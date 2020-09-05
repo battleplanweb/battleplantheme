@@ -1,32 +1,65 @@
 <?php
-/**
- * The template for displaying the footer
- *
- * Contains the closing of the #content div and all content after.
- *
- * @link https://developer.wordpress.org/themes/basics/template-files/#template-partials
- *
- * @package Battle_Plan_Web_Design
- */
-
+/* The template for displaying the footer */
 ?>
 
-	<footer id="colophon" class="site-footer">
-		<div class="site-info">
-			<a href="<?php echo esc_url( __( 'https://wordpress.org/', 'battleplan' ) ); ?>">
-				<?php
-				/* translators: %s: CMS name, i.e. WordPress. */
-				printf( esc_html__( 'Proudly powered by %s', 'battleplan' ), 'WordPress' );
-				?>
-			</a>
-			<span class="sep"> | </span>
-				<?php
-				/* translators: 1: Theme name, 2: Theme author. */
-				printf( esc_html__( 'Theme: %1$s by %2$s.', 'battleplan' ), 'battleplan', '<a href="http://underscores.me/">Glendon Guttenfelder</a>' );
-				?>
+		</div><!-- #main-content -->
+	</section><!-- #wrapper-content -->
+
+	<?php	
+	$current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );
+	$page_slug = $current_page->post_name;
+	$page_data = get_page_by_path($page_slug."-bottom", OBJECT, 'page' );
+	if ( $page_data ) : echo "<section id='wrapper-bottom'>".apply_filters('the_content', $page_data->post_content)."</section><!-- #wrapper-bottom -->"; endif; 
+	?>
+
+	<footer id="colophon">		
+		<?php		
+		if ( is_front_page() && is_home() ) :
+			$page_slug = "site-footer-home"; 
+			$page_data = get_page_by_path( $page_slug, OBJECT, 'page' );
+			if ( !$page_data ) : $page_slug = "site-footer"; endif;				
+		else: $page_slug = "site-footer"; endif;
+		$page_data = get_page_by_path( $page_slug, OBJECT, 'page' );
+		if ( $page_data ) : echo "<div class='site-footer'>".apply_filters('the_content', $page_data->post_content)."</div><!-- .site-footer -->"; endif;
+		?>
+		
+		<div class="site-info">			
+			<?php if (function_exists('battleplan_siteInfo')) {
+				 battleplan_siteInfo();
+			 } else { 
+				$buildLeft = "<div class='social-box'>";
+					if ( do_shortcode('[get-biz info="facebook"]') ) $buildLeft .= do_shortcode('[social-btn type="facebook"]'); 							
+					if ( do_shortcode('[get-biz info="twitter"]') ) $buildLeft .= do_shortcode('[social-btn type="twitter"]');						
+					if ( do_shortcode('[get-biz info="instagram"]') ) $buildLeft .= do_shortcode('[social-btn type="instagram"]');							
+					if ( do_shortcode('[get-biz info="email"]') ) $buildLeft .= do_shortcode('[social-btn type="email"]');
+				$buildLeft .= "</div>";
+
+				$buildCopyright = "<div>".do_shortcode('[get-biz info="copyright"]')." ".do_shortcode('[get-biz info="name"]')." • All Rights Reserved • <a href='/privacy-policy/'>Privacy Policy</a></div><div>";
+				if ( do_shortcode('[get-biz info="street"]') ) $buildCopyright .= do_shortcode('[get-biz info="street"]')." • ";							
+				if ( do_shortcode('[get-biz info="city"]') ) :
+					$buildCopyright .= do_shortcode('[get-biz info="city"]').", ".do_shortcode('[get-biz info="state-abbr"]')." ".do_shortcode('[get-biz info="zip"]')." • ";
+				elseif ( do_shortcode('[get-biz info="region"]') ) : 
+					$buildCopyright .= do_shortcode('[get-biz info="region"]')." • "; 
+				endif;
+				if ( do_shortcode('[get-biz info="license"]') ) $buildCopyright .= "License #".do_shortcode('[get-biz info="license"]')." • "; 						
+				if ( do_shortcode('[get-biz info="phone-link"]') ) $buildCopyright .= do_shortcode('[get-biz info="phone-link"]');							
+				$buildCopyright .= "</div><div>Website developed & maintained by <a href='http://battleplanwebdesign.com' target='_blank'>Battle Plan Web Design</a>";
+				if ( do_shortcode('[get-biz info="misc1"]') ) $buildCopyright .= " • ".do_shortcode('[get-biz info="misc1"]');	
+				$buildCopyright .= "</div>";
+
+				$buildRight = do_shortcode('[img size="1/6" link = "/" class="site-icon"]<img src="../../../wp-content/uploads/flag-pic.jpg" alt="Return to Home Page"/>[/img]');
+				$buildRight .= do_shortcode('[txt size="5/6"]'.$buildCopyright.'[/txt]');
+
+				echo do_shortcode('[col size="1/3" class="site-info-left"]'.$buildLeft.'[/col]');
+				echo do_shortcode('[col size="2/3" class="site-info-right"]'.$buildRight.'[/col]');
+			} ?>					
+			
 		</div><!-- .site-info -->
 	</footer><!-- #colophon -->
 </div><!-- #page -->
+
+<!-- Scroll to Top btn -->
+<a class ="scroll-top hide-1 hide-2 hide-3" href="#page"><i class="fa fa-chevron-up" aria-hidden="true"></i><span class="sr-only">Scroll To Top</span></a>
 
 <?php wp_footer(); ?>
 

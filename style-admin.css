@@ -1,0 +1,22 @@
+@charset "utf-8";
+/* CSS Document */
+
+/* Hide "register plug in" message on Admin Columns Pro & Extended Widget Options */
+.plugin-update-tr[data-plugin*="admin-columns-pro"]:not(#admin-columns-pro-update) .update-message,
+tr.active[data-plugin*="extended-widget-options"] + tr.plugin-update-tr {
+	display:									none;
+}
+
+.plugins * {
+	box-shadow:									none !important;
+	outline:									none;
+}
+.plugins tr {
+	outline: 									1px solid rgba(0,0,0,0.1);
+	transform: 									translateY(-1px);
+}
+.plugins tr#admin-columns-pro-update {
+	outline:									none;
+	border-left:								1px solid rgba(0,0,0,0.1);
+	border-right:								1px solid rgba(0,0,0,0.1);
+}

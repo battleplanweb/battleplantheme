@@ -44,7 +44,7 @@
 	<header id="masthead">
 		
 		<?php if ( has_nav_menu( 'top-menu', 'battleplan' ) ) : ?>
-			<nav id="desktop-navigation" class="main-navigation menu-strip" role="menubar">
+			<nav id="desktop-navigation" class="main-navigation menu-strip" aria-label="Main Menu">
 				<?php wp_nav_menu(
 					array(
 						'container'       => 'div',
@@ -67,7 +67,7 @@
 		if ( $page_data ) : echo apply_filters('the_content', $page_data->post_content); endif; ?>
 
 		<?php if ( has_nav_menu( 'header-menu', 'battleplan' ) ) : ?>
-			<nav id="desktop-navigation" class="main-navigation menu-strip" role="menubar">
+			<nav id="desktop-navigation" class="main-navigation menu-strip" aria-label="Main Menu">
 				<?php wp_nav_menu(
 					array(
 						'container'       => 'div',

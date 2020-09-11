@@ -66,7 +66,7 @@ function battleplan_product_overview( $atts, $content = null ) {
 	if ( $type == "american standard automation systems" ) :
 		$title 		= "Automation Systems";
 		$excerpt	= "<p>Monitor and control the temperature in your home via most web-enabled cell phones, computers and tablets. For total home automation, you can even remotely turn your lights, appliances and wireless keypad locks on and off.</p>";
-		$link 		= "/product-type/nexia-home-intelligence/";
+		$link 		= "/products/nexia-home-intelligence/";
 		$pic 		= "/wp-content/uploads/Nexia-Home-Intelligence-320x320.jpg";
 		$alt 		= "Nexia Home Intelligence";
 	endif;	
@@ -107,7 +107,7 @@ function battleplan_american_standard_customer_care( $atts, $content = null ) {
 			<h1>American Standard</h1>
 			<h2>Customer Care Dealer</h2>
 
-			<img class="alignright noFX" src="/wp-content/uploads/AS-Customer-Care-Logo-258x258.png" alt="American Standard Customer Care Dealer" />
+			<img class="alignright noFX size-half-s" src="/wp-content/uploads/AS-Customer-Care-Logo-258x258.png" alt="American Standard Customer Care Dealer" />
 
 			<p>[get-biz info="name"] is proud to be an authorized American Standard Customer Care Dealer.</p>
 
@@ -119,7 +119,7 @@ function battleplan_american_standard_customer_care( $atts, $content = null ) {
 
 			<p>Not just any HVAC representative can wear the American Standard Customer Care Dealer badge. This recognition must be proven through a commitment to service and properly trained staff. If you are working with a Customer Care Dealer, you can feel confident knowing they have a commitment to the following:</p>
 
-			<img class="alignright noFX" src="/wp-content/uploads/AS-Product-Display-384x247.png" alt="American Standard Heating and Cooling Products" />
+			<img class="alignright noFX size-half-s" src="/wp-content/uploads/AS-Product-Display-384x247.png" alt="American Standard Heating and Cooling Products" />
 
 			<ul>
 				<li><b>Product Knowledge Experts:</b> Customer Care Dealers are up-to-date on the latest technology and products, so they are able to provide recommendations for maximum efficiency and comfort to best meet your needs. Staff training is a top priority.</li>
@@ -134,7 +134,7 @@ function battleplan_american_standard_customer_care( $atts, $content = null ) {
 			 [txt size="100"]
 			  <h2>What is a Customer Care Dealer?</h2>
 
-			  <img src="/wp-content/uploads/AS-Customer-Care-Logo-258x258.png" alt="We are an American Standard Customer Care Dealer." class="alignright size-quarter-s" />
+			  <img src="/wp-content/uploads/AS-Customer-Care-Logo-258x258.png" alt="We are an American Standard Customer Care Dealer." class="alignright size-quarter-s noFX" />
 
 			  <p>The Customer Care program is made up of handpicked dealers who are ready to listen, evaluate and find solutions that work smarter for you and your home.</p>
 			  <p><a href="/customer-care-dealer/">Learn more about the Customer Care program.</a></p>

@@ -14,7 +14,6 @@ jQuery(function($) { try {
 # If page load fails
 
 --------------------------------------------------------------*/
-
 	
 	
 /*--------------------------------------------------------------
@@ -156,27 +155,6 @@ jQuery(function($) { try {
 		});
 		trimText.done = true;
 	};
-
-// Shuffle an array of elements (.widgets that are not locked)
-	window.shuffleElements = function ($elements) {
-		var i, index1, index2, temp_val, count = $elements.length, $parent = $elements.parent(), shuffled_array = [];
-
-		for (i = 0; i < count; i++) { shuffled_array.push(i); }
-
-		for (i = 0; i < count; i++) {
-			index1 = (Math.random() * count) | 0;
-			index2 = (Math.random() * count) | 0;
-			temp_val = shuffled_array[index1];
-			shuffled_array[index1] = shuffled_array[index2];
-			shuffled_array[index2] = temp_val;
-		}
-
-		$elements.detach();
-		for (i = 0; i < count; i++) { $parent.append( $elements.eq(shuffled_array[i]) ); }			
-
-		//var el = $(".widget.lock-to-bottom").detach();
-		//$parent.append( el );
-	};		
 	
 // Remove sidebar from specific pages
 	window.removeSidebar = function(page) {	
@@ -216,7 +194,6 @@ jQuery(function($) { try {
 	};
 		
 // Stick an element to top of screen
-	var totalOffset=0;	
 	window.lockDiv = function(container, strictTrigger, strictOffset, strictTop, faux, whichWay) {	
 		strictTrigger = strictTrigger || "";		
 		strictOffset = strictOffset || "";		
@@ -236,14 +213,13 @@ jQuery(function($) { try {
 		
 		if ( strictOffset === "" ) {
 			if ( strictTop === "" ) {
-				offset = $(container).outerHeight() + totalOffset;
+				offset = $(container).outerHeight();
 			} else {				
-				offset = $(container).outerHeight() + strictTop;
+				offset = $(container).outerHeight() + Number(strictTop);
 			}				
 		} else {
-			offset = strictOffset;	
+			offset = Number(strictOffset);	
 		}
-		totalOffset = totalOffset + $(container).outerHeight();
 		
 		$(container).css("top","unset");
 
@@ -254,7 +230,7 @@ jQuery(function($) { try {
 					newTop = newTop + $(this).outerHeight(true);
 				});		
 			} else {
-				newTop = strictTop;
+				newTop = Number(strictTop);
 			}
 
 			if ( $("#mobile-menu-bar").is(":visible") ) {	
@@ -429,7 +405,7 @@ jQuery(function($) { try {
 			var theContainer = $(container);
 			var checkPageH = theContainer.outerHeight();
 			var parallaxS = (backgroundH / checkPageH) / speed;
-			theContainer.parallax({ imageSrc:getUploadURI+'/'+filename, speed:parallaxS, bleed:bleed, naturalWidth:backgroundW, naturalHeight:backgroundH, positionX:posX, positionY:posY });
+			theContainer.parallax({ imageSrc:getUploadURI+'/'+filename, speed:parallaxS, bleed:bleed, naturalWidth:backgroundW, naturalHeight:backgroundH, positionX:posX, positionY:posY });	
 		}  
 	};
 	
@@ -440,40 +416,57 @@ jQuery(function($) { try {
 		linkOff = linkOff || "non-active";
 		speed = speed || 200;
 		
-		var $el, $currentPage, $noCurrPage, leftPos, topPos, newWidth, magicTop, magicLeft, magicWidth, startOpacity, $mainNav = $(menu);
-		$mainNav.parent().parent().append("<div id='magic-line'></div>");
+		var $el, $currentPage, leftPos, topPos, newWidth, newHeight, magicTop, magicLeft, magicWidth, magicHeight, startOpacity, $mainNav = $(menu);
+		$mainNav.parent().parent().prepend("<div id='magic-line'></div>");
 		var $magicLine = $("#magic-line");		
 		if ( !$mainNav.find("li.current-menu-parent").length ) {		
 			$currentPage = $mainNav.find("li.current-menu-item");
 		} else { 
 			$currentPage = $mainNav.find("li.current-menu-parent");
-		}		
-		$noCurrPage = $mainNav.find(">li");
+		}				
+		
+		if ( $currentPage.hasClass("mobile-only") ) { $currentPage.remove(); }	
 		$currentPage.find(">a").addClass(linkOn);		
 		
 		function checkTop() {
-			if ( !$currentPage.length ) {  
-				startOpacity = 0;
-				$el = $noCurrPage; magicTop = $el.position().top; 
-				$magicLine.stop().animate({ opacity: startOpacity, top: magicTop, left: magicLeft }, 0).data("origTop", magicTop).data("origLeft", magicLeft).data("origWidth", magicWidth);	
-			} else {  
-				startOpacity = 1;
-				$currentPage.each(function() {			
-					$el = $(this); magicTop = $el.position().top; magicLeft = $el.position().left + (($el.outerWidth() - $el.width()) / 2); magicWidth = $el.width();
-					$magicLine.stop().animate({ opacity: startOpacity, top: magicTop, left: magicLeft, width: magicWidth }, 0).data("origTop", magicTop).data("origLeft", magicLeft).data("origWidth", magicWidth);
-				});
-			}
+			setTimeout( function (){ 
+				if ( !$currentPage.length ) {  
+					startOpacity = 0;
+					$el = $mainNav.find(">li"); 
+					magicTop = $el.position().top; 
+					if ( magicTop < 5 ) { magicTop = $mainNav.parent().parent().position().top; }
+					magicHeight = $el.height();
+					$magicLine.stop().animate({ opacity: startOpacity, top: magicTop, left: magicLeft, height: magicHeight }, 0).data("origTop", magicTop).data("origLeft", magicLeft).data("origWidth", magicWidth).data("origHeight", magicHeight);	
+				} else {  
+					startOpacity = 1;
+					$currentPage.each(function() {					
+						$el = $(this); 
+						magicTop = $el.position().top; 
+						if ( magicTop < 5 ) { magicTop = $mainNav.parent().parent().position().top; }
+						magicLeft = $el.position().left + (($el.outerWidth() - $el.width()) / 2); 
+						magicWidth = $el.width(); 
+						magicHeight = $el.height();
+						$magicLine.stop().animate({ opacity: startOpacity, top: magicTop, left: magicLeft, width: magicWidth, height: magicHeight }, 0).data("origTop", magicTop).data("origLeft", magicLeft).data("origWidth", magicWidth).data("origHeight", magicHeight);					
+					});	
+				}
+			}, 10);
 		}
+
 		setTimeout(function(){checkTop();},10);
 		window.addEventListener('scroll', checkTop );
 		
 		$mainNav.find(" > li").hover(function() {			
-			$el = $(this); topPos = $el.position().top; leftPos = $el.position().left + (($el.outerWidth() - $el.width()) / 2); newWidth = $el.width();
-			$magicLine.stop().animate({ opacity: 1, top: topPos, left: leftPos, width: newWidth }, speed);
+			$el = $(this); 
+			topPos = $el.position().top; 
+			if ( topPos < 5 ) { topPos = $mainNav.parent().parent().position().top; }
+			leftPos = $el.position().left + (($el.outerWidth() - $el.width()) / 2); 
+			newWidth = $el.width(); 
+			newHeight = $el.height();
+			$magicLine.stop().animate({ opacity: 1, top: topPos, left: leftPos, width: newWidth, height: newHeight }, speed);
 			$currentPage.find(">a").removeClass(linkOn).addClass(linkOff);
 			$el.find(">a").addClass(linkOn).removeClass(linkOff);
 		}, function() {
-			$magicLine.stop().animate({ opacity: startOpacity, top:$magicLine.data("origTop"), left: $magicLine.data("origLeft"), width: $magicLine.data("origWidth") }, speed);    
+			$magicLine.stop().animate({ opacity: startOpacity, top:$magicLine.data("origTop"), left: $magicLine.data("origLeft"), width: $magicLine.data("origWidth"), height: $magicLine.data("origHeight") }, speed);    
 			$el.find(">a").removeClass(linkOn).addClass(linkOff);
 			$currentPage.find(">a").addClass(linkOn).removeClass(linkOff);
 		});
@@ -724,8 +717,8 @@ jQuery(function($) { try {
 	removeDiv('p:empty, .archive-intro:empty');
 	
 // Add -flex containers for grid setup
-	wrapDiv('.top-strip','<div class="top-strip-flex"></div>', 'inside');
-	wrapDiv('.logo-strip','<div class="logo-strip-flex"></div>', 'inside');	
+	//wrapDiv('.top-strip','<div class="top-strip-flex"></div>', 'inside');
+	//wrapDiv('.logo-strip','<div class="logo-strip-flex"></div>', 'inside');	
 	wrapDiv('.site-main','<div class="site-main-inner"></div>', 'inside');	
 		
 // Add "noFX" class to img if it appears in any of the parent divs
@@ -733,11 +726,25 @@ jQuery(function($) { try {
 	$( "div.noFX" ).find("a").addClass("noFX");
 	
 // Fade in lazy loaded images
-	animateDiv('img', 'fadeIn', '150', '100%', '200');	
+	animateDiv( 'img', 'fadeIn', 150, '100%', 200 );
 	
-// Add "active" & "hover" classes to menu items	
+// Preload BG image and fade in
+	if ( $( 'body' ).hasClass( "background-image" ) && getDeviceW() > mobileCutoff ) {
+		var preloadBG = new Image();
+		preloadBG.onload = function() { animateDiv( '.parallax-mirror', 'fadeIn', 0, '', 200 ); }			
+		preloadBG.onerror = function() { console.log("site-background.jpg not found"); }
+		preloadBG.src = getUploadURI + "/" + "site-background.jpg";  
+	}
+	
+// Add "active" & "hover" classes to menu items, assign roles for ADA compliance		
+	$(".main-navigation ul.main-menu").attr('role','menubar');
+	$(".main-navigation li").attr('role','none');
+	$(".main-navigation a").attr('role','menuitem');
+	$(".main-navigation ul.sub-menu").attr('role','menu');
+	
 	var	$currents = $(".main-navigation ul.main-menu > li.current-menu-item, .main-navigation ul.main-menu > li.current_page_item, .main-navigation ul.main-menu > li.current-menu-parent, .main-navigation ul.main-menu > li.current_page_parent, .main-navigation ul.main-menu > li.current-menu-ancestor"); 
 	$currents.addClass( "active" );
+	$currents.find(">a").attr('aria-current','page');
 	$(".main-navigation ul.main-menu > li").hover ( function() { 		
 		$currents.replaceClass( "active", "dormant" ); 
 		$(this).addClass( "hover" );  
@@ -748,6 +755,7 @@ jQuery(function($) { try {
 	
 	var	$subCurrents = $(".main-navigation ul.sub-menu > li.current-menu-item, .main-navigation ul.sub-menu > li.current_page_item, .main-navigation ul.sub-menu > li.current-menu-parent, .main-navigation ul.sub-menu > li.current_page_parent, .main-navigation ul.sub-menu > li.current-menu-ancestor"); 
 	$subCurrents.addClass( "active" );
+	$subCurrents.find(">a").attr('aria-current','page');
 	$(".main-navigation ul.sub-menu > li").hover ( function() { 		
 		$subCurrents.replaceClass( "active", "dormant" ); 
 		$(this).addClass( "hover" );  
@@ -763,6 +771,12 @@ jQuery(function($) { try {
 		animateScroll(target);
 	});
 	
+// Automatically adjust for Google review bar 
+	$( '<div class="wp-google-badge-faux"></div>' ).insertAfter( $('#colophon'))
+	
+	
+	
+	
 // Set up mobile menu animation
 	//$('#header *').each(function() { 
 		//if ($(this).css("position") === "fixed") {
@@ -776,14 +790,17 @@ jQuery(function($) { try {
 	window.closeMenu = function () {
 		$("#mobile-menu-bar .activate-btn").removeClass("active"); 
 		$("body").removeClass("mm-active"); 
-		$(".top-push #page").css({ "top": "0" });
+		$(".top-push.screen-mobile #page").css({ "top": "0" });
+		$(".top-push.screen-mobile .top-strip.stuck").css({ "top": mobileMenuBarH+"px" });
 	};
 	
 	window.openMenu = function () {
 		$("#mobile-menu-bar .activate-btn").addClass("active"); 
 		$("body").addClass("mm-active"); 
 		var getMenuH = $("#mobile-navigation").outerHeight();
-		$(".top-push.mm-active #page").css({ "top": getMenuH+"px" });
+		var getTotalH = getMenuH + mobileMenuBarH;
+		$(".top-push.screen-mobile.mm-active #page").css({ "top": getMenuH+"px" });	
+		$(".top-push.screen-mobile.mm-active .top-strip.stuck").css({ "top": getTotalH+"px" });
 	};
 	
 	$("#mobile-menu-bar .activate-btn").click(function() {
@@ -800,7 +817,6 @@ jQuery(function($) { try {
 		$('#mobile-navigation ul.sub-menu').height(0);
 		$(el).addClass("active"); 
 		$(el).height(h+"px");
-		console.log(el.data('getH'));
 	};
 
 	$('#mobile-navigation').addClass("get-sub-heights");
@@ -850,18 +866,40 @@ jQuery(function($) { try {
 /*--------------------------------------------------------------
 # Set up sidebar
 --------------------------------------------------------------*/	
-	window.setupSidebar = function (compensate, screenW, menuLock, shuffle) {
+	window.setupSidebar = function (compensate, menuLock, shuffle) {
 		compensate = compensate || 0;		
-		screenW = screenW || mobileCutoff; // deprecated
 		menuLock = menuLock || "true";
 		shuffle = shuffle || "true";
-		var isPaused = false;
+		var isPaused = false;		
+						
+// Shuffle an array of widgets
+	window.shuffleWidgets = function ($elements) {
+		var i, index1, index2, temp_val, count = $elements.length, $parent = $elements.parent(), shuffled_array = [];
+
+		for (i = 0; i < count; i++) { shuffled_array.push(i); }
+
+		for (i = 0; i < count; i++) {
+			index1 = (Math.random() * count) | 0;
+			index2 = (Math.random() * count) | 0;
+			temp_val = shuffled_array[index1];
+			shuffled_array[index1] = shuffled_array[index2];
+			shuffled_array[index2] = temp_val;
+		}
+
+		$elements.detach();
+		for (i = 0; i < count; i++) { $parent.append( $elements.eq(shuffled_array[i]) ); }			
+				
+		var el = $(".widget.lock-to-bottom").detach();
+		$parent.append( el );		
+	};		
 
 // Set up "locked" widgets, and shuffle the rest
 		$('.widget.lock-to-top, .widget.lock-to-bottom').addClass("locked");		
 		$('.widget:not(.locked)').addClass("shuffle");
 		
-		if ( getDeviceW() > mobileCutoff && shuffle == "true" ) { shuffleElements( $('.shuffle') ); }
+		if ( getDeviceW() > mobileCutoff && shuffle == "true" ) { 
+			shuffleWidgets( $('.shuffle') );
+		}
 				
 // Initiate widget removal
 		window.widgetInit = function () {
@@ -918,7 +956,13 @@ jQuery(function($) { try {
 				adjustSidebarH();
 				setTimeout(function() { isPaused = false; }, 3000);
 		};	
-		
+						
+// Adjust height of #secondary to match #primary + add extra spacing between .widget if necessary
+		window.adjustSidebarH = function () {
+			var contentH = $("#primary").outerHeight(true) + compensate;
+			$("#secondary").animate( { height: contentH+"px" }, 300);
+		};
+				
 // Mark first, last, even and odd widgets
 		window.labelWidgets = function () {
 			$(".widget").removeClass("widget-first").removeClass("widget-last").removeClass("widget-even").removeClass("widget-odd");
@@ -927,19 +971,11 @@ jQuery(function($) { try {
 			$(".widget:not(.hide-widget):odd").addClass("widget-even"); 
 			$(".widget:not(.hide-widget):even").addClass("widget-odd"); 	
 		};
-						
-// Adjust height of #secondary to match #primary + add extra spacing between .widget if necessary
-		window.adjustSidebarH = function () {
-			var contentH = $("#primary").outerHeight(true) + compensate;
-			$("#secondary").animate( { height: contentH+"px" }, 300);
-		};
 		
  // Move sidebar in conjunction with mouse scroll to keep it even with content
 		window.moveWidgets = function () {
-			var contentH = $('#primary').outerHeight();		
-			var elem = $(".sidebar-inner"), elemH = elem.outerHeight() + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom'));				
-			var conH = $("#secondary").outerHeight(), conT = $("#secondary").offset().top, conB = conT + conH;				
-			var winH = $(window).height(), winT = $(window).scrollTop(), winB = winT + winH;				
+			var contentH = $('#primary').outerHeight(), elem = $(".sidebar-inner"), elemH = elem.outerHeight() + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom'));				
+			var conH = $("#secondary").outerHeight(), conT = $("#secondary").offset().top, winH = $(window).height(), winT = $(window).scrollTop();				
 			var adjT = winT - conT, fullH = conH - winH, scrollPct = adjT / fullH, dist = winT - conT, maxH = contentH - elemH;	
 			if ( scrollPct > 1 ) { scrollPct = 1; }
 			if ( scrollPct < 0 || scrollPct == null ) { scrollPct = 0; }
@@ -963,11 +999,10 @@ jQuery(function($) { try {
 		// Ensure Parallax elements and widgets are re-assessed on desktop
 			if ( getDeviceW() > mobileCutoff ) { 
 				$(window).trigger('resize.px.parallax');
-				if ( widgets == true ) {
-					widgetInit();				
-					labelWidgets();
-				}
+				if ( widgets == true ) { widgetInit(); }
 			} 
+			
+			labelWidgets();
 
 		// If not a mobile device and sidebar exists, move widgets with scroll	
 			if ( $("#secondary").length && getDeviceW() > mobileCutoff ) {  	
@@ -996,6 +1031,20 @@ jQuery(function($) { try {
 		
 	// Close any open menus on mobile (when device ratio changes)
 		closeMenu();
+		
+	// Ensure "-faux" elements remain correct size
+		$('div[class*="-faux"]').each(function() {	
+			var fauxDiv = $(this);
+			var fauxClass = "."+fauxDiv.attr('class');
+			var mainClass = fauxClass.replace("-faux", "");
+			
+			if ( $( mainClass ).is(":visible") ) {		
+				$( fauxClass ).height($( mainClass ).outerHeight());  
+				$( '.wp-google-badge-faux' ).height($( '.wp-google-badge' ).outerHeight());  
+			} else {			
+				$( fauxClass ).height(0); 
+			}						
+		});		
 
 		
 		/* Remove horizontal styling from office hours box on cell phones */	
@@ -1010,19 +1059,6 @@ jQuery(function($) { try {
 			//}
 		//}
 		
-		/* Ensure "-faux" elements remain correct size */
-		//$('div[class*="-faux"]').each(function() {	
-			//var fauxDiv = $(this);
-			//var fauxClass = "."+fauxDiv.attr('class');
-			//var mainClass = fauxClass.replace("-faux", "");
-			
-			//if ( $( mainClass ).is(":visible") ) {		
-				//$( fauxClass ).height($( mainClass ).outerHeight());  
-				//$( '.wp-google-badge-faux' ).height("50px");  
-			//} else {			
-				//$( fauxClass ).height(0); 
-			//}						
-		//});		
 		
 		/* Set up "fixed" footer, based on class added in header.php */		
 		//var footerH = $(".footer-fixed #footer").outerHeight(true);
@@ -1074,23 +1110,44 @@ jQuery(function($) { try {
 /*--------------------------------------------------------------
 # ADA compliance
 --------------------------------------------------------------*/
-	// add alt="" to all images with no alt tag
+	// Add alt="" to all images with no alt tag
 	setTimeout(function() { $('img:not([alt])').attr('alt', ''); }, 50);
 	setTimeout(function() { $('img:not([alt])').attr('alt', ''); }, 500);
 	
-	// add special focus outline when someone is using tab to navigate site
+	// Add special focus outline when someone is using tab to navigate site
 	$(document).mousemove(function(event) { $('body').addClass('using-mouse').removeClass('using-keyboard'); });
 	$(document).keydown(function(e) { if( e.keyCode == 9 && !$('body').hasClass("using-mouse") ) { $('body').addClass('using-keyboard'); } });
 	
-	// menu support
+	// Menu support
 	$('[role="menubar"]' ).on( 'focus.aria mouseenter.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).attr( 'aria-expanded', true ); } );
 	$('[role="menubar"]' ).on( 'blur.aria mouseleave.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).attr( 'aria-expanded', false ); } );
-
+	
+	// Add .tab-focus class to links and buttons & auto scroll to better position on screen
+	var allowTabFocus = false;
+	$(window).on('keydown', function(e) {
+		$('*').removeClass('tab-focus');
+	  	if ( e.keyCode === 9 ) { allowTabFocus = true; }
+	});
+	$('*').on('focus', function() {
+		if ( allowTabFocus ) { 
+			$(this).addClass('tab-focus');
+			var scrollPos = $(window).scrollTop(), moveTo = $(this).offset().top - ($(window).height() / 2), diff = Math.abs(moveTo - scrollPos);		
+			if ( diff > 200 ) { animateScroll(moveTo); }
+		}
+	});
+	$(window).on('mousedown', function() {
+		$('*').removeClass('tab-focus');
+	  	allowTabFocus = false;
+	})
+	
 	
 /*--------------------------------------------------------------
 # Delay parsing of JavaScript
 --------------------------------------------------------------*/
 	$(window).load(function() { 
+		
+	// Fade out loader screen when site is fully loaded
+	$("#loader").fadeOut("fast");  
 		
 	// Get video link from data-src and feed to src 
 		var vidDefer = document.getElementsByTagName('iframe');
@@ -1123,11 +1180,11 @@ jQuery(function($) { try {
 		setTimeout(function() {	// Wait 2.5 seconds before calling the following functions 	
 
 		// Clear Hummingbird cache	
-			$.post({
-				url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-				data : { action: "clear_cache" },
-				success: function( response ) { console.log(response); } 
-			});	
+			//$.post({
+				//url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
+				//data : { action: "clear_cache" },
+				//success: function( response ) { console.log(response); } 
+			//});	
 		
 		// Count page view 
 			var postID = $('body').attr('id');
@@ -1159,9 +1216,9 @@ jQuery(function($) { try {
 	});	
 	
 // Clear Hummingbird cache 	
-	$.post({
-		url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-		data : { action: "force_clear_cache" },
-		success: function( response ) { console.log(response); } 
-	});		
+	//$.post({
+		//url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
+		//data : { action: "force_clear_cache" },
+		//success: function( response ) { console.log(response); } 
+	//});		
 }});

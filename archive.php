@@ -69,7 +69,7 @@ get_header();
 				$addClass = "";
 			endif;
 		
-			overrideArchive( get_post_type() );
+			if ( function_exists( 'overrideArchive' ) ) { overrideArchive( get_post_type() ); }
 
 			$term = get_term_by( 'slug', get_query_var( 'term' ), get_query_var( 'taxonomy' ) );
 			if ( $term->name ) $archiveHeadline .= ": ".$term->name;

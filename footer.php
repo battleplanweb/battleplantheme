@@ -23,7 +23,7 @@
 		if ( $page_data ) : echo "<div class='site-footer'>".apply_filters('the_content', $page_data->post_content)."</div><!-- .site-footer -->"; endif;
 		?>
 		
-		<div class="site-info">			
+		<section class="section site-info">			
 			<?php if (function_exists('battleplan_siteInfo')) {
 				 battleplan_siteInfo();
 			 } else { 
@@ -50,16 +50,18 @@
 				$buildRight = do_shortcode('[img size="1/6" link = "/" class="site-icon"]<img src="../../../wp-content/uploads/flag-pic.jpg" alt="Return to Home Page"/>[/img]');
 				$buildRight .= do_shortcode('[txt size="5/6"]'.$buildCopyright.'[/txt]');
 
-				echo do_shortcode('[col size="1/3" class="site-info-left"]'.$buildLeft.'[/col]');
-				echo do_shortcode('[col size="2/3" class="site-info-right"]'.$buildRight.'[/col]');
+				echo do_shortcode('[layout grid="1-2"][col class="site-info-left"]'.$buildLeft.'[/col][col class="site-info-right"]'.$buildRight.'[/col][/layout]');
 			} ?>					
 			
-		</div><!-- .site-info -->
+		</section><!-- .site-info -->
 	</footer><!-- #colophon -->
 </div><!-- #page -->
 
 <!-- Scroll to Top btn -->
 <a class ="scroll-top hide-1 hide-2 hide-3" href="#page"><i class="fa fa-chevron-up" aria-hidden="true"></i><span class="sr-only">Scroll To Top</span></a>
+
+
+<?php bp_footer_scripts(); ?>
 
 <?php wp_footer(); ?>
 

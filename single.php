@@ -51,7 +51,7 @@ get_header();
 					$navigation = "true";	
 				endif;
 		
-			overrideSingle( get_post_type() );
+			if ( function_exists( 'overrideSingle' ) ) { overrideSingle( get_post_type() ); }
 
 			// Setup & Display Post		
 			$displayHeader = '<article id="post-'.get_the_ID().'">';		

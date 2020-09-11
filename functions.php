@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', 'v1.1' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', 'v1.2' ); }
 
 
 /*--------------------------------------------------------------
@@ -64,6 +64,19 @@ function battleplan_getSeason($atts, $content = null) {
 	elseif (date("m")>="06" && date("m")<="08") : return $summer; 
 	elseif (date("m")>="09" && date("m")<="11") : return $fall; 
 	else: return $winter; endif; 
+}
+
+/* Find Number of Days Between Two Dates */
+add_shortcode( 'days-ago', 'battleplan_daysAgo' );
+function battleplan_daysAgo( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'oldest'=>'', 'newest'=>'today' ), $atts );
+	$oldest = esc_attr($a['oldest']);
+	$newest = esc_attr($a['newest']);
+	
+	if ( $newest == "today" || $newest == "now" ) : $newest = time(); else: $newest = strtotime($newest); endif;
+	$oldest = strtotime($oldest);	
+	$datediff = $newest - $oldest; 
+	return abs(round($datediff / 86400));
 }
 
 // Load the Featured Image, Title, Excerpt, Content or Permalink from a Separate Post, Page or Custom Post Type
@@ -1109,7 +1122,6 @@ function battleplan_column_settings() {
 					'featured_image_display'=>'image',
 					'image_size'=>'cpac-custom',
 					'image_size_w'=>'60',
-
 					'image_size_h'=>'60',
 					'edit'=>'off',
 					'sort'=>'off',
@@ -1290,10 +1302,9 @@ function battleplan_column_settings() {
 					'search'=>''
 				),
 				'attachments'=>array(
-
 					'type'=>'column-attachment',
 					'label'=>'Attachments',
-					'width'=>'',
+					'width'=>'80',
 					'width_unit'=>'%',
 					'attachment_display'=>'thumbnail',
 					'image_size'=>'cpac-custom',
@@ -1373,9 +1384,9 @@ function battleplan_column_settings() {
 					'label'=>'Image',
 					'width'=>'140',
 					'width_unit'=>'px',
-					'image_size'=>'go-120',
-					'image_size_w'=>'60',
-					'image_size_h'=>'60',
+					'image_size'=>'cpac-custom',
+					'image_size_w'=>'130',
+					'image_size_h'=>'130',
 					'name'=>'image',
 					'label_type'=>''
 				),
@@ -1506,22 +1517,23 @@ function battleplan_handle_main_query( $query ) {
 }
 
 // Maintain pagination when using orderby=rand
-session_start();
-add_filter( 'posts_orderby', 'battleplan_randomise_with_pagination' );
-function battleplan_randomise_with_pagination( $orderby ) { 
-	if ( !is_admin() ) :
-		if( ! get_query_var( 'paged' ) || get_query_var( 'paged' ) == 0 || get_query_var( 'paged' ) == 1 ) {
-			if( isset( $_SESSION['seed'] ) ) { unset( $_SESSION['seed'] ); }
-		}
-		$seed = false;
-		if( isset( $_SESSION['seed'] ) ) { $seed = $_SESSION['seed']; }
-		if ( !$seed ) {
-			$seed = rand();
-			$_SESSION['seed'] = $seed;
-		}
-		$orderby = 'rand('.$seed.')';
-	endif;
- 
+add_filter( 'posts_orderby', 'battleplan_randomize_with_pagination' );
+function battleplan_randomize_with_pagination( $orderby ) { 
+	if ( is_admin() || !is_main_query() || $orderby != "RAND()") return $orderby;
+		
+	session_start();
+	
+	if( ! get_query_var( 'paged' ) || get_query_var( 'paged' ) == 0 || get_query_var( 'paged' ) == 1 ) {
+		if( isset( $_SESSION['seed'] ) ) { unset( $_SESSION['seed'] ); }
+	}
+	$seed = false;
+	if( isset( $_SESSION['seed'] ) ) { $seed = $_SESSION['seed']; }
+	if ( !$seed ) {
+		$seed = rand();
+		$_SESSION['seed'] = $seed;
+	}
+	$orderby = 'rand('.$seed.')';
+
     return $orderby;
 }
 
@@ -1712,6 +1724,7 @@ function battleplan_wpautop_without_br( $content ) {
     return wpautop( $content, false );
 }
 
+// Necessary housekeeping items
 add_action( 'after_setup_theme', 'battleplan_setup' );
 if ( ! function_exists( 'battleplan_setup' ) ) :
 	function battleplan_setup() {
@@ -1728,11 +1741,13 @@ if ( ! function_exists( 'battleplan_setup' ) ) :
 	}
 endif;
 
+// Set content width param
 add_action( 'after_setup_theme', 'battleplan_content_width', 0 );
 function battleplan_content_width() {
 	$GLOBALS['content_width'] = apply_filters( 'battleplan_content_width', 640 );
 }
 
+// Set up sidebar
 add_action( 'widgets_init', 'battleplan_widgets_init' );
 function battleplan_widgets_init() {
 	register_sidebar(
@@ -1748,14 +1763,14 @@ function battleplan_widgets_init() {
 	);
 }
 
+// Load and enqueue styles & scripts
 add_action( 'wp_enqueue_scripts', 'battleplan_scripts' );
 function battleplan_scripts() {
 	wp_enqueue_style( 'battleplan-animate', get_template_directory_uri().'/animate.css', array(), _BP_VERSION );
-	wp_enqueue_style( 'battleplan-admin', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION );	
+	wp_enqueue_style( 'battleplan-admin', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION );		
 	
 	wp_enqueue_script( 'battleplan-bootstrap', get_template_directory_uri() . '/js/bootstrap.js', array(), _BP_VERSION, true );
 	wp_enqueue_script( 'battleplan-font-awesome', get_template_directory_uri() . '/js/font-awesome.js', array(), _BP_VERSION, true );
-	wp_enqueue_script( 'battleplan-navigation', get_template_directory_uri() . '/js/navigation.js', array(), _BP_VERSION, true );
 	wp_enqueue_script( 'battleplan-parallax', get_template_directory_uri() . '/js/parallax.js', array(), _BP_VERSION, true );
 	wp_enqueue_script( 'battleplan-waypoints', get_template_directory_uri() . '/js/waypoints.js', array(), _BP_VERSION, true );
 	wp_enqueue_script( 'battleplan-script', get_template_directory_uri() . '/js/script.js', array(), _BP_VERSION, true );
@@ -1767,12 +1782,31 @@ function battleplan_scripts() {
 	wp_localize_script( 'battleplan-script-site', 'theme_dir', $saveDir );
 }
 
-require get_template_directory() . '/inc/custom-header.php';
-require get_template_directory() . '/inc/customizer.php';
-if ( defined( 'JETPACK__VERSION' ) ) { require get_template_directory() . '/inc/jetpack.php'; }
-
 require get_template_directory() . '/includes/includes-universal.php';
-require get_template_directory() . '/includes/includes-hvac.php';
+
+// Dequeue unneccesary styles & scripts
+add_action( 'wp_print_styles', 'battleplan_dequeue_unwanted_stuff', 99 );
+function battleplan_dequeue_unwanted_stuff() {
+	wp_dequeue_style( 'wp-block-library' );  wp_deregister_style( 'wp-block-library' );
+	wp_dequeue_style( 'wp-block-library-theme' );  wp_deregister_style( 'wp-block-library-theme' );	
+	wp_dequeue_style( 'css-animate' );  wp_deregister_style( 'css-animate' );
+	wp_dequeue_style( 'select2' );  wp_deregister_style( 'select2' );
+	
+	wp_dequeue_script( 'select2'); wp_deregister_script('select2');	
+	wp_dequeue_script( 'wphb-global' ); wp_deregister_script( 'wphb-global' );
+	wp_dequeue_script( 'wp-embed' ); wp_deregister_script( 'wp-embed' );
+	if ( !is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_dequeue_script( 'underscore' ); wp_deregister_script( 'underscore' ); } 
+}
+
+// Remove unwanted dashboard widgets
+add_action('wp_dashboard_setup', 'battleplan_remove_dashboard_widgets');
+function battleplan_remove_dashboard_widgets () {
+	remove_action('welcome_panel','wp_welcome_panel'); // Welcome to WordPress!
+	remove_meta_box('dashboard_primary','dashboard','side'); //WordPress.com Blog
+	remove_meta_box('dashboard_right_now','dashboard','side');
+	remove_meta_box('dashboard_quick_press','dashboard','side'); //Quick Press widget
+	//remove_meta_box('tribe_dashboard_widget', 'dashboard', 'normal'); // News From Modern Tribe
+}
 
 //Brand log-in screen with BP Knight
 add_action( 'login_enqueue_scripts', 'battleplan_login_logo' );
@@ -1964,14 +1998,14 @@ if ( function_exists( 'add_image_size' ) ) {
 add_filter('image_size_names_choose', 'battleplan_image_sizes');
 function battleplan_image_sizes($sizes) {
 	$new_sizes = array(
-		"quarter-s"=>__( "1/4 sidebar"), 
-		"third-s"=>__( "1/3 sidebar"),		
-		"half-s"=>__( "1/2 sidebar"), 				
-		"full-s"=>__( "Full sidebar"), 				
-		"quarter-f"=>__( "1/4"), 		
-		"third-f"=>__( "1/3"), 		
-		"half-f"=>__( "1/2"), 		
-		"full-f"=>__( "Full"), 		
+		"quarter-s"=>__( "Sidebar 25%"), 
+		"third-s"=>__( "Sidebar 33%"),		
+		"half-s"=>__( "Sidebar 50%"), 				
+		"full-s"=>__( "Sidebar 100%"), 				
+		"quarter-f"=>__( "Full 25%"), 		
+		"third-f"=>__( "Full 33%"), 		
+		"half-f"=>__( "Full 50%"), 		
+		"full-f"=>__( "Full 100%"), 		
 		"max"=>__( "Max"), 		
 	);
 	return $new_sizes;
@@ -2147,6 +2181,7 @@ function bp_loader() { do_action('bp_loader'); }
 function bp_font_loader() { do_action('bp_font_loader'); }
 function bp_google_analytics() { do_action('bp_google_analytics'); }
 function bp_mobile_menu_bar_items() { do_action('bp_mobile_menu_bar_items'); }
+function bp_footer_scripts() { do_action('bp_footer_scripts'); }
 
 
 /*--------------------------------------------------------------
@@ -2154,29 +2189,29 @@ function bp_mobile_menu_bar_items() { do_action('bp_mobile_menu_bar_items'); }
 --------------------------------------------------------------*/
 
 // Clear Hummingbird cache periodically
-add_action( 'wp_ajax_clear_cache', 'battleplan_clear_cache_ajax' );
-add_action( 'wp_ajax_nopriv_clear_cache', 'battleplan_clear_cache_ajax' );
-function battleplan_clear_cache_ajax() {
-	$theID = getID('site-header');
-	$timeDue = 'clear-hummingbird-cache'; 	
-	$timeLast = 'last-hummingbird-cache'; 	
-	$dueTime = readMeta($theID, $timeDue);
-	$lastTime = readMeta($theID, $timeLast);
+//add_action( 'wp_ajax_clear_cache', 'battleplan_clear_cache_ajax' );
+//add_action( 'wp_ajax_nopriv_clear_cache', 'battleplan_clear_cache_ajax' );
+//function battleplan_clear_cache_ajax() {
+//	$theID = getID('site-header');
+//	$timeDue = 'clear-hummingbird-cache'; 	
+//	$timeLast = 'last-hummingbird-cache'; 	
+//	$dueTime = readMeta($theID, $timeDue);
+//	$lastTime = readMeta($theID, $timeLast);
 	
-	if ( time() > $dueTime ) : 				
-		if( class_exists('\Hummingbird\WP_Hummingbird') && method_exists('\Hummingbird\WP_Hummingbird', 'flush_cache') ) {
-			\Hummingbird\WP_Hummingbird::flush_cache();
-		}
-		$setCacheTime = 7;
-		$newTime = time() + convertTime($setCacheTime, 'days');
-		updateMeta($theID, $timeDue, $newTime);
-		updateMeta($theID, $timeLast, time());
-		$response = array( 'result' => 'cache dumped!', 'previous dump' => date('F j, Y', $lastTime), 'scheduled dump' => date('F j, Y', $newTime));
-	else:
-		$response = array( 'cached since' => date('F j, Y', $lastTime), 'scheduled dump' => date('F j, Y', $dueTime));
-	endif;
-	wp_send_json( $response );
-} 
+//	if ( time() > $dueTime ) : 				
+//		if( class_exists('\Hummingbird\WP_Hummingbird') && method_exists('\Hummingbird\WP_Hummingbird', 'flush_cache') ) {
+//			\Hummingbird\WP_Hummingbird::flush_cache();
+//		}
+//		$setCacheTime = 7;
+//		$newTime = time() + convertTime($setCacheTime, 'days');
+//		updateMeta($theID, $timeDue, $newTime);
+//		updateMeta($theID, $timeLast, time());
+//		$response = array( 'result' => 'cache dumped!', 'previous dump' => date('F j, Y', $lastTime), 'scheduled dump' => date('F j, Y', $newTime));
+//	else:
+//		$response = array( 'cached since' => date('F j, Y', $lastTime), 'scheduled dump' => date('F j, Y', $dueTime));
+//	endif;
+//	wp_send_json( $response );
+//} 
 
 // Count Post Views
 add_action( 'wp_ajax_count_post_views', 'battleplan_count_post_views_ajax' );
@@ -2252,15 +2287,15 @@ function battleplan_sendServerEmail_ajax() {
 }
 
 // Clear Hummingbird cache immediately upon javascript error
-add_action( 'wp_ajax_force_clear_cache', 'battleplan_force_clear_cache_ajax' );
-add_action( 'wp_ajax_nopriv_force_clear_cache', 'battleplan_force_clear_cache_ajax' );
-function battleplan_force_clear_cache_ajax() {
-	if( class_exists('\Hummingbird\WP_Hummingbird') && method_exists('\Hummingbird\WP_Hummingbird', 'flush_cache') ) {
-		\Hummingbird\WP_Hummingbird::flush_cache();
-	}
-	$response = array( 'result' => 'emergency cache dump!');
-	wp_send_json( $response );
-} 
+//add_action( 'wp_ajax_force_clear_cache', 'battleplan_force_clear_cache_ajax' );
+//add_action( 'wp_ajax_nopriv_force_clear_cache', 'battleplan_force_clear_cache_ajax' );
+//function battleplan_force_clear_cache_ajax() {
+//	if( class_exists('\Hummingbird\WP_Hummingbird') && method_exists('\Hummingbird\WP_Hummingbird', 'flush_cache') ) {
+//		\Hummingbird\WP_Hummingbird::flush_cache();
+//	}
+//	$response = array( 'result' => 'emergency cache dump!');
+//	wp_send_json( $response );
+//} 
 
 
 /*--------------------------------------------------------------
@@ -2292,26 +2327,37 @@ function battleplan_buildSection( $atts, $content = null ) {
 	
 	$buildSection = '<section'.$name.' class="section'.$style.$width.$class.'"';
 	if ( $background != "" ) $buildSection .= ' style="background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;"';	
-	$buildSection .= '><div class="section-flex">';
-	$buildSection .= do_shortcode($content);
-	$buildSection .= '</div></section>';	
+	$buildSection .= '>'.do_shortcode($content).'</section>';	
 	
 	return $buildSection;
+}
+
+// Layout
+add_shortcode( 'layout', 'battleplan_buildLayout' );
+function battleplan_buildLayout( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'grid'=>'1', 'valign'=>'' ), $atts );
+	$grid = esc_attr($a['grid']);
+	$valign = esc_attr($a['valign']);
+	if ( $valign != '' ) $valign = " valign-".$valign;
+
+	$buildLayout = '<div class="flex grid-'.$grid.$valign.'">'.do_shortcode($content).'</div>';	
+	
+	return $buildLayout;
 }
 
 // Column
 add_shortcode( 'col', 'battleplan_buildColumn' );
 function battleplan_buildColumn( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'class'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50' ), $atts );
-	$size = esc_attr($a['size']);	
-	$size = convertSize($size);
+	$a = shortcode_atts( array( 'class'=>'', 'valign'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50' ), $atts );
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
+	$valign = esc_attr($a['valign']);
+	if ( $valign != '' ) $valign = " valign-".$valign;
 	$background = esc_attr($a['background']);
 	$left = esc_attr($a['left']);
 	$top = esc_attr($a['top']);
 
-	$buildCol = '<div class="col span-'.$size.$class.'"><div class="col-inner"';
+	$buildCol = '<div class="col '.$class.$valign.'"><div class="col-inner"';
 	if ( $background != "" ) $buildCol .= 'style="background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;"';	
 	$buildCol .= '>';
 	$buildCol .= do_shortcode($content);

@@ -80,13 +80,10 @@ function battleplan_product_overview( $atts, $content = null ) {
 	endif;	
 	
 	return do_shortcode('
-		[col size="100" class="col-archive col-products"]
+		[col class="col-archive col-products"]
 		 [img size="1/3" link="'.$link.'" ada-hidden="true"]<img class="img-archive img-products" src="'.$pic.'" alt="'.$alt.'" />[/img]
 		 [group size="2/3"]
-		  [txt size="100" class="text-products"]
-		   <a class="link-archive link-products" href="'.$link.'" aria-hidden="true" tabindex="-1"><h3>'.$title.'</h3></a>
-		   '.$excerpt.'
-		  [/txt]
+		  [txt size="100" class="text-products"]<a class="link-archive link-products" href="'.$link.'" aria-hidden="true" tabindex="-1"><h3>'.$title.'</h3></a>'.$excerpt.'[/txt]
 		  [btn size="100" class="button-products" link="'.$link.'"]View '.$title.'[/btn]
 		 [/group]
 		[/col]

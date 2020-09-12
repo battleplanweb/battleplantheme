@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', 'v1.2' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.2.1' ); }
 
 
 /*--------------------------------------------------------------
@@ -786,8 +786,8 @@ function battleplan_column_settings() {
 				'featured-image'=>array(
 					'type'=>'column-featured_image',
 					'label'=>'',
-					'width'=>'80',
-					'width_unit'=>'px',
+					'width'=>'5',
+					'width_unit'=>'%',
 					'featured_image_display'=>'image',
 					'image_size'=>'cpac-custom',
 					'image_size_w'=>'60',
@@ -803,7 +803,7 @@ function battleplan_column_settings() {
 				'title'=>array(
 					'type'=>'title',
 					'label'=>'Name',
-					'width'=>'13',
+					'width'=>'35',
 					'width_unit'=>'%',
 					'edit'=>'on',
 					'sort'=>'on',
@@ -814,7 +814,7 @@ function battleplan_column_settings() {
 				'date-published'=>array(
 					'type'=>'column-date_published',
 					'label'=>'Date Published',
-					'width'=>'',
+					'width'=>'20',
 					'width_unit'=>'%',
 					'date_format'=>'wp_default',
 					'edit'=>'on',
@@ -829,7 +829,7 @@ function battleplan_column_settings() {
 				'rating'=>array(
 					'type'=>'column-meta',
 					'label'=>'Rating',
-					'width'=>'',
+					'width'=>'10',
 					'width_unit'=>'%',
 					'field'=>'testimonial_rating',
 					'field_type'=>'',
@@ -847,7 +847,7 @@ function battleplan_column_settings() {
 				'location'=>array(
 					'type'=>'column-meta',
 					'label'=>'Location',
-					'width'=>'',
+					'width'=>'10',
 					'width_unit'=>'%',
 					'field'=>'testimonial_location',
 					'field_type'=>'checkmark',
@@ -863,7 +863,7 @@ function battleplan_column_settings() {
 				'business'=>array(
 					'type'=>'column-meta',
 					'label'=>'Business',
-					'width'=>'',
+					'width'=>'10',
 					'width_unit'=>'%',
 					'field'=>'testimonial_biz',
 					'field_type'=>'checkmark',
@@ -879,7 +879,7 @@ function battleplan_column_settings() {
 				'website'=>array(
 					'type'=>'column-meta',
 					'label'=>'Website',
-					'width'=>'',
+					'width'=>'10',
 					'width_unit'=>'%',
 					'field'=>'testimonial_website',
 					'field_type'=>'checkmark',
@@ -1238,7 +1238,7 @@ function battleplan_column_settings() {
 				'title'=>array(
 					'type'=>'title',
 					'label'=>'Page',
-					'width'=>'15',
+					'width'=>'25',
 					'width_unit'=>'%',
 					'edit'=>'on',
 					'sort'=>'on',
@@ -1260,8 +1260,8 @@ function battleplan_column_settings() {
 				'post-id'=>array(
 					'type'=>'column-postid',
 					'label'=>'ID',
-					'width'=>'150',
-					'width_unit'=>'px',
+					'width'=>'5',
+					'width_unit'=>'%',
 					'before'=>'',
 					'after'=>'',
 					'sort'=>'on',
@@ -1274,8 +1274,8 @@ function battleplan_column_settings() {
 				'last-modified'=>array(
 					'type'=>'column-modified',
 					'label'=>'Last Modified',
-					'width'=>'190',
-					'width_unit'=>'px',
+					'width'=>'10',
+					'width_unit'=>'%',
 					'date_format'=>'diff',
 					'edit'=>'on',
 					'sort'=>'on',
@@ -1289,8 +1289,8 @@ function battleplan_column_settings() {
 				'date-published'=>array(
 					'type'=>'column-date_published',
 					'label'=>'Date Published',
-					'width'=>'190',
-					'width_unit'=>'px',
+					'width'=>'10',
+					'width_unit'=>'%',
 					'date_format'=>'wp_default',
 					'edit'=>'on',
 					'sort'=>'on',
@@ -1304,7 +1304,7 @@ function battleplan_column_settings() {
 				'attachments'=>array(
 					'type'=>'column-attachment',
 					'label'=>'Attachments',
-					'width'=>'80',
+					'width'=>'30',
 					'width_unit'=>'%',
 					'attachment_display'=>'thumbnail',
 					'image_size'=>'cpac-custom',
@@ -1791,10 +1791,12 @@ function battleplan_dequeue_unwanted_stuff() {
 	wp_dequeue_style( 'wp-block-library-theme' );  wp_deregister_style( 'wp-block-library-theme' );	
 	wp_dequeue_style( 'css-animate' );  wp_deregister_style( 'css-animate' );
 	wp_dequeue_style( 'select2' );  wp_deregister_style( 'select2' );
+	wp_dequeue_style( 'fontawesome' ); wp_deregister_style( 'fontawesome' );
 	
 	wp_dequeue_script( 'select2'); wp_deregister_script('select2');	
 	wp_dequeue_script( 'wphb-global' ); wp_deregister_script( 'wphb-global' );
 	wp_dequeue_script( 'wp-embed' ); wp_deregister_script( 'wp-embed' );
+	wp_dequeue_script( 'modernizr' ); wp_deregister_script( 'modernizr' );
 	if ( !is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_dequeue_script( 'underscore' ); wp_deregister_script( 'underscore' ); } 
 }
 
@@ -1910,7 +1912,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
 		}			
 	}
     if ( "user-email" == $tag->name ) {
-		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish');
+		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com');
         $check = isset( $_POST["user-email"] ) ? trim( $_POST["user-email"] ) : ''; 
 		foreach($badwords as $badword) {
 			if (stripos($check,$badword) !== false) $result->invalidate( $tag, 'We do not accept messages from this email address.');
@@ -2457,10 +2459,10 @@ function battleplan_buildButton( $atts, $content = null ) {
 	$ada = esc_attr($a['ada']);
 	if ( $ada != '' ) $ada = ' <span class="screen-reader-text">'.$ada.'</span>';
 	$target = esc_attr($a['new-tab']);
-	if ( $target == 'yes' || $target == "true" ) $target = 'target="_blank"';
+	if ( $target == 'yes' || $target == "true" ) $target = ' target="_blank"';
 	if ( $class != '' ) $class = " ".$class;
 
-	return '<div class="block block-button span-'.$size.$class.'"'.$style.'><a '.$target.' href="'.$link.'" class="button'.$class.'">'.$content.$ada.'</a></div>';	
+	return '<div class="block block-button span-'.$size.$class.'"'.$style.'><a'.$target.' href="'.$link.'" class="button'.$class.'">'.$content.$ada.'</a></div>';	
 }
 
 /* Accordion Block */

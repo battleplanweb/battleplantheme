@@ -716,9 +716,7 @@ jQuery(function($) { try {
 // Remove empty elements
 	removeDiv('p:empty, .archive-intro:empty');
 	
-// Add -flex containers for grid setup
-	//wrapDiv('.top-strip','<div class="top-strip-flex"></div>', 'inside');
-	//wrapDiv('.logo-strip','<div class="logo-strip-flex"></div>', 'inside');	
+// Wrap content within .site-main so that widgets can be distributed properly
 	wrapDiv('.site-main','<div class="site-main-inner"></div>', 'inside');	
 		
 // Add "noFX" class to img if it appears in any of the parent divs
@@ -929,10 +927,11 @@ jQuery(function($) { try {
 		
 // Determine the widget with height closest to amount of space remaining to fill
 		window.findClosest = function (compare, loop, test) {
-			var curr = test[1], diff = Math.abs (compare - curr);
+			var curr, diff = 999999;
+			loop++;
 			for (var val = 1; val < loop; val++) {
-				var newdiff = Math.abs (compare - test[val]);
-				if ( newdiff < diff ) { diff = newdiff; curr = test[val]; }
+				var newdiff = compare - test[val];
+				if ( newdiff > 0 && newdiff < diff ) { diff = newdiff; curr = test[val]; }
 			}
 			return curr;
 		};
@@ -940,7 +939,7 @@ jQuery(function($) { try {
 // Check hidden widgets for any smaller ones that might still fit
 		window.checkWidgets = function () {			
 				var contentH = $("#primary .site-main-inner").outerHeight() + compensate, widgetH = $("#secondary .sidebar-inner").outerHeight(), i = 0, widgets = [];
-				var remainH = contentH - widgetH + 50; // 50 is arbitrary, can be adjusted as needed to make sure widgets fit but don't go over
+				var remainH = contentH - widgetH + 140; // 140 is arbitrary, can be adjusted as needed to make sure widgets fit but don't go over
 			
 				$('.widget.hide-widget').each(function() {
 					var theWidget = $(this);

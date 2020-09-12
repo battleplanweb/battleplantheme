@@ -15,7 +15,7 @@ get_header();
 			if ( get_post_type() == "galleries" ) :
 				$archiveHeadline = "Photo Galleries";
 				$archiveIntro = "<p>Click a photo below to open up the full album.</p>";
-				$colSize = "1/3";
+				$grid = "1-1-1";
 				$picSize = "100";
 				$textSize = "100";
 				$showBtn = "false";
@@ -33,7 +33,7 @@ get_header();
 				$facebookLink = do_shortcode('[get-biz info="facebook"]')."reviews/";
 				$facebookIcon = "Facebook-Like-Us-1";
 				$archiveIntro = do_shortcode('<a href="#" onclick="trackClicks(\'contact\', \'Offsite Link\', \'Facebook\', \''.$facebookLink.'\'); return false;"><img alt="Like Us on Facebook" src="/wp-content/uploads/'.$facebookIcon.'-240x234.png" class="noFX alignright" style="margin-top:0; max-height:150px"/></a>[txt]<p>Our customers really like us! But don’t take our word for it. Here are some actual reviews posted by our customers on the web.</p><p>If YOU are a satisfied customer, we invite you to click the "thumbs up" icon to review your experience with our business.  Thank you!</p>[/txt]');	
-				$colSize = "100";
+				$grid = "1";
 				$picSize = "1/4";
 				$textSize = "3/4";
 				$showBtn = "false";
@@ -42,7 +42,7 @@ get_header();
 		// Products
 			elseif ( get_post_type() == "products" ) :
 				$archiveHeadline = "Products";
-				$colSize = "100";
+				$grid = "1";
 				$picSize = "1/3";
 				$textSize = "2/3";
 				$showBtn = "true";
@@ -56,7 +56,7 @@ get_header();
 		
 		// Default Archives
 			else: 
-				$colSize = "1/3";
+				$grid = "1-1-1";
 				$picSize = "100";
 				$textSize = "100";
 				$showBtn = "true";
@@ -79,7 +79,7 @@ get_header();
 				if ( $addClass != '' ) $addClass = " ".$addClass;
 				$classes = 'col-archive col-'.get_post_type().' col-'.get_the_ID().$addClass;
 		
-				$buildArchive .= do_shortcode('[col size="'.$colSize.'" class="'.$classes.'"][build-archive type="'.get_post_type().'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'"][/col]');
+				$buildArchive .= do_shortcode('[col class="'.$classes.'"][build-archive type="'.get_post_type().'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'"][/col]');
 
 			endwhile; 
 
@@ -89,12 +89,8 @@ get_header();
 				$displayArchive .= '<div class="archive-description archive-intro '.get_post_type().'-intro">'.$archiveIntro.'</div>'; 
 			$displayArchive .= '</header><!-- .archive-header-->';
 		
-			$displayArchive .= '<div class="archive-content">';
+			$displayArchive .= do_shortcode('[section width="inline" class="archive-content"][layout grid="'.$grid.'"]'.$buildArchive.'[/layout][/section]');
 		
-				$displayArchive .= $buildArchive; 
-		
-			$displayArchive .= '</div><!-- .archive-content -->';
-			
 			$displayArchive .= '<footer class="archive-footer">';
 				$displayArchive .= get_the_posts_pagination( array( 'mid_size' => 2, 'prev_text' => _x( '<i class="fa fa-chevron-left"></i>', 'Previous set of posts' ), 'next_text' => _x( '<i class="fa fa-chevron-right"></i>', 'Next set of posts' ), ));
 			$displayArchive .= '</footer><!-- .archive-footer-->';

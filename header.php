@@ -48,7 +48,7 @@
 				<?php wp_nav_menu(
 					array(
 						'container'       => 'div',
-						'container_class' => 'menu-strip-flex',
+						'container_class' => 'flex',
 						'menu_id'         => 'top-menu',
 						'menu_class'	  => 'menu main-menu',
 						'theme_location'  => 'top-menu',
@@ -71,7 +71,7 @@
 				<?php wp_nav_menu(
 					array(
 						'container'       => 'div',
-						'container_class' => 'menu-strip-flex',
+						'container_class' => 'flex',
 						'menu_id'         => 'header-menu',
 						'menu_class'	  => 'menu main-menu',
 						'theme_location'  => 'header-menu',

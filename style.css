@@ -4,8 +4,8 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: v1.2
-Tested up to: 5.4
+Version: 1.2.1
+Tested up to: 5.5
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
 License URI: LICENSE
@@ -488,7 +488,7 @@ big {
 /* Elements
 --------------------------------------------- */
 body {
-	background: 								transparent;
+	background: 								#000000;
 }
 
 #page {
@@ -791,6 +791,10 @@ div.wpcf7 .ajax-loader {
     border-color: 								red;
 }
 
+.paypal-form {
+	max-width:									500px;
+	margin:										0 auto;
+}
 .paypal-dollar {
 	display:									inline-block;
 	width:										15px;
@@ -833,20 +837,8 @@ section.section {
 	gap:										2.5em 2%
 }
 
-.menu-strip-flex,
 .flex {
 	grid-column: 								default-start / default-end;
-}
-
-.archive-content,
-.block-group,
-.col-inner {
-	display: 									grid;
-	grid-template-columns: 						repeat(12, 1fr);
-	gap: 										2.5em 2%;
-}
-
-.flex {
 	display: 									grid;
 	gap: 										2.5em 2%;
 }
@@ -899,7 +891,6 @@ section.section {
 	grid-column:								span 1;
 }
 
-
 .flex .col-inner {
 	align-content:								start;
 }
@@ -909,17 +900,22 @@ section.section {
 	align-content:								stretch;
 }
 
-.col-inner,
-.block-group {
+.block-group,
+.col-inner {
+	display: 									grid;
+	grid-template-columns: 						repeat(12, 1fr);
 	gap: 										1.5em 2%;
 	height:										100%;
 }
 
 .archive-content {
 	width:										100%;
-	gap: 										4em 2%;
 	margin-top:									2.5em;
 	margin-bottom:								2.5em;
+}
+
+.archive-content .flex {
+	gap: 										4em 2%;
 }
 
 #main-content,
@@ -980,7 +976,7 @@ section.section {
 
 .header-stretch .top-strip .flex, 
 .header-stretch .logo-strip .flex, 
-.menu-stretch .menu-strip-flex,
+.menu-stretch .menu-strip .flex,
 .content-stretch #main-content, 
 .footer-stretch .site-footer, 
 .info-stretch .site-info .flex,
@@ -990,7 +986,7 @@ section.section-stretch .flex {
 
 .header-full .top-strip .flex, 
 .header-full .logo-strip .flex, 
-.menu-full .menu-strip-flex, 
+.menu-full .menu-strip .flex,
 .content-full #main-content, 
 .footer-full .site-footer, 
 .info-full .site-info .flex,
@@ -1000,7 +996,7 @@ section.section-full .flex {
 
 .header-edge .top-strip .flex,
 .header-edge .logo-strip .flex, 
-.menu-edge .menu-strip-flex, 
+.menu-edge .menu-strip .flex,
 .footer-edge .site-footer, 
 .info-edge .site-info .flex,
 section.section-edge .flex {
@@ -1089,7 +1085,7 @@ section.section-edge .flex {
 	text-align:									center;
 }
 
-.col:not(.span-12) .block-button:last-child {
+.flex:not(.grid-1) .col .block-button:last-child {
 	align-self:									end;
 }
 
@@ -1357,7 +1353,7 @@ section.section-edge .flex {
 	font-weight:								normal;	
 }
 
-.menu-strip-flex {
+.menu-strip .flex {
 	z-index: 									1;
 }
 

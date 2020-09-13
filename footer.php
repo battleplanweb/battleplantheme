@@ -9,7 +9,7 @@
 	$current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );
 	$page_slug = $current_page->post_name;
 	$page_data = get_page_by_path($page_slug."-bottom", OBJECT, 'page' );
-	if ( $page_data ) : echo "<section id='wrapper-bottom'>".apply_filters('the_content', $page_data->post_content)."</section><!-- #wrapper-bottom -->"; endif; 
+	if ( $page_data && $page_data->post_status == 'publish' ) : echo "<section id='wrapper-bottom'>".apply_filters('the_content', $page_data->post_content)."</section><!-- #wrapper-bottom -->"; endif; 
 	?>
 
 	<footer id="colophon">		
@@ -20,7 +20,7 @@
 			if ( !$page_data ) : $page_slug = "site-footer"; endif;				
 		else: $page_slug = "site-footer"; endif;
 		$page_data = get_page_by_path( $page_slug, OBJECT, 'page' );
-		if ( $page_data ) : echo "<div class='site-footer'>".apply_filters('the_content', $page_data->post_content)."</div><!-- .site-footer -->"; endif;
+		if ( $page_data && $page_data->post_status == 'publish' ) : echo "<div class='site-footer'>".apply_filters('the_content', $page_data->post_content)."</div><!-- .site-footer -->"; endif;
 		?>
 		
 		<section class="section site-info">			
@@ -47,7 +47,7 @@
 				if ( do_shortcode('[get-biz info="misc1"]') ) $buildCopyright .= " • ".do_shortcode('[get-biz info="misc1"]');	
 				$buildCopyright .= "</div>";
 
-				$buildRight = do_shortcode('[img size="1/6" link = "/" class="site-icon"]<img src="../../../wp-content/uploads/flag-pic.jpg" alt="Return to Home Page"/>[/img]');
+				$buildRight = do_shortcode('[img size="1/6" link = "/" class="site-icon"]<img class="site-icon noFX" src="../../../wp-content/uploads/site-icon.png" alt="Return to Home Page"/>[/img]');
 				$buildRight .= do_shortcode('[txt size="5/6"]'.$buildCopyright.'[/txt]');
 
 				echo do_shortcode('[layout grid="1-2"][col class="site-info-left"]'.$buildLeft.'[/col][col class="site-info-right"]'.$buildRight.'[/col][/layout]');

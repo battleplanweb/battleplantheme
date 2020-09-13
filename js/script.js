@@ -471,6 +471,12 @@ jQuery(function($) { try {
 			$currentPage.find(">a").addClass(linkOn).removeClass(linkOff);
 		});
 	};		
+	
+// Duplicate menu button text onto the button BG
+	$( ".main-navigation ul.main-menu li > a").each(function() { 
+		var btnText = $(this).html();			
+		$(this).parent().attr('data-content', btnText);
+	});
 		
 	
 /*--------------------------------------------------------------
@@ -724,13 +730,13 @@ jQuery(function($) { try {
 	$( "div.noFX" ).find("a").addClass("noFX");
 	
 // Fade in lazy loaded images
-	animateDiv( 'img', 'fadeIn', 150, '100%', 200 );
+	//animateDiv( 'img:not(.loader-img):not(.site-icon)', 'fadeIn', 150, '110%', 200 );
 	
 // Preload BG image and fade in
 	if ( $( 'body' ).hasClass( "background-image" ) && getDeviceW() > mobileCutoff ) {
 		var preloadBG = new Image();
-		preloadBG.onload = function() { animateDiv( '.parallax-mirror', 'fadeIn', 0, '', 200 ); }			
-		preloadBG.onerror = function() { console.log("site-background.jpg not found"); }
+		preloadBG.onload = function() { animateDiv( '.parallax-mirror', 'fadeIn', 0, '', 200 ); };		
+		preloadBG.onerror = function() { console.log("site-background.jpg not found"); };
 		preloadBG.src = getUploadURI + "/" + "site-background.jpg";  
 	}
 	
@@ -973,7 +979,7 @@ jQuery(function($) { try {
 		
  // Move sidebar in conjunction with mouse scroll to keep it even with content
 		window.moveWidgets = function () {
-			var contentH = $('#primary').outerHeight(), elem = $(".sidebar-inner"), elemH = elem.outerHeight() + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom'));				
+			var contentH = $('#primary').outerHeight(), elem = $(".sidebar-inner"), elemH = elem.outerHeight() + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom')), contentV = contentH - getDeviceH(), sidebarV = elemH - getDeviceH();				
 			var conH = $("#secondary").outerHeight(), conT = $("#secondary").offset().top, winH = $(window).height(), winT = $(window).scrollTop();				
 			var adjT = winT - conT, fullH = conH - winH, scrollPct = adjT / fullH, dist = winT - conT, maxH = contentH - elemH;	
 			if ( scrollPct > 1 ) { scrollPct = 1; }
@@ -981,7 +987,9 @@ jQuery(function($) { try {
 			var moveElem = maxH * scrollPct;	
 			if ( moveElem > maxH ) { moveElem = maxH; }
 			if ( moveElem < 0 ) { moveElem = 0; }
-			if ( dist > 0 && getDeviceW() > mobileCutoff ) { elem.css("margin-top",moveElem+"px"); } else { elem.css("margin-top","0px"); }
+			if ( contentV > 0 && sidebarV > -100 && dist > 0 && getDeviceW() > mobileCutoff ) { elem.css("margin-top",moveElem+"px"); } else { elem.css("margin-top","0px"); }
+			
+			//console.log("contentV="+contentV+", sidebarV="+sidebarV);
 		};
 	};
 
@@ -993,12 +1001,14 @@ jQuery(function($) { try {
 	$(window).load(function() { screenResize(true); });
 	$(window).resize(function() { screenResize(true); }); 
 	
-	window.screenResize = function (widgets) {			
+	window.screenResize = function (widgets) {		
+		widgets = widgets || false;
+
 		setTimeout( function () {
 		// Ensure Parallax elements and widgets are re-assessed on desktop
 			if ( getDeviceW() > mobileCutoff ) { 
 				$(window).trigger('resize.px.parallax');
-				if ( widgets == true ) { widgetInit(); }
+				if ( widgets == true ) { widgetInit(); } 
 			} 
 			
 			labelWidgets();
@@ -1009,7 +1019,7 @@ jQuery(function($) { try {
 			} else {
 				window.removeEventListener('scroll', moveWidgets );
 			}							
-		}, 200); // 200 is shortest time for widgets to work
+		}, 300); // 200 is shortest time for widgets to work
 		
 	// Add class to body to determine which size screen is being viewed
 		$('body').removeClass("screen-5 screen-4 screen-3 screen-2 screen-1 screen-mobile screen-desktop");
@@ -1129,7 +1139,8 @@ jQuery(function($) { try {
 	});
 	$('*').on('focus', function() {
 		if ( allowTabFocus ) { 
-			$(this).addClass('tab-focus');
+			$(this).addClass('tab-focus');			
+			$(this).closest('li').addClass('tab-focus');
 			var scrollPos = $(window).scrollTop(), moveTo = $(this).offset().top - ($(window).height() / 2), diff = Math.abs(moveTo - scrollPos);		
 			if ( diff > 200 ) { animateScroll(moveTo); }
 		}

@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.2.1' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.2.2' ); }
 
 
 /*--------------------------------------------------------------
@@ -2350,16 +2350,18 @@ function battleplan_buildLayout( $atts, $content = null ) {
 // Column
 add_shortcode( 'col', 'battleplan_buildColumn' );
 function battleplan_buildColumn( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'class'=>'', 'valign'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50' ), $atts );
+	$a = shortcode_atts( array( 'class'=>'', 'align'=>'', 'valign'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50' ), $atts );
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
+	$align = esc_attr($a['align']);
+	if ( $align != '' ) $align = " text-".$align;
 	$valign = esc_attr($a['valign']);
 	if ( $valign != '' ) $valign = " valign-".$valign;
 	$background = esc_attr($a['background']);
 	$left = esc_attr($a['left']);
 	$top = esc_attr($a['top']);
 
-	$buildCol = '<div class="col '.$class.$valign.'"><div class="col-inner"';
+	$buildCol = '<div class="col '.$class.$align.$valign.'"><div class="col-inner"';
 	if ( $background != "" ) $buildCol .= 'style="background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;"';	
 	$buildCol .= '>';
 	$buildCol .= do_shortcode($content);

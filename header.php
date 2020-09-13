@@ -86,7 +86,7 @@
 	<?php $current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );
 	$page_slug = $current_page->post_name;
 	$page_data = get_page_by_path($page_slug."-top", OBJECT, 'page' );
-	if ( $page_data ) : echo "<section id='wrapper-top'>".apply_filters('the_content', $page_data->post_content)."</section><!-- #wrapper-top -->"; endif; ?>
+	if ( $page_data && $page_data->post_status == 'publish' ) : echo "<section id='wrapper-top'>".apply_filters('the_content', $page_data->post_content)."</section><!-- #wrapper-top -->"; endif; ?>
 	
 	<section id="wrapper-content">
 		<div id="main-content">

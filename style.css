@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 1.2.1
+Version: 1.2.2
 Tested up to: 5.5
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -583,8 +583,21 @@ table {
 .text-left {
 	text-align:									left;
 }
+
 .text-right {
 	text-align:									right;
+}
+
+.text-center {
+	text-align:									center;
+}
+
+.text-small {
+	font-size:									75%;
+}
+
+.text-big {
+	font-size:									125%;
 }
 
 .technical-difficulties {
@@ -895,9 +908,25 @@ section.section {
 	align-content:								start;
 }
 
+.top-strip .flex .col-inner,
+.logo-strip .flex .col-inner,
+.site-info .flex .col-inner {
+	align-content:								center;
+}
+
+.flex.valign-start .col-inner,
+.flex .col.valign-start .col-inner {
+	align-content:								start;
+}
+
 .flex.valign-stretch .col-inner,
 .flex .col.valign-stretch .col-inner {
 	align-content:								stretch;
+}
+
+.flex.valign-center .col-inner,
+.flex .col.valign-center .col-inner {
+	align-content:								center;
 }
 
 .block-group,
@@ -1123,12 +1152,10 @@ section.section-edge .flex {
 
 /* Content
 --------------------------------------------- */
-.content-box #primary {
-	background:									rgba(0,0,0,0.1);
-	padding:									1.5em;
-}
-
-.sidebar-box #secondary {
+.content-box #primary,
+.sidebar-box #secondary,
+.widget-box .widget,
+.content-sidebar-box #main-content {
 	background:									rgba(0,0,0,0.1);
 	padding:									1.5em;
 }
@@ -1150,11 +1177,6 @@ section.section-edge .flex {
 	border-left: 								none;
 	padding-right:								1.5em;
 	border-right: 								1px solid rgba(0,0,0,0.3);
-}
-
-.widget-box .widget {
-	background:									rgba(0,0,0,0.1);
-	padding:									1.5em;
 }
 
 /* Widgets
@@ -1302,6 +1324,7 @@ section.section-edge .flex {
 	position:									absolute;
 	left: 										0;
 	width: 										100%;
+	margin-top:									11px;
 	text-align: 								center;
 	color: 										rgba(0,0,0,0.75);
 	z-index:									10000;
@@ -1309,8 +1332,8 @@ section.section-edge .flex {
 }
 
 .social-button i.fa::before {
-	font-size:									40px;
-	line-height: 								1.6;
+	font-size:									34px;
+	line-height: 								1;
 }
 
 .social-button:hover i.fa {
@@ -1390,6 +1413,33 @@ section.section-edge .flex {
 	color: 										#ffffff;
 	background: 								#404040;
 	border:										none;
+	transition:									all 0.2s ease;
+}
+
+/* Menu Button BG */
+.main-navigation ul.main-menu li::before, 
+.main-navigation ul.main-menu li::after { 
+	content:									" ";
+	position:									absolute;
+	width:										100%;
+	height:										100%;
+	right:										0;
+	top:										0;
+	margin-top:									0;
+	background: 								transparent;
+	transform:									scale(0,0);
+ 	transform-origin: 							50% 50%;
+	z-index:									-1;
+	transition:									all 0.2s ease;
+}
+
+.main-navigation ul.main-menu li:hover::before, 
+.main-navigation ul.main-menu li.active::before,
+.main-navigation ul.main-menu li.tab-focus::before,
+.main-navigation ul.main-menu li:hover::after, 
+.main-navigation ul.main-menu li.active::after,
+.main-navigation ul.main-menu li.tab-focus::after { 
+	transform:									scale(1,1);
 	transition:									all 0.2s ease;
 }
 

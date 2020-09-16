@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.2.2' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.2.3' ); }
 
 
 /*--------------------------------------------------------------
@@ -184,8 +184,8 @@ function battleplan_addShareButtons( $atts, $content = null ) {
 };
 
 // Build an archive
-add_shortcode( 'build-archive', 'WebsiteGO_getBuildArchive' );
-function WebsiteGO_getBuildArchive($atts, $content = null) {	
+add_shortcode( 'build-archive', 'battleplan_getBuildArchive' );
+function battleplan_getBuildArchive($atts, $content = null) {	
 	$a = shortcode_atts( array( 'type'=>'', 'show_btn'=>'false', 'btn_text'=>'Read More', 'btn_pos'=>'outside', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_social'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'show_thumb'=>'true', 'no_pic'=>'', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'accordion'=>'false', 'format_text'=>'false', 'link'=>'post' ), $atts );
 	$type = esc_attr($a['type']);	
 	$showBtn = esc_attr($a['show_btn']);	
@@ -208,7 +208,7 @@ function WebsiteGO_getBuildArchive($atts, $content = null) {
 	$format = esc_attr($a['format_text']);
 	$link = esc_attr($a['link']);		
 	if ( $link == "false" || $link == "no" || $type == "testimonials" ) : $link == "false"; $linkLoc = "";
-	elseif ( $link == "post" ) : $linkLoc = get_the_permalink(get_the_ID());
+	elseif ( $link == "post" ) : $linkLoc = esc_url(get_the_permalink(get_the_ID()));
 	else: $linkLoc = $link;	endif;
 	$noPic = esc_attr($a['no_pic']);	
 	if ( $noPic == "" ) $noPic = "false";	
@@ -278,9 +278,11 @@ function WebsiteGO_getBuildArchive($atts, $content = null) {
 			$archiveMeta = $archiveBody = "";
 			//$archiveBody = "[txt size='".$textSize."' class='text-".$type."']";	
 			if ( $showTitle == "true" ) :
-				if ( $showContent != "true" && $link != "false" ) $archiveMeta .= '<a href="'.$linkLoc.'" class="link-archive link-'.get_post_type().' span-12"'.$titleADA.'>';		
-				$archiveMeta .= '<h3>'.get_the_title().'</h3>';
-				if ( $showContent != "true" && $link != "false" ) $archiveMeta .= '</a>';		
+				$archiveMeta .= "<h3>";
+				if ( $showContent != "true" && $link != "false" ) $archiveMeta .= '<a href="'.$linkLoc.'" class="link-archive link-'.get_post_type().'"'.$titleADA.'>';		
+				$archiveMeta .= esc_html(get_the_title());  
+				if ( $showContent != "true" && $link != "false" ) $archiveMeta .= '</a>';	
+				$archiveMeta .= "</h3>";
 			endif;		
 			if ( $showDate == "true" || $showAuthor == "true" || $showSocial == "true" ) $archiveMeta .= '<div class="archive-meta">';
 			if ( $showDate == "true" ) $archiveMeta .= '<div class="archive-date '.$type.'-date date"><i class="fa fa-clock-o"></i>'.get_the_date().'</div>';
@@ -312,8 +314,8 @@ function WebsiteGO_getBuildArchive($atts, $content = null) {
 	
 	$buildBody = "";
 	if ( $titlePos == "inside" || $btnPos == "inside" || $type == "testimonials" ) : $groupSize = $textSize; $textSize = "100"; $buildBody .= "[group size='".$groupSize."' class='group-".$type."']"; endif;	
-	if ( $titlePos == "inside" ) $buildBody .= $archiveMeta;	
 	if ( $type != "testimonials" ) $buildBody .= "[txt size='".$textSize."' class='text-".$type."']";
+	if ( $titlePos == "inside" ) $buildBody .= $archiveMeta;	
 	$buildBody .= do_shortcode($archiveBody);
 	if ( $type != "testimonials" ) $buildBody .= "[/txt]";	
 	if ( $btnPos == "inside" ) $buildBody .= $buildBtn;	
@@ -325,6 +327,73 @@ function WebsiteGO_getBuildArchive($atts, $content = null) {
 	if ( $btnPos != "inside" ) $showArchive .= $buildBtn;	
 	
 	return $showArchive;
+}
+
+// Display randomly selected posts - start/end can be dates or -53 week / -51 week */
+add_shortcode( 'get-random-posts', 'battleplan_getRandomPosts' );
+function battleplan_getRandomPosts($atts, $content = null) {	
+	$a = shortcode_atts( array( 'num'=>'1', 'offset'=>'0', 'type'=>'post', 'tax'=>'', 'terms'=>'', 'orderby'=>'rand', 'sort'=>'asc', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_social'=>'false', 'show_btn'=>'true', 'button'=>'Read More', 'btn_pos'=>'inside', 'show_content'=>'false', 'thumbnail'=>'force', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'class'=>'', 'link'=>'post' ), $atts );
+	$num = esc_attr($a['num']);	
+	$potentialOffset = esc_attr($a['offset']);
+	$offset = rand(0,$potentialOffset);
+	$postType = esc_attr($a['type']);	
+	$title = esc_attr($a['show_title']);	
+	$orderBy = esc_attr($a['orderby']);	
+	$sort = esc_attr($a['sort']);	
+	$titlePos = esc_attr($a['title_pos']);	
+	$showDate = esc_attr($a['show_date']);	
+	$showExcerpt = esc_attr($a['show_excerpt']);		
+	$showContent = esc_attr($a['show_content']);	
+	$showAuthor = esc_attr($a['show_author']);	
+	$showSocial = esc_attr($a['show_social']);	
+	$showBtn = esc_attr($a['show_btn']);	
+	$button = esc_attr($a['button']);	
+	$btnPos = esc_attr($a['btn_pos']);	
+	$content = esc_attr($a['show_content']);	
+	$thumbnail = esc_attr($a['thumbnail']);	
+	$start = esc_attr($a['start']);	
+	$end = esc_attr($a['end']);	
+	$taxonomy = esc_attr($a['tax']);
+	$term = esc_attr($a['terms']);
+	$terms = explode( ',', $term );
+	$excludeRaw = esc_attr($a['exclude']);
+	$exclude = explode(',', $excludeRaw); 
+	$xCurrent = esc_attr($a['x_current']);
+	if ( $xCurrent == "true" ) :
+		global $post; $excludeThis = $post->ID;
+		array_push($exclude, $excludeThis);
+	endif;	
+	$size = esc_attr($a['size']);		
+	$picSize = esc_attr($a['pic_size']);	
+	$textSize = esc_attr($a['text_size']);		
+	$link = esc_attr($a['link']);		
+	$class = esc_attr($a['class']);	
+	if ( $class != "" ) $class.=" ";	
+	
+	$args = array ('posts_per_page'=>$num, 'offset'=>$offset, 'date_query'=>array( array( 'after'=>$start, 'before'=>$end, 'inclusive'=>true, ), ), 'order'=>$sort, 'post_type'=>$postType, 'post__not_in'=>$exclude);
+
+	if ( $orderBy == 'views-today' ) : $args['meta_key']="post-views-day-1"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="post-views-total-7day"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="post-views-total-30day"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="post-views-total-all"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'recent' ) : $args['meta_key']="post-views-time"; $args['orderby']='meta_value_num';	
+	else : $args['orderby']=$orderBy; endif;		
+
+	if ( $taxonomy && $term ) : 
+		$args['tax_query']=array( array('taxonomy'=>$taxonomy, 'field'=>'slug', 'terms'=>$terms ));
+	endif;
+
+	global $post; 
+	$getPosts = new WP_Query( $args );
+	$combinePosts = "";
+	if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 
+
+		$showPost = do_shortcode('[build-archive type="'.$postType.'" show_btn="'.$showBtn.'" btn_text="'.$button.'" btn_pos="'.$btnPos.'" show_title="'.$title.'" title_pos="'.$titlePos.'" show_date="'.$showDate.'" show_excerpt="'.$showExcerpt.'" show_social="'.$showSocial.'" show_content="'.$showContent.'" show_author="'.$showAuthor.'" size="'.$size.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" link="'.$link.'"]');		
+		
+		if ( has_post_thumbnail() || $thumbnail != "force" ) $combinePosts .= $showPost;
+
+	endwhile; wp_reset_postdata(); endif;
+	return $combinePosts;
 }
 
 // Display posts & images in a Bootstrap slider 
@@ -2183,7 +2252,6 @@ function bp_loader() { do_action('bp_loader'); }
 function bp_font_loader() { do_action('bp_font_loader'); }
 function bp_google_analytics() { do_action('bp_google_analytics'); }
 function bp_mobile_menu_bar_items() { do_action('bp_mobile_menu_bar_items'); }
-function bp_footer_scripts() { do_action('bp_footer_scripts'); }
 
 
 /*--------------------------------------------------------------
@@ -2337,12 +2405,14 @@ function battleplan_buildSection( $atts, $content = null ) {
 // Layout
 add_shortcode( 'layout', 'battleplan_buildLayout' );
 function battleplan_buildLayout( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'grid'=>'1', 'valign'=>'' ), $atts );
+	$a = shortcode_atts( array( 'grid'=>'1', 'valign'=>'', 'break'=>'' ), $atts );
 	$grid = esc_attr($a['grid']);
 	$valign = esc_attr($a['valign']);
 	if ( $valign != '' ) $valign = " valign-".$valign;
+	$break = esc_attr($a['break']);
+	if ( $break != '' ) $break = " break-".$break;
 
-	$buildLayout = '<div class="flex grid-'.$grid.$valign.'">'.do_shortcode($content).'</div>';	
+	$buildLayout = '<div class="flex grid-'.$grid.$valign.$break.'">'.do_shortcode($content).'</div>';	
 	
 	return $buildLayout;
 }
@@ -2406,7 +2476,7 @@ function battleplan_buildVid( $atts, $content = null ) {
 	if ( strpos($link, 'youtube') !== false && $related == "false" ) $link .= "?rel=0";
 	$size = esc_attr($a['size']);	
 	$size = convertSize($size);	
-	$height = 56.25 * ($size/100);	
+	$height = 56.25 * ($size/12);	
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
 
@@ -2468,19 +2538,19 @@ function battleplan_buildButton( $atts, $content = null ) {
 }
 
 /* Accordion Block */
-add_shortcode( 'accordion', 'WebsiteGO_buildAccordion' );
-function WebsiteGO_buildAccordion( $atts, $content = null ) {
+add_shortcode( 'accordion', 'battleplan_buildAccordion' );
+function battleplan_buildAccordion( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'title'=>'', 'excerpt'=>'', 'class'=>'', 'icon'=>'true' ), $atts );
-	$title = esc_attr($a['title']);	
-	if ( $title ) $title = '<h2 role="button" tabindex="0" class="accordion-title">'.$title.'</h2>';
 	$excerpt = esc_attr($a['excerpt']);
 	if ( $excerpt != '' ) $excerpt = '<div class="accordion-excerpt"><div class="accordion-box">'.$excerpt.'</div></div>';
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
 	$icon = esc_attr($a['icon']);
-	if ( $icon == 'true' ) $icon = '<div class="accordion-icon"></div>';
+	if ( $icon == 'true' ) $icon = '<span class="accordion-icon"></span>';
+	$title = esc_attr($a['title']);	
+	if ( $title ) $title = '<h2 role="button" tabindex="0" class="accordion-title">'.$icon.$title.'</h2>';
 	
-	return '<div class="block block-accordion'.$class.'">'.$icon.$title.$excerpt.'<div class="accordion-content"><div class="accordion-box">'.do_shortcode($content).'</div></div></div>';	
+	return '<div class="block block-accordion'.$class.'">'.$title.$excerpt.'<div class="accordion-content"><div class="accordion-box">'.do_shortcode($content).'</div></div></div>';	
 }
  
 /* Social Media Buttons */

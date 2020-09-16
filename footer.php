@@ -60,9 +60,6 @@
 <!-- Scroll to Top btn -->
 <a class ="scroll-top hide-1 hide-2 hide-3" href="#page"><i class="fa fa-chevron-up" aria-hidden="true"></i><span class="sr-only">Scroll To Top</span></a>
 
-
-<?php bp_footer_scripts(); ?>
-
 <?php wp_footer(); ?>
 
 </body>

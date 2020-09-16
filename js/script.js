@@ -979,7 +979,7 @@ jQuery(function($) { try {
 		
  // Move sidebar in conjunction with mouse scroll to keep it even with content
 		window.moveWidgets = function () {
-			var contentH = $('#primary').outerHeight(), elem = $(".sidebar-inner"), elemH = elem.outerHeight() + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom')), contentV = contentH - getDeviceH(), sidebarV = elemH - getDeviceH();				
+			var contentH = $('#primary').outerHeight(), elem = $(".sidebar-inner"), elemH = elem.outerHeight() + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom')), contentV = contentH - getDeviceH() + 200, sidebarV = elemH - getDeviceH() + 400;				
 			var conH = $("#secondary").outerHeight(), conT = $("#secondary").offset().top, winH = $(window).height(), winT = $(window).scrollTop();				
 			var adjT = winT - conT, fullH = conH - winH, scrollPct = adjT / fullH, dist = winT - conT, maxH = contentH - elemH;	
 			if ( scrollPct > 1 ) { scrollPct = 1; }
@@ -987,7 +987,7 @@ jQuery(function($) { try {
 			var moveElem = maxH * scrollPct;	
 			if ( moveElem > maxH ) { moveElem = maxH; }
 			if ( moveElem < 0 ) { moveElem = 0; }
-			if ( contentV > 0 && sidebarV > -100 && dist > 0 && getDeviceW() > mobileCutoff ) { elem.css("margin-top",moveElem+"px"); } else { elem.css("margin-top","0px"); }
+			if ( contentV > 0 && sidebarV > 0 && dist > 0 && getDeviceW() > mobileCutoff ) { elem.css("margin-top",moveElem+"px"); } else { elem.css("margin-top","0px"); }
 			
 			//console.log("contentV="+contentV+", sidebarV="+sidebarV);
 		};

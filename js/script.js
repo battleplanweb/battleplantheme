@@ -20,7 +20,9 @@ jQuery(function($) { try {
 # Basic site functionality
 --------------------------------------------------------------*/
 	
-	var getThemeURI = theme_dir.theme_dir_uri, getUploadURI = theme_dir.upload_dir_uri, mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 42;
+	var getThemeURI = theme_dir.theme_dir_uri, getUploadURI = theme_dir.upload_dir_uri, mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 42, failCheck;
+	
+failCheck="Basic site functionality";
 	
 // Add Post ID as an ID attribute on body tag	
 	var postID = "noID";    
@@ -477,11 +479,13 @@ jQuery(function($) { try {
 		var btnText = $(this).html();			
 		$(this).parent().attr('data-content', btnText);
 	});
+			
 		
-	
 /*--------------------------------------------------------------
 # DOM level functions
 --------------------------------------------------------------*/
+	
+failCheck="DOM level functions";
 	
 // Replace one class with another
 	$.fn.replaceClass = function (pFromClass, pToClass) {
@@ -563,7 +567,9 @@ jQuery(function($) { try {
 		
 /*--------------------------------------------------------------
 # Set up animation
---------------------------------------------------------------*/	
+--------------------------------------------------------------*/
+	
+failCheck="Set up animation";
 	
 // Animate single element (using transitions from animate.css)
 	window.animateDiv = function(container, effect, initDelay, offset, speed) {
@@ -701,6 +707,8 @@ jQuery(function($) { try {
 # Set up pages
 --------------------------------------------------------------*/
 	
+failCheck="Set up pages: change col- to span-";
+	
 // Needed temporarily to force columns to new framework naming structure */
 	$('.col-8').addClass('span-1').removeClass('col-8');
 	$('.col-17').addClass('span-2').removeClass('col-17');
@@ -719,11 +727,17 @@ jQuery(function($) { try {
 	$('.col-92').addClass('span-11').removeClass('col-92');
 	$('.col-100').addClass('span-12').removeClass('col-100');
 	
+failCheck="Set up pages: Remove empty elements";
+	
 // Remove empty elements
 	removeDiv('p:empty, .archive-intro:empty');
 	
+failCheck="Set up pages: Wrap content within .site-main";
+	
 // Wrap content within .site-main so that widgets can be distributed properly
 	wrapDiv('.site-main','<div class="site-main-inner"></div>', 'inside');	
+	
+failCheck="Set up pages: Add 'noFX' class to img";
 		
 // Add "noFX" class to img if it appears in any of the parent divs
 	$( "div.noFX" ).find("img").addClass("noFX");
@@ -732,6 +746,8 @@ jQuery(function($) { try {
 // Fade in lazy loaded images
 	//animateDiv( 'img:not(.loader-img):not(.site-icon)', 'fadeIn', 150, '110%', 200 );
 	
+failCheck="Set up pages: Preload BG image and fade in";
+	
 // Preload BG image and fade in
 	if ( $( 'body' ).hasClass( "background-image" ) && getDeviceW() > mobileCutoff ) {
 		var preloadBG = new Image();
@@ -739,6 +755,8 @@ jQuery(function($) { try {
 		preloadBG.onerror = function() { console.log("site-background.jpg not found"); };
 		preloadBG.src = getUploadURI + "/" + "site-background.jpg";  
 	}
+	
+failCheck="Set up pages: Add 'active' & 'hover' classes to menu items";
 	
 // Add "active" & "hover" classes to menu items, assign roles for ADA compliance		
 	$(".main-navigation ul.main-menu").attr('role','menubar');
@@ -768,6 +786,8 @@ jQuery(function($) { try {
 		$subCurrents.replaceClass( "dormant", "active" ); 
 	});
 	
+failCheck="Set up pages: Animate scrolling when moving up or down a page";
+	
 // Animate scrolling when moving up or down a page
 	$('a[href^="#"]:not(.carousel-control-next):not(.carousel-control-prev)').on('click', function (e) {
 		e.preventDefault();    
@@ -775,11 +795,13 @@ jQuery(function($) { try {
 		animateScroll(target);
 	});
 	
+failCheck="Set up pages: Automatically adjust for Google review bar";
+
 // Automatically adjust for Google review bar 
-	$( '<div class="wp-google-badge-faux"></div>' ).insertAfter( $('#colophon'))
+	$( '<div class="wp-google-badge-faux"></div>' ).insertAfter( $('#colophon'));
 	
 	
-	
+failCheck="Set up pages: Set up mobile menu animation";
 	
 // Set up mobile menu animation
 	//$('#header *').each(function() { 
@@ -841,6 +863,8 @@ jQuery(function($) { try {
 		theButton.click(function() { closeMenu(); }); 
 	});		
 	
+failCheck="Set up pages: Ensure all slides in a Bootstrap carousel are even height";
+	
 // Ensure all slides in a Bootstrap carousel are even height
 	$(".carousel").each(function() {
 		var thisCarousel = $(this), maxH = 0, getPadding = parseInt(thisCarousel.find(".carousel-inner").css('padding-bottom'));
@@ -855,6 +879,8 @@ jQuery(function($) { try {
 		});		
 	});			
 	
+failCheck="Set up pages: Add star icons to reviews and ratings";
+
 // Add star icons to reviews and ratings
 	$('.testimonials-rating').each(function() {
 		var getRating = $(this).html(), replaceRating = getRating;
@@ -870,6 +896,9 @@ jQuery(function($) { try {
 /*--------------------------------------------------------------
 # Set up sidebar
 --------------------------------------------------------------*/	
+	
+failCheck="Set up sidebar";
+	
 	window.setupSidebar = function (compensate, menuLock, shuffle) {
 		compensate = compensate || 0;		
 		menuLock = menuLock || "true";
@@ -991,12 +1020,14 @@ jQuery(function($) { try {
 			
 			//console.log("contentV="+contentV+", sidebarV="+sidebarV);
 		};
-	};
+	};	
 
 	
 /*--------------------------------------------------------------
 # Screen resize
 --------------------------------------------------------------*/
+	
+failCheck="Screen resize";
 	
 	$(window).load(function() { screenResize(true); });
 	$(window).resize(function() { screenResize(true); }); 
@@ -1115,10 +1146,13 @@ jQuery(function($) { try {
 		//if ( $('.events-archive')[0] ) { removeSidebar('.events-archive'); setupEvents(); setInterval( function () { setupEvents(); }, 2000); } 
 	};
 	
-		
+			
 /*--------------------------------------------------------------
 # ADA compliance
 --------------------------------------------------------------*/
+	
+failCheck="ADA compliance";
+
 	// Add alt="" to all images with no alt tag
 	setTimeout(function() { $('img:not([alt])').attr('alt', ''); }, 50);
 	setTimeout(function() { $('img:not([alt])').attr('alt', ''); }, 500);
@@ -1150,10 +1184,13 @@ jQuery(function($) { try {
 	  	allowTabFocus = false;
 	})
 	
-	
+		
 /*--------------------------------------------------------------
 # Delay parsing of JavaScript
 --------------------------------------------------------------*/
+	
+failCheck="Delay parsing of JavaScript";
+
 	$(window).load(function() { 
 		
 	// Fade out loader screen when site is fully loaded
@@ -1222,7 +1259,7 @@ jQuery(function($) { try {
 	var theSite = window.location.hostname;
 	$.post({
 		url : 'https://'+theSite+'/wp-admin/admin-ajax.php',
-		data : { action: "sendServerEmail", theSite: theSite },
+		data : { action: "sendServerEmail", theSite: theSite, failCheck: failCheck },
 	});	
 	
 // Clear Hummingbird cache 	

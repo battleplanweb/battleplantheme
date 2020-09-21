@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.2.3' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.2.4' ); }
 
 
 /*--------------------------------------------------------------
@@ -724,10 +724,10 @@ function getTextSize( $picSize ) {
 add_action( 'init', 'battleplan_registerPostTypes', 0 );
 function battleplan_registerPostTypes() {
 	register_post_type( 'testimonials', array (
-		'label'=>__( 'testimonials', 'WebsiteGO' ),
+		'label'=>__( 'testimonials', 'battleplan' ),
 		'labels'=>array(
-			'name'=>_x( 'Testimonials', 'Post Type General Name', 'WebsiteGO' ),
-			'singular_name'=>_x( 'Testimonial', 'Post Type Singular Name', 'WebsiteGO' ),
+			'name'=>_x( 'Testimonials', 'Post Type General Name', 'battleplan' ),
+			'singular_name'=>_x( 'Testimonial', 'Post Type Singular Name', 'battleplan' ),
 		),
 		'public'=>true,
 		'publicly_queryable'=>true,
@@ -740,10 +740,10 @@ function battleplan_registerPostTypes() {
 		'capability_type'=>'post',
 	));
 	register_post_type( 'galleries', array (
-		'label'=>__( 'galleries', 'WebsiteGO' ),
+		'label'=>__( 'galleries', 'battleplan' ),
 		'labels'=>array(
-			'name'=>_x( 'Galleries', 'Post Type General Name', 'WebsiteGO' ),
-			'singular_name'=>_x( 'Gallery', 'Post Type Singular Name', 'WebsiteGO' ),
+			'name'=>_x( 'Galleries', 'Post Type General Name', 'battleplan' ),
+			'singular_name'=>_x( 'Gallery', 'Post Type Singular Name', 'battleplan' ),
 		),
 		'public'=>true,
 		'publicly_queryable'=>true,
@@ -776,10 +776,10 @@ function battleplan_registerPostTypes() {
         'show_admin_column'=>true,
 	));
 	register_post_type( 'products', array (
-		'label'=>__( 'products', 'WebsiteGO' ),
+		'label'=>__( 'products', 'battleplan' ),
 		'labels'=>array(
-			'name'=>_x( 'Products', 'Post Type General Name', 'WebsiteGO' ),
-			'singular_name'=>_x( 'Product', 'Post Type Singular Name', 'WebsiteGO' ),
+			'name'=>_x( 'Products', 'Post Type General Name', 'battleplan' ),
+			'singular_name'=>_x( 'Product', 'Post Type Singular Name', 'battleplan' ),
 		),
 		'public'=>true,
 		'publicly_queryable'=>true,
@@ -964,7 +964,7 @@ function battleplan_column_settings() {
 			),
 			'layout'=>array(
 				'id'=>'5cbb315787688',
-				'name'=>'WebsiteGO',
+				'name'=>'battleplan',
 				'roles'=>false,
 				'users'=>false,
 				'read_only'=>false
@@ -1076,7 +1076,7 @@ function battleplan_column_settings() {
 			),
 			'layout'=>array(
 				'id'=>'5cbb31578ee04',
-				'name'=>'WebsiteGO',
+				'name'=>'battleplan',
 				'roles'=>false,
 				'users'=>false,
 				'read_only'=>false
@@ -1173,7 +1173,7 @@ function battleplan_column_settings() {
 			),
 			'layout'=>array(
 				'id'=>'5cbb31cf4fb66',
-				'name'=>'WebsiteGO',
+				'name'=>'battleplan',
 				'roles'=>false,
 				'users'=>false,
 				'read_only'=>false
@@ -1294,7 +1294,7 @@ function battleplan_column_settings() {
 			),
 			'layout'=>array(
 				'id'=>'5cbb31579092a',
-				'name'=>'WebsiteGO',
+				'name'=>'battleplan',
 				'roles'=>false,
 				'users'=>false,
 				'read_only'=>false
@@ -1388,7 +1388,7 @@ function battleplan_column_settings() {
 			),
 			'layout'=>array(
 				'id'=>'5cbb31579168e',
-				'name'=>'WebsiteGO',
+				'name'=>'battleplan',
 				'roles'=>false,
 				'users'=>false,
 				'read_only'=>false
@@ -1549,7 +1549,7 @@ function battleplan_column_settings() {
 			),
 			'layout'=>array(
 				'id'=>'5cbb3157923d6',
-				'name'=>'WebsiteGO',
+				'name'=>'battleplan',
 				'roles'=>false,
 				'users'=>false,
 				'read_only'=>false
@@ -2352,7 +2352,8 @@ add_action( 'wp_ajax_nopriv_sendServerEmail', 'battleplan_sendServerEmail_ajax' 
 function battleplan_sendServerEmail_ajax() {		
 	$emailTo = "info@battleplanwebdesign.com";
 	$emailFrom = "do-not-reply@battleplanwebdesign.com";
-	$subject = $content = $_POST['theSite']." needs attention!";
+	$subject = $_POST['theSite']." needs attention!";
+	$content = $_POST['theSite']." failed at ".$_POST['failCheck'];
 	mail($emailTo, $subject, $content, "From: Website Administrator <$emailFrom>");
 }
 

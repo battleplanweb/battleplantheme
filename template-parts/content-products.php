@@ -7,7 +7,7 @@ $efficiency = get_field( "efficiency" );
 
 	<div class="entry-content">
 						
-		<?php if ( has_post_thumbnail() ) : the_post_thumbnail( 'thumbnail', array('class' => 'alignright archive-img '.get_post_type().'-img size-half-s'));  endif;	
+		<?php if ( has_post_thumbnail() ) : the_post_thumbnail( 'thumbnail', array('class' => 'alignright '.get_post_type().'-img size-half-s'));  endif;	
 		
 		 the_content( sprintf ( wp_kses( __( 'Continue reading<span class="screen-reader-text"> "%s"</span>', 'battleplan' ), array( 'span' => array( 'class' => array(), ), ) ), wp_kses_post( get_the_title() ) ) ); 
 		

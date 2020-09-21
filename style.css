@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 1.2.4
+Version: 1.3
 Tested up to: 5.5
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -40,6 +40,7 @@ Tags: custom-background, custom-logo, custom-menu, featured-images, threaded-com
 	- Captions
 	- Testimonials
 	- Coupon
+	- Office Hours
 	- Galleries
 	- Accordion Setup
 	- Products (Shearer Supply)
@@ -377,8 +378,8 @@ h6 {
 	color:										#000000;
 	text-transform:								capitalize;
 	text-align:									center; 
-	clear: 										both;
 	margin:										0;
+	/*	clear: 										both;  removed 9/21/20 so that titles will wrap around photos */
 }
 
 h1 {
@@ -399,12 +400,12 @@ h5 {
 h6 {
 	font-size: 									21rem;
 }
-h1 > a, h1 > a:hover, h1 > span,
-h2 > a, h2 > a:hover, h2 > span,
-h3 > a, h3 > a:hover, h3 > span,
-h4 > a, h4 > a:hover, h4 > span,
-h5 > a, h5 > a:hover, h5 > span,
-h6 > a, h6 > a:hover, h6 > span,
+h1 > a, h1 > a:hover, h1 > a:visited, h1 > span,
+h2 > a, h2 > a:hover, h2 > a:visited, h2 > span,
+h3 > a, h3 > a:hover, h3 > a:visited, h3 > span,
+h4 > a, h4 > a:hover, h4 > a:visited, h4 > span,
+h5 > a, h5 > a:hover, h5 > a:visited, h5 > span,
+h6 > a, h6 > a:hover, h6 > a:visited, h6 > span,
 a > span,
 .phone-number a.phone-link, 
 .phone-number a.phone-link:hover, 
@@ -646,7 +647,6 @@ a.tab-focus {
 	color: 										#191970;
 }
 
-
 /* Forms
 --------------------------------------------- */
 form.wpcf7-form {
@@ -662,7 +662,8 @@ label {
 	margin-bottom:								3px;
 }
 
-#secondary label {
+#secondary label,
+.inline label {
 	display:									inline-block;
 	width:										70px;
 	font-size: 									100%;
@@ -683,13 +684,16 @@ label {
 	color:										red;
 }
 
-#secondary input:not([type="submit"]) {
+#secondary input:not([type="submit"]),
+.inline input:not([type="submit"]) {
 	display:									inline-block;
 	width:										calc(100% - 70px);
 }
 
 #secondary input.full-width,
-#secondary label.full-width{
+#secondary label.full-width,
+.inline input.full-width,
+.inline label.full-width {
 	width:										100%;
 }
 
@@ -843,6 +847,7 @@ input.paypal-amount {
 #masthead, 
 #wrapper-top, 
 #wrapper-bottom {
+	position:									relative;
 	display: 									grid;
 	grid-template-columns: 						1fr;
 	gap: 										0;
@@ -851,11 +856,21 @@ input.paypal-amount {
 .menu-strip, 
 #wrapper-content, 
 section.section {
+	position:									relative;
 	width:										100%;
 	grid-column: 								1 / 2;
 	display: 									grid;
-	grid-template-columns: 						[edge-start] 2% [full-start] 1fr [stretch-start] 2fr [default-start] minmax(0, 1280px) [default-end] 2fr [stretch-end] 1fr [full-end] 2% [edge-end];
+	grid-template-columns: 						[edge-start] 3% [full-start] 1fr [stretch-start] 2fr [default-start] minmax(0, 1280px) [default-end] 2fr [stretch-end] 1fr [full-end] 3% [edge-end];
 	gap: 										0;
+}
+
+#wrapper-top,
+#wrapper-bottom {
+	z-index:									1000;
+}
+
+#wrapper-content {
+	z-index:									2000;
 }
 
 section.section.section-inline {
@@ -863,13 +878,13 @@ section.section.section-inline {
 }
 
 section.section {
-	gap:										2.5em 2%
+	gap:										2.5em 0;
 }
 
 .flex {
 	grid-column: 								default-start / default-end;
 	display: 									grid;
-	gap: 										2.5em 2%;
+	gap: 										2.5em 3%;
 }
 
 .flex.grid-1-auto {
@@ -949,7 +964,7 @@ section.section {
 .col-inner {
 	display: 									grid;
 	grid-template-columns: 						repeat(12, 1fr);
-	gap: 										1.5em 2%;
+	gap: 										1.5em 3%;
 	height:										100%;
 }
 
@@ -960,7 +975,7 @@ section.section {
 }
 
 .archive-content .flex {
-	gap: 										4em 2%;
+	gap: 										4em 3%;
 }
 
 #main-content,
@@ -968,7 +983,7 @@ section.section {
 	grid-column: 								default-start / default-end;
 	display: 									grid;
 	grid-template-columns: 						[column-1-start] 1fr [column-1-end column-2-start] minmax(0, 302px) [column-2-end];
-	gap:										0 2%;
+	gap:										0 3%;
 }
 
 .sidebar-left #main-content {
@@ -1023,7 +1038,7 @@ section.section {
 .header-stretch .logo-strip .flex, 
 .menu-stretch .menu-strip .flex,
 .content-stretch #main-content, 
-.footer-stretch .site-footer, 
+.footer-stretch .footer-strip .flex,
 .info-stretch .site-info .flex,
 section.section-stretch .flex {
 	grid-column: 								stretch-start / stretch-end;
@@ -1033,7 +1048,7 @@ section.section-stretch .flex {
 .header-full .logo-strip .flex, 
 .menu-full .menu-strip .flex,
 .content-full #main-content, 
-.footer-full .site-footer, 
+.footer-full .footer-strip .flex,
 .info-full .site-info .flex,
 section.section-full .flex {
 	grid-column: 								full-start / full-end;
@@ -1042,7 +1057,7 @@ section.section-full .flex {
 .header-edge .top-strip .flex,
 .header-edge .logo-strip .flex, 
 .menu-edge .menu-strip .flex,
-.footer-edge .site-footer, 
+.footer-edge .footer-strip .flex,
 .info-edge .site-info .flex,
 section.section-edge .flex {
 	grid-column: 								edge-start / edge-end;
@@ -1279,7 +1294,7 @@ section.section-edge .flex {
 	border:										none;
 }
 
-.site-footer, 
+.footer-strip, 
 .site-info {
 	padding-top:								2em;
 	padding-bottom:								2em;
@@ -1319,7 +1334,7 @@ section.section-edge .flex {
 --------------------------------------------- */
 .icon {
 	text-align:									center;
-	margin:										1em auto;
+	margin:										1em auto 0;
 }
 
 .icon i.fa {
@@ -2211,6 +2226,89 @@ img.noFX,
 	font-size: 									80%;
 }
 
+/* Office Hours
+--------------------------------------------- */
+.office-hours {
+	border:										1px solid rgba(0,0,0,0.8);
+	background:									#ffffff;
+	color:										#222222;
+	font-size:									18px;
+}
+
+.office-hours > div {
+	display:									flex;
+}
+
+.office-hours > div:not(:last-of-type) {
+	border-bottom:								1px solid rgba(0,0,0,0.15);
+}
+
+.office-hours > div.today {
+	border-top:									2px solid rgba(0,0,0,0.8);
+	border-bottom:								2px solid rgba(0,0,0,0.8);
+	background:									rgba(0,0,0,0.2);
+	margin-top:									-1px;
+}
+
+.office-hours .col-day, 
+.office-hours .col-all, 
+.office-hours .col-morning, 
+.office-hours .col-afternoon {
+	padding:									5px;
+	text-align:									left;
+}
+
+.office-hours .col-day {
+	width:										65px;
+	padding-left:								15px;
+}
+
+.office-hours .col-morning, 
+.office-hours .col-afternoon,
+.office-hours .col-all {
+	padding-right:								15px;
+    text-align: 								center;
+	width:										calc(100% - 65px);
+}
+
+.office-hours div:not(:first-of-type) .col-all, 
+.office-hours div:not(:first-of-type) .col-morning, 
+.office-hours div:not(:first-of-type) .col-afternoon {
+	font-size:									90%;
+}
+
+.office-hours.horz > div {
+	display:									inline-block;
+	float:										left;
+	width:										14.28%;
+}
+
+.office-hours.horz > div:not(:last-of-type) {
+	border-right:								1px solid rgba(0,0,0,0.15);
+	border-bottom:								none;
+}
+
+.office-hours.horz .col-day, .office-hours.horz .col-all, .office-hours.horz .col-morning, .office-hours.horz .col-afternoon {
+    clear: 										both;
+	width:										100%;
+	text-align:									center;
+}
+
+.office-hours.horz .col-day {
+	border-bottom:								1px solid rgba(0,0,0,0.15);
+}
+
+.office-hours.horz .col-day, .office-hours.horz .col-all, .office-hours.horz .col-afternoon {
+    padding-left: 								10px;
+    padding-right: 								10px;
+}
+
+.office-hours.horz > div.today {
+    border-top: 								none;
+    margin-top: 								0;
+}
+
+
 /* Galleries
 --------------------------------------------- */
 .gallery {
@@ -2335,6 +2433,10 @@ img.noFX,
 
 /* Products (Shearer Supply)
 --------------------------------------------- */
+.archive-headline {
+	text-align:									center;
+}
+
 span.descriptionText {
 	font-weight:								bold;
 }
@@ -2383,6 +2485,10 @@ span.descriptionText {
 
 .product-links .descriptionText {
 	margin-bottom:								0.75em;
+}
+
+#why-choose-american-standard .col h3 {
+	text-align:									center;
 }
 
 
@@ -2463,7 +2569,7 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
     position: 									relative;
     display:									none;
 	grid-template-columns: 						repeat(12, 1fr);
-	gap: 										1.5em 2%;
+	gap: 										1.5em 3%;
     width: 										inherit;
     -webkit-backface-visibility:				hidden;
     backface-visibility: 						hidden;
@@ -2699,6 +2805,19 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 	}
 }
 
+/* Desktops & Tablets */
+@media only screen and (min-width: 577px) { 	
+	/* Remove Link styling from phone number */
+	a.phone-link,
+	a.phone-link:hover,
+	a.phone-link:active,
+	a.phone-link.tab-focus {
+		color:										inherit;
+		text-decoration:							none;
+		cursor:										default;
+	}
+}
+
 /* 4: Large Tablets (landscape) */
 @media (max-width: 1280px) {	
 	html::before {
@@ -2749,22 +2868,22 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 		grid-template-columns: 						1fr 1fr;
 	}
 	
-	.flex.grid-1-1-2 .col:nth-of-type(3),
+	.flex.grid-1-1-2 .col:nth-child(3n+3),
 	.flex.grid-1-2-1 .col,
-	.flex.grid-2-1-1 .col:nth-of-type(1) {
+	.flex.grid-2-1-1 .col:nth-child(3n+1) {
 		grid-column: 								span 2;
 	}
 	
-	.flex.grid-1-1-2 .col:nth-of-type(3) .col-inner,
+	.flex.grid-1-1-2 .col:nth-child(3n+3) .col-inner,
 	.flex.grid-1-2-1 .col .col-inner,
-	.flex.grid-2-1-1 .col:nth-of-type(1) .col-inner {
-		max-width:									700px;
+	.flex.grid-2-1-1 .col:nth-child(3n+1) .col-inner {
+		max-width:									600px;
 		margin:										0 auto;
 	}
 	
-	.flex.grid-1-2-1 .col:nth-of-type(1) .col-inner,
-	.flex.grid-1-2-1 .col:nth-of-type(3) .col-inner {
-		max-width:									400px;
+	.flex.grid-1-2-1 .col:nth-child(3n+1) .col-inner,
+	.flex.grid-1-2-1 .col:nth-child(3n+3) .col-inner {
+		max-width:									376px;
 		margin:										0 auto;
 	}
 }
@@ -2809,7 +2928,11 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 	.sidebar-left.sidebar-line #secondary {
 		padding-left:								0;
 		padding-right:								0;
-		border: 									none;
+		padding-top:								2.5em;
+		margin-top:									2.5em;
+		border-left: 								none !important;		
+		border-right: 								none !important;
+		border-top: 								1px solid rgba(0,0,0,0.3);
 	}
 	
 	.sidebar-inner {
@@ -2841,7 +2964,7 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 	#secondary .sidebar-inner {
 		column-count: 								2;
 		column-width: 								300px;
-		column-gap: 								2%;
+		column-gap: 								3%;
 	}	
 	
 	.widget .wpcf7 {
@@ -2866,12 +2989,12 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 		grid-template-columns: 						1fr 1fr;
 	}
 	
-	.flex.grid-1-1-1 .col:nth-of-type(3) {
+	.flex.grid-1-1-1 .col:nth-child(3n+3) {
 		grid-column: 								span 2;
 	}
 	
-	.flex.grid-1-1-1 .col:nth-of-type(3) .col-inner {
-		max-width:									400px;
+	.flex.grid-1-1-1 .col:nth-child(3n+3) .col-inner {
+		max-width:									376px;
 		margin:										0 auto;
 	}	
 }
@@ -2879,13 +3002,18 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 /* 2: Phones (landscape) + Tablets (portrait) */
 @media (max-width: 860px) {
 	
+	/* Home page "hero" parallax sections */
+	#wrapper-top .section-parallax:not(.mobile-full) {
+		height:										600px !important;
+	}
+	
 	/* Responsiveness */
 	.top-strip .flex {
-		gap:										0 2%;
+		gap:										0 3%;
 	}
 	
 	.site-info {
-		gap:										2em 2%;
+		gap:										2em 3%;
 		justify-items: 								center;
 	}
 	
@@ -2915,6 +3043,10 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 	.size-half-s,
 	.size-half-f {
 		max-width: 									80%;
+	}
+	
+	.screen-mobile .flex:not(.break-2) .size-half-s,
+	.screen-mobile .flex:not(.break-2) .size-half-f {
 		float:										none;
 		margin: 									1.5em auto;
 	}
@@ -2932,16 +3064,16 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 		grid-column: 								span 2;
 	}
 	
-	.flex.grid-2-1 .col:nth-of-type(1) .col-inner,
-	.flex.grid-1-2 .col:nth-of-type(2) .col-inner,
+	.flex.grid-2-1 .col:nth-child(2n+1) .col-inner,
+	.flex.grid-1-2 .col:nth-child(2n+2) .col-inner,
 	.flex.break-2 .col .col-inner,
 	.logo-strip .flex:not(.grid-1) .col .col-inner {
 		max-width:									600px;
 		margin:										0 auto;
 	}
 	
-	.flex.grid-2-1 .col:nth-of-type(2) .col-inner,
-	.flex.grid-1-2 .col:nth-of-type(1) .col-inner {
+	.flex.grid-2-1 .col:nth-child(2n+2) .col-inner,
+	.flex.grid-1-2 .col:nth-child(2n+1) .col-inner {
 		max-width:									376px;
 		margin:										0 auto;
 	}
@@ -2978,6 +3110,15 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 		font-size:									16px;
 	}	
 	
+	.screen-mobile h1,
+	.screen-mobile h2,
+	.screen-mobile h3,
+	.screen-mobile h4,
+	.screen-mobile h5,
+	.screen-mobile h6 {
+		text-align:									center;
+	}
+	
 	/* Mobile Menu */
 	#mobile-menu-bar a.phone-link {
 		display:									block;
@@ -3007,20 +3148,33 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 		grid-column:								span 12;
 	}
 	
+	/* Home page "hero" parallax sections */
+	#wrapper-top .section-parallax:not(.mobile-full) {
+		height:										300px !important;
+	}
+	
 	/* Responsive Content */
 	.size-quarter-s,
 	.size-quarter-f,
 	.size-third-s,
 	.size-third-f {
 		max-width: 									80%;
-		float:										none;
-		margin: 									1.5em auto;
 	}
 	
 	.size-half-s,
 	.size-half-f {
 		max-width: 									100%;
 	}
+	
+	.size-half-s,
+	.size-half-f,
+	.size-quarter-s,
+	.size-quarter-f,
+	.size-third-s,
+	.size-third-f {
+		float:										none !important;
+		margin: 									1.5em auto !important;
+	}	
 	
 	/* Responsive Sections */
 	.flex .col {

@@ -11,12 +11,27 @@ tr.active[data-plugin*="extended-widget-options"] + tr.plugin-update-tr {
 	box-shadow:									none !important;
 	outline:									none;
 }
+
 .plugins tr {
 	outline: 									1px solid rgba(0,0,0,0.1);
 	transform: 									translateY(-1px);
 }
+
 .plugins tr#admin-columns-pro-update {
 	outline:									none;
 	border-left:								1px solid rgba(0,0,0,0.1);
 	border-right:								1px solid rgba(0,0,0,0.1);
+}
+
+/* Page Attributes meta box */
+p.post-attributes-help-text {
+	display:									none;
+}
+
+label.post-attributes-label {
+	vertical-align:								middle;
+}
+
+input[type="checkbox"], input[type="radio"] {
+	margin-right:								0.5em;
 }

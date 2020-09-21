@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.2.4' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.3' ); }
 
 
 /*--------------------------------------------------------------
@@ -1836,7 +1836,6 @@ function battleplan_widgets_init() {
 add_action( 'wp_enqueue_scripts', 'battleplan_scripts' );
 function battleplan_scripts() {
 	wp_enqueue_style( 'battleplan-animate', get_template_directory_uri().'/animate.css', array(), _BP_VERSION );
-	wp_enqueue_style( 'battleplan-admin', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION );		
 	
 	wp_enqueue_script( 'battleplan-bootstrap', get_template_directory_uri() . '/js/bootstrap.js', array(), _BP_VERSION, true );
 	wp_enqueue_script( 'battleplan-font-awesome', get_template_directory_uri() . '/js/font-awesome.js', array(), _BP_VERSION, true );
@@ -1849,6 +1848,11 @@ function battleplan_scripts() {
 	$getThemeDir = get_stylesheet_directory_uri();
 	$saveDir = array( 'theme_dir_uri'=>$getThemeDir, 'upload_dir_uri'=>$getUploadDir['baseurl'] );
 	wp_localize_script( 'battleplan-script-site', 'theme_dir', $saveDir );
+}
+
+add_action( 'admin_enqueue_scripts', 'battleplan_admin_scripts' );
+function battleplan_admin_scripts() {
+	wp_enqueue_style( 'battleplan-admin', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION );		
 }
 
 require get_template_directory() . '/includes/includes-universal.php';
@@ -2105,10 +2109,11 @@ function battleplan_content_image_sizes_attr($sizes, $size) {
 	return get_srcset($size[0]);
 }
 
-/* Remove width & height params from the <img> inserted by WordPress */
-add_filter( 'image_send_to_editor', 'remove_width_attribute', 10 );
-function remove_width_attribute( $html ) {
+/* Remove https://domain.com, width & height params from the <img> inserted by WordPress */
+add_filter( 'image_send_to_editor', 'battleplan_remove_junk_from_image', 10 );
+function battleplan_remove_junk_from_image( $html ) {
    $html = preg_replace( '/(width|height)="\d*"\s/', "", $html );
+   $html = str_replace( get_site_url(), "", $html );
    return $html;
 }
 
@@ -2221,6 +2226,8 @@ function battleplan_clearViewFields() {
 	foreach ($getCPT as $postType) {
 		$getPosts = new WP_Query( array ('posts_per_page'=>-1, 'post_type'=>$postType ));
 		if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 
+			deleteMeta( get_the_ID(), '_wp_page_template');
+			deleteMeta( get_the_ID(), '_responsive_layout');
 			deleteMeta( get_the_ID(), 'post-bot-names');
 			deleteMeta( get_the_ID(), 'post-bots');
 			deleteMeta( get_the_ID(), 'add-view-fields');
@@ -2243,6 +2250,46 @@ add_filter( 'excerpt_length', 'battleplan_excerpt_length', 999 );
 function battleplan_excerpt_length( $length ) { 
 	return 20; 
 } 
+
+// Add custom meta boxes to admin panel
+add_action("add_meta_boxes", "battleplan_add_custom_meta_boxes");
+function battleplan_add_custom_meta_boxes() {
+    //add_meta_box("page_attributes-meta-box", "Custom Meta Box", "battleplan_remove_sidebar_meta_box", "post", "side", "default", null);
+    //add_meta_box("page_attributes-meta-box", "Custom Meta Box", "battleplan_remove_sidebar_meta_box", "page", "side", "default", null);
+    //add_meta_box("page_attributes-meta-box", "Custom Meta Box", "battleplan_remove_sidebar_meta_box", "custom_post_type", "side", "default", null);
+    //add_meta_box("page_attributes-meta-box", "Custom Meta Box", "battleplan_remove_sidebar_meta_box", "dashboard", "side", "default", null);
+}
+
+// Add "Remove Sidebar" checkbox to Page Attributes meta box
+add_action( 'page_attributes_misc_attributes', 'battleplan_remove_sidebar_checkbox', 10, 1 );
+function battleplan_remove_sidebar_checkbox($post) { 
+	echo '<p class="post-attributes-label-wrapper">';
+	$getRemoveSidebar = get_post_meta($post->ID, "_bp_remove_sidebar", true);
+
+	if ( $getRemoveSidebar == "" ) : echo '<input name="remove_sidebar" type="checkbox" value="true">';
+	else: echo '<input name="remove_sidebar" type="checkbox" value="true" checked>';
+	endif;	
+	
+	echo '<label class="post-attributes-label" for="remove_sidebar">Remove Sidebar</label>';
+} 
+	 
+add_action("save_post", "battleplan_save_remove_sidebar", 10, 3);
+function battleplan_save_remove_sidebar($post_id, $post, $update) {
+	if ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) return $post_id;
+	if ( defined('DOING_AJAX') && DOING_AJAX ) return $post_id;
+    if ( !current_user_can("edit_post", $post_id) ) return $post_id;
+
+    $updateRemoveSidebar = "";
+    if ( isset($_POST["remove_sidebar"]) ) $updateRemoveSidebar = $_POST["remove_sidebar"];   
+    update_post_meta($post_id, "_bp_remove_sidebar", $updateRemoveSidebar);
+}
+
+add_filter( 'body_class', 'battleplan_add_class_to_body' );
+function battleplan_add_class_to_body( array $classes ) {
+	$checkRemoveSidebar = get_post_meta( get_the_ID(), '_bp_remove_sidebar', true );
+	if ( $checkRemoveSidebar ) $classes[] = "remove-sidebar";
+	return $classes;
+}
 
 
 /*--------------------------------------------------------------
@@ -2552,6 +2599,42 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 	if ( $title ) $title = '<h2 role="button" tabindex="0" class="accordion-title">'.$icon.$title.'</h2>';
 	
 	return '<div class="block block-accordion'.$class.'">'.$title.$excerpt.'<div class="accordion-content"><div class="accordion-box">'.do_shortcode($content).'</div></div></div>';	
+}
+
+/* Parallax Section */
+add_shortcode( 'parallax', 'battleplan_buildParallax' );
+function battleplan_buildParallax( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'name'=>'', 'style'=>'', 'type'=>'section', 'size'=>'100', 'width'=>'edge', 'img-w'=>'2000', 'img-h'=>'1333', 'height'=>'800', 'pos-x'=>'center', 'pos-y'=>'top', 'bleed'=>'10', 'speed'=>'0.7', 'image'=>'', 'class'=>'', 'scroll-btn'=>'false', 'scroll-loc'=>'#page', 'scroll-icon'=>'fa-chevron-down' ), $atts );
+	$name = strtolower(esc_attr($a['name']));
+	$name = preg_replace("/[\s_]/", "-", $name);
+	$style = esc_attr($a['style']);
+	if ( $style != '' ) $style = " style-".$style;
+	$type = esc_attr($a['type']);
+	$size = esc_attr($a['size']);
+	$size = convertSize($size);
+	$width = esc_attr($a['width']); 
+	$imgW = esc_attr($a['img-w']);
+	$imgH = esc_attr($a['img-h']);
+	$height = esc_attr($a['height']);
+	if ( $height == "full" ) : $height = "100vh"; elseif ( $height != "auto" ) : $height = $height."px"; endif;
+	$posX = esc_attr($a['pos-x']);
+	$posY = esc_attr($a['pos-y']);
+	$bleed = esc_attr($a['bleed']);
+	$speed = esc_attr($a['speed']);
+	$image = esc_attr($a['image']);	
+	$class = esc_attr($a['class']); 
+	if ( $class != '' ) $class = " ".$class;
+	$scrollBtn = esc_attr($a['scroll-btn']); 
+	$scrollLoc = esc_attr($a['scroll-loc']); 
+	$scrollIcon = esc_attr($a['scroll-icon']); 
+	if ( $scrollBtn != "false" ) $buildScrollBtn = '<div class="scroll-down"><a href="'.$scrollLoc.'"><i class="fa '.$scrollIcon.' aria-hidden="true"></i><span class="sr-only">Scroll Down</span></a></div>';
+	if ( !$name ) $name = "section-".rand(10000,99999);
+	
+	if ( $type == "section" ) :
+		return do_shortcode('<section id="'.$name.'" class="section'.$style.' section-'.$width.' section-parallax'.$class.'" style="height:'.$height.'" data-parallax="scroll" data-natural-width="'.$imgW.'" data-natural-height="'.$imgH.'" data-position-x="'.$posX.'" data-position-y="'.$posY.'" data-z-index="1" data-bleed="'.$bleed.'" data-speed="'.$speed.'" data-ios-fix="true" data-android-fix="true" data-image-src="'.$image.'">'.$content.$buildScrollBtn.'</section>');	
+	elseif ( $type == "col" ) :
+		return do_shortcode('<div id="'.$name.'" class="col col-parallax'.$class.' '.$posX.'" style="height:'.$imgH.'px" data-parallax="scroll" data-natural-width="'.$imgW.'" data-natural-height="'.$imgH.'" data-position-x="'.$posX.'" data-position-y="'.$posY.'" data-z-index="1" data-bleed="'.$bleed.'" data-speed="'.$speed.'" data-ios-fix="true" data-android-fix="true" data-image-src="'.$image.'">'.$content.'</div>');	
+	endif;
 }
  
 /* Social Media Buttons */

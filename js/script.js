@@ -369,7 +369,7 @@ failCheck="Basic site functionality";
 					}
 				}, closeDelay);
 				setTimeout( function () {
-					locAcc.find('.accordion-content').animate({ height: "toggle", opacity: "toggle" }, transSpeed);	
+					locAcc.find('.accordion-content').animate({ height: "toggle", opacity: "toggle" }, transSpeed);						
 					if ( (locPos - topPos) > (getDeviceH() * 0.25) ) {
 						animateScroll(locPos, topSpacer, transSpeed); 
 					} else {
@@ -744,7 +744,12 @@ failCheck="Set up pages: Add 'noFX' class to img";
 	$( "div.noFX" ).find("a").addClass("noFX");
 	
 // Fade in lazy loaded images
-	//animateDiv( 'img:not(.loader-img):not(.site-icon)', 'fadeIn', 150, '110%', 200 );
+	//animateDiv( 'img:not(.loader-img):not(.site-icon)', 'fadeIn', 150, '110%', 200 );	
+	
+failCheck="Set up pages: Check if 'Remove Sidebar' option is checked in admin panel";
+
+// Check if "Remove Sidebar" option is checked in admin panel, and remove sidebar if applicable	
+if ( $('body').hasClass('remove-sidebar') ) { $('body').removeClass('sidebar-right').removeClass('sidebar-left').addClass('sidebar-none'); }	
 	
 failCheck="Set up pages: Preload BG image and fade in";
 	
@@ -891,6 +896,18 @@ failCheck="Set up pages: Add star icons to reviews and ratings";
 		if ( getRating == 1) replaceRating = '<span class="rating rating-1-star" aria-hidden="true"><span class="sr-only">Rated 1 Star</span></span>';;
 		$(this).html( replaceRating );
 	});
+	
+failCheck="Set up pages: Determine which day of week";
+	
+// Determine which day of week and add active class on office-hours widget	
+	var todayIs = new Date().getDay();
+	if ( todayIs == 0 ) $(".office-hours .row-sun").addClass("today");
+	if ( todayIs == 1 ) $(".office-hours .row-mon").addClass("today");
+	if ( todayIs == 2 ) $(".office-hours .row-tue").addClass("today");
+	if ( todayIs == 3 ) $(".office-hours .row-wed").addClass("today");
+	if ( todayIs == 4 ) $(".office-hours .row-thu").addClass("today");
+	if ( todayIs == 5 ) $(".office-hours .row-fri").addClass("today");
+	if ( todayIs == 6 ) $(".office-hours .row-sat").addClass("today");
 
 	
 /*--------------------------------------------------------------

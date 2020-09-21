@@ -20,7 +20,7 @@
 			if ( !$page_data ) : $page_slug = "site-footer"; endif;				
 		else: $page_slug = "site-footer"; endif;
 		$page_data = get_page_by_path( $page_slug, OBJECT, 'page' );
-		if ( $page_data && $page_data->post_status == 'publish' ) : echo "<div class='site-footer'>".apply_filters('the_content', $page_data->post_content)."</div><!-- .site-footer -->"; endif;
+		if ( $page_data && $page_data->post_status == 'publish' ) : echo apply_filters('the_content', $page_data->post_content); endif;
 		?>
 		
 		<section class="section site-info">			

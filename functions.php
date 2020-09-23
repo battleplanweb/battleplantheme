@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.3' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.4' ); }
 
 
 /*--------------------------------------------------------------
@@ -285,9 +285,9 @@ function battleplan_getBuildArchive($atts, $content = null) {
 				$archiveMeta .= "</h3>";
 			endif;		
 			if ( $showDate == "true" || $showAuthor == "true" || $showSocial == "true" ) $archiveMeta .= '<div class="archive-meta">';
-			if ( $showDate == "true" ) $archiveMeta .= '<div class="archive-date '.$type.'-date date"><i class="fa fa-clock-o"></i>'.get_the_date().'</div>';
-			if ( $showAuthor == "true") $archiveMeta .= '<div class="archive-author '.$type.'-author author"><i class="fa fa-user-o"></i>'.get_the_author().'</div>';
-			if ( $showSocial == "true") $archiveMeta .= '<div class="archive-social '.$type.'-social social">'.do_shortcode('[add-share-buttons facebook="true" twitter="true"]').'</div>';
+			if ( $showDate == "true" ) $archiveMeta .= '<span class="archive-date '.$type.'-date date"><i class="fa fa-calendar"></i>'.get_the_date().'</span>';
+			if ( $showAuthor == "true") $archiveMeta .= '<span class="archive-author '.$type.'-author author"><i class="fa fa-user"></i>'.get_the_author().'</span>';
+			if ( $showSocial == "true") $archiveMeta .= '<span class="archive-social '.$type.'-social social">'.do_shortcode('[add-share-buttons facebook="true" twitter="true"]').'</span>';
 			if ( $showDate == "true" || $showAuthor == "true" || $showSocial == "true" ) $archiveMeta .= '</div>';
 			if ( $showExcerpt == "true") $archiveBody .= '[p]'.get_the_excerpt().'[/p]';
 			if ( $showContent == "true") $archiveBody .= '[p]'.get_the_content().'[/p]';
@@ -588,6 +588,49 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	return $buildSlider;
 }
 
+// Display row of logos that slide from left to right 
+add_shortcode( 'get-logo-slider', 'battleplan_getLogoSlider' );
+function battleplan_getLogoSlider($atts, $content = null ) {	
+	$a = shortcode_atts( array( 'num'=>'-1', 'space'=>'80', 'tag'=>'featured', 'order_by'=>'rand', 'order'=>'ASC', 'shuffle'=>'false', 'speed'=>'3', 'delay'=>'0', 'pause'=>'no', 'link'=>'false'), $atts );
+	$num = esc_attr($a['num']);			
+	$space = esc_attr($a['space']);			
+	$space = $space / 2;	
+	$tag = esc_attr($a['tag']);	
+	$tags = explode( ',', $tag );
+	$orderBy = esc_attr($a['order_by']);		
+	$order = esc_attr($a['order']);		
+	$shuffle = esc_attr($a['shuffle']);		
+	$speed = esc_attr($a['speed']);		
+	$delay = esc_attr($a['delay']);			
+	$pause = esc_attr($a['pause']);			
+	$link = esc_attr($a['link']);		
+	
+	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>$num, 'order'=>$order, 'tax_query'=>array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags )));
+
+	if ( $orderBy == 'views' ) : $args['meta_key']="widget-pic-views"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'recent' ) : $args['meta_key']="widget-pic-time"; $args['orderby']='meta_value_num';	
+	else : $args['orderby']=$orderBy; endif;		
+	
+	if ( $id != '' ) : 
+		$args['post_parent']=$id;
+	endif;
+
+	$image_query = new WP_Query($args);		
+	$imageArray = array();
+
+	if( $image_query->have_posts() ) : while ($image_query->have_posts() ) : $image_query->the_post();
+		$image = wp_get_attachment_image_src( get_the_ID(), 'full' );
+		$getImage = "";
+		if ( $link != "false" ) $getImage .= '<a href="'.$image[0].'">';
+		$getImage .= '<img data-id="'.get_the_ID().'"'.getImgMeta(get_the_ID()).' class="logo-img '.$tags[0].'-img" src="'.$image[0].'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'">';
+		if ( $link != "false" ) $getImage .= '</a>';
+		$imageArray[] = '<span>'.$getImage.'</span>';			
+	endwhile; wp_reset_postdata(); endif;	
+	
+	if ( $shuffle != "false" ) : shuffle($imageArray); endif;
+	$buildSlider = '<div class="logo-slider" data-speed="'.$speed.'" data-delay="'.$delay.'" data-pause="'.$pause.'" data-padding="'.$space.'"><div class="logo-row">'.printArray($imageArray).'</div></div>';
+	return $buildSlider;
+}
 
 /*--------------------------------------------------------------
 # Functions to extend WordPress 
@@ -694,7 +737,7 @@ function convertSize($size) {
 	if ( $size == "4/5" ) return 10;
 }
 
-/* Find text width based on picture width */
+// Find text width based on picture width 
 function getTextSize( $picSize ) {
 	if ( $picSize == "11" || $picSize == "11/12" ) : return "1/12";
 	elseif ( $picSize == "10" || $picSize == "10/12" || $picSize == "5/6" ) : return "1/6";
@@ -714,8 +757,14 @@ function getTextSize( $picSize ) {
 	else : return "100"; endif;
 }
 
-
-
+// Set up function to print contents of an array
+function printArray($array) {
+	$print = "";
+	for ($i = 0; $i < count($array); $i++) {
+		$print .= $array[$i];
+	}
+	return $print;
+}
 
 /*--------------------------------------------------------------
 # Register Custom Post Types
@@ -748,7 +797,7 @@ function battleplan_registerPostTypes() {
 		'public'=>true,
 		'publicly_queryable'=>true,
 		'exclude_from_search'=>false,
-		'supports'=>array( 'title', 'editor', 'thumbnail', 'page-attributes' ),
+		'supports'=>array( 'title', 'editor', 'thumbnail', 'page-attributes', 'custom-fields' ),
 		'hierarchical'=>false,
 		'menu_position'=>20,
 		'menu_icon'=>'dashicons-images-alt',
@@ -784,7 +833,7 @@ function battleplan_registerPostTypes() {
 		'public'=>true,
 		'publicly_queryable'=>true,
 		'exclude_from_search'=>false,
-		'supports'=>array( 'title', 'editor', 'excerpt', 'thumbnail', 'page-attributes' ),
+		'supports'=>array( 'title', 'editor', 'excerpt', 'thumbnail', 'page-attributes', 'custom-fields' ),
 		'hierarchical'=>false,
 		'menu_position'=>20,
 		'menu_icon'=>'dashicons-cart',
@@ -2453,14 +2502,12 @@ function battleplan_buildSection( $atts, $content = null ) {
 // Layout
 add_shortcode( 'layout', 'battleplan_buildLayout' );
 function battleplan_buildLayout( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'grid'=>'1', 'valign'=>'', 'break'=>'' ), $atts );
+	$a = shortcode_atts( array( 'grid'=>'1', 'valign'=>'' ), $atts );
 	$grid = esc_attr($a['grid']);
 	$valign = esc_attr($a['valign']);
 	if ( $valign != '' ) $valign = " valign-".$valign;
-	$break = esc_attr($a['break']);
-	if ( $break != '' ) $break = " break-".$break;
 
-	$buildLayout = '<div class="flex grid-'.$grid.$valign.$break.'">'.do_shortcode($content).'</div>';	
+	$buildLayout = '<div class="flex grid-'.$grid.$valign.'">'.do_shortcode($content).'</div>';	
 	
 	return $buildLayout;
 }

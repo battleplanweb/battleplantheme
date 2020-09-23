@@ -134,7 +134,7 @@ function battleplan_american_standard_customer_care( $atts, $content = null ) {
 			  <img src="/wp-content/uploads/AS-Customer-Care-Logo-258x258.png" alt="We are an American Standard Customer Care Dealer." class="alignright size-quarter-s noFX" />
 
 			  <p>The Customer Care program is made up of handpicked dealers who are ready to listen, evaluate and find solutions that work smarter for you and your home.</p>
-			  <p><a href="/customer-care-dealer/">Learn more about the Customer Care program.</a></p>
+			  <p><strong><a href="/customer-care-dealer/">Learn more about the Customer Care program.</a></strong></p>
 			 [/txt]
 		');	
 	endif;

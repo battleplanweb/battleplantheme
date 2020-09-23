@@ -101,7 +101,7 @@ failCheck="Basic site functionality";
 	
 // Find width of screen
 	window.getDeviceW = function () {
-		var deviceWidth = window.screen.width;			
+		var deviceWidth = $(window).width();			
 		if ( isApple() && (window.orientation == 90 || window.orientation == -90 )) {
 			deviceWidth = window.screen.height;
 		}
@@ -110,7 +110,7 @@ failCheck="Basic site functionality";
 	
 // Find height of screen
 	window.getDeviceH = function () {
-		var deviceHeight = window.screen.height;			
+		var deviceHeight = $(window).height();			
 		if ( isApple() && (window.orientation == 90 || window.orientation == -90 )) {
 			deviceHeight = window.screen.width;
 		}
@@ -161,7 +161,10 @@ failCheck="Basic site functionality";
 // Remove sidebar from specific pages
 	window.removeSidebar = function(page) {	
 		page = "slug-"+page.replace(/\//g, "");
-		if ( $('body').hasClass(page) ) { $('body').removeClass('sidebar-right').removeClass('sidebar-left').addClass('sidebar-none'); }
+		if ( $('body').hasClass(page) ) { 
+			$('body').removeClass('sidebar-right').removeClass('sidebar-left').addClass('sidebar-none'); 
+			removeDiv('#secondary');
+		}
 	};
 	
 // Create faux div for sticky elements pulled out of document flow	
@@ -428,7 +431,8 @@ failCheck="Basic site functionality";
 		}				
 		
 		if ( $currentPage.hasClass("mobile-only") ) { $currentPage.remove(); }	
-		$currentPage.find(">a").addClass(linkOn);		
+		$currentPage.find(">a").addClass(linkOn);
+		$("#desktop-navigation").css({ 'position': 'static' });
 		
 		function checkTop() {
 			setTimeout( function (){ 
@@ -448,7 +452,7 @@ failCheck="Basic site functionality";
 						magicLeft = $el.position().left + (($el.outerWidth() - $el.width()) / 2); 
 						magicWidth = $el.width(); 
 						magicHeight = $el.height();
-						$magicLine.stop().animate({ opacity: startOpacity, top: magicTop, left: magicLeft, width: magicWidth, height: magicHeight }, 0).data("origTop", magicTop).data("origLeft", magicLeft).data("origWidth", magicWidth).data("origHeight", magicHeight);					
+						$magicLine.stop().animate({ opacity: startOpacity, top: magicTop, left: magicLeft, width: magicWidth, height: magicHeight }, 0).data("origTop", magicTop).data("origLeft", magicLeft).data("origWidth", magicWidth).data("origHeight", magicHeight);
 					});	
 				}
 			}, 10);
@@ -478,6 +482,57 @@ failCheck="Basic site functionality";
 	$( ".main-navigation ul.main-menu li > a").each(function() { 
 		var btnText = $(this).html();			
 		$(this).parent().attr('data-content', btnText);
+	});
+	
+// Set up Logo Slider
+	$('.logo-slider').each(function() {
+		var logoSlider = $(this), logoRow = logoSlider.find('.logo-row'), logoNum = logoRow.children().length, logoW=logoNum * 1000, speed = parseInt(logoSlider.attr('data-speed')), delay = parseInt(logoSlider.attr('data-delay')), pause = logoSlider.attr('data-pause'), origPadding = parseInt(logoSlider.attr('data-padding')), easingType = "swing", rotating = true;
+		
+		logoRow.css('width', logoW);
+		speed = speed * 1000;
+		
+		if ( delay == "0" ) { easingType = "linear"; } else { delay = delay * 1000; }
+		if ( pause == "yes" || pause == "true" ) {
+			logoSlider.mouseover(function() { rotating = false; });
+			logoSlider.mouseout(function() { rotating = true; });
+		}
+
+		var moveLogos = setInterval(function() {	
+			if ( rotating != false ) {
+				var $first = logoRow.find('> span:first');
+				var containerW = $first.outerWidth();
+				$first.animate({ 'margin-left': -containerW+'px'}, speed, easingType, function() {
+					$first.remove().css({ 'margin-left': '0px' });
+					logoRow.find('> span:last').after($first);
+				});
+			} 	
+		}, delay);
+		
+		window.checkLogoSlider = function () {
+			var containerH = 0, totalW=0, imgW=0, setPadding=0;
+			logoRow.find('span').each( function() {
+				var thisSpan = $(this);
+				imgW = imgW + thisSpan.width();				
+				totalW = totalW + thisSpan.width() + (origPadding * 2);
+				if (thisSpan.height() > containerH) { containerH = thisSpan.height(); }
+			});
+			logoRow.find('span').each( function() {
+				var thisSpan = $(this);
+				var diffH = (containerH - thisSpan.height()) / 2;
+				$(this).find('img').css({'margin-top':diffH+'px', 'margin-bottom':diffH+'px'});
+			});				
+			if ( totalW < getDeviceW() ) {
+				rotating = false;
+				setPadding = (getDeviceW() - imgW) / logoNum / 2;			
+				logoRow.find('span').css({'padding-left':setPadding+'px', 'padding-right':setPadding+'px'});
+			} else {
+				rotating = true;
+				logoRow.find('span').css({'padding-left':origPadding+'px', 'padding-right':origPadding+'px'});
+			}
+		};			
+			
+		$(window).load(function() { checkLogoSlider(); });
+		$(window).resize(function() { checkLogoSlider(); }); 			
 	});
 			
 		
@@ -749,7 +804,10 @@ failCheck="Set up pages: Add 'noFX' class to img";
 failCheck="Set up pages: Check if 'Remove Sidebar' option is checked in admin panel";
 
 // Check if "Remove Sidebar" option is checked in admin panel, and remove sidebar if applicable	
-if ( $('body').hasClass('remove-sidebar') ) { $('body').removeClass('sidebar-right').removeClass('sidebar-left').addClass('sidebar-none'); }	
+if ( $('body').hasClass('remove-sidebar') ) { 
+	$('body').removeClass('sidebar-right').removeClass('sidebar-left').addClass('sidebar-none'); 
+	removeDiv('#secondary');
+}	
 	
 failCheck="Set up pages: Preload BG image and fade in";
 	
@@ -1025,17 +1083,21 @@ failCheck="Set up sidebar";
 		
  // Move sidebar in conjunction with mouse scroll to keep it even with content
 		window.moveWidgets = function () {
-			var contentH = $('#primary').outerHeight(), elem = $(".sidebar-inner"), elemH = elem.outerHeight() + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom')), contentV = contentH - getDeviceH() + 200, sidebarV = elemH - getDeviceH() + 400;				
-			var conH = $("#secondary").outerHeight(), conT = $("#secondary").offset().top, winH = $(window).height(), winT = $(window).scrollTop();				
-			var adjT = winT - conT, fullH = conH - winH, scrollPct = adjT / fullH, dist = winT - conT, maxH = contentH - elemH;	
+			var contentH = $('#primary').outerHeight(), elem = $(".sidebar-inner"), elemH = elem.outerHeight() + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom')), contentV = contentH - getDeviceH() + 200, sidebarV = elemH - getDeviceH() + 400, addTop=0;	
+			
+			$('.stuck').each(function() { addTop = addTop + $(this).outerHeight(true); });					
+			var secH = $("#secondary").outerHeight(), secT = $("#secondary").offset().top, winH = $(window).height() - addTop, winT = $(window).scrollTop() + addTop;				
+			var adjT = winT - secT, fullH = secH - winH, scrollPct = adjT / fullH, maxH = contentH - elemH;	
 			if ( scrollPct > 1 ) { scrollPct = 1; }
 			if ( scrollPct < 0 || scrollPct == null ) { scrollPct = 0; }
-			var moveElem = maxH * scrollPct;	
+			var moveElem = Math.round(maxH * scrollPct);	
 			if ( moveElem > maxH ) { moveElem = maxH; }
 			if ( moveElem < 0 ) { moveElem = 0; }
-			if ( contentV > 0 && sidebarV > 0 && dist > 0 && getDeviceW() > mobileCutoff ) { elem.css("margin-top",moveElem+"px"); } else { elem.css("margin-top","0px"); }
-			
-			//console.log("contentV="+contentV+", sidebarV="+sidebarV);
+			if ( contentV > 0 && sidebarV > 0 && adjT > 0 && getDeviceW() > mobileCutoff ) { 
+				elem.css("margin-top",moveElem+"px"); 
+			} else { 
+				elem.css("margin-top","0px"); 
+			}
 		};
 	};	
 

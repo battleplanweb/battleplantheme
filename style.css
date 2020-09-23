@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 1.3
+Version: 1.4
 Tested up to: 5.5
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -49,6 +49,7 @@ Tags: custom-background, custom-logo, custom-menu, featured-images, threaded-com
 	- Google Review Widget
 	- Podium Web Chat Module
 	- Bootstrap Carousel
+	- Logo Slider
 # Mobile Styles
 
 
@@ -737,7 +738,8 @@ input[type="time"]:focus,
 input[type="datetime"]:focus,
 input[type="datetime-local"]:focus,
 input[type="color"]:focus,
-textarea:focus {
+textarea:focus,
+.wpcf7 form .wpcf7-response-output {
 	color: 										#111111;
 	background:									rgba(255,255,255,1);
 	border: 									none;
@@ -815,7 +817,6 @@ div.wpcf7 .ajax-loader {
 .wpcf7 form .wpcf7-response-output {
     margin: 									1.5em 0.5em;
     padding: 									0.4em 1em 0.5em;
-	border: 									1px solid rgba(0,0,0,0.4);    
 	font-size: 									90%;
 }
 
@@ -862,6 +863,10 @@ section.section {
 	display: 									grid;
 	grid-template-columns: 						[edge-start] 3% [full-start] 1fr [stretch-start] 2fr [default-start] minmax(0, 1280px) [default-end] 2fr [stretch-end] 1fr [full-end] 3% [edge-end];
 	gap: 										0;
+}
+
+#masthead {
+	z-index:									3000;
 }
 
 #wrapper-top,
@@ -911,6 +916,14 @@ section.section {
 	grid-template-columns: 						1fr 1fr 2fr;
 }
 
+.flex.grid-3-1 {
+	grid-template-columns: 						3fr 1fr;
+}
+
+.flex.grid-1-3 {
+	grid-template-columns: 						1fr 3fr;
+}
+
 .flex.grid-1-1-1 {
 	grid-template-columns: 						1fr 1fr 1fr;
 }
@@ -940,6 +953,7 @@ section.section {
 }
 
 .top-strip .flex .col-inner,
+.divider-strip .flex .col-inner,
 .logo-strip .flex .col-inner,
 .site-info .flex .col-inner {
 	align-content:								center;
@@ -983,7 +997,6 @@ section.section {
 	grid-column: 								default-start / default-end;
 	display: 									grid;
 	grid-template-columns: 						[column-1-start] 1fr [column-1-end column-2-start] minmax(0, 302px) [column-2-end];
-	gap:										0 3%;
 }
 
 .sidebar-left #main-content {
@@ -1013,6 +1026,20 @@ section.section {
 
 .sidebar-none #main-content {
 	grid-template-columns: 						[column-1-start] 1fr [column-2-end];
+}
+
+#main-content {
+	gap:										0 5%;
+}
+
+.content-box #main-content,
+.sidebar-line #main-content,
+.sidebar-box #main-content,
+.widget-box #main-content {
+	gap:										0 2%;
+}
+
+.sidebar-none #main-content {
 	gap:										0;
 }
 
@@ -1035,6 +1062,7 @@ section.section {
 }
 
 .header-stretch .top-strip .flex, 
+.header-stretch .divider-strip .flex, 
 .header-stretch .logo-strip .flex, 
 .menu-stretch .menu-strip .flex,
 .content-stretch #main-content, 
@@ -1045,6 +1073,7 @@ section.section-stretch .flex {
 }
 
 .header-full .top-strip .flex, 
+.header-full .divider-strip .flex, 
 .header-full .logo-strip .flex, 
 .menu-full .menu-strip .flex,
 .content-full #main-content, 
@@ -1055,6 +1084,7 @@ section.section-full .flex {
 }
 
 .header-edge .top-strip .flex,
+.header-edge .divider-strip .flex,
 .header-edge .logo-strip .flex, 
 .menu-edge .menu-strip .flex,
 .footer-edge .footer-strip .flex,
@@ -1156,13 +1186,19 @@ section.section-edge .flex {
 
 /* Header
 --------------------------------------------- */
-.top-strip {
+.top-strip,
+.divider-strip {
 	margin:										0;
 	padding-top:								8px;
 	padding-bottom:								8px;
 	background:									#cccccc;
 	z-index:									3000;
 }
+
+.tag-line, .phone-number {
+	font-size:									140%;
+}
+
 .logo-strip {
 	margin:										0;
 	padding-top:								2em;
@@ -1170,15 +1206,13 @@ section.section-edge .flex {
 	background:									#ffffff;
 	z-index:									1000;
 }
+
 .menu-strip {
 	margin:										0;
 	padding-top:								0;
 	padding-bottom:								0;
 	background:									#cccccc;
 	z-index:									2000;
-}
-.tag-line, .phone-number {
-	font-size:									140%;
 }
 
 /* Content
@@ -1274,8 +1308,8 @@ section.section-edge .flex {
 }
 
 .section[class*="style-"] {
-	padding-top:								2em;
-	padding-bottom:								2em;
+	padding-top:								2.5em;
+	padding-bottom:								2.5em;
 	overflow:									hidden;
 }
 
@@ -1290,8 +1324,10 @@ section.section-edge .flex {
 /* Footer
 --------------------------------------------- */
 #colophon {
+	position:									relative;
 	background:									#cccccc;
 	border:										none;
+	z-index:									3000;
 }
 
 .footer-strip, 
@@ -1523,7 +1559,7 @@ section.section-edge .flex {
 
 #desktop-navigation li:hover ul.sub-menu,
 .main-navigation ul.sub-menu.active,
-.main-navigation li.menu-item-has-children[aria-expanded="true"] ul.sub-menu {
+#desktop-navigation li.menu-item-has-children[aria-expanded="true"] ul.sub-menu {
 	visibility:									visible;
 	opacity:									1;
 	transform: 									scale(1) translateY(0);
@@ -1673,7 +1709,8 @@ section.section-edge .flex {
 	background: 								rgba(255,255,255,0.5);
 }
 
-.side-slide #mobile-navigation, .side-push #mobile-navigation {
+.side-slide #mobile-navigation, 
+.side-push #mobile-navigation {
 	right:										0;
 	border-left: 								1px solid #000000;
 	box-shadow: 								-4px 0 5px rgba(0,0,0,0.5);
@@ -1684,7 +1721,8 @@ section.section-edge .flex {
 	transition: 								all 0.2s ease;
 }
 
-.side-slide.mm-active #mobile-navigation, .side-push.mm-active #mobile-navigation {
+.side-slide.mm-active #mobile-navigation, 
+.side-push.mm-active #mobile-navigation {
 	margin-right:								0;
 	transition: 								all 0.2s ease;
 }
@@ -1699,7 +1737,8 @@ section.section-edge .flex {
 	transition: 								all 0.2s ease;
 }
 
-.top-slide #mobile-navigation, .top-push #mobile-navigation {
+.top-slide #mobile-navigation, 
+.top-push #mobile-navigation {
 	left:										0;
 	border-bottom: 								1px solid #000000;
 	box-shadow: 								0 4px 5px rgba(0,0,0,0.5);
@@ -1709,30 +1748,36 @@ section.section-edge .flex {
 	transition: 								all 0.2s ease 0.2s;
 }
 
-.top-slide.mm-active #mobile-navigation, .top-push.mm-active #mobile-navigation {
+.top-slide.mm-active #mobile-navigation, 
+.top-push.mm-active #mobile-navigation {
 	margin-top:									0;
 	transition: 								all 0.2s ease;
 }
 
-.top-push #page, .top-push .top-strip.stuck  {
+.top-push #page, 
+.top-push .top-strip.stuck  {
 	transition: 								all 0.2s ease;
 }
 
-.top-push.mm-active #page, .top-push .top-strip.stuck  {
+.top-push.mm-active #page, 
+.top-push .top-strip.stuck  {
 	transition: 								all 0.2s ease 0.1s;
 }	
 
-.top-slide #mobile-navigation ul, .top-push #mobile-navigation ul {
+.top-slide #mobile-navigation ul, 
+.top-push #mobile-navigation ul {
 	flex-flow: 									row wrap;
 }
 
-.top-slide #mobile-navigation li, .top-push #mobile-navigation li {
+.top-slide #mobile-navigation li, 
+.top-push #mobile-navigation li {
 	flex: 										1 1 0;
 	margin-left:								8px;
 	margin-right:								8px;
 }
 
-.top-slide #mobile-navigation li a, .top-push #mobile-navigation li a {
+.top-slide #mobile-navigation li a, 
+.top-push #mobile-navigation li a {
 	padding-left:								12px;
 	padding-right:								12px;
 }	
@@ -1919,7 +1964,7 @@ a.scroll-top {
 /* Posts and Pages
 --------------------------------------------- */
 #main-content {
-	margin: 									1.5em 0;
+	margin: 									1.5em 0 2.5em; /* changed bottom margine to 2.5em from 1.5em on Jaric 9/22/20 */
 }
 
 .archive-intro {
@@ -1944,6 +1989,16 @@ a.scroll-top {
 	margin-bottom:								1em;
 }
 
+.archive-meta {
+	font-size:									90%;
+	text-align:									center;
+	margin-top:									-1em;
+}
+
+.col-archive .archive-meta {
+	margin-top:									1em;
+}
+
 .single-meta {
 	font-size:									85%;
 	text-align:									center;
@@ -1951,22 +2006,26 @@ a.scroll-top {
 	margin-bottom:								1em;
 }
 
+.archive-meta span,
 .single-meta span {
 	margin-left:								10px;
 	margin-right:								10px;
 }
 
+.archive-meta i.fa-calendar,
 .single-meta i.fa-calendar {
 	margin-right:								8px;
 	transform:									translateY(0);
 }
 
+.archive-meta i.fa-user,
 .single-meta i.fa-user {
 	margin-left:								8px;
 	margin-right:								-3px;
 	transform:									translateY(0);
 }
 
+.archive-meta i.fa-comments-o,
 .single-meta i.fa-comments-o {
 	margin-right:								4px;
 	transform:									translateY(0);
@@ -2785,7 +2844,28 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 	padding:									10px 18px;
 }
 
+/* Logo Slider
+--------------------------------------------- */
+.logo-slider,
+.logo-slider .logo-row,
+.logo-slider .logo-row span {
+	position: 									relative;
+	display: 									block;
+	margin-left: 								auto;
+	margin-right: 								auto;
+	overflow: 									hidden;
+}
 
+.logo-slider .logo-row span {
+	float: 										left;
+	max-width:									50vw;
+}
+
+.logo-slider .logo-row span img {
+	max-width: 									100%;
+	max-height: 								100%;
+	transition: 								0 linear left;
+}
 
 /*--------------------------------------------------------------
 # Mobile Styles
@@ -3008,7 +3088,8 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 	}
 	
 	/* Responsiveness */
-	.top-strip .flex {
+	.top-strip .flex,
+	.divider-strip .flex {
 		gap:										0 3%;
 	}
 	
@@ -3018,6 +3099,7 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 	}
 	
 	.top-strip .flex .col,
+	.divider-strip .flex .col,
 	.site-info .col {
 		grid-column:								span 12;
 		text-align:									center;
@@ -3045,51 +3127,47 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 		max-width: 									80%;
 	}
 	
-	.screen-mobile .flex:not(.break-2) .size-half-s,
-	.screen-mobile .flex:not(.break-2) .size-half-f {
+	.screen-mobile #primary .size-half-s,
+	.screen-mobile #primary .size-half-f {
 		float:										none;
 		margin: 									1.5em auto;
 	}
 			
 	/* Responsive Sections */
+	.flex.grid-3-1,
+	.flex.grid-1-3,
 	.flex.grid-2-1,
 	.flex.grid-1-2 {
 		grid-template-columns: 						1fr 1fr;
 	}
 	
+	.flex.grid-3-1 .col,
+	.flex.grid-1-3 .col,
 	.flex.grid-2-1 .col,
 	.flex.grid-1-2 .col,
-	.flex.break-2 .col,
+	.flex.grid-1-1 .col,
 	.logo-strip .flex:not(.grid-1) .col {
 		grid-column: 								span 2;
 	}
 	
+	.flex.grid-3-1 .col:nth-child(2n+1) .col-inner,
+	.flex.grid-1-3 .col:nth-child(2n+2) .col-inner,
 	.flex.grid-2-1 .col:nth-child(2n+1) .col-inner,
 	.flex.grid-1-2 .col:nth-child(2n+2) .col-inner,
-	.flex.break-2 .col .col-inner,
+	.flex.grid-1-1 .col .col-inner,
 	.logo-strip .flex:not(.grid-1) .col .col-inner {
 		max-width:									600px;
 		margin:										0 auto;
 	}
 	
+	.flex.grid-3-1 .col:nth-child(2n+2) .col-inner,
+	.flex.grid-1-3 .col:nth-child(2n+1) .col-inner,
 	.flex.grid-2-1 .col:nth-child(2n+2) .col-inner,
 	.flex.grid-1-2 .col:nth-child(2n+1) .col-inner {
 		max-width:									376px;
 		margin:										0 auto;
 	}
 	
-	.flex.grid-1-1:not(.break-2) .col .block {
-		grid-column: 								span 12;
-	}
-	
-	.flex.grid-1-1:not(.break-2) .col .block-image {
-		order: 										1;
-	}
-	
-	.flex.grid-1-1:not(.break-2) .col .block-text {
-		order: 										2;
-	}	
-		
 	/* Responsive Columns */
 	.three-col,
 	.three-column {
@@ -3157,7 +3235,8 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 	.size-quarter-s,
 	.size-quarter-f,
 	.size-third-s,
-	.size-third-f {
+	.size-third-f,
+	.img-testimonials {
 		max-width: 									80%;
 	}
 	
@@ -3186,11 +3265,12 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 	}
 	
 	.flex .col .block-image {
-		order: 										1;
+		order: 										1 !important;
 	}
 	
-	.flex .col .block-text {
-		order: 										2;
+	.flex .col .block-text,
+	.flex .col .block-group {
+		order: 										2 !important;
 	}	
 	
 	/* Responsive Columns */

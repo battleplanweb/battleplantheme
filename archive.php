@@ -16,6 +16,7 @@ get_header();
 				$archiveHeadline = "Photo Galleries";
 				$archiveIntro = "<p>Click a photo below to open up the full album.</p>";
 				$grid = "1-1-1";
+				$valign = "start";
 				$picSize = "100";
 				$textSize = "100";
 				$showBtn = "false";
@@ -33,6 +34,7 @@ get_header();
 				$facebookLink = do_shortcode('[get-biz info="facebook"]')."reviews/";
 				$facebookIcon = "Facebook-Like-Us-1";
 				$grid = "1";
+				$valign = "start";
 				$picSize = "1/4";
 				$textSize = "3/4";
 				$showBtn = "false";
@@ -42,6 +44,7 @@ get_header();
 			elseif ( get_post_type() == "products" ) :
 				$archiveHeadline = "Products";
 				$grid = "1";
+				$valign = "start";
 				$picSize = "1/3";
 				$textSize = "2/3";
 				$showBtn = "true";
@@ -56,6 +59,7 @@ get_header();
 		// Default Archives
 			else: 
 				$grid = "1-1-1";
+				$valign = "stretch";
 				$picSize = "100";
 				$textSize = "100";
 				$showBtn = "true";
@@ -92,7 +96,7 @@ get_header();
 				$displayArchive .= '<div class="archive-description archive-intro '.get_post_type().'-intro">'.$archiveIntro.'</div>'; 
 			$displayArchive .= '</header><!-- .archive-header-->';
 		
-			$displayArchive .= do_shortcode('[section width="inline" class="archive-content"][layout grid="'.$grid.'"]'.$buildArchive.'[/layout][/section]');
+			$displayArchive .= do_shortcode('[section width="inline" class="archive-content"][layout grid="'.$grid.'" valign="'.$valign.'"]'.$buildArchive.'[/layout][/section]');
 		
 			$displayArchive .= '<footer class="archive-footer">';
 				$displayArchive .= get_the_posts_pagination( array( 'mid_size' => 2, 'prev_text' => _x( '<i class="fa fa-chevron-left"></i>', 'Previous set of posts' ), 'next_text' => _x( '<i class="fa fa-chevron-right"></i>', 'Next set of posts' ), ));

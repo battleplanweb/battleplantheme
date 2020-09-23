@@ -31,6 +31,7 @@
 					if ( do_shortcode('[get-biz info="facebook"]') ) $buildLeft .= do_shortcode('[social-btn type="facebook"]'); 							
 					if ( do_shortcode('[get-biz info="twitter"]') ) $buildLeft .= do_shortcode('[social-btn type="twitter"]');						
 					if ( do_shortcode('[get-biz info="instagram"]') ) $buildLeft .= do_shortcode('[social-btn type="instagram"]');							
+					if ( do_shortcode('[get-biz info="linkedin"]') ) $buildLeft .= do_shortcode('[social-btn type="linkedin"]');							
 					if ( do_shortcode('[get-biz info="email"]') ) $buildLeft .= do_shortcode('[social-btn type="email"]');
 				$buildLeft .= "</div>";
 
@@ -41,7 +42,7 @@
 				elseif ( do_shortcode('[get-biz info="region"]') ) : 
 					$buildCopyright .= do_shortcode('[get-biz info="region"]')." • "; 
 				endif;
-				if ( do_shortcode('[get-biz info="license"]') ) $buildCopyright .= "License #".do_shortcode('[get-biz info="license"]')." • "; 						
+				if ( do_shortcode('[get-biz info="license"]') ) $buildCopyright .= "License ".do_shortcode('[get-biz info="license"]')." • "; 						
 				if ( do_shortcode('[get-biz info="phone-link"]') ) $buildCopyright .= do_shortcode('[get-biz info="phone-link"]');							
 				$buildCopyright .= "</div><div>Website developed & maintained by <a href='http://battleplanwebdesign.com' target='_blank'>Battle Plan Web Design</a>";
 				if ( do_shortcode('[get-biz info="misc1"]') ) $buildCopyright .= " • ".do_shortcode('[get-biz info="misc1"]');	

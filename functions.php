@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.4' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.5' ); }
 
 
 /*--------------------------------------------------------------
@@ -98,10 +98,11 @@ function battleplan_getWordPressPage( $atts, $content = null ) {
 	$getPage = get_post( $pageID );
 	$title = esc_html( get_the_title($pageID) );
 	$excerpt = $getPage->post_excerpt;
+	$excerpt = apply_filters('the_excerpt', $excerpt);
 	$content = $getPage->post_content;
 	$content = apply_filters('the_content', $content);
 	$thumbnail = get_the_post_thumbnail( $pageID, 'thumbnail' );
-	$link = get_permalink( $pageID );
+	$link = esc_url(get_permalink( $pageID ));
 
 	if ( $display == "content" ) : $output = $content; endif;
 	if ( $display == "title" ) : $output = $title; endif;
@@ -117,8 +118,8 @@ add_shortcode( 'get-domain', 'battleplan_getDomain' );
 function battleplan_getDomain( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'link'=>'false', ), $atts );
 	$link = esc_attr($a['link']);	
-	if ( $link == "false" ) : return get_site_url();
-	else: return '<a href="'.get_site_url().'">'.get_site_url().'</a>'; endif;
+	if ( $link == "false" ) : return esc_url(get_site_url());
+	else: return '<a href="'.esc_url(get_site_url()).'">'.esc_url(get_site_url()).'</a>'; endif;
 }
 
 // Returns url of page (minus domain)
@@ -223,7 +224,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		if ( $setAltText == "yes" ) :
 			$attachment_id = get_post_thumbnail_id( get_the_ID() );
 			if ( get_post_meta( $attachment_id, '_wp_attachment_image_alt', true ) == "" ) :
-				update_post_meta( $attachment_id, '_wp_attachment_image_alt', get_the_title() );
+				update_post_meta( $attachment_id, '_wp_attachment_image_alt', esc_html(get_the_title()) );
 			endif;
 		endif;	
 	
@@ -235,18 +236,18 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	
 	if ( $type == "testimonials" ) {
 		$linkLoc = "/testimonials/";
-		$testimonialName = get_field( "testimonial_name" );
-		$testimonialPhone = get_field( "testimonial_phone" );
-		$testimonialEmail = get_field( "testimonial_email" );
-		$testimonialTitle = get_field( "testimonial_title" );
-		$testimonialBiz = get_field( "testimonial_biz" );
-		$testimonialWeb = get_field( "testimonial_website" );
-		$testimonialLoc = get_field( "testimonial_location" );
-		$testimonialRate = get_field( "testimonial_rating" );	
-		$testimonialMisc1 = get_field( "testimonial_misc1" );	
-		$testimonialMisc2 = get_field( "testimonial_misc2" );	
-		$testimonialMisc3 = get_field( "testimonial_misc3" );	
-		$testimonialMisc4 = get_field( "testimonial_misc4" );
+		$testimonialName = esc_attr(get_field( "testimonial_name" ));
+		$testimonialPhone = esc_attr(get_field( "testimonial_phone" ));
+		$testimonialEmail = esc_attr(get_field( "testimonial_email" ));
+		$testimonialTitle = esc_attr(get_field( "testimonial_title" ));
+		$testimonialBiz = esc_attr(get_field( "testimonial_biz" ));
+		$testimonialWeb = esc_attr(get_field( "testimonial_website" ));
+		$testimonialLoc = esc_attr(get_field( "testimonial_location" ));
+		$testimonialRate = esc_attr(get_field( "testimonial_rating" ));	
+		$testimonialMisc1 = esc_attr(get_field( "testimonial_misc1" ));	
+		$testimonialMisc2 = esc_attr(get_field( "testimonial_misc2" ));	
+		$testimonialMisc3 = esc_attr(get_field( "testimonial_misc3" ));	
+		$testimonialMisc4 = esc_attr(get_field( "testimonial_misc4" ));
 		
 		$buildCredentials = "<div class='testimonials-credential testimonials-name'>".$testimonialName;
 		if ( $testimonialTitle ) $buildCredentials .= "<span class='testimonials-title'>, ".$testimonialTitle."</span>";
@@ -267,12 +268,12 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		if ( $testimonialMisc4 ) $buildCredentials .= "<div class='testimonials-credential testimonials-misc4'>".$testimonialMisc4."</div>";
 		if ( $testimonialRate ) $buildCredentials .= "<div class='testimonials-credential testimonials-rating'>".$testimonialRate."</div>";	
 
-		$archiveBody = '[txt class="testimonials-quote"][p]'.get_the_content().'[/p][/txt][txt class="testimonials-credentials"]'.$buildCredentials.'[/txt]';
+		$archiveBody = '[txt class="testimonials-quote"][p]'.apply_filters('the_content', get_the_content()).'[/p][/txt][txt class="testimonials-credentials"]'.$buildCredentials.'[/txt]';
 	} else {
 		if ( $accordion == "true" ) :		
-			if ( $format == 'true' ) : $formatContent = "[p]".get_the_content()."[/p]"; else : $formatContent = get_the_content(); endif;
+			if ( $format == 'true' ) : $formatContent = "[p]".apply_filters('the_content', get_the_content())."[/p]"; else : $formatContent = apply_filters('the_content', get_the_content()); endif;
 			//$archiveBody = '[txt class="text-'.$type.'"]';
-			$archiveBody = '[accordion title="'.get_the_title().'" excerpt="'.get_the_excerpt().'"]'.$formatContent.'[/accordion]';		
+			$archiveBody = '[accordion title="'.esc_html(get_the_title()).'" excerpt="'.apply_filters('the_excerpt', get_the_excerpt()).'"]'.$formatContent.'[/accordion]';		
 			//$archiveBody .= '[/txt]';
 		else :		
 			$archiveMeta = $archiveBody = "";
@@ -289,26 +290,26 @@ function battleplan_getBuildArchive($atts, $content = null) {
 			if ( $showAuthor == "true") $archiveMeta .= '<span class="archive-author '.$type.'-author author"><i class="fa fa-user"></i>'.get_the_author().'</span>';
 			if ( $showSocial == "true") $archiveMeta .= '<span class="archive-social '.$type.'-social social">'.do_shortcode('[add-share-buttons facebook="true" twitter="true"]').'</span>';
 			if ( $showDate == "true" || $showAuthor == "true" || $showSocial == "true" ) $archiveMeta .= '</div>';
-			if ( $showExcerpt == "true") $archiveBody .= '[p]'.get_the_excerpt().'[/p]';
-			if ( $showContent == "true") $archiveBody .= '[p]'.get_the_content().'[/p]';
+			if ( $showExcerpt == "true") $archiveBody .= '[p]'.apply_filters('the_excerpt', get_the_excerpt()).'[/p]';
+			if ( $showContent == "true") $archiveBody .= '[p]'.apply_filters('the_content', get_the_content()).'[/p]';
 			if ( $type == "galleries" ) :
 				if ( has_term( 'auto-generated', 'gallery-type' ) ) :
-					$count = get_field("image_number"); 						
+					$count = esc_attr(get_field("image_number")); 						
 				elseif ( has_term( 'shortcode', 'gallery-type' ) ) :
-					$count = get_field("image_number"); 						
+					$count = esc_attr(get_field("image_number")); 						
 				else:
 					$all_attachments = get_posts( array( 'post_type'=>'attachment', 'post_mime_type'=>'image', 'post_parent'=>get_the_ID(), 'post_status'=>'published', 'numberposts'=>-1 ) );
 					$count = count($all_attachments); 						
 				endif;	
 				$subline = $count." Photos";
-				$archiveBody .= '<a href="'.get_the_permalink().'" class="link-archive link-'.get_post_type().'"><p class="gallery-subtitle">'.$subline.'</p></a>'; 	
+				$archiveBody .= '<a href="'.esc_url(get_the_permalink()).'" class="link-archive link-'.get_post_type().'"><p class="gallery-subtitle">'.$subline.'</p></a>'; 	
 			endif;
 			//$archiveBody .= '[/txt]';
 		endif;
 	}
 	
 	if ( $showBtn == "true" ) : 
-		if ( $type == "testimonials" ) : $ada = " testimonials"; else: $ada = ' about '.get_the_title(); endif;	
+		if ( $type == "testimonials" ) : $ada = " testimonials"; else: $ada = ' about '.esc_html(get_the_title()); endif;	
 		$buildBtn = do_shortcode('[btn class="button-'.$type.'" link="'.$linkLoc.'" ada="'.$ada.'"]'.$btnText.'[/btn]'); 	
 	endif;
 	
@@ -565,7 +566,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	$buildControls .= $controlsNextBtn;	
 	$buildControls .= "</div>";	
 
-	if ( $slideType == "box" ) : $style = "style='max-width: ".$size."px; margin-left:auto; margin-right:auto;'"; $slideClass="box-slider"; elseif ( $slideType == "screen" ) : $style = "style='width: calc(100vw - 17px); left: 50%; transform: translateX(calc(-50vw + 8px));'"; $slideClass="screen-slider"; elseif ( $slideType == "fade" ) : $slideClass="carousel-fade"; else: $slideClass="carousel-fade"; endif;	
+	if ( $slideType == "box" ) : $style = "style='margin-left:auto; margin-right:auto;'"; $slideClass="box-slider"; elseif ( $slideType == "screen" ) : $style = "style='width: calc(100vw - 17px); left: 50%; transform: translateX(calc(-50vw + 8px));'"; $slideClass="screen-slider"; elseif ( $slideType == "fade" ) : $slideClass="carousel-fade"; else: $slideClass="carousel-fade"; endif;	
 	
 	$buildSlider = '<div id="'.$type.'Slider'.$sliderNum.'" class="carousel slide slider slider-'.$type.' '.$slideClass.' '.$class.' mult-'.$mult.'" '.$style.' data-interval="'.$interval.'" data-pause="'.$pause.'" data-wrap="'.$loop.'"';	
 	if ( $autoplay == "yes" ) $buildSlider .= ' data-ride="carousel"';
@@ -591,7 +592,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 // Display row of logos that slide from left to right 
 add_shortcode( 'get-logo-slider', 'battleplan_getLogoSlider' );
 function battleplan_getLogoSlider($atts, $content = null ) {	
-	$a = shortcode_atts( array( 'num'=>'-1', 'space'=>'80', 'tag'=>'featured', 'order_by'=>'rand', 'order'=>'ASC', 'shuffle'=>'false', 'speed'=>'3', 'delay'=>'0', 'pause'=>'no', 'link'=>'false'), $atts );
+	$a = shortcode_atts( array( 'num'=>'-1', 'space'=>'80', 'size'=>'full', 'tag'=>'featured', 'order_by'=>'rand', 'order'=>'ASC', 'shuffle'=>'false', 'speed'=>'3', 'delay'=>'0', 'pause'=>'no', 'link'=>'false'), $atts );
 	$num = esc_attr($a['num']);			
 	$space = esc_attr($a['space']);			
 	$space = $space / 2;	
@@ -604,6 +605,7 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 	$delay = esc_attr($a['delay']);			
 	$pause = esc_attr($a['pause']);			
 	$link = esc_attr($a['link']);		
+	$size = esc_attr($a['size']);		
 	
 	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>$num, 'order'=>$order, 'tax_query'=>array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags )));
 
@@ -619,7 +621,7 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 	$imageArray = array();
 
 	if( $image_query->have_posts() ) : while ($image_query->have_posts() ) : $image_query->the_post();
-		$image = wp_get_attachment_image_src( get_the_ID(), 'full' );
+		$image = wp_get_attachment_image_src( get_the_ID(), $size );
 		$getImage = "";
 		if ( $link != "false" ) $getImage .= '<a href="'.$image[0].'">';
 		$getImage .= '<img data-id="'.get_the_ID().'"'.getImgMeta(get_the_ID()).' class="logo-img '.$tags[0].'-img" src="'.$image[0].'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'">';
@@ -630,6 +632,91 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 	if ( $shuffle != "false" ) : shuffle($imageArray); endif;
 	$buildSlider = '<div class="logo-slider" data-speed="'.$speed.'" data-delay="'.$delay.'" data-pause="'.$pause.'" data-padding="'.$space.'"><div class="logo-row">'.printArray($imageArray).'</div></div>';
 	return $buildSlider;
+}
+
+// Generate an array of IDs for images, filtered by image-tags
+add_shortcode( 'load-images', 'battleplan_loadImagesByTag' );
+function battleplan_loadImagesByTag( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'max'=>'-1', 'tags'=>'', 'field'=>'', 'order_by'=>'meta_value_num', 'order'=>'ASC', 'value'=>'', 'type'=>'', 'compare'=>'', ), $atts );
+	$max = esc_attr($a['max']);	
+	$tags = esc_attr($a['tags']);	
+	$field = esc_attr($a['field']);
+	$orderBy = esc_attr($a['order_by']);	
+	$order = esc_attr($a['order']);
+	$value = esc_attr($a['value']);
+	$type = esc_attr($a['type']);
+	$compare = esc_attr($a['compare']);
+	if ( $compare == "greater equal" || $compare == "more equal" ) $compare=">=";
+	if ( $compare == "greater" || $compare == "more" ) $compare=">";
+	if ( $compare == "less equal" ) $compare="<=";
+	if ( $compare == "less" ) $compare="<";
+	if ( $compare == "equal" || $compare == "" ) $compare="=";
+	if ( $compare == "not equal" ) $compare="!=";
+	if ( $field != "" ) :
+		$image_attachments = new WP_Query( array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>$max, 'meta_query'=>array(array( 'key'=>$field, 'value'=>$value, 'type'=>$type, 'compare'=>$compare )), 'orderby'=>$orderBy, 'order'=>$order,  ));
+	elseif ( $tags == "" ) :
+		$tags = get_the_slug();
+		$image_attachments = new WP_Query( array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>$max, 'tax_query'=>array(array( 'taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags, )), 'orderby'=>$orderBy, 'order'=>$order,  ));
+	else:
+		$tags = explode(',', $tags);
+		$image_attachments = new WP_Query( array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>$max, 'tax_query'=>array(array( 'taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>array_values($tags))), 'orderby'=>$orderBy, 'order'=>$order,  ));					
+	endif;
+	
+	global $imageIDs; $imageIDs = array();
+	if ( $image_attachments->have_posts() ) : while ( $image_attachments->have_posts() ) : $image_attachments->the_post(); $imageIDs[] = get_the_ID(); endwhile; endif;	wp_reset_postdata();
+	update_field('image_number', count($imageIDs));
+}
+
+// Genearate a WordPress gallery and filter
+add_shortcode( 'get-gallery', 'battleplan_setUpWPGallery' );
+function battleplan_setUpWPGallery( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'name'=>'', 'size'=>'thumbnail', 'id'=>'', 'columns'=>'5', 'max'=>'-1', 'caption'=>'false', 'start'=>'', 'end'=>'', 'order_by'=>'menu_order', 'order'=>'ASC', 'tags'=>'', 'field'=>'', 'class'=>'', 'include'=>'', 'exclude'=>'', 'value'=>'', 'type'=>'', 'compare'=>'' ), $atts );
+	$id = esc_attr($a['id']);	
+	if ( $id == '' ) global $post; $id = intval( $post->ID );  
+	$name = esc_attr($a['name']);
+	if ( $name == '' ) $name = $id;
+	$size = esc_attr($a['size']);
+	$columns = esc_attr($a['columns']);
+	$order = esc_attr($a['order']);
+	$orderBy = esc_attr($a['order_by']);
+	$max = esc_attr($a['max']);
+	$caption = esc_attr($a['caption']);	
+	$start = esc_attr($a['start']);	
+	$end = esc_attr($a['end']);
+	$exclude = esc_attr($a['exclude']);
+	$include = esc_attr($a['include']);	
+	$value = esc_attr($a['value']);
+	$type = esc_attr($a['type']); 
+	$compare = esc_attr($a['compare']);
+	$field = esc_attr($a['field']);	
+	$tags = esc_attr($a['tags']);
+	do_shortcode('[load-images tags="'.$tags.'" field="'.$field.'" order_by="'.$orderBy.'" order="'.$order.'" value="'.$value.'" type="'.$type.'" compare="'.$compare.'"]');
+	$class = esc_attr($a['class']);
+	if ( $class != "" ) $class = " ".$class;
+	
+	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>$max, 'order'=>$order, 'date_query'=>array( array( 'after'=>$start, 'before'=>$end, 'inclusive'=>'true' )));	
+	global $imageIDs; 
+	if ( $imageIDs ) : $args['post__in']=$imageIDs; $args['orderby']="post__in"; endif;
+	if ( $exclude ) : $exclude = explode(',', $exclude); $args['post__not_in']=$exclude; endif;
+	if ( $include ) : $include = explode(',', $include); $args['post__in']=$include; $args['orderby']="post__in"; endif;
+	if ( !$imageIDs && !$include ) : $args['post_parent']=$id; $args['orderby']=$orderBy; endif;
+	
+	$gallery = '<div id="gallery-'.$name.'" class="gallery gallery-'.$id.' gallery-column-'.$columns.' gallery-size-'.$size.'">';
+
+	$image_attachments = new WP_Query($args);
+	if ( $image_attachments->have_posts() ) : while ( $image_attachments->have_posts() ) : $image_attachments->the_post();
+		$full = wp_get_attachment_image_src($post->ID, 'full');
+		$thumbnail = wp_get_attachment_image_src($post->ID, $size);
+		$count++;
+
+		if ( $caption != "false" ) : $captionPrint = '<figcaption><div class="image-caption image-title">'.$post->post_title.'</div></figcaption>'; endif;
+		$gallery .= '<dl class="col col-archive col-gallery id-'.$post->ID.'"><dt class="col-inner"><a class="link-archive link-gallery ari-fancybox" href="'.$full[0].'"><img  class="wp-image-'.get_the_ID().'" data-id="'.get_the_ID().'"'.getImgMeta($post->ID).' src="'.$thumbnail[0].'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'"></a>'.$captionPrint.'</dt></dl>';
+	endwhile; endif;	
+	wp_reset_postdata();
+	$gallery .= "</div>";	
+	$buildGallery = $gallery;
+	update_field('image_number', $count);
+	return $buildGallery;
 }
 
 /*--------------------------------------------------------------
@@ -679,7 +766,7 @@ function getImgMeta($id) {
 	if ( $keys = array_keys( $custom ) ) {		
 		$addMeta = "";
 		foreach ($keys as $key) :
-			$value = get_field( $key, $id);			
+			$value = esc_attr(get_field( $key, $id));			
 			if ( substr($value, 0, 5) != "field" && !is_array($value) && $value != "" && $value != null ) :				
 				$key = ltrim($key, '_');
 				$key = ltrim($key, '-');

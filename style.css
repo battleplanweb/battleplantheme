@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 1.4
+Version: 1.5
 Tested up to: 5.5
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -1968,8 +1968,8 @@ a.scroll-top {
 }
 
 .archive-intro {
-	margin-top:									1.5em;
-	margin-bottom:								1.5em;
+	margin-top:									0.5em;
+	margin-bottom:								2em;
 }
 
 .testimonials-intro {
@@ -2370,48 +2370,51 @@ img.noFX,
 
 /* Galleries
 --------------------------------------------- */
+.galleries-intro,
+.gallery-subtitle {
+	text-align:									center;
+}
+
+.col-galleries .col-inner {
+	gap:										0.5em 3%;
+}
+
 .gallery {
 	margin-bottom: 								1.5em;
 	display: 									grid;
 	gap: 										1.5em;
 }
 
-.gallery-item {
-	display: 									inline-block;
-	text-align: 								center;
-	width: 										100%;
-}
-
-.gallery-columns-2 {
+.gallery-column-2 {
 	grid-template-columns: 						repeat(2, 1fr);
 }
 
-.gallery-columns-3 {
+.gallery-column-3 {
 	grid-template-columns: 						repeat(3, 1fr);
 }
 
-.gallery-columns-4 {
+.gallery-column-4 {
 	grid-template-columns: 						repeat(4, 1fr);
 }
 
-.gallery-columns-5 {
+.gallery-column-5 {
 	grid-template-columns: 						repeat(5, 1fr);
 }
 
-.gallery-columns-6 {
+.gallery-column-6 {
 	grid-template-columns: 						repeat(6, 1fr);
 }
 
-.gallery-columns-7 {
+.gallery-column-7 {
 	grid-template-columns: 						repeat(7, 1fr);
 }
 
-.gallery-columns-8 {
+.gallery-column-8 {
 	grid-template-columns: 						repeat(8, 1fr);
 }
 
-.gallery-columns-9 {
-	grid-template-columns: 						repeat(9, 1fr);
+dl.col-gallery {
+	margin:										0;
 }
 
 .gallery-caption {
@@ -2957,14 +2960,20 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 	.flex.grid-1-1-2 .col:nth-child(3n+3) .col-inner,
 	.flex.grid-1-2-1 .col .col-inner,
 	.flex.grid-2-1-1 .col:nth-child(3n+1) .col-inner {
-		max-width:									600px;
+		max-width:									75%;
 		margin:										0 auto;
 	}
 	
 	.flex.grid-1-2-1 .col:nth-child(3n+1) .col-inner,
 	.flex.grid-1-2-1 .col:nth-child(3n+3) .col-inner {
-		max-width:									376px;
+		max-width:									50%;
 		margin:										0 auto;
+	}
+	
+	/* Galleries */
+	.gallery-column-7,
+	.gallery-column-8 {
+		grid-template-columns: 						repeat(6, 1fr);
 	}
 }
 
@@ -3074,9 +3083,16 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 	}
 	
 	.flex.grid-1-1-1 .col:nth-child(3n+3) .col-inner {
-		max-width:									376px;
+		max-width:									50%;
 		margin:										0 auto;
 	}	
+		
+	/* Galleries */ 
+	.gallery-column-6,
+	.gallery-column-7,
+	.gallery-column-8 {
+		grid-template-columns: 						repeat(5, 1fr);
+	}
 }
 
 /* 2: Phones (landscape) + Tablets (portrait) */
@@ -3104,6 +3120,12 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 		grid-column:								span 12;
 		text-align:									center;
 		width:										100%;
+	}
+	
+	.top-strip .flex .col .col-inner,
+	.divider-strip .flex .col .col-inner,
+	.site-info .col .col-inner {
+		max-width:									100% !important;
 	}
 	
 	#secondary .sidebar-inner {
@@ -3156,7 +3178,7 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 	.flex.grid-1-2 .col:nth-child(2n+2) .col-inner,
 	.flex.grid-1-1 .col .col-inner,
 	.logo-strip .flex:not(.grid-1) .col .col-inner {
-		max-width:									600px;
+		max-width:									75%;
 		margin:										0 auto;
 	}
 	
@@ -3164,7 +3186,7 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 	.flex.grid-1-3 .col:nth-child(2n+1) .col-inner,
 	.flex.grid-2-1 .col:nth-child(2n+2) .col-inner,
 	.flex.grid-1-2 .col:nth-child(2n+1) .col-inner {
-		max-width:									376px;
+		max-width:									50%;
 		margin:										0 auto;
 	}
 	
@@ -3172,6 +3194,15 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 	.three-col,
 	.three-column {
 		column-count:								2;
+	}	
+			
+	/* Galleries */ 
+	.gallery-column-4,
+	.gallery-column-5,
+	.gallery-column-6,
+	.gallery-column-7,
+	.gallery-column-8 {
+		grid-template-columns: 						repeat(3, 1fr);
 	}
 }
 
@@ -3273,12 +3304,26 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 		order: 										2 !important;
 	}	
 	
+	.flex .col .col-inner {
+		max-width:									100% !important;
+	}
+
 	/* Responsive Columns */
 	.two-col,
 	.two-column,
 	.three-col,
 	.three-column {
 		column-count:								1;
+	}	
+	
+	/* Galleries */ 
+	.gallery-column-3,
+	.gallery-column-4,
+	.gallery-column-5,
+	.gallery-column-6,
+	.gallery-column-7,
+	.gallery-column-8 {
+		grid-template-columns: 						repeat(2, 1fr);
 	}
 }
 

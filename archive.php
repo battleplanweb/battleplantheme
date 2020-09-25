@@ -8,8 +8,8 @@ get_header();
 
 		<?php if ( have_posts() ) : 
 			
-			$archiveHeadline = get_the_archive_title();
-			$archiveIntro = get_the_archive_description();				
+			$archiveHeadline = esc_html(get_the_archive_title());
+			$archiveIntro = esc_html(get_the_archive_description());				
 
 		// Galleries
 			if ( get_post_type() == "galleries" ) :
@@ -22,7 +22,7 @@ get_header();
 				$showBtn = "false";
 				$btnText = "";
 				$btnPos = "outside";
-				$titlePos = "outside";
+				$titlePos = "inside";
 				$showExcerpt = "false";				
 				$showDate = "false";				
 				$showAuthor = "false";

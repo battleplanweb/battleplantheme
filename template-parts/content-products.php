@@ -1,8 +1,8 @@
 <?php
 /* Template part for displaying products */
 
-$comfort = get_field( "comfort" );
-$efficiency = get_field( "efficiency" );
+$comfort = esc_attr(get_field( "comfort" ));
+$efficiency = esc_attr(get_field( "efficiency" ));
 ?>
 
 	<div class="entry-content">

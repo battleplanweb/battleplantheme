@@ -476,7 +476,7 @@ function battleplan_hvac_tip_of_the_month( $atts, $content = null ) {
 		[txt size="100"]
 		 <h2>'.$headline.'</h2>
 
-		 <img src="'.$image.'" alt="'.$alt.'" class="alignright size-half-s" width="320" height="320" />
+		 <img src="'.$image.'" alt="'.$alt.'" class="alignright size-third-s" width="260" height="260" />
 
 		 '.$tip.'
 		[/txt]			

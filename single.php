@@ -3,23 +3,22 @@
 
 get_header();
 ?>
-
+ 
 	<main id="primary" class="site-main">
 
 		<?php while ( have_posts() ) : the_post();
 
-			// Store content in variable
-				ob_start();
-				the_content();
-				$singleContent = ob_get_clean();
-
 			// Galleries
 				if ( get_post_type() == "galleries" ) :
-					$singleHeadline = get_the_title();
+					$singleHeadline = esc_html(get_the_title());
 					$singleIntro = "<p>Click an image to view a larger version.";		
-					if ( wp_count_posts( 'galleries' )->publish > 1 ) $singleIntro .= "Click <a href='/galleries/'>HERE</a> to return to albums.";		
+					if ( wp_count_posts( 'galleries' )->publish > 1 ) $singleIntro .= " Click <a href='/galleries/'>HERE</a> to return to albums.";		
 					$singleIntro .= "</p>";	
 					$orderby = "rand";
+					global $singleContent;
+					ob_start();
+					the_content();
+					$singleContent = ob_get_clean();
 					if (strpos($singleContent, 'section-gallery') === false) $singleContent = do_shortcode('[get-gallery order_by="'.$orderby.'"]'); 
 					$breadcrumbs = "false";
 					$date = "false";						
@@ -30,7 +29,7 @@ get_header();
 		
 			// Products
 				elseif ( get_post_type() == "products" ) :	
-					$singleHeadline = get_the_title();
+					$singleHeadline = esc_html(get_the_title());
 					$singleIntro = "";
 					$breadcrumbs = "true";
 					$date = "false";
@@ -41,7 +40,7 @@ get_header();
 
 			// Default Single
 				else:		
-					$singleHeadline = get_the_title();
+					$singleHeadline = esc_html(get_the_title());
 					$singleIntro = "";
 					$breadcrumbs = "true";
 					$date = "true";
@@ -101,7 +100,7 @@ get_header();
 
 								$prev_post = get_previous_post(); 		
 								if ( $prev_post ) : 
-									$prev_title = strip_tags(str_replace('"', '', $prev_post->post_title)); 			
+									$prev_title = strip_tags(str_replace('"', '', esc_html($prev_post->post_title))); 			
 									$displayFooter .= '<a class="nav-previous prev" href="'.get_permalink( $prev_post->ID ).'" rel="prev"><div class="post-arrow"><i class="fa fa-angle-left" aria-hidden="true"></i></div><div class="post-links"><div class="meta-nav" aria-hidden="true">Previous</div><div class="post-title">'.$prev_title.'</div></div></a>';
 								else:
 									$displayFooter .= '<div class="nav-previous prev"></div>';
@@ -109,7 +108,7 @@ get_header();
 
 								$next_post = get_next_post(); 		
 								if ( $next_post ) : 
-									$next_title = strip_tags(str_replace('"', '', $next_post->post_title)); 			
+									$next_title = strip_tags(str_replace('"', '', esc_html($next_post->post_title))); 			
 									$displayFooter .= '<a class="nav-next next" href="'.get_permalink( $next_post->ID ).'" rel="next"><div class="post-links"><div class="meta-nav" aria-hidden="true">Next</div><div class="post-title">'.$next_title.'</div></div><div class="post-arrow"><i class="fa fa-angle-right" aria-hidden="true"></i></div></a>';
 								else:
 									$displayFooter .= '<div class="nav-next next"></div>';

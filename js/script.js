@@ -792,6 +792,11 @@ failCheck="Set up pages: Wrap content within .site-main";
 // Wrap content within .site-main so that widgets can be distributed properly
 	wrapDiv('.site-main','<div class="site-main-inner"></div>', 'inside');	
 	
+failCheck="Add .page-begins to the next section under masthead";
+	
+// Add .page-begins to the next section under masthead for purposes of locking .top-strip
+	if ( $('#wrapper-top').length ) { $('#wrapper-top').addClass('page-begins'); } else { $('#wrapper-content').addClass('page-begins'); }
+	
 failCheck="Set up pages: Add 'noFX' class to img";
 		
 // Add "noFX" class to img if it appears in any of the parent divs
@@ -934,10 +939,10 @@ failCheck="Set up pages: Ensure all slides in a Bootstrap carousel are even heig
 		thisCarousel.data("maxH", 0);
 		
 		thisCarousel.on('slid.bs.carousel', function() {
-			var thisSlide = thisCarousel.find(".carousel-item.active").outerHeight() + getPadding;
-			if ( thisSlide > maxH ) { 
-				thisCarousel.find(".carousel-inner").css("height",thisSlide+"px");	
-				maxH = thisSlide;
+			var thisSlideH = thisCarousel.find(".carousel-item.active").outerHeight() + getPadding;
+			if ( thisSlideH > maxH ) { 
+				thisCarousel.find(".carousel-inner").css("height",thisSlideH+"px");	
+				maxH = thisSlideH;
 			}
 		});		
 	});			

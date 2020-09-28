@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.5' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.6' ); }
 
 
 /*--------------------------------------------------------------
@@ -184,6 +184,81 @@ function battleplan_addShareButtons( $atts, $content = null ) {
     return $output;	
 };
 
+// Choose random text from given choices
+add_shortcode( 'get-random-text', 'battleplan_getRandomText' );
+function battleplan_getRandomText($atts, $content = null) {
+	$a = shortcode_atts( array( 'cookie'=>'true', 'text1'=>'', 'text2'=>'', 'text3'=>'', 'text4'=>'', 'text5'=>'', 'text6'=>'', 'text7'=>'',  ), $atts );
+	$cookie = esc_attr($a['cookie']);	
+	$textArray = array( wp_kses_post($a['text1']), wp_kses_post($a['text2']), wp_kses_post($a['text3']), wp_kses_post($a['text4']), wp_kses_post($a['text5']), wp_kses_post($a['text6']), wp_kses_post($a['text7']) );	
+	$textArray = array_filter($textArray);
+	$num = count($textArray) - 1;	
+	
+	if ( $cookie != "false" && $_COOKIE['random-text'] != '' ) : $rand = $_COOKIE['random-text'];
+	else : $rand=rand(0,$num); endif;
+	
+	$printText = $textArray[$rand];
+	
+	if ( $rand == $num ) : $rand = 0; else: $rand++; endif;	
+	$cookieParam = array ( 'expires' => time() + (86400 * 7), 'secure' => true );	
+	if ( $cookie != "false" ) setcookie('random-text', $rand, $cookieParam);
+
+	return $printText;
+}
+
+// Display a random photo from tagged images 
+add_shortcode( 'get-random-image', 'battleplan_getRandomImage' );
+function battleplan_getRandomImage($atts, $content = null ) {	
+	$a = shortcode_atts( array( 'id'=>'', 'tag'=>'', 'size'=>'thumbnail', 'link'=>'no', 'number'=>'1', 'offset'=>'', 'align'=>'left', 'class'=>'', 'order_by'=>'rand', 'order'=>'ASC', 'shuffle'=>'no' ), $atts );
+	$tag = esc_attr($a['tag']);	
+	$tags = explode( ',', $tag );
+	$size = esc_attr($a['size']);	
+	$link = esc_attr($a['link']);	
+	$align = esc_attr($a['align']);	
+	$number = esc_attr($a['number']);			
+	$offset = esc_attr($a['offset']);		
+	$orderBy = esc_attr($a['order_by']);		
+	$order = esc_attr($a['order']);		
+	$shuffle = esc_attr($a['shuffle']);	
+	$id = esc_attr($a['id']);		
+	if ( $id == "current" ) $id = get_the_ID();
+	$class = esc_attr($a['class']);	
+	if ( $class != '' ) $class = " ".$class;
+
+	$align = "align".$align;
+	
+	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>$number, 'offset'=>$offset, 'order'=>$order);
+
+	if ( $orderBy == 'views' ) : $args['meta_key']="widget-pic-views"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'recent' ) : $args['meta_key']="widget-pic-time"; $args['orderby']='meta_value_num';	
+	else : $args['orderby']=$orderBy; endif;		
+	
+	if ( $id == '' ) : 
+		$args['tax_query']=array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags ));
+	elseif ( $tag != '' ) :
+		$args['post_parent']=$id;
+		$args['tax_query']=array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags ));
+	else :
+		$args['post_parent']=$id;
+	endif;
+
+	$image_query = new WP_Query($args);		
+	$imageArray = array();
+
+	if( $image_query->have_posts() ) : while ($image_query->have_posts() ) : $image_query->the_post();
+		$full = wp_get_attachment_image_src($post->ID, 'full');
+		$image = wp_get_attachment_image_src($post->ID, $size);
+	
+		$buildImage = "";	
+		if ( $link == "yes" ) $buildImage .= '<a href="'.$full[0].'">';		
+		$buildImage .= '<img data-id="'.get_the_ID().'"'.getImgMeta($post->ID).' class="wp-image-'.get_the_ID().' random-img '.$tags[0].'-img '.$align.' size-'.$size.$class.'" src="'.$image[0].'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'">';	
+		if ( $link == "yes" ) $buildImage .= '</a>';	
+		$imageArray[] =  $buildImage;	
+	
+	endwhile; wp_reset_postdata(); endif;	
+	if ( $shuffle != "no" ) : shuffle($imageArray); endif;
+	return printArray($imageArray);
+}
+
 // Build an archive
 add_shortcode( 'build-archive', 'battleplan_getBuildArchive' );
 function battleplan_getBuildArchive($atts, $content = null) {	
@@ -302,7 +377,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 					$count = count($all_attachments); 						
 				endif;	
 				$subline = $count." Photos";
-				$archiveBody .= '<a href="'.esc_url(get_the_permalink()).'" class="link-archive link-'.get_post_type().'"><p class="gallery-subtitle">'.$subline.'</p></a>'; 	
+				$archiveBody .= '<a href="'.esc_url(get_the_permalink()).'" class="link-archive link-'.get_post_type().'" aria-hidden="true" tabindex="-1"><p class="gallery-subtitle">'.$subline.'</p></a>'; 	
 			endif;
 			//$archiveBody .= '[/txt]';
 		endif;
@@ -1694,7 +1769,6 @@ function battleplan_column_settings() {
 	) );
 }
 
-
 /*--------------------------------------------------------------
 # Basic Theme Set Up
 --------------------------------------------------------------*/
@@ -2029,6 +2103,7 @@ function battleplan_addTaglineToAdminBar( $wp_admin_bar ) {
 	$args = array( 'id' => 'tagline', 'title' => '-&nbsp;&nbsp;'.get_bloginfo( 'description' ).'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;', );
 	$wp_admin_bar->add_node( $args );
 }
+
 add_action( 'wp_before_admin_bar_render', 'battleplan_reorderAdminBar');
 function battleplan_reorderAdminBar() {
     global $wp_admin_bar;
@@ -2534,10 +2609,10 @@ add_action( 'wp_ajax_sendServerEmail', 'battleplan_sendServerEmail_ajax' );
 add_action( 'wp_ajax_nopriv_sendServerEmail', 'battleplan_sendServerEmail_ajax' );
 function battleplan_sendServerEmail_ajax() {		
 	$emailTo = "info@battleplanwebdesign.com";
-	$emailFrom = "do-not-reply@battleplanwebdesign.com";
+	$emailFrom = "From: Website Administrator <do-not-reply@battleplanwebdesign.com>";
 	$subject = $_POST['theSite']." needs attention!";
-	$content = $_POST['theSite']." failed at ".$_POST['failCheck'];
-	mail($emailTo, $subject, $content, "From: Website Administrator <$emailFrom>");
+	$content = $_POST['theSite']." failed at ".$_POST['failCheck'];	
+	mail($emailTo, $subject, $content, $emailFrom);
 }
 
 // Clear Hummingbird cache immediately upon javascript error

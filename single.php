@@ -15,11 +15,12 @@ get_header();
 					if ( wp_count_posts( 'galleries' )->publish > 1 ) $singleIntro .= " Click <a href='/galleries/'>HERE</a> to return to albums.";		
 					$singleIntro .= "</p>";	
 					$orderby = "rand";
+					$columns = "5";
 					global $singleContent;
 					ob_start();
 					the_content();
 					$singleContent = ob_get_clean();
-					if (strpos($singleContent, 'section-gallery') === false) $singleContent = do_shortcode('[get-gallery order_by="'.$orderby.'"]'); 
+					if (strpos($singleContent, 'section-gallery') === false) $singleContent = do_shortcode('[get-gallery order_by="'.$orderby.'" columns="'.$columns.'"]'); 
 					$breadcrumbs = "false";
 					$date = "false";						
 					$author = "false";						
@@ -125,7 +126,7 @@ get_header();
 			get_template_part( 'template-parts/content', get_post_type() );		
 			echo $displayFooter;	
 		
-			if ( comments_open() || get_comments_number() ) comments_template();
+			if ( ( comments_open() || get_comments_number() ) && $comments == "true" ) comments_template();
 		
 		endwhile; ?>
 

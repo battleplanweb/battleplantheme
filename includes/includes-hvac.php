@@ -60,10 +60,10 @@ function battleplan_product_overview( $atts, $content = null ) {
 		$excerpt	= "<p>Everything you want is in one easy package. Single-cabinet systems contain all your heating and cooling needs, from central heating and air cooling systems to heat pump systems for certain types of homes.</p>";
 		$link 		= "/product-type/packaged-units/";
 		$pic 		= "/wp-content/uploads/American-Standard-11-320x320.jpg";
-		$alt 		= "American Packaged Units";
+		$alt 		= "American Standard Packaged Units";
 	endif;	
 	
-	if ( $type == "american standard automation systems" ) :
+	if ( $type == "nexia automation systems" ) :
 		$title 		= "Automation Systems";
 		$excerpt	= "<p>Monitor and control the temperature in your home via most web-enabled cell phones, computers and tablets. For total home automation, you can even remotely turn your lights, appliances and wireless keypad locks on and off.</p>";
 		$link 		= "/products/nexia-home-intelligence/";
@@ -71,12 +71,20 @@ function battleplan_product_overview( $atts, $content = null ) {
 		$alt 		= "Nexia Home Intelligence";
 	endif;	
 	
-	if ( $type == "american standard ductless systems" ) :
+	if ( $type == "samsung ductless systems" ) :
 		$title 		= "Ductless Systems";
 		$excerpt	= "<p>Gain full comfort control over traditional problem areas that don't cool or heat properly. Makes expansion onto existing homes a breeze, such as finishing and conditioning a garage or attic space.</p>";
 		$link 		= "/product-type/ductless-systems/";
 		$pic 		= "/wp-content/uploads/Samsung-Max-320x320.jpg"; 
 		$alt 		= "Ductless Systems";
+	endif;		
+	
+	if ( $type == "indoor air quality" ) :
+		$title 		= "Indoor Air Quality";
+		$excerpt	= "<p>Indoor air quality is known to affect the health, comfort and well-being of people inside your home. Poor IAQ has been linked to all sorts of health and productivity issues. Our IAQ products can help make your home safer and more comfortable.</p>";
+		$link 		= "/product-type/indoor-air-quality/";
+		$pic 		= "/wp-content/uploads/indoor-air-quality-320x320.jpg"; 
+		$alt 		= "Indoor Air Quality";
 	endif;	
 	
 	return do_shortcode('
@@ -104,7 +112,7 @@ function battleplan_american_standard_customer_care( $atts, $content = null ) {
 			<h1>American Standard</h1>
 			<h2>Customer Care Dealer</h2>
 
-			<img class="alignright noFX size-half-s" src="/wp-content/uploads/AS-Customer-Care-Logo-258x258.png" alt="American Standard Customer Care Dealer" />
+			<img class="alignright size-half-s noFX customer-care-logo" src="/wp-content/uploads/AS-Customer-Care-Logo-258x258.png" alt="American Standard Customer Care Dealer" />
 
 			<p>[get-biz info="name"] is proud to be an authorized American Standard Customer Care Dealer.</p>
 
@@ -131,13 +139,13 @@ function battleplan_american_standard_customer_care( $atts, $content = null ) {
 			 [txt size="100"]
 			  <h2>What is a Customer Care Dealer?</h2>
 
-			  <img src="/wp-content/uploads/AS-Customer-Care-Logo-258x258.png" alt="We are an American Standard Customer Care Dealer." class="alignright size-quarter-s noFX" />
+			  <a href="/customer-care-dealer/" aria-hidden="true" tabindex="-1"><img src="/wp-content/uploads/AS-Customer-Care-Logo-258x258.png" alt="We are an American Standard Customer Care Dealer." class="alignright size-quarter-s noFX customer-care-logo" /></a>
 
 			  <p>The Customer Care program is made up of handpicked dealers who are ready to listen, evaluate and find solutions that work smarter for you and your home.</p>
 			  <p><strong><a href="/customer-care-dealer/">Learn more about the Customer Care program.</a></strong></p>
 			 [/txt]
 		');	
-	endif;
+	endif; 
 }	
 
 

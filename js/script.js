@@ -272,9 +272,9 @@ failCheck="Basic site functionality";
 		});		
 		
 		if ( typeof target === 'object' || typeof target === 'string' ) {		
-			newLoc = $(target).offset().top - newTop - topSpacer;	
+			newLoc = $(target).offset().top - newTop - topSpacer;
 		} else {
-			newLoc = target - newTop - topSpacer;	
+			newLoc = target - newTop - topSpacer;
 		}
 		
 		if ( initSpeed == 0 ) { 
@@ -350,9 +350,9 @@ failCheck="Basic site functionality";
 		$('.block-accordion').last().addClass('accordion-last');
 		if ( $('.block-accordion').parents('.col-archive').length) {
 			$('.block-accordion').parents('.col-archive').addClass('archive-accordion');
-			$('.archive-accordion').each(function() { accPos.push($(this).position().top); });			
+			$('.archive-accordion').each(function() { accPos.push($(this).offset().top); });			
 		} else {
-			$('.block-accordion').each(function() { accPos.push($(this).position().top); });			
+			$('.block-accordion').each(function() { accPos.push($(this).offset().top); });			
 		}
 	
 		$(".block-accordion").keyup(function(event) {
@@ -363,7 +363,7 @@ failCheck="Basic site functionality";
 			
 		$(".block-accordion").click(function(e) {		
 			e.preventDefault();  
-			var locAcc = $(this), locIndex = locAcc.index('.block-accordion'), locPos = accPos[locIndex], topPos = accPos[0];			
+			var locAcc = $(this), locIndex = locAcc.index('.block-accordion'), locPos = accPos[locIndex], topPos = accPos[0], moveTo = 0;			
 			if ( !locAcc.hasClass("active") ) {
 				setTimeout( function () {
 					$( '.block-accordion.active .accordion-excerpt, .block-accordion.active .accordion-content' ).animate({ height: "toggle", opacity: "toggle" }, transSpeed);
@@ -374,9 +374,11 @@ failCheck="Basic site functionality";
 				setTimeout( function () {
 					locAcc.find('.accordion-content').animate({ height: "toggle", opacity: "toggle" }, transSpeed);						
 					if ( (locPos - topPos) > (getDeviceH() * 0.25) ) {
-						animateScroll(locPos, topSpacer, transSpeed); 
+						moveTo = locPos;
+						animateScroll(moveTo, topSpacer, transSpeed); 
 					} else {
-						animateScroll(topPos, topSpacer, transSpeed); 
+						moveTo = ((locPos - topPos) / 2) + topPos;						
+						animateScroll(moveTo, topSpacer, transSpeed); 
 					}		
 				}, openDelay);
 				setTimeout( function() {						
@@ -1239,7 +1241,7 @@ failCheck="ADA compliance";
 
 	// Add alt="" to all images with no alt tag
 	setTimeout(function() { $('img:not([alt])').attr('alt', ''); }, 50);
-	setTimeout(function() { $('img:not([alt])').attr('alt', ''); }, 500);
+	setTimeout(function() { $('img:not([alt])').attr('alt', ''); }, 1000);
 	
 	// Add special focus outline when someone is using tab to navigate site
 	$(document).mousemove(function(event) { $('body').addClass('using-mouse').removeClass('using-keyboard'); });
@@ -1266,9 +1268,8 @@ failCheck="ADA compliance";
 	$(window).on('mousedown', function() {
 		$('*').removeClass('tab-focus');
 	  	allowTabFocus = false;
-	})
+	});
 	
-		
 /*--------------------------------------------------------------
 # Delay parsing of JavaScript
 --------------------------------------------------------------*/
@@ -1302,10 +1303,10 @@ failCheck="Delay parsing of JavaScript";
 		
 		setTimeout(function() {	// Wait 1 second before calling the following functions 
 			
-		// Generic page setup functions (if not overriden in site script.js)
+		// Generic page setup functions (if not overriden in script-site.js)
 			trimText();
 			buildAccordion();
-			
+
 		}, 1000);
 
 		setTimeout(function() {	// Wait 2.5 seconds before calling the following functions 	
@@ -1323,28 +1324,41 @@ failCheck="Delay parsing of JavaScript";
 				url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
 				data : { action: "count_post_views", id : postID },
 				success: function( response ) { console.log(response); } 
-			});				
-					
-		}, 2500);
+			});		
+			
+		// Count image view
+			$('#primary img.random-img, .widget-image:not(.hide-widget) img.random-img, .row-of-pics img.random-img, .carousel img.img-slider, #wrapper-bottom img.random-img').waypoint(function() {		
+				var theImg = $(this.element).attr('data-id');			
+				$.post({
+					url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
+					data : { action: "add_view", id : theImg },
+					success: function( response ) { console.log(response); } 
+				});	
+				this.destroy();
+			}, { offset: '75%' });	 	
 
+		}, 2500);
 	}); 
 	
-
 /*--------------------------------------------------------------
 # If page load fails
 --------------------------------------------------------------*/
 	
-	} catch(err) {	
+} catch(err) {	
 	
 // Remove loading screen if site crashes (better to see something than nothing) 	
 	$( "#page" ).prepend( "<div class='technical-difficulties'><b>ATTENTION: </b>Our site is experiencing technical difficulties, but we are working to fix the issue.  Thank you for your patience.</div>" );
 	$("#loader").fadeOut("fast");
-
+							
+	$.getJSON('https://ipapi.co/json/', function(data) {
+		failCheck = failCheck + JSON.stringify(data, null, 2);
+	});
+		
 	var theSite = window.location.hostname;
 	$.post({
 		url : 'https://'+theSite+'/wp-admin/admin-ajax.php',
 		data : { action: "sendServerEmail", theSite: theSite, failCheck: failCheck },
-	});	
+	});
 	
 // Clear Hummingbird cache 	
 	//$.post({

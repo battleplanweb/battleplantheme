@@ -1251,6 +1251,11 @@ failCheck="ADA compliance";
 	$('[role="menubar"]' ).on( 'focus.aria mouseenter.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).attr( 'aria-expanded', true ); } );
 	$('[role="menubar"]' ).on( 'blur.aria mouseleave.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).attr( 'aria-expanded', false ); } );
 	
+	// Remove iframe from tab order
+	$('iframe').each(function(){
+		$(this).attr("aria-hidden", true).attr("tabindex","-1");		
+	})
+	
 	// Add .tab-focus class to links and buttons & auto scroll to better position on screen
 	var allowTabFocus = false;
 	$(window).on('keydown', function(e) {

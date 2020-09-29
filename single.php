@@ -15,12 +15,12 @@ get_header();
 					if ( wp_count_posts( 'galleries' )->publish > 1 ) $singleIntro .= " Click <a href='/galleries/'>HERE</a> to return to albums.";		
 					$singleIntro .= "</p>";	
 					$orderby = "rand";
+					$order = "asc";
 					$columns = "5";
 					global $singleContent;
 					ob_start();
 					the_content();
 					$singleContent = ob_get_clean();
-					if (strpos($singleContent, 'section-gallery') === false) $singleContent = do_shortcode('[get-gallery order_by="'.$orderby.'" columns="'.$columns.'"]'); 
 					$breadcrumbs = "false";
 					$date = "false";						
 					$author = "false";						
@@ -52,6 +52,10 @@ get_header();
 				endif;
 		
 			if ( function_exists( 'overrideSingle' ) ) { overrideSingle( get_post_type() ); }
+		
+			if ( get_post_type() == "galleries" ) :
+				if (strpos($singleContent, 'section-gallery') === false) $singleContent = do_shortcode('[get-gallery order_by="'.$orderby.'" order="'.$order.'" columns="'.$columns.'"]'); 
+			endif;
 
 			// Setup & Display Post		
 			$displayHeader = '<article id="post-'.get_the_ID().'">';		

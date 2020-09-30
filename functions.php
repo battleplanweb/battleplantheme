@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.6.1' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.7' ); }
 
 
 /*--------------------------------------------------------------
@@ -2043,7 +2043,8 @@ function battleplan_widgets_init() {
 // Load and enqueue styles & scripts
 add_action( 'wp_enqueue_scripts', 'battleplan_scripts' );
 function battleplan_scripts() {
-	wp_enqueue_style( 'battleplan-animate', get_template_directory_uri().'/animate.css', array(), _BP_VERSION );
+	wp_enqueue_style( 'battleplan-animate', get_template_directory_uri().'/animate.css', array(), _BP_VERSION );	
+	wp_enqueue_style( 'battleplan-ie', get_template_directory_uri()."/style-ie.css", array(), _BP_VERSION );
 	
 	wp_enqueue_script( 'battleplan-bootstrap', get_template_directory_uri() . '/js/bootstrap.js', array(), _BP_VERSION, true );
 	wp_enqueue_script( 'battleplan-font-awesome', get_template_directory_uri() . '/js/font-awesome.js', array(), _BP_VERSION, true );
@@ -2267,7 +2268,8 @@ function get_srcset( $size ) {
 }
 
 /* Establish default image sizes */
-if ( function_exists( 'add_image_size' ) ) {
+if ( function_exists( 'add_image_size' ) ) {	
+	add_image_size( 'icon', 80, 80, false ); 
 	add_image_size( 'quarter-s', 240, 99999, false ); 
 	add_image_size( 'third-s', 320, 99999, false ); 	
 	add_image_size( 'half-s', 480, 99999, false ); 

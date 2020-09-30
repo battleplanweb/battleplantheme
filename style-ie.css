@@ -1,0 +1,84 @@
+
+/*--------------------------------------------------------------
+>>> TABLE OF CONTENTS:
+----------------------------------------------------------------
+# Grid Set Up
+# Mobile Styles
+
+*/
+
+@media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {  
+
+/*--------------------------------------------------------------
+# Grid Set Up
+--------------------------------------------------------------*/
+	.block-group > div:not(:only-child),
+	.col-inner > div:not(:only-child) {
+		margin-top: 								25px;
+		margin-bottom: 								25px;
+	}
+
+	#wrapper-content, 
+	#wrapper-bottom .section {
+		padding-left:								calc((100% - 1280px)/2);
+		padding-right:								calc((100% - 1280px)/2);
+	}
+		
+	#wrapper-content .col-archive {
+		margin-top:									60px; 
+		margin-bottom:								60px;
+	}
+	
+	#secondary {
+		margin-top:									60px;
+		height:										auto !important;
+	}
+	
+	#wrapper-bottom .section .flex {
+		text-align:									center !important;
+	}
+		
+	#wrapper-bottom .section .col {
+		display:									inline-block;
+	}
+	
+	#wrapper-bottom .section .col:not(:first-child) {
+		margin-top:									30px; 
+	}
+	
+	#wrapper-bottom .section .col:not(:last-child) {
+		margin-bottom:								30px;
+	} 
+	
+	#colophon {
+		height:										135px;
+	}
+	
+	#colophon .site-info-left,
+	#colophon .site-info-right {
+		float:										left;
+		margin-left:								1.5%;
+		margin-right:								1.5%;
+		width:										47%;
+	}
+	
+	#colophon .site-info-right div {
+		margin:										0;
+	}
+	
+	#colophon .site-info-right .site-icon {
+		display:									none;
+	}	
+}
+
+/*--------------------------------------------------------------
+# Mobile Styles
+--------------------------------------------------------------*/
+
+@media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) and (max-width: 1280px) {  
+	#wrapper-content,
+	#wrapper-bottom .section {
+		padding-left:								calc((100% - 1024px)/2);
+		padding-right:								calc((100% - 1024px)/2);
+	}
+}

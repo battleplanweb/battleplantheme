@@ -417,67 +417,70 @@ failCheck="Basic site functionality";
 	};
 	
 // Set up "Magic Menu"	
-	window.magicMenu = function (menu, linkOn, linkOff, speed) {
+	window.magicMenu = function (menu, linkOn, linkOff) {
 		menu = menu || "#desktop-navigation .menu";
 		linkOn = linkOn || "active";
 		linkOff = linkOff || "non-active";
-		speed = speed || 200;
+		var $mainNav = $(menu);
 		
-		var $el, $currentPage, leftPos, topPos, newWidth, newHeight, magicTop, magicLeft, magicWidth, magicHeight, startOpacity, $mainNav = $(menu);
 		$mainNav.parent().parent().prepend("<div id='magic-line'></div>");
-		var $magicLine = $("#magic-line");		
+		$mainNav.parent().parent().prepend("<div id='off-screen'></div>");
+		var $el, $currentPage, magicT, magicL, magicW, magicH, orient = "horizontal", $magicLine = $("#magic-line"), $offScreen = $("#off-screen");		
 		if ( !$mainNav.find("li.current-menu-parent").length ) {		
 			$currentPage = $mainNav.find("li.current-menu-item");
 		} else { 
 			$currentPage = $mainNav.find("li.current-menu-parent");
 		}				
-		
-		if ( $currentPage.hasClass("mobile-only") ) { $currentPage.remove(); }	
+		if ( $mainNav.parent().parent().hasClass("widget") ) { orient = "vertical"; }			
+		if ( !$currentPage.length || $currentPage.hasClass("mobile-only") ) { $currentPage = $offScreen; }	
 		$currentPage.find(">a").addClass(linkOn);
-		$("#desktop-navigation").css({ 'position': 'static' });
 		
-		function checkTop() {
-			setTimeout( function (){ 
-				if ( !$currentPage.length ) {  
-					startOpacity = 0;
-					$el = $mainNav.find(">li"); 
-					magicTop = $el.position().top; 
-					if ( magicTop < 5 ) { magicTop = $mainNav.parent().parent().position().top; }
-					magicHeight = $el.height();
-					$magicLine.stop().animate({ opacity: startOpacity, top: magicTop, left: magicLeft, height: magicHeight }, 0).data("origTop", magicTop).data("origLeft", magicLeft).data("origWidth", magicWidth).data("origHeight", magicHeight);	
-				} else {  
-					startOpacity = 1;
-					$currentPage.each(function() {					
-						$el = $(this); 
-						magicTop = $el.position().top; 
-						if ( magicTop < 5 ) { magicTop = $mainNav.parent().parent().position().top; }
-						magicLeft = $el.position().left + (($el.outerWidth() - $el.width()) / 2); 
-						magicWidth = $el.width(); 
-						magicHeight = $el.height();
-						$magicLine.stop().animate({ opacity: startOpacity, top: magicTop, left: magicLeft, width: magicWidth, height: magicHeight }, 0).data("origTop", magicTop).data("origLeft", magicLeft).data("origWidth", magicWidth).data("origHeight", magicHeight);
-					});	
+		window.setMagicMenu = function () {
+			if ( orient == "horizontal" ) {
+				magicL = $currentPage.position().left + (($currentPage.outerWidth() - $currentPage.width()) / 2);
+				magicT = $currentPage.position().top; 
+				magicW = $currentPage.width(); 
+				magicH = $magicLine.data('origH');
+			} else {
+				magicL = parseInt($currentPage.parent().css('padding-left')); 
+				magicT = $currentPage.position().top - 55;
+				magicW = $magicLine.data('origW'); 
+				magicH = $currentPage.height(); 
+			}
+			$magicLine.css({ "transform":"translate("+magicL+"px, "+magicT+"px)", "width": magicW, "height": magicH }).data("origT", magicT).data("origL", magicL).data("origW", magicW).data("origH", magicH);	
+			
+			var arrayT = [], arrayL = [], arrayW = [], arrayH = [];
+			
+			$('#desktop-navigation .menu-item, .widget-navigation .menu-item').each(function() {
+				var thisItem = $(this);	
+				if ( orient == "horizontal" ) {
+					arrayT.push(thisItem.position().top);				
+					arrayL.push(thisItem.position().left + ((thisItem.outerWidth() - thisItem.width()) / 2));
+					arrayW.push(thisItem.width());
+					arrayH.push($magicLine.data('origH'));
+				} else {
+					arrayT.push(thisItem.position().top - 55);			
+					arrayL.push(parseInt(thisItem.parent().css('padding-left')));
+					arrayW.push($magicLine.data('origW')); 
+					arrayH.push(thisItem.height()); 
 				}
-			}, 10);
-		}
-
-		setTimeout(function(){checkTop();},10);
-		window.addEventListener('scroll', checkTop );
+			});
 		
-		$mainNav.find(" > li").hover(function() {			
-			$el = $(this); 
-			topPos = $el.position().top; 
-			if ( topPos < 5 ) { topPos = $mainNav.parent().parent().position().top; }
-			leftPos = $el.position().left + (($el.outerWidth() - $el.width()) / 2); 
-			newWidth = $el.width(); 
-			newHeight = $el.height();
-			$magicLine.stop().animate({ opacity: 1, top: topPos, left: leftPos, width: newWidth, height: newHeight }, speed);
-			$currentPage.find(">a").removeClass(linkOn).addClass(linkOff);
-			$el.find(">a").addClass(linkOn).removeClass(linkOff);
-		}, function() {
-			$magicLine.stop().animate({ opacity: startOpacity, top:$magicLine.data("origTop"), left: $magicLine.data("origLeft"), width: $magicLine.data("origWidth"), height: $magicLine.data("origHeight") }, speed);    
-			$el.find(">a").removeClass(linkOn).addClass(linkOff);
-			$currentPage.find(">a").addClass(linkOn).removeClass(linkOff);
-		});
+			$mainNav.find(" > li").hover(function() {			
+				$el = $(this); 
+				var getIndex = $el.index();
+				$magicLine.css({ "transform":"translate("+arrayL[getIndex]+"px, "+arrayT[getIndex]+"px)", "width": arrayW[getIndex], "height": arrayH[getIndex] });
+				$currentPage.find(">a").removeClass(linkOn).addClass(linkOff);
+				$el.find(">a").addClass(linkOn).removeClass(linkOff);
+			}, function() {
+				$magicLine.css({ "transform":"translate("+$magicLine.data('origL')+"px, "+$magicLine.data('origT')+"px)", "width": $magicLine.data('origW'), "height": $magicLine.data('origH') });
+				$el.find(">a").removeClass(linkOn).addClass(linkOff);
+				$currentPage.find(">a").addClass(linkOn).removeClass(linkOff);
+			});
+		};
+		
+		setTimeout( function () { setMagicMenu(); }, 500);
+		$(window).resize(function() { setMagicMenu(); }); 	
 	};		
 	
 // Duplicate menu button text onto the button BG
@@ -829,15 +832,15 @@ failCheck="Set up pages: Preload BG image and fade in";
 failCheck="Set up pages: Add 'active' & 'hover' classes to menu items";
 	
 // Add "active" & "hover" classes to menu items, assign roles for ADA compliance		
-	$(".main-navigation ul.main-menu").attr('role','menubar');
-	$(".main-navigation li").attr('role','none');
-	$(".main-navigation a").attr('role','menuitem');
-	$(".main-navigation ul.sub-menu").attr('role','menu');
+	$(".main-navigation ul.main-menu, .widget-navigation ul.menu").attr('role','menubar');
+	$(".main-navigation li, .widget-navigation li").attr('role','none');
+	$(".main-navigation a, .widget-navigation a").attr('role','menuitem');
+	$(".main-navigation ul.sub-menu, .widget-navigation ul.sub-menu").attr('role','menu');
 	
-	var	$currents = $(".main-navigation ul.main-menu > li.current-menu-item, .main-navigation ul.main-menu > li.current_page_item, .main-navigation ul.main-menu > li.current-menu-parent, .main-navigation ul.main-menu > li.current_page_parent, .main-navigation ul.main-menu > li.current-menu-ancestor"); 
+	var	$currents = $(".main-navigation ul.main-menu > li.current-menu-item, .main-navigation ul.main-menu > li.current_page_item, .main-navigation ul.main-menu > li.current-menu-parent, .main-navigation ul.main-menu > li.current_page_parent, .main-navigation ul.main-menu > li.current-menu-ancestor, .widget-navigation ul.menu > li.current-menu-item, .widget-navigation ul.menu > li.current_page_item, .widget-navigation ul.menu > li.current-menu-parent, .widget-navigation ul.menu > li.current_page_parent, .widget-navigation ul.menu > li.current-menu-ancestor"); 
 	$currents.addClass( "active" );
 	$currents.find(">a").attr('aria-current','page');
-	$(".main-navigation ul.main-menu > li").hover ( function() { 		
+	$(".main-navigation ul.main-menu > li, .widget-navigation ul.menu > li").hover ( function() { 		
 		$currents.replaceClass( "active", "dormant" ); 
 		$(this).addClass( "hover" );  
 	}, function() {  
@@ -845,10 +848,10 @@ failCheck="Set up pages: Add 'active' & 'hover' classes to menu items";
 		$currents.replaceClass( "dormant", "active" ); 
 	});		
 	
-	var	$subCurrents = $(".main-navigation ul.sub-menu > li.current-menu-item, .main-navigation ul.sub-menu > li.current_page_item, .main-navigation ul.sub-menu > li.current-menu-parent, .main-navigation ul.sub-menu > li.current_page_parent, .main-navigation ul.sub-menu > li.current-menu-ancestor"); 
+	var	$subCurrents = $(".main-navigation ul.sub-menu > li.current-menu-item, .main-navigation ul.sub-menu > li.current_page_item, .main-navigation ul.sub-menu > li.current-menu-parent, .main-navigation ul.sub-menu > li.current_page_parent, .main-navigation ul.sub-menu > li.current-menu-ancestor, .widget-navigation ul.sub-menu > li.current-menu-item, .widget-navigation ul.sub-menu > li.current_page_item, .widget-navigation ul.sub-menu > li.current-menu-parent, .widget-navigation ul.sub-menu > li.current_page_parent, .widget-navigation ul.sub-menu > li.current-menu-ancestor"); 
 	$subCurrents.addClass( "active" );
 	$subCurrents.find(">a").attr('aria-current','page');
-	$(".main-navigation ul.sub-menu > li").hover ( function() { 		
+	$(".main-navigation ul.sub-menu > li, .widget-navigation ul.sub-menu > li").hover ( function() { 		
 		$subCurrents.replaceClass( "active", "dormant" ); 
 		$(this).addClass( "hover" );  
 	}, function() {  
@@ -1357,13 +1360,14 @@ failCheck="Delay parsing of JavaScript";
 							
 	$.getJSON('https://ipapi.co/json/', function(data) {
 		failCheck = failCheck + JSON.stringify(data, null, 2);
-	});
 		
-	var theSite = window.location.hostname;
-	$.post({
-		url : 'https://'+theSite+'/wp-admin/admin-ajax.php',
-		data : { action: "sendServerEmail", theSite: theSite, failCheck: failCheck },
+		var theSite = window.location.hostname;
+		$.post({
+			url : 'https://'+theSite+'/wp-admin/admin-ajax.php',
+			data : { action: "sendServerEmail", theSite: theSite, failCheck: failCheck },
+		});
 	});
+
 	
 // Clear Hummingbird cache 	
 	//$.post({

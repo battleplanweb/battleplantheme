@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 1.7
+Version: 1.8
 Tested up to: 5.5
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -1448,9 +1448,8 @@ section.section-edge .flex {
 --------------------------------------------- */
 
 /* Main Menu */
-.main-navigation ul {
-	display:									flex;
-	flex-direction:								row;
+.main-navigation ul,
+.widget-navigation ul {
 	list-style: 								none;
 	margin: 									0;
 	padding-left: 								2%;
@@ -1461,11 +1460,17 @@ section.section-edge .flex {
 	font-weight:								normal;	
 }
 
+.main-navigation ul {
+	display:									flex;
+	flex-direction:								row;
+}
+
 .menu-strip .flex {
 	z-index: 									1;
 }
 
-.main-navigation li {
+.main-navigation li,
+.widget-navigation li {
 	text-align:									center;
 	position:									relative;
 }
@@ -1478,7 +1483,8 @@ section.section-edge .flex {
 	display:									none;
 }
 
-.main-navigation a {
+.main-navigation a,
+.widget-navigation a {
 	display:									block;
 	background: 								transparent;
 	border:										none;
@@ -1495,7 +1501,10 @@ section.section-edge .flex {
 
 .main-navigation ul.main-menu li:hover > a, 
 .main-navigation ul.main-menu li.active > a, 
-.main-navigation ul.main-menu li > a.tab-focus {    
+.main-navigation ul.main-menu li > a.tab-focus,
+.widget-navigation ul.menu li:hover > a, 
+.widget-navigation ul.menu li.active > a, 
+.widget-navigation ul.menu li > a.tab-focus {    
 	color: 										#ffffff;
 	background: 								#404040;
 	border:										none;
@@ -1583,18 +1592,22 @@ section.section-edge .flex {
 }
 
 /* Magic Line Menu */
-#magic-line {
-	position: 									absolute; 
-	top: 										0; 				
-	width: 										0;
-	height: 									0;
+#magic-line,
+#off-screen {
+	position: 									absolute;
+	top: 										0; 
+	width: 										auto;
+	height: 									auto;
 	background: 								#404040;
 	pointer-events:								none;
 	z-index:									0;
+	transition:									all 0.3s ease;
 }
-	.stuck #magic-line {
-		position:									fixed;
-	}
+
+#off-screen {
+	top:										-9999px;
+	left:										-9999px;
+}
 
 /* Mobile Menu */
 #mobile-menu-bar-faux {

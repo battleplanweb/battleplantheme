@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.7' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.8' ); }
 
 
 /*--------------------------------------------------------------
@@ -2702,7 +2702,7 @@ add_shortcode( 'img', 'battleplan_buildImg' );
 function battleplan_buildImg( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'link'=>'', 'new-tab'=>'', 'ada-hidden'=>'false', 'class'=>'' ), $atts );
 	$order = esc_attr($a['order']);	
-	if ( $order != '' ) $style = " style='order: ".$order."'";
+	if ( $order != '' ) $style = " style='order: ".$order." !important'";
 	$link = esc_attr($a['link']);	
 	$size = esc_attr($a['size']);	
 	$size = convertSize($size);
@@ -2747,7 +2747,7 @@ function battleplan_buildGroup( $atts, $content = null ) {
 	$size = esc_attr($a['size']);	
 	$size = convertSize($size);
 	$order = esc_attr($a['order']);	
-	if ( $order != '' ) $style = " style='order: ".$order."'";
+	if ( $order != '' ) $style = " style='order: ".$order." !important'";
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
 
@@ -2762,7 +2762,7 @@ function battleplan_buildText( $atts, $content = null ) {
 	$size = esc_attr($a['size']);	
 	$size = convertSize($size);
 	$order = esc_attr($a['order']);	
-	if ( $order != '' ) $style = " style='order: ".$order."'";
+	if ( $order != '' ) $style = " style='order: ".$order." !important'";
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
 
@@ -2783,7 +2783,7 @@ function battleplan_buildButton( $atts, $content = null ) {
 	$size = esc_attr($a['size']);	
 	$size = convertSize($size);
 	$order = esc_attr($a['order']);	
-	if ( $order != '' ) $style = " style='order: ".$order."'";
+	if ( $order != '' ) $style = " style='order: ".$order." !important'";
 	$class = esc_attr($a['class']);
 	$ada = esc_attr($a['ada']);
 	if ( $ada != '' ) $ada = ' <span class="screen-reader-text">'.$ada.'</span>';

@@ -74,6 +74,9 @@ failCheck="Basic site functionality";
 		return "";
 	};	
 	
+// Check if this is a visitor's first page to view, & add .first-page class to trigger special CSS
+	if ( !getCookie('first-page') ) { $("body").addClass("first-page"); setCookie('first-page', 'no'); } else { $("body").addClass("not-first-page"); }
+	
 // Is user on an Apple device?
 	window.isApple = function () {
 		var iOS = !!navigator.platform && /iPad|iPhone|iPod/.test(navigator.platform);
@@ -762,7 +765,75 @@ failCheck="Set up animation";
 		theEl.hover(function() { $(this).addClass(animateClass); });	
 	};
 	
-	
+// Split string into words for animation
+	window.animateWords = function(container, effect1, effect2, initDelay, mainDelay, offset) {
+		initDelay = initDelay || 0;		
+		mainDelay = mainDelay || 100;		
+		offset = offset || "100%";
+		var theContainer = $(container);		
+		theContainer.each(function() {				
+			var myStr = $(this).html();
+			myStr = myStr.split(" ");
+			var myContents = "";			
+			for (var i = 0, len = myStr.length; i < len; i++) {
+				if ( i == len-1 ) {
+					myContents += '<div class="wordSplit animated">' + myStr[i];
+				} else {
+					myContents += '<div class="wordSplit animated">' + myStr[i] + '&nbsp;</div>';
+				}
+			}
+			$(this).html(myContents);	
+
+			var charDelay = initDelay;
+			var currEffect = effect1;
+			theContainer.find(".wordSplit.animated" ).waypoint(function() {
+				var thisDiv = $(this.element);
+				charDelay = charDelay + mainDelay;
+				if ( currEffect === effect2 ) { 
+					setTimeout( function () { thisDiv.addClass(effect1); }, charDelay);
+					currEffect = effect1;
+				} else {
+					setTimeout( function () { thisDiv.addClass(effect2); }, charDelay);
+					currEffect = effect2;
+				}
+				this.destroy();
+			}, { offset: offset });
+		});
+	};
+
+// Split string into characters for animation
+	window.animateCharacters = function(container, effect1, effect2, initDelay, mainDelay, offset) {	
+		initDelay = initDelay || 0;		
+		mainDelay = mainDelay || 100;		
+		offset = offset || "100%";
+		var theContainer = $(container);		
+		theContainer.each(function() {				
+			var myStr = $(this).html();
+			myStr = myStr.split("");
+			var myContents = "";			
+			for (var i = 0, len = myStr.length; i < len; i++) {
+				if ( myStr[i] === " " ) { myStr[i] = "&nbsp;"; }
+				myContents += '<div class="charSplit animated">' + myStr[i] + '</div>';
+			}
+			$(this).html(myContents);	
+
+			var charDelay = initDelay;
+			var currEffect = effect1;
+			theContainer.find(".charSplit.animated" ).waypoint(function() {
+				var thisDiv = $(this.element);
+				charDelay = charDelay + mainDelay;
+				if ( currEffect === effect2 ) { 
+					setTimeout( function () { thisDiv.addClass(effect1); }, charDelay);
+					currEffect = effect1;
+				} else {
+					setTimeout( function () { thisDiv.addClass(effect2); }, charDelay);
+					currEffect = effect2;
+				}				
+				this.destroy();
+			}, { offset: offset });
+		});
+	};
+		
 /*--------------------------------------------------------------
 # Set up pages
 --------------------------------------------------------------*/

@@ -27,29 +27,37 @@
 			<?php if (function_exists('battleplan_siteInfo')) {
 				 battleplan_siteInfo();
 			 } else { 
-				$buildLeft = "<div class='social-box'>";
-					if ( do_shortcode('[get-biz info="facebook"]') ) $buildLeft .= do_shortcode('[social-btn type="facebook"]'); 							
-					if ( do_shortcode('[get-biz info="twitter"]') ) $buildLeft .= do_shortcode('[social-btn type="twitter"]');						
-					if ( do_shortcode('[get-biz info="instagram"]') ) $buildLeft .= do_shortcode('[social-btn type="instagram"]');							
-					if ( do_shortcode('[get-biz info="linkedin"]') ) $buildLeft .= do_shortcode('[social-btn type="linkedin"]');							
-					if ( do_shortcode('[get-biz info="email"]') ) $buildLeft .= do_shortcode('[social-btn type="email"]');
-				$buildLeft .= "</div>";
+				if (function_exists('battleplan_siteInfoLeft')) {
+					$buildLeft = battleplan_siteInfoLeft();
+				} else {	
+					$buildLeft = "<div class='social-box'>";
+						if ( do_shortcode('[get-biz info="facebook"]') ) $buildLeft .= do_shortcode('[social-btn type="facebook"]'); 							
+						if ( do_shortcode('[get-biz info="twitter"]') ) $buildLeft .= do_shortcode('[social-btn type="twitter"]');						
+						if ( do_shortcode('[get-biz info="instagram"]') ) $buildLeft .= do_shortcode('[social-btn type="instagram"]');							
+						if ( do_shortcode('[get-biz info="linkedin"]') ) $buildLeft .= do_shortcode('[social-btn type="linkedin"]');							
+						if ( do_shortcode('[get-biz info="email"]') ) $buildLeft .= do_shortcode('[social-btn type="email"]');
+					$buildLeft .= "</div>";
+				}
+	
+				if (function_exists('battleplan_siteInfoRight')) {
+					$buildRight = battleplan_siteInfoRight();
+				} else {	
+					$buildCopyright = "<div>".do_shortcode('[get-biz info="copyright"]')." ".do_shortcode('[get-biz info="name"]')." • All Rights Reserved • <a href='/privacy-policy/'>Privacy Policy</a></div><div>";
+					if ( do_shortcode('[get-biz info="street"]') ) $buildCopyright .= do_shortcode('[get-biz info="street"]')." • ";							
+					if ( do_shortcode('[get-biz info="city"]') ) :
+						$buildCopyright .= do_shortcode('[get-biz info="city"]').", ".do_shortcode('[get-biz info="state-abbr"]')." ".do_shortcode('[get-biz info="zip"]')." • ";
+					elseif ( do_shortcode('[get-biz info="region"]') ) : 
+						$buildCopyright .= do_shortcode('[get-biz info="region"]')." • "; 
+					endif;
+					if ( do_shortcode('[get-biz info="license"]') ) $buildCopyright .= "License ".do_shortcode('[get-biz info="license"]')." • "; 						
+					if ( do_shortcode('[get-biz info="phone-link"]') ) $buildCopyright .= do_shortcode('[get-biz info="phone-link"]');							
+					$buildCopyright .= "</div><div>Website developed & maintained by <a href='http://battleplanwebdesign.com' target='_blank'>Battle Plan Web Design</a>";
+					if ( do_shortcode('[get-biz info="misc1"]') ) $buildCopyright .= " • ".do_shortcode('[get-biz info="misc1"]');	
+					$buildCopyright .= "</div>";
 
-				$buildCopyright = "<div>".do_shortcode('[get-biz info="copyright"]')." ".do_shortcode('[get-biz info="name"]')." • All Rights Reserved • <a href='/privacy-policy/'>Privacy Policy</a></div><div>";
-				if ( do_shortcode('[get-biz info="street"]') ) $buildCopyright .= do_shortcode('[get-biz info="street"]')." • ";							
-				if ( do_shortcode('[get-biz info="city"]') ) :
-					$buildCopyright .= do_shortcode('[get-biz info="city"]').", ".do_shortcode('[get-biz info="state-abbr"]')." ".do_shortcode('[get-biz info="zip"]')." • ";
-				elseif ( do_shortcode('[get-biz info="region"]') ) : 
-					$buildCopyright .= do_shortcode('[get-biz info="region"]')." • "; 
-				endif;
-				if ( do_shortcode('[get-biz info="license"]') ) $buildCopyright .= "License ".do_shortcode('[get-biz info="license"]')." • "; 						
-				if ( do_shortcode('[get-biz info="phone-link"]') ) $buildCopyright .= do_shortcode('[get-biz info="phone-link"]');							
-				$buildCopyright .= "</div><div>Website developed & maintained by <a href='http://battleplanwebdesign.com' target='_blank'>Battle Plan Web Design</a>";
-				if ( do_shortcode('[get-biz info="misc1"]') ) $buildCopyright .= " • ".do_shortcode('[get-biz info="misc1"]');	
-				$buildCopyright .= "</div>";
-
-				$buildRight = do_shortcode('[img size="1/6" link = "/" class="site-icon"]<img class="site-icon noFX" src="../../../wp-content/uploads/site-icon.png" alt="Return to Home Page"/>[/img]');
-				$buildRight .= do_shortcode('[txt size="5/6"]'.$buildCopyright.'[/txt]');
+					$buildRight = do_shortcode('[img size="1/6" link = "/" class="site-icon"]<img class="site-icon noFX" src="../../../wp-content/uploads/site-icon.png" alt="Return to Home Page"/>[/img]');
+					$buildRight .= do_shortcode('[txt size="5/6"]'.$buildCopyright.'[/txt]');
+				}
 
 				echo do_shortcode('[layout grid="1-2"][col class="site-info-left"]'.$buildLeft.'[/col][col class="site-info-right"]'.$buildRight.'[/col][/layout]');
 			} ?>					

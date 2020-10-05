@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.8.1' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.8.2' ); }
 
 
 /*--------------------------------------------------------------
@@ -361,8 +361,8 @@ function battleplan_getBuildArchive($atts, $content = null) {
 				$archiveMeta .= "</h3>";
 			endif;		
 			if ( $showDate == "true" || $showAuthor == "true" || $showSocial == "true" ) $archiveMeta .= '<div class="archive-meta">';
-			if ( $showDate == "true" ) $archiveMeta .= '<span class="archive-date '.$type.'-date date"><i class="fa fa-calendar"></i>'.get_the_date().'</span>';
-			if ( $showAuthor == "true") $archiveMeta .= '<span class="archive-author '.$type.'-author author"><i class="fa fa-user"></i>'.get_the_author().'</span>';
+			if ( $showDate == "true" ) $archiveMeta .= '<span class="archive-date '.$type.'-date date"><i class="fas fa-calendar-alt"></i>'.get_the_date().'</span>';
+			if ( $showAuthor == "true") $archiveMeta .= '<span class="archive-author '.$type.'-author author"><i class="fas fa-user"></i>'.get_the_author().'</span>';
 			if ( $showSocial == "true") $archiveMeta .= '<span class="archive-social '.$type.'-social social">'.do_shortcode('[add-share-buttons facebook="true" twitter="true"]').'</span>';
 			if ( $showDate == "true" || $showAuthor == "true" || $showSocial == "true" ) $archiveMeta .= '</div>';
 			if ( $showExcerpt == "true") $archiveBody .= '[p]'.apply_filters('the_excerpt', get_the_excerpt()).'[/p]';
@@ -1974,19 +1974,19 @@ function battleplan_meta_date() {
 	$time_string = sprintf ( $time_string, esc_attr( get_the_date( DATE_W3C ) ), esc_html( get_the_date() ), esc_attr( get_the_modified_date( DATE_W3C ) ), esc_html( get_the_modified_date() ) );
 	$posted_on = sprintf ( esc_html_x( '%s', 'post date', 'battleplan' ), $time_string );
 
-	return '<span class="meta-date"><i class="fa fa-calendar"></i>'.$posted_on.'</span>';
+	return '<span class="meta-date"><i class="fas fa-calendar-alt"></i>'.$posted_on.'</span>';
 }
 
 // Set up post meta author
 function battleplan_meta_author() {
 	$byline = sprintf ( esc_html_x( '%s', 'post author', 'battleplan' ), '<span class="author vcard"><a class="url fn n" href="'.esc_url( get_author_posts_url( get_the_author_meta( 'ID' ) )).'">'.esc_html( get_the_author() ).'</a></span>' );
 
-	return '<span class="meta-author"><i class="fa fa-user"></i>'.$byline.'</span>';
+	return '<span class="meta-author"><i class="fas fa-user"></i>'.$byline.'</span>';
 }
 
 // Set up post meta comments
 function battleplan_meta_comments() {		
-	return '<span class="meta-comments"><i class="fa fa-comments-o"></i>'.get_comments_number().'</span>';
+	return '<span class="meta-comments"><i class="fas fa-comments"></i>'.get_comments_number().'</span>';
 }
 
 //Disable Gutenburg
@@ -2045,12 +2045,12 @@ add_action( 'wp_enqueue_scripts', 'battleplan_scripts' );
 function battleplan_scripts() {
 	wp_enqueue_style( 'battleplan-animate', get_template_directory_uri().'/animate.css', array(), _BP_VERSION );	
 	wp_enqueue_style( 'battleplan-ie', get_template_directory_uri()."/style-ie.css", array(), _BP_VERSION );
+	wp_enqueue_style( 'battleplan-fontawesome', get_template_directory_uri()."/fontawesome.min.css", array(), _BP_VERSION );	
 	
-	wp_enqueue_script( 'battleplan-bootstrap', get_template_directory_uri() . '/js/bootstrap.js', array(), _BP_VERSION, true );
-	wp_enqueue_script( 'battleplan-font-awesome', get_template_directory_uri() . '/js/font-awesome.js', array(), _BP_VERSION, true );
-	wp_enqueue_script( 'battleplan-parallax', get_template_directory_uri() . '/js/parallax.js', array(), _BP_VERSION, true );
-	wp_enqueue_script( 'battleplan-waypoints', get_template_directory_uri() . '/js/waypoints.js', array(), _BP_VERSION, true );
-	wp_enqueue_script( 'battleplan-script', get_template_directory_uri() . '/js/script.js', array(), _BP_VERSION, true );
+	wp_enqueue_script( 'battleplan-bootstrap', get_template_directory_uri().'/js/bootstrap.js', array(), _BP_VERSION, true );
+	wp_enqueue_script( 'battleplan-parallax', get_template_directory_uri().'/js/parallax.js', array(), _BP_VERSION, true );
+	wp_enqueue_script( 'battleplan-waypoints', get_template_directory_uri().'/js/waypoints.js', array(), _BP_VERSION, true );
+	wp_enqueue_script( 'battleplan-script', get_template_directory_uri().'/js/script.js', array(), _BP_VERSION, true );
 	if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) { wp_enqueue_script( 'comment-reply' ); }
 	
 	$getUploadDir = wp_upload_dir();
@@ -2502,7 +2502,6 @@ function battleplan_add_class_to_body( array $classes ) {
 	return $classes;
 }
 
-
 /*--------------------------------------------------------------
 # Custom Hooks
 --------------------------------------------------------------*/
@@ -2836,7 +2835,7 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	$scrollBtn = esc_attr($a['scroll-btn']); 
 	$scrollLoc = esc_attr($a['scroll-loc']); 
 	$scrollIcon = esc_attr($a['scroll-icon']); 
-	if ( $scrollBtn != "false" ) $buildScrollBtn = '<div class="scroll-down"><a href="'.$scrollLoc.'"><i class="fa '.$scrollIcon.' aria-hidden="true"></i><span class="sr-only">Scroll Down</span></a></div>';
+	if ( $scrollBtn != "false" ) $buildScrollBtn = '<div class="scroll-down"><a href="'.$scrollLoc.'"><i class="fas '.$scrollIcon.' aria-hidden="true"></i><span class="sr-only">Scroll Down</span></a></div>';
 	if ( !$name ) $name = "section-".rand(10000,99999);
 	
 	if ( $type == "section" ) :
@@ -2855,10 +2854,14 @@ function battleplan_socialBtn( $atts, $content = null ) {
 	$prefix = "";
 	$img = esc_attr($a['img']);
 	$alt = "Visit us on ".$type;
+	$icon = "fab fa-".$icon;
 		
-	if ( $type == "email" ) : $prefix = "mailto:"; $icon = "envelope-o"; $alt="Email us"; endif;
+	if ( $type == "email" ) $prefix = "mailto:"; $icon = "fas fa-envelope"; $alt="Email us";	
+	if ( $type == "facebook" ) $icon = "fab fa-facebook-f";	
+	if ( $type == "pinterest" ) $icon = "fab fa-pinterest-p";	
+	if ( $type == "linkedin" ) $icon = "fab fa-linkedin-in";	
 	
-	if ( $img == '' ) : $iconLoc = '<i class="fa fa-'.$icon.'" aria-hidden="true"></i><span class="sr-only">'.$type.'</span><span class="social-bg"></span>';
+	if ( $img == '' ) : $iconLoc = '<i class="'.$icon.'" aria-hidden="true"></i><span class="sr-only">'.$type.'</span><span class="social-bg"></span>';
 	else: $iconLoc = '<img src = "'.$img.'" alt="'.$alt.'"/>'; endif;
 
 	return '<a class="social-button" href="'.$prefix.$link.'" target="_blank" rel="noopener noreferrer">'.$iconLoc.'</a>';	

@@ -879,6 +879,11 @@ failCheck="Set up pages: Add 'noFX' class to img";
 	$( "div.noFX" ).find("img").addClass("noFX");
 	$( "div.noFX" ).find("a").addClass("noFX");
 	
+failCheck="Add .fa class";
+		
+// Add .fa class to all icons using .far, .fas and .fab
+	$( ".far, .fas, .fab" ).addClass("fa");
+	
 // Fade in lazy loaded images
 	//animateDiv( 'img:not(.loader-img):not(.site-icon)', 'fadeIn', 150, '110%', 200 );	
 	

@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 1.8.1
+Version: 1.8.2
 Tested up to: 5.5
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -409,9 +409,7 @@ h5 > a, h5 > a:hover, h5 > a:visited, h5 > span,
 h6 > a, h6 > a:hover, h6 > a:visited, h6 > span,
 a > span,
 .phone-number a.phone-link, 
-.phone-number a.phone-link:hover, 
-.phone-number i.fa, 
-.phone-number i.fa::before,
+.phone-number a.phone-link:hover,
 b, 
 strong, 
 i:not(.fa), 
@@ -422,6 +420,15 @@ span {
 	text-align:									inherit; 
 	font-size:									inherit;
 	font-weight:								inherit;
+	transition:									inherit;
+}
+
+.phone-number i.fa, 
+.phone-number i.fa::before {
+	color: 										inherit !important; 
+	text-align:									inherit; 
+	font-size:									95%;
+	font-weight:								900;
 	transition:									inherit;
 }
 
@@ -485,11 +492,8 @@ big {
 
 .fa, 
 .fa::before {
-	font-family:								"FontAwesome" !important;
-	font-weight:								normal;
 	font-size:									inherit;
 	line-height:								inherit;
-	transform:									translateY(2px);
 }
 
 
@@ -1388,8 +1392,8 @@ section.section-edge .flex {
 	font-size:									40px;
 	background:									rgba(0,0,0,0.15);
 	border-radius:								50%;
-	z-index:									100;
 	padding:									0.4em;
+	font-weight:								900;
 }
 
 .social-box {
@@ -1410,7 +1414,6 @@ section.section-edge .flex {
 	position:									absolute;
 	left: 										0;
 	width: 										100%;
-	margin-top:									11px;
 	text-align: 								center;
 	color: 										rgba(0,0,0,0.75);
 	z-index:									10000;
@@ -1419,7 +1422,7 @@ section.section-edge .flex {
 
 .social-button i.fa::before {
 	font-size:									34px;
-	line-height: 								1;
+	line-height: 								1.7;
 }
 
 .social-button:hover i.fa {
@@ -1549,10 +1552,10 @@ section.section-edge .flex {
 .main-navigation li.menu-item-has-children > a::after,
 .main-navigation li.current_page_parent-has-children > a::after { 
 	display:									inline-block;
-	font-family: 								FontAwesome;
+	font-family: 								Font Awesome;
 	content:   									"\f0d7";
+	font-weight:								900;
 	font-size:									20px;
-	font-weight:								normal;
 	margin-left:								8px;
 	transform:									translate(1px, -2px);
 }
@@ -1666,25 +1669,20 @@ section.section-edge .flex {
 #mobile-menu-bar .mm-bar-btn.call-btn::after,
 #mobile-menu-bar .mm-bar-btn.email-btn::after {
 	position:									relative;
-	font-family: 								FontAwesome;
-	content:   									"\f095";
-	font-size:									27px; 
-	top:										-2px;
+	font-family: 								Font Awesome;
+	content:   									"\f879";
+	font-weight:								900;
+	font-size:									21px; 
+	top:										-1px;
 	color:										rgba(255,255,255,0.75);
-}
-
-#mobile-menu-bar .mm-bar-btn.call-btn::after {
-	top:										-6px;
 }
 
 #mobile-menu-bar .mm-bar-btn.email-btn::after {
 	content:   									"\f0e0";
-	font-size:									21px; 
 }
 
 #mobile-menu-bar .mm-bar-btn.scroll-to-top-btn::after {
 	content:   									"\f077";
-	font-size:									21px; 
 }
 
 #mobile-menu-bar .mm-bar-btn.activate-btn div {
@@ -2037,8 +2035,8 @@ a.scroll-top {
 	margin-right:								10px;
 }
 
-.archive-meta i.fa-calendar,
-.single-meta i.fa-calendar {
+.archive-meta i.fa-calendar-alt,
+.single-meta i.fa-calendar-alt {
 	margin-right:								8px;
 	transform:									translateY(0);
 }
@@ -2050,8 +2048,8 @@ a.scroll-top {
 	transform:									translateY(0);
 }
 
-.archive-meta i.fa-comments-o,
-.single-meta i.fa-comments-o {
+.archive-meta i.fa-comments,
+.single-meta i.fa-comments {
 	margin-right:								4px;
 	transform:									translateY(0);
 }
@@ -2233,8 +2231,9 @@ img.noFX,
 
 .testimonials-quote p:first-of-type::before {
     display: 									inline-block;
-    font-family: 								FontAwesome;
+    font-family: 								Font Awesome;
     content: 									"\f10d";
+	font-weight:								900;
 	color:										#000000;
     font-size: 									130%;
     text-align: 								left;
@@ -2256,8 +2255,9 @@ img.noFX,
 }
 
 .rating::after {
-	font-family: 								FontAwesome;
+	font-family: 								Font Awesome;
 	letter-spacing:								4px;
+	font-weight:								900;
 }
 
 .rating-5-star::after {
@@ -2486,8 +2486,9 @@ dl.col-gallery {
 
 .block-accordion .accordion-icon::before {
 	display:									inline-block;
-	font-family: 								FontAwesome;
+	font-family: 								Font Awesome;
 	content:									"\f054";
+	font-weight:								900;
 	font-size:									22rem;
 	transform: 									rotate(0deg);
 	transform-origin: 							50% 50%;
@@ -2546,8 +2547,11 @@ span.descriptionText {
 .comfort-empty::after, 
 .efficiency-full::after, 
 .efficiency-empty::after  {
-	font-family: 								FontAwesome;
-	letter-spacing:								4px;
+	font-family: 								Font Awesome;
+	font-weight:								400;
+	width:										25px;
+	display:									inline-block;
+	text-align:									center;
 }
 
 .price-full::after, 
@@ -2562,7 +2566,8 @@ span.descriptionText {
 
 .efficiency-full::after, 
 .efficiency-empty::after {
-	content:   									"\f299";
+	content:   									"\f06c";
+	font-weight:								900;
 }
 
 .price-empty::after, 
@@ -2771,10 +2776,9 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 
 .carousel a.carousel-control-next .carousel-control-next-icon::after, 
 .carousel a.carousel-control-prev .carousel-control-prev-icon::after {
-	font-family: 								FontAwesome;
+	font-family: 								Font Awesome;
 	content: 									"\f054";
-	font-weight: 								normal;
-	font-size: 									80%;
+	font-weight: 								900;
 }
 
 .carousel a.carousel-control-prev .carousel-control-prev-icon::after {

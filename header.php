@@ -5,13 +5,15 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="profile" href="https://gmpg.org/xfn/11">
 	
-	<link rel="preload" as="font" type="font/woff2" href="../../../wp-content/themes/battleplantheme/fonts/fontawesome-webfont.woff2?v=4.7.0" crossorigin="anonymous">
+	<link rel="preload" as="font" type="font/woff2" href="../../../wp-content/themes/battleplantheme/fonts/fa-regular-400.woff2" crossorigin="anonymous">
+	<link rel="preload" as="font" type="font/woff2" href="../../../wp-content/themes/battleplantheme/fonts/fa-solid-900.woff2" crossorigin="anonymous">
+	<link rel="preload" as="font" type="font/woff2" href="../../../wp-content/themes/battleplantheme/fonts/fa-brands-400.woff2" crossorigin="anonymous">
 	<link rel="preload" as="font" type="font/woff2" href="../../../wp-content/themes/battleplantheme/fonts/open-sans-v17-latin-regular.woff2" crossorigin="anonymous">
 	<link rel="preload" as="font" type="font/woff2" href="../../../wp-content/themes/battleplantheme/fonts/open-sans-v17-latin-700.woff2" crossorigin="anonymous">
 	<?php bp_font_loader(); ?>	
 
 	<?php wp_head(); ?>
-	<?php bp_google_analytics(); ?>	
+	<?php bp_google_analytics(); ?>
 </head>
 
 <body <?php body_class(); ?>>

@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.8.2' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.8.3' ); }
 
 
 /*--------------------------------------------------------------
@@ -2854,12 +2854,12 @@ function battleplan_socialBtn( $atts, $content = null ) {
 	$prefix = "";
 	$img = esc_attr($a['img']);
 	$alt = "Visit us on ".$type;
-	$icon = "fab fa-".$icon;
-		
-	if ( $type == "email" ) $prefix = "mailto:"; $icon = "fas fa-envelope"; $alt="Email us";	
-	if ( $type == "facebook" ) $icon = "fab fa-facebook-f";	
-	if ( $type == "pinterest" ) $icon = "fab fa-pinterest-p";	
-	if ( $type == "linkedin" ) $icon = "fab fa-linkedin-in";	
+			
+	if ( $type == "email" ) : $prefix = "mailto:"; $icon = "fas fa-envelope"; $alt="Email us";	
+	elseif ( $type == "facebook" ) : $icon = "fab fa-facebook-f";	
+	elseif ( $type == "pinterest" ) : $icon = "fab fa-pinterest-p";	
+	elseif ( $type == "linkedin" ) : $icon = "fab fa-linkedin-in";
+	else: $icon = "fab fa-".$type; endif;
 	
 	if ( $img == '' ) : $iconLoc = '<i class="'.$icon.'" aria-hidden="true"></i><span class="sr-only">'.$type.'</span><span class="social-bg"></span>';
 	else: $iconLoc = '<img src = "'.$img.'" alt="'.$alt.'"/>'; endif;

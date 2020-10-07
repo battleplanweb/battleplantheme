@@ -2081,16 +2081,6 @@ function battleplan_dequeue_unwanted_stuff() {
 	if ( !is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_dequeue_script( 'underscore' ); wp_deregister_script( 'underscore' ); } 
 }
 
-// Remove unwanted dashboard widgets
-add_action('wp_dashboard_setup', 'battleplan_remove_dashboard_widgets');
-function battleplan_remove_dashboard_widgets () {
-	remove_action('welcome_panel','wp_welcome_panel'); // Welcome to WordPress!
-	remove_meta_box('dashboard_primary','dashboard','side'); //WordPress.com Blog
-	remove_meta_box('dashboard_right_now','dashboard','side');
-	remove_meta_box('dashboard_quick_press','dashboard','side'); //Quick Press widget
-	//remove_meta_box('tribe_dashboard_widget', 'dashboard', 'normal'); // News From Modern Tribe
-}
-
 //Brand log-in screen with BP Knight
 add_action( 'login_enqueue_scripts', 'battleplan_login_logo' );
 function battleplan_login_logo() { ?><style type="text/css">body.login div#login h1 a { background-image: url(https://battleplanassets.com/images/logo-knight.png); padding-bottom: 120px; width: 100%;	background-size: 50%} #login {padding-top:70px !important} </style> <?php } 
@@ -2375,7 +2365,7 @@ function battleplan_current_type_nav_class($classes, $item) {
 wp_update_term(1, 'category', array( 'name'=>'Blog', 'slug'=>'blog' ));
 
 // Display custom fields in WordPress admin edit screen
-add_filter('acf/settings/remove_wp_meta_box', '__return_false');
+//add_filter('acf/settings/remove_wp_meta_box', '__return_false');
 
 // Add 'widget-pic-views' & 'widget-pic-time' fields to an image when it is uploaded
 add_action( 'add_attachment', 'battleplan_addWidgetPicViewsToImg', 10, 9 );
@@ -2468,14 +2458,24 @@ function battleplan_excerpt_length( $length ) {
 	return 20; 
 } 
 
-// Add new widgets to admin dashboard
-add_action( 'wp_dashboard_setup', 'battleplan_add_dashboard_widgets' );
-function battleplan_add_dashboard_widgets() {
-    wp_add_dashboard_widget( 'battleplan_site_stats', 'Site Stats', 'battleplan_display_site_stats' );
+// Remove unwanted dashboard widgets
+add_action('wp_dashboard_setup', 'battleplan_remove_dashboard_widgets');
+function battleplan_remove_dashboard_widgets () {
+	remove_action('welcome_panel','wp_welcome_panel'); // Welcome to WordPress!
+	remove_meta_box('dashboard_primary','dashboard','side'); //WordPress.com Blog
+	remove_meta_box('dashboard_right_now','dashboard','side');
+	remove_meta_box('dashboard_quick_press','dashboard','side'); //Quick Press widget
+	//remove_meta_box('tribe_dashboard_widget', 'dashboard', 'normal'); // News From Modern Tribe
 }
 
-// Set up Site Speed widget on dashboard
-function battleplan_display_site_stats() {
+// Add new dashboard widgets
+add_action( 'wp_dashboard_setup', 'battleplan_add_dashboard_widgets' );
+function battleplan_add_dashboard_widgets() {
+    wp_add_dashboard_widget( 'battleplan_site_stats', 'Site Stats', 'battleplan_admin_site_stats' );
+}
+
+// Set up Site Stats widget on dashboard
+function battleplan_admin_site_stats() {
 	$siteHeader = getID('site-header');
 	$frontPage = get_option('page_on_front');
 	$desktopCounted = readMeta($siteHeader, "load-number-desktop");
@@ -2511,9 +2511,23 @@ function battleplan_display_site_stats() {
 // Add custom meta boxes to posts & pages
 add_action("add_meta_boxes", "battleplan_add_custom_meta_boxes");
 function battleplan_add_custom_meta_boxes() {
-    //add_meta_box("page_attributes-meta-box", "Custom Meta Box", "battleplan_remove_sidebar_meta_box", "post", "side", "default", null);
-    //add_meta_box("page_attributes-meta-box", "Custom Meta Box", "battleplan_remove_sidebar_meta_box", "page", "side", "default", null);
-    //add_meta_box("page_attributes-meta-box", "Custom Meta Box", "battleplan_remove_sidebar_meta_box", "custom_post_type", "side", "default", null);
+    add_meta_box("page-stats-box", "Page Stats", "battleplan_page_site_stats", "page", "side", "default", null);
+    add_meta_box("page-stats-box", "Page Stats", "battleplan_page_site_stats", "post", "side", "default", null);
+	add_meta_box("page-stats-box", "Page Stats", "battleplan_page_site_stats", "custom_post_type", "side", "default", null);
+}
+
+// Set up Site Stats widget on posts & pages
+function battleplan_page_site_stats() {
+	global $post;
+	$totalViews = readMeta($post->ID, "post-views-total-all");
+	$last7Views = readMeta($post->ID, "post-views-total-7day");
+	$last30Views = readMeta($post->ID, "post-views-total-30day");
+	$recordViews = readMeta($post->ID, "post-views-record");	
+	
+	echo "<table><tr><td><b>Last 7 Days</b></td><td><b>".$last7Views."</b> visits.</td></tr>";
+	echo "<tr><td><b>Last 30 Days&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b></td><td><b>".$last30Views."</b> visits.</td></tr>";
+	echo "<tr><td><b>Total</b></td><td><b>".$totalViews."</b> visits.</td></tr>";
+	echo "<tr><td><b>Daily Record</b></td><td><b>".$recordViews."</b> visits.</td></tr></table>";	
 }
 
 // Add "Remove Sidebar" checkbox to Page Attributes meta box

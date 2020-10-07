@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 1.8.3
+Version: 1.8.4
 Tested up to: 5.5
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -386,21 +386,27 @@ h6 {
 h1 {
 	font-size: 									48rem;
 }
+
 h2 {
 	font-size: 									42rem;
 }
+
 h3 {
 	font-size: 									36rem;
 }
+
 h4 {
 	font-size: 									30rem;
 }
+
 h5 {
 	font-size: 									24rem;
 }
+
 h6 {
 	font-size: 									21rem;
 }
+
 h1 > a, h1 > a:hover, h1 > a:visited, h1 > span,
 h2 > a, h2 > a:hover, h2 > a:visited, h2 > span,
 h3 > a, h3 > a:hover, h3 > a:visited, h3 > span,
@@ -421,6 +427,38 @@ span {
 	font-size:									inherit;
 	font-weight:								inherit;
 	transition:									inherit;
+}
+
+.ribbon {
+	position: 									relative;
+	padding:									5px 10px;
+	background: 								#404040;
+	border:										2px solid #000000;
+	color:										#ffffff;
+	width: 										calc(100% + 88px);
+    margin-left: 								-44px;
+	margin-bottom:								1em;
+}
+
+.ribbon:before, 
+.ribbon:after {
+	content: 									"";
+	height: 									0;
+	width: 										0;
+	display: 									block;
+	position: 									absolute;
+	border-top: 								15px solid #000000;
+	bottom: 									-16px;
+}	
+
+.ribbon:before {
+	border-left: 								15px solid transparent !important;
+	left: 										-2px;
+}
+
+.ribbon:after {
+	right: 										-2px;
+	border-right: 								15px solid transparent !important;
 }
 
 .phone-number i.fa, 
@@ -837,6 +875,22 @@ div.wpcf7 .ajax-loader {
 .wpcf7 form.invalid .wpcf7-response-output, 
 .wpcf7 form.unaccepted .wpcf7-response-output {
     border-color: 								red;
+}
+
+a.button.fancy {
+	padding:									0;
+}
+
+a.button .fancy-text,
+a.button .fancy-icon {
+	display:									inline-block;
+	float:										left;
+	padding: 									0.3em 1em;
+}
+
+a.button .fancy-icon {
+	padding-left: 								0.5em;	
+	padding-right: 								0.5em;
 }
 
 .paypal-form {
@@ -1915,7 +1969,7 @@ a.scroll-top {
 	position:									fixed;
 	top:										8%;
 	right:										1%;
-	padding:									2px 12px 10px;
+	padding:									4px 12px 6px;
 	background: 								rgba(0,0,0,0.2);
 	border:										none;
 	outline:									none;
@@ -3020,6 +3074,11 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 		font-size:									17px;
 	}
 	
+	.ribbon {
+		width: 										calc(100% + 80px);
+		margin-left: 								-40px;
+	}
+	
 	/* Footer font size */
 	.site-info, 
 	.site-info .col-inner {
@@ -3129,6 +3188,11 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 
 /* 2: Phones (landscape) + Tablets (portrait) */
 @media (max-width: 860px) {
+		
+	.ribbon {
+		width: 										calc(100% + 82px);
+		margin-left: 								-41px;
+	}
 	
 	/* Home page "hero" parallax sections */
 	#wrapper-top .section-parallax:not(.mobile-full) {

@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.8.4' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.8.6' ); }
 
 /*--------------------------------------------------------------
 # Shortcodes
@@ -817,7 +817,7 @@ function get_the_slug() {
 }
 
 // Get ID from page slug
-function getID($slug) { return get_page_by_path($slug)->ID; }  
+function getID($slug) { return get_page_by_path($slug)->ID; } 
 
 // Get the Role of Current Logged in User
 function getUserRole() {
@@ -2429,6 +2429,13 @@ function battleplan_clearViewFields() {
 		updateMeta( get_the_ID(), 'widget-pic-views', '0' );
 		updateMeta( get_the_ID(), 'widget-pic-time', '0' );
 	endwhile; wp_reset_postdata(); endif;
+	
+	// clear site load speed logs
+	$siteHeader = getID('site-header');
+	updateMeta( $siteHeader, 'load-number-desktop', '0' );			
+	updateMeta( $siteHeader, 'load-speed-desktop', '0' );			
+	updateMeta( $siteHeader, 'load-number-mobile', '0' );			
+	updateMeta( $siteHeader, 'load-speed-mobile', '0' );			
 
 	// clear posts/pages views
 	$getCPT = get_post_types();  
@@ -2461,13 +2468,52 @@ function battleplan_excerpt_length( $length ) {
 	return 20; 
 } 
 
-// Add custom meta boxes to admin panel
+// Add new widgets to admin dashboard
+add_action( 'wp_dashboard_setup', 'battleplan_add_dashboard_widgets' );
+function battleplan_add_dashboard_widgets() {
+    wp_add_dashboard_widget( 'battleplan_site_stats', 'Site Stats', 'battleplan_display_site_stats' );
+}
+
+// Set up Site Speed widget on dashboard
+function battleplan_display_site_stats() {
+	$siteHeader = getID('site-header');
+	$frontPage = get_option('page_on_front');
+	$desktopCounted = readMeta($siteHeader, "load-number-desktop");
+	$desktopSpeed = readMeta($siteHeader, "load-speed-desktop");	
+	$mobileCounted = readMeta($siteHeader, "load-number-mobile");
+	$mobileSpeed = readMeta($siteHeader, "load-speed-mobile");
+	$totalCounted = $desktopCounted + $mobileCounted;
+	$totalSpeed = (round((($desktopSpeed * $desktopCounted) + ($mobileSpeed * $mobileCounted)) / $totalCounted, 1)); 
+	
+	$totalViews = readMeta($frontPage, "post-views-total-all");
+	$last7Views = readMeta($frontPage, "post-views-total-7day");
+	$last30Views = readMeta($frontPage, "post-views-total-30day");
+	$recordViews = readMeta($frontPage, "post-views-record");
+	
+	echo "<table><tr><td><b><u>Framework</u></b></td><td><b>"._BP_VERSION."</b></td></tr>";		
+		
+	echo "<tr><td>&nbsp;</td></tr>";
+	
+	echo "<tr><td><b><u>Site Speed</u></b></td></tr>";
+	echo "<tr><td><b>Desktop</b></td><td><b>".$desktopSpeed."s</b> on <b>".$desktopCounted."</b> visits.</td></tr>";
+	echo "<tr><td><b>Mobile</b></td><td><b>".$mobileSpeed."s</b> on <b>".$mobileCounted."</b> visits.</td></tr>";
+	echo "<tr><td><b>Overall</b></td><td><b>".$totalSpeed."s</b> on <b>".$totalCounted."</b> visits.</td></tr>";
+	
+	echo "<tr><td>&nbsp;</td></tr>";
+	
+	echo "<tr><td><b><u>Home Page Visits</u></b></td></tr>";
+	echo "<tr><td><b>Last 7 Days</b></td><td><b>".$last7Views."</b> visits.</td></tr>";
+	echo "<tr><td><b>Last 30 Days</b></td><td><b>".$last30Views."</b> visits.</td></tr>";
+	echo "<tr><td><b>Total</b></td><td><b>".$totalViews."</b> visits.</td></tr>";
+	echo "<tr><td><b>Daily Record</b></td><td><b>".$recordViews."</b> visits.</td></tr></table>";
+}
+
+// Add custom meta boxes to posts & pages
 add_action("add_meta_boxes", "battleplan_add_custom_meta_boxes");
 function battleplan_add_custom_meta_boxes() {
     //add_meta_box("page_attributes-meta-box", "Custom Meta Box", "battleplan_remove_sidebar_meta_box", "post", "side", "default", null);
     //add_meta_box("page_attributes-meta-box", "Custom Meta Box", "battleplan_remove_sidebar_meta_box", "page", "side", "default", null);
     //add_meta_box("page_attributes-meta-box", "Custom Meta Box", "battleplan_remove_sidebar_meta_box", "custom_post_type", "side", "default", null);
-    //add_meta_box("page_attributes-meta-box", "Custom Meta Box", "battleplan_remove_sidebar_meta_box", "dashboard", "side", "default", null);
 }
 
 // Add "Remove Sidebar" checkbox to Page Attributes meta box
@@ -2544,7 +2590,6 @@ add_action( 'wp_ajax_count_post_views', 'battleplan_count_post_views_ajax' );
 add_action( 'wp_ajax_nopriv_count_post_views', 'battleplan_count_post_views_ajax' );
 function battleplan_count_post_views_ajax() {
 	$theID = intval( $_POST['id'] );
-	$siteHeader = getID('site-header');
 	$loadTime = $_POST['loadTime'];
 	$deviceTime = $_POST['deviceTime'];
 	$lastViewed = readMeta($theID, 'post-views-time');
@@ -2588,6 +2633,7 @@ function battleplan_count_post_views_ajax() {
 	endif;
 	
 	/* Log the load speed for this page */
+	$siteHeader = getID('site-header');
 	$desktopCounted = readMeta($siteHeader, "load-number-desktop");
 	$desktopSpeed = readMeta($siteHeader, "load-speed-desktop");	
 	$mobileCounted = readMeta($siteHeader, "load-number-mobile");
@@ -2599,7 +2645,7 @@ function battleplan_count_post_views_ajax() {
 		$emailTo = "info@battleplanwebdesign.com";
 		$emailFrom = "From: Website Administrator <do-not-reply@battleplanwebdesign.com>";
 		$subject = $_SERVER['HTTP_HOST']." Speed Report";
-		$content = $_SERVER['HTTP_HOST']." Speed Report\n\nDesktop speed = ".$desktopSpeed."s (".$desktopCounted.")\nMobile speed = ".$mobileSpeed."s (".$mobileCounted.")\n\nTotal speed = ".$totalSpeed."s (".$totalCounted.")\n";	
+		$content = $_SERVER['HTTP_HOST']." Speed Report\n\nDesktop = ".$desktopSpeed."s on ".$desktopCounted." visits.\nMobile = ".$mobileSpeed."s on ".$mobileCounted." visits.\n\nOverall = ".$totalSpeed."s on ".$totalCounted." visits.\n";	
 		$desktopCounted = $desktopSpeed = $mobileCounted = $mobileSpeed = 0;
 		mail($emailTo, $subject, $content, $emailFrom);
 	endif;

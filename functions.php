@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.8.6' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.8.7' ); }
 
 /*--------------------------------------------------------------
 # Shortcodes
@@ -2511,13 +2511,13 @@ function battleplan_admin_site_stats() {
 // Add custom meta boxes to posts & pages
 add_action("add_meta_boxes", "battleplan_add_custom_meta_boxes");
 function battleplan_add_custom_meta_boxes() {
-    add_meta_box("page-stats-box", "Page Stats", "battleplan_page_site_stats", "page", "side", "default", null);
-    add_meta_box("page-stats-box", "Page Stats", "battleplan_page_site_stats", "post", "side", "default", null);
-	add_meta_box("page-stats-box", "Page Stats", "battleplan_page_site_stats", "custom_post_type", "side", "default", null);
+    add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", "page", "side", "default", null);
+    add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", "post", "side", "default", null);
+	add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", "custom_post_type", "side", "default", null);
 }
 
-// Set up Site Stats widget on posts & pages
-function battleplan_page_site_stats() {
+// Set up Page Stats widget on posts & pages
+function battleplan_page_stats() {
 	global $post;
 	$totalViews = readMeta($post->ID, "post-views-total-all");
 	$last7Views = readMeta($post->ID, "post-views-total-7day");
@@ -2645,39 +2645,41 @@ function battleplan_count_post_views_ajax() {
 	else:
 		$response = array( 'result' => 'Page view NOT counted (battleplanweb logged in)' );
 	endif;
-	
-	/* Log the load speed for this page */
-	$siteHeader = getID('site-header');
-	$desktopCounted = readMeta($siteHeader, "load-number-desktop");
-	$desktopSpeed = readMeta($siteHeader, "load-speed-desktop");	
-	$mobileCounted = readMeta($siteHeader, "load-number-mobile");
-	$mobileSpeed = readMeta($siteHeader, "load-speed-mobile");
-	$totalCounted = $desktopCounted + $mobileCounted;
-	$totalSpeed = (round((($desktopSpeed * $desktopCounted) + ($mobileSpeed * $mobileCounted)) / $totalCounted, 1)); 
-	
-	if ( $totalCounted > 150 ) :
-		$emailTo = "info@battleplanwebdesign.com";
-		$emailFrom = "From: Website Administrator <do-not-reply@battleplanwebdesign.com>";
-		$subject = $_SERVER['HTTP_HOST']." Speed Report";
-		$content = $_SERVER['HTTP_HOST']." Speed Report\n\nDesktop = ".$desktopSpeed."s on ".$desktopCounted." visits.\nMobile = ".$mobileSpeed."s on ".$mobileCounted." visits.\n\nOverall = ".$totalSpeed."s on ".$totalCounted." visits.\n";	
-		$desktopCounted = $desktopSpeed = $mobileCounted = $mobileSpeed = 0;
-		mail($emailTo, $subject, $content, $emailFrom);
-	endif;
 
-	if ( $deviceTime == "desktop" ) : 	
-		$newTime = ($desktopCounted * $desktopSpeed) + $loadTime;
-		$desktopCounted++;
-		$desktopSpeed = (round($newTime / $desktopCounted, 1)); 
-	else: 
-		$newTime = ($mobileCounted * $mobileSpeed) + $loadTime;
-		$mobileCounted++;
-		$mobileSpeed = (round($newTime / $mobileCounted, 1));
+	/* Log the load speed for this page */
+	if ( $loadTime > 0.2 ) :	
+		$siteHeader = getID('site-header');
+		$desktopCounted = readMeta($siteHeader, "load-number-desktop");
+		$desktopSpeed = readMeta($siteHeader, "load-speed-desktop");	
+		$mobileCounted = readMeta($siteHeader, "load-number-mobile");
+		$mobileSpeed = readMeta($siteHeader, "load-speed-mobile");
+		$totalCounted = $desktopCounted + $mobileCounted;
+		$totalSpeed = (round((($desktopSpeed * $desktopCounted) + ($mobileSpeed * $mobileCounted)) / $totalCounted, 1)); 
+
+		if ( $totalCounted > 150 ) :
+			$emailTo = "info@battleplanwebdesign.com";
+			$emailFrom = "From: Website Administrator <do-not-reply@battleplanwebdesign.com>";
+			$subject = $_SERVER['HTTP_HOST']." Speed Report";
+			$content = $_SERVER['HTTP_HOST']." Speed Report\n\nDesktop = ".$desktopSpeed."s on ".$desktopCounted." visits.\nMobile = ".$mobileSpeed."s on ".$mobileCounted." visits.\n\nOverall = ".$totalSpeed."s on ".$totalCounted." visits.\n";	
+			$desktopCounted = $desktopSpeed = $mobileCounted = $mobileSpeed = 0;
+			mail($emailTo, $subject, $content, $emailFrom);
+		endif;
+
+		if ( $deviceTime == "desktop" ) : 	
+			$newTime = ($desktopCounted * $desktopSpeed) + $loadTime;
+			$desktopCounted++;
+			$desktopSpeed = (round($newTime / $desktopCounted, 1)); 
+		else: 
+			$newTime = ($mobileCounted * $mobileSpeed) + $loadTime;
+			$mobileCounted++;
+			$mobileSpeed = (round($newTime / $mobileCounted, 1));
+		endif;
+
+		updateMeta( $siteHeader, "load-number-desktop", $desktopCounted );	
+		updateMeta( $siteHeader, "load-speed-desktop", $desktopSpeed );		
+		updateMeta( $siteHeader, "load-number-mobile", $mobileCounted );	
+		updateMeta( $siteHeader, "load-speed-mobile", $mobileSpeed );	
 	endif;
-	
-	updateMeta( $siteHeader, "load-number-desktop", $desktopCounted );	
-	updateMeta( $siteHeader, "load-speed-desktop", $desktopSpeed );		
-	updateMeta( $siteHeader, "load-number-mobile", $mobileCounted );	
-	updateMeta( $siteHeader, "load-speed-mobile", $mobileSpeed );		
 	
 	wp_send_json( $response );	
 }

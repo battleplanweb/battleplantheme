@@ -16,8 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.8.3' ); }
-
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.8.4' ); }
 
 /*--------------------------------------------------------------
 # Shortcodes
@@ -2540,11 +2539,14 @@ function bp_mobile_menu_bar_items() { do_action('bp_mobile_menu_bar_items'); }
 //	wp_send_json( $response );
 //} 
 
-// Count Post Views
+// Count Post Views & Log Page Load Speed
 add_action( 'wp_ajax_count_post_views', 'battleplan_count_post_views_ajax' );
 add_action( 'wp_ajax_nopriv_count_post_views', 'battleplan_count_post_views_ajax' );
 function battleplan_count_post_views_ajax() {
 	$theID = intval( $_POST['id'] );
+	$siteHeader = getID('site-header');
+	$loadTime = $_POST['loadTime'];
+	$deviceTime = $_POST['deviceTime'];
 	$lastViewed = readMeta($theID, 'post-views-time');
 	$today = date("F j, Y");	
 	$current = strtotime($today);
@@ -2584,7 +2586,39 @@ function battleplan_count_post_views_ajax() {
 	else:
 		$response = array( 'result' => 'Page view NOT counted (battleplanweb logged in)' );
 	endif;
+	
+	/* Log the load speed for this page */
+	$desktopCounted = readMeta($siteHeader, "load-number-desktop");
+	$desktopSpeed = readMeta($siteHeader, "load-speed-desktop");	
+	$mobileCounted = readMeta($siteHeader, "load-number-mobile");
+	$mobileSpeed = readMeta($siteHeader, "load-speed-mobile");
+	$totalCounted = $desktopCounted + $mobileCounted;
+	$totalSpeed = (round((($desktopSpeed * $desktopCounted) + ($mobileSpeed * $mobileCounted)) / $totalCounted, 1)); 
+	
+	if ( $totalCounted > 150 ) :
+		$emailTo = "info@battleplanwebdesign.com";
+		$emailFrom = "From: Website Administrator <do-not-reply@battleplanwebdesign.com>";
+		$subject = $_SERVER['HTTP_HOST']." Speed Report";
+		$content = $_SERVER['HTTP_HOST']." Speed Report\n\nDesktop speed = ".$desktopSpeed."s (".$desktopCounted.")\nMobile speed = ".$mobileSpeed."s (".$mobileCounted.")\n\nTotal speed = ".$totalSpeed."s (".$totalCounted.")\n";	
+		$desktopCounted = $desktopSpeed = $mobileCounted = $mobileSpeed = 0;
+		mail($emailTo, $subject, $content, $emailFrom);
+	endif;
 
+	if ( $deviceTime == "desktop" ) : 	
+		$newTime = ($desktopCounted * $desktopSpeed) + $loadTime;
+		$desktopCounted++;
+		$desktopSpeed = (round($newTime / $desktopCounted, 1)); 
+	else: 
+		$newTime = ($mobileCounted * $mobileSpeed) + $loadTime;
+		$mobileCounted++;
+		$mobileSpeed = (round($newTime / $mobileCounted, 1));
+	endif;
+	
+	updateMeta( $siteHeader, "load-number-desktop", $desktopCounted );	
+	updateMeta( $siteHeader, "load-speed-desktop", $desktopSpeed );		
+	updateMeta( $siteHeader, "load-number-mobile", $mobileCounted );	
+	updateMeta( $siteHeader, "load-speed-mobile", $mobileSpeed );		
+	
 	wp_send_json( $response );	
 }
 
@@ -2771,7 +2805,7 @@ function battleplan_buildText( $atts, $content = null ) {
 // Button Block
 add_shortcode( 'btn', 'battleplan_buildButton' );
 function battleplan_buildButton( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'', 'class'=>'', 'ada'=>'' ), $atts );
+	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'', 'class'=>'', 'icon'=>'false', 'ada'=>'' ), $atts );
 	$getBiz = esc_attr($a['get-biz']);
 	if ( $getBiz == "" ) :
 		$link = esc_attr($a['link']);
@@ -2789,8 +2823,11 @@ function battleplan_buildButton( $atts, $content = null ) {
 	$target = esc_attr($a['new-tab']);
 	if ( $target == 'yes' || $target == "true" ) $target = ' target="_blank"';
 	if ( $class != '' ) $class = " ".$class;
-
-	return '<div class="block block-button span-'.$size.$class.'"'.$style.'><a'.$target.' href="'.$link.'" class="button'.$class.'">'.$content.$ada.'</a></div>';	
+	$icon = esc_attr($a['icon']);	
+	if ( $icon == "true" ) $icon = "fas fa-chevron-right";	
+	if ( $icon != "false" ) : $class .= " fancy"; $content = '<span class="fancy-text">'.$content.'</span><span class="fancy-icon"><i class="'.$icon.'"></i></span>'; endif;
+	
+	return '<div class="block block-button span-'.$size.$class.'"'.$style.'><a'.$target.' href="'.$link.'" class="button'.$class.'">'.$content.$ada.'</a></div>';
 }
 
 /* Accordion Block */

@@ -1361,9 +1361,16 @@ failCheck="ADA compliance";
 failCheck="Delay parsing of JavaScript";
 
 	$(window).load(function() { 
-		
+	
+	// Calculate load time for page		
+		var endTime = Date.now(); 	
+		var loadTime = ((endTime - startTime) / 1000).toFixed(1);	
+		var deviceTime = "desktop";
+		if ( getDeviceW() <= mobileCutoff ) { deviceTime = "mobile"; }	
+		console.log("Load speed= "+loadTime+"s");
+
 	// Fade out loader screen when site is fully loaded
-	$("#loader").fadeOut("fast");  
+		$("#loader").fadeOut("fast");  		
 		
 	// Get video link from data-src and feed to src 
 		var vidDefer = document.getElementsByTagName('iframe');
@@ -1406,7 +1413,7 @@ failCheck="Delay parsing of JavaScript";
 			var postID = $('body').attr('id');
 			$.post({
 				url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-				data : { action: "count_post_views", id : postID },
+				data : { action: "count_post_views", id: postID, loadTime: loadTime, deviceTime: deviceTime },
 				success: function( response ) { console.log(response); } 
 			});		
 			

@@ -331,7 +331,7 @@ function battleplan_hvac_maintenance_tips( $atts, $content = null ) {
 			 <img src="/wp-content/uploads/maintenance-tips-teaser.jpg" alt="Above view of equipment being worked on." class="alignright size-quarter-s" />
 
 			 <p>The life of your heating & cooling system depends on the service and care you give it. Proper care assures good performance.</p>
-			 <p>We have put together a set of simple \"Dos and Don\'ts\" that every homeowner should follow.</p>
+			 <p>We have put together a set of simple "Dos and Don\'ts" that every homeowner should follow.</p>
 			 
 			 [btn link="/maintenance-tips/" ada="about maintaining your HVAC system"]Learn More[/btn]
 			[/txt]

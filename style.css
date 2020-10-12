@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 1.8.7
+Version: 1.8.8
 Tested up to: 5.5
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -407,15 +407,16 @@ h6 {
 	font-size: 									21rem;
 }
 
-h1 > a, h1 > a:hover, h1 > a:visited, h1 > span,
-h2 > a, h2 > a:hover, h2 > a:visited, h2 > span,
-h3 > a, h3 > a:hover, h3 > a:visited, h3 > span,
-h4 > a, h4 > a:hover, h4 > a:visited, h4 > span,
-h5 > a, h5 > a:hover, h5 > a:visited, h5 > span,
-h6 > a, h6 > a:hover, h6 > a:visited, h6 > span,
+h1 > a, h1 > a:hover, h1 > a.tab-focus, h1 > a:visited, h1 > span,
+h2 > a, h2 > a:hover, h2 > a.tab-focus, h2 > a:visited, h2 > span,
+h3 > a, h3 > a:hover, h3 > a.tab-focus, h3 > a:visited, h3 > span,
+h4 > a, h4 > a:hover, h4 > a.tab-focus, h4 > a:visited, h4 > span,
+h5 > a, h5 > a:hover, h5 > a.tab-focus, h5 > a:visited, h5 > span,
+h6 > a, h6 > a:hover, h6 > a.tab-focus, h6 > a:visited, h6 > span,
 a > span,
 .phone-number a.phone-link, 
-.phone-number a.phone-link:hover,
+.phone-number a.phone-link:hover, 
+.phone-number a.phone-link.tab-focus,
 b, 
 strong, 
 i:not(.fa), 
@@ -461,6 +462,10 @@ span {
 	border-right: 								15px solid transparent !important;
 }
 
+.col-inner > h2 + h3 {
+	margin-top:									-20px /* Random Post - brings <h3> sub-title a little closer to the <h2> title, overcoming the grid-gap */
+}
+
 .phone-number i.fa, 
 .phone-number i.fa::before {
 	color: 										inherit !important; 
@@ -476,7 +481,8 @@ strong {
 }
 
 .phone-number a.phone-link, 
-.phone-number a.phone-link:hover {
+.phone-number a.phone-link:hover, 
+.phone-number a.phone-link.tab-focus {
 	text-decoration:							none;
 } 
 
@@ -1655,10 +1661,12 @@ section.section-edge .flex {
 	position: 									absolute;
 	top: 										0; 
 	width: 										auto;
-	height: 									auto;
+	height: 									100%;
+	margin-top:									0;
 	background: 								#404040;
 	pointer-events:								none;
 	z-index:									0;
+	opacity:									0;
 	transition:									all 0.3s ease;
 }
 
@@ -1795,23 +1803,23 @@ section.section-edge .flex {
 	max-width:									100%;
 	height:										100vh;
 	margin-right:								-100%;
-	transition: 								all 0.2s ease;
+	transition: 								all 0.2s linear;
 }
 
 .side-slide.mm-active #mobile-navigation, 
 .side-push.mm-active #mobile-navigation {
 	margin-right:								0;
-	transition: 								all 0.2s ease;
+	transition: 								all 0.2s linear;
 }
 
 .side-push #page {
 	right:										0;
-	transition: 								all 0.2s ease;
+	transition: 								all 0.2s linear;
 }
 
 .side-push.mm-active #page {
 	right:										440px;
-	transition: 								all 0.2s ease;
+	transition: 								all 0.2s linear;
 }
 
 .top-slide #mobile-navigation, 
@@ -1821,24 +1829,24 @@ section.section-edge .flex {
 	box-shadow: 								0 4px 5px rgba(0,0,0,0.5);
 	width:										100%;
 	height:										auto;
-	margin-top:									-100%;
-	transition: 								all 0.2s ease 0.2s;
+	margin-top:									-110%;
+	transition: 								all 0.2s linear;
 }
 
 .top-slide.mm-active #mobile-navigation, 
 .top-push.mm-active #mobile-navigation {
 	margin-top:									0;
-	transition: 								all 0.2s ease;
+	transition: 								all 0.2s linear;
 }
 
 .top-push #page, 
 .top-push .top-strip.stuck  {
-	transition: 								all 0.2s ease;
+	transition: 								all 0.2s linear;
 }
 
 .top-push.mm-active #page, 
 .top-push .top-strip.stuck  {
-	transition: 								all 0.2s ease 0.1s;
+	transition: 								all 0.2s linear;
 }	
 
 .top-slide #mobile-navigation ul, 
@@ -2865,7 +2873,8 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 	transition:									all 0.2s ease;
 }
 .carousel-indicators .active, 
-.carousel-indicators li:hover {
+.carousel-indicators li:hover, 
+.carousel-indicators li.tab-focus {
 	background-color: 							rgba(0,0,0,0.9);
 	transition:									all 0.2s ease;
 }
@@ -2893,7 +2902,8 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 	border-radius: 								100%;
 }
 .carousel-dot .carousel-indicators .active, 
-.carousel-dot .carousel-indicators li:hover {
+.carousel-dot .carousel-indicators li:hover, 
+.carousel-dot .carousel-indicators li.tab-focus {
 }
 
 .carousel-caption {
@@ -3067,6 +3077,15 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 	/* Headeline font basis */
 	html {
 		font-size:									4.50%;
+	}
+				
+	.screen-mobile h1,
+	.screen-mobile h2,
+	.screen-mobile h3,
+	.screen-mobile h4,
+	.screen-mobile h5,
+	.screen-mobile h6 {
+		text-align:									center;
 	}
 	
 	/* Content font size */
@@ -3314,15 +3333,6 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 	body {
 		font-size:									16px;
 	}	
-	
-	.screen-mobile h1,
-	.screen-mobile h2,
-	.screen-mobile h3,
-	.screen-mobile h4,
-	.screen-mobile h5,
-	.screen-mobile h6 {
-		text-align:									center;
-	}
 	
 	/* Mobile Menu */
 	#mobile-menu-bar a.phone-link {

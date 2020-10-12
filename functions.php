@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.8.7' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.8.8' ); }
 
 /*--------------------------------------------------------------
 # Shortcodes
@@ -2172,7 +2172,7 @@ add_filter( 'wpcf7_validate_email', 'battleplan_contact_form_spam_blocker', 20, 
 add_filter( 'wpcf7_validate_email*', 'battleplan_contact_form_spam_blocker', 20, 2 );
 function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( "user-message" == $tag->name ) {
-		$badwords = array('bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','loans for small businesses','New Hire HVAC Employee','и','д','б','й','л','ы','З','у','Я');
+		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','loans for small businesses','New Hire HVAC Employee','и','д','б','й','л','ы','З','у','Я');
         $check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		foreach($badwords as $badword) {
 			if (stripos($check,$badword) !== false) $result->invalidate( $tag, 'We do not accept messages containing the word(s) "'.$badword.'".' );
@@ -2482,30 +2482,36 @@ function battleplan_admin_site_stats() {
 	$desktopSpeed = readMeta($siteHeader, "load-speed-desktop");	
 	$mobileCounted = readMeta($siteHeader, "load-number-mobile");
 	$mobileSpeed = readMeta($siteHeader, "load-speed-mobile");
+	$lastEmail = readMeta($siteHeader, "last-email");
+	$today = date("F j, Y");	
+	$current = strtotime($today);
+	$daysSinceEmail = number_format((($current - $lastEmail) / 60 / 60 / 24));
 	$totalCounted = $desktopCounted + $mobileCounted;
-	$totalSpeed = (round((($desktopSpeed * $desktopCounted) + ($mobileSpeed * $mobileCounted)) / $totalCounted, 1)); 
 	
-	$totalViews = readMeta($frontPage, "post-views-total-all");
-	$last7Views = readMeta($frontPage, "post-views-total-7day");
-	$last30Views = readMeta($frontPage, "post-views-total-30day");
-	$recordViews = readMeta($frontPage, "post-views-record");
+	$totalViews = number_format(readMeta($frontPage, "post-views-total-all"));
+	$last7Views = number_format(readMeta($frontPage, "post-views-total-7day"));
+	$last30Views = number_format(readMeta($frontPage, "post-views-total-30day"));
+	$recordViews = number_format(readMeta($frontPage, "post-views-record"));
 	
 	echo "<table><tr><td><b><u>Framework</u></b></td><td><b>"._BP_VERSION."</b></td></tr>";		
 		
+	echo "<tr><td>&nbsp;</td></tr>";	
+	
+	echo "<tr><td><b><u>Last Email</u></b></td><td><b>".$daysSinceEmail."</b> days ago</td></tr>";
+	
 	echo "<tr><td>&nbsp;</td></tr>";
 	
 	echo "<tr><td><b><u>Site Speed</u></b></td></tr>";
-	echo "<tr><td><b>Desktop</b></td><td><b>".$desktopSpeed."s</b> on <b>".$desktopCounted."</b> visits.</td></tr>";
-	echo "<tr><td><b>Mobile</b></td><td><b>".$mobileSpeed."s</b> on <b>".$mobileCounted."</b> visits.</td></tr>";
-	echo "<tr><td><b>Overall</b></td><td><b>".$totalSpeed."s</b> on <b>".$totalCounted."</b> visits.</td></tr>";
+	echo "<tr><td><b>Desktop</b></td><td><b>".$desktopSpeed."s</b> on <b>".$desktopCounted."</b> visits</td></tr>";
+	echo "<tr><td><b>Mobile</b></td><td><b>".$mobileSpeed."s</b> on <b>".$mobileCounted."</b> visits</td></tr>";
 	
 	echo "<tr><td>&nbsp;</td></tr>";
 	
 	echo "<tr><td><b><u>Home Page Visits</u></b></td></tr>";
-	echo "<tr><td><b>Last 7 Days</b></td><td><b>".$last7Views."</b> visits.</td></tr>";
-	echo "<tr><td><b>Last 30 Days</b></td><td><b>".$last30Views."</b> visits.</td></tr>";
-	echo "<tr><td><b>Total</b></td><td><b>".$totalViews."</b> visits.</td></tr>";
-	echo "<tr><td><b>Daily Record</b></td><td><b>".$recordViews."</b> visits.</td></tr></table>";
+	echo "<tr><td><b>Last 7 Days</b></td><td><b>".$last7Views."</b> visits</td></tr>";
+	echo "<tr><td><b>Last 30 Days</b></td><td><b>".$last30Views."</b> visits</td></tr>";
+	echo "<tr><td><b>Total</b></td><td><b>".$totalViews."</b> visits</td></tr>";
+	echo "<tr><td><b>Daily Record</b></td><td><b>".$recordViews."</b> visits</td></tr></table>";
 }
 
 // Add custom meta boxes to posts & pages
@@ -2513,7 +2519,7 @@ add_action("add_meta_boxes", "battleplan_add_custom_meta_boxes");
 function battleplan_add_custom_meta_boxes() {
     add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", "page", "side", "default", null);
     add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", "post", "side", "default", null);
-	add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", "custom_post_type", "side", "default", null);
+	add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", "products", "side", "default", null);
 }
 
 // Set up Page Stats widget on posts & pages
@@ -2652,16 +2658,18 @@ function battleplan_count_post_views_ajax() {
 		$desktopCounted = readMeta($siteHeader, "load-number-desktop");
 		$desktopSpeed = readMeta($siteHeader, "load-speed-desktop");	
 		$mobileCounted = readMeta($siteHeader, "load-number-mobile");
-		$mobileSpeed = readMeta($siteHeader, "load-speed-mobile");
+		$mobileSpeed = readMeta($siteHeader, "load-speed-mobile");		
+		$lastEmail = readMeta($siteHeader, "last-email");
+		$daysSinceEmail = (($current - $lastEmail) / 60 / 60 / 24);
 		$totalCounted = $desktopCounted + $mobileCounted;
-		$totalSpeed = (round((($desktopSpeed * $desktopCounted) + ($mobileSpeed * $mobileCounted)) / $totalCounted, 1)); 
 
-		if ( $totalCounted > 150 ) :
+		if ( ($totalCounted > 100 && $daysSinceEmail > 30) || $daysSinceEmail > 90 ) :
 			$emailTo = "info@battleplanwebdesign.com";
 			$emailFrom = "From: Website Administrator <do-not-reply@battleplanwebdesign.com>";
 			$subject = $_SERVER['HTTP_HOST']." Speed Report";
-			$content = $_SERVER['HTTP_HOST']." Speed Report\n\nDesktop = ".$desktopSpeed."s on ".$desktopCounted." visits.\nMobile = ".$mobileSpeed."s on ".$mobileCounted." visits.\n\nOverall = ".$totalSpeed."s on ".$totalCounted." visits.\n";	
+			$content = $_SERVER['HTTP_HOST']." Speed Report\n\nDesktop = ".$desktopSpeed."s on ".$desktopCounted." visits\nMobile = ".$mobileSpeed."s on ".$mobileCounted." visits\n";	
 			$desktopCounted = $desktopSpeed = $mobileCounted = $mobileSpeed = 0;
+			updateMeta( $siteHeader, "last-email", $current );	
 			mail($emailTo, $subject, $content, $emailFrom);
 		endif;
 
@@ -2678,9 +2686,9 @@ function battleplan_count_post_views_ajax() {
 		updateMeta( $siteHeader, "load-number-desktop", $desktopCounted );	
 		updateMeta( $siteHeader, "load-speed-desktop", $desktopSpeed );		
 		updateMeta( $siteHeader, "load-number-mobile", $mobileCounted );	
-		updateMeta( $siteHeader, "load-speed-mobile", $mobileSpeed );	
+		updateMeta( $siteHeader, "load-speed-mobile", $mobileSpeed );			
 	endif;
-	
+
 	wp_send_json( $response );	
 }
 

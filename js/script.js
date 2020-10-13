@@ -870,7 +870,7 @@ failCheck="Set up pages: Wrap content within .site-main";
 // Wrap content within .site-main so that widgets can be distributed properly
 	wrapDiv('.site-main','<div class="site-main-inner"></div>', 'inside');	
 	
-failCheck="Add .page-begins to the next section under masthead";
+failCheck="Set up pages: Add .page-begins to the next section under masthead";
 	
 // Add .page-begins to the next section under masthead for purposes of locking .top-strip
 	if ( $('#wrapper-top').length ) { $('#wrapper-top').addClass('page-begins'); } else { $('#wrapper-content').addClass('page-begins'); }
@@ -881,13 +881,22 @@ failCheck="Set up pages: Add 'noFX' class to img";
 	$( "div.noFX" ).find("img").addClass("noFX");
 	$( "div.noFX" ).find("a").addClass("noFX");
 	
-failCheck="Add .fa class";
+failCheck="Set up pages: Add .fa class";
 		
 // Add .fa class to all icons using .far, .fas and .fab
 	$( ".far, .fas, .fab" ).addClass("fa");
 	
+failCheck="Set up pages: Fade in lazy loaded images";
+	
 // Fade in lazy loaded images
-	//animateDiv( 'img:not(.loader-img):not(.site-icon)', 'fadeIn', 150, '110%', 200 );	
+	$('img').addClass('unloaded');	
+	$('img').one('load', function() { 
+		$(this).removeClass('unloaded'); 
+	}).each(function() { 
+		if (this.complete) { 
+			$(this).trigger('load'); 
+		}
+	});	
 	
 failCheck="Set up pages: Check if 'Remove Sidebar' option is checked in admin panel";
 
@@ -1418,7 +1427,18 @@ failCheck="Delay parsing of JavaScript";
 				data : { action: "count_post_views", id: postID, loadTime: loadTime, deviceTime: deviceTime },
 				success: function( response ) { console.log(response); } 
 			});		
-			
+
+		// Count testimonial view
+			$('.testimonials-name').waypoint(function() {		
+				var theID = $(this.element).attr('data-id');			
+				$.post({
+					url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
+					data : { action: "count_post_views", id: theID, loadTime: 0, deviceTime: deviceTime },
+					success: function( response ) { console.log(response); } 
+				});		
+				this.destroy();
+			}, { offset: '75%' });	 	
+
 		// Count image view
 			$('#primary img.random-img, .widget-image:not(.hide-widget) img.random-img, .row-of-pics img.random-img, .carousel img.img-slider, #wrapper-bottom img.random-img').waypoint(function() {		
 				var theImg = $(this.element).attr('data-id');			

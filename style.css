@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 1.8.8
+Version: 1.8.9
 Tested up to: 5.5
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -1249,6 +1249,14 @@ section.section-edge .flex {
 	text-align:									center;
 }
 
+.block-button.button-left {
+	text-align:									left;
+}
+
+.block-button.button-right {
+	text-align:									right;
+}
+
 .flex.valign-stretch .block-button:last-child {
 	align-self:									end;
 }
@@ -2049,11 +2057,11 @@ a.scroll-top {
 /* Posts and Pages
 --------------------------------------------- */
 #main-content {
-	margin: 									1.5em 0 2.5em; /* changed bottom margine to 2.5em from 1.5em on Jaric 9/22/20 */
+	margin: 									1.5em 0 2.5em; /* changed bottom margin to 2.5em from 1.5em on Jaric 9/22/20 */
 }
 
 .archive-intro {
-	margin-top:									0.5em;
+	margin-top:									1.5em; /* changed top margin to 1.5em from 0.5em for testimonials archive (1st paragraph) 10/12/20 */
 	margin-bottom:								2em;
 }
 
@@ -2153,6 +2161,16 @@ a.scroll-top {
 
 /* Media
 --------------------------------------------- */
+img:not(.parallax-slider) {
+	opacity:									1;
+	transition:									all 0.2s ease;
+}
+
+img:not(.parallax-slider).unloaded {
+	opacity:									0;
+	transition:									all 0.2s ease;
+}
+
 .alignleft, 
 .align-left,
 .thumb-left .section .alignright,

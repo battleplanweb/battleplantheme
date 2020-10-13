@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.8.8' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '1.8.9' ); }
 
 /*--------------------------------------------------------------
 # Shortcodes
@@ -323,7 +323,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		$testimonialMisc3 = esc_attr(get_field( "testimonial_misc3" ));	
 		$testimonialMisc4 = esc_attr(get_field( "testimonial_misc4" ));
 		
-		$buildCredentials = "<div class='testimonials-credential testimonials-name'>".$testimonialName;
+		$buildCredentials = "<div class='testimonials-credential testimonials-name' data-id=".get_the_ID().">".$testimonialName;
 		if ( $testimonialTitle ) $buildCredentials .= "<span class='testimonials-title'>, ".$testimonialTitle."</span>";
 		$buildCredentials .= "</div>";
 		if ( $testimonialBiz ) :
@@ -346,12 +346,9 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	} else {
 		if ( $accordion == "true" ) :		
 			if ( $format == 'true' ) : $formatContent = "[p]".apply_filters('the_content', get_the_content())."[/p]"; else : $formatContent = apply_filters('the_content', get_the_content()); endif;
-			//$archiveBody = '[txt class="text-'.$type.'"]';
 			$archiveBody = '[accordion title="'.esc_html(get_the_title()).'" excerpt="'.apply_filters('the_excerpt', get_the_excerpt()).'"]'.$formatContent.'[/accordion]';		
-			//$archiveBody .= '[/txt]';
 		else :		
 			$archiveMeta = $archiveBody = "";
-			//$archiveBody = "[txt size='".$textSize."' class='text-".$type."']";	
 			if ( $showTitle == "true" ) :
 				$archiveMeta .= "<h3>";
 				if ( $showContent != "true" && $link != "false" ) $archiveMeta .= '<a href="'.$linkLoc.'" class="link-archive link-'.get_post_type().'"'.$titleADA.'>';		
@@ -378,7 +375,6 @@ function battleplan_getBuildArchive($atts, $content = null) {
 				$subline = $count." Photos";
 				$archiveBody .= '<a href="'.esc_url(get_the_permalink()).'" class="link-archive link-'.get_post_type().'" aria-hidden="true" tabindex="-1"><p class="gallery-subtitle">'.$subline.'</p></a>'; 	
 			endif;
-			//$archiveBody .= '[/txt]';
 		endif;
 	}
 	
@@ -459,12 +455,11 @@ function battleplan_getRandomPosts($atts, $content = null) {
 	global $post; 
 	$getPosts = new WP_Query( $args );
 	$combinePosts = "";
-	if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 
-
-		$showPost = do_shortcode('[build-archive type="'.$postType.'" show_btn="'.$showBtn.'" btn_text="'.$button.'" btn_pos="'.$btnPos.'" show_title="'.$title.'" title_pos="'.$titlePos.'" show_date="'.$showDate.'" show_excerpt="'.$showExcerpt.'" show_social="'.$showSocial.'" show_content="'.$showContent.'" show_author="'.$showAuthor.'" size="'.$size.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" link="'.$link.'"]');		
-		
+	if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 	
+		$showPost = do_shortcode('[build-archive type="'.$postType.'" show_btn="'.$showBtn.'" btn_text="'.$button.'" btn_pos="'.$btnPos.'" show_title="'.$title.'" title_pos="'.$titlePos.'" show_date="'.$showDate.'" show_excerpt="'.$showExcerpt.'" show_social="'.$showSocial.'" show_content="'.$showContent.'" show_author="'.$showAuthor.'" size="'.$size.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" link="'.$link.'"]');	
+	
+		if ( $num > 1 ) $showPost = do_shortcode('[col]'.$showPost.'[/col]');	
 		if ( has_post_thumbnail() || $thumbnail != "force" ) $combinePosts .= $showPost;
-
 	endwhile; wp_reset_postdata(); endif;
 	return $combinePosts;
 }
@@ -510,8 +505,8 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	endif;	
 	$link = esc_attr($a['link']);		
 	$id = esc_attr($a['id']);	
-	$mult = esc_attr($a['mult']);		
 	$class = esc_attr($a['class']);	
+	$mult = esc_attr($a['mult']);		
 	if ( $mult == 1 ) $imgSize = 100; 
 	if ( $mult == 2 ) $imgSize = 50;	
 	if ( $mult == 3 ) $imgSize = 33;
@@ -603,16 +598,17 @@ function battleplan_getPostSlider($atts, $content = null ) {
 			$buildInner = '<div class="carousel-inner">';
 
 			while ( $fetchPost->have_posts() ) : 
-				$fetchPost->the_post(); 
+				$fetchPost->the_post();
+	
 				if ( $numDisplay < $num ) : 
 					if ( $pics == "no" || has_post_thumbnail() ) :
 						$numDisplay++; 
 						if ( $numDisplay == 0 ) : 
 							$buildIndicators .= '<li data-target="#'.$type.'Slider'.$sliderNum.'" data-slide-to="'.$numDisplay.'" class="active"></li>';
-							$buildInner .= '<div class="carousel-item active">';
+							$buildInner .= '<div class="active carousel-item carousel-item-'.$type.'" data-id="'.get_the_ID().'">';
 						else : 
 							$buildIndicators .= '<li data-target="#'.$type.'Slider'.$sliderNum.'" data-slide-to="'.$numDisplay.'"></li>'; 
-							$buildInner .= '<div class="carousel-item">';
+							$buildInner .= '<div class="carousel-item carousel-item-'.$type.'" data-id="'.get_the_ID().'">';
 						endif;	
 
 						$buildInner .= do_shortcode('[build-archive type="'.$type.'" show_btn="'.$showBtn.'" btn_text="'.$postBtn.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" size="'.$size.'" pic_size="'.$picSize.'" text_size="'.$textSize.'"]');		
@@ -1988,6 +1984,18 @@ function battleplan_meta_comments() {
 	return '<span class="meta-comments"><i class="fas fa-comments"></i>'.get_comments_number().'</span>';
 }
 
+// Set up footer social media box
+function battleplan_footer_social_box() {	
+	$buildLeft = "<div class='social-box'>";
+		if ( do_shortcode('[get-biz info="facebook"]') ) $buildLeft .= do_shortcode('[social-btn type="facebook"]'); 							
+		if ( do_shortcode('[get-biz info="twitter"]') ) $buildLeft .= do_shortcode('[social-btn type="twitter"]');						
+		if ( do_shortcode('[get-biz info="instagram"]') ) $buildLeft .= do_shortcode('[social-btn type="instagram"]');							
+		if ( do_shortcode('[get-biz info="linkedin"]') ) $buildLeft .= do_shortcode('[social-btn type="linkedin"]');							
+		if ( do_shortcode('[get-biz info="email"]') ) $buildLeft .= do_shortcode('[social-btn type="email"]');
+	$buildLeft .= "</div>";
+	return $buildLeft;
+}
+
 //Disable Gutenburg
 add_filter('use_block_editor_for_post', '__return_false');
 
@@ -2483,12 +2491,18 @@ function battleplan_admin_site_stats() {
 	$mobileCounted = readMeta($siteHeader, "load-number-mobile");
 	$mobileSpeed = readMeta($siteHeader, "load-speed-mobile");
 	$lastEmail = readMeta($siteHeader, "last-email");
-	$today = date("F j, Y");	
+	$today = date("F j, Y, g:i a");	
 	$current = strtotime($today);
 	$daysSinceEmail = number_format((($current - $lastEmail) / 60 / 60 / 24));
-	$totalCounted = $desktopCounted + $mobileCounted;
-	
-	$totalViews = number_format(readMeta($frontPage, "post-views-total-all"));
+	$totalCounted = $desktopCounted + $mobileCounted;		
+	$lastViewed = readMeta($frontPage, 'post-views-time');
+	$dateDiff = (($current - $lastViewed) / 60 / 60 / 24); $howLong = "day";
+	if ( $dateDiff < 1 ) : $dateDiff = (($current - $lastViewed) / 60 / 60); $howLong = "hour"; endif;	
+	if ( $dateDiff < 1 ) : $dateDiff =(($current - $lastViewed) / 60); $howLong = "minute"; endif;
+	if ( $dateDiff != 1 ) $howLong = $howLong."s";	
+	$totalViews = number_format(readMeta($frontPage, "post-views-total-all"));	
+	$dailyMeta = readMeta($frontPage, 'post-views-day-1'); 
+	$viewsToday = number_format($dailyMeta['views']);
 	$last7Views = number_format(readMeta($frontPage, "post-views-total-7day"));
 	$last30Views = number_format(readMeta($frontPage, "post-views-total-30day"));
 	$recordViews = number_format(readMeta($frontPage, "post-views-record"));
@@ -2497,21 +2511,23 @@ function battleplan_admin_site_stats() {
 		
 	echo "<tr><td>&nbsp;</td></tr>";	
 	
-	echo "<tr><td><b><u>Last Email</u></b></td><td><b>".$daysSinceEmail."</b> days ago</td></tr>";
+	echo "<tr><td><b><u>Last Email</u></b></td><td>".sprintf( _n( '<b>%s</b> day ago', '<b>%s</b> days ago', $daysSinceEmail, 'battleplan' ), $daysSinceEmail )."</td></tr>";
 	
 	echo "<tr><td>&nbsp;</td></tr>";
 	
 	echo "<tr><td><b><u>Site Speed</u></b></td></tr>";
-	echo "<tr><td><b>Desktop</b></td><td><b>".$desktopSpeed."s</b> on <b>".$desktopCounted."</b> visits</td></tr>";
-	echo "<tr><td><b>Mobile</b></td><td><b>".$mobileSpeed."s</b> on <b>".$mobileCounted."</b> visits</td></tr>";
+	echo "<tr><td><b>Desktop</b></td><td><b>".$desktopSpeed."s</b> on ".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $desktopCounted, 'battleplan' ), $desktopCounted )."</td></tr>";
+	echo "<tr><td><b>Mobile</b></td><td><b>".$mobileSpeed."s</b> on ".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $mobileCounted, 'battleplan' ), $mobileCounted )."</td></tr>";
 	
 	echo "<tr><td>&nbsp;</td></tr>";
 	
 	echo "<tr><td><b><u>Home Page Visits</u></b></td></tr>";
-	echo "<tr><td><b>Last 7 Days</b></td><td><b>".$last7Views."</b> visits</td></tr>";
-	echo "<tr><td><b>Last 30 Days</b></td><td><b>".$last30Views."</b> visits</td></tr>";
-	echo "<tr><td><b>Total</b></td><td><b>".$totalViews."</b> visits</td></tr>";
-	echo "<tr><td><b>Daily Record</b></td><td><b>".$recordViews."</b> visits</td></tr></table>";
+	echo "<tr><td><b>Today</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $viewsToday, 'battleplan' ), $viewsToday )."</td></tr>";	
+	echo "<tr><td><b>Last 7 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last7Views, 'battleplan' ), $last7Views )."</td></tr>";
+	echo "<tr><td><b>Last 30 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last30Views, 'battleplan' ), $last30Views )."</td></tr>";
+	echo "<tr><td><b>Total</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $totalViews, 'battleplan' ), $totalViews )."</td></tr>";
+	echo "<tr><td><b>Daily Record</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $recordViews, 'battleplan' ), $recordViews )."</td></tr>";
+	echo "<tr><td><b>Last Viewed</b></td><td><b>".$dateDiff."</b> ".$howLong." ago</td></tr></table>";	
 }
 
 // Add custom meta boxes to posts & pages
@@ -2519,21 +2535,33 @@ add_action("add_meta_boxes", "battleplan_add_custom_meta_boxes");
 function battleplan_add_custom_meta_boxes() {
     add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", "page", "side", "default", null);
     add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", "post", "side", "default", null);
-	add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", "products", "side", "default", null);
+	add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", "products", "side", "default", null);	
+	add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", "testimonials", "side", "default", null);
 }
 
 // Set up Page Stats widget on posts & pages
 function battleplan_page_stats() {
 	global $post;
-	$totalViews = readMeta($post->ID, "post-views-total-all");
-	$last7Views = readMeta($post->ID, "post-views-total-7day");
-	$last30Views = readMeta($post->ID, "post-views-total-30day");
-	$recordViews = readMeta($post->ID, "post-views-record");	
+	$totalViews = number_format(readMeta($post->ID, "post-views-total-all"));
+	$dailyMeta = readMeta($post->ID, 'post-views-day-1'); 
+	$viewsToday = number_format($dailyMeta['views']);
+	$last7Views = number_format(readMeta($post->ID, "post-views-total-7day"));
+	$last30Views = number_format(readMeta($post->ID, "post-views-total-30day"));
+	$recordViews = number_format(readMeta($post->ID, "post-views-record"));
+	$lastViewed = readMeta($post->ID, 'post-views-time');
+	$today = date("F j, Y, g:i a");	
+	$current = strtotime($today);
+	$dateDiff = (($current - $lastViewed) / 60 / 60 / 24); $howLong = "day";
+	if ( $dateDiff < 1 ) : $dateDiff = (($current - $lastViewed) / 60 / 60); $howLong = "hour"; endif;	
+	if ( $dateDiff < 1 ) : $dateDiff =(($current - $lastViewed) / 60); $howLong = "minute"; endif;
+	if ( $dateDiff != 1 ) $howLong = $howLong."s";
 	
-	echo "<table><tr><td><b>Last 7 Days</b></td><td><b>".$last7Views."</b> visits.</td></tr>";
-	echo "<tr><td><b>Last 30 Days&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b></td><td><b>".$last30Views."</b> visits.</td></tr>";
-	echo "<tr><td><b>Total</b></td><td><b>".$totalViews."</b> visits.</td></tr>";
-	echo "<tr><td><b>Daily Record</b></td><td><b>".$recordViews."</b> visits.</td></tr></table>";	
+	echo "<table><tr><td><b>Today</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $viewsToday, 'battleplan' ), $viewsToday )."</td></tr>";
+	echo "<tr><td><b>Last 7 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last7Views, 'battleplan' ), $last7Views )."</td></tr>";
+	echo "<tr><td><b>Last 30 Days&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last30Views, 'battleplan' ), $last30Views )."</tr>";
+	echo "<tr><td><b>Total</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $totalViews, 'battleplan' ), $totalViews )."</tr>";
+	echo "<tr><td><b>Daily Record</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $recordViews, 'battleplan' ), $recordViews )."</tr>";	
+	echo "<tr><td><b>Last Viewed</b></td><td><b>".$dateDiff."</b> ".$howLong." ago</td></tr></table>";	
 }
 
 // Add "Remove Sidebar" checkbox to Page Attributes meta box
@@ -2610,47 +2638,49 @@ add_action( 'wp_ajax_count_post_views', 'battleplan_count_post_views_ajax' );
 add_action( 'wp_ajax_nopriv_count_post_views', 'battleplan_count_post_views_ajax' );
 function battleplan_count_post_views_ajax() {
 	$theID = intval( $_POST['id'] );
+	$postType = get_post_type($theID);
 	$loadTime = $_POST['loadTime'];
 	$deviceTime = $_POST['deviceTime'];
 	$lastViewed = readMeta($theID, 'post-views-time');
-	$today = date("F j, Y");	
+	$today = date("F j, Y, g:i a");	
 	$current = strtotime($today);
 	$dateDiff = (($current - $lastViewed) / 60 / 60 / 24);
 	$user = wp_get_current_user();
 	$userLogin = $user->user_login;
 
-	if ( $userLogin != 'battleplanweb' ) :
+	//if ( $userLogin != 'battleplanweb' ) :
 		updateMeta($theID, 'post-views-time', $current);
-		if ($dateDiff != 0) : // day has passed, move 29 to 30, and so on
+		if ($dateDiff > 1) : // day has passed, move 29 to 30, and so on
 			$viewsToday = $views7Day = $views30Day = 1;
-			$dailyMeta = $dailyTime = $dailyViews = array();
+			$dailyTime = $dailyViews = array();
 			for ($x = 29; $x >= 1; $x--) {
 				$dailyMeta = readMeta($theID, 'post-views-day-'.$x); 
 				$dailyTime[$x] = $dailyMeta['date']; 				
-				$dailyViews[$x] = $dailyMeta['views']; 
+				$dailyViews[$x] = intval($dailyMeta['views']); 
 				$y = $x+1;
 				updateMeta( $theID, 'post-views-day-'.$y, array ('date'=>$dailyTime[$x], 'views'=>$dailyViews[$x]));
 			} 		
 			for ($x = 1; $x < 7; $x++) { $views7Day = $views7Day + $dailyViews[$x]; } 					
 			for ($x = 1; $x < 30; $x++) { $views30Day = $views30Day + $dailyViews[$x]; } 		
-			$viewsTotal = readMeta($theID, 'post-views-total-all'); $viewsTotal++;				
+			$viewsTotal = intval(readMeta($theID, 'post-views-total-all')); $viewsTotal++;				
 		else:
 			// same day, just update today
-			$todayMeta = readMeta($theID, 'post-views-day-1'); $viewsToday = $todayMeta['views'] + 1;
-			$views7Day = readMeta($theID, 'post-views-total-7day'); $views7Day++;	
-			$views30Day = readMeta($theID, 'post-views-total-30day'); $views30Day++;	
-			$viewsTotal = readMeta($theID, 'post-views-total-all'); $viewsTotal++;				
-			$viewsRecord = readMeta($theID, 'post-views-record'); 
-			if ( $viewsToday > $viewsRecord ) : updateMeta( $theID, 'post-views-record', $viewsToday); updateMeta( $theID, 'post-views-record-date', $current); endif;
+			$dailyMeta = readMeta($theID, 'post-views-day-1'); 
+			$viewsToday = intval($dailyMeta['views']); $viewsToday++; 
+			$views7Day = intval(readMeta($theID, 'post-views-total-7day')); $views7Day++; 
+			$views30Day = intval(readMeta($theID, 'post-views-total-30day')); $views30Day++;
+			$viewsTotal = intval(readMeta($theID, 'post-views-total-all')); $viewsTotal++; 			
+			$recordViews = intval(readMeta($theID, 'post-views-record'));
+			if ( $viewsToday > $recordViews ) : updateMeta( $theID, 'post-views-record', $viewsToday); updateMeta( $theID, 'post-views-record-date', $current); endif;
 		endif;	
-		updateMeta( $theID, 'post-views-day-1', array ('date'=>date('F j, Y', $current), 'views'=>$viewsToday));			
+		updateMeta( $theID, 'post-views-day-1', array ('date'=>date('F j, Y, g:i a', $current), 'views'=>$viewsToday));			
 		updateMeta( $theID, 'post-views-total-7day', $views7Day);			
-		updateMeta( $theID, 'post-views-total-30day', $views30Day);			
+		updateMeta( $theID, 'post-views-total-30day', $views30Day);			 
 		updateMeta( $theID, 'post-views-total-all', $viewsTotal);	
-		$response = array( 'result' => 'Page view counted' );
-	else:
-		$response = array( 'result' => 'Page view NOT counted (battleplanweb logged in)' );
-	endif;
+		$response = array( 'result' => $dateDiff.' -> '.ucfirst($postType.' view counted') );
+	//else:
+		//$response = array( 'result' => ucfirst($postType.' view NOT counted (battleplanweb logged in)') );
+	//endif;
 
 	/* Log the load speed for this page */
 	if ( $loadTime > 0.2 ) :	
@@ -2661,13 +2691,15 @@ function battleplan_count_post_views_ajax() {
 		$mobileSpeed = readMeta($siteHeader, "load-speed-mobile");		
 		$lastEmail = readMeta($siteHeader, "last-email");
 		$daysSinceEmail = (($current - $lastEmail) / 60 / 60 / 24);
-		$totalCounted = $desktopCounted + $mobileCounted;
+		$totalCounted = $desktopCounted + $mobileCounted;	
 
 		if ( ($totalCounted > 100 && $daysSinceEmail > 30) || $daysSinceEmail > 90 ) :
+			$desktopCount = sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $desktopCounted, 'battleplan' ), $desktopCounted );
+			$mobileCount = sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $mobileCounted, 'battleplan' ), $mobileCounted );
 			$emailTo = "info@battleplanwebdesign.com";
 			$emailFrom = "From: Website Administrator <do-not-reply@battleplanwebdesign.com>";
 			$subject = $_SERVER['HTTP_HOST']." Speed Report";
-			$content = $_SERVER['HTTP_HOST']." Speed Report\n\nDesktop = ".$desktopSpeed."s on ".$desktopCounted." visits\nMobile = ".$mobileSpeed."s on ".$mobileCounted." visits\n";	
+			$content = $_SERVER['HTTP_HOST']." Speed Report\n\nDesktop = ".$desktopSpeed."s on ".$desktopCount."\nMobile = ".$mobileSpeed."s on ".$mobileCount."\n";	
 			$desktopCounted = $desktopSpeed = $mobileCounted = $mobileSpeed = 0;
 			updateMeta( $siteHeader, "last-email", $current );	
 			mail($emailTo, $subject, $content, $emailFrom);
@@ -2703,7 +2735,7 @@ function battleplan_add_view_ajax() {
 	$oldTime = round((($currentTime - readMeta($theID, 'widget-pic-time')) / 60 / 60 / 24), 1);		
 	updateMeta($theID, 'widget-pic-views', $views);	
 	updateMeta($theID, 'widget-pic-time', $currentTime);	
-	$response = array( 'result' => 'successful', 'views' => $views, 'days since previous view' => $oldTime);
+	$response = array( 'result' => 'Image view counted', 'views' => $views, 'days since previous view' => $oldTime);
 	wp_send_json( $response );
 }
 
@@ -2875,7 +2907,7 @@ function battleplan_buildText( $atts, $content = null ) {
 // Button Block
 add_shortcode( 'btn', 'battleplan_buildButton' );
 function battleplan_buildButton( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'', 'class'=>'', 'icon'=>'false', 'ada'=>'' ), $atts );
+	$a = shortcode_atts( array( 'size'=>'100', 'align'=>'center', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'', 'class'=>'', 'icon'=>'false', 'ada'=>'' ), $atts );
 	$getBiz = esc_attr($a['get-biz']);
 	if ( $getBiz == "" ) :
 		$link = esc_attr($a['link']);
@@ -2885,6 +2917,8 @@ function battleplan_buildButton( $atts, $content = null ) {
 	endif;
 	$size = esc_attr($a['size']);	
 	$size = convertSize($size);
+	$align = esc_attr($a['align']);	
+	if ( $align != "center" ) : $align = " button-".$align; else: $align = ""; endif;
 	$order = esc_attr($a['order']);	
 	if ( $order != '' ) $style = " style='order: ".$order." !important'";
 	$class = esc_attr($a['class']);
@@ -2897,7 +2931,7 @@ function battleplan_buildButton( $atts, $content = null ) {
 	if ( $icon == "true" ) $icon = "fas fa-chevron-right";	
 	if ( $icon != "false" ) : $class .= " fancy"; $content = '<span class="fancy-text">'.$content.'</span><span class="fancy-icon"><i class="'.$icon.'"></i></span>'; endif;
 	
-	return '<div class="block block-button span-'.$size.$class.'"'.$style.'><a'.$target.' href="'.$link.'" class="button'.$class.'">'.$content.$ada.'</a></div>';
+	return '<div class="block block-button span-'.$size.$class.$align.'"'.$style.'><a'.$target.' href="'.$link.'" class="button'.$class.'">'.$content.$ada.'</a></div>';
 }
 
 /* Accordion Block */

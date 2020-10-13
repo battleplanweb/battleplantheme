@@ -30,13 +30,7 @@
 				if (function_exists('battleplan_siteInfoLeft')) {
 					$buildLeft = battleplan_siteInfoLeft();
 				} else {	
-					$buildLeft = "<div class='social-box'>";
-						if ( do_shortcode('[get-biz info="facebook"]') ) $buildLeft .= do_shortcode('[social-btn type="facebook"]'); 							
-						if ( do_shortcode('[get-biz info="twitter"]') ) $buildLeft .= do_shortcode('[social-btn type="twitter"]');						
-						if ( do_shortcode('[get-biz info="instagram"]') ) $buildLeft .= do_shortcode('[social-btn type="instagram"]');							
-						if ( do_shortcode('[get-biz info="linkedin"]') ) $buildLeft .= do_shortcode('[social-btn type="linkedin"]');							
-						if ( do_shortcode('[get-biz info="email"]') ) $buildLeft .= do_shortcode('[social-btn type="email"]');
-					$buildLeft .= "</div>";
+					$buildLeft = battleplan_footer_social_box();
 				}
 	
 				if (function_exists('battleplan_siteInfoRight')) {

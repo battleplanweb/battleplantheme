@@ -1,6 +1,7 @@
 <?php
 /* The template for displaying the footer */
-?>
+
+get_sidebar(); ?>
 
 		</div><!-- #main-content -->
 	</section><!-- #wrapper-content -->

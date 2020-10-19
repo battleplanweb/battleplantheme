@@ -1071,12 +1071,33 @@ failCheck="Set up pages: Determine which day of week";
 	
 failCheck="Set up sidebar";
 	
+	var isPaused = false, compensate;
+	
+	// Start Sidebar setup
 	window.setupSidebar = function (compensate, menuLock, shuffle) {
 		compensate = compensate || 0;		
 		menuLock = menuLock || "true";
 		shuffle = shuffle || "true";
-		var isPaused = false;		
-						
+		isPaused = false;		
+		
+	// Set up "locked" widgets, and shuffle the rest
+		$('.widget.lock-to-top, .widget.lock-to-bottom').addClass("locked");		
+		$('.widget:not(.locked)').addClass("shuffle");
+		
+		if ( getDeviceW() > mobileCutoff && shuffle == "true" ) { 
+			shuffleWidgets( $('.shuffle') );
+		}				
+	};	
+	
+// Initiate widget removal
+	window.widgetInit = function () {
+		if ( getDeviceW() > mobileCutoff && isPaused==false ) { 
+			$('.widget').removeClass('hide-widget');
+			removeWidgets('.widget.remove-first');
+			isPaused = true; 
+		} 
+	};
+	
 // Shuffle an array of widgets
 	window.shuffleWidgets = function ($elements) {
 		var i, index1, index2, temp_val, count = $elements.length, $parent = $elements.parent(), shuffled_array = [];
@@ -1097,107 +1118,90 @@ failCheck="Set up sidebar";
 		var el = $(".widget.lock-to-bottom").detach();
 		$parent.append( el );		
 	};		
-
-// Set up "locked" widgets, and shuffle the rest
-		$('.widget.lock-to-top, .widget.lock-to-bottom').addClass("locked");		
-		$('.widget:not(.locked)').addClass("shuffle");
-		
-		if ( getDeviceW() > mobileCutoff && shuffle == "true" ) { 
-			shuffleWidgets( $('.shuffle') );
-		}
-				
-// Initiate widget removal
-		window.widgetInit = function () {
-			if ( getDeviceW() > mobileCutoff && isPaused==false ) { 
-				$('.widget').removeClass('hide-widget');
-				removeWidgets('.widget.remove-first');
-				isPaused = true; 
-			} 
-		};
-				
+	
 // Remove widgets that do not fit
-		window.removeWidgets = function (removeWidget) {
-			var contentH = $("#primary .site-main-inner").outerHeight() + compensate, widgetH = $("#secondary .sidebar-inner").outerHeight(true), remainH = widgetH - contentH, removeThis = $(removeWidget);
+	window.removeWidgets = function (removeWidget) {
+		var contentH = $("#primary .site-main-inner").outerHeight() + compensate, widgetH = $("#secondary .sidebar-inner").outerHeight(true), remainH = widgetH - contentH, removeThis = $(removeWidget);
 
-			if ( remainH > 0 && $('.widget:not(.hide-widget)').length ) {		
-				removeThis.random().addClass("hide-widget");
-						
-				if ( $('.widget.remove-first:not(.hide-widget)').length ) { removeWidgets( '.widget.remove-first:not(.hide-widget)' ); }
-				else if ( $('.widget.shuffle:not(.hide-widget)').length ) { removeWidgets( '.widget.shuffle:not(.hide-widget):not(.widget-important)' ); }
-				else if ( $('.widget.lock-to-bottom:not(.hide-widget)').length ) { removeWidgets( '.widget.lock-to-bottom:not(.hide-widget):not(.widget-important)' ); }
-				else { removeWidgets( '.widget.lock-to-top:not(.hide-widget):not(.widget-important)' ); }				
-				
-			} else { 
-				checkWidgets();
-			}
-		};						
+		if ( remainH > 0 && $('.widget:not(.hide-widget)').length ) {		
+			removeThis.random().addClass("hide-widget");
+
+			if ( $('.widget.remove-first:not(.hide-widget)').length ) { removeWidgets( '.widget.remove-first:not(.hide-widget)' ); }
+			else if ( $('.widget.shuffle:not(.hide-widget)').length ) { removeWidgets( '.widget.shuffle:not(.hide-widget):not(.widget-important)' ); }
+			else if ( $('.widget.lock-to-bottom:not(.hide-widget)').length ) { removeWidgets( '.widget.lock-to-bottom:not(.hide-widget):not(.widget-important)' ); }
+			else { removeWidgets( '.widget.lock-to-top:not(.hide-widget):not(.widget-important)' ); }				
+
+		} else { 
+			checkWidgets();
+		}
+	};						
 		
 // Determine the widget with height closest to amount of space remaining to fill
-		window.findClosest = function (compare, loop, test) {
-			var curr, diff = 999999;
-			loop++;
-			for (var val = 1; val < loop; val++) {
-				var newdiff = compare - test[val];
-				if ( newdiff > 0 && newdiff < diff ) { diff = newdiff; curr = test[val]; }
-			}
-			return curr;
-		};
+	window.findClosest = function (compare, loop, test) {
+		var curr, diff = 999999;
+		loop++;
+		for (var val = 1; val < loop; val++) {
+			var newdiff = compare - test[val];
+			if ( newdiff > 0 && newdiff < diff ) { diff = newdiff; curr = test[val]; }
+		}
+		return curr;
+	};
 		
 // Check hidden widgets for any smaller ones that might still fit
-		window.checkWidgets = function () {			
-				var contentH = $("#primary .site-main-inner").outerHeight() + compensate, widgetH = $("#secondary .sidebar-inner").outerHeight(), i = 0, widgets = [];
-				var remainH = contentH - widgetH + 140; // 140 is arbitrary, can be adjusted as needed to make sure widgets fit but don't go over
-			
-				$('.widget.hide-widget').each(function() {
-					var theWidget = $(this);
-					i++;
-					widgets[i] = theWidget.outerHeight(true) + Math.floor((Math.random() * 10) - 5);
-					theWidget.addClass("widget-height-"+widgets[i]);	
-				});
-			
-				var replaceWidget = findClosest(remainH, i, widgets);
-				widgets.splice(widgets.indexOf(replaceWidget),1);
-				if ( replaceWidget < remainH ) { $(".widget-height-"+replaceWidget).removeClass("hide-widget"); }
-			
-				adjustSidebarH();
-				setTimeout(function() { isPaused = false; }, 3000);
-		};	
-						
-// Adjust height of #secondary to match #primary + add extra spacing between .widget if necessary
-		window.adjustSidebarH = function () {
-			var contentH = $("#primary").outerHeight(true) + compensate;
-			$("#secondary").animate( { height: contentH+"px" }, 300);
-		};
-				
-// Mark first, last, even and odd widgets
-		window.labelWidgets = function () {
-			$(".widget").removeClass("widget-first").removeClass("widget-last").removeClass("widget-even").removeClass("widget-odd");
-			$(".widget:not(.hide-widget)").first().addClass("widget-first");  
-			$(".widget:not(.hide-widget)").last().addClass("widget-last"); 
-			$(".widget:not(.hide-widget):odd").addClass("widget-even"); 
-			$(".widget:not(.hide-widget):even").addClass("widget-odd"); 	
-		};
+	window.checkWidgets = function () {			
+		var contentH = $("#primary .site-main-inner").outerHeight() + compensate, widgetH = $("#secondary .sidebar-inner").outerHeight(), i = 0, widgets = [];
+		var remainH = contentH - widgetH + 140; // 140 is arbitrary, can be adjusted as needed to make sure widgets fit but don't go over
+
+		$('.widget.hide-widget').each(function() {
+			var theWidget = $(this);
+			i++;
+			widgets[i] = theWidget.outerHeight(true) + Math.floor((Math.random() * 10) - 5);
+			theWidget.addClass("widget-height-"+widgets[i]);	
+		});
+
+		var replaceWidget = findClosest(remainH, i, widgets);
+		widgets.splice(widgets.indexOf(replaceWidget),1);
+		if ( replaceWidget < remainH ) { $(".widget-height-"+replaceWidget).removeClass("hide-widget"); }
 		
- // Move sidebar in conjunction with mouse scroll to keep it even with content
-		window.moveWidgets = function () {
-			var contentH = $('#primary').outerHeight(), elem = $(".sidebar-inner"), elemH = elem.outerHeight() + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom')), contentV = contentH - getDeviceH() + 200, sidebarV = elemH - getDeviceH() + 400, addTop=0;	
-			
-			$('.stuck').each(function() { addTop = addTop + $(this).outerHeight(true); });					
-			var secH = $("#secondary").outerHeight(), secT = $("#secondary").offset().top, winH = $(window).height() - addTop, winT = $(window).scrollTop() + addTop;				
-			var adjT = winT - secT, fullH = secH - winH, scrollPct = adjT / fullH, maxH = contentH - elemH;	
-			if ( scrollPct > 1 ) { scrollPct = 1; }
-			if ( scrollPct < 0 || scrollPct == null ) { scrollPct = 0; }
-			var moveElem = Math.round(maxH * scrollPct);	
-			if ( moveElem > maxH ) { moveElem = maxH; }
-			if ( moveElem < 0 ) { moveElem = 0; }
-			if ( contentV > 0 && sidebarV > 0 && adjT > 0 && getDeviceW() > mobileCutoff ) { 
-				elem.css("margin-top",moveElem+"px"); 
-			} else { 
-				elem.css("margin-top","0px"); 
-			}
-		};
+		adjustSidebarH();
+		setTimeout(function() { isPaused = false; }, 3000);
 	};	
 
+// Adjust height of #secondary to match #primary + add extra spacing between .widget if necessary
+	window.adjustSidebarH = function () {
+		var contentH = $("#primary").outerHeight(true) + compensate;
+		$("#secondary").animate( { height: contentH+"px" }, 300);		
+		
+		labelWidgets();
+	};
+
+// Mark first, last, even and odd widgets
+	window.labelWidgets = function () {
+		$(".widget").removeClass("widget-first").removeClass("widget-last").removeClass("widget-even").removeClass("widget-odd");
+		$(".widget:not(.hide-widget)").first().addClass("widget-first");  
+		$(".widget:not(.hide-widget)").last().addClass("widget-last"); 
+		$(".widget:not(.hide-widget):odd").addClass("widget-even"); 
+		$(".widget:not(.hide-widget):even").addClass("widget-odd"); 	
+	};
+
+// Move sidebar in conjunction with mouse scroll to keep it even with content
+	window.moveWidgets = function () {
+		var contentH = $('#primary').outerHeight(), elem = $(".sidebar-inner"), elemH = elem.outerHeight() + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom')), contentV = contentH - getDeviceH() + 200, sidebarV = elemH - getDeviceH() + 400, addTop=0;	
+
+		$('.stuck').each(function() { addTop = addTop + $(this).outerHeight(true); });					
+		var secH = $("#secondary").outerHeight(), secT = $("#secondary").offset().top, winH = $(window).height() - addTop, winT = $(window).scrollTop() + addTop;				
+		var adjT = winT - secT, fullH = secH - winH, scrollPct = adjT / fullH, maxH = contentH - elemH;	
+		if ( scrollPct > 1 ) { scrollPct = 1; }
+		if ( scrollPct < 0 || scrollPct == null ) { scrollPct = 0; }
+		var moveElem = Math.round(maxH * scrollPct);	
+		if ( moveElem > maxH ) { moveElem = maxH; }
+		if ( moveElem < 0 ) { moveElem = 0; }
+		if ( contentV > 0 && sidebarV > 0 && adjT > 0 && getDeviceW() > mobileCutoff ) { 
+			elem.css("margin-top",moveElem+"px"); 
+		} else { 
+			elem.css("margin-top","0px"); 
+		}
+	};
 	
 /*--------------------------------------------------------------
 # Screen resize

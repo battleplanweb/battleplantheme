@@ -6,6 +6,7 @@
 ----------------------------------------------------------------
 # Product Overview
 # American Standard Customer Care
+# Why Choose American Standard
 # HVAC FAQ
 # HVAC Symptom Checker
 # HVAC Maintenance Tips
@@ -146,7 +147,64 @@ function battleplan_american_standard_customer_care( $atts, $content = null ) {
 			 [/txt]
 		');	
 	endif; 
-}	
+}		
+
+
+/*--------------------------------------------------------------
+# Why Choose American Standard
+--------------------------------------------------------------*/
+add_shortcode( 'why-choose-as', 'battleplan_why_choose_as' );
+function battleplan_why_choose_as( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'style'=>'1', 'width'=>'stretch', 'img'=>'American-Standard-Logo-640x120.png', 'alt'=>'We are proud to be an independent American Standard dealer, offering the top rated HVAC products on the market.' ), $atts );
+	$style = esc_attr($a['style']);
+	$width = esc_attr($a['width']);	
+	$img = esc_attr($a['img']);
+	$alt = esc_attr($a['alt']);
+	
+	return do_shortcode('
+		[section name="Why Choose American Standard" style="'.$style.'" width="'.$width.'"]
+ 			[layout grid="1-1-1-1"] 
+  				[col class="span-all"]
+					[txt]
+   						<img src="/wp-content/uploads/'.$img.'" alt="'.$alt.'" class="noFX" />
+   					[/txt]
+  				[/col]
+
+  				[col]
+   					<div class="icon"><i class="fa fas fa-thumbs-up" aria-hidden="true"></i></div>
+   					[txt]
+						<h3>Reliability</h3>
+						<p>You can always depend on the reliability of American Standard. Since 1881, we have built systems that deliver quality heating and cooling during your family\'s most precious moments.</p>
+					[/txt]
+  				[/col]
+
+				[col]
+   					<div class="icon"><i class="fa fas fa-leaf" aria-hidden="true"></i></div>
+   					[txt]
+    					<h3>Sustainability</h3>
+    					<p>American Standard creates smarter solutions that improve the lives of our customers and our environment. Our sustainable heating & cooling products help reduce our energy footprint.</p>
+   					[/txt]
+  				[/col]
+
+ 				[col]
+					<div class="icon"><i class="fa fas fa-home" aria-hidden="true"></i></div>
+					[txt]
+						<h3>Home Comfort</h3>
+						<p>Our goal is to create the perfect heating and cooling system for your family. We evaluate your home and design a system that best fits your needs, as well as one the fits your budget.</p>
+					[/txt]
+				[/col]
+
+				[col]
+					<div class="icon"><i class="fa fas fa-heartbeat" aria-hidden="true"></i></div>
+					[txt]
+						<h3>Air Quality</h3>
+						<p>American Standard’s line of indoor air quality solutions help keep your air cleaner and fresher. We offer plenty of options to improve your air quality from humidity and allergens.</p>
+					[/txt]
+				[/col]
+			[/layout]
+		[/section]
+	');	
+}				
 
 
 /*--------------------------------------------------------------
@@ -453,8 +511,8 @@ function battleplan_hvac_tip_of_the_month( $atts, $content = null ) {
 		$headline = "Schedule Chores To Save Money";
 		$tip = do_shortcode("
 			<p>Many utility companies have \"dual time\" rates, which means they charge more for energy that is used during peak times.</p>
-			<p>If your electric company charges more for day time energy consumption, switch your chores (runing the dishwasher, washing machine, and dryer) to nighttime and your energy costs will be less!</p>
-			<p>For a complete energy audit of your home, call us at <strong>[get-biz info='area-phone']</strong>.</p>
+			<p>If your electric company charges more for day time energy consumption, switch your chores (running the dishwasher, washing machine, and dryer) to nighttime and your energy costs will be less!</p>
+			<p>To keep your system running at optimum efficiency, call us at <strong>[get-biz info='area-phone']</strong> to schedule seasonal maintenance.</p>
 		");
 	endif;
 	

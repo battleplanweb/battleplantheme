@@ -2052,12 +2052,14 @@ add_action( 'wp_enqueue_scripts', 'battleplan_scripts' );
 function battleplan_scripts() {
 	wp_enqueue_style( 'battleplan-animate', get_template_directory_uri().'/animate.css', array(), _BP_VERSION );	
 	wp_enqueue_style( 'battleplan-ie', get_template_directory_uri()."/style-ie.css", array(), _BP_VERSION );
-	wp_enqueue_style( 'battleplan-fontawesome', get_template_directory_uri()."/fontawesome.min.css", array(), _BP_VERSION );	
+	wp_enqueue_style( 'battleplan-fontawesome', get_template_directory_uri()."/fontawesome.min.css", array(), _BP_VERSION );
+	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { wp_enqueue_style( 'battleplan-events', get_template_directory_uri()."/style-events.css", array(), _BP_VERSION ); } 
 	
 	wp_enqueue_script( 'battleplan-bootstrap', get_template_directory_uri().'/js/bootstrap.js', array(), _BP_VERSION, true );
 	wp_enqueue_script( 'battleplan-parallax', get_template_directory_uri().'/js/parallax.js', array(), _BP_VERSION, true );
 	wp_enqueue_script( 'battleplan-waypoints', get_template_directory_uri().'/js/waypoints.js', array(), _BP_VERSION, true );
 	wp_enqueue_script( 'battleplan-script', get_template_directory_uri().'/js/script.js', array(), _BP_VERSION, true );
+	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { wp_enqueue_script( 'battleplan-events', get_template_directory_uri().'/js/events.js', array(), _BP_VERSION, true ); } 
 	if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) { wp_enqueue_script( 'comment-reply' ); }
 	
 	$getUploadDir = wp_upload_dir();
@@ -2473,7 +2475,8 @@ function battleplan_remove_dashboard_widgets () {
 	remove_meta_box('dashboard_primary','dashboard','side'); //WordPress.com Blog
 	remove_meta_box('dashboard_right_now','dashboard','side');
 	remove_meta_box('dashboard_quick_press','dashboard','side'); //Quick Press widget
-	//remove_meta_box('tribe_dashboard_widget', 'dashboard', 'normal'); // News From Modern Tribe
+	remove_meta_box('tribe_dashboard_widget', 'dashboard', 'normal'); // News From Modern Tribe
+	remove_meta_box('wpe_dify_news_feed','dashboard','side'); //WP Engine
 }
 
 // Add new dashboard widgets
@@ -2498,8 +2501,9 @@ function battleplan_admin_site_stats() {
 	$lastViewed = readMeta($frontPage, 'post-views-time');
 	$dateDiff = (($current - $lastViewed) / 60 / 60 / 24); $howLong = "day";
 	if ( $dateDiff < 1 ) : $dateDiff = (($current - $lastViewed) / 60 / 60); $howLong = "hour"; endif;	
-	if ( $dateDiff < 1 ) : $dateDiff =(($current - $lastViewed) / 60); $howLong = "minute"; endif;
+	if ( $dateDiff < 1 ) : $dateDiff = (($current - $lastViewed) / 60); $howLong = "minute"; endif;
 	if ( $dateDiff != 1 ) $howLong = $howLong."s";	
+	$dateDiff = number_format($dateDiff, 1);
 	$totalViews = number_format(readMeta($frontPage, "post-views-total-all"));	
 	$dailyMeta = readMeta($frontPage, 'post-views-day-1'); 
 	$viewsToday = number_format($dailyMeta['views']);
@@ -2527,7 +2531,17 @@ function battleplan_admin_site_stats() {
 	echo "<tr><td><b>Last 30 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last30Views, 'battleplan' ), $last30Views )."</td></tr>";
 	echo "<tr><td><b>Total</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $totalViews, 'battleplan' ), $totalViews )."</td></tr>";
 	echo "<tr><td><b>Daily Record</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $recordViews, 'battleplan' ), $recordViews )."</td></tr>";
-	echo "<tr><td><b>Last Viewed</b></td><td><b>".$dateDiff."</b> ".$howLong." ago</td></tr></table>";	
+	echo "<tr><td><b>Last Viewed</b></td><td><b>".$dateDiff."</b> ".$howLong." ago</td></tr>";	
+		
+	echo "<tr><td>&nbsp;</td></tr>";
+	
+	for ($x = 29; $x >= 1; $x--) {
+		$dailyMeta = readMeta($frontPage, 'post-views-day-'.$x); 
+		$dailyTime[$x] = date("D, M jS", strtotime($dailyMeta['date'])); 				
+		$dailyViews[$x] = intval($dailyMeta['views']); 
+		echo "<tr><td><b>".$dailyTime[$x]."</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $dailyViews[$x], 'battleplan' ), $dailyViews[$x] )."</td></tr>";
+	} 		
+	echo '</table>';
 }
 
 // Add custom meta boxes to posts & pages
@@ -2648,21 +2662,26 @@ function battleplan_count_post_views_ajax() {
 	$user = wp_get_current_user();
 	$userLogin = $user->user_login;
 
-	//if ( $userLogin != 'battleplanweb' ) :
+	if ( $userLogin != 'battleplanweb' && $loadTime > 0.1 ) :
 		updateMeta($theID, 'post-views-time', $current);
-		if ($dateDiff > 1) : // day has passed, move 29 to 30, and so on
-			$viewsToday = $views7Day = $views30Day = 1;
-			$dailyTime = $dailyViews = array();
-			for ($x = 29; $x >= 1; $x--) {
-				$dailyMeta = readMeta($theID, 'post-views-day-'.$x); 
-				$dailyTime[$x] = $dailyMeta['date']; 				
-				$dailyViews[$x] = intval($dailyMeta['views']); 
-				$y = $x+1;
-				updateMeta( $theID, 'post-views-day-'.$y, array ('date'=>$dailyTime[$x], 'views'=>$dailyViews[$x]));
-			} 		
-			for ($x = 1; $x < 7; $x++) { $views7Day = $views7Day + $dailyViews[$x]; } 					
-			for ($x = 1; $x < 30; $x++) { $views30Day = $views30Day + $dailyViews[$x]; } 		
-			$viewsTotal = intval(readMeta($theID, 'post-views-total-all')); $viewsTotal++;				
+		if ($dateDiff > 1) : // day has passed, move 29 to 30, and so on	
+			$loopThis = number_format($dateDiff);	
+			for ($i = 1; $i <= $loopThis; $i++) {	
+				$viewsToday = $views7Day = $views30Day = 1;
+				$dailyTime = $dailyViews = array();
+				for ($x = 29; $x >= 1; $x--) {
+					$dailyMeta = readMeta($theID, 'post-views-day-'.$x); 
+					$dailyTime[$x] = $dailyMeta['date']; 				
+					$dailyViews[$x] = intval($dailyMeta['views']); 
+					$y = $x+1;
+					updateMeta( $theID, 'post-views-day-'.$y, array ('date'=>$dailyTime[$x], 'views'=>$dailyViews[$x]));					
+				} 	
+				$figureTime = $current - ( ($loopThis - $i) * 86400);				
+				updateMeta( $theID, 'post-views-day-1', array ('date'=>date('F j, Y, g:i a', $figureTime), 'views'=>0));
+				for ($x = 1; $x < 7; $x++) { $views7Day = $views7Day + $dailyViews[$x]; } 					
+				for ($x = 1; $x < 30; $x++) { $views30Day = $views30Day + $dailyViews[$x]; } 		
+				$viewsTotal = intval(readMeta($theID, 'post-views-total-all')); $viewsTotal++;		
+			}	
 		else:
 			// same day, just update today
 			$dailyMeta = readMeta($theID, 'post-views-day-1'); 
@@ -2678,12 +2697,8 @@ function battleplan_count_post_views_ajax() {
 		updateMeta( $theID, 'post-views-total-30day', $views30Day);			 
 		updateMeta( $theID, 'post-views-total-all', $viewsTotal);	
 		$response = array( 'result' => $dateDiff.' -> '.ucfirst($postType.' view counted') );
-	//else:
-		//$response = array( 'result' => ucfirst($postType.' view NOT counted (battleplanweb logged in)') );
-	//endif;
-
-	/* Log the load speed for this page */
-	if ( $loadTime > 0.2 ) :	
+	
+		/* Log the load speed for this page */	
 		$siteHeader = getID('site-header');
 		$desktopCounted = readMeta($siteHeader, "load-number-desktop");
 		$desktopSpeed = readMeta($siteHeader, "load-speed-desktop");	
@@ -2694,8 +2709,8 @@ function battleplan_count_post_views_ajax() {
 		$totalCounted = $desktopCounted + $mobileCounted;	
 
 		if ( ($totalCounted > 100 && $daysSinceEmail > 30) || $daysSinceEmail > 90 ) :
-			$desktopCount = sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $desktopCounted, 'battleplan' ), $desktopCounted );
-			$mobileCount = sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $mobileCounted, 'battleplan' ), $mobileCounted );
+			$desktopCount = sprintf( _n( '%s visit', '%s visits', $desktopCounted, 'battleplan' ), $desktopCounted );
+			$mobileCount = sprintf( _n( '%s visit', '%s visits', $mobileCounted, 'battleplan' ), $mobileCounted );
 			$emailTo = "info@battleplanwebdesign.com";
 			$emailFrom = "From: Website Administrator <do-not-reply@battleplanwebdesign.com>";
 			$subject = $_SERVER['HTTP_HOST']." Speed Report";
@@ -2718,7 +2733,9 @@ function battleplan_count_post_views_ajax() {
 		updateMeta( $siteHeader, "load-number-desktop", $desktopCounted );	
 		updateMeta( $siteHeader, "load-speed-desktop", $desktopSpeed );		
 		updateMeta( $siteHeader, "load-number-mobile", $mobileCounted );	
-		updateMeta( $siteHeader, "load-speed-mobile", $mobileSpeed );			
+		updateMeta( $siteHeader, "load-speed-mobile", $mobileSpeed );		
+	else:
+		$response = array( 'result' => ucfirst($postType.' view NOT counted (battleplanweb logged in)') );
 	endif;
 
 	wp_send_json( $response );	
@@ -2799,12 +2816,14 @@ function battleplan_buildSection( $atts, $content = null ) {
 // Layout
 add_shortcode( 'layout', 'battleplan_buildLayout' );
 function battleplan_buildLayout( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'grid'=>'1', 'valign'=>'' ), $atts );
+	$a = shortcode_atts( array( 'grid'=>'1', 'break'=>'', 'valign'=>'' ), $atts );
 	$grid = esc_attr($a['grid']);
+	$break = esc_attr($a['break']);
 	$valign = esc_attr($a['valign']);
 	if ( $valign != '' ) $valign = " valign-".$valign;
+	if ( $break != '' ) $break = " break-".$break;
 
-	$buildLayout = '<div class="flex grid-'.$grid.$valign.'">'.do_shortcode($content).'</div>';	
+	$buildLayout = '<div class="flex grid-'.$grid.$valign.$break.'">'.do_shortcode($content).'</div>';	
 	
 	return $buildLayout;
 }

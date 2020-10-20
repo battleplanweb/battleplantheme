@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 2.0
+Version: 2.1
 Tested up to: 5.5
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -1614,6 +1614,7 @@ section.section-edge .flex {
  	transform-origin: 							50% 50%;
 	z-index:									-1;
 	transition:									all 0.2s ease;
+	pointer-events:								none;
 }
 
 #desktop-navigation ul.main-menu li:hover::before, 
@@ -2507,30 +2508,37 @@ img.noFX,
 	gap: 										1.5em;
 }
 
+.grid-2e,
 .gallery-column-2 {
 	grid-template-columns: 						repeat(2, 1fr);
 }
 
+.grid-3e,
 .gallery-column-3 {
 	grid-template-columns: 						repeat(3, 1fr);
 }
 
+.grid-4e,
 .gallery-column-4 {
 	grid-template-columns: 						repeat(4, 1fr);
 }
 
+.grid-5e,
 .gallery-column-5 {
 	grid-template-columns: 						repeat(5, 1fr);
 }
 
+.grid-6e,
 .gallery-column-6 {
 	grid-template-columns: 						repeat(6, 1fr);
 }
 
+.grid-7e,
 .gallery-column-7 {
 	grid-template-columns: 						repeat(7, 1fr);
 }
 
+.grid-8e,
 .gallery-column-8 {
 	grid-template-columns: 						repeat(8, 1fr);
 }

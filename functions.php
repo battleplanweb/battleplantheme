@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '2.0' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '2.1' ); }
 
 /*--------------------------------------------------------------
 # Shortcodes
@@ -256,6 +256,52 @@ function battleplan_getRandomImage($atts, $content = null ) {
 	endwhile; wp_reset_postdata(); endif;	
 	if ( $shuffle != "no" ) : shuffle($imageArray); endif;
 	return printArray($imageArray);
+}
+
+// Display a row of square pics from tagged images
+add_shortcode( 'get-row-of-pics', 'battleplan_getRowOfPics' );
+function battleplan_getRowOfPics($atts, $content = null ) {	
+	$a = shortcode_atts( array( 'id'=>'', 'tag'=>'row-of-pics', 'link'=>'no', 'col'=>'4', 'size'=>'half-s', 'class'=>'', 'order_by'=>'rand', 'order'=>'ASC', 'shuffle'=>'no' ), $atts );
+	$col = esc_attr($a['col']);		
+	$size = esc_attr($a['size']);		
+	$tag = esc_attr($a['tag']);	
+	$tags = explode( ',', $tag );
+	$link = esc_attr($a['link']);	
+	$orderBy = esc_attr($a['order_by']);		
+	$order = esc_attr($a['order']);		
+	$shuffle = esc_attr($a['shuffle']);		
+	$class = esc_attr($a['class']);	
+	if ( $class != '' ) $class = " ".$class;
+	$id = esc_attr($a['id']);	
+	if ( $id == "current" ) $id = get_the_ID();
+	
+	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>$col, 'order'=>$order, 'tax_query'=>array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags )));
+
+	if ( $orderBy == 'views' ) : $args['meta_key']="widget-pic-views"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'recent' ) : $args['meta_key']="widget-pic-time"; $args['orderby']='meta_value_num';	
+	else : $args['orderby']=$orderBy; endif;		
+	
+	if ( $id != '' ) : 
+		$args['post_parent']=$id;
+	endif;
+
+	$image_query = new WP_Query($args);		
+	$imageArray = array();
+
+	if( $image_query->have_posts() ) : while ($image_query->have_posts() ) : $image_query->the_post();
+		$image = wp_get_attachment_image_src( get_the_ID(), $size );
+	
+		$getImage = "";
+		if ( $link == "yes" ) $getImage .= '<a href="'.$image[0].'">';
+		$getImage .= '<img data-id="'.get_the_ID().'"'.getImgMeta(get_the_ID()).' class="random-img '.$tags[0].'-img '.$align.'" src="'.$image[0].'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'">';
+		if ( $link == "yes" ) $getImage .= '</a>';
+
+		$imageArray[] = do_shortcode('[col class="'.$class.'"]'.$getImage.'[/col]');			
+	endwhile; wp_reset_postdata(); endif;	
+	
+	if ( $shuffle != "no" ) : shuffle($imageArray); endif;
+	$print = do_shortcode('[layout grid="'.$col.'e"]'.printArray($imageArray).'[/layout]'); 
+	return $print;
 }
 
 // Build an archive
@@ -1991,6 +2037,7 @@ function battleplan_footer_social_box() {
 		if ( do_shortcode('[get-biz info="twitter"]') ) $buildLeft .= do_shortcode('[social-btn type="twitter"]');						
 		if ( do_shortcode('[get-biz info="instagram"]') ) $buildLeft .= do_shortcode('[social-btn type="instagram"]');							
 		if ( do_shortcode('[get-biz info="linkedin"]') ) $buildLeft .= do_shortcode('[social-btn type="linkedin"]');							
+		if ( do_shortcode('[get-biz info="yelp"]') ) $buildLeft .= do_shortcode('[social-btn type="yelp"]');							
 		if ( do_shortcode('[get-biz info="email"]') ) $buildLeft .= do_shortcode('[social-btn type="email"]');
 	$buildLeft .= "</div>";
 	return $buildLeft;

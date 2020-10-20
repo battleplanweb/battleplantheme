@@ -20,9 +20,7 @@ jQuery(function($) { try {
 # Basic site functionality
 --------------------------------------------------------------*/
 	
-	var getThemeURI = theme_dir.theme_dir_uri, getUploadURI = theme_dir.upload_dir_uri, mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 42, failCheck;
-	
-failCheck="Basic site functionality";
+	var getThemeURI = theme_dir.theme_dir_uri, getUploadURI = theme_dir.upload_dir_uri, mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 42;
 	
 // Add Post ID as an ID attribute on body tag	
 	var postID = "noID";    
@@ -550,8 +548,6 @@ failCheck="Basic site functionality";
 # DOM level functions
 --------------------------------------------------------------*/
 	
-failCheck="DOM level functions";
-	
 // Replace one class with another
 	$.fn.replaceClass = function (pFromClass, pToClass) {
         return this.removeClass(pFromClass).addClass(pToClass);
@@ -633,8 +629,6 @@ failCheck="DOM level functions";
 /*--------------------------------------------------------------
 # Set up animation
 --------------------------------------------------------------*/
-	
-failCheck="Set up animation";
 	
 // Animate single element (using transitions from animate.css)
 	window.animateDiv = function(container, effect, initDelay, offset, speed) {
@@ -840,8 +834,6 @@ failCheck="Set up animation";
 # Set up pages
 --------------------------------------------------------------*/
 	
-failCheck="Set up pages: change col- to span-";
-	
 // Needed temporarily to force columns to new framework naming structure */
 	$('.col-8').addClass('span-1').removeClass('col-8');
 	$('.col-17').addClass('span-2').removeClass('col-17');
@@ -860,33 +852,21 @@ failCheck="Set up pages: change col- to span-";
 	$('.col-92').addClass('span-11').removeClass('col-92');
 	$('.col-100').addClass('span-12').removeClass('col-100');
 	
-failCheck="Set up pages: Remove empty elements";
-	
 // Remove empty elements
 	removeDiv('p:empty, .archive-intro:empty');
-	
-failCheck="Set up pages: Wrap content within .site-main";
 	
 // Wrap content within .site-main so that widgets can be distributed properly
 	wrapDiv('.site-main','<div class="site-main-inner"></div>', 'inside');	
 	
-failCheck="Set up pages: Add .page-begins to the next section under masthead";
-	
 // Add .page-begins to the next section under masthead for purposes of locking .top-strip
 	if ( $('#wrapper-top').length ) { $('#wrapper-top').addClass('page-begins'); } else { $('#wrapper-content').addClass('page-begins'); }
 	
-failCheck="Set up pages: Add 'noFX' class to img";
-		
 // Add "noFX" class to img if it appears in any of the parent divs
 	$( "div.noFX" ).find("img").addClass("noFX");
 	$( "div.noFX" ).find("a").addClass("noFX");
 	
-failCheck="Set up pages: Add .fa class";
-		
 // Add .fa class to all icons using .far, .fas and .fab
 	$( ".far, .fas, .fab" ).addClass("fa");
-	
-failCheck="Set up pages: Fade in lazy loaded images";
 	
 // Fade in lazy loaded images
 	$('img').addClass('unloaded');	
@@ -898,15 +878,11 @@ failCheck="Set up pages: Fade in lazy loaded images";
 		}
 	});	
 	
-failCheck="Set up pages: Check if 'Remove Sidebar' option is checked in admin panel";
-
 // Check if "Remove Sidebar" option is checked in admin panel, and remove sidebar if applicable	
 if ( $('body').hasClass('remove-sidebar') ) { 
 	$('body').removeClass('sidebar-right').removeClass('sidebar-left').addClass('sidebar-none'); 
 	removeDiv('#secondary');
 }	
-	
-failCheck="Set up pages: Preload BG image and fade in";
 	
 // Preload BG image and fade in
 	if ( $( 'body' ).hasClass( "background-image" ) && getDeviceW() > mobileCutoff ) {
@@ -915,8 +891,6 @@ failCheck="Set up pages: Preload BG image and fade in";
 		preloadBG.onerror = function() { console.log("site-background.jpg not found"); };
 		preloadBG.src = getUploadURI + "/" + "site-background.jpg";  
 	}
-	
-failCheck="Set up pages: Add 'active' & 'hover' classes to menu items";
 	
 // Add "active" & "hover" classes to menu items, assign roles for ADA compliance		
 	$(".main-navigation ul.main-menu, .widget-navigation ul.menu").attr('role','menubar');
@@ -946,8 +920,6 @@ failCheck="Set up pages: Add 'active' & 'hover' classes to menu items";
 		$subCurrents.replaceClass( "dormant", "active" ); 
 	});
 	
-failCheck="Set up pages: Animate scrolling when moving up or down a page";
-	
 // Animate scrolling when moving up or down a page
 	$('a[href^="#"]:not(.carousel-control-next):not(.carousel-control-prev)').on('click', function (e) {
 		e.preventDefault();    
@@ -955,13 +927,8 @@ failCheck="Set up pages: Animate scrolling when moving up or down a page";
 		animateScroll(target);
 	});
 	
-failCheck="Set up pages: Automatically adjust for Google review bar";
-
 // Automatically adjust for Google review bar 
 	$( '<div class="wp-google-badge-faux"></div>' ).insertAfter( $('#colophon'));
-	
-	
-failCheck="Set up pages: Set up mobile menu animation";
 	
 // Set up mobile menu animation
 	//$('#header *').each(function() { 
@@ -1023,8 +990,6 @@ failCheck="Set up pages: Set up mobile menu animation";
 		theButton.click(function() { closeMenu(); }); 
 	});		
 	
-failCheck="Set up pages: Ensure all slides in a Bootstrap carousel are even height";
-	
 // Ensure all slides in a Bootstrap carousel are even height
 	$(".carousel").each(function() {
 		var thisCarousel = $(this), maxH = 0, getPadding = parseInt(thisCarousel.find(".carousel-inner").css('padding-bottom'));
@@ -1039,8 +1004,6 @@ failCheck="Set up pages: Ensure all slides in a Bootstrap carousel are even heig
 		});		
 	});			
 	
-failCheck="Set up pages: Add star icons to reviews and ratings";
-
 // Add star icons to reviews and ratings
 	$('.testimonials-rating').each(function() {
 		var getRating = $(this).html(), replaceRating = getRating;
@@ -1051,8 +1014,6 @@ failCheck="Set up pages: Add star icons to reviews and ratings";
 		if ( getRating == 1) replaceRating = '<span class="rating rating-1-star" aria-hidden="true"><span class="sr-only">Rated 1 Star</span></span>';;
 		$(this).html( replaceRating );
 	});
-	
-failCheck="Set up pages: Determine which day of week";
 	
 // Determine which day of week and add active class on office-hours widget	
 	var todayIs = new Date().getDay();
@@ -1069,35 +1030,12 @@ failCheck="Set up pages: Determine which day of week";
 # Set up sidebar
 --------------------------------------------------------------*/	
 	
-failCheck="Set up sidebar";
-	
-	var isPaused = false, compensate;
-	
-	// Start Sidebar setup
 	window.setupSidebar = function (compensate, menuLock, shuffle) {
 		compensate = compensate || 0;		
 		menuLock = menuLock || "true";
 		shuffle = shuffle || "true";
-		isPaused = false;		
-		
-	// Set up "locked" widgets, and shuffle the rest
-		$('.widget.lock-to-top, .widget.lock-to-bottom').addClass("locked");		
-		$('.widget:not(.locked)').addClass("shuffle");
-		
-		if ( getDeviceW() > mobileCutoff && shuffle == "true" ) { 
-			shuffleWidgets( $('.shuffle') );
-		}				
-	};	
-	
-// Initiate widget removal
-	window.widgetInit = function () {
-		if ( getDeviceW() > mobileCutoff && isPaused==false ) { 
-			$('.widget').removeClass('hide-widget');
-			removeWidgets('.widget.remove-first');
-			isPaused = true; 
-		} 
-	};
-	
+		var isPaused = false;		
+						
 // Shuffle an array of widgets
 	window.shuffleWidgets = function ($elements) {
 		var i, index1, index2, temp_val, count = $elements.length, $parent = $elements.parent(), shuffled_array = [];
@@ -1118,96 +1056,111 @@ failCheck="Set up sidebar";
 		var el = $(".widget.lock-to-bottom").detach();
 		$parent.append( el );		
 	};		
-	
-// Remove widgets that do not fit
-	window.removeWidgets = function (removeWidget) {
-		var contentH = $("#primary .site-main-inner").outerHeight() + compensate, widgetH = $("#secondary .sidebar-inner").outerHeight(true), remainH = widgetH - contentH, removeThis = $(removeWidget);
 
-		if ( remainH > 0 && $('.widget:not(.hide-widget)').length ) {		
-			removeThis.random().addClass("hide-widget");
-
-			if ( $('.widget.remove-first:not(.hide-widget)').length ) { removeWidgets( '.widget.remove-first:not(.hide-widget)' ); }
-			else if ( $('.widget.shuffle:not(.hide-widget)').length ) { removeWidgets( '.widget.shuffle:not(.hide-widget):not(.widget-important)' ); }
-			else if ( $('.widget.lock-to-bottom:not(.hide-widget)').length ) { removeWidgets( '.widget.lock-to-bottom:not(.hide-widget):not(.widget-important)' ); }
-			else { removeWidgets( '.widget.lock-to-top:not(.hide-widget):not(.widget-important)' ); }				
-
-		} else { 
-			checkWidgets();
+// Set up "locked" widgets, and shuffle the rest
+		$('.widget.lock-to-top, .widget.lock-to-bottom').addClass("locked");		
+		$('.widget:not(.locked)').addClass("shuffle");
+		
+		if ( getDeviceW() > mobileCutoff && shuffle == "true" ) { 
+			shuffleWidgets( $('.shuffle') );
 		}
-	};						
+				
+// Initiate widget removal
+		window.widgetInit = function () {
+			if ( getDeviceW() > mobileCutoff && isPaused==false ) { 
+				$('.widget').removeClass('hide-widget');
+				removeWidgets('.widget.remove-first');
+				isPaused = true; 
+			} 
+		};
+				
+// Remove widgets that do not fit
+		window.removeWidgets = function (removeWidget) {
+			var contentH = $("#primary .site-main-inner").outerHeight() + compensate, widgetH = $("#secondary .sidebar-inner").outerHeight(true), remainH = widgetH - contentH, removeThis = $(removeWidget);
+
+			if ( remainH > 0 && $('.widget:not(.hide-widget)').length ) {		
+				removeThis.random().addClass("hide-widget");
+						
+				if ( $('.widget.remove-first:not(.hide-widget)').length ) { removeWidgets( '.widget.remove-first:not(.hide-widget)' ); }
+				else if ( $('.widget.shuffle:not(.hide-widget)').length ) { removeWidgets( '.widget.shuffle:not(.hide-widget):not(.widget-important)' ); }
+				else if ( $('.widget.lock-to-bottom:not(.hide-widget)').length ) { removeWidgets( '.widget.lock-to-bottom:not(.hide-widget):not(.widget-important)' ); }
+				else { removeWidgets( '.widget.lock-to-top:not(.hide-widget):not(.widget-important)' ); }				
+				
+			} else { 
+				checkWidgets();
+			}
+		};						
 		
 // Determine the widget with height closest to amount of space remaining to fill
-	window.findClosest = function (compare, loop, test) {
-		var curr, diff = 999999;
-		loop++;
-		for (var val = 1; val < loop; val++) {
-			var newdiff = compare - test[val];
-			if ( newdiff > 0 && newdiff < diff ) { diff = newdiff; curr = test[val]; }
-		}
-		return curr;
-	};
+		window.findClosest = function (compare, loop, test) {
+			var curr, diff = 999999;
+			loop++;
+			for (var val = 1; val < loop; val++) {
+				var newdiff = compare - test[val];
+				if ( newdiff > 0 && newdiff < diff ) { diff = newdiff; curr = test[val]; }
+			}
+			return curr;
+		};
 		
 // Check hidden widgets for any smaller ones that might still fit
-	window.checkWidgets = function () {			
-		var contentH = $("#primary .site-main-inner").outerHeight() + compensate, widgetH = $("#secondary .sidebar-inner").outerHeight(), i = 0, widgets = [];
-		var remainH = contentH - widgetH + 140; // 140 is arbitrary, can be adjusted as needed to make sure widgets fit but don't go over
-
-		$('.widget.hide-widget').each(function() {
-			var theWidget = $(this);
-			i++;
-			widgets[i] = theWidget.outerHeight(true) + Math.floor((Math.random() * 10) - 5);
-			theWidget.addClass("widget-height-"+widgets[i]);	
-		});
-
-		var replaceWidget = findClosest(remainH, i, widgets);
-		widgets.splice(widgets.indexOf(replaceWidget),1);
-		if ( replaceWidget < remainH ) { $(".widget-height-"+replaceWidget).removeClass("hide-widget"); }
+		window.checkWidgets = function () {			
+				var contentH = $("#primary .site-main-inner").outerHeight() + compensate, widgetH = $("#secondary .sidebar-inner").outerHeight(), i = 0, widgets = [];
+				var remainH = contentH - widgetH + 140; // 140 is arbitrary, can be adjusted as needed to make sure widgets fit but don't go over
+			
+				$('.widget.hide-widget').each(function() {
+					var theWidget = $(this);
+					i++;
+					widgets[i] = theWidget.outerHeight(true) + Math.floor((Math.random() * 10) - 5);
+					theWidget.addClass("widget-height-"+widgets[i]);	
+				});
+			
+				var replaceWidget = findClosest(remainH, i, widgets);
+				widgets.splice(widgets.indexOf(replaceWidget),1);
+				if ( replaceWidget < remainH ) { $(".widget-height-"+replaceWidget).removeClass("hide-widget"); }
+			
+				adjustSidebarH();
+				setTimeout(function() { isPaused = false; }, 3000);
+		};	
+						
+// Adjust height of #secondary to match #primary + add extra spacing between .widget if necessary
+		window.adjustSidebarH = function () {
+			var contentH = $("#primary").outerHeight(true) + compensate;
+			$("#secondary").animate( { height: contentH+"px" }, 300);
+		};
+				
+// Mark first, last, even and odd widgets
+		window.labelWidgets = function () {
+			$(".widget").removeClass("widget-first").removeClass("widget-last").removeClass("widget-even").removeClass("widget-odd");
+			$(".widget:not(.hide-widget)").first().addClass("widget-first");  
+			$(".widget:not(.hide-widget)").last().addClass("widget-last"); 
+			$(".widget:not(.hide-widget):odd").addClass("widget-even"); 
+			$(".widget:not(.hide-widget):even").addClass("widget-odd"); 	
+		};
 		
-		adjustSidebarH();
-		setTimeout(function() { isPaused = false; }, 3000);
+ // Move sidebar in conjunction with mouse scroll to keep it even with content
+		window.moveWidgets = function () {
+			var contentH = $('#primary').outerHeight(), elem = $(".sidebar-inner"), elemH = elem.outerHeight() + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom')), contentV = contentH - getDeviceH() + 200, sidebarV = elemH - getDeviceH() + 400, addTop=0;	
+			
+			$('.stuck').each(function() { addTop = addTop + $(this).outerHeight(true); });					
+			var secH = $("#secondary").outerHeight(), secT = $("#secondary").offset().top, winH = $(window).height() - addTop, winT = $(window).scrollTop() + addTop;				
+			var adjT = winT - secT, fullH = secH - winH, scrollPct = adjT / fullH, maxH = contentH - elemH;	
+			if ( scrollPct > 1 ) { scrollPct = 1; }
+			if ( scrollPct < 0 || scrollPct == null ) { scrollPct = 0; }
+			var moveElem = Math.round(maxH * scrollPct);	
+			if ( moveElem > maxH ) { moveElem = maxH; }
+			if ( moveElem < 0 ) { moveElem = 0; }
+			if ( contentV > 0 && sidebarV > 0 && adjT > 0 && getDeviceW() > mobileCutoff ) { 
+				elem.css("margin-top",moveElem+"px"); 
+			} else { 
+				elem.css("margin-top","0px"); 
+			}
+		};
 	};	
 
-// Adjust height of #secondary to match #primary + add extra spacing between .widget if necessary
-	window.adjustSidebarH = function () {
-		var contentH = $("#primary").outerHeight(true) + compensate;
-		$("#secondary").animate( { height: contentH+"px" }, 300);		
-		
-		labelWidgets();
-	};
-
-// Mark first, last, even and odd widgets
-	window.labelWidgets = function () {
-		$(".widget").removeClass("widget-first").removeClass("widget-last").removeClass("widget-even").removeClass("widget-odd");
-		$(".widget:not(.hide-widget)").first().addClass("widget-first");  
-		$(".widget:not(.hide-widget)").last().addClass("widget-last"); 
-		$(".widget:not(.hide-widget):odd").addClass("widget-even"); 
-		$(".widget:not(.hide-widget):even").addClass("widget-odd"); 	
-	};
-
-// Move sidebar in conjunction with mouse scroll to keep it even with content
-	window.moveWidgets = function () {
-		var contentH = $('#primary').outerHeight(), elem = $(".sidebar-inner"), elemH = elem.outerHeight() + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom')), contentV = contentH - getDeviceH() + 200, sidebarV = elemH - getDeviceH() + 400, addTop=0;	
-
-		$('.stuck').each(function() { addTop = addTop + $(this).outerHeight(true); });					
-		var secH = $("#secondary").outerHeight(), secT = $("#secondary").offset().top, winH = $(window).height() - addTop, winT = $(window).scrollTop() + addTop;				
-		var adjT = winT - secT, fullH = secH - winH, scrollPct = adjT / fullH, maxH = contentH - elemH;	
-		if ( scrollPct > 1 ) { scrollPct = 1; }
-		if ( scrollPct < 0 || scrollPct == null ) { scrollPct = 0; }
-		var moveElem = Math.round(maxH * scrollPct);	
-		if ( moveElem > maxH ) { moveElem = maxH; }
-		if ( moveElem < 0 ) { moveElem = 0; }
-		if ( contentV > 0 && sidebarV > 0 && adjT > 0 && getDeviceW() > mobileCutoff ) { 
-			elem.css("margin-top",moveElem+"px"); 
-		} else { 
-			elem.css("margin-top","0px"); 
-		}
-	};
 	
 /*--------------------------------------------------------------
 # Screen resize
 --------------------------------------------------------------*/
-	
-failCheck="Screen resize";
 	
 	$(window).load(function() { screenResize(true); });
 	$(window).resize(function() { screenResize(true); }); 
@@ -1331,8 +1284,6 @@ failCheck="Screen resize";
 # ADA compliance
 --------------------------------------------------------------*/
 	
-failCheck="ADA compliance";
-
 	// Add alt="" to all images with no alt tag
 	setTimeout(function() { $('img:not([alt])').attr('alt', ''); }, 50);
 	setTimeout(function() { $('img:not([alt])').attr('alt', ''); }, 1000);
@@ -1373,8 +1324,6 @@ failCheck="ADA compliance";
 # Delay parsing of JavaScript
 --------------------------------------------------------------*/
 	
-failCheck="Delay parsing of JavaScript";
-
 	$(window).load(function() { 
 	
 	// Calculate load time for page		
@@ -1468,7 +1417,7 @@ failCheck="Delay parsing of JavaScript";
 	$("#loader").fadeOut("fast");
 							
 	$.getJSON('https://ipapi.co/json/', function(data) {
-		failCheck = failCheck + JSON.stringify(data, null, 2);
+		var failCheck = JSON.stringify(data, null, 2);
 		
 		var theSite = window.location.hostname;
 		$.post({

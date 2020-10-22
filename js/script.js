@@ -118,6 +118,15 @@ jQuery(function($) { try {
 		return deviceHeight;
 	};	
 	
+// Make mobile and tablet cut off variables available in script-site.js
+	window.getMobileCutoff = function () {
+		return mobileCutoff;
+	};	
+	
+	window.getTabletCutoff = function () {
+		return tabletCutoff;
+	};	
+	
 // Copy one element's classes to an outer div
 	window.copyClasses = function (copyTo, copyFrom, additional) {	
 		copyFrom = copyFrom || "img, iframe";
@@ -161,11 +170,12 @@ jQuery(function($) { try {
 	
 // Remove sidebar from specific pages
 	window.removeSidebar = function(page) {	
-		page = "slug-"+page.replace(/\//g, "");
-		if ( $('body').hasClass(page) ) { 
+		test1 = page.replace(".", "");
+		test2 = "slug-"+page.replace(/\//g, "");
+		if ( $('body').hasClass(test1) || $('body').hasClass(test2) ) { 
 			$('body').removeClass('sidebar-right').removeClass('sidebar-left').addClass('sidebar-none'); 
 			removeDiv('#secondary');
-		}
+		} 
 	};
 	
 // Create faux div for sticky elements pulled out of document flow	
@@ -417,6 +427,28 @@ jQuery(function($) { try {
 		}  
 	};
 	
+//Control parallax movement of divs within a container
+	window.parallaxDiv = function (container, element) {
+		element = element || ".parallax";
+		
+		function moveDiv() {
+			$(container).each(function() {	
+				var elem = $(this).find(element), elemH = elem.outerHeight();
+				var conH = $(this).outerHeight(), conT = $(this).position().top, conB = conT + conH;
+				var winH = $(window).height(), winT = $(window).scrollTop(), winB = winT + winH;		
+				var adjT = winB - conT, fullH = conH + winH, scrollPct = adjT / fullH;	
+				if ( scrollPct > 1 ) { scrollPct = 1; }
+				if ( scrollPct < 0 || scrollPct == null ) { scrollPct = 0; }
+				var moveElem = (conH - elemH) * scrollPct;					
+				if ( conT < winB && conB > winT ) { elem.css("margin-top",moveElem+"px"); }
+			});
+		}
+		if ( getDeviceW() > mobileCutoff ) {  			
+			window.addEventListener('scroll', function() { moveDiv(); });			
+		}
+		moveDiv();
+	};
+			
 // Set up "Magic Menu"	
 	window.magicMenu = function (menu, linkOn, linkOff) {
 		menu = menu || "#desktop-navigation .menu";
@@ -720,7 +752,17 @@ jQuery(function($) { try {
 				theRow.find(theDiv+".animated:nth-last-child(3)").data("animation", { effect:effect1, delay:3});
 				theRow.find(theDiv+".animated:nth-last-child(2)").data("animation", { effect:effect1, delay:4});
 				theRow.find(theDiv+".animated:nth-last-child(1)").data("animation", { effect:effect1, delay:5});
-			}		
+			}	
+			if (findCol == 7 || findCol == 8) { 
+				theRow.find(theDiv+".animated:nth-last-child(8)").data("animation", { effect:effect1, delay:0});	
+				theRow.find(theDiv+".animated:nth-last-child(7)").data("animation", { effect:effect1, delay:1});	
+				theRow.find(theDiv+".animated:nth-last-child(6)").data("animation", { effect:effect1, delay:2});	
+				theRow.find(theDiv+".animated:nth-last-child(5)").data("animation", { effect:effect1, delay:3});			
+				theRow.find(theDiv+".animated:nth-last-child(4)").data("animation", { effect:effect1, delay:4});
+				theRow.find(theDiv+".animated:nth-last-child(3)").data("animation", { effect:effect1, delay:5});
+				theRow.find(theDiv+".animated:nth-last-child(2)").data("animation", { effect:effect1, delay:6});
+				theRow.find(theDiv+".animated:nth-last-child(1)").data("animation", { effect:effect1, delay:7});
+			}
 		});
 		theParent.find(theDiv+".animated").waypoint(function() {
 			var thisDiv = $(this.element);
@@ -1386,11 +1428,11 @@ if ( $('body').hasClass('remove-sidebar') ) {
 				var theID = $(this.element).attr('data-id');			
 				$.post({
 					url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-					data : { action: "count_post_views", id: theID, loadTime: 0, deviceTime: deviceTime },
+					data : { action: "count_post_views", id: theID, loadTime: loadTime, deviceTime: deviceTime },
 					success: function( response ) { console.log(response); } 
 				});		
 				this.destroy();
-			}, { offset: '75%' });	 	
+			}, { offset: 'bottom-in-view' });	 	
 
 		// Count image view
 			$('#primary img.random-img, .widget-image:not(.hide-widget) img.random-img, .row-of-pics img.random-img, .carousel img.img-slider, #wrapper-bottom img.random-img').waypoint(function() {		
@@ -1401,7 +1443,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 					success: function( response ) { console.log(response); } 
 				});	
 				this.destroy();
-			}, { offset: '75%' });	 	
+			}, { offset: 'bottom-in-view' });	 	
 
 		}, 2500);
 	}); 

@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 2.1
+Version: 2.2
 Tested up to: 5.5
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -540,6 +540,10 @@ big {
 	line-height:								inherit;
 }
 
+.wordSplit,
+.charSplit {
+	display:									inline-block;
+}
 
 /* Elements
 --------------------------------------------- */
@@ -773,6 +777,7 @@ textarea {
 	border: 									none;
 	padding: 									3px 7px;
 	width:										100%;
+	min-height: 								32px; /* date picker form field on iPad 10-22-2020 */
 	transition:									all 0.2s ease;
 }
 
@@ -3110,7 +3115,16 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 		grid-column: 								span 2; 
 	}
 	
+	/* Row of Pics */
+	.grid-7e .col:nth-last-child(1),
+	.grid-8e .col:nth-last-child(1),
+	.grid-8e .col:nth-last-child(2) {
+		display:									none;
+	}	
+	
 	/* Galleries */
+	.grid-7e,
+	.grid-8e,
 	.gallery-column-7,
 	.gallery-column-8 {
 		grid-template-columns: 						repeat(6, 1fr);
@@ -3204,18 +3218,6 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 		height:										auto !important;
 	}		
 	
-	#secondary .sidebar-inner {
-		column-count: 								2;
-		column-width: 								300px;
-		column-gap: 								3%;
-	}	
-	
-	.widget .wpcf7,
-	.widget .office-hours {
-		display:									inline-block; /* keeps form from being broken into 2 columns on tablets */
-		width:										100%;
-	}
-	
 	/* Responsive Content */
 	.size-quarter-s,
 	.size-quarter-f,
@@ -3247,11 +3249,37 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 		grid-column: 								span 2; 
 	}
 		
-	/* Galleries */ 
+	/* Row of Pics */
+	.grid-6e .col:nth-last-child(1),
+	.grid-7e .col:nth-last-child(2),
+	.grid-8e .col:nth-last-child(3) {
+		display:									none;
+	}	
+	
+	/* Galleries */
+	.grid-6e,
+	.grid-7e,
+	.grid-8e,
 	.gallery-column-6,
 	.gallery-column-7,
 	.gallery-column-8 {
 		grid-template-columns: 						repeat(5, 1fr);
+	}
+}
+
+/* 3: Small Tablets (landscape) ONLY */
+@media (min-width: 861px) and (max-width: 1024px) {		
+	#secondary .sidebar-inner {
+		column-count: 								2;
+		column-width: 								300px;
+		column-gap: 								3%;
+	}	
+
+	.widget {
+		-webkit-column-break-inside: 				avoid;
+        page-break-inside: 							avoid;
+        break-inside: 								avoid; /* keeps form from being broken into 2 columns on tablets -- css-tricks.com suggested 10-22-2020 */
+		margin-top:									0 !important;
 	}
 }
 
@@ -3293,14 +3321,6 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 		max-width:									100% !important;
 	}
 	
-	#secondary .sidebar-inner {
-		column-count: 								1;
-	}
-	
-	.widget .wpcf7 {
-		display:									block; /* resets from inline-block, which keeps form from being broken into 2 columns on tablets */
-	}
-		
 	/* Responsive Content */
 	.size-quarter-s,
 	.size-quarter-f,
@@ -3361,7 +3381,25 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 		column-count:								2;
 	}	
 			
-	/* Galleries */ 
+	/* Row of Pics */
+	.grid-4e .col:nth-last-child(1),
+	.grid-5e .col:nth-last-child(1),
+	.grid-5e .col:nth-last-child(2),
+	.grid-6e .col:nth-last-child(2),
+	.grid-6e .col:nth-last-child(3),
+	.grid-7e .col:nth-last-child(3),
+	.grid-7e .col:nth-last-child(4),
+	.grid-8e .col:nth-last-child(4),
+	.grid-8e .col:nth-last-child(5) {
+		display:									none;
+	}	
+	
+	/* Galleries */
+	.grid-4e,	
+	.grid-5e,	
+	.grid-6e,
+	.grid-7e,
+	.grid-8e,
 	.gallery-column-4,
 	.gallery-column-5,
 	.gallery-column-6,
@@ -3472,7 +3510,31 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 		column-count:								1;
 	}	
 	
-	/* Galleries */ 
+	/* Row of Pics */
+	.grid-3e .col:nth-last-child(1),	
+	.grid-4e .col:nth-last-child(2),
+	.grid-5e .col:nth-last-child(3),
+	.grid-6e .col:nth-last-child(4),
+	.grid-7e .col:nth-last-child(5),
+	.grid-8e .col:nth-last-child(6) {
+		display:									none;
+	}	
+	
+	.flex .col.col-row-of-pics {
+		grid-column: 								span 1;
+	}
+	
+	/* Galleries */
+	.gallery {
+		gap: 										0.75em;
+	}
+	
+	.grid-3e,	
+	.grid-4e,	
+	.grid-5e,	
+	.grid-6e,
+	.grid-7e,
+	.grid-8e,
 	.gallery-column-3,
 	.gallery-column-4,
 	.gallery-column-5,

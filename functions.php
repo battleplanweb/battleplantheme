@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '2.1' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '2.2' ); }
 
 /*--------------------------------------------------------------
 # Shortcodes
@@ -296,7 +296,7 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 		$getImage .= '<img data-id="'.get_the_ID().'"'.getImgMeta(get_the_ID()).' class="random-img '.$tags[0].'-img '.$align.'" src="'.$image[0].'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'">';
 		if ( $link == "yes" ) $getImage .= '</a>';
 
-		$imageArray[] = do_shortcode('[col class="'.$class.'"]'.$getImage.'[/col]');			
+		$imageArray[] = do_shortcode('[col class="col-row-of-pics'.$class.'"]'.$getImage.'[/col]');			
 	endwhile; wp_reset_postdata(); endif;	
 	
 	if ( $shuffle != "no" ) : shuffle($imageArray); endif;
@@ -2616,6 +2616,7 @@ function battleplan_page_stats() {
 	if ( $dateDiff < 1 ) : $dateDiff = (($current - $lastViewed) / 60 / 60); $howLong = "hour"; endif;	
 	if ( $dateDiff < 1 ) : $dateDiff =(($current - $lastViewed) / 60); $howLong = "minute"; endif;
 	if ( $dateDiff != 1 ) $howLong = $howLong."s";
+	$dateDiff = number_format($dateDiff, 1);
 	
 	echo "<table><tr><td><b>Today</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $viewsToday, 'battleplan' ), $viewsToday )."</td></tr>";
 	echo "<tr><td><b>Last 7 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last7Views, 'battleplan' ), $last7Views )."</td></tr>";
@@ -2743,7 +2744,7 @@ function battleplan_count_post_views_ajax() {
 		updateMeta( $theID, 'post-views-total-7day', $views7Day);			
 		updateMeta( $theID, 'post-views-total-30day', $views30Day);			 
 		updateMeta( $theID, 'post-views-total-all', $viewsTotal);	
-		$response = array( 'result' => $dateDiff.' -> '.ucfirst($postType.' view counted') );
+		$response = array( 'result' => ucfirst($postType.' view counted') );
 	
 		/* Log the load speed for this page */	
 		$siteHeader = getID('site-header');

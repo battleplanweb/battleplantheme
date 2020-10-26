@@ -20,7 +20,7 @@ jQuery(function($) { try {
 # Basic site functionality
 --------------------------------------------------------------*/
 	
-	var getThemeURI = theme_dir.theme_dir_uri, getUploadURI = theme_dir.upload_dir_uri, mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 42;
+	var getThemeURI = theme_dir.theme_dir_uri, getUploadURI = theme_dir.upload_dir_uri, mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 42, timezone;
 	
 // Add Post ID as an ID attribute on body tag	
 	var postID = "noID";    
@@ -1355,17 +1355,17 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		// Generic page setup functions (if not overriden in script-site.js)
 			trimText();
 			buildAccordion();
+			
+			$.getJSON('https://ipapi.co/json/', function(data) {
+				timezone = data["timezone"];
+			});
 
 		}, 1000);
 
 		setTimeout(function() {	// Wait 2.5 seconds before calling the following functions 	
 			
 		// Count page view 
-			var postID = $('body').attr('id'), timezone;
-			$.getJSON('https://ipapi.co/json/', function(data) {
-				timezone = data["timezone"];
-			});
-			
+			var postID = $('body').attr('id');			
 			$.post({
 				url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
 				data : { action: "count_post_views", id: postID, timezone: timezone, loadTime: loadTime, deviceTime: deviceTime },

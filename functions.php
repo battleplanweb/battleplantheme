@@ -2670,51 +2670,26 @@ function bp_mobile_menu_bar_items() { do_action('bp_mobile_menu_bar_items'); }
 # AJAX Functions
 --------------------------------------------------------------*/
 
-// Clear Hummingbird cache periodically
-//add_action( 'wp_ajax_clear_cache', 'battleplan_clear_cache_ajax' );
-//add_action( 'wp_ajax_nopriv_clear_cache', 'battleplan_clear_cache_ajax' );
-//function battleplan_clear_cache_ajax() {
-//	$theID = getID('site-header');
-//	$timeDue = 'clear-hummingbird-cache'; 	
-//	$timeLast = 'last-hummingbird-cache'; 	
-//	$dueTime = readMeta($theID, $timeDue);
-//	$lastTime = readMeta($theID, $timeLast);
-	
-//	if ( time() > $dueTime ) : 				
-//		if( class_exists('\Hummingbird\WP_Hummingbird') && method_exists('\Hummingbird\WP_Hummingbird', 'flush_cache') ) {
-//			\Hummingbird\WP_Hummingbird::flush_cache();
-//		}
-//		$setCacheTime = 7;
-//		$newTime = time() + convertTime($setCacheTime, 'days');
-//		updateMeta($theID, $timeDue, $newTime);
-//		updateMeta($theID, $timeLast, time());
-//		$response = array( 'result' => 'cache dumped!', 'previous dump' => date('F j, Y', $lastTime), 'scheduled dump' => date('F j, Y', $newTime));
-//	else:
-//		$response = array( 'cached since' => date('F j, Y', $lastTime), 'scheduled dump' => date('F j, Y', $dueTime));
-//	endif;
-//	wp_send_json( $response );
-//} 
-
 // Count Post Views & Log Page Load Speed
 add_action( 'wp_ajax_count_post_views', 'battleplan_count_post_views_ajax' );
 add_action( 'wp_ajax_nopriv_count_post_views', 'battleplan_count_post_views_ajax' );
 function battleplan_count_post_views_ajax() {
 	$theID = intval( $_POST['id'] );
 	$postType = get_post_type($theID);
+	$timezone = $_POST['timezone'];	
 	$loadTime = $_POST['loadTime'];
 	$deviceTime = $_POST['deviceTime'];
 	$lastViewed = readMeta($theID, 'post-views-time');
-	$today = date("F j, Y, g:i a");	
+	$today = date("F j, Y");	
 	$current = strtotime($today);
 	$dateDiff = (($current - $lastViewed) / 60 / 60 / 24);
 	$user = wp_get_current_user();
 	$userLogin = $user->user_login;
 
-	if ( $userLogin != 'battleplanweb' && $loadTime > 0.1 ) :
+	if ( $userLogin != 'battleplanweb' && $timezone == get_option('timezone_string') && $loadTime > 0.1 ) :
 		updateMeta($theID, 'post-views-time', $current);
-		if ($dateDiff > 1) : // day has passed, move 29 to 30, and so on	
-			$loopThis = number_format($dateDiff);	
-			for ($i = 1; $i <= $loopThis; $i++) {	
+		if ($dateDiff != 0) : // day has passed, move 29 to 30, and so on	
+			for ($i = 1; $i <= $dateDiff; $i++) {	
 				$viewsToday = $views7Day = $views30Day = 1;
 				$dailyTime = $dailyViews = array();
 				for ($x = 29; $x >= 1; $x--) {
@@ -2724,8 +2699,8 @@ function battleplan_count_post_views_ajax() {
 					$y = $x+1;
 					updateMeta( $theID, 'post-views-day-'.$y, array ('date'=>$dailyTime[$x], 'views'=>$dailyViews[$x]));					
 				} 	
-				$figureTime = $current - ( ($loopThis - $i) * 86400);				
-				updateMeta( $theID, 'post-views-day-1', array ('date'=>date('F j, Y, g:i a', $figureTime), 'views'=>0));
+				$figureTime = $current - ( ($dateDiff - $i) * 86400);				
+				updateMeta( $theID, 'post-views-day-1', array ('date'=>date('F j, Y', $figureTime), 'views'=>0));
 				for ($x = 1; $x < 7; $x++) { $views7Day = $views7Day + $dailyViews[$x]; } 					
 				for ($x = 1; $x < 30; $x++) { $views30Day = $views30Day + $dailyViews[$x]; } 		
 				$viewsTotal = intval(readMeta($theID, 'post-views-total-all')); $viewsTotal++;		
@@ -2740,7 +2715,7 @@ function battleplan_count_post_views_ajax() {
 			$recordViews = intval(readMeta($theID, 'post-views-record'));
 			if ( $viewsToday > $recordViews ) : updateMeta( $theID, 'post-views-record', $viewsToday); updateMeta( $theID, 'post-views-record-date', $current); endif;
 		endif;	
-		updateMeta( $theID, 'post-views-day-1', array ('date'=>date('F j, Y, g:i a', $current), 'views'=>$viewsToday));			
+		updateMeta( $theID, 'post-views-day-1', array ('date'=>date('F j, Y', $current), 'views'=>$viewsToday));			
 		updateMeta( $theID, 'post-views-total-7day', $views7Day);			
 		updateMeta( $theID, 'post-views-total-30day', $views30Day);			 
 		updateMeta( $theID, 'post-views-total-all', $viewsTotal);	
@@ -2783,7 +2758,7 @@ function battleplan_count_post_views_ajax() {
 		updateMeta( $siteHeader, "load-number-mobile", $mobileCounted );	
 		updateMeta( $siteHeader, "load-speed-mobile", $mobileSpeed );		
 	else:
-		$response = array( 'result' => ucfirst($postType.' view NOT counted (battleplanweb logged in)') );
+		$response = array( 'result' => ucfirst($postType.' view NOT counted') );
 	endif;
 
 	wp_send_json( $response );	
@@ -2793,14 +2768,22 @@ function battleplan_count_post_views_ajax() {
 add_action( 'wp_ajax_add_view', 'battleplan_add_view_ajax' );
 add_action( 'wp_ajax_nopriv_add_view', 'battleplan_add_view_ajax' );
 function battleplan_add_view_ajax() {
-	$theID = intval( $_POST['id'] );					
+	$theID = intval( $_POST['id'] );	
+	$timezone = $_POST['timezone'];	
 	$views = readMeta($theID, 'widget-pic-views');
-	$views++;
 	$currentTime = time();
-	$oldTime = round((($currentTime - readMeta($theID, 'widget-pic-time')) / 60 / 60 / 24), 1);		
-	updateMeta($theID, 'widget-pic-views', $views);	
-	updateMeta($theID, 'widget-pic-time', $currentTime);	
-	$response = array( 'result' => 'Image view counted', 'views' => $views, 'days since previous view' => $oldTime);
+	$oldTime = round((($currentTime - readMeta($theID, 'widget-pic-time')) / 60 / 60 / 24), 1);	
+	$user = wp_get_current_user();
+	$userLogin = $user->user_login;
+	
+	if ( $userLogin != 'battleplanweb' && $timezone == get_option('timezone_string') ) :
+		$views++;
+		updateMeta($theID, 'widget-pic-views', $views);	
+		updateMeta($theID, 'widget-pic-time', $currentTime);	
+		$response = array( 'result' => 'Image view counted', 'views' => $views, 'days since previous view' => $oldTime);
+	else:
+		$response = array( 'result' => 'Image view NOT counted', 'views' => $views, 'days since previous view' => $oldTime);
+	endif;
 	wp_send_json( $response );
 }
 
@@ -2814,18 +2797,6 @@ function battleplan_sendServerEmail_ajax() {
 	$content = $_POST['theSite']." failed at ".$_POST['failCheck'];	
 	mail($emailTo, $subject, $content, $emailFrom);
 }
-
-// Clear Hummingbird cache immediately upon javascript error
-//add_action( 'wp_ajax_force_clear_cache', 'battleplan_force_clear_cache_ajax' );
-//add_action( 'wp_ajax_nopriv_force_clear_cache', 'battleplan_force_clear_cache_ajax' );
-//function battleplan_force_clear_cache_ajax() {
-//	if( class_exists('\Hummingbird\WP_Hummingbird') && method_exists('\Hummingbird\WP_Hummingbird', 'flush_cache') ) {
-//		\Hummingbird\WP_Hummingbird::flush_cache();
-//	}
-//	$response = array( 'result' => 'emergency cache dump!');
-//	wp_send_json( $response );
-//} 
-
 
 /*--------------------------------------------------------------
 # Grid Set Up

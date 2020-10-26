@@ -973,15 +973,6 @@ if ( $('body').hasClass('remove-sidebar') ) {
 	$( '<div class="wp-google-badge-faux"></div>' ).insertAfter( $('#colophon'));
 	
 // Set up mobile menu animation
-	//$('#header *').each(function() { 
-		//if ($(this).css("position") === "fixed") {
-			//$(this).addClass("fixed-pos");
-		//}
-	//});
-	//if ( $(".wp-google-badge").length > 0 ) {
-		//var googleH = $(".wp-google-badge").outerHeight(true) + 20;
-		//$("#mobile-navigation > ul").css({"padding-bottom":googleH+"px"});		
-	//}
 	window.closeMenu = function () {
 		$("#mobile-menu-bar .activate-btn").removeClass("active"); 
 		$("body").removeClass("mm-active"); 
@@ -1066,7 +1057,6 @@ if ( $('body').hasClass('remove-sidebar') ) {
 	if ( todayIs == 4 ) $(".office-hours .row-thu").addClass("today");
 	if ( todayIs == 5 ) $(".office-hours .row-fri").addClass("today");
 	if ( todayIs == 6 ) $(".office-hours .row-sat").addClass("today");
-
 	
 /*--------------------------------------------------------------
 # Set up sidebar
@@ -1198,7 +1188,6 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			}
 		};
 	};	
-
 	
 /*--------------------------------------------------------------
 # Screen resize
@@ -1272,8 +1261,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			//if ( !$('body').hasClass('screen-1') ) { 
 				//$('.office-hours').removeClass('force-vert').addClass('horz'); 
 			//}
-		//}
-		
+		//}		
 		
 		/* Set up "fixed" footer, based on class added in header.php */		
 		//var footerH = $(".footer-fixed #footer").outerHeight(true);
@@ -1284,44 +1272,8 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		
 		// Reposition Woocommerce Update Cart button above coupon section on mobile checkout
 		//moveDiv('.woocommerce-page.screen-mobile table.cart td.actions .button[name~="update_cart"]','.woocommerce-page #primary table.cart td.actions .coupon','before');	
-		
-		//if ( getDeviceW() > 860 ) { 
-			/* Ensure parallax columns are matching heights */
-			//$('.parallax').each(function() { 
-				//$(this).find('.col.col-parallax').height( $(this).find('.col:not(.col-parallax)').outerHeight() );
-			//});
-			
-			/* Replace .footer-icon on larger devices */
-			//if ( $('.footer-bottom').hasClass('remove-icon') ) {
-				//$('.footer-bottom').removeClass('remove-icon').addClass('adjust-icon');
-			//}		
-		//}
-		
-		//if ( getDeviceW() < 861 ) { 
-			/* Remove .footer-icon on smaller devices */
-			//if ( $('.footer-bottom').hasClass('adjust-icon') ) {
-				//$('.footer-bottom').removeClass('adjust-icon').addClass('remove-icon');
-			//}
-		//}
-		
-		/* Adjustments to The Events Calendar PRO plug-in */
-		//function setupEvents() {
-			//moveDivs('.type-tribe_events', '.tribe-events-event-image', '.tribe-event-schedule-details', 'after');		
-			//$('.tribe-events-meta-group-details').addClass('col').addClass('col-50').addClass('break-100-1');
-			//$('.tribe-events-meta-group-venue').addClass('col').addClass('col-50').addClass('break-100-1');
-			//$('.tribe-events-meta-group-gmap').addClass('col').addClass('col-100');
-			//$('.events-archive.events-list .type-tribe_events').addClass('col').addClass('col-33').addClass('break-50-2').addClass('break-100-1');
-			//$('.type-tribe_events .tribe-events-event-image').addClass('col').addClass('col-100').addClass('noPad');
-			//$('li#tribe-bar-views-option-month').text('Calendar');
-			//if ( $('.tribe-country-name:contains("United States")').length > 0 ) { $('.tribe-country-name').css('display','none'); }		
-			//if ( $('.tribe-events-event-cost .ticket-cost').text().indexOf("Cost:") < 0) { $('.tribe-events-event-cost .ticket-cost').prepend("<strong>Cost:</strong> "); }
-			//if ( $('.recurringinfo')[0] ) {} else { $('.tribe-js .tribe-events-user-recurrence-toggle').css("display","none"); }
-		//}
-		//if ( $('.events-single')[0] ) { setupEvents(); }		
-		//if ( $('.events-archive')[0] ) { removeSidebar('.events-archive'); setupEvents(); setInterval( function () { setupEvents(); }, 2000); } 
 	};
-	
-			
+				
 /*--------------------------------------------------------------
 # ADA compliance
 --------------------------------------------------------------*/
@@ -1373,7 +1325,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		var loadTime = ((endTime - startTime) / 1000).toFixed(1);	
 		var deviceTime = "desktop";
 		if ( getDeviceW() <= mobileCutoff ) { deviceTime = "mobile"; }	
-		console.log("Load speed= "+loadTime+"s");
+		console.log(deviceTime+" load speed= "+loadTime+"s");
 
 	// Fade out loader screen when site is fully loaded
 		$("#loader").fadeOut("fast");  		
@@ -1407,19 +1359,16 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		}, 1000);
 
 		setTimeout(function() {	// Wait 2.5 seconds before calling the following functions 	
-
-		// Clear Hummingbird cache	
-			//$.post({
-				//url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-				//data : { action: "clear_cache" },
-				//success: function( response ) { console.log(response); } 
-			//});	
-		
+			
 		// Count page view 
-			var postID = $('body').attr('id');
+			var postID = $('body').attr('id'), timezone;
+			$.getJSON('https://ipapi.co/json/', function(data) {
+				timezone = data["timezone"];
+			});
+			
 			$.post({
 				url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-				data : { action: "count_post_views", id: postID, loadTime: loadTime, deviceTime: deviceTime },
+				data : { action: "count_post_views", id: postID, timezone: timezone, loadTime: loadTime, deviceTime: deviceTime },
 				success: function( response ) { console.log(response); } 
 			});		
 
@@ -1428,7 +1377,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 				var theID = $(this.element).attr('data-id');			
 				$.post({
 					url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-					data : { action: "count_post_views", id: theID, loadTime: loadTime, deviceTime: deviceTime },
+					data : { action: "count_post_views", id: theID, timezone: timezone, loadTime: loadTime, deviceTime: deviceTime },
 					success: function( response ) { console.log(response); } 
 				});		
 				this.destroy();
@@ -1439,7 +1388,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 				var theImg = $(this.element).attr('data-id');			
 				$.post({
 					url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-					data : { action: "add_view", id : theImg },
+					data : { action: "add_view", id : theImg, timezone: timezone },
 					success: function( response ) { console.log(response); } 
 				});	
 				this.destroy();
@@ -1467,12 +1416,4 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			data : { action: "sendServerEmail", theSite: theSite, failCheck: failCheck },
 		});
 	});
-
-	
-// Clear Hummingbird cache 	
-	//$.post({
-		//url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-		//data : { action: "force_clear_cache" },
-		//success: function( response ) { console.log(response); } 
-	//});		
 }});

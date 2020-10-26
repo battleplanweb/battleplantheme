@@ -91,10 +91,14 @@ get_header();
 		// Build Archive
 			while ( have_posts() ) : the_post(); 
 				if ( $addClass != '' ) $addClass = " ".$addClass;
-				$classes = 'col-archive col-'.get_post_type().' col-'.get_the_ID().$addClass;
+		
+				$addTags = "";
+				$getTags = get_the_terms( $post->ID, 'gallery-tags' );
+				foreach($getTags as $getTag) : $addTags .= " gallery-tags-".$getTag->slug; endforeach; 
+		
+				$classes = 'col-archive col-'.get_post_type().' col-'.get_the_ID().$addTags.$addClass;
 		
 				$buildArchive .= do_shortcode('[col class="'.$classes.'"][build-archive type="'.get_post_type().'" show_thumb="'.$showThumb.'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'"][/col]');
-
 			endwhile; 
 
 		// Display Archive

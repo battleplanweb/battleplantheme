@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '2.2.2' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '2.2.3' ); }
 
 /*--------------------------------------------------------------
 # Shortcodes
@@ -2758,7 +2758,7 @@ function battleplan_count_post_views_ajax() {
 		updateMeta( $siteHeader, "load-number-mobile", $mobileCounted );	
 		updateMeta( $siteHeader, "load-speed-mobile", $mobileSpeed );		
 	else:
-		$response = array( 'result' => ucfirst($postType.' view NOT counted') );
+		$response = array( 'result' => ucfirst($postType.' view NOT counted: user='.$userLogin.', user timezone='.$timezone.', site timezone='.get_option('timezone_string')) );
 	endif;
 
 	wp_send_json( $response );	

@@ -486,7 +486,7 @@ jQuery(function($) { try {
 			
 			var arrayT = [], arrayL = [], arrayW = [], arrayH = [];
 			
-			$('#desktop-navigation .menu-item, .widget-navigation .menu-item').each(function() {
+			$('#desktop-navigation ul.main-menu > .menu-item, .widget-navigation .menu-item').each(function() {
 				var thisItem = $(this);	
 				if ( orient == "horizontal" ) {
 					arrayT.push(thisItem.position().top);				

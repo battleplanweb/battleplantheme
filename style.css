@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 2.2.3
+Version: 2.2.4
 Tested up to: 5.5
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -540,6 +540,14 @@ big {
 	line-height:								inherit;
 }
 
+.fa.fas {
+	font-weight:								900;
+}
+
+.fa.far {
+	font-weight:								400;
+}
+
 .wordSplit,
 .charSplit {
 	display:									inline-block;
@@ -1053,6 +1061,18 @@ section.section {
 	align-content:								center;
 }
 
+.flex .col-inner div.valign-start {
+	align-self:									start;
+}
+
+.flex .col-inner div.valign-center {
+	align-self:									center;
+}
+
+.flex .col-inner div.valign-stretch {
+	align-self:									stretch;
+}
+
 .block-group,
 .col-inner {
 	display: 									grid;
@@ -1541,6 +1561,10 @@ section.section-edge .flex {
 --------------------------------------------- */
 
 /* Main Menu */
+.widget-navigation {
+	position:									relative; /* anchors the position:absolute of #magic-line, added 11-5-2020 for Clay Lewis */
+}
+
 .main-navigation ul,
 .widget-navigation ul {
 	list-style: 								none;
@@ -2181,6 +2205,41 @@ a.scroll-top {
 	display: 									block;
 }
 
+.comment-list {
+	list-style:									none;
+	padding:									0;
+	margin:										0 10px 70px;
+}
+
+.comment-list .comment {
+	margin-top:									70px;
+}
+
+.comment-list .avatar {
+	float:										left;
+	margin:										0 10px 10px 0;
+	width:										80px;
+	height:										80px;
+}
+
+.comment-list span.says {
+	display:									none;
+}
+
+.comment-list .comment-metadata a {
+	text-decoration:							none;
+	font-size:									75%
+}
+
+.comment-list .edit-link a {
+	text-decoration:							underline;
+	margin-left:								10px;
+}
+
+.comment-list .reply a {
+	font-size:									80%;
+}
+
 /* Media
 --------------------------------------------- */
 img {
@@ -2242,6 +2301,16 @@ img.unloaded {
 .size-full-f, 
 .size-max {
 	max-width:									100%;
+}
+
+.size-quarter-s img, 
+.size-third-s img, 
+.size-half-s img, 
+.size-quarter-f img, 
+.size-third-f img, 
+.size-half-f img {
+	max-width:									100% !important;
+	margin:										0 !important;
 }
 
 .page-content .wp-smiley,
@@ -2691,6 +2760,16 @@ span.descriptionText {
 
 #why-choose-american-standard .col h3 {
 	text-align:									center;
+}
+
+/* American Standard iframe */
+
+#product-site {
+    overflow-y: 								auto !important;
+}
+
+#product-site, #product-site iframe {
+    height: 									800px !important;
 }
 
 

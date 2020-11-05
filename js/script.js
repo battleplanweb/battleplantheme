@@ -605,8 +605,10 @@ jQuery(function($) { try {
 		var thisDiv = $(moveThis), thisAnchor = $(anchor);
 		if ( where == "after" ) {
 			thisDiv.insertAfter( thisAnchor );
-		} else {
+		} else if ( where == "before" ) {
 			thisDiv.insertBefore( thisAnchor );
+		} else {
+			thisAnchor.append(thisDiv);
 		}
 	};
 	
@@ -617,8 +619,10 @@ jQuery(function($) { try {
 			var thisDiv = $(this);			
 			if ( where == "after" ) {
 				thisDiv.find( $( moveThis )).insertAfter( thisDiv.find( anchor ) );
-			} else {
+			} else if ( where == "before" ) {
 				thisDiv.find( $( moveThis )).insertBefore( thisDiv.find( anchor ) );
+			} else {
+				thisDiv.find( anchor ).append(thisDiv.find( $( moveThis )));
 			}
 		});
 	};
@@ -1062,9 +1066,9 @@ if ( $('body').hasClass('remove-sidebar') ) {
 # Set up sidebar
 --------------------------------------------------------------*/	
 	
-	window.setupSidebar = function (compensate, menuLock, shuffle) {
+	window.setupSidebar = function (compensate, sidebarScroll, shuffle) {
 		compensate = compensate || 0;		
-		menuLock = menuLock || "true";
+		sidebarScroll = sidebarScroll || "true";
 		shuffle = shuffle || "true";
 		var isPaused = false;		
 						
@@ -1171,20 +1175,22 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		
  // Move sidebar in conjunction with mouse scroll to keep it even with content
 		window.moveWidgets = function () {
-			var contentH = $('#primary').outerHeight(), elem = $(".sidebar-inner"), elemH = elem.outerHeight() + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom')), contentV = contentH - getDeviceH() + 200, sidebarV = elemH - getDeviceH() + 400, addTop=0;	
-			
-			$('.stuck').each(function() { addTop = addTop + $(this).outerHeight(true); });					
-			var secH = $("#secondary").outerHeight(), secT = $("#secondary").offset().top, winH = $(window).height() - addTop, winT = $(window).scrollTop() + addTop;				
-			var adjT = winT - secT, fullH = secH - winH, scrollPct = adjT / fullH, maxH = contentH - elemH;	
-			if ( scrollPct > 1 ) { scrollPct = 1; }
-			if ( scrollPct < 0 || scrollPct == null ) { scrollPct = 0; }
-			var moveElem = Math.round(maxH * scrollPct);	
-			if ( moveElem > maxH ) { moveElem = maxH; }
-			if ( moveElem < 0 ) { moveElem = 0; }
-			if ( contentV > 0 && sidebarV > 0 && adjT > 0 && getDeviceW() > mobileCutoff ) { 
-				elem.css("margin-top",moveElem+"px"); 
-			} else { 
-				elem.css("margin-top","0px"); 
+			if ( sidebarScroll == "true" ) {
+				var contentH = $('#primary').outerHeight(), elem = $(".sidebar-inner"), elemH = elem.outerHeight() + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom')), contentV = contentH - getDeviceH() + 200, sidebarV = elemH - getDeviceH() + 400, addTop=0;	
+
+				$('.stuck').each(function() { addTop = addTop + $(this).outerHeight(true); });					
+				var secH = $("#secondary").outerHeight(), secT = $("#secondary").offset().top, winH = $(window).height() - addTop, winT = $(window).scrollTop() + addTop;				
+				var adjT = winT - secT, fullH = secH - winH, scrollPct = adjT / fullH, maxH = contentH - elemH;	
+				if ( scrollPct > 1 ) { scrollPct = 1; }
+				if ( scrollPct < 0 || scrollPct == null ) { scrollPct = 0; }
+				var moveElem = Math.round(maxH * scrollPct);	
+				if ( moveElem > maxH ) { moveElem = maxH; }
+				if ( moveElem < 0 ) { moveElem = 0; }
+				if ( contentV > 0 && sidebarV > 0 && adjT > 0 && getDeviceW() > mobileCutoff ) { 
+					elem.css("margin-top",moveElem+"px"); 
+				} else { 
+					elem.css("margin-top","0px"); 
+				}
 			}
 		};
 	};	

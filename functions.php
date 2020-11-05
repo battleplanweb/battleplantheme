@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '2.2.3' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '2.2.4' ); }
 
 /*--------------------------------------------------------------
 # Shortcodes
@@ -967,6 +967,24 @@ function printArray($array) {
 	return $print;
 }
 
+// Set up function to add / remove terms on post in front end
+function adjustTerms( $post_id, $term, $taxonomy, $add_or_remove ) {
+	if ( ! is_numeric( $term ) ) {
+		$term = get_term( $term, $taxonomy );
+		if ( ! $term || is_wp_error( $term ) ) return false;
+		$term_id = $term->term_id;
+	} else {
+		$term_id = $term;
+	}
+	$new_terms = array();
+	$current_terms = wp_get_object_terms( $post_id, $taxonomy, array( 'fields' => 'ids' ) );
+	foreach ( $current_terms as $current_term ) {
+		if ( $current_term != $term_id ) $new_terms[] = intval( $current_term );
+	}
+	if ( $add_or_remove == "add" ) $new_terms[] = intval( $term_id );	
+	return wp_set_object_terms( $post_id, $new_terms, $taxonomy );
+}
+
 /*--------------------------------------------------------------
 # Register Custom Post Types
 --------------------------------------------------------------*/
@@ -998,7 +1016,7 @@ function battleplan_registerPostTypes() {
 		'public'=>true,
 		'publicly_queryable'=>true,
 		'exclude_from_search'=>false,
-		'supports'=>array( 'title', 'editor', 'thumbnail', 'page-attributes', 'custom-fields' ),
+		'supports'=>array( 'title', 'editor', 'thumbnail', 'page-attributes', 'custom-fields', 'comments' ),
 		'hierarchical'=>false,
 		'menu_position'=>20,
 		'menu_icon'=>'dashicons-images-alt',

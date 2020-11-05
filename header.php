@@ -18,7 +18,7 @@
 	<?php bp_google_analytics(); ?>
 </head>
 
-<body <?php body_class(); ?>>
+<body <?php body_class(getUserRole()); ?>>
 	
 <?php bp_loader(); ?>
 <?php wp_body_open(); ?>	

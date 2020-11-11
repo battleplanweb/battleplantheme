@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '2.2.4' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '2.2.5' ); }
 
 /*--------------------------------------------------------------
 # Shortcodes
@@ -307,7 +307,7 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 // Build an archive
 add_shortcode( 'build-archive', 'battleplan_getBuildArchive' );
 function battleplan_getBuildArchive($atts, $content = null) {	
-	$a = shortcode_atts( array( 'type'=>'', 'show_btn'=>'false', 'btn_text'=>'Read More', 'btn_pos'=>'outside', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_social'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'show_thumb'=>'true', 'no_pic'=>'', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'accordion'=>'false', 'format_text'=>'false', 'link'=>'post' ), $atts );
+	$a = shortcode_atts( array( 'type'=>'', 'show_btn'=>'false', 'btn_text'=>'Read More', 'btn_pos'=>'outside', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_social'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'show_thumb'=>'true', 'no_pic'=>'', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'accordion'=>'false', 'link'=>'post' ), $atts );
 	$type = esc_attr($a['type']);	
 	$showBtn = esc_attr($a['show_btn']);	
 	$btnText = esc_attr($a['btn_text']);		
@@ -391,8 +391,10 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		$archiveBody = '[txt class="testimonials-quote"][p]'.apply_filters('the_content', get_the_content()).'[/p][/txt][txt class="testimonials-credentials"]'.$buildCredentials.'[/txt]';
 	} else {
 		if ( $accordion == "true" ) :		
-			if ( $format == 'true' ) : $formatContent = "[p]".apply_filters('the_content', get_the_content())."[/p]"; else : $formatContent = apply_filters('the_content', get_the_content()); endif;
-			$archiveBody = '[accordion title="'.esc_html(get_the_title()).'" excerpt="'.apply_filters('the_excerpt', get_the_excerpt()).'"]'.$formatContent.'[/accordion]';		
+			$title = esc_html(get_the_title());
+			$excerpt = wp_kses_post(get_the_excerpt());	
+			$content = apply_filters('the_content', get_the_content()); 
+			$archiveBody = '[accordion title="'.$title.'" excerpt="'.$excerpt.'"]'.$content.'[/accordion]';		
 		else :		
 			$archiveMeta = $archiveBody = "";
 			if ( $showTitle == "true" ) :

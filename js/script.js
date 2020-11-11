@@ -377,12 +377,11 @@ jQuery(function($) { try {
 			var locAcc = $(this), locIndex = locAcc.index('.block-accordion'), locPos = accPos[locIndex], topPos = accPos[0], moveTo = 0;			
 			if ( !locAcc.hasClass("active") ) {
 				setTimeout( function () {
-					$( '.block-accordion.active .accordion-excerpt, .block-accordion.active .accordion-content' ).animate({ height: "toggle", opacity: "toggle" }, transSpeed);
-					if ( locAcc.find('.accordion-excerpt').length ) {
-						locAcc.find('.accordion-excerpt').animate({ height: "toggle", opacity: "toggle" }, transSpeed);
-					}
+					$( '.block-accordion.active .accordion-excerpt' ).animate({ height: "toggle", opacity: "toggle" }, transSpeed);					
+					$( '.block-accordion.active .accordion-content' ).animate({ height: "toggle", opacity: "toggle" }, transSpeed);
 				}, closeDelay);
 				setTimeout( function () {
+					locAcc.find('.accordion-excerpt').animate({ height: "toggle", opacity: "toggle" }, transSpeed);						
 					locAcc.find('.accordion-content').animate({ height: "toggle", opacity: "toggle" }, transSpeed);						
 					if ( (locPos - topPos) > (getDeviceH() * 0.25) ) {
 						moveTo = locPos;
@@ -398,10 +397,8 @@ jQuery(function($) { try {
 				}, cssDelay);
 			} else if ( clickActive == 'close' ) {
 				setTimeout( function () {
-					$( '.block-accordion.active .accordion-excerpt, .block-accordion.active .accordion-content' ).animate({ height: "toggle", opacity: "toggle" }, transSpeed);
-					if ( locAcc.find('.accordion-excerpt').length ) {
-						locAcc.find('.accordion-excerpt').animate({ height: "toggle", opacity: "toggle" }, transSpeed);
-					}
+					$( '.block-accordion.active .accordion-excerpt' ).animate({ height: "toggle", opacity: "toggle" }, transSpeed);					
+					$( '.block-accordion.active .accordion-content' ).animate({ height: "toggle", opacity: "toggle" }, transSpeed);
 				}, closeDelay);	
 				setTimeout( function() {						
 					$(".block-accordion.active").removeClass('active').attr( 'aria-expanded', false );
@@ -434,7 +431,7 @@ jQuery(function($) { try {
 		function moveDiv() {
 			$(container).each(function() {	
 				var elem = $(this).find(element), elemH = elem.outerHeight();
-				var conH = $(this).outerHeight(), conT = $(this).position().top, conB = conT + conH;
+				var conH = $(this).outerHeight(), conT = $(this).offset().top, conB = conT + conH;
 				var winH = $(window).height(), winT = $(window).scrollTop(), winB = winT + winH;		
 				var adjT = winB - conT, fullH = conH + winH, scrollPct = adjT / fullH;	
 				if ( scrollPct > 1 ) { scrollPct = 1; }
@@ -450,21 +447,23 @@ jQuery(function($) { try {
 	};
 			
 // Set up "Magic Menu"	
-	window.magicMenu = function (menu, linkOn, linkOff) {
+	window.magicMenu = function (menu, linkOn, linkOff, stateChange) {
 		menu = menu || "#desktop-navigation .menu";
 		linkOn = linkOn || "active";
 		linkOff = linkOff || "non-active";
+		stateChange = stateChange || "false";
 		var $mainNav = $(menu);
+		var $baseNav = $mainNav.parent().parent();
 		
-		$mainNav.parent().parent().prepend("<div id='magic-line'></div>");
-		$mainNav.parent().parent().prepend("<div id='off-screen'></div>");
+		$baseNav.prepend("<div id='magic-line'></div>");
+		$baseNav.prepend("<div id='off-screen'></div>");
 		var $el, $currentPage, magicT, magicL, magicW, magicH, orient = "horizontal", $magicLine = $("#magic-line"), $offScreen = $("#off-screen");		
 		if ( !$mainNav.find("li.current-menu-parent").length ) {		
 			$currentPage = $mainNav.find("li.current-menu-item");
 		} else { 
 			$currentPage = $mainNav.find("li.current-menu-parent");
 		}				
-		if ( $mainNav.parent().parent().hasClass("widget") ) { orient = "vertical"; }			
+		if ( $baseNav.hasClass("widget") ) { orient = "vertical"; }			
 		if ( !$currentPage.length || $currentPage.hasClass("mobile-only") ) { $currentPage = $offScreen; }	
 		$currentPage.find(">a").addClass(linkOn);
 		
@@ -513,6 +512,31 @@ jQuery(function($) { try {
 				$currentPage.find(">a").addClass(linkOn).removeClass(linkOff);
 			});
 		};
+		
+		// Control the magicMenu state change based on position
+		if ( stateChange == "true" ) {
+			var getMagicSide = $baseNav.find('.flex').position().left, getMagicW = $baseNav.find('.flex').width(), getMagicPos = $baseNav.find('li.active').position().left - getMagicSide, getMagicAdj, getMagicPct;				
+
+			$baseNav.find('li').mouseover(function() {
+				getMagicPos = $(this).position().left - getMagicSide;
+				magicColor(getMagicPos);
+			});
+
+			$baseNav.find('.flex').mouseout(function() {
+				getMagicPos = $baseNav.find('li.active').position().left - getMagicSide;
+				magicColor(getMagicPos);
+			});
+
+			window.magicColor = function (getMagicPos) {
+				getMagicAdj = getMagicPos + ($('#magic-line').width() / 2);
+				getMagicPct = getMagicAdj / getMagicW;
+				if ( getMagicPct < 0.33 ) { $baseNav.removeClass('alt-2').removeClass('alt-3').addClass('alt-1'); }
+				if ( getMagicPct >= 0.33 && getMagicPct < 0.66 ) { $baseNav.removeClass('alt-1').removeClass('alt-3').addClass('alt-2'); }
+				if ( getMagicPct >= 0.66 ) { $baseNav.removeClass('alt-1').removeClass('alt-2').addClass('alt-3'); }		
+			};	
+			
+			magicColor(getMagicPos);
+		}
 		
 		setTimeout( function () { setMagicMenu(); }, 500);
 		$(window).resize(function() { setMagicMenu(); }); 	

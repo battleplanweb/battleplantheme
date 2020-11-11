@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 2.2.4
+Version: 2.2.5
 Tested up to: 5.5
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -737,6 +737,12 @@ form.hide-labels label:not(.show-label) {
 	display:									none;
 }
 
+form.side-by-side p {
+	width: 										50%;
+	float: 										left;
+	padding: 									0 5px;
+}
+
 .required {
 	color:										red;
 	margin-top:									10px;
@@ -778,7 +784,8 @@ input[type="time"],
 input[type="datetime"],
 input[type="datetime-local"],
 input[type="color"],
-textarea {
+textarea,
+select {
 	font-size:									90%;
 	color: 										#666666;
 	background:									rgba(255,255,255,0.9);
@@ -805,6 +812,7 @@ input[type="datetime"]:focus,
 input[type="datetime-local"]:focus,
 input[type="color"]:focus,
 textarea:focus,
+select:focus,
 .wpcf7 form .wpcf7-response-output {
 	color: 										#111111;
 	background:									rgba(255,255,255,1);
@@ -1001,6 +1009,18 @@ section.section {
 
 .flex.grid-1-1-2 {
 	grid-template-columns: 						1fr 1fr 2fr;
+}
+
+.flex.grid-1-3-1 {
+	grid-template-columns: 						1fr 3fr 1fr;
+}
+
+.flex.grid-2-3 {
+	grid-template-columns: 						2fr 3fr;
+}
+
+.flex.grid-3-2 {
+	grid-template-columns: 						3fr 2fr;
 }
 
 .flex.grid-3-1 {
@@ -3167,18 +3187,27 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 	.flex.grid-1-1-1-1,
 	.flex.grid-1-1-2,
 	.flex.grid-1-2-1,
+	.flex.grid-1-3-1,
+	.flex.grid-3-2,
+	.flex.grid-2-3,
 	.flex.grid-2-1-1 {
 		grid-template-columns: 						1fr 1fr;
 	}
 	
 	.flex.grid-1-1-2 .col:nth-child(3n+3),
 	.flex.grid-1-2-1 .col,
+	.flex.grid-1-3-1 .col,
+	.flex.grid-3-2 .col,
+	.flex.grid-2-3 .col,
 	.flex.grid-2-1-1 .col:nth-child(3n+1) {
 		grid-column: 								span 2;
 	}
 	
 	.flex.grid-1-1-2 .col:nth-child(3n+3) .col-inner,
 	.flex.grid-1-2-1 .col .col-inner,
+	.flex.grid-1-3-1 .col .col-inner,
+	.flex.grid-2-3 .col .col-inner,
+	.flex.grid-3-2 .col .col-inner,
 	.flex.grid-2-1-1 .col:nth-child(3n+1) .col-inner {
 		max-width:									75%;
 		margin:										0 auto;
@@ -3621,6 +3650,12 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 	.gallery-column-7,
 	.gallery-column-8 {
 		grid-template-columns: 						repeat(2, 1fr);
+	}
+	
+	/* Forms */
+	form.side-by-side p {
+		width: 										100%;
+		padding: 									0;
 	}
 }
 

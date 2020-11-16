@@ -452,18 +452,18 @@ jQuery(function($) { try {
 		linkOn = linkOn || "active";
 		linkOff = linkOff || "non-active";
 		stateChange = stateChange || "false";
-		var $mainNav = $(menu);
-		var $baseNav = $mainNav.parent().parent();
-		
+		var $mainNav = $(menu), $baseNav = $mainNav.parent().parent(), $el, $currentPage, magicT, magicL, magicW, magicH, orient = "horizontal";		
+		if ( $baseNav.hasClass("widget") ) { orient = "vertical"; }		
+
 		$baseNav.prepend("<div id='magic-line'></div>");
-		$baseNav.prepend("<div id='off-screen'></div>");
-		var $el, $currentPage, magicT, magicL, magicW, magicH, orient = "horizontal", $magicLine = $("#magic-line"), $offScreen = $("#off-screen");		
+		$baseNav.prepend("<div id='off-screen' class='" + orient + "'></div>");			
+		var $magicLine = $("#magic-line"), $offScreen = $("#off-screen");
+		
 		if ( !$mainNav.find("li.current-menu-parent").length ) {		
 			$currentPage = $mainNav.find("li.current-menu-item");
 		} else { 
 			$currentPage = $mainNav.find("li.current-menu-parent");
 		}				
-		if ( $baseNav.hasClass("widget") ) { orient = "vertical"; }			
 		if ( !$currentPage.length || $currentPage.hasClass("mobile-only") ) { $currentPage = $offScreen; }	
 		$currentPage.find(">a").addClass(linkOn);
 		
@@ -515,7 +515,7 @@ jQuery(function($) { try {
 		
 		// Control the magicMenu state change based on position
 		if ( stateChange == "true" ) {
-			var getMagicSide = $baseNav.find('.flex').position().left, getMagicW = $baseNav.find('.flex').width(), getMagicPos = $baseNav.find('li.active').position().left - getMagicSide, getMagicAdj, getMagicPct;				
+			var getMagicSide = $baseNav.find('.flex').position().left, getMagicW = $baseNav.find('.flex').width(), getMagicPos = $currentPage.position().left - getMagicSide, getMagicAdj, getMagicPct;				
 
 			$baseNav.find('li').mouseover(function() {
 				getMagicPos = $(this).position().left - getMagicSide;
@@ -523,16 +523,16 @@ jQuery(function($) { try {
 			});
 
 			$baseNav.find('.flex').mouseout(function() {
-				getMagicPos = $baseNav.find('li.active').position().left - getMagicSide;
+				getMagicPos = $currentPage.position().left - getMagicSide;
 				magicColor(getMagicPos);
 			});
 
 			window.magicColor = function (getMagicPos) {
 				getMagicAdj = getMagicPos + ($('#magic-line').width() / 2);
 				getMagicPct = getMagicAdj / getMagicW;
-				if ( getMagicPct < 0.33 ) { $baseNav.removeClass('alt-2').removeClass('alt-3').addClass('alt-1'); }
-				if ( getMagicPct >= 0.33 && getMagicPct < 0.66 ) { $baseNav.removeClass('alt-1').removeClass('alt-3').addClass('alt-2'); }
-				if ( getMagicPct >= 0.66 ) { $baseNav.removeClass('alt-1').removeClass('alt-2').addClass('alt-3'); }		
+				if ( getMagicPct < 0.33 ) { $('body').removeClass('menu-alt-2').removeClass('menu-alt-3').addClass('menu-alt-1'); }
+				if ( getMagicPct >= 0.33 && getMagicPct < 0.66 ) { $('body').removeClass('menu-alt-1').removeClass('menu-alt-3').addClass('menu-alt-2'); }
+				if ( getMagicPct >= 0.66 ) { $('body').removeClass('menu-alt-1').removeClass('menu-alt-2').addClass('menu-alt-3'); }		
 			};	
 			
 			magicColor(getMagicPos);

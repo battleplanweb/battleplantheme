@@ -1,5 +1,7 @@
 <?php
 /* Battle Plan Web Design Events Calendar PRO Includes
+
+https://docs.theeventscalendar.com/reference/functions/
  
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:
@@ -37,8 +39,9 @@ function battleplan_event_teasers( $atts, $content = null ) {
 			$buildEvents .= '[col]';		
 			$buildEvents .= get_the_post_thumbnail( $post->ID, 'thumbnail', array( 'class' => 'aligncenter' ) ); 
 			$buildEvents .= '[txt]<h3>'.$post->post_title.'</h3>';
-			$buildEvents .= '<p class="event-meta"><span class="tribe-event-date-start">'.tribe_get_start_date( $post );
-			if ( tribe_get_end_time($post) ) $buildEvents .= ' to '.tribe_get_end_time($post);
+			$buildEvents .= '<p class="event-meta"><span class="tribe-event-date-start">'.tribe_get_start_date($post, false);
+			if ( tribe_get_end_date($post, false) != tribe_get_start_date( $post, false ) ) $buildEvents .= ' to '.tribe_get_end_date($post, false);			
+			if ( tribe_get_start_time($post) ) $buildEvents .= '<br/><span class="tribe-event-time-start">'.tribe_get_start_time($post) .' to '. tribe_get_end_time($post);			
 			$buildEvents .= '</p><p>'.$post->post_excerpt.'</p>';		
 			$buildEvents .= '[/txt]';
 			if ( $showBtn == "true" ) $buildEvents .= '[btn link="'.esc_url(get_the_permalink($post->ID)).'"]'.$btnText.'[/btn]';			

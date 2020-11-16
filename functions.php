@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '2.2.5' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '2.2.6' ); }
 
 /*--------------------------------------------------------------
 # Shortcodes
@@ -53,10 +53,10 @@ function battleplan_getYears($atts, $content = null) {
 add_shortcode( 'get-season', 'battleplan_getSeason' );
 function battleplan_getSeason($atts, $content = null) {
 	$a = shortcode_atts( array( 'spring'=>'', 'summer'=>'', 'fall'=>'', 'winter'=>'',  ), $atts );
-	$summer = esc_attr($a['summer']);	
-	$winter = esc_attr($a['winter']);	
-	$spring = esc_attr($a['spring']);	
-	$fall = esc_attr($a['fall']);	
+	$summer = wp_kses_post($a['summer']);	
+	$winter = wp_kses_post($a['winter']);	
+	$spring = wp_kses_post($a['spring']);	
+	$fall = wp_kses_post($a['fall']);	
 	if ( $spring == '' ) $spring = $summer;
 	if ( $fall == '' ) $fall = $winter;
 	if (date("m")>="03" && date("m")<="05") : return $spring; 
@@ -261,7 +261,7 @@ function battleplan_getRandomImage($atts, $content = null ) {
 // Display a row of square pics from tagged images
 add_shortcode( 'get-row-of-pics', 'battleplan_getRowOfPics' );
 function battleplan_getRowOfPics($atts, $content = null ) {	
-	$a = shortcode_atts( array( 'id'=>'', 'tag'=>'row-of-pics', 'link'=>'no', 'col'=>'4', 'size'=>'half-s', 'class'=>'', 'order_by'=>'rand', 'order'=>'ASC', 'shuffle'=>'no' ), $atts );
+	$a = shortcode_atts( array( 'id'=>'', 'tag'=>'row-of-pics', 'link'=>'no', 'col'=>'4', 'size'=>'half-s', 'valign'=>'center', 'class'=>'', 'order_by'=>'rand', 'order'=>'ASC', 'shuffle'=>'no' ), $atts );
 	$col = esc_attr($a['col']);		
 	$size = esc_attr($a['size']);		
 	$tag = esc_attr($a['tag']);	
@@ -269,6 +269,7 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 	$link = esc_attr($a['link']);	
 	$orderBy = esc_attr($a['order_by']);		
 	$order = esc_attr($a['order']);		
+	$valign = esc_attr($a['valign']);		
 	$shuffle = esc_attr($a['shuffle']);		
 	$class = esc_attr($a['class']);	
 	if ( $class != '' ) $class = " ".$class;
@@ -300,7 +301,7 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 	endwhile; wp_reset_postdata(); endif;	
 	
 	if ( $shuffle != "no" ) : shuffle($imageArray); endif;
-	$print = do_shortcode('[layout grid="'.$col.'e"]'.printArray($imageArray).'[/layout]'); 
+	$print = do_shortcode('[layout grid="'.$col.'e" valign="'.$valign.'"]'.printArray($imageArray).'[/layout]'); 
 	return $print;
 }
 

@@ -9,8 +9,8 @@ get_header();
 		<?php if ( have_posts() ) : 
 			
 			$archiveHeadline = wp_kses_post(get_the_archive_title());
-			$archiveIntro = wp_kses_post(get_the_archive_description());				
-
+			$archiveIntro = wp_kses_post(get_the_archive_description());	
+		
 		// Galleries
 			if ( get_post_type() == "galleries" ) :
 				$archiveHeadline = "Photo Galleries";
@@ -85,6 +85,11 @@ get_header();
 			if ( get_post_type() == "testimonials" ) :
 				$archiveIntro = do_shortcode('<a class="noFX alignright" style="margin-top:0;" href="#" onclick="trackClicks(\'contact\', \'Offsite Link\', \'Facebook\', \''.$facebookLink.'\'); return false;"><img alt="Like Us on Facebook" src="/wp-content/uploads/'.$facebookIcon.'.png" class="noFX"/></a>[txt]<p>Our customers really like us! But don’t take our word for it. Here are some actual reviews posted by our customers on the web.</p><p>If YOU are a satisfied customer, we invite you to click the "thumbs up" icon to review your experience with our business.  Thank you!</p>[/txt]');	
 			endif;		
+		
+			if ( is_tax() ) : 	
+				$term = get_term_by( 'slug', get_query_var( 'term' ), get_query_var( 'taxonomy' ) );
+				if ( $term->name ) $archiveHeadline .= ": ".$term->name;		
+			endif;
 
 		// Build Archive
 			while ( have_posts() ) : the_post(); 

@@ -16,7 +16,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '2.2.6' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '3.0' ); }
 
 /*--------------------------------------------------------------
 # Shortcodes
@@ -812,6 +812,7 @@ function battleplan_setUpWPGallery( $atts, $content = null ) {
 	if ( $class != "" ) $class = " ".$class;
 	
 	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>$max, 'order'=>$order, 'date_query'=>array( array( 'after'=>$start, 'before'=>$end, 'inclusive'=>'true' )));	
+	
 	global $imageIDs; 
 	if ( $imageIDs ) : $args['post__in']=$imageIDs; $args['orderby']="post__in"; endif;
 	if ( $exclude ) : $exclude = explode(',', $exclude); $args['post__not_in']=$exclude; endif;
@@ -821,6 +822,7 @@ function battleplan_setUpWPGallery( $atts, $content = null ) {
 	$gallery = '<div id="gallery-'.$name.'" class="gallery gallery-'.$id.' gallery-column-'.$columns.' gallery-size-'.$size.'">';
 
 	$image_attachments = new WP_Query($args);
+	
 	if ( $image_attachments->have_posts() ) : while ( $image_attachments->have_posts() ) : $image_attachments->the_post();
 		$full = wp_get_attachment_image_src($post->ID, 'full');
 		$thumbnail = wp_get_attachment_image_src($post->ID, $size);
@@ -831,9 +833,8 @@ function battleplan_setUpWPGallery( $atts, $content = null ) {
 	endwhile; endif;	
 	wp_reset_postdata();
 	$gallery .= "</div>";	
-	$buildGallery = $gallery;
 	update_field('image_number', $count);
-	return $buildGallery;
+	return $gallery;
 }
 
 /*--------------------------------------------------------------
@@ -986,6 +987,47 @@ function adjustTerms( $post_id, $term, $taxonomy, $add_or_remove ) {
 	}
 	if ( $add_or_remove == "add" ) $new_terms[] = intval( $term_id );	
 	return wp_set_object_terms( $post_id, $new_terms, $taxonomy );
+}
+
+// Remove buttons from WordPress text editor
+add_filter( 'quicktags_settings', 'battleplan_delete_quicktags', 10, 2 );
+function battleplan_delete_quicktags( $qtInit, $editor_id = 'content' ) {
+	//$qtInit['buttons'] = 'strong,em,link,block,del,ins,img,ul,ol,code,more,close';
+	$qtInit['buttons'] = 'strong,em,link,ul,ol,more,close';
+	return $qtInit;
+}
+
+// Add new buttons to WordPress text editor
+add_action( 'admin_print_footer_scripts', 'battleplan_add_quicktags' );
+function battleplan_add_quicktags() {
+	if ( wp_script_is( 'quicktags' ) ) { ?>
+		<script type="text/javascript">
+			QTags.addButton( 'bp_paragraph', 'p', '<p>', '</p>\n\n', 'p', 'Paragraph Tag', 1 );
+			QTags.addButton( 'bp_li', 'li', ' <li>', '</li>', 'li', 'List Item', 100 );
+
+			QTags.addButton( 'bp_section', 'section', '[section name="becomes id attribute" style="corresponds to css" width="default, stretch, full, edge, inline" background="url" left="50" top="50" class=""]\n', '[/section]\n\n', 'section', 'Section', 1000 );		
+			QTags.addButton( 'bp_layout', 'layout', ' [layout grid="1-auto, 1-1-1-1, 5e, content" break="3, 4" valign="start, stretch, center" class=""]\n\n', ' [/layout]\n', 'layout', 'Layout', 1000 );
+			QTags.addButton( 'bp_column', 'column', '  [col name="becomes id attribute" align="center, left, right" valign="start, stretch, center" background="url" left="50" top="50" class=""]\n', '  [/col]\n\n', 'column', 'Column', 1000 );
+			QTags.addButton( 'bp_image', 'image', '   [img size="100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" link="url to link to" new-tab="false, true" ada-hidden="false, true" class=""]', '   [/img]\n', 'image', 'Image', 1000 );
+			QTags.addButton( 'bp_video', 'video', '   [vid size="100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" link="url of video" class="" related="false, true"]', '   [/vid]\n', 'video', 'Video', 1000 );
+			QTags.addButton( 'bp_group', 'group', '   [group size = "100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" class=""]\n', '   [/group]\n\n', 'group', 'Group', 1000 );	
+			QTags.addButton( 'bp_text', 'text', '   [txt size="100 1/2 1/3 1/4 1/6 1/12" order="2, 1, 3" class=""]\n', '   [/txt]\n', 'text', 'Text', 1000 );
+			QTags.addButton( 'bp_button', 'button', '   [btn size="100 1/2 1/3 1/4 1/6 1/12" order="3, 1, 2" align="center, left, right" link="url to link to" get-biz="link in functions.php" new-tab="false, true" class="" ada="text for ada button"]', '   [/btn]\n', 'button', 'Button', 1000 );	
+			QTags.addButton( 'bp_social', 'social', '   [social-btn type="email, facebook, twitter" img="none, link"]', '', 'social', 'Social', 1000 );	
+			QTags.addButton( 'bp_accordion', 'accordion', '   [accordion title="clickable title" excerpt="false, true" class="" icon="true, false"]', '   [/accordion]\n\n', 'accordion', 'Accordion', 1000 );
+			QTags.addButton( 'bp_expire-content', 'expire', '[expire start="2019-05-26" end="2019-06-15"]', '[/expire]\n\n', 'expire', 'Expire', 1000 );
+
+			QTags.addButton( 'bp_random-image', 'random image', '   [get-random-image id="" tag="random" size="thumbnail, third-s" link="no, yes" number="1" offset="" align="left, right, center" order_by="rand, menu_order, title, id, post_date, modified, views, recent" order="asc, desc" shuffle="no, yes"]\n', '', 'random image', 'Random Image', 1000 );
+			QTags.addButton( 'bp_random-post', 'random post', '   [get-random-posts num="1" offset="0" type="post" tax="" terms="" orderby="rand, views-today, views-7day, views-30day, views-all, recent" sort="asc, desc" show_title="true, false" title_pos="outside, inside" show_date="false, true" show_author="false, true" show_excerpt="true, false" show_social="false, true" show_btn="true, false" button="Read More" btn_pos="inside, outside" thumbnail="force, false" link="post, false, /link-destination/" start="" end="" exclude="" x_current="true, false" size="thumbanil, size-third-s" pic_size="1/3" text_size=""]\n', '', 'random post', 'Random Post', 1000 );
+			QTags.addButton( 'bp_random-text', 'random text', '   [get-random-text cookie="true, false" text1="" text2="" text3="" text4="" text5="" text6="" text7=""]\n', '', 'random text', 'Random Text', 1000 );
+			QTags.addButton( 'bp_row-of-pics', 'row of pics', '   [get-row-of-pics id="" tag="row-of-pics" col="4" size="half-s, thumbnail" valign="center, start, stretch" link="no, yes" order_by="rand, menu_order, title, id, post_date, modified, views, recent" order="asc, desc" shuffle="no, yes" class=""]\n', '', 'row of pics', 'Row Of Pics', 1000 );
+			QTags.addButton( 'bp_post-slider', 'post slider', '   [get-post-slider type="" auto="yes, no" interval="6000" loop="true, false" num="4" offset="0" pics="yes, no" controls="yes, no" controls_pos="below, above" indicators="no, yes" pause="true, false" tax="" terms="" orderby="rand, id, author, title, name, type, date, modified, parent, comment_count, relevance, menu_order, recent, (images) views, (posts) views-today, views-7day, views-30day, views-all" order="asc, desc" post_btn="" all_btn="View All" link="" start="" end="" excluse="" x_current="true, false" show_excerpt="true, false" show_content="false, true" size="thumbnail" pic_size="1/3" text_size="" class="" (images) slide_type="box, screen, fade" tag="" caption="no, yes" id="" size="thumbnail, half-s" mult="1"]\n', '', 'post slider', 'Post Slider', 1000 );
+
+			QTags.addButton( 'bp_images-slider', 'Images Slider', '<div class="alignright size-half-s">[get-post-slider type="images" num="6" size="half-s" controls="no" indicators="yes" tag="crew" all_btn="" link="none" slide_type="box" orderby="recent"]</div>\n\n', '', 'images-slider', 'Images Slider', 1000 );	
+			QTags.addButton( 'bp_testimonial-slider', 'Testimonial Slider', '  [col]\n   <h2>What Our Customers Say...</h2>\n   [get-post-slider type="testimonials" num="6" pic_size="1/3"]\n  [/col]\n\n', '', 'testimonial-slider', 'Testimonial Slider', 1000 );
+			QTags.addButton( 'bp_random-product', 'Random Product', '  [col]\n   <h2>Featured Product</h2>\n   [get-random-posts type="products" offset="1" button="Learn More" orderby="views-30day" sort="desc"]\n  [/col]\n\n', '', 'random-product', 'Random Product', 1000 );
+		</script>
+	<?php }
 }
 
 /*--------------------------------------------------------------
@@ -2856,14 +2898,16 @@ function battleplan_buildSection( $atts, $content = null ) {
 // Layout
 add_shortcode( 'layout', 'battleplan_buildLayout' );
 function battleplan_buildLayout( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'grid'=>'1', 'break'=>'', 'valign'=>'' ), $atts );
+	$a = shortcode_atts( array( 'grid'=>'1', 'break'=>'', 'valign'=>'', 'class'=>'' ), $atts );
 	$grid = esc_attr($a['grid']);
+	$class = esc_attr($a['class']);
+	if ( $class != '' ) $class = " ".$class;
 	$break = esc_attr($a['break']);
 	$valign = esc_attr($a['valign']);
 	if ( $valign != '' ) $valign = " valign-".$valign;
 	if ( $break != '' ) $break = " break-".$break;
 
-	$buildLayout = '<div class="flex grid-'.$grid.$valign.$break.'">'.do_shortcode($content).'</div>';	
+	$buildLayout = '<div class="flex grid-'.$grid.$valign.$break.$class.'">'.do_shortcode($content).'</div>';	
 	
 	return $buildLayout;
 }

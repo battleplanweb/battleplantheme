@@ -1097,25 +1097,25 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		var isPaused = false;		
 						
 // Shuffle an array of widgets
-	window.shuffleWidgets = function ($elements) {
-		var i, index1, index2, temp_val, count = $elements.length, $parent = $elements.parent(), shuffled_array = [];
+		window.shuffleWidgets = function ($elements) {
+			var i, index1, index2, temp_val, count = $elements.length, $parent = $elements.parent(), shuffled_array = [];
 
-		for (i = 0; i < count; i++) { shuffled_array.push(i); }
+			for (i = 0; i < count; i++) { shuffled_array.push(i); }
 
-		for (i = 0; i < count; i++) {
-			index1 = (Math.random() * count) | 0;
-			index2 = (Math.random() * count) | 0;
-			temp_val = shuffled_array[index1];
-			shuffled_array[index1] = shuffled_array[index2];
-			shuffled_array[index2] = temp_val;
-		}
+			for (i = 0; i < count; i++) {
+				index1 = (Math.random() * count) | 0;
+				index2 = (Math.random() * count) | 0;
+				temp_val = shuffled_array[index1];
+				shuffled_array[index1] = shuffled_array[index2];
+				shuffled_array[index2] = temp_val;
+			}
 
-		$elements.detach();
-		for (i = 0; i < count; i++) { $parent.append( $elements.eq(shuffled_array[i]) ); }			
-				
-		var el = $(".widget.lock-to-bottom").detach();
-		$parent.append( el );		
-	};		
+			$elements.detach();
+			for (i = 0; i < count; i++) { $parent.append( $elements.eq(shuffled_array[i]) ); }			
+
+			var el = $(".widget.lock-to-bottom").detach();
+			$parent.append( el );		
+		};		
 
 // Set up "locked" widgets, and shuffle the rest
 		$('.widget.lock-to-top, .widget.lock-to-bottom').addClass("locked");		

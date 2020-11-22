@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 2.2.6
+Version: 3.0
 Tested up to: 5.5
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -1112,53 +1112,72 @@ section.section {
 }
 
 #main-content,
-.sidebar-right #main-content {
+.sidebar-right #main-content,
+.flex.grid-content,
+.sidebar-right .flex.grid-content {
 	grid-column: 								default-start / default-end;
 	display: 									grid;
 	grid-template-columns: 						[column-1-start] 1fr [column-1-end column-2-start] minmax(0, 302px) [column-2-end];
 }
 
-.sidebar-left #main-content {
+.sidebar-left #main-content,
+.sidebar-left .flex.grid-content {
 	grid-template-columns: 						[column-1-start] minmax(0, 302px) [column-1-end column-2-start] 1fr [column-2-end];
 }
 
 .sidebar-line #main-content,
-.sidebar-right.sidebar-line #main-content {
+.sidebar-right.sidebar-line #main-content,
+.sidebar-line .flex.grid-content,
+.sidebar-right.sidebar-line .flex.grid-content {
 	grid-template-columns: 						[column-1-start] 1fr [column-1-end column-2-start] minmax(0, 330px) [column-2-end];
 }
 
-.sidebar-left.sidebar-line  #main-content {
+.sidebar-left.sidebar-line  #main-content,
+.sidebar-left.sidebar-line .flex.grid-content {
 	grid-template-columns: 						[column-1-start] minmax(0, 330px) [column-1-end column-2-start] 1fr [column-2-end];
 }
 
 .sidebar-box #main-content,
 .widget-box #main-content,
 .sidebar-right.sidebar-box #main-content,
-.sidebar-right.widget-box #main-content{
+.sidebar-right.widget-box #main-content,
+.sidebar-box .flex.grid-content,
+.sidebar-right.sidebar-box .flex.grid-content,
+.widget-box .flex.grid-content,
+.sidebar-right.widget-box .flex.grid-content {
 	grid-template-columns: 						[column-1-start] 1fr [column-1-end column-2-start] minmax(0, 356px) [column-2-end];
 }
 
 .sidebar-left.sidebar-box  #main-content,
-.sidebar-left.widget-box  #main-content{
+.sidebar-left.widget-box  #main-content,
+.sidebar-left.sidebar-box .flex.grid-content,
+.sidebar-left.widget-box .flex.grid-content {
 	grid-template-columns: 						[column-1-start] minmax(0, 356px) [column-1-end column-2-start] 1fr [column-2-end];
 }
 
-.sidebar-none #main-content {
+.sidebar-none #main-content,
+.sidebar-none .flex.grid-content {
 	grid-template-columns: 						[column-1-start] 1fr [column-2-end];
 }
 
-#main-content {
+#main-content,
+.flex.grid-content {
 	gap:										0 5%;
 }
 
 .content-box #main-content,
 .sidebar-line #main-content,
 .sidebar-box #main-content,
-.widget-box #main-content {
+.widget-box #main-content,
+.content-box .flex.grid-content,
+.sidebar-line .flex.grid-content,
+.sidebar-box .flex.grid-content,
+.widget-box .flex.grid-content {
 	gap:										0 2%;
 }
 
-.sidebar-none #main-content {
+.sidebar-none #main-content,
+.sidebar-none .flex.grid-content {
 	gap:										0;
 }
 
@@ -1437,6 +1456,11 @@ section.section-edge .flex {
 	min-width:									0;
 	margin:										0 5px;
 	border:										1px solid rgba(0,0,0,0.15);
+}
+
+/* Better Business Bureau */
+.widget-bbb #bbblink {
+	margin:										0 auto !important;
 }
 
 /* Sections
@@ -2330,10 +2354,14 @@ img.unloaded {
 .size-quarter-s img, 
 .size-third-s img, 
 .size-half-s img, 
+.size-full-s img, 
 .size-quarter-f img, 
 .size-third-f img, 
-.size-half-f img {
+.size-half-f img, 
+.size-full-f img,
+.img-testimonials img {
 	max-width:									100% !important;
+	width:										100% !important;
 	margin:										0 !important;
 }
 

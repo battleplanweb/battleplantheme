@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 3.0
+Version: 4.0
 Tested up to: 5.5
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -920,6 +920,15 @@ a.button .fancy-icon {
 	padding-right: 								0.5em;
 }
 
+.row-of-buttons {
+	display:									flex;
+	justify-content:							center;
+}
+
+.row-of-buttons .block-button {
+	margin:										0 1%;
+}
+
 .paypal-form {
 	max-width:									500px;
 	margin:										0 auto;
@@ -932,7 +941,6 @@ a.button .fancy-icon {
 input.paypal-amount {
 	width:										calc(100% - 15px);
 }
-
 
 /*--------------------------------------------------------------
 # Grid Set Up
@@ -1081,6 +1089,11 @@ section.section {
 	align-content:								center;
 }
 
+.flex.valign-end .col-inner,
+.flex .col.valign-end .col-inner {
+	align-content:								end;
+}
+
 .flex .col-inner div.valign-start {
 	align-self:									start;
 }
@@ -1091,6 +1104,10 @@ section.section {
 
 .flex .col-inner div.valign-stretch {
 	align-self:									stretch;
+}
+
+.flex .col-inner div.valign-end {
+	align-self:									end;
 }
 
 .block-group,
@@ -1736,6 +1753,7 @@ section.section-edge .flex {
 	position:									absolute;
 	background:									#cccccc;
 	border:										none;
+	min-width:									100%;
 }	
 
 #desktop-navigation li:hover ul.sub-menu,
@@ -3356,7 +3374,12 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 	#secondary {
 		margin-top:									1.5em;
 		height:										auto !important;
-	}		
+	}	
+	
+	.sidebar-shift.screen-mobile #secondary {
+		padding:									0 3%;
+		margin-bottom:								2em;
+	}
 	
 	/* Responsive Content */
 	.size-quarter-s,
@@ -3565,6 +3588,14 @@ iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
 	/* Mobile Menu */
 	#mobile-menu-bar a.phone-link {
 		display:									block;
+	}
+	
+	/* Content */
+	.content-box #primary,
+	.sidebar-box #secondary,
+	.widget-box .widget,
+	.content-sidebar-box #main-content {
+		padding:									1.5em 1em;
 	}
 	
 	/* Pages & Posts */

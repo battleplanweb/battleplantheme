@@ -598,7 +598,21 @@ jQuery(function($) { try {
 		$(window).load(function() { checkLogoSlider(); });
 		$(window).resize(function() { checkLogoSlider(); }); 			
 	});
-			
+	
+	// Filter Post Archive entries according to class (hide all, arrange, show all)  ** Mill Pond Retrievers dog / litter archive
+	window.filterArchives = function (field, container, column, speed) {
+		field = field || null;		
+		container = container || ".section.archive-content";		
+		column = column || ".col-archive";
+		speed = speed || 300;
+		
+		$(container).fadeTo(speed, 0, function () {
+			if ( field == "" || field == null ) { $(column).show(); }
+			else { $(column).hide(); $(column+'.'+field).show(); }	
+			$(column).css({ "clear":"none" });
+			$(container).fadeTo(speed, 1);
+		});
+	};				
 		
 /*--------------------------------------------------------------
 # DOM level functions
@@ -1280,6 +1294,8 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			}						
 		});		
 
+		// Shift #secondary below #wrapper-bottom on mobile		
+		moveDiv('.sidebar-shift.screen-mobile #secondary','#colophon',"before");	
 		
 		/* Remove horizontal styling from office hours box on cell phones */	
 		//if ( $('body').hasClass('screen-1') ) { 
@@ -1296,9 +1312,6 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		/* Set up "fixed" footer, based on class added in header.php */		
 		//var footerH = $(".footer-fixed #footer").outerHeight(true);
 		//$(".footer-fixed #page").css({"marginBottom":footerH+"px"});		
-		
-		/* Shift #secondary below #wrapper-bottom on mobile */		
-		//moveDiv('.sidebar-shift.screen-mobile #secondary','#wrapper-bottom',"after");	
 		
 		// Reposition Woocommerce Update Cart button above coupon section on mobile checkout
 		//moveDiv('.woocommerce-page.screen-mobile table.cart td.actions .button[name~="update_cart"]','.woocommerce-page #primary table.cart td.actions .coupon','before');	
@@ -1355,7 +1368,6 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		var loadTime = ((endTime - startTime) / 1000).toFixed(1);	
 		var deviceTime = "desktop";
 		if ( getDeviceW() <= mobileCutoff ) { deviceTime = "mobile"; }	
-		console.log(deviceTime+" load speed= "+loadTime+"s");
 
 	// Fade out loader screen when site is fully loaded
 		$("#loader").fadeOut("fast");  		
@@ -1395,32 +1407,49 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		setTimeout(function() {	// Wait 2.5 seconds before calling the following functions 	
 			
 		// Count page view 
-			var postID = $('body').attr('id');			
+			var postID = $('body').attr('id');				
 			$.post({
 				url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-				data : { action: "count_post_views", id: postID, timezone: timezone, loadTime: loadTime, deviceTime: deviceTime },
+				data : { action: "count_post_views", id: postID, timezone: timezone },
 				success: function( response ) { console.log(response); } 
-			});		
-
-		// Count testimonial view
-			$('.testimonials-name').waypoint(function() {		
-				var theID = $(this.element).attr('data-id');			
+			});	
+			
+			// Log page load speed
+			if ( loadTime > 0.1 ) { 				
 				$.post({
 					url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-					data : { action: "count_post_views", id: theID, timezone: timezone, loadTime: loadTime, deviceTime: deviceTime },
+					data : { action: "log_page_load_speed", id: postID, timezone: timezone, loadTime: loadTime, deviceTime: deviceTime },
 					success: function( response ) { console.log(response); } 
-				});		
+				});	
+			}
+			
+		// Count random post widget view
+			$('.widget-random-post:not(.hide-widget) h3, #primary h3, #wrapper-bottom h3').waypoint(function() {		
+				var theID = $(this.element).attr('data-id');			
+				var countView = $(this.element).attr('data-count-view');
+				if ( countView == "true" ) {
+					$.post({
+						url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
+						data : { action: "count_teaser_views", id: theID, timezone: timezone },
+						success: function( response ) { console.log(response); } 
+					});		
+				}
 				this.destroy();
 			}, { offset: 'bottom-in-view' });	 	
 
-		// Count image view
-			$('#primary img.random-img, .widget-image:not(.hide-widget) img.random-img, .row-of-pics img.random-img, .carousel img.img-slider, #wrapper-bottom img.random-img').waypoint(function() {		
-				var theImg = $(this.element).attr('data-id');			
+		// Count testimonial & image views
+			$('.testimonials-name, #primary img.random-img, .widget-image:not(.hide-widget) img.random-img, .row-of-pics img.random-img, .carousel img.img-slider, #wrapper-bottom img.random-img').waypoint(function() {		
+				var theID = $(this.element).attr('data-id');			
 				$.post({
 					url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-					data : { action: "add_view", id : theImg, timezone: timezone },
+					data : { action: "count_teaser_views", id: theID, timezone: timezone },
 					success: function( response ) { console.log(response); } 
-				});	
+				});		
+				$.post({
+					url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
+					data : { action: "count_post_views", id: theID, timezone: timezone },
+					success: function( response ) { console.log(response); } 
+				});		
 				this.destroy();
 			}, { offset: 'bottom-in-view' });	 	
 

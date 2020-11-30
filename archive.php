@@ -96,9 +96,12 @@ get_header();
 				if ( $addClass != '' ) $addClass = " ".$addClass;
 		
 				$addTags = "";
-				$getTags = get_the_terms( $post->ID, 'gallery-tags' );
-				foreach($getTags as $getTag) : $addTags .= " gallery-tags-".$getTag->slug; endforeach; 
-		
+				$taxonomies = get_object_taxonomies(get_post_type()); 
+ 				foreach( $taxonomies as $tax ) :
+   					$getTerms = get_the_terms( $post->ID, $tax );
+					foreach($getTerms as $getTerm) : $addTags .= " ".$tax."-".$getTerm->slug; endforeach;
+ 				endforeach;	
+
 				$classes = 'col-archive col-'.get_post_type().' col-'.get_the_ID().$addTags.$addClass;
 		
 				$buildArchive .= do_shortcode('[col class="'.$classes.'"][build-archive type="'.get_post_type().'" show_thumb="'.$showThumb.'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" accordion="'.$accordion.'"][/col]');

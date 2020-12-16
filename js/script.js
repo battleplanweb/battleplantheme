@@ -37,8 +37,7 @@ jQuery(function($) { try {
 	$('body').addClass(slug);
 	
 // Set up Logo to link to home page	
-	$('.logo').css("cursor","pointer");
-	$('.logo').click(function() {
+	$('.logo').css("cursor","pointer").click(function() {
   		window.location = "/";
 	});
 	window.linkHome = function (container) {
@@ -46,6 +45,11 @@ jQuery(function($) { try {
 		$(container).click(function() { window.location = "/"; });
 	};		
 	
+// Set up American Standard logo to link to American Standard website
+	$('.as-logo, .am-stand-logo, .widget-as-logo').each(function() { 
+		$(this).wrapInner('<a href="https://www.americanstandardair.com/"></a>'); 
+	});
+		
 // Track phone number clicks in Google Analytics
 	window.trackClicks = function(type, category, action, url) {
 		gtag('event', type, { 'event_category': category, 'event_action': action, 'event_label': url, 'transport_type': 'beacon', 'event_callback': function(){document.location = url;} });
@@ -1423,33 +1427,25 @@ if ( $('body').hasClass('remove-sidebar') ) {
 				});	
 			}
 			
-		// Count random post widget view
-			$('.widget-random-post:not(.hide-widget) h3, #primary h3, #wrapper-bottom h3').waypoint(function() {		
-				var theID = $(this.element).attr('data-id');			
+		// Count random post widget, testimonial & images - teases & views
+			$('.testimonials-name, #primary img.random-img, .widget-image:not(.hide-widget) img.random-img, .row-of-pics img.random-img, .carousel img.img-slider, #wrapper-bottom img.random-img, .widget-random-post:not(.hide-widget) h3, #primary h3, #wrapper-bottom h3').waypoint(function() {		
+				var theID = $(this.element).attr('data-id');
+				var countTease = $(this.element).attr('data-count-tease');				
 				var countView = $(this.element).attr('data-count-view');
-				if ( countView == "true" ) {
+				if ( countTease == "true" ) {
 					$.post({
 						url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
 						data : { action: "count_teaser_views", id: theID, timezone: timezone },
 						success: function( response ) { console.log(response); } 
 					});		
 				}
-				this.destroy();
-			}, { offset: 'bottom-in-view' });	 	
-
-		// Count testimonial & image views
-			$('.testimonials-name, #primary img.random-img, .widget-image:not(.hide-widget) img.random-img, .row-of-pics img.random-img, .carousel img.img-slider, #wrapper-bottom img.random-img').waypoint(function() {		
-				var theID = $(this.element).attr('data-id');			
-				$.post({
-					url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-					data : { action: "count_teaser_views", id: theID, timezone: timezone },
-					success: function( response ) { console.log(response); } 
-				});		
-				$.post({
-					url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-					data : { action: "count_post_views", id: theID, timezone: timezone },
-					success: function( response ) { console.log(response); } 
-				});		
+				if ( countView == "true" ) {
+					$.post({
+						url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
+						data : { action: "count_post_views", id: theID, timezone: timezone },
+						success: function( response ) { console.log(response); } 
+					});		
+				}
 				this.destroy();
 			}, { offset: 'bottom-in-view' });	 	
 

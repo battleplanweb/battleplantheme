@@ -29,7 +29,7 @@ $damHips = esc_attr(get_post_meta( $damID, 'hips', true ));
 $damElbows = esc_attr(get_post_meta( $damID, 'elbows', true ));
 $damEyes = esc_attr(get_post_meta( $damID, 'eyes', true ));
 $litterStatus = esc_attr(get_field( "litter_status" ));
-$whelpDate = esc_attr(get_field( "whelp_date" ));
+$readyDate = esc_attr(get_field( "ready_date" ));
 $price = esc_attr(get_field( "price" ));
 $deposit = esc_attr(get_field( "deposit" ));
 $b1 = esc_attr(get_post_meta( $sireID, 'sire', true ));
@@ -67,10 +67,10 @@ $modDate = the_modified_date( 'F Y', '', '', FALSE);
 		$buildLitter = do_shortcode('[col class="col-litters"]'.$setupSire.$setupCenter.$setupDam.'[/col]'); 		
 
 		$buildLitter .= '<ul class="litter-details"><h4>Litter Details</h4>';
-		if ( $litterStatus == "Planned" ) : $buildLitter .= '<li><span class="label">Planned: </span>'.date('F Y', strtotime($whelpDate)).'</li>';		
-		elseif ( date('F j, Y') > $whelpDate ) : $buildLitter .= '<li><span class="label">Ready: </span>'.$whelpDate.'</li>'; 		
+		if ( $litterStatus == "Expecting" ) : $buildLitter .= '<li><span class="label">Expected: </span>'.date('F Y', strtotime($readyDate)).'</li>';		
+		elseif ( date('F j, Y') > $readyDate ) : $buildLitter .= '<li><span class="label">Ready: </span>'.$readyDate.'</li>'; 		
 		else : $buildLitter .= '<li><span class="label">Available Now</li>'; endif;
-		if ( $price ) : $buildLitter .= '<li><span class="label">Price: </span>$'.number_format($price, 0, ".", ",").' <span style="font-size:70%;">+ Maine Sales Tax</span></li>';
+		if ( $price ) : $buildLitter .= '<li><span class="label">Price: </span>$'.number_format($price, 0, ".", ",").' <span style="font-size:70%;">+ Sales Tax</span></li>';
 		else: $buildLitter .= "Call For Price"; endif;
 		if ( $deposit ) : $buildLitter .= '<li><span class="label">Deposit: </span>$'.number_format($deposit, 0, ".", ","); endif;
 		

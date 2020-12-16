@@ -17,7 +17,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '4.0' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '4.1' ); }
 if ( ! defined( '_BP_OVERRIDE' ) ) { define( '_BP_OVERRIDE', 'false' ); }
 
 /*--------------------------------------------------------------
@@ -316,8 +316,9 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 // Build an archive
 add_shortcode( 'build-archive', 'battleplan_getBuildArchive' );
 function battleplan_getBuildArchive($atts, $content = null) {	
-	$a = shortcode_atts( array( 'type'=>'', 'count_view'=>'false', 'show_btn'=>'false', 'btn_text'=>'Read More', 'btn_pos'=>'outside', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_social'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'show_thumb'=>'true', 'no_pic'=>'', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'accordion'=>'false', 'link'=>'post' ), $atts );
+	$a = shortcode_atts( array( 'type'=>'', 'count_tease'=>'false', 'count_view'=>'false', 'show_btn'=>'false', 'btn_text'=>'Read More', 'btn_pos'=>'outside', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_social'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'show_thumb'=>'true', 'no_pic'=>'', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'accordion'=>'false', 'link'=>'post' ), $atts );
 	$type = esc_attr($a['type']);	
+	$countTease = esc_attr($a['count_tease']);	
 	$countView = esc_attr($a['count_view']);	
 	$showBtn = esc_attr($a['show_btn']);	
 	$btnText = esc_attr($a['btn_text']);		
@@ -379,7 +380,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		$testimonialMisc3 = esc_attr(get_field( "testimonial_misc3" ));	
 		$testimonialMisc4 = esc_attr(get_field( "testimonial_misc4" ));
 		
-		$buildCredentials = "<div class='testimonials-credential testimonials-name' data-count-view='true' data-id=".get_the_ID().">".$testimonialName;
+		$buildCredentials = "<div class='testimonials-credential testimonials-name' data-count-tease='true' data-id=".get_the_ID().">".$testimonialName;
 		if ( $testimonialTitle ) $buildCredentials .= "<span class='testimonials-title'>, ".$testimonialTitle."</span>";
 		$buildCredentials .= "</div>";
 		if ( $testimonialBiz ) :
@@ -408,7 +409,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		else :		
 			$archiveMeta = $archiveBody = "";
 			if ( $showTitle == "true" ) :
-				$archiveMeta .= "<h3 data-count-view=".$countView." data-id=".get_the_ID().">";
+				$archiveMeta .= "<h3 data-count-tease=".$countTease." data-count-view=".$countView." data-id=".get_the_ID().">";
 				if ( $showContent != "true" && $link != "false" ) $archiveMeta .= '<a href="'.$linkLoc.'" class="link-archive link-'.get_post_type().'"'.$titleADA.'>';		
 				$archiveMeta .= esc_html(get_the_title());  
 				if ( $showContent != "true" && $link != "false" ) $archiveMeta .= '</a>';	
@@ -461,7 +462,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 // Display randomly selected posts - start/end can be dates or -53 week / -51 week */
 add_shortcode( 'get-random-posts', 'battleplan_getRandomPosts' );
 function battleplan_getRandomPosts($atts, $content = null) {	
-	$a = shortcode_atts( array( 'num'=>'1', 'offset'=>'0', 'type'=>'post', 'tax'=>'', 'terms'=>'', 'orderby'=>'recent', 'sort'=>'asc', 'count_view'=>'true', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_social'=>'false', 'show_btn'=>'true', 'button'=>'Read More', 'btn_pos'=>'inside', 'show_content'=>'false', 'thumbnail'=>'force', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'link'=>'post' ), $atts );
+	$a = shortcode_atts( array( 'num'=>'1', 'offset'=>'0', 'type'=>'post', 'tax'=>'', 'terms'=>'', 'orderby'=>'recent', 'sort'=>'asc', 'count_tease'=>'true', 'count_view'=>'false', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_social'=>'false', 'show_btn'=>'true', 'button'=>'Read More', 'btn_pos'=>'inside', 'show_content'=>'false', 'thumbnail'=>'force', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'link'=>'post' ), $atts );
 	$num = esc_attr($a['num']);	
 	$potentialOffset = esc_attr($a['offset']);
 	$offset = rand(0,$potentialOffset);
@@ -469,6 +470,7 @@ function battleplan_getRandomPosts($atts, $content = null) {
 	$title = esc_attr($a['show_title']);	
 	$orderBy = esc_attr($a['orderby']);	
 	$sort = esc_attr($a['sort']);		
+	$countTease = esc_attr($a['count_tease']);	
 	$countView = esc_attr($a['count_view']);	
 	$titlePos = esc_attr($a['title_pos']);	
 	$showDate = esc_attr($a['show_date']);	
@@ -515,7 +517,7 @@ function battleplan_getRandomPosts($atts, $content = null) {
 	$getPosts = new WP_Query( $args );
 	$combinePosts = "";
 	if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 	
-		$showPost = do_shortcode('[build-archive type="'.$postType.'" count_view="'.$countView.'" show_btn="'.$showBtn.'" btn_text="'.$button.'" btn_pos="'.$btnPos.'" show_title="'.$title.'" title_pos="'.$titlePos.'" show_date="'.$showDate.'" show_excerpt="'.$showExcerpt.'" show_social="'.$showSocial.'" show_content="'.$showContent.'" show_author="'.$showAuthor.'" size="'.$size.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" link="'.$link.'"]');	
+		$showPost = do_shortcode('[build-archive type="'.$postType.'" count_tease="'.$countTease.'" count_view="'.$countView.'" show_btn="'.$showBtn.'" btn_text="'.$button.'" btn_pos="'.$btnPos.'" show_title="'.$title.'" title_pos="'.$titlePos.'" show_date="'.$showDate.'" show_excerpt="'.$showExcerpt.'" show_social="'.$showSocial.'" show_content="'.$showContent.'" show_author="'.$showAuthor.'" size="'.$size.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" link="'.$link.'"]');	
 	
 		if ( $num > 1 ) $showPost = do_shortcode('[col]'.$showPost.'[/col]');	
 		if ( has_post_thumbnail() || $thumbnail != "force" ) $combinePosts .= $showPost;
@@ -901,7 +903,7 @@ function getImgMeta($id) {
 		$addMeta = "";
 		foreach ($keys as $key) :
 			$value = esc_attr(get_field( $key, $id));			
-			if ( substr($value, 0, 5) != "field" && !is_array($value) && $value != "" && $value != null ) :				
+			if ( substr($value, 0, 5) != "field" && !is_array($value) && $value != "" && $value != null && $value != "Array" ) :				
 				$key = ltrim($key, '_');
 				$key = ltrim($key, '-');
 				$addMeta .= ' data-'.$key.' = "'.$value.'"';	
@@ -1006,11 +1008,11 @@ function adjustTerms( $post_id, $term, $taxonomy, $add_or_remove ) {
 }
 
 // Populate a secondary menu or sub-menu with posts/pages from any custom post type
-function fillMenu($cpt, $max = "-1", $orderBy = "date", $seq = "DESC") {
-	global $cpt, $max, $orderBy, $seq;
+function fillMenu($cpt, $max = "-1", $orderby = "title", $seq = "asc") { 
+	global $cpt, $max, $orderby, $seq;
 	add_filter( 'wp_get_nav_menu_items', 'WebsiteGO_buildCPTsubmenu', 10, 3 );
 	function WebsiteGO_buildCPTsubmenu( $items, $menu, $args ) {
-		global $cpt, $max, $orderBy, $seq;
+		global $cpt, $max, $orderby, $seq;
 		$child_items = array(); 
 		$menu_order = count($items); 
 		$parent_item_id = NULL;
@@ -1019,7 +1021,7 @@ function fillMenu($cpt, $max = "-1", $orderBy = "date", $seq = "DESC") {
 			if ( in_array($cpt, $item->classes) ) { $parent_item_id = $item->ID; }
 		}
 		
-		$args = array ( 'numberposts'=>$max, 'offset'=>0, 'category'=>'', 'orderby'=>$orderBy, 'order'=>$seq, 'include'=>array(), 'exclude'=>array(), 'meta_key'=>'', 'meta_value'=>'', 'post_type'=>$cpt, 'suppress_filters'=>true, );
+		$args = array ( 'numberposts'=>$max, 'offset'=>0, 'category'=>'', 'orderby'=>$orderby, 'order'=>$seq, 'post_type'=>$cpt, 'suppress_filters'=>true, );
 		
 		foreach ( get_posts( $args ) as $post ) {
 			$post->menu_item_parent = $parent_item_id;
@@ -1064,7 +1066,7 @@ function battleplan_add_quicktags() {
 			QTags.addButton( 'bp_expire-content', 'expire', '[expire start="2019-05-26" end="2019-06-15"]', '[/expire]\n\n', 'expire', 'Expire', 1000 );
 
 			QTags.addButton( 'bp_random-image', 'random image', '   [get-random-image id="" tag="random" size="thumbnail, third-s" link="no, yes" number="1" offset="" align="left, right, center" order_by="recent, rand, menu_order, title, id, post_date, modified, views" order="asc, desc" shuffle="no, yes"]\n', '', 'random image', 'Random Image', 1000 );
-			QTags.addButton( 'bp_random-post', 'random post', '   [get-random-posts num="1" offset="0" type="post" tax="" terms="" orderby="recent, rand, views-today, views-7day, views-30day, views-all" sort="asc, desc" count_view="true, false" show_title="true, false" title_pos="outside, inside" show_date="false, true" show_author="false, true" show_excerpt="true, false" show_social="false, true" show_btn="true, false" button="Read More" btn_pos="inside, outside" thumbnail="force, false" link="post, false, /link-destination/" start="" end="" exclude="" x_current="true, false" size="thumbnail, size-third-s" pic_size="1/3" text_size=""]\n', '', 'random post', 'Random Post', 1000 );
+			QTags.addButton( 'bp_random-post', 'random post', '   [get-random-posts num="1" offset="0" type="post" tax="" terms="" orderby="recent, rand, views-today, views-7day, views-30day, views-all" sort="asc, desc" count_tease="true, false" count_view="true, false" show_title="true, false" title_pos="outside, inside" show_date="false, true" show_author="false, true" show_excerpt="true, false" show_social="false, true" show_btn="true, false" button="Read More" btn_pos="inside, outside" thumbnail="force, false" link="post, false, /link-destination/" start="" end="" exclude="" x_current="true, false" size="thumbnail, size-third-s" pic_size="1/3" text_size=""]\n', '', 'random post', 'Random Post', 1000 );
 			QTags.addButton( 'bp_random-text', 'random text', '   [get-random-text cookie="true, false" text1="" text2="" text3="" text4="" text5="" text6="" text7=""]\n', '', 'random text', 'Random Text', 1000 );
 			QTags.addButton( 'bp_row-of-pics', 'row of pics', '   [get-row-of-pics id="" tag="row-of-pics" col="4" size="half-s, thumbnail" valign="center, start, stretch, end" link="no, yes" order_by="recent, rand, menu_order, title, id, post_date, modified, views" order="asc, desc" shuffle="no, yes" class=""]\n', '', 'row of pics', 'Row Of Pics', 1000 );
 			QTags.addButton( 'bp_post-slider', 'post slider', '   [get-post-slider type="" auto="yes, no" interval="6000" loop="true, false" num="4" offset="0" pics="yes, no" controls="yes, no" controls_pos="below, above" indicators="no, yes" pause="true, false" tax="" terms="" orderby="recent, rand, id, author, title, name, type, date, modified, parent, comment_count, relevance, menu_order, (images) views, (posts) views-today, views-7day, views-30day, views-all" order="asc, desc" post_btn="" all_btn="View All" link="" start="" end="" excluse="" x_current="true, false" show_excerpt="true, false" show_content="false, true" size="thumbnail" pic_size="1/3" text_size="" class="" (images) slide_type="box, screen, fade" tag="" caption="no, yes" id="" size="thumbnail, half-s" mult="1"]\n', '', 'post slider', 'Post Slider', 1000 );
@@ -1259,7 +1261,6 @@ function battleplan_add_acf_fields() {
 		'active' => true,
 		'description' => '',
 	));
-
 }
 
 /*--------------------------------------------------------------
@@ -1285,41 +1286,41 @@ function battleplan_column_settings() {
 					'filter_label'=>'',
 					'name'=>'featured-image',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				),
 				'title'=>array(
 					'type'=>'title',
 					'label'=>'Name',
-					'width'=>'35',
+					'width'=>'',
 					'width_unit'=>'%',
 					'edit'=>'on',
 					'sort'=>'on',
 					'name'=>'title',
 					'label_type'=>'',
-					'search'=>''
-				),
+					'search'=>'on'
+				),		
 				'date-published'=>array(
 					'type'=>'column-date_published',
 					'label'=>'Date Published',
-					'width'=>'20',
+					'width'=>'',
 					'width_unit'=>'%',
 					'date_format'=>'wp_default',
-					'edit'=>'on',
+					'edit'=>'off',
 					'sort'=>'on',
 					'filter'=>'on',
 					'filter_label'=>'',
 					'filter_format'=>'monthly',
 					'name'=>'date-published',
 					'label_type'=>'',
-					'search'=>''
-				),
+					'search'=>'on'
+				),		
 				'rating'=>array(
 					'type'=>'column-meta',
 					'label'=>'Rating',
-					'width'=>'10',
+					'width'=>'',
 					'width_unit'=>'%',
 					'field'=>'testimonial_rating',
-					'field_type'=>'',
+					'field_type'=>'numeric',
 					'before'=>'',
 					'after'=>'',
 					'edit'=>'off',
@@ -1329,12 +1330,82 @@ function battleplan_column_settings() {
 					'name'=>'rating',
 					'label_type'=>'',
 					'editable_type'=>'textarea',
-					'search'=>''
+					'search'=>'on'
+				),
+				'last_viewed'=>array(
+					'type'=>'column-meta',
+					'label'=>'Last Viewed',
+					'width'=>'',
+					'width_unit'=>'%',
+					'field'=>'post-tease-time',
+					'field_type'=>'date',
+					'date_format'=>'wp_default',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'filter_format'=>'monthly',
+					'name'=>'last_viewed',
+					'label_type'=>'',
+					'search'=>'on'
+				),	
+				'views_week'=>array(
+					'type'=>'column-meta',
+					'label'=>'This Week',
+					'width'=>'',
+					'width_unit'=>'%',
+					'field'=>'post-views-total-7day',
+					'field_type'=>'numeric',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'views_week',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'views_month'=>array(
+					'type'=>'column-meta',
+					'label'=>'This Month',
+					'width'=>'',
+					'width_unit'=>'%',
+					'field'=>'post-views-total-30day',
+					'field_type'=>'numeric',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'views_month',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'views_total'=>array(
+					'type'=>'column-meta',
+					'label'=>'Views Total',
+					'width'=>'',
+					'width_unit'=>'%',
+					'field'=>'post-views-total-all',
+					'field_type'=>'numeric',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'views_total',
+					'label_type'=>'',
+					'search'=>'on'
 				),
 				'location'=>array(
 					'type'=>'column-meta',
 					'label'=>'Location',
-					'width'=>'10',
+					'width'=>'',
 					'width_unit'=>'%',
 					'field'=>'testimonial_location',
 					'field_type'=>'checkmark',
@@ -1345,12 +1416,12 @@ function battleplan_column_settings() {
 					'filter_label'=>'',
 					'name'=>'location',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				),
 				'business'=>array(
 					'type'=>'column-meta',
 					'label'=>'Business',
-					'width'=>'10',
+					'width'=>'',
 					'width_unit'=>'%',
 					'field'=>'testimonial_biz',
 					'field_type'=>'checkmark',
@@ -1361,12 +1432,12 @@ function battleplan_column_settings() {
 					'filter_label'=>'',
 					'name'=>'business',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				),
 				'website'=>array(
 					'type'=>'column-meta',
 					'label'=>'Website',
-					'width'=>'10',
+					'width'=>'',
 					'width_unit'=>'%',
 					'field'=>'testimonial_website',
 					'field_type'=>'checkmark',
@@ -1377,7 +1448,7 @@ function battleplan_column_settings() {
 					'filter_label'=>'',
 					'name'=>'website',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				)
 			),
 			'layout'=>array(
@@ -1407,7 +1478,7 @@ function battleplan_column_settings() {
 					'filter_label'=>'',
 					'name'=>'featured-image',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				),
 				'title'=>array(
 					'type'=>'title',
@@ -1418,7 +1489,7 @@ function battleplan_column_settings() {
 					'sort'=>'on',
 					'name'=>'title',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				),
 				'slug'=>array(
 					'type'=>'column-slug',
@@ -1429,7 +1500,7 @@ function battleplan_column_settings() {
 					'sort'=>'on',
 					'name'=>'slug',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				),
 				'gallery-type'=>array(
 					'type'=>'column-taxonomy',
@@ -1444,7 +1515,7 @@ function battleplan_column_settings() {
 					'filter_label'=>'',
 					'name'=>'gallery-type',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				),
 				'last-modified'=>array(
 					'type'=>'column-modified',
@@ -1459,7 +1530,7 @@ function battleplan_column_settings() {
 					'filter_format'=>'monthly',
 					'name'=>'last-modified',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				),
 				'date-published'=>array(
 					'type'=>'column-date_published',
@@ -1474,7 +1545,7 @@ function battleplan_column_settings() {
 					'filter_format'=>'monthly',
 					'name'=>'date-published',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				),
 				'gallery-tags'=>array(
 					'type'=>'column-taxonomy',
@@ -1489,7 +1560,7 @@ function battleplan_column_settings() {
 					'filter_label'=>'',
 					'name'=>'gallery-tags',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				)
 			),
 			'layout'=>array(
@@ -1519,7 +1590,7 @@ function battleplan_column_settings() {
 					'filter_label'=>'',
 					'name'=>'featured-image',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				),
 				'title'=>array(
 					'type'=>'title',
@@ -1530,24 +1601,24 @@ function battleplan_column_settings() {
 					'sort'=>'on',
 					'name'=>'title',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				),
 				'column-slug'=>array(
 					'type'=>'column-slug',
 					'label'=>'Slug',
-					'width'=>'15',
+					'width'=>'',
 					'width_unit'=>'%',
 					'edit'=>'on',
 					'sort'=>'on',
 					'name'=>'column-slug',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				),
 				'last-modified'=>array(
 					'type'=>'column-modified',
 					'label'=>'Last Modified',
-					'width'=>'',
-					'width_unit'=>'%',
+					'width'=>'130',
+					'width_unit'=>'px',
 					'date_format'=>'diff',
 					'edit'=>'on',
 					'sort'=>'on',
@@ -1556,13 +1627,13 @@ function battleplan_column_settings() {
 					'filter_format'=>'monthly',
 					'name'=>'last-modified',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				),
 				'date-published'=>array(
 					'type'=>'column-date_published',
 					'label'=>'Date Published',
-					'width'=>'',
-					'width_unit'=>'%',
+					'width'=>'130',
+					'width_unit'=>'px',
 					'date_format'=>'wp_default',
 					'edit'=>'on',
 					'sort'=>'on',
@@ -1571,13 +1642,83 @@ function battleplan_column_settings() {
 					'filter_format'=>'monthly',
 					'name'=>'date-published',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
+				),
+				'last_viewed'=>array(
+					'type'=>'column-meta',
+					'label'=>'Last Viewed',
+					'width'=>'130',
+					'width_unit'=>'px',
+					'field'=>'post-tease-time',
+					'field_type'=>'date',
+					'date_format'=>'wp_default',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'filter_format'=>'monthly',
+					'name'=>'last_viewed',
+					'label_type'=>'',
+					'search'=>'on'
+				),	
+				'views_week'=>array(
+					'type'=>'column-meta',
+					'label'=>'This Week',
+					'width'=>'',
+					'width_unit'=>'%',
+					'field'=>'post-views-total-7day',
+					'field_type'=>'numeric',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'views_week',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'views_month'=>array(
+					'type'=>'column-meta',
+					'label'=>'This Month',
+					'width'=>'',
+					'width_unit'=>'%',
+					'field'=>'post-views-total-30day',
+					'field_type'=>'numeric',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'views_month',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'views_total'=>array(
+					'type'=>'column-meta',
+					'label'=>'Views Total',
+					'width'=>'',
+					'width_unit'=>'%',
+					'field'=>'post-views-total-all',
+					'field_type'=>'numeric',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'views_total',
+					'label_type'=>'',
+					'search'=>'on'
 				),
 				'categories'=>array(
 					'type'=>'categories',
 					'label'=>'Categories',
-					'width'=>'15',
-					'width_unit'=>'%',
+					'width'=>'100',
+					'width_unit'=>'px',
 					'edit'=>'on',
 					'enable_term_creation'=>'on',
 					'sort'=>'on',
@@ -1585,13 +1726,13 @@ function battleplan_column_settings() {
 					'name'=>'categories',
 					'label_type'=>'',
 					'filter_label'=>'',
-					'search'=>''
+					'search'=>'on'
 				),
 				'tags'=>array(
 					'type'=>'tags',
 					'label'=>'Tags',
-					'width'=>'15',
-					'width_unit'=>'%',
+					'width'=>'100',
+					'width_unit'=>'px',
 					'edit'=>'on',
 					'enable_term_creation'=>'on',
 					'sort'=>'on',
@@ -1599,18 +1740,18 @@ function battleplan_column_settings() {
 					'filter_label'=>'',
 					'name'=>'tags',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				),
 				'author'=>array(
 					'type'=>'author',
 					'label'=>'Author',
-					'width'=>'10',
+					'width'=>'',
 					'width_unit'=>'%',
 					'edit'=>'on',
 					'sort'=>'on',
 					'name'=>'author',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				)
 			),
 			'layout'=>array(
@@ -1628,30 +1769,30 @@ function battleplan_column_settings() {
 				'title'=>array(
 					'type'=>'title',
 					'label'=>'Page',
-					'width'=>'25',
+					'width'=>'',
 					'width_unit'=>'%',
 					'edit'=>'on',
 					'sort'=>'on',
 					'name'=>'title',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				),
 				'slug'=>array(
 					'type'=>'column-slug',
 					'label'=>'Slug',
-					'width'=>'20',
-					'width_unit'=>'%',
+					'width'=>'130',
+					'width_unit'=>'px',
 					'edit'=>'on',
 					'sort'=>'on',
 					'name'=>'slug',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				),
 				'post-id'=>array(
 					'type'=>'column-postid',
 					'label'=>'ID',
-					'width'=>'5',
-					'width_unit'=>'%',
+					'width'=>'60',
+					'width_unit'=>'px',
 					'before'=>'',
 					'after'=>'',
 					'sort'=>'on',
@@ -1659,13 +1800,13 @@ function battleplan_column_settings() {
 					'filter_label'=>'',
 					'name'=>'post-id',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				),
 				'last-modified'=>array(
 					'type'=>'column-modified',
 					'label'=>'Last Modified',
-					'width'=>'10',
-					'width_unit'=>'%',
+					'width'=>'130',
+					'width_unit'=>'px',
 					'date_format'=>'diff',
 					'edit'=>'on',
 					'sort'=>'on',
@@ -1674,13 +1815,13 @@ function battleplan_column_settings() {
 					'filter_format'=>'monthly',
 					'name'=>'last-modified',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				),
 				'date-published'=>array(
 					'type'=>'column-date_published',
 					'label'=>'Date Published',
-					'width'=>'10',
-					'width_unit'=>'%',
+					'width'=>'130',
+					'width_unit'=>'px',
 					'date_format'=>'wp_default',
 					'edit'=>'on',
 					'sort'=>'on',
@@ -1689,13 +1830,83 @@ function battleplan_column_settings() {
 					'filter_format'=>'monthly',
 					'name'=>'date-published',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
+				),
+				'last_viewed'=>array(
+					'type'=>'column-meta',
+					'label'=>'Last Viewed',
+					'width'=>'130',
+					'width_unit'=>'px',
+					'field'=>'post-tease-time',
+					'field_type'=>'date',
+					'date_format'=>'wp_default',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'filter_format'=>'monthly',
+					'name'=>'last_viewed',
+					'label_type'=>'',
+					'search'=>'on'
+				),	
+				'views_week'=>array(
+					'type'=>'column-meta',
+					'label'=>'This Week',
+					'width'=>'',
+					'width_unit'=>'%',
+					'field'=>'post-views-total-7day',
+					'field_type'=>'numeric',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'views_week',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'views_month'=>array(
+					'type'=>'column-meta',
+					'label'=>'This Month',
+					'width'=>'',
+					'width_unit'=>'%',
+					'field'=>'post-views-total-30day',
+					'field_type'=>'numeric',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'views_month',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'views_total'=>array(
+					'type'=>'column-meta',
+					'label'=>'Views Total',
+					'width'=>'',
+					'width_unit'=>'%',
+					'field'=>'post-views-total-all',
+					'field_type'=>'numeric',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'views_total',
+					'label_type'=>'',
+					'search'=>'on'
 				),
 				'attachments'=>array(
 					'type'=>'column-attachment',
 					'label'=>'Attachments',
-					'width'=>'30',
-					'width_unit'=>'%',
+					'width'=>'400',
+					'width_unit'=>'px',
 					'attachment_display'=>'thumbnail',
 					'image_size'=>'cpac-custom',
 					'image_size_w'=>'60',
@@ -1733,8 +1944,8 @@ function battleplan_column_settings() {
 				'filename'=>array(
 					'type'=>'column-file_name',
 					'label'=>'Filename',
-					'width'=>'300',
-					'width_unit'=>'px',
+					'width'=>'',
+					'width_unit'=>'%',
 					'sort'=>'on',
 					'name'=>'filename',
 					'label_type'=>''
@@ -1742,8 +1953,8 @@ function battleplan_column_settings() {
 				'alt-text' => array(
 					'type' => 'column-alternate_text',
 					'label' => 'Alt Text',
-					'width' => '',
-					'width_unit' => '%',
+					'width' => '150',
+					'width_unit' => 'px',
 					'use_icons' => '',
 					'name' => 'column-alternate_text',
 					'label_type' => '',
@@ -1758,8 +1969,8 @@ function battleplan_column_settings() {
 				'date'=>array(
 					'type'=>'date',
 					'label'=>'Date',
-					'width'=>'10',
-					'width_unit'=>'%',
+					'width'=>'100',
+					'width_unit'=>'px',
 					'edit'=>'off',
 					'sort'=>'on',
 					'filter'=>'on',
@@ -1767,23 +1978,93 @@ function battleplan_column_settings() {
 					'filter_format'=>'monthly',
 					'name'=>'date',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				),
 				'image-id'=>array(
 					'type'=>'column-mediaid',
 					'label'=>'ID',
-					'width'=>'100',
-					'width_unit'=>'px',
+					'width'=>'',
+					'width_unit'=>'%',
 					'sort'=>'on',
 					'name'=>'image-id',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
+				),
+				'last_viewed'=>array(
+					'type'=>'column-meta',
+					'label'=>'Last Viewed',
+					'width'=>'',
+					'width_unit'=>'%',
+					'field'=>'post-tease-time',
+					'field_type'=>'date',
+					'date_format'=>'wp_default',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'filter_format'=>'monthly',
+					'name'=>'last_viewed',
+					'label_type'=>'',
+					'search'=>'on'
+				),	
+				'views_week'=>array(
+					'type'=>'column-meta',
+					'label'=>'This Week',
+					'width'=>'',
+					'width_unit'=>'%',
+					'field'=>'post-views-total-7day',
+					'field_type'=>'numeric',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'views_week',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'views_month'=>array(
+					'type'=>'column-meta',
+					'label'=>'This Month',
+					'width'=>'',
+					'width_unit'=>'%',
+					'field'=>'post-views-total-30day',
+					'field_type'=>'numeric',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'views_month',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'views_total'=>array(
+					'type'=>'column-meta',
+					'label'=>'Views Total',
+					'width'=>'',
+					'width_unit'=>'%',
+					'field'=>'post-views-total-all',
+					'field_type'=>'numeric',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'views_total',
+					'label_type'=>'',
+					'search'=>'on'
 				),
 				'taxonomy-image-categories'=>array(
 					'type'=>'taxonomy-image-categories',
 					'label'=>'Image Categories',
-					'width'=>'200',
-					'width_unit'=>'px',
+					'width'=>'',
+					'width_unit'=>'%',
 					'edit'=>'on',
 					'enable_term_creation'=>'on',
 					'sort'=>'on',
@@ -1791,13 +2072,13 @@ function battleplan_column_settings() {
 					'filter_label'=>'',
 					'name'=>'taxonomy-image-categories',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				),
 				'taxonomy-image-tags'=>array(
 					'type'=>'taxonomy-image-tags',
 					'label'=>'Image Tags',
-					'width'=>'200',
-					'width_unit'=>'px',
+					'width'=>'',
+					'width_unit'=>'%',
 					'edit'=>'on',
 					'enable_term_creation'=>'on',
 					'sort'=>'on',
@@ -1805,13 +2086,13 @@ function battleplan_column_settings() {
 					'filter_label'=>'',
 					'name'=>'taxonomy-image-tags',
 					'label_type'=>'',
-					'search'=>''
+					'search'=>'on'
 				),
 				'sizes'=>array(
 					'type'=>'column-available_sizes',
 					'label'=>'Sizes',
-					'width'=>'',
-					'width_unit'=>'%',
+					'width'=>'200',
+					'width_unit'=>'px',
 					'include_missing_sizes'=>'',
 					'sort'=>'on',
 					'name'=>'sizes',
@@ -2080,7 +2361,8 @@ if ( ! function_exists( 'battleplan_setup' ) ) :
 		add_theme_support( 'title-tag' );
 		add_theme_support( 'post-thumbnails' );
 		register_nav_menus( array( 'top-menu' => esc_html__( 'Top Menu', 'battleplan' ), ) );
-		register_nav_menus( array( 'header-menu' => esc_html__( 'Header Menu', 'battleplan' ), ) );
+		register_nav_menus( array( 'header-menu' => esc_html__( 'Header Menu', 'battleplan' ), ) );		
+		register_nav_menus( array( 'footer-menu' => esc_html__( 'Footer Menu', 'battleplan' ), ) );
 		add_theme_support( 'html5', array( 'search-form', 'comment-form', 'comment-list', 'gallery', 'caption', 'style', 'script', ) );
 		add_theme_support( 'custom-background', apply_filters( 'battleplan_custom_background_args', array( 'default-color' => 'ffffff', 'default-image' => '', ) ) );
 		add_theme_support( 'customize-selective-refresh-widgets' );
@@ -2245,16 +2527,17 @@ add_filter( 'wpcf7_validate_email', 'battleplan_contact_form_spam_blocker', 20, 
 add_filter( 'wpcf7_validate_email*', 'battleplan_contact_form_spam_blocker', 20, 2 );
 function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( "user-message" == $tag->name ) {
+		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
+		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
 		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','loans for small businesses','New Hire HVAC Employee','и','д','б','й','л','ы','З','у','Я');
-        $check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
+		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
+		if ( $check == $name ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($badwords as $badword) {
 			if (stripos($check,$badword) !== false) $result->invalidate( $tag, 'We do not accept messages containing the word(s) "'.$badword.'".' );
 		}
-		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
-        $check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		foreach($webwords as $webword) {
 			if (stripos($check,$webword) !== false) $result->invalidate( $tag, 'We do not accept messages containing website addresses.' );
-		}			
+		}		
 	}
     if ( "user-email" == $tag->name ) {
 		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com');

@@ -455,7 +455,7 @@ function battleplan_add_acf_pedigree_fields() {
 				'conditional_logic' => 0,
 				'choices' => array(
 					'Available' => 'Available',
-					'Planned' => 'Planned',
+					'Expecting' => 'Expecting',
 				),
 				'allow_null' => 0,
 				'other_choice' => 0,
@@ -466,8 +466,8 @@ function battleplan_add_acf_pedigree_fields() {
 			),
 			array(
 				'key' => 'field_52dd8f4f60233',
-				'label' => 'Whelp Date',
-				'name' => 'whelp_date',
+				'label' => 'Expecting / Ready Date',
+				'name' => 'ready_date',
 				'type' => 'date_picker',
 				'required' => 0,
 				'conditional_logic' => 0,
@@ -699,12 +699,12 @@ function battleplan_pedigree_column_settings() {
 					'search'=>'on',
 					'filter'=>'on'
 				),
-				'status'=>array(
+				'litter_status'=>array(
 					'type'=>'column-acf_field',
 					'label'=>'Status',
 					'width'=>'',
 					'width_unit'=>'%',
-					'field'=>'status',
+					'field'=>'litter_status',
 					'field_type'=>'',
 					'before'=>'',
 					'after'=>'',
@@ -715,12 +715,12 @@ function battleplan_pedigree_column_settings() {
 					'search'=>'on',
 					'filter'=>'on'
 				),
-				'whelp_date'=>array(
+				'ready_date'=>array(
 					'type'=>'column-acf_field',
-					'label'=>'Whelp Date',
+					'label'=>'Expecting / Ready Date',
 					'width'=>'',
 					'width_unit'=>'%',
-					'field'=>'whelp_date',
+					'field'=>'ready_date',
 					'field_type'=>'',
 					'before'=>'',
 					'after'=>'',
@@ -885,7 +885,7 @@ function battleplan_override_main_query_with_pedigree( $query ) {
 			$query->set( 'post_type','litters');
 			$query->set( 'posts_per_page',-1);
 			$query->set('orderby', 'meta_value_num');	
-			$query->set('meta_key', 'whelp_date');	 
+			$query->set('meta_key', 'ready_date');	 
 			$query->set( 'order','asc');
 		endif;
 	endif; 
@@ -910,7 +910,7 @@ function get_callname_ajax() {
 	$linkLoc = get_permalink($id);
 	$callname = get_field( "call_name", $id );
 	
-	if ( $callname ) : $addCallName = '<h2><a href="'.$linkLoc.'" class="link-archive link-dogs" aria-hidden="true" tabindex="-1">"'.$callname.'"</a></h2>'; else: $addCallName = "<h2>&nbsp;</h2>"; endif;
+	if ( $callname ) : $addCallName = '<h2><a href="'.$linkLoc.'" class="link-archive link-dogs" aria-hidden="true" tabindex="-1">“ '.$callname.' ”</a></h2>'; else: $addCallName = "<h2>&nbsp;</h2>"; endif;
 	
     $response = array( 'result' => 'successful', 'callname' => $addCallName);
   	wp_send_json( $response );

@@ -37,7 +37,9 @@ get_sidebar(); ?>
 				if (function_exists('battleplan_siteInfoRight')) {
 					$buildRight = battleplan_siteInfoRight();
 				} else {	
-					$buildCopyright = "<div>".do_shortcode('[get-biz info="copyright"]')." ".do_shortcode('[get-biz info="name"]')." • All Rights Reserved • <a href='/privacy-policy/'>Privacy Policy</a></div><div>";
+					$buildCopyright = "";
+					$buildCopyright .= wp_nav_menu( array( 'theme_location' => 'footer-menu', 'container' => 'div', 'container_id' => 'footer-navigation', 'container_class' => 'secondary-navigation', 'menu_id' => 'footer-menu', 'menu_class' => 'menu secondary-menu', 'fallback_cb' => 'false', 'echo' => false ) );
+					$buildCopyright .= "<div>".do_shortcode('[get-biz info="copyright"]')." ".do_shortcode('[get-biz info="name"]')." • All Rights Reserved • <a href='/privacy-policy/'>Privacy Policy</a></div><div>";
 					if ( do_shortcode('[get-biz info="street"]') ) $buildCopyright .= do_shortcode('[get-biz info="street"]')." • ";							
 					if ( do_shortcode('[get-biz info="city"]') ) :
 						$buildCopyright .= do_shortcode('[get-biz info="city"]').", ".do_shortcode('[get-biz info="state-abbr"]')." ".do_shortcode('[get-biz info="zip"]')." • ";

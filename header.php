@@ -30,7 +30,7 @@
 	<?php bp_mobile_menu_bar_items(); ?>
 	<?php echo do_shortcode('[get-biz info="mm-bar-link"]') ?>
 	<a href="/contact-us/"><div class="mm-bar-btn email-btn" aria-hidden="true"></div><span class="sr-only">Contact Us</span></a>
-	<div class="mm-bar-btn activate-btn"><div></div><div></div><div></div></div>
+	<div class="mm-bar-btn activate-btn"><div></div><div></div><div></div></div> 
 </div>
 	
 <?php wp_nav_menu( array(

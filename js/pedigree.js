@@ -10,7 +10,7 @@ jQuery(function($) {
 		addDiv(".col-dogs.dogs-male .image-dogs a", "<div class='sex-box'><i class='fa fas fa-mars'></i></div>", "inside"); 
 			
 		// setup filtering of dogs & litters archive pages with buttons		
-		$("button.females-btn, button.males-btn, button.all-btn, button.available-btn, button.planned-btn").keyup(function(event) {
+		$("button.females-btn, button.males-btn, button.all-btn, button.available-btn, button.expecting-btn").keyup(function(event) {
 			var thisBtn = $(this);
 			if (event.keyCode === 13 || event.keyCode === 32) { thisBtn.click(); }
 		});		 
@@ -20,14 +20,14 @@ jQuery(function($) {
 		$('button.all-btn').click( function() { filterArchives(); $('button').removeClass("active"); $('button.all-btn').addClass("active"); });
 
 		$('button.available-btn').click( function() { filterArchives("litter-available"); $('button').removeClass("active"); $('button.available-btn').addClass("active"); });
-		$('button.planned-btn').click( function() { filterArchives("litter-planned"); $('button').removeClass("active"); $('button.planned-btn').addClass("active"); });
+		$('button.expecting-btn').click( function() { filterArchives("litter-expecting"); $('button').removeClass("active"); $('button.expecting-btn').addClass("active"); });
 
 		if ( getUrlVar('page') == "males" ) { filterArchives("dogs-male"); $('button').removeClass("active"); $('button.males-btn').addClass("active"); }
 		else if ( getUrlVar('page') == "females" ) { filterArchives("dogs-female"); $('button').removeClass("active"); $('button.females-btn').addClass("active"); }
 		else { filterArchives(); $('button').removeClass("active"); $('button.all-btn').addClass("active"); }
 		
 		if ( getUrlVar('page') == "available" ) { filterArchives("litter-available"); $('button').removeClass("active"); $('button.available-btn').addClass("active"); }
-		if ( getUrlVar('page') == "planned" ) { filterArchives("litter-planned"); $('button').removeClass("active"); $('button.planned-btn').addClass("active"); }		
+		if ( getUrlVar('page') == "expecting" ) { filterArchives("litter-expecting"); $('button').removeClass("active"); $('button.expecting-btn').addClass("active"); }		
 		
 		// AJAX - insert Call Name before the "headline" (full name) of each dog pic			
 		addName = function(callname, thisDiv) {	

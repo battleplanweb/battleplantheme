@@ -24,7 +24,7 @@ get_header();
 			ob_start(); ?>
 				<div class="row-of-buttons">
 					<div class="block block-button"><button class="available-btn" tabindex="0">Available</button></div>
-					<div class="block block-button"><button class="planned-btn" tabindex="0">Planned</button></div>
+					<div class="block block-button"><button class="expecting-btn" tabindex="0">Expecting</button></div>
 					<div class="block block-button"><button class="all-btn" tabindex="0">All</button></div>
 				</div>
 			<?php 

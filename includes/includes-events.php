@@ -6,14 +6,15 @@ https://docs.theeventscalendar.com/reference/functions/
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
-# Event Teasers
-
+# Shortcodes
+# Set up Admin Columns
 --------------------------------------------------------------*/
 
 
 /*--------------------------------------------------------------
-# Event Teasers
+# Shortcodes
 --------------------------------------------------------------*/
+// display teasers of upcoming events 
 add_shortcode( 'event_teasers', 'battleplan_event_teasers' );
 function battleplan_event_teasers( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'name'=>'', 'style'=>'1', 'width'=>'default', 'grid'=>'1-1-1', 'tag'=>'featured', 'max'=>'3', 'start'=>'now', 'end'=>'', 'valign'=>'stretch', 'show_btn'=>'true', 'btn_text'=>'Read More' ), $atts );
@@ -51,4 +52,132 @@ function battleplan_event_teasers( $atts, $content = null ) {
 		return do_shortcode($buildEvents);
 	endif;
 }	
+
+/*--------------------------------------------------------------
+# Set up Admin Columns
+--------------------------------------------------------------*/
+add_action( 'ac/ready', 'battleplan_event_column_settings' );
+function battleplan_event_column_settings() {
+	ac_register_columns( 'tribe_events', array(
+		array(
+			'columns'=>array(
+				'featured-image'=>array(
+					'type'=>'column-featured_image',
+					'label'=>'',
+					'width'=>'100',
+					'width_unit'=>'px',
+					'featured_image_display'=>'image',
+					'image_size'=>'icon',
+					'image_size_w'=>'60',
+					'image_size_h'=>'60',
+					'edit'=>'off',
+					'sort'=>'off',
+					'filter'=>'off',
+					'filter_label'=>'',
+					'name'=>'featured-image',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'title'=>array(
+					'type'=>'title',
+					'label'=>'Title',
+					'width'=>'',
+					'width_unit'=>'%',
+					'edit'=>'on',
+					'sort'=>'on',
+					'name'=>'title',
+					'label_type'=>'',
+					'search'=>'on'
+				),		
+				'start-date'=>array(
+					'type'=>'start-date',
+					'label'=>'Start Date',
+					'width'=>'',
+					'width_unit'=>'%',
+					'date_format'=>'wp_default',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'filter_format'=>'monthly',
+					'name'=>'start-date',
+					'label_type'=>'',
+					'search'=>'on'
+				),		
+				'end-date'=>array(
+					'type'=>'end-date',
+					'label'=>'End Date',
+					'width'=>'',
+					'width_unit'=>'%',
+					'date_format'=>'wp_default',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'filter_format'=>'monthly',
+					'name'=>'end-date',
+					'label_type'=>'',
+					'search'=>'on'
+				),				
+				'recurring'=>array(
+					'type'=>'recurring',
+					'label'=>'Recurring',
+					'width'=>'',
+					'width_unit'=>'%',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'end-date',
+					'label_type'=>'',
+					'search'=>'on'
+				),					
+				'events-cats'=>array(
+					'type'=>'events-cats',
+					'label'=>'Categories',
+					'width'=>'',
+					'width_unit'=>'%',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'events-cats',
+					'label_type'=>'',
+					'search'=>'on'
+				),							
+				'tags'=>array(
+					'type'=>'tags',
+					'label'=>'Tags',
+					'width'=>'',
+					'width_unit'=>'%',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'tags',
+					'label_type'=>'',
+					'search'=>'on'
+				),	
+				'author'=>array(
+					'type'=>'author',
+					'label'=>'Author',
+					'width'=>'',
+					'width_unit'=>'%',
+					'edit'=>'on',
+					'sort'=>'on',
+					'name'=>'author',
+					'label_type'=>'',
+					'search'=>'on'
+				)
+			),
+			'layout'=>array(
+				'id'=>'5fce1c19ac6bb',
+				'name'=>'battleplan',
+				'roles'=>false,
+				'users'=>false,
+				'read_only'=>false
+			)			
+		)
+	) );
+}
 ?>

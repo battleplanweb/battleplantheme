@@ -1,5 +1,6 @@
-jQuery(function($) {		
-	$(window).load(function() { 
+document.addEventListener("DOMContentLoaded", function () {	"use strict"; (function($) {
+
+	$(window).on("load", function() {
 		
 	// Convert elements to standard class names
 		
@@ -78,4 +79,5 @@ jQuery(function($) {
 		$('.tribe-events-list-event-title a').attr('aria-hidden','true').attr('tabindex', '-1');
 				
 	});
-});	
+	
+})(jQuery); });

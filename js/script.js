@@ -1,5 +1,4 @@
-jQuery(function($) { try {
-	
+document.addEventListener("DOMContentLoaded", function () {	"use strict"; (function($) {
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
@@ -14,14 +13,14 @@ jQuery(function($) { try {
 # If page load fails
 
 --------------------------------------------------------------*/
-	
-	
+
+
 /*--------------------------------------------------------------
 # Basic site functionality
 --------------------------------------------------------------*/
-	
+
 	var getThemeURI = theme_dir.theme_dir_uri, getUploadURI = theme_dir.upload_dir_uri, mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 42, timezone;
-	
+
 // Add Post ID as an ID attribute on body tag	
 	var postID = "noID";    
 	$.each($('body').attr('class').split(' '), function (index, className) { 
@@ -29,37 +28,37 @@ jQuery(function($) { try {
 		else if (className.indexOf('page-id-') === 0) { postID = className.substr(8); }
 	});	
 	$('body').attr('id',postID);
-	
+
 // Add page slug as class to body
 	var slug = window.location.pathname;
 	slug = slug.substr(1).slice(0, -1).replace("/", "-");		
 	if ( slug ) { slug = "slug-"+slug; } else { slug = "slug-home"; }
 	$('body').addClass(slug);
-	
+
 // Set up Logo to link to home page	
 	$('.logo').css("cursor","pointer").click(function() {
-  		window.location = "/";
+		window.location = "/";
 	});
 	window.linkHome = function (container) {
 		$(container).css( "cursor", "pointer" );
 		$(container).click(function() { window.location = "/"; });
 	};		
-	
+
 // Set up American Standard logo to link to American Standard website
 	$('.as-logo, .am-stand-logo, .widget-as-logo').each(function() { 
 		$(this).wrapInner('<a href="https://www.americanstandardair.com/"></a>'); 
 	});
-		
+
 // Track phone number clicks in Google Analytics
 	window.trackClicks = function(type, category, action, url) {
 		gtag('event', type, { 'event_category': category, 'event_action': action, 'event_label': url, 'transport_type': 'beacon', 'event_callback': function(){document.location = url;} });
 	};
-	
+
 // Track contact form submissions in Google Analytics
 	document.addEventListener( 'wpcf7mailsent', function( event ) {
 		gtag('event', 'contact', { 'event_category': 'Contact', 'event_action': 'Email' });
 	}, false );
-	
+
 // Set up Cookies
 	window.setCookie = function(cname,cvalue,exdays) {
 		var d = new Date();
@@ -75,22 +74,22 @@ jQuery(function($) { try {
 		}
 		return "";
 	};	
-	
+
 // Check if this is a visitor's first page to view, & add .first-page class to trigger special CSS
 	if ( !getCookie('first-page') ) { $("body").addClass("first-page"); setCookie('first-page', 'no'); } else { $("body").addClass("not-first-page"); }
-	
+
 // Is user on an Apple device?
 	window.isApple = function () {
 		var iOS = !!navigator.platform && /iPad|iPhone|iPod/.test(navigator.platform);
 		return iOS;		
 	};	
-	
+
 // Get "slug" of current webpage
 	window.getSlug = function () {
 		var findSlug = window.location.pathname.split('/');
 		return findSlug[1];		
 	};	
-	
+
 // Get variable from page's URL
 	window.getUrlVar = function (key) {
 		key = key || "page";
@@ -98,12 +97,12 @@ jQuery(function($) { try {
 		if (results == null) { return null; }
 		return decodeURI(results[1]) || 0;
 	};
-	
+
 // Extend .hasClass to .hasPartialClass
 	$.fn.hasPartialClass = function(partial){
 		return new RegExp(partial).test(this.prop('class')); 
 	};
-	
+
 // Find width of screen
 	window.getDeviceW = function () {
 		var deviceWidth = $(window).width();			
@@ -112,7 +111,7 @@ jQuery(function($) { try {
 		}
 		return deviceWidth;
 	};		
-	
+
 // Find height of screen
 	window.getDeviceH = function () {
 		var deviceHeight = $(window).height();			
@@ -121,16 +120,16 @@ jQuery(function($) { try {
 		}
 		return deviceHeight;
 	};	
-	
+
 // Make mobile and tablet cut off variables available in script-site.js
 	window.getMobileCutoff = function () {
 		return mobileCutoff;
 	};	
-	
+
 	window.getTabletCutoff = function () {
 		return tabletCutoff;
 	};	
-	
+
 // Copy one element's classes to an outer div
 	window.copyClasses = function (copyTo, copyFrom, additional) {	
 		copyFrom = copyFrom || "img, iframe";
@@ -140,10 +139,16 @@ jQuery(function($) { try {
 			}).get().join(' ')).addClass(additional);
 		});
 	};
-		
+
 // Find & Replace text or html in a Div	
-	window.replaceText = function (container, find, replace, type) {
+	window.replaceText = function (container, find, replace, type, all) {
 		type = type || "text";	
+		all = all || "false";	
+		
+		if ( all == "true" ) {
+			find = new RegExp(find, "gi");			
+		}
+		
 		if ( type == "text" ) { 
 			$(container).text(function () {
 				var thisText = $(this).text();
@@ -156,7 +161,7 @@ jQuery(function($) { try {
 			});
 		}
 	};	
-		
+
 // Truncate long testimonial text
 	window.trimText = function (length, container) {
 		if (trimText.done) return;
@@ -171,7 +176,7 @@ jQuery(function($) { try {
 		});
 		trimText.done = true;
 	};
-	
+
 // Remove sidebar from specific pages
 	window.removeSidebar = function(page) {	
 		test1 = page.replace(".", "");
@@ -181,7 +186,7 @@ jQuery(function($) { try {
 			removeDiv('#secondary');
 		} 
 	};
-	
+
 // Create faux div for sticky elements pulled out of document flow	
 	window.addStuck = function (element, faux) {
 		faux = faux || "true";	
@@ -190,13 +195,13 @@ jQuery(function($) { try {
 			if ( faux == "true" ) { addFaux(element); }
 		}
 	};
-	
+
 	window.removeStuck = function (element, faux) {
 		faux = faux || "true";
 		$(element).removeClass("stuck");
 		if ( faux == "true" ) { removeFaux(element); }
 	};
-	
+
 	window.addFaux = function (element) {
 		var theEl = $(element);
 		var elementName = element.substr(1);		
@@ -206,13 +211,13 @@ jQuery(function($) { try {
 			theFaux.animate({ "height":theEl.outerHeight()+"px" }, 0);
 		}
 	};
-	
+
 	window.removeFaux = function (element) {
 		var elementName = element.substr(1);
 		var theFaux = $("."+elementName+"-faux");
 		theFaux.remove();
 	};
-		
+
 // Stick an element to top of screen
 	window.lockDiv = function(container, strictTrigger, strictOffset, strictTop, faux, whichWay) {	
 		strictTrigger = strictTrigger || "";		
@@ -220,6 +225,7 @@ jQuery(function($) { try {
 		strictTop = strictTop || "";	
 		faux = faux || "true";			
 		whichWay = whichWay || "both";	
+		var trigger, offset;
 
 		if ( strictTrigger === "" ) {
 			if ( $(container).next().length ) {
@@ -230,7 +236,7 @@ jQuery(function($) { try {
 		} else {
 			trigger = $(strictTrigger);
 		}
-		
+
 		if ( strictOffset === "" ) {
 			if ( strictTop === "" ) {
 				offset = $(container).outerHeight();
@@ -240,7 +246,7 @@ jQuery(function($) { try {
 		} else {
 			offset = Number(strictOffset);	
 		}
-		
+
 		$(container).css("top","unset");
 
 		trigger.waypoint(function(direction) {			
@@ -256,7 +262,7 @@ jQuery(function($) { try {
 			if ( $("#mobile-menu-bar").is(":visible") ) {	
 				newTop = newTop + mobileMenuBarH;
 			}
-			
+
 			if (direction === 'down' && ( whichWay === 'both' || whichWay === 'down' )) {			
 				addStuck(container, faux);
 				$(container).css("top",newTop+"px");
@@ -266,32 +272,32 @@ jQuery(function($) { try {
 			}	
 		}, { offset: offset+"px" });		
 	};
-		
+
 // Shortcut to stick menu to top
 	window.lockMenu = function() {	
 		lockDiv('#desktop-navigation');	
 	};
-	
+
 // Animate the automated scrolling to section of content
 	window.animateScroll = function (target, topSpacer, initSpeed) {
-		var newTop=0, newLoc=0;
+		var newTop=0, newLoc=0, transSpeed;
 		initSpeed = initSpeed || 0;
 		topSpacer = topSpacer || 0;
-		
+
 		if ( $("#mobile-menu-bar").is(":visible") ) {	
 			topSpacer = topSpacer + mobileMenuBarH;	
 		}
-				
+
 		$('.stuck').each(function() {
 			newTop = newTop + $(this).outerHeight();				
 		});		
-		
+
 		if ( typeof target === 'object' || typeof target === 'string' ) {		
 			newLoc = $(target).offset().top - newTop - topSpacer;
 		} else {
 			newLoc = target - newTop - topSpacer;
 		}
-		
+
 		if ( initSpeed == 0 ) { 
 			transSpeed = Math.abs(( $(window).scrollTop() - newLoc )) / 3;
 			if ( transSpeed < 500 ) { transSpeed = 500; }
@@ -310,7 +316,7 @@ jQuery(function($) { try {
 			$('a.scroll-top').css({ "display": "block" }).animate( { opacity: 1 }, 150);
 		}	
 	}, { offset: '10%' });	
-		
+
 // Set up "Scroll Down" button
 	var waypoints = $('#wrapper-content').waypoint(function(direction) {
 		if (direction === 'down') {			
@@ -319,7 +325,7 @@ jQuery(function($) { try {
 			$('.scroll-down').fadeIn("fast"); 	
 		}	
 	}, { offset: '99%' });	
-	
+
 //Find screen position of element
 	window.getPosition = function (container, neededPos, scope) {
 		scope = scope || 'window';	
@@ -337,7 +343,7 @@ jQuery(function($) { try {
 		getRight = getLeft + conW;
 		getCenterX = getLeft + (conW/2);
 		getCenterY = getTop + (conH/2);	
-		
+
 		if ( neededPos == "left" || neededPos == "l") { return getLeft; }		
 		if ( neededPos == "top" || neededPos == "t") { return getTop; }
 		if ( neededPos == "bottom" || neededPos == "b") { return getBottom; }
@@ -345,7 +351,7 @@ jQuery(function($) { try {
 		if ( neededPos == "centerX" || neededPos == "centerx" || neededPos == "center-x" ) { return getCenterX; }		
 		if ( neededPos == "centerY" || neededPos == "centery" || neededPos == "center-y" ) { return getCenterY; }		
 	};
-	
+
 // Accordion section - control opening & closing of expandable text boxes
 	window.buildAccordion = function (topSpacer, cssDelay, transSpeed, closeDelay, openDelay, clickActive) {
 		if (buildAccordion.done) return;
@@ -356,10 +362,10 @@ jQuery(function($) { try {
 		topSpacer = topSpacer || 0.1;
 		clickActive = clickActive || 'close';
 		var fullDelay = cssDelay+closeDelay+openDelay+transSpeed, useThis, accPos = [];
-		
+
 		if ( topSpacer < 1 ) { topSpacer = getDeviceH() * topSpacer; }		
 		if ( getDeviceW() < mobileCutoff ) { topSpacer = topSpacer + mobileMenuBarH; }		
-				
+
 		$('.block-accordion').attr( 'aria-expanded', false );
 		$('.block-accordion').first().addClass('accordion-first');
 		$('.block-accordion').last().addClass('accordion-last');
@@ -369,13 +375,13 @@ jQuery(function($) { try {
 		} else {
 			$('.block-accordion').each(function() { accPos.push($(this).offset().top); });			
 		}
-	
+
 		$(".block-accordion").keyup(function(event) {
 			if (event.keyCode === 13 || event.keyCode === 32) {
 				$(this).click();
 			}
 		});
-			
+
 		$(".block-accordion").click(function(e) {		
 			e.preventDefault();  
 			var locAcc = $(this), locIndex = locAcc.index('.block-accordion'), locPos = accPos[locIndex], topPos = accPos[0], moveTo = 0;			
@@ -412,7 +418,7 @@ jQuery(function($) { try {
 		});
 		buildAccordion.done = true;
 	};
-	
+
 //Set full screen parallax background for desktops
 	window.parallaxBG = function (container, filename, backgroundW, backgroundH, posX, posY, bleed, speed) {
 		posX = posX || 'center';
@@ -427,11 +433,11 @@ jQuery(function($) { try {
 			theContainer.parallax({ imageSrc:getUploadURI+'/'+filename, speed:parallaxS, bleed:bleed, naturalWidth:backgroundW, naturalHeight:backgroundH, positionX:posX, positionY:posY });	
 		}  
 	};
-	
+
 //Control parallax movement of divs within a container
 	window.parallaxDiv = function (container, element) {
 		element = element || ".parallax";
-		
+
 		function moveDiv() {
 			$(container).each(function() {	
 				var elem = $(this).find(element), elemH = elem.outerHeight();
@@ -449,7 +455,7 @@ jQuery(function($) { try {
 		}
 		moveDiv();
 	};
-			
+
 // Set up "Magic Menu"	
 	window.magicMenu = function (menu, linkOn, linkOff, stateChange) {
 		menu = menu || "#desktop-navigation .menu";
@@ -462,7 +468,7 @@ jQuery(function($) { try {
 		$baseNav.prepend("<div id='magic-line'></div>");
 		$baseNav.prepend("<div id='off-screen' class='" + orient + "'></div>");			
 		var $magicLine = $("#magic-line"), $offScreen = $("#off-screen");
-		
+
 		if ( !$mainNav.find("li.current-menu-parent").length ) {		
 			$currentPage = $mainNav.find("li.current-menu-item");
 		} else { 
@@ -470,7 +476,7 @@ jQuery(function($) { try {
 		}				
 		if ( !$currentPage.length || $currentPage.hasClass("mobile-only") ) { $currentPage = $offScreen; }	
 		$currentPage.find(">a").addClass(linkOn);
-		
+
 		window.setMagicMenu = function () {
 			if ( orient == "horizontal" ) {
 				magicL = $currentPage.position().left + (($currentPage.outerWidth() - $currentPage.width()) / 2);
@@ -484,11 +490,11 @@ jQuery(function($) { try {
 				magicH = $currentPage.height();  
 			}
 			$magicLine.css({ "transform":"translate("+magicL+"px, "+magicT+"px)", "width": magicW, "height": magicH }).data("origT", magicT).data("origL", magicL).data("origW", magicW).data("origH", magicH);	
-			
+
 			$magicLine.delay(250).animate({ "opacity":1 }, 0);
-			
+
 			var arrayT = [], arrayL = [], arrayW = [], arrayH = [];
-			
+
 			$('#desktop-navigation ul.main-menu > .menu-item, .widget-navigation .menu-item').each(function() {
 				var thisItem = $(this);	
 				if ( orient == "horizontal" ) {
@@ -503,7 +509,7 @@ jQuery(function($) { try {
 					arrayH.push(thisItem.height()); 
 				}
 			});
-		
+
 			$mainNav.find(" > li").hover(function() {			
 				$el = $(this); 
 				var getIndex = $el.index();
@@ -516,7 +522,7 @@ jQuery(function($) { try {
 				$currentPage.find(">a").addClass(linkOn).removeClass(linkOff);
 			});
 		};
-		
+
 		// Control the magicMenu state change based on position
 		if ( stateChange == "true" ) {
 			var getMagicSide = $baseNav.find('.flex').position().left, getMagicW = $baseNav.find('.flex').width(), getMagicPos = $currentPage.position().left - getMagicSide, getMagicAdj, getMagicPct;				
@@ -538,27 +544,27 @@ jQuery(function($) { try {
 				if ( getMagicPct >= 0.33 && getMagicPct < 0.66 ) { $('body').removeClass('menu-alt-1').removeClass('menu-alt-3').addClass('menu-alt-2'); }
 				if ( getMagicPct >= 0.66 ) { $('body').removeClass('menu-alt-1').removeClass('menu-alt-2').addClass('menu-alt-3'); }		
 			};	
-			
+
 			magicColor(getMagicPos);
 		}
-		
+
 		setTimeout( function () { setMagicMenu(); }, 500);
 		$(window).resize(function() { setMagicMenu(); }); 	
 	};		
-	
+
 // Duplicate menu button text onto the button BG
 	$( ".main-navigation ul.main-menu li > a").each(function() { 
 		var btnText = $(this).html();			
 		$(this).parent().attr('data-content', btnText);
 	});
-	
+
 // Set up Logo Slider
 	$('.logo-slider').each(function() {
 		var logoSlider = $(this), logoRow = logoSlider.find('.logo-row'), logoNum = logoRow.children().length, logoW=logoNum * 1000, speed = parseInt(logoSlider.attr('data-speed')), delay = parseInt(logoSlider.attr('data-delay')), pause = logoSlider.attr('data-pause'), origPadding = parseInt(logoSlider.attr('data-padding')), easingType = "swing", rotating = true;
-		
+
 		logoRow.css('width', logoW);
 		speed = speed * 1000;
-		
+
 		if ( delay == "0" ) { easingType = "linear"; } else { delay = delay * 1000; }
 		if ( pause == "yes" || pause == "true" ) {
 			logoSlider.mouseover(function() { rotating = false; });
@@ -575,7 +581,7 @@ jQuery(function($) { try {
 				});
 			} 	
 		}, delay);
-		
+
 		window.checkLogoSlider = function () {
 			var containerH = 0, totalW=0, imgW=0, setPadding=0;
 			logoRow.find('span').each( function() {
@@ -598,18 +604,18 @@ jQuery(function($) { try {
 				logoRow.find('span').css({'padding-left':origPadding+'px', 'padding-right':origPadding+'px'});
 			}
 		};			
-			
-		$(window).load(function() { checkLogoSlider(); });
+
+		$(window).on( 'load', function() { checkLogoSlider(); });
 		$(window).resize(function() { checkLogoSlider(); }); 			
 	});
-	
+
 	// Filter Post Archive entries according to class (hide all, arrange, show all)  ** Mill Pond Retrievers dog / litter archive
 	window.filterArchives = function (field, container, column, speed) {
 		field = field || null;		
 		container = container || ".section.archive-content";		
 		column = column || ".col-archive";
 		speed = speed || 300;
-		
+
 		$(container).fadeTo(speed, 0, function () {
 			if ( field == "" || field == null ) { $(column).show(); }
 			else { $(column).hide(); $(column+'.'+field).show(); }	
@@ -617,16 +623,16 @@ jQuery(function($) { try {
 			$(container).fadeTo(speed, 1);
 		});
 	};				
-		
+
 /*--------------------------------------------------------------
 # DOM level functions
 --------------------------------------------------------------*/
-	
+
 // Replace one class with another
 	$.fn.replaceClass = function (pFromClass, pToClass) {
-        return this.removeClass(pFromClass).addClass(pToClass);
-    };
-			
+		return this.removeClass(pFromClass).addClass(pToClass);
+	};
+
 // Randomly select from a group of elements
 	$.fn.random = function() { return this.eq(Math.floor(Math.random() * this.length)); };
 
@@ -640,7 +646,7 @@ jQuery(function($) { try {
 			thisDiv.clone().insertBefore( thisAnchor );
 		}
 	};	
-	
+
 // Move a single div to another location
 	window.moveDiv = function (moveThis, anchor, where) {
 		where = where || "after";
@@ -653,7 +659,7 @@ jQuery(function($) { try {
 			thisAnchor.append(thisDiv);
 		}
 	};
-	
+
 // Move multiple divs to another location
 	window.moveDivs = function (wrapper, moveThis, anchor, where) {
 		where = where || "after";
@@ -668,7 +674,7 @@ jQuery(function($) { try {
 			}
 		});
 	};
-		
+
 // Add a div within an existing div
 	window.addDiv = function (target, newDiv, where) {
 		newDiv = newDiv || "<div></div>";
@@ -680,7 +686,7 @@ jQuery(function($) { try {
 			currDiv.prepend( addDiv );
 		}
 	};
-		
+
 // Wrap a div inside a newly formed div
 	window.wrapDiv = function (target, newDiv, where) {
 		newDiv = newDiv || "<div></div>";
@@ -691,23 +697,28 @@ jQuery(function($) { try {
 			$(target).each(function() { $(this).wrapInner(newDiv); });
 		}
 	};	
-	
+
 // Wrap multiple divs inside a newly formed div
 	window.wrapDivs = function (target, newDiv) {
 		newDiv = newDiv || "<div />";
 		$(target).wrapAll( newDiv );
 	};	
 
+// Remove parent of target div
+	window.removeParent = function (target) {
+		$(target).unwrap();
+	};	
+
 // Delete a div
 	window.removeDiv = function (target) {
 		$(target).remove();
 	};	
-	
-		
+
+
 /*--------------------------------------------------------------
 # Set up animation
 --------------------------------------------------------------*/
-	
+
 // Animate single element (using transitions from animate.css)
 	window.animateDiv = function(container, effect, initDelay, offset, speed) {
 		initDelay = initDelay || 0;		
@@ -722,7 +733,7 @@ jQuery(function($) { try {
 			this.destroy();
 		}, { offset: offset });
 	};
-	
+
 // Animate multiple elements
 	window.animateDivs = function(container, effect1, effect2, initDelay, mainDelay, offset, speed) {	
 		initDelay = initDelay || 0;		
@@ -739,7 +750,7 @@ jQuery(function($) { try {
 		setTimeout( function() {
 			theParent.find(theDiv+".animated").waypoint(function() {
 				var thisDiv = $(this.element);	
-				var divIndex = thisDiv.prevAll(theDiv).size();
+				var divIndex = thisDiv.prevAll(theDiv).length;
 				thisDiv.css({ "animation-duration": speed+"s"});
 				if ( divIndex > 6 ) {
 					theDelay = mainDelay;	
@@ -757,7 +768,7 @@ jQuery(function($) { try {
 			}, { offset: offset });
 		}, initDelay);
 	};
-		
+
 // Animate grid elements
 	window.animateGrid = function(container, effect1, effect2, effect3, initDelay, mainDelay, offset, mobile, speed) {
 		initDelay = initDelay || 0;		
@@ -823,7 +834,7 @@ jQuery(function($) { try {
 			this.destroy();
 		}, { offset: offset });	
 	};	
-	
+
 // Animate single element (using CSS transitions in go-style.css)
 	window.animateCSS = function(container, initDelay, offset, speed) {	
 		initDelay = initDelay || 0;		
@@ -838,7 +849,7 @@ jQuery(function($) { try {
 			this.destroy();
 		}, { offset: offset });
 	};
-	
+
 // Animate the hover effect of a button, and allow to finish (even if mouse out)
 	window.animateBtn = function(menu, notClass, animateClass) {	
 		menu = menu || ".menu";		
@@ -848,7 +859,7 @@ jQuery(function($) { try {
 		theEl.bind("webkitAnimationEnd mozAnimationEnd animationend", function() { $(this).removeClass(animateClass); });
 		theEl.hover(function() { $(this).addClass(animateClass); });	
 	};
-	
+
 // Split string into words for animation
 	window.animateWords = function(container, effect1, effect2, initDelay, mainDelay, offset) {
 		initDelay = initDelay || 0;		
@@ -917,11 +928,11 @@ jQuery(function($) { try {
 			}, { offset: offset });
 		});
 	};
-		
+
 /*--------------------------------------------------------------
 # Set up pages
 --------------------------------------------------------------*/
-	
+
 // Needed temporarily to force columns to new framework naming structure */
 	$('.col-8').addClass('span-1').removeClass('col-8');
 	$('.col-17').addClass('span-2').removeClass('col-17');
@@ -939,23 +950,23 @@ jQuery(function($) { try {
 	$('.col-83').addClass('span-10').removeClass('col-83');
 	$('.col-92').addClass('span-11').removeClass('col-92');
 	$('.col-100').addClass('span-12').removeClass('col-100');
-	
+
 // Remove empty elements
 	removeDiv('p:empty, .archive-intro:empty');
-	
+
 // Wrap content within .site-main so that widgets can be distributed properly
 	wrapDiv('.site-main','<div class="site-main-inner"></div>', 'inside');	
-	
+
 // Add .page-begins to the next section under masthead for purposes of locking .top-strip
 	if ( $('#wrapper-top').length ) { $('#wrapper-top').addClass('page-begins'); } else { $('#wrapper-content').addClass('page-begins'); }
-	
+
 // Add "noFX" class to img if it appears in any of the parent divs
 	$( "div.noFX" ).find("img").addClass("noFX");
 	$( "div.noFX" ).find("a").addClass("noFX");
-	
+
 // Add .fa class to all icons using .far, .fas and .fab
 	$( ".far, .fas, .fab" ).addClass("fa");
-	
+
 // Fade in lazy loaded images
 	$('img').addClass('unloaded');	
 	$('img').one('load', function() { 
@@ -965,13 +976,13 @@ jQuery(function($) { try {
 			$(this).trigger('load'); 
 		}
 	});	
-	
+
 // Check if "Remove Sidebar" option is checked in admin panel, and remove sidebar if applicable	
 if ( $('body').hasClass('remove-sidebar') ) { 
 	$('body').removeClass('sidebar-right').removeClass('sidebar-left').addClass('sidebar-none'); 
 	removeDiv('#secondary');
 }	
-	
+
 // Preload BG image and fade in
 	if ( $( 'body' ).hasClass( "background-image" ) && getDeviceW() > mobileCutoff ) {
 		var preloadBG = new Image();
@@ -979,13 +990,13 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		preloadBG.onerror = function() { console.log("site-background.jpg not found"); };
 		preloadBG.src = getUploadURI + "/" + "site-background.jpg";  
 	}
-	
+
 // Add "active" & "hover" classes to menu items, assign roles for ADA compliance		
 	$(".main-navigation ul.main-menu, .widget-navigation ul.menu").attr('role','menubar');
 	$(".main-navigation li, .widget-navigation li").attr('role','none');
 	$(".main-navigation a, .widget-navigation a").attr('role','menuitem');
 	$(".main-navigation ul.sub-menu, .widget-navigation ul.sub-menu").attr('role','menu');
-	
+
 	var	$currents = $(".main-navigation ul.main-menu > li.current-menu-item, .main-navigation ul.main-menu > li.current_page_item, .main-navigation ul.main-menu > li.current-menu-parent, .main-navigation ul.main-menu > li.current_page_parent, .main-navigation ul.main-menu > li.current-menu-ancestor, .widget-navigation ul.menu > li.current-menu-item, .widget-navigation ul.menu > li.current_page_item, .widget-navigation ul.menu > li.current-menu-parent, .widget-navigation ul.menu > li.current_page_parent, .widget-navigation ul.menu > li.current-menu-ancestor"); 
 	$currents.addClass( "active" );
 	$currents.find(">a").attr('aria-current','page');
@@ -996,7 +1007,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		$(this).removeClass("hover");
 		$currents.replaceClass( "dormant", "active" ); 
 	});		
-	
+
 	var	$subCurrents = $(".main-navigation ul.sub-menu > li.current-menu-item, .main-navigation ul.sub-menu > li.current_page_item, .main-navigation ul.sub-menu > li.current-menu-parent, .main-navigation ul.sub-menu > li.current_page_parent, .main-navigation ul.sub-menu > li.current-menu-ancestor, .widget-navigation ul.sub-menu > li.current-menu-item, .widget-navigation ul.sub-menu > li.current_page_item, .widget-navigation ul.sub-menu > li.current-menu-parent, .widget-navigation ul.sub-menu > li.current_page_parent, .widget-navigation ul.sub-menu > li.current-menu-ancestor"); 
 	$subCurrents.addClass( "active" );
 	$subCurrents.find(">a").attr('aria-current','page');
@@ -1007,17 +1018,17 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		$(this).removeClass("hover");
 		$subCurrents.replaceClass( "dormant", "active" ); 
 	});
-	
+
 // Animate scrolling when moving up or down a page
 	$('a[href^="#"]:not(.carousel-control-next):not(.carousel-control-prev)').on('click', function (e) {
 		e.preventDefault();    
 		var target = this.hash;
 		animateScroll(target);
 	});
-	
+
 // Automatically adjust for Google review bar 
 	$( '<div class="wp-google-badge-faux"></div>' ).insertAfter( $('#colophon'));
-	
+
 // Set up mobile menu animation
 	window.closeMenu = function () {
 		$("#mobile-menu-bar .activate-btn").removeClass("active"); 
@@ -1025,7 +1036,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		$(".top-push.screen-mobile #page").css({ "top": "0" });
 		$(".top-push.screen-mobile .top-strip.stuck").css({ "top": mobileMenuBarH+"px" });
 	};
-	
+
 	window.openMenu = function () {
 		$("#mobile-menu-bar .activate-btn").addClass("active"); 
 		$("body").addClass("mm-active"); 
@@ -1034,16 +1045,16 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		$(".top-push.screen-mobile.mm-active #page").css({ "top": getMenuH+"px" });	
 		$(".top-push.screen-mobile.mm-active .top-strip.stuck").css({ "top": getTotalH+"px" });
 	};
-	
+
 	$("#mobile-menu-bar .activate-btn").click(function() {
 		if ( $(this).hasClass("active")) { closeMenu();	} else { openMenu(); }
 	}); 	
-	
+
 	window.closeSubMenu = function (el) {
 		$(el).removeClass("active"); 
 		$(el).height(0);
 	};
-	
+
 	window.openSubMenu = function (el, h) {
 		$('#mobile-navigation ul.sub-menu').removeClass("active"); 
 		$('#mobile-navigation ul.sub-menu').height(0);
@@ -1061,19 +1072,19 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		}); 
 		closeSubMenu(theSub); 		
 	});	
-	
+
 	$('#mobile-navigation').removeClass("get-sub-heights");
 
 	$('#mobile-navigation li:not(.menu-item-has-children)').each(function() { 
 		var theButton = $(this);
 		theButton.click(function() { closeMenu(); }); 
 	});		
-	
+
 // Ensure all slides in a Bootstrap carousel are even height
 	$(".carousel").each(function() {
 		var thisCarousel = $(this), maxH = 0, getPadding = parseInt(thisCarousel.find(".carousel-inner").css('padding-bottom'));
 		thisCarousel.data("maxH", 0);
-		
+
 		thisCarousel.on('slid.bs.carousel', function() {
 			var thisSlideH = thisCarousel.find(".carousel-item.active").outerHeight() + getPadding;
 			if ( thisSlideH > maxH ) { 
@@ -1082,7 +1093,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			}
 		});		
 	});			
-	
+
 // Add star icons to reviews and ratings
 	$('.testimonials-rating').each(function() {
 		var getRating = $(this).html(), replaceRating = getRating;
@@ -1093,7 +1104,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		if ( getRating == 1) replaceRating = '<span class="rating rating-1-star" aria-hidden="true"><span class="sr-only">Rated 1 Star</span></span>';;
 		$(this).html( replaceRating );
 	});
-	
+
 // Determine which day of week and add active class on office-hours widget	
 	var todayIs = new Date().getDay();
 	if ( todayIs == 0 ) $(".office-hours .row-sun").addClass("today");
@@ -1103,17 +1114,17 @@ if ( $('body').hasClass('remove-sidebar') ) {
 	if ( todayIs == 4 ) $(".office-hours .row-thu").addClass("today");
 	if ( todayIs == 5 ) $(".office-hours .row-fri").addClass("today");
 	if ( todayIs == 6 ) $(".office-hours .row-sat").addClass("today");
-	
+
 /*--------------------------------------------------------------
 # Set up sidebar
 --------------------------------------------------------------*/	
-	
+
 	window.setupSidebar = function (compensate, sidebarScroll, shuffle) {
 		compensate = compensate || 0;		
 		sidebarScroll = sidebarScroll || "true";
 		shuffle = shuffle || "true";
 		var isPaused = false;		
-						
+
 // Shuffle an array of widgets
 		window.shuffleWidgets = function ($elements) {
 			var i, index1, index2, temp_val, count = $elements.length, $parent = $elements.parent(), shuffled_array = [];
@@ -1138,11 +1149,11 @@ if ( $('body').hasClass('remove-sidebar') ) {
 // Set up "locked" widgets, and shuffle the rest
 		$('.widget.lock-to-top, .widget.lock-to-bottom').addClass("locked");		
 		$('.widget:not(.locked)').addClass("shuffle");
-		
+
 		if ( getDeviceW() > mobileCutoff && shuffle == "true" ) { 
 			shuffleWidgets( $('.shuffle') );
 		}
-				
+
 // Initiate widget removal
 		window.widgetInit = function () {
 			if ( getDeviceW() > mobileCutoff && isPaused==false ) { 
@@ -1151,24 +1162,24 @@ if ( $('body').hasClass('remove-sidebar') ) {
 				isPaused = true; 
 			} 
 		};
-				
+
 // Remove widgets that do not fit
 		window.removeWidgets = function (removeWidget) {
 			var contentH = $("#primary .site-main-inner").outerHeight() + compensate, widgetH = $("#secondary .sidebar-inner").outerHeight(true), remainH = widgetH - contentH, removeThis = $(removeWidget);
 
 			if ( remainH > 0 && $('.widget:not(.hide-widget)').length ) {		
 				removeThis.random().addClass("hide-widget");
-						
+
 				if ( $('.widget.remove-first:not(.hide-widget)').length ) { removeWidgets( '.widget.remove-first:not(.hide-widget)' ); }
 				else if ( $('.widget.shuffle:not(.hide-widget)').length ) { removeWidgets( '.widget.shuffle:not(.hide-widget):not(.widget-important)' ); }
 				else if ( $('.widget.lock-to-bottom:not(.hide-widget)').length ) { removeWidgets( '.widget.lock-to-bottom:not(.hide-widget):not(.widget-important)' ); }
 				else { removeWidgets( '.widget.lock-to-top:not(.hide-widget):not(.widget-important)' ); }				
-				
+
 			} else { 
 				checkWidgets();
 			}
 		};						
-		
+
 // Determine the widget with height closest to amount of space remaining to fill
 		window.findClosest = function (compare, loop, test) {
 			var curr, diff = 999999;
@@ -1179,33 +1190,33 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			}
 			return curr;
 		};
-		
+
 // Check hidden widgets for any smaller ones that might still fit
 		window.checkWidgets = function () {			
 				var contentH = $("#primary .site-main-inner").outerHeight() + compensate, widgetH = $("#secondary .sidebar-inner").outerHeight(), i = 0, widgets = [];
 				var remainH = contentH - widgetH + 140; // 140 is arbitrary, can be adjusted as needed to make sure widgets fit but don't go over
-			
+
 				$('.widget.hide-widget').each(function() {
 					var theWidget = $(this);
 					i++;
 					widgets[i] = theWidget.outerHeight(true) + Math.floor((Math.random() * 10) - 5);
 					theWidget.addClass("widget-height-"+widgets[i]);	
 				});
-			
+
 				var replaceWidget = findClosest(remainH, i, widgets);
 				widgets.splice(widgets.indexOf(replaceWidget),1);
 				if ( replaceWidget < remainH ) { $(".widget-height-"+replaceWidget).removeClass("hide-widget"); }
-			
+
 				adjustSidebarH();
 				setTimeout(function() { isPaused = false; }, 3000);
 		};	
-						
+
 // Adjust height of #secondary to match #primary + add extra spacing between .widget if necessary
 		window.adjustSidebarH = function () {
 			var contentH = $("#primary").outerHeight(true) + compensate;
 			$("#secondary").animate( { height: contentH+"px" }, 300);
 		};
-				
+
 // Mark first, last, even and odd widgets
 		window.labelWidgets = function () {
 			$(".widget").removeClass("widget-first").removeClass("widget-last").removeClass("widget-even").removeClass("widget-odd");
@@ -1214,7 +1225,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			$(".widget:not(.hide-widget):odd").addClass("widget-even"); 
 			$(".widget:not(.hide-widget):even").addClass("widget-odd"); 	
 		};
-		
+
  // Move sidebar in conjunction with mouse scroll to keep it even with content
 		window.moveWidgets = function () {
 			if ( sidebarScroll == "true" ) {
@@ -1236,14 +1247,14 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			}
 		};
 	};	
-	
+
 /*--------------------------------------------------------------
 # Screen resize
 --------------------------------------------------------------*/
-	
-	$(window).load(function() { screenResize(true); });
+
+	$(window).on( 'load', function() { screenResize(true); });
 	$(window).resize(function() { screenResize(true); }); 
-	
+
 	window.screenResize = function (widgets) {		
 		widgets = widgets || false;
 
@@ -1253,7 +1264,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 				$(window).trigger('resize.px.parallax');
 				if ( widgets == true ) { widgetInit(); } 
 			} 
-			
+
 			labelWidgets();
 
 		// If not a mobile device and sidebar exists, move widgets with scroll	
@@ -1263,7 +1274,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 				window.removeEventListener('scroll', moveWidgets );
 			}							
 		}, 300); // 200 is shortest time for widgets to work
-		
+
 	// Add class to body to determine which size screen is being viewed
 		$('body').removeClass("screen-5 screen-4 screen-3 screen-2 screen-1 screen-mobile screen-desktop");
 		if ( getDeviceW() > 1280 ) { $('body').addClass("screen-5").addClass("screen-desktop"); }	
@@ -1271,25 +1282,25 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		if ( getDeviceW() <= mobileCutoff && getDeviceW() > 860 ) { $('body').addClass("screen-3").addClass("screen-mobile"); }
 		if ( getDeviceW() <= 860 && getDeviceW() > 576 ) { $('body').addClass("screen-2").addClass("screen-mobile"); }
 		if ( getDeviceW() <= 576 ) { $('body').addClass("screen-1").addClass("screen-mobile"); }
-		
+
 	// Disable href on mobile menu items with children
 		$(".screen-mobile li.menu-item-has-children").children("a").attr("href", "javascript:void(0)");
-		
+
 	// Center the sub-menu ul under the parent li on non-mobile
 		$('.main-navigation ul.sub-menu').each(function() {	
 			var subW = $(this).outerWidth(true), parentW = $(this).parent().width(), moveL = - Math.round((subW - parentW) / 2);
 			$(this).css({ "left":moveL+"px" });			
 		});
-		
+
 	// Close any open menus on mobile (when device ratio changes)
 		closeMenu();
-		
+
 	// Ensure "-faux" elements remain correct size
 		$('div[class*="-faux"]').each(function() {	
 			var fauxDiv = $(this);
 			var fauxClass = "."+fauxDiv.attr('class');
 			var mainClass = fauxClass.replace("-faux", "");
-			
+
 			if ( $( mainClass ).is(":visible") ) {		
 				$( fauxClass ).height($( mainClass ).outerHeight());  
 				$( '.wp-google-badge-faux' ).height($( '.wp-google-badge' ).outerHeight());  
@@ -1300,7 +1311,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 
 		// Shift #secondary below #wrapper-bottom on mobile		
 		moveDiv('.sidebar-shift.screen-mobile #secondary','#colophon',"before");	
-		
+
 		/* Remove horizontal styling from office hours box on cell phones */	
 		//if ( $('body').hasClass('screen-1') ) { 
 			//if ( $('.office-hours').hasClass('horz') ) { 
@@ -1312,61 +1323,64 @@ if ( $('body').hasClass('remove-sidebar') ) {
 				//$('.office-hours').removeClass('force-vert').addClass('horz'); 
 			//}
 		//}		
-		
+
 		/* Set up "fixed" footer, based on class added in header.php */		
 		//var footerH = $(".footer-fixed #footer").outerHeight(true);
 		//$(".footer-fixed #page").css({"marginBottom":footerH+"px"});		
-		
+
 		// Reposition Woocommerce Update Cart button above coupon section on mobile checkout
 		//moveDiv('.woocommerce-page.screen-mobile table.cart td.actions .button[name~="update_cart"]','.woocommerce-page #primary table.cart td.actions .coupon','before');	
 	};
-				
+
 /*--------------------------------------------------------------
 # ADA compliance
 --------------------------------------------------------------*/
-	
+
 	// Add alt="" to all images with no alt tag
 	setTimeout(function() { $('img:not([alt])').attr('alt', ''); }, 50);
 	setTimeout(function() { $('img:not([alt])').attr('alt', ''); }, 1000);
-	
+
 	// Add special focus outline when someone is using tab to navigate site
 	$(document).mousemove(function(event) { $('body').addClass('using-mouse').removeClass('using-keyboard'); });
 	$(document).keydown(function(e) { if( e.keyCode == 9 && !$('body').hasClass("using-mouse") ) { $('body').addClass('using-keyboard'); } });
-	
+
 	// Menu support
 	$('[role="menubar"]' ).on( 'focus.aria mouseenter.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).attr( 'aria-expanded', true ); } );
 	$('[role="menubar"]' ).on( 'blur.aria mouseleave.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).attr( 'aria-expanded', false ); } );
-	
+
 	// Remove iframe from tab order
 	$('iframe').each(function(){
 		$(this).attr("aria-hidden", true).attr("tabindex","-1");		
 	})
-	
+
 	// Add .tab-focus class to links and buttons & auto scroll to better position on screen
 	var allowTabFocus = false;
 	$(window).on('keydown', function(e) {
 		$('*').removeClass('tab-focus');
-	  	if ( e.keyCode === 9 ) { allowTabFocus = true; }
+		if ( e.keyCode === 9 ) { allowTabFocus = true; }
 	});
+	
 	$('*').on('focus', function() {
 		if ( allowTabFocus ) { 
+			console.log("this");
 			$(this).addClass('tab-focus');			
 			$(this).closest('li').addClass('tab-focus');
 			var scrollPos = $(window).scrollTop(), moveTo = $(this).offset().top - ($(window).height() / 2), diff = Math.abs(moveTo - scrollPos);		
 			if ( diff > 200 ) { animateScroll(moveTo); }
 		}
 	});
+	
 	$(window).on('mousedown', function() {
 		$('*').removeClass('tab-focus');
-	  	allowTabFocus = false;
+		allowTabFocus = false;
 	});
-	
+
 /*--------------------------------------------------------------
 # Delay parsing of JavaScript
 --------------------------------------------------------------*/
-	
-	$(window).load(function() { 
-	
+
+	$(window).on( 'load', function() {
+
 	// Calculate load time for page		
 		var endTime = Date.now(); 	
 		var loadTime = ((endTime - startTime) / 1000).toFixed(1);	
@@ -1375,7 +1389,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 
 	// Fade out loader screen when site is fully loaded
 		$("#loader").fadeOut("fast");  		
-		
+
 	// Get video link from data-src and feed to src 
 		var vidDefer = document.getElementsByTagName('iframe');
 		for (var i=0; i<vidDefer.length; i++) {
@@ -1383,7 +1397,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 				vidDefer[i].setAttribute('src',vidDefer[i].getAttribute('data-src'));
 			}
 		}
-		
+
 		// HACK - keep the 100x400 box with parallax image from showing up on left side of page	
 		//window.clearParallaxGlitch = function () {
 			//$('.parallax-mirror').each(function() {
@@ -1394,14 +1408,14 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		//}
 		//setTimeout(function() {	clearParallaxGlitch(); }, 50);
 		//$('#container').resize(function() { clearParallaxGlitch(); });
-		
-		
+
+
 		setTimeout(function() {	// Wait 1 second before calling the following functions 
-			
+
 		// Generic page setup functions (if not overriden in script-site.js)
 			trimText();
 			buildAccordion();
-			
+
 			$.getJSON('https://ipapi.co/json/', function(data) {
 				timezone = data["timezone"];
 			});
@@ -1409,7 +1423,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		}, 1000);
 
 		setTimeout(function() {	// Wait 2.5 seconds before calling the following functions 	
-			
+
 		// Count page view 
 			var postID = $('body').attr('id');				
 			$.post({
@@ -1417,7 +1431,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 				data : { action: "count_post_views", id: postID, timezone: timezone },
 				success: function( response ) { console.log(response); } 
 			});	
-			
+
 			// Log page load speed
 			if ( loadTime > 0.1 ) { 				
 				$.post({
@@ -1426,7 +1440,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 					success: function( response ) { console.log(response); } 
 				});	
 			}
-			
+
 		// Count random post widget, testimonial & images - teases & views
 			$('.testimonials-name, #primary img.random-img, .widget-image:not(.hide-widget) img.random-img, .row-of-pics img.random-img, .carousel img.img-slider, #wrapper-bottom img.random-img, .widget-random-post:not(.hide-widget) h3, #primary h3, #wrapper-bottom h3').waypoint(function() {		
 				var theID = $(this.element).attr('data-id');
@@ -1450,25 +1464,6 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			}, { offset: 'bottom-in-view' });	 	
 
 		}, 2500);
-	}); 
-	
-/*--------------------------------------------------------------
-# If page load fails
---------------------------------------------------------------*/
-	
-} catch(err) {	
-	
-// Remove loading screen if site crashes (better to see something than nothing) 	
-	$( "#page" ).prepend( "<div class='technical-difficulties'><b>ATTENTION: </b>Our site is experiencing technical difficulties, but we are working to fix the issue.  Thank you for your patience.</div>" );
-	$("#loader").fadeOut("fast");
-							
-	$.getJSON('https://ipapi.co/json/', function(data) {
-		var failCheck = JSON.stringify(data, null, 2);
-		
-		var theSite = window.location.hostname;
-		$.post({
-			url : 'https://'+theSite+'/wp-admin/admin-ajax.php',
-			data : { action: "sendServerEmail", theSite: theSite, failCheck: failCheck },
-		});
 	});
-}});
+	
+})(jQuery); });

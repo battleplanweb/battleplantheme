@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 4.1
+Version: 5.0
 Tested up to: 5.5
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -1405,6 +1405,10 @@ section.section-edge .flex {
 
 /* Content
 --------------------------------------------- */
+#primary {
+	max-width:									100%;
+}
+
 .content-box #primary,
 .sidebar-box #secondary,
 .widget-box .widget,
@@ -1958,7 +1962,7 @@ section.section-edge .flex {
 	box-shadow: 								0 4px 5px rgba(0,0,0,0.5);
 	width:										100%;
 	height:										auto;
-	margin-top:									-110%;
+	margin-top:									calc(-100% - 70px);
 	transition: 								all 0.2s linear;
 }
 
@@ -2489,7 +2493,7 @@ img.noFX,
 }
 
 .wp-caption .wp-caption-text {
-	margin: 									0.8075em 0;
+	margin: 									8px 0; /* EJ's 12/18/20 */
 }
 
 .wp-caption-text {
@@ -2876,7 +2880,8 @@ span.descriptionText {
     overflow-y: 								auto !important;
 }
 
-#product-site, #product-site iframe {
+#product-site, 
+#product-site iframe {
     height: 									800px !important;
 }
 
@@ -2892,6 +2897,7 @@ span.descriptionText {
 	top:										0;
 	z-index:									99999 !important;
 }
+
 div[class*="-faux"] {
 	position:									relative;
 	display:									block;
@@ -2933,7 +2939,9 @@ div[class*="-faux"] {
 }
 
 /* Podium Web Chat Module */
-iframe#podium-prompt, iframe#podium-bubble, iframe#podium-modal {
+iframe#podium-prompt, 
+iframe#podium-bubble, 
+iframe#podium-modal {
 	border:										none !important;
 	box-shadow:									none !important;
 	outline:									none !important;

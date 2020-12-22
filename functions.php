@@ -17,7 +17,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '4.1' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '5.0' ); }
 if ( ! defined( '_BP_OVERRIDE' ) ) { define( '_BP_OVERRIDE', 'false' ); }
 
 /*--------------------------------------------------------------
@@ -859,6 +859,12 @@ function battleplan_setUpWPGallery( $atts, $content = null ) {
 # Functions to extend WordPress 
 --------------------------------------------------------------*/
 
+// Check if current page is log in screen 
+function is_wplogin() {
+    $ABSPATH_MY = str_replace(array('\\','/'), DIRECTORY_SEPARATOR, ABSPATH);
+    return ((in_array($ABSPATH_MY.'wp-login.php', get_included_files()) || in_array($ABSPATH_MY.'wp-register.php', get_included_files()) ) || (isset($_GLOBALS['pagenow']) && $GLOBALS['pagenow'] === 'wp-login.php') || $_SERVER['PHP_SELF']== '/wp-login.php');
+}
+
 // Check if user is on a mobile device
 function is_mobile() {
     return preg_match("/(android|avantgo|blackberry|bolt|boost|cricket|docomo|fone|hiptop|mini|mobi|palm|phone|pie|tablet|up\.browser|up\.link|webos|wos)/i", $_SERVER["HTTP_USER_AGENT"]);
@@ -872,6 +878,7 @@ function the_slug() {
 	do_action('after_slug', $slug);
 	echo $slug;
 }
+
 function get_the_slug() {
 	$slug = basename(get_permalink());
 	do_action('before_slug', $slug);
@@ -2172,7 +2179,7 @@ function battleplan_breadcrumbs() {
 
     if ( is_singular() ) :
         $post_object 	= sanitize_post( $queried_object );
-        $title          = apply_filters( 'the_title', $post_object->post_title );
+        $title          = apply_filters( 'the_title', $post_object->post_title, $post->ID);
         $parent         = $post_object->post_parent;
         $post_type      = $post_object->post_type;
         $post_id        = $post_object->ID;
@@ -2393,18 +2400,20 @@ function battleplan_widgets_init() {
 }
 
 // Load and enqueue styles & scripts
-add_action( 'wp_enqueue_scripts', 'battleplan_scripts' );
+add_action( 'wp_enqueue_scripts', 'battleplan_scripts', 20 );
 function battleplan_scripts() {
 	wp_enqueue_style( 'battleplan-animate', get_template_directory_uri().'/animate.css', array(), _BP_VERSION );	
 	wp_enqueue_style( 'battleplan-ie', get_template_directory_uri()."/style-ie.css", array(), _BP_VERSION );
 	wp_enqueue_style( 'battleplan-fontawesome', get_template_directory_uri()."/fontawesome.min.css", array(), _BP_VERSION );
-	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { wp_enqueue_style( 'battleplan-events', get_template_directory_uri()."/style-events.css", array(), _BP_VERSION ); } 
+	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { wp_enqueue_style( 'battleplan-events', get_template_directory_uri()."/style-events.css", array(), _BP_VERSION ); } 	
+	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_enqueue_style( 'battleplan-woocommerce', get_template_directory_uri()."/style-woocommerce.css", array(), _BP_VERSION ); } 
 	
 	wp_enqueue_script( 'battleplan-bootstrap', get_template_directory_uri().'/js/bootstrap.js', array(), _BP_VERSION, true );
 	wp_enqueue_script( 'battleplan-parallax', get_template_directory_uri().'/js/parallax.js', array(), _BP_VERSION, true );
 	wp_enqueue_script( 'battleplan-waypoints', get_template_directory_uri().'/js/waypoints.js', array(), _BP_VERSION, true );
 	wp_enqueue_script( 'battleplan-script', get_template_directory_uri().'/js/script.js', array(), _BP_VERSION, true );
 	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { wp_enqueue_script( 'battleplan-events', get_template_directory_uri().'/js/events.js', array(), _BP_VERSION, true ); } 
+	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_enqueue_script( 'battleplan-woocommerce', get_template_directory_uri().'/js/woocommerce.js', array(), _BP_VERSION, true ); } 
 	if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) { wp_enqueue_script( 'comment-reply' ); }
 	
 	$getUploadDir = wp_upload_dir();
@@ -2419,6 +2428,8 @@ function battleplan_admin_scripts() {
 }
 
 require get_template_directory() . '/includes/includes-universal.php';
+if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { require get_template_directory() . '/includes/includes-events.php'; } 
+if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { require get_template_directory() . '/includes/includes-woocommerce.php'; } 
 
 // Dequeue unneccesary styles & scripts
 add_action( 'wp_print_styles', 'battleplan_dequeue_unwanted_stuff', 99 );
@@ -2540,7 +2551,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
 		}		
 	}
     if ( "user-email" == $tag->name ) {
-		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com');
+		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com');
         $check = isset( $_POST["user-email"] ) ? trim( $_POST["user-email"] ) : ''; 
 		foreach($badwords as $badword) {
 			if (stripos($check,$badword) !== false) $result->invalidate( $tag, 'We do not accept messages from this email address.');

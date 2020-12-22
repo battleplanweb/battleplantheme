@@ -1,5 +1,6 @@
-jQuery(function($) {		
-	$(window).load(function() { 
+document.addEventListener("DOMContentLoaded", function () {	"use strict"; (function($) {
+
+	$(window).on("load", function() {
 		replaceText('.single-litters h1, .single-litters h2, .single-litters h3', ' X ', ' x ', 'html');		
 		replaceText('.single-litters h1, .single-litters h2, .single-litters h3', ' x ', '<span class="X"> x </span>', 'html');
 		
@@ -45,4 +46,5 @@ jQuery(function($) {
 			});		
 		});				
 	});
-});	
+	
+})(jQuery); });

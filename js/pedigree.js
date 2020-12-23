@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		if ( getUrlVar('page') == "expecting" ) { filterArchives("litter-expecting"); $('button').removeClass("active"); $('button.expecting-btn').addClass("active"); }		
 		
 		// AJAX - insert Call Name before the "headline" (full name) of each dog pic			
-		addName = function(callname, thisDiv) {	
+		var addName = function(callname, thisDiv) {	
 			var thisLoc = thisDiv.find(".block.text-dogs");		
 			addDiv(thisLoc, callname, "before");
 		};				

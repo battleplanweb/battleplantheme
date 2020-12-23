@@ -17,39 +17,50 @@ https://docs.theeventscalendar.com/reference/functions/
 // display teasers of upcoming events 
 add_shortcode( 'event_teasers', 'battleplan_event_teasers' );
 function battleplan_event_teasers( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'style'=>'1', 'width'=>'default', 'grid'=>'1-1-1', 'tag'=>'featured', 'max'=>'3', 'start'=>'now', 'end'=>'', 'valign'=>'stretch', 'show_btn'=>'true', 'btn_text'=>'Read More' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'style'=>'1', 'width'=>'default', 'grid'=>'1-1-1', 'tag'=>'featured', 'max'=>'3', 'start'=>'today', 'end'=>'', 'valign'=>'stretch', 'show_btn'=>'true', 'btn_text'=>'Read More' ), $atts );
 	$name = esc_attr($a['name']);
 	$style = esc_attr($a['style']);
 	$width = esc_attr($a['cat']);
 	$grid = esc_attr($a['grid']);
 	$tag = esc_attr($a['tag']);
+	$num = 0;
 	$max = esc_attr($a['max']);
-	$start = esc_attr($a['start']);	
+	$get = $max * 3;
+	$cutoff = esc_attr($a['start']);	
+	$start = strtotime($cutoff."-7 days");
 	$end = esc_attr($a['end']);
 	$valign = esc_attr($a['valign']);
 	$showBtn = esc_attr($a['show_btn']);
 	$btnText = esc_attr($a['btn_text']);
+	$buildEvents = "";
 	
-	$events = tribe_get_events( [ 'start_date' => $start, 'end_date' => $end, 'eventDisplay' => 'list', 'posts_per_page' => $max, 'tag' => $tag] );
+	$events = tribe_get_events( [ 'start_date' => $start, 'end_date' => $end, 'eventDisplay' => 'list', 'posts_per_page' => $get, 'tag' => $tag] );
 	
 	if ( $events ) :
-		$buildEvents = '[section name="'.$name.'" style="'.$style.'" width="'.$width.'" class="event-teasers"]';
-		$buildEvents .= '[layout grid="'.$grid.'" valign="'.$valign.'"]';	
 		foreach ( $events as $post ) {
-			setup_postdata( $post );		
-			$buildEvents .= '[col]';		
-			$buildEvents .= get_the_post_thumbnail( $post->ID, 'thumbnail', array( 'class' => 'aligncenter' ) ); 
-			$buildEvents .= '[txt]<h3>'.$post->post_title.'</h3>';
-			$buildEvents .= '<p class="event-meta"><span class="tribe-event-date-start">'.tribe_get_start_date($post, false);
-			if ( tribe_get_end_date($post, false) != tribe_get_start_date( $post, false ) ) $buildEvents .= ' to '.tribe_get_end_date($post, false);			
-			if ( tribe_get_start_time($post) ) $buildEvents .= '<br/><span class="tribe-event-time-start">'.tribe_get_start_time($post) .' to '. tribe_get_end_time($post);			
-			$buildEvents .= '</p><p>'.$post->post_excerpt.'</p>';		
-			$buildEvents .= '[/txt]';
-			if ( $showBtn == "true" ) $buildEvents .= '[btn link="'.esc_url(get_the_permalink($post->ID)).'"]'.$btnText.'[/btn]';			
-			$buildEvents .= '[/col]';
+			setup_postdata( $post );			
+			if ( tribe_get_end_date($post, false) < $cutoff && $num <= $max ) {			
+				$buildEvents .= '[col]';		
+				$buildEvents .= get_the_post_thumbnail( $post->ID, 'thumbnail', array( 'class' => 'aligncenter' ) ); 
+				$buildEvents .= '[txt]<h3>'.$post->post_title.'</h3>';
+				$buildEvents .= '<p class="event-meta"><span class="tribe-event-date-start">'.tribe_get_start_date($post, false);
+				if ( tribe_get_end_date($post, false) != tribe_get_start_date( $post, false ) ) $buildEvents .= ' to '.tribe_get_end_date($post, false);			
+				if ( tribe_get_start_time($post) ) $buildEvents .= '<br/><span class="tribe-event-time-start">'.tribe_get_start_time($post) .' to '. tribe_get_end_time($post);			
+				$buildEvents .= '</p><p>'.$post->post_excerpt.'</p>';		
+				$buildEvents .= '[/txt]';
+				if ( $showBtn == "true" ) $buildEvents .= '[btn link="'.esc_url(get_the_permalink($post->ID)).'"]'.$btnText.'[/btn]';			
+				$buildEvents .= '[/col]';
+				$num++;
+			}
 		}
-		$buildEvents .= '[/layout][/section]';	
-		return do_shortcode($buildEvents);
+	
+		if ( $buildEvents ) :
+			$buildList = '[section name="'.$name.'" style="'.$style.'" width="'.$width.'" class="event-teasers"]';
+			$buildList .= '[layout grid="'.$grid.'" valign="'.$valign.'"]';		
+			$buildList .= $buildEvents;
+			$buildList .= '[/layout][/section]';	
+		endif;
+		return do_shortcode($buildList);
 	endif;
 }	
 

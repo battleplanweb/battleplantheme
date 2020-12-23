@@ -93,6 +93,7 @@
 #tribe-events-footer {
 	margin-top:									2em;
 	overflow:									visible;
+	clear:										both;
 }
 
 ul.tribe-events-sub-nav {

@@ -179,14 +179,13 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 // Remove sidebar from specific pages
 	window.removeSidebar = function(page) {	
-		test1 = page.replace(".", "");
-		test2 = "slug-"+page.replace(/\//g, "");
+		var test1 = page.replace(".", ""), test2 = "slug-"+page.replace(/\//g, "");
 		if ( $('body').hasClass(test1) || $('body').hasClass(test2) ) { 
 			$('body').removeClass('sidebar-right').removeClass('sidebar-left').addClass('sidebar-none'); 
 			removeDiv('#secondary');
 		} 
 	};
-
+ 
 // Create faux div for sticky elements pulled out of document flow	
 	window.addStuck = function (element, faux) {
 		faux = faux || "true";	
@@ -289,7 +288,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		}
 
 		$('.stuck').each(function() {
-			newTop = newTop + $(this).outerHeight();				
+			newTop = newTop + $(this).outerHeight();	
 		});		
 
 		if ( typeof target === 'object' || typeof target === 'string' ) {		
@@ -1300,6 +1299,11 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			var fauxDiv = $(this);
 			var fauxClass = "."+fauxDiv.attr('class');
 			var mainClass = fauxClass.replace("-faux", "");
+			
+			if ( !$(mainClass).length ) {
+				var mainID = "#"+fauxDiv.attr('class');
+				mainClass = mainID.replace("-faux", "");
+			} 
 
 			if ( $( mainClass ).is(":visible") ) {		
 				$( fauxClass ).height($( mainClass ).outerHeight());  

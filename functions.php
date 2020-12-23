@@ -17,7 +17,7 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '5.0' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '5.0.1' ); }
 if ( ! defined( '_BP_OVERRIDE' ) ) { define( '_BP_OVERRIDE', 'false' ); }
 
 /*--------------------------------------------------------------

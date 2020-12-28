@@ -151,13 +151,21 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		
 		if ( type == "text" ) { 
 			$(container).text(function () {
-				var thisText = $(this).text();
-				return thisText.replace(find,replace); 
+				if ( find != "" ) {
+					var thisText = $(this).text();
+					return thisText.replace(find,replace); 
+				} else {
+					return replace; 
+				}
 			});
 		} else {
 			$(container).html(function () {
-				var thisHtml = $(this).html();
-				return thisHtml.replace(find,replace); 
+				if ( find != "" ) {
+					var thisHtml = $(this).html();
+					return thisHtml.replace(find,replace); 
+				} else {
+					return replace; 
+				}
 			});
 		}
 	};	

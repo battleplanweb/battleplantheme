@@ -18,6 +18,33 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	// Reset breadcrumbs to common look
 		$('nav.woocommerce-breadcrumb').addClass('breadcrumbs').removeClass('woocommerce-breadcrumb');
 				
+	// Reset pagination buttons to common look	
+		replaceText('.theme-battleplantheme.woocommerce-page nav.woocommerce-pagination ul li a.prev', '', '<i class="fa fa-chevron-left"></i>', 'html');
+		replaceText('.theme-battleplantheme.woocommerce-page nav.woocommerce-pagination ul li a.next', '', '<i class="fa fa-chevron-right"></i>', 'html');
+		 
+	// Change product page to CSS grid
+		/*$('.theme-battleplantheme.woocommerce-page div.product').addClass('flex').addClass('grid-1-1');*/
+		
+	// On non-variation products, wrap Quantity input and Add To Cart button 
+		$('.woocommerce-variation-add-to-cart').addClass("bp-add-to-cart");
+		if ( !$('.bp-add-to-cart').length ) {
+			wrapDiv('form.cart div.quantity', '<div class="bp-add-to-cart"></div>', 'outside');
+			moveDiv('button.single_add_to_cart_button', '.bp-add-to-cart div.quantity', 'after');
+		}		
+		
+	// Match height of quantity inputs and corresponding buttons
+		$('.bp-add-to-cart div.quantity + button').each(function() {
+			var theBtn = $(this), theInput = theBtn.prev().find('input'), getBtnH = theBtn.outerHeight();			
+			theInput.css({"height":getBtnH+"px", "padding":"0 1em"});
+			theBtn.css({"height":getBtnH+"px", "padding":"0 1em"});
+		});
+		
+		$('#coupon_code + button').each(function() {
+			var theBtn = $(this), theInput = theBtn.prev(), getBtnH = theBtn.outerHeight();			
+			theInput.css({"height":getBtnH+"px", "padding":"0 1em"});
+			theBtn.css({"height":getBtnH+"px", "padding":"0 1em"});
+		});
+				
 	// Format the shipping address on cart page				
 		var getShipping = $('.woocommerce-shipping-destination').text().replace(/.([^.]*)$/,'\ $1');		
 		$('.woocommerce-shipping-destination').text(getShipping);		
@@ -26,12 +53,16 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				
 	// Removes double asterisk in woocommerce required forms
 		$('abbr.required, em.required, span.required').text("");
+		setTimeout( function () { $('abbr.required, em.required, span.required').text(""); }, 2000);
 		
 	// Removes button styling from Pay, View and Cancel buttons (on Account page)
 		$('.woocommerce-orders-table__cell a').removeClass('woocommerce-button').removeClass('button');	
 		
 	// Enhance ADA compliance
-		$('#billing_state, #shipping_state, button#place_order').attr('tabindex', '0').attr('aria-hidden', 'false');
+		$('#billing_state, #shipping_state, button#place_order').attr('tabindex', '0').attr('aria-hidden', 'false');		
+		
+	// Make Account Page menu a flex box menu	
+		$('.woocommerce-MyAccount-navigation ul').addClass('row-of-buttons');		
 	});
 	
 })(jQuery); });

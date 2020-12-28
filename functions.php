@@ -17,8 +17,8 @@
 --------------------------------------------------------------*/
 
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '5.0.1' ); }
-if ( ! defined( '_BP_OVERRIDE' ) ) { define( '_BP_OVERRIDE', 'false' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '5.0.2' ); }
+if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
 /*--------------------------------------------------------------
 # Shortcodes
@@ -621,7 +621,8 @@ function battleplan_getPostSlider($atts, $content = null ) {
 				endif;	
 
 				$image = wp_get_attachment_image_src(get_the_ID(), $size );
-				if ( $link == "alt" ) $linkTo = get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true);
+				if ( $link == "alt" ) $linkTo = get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true);				
+				if ( $link == "description" ) $linkTo = esc_html(get_post(get_the_ID())->post_content);
 				$buildImg = "";
 				if ( $link != "none" ) : $buildImg = "<a href='".$linkTo."' class='link-archive link-".$type."'>"; endif;	
 				$buildImg .= "<img data-id='".get_the_ID()."' ".getImgMeta(get_the_ID())." class='img-slider ".$tags[0]."-img' src = '".$image[0]."' alt='".get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true)."'>";
@@ -1078,7 +1079,7 @@ function battleplan_add_quicktags() {
 			QTags.addButton( 'bp_row-of-pics', 'row of pics', '   [get-row-of-pics id="" tag="row-of-pics" col="4" size="half-s, thumbnail" valign="center, start, stretch, end" link="no, yes" order_by="recent, rand, menu_order, title, id, post_date, modified, views" order="asc, desc" shuffle="no, yes" class=""]\n', '', 'row of pics', 'Row Of Pics', 1000 );
 			QTags.addButton( 'bp_post-slider', 'post slider', '   [get-post-slider type="" auto="yes, no" interval="6000" loop="true, false" num="4" offset="0" pics="yes, no" controls="yes, no" controls_pos="below, above" indicators="no, yes" pause="true, false" tax="" terms="" orderby="recent, rand, id, author, title, name, type, date, modified, parent, comment_count, relevance, menu_order, (images) views, (posts) views-today, views-7day, views-30day, views-all" order="asc, desc" post_btn="" all_btn="View All" link="" start="" end="" excluse="" x_current="true, false" show_excerpt="true, false" show_content="false, true" size="thumbnail" pic_size="1/3" text_size="" class="" (images) slide_type="box, screen, fade" tag="" caption="no, yes" id="" size="thumbnail, half-s" mult="1"]\n', '', 'post slider', 'Post Slider', 1000 );
 
-			QTags.addButton( 'bp_images-slider', 'Images Slider', '<div class="alignright size-half-s">[get-post-slider type="images" num="6" size="half-s" controls="no" indicators="yes" tag="crew" all_btn="" link="none" slide_type="box" orderby="recent"]</div>\n\n', '', 'images-slider', 'Images Slider', 1000 );	
+			QTags.addButton( 'bp_images-slider', 'Images Slider', '<div class="alignright size-half-s">[get-post-slider type="images" num="6" size="half-s" controls="no" indicators="yes" tag="featured" all_btn="" link="none, alt, description, blank" slide_type="box, screen, fade" orderby="recent"]</div>\n\n', '', 'images-slider', 'Images Slider', 1000 );	
 			QTags.addButton( 'bp_testimonial-slider', 'Testimonial Slider', '  [col]\n   <h2>What Our Customers Say...</h2>\n   [get-post-slider type="testimonials" num="6" pic_size="1/3"]\n  [/col]\n\n', '', 'testimonial-slider', 'Testimonial Slider', 1000 );
 			QTags.addButton( 'bp_random-product', 'Random Product', '  [col]\n   <h2>Featured Product</h2>\n   [get-random-posts type="products" offset="1" button="Learn More" orderby="views-30day" sort="desc"]\n  [/col]\n\n', '', 'random-product', 'Random Product', 1000 );
 		</script>
@@ -2408,6 +2409,7 @@ function battleplan_scripts() {
 	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { wp_enqueue_style( 'battleplan-events', get_template_directory_uri()."/style-events.css", array(), _BP_VERSION ); } 	
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_enqueue_style( 'battleplan-woocommerce', get_template_directory_uri()."/style-woocommerce.css", array(), _BP_VERSION ); } 
 	
+	//wp_enqueue_script( 'battleplan-jquery-ui', get_template_directory_uri().'/js/jquery-ui.js', array(), _BP_VERSION, true );	
 	wp_enqueue_script( 'battleplan-bootstrap', get_template_directory_uri().'/js/bootstrap.js', array(), _BP_VERSION, true );
 	wp_enqueue_script( 'battleplan-parallax', get_template_directory_uri().'/js/parallax.js', array(), _BP_VERSION, true );
 	wp_enqueue_script( 'battleplan-waypoints', get_template_directory_uri().'/js/waypoints.js', array(), _BP_VERSION, true );
@@ -2551,7 +2553,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
 		}		
 	}
     if ( "user-email" == $tag->name ) {
-		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com');
+		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net');
         $check = isset( $_POST["user-email"] ) ? trim( $_POST["user-email"] ) : ''; 
 		foreach($badwords as $badword) {
 			if (stripos($check,$badword) !== false) $result->invalidate( $tag, 'We do not accept messages from this email address.');
@@ -3011,7 +3013,7 @@ function battleplan_log_page_load_speed_ajax() {
 	$user = wp_get_current_user();
 	$userLogin = $user->user_login;
 		
-	if ( ($userLogin != 'battleplanweb' && $timezone == get_option('timezone_string') ) || _BP_OVERRIDE == "true" ) :
+	if ( ($userLogin != 'battleplanweb' && $timezone == get_option('timezone_string') ) || _BP_COUNT_ALL_VISITS == "true" ) :
 		$siteHeader = getID('site-header');
 		$desktopCounted = readMeta($siteHeader, "load-number-desktop");
 		$desktopSpeed = readMeta($siteHeader, "load-speed-desktop");	
@@ -3068,7 +3070,7 @@ function battleplan_count_post_views_ajax() {
 	$user = wp_get_current_user();
 	$userLogin = $user->user_login;
 	
-	if ( ($userLogin != 'battleplanweb' && $timezone == get_option('timezone_string') ) || _BP_OVERRIDE == "true" ) :
+	if ( ($userLogin != 'battleplanweb' && $timezone == get_option('timezone_string') ) || _BP_COUNT_ALL_VISITS == "true" ) :
 		if ( $dateDiff != 0 ) : // day has passed, move 29 to 30, and so on	
 			if ( $dateDiff > 30 ) $dateDiff = 30;
 			for ($i = 1; $i <= $dateDiff; $i++) {	
@@ -3122,7 +3124,7 @@ function battleplan_count_teaser_views_ajax() {
 	$user = wp_get_current_user();
 	$userLogin = $user->user_login;
 	
-	if ( ($userLogin != 'battleplanweb' && $timezone == get_option('timezone_string') ) || _BP_OVERRIDE == "true" ) :
+	if ( ($userLogin != 'battleplanweb' && $timezone == get_option('timezone_string') ) || _BP_COUNT_ALL_VISITS == "true" ) :
 		updateMeta($theID, 'post-tease-time', $current);
 		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' TEASER counted: Prior tease = '.$lastTeased) );
 	else:

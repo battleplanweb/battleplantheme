@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 5.0.1
+Version: 5.0.2
 Tested up to: 5.5
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -839,6 +839,39 @@ form.hide-labels ::placeholder {
 	font-weight:								bold;
 }
 
+input[type="checkbox"], 
+input[type="radio"] {
+	position: 									relative;
+	cursor: 									pointer;	
+	display:									inline-block;
+	width: 										17px !important;
+	height: 									17px !important;
+	margin-right:								10px !important;
+	appearance:									none;
+	background-color:							#ffffff;
+	border: 									2px solid #000000;
+}
+
+input[type="checkbox"]::before, 
+input[type="radio"]::before,
+input[type="checkbox"]:checked::after, 
+input[type="radio"]:checked::after {
+	content: 									" ";
+	position: 									absolute;
+	display: 									block;
+	width: 										100%;
+	height: 									100%;
+	top: 										0;
+	left: 										0;
+	background-color:							transparent;
+	border: 									2px solid #ffffff;
+}
+
+input[type="checkbox"]:checked::after, 
+input[type="radio"]:checked::after {
+	background-color:							rgba(0,0,0,0.6);
+}
+
 a.button,
 a.page-numbers,
 span.page-numbers,
@@ -923,6 +956,7 @@ a.button .fancy-icon {
 .row-of-buttons {
 	display:									flex;
 	justify-content:							center;
+	flex-wrap:									wrap;
 }
 
 .row-of-buttons .block-button {
@@ -1094,18 +1128,22 @@ section.section {
 	align-content:								end;
 }
 
+.flex .col.valign-start,
 .flex .col-inner div.valign-start {
 	align-self:									start;
 }
 
+.flex .col.valign-center,
 .flex .col-inner div.valign-center {
 	align-self:									center;
 }
 
+.flex .col.valign-stretch,
 .flex .col-inner div.valign-stretch {
 	align-self:									stretch;
 }
 
+.flex .col.valign-end,
 .flex .col-inner div.valign-end {
 	align-self:									end;
 }
@@ -1174,7 +1212,7 @@ section.section {
 
 .sidebar-none #main-content,
 .sidebar-none .flex.grid-content {
-	grid-template-columns: 						[column-1-start] 1fr [column-2-end];
+	grid-template-columns: 						[column-1-start column-2-start] 1fr [column-1-end column-2-end];
 }
 
 #main-content,
@@ -1561,6 +1599,10 @@ section.section-edge .flex {
 
 .site-info .col-inner .block-text {
 	order:										2;
+}
+
+.site-info-center {
+	text-align:									center;
 }
 
 /* Icons & Social Media
@@ -3323,8 +3365,11 @@ iframe#podium-modal {
 	/* Row of Pics */
 	.grid-7e .col:nth-last-child(1),
 	.grid-8e .col:nth-last-child(1),
-	.grid-8e .col:nth-last-child(2) {
-		display:									none;
+	.grid-8e .col:nth-last-child(2),
+	.grid-7e li:nth-last-child(1),
+	.grid-8e li:nth-last-child(1),
+	.grid-8e li:nth-last-child(2) {
+		display:									none !important;
 	}	
 	
 	/* Galleries */
@@ -3462,8 +3507,11 @@ iframe#podium-modal {
 	/* Row of Pics */
 	.grid-6e .col:nth-last-child(1),
 	.grid-7e .col:nth-last-child(2),
-	.grid-8e .col:nth-last-child(3) {
-		display:									none;
+	.grid-8e .col:nth-last-child(3),
+	.grid-6e li:nth-last-child(1),
+	.grid-7e li:nth-last-child(2),
+	.grid-8e li:nth-last-child(3) {
+		display:									none !important;
 	}	
 	
 	/* Galleries */
@@ -3600,8 +3648,17 @@ iframe#podium-modal {
 	.grid-7e .col:nth-last-child(3),
 	.grid-7e .col:nth-last-child(4),
 	.grid-8e .col:nth-last-child(4),
-	.grid-8e .col:nth-last-child(5) {
-		display:									none;
+	.grid-8e .col:nth-last-child(5),
+	.grid-4e li:nth-last-child(1),
+	.grid-5e li:nth-last-child(1),
+	.grid-5e li:nth-last-child(2),
+	.grid-6e li:nth-last-child(2),
+	.grid-6e li:nth-last-child(3),
+	.grid-7e li:nth-last-child(3),
+	.grid-7e li:nth-last-child(4),
+	.grid-8e li:nth-last-child(4),
+	.grid-8e li:nth-last-child(5) {
+		display:									none !important;
 	}	
 	
 	/* Galleries */
@@ -3734,8 +3791,14 @@ iframe#podium-modal {
 	.grid-5e .col:nth-last-child(3),
 	.grid-6e .col:nth-last-child(4),
 	.grid-7e .col:nth-last-child(5),
-	.grid-8e .col:nth-last-child(6) {
-		display:									none;
+	.grid-8e .col:nth-last-child(6),
+	.grid-3e li:nth-last-child(1),	
+	.grid-4e li:nth-last-child(2),
+	.grid-5e li:nth-last-child(3),
+	.grid-6e li:nth-last-child(4),
+	.grid-7e li:nth-last-child(5),
+	.grid-8e li:nth-last-child(6) {
+		display:									none !important;
 	}	
 	
 	.flex .col.col-row-of-pics {

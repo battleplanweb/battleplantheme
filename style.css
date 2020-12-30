@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 5.0.2
+Version: 6.0
 Tested up to: 5.5
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -47,7 +47,7 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
 	- Waypoints
 	- Google Review Widget
 	- Podium Web Chat Module
-	- Bootstrap Carousel
+	- Bootstrap Carousel	
 	- Logo Slider
 # Mobile Styles
 
@@ -967,6 +967,16 @@ a.button .fancy-icon {
 	max-width:									500px;
 	margin:										0 auto;
 }
+
+.paypal-form form p {
+    margin-top: 								1.5em;
+    margin-bottom: 								1.5em;
+}
+
+.paypal-form form p:last-of-type {
+    margin-bottom: 								2em;
+}
+
 .paypal-dollar {
 	display:									inline-block;
 	width:										15px;
@@ -1192,6 +1202,18 @@ section.section {
 	grid-template-columns: 						[column-1-start] minmax(0, 330px) [column-1-end column-2-start] 1fr [column-2-end];
 }
 
+.content-sidebar-box.sidebar-line #main-content,
+.content-sidebar-box.sidebar-right.sidebar-line #main-content,
+.content-sidebar-box.sidebar-line .flex.grid-content,
+.content-sidebar-box.sidebar-right.sidebar-line .flex.grid-content {
+	grid-template-columns: 						[column-1-start] 1fr [column-1-end column-2-start] minmax(0, 374px) [column-2-end];
+}
+
+.content-sidebar-box.sidebar-left.sidebar-line  #main-content,
+.content-sidebar-box.sidebar-left.sidebar-line .flex.grid-content {
+	grid-template-columns: 						[column-1-start] minmax(0, 374px) [column-1-end column-2-start] 1fr [column-2-end];
+}
+
 .sidebar-box #main-content,
 .widget-box #main-content,
 .sidebar-right.sidebar-box #main-content,
@@ -1232,7 +1254,9 @@ section.section {
 }
 
 .sidebar-none #main-content,
-.sidebar-none .flex.grid-content {
+.sidebar-none .flex.grid-content,
+.content-sidebar-box.sidebar-line #main-content,
+.content-sidebar-box.sidebar-line .flex.grid-content {
 	gap:										0;
 }
 
@@ -1279,6 +1303,7 @@ section.section-full .flex {
 .header-edge .top-strip .flex,
 .header-edge .divider-strip .flex,
 .header-edge .logo-strip .flex, 
+.split-menu .menu-strip .flex,
 .menu-edge .menu-strip .flex,
 .footer-edge .footer-strip .flex,
 .info-edge .site-info .flex,
@@ -1474,6 +1499,15 @@ section.section-edge .flex {
 	border-right: 								1px solid rgba(0,0,0,0.3);
 }
 
+.content-sidebar-box.sidebar-line #main-content {
+	padding:									0;
+}
+
+.content-sidebar-box.sidebar-line #main-content #primary,
+.content-sidebar-box.sidebar-line #main-content #secondary {
+	padding:									2em;
+}
+
 /* Widgets
 --------------------------------------------- */
 .widget {
@@ -1548,12 +1582,91 @@ section.section-edge .flex {
 	overflow:									hidden;
 }
 
+/* Style 1 */
 .section.style-1 {
 	background:									#cccccc;
 }
 
+/* Style 2 */
 .section.style-2 {
 	background:									#b2b2b2;
+}
+
+/* Section Lock */
+.section-lock {
+	position:									fixed !important;
+	z-index:									999999997 /* between mobile menu & a.scroll-top */;
+}
+
+.section-lock .closeBtn, 
+.closeBtn {
+	position:									absolute;
+	top:										15px;
+	right:										15px;
+	cursor:										pointer;
+	background:									rgba(0,0,0,0.3);
+	color:										rgba(0,0,0,0.6);
+	border:										2px solid #000000;
+	padding:									3px 10px;
+	font-size:									20px;
+	z-index:									1000;
+	transition:									all 0.2s ease;
+}
+
+.section-lock .closeBtn:hover, 
+.closeBtn:hover {
+	background:									rgba(0,0,0,0.6);
+	color:										rgba(255,255,255,1);
+	border:										2px solid #000000;
+	transition:									all 0.2s ease;
+}
+
+/* Modal Box */
+.section.section-lock[data-pos="modal"],
+.section.section-lock[data-pos="center"] {
+	width:										100vw;
+	height:										100vh;
+	background:									rgba(0,0,0,0.85);
+}
+
+.section.section-lock[data-pos="modal"] .flex,
+.section.section-lock[data-pos="center"] .flex {
+	position:									fixed !important;
+	width: 										96%;
+    max-width: 									800px;
+	top:										50%;
+	left:										50%;
+	transform: 									translate(-50%, -50%);
+	padding:									2em;
+}
+
+/* Style Lock */
+.section.style-lock,
+.section.style-lock[data-pos="modal"] .flex,
+.section.style-lock[data-pos="center"] .flex {
+	background:									#ffffff;
+	border:										2px solid #000000;
+	color:										#000000;
+}
+
+.section.style-lock[data-pos="top"] {
+	border-top:									none;
+	border-left:								none;
+	border-right:								none;
+}
+
+.section.style-lock[data-pos="bottom"] {
+	border-bottom:								none;
+	border-left:								none;
+	border-right:								none;
+}
+
+/* 3: Small Tablets (landscape) */
+@media (max-width: 1024px) {
+	.section-lock .closeBtn {
+		top:										-2px;
+		right:										-2px;
+	}
 }
 
 /* Footer
@@ -1672,7 +1785,6 @@ section.section-edge .flex {
 	background:									rgba(0,0,0,0.3);
 	transition:									all 0.2s ease;
 }
-
 
 /* Site Navigation
 --------------------------------------------- */
@@ -1849,6 +1961,12 @@ section.section-edge .flex {
 
 #off-screen.vertical {
 	top:										-3999px;
+}
+
+/* Split Menu */
+.split-menu #desktop-navigation .flex {
+	grid-template-columns: 						1fr 1fr;
+	gap:										0 3%;
 }
 
 /* Mobile Menu */

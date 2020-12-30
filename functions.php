@@ -16,23 +16,12 @@
 
 --------------------------------------------------------------*/
 
-
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '5.0.2' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '6.0' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
 /*--------------------------------------------------------------
 # Shortcodes
 --------------------------------------------------------------*/
-
-// Expire Content
-add_shortcode( 'expire', 'battleplan_expireContent' );
-function battleplan_expireContent( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'start'=>'', 'end'=>'' ), $atts );
-	$start = strtotime(esc_attr($a['start']));
-	$end = strtotime(esc_attr($a['end']));
-	$now = time();	
-	if ( $now > $start && $now < $end ) { return do_shortcode($content); } else { return null; }
-}
 
 // Returns current year
 add_shortcode( 'get-year', 'battleplan_getYear' );
@@ -224,8 +213,7 @@ function battleplan_getRandomImage($atts, $content = null ) {
 	if ( $id == "current" ) $id = get_the_ID();
 	$class = esc_attr($a['class']);	
 	if ( $class != '' ) $class = " ".$class;
-
-	$align = "align".$align;
+	if ( $align != '' ) $align = "align".$align;
 	
 	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>$number, 'offset'=>$offset, 'order'=>$order);
 
@@ -1061,18 +1049,18 @@ function battleplan_add_quicktags() {
 			QTags.addButton( 'bp_paragraph', 'p', '<p>', '</p>\n\n', 'p', 'Paragraph Tag', 1 );
 			QTags.addButton( 'bp_li', 'li', ' <li>', '</li>', 'li', 'List Item', 100 );
 
-			QTags.addButton( 'bp_section', 'section', '[section name="becomes id attribute" style="corresponds to css" width="default, stretch, full, edge, inline" background="url" left="50" top="50" class=""]\n', '[/section]\n\n', 'section', 'Section', 1000 );		
+			QTags.addButton( 'bp_section', 'section', '[section name="becomes id attribute" style="corresponds to css" width="default, stretch, full, edge, inline" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '[/section]\n\n', 'section', 'Section', 1000 );		
 			QTags.addButton( 'bp_layout', 'layout', ' [layout grid="1-auto, 1-1-1-1, 5e, content" break="3, 4" valign="start, stretch, center, end" class=""]\n\n', ' [/layout]\n', 'layout', 'Layout', 1000 );
-			QTags.addButton( 'bp_column', 'column', '  [col name="becomes id attribute" align="center, left, right" valign="start, stretch, center, end" background="url" left="50" top="50" class=""]\n', '  [/col]\n\n', 'column', 'Column', 1000 );
-			QTags.addButton( 'bp_image', 'image', '   [img size="100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" link="url to link to" new-tab="false, true" ada-hidden="false, true" class=""]', '[/img]\n', 'image', 'Image', 1000 );
-			QTags.addButton( 'bp_video', 'video', '   [vid size="100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" link="url of video" class="" related="false, true"]', '[/vid]\n', 'video', 'Video', 1000 );
-			QTags.addButton( 'bp_group', 'group', '   [group size = "100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" class=""]\n', '   [/group]\n\n', 'group', 'Group', 1000 );	
-			QTags.addButton( 'bp_text', 'text', '   [txt size="100 1/2 1/3 1/4 1/6 1/12" order="2, 1, 3" class=""]\n', '   [/txt]\n', 'text', 'Text', 1000 );
-			QTags.addButton( 'bp_button', 'button', '   [btn size="100 1/2 1/3 1/4 1/6 1/12" order="3, 1, 2" align="center, left, right" link="url to link to" get-biz="link in functions.php" new-tab="false, true" class="" ada="text for ada button"]', '[/btn]\n', 'button', 'Button', 1000 );	
+			QTags.addButton( 'bp_column', 'column', '  [col name="becomes id attribute" align="center, left, right" valign="start, stretch, center, end" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '  [/col]\n\n', 'column', 'Column', 1000 );
+			QTags.addButton( 'bp_image', 'image', '   [img size="100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" link="url to link to" new-tab="false, true" ada-hidden="false, true" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/img]\n', 'image', 'Image', 1000 );
+			QTags.addButton( 'bp_video', 'video', '   [vid size="100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" link="url of video" class="" related="false, true" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/vid]\n', 'video', 'Video', 1000 );
+			QTags.addButton( 'bp_group', 'group', '   [group size = "100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '   [/group]\n\n', 'group', 'Group', 1000 );	
+			QTags.addButton( 'bp_text', 'text', '   [txt size="100 1/2 1/3 1/4 1/6 1/12" order="2, 1, 3" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '   [/txt]\n', 'text', 'Text', 1000 );
+			QTags.addButton( 'bp_button', 'button', '   [btn size="100 1/2 1/3 1/4 1/6 1/12" order="3, 1, 2" align="center, left, right" link="url to link to" get-biz="link in functions.php" new-tab="false, true" class="" ada="text for ada button" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/btn]\n', 'button', 'Button', 1000 );	
 			QTags.addButton( 'bp_social', 'social', '   [social-btn type="email, facebook, twitter" img="none, link"]', '', 'social', 'Social', 1000 );	
-			QTags.addButton( 'bp_accordion', 'accordion', '   [accordion title="clickable title" excerpt="false, true" class="" icon="true, false"]', '[/accordion]\n\n', 'accordion', 'Accordion', 1000 );
-			QTags.addButton( 'bp_expire-content', 'expire', '[expire start="2019-05-26" end="2019-06-15"]', '[/expire]\n\n', 'expire', 'Expire', 1000 );
-
+			QTags.addButton( 'bp_accordion', 'accordion', '   [accordion title="clickable title" excerpt="false, true" class="" icon="true, false" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/accordion]\n\n', 'accordion', 'Accordion', 1000 );
+			QTags.addButton( 'bp_expire-content', 'expire', '[expire start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/expire]\n\n', 'expire', 'Expire', 1000 );			
+			QTags.addButton( 'bp_lock-section', 'lock', '[lock name="becomes id attribute" style="(lock) corresponds to css" width="edge, default, stretch, full, inline" position="bottom, top, modal" delay="3000" cookie="session, never, always, # days" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '[/lock]\n\n', 'lock', 'Lock', 1000 );		
 			QTags.addButton( 'bp_random-image', 'random image', '   [get-random-image id="" tag="random" size="thumbnail, third-s" link="no, yes" number="1" offset="" align="left, right, center" order_by="recent, rand, menu_order, title, id, post_date, modified, views" order="asc, desc" shuffle="no, yes"]\n', '', 'random image', 'Random Image', 1000 );
 			QTags.addButton( 'bp_random-post', 'random post', '   [get-random-posts num="1" offset="0" type="post" tax="" terms="" orderby="recent, rand, views-today, views-7day, views-30day, views-all" sort="asc, desc" count_tease="true, false" count_view="true, false" show_title="true, false" title_pos="outside, inside" show_date="false, true" show_author="false, true" show_excerpt="true, false" show_social="false, true" show_btn="true, false" button="Read More" btn_pos="inside, outside" thumbnail="force, false" link="post, false, /link-destination/" start="" end="" exclude="" x_current="true, false" size="thumbnail, size-third-s" pic_size="1/3" text_size=""]\n', '', 'random post', 'Random Post', 1000 );
 			QTags.addButton( 'bp_random-text', 'random text', '   [get-random-text cookie="true, false" text1="" text2="" text3="" text4="" text5="" text6="" text7=""]\n', '', 'random text', 'Random Text', 1000 );
@@ -2553,7 +2541,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
 		}		
 	}
     if ( "user-email" == $tag->name ) {
-		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net');
+		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com');
         $check = isset( $_POST["user-email"] ) ? trim( $_POST["user-email"] ) : ''; 
 		foreach($badwords as $badword) {
 			if (stripos($check,$badword) !== false) $result->invalidate( $tag, 'We do not accept messages from this email address.');
@@ -3154,10 +3142,20 @@ function battleplan_add_ptags( $atts, $content = null ) {
 	return wpautop( $content );
 }
 
+// Expire Content
+add_shortcode( 'expire', 'battleplan_expireContent' );
+function battleplan_expireContent( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'start'=>'', 'end'=>'' ), $atts );
+	$start = strtotime(esc_attr($a['start']));
+	$end = strtotime(esc_attr($a['end']));
+	$now = time();	
+	if ( $now > $start && $now < $end ) { return do_shortcode($content); } else { return null; }
+}
+
 // Section
 add_shortcode( 'section', 'battleplan_buildSection' );
 function battleplan_buildSection( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'style'=>'', 'width'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'class'=>'' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'style'=>'', 'width'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'class'=>'', 'start'=>'', 'end'=>'' ), $atts );
 	$name = strtolower(esc_attr($a['name']));
 	$name = preg_replace("/[\s_]/", "-", $name);
 	$background = esc_attr($a['background']);
@@ -3170,6 +3168,13 @@ function battleplan_buildSection( $atts, $content = null ) {
 	$style = esc_attr($a['style']);
 	if ( $style != '' ) $style = " style-".$style;
 	if ( $name ) : $name = " id='".$name."'"; else: $name = ""; endif;
+	$start = strtotime(esc_attr($a['start']));
+	$end = strtotime(esc_attr($a['end']));	
+	if ( $start || $end ) {
+		$now = time(); 
+		if ( $start && $now < $start ) return null;
+		if ( $end && $now > $end ) return null;		
+	}
 	
 	$buildSection = '<section'.$name.' class="section'.$style.$width.$class.'"';
 	if ( $background != "" ) $buildSection .= ' style="background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;"';	
@@ -3198,7 +3203,7 @@ function battleplan_buildLayout( $atts, $content = null ) {
 // Column
 add_shortcode( 'col', 'battleplan_buildColumn' );
 function battleplan_buildColumn( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'class'=>'', 'align'=>'', 'valign'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50' ), $atts );
+	$a = shortcode_atts( array( 'class'=>'', 'align'=>'', 'valign'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'start'=>'', 'end'=>'' ), $atts );
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
 	$align = esc_attr($a['align']);
@@ -3208,6 +3213,13 @@ function battleplan_buildColumn( $atts, $content = null ) {
 	$background = esc_attr($a['background']);
 	$left = esc_attr($a['left']);
 	$top = esc_attr($a['top']);
+	$start = strtotime(esc_attr($a['start']));
+	$end = strtotime(esc_attr($a['end']));	
+	if ( $start || $end ) {
+		$now = time(); 
+		if ( $start && $now < $start ) return null;
+		if ( $end && $now > $end ) return null;		
+	}
 
 	$buildCol = '<div class="col '.$class.$align.$valign.'"><div class="col-inner"';
 	if ( $background != "" ) $buildCol .= 'style="background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;"';	
@@ -3221,7 +3233,7 @@ function battleplan_buildColumn( $atts, $content = null ) {
 // Image Block
 add_shortcode( 'img', 'battleplan_buildImg' );
 function battleplan_buildImg( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'link'=>'', 'new-tab'=>'', 'ada-hidden'=>'false', 'class'=>'' ), $atts );
+	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'link'=>'', 'new-tab'=>'', 'ada-hidden'=>'false', 'class'=>'', 'start'=>'', 'end'=>'' ), $atts );
 	$order = esc_attr($a['order']);	
 	if ( $order != '' ) $style = " style='order: ".$order." !important'";
 	$link = esc_attr($a['link']);	
@@ -3233,6 +3245,13 @@ function battleplan_buildImg( $atts, $content = null ) {
 	$target = esc_attr($a['new-tab']);
 	if ( $target == 'yes' || $target == "true" ) $target = 'target="_blank"';
 	if ( $class != '' ) $class = " ".$class;
+	$start = strtotime(esc_attr($a['start']));
+	$end = strtotime(esc_attr($a['end']));	
+	if ( $start || $end ) {
+		$now = time(); 
+		if ( $start && $now < $start ) return null;
+		if ( $end && $now > $end ) return null;		
+	}
 
 	$buildImg = '<div class="block block-image span-'.$size.$class.'" '.$style.'>';
 	if ( $link != '' ) : $buildImg .= '<a '.$target.' href="'.$link.'"'.$hidden.'>'; endif;
@@ -3246,7 +3265,7 @@ function battleplan_buildImg( $atts, $content = null ) {
 // Video Block
 add_shortcode( 'vid', 'battleplan_buildVid' );
 function battleplan_buildVid( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'link'=>'', 'class'=>'', 'related'=>'false' ), $atts );
+	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'link'=>'', 'class'=>'', 'related'=>'false', 'start'=>'', 'end'=>'' ), $atts );
 	$related = esc_attr($a['related']);	
 	$order = esc_attr($a['order']);	
 	if ( $order != '' ) $style = " order: ".$order;
@@ -3257,6 +3276,13 @@ function battleplan_buildVid( $atts, $content = null ) {
 	$height = 56.25 * ($size/12);	
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
+	$start = strtotime(esc_attr($a['start']));
+	$end = strtotime(esc_attr($a['end']));	
+	if ( $start || $end ) {
+		$now = time(); 
+		if ( $start && $now < $start ) return null;
+		if ( $end && $now > $end ) return null;		
+	}
 
 	return '<div class="block block-video span-'.$size.$class.'" style="'.$style.' padding-top:'.$height.'%"><iframe src="" data-src="'.$link.'" allowfullscreen></iframe></div>';
 }
@@ -3264,13 +3290,20 @@ function battleplan_buildVid( $atts, $content = null ) {
 // Group Block
 add_shortcode( 'group', 'battleplan_buildGroup' );
 function battleplan_buildGroup( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'class'=>'' ), $atts );
+	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'class'=>'', 'start'=>'', 'end'=>'' ), $atts );
 	$size = esc_attr($a['size']);	
 	$size = convertSize($size);
 	$order = esc_attr($a['order']);	
 	if ( $order != '' ) $style = " style='order: ".$order." !important'";
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
+	$start = strtotime(esc_attr($a['start']));
+	$end = strtotime(esc_attr($a['end']));	
+	if ( $start || $end ) {
+		$now = time(); 
+		if ( $start && $now < $start ) return null;
+		if ( $end && $now > $end ) return null;		
+	}
 
 	return '<div class="block block-group span-'.$size.$class.'" '.$style.'>'.do_shortcode($content).'</div>';
 }
@@ -3279,13 +3312,20 @@ function battleplan_buildGroup( $atts, $content = null ) {
 add_shortcode( 'text', 'battleplan_buildText' );
 add_shortcode( 'txt', 'battleplan_buildText' );
 function battleplan_buildText( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'class'=>'' ), $atts );
+	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'class'=>'', 'start'=>'', 'end'=>'' ), $atts );
 	$size = esc_attr($a['size']);	
 	$size = convertSize($size);
 	$order = esc_attr($a['order']);	
 	if ( $order != '' ) $style = " style='order: ".$order." !important'";
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
+	$start = strtotime(esc_attr($a['start']));
+	$end = strtotime(esc_attr($a['end']));	
+	if ( $start || $end ) {
+		$now = time(); 
+		if ( $start && $now < $start ) return null;
+		if ( $end && $now > $end ) return null;		
+	}
 
 	return '<div class="block block-text span-'.$size.$class.'" '.$style.'>'.do_shortcode($content).'</div>';
 }
@@ -3293,7 +3333,7 @@ function battleplan_buildText( $atts, $content = null ) {
 // Button Block
 add_shortcode( 'btn', 'battleplan_buildButton' );
 function battleplan_buildButton( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'align'=>'center', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'', 'class'=>'', 'icon'=>'false', 'ada'=>'' ), $atts );
+	$a = shortcode_atts( array( 'size'=>'100', 'align'=>'center', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'', 'class'=>'', 'icon'=>'false', 'ada'=>'', 'start'=>'', 'end'=>'' ), $atts );
 	$getBiz = esc_attr($a['get-biz']);
 	if ( $getBiz == "" ) :
 		$link = esc_attr($a['link']);
@@ -3316,14 +3356,21 @@ function battleplan_buildButton( $atts, $content = null ) {
 	$icon = esc_attr($a['icon']);	
 	if ( $icon == "true" ) $icon = "fas fa-chevron-right";	
 	if ( $icon != "false" ) : $class .= " fancy"; $content = '<span class="fancy-text">'.$content.'</span><span class="fancy-icon"><i class="'.$icon.'"></i></span>'; endif;
-	
+	$start = strtotime(esc_attr($a['start']));
+	$end = strtotime(esc_attr($a['end']));	
+	if ( $start || $end ) {
+		$now = time(); 
+		if ( $start && $now < $start ) return null;
+		if ( $end && $now > $end ) return null;		
+	}
+
 	return '<div class="block block-button span-'.$size.$class.$align.'"'.$style.'><a'.$target.' href="'.$link.'" class="button'.$class.'">'.$content.$ada.'</a></div>';
 }
 
 /* Accordion Block */
 add_shortcode( 'accordion', 'battleplan_buildAccordion' );
 function battleplan_buildAccordion( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'title'=>'', 'excerpt'=>'', 'class'=>'', 'icon'=>'true' ), $atts );
+	$a = shortcode_atts( array( 'title'=>'', 'excerpt'=>'', 'class'=>'', 'icon'=>'true', 'start'=>'', 'end'=>'' ), $atts );
 	$excerpt = esc_attr($a['excerpt']);
 	if ( $excerpt != '' ) $excerpt = '<div class="accordion-excerpt"><div class="accordion-box">'.$excerpt.'</div></div>';
 	$class = esc_attr($a['class']);
@@ -3332,7 +3379,14 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 	if ( $icon == 'true' ) $icon = '<span class="accordion-icon"></span>';
 	$title = esc_attr($a['title']);	
 	if ( $title ) $title = '<h2 role="button" tabindex="0" class="accordion-title">'.$icon.$title.'</h2>';
-	
+	$start = strtotime(esc_attr($a['start']));
+	$end = strtotime(esc_attr($a['end']));	
+	if ( $start || $end ) {
+		$now = time(); 
+		if ( $start && $now < $start ) return null;
+		if ( $end && $now > $end ) return null;		
+	}
+
 	return '<div class="block block-accordion'.$class.'">'.$title.$excerpt.'<div class="accordion-content"><div class="accordion-box">'.do_shortcode($content).'</div></div></div>';	
 }
 
@@ -3370,6 +3424,40 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	elseif ( $type == "col" ) :
 		return do_shortcode('<div id="'.$name.'" class="col col-parallax'.$class.' '.$posX.'" style="height:'.$imgH.'px" data-parallax="scroll" data-natural-width="'.$imgW.'" data-natural-height="'.$imgH.'" data-position-x="'.$posX.'" data-position-y="'.$posY.'" data-z-index="1" data-bleed="'.$bleed.'" data-speed="'.$speed.'" data-ios-fix="true" data-android-fix="true" data-image-src="'.$image.'">'.$content.'</div>');	
 	endif;
+}
+
+/* Locked Section */
+add_shortcode( 'lock', 'battleplan_buildLockedSection' );
+function battleplan_buildLockedSection( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'name'=>'', 'style'=>'lock', 'width'=>'edge', 'position'=>'bottom', 'delay'=>'3000', 'show'=>'session', 'background'=>'', 'left'=>'50', 'top'=>'50', 'class'=>'', 'start'=>'', 'end'=>'' ), $atts );
+	$name = strtolower(esc_attr($a['name']));
+	$name = preg_replace("/[\s_]/", "-", $name);
+	$pos = esc_attr($a['position']);
+	$delay = esc_attr($a['delay']);
+	$show = esc_attr($a['show']); 
+	$background = esc_attr($a['background']);
+	$left = esc_attr($a['left']);
+	$top = esc_attr($a['top']);
+	$width = esc_attr($a['width']);
+	if ( $width != '' ) $width = " section-".$width;
+	$class = esc_attr($a['class']);
+	if ( $class != '' ) $class = " ".$class;
+	$style = esc_attr($a['style']);
+	if ( $style != '' ) $style = " style-".$style;
+	if ( $name ) : $name = " id='".$name."'"; else: $name = ""; endif;
+	$start = strtotime(esc_attr($a['start']));
+	$end = strtotime(esc_attr($a['end']));	
+	if ( $start || $end ) {
+		$now = time(); 
+		if ( $start && $now < $start ) return null;
+		if ( $end && $now > $end ) return null;		
+	}
+	
+	$buildSection = '<section'.$name.' class="section section-lock'.$style.$width.$class.'" data-pos="'.$pos.'" data-delay="'.$delay.'" data-show="'.$show.'"';
+	if ( $background != "" ) $buildSection .= ' style="background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;"';	
+	$buildSection .= '>'.do_shortcode($content).'</section>';	
+	
+	return $buildSection;
 }
  
 /* Social Media Buttons */

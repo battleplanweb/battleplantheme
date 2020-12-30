@@ -9,7 +9,9 @@
 # Set Up Admin Columns
 # Basic Theme Set Up
 
+--------------------------------------------------------------*/
 
+if ( ! defined( '_BP_SET_ALT_TEXT' ) ) { define( '_BP_SET_ALT_TEXT', 'false' ); }
 
 /*--------------------------------------------------------------
 # Functions to extend WordPress
@@ -70,6 +72,28 @@ function battleplan_woo_gallery_support() {
 	add_theme_support( 'wc-product-gallery-slider' );
 }
 
+// Move Short Product Description above main description
+add_action( 'edit_form_after_title', 'battleplan_move_excerpt_meta_box' );
+function battleplan_move_excerpt_meta_box( $post ) {
+    if ( $post->post_type == "product" ) {
+        remove_meta_box( 'postexcerpt', $post->post_type, 'normal' ); ?>
+        <h2 style="padding: 20px 0 0;">Product Description</h2>
+		<style>textarea#excerpt { height:20em; }</style>
+        <?php post_excerpt_meta_box( $post );
+    }
+}
+
+// Use product title to add alt text to shop images
+add_action( 'woocommerce_after_shop_loop_item', 'battleplan_set_alt_text_on_images', 10, 2 );
+function battleplan_set_alt_text_on_images() {
+	if ( _BP_SET_ALT_TEXT == "true" ) :
+		$attachment_id = get_post_thumbnail_id( get_the_ID() );
+		if ( get_post_meta( $attachment_id, '_wp_attachment_image_alt', true ) == "" ) :
+			update_post_meta( $attachment_id, '_wp_attachment_image_alt', get_the_title() );
+		endif;
+	endif;		
+}
+
 // Fix issue with products containing more than 20 variations
 add_filter( 'woocommerce_ajax_variation_threshold', 'battleplan_ajax_variation_threshold', 100, 2 );
 function battleplan_ajax_variation_threshold( $qty, $product ) { return 100; }
@@ -109,4 +133,5 @@ function battleplan_related_products_args( $args ) {
 	$args['columns'] = 6; // arranged in 6 columns
 	return $args;
 }
+
 ?>

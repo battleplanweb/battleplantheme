@@ -19,7 +19,9 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 # Basic site functionality
 --------------------------------------------------------------*/
 
-	var getThemeURI = theme_dir.theme_dir_uri, getUploadURI = theme_dir.upload_dir_uri, mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 42, timezone;
+	var getThemeURI = theme_dir.theme_dir_uri, getUploadURI = theme_dir.upload_dir_uri, mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 0, timezone;
+	
+	if ( $("#mobile-menu-bar").is(":visible") ) { mobileMenuBarH = $("#mobile-menu-bar").outerHeight();	}
 
 // Add Post ID as an ID attribute on body tag	
 	var postID = "noID";    
@@ -61,10 +63,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 // Set up Cookies
 	window.setCookie = function(cname,cvalue,exdays) {
-		var d = new Date();
+		var d = new Date(), expires;
 		d.setTime(d.getTime()+(exdays*24*60*60*1000));
-		var expires = "expires="+d.toGMTString();
-		document.cookie = cname + "=" + cvalue + "; " + expires + "; path=/; secure";
+		if ( exdays != null && exdays != "" ) {	expires = "expires="+d.toGMTString()+"; "; }
+		document.cookie = cname + "=" + cvalue + "; " + expires + "path=/; secure";
 	};
 	window.getCookie = function(cname) {
 		var name = cname + "=", ca = document.cookie.split(';');
@@ -266,9 +268,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				newTop = Number(strictTop);
 			}
 
-			if ( $("#mobile-menu-bar").is(":visible") ) {	
-				newTop = newTop + mobileMenuBarH;
-			}
+			newTop = newTop + mobileMenuBarH;
 
 			if (direction === 'down' && ( whichWay === 'both' || whichWay === 'down' )) {			
 				addStuck(container, faux);
@@ -290,10 +290,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		var newTop=0, newLoc=0, transSpeed;
 		initSpeed = initSpeed || 0;
 		topSpacer = topSpacer || 0;
-
-		if ( $("#mobile-menu-bar").is(":visible") ) {	
-			topSpacer = topSpacer + mobileMenuBarH;	
-		}
+		topSpacer = topSpacer + mobileMenuBarH;	
 
 		$('.stuck').each(function() {
 			newTop = newTop + $(this).outerHeight();	
@@ -304,15 +301,18 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		} else {
 			newLoc = target - newTop - topSpacer;
 		}
+		
+		window.scroll({ top: newLoc, left: 0, behavior: 'smooth' }); /* replaced 12/30/20 */	
+		
+		//if ( initSpeed == 0 ) { 
+		//	transSpeed = Math.abs(( $(window).scrollTop() - newLoc )) / 3;
+		//	if ( transSpeed < 500 ) { transSpeed = 500; }
+		//	if ( transSpeed > 1500 ) { transSpeed = 1500; }
+		//} else {
+		//	transSpeed = initSpeed;
+		//}
 
-		if ( initSpeed == 0 ) { 
-			transSpeed = Math.abs(( $(window).scrollTop() - newLoc )) / 3;
-			if ( transSpeed < 500 ) { transSpeed = 500; }
-			if ( transSpeed > 1500 ) { transSpeed = 1500; }
-		} else {
-			transSpeed = initSpeed;
-		}
-		$('html, body').stop().animate({ 'scrollTop': newLoc }, transSpeed, 'swing', function() { screenResize(); });
+		//$('html, body').stop().animate({ 'scrollTop': newLoc }, transSpeed, 'swing', function() { screenResize(); });
 	};
 
 // Set up "Back To Top" button
@@ -530,7 +530,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			});
 		};
 
-		// Control the magicMenu state change based on position
+		// Add alternate classes to <body> to control state changes based on position of $magicLine
 		if ( stateChange == "true" ) {
 			var getMagicSide = $baseNav.find('.flex').position().left, getMagicW = $baseNav.find('.flex').width(), getMagicPos = $currentPage.position().left - getMagicSide, getMagicAdj, getMagicPct;				
 
@@ -558,7 +558,33 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		setTimeout( function () { setMagicMenu(); }, 500);
 		$(window).resize(function() { setMagicMenu(); }); 	
 	};		
-
+	
+// Set up Split Menu
+	window.splitMenu = function (menu, logo, compensate) {
+		if ( getDeviceW() > mobileCutoff ) { 
+			menu = menu || "#desktop-navigation";
+			logo = logo || ".logo img";			
+			compensate = compensate || 0;			
+			var menuFlex = $(menu).find('.flex'), menuUL = $(menu).find('ul.menu'), logoW = $(logo).outerWidth() + compensate, menuW = menuUL.width() / 2, optW = 0;
+			
+			menuUL.children().each(function() {
+				optW += $(this).outerWidth();
+				if ( optW < menuW ) $(this).addClass('left-menu');
+				if ( optW > menuW ) $(this).addClass('right-menu');
+			});
+			
+			addDiv(menuFlex, '<div class="split-menu-r"></div>', 'before'); 
+			addDiv(menuFlex, '<div class="split-menu-l"></div>', 'before'); 			
+			moveDiv(menuUL, '.split-menu-l', 'inside'); 			
+			cloneDiv(menuUL, '.split-menu-r', 'inside'); 			
+			$('.split-menu-l ul.menu').attr('id', $('.split-menu-l ul.menu').attr('id') + "-l");
+			$('.split-menu-r ul.menu').attr('id', $('.split-menu-r ul.menu').attr('id') + "-r");			
+			$('.split-menu-l').find('li.right-menu').remove();
+			$('.split-menu-r').find('li.left-menu').remove();
+			menuFlex.css({"grid-column-gap":logoW+"px"});
+		}		
+	};	
+			
 // Duplicate menu button text onto the button BG
 	$( ".main-navigation ul.main-menu li > a").each(function() { 
 		var btnText = $(this).html();			
@@ -629,7 +655,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			$(column).css({ "clear":"none" });
 			$(container).fadeTo(speed, 1);
 		});
-	};				
+	};					
+				
+	setTimeout( function () { $(".msg-disappear").fadeOut(); }, 3000); 
+
 
 /*--------------------------------------------------------------
 # DOM level functions
@@ -649,8 +678,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		var thisDiv = $(moveThis), thisAnchor = $(anchor);
 		if ( where == "after" ) {
 			thisDiv.clone().insertAfter( thisAnchor );
-		} else {
+		} else if ( where == "before" ) {
 			thisDiv.clone().insertBefore( thisAnchor );
+		} else {
+			thisAnchor.append(thisDiv.clone());
 		}
 	};	
 
@@ -720,7 +751,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	window.removeDiv = function (target) {
 		$(target).remove();
 	};	
-
 
 /*--------------------------------------------------------------
 # Set up animation
@@ -986,7 +1016,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 // Check if "Remove Sidebar" option is checked in admin panel, and remove sidebar if applicable	
 if ( $('body').hasClass('remove-sidebar') ) { 
-	$('body').removeClass('sidebar-right').removeClass('sidebar-left').addClass('sidebar-none'); 
+	$('body').removeClass('sidebar-line').removeClass('sidebar-box').removeClass('widget-box').removeClass('sidebar-right').removeClass('sidebar-left').addClass('sidebar-none'); 
 	removeDiv('#secondary');
 }	
 
@@ -1224,7 +1254,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			$("#secondary").animate( { height: contentH+"px" }, 300);
 		};
 
-// Mark first, last, even and odd widgets
+// Add classes for first, last, even and odd widgets
 		window.labelWidgets = function () {
 			$(".widget").removeClass("widget-first").removeClass("widget-last").removeClass("widget-even").removeClass("widget-odd");
 			$(".widget:not(.hide-widget)").first().addClass("widget-first");  
@@ -1238,7 +1268,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			if ( sidebarScroll == "true" ) {
 				var contentH = $('#primary').outerHeight(), elem = $(".sidebar-inner"), elemH = elem.outerHeight() + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom')), contentV = contentH - getDeviceH() + 200, sidebarV = elemH - getDeviceH() + 400, addTop=0;	
 
-				$('.stuck').each(function() { addTop = addTop + $(this).outerHeight(true); });					
+				//$('.stuck').each(function() { addTop = addTop + $(this).outerHeight(true); }); /* removed for Align K9 12/30/20... if this is needed, then add a "ignore height" param to setupSidebar() and add this param to Align K9 site-script.js				
 				var secH = $("#secondary").outerHeight(), secT = $("#secondary").offset().top, winH = $(window).height() - addTop, winT = $(window).scrollTop() + addTop;				
 				var adjT = winT - secT, fullH = secH - winH, scrollPct = adjT / fullH, maxH = contentH - elemH;	
 				if ( scrollPct > 1 ) { scrollPct = 1; }
@@ -1365,28 +1395,30 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		$(this).attr("aria-hidden", true).attr("tabindex","-1");		
 	})
 
-	// Add .tab-focus class to links and buttons & auto scroll to better position on screen
-	var allowTabFocus = false;
-	$(window).on('keydown', function(e) {
-		$('*').removeClass('tab-focus');
-		if ( e.keyCode === 9 ) { allowTabFocus = true; }
+	// Add .tab-focus class to links and buttons & auto scroll to center	
+	document.addEventListener("keydown", function(e) {
+		if ( e.keyCode === 9 ) { 					
+			var el, els = document.getElementsByClassName('tab-focus');				
+			if ( els[0] ) { 
+				for (el of els ) { 
+					el.classList.remove('tab-focus'); 
+				} 
+			};	
+			setTimeout(function() {
+				document.activeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });				
+				document.activeElement.classList.add("tab-focus"); 					
+			}, 10);
+		}		
+	});
+	document.addEventListener("mousedown", function(e) {
+		var el, els = document.getElementsByClassName('tab-focus');				
+		if ( els[0] ) { 
+			for (el of els ) { 
+				el.classList.remove('tab-focus'); 
+			} 
+		};			
 	});
 	
-	$('*').on('focus', function() {
-		if ( allowTabFocus ) { 
-			console.log("this");
-			$(this).addClass('tab-focus');			
-			$(this).closest('li').addClass('tab-focus');
-			var scrollPos = $(window).scrollTop(), moveTo = $(this).offset().top - ($(window).height() / 2), diff = Math.abs(moveTo - scrollPos);		
-			if ( diff > 200 ) { animateScroll(moveTo); }
-		}
-	});
-	
-	$(window).on('mousedown', function() {
-		$('*').removeClass('tab-focus');
-		allowTabFocus = false;
-	});
-
 /*--------------------------------------------------------------
 # Delay parsing of JavaScript
 --------------------------------------------------------------*/
@@ -1420,7 +1452,61 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		//}
 		//setTimeout(function() {	clearParallaxGlitch(); }, 50);
 		//$('#container').resize(function() { clearParallaxGlitch(); });
+		
+		
+	// Set up Locked Message position, delay, & cookie	
+		$('section.section-lock').each(function() {
+			var thisLock = $(this), initDelay = thisLock.attr('data-delay'), lockPos = thisLock.attr('data-pos'), cookieExpire = thisLock.attr('data-show'), rowH = thisLock.outerHeight() + 100, buttonActivated = "no";
 
+			if ( cookieExpire == "always" ) { cookieExpire = 0.000001; }
+			if ( cookieExpire == "never" ) { cookieExpire = 100000; }			
+			if ( cookieExpire == "session" ) { cookieExpire = null; }			
+
+			addDiv(thisLock.find(".flex"), '<div class="closeBtn" aria-label="close" aria-hidden="false" tabindex="0"><i class="fa fa-times"></i></div>','before');
+			
+			thisLock.find('.closeBtn').keyup(function(event) {
+				if (event.keyCode === 13 || event.keyCode === 32) {
+					$(this).click();
+				}
+			});
+			
+			if ( lockPos == "top" ) {		
+				thisLock.css( "top",-rowH+"px");	
+				if ( getCookie("display-message") !== "no" ) {
+					thisLock.delay(initDelay).animate({ "top":mobileMenuBarH+"px" }, 600);
+					thisLock.find('.closeBtn').click(function() {
+						thisLock.animate({ "top":-rowH+"px" }, 600);
+						setCookie("display-message","no",cookieExpire);
+					});
+				}
+			} else if ( lockPos == "bottom" ) { 	
+				thisLock.css( "bottom",-rowH+"px");	
+				if ( getCookie("display-message") !== "no" ) {
+					thisLock.delay(initDelay).animate({ "bottom":"0" }, 600);
+					thisLock.find('.closeBtn').click(function() {
+						thisLock.animate({ "bottom":-rowH+"px" }, 600);
+						setCookie("display-message","no",cookieExpire);
+					});
+				}
+			} else { 				
+				thisLock.css({"opacity":0}).fadeOut();				
+				if ( buttonActivated == "no" && getCookie("display-message") !== "no" ) {
+					setTimeout(function() { thisLock.css({"opacity":1}).fadeIn(); }, initDelay);
+					thisLock.find('.closeBtn').click(function() {
+						thisLock.fadeOut();
+						setCookie("display-message","no",cookieExpire);
+					});	
+				}
+				if ( buttonActivated == "yes" ) {				
+					$('.modal-btn').click(function() {
+						thisLock.css({"opacity":1}).fadeIn();
+					});
+					thisLock.find('.closeBtn').click(function() {
+						thisLock.fadeOut();
+					});						
+				}
+			}	
+		});
 
 		setTimeout(function() {	// Wait 1 second before calling the following functions 
 

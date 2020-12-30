@@ -21,7 +21,7 @@
 <body <?php body_class(getUserRole()); ?>>
 	
 <?php bp_loader(); ?>
-<?php wp_body_open(); ?>	
+<?php wp_body_open(); ?>
 	
 <div id="mobile-menu-bar-faux"></div>
 	
@@ -42,9 +42,15 @@
 	'walker'          => new Aria_Walker_Nav_Menu(),
 ) ); ?>			
 	
-<div id="page" class="site">
-	<a class="skip-link screen-reader-text" href="#primary"><?php esc_html_e( 'Skip to content', 'battleplan' ); ?></a>
+<a class="skip-link screen-reader-text" href="#primary"><?php esc_html_e( 'Skip to content', 'battleplan' ); ?></a>
 
+<?php	
+$page_slug = "site-message"; 
+$page_data = get_page_by_path($page_slug, OBJECT, 'page' );
+if ( $page_data && $page_data->post_status == 'publish' ) : echo apply_filters('the_content', $page_data->post_content); endif; 
+?>
+	
+<div id="page" class="site">
 	<header id="masthead">
 		
 		<?php if ( has_nav_menu( 'top-menu', 'battleplan' ) ) : ?>
@@ -69,7 +75,7 @@
 		else: $page_slug = "site-header"; endif;
 		$page_data = get_page_by_path( $page_slug, OBJECT, 'page' );
 		if ( $page_data ) : echo apply_filters('the_content', $page_data->post_content); endif; ?>
-
+		
 		<?php if ( has_nav_menu( 'header-menu', 'battleplan' ) ) : ?>
 			<nav id="desktop-navigation" class="main-navigation menu-strip" aria-label="Main Menu">
 				<?php wp_nav_menu(

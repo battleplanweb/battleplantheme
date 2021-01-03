@@ -33,12 +33,14 @@
 	<div class="mm-bar-btn activate-btn"><div></div><div></div><div></div></div> 
 </div>
 	
-<?php wp_nav_menu( array(
+<?php $mainMenuLoc = 'header-menu'; if ( has_nav_menu( 'top-menu', 'battleplan' ) ) $mainMenuLoc = 'top-menu';
+wp_nav_menu( array(
 	'container'       => 'nav',
 	'container_id' 	  => 'mobile-navigation',
 	'container_class' => 'main-navigation',
 	'menu_id'         => 'mobile-menu',
 	'menu_class'	  => 'menu main-menu',
+	'theme_location'  => $mainMenuLoc,
 	'walker'          => new Aria_Walker_Nav_Menu(),
 ) ); ?>			
 	

@@ -33,7 +33,11 @@
 	<div class="mm-bar-btn activate-btn"><div></div><div></div><div></div></div> 
 </div>
 	
-<?php $mainMenuLoc = 'header-menu'; if ( has_nav_menu( 'top-menu', 'battleplan' ) ) $mainMenuLoc = 'top-menu';
+<?php $mainMenuLoc = ''; 
+if ( has_nav_menu( 'header-menu', 'battleplan' ) ) $mainMenuLoc = 'header-menu';
+if ( has_nav_menu( 'top-menu', 'battleplan' ) ) $mainMenuLoc = 'top-menu';
+if ( has_nav_menu( 'widget-menu', 'battleplan' ) ) $mainMenuLoc = 'widget-menu';
+	
 wp_nav_menu( array(
 	'container'       => 'nav',
 	'container_id' 	  => 'mobile-navigation',

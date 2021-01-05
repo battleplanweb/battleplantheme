@@ -584,7 +584,16 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			menuFlex.css({"grid-column-gap":logoW+"px"});
 		}		
 	};	
-			
+	
+// Add a logo into an <li> on the menu strip
+	window.addMenuLogo = function (imageFile, menu) {
+		menu = menu || '#desktop-navigation';
+		$(menu).addClass('menu-with-logo');
+		addDiv('.menu-with-logo','<div class="menu-logo"><img src = "'+imageFile+'" alt=""></div>','before');
+		$('.menu-with-logo .menu-logo').height($('.menu-with-logo').height());
+		linkHome('.menu-logo');
+	};
+	
 // Duplicate menu button text onto the button BG
 	$( ".main-navigation ul.main-menu li > a").each(function() { 
 		var btnText = $(this).html();			
@@ -656,8 +665,24 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			$(container).fadeTo(speed, 1);
 		});
 	};					
-				
-	setTimeout( function () { $(".msg-disappear").fadeOut(); }, 3000); 
+			
+	// Tabbed Content - control changing and animation of tabbed content
+	$("ul.tabs li").keyup(function(event) {
+		var thisBtn = $(this);
+		if (event.keyCode === 13 || event.keyCode === 32) { thisBtn.click(); }
+	});		
+	$('ul.tabs li').click(function() {
+		var tab_id = $(this).attr('data-tab');
+		var fadeSpeed = 150;
+
+		$('ul.tabs li').removeClass('current');
+		$(this).addClass('current');
+
+		$('.tab-content').fadeOut(fadeSpeed).next().removeClass('current');
+		$("#"+tab_id).delay(fadeSpeed).addClass('current').fadeIn(fadeSpeed);
+	});
+
+	//setTimeout( function () { $(".msg-disappear").fadeOut(); }, 3000); 
 
 
 /*--------------------------------------------------------------
@@ -1094,6 +1119,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 
 	window.openSubMenu = function (el, h) {
 		$('#mobile-navigation ul.sub-menu').removeClass("active"); 
+
 		$('#mobile-navigation ul.sub-menu').height(0);
 		$(el).addClass("active"); 
 		$(el).height(h+"px");
@@ -1186,6 +1212,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 // Set up "locked" widgets, and shuffle the rest
 		$('.widget.lock-to-top, .widget.lock-to-bottom').addClass("locked");		
 		$('.widget:not(.locked)').addClass("shuffle");
+
 
 		if ( getDeviceW() > mobileCutoff && shuffle == "true" ) { 
 			shuffleWidgets( $('.shuffle') );

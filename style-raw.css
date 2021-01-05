@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 6.0
+Version: 6.2
 Tested up to: 5.5
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -42,6 +42,7 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
 	- Office Hours
 	- Galleries
 	- Accordion Setup
+	- Tabbed Content
 	- Products (Shearer Supply)
 # Plugins
 	- Waypoints
@@ -652,11 +653,13 @@ table {
 .two-col,
 .two-column {
 	column-count:								2;
+	column-gap: 								2.5em;
 }
 
 .three-col,
 .three-column {
 	column-count:								3;
+	column-gap: 								2.5em;
 }
 
 .text-left {
@@ -713,6 +716,7 @@ a.tab-focus {
 --------------------------------------------- */
 form.wpcf7-form {
 	margin:										1em auto;
+
     text-align: 								center;
 	max-width:									500px;
 }
@@ -878,7 +882,8 @@ span.page-numbers,
 button,
 input[type="button"],
 input[type="reset"],
-input[type="submit"] {
+input[type="submit"],
+ul.tabs li {
 	display:									inline-block;
 	font: 										normal 1.2em / 1 Helvetica, Arial, Verdana, sans-serif; 
 	background: 								rgba(0,0,0,0.2);
@@ -897,18 +902,22 @@ button:hover,
 input[type="button"]:hover,
 input[type="reset"]:hover,
 input[type="submit"]:hover,
+ul.tabs li:hover,
 a.button.tab-focus,
 a.page-numbers.tab-focus,
 button.tab-focus,
 input[type="button"].tab-focus,
 input[type="reset"].tab-focus,
 input[type="submit"].tab-focus,
+ul.tabs li.tab-focus,
 a.button:active,
 a.page-numbers:active,
 button:active,
 input[type="button"]:active,
 input[type="reset"]:active,
-input[type="submit"]:active {
+input[type="submit"]:active,
+ul.tabs li:active,
+ul.tabs li.current {
 	background: 								rgba(0,0,0,0.4);
 	border:										none;
 	transition:									all 0.2s ease;
@@ -953,14 +962,16 @@ a.button .fancy-icon {
 	padding-right: 								0.5em;
 }
 
-.row-of-buttons {
+.row-of-buttons,
+ul.tabs {
 	display:									flex;
 	justify-content:							center;
 	flex-wrap:									wrap;
 }
 
-.row-of-buttons .block-button {
-	margin:										0 1%;
+.row-of-buttons .block-button,
+ul.tabs li {
+	margin:										0.25em 1%;
 }
 
 .paypal-form {
@@ -1433,6 +1444,7 @@ section.section-edge .flex {
 	margin:										0;
 	padding-top:								8px;
 	padding-bottom:								8px;
+
 	background:									#cccccc;
 	z-index:									3000;
 }
@@ -1968,6 +1980,49 @@ section.section-edge .flex {
 	grid-template-columns: 						1fr 1fr;
 	gap:										0 3%;
 }
+
+/* Menu Logo [ added via js with addMenuLogo() ] */
+.menu-with-logo .menu-logo {
+	position:										absolute;
+	grid-column: 									default-start;
+	z-index:										1000;
+	transform:										translateX(-50vw);
+	transition:										all 0.4s ease;
+}
+
+.menu-stretch .menu-with-logo .menu-logo {
+	grid-column: 									stretch-start;
+}
+
+.menu-full .menu-with-logo .menu-logo {
+	grid-column:									full-start;
+}
+
+.menu-edge .menu-with-logo .menu-logo {
+	grid-column:									edge-start;
+}
+
+	.menu-with-logo.stuck .menu-logo {
+		transform:										translateX(0);
+		transition:										all 0.4s ease;
+	}
+
+.menu-with-logo .menu-logo img {
+	width:											auto;
+	max-height:										100%;
+	padding-top:									5%;
+	padding-bottom:									5%;
+}
+
+.menu-with-logo .flex {
+	padding-left:									0;
+	transition:										all 0.4s ease;
+}
+
+	.menu-with-logo.stuck .flex {
+		padding-left:									100px;
+		transition:										all 0.4s ease;
+	}
 
 /* Mobile Menu */
 #mobile-menu-bar-faux {
@@ -2969,7 +3024,25 @@ dl.col-gallery {
 	padding:									0.1em 1em 1em;
 }
 
+/* Tabbed Content
+--------------------------------------------- */
+div.tab-content-holder {
+	min-height:									100vh;
+}
 
+ul.tabs {
+	margin: 									1em 0;
+	padding: 									0;
+}
+
+section.tab-content {
+	display: 									none;
+	padding: 									1.5em;
+}
+
+section.tab-content.current {
+	display:									inherit;
+}
 
 /* Products (Shearer Supply)
 --------------------------------------------- */
@@ -3613,7 +3686,8 @@ iframe#podium-modal {
 		grid-column: 								span 2;
 	}
 	
-	.flex.grid-1-1-1 .col:nth-child(3n+3) .col-inner {
+	.flex.grid-1-1-1 .col:nth-child(3n+3) .col-inner,
+	.flex.break-3 .col .col-inner {
 		max-width:									50%;
 		margin:										0 auto;
 	}	
@@ -3757,16 +3831,16 @@ iframe#podium-modal {
 		column-count:								2;
 	}	
 			
-	/* Row of Pics */
-	.grid-4e .col:nth-last-child(1),
-	.grid-5e .col:nth-last-child(1),
-	.grid-5e .col:nth-last-child(2),
-	.grid-6e .col:nth-last-child(2),
-	.grid-6e .col:nth-last-child(3),
-	.grid-7e .col:nth-last-child(3),
-	.grid-7e .col:nth-last-child(4),
-	.grid-8e .col:nth-last-child(4),
-	.grid-8e .col:nth-last-child(5),
+	/* Row of Pics */ /* changed from .col to .col-row-of-pics 1/5/21 for Bubba's Cooks Country */
+	.grid-4e .col-row-of-pics:nth-last-child(1),
+	.grid-5e .col-row-of-pics:nth-last-child(1),
+	.grid-5e .col-row-of-pics:nth-last-child(2),
+	.grid-6e .col-row-of-pics:nth-last-child(2),
+	.grid-6e .col-row-of-pics:nth-last-child(3),
+	.grid-7e .col-row-of-pics:nth-last-child(3),
+	.grid-7e .col-row-of-pics:nth-last-child(4),
+	.grid-8e .col-row-of-pics:nth-last-child(4),
+	.grid-8e .col-row-of-pics:nth-last-child(5),
 	.grid-4e li:nth-last-child(1),
 	.grid-5e li:nth-last-child(1),
 	.grid-5e li:nth-last-child(2),
@@ -3903,13 +3977,13 @@ iframe#podium-modal {
 		column-count:								1;
 	}	
 	
-	/* Row of Pics */
-	.grid-3e .col:nth-last-child(1),	
-	.grid-4e .col:nth-last-child(2),
-	.grid-5e .col:nth-last-child(3),
-	.grid-6e .col:nth-last-child(4),
-	.grid-7e .col:nth-last-child(5),
-	.grid-8e .col:nth-last-child(6),
+	/* Row of Pics */ /* changed from .col to .col-row-of-pics 1/5/21 for Bubba's Cooks Country */
+	.grid-3e .col-row-of-pics:nth-last-child(1),	
+	.grid-4e .col-row-of-pics:nth-last-child(2),
+	.grid-5e .col-row-of-pics:nth-last-child(3),
+	.grid-6e .col-row-of-pics:nth-last-child(4),
+	.grid-7e .col-row-of-pics:nth-last-child(5),
+	.grid-8e .col-row-of-pics:nth-last-child(6),
 	.grid-3e li:nth-last-child(1),	
 	.grid-4e li:nth-last-child(2),
 	.grid-5e li:nth-last-child(3),

@@ -217,7 +217,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		if ( theEl.is(":visible") ) {		
 			$( "<div class='"+elementName+"-faux'></div>" ).insertBefore( theEl );
 			var theFaux = $("."+elementName+"-faux");
-			theFaux.animate({ "height":theEl.outerHeight()+"px" }, 0);
+			theFaux.css({ "height":theEl.outerHeight()+"px" });
 		}
 	};
 

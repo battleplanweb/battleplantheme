@@ -1422,6 +1422,9 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		$(this).attr("aria-hidden", true).attr("tabindex","-1");		
 	})
 
+	// Remove iframe from tab order
+	$('form.hide-labels label:not(.show-label)').addClass('sr-only');	
+
 	// Add .tab-focus class to links and buttons & auto scroll to center	
 	document.addEventListener("keydown", function(e) {
 		if ( e.keyCode === 9 ) { 					

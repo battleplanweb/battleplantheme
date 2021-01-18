@@ -654,12 +654,13 @@ function battleplan_pedigree_column_settings() {
 			)			
 		)
 	) );
+	
 	ac_register_columns( 'litters', array(
 		array(
 			'columns'=>array(
 				'title'=>array(
 					'type'=>'title',
-					'label'=>'Title',
+					'label'=>'Litter',
 					'width'=>'',
 					'width_unit'=>'%',
 					'edit'=>'on',
@@ -670,7 +671,7 @@ function battleplan_pedigree_column_settings() {
 					'filter'=>'on'
 				),
 				'sire'=>array(
-					'type'=>'column-acf_field',
+					'type'=>'column-meta',
 					'label'=>'Sire',
 					'width'=>'',
 					'width_unit'=>'%',		
@@ -685,7 +686,7 @@ function battleplan_pedigree_column_settings() {
 					'filter'=>'on'
 				),
 				'dam'=>array(
-					'type'=>'column-acf_field',
+					'type'=>'column-meta',
 					'label'=>'Dam',
 					'width'=>'',
 					'width_unit'=>'%',		
@@ -700,7 +701,7 @@ function battleplan_pedigree_column_settings() {
 					'filter'=>'on'
 				),
 				'litter_status'=>array(
-					'type'=>'column-acf_field',
+					'type'=>'column-meta',
 					'label'=>'Status',
 					'width'=>'',
 					'width_unit'=>'%',
@@ -716,7 +717,7 @@ function battleplan_pedigree_column_settings() {
 					'filter'=>'on'
 				),
 				'ready_date'=>array(
-					'type'=>'column-acf_field',
+					'type'=>'column-meta',
 					'label'=>'Expecting / Ready Date',
 					'width'=>'',
 					'width_unit'=>'%',
@@ -732,7 +733,7 @@ function battleplan_pedigree_column_settings() {
 					'filter'=>'on'
 				),
 				'price'=>array(
-					'type'=>'column-acf_field',
+					'type'=>'column-meta',
 					'label'=>'Price',
 					'width'=>'',
 					'width_unit'=>'%',
@@ -748,7 +749,7 @@ function battleplan_pedigree_column_settings() {
 					'filter'=>'on'
 				),
 				'deposit'=>array(
-					'type'=>'column-acf_field',
+					'type'=>'column-meta',
 					'label'=>'Deposit',
 					'width'=>'',
 					'width_unit'=>'%',

@@ -16,7 +16,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '6.1.1' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '6.2.2' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
 /*--------------------------------------------------------------

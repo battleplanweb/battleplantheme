@@ -49,9 +49,17 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		
 		moveDivs ('.post-type-archive-tribe_events.slug-events .type-tribe_events', '.tribe-events-event-meta', '.block-text .tribe-events-list-event-title', 'after');
 		
-		moveDivs ('.post-type-archive-tribe_events.slug-events .type-tribe_events', '.block-button', '.block-text', 'after');
+		moveDivs ('.post-type-archive-tribe_events.slug-events .type-tribe_events', '.tribe-events-venue-details', '.block-text p:last-of-type', 'after');		
+
+		moveDivs ('.post-type-archive-tribe_events.slug-events .type-tribe_events', '.tribe-events-event-cost', '.block-text p:last-of-type', 'after');		
 		
-		moveDiv ('.tribe-events-notices', '.tribe_events', 'before');		
+		$( ".ticket-cost" ).prepend( "<span class='cost-label'>Cost: </span>" );		
+		
+		$( ".tribe-events-venue-details" ).prepend( "<span class='venue-label'>Location: </span><br/>" );
+			
+		moveDivs ('.post-type-archive-tribe_events.slug-events .type-tribe_events', '.block-button', '.tribe-events-content', 'after');
+		
+		moveDiv ('.tribe-events-notices', '.tribe_events', 'before');	
 		
 	// Change button text & add buttons
 

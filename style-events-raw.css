@@ -74,6 +74,13 @@
 	margin-bottom:								1.5em;
 }
 
+.tribe-events-loop .tribe-events-event-cost,
+.tribe-events-loop .tribe-events-venue-details {
+	font-size:									92%;
+	margin-top:									1em;
+	margin-bottom:								1em;
+}
+
 .tribe-event-date-start::before,
 .tribe-event-time-start::before {
 	display: 									inline-block;
@@ -90,8 +97,11 @@
     padding-right: 								7px;
 }
 
-#tribe-events-footer {
-	margin-top:									2em;
+#tribe-events-footer,
+.events-list #tribe-events-footer, 
+.tribe-events-day #tribe-events-footer, 
+.tribe-events-map #tribe-events-footer{
+	margin-top:									4em;
 	overflow:									visible;
 	clear:										both;
 }
@@ -282,6 +292,7 @@ ul.tribe-events-sub-nav {
 	margin:										1.2em 0;
 	padding:									0;	
 }
+
 
 .tribe-events-adv-list-widget .tribe-mini-calendar-event {
 	margin:										0;

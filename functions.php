@@ -16,7 +16,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '6.2.2' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '6.3' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
 /*--------------------------------------------------------------
@@ -1073,6 +1073,9 @@ function battleplan_add_quicktags() {
 		</script>
 	<?php }
 }
+
+// Add shortcode capability to Contact Form 7
+add_filter( 'wpcf7_form_elements', 'do_shortcode' );
 
 /*--------------------------------------------------------------
 # Register Custom Post Types
@@ -2541,7 +2544,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
 		}		
 	}
     if ( "user-email" == $tag->name ) {
-		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com');
+		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com');
         $check = isset( $_POST["user-email"] ) ? trim( $_POST["user-email"] ) : ''; 
 		foreach($badwords as $badword) {
 			if (stripos($check,$badword) !== false) $result->invalidate( $tag, 'We do not accept messages from this email address.');
@@ -3008,10 +3011,12 @@ function battleplan_log_page_load_speed_ajax() {
 		$mobileCounted = readMeta($siteHeader, "load-number-mobile");
 		$mobileSpeed = readMeta($siteHeader, "load-speed-mobile");		
 		$lastEmail = readMeta($siteHeader, "last-email");
+		$today = date("F j, Y, g:i a");	
+		$current = strtotime($today);
 		$daysSinceEmail = (($current - $lastEmail) / 60 / 60 / 24);
 		$totalCounted = $desktopCounted + $mobileCounted;	
 
-		if ( ($totalCounted > 100 && $daysSinceEmail > 30) || $daysSinceEmail > 90 ) :
+		if ( ( $totalCounted > 100 && $daysSinceEmail > 30 ) || $daysSinceEmail > 90 ) :
 			$desktopCount = sprintf( _n( '%s visit', '%s visits', $desktopCounted, 'battleplan' ), $desktopCounted );
 			$mobileCount = sprintf( _n( '%s visit', '%s visits', $mobileCounted, 'battleplan' ), $mobileCounted );
 			$emailTo = "info@battleplanwebdesign.com";

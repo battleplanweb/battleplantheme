@@ -10,7 +10,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 # Screen resize
 # ADA compliance
 # Delay parsing of JavaScript
-# If page load fails
 
 --------------------------------------------------------------*/
 
@@ -359,6 +358,15 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		if ( neededPos == "centerY" || neededPos == "centery" || neededPos == "center-y" ) { return getCenterY; }		
 	};
 
+//Find translateY or translateX of element
+	window.getTranslate = function (container, XorY) {
+		XorY = XorY || 'Y';
+		var theContainer = document.querySelector(container), style = window.getComputedStyle(theContainer), matrix = style.transform || style.webkitTransform || style.mozTransform, matrixValues = matrix.match(/matrix.*\((.+)\)/)[1].split(', ');
+		
+		if ( XorY == "x" || XorY == "X" ) return matrixValues[4];
+		if ( XorY == "y" || XorY == "Y" ) return matrixValues[5];
+	};
+	
 // Accordion section - control opening & closing of expandable text boxes
 	window.buildAccordion = function (topSpacer, cssDelay, transSpeed, closeDelay, openDelay, clickActive) {
 		if (buildAccordion.done) return;
@@ -682,8 +690,11 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$("#"+tab_id).delay(fadeSpeed).addClass('current').fadeIn(fadeSpeed);
 	});
 
-	//setTimeout( function () { $(".msg-disappear").fadeOut(); }, 3000); 
-
+	// Prepare data for javascript that was encodded in PHP
+	window.prepareJSON = function (data) {
+		data = data.replace(/%7B/g, '{').replace(/%7D/g, '}').replace(/%22/g, '"').replace(/%3A/g, ':').replace(/%2C/g, ',');				
+		return $.parseJSON(data);
+	};					
 
 /*--------------------------------------------------------------
 # DOM level functions
@@ -916,6 +927,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	window.animateBtn = function(menu, notClass, animateClass) {	
 		menu = menu || ".menu";		
 		notClass = notClass || "li:not(.active)";	
+
 		var theEl = $(menu).find(notClass);
 		animateClass = animateClass || "go-animated";
 		theEl.bind("webkitAnimationEnd mozAnimationEnd animationend", function() { $(this).removeClass(animateClass); });
@@ -1085,7 +1097,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 	$('a[href^="#"]:not(.carousel-control-next):not(.carousel-control-prev)').on('click', function (e) {
 		e.preventDefault();    
 		var target = this.hash;
-		animateScroll(target);
+		if ( target != "" ) { animateScroll(target); }
 	});
 
 // Automatically adjust for Google review bar 

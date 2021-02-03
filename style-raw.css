@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 6.3
+Version: 6.4
 Tested up to: 5.5
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -712,10 +712,39 @@ a.tab-focus {
 	color: 										#191970;
 }
 
+a[tooltip] {
+  	position: 									relative;
+  	display: 									inline-block;
+}
+
+a[tooltip]::after {
+	content:									attr(tooltip);
+	position: 									absolute;
+	display:									block;
+	visibility: 								hidden;
+	background: 								rgba(0,0,0,0.9);
+	color: 										#ffffff;
+	text-align: 								center;
+	padding: 									6px;
+	margin-top:									3px;
+	border-radius: 								6px;
+	z-index: 									1;
+	width: 										150px;
+	margin-left: 								-75px;
+	font-size:									13px;
+	line-height:								1.3;
+	font-weight:								normal;
+}
+
+a[tooltip]:hover::after {
+  	visibility: 								visible;
+}
+
 /* Forms
 --------------------------------------------- */
 form.wpcf7-form {
 	margin:										1em auto;
+
 
     text-align: 								center;
 	max-width:									500px;
@@ -1222,13 +1251,14 @@ section.section {
 	height:										100%;
 }
 
-.archive-content {
+.section.archive-content,
+.section.section-inline.archive-content {
 	width:										100%;
-	margin-top:									2.5em;
-	margin-bottom:								2.5em;
+	margin-top:									4em;
+	margin-bottom:								4em;
 }
 
-.archive-content .flex {
+.section.archive-content .flex {
 	gap: 										4em 3%;
 }
 
@@ -2457,6 +2487,10 @@ a.scroll-top {
 	margin: 									2.5em 0; /* changed bottom margin to 2.5em from 1.5em on Jaric 9/22/20 - changed top margin to 2.5em because all sites seem to need it 12/1/20 */
 }
 
+h3.archive-subheadline {
+	font-size:									140%;
+}
+
 .archive-intro {
 	margin-top:									1.5em; /* changed top margin to 1.5em from 0.5em for testimonials archive (1st paragraph) 10/12/20 */
 	margin-bottom:								2em;
@@ -2515,6 +2549,10 @@ a.scroll-top {
 	transform:									translateY(0);
 }
 
+.archive-meta i.fa-user {
+	margin-right:								4px;
+}
+
 .archive-meta i.fa-comments,
 .single-meta i.fa-comments {
 	margin-right:								4px;
@@ -2534,61 +2572,122 @@ a.scroll-top {
 	margin-bottom:								1.5em;
 }
 
+.tag-list a {
+	margin-left:								10px;
+	margin-right:								10px;
+}
+
 .tag-buttons {
 	display:									flex;
 	flex-flow: 									row wrap;
 }
 
 .tag-buttons a {
-	flex: 										1 1 0;
+	flex: 										1 1 1;
+	margin:										8px;
+	text-align:									center;
+}
+
+.social-share-buttons {
+	text-align:									center;
+}
+
+.social-share-buttons .share-button {
 	margin-left:								8px;
 	margin-right:								8px;
-	text-align:									center;
 }
 
 /* Comments
 --------------------------------------------- */
-.comment-content a {
-	word-wrap: 									break-word;
+#comments {
+	margin-top:									2em;
+	padding-top:								2em;
+	border-top:									1px solid rgba(0,0,0,0.85);
 }
 
-.bypostauthor {
-	display: 									block;
+h2.comments-title,
+h3#reply-title {
+	font-size:									28rem;
 }
 
-.comment-list {
+ul.comment-list,
+ul.comment-list ul.children {
 	list-style:									none;
 	padding:									0;
-	margin:										0 10px 70px;
+	margin:										0;
 }
 
-.comment-list .comment {
-	margin-top:									70px;
+ul.comment-list > .comment {
+	margin:										4em 2%;
+	border-bottom:								1px solid rgba(0,0,0,0.85);
 }
 
-.comment-list .avatar {
+ul.comment-list ul.children .comment {
+	margin:										2em 0 2em 4%;
+}
+
+ul.comment-list ul.children .comment:last-child {
+	margin-bottom:								4em;
+}
+
+ul.comment-list .avatar {
 	float:										left;
 	margin:										0 10px 10px 0;
-	width:										80px;
-	height:										80px;
 }
 
-.comment-list span.says {
+ul.comment-list h3.comment-author {
+	text-align:									left !important;
+	font-size:									28rem;
+}
+
+ul.comment-list .comment-meta {
+	font-size:									70%;
+}
+
+ul.comment-list .comment-meta .comment-time {
 	display:									none;
 }
 
-.comment-list .comment-metadata a {
-	text-decoration:							none;
-	font-size:									75%
+ul.comment-list p {
+	margin-bottom:								1em;
 }
 
-.comment-list .edit-link a {
-	text-decoration:							underline;
-	margin-left:								10px;
+ul.comment-list p a {
+	word-wrap: 									break-word;
 }
 
-.comment-list .reply a {
+ul.comment-list .comment-meta .comment-edit-link {
+	float:										right;
+}
+
+ul.comment-list .reply a {
 	font-size:									80%;
+}
+
+form#commentform {
+	margin:										1.5em auto;
+	width:										100%;
+	max-width:									500px;
+}
+
+form#commentform p {
+	text-align:									center;
+}
+
+form#commentform p.form-submit {
+	margin-top:									1.5em;
+}
+
+h3#reply-title p.reply {
+	margin-top:									0.5em;
+}
+
+#cancel-comment-reply-link {
+	display:									none;
+}
+
+ul.comment-list #cancel-comment-reply-link {
+	display:									inline-block;
 }
 
 /* Media
@@ -2750,23 +2849,24 @@ img.noFX,
 
 .wp-caption img[class*="wp-image-"] {
 	display: 									block;
+	margin-bottom:								0; /* Air Right 1/27/21 */
 	margin-left: 								auto;
 	margin-right: 								auto;
 }
 
 .wp-caption .wp-caption-text {
-	margin: 									8px 0; /* EJ's 12/18/20 */
-}
-
-.wp-caption-text {
+	display:									inline-block; /* Air Right 1/27/21 */
+	width:										100%; /* Air Right 1/27/21 */
+	font-size:									90%; /* Air Right 1/27/21 */
 	text-align: 								center;
+	margin: 									8px 0; /* EJ's 12/18/20 */
 }
 
 /* Testimonials
 --------------------------------------------- */
 .testimonials-credentials {
 	text-align:									right;
-	margin-top:									1.5em;
+	/*margin-top:									1.5em; removed 2/3/21 - checked on KyTy and Humphrey */
 	color:										#000000;
 }
 
@@ -2938,6 +3038,34 @@ img.noFX,
     margin-top: 								0;
 }
 
+/* Random Posts (thumb-only)
+--------------------------------------------- */
+.thumb-only {
+	display:									flex;
+	flex-wrap:									wrap;
+	gap:										1.5em 3%;
+}
+
+#secondary .thumb-only {
+	gap:										0.5em;
+}
+
+.thumb-only .col,
+.thumb-only.thumb-col-1 .col {
+	flex:										1 0 50%;
+}
+
+.thumb-only.thumb-col-2 .col {
+	flex:										1 0 33%;
+}
+
+.thumb-only.thumb-col-3 .col {
+	flex:										1 0 25%;
+}
+
+.thumb-only.thumb-col-4 .col {
+	flex:										1 0 20%;
+}
 
 /* Galleries
 --------------------------------------------- */
@@ -3307,6 +3435,7 @@ iframe#podium-modal {
 @supports ((-webkit-transform-style:preserve-3d) or (transform-style:preserve-3d)) {
     .active.carousel-item-left, 
 	.carousel-item-prev { 
+
 		transform: 									translate3d(-100%, 0, 0);
 	}
 }
@@ -3394,6 +3523,7 @@ iframe#podium-modal {
     cursor: 									pointer;
 	transition:									all 0.2s ease;
 }
+
 .carousel-indicators .active, 
 .carousel-indicators li:hover, 
 .carousel-indicators li.tab-focus {
@@ -3423,9 +3553,31 @@ iframe#podium-modal {
 	height: 									17px;
 	border-radius: 								100%;
 }
+
 .carousel-dot .carousel-indicators .active, 
 .carousel-dot .carousel-indicators li:hover, 
 .carousel-dot .carousel-indicators li.tab-focus {
+}
+
+.carousel-emboss .carousel-indicators li,
+.carousel-emboss .carousel-indicators .active, 
+.carousel-emboss .carousel-indicators li:hover, 
+.carousel-emboss .carousel-indicators li.tab-focus {
+	box-shadow:									inset 2px 2px 2px rgba(0,0,0,0.2), 2px 2px 2px rgba(255,255,255,0.2);
+}
+
+.carousel-emboss .carousel-indicators .active::after, 
+.carousel-emboss .carousel-indicators li:hover::after, 
+.carousel-emboss .carousel-indicators li.tab-focus::after {
+    content: 									'';
+    width: 										11px;
+    height: 									11px;
+    position: 									absolute;
+    top: 										3px;
+    left: 										3px;
+    border-radius: 								100%;
+    background: 								rgb(255,255,255,1);
+	box-shadow:									1px 1px 1px rgba(0,0,0,0.2), inset 1px 1px 1px rgba(255,255,255,0.4);
 }
 
 .carousel-caption {

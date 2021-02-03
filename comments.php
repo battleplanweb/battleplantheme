@@ -33,40 +33,31 @@ if ( post_password_required() ) {
 		<?php the_comments_navigation(); ?>
 
 		<ul class="comment-list">
-			<?php
-			$args = array(
-				'walker'            => null,
-				'max_depth'         => '',
-				'style'             => 'ul',
-				'callback'          => null,
-				'end-callback'      => null,
-				'type'              => 'all',
-				'page'              => '',
-				'per_page'          => '',
-				'avatar_size'       => 80,
-				'reverse_top_level' => null,
-				'reverse_children'  => '',
-				'format'            => 'html5',  
-				'short_ping'        => false,   
-				'echo'              => true     
-			);
-			wp_list_comments( array($args) );
-			?>
+			<?php wp_list_comments( 'type=comment&&max_depth=2&callback=battleplan_comment_structure' );	?>
 		</ul><!-- .comment-list -->
 
 		<?php
 		the_comments_navigation();
 
-		// If comments are closed and there are comments, let's leave a little note, shall we?
-		if ( ! comments_open() ) :
-			?>
+		if ( ! comments_open() ) : ?>
 			<p class="no-comments"><?php esc_html_e( 'Comments are closed.', 'battleplan' ); ?></p>
 			<?php
 		endif;
 
 	endif; // Check for have_comments().
 
-	comment_form();
+	$comments_args = array(
+        'title_reply' => __( 'Write a Comment', 'battleplan' ),
+        'comment_notes_after' => '',    
+		'fields' => array(
+			'author' => '<p class="comment-form-author"><label for="author">' . _x( 'Your Name', 'battleplan' ) . '</label><br /><input id="author" name="author" aria-required="true"></input></p>',
+			'email' => '<p class="comment-form-email"><label for="email">' . _x( 'Your Email', 'battleplan' ) . '</label><br /><input id="email" name="email"></input></p>',
+			'url' => '<p class="comment-form-url"><label for="url">' . _x( 'Your Website', 'battleplan' ) . '</label><br /><input id="url" name="url"></input></p>',
+		),
+        'comment_field' => '<p class="comment-form-comment"><label for="comment">' . _x( 'Your Comment', 'battleplan' ) . '</label><br /><textarea id="comment" name="comment" aria-required="true"></textarea></p>',
+        'label_submit' => __( 'Submit', 'battleplan' ),
+	);
+	comment_form( $comments_args );
 	?>
 
 </div><!-- #comments -->

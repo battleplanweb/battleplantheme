@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 # Basic site functionality
 --------------------------------------------------------------*/
 
-	var getThemeURI = theme_dir.theme_dir_uri, getUploadURI = theme_dir.upload_dir_uri, mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 0, timezone;
+	var getThemeURI = theme_dir.theme_dir_urti, getUploadURI = theme_dir.upload_dir_uri, mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 0, timezone;
 	
 	if ( $("#mobile-menu-bar").is(":visible") ) { mobileMenuBarH = $("#mobile-menu-bar").outerHeight();	}
 
@@ -725,6 +725,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	window.moveDiv = function (moveThis, anchor, where) {
 		where = where || "after";
 		var thisDiv = $(moveThis), thisAnchor = $(anchor);
+
 		if ( where == "after" ) {
 			thisDiv.insertAfter( thisAnchor );
 		} else if ( where == "before" ) {
@@ -927,6 +928,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	window.animateBtn = function(menu, notClass, animateClass) {	
 		menu = menu || ".menu";		
 		notClass = notClass || "li:not(.active)";	
+
 
 		var theEl = $(menu).find(notClass);
 		animateClass = animateClass || "go-animated";
@@ -1189,6 +1191,11 @@ if ( $('body').hasClass('remove-sidebar') ) {
 	if ( todayIs == 4 ) $(".office-hours .row-thu").addClass("today");
 	if ( todayIs == 5 ) $(".office-hours .row-fri").addClass("today");
 	if ( todayIs == 6 ) $(".office-hours .row-sat").addClass("today");
+	
+					
+// Removes double asterisk in required forms
+	$('abbr.required, em.required, span.required').text("");
+	setTimeout( function () { $('abbr.required, em.required, span.required').text(""); }, 2000);
 
 /*--------------------------------------------------------------
 # Set up sidebar
@@ -1449,6 +1456,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			setTimeout(function() {
 				document.activeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });				
 				document.activeElement.classList.add("tab-focus"); 					
+				//document.activeElement.closest('li').classList.add("tab-focus"); 	/* removed 2/3/21 because it causes 2 items to be highlighted at once */			
 			}, 10);
 		}		
 	});

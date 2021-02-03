@@ -50,10 +50,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$('.woocommerce-shipping-destination').text(getShipping);		
 		replaceText('.woocommerce-shipping-destination', 'Shipping to ', '', 'text');
 		replaceText('.woocommerce-shipping-destination', ',', '<br/>', 'html');
-				
-	// Removes double asterisk in woocommerce required forms
-		$('abbr.required, em.required, span.required').text("");
-		setTimeout( function () { $('abbr.required, em.required, span.required').text(""); }, 2000);
 		
 	// Removes button styling from Pay, View and Cancel buttons (on Account page)
 		$('.woocommerce-orders-table__cell a').removeClass('woocommerce-button').removeClass('button');	

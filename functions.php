@@ -16,8 +16,9 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '6.3' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '6.4' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
+if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 
 /*--------------------------------------------------------------
 # Shortcodes
@@ -157,20 +158,24 @@ function battleplan_getCount($atts, $content = null) {
 // Add Social Media Share Buttons
 add_shortcode( 'add-share-buttons', 'battleplan_addShareButtons' );
 function battleplan_addShareButtons( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'facebook'=>'false', 'twitter'=>'false', ), $atts );
+	$a = shortcode_atts( array( 'facebook'=>'false', 'twitter'=>'false', 'pinterest'=>'false' ), $atts );
 	$facebook = esc_attr($a['facebook']);
 	$twitter = esc_attr($a['twitter']);	
+	$pinterest = esc_attr($a['pinterest']);	
 	global $post;
-    $postURL = urlencode( esc_url( get_permalink($post->ID) ) );
+    $postURL = urlencode( esc_url( get_permalink($post->ID) ));
     $postTitle = urlencode( $post->postTitle );
+    $postImg = urlencode(get_the_post_thumbnail_url( $post->ID, 'thumbnail' ));
     $facebookLink = sprintf( 'https://www.facebook.com/sharer/sharer.php?u=%1$s', $postURL );
     $twitterLink = sprintf( 'https://twitter.com/intent/tweet?text=%2$s&url=%1$s', $postURL, $postTitle );
+	$pinterestLink = sprintf( 'https://pinterest.com/pin/create/button/?url=%1$s&media=%2$s&description=%3$s', $postURL, $postImg, $postTitle );
 
     $output = '<div class="social-share-buttons">';
-	if ( $facebook == "true" ) $output .= '<a target="_blank" href="'.$facebookLink.'" class="share-button facebook"><span class="sr-only">Share on Facebook</span></a>';
-	if ( $twitter == "true" ) $output .= '<a target="_blank" href="'.$twitterLink.'" class="share-button twitter"><span class="sr-only">Share on Twitter</span></a>';
+	if ( $facebook == "true" ) $output .= '<a tooltip="Click to share on Facebook" target="_blank" href="'.$facebookLink.'" class="share-button facebook"><i class="fab fa-facebook-f" aria-hidden="true"></i><span class="sr-only">Share on Facebook</span></a>';
+	if ( $twitter == "true" ) $output .= '<a tooltip="Click to share on Twitter" target="_blank" href="'.$twitterLink.'" class="share-button twitter"><i class="fab fa-twitter" aria-hidden="true"></i><span class="sr-only">Share on Twitter</span></a>';
+	if ( $pinterest == "true" ) $output .= '<a tooltip="Click to share on Pinterest" target="_blank" href="'.$pinterestLink.'" class="share-button pinterest"><i class="fab fa-pinterest-p" aria-hidden="true"></i><span class="sr-only">Share on Pinterest</span></a>';
     $output .= '</div><!-- .social-share-buttons -->';
-
+ 
     return $output;	
 };
 
@@ -304,7 +309,7 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 // Build an archive
 add_shortcode( 'build-archive', 'battleplan_getBuildArchive' );
 function battleplan_getBuildArchive($atts, $content = null) {	
-	$a = shortcode_atts( array( 'type'=>'', 'count_tease'=>'false', 'count_view'=>'false', 'show_btn'=>'false', 'btn_text'=>'Read More', 'btn_pos'=>'outside', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_social'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'show_thumb'=>'true', 'no_pic'=>'', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'accordion'=>'false', 'link'=>'post' ), $atts );
+	$a = shortcode_atts( array( 'type'=>'', 'count_tease'=>'false', 'count_view'=>'false', 'thumb_only'=>'false', 'show_btn'=>'false', 'btn_text'=>'Read More', 'btn_pos'=>'outside', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_social'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'add_info'=>'', 'show_thumb'=>'true', 'no_pic'=>'', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'accordion'=>'false', 'link'=>'post' ), $atts );
 	$type = esc_attr($a['type']);	
 	$countTease = esc_attr($a['count_tease']);	
 	$countView = esc_attr($a['count_view']);	
@@ -318,10 +323,21 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	$showSocial = esc_attr($a['show_social']);		
 	$showExcerpt = esc_attr($a['show_excerpt']);		
 	$showContent = esc_attr($a['show_content']);	
-	if ( $showContent == "true" ) : $showExcerpt = "false"; $showBtn = "false"; endif;
+	if ( $showContent == "true" ) : 
+		$showExcerpt = "false"; 
+		$content = apply_filters('the_content', get_the_content()); 
+	else:
+		if ( $showExcerpt == "true" ) :
+			$content = apply_filters('the_excerpt', get_the_excerpt());
+		else:
+			$content = "";
+		endif;
+	endif;
+	$content .= wp_kses_post($a['add_info']);
 	$showThumb = esc_attr($a['show_thumb']);
 	if ( $showThumb != "false" ) $showThumb = "true";
-	$size = esc_attr($a['size']);		
+	$size = esc_attr($a['size']);	
+	if ( $size == "" ) $size = "thumbnail";
 	$picSize = esc_attr($a['pic_size']);	
 	$textSize = esc_attr($a['text_size']);		
 	$accordion = esc_attr($a['accordion']);			
@@ -334,13 +350,13 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	if ( $noPic == "" ) $noPic = "false";	
 	if ( $showBtn == "true" ) : $picADA = " ada-hidden='true'"; $titleADA = " aria-hidden='true' tabindex='-1'";
 	elseif ( $showTitle == "true" ) : $picADA = " ada-hidden='true'"; endif;
+	$thumbOnly = esc_attr($a['thumb_only']);
 		
 	if ( has_post_thumbnail() && $showThumb == "true" ) : 	
 		$buildImg = do_shortcode("[img size='".$picSize."' class='image-".$type."' link='".$linkLoc."' ".$picADA."]".get_the_post_thumbnail( get_the_ID(), $size, array( 'class'=>'img-archive img-'.$type.$googleTag ))."[/img]"); 
 		if ( $textSize == "" ) : $textSize = getTextSize($picSize); endif;
 	
-		global $setAltText;
-		if ( $setAltText == "yes" ) :
+		if ( _SET_ALT_TEXT_TO_TITLE == "yes" ) :
 			$attachment_id = get_post_thumbnail_id( get_the_ID() );
 			if ( get_post_meta( $attachment_id, '_wp_attachment_image_alt', true ) == "" ) :
 				update_post_meta( $attachment_id, '_wp_attachment_image_alt', esc_html(get_the_title()) );
@@ -392,7 +408,6 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		if ( $accordion == "true" ) :		
 			$title = esc_html(get_the_title());
 			$excerpt = wp_kses_post(get_the_excerpt());	
-			$content = apply_filters('the_content', get_the_content()); 
 			$archiveBody = '[accordion title="'.$title.'" excerpt="'.$excerpt.'"]'.$content.'[/accordion]';		
 		else :		
 			$archiveMeta = $archiveBody = "";
@@ -408,8 +423,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 			if ( $showAuthor == "true") $archiveMeta .= '<span class="archive-author '.$type.'-author author"><i class="fas fa-user"></i>'.get_the_author().'</span>';
 			if ( $showSocial == "true") $archiveMeta .= '<span class="archive-social '.$type.'-social social">'.do_shortcode('[add-share-buttons facebook="true" twitter="true"]').'</span>';
 			if ( $showDate == "true" || $showAuthor == "true" || $showSocial == "true" ) $archiveMeta .= '</div>';
-			if ( $showExcerpt == "true") $archiveBody .= '[p]'.apply_filters('the_excerpt', get_the_excerpt()).'[/p]';
-			if ( $showContent == "true") $archiveBody .= '[p]'.apply_filters('the_content', get_the_content()).'[/p]';
+			$archiveBody .= '[p]'.$content.'[/p]';
 			if ( $type == "galleries" ) :
 				if ( has_term( 'auto-generated', 'gallery-type' ) ) :
 					$count = esc_attr(get_field("image_number")); 						
@@ -429,20 +443,24 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		if ( $type == "testimonials" ) : $ada = " testimonials"; else: $ada = ' about '.esc_html(get_the_title()); endif;	
 		$buildBtn = do_shortcode('[btn class="button-'.$type.'" link="'.$linkLoc.'" ada="'.$ada.'"]'.$btnText.'[/btn]'); 	
 	endif;
-	
-	$buildBody = "";
-	if ( $titlePos == "inside" || $btnPos == "inside" || $type == "testimonials" ) : $groupSize = $textSize; $textSize = "100"; $buildBody .= "[group size='".$groupSize."' class='group-".$type."']"; endif;	
-	if ( $type != "testimonials" ) $buildBody .= "[txt size='".$textSize."' class='text-".$type."']";
-	if ( $titlePos == "inside" ) $buildBody .= $archiveMeta;	
-	$buildBody .= do_shortcode($archiveBody);
-	if ( $type != "testimonials" ) $buildBody .= "[/txt]";	
-	if ( $btnPos == "inside" ) $buildBody .= $buildBtn;	
-	if ( $titlePos == "inside" || $btnPos == "inside" || $type == "testimonials" ) $buildBody .= "[/group]";
-	
-	$showArchive = "";
-	if ( $titlePos != "inside" ) $showArchive .= $archiveMeta;	
-	$showArchive .= $buildImg.do_shortcode($buildBody);
-	if ( $btnPos != "inside" ) $showArchive .= $buildBtn;	
+			
+	if ( $thumbOnly == "true" ) :
+		$showArchive = $buildImg;
+	else:
+		$buildBody = "";
+		if ( $titlePos == "inside" || $btnPos == "inside" || $type == "testimonials" ) : $groupSize = $textSize; $textSize = "100"; $buildBody .= "[group size='".$groupSize."' class='group-".$type."']"; endif;	
+		if ( $type != "testimonials" ) $buildBody .= "[txt size='".$textSize."' class='text-".$type."']";
+		if ( $titlePos == "inside" ) $buildBody .= $archiveMeta;	
+		$buildBody .= do_shortcode($archiveBody);
+		if ( $type != "testimonials" ) $buildBody .= "[/txt]";	
+		if ( $btnPos == "inside" ) $buildBody .= $buildBtn;	
+		if ( $titlePos == "inside" || $btnPos == "inside" || $type == "testimonials" ) $buildBody .= "[/group]";
+
+		$showArchive = "";
+		if ( $titlePos != "inside" ) $showArchive .= $archiveMeta;	
+		$showArchive .= $buildImg.do_shortcode($buildBody);
+		if ( $btnPos != "inside" ) $showArchive .= $buildBtn;
+	endif;	
 	
 	return $showArchive;
 }
@@ -450,7 +468,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 // Display randomly selected posts - start/end can be dates or -53 week / -51 week */
 add_shortcode( 'get-random-posts', 'battleplan_getRandomPosts' );
 function battleplan_getRandomPosts($atts, $content = null) {	
-	$a = shortcode_atts( array( 'num'=>'1', 'offset'=>'0', 'type'=>'post', 'tax'=>'', 'terms'=>'', 'orderby'=>'recent', 'sort'=>'asc', 'count_tease'=>'true', 'count_view'=>'false', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_social'=>'false', 'show_btn'=>'true', 'button'=>'Read More', 'btn_pos'=>'inside', 'show_content'=>'false', 'thumbnail'=>'force', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'link'=>'post' ), $atts );
+	$a = shortcode_atts( array( 'num'=>'1', 'offset'=>'0', 'type'=>'post', 'tax'=>'', 'terms'=>'', 'field_key'=>'', 'field_value'=>'', 'field_compare'=>'IN', 'orderby'=>'recent', 'sort'=>'asc', 'count_tease'=>'true', 'count_view'=>'false', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_social'=>'false', 'show_btn'=>'true', 'button'=>'Read More', 'btn_pos'=>'inside', 'show_content'=>'false', 'thumb_only'=>'false', 'thumb_col'=>'1', 'thumbnail'=>'force', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'link'=>'post' ), $atts );
 	$num = esc_attr($a['num']);	
 	$potentialOffset = esc_attr($a['offset']);
 	$offset = rand(0,$potentialOffset);
@@ -476,6 +494,10 @@ function battleplan_getRandomPosts($atts, $content = null) {
 	$taxonomy = esc_attr($a['tax']);
 	$term = esc_attr($a['terms']);
 	$terms = explode( ',', $term );
+	$fieldKey = esc_attr($a['field_key']);
+	$fieldValue = esc_attr($a['field_value']);
+	$fieldValues = explode( ',', $fieldValue );
+	$fieldCompare = esc_attr($a['field_compare']);
 	$excludeRaw = esc_attr($a['exclude']);
 	$exclude = explode(',', $excludeRaw); 
 	$xCurrent = esc_attr($a['x_current']);
@@ -486,8 +508,15 @@ function battleplan_getRandomPosts($atts, $content = null) {
 	$size = esc_attr($a['size']);		
 	$picSize = esc_attr($a['pic_size']);	
 	$textSize = esc_attr($a['text_size']);		
-	$link = esc_attr($a['link']);		
-	
+	$link = esc_attr($a['link']);
+	$thumbOnly = esc_attr($a['thumb_only']);
+	if ( $thumbOnly == "true" ) : 
+		$title = $showDate = $showExcerpt = $showContent = $showAuthor = $showSocial = $showBtn = "false";
+		$picSize = "100";
+		$showThumb = "true";
+	endif;
+	$thumbCol = esc_attr($a['thumb_col']);
+
 	$args = array ('posts_per_page'=>$num, 'offset'=>$offset, 'date_query'=>array( array( 'after'=>$start, 'before'=>$end, 'inclusive'=>true, ), ), 'order'=>$sort, 'post_type'=>$postType, 'post__not_in'=>$exclude);
 
 	if ( $orderBy == 'views-today' ) : $args['meta_key']="post-views-day-1"; $args['orderby']='meta_value_num';	
@@ -500,16 +529,22 @@ function battleplan_getRandomPosts($atts, $content = null) {
 	if ( $taxonomy && $term ) : 
 		$args['tax_query']=array( array('taxonomy'=>$taxonomy, 'field'=>'slug', 'terms'=>$terms ));
 	endif;
+	
+	if ( $fieldKey && $fieldValue ) : 
+		$args['meta_query']=array( array('key'=>$fieldKey, 'value'=>$fieldValues, 'compare'=>$fieldCompare ));
+	endif;
 
 	global $post; 
 	$getPosts = new WP_Query( $args );
 	$combinePosts = "";
 	if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 	
-		$showPost = do_shortcode('[build-archive type="'.$postType.'" count_tease="'.$countTease.'" count_view="'.$countView.'" show_btn="'.$showBtn.'" btn_text="'.$button.'" btn_pos="'.$btnPos.'" show_title="'.$title.'" title_pos="'.$titlePos.'" show_date="'.$showDate.'" show_excerpt="'.$showExcerpt.'" show_social="'.$showSocial.'" show_content="'.$showContent.'" show_author="'.$showAuthor.'" size="'.$size.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" link="'.$link.'"]');	
+		$showPost = do_shortcode('[build-archive type="'.$postType.'" count_tease="'.$countTease.'" count_view="'.$countView.'" thumb_only="'.$thumbOnly.'" show_btn="'.$showBtn.'" btn_text="'.$button.'" btn_pos="'.$btnPos.'" show_title="'.$title.'" title_pos="'.$titlePos.'" show_date="'.$showDate.'" show_excerpt="'.$showExcerpt.'" show_social="'.$showSocial.'" show_content="'.$showContent.'" show_author="'.$showAuthor.'" size="'.$size.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" link="'.$link.'"]');	
 	
 		if ( $num > 1 ) $showPost = do_shortcode('[col]'.$showPost.'[/col]');	
 		if ( has_post_thumbnail() || $thumbnail != "force" ) $combinePosts .= $showPost;
 	endwhile; wp_reset_postdata(); endif;
+	
+	if ( $thumbOnly == "true" ) $combinePosts = '<div class = "random-posts thumb-only thumb-col-'.$thumbCol.'">'.$combinePosts.'</div>';
 	return $combinePosts;
 }
 
@@ -1054,6 +1089,7 @@ function battleplan_add_quicktags() {
 			QTags.addButton( 'bp_column', 'column', '  [col name="becomes id attribute" align="center, left, right" valign="start, stretch, center, end" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '  [/col]\n\n', 'column', 'Column', 1000 );
 			QTags.addButton( 'bp_image', 'image', '   [img size="100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" link="url to link to" new-tab="false, true" ada-hidden="false, true" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/img]\n', 'image', 'Image', 1000 );
 			QTags.addButton( 'bp_video', 'video', '   [vid size="100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" link="url of video" class="" related="false, true" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/vid]\n', 'video', 'Video', 1000 );
+			QTags.addButton( 'bp_caption', 'caption', '[caption align="aligncenter, alignleft, alignright" width="800"]<img src="/filename.jpg" alt="" class="size-full-s" />Type caption here.', '[/caption]\n', 'caption', 'Caption', 1000 );
 			QTags.addButton( 'bp_group', 'group', '   [group size = "100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '   [/group]\n\n', 'group', 'Group', 1000 );	
 			QTags.addButton( 'bp_text', 'text', '   [txt size="100 1/2 1/3 1/4 1/6 1/12" order="2, 1, 3" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '   [/txt]\n', 'text', 'Text', 1000 );
 			QTags.addButton( 'bp_button', 'button', '   [btn size="100 1/2 1/3 1/4 1/6 1/12" order="3, 1, 2" align="center, left, right" link="url to link to" get-biz="link in functions.php" new-tab="false, true" class="" ada="text for ada button" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/btn]\n', 'button', 'Button', 1000 );	
@@ -1062,7 +1098,7 @@ function battleplan_add_quicktags() {
 			QTags.addButton( 'bp_expire-content', 'expire', '[expire start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/expire]\n\n', 'expire', 'Expire', 1000 );			
 			QTags.addButton( 'bp_lock-section', 'lock', '[lock name="becomes id attribute" style="(lock) corresponds to css" width="edge, default, stretch, full, inline" position="bottom, top, modal" delay="3000" show="session, never, always, # days" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '[/lock]\n\n', 'lock', 'Lock', 1000 );		
 			QTags.addButton( 'bp_random-image', 'random image', '   [get-random-image id="" tag="random" size="thumbnail, third-s" link="no, yes" number="1" offset="" align="left, right, center" order_by="recent, rand, menu_order, title, id, post_date, modified, views" order="asc, desc" shuffle="no, yes"]\n', '', 'random image', 'Random Image', 1000 );
-			QTags.addButton( 'bp_random-post', 'random post', '   [get-random-posts num="1" offset="0" type="post" tax="" terms="" orderby="recent, rand, views-today, views-7day, views-30day, views-all" sort="asc, desc" count_tease="true, false" count_view="true, false" show_title="true, false" title_pos="outside, inside" show_date="false, true" show_author="false, true" show_excerpt="true, false" show_social="false, true" show_btn="true, false" button="Read More" btn_pos="inside, outside" thumbnail="force, false" link="post, false, /link-destination/" start="" end="" exclude="" x_current="true, false" size="thumbnail, size-third-s" pic_size="1/3" text_size=""]\n', '', 'random post', 'Random Post', 1000 );
+			QTags.addButton( 'bp_random-post', 'random post', '   [get-random-posts num="1" offset="0" type="post" tax="" terms="" orderby="recent, rand, views-today, views-7day, views-30day, views-all" sort="asc, desc" count_tease="true, false" count_view="true, false" thumb_only="false, true" thumb_col="1, 2, 3, 4" show_title="true, false" title_pos="outside, inside" show_date="false, true" show_author="false, true" show_excerpt="true, false" show_social="false, true" show_btn="true, false" button="Read More" btn_pos="inside, outside" thumbnail="force, false" link="post, false, /link-destination/" start="" end="" exclude="" x_current="true, false" size="thumbnail, size-third-s" pic_size="1/3" text_size=""]\n', '', 'random post', 'Random Post', 1000 );
 			QTags.addButton( 'bp_random-text', 'random text', '   [get-random-text cookie="true, false" text1="" text2="" text3="" text4="" text5="" text6="" text7=""]\n', '', 'random text', 'Random Text', 1000 );
 			QTags.addButton( 'bp_row-of-pics', 'row of pics', '   [get-row-of-pics id="" tag="row-of-pics" col="4" size="half-s, thumbnail" valign="center, start, stretch, end" link="no, yes" order_by="recent, rand, menu_order, title, id, post_date, modified, views" order="asc, desc" shuffle="no, yes" class=""]\n', '', 'row of pics', 'Row Of Pics', 1000 );
 			QTags.addButton( 'bp_post-slider', 'post slider', '   [get-post-slider type="" auto="yes, no" interval="6000" loop="true, false" num="4" offset="0" pics="yes, no" controls="yes, no" controls_pos="below, above" indicators="no, yes" pause="true, false" tax="" terms="" orderby="recent, rand, id, author, title, name, type, date, modified, parent, comment_count, relevance, menu_order, (images) views, (posts) views-today, views-7day, views-30day, views-all" order="asc, desc" post_btn="" all_btn="View All" link="" start="" end="" excluse="" x_current="true, false" show_excerpt="true, false" show_content="false, true" size="thumbnail" pic_size="1/3" text_size="" class="" (images) slide_type="box, screen, fade" tag="" caption="no, yes" id="" size="thumbnail, half-s" mult="1"]\n', '', 'post slider', 'Post Slider', 1000 );
@@ -2326,6 +2362,46 @@ function battleplan_meta_comments() {
 	return '<span class="meta-comments"><i class="fas fa-comments"></i>'.get_comments_number().'</span>';
 }
 
+// Set up comment structure
+function battleplan_comment_structure($comment, $args, $depth) {
+	$GLOBALS['comment'] = $comment; ?>
+	<li <?php comment_class(); ?> id="li-comment-<?php comment_ID() ?>">
+		<div id="comment-<?php comment_ID(); ?>">
+			<div class="comment-author vcard">
+				<?php echo get_avatar($comment,$size='64' ); ?>
+				<?php printf(__('<cite class="fn"><h3 class="comment-author">%s</h3></cite>'), get_comment_author_link()) ?>
+      		</div>
+			<?php if ($comment->comment_approved == '0') : ?>
+         		<em><?php _e('Your comment is awaiting moderation.') ?></em>
+         		<br />
+			<?php endif; ?>
+
+      		<div class="comment-meta">
+				<?php printf(__('<span class="comment-date">%1$s</span><span class="comment-time"> at %2$s</span>'), get_comment_date(), get_comment_time()) ?>
+				<?php edit_comment_link(__('(Edit)'),'  ','') ?>
+			</div>
+
+      		<?php comment_text() ?>
+			
+      		<div class="reply">
+         		<?php comment_reply_link(array_merge( $args, array('depth' => $depth, 'max_depth' => $args['max_depth']))) ?>
+      		</div>
+		</div>
+<?php }
+
+// Add .button class to comment reply link
+add_filter('comment_reply_link', 'battleplan_comment_reply_link', 99);
+function battleplan_comment_reply_link($content) {
+    return preg_replace( '/comment-reply-link/', 'button comment-reply-link', $content);
+}
+
+// Re-format the 'cancel reply' button
+add_filter( 'cancel_comment_reply_link', 'battleplan_cancel_comment_reply_link', 10, 3 );
+function battleplan_cancel_comment_reply_link( $formatted_link, $link, $text ) {
+	$formatted_link = '<p class="reply"><a id="cancel-comment-reply-link" class="button" rel="nofollow" href="'.$link.'">'.$text.'</a></p>';
+	return $formatted_link;
+}
+
 // Set up footer social media box
 function battleplan_footer_social_box() {	
 	$buildLeft = "<div class='social-box'>";
@@ -2520,7 +2596,6 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 
 		$output .= apply_filters( 'walker_nav_menu_start_el', $item_output, $item, $depth, $args );
 	}
-
 }
 
 // Set up spam filter for Contact Form 7 emails
@@ -2533,7 +2608,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( "user-message" == $tag->name ) {
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
-		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','loans for small businesses','New Hire HVAC Employee','и','д','б','й','л','ы','З','у','Я');
+		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','и','д','б','й','л','ы','З','у','Я');
 		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
 		if ( $check == $name ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($badwords as $badword) {
@@ -2832,11 +2907,20 @@ function battleplan_clearViewFields() {
 	}	
 } 
 
-// Set excerpt length
+// Cap excerpt at 1 or 2 sentences, based on length
 add_filter( 'excerpt_length', 'battleplan_excerpt_length', 999 );
 function battleplan_excerpt_length( $length ) { 
-	return 20; 
+	return 200; 
 } 
+
+add_filter('get_the_excerpt', 'end_with_sentence');
+function end_with_sentence( $excerpt ) {
+    $sentences = preg_split( "/(\.|\!|\?)/", $excerpt, NULL, PREG_SPLIT_DELIM_CAPTURE);
+    $newExcerpt = implode('', array_slice($sentences, 0, 4));	
+	if ( strlen($newExcerpt) > 150 ) $newExcerpt = implode('', array_slice($sentences, 0, 2));
+
+    return $newExcerpt;
+}
 
 // Remove unwanted dashboard widgets
 add_action('wp_dashboard_setup', 'battleplan_remove_dashboard_widgets');
@@ -3021,7 +3105,7 @@ function battleplan_log_page_load_speed_ajax() {
 			$mobileCount = sprintf( _n( '%s visit', '%s visits', $mobileCounted, 'battleplan' ), $mobileCounted );
 			$emailTo = "info@battleplanwebdesign.com";
 			$emailFrom = "From: Website Administrator <do-not-reply@battleplanwebdesign.com>";
-			$subject = $_SERVER['HTTP_HOST']." Speed Report";
+			$subject = "Speed Report: ".$_SERVER['HTTP_HOST'];
 			$content = $_SERVER['HTTP_HOST']." Speed Report\n\nDesktop = ".$desktopSpeed."s on ".$desktopCount."\nMobile = ".$mobileSpeed."s on ".$mobileCount."\n";	
 			$desktopCounted = $desktopSpeed = $mobileCounted = $mobileSpeed = 0;
 			updateMeta( $siteHeader, "last-email", $current );	

@@ -16,9 +16,9 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '6.4' ); }
-if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '6.5' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
+if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
 /*--------------------------------------------------------------
 # Shortcodes
@@ -384,7 +384,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		$testimonialMisc3 = esc_attr(get_field( "testimonial_misc3" ));	
 		$testimonialMisc4 = esc_attr(get_field( "testimonial_misc4" ));
 		
-		$buildCredentials = "<div class='testimonials-credential testimonials-name' data-count-tease='true' data-id=".get_the_ID().">".$testimonialName;
+		$buildCredentials = "<div class='testimonials-credential testimonials-name' data-count-tease='true' data-count-view='true' data-id=".get_the_ID().">".$testimonialName;
 		if ( $testimonialTitle ) $buildCredentials .= "<span class='testimonials-title'>, ".$testimonialTitle."</span>";
 		$buildCredentials .= "</div>";
 		if ( $testimonialBiz ) :
@@ -917,8 +917,8 @@ function getID($slug) { return get_page_by_path($slug)->ID; }
 // Get the Role of Current Logged in User
 function getUserRole() {
 	if ( is_user_logged_in() ) : 
-		global $current_user;
-		$user_roles = $current_user->roles;
+		global $today_user;
+		$user_roles = $today_user->roles;
 		$user_role = array_shift($user_roles);
 		return $user_role;
 	endif;
@@ -1030,9 +1030,9 @@ function adjustTerms( $post_id, $term, $taxonomy, $add_or_remove ) {
 		$term_id = $term;
 	}
 	$new_terms = array();
-	$current_terms = wp_get_object_terms( $post_id, $taxonomy, array( 'fields' => 'ids' ) );
-	foreach ( $current_terms as $current_term ) {
-		if ( $current_term != $term_id ) $new_terms[] = intval( $current_term );
+	$today_terms = wp_get_object_terms( $post_id, $taxonomy, array( 'fields' => 'ids' ) );
+	foreach ( $today_terms as $today_term ) {
+		if ( $today_term != $term_id ) $new_terms[] = intval( $today_term );
 	}
 	if ( $add_or_remove == "add" ) $new_terms[] = intval( $term_id );	
 	return wp_set_object_terms( $post_id, $new_terms, $taxonomy );
@@ -1372,7 +1372,7 @@ function battleplan_column_settings() {
 					'label'=>'Last Viewed',
 					'width'=>'',
 					'width_unit'=>'%',
-					'field'=>'post-tease-time',
+					'field'=>'post-views-now',
 					'field_type'=>'date',
 					'date_format'=>'wp_default',
 					'before'=>'',
@@ -1684,7 +1684,7 @@ function battleplan_column_settings() {
 					'label'=>'Last Viewed',
 					'width'=>'130',
 					'width_unit'=>'px',
-					'field'=>'post-tease-time',
+					'field'=>'post-views-now',
 					'field_type'=>'date',
 					'date_format'=>'wp_default',
 					'before'=>'',
@@ -1872,7 +1872,7 @@ function battleplan_column_settings() {
 					'label'=>'Last Viewed',
 					'width'=>'130',
 					'width_unit'=>'px',
-					'field'=>'post-tease-time',
+					'field'=>'post-views-now',
 					'field_type'=>'date',
 					'date_format'=>'wp_default',
 					'before'=>'',
@@ -2030,7 +2030,7 @@ function battleplan_column_settings() {
 					'label'=>'Last Viewed',
 					'width'=>'',
 					'width_unit'=>'%',
-					'field'=>'post-tease-time',
+					'field'=>'post-views-now',
 					'field_type'=>'date',
 					'date_format'=>'wp_default',
 					'before'=>'',
@@ -2261,7 +2261,7 @@ function battleplan_breadcrumbs() {
             $term_name          = $term_object->name;
             $term_parent        = $term_object->parent;
             $taxonomy_object    = get_taxonomy( $taxonomy );
-            $current_term_link  = $before . $taxonomy_object->labels->name . ': ' . $term_name . $after;
+            $today_term_link  = $before . $taxonomy_object->labels->name . ': ' . $term_name . $after;
             $parent_term_string = '';
 
             if ( $term_parent !== 0 ) :
@@ -2276,9 +2276,9 @@ function battleplan_breadcrumbs() {
             endif;
 
             if ( $parent_term_string ) :
-                $breadcrumb_trail = $parent_term_string . $delimiter . $current_term_link;
+                $breadcrumb_trail = $parent_term_string . $delimiter . $today_term_link;
             else :
-                $breadcrumb_trail = $current_term_link;
+                $breadcrumb_trail = $today_term_link;
             endif;
 
       	elseif ( is_author() ) :
@@ -2318,8 +2318,8 @@ function battleplan_breadcrumbs() {
     if ( is_404() ) : $breadcrumb_trail = $before . __( 'Error 404' ) . $after; endif;
 
     if ( is_paged() ) :
-        $current_page = get_query_var( 'paged' ) ? get_query_var( 'paged' ) : get_query_var( 'page' );
-        $page_addon   = $before . sprintf( __( ' ( Page %s )' ), number_format_i18n( $current_page ) ) . $after;
+        $today_page = get_query_var( 'paged' ) ? get_query_var( 'paged' ) : get_query_var( 'page' );
+        $page_addon   = $before . sprintf( __( ' ( Page %s )' ), number_format_i18n( $today_page ) ) . $after;
     endif;
 
     $breadcrumb_output_link = '<div class="breadcrumbs">';
@@ -2604,6 +2604,8 @@ add_filter( 'wpcf7_validate_text', 'battleplan_contact_form_spam_blocker', 20, 2
 add_filter( 'wpcf7_validate_text*', 'battleplan_contact_form_spam_blocker', 20, 2 );
 add_filter( 'wpcf7_validate_email', 'battleplan_contact_form_spam_blocker', 20, 2 );
 add_filter( 'wpcf7_validate_email*', 'battleplan_contact_form_spam_blocker', 20, 2 );
+add_filter( 'wpcf7_validate_tel', 'battleplan_contact_form_spam_blocker', 20, 2 );
+add_filter( 'wpcf7_validate_tel*', 'battleplan_contact_form_spam_blocker', 20, 2 );
 function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( "user-message" == $tag->name ) {
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
@@ -2618,9 +2620,16 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
 			if (stripos($check,$webword) !== false) $result->invalidate( $tag, 'We do not accept messages containing website addresses.' );
 		}		
 	}
+    if ( "user-phone" == $tag->name ) {
+        $check = isset( $_POST["user-phone"] ) ? trim( $_POST["user-phone"] ) : ''; 
+		$badnumbers = array('89031234567');
+		foreach($badnumbers as $badnumber) {
+			if (stripos($check,$badnumber) !== false) $result->invalidate( $tag, 'Message cannot be sent.');
+		}
+	}
     if ( "user-email" == $tag->name ) {
-		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com');
         $check = isset( $_POST["user-email"] ) ? trim( $_POST["user-email"] ) : ''; 
+		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com');
 		foreach($badwords as $badword) {
 			if (stripos($check,$badword) !== false) $result->invalidate( $tag, 'We do not accept messages from this email address.');
 		}
@@ -2806,6 +2815,7 @@ wp_update_term(1, 'category', array( 'name'=>'Blog', 'slug'=>'blog' ));
 add_action( 'add_attachment', 'battleplan_addWidgetPicViewsToImg', 10, 9 );
 function battleplan_addWidgetPicViewsToImg( $post_ID ) {
 	if ( wp_attachment_is_image( $post_ID ) ) {		
+		updateMeta( $post_ID, 'post-views-now', '--' );			
 		updateMeta( $post_ID, 'post-views-time', '--' );			
 		updateMeta( $post_ID, 'post-tease-time', '--' );			
 		updateMeta( $post_ID, 'post-views-total-all', '0' );			
@@ -2824,6 +2834,7 @@ add_action( 'save_post', 'battleplan_addViewsToPost', 10, 3 );
 function battleplan_addViewsToPost() {
 	global $post; $post_ID = $post->ID;	
 	if ( readMeta( $post_ID, 'post-views-total-all') == '' ) {
+		updateMeta( $post_ID, 'post-views-now', '--' );			
 		updateMeta( $post_ID, 'post-views-time', '--' );			
 		updateMeta( $post_ID, 'post-tease-time', '--' );			
 		updateMeta( $post_ID, 'post-views-total-all', '0' );			
@@ -2844,6 +2855,7 @@ function battleplan_clearViews($new_post_id) {
 	$post_ID = $new_post_id;
 	deleteMeta( $post_ID, 'post-bot-names');
 	deleteMeta( $post_ID, 'post-bots');
+	updateMeta( $post_ID, 'post-views-now', '--' );				
 	updateMeta( $post_ID, 'post-views-time', '--' );			
 	updateMeta( $post_ID, 'post-tease-time', '--' );			
 	updateMeta( $post_ID, 'post-views-total-all', '0' );			
@@ -2861,6 +2873,7 @@ function battleplan_clearViewFields() {
 	// clear image views
 	$image_query = new WP_Query( array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>-1 ));
 	if( $image_query->have_posts() ) : while ($image_query->have_posts() ) : $image_query->the_post();
+		updateMeta( get_the_ID(), 'post-views-now', '--' );			
 		updateMeta( get_the_ID(), 'post-views-time', '--' );			
 		updateMeta( get_the_ID(), 'post-tease-time', '--' );			
 		updateMeta( get_the_ID(), 'post-views-total-all', '0' );			
@@ -2893,6 +2906,7 @@ function battleplan_clearViewFields() {
 			deleteMeta( get_the_ID(), 'post-bots');
 			deleteMeta( get_the_ID(), 'add-view-fields');
 			deleteMeta( get_the_ID(), 'check-pics-for-views');
+			updateMeta( get_the_ID(), 'post-views-now', '--' );			
 			updateMeta( get_the_ID(), 'post-views-time', '--' );			
 			updateMeta( get_the_ID(), 'post-tease-time', '--' );			
 			updateMeta( get_the_ID(), 'post-views-total-all', '0' );			
@@ -2942,28 +2956,30 @@ function battleplan_add_dashboard_widgets() {
 // Set up Site Stats widget on dashboard
 function battleplan_admin_site_stats() {
 	$siteHeader = getID('site-header');
-	$frontPage = get_option('page_on_front');
 	$desktopCounted = readMeta($siteHeader, "load-number-desktop");
 	$desktopSpeed = readMeta($siteHeader, "load-speed-desktop");	
 	$mobileCounted = readMeta($siteHeader, "load-number-mobile");
 	$mobileSpeed = readMeta($siteHeader, "load-speed-mobile");
 	$lastEmail = readMeta($siteHeader, "last-email");
-	$today = date("F j, Y, g:i a");	
-	$current = strtotime($today);
-	$daysSinceEmail = number_format((($current - $lastEmail) / 60 / 60 / 24));
+	$rightNow = strtotime(date("F j, Y g:i a"));
+	$today = strtotime(date("F j, Y"));
+	$daysSinceEmail = number_format((($rightNow - $lastEmail) / 60 / 60 / 24));
 	$totalCounted = $desktopCounted + $mobileCounted;		
-	$lastViewed = readMeta($frontPage, 'post-views-time');
-	$dateDiff = (($current - $lastViewed) / 60 / 60 / 24); $howLong = "day";
-	if ( $dateDiff < 1 ) : $dateDiff = (($current - $lastViewed) / 60 / 60); $howLong = "hour"; endif;	
-	if ( $dateDiff < 1 ) : $dateDiff = (($current - $lastViewed) / 60); $howLong = "minute"; endif;
-	if ( $dateDiff != 1 ) $howLong = $howLong."s";	
-	$dateDiff = number_format($dateDiff, 1);
-	$totalViews = number_format(readMeta($frontPage, "post-views-total-all"));	
-	$dailyMeta = readMeta($frontPage, 'post-views-day-1'); 
+	$totalViews = number_format(readMeta($siteHeader, "site-views-total-all"));	
+	$dailyMeta = readMeta($siteHeader, 'site-views-day-1'); 
 	$viewsToday = number_format($dailyMeta['views']);
-	$last7Views = number_format(readMeta($frontPage, "post-views-total-7day"));
-	$last30Views = number_format(readMeta($frontPage, "post-views-total-30day"));
-	$recordViews = number_format(readMeta($frontPage, "post-views-record"));
+	$dateToday = strtotime($dailyMeta['date']);
+	if ( $dateToday != $today ) $viewsToday = 0;
+	$last7Views = number_format(readMeta($siteHeader, "site-views-total-7day"));
+	$last30Views = number_format(readMeta($siteHeader, "site-views-total-30day"));
+	$recordViews = number_format(readMeta($siteHeader, "site-views-record"));
+	$recordDate = date("M jS, Y", readMeta($siteHeader, "site-views-record-date")); 
+	$lastViewed = readMeta($siteHeader, 'site-views-now');		
+	$dateDiff = (($rightNow - $lastViewed) / 60 / 60 / 24); $howLong = "day";
+	if ( $dateDiff < 1 ) : $dateDiff = (($rightNow - $lastViewed) / 60 / 60); $howLong = "hour"; endif;	
+	if ( $dateDiff < 1 ) : $dateDiff = (($rightNow - $lastViewed) / 60); $howLong = "minute"; endif;
+	if ( $dateDiff != 1 ) $howLong = $howLong."s";	
+	$dateDiff = number_format($dateDiff, 0);
 	
 	echo "<table><tr><td><b><u>Framework</u></b></td><td><b>"._BP_VERSION."</b></td></tr>";		
 		
@@ -2979,18 +2995,18 @@ function battleplan_admin_site_stats() {
 	
 	echo "<tr><td>&nbsp;</td></tr>";
 	
-	echo "<tr><td><b><u>Home Page Visits</u></b></td></tr>";
+	echo "<tr><td><b><u>Site Visitors</u></b></td></tr>";
 	echo "<tr><td><b>Today</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $viewsToday, 'battleplan' ), $viewsToday )."</td></tr>";	
 	echo "<tr><td><b>Last 7 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last7Views, 'battleplan' ), $last7Views )."</td></tr>";
 	echo "<tr><td><b>Last 30 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last30Views, 'battleplan' ), $last30Views )."</td></tr>";
 	echo "<tr><td><b>Total</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $totalViews, 'battleplan' ), $totalViews )."</td></tr>";
-	echo "<tr><td><b>Daily Record</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $recordViews, 'battleplan' ), $recordViews )."</td></tr>";
-	echo "<tr><td><b>Last Viewed</b></td><td><b>".$dateDiff."</b> ".$howLong." ago</td></tr>";	
+	echo "<tr><td><b>Daily Record</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $recordViews, 'battleplan' ), $recordViews )." on ".$recordDate."</td></tr>";
+	echo "<tr><td><b>Last Visitor</b></td><td><b>".$dateDiff."</b> ".$howLong." ago</td></tr>";	
 		
 	echo "<tr><td>&nbsp;</td></tr>";
 	
-	for ($x = 29; $x >= 1; $x--) {
-		$dailyMeta = readMeta($frontPage, 'post-views-day-'.$x); 
+	for ($x = 1; $x <= 29; $x++) {
+		$dailyMeta = readMeta($siteHeader, 'site-views-day-'.$x); 
 		$dailyTime[$x] = date("D, M jS", strtotime($dailyMeta['date'])); 				
 		$dailyViews[$x] = intval($dailyMeta['views']); 
 		echo "<tr><td><b>".$dailyTime[$x]."</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $dailyViews[$x], 'battleplan' ), $dailyViews[$x] )."</td></tr>";
@@ -3011,25 +3027,27 @@ function battleplan_add_custom_meta_boxes() {
 function battleplan_page_stats() {
 	global $post;
 	$totalViews = number_format(readMeta($post->ID, "post-views-total-all"));
+	$rightNow = strtotime(date("F j, Y g:i a"));
+	$today = strtotime(date("F j, Y"));
+	$lastViewed = readMeta($post->ID, 'post-views-now');		
 	$dailyMeta = readMeta($post->ID, 'post-views-day-1'); 
 	$viewsToday = number_format($dailyMeta['views']);
+	$dateToday = strtotime($dailyMeta['date']);
+	if ( $dateToday != $today ) $viewsToday = 0;
 	$last7Views = number_format(readMeta($post->ID, "post-views-total-7day"));
 	$last30Views = number_format(readMeta($post->ID, "post-views-total-30day"));
 	$recordViews = number_format(readMeta($post->ID, "post-views-record"));
-	$lastViewed = readMeta($post->ID, 'post-views-time');
-	$today = date("F j, Y, g:i a");	
-	$current = strtotime($today);
-	$dateDiff = (($current - $lastViewed) / 60 / 60 / 24); $howLong = "day";
-	if ( $dateDiff < 1 ) : $dateDiff = (($current - $lastViewed) / 60 / 60); $howLong = "hour"; endif;	
-	if ( $dateDiff < 1 ) : $dateDiff =(($current - $lastViewed) / 60); $howLong = "minute"; endif;
-	if ( $dateDiff != 1 ) $howLong = $howLong."s";
-	$dateDiff = number_format($dateDiff, 1);
-	
+	$recordDate = date("M jS, Y", readMeta($post->ID, "post-views-record-date")); 
+	$dateDiff = (($rightNow - $lastViewed) / 60 / 60 / 24); $howLong = "day";
+	if ( $dateDiff < 1 ) : $dateDiff = (($rightNow - $lastViewed) / 60 / 60); $howLong = "hour"; endif;	
+	if ( $dateDiff < 1 ) : $dateDiff = (($rightNow - $lastViewed) / 60); $howLong = "minute"; endif;
+	if ( $dateDiff != 1 ) $howLong = $howLong."s";	
+	$dateDiff = number_format($dateDiff, 0);	
 	echo "<table><tr><td><b>Today</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $viewsToday, 'battleplan' ), $viewsToday )."</td></tr>";
 	echo "<tr><td><b>Last 7 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last7Views, 'battleplan' ), $last7Views )."</td></tr>";
-	echo "<tr><td><b>Last 30 Days&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last30Views, 'battleplan' ), $last30Views )."</tr>";
-	echo "<tr><td><b>Total</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $totalViews, 'battleplan' ), $totalViews )."</tr>";
-	echo "<tr><td><b>Daily Record</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $recordViews, 'battleplan' ), $recordViews )."</tr>";	
+	echo "<tr><td><b>Last 30 Days&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last30Views, 'battleplan' ), $last30Views )."</td></tr>";
+	echo "<tr><td><b>Total</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $totalViews, 'battleplan' ), $totalViews )."</td></tr>";
+	echo "<tr><td><b>Daily Record</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $recordViews, 'battleplan' ), $recordViews )." on ".$recordDate."</td></tr>";
 	echo "<tr><td><b>Last Viewed</b></td><td><b>".$dateDiff."</b> ".$howLong." ago</td></tr></table>";	
 }
 
@@ -3081,7 +3099,6 @@ function bp_mobile_menu_bar_items() { do_action('bp_mobile_menu_bar_items'); }
 add_action( 'wp_ajax_log_page_load_speed', 'battleplan_log_page_load_speed_ajax' );
 add_action( 'wp_ajax_nopriv_log_page_load_speed', 'battleplan_log_page_load_speed_ajax' );
 function battleplan_log_page_load_speed_ajax() {
-	$theID = intval( $_POST['id'] );
 	$timezone = $_POST['timezone'];	
 	$loadTime = $_POST['loadTime'];
 	$deviceTime = $_POST['deviceTime'];
@@ -3095,20 +3112,19 @@ function battleplan_log_page_load_speed_ajax() {
 		$mobileCounted = readMeta($siteHeader, "load-number-mobile");
 		$mobileSpeed = readMeta($siteHeader, "load-speed-mobile");		
 		$lastEmail = readMeta($siteHeader, "last-email");
-		$today = date("F j, Y, g:i a");	
-		$current = strtotime($today);
-		$daysSinceEmail = (($current - $lastEmail) / 60 / 60 / 24);
+		$rightNow = strtotime(date("F j, Y, g:i a"));
+		$daysSinceEmail = (($rightNow - $lastEmail) / 60 / 60 / 24);
 		$totalCounted = $desktopCounted + $mobileCounted;	
 
 		if ( ( $totalCounted > 100 && $daysSinceEmail > 30 ) || $daysSinceEmail > 90 ) :
-			$desktopCount = sprintf( _n( '%s visit', '%s visits', $desktopCounted, 'battleplan' ), $desktopCounted );
-			$mobileCount = sprintf( _n( '%s visit', '%s visits', $mobileCounted, 'battleplan' ), $mobileCounted );
+			$desktopCount = sprintf( _n( '%s pageview', '%s pageviews', $desktopCounted, 'battleplan' ), $desktopCounted );
+			$mobileCount = sprintf( _n( '%s pageview', '%s pageviews', $mobileCounted, 'battleplan' ), $mobileCounted );
 			$emailTo = "info@battleplanwebdesign.com";
 			$emailFrom = "From: Website Administrator <do-not-reply@battleplanwebdesign.com>";
 			$subject = "Speed Report: ".$_SERVER['HTTP_HOST'];
 			$content = $_SERVER['HTTP_HOST']." Speed Report\n\nDesktop = ".$desktopSpeed."s on ".$desktopCount."\nMobile = ".$mobileSpeed."s on ".$mobileCount."\n";	
 			$desktopCounted = $desktopSpeed = $mobileCounted = $mobileSpeed = 0;
-			updateMeta( $siteHeader, "last-email", $current );	
+			updateMeta( $siteHeader, "last-email", $rightNow );	
 			mail($emailTo, $subject, $content, $emailFrom);
 		endif;
 
@@ -3133,7 +3149,67 @@ function battleplan_log_page_load_speed_ajax() {
 	wp_send_json( $response );	
 }
 
-// Count Post Views
+// Count Site Views
+add_action( 'wp_ajax_count_site_views', 'battleplan_count_site_views_ajax' );
+add_action( 'wp_ajax_nopriv_count_site_views', 'battleplan_count_site_views_ajax' );
+function battleplan_count_site_views_ajax() {
+	$siteHeader = getID('site-header');
+	$timezone = $_POST['timezone'];	
+	$lastViewed = readMeta($siteHeader, 'site-views-time');
+	$rightNow = strtotime(date("F j, Y g:i a"));	
+	$today = strtotime(date("F j, Y"));
+	$dateDiff = (($today - $lastViewed) / 60 / 60 / 24);
+	$user = wp_get_current_user();
+	$userLogin = $user->user_login;
+		
+	if ( ($userLogin != 'battleplanweb' && $timezone == get_option('timezone_string') ) || _BP_COUNT_ALL_VISITS == "true" ) :
+		if(!isset($_COOKIE['countVisit'])) :
+			if ( $dateDiff != 0 ) : // day has passed, move 29 to 30, and so on	
+				if ( $dateDiff > 30 ) $dateDiff = 30;
+				for ($i = 1; $i <= $dateDiff; $i++) {	
+					$viewsToday = $views7Day = $views30Day = 1;
+					$dailyTime = $dailyViews = array();
+					for ($x = 29; $x >= 1; $x--) {
+						$dailyMeta = readMeta($siteHeader, 'site-views-day-'.$x); 
+						$dailyTime[$x] = $dailyMeta['date']; 				
+						$dailyViews[$x] = intval($dailyMeta['views']); 
+						$y = $x+1;
+						updateMeta( $siteHeader, 'site-views-day-'.$y, array ('date'=>$dailyTime[$x], 'views'=>$dailyViews[$x]));					
+					} 	
+					$figureTime = $today - ( ($dateDiff - $i) * 86400);	
+					updateMeta( $siteHeader, 'site-views-day-1', array ('date'=>date("F j, Y", $figureTime), 'views'=>0));
+					for ($x = 1; $x < 7; $x++) { $views7Day = $views7Day + $dailyViews[$x]; } 					
+					for ($x = 1; $x < 30; $x++) { $views30Day = $views30Day + $dailyViews[$x]; } 		
+					$viewsTotal = intval(readMeta($siteHeader, 'site-views-total-all')); $viewsTotal++;		
+				}	
+			else:
+				// same day, just update today
+				$dailyMeta = readMeta($siteHeader, 'site-views-day-1'); 
+				$viewsToday = intval($dailyMeta['views']); $viewsToday++; 
+				$views7Day = intval(readMeta($siteHeader, 'site-views-total-7day')); $views7Day++; 
+				$views30Day = intval(readMeta($siteHeader, 'site-views-total-30day')); $views30Day++;
+				$viewsTotal = intval(readMeta($siteHeader, 'site-views-total-all')); $viewsTotal++; 			
+				$recordViews = intval(readMeta($siteHeader, 'site-views-record'));
+				if ( $viewsToday > $recordViews ) : updateMeta( $siteHeader, 'site-views-record', $viewsToday); updateMeta( $siteHeader, 'site-views-record-date', $today); endif;
+			endif;	
+			updateMeta($siteHeader, 'site-views-now', $rightNow);
+			updateMeta($siteHeader, 'site-views-time', $today);
+			updateMeta( $siteHeader, 'site-views-day-1', array ('date'=>date('F j, Y', $today), 'views'=>$viewsToday));			
+			updateMeta( $siteHeader, 'site-views-total-7day', $views7Day);			
+			updateMeta( $siteHeader, 'site-views-total-30day', $views30Day);			 
+			updateMeta( $siteHeader, 'site-views-total-all', $viewsTotal);
+			setcookie('countVisit', 'no', time() + 600, "/"); 
+			$response = array( 'result' => 'Site View counted: Total='.$viewsTotal.', Today='.$viewsToday.', Week='.$views7Day.', Month='.$views30Day);
+		else:
+			$response = array( 'result' => 'Site View NOT counted: viewer already counted');
+		endif;
+	else:
+		$response = array( 'result' => 'Site View NOT counted: user='.$userLogin.', user timezone='.$timezone.', site timezone='.get_option('timezone_string'));
+	endif;	
+	wp_send_json( $response );	
+}
+
+// Count Page / Post Views
 add_action( 'wp_ajax_count_post_views', 'battleplan_count_post_views_ajax' );
 add_action( 'wp_ajax_nopriv_count_post_views', 'battleplan_count_post_views_ajax' );
 function battleplan_count_post_views_ajax() {
@@ -3141,9 +3217,9 @@ function battleplan_count_post_views_ajax() {
 	$postType = get_post_type($theID);
 	$timezone = $_POST['timezone'];	
 	$lastViewed = readMeta($theID, 'post-views-time');
-	$today = date("F j, Y");	
-	$current = strtotime($today);
-	$dateDiff = (($current - $lastViewed) / 60 / 60 / 24);
+	$rightNow = strtotime(date("F j, Y g:i a"));	
+	$today = strtotime(date("F j, Y"));
+	$dateDiff = (($today - $lastViewed) / 60 / 60 / 24);
 	$user = wp_get_current_user();
 	$userLogin = $user->user_login;
 	
@@ -3160,7 +3236,7 @@ function battleplan_count_post_views_ajax() {
 					$y = $x+1;
 					updateMeta( $theID, 'post-views-day-'.$y, array ('date'=>$dailyTime[$x], 'views'=>$dailyViews[$x]));					
 				} 	
-				$figureTime = $current - ( ($dateDiff - $i) * 86400);	
+				$figureTime = $today - ( ($dateDiff - $i) * 86400);	
 				updateMeta( $theID, 'post-views-day-1', array ('date'=>date("F j, Y", $figureTime), 'views'=>0));
 				for ($x = 1; $x < 7; $x++) { $views7Day = $views7Day + $dailyViews[$x]; } 					
 				for ($x = 1; $x < 30; $x++) { $views30Day = $views30Day + $dailyViews[$x]; } 		
@@ -3174,10 +3250,11 @@ function battleplan_count_post_views_ajax() {
 			$views30Day = intval(readMeta($theID, 'post-views-total-30day')); $views30Day++;
 			$viewsTotal = intval(readMeta($theID, 'post-views-total-all')); $viewsTotal++; 			
 			$recordViews = intval(readMeta($theID, 'post-views-record'));
-			if ( $viewsToday > $recordViews ) : updateMeta( $theID, 'post-views-record', $viewsToday); updateMeta( $theID, 'post-views-record-date', $current); endif;
+			if ( $viewsToday > $recordViews ) : updateMeta( $theID, 'post-views-record', $viewsToday); updateMeta( $theID, 'post-views-record-date', $today); endif;
 		endif;	
-		updateMeta($theID, 'post-views-time', $current);
-		updateMeta( $theID, 'post-views-day-1', array ('date'=>date('F j, Y', $current), 'views'=>$viewsToday));			
+		updateMeta($theID, 'post-views-now', $rightNow);
+		updateMeta($theID, 'post-views-time', $today);
+		updateMeta( $theID, 'post-views-day-1', array ('date'=>date('F j, Y', $today), 'views'=>$viewsToday));			
 		updateMeta( $theID, 'post-views-total-7day', $views7Day);			
 		updateMeta( $theID, 'post-views-total-30day', $views30Day);			 
 		updateMeta( $theID, 'post-views-total-all', $viewsTotal);	
@@ -3196,13 +3273,12 @@ function battleplan_count_teaser_views_ajax() {
 	$postType = get_post_type($theID);
 	$timezone = $_POST['timezone'];			
 	$lastTeased = date("F j, Y g:i a", readMeta($theID, 'post-tease-time'));
-	$today = date("F j, Y  g:i a");	
-	$current = strtotime($today);
+	$today = strtotime(date("F j, Y  g:i a"));
 	$user = wp_get_current_user();
 	$userLogin = $user->user_login;
 	
 	if ( ($userLogin != 'battleplanweb' && $timezone == get_option('timezone_string') ) || _BP_COUNT_ALL_VISITS == "true" ) :
-		updateMeta($theID, 'post-tease-time', $current);
+		updateMeta($theID, 'post-tease-time', $today);
 		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' TEASER counted: Prior tease = '.$lastTeased) );
 	else:
 		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' teaser NOT counted: user='.$userLogin.', user timezone='.$timezone.', site timezone='.get_option('timezone_string')) );

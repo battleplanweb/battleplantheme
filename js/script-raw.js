@@ -726,6 +726,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		where = where || "after";
 		var thisDiv = $(moveThis), thisAnchor = $(anchor);
 
+
+
 		if ( where == "after" ) {
 			thisDiv.insertAfter( thisAnchor );
 		} else if ( where == "before" ) {
@@ -1103,6 +1105,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 	});
 
 // Automatically adjust for Google review bar 
+
 	$( '<div class="wp-google-badge-faux"></div>' ).insertAfter( $('#colophon'));
 
 // Set up mobile menu animation
@@ -1570,13 +1573,19 @@ if ( $('body').hasClass('remove-sidebar') ) {
 
 		}, 1000);
 
-		setTimeout(function() {	// Wait 2.5 seconds before calling the following functions 	
+		setTimeout(function() {	// Wait 2 seconds before calling the following functions 	
 
 		// Count page view 
 			var postID = $('body').attr('id');				
 			$.post({
 				url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
 				data : { action: "count_post_views", id: postID, timezone: timezone },
+				success: function( response ) { console.log(response); } 
+			});	
+		// Count site view 
+			$.post({
+				url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
+				data : { action: "count_site_views", timezone: timezone },
 				success: function( response ) { console.log(response); } 
 			});	
 
@@ -1590,7 +1599,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			}
 
 		// Count random post widget, testimonial & images - teases & views
-			$('.testimonials-name, #primary img.random-img, .widget-image:not(.hide-widget) img.random-img, .row-of-pics img.random-img, .carousel img.img-slider, #wrapper-bottom img.random-img, .widget-random-post:not(.hide-widget) h3, #primary h3, #wrapper-bottom h3').waypoint(function() {		
+			$('.carousel img.img-slider, #primary .testimonials-name, .widget:not(.hide-widget) .testimonials-name, #wrapper-bottom .testimonials-name, #primary img.random-img, .widget:not(.hide-widget) img.random-img, #wrapper-bottom img.random-img, #primary h3, .widget:not(.hide-widget) h3, #wrapper-bottom h3').waypoint(function() {		
 				var theID = $(this.element).attr('data-id');
 				var countTease = $(this.element).attr('data-count-tease');				
 				var countView = $(this.element).attr('data-count-view');
@@ -1611,7 +1620,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 				this.destroy();
 			}, { offset: 'bottom-in-view' });	 	
 
-		}, 2500);
+		}, 2000);
 	});
 	
 })(jQuery); });

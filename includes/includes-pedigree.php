@@ -882,12 +882,21 @@ function battleplan_override_main_query_with_pedigree( $query ) {
 			$query->set( 'orderby','name');
 			$query->set( 'order','asc');
 		endif;
-		if ( is_post_type_archive('litters') ) :
+		if ( is_post_type_archive('litters')) :
 			$query->set( 'post_type','litters');
-			$query->set( 'posts_per_page',-1);
-			$query->set('orderby', 'meta_value_num');	
-			$query->set('meta_key', 'ready_date');	 
-			$query->set( 'order','asc');
+			$query->set( 'posts_per_page', -1);	
+			$meta_query = array( array(
+    			'status_clause' => array(
+      				'key' => 'litter_status',
+      				'compare' => 'EXISTS'
+    			)), array(
+    			'ready_date_clause' => array(
+      				'key' => 'ready_date',
+      				'compare' => 'EXISTS'
+    			) )
+			);
+			$query->set('meta_query', $meta_query);
+			$query->set('orderby', array('status_clause' => 'ASC', 'ready_date_clause' => 'ASC'));
 		endif;
 	endif; 
 }

@@ -975,8 +975,8 @@ add_action( 'add_attachment', 'battleplan_addWidgetPicViewsToImg', 10, 9 );
 function battleplan_addWidgetPicViewsToImg( $post_ID ) {
 	if ( wp_attachment_is_image( $post_ID ) ) {		
 		updateMeta( $post_ID, 'log-views-now', '--' );			
-		updateMeta( $post_ID, 'log-views-time', '--' );			
-		updateMeta( $post_ID, 'log-tease-time', '--' );			
+		updateMeta( $post_ID, 'log-views-time', strtotime(date("F j, Y")) );			
+		updateMeta( $post_ID, 'log-tease-time', strtotime(date("F j, Y")) );			
 		updateMeta( $post_ID, 'log-views-total-7day', '0' );		
 		updateMeta( $post_ID, 'log-views-total-30day', '0' );
 		updateMeta( $post_ID, 'log-views-total-90day', '0' );
@@ -992,8 +992,8 @@ function battleplan_addViewsToPost() {
 	global $post; $post_ID = $post->ID;	
 	if ( readMeta( $post_ID, 'log-views') == '' ) {
 		updateMeta( $post_ID, 'log-views-now', '--' );			
-		updateMeta( $post_ID, 'log-views-time', '--' );			
-		updateMeta( $post_ID, 'log-tease-time', '--' );			
+		updateMeta( $post_ID, 'log-views-time', strtotime(date("F j, Y")) );			
+		updateMeta( $post_ID, 'log-tease-time', strtotime(date("F j, Y")) );			
 		updateMeta( $post_ID, 'log-views-total-7day', '0' );		
 		updateMeta( $post_ID, 'log-views-total-30day', '0' );
 		updateMeta( $post_ID, 'log-views-total-90day', '0' );
@@ -1009,8 +1009,8 @@ add_action( 'dp_duplicate_page', 'battleplan_clearViews', 99, 2 );
 function battleplan_clearViews($new_post_id) {
 	$post_ID = $new_post_id;
 	updateMeta( $post_ID, 'log-views-now', '--' );			
-	updateMeta( $post_ID, 'log-views-time', '--' );			
-	updateMeta( $post_ID, 'log-tease-time', '--' );			
+	updateMeta( $post_ID, 'log-views-time', strtotime(date("F j, Y")) );			
+	updateMeta( $post_ID, 'log-tease-time', strtotime(date("F j, Y")) );			
 	updateMeta( $post_ID, 'log-views-total-7day', '0' );		
 	updateMeta( $post_ID, 'log-views-total-30day', '0' );
 	updateMeta( $post_ID, 'log-views-total-90day', '0' );

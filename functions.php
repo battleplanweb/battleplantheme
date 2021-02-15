@@ -15,9 +15,9 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '6.6.1' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '6.6.2' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
-if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'true' ); }
+if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
 /*--------------------------------------------------------------
 # Shortcodes
@@ -1894,8 +1894,8 @@ function battleplan_clearViewFields() {
 			deleteMeta( get_the_ID(), 'post-views-day-'.$x);
 		} 		
 		updateMeta( get_the_ID(), 'log-views-now', '--' );			
-		updateMeta( get_the_ID(), 'log-views-time', '--' );			
-		updateMeta( get_the_ID(), 'log-tease-time', '--' );			
+		updateMeta( get_the_ID(), 'log-views-time', strtotime(date("F j, Y")) );			
+		updateMeta( get_the_ID(), 'log-tease-time', strtotime(date("F j, Y")) );			
 		updateMeta( get_the_ID(), 'log-views-total-7day', '0' );		
 		updateMeta( get_the_ID(), 'log-views-total-30day', '0' );
 		updateMeta( get_the_ID(), 'log-views-total-90day', '0' );
@@ -1955,8 +1955,8 @@ function battleplan_clearViewFields() {
 				deleteMeta( get_the_ID(), 'site-views-day-'.$x);
 			} 		
 			updateMeta( get_the_ID(), 'log-views-now', '--' );			
-			updateMeta( get_the_ID(), 'log-views-time', '--' );			
-			updateMeta( get_the_ID(), 'log-tease-time', '--' );			
+			updateMeta( get_the_ID(), 'log-views-time', strtotime(date("F j, Y")) );			
+			updateMeta( get_the_ID(), 'log-tease-time', strtotime(date("F j, Y")) );			
 			updateMeta( get_the_ID(), 'log-views-total-7day', '0' );		
 			updateMeta( get_the_ID(), 'log-views-total-30day', '0' );
 			updateMeta( get_the_ID(), 'log-views-total-90day', '0' );

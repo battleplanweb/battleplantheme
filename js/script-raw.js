@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 # Basic site functionality
 --------------------------------------------------------------*/
 
-	var getThemeURI = theme_dir.theme_dir_urti, getUploadURI = theme_dir.upload_dir_uri, mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 0, timezone;
+	var getThemeURI = theme_dir.theme_dir_urti, getUploadURI = theme_dir.upload_dir_uri, mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 0, timezone, userLoc;
 	
 	if ( $("#mobile-menu-bar").is(":visible") ) { mobileMenuBarH = $("#mobile-menu-bar").outerHeight();	}
 
@@ -725,9 +725,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	window.moveDiv = function (moveThis, anchor, where) {
 		where = where || "after";
 		var thisDiv = $(moveThis), thisAnchor = $(anchor);
-
-
-
 		if ( where == "after" ) {
 			thisDiv.insertAfter( thisAnchor );
 		} else if ( where == "before" ) {
@@ -759,8 +756,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		var addDiv = $(newDiv), currDiv = $(target);
 		if ( where == "after" ) {
 			currDiv.append( addDiv );
-		} else {
+		} else if ( where == "before" ) {
 			currDiv.prepend( addDiv );
+		} else {
+			addDiv.insertBefore( currDiv );
 		}
 	};
 
@@ -1469,6 +1468,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			for (el of els ) { 
 				el.classList.remove('tab-focus'); 
 			} 
+
 		};			
 	});
 	
@@ -1568,7 +1568,8 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			buildAccordion();
 
 			$.getJSON('https://ipapi.co/json/', function(data) {
-				timezone = data["timezone"];
+				timezone = data["timezone"];				
+				userLoc = data["city"] + ", " + data["region_code"];
 			});
 
 		}, 1000);
@@ -1585,7 +1586,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		// Count site view 
 			$.post({
 				url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-				data : { action: "count_site_views", timezone: timezone },
+				data : { action: "count_site_views", timezone: timezone, userLoc: userLoc },
 				success: function( response ) { console.log(response); } 
 			});	
 

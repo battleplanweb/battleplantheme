@@ -8,7 +8,6 @@
 # Functions to extend WordPress
 # Register Custom Post Types
 # Import Advanced Custom Fields
-# Set Up Admin Columns
 # Basic Theme Set Up
 # Custom Hooks
 # AJAX Functions
@@ -16,9 +15,9 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '6.5' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '6.6' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
-if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
+if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'true' ); }
 
 /*--------------------------------------------------------------
 # Shortcodes
@@ -222,11 +221,13 @@ function battleplan_getRandomImage($atts, $content = null ) {
 	
 	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>$number, 'offset'=>$offset, 'order'=>$order);
 
-	if ( $orderBy == 'views-today' ) : $args['meta_key']="post-views-day-1"; $args['orderby']='meta_value_num';	
-	elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="post-views-total-7day"; $args['orderby']='meta_value_num';	
-	elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="post-views-total-30day"; $args['orderby']='meta_value_num';	
-	elseif ( $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="post-views-total-all"; $args['orderby']='meta_value_num';	
-	elseif ( $orderBy == 'recent' ) : $args['meta_key']="post-tease-time"; $args['orderby']='meta_value_num';	
+	if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="log-views-total-7day"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="log-views-total-30day"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'views-90day' ) : $args['meta_key']="log-views-total-90day"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'views-180day' ) : $args['meta_key']="log-views-total-180day"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="log-views-total-365day"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'recent' ) : $args['meta_key']="log-tease-time"; $args['orderby']='meta_value_num';	
 	else : $args['orderby']=$orderBy; endif;		
 	
 	if ( $id == '' ) : 
@@ -276,11 +277,13 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 	
 	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>$col, 'order'=>$order, 'tax_query'=>array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags )));
 
-	if ( $orderBy == 'views-today' ) : $args['meta_key']="post-views-day-1"; $args['orderby']='meta_value_num';	
-	elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="post-views-total-7day"; $args['orderby']='meta_value_num';	
-	elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="post-views-total-30day"; $args['orderby']='meta_value_num';	
-	elseif ( $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="post-views-total-all"; $args['orderby']='meta_value_num';	
-	elseif ( $orderBy == 'recent' ) : $args['meta_key']="post-tease-time"; $args['orderby']='meta_value_num';	
+	if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="log-views-total-7day"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="log-views-total-30day"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'views-90day' ) : $args['meta_key']="log-views-total-90day"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'views-180day' ) : $args['meta_key']="log-views-total-180day"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="log-views-total-365day"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'recent' ) : $args['meta_key']="log-tease-time"; $args['orderby']='meta_value_num';	
 	else : $args['orderby']=$orderBy; endif;		
 	
 	if ( $id != '' ) : 
@@ -519,11 +522,13 @@ function battleplan_getRandomPosts($atts, $content = null) {
 
 	$args = array ('posts_per_page'=>$num, 'offset'=>$offset, 'date_query'=>array( array( 'after'=>$start, 'before'=>$end, 'inclusive'=>true, ), ), 'order'=>$sort, 'post_type'=>$postType, 'post__not_in'=>$exclude);
 
-	if ( $orderBy == 'views-today' ) : $args['meta_key']="post-views-day-1"; $args['orderby']='meta_value_num';	
-	elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="post-views-total-7day"; $args['orderby']='meta_value_num';	
-	elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="post-views-total-30day"; $args['orderby']='meta_value_num';	
-	elseif ( $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="post-views-total-all"; $args['orderby']='meta_value_num';	
-	elseif ( $orderBy == 'recent' ) : $args['meta_key']="post-tease-time"; $args['orderby']='meta_value_num';	
+	if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="log-views-total-7day"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="log-views-total-30day"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'views-90day' ) : $args['meta_key']="log-views-total-90day"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'views-180day' ) : $args['meta_key']="log-views-total-180day"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'views-365day' ||  $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="log-views-total-365day"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'recent' ) : $args['meta_key']="log-tease-time"; $args['orderby']='meta_value_num';	
 	else : $args['orderby']=$orderBy; endif;		
 
 	if ( $taxonomy && $term ) : 
@@ -609,11 +614,13 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	if ( $type == "image" || $type == "images" ) :
 		$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>$num, 'order'=>$order);
 
-		if ( $orderBy == 'views-today' ) : $args['meta_key']="post-views-day-1"; $args['orderby']='meta_value_num';	
-		elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="post-views-total-7day"; $args['orderby']='meta_value_num';	
-		elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="post-views-total-30day"; $args['orderby']='meta_value_num';	
-		elseif ( $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="post-views-total-all"; $args['orderby']='meta_value_num';	
-		elseif ( $orderBy == 'recent' ) : $args['meta_key']="post-tease-time"; $args['orderby']='meta_value_num';	
+		if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; $args['orderby']='meta_value_num';	
+		elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="log-views-total-7day"; $args['orderby']='meta_value_num';	
+		elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="log-views-total-30day"; $args['orderby']='meta_value_num';			
+		elseif ( $orderBy == 'views-90day' ) : $args['meta_key']="log-views-total-90day"; $args['orderby']='meta_value_num';			
+		elseif ( $orderBy == 'views-180day' ) : $args['meta_key']="log-views-total-180day"; $args['orderby']='meta_value_num';	
+		elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="log-views-total-365day"; $args['orderby']='meta_value_num';	
+		elseif ( $orderBy == 'recent' ) : $args['meta_key']="log-tease-time"; $args['orderby']='meta_value_num';	
 		else : $args['orderby']=$orderBy; endif;		
 
 		if ( $id == '' ) : 
@@ -667,11 +674,13 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	else :
 		$args = array ('posts_per_page'=>-1, 'offset'=>$offset, 'date_query'=>array( array( 'after'=>$start, 'before'=>$end, 'inclusive'=>true, ), ), 'order'=>$order, 'post_type'=>$type, 'post__not_in'=>$exclude);
 
-		if ( $orderBy == 'views-today' ) : $args['meta_key']="post-views-day-1"; $args['orderby']='meta_value_num';	
-		elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="post-views-total-7day"; $args['orderby']='meta_value_num';	
-		elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="post-views-total-30day"; $args['orderby']='meta_value_num';	
-		elseif ( $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="post-views-total-all"; $args['orderby']='meta_value_num';	
-		elseif ( $orderBy == 'recent' ) : $args['meta_key']="post-tease-time"; $args['orderby']='meta_value_num';	
+		if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; $args['orderby']='meta_value_num';	
+		elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="log-views-total-7day"; $args['orderby']='meta_value_num';	
+		elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="log-views-total-30day"; $args['orderby']='meta_value_num';	
+		elseif ( $orderBy == 'views-90day' ) : $args['meta_key']="log-views-total-90day"; $args['orderby']='meta_value_num';	
+		elseif ( $orderBy == 'views-180day' ) : $args['meta_key']="log-views-total-180day"; $args['orderby']='meta_value_num';	
+		elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="log-views-total-365day"; $args['orderby']='meta_value_num';	
+		elseif ( $orderBy == 'recent' ) : $args['meta_key']="log-tease-time"; $args['orderby']='meta_value_num';	
 		else : $args['orderby']=$orderBy; endif;		
 
 		if ( $taxonomy && $term ) : 
@@ -765,11 +774,13 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 	
 	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>$num, 'order'=>$order, 'tax_query'=>array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags )));
 
-	if ( $orderBy == 'views-today' ) : $args['meta_key']="post-views-day-1"; $args['orderby']='meta_value_num';	
-	elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="post-views-total-7day"; $args['orderby']='meta_value_num';	
-	elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="post-views-total-30day"; $args['orderby']='meta_value_num';	
-	elseif ( $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="post-views-total-all"; $args['orderby']='meta_value_num';	
-	elseif ( $orderBy == 'recent' ) : $args['meta_key']="post-tease-time"; $args['orderby']='meta_value_num';	
+	if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="log-views-total-7day"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="log-views-total-30day"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'views-90day' ) : $args['meta_key']="log-views-total-90day"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'views-180day' ) : $args['meta_key']="log-views-total-180day"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="log-views-total-365day"; $args['orderby']='meta_value_num';	
+	elseif ( $orderBy == 'recent' ) : $args['meta_key']="log-tease-time"; $args['orderby']='meta_value_num';	
 	else : $args['orderby']=$orderBy; endif;		
 	
 	if ( $id != '' ) : 
@@ -945,8 +956,8 @@ function getImgMeta($id) {
 }
 
 // Read meta in custom field
-function readMeta($id, $key) {
-	return get_post_meta( $id, $key, true );
+function readMeta($id, $key, $single=true) {
+	return get_post_meta( $id, $key, $single );
 }
 // Update meta in custom field
 function updateMeta($id, $key, $value) {
@@ -1066,48 +1077,6 @@ function fillMenu($cpt, $max = "-1", $orderby = "title", $seq = "asc") {
 		}
 		return array_merge( $items, $child_items );
 	}
-}
-
-// Remove buttons from WordPress text editor
-add_filter( 'quicktags_settings', 'battleplan_delete_quicktags', 10, 2 );
-function battleplan_delete_quicktags( $qtInit, $editor_id = 'content' ) {
-	//$qtInit['buttons'] = 'strong,em,link,block,del,ins,img,ul,ol,code,more,close';
-	$qtInit['buttons'] = 'strong,em,link,ul,ol,more,close';
-	return $qtInit;
-}
-
-// Add new buttons to WordPress text editor
-add_action( 'admin_print_footer_scripts', 'battleplan_add_quicktags' );
-function battleplan_add_quicktags() {
-	if ( wp_script_is( 'quicktags' ) ) { ?>
-		<script type="text/javascript">
-			QTags.addButton( 'bp_paragraph', 'p', '<p>', '</p>\n\n', 'p', 'Paragraph Tag', 1 );
-			QTags.addButton( 'bp_li', 'li', ' <li>', '</li>', 'li', 'List Item', 100 );
-
-			QTags.addButton( 'bp_section', 'section', '[section name="becomes id attribute" style="corresponds to css" width="default, stretch, full, edge, inline" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '[/section]\n\n', 'section', 'Section', 1000 );		
-			QTags.addButton( 'bp_layout', 'layout', ' [layout grid="1-auto, 1-1-1-1, 5e, content" break="3, 4" valign="start, stretch, center, end" class=""]\n\n', ' [/layout]\n', 'layout', 'Layout', 1000 );
-			QTags.addButton( 'bp_column', 'column', '  [col name="becomes id attribute" align="center, left, right" valign="start, stretch, center, end" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '  [/col]\n\n', 'column', 'Column', 1000 );
-			QTags.addButton( 'bp_image', 'image', '   [img size="100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" link="url to link to" new-tab="false, true" ada-hidden="false, true" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/img]\n', 'image', 'Image', 1000 );
-			QTags.addButton( 'bp_video', 'video', '   [vid size="100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" link="url of video" class="" related="false, true" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/vid]\n', 'video', 'Video', 1000 );
-			QTags.addButton( 'bp_caption', 'caption', '[caption align="aligncenter, alignleft, alignright" width="800"]<img src="/filename.jpg" alt="" class="size-full-s" />Type caption here.', '[/caption]\n', 'caption', 'Caption', 1000 );
-			QTags.addButton( 'bp_group', 'group', '   [group size = "100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '   [/group]\n\n', 'group', 'Group', 1000 );	
-			QTags.addButton( 'bp_text', 'text', '   [txt size="100 1/2 1/3 1/4 1/6 1/12" order="2, 1, 3" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '   [/txt]\n', 'text', 'Text', 1000 );
-			QTags.addButton( 'bp_button', 'button', '   [btn size="100 1/2 1/3 1/4 1/6 1/12" order="3, 1, 2" align="center, left, right" link="url to link to" get-biz="link in functions.php" new-tab="false, true" class="" ada="text for ada button" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/btn]\n', 'button', 'Button', 1000 );	
-			QTags.addButton( 'bp_social', 'social', '   [social-btn type="email, facebook, twitter" img="none, link"]', '', 'social', 'Social', 1000 );	
-			QTags.addButton( 'bp_accordion', 'accordion', '   [accordion title="clickable title" excerpt="false, true" class="" icon="true, false" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/accordion]\n\n', 'accordion', 'Accordion', 1000 );
-			QTags.addButton( 'bp_expire-content', 'expire', '[expire start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/expire]\n\n', 'expire', 'Expire', 1000 );			
-			QTags.addButton( 'bp_lock-section', 'lock', '[lock name="becomes id attribute" style="(lock) corresponds to css" width="edge, default, stretch, full, inline" position="bottom, top, modal" delay="3000" show="session, never, always, # days" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '[/lock]\n\n', 'lock', 'Lock', 1000 );		
-			QTags.addButton( 'bp_random-image', 'random image', '   [get-random-image id="" tag="random" size="thumbnail, third-s" link="no, yes" number="1" offset="" align="left, right, center" order_by="recent, rand, menu_order, title, id, post_date, modified, views" order="asc, desc" shuffle="no, yes"]\n', '', 'random image', 'Random Image', 1000 );
-			QTags.addButton( 'bp_random-post', 'random post', '   [get-random-posts num="1" offset="0" type="post" tax="" terms="" orderby="recent, rand, views-today, views-7day, views-30day, views-all" sort="asc, desc" count_tease="true, false" count_view="true, false" thumb_only="false, true" thumb_col="1, 2, 3, 4" show_title="true, false" title_pos="outside, inside" show_date="false, true" show_author="false, true" show_excerpt="true, false" show_social="false, true" show_btn="true, false" button="Read More" btn_pos="inside, outside" thumbnail="force, false" link="post, false, /link-destination/" start="" end="" exclude="" x_current="true, false" size="thumbnail, size-third-s" pic_size="1/3" text_size=""]\n', '', 'random post', 'Random Post', 1000 );
-			QTags.addButton( 'bp_random-text', 'random text', '   [get-random-text cookie="true, false" text1="" text2="" text3="" text4="" text5="" text6="" text7=""]\n', '', 'random text', 'Random Text', 1000 );
-			QTags.addButton( 'bp_row-of-pics', 'row of pics', '   [get-row-of-pics id="" tag="row-of-pics" col="4" size="half-s, thumbnail" valign="center, start, stretch, end" link="no, yes" order_by="recent, rand, menu_order, title, id, post_date, modified, views" order="asc, desc" shuffle="no, yes" class=""]\n', '', 'row of pics', 'Row Of Pics', 1000 );
-			QTags.addButton( 'bp_post-slider', 'post slider', '   [get-post-slider type="" auto="yes, no" interval="6000" loop="true, false" num="4" offset="0" pics="yes, no" controls="yes, no" controls_pos="below, above" indicators="no, yes" pause="true, false" tax="" terms="" orderby="recent, rand, id, author, title, name, type, date, modified, parent, comment_count, relevance, menu_order, (images) views, (posts) views-today, views-7day, views-30day, views-all" order="asc, desc" post_btn="" all_btn="View All" link="" start="" end="" excluse="" x_current="true, false" show_excerpt="true, false" show_content="false, true" size="thumbnail" pic_size="1/3" text_size="" class="" (images) slide_type="box, screen, fade" tag="" caption="no, yes" id="" size="thumbnail, half-s" mult="1"]\n', '', 'post slider', 'Post Slider', 1000 );
-
-			QTags.addButton( 'bp_images-slider', 'Images Slider', '<div class="alignright size-half-s">[get-post-slider type="images" num="6" size="half-s" controls="no" indicators="yes" tag="featured" all_btn="" link="none, alt, description, blank" slide_type="box, screen, fade" orderby="recent"]</div>\n\n', '', 'images-slider', 'Images Slider', 1000 );	
-			QTags.addButton( 'bp_testimonial-slider', 'Testimonial Slider', '  [col]\n   <h2>What Our Customers Say...</h2>\n   [get-post-slider type="testimonials" num="6" pic_size="1/3"]\n  [/col]\n\n', '', 'testimonial-slider', 'Testimonial Slider', 1000 );
-			QTags.addButton( 'bp_random-product', 'Random Product', '  [col]\n   <h2>Featured Product</h2>\n   [get-random-posts type="products" offset="1" button="Learn More" orderby="views-30day" sort="desc"]\n  [/col]\n\n', '', 'random-product', 'Random Product', 1000 );
-		</script>
-	<?php }
 }
 
 // Add shortcode capability to Contact Form 7
@@ -1296,853 +1265,6 @@ function battleplan_add_acf_fields() {
 		'active' => true,
 		'description' => '',
 	));
-}
-
-/*--------------------------------------------------------------
-# Set up Admin Columns
---------------------------------------------------------------*/
-add_action( 'ac/ready', 'battleplan_column_settings' );
-function battleplan_column_settings() {
-	ac_register_columns( 'testimonials', array(
-		array(
-			'columns'=>array(
-				'featured-image'=>array(
-					'type'=>'column-featured_image',
-					'label'=>'',
-					'width'=>'5',
-					'width_unit'=>'%',
-					'featured_image_display'=>'image',
-					'image_size'=>'cpac-custom',
-					'image_size_w'=>'60',
-					'image_size_h'=>'60',
-					'edit'=>'off',
-					'sort'=>'off',
-					'filter'=>'off',
-					'filter_label'=>'',
-					'name'=>'featured-image',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'title'=>array(
-					'type'=>'title',
-					'label'=>'Name',
-					'width'=>'',
-					'width_unit'=>'%',
-					'edit'=>'on',
-					'sort'=>'on',
-					'name'=>'title',
-					'label_type'=>'',
-					'search'=>'on'
-				),		
-				'date-published'=>array(
-					'type'=>'column-date_published',
-					'label'=>'Date Published',
-					'width'=>'',
-					'width_unit'=>'%',
-					'date_format'=>'wp_default',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'filter_format'=>'monthly',
-					'name'=>'date-published',
-					'label_type'=>'',
-					'search'=>'on'
-				),		
-				'rating'=>array(
-					'type'=>'column-meta',
-					'label'=>'Rating',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'testimonial_rating',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'rating',
-					'label_type'=>'',
-					'editable_type'=>'textarea',
-					'search'=>'on'
-				),
-				'last_viewed'=>array(
-					'type'=>'column-meta',
-					'label'=>'Last Viewed',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'post-views-now',
-					'field_type'=>'date',
-					'date_format'=>'wp_default',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'filter_format'=>'monthly',
-					'name'=>'last_viewed',
-					'label_type'=>'',
-					'search'=>'on'
-				),	
-				'views_week'=>array(
-					'type'=>'column-meta',
-					'label'=>'This Week',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'post-views-total-7day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'views_week',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'views_month'=>array(
-					'type'=>'column-meta',
-					'label'=>'This Month',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'post-views-total-30day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'views_month',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'views_total'=>array(
-					'type'=>'column-meta',
-					'label'=>'Views Total',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'post-views-total-all',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'views_total',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'location'=>array(
-					'type'=>'column-meta',
-					'label'=>'Location',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'testimonial_location',
-					'field_type'=>'checkmark',
-					'before'=>'',
-					'after'=>'',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'location',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'business'=>array(
-					'type'=>'column-meta',
-					'label'=>'Business',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'testimonial_biz',
-					'field_type'=>'checkmark',
-					'before'=>'',
-					'after'=>'',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'business',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'website'=>array(
-					'type'=>'column-meta',
-					'label'=>'Website',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'testimonial_website',
-					'field_type'=>'checkmark',
-					'before'=>'',
-					'after'=>'',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'website',
-					'label_type'=>'',
-					'search'=>'on'
-				)
-			),
-			'layout'=>array(
-				'id'=>'5cbb315787688',
-				'name'=>'battleplan',
-				'roles'=>false,
-				'users'=>false,
-				'read_only'=>false
-			)			
-		)
-	) );
-	ac_register_columns( 'galleries', array(
-		array(
-			'columns'=>array(
-				'featured-image'=>array(
-					'type'=>'column-featured_image',
-					'label'=>'',
-					'width'=>'80',
-					'width_unit'=>'px',
-					'featured_image_display'=>'image',
-					'image_size'=>'cpac-custom',
-					'image_size_w'=>'60',
-					'image_size_h'=>'60',
-					'edit'=>'off',
-					'sort'=>'off',
-					'filter'=>'off',
-					'filter_label'=>'',
-					'name'=>'featured-image',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'title'=>array(
-					'type'=>'title',
-					'label'=>'Title',
-					'width'=>'',
-					'width_unit'=>'%',
-					'edit'=>'on',
-					'sort'=>'on',
-					'name'=>'title',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'slug'=>array(
-					'type'=>'column-slug',
-					'label'=>'Slug',
-					'width'=>'15',
-					'width_unit'=>'%',
-					'edit'=>'on',
-					'sort'=>'on',
-					'name'=>'slug',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'gallery-type'=>array(
-					'type'=>'column-taxonomy',
-					'label'=>'Type',
-					'width'=>'',
-					'width_unit'=>'%',
-					'taxonomy'=>'gallery-type',
-					'edit'=>'on',
-					'enable_term_creation'=>'on',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'gallery-type',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'last-modified'=>array(
-					'type'=>'column-modified',
-					'label'=>'Last Modified',
-					'width'=>'',
-					'width_unit'=>'%',
-					'date_format'=>'diff',
-					'edit'=>'on',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'filter_format'=>'monthly',
-					'name'=>'last-modified',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'date-published'=>array(
-					'type'=>'column-date_published',
-					'label'=>'Date Published',
-					'width'=>'',
-					'width_unit'=>'%',
-					'date_format'=>'wp_default',
-					'edit'=>'on',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'filter_format'=>'monthly',
-					'name'=>'date-published',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'gallery-tags'=>array(
-					'type'=>'column-taxonomy',
-					'label'=>'Gallery Tags',
-					'width'=>'',
-					'width_unit'=>'%',
-					'taxonomy'=>'gallery-tags',
-					'edit'=>'on',
-					'enable_term_creation'=>'on',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'gallery-tags',
-					'label_type'=>'',
-					'search'=>'on'
-				)
-			),
-			'layout'=>array(
-				'id'=>'5cbb31578ee04',
-				'name'=>'battleplan',
-				'roles'=>false,
-				'users'=>false,
-				'read_only'=>false
-			)			
-		)
-	) );
-	ac_register_columns( 'post', array(
-		array(
-			'columns'=>array(
-				'featured-image'=>array(
-					'type'=>'column-featured_image',
-					'label'=>'',
-					'width'=>'80',
-					'width_unit'=>'px',
-					'featured_image_display'=>'image',
-					'image_size'=>'cpac-custom',
-					'image_size_w'=>'60',
-					'image_size_h'=>'60',
-					'edit'=>'off',
-					'sort'=>'off',
-					'filter'=>'off',
-					'filter_label'=>'',
-					'name'=>'featured-image',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'title'=>array(
-					'type'=>'title',
-					'label'=>'Title',
-					'width'=>'',
-					'width_unit'=>'%',
-					'edit'=>'on',
-					'sort'=>'on',
-					'name'=>'title',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'column-slug'=>array(
-					'type'=>'column-slug',
-					'label'=>'Slug',
-					'width'=>'',
-					'width_unit'=>'%',
-					'edit'=>'on',
-					'sort'=>'on',
-					'name'=>'column-slug',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'last-modified'=>array(
-					'type'=>'column-modified',
-					'label'=>'Last Modified',
-					'width'=>'130',
-					'width_unit'=>'px',
-					'date_format'=>'diff',
-					'edit'=>'on',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'filter_format'=>'monthly',
-					'name'=>'last-modified',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'date-published'=>array(
-					'type'=>'column-date_published',
-					'label'=>'Date Published',
-					'width'=>'130',
-					'width_unit'=>'px',
-					'date_format'=>'wp_default',
-					'edit'=>'on',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'filter_format'=>'monthly',
-					'name'=>'date-published',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'last_viewed'=>array(
-					'type'=>'column-meta',
-					'label'=>'Last Viewed',
-					'width'=>'130',
-					'width_unit'=>'px',
-					'field'=>'post-views-now',
-					'field_type'=>'date',
-					'date_format'=>'wp_default',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'filter_format'=>'monthly',
-					'name'=>'last_viewed',
-					'label_type'=>'',
-					'search'=>'on'
-				),	
-				'views_week'=>array(
-					'type'=>'column-meta',
-					'label'=>'This Week',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'post-views-total-7day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'views_week',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'views_month'=>array(
-					'type'=>'column-meta',
-					'label'=>'This Month',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'post-views-total-30day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'views_month',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'views_total'=>array(
-					'type'=>'column-meta',
-					'label'=>'Views Total',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'post-views-total-all',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'views_total',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'categories'=>array(
-					'type'=>'categories',
-					'label'=>'Categories',
-					'width'=>'100',
-					'width_unit'=>'px',
-					'edit'=>'on',
-					'enable_term_creation'=>'on',
-					'sort'=>'on',
-					'filter'=>'on',
-					'name'=>'categories',
-					'label_type'=>'',
-					'filter_label'=>'',
-					'search'=>'on'
-				),
-				'tags'=>array(
-					'type'=>'tags',
-					'label'=>'Tags',
-					'width'=>'100',
-					'width_unit'=>'px',
-					'edit'=>'on',
-					'enable_term_creation'=>'on',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'tags',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'author'=>array(
-					'type'=>'author',
-					'label'=>'Author',
-					'width'=>'',
-					'width_unit'=>'%',
-					'edit'=>'on',
-					'sort'=>'on',
-					'name'=>'author',
-					'label_type'=>'',
-					'search'=>'on'
-				)
-			),
-			'layout'=>array(
-				'id'=>'5cbb31579092a',
-				'name'=>'battleplan',
-				'roles'=>false,
-				'users'=>false,
-				'read_only'=>false
-			)			
-		)
-	) );
-	ac_register_columns( 'page', array(
-		array(
-			'columns'=>array(
-				'title'=>array(
-					'type'=>'title',
-					'label'=>'Page',
-					'width'=>'',
-					'width_unit'=>'%',
-					'edit'=>'on',
-					'sort'=>'on',
-					'name'=>'title',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'slug'=>array(
-					'type'=>'column-slug',
-					'label'=>'Slug',
-					'width'=>'130',
-					'width_unit'=>'px',
-					'edit'=>'on',
-					'sort'=>'on',
-					'name'=>'slug',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'post-id'=>array(
-					'type'=>'column-postid',
-					'label'=>'ID',
-					'width'=>'60',
-					'width_unit'=>'px',
-					'before'=>'',
-					'after'=>'',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'post-id',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'last-modified'=>array(
-					'type'=>'column-modified',
-					'label'=>'Last Modified',
-					'width'=>'130',
-					'width_unit'=>'px',
-					'date_format'=>'diff',
-					'edit'=>'on',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'filter_format'=>'monthly',
-					'name'=>'last-modified',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'date-published'=>array(
-					'type'=>'column-date_published',
-					'label'=>'Date Published',
-					'width'=>'130',
-					'width_unit'=>'px',
-					'date_format'=>'wp_default',
-					'edit'=>'on',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'filter_format'=>'monthly',
-					'name'=>'date-published',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'last_viewed'=>array(
-					'type'=>'column-meta',
-					'label'=>'Last Viewed',
-					'width'=>'130',
-					'width_unit'=>'px',
-					'field'=>'post-views-now',
-					'field_type'=>'date',
-					'date_format'=>'wp_default',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'filter_format'=>'monthly',
-					'name'=>'last_viewed',
-					'label_type'=>'',
-					'search'=>'on'
-				),	
-				'views_week'=>array(
-					'type'=>'column-meta',
-					'label'=>'This Week',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'post-views-total-7day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'views_week',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'views_month'=>array(
-					'type'=>'column-meta',
-					'label'=>'This Month',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'post-views-total-30day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'views_month',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'views_total'=>array(
-					'type'=>'column-meta',
-					'label'=>'Views Total',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'post-views-total-all',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'views_total',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'attachments'=>array(
-					'type'=>'column-attachment',
-					'label'=>'Attachments',
-					'width'=>'400',
-					'width_unit'=>'px',
-					'attachment_display'=>'thumbnail',
-					'image_size'=>'cpac-custom',
-					'image_size_w'=>'60',
-					'image_size_h'=>'60',
-					'number_of_items'=>'10',
-					'edit'=>'on',
-					'sort'=>'on',
-					'name'=>'attachments',
-					'label_type'=>''
-				)
-			),
-			'layout'=>array(
-				'id'=>'5cbb31579168e',
-				'name'=>'battleplan',
-				'roles'=>false,
-				'users'=>false,
-				'read_only'=>false
-			)			
-		)
-	) );
-	ac_register_columns( 'wp-media', array(
-		array(
-			'columns'=>array(
-				'image'=>array(
-					'type'=>'column-image',
-					'label'=>'Image',
-					'width'=>'140',
-					'width_unit'=>'px',
-					'image_size'=>'cpac-custom',
-					'image_size_w'=>'130',
-					'image_size_h'=>'130',
-					'name'=>'image',
-					'label_type'=>''
-				),
-				'filename'=>array(
-					'type'=>'column-file_name',
-					'label'=>'Filename',
-					'width'=>'',
-					'width_unit'=>'%',
-					'sort'=>'on',
-					'name'=>'filename',
-					'label_type'=>''
-				),
-				'alt-text' => array(
-					'type' => 'column-alternate_text',
-					'label' => 'Alt Text',
-					'width' => '150',
-					'width_unit' => 'px',
-					'use_icons' => '',
-					'name' => 'column-alternate_text',
-					'label_type' => '',
-					'edit' => 'on',
-					'sort' => 'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'bulk-editing' => '',
-					'export' => '',
-					'search' => ''
-				),
-				'date'=>array(
-					'type'=>'date',
-					'label'=>'Date',
-					'width'=>'100',
-					'width_unit'=>'px',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'filter_format'=>'monthly',
-					'name'=>'date',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'image-id'=>array(
-					'type'=>'column-mediaid',
-					'label'=>'ID',
-					'width'=>'',
-					'width_unit'=>'%',
-					'sort'=>'on',
-					'name'=>'image-id',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'last_viewed'=>array(
-					'type'=>'column-meta',
-					'label'=>'Last Viewed',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'post-views-now',
-					'field_type'=>'date',
-					'date_format'=>'wp_default',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'filter_format'=>'monthly',
-					'name'=>'last_viewed',
-					'label_type'=>'',
-					'search'=>'on'
-				),	
-				'views_week'=>array(
-					'type'=>'column-meta',
-					'label'=>'This Week',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'post-views-total-7day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'views_week',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'views_month'=>array(
-					'type'=>'column-meta',
-					'label'=>'This Month',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'post-views-total-30day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'views_month',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'views_total'=>array(
-					'type'=>'column-meta',
-					'label'=>'Views Total',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'post-views-total-all',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'views_total',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'taxonomy-image-categories'=>array(
-					'type'=>'taxonomy-image-categories',
-					'label'=>'Image Categories',
-					'width'=>'',
-					'width_unit'=>'%',
-					'edit'=>'on',
-					'enable_term_creation'=>'on',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'taxonomy-image-categories',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'taxonomy-image-tags'=>array(
-					'type'=>'taxonomy-image-tags',
-					'label'=>'Image Tags',
-					'width'=>'',
-					'width_unit'=>'%',
-					'edit'=>'on',
-					'enable_term_creation'=>'on',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'taxonomy-image-tags',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'sizes'=>array(
-					'type'=>'column-available_sizes',
-					'label'=>'Sizes',
-					'width'=>'200',
-					'width_unit'=>'px',
-					'include_missing_sizes'=>'',
-					'sort'=>'on',
-					'name'=>'sizes',
-					'label_type'=>''
-				)
-			),
-			'layout'=>array(
-				'id'=>'5cbb3157923d6',
-				'name'=>'battleplan',
-				'roles'=>false,
-				'users'=>false,
-				'read_only'=>false
-			)			
-		)
-	) );
 }
 
 /*--------------------------------------------------------------
@@ -2415,9 +1537,6 @@ function battleplan_footer_social_box() {
 	return $buildLeft;
 }
 
-//Disable Gutenburg
-add_filter('use_block_editor_for_post', '__return_false');
-
 // Stop adding line breaks to content
 remove_filter( 'the_content', 'wpautop' );
 remove_filter( 'the_excerpt', 'wpautop' );
@@ -2496,6 +1615,7 @@ function battleplan_admin_scripts() {
 	wp_enqueue_style( 'battleplan-admin', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION );		
 }
 
+if ( is_admin() ) { require get_template_directory() . '/functions-admin.php'; } 
 require get_template_directory() . '/includes/includes-universal.php';
 if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { require get_template_directory() . '/includes/includes-events.php'; } 
 if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { require get_template_directory() . '/includes/includes-woocommerce.php'; } 
@@ -2520,30 +1640,8 @@ function battleplan_dequeue_unwanted_stuff() {
 add_action( 'login_enqueue_scripts', 'battleplan_login_logo' );
 function battleplan_login_logo() { ?><style type="text/css">body.login div#login h1 a { background-image: url(https://battleplanassets.com/images/logo-knight.png); padding-bottom: 120px; width: 100%;	background-size: 50%} #login {padding-top:70px !important} </style> <?php } 
 
-// Add Location (site tagline) to Admin Bar
-add_action( 'admin_bar_menu', 'battleplan_addTaglineToAdminBar', 999 );
-function battleplan_addTaglineToAdminBar( $wp_admin_bar ) {
-	$args = array( 'id' => 'tagline', 'title' => '-&nbsp;&nbsp;'.get_bloginfo( 'description' ).'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;', );
-	$wp_admin_bar->add_node( $args );
-}
-
-add_action( 'wp_before_admin_bar_render', 'battleplan_reorderAdminBar');
-function battleplan_reorderAdminBar() {
-    global $wp_admin_bar;
-    $IDs_sequence = array('wp-logo', 'site-name', 'tagline', 'updates', 'comments', 'wphb', 'new-content' );
-    $nodes = $wp_admin_bar->get_nodes();
-    foreach ( $IDs_sequence as $id ) {
-        if ( ! isset($nodes[$id]) ) continue;
-        $wp_admin_bar->remove_menu($id);
-        $wp_admin_bar->add_node($nodes[$id]);
-        unset($nodes[$id]);
-    }
-    foreach ( $nodes as $id => &$obj ) {
-        if ( ! empty($obj->parent) ) continue;
-        $wp_admin_bar->remove_menu($id);
-        $wp_admin_bar->add_node($obj);
-    }
-}
+// Hide the Wordpress admin bar
+show_admin_bar( false );
 
 // Set up Main Menu
 class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
@@ -2646,21 +1744,6 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
 add_action('wp_footer', 'battleplan_no_contact_form_refill', 99); 
 function battleplan_no_contact_form_refill() { ?><script>wpcf7.cached = 0;</script><?php }
 
-// Replace WordPress copyright message at bottom of admin page
-add_filter('admin_footer_text', 'battleplan_remove_footer_admin');
-function battleplan_remove_footer_admin () { echo 'Powered by <a href="https://battleplanwebdesign.com" target="_blank">Battle Plan Web Design</a></p>'; }
-
-// Change Howdy text
-add_filter( 'admin_bar_menu', 'battleplan_replace_howdy', 25 );
-function battleplan_replace_howdy( $wp_admin_bar ) {
-	 $my_account=$wp_admin_bar->get_node('my-account');
-	 $newtitle = str_replace( 'Howdy,', 'Welcome,', $my_account->title );
-	 $wp_admin_bar->add_node( array( 'id'=>'my-account', 'title'=>$newtitle, ) );
- }
-
-// Hide the Wordpress admin bar
-show_admin_bar( false );
-
 // Remove auto <p> from around images 
 add_filter('the_content', 'battleplan_remove_ptags_on_images', 9999);
 function battleplan_remove_ptags_on_images($content){
@@ -2753,31 +1836,11 @@ function battleplan_content_image_sizes_attr($sizes, $size) {
 	return get_srcset($size[0]);
 }
 
-/* Remove https://domain.com, width & height params from the <img> inserted by WordPress */
-add_filter( 'image_send_to_editor', 'battleplan_remove_junk_from_image', 10 );
-function battleplan_remove_junk_from_image( $html ) {
-   $html = preg_replace( '/(width|height)="\d*"\s/', "", $html );
-   $html = str_replace( get_site_url(), "", $html );
-   return $html;
-}
-
 // Add attachment ID to attached images as 'data-id'
 add_filter( 'wp_get_attachment_image_attributes', 'battleplan_attachment_id_on_images', 20, 2 );
 function battleplan_attachment_id_on_images( $attr, $attachment ) {
 	$attr['data-id'] = $attachment->ID;
 	return $attr;
-}
-
-// Automatically set the image Title, Alt-Text, Caption & Description upon upload
-add_action( 'add_attachment', 'battleplan_setImageMetaUponUpload' );
-function battleplan_setImageMetaUponUpload( $post_ID ) {
-	if ( wp_attachment_is_image( $post_ID ) ) {
-		$imageTitle = get_post( $post_ID )->post_title;
-		$imageTitle = ucwords( preg_replace( '%\s*[-_\s]+\s*%', ' ', $imageTitle )); // remove hyphens, underscores & extra spaces and capitalize
-		$imageMeta = array ( 'ID' => $post_ID, 'post_title' => $imageTitle ) /* post title */;			 
-		update_post_meta( $post_ID, '_wp_attachment_image_alt', $imageTitle ) /* alt text */;
-		wp_update_post( $imageMeta );
-	} 
 }
 
 // Do not resize animated .gif 
@@ -2808,82 +1871,37 @@ function battleplan_current_type_nav_class($classes, $item) {
 // Rename "Uncategorized" posts to "Blog"
 wp_update_term(1, 'category', array( 'name'=>'Blog', 'slug'=>'blog' ));
 
-// Display custom fields in WordPress admin edit screen
-//add_filter('acf/settings/remove_wp_meta_box', '__return_false');
-
-// Add 'post-views-*' fields to an image when it is uploaded
-add_action( 'add_attachment', 'battleplan_addWidgetPicViewsToImg', 10, 9 );
-function battleplan_addWidgetPicViewsToImg( $post_ID ) {
-	if ( wp_attachment_is_image( $post_ID ) ) {		
-		updateMeta( $post_ID, 'post-views-now', '--' );			
-		updateMeta( $post_ID, 'post-views-time', '--' );			
-		updateMeta( $post_ID, 'post-tease-time', '--' );			
-		updateMeta( $post_ID, 'post-views-total-all', '0' );			
-		updateMeta( $post_ID, 'post-views-total-7day', '0' );		
-		updateMeta( $post_ID, 'post-views-total-30day', '0' );
-		updateMeta( $post_ID, 'post-views-record', '0' );					
-		updateMeta( $post_ID, 'post-views-record-date', '--' );
-		for ($x = 1; $x <= 30; $x++) {
-			updateMeta( $post_ID, 'post-views-day-'.$x, array('date'=>'--', 'views'=>'0') );
-		} 
-	} 
-}
-
-// Add 'post-views-*' fields to posts/pages when published 
-add_action( 'save_post', 'battleplan_addViewsToPost', 10, 3 );
-function battleplan_addViewsToPost() {
-	global $post; $post_ID = $post->ID;	
-	if ( readMeta( $post_ID, 'post-views-total-all') == '' ) {
-		updateMeta( $post_ID, 'post-views-now', '--' );			
-		updateMeta( $post_ID, 'post-views-time', '--' );			
-		updateMeta( $post_ID, 'post-tease-time', '--' );			
-		updateMeta( $post_ID, 'post-views-total-all', '0' );			
-		updateMeta( $post_ID, 'post-views-total-7day', '0' );		
-		updateMeta( $post_ID, 'post-views-total-30day', '0' );
-		updateMeta( $post_ID, 'post-views-record', '0' );					
-		updateMeta( $post_ID, 'post-views-record-date', '--' );
-		for ($x = 1; $x <= 30; $x++) {
-			updateMeta( $post_ID, 'post-views-day-'.$x, array('date'=>'--', 'views'=>'0') );
-		} 
-	}
-}
-
-// Clear views when post/page is cloned
-add_action( 'dp_duplicate_post', 'battleplan_clearViews', 99, 2 );
-add_action( 'dp_duplicate_page', 'battleplan_clearViews', 99, 2 );
-function battleplan_clearViews($new_post_id) {
-	$post_ID = $new_post_id;
-	deleteMeta( $post_ID, 'post-bot-names');
-	deleteMeta( $post_ID, 'post-bots');
-	updateMeta( $post_ID, 'post-views-now', '--' );				
-	updateMeta( $post_ID, 'post-views-time', '--' );			
-	updateMeta( $post_ID, 'post-tease-time', '--' );			
-	updateMeta( $post_ID, 'post-views-total-all', '0' );			
-	updateMeta( $post_ID, 'post-views-total-7day', '0' );		
-	updateMeta( $post_ID, 'post-views-total-30day', '0' );
-	updateMeta( $post_ID, 'post-views-record', '0' );					
-	updateMeta( $post_ID, 'post-views-record-date', '--' );
-	for ($x = 1; $x <= 30; $x++) {
-		updateMeta( $post_ID, 'post-views-day-'.$x, array('date'=>'--', 'views'=>'0') );
-	} 
-}
+$siteHeader = getID('site-header');
+if ( readMeta($siteHeader, "log-views") == '' ) : battleplan_clearViewFields(); endif;
 
 // Force clear all views for posts/pages - run this from functions.php within a site's child theme
 function battleplan_clearViewFields() {
 	// clear image views
 	$image_query = new WP_Query( array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>-1 ));
 	if( $image_query->have_posts() ) : while ($image_query->have_posts() ) : $image_query->the_post();
-		updateMeta( get_the_ID(), 'post-views-now', '--' );			
-		updateMeta( get_the_ID(), 'post-views-time', '--' );			
-		updateMeta( get_the_ID(), 'post-tease-time', '--' );			
-		updateMeta( get_the_ID(), 'post-views-total-all', '0' );			
-		updateMeta( get_the_ID(), 'post-views-total-7day', '0' );		
-		updateMeta( get_the_ID(), 'post-views-total-30day', '0' );
-		updateMeta( get_the_ID(), 'post-views-record', '0' );					
-		updateMeta( get_the_ID(), 'post-views-record-date', '--' );
-		for ($x = 1; $x <= 30; $x++) {
-			updateMeta( get_the_ID(), 'post-views-day-'.$x, array('date'=>'--', 'views'=>'0') );
-		} 
+		deleteMeta( get_the_ID(), 'post-views-now');
+		deleteMeta( get_the_ID(), 'post-views-time');
+		deleteMeta( get_the_ID(), 'post-tease-time');
+		deleteMeta( get_the_ID(), 'post-views-total-all');
+		deleteMeta( get_the_ID(), 'post-views-record');
+		deleteMeta( get_the_ID(), 'post-views-record-date');
+		deleteMeta( get_the_ID(), 'post-views-total-7day');
+		deleteMeta( get_the_ID(), 'post-views-total-30day');
+		deleteMeta( get_the_ID(), 'post-views-total-90day');
+		deleteMeta( get_the_ID(), 'post-views-total-180day');
+		deleteMeta( get_the_ID(), 'post-views-total-365day');
+		for ($x = 0; $x < 31; $x++) {
+			deleteMeta( get_the_ID(), 'post-views-day-'.$x);
+		} 		
+		updateMeta( get_the_ID(), 'log-views-now', '--' );			
+		updateMeta( get_the_ID(), 'log-views-time', '--' );			
+		updateMeta( get_the_ID(), 'log-tease-time', '--' );			
+		updateMeta( get_the_ID(), 'log-views-total-7day', '0' );		
+		updateMeta( get_the_ID(), 'log-views-total-30day', '0' );
+		updateMeta( get_the_ID(), 'log-views-total-90day', '0' );
+		updateMeta( get_the_ID(), 'log-views-total-180day', '0' );
+		updateMeta( get_the_ID(), 'log-views-total-365day', '0' );
+		updateMeta( get_the_ID(), 'log-views', array( 'date'=>'--', 'views'=>0) );					
 
 	endwhile; wp_reset_postdata(); endif;
 	
@@ -2906,17 +1924,45 @@ function battleplan_clearViewFields() {
 			deleteMeta( get_the_ID(), 'post-bots');
 			deleteMeta( get_the_ID(), 'add-view-fields');
 			deleteMeta( get_the_ID(), 'check-pics-for-views');
-			updateMeta( get_the_ID(), 'post-views-now', '--' );			
-			updateMeta( get_the_ID(), 'post-views-time', '--' );			
-			updateMeta( get_the_ID(), 'post-tease-time', '--' );			
-			updateMeta( get_the_ID(), 'post-views-total-all', '0' );			
-			updateMeta( get_the_ID(), 'post-views-total-7day', '0' );		
-			updateMeta( get_the_ID(), 'post-views-total-30day', '0' );
-			updateMeta( get_the_ID(), 'post-views-record', '0' );					
-			updateMeta( get_the_ID(), 'post-views-record-date', '--' );
-			for ($x = 1; $x <= 30; $x++) {
-				updateMeta( get_the_ID(), 'post-views-day-'.$x, array('date'=>'--', 'views'=>'0') );
-			} 
+			deleteMeta( get_the_ID(), 'clear-hummingbird-cache');
+			deleteMeta( get_the_ID(), 'last-hummingbird-cache');
+			deleteMeta( get_the_ID(), 'post-views-now');
+			deleteMeta( get_the_ID(), 'post-views-time');
+			deleteMeta( get_the_ID(), 'post-tease-time');
+			deleteMeta( get_the_ID(), 'post-views-total-all');
+			deleteMeta( get_the_ID(), 'post-views-record');
+			deleteMeta( get_the_ID(), 'post-views-record-date');
+			deleteMeta( get_the_ID(), 'post-views-total-7day');
+			deleteMeta( get_the_ID(), 'post-views-total-30day');
+			deleteMeta( get_the_ID(), 'post-views-total-90day');
+			deleteMeta( get_the_ID(), 'post-views-total-180day');
+			deleteMeta( get_the_ID(), 'post-views-total-365day');
+			for ($x = 0; $x < 31; $x++) {
+				deleteMeta( get_the_ID(), 'post-views-day-'.$x);
+			} 		
+			deleteMeta( get_the_ID(), 'site-views-now');
+			deleteMeta( get_the_ID(), 'site-views-time');
+			deleteMeta( get_the_ID(), 'site-tease-time');
+			deleteMeta( get_the_ID(), 'site-views-total-all');
+			deleteMeta( get_the_ID(), 'site-views-record');
+			deleteMeta( get_the_ID(), 'site-views-record-date');
+			deleteMeta( get_the_ID(), 'site-views-total-7day');
+			deleteMeta( get_the_ID(), 'site-views-total-30day');
+			deleteMeta( get_the_ID(), 'site-views-total-90day');
+			deleteMeta( get_the_ID(), 'site-views-total-180day');
+			deleteMeta( get_the_ID(), 'site-views-total-365day');
+			for ($x = 0; $x < 31; $x++) {
+				deleteMeta( get_the_ID(), 'site-views-day-'.$x);
+			} 		
+			updateMeta( get_the_ID(), 'log-views-now', '--' );			
+			updateMeta( get_the_ID(), 'log-views-time', '--' );			
+			updateMeta( get_the_ID(), 'log-tease-time', '--' );			
+			updateMeta( get_the_ID(), 'log-views-total-7day', '0' );		
+			updateMeta( get_the_ID(), 'log-views-total-30day', '0' );
+			updateMeta( get_the_ID(), 'log-views-total-90day', '0' );
+			updateMeta( get_the_ID(), 'log-views-total-180day', '0' );
+			updateMeta( get_the_ID(), 'log-views-total-365day', '0' );
+			updateMeta( get_the_ID(), 'log-views', array( 'date'=>'--', 'views'=>0) );					
 		endwhile; wp_reset_postdata(); endif;
 	}	
 } 
@@ -2934,145 +1980,6 @@ function end_with_sentence( $excerpt ) {
 	if ( strlen($newExcerpt) > 150 ) $newExcerpt = implode('', array_slice($sentences, 0, 2));
 
     return $newExcerpt;
-}
-
-// Remove unwanted dashboard widgets
-add_action('wp_dashboard_setup', 'battleplan_remove_dashboard_widgets');
-function battleplan_remove_dashboard_widgets () {
-	remove_action('welcome_panel','wp_welcome_panel'); // Welcome to WordPress!
-	remove_meta_box('dashboard_primary','dashboard','side'); //WordPress.com Blog
-	remove_meta_box('dashboard_right_now','dashboard','side');
-	remove_meta_box('dashboard_quick_press','dashboard','side'); //Quick Press widget
-	remove_meta_box('tribe_dashboard_widget', 'dashboard', 'normal'); // News From Modern Tribe
-	remove_meta_box('wpe_dify_news_feed','dashboard','side'); //WP Engine
-}
-
-// Add new dashboard widgets
-add_action( 'wp_dashboard_setup', 'battleplan_add_dashboard_widgets' );
-function battleplan_add_dashboard_widgets() {
-    wp_add_dashboard_widget( 'battleplan_site_stats', 'Site Stats', 'battleplan_admin_site_stats' );
-}
-
-// Set up Site Stats widget on dashboard
-function battleplan_admin_site_stats() {
-	$siteHeader = getID('site-header');
-	$desktopCounted = readMeta($siteHeader, "load-number-desktop");
-	$desktopSpeed = readMeta($siteHeader, "load-speed-desktop");	
-	$mobileCounted = readMeta($siteHeader, "load-number-mobile");
-	$mobileSpeed = readMeta($siteHeader, "load-speed-mobile");
-	$lastEmail = readMeta($siteHeader, "last-email");
-	$rightNow = strtotime(date("F j, Y g:i a"));
-	$today = strtotime(date("F j, Y"));
-	$daysSinceEmail = number_format((($rightNow - $lastEmail) / 60 / 60 / 24));
-	$totalCounted = $desktopCounted + $mobileCounted;		
-	$totalViews = number_format(readMeta($siteHeader, "site-views-total-all"));	
-	$dailyMeta = readMeta($siteHeader, 'site-views-day-1'); 
-	$viewsToday = number_format($dailyMeta['views']);
-	$dateToday = strtotime($dailyMeta['date']);
-	if ( $dateToday != $today ) $viewsToday = 0;
-	$last7Views = number_format(readMeta($siteHeader, "site-views-total-7day"));
-	$last30Views = number_format(readMeta($siteHeader, "site-views-total-30day"));
-	$recordViews = number_format(readMeta($siteHeader, "site-views-record"));
-	$recordDate = date("M jS, Y", readMeta($siteHeader, "site-views-record-date")); 
-	$lastViewed = readMeta($siteHeader, 'site-views-now');		
-	$dateDiff = (($rightNow - $lastViewed) / 60 / 60 / 24); $howLong = "day";
-	if ( $dateDiff < 1 ) : $dateDiff = (($rightNow - $lastViewed) / 60 / 60); $howLong = "hour"; endif;	
-	if ( $dateDiff < 1 ) : $dateDiff = (($rightNow - $lastViewed) / 60); $howLong = "minute"; endif;
-	if ( $dateDiff != 1 ) $howLong = $howLong."s";	
-	$dateDiff = number_format($dateDiff, 0);
-	
-	echo "<table><tr><td><b><u>Framework</u></b></td><td><b>"._BP_VERSION."</b></td></tr>";		
-		
-	echo "<tr><td>&nbsp;</td></tr>";	
-	
-	echo "<tr><td><b><u>Last Email</u></b></td><td>".sprintf( _n( '<b>%s</b> day ago', '<b>%s</b> days ago', $daysSinceEmail, 'battleplan' ), $daysSinceEmail )."</td></tr>";
-	
-	echo "<tr><td>&nbsp;</td></tr>";
-	
-	echo "<tr><td><b><u>Site Speed</u></b></td></tr>";
-	echo "<tr><td><b>Desktop</b></td><td><b>".$desktopSpeed."s</b> on ".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $desktopCounted, 'battleplan' ), $desktopCounted )."</td></tr>";
-	echo "<tr><td><b>Mobile</b></td><td><b>".$mobileSpeed."s</b> on ".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $mobileCounted, 'battleplan' ), $mobileCounted )."</td></tr>";
-	
-	echo "<tr><td>&nbsp;</td></tr>";
-	
-	echo "<tr><td><b><u>Site Visitors</u></b></td></tr>";
-	echo "<tr><td><b>Today</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $viewsToday, 'battleplan' ), $viewsToday )."</td></tr>";	
-	echo "<tr><td><b>Last 7 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last7Views, 'battleplan' ), $last7Views )."</td></tr>";
-	echo "<tr><td><b>Last 30 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last30Views, 'battleplan' ), $last30Views )."</td></tr>";
-	echo "<tr><td><b>Total</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $totalViews, 'battleplan' ), $totalViews )."</td></tr>";
-	echo "<tr><td><b>Daily Record</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $recordViews, 'battleplan' ), $recordViews )." on ".$recordDate."</td></tr>";
-	echo "<tr><td><b>Last Visitor</b></td><td><b>".$dateDiff."</b> ".$howLong." ago</td></tr>";	
-		
-	echo "<tr><td>&nbsp;</td></tr>";
-	
-	for ($x = 1; $x <= 29; $x++) {
-		$dailyMeta = readMeta($siteHeader, 'site-views-day-'.$x); 
-		$dailyTime[$x] = date("D, M jS", strtotime($dailyMeta['date'])); 				
-		$dailyViews[$x] = intval($dailyMeta['views']); 
-		echo "<tr><td><b>".$dailyTime[$x]."</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $dailyViews[$x], 'battleplan' ), $dailyViews[$x] )."</td></tr>";
-	} 		
-	echo '</table>';
-}
-
-// Add custom meta boxes to posts & pages
-add_action("add_meta_boxes", "battleplan_add_custom_meta_boxes");
-function battleplan_add_custom_meta_boxes() {
-    add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", "page", "side", "default", null);
-    add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", "post", "side", "default", null);
-	add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", "products", "side", "default", null);	
-	add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", "testimonials", "side", "default", null);
-}
-
-// Set up Page Stats widget on posts & pages
-function battleplan_page_stats() {
-	global $post;
-	$totalViews = number_format(readMeta($post->ID, "post-views-total-all"));
-	$rightNow = strtotime(date("F j, Y g:i a"));
-	$today = strtotime(date("F j, Y"));
-	$lastViewed = readMeta($post->ID, 'post-views-now');		
-	$dailyMeta = readMeta($post->ID, 'post-views-day-1'); 
-	$viewsToday = number_format($dailyMeta['views']);
-	$dateToday = strtotime($dailyMeta['date']);
-	if ( $dateToday != $today ) $viewsToday = 0;
-	$last7Views = number_format(readMeta($post->ID, "post-views-total-7day"));
-	$last30Views = number_format(readMeta($post->ID, "post-views-total-30day"));
-	$recordViews = number_format(readMeta($post->ID, "post-views-record"));
-	$recordDate = date("M jS, Y", readMeta($post->ID, "post-views-record-date")); 
-	$dateDiff = (($rightNow - $lastViewed) / 60 / 60 / 24); $howLong = "day";
-	if ( $dateDiff < 1 ) : $dateDiff = (($rightNow - $lastViewed) / 60 / 60); $howLong = "hour"; endif;	
-	if ( $dateDiff < 1 ) : $dateDiff = (($rightNow - $lastViewed) / 60); $howLong = "minute"; endif;
-	if ( $dateDiff != 1 ) $howLong = $howLong."s";	
-	$dateDiff = number_format($dateDiff, 0);	
-	echo "<table><tr><td><b>Today</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $viewsToday, 'battleplan' ), $viewsToday )."</td></tr>";
-	echo "<tr><td><b>Last 7 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last7Views, 'battleplan' ), $last7Views )."</td></tr>";
-	echo "<tr><td><b>Last 30 Days&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last30Views, 'battleplan' ), $last30Views )."</td></tr>";
-	echo "<tr><td><b>Total</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $totalViews, 'battleplan' ), $totalViews )."</td></tr>";
-	echo "<tr><td><b>Daily Record</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $recordViews, 'battleplan' ), $recordViews )." on ".$recordDate."</td></tr>";
-	echo "<tr><td><b>Last Viewed</b></td><td><b>".$dateDiff."</b> ".$howLong." ago</td></tr></table>";	
-}
-
-// Add "Remove Sidebar" checkbox to Page Attributes meta box
-add_action( 'page_attributes_misc_attributes', 'battleplan_remove_sidebar_checkbox', 10, 1 );
-function battleplan_remove_sidebar_checkbox($post) { 
-	echo '<p class="post-attributes-label-wrapper">';
-	$getRemoveSidebar = get_post_meta($post->ID, "_bp_remove_sidebar", true);
-
-	if ( $getRemoveSidebar == "" ) : echo '<input name="remove_sidebar" type="checkbox" value="true">';
-	else: echo '<input name="remove_sidebar" type="checkbox" value="true" checked>';
-	endif;	
-	
-	echo '<label class="post-attributes-label" for="remove_sidebar">Remove Sidebar</label>';
-} 
-	 
-add_action("save_post", "battleplan_save_remove_sidebar", 10, 3);
-function battleplan_save_remove_sidebar($post_id, $post, $update) {
-	if ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) return $post_id;
-	if ( defined('DOING_AJAX') && DOING_AJAX ) return $post_id;
-    if ( !current_user_can("edit_post", $post_id) ) return $post_id;
-
-    $updateRemoveSidebar = "";
-    if ( isset($_POST["remove_sidebar"]) ) $updateRemoveSidebar = $_POST["remove_sidebar"];   
-    update_post_meta($post_id, "_bp_remove_sidebar", $updateRemoveSidebar);
 }
 
 add_filter( 'body_class', 'battleplan_add_class_to_body' );
@@ -3155,51 +2062,57 @@ add_action( 'wp_ajax_nopriv_count_site_views', 'battleplan_count_site_views_ajax
 function battleplan_count_site_views_ajax() {
 	$siteHeader = getID('site-header');
 	$timezone = $_POST['timezone'];	
-	$lastViewed = readMeta($siteHeader, 'site-views-time');
+	$userLoc = $_POST['userLoc'];	
+	$lastViewed = readMeta($siteHeader, 'log-views-time');
 	$rightNow = strtotime(date("F j, Y g:i a"));	
 	$today = strtotime(date("F j, Y"));
 	$dateDiff = (($today - $lastViewed) / 60 / 60 / 24);
 	$user = wp_get_current_user();
 	$userLogin = $user->user_login;
+	$getViews = readMeta($siteHeader, 'log-views');
+	$getViews = maybe_unserialize( $getViews );
+	if ( !is_array($getViews) ) $getViews = array();
+	$viewsToday = $views7Day = $views30Day = $views90Day = $views180Day = $views365Day = intval(0); 
 		
 	if ( ($userLogin != 'battleplanweb' && $timezone == get_option('timezone_string') ) || _BP_COUNT_ALL_VISITS == "true" ) :
 		if(!isset($_COOKIE['countVisit'])) :
 			if ( $dateDiff != 0 ) : // day has passed, move 29 to 30, and so on	
-				if ( $dateDiff > 30 ) $dateDiff = 30;
 				for ($i = 1; $i <= $dateDiff; $i++) {	
-					$viewsToday = $views7Day = $views30Day = 1;
-					$dailyTime = $dailyViews = array();
-					for ($x = 29; $x >= 1; $x--) {
-						$dailyMeta = readMeta($siteHeader, 'site-views-day-'.$x); 
-						$dailyTime[$x] = $dailyMeta['date']; 				
-						$dailyViews[$x] = intval($dailyMeta['views']); 
-						$y = $x+1;
-						updateMeta( $siteHeader, 'site-views-day-'.$y, array ('date'=>$dailyTime[$x], 'views'=>$dailyViews[$x]));					
-					} 	
 					$figureTime = $today - ( ($dateDiff - $i) * 86400);	
-					updateMeta( $siteHeader, 'site-views-day-1', array ('date'=>date("F j, Y", $figureTime), 'views'=>0));
-					for ($x = 1; $x < 7; $x++) { $views7Day = $views7Day + $dailyViews[$x]; } 					
-					for ($x = 1; $x < 30; $x++) { $views30Day = $views30Day + $dailyViews[$x]; } 		
-					$viewsTotal = intval(readMeta($siteHeader, 'site-views-total-all')); $viewsTotal++;		
+					array_unshift($getViews, array ('date'=>date("F j, Y", $figureTime), 'views'=>$viewsToday));
 				}	
 			else:
-				// same day, just update today
-				$dailyMeta = readMeta($siteHeader, 'site-views-day-1'); 
-				$viewsToday = intval($dailyMeta['views']); $viewsToday++; 
-				$views7Day = intval(readMeta($siteHeader, 'site-views-total-7day')); $views7Day++; 
-				$views30Day = intval(readMeta($siteHeader, 'site-views-total-30day')); $views30Day++;
-				$viewsTotal = intval(readMeta($siteHeader, 'site-views-total-all')); $viewsTotal++; 			
-				$recordViews = intval(readMeta($siteHeader, 'site-views-record'));
-				if ( $viewsToday > $recordViews ) : updateMeta( $siteHeader, 'site-views-record', $viewsToday); updateMeta( $siteHeader, 'site-views-record-date', $today); endif;
+				$viewsToday = intval($getViews[0]['views']); 
 			endif;	
-			updateMeta($siteHeader, 'site-views-now', $rightNow);
-			updateMeta($siteHeader, 'site-views-time', $today);
-			updateMeta( $siteHeader, 'site-views-day-1', array ('date'=>date('F j, Y', $today), 'views'=>$viewsToday));			
-			updateMeta( $siteHeader, 'site-views-total-7day', $views7Day);			
-			updateMeta( $siteHeader, 'site-views-total-30day', $views30Day);			 
-			updateMeta( $siteHeader, 'site-views-total-all', $viewsTotal);
-			setcookie('countVisit', 'no', time() + 600, "/"); 
-			$response = array( 'result' => 'Site View counted: Total='.$viewsTotal.', Today='.$viewsToday.', Week='.$views7Day.', Month='.$views30Day);
+			updateMeta($siteHeader, 'log-views-now', $rightNow);
+			updateMeta($siteHeader, 'log-views-time', $today);	
+			$viewsToday++;
+			array_shift($getViews);	
+			array_unshift($getViews, array ('date'=>date('F j, Y', $today), 'views'=>$viewsToday));	
+			$newViews = maybe_serialize( $getViews );
+			updateMeta($siteHeader, 'log-views', $newViews);
+
+			for ($x = 0; $x < 7; $x++) { $views7Day = $views7Day + intval($getViews[$x]['views']); } 					
+			for ($x = 0; $x < 30; $x++) { $views30Day = $views30Day + intval($getViews[$x]['views']); } 						
+			for ($x = 0; $x < 90; $x++) { $views90Day = $views90Day + intval($getViews[$x]['views']); } 		
+			for ($x = 0; $x < 180; $x++) { $views180Day = $views180Day + intval($getViews[$x]['views']); } 		
+			for ($x = 0; $x < 365; $x++) { $views365Day = $views365Day + intval($getViews[$x]['views']); } 		
+			updateMeta($siteHeader, 'log-views-total-7day', $views7Day);			
+			updateMeta($siteHeader, 'log-views-total-30day', $views30Day);			 
+			updateMeta($siteHeader, 'log-views-total-90day', $views90Day);	
+			updateMeta($siteHeader, 'log-views-total-180day', $views180Day);	
+			updateMeta($siteHeader, 'log-views-total-365day', $views365Day);	
+		
+			$getLocations = readMeta($siteHeader, 'log-views-cities');
+			$getLocations = maybe_unserialize( $getLocations );
+			if ( !is_array($getLocations) ) $getLocations = array();
+			array_unshift($getLocations, $userLoc);
+			if ( count($getLocations) > 250 ) array_pop($getLocations);
+			$newLocations = maybe_serialize( $getLocations );
+			updateMeta($siteHeader, 'log-views-cities', $newLocations);
+			setcookie('countVisit', 'no', time() + -600, "/"); 
+	
+			$response = array( 'result' => 'Site View counted: Today='.$viewsToday.', Week='.$views7Day.', Month='.$views30Day.', Quarter='.$views90Day.', Year= '.$views365Day);
 		else:
 			$response = array( 'result' => 'Site View NOT counted: viewer already counted');
 		endif;
@@ -3216,49 +2129,47 @@ function battleplan_count_post_views_ajax() {
 	$theID = intval( $_POST['id'] );
 	$postType = get_post_type($theID);
 	$timezone = $_POST['timezone'];	
-	$lastViewed = readMeta($theID, 'post-views-time');
+	$lastViewed = readMeta($theID, 'log-views-time');
 	$rightNow = strtotime(date("F j, Y g:i a"));	
 	$today = strtotime(date("F j, Y"));
 	$dateDiff = (($today - $lastViewed) / 60 / 60 / 24);
 	$user = wp_get_current_user();
 	$userLogin = $user->user_login;
+	$getViews = readMeta($theID, 'log-views');
+	$getViews = maybe_unserialize( $getViews );
+	if ( !is_array($getViews) ) $getViews = array();
+	$viewsToday = $views7Day = $views30Day = $views90Day = $views180Day = $views365Day = intval(0); 
 	
 	if ( ($userLogin != 'battleplanweb' && $timezone == get_option('timezone_string') ) || _BP_COUNT_ALL_VISITS == "true" ) :
 		if ( $dateDiff != 0 ) : // day has passed, move 29 to 30, and so on	
-			if ( $dateDiff > 30 ) $dateDiff = 30;
 			for ($i = 1; $i <= $dateDiff; $i++) {	
-				$viewsToday = $views7Day = $views30Day = 1;
-				$dailyTime = $dailyViews = array();
-				for ($x = 29; $x >= 1; $x--) {
-					$dailyMeta = readMeta($theID, 'post-views-day-'.$x); 
-					$dailyTime[$x] = $dailyMeta['date']; 				
-					$dailyViews[$x] = intval($dailyMeta['views']); 
-					$y = $x+1;
-					updateMeta( $theID, 'post-views-day-'.$y, array ('date'=>$dailyTime[$x], 'views'=>$dailyViews[$x]));					
-				} 	
 				$figureTime = $today - ( ($dateDiff - $i) * 86400);	
-				updateMeta( $theID, 'post-views-day-1', array ('date'=>date("F j, Y", $figureTime), 'views'=>0));
-				for ($x = 1; $x < 7; $x++) { $views7Day = $views7Day + $dailyViews[$x]; } 					
-				for ($x = 1; $x < 30; $x++) { $views30Day = $views30Day + $dailyViews[$x]; } 		
-				$viewsTotal = intval(readMeta($theID, 'post-views-total-all')); $viewsTotal++;		
+				array_unshift($getViews, array ('date'=>date("F j, Y", $figureTime), 'views'=>$viewsToday));
 			}	
 		else:
-			// same day, just update today
-			$dailyMeta = readMeta($theID, 'post-views-day-1'); 
-			$viewsToday = intval($dailyMeta['views']); $viewsToday++; 
-			$views7Day = intval(readMeta($theID, 'post-views-total-7day')); $views7Day++; 
-			$views30Day = intval(readMeta($theID, 'post-views-total-30day')); $views30Day++;
-			$viewsTotal = intval(readMeta($theID, 'post-views-total-all')); $viewsTotal++; 			
-			$recordViews = intval(readMeta($theID, 'post-views-record'));
-			if ( $viewsToday > $recordViews ) : updateMeta( $theID, 'post-views-record', $viewsToday); updateMeta( $theID, 'post-views-record-date', $today); endif;
-		endif;	
-		updateMeta($theID, 'post-views-now', $rightNow);
-		updateMeta($theID, 'post-views-time', $today);
-		updateMeta( $theID, 'post-views-day-1', array ('date'=>date('F j, Y', $today), 'views'=>$viewsToday));			
-		updateMeta( $theID, 'post-views-total-7day', $views7Day);			
-		updateMeta( $theID, 'post-views-total-30day', $views30Day);			 
-		updateMeta( $theID, 'post-views-total-all', $viewsTotal);	
-		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' VIEW counted: Total='.$viewsTotal.', Today='.$viewsToday.', Week='.$views7Day.', Month='.$views30Day) );
+			$viewsToday = intval($getViews[0]['views']); 
+		endif;
+	
+		updateMeta($theID, 'log-views-now', $rightNow);
+		updateMeta($theID, 'log-views-time', $today);	
+		$viewsToday++;
+		array_shift($getViews);	
+		array_unshift($getViews, array ('date'=>date('F j, Y', $today), 'views'=>$viewsToday));	
+		$newViews = maybe_serialize( $getViews );
+		updateMeta($theID, 'log-views', $newViews);
+
+		for ($x = 0; $x < 7; $x++) { $views7Day = $views7Day + intval($getViews[$x]['views']); } 					
+		for ($x = 0; $x < 30; $x++) { $views30Day = $views30Day + intval($getViews[$x]['views']); } 						
+		for ($x = 0; $x < 90; $x++) { $views90Day = $views90Day + intval($getViews[$x]['views']); } 		
+		for ($x = 0; $x < 180; $x++) { $views180Day = $views180Day + intval($getViews[$x]['views']); } 		
+		for ($x = 0; $x < 365; $x++) { $views365Day = $views365Day + intval($getViews[$x]['views']); } 		
+		updateMeta($theID, 'log-views-today', $viewsToday);					
+		updateMeta($theID, 'log-views-total-7day', $views7Day);			
+		updateMeta($theID, 'log-views-total-30day', $views30Day);			 
+		updateMeta($theID, 'log-views-total-90day', $views90Day);	
+		updateMeta($theID, 'log-views-total-180day', $views180Day);	
+		updateMeta($theID, 'log-views-total-365day', $views365Day);	
+		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' VIEW counted: Today='.$viewsToday.', Week='.$views7Day.', Month='.$views30Day.', Quarter='.$views90Day.', Year='.$views365Day) );
 	else:
 		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' view NOT counted: user='.$userLogin.', user timezone='.$timezone.', site timezone='.get_option('timezone_string')) );
 	endif;	
@@ -3272,13 +2183,13 @@ function battleplan_count_teaser_views_ajax() {
 	$theID = intval( $_POST['id'] );
 	$postType = get_post_type($theID);
 	$timezone = $_POST['timezone'];			
-	$lastTeased = date("F j, Y g:i a", readMeta($theID, 'post-tease-time'));
+	$lastTeased = date("F j, Y g:i a", readMeta($theID, 'log-tease-time'));
 	$today = strtotime(date("F j, Y  g:i a"));
 	$user = wp_get_current_user();
 	$userLogin = $user->user_login;
 	
 	if ( ($userLogin != 'battleplanweb' && $timezone == get_option('timezone_string') ) || _BP_COUNT_ALL_VISITS == "true" ) :
-		updateMeta($theID, 'post-tease-time', $today);
+		updateMeta($theID, 'log-tease-time', $today);
 		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' TEASER counted: Prior tease = '.$lastTeased) );
 	else:
 		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' teaser NOT counted: user='.$userLogin.', user timezone='.$timezone.', site timezone='.get_option('timezone_string')) );

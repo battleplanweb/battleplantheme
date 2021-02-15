@@ -1,6 +1,10 @@
 @charset "utf-8";
 /* CSS Document */
 
+.clearfix {
+	clear:										both;
+}
+
 /* Hide "register plug in" message on Admin Columns Pro & Extended Widget Options */
 .plugin-update-tr[data-plugin*="admin-columns-pro"]:not(#admin-columns-pro-update) .update-message,
 tr.active[data-plugin*="extended-widget-options"] + tr.plugin-update-tr {
@@ -21,6 +25,32 @@ tr.active[data-plugin*="extended-widget-options"] + tr.plugin-update-tr {
 	outline:									none;
 	border-left:								1px solid rgba(0,0,0,0.1);
 	border-right:								1px solid rgba(0,0,0,0.1);
+}
+
+/* Admin dashboard */
+#dashboard-widgets .postbox-container .empty-container {
+	opacity:									0;
+}
+
+#dashboard-widgets #postbox-container-3 {
+	width:										50%;
+}
+
+#dashboard-widgets #postbox-container-3 table {
+	float:										left;
+	margin-right:								15px;
+}
+
+#dashboard-widgets #postbox-container-3 td.dates {
+	min-width:									175px;
+}
+
+#dashboard-widgets #postbox-container-3 td.visits {
+	min-width:									55px;
+}
+
+#dashboard-widgets #postbox-container-4 {
+	display:									none;
 }
 
 /* Page Attributes meta box */

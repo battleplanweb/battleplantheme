@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '6.6' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '6.6.1' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'true' ); }
 
@@ -2110,7 +2110,7 @@ function battleplan_count_site_views_ajax() {
 			if ( count($getLocations) > 250 ) array_pop($getLocations);
 			$newLocations = maybe_serialize( $getLocations );
 			updateMeta($siteHeader, 'log-views-cities', $newLocations);
-			setcookie('countVisit', 'no', time() + -600, "/"); 
+			setcookie('countVisit', 'no', time() + 600, "/"); 
 	
 			$response = array( 'result' => 'Site View counted: Today='.$viewsToday.', Week='.$views7Day.', Month='.$views30Day.', Quarter='.$views90Day.', Year= '.$views365Day);
 		else:

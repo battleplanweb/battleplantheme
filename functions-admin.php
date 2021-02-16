@@ -970,11 +970,11 @@ function battleplan_setImageMetaUponUpload( $post_ID ) {
 // Display custom fields in WordPress admin edit screen
 //add_filter('acf/settings/remove_wp_meta_box', '__return_false');
 
-// Add 'log-views-*' fields to an image when it is uploaded
+// Add 'log-views' fields to an image when it is uploaded
 add_action( 'add_attachment', 'battleplan_addWidgetPicViewsToImg', 10, 9 );
 function battleplan_addWidgetPicViewsToImg( $post_ID ) {
 	if ( wp_attachment_is_image( $post_ID ) ) {		
-		updateMeta( $post_ID, 'log-views-now', '--' );			
+		updateMeta( $post_ID, 'log-views-now', strtotime(date("F j, Y")) );			
 		updateMeta( $post_ID, 'log-views-time', strtotime(date("F j, Y")) );			
 		updateMeta( $post_ID, 'log-tease-time', strtotime(date("F j, Y")) );			
 		updateMeta( $post_ID, 'log-views-total-7day', '0' );		
@@ -982,16 +982,16 @@ function battleplan_addWidgetPicViewsToImg( $post_ID ) {
 		updateMeta( $post_ID, 'log-views-total-90day', '0' );
 		updateMeta( $post_ID, 'log-views-total-180day', '0' );
 		updateMeta( $post_ID, 'log-views-total-365day', '0' );
-		updateMeta( $post_ID, 'log-views', array( 'date'=>'--', 'views'=>0) );					
+		updateMeta( $post_ID, 'log-views', array( 'date'=> strtotime(date("F j, Y")), 'views' => 0 ));					
 	} 
 }
 
-// Add 'log-views-*' fields to posts/pages when published 
+// Add 'log-views' fields to posts/pages when published 
 add_action( 'save_post', 'battleplan_addViewsToPost', 10, 3 );
 function battleplan_addViewsToPost() {
 	global $post; $post_ID = $post->ID;	
 	if ( readMeta( $post_ID, 'log-views') == '' ) {
-		updateMeta( $post_ID, 'log-views-now', '--' );			
+		updateMeta( $post_ID, 'log-views-now', strtotime(date("F j, Y")) );			
 		updateMeta( $post_ID, 'log-views-time', strtotime(date("F j, Y")) );			
 		updateMeta( $post_ID, 'log-tease-time', strtotime(date("F j, Y")) );			
 		updateMeta( $post_ID, 'log-views-total-7day', '0' );		
@@ -999,7 +999,7 @@ function battleplan_addViewsToPost() {
 		updateMeta( $post_ID, 'log-views-total-90day', '0' );
 		updateMeta( $post_ID, 'log-views-total-180day', '0' );
 		updateMeta( $post_ID, 'log-views-total-365day', '0' );
-		updateMeta( $post_ID, 'log-views', array( 'date'=>'--', 'views'=>0) );					
+		updateMeta( $post_ID, 'log-views', array( 'date' => strtotime(date("F j, Y")), 'views' => 0 ));					
 	}
 }
 
@@ -1008,7 +1008,7 @@ add_action( 'dp_duplicate_post', 'battleplan_clearViews', 99, 2 );
 add_action( 'dp_duplicate_page', 'battleplan_clearViews', 99, 2 );
 function battleplan_clearViews($new_post_id) {
 	$post_ID = $new_post_id;
-	updateMeta( $post_ID, 'log-views-now', '--' );			
+	updateMeta( $post_ID, 'log-views-now', strtotime(date("F j, Y")) );			
 	updateMeta( $post_ID, 'log-views-time', strtotime(date("F j, Y")) );			
 	updateMeta( $post_ID, 'log-tease-time', strtotime(date("F j, Y")) );			
 	updateMeta( $post_ID, 'log-views-total-7day', '0' );		
@@ -1016,7 +1016,7 @@ function battleplan_clearViews($new_post_id) {
 	updateMeta( $post_ID, 'log-views-total-90day', '0' );
 	updateMeta( $post_ID, 'log-views-total-180day', '0' );
 	updateMeta( $post_ID, 'log-views-total-365day', '0' );
-	updateMeta( $post_ID, 'log-views', array( 'date'=>'--', 'views'=>0) );					
+	updateMeta( $post_ID, 'log-views', array( 'date'=> strtotime(date("F j, Y")), 'views' => 0 ));					
 }
 
 // Add & Remove WP Admin Menu items
@@ -1034,32 +1034,15 @@ function battleplan_remove_menus() {
 add_filter( 'custom_menu_order', 'battleplan_custom_menu_order', 10, 1 );
 add_filter( 'menu_order', 'battleplan_custom_menu_order', 10, 1 );
 function battleplan_custom_menu_order( $menu_ord ) {
-    if ( !$menu_ord ) return true;
-    return array(
-        'index.php', 							// Dashboard
-        'separator1', 							// First separator
-        'upload.php', 							// Media
-        'edit.php?post_type=page', 				// Pages
-        'edit.php?post_type=galleries', 		// Galleries
-        'edit.php?post_type=testimonials', 		// Testimonials
-        'edit.php?post_type=products', 			// Products
-        'edit.php', 							// Posts
-        'edit-comments.php', 					// Comments
-        'wpcf7', 								// Contact
-        'separator2', 							// Second separator
-		'wpengine-common', 						// WP Engine
-        'themes.php', 							// Appearance
-        'plugins.php', 							// Plugins
-        'options-general.php', 					// Settings
-        'tools.php', 							// Tools
-		'edit.php?post_type=acf-field-group',	// Custom Fields
-        'users.php', 							// Users
-        'separator-last', 						// Last separator
-		'wds_wizard', 							// Smart Crawl Pro
-		'smush',								// Smush Pro
-		'wr2x_settings',						// Meow Apps (Perfect Images)
-		'wpmudev'								// WPMU Dev
-    );
+    if ( !$menu_ord ) return true;	
+	$getCPT = get_post_types();  
+	$displayTypes = array('index.php', 'separator1', 'upload.php', 'edit.php?post_type=page');
+	unset($getCPT['attachment'], $getCPT['revision'], $getCPT['nav_menu_item'], $getCPT['custom_css'], $getCPT['customize_changeset'], $getCPT['oembed_cache'], $getCPT['user_request'], $getCPT['wp_block'], $getCPT['acf-field-group'], $getCPT['acf-field'], $getCPT['wpcf7_contact_form'], $getCPT['wphb_minify_group']); 	
+	foreach ($getCPT as $postType) {
+		array_push($displayTypes, 'edit.php?post_type='.$postType);
+	}
+	array_push($displayTypes, 'edit.php', 'edit-comments.php', 'wpcf7', 'separator2', 'wpengine-common', 'themes.php', 'plugins.php', 'options-general.php', 'tools.php', 'edit.php?post_type=acf-field-group', 'users.php', 'separator-last', 'wds_wizard', 'smush', 'wr2x_settings', 'wpmudev');	
+	return $displayTypes;
 }
 
 // Remove unwanted dashboard widgets
@@ -1208,7 +1191,7 @@ function battleplan_admin_trends_stats() {
 		if ( $count == 7 ) :
 		 	echo "<tr><td class='dates'><b>".$dailyTime." - ".$end."</b></td><td class='visits'>".$views." visits</td></tr>";
  			$count = $views = 0;	
-			if ( $views < 1 ) : $cutoff++; if ( $cutoff == 5) : break; endif; endif;
+			if ( $views < 1 ) : $cutoff++; if ( $dailyTime == "Jan 1, 1970" || $cutoff == 5) : break; endif; endif;
 		endif;	
 	} 		
 	echo "</table>";
@@ -1224,7 +1207,7 @@ function battleplan_admin_trends_stats() {
 		if ( $count == 31 ) :
 		 	echo "<tr><td class='dates'><b>".$dailyTime." - ".$end."</b></td><td class='visits'>".$views." visits</td></tr>";
  			$count = $views = 0;	
-			if ( $views < 1 ) : $cutoff++; if ( $cutoff == 2) : break; endif; endif;
+			if ( $views < 1 ) : $cutoff++; if ( $dailyTime == "Jan 1, 1970" || $cutoff == 2) : break; endif; endif;
 		endif;	
 	} 		
 	echo "</table>";
@@ -1240,7 +1223,7 @@ function battleplan_admin_trends_stats() {
 		if ( $count == 91 ) :
 		 	echo "<tr><td class='dates'><b>".$dailyTime." - ".$end."</b></td><td class='visits'>".$views." visits</td></tr>";
  			$count = $views = 0;	
-			if ( $views < 1 ) : $cutoff++; if ( $cutoff == 1) : break; endif; endif;
+			if ( $views < 1 ) : $cutoff++; if ( $dailyTime == "Jan 1, 1970" || $cutoff == 1) : break; endif; endif;
 		endif;	
 	} 		
 	echo "</table>";

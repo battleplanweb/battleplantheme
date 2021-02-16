@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '6.6.2' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '6.6.3' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -1871,8 +1871,12 @@ function battleplan_current_type_nav_class($classes, $item) {
 // Rename "Uncategorized" posts to "Blog"
 wp_update_term(1, 'category', array( 'name'=>'Blog', 'slug'=>'blog' ));
 
-$siteHeader = getID('site-header');
-if ( readMeta($siteHeader, "log-views") == '' ) : battleplan_clearViewFields(); endif;
+
+add_action( 'init', 'battleplan_resetEverything', 0 );
+function battleplan_resetEverything() {	
+	$siteHeader = getID('site-header');
+	if ( readMeta($siteHeader, "log-views") == '' ) : battleplan_clearViewFields(); endif;
+}
 
 // Force clear all views for posts/pages - run this from functions.php within a site's child theme
 function battleplan_clearViewFields() {
@@ -1893,7 +1897,7 @@ function battleplan_clearViewFields() {
 		for ($x = 0; $x < 31; $x++) {
 			deleteMeta( get_the_ID(), 'post-views-day-'.$x);
 		} 		
-		updateMeta( get_the_ID(), 'log-views-now', '--' );			
+		updateMeta( get_the_ID(), 'log-views-now', strtotime(date("F j, Y")) );					
 		updateMeta( get_the_ID(), 'log-views-time', strtotime(date("F j, Y")) );			
 		updateMeta( get_the_ID(), 'log-tease-time', strtotime(date("F j, Y")) );			
 		updateMeta( get_the_ID(), 'log-views-total-7day', '0' );		
@@ -1901,7 +1905,7 @@ function battleplan_clearViewFields() {
 		updateMeta( get_the_ID(), 'log-views-total-90day', '0' );
 		updateMeta( get_the_ID(), 'log-views-total-180day', '0' );
 		updateMeta( get_the_ID(), 'log-views-total-365day', '0' );
-		updateMeta( get_the_ID(), 'log-views', array( 'date'=>'--', 'views'=>0) );					
+		updateMeta( get_the_ID(), 'log-views', array( 'date' => strtotime(date("F j, Y")), 'views' => 0 ));					
 
 	endwhile; wp_reset_postdata(); endif;
 	
@@ -1954,7 +1958,7 @@ function battleplan_clearViewFields() {
 			for ($x = 0; $x < 31; $x++) {
 				deleteMeta( get_the_ID(), 'site-views-day-'.$x);
 			} 		
-			updateMeta( get_the_ID(), 'log-views-now', '--' );			
+			updateMeta( get_the_ID(), 'log-views-now', strtotime(date("F j, Y")) );			
 			updateMeta( get_the_ID(), 'log-views-time', strtotime(date("F j, Y")) );			
 			updateMeta( get_the_ID(), 'log-tease-time', strtotime(date("F j, Y")) );			
 			updateMeta( get_the_ID(), 'log-views-total-7day', '0' );		
@@ -1962,7 +1966,7 @@ function battleplan_clearViewFields() {
 			updateMeta( get_the_ID(), 'log-views-total-90day', '0' );
 			updateMeta( get_the_ID(), 'log-views-total-180day', '0' );
 			updateMeta( get_the_ID(), 'log-views-total-365day', '0' );
-			updateMeta( get_the_ID(), 'log-views', array( 'date'=>'--', 'views'=>0) );					
+			updateMeta( get_the_ID(), 'log-views', array( 'date' => strtotime(date("F j, Y")), 'views' => 0 ));					
 		endwhile; wp_reset_postdata(); endif;
 	}	
 } 

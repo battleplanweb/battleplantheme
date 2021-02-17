@@ -38,6 +38,17 @@ get_header();
 					$comments = "false";
 					$tags = "false"; // list / button
 					$navigation = "false";	
+		
+			// Optimized
+				elseif ( get_post_type() == "optimized" ) :	
+					$singleHeadline = "";
+					$singleIntro = "";
+					$breadcrumbs = "false";
+					$date = "false";
+					$author = "false";
+					$comments = "false";
+					$tags = "false"; // list / button
+					$navigation = "false";	
 
 			// Default Single
 				else:		
@@ -126,7 +137,7 @@ get_header();
 				$displayFooter .= '</footer><!-- .entry-footer-->';		
 			$displayFooter .= '</article><!-- #post-'.get_the_ID().' -->';
 		
-			echo $displayHeader;
+			if ( $singleHeadline != '' ) echo $displayHeader;
 			get_template_part( 'template-parts/content', get_post_type() );		
 			echo $displayFooter;	
 		

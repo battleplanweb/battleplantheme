@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '6.6.3' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '6.6.4' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -959,12 +959,14 @@ function getImgMeta($id) {
 function readMeta($id, $key, $single=true) {
 	return get_post_meta( $id, $key, $single );
 }
+
 // Update meta in custom field
 function updateMeta($id, $key, $value) {
 	if ( !add_post_meta( $id, $key, $value, true ) ) { 
 		update_post_meta( $id, $key, $value );
 	}
 }
+
 // Delete custom field
 function deleteMeta($id, $key) {
 	delete_post_meta( $id, $key );
@@ -1162,6 +1164,39 @@ function battleplan_registerPostTypes() {
         'rewrite'=>true,
         'show_admin_column'=>true,
 	));
+	register_post_type( 'optimized', array (
+		'label'=>__( 'optimized', 'battleplan' ),
+		'labels'=>array(
+			'name'=>_x( 'Optimized', 'Post Type General Name', 'battleplan' ),
+			'singular_name'=>_x( 'Optimized', 'Post Type Singular Name', 'battleplan' ),
+		),
+		'public'=>true,
+		'publicly_queryable'=>true,
+		'exclude_from_search'=>false,
+		'supports'=>array( 'title', 'editor', 'thumbnail', 'page-attributes', 'custom-fields' ),
+		'hierarchical'=>false,
+		'menu_position'=>20,
+		'menu_icon'=>'dashicons-edit-page',
+		'has_archive'=>true,
+		'capability_type'=>'page',
+	));
+}
+
+// Remove 'optimized' from the url so that optimized pages look like regular pages
+add_filter( 'post_type_link', 'battleplan_remove_cpt_slug', 10, 2 );
+function battleplan_remove_cpt_slug( $post_link, $post ) {
+	if ( 'optimized' === $post->post_type && 'publish' === $post->post_status ) {
+ 		$post_link = str_replace( '/' . $post->post_type . '/', '/', $post_link );
+ 	}
+ 	return $post_link;
+}
+
+add_action( 'pre_get_posts', 'battleplan_add_cpt_to_main_query' );
+function battleplan_add_cpt_to_main_query( $query ) {
+	if ( !$query->is_main_query() ) return;
+	if ( !isset( $query->query['page'] ) || 2 !== count( $query->query ) ) return;
+	if ( empty( $query->query['name'] ) ) return;
+	$query->set( 'post_type', array( 'post', 'page', 'optimized' ) );
 }
 
 /*--------------------------------------------------------------
@@ -1872,10 +1907,10 @@ function battleplan_current_type_nav_class($classes, $item) {
 wp_update_term(1, 'category', array( 'name'=>'Blog', 'slug'=>'blog' ));
 
 
-add_action( 'init', 'battleplan_resetEverything', 0 );
+add_action( 'init', 'battleplan_resetEverything', 0 ); 
 function battleplan_resetEverything() {	
 	$siteHeader = getID('site-header');
-	if ( readMeta($siteHeader, "log-views") == '' ) : battleplan_clearViewFields(); endif;
+	if ( ! get_post_meta( $siteHeader, 'framework-version', true ) ) : battleplan_clearViewFields(); endif;
 }
 
 // Force clear all views for posts/pages - run this from functions.php within a site's child theme
@@ -1897,28 +1932,20 @@ function battleplan_clearViewFields() {
 		for ($x = 0; $x < 31; $x++) {
 			deleteMeta( get_the_ID(), 'post-views-day-'.$x);
 		} 		
-		updateMeta( get_the_ID(), 'log-views-now', strtotime(date("F j, Y")) );					
-		updateMeta( get_the_ID(), 'log-views-time', strtotime(date("F j, Y")) );			
-		updateMeta( get_the_ID(), 'log-tease-time', strtotime(date("F j, Y")) );			
+		updateMeta( get_the_ID(), 'log-views-now', strtotime("-1 day"));					
+		updateMeta( get_the_ID(), 'log-views-time', strtotime("-1 day"));		
+		updateMeta( get_the_ID(), 'log-tease-time', strtotime("-1 day"));			
 		updateMeta( get_the_ID(), 'log-views-total-7day', '0' );		
 		updateMeta( get_the_ID(), 'log-views-total-30day', '0' );
 		updateMeta( get_the_ID(), 'log-views-total-90day', '0' );
 		updateMeta( get_the_ID(), 'log-views-total-180day', '0' );
 		updateMeta( get_the_ID(), 'log-views-total-365day', '0' );
-		updateMeta( get_the_ID(), 'log-views', array( 'date' => strtotime(date("F j, Y")), 'views' => 0 ));					
-
+		updateMeta( get_the_ID(), 'log-views', array( 'date' => strtotime(date("F j, Y")), 'views' => 0 ));		
 	endwhile; wp_reset_postdata(); endif;
-	
-	// clear site load speed logs
-	$siteHeader = getID('site-header');
-	updateMeta( $siteHeader, 'load-number-desktop', '0' );			
-	updateMeta( $siteHeader, 'load-speed-desktop', '0' );			
-	updateMeta( $siteHeader, 'load-number-mobile', '0' );			
-	updateMeta( $siteHeader, 'load-speed-mobile', '0' );			
 
-	// clear posts/pages views
+	// clear posts views
 	$getCPT = get_post_types();  
-	unset($getCPT['attachment'], $getCPT['revision'], $getCPT['nav_menu_item'], $getCPT['custom_css'], $getCPT['customize_changeset'], $getCPT['oembed_cache'], $getCPT['user_request'], $getCPT['wp_block'], $getCPT['acf-field-group'], $getCPT['acf-field'], $getCPT['wpcf7_contact_form'], $getCPT['wphb_minify_group']); 	
+	unset($getCPT['attachment'], $getCPT['page'], $getCPT['revision'], $getCPT['nav_menu_item'], $getCPT['custom_css'], $getCPT['customize_changeset'], $getCPT['oembed_cache'], $getCPT['user_request'], $getCPT['wp_block'], $getCPT['acf-field-group'], $getCPT['acf-field'], $getCPT['wpcf7_contact_form'], $getCPT['wphb_minify_group']); 	
 	foreach ($getCPT as $postType) {
 		$getPosts = new WP_Query( array ('posts_per_page'=>-1, 'post_type'=>$postType ));
 		if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 
@@ -1958,18 +1985,74 @@ function battleplan_clearViewFields() {
 			for ($x = 0; $x < 31; $x++) {
 				deleteMeta( get_the_ID(), 'site-views-day-'.$x);
 			} 		
-			updateMeta( get_the_ID(), 'log-views-now', strtotime(date("F j, Y")) );			
-			updateMeta( get_the_ID(), 'log-views-time', strtotime(date("F j, Y")) );			
-			updateMeta( get_the_ID(), 'log-tease-time', strtotime(date("F j, Y")) );			
+			updateMeta( get_the_ID(), 'log-views-now', strtotime("-1 day"));			
+			updateMeta( get_the_ID(), 'log-views-time', strtotime("-1 day"));				
+			updateMeta( get_the_ID(), 'log-tease-time', strtotime("-1 day"));			
 			updateMeta( get_the_ID(), 'log-views-total-7day', '0' );		
 			updateMeta( get_the_ID(), 'log-views-total-30day', '0' );
 			updateMeta( get_the_ID(), 'log-views-total-90day', '0' );
 			updateMeta( get_the_ID(), 'log-views-total-180day', '0' );
 			updateMeta( get_the_ID(), 'log-views-total-365day', '0' );
 			updateMeta( get_the_ID(), 'log-views', array( 'date' => strtotime(date("F j, Y")), 'views' => 0 ));					
-		endwhile; wp_reset_postdata(); endif;
+		endwhile; wp_reset_postdata(); endif;		
+			
+		// clear page views
+		$getPosts = new WP_Query( array ('posts_per_page'=>-1, 'post_type'=>'page' ));
+		if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 
+			deleteMeta( get_the_ID(), '_wp_page_template');
+			deleteMeta( get_the_ID(), '_responsive_layout');
+			deleteMeta( get_the_ID(), 'post-bot-names');
+			deleteMeta( get_the_ID(), 'post-bots');
+			deleteMeta( get_the_ID(), 'add-view-fields');
+			deleteMeta( get_the_ID(), 'check-pics-for-views');
+			deleteMeta( get_the_ID(), 'clear-hummingbird-cache');
+			deleteMeta( get_the_ID(), 'last-hummingbird-cache');
+			deleteMeta( get_the_ID(), 'post-views-now');
+			deleteMeta( get_the_ID(), 'post-views-time');
+			deleteMeta( get_the_ID(), 'post-tease-time');
+			deleteMeta( get_the_ID(), 'post-views-total-all');
+			deleteMeta( get_the_ID(), 'post-views-record');
+			deleteMeta( get_the_ID(), 'post-views-record-date');
+			deleteMeta( get_the_ID(), 'post-views-total-7day');
+			deleteMeta( get_the_ID(), 'post-views-total-30day');
+			deleteMeta( get_the_ID(), 'post-views-total-90day');
+			deleteMeta( get_the_ID(), 'post-views-total-180day');
+			deleteMeta( get_the_ID(), 'post-views-total-365day');
+			for ($x = 0; $x < 31; $x++) {
+				deleteMeta( get_the_ID(), 'post-views-day-'.$x);
+			} 		
+			deleteMeta( get_the_ID(), 'site-views-now');
+			deleteMeta( get_the_ID(), 'site-views-time');
+			deleteMeta( get_the_ID(), 'site-tease-time');
+			deleteMeta( get_the_ID(), 'site-views-total-all');
+			deleteMeta( get_the_ID(), 'site-views-record');
+			deleteMeta( get_the_ID(), 'site-views-record-date');
+			deleteMeta( get_the_ID(), 'site-views-total-7day');
+			deleteMeta( get_the_ID(), 'site-views-total-30day');
+			deleteMeta( get_the_ID(), 'site-views-total-90day');
+			deleteMeta( get_the_ID(), 'site-views-total-180day');
+			deleteMeta( get_the_ID(), 'site-views-total-365day');
+			for ($x = 0; $x < 31; $x++) {
+				deleteMeta( get_the_ID(), 'site-views-day-'.$x);
+			} 		
+			updateMeta( get_the_ID(), 'log-views-total-7day', '0' );		
+			updateMeta( get_the_ID(), 'log-views-total-30day', '0' );
+			updateMeta( get_the_ID(), 'log-views-total-90day', '0' );
+			updateMeta( get_the_ID(), 'log-views-total-180day', '0' );
+			updateMeta( get_the_ID(), 'log-views-total-365day', '0' );
+			updateMeta( get_the_ID(), 'log-views', array( 'date' => strtotime(date("F j, Y")), 'views' => 0 ));					
+		endwhile; wp_reset_postdata(); endif;		
+
+		// clear site load speed logs
+		$siteHeader = getID('site-header');
+		updateMeta( $siteHeader, 'load-number-desktop', '0' );			
+		updateMeta( $siteHeader, 'load-speed-desktop', '0' );			
+		updateMeta( $siteHeader, 'load-number-mobile', '0' );			
+		updateMeta( $siteHeader, 'load-speed-mobile', '0' );
+		
+		updateMeta( $siteHeader, 'framework-version', _BP_VERSION );	
 	}	
-} 
+}  
 
 // Cap excerpt at 1 or 2 sentences, based on length
 add_filter( 'excerpt_length', 'battleplan_excerpt_length', 999 );

@@ -1449,16 +1449,14 @@ if ( $('body').hasClass('remove-sidebar') ) {
 	// Add .tab-focus class to links and buttons & auto scroll to center	
 	document.addEventListener("keydown", function(e) {
 		if ( e.keyCode === 9 ) { 					
-			var el, els = document.getElementsByClassName('tab-focus');				
-			if ( els[0] ) { 
-				for (el of els ) { 
-					el.classList.remove('tab-focus'); 
-				} 
-			};	
+			var els = document.getElementsByClassName('tab-focus');		
+			while ( els[0] ) {
+				els[0].classList.remove('tab-focus')
+			};
 			setTimeout(function() {
 				document.activeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });				
 				document.activeElement.classList.add("tab-focus"); 					
-				//document.activeElement.closest('li').classList.add("tab-focus"); 	/* removed 2/3/21 because it causes 2 items to be highlighted at once */			
+				document.activeElement.closest('li').classList.add("tab-focus"); 	
 			}, 10);
 		}		
 	});
@@ -1580,7 +1578,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			var postID = $('body').attr('id');				
 			$.post({
 				url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-				data : { action: "count_post_views", id: postID, timezone: timezone },
+				data : { action: "count_post_views", id: postID, timezone: timezone, userLoc: userLoc },
 				success: function( response ) { console.log(response); } 
 			});	
 		// Count site view 
@@ -1594,7 +1592,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			if ( loadTime > 0.1 ) { 				
 				$.post({
 					url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-					data : { action: "log_page_load_speed", id: postID, timezone: timezone, loadTime: loadTime, deviceTime: deviceTime },
+					data : { action: "log_page_load_speed", id: postID, timezone: timezone, loadTime: loadTime, deviceTime: deviceTime, userLoc: userLoc },
 					success: function( response ) { console.log(response); } 
 				});	
 			}
@@ -1607,14 +1605,14 @@ if ( $('body').hasClass('remove-sidebar') ) {
 				if ( countTease == "true" ) {
 					$.post({
 						url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-						data : { action: "count_teaser_views", id: theID, timezone: timezone },
+						data : { action: "count_teaser_views", id: theID, timezone: timezone, userLoc: userLoc },
 						success: function( response ) { console.log(response); } 
 					});		
 				}
 				if ( countView == "true" ) {
 					$.post({
 						url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-						data : { action: "count_post_views", id: theID, timezone: timezone },
+						data : { action: "count_post_views", id: theID, timezone: timezone, userLoc: userLoc },
 						success: function( response ) { console.log(response); } 
 					});		
 				}

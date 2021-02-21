@@ -1229,6 +1229,8 @@ function battleplan_remove_dashboard_widgets () {
 	remove_meta_box('dashboard_activity','dashboard','side');				//Activity
 	remove_meta_box('dashboard_site_health','dashboard','normal');			//Site Health
 	remove_meta_box('dashboard_site_health','dashboard','side');			//Site Health
+	remove_meta_box('woocommerce_dashboard_status','dashboard','normal');	//Woocommerce
+	remove_meta_box('woocommerce_dashboard_status','dashboard','side');	//Woocommerce
 }
 
 // Add new dashboard widgets
@@ -1326,15 +1328,17 @@ function battleplan_admin_location_stats() {
 	foreach ($uniqueLocs as $uniqueLoc) :
 		$combineLocs[$uniqueLoc]=$tallyCounts[$uniqueLoc];
 	endforeach; 	
-	arsort($combineLocs);
+	//ksort($combineLocs, SORT_STRING);
+	//arsort($combineLocs, SORT_NUMERIC);
+	
+	uksort( $combineLocs, function($a, $b) use ($combineLocs) { return [$combineLocs[$b], $a] <=> [$combineLocs[$a], $b]; } );
 		
-	echo "<table>";
-	echo "<tr><td>Last <b>".$locNum."</b> visitors</b></td></tr>";
-	echo "<tr><td>&nbsp;</td></tr>";
+	echo "<div>Last <b>".$locNum."</b> visitors</b><br/><br/>";
+	echo "<ul>";
 	foreach ($combineLocs as $city=>$cityNum) :
-		echo "<tr><td>".$city."</td><td><b>".$cityNum."</b></td></tr>";
+		echo "<li><span class='city-name'>".$city."</span><span class='city-num'><b>".$cityNum."</b></span></li>";
 	endforeach; 	
-	echo '</table>';
+	echo '</ul></div>';
 }
 
 // Set up Trends widget on dashboard

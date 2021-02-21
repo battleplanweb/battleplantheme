@@ -53,6 +53,15 @@ tr.active[data-plugin*="extended-widget-options"] + tr.plugin-update-tr {
 	display:									none;
 }
 
+#battleplan_location_stats ul {
+	column-count:								2;
+}
+
+#battleplan_location_stats ul span.city-name {
+	display:									inline-block;
+	width:										150px;
+}
+
 /* Page Attributes meta box */
 p.post-attributes-help-text {
 	display:									none;

@@ -6,7 +6,7 @@
 ----------------------------------------------------------------
 # Shortcodes
 # Set Up Admin Columns
-# Basic Theme Set Up
+# Admin Interface Set Up
 
 --------------------------------------------------------------*/
 
@@ -67,8 +67,8 @@ function battleplan_column_settings() {
 				'title'=>array(
 					'type'=>'title',
 					'label'=>'Page',
-					'width'=>'',
-					'width_unit'=>'%',
+					'width'=>'200',
+					'width_unit'=>'px',
 					'edit'=>'on',
 					'sort'=>'on',
 					'name'=>'title',
@@ -99,6 +99,36 @@ function battleplan_column_settings() {
 					'name'=>'post-id',
 					'label_type'=>'',
 					'search'=>'on'
+				),
+				'top-exists'=>array(
+					'type'=>'column-meta',
+					'label'=>'Top',
+					'width'=>'60',
+					'width_unit'=>'px',
+					'field'=>'page-top_text',
+					'field_type'=>'has_content',
+					'before'=>'',
+					'after'=>'',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'top-exists',
+					'label_type'=>'',
+				),
+				'bottom-exists'=>array(
+					'type'=>'column-meta',
+					'label'=>'Bottom',
+					'width'=>'80',
+					'width_unit'=>'px',
+					'field'=>'page-bottom_text',
+					'field_type'=>'has_content',
+					'before'=>'',
+					'after'=>'',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'bottom-exists',
+					'label_type'=>'',
 				),
 				'last-modified'=>array(
 					'type'=>'column-modified',
@@ -152,8 +182,8 @@ function battleplan_column_settings() {
 				'views_week'=>array(
 					'type'=>'column-meta',
 					'label'=>'Week',
-					'width'=>'',
-					'width_unit'=>'%',
+					'width'=>'65',
+					'width_unit'=>'px',
 					'field'=>'log-views-total-7day',
 					'field_type'=>'numeric',
 					'before'=>'',
@@ -169,8 +199,8 @@ function battleplan_column_settings() {
 				'views_month'=>array(
 					'type'=>'column-meta',
 					'label'=>'Month',
-					'width'=>'',
-					'width_unit'=>'%',
+					'width'=>'65',
+					'width_unit'=>'px',
 					'field'=>'log-views-total-30day',
 					'field_type'=>'numeric',
 					'before'=>'',
@@ -186,8 +216,8 @@ function battleplan_column_settings() {
 				'views_quarter'=>array(
 					'type'=>'column-meta',
 					'label'=>'Quarter',
-					'width'=>'',
-					'width_unit'=>'%',
+					'width'=>'65',
+					'width_unit'=>'px',
 					'field'=>'log-views-total-90day',
 					'field_type'=>'numeric',
 					'before'=>'',
@@ -231,8 +261,202 @@ function battleplan_column_settings() {
 				'title'=>array(
 					'type'=>'title',
 					'label'=>'Page',
-					'width'=>'',
-					'width_unit'=>'%',
+					'width'=>'200',
+					'width_unit'=>'px',
+					'edit'=>'on',
+					'sort'=>'on',
+					'name'=>'title',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'slug'=>array(
+					'type'=>'column-slug',
+					'label'=>'Slug',
+					'width'=>'130',
+					'width_unit'=>'px',
+					'edit'=>'on',
+					'sort'=>'on',
+					'name'=>'slug',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'post-id'=>array(
+					'type'=>'column-postid',
+					'label'=>'ID',
+					'width'=>'60',
+					'width_unit'=>'px',
+					'before'=>'',
+					'after'=>'',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'post-id',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'top-exists'=>array(
+					'type'=>'column-meta',
+					'label'=>'Top',
+					'width'=>'60',
+					'width_unit'=>'px',
+					'field'=>'page-top_text',
+					'field_type'=>'has_content',
+					'before'=>'',
+					'after'=>'',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'top-exists',
+					'label_type'=>'',
+				),
+				'bottom-exists'=>array(
+					'type'=>'column-meta',
+					'label'=>'Bottom',
+					'width'=>'80',
+					'width_unit'=>'px',
+					'field'=>'page-bottom_text',
+					'field_type'=>'has_content',
+					'before'=>'',
+					'after'=>'',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'bottom-exists',
+					'label_type'=>'',
+				),
+				'last-modified'=>array(
+					'type'=>'column-modified',
+					'label'=>'Modified',
+					'width'=>'130',
+					'width_unit'=>'px',
+					'date_format'=>'diff',
+					'edit'=>'on',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'filter_format'=>'monthly',
+					'name'=>'last-modified',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'date-published'=>array(
+					'type'=>'column-date_published',
+					'label'=>'Published',
+					'width'=>'130',
+					'width_unit'=>'px',
+					'date_format'=>'wp_default',
+					'edit'=>'on',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'filter_format'=>'monthly',
+					'name'=>'date-published',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'last_viewed'=>array(
+					'type'=>'column-meta',
+					'label'=>'Last Viewed',
+					'width'=>'130',
+					'width_unit'=>'px',
+					'field'=>'log-views-now',
+					'field_type'=>'date',
+					'date_format'=>'wp_default',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'filter_format'=>'monthly',
+					'name'=>'last_viewed',
+					'label_type'=>'',
+					'search'=>'on'
+				),	
+				'views_week'=>array(
+					'type'=>'column-meta',
+					'label'=>'Week',
+					'width'=>'65',
+					'width_unit'=>'px',
+					'field'=>'log-views-total-7day',
+					'field_type'=>'numeric',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'views_week',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'views_month'=>array(
+					'type'=>'column-meta',
+					'label'=>'Month',
+					'width'=>'65',
+					'width_unit'=>'px',
+					'field'=>'log-views-total-30day',
+					'field_type'=>'numeric',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'views_month',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'views_quarter'=>array(
+					'type'=>'column-meta',
+					'label'=>'Quarter',
+					'width'=>'65',
+					'width_unit'=>'px',
+					'field'=>'log-views-total-90day',
+					'field_type'=>'numeric',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'views_total',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'attachments'=>array(
+					'type'=>'column-attachment',
+					'label'=>'Attachments',
+					'width'=>'400',
+					'width_unit'=>'px',
+					'attachment_display'=>'thumbnail',
+					'image_size'=>'cpac-custom',
+					'image_size_w'=>'60',
+					'image_size_h'=>'60',
+					'number_of_items'=>'10',
+					'edit'=>'on',
+					'sort'=>'on',
+					'name'=>'attachments',
+					'label_type'=>''
+				)
+			),
+			'layout'=>array(
+				'id'=>'5cbb31579168e',
+				'name'=>'battleplan',
+				'roles'=>false,
+				'users'=>false,
+				'read_only'=>false
+			)			
+		)
+	) );
+	ac_register_columns( 'elements', array(
+		array(
+			'columns'=>array(
+				'title'=>array(
+					'type'=>'title',
+					'label'=>'Page',
+					'width'=>'170',
+					'width_unit'=>'px',
 					'edit'=>'on',
 					'sort'=>'on',
 					'name'=>'title',
@@ -291,76 +515,6 @@ function battleplan_column_settings() {
 					'filter_label'=>'',
 					'filter_format'=>'monthly',
 					'name'=>'date-published',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'last_viewed'=>array(
-					'type'=>'column-meta',
-					'label'=>'Last Viewed',
-					'width'=>'130',
-					'width_unit'=>'px',
-					'field'=>'log-views-now',
-					'field_type'=>'date',
-					'date_format'=>'wp_default',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'filter_format'=>'monthly',
-					'name'=>'last_viewed',
-					'label_type'=>'',
-					'search'=>'on'
-				),	
-				'views_week'=>array(
-					'type'=>'column-meta',
-					'label'=>'Week',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'log-views-total-7day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'views_week',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'views_month'=>array(
-					'type'=>'column-meta',
-					'label'=>'Month',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'log-views-total-30day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'views_month',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'views_quarter'=>array(
-					'type'=>'column-meta',
-					'label'=>'Quarter',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'log-views-total-90day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'views_total',
 					'label_type'=>'',
 					'search'=>'on'
 				),
@@ -1068,11 +1222,14 @@ function battleplan_column_settings() {
 }
 
 /*--------------------------------------------------------------
-# Basic Theme Set Up
+# Admin Interface Set Up
 --------------------------------------------------------------*/
 
-//Disable Gutenburg
+// Disable Gutenburg
 add_filter('use_block_editor_for_post', '__return_false');
+
+// Disable Visual Editor
+add_filter( 'user_can_richedit' , '__return_false', 50 );
 
 // Add Location (site tagline) to Admin Bar
 add_action( 'admin_bar_menu', 'battleplan_addTaglineToAdminBar', 999 );
@@ -1188,10 +1345,14 @@ add_action( 'admin_init', 'battleplan_remove_menus', 999 );
 function battleplan_remove_menus() {   
 	remove_menu_page( 'link-manager.php' );       						//Links
 	remove_submenu_page( 'themes.php', 'theme-editor.php' );        	//Appearance -> Theme Editor
+	remove_submenu_page( 'themes.php', 'widgets.php' );        			//Appearance -> Widgets
+	remove_submenu_page( 'themes.php', 'nav-menus.php' );        		//Appearance -> Menus
 	remove_submenu_page( 'tools.php', 'export-personal-data.php' );   	//Tools - Export Personal Data  
 	remove_submenu_page( 'tools.php', 'erase-personal-data.php' );   	//Tools - Erase Personal Data
 	remove_menu_page( 'meowapps-main-menu' );       					//Meow Apps
 	add_menu_page('Perfect Images', 'Perfect Images', 'manage_options', '/admin.php?page=wr2x_settings', '', 'dashicons-welcome-view-site');
+	add_submenu_page( 'edit.php?post_type=elements', 'Widgets', 'Widgets', 'manage_options', 'widgets.php' );	
+	add_submenu_page( 'edit.php?post_type=elements', 'Menus', 'Menus', 'manage_options', 'nav-menus.php' );	
 }
 
 // Reorder WP Admin Menu Items
@@ -1200,8 +1361,8 @@ add_filter( 'menu_order', 'battleplan_custom_menu_order', 10, 1 );
 function battleplan_custom_menu_order( $menu_ord ) {
     if ( !$menu_ord ) return true;	
 	$getCPT = get_post_types();  
-	$displayTypes = array('index.php', 'separator1', 'upload.php', 'edit.php?post_type=page');
-	unset($getCPT['attachment'], $getCPT['revision'], $getCPT['nav_menu_item'], $getCPT['custom_css'], $getCPT['customize_changeset'], $getCPT['oembed_cache'], $getCPT['user_request'], $getCPT['wp_block'], $getCPT['acf-field-group'], $getCPT['acf-field'], $getCPT['wpcf7_contact_form'], $getCPT['wphb_minify_group']); 	
+	$displayTypes = array('index.php', 'separator1', 'upload.php', 'edit.php?post_type=elements', 'edit.php?post_type=page');
+	unset($getCPT['attachment'], $getCPT['revision'], $getCPT['nav_menu_item'], $getCPT['custom_css'], $getCPT['customize_changeset'], $getCPT['oembed_cache'], $getCPT['user_request'], $getCPT['wp_block'], $getCPT['acf-field-group'], $getCPT['acf-field'], $getCPT['wpcf7_contact_form'], $getCPT['wphb_minify_group'], $getCPT['elements']); 	
 	foreach ($getCPT as $postType) {
 		array_push($displayTypes, 'edit.php?post_type='.$postType);
 	}
@@ -1465,4 +1626,35 @@ function battleplan_save_remove_sidebar($post_id, $post, $update) {
     if ( isset($_POST["remove_sidebar"]) ) $updateRemoveSidebar = $_POST["remove_sidebar"];   
     update_post_meta($post_id, "_bp_remove_sidebar", $updateRemoveSidebar);
 }
+
+// Move Site Header, Site Footer, Site Message, Office Hours, Privacy Policy, etc. to Elements post type
+add_action( 'admin_init', 'battleplan_setupElements', 999 );
+function battleplan_setupElements() {   
+	if ( get_page_by_path('site-header', OBJECT, 'page' ) ) :
+		$post_id = get_page_by_path('site-header', OBJECT, 'page' )->ID;
+		$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
+		wp_update_post( $my_post );
+	endif;
+	if ( get_page_by_path('site-footer', OBJECT, 'page' ) ) :
+		$post_id = get_page_by_path('site-footer', OBJECT, 'page' )->ID;
+		$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
+		wp_update_post( $my_post );
+	endif;
+	if ( get_page_by_path('site-message', OBJECT, 'page' ) ) :
+		$post_id = get_page_by_path('site-message', OBJECT, 'page' )->ID;
+		$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
+		wp_update_post( $my_post );
+	endif;
+	if ( get_page_by_path('privacy-policy', OBJECT, 'page' ) ) :
+		$post_id = get_page_by_path('privacy-policy', OBJECT, 'page' )->ID;
+		$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
+		wp_update_post( $my_post );
+	endif;
+	if ( get_page_by_path('office-hours', OBJECT, 'page' ) ) :
+		$post_id = get_page_by_path('office-hours', OBJECT, 'page' )->ID;
+		$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
+		wp_update_post( $my_post );
+	endif;
+}
+
 ?>

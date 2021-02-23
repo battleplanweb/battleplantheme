@@ -74,3 +74,81 @@ label.post-attributes-label {
 input[type="checkbox"], input[type="radio"] {
 	margin-right:								0.5em;
 }
+
+/* Pages, Posts, etc. */
+.wp-list-table th:not(#title) a,
+.wp-list-table td:not(.title):not(.column-source):not(.plugin-title):not(.column-description):not(.plugin-update) {
+	text-align:									center;
+}
+
+.wp-list-table th:not(#title) a span {
+	display:									block;
+	margin:										0 auto 4px;
+	float:										none;
+}
+
+td.title {
+	cursor:										pointer;
+}
+
+td.title .wds-meta-details {
+	display:									none;
+}
+
+.row-actions {
+	display:									block;
+	position:									relative;
+	left:										0;
+	transform:									scale(1,0);
+	max-height:									0;
+	transition:									all 0.4s ease;
+}
+
+.comment-item:hover .row-actions, 
+.mobile .row-actions, 
+.no-js .row-actions, 
+.row-actions.visible,
+td.column-source:hover .row-actions,
+td.has-row-actions:hover .row-actions {
+	display:									block;
+	position:									relative;
+	transform:									scale(1,1);
+	max-height:									120px;
+	transition:									all 0.4s ease;
+}
+
+.dashicons-no-alt::before {
+    content: 									"\f460";
+}
+
+.dashicons-yes::before {
+    content: 									"\f12a";
+}
+
+span.dashicons.red {
+	color:										#000000 !important;
+}
+
+a[data-wp-action="disable"],
+.auto-update-time {
+	opacity:									0.35;
+}
+
+/* Page Meta Box structure */
+#poststuff #wds-wds-meta-box {
+	display:									none;
+}
+
+#poststuff #wds-wds-meta-box {
+	display:									block;
+}
+
+#page-top_text {
+	max-height:									150px;
+	resize: 									none;
+}
+
+#page-bottom_text {
+	max-height:									605px;
+	resize: 									none;
+}

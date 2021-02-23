@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '6.6.5' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '7.0' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -82,8 +82,26 @@ function battleplan_getWordPressPage( $atts, $content = null ) {
 
 	$latest_cpt = get_posts("post_type='.$type.'&numberposts=1"); $pageID = $latest_cpt[0]->ID;	
 	if ( $id != "" ) : $pageID = $id; endif;	
-	if ( $slug != "" ) : $page = get_page_by_path( $slug, OBJECT, $type ); $pageID = $page->ID; endif;	
-	if ( $title != "" ) : $page = get_page_by_title( $title, OBJECT, $type ); $pageID = $page->ID; endif;	
+	if ( $slug != "" ) : 
+	 	if ( get_page_by_path( $slug, OBJECT, $type ) ) :
+			$pageID = get_page_by_path( $slug, OBJECT, $type )->ID; 
+		else:
+			$getCPT = get_post_types();  
+			foreach ($getCPT as $postType) :
+				if ( get_page_by_path($slug, OBJECT, $postType) ) : $pageID = get_page_by_path($slug, OBJECT, $postType)->ID; break; endif;
+			endforeach;		
+		endif;	
+	endif;	
+	if ( $title != "" ) : 
+	 	if ( get_page_by_title( $title, OBJECT, $type ) ) :
+			$pageID = get_page_by_title( $title, OBJECT, $type )->ID; 
+		else:
+			$getCPT = get_post_types();  
+			foreach ($getCPT as $postType) :
+				if ( get_page_by_title( $title, OBJECT, $postType) ) : $pageID = get_page_by_title( $title, OBJECT, $postType)->ID; break; endif;
+			endforeach;		
+		endif;	
+	endif;	
 
 	$getPage = get_post( $pageID );
 	$title = esc_html( get_the_title($pageID) );
@@ -101,6 +119,32 @@ function battleplan_getWordPressPage( $atts, $content = null ) {
 	if ( $display == "link" ) : $output = $link; endif;
 
 	return $output;
+}
+
+// Checks to see if slug exists, and if so prints it
+add_shortcode( 'get-element', 'battleplan_getElement' );
+function battleplan_getElement( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'slug'=>'' ), $atts );
+	$page_slug = esc_attr($a['slug']);	
+	$page_slug_home = $page_slug."-home";	
+
+	if ( is_front_page() ) :
+		if ( get_page_by_path( $page_slug_home, OBJECT, 'elements' ) ) :
+			$page_data = get_page_by_path( $page_slug_home, OBJECT, 'elements' );
+		elseif ( get_page_by_path( $page_slug_home, OBJECT, 'page' ) ) :
+			$page_data = get_page_by_path( $page_slug_home, OBJECT, 'page' );
+		endif;
+	endif;
+	
+	if ( !$page_data ) :
+		if ( get_page_by_path( $page_slug, OBJECT, 'elements' ) ) :
+			$page_data = get_page_by_path( $page_slug, OBJECT, 'elements' );
+		elseif ( get_page_by_path( $page_slug, OBJECT, 'page' ) ) :
+			$page_data = get_page_by_path( $page_slug, OBJECT, 'page' );
+		endif;
+	endif;
+	
+	if ( $page_data ) return apply_filters('the_content', $page_data->post_content); 
 }
 
 // Returns website address (for privacy policy, etc)
@@ -922,8 +966,14 @@ function get_the_slug() {
 	return $slug;
 }
 
-// Get ID from page slug
-function getID($slug) { return get_page_by_path($slug)->ID; } 
+// Get ID from page, post or custom post type slug
+function getID($slug) { 
+	$getCPT = get_post_types();  
+	foreach ($getCPT as $postType) :
+		if ( get_page_by_path($slug, OBJECT, $postType) ) : $id = get_page_by_path($slug, OBJECT, $postType)->ID; break; endif;
+	endforeach;		
+	return $id;
+} 
 
 // Get the Role of Current Logged in User
 function getUserRole() {
@@ -1180,6 +1230,23 @@ function battleplan_registerPostTypes() {
 		'has_archive'=>true,
 		'capability_type'=>'page',
 	));
+	register_post_type( 'elements', array (
+		'label'=>__( 'elements', 'battleplan' ),
+		'labels'=>array(
+			'name'=>_x( 'Elements', 'Post Type General Name', 'battleplan' ),
+			'singular_name'=>_x( 'Element', 'Post Type Singular Name', 'battleplan' ),
+		),
+		'public'=>true,
+		'publicly_queryable'=>false,
+		'exclude_from_search'=>true,
+		'supports'=>array( 'title', 'editor' ),
+		'hierarchical'=>false,
+		'menu_position'=>20,
+		'menu_icon'=>'dashicons-block-default', 
+		'has_archive'=>false,
+		'capability_type'=>'page',
+	));
+
 }
 
 // Remove 'optimized' from the url so that optimized pages look like regular pages
@@ -1647,13 +1714,15 @@ function battleplan_scripts() {
 
 add_action( 'admin_enqueue_scripts', 'battleplan_admin_scripts' );
 function battleplan_admin_scripts() {
-	wp_enqueue_style( 'battleplan-admin', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION );		
+	wp_enqueue_style( 'battleplan-admin-css', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION );		
+	wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array(), _BP_VERSION, true );
 }
 
-if ( is_admin() ) { require get_template_directory() . '/functions-admin.php'; } 
-require get_template_directory() . '/includes/includes-universal.php';
-if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { require get_template_directory() . '/includes/includes-events.php'; } 
-if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { require get_template_directory() . '/includes/includes-woocommerce.php'; } 
+if ( is_admin() ) { require_once get_template_directory() . '/functions-admin.php'; } 
+require_once get_template_directory() . '/includes/includes-universal.php';
+if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { require_once get_template_directory() . '/includes/includes-events.php'; } 
+if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { require_once get_template_directory() . '/includes/includes-woocommerce.php'; } 
+require_once get_template_directory() . '/functions-public.php';
 
 // Dequeue unneccesary styles & scripts
 add_action( 'wp_print_styles', 'battleplan_dequeue_unwanted_stuff', 99 );
@@ -2072,12 +2141,23 @@ function end_with_sentence( $excerpt ) {
     return $newExcerpt;
 }
 
+// Check "remove sidebar" meta box on post and add class if true
 add_filter( 'body_class', 'battleplan_add_class_to_body' );
 function battleplan_add_class_to_body( array $classes ) {
 	$checkRemoveSidebar = get_post_meta( get_the_ID(), '_bp_remove_sidebar', true );
 	if ( $checkRemoveSidebar ) $classes[] = "remove-sidebar";
 	return $classes;
 }
+
+// add Top & Bottom textareas for pages
+$pageTopMeta = new Metabox_Constructor(array( 'id' => 'page-top', 'title' => 'Page Top', 'screen' => 'page', 'context' => 'normal', 'priority' => 'high' ));
+$pageTopMeta->addWysiwyg(array( 'id' => 'page-top_text', 'label' => '' ));
+$pageBottomMeta = new Metabox_Constructor(array( 'id' => 'page-bottom', 'title' => 'Page Bottom', 'screen' => 'page', 'context' => 'normal', 'priority' => 'high' ));
+$pageBottomMeta->addWysiwyg(array( 'id' => 'page-bottom_text', 'label' => '' ));
+$optimizedTopMeta = new Metabox_Constructor(array( 'id' => 'page-top', 'title' => 'Page Top', 'screen' => 'optimized', 'context' => 'normal', 'priority' => 'high' ));
+$optimizedTopMeta->addWysiwyg(array( 'id' => 'page-top_text', 'label' => '' ));
+$optimizedBottomMeta = new Metabox_Constructor(array( 'id' => 'page-bottom', 'title' => 'Page Bottom', 'screen' => 'optimized', 'context' => 'normal', 'priority' => 'high' ));
+$optimizedBottomMeta->addWysiwyg(array( 'id' => 'page-bottom_text', 'label' => '' ));
 
 /*--------------------------------------------------------------
 # Custom Hooks

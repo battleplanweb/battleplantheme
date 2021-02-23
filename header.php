@@ -50,11 +50,7 @@ wp_nav_menu( array(
 	
 <a class="skip-link screen-reader-text" href="#primary"><?php esc_html_e( 'Skip to content', 'battleplan' ); ?></a>
 
-<?php	
-$page_slug = "site-message"; 
-$page_data = get_page_by_path($page_slug, OBJECT, 'page' );
-if ( $page_data && $page_data->post_status == 'publish' ) : echo apply_filters('the_content', $page_data->post_content); endif; 
-?>
+<?php echo do_shortcode('[get-element slug="site-message"]'); ?>
 	
 <div id="page" class="site">
 	<header id="masthead">
@@ -74,13 +70,7 @@ if ( $page_data && $page_data->post_status == 'publish' ) : echo apply_filters('
 			</nav><!-- #site-navigation -->
 		<?php endif; ?>
 
-		<?php if ( is_front_page() && is_home() ) :
-			$page_slug = "site-header-home"; 
-			$page_data = get_page_by_path( $page_slug, OBJECT, 'page' );
-			if ( !$page_data ) : $page_slug = "site-header"; endif;				
-		else: $page_slug = "site-header"; endif;
-		$page_data = get_page_by_path( $page_slug, OBJECT, 'page' );
-		if ( $page_data ) : echo apply_filters('the_content', $page_data->post_content); endif; ?>
+		<?php echo do_shortcode('[get-element slug="site-header"]'); ?>
 		
 		<?php if ( has_nav_menu( 'header-menu', 'battleplan' ) ) : ?>
 			<nav id="desktop-navigation" class="main-navigation menu-strip" aria-label="Main Menu">
@@ -99,10 +89,17 @@ if ( $page_data && $page_data->post_status == 'publish' ) : echo apply_filters('
 		
 	</header><!-- #masthead -->
 	
-	<?php $current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );
-	$page_slug = $current_page->post_name;
-	$page_data = get_page_by_path($page_slug."-top", OBJECT, 'page' );
-	if ( $page_data && $page_data->post_status == 'publish' ) : echo "<section id='wrapper-top'>".apply_filters('the_content', $page_data->post_content)."</section><!-- #wrapper-top -->"; endif; ?>
+	<?php	
+	$current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );
+	$textarea = get_post_meta( $current_page->ID, 'page-top_text', true );
+ 	if ( $textarea != "" ) 
+		: echo "<section id='wrapper-top'>".apply_filters('the_content', $textarea)."</section><!-- #wrapper-top -->";
+	else:
+		$page_slug = $current_page->post_name;
+		$page_data = get_page_by_path($page_slug."-top", OBJECT, 'page' );
+		if ( $page_data && $page_data->post_status == 'publish' ) : echo "<section id='wrapper-top'>".apply_filters('the_content', $page_data->post_content)."</section><!-- #wrapper-top -->"; endif; 
+	endif;
+	?>
 	
 	<section id="wrapper-content">
 		<div id="main-content">

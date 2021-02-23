@@ -4,8 +4,8 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 6.6.5
-Tested up to: 5.5
+Version: 7.0
+Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
 License URI: LICENSE
@@ -2726,6 +2726,13 @@ img.unloaded {
 	margin:										1em 0 1em 1.5em;
 }
 
+.alignright img, 
+.align-right img, 
+.alignleft img, 
+.align-left img {
+	float:										none;
+}
+
 .aligncenter,
 .align-center {
 	float:										none;
@@ -2806,6 +2813,7 @@ img.noFX,
 	border: 									0;
     margin: 									0;
     padding: 									0;
+	pointer-events:								none;
 }
 
 /* Videos */

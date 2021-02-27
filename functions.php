@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '7.0' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '7.1' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -56,7 +56,7 @@ function battleplan_getSeason($atts, $content = null) {
 	else: return $winter; endif; 
 }
 
-/* Find Number of Days Between Two Dates */
+// Find Number of Days Between Two Dates 
 add_shortcode( 'days-ago', 'battleplan_daysAgo' );
 function battleplan_daysAgo( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'oldest'=>'', 'newest'=>'today' ), $atts );
@@ -289,10 +289,11 @@ function battleplan_getRandomImage($atts, $content = null ) {
 	if( $image_query->have_posts() ) : while ($image_query->have_posts() ) : $image_query->the_post();
 		$full = wp_get_attachment_image_src($post->ID, 'full');
 		$image = wp_get_attachment_image_src($post->ID, $size);
+		$imgSet = wp_get_attachment_image_srcset($post->ID, $size );
 	
 		$buildImage = "";	
 		if ( $link == "yes" ) $buildImage .= '<a href="'.$full[0].'">';		
-		$buildImage .= '<img data-id="'.get_the_ID().'"'.getImgMeta($post->ID).' class="wp-image-'.get_the_ID().' random-img '.$tags[0].'-img '.$align.' size-'.$size.$class.'" src="'.$image[0].'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'">';	
+		$buildImage .= '<img data-id="'.get_the_ID().'"'.getImgMeta($post->ID).' class="wp-image-'.get_the_ID().' random-img '.$tags[0].'-img '.$align.' size-'.$size.$class.'" src="'.$image[0].'" srcset="'.$imgSet.'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'">';	
 		if ( $link == "yes" ) $buildImage .= '</a>';	
 		$imageArray[] =  $buildImage;	
 	
@@ -339,10 +340,11 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 
 	if( $image_query->have_posts() ) : while ($image_query->have_posts() ) : $image_query->the_post();
 		$image = wp_get_attachment_image_src( get_the_ID(), $size );
+		$imgSet = wp_get_attachment_image_srcset( get_the_ID(), $size );
 	
 		$getImage = "";
 		if ( $link == "yes" ) $getImage .= '<a href="'.$image[0].'">';
-		$getImage .= '<img data-id="'.get_the_ID().'"'.getImgMeta(get_the_ID()).' class="random-img '.$tags[0].'-img '.$align.'" src="'.$image[0].'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'">';
+		$getImage .= '<img data-id="'.get_the_ID().'"'.getImgMeta(get_the_ID()).' class="random-img '.$tags[0].'-img '.$align.'" src="'.$image[0].'" srcset="'.$imgSet.'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'">';
 		if ( $link == "yes" ) $getImage .= '</a>';
 
 		$imageArray[] = do_shortcode('[col class="col-row-of-pics'.$class.'"]'.$getImage.'[/col]');			
@@ -695,11 +697,12 @@ function battleplan_getPostSlider($atts, $content = null ) {
 				endif;	
 
 				$image = wp_get_attachment_image_src(get_the_ID(), $size );
+				$imgSet = wp_get_attachment_image_srcset(get_the_ID(), $size );
 				if ( $link == "alt" ) $linkTo = get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true);				
 				if ( $link == "description" ) $linkTo = esc_html(get_post(get_the_ID())->post_content);
 				$buildImg = "";
 				if ( $link != "none" ) : $buildImg = "<a href='".$linkTo."' class='link-archive link-".$type."'>"; endif;	
-				$buildImg .= "<img data-id='".get_the_ID()."' ".getImgMeta(get_the_ID())." class='img-slider ".$tags[0]."-img' src = '".$image[0]."' alt='".get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true)."'>";
+				$buildImg .= "<img data-id='".get_the_ID()."' ".getImgMeta(get_the_ID())." class='img-slider ".$tags[0]."-img' src = '".$image[0]."' srcset='".$imgSet."' alt='".get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true)."'>";
 		
 				if ( $caption == "yes" || $caption == "title" ) : $buildImg .= "<div class='caption-holder'><div class='img-caption'>".get_the_title(get_the_ID())."</div></div>";	
 				elseif ( $caption == "alt" ) : $buildImg .= "<div class='caption-holder'><div class='img-caption'>".get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true)."</div></div>";
@@ -836,9 +839,11 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 
 	if( $image_query->have_posts() ) : while ($image_query->have_posts() ) : $image_query->the_post();
 		$image = wp_get_attachment_image_src( get_the_ID(), $size );
+		$imgSet = wp_get_attachment_image_srcset( get_the_ID(), $size );
+	
 		$getImage = "";
 		if ( $link != "false" ) $getImage .= '<a href="'.$image[0].'">';
-		$getImage .= '<img data-id="'.get_the_ID().'"'.getImgMeta(get_the_ID()).' class="logo-img '.$tags[0].'-img" src="'.$image[0].'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'">';
+		$getImage .= '<img data-id="'.get_the_ID().'"'.getImgMeta(get_the_ID()).' class="logo-img '.$tags[0].'-img" src="'.$image[0].'" srcset="'.$imgSet.'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'">';
 		if ( $link != "false" ) $getImage .= '</a>';
 		$imageArray[] = '<span>'.$getImage.'</span>';			
 	endwhile; wp_reset_postdata(); endif;	
@@ -923,10 +928,11 @@ function battleplan_setUpWPGallery( $atts, $content = null ) {
 	if ( $image_attachments->have_posts() ) : while ( $image_attachments->have_posts() ) : $image_attachments->the_post();
 		$full = wp_get_attachment_image_src($post->ID, 'full');
 		$thumbnail = wp_get_attachment_image_src($post->ID, $size);
+		$imgSet = wp_get_attachment_image_srcset($post->ID, $size );
 		$count++;
 
 		if ( $caption != "false" ) : $captionPrint = '<figcaption><div class="image-caption image-title">'.$post->post_title.'</div></figcaption>'; endif;
-		$gallery .= '<dl class="col col-archive col-gallery id-'.$post->ID.'"><dt class="col-inner"><a class="link-archive link-gallery ari-fancybox" href="'.$full[0].'"><img  class="wp-image-'.get_the_ID().'" data-id="'.get_the_ID().'"'.getImgMeta($post->ID).' src="'.$thumbnail[0].'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'"></a>'.$captionPrint.'</dt></dl>';
+		$gallery .= '<dl class="col col-archive col-gallery id-'.$post->ID.'"><dt class="col-inner"><a class="link-archive link-gallery ari-fancybox" href="'.$full[0].'"><img  class="wp-image-'.get_the_ID().'" data-id="'.get_the_ID().'"'.getImgMeta($post->ID).' src="'.$thumbnail[0].'" srcset="'.$imgSet.'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'"></a>'.$captionPrint.'</dt></dl>';
 	endwhile; endif;	
 	wp_reset_postdata();
 	$gallery .= "</div>";	
@@ -1747,6 +1753,16 @@ function battleplan_login_logo() { ?><style type="text/css">body.login div#login
 // Hide the Wordpress admin bar
 show_admin_bar( false );
 
+// Suspend site if necessary
+add_action('get_header', 'battleplan_suspension_mode');
+function battleplan_suspension_mode() {
+	$suspended = get_post_meta( get_page_by_path('site-header', OBJECT, 'elements')->ID, '_suspend_site', true);
+	$userLogin = wp_get_current_user()->user_login;	
+	if ( $userLogin != 'battleplanweb' && $suspended == "yes" ) {
+		wp_die('<h1>Website Unavailable</h1><br />We apologize for the inconvenience. Please check back later.');
+	}
+}
+
 // Set up Main Menu
 class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 	public function start_el( &$output, $item, $depth = 0, $args = array(), $id = 0 ) {
@@ -1812,11 +1828,11 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( "user-message" == $tag->name ) {
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
-		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','и','д','б','й','л','ы','З','у','Я');
+		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','Mark Of The Beast','fuck','и','д','б','й','л','ы','З','у','Я');
 		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
 		if ( $check == $name ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($badwords as $badword) {
-			if (stripos($check,$badword) !== false) $result->invalidate( $tag, 'We do not accept messages containing the word(s) "'.$badword.'".' );
+			if (stripos($check,$badword) !== false) $result->invalidate( $tag, 'Message cannot be sent.' );
 		}
 		foreach($webwords as $webword) {
 			if (stripos($check,$webword) !== false) $result->invalidate( $tag, 'We do not accept messages containing website addresses.' );
@@ -1831,9 +1847,9 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
 	}
     if ( "user-email" == $tag->name ) {
         $check = isset( $_POST["user-email"] ) ? trim( $_POST["user-email"] ) : ''; 
-		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com');
+		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com');
 		foreach($badwords as $badword) {
-			if (stripos($check,$badword) !== false) $result->invalidate( $tag, 'We do not accept messages from this email address.');
+			if (stripos($check,$badword) !== false) $result->invalidate( $tag, 'Message cannot be sent.');
 		}
 	}
     if ( 'user-email-confirm' == $tag->name ) {
@@ -1864,7 +1880,7 @@ add_filter('widget_text','do_shortcode');
 add_filter( 'jpeg_quality', 'battleplan_smashing_jpeg_quality' );
 function battleplan_smashing_jpeg_quality() { return 100; }
 
-/* Set up sizes for srcset */
+// Set up sizes for srcset
 function get_srcset( $size ) {	
 	$ratio1280 = ($size / 1280) * 100; 
 	if ( $ratio1280 <= 40 ) : $ratio1280 = 40;
@@ -1887,7 +1903,7 @@ function get_srcset( $size ) {
 	return '(max-width: 575px) '.$ratio575.'vw, (max-width: 860px) '.$ratio860.'vw, (max-width: 1024px) '.$ratio1024.'vw, (max-width: 1280px) '.$ratio1280.'vw, '.$size.'px';
 }
 
-/* Establish default image sizes */
+// Establish default image sizes
 if ( function_exists( 'add_image_size' ) ) {	
 	add_image_size( 'icon', 80, 80, false ); 
 	add_image_size( 'quarter-s', 240, 99999, false ); 
@@ -1927,14 +1943,14 @@ function battleplan_remove_image_sizes() {
 	update_option( 'large_size_w', 0 );
 }
 
-/* Set new max srcset image */
+// Set new max srcset image 
 add_filter( 'max_srcset_image_width', 'battleplan_remove_max_srcset_image_width' );
 function battleplan_remove_max_srcset_image_width( $max_width ) {
 	$max_width = 2000;
 	return $max_width;
 }
 
-/* Set the size param in srcset image */
+// Set the size param in srcset image
 add_filter('wp_calculate_image_sizes', 'battleplan_content_image_sizes_attr', 10 , 2);
 function battleplan_content_image_sizes_attr($sizes, $size) {
 	return get_srcset($size[0]);
@@ -2149,7 +2165,7 @@ function battleplan_add_class_to_body( array $classes ) {
 	return $classes;
 }
 
-// add Top & Bottom textareas for pages
+// Add Top & Bottom textareas for pages
 $pageTopMeta = new Metabox_Constructor(array( 'id' => 'page-top', 'title' => 'Page Top', 'screen' => 'page', 'context' => 'normal', 'priority' => 'high' ));
 $pageTopMeta->addWysiwyg(array( 'id' => 'page-top_text', 'label' => '' ));
 $pageBottomMeta = new Metabox_Constructor(array( 'id' => 'page-bottom', 'title' => 'Page Bottom', 'screen' => 'page', 'context' => 'normal', 'priority' => 'high' ));
@@ -2180,8 +2196,7 @@ function battleplan_log_page_load_speed_ajax() {
 	$userLoc = $_POST['userLoc'];	
 	$loadTime = $_POST['loadTime'];
 	$deviceTime = $_POST['deviceTime'];
-	$user = wp_get_current_user();
-	$userLogin = $user->user_login;
+	$userLogin = wp_get_current_user()->user_login;
 	
 	if ( $userLoc == "Ashburn, VA") :
 		$response = array( 'result' => 'Bot ignored' );		
@@ -2240,8 +2255,7 @@ function battleplan_count_site_views_ajax() {
 	$rightNow = strtotime(date("F j, Y g:i a"));	
 	$today = strtotime(date("F j, Y"));
 	$dateDiff = (($today - $lastViewed) / 60 / 60 / 24);
-	$user = wp_get_current_user();
-	$userLogin = $user->user_login;
+	$userLogin = wp_get_current_user()->user_login;
 	$getViews = readMeta($siteHeader, 'log-views');
 	$getViews = maybe_unserialize( $getViews );
 	if ( !is_array($getViews) ) $getViews = array();
@@ -2309,8 +2323,7 @@ function battleplan_count_post_views_ajax() {
 	$rightNow = strtotime(date("F j, Y g:i a"));	
 	$today = strtotime(date("F j, Y"));
 	$dateDiff = (($today - $lastViewed) / 60 / 60 / 24);
-	$user = wp_get_current_user();
-	$userLogin = $user->user_login;
+	$userLogin = wp_get_current_user()->user_login;
 	$getViews = readMeta($theID, 'log-views');
 	$getViews = maybe_unserialize( $getViews );
 	if ( !is_array($getViews) ) $getViews = array();
@@ -2364,8 +2377,7 @@ function battleplan_count_teaser_views_ajax() {
 	$userLoc = $_POST['userLoc'];	
 	$lastTeased = date("F j, Y g:i a", readMeta($theID, 'log-tease-time'));
 	$today = strtotime(date("F j, Y  g:i a"));
-	$user = wp_get_current_user();
-	$userLogin = $user->user_login;
+	$userLogin = wp_get_current_user()->user_login;
 	
 	if ( $userLoc == "Ashburn, VA") :
 		$response = array( 'result' => 'Bot ignored' );		
@@ -2623,7 +2635,7 @@ function battleplan_buildButton( $atts, $content = null ) {
 	return '<div class="block block-button span-'.$size.$class.$align.'"'.$style.'><a'.$target.' href="'.$link.'" class="button'.$class.'">'.$content.$ada.'</a></div>';
 }
 
-/* Accordion Block */
+// Accordion Block 
 add_shortcode( 'accordion', 'battleplan_buildAccordion' );
 function battleplan_buildAccordion( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'title'=>'', 'excerpt'=>'', 'class'=>'', 'icon'=>'true', 'start'=>'', 'end'=>'' ), $atts );
@@ -2646,7 +2658,7 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 	return '<div class="block block-accordion'.$class.'">'.$title.$excerpt.'<div class="accordion-content"><div class="accordion-box">'.do_shortcode($content).'</div></div></div>';	
 }
 
-/* Parallax Section */
+// Parallax Section 
 add_shortcode( 'parallax', 'battleplan_buildParallax' );
 function battleplan_buildParallax( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'name'=>'', 'style'=>'', 'type'=>'section', 'size'=>'100', 'width'=>'edge', 'img-w'=>'2000', 'img-h'=>'1333', 'height'=>'800', 'pos-x'=>'center', 'pos-y'=>'top', 'bleed'=>'10', 'speed'=>'0.7', 'image'=>'', 'class'=>'', 'scroll-btn'=>'false', 'scroll-loc'=>'#page', 'scroll-icon'=>'fa-chevron-down' ), $atts );
@@ -2682,7 +2694,7 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	endif;
 }
 
-/* Locked Section */
+// Locked Section 
 add_shortcode( 'lock', 'battleplan_buildLockedSection' );
 function battleplan_buildLockedSection( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'name'=>'', 'style'=>'lock', 'width'=>'edge', 'position'=>'bottom', 'delay'=>'3000', 'show'=>'session', 'background'=>'', 'left'=>'50', 'top'=>'50', 'class'=>'', 'start'=>'', 'end'=>'' ), $atts );
@@ -2716,7 +2728,7 @@ function battleplan_buildLockedSection( $atts, $content = null ) {
 	return $buildSection;
 }
  
-/* Social Media Buttons */
+// Social Media Buttons 
 add_shortcode( 'social-btn', 'battleplan_socialBtn' );
 function battleplan_socialBtn( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', 'img'=>'' ), $atts );

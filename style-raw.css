@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 7.0
+Version: 7.1
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -1555,7 +1555,8 @@ section.section-edge .flex {
 
 /* Content
 --------------------------------------------- */
-#primary {
+#primary,
+#secondary {
 	max-width:									100%;
 }
 

@@ -1231,17 +1231,26 @@ add_filter('use_block_editor_for_post', '__return_false');
 // Disable Visual Editor
 add_filter( 'user_can_richedit' , '__return_false', 50 );
 
-// Add Location (site tagline) to Admin Bar
-add_action( 'admin_bar_menu', 'battleplan_addTaglineToAdminBar', 999 );
-function battleplan_addTaglineToAdminBar( $wp_admin_bar ) {
-	$args = array( 'id' => 'tagline', 'title' => '-&nbsp;&nbsp;'.get_bloginfo( 'description' ).'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;', );
-	$wp_admin_bar->add_node( $args );
-}
-
+// Add, Remove and Reorder Items in Admin Bar
 add_action( 'wp_before_admin_bar_render', 'battleplan_reorderAdminBar');
 function battleplan_reorderAdminBar() {
     global $wp_admin_bar;
-    $IDs_sequence = array('wp-logo', 'site-name', 'tagline', 'updates', 'comments', 'wphb', 'new-content' );
+	
+	$wp_admin_bar->add_node( array( 'id' => 'tagline', 'title' => '-&nbsp;&nbsp;'.get_bloginfo( 'description' ).'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;', 'href'  => esc_url(site_url()), ) );	
+	
+	$suspended = get_post_meta( get_page_by_path('site-header', OBJECT, 'elements')->ID, '_suspend_site', true);	
+	if ( $_SERVER['QUERY_STRING'] == "page=suspend-site" ) :	
+		if ( $suspended == "yes" ) : $suspended = "no";
+		else : $suspended = "yes";
+		endif;
+	endif;
+	if ( $suspended == "yes" ) :
+		$wp_admin_bar->add_node( array( 'id' => 'suspend', 'title' => 'Reinstate Website', 'href' => 'admin.php?page=suspend-site' ) );	
+	else:
+		$wp_admin_bar->add_node( array( 'id' => 'suspend', 'title' => 'Suspend Website', 'href' => 'admin.php?page=suspend-site' ) );	
+	endif;
+	
+    $IDs_sequence = array('site-name', 'tagline', 'suspend' );
     $nodes = $wp_admin_bar->get_nodes();
     foreach ( $IDs_sequence as $id ) {
         if ( ! isset($nodes[$id]) ) continue;
@@ -1254,6 +1263,33 @@ function battleplan_reorderAdminBar() {
         $wp_admin_bar->remove_menu($id);
         $wp_admin_bar->add_node($obj);
     }
+	$wp_admin_bar->remove_node('wp-logo');
+	$wp_admin_bar->remove_node('wphb');
+	$wp_admin_bar->remove_node('updates');
+    $wp_admin_bar->remove_node('comments');
+    $wp_admin_bar->remove_node('new-content');
+    $wp_admin_bar->remove_node('wpengine_adminbar');
+	$wp_admin_bar->remove_node('view-site');	
+}
+
+// Create "Suspend Website" admin page
+add_action( 'admin_menu', 'battleplan_admin_menu' );
+function battleplan_admin_menu() {
+	add_menu_page( __( 'Suspend Site', 'battleplan' ), __( 'Suspend Site', 'battleplan' ), 'manage_options', 'suspend-site', 'battleplan_suspendSitePage', 'dashicons-schedule', 3 );
+}
+
+function battleplan_suspendSitePage() { 
+	$siteHeader = get_page_by_path('site-header', OBJECT, 'elements')->ID;
+	$suspended = get_post_meta($siteHeader, '_suspend_site', true);	
+	if ( $suspended == "yes" || $suspended == null || $suspended = "" ) :
+		if ( !add_post_meta( $siteHeader, '_suspend_site', $suspended, true ) ) :
+			update_post_meta( $siteHeader, '_suspend_site', 'no' );
+		endif;
+		echo '<h1>Website Reinstated</h1>';
+	else:
+		update_post_meta( $siteHeader, '_suspend_site', 'yes' );
+		echo '<h1>Website Suspended</h1>';
+	endif;
 }
 
 // Replace WordPress copyright message at bottom of admin page
@@ -1268,7 +1304,7 @@ function battleplan_replace_howdy( $wp_admin_bar ) {
 	 $wp_admin_bar->add_node( array( 'id'=>'my-account', 'title'=>$newtitle, ) );
  }
 
-/* Remove https://domain.com, width & height params from the <img> inserted by WordPress */
+// Remove https://domain.com, width & height params from the <img> inserted by WordPress
 add_filter( 'image_send_to_editor', 'battleplan_remove_junk_from_image', 10 );
 function battleplan_remove_junk_from_image( $html ) {
    $html = preg_replace( '/(width|height)="\d*"\s/', "", $html );

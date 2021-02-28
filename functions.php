@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '7.1' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '7.2' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -1243,8 +1243,8 @@ function battleplan_registerPostTypes() {
 			'singular_name'=>_x( 'Element', 'Post Type Singular Name', 'battleplan' ),
 		),
 		'public'=>true,
-		'publicly_queryable'=>false,
-		'exclude_from_search'=>true,
+		'publicly_queryable'=>true,
+		'exclude_from_search'=>false,
 		'supports'=>array( 'title', 'editor' ),
 		'hierarchical'=>false,
 		'menu_position'=>20,
@@ -1258,7 +1258,7 @@ function battleplan_registerPostTypes() {
 // Remove 'optimized' from the url so that optimized pages look like regular pages
 add_filter( 'post_type_link', 'battleplan_remove_cpt_slug', 10, 2 );
 function battleplan_remove_cpt_slug( $post_link, $post ) {
-	if ( 'optimized' === $post->post_type && 'publish' === $post->post_status ) {
+	if ( ('optimized' === $post->post_type || 'elements' === $post->post_type) && 'publish' === $post->post_status ) {
  		$post_link = str_replace( '/' . $post->post_type . '/', '/', $post_link );
  	}
  	return $post_link;

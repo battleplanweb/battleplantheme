@@ -62,6 +62,19 @@ tr.active[data-plugin*="extended-widget-options"] + tr.plugin-update-tr {
 	width:										150px;
 }
 
+.this-month {
+	color:										#219500;
+}
+ 
+.this-week {
+	color:										#00d922;
+}
+
+.this-day {
+	color:										#0073aa;
+	font-size:									115%;
+}
+
 /* Page Attributes meta box */
 p.post-attributes-help-text {
 	display:									none;

@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 7.2
+Version: 7.3
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -46,7 +46,6 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
 	- Products (Shearer Supply)
 # Plugins
 	- Waypoints
-	- Google Review Widget
 	- Podium Web Chat Module
 	- Bootstrap Carousel	
 	- Logo Slider
@@ -3285,6 +3284,57 @@ span.descriptionText {
     height: 									800px !important;
 }
 
+/* Google Reviews
+--------------------------------------------- */
+.wp-gr.wp-google-badge {
+	position:									fixed;
+	z-index:									10000;
+	left: 										0;
+	right: 										0;
+	bottom: 									0;
+	text-align:									center;
+	text-decoration:							none;
+}
+
+.wp-gr .wp-google-badge-btn {
+	background:									#ffffff;
+	padding:									6px 0;
+}
+
+.wp-gr .wp-google-border {
+    background: 								#cccccc;
+	height:										5px;
+}
+
+.wp-gr .wp-google-badge-score {
+	display:									flex;
+	flex-flow: 									row wrap;
+	justify-content: 							center;
+	align-items: 								center;
+}
+
+.wp-gr .wp-google-rating .wp-google-value {
+    color: 										#404040;
+	margin-right:								5px;
+	font-weight:								bold;
+}
+
+.wp-gr .wp-google-rating .wp-google-stars {
+    color: 										#404040;
+}
+
+.wp-gr .wp-google-total {
+    color: 										#404040;
+	font-size:									75%;
+	font-style:									italic;
+	margin-bottom:								-2px
+}
+
+.wp-gr svg {
+	max-width:									25px;
+	max-height:									25px;
+	margin-right:								10px;
+}
 
 /*--------------------------------------------------------------
 # Plugins
@@ -3302,40 +3352,6 @@ div[class*="-faux"] {
 	position:									relative;
 	display:									block;
 	width:										100%;
-}
-
-/* Google Reviews Widget
---------------------------------------------- */
-.wp-gr .wp-google-badge_left-fixed {
-	left: 										0 !important;
-	right: 										0 !important;
-	bottom: 									0 !important;
-	text-align:									center !important;
-	border-radius:								0 !important;
-	transform: 									translateZ(0);
-    -webkit-transform: 							translateZ(0);
-}
-.wp-gr .wp-google-badge-btn {
-	padding:									0 !important;
-}
-.wpac svg {
-	max-width:									25px;
-}
-.wp-google-badge-score > div {
-	display:									none;
-}
-.wp-gr .wp-google-border {
-    background: 								#cccccc !important;
-    border-radius: 								0 !important;
-}
-.wp-gr .wp-google-rating {
-    color: 										#404040 !important;
-}
-.wp-gr .wp-google-badge-score *, .wp-gr .wp-google-stars * {
-    fill: 										#404040 !important;
-}
-.wp-gr .wp-google-close {
-    box-shadow:									none !important;
 }
 
 /* Podium Web Chat Module */

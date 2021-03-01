@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '7.2' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '7.3' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -839,11 +839,9 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 
 	if( $image_query->have_posts() ) : while ($image_query->have_posts() ) : $image_query->the_post();
 		$image = wp_get_attachment_image_src( get_the_ID(), $size );
-		$imgSet = wp_get_attachment_image_srcset( get_the_ID(), $size );
-	
 		$getImage = "";
 		if ( $link != "false" ) $getImage .= '<a href="'.$image[0].'">';
-		$getImage .= '<img data-id="'.get_the_ID().'"'.getImgMeta(get_the_ID()).' class="logo-img '.$tags[0].'-img" src="'.$image[0].'" srcset="'.$imgSet.'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'">';
+		$getImage .= '<img data-id="'.get_the_ID().'"'.getImgMeta(get_the_ID()).' class="logo-img '.$tags[0].'-img" src="'.$image[0].'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'">';
 		if ( $link != "false" ) $getImage .= '</a>';
 		$imageArray[] = '<span>'.$getImage.'</span>';			
 	endwhile; wp_reset_postdata(); endif;	
@@ -2174,6 +2172,65 @@ $optimizedTopMeta = new Metabox_Constructor(array( 'id' => 'page-top', 'title' =
 $optimizedTopMeta->addWysiwyg(array( 'id' => 'page-top_text', 'label' => '' ));
 $optimizedBottomMeta = new Metabox_Constructor(array( 'id' => 'page-bottom', 'title' => 'Page Bottom', 'screen' => 'optimized', 'context' => 'normal', 'priority' => 'high' ));
 $optimizedBottomMeta->addWysiwyg(array( 'id' => 'page-bottom_text', 'label' => '' ));
+
+// Display Google review rating
+add_shortcode( 'get-google-rating', 'battleplan_getGoogleRating' );
+function battleplan_getGoogleRating($atts, $content = null) {
+	$a = shortcode_atts( array( 'id'=>'', 'api'=>'AIzaSyBqf0idxwuOxaG-j3eCpef1Bunv-YVdVP8'  ), $atts );
+	$placeID = esc_attr($a['id']);	
+	$apiKey = esc_attr($a['api']);	
+	
+	$siteHeader = getID('site-header');
+	$dateChecked = readMeta($siteHeader, "google-review-date");	
+	$today = strtotime(date("F j, Y"));	
+	$daysSinceCheck = $today - $dateChecked;
+	
+	if ( $daysSinceCheck < 7 ) :
+		$rating = readMeta($siteHeader, "google-review-rating");	
+		$number = readMeta($siteHeader, "google-review-number");		
+	else:	
+		$url = "https://maps.googleapis.com/maps/api/place/details/json?placeid=".$placeID."&key=".$apiKey;
+		$ch = curl_init();
+		curl_setopt ($ch, CURLOPT_URL, $url);
+		curl_setopt ($ch, CURLOPT_RETURNTRANSFER, 1);
+		$result = curl_exec ($ch);
+		$res = json_decode($result,true);
+		$rating = $res['result']['rating'];	
+		$number = $res['result']['user_ratings_total'];	
+		updateMeta( $siteHeader, "google-review-rating", $rating );	
+		updateMeta( $siteHeader, "google-review-number", $number );	
+		updateMeta( $siteHeader, "google-review-date", $today );		
+	endif;
+	
+	$rating = number_format($rating, 1);
+	
+	if ( $rating > 3.4 ) :
+		$buildPanel = '<a class="wp-gr wp-google-badge" href="https://search.google.com/local/reviews?placeid='.$placeID.'&hl=en&gl=US" target="_blank">';
+		$buildPanel .= '<div class="wp-google-border"></div>';
+		$buildPanel .= '<div class="wp-google-badge-btn">';
+		$buildPanel .= '<div class="wp-google-badge-score wp-google-rating" itemprop="aggregateRating" itemscope="" itemtype="http://schema.org/AggregateRating">';
+		$buildPanel .= '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" height="44" width="44"><g fill="none" fill-rule="evenodd">';
+		$buildPanel .= '<path d="M482.56 261.36c0-16.73-1.5-32.83-4.29-48.27H256v91.29h127.01c-5.47 29.5-22.1 54.49-47.09 71.23v59.21h76.27c44.63-41.09 70.37-101.59 70.37-173.46z" fill="#4285f4"></path>';
+		$buildPanel .= '<path d="M256 492c63.72 0 117.14-21.13 156.19-57.18l-76.27-59.21c-21.13 14.16-48.17 22.53-79.92 22.53-61.47 0-113.49-41.51-132.05-97.3H45.1v61.15c38.83 77.13 118.64 130.01 210.9 130.01z" fill="#34a853"></path>';
+		$buildPanel .= '<path d="M123.95 300.84c-4.72-14.16-7.4-29.29-7.4-44.84s2.68-30.68 7.4-44.84V150.01H45.1C29.12 181.87 20 217.92 20 256c0 38.08 9.12 74.13 25.1 105.99l78.85-61.15z" fill="#fbbc05"></path>';
+		$buildPanel .= '<path d="M256 113.86c34.65 0 65.76 11.91 90.22 35.29l67.69-67.69C373.03 43.39 319.61 20 256 20c-92.25 0-172.07 52.89-210.9 130.01l78.85 61.15c18.56-55.78 70.59-97.3 132.05-97.3z" fill="#ea4335"></path>';
+		$buildPanel .= '<path d="M20 20h472v472H20V20z"></path>';
+		$buildPanel .= '</g></svg>';
+		$buildPanel .= '<div class="wp-google-value" itemprop="ratingValue">'.$rating.'</div>';
+		$buildPanel .= '<div class="wp-google-stars">';
+
+		if ( $rating >= 4.7) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.$rating.' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i></span>';	
+		if ( $rating >= 4.2 && $rating <= 4.6 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.$rating.' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star-half-alt"></i></span>';
+		if ( $rating >= 3.7 && $rating <= 4.1 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.$rating.' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa far fa-star"></i></span>';		
+		if ( $rating >= 3.2 && $rating <= 3.6 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.$rating.' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star-half-alt"></i><i class="fa far fa-star"></i></span>';
+
+		$buildPanel .= '</div></div>';	
+		if ( $number > 7 ) $buildPanel .= '<div class="wp-google-total">Click to view our '.$number.' Google reviews!</div>';	
+		$buildPanel .= '</div></a>';
+
+		return $buildPanel;
+	endif;
+}
 
 /*--------------------------------------------------------------
 # Custom Hooks

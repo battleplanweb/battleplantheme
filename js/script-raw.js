@@ -1565,6 +1565,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			trimText();
 			buildAccordion();
 
+		// Get IP data
 			$.getJSON('https://ipapi.co/json/', function(data) {
 				timezone = data["timezone"];				
 				userLoc = data["city"] + ", " + data["region_code"];
@@ -1573,7 +1574,6 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		}, 1000);
 
 		setTimeout(function() {	// Wait 2 seconds before calling the following functions 	
-
 		// Count page view 
 			var postID = $('body').attr('id');				
 			$.post({

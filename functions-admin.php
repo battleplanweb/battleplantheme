@@ -1467,10 +1467,20 @@ function battleplan_admin_site_stats() {
 	array_multisort($sort['views'], SORT_DESC, SORT_NUMERIC, $sort['date'], SORT_DESC, $getViews);
 	
 	for ($x = 0; $x < 10; $x++) {
-		$dailyTime = date("M j, Y", strtotime($getViews[$x]['date'])); 				
+		$dailyTime = date("M j, Y", strtotime($getViews[$x]['date'])); 		
+		$howOld = ($today - strtotime($getViews[$x]['date'])) / 86400;
+		if ( $howOld < 1 ) :
+			$class="this-day";
+		elseif ( $howOld < 8 ) :
+			$class="this-week";
+		elseif ( $howOld < 32 ) :
+			$class="this-month";
+		else:
+			$class="";
+		endif;
 		$dailyViews = intval($getViews[$x]['views']); 	
 		$rank = $x + 1;
-		if ( $dailyViews > 0 ) echo "<tr><td>&nbsp;#".$rank."&nbsp;&nbsp;&nbsp;<b>".$dailyTime."</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $dailyViews, 'battleplan' ), $dailyViews )."</td></tr>";
+		if ( $dailyViews > 0 ) echo "<tr><td class='".$class."'>&nbsp;#".$rank."&nbsp;&nbsp;&nbsp;<b>".$dailyTime."</b></td><td class='".$class."'>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $dailyViews, 'battleplan' ), $dailyViews )."</td></tr>";
 	} 		
 	echo '</table>';
 }

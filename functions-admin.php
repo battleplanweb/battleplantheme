@@ -7,6 +7,7 @@
 # Shortcodes
 # Set Up Admin Columns
 # Admin Interface Set Up
+# One-Time Run Functions
 
 --------------------------------------------------------------*/
 
@@ -1727,38 +1728,205 @@ function battleplan_duplicate_post_as_draft(){
  
 function battleplan_duplicate_post_link( $actions, $post ) {
 	if (current_user_can('edit_posts')) {
-		$actions['duplicate'] = '<a href="' . wp_nonce_url('admin.php?action=battleplan_duplicate_post_as_draft&post=' . $post->ID, basename(__FILE__), 'duplicate_nonce' ) . '" title="Duplicate this item" rel="permalink">Duplicate</a>';
+		$actions['duplicate'] = '<a href="' . wp_nonce_url('admin.php?action=battleplan_duplicate_post_as_draft&post=' . $post->ID, basename(__FILE__), 'duplicate_nonce' ) . '" title="Clone this item" rel="permalink">Clone</a>';
 	}
 	return $actions;
 }
 
+// Force clear all views for posts/pages - run this from functions-site.php within a site's child theme
+function battleplan_clearViewFields() {
+	// clear image views
+	$image_query = new WP_Query( array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>-1 ));
+	if( $image_query->have_posts() ) : while ($image_query->have_posts() ) : $image_query->the_post();
+		deleteMeta( get_the_ID(), 'post-views-now');
+		deleteMeta( get_the_ID(), 'post-views-time');
+		deleteMeta( get_the_ID(), 'post-tease-time');
+		deleteMeta( get_the_ID(), 'post-views-total-all');
+		deleteMeta( get_the_ID(), 'post-views-record');
+		deleteMeta( get_the_ID(), 'post-views-record-date');
+		deleteMeta( get_the_ID(), 'post-views-total-7day');
+		deleteMeta( get_the_ID(), 'post-views-total-30day');
+		deleteMeta( get_the_ID(), 'post-views-total-90day');
+		deleteMeta( get_the_ID(), 'post-views-total-180day');
+		deleteMeta( get_the_ID(), 'post-views-total-365day');
+		for ($x = 0; $x < 31; $x++) {
+			deleteMeta( get_the_ID(), 'post-views-day-'.$x);
+		} 		
+		updateMeta( get_the_ID(), 'log-views-now', strtotime("-1 day"));					
+		updateMeta( get_the_ID(), 'log-views-time', strtotime("-1 day"));		
+		updateMeta( get_the_ID(), 'log-tease-time', strtotime("-1 day"));			
+		updateMeta( get_the_ID(), 'log-views-total-7day', '0' );		
+		updateMeta( get_the_ID(), 'log-views-total-30day', '0' );
+		updateMeta( get_the_ID(), 'log-views-total-90day', '0' );
+		updateMeta( get_the_ID(), 'log-views-total-180day', '0' );
+		updateMeta( get_the_ID(), 'log-views-total-365day', '0' );
+		updateMeta( get_the_ID(), 'log-views', array( 'date' => strtotime(date("F j, Y")), 'views' => 0 ));		
+	endwhile; wp_reset_postdata(); endif;
+
+	// clear posts views
+	$getCPT = get_post_types();  
+	unset($getCPT['attachment'], $getCPT['page'], $getCPT['revision'], $getCPT['nav_menu_item'], $getCPT['custom_css'], $getCPT['customize_changeset'], $getCPT['oembed_cache'], $getCPT['user_request'], $getCPT['wp_block'], $getCPT['acf-field-group'], $getCPT['acf-field'], $getCPT['wpcf7_contact_form'], $getCPT['wphb_minify_group']); 	
+	foreach ($getCPT as $postType) {
+		$getPosts = new WP_Query( array ('posts_per_page'=>-1, 'post_type'=>$postType ));
+		if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 
+			deleteMeta( get_the_ID(), '_wp_page_template');
+			deleteMeta( get_the_ID(), '_responsive_layout');
+			deleteMeta( get_the_ID(), 'post-bot-names');
+			deleteMeta( get_the_ID(), 'post-bots');
+			deleteMeta( get_the_ID(), 'add-view-fields');
+			deleteMeta( get_the_ID(), 'check-pics-for-views');
+			deleteMeta( get_the_ID(), 'clear-hummingbird-cache');
+			deleteMeta( get_the_ID(), 'last-hummingbird-cache');
+			deleteMeta( get_the_ID(), 'post-views-now');
+			deleteMeta( get_the_ID(), 'post-views-time');
+			deleteMeta( get_the_ID(), 'post-tease-time');
+			deleteMeta( get_the_ID(), 'post-views-total-all');
+			deleteMeta( get_the_ID(), 'post-views-record');
+			deleteMeta( get_the_ID(), 'post-views-record-date');
+			deleteMeta( get_the_ID(), 'post-views-total-7day');
+			deleteMeta( get_the_ID(), 'post-views-total-30day');
+			deleteMeta( get_the_ID(), 'post-views-total-90day');
+			deleteMeta( get_the_ID(), 'post-views-total-180day');
+			deleteMeta( get_the_ID(), 'post-views-total-365day');
+			for ($x = 0; $x < 31; $x++) {
+				deleteMeta( get_the_ID(), 'post-views-day-'.$x);
+			} 		
+			deleteMeta( get_the_ID(), 'site-views-now');
+			deleteMeta( get_the_ID(), 'site-views-time');
+			deleteMeta( get_the_ID(), 'site-tease-time');
+			deleteMeta( get_the_ID(), 'site-views-total-all');
+			deleteMeta( get_the_ID(), 'site-views-record');
+			deleteMeta( get_the_ID(), 'site-views-record-date');
+			deleteMeta( get_the_ID(), 'site-views-total-7day');
+			deleteMeta( get_the_ID(), 'site-views-total-30day');
+			deleteMeta( get_the_ID(), 'site-views-total-90day');
+			deleteMeta( get_the_ID(), 'site-views-total-180day');
+			deleteMeta( get_the_ID(), 'site-views-total-365day');
+			for ($x = 0; $x < 31; $x++) {
+				deleteMeta( get_the_ID(), 'site-views-day-'.$x);
+			} 		
+			updateMeta( get_the_ID(), 'log-views-now', strtotime("-1 day"));			
+			updateMeta( get_the_ID(), 'log-views-time', strtotime("-1 day"));				
+			updateMeta( get_the_ID(), 'log-tease-time', strtotime("-1 day"));			
+			updateMeta( get_the_ID(), 'log-views-total-7day', '0' );		
+			updateMeta( get_the_ID(), 'log-views-total-30day', '0' );
+			updateMeta( get_the_ID(), 'log-views-total-90day', '0' );
+			updateMeta( get_the_ID(), 'log-views-total-180day', '0' );
+			updateMeta( get_the_ID(), 'log-views-total-365day', '0' );
+			updateMeta( get_the_ID(), 'log-views', array( 'date' => strtotime(date("F j, Y")), 'views' => 0 ));					
+		endwhile; wp_reset_postdata(); endif;		
+			
+		// clear page views
+		$getPosts = new WP_Query( array ('posts_per_page'=>-1, 'post_type'=>'page' ));
+		if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 
+			deleteMeta( get_the_ID(), '_wp_page_template');
+			deleteMeta( get_the_ID(), '_responsive_layout');
+			deleteMeta( get_the_ID(), 'post-bot-names');
+			deleteMeta( get_the_ID(), 'post-bots');
+			deleteMeta( get_the_ID(), 'add-view-fields');
+			deleteMeta( get_the_ID(), 'check-pics-for-views');
+			deleteMeta( get_the_ID(), 'clear-hummingbird-cache');
+			deleteMeta( get_the_ID(), 'last-hummingbird-cache');
+			deleteMeta( get_the_ID(), 'post-views-now');
+			deleteMeta( get_the_ID(), 'post-views-time');
+			deleteMeta( get_the_ID(), 'post-tease-time');
+			deleteMeta( get_the_ID(), 'post-views-total-all');
+			deleteMeta( get_the_ID(), 'post-views-record');
+			deleteMeta( get_the_ID(), 'post-views-record-date');
+			deleteMeta( get_the_ID(), 'post-views-total-7day');
+			deleteMeta( get_the_ID(), 'post-views-total-30day');
+			deleteMeta( get_the_ID(), 'post-views-total-90day');
+			deleteMeta( get_the_ID(), 'post-views-total-180day');
+			deleteMeta( get_the_ID(), 'post-views-total-365day');
+			for ($x = 0; $x < 31; $x++) {
+				deleteMeta( get_the_ID(), 'post-views-day-'.$x);
+			} 		
+			deleteMeta( get_the_ID(), 'site-views-now');
+			deleteMeta( get_the_ID(), 'site-views-time');
+			deleteMeta( get_the_ID(), 'site-tease-time');
+			deleteMeta( get_the_ID(), 'site-views-total-all');
+			deleteMeta( get_the_ID(), 'site-views-record');
+			deleteMeta( get_the_ID(), 'site-views-record-date');
+			deleteMeta( get_the_ID(), 'site-views-total-7day');
+			deleteMeta( get_the_ID(), 'site-views-total-30day');
+			deleteMeta( get_the_ID(), 'site-views-total-90day');
+			deleteMeta( get_the_ID(), 'site-views-total-180day');
+			deleteMeta( get_the_ID(), 'site-views-total-365day');
+			for ($x = 0; $x < 31; $x++) {
+				deleteMeta( get_the_ID(), 'site-views-day-'.$x);
+			} 		
+			updateMeta( get_the_ID(), 'log-views-total-7day', '0' );		
+			updateMeta( get_the_ID(), 'log-views-total-30day', '0' );
+			updateMeta( get_the_ID(), 'log-views-total-90day', '0' );
+			updateMeta( get_the_ID(), 'log-views-total-180day', '0' );
+			updateMeta( get_the_ID(), 'log-views-total-365day', '0' );
+			updateMeta( get_the_ID(), 'log-views', array( 'date' => strtotime(date("F j, Y")), 'views' => 0 ));					
+		endwhile; wp_reset_postdata(); endif;		
+
+		// clear site load speed logs
+		$siteHeader = getID('site-header');
+		updateMeta( $siteHeader, 'load-number-desktop', '0' );			
+		updateMeta( $siteHeader, 'load-speed-desktop', '0' );			
+		updateMeta( $siteHeader, 'load-number-mobile', '0' );			
+		updateMeta( $siteHeader, 'load-speed-mobile', '0' );
+		
+		updateMeta( $siteHeader, 'framework-version', _BP_VERSION );	
+	}	
+}  
+
+/*--------------------------------------------------------------
+# One-Time Run Functions
+--------------------------------------------------------------*/
 // Move Site Header, Site Footer, Site Message, Office Hours, Privacy Policy, etc. to Elements post type
+// Delete pages that are now served directly from framework (privacy policy, symptom checker, etc)
+// Delete FB and Wells Fargo images that are now served directly from framework
 add_action( 'admin_init', 'battleplan_setupElements', 999 );
 function battleplan_setupElements() {   
-	if ( get_page_by_path('site-header', OBJECT, 'page' ) ) :
-		$post_id = get_page_by_path('site-header', OBJECT, 'page' )->ID;
-		$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
-		wp_update_post( $my_post );
+	
+	if ( get_option( 'bp_setup_2021_03_03' ) != 'completed' ) :
+		if ( get_page_by_path('site-header', OBJECT, 'page' ) ) :
+			$post_id = get_page_by_path('site-header', OBJECT, 'page' )->ID;
+			$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
+			wp_update_post( $my_post );
+		endif;
+		if ( get_page_by_path('site-footer', OBJECT, 'page' ) ) :
+			$post_id = get_page_by_path('site-footer', OBJECT, 'page' )->ID;
+			$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
+			wp_update_post( $my_post );
+		endif;
+		if ( get_page_by_path('site-message', OBJECT, 'page' ) ) :
+			$post_id = get_page_by_path('site-message', OBJECT, 'page' )->ID;
+			$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
+			wp_update_post( $my_post );
+		endif;
+		if ( get_page_by_path('privacy-policy', OBJECT, 'page' ) ) :
+			$post_id = get_page_by_path('privacy-policy', OBJECT, 'page' )->ID;
+			$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
+			wp_update_post( $my_post );
+		endif;
+		if ( get_page_by_path('office-hours', OBJECT, 'page' ) ) :
+			$post_id = get_page_by_path('office-hours', OBJECT, 'page' )->ID;
+			$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
+			wp_update_post( $my_post );
+		endif;	
+		update_option( 'bp_setup_2021_03_03', 'completed' );
 	endif;
-	if ( get_page_by_path('site-footer', OBJECT, 'page' ) ) :
-		$post_id = get_page_by_path('site-footer', OBJECT, 'page' )->ID;
-		$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
-		wp_update_post( $my_post );
-	endif;
-	if ( get_page_by_path('site-message', OBJECT, 'page' ) ) :
-		$post_id = get_page_by_path('site-message', OBJECT, 'page' )->ID;
-		$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
-		wp_update_post( $my_post );
-	endif;
-	if ( get_page_by_path('privacy-policy', OBJECT, 'page' ) ) :
-		$post_id = get_page_by_path('privacy-policy', OBJECT, 'page' )->ID;
-		$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
-		wp_update_post( $my_post );
-	endif;
-	if ( get_page_by_path('office-hours', OBJECT, 'page' ) ) :
-		$post_id = get_page_by_path('office-hours', OBJECT, 'page' )->ID;
-		$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
-		wp_update_post( $my_post );
+	
+	if ( get_option( 'bp_setup_2021_03_07' ) != 'completed' ) :
+		wp_delete_post( get_page_by_path('privacy-policy', OBJECT, 'elements' )->ID, true);	
+		wp_delete_post( get_page_by_path('customer-care-dealer', OBJECT, 'page' )->ID, true);	
+		wp_delete_post( get_page_by_path('maintenance-tips', OBJECT, 'page' )->ID, true);	
+		wp_delete_post( get_page_by_path('symptom-checker', OBJECT, 'page' )->ID, true);	
+	
+		wp_delete_attachment( getID('Wells-Fargo-A'), true );
+		wp_delete_attachment( getID('Wells-Fargo-B'), true );
+		wp_delete_attachment( getID('Wells-Fargo-C'), true );
+		wp_delete_attachment( getID('Wells-Fargo-D'), true );
+		wp_delete_attachment( getID('Facebook-Like-Us-1'), true );
+		wp_delete_attachment( getID('Facebook-Like-Us-2'), true );
+		wp_delete_attachment( getID('Facebook-Like-Us-3'), true );
+
+		update_option( 'bp_setup_2021_03_07', 'completed' );
 	endif;
 }
 

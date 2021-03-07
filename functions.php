@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '7.3' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.0' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -159,27 +159,6 @@ function battleplan_getDomain( $atts, $content = null ) {
 // Returns url of page (minus domain)
 add_shortcode( 'get-url', 'battleplan_getURL' );
 function battleplan_getURL() { return $_SERVER['REQUEST_URI']; }
-
-// Add Wells Fargo Ad to Sidebar
-add_shortcode( 'get-wells-fargo', 'battleplan_getWellsFargo' );
-function battleplan_getWellsFargo($atts, $content = null) {
-	$a = shortcode_atts( array( 'graphic1'=>'', 'graphic2'=>'', 'link'=>'', 'class'=>''  ), $atts );
-	$graphic1 = esc_attr($a['graphic1']);	
-	$graphic2 = esc_attr($a['graphic2']);	
-	$link = esc_attr($a['link']);	
-	$class = esc_attr($a['class']);	
-	if ( $class != '' ) : $class = 'class="'.$class.'"'; endif;
-	$rand = rand(1,2);
-	if ($rand == "1") : $ad = $graphic1; endif;
-	if ($rand == "2") : $ad = $graphic2; endif;
-	if ($ad=="Wells-Fargo-A.png" || $ad=="Wells-Fargo-B.png") $alt = "Looking for financing options? Special financing available. This credit card is issued with approved credit by Wells Fargo Bank, N.A. Equal Housing Lender. Learn more.";
-	if ($ad=="Wells-Fargo-C.png" || $ad=="Wells-Fargo-D.png") $alt = "Special financing available. This credit card is issued with approved credit by Wells Fargo Bank, N.A. Equal Housing Lender. Learn more.";	
-	if ($ad=="Wells-Fargo-C.png" || $ad=="Wells-Fargo-D.png") $alt = "Special financing available. This credit card is issued with approved credit by Wells Fargo Bank, N.A. Equal Housing Lender. Learn more.";		
-	if ($ad=="Wells-Fargo-Splash-A.png" || $ad=="Wells-Fargo-Splash-B.png" || $ad=="Wells-Fargo-Splash-C.png") $alt = "Buy today, pay over time. This credit card also brings you revolving line of credit that you can use over and over again, special financing where available, convenient monthly payments to fit your budget, easy-to-use online account management and bill payment options. This credit card is issued with approved credit by Wells Fargo Bank, N.A. Equal Housing Lender. Learn more.";	
-	if ($ad=="Wells-Fargo-Splash-D.png") $alt = "Buy today, pay over time. Your Wells Fargo Home Projects credit card also brings you revolving line of credit that you can use over and over again, special financing where available, convenient monthly payments to fit your budget, easy-to-use online account management and bill payment options. The Wells Fargo Home Projects credit card is issued with approved credit by Wells Fargo Bank, N.A. Equal Housing Lender. Learn more.";	
-	$output = '<a href="#" class="financing-link" onclick="trackClicks(\'link\', \'Offsite Link\', \'Wells Fargo\', \''.$link.'\'); return false;"><img src="/wp-content/uploads/'.$ad.'" alt="'.$alt.'" '.$class.'/></a>';
-	return $output; 
-}
 
 // Show count of posts, images, etc.
 add_shortcode( 'get-count', 'battleplan_getCount' );
@@ -697,12 +676,13 @@ function battleplan_getPostSlider($atts, $content = null ) {
 				endif;	
 
 				$image = wp_get_attachment_image_src(get_the_ID(), $size );
-				$imgSet = wp_get_attachment_image_srcset(get_the_ID(), $size );
+				//$imgSet = wp_get_attachment_image_srcset(get_the_ID(), $size );
 				if ( $link == "alt" ) $linkTo = get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true);				
 				if ( $link == "description" ) $linkTo = esc_html(get_post(get_the_ID())->post_content);
 				$buildImg = "";
 				if ( $link != "none" ) : $buildImg = "<a href='".$linkTo."' class='link-archive link-".$type."'>"; endif;	
-				$buildImg .= "<img data-id='".get_the_ID()."' ".getImgMeta(get_the_ID())." class='img-slider ".$tags[0]."-img' src = '".$image[0]."' srcset='".$imgSet."' alt='".get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true)."'>";
+				//$buildImg .= "<img data-id='".get_the_ID()."' ".getImgMeta(get_the_ID())." class='img-slider ".$tags[0]."-img' src = '".$image[0]."' srcset='".$imgSet."' alt='".get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true)."'>";
+				$buildImg .= "<img data-id='".get_the_ID()."' ".getImgMeta(get_the_ID())." class='img-slider ".$tags[0]."-img' src = '".$image[0]."' alt='".get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true)."'>";
 		
 				if ( $caption == "yes" || $caption == "title" ) : $buildImg .= "<div class='caption-holder'><div class='img-caption'>".get_the_title(get_the_ID())."</div></div>";	
 				elseif ( $caption == "alt" ) : $buildImg .= "<div class='caption-holder'><div class='img-caption'>".get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true)."</div></div>";
@@ -938,6 +918,25 @@ function battleplan_setUpWPGallery( $atts, $content = null ) {
 	return $gallery;
 }
 
+// Build a coupon
+add_shortcode( 'coupon', 'battleplan_coupon' );
+function battleplan_coupon( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'action'=>'Mention Our Website For', 'discount'=>'$20 OFF', 'service'=>'Service Call', 'disclaimer'=>'First time customers only.  Limited time offer.  Not valid with any other offer.  Must mention coupon at time of appointment.  During regular business hours only.  Limit one coupon per system.' ), $atts );
+	$action = esc_attr($a['action']);
+	$discount = esc_attr($a['discount']);
+	$service = esc_attr($a['service']);
+	$disclaimer = esc_attr($a['disclaimer']);
+	
+	return do_shortcode('
+		[txt class="coupon"]
+			<h2 class="action">'.$action.'</h2>
+			<h2 class="discount">'.$discount.'</h2>
+			<h2 class="service">'.$service.'</h2>
+			<p class="disclaimer">'.$disclaimer.'</p>	
+		[/txt]
+	');
+}
+
 /*--------------------------------------------------------------
 # Functions to extend WordPress 
 --------------------------------------------------------------*/
@@ -970,12 +969,18 @@ function get_the_slug() {
 	return $slug;
 }
 
-// Get ID from page, post or custom post type slug
+// Get ID from page, post or custom post type by entering slug or title
 function getID($slug) { 
-	$getCPT = get_post_types();  
+	$getCPT = get_post_types(); 
+	$id = false;
 	foreach ($getCPT as $postType) :
 		if ( get_page_by_path($slug, OBJECT, $postType) ) : $id = get_page_by_path($slug, OBJECT, $postType)->ID; break; endif;
-	endforeach;		
+	endforeach;	
+	if ( $id == false ) :
+		foreach ($getCPT as $postType) :
+			if ( get_page_by_title($slug, OBJECT, $postType) ) : $id = get_page_by_title($slug, OBJECT, $postType)->ID; break; endif;
+		endforeach;	
+	endif;
 	return $id;
 } 
 
@@ -1723,9 +1728,10 @@ function battleplan_admin_scripts() {
 }
 
 if ( is_admin() ) { require_once get_template_directory() . '/functions-admin.php'; } 
-require_once get_template_directory() . '/includes/includes-universal.php';
 if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { require_once get_template_directory() . '/includes/includes-events.php'; } 
 if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { require_once get_template_directory() . '/includes/includes-woocommerce.php'; } 
+if ( get_option( 'site_type' ) == 'hvac' ) { require_once get_template_directory() . '/includes/includes-hvac.php'; } 
+if ( get_option( 'site_type' ) == 'pedigree' ) { require_once get_template_directory() . '/includes/includes-pedigree.php'; } 
 require_once get_template_directory() . '/functions-public.php';
 
 // Dequeue unneccesary styles & scripts
@@ -1746,7 +1752,17 @@ function battleplan_dequeue_unwanted_stuff() {
 
 //Brand log-in screen with BP Knight
 add_action( 'login_enqueue_scripts', 'battleplan_login_logo' );
-function battleplan_login_logo() { ?><style type="text/css">body.login div#login h1 a { background-image: url(https://battleplanassets.com/images/logo-knight.png); padding-bottom: 120px; width: 100%;	background-size: 50%} #login {padding-top:70px !important} </style> <?php } 
+function battleplan_login_logo() { ?><style type="text/css">body.login div#login h1 a { background-image: url('/wp-content/themes/battleplantheme/common/logos/battleplan-logo.png'); padding-bottom: 120px; width: 100%;	background-size: 50%} #login {padding-top:70px !important} </style> <?php }  
+
+add_filter( 'login_headerurl', 'battleplan_login_url', 10, 1 );
+function battleplan_login_url( $url ) {
+    return esc_url("https://battleplanwebdesign.com");
+}
+
+add_filter( 'login_headertext', 'battleplan_login_headertext' ); 
+function battleplan_login_headertext( $headertext ) {
+   	return esc_html__( 'Powered by Battle Plan Web Design', 'battleplan' );
+}
 
 // Hide the Wordpress admin bar
 show_admin_bar( false );
@@ -1826,7 +1842,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( "user-message" == $tag->name ) {
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
-		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','Mark Of The Beast','fuck','и','д','б','й','л','ы','З','у','Я');
+		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','Mark Of The Beast','fuck','dogloverclub.store','и','д','б','й','л','ы','З','у','Я');
 		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
 		if ( $check == $name ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($badwords as $badword) {
@@ -1890,11 +1906,11 @@ function get_srcset( $size ) {
 	elseif ( $ratio1024 <= 75 ) : $ratio1024 = 50;
 	else: $ratio1024 = 100; endif;
 	
-	$ratio860 = ($size / 1024) * 100; 
+	$ratio860 = ($size / 860) * 100; 
 	if ( $ratio860 <= 33 ) : $ratio860 = 50;
 	else: $ratio860 = 100; endif;
 	
-	$ratio575 = ($size / 1024) * 100; 
+	$ratio575 = ($size / 575) * 100; 
 	if ( $ratio575 <= 25 ) : $ratio575 = 50;
 	else: $ratio575 = 100; endif;
 
@@ -1988,7 +2004,6 @@ function battleplan_current_type_nav_class($classes, $item) {
 
 // Rename "Uncategorized" posts to "Blog"
 wp_update_term(1, 'category', array( 'name'=>'Blog', 'slug'=>'blog' ));
-
 add_action( 'init', 'battleplan_resetEverything', 0 ); 
 function battleplan_resetEverything() {	
 	$siteHeader = getID('site-header');
@@ -1999,160 +2014,21 @@ function battleplan_resetEverything() {
 	endif;
 }
 
-// Force clear all views for posts/pages - run this from functions.php within a site's child theme
-function battleplan_clearViewFields() {
-	// clear image views
-	$image_query = new WP_Query( array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>-1 ));
-	if( $image_query->have_posts() ) : while ($image_query->have_posts() ) : $image_query->the_post();
-		deleteMeta( get_the_ID(), 'post-views-now');
-		deleteMeta( get_the_ID(), 'post-views-time');
-		deleteMeta( get_the_ID(), 'post-tease-time');
-		deleteMeta( get_the_ID(), 'post-views-total-all');
-		deleteMeta( get_the_ID(), 'post-views-record');
-		deleteMeta( get_the_ID(), 'post-views-record-date');
-		deleteMeta( get_the_ID(), 'post-views-total-7day');
-		deleteMeta( get_the_ID(), 'post-views-total-30day');
-		deleteMeta( get_the_ID(), 'post-views-total-90day');
-		deleteMeta( get_the_ID(), 'post-views-total-180day');
-		deleteMeta( get_the_ID(), 'post-views-total-365day');
-		for ($x = 0; $x < 31; $x++) {
-			deleteMeta( get_the_ID(), 'post-views-day-'.$x);
-		} 		
-		updateMeta( get_the_ID(), 'log-views-now', strtotime("-1 day"));					
-		updateMeta( get_the_ID(), 'log-views-time', strtotime("-1 day"));		
-		updateMeta( get_the_ID(), 'log-tease-time', strtotime("-1 day"));			
-		updateMeta( get_the_ID(), 'log-views-total-7day', '0' );		
-		updateMeta( get_the_ID(), 'log-views-total-30day', '0' );
-		updateMeta( get_the_ID(), 'log-views-total-90day', '0' );
-		updateMeta( get_the_ID(), 'log-views-total-180day', '0' );
-		updateMeta( get_the_ID(), 'log-views-total-365day', '0' );
-		updateMeta( get_the_ID(), 'log-views', array( 'date' => strtotime(date("F j, Y")), 'views' => 0 ));		
-	endwhile; wp_reset_postdata(); endif;
-
-	// clear posts views
-	$getCPT = get_post_types();  
-	unset($getCPT['attachment'], $getCPT['page'], $getCPT['revision'], $getCPT['nav_menu_item'], $getCPT['custom_css'], $getCPT['customize_changeset'], $getCPT['oembed_cache'], $getCPT['user_request'], $getCPT['wp_block'], $getCPT['acf-field-group'], $getCPT['acf-field'], $getCPT['wpcf7_contact_form'], $getCPT['wphb_minify_group']); 	
-	foreach ($getCPT as $postType) {
-		$getPosts = new WP_Query( array ('posts_per_page'=>-1, 'post_type'=>$postType ));
-		if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 
-			deleteMeta( get_the_ID(), '_wp_page_template');
-			deleteMeta( get_the_ID(), '_responsive_layout');
-			deleteMeta( get_the_ID(), 'post-bot-names');
-			deleteMeta( get_the_ID(), 'post-bots');
-			deleteMeta( get_the_ID(), 'add-view-fields');
-			deleteMeta( get_the_ID(), 'check-pics-for-views');
-			deleteMeta( get_the_ID(), 'clear-hummingbird-cache');
-			deleteMeta( get_the_ID(), 'last-hummingbird-cache');
-			deleteMeta( get_the_ID(), 'post-views-now');
-			deleteMeta( get_the_ID(), 'post-views-time');
-			deleteMeta( get_the_ID(), 'post-tease-time');
-			deleteMeta( get_the_ID(), 'post-views-total-all');
-			deleteMeta( get_the_ID(), 'post-views-record');
-			deleteMeta( get_the_ID(), 'post-views-record-date');
-			deleteMeta( get_the_ID(), 'post-views-total-7day');
-			deleteMeta( get_the_ID(), 'post-views-total-30day');
-			deleteMeta( get_the_ID(), 'post-views-total-90day');
-			deleteMeta( get_the_ID(), 'post-views-total-180day');
-			deleteMeta( get_the_ID(), 'post-views-total-365day');
-			for ($x = 0; $x < 31; $x++) {
-				deleteMeta( get_the_ID(), 'post-views-day-'.$x);
-			} 		
-			deleteMeta( get_the_ID(), 'site-views-now');
-			deleteMeta( get_the_ID(), 'site-views-time');
-			deleteMeta( get_the_ID(), 'site-tease-time');
-			deleteMeta( get_the_ID(), 'site-views-total-all');
-			deleteMeta( get_the_ID(), 'site-views-record');
-			deleteMeta( get_the_ID(), 'site-views-record-date');
-			deleteMeta( get_the_ID(), 'site-views-total-7day');
-			deleteMeta( get_the_ID(), 'site-views-total-30day');
-			deleteMeta( get_the_ID(), 'site-views-total-90day');
-			deleteMeta( get_the_ID(), 'site-views-total-180day');
-			deleteMeta( get_the_ID(), 'site-views-total-365day');
-			for ($x = 0; $x < 31; $x++) {
-				deleteMeta( get_the_ID(), 'site-views-day-'.$x);
-			} 		
-			updateMeta( get_the_ID(), 'log-views-now', strtotime("-1 day"));			
-			updateMeta( get_the_ID(), 'log-views-time', strtotime("-1 day"));				
-			updateMeta( get_the_ID(), 'log-tease-time', strtotime("-1 day"));			
-			updateMeta( get_the_ID(), 'log-views-total-7day', '0' );		
-			updateMeta( get_the_ID(), 'log-views-total-30day', '0' );
-			updateMeta( get_the_ID(), 'log-views-total-90day', '0' );
-			updateMeta( get_the_ID(), 'log-views-total-180day', '0' );
-			updateMeta( get_the_ID(), 'log-views-total-365day', '0' );
-			updateMeta( get_the_ID(), 'log-views', array( 'date' => strtotime(date("F j, Y")), 'views' => 0 ));					
-		endwhile; wp_reset_postdata(); endif;		
-			
-		// clear page views
-		$getPosts = new WP_Query( array ('posts_per_page'=>-1, 'post_type'=>'page' ));
-		if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 
-			deleteMeta( get_the_ID(), '_wp_page_template');
-			deleteMeta( get_the_ID(), '_responsive_layout');
-			deleteMeta( get_the_ID(), 'post-bot-names');
-			deleteMeta( get_the_ID(), 'post-bots');
-			deleteMeta( get_the_ID(), 'add-view-fields');
-			deleteMeta( get_the_ID(), 'check-pics-for-views');
-			deleteMeta( get_the_ID(), 'clear-hummingbird-cache');
-			deleteMeta( get_the_ID(), 'last-hummingbird-cache');
-			deleteMeta( get_the_ID(), 'post-views-now');
-			deleteMeta( get_the_ID(), 'post-views-time');
-			deleteMeta( get_the_ID(), 'post-tease-time');
-			deleteMeta( get_the_ID(), 'post-views-total-all');
-			deleteMeta( get_the_ID(), 'post-views-record');
-			deleteMeta( get_the_ID(), 'post-views-record-date');
-			deleteMeta( get_the_ID(), 'post-views-total-7day');
-			deleteMeta( get_the_ID(), 'post-views-total-30day');
-			deleteMeta( get_the_ID(), 'post-views-total-90day');
-			deleteMeta( get_the_ID(), 'post-views-total-180day');
-			deleteMeta( get_the_ID(), 'post-views-total-365day');
-			for ($x = 0; $x < 31; $x++) {
-				deleteMeta( get_the_ID(), 'post-views-day-'.$x);
-			} 		
-			deleteMeta( get_the_ID(), 'site-views-now');
-			deleteMeta( get_the_ID(), 'site-views-time');
-			deleteMeta( get_the_ID(), 'site-tease-time');
-			deleteMeta( get_the_ID(), 'site-views-total-all');
-			deleteMeta( get_the_ID(), 'site-views-record');
-			deleteMeta( get_the_ID(), 'site-views-record-date');
-			deleteMeta( get_the_ID(), 'site-views-total-7day');
-			deleteMeta( get_the_ID(), 'site-views-total-30day');
-			deleteMeta( get_the_ID(), 'site-views-total-90day');
-			deleteMeta( get_the_ID(), 'site-views-total-180day');
-			deleteMeta( get_the_ID(), 'site-views-total-365day');
-			for ($x = 0; $x < 31; $x++) {
-				deleteMeta( get_the_ID(), 'site-views-day-'.$x);
-			} 		
-			updateMeta( get_the_ID(), 'log-views-total-7day', '0' );		
-			updateMeta( get_the_ID(), 'log-views-total-30day', '0' );
-			updateMeta( get_the_ID(), 'log-views-total-90day', '0' );
-			updateMeta( get_the_ID(), 'log-views-total-180day', '0' );
-			updateMeta( get_the_ID(), 'log-views-total-365day', '0' );
-			updateMeta( get_the_ID(), 'log-views', array( 'date' => strtotime(date("F j, Y")), 'views' => 0 ));					
-		endwhile; wp_reset_postdata(); endif;		
-
-		// clear site load speed logs
-		$siteHeader = getID('site-header');
-		updateMeta( $siteHeader, 'load-number-desktop', '0' );			
-		updateMeta( $siteHeader, 'load-speed-desktop', '0' );			
-		updateMeta( $siteHeader, 'load-number-mobile', '0' );			
-		updateMeta( $siteHeader, 'load-speed-mobile', '0' );
-		
-		updateMeta( $siteHeader, 'framework-version', _BP_VERSION );	
-	}	
-}  
-
-// Cap excerpt at 1 or 2 sentences, based on length
+// Cap auto generated excerpts at 1 or 2 sentences, based on length
 add_filter( 'excerpt_length', 'battleplan_excerpt_length', 999 );
 function battleplan_excerpt_length( $length ) { 
 	return 200; 
 } 
 
 add_filter('get_the_excerpt', 'end_with_sentence');
-function end_with_sentence( $excerpt ) {
-    $sentences = preg_split( "/(\.|\!|\?)/", $excerpt, NULL, PREG_SPLIT_DELIM_CAPTURE);
-    $newExcerpt = implode('', array_slice($sentences, 0, 4));	
-	if ( strlen($newExcerpt) > 150 ) $newExcerpt = implode('', array_slice($sentences, 0, 2));
+function end_with_sentence( $excerpt ) {	
+	if ( !has_excerpt() ) :		
+		$sentences = preg_split( "/(\.|\!|\?)/", $excerpt, NULL, PREG_SPLIT_DELIM_CAPTURE);
+		$newExcerpt = implode('', array_slice($sentences, 0, 4));	
+		if ( strlen($newExcerpt) > 150 ) $newExcerpt = implode('', array_slice($sentences, 0, 2));
 
-    return $newExcerpt;
+		return $newExcerpt;
+	else: return $excerpt; endif;
 }
 
 // Check "remove sidebar" meta box on post and add class if true
@@ -2176,16 +2052,22 @@ $optimizedBottomMeta->addWysiwyg(array( 'id' => 'page-bottom_text', 'label' => '
 // Display Google review rating
 add_shortcode( 'get-google-rating', 'battleplan_getGoogleRating' );
 function battleplan_getGoogleRating($atts, $content = null) {
-	$a = shortcode_atts( array( 'id'=>'', 'api'=>'AIzaSyBqf0idxwuOxaG-j3eCpef1Bunv-YVdVP8'  ), $atts );
+	$a = shortcode_atts( array( 'id'=>'', 'api'=>''  ), $atts );
 	$placeID = esc_attr($a['id']);	
 	$apiKey = esc_attr($a['api']);	
+	
+	if ( $apiKey == "" ) :
+		$apiKey = "AIzaSyBqf0idxwuOxaG";
+		$apiKey .= "-j3eCpef1Bunv";
+		$apiKey .= "-YVdVP8";
+	endif;
 	
 	$siteHeader = getID('site-header');
 	$dateChecked = readMeta($siteHeader, "google-review-date");	
 	$today = strtotime(date("F j, Y"));	
 	$daysSinceCheck = $today - $dateChecked;
 	
-	if ( $daysSinceCheck < 7 ) :
+	if ( $daysSinceCheck < 6 ) :
 		$rating = readMeta($siteHeader, "google-review-rating");	
 		$number = readMeta($siteHeader, "google-review-number");		
 	else:	
@@ -2202,9 +2084,8 @@ function battleplan_getGoogleRating($atts, $content = null) {
 		updateMeta( $siteHeader, "google-review-date", $today );		
 	endif;
 	
-	$rating = number_format($rating, 1);
-	
-	if ( $rating > 3.4 ) :
+	if ( $rating > 3.99 ) :
+		$rating = number_format($rating, 1, '.', ',');
 		$buildPanel = '<a class="wp-gr wp-google-badge" href="https://search.google.com/local/reviews?placeid='.$placeID.'&hl=en&gl=US" target="_blank">';
 		$buildPanel .= '<div class="wp-google-border"></div>';
 		$buildPanel .= '<div class="wp-google-badge-btn">';
@@ -2225,7 +2106,9 @@ function battleplan_getGoogleRating($atts, $content = null) {
 		if ( $rating >= 3.2 && $rating <= 3.6 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.$rating.' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star-half-alt"></i><i class="fa far fa-star"></i></span>';
 
 		$buildPanel .= '</div></div>';	
-		if ( $number > 7 ) $buildPanel .= '<div class="wp-google-total">Click to view our '.$number.' Google reviews!</div>';	
+		$buildPanel .= '<div class="wp-google-total">Click to view our ';			
+		if ( $number > 14 ) $buildPanel .= $number.' ';			
+		$buildPanel .= 'Google reviews!</div>';	
 		$buildPanel .= '</div></a>';
 
 		return $buildPanel;
@@ -2268,7 +2151,7 @@ function battleplan_log_page_load_speed_ajax() {
 		$daysSinceEmail = (($rightNow - $lastEmail) / 60 / 60 / 24);
 		$totalCounted = $desktopCounted + $mobileCounted;	
 
-		if ( ( $totalCounted > 100 && $daysSinceEmail > 30 ) || $daysSinceEmail > 90 ) :
+		if ( ( $totalCounted > 200 && $daysSinceEmail > 35 ) || $daysSinceEmail > 90 ) :
 			$desktopCount = sprintf( _n( '%s pageview', '%s pageviews', $desktopCounted, 'battleplan' ), $desktopCounted );
 			$mobileCount = sprintf( _n( '%s pageview', '%s pageviews', $mobileCounted, 'battleplan' ), $mobileCounted );
 			$emailTo = "info@battleplanwebdesign.com";
@@ -2445,17 +2328,6 @@ function battleplan_count_teaser_views_ajax() {
 		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' teaser NOT counted: user='.$userLogin.', user timezone='.$timezone.', site timezone='.get_option('timezone_string')) );
 	endif;	
 	wp_send_json( $response );	
-}
-
-// Send email to self when website fails
-add_action( 'wp_ajax_sendServerEmail', 'battleplan_sendServerEmail_ajax' );
-add_action( 'wp_ajax_nopriv_sendServerEmail', 'battleplan_sendServerEmail_ajax' );
-function battleplan_sendServerEmail_ajax() {		
-	$emailTo = "info@battleplanwebdesign.com";
-	$emailFrom = "From: Website Administrator <do-not-reply@battleplanwebdesign.com>";
-	$subject = $_POST['theSite']." needs attention!";
-	$content = $_POST['theSite']." failed at ".$_POST['failCheck'];	
-	mail($emailTo, $subject, $content, $emailFrom);
 }
 
 /*--------------------------------------------------------------

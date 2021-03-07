@@ -1053,7 +1053,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			$(this).trigger('load'); 
 		}
 	});	
-
+	
 // Check if "Remove Sidebar" option is checked in admin panel, and remove sidebar if applicable	
 if ( $('body').hasClass('remove-sidebar') ) { 
 	$('body').removeClass('sidebar-line').removeClass('sidebar-box').removeClass('widget-box').removeClass('sidebar-right').removeClass('sidebar-left').addClass('sidebar-none'); 

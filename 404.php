@@ -3,7 +3,7 @@
 
 $getURL = str_replace("/", "", $_SERVER['REQUEST_URI']);
 $filename = "wp-content/themes/battleplantheme/includes/includes-".$getURL.".php";
-if ( !file_exists($filename) ) $filename = "wp-content/themes/battleplantheme/includes/includes-".$GLOBALS['prefix']."-".$getURL.".php";
+if ( !file_exists($filename) ) $filename = "wp-content/themes/battleplantheme/includes/includes-".get_option('site_type')."-".$getURL.".php";
 
 if ( file_exists($filename) ) :
 	$class = 'include-page '.$getURL;

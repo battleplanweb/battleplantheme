@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 7.3
+Version: 8.0
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -661,14 +661,17 @@ table {
 	column-gap: 								2.5em;
 }
 
+.left,
 .text-left {
 	text-align:									left;
 }
 
+.right,
 .text-right {
 	text-align:									right;
 }
 
+.center,
 .text-center {
 	text-align:									center;
 }
@@ -2739,25 +2742,59 @@ img.unloaded {
 	margin: 									1.5em auto;
 }
 
+
+.size-quarter-s {
+	max-width:									240px;
+}
+
+.size-third-s,
+.size-quarter-f {
+	max-width:									320px;
+}
+
+.size-half-s {
+	max-width:									480px;
+}
+
+.size-full-s {
+	max-width:									960px;
+}
+
+.size-third-f {
+	max-width:									430px;
+}
+
+.size-half-f {
+	max-width:									640px;
+}
+
+.size-full-f {
+	max-width:									1280px;
+}
+
+.size-max {
+	max-width:									1920px;
+}
+
 .size-quarter-s, 
 .size-quarter-f {
-	max-width:									25%;
+	width:										25%;
 }
 
 .size-third-s, 
 .size-third-f {
-	max-width:									33%;
+	width:										33%;
 }
 
 .size-half-s, 
 .size-half-f {
-	max-width:									50%;
+	width:										50%;
 }
 
 .size-full-s, 
 .size-full-f, 
 .size-max {
-	max-width:									100%;
+	width:										100%;
 }
 
 .size-quarter-s img, 
@@ -2770,8 +2807,8 @@ img.unloaded {
 .size-full-f img,
 .img-testimonials img {
 	max-width:									100% !important;
-	width:										100% !important;
-	margin:										0 !important;
+	width:										auto !important;
+	margin:										0 auto !important;
 }
 
 .page-content .wp-smiley,
@@ -3714,11 +3751,11 @@ iframe#podium-modal {
 	/* Responsive Content w/ sidebar */
 	.size-quarter-s,
 	.size-third-s {
-		max-width:									33%;
+		width:										33%;
 	}
 	
 	.size-half-s {
-		max-width: 									40%;
+		width: 										40%;
 	}
 	
 	/* Responsive Sections */
@@ -3877,12 +3914,12 @@ iframe#podium-modal {
 	.size-quarter-f,
 	.size-third-s,
 	.size-third-f {
-		max-width:									33%;
+		width:										33%;
 	}
 	
 	.size-half-s,
 	.size-half-f {
-		max-width: 									45%;
+		width: 										45%;
 	}
 	
 	/* Responsive Sections */
@@ -3985,12 +4022,12 @@ iframe#podium-modal {
 	.size-quarter-f,
 	.size-third-s,
 	.size-third-f {
-		max-width:									43%;
+		width:										43%;
 	}
 	
 	.size-half-s,
 	.size-half-f {
-		max-width: 									80%;
+		width: 										80%;
 	}
 	
 	.screen-mobile #primary .size-half-s,
@@ -4152,12 +4189,12 @@ iframe#podium-modal {
 	.size-third-s,
 	.size-third-f,
 	.img-testimonials {
-		max-width: 									80%;
+		width: 										80%;
 	}
 	
 	.size-half-s,
 	.size-half-f {
-		max-width: 									100%;
+		width: 										100%;
 	}
 	
 	.size-half-s,
@@ -4165,7 +4202,6 @@ iframe#podium-modal {
 	.size-quarter-s,
 	.size-quarter-f,
 	.size-third-s,
-
 	.size-third-f {
 		float:										none !important;
 		margin: 									1.5em auto !important;

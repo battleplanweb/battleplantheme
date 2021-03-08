@@ -13,7 +13,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 --------------------------------------------------------------*/
 
-
 /*--------------------------------------------------------------
 # Basic site functionality
 --------------------------------------------------------------*/
@@ -694,7 +693,17 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	window.prepareJSON = function (data) {
 		data = data.replace(/%7B/g, '{').replace(/%7D/g, '}').replace(/%22/g, '"').replace(/%3A/g, ':').replace(/%2C/g, ',');				
 		return $.parseJSON(data);
-	};					
+	};		
+	
+	// Set up Review Questions & Redirect
+	$('.review-form:first').addClass('active');
+	$('.review-form #gmail-yes').click(function() { window.location.href = "/google"; });	
+	$('.review-form #facebook-yes').click(function() { window.location.href = "/facebook"; });
+	
+	$('.review-form #gmail-no, .review-form #facebook-no').click(function() {
+		$(this).closest('.review-form').removeClass('active');
+		$(this).closest('.review-form').next().addClass('active');			
+	});
 
 /*--------------------------------------------------------------
 # DOM level functions

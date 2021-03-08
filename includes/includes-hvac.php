@@ -343,7 +343,43 @@ function battleplan_hvac_column_settings() {
 	) );
 }
 
-// Add Wells Fargo Ad to Sidebar
+// Add Brand Logo widget to Sidebar
+add_shortcode( 'get-brand-logo', 'battleplan_getBrandLogo' );
+function battleplan_getBrandLogo() {	
+	$brand = strtolower(str_replace(" ", "-", get_option('site_brand')));
+	$name = ucwords(get_option('site_brand'));
+	return '<img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo.png" alt="We offer '.$name.' heating and air conditioning products." />';
+}
+
+// Add Symptom Checker widget to Sidebar
+add_shortcode( 'get-symptom-checker', 'battleplan_getSymptomChecker' );
+function battleplan_getSymptomChecker() {	
+	$brand = strtolower(str_replace(" ", "-", get_option('site_brand')));
+	return '<a href="/symptom-checker/"><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/symptom-checker.jpg" alt="Click to troubleshoot common HVAC problems." /></a>';
+}
+
+// Add Customer Care Dealer widget to Sidebar
+add_shortcode( 'get-customer-care', 'battleplan_getCustomerCare' );
+function battleplan_getCustomerCare() {	
+	return '<a href="/customer-care-dealer/"><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-american-standard/customer-care-dealer-logo-alt.png" alt="We are proud to be an American Standard Customer Care Dealer" /></a>';
+}
+
+// Add Financing widget to Sidebar
+add_shortcode( 'get-financing', 'battleplan_getFinancing' );
+function battleplan_getFinancing($atts, $content = null) {
+	$a = shortcode_atts( array( 'bank'=>'', 'link'=>''  ), $atts );
+	$bank = esc_attr($a['bank']);
+	$img = strtolower(str_replace(" ", "-", $bank));
+	$link = esc_attr($a['link']);	
+	
+	$buildFinancing = '<a href="'.$link.'">';
+	$buildFinancing .= '<img class="noFX" src="/wp-content/themes/battleplantheme/common/financing/'.$img.'.png" alt="Apply for financing for your HVAC needs at '.$bank.'" />';
+	$buildFinancing .= '</a>';
+	
+	return $buildFinancing;
+}
+
+// Add Wells Fargo widget to Sidebar
 add_shortcode( 'get-wells-fargo', 'battleplan_getWellsFargo' );
 function battleplan_getWellsFargo($atts, $content = null) {
 	$a = shortcode_atts( array( 'graphic1'=>'', 'graphic2'=>'', 'link'=>'', 'class'=>''  ), $atts );
@@ -363,7 +399,6 @@ function battleplan_getWellsFargo($atts, $content = null) {
 	$output = '<a href="#" class="financing-link" onclick="trackClicks(\'link\', \'Offsite Link\', \'Wells Fargo\', \''.$link.'\'); return false;"><img src="/wp-content/themes/battleplantheme/common/financing/'.$ad.'" alt="'.$alt.'" '.$class.'/></a>';
 	return $output; 
 }
-
 
 /*--------------------------------------------------------------
 # Basic Theme Set Up

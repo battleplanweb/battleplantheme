@@ -725,6 +725,22 @@ function battleplan_column_settings() {
 					'name'=>'website',
 					'label_type'=>'',
 					'search'=>'on'
+				),
+				'platform'=>array(
+					'type'=>'column-meta',
+					'label'=>'Platform',
+					'width'=>'',
+					'width_unit'=>'%',
+					'field'=>'testimonial_platform',
+					'field_type'=>'',
+					'before'=>'',
+					'after'=>'',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'platform',
+					'label_type'=>'',
+					'search'=>'on'
 				)
 			),
 			'layout'=>array(
@@ -1927,6 +1943,47 @@ function battleplan_setupElements() {
 		wp_delete_attachment( getID('Facebook-Like-Us-3'), true );
 
 		update_option( 'bp_setup_2021_03_07', 'completed' );
+	endif;	
+	
+	if ( get_option( 'bp_setup_2021_03_08' ) != 'completed' ) :
+		wp_delete_attachment( getID('as-product-display-384x247'), true );
+		wp_delete_attachment( getID('symptom-checker'), true );
+		wp_delete_attachment( getID('cc-visa'), true );
+		wp_delete_attachment( getID('cc-mc'), true );
+		wp_delete_attachment( getID('cc-discover'), true );
+		wp_delete_attachment( getID('cc-amex'), true );
+		wp_delete_attachment( getID('as-customer-care-logo-horizontal'), true );
+		wp_delete_attachment( getID('as-customer-care-logo-640x640'), true );
+		wp_delete_attachment( getID('AS-Customer-Care-Logo-258x258'), true );
+		wp_delete_attachment( getID('american-standard-logo'), true );
+		wp_delete_attachment( getID('AS-Logo-900x168-1'), true );
+	
+		$args = array(
+			'posts_per_page'	=> -1,
+			'post_type'			=> 'testimonials',
+		);
+	
+		$the_query = new WP_Query( $args );
+		if( $the_query->have_posts() ): 
+			while( $the_query->have_posts() ) : $the_query->the_post();		
+	
+				$loc = readMeta( get_the_ID(), 'testimonial_location');	
+				if ( $loc == "Google Review" ) :	
+					updateMeta( get_the_ID(), 'testimonial_location', '');		
+					updateMeta( get_the_ID(), 'testimonial_platform', 'Google');		
+				endif;
+	
+				$platform = readMeta( get_the_ID(), 'testimonial_platform');	
+				if ( $platform == "" ) :	
+					updateMeta( get_the_ID(), 'testimonial_platform', 'Facebook');		
+				endif;
+	
+			endwhile; 
+		endif; 
+		wp_reset_query();	 // Restore global post data stomped by the_post(). 
+
+		update_option( 'bp_setup_2021_03_08', 'completed' );
+	
 	endif;
 }
 

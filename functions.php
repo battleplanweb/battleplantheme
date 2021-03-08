@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.0.1' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.1' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -406,6 +406,8 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		$testimonialBiz = esc_attr(get_field( "testimonial_biz" ));
 		$testimonialWeb = esc_attr(get_field( "testimonial_website" ));
 		$testimonialLoc = esc_attr(get_field( "testimonial_location" ));
+		$testimonialPlatform = esc_attr(get_field( "testimonial_platform" ));
+		$testimonialPlatform = strtolower($testimonialPlatform);
 		$testimonialRate = esc_attr(get_field( "testimonial_rating" ));	
 		$testimonialMisc1 = esc_attr(get_field( "testimonial_misc1" ));	
 		$testimonialMisc2 = esc_attr(get_field( "testimonial_misc2" ));	
@@ -431,7 +433,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		if ( $testimonialMisc4 ) $buildCredentials .= "<div class='testimonials-credential testimonials-misc4'>".$testimonialMisc4."</div>";
 		if ( $testimonialRate ) $buildCredentials .= "<div class='testimonials-credential testimonials-rating'>".$testimonialRate."</div>";	
 
-		$archiveBody = '[txt class="testimonials-quote"][p]'.apply_filters('the_content', get_the_content()).'[/p][/txt][txt class="testimonials-credentials"]'.$buildCredentials.'[/txt]';
+		$archiveBody = '[txt class="testimonials-quote"][p]'.apply_filters('the_content', get_the_content()).'[/p][/txt][txt size="11/12" class="testimonials-credentials"]'.$buildCredentials.'[/txt][txt size="1/12" class="testimonials-platform testimonials-platform-'.$testimonialPlatform.'"][/txt]';
 	} else {
 		if ( $accordion == "true" ) :		
 			$title = esc_html(get_the_title());
@@ -937,6 +939,34 @@ function battleplan_coupon( $atts, $content = null ) {
 	');
 }
 
+// Add Emergency Service widget to Sidebar
+add_shortcode( 'get-emergency-service', 'battleplan_getEmergencyService' );
+function battleplan_getEmergencyService( $atts, $content = null ) {	
+	$a = shortcode_atts( array( 'graphic'=>'1' ), $atts );
+	$graphic = esc_attr($a['graphic']);
+
+	return '<img class="noFX" src="/wp-content/themes/battleplantheme/common/logos/24-hr-service-'.$graphic.'.png" alt="We provide 24/7 emergency service" />';
+}
+
+// Add Credit Cards widget to Sidebar
+add_shortcode( 'get-credit-cards', 'battleplan_getCreditCards' );
+function battleplan_getCreditCards( $atts, $content = null ) {	
+	$a = shortcode_atts( array( 'mc'=>'yes', 'visa'=>'yes', 'discover'=>'yes', 'amex'=>'yes' ), $atts );
+	$mc = esc_attr($a['mc']);
+	$visa = esc_attr($a['visa']);
+	$discover = esc_attr($a['discover']);
+	$amex = esc_attr($a['amex']);
+
+	$buildCards = '<div id="credit-cards">';
+	if ( $mc == "yes" ) $buildCards .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-mc.png" alt="We accept Mastercard"/>';
+	if ( $visa == "yes" ) $buildCards .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-visa.png" alt="We accept Visa"/>';	
+	if ( $discover == "yes" ) $buildCards .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-discover.png" alt="We accept Discover" />';	
+	if ( $amex == "yes" ) $buildCards .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-amex.png" alt="We accept American Express" />';
+	$buildCards .= '</div>';  					  
+													  
+	return $buildCards;
+}
+
 /*--------------------------------------------------------------
 # Functions to extend WordPress 
 --------------------------------------------------------------*/
@@ -1322,6 +1352,26 @@ function battleplan_add_acf_fields() {
 				'required' => 0,
 				'conditional_logic' => 0,
 				'formatting' => 'html',
+			),
+			array(
+				'key' => 'field_981frha7553v6',
+				'label' => 'Platform',
+				'name' => 'testimonial_platform',
+				'type' => 'radio',
+				'instructions' => 'What platform did this testimonial come from?',
+				'required' => 0,
+				'conditional_logic' => 0,
+				'choices' => array(
+					'None' => 'None',
+					'Facebook' => 'Facebook',
+					'Google' => 'Google',
+				),
+				'other_choice' => 0,
+				'save_other_choice' => 0,
+				'default_value' => 0,
+				'layout' => 'horizontal',
+				'allow_null' => 0,
+				'return_format' => 'value',
 			),
 			array(
 				'key' => 'field_580deec4986b5',
@@ -2062,7 +2112,7 @@ function battleplan_getGoogleRating() {
 		$today = strtotime(date("F j, Y"));	
 		$daysSinceCheck = $today - $dateChecked;
 
-		if ( $daysSinceCheck < -6 ) :
+		if ( $daysSinceCheck < 6 ) :
 			$rating = readMeta($siteHeader, "google-review-rating");	
 			$number = readMeta($siteHeader, "google-review-number");		
 		else:	
@@ -2112,10 +2162,14 @@ function battleplan_getGoogleRating() {
 }
 
 // Set up review re-directs
-$currPage = $_SERVER['REQUEST_URI'];
-if ( $currPage == "/facebook" && do_shortcode('[get-biz info="facebook"]') != "" ) : wp_redirect( do_shortcode('[get-biz info="facebook"]')."reviews/", 301 ); exit; endif;
-if ( $currPage == "/google" && do_shortcode('[get-biz info="pid"]') != "" ) : wp_redirect( "https://search.google.com/local/reviews?placeid=".do_shortcode('[get-biz info="pid"]')."&hl=en&gl=US", 301 ); exit; endif;
-
+$currPage = str_replace('/', '', $_SERVER['REQUEST_URI']);
+if ( $currPage == "facebook" && do_shortcode('[get-biz info="facebook"]') != "" ) : 
+	$facebook = do_shortcode('[get-biz info="facebook"]');
+	if ( substr($facebook, -1) != '/') $facebook .= "/";
+	wp_redirect( $facebook."reviews/", 301 ); 
+	exit; 
+endif;
+if ( $currPage == "google" && do_shortcode('[get-biz info="pid"]') != "" ) : wp_redirect( "https://search.google.com/local/reviews?placeid=".do_shortcode('[get-biz info="pid"]')."&hl=en&gl=US", 301 ); exit; endif;
 
 /*--------------------------------------------------------------
 # Custom Hooks

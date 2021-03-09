@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.1' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.1.1' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -944,8 +944,16 @@ add_shortcode( 'get-emergency-service', 'battleplan_getEmergencyService' );
 function battleplan_getEmergencyService( $atts, $content = null ) {	
 	$a = shortcode_atts( array( 'graphic'=>'1' ), $atts );
 	$graphic = esc_attr($a['graphic']);
-
 	return '<img class="noFX" src="/wp-content/themes/battleplantheme/common/logos/24-hr-service-'.$graphic.'.png" alt="We provide 24/7 emergency service" />';
+}
+
+// Add BBB widget to Sidebar
+add_shortcode( 'get-bbb', 'battleplan_getBBB' );
+function battleplan_getBBB( $atts, $content = null ) {	
+	$a = shortcode_atts( array( 'link'=>'', 'graphic'=>'1' ), $atts );
+	$link = esc_attr($a['link']);
+	$graphic = esc_attr($a['graphic']);
+	return '<a href="'.$link.'"><img src="/wp-content/themes/battleplantheme/common/logos/bbb-'.$graphic.'.png" alt="We are accredited with the Better Business Bureau with an A+ rating" /></a>';
 }
 
 // Add Credit Cards widget to Sidebar
@@ -1365,6 +1373,7 @@ function battleplan_add_acf_fields() {
 					'None' => 'None',
 					'Facebook' => 'Facebook',
 					'Google' => 'Google',
+					'Nextdoor' => 'Nextdoor',
 				),
 				'other_choice' => 0,
 				'save_other_choice' => 0,

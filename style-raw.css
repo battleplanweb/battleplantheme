@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 8.1
+Version: 8.1.1
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -1463,29 +1463,29 @@ section.section-edge .flex {
 .col-inner .block-image,
 .thumb-left .col-inner .block-image,
 .thumb-right .col-inner .block-group,
-.thumb-right .col-inner .block-text,
+.thumb-right .col-inner > .block-text,
 .thumb-right .col-inner .block-image.span-12,
 .switch-thumb .col-inner .block-group,
-.switch-thumb .col-inner .block-text,
+.switch-thumb .col-inner > .block-text,
 .thumb-left .switch-thumb .col-inner .block-group,
-.thumb-left .switch-thumb .col-inner .block-text,
+.thumb-left .switch-thumb .col-inner > .block-text,
 .thumb-right .switch-thumb .col-inner .block-image,
 .thumb-right .switch-thumb .col-inner .block-group.span-12,
-.thumb-right .switch-thumb .col-inner .block-text.span-12 {
+.thumb-right .switch-thumb .col-inner > .block-text.span-12 {
 	order:										1;
 }
 
 .col-inner .block-group,
-.col-inner .block-text,
+.col-inner > .block-text,
 .thumb-left .col-inner .block-group,
-.thumb-left .col-inner .block-text,
+.thumb-left .col-inner > .block-text,
 .thumb-right .col-inner .block-image,
 .thumb-right .col-inner .block-group.span-12,
-.thumb-right .col-inner .block-text.span-12,
+.thumb-right .col-inner > .block-text.span-12,
 .switch-thumb .col-inner .block-image,
 .thumb-left .switch-thumb .col-inner .block-image,
 .thumb-right .switch-thumb .col-inner .block-group,
-.thumb-right .switch-thumb .col-inner .block-text,
+.thumb-right .switch-thumb .col-inner > .block-text,
 .thumb-right .switch-thumb .col-inner .block-image.span-12 {
 	order:										2;
 }
@@ -2898,6 +2898,7 @@ img.noFX,
 	margin-bottom:								0; /* Air Right 1/27/21 */
 	margin-left: 								auto;
 
+
 	margin-right: 								auto;
 }
 
@@ -2914,9 +2915,7 @@ img.noFX,
 .testimonials-credentials {
 	text-align:									right;
 	color:										#000000;
-}
-
-.testimonials-credentials > * {
+	grid-column:								span 11 !important;
 }
 
 .testimonials-quote p:first-of-type::before {
@@ -2933,7 +2932,6 @@ img.noFX,
 .testimonials-name {
 	font-weight:								bold;
 	font-size:									120%;
-	padding-right:								4px;
 }
 
 .testimonials-location {
@@ -2942,12 +2940,14 @@ img.noFX,
 
 .testimonials-rating {
 	color:										#000000;
+	margin-right:								-5px;
 }
 
 .testimonials-platform {
-	margin:										14px 0 0;
+	margin:										14px 1px 0;
 	width:										30px;
 	height:										30px;
+	grid-column:								span 1 !important;
 }
 
 .testimonials-platform-facebook {
@@ -2957,6 +2957,11 @@ img.noFX,
 
 .testimonials-platform-google {
 	background:									url('../battleplantheme/common/logos/google.png');
+	background-size:							contain;
+}
+
+.testimonials-platform-nextdoor {
+	background:									url('../battleplantheme/common/logos/nextdoor.png');
 	background-size:							contain;
 }
 
@@ -3720,6 +3725,10 @@ iframe#podium-modal {
 	margin-bottom:								10px;
 }
 
+.review-form button {
+	margin:										0 5px;
+}
+
 /*--------------------------------------------------------------
 # Mobile Styles
 --------------------------------------------------------------*/
@@ -3987,6 +3996,7 @@ iframe#podium-modal {
 	}	
 	
 	/* Galleries */
+
 	.grid-6e,
 	.grid-7e,
 	.grid-8e,

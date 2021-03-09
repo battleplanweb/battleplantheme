@@ -5,8 +5,9 @@
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
 # Product Overview
-# American Standard Customer Care Teaser
+# American Standard Customer Care
 # Why Choose American Standard
+# Ruud Pro Partner
 # HVAC Maintenance Tips Teaser
 # HVAC Tip Of The Month
 # Register Custom Post Types
@@ -39,7 +40,7 @@ function battleplan_product_overview( $atts, $content = null ) {
 
 
 /*--------------------------------------------------------------
-# American Standard Customer Care Teaser
+# American Standard Customer Care
 --------------------------------------------------------------*/
 add_shortcode( 'american-standard-customer-care', 'battleplan_american_standard_customer_care' );
 function battleplan_american_standard_customer_care( $atts, $content = null ) {
@@ -61,16 +62,30 @@ function battleplan_why_choose_as( $atts, $content = null ) {
 	$img = esc_attr($a['img']);
 	$alt = esc_attr($a['alt']);
 	
-	if ( $img != "" ) :	$img = "/wp-content/uploads/".$img;
-	else: $img = "/wp-content/themes/battleplantheme/common/hvac-american-standard/why-choose-american-standard-logo.png";
+	if ( $img == "grey" ) : $img = "/wp-content/themes/battleplantheme/common/hvac-american-standard/why-choose-american-standard-logo-grey.png";
+	elseif ( $img == "white" ) : $img = "/wp-content/themes/battleplantheme/common/hvac-american-standard/why-choose-american-standard-logo-white.png";
+	elseif ( $img == "" ) :	$img = "/wp-content/themes/battleplantheme/common/hvac-american-standard/why-choose-american-standard-logo.png";
+	else: $img = "/wp-content/uploads/".$img;
 	endif;
 	
 	return include "wp-content/themes/battleplantheme/includes/includes-why-choose-american-standard.php";
-}				
+}		
+
+
+/*--------------------------------------------------------------
+# Ruud Pro Partner
+--------------------------------------------------------------*/
+add_shortcode( 'ruud-pro-partner', 'battleplan_ruud_pro_partner' );
+function battleplan_ruud_pro_partner( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'type'=>'', ), $atts );
+	$type = esc_attr($a['type']);
+
+	return include "wp-content/themes/battleplantheme/includes/includes-ruud-pro-partner.php";
+}			
 	
 	
 /*--------------------------------------------------------------
-# HVAC Maintenance Tips Teaser
+# HVAC Maintenance Tips 
 --------------------------------------------------------------*/
 add_shortcode( 'hvac-maintenance-tips', 'battleplan_hvac_maintenance_tips' );
 function battleplan_hvac_maintenance_tips( $atts, $content = null ) {
@@ -345,10 +360,13 @@ function battleplan_hvac_column_settings() {
 
 // Add Brand Logo widget to Sidebar
 add_shortcode( 'get-brand-logo', 'battleplan_getBrandLogo' );
-function battleplan_getBrandLogo() {	
+function battleplan_getBrandLogo($atts, $content = null) {
+	$a = shortcode_atts( array( 'alt'=>'' ), $atts );
+	$alt = esc_attr($a['alt']);
+	if ( $alt != '' ) $alt="-".$alt;
 	$brand = strtolower(str_replace(" ", "-", get_option('site_brand')));
 	$name = ucwords(get_option('site_brand'));
-	return '<img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo.png" alt="We offer '.$name.' heating and air conditioning products." />';
+	return '<img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$alt.'.png" alt="We offer '.$name.' heating and air conditioning products." />';
 }
 
 // Add Symptom Checker widget to Sidebar
@@ -371,10 +389,11 @@ function battleplan_getFinancing($atts, $content = null) {
 	$bank = esc_attr($a['bank']);
 	$img = strtolower(str_replace(" ", "-", $bank));
 	$link = esc_attr($a['link']);	
+	$buildFinancing = "";
 	
-	$buildFinancing = '<a href="'.$link.'">';
-	$buildFinancing .= '<img class="noFX" src="/wp-content/themes/battleplantheme/common/financing/'.$img.'.png" alt="Apply for financing for your HVAC needs at '.$bank.'" />';
-	$buildFinancing .= '</a>';
+	if ( $link != "" ) $buildFinancing .= '<a href="'.$link.'">';
+	$buildFinancing .= '<img src="/wp-content/themes/battleplantheme/common/financing/'.$img.'.png" alt="Apply for financing for your HVAC needs at '.$bank.'" />';
+	if ( $link != "" ) $buildFinancing .= '</a>';
 	
 	return $buildFinancing;
 }

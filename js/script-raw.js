@@ -285,7 +285,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 // Animate the automated scrolling to section of content
 	window.animateScroll = function (target, topSpacer, initSpeed) {
-		var newTop=0, newLoc=0, transSpeed;
+		var newTop=0, newLoc=0;
 		initSpeed = initSpeed || 0;
 		topSpacer = topSpacer || 0;
 		topSpacer = topSpacer + mobileMenuBarH;	
@@ -300,17 +300,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			newLoc = target - newTop - topSpacer;
 		}
 		
-		window.scroll({ top: newLoc, left: 0, behavior: 'smooth' }); /* replaced 12/30/20 */	
-		
-		//if ( initSpeed == 0 ) { 
-		//	transSpeed = Math.abs(( $(window).scrollTop() - newLoc )) / 3;
-		//	if ( transSpeed < 500 ) { transSpeed = 500; }
-		//	if ( transSpeed > 1500 ) { transSpeed = 1500; }
-		//} else {
-		//	transSpeed = initSpeed;
-		//}
-
-		//$('html, body').stop().animate({ 'scrollTop': newLoc }, transSpeed, 'swing', function() { screenResize(); });
+		window.scroll({ top: newLoc, left: 0, behavior: 'smooth' }); 
 	};
 
 // Set up "Back To Top" button
@@ -609,53 +599,55 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 // Set up Logo Slider
 	$('.logo-slider').each(function() {
-		var logoSlider = $(this), logoRow = logoSlider.find('.logo-row'), logoNum = logoRow.children().length, logoW=logoNum * 1000, speed = parseInt(logoSlider.attr('data-speed')), delay = parseInt(logoSlider.attr('data-delay')), pause = logoSlider.attr('data-pause'), origPadding = parseInt(logoSlider.attr('data-padding')), easingType = "swing", rotating = true;
-
-		logoRow.css('width', logoW);
-		speed = speed * 1000;
-
-		if ( delay == "0" ) { easingType = "linear"; } else { delay = delay * 1000; }
+		var logoSlider = $(this), logoRow = logoSlider.find('.logo-row'), speed = logoSlider.attr('data-speed'), delay = (parseInt(logoSlider.attr('data-delay'))) * 1000, maxW = getDeviceW() * (parseInt(logoSlider.attr('data-maxw')) / 100), pause = logoSlider.attr('data-pause'), spacing = getDeviceW() * (parseInt(logoSlider.attr('data-spacing')) / 100), easing = "swing", moving = true, firstLogo, secondLogo, largestW = 0, checkW = 0, thisW = 0, firstPos = 0, secondPos = 0, space = 0, containerW = 0, logoW = 0;
+		
+		logoRow.css({'opacity': 0});
+		
+		if ( delay == "0" ) { easing = "linear"; } 
 		if ( pause == "yes" || pause == "true" ) {
-			logoSlider.mouseover(function() { rotating = false; });
-			logoSlider.mouseout(function() { rotating = true; });
-		}
+			logoSlider.mouseover(function() { moving = false; });
+			logoSlider.mouseout(function() { moving = true; });
+		}		
+		if ( getDeviceW() < mobileCutoff ) { spacing = spacing * 1.5; }
 
-		var moveLogos = setInterval(function() {	
-			if ( rotating != false ) {
-				var $first = logoRow.find('> span:first');
-				var containerW = $first.outerWidth();
-				$first.animate({ 'margin-left': -containerW+'px'}, speed, easingType, function() {
-					$first.remove().css({ 'margin-left': '0px' });
-					logoRow.find('> span:last').after($first);
-				});
-			} 	
-		}, delay);
-
-		window.checkLogoSlider = function () {
-			var containerH = 0, totalW=0, imgW=0, setPadding=0;
-			logoRow.find('span').each( function() {
-				var thisSpan = $(this);
-				imgW = imgW + thisSpan.width();				
-				totalW = totalW + thisSpan.width() + (origPadding * 2);
-				if (thisSpan.height() > containerH) { containerH = thisSpan.height(); }
+		setTimeout(function() { 
+			logoSlider.find('span').find('img').each(function() { 
+				thisW = parseInt($(this).attr('width'));
+				if ( thisW > maxW ) { thisW = maxW; $(this).width(thisW); }
+				if ( thisW > largestW ) { largestW = thisW; }
+				logoW = logoW + spacing + thisW; 
 			});
-			logoRow.find('span').each( function() {
-				var thisSpan = $(this);
-				var diffH = (containerH - thisSpan.height()) / 2;
-				$(this).find('img').css({'margin-top':diffH+'px', 'margin-bottom':diffH+'px'});
-			});				
-			if ( totalW < getDeviceW() ) {
-				rotating = false;
-				setPadding = (getDeviceW() - imgW) / logoNum / 2;			
-				logoRow.find('span').css({'padding-left':setPadding+'px', 'padding-right':setPadding+'px'});
-			} else {
-				rotating = true;
-				logoRow.find('span').css({'padding-left':origPadding+'px', 'padding-right':origPadding+'px'});
-			}
-		};			
 
-		$(window).on( 'load', function() { checkLogoSlider(); });
-		$(window).resize(function() { checkLogoSlider(); }); 			
+			setTimeout(function() { 
+				checkW = getDeviceW() + largestW + spacing;
+				if ( logoW < checkW ) { logoW = checkW; }
+				logoRow.css('width', logoW); 
+				
+				if ( speed == "slow" ) { speed = logoW * 3;
+				} else if ( speed == "fast" ) { speed = logoW * 1.5;
+				} else { speed = logoW * (parseInt(speed)); }
+				
+				logoRow.animate({ 'opacity': 1}, 300);
+
+				function moveLogos() {
+					if ( moving != false ) {								
+						firstLogo = logoRow.find('span:nth-of-type(1)');
+						firstPos = firstLogo.position().left + firstLogo.width();
+						secondLogo = logoRow.find('span:nth-of-type(2)');
+						secondPos = secondLogo.position().left;	
+						containerW = firstLogo.width() + secondPos - firstPos; 	
+						
+						logoRow.animate({ 'margin-left': -containerW+'px'}, speed, easing, function() {
+							firstLogo.remove();
+							logoRow.find('span:last').after(firstLogo);
+							logoRow.css({ 'margin-left': '0px' });
+						});						
+					} 	
+				}
+				if ( delay > 0 ) { delay = delay + speed; moveLogos(); }
+				var advanceLogos = setInterval( moveLogos, delay );
+			}, 10);
+		}, 1500);
 	});
 
 	// Filter Post Archive entries according to class (hide all, arrange, show all)  ** Mill Pond Retrievers dog / litter archive
@@ -930,6 +922,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			var thisDiv = $(this.element);	
 			thisDiv.css({ "transition-duration": speed+"s"});
 			setTimeout( function () { thisDiv.removeClass('animate'); }, initDelay);			
+
 			this.destroy();
 		}, { offset: offset });
 	};
@@ -1037,6 +1030,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	$('.col-92').addClass('span-11').removeClass('col-92');
 	$('.col-100').addClass('span-12').removeClass('col-100');
 
+
 // Remove empty elements
 	removeDiv('p:empty, .archive-intro:empty');
 
@@ -1109,12 +1103,38 @@ if ( $('body').hasClass('remove-sidebar') ) {
 	$('a[href^="#"]:not(.carousel-control-next):not(.carousel-control-prev)').on('click', function (e) {
 		e.preventDefault();    
 		var target = this.hash;
-		if ( target != "" ) { animateScroll(target); }
+		if ( target != "" ) { 
+			 if ( $('*'+target).length ) { 
+				animateScroll(target); 
+				setTimeout(function(){ animateScroll(target); }, 100); /* helps re-calculate in case there is a .stuck to account for (Executive Mobile Detailing) */
+			 } else {
+				 window.location.href = "/"+target;
+			}
+		}
 	});
 
 // Automatically adjust for Google review bar 
-
 	$( '<div class="wp-google-badge-faux"></div>' ).insertAfter( $('#colophon'));
+	
+// Control Menu Buttons on "one page" site		
+	if ( $('.menu-item a[href^="#"]').is(':visible') ) { 
+		var menu = $('nav:visible').find('ul'), whenToChange = $(window).outerHeight() * 0.35, menuHeight = menu.outerHeight()+whenToChange, menuItems = menu.find('a[href^="#"]'), scrollItems = menuItems.map(function(){ var item = $($(this).attr("href")); if ( $(this).parent().css('display') != "none" ) { return item; } });
+		
+		$(window).scroll(function() { 
+			var fromTop = $(this).scrollTop()+menuHeight, thisHash, changeMenu; 
+			var cur = scrollItems.map(function() {  
+				if ( $(this).offset().top < fromTop ) { 
+					thisHash = "#"+$(this)[0].id;
+					clearTimeout(changeMenu);
+					changeMenu = setTimeout(function(){ 
+						menu.find('li').removeClass('current-menu-item').removeClass('current_page_item').removeClass('active');
+						menu.find('a[href^="'+thisHash+'"]').closest('li').addClass('current-menu-item').addClass('current_page_item').addClass('active'); 
+					}, 10);	
+					closeMenu();// auto close mobile menu
+				}
+			});
+		});
+	};
 
 // Set up mobile menu animation
 	window.closeMenu = function () {

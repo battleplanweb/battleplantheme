@@ -44,12 +44,14 @@ $printPage = '
 	  <p>High-efficiency filters remove more of the smaller particles from the air. This will help us breathe better and reduce sinus problems, headaches and colds. Many people miss fewer days from school and work and use less allergy medication. The air is filtered before entering the air conditioning and furnace.</p>
 	[/accordion]
 
-	[accordion title="How much am I overpaying on utility bills?"]
-	  <p>For any system that is in excess of 10 years old, unfortunately you are paying an average of 30% more on your overall utility expenses due to a lack in efficiency standard. For example, by upgrading a unit which has a 10 SEER rating to a new updated system with a minimum of 13 SEER, you will see a savings of at least 30%. An important point to remember is that when you upgrade to a 13 SEER or higher, you must install an ARI matched system.</p>
+	[accordion title="Why is regular maintenance important?"]
+	  <p>Just like you take your car to the shop for oil changes and tune-ups, your home comfort system should receive the same kind of attention. Scheduled maintenance by a trained technician provides a variety of benefits to your HVAC equipment, which can help your systems perform efficiently and prevent costly breakdowns.</p>	  
+	  
+	  <p>To ensure your system operates at its maximum efficiency, our experts at [get-biz info="name"] recommend a thorough check-up twice a year. Ask us about our preventative maintenance agreement, which will provide two scheduled visits per year plus a number of cost saving perks!</p>
 	[/accordion]
 
-	[accordion title="How often should my system be checked?"]
-	  <p>In able to ensure your system maintains a maximum operating standard, our experts at [get-biz info="name"] recommend a thorough check-up at least twice a year. In doing so, we have designed our preventative maintenance agreement that will do exactly that! Our preventative maintenance agreement will provide two scheduled visits each year.</p>
+	[accordion title="How much am I overpaying on utility bills?"]
+	  <p>For any system that is in excess of 10 years old, unfortunately you are paying an average of 30% more on your overall utility expenses due to a lack in efficiency standard. For example, by upgrading a unit which has a 10 SEER rating to a new updated system with a minimum of 13 SEER, you will see a savings of at least 30%. An important point to remember is that when you upgrade to a 13 SEER or higher, you must install an ARI matched system.</p>
 	[/accordion]
 	';
  

@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 8.1.1
+Version: 8.2
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -1001,8 +1001,13 @@ ul.tabs li.disabled {
 }
 
 div.wpcf7 .ajax-loader {
-	width:										16px;
-	margin-right:								-16px;
+	width:										0;
+	margin:										0;
+}
+
+div.wpcf7 .form-submitting .ajax-loader {
+	width:										24px;
+	margin:										0 24px;
 }
 
 .wpcf7-not-valid-tip {
@@ -1606,6 +1611,8 @@ section.section-edge .flex {
 }
 
 .widget-box .widget {
+
+
 	margin:										1.5em auto;
 }
 
@@ -2743,7 +2750,7 @@ img.unloaded {
 	margin: 									1.5em auto;
 }
 
-
+/*
 .size-quarter-s {
 	max-width:									240px;
 }
@@ -2796,6 +2803,40 @@ img.unloaded {
 .size-full-f, 
 .size-max {
 	width:										100%;
+}
+*/
+
+.align-left.size-half-f,
+.alignleft.size-half-f,
+.align-right.size-half-f,
+.alignright.size-half-f,
+.align-left.size-half-s,
+.alignleft.size-half-s,
+.align-right.size-half-s,
+.alignright.size-half-s {
+	max-width:									calc(50% - 1.5em);
+}
+
+.align-left.size-third-f,
+.alignleft.size-third-f,
+.align-right.size-third-f,
+.alignright.size-third-f,
+.align-left.size-third-s,
+.alignleft.size-third-s,
+.align-right.size-third-s,
+.alignright.size-third-s {
+	max-width:									33%;
+}
+
+.align-left.size-quarter-f,
+.alignleft.size-quarter-f,
+.align-right.size-quarter-f,
+.alignright.size-quarter-f,
+.align-left.size-quarter-s,
+.alignleft.size-quarter-s,
+.align-right.size-quarter-s,
+.alignright.size-quarter-s {
+	max-width:									25%;
 }
 
 .size-quarter-s img, 
@@ -3685,7 +3726,7 @@ iframe#podium-modal {
 
 /* Logo Slider
 --------------------------------------------- */
-.logo-slider,
+/*.logo-slider,
 .logo-slider .logo-row,
 .logo-slider .logo-row span {
 	position: 									relative;
@@ -3704,6 +3745,19 @@ iframe#podium-modal {
 	max-width: 									100%;
 	max-height: 								100%;
 	transition: 								0 linear left;
+}*/
+
+
+
+.logo-slider .logo-row {
+	display:									flex;
+	flex-flow: 									row nowrap;
+	justify-content:							space-between;
+	align-items:								center;
+}
+
+.logo-slider .logo-row span {
+	padding:									0 2%;
 }
 
 /* Review Questions & Redirect
@@ -3792,7 +3846,7 @@ iframe#podium-modal {
 		font-size: 									14px;
 	}
 	
-	/* Responsive Content w/ sidebar */
+	/* Responsive Content w/ sidebar 
 	.size-quarter-s,
 	.size-third-s {
 		width:										33%;
@@ -3801,6 +3855,7 @@ iframe#podium-modal {
 	.size-half-s {
 		width: 										40%;
 	}
+	*/
 	
 	/* Responsive Sections */
 	.flex.grid-1-1-1-1,
@@ -3953,7 +4008,7 @@ iframe#podium-modal {
 		margin-bottom:								2em;
 	}
 	
-	/* Responsive Content */
+	/* Responsive Content 
 	.size-quarter-s,
 	.size-quarter-f,
 	.size-third-s,
@@ -3964,7 +4019,7 @@ iframe#podium-modal {
 	.size-half-s,
 	.size-half-f {
 		width: 										45%;
-	}
+	}*/
 	
 	/* Responsive Sections */
 	.flex.grid-1-1-1 {
@@ -4062,7 +4117,7 @@ iframe#podium-modal {
 		max-width:									100% !important;
 	}
 	
-	/* Responsive Content */
+	/* Responsive Content 
 	.size-quarter-s,
 	.size-quarter-f,
 	.size-third-s,
@@ -4075,11 +4130,22 @@ iframe#podium-modal {
 		width: 										80%;
 	}
 	
-	.screen-mobile #primary .size-half-s,
-	.screen-mobile #primary .size-half-f {
+	.screen-mobile .size-half-s,
+	.screen-mobile .size-half-f {
 		float:										none;
 		margin: 									1.5em auto;
-	}	
+	}	*/
+	
+	.align-left.size-half-f,
+	.alignleft.size-half-f,
+	.align-right.size-half-f,
+	.alignright.size-half-f,
+	.align-left.size-half-s,
+	.alignleft.size-half-s,
+	.align-right.size-half-s,
+	.alignright.size-half-s {
+		max-width:									40%;
+	}
 			
 	/* Responsive Sections */
 	.flex.grid-3-1,
@@ -4228,7 +4294,7 @@ iframe#podium-modal {
 		height:										300px !important;
 	}
 	
-	/* Responsive Content */
+	/* Responsive Content 
 	.size-quarter-s,
 	.size-quarter-f,
 	.size-third-s,
@@ -4242,6 +4308,9 @@ iframe#podium-modal {
 		width: 										100%;
 	}
 	
+			
+
+	
 	.size-half-s,
 	.size-half-f,
 	.size-quarter-s,
@@ -4250,7 +4319,44 @@ iframe#podium-modal {
 	.size-third-f {
 		float:										none !important;
 		margin: 									1.5em auto !important;
-	}	
+	}	*/
+	
+	.align-left.size-half-f,
+	.alignleft.size-half-f,
+	.align-right.size-half-f,
+	.alignright.size-half-f,
+	.align-left.size-half-s,
+	.alignleft.size-half-s,
+	.align-right.size-half-s,
+	.alignright.size-half-s {
+		max-width:									100%;
+		float:										none !important;
+		margin: 									1.5em auto !important;
+	}
+	
+	.align-left.size-third-f,
+	.alignleft.size-third-f,
+	.align-right.size-third-f,
+	.alignright.size-third-f,
+	.align-left.size-third-s,
+	.alignleft.size-third-s,
+	.align-right.size-third-s,
+	.alignright.size-third-s {
+		max-width:									65%;
+		float:										none !important;
+		margin: 									1.5em auto !important;
+	}
+
+	.align-left.size-quarter-f,
+	.alignleft.size-quarter-f,
+	.align-right.size-quarter-f,
+	.alignright.size-quarter-f,
+	.align-left.size-quarter-s,
+	.alignleft.size-quarter-s,
+	.align-right.size-quarter-s,
+	.alignright.size-quarter-s {
+		max-width:									calc(45% - 1.5em);
+	}
 	
 	/* Responsive Sections */
 	.flex .col {
@@ -4344,6 +4450,7 @@ iframe#podium-modal {
 @media screen and (min-width: 861px) and (max-width: 1024px) {
 	.hide-3 {
 		display:									none !important;
+
 	}
 }
 

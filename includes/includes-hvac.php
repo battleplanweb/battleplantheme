@@ -13,6 +13,12 @@
 # Register Custom Post Types
 # Import Advanced Custom Fields
 # Set Up Admin Columns
+# Widgets
+	- Brand Logo
+	- Symptom Checker
+	- Customer Care Dealer
+	- Financing widget
+	- Wells Fargo
 # Basic Theme Set Up
 
 --------------------------------------------------------------*/
@@ -358,6 +364,10 @@ function battleplan_hvac_column_settings() {
 	) );
 }
 
+/*--------------------------------------------------------------
+# Widgets
+--------------------------------------------------------------*/
+
 // Add Brand Logo widget to Sidebar
 add_shortcode( 'get-brand-logo', 'battleplan_getBrandLogo' );
 function battleplan_getBrandLogo($atts, $content = null) {
@@ -373,6 +383,7 @@ function battleplan_getBrandLogo($atts, $content = null) {
 add_shortcode( 'get-symptom-checker', 'battleplan_getSymptomChecker' );
 function battleplan_getSymptomChecker() {	
 	$brand = strtolower(str_replace(" ", "-", get_option('site_brand')));
+	if ( $brand == "" ) $brand = "american-standard";
 	return '<a href="/symptom-checker/"><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/symptom-checker.jpg" alt="Click to troubleshoot common HVAC problems." /></a>';
 }
 

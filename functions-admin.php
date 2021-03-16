@@ -1449,14 +1449,14 @@ function battleplan_admin_site_stats() {
 	$today = strtotime(date("F j, Y"));
 	$getViews = readMeta($siteHeader, 'log-views');
 	$getViews = maybe_unserialize( $getViews );
-	$viewsToday = number_format($getViews[0]['views']);
+	$viewsToday = $getViews[0]['views'];
 	$firstDate = strtotime($getViews[0]['date']);
 	if ( $firstDate != $today ) $viewsToday = 0;
-	$last7Views = number_format(readMeta($siteHeader, "log-views-total-7day"));
-	$last30Views = number_format(readMeta($siteHeader, "log-views-total-30day"));
-	$last90Views = number_format(readMeta($siteHeader, "log-views-total-90day"));	
-	$last180Views = number_format(readMeta($siteHeader, "log-views-total-180day"));	
-	$last365Views = number_format(readMeta($siteHeader, "log-views-total-365day"));
+	$last7Views = readMeta($siteHeader, "log-views-total-7day");
+	$last30Views = readMeta($siteHeader, "log-views-total-30day");
+	$last90Views = readMeta($siteHeader, "log-views-total-90day");	
+	$last180Views = readMeta($siteHeader, "log-views-total-180day");	
+	$last365Views = readMeta($siteHeader, "log-views-total-365day");
 	$lastViewed = readMeta($siteHeader, 'log-views-now');		
 	$dateDiff = (($rightNow - $lastViewed) / 60 / 60 / 24); $howLong = "day";
 	if ( $dateDiff < 1 ) : $dateDiff = (($rightNow - $lastViewed) / 60 / 60); $howLong = "hour"; endif;	
@@ -1466,13 +1466,13 @@ function battleplan_admin_site_stats() {
 	
 	echo "<table>";		
 	echo "<tr><td><b>Last Visitor</b></td><td><b>".$dateDiff."</b> ".$howLong." ago</td></tr>";			
-	echo "<tr><td><b>Today</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $viewsToday, 'battleplan' ), $viewsToday )."</td></tr>";	
+	echo "<tr><td><b>Today</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $viewsToday, 'battleplan' ), number_format($viewsToday))."</td></tr>";	
 	echo "<tr><td>&nbsp;</td></tr>";
-	echo "<tr><td><b>Last 7 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last7Views, 'battleplan' ), $last7Views )."</td></tr>";
-	if ( $last30Views != $last7Views) echo "<tr><td><b>Last 30 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last30Views, 'battleplan' ), $last30Views )."</td></tr>";
-	if ( $last90Views != $last30Views) echo "<tr><td><b>Last 90 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last90Views, 'battleplan' ), $last90Views )."</td></tr>";
-	if ( $last180Views != $last90Views) echo "<tr><td><b>Last 180 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last180Views, 'battleplan' ), $last180Views )."</td></tr>";
-	if ( $last365Views != $last180Views) echo "<tr><td><b>Last 365 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last365Views, 'battleplan' ), $last365Views )."</td></tr>";
+	echo "<tr><td><b>Last 7 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last7Views, 'battleplan' ), number_format($last7Views) )."</td></tr>";
+	if ( $last30Views != $last7Views) echo "<tr><td><b>Last 30 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last30Views, 'battleplan' ), number_format($last30Views) )."</td></tr>";
+	if ( $last90Views != $last30Views) echo "<tr><td><b>Last 90 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last90Views, 'battleplan' ), number_format($last90Views) )."</td></tr>";
+	if ( $last180Views != $last90Views) echo "<tr><td><b>Last 180 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last180Views, 'battleplan' ), number_format($last180Views) )."</td></tr>";
+	if ( $last365Views != $last180Views) echo "<tr><td><b>Last 365 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last365Views, 'battleplan' ), number_format($last365Views) )."</td></tr>";
 	echo "<tr><td>&nbsp;</td></tr>";
 	echo "<tr><td><b><u>Top 10 Most Visited Days</u></b></td><td>&nbsp;</td></tr>";
 
@@ -1512,11 +1512,11 @@ function battleplan_admin_speed_stats() {
 	$lastEmail = readMeta($siteHeader, "last-email");
 	$rightNow = strtotime(date("F j, Y g:i a"));
 	$today = strtotime(date("F j, Y"));
-	$daysSinceEmail = number_format((($rightNow - $lastEmail) / 60 / 60 / 24));
+	$daysSinceEmail = (($rightNow - $lastEmail) / 60 / 60 / 24);
 	$totalCounted = $desktopCounted + $mobileCounted;		
 	
 	echo "<table>";
-		echo "<tr><td><b>".$totalCounted."</b> pageloads in the last </td><td>".sprintf( _n( '<b>%s</b> day', '<b>%s</b> days', $daysSinceEmail, 'battleplan' ), $daysSinceEmail )."</td></tr>";
+		echo "<tr><td><b>".$totalCounted."</b> pageloads in the last </td><td>".sprintf( _n( '<b>%s</b> day', '<b>%s</b> days', $daysSinceEmail, 'battleplan' ), number_format($daysSinceEmail) )."</td></tr>";
 		echo "<tr><td>&nbsp;</td></tr>";
 		echo "<tr><td><b>Desktop</b></td><td><b>".$desktopSpeed."s</b> on ".sprintf( _n( '<b>%s</b> pageload', '<b>%s</b> pageloads', $desktopCounted, 'battleplan' ), $desktopCounted )."</td></tr>";
 		echo "<tr><td><b>Mobile</b></td><td><b>".$mobileSpeed."s</b> on ".sprintf( _n( '<b>%s</b> pageload', '<b>%s</b> pageloads', $mobileCounted, 'battleplan' ), $mobileCounted )."</td></tr>";
@@ -1565,7 +1565,7 @@ function battleplan_admin_trends_stats() {
 		$views = $views + $dailyViews;		
 		if ( $count == 1 ) $end = $dailyTime;
 		if ( $count == 7 ) :
-		 	echo "<tr><td class='dates'><b>".$dailyTime." - ".$end."</b></td><td class='visits'>".$views." visits</td></tr>";
+		 	echo "<tr><td class='dates'><b>".$dailyTime." - ".$end."</b></td><td class='visits'>".number_format($views)." visits</td></tr>";
  			$count = $views = 0;	
 			if ( $views < 1 ) : $cutoff++; if ( $dailyTime == "Jan 1, 1970" || $cutoff == 5) : break; endif; endif;
 		endif;	
@@ -1581,7 +1581,7 @@ function battleplan_admin_trends_stats() {
 		$views = $views + $dailyViews;		
 		if ( $count == 1 ) $end = $dailyTime;
 		if ( $count == 31 ) :
-		 	echo "<tr><td class='dates'><b>".$dailyTime." - ".$end."</b></td><td class='visits'>".$views." visits</td></tr>";
+		 	echo "<tr><td class='dates'><b>".$dailyTime." - ".$end."</b></td><td class='visits'>".number_format($views)." visits</td></tr>";
  			$count = $views = 0;	
 			if ( $views < 1 ) : $cutoff++; if ( $dailyTime == "Jan 1, 1970" || $cutoff == 2) : break; endif; endif;
 		endif;	
@@ -1597,7 +1597,7 @@ function battleplan_admin_trends_stats() {
 		$views = $views + $dailyViews;		
 		if ( $count == 1 ) $end = $dailyTime;
 		if ( $count == 91 ) :
-		 	echo "<tr><td class='dates'><b>".$dailyTime." - ".$end."</b></td><td class='visits'>".$views." visits</td></tr>";
+		 	echo "<tr><td class='dates'><b>".$dailyTime." - ".$end."</b></td><td class='visits'>".number_format($views)." visits</td></tr>";
  			$count = $views = 0;	
 			if ( $views < 1 ) : $cutoff++; if ( $dailyTime == "Jan 1, 1970" || $cutoff == 1) : break; endif; endif;
 		endif;	
@@ -1624,14 +1624,14 @@ function battleplan_page_stats() {
 	$lastViewed = readMeta($post->ID, 'log-views-now');		
 	$getViews = readMeta($post->ID, 'log-views');
 	$getViews = maybe_unserialize( $getViews );
-	$viewsToday = number_format($getViews[0]['views']);
+	$viewsToday = $getViews[0]['views'];
 	$firstDate = strtotime($getViews[0]['date']);
 	if ( $firstDate != $today ) $viewsToday = 0;
-	$last7Views = number_format(readMeta($post->ID, "log-views-total-7day"));
-	$last30Views = number_format(readMeta($post->ID, "log-views-total-30day"));
-	$last90Views = number_format(readMeta($post->ID, "log-views-total-90day"));	
-	$last180Views = number_format(readMeta($post->ID, "log-views-total-180day"));	
-	$last365Views = number_format(readMeta($post->ID, "log-views-total-365day"));
+	$last7Views = readMeta($post->ID, "log-views-total-7day");
+	$last30Views = readMeta($post->ID, "log-views-total-30day");
+	$last90Views = readMeta($post->ID, "log-views-total-90day");	
+	$last180Views = readMeta($post->ID, "log-views-total-180day");	
+	$last365Views = readMeta($post->ID, "log-views-total-365day");
 	$dateDiff = (($rightNow - $lastViewed) / 60 / 60 / 24); $howLong = "day";
 	if ( $dateDiff < 1 ) : $dateDiff = (($rightNow - $lastViewed) / 60 / 60); $howLong = "hour"; endif;	
 	if ( $dateDiff < 1 ) : $dateDiff = (($rightNow - $lastViewed) / 60); $howLong = "minute"; endif;
@@ -1641,12 +1641,12 @@ function battleplan_page_stats() {
 	echo "<table>";		
 	echo "<tr><td><b>Last Viewed</b></td><td><b>".$dateDiff."</b> ".$howLong." ago</td></tr>";	
 	echo "<tr><td>&nbsp;</td></tr>";		
-	echo "<tr><td><b>Today</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $viewsToday, 'battleplan' ), $viewsToday )."</td></tr>";	
-	echo "<tr><td><b>Last 7 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last7Views, 'battleplan' ), $last7Views )."</td></tr>";
-	if ( $last30Views != $last7Views) echo "<tr><td><b>Last 30 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last30Views, 'battleplan' ), $last30Views )."</td></tr>";
-	if ( $last90Views != $last30Views) echo "<tr><td><b>Last 90 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last90Views, 'battleplan' ), $last90Views )."</td></tr>";
-	if ( $last180Views != $last90Views) echo "<tr><td><b>Last 180 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last180Views, 'battleplan' ), $last180Views )."</td></tr>";
-	if ( $last365Views != $last180Views) echo "<tr><td><b>Last 365 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last365Views, 'battleplan' ), $last365Views )."</td></tr>";
+	echo "<tr><td><b>Today</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $viewsToday, 'battleplan' ), number_format($viewsToday) )."</td></tr>";	
+	echo "<tr><td><b>Last 7 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last7Views, 'battleplan' ), number_format($last7Views) )."</td></tr>";
+	if ( $last30Views != $last7Views) echo "<tr><td><b>Last 30 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last30Views, 'battleplan' ), number_format($last30Views) )."</td></tr>";
+	if ( $last90Views != $last30Views) echo "<tr><td><b>Last 90 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last90Views, 'battleplan' ), number_format($last90Views) )."</td></tr>";
+	if ( $last180Views != $last90Views) echo "<tr><td><b>Last 180 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last180Views, 'battleplan' ), number_format($last180Views) )."</td></tr>";
+	if ( $last365Views != $last180Views) echo "<tr><td><b>Last 365 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last365Views, 'battleplan' ), number_format($last365Views) )."</td></tr>";
 	echo "</table>";		
 }
 

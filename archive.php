@@ -89,7 +89,7 @@ get_header();
 			if ( function_exists( 'overrideArchive' ) ) { overrideArchive( get_post_type() ); }
 		
 			if ( get_post_type() == "testimonials" ) :
-				$archiveIntro = do_shortcode('<a class="noFX alignright" style="margin-top:0;" href="#" onclick="trackClicks(\'contact\', \'Offsite Link\', \'Facebook\', \''.$facebookLink.'\'); return false;"><img alt="Like Us on Facebook" src="/wp-content/themes/battleplantheme/common/logos/'.$facebookIcon.'.png" class="noFX"/></a>[txt]<p>Our customers really like us! But don’t take our word for it. Here are some actual reviews posted by our customers on the web.</p><p>If YOU are a satisfied customer, we invite you to click the "thumbs up" icon to review your experience with our business.  Thank you!</p>[/txt]');	
+				$archiveIntro = do_shortcode('<a class="noFX alignright size-quarter-s" style="margin-top:0;" href="#" onclick="trackClicks(\'contact\', \'Offsite Link\', \'Facebook\', \''.$facebookLink.'\'); return false;"><img alt="Like Us on Facebook" src="/wp-content/themes/battleplantheme/common/logos/'.$facebookIcon.'.png" class="noFX"/></a>[txt]<p>Our customers really like us! But don’t take our word for it. Here are some actual reviews posted by our customers on the web.</p><p>If YOU are a satisfied customer, we invite you to click the "thumbs up" icon to review your experience with our business.  Thank you!</p>[/txt]');	
 			endif;		
 		
 			if ( (is_tax() || is_tag() || is_author || is_category()) && !is_category('blog') && get_post_type() != "testimonials" ) : 	

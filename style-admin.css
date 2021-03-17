@@ -156,12 +156,8 @@ a[data-wp-action="disable"],
 	display:									block;
 }
 
-#page-top_text {
-	max-height:									150px;
-	resize: 									none;
-}
-
+#page-top_text,
 #page-bottom_text {
-	max-height:									605px;
+	max-height:									610px;
 	resize: 									none;
 } 

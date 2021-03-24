@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 # Basic site functionality
 --------------------------------------------------------------*/
 
-	var getThemeURI = theme_dir.theme_dir_urti, getUploadURI = theme_dir.upload_dir_uri, mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 0, timezone, userLoc;
+	var getThemeURI = theme_dir.theme_dir_urti, getUploadURI = theme_dir.upload_dir_uri, mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 0, timezone, userLoc, userRefer;
 	
 	if ( $("#mobile-menu-bar").is(":visible") ) { mobileMenuBarH = $("#mobile-menu-bar").outerHeight();	}
 
@@ -300,7 +300,9 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			newLoc = target - newTop - topSpacer;
 		}
 		
-		window.scroll({ top: newLoc, left: 0, behavior: 'smooth' }); 
+		if ( target !== "#tab-description" ) { // 03/23/2021 --- Kin-Tec Industries
+			window.scroll({ top: newLoc, left: 0, behavior: 'smooth' }); 
+		}
 	};
 
 // Set up "Back To Top" button
@@ -922,6 +924,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			var thisDiv = $(this.element);	
 			thisDiv.css({ "transition-duration": speed+"s"});
 			setTimeout( function () { thisDiv.removeClass('animate'); }, initDelay);			
+
 
 
 
@@ -1603,7 +1606,8 @@ if ( $('body').hasClass('remove-sidebar') ) {
 				timezone = data["timezone"];				
 				userLoc = data["city"] + ", " + data["region_code"];
 			});
-
+			userRefer = encodeURI(document.referrer); 
+			console.log("referrer: "+userRefer);
 		}, 1000);
 
 		setTimeout(function() {	// Wait 2 seconds before calling the following functions 	
@@ -1617,7 +1621,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		// Count site view 
 			$.post({
 				url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-				data : { action: "count_site_views", timezone: timezone, userLoc: userLoc },
+				data : { action: "count_site_views", timezone: timezone, userLoc: userLoc, userRefer: userRefer },
 				success: function( response ) { console.log(response); } 
 			});	
 

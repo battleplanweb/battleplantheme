@@ -15,10 +15,16 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.3' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.4' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
+add_action( 'init', 'battleplan_resetOptions', 0 );
+function battleplan_resetOptions() {
+	update_option( 'site_type', '' );
+	update_option( 'site_brand', '' );
+}
+		
 /*--------------------------------------------------------------
 # Shortcodes
 --------------------------------------------------------------*/
@@ -2068,22 +2074,12 @@ function battleplan_current_type_nav_class($classes, $item) {
 
 // Rename "Uncategorized" posts to "Blog"
 wp_update_term(1, 'category', array( 'name'=>'Blog', 'slug'=>'blog' ));
-add_action( 'init', 'battleplan_resetEverything', 0 ); 
-function battleplan_resetEverything() {	
-	$siteHeader = getID('site-header');
-	if ( !get_post_meta( $siteHeader, 'framework-version', true ) ) : 
-		if ( get_site_url() != "https://syrinx13.com" ) :	
-			battleplan_clearViewFields(); 
-		endif;
-	endif;
-}
 
 // Cap auto generated excerpts at 1 or 2 sentences, based on length
 add_filter( 'excerpt_length', 'battleplan_excerpt_length', 999 );
 function battleplan_excerpt_length( $length ) { 
 	return 200; 
 } 
-
 add_filter('get_the_excerpt', 'end_with_sentence');
 function end_with_sentence( $excerpt ) {	
 	if ( !has_excerpt() ) :		
@@ -2209,7 +2205,7 @@ function battleplan_log_page_load_speed_ajax() {
 	
 	if ( $userLoc == "Ashburn, VA") :
 		$response = array( 'result' => 'Bot ignored' );		
-	elseif ( ($userLogin != 'battleplanweb' && $timezone == get_option('timezone_string') ) || _BP_COUNT_ALL_VISITS == "true" ) :
+	elseif ( $userLogin != 'battleplanweb' && ( $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" )) :
 		$siteHeader = getID('site-header');
 		$desktopCounted = readMeta($siteHeader, "load-number-desktop");
 		$desktopSpeed = readMeta($siteHeader, "load-speed-desktop");	
@@ -2260,6 +2256,10 @@ function battleplan_count_site_views_ajax() {
 	$siteHeader = getID('site-header');
 	$timezone = $_POST['timezone'];	
 	$userLoc = $_POST['userLoc'];	
+	$userRefer = $_POST['userRefer'];	
+	$userRefer = parse_url($userRefer);
+	$userRefer = $userRefer['host'];
+	$userRefer = str_replace(array("www.", "http://", "https://"), "", $userRefer);	
 	$lastViewed = readMeta($siteHeader, 'log-views-time');
 	$rightNow = strtotime(date("F j, Y g:i a"));	
 	$today = strtotime(date("F j, Y"));
@@ -2268,25 +2268,27 @@ function battleplan_count_site_views_ajax() {
 	$getViews = readMeta($siteHeader, 'log-views');
 	$getViews = maybe_unserialize( $getViews );
 	if ( !is_array($getViews) ) $getViews = array();
-	$viewsToday = $views7Day = $views30Day = $views90Day = $views180Day = $views365Day = intval(0); 
+	$viewsToday = $views7Day = $views30Day = $views90Day = $views180Day = $views365Day = $searchToday = intval(0); 
 		
 	if ( $userLoc == "Ashburn, VA") :
 		$response = array( 'result' => 'Bot ignored' );		
-	elseif ( ($userLogin != 'battleplanweb' && $timezone == get_option('timezone_string') ) || _BP_COUNT_ALL_VISITS == "true" ) :
+	elseif ( $userLogin != 'battleplanweb' && ( $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" )) :
 		if(!isset($_COOKIE['countVisit'])) :
-			if ( $dateDiff != 0 ) : // day has passed, move 29 to 30, and so on	
+			if ( $dateDiff != 0 ) : // day has passed
 				for ($i = 1; $i <= $dateDiff; $i++) {	
 					$figureTime = $today - ( ($dateDiff - $i) * 86400);	
-					array_unshift($getViews, array ('date'=>date("F j, Y", $figureTime), 'views'=>$viewsToday));
+					array_unshift($getViews, array ('date'=>date("F j, Y", $figureTime), 'views'=>$viewsToday, 'search'=>$searchToday));
 				}	
 			else:
 				$viewsToday = intval($getViews[0]['views']); 
+				$searchToday = intval($getViews[0]['search']); 
 			endif;	
 			updateMeta($siteHeader, 'log-views-now', $rightNow);
 			updateMeta($siteHeader, 'log-views-time', $today);	
 			$viewsToday++;
+			if ( strpos($userRefer, "google") !== false || strpos($userRefer, "yahoo") !== false || strpos($userRefer, "bing") !== false ) $searchToday++;	
 			array_shift($getViews);	
-			array_unshift($getViews, array ('date'=>date('F j, Y', $today), 'views'=>$viewsToday));	
+			array_unshift($getViews, array ('date'=>date('F j, Y', $today), 'views'=>$viewsToday, 'search'=>$searchToday));	
 			$newViews = maybe_serialize( $getViews );
 			updateMeta($siteHeader, 'log-views', $newViews);
 
@@ -2300,14 +2302,23 @@ function battleplan_count_site_views_ajax() {
 			updateMeta($siteHeader, 'log-views-total-90day', $views90Day);	
 			updateMeta($siteHeader, 'log-views-total-180day', $views180Day);	
 			updateMeta($siteHeader, 'log-views-total-365day', $views365Day);	
-		
+			
+			$getReferrers = readMeta($siteHeader, 'log-views-referrers');
+			$getReferrers = maybe_unserialize( $getReferrers );
+			if ( !is_array($getReferrers) ) $getReferrers = array();
+			array_unshift($getReferrers, $userRefer);
+			if ( count($getReferrers) > $views90Day ) array_pop($getReferrers);
+			$newReferrers = maybe_serialize( $getReferrers );
+			updateMeta($siteHeader, 'log-views-referrers', $newReferrers);
+
 			$getLocations = readMeta($siteHeader, 'log-views-cities');
 			$getLocations = maybe_unserialize( $getLocations );
 			if ( !is_array($getLocations) ) $getLocations = array();
 			array_unshift($getLocations, $userLoc);
-			if ( count($getLocations) > 250 ) array_pop($getLocations);
+			if ( count($getLocations) > $views90Day ) array_pop($getLocations);
 			$newLocations = maybe_serialize( $getLocations );
 			updateMeta($siteHeader, 'log-views-cities', $newLocations);
+	
 			setcookie('countVisit', 'no', time() + 600, "/"); 
 	
 			$response = array( 'result' => 'Site View counted: Today='.$viewsToday.', Week='.$views7Day.', Month='.$views30Day.', Quarter='.$views90Day.', Year= '.$views365Day);
@@ -2340,7 +2351,7 @@ function battleplan_count_post_views_ajax() {
 	
 	if ( $userLoc == "Ashburn, VA") :
 		$response = array( 'result' => 'Bot ignored' );		
-	elseif ( ($userLogin != 'battleplanweb' && $timezone == get_option('timezone_string') ) || _BP_COUNT_ALL_VISITS == "true" ) :
+	elseif ( $userLogin != 'battleplanweb' && ( $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" )) :
 		if ( $dateDiff != 0 ) : // day has passed, move 29 to 30, and so on	
 			for ($i = 1; $i <= $dateDiff; $i++) {	
 				$figureTime = $today - ( ($dateDiff - $i) * 86400);	
@@ -2390,7 +2401,7 @@ function battleplan_count_teaser_views_ajax() {
 	
 	if ( $userLoc == "Ashburn, VA") :
 		$response = array( 'result' => 'Bot ignored' );		
-	elseif ( ($userLogin != 'battleplanweb' && $timezone == get_option('timezone_string') ) || _BP_COUNT_ALL_VISITS == "true" ) :
+	elseif ( $userLogin != 'battleplanweb' && ( $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" )) :
 		updateMeta($theID, 'log-tease-time', $today);
 		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' TEASER counted: Prior tease = '.$lastTeased) );
 	else:

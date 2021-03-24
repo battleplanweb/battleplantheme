@@ -36,7 +36,7 @@ function battleplan_add_quicktags() {
 			QTags.addButton( 'bp_column', 'column', '  [col name="becomes id attribute" align="center, left, right" valign="start, stretch, center, end" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '  [/col]\n\n', 'column', 'Column', 1000 );
 			QTags.addButton( 'bp_image', 'image', '   [img size="100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" link="url to link to" new-tab="false, true" ada-hidden="false, true" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/img]\n', 'image', 'Image', 1000 );
 			QTags.addButton( 'bp_video', 'video', '   [vid size="100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" link="url of video" class="" related="false, true" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/vid]\n', 'video', 'Video', 1000 );
-			QTags.addButton( 'bp_caption', 'caption', '[caption align="aligncenter, alignleft, alignright" width="800"]<img src="/filename.jpg" alt="" class="size-full-s" />Type caption here.', '[/caption]\n', 'caption', 'Caption', 1000 );
+			QTags.addButton( 'bp_caption', 'caption', '[caption align="aligncenter, alignleft, alignright | size-full-s" width="800"]<img src="/filename.jpg" alt="" class="size-full-s" />Type caption here.[/caption]\n', '', 'caption', 'Caption', 1000 );
 			QTags.addButton( 'bp_group', 'group', '   [group size = "100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '   [/group]\n\n', 'group', 'Group', 1000 );	
 			QTags.addButton( 'bp_text', 'text', '   [txt size="100 1/2 1/3 1/4 1/6 1/12" order="2, 1, 3" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '   [/txt]\n', 'text', 'Text', 1000 );
 			QTags.addButton( 'bp_button', 'button', '   [btn size="100 1/2 1/3 1/4 1/6 1/12" order="3, 1, 2" align="center, left, right" link="url to link to" get-biz="link in functions.php" new-tab="false, true" class="" ada="text for ada button" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/btn]\n', 'button', 'Button', 1000 );	
@@ -1580,7 +1580,7 @@ function battleplan_admin_trends_stats() {
 		$count++;
 		$views = $views + $dailyViews;		
 		if ( $count == 1 ) $end = $dailyTime;
-		if ( $count == 31 ) :
+		if ( $count == 30 ) :
 		 	echo "<tr><td class='dates'><b>".$dailyTime." - ".$end."</b></td><td class='visits'>".number_format($views)." visits</td></tr>";
  			$count = $views = 0;	
 			if ( $views < 1 ) : $cutoff++; if ( $dailyTime == "Jan 1, 1970" || $cutoff == 2) : break; endif; endif;
@@ -1596,7 +1596,7 @@ function battleplan_admin_trends_stats() {
 		$count++;
 		$views = $views + $dailyViews;		
 		if ( $count == 1 ) $end = $dailyTime;
-		if ( $count == 91 ) :
+		if ( $count == 90 ) :
 		 	echo "<tr><td class='dates'><b>".$dailyTime." - ".$end."</b></td><td class='visits'>".number_format($views)." visits</td></tr>";
  			$count = $views = 0;	
 			if ( $views < 1 ) : $cutoff++; if ( $dailyTime == "Jan 1, 1970" || $cutoff == 1) : break; endif; endif;

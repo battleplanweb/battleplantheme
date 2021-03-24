@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 8.2.1
+Version: 8.3
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -609,6 +609,14 @@ ul {
 
 ol {
 	list-style: 								decimal;
+}
+
+li {
+	margin-bottom:								0.3em;
+}
+
+li:last-child {
+	margin-bottom:								0;
 }
 
 li > ul,
@@ -1379,7 +1387,8 @@ section.section {
 .content-stretch #main-content, 
 .footer-stretch .footer-strip .flex,
 .info-stretch .site-info .flex,
-section.section-stretch .flex {
+section.section-stretch .flex,
+section.section-parallax section.section-stretch .flex {
 	grid-column: 								stretch-start / stretch-end;
 }
 
@@ -1390,7 +1399,8 @@ section.section-stretch .flex {
 .content-full #main-content, 
 .footer-full .footer-strip .flex,
 .info-full .site-info .flex,
-section.section-full .flex {
+section.section-full .flex,
+section.section-parallax section.section-full .flex {
 	grid-column: 								full-start / full-end;
 }
 
@@ -1401,8 +1411,13 @@ section.section-full .flex {
 .menu-edge .menu-strip .flex,
 .footer-edge .footer-strip .flex,
 .info-edge .site-info .flex,
-section.section-edge .flex {
+section.section-edge .flex,
+section.section-parallax section.section-edge .flex {
 	grid-column: 								edge-start / edge-end;
+}
+
+section.section-parallax section.section-default .flex {
+	grid-column: 								default-start / default-end;
 }
 
 .col-inner > *,
@@ -1611,6 +1626,7 @@ section.section-edge .flex {
 }
 
 .widget-box .widget {
+
 
 
 	margin:										1.5em auto;
@@ -1974,6 +1990,7 @@ section.section-edge .flex {
 	pointer-events:								none;
 }
 
+
 #desktop-navigation ul.main-menu li:hover::before, 
 #desktop-navigation ul.main-menu li.active::before,
 #desktop-navigation ul.main-menu li.tab-focus::before,
@@ -2289,6 +2306,7 @@ section.section-edge .flex {
 .top-push #mobile-navigation ul {
 	flex-flow: 									row wrap;
 }
+
 
 .top-slide #mobile-navigation li, 
 .top-push #mobile-navigation li {
@@ -2661,6 +2679,7 @@ ul.comment-list .comment-meta .comment-time {
 
 ul.comment-list p {
 	margin-bottom:								1em;
+
 }
 
 ul.comment-list p a {
@@ -2684,6 +2703,7 @@ form#commentform {
 form#commentform p {
 	text-align:									center;
 }
+
 
 form#commentform p.form-submit {
 	margin-top:									1.5em;
@@ -2938,8 +2958,6 @@ img.noFX,
 	display: 									block;
 	margin-bottom:								0; /* Air Right 1/27/21 */
 	margin-left: 								auto;
-
-
 	margin-right: 								auto;
 }
 
@@ -3048,14 +3066,41 @@ img.noFX,
 /* Office Hours
 --------------------------------------------- */
 .office-hours {
+	display:									grid;	
+	grid-template-columns: 						1fr;
+	grid-template-rows: 						repeat(7, 1fr);
 	border:										1px solid rgba(0,0,0,0.8);
 	background:									#ffffff;
 	color:										#222222;
 	font-size:									18px;
+	margin-top:									1em;
+	margin-bottom:								1.5em;
+}
+
+.office-hours:first-child {
+	margin-top:									0;
+}
+
+.office-hours:last-child {
+	margin-bottom:								0;
 }
 
 .office-hours > div {
-	display:									flex;
+	display:									grid;	
+	grid-template-columns: 						2fr 3fr;
+	grid-template-rows: 						1fr;
+	align-items:								center;
+	padding:									5px 15px;
+}
+
+.office-hours .col-day {
+	text-align:									left;
+}
+
+.office-hours .col-morning, 
+.office-hours .col-afternoon,
+.office-hours .col-all {
+    text-align: 								center;
 }
 
 .office-hours > div:not(:last-of-type) {
@@ -3069,37 +3114,30 @@ img.noFX,
 	margin-top:									-1px;
 }
 
-.office-hours .col-day, 
-.office-hours .col-all, 
-.office-hours .col-morning, 
-.office-hours .col-afternoon {
-	padding:									5px;
-	text-align:									left;
-}
-
-.office-hours .col-day {
-	width:										65px;
-	padding-left:								15px;
-}
-
-.office-hours .col-morning, 
-.office-hours .col-afternoon,
-.office-hours .col-all {
-	padding-right:								15px;
-    text-align: 								center;
-	width:										calc(100% - 65px);
-}
-
 .office-hours div:not(:first-of-type) .col-all, 
 .office-hours div:not(:first-of-type) .col-morning, 
 .office-hours div:not(:first-of-type) .col-afternoon {
 	font-size:									90%;
 }
 
+.office-hours.horz {
+	grid-template-columns: 						repeat(7, 1fr);
+	grid-template-rows: 						1fr;
+}
+
 .office-hours.horz > div {
-	display:									inline-block;
-	float:										left;
-	width:										14.28%;
+	grid-template-columns: 						1fr;
+	grid-template-rows: 						1fr 1fr;
+	padding:									0;
+
+}
+
+.office-hours.horz .col-day, 
+.office-hours.horz .col-all, 
+.office-hours.horz .col-morning, 
+.office-hours.horz .col-afternoon {
+	text-align:									center;
+	padding-bottom:								10px;
 }
 
 .office-hours.horz > div:not(:last-of-type) {
@@ -3107,24 +3145,15 @@ img.noFX,
 	border-bottom:								none;
 }
 
-.office-hours.horz .col-day, .office-hours.horz .col-all, .office-hours.horz .col-morning, .office-hours.horz .col-afternoon {
-    clear: 										both;
-	width:										100%;
-	text-align:									center;
-}
-
 .office-hours.horz .col-day {
 	border-bottom:								1px solid rgba(0,0,0,0.15);
 }
 
-.office-hours.horz .col-day, .office-hours.horz .col-all, .office-hours.horz .col-afternoon {
-    padding-left: 								10px;
-    padding-right: 								10px;
-}
-
 .office-hours.horz > div.today {
-    border-top: 								none;
-    margin-top: 								0;
+	border:										none;
+	border-left:								2px solid rgba(0,0,0,0.8);
+	border-right:								2px solid rgba(0,0,0,0.8);
+	margin-top:									0;
 }
 
 /* Random Posts (thumb-only)
@@ -3625,6 +3654,7 @@ iframe#podium-modal {
     -ms-flex: 									0 1 auto;
     flex: 										0 1 auto;
     width: 										30px;
+
     height: 									5px;
     margin: 									0 10px;
     text-indent: 								-999px;
@@ -3766,6 +3796,7 @@ iframe#podium-modal {
 	text-align:									center;
 	opacity:									0;
 	transition:									all 0.3s ease;
+
 }
 
 .review-form.active {
@@ -4258,6 +4289,46 @@ iframe#podium-modal {
 		padding:									1.5em 1em;
 	}
 	
+	/* Office Hours */
+	.office-hours.horz {
+		grid-template-columns: 						1fr;
+		grid-template-rows: 						repeat(7, 1fr);
+	}
+
+	.office-hours.horz > div {
+		grid-template-columns: 						2fr 3fr;
+		grid-template-rows: 						1fr;
+		padding:									5px 15px;
+	}
+
+	.office-hours.horz .col-day {
+		text-align:									left;
+		padding-bottom:								0;
+	}
+
+	.office-hours.horz .col-morning, 
+	.office-hours.horz .col-afternoon,
+	.office-hours.horz .col-all {
+		text-align: 								center;
+		padding-bottom:								0;
+	}
+
+	.office-hours.horz > div:not(:last-of-type) {
+		border-right:								none;
+		border-bottom:								1px solid rgba(0,0,0,0.15);
+	}
+
+	.office-hours.horz .col-day {
+		border-bottom:								none;
+	}
+
+	.office-hours.horz > div.today {
+		border:										none;
+		border-top:									2px solid rgba(0,0,0,0.8);
+		border-bottom:								2px solid rgba(0,0,0,0.8);
+		margin-top:									-1px;
+	}
+		
 	/* Pages & Posts */
 	.single-meta {
 		display:									inline-block;
@@ -4408,6 +4479,12 @@ iframe#podium-modal {
 	
 	.flex .col.col-row-of-pics {
 		grid-column: 								span 1;
+	}
+	
+	/* Captions
+	--------------------------------------------- */
+	.wp-caption {
+		width:										100% !important /* Gulf Coast Chiro 3/22/21*/;
 	}
 	
 	/* Galleries */

@@ -923,6 +923,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			thisDiv.css({ "transition-duration": speed+"s"});
 			setTimeout( function () { thisDiv.removeClass('animate'); }, initDelay);			
 
+
+
 			this.destroy();
 		}, { offset: offset });
 	};
@@ -1277,6 +1279,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			} 
 		};
 
+
 // Remove widgets that do not fit
 		window.removeWidgets = function (removeWidget) {
 			var contentH = $("#primary .site-main-inner").outerHeight() + compensate, widgetH = $("#secondary .sidebar-inner").outerHeight(true), remainH = widgetH - contentH, removeThis = $(removeWidget);
@@ -1349,6 +1352,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 				var secH = $("#secondary").outerHeight(), secT = $("#secondary").offset().top, winH = $(window).height() - addTop, winT = $(window).scrollTop() + addTop;				
 				var adjT = winT - secT, fullH = secH - winH, scrollPct = adjT / fullH, maxH = contentH - elemH;	
 				if ( scrollPct > 1 ) { scrollPct = 1; }
+
 				if ( scrollPct < 0 || scrollPct == null ) { scrollPct = 0; }
 				var moveElem = Math.round(maxH * scrollPct);	
 				if ( moveElem > maxH ) { moveElem = maxH; }

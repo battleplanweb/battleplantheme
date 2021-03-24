@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.2.1' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.3' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -273,7 +273,7 @@ function battleplan_getRandomImage($atts, $content = null ) {
 	
 		$buildImage = "";	
 		if ( $link == "yes" ) $buildImage .= '<a href="'.$full[0].'">';		
-		$buildImage .= '<img data-id="'.$getID.'"'.getImgMeta($getID).' class="wp-image-'.$getID.' random-img '.$tags[0].'-img '.$align.' size-'.$size.$class.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" srcset="'.$imgSet.'" alt="'.get_post_meta($getID, '_wp_attachment_image_alt', true).'">';	
+		$buildImage .= '<img data-id="'.$getID.'"'.getImgMeta($getID).' data-count-tease="true" data-count-view="true" class="wp-image-'.$getID.' random-img '.$tags[0].'-img '.$align.' size-'.$size.$class.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" srcset="'.$imgSet.'" alt="'.get_post_meta($getID, '_wp_attachment_image_alt', true).'">';	
 		if ( $link == "yes" ) $buildImage .= '</a>';	
 		$imageArray[] = $buildImage;	
 	
@@ -325,7 +325,7 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 	
 		$getImage = "";
 		if ( $link == "yes" ) $getImage .= '<a href="'.$image[0].'">';
-		$getImage .= '<img data-id="'.$getID.'"'.getImgMeta($getID).' class="random-img '.$tags[0].'-img '.$align.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" srcset="'.$imgSet.'" alt="'.get_post_meta($getID, '_wp_attachment_image_alt', true).'">';
+		$getImage .= '<img data-id="'.$getID.'"'.getImgMeta($getID).' data-count-tease="true" data-count-view="true" class="random-img '.$tags[0].'-img '.$align.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" srcset="'.$imgSet.'" alt="'.get_post_meta($getID, '_wp_attachment_image_alt', true).'">';
 		if ( $link == "yes" ) $getImage .= '</a>';
 
 		$imageArray[] = do_shortcode('[col class="col-row-of-pics'.$class.'"]'.$getImage.'[/col]');			
@@ -686,7 +686,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 				$buildImg = "";
 				if ( $link != "none" ) : $buildImg = "<a href='".$linkTo."' class='link-archive link-".$type."'>"; endif;	
 				//$buildImg .= "<img data-id='".get_the_ID()."' ".getImgMeta(get_the_ID())." class='img-slider ".$tags[0]."-img' src = '".$image[0]."' srcset='".$imgSet."' alt='".get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true)."'>";
-				$buildImg .= "<img data-id='".get_the_ID()."' ".getImgMeta(get_the_ID())." class='img-slider ".$tags[0]."-img' src = '".$image[0]."' width='".$image[1]."' height='".$image[2]."' alt='".get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true)."'>";
+				$buildImg .= "<img data-id='".get_the_ID()."' ".getImgMeta(get_the_ID())." data-count-tease='true' data-count-view='true' class='img-slider ".$tags[0]."-img' src = '".$image[0]."' width='".$image[1]."' height='".$image[2]."' alt='".get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true)."'>";
 		
 				if ( $caption == "yes" || $caption == "title" ) : $buildImg .= "<div class='caption-holder'><div class='img-caption'>".get_the_title(get_the_ID())."</div></div>";	
 				elseif ( $caption == "alt" ) : $buildImg .= "<div class='caption-holder'><div class='img-caption'>".get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true)."</div></div>";
@@ -826,7 +826,7 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 		$image = wp_get_attachment_image_src( get_the_ID(), $size );
 		$getImage = "";
 		if ( $link != "false" ) $getImage .= '<a href="'.$image[0].'">';
-		$getImage .= '<img data-id="'.get_the_ID().'"'.getImgMeta(get_the_ID()).' class="logo-img '.$tags[0].'-img" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'">';
+		$getImage .= '<img data-id="'.get_the_ID().'"'.getImgMeta(get_the_ID()).' data-count-tease="true" data-count-view="true" class="logo-img '.$tags[0].'-img" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'">';
 		if ( $link != "false" ) $getImage .= '</a>';
 		$imageArray[] = '<span>'.$getImage.'</span>';			
 	endwhile; wp_reset_postdata(); endif;	
@@ -1906,7 +1906,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( "user-message" == $tag->name ) {
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
-		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','Mark Of The Beast','fuck','dogloverclub.store','и','д','б','й','л','ы','З','у','Я');
+		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','и','д','б','й','л','ы','З','у','Я');
 		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
 		if ( $check == $name ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($badwords as $badword) {

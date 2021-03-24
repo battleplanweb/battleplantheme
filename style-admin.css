@@ -32,20 +32,32 @@ tr.active[data-plugin*="extended-widget-options"] + tr.plugin-update-tr {
 	opacity:									0;
 }
 
+#dashboard-widgets #postbox-container-1 {
+	width:										21%;
+}
+
+#dashboard-widgets #postbox-container-2 {
+	width:										23%;
+}
+
 #dashboard-widgets #postbox-container-3 {
-	width:										50%;
+	width:										56%;
 }
 
 #dashboard-widgets #postbox-container-3 table {
 	float:										left;
-	margin-right:								15px;
+}
+
+#dashboard-widgets #postbox-container-3 table:not(:last-of-type) {
+	margin-right:								70px;
 }
 
 #dashboard-widgets #postbox-container-3 td.dates {
-	min-width:									175px;
+	min-width:									100px;
 }
 
-#dashboard-widgets #postbox-container-3 td.visits {
+#dashboard-widgets #postbox-container-3 td.visits,
+#dashboard-widgets #postbox-container-3 td.search {
 	min-width:									55px;
 }
 
@@ -53,10 +65,12 @@ tr.active[data-plugin*="extended-widget-options"] + tr.plugin-update-tr {
 	display:									none;
 }
 
+#battleplan_referrer_stats ul,
 #battleplan_location_stats ul {
 	column-count:								2;
 }
 
+#battleplan_referrer_stats ul span.referrer-name,
 #battleplan_location_stats ul span.city-name {
 	display:									inline-block;
 	width:										150px;

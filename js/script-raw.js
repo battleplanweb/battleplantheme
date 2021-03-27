@@ -51,7 +51,13 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 // Track phone number clicks in Google Analytics
 	window.trackClicks = function(type, category, action, url) {
-		gtag('event', type, { 'event_category': category, 'event_action': action, 'event_label': url, 'transport_type': 'beacon', 'event_callback': function(){document.location = url;} });
+		$.post({
+			url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
+			data : { action: "count_link_clicks", type: action },
+			success: function( response ) { console.log(response); document.location = url; } 
+		});	
+		
+		gtag('event', type, { 'event_category': category, 'event_action': action, 'event_label': url, 'transport_type': 'beacon', 'event_callback': function(){} });		
 	};
 
 // Track contact form submissions in Google Analytics
@@ -227,6 +233,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 // Stick an element to top of screen
 	window.lockDiv = function(container, strictTrigger, strictOffset, strictTop, faux, whichWay) {	
+
 		strictTrigger = strictTrigger || "";		
 		strictOffset = strictOffset || "";		
 		strictTop = strictTop || "";	

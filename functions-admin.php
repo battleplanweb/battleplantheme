@@ -1437,7 +1437,8 @@ function battleplan_add_dashboard_widgets() {
     //wp_add_dashboard_widget( 'battleplan_site_stats', 'Site Stats', 'battleplan_admin_site_stats' );
     //wp_add_dashboard_widget( 'battleplan_location_stats', 'Location Stats', 'battleplan_admin_location_stats' );
 	add_meta_box( 'battleplan_site_stats', 'Site Visitors', 'battleplan_admin_site_stats', 'dashboard', 'normal', 'high' );		
-	add_meta_box( 'battleplan_speed_stats', 'Site Speed', 'battleplan_admin_speed_stats', 'dashboard', 'normal', 'high' );	
+	add_meta_box( 'battleplan_speed_stats', 'Site Speed', 'battleplan_admin_speed_stats', 'dashboard', 'normal', 'high' );		
+	add_meta_box( 'battleplan_click_stats', 'Visitor Clicks', 'battleplan_admin_click_stats', 'dashboard', 'normal', 'high' );	
 	add_meta_box( 'battleplan_referrer_stats', 'Visitor Referrers', 'battleplan_admin_referrer_stats', 'dashboard', 'side', 'high' );	
 	add_meta_box( 'battleplan_location_stats', 'Visitor Locations', 'battleplan_admin_location_stats', 'dashboard', 'side', 'high' );
 	add_meta_box( 'battleplan_trends_stats', 'Visitor Trends', 'battleplan_admin_trends_stats', 'dashboard', 'column3', 'high' );		
@@ -1487,18 +1488,9 @@ function battleplan_admin_site_stats() {
 	for ($x = 0; $x < 10; $x++) {
 		$dailyTime = date("M j, Y", strtotime($getViews[$x]['date'])); 		
 		$howOld = ($today - strtotime($getViews[$x]['date'])) / 86400;
-		if ( $howOld < 1 ) :
-			$class="this-day";
-		elseif ( $howOld < 8 ) :
-			$class="this-week";
-		elseif ( $howOld < 32 ) :
-			$class="this-month";
-		else:
-			$class="";
-		endif;
 		$dailyViews = intval($getViews[$x]['views']); 	
 		$rank = $x + 1;
-		if ( $dailyViews > 0 ) echo "<tr><td class='".$class."'>&nbsp;#".$rank."&nbsp;&nbsp;&nbsp;<b>".$dailyTime."</b></td><td class='".$class."'>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $dailyViews, 'battleplan' ), $dailyViews )."</td></tr>";
+		if ( $dailyViews > 0 ) echo "<tr data-age=".$howOld."><td>&nbsp;#".$rank."&nbsp;&nbsp;&nbsp;<b>".$dailyTime."</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $dailyViews, 'battleplan' ), $dailyViews )."</td></tr>";
 	} 		
 	echo '</table>';
 }
@@ -1524,6 +1516,24 @@ function battleplan_admin_speed_stats() {
 	echo "</table>";
 }
 
+// Set up Visitor Clicks widget on dashboard
+function battleplan_admin_click_stats() {
+	$siteHeader = getID('site-header');
+	$callClicks = readMeta($siteHeader, "call-clicks");
+	$callClicks = maybe_unserialize($callClicks);
+	$emailClicks = readMeta($siteHeader, "email-clicks");
+	$emailClicks = maybe_unserialize($emailClicks);
+	$financeClicks = readMeta($siteHeader, "finance-clicks");
+	$financeClicks = maybe_unserialize($financeClicks);
+	
+	echo "<table>";
+	echo "<tr><td><b>Year</b></td><td><b>Calls</b></td><td><b>Emails</b></td><td><b>Finance</b></td></tr>";
+	for ($x = 0; $x < 1; $x++) {		
+		echo "<tr><td><b>".date("Y", $callClicks[$x]['year'])."</b></td><td>".number_format($callClicks[$x]['number'])."</td><td>".number_format($emailClicks[$x]['number'])."</td><td>".number_format($financeClicks[$x]['number'])."</td></tr>";
+	} 			
+	echo "</table>";
+}
+
 // Set up Visitor Referrers widget on dashboard
 function battleplan_admin_referrer_stats() {
 	$siteHeader = getID('site-header');
@@ -1533,6 +1543,7 @@ function battleplan_admin_referrer_stats() {
 	$tallyCounts = array_count_values($referrers);
 	$uniqueReferrers = array_unique($referrers);
 	$combineReferrers = [];
+	$thisDomain = str_replace("https://", "", get_site_url());
 	
 	foreach ($uniqueReferrers as $uniqueReferrer) :
 		$combineReferrers[$uniqueReferrer]=$tallyCounts[$uniqueReferrer];
@@ -1544,6 +1555,7 @@ function battleplan_admin_referrer_stats() {
 	echo "<ul>";
 	foreach ($combineReferrers as $referrer=>$referNum) :
 		if ( $referrer == "" ) $referrer = "Direct";
+		if ( $referrer == $thisDomain ) $referrer = "Self";
 		echo "<li><span class='referrer-name'>".$referrer."</span><span class='referrer-num'><b>".$referNum."</b></span></li>";
 	endforeach; 	
 	echo '</ul></div>';
@@ -1573,7 +1585,7 @@ function battleplan_admin_location_stats() {
 	echo '</ul></div>';
 }
 
-// Set up Trends widget on dashboard
+// Set up Visitor Trends widget on dashboard
 function battleplan_admin_trends_stats() {
 	$siteHeader = getID('site-header');
 	$today = strtotime(date("F j, Y"));
@@ -1581,18 +1593,18 @@ function battleplan_admin_trends_stats() {
 	$getViews = maybe_unserialize( $getViews );
 	
  	$count = $views = $cutoff = 0;	
-	echo "<table><tr><td><b><u>Weekly</u></b></td><td><b><u>Total</u></b></td><td><b><u>Search</u></b></td></tr>";		
+	echo "<table class='trends-weekly'><tr><td><b><u>Weekly</u></b></td><td><b><u>Total</u></b></td><td><b><u>Search</u></b></td></tr>";		
 	for ($x = 0; $x < 1095; $x++) {		
 		$dailyTime = date("M j, Y", strtotime($getViews[$x]['date'])); 
 		$dailyViews = intval($getViews[$x]['views']); 
 		$dailySearch = intval($getViews[$x]['search']); 
 		$count++;
 		$views = $views + $dailyViews;	
-		$search = $search + $dailySearch;
+		$search = $search + $dailySearch; 
 		if ( $count == 1 ) $end = $dailyTime;
 		if ( $count == 7 ) :
 			if ( strtotime($end) < strtotime("Mar 23, 2021") ) $search = "";
-		 	echo "<tr><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
+		 	echo "<tr data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
  			$count = $views = $search = 0;	
 			if ( $views < 1 ) : $cutoff++; if ( $dailyTime == "Jan 1, 1970" || $cutoff == 5) : break; endif; endif;
 		endif;	
@@ -1600,7 +1612,7 @@ function battleplan_admin_trends_stats() {
 	echo "</table>";
 	
 	$count = $views = $search = $cutoff = 0;	
-	echo "<table><tr><td><b><u>Monthly</u></b></td><td><b><u>Total</u></b></td><td><b><u>Search</u></b></td></tr>";		
+	echo "<table class='trends-monthly'><tr><td><b><u>Monthly</u></b></td><td><b><u>Total</u></b></td><td><b><u>Search</u></b></td></tr>";		
 	for ($x = 0; $x < 1095; $x++) {		
 		$dailyTime = date("M j, Y", strtotime($getViews[$x]['date'])); 
 		$dailyViews = intval($getViews[$x]['views']); 
@@ -1611,7 +1623,7 @@ function battleplan_admin_trends_stats() {
 		if ( $count == 1 ) $end = $dailyTime;
 		if ( $count == 30 ) :
 			if ( strtotime($end) < strtotime("Mar 23, 2021") ) $search = "";
-		 	echo "<tr><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
+		 	echo "<tr data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
  			$count = $views = $search = 0;	
 			if ( $views < 1 ) : $cutoff++; if ( $dailyTime == "Jan 1, 1970" || $cutoff == 2) : break; endif; endif;
 		endif;	
@@ -1619,7 +1631,7 @@ function battleplan_admin_trends_stats() {
 	echo "</table>";
 
 	$count = $views = $search = $cutoff = 0;	
-	echo "<table><tr><td><b><u>Quarterly</u></b></td><td><b><u>Total</u></b></td><td><b><u>Search</u></b></td></tr>";		
+	echo "<table class='trends-quartlery'><tr><td><b><u>Quarterly</u></b></td><td><b><u>Total</u></b></td><td><b><u>Search</u></b></td></tr>";		
 	for ($x = 0; $x < 1095; $x++) {		
 		$dailyTime = date("M j, Y", strtotime($getViews[$x]['date'])); 
 		$dailyViews = intval($getViews[$x]['views']); 
@@ -1630,7 +1642,7 @@ function battleplan_admin_trends_stats() {
 		if ( $count == 1 ) $end = $dailyTime;
 		if ( $count == 90 ) :
 			if ( strtotime($end) < strtotime("Mar 23, 2021") ) $search = "";
-		 	echo "<tr><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
+		 	echo "<tr data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
  			$count = $views = 0;	
 			if ( $views < 1 ) : $cutoff++; if ( $dailyTime == "Jan 1, 1970" || $cutoff == 1) : break; endif; endif;
 		endif;	

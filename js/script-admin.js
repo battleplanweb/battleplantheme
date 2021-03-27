@@ -10,6 +10,39 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 # Admin interface
 --------------------------------------------------------------*/
 	
+	/* Control color of Top 10 Most Visited Days box */
+	$("#battleplan_site_stats tr").each(function(){
+		var getAge = 100 - $(this).attr("data-age");
+		if (getAge < 0) { getAge = 0; }
+		$(this).find('td').css({ "filter": "brightness("+getAge+"%)" });
+	});
+	
+	/* Control color of Visitor Trends box */
+	function runVisitorTrendColor(trend) {
+		var getCount = [], getTotal, getHalf, loopThru, loopNum=0, varyAmt;
+		$("#battleplan_trends_stats ."+trend+" tr").each(function(){
+			getCount.push( $(this).attr("data-count") );
+		});	
+		getCount.shift(); 
+		getCount.sort(function(a, b){return b-a});
+		getTotal = getCount.length;
+		getHalf = Math.floor(getTotal / 2);
+		getTotal--;
+
+		for (loopThru = 0; loopThru < getHalf; loopThru++) {	
+			varyAmt = 100 - ((100 / getHalf) * loopThru);
+			$('#battleplan_trends_stats .'+trend+' tr[data-count="' + getCount[loopThru] + '"]').find('td').css({ "filter": "brightness("+varyAmt+"%)" });
+		} 
+		for (loopThru = getTotal; loopThru > getHalf; loopThru--) {	
+			varyAmt = 100 - ((100 / getHalf) * loopNum);
+			$('#battleplan_trends_stats .'+trend+' tr[data-count="' + getCount[loopThru] + '"]').find('td').css({ "color":"#f00", "filter": "brightness("+varyAmt+"%)" });
+			loopNum++;
+		} 
+	}	
+	runVisitorTrendColor('trends-weekly');
+	runVisitorTrendColor('trends-monthly');
+	runVisitorTrendColor('trends-quarterly');	
+	
 	/* Check meta boxes for content, collapse if empty */	
 	if ( !$('#page-top_text').html() ) { $('#page-top').addClass('closed'); }
 	if ( !$('#page-bottom_text').html() ) { $('#page-bottom').addClass('closed'); }

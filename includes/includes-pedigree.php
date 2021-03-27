@@ -202,7 +202,7 @@ function battleplan_add_acf_pedigree_fields() {
 			),
 			array(
 				'key' => 'field_52dd6a184e280',
-				'label' => 'Elbows',
+				'label' => 'Elbows (OFA)',
 				'name' => 'elbows',
 				'type' => 'radio',
 				'required' => 0,
@@ -238,6 +238,24 @@ function battleplan_add_acf_pedigree_fields() {
 				'save_other_choice' => 1,
 				'default_value' => 'NA',
 				'layout' => 'vertical',
+				'return_format' => 'value',
+			),
+			array(
+				'key' => 'field_74rg13k063578',
+				'label' => 'PRA',
+				'name' => 'pra',
+				'type' => 'radio',
+				'required' => 0,
+				'conditional_logic' => 0,
+				'choices' => array(
+					'Clear' => 'Clear',
+					'NA' => 'NA',
+				),
+				'other_choice' => 1,
+				'save_other_choice' => 0,
+				'default_value' => 'NA',
+				'layout' => 'vertical',
+				'allow_null' => 0,
 				'return_format' => 'value',
 			),
 			array(

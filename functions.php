@@ -15,16 +15,10 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.4' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.5' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
-add_action( 'init', 'battleplan_resetOptions', 0 );
-function battleplan_resetOptions() {
-	update_option( 'site_type', '' );
-	update_option( 'site_brand', '' );
-}
-		
 /*--------------------------------------------------------------
 # Shortcodes
 --------------------------------------------------------------*/
@@ -2161,7 +2155,7 @@ function battleplan_getGoogleRating() {
 
 			$buildPanel .= '</div></div>';	
 			$buildPanel .= '<div class="wp-google-total">Click to view our ';			
-			if ( $number > 14 ) $buildPanel .= $number.' ';			
+			if ( $number > 14 ) $buildPanel .= number_format($number).' ';			
 			$buildPanel .= 'Google reviews!</div>';	
 			$buildPanel .= '</div></a>';
 
@@ -2406,6 +2400,49 @@ function battleplan_count_teaser_views_ajax() {
 		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' TEASER counted: Prior tease = '.$lastTeased) );
 	else:
 		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' teaser NOT counted: user='.$userLogin.', user timezone='.$timezone.', site timezone='.get_option('timezone_string')) );
+	endif;	
+	wp_send_json( $response );	
+}
+
+// Count Link Clicks
+add_action( 'wp_ajax_count_link_clicks', 'battleplan_count_link_clicks_ajax' );
+add_action( 'wp_ajax_nopriv_count_link_clicks', 'battleplan_count_link_clicks_ajax' );
+function battleplan_count_link_clicks_ajax() {
+	$siteHeader = getID('site-header');
+	$type = $_POST['type'];	
+	$userLogin = wp_get_current_user()->user_login;	
+	$thisYear = strtotime(date("Y"));
+		
+	if ( $userLoc == "Ashburn, VA") :
+		$response = array( 'result' => 'Bot ignored' );		
+	elseif ( $userLogin != 'battleplanweb' && ( $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" )) :
+	
+		if ( $type == "Phone Call" ) : $getType = 'call-clicks';
+		elseif ( $type == "Email" ) : $getType = 'email-clicks';
+		elseif ( $type == "Wells Fargo" ) :	$getType = 'finance-clicks';
+		endif;
+	
+		$getClicks = readMeta($siteHeader, $getType);	
+		$getClicks = maybe_unserialize( $getClicks );
+		if ( !is_array($getClicks) ) $getClicks = array();
+	
+		$recentYear = $getClicks[0]['year'];
+	
+		if ( $recentYear == $thisYear ) :
+			$numClicks = intval($getClicks[0]['number']);	
+			$numClicks++;
+			array_shift($getClicks); // remove current value of year, so it can be replaced	
+			array_unshift($getClicks, array ('year'=>$thisYear, 'number'=>$numClicks));		
+		else:
+			array_unshift($getClicks, array ('year'=>$thisYear, 'number'=>1));			
+		endif;
+	
+		$newClicks = maybe_serialize( $getClicks );
+		updateMeta($siteHeader, $getType, $newClicks);
+
+		$response = array( 'result' => $getType.' counted = '.$numClicks);
+	else:
+		$response = array( 'result' => 'Click not counted' );
 	endif;	
 	wp_send_json( $response );	
 }

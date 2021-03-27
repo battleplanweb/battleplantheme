@@ -76,17 +76,14 @@ tr.active[data-plugin*="extended-widget-options"] + tr.plugin-update-tr {
 	width:										150px;
 }
 
-.this-month {
-	color:										#219500;
-}
- 
-.this-week {
-	color:										#00d922;
+#battleplan_site_stats tr td,
+#battleplan_trends_stats table tr td {
+	color:										#00e60e;
+	filter:										brightness(0%);
 }
 
-.this-day {
-	color:										#0073aa;
-	font-size:									115%;
+#battleplan_click_stats td {
+	width:										75px;
 }
 
 /* Page Attributes meta box */

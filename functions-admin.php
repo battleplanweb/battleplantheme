@@ -1490,7 +1490,7 @@ function battleplan_admin_site_stats() {
 		$howOld = ($today - strtotime($getViews[$x]['date'])) / 86400;
 		$dailyViews = intval($getViews[$x]['views']); 	
 		$rank = $x + 1;
-		if ( $dailyViews > 0 ) echo "<tr data-age=".$howOld."><td>&nbsp;#".$rank."&nbsp;&nbsp;&nbsp;<b>".$dailyTime."</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $dailyViews, 'battleplan' ), $dailyViews )."</td></tr>";
+		if ( $dailyViews > 0 ) echo "<tr class='coloration' data-age=".$howOld."><td>&nbsp;#".$rank."&nbsp;&nbsp;&nbsp;<b>".$dailyTime."</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $dailyViews, 'battleplan' ), $dailyViews )."</td></tr>";
 	} 		
 	echo '</table>';
 }
@@ -1604,7 +1604,7 @@ function battleplan_admin_trends_stats() {
 		if ( $count == 1 ) $end = $dailyTime;
 		if ( $count == 7 ) :
 			if ( strtotime($end) < strtotime("Mar 23, 2021") ) $search = "";
-		 	echo "<tr data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
+		 	echo "<tr class='coloration' data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
  			$count = $views = $search = 0;	
 			if ( $views < 1 ) : $cutoff++; if ( $dailyTime == "Jan 1, 1970" || $cutoff == 5) : break; endif; endif;
 		endif;	
@@ -1623,7 +1623,7 @@ function battleplan_admin_trends_stats() {
 		if ( $count == 1 ) $end = $dailyTime;
 		if ( $count == 30 ) :
 			if ( strtotime($end) < strtotime("Mar 23, 2021") ) $search = "";
-		 	echo "<tr data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
+		 	echo "<tr class='coloration' data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
  			$count = $views = $search = 0;	
 			if ( $views < 1 ) : $cutoff++; if ( $dailyTime == "Jan 1, 1970" || $cutoff == 2) : break; endif; endif;
 		endif;	
@@ -1642,7 +1642,7 @@ function battleplan_admin_trends_stats() {
 		if ( $count == 1 ) $end = $dailyTime;
 		if ( $count == 90 ) :
 			if ( strtotime($end) < strtotime("Mar 23, 2021") ) $search = "";
-		 	echo "<tr data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
+		 	echo "<tr class='coloration' data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
  			$count = $views = 0;	
 			if ( $views < 1 ) : $cutoff++; if ( $dailyTime == "Jan 1, 1970" || $cutoff == 1) : break; endif; endif;
 		endif;	

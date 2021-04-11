@@ -13,7 +13,7 @@ $efficiency = esc_attr(get_field( "efficiency" ));
 		
 		echo '<div class="product-meta">';
 
-			if ( $comfort != "na" ) : 
+			if ( $comfort != "na" && $comfort != "" ) : 
 				echo '<div class="product-rating">';
 					echo '<span class="rating-label">Comfort: </span>';
 					if ( $comfort == 1 ) : echo '<span class="comfort-full"></span><span class="comfort-empty"></span><span class="comfort-empty"></span><span class="comfort-empty"></span><span class="comfort-empty"></span>';
@@ -25,7 +25,7 @@ $efficiency = esc_attr(get_field( "efficiency" ));
 				echo '</div>';
 			endif; 
 
-			if ( $efficiency != "na" ) : 
+			if ( $efficiency != "na" && $comfort != "" ) : 
 				echo '<div class="product-rating">';
 					echo '<span class="rating-label">Efficiency: </span>';
 					if ( $efficiency == 1 ) : echo '<span class="efficiency-full"></span><span class="efficiency-empty"></span><span class="efficiency-empty"></span><span class="efficiency-empty"></span><span class="efficiency-empty"></span>';

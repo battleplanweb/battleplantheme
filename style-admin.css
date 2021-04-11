@@ -73,13 +73,15 @@ tr.active[data-plugin*="extended-widget-options"] + tr.plugin-update-tr {
 #battleplan_referrer_stats ul span.referrer-name,
 #battleplan_location_stats ul span.city-name {
 	display:									inline-block;
-	width:										150px;
+	width:										143px;
+	margin-right:								7px;
+	overflow:									clip;
 }
 
-#battleplan_site_stats tr td,
-#battleplan_trends_stats table tr td {
-	color:										#00e60e;
-	filter:										brightness(0%);
+#battleplan_site_stats tr.coloration td,
+#battleplan_trends_stats table tr.coloration td {
+	color:										#009809;
+	filter:										saturate(0%);
 }
 
 #battleplan_click_stats td {

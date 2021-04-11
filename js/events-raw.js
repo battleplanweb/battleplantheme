@@ -55,8 +55,12 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		
 		$( ".ticket-cost" ).prepend( "<span class='cost-label'>Cost: </span>" );		
 		
-		$( ".tribe-events-venue-details" ).prepend( "<span class='venue-label'>Location: </span><br/>" );
-			
+		$(".tribe-events-venue-details").each(function() {
+			if ( $(this).find('a').length ) {		
+				$(this).prepend( "<span class='venue-label'>Location: </span><br/>" );
+			}				
+		});
+					
 		moveDivs ('.post-type-archive-tribe_events.slug-events .type-tribe_events', '.block-button', '.tribe-events-content', 'after');
 		
 		moveDiv ('.tribe-events-notices', '.tribe_events', 'before');	

@@ -930,11 +930,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$(container+".animate").waypoint(function() {
 			var thisDiv = $(this.element);	
 			thisDiv.css({ "transition-duration": speed+"s"});
-			setTimeout( function () { thisDiv.removeClass('animate'); }, initDelay);			
-
-
-
-
+			setTimeout( function () { thisDiv.removeClass('animate'); }, initDelay);		
 			this.destroy();
 		}, { offset: offset });
 	};
@@ -1289,7 +1285,6 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			} 
 		};
 
-
 // Remove widgets that do not fit
 		window.removeWidgets = function (removeWidget) {
 			var contentH = $("#primary .site-main-inner").outerHeight() + compensate, widgetH = $("#secondary .sidebar-inner").outerHeight(true), remainH = widgetH - contentH, removeThis = $(removeWidget);
@@ -1599,7 +1594,10 @@ if ( $('body').hasClass('remove-sidebar') ) {
 						thisLock.fadeOut();
 					});						
 				}
-			}	
+			}			
+			thisLock.click(function() {
+				setCookie("display-message","no",cookieExpire);
+			});			
 		});
 
 		setTimeout(function() {	// Wait 1 second before calling the following functions 

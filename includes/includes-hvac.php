@@ -1,4 +1,4 @@
-<?php
+c<?php
 /* Battle Plan Web Design - HVAC Includes
  
 /*--------------------------------------------------------------
@@ -31,7 +31,10 @@ function battleplan_product_overview( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', ), $atts );
 	$type = esc_attr($a['type']);
 	
-	include "wp-content/themes/battleplantheme/includes/includes-american-standard-product-overview.php";
+	if (strpos($type, 'american standard') !== false) { include("wp-content/themes/battleplantheme/includes/includes-american-standard-product-overview.php"); }
+	elseif (strpos($type, 'ruud') !== false) { include("wp-content/themes/battleplantheme/includes/includes-ruud-product-overview.php"); }
+	elseif (strpos($type, 'carrier') !== false) { include("wp-content/themes/battleplantheme/includes/includes-carrier-product-overview.php"); }
+	else { include("wp-content/themes/battleplantheme/includes/includes-generic-product-overview.php"); }
 	
 	return do_shortcode('
 		[col class="col-archive col-products"]
@@ -349,6 +352,20 @@ function battleplan_hvac_column_settings() {
 					'filter'=>'on',
 					'filter_label'=>'',
 					'name'=>'product-class',
+					'label_type'=>'',
+					'search'=>''
+				),
+				'menu-order'=>array(
+					'type'=>'column-order',
+					'label'=>'Order',
+					'width'=>'',
+					'width_unit'=>'%',
+					'edit'=>'on',
+					'enable_term_creation'=>'on',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'menu-order',
 					'label_type'=>'',
 					'search'=>''
 				),

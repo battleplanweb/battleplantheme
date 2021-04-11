@@ -1,4 +1,4 @@
-<?php
+<?php session_start();
 /* Battle Plan Web Design functions and definitions
  
 /*--------------------------------------------------------------
@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.5' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.6' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -465,7 +465,8 @@ function battleplan_getBuildArchive($atts, $content = null) {
 					$all_attachments = get_posts( array( 'post_type'=>'attachment', 'post_mime_type'=>'image', 'post_parent'=>get_the_ID(), 'post_status'=>'published', 'numberposts'=>-1 ) );
 					$count = count($all_attachments); 						
 				endif;	
-				$subline = $count." Photos";
+				if ( $count == "" ) $count = 0;
+				$subline = sprintf( _n( '%s Photo', '%s Photos', $count, 'battleplan' ), number_format($count) );
 				$archiveBody .= '<a href="'.esc_url(get_the_permalink()).'" class="link-archive link-'.get_post_type().'" aria-hidden="true" tabindex="-1"><p class="gallery-subtitle">'.$subline.'</p></a>'; 	
 			endif;
 		endif;
@@ -1465,23 +1466,16 @@ function battleplan_handle_main_query( $query ) {
 
 // Maintain pagination when using orderby=rand
 add_filter( 'posts_orderby', 'battleplan_randomize_with_pagination' );
-function battleplan_randomize_with_pagination( $orderby ) { 
+function battleplan_randomize_with_pagination( $orderby ) { 		
 	if ( is_admin() || !is_main_query() || $orderby != "RAND()") return $orderby;
-		
-	session_start();
-	
-	if( ! get_query_var( 'paged' ) || get_query_var( 'paged' ) == 0 || get_query_var( 'paged' ) == 1 ) {
-		if( isset( $_SESSION['seed'] ) ) { unset( $_SESSION['seed'] ); }
-	}
-	$seed = false;
-	if( isset( $_SESSION['seed'] ) ) { $seed = $_SESSION['seed']; }
-	if ( !$seed ) {
-		$seed = rand();
-		$_SESSION['seed'] = $seed;
-	}
-	$orderby = 'rand('.$seed.')';
 
-    return $orderby;
+	$seed = $_SESSION['bp_seed'];
+	if( !get_query_var( 'paged' ) || get_query_var( 'paged' ) == 0 || get_query_var( 'paged' ) == 1 ) {
+		$seed = mt_rand(0, 32767);
+	}
+	$_SESSION['bp_seed'] = $seed;
+
+	return 'RAND('.$seed.')';		
 }
 
 // Add Breadcrumbs
@@ -1770,6 +1764,7 @@ function battleplan_scripts() {
 	wp_enqueue_style( 'battleplan-fontawesome', get_template_directory_uri()."/fontawesome.css", array(), _BP_VERSION );
 	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { wp_enqueue_style( 'battleplan-events', get_template_directory_uri()."/style-events.css", array(), _BP_VERSION ); } 	
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_enqueue_style( 'battleplan-woocommerce', get_template_directory_uri()."/style-woocommerce.css", array(), _BP_VERSION ); } 
+	if ( is_plugin_active( 'stripe-payments/accept-stripe-payments.php' ) ) { wp_enqueue_style( 'battleplan-stripe-payments', get_template_directory_uri()."/style-stripe-payments.css", array(), _BP_VERSION ); } 
 	
 	wp_enqueue_script( 'battleplan-bootstrap', get_template_directory_uri().'/js/bootstrap.js', array(), _BP_VERSION, true );
 	wp_enqueue_script( 'battleplan-parallax', get_template_directory_uri().'/js/parallax.js', array(), _BP_VERSION, true );
@@ -1799,14 +1794,15 @@ if ( get_option( 'site_type' ) == 'pedigree' ) { require_once get_template_direc
 require_once get_template_directory() . '/functions-public.php';
 
 // Dequeue unneccesary styles & scripts
-add_action( 'wp_print_styles', 'battleplan_dequeue_unwanted_stuff', 99 );
+add_action( 'wp_print_styles', 'battleplan_dequeue_unwanted_stuff', 9999 );
 function battleplan_dequeue_unwanted_stuff() {
 	wp_dequeue_style( 'wp-block-library' );  wp_deregister_style( 'wp-block-library' );
 	wp_dequeue_style( 'wp-block-library-theme' );  wp_deregister_style( 'wp-block-library-theme' );	
 	wp_dequeue_style( 'css-animate' );  wp_deregister_style( 'css-animate' );
 	wp_dequeue_style( 'select2' );  wp_deregister_style( 'select2' );
 	wp_dequeue_style( 'fontawesome' ); wp_deregister_style( 'fontawesome' );
-	
+	wp_dequeue_style( 'stripe-handler-ng-style' ); wp_deregister_style( 'stripe-handler-ng-style' );
+	wp_dequeue_style( 'asp-default-style' ); wp_deregister_style( 'asp-default-style' );	
 	wp_dequeue_script( 'select2'); wp_deregister_script('select2');	
 	wp_dequeue_script( 'wphb-global' ); wp_deregister_script( 'wphb-global' );
 	wp_dequeue_script( 'wp-embed' ); wp_deregister_script( 'wp-embed' );
@@ -1925,7 +1921,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
 	}
     if ( "user-email" == $tag->name ) {
         $check = isset( $_POST["user-email"] ) ? trim( $_POST["user-email"] ) : ''; 
-		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com');
+		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com');
 		foreach($badwords as $badword) {
 			if (stripos($check,$badword) !== false) $result->invalidate( $tag, 'Message cannot be sent.');
 		}
@@ -2130,7 +2126,8 @@ function battleplan_getGoogleRating() {
 			$number = $res['result']['user_ratings_total'];	
 			updateMeta( $siteHeader, "google-review-rating", $rating );	
 			updateMeta( $siteHeader, "google-review-number", $number );	
-			updateMeta( $siteHeader, "google-review-date", $today );		
+			updateMeta( $siteHeader, "google-review-date", $today );
+			$dateChecked = $today;
 		endif;
 
 		if ( $rating > 3.99 ) :
@@ -2145,7 +2142,7 @@ function battleplan_getGoogleRating() {
 			$buildPanel .= '<path d="M256 113.86c34.65 0 65.76 11.91 90.22 35.29l67.69-67.69C373.03 43.39 319.61 20 256 20c-92.25 0-172.07 52.89-210.9 130.01l78.85 61.15c18.56-55.78 70.59-97.3 132.05-97.3z" fill="#ea4335"></path>';
 			$buildPanel .= '<path d="M20 20h472v472H20V20z"></path>';
 			$buildPanel .= '</g></svg>';
-			$buildPanel .= '<div class="wp-google-value" itemprop="ratingValue">'.number_format($rating, 1, '.', ',').'</div>';
+			$buildPanel .= '<div data-as-of="'.$dateChecked.'" class="wp-google-value" itemprop="ratingValue">'.number_format($rating, 1, '.', ',').'</div>';
 			$buildPanel .= '<div class="wp-google-stars">';
 
 			if ( $rating >= 4.7) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($rating, 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i></span>';	

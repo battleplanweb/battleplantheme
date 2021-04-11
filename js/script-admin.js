@@ -13,8 +13,9 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	/* Control color of Top 10 Most Visited Days box */
 	$("#battleplan_site_stats tr").each(function(){
 		var getAge = 100 - $(this).attr("data-age");
+		getAge = getAge * 2;
 		if (getAge < 0) { getAge = 0; }
-		$(this).find('td').css({ "filter": "brightness("+getAge+"%)" });
+		$(this).find('td').css({ "filter": "saturate("+getAge+"%)" });
 	});
 	
 	/* Control color of Visitor Trends box */
@@ -31,11 +32,13 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 		for (loopThru = 0; loopThru < getHalf; loopThru++) {	
 			varyAmt = 100 - ((100 / getHalf) * loopThru);
-			$('#battleplan_trends_stats .'+trend+' tr[data-count="' + getCount[loopThru] + '"]').find('td').css({ "filter": "brightness("+varyAmt+"%)" });
+			varyAmt = varyAmt * 2;
+			$('#battleplan_trends_stats .'+trend+' tr[data-count="' + getCount[loopThru] + '"]').find('td').css({ "filter": "saturate("+varyAmt+"%)" });
 		} 
 		for (loopThru = getTotal; loopThru > getHalf; loopThru--) {	
 			varyAmt = 100 - ((100 / getHalf) * loopNum);
-			$('#battleplan_trends_stats .'+trend+' tr[data-count="' + getCount[loopThru] + '"]').find('td').css({ "color":"#f00", "filter": "brightness("+varyAmt+"%)" });
+			varyAmt = varyAmt * 2;
+			$('#battleplan_trends_stats .'+trend+' tr[data-count="' + getCount[loopThru] + '"]').find('td').css({ "color":"#f00", "filter": "saturate("+varyAmt+"%)" });
 			loopNum++;
 		} 
 	}	

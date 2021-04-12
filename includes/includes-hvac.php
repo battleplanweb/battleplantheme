@@ -1,4 +1,4 @@
-c<?php
+<?php
 /* Battle Plan Web Design - HVAC Includes
  
 /*--------------------------------------------------------------

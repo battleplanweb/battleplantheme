@@ -2277,7 +2277,7 @@ function battleplan_count_site_views_ajax() {
 			updateMeta($siteHeader, 'log-views-now', $rightNow);
 			updateMeta($siteHeader, 'log-views-time', $today);	
 			$viewsToday++;
-			if ( strpos($userRefer, "google") !== false || strpos($userRefer, "yahoo") !== false || strpos($userRefer, "bing") !== false ) $searchToday++;	
+			if ( strpos($userRefer, "google") !== false || strpos($userRefer, "yahoo") !== false || strpos($userRefer, "bing") !== false || strpos($userRefer, "duckduckgo") !== false ) $searchToday++;	
 			array_shift($getViews);	
 			array_unshift($getViews, array ('date'=>date('F j, Y', $today), 'views'=>$viewsToday, 'search'=>$searchToday));	
 			$newViews = maybe_serialize( $getViews );

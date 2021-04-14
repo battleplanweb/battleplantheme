@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 8.6
+Version: 8.6.2
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -431,7 +431,9 @@ span {
 	transition:									inherit;
 }
 
-.ribbon {
+.ribbon,
+.slant-edge,
+.forked-edge {
 	position: 									relative;
 	padding:									5px 10px;
 	background: 								#404040;
@@ -443,7 +445,11 @@ span {
 }
 
 .ribbon:before, 
-.ribbon:after {
+.ribbon:after,
+.slant-edge:before, 
+.slant-edge:after,
+.forked-edge:before, 
+.forked-edge:after {
 	content: 									"";
 	height: 									0;
 	width: 										0;
@@ -461,6 +467,61 @@ span {
 .ribbon:after {
 	right: 										-2px;
 	border-right: 								15px solid transparent !important;
+}
+
+.slant-edge:before, 
+.slant-edge:after {
+	border-top: 								50px solid #000000;
+	bottom: 									0;
+}	
+
+.slant-edge:before {
+	border-left: 								50px solid transparent;
+	left: 										-50px;
+}
+
+.slant-edge:after {
+	right: 										-50px;
+	border-right: 								50px solid transparent;
+}
+
+.forked-edge:before, 
+.forked-edge:after {
+	 bottom: 									-1em;
+	 border: 									1.5em solid #000000;
+	 z-index: 									-1;
+}
+
+.forked-edge:before {
+	 left: 										-2em;
+	 border-right-width: 						1.5em;
+	 border-left-color: 						transparent;
+}
+
+.forked-edge:after {
+	 right: 									-2em;
+	 border-left-width: 						1.5em;
+	 border-right-color: 						transparent;
+}
+
+.forked-edge > div:before, 
+.forked-edge > div:after {
+	 content: 									"";
+	 position: 									absolute;
+	 display: 									block;
+	 border-style: 								solid;
+	 border-color: 								#000 transparent transparent transparent;
+	 bottom: 									-1em;
+}
+
+.forked-edge > div:before {
+	 left: 										0;
+	 border-width: 								1em 0 0 1em;
+}
+
+.forked-edge > div:after {
+	 right: 									0;
+	 border-width: 								1em 1em 0 0;
 }
 
 .col-inner > h2 + h3 {
@@ -1416,6 +1477,10 @@ section.section-parallax section.section-default .flex {
 	grid-column: 								default-start / default-end;
 }
 
+section.section .flex.nested .flex {
+	grid-column: 								span 1;
+}
+
 .col-inner > *,
 .span-12 {
 	grid-column:								span 12;
@@ -1804,6 +1869,7 @@ section.section-parallax section.section-default .flex {
 .site-info {
 	color:										#000000;
 }
+
 
 
 
@@ -2250,6 +2316,7 @@ section.section-parallax section.section-default .flex {
 .side-slide #mobile-navigation, 
 .side-push #mobile-navigation {
 	right:										0;
+
 	border-left: 								1px solid #000000;
 	box-shadow: 								-4px 0 5px rgba(0,0,0,0.5);
 	width:										440px;
@@ -2485,6 +2552,7 @@ a.scroll-top {
 .scroll-down a:hover {
 	color:										rgba(255,255,255,0.8);
 	transition:									all 0.3s ease;
+
 }
 
 @keyframes scroll-down-constant {
@@ -2680,6 +2748,7 @@ ul.comment-list .comment-meta .comment-time {
 
 ul.comment-list p {
 	margin-bottom:								1em;
+
 
 }
 
@@ -3481,6 +3550,7 @@ span.descriptionText {
 	top:										0;
 	z-index:									99999 !important;
 }
+
 
 div[class*="-faux"] {
 	position:									relative;
@@ -4374,33 +4444,7 @@ iframe#podium-modal {
 		height:										300px !important;
 	}
 	
-	/* Responsive Content 
-	.size-quarter-s,
-	.size-quarter-f,
-	.size-third-s,
-	.size-third-f,
-	.img-testimonials {
-		width: 										80%;
-	}
-	
-	.size-half-s,
-	.size-half-f {
-		width: 										100%;
-	}
-	
-			
-
-	
-	.size-half-s,
-	.size-half-f,
-	.size-quarter-s,
-	.size-quarter-f,
-	.size-third-s,
-	.size-third-f {
-		float:										none !important;
-		margin: 									1.5em auto !important;
-	}	*/
-	
+	/* Responsive Content */
 	.align-left.size-half-f,
 	.alignleft.size-half-f,
 	.align-right.size-half-f,
@@ -4436,6 +4480,26 @@ iframe#podium-modal {
 	.align-right.size-quarter-s,
 	.alignright.size-quarter-s {
 		max-width:									calc(45% - 1.5em);
+	}
+	
+
+	.inset-shadow img.align-left.size-half-f, 
+	.inset-shadow img.alignleft.size-half-f, 
+	.inset-shadow img.align-right.size-half-f, 
+	.inset-shadow img.alignright.size-half-f, 
+	.inset-shadow img.align-left.size-half-s, 
+	.inset-shadow img.alignleft.size-half-s, 
+	.inset-shadow img.align-right.size-half-s, 
+	.inset-shadow img.alignright.size-half-s,
+	.inset-shadow img.align-left.size-third-f,
+	.inset-shadow img.alignleft.size-third-f,
+	.inset-shadow img.align-right.size-third-f,
+	.inset-shadow img.alignright.size-third-f,
+	.inset-shadow img.align-left.size-third-s,
+	.inset-shadow img.alignleft.size-third-s,
+	.inset-shadow img.align-right.size-third-s,
+	.inset-shadow img.alignright.size-third-s {
+		margin:										0 auto !important;
 	}
 	
 	/* Responsive Sections */

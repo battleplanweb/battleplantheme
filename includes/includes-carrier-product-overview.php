@@ -9,12 +9,12 @@
 		$alt 		= "Carrier Air Conditioners";
 	endif;
 	
-	if ( $type == "carrier air handlers" ) :
-		$title 		= "Air Handlers";
-		$excerpt	= "<p>Air handlers make sure newly cooled or heated air gets to every corner in your house, even the tight spaces. Team up an air handler unit with an air conditioner or heat pump to circulate cool air in the summer and warm air in the winter.</p>";
-		$link 		= "/product-type/air-handlers/";
-		$pic 		= "Ruud-11-320x320.jpg";
-		$alt 		= "Ruud Air Handlers";
+	if ( $type == "carrier furnaces" ) :
+		$title 		= "Furnaces";
+		$excerpt	= "<p>The furnace is the heart of your home—out of sight, out of mind, and still keeping you and your family comfortable all year round. Our quiet, energy-efficient furnaces are designed to provide warmth to keep you cozy in winter and to circulate clean, refreshing air from your cooling system in the summer.</p>";
+		$link 		= "/product-type/furnaces/";
+		$pic 		= "carrier-furnace-01-320x320.jpg";
+		$alt 		= "Carrier Furnaces";
 	endif;
 	
 	if ( $type == "carrier heat pumps" ) :
@@ -23,6 +23,30 @@
 		$link 		= "/product-type/heat-pumps/";
 		$pic 		= "carrier-air-conditioner-01-320x320.jpg";
 		$alt 		= "Carrier Heat Pumps";
+	endif;	
+	
+	if ( $type == "carrier fan coils" ) :
+		$title 		= "Fan Coils";
+		$excerpt	= "<p>A fan coil is an indoor unit of a heating and cooling system that controls your  environment by moving air inside your home and reducing indoor humidity.</p>";
+		$link 		= "/product-type/fan-coils/";
+		$pic 		= "carrier-fan-coil-01-320x320.jpg";
+		$alt 		= "Carrier Fan Coils";
+	endif;		
+	
+	if ( $type == "carrier thermostats" ) :
+		$title 		= "Thermostats";
+		$excerpt	= "<p>A smart thermostat can make a noticeable difference for your home comfort and your wallet by putting control at your fingertips.</p>";
+		$link 		= "/product-type/thermostats/";
+		$pic 		= "carrier-tstat-01-320x320.jpg";
+		$alt 		= "Carrier Thermostats";
+	endif;		
+	
+	if ( $type == "carrier ductless systems" ) :
+		$title 		= "Ductless Systems";
+		$excerpt	= "<p>Ductless mini split systems can fit in any space, and deliver comfort with minimal visual impact. These solutions are flexible and work wherever you need them.</p>";
+		$link 		= "/product-type/ductless-systems/";
+		$pic 		= "carrier-ductless-01-320x320.jpg";
+		$alt 		= "Carrier Ductless Systems";
 	endif;	
 
 ?>

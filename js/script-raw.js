@@ -234,6 +234,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 // Stick an element to top of screen
 	window.lockDiv = function(container, strictTrigger, strictOffset, strictTop, faux, whichWay) {	
 
+
+
 		strictTrigger = strictTrigger || "";		
 		strictOffset = strictOffset || "";		
 		strictTop = strictTop || "";	

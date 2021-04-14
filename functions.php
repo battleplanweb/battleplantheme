@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.6' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.6.2' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -1765,13 +1765,15 @@ function battleplan_scripts() {
 	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { wp_enqueue_style( 'battleplan-events', get_template_directory_uri()."/style-events.css", array(), _BP_VERSION ); } 	
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_enqueue_style( 'battleplan-woocommerce', get_template_directory_uri()."/style-woocommerce.css", array(), _BP_VERSION ); } 
 	if ( is_plugin_active( 'stripe-payments/accept-stripe-payments.php' ) ) { wp_enqueue_style( 'battleplan-stripe-payments', get_template_directory_uri()."/style-stripe-payments.css", array(), _BP_VERSION ); } 
+	if ( is_plugin_active( 'cue/cue.php' ) ) { wp_enqueue_style( 'battleplan-cue', get_template_directory_uri()."/cue.css", array(), _BP_VERSION ); } 
 	
 	wp_enqueue_script( 'battleplan-bootstrap', get_template_directory_uri().'/js/bootstrap.js', array(), _BP_VERSION, true );
 	wp_enqueue_script( 'battleplan-parallax', get_template_directory_uri().'/js/parallax.js', array(), _BP_VERSION, true );
 	wp_enqueue_script( 'battleplan-waypoints', get_template_directory_uri().'/js/waypoints.js', array(), _BP_VERSION, true );
 	wp_enqueue_script( 'battleplan-script', get_template_directory_uri().'/js/script.js', array(), _BP_VERSION, true );
 	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { wp_enqueue_script( 'battleplan-events', get_template_directory_uri().'/js/events.js', array(), _BP_VERSION, true ); } 
-	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_enqueue_script( 'battleplan-woocommerce', get_template_directory_uri().'/js/woocommerce.js', array(), _BP_VERSION, true ); } 
+	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_enqueue_script( 'battleplan-woocommerce', get_template_directory_uri().'/js/woocommerce.js', array(), _BP_VERSION, true ); } 	
+	if ( is_plugin_active( 'cue/cue.php' ) ) { wp_enqueue_script( 'battleplan-cue', get_template_directory_uri().'/js/cue.js', array(), _BP_VERSION, true ); } 
 	if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) { wp_enqueue_script( 'comment-reply' ); }
 	
 	$getUploadDir = wp_upload_dir();
@@ -1802,7 +1804,9 @@ function battleplan_dequeue_unwanted_stuff() {
 	wp_dequeue_style( 'select2' );  wp_deregister_style( 'select2' );
 	wp_dequeue_style( 'fontawesome' ); wp_deregister_style( 'fontawesome' );
 	wp_dequeue_style( 'stripe-handler-ng-style' ); wp_deregister_style( 'stripe-handler-ng-style' );
-	wp_dequeue_style( 'asp-default-style' ); wp_deregister_style( 'asp-default-style' );	
+	wp_dequeue_style( 'asp-default-style' ); wp_deregister_style( 'asp-default-style' );		
+	wp_dequeue_style( 'cue' ); wp_deregister_style( 'cue' );
+	
 	wp_dequeue_script( 'select2'); wp_deregister_script('select2');	
 	wp_dequeue_script( 'wphb-global' ); wp_deregister_script( 'wphb-global' );
 	wp_dequeue_script( 'wp-embed' ); wp_deregister_script( 'wp-embed' );
@@ -2493,6 +2497,23 @@ function battleplan_buildSection( $atts, $content = null ) {
 	$buildSection .= '>'.do_shortcode($content).'</section>';	
 	
 	return $buildSection;
+}
+
+// Layout (Nested)
+add_shortcode( 'nested', 'battleplan_buildNested' );
+function battleplan_buildNested( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'grid'=>'1', 'break'=>'', 'valign'=>'', 'class'=>'' ), $atts );
+	$grid = esc_attr($a['grid']);
+	$class = esc_attr($a['class']);
+	if ( $class != '' ) $class = " ".$class;
+	$break = esc_attr($a['break']);
+	$valign = esc_attr($a['valign']);
+	if ( $valign != '' ) $valign = " valign-".$valign;
+	if ( $break != '' ) $break = " break-".$break;
+
+	$buildLayout = '<div class="flex nested grid-'.$grid.$valign.$break.$class.'">'.do_shortcode($content).'</div>';	
+	
+	return $buildLayout;
 }
 
 // Layout

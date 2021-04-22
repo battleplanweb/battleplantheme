@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.6.2' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.7' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -1726,7 +1726,8 @@ if ( ! function_exists( 'battleplan_setup' ) ) :
 		register_nav_menus( array( 'top-menu' => esc_html__( 'Top Menu', 'battleplan' ), ) );
 		register_nav_menus( array( 'header-menu' => esc_html__( 'Header Menu', 'battleplan' ), ) );				
 		register_nav_menus( array( 'widget-menu' => esc_html__( 'Widget Menu', 'battleplan' ), ) );		
-		register_nav_menus( array( 'footer-menu' => esc_html__( 'Footer Menu', 'battleplan' ), ) );
+		register_nav_menus( array( 'footer-menu' => esc_html__( 'Footer Menu', 'battleplan' ), ) );	
+		register_nav_menus( array( 'manual-menu' => esc_html__( 'Manual Menu', 'battleplan' ), ) );
 		add_theme_support( 'html5', array( 'search-form', 'comment-form', 'comment-list', 'gallery', 'caption', 'style', 'script', ) );
 		add_theme_support( 'custom-background', apply_filters( 'battleplan_custom_background_args', array( 'default-color' => 'ffffff', 'default-image' => '', ) ) );
 		add_theme_support( 'customize-selective-refresh-widgets' );
@@ -1830,16 +1831,6 @@ function battleplan_login_headertext( $headertext ) {
 
 // Hide the Wordpress admin bar
 show_admin_bar( false );
-
-// Suspend site if necessary
-add_action('get_header', 'battleplan_suspension_mode');
-function battleplan_suspension_mode() {
-	$suspended = get_post_meta( get_page_by_path('site-header', OBJECT, 'elements')->ID, '_suspend_site', true);
-	$userLogin = wp_get_current_user()->user_login;	
-	if ( $userLogin != 'battleplanweb' && $suspended == "yes" ) {
-		wp_die('<h1>Website Unavailable</h1><br />We apologize for the inconvenience. Please check back later.');
-	}
-}
 
 // Set up Main Menu
 class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
@@ -2665,7 +2656,7 @@ function battleplan_buildText( $atts, $content = null ) {
 // Button Block
 add_shortcode( 'btn', 'battleplan_buildButton' );
 function battleplan_buildButton( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'align'=>'center', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'', 'class'=>'', 'icon'=>'false', 'ada'=>'', 'start'=>'', 'end'=>'' ), $atts );
+	$a = shortcode_atts( array( 'size'=>'100', 'align'=>'center', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'', 'class'=>'', 'fancy'=>'', 'icon'=>'false', 'ada'=>'', 'start'=>'', 'end'=>'' ), $atts );
 	$getBiz = esc_attr($a['get-biz']);
 	if ( $getBiz == "" ) :
 		$link = esc_attr($a['link']);
@@ -2685,9 +2676,12 @@ function battleplan_buildButton( $atts, $content = null ) {
 	$target = esc_attr($a['new-tab']);
 	if ( $target == 'yes' || $target == "true" ) $target = ' target="_blank"';
 	if ( $class != '' ) $class = " ".$class;
+	$fancy = esc_attr($a['fancy']);	
 	$icon = esc_attr($a['icon']);	
 	if ( $icon == "true" ) $icon = "fas fa-chevron-right";	
-	if ( $icon != "false" ) : $class .= " fancy"; $content = '<span class="fancy-text">'.$content.'</span><span class="fancy-icon"><i class="'.$icon.'"></i></span>'; endif;
+	if ( $fancy != "" ) $fancy = "-".$fancy;
+	if ( $icon != "false" ) : $class .= " fancy".$fancy; $content = '<span class="fancy-text">'.$content.'</span><span class="fancy-icon"><i class="'.$icon.'"></i></span>'; endif;
+	
 	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));	
 	if ( $start || $end ) {
@@ -2750,9 +2744,9 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	if ( !$name ) $name = "section-".rand(10000,99999);
 	
 	if ( $type == "section" ) :
-		return do_shortcode('<section id="'.$name.'" class="section'.$style.' section-'.$width.' section-parallax'.$class.'" style="height:'.$height.'" data-parallax="scroll" data-natural-width="'.$imgW.'" data-natural-height="'.$imgH.'" data-position-x="'.$posX.'" data-position-y="'.$posY.'" data-z-index="1" data-bleed="'.$bleed.'" data-speed="'.$speed.'" data-ios-fix="true" data-android-fix="true" data-image-src="'.$image.'">'.$content.$buildScrollBtn.'</section>');	
+		return do_shortcode('<section id="'.$name.'" class="section'.$style.' section-'.$width.' section-parallax'.$class.'" style="height:'.$height.'" data-parallax="scroll" data-natural-width="'.$imgW.'" data-natural-height="'.$imgH.'" data-position-x="'.$posX.'" data-position-y="'.$posY.'" data-z-index="1" data-bleed="'.$bleed.'" data-speed="'.$speed.'" data-ios-fix="false" data-android-fix="false" data-image-src="'.$image.'">'.$content.$buildScrollBtn.'</section>');	
 	elseif ( $type == "col" ) :
-		return do_shortcode('<div id="'.$name.'" class="col col-parallax'.$class.' '.$posX.'" style="height:'.$height.'" data-parallax="scroll" data-natural-width="'.$imgW.'" data-natural-height="'.$imgH.'" data-position-x="'.$posX.'" data-position-y="'.$posY.'" data-z-index="1" data-bleed="'.$bleed.'" data-speed="'.$speed.'" data-ios-fix="true" data-android-fix="true" data-image-src="'.$image.'">'.$content.'</div>');	
+		return do_shortcode('<div id="'.$name.'" class="col col-parallax'.$class.' '.$posX.'" style="height:'.$height.'" data-parallax="scroll" data-natural-width="'.$imgW.'" data-natural-height="'.$imgH.'" data-position-x="'.$posX.'" data-position-y="'.$posY.'" data-z-index="1" data-bleed="'.$bleed.'" data-speed="'.$speed.'" data-ios-fix="false" data-android-fix="false" data-image-src="'.$image.'">'.$content.'</div>');	
 	endif;
 }
 

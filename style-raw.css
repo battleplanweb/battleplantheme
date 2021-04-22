@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 8.6.2
+Version: 8.7
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -1093,20 +1093,62 @@ div.wpcf7 .form-submitting .ajax-loader {
     border-color: 								red;
 }
 
-a.button.fancy {
-	padding:									0;
-}
-
-a.button .fancy-text,
-a.button .fancy-icon {
+a.button.fancy .fancy-text,
+a.button.fancy .fancy-icon,
+a.button.fancy:hover .fancy-text,
+a.button.fancy:hover .fancy-icon,
+a.button.fancy-2 .fancy-text,
+a.button.fancy-2 .fancy-icon,
+a.button.fancy-2:hover .fancy-text,
+a.button.fancy-2:hover .fancy-icon {
 	display:									inline-block;
-	float:										left;
-	padding: 									0.3em 1em;
+	padding: 									0;
+	transition:									all 0.3s ease;
 }
 
-a.button .fancy-icon {
-	padding-left: 								0.5em;	
-	padding-right: 								0.5em;
+a.button.fancy .fancy-icon i,
+a.button.fancy-2 .fancy-icon i {
+	font-size:									85%;
+}
+
+a.button.fancy .fancy-text {
+	padding-left:								10px;
+	padding-right:								10px;
+}
+
+a.button.fancy:hover .fancy-text {
+	padding-left:								1px;
+	padding-right:								19px;
+}
+
+a.button.fancy .fancy-icon {
+	width:										0;
+	transform:									translateX(-15px);
+	opacity:									0;
+}
+
+a.button.fancy:hover .fancy-icon {
+	width:										0;
+	transform:									translateX(-9px);
+	opacity:									1;
+}
+
+a.button.fancy-2 {
+	padding:									0;	
+}
+
+a.button.fancy-2 .fancy-text,
+a.button.fancy-2:hover .fancy-text {
+	padding: 									0.3em 0.6em 0.3em 0.7em;
+}
+
+a.button.fancy-2 .fancy-icon,
+a.button.fancy-2:hover .fancy-icon {
+	padding: 									0.3em 0.5em 0.3em 0.6em;
+}
+
+a.button.fancy-2 .fancy-icon {
+	background:									rgba(0,0,0,0.2);
 }
 
 .row-of-buttons,
@@ -1168,6 +1210,10 @@ section.section {
 	display: 									grid;
 	grid-template-columns: 						[edge-start] 3% [full-start] 1fr [stretch-start] 2fr [default-start] minmax(0, 1280px) [default-end] 2fr [stretch-end] 1fr [full-end] 3% [edge-end];
 	gap: 										0;
+}
+
+section.section-parallax > section.section {
+	grid-column: 								1 / -1;
 }
 
 #masthead {
@@ -2055,8 +2101,6 @@ section.section .flex.nested .flex {
 	pointer-events:								none;
 }
 
-
-
 #desktop-navigation ul.main-menu li:hover::before, 
 #desktop-navigation ul.main-menu li.active::before,
 #desktop-navigation ul.main-menu li.tab-focus::before,
@@ -2316,6 +2360,7 @@ section.section .flex.nested .flex {
 .side-slide #mobile-navigation, 
 .side-push #mobile-navigation {
 	right:										0;
+
 
 	border-left: 								1px solid #000000;
 	box-shadow: 								-4px 0 5px rgba(0,0,0,0.5);
@@ -2943,6 +2988,21 @@ img.unloaded {
 	margin:										0 auto !important;
 }
 
+.size-quarter-s iframe, 
+.size-third-s iframe, 
+.size-half-s iframe, 
+.size-full-s iframe, 
+.size-quarter-f iframe, 
+.size-third-f iframe, 
+.size-half-f iframe, 
+.size-full-f iframe {
+	margin:										0 auto !important;
+}
+
+.inset-shadow img {
+	width:										100% !important; /* added 4/19/21 for Ironworks Welds */
+}
+
 .page-content .wp-smiley,
 .entry-content .wp-smiley,
 .comment-content .wp-smiley {
@@ -3017,6 +3077,14 @@ img.noFX,
 .block-video.span-3 {
 	width:										25%;
 }
+
+.screen-mobile .parallax-mirror.mobile-hide {
+	display:									none;
+}		
+
+.screen-mobile .parallax-mirror {
+	display:									none;
+}		
 
 /* Captions
 --------------------------------------------- */
@@ -3328,7 +3396,7 @@ dl.col-gallery {
 .block-accordion h2 { 
 	font-family:								"Open Sans";
 	font-weight:								bold;
-	font-size: 									1.2em;
+	font-size: 									18rem;
 	text-transform:								none;
 	padding:									0.3em 0.3em 0.3em 2em;
 	text-align:									left !important;
@@ -3358,7 +3426,7 @@ dl.col-gallery {
 	font-family: 								Font Awesome;
 	content:									"\f054";
 	font-weight:								900;
-	font-size:									22rem;
+	font-size:									18rem;
 	transform: 									rotate(0deg);
 	transform-origin: 							50% 50%;
 	transition: 								all 0.2s linear;
@@ -3406,6 +3474,7 @@ section.tab-content {
 section.tab-content.current {
 	display:									inherit;
 }
+
 
 /* Products (Shearer Supply)
 --------------------------------------------- */
@@ -3938,7 +4007,7 @@ iframe#podium-modal {
 		position: 									fixed;
 		z-index: 									-10; 
 	}
-	
+
 	.loader {
 		top: 										calc(50% - 42px) !important;
 	}
@@ -4021,6 +4090,12 @@ iframe#podium-modal {
 	.gallery-column-7,
 	.gallery-column-8 {
 		grid-template-columns: 						repeat(6, 1fr);
+	}
+	
+	/* Accordion */
+	.block-accordion h2,
+	.block-accordion .accordion-icon::before {
+		font-size:									24rem;
 	}
 }
 
@@ -4534,6 +4609,7 @@ iframe#podium-modal {
 	
 	/* Row of Pics */ /* changed from .col to .col-row-of-pics 1/5/21 for Bubba's Cooks Country */
 	.grid-3e .col-row-of-pics:nth-last-child(1),	
+
 	.grid-4e .col-row-of-pics:nth-last-child(2),
 	.grid-5e .col-row-of-pics:nth-last-child(3),
 	.grid-6e .col-row-of-pics:nth-last-child(4),

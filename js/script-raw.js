@@ -203,16 +203,18 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 // Create faux div for sticky elements pulled out of document flow	
 	window.addStuck = function (element, faux) {
 		faux = faux || "true";	
+		var fauxElement = element.split(" ").pop();
 		if ( $(element).is(":visible") ) {						
 			$(element).addClass("stuck");	
-			if ( faux == "true" ) { addFaux(element); }
+			if ( faux == "true" ) { addFaux(fauxElement); }
 		}
 	};
 
 	window.removeStuck = function (element, faux) {
 		faux = faux || "true";
+		var fauxElement = element.split(" ").pop();
 		$(element).removeClass("stuck");
-		if ( faux == "true" ) { removeFaux(element); }
+		if ( faux == "true" ) { removeFaux(fauxElement); }
 	};
 
 	window.addFaux = function (element) {
@@ -233,9 +235,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 // Stick an element to top of screen
 	window.lockDiv = function(container, strictTrigger, strictOffset, strictTop, faux, whichWay) {	
-
-
-
 		strictTrigger = strictTrigger || "";		
 		strictOffset = strictOffset || "";		
 		strictTop = strictTop || "";	
@@ -698,6 +697,22 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		return $.parseJSON(data);
 	};		
 	
+	// Set a div's height to 0 and then slide to full height
+	window.revealDiv = function (container, delay, speed, offset) {
+		delay = delay || 0;		
+		speed = speed || 1000;		
+		offset = offset || "100%";
+		var total = delay + speed;
+		var theEl = $(container), fixedH = theEl.height();
+		theEl.height(0);		
+		setTimeout( function () { 
+			theEl.waypoint(function() {
+				theEl.animate({height: fixedH}, speed);
+			}, { offset: offset });
+		}, delay);	
+		setTimeout( function () { screenResize(); }, total);	
+	};	
+	
 	// Set up Review Questions & Redirect
 	$('.review-form:first').addClass('active');
 	$('.review-form #gmail-yes').click(function() { window.location.href = "/google"; });	
@@ -938,15 +953,22 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	};
 
 // Animate the hover effect of a button, and allow to finish (even if mouse out)
-	window.animateBtn = function(menu, notClass, animateClass) {	
+	window.animateBtn = function(menu, notClass, animateClass, inOut) {	
 		menu = menu || ".menu";		
-		notClass = notClass || "li:not(.active)";	
-
+		notClass = notClass || "li:not(.active)";
+		inOut = inOut || 'both';
 
 		var theEl = $(menu).find(notClass);
 		animateClass = animateClass || "go-animated";
-		theEl.bind("webkitAnimationEnd mozAnimationEnd animationend", function() { $(this).removeClass(animateClass); });
-		theEl.hover(function() { $(this).addClass(animateClass); });	
+		theEl.bind("webkitAnimationEnd mozAnimationEnd msAnimationEnd oAnimationEnd animationEnd", function() { $(this).removeClass(animateClass); });
+		
+		if ( inOut == "in" ) {
+			theEl.mouseenter(function() { $(this).addClass(animateClass); });	
+		} else if ( inOut == "out" ) {
+			theEl.mouseleave(function() { $(this).addClass(animateClass); });	
+		} else {
+			theEl.hover(function() { $(this).addClass(animateClass); });
+		}
 	};
 
 // Split string into words for animation
@@ -1128,19 +1150,21 @@ if ( $('body').hasClass('remove-sidebar') ) {
 	
 // Control Menu Buttons on "one page" site		
 	if ( $('.menu-item a[href^="#"]').is(':visible') ) { 
-		var menu = $('nav:visible').find('ul'), whenToChange = $(window).outerHeight() * 0.35, menuHeight = menu.outerHeight()+whenToChange, menuItems = menu.find('a[href^="#"]'), scrollItems = menuItems.map(function(){ var item = $($(this).attr("href")); if ( $(this).parent().css('display') != "none" ) { return item; } });
+		var thisLink = $(this), menu = $('nav:visible').find('ul'), whenToChange = $(window).outerHeight() * 0.35, menuHeight = menu.outerHeight()+whenToChange, menuItems = menu.find('a[href^="#"]'), scrollItems = menuItems.map(function(){ var item = $(thisLink.attr("href")); if ( thisLink.parent().css('display') != "none" ) { return item; } });
 		
 		$(window).scroll(function() { 
-			var fromTop = $(this).scrollTop()+menuHeight, thisHash, changeMenu; 
+			var fromTop = thisLink.scrollTop()+menuHeight, thisHash, changeMenu; 
 			var cur = scrollItems.map(function() {  
-				if ( $(this).offset().top < fromTop ) { 
-					thisHash = "#"+$(this)[0].id;
-					clearTimeout(changeMenu);
-					changeMenu = setTimeout(function(){ 
-						menu.find('li').removeClass('current-menu-item').removeClass('current_page_item').removeClass('active');
-						menu.find('a[href^="'+thisHash+'"]').closest('li').addClass('current-menu-item').addClass('current_page_item').addClass('active'); 
-					}, 10);	
-					closeMenu();// auto close mobile menu
+				if ( thisLink.offset() !== undefined ) {
+					if ( thisLink.offset().top < fromTop ) { 
+						thisHash = "#"+thisLink[0].id;
+						clearTimeout(changeMenu);
+						changeMenu = setTimeout(function(){ 
+							menu.find('li').removeClass('current-menu-item').removeClass('current_page_item').removeClass('active');
+							menu.find('a[href^="'+thisHash+'"]').closest('li').addClass('current-menu-item').addClass('current_page_item').addClass('active'); 
+						}, 10);	
+						closeMenu();// auto close mobile menu
+					}
 				}
 			});
 		});
@@ -1494,9 +1518,14 @@ if ( $('body').hasClass('remove-sidebar') ) {
 				els[0].classList.remove('tab-focus')
 			};
 			setTimeout(function() {
-				document.activeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });				
-				document.activeElement.classList.add("tab-focus"); 					
-				document.activeElement.closest('li').classList.add("tab-focus"); 	
+				var getEl = document.activeElement, menuItem = getEl.closest('.menu-item');
+				getEl.classList.add("tab-focus"); 		
+				if ( menuItem == null ) {
+					getEl.scrollIntoView({ behavior: 'smooth', block: 'center' });	
+				} else {
+					menuItem.classList.add("tab-focus");
+					getEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });	
+				}
 			}, 10);
 		}		
 	});
@@ -1506,7 +1535,6 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			for (el of els ) { 
 				el.classList.remove('tab-focus'); 
 			} 
-
 		};			
 	});
 	
@@ -1543,8 +1571,42 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		//}
 		//setTimeout(function() {	clearParallaxGlitch(); }, 50);
 		//$('#container').resize(function() { clearParallaxGlitch(); });
-		
-		
+				
+	// Handle parallax sections (with content) on mobile devices
+		var countParallax = 1;
+		$('.section-parallax .flex').each(function() {
+			var thisSection = $(this).closest('.section-parallax'), thisSectionBG = thisSection.attr('data-image-src'), parallaxClass = 'parallax-'+countParallax;			
+			thisSection.addClass('mobile-full');
+			
+			setTimeout(function() { 				
+				$('img.parallax-slider').each(function() {
+					if ( $(this).attr('src') == thisSectionBG ) {
+						$(this).parent().addClass('mobile-hide');						
+					}
+				});		
+			}, 100); 
+						
+			$('<style>html.'+parallaxClass+'::before{background-image:url('+thisSectionBG+')}</style>').appendTo('head');		
+			
+			thisSection.waypoint(function(direction) {				
+				if (direction === 'down') {			
+					$('html').addClass(parallaxClass);
+				} else {
+					$('html').removeClass(parallaxClass);
+				}					
+			}, { offset: '100%' });	 		
+			
+			thisSection.waypoint(function(direction) {
+				if (direction === 'down') {			
+					$('html').removeClass(parallaxClass);
+				} else {
+					$('html').addClass(parallaxClass);
+				}					
+			}, { offset: function() { return -$(this.element).outerHeight() } });	
+			
+			countParallax++;
+		}); 
+				
 	// Set up Locked Message position, delay, & cookie	
 		$('section.section-lock').each(function() {
 			var thisLock = $(this), initDelay = thisLock.attr('data-delay'), lockPos = thisLock.attr('data-pos'), cookieExpire = thisLock.attr('data-show'), rowH = thisLock.outerHeight() + 100, buttonActivated = "no";

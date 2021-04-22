@@ -853,6 +853,20 @@ function battleplan_column_settings() {
 					'name'=>'gallery-tags',
 					'label_type'=>'',
 					'search'=>'on'
+				),
+				'menu-order'=>array(
+					'type'=>'column-order',
+					'label'=>'Order',
+					'width'=>'',
+					'width_unit'=>'%',
+					'edit'=>'on',
+					'enable_term_creation'=>'on',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'menu-order',
+					'label_type'=>'',
+					'search'=>''
 				)
 			),
 			'layout'=>array(
@@ -1255,18 +1269,6 @@ function battleplan_reorderAdminBar() {
 	
 	$wp_admin_bar->add_node( array( 'id' => 'tagline', 'title' => '-&nbsp;&nbsp;'.get_bloginfo( 'description' ).'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;', 'href'  => esc_url(site_url()), ) );	
 	
-	$suspended = get_post_meta( get_page_by_path('site-header', OBJECT, 'elements')->ID, '_suspend_site', true);	
-	if ( $_SERVER['QUERY_STRING'] == "page=suspend-site" ) :	
-		if ( $suspended == "yes" ) : $suspended = "no";
-		else : $suspended = "yes";
-		endif;
-	endif;
-	if ( $suspended == "yes" ) :
-		$wp_admin_bar->add_node( array( 'id' => 'suspend', 'title' => 'Reinstate Website', 'href' => 'admin.php?page=suspend-site' ) );	
-	else:
-		$wp_admin_bar->add_node( array( 'id' => 'suspend', 'title' => 'Suspend Website', 'href' => 'admin.php?page=suspend-site' ) );	
-	endif;
-	
     $IDs_sequence = array('site-name', 'tagline', 'suspend' );
     $nodes = $wp_admin_bar->get_nodes();
     foreach ( $IDs_sequence as $id ) {
@@ -1289,24 +1291,14 @@ function battleplan_reorderAdminBar() {
 	$wp_admin_bar->remove_node('view-site');	
 }
 
-// Create "Suspend Website" admin page
+// Create additional admin pages
 add_action( 'admin_menu', 'battleplan_admin_menu' );
 function battleplan_admin_menu() {
-	add_menu_page( __( 'Suspend Site', 'battleplan' ), __( 'Suspend Site', 'battleplan' ), 'manage_options', 'suspend-site', 'battleplan_suspendSitePage', 'dashicons-schedule', 3 );
+	add_menu_page( __( 'Clear Stats', 'battleplan' ), __( 'Clear Stats', 'battleplan' ), 'manage_options', 'clear-stats', 'battleplan_clearViewFields', 'dashicons-trash', 3 );
 }
 
-function battleplan_suspendSitePage() { 
-	$siteHeader = get_page_by_path('site-header', OBJECT, 'elements')->ID;
-	$suspended = get_post_meta($siteHeader, '_suspend_site', true);	
-	if ( $suspended == "yes" || $suspended == null || $suspended = "" ) :
-		if ( !add_post_meta( $siteHeader, '_suspend_site', $suspended, true ) ) :
-			update_post_meta( $siteHeader, '_suspend_site', 'no' );
-		endif;
-		echo '<h1>Website Reinstated</h1>';
-	else:
-		update_post_meta( $siteHeader, '_suspend_site', 'yes' );
-		echo '<h1>Website Suspended</h1>';
-	endif;
+function battleplan_addSitePage() { 
+	echo '<h1>Admin Page</h1>';
 }
 
 // Replace WordPress copyright message at bottom of admin page

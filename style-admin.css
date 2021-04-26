@@ -102,7 +102,19 @@ input[type="checkbox"], input[type="radio"] {
 }
 
 /* Pages, Posts, etc. */
-.wp-list-table th:not(#title) a,
+.wp-list-table th:not(#title) a {
+	text-align:									center;
+}
+
+.wp-list-table th:not(#title) {
+	text-align:									center;
+	padding:									2px 0 6px;
+}
+
+.wp-list-table th:not(#title).sortable {
+	padding:									8px 0 0;
+}
+
 .wp-list-table td:not(.title):not(.column-source):not(.plugin-title):not(.column-description):not(.plugin-update) {
 	text-align:									center;
 }

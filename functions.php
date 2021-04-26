@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.7' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.7.1' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -1187,6 +1187,13 @@ function fillMenu($cpt, $max = "-1", $orderby = "title", $seq = "asc") {
 // Add shortcode capability to Contact Form 7
 add_filter( 'wpcf7_form_elements', 'do_shortcode' );
 
+// Custom User Roles
+add_action( 'init', 'battleplan_create_user_roles' );
+function battleplan_create_user_roles() {
+	remove_role( 'bp_manager' );
+	add_role('bp_manager', __('Manager'), get_role('editor')->capabilities);
+}
+
 /*--------------------------------------------------------------
 # Register Custom Post Types
 --------------------------------------------------------------*/
@@ -1701,6 +1708,7 @@ function battleplan_footer_social_box() {
 		if ( do_shortcode('[get-biz info="instagram"]') ) $buildLeft .= do_shortcode('[social-btn type="instagram"]');							
 		if ( do_shortcode('[get-biz info="linkedin"]') ) $buildLeft .= do_shortcode('[social-btn type="linkedin"]');							
 		if ( do_shortcode('[get-biz info="yelp"]') ) $buildLeft .= do_shortcode('[social-btn type="yelp"]');							
+		if ( do_shortcode('[get-biz info="pinterest"]') ) $buildLeft .= do_shortcode('[social-btn type="pinterest"]');							
 		if ( do_shortcode('[get-biz info="email"]') ) $buildLeft .= do_shortcode('[social-btn type="email"]');
 	$buildLeft .= "</div>";
 	return $buildLeft;
@@ -2063,14 +2071,14 @@ wp_update_term(1, 'category', array( 'name'=>'Blog', 'slug'=>'blog' ));
 // Cap auto generated excerpts at 1 or 2 sentences, based on length
 add_filter( 'excerpt_length', 'battleplan_excerpt_length', 999 );
 function battleplan_excerpt_length( $length ) { 
-	return 200; 
+	return 300; 
 } 
 add_filter('get_the_excerpt', 'end_with_sentence');
 function end_with_sentence( $excerpt ) {	
 	if ( !has_excerpt() ) :		
 		$sentences = preg_split( "/(\.|\!|\?)/", $excerpt, NULL, PREG_SPLIT_DELIM_CAPTURE);
 		$newExcerpt = implode('', array_slice($sentences, 0, 4));	
-		if ( strlen($newExcerpt) > 150 ) $newExcerpt = implode('', array_slice($sentences, 0, 2));
+		if ( strlen($newExcerpt) > 200 ) $newExcerpt = implode('', array_slice($sentences, 0, 2));
 
 		return $newExcerpt;
 	else: return $excerpt; endif;

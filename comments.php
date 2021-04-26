@@ -50,9 +50,9 @@ if ( post_password_required() ) {
         'title_reply' => __( 'Write a Comment', 'battleplan' ),
         'comment_notes_after' => '',    
 		'fields' => array(
-			'author' => '<p class="comment-form-author"><label for="author">' . _x( 'Your Name', 'battleplan' ) . '</label><br /><input id="author" name="author" aria-required="true"></input></p>',
-			'email' => '<p class="comment-form-email"><label for="email">' . _x( 'Your Email', 'battleplan' ) . '</label><br /><input id="email" name="email"></input></p>',
-			'url' => '<p class="comment-form-url"><label for="url">' . _x( 'Your Website', 'battleplan' ) . '</label><br /><input id="url" name="url"></input></p>',
+			'author' => '<p class="comment-form-author"><label for="author">' . _x( 'Your Name', 'battleplan' ) . '</label><br /><input type="text" id="author" name="author" aria-required="true"></input></p>',
+			'email' => '<p class="comment-form-email"><label for="email">' . _x( 'Your Email', 'battleplan' ) . '</label><br /><input type="text" id="email" name="email"></input></p>',
+			'url' => '<p class="comment-form-url"><label for="url">' . _x( 'Your Website', 'battleplan' ) . '</label><br /><input type="text" id="url" name="url"></input></p>',
 		),
         'comment_field' => '<p class="comment-form-comment"><label for="comment">' . _x( 'Your Comment', 'battleplan' ) . '</label><br /><textarea id="comment" name="comment" aria-required="true"></textarea></p>',
         'label_submit' => __( 'Submit', 'battleplan' ),

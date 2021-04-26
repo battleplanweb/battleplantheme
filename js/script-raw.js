@@ -145,6 +145,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			}).get().join(' ')).addClass(additional);
 		});
 	};
+	
+// Shuffle an array
+	window.shuffleArray = function (array) {
+  		for (let i = array.length - 1; i > 0; i--) {
+			let j = Math.floor(Math.random() * (i + 1));
+    		[array[i], array[j]] = [array[j], array[i]];
+  		}
+	}	
 
 // Find & Replace text or html in a Div	
 	window.replaceText = function (container, find, replace, type, all) {
@@ -181,6 +189,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		if (trimText.done) return;
 		length = length || 250;
 		container = container || ".slider-testimonials .testimonials-quote, #secondary .testimonials-quote, .random-post .testimonials-quote";
+		
 		$(container).each(function() { 
 			var theText = $(this).html(), maxLength = length, trimText = theText.substr(0, maxLength);
 			if ( trimText.length == maxLength ) {
@@ -188,7 +197,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				$(this).html(trimText  + "…" );
 			}
 		});
-		trimText.done = true;
+		trimText.done = true; 		
 	};
 
 // Remove sidebar from specific pages

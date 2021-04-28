@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 8.7.1
+Version: 8.7.2
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -1243,6 +1243,10 @@ section.section {
 	gap: 										2.5em 3%;
 }
 
+section.section-default .flex {
+	gap: 										2.5em 4.5%;
+}
+
 .flex.grid-1-auto {
 	grid-template-columns: 						1fr auto;
 }
@@ -1432,6 +1436,7 @@ section.section {
 
 .sidebar-left.sidebar-box  #main-content,
 .sidebar-left.widget-box  #main-content,
+
 .sidebar-left.sidebar-box .flex.grid-content,
 .sidebar-left.widget-box .flex.grid-content {
 	grid-template-columns: 						[column-1-start] minmax(0, 356px) [column-1-end column-2-start] 1fr [column-2-end];
@@ -1768,10 +1773,13 @@ section.section .flex.nested .flex {
 }
 
 /* Credit Card Logos */
+#credit-cards,
 .widget-credit-cards #credit-cards {
 	display:									flex;
 	justify-content:							space-around;
 }
+
+#credit-cards img,
 .widget-credit-cards #credit-cards img {	
 	max-width:									100px;
 	width:										100%;
@@ -1959,6 +1967,10 @@ section.section .flex.nested .flex {
 	border-radius:								50%;
 	padding:									0.5em;
 	font-weight:								900;
+}
+
+.fa-fw {
+	width:										2em;
 }
 
 .social-box {
@@ -3082,10 +3094,6 @@ img.noFX,
 	display:									none;
 }		
 
-.screen-mobile .parallax-mirror {
-	display:									none;
-}		
-
 /* Captions
 --------------------------------------------- */
 .wp-caption {
@@ -3476,6 +3484,7 @@ section.tab-content.current {
 }
 
 
+
 /* Products (Shearer Supply)
 --------------------------------------------- */
 .archive-headline,
@@ -3541,7 +3550,7 @@ span.descriptionText {
 	font-size:									75%;
 }
 
-#why-choose-american-standard .col h3 {
+.why-choose-us .col h3 {
 	text-align:									center;
 }
 

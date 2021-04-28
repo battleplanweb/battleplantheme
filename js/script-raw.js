@@ -44,11 +44,11 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$(container).click(function() { window.location = "/"; });
 	};		
 
-// Set up American Standard logo to link to American Standard website
-	$('.as-logo, .am-stand-logo, .widget-as-logo').each(function() { 
-		$(this).wrapInner('<a href="https://www.americanstandardair.com/"></a>'); 
+// Set up American Standard logo to link to American Standard website	
+	$("img[src*='american-standard']").each(function() { 
+		$(this).wrap('<a href="https://www.americanstandardair.com/" target="_blank"></a>'); 
 	});
-
+			
 // Track phone number clicks in Google Analytics
 	window.trackClicks = function(type, category, action, url) {
 		$.post({

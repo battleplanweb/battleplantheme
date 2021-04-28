@@ -6,7 +6,7 @@
 ----------------------------------------------------------------
 # Product Overview
 # American Standard Customer Care
-# Why Choose American Standard
+# Why Choose Us?
 # Ruud Pro Partner
 # HVAC Maintenance Tips Teaser
 # HVAC Tip Of The Month
@@ -33,7 +33,8 @@ function battleplan_product_overview( $atts, $content = null ) {
 	
 	if (strpos($type, 'american standard') !== false) { include("wp-content/themes/battleplantheme/includes/includes-american-standard-product-overview.php"); }
 	elseif (strpos($type, 'ruud') !== false) { include("wp-content/themes/battleplantheme/includes/includes-ruud-product-overview.php"); }
-	elseif (strpos($type, 'carrier') !== false) { include("wp-content/themes/battleplantheme/includes/includes-carrier-product-overview.php"); }
+	elseif (strpos($type, 'carrier') !== false) { include("wp-content/themes/battleplantheme/includes/includes-carrier-product-overview.php"); }	
+	elseif (strpos($type, 'york') !== false) { include("wp-content/themes/battleplantheme/includes/includes-york-product-overview.php"); }
 	else { include("wp-content/themes/battleplantheme/includes/includes-generic-product-overview.php"); }
 	
 	return do_shortcode('
@@ -61,23 +62,26 @@ function battleplan_american_standard_customer_care( $atts, $content = null ) {
 
 
 /*--------------------------------------------------------------
-# Why Choose American Standard
+# Why Choose Us?
 --------------------------------------------------------------*/
-add_shortcode( 'why-choose-as', 'battleplan_why_choose_as' );
-function battleplan_why_choose_as( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'style'=>'1', 'width'=>'stretch', 'img'=>'', 'alt'=>'We are proud to be an independent American Standard dealer, offering the top rated HVAC products on the market.' ), $atts );
+add_shortcode( 'why-choose-as', 'battleplan_why_choose_us' );
+add_shortcode( 'why-choose-us', 'battleplan_why_choose_us' );
+function battleplan_why_choose_us( $atts, $content = null ) {
+	$brand = strtolower(str_replace(" ", "-", get_option('site_brand')));
+	$name = ucwords(get_option('site_brand'));
+	$a = shortcode_atts( array( 'style'=>'1', 'width'=>'stretch', 'img'=>'', 'alt'=>'We are proud to be a dealer of '.$name.', offering the top rated HVAC products on the market.' ), $atts );
 	$style = esc_attr($a['style']);
 	$width = esc_attr($a['width']);	
 	$img = esc_attr($a['img']);
 	$alt = esc_attr($a['alt']);
 	
-	if ( $img == "grey" ) : $img = "/wp-content/themes/battleplantheme/common/hvac-american-standard/why-choose-american-standard-logo-grey.png";
-	elseif ( $img == "white" ) : $img = "/wp-content/themes/battleplantheme/common/hvac-american-standard/why-choose-american-standard-logo-white.png";
-	elseif ( $img == "" ) :	$img = "/wp-content/themes/battleplantheme/common/hvac-american-standard/why-choose-american-standard-logo.png";
+	if ( $img == "grey" ) : $img = "/wp-content/themes/battleplantheme/common/hvac-".$brand."/why-choose-".$brand."-logo-grey.png";
+	elseif ( $img == "white" ) : $img = "/wp-content/themes/battleplantheme/common/hvac-".$brand."/why-choose-".$brand."-logo-white.png";
+	elseif ( $img == "" ) :	$img = "/wp-content/themes/battleplantheme/common/hvac-".$brand."/why-choose-".$brand."-logo.png";
 	else: $img = "/wp-content/uploads/".$img;
 	endif;
 	
-	return include "wp-content/themes/battleplantheme/includes/includes-why-choose-american-standard.php";
+	return include "wp-content/themes/battleplantheme/includes/includes-why-choose-".$brand.".php";
 }		
 
 
@@ -388,11 +392,15 @@ function battleplan_hvac_column_settings() {
 // Add Brand Logo widget to Sidebar
 add_shortcode( 'get-brand-logo', 'battleplan_getBrandLogo' );
 function battleplan_getBrandLogo($atts, $content = null) {
-	$a = shortcode_atts( array( 'alt'=>'' ), $atts );
+	$a = shortcode_atts( array( 'alt'=>'', 'brand'=>'' ), $atts );
 	$alt = esc_attr($a['alt']);
+	$brand = esc_attr($a['brand']);
+	$name = ucwords($brand);
 	if ( $alt != '' ) $alt="-".$alt;
-	$brand = strtolower(str_replace(" ", "-", get_option('site_brand')));
-	$name = ucwords(get_option('site_brand'));
+	if ( $brand == '' ) :
+		$brand = strtolower(str_replace(" ", "-", get_option('site_brand')));
+		$name = ucwords(get_option('site_brand'));
+	endif;
 	return '<img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$alt.'.png" alt="We offer '.$name.' heating and air conditioning products." />';
 }
 

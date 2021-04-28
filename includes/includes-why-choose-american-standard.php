@@ -2,7 +2,7 @@
 /* Battle Plan Web Design - Why Choose American Standard */
 
 return do_shortcode('
-	[section name="Why Choose American Standard" style="'.$style.'" width="'.$width.'"]
+	[section name="Why Choose American Standard" class="why-choose-us" style="'.$style.'" width="'.$width.'"]
 		[layout grid="1-1-1-1"] 
 			[col class="span-all"]
 				[txt]

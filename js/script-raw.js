@@ -45,7 +45,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	};		
 
 // Set up American Standard logo to link to American Standard website	
-	$("img[src*='american-standard']").each(function() { 
+	$("img[src*='/american-standard']").each(function() { 
 		$(this).wrap('<a href="https://www.americanstandardair.com/" target="_blank"></a>'); 
 	});
 			
@@ -299,6 +299,27 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	window.lockMenu = function() {	
 		lockDiv('#desktop-navigation');	
 	};
+	
+// Add stroke to text & transparent objects
+	window.addStroke = function(element, width, topColor, bottomColor, leftColor, rightColor) {	
+  		var shadow = "", steps = 16, spacing = width - 1, color, angle, cos, sin;
+		leftColor = leftColor || topColor;
+		bottomColor = bottomColor || topColor;
+		rightColor = rightColor || bottomColor;
+		
+  		for (var i = 0; i < steps; i++) {
+    		angle = (i * 2 * Math.PI) / steps;
+    		cos = Math.round(10000 * Math.cos(angle)) / 10000;
+    		sin = Math.round(10000 * Math.sin(angle)) / 10000;	 
+			if ( cos <= 0 && sin <= 0 ) { color = topColor; }  	  
+			if ( cos >= 0 && sin >= 0 ) { color = bottomColor; }
+			if ( cos <= 0 && sin >= 0 ) { color = leftColor; }
+			if ( cos >= 0 && sin <= 0 ) { color = rightColor; }
+			shadow += "calc("+ width + "px * " + cos + ") calc("+ width + "px * " + sin + ") 0 "+ color;
+	 		if ( i < (steps-1) ) { shadow += ", "; }	  
+  		}	
+		$(element).css({ "text-shadow": shadow, "letter-spacing":spacing+"px" });
+	};
 
 // Animate the automated scrolling to section of content
 	window.animateScroll = function (target, topSpacer, initSpeed) {
@@ -323,7 +344,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	};
 
 // Set up "Back To Top" button
-	var waypoints = $('#wrapper-content').waypoint(function(direction) {
+	var backToTop = $('#wrapper-content').waypoint(function(direction) {
 		if (direction === 'up') {			
 			$('a.scroll-top').animate( { opacity: 0 }, 150, function() { $('a.scroll-top').css({ "display": "none" }); });
 		} else {
@@ -332,7 +353,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	}, { offset: '10%' });	
 
 // Set up "Scroll Down" button
-	var waypoints = $('#wrapper-content').waypoint(function(direction) {
+	var scrollDown = $('#wrapper-content').waypoint(function(direction) {
 		if (direction === 'down') {			
 			$('.scroll-down').fadeOut("fast"); 	
 		} else {
@@ -371,20 +392,20 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		XorY = XorY || 'Y';
 		var theContainer = document.querySelector(container), style = window.getComputedStyle(theContainer), matrix = style.transform || style.webkitTransform || style.mozTransform, matrixValues = matrix.match(/matrix.*\((.+)\)/)[1].split(', ');
 		
-		if ( XorY == "x" || XorY == "X" ) return matrixValues[4];
-		if ( XorY == "y" || XorY == "Y" ) return matrixValues[5];
+		if ( XorY == "x" || XorY == "X" ) { return matrixValues[4]; }
+		if ( XorY == "y" || XorY == "Y" ) { return matrixValues[5]; }
 	};
 	
 // Accordion section - control opening & closing of expandable text boxes
 	window.buildAccordion = function (topSpacer, cssDelay, transSpeed, closeDelay, openDelay, clickActive) {
-		if (buildAccordion.done) return;
+		if (buildAccordion.done) { return; }
 		transSpeed = transSpeed || 500;
 		closeDelay = closeDelay || 0;
 		openDelay = openDelay || 0;
 		cssDelay = cssDelay || closeDelay + openDelay;
 		topSpacer = topSpacer || 0.1;
 		clickActive = clickActive || 'close';
-		var fullDelay = cssDelay+closeDelay+openDelay+transSpeed, useThis, accPos = [];
+		var accPos = [];
 
 		if ( topSpacer < 1 ) { topSpacer = getDeviceH() * topSpacer; }		
 		if ( getDeviceW() < mobileCutoff ) { topSpacer = topSpacer + mobileMenuBarH; }		
@@ -404,10 +425,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				$(this).click();
 			}
 		});
-
-		$(".block-accordion").click(function(e) {		
-			e.preventDefault();  
-			var locAcc = $(this), locIndex = locAcc.index('.block-accordion'), locPos = accPos[locIndex], topPos = accPos[0], moveTo = 0;			
+ 
+		$(".block-accordion .accordion-title").click(function(e) {		
+			e.preventDefault();
+			var locAcc = $(this).closest('.block-accordion'), locIndex = locAcc.index('.block-accordion'), locPos = accPos[locIndex], topPos = accPos[0], moveTo = 0;			
 			if ( !locAcc.hasClass("active") ) {
 				setTimeout( function () {
 					$( '.block-accordion.active .accordion-excerpt' ).animate({ height: "toggle", opacity: "toggle" }, transSpeed);					
@@ -437,7 +458,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 					$(".block-accordion.active").removeClass('active').attr( 'aria-expanded', false );
 				}, cssDelay);	
 			}
-			if ( getDeviceW() > mobileCutoff ) { setTimeout( function() { adjustSidebarH(); }, fullDelay); }		
 		});
 		buildAccordion.done = true;
 	};
@@ -682,8 +702,22 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			$(column).css({ "clear":"none" });
 			$(container).fadeTo(speed, 1);
 		});
-	};					
-			
+	};		
+		
+	// Handle the post filter button [get-filter-btn]
+	$(".filter-btn").click(function() {
+		var thisBtn = $(this), url = "?"+thisBtn.attr('data-url')+"=", flag=false;
+		$("input:checkbox[name=choice]:checked").each(function() {
+			if ( !flag ) {
+				url = url + $(this).val();
+				flag = true;
+			} else {
+				url = url  + "," + $(this).val();
+			}         
+		});
+		window.location = url;
+	});		
+		
 	// Tabbed Content - control changing and animation of tabbed content
 	$("ul.tabs li").keyup(function(event) {
 		var thisBtn = $(this);
@@ -711,15 +745,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		delay = delay || 0;		
 		speed = speed || 1000;		
 		offset = offset || "100%";
-		var total = delay + speed;
-		var theEl = $(container), fixedH = theEl.height();
-		theEl.height(0);		
+		var total = delay + speed, theEl = $(container), fixedH = theEl.outerHeight(), padT = theEl.css('padding-top'), padB = theEl.css('padding-bottom');
+		theEl.css({"height":0, "padding-top":0, "padding-bottom":0});		
 		setTimeout( function () { 
 			theEl.waypoint(function() {
-				theEl.animate({height: fixedH}, speed);
+				theEl.animate({"height": fixedH, "padding-top":padT, "padding-bottom":padB}, speed);
+				setTimeout( function () { screenResize(); }, total);	
 			}, { offset: offset });
 		}, delay);	
-		setTimeout( function () { screenResize(); }, total);	
 	};	
 	
 	// Set up Review Questions & Redirect
@@ -752,6 +785,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			thisDiv.clone().insertAfter( thisAnchor );
 		} else if ( where == "before" ) {
 			thisDiv.clone().insertBefore( thisAnchor );
+		} else if ( where == "top" || "start" ) {
+			thisAnchor.prepend(thisDiv.clone());
 		} else {
 			thisAnchor.append(thisDiv.clone());
 		}
@@ -765,6 +800,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			thisDiv.insertAfter( thisAnchor );
 		} else if ( where == "before" ) {
 			thisDiv.insertBefore( thisAnchor );
+		} else if ( where == "top" || "start" ) {
+			thisAnchor.prepend(thisDiv);
 		} else {
 			thisAnchor.append(thisDiv);
 		}
@@ -779,6 +816,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				thisDiv.find( $( moveThis )).insertAfter( thisDiv.find( anchor ) );
 			} else if ( where == "before" ) {
 				thisDiv.find( $( moveThis )).insertBefore( thisDiv.find( anchor ) );
+			} else if ( where == "top" || "start" ) {
+				thisDiv.find( anchor ).prepend(thisDiv.find( $( moveThis )));
 			} else {
 				thisDiv.find( anchor ).append(thisDiv.find( $( moveThis )));
 			}
@@ -824,8 +863,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 // Delete a div
 	window.removeDiv = function (target) {
 		$(target).remove();
+	};		
+	
+// Turn SVG into an element's background image
+	window.svgBG = function (svg, element) {
+		var thisSVG = $(svg), thisEl = $(element);
+		thisSVG.clone().css({"position":"absolute"}).prependTo(thisEl);
 	};	
-
+	
 /*--------------------------------------------------------------
 # Set up animation
 --------------------------------------------------------------*/
@@ -1140,33 +1185,34 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		$subCurrents.replaceClass( "dormant", "active" ); 
 	});
 
+// Automatically adjust for Google review bar 
+	$( '<div class="wp-google-badge-faux"></div>' ).insertAfter( $('#colophon'));
+
 // Animate scrolling when moving up or down a page
 	$('a[href^="#"]:not(.carousel-control-next):not(.carousel-control-prev)').on('click', function (e) {
 		e.preventDefault();    
-		var target = this.hash;
+		var target = this.hash, compensate = Number($(target).attr('data-hash'));
+		if( isNaN(compensate) ) { compensate = 0; } 
 		if ( target != "" ) { 
 			 if ( $('*'+target).length ) { 
-				animateScroll(target); 
-				setTimeout(function(){ animateScroll(target); }, 100); /* helps re-calculate in case there is a .stuck to account for (Executive Mobile Detailing) */
+				animateScroll(target, compensate); 
+				setTimeout(function(){ animateScroll(target, compensate); }, 100); /* helps re-calculate in case there is a .stuck to account for (Executive Mobile Detailing) */
 			 } else {
 				 window.location.href = "/"+target;
 			}
 		}
 	});
-
-// Automatically adjust for Google review bar 
-	$( '<div class="wp-google-badge-faux"></div>' ).insertAfter( $('#colophon'));
 	
 // Control Menu Buttons on "one page" site		
 	if ( $('.menu-item a[href^="#"]').is(':visible') ) { 
-		var thisLink = $(this), menu = $('nav:visible').find('ul'), whenToChange = $(window).outerHeight() * 0.35, menuHeight = menu.outerHeight()+whenToChange, menuItems = menu.find('a[href^="#"]'), scrollItems = menuItems.map(function(){ var item = $(thisLink.attr("href")); if ( thisLink.parent().css('display') != "none" ) { return item; } });
+		var menu = $('nav:visible').find('ul'), whenToChange = $(window).outerHeight() * 0.35, menuHeight = menu.outerHeight()+whenToChange, menuItems = menu.find('a[href^="#"]'), scrollItems = menuItems.map(function(){ var item = $($(this).attr("href")); if ( $(this).parent().css('display') != "none" ) { return item; } });
 		
 		$(window).scroll(function() { 
-			var fromTop = thisLink.scrollTop()+menuHeight, thisHash, changeMenu; 
+			var fromTop = $(this).scrollTop()+menuHeight, thisHash, changeMenu; 
 			var cur = scrollItems.map(function() {  
-				if ( thisLink.offset() !== undefined ) {
-					if ( thisLink.offset().top < fromTop ) { 
-						thisHash = "#"+thisLink[0].id;
+				if ( $(this).offset() !== undefined ) {
+					if ( $(this).offset().top < fromTop ) { 
+						thisHash = "#"+$(this)[0].id;
 						clearTimeout(changeMenu);
 						changeMenu = setTimeout(function(){ 
 							menu.find('li').removeClass('current-menu-item').removeClass('current_page_item').removeClass('active');
@@ -1178,7 +1224,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			});
 		});
 	};
-
+	
 // Set up mobile menu animation
 	window.closeMenu = function () {
 		$("#mobile-menu-bar .activate-btn").removeClass("active"); 
@@ -1279,20 +1325,20 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		compensate = compensate || 0;		
 		sidebarScroll = sidebarScroll || "true";
 		shuffle = shuffle || "true";
-		var isPaused = false;		
 
 // Shuffle an array of widgets
-		window.shuffleWidgets = function ($elements) {
+		window.arrangeWidgets = function ($elements) {
 			var i, index1, index2, temp_val, count = $elements.length, $parent = $elements.parent(), shuffled_array = [];
-
 			for (i = 0; i < count; i++) { shuffled_array.push(i); }
-
-			for (i = 0; i < count; i++) {
-				index1 = (Math.random() * count) | 0;
-				index2 = (Math.random() * count) | 0;
-				temp_val = shuffled_array[index1];
-				shuffled_array[index1] = shuffled_array[index2];
-				shuffled_array[index2] = temp_val;
+			
+			if ( shuffle == "true" ) {
+				for (i = 0; i < count; i++) {
+					index1 = (Math.random() * count) | 0;
+					index2 = (Math.random() * count) | 0;
+					temp_val = shuffled_array[index1];
+					shuffled_array[index1] = shuffled_array[index2];
+					shuffled_array[index2] = temp_val;
+				}
 			}
 
 			$elements.detach();
@@ -1301,78 +1347,47 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			var el = $(".widget.lock-to-bottom").detach();
 			$parent.append( el );		
 		};		
+		
+// Check & log heights of main elements
+		window.checkHeights = function () {
+			var primary = $('#primary').outerHeight();
+			var secondary = $('#secondary').outerHeight();
+			var viewport = $(window).outerHeight();
+			var content = $("#primary .site-main-inner").outerHeight() + compensate;
+			var widgets = $("#secondary .sidebar-inner").outerHeight();
+			var widgetsPad = widgets + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom'));
+			var remain = primary - widgetsPad;
+
+			$('#wrapper-content').attr( 'data-primary', Math.round(primary) ).attr( 'data-secondary', Math.round(secondary) ).attr( 'data-viewport', Math.round(viewport) ).attr( 'data-content', Math.round(content) ).attr( 'data-widgets', Math.round(widgets) ).attr( 'data-widget-padding', Math.round(widgetsPad) ).attr( 'data-remain', Math.round(remain) );
+			
+			return remain;
+		}
 
 // Set up "locked" widgets, and shuffle the rest
 		$('.widget.lock-to-top, .widget.lock-to-bottom').addClass("locked");		
 		$('.widget:not(.locked)').addClass("shuffle");
-
-
-		if ( getDeviceW() > mobileCutoff && shuffle == "true" ) { 
-			shuffleWidgets( $('.shuffle') );
-		}
+		arrangeWidgets( $('.shuffle') );
 
 // Initiate widget removal
 		window.widgetInit = function () {
-			if ( getDeviceW() > mobileCutoff && isPaused==false ) { 
-				$('.widget').removeClass('hide-widget');
-				removeWidgets('.widget.remove-first');
-				isPaused = true; 
+			if ( getDeviceW() > mobileCutoff ) { 
+				$('.widget:not(.widget-important)').addClass('hide-widget');
+				addWidgets();				
 			} 
 		};
-
-// Remove widgets that do not fit
-		window.removeWidgets = function (removeWidget) {
-			var contentH = $("#primary .site-main-inner").outerHeight() + compensate, widgetH = $("#secondary .sidebar-inner").outerHeight(true), remainH = widgetH - contentH, removeThis = $(removeWidget);
-
-			if ( remainH > 0 && $('.widget:not(.hide-widget)').length ) {		
-				removeThis.random().addClass("hide-widget");
-
-				if ( $('.widget.remove-first:not(.hide-widget)').length ) { removeWidgets( '.widget.remove-first:not(.hide-widget)' ); }
-				else if ( $('.widget.shuffle:not(.hide-widget)').length ) { removeWidgets( '.widget.shuffle:not(.hide-widget):not(.widget-important)' ); }
-				else if ( $('.widget.lock-to-bottom:not(.hide-widget)').length ) { removeWidgets( '.widget.lock-to-bottom:not(.hide-widget):not(.widget-important)' ); }
-				else { removeWidgets( '.widget.lock-to-top:not(.hide-widget):not(.widget-important)' ); }				
-
-			} else { 
-				checkWidgets();
-			}
-		};						
-
-// Determine the widget with height closest to amount of space remaining to fill
-		window.findClosest = function (compare, loop, test) {
-			var curr, diff = 999999;
-			loop++;
-			for (var val = 1; val < loop; val++) {
-				var newdiff = compare - test[val];
-				if ( newdiff > 0 && newdiff < diff ) { diff = newdiff; curr = test[val]; }
-			}
-			return curr;
-		};
-
-// Check hidden widgets for any smaller ones that might still fit
-		window.checkWidgets = function () {			
-				var contentH = $("#primary .site-main-inner").outerHeight() + compensate, widgetH = $("#secondary .sidebar-inner").outerHeight(), i = 0, widgets = [];
-				var remainH = contentH - widgetH + 140; // 140 is arbitrary, can be adjusted as needed to make sure widgets fit but don't go over
-
-				$('.widget.hide-widget').each(function() {
-					var theWidget = $(this);
-					i++;
-					widgets[i] = theWidget.outerHeight(true) + Math.floor((Math.random() * 10) - 5);
-					theWidget.addClass("widget-height-"+widgets[i]);	
-				});
-
-				var replaceWidget = findClosest(remainH, i, widgets);
-				widgets.splice(widgets.indexOf(replaceWidget),1);
-				if ( replaceWidget < remainH ) { $(".widget-height-"+replaceWidget).removeClass("hide-widget"); }
-
-				adjustSidebarH();
-				setTimeout(function() { isPaused = false; }, 3000);
+		
+// Add widget one by one as long as they fit
+		window.addWidgets = function () {
+			$('.hide-widget:not(.remove-first)').each(function(){
+				if ( $(this).height() <= checkHeights() ) { $(this).removeClass('hide-widget'); }				
+			});
+	
+			$('.hide-widget').each(function(){
+				if ( $(this).height() <= checkHeights() ) { $(this).removeClass('hide-widget'); }				
+			});
+			
+			if ( !$('.widget:not(.hide-widget)').length ) { $('widget:first-of-type').removeClass('hide-widget'); }
 		};	
-
-// Adjust height of #secondary to match #primary + add extra spacing between .widget if necessary
-		window.adjustSidebarH = function () {
-			var contentH = $("#primary").outerHeight(true) + compensate;
-			$("#secondary").animate( { height: contentH+"px" }, 300);
-		};
 
 // Add classes for first, last, even and odd widgets
 		window.labelWidgets = function () {
@@ -1385,25 +1400,33 @@ if ( $('body').hasClass('remove-sidebar') ) {
 
  // Move sidebar in conjunction with mouse scroll to keep it even with content
 		window.moveWidgets = function () {
-			if ( sidebarScroll == "true" ) {
-				var contentH = $('#primary').outerHeight(), elem = $(".sidebar-inner"), elemH = elem.outerHeight() + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom')), contentV = contentH - getDeviceH() + 200, sidebarV = elemH - getDeviceH() + 400, addTop=0;	
-
-				//$('.stuck').each(function() { addTop = addTop + $(this).outerHeight(true); }); /* removed for Align K9 12/30/20... if this is needed, then add a "ignore height" param to setupSidebar() and add this param to Align K9 site-script.js				
-				var secH = $("#secondary").outerHeight(), secT = $("#secondary").offset().top, winH = $(window).height() - addTop, winT = $(window).scrollTop() + addTop;				
-				var adjT = winT - secT, fullH = secH - winH, scrollPct = adjT / fullH, maxH = contentH - elemH;	
-				if ( scrollPct > 1 ) { scrollPct = 1; }
-
-				if ( scrollPct < 0 || scrollPct == null ) { scrollPct = 0; }
-				var moveElem = Math.round(maxH * scrollPct);	
-				if ( moveElem > maxH ) { moveElem = maxH; }
-				if ( moveElem < 0 ) { moveElem = 0; }
-				if ( contentV > 0 && sidebarV > 0 && adjT > 0 && getDeviceW() > mobileCutoff ) { 
-					elem.css("margin-top",moveElem+"px"); 
-				} else { 
-					elem.css("margin-top","0px"); 
-				}
+			if ( sidebarScroll == "true" && getDeviceW() > mobileCutoff ) {
+				var sidebar = $(".sidebar-inner");	
+				var primary = Number($('#wrapper-content').attr('data-primary'));
+				var widgets = Number($('#wrapper-content').attr('data-widgets'));
+				var visible = Number($('#wrapper-content').attr('data-viewport'));
+				var primaryOffset = $("#primary").offset().top;
+				var scrollPos = Number($(window).scrollTop()) - Number(primaryOffset);
+				var max = primary - widgets;
+				var scrollPct = (scrollPos / primary);
+				var findPos = (primary - widgets) * scrollPct;
+				
+				$('.stuck').each(function() {
+					visible = visible - $(this).outerHeight();
+				})
+				visible = visible - $('.wp-google-badge').outerHeight();	
+	
+				if ( widgets < visible ) { findPos = scrollPos + parseInt($("#secondary").css('padding-top')); }
+				if ( findPos > max ) { findPos = max; }
+				if ( findPos > 0 ) { 
+					sidebar.css({ "margin-top": findPos+"px" }); 
+				} else {
+					sidebar.css({ "margin-top": "0px" }); 
+				}					
 			}
 		};
+					
+		labelWidgets();
 	};	
 
 /*--------------------------------------------------------------
@@ -1422,8 +1445,6 @@ if ( $('body').hasClass('remove-sidebar') ) {
 				$(window).trigger('resize.px.parallax');
 				if ( widgets == true ) { widgetInit(); } 
 			} 
-
-			labelWidgets();
 
 		// If not a mobile device and sidebar exists, move widgets with scroll	
 			if ( $("#secondary").length && getDeviceW() > mobileCutoff ) {  	
@@ -1685,7 +1706,6 @@ if ( $('body').hasClass('remove-sidebar') ) {
 				userLoc = data["city"] + ", " + data["region_code"];
 			});
 			userRefer = encodeURI(document.referrer); 
-			console.log("referrer: "+userRefer);
 		}, 1000);
 
 		setTimeout(function() {	// Wait 2 seconds before calling the following functions 	

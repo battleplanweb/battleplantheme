@@ -102,11 +102,11 @@ input[type="checkbox"], input[type="radio"] {
 }
 
 /* Pages, Posts, etc. */
-.wp-list-table th:not(#title) a {
+.wp-list-table th a {
 	text-align:									center;
 }
 
-.wp-list-table th:not(#title) {
+.wp-list-table th {
 	text-align:									center;
 	padding:									2px 0 6px;
 }
@@ -115,8 +115,24 @@ input[type="checkbox"], input[type="radio"] {
 	padding:									8px 0 0;
 }
 
-.wp-list-table td:not(.title):not(.column-source):not(.plugin-title):not(.column-description):not(.plugin-update) {
+.wp-list-table td {
 	text-align:									center;
+}
+
+.wp-list-table th#title a,
+.wp-list-table th#title,
+.wp-list-table th#filename a,
+.wp-list-table th#filename,
+.wp-list-table th#alt-text a,
+.wp-list-table th#alt-text,
+.wp-list-table td.title,
+.wp-list-table td.column-source,
+.wp-list-table td.plugin-title,
+.wp-list-table td.column-description,
+.wp-list-table td.plugin-update,
+.wp-list-table td.column-filename,
+.wp-list-table td.alt-text {
+	text-align:									left;
 }
 
 .wp-list-table th:not(#title) a span {
@@ -186,3 +202,8 @@ a[data-wp-action="disable"],
 	max-height:									610px;
 	resize: 									none;
 } 
+
+ul.acf-checkbox-list {
+	column-count:								4;
+	column-gap: 								2.5em;
+}

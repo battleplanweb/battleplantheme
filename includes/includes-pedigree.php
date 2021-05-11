@@ -544,8 +544,8 @@ function battleplan_pedigree_column_settings() {
 				'featured-image'=>array(
 					'type'=>'column-featured_image',
 					'label'=>'',
-					'width'=>'5',
-					'width_unit'=>'%',
+					'width'=>'80',
+					'width_unit'=>'px',
 					'featured_image_display'=>'image',
 					'image_size'=>'cpac-custom',
 					'image_size_w'=>'60',
@@ -561,8 +561,8 @@ function battleplan_pedigree_column_settings() {
 				'title'=>array(
 					'type'=>'title',
 					'label'=>'Full Name',
-					'width'=>'',
-					'width_unit'=>'%',
+					'width'=>'200',
+					'width_unit'=>'px',
 					'edit'=>'on',
 					'editable_type'=>'text',
 					'sort'=>'on',
@@ -581,6 +581,20 @@ function battleplan_pedigree_column_settings() {
                 	'bulk_edit'=>'on',
 					'search'=>'on',
 					'filter'=>'on'
+				),
+				'post-id'=>array(
+					'type'=>'column-postid',
+					'label'=>'ID',
+					'width'=>'100',
+					'width_unit'=>'px',
+					'before'=>'',
+					'after'=>'',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'post-id',
+					'label_type'=>'',
+					'search'=>'on'
 				),
 				'call_name'=>array(
 					'type'=>'column-meta',
@@ -665,12 +679,12 @@ function battleplan_pedigree_column_settings() {
 				)
 			),
 			'layout'=>array(
-				'id'=>'5cbb3157923d6',
-				'name'=>'battleplan',
+				'id'=>'battleplan-dogs-main',
+				'name'=>'Main View',
 				'roles'=>false,
 				'users'=>false,
 				'read_only'=>false
-			)			
+			)				
 		)
 	) );
 	
@@ -680,8 +694,8 @@ function battleplan_pedigree_column_settings() {
 				'title'=>array(
 					'type'=>'title',
 					'label'=>'Litter',
-					'width'=>'',
-					'width_unit'=>'%',
+					'width'=>'200',
+					'width_unit'=>'px',
 					'edit'=>'on',
 					'editable_type'=>'text',
 					'sort'=>'on',
@@ -785,8 +799,8 @@ function battleplan_pedigree_column_settings() {
 				)
 			),
 			'layout'=>array(
-				'id'=>'5cbb3157923d6',
-				'name'=>'battleplan',
+				'id'=>'battleplan-litters-main',
+				'name'=>'Main View',
 				'roles'=>false,
 				'users'=>false,
 				'read_only'=>false
@@ -799,8 +813,8 @@ function battleplan_pedigree_column_settings() {
 				'title'=>array(
 					'type'=>'title',
 					'label'=>'Page',
-					'width'=>'25',
-					'width_unit'=>'%',
+					'width'=>'200',
+					'width_unit'=>'px',
 					'edit'=>'on',
 					'sort'=>'on',
 					'name'=>'title',
@@ -810,7 +824,7 @@ function battleplan_pedigree_column_settings() {
 				'slug'=>array(
 					'type'=>'column-slug',
 					'label'=>'Slug',
-					'width'=>'20',
+					'width'=>'15',
 					'width_unit'=>'%',
 					'edit'=>'on',
 					'sort'=>'on',
@@ -821,8 +835,8 @@ function battleplan_pedigree_column_settings() {
 				'post-id'=>array(
 					'type'=>'column-postid',
 					'label'=>'ID',
-					'width'=>'5',
-					'width_unit'=>'%',
+					'width'=>'100',
+					'width_unit'=>'px',
 					'before'=>'',
 					'after'=>'',
 					'sort'=>'on',
@@ -879,12 +893,12 @@ function battleplan_pedigree_column_settings() {
 				)
 			),
 			'layout'=>array(
-				'id'=>'5cbb31579168e',
-				'name'=>'battleplan',
+				'id'=>'battleplan-resources-main',
+				'name'=>'Main View',
 				'roles'=>false,
 				'users'=>false,
 				'read_only'=>false
-			)			
+			)	
 		)
 	) );
 }

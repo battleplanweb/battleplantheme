@@ -6,8 +6,8 @@
 ----------------------------------------------------------------
 # Product Overview
 # American Standard Customer Care
-# Why Choose Us?
 # Ruud Pro Partner
+# Why Choose Us?
 # HVAC Maintenance Tips Teaser
 # HVAC Tip Of The Month
 # Register Custom Post Types
@@ -58,32 +58,7 @@ function battleplan_american_standard_customer_care( $atts, $content = null ) {
 	$type = esc_attr($a['type']);
 
 	return include "wp-content/themes/battleplantheme/includes/includes-customer-care-dealer.php";
-}		
-
-
-/*--------------------------------------------------------------
-# Why Choose Us?
---------------------------------------------------------------*/
-add_shortcode( 'why-choose-as', 'battleplan_why_choose_us' );
-add_shortcode( 'why-choose-us', 'battleplan_why_choose_us' );
-function battleplan_why_choose_us( $atts, $content = null ) {
-	$brand = strtolower(str_replace(" ", "-", get_option('site_brand')));
-	$name = ucwords(get_option('site_brand'));
-	$a = shortcode_atts( array( 'style'=>'1', 'width'=>'stretch', 'img'=>'', 'alt'=>'We are proud to be a dealer of '.$name.', offering the top rated HVAC products on the market.' ), $atts );
-	$style = esc_attr($a['style']);
-	$width = esc_attr($a['width']);	
-	$img = esc_attr($a['img']);
-	$alt = esc_attr($a['alt']);
-	
-	if ( $img == "grey" ) : $img = "/wp-content/themes/battleplantheme/common/hvac-".$brand."/why-choose-".$brand."-logo-grey.png";
-	elseif ( $img == "white" ) : $img = "/wp-content/themes/battleplantheme/common/hvac-".$brand."/why-choose-".$brand."-logo-white.png";
-	elseif ( $img == "" ) :	$img = "/wp-content/themes/battleplantheme/common/hvac-".$brand."/why-choose-".$brand."-logo.png";
-	else: $img = "/wp-content/uploads/".$img;
-	endif;
-	
-	return include "wp-content/themes/battleplantheme/includes/includes-why-choose-".$brand.".php";
-}		
-
+}	
 
 /*--------------------------------------------------------------
 # Ruud Pro Partner
@@ -94,8 +69,35 @@ function battleplan_ruud_pro_partner( $atts, $content = null ) {
 	$type = esc_attr($a['type']);
 
 	return include "wp-content/themes/battleplantheme/includes/includes-ruud-pro-partner.php";
-}			
+}				
+
+/*--------------------------------------------------------------
+# Why Choose Us?
+--------------------------------------------------------------*/
+add_shortcode( 'why-choose-as', 'battleplan_why_choose_us' );
+add_shortcode( 'why-choose-us', 'battleplan_why_choose_us' );
+function battleplan_why_choose_us( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'brand'=>'', 'style'=>'1', 'width'=>'stretch', 'img'=>'', 'alt'=>'' ), $atts );	
+	$brand = esc_attr($a['brand']);
+	$name = ucwords($brand);
+	$style = esc_attr($a['style']);
+	$width = esc_attr($a['width']);	
+	$img = esc_attr($a['img']);
+	$alt = esc_attr($a['alt']);
+	if ( $brand == '' ) :
+		$brand = strtolower(str_replace(" ", "-", get_option('site_brand')));
+		$name = ucwords($brand);
+	endif;
+	if ( $alt == '' ) $alt='We are proud to be a dealer of '.$name.', offering the top rated HVAC products on the market.';
 	
+	if ( $img == "grey" ) : $img = "/wp-content/themes/battleplantheme/common/hvac-".$brand."/why-choose-".$brand."-logo-grey.png";
+	elseif ( $img == "white" ) : $img = "/wp-content/themes/battleplantheme/common/hvac-".$brand."/why-choose-".$brand."-logo-white.png";
+	elseif ( $img == "" ) :	$img = "/wp-content/themes/battleplantheme/common/hvac-".$brand."/why-choose-".$brand."-logo.png";
+	else: $img = "/wp-content/uploads/".$img;
+	endif;
+	
+	return include "wp-content/themes/battleplantheme/includes/includes-why-choose-".$brand.".php";
+}		
 	
 /*--------------------------------------------------------------
 # HVAC Maintenance Tips 
@@ -106,8 +108,7 @@ function battleplan_hvac_maintenance_tips( $atts, $content = null ) {
 	$type = esc_attr($a['type']);
 	
 	return include "wp-content/themes/battleplantheme/includes/includes-hvac-maintenance-tips.php";
-}	
-	
+}		
 	
 /*--------------------------------------------------------------
 # HVAC Tip Of The Month
@@ -116,7 +117,6 @@ add_shortcode( 'hvac-tip-of-the-month', 'battleplan_hvac_tip_of_the_month' );
 function battleplan_hvac_tip_of_the_month( $atts, $content = null ) {
 	return include "wp-content/themes/battleplantheme/includes/includes-hvac-tip-of-the-month.php";
 }
-
 
 /*--------------------------------------------------------------
 # Register Custom Post Types
@@ -167,7 +167,6 @@ function battleplan_registerHVACPostTypes() {
         'show_admin_column'=>true,
 	));
 }
-
 
 /*--------------------------------------------------------------
 # Import Advanced Custom Fields
@@ -268,7 +267,7 @@ function battleplan_add_acf_hvac_fields() {
 
 
 /*--------------------------------------------------------------
-# Set up Admin Columns
+# Set Up Admin Columns
 --------------------------------------------------------------*/
 add_action( 'ac/ready', 'battleplan_hvac_column_settings' );
 function battleplan_hvac_column_settings() {
@@ -295,8 +294,8 @@ function battleplan_hvac_column_settings() {
 				'title'=>array(
 					'type'=>'title',
 					'label'=>'Title',
-					'width'=>'',
-					'width_unit'=>'%',
+					'width'=>'200',
+					'width_unit'=>'px',
 					'edit'=>'on',
 					'sort'=>'on',
 					'name'=>'title',
@@ -306,13 +305,27 @@ function battleplan_hvac_column_settings() {
 				'slug'=>array(
 					'type'=>'column-slug',
 					'label'=>'Slug',
-					'width'=>'',
+					'width'=>'15',
 					'width_unit'=>'%',
 					'edit'=>'off',
 					'sort'=>'on',
 					'name'=>'slug',
 					'label_type'=>'',
 					'search'=>''
+				),
+				'post-id'=>array(
+					'type'=>'column-postid',
+					'label'=>'ID',
+					'width'=>'100',
+					'width_unit'=>'px',
+					'before'=>'',
+					'after'=>'',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'post-id',
+					'label_type'=>'',
+					'search'=>'on'
 				),
 				'product-brand'=>array(
 					'type'=>'column-taxonomy',
@@ -375,8 +388,8 @@ function battleplan_hvac_column_settings() {
 				),
 			),
 			'layout'=>array(
-				'id'=>'5cbb31cf4fb66',
-				'name'=>'battleplan',
+				'id'=>'battleplan-products-main',
+				'name'=>'Main View',
 				'roles'=>false,
 				'users'=>false,
 				'read_only'=>false
@@ -399,7 +412,7 @@ function battleplan_getBrandLogo($atts, $content = null) {
 	if ( $alt != '' ) $alt="-".$alt;
 	if ( $brand == '' ) :
 		$brand = strtolower(str_replace(" ", "-", get_option('site_brand')));
-		$name = ucwords(get_option('site_brand'));
+		$name = ucwords($brand);
 	endif;
 	return '<img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$alt.'.png" alt="We offer '.$name.' heating and air conditioning products." />';
 }

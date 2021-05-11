@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.7.2' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.8' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -920,7 +920,7 @@ function battleplan_setUpWPGallery( $atts, $content = null ) {
 		$count++;
 
 		if ( $caption != "false" ) : $captionPrint = '<figcaption><div class="image-caption image-title">'.$post->post_title.'</div></figcaption>'; endif;
-		$gallery .= '<dl class="col col-archive col-gallery id-'.$getID.'"><dt class="col-inner"><a class="link-archive link-gallery ari-fancybox" href="'.$full[0].'"><img  class="wp-image-'.get_the_ID().'" data-id="'.get_the_ID().'"'.getImgMeta($getID).' src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" srcset="'.$imgSet.'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'"></a>'.$captionPrint.'</dt></dl>';
+		$gallery .= '<dl class="col col-archive col-gallery id-'.$getID.'"><dt class="col-inner"><a class="link-archive link-gallery ari-fancybox" href="'.$full[0].'"><img class="img-gallery wp-image-'.get_the_ID().'" data-id="'.get_the_ID().'"'.getImgMeta($getID).' src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" srcset="'.$imgSet.'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'"></a>'.$captionPrint.'</dt></dl>';
 	endwhile; endif;	
 	wp_reset_postdata();
 	$gallery .= "</div>";	
@@ -983,6 +983,33 @@ function battleplan_getCreditCards( $atts, $content = null ) {
 	return $buildCards;
 }
 
+// Create filter button for querying posts base on custom fields
+add_shortcode( 'get-filter-btn', 'battleplan_getFilterButton' );
+function battleplan_getFilterButton( $atts, $content = null ) {	
+	$a = shortcode_atts( array( 'btn_reveal'=>'false', 'field'=>'', 'btn_search'=>'Search', 'ul'=>'' ), $atts );
+	$btnReveal = esc_attr($a['btn_reveal']);
+	$field_key = esc_attr($a['field']);
+	$field = get_field_object($field_key);
+	$ul = esc_attr($a['ul']);
+	$btnSearch = esc_attr($a['btn_search']);
+	
+	if ( $field ) :	
+		$buildFilter .= '<form name="filter-form" action=/results method="get">';
+		$buildFilter .= '<ul class="'.$ul.'">';
+			foreach( $field['choices'] as $k => $v ) :
+				$buildFilter .= '<li class="filter-choice"><input type="checkbox" name="choice" value="'.$k.'"><div class="checkbox-label">'.$v.'</div></li>';
+			endforeach;
+		$buildFilter .= "</ul>";
+
+		$buildFilter .= '<div class="block block-button"><input type="button" class="filter-btn" data-url="'.$field_key.'" value="'.$btnSearch.'"></div>';
+		$buildFilter .= '</form><div class="clearfix"></div>';	
+	endif;												  
+	
+	if ( $btnReveal != "false" ) $buildFilter = do_shortcode('[accordion title="'.$btnReveal.'" btn="true" icon="false"]'.$buildFilter.'[/accordion]');
+	
+	return $buildFilter;
+} 
+ 
 /*--------------------------------------------------------------
 # Functions to extend WordPress 
 --------------------------------------------------------------*/
@@ -1158,32 +1185,34 @@ function adjustTerms( $post_id, $term, $taxonomy, $add_or_remove ) {
 
 // Populate a secondary menu or sub-menu with posts/pages from any custom post type
 function fillMenu($cpt, $max = "-1", $orderby = "title", $seq = "asc") { 
-	global $cpt, $max, $orderby, $seq;
-	add_filter( 'wp_get_nav_menu_items', 'WebsiteGO_buildCPTsubmenu', 10, 3 );
-	function WebsiteGO_buildCPTsubmenu( $items, $menu, $args ) {
-		global $cpt, $max, $orderby, $seq;
-		$child_items = array(); 
-		$menu_order = count($items); 
-		$parent_item_id = NULL;
-		
-		foreach ( $items as $item ) {
-			if ( in_array($cpt, $item->classes) ) { $parent_item_id = $item->ID; }
-		}
-		
-		$args = array ( 'numberposts'=>$max, 'offset'=>0, 'category'=>'', 'orderby'=>$orderby, 'order'=>$seq, 'post_type'=>$cpt, 'suppress_filters'=>true, );
-		
-		foreach ( get_posts( $args ) as $post ) {
-			$post->menu_item_parent = $parent_item_id;
-			$post->post_type = 'nav_menu_item';
-			$post->object = 'custom';
-			$post->type = 'custom';
-			$post->menu_order = ++$menu_order;
-			$post->title = $post->post_title;
-			$post->url = get_permalink( $post->ID );
-			array_push($child_items, $post);
-		}
-		return array_merge( $items, $child_items );
-	}
+	global $cpt, $max, $orderby, $seq;	
+	$types = explode(",", $cpt);	
+	foreach ( $types as $type ) :
+		add_filter( 'wp_get_nav_menu_items', function ($items, $menu, $args) use ($type) {
+			global $max, $orderby, $seq;
+			$child_items = array(); 
+			$menu_order = count($items); 
+			$parent_item_id = NULL;
+
+			foreach ( $items as $item ) {
+				if ( in_array($type, $item->classes) ) { $parent_item_id = $item->ID; }
+			}
+
+			$args = array ( 'numberposts'=>$max, 'offset'=>0, 'category'=>'', 'orderby'=>$orderby, 'order'=>$seq, 'post_type'=>$type, 'suppress_filters'=>true, );
+
+			foreach ( get_posts( $args ) as $post ) {
+				$post->menu_item_parent = $parent_item_id;
+				$post->post_type = 'nav_menu_item';
+				$post->object = 'custom';
+				$post->type = 'custom';
+				$post->menu_order = ++$menu_order;
+				$post->title = $post->post_title;
+				$post->url = get_permalink( $post->ID );
+				array_push($child_items, $post);
+			}
+			return array_merge( $items, $child_items );
+		}, 10, 3);
+	endforeach;
 }
 
 // Add shortcode capability to Contact Form 7
@@ -1943,10 +1972,16 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
 add_action('wp_footer', 'battleplan_no_contact_form_refill', 99); 
 function battleplan_no_contact_form_refill() { ?><script>wpcf7.cached = 0;</script><?php }
 
-// Remove auto <p> from around images 
+// Remove auto <p> from around <img>
 add_filter('the_content', 'battleplan_remove_ptags_on_images', 9999);
 function battleplan_remove_ptags_on_images($content){
    return preg_replace('/<p>\s*(<a .*>)?\s*(<img .* \/>)\s*(<\/a>)?\s*<\/p>/iU', '\1\2\3', $content);
+}
+
+// Remove auto <p> from around <svg>
+add_filter('the_content', 'battleplan_remove_ptags_on_svg', 9999);
+function battleplan_remove_ptags_on_svg($content){
+   return preg_replace('/<p>\s*(<svg .*>)?\s*(<\/svg>)?\s*<\/p>/iU', '\1\2\3', $content);
 }
 
 // Remove auto <p> from inside widgets 
@@ -2472,9 +2507,11 @@ function battleplan_expireContent( $atts, $content = null ) {
 // Section
 add_shortcode( 'section', 'battleplan_buildSection' );
 function battleplan_buildSection( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'style'=>'', 'width'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'class'=>'', 'start'=>'', 'end'=>'' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'hash'=>'', 'style'=>'', 'width'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'class'=>'', 'start'=>'', 'end'=>'' ), $atts );
 	$name = strtolower(esc_attr($a['name']));
 	$name = preg_replace("/[\s_]/", "-", $name);
+	$hash = esc_attr($a['hash']);
+	if ( $hash != '' ) $hash='data-hash="'.$hash.'"';
 	$background = esc_attr($a['background']);
 	$left = esc_attr($a['left']);
 	$top = esc_attr($a['top']);
@@ -2493,7 +2530,7 @@ function battleplan_buildSection( $atts, $content = null ) {
 		if ( $end && $now > $end ) return null;		
 	}
 	
-	$buildSection = '<section'.$name.' class="section'.$style.$width.$class.'"';
+	$buildSection = '<section'.$name.' class="section'.$style.$width.$class.'" '.$hash;
 	if ( $background != "" ) $buildSection .= ' style="background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;"';	
 	$buildSection .= '>'.do_shortcode($content).'</section>';	
 	
@@ -2706,15 +2743,20 @@ function battleplan_buildButton( $atts, $content = null ) {
 // Accordion Block 
 add_shortcode( 'accordion', 'battleplan_buildAccordion' );
 function battleplan_buildAccordion( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'title'=>'', 'excerpt'=>'', 'class'=>'', 'icon'=>'true', 'start'=>'', 'end'=>'' ), $atts );
+	$a = shortcode_atts( array( 'title'=>'', 'excerpt'=>'', 'class'=>'', 'btn'=>'false', 'icon'=>'true', 'start'=>'', 'end'=>'' ), $atts );
 	$excerpt = esc_attr($a['excerpt']);
 	if ( $excerpt != '' ) $excerpt = '<div class="accordion-excerpt"><div class="accordion-box">'.$excerpt.'</div></div>';
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
-	$icon = esc_attr($a['icon']);
-	if ( $icon == 'true' ) $icon = '<span class="accordion-icon"></span>';
 	$title = esc_attr($a['title']);	
-	if ( $title ) $title = '<h2 role="button" tabindex="0" class="accordion-title">'.$icon.$title.'</h2>';
+	$icon = esc_attr($a['icon']);
+	$btn = esc_attr($a['btn']);
+	if ( $btn == "true" ) :	
+		if ( $title ) : $title = '<div class="block block-button"><button role="button" tabindex="0" class="accordion-title">'.$title.'</button></div>'; endif;
+	else: 
+		if ( $icon == 'true' ) : $icon = '<span class="accordion-icon"></span>'; else: $icon = ''; endif;	
+		if ( $title ) : $title = '<h2 role="button" tabindex="0" class="accordion-title">'.$icon.$title.'</h2>'; endif;
+	endif;
 	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));	
 	if ( $start || $end ) {

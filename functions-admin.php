@@ -31,7 +31,7 @@ function battleplan_add_quicktags() {
 			QTags.addButton( 'bp_paragraph', 'p', '<p>', '</p>\n\n', 'p', 'Paragraph Tag', 1 );
 			QTags.addButton( 'bp_li', 'li', ' <li>', '</li>', 'li', 'List Item', 100 );
 
-			QTags.addButton( 'bp_section', 'section', '[section name="becomes id attribute" style="corresponds to css" width="default, stretch, full, edge, inline" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '[/section]\n\n', 'section', 'Section', 1000 );		
+			QTags.addButton( 'bp_section', 'section', '[section name="becomes id attribute" hash="compensation for scroll on one-page sites" style="corresponds to css" width="default, stretch, full, edge, inline" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '[/section]\n\n', 'section', 'Section', 1000 );		
 			QTags.addButton( 'bp_layout', 'layout', ' [layout grid="1-auto, 1-1-1-1, 5e, content" break="3, 4" valign="start, stretch, center, end" class=""]\n\n', ' [/layout]\n', 'layout', 'Layout', 1000 );
 			QTags.addButton( 'bp_column', 'column', '  [col name="becomes id attribute" align="center, left, right" valign="start, stretch, center, end" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '  [/col]\n\n', 'column', 'Column', 1000 );
 			QTags.addButton( 'bp_image', 'image', '   [img size="100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" link="url to link to" new-tab="false, true" ada-hidden="false, true" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/img]\n', 'image', 'Image', 1000 );
@@ -58,10 +58,389 @@ function battleplan_add_quicktags() {
 }
 
 /*--------------------------------------------------------------
-# Set up Admin Columns
+# Set Up Admin Columns
 --------------------------------------------------------------*/
-add_action( 'ac/ready', 'battleplan_column_settings' );
+add_action( 'init', 'battleplan_column_settings' );
 function battleplan_column_settings() {
+	ac_register_columns( 'wp-media', array(
+		array(
+			'columns'=>array(
+				'image'=>array(
+					'type'=>'column-image',
+					'label'=>'Image',
+					'width'=>'140',
+					'width_unit'=>'px',
+					'image_size'=>'cpac-custom',
+					'image_size_w'=>'130',
+					'image_size_h'=>'130',
+					'name'=>'image',
+					'label_type'=>''
+				),
+				'filename'=>array(
+					'type'=>'column-file_name',
+					'label'=>'Filename',
+					'width'=>'200',
+					'width_unit'=>'px',
+					'sort'=>'on',
+					'name'=>'filename',
+					'label_type'=>''
+				),
+				'alt-text' => array(
+					'type' => 'column-alternate_text',
+					'label' => 'Alt Text',
+					'width' => '500',
+					'width_unit' => 'px',
+					'use_icons' => '',
+					'name' => 'column-alternate_text',
+					'label_type' => '',
+					'edit' => 'on',
+					'sort' => 'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'bulk-editing' =>'',
+					'export' => '',
+					'search' => ''
+				),
+				'date'=>array(
+					'type'=>'date',
+					'label'=>'Date',
+					'width'=>'100',
+					'width_unit'=>'px',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'filter_format'=>'monthly',
+					'name'=>'date',
+					'label_type'=>'',
+					'search'=>'on',
+				),
+				'image-id'=>array(
+					'type'=>'column-mediaid',
+					'label'=>'ID',
+					'width'=>'100',
+					'width_unit'=>'px',
+					'sort'=>'on',
+					'name'=>'image-id',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'taxonomy-image-categories'=>array(
+					'type'=>'taxonomy-image-categories',
+					'label'=>'Categories',
+					'width'=>'',
+					'width_unit'=>'%',
+					'edit'=>'on',
+					'enable_term_creation'=>'on',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'taxonomy-image-categories',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'taxonomy-image-tags'=>array(
+					'type'=>'taxonomy-image-tags',
+					'label'=>'Tags',
+					'width'=>'',
+					'width_unit'=>'%',
+					'edit'=>'on',
+					'enable_term_creation'=>'on',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'taxonomy-image-tags',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'sizes'=>array(
+					'type'=>'column-available_sizes',
+					'label'=>'Sizes',
+					'width'=>'200',
+					'width_unit'=>'px',
+					'include_missing_sizes'=>'',
+					'sort'=>'off',
+					'name'=>'sizes',
+					'label_type'=>''
+				)
+			),
+			'layout'=>array(
+				'id'=>'battleplan-media-main',
+				'name'=>'Main View',
+				'roles'=>false,
+				'users'=>false,
+				'read_only'=>false
+			)			
+		)
+	) );
+	ac_register_columns( 'wp-media', array(
+		array(
+			'columns'=>array(
+				'image'=>array(
+					'type'=>'column-image',
+					'label'=>'Image',
+					'width'=>'140',
+					'width_unit'=>'px',
+					'image_size'=>'cpac-custom',
+					'image_size_w'=>'130',
+					'image_size_h'=>'130',
+					'name'=>'image',
+					'label_type'=>''
+				),
+				'image-id'=>array(
+					'type'=>'column-mediaid',
+					'label'=>'ID',
+					'width'=>'100',
+					'width_unit'=>'px',
+					'sort'=>'on',
+					'name'=>'image-id',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'last_viewed'=>array(
+					'type'=>'column-meta',
+					'label'=>'Last Viewed',
+					'width'=>'',
+					'width_unit'=>'%',
+					'field'=>'log-views-now',
+					'field_type'=>'date',
+					'date_format'=>'wp_default',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'off',
+					'filter_label'=>'',
+					'filter_format'=>'monthly',
+					'name'=>'last_viewed',
+					'label_type'=>'',
+					'search'=>'on'
+				),	
+				'last_teased'=>array(
+					'type'=>'column-meta',
+					'label'=>'Last Teased',
+					'width'=>'',
+					'width_unit'=>'%',
+					'field'=>'log-tease-time',
+					'field_type'=>'date',
+					'date_format'=>'wp_default',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'off',
+					'filter_label'=>'',
+					'filter_format'=>'monthly',
+					'name'=>'last_teased',
+					'label_type'=>'',
+					'search'=>'on'
+				),	
+				'views_today'=>array(
+					'type'=>'column-meta',
+					'label'=>'Today',
+					'width'=>'',
+					'width_unit'=>'%',
+					'field'=>'log-views-today',
+					'field_type'=>'numeric',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'off',
+					'filter_label'=>'',
+					'name'=>'views_today',
+					'label_type'=>'',
+					'search'=>'on'
+				),	
+				'views_week'=>array(
+					'type'=>'column-meta',
+					'label'=>'Week',
+					'width'=>'',
+					'width_unit'=>'%',
+					'field'=>'log-views-total-7day',
+					'field_type'=>'numeric',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'off',
+					'filter_label'=>'',
+					'name'=>'views_week',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'views_month'=>array(
+					'type'=>'column-meta',
+					'label'=>'Month',
+					'width'=>'',
+					'width_unit'=>'%',
+					'field'=>'log-views-total-30day',
+					'field_type'=>'numeric',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'off',
+					'filter_label'=>'',
+					'name'=>'views_month',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'views_quarter'=>array(
+					'type'=>'column-meta',
+					'label'=>'Quarter',
+					'width'=>'',
+					'width_unit'=>'%',
+					'field'=>'log-views-total-90day',
+					'field_type'=>'numeric',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'off',
+					'filter_label'=>'',
+					'name'=>'views_quarter',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'views_semester'=>array(
+					'type'=>'column-meta',
+					'label'=>'Semester',
+					'width'=>'',
+					'width_unit'=>'%',
+					'field'=>'log-views-total-180day',
+					'field_type'=>'numeric',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'off',
+					'filter_label'=>'',
+					'name'=>'views_semester',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'views_year'=>array(
+					'type'=>'column-meta',
+					'label'=>'Year',
+					'width'=>'',
+					'width_unit'=>'%',
+					'field'=>'log-views-total-365day',
+					'field_type'=>'numeric',
+					'before'=>'',
+					'after'=>'',
+					'edit'=>'off',
+					'sort'=>'on',
+					'filter'=>'off',
+					'filter_label'=>'',
+					'name'=>'views_year',
+					'label_type'=>'',
+					'search'=>'on'
+				)
+			),
+			'layout'=>array(
+				'id'=>'battleplan-media-stats',
+				'name'=>'Stats View',
+				'roles'=>false,
+				'users'=>false,
+				'read_only'=>false
+			)			
+		)
+	) );	
+	ac_register_columns( 'elements', array(
+		array(
+			'columns'=>array(
+				'title'=>array(
+					'type'=>'title',
+					'label'=>'Page',
+					'width'=>'200',
+					'width_unit'=>'px',
+					'edit'=>'on',
+					'sort'=>'on',
+					'name'=>'title',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'slug'=>array(
+					'type'=>'column-slug',
+					'label'=>'Slug',
+					'width'=>'130',
+					'width_unit'=>'px',
+					'edit'=>'on',
+					'sort'=>'on',
+					'name'=>'slug',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'post-id'=>array(
+					'type'=>'column-postid',
+					'label'=>'ID',
+					'width'=>'60',
+					'width_unit'=>'px',
+					'before'=>'',
+					'after'=>'',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'post-id',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'last-modified'=>array(
+					'type'=>'column-modified',
+					'label'=>'Modified',
+					'width'=>'130',
+					'width_unit'=>'px',
+					'date_format'=>'diff',
+					'edit'=>'on',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'filter_format'=>'monthly',
+					'name'=>'last-modified',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'date-published'=>array(
+					'type'=>'column-date_published',
+					'label'=>'Published',
+					'width'=>'130',
+					'width_unit'=>'px',
+					'date_format'=>'wp_default',
+					'edit'=>'on',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'filter_format'=>'monthly',
+					'name'=>'date-published',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'attachments'=>array(
+					'type'=>'column-attachment',
+					'label'=>'Attachments',
+					'width'=>'400',
+					'width_unit'=>'px',
+					'attachment_display'=>'thumbnail',
+					'image_size'=>'cpac-custom',
+					'image_size_w'=>'60',
+					'image_size_h'=>'60',
+					'number_of_items'=>'10',
+					'edit'=>'on',
+					'sort'=>'on',
+					'name'=>'attachments',
+					'label_type'=>''
+				)
+			),
+			'layout'=>array(
+				'id'=>'battleplan-elements-main',
+				'name'=>'Main View',
+				'roles'=>false,
+				'users'=>false,
+				'read_only'=>false
+			)			
+		)
+	) );	
 	ac_register_columns( 'page', array(
 		array(
 			'columns'=>array(
@@ -90,7 +469,7 @@ function battleplan_column_settings() {
 				'post-id'=>array(
 					'type'=>'column-postid',
 					'label'=>'ID',
-					'width'=>'60',
+					'width'=>'100',
 					'width_unit'=>'px',
 					'before'=>'',
 					'after'=>'',
@@ -161,76 +540,6 @@ function battleplan_column_settings() {
 					'label_type'=>'',
 					'search'=>'on'
 				),
-				'last_viewed'=>array(
-					'type'=>'column-meta',
-					'label'=>'Last Viewed',
-					'width'=>'130',
-					'width_unit'=>'px',
-					'field'=>'log-views-now',
-					'field_type'=>'date',
-					'date_format'=>'wp_default',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'off',
-					'filter_label'=>'',
-					'filter_format'=>'monthly',
-					'name'=>'last_viewed',
-					'label_type'=>'',
-					'search'=>'on'
-				),	
-				'views_week'=>array(
-					'type'=>'column-meta',
-					'label'=>'Week',
-					'width'=>'65',
-					'width_unit'=>'px',
-					'field'=>'log-views-total-7day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'off',
-					'filter_label'=>'',
-					'name'=>'views_week',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'views_month'=>array(
-					'type'=>'column-meta',
-					'label'=>'Month',
-					'width'=>'65',
-					'width_unit'=>'px',
-					'field'=>'log-views-total-30day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'off',
-					'filter_label'=>'',
-					'name'=>'views_month',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'views_quarter'=>array(
-					'type'=>'column-meta',
-					'label'=>'Quarter',
-					'width'=>'65',
-					'width_unit'=>'px',
-					'field'=>'log-views-total-90day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'off',
-					'filter_label'=>'',
-					'name'=>'views_total',
-					'label_type'=>'',
-					'search'=>'on'
-				),
 				'attachments'=>array(
 					'type'=>'column-attachment',
 					'label'=>'Attachments',
@@ -248,302 +557,14 @@ function battleplan_column_settings() {
 				)
 			),
 			'layout'=>array(
-				'id'=>'5cbb31579168e',
-				'name'=>'battleplan',
+				'id'=>'battleplan-pages-main',
+				'name'=>'Main View',
 				'roles'=>false,
 				'users'=>false,
 				'read_only'=>false
 			)			
 		)
-	) );
-	ac_register_columns( 'optimized', array(
-		array(
-			'columns'=>array(
-				'title'=>array(
-					'type'=>'title',
-					'label'=>'Page',
-					'width'=>'200',
-					'width_unit'=>'px',
-					'edit'=>'on',
-					'sort'=>'on',
-					'name'=>'title',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'slug'=>array(
-					'type'=>'column-slug',
-					'label'=>'Slug',
-					'width'=>'130',
-					'width_unit'=>'px',
-					'edit'=>'on',
-					'sort'=>'on',
-					'name'=>'slug',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'post-id'=>array(
-					'type'=>'column-postid',
-					'label'=>'ID',
-					'width'=>'60',
-					'width_unit'=>'px',
-					'before'=>'',
-					'after'=>'',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'post-id',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'top-exists'=>array(
-					'type'=>'column-meta',
-					'label'=>'Top',
-					'width'=>'60',
-					'width_unit'=>'px',
-					'field'=>'page-top_text',
-					'field_type'=>'has_content',
-					'before'=>'',
-					'after'=>'',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'top-exists',
-					'label_type'=>'',
-				),
-				'bottom-exists'=>array(
-					'type'=>'column-meta',
-					'label'=>'Bottom',
-					'width'=>'80',
-					'width_unit'=>'px',
-					'field'=>'page-bottom_text',
-					'field_type'=>'has_content',
-					'before'=>'',
-					'after'=>'',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'bottom-exists',
-					'label_type'=>'',
-				),
-				'last-modified'=>array(
-					'type'=>'column-modified',
-					'label'=>'Modified',
-					'width'=>'130',
-					'width_unit'=>'px',
-					'date_format'=>'diff',
-					'edit'=>'on',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'filter_format'=>'monthly',
-					'name'=>'last-modified',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'date-published'=>array(
-					'type'=>'column-date_published',
-					'label'=>'Published',
-					'width'=>'130',
-					'width_unit'=>'px',
-					'date_format'=>'wp_default',
-					'edit'=>'on',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'filter_format'=>'monthly',
-					'name'=>'date-published',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'last_viewed'=>array(
-					'type'=>'column-meta',
-					'label'=>'Last Viewed',
-					'width'=>'130',
-					'width_unit'=>'px',
-					'field'=>'log-views-now',
-					'field_type'=>'date',
-					'date_format'=>'wp_default',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'off',
-					'filter_label'=>'',
-					'filter_format'=>'monthly',
-					'name'=>'last_viewed',
-					'label_type'=>'',
-					'search'=>'on'
-				),	
-				'views_week'=>array(
-					'type'=>'column-meta',
-					'label'=>'Week',
-					'width'=>'65',
-					'width_unit'=>'px',
-					'field'=>'log-views-total-7day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'off',
-					'filter_label'=>'',
-					'name'=>'views_week',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'views_month'=>array(
-					'type'=>'column-meta',
-					'label'=>'Month',
-					'width'=>'65',
-					'width_unit'=>'px',
-					'field'=>'log-views-total-30day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'off',
-					'filter_label'=>'',
-					'name'=>'views_month',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'views_quarter'=>array(
-					'type'=>'column-meta',
-					'label'=>'Quarter',
-					'width'=>'65',
-					'width_unit'=>'px',
-					'field'=>'log-views-total-90day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'off',
-					'filter_label'=>'',
-					'name'=>'views_total',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'attachments'=>array(
-					'type'=>'column-attachment',
-					'label'=>'Attachments',
-					'width'=>'400',
-					'width_unit'=>'px',
-					'attachment_display'=>'thumbnail',
-					'image_size'=>'cpac-custom',
-					'image_size_w'=>'60',
-					'image_size_h'=>'60',
-					'number_of_items'=>'10',
-					'edit'=>'on',
-					'sort'=>'on',
-					'name'=>'attachments',
-					'label_type'=>''
-				)
-			),
-			'layout'=>array(
-				'id'=>'5cbb31579168e',
-				'name'=>'battleplan',
-				'roles'=>false,
-				'users'=>false,
-				'read_only'=>false
-			)			
-		)
-	) );
-	ac_register_columns( 'elements', array(
-		array(
-			'columns'=>array(
-				'title'=>array(
-					'type'=>'title',
-					'label'=>'Page',
-					'width'=>'170',
-					'width_unit'=>'px',
-					'edit'=>'on',
-					'sort'=>'on',
-					'name'=>'title',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'slug'=>array(
-					'type'=>'column-slug',
-					'label'=>'Slug',
-					'width'=>'130',
-					'width_unit'=>'px',
-					'edit'=>'on',
-					'sort'=>'on',
-					'name'=>'slug',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'post-id'=>array(
-					'type'=>'column-postid',
-					'label'=>'ID',
-					'width'=>'60',
-					'width_unit'=>'px',
-					'before'=>'',
-					'after'=>'',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'post-id',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'last-modified'=>array(
-					'type'=>'column-modified',
-					'label'=>'Modified',
-					'width'=>'130',
-					'width_unit'=>'px',
-					'date_format'=>'diff',
-					'edit'=>'on',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'filter_format'=>'monthly',
-					'name'=>'last-modified',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'date-published'=>array(
-					'type'=>'column-date_published',
-					'label'=>'Published',
-					'width'=>'130',
-					'width_unit'=>'px',
-					'date_format'=>'wp_default',
-					'edit'=>'on',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'filter_format'=>'monthly',
-					'name'=>'date-published',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'attachments'=>array(
-					'type'=>'column-attachment',
-					'label'=>'Attachments',
-					'width'=>'400',
-					'width_unit'=>'px',
-					'attachment_display'=>'thumbnail',
-					'image_size'=>'cpac-custom',
-					'image_size_w'=>'60',
-					'image_size_h'=>'60',
-					'number_of_items'=>'10',
-					'edit'=>'on',
-					'sort'=>'on',
-					'name'=>'attachments',
-					'label_type'=>''
-				)
-			),
-			'layout'=>array(
-				'id'=>'5cbb31579168e',
-				'name'=>'battleplan',
-				'roles'=>false,
-				'users'=>false,
-				'read_only'=>false
-			)			
-		)
-	) );
+	) );	
 	ac_register_columns( 'testimonials', array(
 		array(
 			'columns'=>array(
@@ -567,14 +588,28 @@ function battleplan_column_settings() {
 				'title'=>array(
 					'type'=>'title',
 					'label'=>'Name',
-					'width'=>'',
-					'width_unit'=>'%',
+					'width'=>'200',
+					'width_unit'=>'px',
 					'edit'=>'on',
 					'sort'=>'on',
 					'name'=>'title',
 					'label_type'=>'',
 					'search'=>'on'
 				),		
+				'post-id'=>array(
+					'type'=>'column-postid',
+					'label'=>'ID',
+					'width'=>'100',
+					'width_unit'=>'px',
+					'before'=>'',
+					'after'=>'',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'post-id',
+					'label_type'=>'',
+					'search'=>'on'
+				),
 				'date-published'=>array(
 					'type'=>'column-date_published',
 					'label'=>'Published',
@@ -608,73 +643,19 @@ function battleplan_column_settings() {
 					'editable_type'=>'textarea',
 					'search'=>'on'
 				),
-				'last_viewed'=>array(
+				'platform'=>array(
 					'type'=>'column-meta',
-					'label'=>'Last Viewed',
+					'label'=>'Platform',
 					'width'=>'',
 					'width_unit'=>'%',
-					'field'=>'log-views-now',
-					'field_type'=>'date',
-					'date_format'=>'wp_default',
+					'field'=>'testimonial_platform',
+					'field_type'=>'',
 					'before'=>'',
 					'after'=>'',
-					'edit'=>'off',
 					'sort'=>'on',
-					'filter'=>'off',
+					'filter'=>'on',
 					'filter_label'=>'',
-					'filter_format'=>'monthly',
-					'name'=>'last_viewed',
-					'label_type'=>'',
-					'search'=>'on'
-				),	
-				'views_week'=>array(
-					'type'=>'column-meta',
-					'label'=>'Week',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'log-views-total-7day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'off',
-					'filter_label'=>'',
-					'name'=>'views_week',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'views_month'=>array(
-					'type'=>'column-meta',
-					'label'=>'Month',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'log-views-total-30day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'off',
-					'filter_label'=>'',
-					'name'=>'views_month',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'views_quarter'=>array(
-					'type'=>'column-meta',
-					'label'=>'Quarter',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'log-views-total-90day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'off',
-					'filter_label'=>'',
-					'name'=>'views_total',
+					'name'=>'platform',
 					'label_type'=>'',
 					'search'=>'on'
 				),
@@ -725,27 +706,11 @@ function battleplan_column_settings() {
 					'name'=>'website',
 					'label_type'=>'',
 					'search'=>'on'
-				),
-				'platform'=>array(
-					'type'=>'column-meta',
-					'label'=>'Platform',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'testimonial_platform',
-					'field_type'=>'',
-					'before'=>'',
-					'after'=>'',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'platform',
-					'label_type'=>'',
-					'search'=>'on'
 				)
 			),
 			'layout'=>array(
-				'id'=>'5cbb315787688',
-				'name'=>'battleplan',
+				'id'=>'battleplan-testimonials-main',
+				'name'=>'Main View',
 				'roles'=>false,
 				'users'=>false,
 				'read_only'=>false
@@ -775,8 +740,8 @@ function battleplan_column_settings() {
 				'title'=>array(
 					'type'=>'title',
 					'label'=>'Title',
-					'width'=>'',
-					'width_unit'=>'%',
+					'width'=>'200',
+					'width_unit'=>'px',
 					'edit'=>'on',
 					'sort'=>'on',
 					'name'=>'title',
@@ -791,6 +756,20 @@ function battleplan_column_settings() {
 					'edit'=>'on',
 					'sort'=>'on',
 					'name'=>'slug',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'post-id'=>array(
+					'type'=>'column-postid',
+					'label'=>'ID',
+					'width'=>'100',
+					'width_unit'=>'px',
+					'before'=>'',
+					'after'=>'',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'post-id',
 					'label_type'=>'',
 					'search'=>'on'
 				),
@@ -857,8 +836,8 @@ function battleplan_column_settings() {
 				'menu-order'=>array(
 					'type'=>'column-order',
 					'label'=>'Order',
-					'width'=>'',
-					'width_unit'=>'%',
+					'width'=>'100',
+					'width_unit'=>'px',
 					'edit'=>'on',
 					'enable_term_creation'=>'on',
 					'sort'=>'on',
@@ -870,55 +849,82 @@ function battleplan_column_settings() {
 				)
 			),
 			'layout'=>array(
-				'id'=>'5cbb31578ee04',
-				'name'=>'battleplan',
+				'id'=>'battleplan-galleries-main',
+				'name'=>'Main View',
 				'roles'=>false,
 				'users'=>false,
 				'read_only'=>false
-			)			
+			)		
 		)
-	) );
-	ac_register_columns( 'post', array(
+	) );	
+	ac_register_columns( 'optimized', array(
 		array(
 			'columns'=>array(
-				'featured-image'=>array(
-					'type'=>'column-featured_image',
-					'label'=>'',
-					'width'=>'80',
-					'width_unit'=>'px',
-					'featured_image_display'=>'image',
-					'image_size'=>'cpac-custom',
-					'image_size_w'=>'60',
-					'image_size_h'=>'60',
-					'edit'=>'off',
-					'sort'=>'off',
-					'filter'=>'off',
-					'filter_label'=>'',
-					'name'=>'featured-image',
-					'label_type'=>'',
-					'search'=>'on'
-				),
 				'title'=>array(
 					'type'=>'title',
-					'label'=>'Title',
-					'width'=>'',
-					'width_unit'=>'%',
+					'label'=>'Page',
+					'width'=>'200',
+					'width_unit'=>'px',
 					'edit'=>'on',
 					'sort'=>'on',
 					'name'=>'title',
 					'label_type'=>'',
 					'search'=>'on'
 				),
-				'column-slug'=>array(
+				'slug'=>array(
 					'type'=>'column-slug',
 					'label'=>'Slug',
-					'width'=>'',
-					'width_unit'=>'%',
+					'width'=>'130',
+					'width_unit'=>'px',
 					'edit'=>'on',
 					'sort'=>'on',
-					'name'=>'column-slug',
+					'name'=>'slug',
 					'label_type'=>'',
 					'search'=>'on'
+				),
+				'post-id'=>array(
+					'type'=>'column-postid',
+					'label'=>'ID',
+					'width'=>'100',
+					'width_unit'=>'px',
+					'before'=>'',
+					'after'=>'',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'post-id',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'top-exists'=>array(
+					'type'=>'column-meta',
+					'label'=>'Top',
+					'width'=>'60',
+					'width_unit'=>'px',
+					'field'=>'page-top_text',
+					'field_type'=>'has_content',
+					'before'=>'',
+					'after'=>'',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'top-exists',
+					'label_type'=>'',
+				),
+				'bottom-exists'=>array(
+					'type'=>'column-meta',
+					'label'=>'Bottom',
+					'width'=>'80',
+					'width_unit'=>'px',
+					'field'=>'page-bottom_text',
+					'field_type'=>'has_content',
+					'before'=>'',
+					'after'=>'',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'bottom-exists',
+					'label_type'=>'',
 				),
 				'last-modified'=>array(
 					'type'=>'column-modified',
@@ -950,306 +956,385 @@ function battleplan_column_settings() {
 					'label_type'=>'',
 					'search'=>'on'
 				),
-				'last_viewed'=>array(
-					'type'=>'column-meta',
-					'label'=>'Last Viewed',
-					'width'=>'130',
+				'attachments'=>array(
+					'type'=>'column-attachment',
+					'label'=>'Attachments',
+					'width'=>'400',
 					'width_unit'=>'px',
-					'field'=>'log-views-now',
-					'field_type'=>'date',
-					'date_format'=>'wp_default',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'off',
-					'filter_label'=>'',
-					'filter_format'=>'monthly',
-					'name'=>'last_viewed',
-					'label_type'=>'',
-					'search'=>'on'
-				),	
-				'views_week'=>array(
-					'type'=>'column-meta',
-					'label'=>'Week',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'log-views-total-7day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'off',
-					'filter_label'=>'',
-					'name'=>'views_week',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'views_month'=>array(
-					'type'=>'column-meta',
-					'label'=>'Month',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'log-views-total-30day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'off',
-					'filter_label'=>'',
-					'name'=>'views_month',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'views_quarter'=>array(
-					'type'=>'column-meta',
-					'label'=>'Quarter',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'log-views-total-90day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'off',
-					'filter_label'=>'',
-					'name'=>'views_total',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'categories'=>array(
-					'type'=>'categories',
-					'label'=>'Categories',
-					'width'=>'100',
-					'width_unit'=>'px',
-					'edit'=>'on',
-					'enable_term_creation'=>'on',
-					'sort'=>'on',
-					'filter'=>'on',
-					'name'=>'categories',
-					'label_type'=>'',
-					'filter_label'=>'',
-					'search'=>'on'
-				),
-				'tags'=>array(
-					'type'=>'tags',
-					'label'=>'Tags',
-					'width'=>'100',
-					'width_unit'=>'px',
-					'edit'=>'on',
-					'enable_term_creation'=>'on',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'tags',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'author'=>array(
-					'type'=>'author',
-					'label'=>'Author',
-					'width'=>'',
-					'width_unit'=>'%',
-					'edit'=>'on',
-					'sort'=>'on',
-					'name'=>'author',
-					'label_type'=>'',
-					'search'=>'on'
-				)
-			),
-			'layout'=>array(
-				'id'=>'5cbb31579092a',
-				'name'=>'battleplan',
-				'roles'=>false,
-				'users'=>false,
-				'read_only'=>false
-			)			
-		)
-	) );
-	ac_register_columns( 'wp-media', array(
-		array(
-			'columns'=>array(
-				'image'=>array(
-					'type'=>'column-image',
-					'label'=>'Image',
-					'width'=>'140',
-					'width_unit'=>'px',
+					'attachment_display'=>'thumbnail',
 					'image_size'=>'cpac-custom',
-					'image_size_w'=>'130',
-					'image_size_h'=>'130',
-					'name'=>'image',
-					'label_type'=>''
-				),
-				'filename'=>array(
-					'type'=>'column-file_name',
-					'label'=>'Filename',
-					'width'=>'',
-					'width_unit'=>'%',
-					'sort'=>'on',
-					'name'=>'filename',
-					'label_type'=>''
-				),
-				'alt-text' => array(
-					'type' => 'column-alternate_text',
-					'label' => 'Alt Text',
-					'width' => '150',
-					'width_unit' => 'px',
-					'use_icons' => '',
-					'name' => 'column-alternate_text',
-					'label_type' => '',
-					'edit' => 'on',
-					'sort' => 'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'bulk-editing' =>'',
-					'export' => '',
-					'search' => ''
-				),
-				'date'=>array(
-					'type'=>'date',
-					'label'=>'Date',
-					'width'=>'100',
-					'width_unit'=>'px',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'filter_format'=>'monthly',
-					'name'=>'date',
-					'label_type'=>'',
-					'search'=>'on',
-				),
-				'image-id'=>array(
-					'type'=>'column-mediaid',
-					'label'=>'ID',
-					'width'=>'',
-					'width_unit'=>'%',
-					'sort'=>'on',
-					'name'=>'image-id',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'last_viewed'=>array(
-					'type'=>'column-meta',
-					'label'=>'Last Viewed',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'log-views-now',
-					'field_type'=>'date',
-					'date_format'=>'wp_default',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'off',
-					'filter_label'=>'',
-					'filter_format'=>'monthly',
-					'name'=>'last_viewed',
-					'label_type'=>'',
-					'search'=>'on'
-				),	
-				'views_week'=>array(
-					'type'=>'column-meta',
-					'label'=>'Week',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'log-views-total-7day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'off',
-					'filter_label'=>'',
-					'name'=>'views_week',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'views_month'=>array(
-					'type'=>'column-meta',
-					'label'=>'Month',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'log-views-total-30day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'off',
-					'filter_label'=>'',
-					'name'=>'views_month',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'views_quarter'=>array(
-					'type'=>'column-meta',
-					'label'=>'Quarter',
-					'width'=>'',
-					'width_unit'=>'%',
-					'field'=>'log-views-total-90day',
-					'field_type'=>'numeric',
-					'before'=>'',
-					'after'=>'',
-					'edit'=>'off',
-					'sort'=>'on',
-					'filter'=>'off',
-					'filter_label'=>'',
-					'name'=>'views_total',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'taxonomy-image-categories'=>array(
-					'type'=>'taxonomy-image-categories',
-					'label'=>'Categories',
-					'width'=>'',
-					'width_unit'=>'%',
+					'image_size_w'=>'60',
+					'image_size_h'=>'60',
+					'number_of_items'=>'10',
 					'edit'=>'on',
-					'enable_term_creation'=>'on',
 					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'taxonomy-image-categories',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'taxonomy-image-tags'=>array(
-					'type'=>'taxonomy-image-tags',
-					'label'=>'Tags',
-					'width'=>'',
-					'width_unit'=>'%',
-					'edit'=>'on',
-					'enable_term_creation'=>'on',
-					'sort'=>'on',
-					'filter'=>'on',
-					'filter_label'=>'',
-					'name'=>'taxonomy-image-tags',
-					'label_type'=>'',
-					'search'=>'on'
-				),
-				'sizes'=>array(
-					'type'=>'column-available_sizes',
-					'label'=>'Sizes',
-					'width'=>'200',
-					'width_unit'=>'px',
-					'include_missing_sizes'=>'',
-					'sort'=>'off',
-					'name'=>'sizes',
+					'name'=>'attachments',
 					'label_type'=>''
 				)
 			),
 			'layout'=>array(
-				'id'=>'5cbb3157923d6',
-				'name'=>'battleplan',
+				'id'=>'battleplan-optimized-main',
+				'name'=>'Main View',
 				'roles'=>false,
 				'users'=>false,
 				'read_only'=>false
 			)			
 		)
 	) );
+
+	$getCPT = get_post_types(); 
+	foreach ($getCPT as $postType) :
+		$exclude = array( "elements", "page", "testimonials", "galleries", "optimized", "products", "dogs", "litters", "resources", "tribe_events" );
+		if ( !in_array( $postType, $exclude) ):
+			ac_register_columns( $postType, array(
+				array(
+					'columns'=>array(
+						'featured-image'=>array(
+							'type'=>'column-featured_image',
+							'label'=>'',
+							'width'=>'80',
+							'width_unit'=>'px',
+							'featured_image_display'=>'image',
+							'image_size'=>'cpac-custom',
+							'image_size_w'=>'60',
+							'image_size_h'=>'60',
+							'edit'=>'off',
+							'sort'=>'off',
+							'filter'=>'off',
+							'filter_label'=>'',
+							'name'=>'featured-image',
+							'label_type'=>'',
+							'search'=>'on'
+						),
+						'title'=>array(
+							'type'=>'title',
+							'label'=>'Title',
+							'width'=>'200',
+							'width_unit'=>'px',
+							'edit'=>'on',
+							'sort'=>'on',
+							'name'=>'title',
+							'label_type'=>'',
+							'search'=>'on'
+						),
+						'column-slug'=>array(
+							'type'=>'column-slug',
+							'label'=>'Slug',
+							'width'=>'15',
+							'width_unit'=>'%',
+							'edit'=>'on',
+							'sort'=>'on',
+							'name'=>'column-slug',
+							'label_type'=>'',
+							'search'=>'on'
+						),
+						'post-id'=>array(
+							'type'=>'column-postid',
+							'label'=>'ID',
+							'width'=>'100',
+							'width_unit'=>'px',
+							'before'=>'',
+							'after'=>'',
+							'sort'=>'on',
+							'filter'=>'on',
+							'filter_label'=>'',
+							'name'=>'post-id',
+							'label_type'=>'',
+							'search'=>'on'
+						),
+						'last-modified'=>array(
+							'type'=>'column-modified',
+							'label'=>'Modified',
+							'width'=>'130',
+							'width_unit'=>'px',
+							'date_format'=>'diff',
+							'edit'=>'on',
+							'sort'=>'on',
+							'filter'=>'on',
+							'filter_label'=>'',
+							'filter_format'=>'monthly',
+							'name'=>'last-modified',
+							'label_type'=>'',
+							'search'=>'on'
+						),
+						'date-published'=>array(
+							'type'=>'column-date_published',
+							'label'=>'Published',
+							'width'=>'130',
+							'width_unit'=>'px',
+							'date_format'=>'wp_default',
+							'edit'=>'on',
+							'sort'=>'on',
+							'filter'=>'on',
+							'filter_label'=>'',
+							'filter_format'=>'monthly',
+							'name'=>'date-published',
+							'label_type'=>'',
+							'search'=>'on'
+						),
+						'categories'=>array(
+							'type'=>'categories',
+							'label'=>'Categories',
+							'width'=>'100',
+							'width_unit'=>'px',
+							'edit'=>'on',
+							'enable_term_creation'=>'on',
+							'sort'=>'on',
+							'filter'=>'on',
+							'name'=>'categories',
+							'label_type'=>'',
+							'filter_label'=>'',
+							'search'=>'on'
+						),
+						'tags'=>array(
+							'type'=>'tags',
+							'label'=>'Tags',
+							'width'=>'100',
+							'width_unit'=>'px',
+							'edit'=>'on',
+							'enable_term_creation'=>'on',
+							'sort'=>'on',
+							'filter'=>'on',
+							'filter_label'=>'',
+							'name'=>'tags',
+							'label_type'=>'',
+							'search'=>'on'
+						),
+						'author'=>array(
+							'type'=>'author',
+							'label'=>'Author',
+							'width'=>'',
+							'width_unit'=>'%',
+							'edit'=>'on',
+							'sort'=>'on',
+							'name'=>'author',
+							'label_type'=>'',
+							'search'=>'on'
+						),
+						'menu-order'=>array(
+							'type'=>'column-order',
+							'label'=>'Order',
+							'width'=>'100',
+							'width_unit'=>'px',
+							'edit'=>'on',
+							'enable_term_creation'=>'on',
+							'sort'=>'on',
+							'filter'=>'on',
+							'filter_label'=>'',
+							'name'=>'menu-order',
+							'label_type'=>'',
+							'search'=>''
+						)
+					),
+					'layout'=>array(
+						'id'=>'battleplan-'.$postType.'-main',
+						'name'=>'Main View',
+						'roles'=>false,
+						'users'=>false,
+						'read_only'=>false
+					)			
+				)
+			) );
+		endif;
+		$exclude = array( "elements" );
+		if ( !in_array( $postType, $exclude) ):
+			ac_register_columns( $postType, array(
+				array(
+					'columns'=>array(
+						'featured-image'=>array(
+							'type'=>'column-featured_image',
+							'label'=>'',
+							'width'=>'80',
+							'width_unit'=>'px',
+							'featured_image_display'=>'image',
+							'image_size'=>'cpac-custom',
+							'image_size_w'=>'60',
+							'image_size_h'=>'60',
+							'edit'=>'off',
+							'sort'=>'off',
+							'filter'=>'off',
+							'filter_label'=>'',
+							'name'=>'featured-image',
+							'label_type'=>'',
+							'search'=>'on'
+						),
+						'title'=>array(
+							'type'=>'title',
+							'label'=>'Title',
+							'width'=>'200',
+							'width_unit'=>'px',
+							'edit'=>'on',
+							'sort'=>'on',
+							'name'=>'title',
+							'label_type'=>'',
+							'search'=>'on'
+						),
+						'post-id'=>array(
+							'type'=>'column-postid',
+							'label'=>'ID',
+							'width'=>'100',
+							'width_unit'=>'px',
+							'before'=>'',
+							'after'=>'',
+							'sort'=>'on',
+							'filter'=>'on',
+							'filter_label'=>'',
+							'name'=>'post-id',
+							'label_type'=>'',
+							'search'=>'on'
+						),
+						'last_viewed'=>array(
+							'type'=>'column-meta',
+							'label'=>'Last Viewed',
+							'width'=>'',
+							'width_unit'=>'%',
+							'field'=>'log-views-now',
+							'field_type'=>'date',
+							'date_format'=>'wp_default',
+							'before'=>'',
+							'after'=>'',
+							'edit'=>'off',
+							'sort'=>'on',
+							'filter'=>'off',
+							'filter_label'=>'',
+							'filter_format'=>'monthly',
+							'name'=>'last_viewed',
+							'label_type'=>'',
+							'search'=>'on'
+						),	
+						'last_teased'=>array(
+							'type'=>'column-meta',
+							'label'=>'Last Teased',
+							'width'=>'',
+							'width_unit'=>'%',
+							'field'=>'log-tease-time',
+							'field_type'=>'date',
+							'date_format'=>'wp_default',
+							'before'=>'',
+							'after'=>'',
+							'edit'=>'off',
+							'sort'=>'on',
+							'filter'=>'off',
+							'filter_label'=>'',
+							'filter_format'=>'monthly',
+							'name'=>'last_teased',
+							'label_type'=>'',
+							'search'=>'on'
+						),	
+						'views_today'=>array(
+							'type'=>'column-meta',
+							'label'=>'Today',
+							'width'=>'',
+							'width_unit'=>'%',
+							'field'=>'log-views-today',
+							'field_type'=>'numeric',
+							'before'=>'',
+							'after'=>'',
+							'edit'=>'off',
+							'sort'=>'on',
+							'filter'=>'off',
+							'filter_label'=>'',
+							'name'=>'views_today',
+							'label_type'=>'',
+							'search'=>'on'
+						),	
+						'views_week'=>array(
+							'type'=>'column-meta',
+							'label'=>'Week',
+							'width'=>'',
+							'width_unit'=>'%',
+							'field'=>'log-views-total-7day',
+							'field_type'=>'numeric',
+							'before'=>'',
+							'after'=>'',
+							'edit'=>'off',
+							'sort'=>'on',
+							'filter'=>'off',
+							'filter_label'=>'',
+							'name'=>'views_week',
+							'label_type'=>'',
+							'search'=>'on'
+						),
+						'views_month'=>array(
+							'type'=>'column-meta',
+							'label'=>'Month',
+							'width'=>'',
+							'width_unit'=>'%',
+							'field'=>'log-views-total-30day',
+							'field_type'=>'numeric',
+							'before'=>'',
+							'after'=>'',
+							'edit'=>'off',
+							'sort'=>'on',
+							'filter'=>'off',
+							'filter_label'=>'',
+							'name'=>'views_month',
+							'label_type'=>'',
+							'search'=>'on'
+						),
+						'views_quarter'=>array(
+							'type'=>'column-meta',
+							'label'=>'Quarter',
+							'width'=>'',
+							'width_unit'=>'%',
+							'field'=>'log-views-total-90day',
+							'field_type'=>'numeric',
+							'before'=>'',
+							'after'=>'',
+							'edit'=>'off',
+							'sort'=>'on',
+							'filter'=>'off',
+							'filter_label'=>'',
+							'name'=>'views_quarter',
+							'label_type'=>'',
+							'search'=>'on'
+						),
+						'views_semester'=>array(
+							'type'=>'column-meta',
+							'label'=>'Semester',
+							'width'=>'',
+							'width_unit'=>'%',
+							'field'=>'log-views-total-180day',
+							'field_type'=>'numeric',
+							'before'=>'',
+							'after'=>'',
+							'edit'=>'off',
+							'sort'=>'on',
+							'filter'=>'off',
+							'filter_label'=>'',
+							'name'=>'views_semester',
+							'label_type'=>'',
+							'search'=>'on'
+						),
+						'views_year'=>array(
+							'type'=>'column-meta',
+							'label'=>'Year',
+							'width'=>'',
+							'width_unit'=>'%',
+							'field'=>'log-views-total-365day',
+							'field_type'=>'numeric',
+							'before'=>'',
+							'after'=>'',
+							'edit'=>'off',
+							'sort'=>'on',
+							'filter'=>'off',
+							'filter_label'=>'',
+							'name'=>'views_year',
+							'label_type'=>'',
+							'search'=>'on'
+						)
+					),
+					'layout'=>array(
+						'id'=>'battleplan-'.$postType.'-stats',
+						'name'=>'Stats View',
+						'roles'=>false,
+						'users'=>false,
+						'read_only'=>false
+					)			
+				)
+			) );
+		endif;
+	endforeach;
 }
 
 /*--------------------------------------------------------------
@@ -1808,6 +1893,7 @@ function battleplan_clearViewFields() {
 		updateMeta( get_the_ID(), 'log-views-now', strtotime("-1 day"));					
 		updateMeta( get_the_ID(), 'log-views-time', strtotime("-1 day"));		
 		updateMeta( get_the_ID(), 'log-tease-time', strtotime("-1 day"));			
+		updateMeta( get_the_ID(), 'log-views-today', '0' );				
 		updateMeta( get_the_ID(), 'log-views-total-7day', '0' );		
 		updateMeta( get_the_ID(), 'log-views-total-30day', '0' );
 		updateMeta( get_the_ID(), 'log-views-total-90day', '0' );
@@ -1861,6 +1947,7 @@ function battleplan_clearViewFields() {
 			updateMeta( get_the_ID(), 'log-views-now', strtotime("-1 day"));			
 			updateMeta( get_the_ID(), 'log-views-time', strtotime("-1 day"));				
 			updateMeta( get_the_ID(), 'log-tease-time', strtotime("-1 day"));			
+			updateMeta( get_the_ID(), 'log-views-today', '0' );		
 			updateMeta( get_the_ID(), 'log-views-total-7day', '0' );		
 			updateMeta( get_the_ID(), 'log-views-total-30day', '0' );
 			updateMeta( get_the_ID(), 'log-views-total-90day', '0' );
@@ -1908,6 +1995,7 @@ function battleplan_clearViewFields() {
 			for ($x = 0; $x < 31; $x++) {
 				deleteMeta( get_the_ID(), 'site-views-day-'.$x);
 			} 		
+			updateMeta( get_the_ID(), 'log-views-today', '0' );		
 			updateMeta( get_the_ID(), 'log-views-total-7day', '0' );		
 			updateMeta( get_the_ID(), 'log-views-total-30day', '0' );
 			updateMeta( get_the_ID(), 'log-views-total-90day', '0' );

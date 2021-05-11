@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 8.7.2
+Version: 8.8
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -43,6 +43,7 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
 	- Galleries
 	- Accordion Setup
 	- Tabbed Content
+	- SVG
 	- Products (Shearer Supply)
 # Plugins
 	- Waypoints
@@ -153,7 +154,7 @@ textarea {
 }
 
 /* Show the overflow in IE. Show the overflow in Edge. */
-a.button
+a.button,
 a.page-numbers,
 span.page-numbers,
 button,
@@ -632,7 +633,10 @@ hr {
 	margin-bottom: 								1.5em;
 }
 
-p {
+p,
+h1 + .block.block-text,
+h2 + .block.block-text,
+h3 + .block.block-text {
 	margin-top: 								1em;	
 	margin-bottom: 								1.5em;
 }
@@ -660,7 +664,10 @@ ol:first-child {
 
 p:last-child,
 ul:last-child,
-ol:last-child {
+ol:last-child,
+h1 + .block.block-text:last-child,
+h2 + .block.block-text:last-child,
+h3 + .block.block-text:last-child {
 	margin-bottom:								0;
 }
 
@@ -674,6 +681,14 @@ ol {
 
 li:not(.menu-item):not(:last-child) {
 	margin-bottom:								0.3em;
+}
+
+li.filter-choice {
+	list-style:									none;
+}
+
+li.filter-choice div {
+	display:									inline-block;
 }
 
 li > ul,
@@ -1080,6 +1095,10 @@ div.wpcf7 .form-submitting .ajax-loader {
     font-size: 									90%;
     font-weight: 								normal;
     display: 									block;
+}
+
+.wpcf7 form.sent .wpcf7-response-output {
+    border-color: 								unset;
 }
 
 .wpcf7 form .wpcf7-response-output {
@@ -1789,6 +1808,7 @@ section.section .flex.nested .flex {
 	border:										1px solid rgba(0,0,0,0.15);
 }
 
+
 /* Better Business Bureau */
 
 .widget-bbb #bbblink {
@@ -1991,6 +2011,7 @@ section.section .flex.nested .flex {
 	position:									absolute;
 	left: 										0;
 	width: 										100%;
+
 	text-align: 								center;
 	color: 										rgba(0,0,0,0.75);
 	z-index:									10000;
@@ -3463,6 +3484,10 @@ dl.col-gallery {
 	padding:									0.1em 1em 1em;
 }
 
+.block-button + .accordion-content .accordion-box {
+	padding:									1em;
+}
+
 /* Tabbed Content
 --------------------------------------------- */
 div.tab-content-holder {
@@ -3483,7 +3508,11 @@ section.tab-content.current {
 	display:									inherit;
 }
 
-
+/* SVG
+--------------------------------------------- */
+#include-svg {
+	display:									none;
+}
 
 /* Products (Shearer Supply)
 --------------------------------------------- */
@@ -4166,6 +4195,7 @@ iframe#podium-modal {
 		margin-top:									2.5em;
 		border-left: 								none !important;		
 		border-right: 								none !important;
+
 		border-top: 								1px solid rgba(0,0,0,0.3);
 	}
 	
@@ -4252,27 +4282,37 @@ iframe#podium-modal {
 	.gallery-column-8 {
 		grid-template-columns: 						repeat(5, 1fr);
 	}
+	
+	/* Sidebar */
+	.content-box #primary, 
+	.sidebar-box #secondary, 
+	.widget-box .widget, 
+	.content-sidebar-box #main-content {
+		padding:									2.5em 1.5em;
+	}
+	
+	#secondary img {
+		margin:										0;
+	}
+	
+	#secondary .sidebar-inner {
+		display:									flex;
+		flex-flow:									row wrap;
+		gap:										2.5em 3%;
+		justify-content:							space-evenly;
+	}
+	
+	.widget {
+		margin:										0 !important;
+	}
 }
 
 /* 3: Small Tablets (landscape) ONLY */
 @media (min-width: 861px) and (max-width: 1024px) {		
-	#secondary .sidebar-inner {
-		column-count: 								2;
-		column-width: 								300px;
-		column-gap: 								3%;
-	}	
-
-	.widget {
-		-webkit-column-break-inside: 				avoid;
-        page-break-inside: 							avoid;
-        break-inside: 								avoid; /* keeps form from being broken into 2 columns on tablets -- css-tricks.com suggested 10-22-2020 */
-		margin-top:									0 !important;
-	}
 }
 
 /* 2: Phones (landscape) + Tablets (portrait) */
-@media (max-width: 860px) {
-		
+@media (max-width: 860px) {		
 	.ribbon {
 		width: 										calc(100% + 82px);
 		margin-left: 								-41px;

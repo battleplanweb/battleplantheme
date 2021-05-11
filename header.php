@@ -46,7 +46,7 @@ wp_nav_menu( array(
 	'menu_class'	  => 'menu main-menu',
 	'theme_location'  => $mainMenuLoc,
 	'walker'          => new Aria_Walker_Nav_Menu(),
-) ); ?>			
+) ); ?>	
 	
 <a class="skip-link screen-reader-text" href="#primary"><?php esc_html_e( 'Skip to content', 'battleplan' ); ?></a>
 

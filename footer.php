@@ -64,9 +64,11 @@ get_sidebar(); ?>
 </div><!-- #page -->
 
 <!-- Scroll to Top btn -->
-<a class ="scroll-top hide-1 hide-2 hide-3" href="#page"><i class="fa fa-chevron-up" aria-hidden="true"></i><span class="sr-only">Scroll To Top</span></a>
+<a class ="scroll-top hide-1 hide-2 hide-3" href="#page"><i class="fa fa-chevron-up" aria-hidden="true"></i><span class="sr-only">Scroll To Top</span></a>	
 
-<?php wp_footer(); ?>
+<?php wp_footer(); ?>	
+	
+<?php echo '<div id="include-svg">'.do_shortcode('[get-element slug="svg"]').'</div>'; ?>
 
 </body>
 </html>

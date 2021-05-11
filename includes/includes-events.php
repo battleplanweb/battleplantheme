@@ -7,7 +7,7 @@ https://docs.theeventscalendar.com/reference/functions/
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
 # Shortcodes
-# Set up Admin Columns
+# Set Up Admin Columns
 --------------------------------------------------------------*/
 
 
@@ -65,7 +65,7 @@ function battleplan_event_teasers( $atts, $content = null ) {
 }	
 
 /*--------------------------------------------------------------
-# Set up Admin Columns
+# Set Up Admin Columns
 --------------------------------------------------------------*/
 add_action( 'ac/ready', 'battleplan_event_column_settings' );
 function battleplan_event_column_settings() {
@@ -75,7 +75,7 @@ function battleplan_event_column_settings() {
 				'featured-image'=>array(
 					'type'=>'column-featured_image',
 					'label'=>'',
-					'width'=>'100',
+					'width'=>'80',
 					'width_unit'=>'px',
 					'featured_image_display'=>'image',
 					'image_size'=>'icon',
@@ -92,14 +92,39 @@ function battleplan_event_column_settings() {
 				'title'=>array(
 					'type'=>'title',
 					'label'=>'Title',
-					'width'=>'',
-					'width_unit'=>'%',
+					'width'=>'200',
+					'width_unit'=>'px',
 					'edit'=>'on',
 					'sort'=>'on',
 					'name'=>'title',
 					'label_type'=>'',
 					'search'=>'on'
 				),		
+				'column-slug'=>array(
+					'type'=>'column-slug',
+					'label'=>'Slug',
+					'width'=>'15',
+					'width_unit'=>'%',
+					'edit'=>'on',
+					'sort'=>'on',
+					'name'=>'column-slug',
+					'label_type'=>'',
+					'search'=>'on'
+				),
+				'post-id'=>array(
+					'type'=>'column-postid',
+					'label'=>'ID',
+					'width'=>'100',
+					'width_unit'=>'px',
+					'before'=>'',
+					'after'=>'',
+					'sort'=>'on',
+					'filter'=>'on',
+					'filter_label'=>'',
+					'name'=>'post-id',
+					'label_type'=>'',
+					'search'=>'on'
+				),
 				'start-date'=>array(
 					'type'=>'start-date',
 					'label'=>'Start Date',
@@ -182,8 +207,8 @@ function battleplan_event_column_settings() {
 				)
 			),
 			'layout'=>array(
-				'id'=>'5fce1c19ac6bb',
-				'name'=>'battleplan',
+				'id'=>'battleplan-tribe_events-main',
+				'name'=>'Main View',
 				'roles'=>false,
 				'users'=>false,
 				'read_only'=>false

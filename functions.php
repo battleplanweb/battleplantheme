@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.8' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.8.1' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -678,7 +678,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 						$buildInner .= '<div class="carousel-item active">';
 					else : 
 						$buildIndicators .= '<li data-target="#'.$type.'Slider'.$sliderNum.'" data-slide-to="'.$numDisplay.'"></li>'; 
-						$buildInner .= '<div class="clearfix"></div></div><div class="carousel-item">';
+						$buildInner .= '<!--div class="clearfix"></div--></div><div class="carousel-item">';
 					endif;	
 				endif;	
 
@@ -702,7 +702,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 				$rowDisplay++;
 				if ( $rowDisplay == $mult ) $rowDisplay = 0;	
 			endwhile;
-		$buildInner .= "<div class='clearfix'></div></div>";
+		$buildInner .= "<!--div class='clearfix'></div--></div>";
 		wp_reset_postdata();
 		endif;
 	else :
@@ -2743,20 +2743,23 @@ function battleplan_buildButton( $atts, $content = null ) {
 // Accordion Block 
 add_shortcode( 'accordion', 'battleplan_buildAccordion' );
 function battleplan_buildAccordion( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'title'=>'', 'excerpt'=>'', 'class'=>'', 'btn'=>'false', 'icon'=>'true', 'start'=>'', 'end'=>'' ), $atts );
+	$a = shortcode_atts( array( 'title'=>'', 'excerpt'=>'', 'class'=>'', 'btn'=>'false', 'btn_collapse'=>'false', 'icon'=>'true', 'start'=>'', 'end'=>'' ), $atts );
 	$excerpt = esc_attr($a['excerpt']);
 	if ( $excerpt != '' ) $excerpt = '<div class="accordion-excerpt"><div class="accordion-box">'.$excerpt.'</div></div>';
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
 	$title = esc_attr($a['title']);	
 	$icon = esc_attr($a['icon']);
+	$btnCollapse = esc_attr($a['btn_collapse']);
 	$btn = esc_attr($a['btn']);
 	if ( $btn == "true" ) :	
-		if ( $title ) : $title = '<div class="block block-button"><button role="button" tabindex="0" class="accordion-title">'.$title.'</button></div>'; endif;
+		if ( $btnCollapse == "false" ) $btnCollapse = "hide";
+		if ( $title ) : $title = '<div class="block block-button"><button role="button" tabindex="0" class="accordion-title" data-text="'.$title.'" data-collapse="'.$btnCollapse.'">'.$title.'</button></div>'; endif;
 	else: 
 		if ( $icon == 'true' ) : $icon = '<span class="accordion-icon"></span>'; else: $icon = ''; endif;	
 		if ( $title ) : $title = '<h2 role="button" tabindex="0" class="accordion-title">'.$icon.$title.'</h2>'; endif;
 	endif;
+
 	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));	
 	if ( $start || $end ) {

@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 8.8
+Version: 8.8.1
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -1809,6 +1809,7 @@ section.section .flex.nested .flex {
 }
 
 
+
 /* Better Business Bureau */
 
 .widget-bbb #bbblink {
@@ -2667,6 +2668,7 @@ h3.archive-subheadline {
 	font-size:									40rem;
 }
 
+
 .archive-intro {
 	margin-top:									1.5em; /* changed top margin to 1.5em from 0.5em for testimonials archive (1st paragraph) 10/12/20 */
 	margin-bottom:								2em;
@@ -3284,6 +3286,7 @@ img.noFX,
 
 .office-hours div:not(:first-of-type) .col-all, 
 .office-hours div:not(:first-of-type) .col-morning, 
+
 .office-hours div:not(:first-of-type) .col-afternoon {
 	font-size:									90%;
 }
@@ -3422,6 +3425,10 @@ dl.col-gallery {
 	z-index:									10000;
 } 
 
+.block-button + .accordion-content {
+	margin-top:									1.5em;
+}
+
 .block-accordion h2 { 
 	font-family:								"Open Sans";
 	font-weight:								bold;
@@ -3473,6 +3480,7 @@ dl.col-gallery {
 
 .accordion-box .block-accordion .accordion-content {
 	background:									rgba(0,0,0,0.1);
+
 	border-bottom:								none;
 }
 
@@ -3835,6 +3843,7 @@ iframe#podium-modal {
 .carousel-indicators li {
     position: 									relative;
     -ms-flex: 									0 1 auto;
+
     flex: 										0 1 auto;
     width: 										30px;
 

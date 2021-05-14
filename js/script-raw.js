@@ -428,22 +428,27 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
  
 		$(".block-accordion .accordion-title").click(function(e) {		
 			e.preventDefault();
-			var locAcc = $(this).closest('.block-accordion'), locIndex = locAcc.index('.block-accordion'), locPos = accPos[locIndex], topPos = accPos[0], moveTo = 0;			
+			var thisBtn = $(this), locAcc = thisBtn.closest('.block-accordion'), locIndex = locAcc.index('.block-accordion'), locPos = accPos[locIndex], topPos = accPos[0], moveTo = 0, btnText=thisBtn.attr('data-text'), btnCollapse=thisBtn.attr('data-collapse');	
+			
 			if ( !locAcc.hasClass("active") ) {
 				setTimeout( function () {
 					$( '.block-accordion.active .accordion-excerpt' ).animate({ height: "toggle", opacity: "toggle" }, transSpeed);					
 					$( '.block-accordion.active .accordion-content' ).animate({ height: "toggle", opacity: "toggle" }, transSpeed);
+					if ( btnCollapse == "hide" ) { thisBtn.fadeOut(); } 
+					else if ( btnCollapse != "false" ) { thisBtn.text(btnCollapse); } 
 				}, closeDelay);
 				setTimeout( function () {
 					locAcc.find('.accordion-excerpt').animate({ height: "toggle", opacity: "toggle" }, transSpeed);						
 					locAcc.find('.accordion-content').animate({ height: "toggle", opacity: "toggle" }, transSpeed);						
-					if ( (locPos - topPos) > (getDeviceH() * 0.25) ) {
-						moveTo = locPos;
-						animateScroll(moveTo, topSpacer, transSpeed); 
-					} else {
-						moveTo = ((locPos - topPos) / 2) + topPos;						
-						animateScroll(moveTo, topSpacer, transSpeed); 
-					}		
+					if ( btnCollapse == undefined ) {
+						if ( (locPos - topPos) > (getDeviceH() * 0.25) ) {
+							moveTo = locPos;
+							animateScroll(moveTo, topSpacer, transSpeed); 
+						} else {
+							moveTo = ((locPos - topPos) / 2) + topPos;						
+							animateScroll(moveTo, topSpacer, transSpeed); 
+						}	
+					}
 				}, openDelay);
 				setTimeout( function() {						
 					$(".block-accordion.active").removeClass('active').attr( 'aria-expanded', false ); 
@@ -453,6 +458,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				setTimeout( function () {
 					$( '.block-accordion.active .accordion-excerpt' ).animate({ height: "toggle", opacity: "toggle" }, transSpeed);					
 					$( '.block-accordion.active .accordion-content' ).animate({ height: "toggle", opacity: "toggle" }, transSpeed);
+					if ( btnCollapse != "false" ) { thisBtn.text(btnText); } 
 				}, closeDelay);	
 				setTimeout( function() {						
 					$(".block-accordion.active").removeClass('active').attr( 'aria-expanded', false );
@@ -1387,6 +1393,8 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			});
 			
 			if ( !$('.widget:not(.hide-widget)').length ) { $('widget:first-of-type').removeClass('hide-widget'); }
+			
+			checkHeights();
 		};	
 
 // Add classes for first, last, even and odd widgets

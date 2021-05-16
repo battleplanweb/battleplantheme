@@ -1357,14 +1357,11 @@ if ( $('body').hasClass('remove-sidebar') ) {
 // Check & log heights of main elements
 		window.checkHeights = function () {
 			var primary = $('#primary').outerHeight();
-			var secondary = $('#secondary').outerHeight();
 			var viewport = $(window).outerHeight();
-			var content = $("#primary .site-main-inner").outerHeight() + compensate;
-			var widgets = $("#secondary .sidebar-inner").outerHeight();
-			var widgetsPad = widgets + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom'));
-			var remain = primary - widgetsPad;
+			var widgets = $("#secondary .sidebar-inner").outerHeight() + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom'));			
+			var remain = primary - widgets;
 
-			$('#wrapper-content').attr( 'data-primary', Math.round(primary) ).attr( 'data-secondary', Math.round(secondary) ).attr( 'data-viewport', Math.round(viewport) ).attr( 'data-content', Math.round(content) ).attr( 'data-widgets', Math.round(widgets) ).attr( 'data-widget-padding', Math.round(widgetsPad) ).attr( 'data-remain', Math.round(remain) );
+			$('#wrapper-content').attr( 'data-primary', Math.round(primary) ).attr( 'data-viewport', Math.round(viewport) ).attr( 'data-widgets', Math.round(widgets) ).attr( 'data-remain', Math.round(remain) );
 			
 			return remain;
 		}
@@ -1395,6 +1392,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			if ( !$('.widget:not(.hide-widget)').length ) { $('widget:first-of-type').removeClass('hide-widget'); }
 			
 			checkHeights();
+			labelWidgets();
 		};	
 
 // Add classes for first, last, even and odd widgets
@@ -1409,32 +1407,34 @@ if ( $('body').hasClass('remove-sidebar') ) {
  // Move sidebar in conjunction with mouse scroll to keep it even with content
 		window.moveWidgets = function () {
 			if ( sidebarScroll == "true" && getDeviceW() > mobileCutoff ) {
-				var sidebar = $(".sidebar-inner");	
+				checkHeights();
+				var sidebar = $(".sidebar-inner"), scrollPct, findPos;	
 				var primary = Number($('#wrapper-content').attr('data-primary'));
 				var widgets = Number($('#wrapper-content').attr('data-widgets'));
-				var visible = Number($('#wrapper-content').attr('data-viewport'));
+				var viewport = Number($('#wrapper-content').attr('data-viewport'));
+				var remain = Number($('#wrapper-content').attr('data-remain'));				
 				var primaryOffset = $("#primary").offset().top;
-				var scrollPos = Number($(window).scrollTop()) - Number(primaryOffset);
-				var max = primary - widgets;
-				var scrollPct = (scrollPos / primary);
-				var findPos = (primary - widgets) * scrollPct;
-				
-				$('.stuck').each(function() {
-					visible = visible - $(this).outerHeight();
-				})
-				visible = visible - $('.wp-google-badge').outerHeight();	
-	
-				if ( widgets < visible ) { findPos = scrollPos + parseInt($("#secondary").css('padding-top')); }
-				if ( findPos > max ) { findPos = max; }
-				if ( findPos > 0 ) { 
-					sidebar.css({ "margin-top": findPos+"px" }); 
+				var scrollPos = Number($(window).scrollTop());
+				var adjScrollPos = scrollPos - primaryOffset;			
+								
+				if ( scrollPos > primaryOffset ) {				
+					scrollPct = adjScrollPos / ( primary - viewport );
+					findPos = remain * scrollPct;
 				} else {
-					sidebar.css({ "margin-top": "0px" }); 
-				}					
+					findPos = 0;
+				}
+
+				$('.stuck').each(function() {
+					viewport = viewport - $(this).outerHeight();
+				})
+				viewport = viewport - $('.wp-google-badge').outerHeight();	
+
+				if ( widgets < viewport ) { findPos = adjScrollPos + parseInt($("#secondary").css('padding-top')); }
+				if ( findPos > remain ) { findPos = remain; }
+				if ( findPos < 0 ) { findPos = 0; }
+				sidebar.css({ "margin-top": findPos+"px" }); 
 			}
 		};
-					
-		labelWidgets();
 	};	
 
 /*--------------------------------------------------------------

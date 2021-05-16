@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.8.1' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.8.2' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -2236,7 +2236,7 @@ function battleplan_log_page_load_speed_ajax() {
 	
 	if ( $userLoc == "Ashburn, VA") :
 		$response = array( 'result' => 'Bot ignored' );		
-	elseif ( $userLogin != 'battleplanweb' && ( $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" )) :
+	elseif ( ( $userLogin != 'battleplanweb' && ( $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :
 		$siteHeader = getID('site-header');
 		$desktopCounted = readMeta($siteHeader, "load-number-desktop");
 		$desktopSpeed = readMeta($siteHeader, "load-speed-desktop");	
@@ -2303,7 +2303,7 @@ function battleplan_count_site_views_ajax() {
 		
 	if ( $userLoc == "Ashburn, VA") :
 		$response = array( 'result' => 'Bot ignored' );		
-	elseif ( $userLogin != 'battleplanweb' && ( $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" )) :
+	elseif ( ( $userLogin != 'battleplanweb' && ( $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :
 		if(!isset($_COOKIE['countVisit'])) :
 			if ( $dateDiff != 0 ) : // day has passed
 				for ($i = 1; $i <= $dateDiff; $i++) {	
@@ -2382,7 +2382,7 @@ function battleplan_count_post_views_ajax() {
 	
 	if ( $userLoc == "Ashburn, VA") :
 		$response = array( 'result' => 'Bot ignored' );		
-	elseif ( $userLogin != 'battleplanweb' && ( $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" )) :
+	elseif ( ( $userLogin != 'battleplanweb' && ( $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :
 		if ( $dateDiff != 0 ) : // day has passed, move 29 to 30, and so on	
 			for ($i = 1; $i <= $dateDiff; $i++) {	
 				$figureTime = $today - ( ($dateDiff - $i) * 86400);	
@@ -2432,7 +2432,7 @@ function battleplan_count_teaser_views_ajax() {
 	
 	if ( $userLoc == "Ashburn, VA") :
 		$response = array( 'result' => 'Bot ignored' );		
-	elseif ( $userLogin != 'battleplanweb' && ( $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" )) :
+	elseif ( ( $userLogin != 'battleplanweb' && ( $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :
 		updateMeta($theID, 'log-tease-time', $today);
 		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' TEASER counted: Prior tease = '.$lastTeased) );
 	else:
@@ -2452,8 +2452,7 @@ function battleplan_count_link_clicks_ajax() {
 		
 	if ( $userLoc == "Ashburn, VA") :
 		$response = array( 'result' => 'Bot ignored' );		
-	elseif ( $userLogin != 'battleplanweb' && ( $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" )) :
-	
+	elseif ( ( $userLogin != 'battleplanweb' && ( $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :	
 		if ( $type == "Phone Call" ) : $getType = 'call-clicks';
 		elseif ( $type == "Email" ) : $getType = 'email-clicks';
 		elseif ( $type == "Wells Fargo" ) :	$getType = 'finance-clicks';

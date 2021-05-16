@@ -7,7 +7,8 @@
 
 /* Hide "register plug in" message on Admin Columns Pro & Extended Widget Options */
 .plugin-update-tr[data-plugin*="admin-columns-pro"]:not(#admin-columns-pro-update) .update-message,
-tr.active[data-plugin*="extended-widget-options"] + tr.plugin-update-tr {
+tr.active[data-plugin*="extended-widget-options"] + tr.plugin-update-tr,
+tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	display:									none;
 }
 

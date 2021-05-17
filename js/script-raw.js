@@ -760,6 +760,24 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			}, { offset: offset });
 		}, delay);	
 	};	
+		
+// Button to reveal a hidden div
+	window.btnRevealDiv = function(button, container, topSpacer, initSpeed) {	
+		initSpeed = initSpeed || 0;
+		topSpacer = topSpacer || 0;
+		var origDisplay = $( container ).css( "display" );
+
+		if ( getDeviceW() < mobileCutoff ) { 
+			topSpacer = topSpacer + $("#mobile-menu-bar").outerHeight();	
+		}			
+
+		$( container ).css( "display","none");	
+		$( button ).click(function(){
+			$( container ).css( "display",origDisplay);
+			var target = container;
+			animateScroll(target, topSpacer, initSpeed);
+		});
+	};
 	
 	// Set up Review Questions & Redirect
 	$('.review-form:first').addClass('active');

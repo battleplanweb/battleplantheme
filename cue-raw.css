@@ -169,6 +169,19 @@
 	text-align:									right;
 }
 
+.alt-time .mejs-controls .mejs-time span {
+	text-align:									right;
+}
+
+.alt-time .mejs-controls .mejs-time .mejs-duration {
+	text-align:									left;
+}
+
+.alt-time .mejs-controls .mejs-time .mejs-duration::before {
+	content:									"/"; 
+	margin:										0 8px;
+}
+
 .mejs-controls .mejs-time .mejs-time-separator {
 	display:									none;
 }

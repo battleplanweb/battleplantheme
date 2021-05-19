@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 8.8.4
+Version: 8.8.5
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -3264,6 +3264,11 @@ img.noFX,
 	padding:									5px 15px;
 }
 
+.office-hours > div.row-info {
+	grid-template-columns: 						1fr;
+	font-size:									90%;
+}
+
 .office-hours .col-day {
 	text-align:									left;
 }
@@ -3692,6 +3697,11 @@ iframe#podium-modal {
 	width:										100%; 
 }
 
+.carousel.pointer-event {
+  	-ms-touch-action: 							pan-y;
+  	touch-action: 								pan-y;
+}
+
 .carousel-inner {
     position: 									relative;
     width: 										inherit;
@@ -3718,12 +3728,15 @@ iframe#podium-modal {
     transition: 								transform 0.6s ease;
 }
 
-@media screen and (prefers-reduced-motion:reduce) {
-    .carousel-item-next, 
-	.carousel-item-prev, 
-	.carousel-item.active { 
-		transition: 								none;
-	}
+@media (prefers-reduced-motion: reduce) {
+  	.carousel-item,
+	.carousel-fade .active.carousel-item-left,
+  	.carousel-fade .active.carousel-item-right,
+	.carousel-control-prev,
+  	.carousel-control-next,
+	.carousel-indicators li {
+    	transition: 							none;
+  	}
 }
 
 .carousel-item-next, 
@@ -4577,6 +4590,7 @@ iframe#podium-modal {
 	/* Footer */
 	.site-info .site-icon {
 		display:									none;
+
 
 	}
 	.site-info .span-10 {

@@ -1382,6 +1382,8 @@ if ( $('body').hasClass('remove-sidebar') ) {
 
 			$('#wrapper-content').attr( 'data-primary', Math.round(primary) ).attr( 'data-viewport', Math.round(viewport) ).attr( 'data-widgets', Math.round(widgets) ).attr( 'data-remain', Math.round(remain) );
 			
+			console.log(Math.random() * 10);
+			
 			return remain;
 		}
 
@@ -1426,7 +1428,6 @@ if ( $('body').hasClass('remove-sidebar') ) {
  // Move sidebar in conjunction with mouse scroll to keep it even with content
 		window.moveWidgets = function () {
 			if ( sidebarScroll == "true" && getDeviceW() > mobileCutoff ) {
-				checkHeights();
 				var sidebar = $(".sidebar-inner"), scrollPct, findPos;	
 				var primary = Number($('#wrapper-content').attr('data-primary'));
 				var widgets = Number($('#wrapper-content').attr('data-widgets'));
@@ -1451,6 +1452,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 				if ( widgets < viewport ) { findPos = adjScrollPos + parseInt($("#secondary").css('padding-top')); }
 				if ( findPos > remain ) { findPos = remain; }
 				if ( findPos < 0 ) { findPos = 0; }
+				if ( findPos > 0 && findPos < remain ) { checkHeights(); }
 				sidebar.css({ "margin-top": findPos+"px" }); 
 			}
 		};

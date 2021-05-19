@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.8.3' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.8.4' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -592,7 +592,8 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	$num = esc_attr($a['num']);	
 	$controls = esc_attr($a['controls']);	
 	$controlsPos = esc_attr($a['controls_pos']);
-	$indicators = esc_attr($a['indicators']);		
+	$indicators = esc_attr($a['indicators']);			
+	$pause = esc_attr($a['pause']);		
 	$autoplay = esc_attr($a['auto']);		
 	$type = esc_attr($a['type']);		
 	$potentialOffset = esc_attr($a['offset']);
@@ -767,7 +768,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 
 	if ( $slideType == "box" ) : $style = "style='margin-left:auto; margin-right:auto;'"; $slideClass="box-slider"; elseif ( $slideType == "screen" ) : $style = "style='width: calc(100vw - 17px); left: 50%; transform: translateX(calc(-50vw + 8px));'"; $slideClass="screen-slider"; elseif ( $slideType == "fade" ) : $slideClass="carousel-fade"; else: $slideClass="carousel-fade"; endif;	
 	
-	$buildSlider = '<div id="'.$type.'Slider'.$sliderNum.'" class="carousel slide slider slider-'.$type.' '.$slideClass.' '.$class.' mult-'.$mult.'" '.$style.' data-interval="'.$interval.'" data-pause="'.$pause.'" data-wrap="'.$loop.'"';	
+	$buildSlider = '<div id="'.$type.'Slider'.$sliderNum.'" class="carousel slide slider slider-'.$type.' '.$slideClass.' '.$class.' mult-'.$mult.'" '.$style.' data-interval="'.$interval.'" data-pause="'.$pause.'" data-wrap="'.$loop.'" data-touch="true"';	
 	if ( $autoplay == "yes" ) $buildSlider .= ' data-ride="carousel"';
 	$buildSlider .= '>';	
 	
@@ -1807,7 +1808,7 @@ function battleplan_scripts() {
 	if ( is_plugin_active( 'stripe-payments/accept-stripe-payments.php' ) ) { wp_enqueue_style( 'battleplan-stripe-payments', get_template_directory_uri()."/style-stripe-payments.css", array(), _BP_VERSION ); } 
 	if ( is_plugin_active( 'cue/cue.php' ) ) { wp_enqueue_style( 'battleplan-cue', get_template_directory_uri()."/cue.css", array(), _BP_VERSION ); } 
 	
-	wp_enqueue_script( 'battleplan-bootstrap', get_template_directory_uri().'/js/bootstrap.js', array(), _BP_VERSION, true );
+	wp_enqueue_script( 'battleplan-carousel', get_template_directory_uri().'/js/bootstrap-carousel.js', array(), _BP_VERSION, true );
 	wp_enqueue_script( 'battleplan-parallax', get_template_directory_uri().'/js/parallax.js', array(), _BP_VERSION, true );
 	wp_enqueue_script( 'battleplan-waypoints', get_template_directory_uri().'/js/waypoints.js', array(), _BP_VERSION, true );
 	wp_enqueue_script( 'battleplan-script', get_template_directory_uri().'/js/script.js', array(), _BP_VERSION, true );
@@ -1816,7 +1817,7 @@ function battleplan_scripts() {
 	if ( is_plugin_active( 'cue/cue.php' ) ) { wp_enqueue_script( 'battleplan-cue', get_template_directory_uri().'/js/cue.js', array(), _BP_VERSION, true ); } 
 	if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) { wp_enqueue_script( 'comment-reply' ); }
 	
-	$getUploadDir = wp_upload_dir();
+	$getUploadDir = wp_upload_dir(); 
 	$getThemeDir = get_stylesheet_directory_uri();
 	$saveDir = array( 'theme_dir_uri'=>$getThemeDir, 'upload_dir_uri'=>$getUploadDir['baseurl'] );
 	wp_localize_script( 'battleplan-script-site', 'theme_dir', $saveDir );
@@ -2506,7 +2507,7 @@ function battleplan_expireContent( $atts, $content = null ) {
 // Section
 add_shortcode( 'section', 'battleplan_buildSection' );
 function battleplan_buildSection( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'hash'=>'', 'style'=>'', 'width'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'class'=>'', 'start'=>'', 'end'=>'' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'hash'=>'', 'style'=>'', 'width'=>'', 'grid'=>'', 'break'=>'', 'valign'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'class'=>'', 'start'=>'', 'end'=>'' ), $atts );
 	$name = strtolower(esc_attr($a['name']));
 	$name = preg_replace("/[\s_]/", "-", $name);
 	$hash = esc_attr($a['hash']);
@@ -2528,10 +2529,19 @@ function battleplan_buildSection( $atts, $content = null ) {
 		if ( $start && $now < $start ) return null;
 		if ( $end && $now > $end ) return null;		
 	}
-	
+	$grid = esc_attr($a['grid']);
+	$break = esc_attr($a['break']);
+	$valign = esc_attr($a['valign']);
+	if ( $valign != '' ) $valign = " valign-".$valign;
+	if ( $break != '' ) $break = " break-".$break;
+	if ( $grid != '' ) :
+		$buildLayout = '<div class="flex grid-'.$grid.$valign.$break.$class.'">'.do_shortcode($content).'</div>';
+	else:
+		$buildLayout = do_shortcode($content);
+	endif;	
 	$buildSection = '<section'.$name.' class="section'.$style.$width.$class.'" '.$hash;
 	if ( $background != "" ) $buildSection .= ' style="background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;"';	
-	$buildSection .= '>'.do_shortcode($content).'</section>';	
+	$buildSection .= '>'.$buildLayout.'</section>';	
 	
 	return $buildSection;
 }

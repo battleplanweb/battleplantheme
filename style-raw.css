@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 8.8.3
+Version: 8.8.4
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -3838,7 +3838,7 @@ iframe#podium-modal {
     justify-content: 							center;
     padding-left: 								5%;
    	padding-right: 								5%;
-	margin:										-1.5em 0 1.5em; /* negative top margin pulls indicators back up to compensate for padding-bottom on .carousel-inner - Norris */
+	margin:										0em 0 1.5em; /* removed negative top margin 5/18/21; negative top margin pulls indicators back up to compensate for padding-bottom on .carousel-inner - Norris */
     list-style: 								none;
 }
 
@@ -4577,6 +4577,7 @@ iframe#podium-modal {
 	/* Footer */
 	.site-info .site-icon {
 		display:									none;
+
 	}
 	.site-info .span-10 {
 		grid-column:								span 12;
@@ -4744,6 +4745,7 @@ iframe#podium-modal {
 
 @media screen and (min-width: 1025px) and (max-width: 1280px) {
 	.hide-4 {
+
 		display:									none !important;
 	}
 }

@@ -9,9 +9,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 /*--------------------------------------------------------------
 # Admin interface
 --------------------------------------------------------------*/
-	
-	
-	
+		
 	/* Control color of Top 10 Most Visited Days box */
 	$("#battleplan_site_stats tr").each(function(){
 		var getAge = 100 - $(this).attr("data-age");
@@ -70,5 +68,5 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			$('.sui-box-body').css({'display':'block'});
 			$('.wds-focus-keyword').css({'display':'block'});
 		});
-	}, 1000);
+	}, 1000);	
 })(jQuery); });

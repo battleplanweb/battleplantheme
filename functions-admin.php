@@ -1381,7 +1381,8 @@ function battleplan_reorderAdminBar() {
 // Create additional admin pages
 add_action( 'admin_menu', 'battleplan_admin_menu' );
 function battleplan_admin_menu() {
-	add_menu_page( __( 'Clear Stats', 'battleplan' ), __( 'Clear Stats', 'battleplan' ), 'manage_options', 'clear-stats', 'battleplan_clearViewFields', 'dashicons-trash', 3 );
+	//add_menu_page( __( 'Clear Stats', 'battleplan' ), __( 'Clear Stats', 'battleplan' ), 'manage_options', 'clear-stats', 'battleplan_clearViewFields', 'dashicons-trash', 3 );
+	add_submenu_page( 'tools.php', 'Clear Stats', 'Clear Stats', 'manage_options', 'battleplan_clearViewFields' );	
 }
 
 function battleplan_addSitePage() { 
@@ -1460,15 +1461,27 @@ function battleplan_addViewsToPost() {
 add_action( 'admin_init', 'battleplan_remove_menus', 999 );
 function battleplan_remove_menus() {   
 	remove_menu_page( 'link-manager.php' );       						//Links
-	remove_submenu_page( 'themes.php', 'theme-editor.php' );        	//Appearance -> Theme Editor
-	remove_submenu_page( 'themes.php', 'widgets.php' );        			//Appearance -> Widgets
-	remove_submenu_page( 'themes.php', 'nav-menus.php' );        		//Appearance -> Menus
-	remove_submenu_page( 'tools.php', 'export-personal-data.php' );   	//Tools - Export Personal Data  
-	remove_submenu_page( 'tools.php', 'erase-personal-data.php' );   	//Tools - Erase Personal Data
+	remove_menu_page( 'edit-comments.php' );       						//Comments	
+	remove_menu_page( 'wpcf7' );       									//Contact Forms	
+	remove_menu_page( 'edit.php?post_type=acf-field-group' );       	//Custom Fields
 	remove_menu_page( 'meowapps-main-menu' );       					//Meow Apps
-	add_menu_page('Perfect Images', 'Perfect Images', 'manage_options', '/admin.php?page=wr2x_settings', '', 'dashicons-welcome-view-site');
-	add_submenu_page( 'edit.php?post_type=elements', 'Widgets', 'Widgets', 'manage_options', 'widgets.php' );	
+	remove_menu_page( 'themes.php' );       							//Appearance
+	remove_menu_page( 'wpmudev' );       								//WPMU Dev
+	remove_menu_page( 'ari-fancy-lightbox' );       					//ARI Fancy Lightbox
+	remove_submenu_page( 'plugins.php', 'plugin-editor.php' );        	//Plugins => Plugin Editor
+	remove_submenu_page( 'tools.php', 'export-personal-data.php' );   	//Tools => Export Personal Data  
+	remove_submenu_page( 'tools.php', 'erase-personal-data.php' );   	//Tools => Erase Personal Data
+	remove_submenu_page( 'upload.php', 'wr2x_dashboard' );   			//Media => Perfect Images Dashboard
+
+	add_submenu_page( 'upload.php', 'Favicon', 'Favicon', 'manage_options', 'admin.php?page=wr2x_settings' );	
+	add_submenu_page( 'upload.php', 'Perfect Images', 'Perfect Images', 'manage_options', 'customize.php' );	
 	add_submenu_page( 'edit.php?post_type=elements', 'Menus', 'Menus', 'manage_options', 'nav-menus.php' );	
+	add_submenu_page( 'edit.php?post_type=elements', 'Widgets', 'Widgets', 'manage_options', 'widgets.php' );	
+	add_submenu_page( 'edit.php?post_type=elements', 'Contact Forms', 'Contact Forms', 'manage_options', 'admin.php?page=wpcf7' );	
+	add_submenu_page( 'edit.php?post_type=elements', 'Comments', 'Comments', 'manage_options', 'edit-comments.php' );
+	add_submenu_page( 'edit.php?post_type=elements', 'Custom Fields', 'Custom Fields', 'manage_options', 'edit.php?post_type=acf-field-group' );		
+	add_submenu_page( 'edit.php?post_type=elements', 'Themes', 'Themes', 'manage_options', 'themes.php' );		
+	add_submenu_page( 'options-general.php', 'Lightbox', 'Lightbox', 'manage_options', 'admin.php?page=ari-fancy-lightbox' );
 }
 
 // Reorder WP Admin Menu Items
@@ -1482,8 +1495,31 @@ function battleplan_custom_menu_order( $menu_ord ) {
 	foreach ($getCPT as $postType) {
 		array_push($displayTypes, 'edit.php?post_type='.$postType);
 	}
-	array_push($displayTypes, 'edit.php', 'edit-comments.php', 'wpcf7', 'separator2', 'wpengine-common', 'themes.php', 'plugins.php', 'options-general.php', 'tools.php', 'edit.php?post_type=acf-field-group', 'users.php', 'separator-last', 'wds_wizard', 'smush', 'wr2x_settings', 'wpmudev');	
+	array_push($displayTypes, 'edit.php', 'separator2', 'plugins.php', 'wppusher', 'options-general.php', 'tools.php', 'users.php', 'separator-last', 'wpengine-common', 'wds_wizard', 'smush');	
 	return $displayTypes;
+}
+
+// Reorder WP Admin Sub-Menu Items
+add_filter( 'custom_menu_order', 'battleplan_submenu_order' );
+function battleplan_submenu_order( $menu_ord ) {
+    global $submenu;	
+    //echo '<pre>'.print_r($submenu,true).'</pre>';
+
+    $arr = array();
+    $arr[] = $submenu['options-general.php'][10];     
+    $arr[] = $submenu['options-general.php'][15];
+    $arr[] = $submenu['options-general.php'][20];
+    $arr[] = $submenu['options-general.php'][25];
+    $arr[] = $submenu['options-general.php'][30];
+    $arr[] = $submenu['options-general.php'][40];
+    $arr[] = $submenu['options-general.php'][45];
+    $arr[] = $submenu['options-general.php'][49];
+    $arr[] = $submenu['options-general.php'][46];
+    $arr[] = $submenu['options-general.php'][48];
+    $arr[] = $submenu['options-general.php'][47];
+    $submenu['options-general.php'] = $arr;
+
+    return $menu_ord;
 }
 
 // Remove unwanted dashboard widgets

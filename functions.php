@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.8.4' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.8.5' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -376,7 +376,8 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	$format = esc_attr($a['format_text']);
 	$link = esc_attr($a['link']);		
 	if ( $link == "false" || $link == "no" || $type == "testimonials" ) : $link == "false"; $linkLoc = "";
-	elseif ( $link == "post" ) : $linkLoc = esc_url(get_the_permalink(get_the_ID()));
+	elseif ( $link == "post" ) : $linkLoc = esc_url(get_the_permalink(get_the_ID()));	
+	elseif ( strpos($link, 'cf-') === 0 ) : $linkLoc = esc_url(get_field(str_replace('cf-', '', $link))); 
 	else: $linkLoc = $link;	endif;
 	$noPic = esc_attr($a['no_pic']);	
 	if ( $noPic == "" ) $noPic = "false";	

@@ -49,21 +49,15 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$(this).wrap('<a href="https://www.americanstandardair.com/" target="_blank"></a>'); 
 	});
 			
-// Track phone number clicks in Google Analytics
+// Track phone number clicks
 	window.trackClicks = function(type, category, action, url) {
+		document.location = url;
 		$.post({
 			url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
 			data : { action: "count_link_clicks", type: action },
-			success: function( response ) { console.log(response); document.location = url; } 
-		});	
-		
-		gtag('event', type, { 'event_category': category, 'event_action': action, 'event_label': url, 'transport_type': 'beacon', 'event_callback': function(){} });		
+			success: function( response ) { console.log(response);  } 
+		});		
 	};
-
-// Track contact form submissions in Google Analytics
-	document.addEventListener( 'wpcf7mailsent', function( event ) {
-		gtag('event', 'contact', { 'event_category': 'Contact', 'event_action': 'Email' });
-	}, false );
 
 // Set up Cookies
 	window.setCookie = function(cname,cvalue,exdays) {
@@ -317,8 +311,11 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			if ( cos >= 0 && sin <= 0 ) { color = rightColor; }
 			shadow += "calc("+ width + "px * " + cos + ") calc("+ width + "px * " + sin + ") 0 "+ color;
 	 		if ( i < (steps-1) ) { shadow += ", "; }	  
-  		}	
-		$(element).css({ "text-shadow": shadow, "letter-spacing":spacing+"px" });
+  		}			
+		
+		var style = document.createElement('style');
+		style.innerHTML = element + " { text-shadow: "+shadow+"; letter-spacing: "+spacing+"px; }";
+		document.head.appendChild(style);
 	};
 
 // Animate the automated scrolling to section of content
@@ -1015,7 +1012,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		}, { offset: offset });	
 	};	
 
-// Animate single element (using CSS transitions in go-style.css)
+// Animate single element (using CSS transitions in site-style.css)
 	window.animateCSS = function(container, initDelay, offset, speed) {	
 		initDelay = initDelay || 0;		
 		offset = offset || "100%";
@@ -1122,7 +1119,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 # Set up pages
 --------------------------------------------------------------*/
 
-// Needed temporarily to force columns to new framework naming structure */
+/* Needed temporarily to force columns to new framework naming structure 
 	$('.col-8').addClass('span-1').removeClass('col-8');
 	$('.col-17').addClass('span-2').removeClass('col-17');
 	$('.col-20').addClass('span-2').removeClass('col-20');
@@ -1138,7 +1135,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	$('.col-80').addClass('span-10').removeClass('col-80');
 	$('.col-83').addClass('span-10').removeClass('col-83');
 	$('.col-92').addClass('span-11').removeClass('col-92');
-	$('.col-100').addClass('span-12').removeClass('col-100');
+	$('.col-100').addClass('span-12').removeClass('col-100');*/
 
 
 // Remove empty elements
@@ -1334,8 +1331,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 	if ( todayIs == 3 ) $(".office-hours .row-wed").addClass("today");
 	if ( todayIs == 4 ) $(".office-hours .row-thu").addClass("today");
 	if ( todayIs == 5 ) $(".office-hours .row-fri").addClass("today");
-	if ( todayIs == 6 ) $(".office-hours .row-sat").addClass("today");
-	
+	if ( todayIs == 6 ) $(".office-hours .row-sat").addClass("today");	
 					
 // Removes double asterisk in required forms
 	$('abbr.required, em.required, span.required').text("");
@@ -1521,25 +1517,6 @@ if ( $('body').hasClass('remove-sidebar') ) {
 
 		// Shift #secondary below #wrapper-bottom on mobile		
 		moveDiv('.sidebar-shift.screen-mobile #secondary','#colophon',"before");	
-
-		/* Remove horizontal styling from office hours box on cell phones */	
-		//if ( $('body').hasClass('screen-1') ) { 
-			//if ( $('.office-hours').hasClass('horz') ) { 
-				//$('.office-hours').removeClass('horz').addClass('force-vert'); 
-			//}
-		//}
-		//if ( $('.office-hours').hasClass('force-vert') ) { 
-			//if ( !$('body').hasClass('screen-1') ) { 
-				//$('.office-hours').removeClass('force-vert').addClass('horz'); 
-			//}
-		//}		
-
-		/* Set up "fixed" footer, based on class added in header.php */		
-		//var footerH = $(".footer-fixed #footer").outerHeight(true);
-		//$(".footer-fixed #page").css({"marginBottom":footerH+"px"});		
-
-		// Reposition Woocommerce Update Cart button above coupon section on mobile checkout
-		//moveDiv('.woocommerce-page.screen-mobile table.cart td.actions .button[name~="update_cart"]','.woocommerce-page #primary table.cart td.actions .coupon','before');	
 	};
 
 /*--------------------------------------------------------------
@@ -1616,17 +1593,6 @@ if ( $('body').hasClass('remove-sidebar') ) {
 				vidDefer[i].setAttribute('src',vidDefer[i].getAttribute('data-src'));
 			}
 		}
-
-		// HACK - keep the 100x400 box with parallax image from showing up on left side of page	
-		//window.clearParallaxGlitch = function () {
-			//$('.parallax-mirror').each(function() {
-				//var thisDiv = $(this), thisW = thisDiv.width();
-				//if ( thisW < 101 ) { thisDiv.css({ "opacity":0 }); }
-				//else { thisDiv.css({ "opacity":1 }); }
-			//}); 
-		//}
-		//setTimeout(function() {	clearParallaxGlitch(); }, 50);
-		//$('#container').resize(function() { clearParallaxGlitch(); });
 				
 	// Handle parallax sections (with content) on mobile devices
 		var countParallax = 1;

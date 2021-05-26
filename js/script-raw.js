@@ -45,7 +45,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	};		
 
 // Set up American Standard logo to link to American Standard website	
-	$("img[src*='/hvac-american-standard']").each(function() { 
+	$("img[src*='/hvac-american-standard/american-standard']").each(function() { 
 		$(this).wrap('<a href="https://www.americanstandardair.com/" target="_blank"></a>'); 
 	});
 			
@@ -1374,15 +1374,12 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		
 // Check & log heights of main elements
 		window.checkHeights = function () {
-
 			var primary = $('#primary').outerHeight();
 			var viewport = $(window).outerHeight();
 			var widgets = $("#secondary .sidebar-inner").outerHeight() + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom')) + compensate;			
 			var remain = primary - widgets;
 
 			$('#wrapper-content').attr( 'data-primary', Math.round(primary) ).attr( 'data-viewport', Math.round(viewport) ).attr( 'data-widgets', Math.round(widgets) ).attr( 'data-remain', Math.round(remain) );
-			
-			console.log(Math.random() * 10);
 			
 			return remain;
 		}

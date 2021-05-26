@@ -181,7 +181,7 @@ function battleplan_add_acf_pedigree_fields() {
 			),
 			array(
 				'key' => 'field_52dd12bc79863',
-				'label' => 'Hips',
+				'label' => 'Hips (OFA)',
 				'name' => 'hips',
 				'type' => 'radio',
 				'required' => 0,
@@ -202,7 +202,7 @@ function battleplan_add_acf_pedigree_fields() {
 			),
 			array(
 				'key' => 'field_52dd6a184e280',
-				'label' => 'Elbows (OFA)',
+				'label' => 'Elbows',
 				'name' => 'elbows',
 				'type' => 'radio',
 				'required' => 0,

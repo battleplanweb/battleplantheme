@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 8.8.5
+Version: 8.9
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -664,7 +664,7 @@ ol:first-child {
 
 p:last-child,
 ul:last-child,
-ol:last-child,
+ol:not(.carousel-indicators):last-child,
 h1 + .block.block-text:last-child,
 h2 + .block.block-text:last-child,
 h3 + .block.block-text:last-child {
@@ -3706,7 +3706,6 @@ iframe#podium-modal {
     position: 									relative;
     width: 										inherit;
     overflow: 									hidden;
-	padding-bottom:								1.5em; 
 }
 
 .carousel-item {
@@ -3777,8 +3776,6 @@ iframe#podium-modal {
 @supports ((-webkit-transform-style:preserve-3d) or (transform-style:preserve-3d)) {
     .active.carousel-item-left, 
 	.carousel-item-prev { 
-
-
 		transform: 									translate3d(-100%, 0, 0);
 	}
 }
@@ -3851,17 +3848,15 @@ iframe#podium-modal {
     justify-content: 							center;
     padding-left: 								5%;
    	padding-right: 								5%;
-	margin:										0em 0 1.5em; /* removed negative top margin 5/18/21; negative top margin pulls indicators back up to compensate for padding-bottom on .carousel-inner - Norris */
+	margin:										1em 0;
     list-style: 								none;
 }
 
 .carousel-indicators li {
     position: 									relative;
     -ms-flex: 									0 1 auto;
-
     flex: 										0 1 auto;
     width: 										30px;
-
     height: 									5px;
     margin: 									0 10px;
     text-indent: 								-999px;
@@ -4583,6 +4578,7 @@ iframe#podium-modal {
 		text-align:									center;
 	}
 	
+
 	.product-links .descriptionText a {
 		display:									block;
 	}

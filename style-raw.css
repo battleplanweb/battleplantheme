@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 8.9
+Version: 8.9.1
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -1791,15 +1791,20 @@ section.section .flex.nested .flex {
 	display:									none;
 }
 
-/* Credit Card Logos */
+/* Credit Card & Crypto Currency Logos */
 #credit-cards,
-.widget-credit-cards #credit-cards {
+.widget-credit-cards #credit-cards,
+.currency,
+.widget-currency .currency {
 	display:									flex;
 	justify-content:							space-around;
+	margin:										8px 0;
 }
 
 #credit-cards img,
-.widget-credit-cards #credit-cards img {	
+.widget-credit-cards #credit-cards img,
+.currency img,
+.widget-currency .currency img {
 	max-width:									100px;
 	width:										100%;
 	height:										100%;
@@ -1807,8 +1812,6 @@ section.section .flex.nested .flex {
 	margin:										0 5px;
 	border:										1px solid rgba(0,0,0,0.15);
 }
-
-
 
 /* Better Business Bureau */
 
@@ -4578,6 +4581,7 @@ iframe#podium-modal {
 		text-align:									center;
 	}
 	
+
 
 	.product-links .descriptionText a {
 		display:									block;

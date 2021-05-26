@@ -1637,15 +1637,11 @@ function battleplan_admin_click_stats() {
 	$siteHeader = getID('site-header');
 	$callClicks = readMeta($siteHeader, "call-clicks");
 	$callClicks = maybe_unserialize($callClicks);
-	$emailClicks = readMeta($siteHeader, "email-clicks");
-	$emailClicks = maybe_unserialize($emailClicks);
-	$financeClicks = readMeta($siteHeader, "finance-clicks");
-	$financeClicks = maybe_unserialize($financeClicks);
 	
 	echo "<table>";
-	echo "<tr><td><b>Year</b></td><td><b>Calls</b></td><td><b>Emails</b></td><td><b>Finance</b></td></tr>";
+	echo "<tr><td><b>Year</b></td><td><b>Calls</b></td>";
 	for ($x = 0; $x < 1; $x++) {		
-		echo "<tr><td><b>".date("Y", $callClicks[$x]['year'])."</b></td><td>".number_format($callClicks[$x]['number'])."</td><td>".number_format($emailClicks[$x]['number'])."</td><td>".number_format($financeClicks[$x]['number'])."</td></tr>";
+		echo "<tr><td><b>".date("Y", $callClicks[$x]['year'])."</b></td><td>".number_format($callClicks[$x]['number'])."</td></tr>";
 	} 			
 	echo "</table>";
 }

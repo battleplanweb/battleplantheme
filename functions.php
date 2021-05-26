@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.9' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.9.1' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -976,7 +976,7 @@ function battleplan_getCreditCards( $atts, $content = null ) {
 	$discover = esc_attr($a['discover']);
 	$amex = esc_attr($a['amex']);
 
-	$buildCards = '<div id="credit-cards">';
+	$buildCards = '<div id="credit-cards" class="currency">';
 	if ( $mc == "yes" ) $buildCards .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-mc.png" alt="We accept Mastercard"/>';
 	if ( $visa == "yes" ) $buildCards .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-visa.png" alt="We accept Visa"/>';	
 	if ( $discover == "yes" ) $buildCards .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-discover.png" alt="We accept Discover" />';	
@@ -984,6 +984,31 @@ function battleplan_getCreditCards( $atts, $content = null ) {
 	$buildCards .= '</div>';  					  
 													  
 	return $buildCards;
+}
+
+// Add Crypto Currency widget to Sidebar
+add_shortcode( 'get-crypto', 'battleplan_getCrypto' );
+function battleplan_getCrypto( $atts, $content = null ) {	
+	$a = shortcode_atts( array( 'bitcoin'=>'yes', 'cardano'=>'yes', 'chainlink'=>'yes', 'dogecoin'=>'yes', 'monero'=>'yes', 'polygon'=>'yes', 'stellar'=>'yes' ), $atts );
+	$bitcoin = esc_attr($a['bitcoin']);
+	$cardano = esc_attr($a['cardano']);
+	$chainlink = esc_attr($a['chainlink']);
+	$dogecoin = esc_attr($a['dogecoin']);
+	$monero = esc_attr($a['monero']);
+	$polygon = esc_attr($a['polygon']);
+	$stellar = esc_attr($a['stellar']);
+
+	$buildCrypto = '<div id="crypto" class="currency">';
+	if ( $bitcoin == "yes" ) $buildCrypto .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-bitcoin.png" alt="We accept Bitcoin crypto currency"/>';
+	if ( $cardano == "yes" ) $buildCrypto .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-cardano.png" alt="We accept Cardano crypto currency"/>';	
+	if ( $chainlink == "yes" ) $buildCrypto .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-chainlink.png" alt="We accept Chainlink crypto currency" />';	
+	if ( $dogecoin == "yes" ) $buildCrypto .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-dogecoin.png" alt="We accept Dogecoin crypto currency" />';
+	if ( $monero == "yes" ) $buildCrypto .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-monero.png" alt="We accept Monero crypto currency"/>';	
+	if ( $polygon == "yes" ) $buildCrypto .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-polygon.png" alt="We accept Polygon crypto currency" />';	
+	if ( $stellar == "yes" ) $buildCrypto .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-stellar.png" alt="We accept Stellar crypto currency" />';
+	$buildCrypto .= '</div>';  					  
+													  
+	return $buildCrypto;
 }
 
 // Create filter button for querying posts base on custom fields
@@ -1743,7 +1768,9 @@ function battleplan_footer_social_box() {
 		if ( do_shortcode('[get-biz info="instagram"]') ) $buildLeft .= do_shortcode('[social-btn type="instagram"]');							
 		if ( do_shortcode('[get-biz info="linkedin"]') ) $buildLeft .= do_shortcode('[social-btn type="linkedin"]');							
 		if ( do_shortcode('[get-biz info="yelp"]') ) $buildLeft .= do_shortcode('[social-btn type="yelp"]');							
-		if ( do_shortcode('[get-biz info="pinterest"]') ) $buildLeft .= do_shortcode('[social-btn type="pinterest"]');							
+		if ( do_shortcode('[get-biz info="pinterest"]') ) $buildLeft .= do_shortcode('[social-btn type="pinterest"]');								
+		if ( do_shortcode('[get-biz info="youtube"]') ) $buildLeft .= do_shortcode('[social-btn type="youtube"]');											
+		if ( do_shortcode('[get-biz info="tiktok"]') ) $buildLeft .= do_shortcode('[social-btn type="tiktok"]');							
 		if ( do_shortcode('[get-biz info="email"]') ) $buildLeft .= do_shortcode('[social-btn type="email"]');
 	$buildLeft .= "</div>";
 	return $buildLeft;

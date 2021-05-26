@@ -25,6 +25,7 @@ get_header();
 					$date = "false";						
 					$author = "false";						
 					$comments = "false";
+					$social = "false";
 					$tags = "false";
 					$navigation = "false";	
 		
@@ -36,6 +37,7 @@ get_header();
 					$date = "false";
 					$author = "false";
 					$comments = "false";
+					$social = "false";
 					$tags = "false"; // list / button
 					$navigation = "false";	
 		
@@ -47,6 +49,7 @@ get_header();
 					$date = "false";
 					$author = "false";
 					$comments = "false";
+					$social = "false";
 					$tags = "false"; // list / button
 					$navigation = "false";	
 
@@ -58,6 +61,7 @@ get_header();
 					$date = "true";
 					$author = "true";
 					$comments = "true";
+					$social = "false";
 					$tags = "list"; // list / button
 					$navigation = "true";	
 				endif;
@@ -81,6 +85,7 @@ get_header();
 							if ( $date == "true" ) $displayHeader .= battleplan_meta_date();
 							if ( $author == "true" ) $displayHeader .= battleplan_meta_author();
 							if ( $comments == "true" ) $displayHeader .= battleplan_meta_comments();
+							if ( $social == "true" ) $displayHeader .= '<span class="meta-social">'.do_shortcode('[add-share-buttons facebook="true" twitter="true"]').'</span>';
 						$displayHeader .= '</div>';
 					endif;
 		

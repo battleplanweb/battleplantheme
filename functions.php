@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.8.5' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.9' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -228,6 +228,7 @@ function battleplan_getRandomImage($atts, $content = null ) {
 	$a = shortcode_atts( array( 'id'=>'', 'tag'=>'', 'size'=>'thumbnail', 'link'=>'no', 'number'=>'1', 'offset'=>'', 'align'=>'left', 'class'=>'', 'order_by'=>'recent', 'order'=>'asc', 'shuffle'=>'no' ), $atts );
 	$tag = esc_attr($a['tag']);	
 	$tags = explode( ',', $tag );
+	if ( $tag == "page-slug" ) $tags = basename($_SERVER['REQUEST_URI']).PHP_EOL; 
 	$size = esc_attr($a['size']);	
 	$link = esc_attr($a['link']);	
 	$align = esc_attr($a['align']);	
@@ -1683,7 +1684,8 @@ function battleplan_meta_date() {
 
 // Set up post meta author
 function battleplan_meta_author() {
-	$byline = sprintf ( esc_html_x( '%s', 'post author', 'battleplan' ), '<span class="author vcard"><a class="url fn n" href="'.esc_url( get_author_posts_url( get_the_author_meta( 'ID' ) )).'">'.esc_html( get_the_author() ).'</a></span>' );
+	//$byline = sprintf ( esc_html_x( '%s', 'post author', 'battleplan' ), '<span class="author vcard"><a class="url fn n" href="'.esc_url( get_author_posts_url( get_the_author_meta( 'ID' ) )).'">'.esc_html( get_the_author() ).'</a></span>' );	
+	$byline = sprintf ( esc_html_x( '%s', 'post author', 'battleplan' ), '<span class="author vcard">'.esc_html( get_the_author() ).'</span>' );
 
 	return '<span class="meta-author"><i class="fas fa-user"></i>'.$byline.'</span>';
 }

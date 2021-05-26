@@ -1473,8 +1473,8 @@ function battleplan_remove_menus() {
 	remove_submenu_page( 'tools.php', 'erase-personal-data.php' );   	//Tools => Erase Personal Data
 	remove_submenu_page( 'upload.php', 'wr2x_dashboard' );   			//Media => Perfect Images Dashboard
 
-	add_submenu_page( 'upload.php', 'Favicon', 'Favicon', 'manage_options', 'admin.php?page=wr2x_settings' );	
-	add_submenu_page( 'upload.php', 'Perfect Images', 'Perfect Images', 'manage_options', 'customize.php' );	
+	add_submenu_page( 'upload.php', 'Perfect Images', 'Perfect Images', 'manage_options', 'admin.php?page=wr2x_settings' );	
+	add_submenu_page( 'upload.php', 'Favicon', 'Favicon', 'manage_options', 'customize.php' );	
 	add_submenu_page( 'edit.php?post_type=elements', 'Menus', 'Menus', 'manage_options', 'nav-menus.php' );	
 	add_submenu_page( 'edit.php?post_type=elements', 'Widgets', 'Widgets', 'manage_options', 'widgets.php' );	
 	add_submenu_page( 'edit.php?post_type=elements', 'Contact Forms', 'Contact Forms', 'manage_options', 'admin.php?page=wpcf7' );	
@@ -1482,6 +1482,7 @@ function battleplan_remove_menus() {
 	add_submenu_page( 'edit.php?post_type=elements', 'Custom Fields', 'Custom Fields', 'manage_options', 'edit.php?post_type=acf-field-group' );		
 	add_submenu_page( 'edit.php?post_type=elements', 'Themes', 'Themes', 'manage_options', 'themes.php' );		
 	add_submenu_page( 'options-general.php', 'Lightbox', 'Lightbox', 'manage_options', 'admin.php?page=ari-fancy-lightbox' );
+	add_submenu_page( 'tools.php', 'Git Updater', 'Git Updater', 'manage_options', 'options-general.php?page=git-updater' );
 }
 
 // Reorder WP Admin Menu Items
@@ -1491,11 +1492,11 @@ function battleplan_custom_menu_order( $menu_ord ) {
     if ( !$menu_ord ) return true;	
 	$getCPT = get_post_types();  
 	$displayTypes = array('index.php', 'separator1', 'upload.php', 'edit.php?post_type=elements', 'edit.php?post_type=page');
-	unset($getCPT['attachment'], $getCPT['revision'], $getCPT['nav_menu_item'], $getCPT['custom_css'], $getCPT['customize_changeset'], $getCPT['oembed_cache'], $getCPT['user_request'], $getCPT['wp_block'], $getCPT['acf-field-group'], $getCPT['acf-field'], $getCPT['wpcf7_contact_form'], $getCPT['wphb_minify_group'], $getCPT['elements']); 	
+	unset($getCPT['attachment'], $getCPT['revision'], $getCPT['nav_menu_item'], $getCPT['custom_css'], $getCPT['customize_changeset'], $getCPT['oembed_cache'], $getCPT['user_request'], $getCPT['wp_block'], $getCPT['acf-field-group'], $getCPT['acf-field'], $getCPT['wpcf7_contact_form'], $getCPT['wphb_minify_group'], $getCPT['elements'], $getCPT['asp-products']); 	
 	foreach ($getCPT as $postType) {
 		array_push($displayTypes, 'edit.php?post_type='.$postType);
 	}
-	array_push($displayTypes, 'edit.php', 'separator2', 'plugins.php', 'wppusher', 'options-general.php', 'tools.php', 'users.php', 'separator-last', 'wpengine-common', 'wds_wizard', 'smush');	
+	array_push($displayTypes, 'edit.php', 'separator2', 'plugins.php', 'options-general.php', 'tools.php', 'users.php', 'separator-last', 'wpengine-common', 'wds_wizard', 'smush', 'edit.php?post_type=asp-products');	
 	return $displayTypes;
 }
 

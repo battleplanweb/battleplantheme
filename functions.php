@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.9.1' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.10' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -906,9 +906,19 @@ function battleplan_setUpWPGallery( $atts, $content = null ) {
 	
 	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>$max, 'order'=>$order, 'date_query'=>array( array( 'after'=>$start, 'before'=>$end, 'inclusive'=>'true' )));	
 	
+	if ( $exclude ) : 
+		$exclude = explode(',', $exclude); 
+		foreach ($exclude as $exclusion) :
+			if (($key = array_search($exclusion, $imageIDs)) !== false) unset($imageIDs[$key]);
+		endforeach;
+	endif;
+	if ( $include ) : 
+		$include = explode(',', $include); 
+		foreach ($include as $inclusion) :
+			array_push($imageIDs, $inclusion);
+		endforeach;
+	endif;
 	if ( $imageIDs ) : $args['post__in']=$imageIDs; $args['orderby']="post__in"; endif;
-	if ( $exclude ) : $exclude = explode(',', $exclude); $args['post__not_in']=$exclude; endif;
-	if ( $include ) : $include = explode(',', $include); $args['post__in']=$include; $args['orderby']="post__in"; endif;
 	if ( !$imageIDs && !$include ) : $args['post_parent']=$id; $args['orderby']=$orderBy; endif;
 	
 	$gallery = '<div id="gallery-'.$name.'" class="gallery gallery-'.$id.' gallery-column-'.$columns.' gallery-size-'.$size.'">';
@@ -1986,7 +1996,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
 	}
     if ( "user-email" == $tag->name ) {
         $check = isset( $_POST["user-email"] ) ? trim( $_POST["user-email"] ) : ''; 
-		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com');
+		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz');
 		foreach($badwords as $badword) {
 			if (stripos($check,$badword) !== false) $result->invalidate( $tag, 'Message cannot be sent.');
 		}
@@ -2206,7 +2216,7 @@ function battleplan_getGoogleRating() {
 			$buildPanel .= '<div class="wp-google-border"></div>';
 			$buildPanel .= '<div class="wp-google-badge-btn">';
 			$buildPanel .= '<div class="wp-google-badge-score wp-google-rating" itemprop="aggregateRating" itemscope="" itemtype="http://schema.org/AggregateRating">';
-			$buildPanel .= '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" height="44" width="44"><g fill="none" fill-rule="evenodd">';
+			$buildPanel .= '<svg role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" height="44" width="44"><title>Google Logo</title><g fill="none" fill-rule="evenodd">';
 			$buildPanel .= '<path d="M482.56 261.36c0-16.73-1.5-32.83-4.29-48.27H256v91.29h127.01c-5.47 29.5-22.1 54.49-47.09 71.23v59.21h76.27c44.63-41.09 70.37-101.59 70.37-173.46z" fill="#4285f4"></path>';
 			$buildPanel .= '<path d="M256 492c63.72 0 117.14-21.13 156.19-57.18l-76.27-59.21c-21.13 14.16-48.17 22.53-79.92 22.53-61.47 0-113.49-41.51-132.05-97.3H45.1v61.15c38.83 77.13 118.64 130.01 210.9 130.01z" fill="#34a853"></path>';
 			$buildPanel .= '<path d="M123.95 300.84c-4.72-14.16-7.4-29.29-7.4-44.84s2.68-30.68 7.4-44.84V150.01H45.1C29.12 181.87 20 217.92 20 256c0 38.08 9.12 74.13 25.1 105.99l78.85-61.15z" fill="#fbbc05"></path>';
@@ -2232,7 +2242,7 @@ function battleplan_getGoogleRating() {
 	endif;
 }
 
-// Set up review re-directs
+// Set up URL re-directs
 $currPage = str_replace('/', '', $_SERVER['REQUEST_URI']);
 if ( $currPage == "facebook" && do_shortcode('[get-biz info="facebook"]') != "" ) : 
 	$facebook = do_shortcode('[get-biz info="facebook"]');
@@ -2240,7 +2250,14 @@ if ( $currPage == "facebook" && do_shortcode('[get-biz info="facebook"]') != "" 
 	wp_redirect( $facebook."reviews/", 301 ); 
 	exit; 
 endif;
-if ( $currPage == "google" && do_shortcode('[get-biz info="pid"]') != "" ) : wp_redirect( "https://search.google.com/local/reviews?placeid=".do_shortcode('[get-biz info="pid"]')."&hl=en&gl=US", 301 ); exit; endif;
+if ( $currPage == "google" && do_shortcode('[get-biz info="pid"]') != "" ) : 
+	wp_redirect( "https://search.google.com/local/reviews?placeid=".do_shortcode('[get-biz info="pid"]')."&hl=en&gl=US", 301 ); 
+	exit; 
+endif;
+if ( $currPage == "reviews" ) : 
+	wp_redirect( "/review", 301 ); 
+	exit; 
+endif;
 
 /*--------------------------------------------------------------
 # Custom Hooks
@@ -2651,7 +2668,7 @@ function battleplan_buildImg( $atts, $content = null ) {
 	$size = convertSize($size);
 	$class = esc_attr($a['class']);
 	$hidden = esc_attr($a['ada-hidden']);
-	if ( $hidden == "true" ) $hidden = " aria-hidden='true' tabindex='-1'";
+	if ( $hidden == "true" ) : $hidden = " aria-hidden='true' tabindex='-1'"; else: $hidden = ""; endif;
 	$target = esc_attr($a['new-tab']);
 	if ( $target == 'yes' || $target == "true" ) $target = 'target="_blank"';
 	if ( $class != '' ) $class = " ".$class;
@@ -2795,7 +2812,7 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 		if ( $btnCollapse == "false" ) $btnCollapse = "hide";
 		if ( $title ) : $title = '<div class="block block-button"><button role="button" tabindex="0" class="accordion-title" data-text="'.$title.'" data-collapse="'.$btnCollapse.'">'.$title.'</button></div>'; endif;
 	else: 
-		if ( $icon == 'true' ) : $icon = '<span class="accordion-icon"></span>'; else: $icon = ''; endif;	
+		if ( $icon == 'true' ) : $icon = '<span class="accordion-icon" aria-hidden="true"></span>'; else: $icon = ''; endif;	
 		if ( $title ) : $title = '<h2 role="button" tabindex="0" class="accordion-title">'.$icon.$title.'</h2>'; endif;
 	endif;
 

@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 8.9.1
+Version: 8.10
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -243,6 +243,11 @@ textarea {
 	-webkit-appearance: 						none;
 }
 
+/* Change cursor for input date */
+[type="date"] {
+	cursor:										pointer;
+}
+
 /* Correct the inability to style clickable types in iOS and Safari. Change font properties to `inherit` in Safari. */
 ::-webkit-file-upload-button {
 	-webkit-appearance: 						button;
@@ -329,6 +334,7 @@ html {
 #primary[tabindex="-1"]:focus {
 	outline:									0;
 }
+
 
 *:focus,
 *:focus-within {
@@ -1066,6 +1072,7 @@ input[type="submit"]:active,
 ul.tabs li:active,
 ul.tabs li.current {
 	background: 								rgba(0,0,0,0.4);
+
 	border:										none;
 	transition:									all 0.2s ease;
 }
@@ -3442,7 +3449,7 @@ dl.col-gallery {
 .block-accordion h2 { 
 	font-family:								"Open Sans";
 	font-weight:								bold;
-	font-size: 									18rem;
+	font-size: 									28rem;
 	text-transform:								none;
 	padding:									0.3em 0.3em 0.3em 2em;
 	text-align:									left !important;
@@ -3847,6 +3854,7 @@ iframe#podium-modal {
     z-index: 									15;
     display: 									-ms-flexbox;
     display: 									flex;
+	flex-wrap:									wrap;
     -ms-flex-pack: 								center;
     justify-content: 							center;
     padding-left: 								5%;
@@ -3861,7 +3869,7 @@ iframe#podium-modal {
     flex: 										0 1 auto;
     width: 										30px;
     height: 									5px;
-    margin: 									0 10px;
+    margin: 									5px 10px;
     text-indent: 								-999px;
 	background-color: 							rgba(0,0,0,0.4);
     cursor: 									pointer;
@@ -4150,12 +4158,6 @@ iframe#podium-modal {
 	.gallery-column-7,
 	.gallery-column-8 {
 		grid-template-columns: 						repeat(6, 1fr);
-	}
-	
-	/* Accordion */
-	.block-accordion h2,
-	.block-accordion .accordion-icon::before {
-		font-size:									24rem;
 	}
 }
 
@@ -4716,6 +4718,12 @@ iframe#podium-modal {
 	--------------------------------------------- */
 	.wp-caption {
 		width:										100% !important /* Gulf Coast Chiro 3/22/21*/;
+	}
+	
+	/* Accordion */
+	.block-accordion h2,
+	.block-accordion .accordion-icon::before {
+		font-size:									24rem;
 	}
 	
 	/* Galleries */

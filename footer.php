@@ -18,7 +18,7 @@ get_sidebar(); ?>
 	endif;
 	?>
 
-	<footer id="colophon">		
+	<footer id="colophon" role="banner" aria-label="footer">		
 		
 		<?php echo do_shortcode('[get-element slug="site-footer"]'); ?>
 		
@@ -66,7 +66,7 @@ get_sidebar(); ?>
 </div><!-- #page -->
 
 <!-- Scroll to Top btn -->
-<a class ="scroll-top hide-1 hide-2 hide-3" href="#page"><i class="fa fa-chevron-up" aria-hidden="true"></i><span class="sr-only">Scroll To Top</span></a>	
+<a class ="scroll-top hide-1 hide-2 hide-3" href="#page" role="button"><i class="fa fa-chevron-up" aria-hidden="true"></i><span class="sr-only">Scroll To Top</span></a>	
 
 <?php wp_footer(); ?>	
 	

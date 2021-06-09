@@ -36,16 +36,26 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	$('body').addClass(slug);
 
 // Set up Logo to link to home page	
-	$('.logo').css("cursor","pointer").click(function() {
-		window.location = "/";
+	$('.logo').keyup(function(event) {
+		if (event.keyCode === 13 || event.keyCode === 32) {
+			$(this).click();
+		}
 	});
+	$('.logo').attr('tabindex','0').attr('role','button').attr('aria-label','Return to Home Page').css('cursor', 'pointer').click(function() { window.location = "/"; });
+	$('.logo img').attr('aria-hidden', 'true');
+	
 	window.linkHome = function (container) {
-		$(container).css( "cursor", "pointer" );
-		$(container).click(function() { window.location = "/"; });
+		$(container).keyup(function(event) {
+			if (event.keyCode === 13 || event.keyCode === 32) {
+				$(this).click();
+			}
+		});
+		$(container).attr('tabindex','0').attr('role','button').attr('aria-label','Return to Home Page').css('cursor', 'pointer').click(function() { window.location = "/"; });
+		$(container).find('img').attr('aria-hidden', 'true');
 	};		
 
 // Set up American Standard logo to link to American Standard website	
-	$("img[src*='/hvac-american-standard/american-standard']").each(function() { 
+	$("img[src*='hvac-american-standard/american-standard']").each(function() { 
 		$(this).wrap('<a href="https://www.americanstandardair.com/" target="_blank"></a>'); 
 	});
 			
@@ -707,6 +717,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		});
 	};		
 		
+
 	// Handle the post filter button [get-filter-btn]
 	$(".filter-btn").click(function() {
 		var thisBtn = $(this), url = "?"+thisBtn.attr('data-url')+"=", flag=false;
@@ -944,6 +955,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				this.destroy();
 			}, { offset: offset });
 		}, initDelay);
+
 	};
 
 // Animate grid elements
@@ -1522,6 +1534,15 @@ if ( $('body').hasClass('remove-sidebar') ) {
 /*--------------------------------------------------------------
 # ADA compliance
 --------------------------------------------------------------*/
+	
+	// Add aria-labels to landmarks, sections and titles
+	$('#primary').attr( 'role', 'main' ).attr( 'aria-label', 'main content' );
+	$('#secondary').attr( 'role', 'complementary' ).attr( 'aria-label', 'sidebar' );	
+	$('h3 a[aria-hidden="true"]').each(function() { $(this).parent().attr( 'aria-label', $(this).text()); });
+	
+	$('form.hide-labels input, form.hide-labels textarea').each(function() { $(this).attr('title', $(this).closest('p').find('label').text()) });
+	
+	$('span.required').attr("aria-hidden", true).after('<span class="sr-only">Required Field</span>');
 
 	// Add alt="" to all images with no alt tag
 	setTimeout(function() { $('img:not([alt])').attr('alt', ''); }, 50);
@@ -1533,19 +1554,21 @@ if ( $('body').hasClass('remove-sidebar') ) {
 
 	// Menu support
 	$('[role="menubar"]' ).on( 'focus.aria mouseenter.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).attr( 'aria-expanded', true ); } );
-	$('[role="menubar"]' ).on( 'blur.aria mouseleave.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).attr( 'aria-expanded', false ); } );
+	$('[role="menubar"]' ).on( 'blur.aria mouseleave.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).attr( 'aria-expanded', false ); } );	
+	$('a[role="menuitem"]' ).attr( 'tabindex', '0' );
+	$('li[aria-haspopup="true"]').attr( 'tabindex', '-1' );
 
 	// Remove iframe from tab order
 	$('iframe').each(function(){
 		$(this).attr("aria-hidden", true).attr("tabindex","-1");		
 	})
 
-	// Remove iframe from tab order
+	// Make hidden labels accessible to screen reader
 	$('form.hide-labels label:not(.show-label)').addClass('sr-only');	
 
 	// Add .tab-focus class to links and buttons & auto scroll to center	
 	document.addEventListener("keydown", function(e) {
-		if ( e.keyCode === 9 ) { 					
+		if ( e.keyCode === 9 ) { // 9 is tab key				
 			var els = document.getElementsByClassName('tab-focus');		
 			while ( els[0] ) {
 				els[0].classList.remove('tab-focus')

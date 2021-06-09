@@ -48,12 +48,12 @@ wp_nav_menu( array(
 	'walker'          => new Aria_Walker_Nav_Menu(),
 ) ); ?>	
 	
-<a class="skip-link screen-reader-text" href="#primary"><?php esc_html_e( 'Skip to content', 'battleplan' ); ?></a>
+<a class="skip-link sr-only" href="#primary"><?php esc_html_e( 'Skip to content', 'battleplan' ); ?></a>
 
 <?php echo do_shortcode('[get-element slug="site-message"]'); ?>
 	
-<div id="page" class="site">
-	<header id="masthead">
+<div id="page" class="site" aria-label="page">
+	<header id="masthead" role="banner" aria-label="header">
 		
 		<?php if ( has_nav_menu( 'top-menu', 'battleplan' ) ) : ?>
 			<nav id="desktop-navigation" class="main-navigation menu-strip" aria-label="Main Menu">

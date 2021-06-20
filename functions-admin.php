@@ -1668,7 +1668,7 @@ function battleplan_admin_referrer_stats() {
 	foreach ($combineReferrers as $referrer=>$referNum) :
 		if ( $referrer == "" ) $referrer = "Direct";
 		if ( $referrer == $thisDomain ) $referrer = "Self";
-		echo "<li><span class='referrer-name'>".$referrer."</span><span class='referrer-num'><b>".$referNum."</b></span></li>";
+		echo "<li><span class='label'>".$referrer."</span><span class='value'><b>".$referNum."</b></span></li>";
 	endforeach; 	
 	echo '</ul></div>';
 }
@@ -1692,9 +1692,36 @@ function battleplan_admin_location_stats() {
 	echo "<div>Last <b>".$locNum."</b> visitors</b><br/><br/>";
 	echo "<ul>";
 	foreach ($combineLocs as $city=>$cityNum) :
-		echo "<li><span class='city-name'>".$city."</span><span class='city-num'><b>".$cityNum."</b></span></li>";
+		echo "<li><span class='label'>".$city."</span><span class='value'><b>".$cityNum."</b></span></li>";
 	endforeach; 	
 	echo '</ul></div>';
+}
+
+// Set up Visitor Pageviews widget on dashboard
+function battleplan_admin_pageview_stats() {
+	$siteHeader = getID('site-header');
+	$pageviews = readMeta($siteHeader, "pages-viewed");
+	$pageviews = maybe_unserialize($pageviews);
+	$singleViews = $multiViews = $totalMulti = $singlePct = $multiPct = 0;	
+	
+	foreach ($pageviews as $id => $views) {	
+		if ( $views < 1 ) : // ignore
+		elseif ( $views == 1 ) : $singleViews++; 
+		else : $multiViews++; $totalMulti = $totalMulti + $views; endif;	
+	}
+	
+	$singlePct = ($singleViews / ($multiViews + $singleViews)) * 100;
+	$multiPct = ($multiViews / ($multiViews + $singleViews)) * 100;
+	$avgVisit = round( ($totalMulti + $singleViews) / ($multiViews + $singleViews), 1, PHP_ROUND_HALF_UP);
+	$avgMulti = round( ($totalMulti / $multiViews), 1, PHP_ROUND_HALF_UP);
+	
+	echo "<ul>";
+		echo "<li><span class='label'><b>One Page Visits</b></td><td><b></span><span class='value'>".number_format($singlePct)."%</b>&nbsp;&nbsp;&nbsp;(".$singleViews.")</span></li>";
+		echo "<li><span class='label'><b>Multi Page Visits</b></td><td><b></span><span class='value'>".number_format($multiPct)."%</b>&nbsp;&nbsp;&nbsp;(".$multiViews.")</span></li>";
+		echo "<li>&nbsp;</li>";
+		echo "<li><span class='label'><b>Overall Avg.</b></td><td><b></span><span class='value'>".$avgVisit." pages per visit</span></li>";		
+		echo "<li><span class='label'><b>Multi Page Avg.</b></td><td><b></span><span class='value'>".$avgMulti." pages per visit</span></li>";
+	echo "</ul>";
 }
 
 // Set up Visitor Trends widget on dashboard
@@ -2048,6 +2075,7 @@ function battleplan_clearViewFields() {
 		updateMeta( $siteHeader, 'log-views', array( 'date' => strtotime(date("F j, Y")), 'views' => 0, 'search' => 0 ));					
 		deleteMeta( $siteHeader, 'log-views-referrers');
 		deleteMeta( $siteHeader, 'log-views-cities');
+		deleteMeta( $siteHeader, 'pages-viewed');
 		
 		updateMeta( $siteHeader, 'framework-version', _BP_VERSION );	
 	}	

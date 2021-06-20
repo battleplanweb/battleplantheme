@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.10' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.11' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -331,11 +331,39 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 		$getImage .= '<img data-id="'.$getID.'"'.getImgMeta($getID).' data-count-tease="true" data-count-view="true" class="random-img '.$tags[0].'-img '.$align.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" srcset="'.$imgSet.'" alt="'.get_post_meta($getID, '_wp_attachment_image_alt', true).'">';
 		if ( $link == "yes" ) $getImage .= '</a>';
 
-		$imageArray[] = do_shortcode('[col class="col-row-of-pics'.$class.'"]'.$getImage.'[/col]');			
-	endwhile; wp_reset_postdata(); endif;	
+		$imageArray[] = do_shortcode('[col class="col-row-of-pics'.$class.'"]'.$getImage.'[/col]');		
+		$ratioArray[] = $image[2] / $image[1];	
+	endwhile; wp_reset_postdata(); endif;
 	
-	if ( $shuffle != "no" ) : shuffle($imageArray); endif;
-	$print = do_shortcode('[layout grid="'.$col.'e" valign="'.$valign.'"]'.printArray($imageArray).'[/layout]'); 
+	if ( $shuffle == "yes" || $shuffle == "true" || $shuffle == "random" ) : shuffle($imageArray); 
+	elseif ( $shuffle == "peak" || $shuffle == "valley" ) :	
+		if ( $shuffle == "peak" ) :	array_multisort($ratioArray, SORT_ASC, SORT_NUMERIC, $imageArray, SORT_ASC);
+		else: array_multisort($ratioArray, SORT_DESC, SORT_NUMERIC, $imageArray, SORT_DESC); endif;
+	 	$result = array();
+		$count = count($imageArray);
+		for ($counter=0; $counter < $count; $counter++) :			
+			if ($counter % 2 == 0) :
+				array_push($result, $imageArray[$counter]);
+				unset($imageArray[$counter]);
+			endif;	
+		endfor;
+		$imageArray = array_merge($imageArray, array_reverse($result));
+	elseif ( $shuffle == "alternate" ) :	
+		$rand = rand(1,2);
+		if ( $rand == 1) : array_multisort($ratioArray, SORT_ASC, SORT_NUMERIC, $imageArray, SORT_ASC); else: array_multisort($ratioArray, SORT_DESC, SORT_NUMERIC, $imageArray, SORT_DESC); endif;
+		$result= array();
+		$count = count($imageArray);
+		for ($counter=0; $counter * 2 < $count; $counter++) :
+			$anticounter = $count - $counter - 1;
+			array_push($result, $imageArray[$anticounter]);
+			if ($counter != $anticounter) : array_push($result, $imageArray[$counter]); endif;
+		endfor;
+		$left = array_slice($result, 0, count($result)/2);
+		$right = array_slice($result, count($result)/2);
+		$imageArray = array_merge($right, array_reverse($left));
+	endif;
+							   
+	$print .= do_shortcode('[layout grid="'.$col.'e" valign="'.$valign.'"]'.printArray($imageArray).'[/layout]'); 
 	return $print;
 }
 
@@ -1047,7 +1075,28 @@ function battleplan_getFilterButton( $atts, $content = null ) {
 	
 	return $buildFilter;
 } 
- 
+
+// Build custom log in form
+add_shortcode( 'get-login', 'battleplan_getLogInForm' );
+function battleplan_getLogInForm( $atts, $content = null ) {	
+	$a = shortcode_atts( array( 'username'=>'Username or Email', 'password'=>'Password', 'remember'=>'Remember Me', 'login'=>'Log In', 'redirect'=>site_url( '/log-in/' ), 'message'=>'Welcome. You are logged in.' ), $atts );
+	$username = esc_attr($a['username']);
+	$password = esc_attr($a['password']);
+	$remember = esc_attr($a['remember']);	
+	$login = esc_attr($a['login']);
+	$message = esc_attr($a['message']);
+	$redirect = esc_attr($a['redirect']);		
+
+	if ( is_user_logged_in() ) : $buildLogin = '<p>'.$message.'</p>'; 
+	else:	
+		$buildLogin = '<div class = "site-log-in" >'; 		
+		$buildLogin .= wp_login_form ( array ( 'echo' => false, 'redirect'=>__($redirect), 'label_username'=>__($username), 'label_password'=>__($password), 'label_remember'=>__($remember), 'label_log_in'=>__($login) )); 		
+		$buildLogin .= '</div>';
+	endif;	
+
+	return $buildLogin; 
+} 
+  
 /*--------------------------------------------------------------
 # Functions to extend WordPress 
 --------------------------------------------------------------*/
@@ -1096,13 +1145,17 @@ function getID($slug) {
 } 
 
 // Get the Role of Current Logged in User
-function getUserRole() {
+function getUserRole($display="slug") {
 	if ( is_user_logged_in() ) : 
-		global $today_user;
-		$user_roles = $today_user->roles;
-		$user_role = array_shift($user_roles);
-		return $user_role;
-	endif;
+		$user = wp_get_current_user();
+	 	$roles = ( array ) $user->roles;	
+		if ( $display == "name" ) : 
+			global $wp_roles;
+			return $wp_roles->roles[$roles[0]]['name'];
+		else: return $roles[0];	 
+		endif;
+	 else: return "not_logged_in"; 	 
+	 endif;
 }
 
 // Add data-{key}="{value}" to an image based on its custom fields 
@@ -1771,6 +1824,7 @@ function battleplan_cancel_comment_reply_link( $formatted_link, $link, $text ) {
 }
 
 // Set up footer social media box
+add_shortcode( 'get-social-box', 'battleplan_footer_social_box' );
 function battleplan_footer_social_box() {	
 	$buildLeft = "<div class='social-box'>";
 		if ( do_shortcode('[get-biz info="facebook"]') ) $buildLeft .= do_shortcode('[social-btn type="facebook"]'); 							
@@ -2295,7 +2349,7 @@ function battleplan_log_page_load_speed_ajax() {
 		$daysSinceEmail = (($rightNow - $lastEmail) / 60 / 60 / 24);
 		$totalCounted = $desktopCounted + $mobileCounted;	
 
-		if ( ( $totalCounted > 200 && $daysSinceEmail > 35 ) || $daysSinceEmail > 90 ) :
+		if ( ( $totalCounted > 300 && $daysSinceEmail > 45 ) || $daysSinceEmail > 100 ) :
 			$desktopCount = sprintf( _n( '%s pageview', '%s pageviews', $desktopCounted, 'battleplan' ), $desktopCounted );
 			$mobileCount = sprintf( _n( '%s pageview', '%s pageviews', $mobileCounted, 'battleplan' ), $mobileCounted );
 			$emailTo = "info@battleplanwebdesign.com";
@@ -2414,6 +2468,9 @@ function battleplan_count_site_views_ajax() {
 add_action( 'wp_ajax_count_post_views', 'battleplan_count_post_views_ajax' );
 add_action( 'wp_ajax_nopriv_count_post_views', 'battleplan_count_post_views_ajax' );
 function battleplan_count_post_views_ajax() {
+	$siteHeader = getID('site-header');
+	$uniqueID = $_POST['uniqueID'];
+	$pagesViewed = intval( $_POST['pagesViewed']);
 	$theID = intval( $_POST['id'] );
 	$postType = get_post_type($theID);
 	$timezone = $_POST['timezone'];	
@@ -2423,6 +2480,9 @@ function battleplan_count_post_views_ajax() {
 	$today = strtotime(date("F j, Y"));
 	$dateDiff = (($today - $lastViewed) / 60 / 60 / 24);
 	$userLogin = wp_get_current_user()->user_login;
+	$getPageviews = readMeta($siteHeader, 'pages-viewed');
+	$getPageviews = maybe_unserialize( $getPageviews );
+	if ( !is_array($getPageviews) ) $getPageviews = array();
 	$getViews = readMeta($theID, 'log-views');
 	$getViews = maybe_unserialize( $getViews );
 	if ( !is_array($getViews) ) $getViews = array();
@@ -2431,6 +2491,13 @@ function battleplan_count_post_views_ajax() {
 	if ( $userLoc == "Ashburn, VA") :
 		$response = array( 'result' => 'Bot ignored' );		
 	elseif ( ( $userLogin != 'battleplanweb' && ( $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :
+	
+		$visitCutoff = readMeta($siteHeader, 'log-views-total-90day');
+		$getPageviews[$uniqueID] = $pagesViewed;
+		if ( count($getPageviews) > $visitCutoff ) array_shift($getPageviews);	
+		$newPageviews = maybe_serialize( $getPageviews );
+		updateMeta($siteHeader, 'pages-viewed', $newPageviews);	
+	
 		if ( $dateDiff != 0 ) : // day has passed, move 29 to 30, and so on	
 			for ($i = 1; $i <= $dateDiff; $i++) {	
 				$figureTime = $today - ( ($dateDiff - $i) * 86400);	

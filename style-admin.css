@@ -71,8 +71,7 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	column-count:								2;
 }
 
-#battleplan_referrer_stats ul span.referrer-name,
-#battleplan_location_stats ul span.city-name {
+ul span.label {
 	display:									inline-block;
 	width:										143px;
 	margin-right:								7px;

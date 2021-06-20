@@ -34,6 +34,31 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	slug = slug.substr(1).slice(0, -1).replace("/", "-");		
 	if ( slug ) { slug = "slug-"+slug; } else { slug = "slug-home"; }
 	$('body').addClass(slug);
+	
+// Is user on an Apple device?
+	window.isApple = function () {
+		var iOS = !!navigator.platform && /iPad|iPhone|iPod/.test(navigator.platform);
+		return iOS;		
+	};	
+	
+// Get domain of current webpage
+	window.getDomain = function () {
+		return window.location.hostname;
+	};		
+	
+// Get "slug" of current webpage
+	window.getSlug = function () {
+		var findSlug = window.location.pathname.split('/');
+		return findSlug[1];		
+	};	
+
+// Get variable from page's URL
+	window.getUrlVar = function (key) {
+		key = key || "page";
+		var results = new RegExp('[\?&]' + key + '=([^&#]*)').exec(window.location.href);
+		if (results == null) { return null; }
+		return decodeURI(results[1]) || 0;
+	};
 
 // Set up Logo to link to home page	
 	$('.logo').keyup(function(event) {
@@ -71,10 +96,12 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 // Set up Cookies
 	window.setCookie = function(cname,cvalue,exdays) {
-		var d = new Date(), expires;
+		var domain = document.domain.match(/[^\.]*\.[^.]*$/)[0];
+		var d = new Date(), expires='';
 		d.setTime(d.getTime()+(exdays*24*60*60*1000));
 		if ( exdays != null && exdays != "" ) {	expires = "expires="+d.toGMTString()+"; "; }
-		document.cookie = cname + "=" + cvalue + "; " + expires + "path=/; secure";
+		document.cookie = cname + "=" + cvalue + "; " + expires + "path=/; domain=" + domain +"; secure";
+		console.log("cookie set [ "+cname + "=" + cvalue + "; " + expires + "path=/; domain=" + domain +"; secure ]");
 	};
 	window.getCookie = function(cname) {
 		var name = cname + "=", ca = document.cookie.split(';');
@@ -83,30 +110,36 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			if (c.indexOf(name)==0) return c.substring(name.length,c.length);
 		}
 		return "";
+	};		
+	window.deleteCookie = function(cname) {
+		setCookie(cname,"",-1);
 	};	
 
-// Check if this is a visitor's first page to view, & add .first-page class to trigger special CSS
-	if ( !getCookie('first-page') ) { $("body").addClass("first-page"); setCookie('first-page', 'no'); } else { $("body").addClass("not-first-page"); }
-
-// Is user on an Apple device?
-	window.isApple = function () {
-		var iOS = !!navigator.platform && /iPad|iPhone|iPod/.test(navigator.platform);
-		return iOS;		
-	};	
-
-// Get "slug" of current webpage
-	window.getSlug = function () {
-		var findSlug = window.location.pathname.split('/');
-		return findSlug[1];		
-	};	
-
-// Get variable from page's URL
-	window.getUrlVar = function (key) {
-		key = key || "page";
-		var results = new RegExp('[\?&]' + key + '=([^&#]*)').exec(window.location.href);
-		if (results == null) { return null; }
-		return decodeURI(results[1]) || 0;
-	};
+// Check if this is a visitor's first page to view & add .first-page class to trigger special CSS
+	if ( !getCookie('first-page') ) { 
+		setCookie('first-page', 'no'); 
+		$("body").addClass("first-page"); 		
+	} else { 
+		$("body").addClass("not-first-page"); 
+	}
+	
+// Calculate how many pages user has viewed (exclude page refresh)
+	if ( !getCookie('pages-viewed') ) { 
+		var uniqueID = Date.now() + "A" + Math.floor(Math.random() * 100);		
+		setCookie('unique-id', uniqueID); 
+		$("body").attr("data-unique-id", uniqueID); 
+		$("body").attr("data-pageviews", 1); 
+		setCookie('pages-viewed', 1); 
+	} else { 
+		var pages_viewed = Number(getCookie('pages-viewed'));
+		if ( getCookie('prev-page') != getSlug() ) {
+			pages_viewed++;
+			setCookie('pages-viewed', pages_viewed); 		
+			setCookie('prev-page', getSlug()); 
+		}
+		$("body").attr("data-pageviews", pages_viewed); 
+		$("body").attr("data-unique-id", getCookie('unique-id')); 
+	}
 
 // Extend .hasClass to .hasPartialClass
 	$.fn.hasPartialClass = function(partial){
@@ -510,6 +543,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			window.addEventListener('scroll', function() { moveDiv(); });			
 		}
 		moveDiv();
+
 	};
 
 // Set up "Magic Menu"	
@@ -717,6 +751,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		});
 	};		
 		
+
 
 	// Handle the post filter button [get-filter-btn]
 	$(".filter-btn").click(function() {
@@ -1725,10 +1760,10 @@ if ( $('body').hasClass('remove-sidebar') ) {
 
 		setTimeout(function() {	// Wait 2 seconds before calling the following functions 	
 		// Count page view 
-			var postID = $('body').attr('id');				
+			var postID = $('body').attr('id'), pageViews = $('body').attr('data-pageviews'), uniqueID = $('body').attr('data-unique-id');
 			$.post({
 				url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-				data : { action: "count_post_views", id: postID, timezone: timezone, userLoc: userLoc },
+				data : { action: "count_post_views", id: postID, timezone: timezone, userLoc: userLoc, pagesViewed: pageViews, uniqueID: uniqueID },
 				success: function( response ) { console.log(response); } 
 			});	
 		// Count site view 
@@ -1739,7 +1774,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			});	
 
 			// Log page load speed
-			if ( loadTime > 0.1 ) { 				
+			if ( loadTime > 0.1 && loadTime < 10.0 ) { 				
 				$.post({
 					url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
 					data : { action: "log_page_load_speed", id: postID, timezone: timezone, loadTime: loadTime, deviceTime: deviceTime, userLoc: userLoc },

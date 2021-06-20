@@ -1557,6 +1557,7 @@ function battleplan_add_dashboard_widgets() {
 	add_meta_box( 'battleplan_click_stats', 'Visitor Clicks', 'battleplan_admin_click_stats', 'dashboard', 'normal', 'high' );	
 	add_meta_box( 'battleplan_referrer_stats', 'Visitor Referrers', 'battleplan_admin_referrer_stats', 'dashboard', 'side', 'high' );	
 	add_meta_box( 'battleplan_location_stats', 'Visitor Locations', 'battleplan_admin_location_stats', 'dashboard', 'side', 'high' );
+	add_meta_box( 'battleplan_pageview_stats', 'Visitor Pageviews', 'battleplan_admin_pageview_stats', 'dashboard', 'side', 'high' );
 	add_meta_box( 'battleplan_trends_stats', 'Visitor Trends', 'battleplan_admin_trends_stats', 'dashboard', 'column3', 'high' );		
 }
 

@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 8.7
+Version: 8.11.1
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -43,6 +43,7 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
 	- Galleries
 	- Accordion Setup
 	- Tabbed Content
+	- SVG
 	- Products (Shearer Supply)
 # Plugins
 	- Waypoints
@@ -153,7 +154,7 @@ textarea {
 }
 
 /* Show the overflow in IE. Show the overflow in Edge. */
-a.button
+a.button,
 a.page-numbers,
 span.page-numbers,
 button,
@@ -242,6 +243,11 @@ textarea {
 	-webkit-appearance: 						none;
 }
 
+/* Change cursor for input date */
+[type="date"] {
+	cursor:										pointer;
+}
+
 /* Correct the inability to style clickable types in iOS and Safari. Change font properties to `inherit` in Safari. */
 ::-webkit-file-upload-button {
 	-webkit-appearance: 						button;
@@ -328,6 +334,7 @@ html {
 #primary[tabindex="-1"]:focus {
 	outline:									0;
 }
+
 
 *:focus,
 *:focus-within {
@@ -632,7 +639,10 @@ hr {
 	margin-bottom: 								1.5em;
 }
 
-p {
+p,
+h1 + .block.block-text,
+h2 + .block.block-text,
+h3 + .block.block-text {
 	margin-top: 								1em;	
 	margin-bottom: 								1.5em;
 }
@@ -660,7 +670,10 @@ ol:first-child {
 
 p:last-child,
 ul:last-child,
-ol:last-child {
+ol:not(.carousel-indicators):last-child,
+h1 + .block.block-text:last-child,
+h2 + .block.block-text:last-child,
+h3 + .block.block-text:last-child {
 	margin-bottom:								0;
 }
 
@@ -674,6 +687,14 @@ ol {
 
 li:not(.menu-item):not(:last-child) {
 	margin-bottom:								0.3em;
+}
+
+li.filter-choice {
+	list-style:									none;
+}
+
+li.filter-choice div {
+	display:									inline-block;
 }
 
 li > ul,
@@ -810,10 +831,9 @@ a[tooltip]:hover::after {
 
 /* Forms
 --------------------------------------------- */
-form.wpcf7-form {
+form.wpcf7-form,
+form#loginform {
 	margin:										1em auto;
-
-
     text-align: 								center;
 	max-width:									500px;
 }
@@ -1051,6 +1071,7 @@ input[type="submit"]:active,
 ul.tabs li:active,
 ul.tabs li.current {
 	background: 								rgba(0,0,0,0.4);
+
 	border:										none;
 	transition:									all 0.2s ease;
 }
@@ -1080,6 +1101,10 @@ div.wpcf7 .form-submitting .ajax-loader {
     font-size: 									90%;
     font-weight: 								normal;
     display: 									block;
+}
+
+.wpcf7 form.sent .wpcf7-response-output {
+    border-color: 								unset;
 }
 
 .wpcf7 form .wpcf7-response-output {
@@ -1241,6 +1266,10 @@ section.section {
 	grid-column: 								default-start / default-end;
 	display: 									grid;
 	gap: 										2.5em 3%;
+}
+
+section.section-default .flex {
+	gap: 										2.5em 4.5%;
 }
 
 .flex.grid-1-auto {
@@ -1432,6 +1461,7 @@ section.section {
 
 .sidebar-left.sidebar-box  #main-content,
 .sidebar-left.widget-box  #main-content,
+
 .sidebar-left.sidebar-box .flex.grid-content,
 .sidebar-left.widget-box .flex.grid-content {
 	grid-template-columns: 						[column-1-start] minmax(0, 356px) [column-1-end column-2-start] 1fr [column-2-end];
@@ -1767,12 +1797,20 @@ section.section .flex.nested .flex {
 	display:									none;
 }
 
-/* Credit Card Logos */
-.widget-credit-cards #credit-cards {
+/* Credit Card & Crypto Currency Logos */
+#credit-cards,
+.widget-credit-cards #credit-cards,
+.currency,
+.widget-currency .currency {
 	display:									flex;
 	justify-content:							space-around;
+	margin:										8px 0;
 }
-.widget-credit-cards #credit-cards img {	
+
+#credit-cards img,
+.widget-credit-cards #credit-cards img,
+.currency img,
+.widget-currency .currency img {
 	max-width:									100px;
 	width:										100%;
 	height:										100%;
@@ -1961,6 +1999,10 @@ section.section .flex.nested .flex {
 	font-weight:								900;
 }
 
+.fa-fw {
+	width:										2em;
+}
+
 .social-box {
 	line-height:								1;
 }
@@ -1979,6 +2021,7 @@ section.section .flex.nested .flex {
 	position:									absolute;
 	left: 										0;
 	width: 										100%;
+
 	text-align: 								center;
 	color: 										rgba(0,0,0,0.75);
 	z-index:									10000;
@@ -2297,6 +2340,7 @@ section.section .flex.nested .flex {
 	font-family: 								Font Awesome;
 	content:   									"\f879";
 	font-weight:								900;
+
 	font-size:									21px; 
 	top:										-1px;
 	color:										rgba(255,255,255,0.75);
@@ -2634,6 +2678,7 @@ h3.archive-subheadline {
 	font-size:									40rem;
 }
 
+
 .archive-intro {
 	margin-top:									1.5em; /* changed top margin to 1.5em from 0.5em for testimonials archive (1st paragraph) 10/12/20 */
 	margin-bottom:								2em;
@@ -2849,6 +2894,7 @@ img.unloaded {
 }
 
 .alignleft, 
+
 .align-left,
 .thumb-left .section .alignright,
 .thumb-left .section .align-right,
@@ -3022,7 +3068,8 @@ img.noFX,
 	border:										none !important;
 	background:									none !important;
 	box-shadow:									none !important;
-	outline:									none !important;
+	outline:									none !important;	
+	filter:										none !important;
 }
 
 .inset-shadow {
@@ -3079,10 +3126,6 @@ img.noFX,
 }
 
 .screen-mobile .parallax-mirror.mobile-hide {
-	display:									none;
-}		
-
-.screen-mobile .parallax-mirror {
 	display:									none;
 }		
 
@@ -3232,6 +3275,11 @@ img.noFX,
 	padding:									5px 15px;
 }
 
+.office-hours > div.row-info {
+	grid-template-columns: 						1fr;
+	font-size:									90%;
+}
+
 .office-hours .col-day {
 	text-align:									left;
 }
@@ -3255,6 +3303,8 @@ img.noFX,
 
 .office-hours div:not(:first-of-type) .col-all, 
 .office-hours div:not(:first-of-type) .col-morning, 
+
+
 .office-hours div:not(:first-of-type) .col-afternoon {
 	font-size:									90%;
 }
@@ -3393,10 +3443,14 @@ dl.col-gallery {
 	z-index:									10000;
 } 
 
+.block-button + .accordion-content {
+	margin-top:									1.5em;
+}
+
 .block-accordion h2 { 
 	font-family:								"Open Sans";
 	font-weight:								bold;
-	font-size: 									18rem;
+	font-size: 									28rem;
 	text-transform:								none;
 	padding:									0.3em 0.3em 0.3em 2em;
 	text-align:									left !important;
@@ -3444,6 +3498,7 @@ dl.col-gallery {
 
 .accordion-box .block-accordion .accordion-content {
 	background:									rgba(0,0,0,0.1);
+
 	border-bottom:								none;
 }
 
@@ -3453,6 +3508,10 @@ dl.col-gallery {
 
 .block-accordion .accordion-box {
 	padding:									0.1em 1em 1em;
+}
+
+.block-button + .accordion-content .accordion-box {
+	padding:									1em;
 }
 
 /* Tabbed Content
@@ -3475,6 +3534,11 @@ section.tab-content.current {
 	display:									inherit;
 }
 
+/* SVG
+--------------------------------------------- */
+#include-svg {
+	display:									none;
+}
 
 /* Products (Shearer Supply)
 --------------------------------------------- */
@@ -3541,7 +3605,7 @@ span.descriptionText {
 	font-size:									75%;
 }
 
-#why-choose-american-standard .col h3 {
+.why-choose-us .col h3 {
 	text-align:									center;
 }
 
@@ -3644,11 +3708,15 @@ iframe#podium-modal {
 	width:										100%; 
 }
 
+.carousel.pointer-event {
+  	-ms-touch-action: 							pan-y;
+  	touch-action: 								pan-y;
+}
+
 .carousel-inner {
     position: 									relative;
     width: 										inherit;
     overflow: 									hidden;
-	padding-bottom:								1.5em; 
 }
 
 .carousel-item {
@@ -3670,12 +3738,15 @@ iframe#podium-modal {
     transition: 								transform 0.6s ease;
 }
 
-@media screen and (prefers-reduced-motion:reduce) {
-    .carousel-item-next, 
-	.carousel-item-prev, 
-	.carousel-item.active { 
-		transition: 								none;
-	}
+@media (prefers-reduced-motion: reduce) {
+  	.carousel-item,
+	.carousel-fade .active.carousel-item-left,
+  	.carousel-fade .active.carousel-item-right,
+	.carousel-control-prev,
+  	.carousel-control-next,
+	.carousel-indicators li {
+    	transition: 							none;
+  	}
 }
 
 .carousel-item-next, 
@@ -3716,8 +3787,6 @@ iframe#podium-modal {
 @supports ((-webkit-transform-style:preserve-3d) or (transform-style:preserve-3d)) {
     .active.carousel-item-left, 
 	.carousel-item-prev { 
-
-
 		transform: 									translate3d(-100%, 0, 0);
 	}
 }
@@ -3786,11 +3855,12 @@ iframe#podium-modal {
     z-index: 									15;
     display: 									-ms-flexbox;
     display: 									flex;
+	flex-wrap:									wrap;
     -ms-flex-pack: 								center;
     justify-content: 							center;
     padding-left: 								5%;
    	padding-right: 								5%;
-	margin:										-1.5em 0 1.5em; /* negative top margin pulls indicators back up to compensate for padding-bottom on .carousel-inner - Norris */
+	margin:										1em 0;
     list-style: 								none;
 }
 
@@ -3799,9 +3869,8 @@ iframe#podium-modal {
     -ms-flex: 									0 1 auto;
     flex: 										0 1 auto;
     width: 										30px;
-
     height: 									5px;
-    margin: 									0 10px;
+    margin: 									5px 10px;
     text-indent: 								-999px;
 	background-color: 							rgba(0,0,0,0.4);
     cursor: 									pointer;
@@ -4091,12 +4160,6 @@ iframe#podium-modal {
 	.gallery-column-8 {
 		grid-template-columns: 						repeat(6, 1fr);
 	}
-	
-	/* Accordion */
-	.block-accordion h2,
-	.block-accordion .accordion-icon::before {
-		font-size:									24rem;
-	}
 }
 
 /* 3: Small Tablets (landscape) */
@@ -4157,6 +4220,7 @@ iframe#podium-modal {
 		margin-top:									2.5em;
 		border-left: 								none !important;		
 		border-right: 								none !important;
+
 		border-top: 								1px solid rgba(0,0,0,0.3);
 	}
 	
@@ -4243,27 +4307,37 @@ iframe#podium-modal {
 	.gallery-column-8 {
 		grid-template-columns: 						repeat(5, 1fr);
 	}
+	
+	/* Sidebar */
+	.content-box #primary, 
+	.sidebar-box #secondary, 
+	.widget-box .widget, 
+	.content-sidebar-box #main-content {
+		padding:									2.5em 1.5em;
+	}
+	
+	#secondary img {
+		margin:										0;
+	}
+	
+	#secondary .sidebar-inner {
+		display:									flex;
+		flex-flow:									row wrap;
+		gap:										2.5em 3%;
+		justify-content:							space-evenly;
+	}
+	
+	.widget {
+		margin:										0 !important;
+	}
 }
 
 /* 3: Small Tablets (landscape) ONLY */
 @media (min-width: 861px) and (max-width: 1024px) {		
-	#secondary .sidebar-inner {
-		column-count: 								2;
-		column-width: 								300px;
-		column-gap: 								3%;
-	}	
-
-	.widget {
-		-webkit-column-break-inside: 				avoid;
-        page-break-inside: 							avoid;
-        break-inside: 								avoid; /* keeps form from being broken into 2 columns on tablets -- css-tricks.com suggested 10-22-2020 */
-		margin-top:									0 !important;
-	}
 }
 
 /* 2: Phones (landscape) + Tablets (portrait) */
-@media (max-width: 860px) {
-		
+@media (max-width: 860px) {		
 	.ribbon {
 		width: 										calc(100% + 82px);
 		margin-left: 								-41px;
@@ -4359,7 +4433,8 @@ iframe#podium-modal {
 	.flex.grid-2-3 .col .col-inner,
 	.flex.grid-3-2 .col .col-inner,
 	.flex.grid-1-1 .col .col-inner,
-	.logo-strip .flex:not(.grid-1) .col .col-inner {
+	.logo-strip .flex:not(.grid-1) .col .col-inner,
+	.flex.break-2 .col .col-inner {
 		max-width:									75%;
 		margin:										0 auto;
 	}
@@ -4367,10 +4442,18 @@ iframe#podium-modal {
 	.flex.grid-3-1 .col:nth-child(2n+2) .col-inner,
 	.flex.grid-1-3 .col:nth-child(2n+1) .col-inner,
 	.flex.grid-2-1 .col:nth-child(2n+2) .col-inner,
-	.flex.grid-1-2 .col:nth-child(2n+1) .col-inner {
+	.flex.grid-1-2 .col:nth-child(2n+1) .col-inner{
 		max-width:									50%;
 		margin:										0 auto;
 	}
+	
+	.flex.break-2 .col {
+		grid-column: 								span 2; 
+	}
+	
+	.flex.grid-3e.break-2 .col {
+		grid-column: 								span 3; 
+	}	
 	
 	/* Responsive Columns */
 	.three-col,
@@ -4501,6 +4584,8 @@ iframe#podium-modal {
 		text-align:									center;
 	}
 	
+
+
 	.product-links .descriptionText a {
 		display:									block;
 	}
@@ -4508,6 +4593,8 @@ iframe#podium-modal {
 	/* Footer */
 	.site-info .site-icon {
 		display:									none;
+
+
 	}
 	.site-info .span-10 {
 		grid-column:								span 12;
@@ -4634,6 +4721,12 @@ iframe#podium-modal {
 		width:										100% !important /* Gulf Coast Chiro 3/22/21*/;
 	}
 	
+	/* Accordion */
+	.block-accordion h2,
+	.block-accordion .accordion-icon::before {
+		font-size:									24rem;
+	}
+	
 	/* Galleries */
 	.gallery {
 		gap: 										0.75em;
@@ -4675,6 +4768,7 @@ iframe#podium-modal {
 
 @media screen and (min-width: 1025px) and (max-width: 1280px) {
 	.hide-4 {
+
 		display:									none !important;
 	}
 }

@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.11.2' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.12' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -1002,7 +1002,7 @@ function battleplan_getBBB( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'link'=>'', 'graphic'=>'1' ), $atts );
 	$link = esc_attr($a['link']);
 	$graphic = esc_attr($a['graphic']);
-	return '<a href="'.$link.'"><img src="/wp-content/themes/battleplantheme/common/logos/bbb-'.$graphic.'.png" alt="We are accredited with the Better Business Bureau with an A+ rating" /></a>';
+	return '<a href="'.$link.'" title="Click here to view our profile page on the Better Business Bureau website."><img src="/wp-content/themes/battleplantheme/common/logos/bbb-'.$graphic.'.png" alt="We are accredited with the BBB and are proud of our A+ rating" /></a>';
 }
 
 // Add Credit Cards widget to Sidebar

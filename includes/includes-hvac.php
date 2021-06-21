@@ -425,7 +425,7 @@ add_shortcode( 'get-symptom-checker', 'battleplan_getSymptomChecker' );
 function battleplan_getSymptomChecker() {	
 	$brand = strtolower(str_replace(" ", "-", get_option('site_brand')));
 	if ( $brand == "" ) $brand = "american-standard";
-	return '<a href="/symptom-checker/"><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/symptom-checker.jpg" alt="Click to troubleshoot common HVAC problems." /></a>';
+	return '<a href="/symptom-checker/" title="Click here for troublshooting ideas to solve common HVAC problems."><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/symptom-checker.jpg" alt="HVAC unit pictured on colorful background." /></a>';
 }
 
 // Add Customer Care Dealer widget to Sidebar

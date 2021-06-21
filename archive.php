@@ -83,16 +83,22 @@ get_header();
 				$accordion = "false";
 				$countTease = "false";
 				$countView = "false";
+				$addInfo = "";				
 				$addClass = "";
 			endif;
 		
 			if ( function_exists( 'overrideArchive' ) ) { overrideArchive( get_post_type() ); }
 		
-			if ( get_post_type() == "testimonials" ) :
-				$archiveIntro = do_shortcode('<a class="noFX alignright size-quarter-s" style="margin-top:0;" href="#" onclick="trackClicks(\'contact\', \'Offsite Link\', \'Facebook\', \''.$facebookLink.'\'); return false;"><img alt="Like Us on Facebook" src="/wp-content/themes/battleplantheme/common/logos/'.$facebookIcon.'.png" class="noFX"/></a>[txt]<p>Our customers really like us! But don’t take our word for it. Here are some actual reviews posted by our customers on the web.</p><p>If YOU are a satisfied customer, we invite you to click the "thumbs up" icon to review your experience with our business.  Thank you!</p>[/txt]');	
+			if ( get_post_type() == "testimonials" ) :		
+				$buildIntro = "";		
+				if ( $facebookLink != "reviews/" ) $buildIntro .= '<a class="noFX alignright size-quarter-s" style="margin-top:0;" href="#" onclick="trackClicks(\'contact\', \'Offsite Link\', \'Facebook\', \''.$facebookLink.'\'); return false;"><img alt="Like Us on Facebook" src="/wp-content/themes/battleplantheme/common/logos/'.$facebookIcon.'.png" class="noFX"/></a>';
+				$buildIntro .= '[txt]<p>Our customers really like us! But don’t take our word for it. Here are some actual reviews posted by our customers on the web.</p>';				
+				if ( $facebookLink != "reviews/" ) $buildIntro .= '<p>If YOU are a satisfied customer, we invite you to click the "thumbs up" icon to review your experience with our business.  Thank you!</p>';		
+				$buildIntro .= '[/txt]';				
+				$archiveIntro = do_shortcode($buildIntro); 
 			endif;		
 		
-			if ( (is_tax() || is_tag() || is_author || is_category()) && !is_category('blog') && get_post_type() != "testimonials" ) : 	
+			if ( ( is_tax() || is_tag() || is_author() || is_category() ) && !is_category('blog') && get_post_type() != "testimonials" ) : 	
 				if ( is_tax() ) : $term = get_term_by( 'slug', get_query_var( 'term' ), get_query_var( 'taxonomy' ) ); $subHeadline = $term->name; 
 				else : $subHeadline = wp_kses_post(get_the_archive_title()); endif;	
 				$archiveHeadline .= "</h1><h3 class='page-subheadline archive-subheadline ".get_post_type()."-subheadline'>".$subHeadline."</h3>"; 
@@ -100,8 +106,7 @@ get_header();
 
 		// Build Archive
 			while ( have_posts() ) : the_post(); 
-				if ( $addClass != '' ) $addClass = " ".$addClass;
-		
+				if ( $addClass != '' ) $addClass = " ".$addClass;		
 				$addTags = "";
 				$taxonomies = get_object_taxonomies(get_post_type()); 
  				foreach( $taxonomies as $tax ) :
@@ -111,7 +116,7 @@ get_header();
 
 				$classes = 'col-archive col-'.get_post_type().' col-'.get_the_ID().$addTags.$addClass;
 		
-				$buildArchive .= do_shortcode('[col class="'.$classes.'"][build-archive type="'.get_post_type().'" show_thumb="'.$showThumb.'" size="'.$size.'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" accordion="'.$accordion.'" count_tease="'.$countTease.'" count_view="'.$countView.'"][/col]');
+				$buildArchive .= do_shortcode('[col class="'.$classes.'"][build-archive type="'.get_post_type().'" show_thumb="'.$showThumb.'" size="'.$size.'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" accordion="'.$accordion.'" count_tease="'.$countTease.'" count_view="'.$countView.'" add_info="'.$addInfo.'"][/col]');
 			endwhile; 
 
 		// Display Archive

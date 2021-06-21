@@ -18,7 +18,7 @@ get_sidebar(); ?>
 	endif;
 	?>
 
-	<footer id="colophon">		
+	<footer id="colophon" role="banner" aria-label="footer">		
 		
 		<?php echo do_shortcode('[get-element slug="site-footer"]'); ?>
 		
@@ -37,7 +37,8 @@ get_sidebar(); ?>
 				} else {	
 					$buildCopyright = "";
 					$buildCopyright .= wp_nav_menu( array( 'theme_location' => 'footer-menu', 'container' => 'div', 'container_id' => 'footer-navigation', 'container_class' => 'secondary-navigation', 'menu_id' => 'footer-menu', 'menu_class' => 'menu secondary-menu', 'fallback_cb' => 'false', 'echo' => false ) );
-					$buildCopyright .= "<div>".do_shortcode('[get-biz info="copyright"]')." ".do_shortcode('[get-biz info="name"]')." • All Rights Reserved • <a href='/privacy-policy/'>Privacy Policy</a></div><div>";
+					if ( do_shortcode('[get-biz info="misc2"]') ) $buildCopyright .= "<div class='site-info-misc2'>".do_shortcode('[get-biz info="misc2"]')."</div>";						
+					$buildCopyright .= "<div class='site-info-copyright'>".do_shortcode('[get-biz info="copyright"]')." ".do_shortcode('[get-biz info="name"]')." • All Rights Reserved • <a href='/privacy-policy/'>Privacy Policy</a></div><div class='site-info-address'>";
 					if ( do_shortcode('[get-biz info="street"]') ) $buildCopyright .= do_shortcode('[get-biz info="street"]')." • ";							
 					if ( do_shortcode('[get-biz info="city"]') ) :
 						$buildCopyright .= do_shortcode('[get-biz info="city"]').", ".do_shortcode('[get-biz info="state-abbr"]')." ".do_shortcode('[get-biz info="zip"]')." • ";
@@ -46,9 +47,10 @@ get_sidebar(); ?>
 					endif;
 					if ( do_shortcode('[get-biz info="license"]') ) $buildCopyright .= "License ".do_shortcode('[get-biz info="license"]')." • "; 						
 					if ( do_shortcode('[get-biz info="phone-link"]') ) $buildCopyright .= do_shortcode('[get-biz info="phone-link"]');							
-					$buildCopyright .= "</div><div>Website developed & maintained by <a href='http://battleplanwebdesign.com' target='_blank'>Battle Plan Web Design</a>";
+					$buildCopyright .= "</div><div class='site-info-battleplan'>Website developed & maintained by <a href='http://battleplanwebdesign.com' target='_blank'>Battle Plan Web Design</a>";
 					if ( do_shortcode('[get-biz info="misc1"]') ) $buildCopyright .= " • ".do_shortcode('[get-biz info="misc1"]');	
-					$buildCopyright .= "</div>";
+					$buildCopyright .= "</div>";					
+					if ( do_shortcode('[get-biz info="misc3"]') ) $buildCopyright .= "<div class='site-info-misc3'>".do_shortcode('[get-biz info="misc3"]')."</div>";	
 					
 					if (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-icon-80x80.png' ) ) : $iconName = "site-icon-80x80.png"; else: $iconName = "site-icon.png"; endif; 
 
@@ -64,9 +66,11 @@ get_sidebar(); ?>
 </div><!-- #page -->
 
 <!-- Scroll to Top btn -->
-<a class ="scroll-top hide-1 hide-2 hide-3" href="#page"><i class="fa fa-chevron-up" aria-hidden="true"></i><span class="sr-only">Scroll To Top</span></a>
+<a class ="scroll-top hide-1 hide-2 hide-3" href="#page" role="button"><i class="fa fa-chevron-up" aria-hidden="true"></i><span class="sr-only">Scroll To Top</span></a>	
 
-<?php wp_footer(); ?>
+<?php wp_footer(); ?>	
+	
+<?php echo '<div id="include-svg">'.do_shortcode('[get-element slug="svg"]').'</div>'; ?>
 
 </body>
 </html>

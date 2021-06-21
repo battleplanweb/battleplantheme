@@ -34,62 +34,18 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	slug = slug.substr(1).slice(0, -1).replace("/", "-");		
 	if ( slug ) { slug = "slug-"+slug; } else { slug = "slug-home"; }
 	$('body').addClass(slug);
-
-// Set up Logo to link to home page	
-	$('.logo').css("cursor","pointer").click(function() {
-		window.location = "/";
-	});
-	window.linkHome = function (container) {
-		$(container).css( "cursor", "pointer" );
-		$(container).click(function() { window.location = "/"; });
-	};		
-
-// Set up American Standard logo to link to American Standard website
-	$('.as-logo, .am-stand-logo, .widget-as-logo').each(function() { 
-		$(this).wrapInner('<a href="https://www.americanstandardair.com/"></a>'); 
-	});
-
-// Track phone number clicks in Google Analytics
-	window.trackClicks = function(type, category, action, url) {
-		$.post({
-			url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-			data : { action: "count_link_clicks", type: action },
-			success: function( response ) { console.log(response); document.location = url; } 
-		});	
-		
-		gtag('event', type, { 'event_category': category, 'event_action': action, 'event_label': url, 'transport_type': 'beacon', 'event_callback': function(){} });		
-	};
-
-// Track contact form submissions in Google Analytics
-	document.addEventListener( 'wpcf7mailsent', function( event ) {
-		gtag('event', 'contact', { 'event_category': 'Contact', 'event_action': 'Email' });
-	}, false );
-
-// Set up Cookies
-	window.setCookie = function(cname,cvalue,exdays) {
-		var d = new Date(), expires;
-		d.setTime(d.getTime()+(exdays*24*60*60*1000));
-		if ( exdays != null && exdays != "" ) {	expires = "expires="+d.toGMTString()+"; "; }
-		document.cookie = cname + "=" + cvalue + "; " + expires + "path=/; secure";
-	};
-	window.getCookie = function(cname) {
-		var name = cname + "=", ca = document.cookie.split(';');
-		for(var i=0; i<ca.length; i++) {
-			var c = ca[i].trim();
-			if (c.indexOf(name)==0) return c.substring(name.length,c.length);
-		}
-		return "";
-	};	
-
-// Check if this is a visitor's first page to view, & add .first-page class to trigger special CSS
-	if ( !getCookie('first-page') ) { $("body").addClass("first-page"); setCookie('first-page', 'no'); } else { $("body").addClass("not-first-page"); }
-
+	
 // Is user on an Apple device?
 	window.isApple = function () {
 		var iOS = !!navigator.platform && /iPad|iPhone|iPod/.test(navigator.platform);
 		return iOS;		
 	};	
-
+	
+// Get domain of current webpage
+	window.getDomain = function () {
+		return window.location.hostname;
+	};		
+	
 // Get "slug" of current webpage
 	window.getSlug = function () {
 		var findSlug = window.location.pathname.split('/');
@@ -103,6 +59,87 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		if (results == null) { return null; }
 		return decodeURI(results[1]) || 0;
 	};
+
+// Set up Logo to link to home page	
+	$('.logo').keyup(function(event) {
+		if (event.keyCode === 13 || event.keyCode === 32) {
+			$(this).click();
+		}
+	});
+	$('.logo').attr('tabindex','0').attr('role','button').attr('aria-label','Return to Home Page').css('cursor', 'pointer').click(function() { window.location = "/"; });
+	$('.logo img').attr('aria-hidden', 'true');
+	
+	window.linkHome = function (container) {
+		$(container).keyup(function(event) {
+			if (event.keyCode === 13 || event.keyCode === 32) {
+				$(this).click();
+			}
+		});
+		$(container).attr('tabindex','0').attr('role','button').attr('aria-label','Return to Home Page').css('cursor', 'pointer').click(function() { window.location = "/"; });
+		$(container).find('img').attr('aria-hidden', 'true');
+	};		
+
+// Set up American Standard logo to link to American Standard website	
+	$("img[src*='hvac-american-standard/american-standard']").each(function() { 
+		$(this).wrap('<a href="https://www.americanstandardair.com/" target="_blank"></a>'); 
+	});
+			
+// Track phone number clicks
+	window.trackClicks = function(type, category, action, url) {
+		document.location = url;
+		$.post({
+			url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
+			data : { action: "count_link_clicks", type: action },
+			success: function( response ) { console.log(response);  } 
+		});		
+	};
+
+// Set up Cookies
+	window.setCookie = function(cname,cvalue,exdays) {
+		var domain = document.domain.match(/[^\.]*\.[^.]*$/)[0];
+		var d = new Date(), expires='';
+		d.setTime(d.getTime()+(exdays*24*60*60*1000));
+		if ( exdays != null && exdays != "" ) {	expires = "expires="+d.toGMTString()+"; "; }
+		document.cookie = cname + "=" + cvalue + "; " + expires + "path=/; domain=" + domain +"; secure";
+		console.log("cookie set [ "+cname + "=" + cvalue + "; " + expires + "path=/; domain=" + domain +"; secure ]");
+	};
+	window.getCookie = function(cname) {
+		var name = cname + "=", ca = document.cookie.split(';');
+		for(var i=0; i<ca.length; i++) {
+			var c = ca[i].trim();
+			if (c.indexOf(name)==0) return c.substring(name.length,c.length);
+		}
+		return "";
+	};		
+	window.deleteCookie = function(cname) {
+		setCookie(cname,"",-1);
+	};	
+
+// Check if this is a visitor's first page to view & add .first-page class to trigger special CSS
+	if ( !getCookie('first-page') ) { 
+		setCookie('first-page', 'no'); 
+		$("body").addClass("first-page"); 		
+	} else { 
+		$("body").addClass("not-first-page"); 
+	}
+	
+// Calculate how many pages user has viewed (exclude page refresh)
+	if ( !getCookie('pages-viewed') ) { 
+		var uniqueID = Date.now() + "A" + Math.floor(Math.random() * 100);		
+		setCookie('unique-id', uniqueID); 
+		$("body").attr("data-unique-id", uniqueID); 
+		$("body").attr("data-pageviews", 1); 
+		setCookie('pages-viewed', 1); 
+	} else { 
+		var pages_viewed = Number(getCookie('pages-viewed'));
+		if ( getCookie('prev-page') != getSlug() ) {
+			pages_viewed++;
+			setCookie('pages-viewed', pages_viewed); 		
+			setCookie('prev-page', getSlug()); 
+		}
+		$("body").attr("data-pageviews", pages_viewed); 
+		$("body").attr("data-unique-id", getCookie('unique-id')); 
+	}
 
 // Extend .hasClass to .hasPartialClass
 	$.fn.hasPartialClass = function(partial){
@@ -145,6 +182,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			}).get().join(' ')).addClass(additional);
 		});
 	};
+	
+// Shuffle an array
+	window.shuffleArray = function (array) {
+  		for (let i = array.length - 1; i > 0; i--) {
+			let j = Math.floor(Math.random() * (i + 1));
+    		[array[i], array[j]] = [array[j], array[i]];
+  		}
+	}	
 
 // Find & Replace text or html in a Div	
 	window.replaceText = function (container, find, replace, type, all) {
@@ -181,6 +226,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		if (trimText.done) return;
 		length = length || 250;
 		container = container || ".slider-testimonials .testimonials-quote, #secondary .testimonials-quote, .random-post .testimonials-quote";
+		
 		$(container).each(function() { 
 			var theText = $(this).html(), maxLength = length, trimText = theText.substr(0, maxLength);
 			if ( trimText.length == maxLength ) {
@@ -188,7 +234,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				$(this).html(trimText  + "…" );
 			}
 		});
-		trimText.done = true;
+		trimText.done = true; 		
 	};
 
 // Remove sidebar from specific pages
@@ -290,6 +336,30 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	window.lockMenu = function() {	
 		lockDiv('#desktop-navigation');	
 	};
+	
+// Add stroke to text & transparent objects
+	window.addStroke = function(element, width, topColor, bottomColor, leftColor, rightColor) {	
+  		var shadow = "", steps = 16, spacing = width - 1, color, angle, cos, sin;
+		leftColor = leftColor || topColor;
+		bottomColor = bottomColor || topColor;
+		rightColor = rightColor || bottomColor;
+		
+  		for (var i = 0; i < steps; i++) {
+    		angle = (i * 2 * Math.PI) / steps;
+    		cos = Math.round(10000 * Math.cos(angle)) / 10000;
+    		sin = Math.round(10000 * Math.sin(angle)) / 10000;	 
+			if ( cos <= 0 && sin <= 0 ) { color = topColor; }  	  
+			if ( cos >= 0 && sin >= 0 ) { color = bottomColor; }
+			if ( cos <= 0 && sin >= 0 ) { color = leftColor; }
+			if ( cos >= 0 && sin <= 0 ) { color = rightColor; }
+			shadow += "calc("+ width + "px * " + cos + ") calc("+ width + "px * " + sin + ") 0 "+ color;
+	 		if ( i < (steps-1) ) { shadow += ", "; }	  
+  		}			
+		
+		var style = document.createElement('style');
+		style.innerHTML = element + " { text-shadow: "+shadow+"; letter-spacing: "+spacing+"px; }";
+		document.head.appendChild(style);
+	};
 
 // Animate the automated scrolling to section of content
 	window.animateScroll = function (target, topSpacer, initSpeed) {
@@ -314,7 +384,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	};
 
 // Set up "Back To Top" button
-	var waypoints = $('#wrapper-content').waypoint(function(direction) {
+	var backToTop = $('#wrapper-content').waypoint(function(direction) {
 		if (direction === 'up') {			
 			$('a.scroll-top').animate( { opacity: 0 }, 150, function() { $('a.scroll-top').css({ "display": "none" }); });
 		} else {
@@ -323,7 +393,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	}, { offset: '10%' });	
 
 // Set up "Scroll Down" button
-	var waypoints = $('#wrapper-content').waypoint(function(direction) {
+	var scrollDown = $('#wrapper-content').waypoint(function(direction) {
 		if (direction === 'down') {			
 			$('.scroll-down').fadeOut("fast"); 	
 		} else {
@@ -362,20 +432,20 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		XorY = XorY || 'Y';
 		var theContainer = document.querySelector(container), style = window.getComputedStyle(theContainer), matrix = style.transform || style.webkitTransform || style.mozTransform, matrixValues = matrix.match(/matrix.*\((.+)\)/)[1].split(', ');
 		
-		if ( XorY == "x" || XorY == "X" ) return matrixValues[4];
-		if ( XorY == "y" || XorY == "Y" ) return matrixValues[5];
+		if ( XorY == "x" || XorY == "X" ) { return matrixValues[4]; }
+		if ( XorY == "y" || XorY == "Y" ) { return matrixValues[5]; }
 	};
 	
 // Accordion section - control opening & closing of expandable text boxes
 	window.buildAccordion = function (topSpacer, cssDelay, transSpeed, closeDelay, openDelay, clickActive) {
-		if (buildAccordion.done) return;
+		if (buildAccordion.done) { return; }
 		transSpeed = transSpeed || 500;
 		closeDelay = closeDelay || 0;
 		openDelay = openDelay || 0;
 		cssDelay = cssDelay || closeDelay + openDelay;
 		topSpacer = topSpacer || 0.1;
 		clickActive = clickActive || 'close';
-		var fullDelay = cssDelay+closeDelay+openDelay+transSpeed, useThis, accPos = [];
+		var accPos = [];
 
 		if ( topSpacer < 1 ) { topSpacer = getDeviceH() * topSpacer; }		
 		if ( getDeviceW() < mobileCutoff ) { topSpacer = topSpacer + mobileMenuBarH; }		
@@ -395,25 +465,30 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				$(this).click();
 			}
 		});
-
-		$(".block-accordion").click(function(e) {		
-			e.preventDefault();  
-			var locAcc = $(this), locIndex = locAcc.index('.block-accordion'), locPos = accPos[locIndex], topPos = accPos[0], moveTo = 0;			
+ 
+		$(".block-accordion .accordion-title").click(function(e) {		
+			e.preventDefault();
+			var thisBtn = $(this), locAcc = thisBtn.closest('.block-accordion'), locIndex = locAcc.index('.block-accordion'), locPos = accPos[locIndex], topPos = accPos[0], moveTo = 0, btnText=thisBtn.attr('data-text'), btnCollapse=thisBtn.attr('data-collapse');	
+			
 			if ( !locAcc.hasClass("active") ) {
 				setTimeout( function () {
 					$( '.block-accordion.active .accordion-excerpt' ).animate({ height: "toggle", opacity: "toggle" }, transSpeed);					
 					$( '.block-accordion.active .accordion-content' ).animate({ height: "toggle", opacity: "toggle" }, transSpeed);
+					if ( btnCollapse == "hide" ) { thisBtn.fadeOut(); } 
+					else if ( btnCollapse != "false" ) { thisBtn.text(btnCollapse); } 
 				}, closeDelay);
 				setTimeout( function () {
 					locAcc.find('.accordion-excerpt').animate({ height: "toggle", opacity: "toggle" }, transSpeed);						
 					locAcc.find('.accordion-content').animate({ height: "toggle", opacity: "toggle" }, transSpeed);						
-					if ( (locPos - topPos) > (getDeviceH() * 0.25) ) {
-						moveTo = locPos;
-						animateScroll(moveTo, topSpacer, transSpeed); 
-					} else {
-						moveTo = ((locPos - topPos) / 2) + topPos;						
-						animateScroll(moveTo, topSpacer, transSpeed); 
-					}		
+					if ( btnCollapse == undefined ) {
+						if ( (locPos - topPos) > (getDeviceH() * 0.25) ) {
+							moveTo = locPos;
+							animateScroll(moveTo, topSpacer, transSpeed); 
+						} else {
+							moveTo = ((locPos - topPos) / 2) + topPos;						
+							animateScroll(moveTo, topSpacer, transSpeed); 
+						}	
+					}
 				}, openDelay);
 				setTimeout( function() {						
 					$(".block-accordion.active").removeClass('active').attr( 'aria-expanded', false ); 
@@ -423,12 +498,12 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				setTimeout( function () {
 					$( '.block-accordion.active .accordion-excerpt' ).animate({ height: "toggle", opacity: "toggle" }, transSpeed);					
 					$( '.block-accordion.active .accordion-content' ).animate({ height: "toggle", opacity: "toggle" }, transSpeed);
+					if ( btnCollapse != "false" ) { thisBtn.text(btnText); } 
 				}, closeDelay);	
 				setTimeout( function() {						
 					$(".block-accordion.active").removeClass('active').attr( 'aria-expanded', false );
 				}, cssDelay);	
 			}
-			if ( getDeviceW() > mobileCutoff ) { setTimeout( function() { adjustSidebarH(); }, fullDelay); }		
 		});
 		buildAccordion.done = true;
 	};
@@ -468,6 +543,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			window.addEventListener('scroll', function() { moveDiv(); });			
 		}
 		moveDiv();
+
 	};
 
 // Set up "Magic Menu"	
@@ -673,8 +749,24 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			$(column).css({ "clear":"none" });
 			$(container).fadeTo(speed, 1);
 		});
-	};					
-			
+	};		
+		
+
+
+	// Handle the post filter button [get-filter-btn]
+	$(".filter-btn").click(function() {
+		var thisBtn = $(this), url = "?"+thisBtn.attr('data-url')+"=", flag=false;
+		$("input:checkbox[name=choice]:checked").each(function() {
+			if ( !flag ) {
+				url = url + $(this).val();
+				flag = true;
+			} else {
+				url = url  + "," + $(this).val();
+			}         
+		});
+		window.location = url;
+	});		
+		
 	// Tabbed Content - control changing and animation of tabbed content
 	$("ul.tabs li").keyup(function(event) {
 		var thisBtn = $(this);
@@ -702,16 +794,33 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		delay = delay || 0;		
 		speed = speed || 1000;		
 		offset = offset || "100%";
-		var total = delay + speed;
-		var theEl = $(container), fixedH = theEl.height();
-		theEl.height(0);		
+		var total = delay + speed, theEl = $(container), fixedH = theEl.outerHeight(), padT = theEl.css('padding-top'), padB = theEl.css('padding-bottom');
+		theEl.css({"height":0, "padding-top":0, "padding-bottom":0});		
 		setTimeout( function () { 
 			theEl.waypoint(function() {
-				theEl.animate({height: fixedH}, speed);
+				theEl.animate({"height": fixedH, "padding-top":padT, "padding-bottom":padB}, speed);
+				setTimeout( function () { screenResize(); }, total);	
 			}, { offset: offset });
 		}, delay);	
-		setTimeout( function () { screenResize(); }, total);	
 	};	
+		
+// Button to reveal a hidden div
+	window.btnRevealDiv = function(button, container, topSpacer, initSpeed) {	
+		initSpeed = initSpeed || 0;
+		topSpacer = topSpacer || 0;
+		var origDisplay = $( container ).css( "display" );
+
+		if ( getDeviceW() < mobileCutoff ) { 
+			topSpacer = topSpacer + $("#mobile-menu-bar").outerHeight();	
+		}			
+
+		$( container ).css( "display","none");	
+		$( button ).click(function(){
+			$( container ).css( "display",origDisplay);
+			var target = container;
+			animateScroll(target, topSpacer, initSpeed);
+		});
+	};
 	
 	// Set up Review Questions & Redirect
 	$('.review-form:first').addClass('active');
@@ -743,6 +852,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			thisDiv.clone().insertAfter( thisAnchor );
 		} else if ( where == "before" ) {
 			thisDiv.clone().insertBefore( thisAnchor );
+		} else if ( where == "top" || "start" ) {
+			thisAnchor.prepend(thisDiv.clone());
 		} else {
 			thisAnchor.append(thisDiv.clone());
 		}
@@ -756,6 +867,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			thisDiv.insertAfter( thisAnchor );
 		} else if ( where == "before" ) {
 			thisDiv.insertBefore( thisAnchor );
+		} else if ( where == "top" || "start" ) {
+			thisAnchor.prepend(thisDiv);
 		} else {
 			thisAnchor.append(thisDiv);
 		}
@@ -770,6 +883,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				thisDiv.find( $( moveThis )).insertAfter( thisDiv.find( anchor ) );
 			} else if ( where == "before" ) {
 				thisDiv.find( $( moveThis )).insertBefore( thisDiv.find( anchor ) );
+			} else if ( where == "top" || "start" ) {
+				thisDiv.find( anchor ).prepend(thisDiv.find( $( moveThis )));
 			} else {
 				thisDiv.find( anchor ).append(thisDiv.find( $( moveThis )));
 			}
@@ -815,8 +930,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 // Delete a div
 	window.removeDiv = function (target) {
 		$(target).remove();
+	};		
+	
+// Turn SVG into an element's background image
+	window.svgBG = function (svg, element) {
+		var thisSVG = $(svg), thisEl = $(element);
+		thisSVG.clone().css({"position":"absolute"}).prependTo(thisEl);
 	};	
-
+	
 /*--------------------------------------------------------------
 # Set up animation
 --------------------------------------------------------------*/
@@ -869,6 +990,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				this.destroy();
 			}, { offset: offset });
 		}, initDelay);
+
 	};
 
 // Animate grid elements
@@ -937,7 +1059,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		}, { offset: offset });	
 	};	
 
-// Animate single element (using CSS transitions in go-style.css)
+// Animate single element (using CSS transitions in site-style.css)
 	window.animateCSS = function(container, initDelay, offset, speed) {	
 		initDelay = initDelay || 0;		
 		offset = offset || "100%";
@@ -1044,7 +1166,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 # Set up pages
 --------------------------------------------------------------*/
 
-// Needed temporarily to force columns to new framework naming structure */
+/* Needed temporarily to force columns to new framework naming structure 
 	$('.col-8').addClass('span-1').removeClass('col-8');
 	$('.col-17').addClass('span-2').removeClass('col-17');
 	$('.col-20').addClass('span-2').removeClass('col-20');
@@ -1060,7 +1182,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	$('.col-80').addClass('span-10').removeClass('col-80');
 	$('.col-83').addClass('span-10').removeClass('col-83');
 	$('.col-92').addClass('span-11').removeClass('col-92');
-	$('.col-100').addClass('span-12').removeClass('col-100');
+	$('.col-100').addClass('span-12').removeClass('col-100');*/
 
 
 // Remove empty elements
@@ -1131,33 +1253,34 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		$subCurrents.replaceClass( "dormant", "active" ); 
 	});
 
+// Automatically adjust for Google review bar 
+	$( '<div class="wp-google-badge-faux"></div>' ).insertAfter( $('#colophon'));
+
 // Animate scrolling when moving up or down a page
 	$('a[href^="#"]:not(.carousel-control-next):not(.carousel-control-prev)').on('click', function (e) {
 		e.preventDefault();    
-		var target = this.hash;
+		var target = this.hash, compensate = Number($(target).attr('data-hash'));
+		if( isNaN(compensate) ) { compensate = 0; } 
 		if ( target != "" ) { 
 			 if ( $('*'+target).length ) { 
-				animateScroll(target); 
-				setTimeout(function(){ animateScroll(target); }, 100); /* helps re-calculate in case there is a .stuck to account for (Executive Mobile Detailing) */
+				animateScroll(target, compensate); 
+				setTimeout(function(){ animateScroll(target, compensate); }, 100); /* helps re-calculate in case there is a .stuck to account for (Executive Mobile Detailing) */
 			 } else {
 				 window.location.href = "/"+target;
 			}
 		}
 	});
-
-// Automatically adjust for Google review bar 
-	$( '<div class="wp-google-badge-faux"></div>' ).insertAfter( $('#colophon'));
 	
 // Control Menu Buttons on "one page" site		
 	if ( $('.menu-item a[href^="#"]').is(':visible') ) { 
-		var thisLink = $(this), menu = $('nav:visible').find('ul'), whenToChange = $(window).outerHeight() * 0.35, menuHeight = menu.outerHeight()+whenToChange, menuItems = menu.find('a[href^="#"]'), scrollItems = menuItems.map(function(){ var item = $(thisLink.attr("href")); if ( thisLink.parent().css('display') != "none" ) { return item; } });
+		var menu = $('nav:visible').find('ul'), whenToChange = $(window).outerHeight() * 0.35, menuHeight = menu.outerHeight()+whenToChange, menuItems = menu.find('a[href^="#"]'), scrollItems = menuItems.map(function(){ var item = $($(this).attr("href")); if ( $(this).parent().css('display') != "none" ) { return item; } });
 		
 		$(window).scroll(function() { 
-			var fromTop = thisLink.scrollTop()+menuHeight, thisHash, changeMenu; 
+			var fromTop = $(this).scrollTop()+menuHeight, thisHash, changeMenu; 
 			var cur = scrollItems.map(function() {  
-				if ( thisLink.offset() !== undefined ) {
-					if ( thisLink.offset().top < fromTop ) { 
-						thisHash = "#"+thisLink[0].id;
+				if ( $(this).offset() !== undefined ) {
+					if ( $(this).offset().top < fromTop ) { 
+						thisHash = "#"+$(this)[0].id;
 						clearTimeout(changeMenu);
 						changeMenu = setTimeout(function(){ 
 							menu.find('li').removeClass('current-menu-item').removeClass('current_page_item').removeClass('active');
@@ -1169,7 +1292,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			});
 		});
 	};
-
+	
 // Set up mobile menu animation
 	window.closeMenu = function () {
 		$("#mobile-menu-bar .activate-btn").removeClass("active"); 
@@ -1220,7 +1343,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 	$('#mobile-navigation li:not(.menu-item-has-children)').each(function() { 
 		var theButton = $(this);
 		theButton.click(function() { closeMenu(); }); 
-	});		
+	});	
 
 // Ensure all slides in a Bootstrap carousel are even height
 	$(".carousel").each(function() {
@@ -1255,8 +1378,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 	if ( todayIs == 3 ) $(".office-hours .row-wed").addClass("today");
 	if ( todayIs == 4 ) $(".office-hours .row-thu").addClass("today");
 	if ( todayIs == 5 ) $(".office-hours .row-fri").addClass("today");
-	if ( todayIs == 6 ) $(".office-hours .row-sat").addClass("today");
-	
+	if ( todayIs == 6 ) $(".office-hours .row-sat").addClass("today");	
 					
 // Removes double asterisk in required forms
 	$('abbr.required, em.required, span.required').text("");
@@ -1270,20 +1392,20 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		compensate = compensate || 0;		
 		sidebarScroll = sidebarScroll || "true";
 		shuffle = shuffle || "true";
-		var isPaused = false;		
 
 // Shuffle an array of widgets
-		window.shuffleWidgets = function ($elements) {
+		window.arrangeWidgets = function ($elements) {
 			var i, index1, index2, temp_val, count = $elements.length, $parent = $elements.parent(), shuffled_array = [];
-
 			for (i = 0; i < count; i++) { shuffled_array.push(i); }
-
-			for (i = 0; i < count; i++) {
-				index1 = (Math.random() * count) | 0;
-				index2 = (Math.random() * count) | 0;
-				temp_val = shuffled_array[index1];
-				shuffled_array[index1] = shuffled_array[index2];
-				shuffled_array[index2] = temp_val;
+			
+			if ( shuffle == "true" ) {
+				for (i = 0; i < count; i++) {
+					index1 = (Math.random() * count) | 0;
+					index2 = (Math.random() * count) | 0;
+					temp_val = shuffled_array[index1];
+					shuffled_array[index1] = shuffled_array[index2];
+					shuffled_array[index2] = temp_val;
+				}
 			}
 
 			$elements.detach();
@@ -1292,78 +1414,47 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			var el = $(".widget.lock-to-bottom").detach();
 			$parent.append( el );		
 		};		
+		
+// Check & log heights of main elements
+		window.checkHeights = function () {
+			var primary = $('#primary').outerHeight();
+			var viewport = $(window).outerHeight();
+			var widgets = $("#secondary .sidebar-inner").outerHeight() + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom')) + compensate;			
+			var remain = primary - widgets;
+
+			$('#wrapper-content').attr( 'data-primary', Math.round(primary) ).attr( 'data-viewport', Math.round(viewport) ).attr( 'data-widgets', Math.round(widgets) ).attr( 'data-remain', Math.round(remain) );
+			
+			return remain;
+		}
 
 // Set up "locked" widgets, and shuffle the rest
 		$('.widget.lock-to-top, .widget.lock-to-bottom').addClass("locked");		
 		$('.widget:not(.locked)').addClass("shuffle");
-
-
-		if ( getDeviceW() > mobileCutoff && shuffle == "true" ) { 
-			shuffleWidgets( $('.shuffle') );
-		}
+		arrangeWidgets( $('.shuffle') );
 
 // Initiate widget removal
 		window.widgetInit = function () {
-			if ( getDeviceW() > mobileCutoff && isPaused==false ) { 
-				$('.widget').removeClass('hide-widget');
-				removeWidgets('.widget.remove-first');
-				isPaused = true; 
+			if ( getDeviceW() > mobileCutoff ) { 
+				$('.widget:not(.widget-important)').addClass('hide-widget');
+				addWidgets();				
 			} 
 		};
-
-// Remove widgets that do not fit
-		window.removeWidgets = function (removeWidget) {
-			var contentH = $("#primary .site-main-inner").outerHeight() + compensate, widgetH = $("#secondary .sidebar-inner").outerHeight(true), remainH = widgetH - contentH, removeThis = $(removeWidget);
-
-			if ( remainH > 0 && $('.widget:not(.hide-widget)').length ) {		
-				removeThis.random().addClass("hide-widget");
-
-				if ( $('.widget.remove-first:not(.hide-widget)').length ) { removeWidgets( '.widget.remove-first:not(.hide-widget)' ); }
-				else if ( $('.widget.shuffle:not(.hide-widget)').length ) { removeWidgets( '.widget.shuffle:not(.hide-widget):not(.widget-important)' ); }
-				else if ( $('.widget.lock-to-bottom:not(.hide-widget)').length ) { removeWidgets( '.widget.lock-to-bottom:not(.hide-widget):not(.widget-important)' ); }
-				else { removeWidgets( '.widget.lock-to-top:not(.hide-widget):not(.widget-important)' ); }				
-
-			} else { 
-				checkWidgets();
-			}
-		};						
-
-// Determine the widget with height closest to amount of space remaining to fill
-		window.findClosest = function (compare, loop, test) {
-			var curr, diff = 999999;
-			loop++;
-			for (var val = 1; val < loop; val++) {
-				var newdiff = compare - test[val];
-				if ( newdiff > 0 && newdiff < diff ) { diff = newdiff; curr = test[val]; }
-			}
-			return curr;
-		};
-
-// Check hidden widgets for any smaller ones that might still fit
-		window.checkWidgets = function () {			
-				var contentH = $("#primary .site-main-inner").outerHeight() + compensate, widgetH = $("#secondary .sidebar-inner").outerHeight(), i = 0, widgets = [];
-				var remainH = contentH - widgetH + 140; // 140 is arbitrary, can be adjusted as needed to make sure widgets fit but don't go over
-
-				$('.widget.hide-widget').each(function() {
-					var theWidget = $(this);
-					i++;
-					widgets[i] = theWidget.outerHeight(true) + Math.floor((Math.random() * 10) - 5);
-					theWidget.addClass("widget-height-"+widgets[i]);	
-				});
-
-				var replaceWidget = findClosest(remainH, i, widgets);
-				widgets.splice(widgets.indexOf(replaceWidget),1);
-				if ( replaceWidget < remainH ) { $(".widget-height-"+replaceWidget).removeClass("hide-widget"); }
-
-				adjustSidebarH();
-				setTimeout(function() { isPaused = false; }, 3000);
+		
+// Add widget one by one as long as they fit
+		window.addWidgets = function () {
+			$('.hide-widget:not(.remove-first)').each(function(){
+				if ( $(this).height() <= checkHeights() ) { $(this).removeClass('hide-widget'); }				
+			});
+	
+			$('.hide-widget').each(function(){
+				if ( $(this).height() <= checkHeights() ) { $(this).removeClass('hide-widget'); }				
+			});
+			
+			if ( !$('.widget:not(.hide-widget)').length ) { $('widget:first-of-type').removeClass('hide-widget'); }
+			
+			checkHeights();
+			labelWidgets();
 		};	
-
-// Adjust height of #secondary to match #primary + add extra spacing between .widget if necessary
-		window.adjustSidebarH = function () {
-			var contentH = $("#primary").outerHeight(true) + compensate;
-			$("#secondary").animate( { height: contentH+"px" }, 300);
-		};
 
 // Add classes for first, last, even and odd widgets
 		window.labelWidgets = function () {
@@ -1376,23 +1467,33 @@ if ( $('body').hasClass('remove-sidebar') ) {
 
  // Move sidebar in conjunction with mouse scroll to keep it even with content
 		window.moveWidgets = function () {
-			if ( sidebarScroll == "true" ) {
-				var contentH = $('#primary').outerHeight(), elem = $(".sidebar-inner"), elemH = elem.outerHeight() + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom')), contentV = contentH - getDeviceH() + 200, sidebarV = elemH - getDeviceH() + 400, addTop=0;	
-
-				//$('.stuck').each(function() { addTop = addTop + $(this).outerHeight(true); }); /* removed for Align K9 12/30/20... if this is needed, then add a "ignore height" param to setupSidebar() and add this param to Align K9 site-script.js				
-				var secH = $("#secondary").outerHeight(), secT = $("#secondary").offset().top, winH = $(window).height() - addTop, winT = $(window).scrollTop() + addTop;				
-				var adjT = winT - secT, fullH = secH - winH, scrollPct = adjT / fullH, maxH = contentH - elemH;	
-				if ( scrollPct > 1 ) { scrollPct = 1; }
-
-				if ( scrollPct < 0 || scrollPct == null ) { scrollPct = 0; }
-				var moveElem = Math.round(maxH * scrollPct);	
-				if ( moveElem > maxH ) { moveElem = maxH; }
-				if ( moveElem < 0 ) { moveElem = 0; }
-				if ( contentV > 0 && sidebarV > 0 && adjT > 0 && getDeviceW() > mobileCutoff ) { 
-					elem.css("margin-top",moveElem+"px"); 
-				} else { 
-					elem.css("margin-top","0px"); 
+			if ( sidebarScroll == "true" && getDeviceW() > mobileCutoff ) {
+				var sidebar = $(".sidebar-inner"), scrollPct, findPos;	
+				var primary = Number($('#wrapper-content').attr('data-primary'));
+				var widgets = Number($('#wrapper-content').attr('data-widgets'));
+				var viewport = Number($('#wrapper-content').attr('data-viewport'));
+				var remain = Number($('#wrapper-content').attr('data-remain'));				
+				var primaryOffset = $("#primary").offset().top;
+				var scrollPos = Number($(window).scrollTop());
+				var adjScrollPos = scrollPos - primaryOffset;			
+								
+				if ( scrollPos > primaryOffset ) {				
+					scrollPct = adjScrollPos / ( primary - viewport );
+					findPos = remain * scrollPct;
+				} else {
+					findPos = 0;
 				}
+
+				$('.stuck').each(function() {
+					viewport = viewport - $(this).outerHeight();
+				})
+				viewport = viewport - $('.wp-google-badge').outerHeight();	
+
+				if ( widgets < viewport ) { findPos = adjScrollPos + parseInt($("#secondary").css('padding-top')); }
+				if ( findPos > remain ) { findPos = remain; }
+				if ( findPos < 0 ) { findPos = 0; }
+				if ( findPos > 0 && findPos < remain ) { checkHeights(); }
+				sidebar.css({ "margin-top": findPos+"px" }); 
 			}
 		};
 	};	
@@ -1413,8 +1514,6 @@ if ( $('body').hasClass('remove-sidebar') ) {
 				$(window).trigger('resize.px.parallax');
 				if ( widgets == true ) { widgetInit(); } 
 			} 
-
-			labelWidgets();
 
 		// If not a mobile device and sidebar exists, move widgets with scroll	
 			if ( $("#secondary").length && getDeviceW() > mobileCutoff ) {  	
@@ -1465,30 +1564,20 @@ if ( $('body').hasClass('remove-sidebar') ) {
 
 		// Shift #secondary below #wrapper-bottom on mobile		
 		moveDiv('.sidebar-shift.screen-mobile #secondary','#colophon',"before");	
-
-		/* Remove horizontal styling from office hours box on cell phones */	
-		//if ( $('body').hasClass('screen-1') ) { 
-			//if ( $('.office-hours').hasClass('horz') ) { 
-				//$('.office-hours').removeClass('horz').addClass('force-vert'); 
-			//}
-		//}
-		//if ( $('.office-hours').hasClass('force-vert') ) { 
-			//if ( !$('body').hasClass('screen-1') ) { 
-				//$('.office-hours').removeClass('force-vert').addClass('horz'); 
-			//}
-		//}		
-
-		/* Set up "fixed" footer, based on class added in header.php */		
-		//var footerH = $(".footer-fixed #footer").outerHeight(true);
-		//$(".footer-fixed #page").css({"marginBottom":footerH+"px"});		
-
-		// Reposition Woocommerce Update Cart button above coupon section on mobile checkout
-		//moveDiv('.woocommerce-page.screen-mobile table.cart td.actions .button[name~="update_cart"]','.woocommerce-page #primary table.cart td.actions .coupon','before');	
 	};
 
 /*--------------------------------------------------------------
 # ADA compliance
 --------------------------------------------------------------*/
+	
+	// Add aria-labels to landmarks, sections and titles
+	$('#primary').attr( 'role', 'main' ).attr( 'aria-label', 'main content' );
+	$('#secondary').attr( 'role', 'complementary' ).attr( 'aria-label', 'sidebar' );	
+	$('h3 a[aria-hidden="true"]').each(function() { $(this).parent().attr( 'aria-label', $(this).text()); });
+	
+	$('form.hide-labels input, form.hide-labels textarea').each(function() { $(this).attr('title', $(this).closest('p').find('label').text()) });
+	
+	$('span.required').attr("aria-hidden", true).after('<span class="sr-only">Required Field</span>');
 
 	// Add alt="" to all images with no alt tag
 	setTimeout(function() { $('img:not([alt])').attr('alt', ''); }, 50);
@@ -1500,19 +1589,21 @@ if ( $('body').hasClass('remove-sidebar') ) {
 
 	// Menu support
 	$('[role="menubar"]' ).on( 'focus.aria mouseenter.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).attr( 'aria-expanded', true ); } );
-	$('[role="menubar"]' ).on( 'blur.aria mouseleave.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).attr( 'aria-expanded', false ); } );
+	$('[role="menubar"]' ).on( 'blur.aria mouseleave.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).attr( 'aria-expanded', false ); } );	
+	$('a[role="menuitem"]' ).attr( 'tabindex', '0' );
+	$('li[aria-haspopup="true"]').attr( 'tabindex', '-1' );
 
 	// Remove iframe from tab order
 	$('iframe').each(function(){
 		$(this).attr("aria-hidden", true).attr("tabindex","-1");		
 	})
 
-	// Remove iframe from tab order
+	// Make hidden labels accessible to screen reader
 	$('form.hide-labels label:not(.show-label)').addClass('sr-only');	
 
 	// Add .tab-focus class to links and buttons & auto scroll to center	
 	document.addEventListener("keydown", function(e) {
-		if ( e.keyCode === 9 ) { 					
+		if ( e.keyCode === 9 ) { // 9 is tab key				
 			var els = document.getElementsByClassName('tab-focus');		
 			while ( els[0] ) {
 				els[0].classList.remove('tab-focus')
@@ -1560,17 +1651,6 @@ if ( $('body').hasClass('remove-sidebar') ) {
 				vidDefer[i].setAttribute('src',vidDefer[i].getAttribute('data-src'));
 			}
 		}
-
-		// HACK - keep the 100x400 box with parallax image from showing up on left side of page	
-		//window.clearParallaxGlitch = function () {
-			//$('.parallax-mirror').each(function() {
-				//var thisDiv = $(this), thisW = thisDiv.width();
-				//if ( thisW < 101 ) { thisDiv.css({ "opacity":0 }); }
-				//else { thisDiv.css({ "opacity":1 }); }
-			//}); 
-		//}
-		//setTimeout(function() {	clearParallaxGlitch(); }, 50);
-		//$('#container').resize(function() { clearParallaxGlitch(); });
 				
 	// Handle parallax sections (with content) on mobile devices
 		var countParallax = 1;
@@ -1676,15 +1756,14 @@ if ( $('body').hasClass('remove-sidebar') ) {
 				userLoc = data["city"] + ", " + data["region_code"];
 			});
 			userRefer = encodeURI(document.referrer); 
-			console.log("referrer: "+userRefer);
 		}, 1000);
 
 		setTimeout(function() {	// Wait 2 seconds before calling the following functions 	
 		// Count page view 
-			var postID = $('body').attr('id');				
+			var postID = $('body').attr('id'), pageViews = $('body').attr('data-pageviews'), uniqueID = $('body').attr('data-unique-id');
 			$.post({
 				url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-				data : { action: "count_post_views", id: postID, timezone: timezone, userLoc: userLoc },
+				data : { action: "count_post_views", id: postID, timezone: timezone, userLoc: userLoc, pagesViewed: pageViews, uniqueID: uniqueID },
 				success: function( response ) { console.log(response); } 
 			});	
 		// Count site view 
@@ -1695,7 +1774,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			});	
 
 			// Log page load speed
-			if ( loadTime > 0.1 ) { 				
+			if ( loadTime > 0.1 && loadTime < 10.0 ) { 				
 				$.post({
 					url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
 					data : { action: "log_page_load_speed", id: postID, timezone: timezone, loadTime: loadTime, deviceTime: deviceTime, userLoc: userLoc },

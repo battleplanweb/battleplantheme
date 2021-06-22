@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 // Set up American Standard logo to link to American Standard website	
 	$("img[src*='hvac-american-standard/american-standard']").each(function() { 
-		$(this).wrap('<a href="https://www.americanstandardair.com/" target="_blank"></a>'); 
+		$(this).wrap('<a href="https://www.americanstandardair.com/" target="_blank" rel="noreferrer"></a>'); 
 	});
 			
 // Track phone number clicks
@@ -543,6 +543,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			window.addEventListener('scroll', function() { moveDiv(); });			
 		}
 		moveDiv();
+
 
 	};
 
@@ -1642,8 +1643,8 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		if ( getDeviceW() <= mobileCutoff ) { deviceTime = "mobile"; }	
 
 	// Fade out loader screen when site is fully loaded
-		$("#loader").fadeOut("fast");  		
-
+		$("#loader").fadeOut("fast");  		 
+ 
 	// Get video link from data-src and feed to src 
 		var vidDefer = document.getElementsByTagName('iframe');
 		for (var i=0; i<vidDefer.length; i++) {
@@ -1674,6 +1675,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 				} else {
 					$('html').removeClass(parallaxClass);
 				}					
+
 			}, { offset: '100%' });	 		
 			
 			thisSection.waypoint(function(direction) {
@@ -1777,6 +1779,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			if ( loadTime > 0.1 && loadTime < 10.0 ) { 				
 				$.post({
 					url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
+
 					data : { action: "log_page_load_speed", id: postID, timezone: timezone, loadTime: loadTime, deviceTime: deviceTime, userLoc: userLoc },
 					success: function( response ) { console.log(response); } 
 				});	

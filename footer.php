@@ -47,14 +47,14 @@ get_sidebar(); ?>
 					endif;
 					if ( do_shortcode('[get-biz info="license"]') ) $buildCopyright .= "License ".do_shortcode('[get-biz info="license"]')." • "; 						
 					if ( do_shortcode('[get-biz info="phone-link"]') ) $buildCopyright .= do_shortcode('[get-biz info="phone-link"]');							
-					$buildCopyright .= "</div><div class='site-info-battleplan'>Website developed & maintained by <a href='http://battleplanwebdesign.com' target='_blank'>Battle Plan Web Design</a>";
+					$buildCopyright .= "</div><div class='site-info-battleplan'>Website developed & maintained by <a href='http://battleplanwebdesign.com' target='_blank' rel='noreferrer'>Battle Plan Web Design</a>";
 					if ( do_shortcode('[get-biz info="misc1"]') ) $buildCopyright .= " • ".do_shortcode('[get-biz info="misc1"]');	
 					$buildCopyright .= "</div>";					
 					if ( do_shortcode('[get-biz info="misc3"]') ) $buildCopyright .= "<div class='site-info-misc3'>".do_shortcode('[get-biz info="misc3"]')."</div>";	
 					
-					if (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-icon-80x80.png' ) ) : $iconName = "site-icon-80x80.png"; else: $iconName = "site-icon.png"; endif; 
+					if (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-icon-80x80.png' ) ) : $iconName = "site-icon-80x80.png"; $iconWH = " width='80' height='80'"; else: $iconName = "site-icon.png"; endif; 
 
-					$buildRight = do_shortcode('[img size="1/6" link = "/" class="site-icon"]<img class="site-icon noFX" src="../../../wp-content/uploads/'.$iconName.'" alt="Return to Home Page"/>[/img]');
+					$buildRight = do_shortcode('[img size="1/6" link = "/" class="site-icon"]<img class="site-icon noFX" src="../../../wp-content/uploads/'.$iconName.'" alt="Return to Home Page"'.$iconWH.'/>[/img]');
 					$buildRight .= do_shortcode('[txt size="5/6"]'.$buildCopyright.'[/txt]');
 				}
 

@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.12' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.13' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -1891,17 +1891,33 @@ function battleplan_widgets_init() {
 	);
 }
 
-// Load and enqueue styles & scripts
+// Load essential CSS in header
+add_action('bp_loader', 'battleplan_initialCSS', 1);
+function battleplan_initialCSS() { ?>
+	<style>	
+		html { line-height: 1.15; -webkit-text-size-adjust: 100%; box-sizing: border-box; }
+		body { margin: 0; }
+		*, *::before, *::after { box-sizing: inherit; }
+		.clearfix { clear: both; }
+		.screen-reader-text, .sr-only { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; }		
+		#mobile-navigation { display: block; position: fixed; height: 42px }
+		.side-slide #mobile-navigation, .side-push #mobile-navigation { right: 0; margin-right: -100%; }
+		.top-slide #mobile-navigation, .top-push #mobile-navigation { left: 0; margin-top: calc(-100% - 70px); }
+	</style>
+ <?php };
+
+// Defer jquery and other js to footer
+function defer_parsing_of_js( $url ) {
+    if ( is_user_logged_in() ) return $url; //don't break WP Admin
+    if ( FALSE === strpos( $url, '.js' ) ) return $url;
+    //if ( strpos( $url, 'jquery.js' ) ) return str_replace( ' src', ' async src', $url );
+    return str_replace( ' src', ' defer src', $url );
+}
+add_filter( 'script_loader_tag', 'defer_parsing_of_js', 10 );
+
+// Load and enqueue scripts
 add_action( 'wp_enqueue_scripts', 'battleplan_scripts', 20 );
 function battleplan_scripts() {
-	wp_enqueue_style( 'battleplan-animate', get_template_directory_uri().'/animate.css', array(), _BP_VERSION );	
-	wp_enqueue_style( 'battleplan-ie', get_template_directory_uri()."/style-ie.css", array(), _BP_VERSION );
-	wp_enqueue_style( 'battleplan-fontawesome', get_template_directory_uri()."/fontawesome.css", array(), _BP_VERSION );
-	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { wp_enqueue_style( 'battleplan-events', get_template_directory_uri()."/style-events.css", array(), _BP_VERSION ); } 	
-	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_enqueue_style( 'battleplan-woocommerce', get_template_directory_uri()."/style-woocommerce.css", array(), _BP_VERSION ); } 
-	if ( is_plugin_active( 'stripe-payments/accept-stripe-payments.php' ) ) { wp_enqueue_style( 'battleplan-stripe-payments', get_template_directory_uri()."/style-stripe-payments.css", array(), _BP_VERSION ); } 
-	if ( is_plugin_active( 'cue/cue.php' ) ) { wp_enqueue_style( 'battleplan-cue', get_template_directory_uri()."/cue.css", array(), _BP_VERSION ); } 
-	
 	wp_enqueue_script( 'battleplan-carousel', get_template_directory_uri().'/js/bootstrap-carousel.js', array(), _BP_VERSION, true );
 	wp_enqueue_script( 'battleplan-parallax', get_template_directory_uri().'/js/parallax.js', array(), _BP_VERSION, true );
 	wp_enqueue_script( 'battleplan-waypoints', get_template_directory_uri().'/js/waypoints.js', array(), _BP_VERSION, true );
@@ -1915,6 +1931,24 @@ function battleplan_scripts() {
 	$getThemeDir = get_stylesheet_directory_uri();
 	$saveDir = array( 'theme_dir_uri'=>$getThemeDir, 'upload_dir_uri'=>$getUploadDir['baseurl'] );
 	wp_localize_script( 'battleplan-script-site', 'theme_dir', $saveDir );
+}
+
+// Load and enqueue styles
+add_action( 'get_footer', 'battleplan_styles', 20 );
+function battleplan_styles() {
+	wp_enqueue_style( 'battleplan-animate', get_template_directory_uri().'/animate.css', array(), _BP_VERSION );	
+	wp_enqueue_style( 'battleplan-ie', get_template_directory_uri()."/style-ie.css", array(), _BP_VERSION );
+	wp_enqueue_style( 'battleplan-fontawesome', get_template_directory_uri()."/fontawesome.css", array(), _BP_VERSION );
+
+	if ( is_plugin_active( 'contact-form-7/wp-contact-form-7.php' ) ) { wp_enqueue_style( 'contact-form-7', '/wp-content/plugins/contact-form-7/includes/css/styles.css', array(), _BP_VERSION ); }
+	if ( is_plugin_active( 'extended-widget-options/plugin.php' ) ) { wp_enqueue_style( 'widgetopts-styles', '/wp-content/plugins/extended-widget-options/assets/css/widget-options.css', array(), _BP_VERSION ); }	
+	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { wp_enqueue_style( 'battleplan-events', get_template_directory_uri()."/style-events.css", array(), _BP_VERSION ); } 	
+	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_enqueue_style( 'battleplan-woocommerce', get_template_directory_uri()."/style-woocommerce.css", array(), _BP_VERSION ); } 
+	if ( is_plugin_active( 'stripe-payments/accept-stripe-payments.php' ) ) { wp_enqueue_style( 'battleplan-stripe-payments', get_template_directory_uri()."/style-stripe-payments.css", array(), _BP_VERSION ); } 
+	if ( is_plugin_active( 'cue/cue.php' ) ) { wp_enqueue_style( 'battleplan-cue', get_template_directory_uri()."/cue.css", array(), _BP_VERSION ); } 
+	
+	wp_enqueue_style( 'parent-style', get_template_directory_uri()."/style.css", array(), _BP_VERSION );
+	wp_enqueue_style( 'battleplan-style', get_stylesheet_directory_uri()."/style-site.css", array(), _BP_VERSION );	
 }
 
 add_action( 'admin_enqueue_scripts', 'battleplan_admin_scripts' );
@@ -1941,6 +1975,11 @@ function battleplan_dequeue_unwanted_stuff() {
 	wp_dequeue_style( 'stripe-handler-ng-style' ); wp_deregister_style( 'stripe-handler-ng-style' );
 	wp_dequeue_style( 'asp-default-style' ); wp_deregister_style( 'asp-default-style' );		
 	wp_dequeue_style( 'cue' ); wp_deregister_style( 'cue' );
+	// re-load in footer
+	wp_dequeue_style( 'contact-form-7' ); wp_deregister_style( 'contact-form-7' );
+	wp_dequeue_style( 'widgetopts-styles' ); wp_deregister_style( 'widgetopts-styles' );
+	wp_dequeue_style( 'parent-style' ); wp_deregister_style( 'parent-style' );
+	wp_dequeue_style( 'battleplan-style' ); wp_deregister_style( 'battleplan-style' );
 	
 	wp_dequeue_script( 'select2'); wp_deregister_script('select2');	
 	wp_dequeue_script( 'wphb-global' ); wp_deregister_script( 'wphb-global' );

@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 8.12
+Version: 8.13
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -57,18 +57,6 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
 /*--------------------------------------------------------------
 # Normalize
 --------------------------------------------- */
-
-/* Correct the line height in all browsers. Prevent adjustments of font size after orientation changes in iOS. */
-html {
-	line-height: 								1.15;
-	-webkit-text-size-adjust: 					100%;
-}
-
-/*  Remove the margin in all browsers.  */
-body {
-	margin: 									0;
-}
-
 /* Render the `main` element consistently in IE. */
 main {
 	display: 									block;
@@ -274,22 +262,6 @@ template {
 	display: 									none;
 }
 
-/* Inherit box-sizing to more easily change it's value on a component level. */
-*,
-*::before,
-*::after {
-	box-sizing: 								inherit;
-}
-
-html {
-	box-sizing: 								border-box;
-}
-
-.clearfix {
-	clear:										both;
-}
-
-
 /*--------------------------------------------------------------
 # Accessibility
 --------------------------------------------- */
@@ -297,15 +269,15 @@ html {
 /* Text meant only for screen readers. */
 .screen-reader-text,
 .sr-only {
+	/*position: 									absolute !important;
+	width: 										1px;
+	height: 									1px;
+	margin: 									-1px;
+	padding: 									0; // included in functions.php */
 	border: 									0;
 	clip: 										rect(1px, 1px, 1px, 1px);
 	clip-path: 									inset(50%);
-	height: 									1px;
-	margin: 									-1px;
 	overflow: 									hidden;
-	padding: 									0;
-	position: 									absolute !important;
-	width: 										1px;
 	word-wrap: 									normal !important;
 }
 
@@ -1954,10 +1926,6 @@ section.section .flex.nested .flex {
 	color:										#000000;
 }
 
-
-
-
-
 .site-info a,
 .site-info a:hover,
 .site-info a:active,
@@ -2367,8 +2335,8 @@ section.section .flex.nested .flex {
 #mobile-menu-bar .mm-bar-btn.activate-btn.active div:nth-of-type(3) { transform: rotate(45deg) translate(-5px, -6px) }
 
 #mobile-navigation {
-	display:									block;
-	position:									fixed;
+	/*display:									block;
+	position:									fixed; // included in functions.php */
 	top:										42px;
 	padding-top:								1em;
 	padding-bottom:								1em;
@@ -2403,15 +2371,13 @@ section.section .flex.nested .flex {
 
 .side-slide #mobile-navigation, 
 .side-push #mobile-navigation {
-	right:										0;
-
-
+	/*right:										0;
+	margin-right:								-100%; // included in functions.php */
 	border-left: 								1px solid #000000;
 	box-shadow: 								-4px 0 5px rgba(0,0,0,0.5);
 	width:										440px;
 	max-width:									100%;
 	height:										100vh;
-	margin-right:								-100%;
 	transition: 								all 0.2s linear;
 }
 
@@ -2433,12 +2399,12 @@ section.section .flex.nested .flex {
 
 .top-slide #mobile-navigation, 
 .top-push #mobile-navigation {
-	left:										0;
+	/*left:										0;
+	margin-top:									calc(-100% - 70px); // included in functions.php */
 	border-bottom: 								1px solid #000000;
 	box-shadow: 								0 4px 5px rgba(0,0,0,0.5);
 	width:										100%;
 	height:										auto;
-	margin-top:									calc(-100% - 70px);
 	transition: 								all 0.2s linear;
 }
 
@@ -2462,8 +2428,6 @@ section.section .flex.nested .flex {
 .top-push #mobile-navigation ul {
 	flex-flow: 									row wrap;
 }
-
-
 
 .top-slide #mobile-navigation li, 
 .top-push #mobile-navigation li {

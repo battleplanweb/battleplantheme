@@ -9,4 +9,12 @@
 		$alt 		= "Lennox Commercial Rooftop Units";
 	endif;
 
+	if ( $type == "lennox commercial heating" ) :
+		$title 		= "Heating";
+		$excerpt	= "<p>From high efficiency furnaces to convenient, high-performance unit heaters, Lennox® heating products provide flexible solutions for spaces large and small. Simple to install and easy to maintain, Lennox units can be customized to meet each building’s specific needs.</p>";
+		$link 		= "/product-type/heating/";
+		$pic 		= "Lennox-Commercial-Heating-1-320x320.jpg";
+		$alt 		= "Lennox Commercial Heating";
+	endif;
+
 ?>

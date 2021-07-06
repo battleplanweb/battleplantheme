@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.13' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.13.1' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -1908,7 +1908,7 @@ function battleplan_initialCSS() { ?>
 
 // Defer jquery and other js to footer
 function defer_parsing_of_js( $url ) {
-    if ( is_user_logged_in() ) return $url; //don't break WP Admin
+    if ( is_admin() ) return $url; //don't break WP Admin
     if ( FALSE === strpos( $url, '.js' ) ) return $url;
     //if ( strpos( $url, 'jquery.js' ) ) return str_replace( ' src', ' async src', $url );
     return str_replace( ' src', ' defer src', $url );
@@ -2905,7 +2905,7 @@ function battleplan_buildButton( $atts, $content = null ) {
 // Accordion Block 
 add_shortcode( 'accordion', 'battleplan_buildAccordion' );
 function battleplan_buildAccordion( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'title'=>'', 'excerpt'=>'', 'class'=>'', 'btn'=>'false', 'btn_collapse'=>'false', 'icon'=>'true', 'start'=>'', 'end'=>'' ), $atts );
+	$a = shortcode_atts( array( 'title'=>'', 'excerpt'=>'', 'class'=>'', 'active'=>'false', 'btn'=>'false', 'btn_collapse'=>'false', 'icon'=>'true', 'start'=>'', 'end'=>'' ), $atts );
 	$excerpt = esc_attr($a['excerpt']);
 	if ( $excerpt != '' ) $excerpt = '<div class="accordion-excerpt"><div class="accordion-box">'.$excerpt.'</div></div>';
 	$class = esc_attr($a['class']);
@@ -2921,7 +2921,8 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 		if ( $icon == 'true' ) : $icon = '<span class="accordion-icon" aria-hidden="true"></span>'; else: $icon = ''; endif;	
 		if ( $title ) : $title = '<h2 role="button" tabindex="0" class="accordion-title">'.$icon.$title.'</h2>'; endif;
 	endif;
-
+	$active = esc_attr($a['active']);
+	if ( $active != "false" ) $class .= " start-active";
 	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));	
 	if ( $start || $end ) {

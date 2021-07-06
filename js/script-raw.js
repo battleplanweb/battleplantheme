@@ -459,6 +459,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		} else {
 			$('.block-accordion').each(function() { accPos.push($(this).offset().top); });			
 		}
+		
+		$( '.block-accordion.start-active' ).attr( 'aria-expanded', true ).addClass('active');
+		$( '.block-accordion.start-active .accordion-excerpt' ).animate({ height: "toggle", opacity: "toggle" }, 0);					
+		$( '.block-accordion.start-active .accordion-content' ).animate({ height: "toggle", opacity: "toggle" }, 0);
 
 		$(".block-accordion").keyup(function(event) {
 			if (event.keyCode === 13 || event.keyCode === 32) {
@@ -616,7 +620,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 		// Add alternate classes to <body> to control state changes based on position of $magicLine
 		if ( stateChange == "true" ) {
-			var getMagicSide = $baseNav.find('.flex').position().left, getMagicW = $baseNav.find('.flex').width(), getMagicPos = $currentPage.position().left - getMagicSide, getMagicAdj, getMagicPct;				
+			var getMagicSide = $baseNav.find('.flex').position().left, getMagicW = $baseNav.find('.flex').width(), getMagicPos = $currentPage.position().left - getMagicSide, getMagicAdj, getMagicPct, getMagicNow;			
 
 			$baseNav.find('li').mouseover(function() {
 				getMagicPos = $(this).position().left - getMagicSide;
@@ -628,12 +632,15 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				magicColor(getMagicPos);
 			});
 
-			window.magicColor = function (getMagicPos) {
-				getMagicAdj = getMagicPos + ($('#magic-line').width() / 2);
+			window.magicColor = function (getMagicPos) {						
+				getMagicAdj = getMagicPos + ($magicLine.width() / 2);
 				getMagicPct = getMagicAdj / getMagicW;
+				getMagicNow = $magicLine.position().left - getMagicSide;
 				if ( getMagicPct < 0.33 ) { $('body').removeClass('menu-alt-2').removeClass('menu-alt-3').addClass('menu-alt-1'); }
 				if ( getMagicPct >= 0.33 && getMagicPct < 0.66 ) { $('body').removeClass('menu-alt-1').removeClass('menu-alt-3').addClass('menu-alt-2'); }
 				if ( getMagicPct >= 0.66 ) { $('body').removeClass('menu-alt-1').removeClass('menu-alt-2').addClass('menu-alt-3'); }		
+				if ( getMagicAdj <= getMagicNow ) { $('body').addClass('menu-dir-l').removeClass('menu-dir-r'); }	
+				else { $('body').addClass('menu-dir-r').removeClass('menu-dir-l'); }
 			};	
 
 			magicColor(getMagicPos);
@@ -934,10 +941,19 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	};		
 	
 // Turn SVG into an element's background image
-	window.svgBG = function (svg, element) {
+	window.svgBG = function (svg, element, where) {
 		var thisSVG = $(svg), thisEl = $(element);
-		thisSVG.clone().css({"position":"absolute"}).prependTo(thisEl);
-	};	
+		where = where || "bottom";
+		if ( where == "bottom" ) {
+			thisSVG.clone().css({"position":"absolute"}).appendTo(thisEl);
+		} else if ( where == "top" ) {
+			thisSVG.clone().css({"position":"absolute"}).prependTo(thisEl);
+		} else if ( where == "before" || where == "start" ) {
+			thisSVG.clone().css({"position":"absolute"}).insertBefore(thisEl);
+		} else {
+			thisSVG.clone().css({"position":"absolute"}).insertAfter(thisEl); 
+		} 
+	};
 	
 /*--------------------------------------------------------------
 # Set up animation
@@ -1390,9 +1406,9 @@ if ( $('body').hasClass('remove-sidebar') ) {
 --------------------------------------------------------------*/	
 
 	window.setupSidebar = function (compensate, sidebarScroll, shuffle) {
-		compensate = compensate || 0;		
 		sidebarScroll = sidebarScroll || "true";
-		shuffle = shuffle || "true";
+		shuffle = shuffle || "true";		
+		compensate = compensate || 0;		
 
 // Shuffle an array of widgets
 		window.arrangeWidgets = function ($elements) {
@@ -1434,8 +1450,9 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		arrangeWidgets( $('.shuffle') );
 
 // Initiate widget removal
-		window.widgetInit = function () {
+		window.widgetInit = function () {		
 			if ( getDeviceW() > mobileCutoff ) { 
+				$('#secondary').css({ "height":"calc(100% + "+compensate+"px)" });
 				$('.widget:not(.widget-important)').addClass('hide-widget');
 				addWidgets();				
 			} 

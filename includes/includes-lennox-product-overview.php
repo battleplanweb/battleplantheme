@@ -17,4 +17,44 @@
 		$alt 		= "Lennox Commercial Heating";
 	endif;
 
+	if ( $type == "lennox commercial split systems" ) :
+		$title 		= "Split Systems";
+		$excerpt	= "<p>Lennox offers an extensive line of split system components that provide reliable performance to meet the demands of a variety of commercial applications. Our systems offer the highest efficiency available while reducing energy bills and maximizing comfort.</p>";
+		$link 		= "/product-type/split-systems/";
+		$pic 		= "Lennox-Commercial-Split-Systems-1-320x320.jpg";
+		$alt 		= "Lennox Commercial Split Systems";
+	endif;
+
+	if ( $type == "lennox commercial mini split systems" ) :
+		$title 		= "Mini-Split Systems";
+		$excerpt	= "<p>Lennox® Mini-Split Systems offer flexible, easily installed cooling and heating for a variety of commercial applications when new ductwork isn’t convenient or even possible. Energy efficient operation and an extensive product portfolio make them a perfect fit for any environment.</p>";
+		$link 		= "/product-type/mini-splits/";
+		$pic 		= "Lennox-Commercial-Mini-Split-Systems-1-320x320.jpg";
+		$alt 		= "Lennox Commercial Mini-Split Systems";
+	endif;
+
+	if ( $type == "lennox commercial indoor air quality" ) :
+		$title 		= "Indoor Air Quality";
+		$excerpt	= "<p>Ventilation is essential to improving indoor air quality by cost-effectively incorporating fresh air that reduces the concentration of chemicals, carbon dioxide and other contaminates. Ideal for tightly sealed buildings, a ventilation system helps replace stale, contaminated indoor air with fresher.</p>";
+		$link 		= "/product-type/indoor-air-quality/";
+		$pic 		= "Lennox-Commercial-Indoor-Air-Quality-1-320x320.jpg";
+		$alt 		= "Lennox Commercial Indoor Air Quality";
+	endif;
+
+	if ( $type == "lennox commercial controls" ) :
+		$title 		= "Controls";
+		$excerpt	= "<p>Lennox® commercial thermostats and sensors offer simple and efficient temperature control. Our user-friendly thermostats and sensors are designed for simple operation with sophisticated features and capabilities designed specifically for commercial applications.</p>";
+		$link 		= "/product-type/controls/";
+		$pic 		= "Lennox-Commercial-Controller-4-320x320.jpg";
+		$alt 		= "Lennox Commercial Controls";
+	endif;
+
+	if ( $type == "lennox commercial vrf" ) :
+		$title 		= "Lennox VRF";
+		$excerpt	= "<p>Lennox VRF® is a flexible, versatile solution that is ideal for a wide range of buildings and workplaces. From office buildings to retail environments of all sizes, Lennox VRF makes customized comfort easy and efficient.</p>";
+		$link 		= "/product-type/vrf/";
+		$pic 		= "Lennox-VRF-1-320x320.jpg";
+		$alt 		= "Lennox Commercial VRF";
+	endif;
+
 ?>

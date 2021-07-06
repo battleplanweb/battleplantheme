@@ -1526,25 +1526,27 @@ function battleplan_submenu_order( $menu_ord ) {
 // Remove unwanted dashboard widgets
 add_action('wp_dashboard_setup', 'battleplan_remove_dashboard_widgets');
 function battleplan_remove_dashboard_widgets () {
-	remove_action('welcome_panel','wp_welcome_panel'); 						//Welcome to WordPress!
-	remove_meta_box('dashboard_primary','dashboard','normal'); 				//WordPress.com Blog
-	remove_meta_box('dashboard_primary','dashboard','side'); 				//WordPress.com Blog
+	remove_action('welcome_panel','wp_welcome_panel'); 							//Welcome to WordPress!
+	remove_meta_box('dashboard_primary','dashboard','normal'); 					//WordPress.com Blog
+	remove_meta_box('dashboard_primary','dashboard','side'); 					//WordPress.com Blog
 	remove_meta_box('dashboard_right_now','dashboard','normal');	
 	remove_meta_box('dashboard_right_now','dashboard','side');
-	remove_meta_box('dashboard_quick_press','dashboard','normal'); 			//Quick Press widget
-	remove_meta_box('dashboard_quick_press','dashboard','side'); 			//Quick Press widget
-	remove_meta_box('tribe_dashboard_widget', 'dashboard', 'normal'); 		//News From Modern Tribe	
-	remove_meta_box('tribe_dashboard_widget', 'dashboard', 'side'); 		//News From Modern Tribe
-	remove_meta_box('wpe_dify_news_feed','dashboard','normal'); 			//WP Engine	
-	remove_meta_box('wpe_dify_news_feed','dashboard','side'); 				//WP Engine
-	remove_meta_box('wds_sitemaps_dashboard_widget','dashboard','normal');	//SmartCrawl Site Maps
-	remove_meta_box('wds_sitemaps_dashboard_widget','dashboard','side');	//SmartCrawl Site Maps
-	remove_meta_box('dashboard_activity','dashboard','normal');				//Activity
-	remove_meta_box('dashboard_activity','dashboard','side');				//Activity
-	remove_meta_box('dashboard_site_health','dashboard','normal');			//Site Health
-	remove_meta_box('dashboard_site_health','dashboard','side');			//Site Health
-	remove_meta_box('woocommerce_dashboard_status','dashboard','normal');	//Woocommerce
-	remove_meta_box('woocommerce_dashboard_status','dashboard','side');		//Woocommerce
+	remove_meta_box('dashboard_quick_press','dashboard','normal'); 				//Quick Press widget
+	remove_meta_box('dashboard_quick_press','dashboard','side'); 				//Quick Press widget
+	remove_meta_box('tribe_dashboard_widget', 'dashboard', 'normal'); 			//News From Modern Tribe	
+	remove_meta_box('tribe_dashboard_widget', 'dashboard', 'side'); 			//News From Modern Tribe
+	remove_meta_box('wpe_dify_news_feed','dashboard','normal'); 				//WP Engine	
+	remove_meta_box('wpe_dify_news_feed','dashboard','side'); 					//WP Engine
+	remove_meta_box('wds_sitemaps_dashboard_widget','dashboard','normal');		//SmartCrawl Site Maps
+	remove_meta_box('wds_sitemaps_dashboard_widget','dashboard','side');		//SmartCrawl Site Maps
+	remove_meta_box('dashboard_activity','dashboard','normal');					//Activity
+	remove_meta_box('dashboard_activity','dashboard','side');					//Activity
+	remove_meta_box('dashboard_site_health','dashboard','normal');				//Site Health
+	remove_meta_box('dashboard_site_health','dashboard','side');				//Site Health
+	remove_meta_box('woocommerce_dashboard_status','dashboard','normal');		//Woocommerce
+	remove_meta_box('woocommerce_dashboard_status','dashboard','side');			//Woocommerce
+	remove_meta_box('wp_mail_smtp_reports_widget_lite','dashboard','normal');	//WP Mail SMTP
+	remove_meta_box('wp_mail_smtp_reports_widget_lite','dashboard','side');		//WP Mail SMTP
 }
 
 // Add new dashboard widgets

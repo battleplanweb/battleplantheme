@@ -28,7 +28,7 @@ add_action( 'admin_print_footer_scripts', 'battleplan_add_quicktags' );
 function battleplan_add_quicktags() {
 	if ( wp_script_is( 'quicktags' ) ) { ?>
 		<script type="text/javascript">
-			QTags.addButton( 'bp_paragraph', 'p', '<p>', '</p>\n\n', 'p', 'Paragraph Tag', 1 );
+			QTags.addButton( 'bp_paragraph', 'p', '<p>', '</p>\n', 'p', 'Paragraph Tag', 1 );
 			QTags.addButton( 'bp_li', 'li', ' <li>', '</li>', 'li', 'List Item', 100 );
 
 			QTags.addButton( 'bp_section', 'section', '[section name="becomes id attribute" hash="compensation for scroll on one-page sites" style="corresponds to css" width="default, stretch, full, edge, inline" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '[/section]\n\n', 'section', 'Section', 1000 );		

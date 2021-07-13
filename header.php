@@ -89,16 +89,12 @@ wp_nav_menu( array(
 		
 	</header><!-- #masthead -->
 	
+	<?php bp_after_masthead(); ?>
+	
 	<?php	
 	$current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );
 	$textarea = get_post_meta( $current_page->ID, 'page-top_text', true );
- 	if ( $textarea != "" ) 
-		: echo "<section id='wrapper-top'>".apply_filters('the_content', $textarea)."</section><!-- #wrapper-top -->";
-	else:
-		$page_slug = $current_page->post_name;
-		$page_data = get_page_by_path($page_slug."-top", OBJECT, 'page' );
-		if ( $page_data && $page_data->post_status == 'publish' ) : echo "<section id='wrapper-top'>".apply_filters('the_content', $page_data->post_content)."</section><!-- #wrapper-top -->"; endif; 
-	endif;
+ 	if ( $textarea != "" ) : echo "<section id='wrapper-top'>".apply_filters('the_content', $textarea)."</section><!-- #wrapper-top -->"; endif;
 	?>
 	
 	<section id="wrapper-content">

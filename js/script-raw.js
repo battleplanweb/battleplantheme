@@ -1289,7 +1289,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 	});
 	
 // Control Menu Buttons on "one page" site		
-	if ( $('.menu-item a[href^="#"]').is(':visible') ) { 
+	if ( $('.menu-item:not(.no-highlight) a[href^="#"]').is(':visible') ) { 
 		var menu = $('nav:visible').find('ul'), whenToChange = $(window).outerHeight() * 0.35, menuHeight = menu.outerHeight()+whenToChange, menuItems = menu.find('a[href^="#"]'), scrollItems = menuItems.map(function(){ var item = $($(this).attr("href")); if ( $(this).parent().css('display') != "none" ) { return item; } });
 		
 		$(window).scroll(function() { 

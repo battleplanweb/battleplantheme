@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.13.1' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.14' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -403,10 +403,11 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	$textSize = esc_attr($a['text_size']);		
 	$accordion = esc_attr($a['accordion']);			
 	$format = esc_attr($a['format_text']);
-	$link = esc_attr($a['link']);		
-	if ( $link == "false" || $link == "no" || $type == "testimonials" ) : $link == "false"; $linkLoc = "";
+	$link = esc_attr($a['link']);	
+	if ( strpos($link, 'cf-') === 0 ) : $linkLoc = esc_url(get_field(str_replace('cf-', '', $link)));
+	elseif ( $type == "testimonials" ) : $linkLoc = "/testimonials/";
+	elseif ( $link == "false" || $link == "no" ) : $link = "false"; $linkLoc = "";
 	elseif ( $link == "post" ) : $linkLoc = esc_url(get_the_permalink(get_the_ID()));	
-	elseif ( strpos($link, 'cf-') === 0 ) : $linkLoc = esc_url(get_field(str_replace('cf-', '', $link))); 
 	else: $linkLoc = $link;	endif;
 	$noPic = esc_attr($a['no_pic']);	
 	if ( $noPic == "" ) $noPic = "false";	
@@ -432,7 +433,6 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	else : $textSize = "100"; endif;
 	
 	if ( $type == "testimonials" ) {
-		$linkLoc = "/testimonials/";
 		$testimonialName = esc_attr(get_field( "testimonial_name" ));
 		$testimonialPhone = esc_attr(get_field( "testimonial_phone" ));
 		$testimonialEmail = esc_attr(get_field( "testimonial_email" ));
@@ -773,7 +773,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 							$buildInner .= '<div class="carousel-item carousel-item-'.$type.'" data-id="'.get_the_ID().'">';
 						endif;	
 
-						$buildInner .= do_shortcode('[build-archive type="'.$type.'" show_btn="'.$showBtn.'" btn_text="'.$postBtn.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" size="'.$size.'" pic_size="'.$picSize.'" text_size="'.$textSize.'"]');		
+						$buildInner .= do_shortcode('[build-archive type="'.$type.'" show_btn="'.$showBtn.'" btn_text="'.$postBtn.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" size="'.$size.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" link="'.$link.'"]');		
 
 						$buildInner .= "</div>";	
 					endif;
@@ -790,7 +790,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	$controlsNextBtn .= '<div class="block block-button"><a class="button carousel-control-next'.$controlClass.'" href="#'.$type.'Slider'.$sliderNum.'" data-slide="next"><span class="carousel-control-next-icon" aria-label="Next Slide"><span class="sr-only">Next Slide</span></span></a></div>';
 	$viewMoreBtn = do_shortcode('[btn link="'.$linkTo.'"]'.$allBtn.'[/btn]');	
 
-	$buildControls = "<div class='controls'>";	
+	$buildControls = "<div class='controls controls-".$controlsPos."'>";	
 	$buildControls .= $controlsPrevBtn;
 	if ( $allBtn != "" ) $buildControls .= $viewMoreBtn;
 	$buildControls .= $controlsNextBtn;	
@@ -2359,7 +2359,7 @@ function bp_loader() { do_action('bp_loader'); }
 function bp_font_loader() { do_action('bp_font_loader'); }
 function bp_google_analytics() { do_action('bp_google_analytics'); }
 function bp_mobile_menu_bar_items() { do_action('bp_mobile_menu_bar_items'); }
-
+function bp_after_masthead() { do_action('bp_after_masthead'); }
 
 /*--------------------------------------------------------------
 # AJAX Functions
@@ -3005,9 +3005,10 @@ function battleplan_buildLockedSection( $atts, $content = null ) {
 // Social Media Buttons 
 add_shortcode( 'social-btn', 'battleplan_socialBtn' );
 function battleplan_socialBtn( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'type'=>'', 'img'=>'' ), $atts );
+	$a = shortcode_atts( array( 'type'=>'', 'img'=>'', 'link'=>'' ), $atts );
 	$type = $icon = esc_attr($a['type']);
-	$link = do_shortcode('[get-biz info="'.$type.'"]');
+	$link = esc_attr($a['link']);
+	if ( $link == '' ) $link = do_shortcode('[get-biz info="'.$type.'"]');
 	$prefix = "";
 	$img = esc_attr($a['img']);
 	$alt = "Visit us on ".$type;

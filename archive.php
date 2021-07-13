@@ -83,7 +83,7 @@ get_header();
 				$accordion = "false";
 				$countTease = "false";
 				$countView = "false";
-				$link = "";
+				$link = "post"; //post, cf-custom-field, specific link, false
 				$addInfo = "";				
 				$addClass = "";
 			endif;

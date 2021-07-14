@@ -297,7 +297,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		} else {
 			trigger = $(strictTrigger);
 		}
-
+		
 		if ( strictOffset === "" ) {
 			if ( strictTop === "" ) {
 				offset = $(container).outerHeight();
@@ -310,7 +310,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 		$(container).css("top","unset");
 
-		trigger.waypoint(function(direction) {			
+		trigger.waypoint(function(direction) {		
 			var newTop = 0;
 			if ( strictTop === "" ) {
 				$('.stuck').each(function() {
@@ -943,7 +943,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 // Turn SVG into an element's background image
 	window.svgBG = function (svg, element, where) {
 		var thisSVG = $(svg), thisEl = $(element);
-		where = where || "bottom";
+		where = where || "top";
 		if ( where == "bottom" ) {
 			thisSVG.clone().css({"position":"absolute"}).appendTo(thisEl);
 		} else if ( where == "top" ) {

@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '8.14.1' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.0' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -603,7 +603,6 @@ function battleplan_getRandomPosts($atts, $content = null) {
 
 	global $post; 
 	$getPosts = new WP_Query( $args );
-	$combinePosts = "";
 	if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 	
 		$showPost = do_shortcode('[build-archive type="'.$postType.'" count_tease="'.$countTease.'" count_view="'.$countView.'" thumb_only="'.$thumbOnly.'" show_btn="'.$showBtn.'" btn_text="'.$button.'" btn_pos="'.$btnPos.'" show_title="'.$title.'" title_pos="'.$titlePos.'" show_date="'.$showDate.'" show_excerpt="'.$showExcerpt.'" show_social="'.$showSocial.'" show_content="'.$showContent.'" show_author="'.$showAuthor.'" size="'.$size.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" link="'.$link.'"]');	
 	
@@ -611,7 +610,8 @@ function battleplan_getRandomPosts($atts, $content = null) {
 		if ( has_post_thumbnail() || $thumbnail != "force" ) $combinePosts .= $showPost;
 	endwhile; wp_reset_postdata(); endif;
 	
-	if ( $thumbOnly == "true" ) $combinePosts = '<div class = "random-posts thumb-only thumb-col-'.$thumbCol.'">'.$combinePosts.'</div>';
+	if ( $thumbOnly == "true" ) $combinePosts = '<div class="random-post random-posts thumb-only thumb-col-'.$thumbCol.'">'.$combinePosts.'</div>';
+	
 	return $combinePosts;
 }
 
@@ -993,7 +993,11 @@ add_shortcode( 'get-emergency-service', 'battleplan_getEmergencyService' );
 function battleplan_getEmergencyService( $atts, $content = null ) {	
 	$a = shortcode_atts( array( 'graphic'=>'1' ), $atts );
 	$graphic = esc_attr($a['graphic']);
-	return '<img class="noFX" src="/wp-content/themes/battleplantheme/common/logos/24-hr-service-'.$graphic.'.png" alt="We provide 24/7 emergency service" />';
+	if ( $graphic == 1 ) : $height = 177;
+	elseif ( $graphic == 2 || $graphic == 3 ) : $height = 237;
+	elseif ( $graphic == 4 ) : $height = 418;
+	else : $height = 320; endif;
+	return '<img class="noFX" src="/wp-content/themes/battleplantheme/common/logos/24-hr-service-'.$graphic.'.png" alt="We provide 24/7 emergency service" width="320" height="'.$height.'" />';
 }
 
 // Add BBB widget to Sidebar
@@ -1002,7 +1006,9 @@ function battleplan_getBBB( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'link'=>'', 'graphic'=>'1' ), $atts );
 	$link = esc_attr($a['link']);
 	$graphic = esc_attr($a['graphic']);
-	return '<a href="'.$link.'" title="Click here to view our profile page on the Better Business Bureau website."><img src="/wp-content/themes/battleplantheme/common/logos/bbb-'.$graphic.'.png" alt="We are accredited with the BBB and are proud of our A+ rating" /></a>';
+	if ( $graphic == 1 ) : $height = 221;
+	else : $height = 94; endif;
+	return '<a href="'.$link.'" title="Click here to view our profile page on the Better Business Bureau website."><img src="/wp-content/themes/battleplantheme/common/logos/bbb-'.$graphic.'.png" alt="We are accredited with the BBB and are proud of our A+ rating"  width="320" height="'.$height.'" /></a>';
 }
 
 // Add Credit Cards widget to Sidebar
@@ -1015,10 +1021,10 @@ function battleplan_getCreditCards( $atts, $content = null ) {
 	$amex = esc_attr($a['amex']);
 
 	$buildCards = '<div id="credit-cards" class="currency">';
-	if ( $mc == "yes" ) $buildCards .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-mc.png" alt="We accept Mastercard"/>';
-	if ( $visa == "yes" ) $buildCards .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-visa.png" alt="We accept Visa"/>';	
-	if ( $discover == "yes" ) $buildCards .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-discover.png" alt="We accept Discover" />';	
-	if ( $amex == "yes" ) $buildCards .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-amex.png" alt="We accept American Express" />';
+	if ( $mc == "yes" ) $buildCards .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-mc.png" loading="lazy" alt="We accept Mastercard" width="100" height="62"/>';
+	if ( $visa == "yes" ) $buildCards .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-visa.png" loading="lazy" alt="We accept Visa width="100" height="62"/>';
+	if ( $discover == "yes" ) $buildCards .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-discover.png" loading="lazy" alt="We accept Discover width="100" height="62"/>';
+	if ( $amex == "yes" ) $buildCards .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-amex.png" loading="lazy" alt="We accept American Express width="100" height="62"/>';
 	$buildCards .= '</div>';  					  
 													  
 	return $buildCards;
@@ -1037,13 +1043,13 @@ function battleplan_getCrypto( $atts, $content = null ) {
 	$stellar = esc_attr($a['stellar']);
 
 	$buildCrypto = '<div id="crypto" class="currency">';
-	if ( $bitcoin == "yes" ) $buildCrypto .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-bitcoin.png" alt="We accept Bitcoin crypto currency"/>';
-	if ( $cardano == "yes" ) $buildCrypto .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-cardano.png" alt="We accept Cardano crypto currency"/>';	
-	if ( $chainlink == "yes" ) $buildCrypto .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-chainlink.png" alt="We accept Chainlink crypto currency" />';	
-	if ( $dogecoin == "yes" ) $buildCrypto .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-dogecoin.png" alt="We accept Dogecoin crypto currency" />';
-	if ( $monero == "yes" ) $buildCrypto .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-monero.png" alt="We accept Monero crypto currency"/>';	
-	if ( $polygon == "yes" ) $buildCrypto .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-polygon.png" alt="We accept Polygon crypto currency" />';	
-	if ( $stellar == "yes" ) $buildCrypto .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-stellar.png" alt="We accept Stellar crypto currency" />';
+	if ( $bitcoin == "yes" ) $buildCrypto .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-bitcoin.png" alt="We accept Bitcoin crypto currency" width="100" height="100" />';
+	if ( $cardano == "yes" ) $buildCrypto .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-cardano.png" alt="We accept Cardano crypto currency" width="100" height="100" />';
+	if ( $chainlink == "yes" ) $buildCrypto .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-chainlink.png" alt="We accept Chainlink crypto currency" width="100" height="100" />';
+	if ( $dogecoin == "yes" ) $buildCrypto .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-dogecoin.png" alt="We accept Dogecoin crypto currency" width="100" height="100" />';
+	if ( $monero == "yes" ) $buildCrypto .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-monero.png" alt="We accept Monero crypto currency" width="100" height="100" />';
+	if ( $polygon == "yes" ) $buildCrypto .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-polygon.png" alt="We accept Polygon crypto currency" width="100" height="100" />';
+	if ( $stellar == "yes" ) $buildCrypto .= '<img src="/wp-content/themes/battleplantheme/common/logos/cc-stellar.png" alt="We accept Stellar crypto currency" width="100" height="100" />';
 	$buildCrypto .= '</div>';  					  
 													  
 	return $buildCrypto;
@@ -1890,21 +1896,32 @@ function battleplan_widgets_init() {
 		)
 	);
 }
+ 
+// Disable emojis
+add_action( 'init', 'bp_disable_emojis' );
+function bp_disable_emojis() {
+	remove_action( 'wp_head', 'print_emoji_detection_script', 7 );
+	remove_action( 'admin_print_scripts', 'print_emoji_detection_script' );
+	remove_action( 'wp_print_styles', 'print_emoji_styles' );
+	remove_action( 'admin_print_styles', 'print_emoji_styles' ); 
+	remove_filter( 'the_content_feed', 'wp_staticize_emoji' );
+	remove_filter( 'comment_text_rss', 'wp_staticize_emoji' ); 
+	remove_filter( 'wp_mail', 'wp_staticize_emoji_for_email' );
+	add_filter( 'tiny_mce_plugins', 'bp_disable_emojis_tinymce' );
+	add_filter( 'wp_resource_hints', 'bp_disable_emojis_remove_dns_prefetch', 10, 2 );
+}
 
-// Load essential CSS in header
-add_action('bp_loader', 'battleplan_initialCSS', 1);
-function battleplan_initialCSS() { ?>
-	<style>	
-		html { line-height: 1.15; -webkit-text-size-adjust: 100%; box-sizing: border-box; }
-		body { margin: 0; }
-		*, *::before, *::after { box-sizing: inherit; }
-		.clearfix { clear: both; }
-		.screen-reader-text, .sr-only { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; }		
-		#mobile-navigation { display: block; position: fixed; height: 42px }
-		.side-slide #mobile-navigation, .side-push #mobile-navigation { right: 0; margin-right: -100%; }
-		.top-slide #mobile-navigation, .top-push #mobile-navigation { left: 0; margin-top: calc(-100% - 70px); }
-	</style>
- <?php };
+function bp_disable_emojis_tinymce( $plugins ) {
+	if ( is_array( $plugins ) ) { return array_diff( $plugins, array( 'wpemoji' ) ); } else { return array(); }
+}
+
+function bp_disable_emojis_remove_dns_prefetch( $urls, $relation_type ) {
+	if ( 'dns-prefetch' == $relation_type ) {
+		$emoji_svg_url = apply_filters( 'emoji_svg_url', 'https://s.w.org/images/core/emoji/2/svg/' );
+		$urls = array_diff( $urls, array( $emoji_svg_url ) );
+	}
+	return $urls;
+}
 
 // Defer jquery and other js to footer
 function defer_parsing_of_js( $url ) {
@@ -1933,13 +1950,34 @@ function battleplan_scripts() {
 	wp_localize_script( 'battleplan-script-site', 'theme_dir', $saveDir );
 }
 
-// Load and enqueue styles
-add_action( 'get_footer', 'battleplan_styles', 20 );
-function battleplan_styles() {
-	wp_enqueue_style( 'battleplan-animate', get_template_directory_uri().'/animate.css', array(), _BP_VERSION );	
-	wp_enqueue_style( 'battleplan-ie', get_template_directory_uri()."/style-ie.css", array(), _BP_VERSION );
-	wp_enqueue_style( 'battleplan-fontawesome', get_template_directory_uri()."/fontawesome.css", array(), _BP_VERSION );
+// Dequeue unneccesary styles & scripts
+add_action( 'wp_print_styles', 'battleplan_dequeue_unwanted_stuff', 9998 );
+function battleplan_dequeue_unwanted_stuff() {
+	wp_dequeue_style( 'wp-block-library' );  wp_deregister_style( 'wp-block-library' );
+	wp_dequeue_style( 'wp-block-library-theme' );  wp_deregister_style( 'wp-block-library-theme' );	
+	wp_dequeue_style( 'css-animate' );  wp_deregister_style( 'css-animate' );
+	wp_dequeue_style( 'select2' );  wp_deregister_style( 'select2' );
+	wp_dequeue_style( 'fontawesome' ); wp_deregister_style( 'fontawesome' );
+	wp_dequeue_style( 'stripe-handler-ng-style' ); wp_deregister_style( 'stripe-handler-ng-style' );
+	wp_dequeue_style( 'asp-default-style' ); wp_deregister_style( 'asp-default-style' );		
+	wp_dequeue_style( 'cue' ); wp_deregister_style( 'cue' );
+	wp_dequeue_style( 'typed-cursor' ); wp_deregister_style( 'typed-cursor' );
+	// re-load in footer
+	wp_dequeue_style( 'contact-form-7' ); wp_deregister_style( 'contact-form-7' );
+	wp_dequeue_style( 'widgetopts-styles' ); wp_deregister_style( 'widgetopts-styles' );
+	wp_dequeue_style( 'parent-style' ); wp_deregister_style( 'parent-style' );
+	wp_dequeue_style( 'battleplan-style' ); wp_deregister_style( 'battleplan-style' );
+	
+	wp_dequeue_script( 'select2'); wp_deregister_script('select2');	
+	wp_dequeue_script( 'wphb-global' ); wp_deregister_script( 'wphb-global' );
+	wp_dequeue_script( 'wp-embed' ); wp_deregister_script( 'wp-embed' );
+	wp_dequeue_script( 'modernizr' ); wp_deregister_script( 'modernizr' );
+	if ( !is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_dequeue_script( 'underscore' ); wp_deregister_script( 'underscore' ); } 
+}
 
+// Load and enqueue styles
+add_action( 'wp_print_styles', 'battleplan_header_styles', 9999 );
+function battleplan_header_styles() {
 	if ( is_plugin_active( 'contact-form-7/wp-contact-form-7.php' ) ) { wp_enqueue_style( 'contact-form-7', '/wp-content/plugins/contact-form-7/includes/css/styles.css', array(), _BP_VERSION ); }
 	if ( is_plugin_active( 'extended-widget-options/plugin.php' ) ) { wp_enqueue_style( 'widgetopts-styles', '/wp-content/plugins/extended-widget-options/assets/css/widget-options.css', array(), _BP_VERSION ); }	
 	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { wp_enqueue_style( 'battleplan-events', get_template_directory_uri()."/style-events.css", array(), _BP_VERSION ); } 	
@@ -1949,6 +1987,13 @@ function battleplan_styles() {
 	
 	wp_enqueue_style( 'parent-style', get_template_directory_uri()."/style.css", array(), _BP_VERSION );
 	wp_enqueue_style( 'battleplan-style', get_stylesheet_directory_uri()."/style-site.css", array(), _BP_VERSION );	
+}
+
+add_action( 'wp_footer', 'battleplan_footer_styles' );
+function battleplan_footer_styles() {
+	wp_enqueue_style( 'battleplan-animate', get_template_directory_uri().'/animate.css', array(), _BP_VERSION );	
+	wp_enqueue_style( 'battleplan-ie', get_template_directory_uri()."/style-ie.css", array(), _BP_VERSION );
+	wp_enqueue_style( 'battleplan-fontawesome', get_template_directory_uri()."/fontawesome.css", array(), _BP_VERSION );
 }
 
 add_action( 'admin_enqueue_scripts', 'battleplan_admin_scripts' );
@@ -1964,33 +2009,9 @@ if ( get_option( 'site_type' ) == 'hvac' ) { require_once get_template_directory
 if ( get_option( 'site_type' ) == 'pedigree' ) { require_once get_template_directory() . '/includes/includes-pedigree.php'; } 
 require_once get_template_directory() . '/functions-public.php';
 
-// Dequeue unneccesary styles & scripts
-add_action( 'wp_print_styles', 'battleplan_dequeue_unwanted_stuff', 9999 );
-function battleplan_dequeue_unwanted_stuff() {
-	wp_dequeue_style( 'wp-block-library' );  wp_deregister_style( 'wp-block-library' );
-	wp_dequeue_style( 'wp-block-library-theme' );  wp_deregister_style( 'wp-block-library-theme' );	
-	wp_dequeue_style( 'css-animate' );  wp_deregister_style( 'css-animate' );
-	wp_dequeue_style( 'select2' );  wp_deregister_style( 'select2' );
-	wp_dequeue_style( 'fontawesome' ); wp_deregister_style( 'fontawesome' );
-	wp_dequeue_style( 'stripe-handler-ng-style' ); wp_deregister_style( 'stripe-handler-ng-style' );
-	wp_dequeue_style( 'asp-default-style' ); wp_deregister_style( 'asp-default-style' );		
-	wp_dequeue_style( 'cue' ); wp_deregister_style( 'cue' );
-	// re-load in footer
-	wp_dequeue_style( 'contact-form-7' ); wp_deregister_style( 'contact-form-7' );
-	wp_dequeue_style( 'widgetopts-styles' ); wp_deregister_style( 'widgetopts-styles' );
-	wp_dequeue_style( 'parent-style' ); wp_deregister_style( 'parent-style' );
-	wp_dequeue_style( 'battleplan-style' ); wp_deregister_style( 'battleplan-style' );
-	
-	wp_dequeue_script( 'select2'); wp_deregister_script('select2');	
-	wp_dequeue_script( 'wphb-global' ); wp_deregister_script( 'wphb-global' );
-	wp_dequeue_script( 'wp-embed' ); wp_deregister_script( 'wp-embed' );
-	wp_dequeue_script( 'modernizr' ); wp_deregister_script( 'modernizr' );
-	if ( !is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_dequeue_script( 'underscore' ); wp_deregister_script( 'underscore' ); } 
-}
-
 //Brand log-in screen with BP Knight
 add_action( 'login_enqueue_scripts', 'battleplan_login_logo' );
-function battleplan_login_logo() { ?><style type="text/css">body.login div#login h1 a { background-image: url('/wp-content/themes/battleplantheme/common/logos/battleplan-logo.png'); padding-bottom: 120px; width: 100%;	background-size: 50%} #login {padding-top:70px !important} </style> <?php }  
+function battleplan_login_logo() { ?><style type="text/css">body.login div#login h1 a { background-image: url('/wp-content/themes/battleplantheme/common/logos/battleplan-logo.png'); padding-bottom: 120px; width: 100%; background-size: 50%} #login {padding-top:70px !important} </style> <?php }  
 
 add_filter( 'login_headerurl', 'battleplan_login_url', 10, 1 );
 function battleplan_login_url( $url ) {

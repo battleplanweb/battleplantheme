@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 8.14.1
+Version: 9.0
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -53,10 +53,29 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
 	- Review Questions & Redirect
 # Mobile Styles
 
-
 /*--------------------------------------------------------------
 # Normalize
 --------------------------------------------- */
+html { 
+	line-height: 								1.15; 
+	-webkit-text-size-adjust: 					100%; 
+	box-sizing: 								border-box; 
+}
+
+body { 
+	margin: 									0;
+}
+
+*, 
+*::before, 
+*::after { 
+	box-sizing: 								inherit; 
+}
+
+.clearfix { 
+	clear: 										both; 
+}
+		
 /* Render the `main` element consistently in IE. */
 main {
 	display: 									block;
@@ -269,11 +288,11 @@ template {
 /* Text meant only for screen readers. */
 .screen-reader-text,
 .sr-only {
-	/*position: 									absolute !important;
+	position: 									absolute !important;
 	width: 										1px;
 	height: 									1px;
 	margin: 									-1px;
-	padding: 									0; // included in functions.php */
+	padding: 									0;
 	border: 									0;
 	clip: 										rect(1px, 1px, 1px, 1px);
 	clip-path: 									inset(50%);
@@ -446,6 +465,8 @@ span {
 .ribbon:after {
 	right: 										-2px;
 	border-right: 								15px solid transparent !important;
+
+
 }
 
 .slant-edge:before, 
@@ -1988,6 +2009,7 @@ section.section .flex.nested .flex {
 	margin-left:								6px;	
 	margin-right:								6px;
 	text-align: 								center;
+
 }
 
 .social-button i.fa {
@@ -2320,6 +2342,7 @@ section.section .flex.nested .flex {
 }
 
 #mobile-menu-bar .mm-bar-btn.email-btn::after {
+
 	content:   									"\f0e0";
 }
 
@@ -2340,8 +2363,8 @@ section.section .flex.nested .flex {
 #mobile-menu-bar .mm-bar-btn.activate-btn.active div:nth-of-type(3) { transform: rotate(45deg) translate(-5px, -6px) }
 
 #mobile-navigation {
-	/*display:									block;
-	position:									fixed; // included in functions.php */
+	display:									block;
+	position:									fixed; 
 	top:										42px;
 	padding-top:								1em;
 	padding-bottom:								1em;
@@ -2376,8 +2399,8 @@ section.section .flex.nested .flex {
 
 .side-slide #mobile-navigation, 
 .side-push #mobile-navigation {
-	/*right:										0;
-	margin-right:								-100%; // included in functions.php */
+	right:										0;
+	margin-right:								-100%;
 	border-left: 								1px solid #000000;
 	box-shadow: 								-4px 0 5px rgba(0,0,0,0.5);
 	width:										440px;
@@ -2404,8 +2427,8 @@ section.section .flex.nested .flex {
 
 .top-slide #mobile-navigation, 
 .top-push #mobile-navigation {
-	/*left:										0;
-	margin-top:									calc(-100% - 70px); // included in functions.php */
+	left:										0;
+	margin-top:									calc(-100% - 70px);
 	border-bottom: 								1px solid #000000;
 	box-shadow: 								0 4px 5px rgba(0,0,0,0.5);
 	width:										100%;
@@ -3075,6 +3098,7 @@ img.noFX,
 	position: 									absolute;
 	top: 										0;
 	left: 										0;
+
 	width: 										100%;
 	height: 									100%;
 }

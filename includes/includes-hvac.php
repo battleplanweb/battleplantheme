@@ -417,7 +417,13 @@ function battleplan_getBrandLogo($atts, $content = null) {
 		$brand = strtolower(str_replace(" ", "-", get_option('site_brand')));
 		$name = ucwords($brand);
 	endif;
-	return '<img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$alt.'.png" alt="We offer '.$name.' heating and air conditioning products." />';
+	if ( $brand == "york" || $brand == "carrier" || $brand == "amana" ) : $height = 165;
+	elseif ( $brand == "trane" || $brand == "lennox" ) : $height = 116;
+	elseif ( $brand == "ruud" ) : $height = 252;
+	elseif ( $brand == "heil" ) : $height = 139;
+	else : $height = 75; endif;
+	
+	return '<img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$alt.'.png" alt="We offer '.$name.' heating and air conditioning products." width="400" height="'.$height.'" />';
 }
 
 // Add Symptom Checker widget to Sidebar
@@ -466,7 +472,7 @@ function battleplan_getWellsFargo($atts, $content = null) {
 	if ($ad=="Wells-Fargo-C.png" || $ad=="Wells-Fargo-D.png") : $alt = "Special financing available. This credit card is issued with approved credit by Wells Fargo Bank, N.A. Equal Housing Lender. Learn more."; $width="300"; $height="250"; endif;
 	if ($ad=="Wells-Fargo-E.png") : $alt = "Financing available through Wells Fargo Bank, NA. This credit card is issued with approved credit.  Equal Housing Lender."; $width="200"; $height="152"; endif;	
 	if ($ad=="Wells-Fargo-Splash-A.png" || $ad=="Wells-Fargo-Splash-B.png" || $ad=="Wells-Fargo-Splash-C.png" || $ad=="Wells-Fargo-Splash-D.png") : $alt = "Buy today, pay over time with this Wells Fargo credit card. Learn more."; $width="600"; $height="300"; endif;		
-	$output = '<a href="'.$link.'"><img src="/wp-content/themes/battleplantheme/common/financing/'.$ad.'" alt="'.$alt.'" '.$class.' width="'.$width.'" height="'.$height.'"/></a>';
+	$output = '<a href="'.$link.'" title="Click to learn more about Wells Fargo financing options."><img src="/wp-content/themes/battleplantheme/common/financing/'.$ad.'" loading="lazy" alt="'.$alt.'" '.$class.' width="'.$width.'" height="'.$height.'"/></a>';
 	return $output; 
 }
 

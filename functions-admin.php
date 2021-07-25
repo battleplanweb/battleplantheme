@@ -44,6 +44,7 @@ function battleplan_add_quicktags() {
 			QTags.addButton( 'bp_accordion', 'accordion', '   [accordion title="clickable title" excerpt="false, true" class="" icon="true, false" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/accordion]\n\n', 'accordion', 'Accordion', 1000 );
 			QTags.addButton( 'bp_expire-content', 'expire', '[expire start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/expire]\n\n', 'expire', 'Expire', 1000 );			
 			QTags.addButton( 'bp_lock-section', 'lock', '[lock name="becomes id attribute" style="(lock) corresponds to css" width="edge, default, stretch, full, inline" position="bottom, top, modal" delay="3000" show="session, never, always, # days" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '[/lock]\n\n', 'lock', 'Lock', 1000 );		
+			QTags.addButton( 'bp_images_side-by-side', 'side by side images', '[col]\n <div class="span-6"><img style="max-height:600px" src="/wp-content/uploads/pic1.jpg" alt="" class="" /></div>\n <div class="span-6"><img style="max-height:600px" src="/wp-content/uploads/pic2.jpg" alt="" class="" /></div>\n[/col]\n', '', 'side by side images', 'Side By Side Images', 1000 );
 			QTags.addButton( 'bp_random-image', 'random image', '   [get-random-image id="" tag="random" size="thumbnail, third-s" link="no, yes" number="1" offset="" align="left, right, center" order_by="recent, rand, menu_order, title, id, post_date, modified, views" order="asc, desc" shuffle="no, yes"]\n', '', 'random image', 'Random Image', 1000 );
 			QTags.addButton( 'bp_random-post', 'random post', '   [get-random-posts num="1" offset="0" type="post" tax="" terms="" orderby="recent, rand, views-today, views-7day, views-30day, views-90day, views-180day, views-365day, views-all" sort="asc, desc" count_tease="true, false" count_view="true, false" thumb_only="false, true" thumb_col="1, 2, 3, 4" show_title="true, false" title_pos="outside, inside" show_date="false, true" show_author="false, true" show_excerpt="true, false" show_social="false, true" show_btn="true, false" button="Read More" btn_pos="inside, outside" thumbnail="force, false" link="post, false, cf-field_name, /link-destination/" start="" end="" exclude="" x_current="true, false" size="thumbnail, size-third-s" pic_size="1/3" text_size=""]\n', '', 'random post', 'Random Post', 1000 );
 			QTags.addButton( 'bp_random-text', 'random text', '   [get-random-text cookie="true, false" text1="" text2="" text3="" text4="" text5="" text6="" text7=""]\n', '', 'random text', 'Random Text', 1000 );
@@ -1628,7 +1629,7 @@ function battleplan_admin_speed_stats() {
 	$totalCounted = $desktopCounted + $mobileCounted;		
 	
 	echo "<table>";
-		echo "<tr><td><b>".number_format($totalCounted)."</b> pageloads in the last </td><td>".sprintf( _n( '<b>%s</b> day', '<b>%s</b> days', $daysSinceEmail, 'battleplan' ), number_format($daysSinceEmail) )."</td></tr>";
+		echo "<tr><td><b>".number_format($totalCounted)."</b> pageloads</td><td> in the last ".sprintf( _n( '<b>%s</b> day', '<b>%s</b> days', $daysSinceEmail, 'battleplan' ), number_format($daysSinceEmail) )."</td></tr>";
 		echo "<tr><td>&nbsp;</td></tr>";
 		echo "<tr><td><b>Desktop</b></td><td><b>".$desktopSpeed."s</b> on ".sprintf( _n( '<b>%s</b> pageload', '<b>%s</b> pageloads', $desktopCounted, 'battleplan' ), number_format($desktopCounted) )."</td></tr>";
 		echo "<tr><td><b>Mobile</b></td><td><b>".$mobileSpeed."s</b> on ".sprintf( _n( '<b>%s</b> pageload', '<b>%s</b> pageloads', $mobileCounted, 'battleplan' ), number_format($mobileCounted) )."</td></tr>";
@@ -1666,12 +1667,12 @@ function battleplan_admin_referrer_stats() {
 	
 	uksort( $combineReferrers, function($a, $b) use ($combineReferrers) { return [$combineReferrers[$b], $a] <=> [$combineReferrers[$a], $b]; } );
 		
-	echo "<div>Last <b>".$referNum."</b> referrers</b><br/><br/>";
+	echo "<div>Last <b>".number_format($referNum)."</b> referrers</b><br/><br/>";
 	echo "<ul>";
 	foreach ($combineReferrers as $referrer=>$referNum) :
 		if ( $referrer == "" ) $referrer = "Direct";
 		if ( $referrer == $thisDomain ) $referrer = "Self";
-		echo "<li><span class='label'>".$referrer."</span><span class='value'><b>".$referNum."</b></span></li>";
+		echo "<li><span class='label'>".$referrer."</span><span class='value'><b>".number_format($referNum)."</b></span></li>";
 	endforeach; 	
 	echo '</ul></div>';
 }
@@ -1692,10 +1693,10 @@ function battleplan_admin_location_stats() {
 	
 	uksort( $combineLocs, function($a, $b) use ($combineLocs) { return [$combineLocs[$b], $a] <=> [$combineLocs[$a], $b]; } );
 		
-	echo "<div>Last <b>".$locNum."</b> visitors</b><br/><br/>";
+	echo "<div>Last <b>".number_format($locNum)."</b> visitors</b><br/><br/>";
 	echo "<ul>";
 	foreach ($combineLocs as $city=>$cityNum) :
-		echo "<li><span class='label'>".$city."</span><span class='value'><b>".$cityNum."</b></span></li>";
+		echo "<li><span class='label'>".$city."</span><span class='value'><b>".number_format($cityNum)."</b></span></li>";
 	endforeach; 	
 	echo '</ul></div>';
 }
@@ -1719,8 +1720,8 @@ function battleplan_admin_pageview_stats() {
 	$avgMulti = round( ($totalMulti / $multiViews), 1, PHP_ROUND_HALF_UP);
 	
 	echo "<ul>";
-		echo "<li><span class='label'><b>One Page Visits</b></td><td><b></span><span class='value'>".number_format($singlePct)."%</b>&nbsp;&nbsp;&nbsp;(".$singleViews.")</span></li>";
-		echo "<li><span class='label'><b>Multi Page Visits</b></td><td><b></span><span class='value'>".number_format($multiPct)."%</b>&nbsp;&nbsp;&nbsp;(".$multiViews.")</span></li>";
+		echo "<li><span class='label'><b>One Page Visits</b></td><td><b></span><span class='value'>".number_format($singlePct)."%</b>&nbsp;&nbsp;&nbsp;(".number_format($singleViews).")</span></li>";
+		echo "<li><span class='label'><b>Multi Page Visits</b></td><td><b></span><span class='value'>".number_format($multiPct)."%</b>&nbsp;&nbsp;&nbsp;(".number_format($multiViews).")</span></li>";
 		echo "<li>&nbsp;</li>";
 		echo "<li><span class='label'><b>Overall Avg.</b></td><td><b></span><span class='value'>".$avgVisit." pages per visit</span></li>";		
 		echo "<li><span class='label'><b>Multi Page Avg.</b></td><td><b></span><span class='value'>".$avgMulti." pages per visit</span></li>";

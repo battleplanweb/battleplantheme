@@ -40,7 +40,7 @@ function battleplan_product_overview( $atts, $content = null ) {
 	
 	return do_shortcode('
 		[col class="col-archive col-products"]
-		 [img size="1/3" link="'.$link.'" ada-hidden="true"]<img class="img-archive img-products" src="/wp-content/uploads/'.$pic.'" alt="'.$alt.'" />[/img]
+		 [img size="1/3" link="'.$link.'" ada-hidden="true"]<img class="img-archive img-products" src="/wp-content/uploads/'.$pic.'" loading="lazy" alt="'.$alt.'" />[/img]
 		 [group size="2/3"]
 		  [txt size="100" class="text-products"]<h3><a class="link-archive link-products" href="'.$link.'" aria-hidden="true" tabindex="-1">'.$title.'</a></h3>'.$excerpt.'[/txt]
 		  [btn size="100" class="button-products" link="'.$link.'"]View '.$title.'[/btn]
@@ -431,13 +431,13 @@ add_shortcode( 'get-symptom-checker', 'battleplan_getSymptomChecker' );
 function battleplan_getSymptomChecker() {	
 	$brand = strtolower(str_replace(" ", "-", get_option('site_brand')));
 	if ( $brand == "" ) $brand = "american-standard";
-	return '<a href="/symptom-checker/" title="Click here for troublshooting ideas to solve common HVAC problems."><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/symptom-checker.jpg" alt="HVAC unit pictured on colorful background." width="300" height="250"/></a>';
+	return '<a href="/symptom-checker/" title="Click here for troublshooting ideas to solve common HVAC problems."><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/symptom-checker.jpg" loading="lazy" alt="HVAC unit pictured on colorful background." width="300" height="250"/></a>';
 }
 
 // Add Customer Care Dealer widget to Sidebar
 add_shortcode( 'get-customer-care', 'battleplan_getCustomerCare' );
 function battleplan_getCustomerCare() {	
-	return '<a href="/customer-care-dealer/" title="Click here to read more about the American Standard Heating & Cooling Customer Care Dealer program"><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-american-standard/customer-care-dealer-logo-alt.png" alt="We are proud to be an American Standard Customer Care Dealer" /></a>';
+	return '<a href="/customer-care-dealer/" title="Click here to read more about the American Standard Heating & Cooling Customer Care Dealer program"><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-american-standard/customer-care-dealer-logo-alt.png" loading="lazy" alt="We are proud to be an American Standard Customer Care Dealer" /></a>';
 }
 
 // Add Financing widget to Sidebar
@@ -449,8 +449,16 @@ function battleplan_getFinancing($atts, $content = null) {
 	$link = esc_attr($a['link']);	
 	$buildFinancing = "";
 	
+	if ( $bank == "ftl-finance" ) : $height = 142;
+	elseif ( $brand == "arvest-bank" ) : $height = 192;
+	elseif ( $brand == "atwood-rentals" ) : $height = 200;
+	elseif ( $brand == "enerbank-usa" ) : $height = 80;
+	elseif ( $brand == "green-sky" ) : $height = 130;
+	elseif ( $brand == "service-finance" ) : $height = 379;
+	else : $height = 160; endif;
+	
 	if ( $link != "" ) $buildFinancing .= '<a href="'.$link.'" title="Click here to apply for financing for AC repair at '.$bank.'">';
-	$buildFinancing .= '<img src="/wp-content/themes/battleplantheme/common/financing/'.$img.'.png" alt="Apply for financing for your HVAC needs at '.$bank.'" />';
+	$buildFinancing .= '<img src="/wp-content/themes/battleplantheme/common/financing/'.$img.'.png" loading="lazy" alt="Apply for financing for your HVAC needs at '.$bank.'" width="320" height="'.$height.'" />';
 	if ( $link != "" ) $buildFinancing .= '</a>';
 	
 	return $buildFinancing;

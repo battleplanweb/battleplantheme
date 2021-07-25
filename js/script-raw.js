@@ -263,13 +263,15 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		if ( faux == "true" ) { removeFaux(fauxElement); }
 	};
 
-	window.addFaux = function (element) {
+	window.addFaux = function (element, fixedAtLoad) {
+		fixedAtLoad = fixedAtLoad || "false";
 		var theEl = $(element);
 		var elementName = element.substr(1);		
 		if ( theEl.is(":visible") ) {		
 			$( "<div class='"+elementName+"-faux'></div>" ).insertBefore( theEl );
 			var theFaux = $("."+elementName+"-faux");
 			theFaux.css({ "height":theEl.outerHeight()+"px" });
+			if ( fixedAtLoad == "true" ) { theEl.css({ "position":"fixed" }); }
 		}
 	};
 

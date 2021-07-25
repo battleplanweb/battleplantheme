@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 9.0
+Version: 9.1
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -465,6 +465,8 @@ span {
 .ribbon:after {
 	right: 										-2px;
 	border-right: 								15px solid transparent !important;
+
+
 
 
 }
@@ -2342,7 +2344,6 @@ section.section .flex.nested .flex {
 }
 
 #mobile-menu-bar .mm-bar-btn.email-btn::after {
-
 	content:   									"\f0e0";
 }
 
@@ -3450,8 +3451,8 @@ dl.col-gallery {
 .block-accordion h2 { 
 	font-family:								"Open Sans";
 	font-weight:								bold;
-	font-size: 									28px; /* Blain Services 7/7/21 */
-	line-height: 								1.1; /* Blain Services 7/7/21 */
+	font-size: 									24px; 
+	line-height: 								1.1; 
 	text-transform:								none;
 	padding:									0.3em 0.3em 0.3em 2em;
 	text-align:									left !important;
@@ -4345,10 +4346,10 @@ iframe#podium-modal {
 	}
 	
 	/* Home page "hero" parallax sections */
-	#wrapper-top .section-parallax:not(.mobile-full),
+	/*#wrapper-top .section-parallax:not(.mobile-full),
 	#wrapper-bottom .section-parallax:not(.mobile-full) {
-		height:										600px !important;
-	}
+		height:										600px !important;   removed 7/20/21 after making addition to parallax.js to load smaller hero images on mobile
+	}*/
 	
 	/* Responsiveness */
 	.top-strip .flex,
@@ -4602,10 +4603,11 @@ iframe#podium-modal {
 	}
 	
 	/* Home page "hero" parallax sections */
-	#wrapper-top .section-parallax:not(.mobile-full),
+	/*#wrapper-top .section-parallax:not(.mobile-full),
 	#wrapper-bottom .section-parallax:not(.mobile-full) {
-		height:										300px !important;
-	}
+		height:										300px !important;  removed 7/20/21 after making addition to parallax.js to load smaller hero images on mobile
+	}*/
+	
 	
 	/* Responsive Content */
 	.align-left.size-half-f,
@@ -4725,7 +4727,7 @@ iframe#podium-modal {
 	/* Accordion */
 	.block-accordion h2,
 	.block-accordion .accordion-icon::before {
-		font-size:									24px; /* Blain Services 7/7/21 */
+		font-size:									21px;
 	}
 	
 	/* Galleries */

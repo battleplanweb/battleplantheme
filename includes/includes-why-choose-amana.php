@@ -6,7 +6,7 @@ return do_shortcode('
 		[layout grid="1-1-1-1"] 
 			[col class="span-all"]
 				[txt]
-					<img src="'.$img.'" loading="lazy" alt="'.$alt.'" class="noFX" width="496" height="142" />
+					<img src="'.$img.'" loading="lazy" alt="'.$alt.'" class="noFX" width="496" height="142" style="aspect-ratio:496/142" />
 				[/txt]
 			[/col]
 

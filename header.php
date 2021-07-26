@@ -1,17 +1,16 @@
 <!doctype html>
 <html <?php language_attributes(); ?>>
-<head>
-	
+<head>	
 	<script type="text/javascript">var startTime = Date.now();</script>	
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="profile" href="https://gmpg.org/xfn/11">
 	
+	<link rel="preload" as="font" type="font/woff2" href="../../../wp-content/themes/battleplantheme/fonts/open-sans-v17-latin-regular.woff2" crossorigin="anonymous">
+	<link rel="preload" as="font" type="font/woff2" href="../../../wp-content/themes/battleplantheme/fonts/open-sans-v17-latin-700.woff2" crossorigin="anonymous">
 	<link rel="preload" as="font" type="font/woff2" href="../../../wp-content/themes/battleplantheme/fonts/fa-regular-400.woff2" crossorigin="anonymous">
 	<link rel="preload" as="font" type="font/woff2" href="../../../wp-content/themes/battleplantheme/fonts/fa-solid-900.woff2" crossorigin="anonymous">
 	<link rel="preload" as="font" type="font/woff2" href="../../../wp-content/themes/battleplantheme/fonts/fa-brands-400.woff2" crossorigin="anonymous">
-	<link rel="preload" as="font" type="font/woff2" href="../../../wp-content/themes/battleplantheme/fonts/open-sans-v17-latin-regular.woff2" crossorigin="anonymous">
-	<link rel="preload" as="font" type="font/woff2" href="../../../wp-content/themes/battleplantheme/fonts/open-sans-v17-latin-700.woff2" crossorigin="anonymous">
 	<?php bp_font_loader(); ?>	
 
 	<?php wp_head(); ?>

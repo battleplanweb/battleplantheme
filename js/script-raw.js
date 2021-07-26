@@ -17,10 +17,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 # Basic site functionality
 --------------------------------------------------------------*/
 
-	var getThemeURI = theme_dir.theme_dir_urti, getUploadURI = theme_dir.upload_dir_uri, mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 0, timezone, userLoc, userRefer;
+	var getThemeURI = theme_dir.theme_dir_urti, getUploadURI = theme_dir.upload_dir_uri, mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 0, timezone, userLoc, userRefer, pageViews, uniqueID, pageLimit = 3, speedFactor = 0.5;
 	
 	if ( $("#mobile-menu-bar").is(":visible") ) { mobileMenuBarH = $("#mobile-menu-bar").outerHeight();	}
-
+	
 // Add Post ID as an ID attribute on body tag	
 	var postID = "noID";    
 	$.each($('body').attr('class').split(' '), function (index, className) { 
@@ -125,19 +125,19 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	
 // Calculate how many pages user has viewed (exclude page refresh)
 	if ( !getCookie('pages-viewed') ) { 
-		var uniqueID = Date.now() + "A" + Math.floor(Math.random() * 100);		
+		uniqueID = Date.now() + "A" + Math.floor(Math.random() * 100);		
 		setCookie('unique-id', uniqueID); 
 		$("body").attr("data-unique-id", uniqueID); 
 		$("body").attr("data-pageviews", 1); 
 		setCookie('pages-viewed', 1); 
 	} else { 
-		var pages_viewed = Number(getCookie('pages-viewed'));
+		pageViews = Number(getCookie('pages-viewed'));
 		if ( getCookie('prev-page') != getSlug() ) {
-			pages_viewed++;
-			setCookie('pages-viewed', pages_viewed); 		
+			pageViews++;
+			setCookie('pages-viewed', pageViews); 		
 			setCookie('prev-page', getSlug()); 
 		}
-		$("body").attr("data-pageviews", pages_viewed); 
+		$("body").attr("data-pageviews", pageViews); 
 		$("body").attr("data-unique-id", getCookie('unique-id')); 
 	}
 
@@ -761,8 +761,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		});
 	};		
 		
-
-
 	// Handle the post filter button [get-filter-btn]
 	$(".filter-btn").click(function() {
 		var thisBtn = $(this), url = "?"+thisBtn.attr('data-url')+"=", flag=false;
@@ -961,14 +959,24 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 # Set up animation
 --------------------------------------------------------------*/
 
+// Gracefully start to fade out the pre-loader
+	var opacity = 1, loader = document.getElementById("loader"), color = getComputedStyle(loader).getPropertyValue("background-color"), [r,g,b,a] = color.match(/\d+/g).map(Number), bgTimer = setInterval(function() {
+		opacity = opacity - 0.01;
+		document.getElementById("loader").style.backgroundColor = 'rgb('+r+','+g+','+b+','+opacity+')';
+		if ( opacity < 0.3 ) { clearInterval(bgTimer) }
+	}, 10);
+
 // Animate single element (using transitions from animate.css)
 	window.animateDiv = function(container, effect, initDelay, offset, speed) {
 		initDelay = initDelay || 0;		
 		offset = offset || "100%";
 		speed = speed || 1000;
 		speed = speed / 1000;
+		var transDuration = parseFloat($(container).css( "transition-duration")), transDelay = parseFloat($(container).css( "transition-delay"));
+		if ( pageViews > pageLimit ) { initDelay = initDelay * speedFactor; speed = speed * speedFactor; transDuration = transDuration * speedFactor; transDelay = transDelay * speedFactor; }
+		
 		$(container).addClass('animated');
-		$(container).css({ "animation-duration": speed+"s"});
+		$(container).css({ "animation-duration": speed+"s", "transition-duration": transDuration+"s", "transition-delay": transDelay+"s"});		
 		$(container+".animated").waypoint(function() {
 			var thisDiv = $(this.element);	
 			setTimeout( function () { thisDiv.addClass(effect); }, initDelay);			
@@ -983,16 +991,12 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		offset = offset || "100%";
 		speed = speed || 1000;
 		speed = speed / 1000;
-		var theDelay = 0;
-		var currEffect = effect1;
-		var theParent = $(container).parent();
-		var getDiv = container.split(' ');
-		var theDiv = getDiv.pop();
+		if ( pageViews > pageLimit ) { initDelay = initDelay * speedFactor; mainDelay = mainDelay * speedFactor; speed = speed * speedFactor; }
+		var theDelay = 0, currEffect = effect1, theParent = $(container).parent(), getDiv = container.split(' '), theDiv = getDiv.pop();
 		$(container).addClass('animated');
 		setTimeout( function() {
 			theParent.find(theDiv+".animated").waypoint(function() {
-				var thisDiv = $(this.element);	
-				var divIndex = thisDiv.prevAll(theDiv).length;
+				var thisDiv = $(this.element), divIndex = thisDiv.prevAll(theDiv).length;
 				thisDiv.css({ "animation-duration": speed+"s"});
 				if ( divIndex > 6 ) {
 					theDelay = mainDelay;	
@@ -1020,13 +1024,11 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		mobile = mobile || "false";
 		speed = speed || 1000;
 		speed = speed / 1000;
-		var theParent = $(container).parent();
-		var getDiv = container.split(' ');
-		var theDiv = getDiv.pop();
+		if ( pageViews > pageLimit ) { initDelay = initDelay * speedFactor; mainDelay = mainDelay * speedFactor; speed = speed * speedFactor; }
+		var theParent = $(container).parent(), getDiv = container.split(' '), theDiv = getDiv.pop();
 		$(container).addClass('animated');
 		theParent.each(function() {
-			var theRow = $(this);
-			var findCol = theRow.find(theDiv+".animated").length;
+			var theRow = $(this), findCol = theRow.find(theDiv+".animated").length;
 			if (findCol == 1) { 
 				theRow.find(theDiv+".animated").data("animation", { effect:effect1, delay:0});
 			}
@@ -1065,9 +1067,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			}
 		});
 		theParent.find(theDiv+".animated").waypoint(function() {
-			var thisDiv = $(this.element);
-			var delay = (mainDelay * thisDiv.data("animation").delay) + initDelay;
-			var effect = thisDiv.data("animation").effect;
+			var thisDiv = $(this.element), delay = (mainDelay * thisDiv.data("animation").delay) + initDelay, effect = thisDiv.data("animation").effect;
 			thisDiv.css({ "animation-duration": speed+"s"});
 			if ( getDeviceW() > mobileCutoff || mobile == "true" ) { 
 				setTimeout( function () { thisDiv.addClass(effect); }, delay);
@@ -1117,6 +1117,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		initDelay = initDelay || 0;		
 		mainDelay = mainDelay || 100;		
 		offset = offset || "100%";
+		if ( pageViews > pageLimit ) { initDelay = initDelay * speedFactor; mainDelay = mainDelay * speedFactor; }
 		var theContainer = $(container);		
 		theContainer.each(function() {				
 			var myStr = $(this).html();
@@ -1131,8 +1132,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			}
 			$(this).html(myContents);	
 
-			var charDelay = initDelay;
-			var currEffect = effect1;
+			var charDelay = initDelay, currEffect = effect1;
 			theContainer.find(".wordSplit.animated" ).waypoint(function() {
 				var thisDiv = $(this.element);
 				charDelay = charDelay + mainDelay;
@@ -1153,6 +1153,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		initDelay = initDelay || 0;		
 		mainDelay = mainDelay || 100;		
 		offset = offset || "100%";
+		if ( pageViews > pageLimit ) { initDelay = initDelay * speedFactor; mainDelay = mainDelay * speedFactor; }
 		var theContainer = $(container);		
 		theContainer.each(function() {				
 			var myStr = $(this).html();
@@ -1164,8 +1165,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			}
 			$(this).html(myContents);	
 
-			var charDelay = initDelay;
-			var currEffect = effect1;
+			var charDelay = initDelay, currEffect = effect1;
 			theContainer.find(".charSplit.animated" ).waypoint(function() {
 				var thisDiv = $(this.element);
 				charDelay = charDelay + mainDelay;
@@ -1654,14 +1654,15 @@ if ( $('body').hasClass('remove-sidebar') ) {
 --------------------------------------------------------------*/
 
 	$(window).on( 'load', function() {
-
+	
 	// Calculate load time for page		
 		var endTime = Date.now(); 	
 		var loadTime = ((endTime - startTime) / 1000).toFixed(1);	
 		var deviceTime = "desktop";
 		if ( getDeviceW() <= mobileCutoff ) { deviceTime = "mobile"; }	
 
-	// Fade out loader screen when site is fully loaded
+	// Fade out pre-loader screen when site is fully loaded
+		clearInterval(bgTimer);
 		$("#loader").fadeOut("fast");  		 
  
 	// Get video link from data-src and feed to src 
@@ -1781,7 +1782,8 @@ if ( $('body').hasClass('remove-sidebar') ) {
 
 		setTimeout(function() {	// Wait 2 seconds before calling the following functions 	
 		// Count page view 
-			var postID = $('body').attr('id'), pageViews = $('body').attr('data-pageviews'), uniqueID = $('body').attr('data-unique-id');
+			var postID = $('body').attr('id');
+			console.log(pageViews);
 			$.post({
 				url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
 				data : { action: "count_post_views", id: postID, timezone: timezone, userLoc: userLoc, pagesViewed: pageViews, uniqueID: uniqueID },

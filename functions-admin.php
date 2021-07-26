@@ -1345,7 +1345,9 @@ function battleplan_column_settings() {
 --------------------------------------------------------------*/
 
 // Disable Gutenburg
-add_filter('use_block_editor_for_post', '__return_false');
+add_filter( 'use_block_editor_for_post', '__return_false' );
+add_filter( 'gutenberg_use_widgets_block_editor', '__return_false' );
+add_filter( 'wp_use_widgets_block_editor', '__return_false' );
 
 // Disable Visual Editor
 add_filter( 'user_can_richedit' , '__return_false', 50 );

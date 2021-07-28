@@ -27,7 +27,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon"><i class="fa fa-fw fas fa-clipboard-check    fa fa-fw fas fa-award" aria-hidden="true"></i></div>
+				<div class="icon"><i class="fa fa-fw fas fa-clipboard-check fa fa-fw fas fa-award" aria-hidden="true"></i></div>
 				[txt]
 					<h2>Quality Products</h2>
 					<p>Heat wave or ice age, our HVAC systems help your home stay at comfortable temperatures.  When you choose Amana heating and cooling products, you can sit back, relax and breathe easy.</p>

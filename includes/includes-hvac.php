@@ -420,7 +420,7 @@ function battleplan_getBrandLogo($atts, $content = null) {
 	if ( $brand == "york" || $brand == "carrier" || $brand == "amana" ) : $height = 165;
 	elseif ( $brand == "trane" || $brand == "lennox" ) : $height = 116;
 	elseif ( $brand == "ruud" ) : $height = 252;
-	elseif ( $brand == "heil" ) : $height = 139;
+	elseif ( $brand == "heil" ) : $height = 139;	
 	else : $height = 75; endif;
 	
 	return '<img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$alt.'.png" alt="We offer '.$name.' heating and air conditioning products." width="400" height="'.$height.'" style="aspect-ratio:400/'.$height.'" />';
@@ -449,12 +449,12 @@ function battleplan_getFinancing($atts, $content = null) {
 	$link = esc_attr($a['link']);	
 	$buildFinancing = "";
 	
-	if ( $bank == "ftl-finance" ) : $height = 142;
-	elseif ( $brand == "arvest-bank" ) : $height = 192;
-	elseif ( $brand == "atwood-rentals" ) : $height = 200;
-	elseif ( $brand == "enerbank-usa" ) : $height = 80;
-	elseif ( $brand == "green-sky" ) : $height = 130;
-	elseif ( $brand == "service-finance" ) : $height = 379;
+	if ( $img == "ftl-finance" ) : $height = 142;
+	elseif ( $img == "arvest-bank" ) : $height = 192;
+	elseif ( $img == "atwood-rentals" ) : $height = 200;
+	elseif ( $img == "enerbank-usa" ) : $height = 80;
+	elseif ( $img == "green-sky" ) : $height = 130;
+	elseif ( $img == "service-finance" ) : $height = 379;
 	else : $height = 160; endif;
 	
 	if ( $link != "" ) $buildFinancing .= '<a href="'.$link.'" title="Click here to apply for financing for AC repair at '.$bank.'">';

@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.2' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.3' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -1941,22 +1941,20 @@ function battleplan_dequeue_unwanted_stuff() {
 	wp_dequeue_style( 'typed-cursor' ); wp_deregister_style( 'typed-cursor' );
 	wp_dequeue_style( 'contact-form-7' ); wp_deregister_style( 'contact-form-7' );
 
-// re-load in header	
+// re-load in header
 	wp_dequeue_style( 'stripe-handler-ng-style' ); wp_deregister_style( 'stripe-handler-ng-style' );
 	wp_dequeue_style( 'cue' ); wp_deregister_style( 'cue' );
-	wp_dequeue_style( 'parent-style' ); wp_deregister_style( 'parent-style' );
-	wp_dequeue_style( 'battleplan-style' ); wp_deregister_style( 'battleplan-style' );	
 	
-	// re-load in footer
+// re-load in footer
 	wp_dequeue_style( 'css-animate' );  wp_deregister_style( 'css-animate' );
 	wp_dequeue_style( 'fontawesome' ); wp_deregister_style( 'fontawesome' );
 	wp_dequeue_style( 'widgetopts-styles' ); wp_deregister_style( 'widgetopts-styles' );
 	
+// scripts
 	wp_dequeue_script( 'select2'); wp_deregister_script('select2');	
 	wp_dequeue_script( 'wphb-global' ); wp_deregister_script( 'wphb-global' );
 	wp_dequeue_script( 'wp-embed' ); wp_deregister_script( 'wp-embed' );
-	wp_dequeue_script( 'modernizr' ); wp_deregister_script( 'modernizr' );	
-	
+	wp_dequeue_script( 'modernizr' ); wp_deregister_script( 'modernizr' );		
 	if ( !is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_dequeue_script( 'underscore' ); wp_deregister_script( 'underscore' ); } 
 }
 
@@ -1985,18 +1983,21 @@ add_action( 'wp_enqueue_scripts', 'battleplan_scripts', 20 );
 function battleplan_scripts() {
 	wp_enqueue_script( 'battleplan-carousel', get_template_directory_uri().'/js/bootstrap-carousel.js', array(), _BP_VERSION, false );
 	wp_enqueue_script( 'battleplan-parallax', get_template_directory_uri().'/js/parallax.js', array(), _BP_VERSION, false );
-	wp_enqueue_script( 'battleplan-waypoints', get_template_directory_uri().'/js/waypoints.js', array(), _BP_VERSION, false );
+	wp_enqueue_script( 'battleplan-waypoints', get_template_directory_uri().'/js/waypoints.js', array(), _BP_VERSION, false );	
 	wp_enqueue_script( 'battleplan-script', get_template_directory_uri().'/js/script.js', array(), _BP_VERSION, false );
+	wp_enqueue_script( 'battleplan-script-site', get_stylesheet_directory_uri().'/script-site.js', array(), _BP_VERSION, false );
 	
 	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { wp_enqueue_script( 'battleplan-events', get_template_directory_uri().'/js/events.js', array(), _BP_VERSION, false ); } 
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_enqueue_script( 'battleplan-woocommerce', get_template_directory_uri().'/js/woocommerce.js', array(), _BP_VERSION, false ); } 	
 	if ( is_plugin_active( 'cue/cue.php' ) ) { wp_enqueue_script( 'battleplan-cue', get_template_directory_uri().'/js/cue.js', array(), _BP_VERSION, false ); } 
+	
 	if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) { wp_enqueue_script( 'comment-reply' ); }
 	
-	$getUploadDir = wp_upload_dir(); 
-	$getThemeDir = get_stylesheet_directory_uri();
-	$saveDir = array( 'theme_dir_uri'=>$getThemeDir, 'upload_dir_uri'=>$getUploadDir['baseurl'] );
-	wp_localize_script( 'battleplan-script-site', 'theme_dir', $saveDir );
+	$saveDir = array( 'theme_dir_uri'=>get_stylesheet_directory_uri(), 'upload_dir_uri'=>wp_upload_dir()['baseurl'] );
+	wp_localize_script( 'battleplan-script', 'site_dir', $saveDir );	
+	
+    $saveOptions = array ( 'lat' => get_option('site_lat'), 'long' => get_option('site_long'), 'radius' => get_option('site_radius'));
+    wp_localize_script('battleplan-script', 'site_options', $saveOptions);
 }
 
 // Load and enqueue admin styles & scripts
@@ -2012,6 +2013,56 @@ if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { require_once get_temp
 if ( get_option( 'site_type' ) == 'hvac' ) { require_once get_template_directory() . '/includes/includes-hvac.php'; } 
 if ( get_option( 'site_type' ) == 'pedigree' ) { require_once get_template_directory() . '/includes/includes-pedigree.php'; } 
 require_once get_template_directory() . '/functions-public.php';
+require_once get_stylesheet_directory() . '/functions-site.php';
+
+// Delay execution of non-essential scripts
+if ( !is_admin() ) {
+	ob_start(); 
+	add_action('shutdown', function() { $final = ''; $levels = ob_get_level(); for ($i = 0; $i < $levels; $i++) { $final .= ob_get_clean(); } echo apply_filters('final_output', $final); }, 0);
+	add_filter('final_output', function($html) {
+		$dom = new DOMDocument();
+		$dom->loadHTML($html);
+		$script = $dom->getElementsByTagName('script');
+
+		$targets = array('podium', 'google', 'paypal', 'carousel', 'extended-widget');
+
+		foreach ($script as $item) :		   
+			foreach ($targets as $target) :
+				if (strpos($item->getAttribute("src"), $target) !== FALSE) :       
+					$item->setAttribute("data-loading", "delay");
+					if ($item->getAttribute("src")) : $item->setAttribute("data-src", $item->getAttribute("src")); $item->removeAttribute("src");
+					else: $item->setAttribute("data-src", "data:text/javascript;base64,".base64_encode($item->innertext)); $item->innertext=""; 
+					endif;
+				endif;
+			endforeach;
+		endforeach;
+
+		$html = $dom->saveHTML();
+		$html = preg_replace('/<!DOCTYPE.*?<html>.*?<body><p>/ims', '', $html);
+		$html = str_replace('</p></body></html>', '', $html);
+		return $html;
+	}); 
+
+	add_action( 'wp_print_footer_scripts', 'battleplan_delay_nonessential_scripts');
+	function battleplan_delay_nonessential_scripts() { ?>
+		<script type="text/javascript" id="delay-scripts">
+			const loadScriptsTimer=setTimeout(loadScripts,3000);
+			const userInteractionEvents=["mouseover","keydown","touchstart","touchmove","wheel"];
+			userInteractionEvents.forEach(function(event) {	
+				window.addEventListener(event, triggerScriptLoader, {passive:!0})});
+				function triggerScriptLoader() {
+					loadScripts();
+					clearTimeout(loadScriptsTimer);
+					userInteractionEvents.forEach(function(event) {
+						window.removeEventListener(event, triggerScriptLoader, {passive:!0})
+					})
+				}
+			function loadScripts() {
+				setTimeout(function() { document.querySelectorAll("script[data-loading='delay']").forEach(function(elem) { elem.setAttribute("src", elem.getAttribute("data-src")) }) }, 1000);
+			}
+		</script><?php
+	}
+}
 
 //Brand log-in screen with BP Knight
 add_action( 'login_enqueue_scripts', 'battleplan_login_logo' );
@@ -2395,6 +2446,7 @@ add_action( 'wp_ajax_log_page_load_speed', 'battleplan_log_page_load_speed_ajax'
 add_action( 'wp_ajax_nopriv_log_page_load_speed', 'battleplan_log_page_load_speed_ajax' );
 function battleplan_log_page_load_speed_ajax() {
 	$timezone = $_POST['timezone'];	
+	$userValid = $_POST['userValid'];	
 	$userLoc = $_POST['userLoc'];	
 	$loadTime = $_POST['loadTime'];
 	$deviceTime = $_POST['deviceTime'];
@@ -2402,7 +2454,7 @@ function battleplan_log_page_load_speed_ajax() {
 	
 	if ( $userLoc == "Ashburn, VA") :
 		$response = array( 'result' => 'Bot ignored' );		
-	elseif ( ( $userLogin != 'battleplanweb' && ( $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :
+	elseif ( ( $userLogin != 'battleplanweb' && $userValid != "false" && ( $userValid == "true" || $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :
 		$siteHeader = getID('site-header');
 		$desktopCounted = readMeta($siteHeader, "load-number-desktop");
 		$desktopSpeed = readMeta($siteHeader, "load-speed-desktop");	
@@ -2451,7 +2503,8 @@ add_action( 'wp_ajax_count_site_views', 'battleplan_count_site_views_ajax' );
 add_action( 'wp_ajax_nopriv_count_site_views', 'battleplan_count_site_views_ajax' );
 function battleplan_count_site_views_ajax() {
 	$siteHeader = getID('site-header');
-	$timezone = $_POST['timezone'];	
+	$timezone = $_POST['timezone'];
+	$userValid = $_POST['userValid'];		
 	$userLoc = $_POST['userLoc'];	
 	$userRefer = $_POST['userRefer'];	
 	$userRefer = parse_url($userRefer);
@@ -2469,7 +2522,7 @@ function battleplan_count_site_views_ajax() {
 		
 	if ( $userLoc == "Ashburn, VA") :
 		$response = array( 'result' => 'Bot ignored' );		
-	elseif ( ( $userLogin != 'battleplanweb' && ( $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :
+	elseif ( ( $userLogin != 'battleplanweb' && $userValid != "false" && ( $userValid == "true" || $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :
 		if(!isset($_COOKIE['countVisit'])) :
 			if ( $dateDiff != 0 ) : // day has passed
 				for ($i = 1; $i <= $dateDiff; $i++) {	
@@ -2523,7 +2576,7 @@ function battleplan_count_site_views_ajax() {
 			$response = array( 'result' => 'Site View NOT counted: viewer already counted');
 		endif;
 	else:
-		$response = array( 'result' => 'Site View NOT counted: user='.$userLogin.', user timezone='.$timezone.', site timezone='.get_option('timezone_string'));
+		$response = array( 'result' => 'Site View NOT counted: user='.$userLogin.', user timezone='.$timezone.', user valid='.$userValid.', site timezone='.get_option('timezone_string'));
 	endif;	
 	wp_send_json( $response );	
 }
@@ -2538,6 +2591,7 @@ function battleplan_count_post_views_ajax() {
 	$theID = intval( $_POST['id'] );
 	$postType = get_post_type($theID);
 	$timezone = $_POST['timezone'];	
+	$userValid = $_POST['userValid'];	
 	$userLoc = $_POST['userLoc'];	
 	$lastViewed = readMeta($theID, 'log-views-time');
 	$rightNow = strtotime(date("F j, Y g:i a"));	
@@ -2554,8 +2608,7 @@ function battleplan_count_post_views_ajax() {
 	
 	if ( $userLoc == "Ashburn, VA") :
 		$response = array( 'result' => 'Bot ignored' );		
-	elseif ( ( $userLogin != 'battleplanweb' && ( $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :
-	
+	elseif ( ( $userLogin != 'battleplanweb' && $userValid != "false" && ( $userValid == "true" || $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :	
 		$visitCutoff = readMeta($siteHeader, 'log-views-total-90day');
 		$getPageviews[$uniqueID] = $pagesViewed;
 		if ( count($getPageviews) > $visitCutoff ) array_shift($getPageviews);	
@@ -2592,7 +2645,7 @@ function battleplan_count_post_views_ajax() {
 		updateMeta($theID, 'log-views-total-365day', $views365Day);	
 		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' VIEW counted: Today='.$viewsToday.', Week='.$views7Day.', Month='.$views30Day.', Quarter='.$views90Day.', Year='.$views365Day) );
 	else:
-		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' view NOT counted: user='.$userLogin.', user timezone='.$timezone.', site timezone='.get_option('timezone_string')) );
+		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' view NOT counted: user='.$userLogin.', user timezone='.$timezone.', user valid='.$userValid.', site timezone='.get_option('timezone_string')) );
 	endif;	
 	wp_send_json( $response );	
 }
@@ -2604,6 +2657,7 @@ function battleplan_count_teaser_views_ajax() {
 	$theID = intval( $_POST['id'] );
 	$postType = get_post_type($theID);
 	$timezone = $_POST['timezone'];	
+	$userValid = $_POST['userValid'];	
 	$userLoc = $_POST['userLoc'];	
 	$lastTeased = date("F j, Y g:i a", readMeta($theID, 'log-tease-time'));
 	$today = strtotime(date("F j, Y  g:i a"));
@@ -2611,11 +2665,11 @@ function battleplan_count_teaser_views_ajax() {
 	
 	if ( $userLoc == "Ashburn, VA") :
 		$response = array( 'result' => 'Bot ignored' );		
-	elseif ( ( $userLogin != 'battleplanweb' && ( $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :
+	elseif ( ( $userLogin != 'battleplanweb' && $userValid != "false" && ( $userValid == "true" || $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :
 		updateMeta($theID, 'log-tease-time', $today);
 		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' TEASER counted: Prior tease = '.$lastTeased) );
 	else:
-		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' teaser NOT counted: user='.$userLogin.', user timezone='.$timezone.', site timezone='.get_option('timezone_string')) );
+		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' teaser NOT counted: user='.$userLogin.', user timezone='.$timezone.', user valid='.$userValid.', site timezone='.get_option('timezone_string')) );
 	endif;	
 	wp_send_json( $response );	
 }
@@ -2631,7 +2685,7 @@ function battleplan_count_link_clicks_ajax() {
 		
 	if ( $userLoc == "Ashburn, VA") :
 		$response = array( 'result' => 'Bot ignored' );		
-	elseif ( ( $userLogin != 'battleplanweb' && ( $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :	
+	elseif ( ( $userLogin != 'battleplanweb' && $userValid != "false" && ( $userValid == "true" || $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :
 		if ( $type == "Phone Call" ) : $getType = 'call-clicks';
 		elseif ( $type == "Email" ) : $getType = 'email-clicks';
 		elseif ( $type == "Wells Fargo" ) :	$getType = 'finance-clicks';

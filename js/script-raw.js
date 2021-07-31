@@ -940,6 +940,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	window.removeDiv = function (target) {
 		$(target).remove();
 
+
+
 	};		
 	
 // Turn SVG into an element's background image
@@ -1737,6 +1739,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 						setCookie("display-message","no",cookieExpire);
 					});	
 				}
+
 				if ( buttonActivated == "yes" ) {				
 					$('.modal-btn').click(function() {
 						thisLock.css({"opacity":1}).fadeIn();

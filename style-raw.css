@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 9.3
+Version: 9.4
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -1801,6 +1801,8 @@ section.section .flex.nested .flex {
 .tag-line, .phone-number {
 	font-size:									140%;
 }
+
+
 
 
 .logo-strip {
@@ -4201,6 +4203,7 @@ iframe#podium-modal {
 	
 	/* Headeline font basis */
 	html {
+
 		font-size:									5.0%;
 	}
 			
@@ -4346,6 +4349,10 @@ iframe#podium-modal {
 		display:									block;
 	}
 	
+	.col.empty {
+		display: 									none;
+	}
+	
 	/* Responsiveness */
 	.site-main,
 	.sidebar-right .site-main,
@@ -4372,19 +4379,6 @@ iframe#podium-modal {
 		padding:									0 3%;
 		margin-bottom:								2em;
 	}
-	
-	/* Responsive Content 
-	.size-quarter-s,
-	.size-quarter-f,
-	.size-third-s,
-	.size-third-f {
-		width:										33%;
-	}
-	
-	.size-half-s,
-	.size-half-f {
-		width: 										45%;
-	}*/
 	
 	/* Responsive Sections */
 	.flex.grid-1-1-1 {
@@ -4460,12 +4454,6 @@ iframe#podium-modal {
 		width: 										calc(100% + 82px);
 		margin-left: 								-41px;
 	}
-	
-	/* Home page "hero" parallax sections */
-	/*#wrapper-top .section-parallax:not(.mobile-full),
-	#wrapper-bottom .section-parallax:not(.mobile-full) {
-		height:										600px !important;   removed 7/20/21 after making addition to parallax.js to load smaller hero images on mobile
-	}*/
 	
 	/* Responsiveness */
 	.top-strip .flex,
@@ -4701,8 +4689,6 @@ iframe#podium-modal {
 	.product-links .descriptionText {
 		text-align:									center;
 	}
-	
-
 
 	.product-links .descriptionText a {
 		display:									block;
@@ -4717,13 +4703,6 @@ iframe#podium-modal {
 	.site-info .span-10 {
 		grid-column:								span 12;
 	}
-	
-	/* Home page "hero" parallax sections */
-	/*#wrapper-top .section-parallax:not(.mobile-full),
-	#wrapper-bottom .section-parallax:not(.mobile-full) {
-		height:										300px !important;  removed 7/20/21 after making addition to parallax.js to load smaller hero images on mobile
-	}*/
-	
 	
 	/* Responsive Content */
 	.align-left.size-half-f,

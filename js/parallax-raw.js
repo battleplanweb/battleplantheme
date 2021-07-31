@@ -90,46 +90,34 @@
       this.positionX + (isNaN(this.positionX)? '' : 'px') + ' ' +
       this.positionY + (isNaN(this.positionY)? '' : 'px');
 
-    if (navigator.userAgent.match(/(iPod|iPhone|iPad)/)) {
-      if (this.imageSrc && this.iosFix && !this.$element.is('img')) {
+    if ( navigator.userAgent.match(/(iPod|iPhone|iPad|Android)/) || $(window).width() <= 1024 ) {
+      if (this.imageSrc && !this.$element.is('img')) {
 	    var mobileSrc = this.imageSrc.split('.')[0], mobileExt = "."+this.imageSrc.split('.')[1], deviceW = $(window).width(), useW = 480, useH = 320, ratio = this.naturalWidth / this.naturalHeight; 
-		if ( window.orientation == 90 || window.orientation == -90 ) { deviceWidth = window.screen.height; }
+		if ( navigator.userAgent.match(/(iPod|iPhone|iPad)/) ) { if ( window.orientation == 90 || window.orientation == -90 ) { deviceWidth = window.screen.height; } }		
 		if ( deviceW > 480 ) { useW = 640; }
 		if ( deviceW > 640 ) { useW = 960; }
 		if ( deviceW > 960 ) { useW = 1280; }
 		useH = Math.round(useW / ratio);
 		mobileSrc = mobileSrc+"-"+useW+"x"+useH+mobileExt;
-  
-        this.$element.css({
-		  "min-height": useH+'px',		  
-		  "max-height": useH+'px',
-          "background-image": 'url(' + mobileSrc + ')',
-          "background-size": 'cover',
-          "background-position": this.position
-        });
+		
+		this.$element.css({
+		  "background-image": 'url(' + mobileSrc + ')',
+		  "background-size": 'cover',
+		  "background-position": this.position
+		});
+		
+		if ( this.$element.attr("data-has-content") == "true" ) {  
+			var theParallax = this.$element.find('.col.parallax'), parallaxH = theParallax.outerHeight() + 100;
+			this.$element.css({ "paddingTop":"50px", "paddingBottom":"50px", "height":parallaxH+"px" });	
+		} else {  
+			this.$element.css({
+			  "min-height": useH+'px',		  
+			  "max-height": useH+'px',
+			});
+		}
       }
       return this;
-    }
-
-    if (navigator.userAgent.match(/(Android)/)) {
-      if (this.imageSrc && this.androidFix && !this.$element.is('img')) {
-	    var mobileSrc = this.imageSrc.split('.')[0], mobileExt = "."+this.imageSrc.split('.')[1], deviceW = $(window).width(), useW = 480, useH = 320, ratio = this.naturalWidth / this.naturalHeight; 
-		if ( deviceW > 480 ) { useW = 640; }
-		if ( deviceW > 640 ) { useW = 960; }
-		if ( deviceW > 960 ) { useW = 1280; }
-		useH = Math.round(useW / ratio);
-		mobileSrc = mobileSrc+"-"+useW+"x"+useH+mobileExt;
-  
-        this.$element.css({
-		  "min-height": useH+'px',		  
-		  "max-height": useH+'px',
-          "background-image": 'url(' + mobileSrc + ')',
-          "background-size": 'cover',
-          "background-position": this.position
-        });
-      }
-      return this;
-    }
+   }
 
     this.$mirror = $('<div />').prependTo(this.mirrorContainer);
 

@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.3' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.4' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -3017,6 +3017,7 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 add_shortcode( 'parallax', 'battleplan_buildParallax' );
 function battleplan_buildParallax( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'name'=>'', 'style'=>'', 'type'=>'section', 'width'=>'edge', 'img-w'=>'2000', 'img-h'=>'1333', 'height'=>'800', 'pos-x'=>'center', 'pos-y'=>'top', 'bleed'=>'10', 'speed'=>'0.7', 'image'=>'', 'class'=>'', 'scroll-btn'=>'false', 'scroll-loc'=>'#page', 'scroll-icon'=>'fa-chevron-down' ), $atts );
+	if ( $content != null ) { $hasContent = ' data-has-content="true"'; }
 	$name = strtolower(esc_attr($a['name']));
 	$name = preg_replace("/[\s_]/", "-", $name);
 	$style = esc_attr($a['style']);
@@ -3029,7 +3030,7 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	if ( $height == "full" ) : $height = "100vh"; elseif ( $height != "auto" ) : $height = $height."px"; endif;
 	$posX = esc_attr($a['pos-x']);
 	$posY = esc_attr($a['pos-y']);
-	$bleed = esc_attr($a['bleed']);
+	$bleed = esc_attr($a['bleed']); 
 	$speed = esc_attr($a['speed']);
 	$image = esc_attr($a['image']);	
 	$class = esc_attr($a['class']); 
@@ -3041,9 +3042,9 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	if ( !$name ) $name = "section-".rand(10000,99999);
 	
 	if ( $type == "section" ) :
-		return do_shortcode('<section id="'.$name.'" class="section'.$style.' section-'.$width.' section-parallax'.$class.'" style="height:'.$height.'" data-parallax="scroll" data-natural-width="'.$imgW.'" data-natural-height="'.$imgH.'" data-position-x="'.$posX.'" data-position-y="'.$posY.'" data-z-index="1" data-bleed="'.$bleed.'" data-speed="'.$speed.'" data-ios-fix="true" data-android-fix="true" data-image-src="'.$image.'">'.$content.$buildScrollBtn.'</section>');	
+		return do_shortcode('<section id="'.$name.'" class="section'.$style.' section-'.$width.' section-parallax'.$class.'" style="height:'.$height.'" data-parallax="scroll" data-natural-width="'.$imgW.'" data-natural-height="'.$imgH.'" data-position-x="'.$posX.'" data-position-y="'.$posY.'" data-z-index="1" data-bleed="'.$bleed.'" data-speed="'.$speed.'" data-image-src="'.$image.'"'.$hasContent.'>'.$content.$buildScrollBtn.'</section>');	
 	elseif ( $type == "col" ) :
-		return do_shortcode('<div id="'.$name.'" class="col col-parallax'.$class.' '.$posX.'" style="height:'.$height.'" data-parallax="scroll" data-natural-width="'.$imgW.'" data-natural-height="'.$imgH.'" data-position-x="'.$posX.'" data-position-y="'.$posY.'" data-z-index="1" data-bleed="'.$bleed.'" data-speed="'.$speed.'" data-ios-fix="true" data-android-fix="true" data-image-src="'.$image.'">'.$content.'</div>');	
+		return do_shortcode('<div id="'.$name.'" class="col col-parallax'.$class.' '.$posX.'" style="height:'.$height.'" data-parallax="scroll" data-natural-width="'.$imgW.'" data-natural-height="'.$imgH.'" data-position-x="'.$posX.'" data-position-y="'.$posY.'" data-z-index="1" data-bleed="'.$bleed.'" data-speed="'.$speed.'" data-image-src="'.$image.'"'.$hasContent.'>'.$content.'</div>');	
 	endif;
 }
 

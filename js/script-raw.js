@@ -533,25 +533,24 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 //Control parallax movement of divs within a container
 	window.parallaxDiv = function (container, element) {
 		element = element || ".parallax";
-
-		function moveDiv() {
-			$(container).each(function() {	
-				var elem = $(this).find(element), elemH = elem.outerHeight();
-				var conH = $(this).outerHeight(), conT = $(this).offset().top, conB = conT + conH;
-				var winH = $(window).height(), winT = $(window).scrollTop(), winB = winT + winH;		
-				var adjT = winB - conT, fullH = conH + winH, scrollPct = adjT / fullH;	
-				if ( scrollPct > 1 ) { scrollPct = 1; }
-				if ( scrollPct < 0 || scrollPct == null ) { scrollPct = 0; }
-				var moveElem = (conH - elemH) * scrollPct;					
-				if ( conT < winB && conB > winT ) { elem.css("margin-top",moveElem+"px"); }
-			});
+		function posParaDiv() {
+			if ( getDeviceW() > mobileCutoff ) {  	
+				$(container).each(function() {					
+					if ( $(this).find(element).length > 0) {
+						var elem = $(this).find(element), elemH = elem.outerHeight();
+						var conH = $(this).outerHeight(), conT = $(this).offset().top, conB = conT + conH;
+						var winH = $(window).height(), winT = $(window).scrollTop(), winB = winT + winH;		
+						var adjT = winB - conT, fullH = conH + winH, scrollPct = adjT / fullH;	
+						if ( scrollPct > 1 ) { scrollPct = 1; }
+						if ( scrollPct < 0 || scrollPct == null ) { scrollPct = 0; }
+						var moveElem = (conH - elemH) * scrollPct;					
+						if ( conT < winB && conB > winT ) { elem.css("margin-top",moveElem+"px"); }
+					}
+				});
+			}
 		}
-		if ( getDeviceW() > mobileCutoff ) {  			
-			window.addEventListener('scroll', function() { moveDiv(); });			
-		}
-		moveDiv();
-
-
+		window.addEventListener('scroll', function() { posParaDiv(); });			
+		posParaDiv();
 	};
 
 // Set up "Magic Menu"	
@@ -939,9 +938,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 // Delete a div
 	window.removeDiv = function (target) {
 		$(target).remove();
-
-
-
 	};		
 	
 // Turn SVG into an element's background image
@@ -1661,7 +1657,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 		}
 				
 	// Handle parallax sections (with content) on mobile devices
-		var countParallax = 1;
+	/*	var countParallax = 1;
 		$('.section-parallax .flex').each(function() {
 			var thisSection = $(this).closest('.section-parallax'), thisSectionBG = thisSection.attr('data-image-src'), parallaxClass = 'parallax-'+countParallax;			
 			thisSection.addClass('mobile-full');
@@ -1695,6 +1691,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 			
 			countParallax++;
 		}); 
+		*/
 				
 	// Set up Locked Message position, delay, & cookie	
 		$('section.section-lock').each(function() {

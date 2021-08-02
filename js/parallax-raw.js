@@ -92,29 +92,38 @@
 
     if ( navigator.userAgent.match(/(iPod|iPhone|iPad|Android)/) || $(window).width() <= 1024 ) {
       if (this.imageSrc && !this.$element.is('img')) {
-	    var mobileSrc = this.imageSrc.split('.')[0], mobileExt = "."+this.imageSrc.split('.')[1], deviceW = $(window).width(), useW = 480, useH = 320, ratio = this.naturalWidth / this.naturalHeight; 
-		if ( navigator.userAgent.match(/(iPod|iPhone|iPad)/) ) { if ( window.orientation == 90 || window.orientation == -90 ) { deviceWidth = window.screen.height; } }		
-		if ( deviceW > 480 ) { useW = 640; }
-		if ( deviceW > 640 ) { useW = 960; }
-		if ( deviceW > 960 ) { useW = 1280; }
-		useH = Math.round(useW / ratio);
-		mobileSrc = mobileSrc+"-"+useW+"x"+useH+mobileExt;
+	    var mobileSrc = this.imageSrc.split('.')[0], mobileExt = "."+this.imageSrc.split('.')[1], deviceW = $(window).width(), useW=[], useH=[], useMe=0, ratio = this.naturalWidth / this.naturalHeight, padding=this.$element.attr("data-padding"); 
+		if ( navigator.userAgent.match(/(iPod|iPhone|iPad)/) ) { if ( window.orientation == 90 || window.orientation == -90 ) { deviceWidth = window.screen.height; } }	
+		
+		useW[0] = 480; useH[0] = Math.round(useW[0] / ratio);
+		useW[1] = 640; useH[1] = Math.round(useW[1] / ratio);
+		useW[2] = 960; useH[2] = Math.round(useW[2] / ratio);
+		useW[3] = 1280; useH[3] = Math.round(useW[3] / ratio);
+
+		if ( deviceW > 480 ) { useMe = 1; }
+		if ( deviceW > 640 ) { useMe = 2; }
+		if ( deviceW > 960 ) { useMe = 3; }	
+		if ( deviceW > 1280 ) { useMe = 4; }	
+		
+		if ( this.$element.attr("data-has-content") == "true" ) {  
+			var theParallax = this.$element.find('.col.parallax'), parallaxH = theParallax.outerHeight() + (padding * 2);
+			this.$element.css({ "paddingTop":padding+"px", "paddingBottom":padding+"px", "min-height":parallaxH+"px", "max-height":parallaxH+'px' });
+			if ( parallaxH > useH[useMe] ) { useMe++;
+				if ( parallaxH > useH[useMe] ) { useMe++;
+					if ( parallaxH > useH[useMe] ) { useMe++; }
+				}			
+			}
+		} else {  
+			this.$element.css({ "min-height": useH+'px', "max-height": useH+'px' });
+		}		
+
+		if ( useMe < 4 ) { mobileSrc = mobileSrc+"-"+useW[useMe]+"x"+useH[useMe]+mobileExt; } else { mobileSrc = mobileSrc + mobileExt }
 		
 		this.$element.css({
 		  "background-image": 'url(' + mobileSrc + ')',
 		  "background-size": 'cover',
 		  "background-position": this.position
 		});
-		
-		if ( this.$element.attr("data-has-content") == "true" ) {  
-			var theParallax = this.$element.find('.col.parallax'), parallaxH = theParallax.outerHeight() + 100;
-			this.$element.css({ "paddingTop":"50px", "paddingBottom":"50px", "height":parallaxH+"px" });	
-		} else {  
-			this.$element.css({
-			  "min-height": useH+'px',		  
-			  "max-height": useH+'px',
-			});
-		}
       }
       return this;
    }

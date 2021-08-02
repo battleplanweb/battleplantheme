@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.4' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.5' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -1939,7 +1939,8 @@ function battleplan_dequeue_unwanted_stuff() {
 	wp_dequeue_style( 'select2' );  wp_deregister_style( 'select2' );
 	wp_dequeue_style( 'asp-default-style' ); wp_deregister_style( 'asp-default-style' );		
 	wp_dequeue_style( 'typed-cursor' ); wp_deregister_style( 'typed-cursor' );
-	wp_dequeue_style( 'contact-form-7' ); wp_deregister_style( 'contact-form-7' );
+	wp_dequeue_style( 'contact-form-7' ); wp_deregister_style( 'contact-form-7' );	
+	wp_dequeue_style( 'ari-fancybox' ); wp_deregister_style( 'ari-fancybox' );
 
 // re-load in header
 	wp_dequeue_style( 'stripe-handler-ng-style' ); wp_deregister_style( 'stripe-handler-ng-style' );
@@ -1976,6 +1977,7 @@ function battleplan_footer_styles() {
 	wp_enqueue_style( 'battleplan-animate', get_template_directory_uri().'/animate.css', array(), _BP_VERSION );	
 	wp_enqueue_style( 'battleplan-fontawesome', get_template_directory_uri()."/fontawesome.css", array(), _BP_VERSION );
 	if ( is_plugin_active( 'extended-widget-options/plugin.php' ) ) { wp_enqueue_style( 'widgetopts-styles', '/wp-content/plugins/extended-widget-options/assets/css/widget-options.css', array(), _BP_VERSION ); }	
+	if ( is_plugin_active( 'ari-fancy-lightbox/ari-fancy-lightbox.php' ) ) { wp_enqueue_style( 'ari-fancybox-styles', '/wp-content/plugins/ari-fancy-lightbox/assets/fancybox/jquery.fancybox.min.css', array(), _BP_VERSION ); }	
 }
 
 // Load and enqueue remaining scripts
@@ -2016,7 +2018,7 @@ require_once get_template_directory() . '/functions-public.php';
 require_once get_stylesheet_directory() . '/functions-site.php';
 
 // Delay execution of non-essential scripts
-if ( !is_admin() ) {
+if ( !is_admin() && !is_plugin_active( 'woocommerce/woocommerce.php' ) ) {
 	ob_start(); 
 	add_action('shutdown', function() { $final = ''; $levels = ob_get_level(); for ($i = 0; $i < $levels; $i++) { $final .= ob_get_clean(); } echo apply_filters('final_output', $final); }, 0);
 	add_filter('final_output', function($html) {
@@ -2024,7 +2026,7 @@ if ( !is_admin() ) {
 		$dom->loadHTML($html);
 		$script = $dom->getElementsByTagName('script');
 
-		$targets = array('podium', 'google', 'paypal', 'carousel', 'extended-widget');
+		$targets = array('podium', 'google', 'paypal', 'carousel', 'extended-widget', 'fancybox');
 
 		foreach ($script as $item) :		   
 			foreach ($targets as $target) :
@@ -2046,7 +2048,7 @@ if ( !is_admin() ) {
 	add_action( 'wp_print_footer_scripts', 'battleplan_delay_nonessential_scripts');
 	function battleplan_delay_nonessential_scripts() { ?>
 		<script type="text/javascript" id="delay-scripts">
-			const loadScriptsTimer=setTimeout(loadScripts,3000);
+			const loadScriptsTimer=setTimeout(loadScripts,4000);
 			const userInteractionEvents=["mouseover","keydown","touchstart","touchmove","wheel"];
 			userInteractionEvents.forEach(function(event) {	
 				window.addEventListener(event, triggerScriptLoader, {passive:!0})});
@@ -3016,8 +3018,8 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 // Parallax Section 
 add_shortcode( 'parallax', 'battleplan_buildParallax' );
 function battleplan_buildParallax( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'style'=>'', 'type'=>'section', 'width'=>'edge', 'img-w'=>'2000', 'img-h'=>'1333', 'height'=>'800', 'pos-x'=>'center', 'pos-y'=>'top', 'bleed'=>'10', 'speed'=>'0.7', 'image'=>'', 'class'=>'', 'scroll-btn'=>'false', 'scroll-loc'=>'#page', 'scroll-icon'=>'fa-chevron-down' ), $atts );
-	if ( $content != null ) { $hasContent = ' data-has-content="true"'; }
+	$a = shortcode_atts( array( 'name'=>'', 'style'=>'', 'type'=>'section', 'width'=>'edge', 'img-w'=>'2000', 'img-h'=>'1333', 'height'=>'800', 'padding'=>'50', 'pos-x'=>'center', 'pos-y'=>'top', 'bleed'=>'10', 'speed'=>'0.7', 'image'=>'', 'class'=>'', 'scroll-btn'=>'false', 'scroll-loc'=>'#page', 'scroll-icon'=>'fa-chevron-down' ), $atts );
+	if ( $content != null ) { $hasContent = ' data-has-content="true" data-padding="'.esc_attr($a['padding']).'"'; }
 	$name = strtolower(esc_attr($a['name']));
 	$name = preg_replace("/[\s_]/", "-", $name);
 	$style = esc_attr($a['style']);

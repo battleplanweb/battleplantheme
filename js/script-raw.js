@@ -126,7 +126,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	
 // Calculate how many pages user has viewed (exclude page refresh)
 	if ( !getCookie('pages-viewed') ) { 
-		uniqueID = Date.now() + "A" + Math.floor(Math.random() * 100);		
+		uniqueID = Number(Date.now() + Math.floor(Math.random() * 100));		
 		setCookie('unique-id', uniqueID); 
 		$("body").attr("data-unique-id", uniqueID); 
 		$("body").attr("data-pageviews", 1); 
@@ -810,6 +810,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				setTimeout( function () { screenResize(); }, total);	
 			}, { offset: offset });
 		}, delay);	
+
 	};	
 		
 // Button to reveal a hidden div
@@ -934,6 +935,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	window.removeParent = function (target) {
 		$(target).unwrap();
 	};	
+
 
 // Delete a div
 	window.removeDiv = function (target) {
@@ -1646,52 +1648,7 @@ if ( $('body').hasClass('remove-sidebar') ) {
 
 	// Fade out pre-loader screen when site is fully loaded
 		clearInterval(bgTimer);
-		$("#loader").fadeOut("fast");  		 
- 
-	// Get video link from data-src and feed to src 
-		var vidDefer = document.getElementsByTagName('iframe');
-		for (var i=0; i<vidDefer.length; i++) {
-			if(vidDefer[i].getAttribute('data-src')) {
-				vidDefer[i].setAttribute('src',vidDefer[i].getAttribute('data-src'));
-			}
-		}
-				
-	// Handle parallax sections (with content) on mobile devices
-	/*	var countParallax = 1;
-		$('.section-parallax .flex').each(function() {
-			var thisSection = $(this).closest('.section-parallax'), thisSectionBG = thisSection.attr('data-image-src'), parallaxClass = 'parallax-'+countParallax;			
-			thisSection.addClass('mobile-full');
-			
-			setTimeout(function() { 				
-				$('img.parallax-slider').each(function() {
-					if ( $(this).attr('src') == thisSectionBG ) {
-						$(this).parent().addClass('mobile-hide');						
-					}
-				});		
-			}, 100); 
-						
-			$('<style>html.'+parallaxClass+'::before{background-image:url('+thisSectionBG+')}</style>').appendTo('head');		
-			
-			thisSection.waypoint(function(direction) {				
-				if (direction === 'down') {			
-					$('html').addClass(parallaxClass);
-				} else {
-					$('html').removeClass(parallaxClass);
-				}					
-
-			}, { offset: '100%' });	 		
-			
-			thisSection.waypoint(function(direction) {
-				if (direction === 'down') {			
-					$('html').removeClass(parallaxClass);
-				} else {
-					$('html').addClass(parallaxClass);
-				}					
-			}, { offset: function() { return -$(this.element).outerHeight() } });	
-			
-			countParallax++;
-		}); 
-		*/
+		$("#loader").fadeOut("fast"); 
 				
 	// Set up Locked Message position, delay, & cookie	
 		$('section.section-lock').each(function() {

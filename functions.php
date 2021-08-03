@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.5' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.5.1' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -274,7 +274,7 @@ function battleplan_getRandomImage($atts, $content = null ) {
 	
 		$buildImage = "";	
 		if ( $link == "yes" ) $buildImage .= '<a href="'.$full[0].'">';		
-		$buildImage .= '<img data-id="'.$getID.'"'.getImgMeta($getID).' data-count-tease="true" data-count-view="true" class="wp-image-'.$getID.' random-img '.$tags[0].'-img '.$align.' size-'.$size.$class.'" loading="lazy" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" alt="'.get_post_meta($getID, '_wp_attachment_image_alt', true).'">';	
+		$buildImage .= '<img data-id="'.$getID.'"'.getImgMeta($getID).' data-count-tease="true" data-count-view="true" class="wp-image-'.$getID.' random-img '.$tags[0].'-img '.$align.' size-'.$size.$class.'" loading="lazy" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.get_post_meta($getID, '_wp_attachment_image_alt', true).'">';	
 		if ( $link == "yes" ) $buildImage .= '</a>';	
 		$imageArray[] = $buildImage;	
 	
@@ -328,7 +328,7 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 	
 		$getImage = "";
 		if ( $link == "yes" ) $getImage .= '<a href="'.$image[0].'">';
-		$getImage .= '<img data-id="'.$getID.'"'.getImgMeta($getID).' data-count-tease="true" data-count-view="true" class="random-img '.$tags[0].'-img '.$align.'" loading="lazy" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" alt="'.get_post_meta($getID, '_wp_attachment_image_alt', true).'">';
+		$getImage .= '<img data-id="'.$getID.'"'.getImgMeta($getID).' data-count-tease="true" data-count-view="true" class="random-img '.$tags[0].'-img '.$align.'" loading="lazy" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.get_post_meta($getID, '_wp_attachment_image_alt', true).'">';
 		if ( $link == "yes" ) $getImage .= '</a>';
 
 		$imageArray[] = do_shortcode('[col class="col-row-of-pics'.$class.'"]'.$getImage.'[/col]');		
@@ -960,7 +960,7 @@ function battleplan_setUpWPGallery( $atts, $content = null ) {
 		$count++;
 
 		if ( $caption != "false" ) : $captionPrint = '<figcaption><div class="image-caption image-title">'.$post->post_title.'</div></figcaption>'; endif;
-		$gallery .= '<dl class="col col-archive col-gallery id-'.$getID.'"><dt class="col-inner"><a class="link-archive link-gallery ari-fancybox" href="'.$full[0].'"><img class="img-gallery wp-image-'.get_the_ID().'" data-id="'.get_the_ID().'"'.getImgMeta($getID).' loading="lazy" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'"></a>'.$captionPrint.'</dt></dl>';
+		$gallery .= '<dl class="col col-archive col-gallery id-'.$getID.'"><dt class="col-inner"><a class="link-archive link-gallery ari-fancybox" href="'.$full[0].'"><img class="img-gallery wp-image-'.get_the_ID().'" data-id="'.get_the_ID().'"'.getImgMeta($getID).' loading="lazy" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'"></a>'.$captionPrint.'</dt></dl>';
 	endwhile; endif;	
 	wp_reset_postdata();
 	$gallery .= "</div>";	
@@ -1600,16 +1600,11 @@ function battleplan_handle_main_query( $query ) {
 
 // Maintain pagination when using orderby=rand
 add_filter( 'posts_orderby', 'battleplan_randomize_with_pagination' );
-function battleplan_randomize_with_pagination( $orderby ) { 		
-	if ( is_admin() || !is_main_query() || $orderby != "RAND()") return $orderby;
-
-	$seed = $_SESSION['bp_seed'];
-	if( !get_query_var( 'paged' ) || get_query_var( 'paged' ) == 0 || get_query_var( 'paged' ) == 1 ) {
-		$seed = mt_rand(0, 32767);
-	}
-	$_SESSION['bp_seed'] = $seed;
-
-	return 'RAND('.$seed.')';		
+function battleplan_randomize_with_pagination( $orderby ) { 
+	if ( $orderby == "RAND()" && isset($_COOKIE['unique-id']) ) :
+		$orderby = "RAND(".$_COOKIE['unique-id'].")";
+	endif;
+	return $orderby;
 }
 
 // Add Breadcrumbs
@@ -2026,7 +2021,7 @@ if ( !is_admin() && !is_plugin_active( 'woocommerce/woocommerce.php' ) ) {
 		$dom->loadHTML($html);
 		$script = $dom->getElementsByTagName('script');
 
-		$targets = array('podium', 'google', 'paypal', 'carousel', 'extended-widget', 'fancybox');
+		$targets = array('podium', 'google', 'paypal', 'carousel', 'extended-widget', 'fancybox', 'embed-player');
 
 		foreach ($script as $item) :		   
 			foreach ($targets as $target) :
@@ -2060,7 +2055,7 @@ if ( !is_admin() && !is_plugin_active( 'woocommerce/woocommerce.php' ) ) {
 					})
 				}
 			function loadScripts() {
-				setTimeout(function() { document.querySelectorAll("script[data-loading='delay']").forEach(function(elem) { elem.setAttribute("src", elem.getAttribute("data-src")) }) }, 1000);
+				setTimeout(function() { document.querySelectorAll("[data-loading='delay']").forEach(function(elem) { elem.setAttribute("src", elem.getAttribute("data-src")) }) }, 1000);
 			}
 		</script><?php
 	}
@@ -2898,7 +2893,7 @@ function battleplan_buildVid( $atts, $content = null ) {
 		if ( $end && $now > $end ) return null;		
 	}
 
-	return '<div class="block block-video span-'.$size.$class.'" style="'.$style.' padding-top:'.$height.'%"><iframe src="" data-src="'.$link.'" allowfullscreen></iframe></div>';
+	return '<div class="block block-video span-'.$size.$class.'" style="'.$style.' padding-top:'.$height.'%"><iframe src="" data-src="'.$link.'" data-loading="delay" allowfullscreen></iframe></div>';
 }
 
 // Group Block

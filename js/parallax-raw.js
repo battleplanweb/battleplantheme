@@ -106,7 +106,7 @@
 		if ( deviceW > 1280 ) { useMe = 4; }	
 		
 		if ( this.$element.attr("data-has-content") == "true" ) {  
-			var theParallax = this.$element.find('.col.parallax'), parallaxH = theParallax.outerHeight() + (padding * 2);
+			var theParallax = this.$element.find('.col.parallax'), parallaxH = Math.round(theParallax.outerHeight()) + (padding * 2);
 			this.$element.css({ "paddingTop":padding+"px", "paddingBottom":padding+"px", "min-height":parallaxH+"px", "max-height":parallaxH+'px' });
 			if ( parallaxH > useH[useMe] ) { useMe++;
 				if ( parallaxH > useH[useMe] ) { useMe++;
@@ -114,7 +114,7 @@
 				}			
 			}
 		} else {  
-			this.$element.css({ "min-height": useH+'px', "max-height": useH+'px' });
+			this.$element.css({ "min-height": useH[useMe]+'px', "max-height": useH[useMe]+'px' });
 		}		
 
 		if ( useMe < 4 ) { mobileSrc = mobileSrc+"-"+useW[useMe]+"x"+useH[useMe]+mobileExt; } else { mobileSrc = mobileSrc + mobileExt }

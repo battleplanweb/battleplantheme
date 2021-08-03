@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 9.5.1
+Version: 9.5.2
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -1724,7 +1724,7 @@ section.section .flex.nested .flex {
   	transform: 									translateZ(0);
 }
 
-.section-parallax .col.parallax {
+.section .col.parallax {
 	align-self: 								start;
 }
 
@@ -1800,6 +1800,7 @@ section.section .flex.nested .flex {
 	background:									#cccccc;
 	z-index:									3000;
 }
+
 
 .tag-line, .phone-number {
 	font-size:									140%;
@@ -2200,6 +2201,7 @@ section.section .flex.nested .flex {
 
 .menu-strip .flex {
 	z-index: 									1;
+
 }
 
 .main-navigation li,
@@ -4870,7 +4872,6 @@ iframe#podium-modal {
 
 @media screen and (min-width: 1025px) and (max-width: 1280px) {
 	.hide-4 {
-
 		display:									none !important;
 	}
 }
@@ -4878,7 +4879,6 @@ iframe#podium-modal {
 @media screen and (min-width: 861px) and (max-width: 1024px) {
 	.hide-3 {
 		display:									none !important;
-
 	}
 }
 
@@ -4890,6 +4890,42 @@ iframe#podium-modal {
 
 @media screen and (max-width: 576px) {
 	.hide-1 {
+		display:									none !important;
+	}
+}
+
+
+
+
+
+@media screen and (min-width: 961px) and (max-width: 1279px) {
+	.screen-480,
+	.screen-640,
+	.screen-960 {
+		display:									none !important;
+	}
+}
+
+@media screen and (min-width: 641px) and (max-width: 960px) {
+	.screen-480,
+	.screen-640,
+	.screen-1280 {
+		display:									none !important;
+	}
+}
+
+@media screen and (min-width: 481px) and (max-width: 640px) {
+	.screen-480,
+	.screen-960,
+	.screen-1280 {
+		display:									none !important;
+	}
+}
+
+@media screen and (max-width: 480px) {
+	.screen-640,
+	.screen-960,
+	.screen-1280 {
 		display:									none !important;
 	}
 }

@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.5.1' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.5.2' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -3014,7 +3014,7 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 add_shortcode( 'parallax', 'battleplan_buildParallax' );
 function battleplan_buildParallax( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'name'=>'', 'style'=>'', 'type'=>'section', 'width'=>'edge', 'img-w'=>'2000', 'img-h'=>'1333', 'height'=>'800', 'padding'=>'50', 'pos-x'=>'center', 'pos-y'=>'top', 'bleed'=>'10', 'speed'=>'0.7', 'image'=>'', 'class'=>'', 'scroll-btn'=>'false', 'scroll-loc'=>'#page', 'scroll-icon'=>'fa-chevron-down' ), $atts );
-	if ( $content != null ) { $hasContent = ' data-has-content="true" data-padding="'.esc_attr($a['padding']).'"'; }
+	//if ( $content != null ) { $hasContent = ' data-has-content="true" data-padding="'.esc_attr($a['padding']).'"'; }
 	$name = strtolower(esc_attr($a['name']));
 	$name = preg_replace("/[\s_]/", "-", $name);
 	$style = esc_attr($a['style']);
@@ -3028,6 +3028,7 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	$posX = esc_attr($a['pos-x']);
 	$posY = esc_attr($a['pos-y']);
 	$bleed = esc_attr($a['bleed']); 
+	$padding = esc_attr($a['padding']); 
 	$speed = esc_attr($a['speed']);
 	$image = esc_attr($a['image']);	
 	$class = esc_attr($a['class']); 
@@ -3036,12 +3037,34 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	$scrollLoc = esc_attr($a['scroll-loc']); 
 	$scrollIcon = esc_attr($a['scroll-icon']); 
 	if ( $scrollBtn != "false" ) $buildScrollBtn = '<div class="scroll-down"><a href="'.$scrollLoc.'"><i class="fas '.$scrollIcon.' aria-hidden="true"></i><span class="sr-only">Scroll Down</span></a></div>';
-	if ( !$name ) $name = "section-".rand(10000,99999);
+	if ( !$name ) $name = "section-".rand(10000,99999);	
 	
-	if ( $type == "section" ) :
-		return do_shortcode('<section id="'.$name.'" class="section'.$style.' section-'.$width.' section-parallax'.$class.'" style="height:'.$height.'" data-parallax="scroll" data-natural-width="'.$imgW.'" data-natural-height="'.$imgH.'" data-position-x="'.$posX.'" data-position-y="'.$posY.'" data-z-index="1" data-bleed="'.$bleed.'" data-speed="'.$speed.'" data-image-src="'.$image.'"'.$hasContent.'>'.$content.$buildScrollBtn.'</section>');	
-	elseif ( $type == "col" ) :
-		return do_shortcode('<div id="'.$name.'" class="col col-parallax'.$class.' '.$posX.'" style="height:'.$height.'" data-parallax="scroll" data-natural-width="'.$imgW.'" data-natural-height="'.$imgH.'" data-position-x="'.$posX.'" data-position-y="'.$posY.'" data-z-index="1" data-bleed="'.$bleed.'" data-speed="'.$speed.'" data-image-src="'.$image.'"'.$hasContent.'>'.$content.'</div>');	
+	if ( is_mobile() ) :		
+		$mobileSrc = explode('.', $image);
+		$ratio = $imgW / $imgH;
+		$useRatio = 2;
+		$realW = array(480, 640, 960, 1280);
+		$realH = $useH = array(round($realW[0]/$ratio), round($realW[1]/$ratio), round($realW[2]/$ratio), round($realW[3]/$ratio));
+		if ( $ratio < $useRatio ) { $useH = array(round($realW[0]/$useRatio), round($realW[1]/$useRatio), round($realW[2]/$useRatio), round($realW[3]/$useRatio)); }
+		
+		if ( $content != null ) :			
+			for ($i = 0; $i < count($realW); $i++) :			
+				$setUpElement .= do_shortcode('<section id="'.$name.'" class="section'.$style.' section-'.$width.$class.' screen-'.$realW[$i].'" style="height: auto; padding-top: '.$padding.'px; padding-bottom: '.$padding.'px; background-image: url(../../..'.$mobileSrc[0].'-'.$realW[$i].'x'.$realH[$i].'.'.$mobileSrc[1].'); background-size: cover; background-position: '.$posY." ".$posX.'">'.$content.'</section>');		
+			endfor;				
+		else : 
+			for ($i = 0; $i < count($realW); $i++) :			
+				$setUpElement .= '<section class="section'.$style.' section-'.$width.$class.' screen-'.$realW[$i].'" style="height:'.$useH[$i].'px; background-image: url(../../..'.$mobileSrc[0].'-'.$realW[$i].'x'.$realH[$i].'.'.$mobileSrc[1].'); background-size: cover; background-position: '.$posY." ".$posX.'"></section>';		
+			endfor;						
+		endif;	
+		
+		return $setUpElement;
+		
+	else:
+		if ( $type == "section" ) :
+			return do_shortcode('<section id="'.$name.'" class="section'.$style.' section-'.$width.' section-parallax'.$class.'" style="height:'.$height.'" data-parallax="scroll" data-natural-width="'.$imgW.'" data-natural-height="'.$imgH.'" data-position-x="'.$posX.'" data-position-y="'.$posY.'" data-z-index="1" data-bleed="'.$bleed.'" data-speed="'.$speed.'" data-image-src="'.$image.'">'.$content.$buildScrollBtn.'</section>');	
+		elseif ( $type == "col" ) :
+			return do_shortcode('<div id="'.$name.'" class="col col-parallax'.$class.' '.$posX.'" style="height:'.$height.'" data-parallax="scroll" data-natural-width="'.$imgW.'" data-natural-height="'.$imgH.'" data-position-x="'.$posX.'" data-position-y="'.$posY.'" data-z-index="1" data-bleed="'.$bleed.'" data-speed="'.$speed.'" data-image-src="'.$image.'">'.$content.'</div>');	
+		endif;		
 	endif;
 }
 

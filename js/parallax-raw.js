@@ -89,6 +89,8 @@
     this.position =
       this.positionX + (isNaN(this.positionX)? '' : 'px') + ' ' +
       this.positionY + (isNaN(this.positionY)? '' : 'px');
+	  
+/*
 
     if ( navigator.userAgent.match(/(iPod|iPhone|iPad|Android)/) || $(window).width() <= 1024 ) {
       if (this.imageSrc && !this.$element.is('img')) {
@@ -127,7 +129,7 @@
       }
       return this;
    }
-
+*/
     this.$mirror = $('<div />').prependTo(this.mirrorContainer);
 
     var slider = this.$element.find('>.parallax-slider');

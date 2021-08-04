@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.5.3' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.5.4' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -1101,6 +1101,30 @@ function battleplan_getLogInForm( $atts, $content = null ) {
 
 	return $buildLogin; 
 } 
+
+// Side by side images
+add_shortcode( 'side-by-side', 'battleplan_SideBySideImg' );
+function battleplan_SideBySideImg( $atts, $content = null ) {	
+	$a = shortcode_atts( array( 'img'=>'', 'size'=>'half-s', 'align'=>'center', 'full'=>'', 'pos'=>'bottom' ), $atts );	
+	$size = esc_attr($a['size']);
+	$full = esc_attr($a['full']);	
+	$pos = esc_attr($a['pos']);
+	$align = "align".esc_attr($a['align']);
+	$images = explode(',', esc_attr($a['img']));
+	$num = count($images);
+	
+	$buildFlex = '<ul class="side-by-side '.$align.'">';
+	for ($i=0; $i<$num; $i++) :
+		$img = wp_get_attachment_image_src( $images[$i], $size );
+		list ($src, $width, $height ) = $img;
+		if ( $images[$i] == $full ) : $class=' class="full-'.$pos.'" '; else: $class=''; endif;
+		$ratio = $width/$height;	
+		$buildFlex .= '<li style="flex: '.$ratio.'"'.$class.'>'.wp_get_attachment_image( $images[$i], $size ).'</li>';	
+	endfor;
+	$buildFlex .= '</ul>';
+	
+	return $buildFlex;
+} 
   
 /*--------------------------------------------------------------
 # Functions to extend WordPress 
@@ -1981,8 +2005,12 @@ function battleplan_scripts() {
 	if ( !is_mobile() ) { wp_enqueue_script( 'battleplan-parallax', get_template_directory_uri().'/js/parallax.js', array(), _BP_VERSION, false ); }
 	wp_enqueue_script( 'battleplan-carousel', get_template_directory_uri().'/js/bootstrap-carousel.js', array(), _BP_VERSION, false );	
 	wp_enqueue_script( 'battleplan-waypoints', get_template_directory_uri().'/js/waypoints.js', array(), _BP_VERSION, false );	
-	wp_enqueue_script( 'battleplan-script', get_template_directory_uri().'/js/script.js', array(), _BP_VERSION, false );
-	wp_enqueue_script( 'battleplan-script-site', get_stylesheet_directory_uri().'/script-site.js', array(), _BP_VERSION, false );
+	//wp_enqueue_script( 'battleplan-script', get_template_directory_uri().'/js/script.js', array(), _BP_VERSION, false );
+		
+	if ( !is_mobile() ) { wp_enqueue_script( 'battleplan-script-desktop', get_template_directory_uri().'/js/script-desktop.js', array(), _BP_VERSION, false ); }
+	wp_enqueue_script( 'battleplan-script-essential', get_template_directory_uri().'/js/script-essential.js', array(), _BP_VERSION, false );				
+	wp_enqueue_script( 'battleplan-script-site', get_stylesheet_directory_uri().'/script-site.js', array(), _BP_VERSION, false );	
+	wp_enqueue_script( 'battleplan-script-tracking', get_template_directory_uri().'/js/script-tracking.js', array(), _BP_VERSION, false );
 	
 	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { wp_enqueue_script( 'battleplan-events', get_template_directory_uri().'/js/events.js', array(), _BP_VERSION, false ); } 
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_enqueue_script( 'battleplan-woocommerce', get_template_directory_uri().'/js/woocommerce.js', array(), _BP_VERSION, false ); } 	
@@ -1991,10 +2019,11 @@ function battleplan_scripts() {
 	if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) { wp_enqueue_script( 'comment-reply' ); }
 	
 	$saveDir = array( 'theme_dir_uri'=>get_stylesheet_directory_uri(), 'upload_dir_uri'=>wp_upload_dir()['baseurl'] );
-	wp_localize_script( 'battleplan-script', 'site_dir', $saveDir );	
+	wp_localize_script( 'battleplan-script-essential', 'site_dir', $saveDir );	
+	wp_localize_script( 'battleplan-script-desktop', 'site_dir', $saveDir );	
 	
     $saveOptions = array ( 'lat' => get_option('site_lat'), 'long' => get_option('site_long'), 'radius' => get_option('site_radius'));
-    wp_localize_script('battleplan-script', 'site_options', $saveOptions);
+    wp_localize_script('battleplan-script-tracking', 'site_options', $saveOptions);
 }
 
 // Load and enqueue admin styles & scripts
@@ -3040,7 +3069,8 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	if ( !$name ) $name = "section-".rand(10000,99999);	
 	
 	if ( is_mobile() ) :		
-		$mobileSrc = explode('.', $image);
+		$mobileSrc = explode('.', $image);		
+		$mobileSrc[0] = substr($mobileSrc[0], 0, strpos($mobileSrc[0], "-1920x"));		
 		$ratio = $imgW / $imgH;
 		$useRatio = 2;
 		$realW = array(480, 640, 960, 1280);

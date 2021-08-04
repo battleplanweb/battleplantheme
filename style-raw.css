@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 9.5.3
+Version: 9.5.4
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -1802,6 +1802,8 @@ section.section .flex.nested .flex {
 }
 
 
+
+
 .tag-line, .phone-number {
 	font-size:									140%;
 }
@@ -2203,6 +2205,8 @@ section.section .flex.nested .flex {
 	z-index: 									1;
 
 }
+
+
 
 .main-navigation li,
 .widget-navigation li {
@@ -3048,62 +3052,6 @@ img.unloaded {
 	margin: 									1.5em auto;
 }
 
-/*
-.size-quarter-s {
-	max-width:									240px;
-}
-
-.size-third-s,
-.size-quarter-f {
-	max-width:									320px;
-}
-
-.size-half-s {
-	max-width:									480px;
-}
-
-.size-full-s {
-	max-width:									960px;
-}
-
-.size-third-f {
-	max-width:									430px;
-}
-
-.size-half-f {
-	max-width:									640px;
-}
-
-.size-full-f {
-	max-width:									1280px;
-}
-
-.size-max {
-	max-width:									1920px;
-}
-
-.size-quarter-s, 
-.size-quarter-f {
-	width:										25%;
-}
-
-.size-third-s, 
-.size-third-f {
-	width:										33%;
-}
-
-.size-half-s, 
-.size-half-f {
-	width:										50%;
-}
-
-.size-full-s, 
-.size-full-f, 
-.size-max {
-	width:										100%;
-}
-*/
-
 .align-left.size-half-f,
 .alignleft.size-half-f,
 .align-right.size-half-f,
@@ -3193,7 +3141,6 @@ img.noFX,
 	position:									relative;
 }
 
-
 .inset-shadow::after {
     content: 									'';
     position: 									absolute;
@@ -3208,6 +3155,22 @@ img.noFX,
     margin: 									0;
     padding: 									0;
 	pointer-events:								none;
+}
+
+ul.side-by-side {
+	display: 									flex; 
+	flex-flow:									row wrap; 
+	list-style: 								none;
+	padding: 									0;
+}
+
+ul.side-by-side li {
+	margin: 									0 !important;
+	padding: 									0 1em;
+}
+
+ul.side-by-side img {
+	box-sizing: 								content-box;
 }
 
 /* Videos */
@@ -3289,6 +3252,7 @@ img.noFX,
 }
 
 .testimonials-name {
+
 	font-weight:								bold;
 	font-size:									120%;
 }
@@ -3310,6 +3274,7 @@ img.noFX,
 }
 
 .testimonials-platform-facebook {
+
 	background:									url('../battleplantheme/common/logos/facebook.png');
 	background-size:							contain;
 }
@@ -4219,55 +4184,42 @@ iframe#podium-modal {
 		font-size: 									14px;
 	}
 	
-	/* Responsive Content w/ sidebar 
-	.size-quarter-s,
-	.size-third-s {
-		width:										33%;
-	}
-	
-	.size-half-s {
-		width: 										40%;
-	}
-	*/
-	
 	/* Responsive Sections */
-	.flex.grid-1-1-1-1,
-	.flex.grid-1-1-2,
-	.flex.grid-1-2-1,
-	.flex.grid-1-3-1,
-	/*.flex.grid-3-2,
-	.flex.grid-2-3, removed 2/28 H & K Header */
-	.flex.grid-2-1-1 {
+	.flex.grid-1-1-1-1:not(.break-none),
+	.flex.grid-1-1-2:not(.break-none),
+	.flex.grid-1-2-1:not(.break-none),
+	.flex.grid-1-3-1:not(.break-none),
+	.flex.grid-2-1-1:not(.break-none) {
 		grid-template-columns: 						1fr 1fr;
 	}
 	
-	.flex.grid-1-1-2 .col:nth-child(3n+3),
-	.flex.grid-1-2-1 .col,
-	.flex.grid-1-3-1 .col,
-	/*.flex.grid-3-2 .col,
-	.flex.grid-2-3 .col, removed 2/28 H & K Header */
-	.flex.grid-2-1-1 .col:nth-child(3n+1) {
+	.flex.grid-1-1-2:not(.break-none) .col:nth-child(3n+3),
+	.flex.grid-1-2-1:not(.break-none) .col,
+	.flex.grid-1-3-1:not(.break-none) .col,
+	.flex.grid-2-1-1:not(.break-none) .col:nth-child(3n+1) {
 		grid-column: 								span 2;
 	}
 	
-	.flex.grid-1-1-2 .col:nth-child(3n+3) .col-inner,
-	.flex.grid-1-2-1 .col .col-inner,
-	.flex.grid-1-3-1 .col .col-inner,
-	/*.flex.grid-2-3 .col .col-inner,
-	.flex.grid-3-2 .col .col-inner, removed 2/28 H & K Header */
-	.flex.grid-2-1-1 .col:nth-child(3n+1) .col-inner {
+	.flex.grid-1-1-2:not(.break-none) .col:nth-child(3n+3) .col-inner,
+	.flex.grid-1-2-1:not(.break-none) .col .col-inner,
+	.flex.grid-1-3-1:not(.break-none) .col .col-inner,
+	.flex.grid-2-1-1:not(.break-none) .col:nth-child(3n+1) .col-inner {
 		max-width:									75%;
 		margin:										0 auto;
 	}
 	
-	.flex.grid-1-2-1 .col:nth-child(3n+1) .col-inner,
-	.flex.grid-1-2-1 .col:nth-child(3n+3) .col-inner {
+	.flex.grid-1-2-1:not(.break-none) .col:nth-child(3n+1) .col-inner,
+	.flex.grid-1-2-1:not(.break-none) .col:nth-child(3n+3) .col-inner {
 		max-width:									50%;
 		margin:										0 auto;
 	}
 			
 	.flex.break-4 .col {
 		grid-column: 								span 2; 
+	}
+	
+	.flex.break-4 .col .col-inner {
+		max-width:									100% !important;
 	}
 	
 	/* Row of Pics */
@@ -4387,15 +4339,15 @@ iframe#podium-modal {
 	}
 	
 	/* Responsive Sections */
-	.flex.grid-1-1-1 {
+	.flex.grid-1-1-1:not(.break-none) {
 		grid-template-columns: 						1fr 1fr;
 	}
 	
-	.flex.grid-1-1-1 .col:nth-child(3n+3) {
+	.flex.grid-1-1-1:not(.break-none) .col:nth-child(3n+3) {
 		grid-column: 								span 2;
 	}
 	
-	.flex.grid-1-1-1 .col:nth-child(3n+3) .col-inner,
+	.flex.grid-1-1-1:not(.break-none) .col:nth-child(3n+3) .col-inner,
 	.flex.break-3 .col .col-inner {
 		max-width:									50%;
 		margin:										0 auto;
@@ -4403,6 +4355,10 @@ iframe#podium-modal {
 	
 	.flex.break-3 .col {
 		grid-column: 								span 2; 
+	}
+	
+	.flex.break-3 .col .col-inner {
+		max-width: 									100% !important;
 	}
 		
 	/* Row of Pics */
@@ -4487,25 +4443,6 @@ iframe#podium-modal {
 		max-width:									100% !important;
 	}
 	
-	/* Responsive Content 
-	.size-quarter-s,
-	.size-quarter-f,
-	.size-third-s,
-	.size-third-f {
-		width:										43%;
-	}
-	
-	.size-half-s,
-	.size-half-f {
-		width: 										80%;
-	}
-	
-	.screen-mobile .size-half-s,
-	.screen-mobile .size-half-f {
-		float:										none;
-		margin: 									1.5em auto;
-	}	*/
-	
 	.align-left.size-half-f,
 	.alignleft.size-half-f,
 	.align-right.size-half-f,
@@ -4518,43 +4455,43 @@ iframe#podium-modal {
 	}
 			
 	/* Responsive Sections */
-	.flex.grid-3-1,
-	.flex.grid-1-3,
-	.flex.grid-2-1,
-	.flex.grid-1-2,
-	.flex.grid-3-2,
-	.flex.grid-2-3 {
+	.flex.grid-3-1:not(.break-none),
+	.flex.grid-1-3:not(.break-none),
+	.flex.grid-2-1:not(.break-none),
+	.flex.grid-1-2:not(.break-none),
+	.flex.grid-3-2:not(.break-none),
+	.flex.grid-2-3:not(.break-none) {
 		grid-template-columns: 						1fr 1fr;
 	}
 	
-	.flex.grid-3-1 .col,
-	.flex.grid-1-3 .col,
-	.flex.grid-2-1 .col,
-	.flex.grid-1-2 .col,
-	.flex.grid-1-1 .col,
-	.flex.grid-3-2 .col,
-	.flex.grid-2-3 .col,
+	.flex.grid-3-1:not(.break-none) .col,
+	.flex.grid-1-3:not(.break-none) .col,
+	.flex.grid-2-1:not(.break-none) .col,
+	.flex.grid-1-2:not(.break-none) .col,
+	.flex.grid-1-1:not(.break-none) .col,
+	.flex.grid-3-2:not(.break-none) .col,
+	.flex.grid-2-3:not(.break-none) .col,
 	.logo-strip .flex:not(.grid-1) .col {
 		grid-column: 								span 2;
 	}
 	
-	.flex.grid-3-1 .col:nth-child(2n+1) .col-inner,
-	.flex.grid-1-3 .col:nth-child(2n+2) .col-inner,
-	.flex.grid-2-1 .col:nth-child(2n+1) .col-inner,
-	.flex.grid-1-2 .col:nth-child(2n+2) .col-inner,
-	.flex.grid-2-3 .col .col-inner,
-	.flex.grid-3-2 .col .col-inner,
-	.flex.grid-1-1 .col .col-inner,
+	.flex.grid-3-1:not(.break-none) .col:nth-child(2n+1) .col-inner,
+	.flex.grid-1-3:not(.break-none) .col:nth-child(2n+2) .col-inner,
+	.flex.grid-2-1:not(.break-none) .col:nth-child(2n+1) .col-inner,
+	.flex.grid-1-2:not(.break-none) .col:nth-child(2n+2) .col-inner,
+	.flex.grid-2-3:not(.break-none) .col .col-inner,
+	.flex.grid-3-2:not(.break-none) .col .col-inner,
+	.flex.grid-1-1:not(.break-none) .col .col-inner,
 	.logo-strip .flex:not(.grid-1) .col .col-inner,
 	.flex.break-2 .col .col-inner {
 		max-width:									75%;
 		margin:										0 auto;
 	}
 	
-	.flex.grid-3-1 .col:nth-child(2n+2) .col-inner,
-	.flex.grid-1-3 .col:nth-child(2n+1) .col-inner,
-	.flex.grid-2-1 .col:nth-child(2n+2) .col-inner,
-	.flex.grid-1-2 .col:nth-child(2n+1) .col-inner{
+	.flex.grid-3-1:not(.break-none) .col:nth-child(2n+2) .col-inner,
+	.flex.grid-1-3:not(.break-none) .col:nth-child(2n+1) .col-inner,
+	.flex.grid-2-1:not(.break-none) .col:nth-child(2n+2) .col-inner,
+	.flex.grid-1-2:not(.break-none) .col:nth-child(2n+1) .col-inner{
 		max-width:									50%;
 		margin:										0 auto;
 	}
@@ -4572,6 +4509,19 @@ iframe#podium-modal {
 	.three-column {
 		column-count:								2;
 	}	
+	 
+	/* Media */
+	ul.side-by-side li.full-top {
+		flex: 										100% !important;
+		order: 										-1;
+		margin-bottom: 								1.5em !important;
+	}	
+	
+	ul.side-by-side li.full-bottom {
+		flex: 										100% !important;
+		order: 										99;
+		margin-top: 								1.5em !important;
+	}
 			
 	/* Row of Pics */ /* changed from .col to .col-row-of-pics 1/5/21 for Bubba's Cooks Country */
 	.grid-4e .col-row-of-pics:nth-last-child(1),
@@ -4703,9 +4653,8 @@ iframe#podium-modal {
 	/* Footer */
 	.site-info .site-icon {
 		display:									none;
-
-
 	}
+	
 	.site-info .span-10 {
 		grid-column:								span 12;
 	}
@@ -4748,7 +4697,6 @@ iframe#podium-modal {
 		max-width:									calc(45% - 1.5em);
 	}
 	
-
 	.inset-shadow img.align-left.size-half-f, 
 	.inset-shadow img.alignleft.size-half-f, 
 	.inset-shadow img.align-right.size-half-f, 
@@ -4769,6 +4717,10 @@ iframe#podium-modal {
 	}
 	
 	/* Responsive Sections */
+	.flex.break-none {
+		grid-template-columns: 						1fr 1fr;
+	}
+
 	.flex .col {
 		grid-column: 								span 2;
 	}
@@ -4797,6 +4749,20 @@ iframe#podium-modal {
 	.three-column {
 		column-count:								1;
 	}	
+	
+	/* Media */
+	ul.side-by-side {
+		flex-flow: 									column;
+	}
+	
+	ul.side-by-side li {
+		padding: 									0.8em 0;
+	}
+	
+	ul.side-by-side li.full-top,
+	ul.side-by-side li.full-bottom {
+		margin: 									0 !important;
+	}
 	
 	/* Row of Pics */ /* changed from .col to .col-row-of-pics 1/5/21 for Bubba's Cooks Country */
 	.grid-3e .col-row-of-pics:nth-last-child(1),	
@@ -4893,10 +4859,6 @@ iframe#podium-modal {
 		display:									none !important;
 	}
 }
-
-
-
-
 
 @media screen and (min-width: 961px) and (max-width: 1279px) {
 	.screen-480,

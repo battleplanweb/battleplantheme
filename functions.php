@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.5.4' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.5.5' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -2090,6 +2090,21 @@ if ( !is_admin() && !is_plugin_active( 'woocommerce/woocommerce.php' ) ) {
 	}
 }
 
+// If post has "remove sidebar" checked, set necessary classes on body 
+add_filter( 'body_class', 'battleplan_remove_sidebar', 99 );
+function battleplan_remove_sidebar( $classes ) {
+	$checkRemoveSidebar = get_post_meta( get_the_ID(), '_bp_remove_sidebar', true );
+	if ( $checkRemoveSidebar ) :
+		$classes = str_replace('sidebar-line', '', $classes);
+		$classes = str_replace('sidebar-box', '', $classes);
+		$classes = str_replace('widget-box', '', $classes);
+		$classes = str_replace('sidebar-right', '', $classes);
+		$classes = str_replace('sidebar-left', '', $classes);
+		$classes[] = "sidebar-none";		
+	endif;
+	return $classes;
+}
+
 //Brand log-in screen with BP Knight
 add_action( 'login_enqueue_scripts', 'battleplan_login_logo' );
 function battleplan_login_logo() { ?><style type="text/css">body.login div#login h1 a { background-image: url('/wp-content/themes/battleplantheme/common/logos/battleplan-logo.png'); padding-bottom: 120px; width: 100%; background-size: 50%} #login {padding-top:70px !important} </style> <?php }  
@@ -2172,7 +2187,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( "user-message" == $tag->name ) {
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
-		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','и','д','б','й','л','ы','З','у','Я');
+		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','и','д','б','й','л','ы','З','у','Я');
 		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
 		if ( $check == $name ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($badwords as $badword) {
@@ -2191,7 +2206,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
 	}
     if ( "user-email" == $tag->name ) {
         $check = isset( $_POST["user-email"] ) ? trim( $_POST["user-email"] ) : ''; 
-		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz');
+		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz', '@tworld.com', 'garywhi777@gmail.com');
 		foreach($badwords as $badword) {
 			if (stripos($check,$badword) !== false) $result->invalidate( $tag, 'Message cannot be sent.');
 		}
@@ -2355,14 +2370,6 @@ function end_with_sentence( $excerpt ) {
 
 		return $newExcerpt;
 	else: return $excerpt; endif;
-}
-
-// Check "remove sidebar" meta box on post and add class if true
-add_filter( 'body_class', 'battleplan_add_class_to_body' );
-function battleplan_add_class_to_body( array $classes ) {
-	$checkRemoveSidebar = get_post_meta( get_the_ID(), '_bp_remove_sidebar', true );
-	if ( $checkRemoveSidebar ) $classes[] = "remove-sidebar";
-	return $classes;
 }
 
 // Add Top & Bottom textareas for pages
@@ -3069,8 +3076,8 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	if ( !$name ) $name = "section-".rand(10000,99999);	
 	
 	if ( is_mobile() ) :		
-		$mobileSrc = explode('.', $image);		
-		$mobileSrc[0] = substr($mobileSrc[0], 0, strpos($mobileSrc[0], "-1920x"));		
+		$mobileSrc = explode('.', $image);			
+		if ( strpos($mobileSrc[0], "-1920x") !== false ) { $mobileSrc[0] = substr($mobileSrc[0], 0, strpos($mobileSrc[0], "-1920x")); }	
 		$ratio = $imgW / $imgH;
 		$useRatio = 2;
 		$realW = array(480, 640, 960, 1280);

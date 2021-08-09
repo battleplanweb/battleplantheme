@@ -1,13 +1,15 @@
 <?php
 /* The template for displaying the footer */
 
-get_sidebar(); ?>
+	$current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );
+	$checkRemoveSidebar = get_post_meta( $current_page->ID, '_bp_remove_sidebar', true );
+	if ( $checkRemoveSidebar != true ) : get_sidebar(); endif;
+?>
 
 		</div><!-- #main-content -->
 	</section><!-- #wrapper-content -->
 
 	<?php	
-	$current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );
 	$textarea = get_post_meta( $current_page->ID, 'page-bottom_text', true );
  	if ( $textarea != "" ) : echo "<section id='wrapper-bottom'>".apply_filters('the_content', $textarea)."</section><!-- #wrapper-bottom -->"; endif;
 	?>

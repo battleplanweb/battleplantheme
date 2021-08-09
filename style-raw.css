@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 9.5.4
+Version: 9.5.5
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -1320,6 +1320,58 @@ input.paypal-amount {
 	width:										calc(100% - 15px);
 }
 
+/* Fancy Box Buttons */
+.fancybox-container {
+	z-index: 									9999999995 !important;
+}
+
+.fancybox-is-open .fancybox-bg {
+    opacity: 									0.9;
+    background-color: 							#000000;
+}
+
+.fancybox-infobar,
+button.fancybox-button {
+	background: 								#222222;
+	border: 									1px solid rgba(255,255,255,0.2);
+	box-shadow: 								2px 2px 2px rgba(0,0,0,1);
+	transform: 									scale(0.9);
+	margin: 									9px 5px;
+	transition: 								all 0.2s ease;
+}
+
+button.fancybox-button:hover,
+button.fancybox-button.active,
+button.fancybox-button.tab-focus {
+	background: 								#323232;
+	border: 									1px solid rgba(255,255,255,0.2);
+	box-shadow: 								none;
+	box-shadow: 								2px 2px 2px rgba(0,0,0,1);
+	transform: 									scale(1);
+	margin: 									9px 5px;
+	transition: 								all 0.2s ease;
+}
+
+.fancybox-navigation button.fancybox-button {
+    width: 										50px;
+    height: 									50px;
+    padding:									12px;
+	margin: 									-40px 10px 0;
+}
+
+.fancybox-navigation button.fancybox-button:hover,
+.fancybox-navigation button.fancybox-button.active,
+.fancybox-navigation button.fancybox-button.tab-focus {
+    width: 										50px;
+    height: 									50px;
+    padding:									12px;
+	margin: 									-40px 10px 0;
+}
+
+.fancybox-navigation button::before {
+    display: 									none;
+}
+
 /*--------------------------------------------------------------
 # Grid Set Up
 --------------------------------------------------------------*/
@@ -1800,6 +1852,7 @@ section.section .flex.nested .flex {
 	background:									#cccccc;
 	z-index:									3000;
 }
+
 
 
 

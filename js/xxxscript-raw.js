@@ -811,7 +811,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			}, { offset: offset });
 		}, delay);	
 
-
 	};	
 		
 // Button to reveal a hidden div
@@ -936,7 +935,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	window.removeParent = function (target) {
 		$(target).unwrap();
 	};	
-
 
 
 // Delete a div

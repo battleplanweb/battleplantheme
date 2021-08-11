@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.5.5' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.5.6' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -154,6 +154,14 @@ function battleplan_getDomain( $atts, $content = null ) {
 	$link = esc_attr($a['link']);	
 	if ( $link == "false" ) : return esc_url(get_site_url());
 	else: return '<a href="'.esc_url(get_site_url()).'">'.esc_url(get_site_url()).'</a>'; endif;
+}
+
+// Returns website address (minus https and .com)
+add_shortcode( 'get-domain-name', 'battleplan_getDomainName' );
+function battleplan_getDomainName() {
+	$url = esc_url(get_site_url());
+	$parts = explode('.', parse_url($url, PHP_URL_HOST));
+	return $parts[1];
 }
 
 // Returns url of page (minus domain)
@@ -2033,13 +2041,13 @@ function battleplan_admin_scripts() {
 	wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array(), _BP_VERSION, false );
 }
 
-if ( is_admin() ) { require_once get_template_directory() . '/functions-admin.php'; } 
 if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { require_once get_template_directory() . '/includes/includes-events.php'; } 
 if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { require_once get_template_directory() . '/includes/includes-woocommerce.php'; } 
 if ( get_option( 'site_type' ) == 'hvac' ) { require_once get_template_directory() . '/includes/includes-hvac.php'; } 
 if ( get_option( 'site_type' ) == 'pedigree' ) { require_once get_template_directory() . '/includes/includes-pedigree.php'; } 
 require_once get_template_directory() . '/functions-public.php';
 require_once get_stylesheet_directory() . '/functions-site.php';
+if ( is_admin() ) { require_once get_template_directory() . '/functions-admin.php'; } 
 
 // Delay execution of non-essential scripts
 if ( !is_admin() && !is_plugin_active( 'woocommerce/woocommerce.php' ) ) {
@@ -2102,6 +2110,13 @@ function battleplan_remove_sidebar( $classes ) {
 		$classes = str_replace('sidebar-left', '', $classes);
 		$classes[] = "sidebar-none";		
 	endif;
+	return $classes;
+}
+
+// Add class that denotes mobile or desktop 
+add_filter( 'body_class', 'battleplan_is_mobile' );
+function battleplan_is_mobile( $classes ) {
+ 	if ( is_mobile() ) : $classes[] = "screen-mobile"; else: $classes[] = "screen-desktop"; endif;
 	return $classes;
 }
 

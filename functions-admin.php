@@ -7,7 +7,7 @@
 # Shortcodes
 # Set Up Admin Columns
 # Admin Interface Set Up
-# One-Time Run Functions
+# Set Global Options
 
 --------------------------------------------------------------*/
 
@@ -1407,8 +1407,11 @@ function battleplan_replace_howdy( $wp_admin_bar ) {
 // Remove https://domain.com, width & height params from the <img> inserted by WordPress
 add_filter( 'image_send_to_editor', 'battleplan_remove_junk_from_image', 10 );
 function battleplan_remove_junk_from_image( $html ) {
-   $html = preg_replace( '/(width|height)="\d*"\s/', "", $html );
-   $html = str_replace( get_site_url(), "", $html );
+	$pattern = '/(<img.*)width="(\d+)" height="(\d+)"(.*class=")(.*)" \/(>)/';
+	$style = '$1class="$5" width="$2" height="$3" style="aspect-ratio:$2/$3" />';
+	$html = preg_replace($pattern, $style, $html);
+	$html = str_replace( get_site_url(), "", $html );
+
    return $html;
 }
 
@@ -1484,7 +1487,8 @@ function battleplan_remove_menus() {
 	add_submenu_page( 'edit.php?post_type=elements', 'Comments', 'Comments', 'manage_options', 'edit-comments.php' );
 	add_submenu_page( 'edit.php?post_type=elements', 'Custom Fields', 'Custom Fields', 'manage_options', 'edit.php?post_type=acf-field-group' );		
 	add_submenu_page( 'edit.php?post_type=elements', 'Themes', 'Themes', 'manage_options', 'themes.php' );		
-	add_submenu_page( 'options-general.php', 'Lightbox', 'Lightbox', 'manage_options', 'admin.php?page=ari-fancy-lightbox' );
+	add_submenu_page( 'options-general.php', 'Lightbox', 'Lightbox', 'manage_options', 'admin.php?page=ari-fancy-lightbox' );	
+	add_submenu_page( 'options-general.php', 'Options', 'Options', 'manage_options', 'options.php' );
 	add_submenu_page( 'tools.php', 'Git Updater', 'Git Updater', 'manage_options', 'options-general.php?page=git-updater' );
 }
 
@@ -1524,6 +1528,26 @@ function battleplan_submenu_order( $menu_ord ) {
     $submenu['options-general.php'] = $arr;
 
     return $menu_ord;
+}
+
+// Remove unwanted widgets from Elements
+add_action('widgets_init', 'battleplan_unregister_default_widgets', 11);
+function battleplan_unregister_default_widgets() {
+	unregister_widget('Akismet_Widget');
+	unregister_widget('WP_Widget_Custom_HTML');	
+	unregister_widget('WP_Widget_Links');
+	unregister_widget('WP_Widget_Media_Audio');
+	unregister_widget('WP_Widget_Media_Gallery');
+	unregister_widget('WP_Widget_Media_Image');
+	unregister_widget('WP_Widget_Media_Video');
+	unregister_widget('WP_Widget_Meta');
+	unregister_widget('WP_Widget_Pages');
+	unregister_widget('WP_Widget_Recent_Comments');
+	unregister_widget('WP_Widget_Recent_Posts');
+	unregister_widget('WP_Widget_RSS');
+	unregister_widget('WP_Widget_Tag_Cloud');
+	unregister_widget('WPE_Powered_By_Widget');
+	unregister_widget('Twenty_Eleven_Ephemera_Widget');
 }
 
 // Remove unwanted dashboard widgets
@@ -2086,102 +2110,334 @@ function battleplan_clearViewFields() {
 		updateMeta( $siteHeader, 'framework-version', _BP_VERSION );	
 	}	
 }  
-
+	
 /*--------------------------------------------------------------
-# One-Time Run Functions
+# Set Global Options
 --------------------------------------------------------------*/
-// Move Site Header, Site Footer, Site Message, Office Hours, Privacy Policy, etc. to Elements post type
-// Delete pages that are now served directly from framework (privacy policy, symptom checker, etc)
-// Delete FB and Wells Fargo images that are now served directly from framework
-add_action( 'admin_init', 'battleplan_setupElements', 999 );
-function battleplan_setupElements() {   
-	
-	if ( get_option( 'bp_setup_2021_03_03' ) != 'completed' ) :
-		if ( get_page_by_path('site-header', OBJECT, 'page' ) ) :
-			$post_id = get_page_by_path('site-header', OBJECT, 'page' )->ID;
-			$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
-			wp_update_post( $my_post );
-		endif;
-		if ( get_page_by_path('site-footer', OBJECT, 'page' ) ) :
-			$post_id = get_page_by_path('site-footer', OBJECT, 'page' )->ID;
-			$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
-			wp_update_post( $my_post );
-		endif;
-		if ( get_page_by_path('site-message', OBJECT, 'page' ) ) :
-			$post_id = get_page_by_path('site-message', OBJECT, 'page' )->ID;
-			$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
-			wp_update_post( $my_post );
-		endif;
-		if ( get_page_by_path('privacy-policy', OBJECT, 'page' ) ) :
-			$post_id = get_page_by_path('privacy-policy', OBJECT, 'page' )->ID;
-			$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
-			wp_update_post( $my_post );
-		endif;
-		if ( get_page_by_path('office-hours', OBJECT, 'page' ) ) :
-			$post_id = get_page_by_path('office-hours', OBJECT, 'page' )->ID;
-			$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
-			wp_update_post( $my_post );
-		endif;	
-		update_option( 'bp_setup_2021_03_03', 'completed' );
-	endif;
-	
-	if ( get_option( 'bp_setup_2021_03_07' ) != 'completed' ) :
-		wp_delete_post( get_page_by_path('privacy-policy', OBJECT, 'elements' )->ID, true);	
-		wp_delete_post( get_page_by_path('customer-care-dealer', OBJECT, 'page' )->ID, true);	
-		wp_delete_post( get_page_by_path('maintenance-tips', OBJECT, 'page' )->ID, true);	
-		wp_delete_post( get_page_by_path('symptom-checker', OBJECT, 'page' )->ID, true);	
-	
-		wp_delete_attachment( getID('Wells-Fargo-A'), true );
-		wp_delete_attachment( getID('Wells-Fargo-B'), true );
-		wp_delete_attachment( getID('Wells-Fargo-C'), true );
-		wp_delete_attachment( getID('Wells-Fargo-D'), true );
-		wp_delete_attachment( getID('Facebook-Like-Us-1'), true );
-		wp_delete_attachment( getID('Facebook-Like-Us-2'), true );
-		wp_delete_attachment( getID('Facebook-Like-Us-3'), true );
+add_action( 'admin_init', 'battleplan_setupGlobalOptions', 999 );
+function battleplan_setupGlobalOptions() {  
 
-		update_option( 'bp_setup_2021_03_07', 'completed' );
+	if ( is_plugin_active('wpmu-dev-seo/wpmu-dev-seo.php') && get_option( 'bp_setup_smartcrawl_initial' ) != 'completed' ) : 
+		$smartCrawlSettings = get_option( 'wds_settings_options' );		
+		$smartCrawlSettings['onpage'] = '1';
+		$smartCrawlSettings['social'] = '1';
+		$smartCrawlSettings['sitemap'] = '1';
+		$smartCrawlSettings['checkup'] = '1';
+		$smartCrawlSettings['analysis-seo'] = '1';
+		$smartCrawlSettings['analysis-readability'] = '1';
+		$smartCrawlSettings['extras-admin_bar'] = '0';
+		$smartCrawlSettings['metabox-lax_enforcement'] = '1';
+		$smartCrawlSettings['general-suppress-generator'] = '1';
+		$smartCrawlSettings['general-suppress-redundant_canonical'] = '0';
+		$smartCrawlSettings['seo_metabox_permission_level']['0'] = 'list_users';
+		$smartCrawlSettings['seo_metabox_301_permission_level']['0'] = 'list_users';
+		$smartCrawlSettings['urlmetrics_metabox_permission_level']['0'] = 'list_users';
+		$smartCrawlSettings['access-id'] = '0';
+		$smartCrawlSettings['secret-key'] = '0';
+		$smartCrawlSettings['analysis_strategy'] = 'moderate';
+		$smartCrawlSettings['high-contrast'] = '0';
+		$smartCrawlSettings['robots-txt'] = '1';		
+		update_option( 'wds_sitemap_options', $smartCrawlSettings );	
+		
+		$smartCrawlMeta = get_option( 'wds_onpage_options' );		
+		$smartCrawlMeta['wds_onpage-setup'] = '1';
+		$smartCrawlMeta['meta_robots-noindex-attachment'] = '1';		
+		$smartCrawlMeta['enable-author-archive'] = '1';
+		$smartCrawlMeta['enable-date-archive'] = '1';
+		$smartCrawlMeta['onpage-stylesheet'] = '0';
+		$smartCrawlMeta['onpage-dashboard-widget'] = '1';
+		$smartCrawlMeta['onpage-disable-automatic-regeneration'] = '0';
+				
+		$smartCrawlSep = ' | ';
+		$smartCrawlTitle = '%%title%%'.$smartCrawlSep;
+		$smartCrawlSite = '%%sitename%%'.$smartCrawlSep.'%%sitedesc%%';
+		$smartCrawlExcerpt = '%%excerpt%%';
+		
+		$smartCrawlMeta['title-post'] = $smartCrawlTitle.$smartCrawlSite;
+		$smartCrawlMeta['title-page'] = $smartCrawlTitle.$smartCrawlSite;			
+		$smartCrawlMeta['title-optimized'] = $smartCrawlTitle.$smartCrawlSite;		
+		$smartCrawlMeta['og-title-post'] = $smartCrawlTitle.$smartCrawlSite;
+		$smartCrawlMeta['og-title-page'] = $smartCrawlTitle.$smartCrawlSite;
+		$smartCrawlMeta['og-title-optimized'] = $smartCrawlTitle.$smartCrawlSite;
+
+		$smartCrawlMeta['title-testimonials'] = 'Testimonials'.$smartCrawlSep.$smartCrawlSite;
+		$smartCrawlMeta['og-title-testimonials'] = 'Testimonials'.$smartCrawlSep.$smartCrawlSite;
+		$smartCrawlMeta['title-galleries']  = 'Galleries'.$smartCrawlSep.$smartCrawlSite;
+		$smartCrawlMeta['og-title-galleries']  = 'Galleries'.$smartCrawlSep.$smartCrawlSite;
+		$smartCrawlMeta['title-products']  = 'Products'.$smartCrawlSep.$smartCrawlSite;
+		$smartCrawlMeta['og-title-products']  = 'Products'.$smartCrawlSep.$smartCrawlSite;
+		$smartCrawlMeta['title-product-brand'] = '%%term_title%%'.$smartCrawlSep.$smartCrawlSite;
+		$smartCrawlMeta['title-product-type'] = '%%term_title%%'.$smartCrawlSep.$smartCrawlSite;
+		$smartCrawlMeta['title-product-class'] = '%%term_title%%'.$smartCrawlSep.$smartCrawlSite;
+		$smartCrawlMeta['og-title-product-brand'] = '%%term_title%%'.$smartCrawlSep.$smartCrawlSite;
+		$smartCrawlMeta['og-title-product-type'] = '%%term_title%%'.$smartCrawlSep.$smartCrawlSite;
+		$smartCrawlMeta['og-title-product-class'] = '%%term_title%%'.$smartCrawlSep.$smartCrawlSite;
+		$smartCrawlMeta['title-news'] = 'News'.$smartCrawlSep.$smartCrawlSite;
+		$smartCrawlMeta['og-title-news'] = 'News'.$smartCrawlSep.$smartCrawlSite;
+		$smartCrawlMeta['title-404'] = 'Page Not Found'.$smartCrawlSep.$smartCrawlSite;
+		
+		$smartCrawlMeta['metadesc-post'] = $smartCrawlExcerpt;
+		$smartCrawlMeta['metadesc-page'] = $smartCrawlExcerpt;
+		$smartCrawlMeta['metadesc-testimonials'] = $smartCrawlExcerpt;
+		$smartCrawlMeta['metadesc-galleries'] = $smartCrawlExcerpt;
+		$smartCrawlMeta['metadesc-optimized'] = $smartCrawlExcerpt;
+		$smartCrawlMeta['metadesc-products'] = $smartCrawlExcerpt;
+		$smartCrawlMeta['metadesc-news'] = $smartCrawlExcerpt;
+		$smartCrawlMeta['metadesc-product-brand'] = $smartCrawlExcerpt;
+		$smartCrawlMeta['metadesc-product-class'] = $smartCrawlExcerpt;
+		$smartCrawlMeta['metadesc-product-type'] = $smartCrawlExcerpt;
+		$smartCrawlMeta['og-description-post'] = $smartCrawlExcerpt;
+		$smartCrawlMeta['og-description-page'] = $smartCrawlExcerpt;
+		$smartCrawlMeta['og-description-testimonials'] = $smartCrawlExcerpt;
+		$smartCrawlMeta['og-description-galleries'] = $smartCrawlExcerpt;
+		$smartCrawlMeta['og-description-optimized'] = $smartCrawlExcerpt;
+		$smartCrawlMeta['og-description-products'] = $smartCrawlExcerpt;
+		$smartCrawlMeta['og-description-news'] = $smartCrawlExcerpt;
+		$smartCrawlMeta['og-description-product-brand'] = $smartCrawlExcerpt;
+		$smartCrawlMeta['og-description-product-class'] =$smartCrawlExcerpt;
+		$smartCrawlMeta['og-description-product-type'] = $smartCrawlExcerpt;
+		$smartCrawlMeta['metadesc-404'] = 'Sorry, this page does not exist.';	
+		
+		$smartCrawlMeta['og-active-post'] = '1';	
+		$smartCrawlMeta['og-active-page'] = '1';	
+		$smartCrawlMeta['og-active-testimonials'] = '1';	
+		$smartCrawlMeta['og-active-galleries'] = '1';	
+		$smartCrawlMeta['og-active-optimized'] = '1';	
+		$smartCrawlMeta['og-active-products'] = '1';	
+		$smartCrawlMeta['og-active-news'] = '1';	
+		$smartCrawlMeta['og-active-product-brand'] = '1';	
+		$smartCrawlMeta['og-active-product-class'] = '1';	
+		$smartCrawlMeta['og-active-product-type'] = '1';
+		$smartCrawlMeta['og-active-404'] = '0';			
+		update_option( 'wds_onpage_options', $smartCrawlMeta );	
+		
+		$smartCrawlSitemap = get_option( 'wds_sitemap_options' );		
+		$smartCrawlSitemap['override-native'] = '1';
+		$smartCrawlSitemap['wds_sitemap-setup'] = '1';
+		$smartCrawlSitemap['post_types-post-not_in_sitemap'] = '0';
+		$smartCrawlSitemap['post_types-page-not_in_sitemap'] = '0';
+		$smartCrawlSitemap['post_types-testimonials-not_in_sitemap'] = '0';
+		$smartCrawlSitemap['post_types-galleries-not_in_sitemap'] = '0';		
+		$smartCrawlSitemap['post_types-optimized-not_in_sitemap'] = '0';
+		$smartCrawlSitemap['post_types-elements-not_in_sitemap'] = '1';
+		$smartCrawlSitemap['post_types-products-not_in_sitemap'] = '0';
+		$smartCrawlSitemap['post_types-category-not_in_sitemap'] = '1';
+		$smartCrawlSitemap['post_types-post_tag-not_in_sitemap'] = '1';
+		$smartCrawlSitemap['post_types-gallery-type-not_in_sitemap'] = '1';
+		$smartCrawlSitemap['post_types-gallery-tags-not_in_sitemap'] = '1';
+		$smartCrawlSitemap['post_types-image-categories-not_in_sitemap'] = '1';
+		$smartCrawlSitemap['post_types-image-tags-not_in_sitemap'] = '1';
+		$smartCrawlSitemap['post_types-product-brand-not_in_sitemap'] = '0';
+		$smartCrawlSitemap['post_types-product-type-not_in_sitemap'] = '0';
+		$smartCrawlSitemap['post_types-product-class-not_in_sitemap'] = '0';
+		$smartCrawlSitemap['sitemap-images'] = '0';
+		$smartCrawlSitemap['sitemap-stylesheet'] = '0';
+		$smartCrawlSitemap['sitemap-dashboard-widget'] = '0';
+		$smartCrawlSitemap['sitemap-stylesheet'] = '0';
+		$smartCrawlSitemap['sitemap-disable-automatic-regeneration'] = '0';
+		$smartCrawlSitemap['crawler-frequency'] = 'weekly';
+		$smartCrawlSitemap['crawler-dow'] = '1';
+		$smartCrawlSitemap['crawler-dow'] = '12';
+		update_option( 'wds_sitemap_options', $smartCrawlSitemap );	
+
+		$smartCrawlSchema = get_option( 'wds_schema_options' );	
+		if ( getID('about-us') ) : $aboutUs = getID('about-us');
+		elseif ( getID('about') ) : $aboutUs = getID('about'); 
+		else : $aboutUs = getID('home'); endif;		
+		if ( getID('contact-us') ) : $contactUs = getID('contact-us');
+		else : $contactUs = getID('contact'); endif;
+		$smartCrawlSchema['schema_website_logo'] = get_bloginfo('url').'/wp-content/uploads/logo.png';
+		$smartCrawlSchema['organization_type'] = 'Corporation';
+		$smartCrawlSchema['organization_contact_type'] = 'customer support';
+		$smartCrawlSchema['organization_phone_number'] = battleplan_getBizInfo( array ( 'info'=>'area' )) . battleplan_getBizInfo( array ( 'info'=>'phone' ));
+		$smartCrawlSchema['organization_contact_page'] = $contactUs;
+		$smartCrawlSchema['schema_output_page'] = getID('home');
+		$smartCrawlSchema['schema_about_page'] = $aboutUs;
+		$smartCrawlSchema['schema_contact_page'] = $contactUs;
+		$smartCrawlSchema['schema_main_navigation_menu'] = 'main-menu';
+		update_option( 'wds_schema_options', $smartCrawlSchema );	
+		
+		$smartCrawlSocial = get_option( 'wds_social_options' );		
+		$smartCrawlSocial['disable-schema'] = '0';
+		$smartCrawlSocial['sitename'] = get_bloginfo('name');
+		$smartCrawlSocial['organization_logo'] = get_bloginfo('url').'/wp-content/uploads/logo.png';
+		$smartCrawlSocial['schema_type'] = 'Organization';		
+		$smartCrawlSocial['organization_name'] = get_bloginfo('name');
+		$smartCrawlSocial['og-enable'] = '1';
+		$smartCrawlSocial['facebook_url'] = battleplan_getBizInfo( array ( 'info'=>'facebook' ));
+		$smartCrawlSocial['twitter_username'] = str_replace('https://twitter.com/', '', battleplan_getBizInfo( array ( 'info'=>'twitter' )));
+		$smartCrawlSocial['instagram_url'] = battleplan_getBizInfo( array ( 'info'=>'instagram' ));
+		$smartCrawlSocial['linkedin_url'] = battleplan_getBizInfo( array ( 'info'=>'linkedin' ));
+		$smartCrawlSocial['pinterest_url'] = battleplan_getBizInfo( array ( 'info'=>'pinterest' ));
+		$smartCrawlSocial['youtube_url'] = battleplan_getBizInfo( array ( 'info'=>'youtube' ));
+		update_option( 'wds_social_options', $smartCrawlSocial );	
+		
+		update_option( 'bp_setup_smartcrawl_initial', 'completed' );
+	endif;	
+				
+	if ( is_plugin_active('wp-smush-pro/wp-smush.php') && get_option( 'bp_setup_smush_pro_initial' ) != 'completed' ) : 		
+		$smushSettings = get_option( 'wp-smush-settings' );		
+		$smushSettings['auto'] = '1';
+		$smushSettings['lossy'] = '1';
+		$smushSettings['strip_exif'] = '1';
+		$smushSettings['resize'] = '0';
+		$smushSettings['detection'] = '0';
+		$smushSettings['original'] = '0';
+		$smushSettings['backup'] = '0';
+		$smushSettings['png_to_jpg'] = '0';
+		$smushSettings['nextgen'] = '0';
+		$smushSettings['s3'] = '0';
+		$smushSettings['gutenberg'] = '0';
+		$smushSettings['js_builder'] = '0';
+		$smushSettings['cdn'] = '0';
+		$smushSettings['auto_resize'] = '0';
+		$smushSettings['webp'] = '0';
+		$smushSettings['usage'] = '0';
+		$smushSettings['lazy_load'] = '0';
+		$smushSettings['usage'] = '0';
+		$smushSettings['background_images'] = '1';
+		$smushSettings['webp_mod'] = '0';
+		$smushSettings['networkwide'] = '0';
+		$smushSettings['bulk'] = '0';
+		update_option( 'wp-smush-settings', $smushSettings );
+		
+		update_option( 'bp_setup_smush_pro_initial', 'completed' );
+	endif;
+
+	if ( is_plugin_active('wp-mail-smtp/wp_mail_smtp.php') && get_option( 'bp_setup_wp_mail_smtp_initial' ) != 'completed' ) : 		
+		$wpMailSettings = get_option( 'wp_mail_smtp' );		
+		$wpMailSettings['mail']['from_email'] = 'email@admin.'.str_replace('https://', '', get_bloginfo('url'));
+		$wpMailSettings['mail']['from_name'] = get_bloginfo('name');
+		$wpMailSettings['mail']['mailer'] = sendinblue;
+		$wpMailSettings['mail']['from_email_force'] = '1';
+		$wpMailSettings['mail']['from_name_force'] = '0';		
+		$wpMailSettings['sendinblue']['api_key'] = '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';
+		$wpMailSettings['sendinblue']['domain'] = 'admin.'.str_replace('https://', '', get_bloginfo('url'));		
+		update_option( 'wp_mail_smtp', $wpMailSettings );
+		
+		update_option( 'bp_setup_wp_mail_smtp_initial', 'completed' );
+	endif;	
+
+	if ( is_plugin_active('extended-widget-options/plugin.php') && get_option( 'bp_setup_widget_options_initial' ) != 'completed' ) :
+		$widgetOpts = get_option( 'widgetopts_settings' );
+				
+		$widgetOpts['settings']['visibility']['post_type'] = '1';
+		$widgetOpts['settings']['visibility']['taxonomies'] = '1';
+		$widgetOpts['settings']['visibility']['misc'] = '1';		
+		
+		$widgetOpts['settings']['classes']['id'] = '1';
+		$widgetOpts['settings']['classes']['type'] = 'both';
+		$widgetOpts['settings']['classes']['classlists']['0'] = 'remove-first';
+		$widgetOpts['settings']['classes']['classlists']['1'] = 'lock-to-top';
+		$widgetOpts['settings']['classes']['classlists']['2'] = 'lock-to-bottom';
+		$widgetOpts['settings']['classes']['classlists']['3'] = 'widget-important';
+		$widgetOpts['settings']['classes']['classlists']['4'] = 'widget-set';
+		
+		$widgetOpts['settings']['dates']['days'] = '1';		
+		$widgetOpts['settings']['dates']['date_range'] = '1';		
+	
+		$widgetOpts['visibility'] = 'activate';		
+		$widgetOpts['devices'] = 'deactivate';
+		$widgetOpts['urls'] = 'activate';
+		$widgetOpts['alignment'] = 'deactivate';
+		$widgetOpts['hide_title'] = 'activate';
+		$widgetOpts['classes'] = 'activate';
+		$widgetOpts['logic'] = 'deactivate';
+		$widgetOpts['move'] = 'deactivate';
+		$widgetOpts['clone'] = 'activate';
+		$widgetOpts['links'] = 'deactivate';
+		$widgetOpts['fixed'] = 'deactivate';
+		$widgetOpts['columns'] = 'deactivate';
+		$widgetOpts['roles'] = 'deactivate';
+		$widgetOpts['dates'] = 'activate';
+		$widgetOpts['styling'] = 'deactivate';
+		$widgetOpts['animation'] = 'deactivate';
+		$widgetOpts['taxonomies'] = 'deactivate';
+		$widgetOpts['disable_widgets'] = 'deactivate';
+		$widgetOpts['permission'] = 'deactivate';
+		$widgetOpts['shortcodes'] = 'deactivate';		
+		$widgetOpts['cache'] = 'deactivate';
+		$widgetOpts['search'] = 'deactivate';
+		$widgetOpts['widget_area'] = 'deactivate';		
+		$widgetOpts['import_export'] = 'deactivate';
+		$widgetOpts['elementor'] = 'deactivate';
+		$widgetOpts['beaver'] = 'deactivate';
+		$widgetOpts['acf'] = 'activate';						
+		update_option( 'widgetopts_settings', $widgetOpts );
+		
+		update_option( 'bp_setup_widget_options_initial', 'completed' );
+	endif;	
+
+	if ( get_option( 'bp_setup_2021_08_11d' ) != 'completed' ) :
+		update_option( 'admin_email', 'info@battleplanwebdesign.com' );
+		update_option( 'admin_email_lifespan', '9999999999999' );
+		update_option( 'default_comment_status', 'closed' );
+		update_option( 'default_ping_status', 'closed' );
+		update_option( 'permalink_structure', '/%postname%/' );
+		update_option( 'wpe-rand-enabled', '1' );
+		update_option( 'recently_activated', '' );
+		update_option( 'recently_edited', '' );
+		
+		$parts = explode('.', parse_url(esc_url(get_site_url()), PHP_URL_HOST));
+		update_option( 'wp-smush-dir_path', '/nas/content/live/'.$parts[1].'/wp-content' );
+
+		delete_option( 'nearbynow_options' );
+		delete_option( 'theme_mods_responsive' );
+		delete_option( 'theme_mods_responsive-child' );
+		delete_option( 'responsive_theme_options' );
+		delete_option( 'responsive_install' );
+		delete_option( 'theme_mods_website-go-3' );
+		delete_option( 'theme_mods_website-go-4' );
+		delete_option( 'whatthefile-install-date' );
+		delete_option( 'duplicate_post_blacklist' );
+		delete_option( 'duplicate_post_copyattachments' );
+		delete_option( 'duplicate_post_copyauthor' );
+		delete_option( 'duplicate_post_copychildren' );
+		delete_option( 'duplicate_post_copycomments' );
+		delete_option( 'duplicate_post_copycontent' );
+		delete_option( 'duplicate_post_copydate' );
+		delete_option( 'duplicate_post_copyexcerpt' );
+		delete_option( 'duplicate_post_copyformat' );
+		delete_option( 'duplicate_post_copymenuorder' );
+		delete_option( 'duplicate_post_copypassword' );
+		delete_option( 'duplicate_post_copyslug' );
+		delete_option( 'duplicate_post_copystatus' );
+		delete_option( 'duplicate_post_copytemplate' );
+		delete_option( 'duplicate_post_copythumbnail' );
+		delete_option( 'duplicate_post_copytitle' );
+		delete_option( 'duplicate_post_increase_menu_order_by' );
+		delete_option( 'duplicate_post_roles' );
+		delete_option( 'duplicate_post_show_adminbar' );
+		delete_option( 'duplicate_post_show_bulkactions' );
+		delete_option( 'duplicate_post_show_notice' );
+		delete_option( 'duplicate_post_show_original_column' );
+		delete_option( 'duplicate_post_show_original_in_post_states' );
+		delete_option( 'duplicate_post_show_original_meta_box' );
+		delete_option( 'duplicate_post_show_row' );
+		delete_option( 'duplicate_post_show_submitbox' );
+		delete_option( 'duplicate_post_taxonomies_blacklist' );
+		delete_option( 'duplicate_post_title_prefix' );
+		delete_option( 'duplicate_post_title_suffix' );
+		delete_option( 'duplicate_post_types_enabled' );
+		delete_option( 'duplicate_post_version' );
+		
+		delete_option( 'bp_setup_2021_03_03' );
+		delete_option( 'bp_setup_2021_03_07' );
+		delete_option( 'bp_setup_2021_03_08' );		
+		delete_option( 'bp_setup_2021_08_11' );		
+		delete_option( 'bp_setup_2021_08_11b' );		
+		delete_option( 'bp_setup_2021_08_11c' );		
+		delete_option( 'bp_setup_widget_options_2021_08_11' );	
+		
+		$sidebars_widgets = get_option( 'sidebars_widgets' );
+     	$sidebars_widgets['wp_inactive_widgets'] = array();
+     	update_option( 'sidebars_widgets', $sidebars_widgets );
+		
+		update_option( 'bp_setup_2021_08_11d', 'completed' );
 	endif;	
 	
-	if ( get_option( 'bp_setup_2021_03_08' ) != 'completed' ) :
-		wp_delete_attachment( getID('as-product-display-384x247'), true );
-		wp_delete_attachment( getID('symptom-checker'), true );
-		wp_delete_attachment( getID('cc-visa'), true );
-		wp_delete_attachment( getID('cc-mc'), true );
-		wp_delete_attachment( getID('cc-discover'), true );
-		wp_delete_attachment( getID('cc-amex'), true );
-		wp_delete_attachment( getID('as-customer-care-logo-horizontal'), true );
-		wp_delete_attachment( getID('as-customer-care-logo-640x640'), true );
-		wp_delete_attachment( getID('AS-Customer-Care-Logo-258x258'), true );
-		wp_delete_attachment( getID('american-standard-logo'), true );
-		wp_delete_attachment( getID('AS-Logo-900x168-1'), true );
-	
-		$args = array(
-			'posts_per_page'	=> -1,
-			'post_type'			=> 'testimonials',
-		);
-	
-		$the_query = new WP_Query( $args );
-		if( $the_query->have_posts() ): 
-			while( $the_query->have_posts() ) : $the_query->the_post();		
-	
-				$loc = readMeta( get_the_ID(), 'testimonial_location');	
-				if ( $loc == "Google Review" ) :	
-					updateMeta( get_the_ID(), 'testimonial_location', '');		
-					updateMeta( get_the_ID(), 'testimonial_platform', 'Google');		
-				endif;
-	
-				$platform = readMeta( get_the_ID(), 'testimonial_platform');	
-				if ( $platform == "" ) :	
-					updateMeta( get_the_ID(), 'testimonial_platform', 'Facebook');		
-				endif;
-	
-			endwhile; 
-		endif; 
-		wp_reset_query();	 // Restore global post data stomped by the_post(). 
-
-		update_option( 'bp_setup_2021_03_08', 'completed' );
-	
-	endif;
+	//$smartCrawl = get_option( 'wpcf7' );
+	//print_r($smartCrawl);	
 }
 
 ?>

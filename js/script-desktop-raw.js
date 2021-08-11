@@ -182,32 +182,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 /*--------------------------------------------------------------
 # Set up sidebar
 --------------------------------------------------------------*/
-	window.setupSidebar = function (compensate, sidebarScroll, shuffle) {
-		sidebarScroll = sidebarScroll || "true";
-		shuffle = shuffle || "true";		
-		compensate = compensate || 0;		
-
-// Shuffle an array of widgets
-		window.arrangeWidgets = function ($elements) {
-			var i, index1, index2, temp_val, count = $elements.length, $parent = $elements.parent(), shuffled_array = [];
-			for (i = 0; i < count; i++) { shuffled_array.push(i); }
-			
-			if ( shuffle == "true" ) {
-				for (i = 0; i < count; i++) {
-					index1 = (Math.random() * count) | 0;
-					index2 = (Math.random() * count) | 0;
-					temp_val = shuffled_array[index1];
-					shuffled_array[index1] = shuffled_array[index2];
-					shuffled_array[index2] = temp_val;
-				}
-			}
-
-			$elements.detach();
-			for (i = 0; i < count; i++) { $parent.append( $elements.eq(shuffled_array[i]) ); }			
-
-			var el = $(".widget.lock-to-bottom").detach();
-			$parent.append( el );		
-		};		
+	window.desktopSidebar = function (compensate, sidebarScroll, shuffle) {
 		
 // Check & log heights of main elements
 		window.checkHeights = function () {
@@ -221,11 +196,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			return remain;
 		}
 
-// Set up "locked" widgets, and shuffle the rest
-		$('.widget.lock-to-top, .widget.lock-to-bottom').addClass("locked");		
-		$('.widget:not(.locked)').addClass("shuffle");
-		arrangeWidgets( $('.shuffle') );
-
 // Initiate widget removal
 		window.widgetInit = function () {		
 			$('#secondary').css({ "height":"calc(100% + "+compensate+"px)" });
@@ -235,28 +205,23 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		
 // Add widget one by one as long as they fit
 		window.addWidgets = function () {
-			$('.hide-widget:not(.remove-first)').each(function(){
-				if ( $(this).height() <= checkHeights() ) { $(this).removeClass('hide-widget'); }				
+			$('.hide-widget:not(.remove-first):not(.hide-set)').each(function() {
+				if ( $(this).height() <= checkHeights() ) { $(this).removeClass('hide-widget'); }	 			
+			});
+			
+			$('.hide-widget:not(.remove-first)').each(function() {
+				if ( $(this).height() <= checkHeights() ) { $(this).removeClass('hide-widget'); }	 			
 			});
 	
 			$('.hide-widget').each(function(){
 				if ( $(this).height() <= checkHeights() ) { $(this).removeClass('hide-widget'); }				
 			});
 			
-			if ( !$('.widget:not(.hide-widget)').length ) { $('widget:first-of-type').removeClass('hide-widget'); }
+			if ( !$('.widget:not(.hide-widget)').length ) { $('widget:first-of-type').removeClass('hide-widget'); } // guarantees at least 1 visible widget
 			
 			checkHeights();
 			labelWidgets();
 		};	
-
-// Add classes for first, last, even and odd widgets
-		window.labelWidgets = function () {
-			$(".widget").removeClass("widget-first").removeClass("widget-last").removeClass("widget-even").removeClass("widget-odd");
-			$(".widget:not(.hide-widget)").first().addClass("widget-first");  
-			$(".widget:not(.hide-widget)").last().addClass("widget-last"); 
-			$(".widget:not(.hide-widget):odd").addClass("widget-even"); 
-			$(".widget:not(.hide-widget):even").addClass("widget-odd"); 	
-		};
 
  // Move sidebar in conjunction with mouse scroll to keep it even with content
 		window.moveWidgets = function () {

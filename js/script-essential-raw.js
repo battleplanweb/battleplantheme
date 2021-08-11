@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 ----------------------------------------------------------------
 # Basic site functionality
 # DOM level functions
+# Setup Sidebar
 # Set up animation
 # Set up pages
 # Screen resize
@@ -780,8 +781,56 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		} 
 	};
 		
-if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv = window.magicMenu = window.splitMenu = window.addMenuLogo = window.setupSidebar = function () {} }	
-	
+if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv = window.magicMenu = window.splitMenu = window.addMenuLogo = window.desktopSidebar = function () {} }	
+		
+/*--------------------------------------------------------------
+# Set up sidebar
+--------------------------------------------------------------*/
+	window.setupSidebar = function (compensate, sidebarScroll, shuffle) {
+		sidebarScroll = sidebarScroll || "true";
+		shuffle = shuffle || "true";		
+		compensate = compensate || 0;
+		
+// Add classes for first, last, even and odd widgets
+		window.labelWidgets = function () {
+			$(".widget:not(.hide-widget)").first().addClass("widget-first");  
+			$(".widget:not(.hide-widget)").last().addClass("widget-last"); 
+			$(".widget:not(.hide-widget):odd").addClass("widget-even"); 
+			$(".widget:not(.hide-widget):even").addClass("widget-odd"); 	
+		};		
+
+// Shuffle non-locked widgets
+		var $shuffledWidgets = $('.widget:not(.lock-to-top):not(.lock-to-bottom)'), count = $shuffledWidgets.length, $parent = $shuffledWidgets.parent(), i, index1, index2, temp_val, shuffled_array = [], $lockedWidgets = $(".widget.lock-to-bottom").detach();
+
+		for (i = 0; i < count; i++) { 
+			shuffled_array.push(i); 
+		}
+
+		if ( shuffle == "true" ) {
+			for (i = 0; i < count; i++) {
+				index1 = (Math.random() * count) | 0;
+				index2 = (Math.random() * count) | 0;
+				temp_val = shuffled_array[index1];
+				shuffled_array[index1] = shuffled_array[index2];
+				shuffled_array[index2] = temp_val;
+			}
+		}
+
+		$shuffledWidgets.detach();
+		for (i = 0; i < count; i++) { 
+			$parent.append( $shuffledWidgets.eq(shuffled_array[i]) );
+		}			
+
+		$parent.append( $lockedWidgets );
+		
+		$('.widget-set.set-a:not(:first-child), .widget-set.set-b:not(:first-child), .widget-set.set-c:not(:first-child)').addClass('hide-set').addClass('hide-widget');
+		
+		if ( $('body').hasClass('screen-mobile') ) {
+			labelWidgets();
+		} else {
+			desktopSidebar(compensate, sidebarScroll, shuffle);
+		}
+	};	
 	
 /*--------------------------------------------------------------
 # Set up animation
@@ -1206,12 +1255,12 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 
 	window.screenResize = function () {		
 	// Add class to body to determine which size screen is being viewed
-		$('body').removeClass("screen-5 screen-4 screen-3 screen-2 screen-1 screen-mobile screen-desktop");
-		if ( getDeviceW() > 1280 ) { $('body').addClass("screen-5").addClass("screen-desktop"); }	
-		if ( getDeviceW() <= 1280 && getDeviceW() > mobileCutoff ) { $('body').addClass("screen-4").addClass("screen-desktop"); }
-		if ( getDeviceW() <= mobileCutoff && getDeviceW() > 860 ) { $('body').addClass("screen-3").addClass("screen-mobile"); }
-		if ( getDeviceW() <= 860 && getDeviceW() > 576 ) { $('body').addClass("screen-2").addClass("screen-mobile"); }
-		if ( getDeviceW() <= 576 ) { $('body').addClass("screen-1").addClass("screen-mobile"); }
+		$('body').removeClass("screen-5 screen-4 screen-3 screen-2 screen-1");
+		if ( getDeviceW() > 1280 ) { $('body').addClass("screen-5"); }	
+		if ( getDeviceW() <= 1280 && getDeviceW() > mobileCutoff ) { $('body').addClass("screen-4"); }
+		if ( getDeviceW() <= mobileCutoff && getDeviceW() > 860 ) { $('body').addClass("screen-3"); }
+		if ( getDeviceW() <= 860 && getDeviceW() > 576 ) { $('body').addClass("screen-2"); }
+		if ( getDeviceW() <= 576 ) { $('body').addClass("screen-1"); }
 
 	// Disable href on mobile menu items with children
 		$(".screen-mobile li.menu-item-has-children").children("a").attr("href", "javascript:void(0)");

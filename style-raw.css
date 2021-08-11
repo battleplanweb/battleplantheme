@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 9.5.5
+Version: 9.5.6
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -2033,6 +2033,7 @@ section.section .flex.nested .flex {
 .section-lock {
 	position:									fixed !important;
 	z-index:									999999997 /* between mobile menu & a.scroll-top */;
+	opacity: 									0;
 }
 
 .section-lock .closeBtn, 

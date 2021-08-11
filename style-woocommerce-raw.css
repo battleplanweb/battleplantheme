@@ -2,6 +2,7 @@
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
 # Base
+	- Font Awesome
 	- Forms
 	- Overrides
 	- Info & Error Boxes
@@ -15,6 +16,18 @@
 /*--------------------------------------------------------------
 # Base
 --------------------------------------------------------------*/
+
+/* Font Awesome
+--------------------------------------------- */
+.fa-shopping-bag:before {
+    content: 									"\f290";
+}
+.fa-shopping-basket:before {
+    content: 									"\f291";
+}
+.fa-shopping-cart:before {
+    content: 									"\f07a";
+}
 
 /* Forms
 --------------------------------------------- */
@@ -149,7 +162,9 @@ input[type="number"] {
 .theme-battleplantheme.woocommerce-page ul.products::before,
 .theme-battleplantheme.woocommerce-page .reset_variations,
 .theme-battleplantheme.woocommerce-page .woocommerce-terms-and-conditions-wrapper,
-.theme-battleplantheme.woocommerce-page .about_paypal {
+.theme-battleplantheme.woocommerce-page .about_paypal,
+.theme-battleplantheme.woocommerce-page .payment_method_ppec_paypal,
+#woo-ppec-credit-messaging {
     display:									none !important;
 }
 
@@ -548,6 +563,7 @@ label[for=wc-stripe-new-payment-method] {
 }
 
 .woocommerce-account .woocommerce a {
+
 	margin-right:								10px;
 }
 

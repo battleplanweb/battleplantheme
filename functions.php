@@ -15,7 +15,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.5.6' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.5.7' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -2104,8 +2104,8 @@ function battleplan_remove_sidebar( $classes ) {
 	$checkRemoveSidebar = get_post_meta( get_the_ID(), '_bp_remove_sidebar', true );
 	if ( $checkRemoveSidebar ) :
 		$classes = str_replace('sidebar-line', '', $classes);
-		$classes = str_replace('sidebar-box', '', $classes);
-		$classes = str_replace('widget-box', '', $classes);
+		//$classes = str_replace('sidebar-box', '', $classes);
+		//$classes = str_replace('widget-box', '', $classes);
 		$classes = str_replace('sidebar-right', '', $classes);
 		$classes = str_replace('sidebar-left', '', $classes);
 		$classes[] = "sidebar-none";		
@@ -2286,6 +2286,7 @@ function get_srcset( $size ) {
 // Establish default image sizes
 if ( function_exists( 'add_image_size' ) ) {	
 	add_image_size( 'icon', 80, 80, false ); 
+	add_image_size( 'icon-2x', 160, 160, false ); 
 	add_image_size( 'quarter-s', 240, 99999, false ); 
 	add_image_size( 'third-s', 320, 99999, false ); 	
 	add_image_size( 'half-s', 480, 99999, false ); 
@@ -2295,6 +2296,7 @@ if ( function_exists( 'add_image_size' ) ) {
 	add_image_size( 'half-f', 640, 99999, false ); 
 	add_image_size( 'full-f', 1280, 99999, false ); 
 	add_image_size( 'max', 1920, 99999, false ); 
+	add_image_size( 'third-f-2x', 800, 99999, false ); 
 }
 
 add_filter('image_size_names_choose', 'battleplan_image_sizes');

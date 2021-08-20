@@ -7,7 +7,7 @@
 # Shortcodes
 # Set Up Admin Columns
 # Admin Interface Set Up
-# One-Time Run Functions
+# Set Global Options
 
 --------------------------------------------------------------*/
 
@@ -28,11 +28,11 @@ add_action( 'admin_print_footer_scripts', 'battleplan_add_quicktags' );
 function battleplan_add_quicktags() {
 	if ( wp_script_is( 'quicktags' ) ) { ?>
 		<script type="text/javascript">
-			QTags.addButton( 'bp_paragraph', 'p', '<p>', '</p>\n\n', 'p', 'Paragraph Tag', 1 );
+			QTags.addButton( 'bp_paragraph', 'p', '<p>', '</p>\n', 'p', 'Paragraph Tag', 1 );
 			QTags.addButton( 'bp_li', 'li', ' <li>', '</li>', 'li', 'List Item', 100 );
 
 			QTags.addButton( 'bp_section', 'section', '[section name="becomes id attribute" hash="compensation for scroll on one-page sites" style="corresponds to css" width="default, stretch, full, edge, inline" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '[/section]\n\n', 'section', 'Section', 1000 );		
-			QTags.addButton( 'bp_layout', 'layout', ' [layout grid="1-auto, 1-1-1-1, 5e, content" break="3, 4" valign="start, stretch, center, end" class=""]\n\n', ' [/layout]\n', 'layout', 'Layout', 1000 );
+			QTags.addButton( 'bp_layout', 'layout', ' [layout grid="1-auto, 1-1-1-1, 5e, content" break="none, 3, 4" valign="start, stretch, center, end" class=""]\n\n', ' [/layout]\n', 'layout', 'Layout', 1000 );
 			QTags.addButton( 'bp_column', 'column', '  [col name="becomes id attribute" align="center, left, right" valign="start, stretch, center, end" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '  [/col]\n\n', 'column', 'Column', 1000 );
 			QTags.addButton( 'bp_image', 'image', '   [img size="100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" link="url to link to" new-tab="false, true" ada-hidden="false, true" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/img]\n', 'image', 'Image', 1000 );
 			QTags.addButton( 'bp_video', 'video', '   [vid size="100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" link="url of video" class="" related="false, true" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/vid]\n', 'video', 'Video', 1000 );
@@ -44,6 +44,7 @@ function battleplan_add_quicktags() {
 			QTags.addButton( 'bp_accordion', 'accordion', '   [accordion title="clickable title" excerpt="false, true" class="" icon="true, false" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/accordion]\n\n', 'accordion', 'Accordion', 1000 );
 			QTags.addButton( 'bp_expire-content', 'expire', '[expire start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/expire]\n\n', 'expire', 'Expire', 1000 );			
 			QTags.addButton( 'bp_lock-section', 'lock', '[lock name="becomes id attribute" style="(lock) corresponds to css" width="edge, default, stretch, full, inline" position="bottom, top, modal" delay="3000" show="session, never, always, # days" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '[/lock]\n\n', 'lock', 'Lock', 1000 );		
+			QTags.addButton( 'bp_images_side-by-side', 'side by side images', '[side-by-side img="ids" size="half-s, third-s, full" align="center, left, right" full="id" pos="bottom, top"]', '', 'side by side images', 'Side By Side Images', 1000 );			
 			QTags.addButton( 'bp_random-image', 'random image', '   [get-random-image id="" tag="random" size="thumbnail, third-s" link="no, yes" number="1" offset="" align="left, right, center" order_by="recent, rand, menu_order, title, id, post_date, modified, views" order="asc, desc" shuffle="no, yes"]\n', '', 'random image', 'Random Image', 1000 );
 			QTags.addButton( 'bp_random-post', 'random post', '   [get-random-posts num="1" offset="0" type="post" tax="" terms="" orderby="recent, rand, views-today, views-7day, views-30day, views-90day, views-180day, views-365day, views-all" sort="asc, desc" count_tease="true, false" count_view="true, false" thumb_only="false, true" thumb_col="1, 2, 3, 4" show_title="true, false" title_pos="outside, inside" show_date="false, true" show_author="false, true" show_excerpt="true, false" show_social="false, true" show_btn="true, false" button="Read More" btn_pos="inside, outside" thumbnail="force, false" link="post, false, cf-field_name, /link-destination/" start="" end="" exclude="" x_current="true, false" size="thumbnail, size-third-s" pic_size="1/3" text_size=""]\n', '', 'random post', 'Random Post', 1000 );
 			QTags.addButton( 'bp_random-text', 'random text', '   [get-random-text cookie="true, false" text1="" text2="" text3="" text4="" text5="" text6="" text7=""]\n', '', 'random text', 'Random Text', 1000 );
@@ -1344,7 +1345,9 @@ function battleplan_column_settings() {
 --------------------------------------------------------------*/
 
 // Disable Gutenburg
-add_filter('use_block_editor_for_post', '__return_false');
+add_filter( 'use_block_editor_for_post', '__return_false' );
+add_filter( 'gutenberg_use_widgets_block_editor', '__return_false' );
+add_filter( 'wp_use_widgets_block_editor', '__return_false' );
 
 // Disable Visual Editor
 add_filter( 'user_can_richedit' , '__return_false', 50 );
@@ -1404,41 +1407,21 @@ function battleplan_replace_howdy( $wp_admin_bar ) {
 // Remove https://domain.com, width & height params from the <img> inserted by WordPress
 add_filter( 'image_send_to_editor', 'battleplan_remove_junk_from_image', 10 );
 function battleplan_remove_junk_from_image( $html ) {
-   $html = preg_replace( '/(width|height)="\d*"\s/', "", $html );
-   $html = str_replace( get_site_url(), "", $html );
+	$pattern = '/(<img.*)width="(\d+)" height="(\d+)"(.*class=")(.*)" \/(>)/';
+	$style = '$1class="$5" width="$2" height="$3" style="aspect-ratio:$2/$3" />';
+	$html = preg_replace($pattern, $style, $html);
+	$html = str_replace( get_site_url(), "", $html );
+
    return $html;
 }
 
-// Automatically set the image Title, Alt-Text, Caption & Description upon upload
-add_action( 'add_attachment', 'battleplan_setImageMetaUponUpload' );
-function battleplan_setImageMetaUponUpload( $post_ID ) {
-	if ( wp_attachment_is_image( $post_ID ) ) {
-		$imageTitle = get_post( $post_ID )->post_title;
-		$imageTitle = ucwords( preg_replace( '%\s*[-_\s]+\s*%', ' ', $imageTitle )); // remove hyphens, underscores & extra spaces and capitalize
-		$imageMeta = array ( 'ID' => $post_ID, 'post_title' => $imageTitle ) /* post title */;			 
-		update_post_meta( $post_ID, '_wp_attachment_image_alt', $imageTitle ) /* alt text */;
-		wp_update_post( $imageMeta );
-	} 
-}
+// Set the quality of compression on various WordPress generated image sizes
+function av_return_100(){ return 67; }
+add_filter('jpeg_quality', 'av_return_100', 9999);
+add_filter('wp_editor_set_quality', 'av_return_100', 9999);
 
 // Display custom fields in WordPress admin edit screen
 //add_filter('acf/settings/remove_wp_meta_box', '__return_false');
-
-// Add 'log-views' fields to an image when it is uploaded
-add_action( 'add_attachment', 'battleplan_addWidgetPicViewsToImg', 10, 9 );
-function battleplan_addWidgetPicViewsToImg( $post_ID ) {
-	if ( wp_attachment_is_image( $post_ID ) ) {		
-		updateMeta( $post_ID, 'log-views-now', strtotime("-1 day"));		
-		updateMeta( $post_ID, 'log-views-time', strtotime("-1 day"));		
-		updateMeta( $post_ID, 'log-tease-time', strtotime("-1 day"));		
-		updateMeta( $post_ID, 'log-views-total-7day', '0' );		
-		updateMeta( $post_ID, 'log-views-total-30day', '0' );
-		updateMeta( $post_ID, 'log-views-total-90day', '0' );
-		updateMeta( $post_ID, 'log-views-total-180day', '0' );
-		updateMeta( $post_ID, 'log-views-total-365day', '0' );
-		updateMeta( $post_ID, 'log-views', array( 'date'=> strtotime(date("F j, Y")), 'views' => 0 ));					
-	} 
-}
 
 // Add 'log-views' fields to posts/pages when published 
 add_action( 'save_post', 'battleplan_addViewsToPost', 10, 3 );
@@ -1481,7 +1464,8 @@ function battleplan_remove_menus() {
 	add_submenu_page( 'edit.php?post_type=elements', 'Comments', 'Comments', 'manage_options', 'edit-comments.php' );
 	add_submenu_page( 'edit.php?post_type=elements', 'Custom Fields', 'Custom Fields', 'manage_options', 'edit.php?post_type=acf-field-group' );		
 	add_submenu_page( 'edit.php?post_type=elements', 'Themes', 'Themes', 'manage_options', 'themes.php' );		
-	add_submenu_page( 'options-general.php', 'Lightbox', 'Lightbox', 'manage_options', 'admin.php?page=ari-fancy-lightbox' );
+	add_submenu_page( 'options-general.php', 'Lightbox', 'Lightbox', 'manage_options', 'admin.php?page=ari-fancy-lightbox' );	
+	add_submenu_page( 'options-general.php', 'Options', 'Options', 'manage_options', 'options.php' );
 	add_submenu_page( 'tools.php', 'Git Updater', 'Git Updater', 'manage_options', 'options-general.php?page=git-updater' );
 }
 
@@ -1496,7 +1480,7 @@ function battleplan_custom_menu_order( $menu_ord ) {
 	foreach ($getCPT as $postType) {
 		array_push($displayTypes, 'edit.php?post_type='.$postType);
 	}
-	array_push($displayTypes, 'edit.php', 'separator2', 'plugins.php', 'options-general.php', 'tools.php', 'users.php', 'separator-last', 'wpengine-common', 'wds_wizard', 'smush', 'edit.php?post_type=asp-products');	
+	array_push($displayTypes, 'edit.php', 'separator2', 'plugins.php', 'options-general.php', 'tools.php', 'users.php', 'separator-last', 'wpengine-common', 'wpseo_dashboard', 'edit.php?post_type=asp-products');	
 	return $displayTypes;
 }
 
@@ -1523,28 +1507,50 @@ function battleplan_submenu_order( $menu_ord ) {
     return $menu_ord;
 }
 
+// Remove unwanted widgets from Elements
+add_action('widgets_init', 'battleplan_unregister_default_widgets', 11);
+function battleplan_unregister_default_widgets() {
+	unregister_widget('Akismet_Widget');
+	unregister_widget('WP_Widget_Custom_HTML');	
+	unregister_widget('WP_Widget_Links');
+	unregister_widget('WP_Widget_Media_Audio');
+	unregister_widget('WP_Widget_Media_Gallery');
+	unregister_widget('WP_Widget_Media_Image');
+	unregister_widget('WP_Widget_Media_Video');
+	unregister_widget('WP_Widget_Meta');
+	unregister_widget('WP_Widget_Pages');
+	unregister_widget('WP_Widget_Recent_Comments');
+	unregister_widget('WP_Widget_Recent_Posts');
+	unregister_widget('WP_Widget_RSS');
+	unregister_widget('WP_Widget_Tag_Cloud');
+	unregister_widget('WPE_Powered_By_Widget');
+	unregister_widget('Twenty_Eleven_Ephemera_Widget');
+}
+
 // Remove unwanted dashboard widgets
 add_action('wp_dashboard_setup', 'battleplan_remove_dashboard_widgets');
 function battleplan_remove_dashboard_widgets () {
-	remove_action('welcome_panel','wp_welcome_panel'); 						//Welcome to WordPress!
-	remove_meta_box('dashboard_primary','dashboard','normal'); 				//WordPress.com Blog
-	remove_meta_box('dashboard_primary','dashboard','side'); 				//WordPress.com Blog
+	remove_action('welcome_panel','wp_welcome_panel'); 							//Welcome to WordPress!
+	remove_meta_box('dashboard_primary','dashboard','normal'); 					//WordPress.com Blog
+	remove_meta_box('dashboard_primary','dashboard','side'); 					//WordPress.com Blog
 	remove_meta_box('dashboard_right_now','dashboard','normal');	
 	remove_meta_box('dashboard_right_now','dashboard','side');
-	remove_meta_box('dashboard_quick_press','dashboard','normal'); 			//Quick Press widget
-	remove_meta_box('dashboard_quick_press','dashboard','side'); 			//Quick Press widget
-	remove_meta_box('tribe_dashboard_widget', 'dashboard', 'normal'); 		//News From Modern Tribe	
-	remove_meta_box('tribe_dashboard_widget', 'dashboard', 'side'); 		//News From Modern Tribe
-	remove_meta_box('wpe_dify_news_feed','dashboard','normal'); 			//WP Engine	
-	remove_meta_box('wpe_dify_news_feed','dashboard','side'); 				//WP Engine
-	remove_meta_box('wds_sitemaps_dashboard_widget','dashboard','normal');	//SmartCrawl Site Maps
-	remove_meta_box('wds_sitemaps_dashboard_widget','dashboard','side');	//SmartCrawl Site Maps
-	remove_meta_box('dashboard_activity','dashboard','normal');				//Activity
-	remove_meta_box('dashboard_activity','dashboard','side');				//Activity
-	remove_meta_box('dashboard_site_health','dashboard','normal');			//Site Health
-	remove_meta_box('dashboard_site_health','dashboard','side');			//Site Health
-	remove_meta_box('woocommerce_dashboard_status','dashboard','normal');	//Woocommerce
-	remove_meta_box('woocommerce_dashboard_status','dashboard','side');		//Woocommerce
+	remove_meta_box('dashboard_quick_press','dashboard','normal'); 				//Quick Press widget
+	remove_meta_box('dashboard_quick_press','dashboard','side'); 				//Quick Press widget
+	remove_meta_box('tribe_dashboard_widget', 'dashboard', 'normal'); 			//News From Modern Tribe	
+	remove_meta_box('tribe_dashboard_widget', 'dashboard', 'side'); 			//News From Modern Tribe
+	remove_meta_box('wpe_dify_news_feed','dashboard','normal'); 				//WP Engine	
+	remove_meta_box('wpe_dify_news_feed','dashboard','side'); 					//WP Engine
+	remove_meta_box('dashboard_activity','dashboard','normal');					//Activity
+	remove_meta_box('dashboard_activity','dashboard','side');					//Activity
+	remove_meta_box('dashboard_site_health','dashboard','normal');				//Site Health
+	remove_meta_box('dashboard_site_health','dashboard','side');				//Site Health
+	remove_meta_box('woocommerce_dashboard_status','dashboard','normal');		//Woocommerce
+	remove_meta_box('woocommerce_dashboard_status','dashboard','side');			//Woocommerce
+	remove_meta_box('wp_mail_smtp_reports_widget_lite','dashboard','normal');	//WP Mail SMTP
+	remove_meta_box('wp_mail_smtp_reports_widget_lite','dashboard','side');		//WP Mail SMTP
+	remove_meta_box('wpseo-dashboard-overview','dashboard','normal');			//Yoast
+	remove_meta_box('wpseo-dashboard-overview','dashboard','side');				//Yoast	
 }
 
 // Add new dashboard widgets
@@ -1626,7 +1632,7 @@ function battleplan_admin_speed_stats() {
 	$totalCounted = $desktopCounted + $mobileCounted;		
 	
 	echo "<table>";
-		echo "<tr><td><b>".number_format($totalCounted)."</b> pageloads in the last </td><td>".sprintf( _n( '<b>%s</b> day', '<b>%s</b> days', $daysSinceEmail, 'battleplan' ), number_format($daysSinceEmail) )."</td></tr>";
+		echo "<tr><td><b>".number_format($totalCounted)."</b> pageloads</td><td> in the last ".sprintf( _n( '<b>%s</b> day', '<b>%s</b> days', $daysSinceEmail, 'battleplan' ), number_format($daysSinceEmail) )."</td></tr>";
 		echo "<tr><td>&nbsp;</td></tr>";
 		echo "<tr><td><b>Desktop</b></td><td><b>".$desktopSpeed."s</b> on ".sprintf( _n( '<b>%s</b> pageload', '<b>%s</b> pageloads', $desktopCounted, 'battleplan' ), number_format($desktopCounted) )."</td></tr>";
 		echo "<tr><td><b>Mobile</b></td><td><b>".$mobileSpeed."s</b> on ".sprintf( _n( '<b>%s</b> pageload', '<b>%s</b> pageloads', $mobileCounted, 'battleplan' ), number_format($mobileCounted) )."</td></tr>";
@@ -1664,12 +1670,12 @@ function battleplan_admin_referrer_stats() {
 	
 	uksort( $combineReferrers, function($a, $b) use ($combineReferrers) { return [$combineReferrers[$b], $a] <=> [$combineReferrers[$a], $b]; } );
 		
-	echo "<div>Last <b>".$referNum."</b> referrers</b><br/><br/>";
+	echo "<div>Last <b>".number_format($referNum)."</b> referrers</b><br/><br/>";
 	echo "<ul>";
 	foreach ($combineReferrers as $referrer=>$referNum) :
 		if ( $referrer == "" ) $referrer = "Direct";
 		if ( $referrer == $thisDomain ) $referrer = "Self";
-		echo "<li><span class='label'>".$referrer."</span><span class='value'><b>".$referNum."</b></span></li>";
+		echo "<li><span class='label'>".$referrer."</span><span class='value'><b>".number_format($referNum)."</b></span></li>";
 	endforeach; 	
 	echo '</ul></div>';
 }
@@ -1690,10 +1696,10 @@ function battleplan_admin_location_stats() {
 	
 	uksort( $combineLocs, function($a, $b) use ($combineLocs) { return [$combineLocs[$b], $a] <=> [$combineLocs[$a], $b]; } );
 		
-	echo "<div>Last <b>".$locNum."</b> visitors</b><br/><br/>";
+	echo "<div>Last <b>".number_format($locNum)."</b> visitors</b><br/><br/>";
 	echo "<ul>";
 	foreach ($combineLocs as $city=>$cityNum) :
-		echo "<li><span class='label'>".$city."</span><span class='value'><b>".$cityNum."</b></span></li>";
+		echo "<li><span class='label'>".$city."</span><span class='value'><b>".number_format($cityNum)."</b></span></li>";
 	endforeach; 	
 	echo '</ul></div>';
 }
@@ -1717,8 +1723,8 @@ function battleplan_admin_pageview_stats() {
 	$avgMulti = round( ($totalMulti / $multiViews), 1, PHP_ROUND_HALF_UP);
 	
 	echo "<ul>";
-		echo "<li><span class='label'><b>One Page Visits</b></td><td><b></span><span class='value'>".number_format($singlePct)."%</b>&nbsp;&nbsp;&nbsp;(".$singleViews.")</span></li>";
-		echo "<li><span class='label'><b>Multi Page Visits</b></td><td><b></span><span class='value'>".number_format($multiPct)."%</b>&nbsp;&nbsp;&nbsp;(".$multiViews.")</span></li>";
+		echo "<li><span class='label'><b>One Page Visits</b></td><td><b></span><span class='value'>".number_format($singlePct)."%</b>&nbsp;&nbsp;&nbsp;(".number_format($singleViews).")</span></li>";
+		echo "<li><span class='label'><b>Multi Page Visits</b></td><td><b></span><span class='value'>".number_format($multiPct)."%</b>&nbsp;&nbsp;&nbsp;(".number_format($multiViews).")</span></li>";
 		echo "<li>&nbsp;</li>";
 		echo "<li><span class='label'><b>Overall Avg.</b></td><td><b></span><span class='value'>".$avgVisit." pages per visit</span></li>";		
 		echo "<li><span class='label'><b>Multi Page Avg.</b></td><td><b></span><span class='value'>".$avgMulti." pages per visit</span></li>";
@@ -1934,6 +1940,34 @@ function battleplan_duplicate_post_link( $actions, $post ) {
 	return $actions;
 }
 
+// Automatically set the image Title, Alt-Text, Caption & Description upon upload
+add_action( 'add_attachment', 'battleplan_setImageMetaUponUpload' );
+function battleplan_setImageMetaUponUpload( $post_ID ) {
+	if ( wp_attachment_is_image( $post_ID ) ) {
+		$imageTitle = get_post( $post_ID )->post_title;
+		$imageTitle = ucwords( preg_replace( '%\s*[-_\s]+\s*%', ' ', $imageTitle )); // remove hyphens, underscores & extra spaces and capitalize
+		$imageMeta = array ( 'ID' => $post_ID, 'post_title' => $imageTitle ) /* post title */;			 
+		update_post_meta( $post_ID, '_wp_attachment_image_alt', $imageTitle ) /* alt text */;
+		wp_update_post( $imageMeta );
+	} 
+}
+
+// Add 'log-views' fields to an image when it is uploaded
+add_action( 'add_attachment', 'battleplan_addWidgetPicViewsToImg' );
+function battleplan_addWidgetPicViewsToImg( $post_ID ) {
+	if ( wp_attachment_is_image( $post_ID ) ) {		
+		updateMeta( $post_ID, 'log-views-now', strtotime("-1 day"));		
+		updateMeta( $post_ID, 'log-views-time', strtotime("-1 day"));		
+		updateMeta( $post_ID, 'log-tease-time', strtotime("-1 day"));		
+		updateMeta( $post_ID, 'log-views-total-7day', '0' );		
+		updateMeta( $post_ID, 'log-views-total-30day', '0' );
+		updateMeta( $post_ID, 'log-views-total-90day', '0' );
+		updateMeta( $post_ID, 'log-views-total-180day', '0' );
+		updateMeta( $post_ID, 'log-views-total-365day', '0' );
+		updateMeta( $post_ID, 'log-views', array( 'date'=> strtotime(date("F j, Y")), 'views' => 0 ));					
+	} 
+}
+
 // Force clear all views for posts/pages - run this from functions-site.php within a site's child theme
 function battleplan_clearViewFields() {
 	// clear image views
@@ -2081,102 +2115,304 @@ function battleplan_clearViewFields() {
 		updateMeta( $siteHeader, 'framework-version', _BP_VERSION );	
 	}	
 }  
-
+	
 /*--------------------------------------------------------------
-# One-Time Run Functions
+# Set Global Options
 --------------------------------------------------------------*/
-// Move Site Header, Site Footer, Site Message, Office Hours, Privacy Policy, etc. to Elements post type
-// Delete pages that are now served directly from framework (privacy policy, symptom checker, etc)
-// Delete FB and Wells Fargo images that are now served directly from framework
-add_action( 'admin_init', 'battleplan_setupElements', 999 );
-function battleplan_setupElements() {   
-	
-	if ( get_option( 'bp_setup_2021_03_03' ) != 'completed' ) :
-		if ( get_page_by_path('site-header', OBJECT, 'page' ) ) :
-			$post_id = get_page_by_path('site-header', OBJECT, 'page' )->ID;
-			$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
-			wp_update_post( $my_post );
-		endif;
-		if ( get_page_by_path('site-footer', OBJECT, 'page' ) ) :
-			$post_id = get_page_by_path('site-footer', OBJECT, 'page' )->ID;
-			$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
-			wp_update_post( $my_post );
-		endif;
-		if ( get_page_by_path('site-message', OBJECT, 'page' ) ) :
-			$post_id = get_page_by_path('site-message', OBJECT, 'page' )->ID;
-			$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
-			wp_update_post( $my_post );
-		endif;
-		if ( get_page_by_path('privacy-policy', OBJECT, 'page' ) ) :
-			$post_id = get_page_by_path('privacy-policy', OBJECT, 'page' )->ID;
-			$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
-			wp_update_post( $my_post );
-		endif;
-		if ( get_page_by_path('office-hours', OBJECT, 'page' ) ) :
-			$post_id = get_page_by_path('office-hours', OBJECT, 'page' )->ID;
-			$my_post = array( 'ID' => $post_id, 'post_type' => 'elements', ); 
-			wp_update_post( $my_post );
-		endif;	
-		update_option( 'bp_setup_2021_03_03', 'completed' );
-	endif;
-	
-	if ( get_option( 'bp_setup_2021_03_07' ) != 'completed' ) :
-		wp_delete_post( get_page_by_path('privacy-policy', OBJECT, 'elements' )->ID, true);	
-		wp_delete_post( get_page_by_path('customer-care-dealer', OBJECT, 'page' )->ID, true);	
-		wp_delete_post( get_page_by_path('maintenance-tips', OBJECT, 'page' )->ID, true);	
-		wp_delete_post( get_page_by_path('symptom-checker', OBJECT, 'page' )->ID, true);	
-	
-		wp_delete_attachment( getID('Wells-Fargo-A'), true );
-		wp_delete_attachment( getID('Wells-Fargo-B'), true );
-		wp_delete_attachment( getID('Wells-Fargo-C'), true );
-		wp_delete_attachment( getID('Wells-Fargo-D'), true );
-		wp_delete_attachment( getID('Facebook-Like-Us-1'), true );
-		wp_delete_attachment( getID('Facebook-Like-Us-2'), true );
-		wp_delete_attachment( getID('Facebook-Like-Us-3'), true );
+add_action( 'admin_init', 'battleplan_setupGlobalOptions', 999 );
+function battleplan_setupGlobalOptions() {  
 
-		update_option( 'bp_setup_2021_03_07', 'completed' );
+	if ( is_plugin_active('wp-mail-smtp/wp_mail_smtp.php') && get_option( 'bp_setup_wp_mail_smtp_initial' ) != 'completed' ) : 	
+		$apiKey1 = "keysib";
+		$apiKey2 = "ef3a9074e001fa21f640578f699994cba854489d3ef793";
+		$wpMailSettings = get_option( 'wp_mail_smtp' );		
+		$wpMailSettings['mail']['from_email'] = 'email@admin.'.str_replace('https://', '', get_bloginfo('url'));
+		$wpMailSettings['mail']['from_name'] = get_bloginfo('name');
+		$wpMailSettings['mail']['mailer'] = sendinblue;
+		$wpMailSettings['mail']['from_email_force'] = '1';
+		$wpMailSettings['mail']['from_name_force'] = '0';		
+		$wpMailSettings['sendinblue']['api_key'] = 'x'.$apiKey1.'-d08cc84fe45b37a420'.$apiKey2.'-AafFpD2zKkIN3SBZ';
+		$wpMailSettings['sendinblue']['domain'] = 'admin.'.str_replace('https://', '', get_bloginfo('url'));		
+		update_option( 'wp_mail_smtp', $wpMailSettings );
+		
+		update_option( 'bp_setup_wp_mail_smtp_initial', 'completed' );
+	endif;	
+
+	if ( is_plugin_active('extended-widget-options/plugin.php') && get_option( 'bp_setup_widget_options_initial' ) != 'completed' ) :
+		$widgetOpts = get_option( 'widgetopts_settings' );
+				
+		$widgetOpts['settings']['visibility']['post_type'] = '1';
+		$widgetOpts['settings']['visibility']['taxonomies'] = '1';
+		$widgetOpts['settings']['visibility']['misc'] = '1';		
+		
+		$widgetOpts['settings']['classes']['id'] = '1';
+		$widgetOpts['settings']['classes']['type'] = 'both';
+		$widgetOpts['settings']['classes']['classlists']['0'] = 'remove-first';
+		$widgetOpts['settings']['classes']['classlists']['1'] = 'lock-to-top';
+		$widgetOpts['settings']['classes']['classlists']['2'] = 'lock-to-bottom';
+		$widgetOpts['settings']['classes']['classlists']['3'] = 'widget-important';
+		$widgetOpts['settings']['classes']['classlists']['4'] = 'widget-set';
+		
+		$widgetOpts['settings']['dates']['days'] = '1';		
+		$widgetOpts['settings']['dates']['date_range'] = '1';		
+	
+		$widgetOpts['visibility'] = 'activate';		
+		$widgetOpts['devices'] = 'deactivate';
+		$widgetOpts['urls'] = 'activate';
+		$widgetOpts['alignment'] = 'deactivate';
+		$widgetOpts['hide_title'] = 'activate';
+		$widgetOpts['classes'] = 'activate';
+		$widgetOpts['logic'] = 'deactivate';
+		$widgetOpts['move'] = 'deactivate';
+		$widgetOpts['clone'] = 'activate';
+		$widgetOpts['links'] = 'deactivate';
+		$widgetOpts['fixed'] = 'deactivate';
+		$widgetOpts['columns'] = 'deactivate';
+		$widgetOpts['roles'] = 'deactivate';
+		$widgetOpts['dates'] = 'activate';
+		$widgetOpts['styling'] = 'deactivate';
+		$widgetOpts['animation'] = 'deactivate';
+		$widgetOpts['taxonomies'] = 'deactivate';
+		$widgetOpts['disable_widgets'] = 'deactivate';
+		$widgetOpts['permission'] = 'deactivate';
+		$widgetOpts['shortcodes'] = 'deactivate';		
+		$widgetOpts['cache'] = 'deactivate';
+		$widgetOpts['search'] = 'deactivate';
+		$widgetOpts['widget_area'] = 'deactivate';		
+		$widgetOpts['import_export'] = 'deactivate';
+		$widgetOpts['elementor'] = 'deactivate';
+		$widgetOpts['beaver'] = 'deactivate';
+		$widgetOpts['acf'] = 'activate';						
+		update_option( 'widgetopts_settings', $widgetOpts );
+		
+		update_option( 'bp_setup_widget_options_initial', 'completed' );
+	endif;	
+		
+	if ( is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') && get_option( 'bp_setup_yoast_initial' ) != 'completed' ) :
+		delete_option( 'smush-directory-path-hash-updated' );		
+		delete_option( 'wp-smush-settings' );		
+		delete_option( 'skip-smush-setup' );		
+		delete_option( 'wp-smush-cdn_status' );		
+		delete_option( 'wp-smush-last_run_sync' );		
+		delete_option( 'wp-smush-lazy_load' );		
+		delete_option( 'wp-smush-show_upgrade_modal' );			
+		delete_option( 'bp_setup_smush_pro_initial' );			
+		for ($x = 0; $x <= 4000; $x++) {
+			delete_option( 'smush-in-progress-'.$x );		
+		} 		
+		delete_option( 'wr2x_auto_generate' );
+		delete_option( 'wr2x_full_size' );
+		delete_option( 'wr2x_method' );
+		delete_option( 'wr2x_quality' );
+		delete_option( 'wr2x_regenerate_thumbnails' );
+		delete_option( 'wr2x_disable_responsive' );
+		delete_option( 'wr2x_cdn_domain' );
+		delete_option( 'wr2x_over_http_check' );
+		delete_option( 'wr2x_debug' );
+		delete_option( 'wr2x_form_2020' );
+		delete_option( 'wr2x_retina_sizes' );
+		delete_option( 'wr2x_disabled_sizes' );
+		delete_option( 'wr2x_version_6_0_0' );
+		delete_option( 'wr2x_notice_easyio' );
+		delete_option( 'wpmudev_apikey' );
+		delete_option( 'wds-sitemap-ignore_urls' );
+		delete_option( 'wds-sitemap-ignore_post_ids' );
+		delete_option( 'wds-model-service-checkup-last' );
+		delete_option( 'wds-model-service-checkup-progress' );
+		delete_option( 'wds-model-service-seo-service-last_runtime 	' );
+		delete_option( 'wds-model-service-seo-progress' );
+		delete_option( 'wds_sitemap_options' );
+		delete_option( 'wds_autolinks_options' );
+		delete_option( 'wds_settings_options' );
+		delete_option( 'wds_taxonomy_meta' );
+		delete_option( 'wds_onpage_options' );
+		delete_option( 'wds_social_options' );
+		delete_option( 'wds-onboarding-done' );
+		delete_option( 'wds_checkup_options' );
+		delete_option( 'wds_engine_notification' );
+		delete_option( 'wds_sitemap_dashboard' );
+		delete_option( 'wds-sitemap-extras' );
+		delete_option( 'wds-redirections' );
+		delete_option( 'wds-redirections-types' );
+		delete_option( 'wds-sitemap-rewrite-rules-flushed' );
+		delete_option( 'wds-checkup-ignores' );
+		delete_option( 'wds_schema_options' );
+		delete_option( 'wds_lighthouse_options' );
+		delete_option( 'wds_health_options' );
+		delete_option( 'wds_version' );
+		delete_option( 'wds-model-service-checkup-result' );			
+		
+		delete_option( 'bp_setup_smartcrawl_initial' );
+		delete_option( 'bp_setup_smush_pro_initial' );	
+		
+		$wpSEOSettings = get_option( 'wpseo_titles' );		
+		$wpSEOSettings['separator'] = 'sc-pipe';
+		$wpSEOSettings['title-home-wpseo'] = '%%page%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';
+		$wpSEOSettings['title-author-wpseo'] = '%%name%%, Author at %%sitename%% %%page%%';
+		$wpSEOSettings['title-archive-wpseo'] = 'Archive %%sep%% %%sitename%% %%sep%% %%date%% ';
+		$wpSEOSettings['title-search-wpseo'] = 'You searched for %%searchphrase%% %%sep%% %%sitename%%';
+		$wpSEOSettings['title-404-wpseo'] = 'Page not found %%sep%% %%sitename%%';
+		$wpSEOTitle = ' %%page%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';		
+		$getCPT = get_post_types(); 
+		foreach ($getCPT as $postType) :
+			if ( $postType == "post" || $postType == "page" || $postType == "optimized" ) :
+				$wpSEOSettings['title-'.$postType] = '%%title%%'.$wpSEOTitle;
+				$wpSEOSettings['social-title-'.$postType] = '%%title%%'.$wpSEOTitle;
+			elseif ( $postType == "attachment" || $postType == "revision" || $postType == "nav_menu_item" || $postType == "custom_css" || $postType == "customize_changeset" || $postType == "oembed_cache" || $postType == "user_request" || $postType == "wp_block" || $postType == "elements" || $postType == "acf-field-group" || $postType == "acf-field" || $postType == "wpcf7_contact_form" ) :
+				// nothing //
+			else:
+				$wpSEOSettings['title-'.$postType] = ucfirst($postType).$wpSEOTitle;			
+				$wpSEOSettings['social-title-'.$postType] = ucfirst($postType).$wpSEOTitle;			
+			endif;		
+		endforeach;	
+		$wpSEOSettings['social-title-author-wpseo'] = '%%name%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';
+		$wpSEOSettings['social-title-archive-wpseo'] = '%%date%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';
+		$wpSEOSettings['noindex-author-wpseo'] = '1';
+		$wpSEOSettings['noindex-author-noposts-wpseo'] = '1';
+		$wpSEOSettings['noindex-archive-wpseo'] = '1';
+		$wpSEOSettings['disable-author'] = '1';
+		$wpSEOSettings['disable-date'] = '1';
+		$wpSEOSettings['disable-attachment'] = '1';
+		$wpSEOSettings['breadcrumbs-404crumb'] = 'Error 404: Page not found';
+		$wpSEOSettings['breadcrumbs-boldlast'] = '1';
+		$wpSEOSettings['breadcrumbs-archiveprefix'] = 'Archives for';
+		$wpSEOSettings['breadcrumbs-enable'] = '1';
+		$wpSEOSettings['breadcrumbs-home'] = 'Home';
+		$wpSEOSettings['breadcrumbs-searchprefix'] = 'You searched for';
+		$wpSEOSettings['breadcrumbs-sep'] = '»';
+		$wpSEOSettings['company_logo'] = get_bloginfo("url").'/wp-content/uploads/logo.png';
+		$wpSEOSettings['company_logo_id'] = attachment_url_to_postid( get_bloginfo("url").'/wp-content/uploads/logo.png' );
+		$wpSEOSettings['company_logo_meta']['url'] = get_bloginfo("url").'/wp-content/uploads/logo.png';	
+		$wpSEOSettings['company_logo_meta']['path'] = get_attached_file( attachment_url_to_postid( get_bloginfo("url").'/wp-content/uploads/logo.png' ) );
+		$wpSEOSettings['company_logo_meta']['id'] = attachment_url_to_postid( get_bloginfo("url").'/wp-content/uploads/logo.png' );
+		$wpSEOSettings['company_name'] = get_bloginfo('name');
+		$wpSEOSettings['company_or_person'] = 'company';
+		$wpSEOSettings['stripcategorybase'] = '1';
+		$wpSEOSettings['breadcrumbs-enable'] = '1';
+		update_option( 'wpseo_titles', $wpSEOSettings );
+
+		$wpSEOSocial = get_option( 'wpseo_social' );		
+		$wpSEOSocial['facebook_site'] = battleplan_getBizInfo( array ( 'info'=>'facebook' ));
+		$wpSEOSocial['instagram_url'] = battleplan_getBizInfo( array ( 'info'=>'instagram' ));
+		$wpSEOSocial['linkedin_url'] = battleplan_getBizInfo( array ( 'info'=>'linkedin' ));
+		$wpSEOSocial['og_default_image'] = get_bloginfo("url").'/wp-content/uploads/logo.png';
+		$wpSEOSocial['og_default_image_id'] = attachment_url_to_postid( get_bloginfo("url").'/wp-content/uploads/logo.png' );
+		$wpSEOSocial['opengraph'] = '1';
+		$wpSEOSocial['pinterest_url'] = battleplan_getBizInfo( array ( 'info'=>'pinterest' ));
+		$wpSEOSocial['twitter_site'] = battleplan_getBizInfo( array ( 'info'=>'twitter' ));
+		$wpSEOSocial['youtube_url'] = battleplan_getBizInfo( array ( 'info'=>'youtube' ));		
+		update_option( 'wpseo_social', $wpSEOSocial );
+		
+		$wpSEOLocal = get_option( 'wpseo_local' );		
+		$wpSEOLocal['business_type'] = 'Organization';
+		$wpSEOLocal['location_address'] = battleplan_getBizInfo( array ( 'info'=>'street' ));
+		$wpSEOLocal['location_city'] = battleplan_getBizInfo( array ( 'info'=>'city' ));
+		$wpSEOLocal['location_state'] = battleplan_getBizInfo( array ( 'info'=>'state-full' ));
+		$wpSEOLocal['location_zipcode'] = battleplan_getBizInfo( array ( 'info'=>'zip' ));
+		$wpSEOLocal['location_country'] = 'US';
+		$wpSEOLocal['location_phone'] = battleplan_getBizInfo( array ( 'info'=>'area' )) . battleplan_getBizInfo( array ( 'info'=>'phone' ));
+		$wpSEOLocal['location_email'] = battleplan_getBizInfo( array ( 'info'=>'email' ));
+		$wpSEOLocal['location_url'] = get_bloginfo("url");
+		$wpSEOLocal['location_price_range'] = '$$';
+		$wpSEOLocal['location_payment_accepted'] = "Cash, Credit Cards, Paypal";
+		$wpSEOLocal['location_area_served'] = battleplan_getBizInfo( array ( 'info'=>'service-area' ));
+		$wpSEOLocal['location_coords_lat'] = get_option('site_lat');
+		$wpSEOLocal['location_coords_long'] = get_option('site_long');
+		$wpSEOLocal['hide_opening_hours'] = 'on';
+		$wpSEOLocal['address_format'] = 'address-state-postal';	
+		update_option( 'wpseo_local', $wpSEOLocal );
+		
+		update_option( 'bp_setup_yoast_initial', 'completed' );
+	endif;
+
+	if ( get_option( 'bp_setup_2021_08_15' ) != 'completed' ) :
+		update_option( 'admin_email', 'info@battleplanwebdesign.com' );
+		update_option( 'admin_email_lifespan', '9999999999999' );
+		update_option( 'default_comment_status', 'closed' );
+		update_option( 'default_ping_status', 'closed' );
+		update_option( 'permalink_structure', '/%postname%/' );
+		update_option( 'wpe-rand-enabled', '1' );
+		update_option( 'recently_activated', '' );
+		update_option( 'recently_edited', '' );
+		
+		$parts = explode('.', parse_url(esc_url(get_site_url()), PHP_URL_HOST));
+		update_option( 'wp-smush-dir_path', '/nas/content/live/'.$parts[1].'/wp-content' );
+
+		delete_option( 'nearbynow_options' );
+		delete_option( 'theme_mods_responsive' );
+		delete_option( 'theme_mods_responsive-child' );
+		delete_option( 'responsive_theme_options' );
+		delete_option( 'responsive_install' );
+		delete_option( 'theme_mods_website-go-3' );
+		delete_option( 'theme_mods_website-go-4' );
+		delete_option( 'whatthefile-install-date' );
+		delete_option( 'duplicate_post_blacklist' );
+		delete_option( 'duplicate_post_copyattachments' );
+		delete_option( 'duplicate_post_copyauthor' );
+		delete_option( 'duplicate_post_copychildren' );
+		delete_option( 'duplicate_post_copycomments' );
+		delete_option( 'duplicate_post_copycontent' );
+		delete_option( 'duplicate_post_copydate' );
+		delete_option( 'duplicate_post_copyexcerpt' );
+		delete_option( 'duplicate_post_copyformat' );
+		delete_option( 'duplicate_post_copymenuorder' );
+		delete_option( 'duplicate_post_copypassword' );
+		delete_option( 'duplicate_post_copyslug' );
+		delete_option( 'duplicate_post_copystatus' );
+		delete_option( 'duplicate_post_copytemplate' );
+		delete_option( 'duplicate_post_copythumbnail' );
+		delete_option( 'duplicate_post_copytitle' );
+		delete_option( 'duplicate_post_increase_menu_order_by' );
+		delete_option( 'duplicate_post_roles' );
+		delete_option( 'duplicate_post_show_adminbar' );
+		delete_option( 'duplicate_post_show_bulkactions' );
+		delete_option( 'duplicate_post_show_notice' );
+		delete_option( 'duplicate_post_show_original_column' );
+		delete_option( 'duplicate_post_show_original_in_post_states' );
+		delete_option( 'duplicate_post_show_original_meta_box' );
+		delete_option( 'duplicate_post_show_row' );
+		delete_option( 'duplicate_post_show_submitbox' );
+		delete_option( 'duplicate_post_taxonomies_blacklist' );
+		delete_option( 'duplicate_post_title_prefix' );
+		delete_option( 'duplicate_post_title_suffix' );
+		delete_option( 'duplicate_post_types_enabled' );
+		delete_option( 'duplicate_post_version' );
+		
+		delete_option( 'seed_cspv5_settings_content' );
+		delete_option( 'seed_cspv5_token' );
+		delete_option( 'seed_cspv5_version' );
+		delete_option( 'seed_cspv5_coming_soon_page_id' );
+		delete_option( 'seed_cspv5_api_message' );
+		delete_option( 'seed_cspv5_api_nag' );
+		delete_option( 'seed_cspv5_per' );
+
+		delete_option( 'elfsight_instalink_widgets_clogged' );
+		delete_option( 'elfsight_instalink_last_check_datetime' );
+		delete_option( 'elfsight_instagram_feed_widget_hash' );
+		delete_option( 'widget_elfsight-instagram-feed' );
+		delete_option( 'elfsight_instagram_feed_widgets_clogged' );
+		delete_option( 'elfsight_instagram_feed_last_upgraded_at' );
+		
+		delete_option( 'bp_setup_2021_03_03' );
+		delete_option( 'bp_setup_2021_03_07' );
+		delete_option( 'bp_setup_2021_03_08' );		
+		delete_option( 'bp_setup_2021_08_11' );		
+		delete_option( 'bp_setup_2021_08_11b' );		
+		delete_option( 'bp_setup_2021_08_11c' );				
+		delete_option( 'bp_setup_2021_08_11d' );		
+		delete_option( 'bp_setup_widget_options_2021_08_11' );	
+		
+		$sidebars_widgets = get_option( 'sidebars_widgets' );
+     	$sidebars_widgets['wp_inactive_widgets'] = array();
+     	update_option( 'sidebars_widgets', $sidebars_widgets );
+		
+		update_option( 'bp_setup_2021_08_15', 'completed' );
 	endif;	
 	
-	if ( get_option( 'bp_setup_2021_03_08' ) != 'completed' ) :
-		wp_delete_attachment( getID('as-product-display-384x247'), true );
-		wp_delete_attachment( getID('symptom-checker'), true );
-		wp_delete_attachment( getID('cc-visa'), true );
-		wp_delete_attachment( getID('cc-mc'), true );
-		wp_delete_attachment( getID('cc-discover'), true );
-		wp_delete_attachment( getID('cc-amex'), true );
-		wp_delete_attachment( getID('as-customer-care-logo-horizontal'), true );
-		wp_delete_attachment( getID('as-customer-care-logo-640x640'), true );
-		wp_delete_attachment( getID('AS-Customer-Care-Logo-258x258'), true );
-		wp_delete_attachment( getID('american-standard-logo'), true );
-		wp_delete_attachment( getID('AS-Logo-900x168-1'), true );
+	//$smartCrawl = get_option( 'ari_fancy_lightbox_settings' );
+	//print_r($smartCrawl);		
+	//echo "------------------------------------------------------------>".get_attached_file( attachment_url_to_postid( get_bloginfo("url").'/wp-content/uploads/logo.png' ) );	
 	
-		$args = array(
-			'posts_per_page'	=> -1,
-			'post_type'			=> 'testimonials',
-		);
-	
-		$the_query = new WP_Query( $args );
-		if( $the_query->have_posts() ): 
-			while( $the_query->have_posts() ) : $the_query->the_post();		
-	
-				$loc = readMeta( get_the_ID(), 'testimonial_location');	
-				if ( $loc == "Google Review" ) :	
-					updateMeta( get_the_ID(), 'testimonial_location', '');		
-					updateMeta( get_the_ID(), 'testimonial_platform', 'Google');		
-				endif;
-	
-				$platform = readMeta( get_the_ID(), 'testimonial_platform');	
-				if ( $platform == "" ) :	
-					updateMeta( get_the_ID(), 'testimonial_platform', 'Facebook');		
-				endif;
-	
-			endwhile; 
-		endif; 
-		wp_reset_query();	 // Restore global post data stomped by the_post(). 
-
-		update_option( 'bp_setup_2021_03_08', 'completed' );
-	
-	endif;
 }
 
 ?>

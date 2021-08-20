@@ -34,15 +34,15 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 }
 
 #dashboard-widgets #postbox-container-1 {
-	width:										21%;
+	width:										18%;
 }
 
 #dashboard-widgets #postbox-container-2 {
-	width:										23%;
+	width:										34%;
 }
 
 #dashboard-widgets #postbox-container-3 {
-	width:										56%;
+	width:										48%;
 }
 
 #dashboard-widgets #postbox-container-3 table {
@@ -50,7 +50,7 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 }
 
 #dashboard-widgets #postbox-container-3 table:not(:last-of-type) {
-	margin-right:								70px;
+	margin-right:								50px;
 }
 
 #dashboard-widgets #postbox-container-3 td.dates {
@@ -73,9 +73,12 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 
 ul span.label {
 	display:									inline-block;
-	width:										143px;
-	margin-right:								7px;
+	width:										210px;
 	overflow:									clip;
+}
+
+ul span.value {
+	margin-right:								20px;
 }
 
 #battleplan_site_stats tr.coloration td,
@@ -197,9 +200,34 @@ a[data-wp-action="disable"],
 	display:									block;
 }
 
+#poststuff #postbox-container-2 #normal-sortables {
+	display: 									flex;
+	flex-flow: 									row wrap; 
+}
+
+#poststuff #postbox-container-2 #normal-sortables .postbox { 
+	width: 										100%;
+}
+
+#page-top {
+	order: 										1;
+}
+
+#page-bottom {
+	order: 										2;
+}
+
+#wpseo_meta {
+	order: 										3;
+}
+
+#commentstatusdiv {
+	order: 										4;
+}
+
 #page-top_text,
 #page-bottom_text {
-	max-height:									610px;
+	max-height:									700px;
 	resize: 									none;
 } 
 

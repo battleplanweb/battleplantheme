@@ -83,6 +83,7 @@ get_header();
 				$accordion = "false";
 				$countTease = "false";
 				$countView = "false";
+				$link = "post"; //post, cf-custom-field, specific link, false
 				$addInfo = "";				
 				$addClass = "";
 			endif;
@@ -91,7 +92,7 @@ get_header();
 		
 			if ( get_post_type() == "testimonials" ) :		
 				$buildIntro = "";		
-				if ( $facebookLink != "reviews/" ) $buildIntro .= '<a class="noFX alignright size-quarter-s" style="margin-top:0;" href="#" onclick="trackClicks(\'contact\', \'Offsite Link\', \'Facebook\', \''.$facebookLink.'\'); return false;"><img alt="Like Us on Facebook" src="/wp-content/themes/battleplantheme/common/logos/'.$facebookIcon.'.png" class="noFX"/></a>';
+				if ( $facebookLink != "reviews/" ) $buildIntro .= '<a class="noFX alignright size-quarter-s" style="margin-top:0;" href="#" onclick="trackClicks(\'contact\', \'Offsite Link\', \'Facebook\', \''.$facebookLink.'\'); return false;"><img alt="Like Us on Facebook" src="/wp-content/themes/battleplantheme/common/logos/'.$facebookIcon.'.png" class="noFX" width="190" height="190" /></a>';
 				$buildIntro .= '[txt]<p>Our customers really like us! But don’t take our word for it. Here are some actual reviews posted by our customers on the web.</p>';				
 				if ( $facebookLink != "reviews/" ) $buildIntro .= '<p>If YOU are a satisfied customer, we invite you to click the "thumbs up" icon to review your experience with our business.  Thank you!</p>';		
 				$buildIntro .= '[/txt]';				
@@ -116,7 +117,7 @@ get_header();
 
 				$classes = 'col-archive col-'.get_post_type().' col-'.get_the_ID().$addTags.$addClass;
 		
-				$buildArchive .= do_shortcode('[col class="'.$classes.'"][build-archive type="'.get_post_type().'" show_thumb="'.$showThumb.'" size="'.$size.'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" accordion="'.$accordion.'" count_tease="'.$countTease.'" count_view="'.$countView.'" add_info="'.$addInfo.'"][/col]');
+				$buildArchive .= do_shortcode('[col class="'.$classes.'"][build-archive type="'.get_post_type().'" show_thumb="'.$showThumb.'" size="'.$size.'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" accordion="'.$accordion.'" count_tease="'.$countTease.'" count_view="'.$countView.'" add_info="'.$addInfo.'" link="'.$link.'"][/col]');
 			endwhile; 
 
 		// Display Archive

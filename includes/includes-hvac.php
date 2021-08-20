@@ -40,7 +40,7 @@ function battleplan_product_overview( $atts, $content = null ) {
 	
 	return do_shortcode('
 		[col class="col-archive col-products"]
-		 [img size="1/3" link="'.$link.'" ada-hidden="true"]<img class="img-archive img-products" src="/wp-content/uploads/'.$pic.'" alt="'.$alt.'" />[/img]
+		 [img size="1/3" link="'.$link.'" ada-hidden="true"]<img class="img-archive img-products" src="/wp-content/uploads/'.$pic.'" loading="lazy" alt="'.$alt.'" style="aspect-ratio:1/1"/>[/img]
 		 [group size="2/3"]
 		  [txt size="100" class="text-products"]<h3><a class="link-archive link-products" href="'.$link.'" aria-hidden="true" tabindex="-1">'.$title.'</a></h3>'.$excerpt.'[/txt]
 		  [btn size="100" class="button-products" link="'.$link.'"]View '.$title.'[/btn]
@@ -417,7 +417,13 @@ function battleplan_getBrandLogo($atts, $content = null) {
 		$brand = strtolower(str_replace(" ", "-", get_option('site_brand')));
 		$name = ucwords($brand);
 	endif;
-	return '<img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$alt.'.png" alt="We offer '.$name.' heating and air conditioning products." />';
+	if ( $brand == "york" || $brand == "carrier" || $brand == "amana" ) : $height = 165;
+	elseif ( $brand == "trane" || $brand == "lennox" ) : $height = 116;
+	elseif ( $brand == "ruud" ) : $height = 252;
+	elseif ( $brand == "heil" ) : $height = 139;	
+	else : $height = 75; endif;
+	
+	return '<img class="noFX" loading="lazy" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$alt.'.png" alt="We offer '.$name.' heating and air conditioning products." width="400" height="'.$height.'" style="aspect-ratio:400/'.$height.'" />';
 }
 
 // Add Symptom Checker widget to Sidebar
@@ -425,13 +431,13 @@ add_shortcode( 'get-symptom-checker', 'battleplan_getSymptomChecker' );
 function battleplan_getSymptomChecker() {	
 	$brand = strtolower(str_replace(" ", "-", get_option('site_brand')));
 	if ( $brand == "" ) $brand = "american-standard";
-	return '<a href="/symptom-checker/" title="Click here for troublshooting ideas to solve common HVAC problems."><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/symptom-checker.jpg" alt="HVAC unit pictured on colorful background." /></a>';
+	return '<a href="/symptom-checker/" title="Click here for troublshooting ideas to solve common HVAC problems."><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/symptom-checker.jpg" loading="lazy" alt="HVAC unit pictured on colorful background." width="300" height="250" style="aspect-ratio:300/250" /></a>';
 }
 
 // Add Customer Care Dealer widget to Sidebar
 add_shortcode( 'get-customer-care', 'battleplan_getCustomerCare' );
 function battleplan_getCustomerCare() {	
-	return '<a href="/customer-care-dealer/"><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-american-standard/customer-care-dealer-logo-alt.png" alt="We are proud to be an American Standard Customer Care Dealer" /></a>';
+	return '<a href="/customer-care-dealer/" title="Click here to read more about the American Standard Heating & Cooling Customer Care Dealer program"><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-american-standard/customer-care-dealer-logo-alt.png" loading="lazy" alt="We are proud to be an American Standard Customer Care Dealer" width="320" height="178" style="aspect-ratio:320/178" /></a>';
 }
 
 // Add Financing widget to Sidebar
@@ -443,8 +449,16 @@ function battleplan_getFinancing($atts, $content = null) {
 	$link = esc_attr($a['link']);	
 	$buildFinancing = "";
 	
-	if ( $link != "" ) $buildFinancing .= '<a href="'.$link.'">';
-	$buildFinancing .= '<img src="/wp-content/themes/battleplantheme/common/financing/'.$img.'.png" alt="Apply for financing for your HVAC needs at '.$bank.'" />';
+	if ( $img == "ftl-finance" ) : $height = 142;
+	elseif ( $img == "arvest-bank" ) : $height = 192;
+	elseif ( $img == "atwood-rentals" ) : $height = 200;
+	elseif ( $img == "enerbank-usa" ) : $height = 80;
+	elseif ( $img == "green-sky" ) : $height = 130;
+	elseif ( $img == "service-finance" ) : $height = 379;
+	else : $height = 160; endif;
+	
+	if ( $link != "" ) $buildFinancing .= '<a href="'.$link.'" title="Click here to apply for financing for AC repair at '.$bank.'">';
+	$buildFinancing .= '<img src="/wp-content/themes/battleplantheme/common/financing/'.$img.'.png" loading="lazy" alt="Apply for financing for your HVAC needs at '.$bank.'" width="320" height="'.$height.'" style="aspect-ratio:320/'.$height.'" />';
 	if ( $link != "" ) $buildFinancing .= '</a>';
 	
 	return $buildFinancing;
@@ -462,12 +476,11 @@ function battleplan_getWellsFargo($atts, $content = null) {
 	$rand = rand(1,2);
 	if ($rand == "1") : $ad = $graphic1; endif;
 	if ($rand == "2") : $ad = $graphic2; endif;
-	if ($ad=="Wells-Fargo-A.png" || $ad=="Wells-Fargo-B.png") $alt = "Looking for financing options? Special financing available. This credit card is issued with approved credit by Wells Fargo Bank, N.A. Equal Housing Lender. Learn more.";
-	if ($ad=="Wells-Fargo-C.png" || $ad=="Wells-Fargo-D.png") $alt = "Special financing available. This credit card is issued with approved credit by Wells Fargo Bank, N.A. Equal Housing Lender. Learn more.";	
-	if ($ad=="Wells-Fargo-E.png") $alt = "Financing available through Wells Fargo Bank, NA. This credit card is issued with approved credit.  Equal Housing Lender.";		
-	if ($ad=="Wells-Fargo-Splash-A.png" || $ad=="Wells-Fargo-Splash-B.png" || $ad=="Wells-Fargo-Splash-C.png") $alt = "Buy today, pay over time. This credit card also brings you revolving line of credit that you can use over and over again, special financing where available, convenient monthly payments to fit your budget, easy-to-use online account management and bill payment options. This credit card is issued with approved credit by Wells Fargo Bank, N.A. Equal Housing Lender. Learn more.";	
-	if ($ad=="Wells-Fargo-Splash-D.png") $alt = "Buy today, pay over time. Your Wells Fargo Home Projects credit card also brings you revolving line of credit that you can use over and over again, special financing where available, convenient monthly payments to fit your budget, easy-to-use online account management and bill payment options. The Wells Fargo Home Projects credit card is issued with approved credit by Wells Fargo Bank, N.A. Equal Housing Lender. Learn more.";	
-	$output = '<a href="'.$link.'"><img src="/wp-content/themes/battleplantheme/common/financing/'.$ad.'" alt="'.$alt.'" '.$class.'/></a>';
+	if ($ad=="Wells-Fargo-A.png" || $ad=="Wells-Fargo-B.png") : $alt = "Looking for financing options? Special financing available. This credit card is issued with approved credit by Wells Fargo Bank, N.A. Equal Housing Lender. Learn more."; $width="300"; $height="250"; endif;
+	if ($ad=="Wells-Fargo-C.png" || $ad=="Wells-Fargo-D.png") : $alt = "Special financing available. This credit card is issued with approved credit by Wells Fargo Bank, N.A. Equal Housing Lender. Learn more."; $width="300"; $height="250"; endif;
+	if ($ad=="Wells-Fargo-E.png") : $alt = "Financing available through Wells Fargo Bank, NA. This credit card is issued with approved credit.  Equal Housing Lender."; $width="200"; $height="152"; endif;	
+	if ($ad=="Wells-Fargo-Splash-A.png" || $ad=="Wells-Fargo-Splash-B.png" || $ad=="Wells-Fargo-Splash-C.png" || $ad=="Wells-Fargo-Splash-D.png") : $alt = "Buy today, pay over time with this Wells Fargo credit card. Learn more."; $width="600"; $height="300"; endif;		
+	$output = '<a href="'.$link.'" title="Click to learn more about Wells Fargo financing options."><img src="/wp-content/themes/battleplantheme/common/financing/'.$ad.'" loading="lazy" alt="'.$alt.'" '.$class.' width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" /></a>';
 	return $output; 
 }
 

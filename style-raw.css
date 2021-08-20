@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 8.13
+Version: 9.6
 Tested up to: 5.6
 Requires PHP: 5.6
 License: GNU General Public License v2 or later 
@@ -53,10 +53,29 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
 	- Review Questions & Redirect
 # Mobile Styles
 
-
 /*--------------------------------------------------------------
 # Normalize
 --------------------------------------------- */
+html { 
+	line-height: 								1.15; 
+	-webkit-text-size-adjust: 					100%; 
+	box-sizing: 								border-box; 
+}
+
+body { 
+	margin: 									0;
+}
+
+*, 
+*::before, 
+*::after { 
+	box-sizing: 								inherit; 
+}
+
+.clearfix { 
+	clear: 										both; 
+}
+		
 /* Render the `main` element consistently in IE. */
 main {
 	display: 									block;
@@ -268,12 +287,13 @@ template {
 
 /* Text meant only for screen readers. */
 .screen-reader-text,
-.sr-only {
-	/*position: 									absolute !important;
+.sr-only,
+.wpcf7 .screen-reader-response {
+	position: 									absolute !important;
 	width: 										1px;
 	height: 									1px;
 	margin: 									-1px;
-	padding: 									0; // included in functions.php */
+	padding: 									0;
 	border: 									0;
 	clip: 										rect(1px, 1px, 1px, 1px);
 	clip-path: 									inset(50%);
@@ -446,6 +466,11 @@ span {
 .ribbon:after {
 	right: 										-2px;
 	border-right: 								15px solid transparent !important;
+
+
+
+
+
 }
 
 .slant-edge:before, 
@@ -803,6 +828,118 @@ a[tooltip]:hover::after {
 
 /* Forms
 --------------------------------------------- */
+.wpcf7 form .wpcf7-response-output {
+	margin: 									2em 0.5em 1em;
+	padding: 									0.2em 1em;
+}
+
+.wpcf7 form.init .wpcf7-response-output,
+.wpcf7 form.resetting .wpcf7-response-output,
+.wpcf7 form.submitting .wpcf7-response-output {
+	display: 									none;
+}
+
+.wpcf7-form-control-wrap {
+	position: 									relative;
+}
+
+.wpcf7-not-valid-tip {
+	font-size: 									1em;
+	font-weight: 								normal;
+	display: 									block;
+}
+
+.use-floating-validation-tip .wpcf7-not-valid-tip {
+	position: 									relative;
+	top: 										-2ex;
+	left: 										1em;
+	z-index: 									100;
+	border: 									1px solid #dc3232;
+	background: 								#ffffff;
+	padding: 									.2em .8em;
+	width: 										24em;
+}
+
+.wpcf7-list-item {
+	display: 									inline-block;
+	margin: 									0 0 0 1em;
+}
+
+.wpcf7-list-item-label::before,
+.wpcf7-list-item-label::after {
+	content: 									" ";
+}
+
+.wpcf7 .ajax-loader {
+	position:									relative;
+	visibility: 								hidden;
+	display: 									inline-block;
+	background-color: 							rgba(100,100,100,0.7);
+	width: 										24px;
+	height: 									24px;
+	border: 									none;
+	border-radius: 								100%;
+	padding: 									0;
+	margin: 									0 24px;
+}
+
+.wpcf7 form.submitting .ajax-loader {
+	visibility: 								visible;
+}
+
+.wpcf7 .ajax-loader::before {
+	content: 									'';
+	position: 									absolute;
+	background-color: 							rgba(205,205,205,0.7);
+	top: 										4px;
+	left: 										4px;
+	width: 										6px;
+	height: 									6px;
+	border: 									none;
+	border-radius: 								100%;
+	transform-origin: 							8px 8px;
+	animation-name: 							spin;
+	animation-duration: 						1000ms;
+	animation-timing-function: 					linear;
+	animation-iteration-count: 					infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wpcf7 .ajax-loader::before {
+		animation-name: 						blink;
+		animation-duration: 					2000ms;
+	}
+}
+
+@keyframes spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
+
+@keyframes blink {
+	from { opacity: 0; }
+	50% { opacity: 1; }
+	to { opacity: 0; }
+}
+
+.wpcf7 input[type="file"] {
+	cursor: 									pointer;
+}
+
+.wpcf7 input[type="file"]:disabled {
+	cursor: 									default;
+}
+
+.wpcf7 .wpcf7-submit:disabled {
+	cursor: 									not-allowed;
+}
+
+.wpcf7 input[type="url"],
+.wpcf7 input[type="email"],
+.wpcf7 input[type="tel"] {
+	direction: 									ltr;
+}
+
 form.wpcf7-form,
 form#loginform {
 	margin:										1em auto;
@@ -1181,6 +1318,59 @@ ul.tabs li {
 
 input.paypal-amount {
 	width:										calc(100% - 15px);
+}
+
+/* Fancy Box Buttons */
+.fancybox-container {
+	z-index: 									9999999995 !important;
+}
+
+.fancybox-is-open .fancybox-bg {
+    opacity: 									0.9;
+    background-color: 							#000000;
+}
+
+.fancybox-infobar,
+button.fancybox-button {
+	background: 								#222222;
+	border: 									1px solid rgba(255,255,255,0.2);
+	box-shadow: 								2px 2px 2px rgba(0,0,0,1);
+	transform: 									scale(0.9);
+	margin: 									9px 5px;
+	transition: 								all 0.2s ease;
+}
+
+button.fancybox-button:hover,
+button.fancybox-button.active,
+button.fancybox-button.tab-focus {
+	background: 								#323232;
+	border: 									1px solid rgba(255,255,255,0.2);
+	box-shadow: 								none;
+	box-shadow: 								2px 2px 2px rgba(0,0,0,1);
+	transform: 									scale(1);
+	margin: 									9px 5px;
+	transition: 								all 0.2s ease;
+}
+
+.fancybox-navigation button.fancybox-button {
+    width: 										50px;
+    height: 									50px;
+    padding:									12px;
+	margin: 									-40px 10px 0;
+}
+
+.fancybox-navigation button.fancybox-button:hover,
+.fancybox-navigation button.fancybox-button.active,
+.fancybox-navigation button.fancybox-button.tab-focus {
+    width: 										50px;
+    height: 									50px;
+    padding:									12px;
+	margin: 									-40px 10px 0;
+}
+
+.fancybox-navigation button::before,
+.fancybox-caption {
+    display: 									none;
 }
 
 /*--------------------------------------------------------------
@@ -1582,6 +1772,14 @@ section.section .flex.nested .flex {
 	grid-column:								1 / -1 !important;
 }
 
+.animated {
+  	will-change: 								transform;
+  	transform: 									translateZ(0);
+}
+
+.section .col.parallax {
+	align-self: 								start;
+}
 
 /* Blocks
 --------------------------------------------- */
@@ -1656,9 +1854,17 @@ section.section .flex.nested .flex {
 	z-index:									3000;
 }
 
+
+
+
+
 .tag-line, .phone-number {
 	font-size:									140%;
 }
+
+
+
+
 
 .logo-strip {
 	margin:										0;
@@ -1809,8 +2015,8 @@ section.section .flex.nested .flex {
 }
 
 .section[class*="style-"] {
-	padding-top:								2.5em;
-	padding-bottom:								2.5em;
+	padding-top:								3.5em;
+	padding-bottom:								3.5em;
 	overflow:									hidden;
 }
 
@@ -1828,6 +2034,7 @@ section.section .flex.nested .flex {
 .section-lock {
 	position:									fixed !important;
 	z-index:									999999997 /* between mobile menu & a.scroll-top */;
+	/*opacity: 									0;*/
 }
 
 .section-lock .closeBtn, 
@@ -1879,18 +2086,26 @@ section.section .flex.nested .flex {
 	background:									#ffffff;
 	border:										2px solid #000000;
 	color:										#000000;
+	transition: 								all 0.6s ease;
 }
 
 .section.style-lock[data-pos="top"] {
 	border-top:									none;
 	border-left:								none;
 	border-right:								none;
+	transform: 									translateY(-100vh);
 }
 
 .section.style-lock[data-pos="bottom"] {
 	border-bottom:								none;
 	border-left:								none;
 	border-right:								none;
+	transform: 									translateY(100vh);
+}
+
+.section.style-lock.on-screen {
+	transform: 									translateY(0);
+	transition: 								all 0.6s ease;
 }
 
 /* 3: Small Tablets (landscape) */
@@ -1983,6 +2198,7 @@ section.section .flex.nested .flex {
 	margin-left:								6px;	
 	margin-right:								6px;
 	text-align: 								center;
+
 }
 
 .social-button i.fa {
@@ -2050,7 +2266,10 @@ section.section .flex.nested .flex {
 
 .menu-strip .flex {
 	z-index: 									1;
+
 }
+
+
 
 .main-navigation li,
 .widget-navigation li {
@@ -2335,8 +2554,8 @@ section.section .flex.nested .flex {
 #mobile-menu-bar .mm-bar-btn.activate-btn.active div:nth-of-type(3) { transform: rotate(45deg) translate(-5px, -6px) }
 
 #mobile-navigation {
-	/*display:									block;
-	position:									fixed; // included in functions.php */
+	display:									block;
+	position:									fixed; 
 	top:										42px;
 	padding-top:								1em;
 	padding-bottom:								1em;
@@ -2371,8 +2590,8 @@ section.section .flex.nested .flex {
 
 .side-slide #mobile-navigation, 
 .side-push #mobile-navigation {
-	/*right:										0;
-	margin-right:								-100%; // included in functions.php */
+	right:										0;
+	margin-right:								-100%;
 	border-left: 								1px solid #000000;
 	box-shadow: 								-4px 0 5px rgba(0,0,0,0.5);
 	width:										440px;
@@ -2399,8 +2618,8 @@ section.section .flex.nested .flex {
 
 .top-slide #mobile-navigation, 
 .top-push #mobile-navigation {
-	/*left:										0;
-	margin-top:									calc(-100% - 70px); // included in functions.php */
+	left:										0;
+	margin-top:									calc(-100% - 70px);
 	border-bottom: 								1px solid #000000;
 	box-shadow: 								0 4px 5px rgba(0,0,0,0.5);
 	width:										100%;
@@ -2486,6 +2705,7 @@ span.page-numbers.dots {
 	box-shadow:									none !important;
 	cursor:										default;
 }
+
 
 a.next i.fa,
 a.prev i.fa {
@@ -2895,62 +3115,6 @@ img.unloaded {
 	margin: 									1.5em auto;
 }
 
-/*
-.size-quarter-s {
-	max-width:									240px;
-}
-
-.size-third-s,
-.size-quarter-f {
-	max-width:									320px;
-}
-
-.size-half-s {
-	max-width:									480px;
-}
-
-.size-full-s {
-	max-width:									960px;
-}
-
-.size-third-f {
-	max-width:									430px;
-}
-
-.size-half-f {
-	max-width:									640px;
-}
-
-.size-full-f {
-	max-width:									1280px;
-}
-
-.size-max {
-	max-width:									1920px;
-}
-
-.size-quarter-s, 
-.size-quarter-f {
-	width:										25%;
-}
-
-.size-third-s, 
-.size-third-f {
-	width:										33%;
-}
-
-.size-half-s, 
-.size-half-f {
-	width:										50%;
-}
-
-.size-full-s, 
-.size-full-f, 
-.size-max {
-	width:										100%;
-}
-*/
-
 .align-left.size-half-f,
 .alignleft.size-half-f,
 .align-right.size-half-f,
@@ -3040,7 +3204,6 @@ img.noFX,
 	position:									relative;
 }
 
-
 .inset-shadow::after {
     content: 									'';
     position: 									absolute;
@@ -3057,6 +3220,22 @@ img.noFX,
 	pointer-events:								none;
 }
 
+ul.side-by-side {
+	display: 									flex; 
+	flex-flow:									row wrap; 
+	list-style: 								none;
+	padding: 									0;
+}
+
+ul.side-by-side li {
+	margin: 									0 !important;
+	padding: 									0 1em;
+}
+
+ul.side-by-side img {
+	box-sizing: 								content-box;
+}
+
 /* Videos */
 .block-video {
 	position:									relative;
@@ -3069,6 +3248,7 @@ img.noFX,
 	position: 									absolute;
 	top: 										0;
 	left: 										0;
+
 	width: 										100%;
 	height: 									100%;
 }
@@ -3135,6 +3315,7 @@ img.noFX,
 }
 
 .testimonials-name {
+
 	font-weight:								bold;
 	font-size:									120%;
 }
@@ -3156,6 +3337,7 @@ img.noFX,
 }
 
 .testimonials-platform-facebook {
+
 	background:									url('../battleplantheme/common/logos/facebook.png');
 	background-size:							contain;
 }
@@ -3176,6 +3358,12 @@ img.noFX,
 
 .slider-testimonials .controls {
 	margin-top:									1.2em;
+}
+
+.slider-testimonials .controls-before,
+.slider-testimonials .controls-above {
+	margin-top: 								0;
+	margin-bottom:								1.2em;
 }
 
 /* Coupon
@@ -3414,7 +3602,8 @@ dl.col-gallery {
 .block-accordion h2 { 
 	font-family:								"Open Sans";
 	font-weight:								bold;
-	font-size: 									28rem;
+	font-size: 									24px; 
+	line-height: 								1.1; 
 	text-transform:								none;
 	padding:									0.3em 0.3em 0.3em 2em;
 	text-align:									left !important;
@@ -3527,6 +3716,7 @@ span.descriptionText {
 }
 
 .price-full::after, 
+
 .price-empty::after, 
 .comfort-full::after, 
 .comfort-empty::after, 
@@ -4047,6 +4237,7 @@ iframe#podium-modal {
 	
 	/* Headeline font basis */
 	html {
+
 		font-size:									5.0%;
 	}
 			
@@ -4056,55 +4247,42 @@ iframe#podium-modal {
 		font-size: 									14px;
 	}
 	
-	/* Responsive Content w/ sidebar 
-	.size-quarter-s,
-	.size-third-s {
-		width:										33%;
-	}
-	
-	.size-half-s {
-		width: 										40%;
-	}
-	*/
-	
 	/* Responsive Sections */
-	.flex.grid-1-1-1-1,
-	.flex.grid-1-1-2,
-	.flex.grid-1-2-1,
-	.flex.grid-1-3-1,
-	/*.flex.grid-3-2,
-	.flex.grid-2-3, removed 2/28 H & K Header */
-	.flex.grid-2-1-1 {
+	.flex.grid-1-1-1-1:not(.break-none),
+	.flex.grid-1-1-2:not(.break-none),
+	.flex.grid-1-2-1:not(.break-none),
+	.flex.grid-1-3-1:not(.break-none),
+	.flex.grid-2-1-1:not(.break-none) {
 		grid-template-columns: 						1fr 1fr;
 	}
 	
-	.flex.grid-1-1-2 .col:nth-child(3n+3),
-	.flex.grid-1-2-1 .col,
-	.flex.grid-1-3-1 .col,
-	/*.flex.grid-3-2 .col,
-	.flex.grid-2-3 .col, removed 2/28 H & K Header */
-	.flex.grid-2-1-1 .col:nth-child(3n+1) {
+	.flex.grid-1-1-2:not(.break-none) .col:nth-child(3n+3),
+	.flex.grid-1-2-1:not(.break-none) .col,
+	.flex.grid-1-3-1:not(.break-none) .col,
+	.flex.grid-2-1-1:not(.break-none) .col:nth-child(3n+1) {
 		grid-column: 								span 2;
 	}
 	
-	.flex.grid-1-1-2 .col:nth-child(3n+3) .col-inner,
-	.flex.grid-1-2-1 .col .col-inner,
-	.flex.grid-1-3-1 .col .col-inner,
-	/*.flex.grid-2-3 .col .col-inner,
-	.flex.grid-3-2 .col .col-inner, removed 2/28 H & K Header */
-	.flex.grid-2-1-1 .col:nth-child(3n+1) .col-inner {
+	.flex.grid-1-1-2:not(.break-none) .col:nth-child(3n+3) .col-inner,
+	.flex.grid-1-2-1:not(.break-none) .col .col-inner,
+	.flex.grid-1-3-1:not(.break-none) .col .col-inner,
+	.flex.grid-2-1-1:not(.break-none) .col:nth-child(3n+1) .col-inner {
 		max-width:									75%;
 		margin:										0 auto;
 	}
 	
-	.flex.grid-1-2-1 .col:nth-child(3n+1) .col-inner,
-	.flex.grid-1-2-1 .col:nth-child(3n+3) .col-inner {
+	.flex.grid-1-2-1:not(.break-none) .col:nth-child(3n+1) .col-inner,
+	.flex.grid-1-2-1:not(.break-none) .col:nth-child(3n+3) .col-inner {
 		max-width:									50%;
 		margin:										0 auto;
 	}
 			
 	.flex.break-4 .col {
 		grid-column: 								span 2; 
+	}
+	
+	.flex.break-4 .col .col-inner {
+		max-width:									100% !important;
 	}
 	
 	/* Row of Pics */
@@ -4192,6 +4370,10 @@ iframe#podium-modal {
 		display:									block;
 	}
 	
+	.col.empty {
+		display: 									none;
+	}
+	
 	/* Responsiveness */
 	.site-main,
 	.sidebar-right .site-main,
@@ -4219,29 +4401,16 @@ iframe#podium-modal {
 		margin-bottom:								2em;
 	}
 	
-	/* Responsive Content 
-	.size-quarter-s,
-	.size-quarter-f,
-	.size-third-s,
-	.size-third-f {
-		width:										33%;
-	}
-	
-	.size-half-s,
-	.size-half-f {
-		width: 										45%;
-	}*/
-	
 	/* Responsive Sections */
-	.flex.grid-1-1-1 {
+	.flex.grid-1-1-1:not(.break-none) {
 		grid-template-columns: 						1fr 1fr;
 	}
 	
-	.flex.grid-1-1-1 .col:nth-child(3n+3) {
+	.flex.grid-1-1-1:not(.break-none) .col:nth-child(3n+3) {
 		grid-column: 								span 2;
 	}
 	
-	.flex.grid-1-1-1 .col:nth-child(3n+3) .col-inner,
+	.flex.grid-1-1-1:not(.break-none) .col:nth-child(3n+3) .col-inner,
 	.flex.break-3 .col .col-inner {
 		max-width:									50%;
 		margin:										0 auto;
@@ -4249,6 +4418,10 @@ iframe#podium-modal {
 	
 	.flex.break-3 .col {
 		grid-column: 								span 2; 
+	}
+	
+	.flex.break-3 .col .col-inner {
+		max-width: 									100% !important;
 	}
 		
 	/* Row of Pics */
@@ -4307,12 +4480,6 @@ iframe#podium-modal {
 		margin-left: 								-41px;
 	}
 	
-	/* Home page "hero" parallax sections */
-	#wrapper-top .section-parallax:not(.mobile-full),
-	#wrapper-bottom .section-parallax:not(.mobile-full) {
-		height:										600px !important;
-	}
-	
 	/* Responsiveness */
 	.top-strip .flex,
 	.divider-strip .flex {
@@ -4339,25 +4506,6 @@ iframe#podium-modal {
 		max-width:									100% !important;
 	}
 	
-	/* Responsive Content 
-	.size-quarter-s,
-	.size-quarter-f,
-	.size-third-s,
-	.size-third-f {
-		width:										43%;
-	}
-	
-	.size-half-s,
-	.size-half-f {
-		width: 										80%;
-	}
-	
-	.screen-mobile .size-half-s,
-	.screen-mobile .size-half-f {
-		float:										none;
-		margin: 									1.5em auto;
-	}	*/
-	
 	.align-left.size-half-f,
 	.alignleft.size-half-f,
 	.align-right.size-half-f,
@@ -4370,44 +4518,44 @@ iframe#podium-modal {
 	}
 			
 	/* Responsive Sections */
-	.flex.grid-3-1,
-	.flex.grid-1-3,
-	.flex.grid-2-1,
-	.flex.grid-1-2,
-	.flex.grid-3-2,
-	.flex.grid-2-3 {
+	.flex.grid-3-1:not(.break-none),
+	.flex.grid-1-3:not(.break-none),
+	.flex.grid-2-1:not(.break-none),
+	.flex.grid-1-2:not(.break-none),
+	.flex.grid-3-2:not(.break-none),
+	.flex.grid-2-3:not(.break-none) {
 		grid-template-columns: 						1fr 1fr;
 	}
 	
-	.flex.grid-3-1 .col,
-	.flex.grid-1-3 .col,
-	.flex.grid-2-1 .col,
-	.flex.grid-1-2 .col,
-	.flex.grid-1-1 .col,
-	.flex.grid-3-2 .col,
-	.flex.grid-2-3 .col,
+	.flex.grid-3-1:not(.break-none) .col,
+	.flex.grid-1-3:not(.break-none) .col,
+	.flex.grid-2-1:not(.break-none) .col,
+	.flex.grid-1-2:not(.break-none) .col,
+	.flex.grid-1-1:not(.break-none) .col,
+	.flex.grid-3-2:not(.break-none) .col,
+	.flex.grid-2-3:not(.break-none) .col,
 	.logo-strip .flex:not(.grid-1) .col {
 		grid-column: 								span 2;
 	}
 	
-	.flex.grid-3-1 .col:nth-child(2n+1) .col-inner,
-	.flex.grid-1-3 .col:nth-child(2n+2) .col-inner,
-	.flex.grid-2-1 .col:nth-child(2n+1) .col-inner,
-	.flex.grid-1-2 .col:nth-child(2n+2) .col-inner,
-	.flex.grid-2-3 .col .col-inner,
-	.flex.grid-3-2 .col .col-inner,
-	.flex.grid-1-1 .col .col-inner,
+	.flex.grid-3-1:not(.break-none) .col:nth-child(2n+1) .col-inner,
+	.flex.grid-1-3:not(.break-none) .col:nth-child(2n+2) .col-inner,
+	.flex.grid-2-1:not(.break-none) .col:nth-child(2n+1) .col-inner,
+	.flex.grid-1-2:not(.break-none) .col:nth-child(2n+2) .col-inner,
+	.flex.grid-2-3:not(.break-none) .col .col-inner,
+	.flex.grid-3-2:not(.break-none) .col .col-inner,
+	.flex.grid-1-1:not(.break-none) .col .col-inner,
 	.logo-strip .flex:not(.grid-1) .col .col-inner,
 	.flex.break-2 .col .col-inner {
-		max-width:									75%;
+		max-width:									85%;
 		margin:										0 auto;
 	}
 	
-	.flex.grid-3-1 .col:nth-child(2n+2) .col-inner,
-	.flex.grid-1-3 .col:nth-child(2n+1) .col-inner,
-	.flex.grid-2-1 .col:nth-child(2n+2) .col-inner,
-	.flex.grid-1-2 .col:nth-child(2n+1) .col-inner{
-		max-width:									50%;
+	.flex.grid-3-1:not(.break-none) .col:nth-child(2n+2) .col-inner,
+	.flex.grid-1-3:not(.break-none) .col:nth-child(2n+1) .col-inner,
+	.flex.grid-2-1:not(.break-none) .col:nth-child(2n+2) .col-inner,
+	.flex.grid-1-2:not(.break-none) .col:nth-child(2n+1) .col-inner{
+		max-width:									75%;
 		margin:										0 auto;
 	}
 	
@@ -4424,6 +4572,19 @@ iframe#podium-modal {
 	.three-column {
 		column-count:								2;
 	}	
+	 
+	/* Media */
+	ul.side-by-side li.full-top {
+		flex: 										100% !important;
+		order: 										-1;
+		margin-bottom: 								1.5em !important;
+	}	
+	
+	ul.side-by-side li.full-bottom {
+		flex: 										100% !important;
+		order: 										99;
+		margin-top: 								1.5em !important;
+	}
 			
 	/* Row of Pics */ /* changed from .col to .col-row-of-pics 1/5/21 for Bubba's Cooks Country */
 	.grid-4e .col-row-of-pics:nth-last-child(1),
@@ -4547,8 +4708,6 @@ iframe#podium-modal {
 	.product-links .descriptionText {
 		text-align:									center;
 	}
-	
-
 
 	.product-links .descriptionText a {
 		display:									block;
@@ -4557,17 +4716,10 @@ iframe#podium-modal {
 	/* Footer */
 	.site-info .site-icon {
 		display:									none;
-
-
-	}
-	.site-info .span-10 {
-		grid-column:								span 12;
 	}
 	
-	/* Home page "hero" parallax sections */
-	#wrapper-top .section-parallax:not(.mobile-full),
-	#wrapper-bottom .section-parallax:not(.mobile-full) {
-		height:										300px !important;
+	.site-info .span-10 {
+		grid-column:								span 12;
 	}
 	
 	/* Responsive Content */
@@ -4608,7 +4760,6 @@ iframe#podium-modal {
 		max-width:									calc(45% - 1.5em);
 	}
 	
-
 	.inset-shadow img.align-left.size-half-f, 
 	.inset-shadow img.alignleft.size-half-f, 
 	.inset-shadow img.align-right.size-half-f, 
@@ -4629,6 +4780,10 @@ iframe#podium-modal {
 	}
 	
 	/* Responsive Sections */
+	.flex.break-none {
+		grid-template-columns: 						1fr 1fr;
+	}
+
 	.flex .col {
 		grid-column: 								span 2;
 	}
@@ -4657,6 +4812,20 @@ iframe#podium-modal {
 	.three-column {
 		column-count:								1;
 	}	
+	
+	/* Media */
+	ul.side-by-side {
+		flex-flow: 									column;
+	}
+	
+	ul.side-by-side li {
+		padding: 									0.8em 0;
+	}
+	
+	ul.side-by-side li.full-top,
+	ul.side-by-side li.full-bottom {
+		margin: 									0 !important;
+	}
 	
 	/* Row of Pics */ /* changed from .col to .col-row-of-pics 1/5/21 for Bubba's Cooks Country */
 	.grid-3e .col-row-of-pics:nth-last-child(1),	
@@ -4688,7 +4857,7 @@ iframe#podium-modal {
 	/* Accordion */
 	.block-accordion h2,
 	.block-accordion .accordion-icon::before {
-		font-size:									24rem;
+		font-size:									21px;
 	}
 	
 	/* Galleries */
@@ -4732,7 +4901,6 @@ iframe#podium-modal {
 
 @media screen and (min-width: 1025px) and (max-width: 1280px) {
 	.hide-4 {
-
 		display:									none !important;
 	}
 }
@@ -4740,7 +4908,6 @@ iframe#podium-modal {
 @media screen and (min-width: 861px) and (max-width: 1024px) {
 	.hide-3 {
 		display:									none !important;
-
 	}
 }
 
@@ -4752,6 +4919,38 @@ iframe#podium-modal {
 
 @media screen and (max-width: 576px) {
 	.hide-1 {
+		display:									none !important;
+	}
+}
+
+@media screen and (min-width: 961px) and (max-width: 1279px) {
+	.screen-480,
+	.screen-640,
+	.screen-960 {
+		display:									none !important;
+	}
+}
+
+@media screen and (min-width: 641px) and (max-width: 960px) {
+	.screen-480,
+	.screen-640,
+	.screen-1280 {
+		display:									none !important;
+	}
+}
+
+@media screen and (min-width: 481px) and (max-width: 640px) {
+	.screen-480,
+	.screen-960,
+	.screen-1280 {
+		display:									none !important;
+	}
+}
+
+@media screen and (max-width: 480px) {
+	.screen-640,
+	.screen-960,
+	.screen-1280 {
 		display:									none !important;
 	}
 }

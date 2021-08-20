@@ -1,21 +1,17 @@
 <?php
 /* The template for displaying the footer */
 
-get_sidebar(); ?>
+	$current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );
+	$checkRemoveSidebar = get_post_meta( $current_page->ID, '_bp_remove_sidebar', true );
+	if ( $checkRemoveSidebar != true ) : get_sidebar(); endif;
+?>
 
 		</div><!-- #main-content -->
 	</section><!-- #wrapper-content -->
 
 	<?php	
-	$current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );
 	$textarea = get_post_meta( $current_page->ID, 'page-bottom_text', true );
- 	if ( $textarea != "" ) 
-		: echo "<section id='wrapper-bottom'>".apply_filters('the_content', $textarea)."</section><!-- #wrapper-bottom -->";
-	else:
-		$page_slug = $current_page->post_name;
-		$page_data = get_page_by_path($page_slug."-bottom", OBJECT, 'page' );
-		if ( $page_data && $page_data->post_status == 'publish' ) : echo "<section id='wrapper-bottom'>".apply_filters('the_content', $page_data->post_content)."</section><!-- #wrapper-bottom -->"; endif; 
-	endif;
+ 	if ( $textarea != "" ) : echo "<section id='wrapper-bottom'>".apply_filters('the_content', $textarea)."</section><!-- #wrapper-bottom -->"; endif;
 	?>
 
 	<footer id="colophon" role="banner" aria-label="footer">		
@@ -54,7 +50,7 @@ get_sidebar(); ?>
 					
 					if (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-icon-80x80.png' ) ) : $iconName = "site-icon-80x80.png"; $iconWH = " width='80' height='80'"; else: $iconName = "site-icon.png"; endif; 
 
-					$buildRight = do_shortcode('[img size="1/6" link = "/" class="site-icon"]<img class="site-icon noFX" src="../../../wp-content/uploads/'.$iconName.'" alt="Return to Home Page"'.$iconWH.'/>[/img]');
+					$buildRight = do_shortcode('[img size="1/6" link = "/" class="site-icon"]<img class="site-icon noFX" src="../../../wp-content/uploads/'.$iconName.'" loading="lazy" alt="Return to Home Page"'.$iconWH.'/>[/img]');
 					$buildRight .= do_shortcode('[txt size="5/6"]'.$buildCopyright.'[/txt]');
 				}
 

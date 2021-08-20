@@ -1,17 +1,16 @@
 <!doctype html>
 <html <?php language_attributes(); ?>>
-<head>
-	
+<head>	
 	<script type="text/javascript">var startTime = Date.now();</script>	
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="profile" href="https://gmpg.org/xfn/11">
 	
-	<link rel="preload" as="font" type="font/woff2" href="../../../wp-content/themes/battleplantheme/fonts/fa-regular-400.woff2" crossorigin="anonymous">
-	<link rel="preload" as="font" type="font/woff2" href="../../../wp-content/themes/battleplantheme/fonts/fa-solid-900.woff2" crossorigin="anonymous">
-	<link rel="preload" as="font" type="font/woff2" href="../../../wp-content/themes/battleplantheme/fonts/fa-brands-400.woff2" crossorigin="anonymous">
-	<link rel="preload" as="font" type="font/woff2" href="../../../wp-content/themes/battleplantheme/fonts/open-sans-v17-latin-regular.woff2" crossorigin="anonymous">
-	<link rel="preload" as="font" type="font/woff2" href="../../../wp-content/themes/battleplantheme/fonts/open-sans-v17-latin-700.woff2" crossorigin="anonymous">
+	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/open-sans-v17-latin-regular.woff2" crossorigin="anonymous">
+	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/open-sans-v17-latin-700.woff2" crossorigin="anonymous">
+	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/fa-regular-400.woff2" crossorigin="anonymous">
+	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/fa-solid-900.woff2" crossorigin="anonymous">
+	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/fa-brands-400.woff2" crossorigin="anonymous">
 	<?php bp_font_loader(); ?>	
 
 	<?php wp_head(); ?>
@@ -89,16 +88,12 @@ wp_nav_menu( array(
 		
 	</header><!-- #masthead -->
 	
+	<?php bp_after_masthead(); ?>
+	
 	<?php	
 	$current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );
 	$textarea = get_post_meta( $current_page->ID, 'page-top_text', true );
- 	if ( $textarea != "" ) 
-		: echo "<section id='wrapper-top'>".apply_filters('the_content', $textarea)."</section><!-- #wrapper-top -->";
-	else:
-		$page_slug = $current_page->post_name;
-		$page_data = get_page_by_path($page_slug."-top", OBJECT, 'page' );
-		if ( $page_data && $page_data->post_status == 'publish' ) : echo "<section id='wrapper-top'>".apply_filters('the_content', $page_data->post_content)."</section><!-- #wrapper-top -->"; endif; 
-	endif;
+ 	if ( $textarea != "" ) : echo "<section id='wrapper-top'>".apply_filters('the_content', $textarea)."</section><!-- #wrapper-top -->"; endif;
 	?>
 	
 	<section id="wrapper-content">

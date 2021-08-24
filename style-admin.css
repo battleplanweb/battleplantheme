@@ -187,7 +187,8 @@ span.dashicons.red {
 }
 
 a[data-wp-action="disable"],
-.auto-update-time {
+.auto-update-time,
+.column-auto-updates * {
 	opacity:									0.35;
 }
 
@@ -234,4 +235,10 @@ a[data-wp-action="disable"],
 ul.acf-checkbox-list {
 	column-count:								4;
 	column-gap: 								2.5em;
+}
+
+.post-type-elements .postbox.yoast,
+.post-type-testimonials .postbox.yoast,
+.post-type-galleries .postbox.yoast {
+	display: 									none;
 }

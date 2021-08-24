@@ -1,8 +1,6 @@
-<?php
-/* The template for displaying archive pages for "litters" post type */
+<?php /* The template for displaying archive pages for "litters" post type */
 
-get_header(); 
-?>
+get_header(); ?>
 
 	<main id="primary" class="site-main">
 

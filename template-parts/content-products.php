@@ -1,5 +1,4 @@
-<?php
-/* Template part for displaying products */
+<?php /* Template part for displaying products */
 
 $comfort = esc_attr(get_field( "comfort" ));
 $efficiency = esc_attr(get_field( "efficiency" ));

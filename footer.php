@@ -1,5 +1,4 @@
-<?php
-/* The template for displaying the footer */
+<?php /* The template for displaying the footer */
 
 	$current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );
 	$checkRemoveSidebar = get_post_meta( $current_page->ID, '_bp_remove_sidebar', true );

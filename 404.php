@@ -1,5 +1,4 @@
-<?php
-/* The template for displaying 404 pages (not found) */
+<?php /* The template for displaying 404 pages (not found) */
 
 $getURL = str_replace("/", "", $_SERVER['REQUEST_URI']);
 $filename = "wp-content/themes/battleplantheme/includes/includes-".$getURL.".php";
@@ -22,8 +21,8 @@ else:
 	$content .= do_shortcode('[contact-form-7 title="Contact Us Form"]');
 endif; 
 
-get_header();
-?>
+get_header(); ?>
+
 	<main id="primary" class="site-main">
 		<article class="<?php echo $class;?>">
 			
@@ -31,6 +30,5 @@ get_header();
 
 		</article><!-- <?php echo $class;?> -->
 	</main><!-- #primary -->
-<?php 
-get_footer();
-?>
+	
+<?php get_footer(); ?>

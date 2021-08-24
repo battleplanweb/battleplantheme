@@ -1,6 +1,4 @@
-<?php
-/* Template part for displaying galleries */
-
+<?php /* Template part for displaying galleries */
 global $singleContent;
 ?>
 
@@ -9,4 +7,3 @@ global $singleContent;
 		<?php echo $singleContent; ?>
 		
 	</div><!-- .entry-content -->
-

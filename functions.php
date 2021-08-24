@@ -16,7 +16,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.6' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.7' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -234,7 +234,7 @@ function battleplan_getRandomText($atts, $content = null) {
 // Display a random photo from tagged images 
 add_shortcode( 'get-random-image', 'battleplan_getRandomImage' );
 function battleplan_getRandomImage($atts, $content = null ) {	
-	$a = shortcode_atts( array( 'id'=>'', 'tag'=>'', 'size'=>'thumbnail', 'link'=>'no', 'number'=>'1', 'offset'=>'', 'align'=>'left', 'class'=>'', 'order_by'=>'recent', 'order'=>'asc', 'shuffle'=>'no' ), $atts );
+	$a = shortcode_atts( array( 'id'=>'', 'tag'=>'', 'size'=>'thumbnail', 'link'=>'no', 'number'=>'1', 'offset'=>'0', 'align'=>'left', 'class'=>'', 'order_by'=>'recent', 'order'=>'asc', 'shuffle'=>'no' ), $atts );
 	$tag = esc_attr($a['tag']);	
 	$tags = explode( ',', $tag );
 	if ( $tag == "page-slug" ) $tags = basename($_SERVER['REQUEST_URI']).PHP_EOL; 
@@ -295,11 +295,12 @@ function battleplan_getRandomImage($atts, $content = null ) {
 // Display a row of square pics from tagged images
 add_shortcode( 'get-row-of-pics', 'battleplan_getRowOfPics' );
 function battleplan_getRowOfPics($atts, $content = null ) {	
-	$a = shortcode_atts( array( 'id'=>'', 'tag'=>'row-of-pics', 'link'=>'no', 'col'=>'4', 'row'=>'1', 'size'=>'half-s', 'valign'=>'center', 'class'=>'', 'order_by'=>'recent', 'order'=>'asc', 'shuffle'=>'no' ), $atts );
+	$a = shortcode_atts( array( 'id'=>'', 'tag'=>'row-of-pics', 'link'=>'no', 'col'=>'4', 'row'=>'1', 'offset'=>'0', 'size'=>'half-s', 'valign'=>'center', 'class'=>'', 'order_by'=>'recent', 'order'=>'asc', 'shuffle'=>'no' ), $atts );
 	$col = esc_attr($a['col']);		
 	$row = esc_attr($a['row']);		
 	$size = esc_attr($a['size']);
 	$num = $row * $col;
+	$offset = esc_attr($a['offset']);
 	$tag = esc_attr($a['tag']);	
 	$tags = explode( ',', $tag );
 	$link = esc_attr($a['link']);	
@@ -312,7 +313,7 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 	$id = esc_attr($a['id']);	
 	if ( $id == "current" ) $id = get_the_ID();
 	
-	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>$num, 'order'=>$order, 'tax_query'=>array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags )));
+	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>$num, 'offset'=>$offset, 'order'=>$order, 'tax_query'=>array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags )));
 
 	if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; $args['orderby']='meta_value_num';	
 	elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="log-views-total-7day"; $args['orderby']='meta_value_num';	
@@ -542,10 +543,10 @@ function battleplan_getBuildArchive($atts, $content = null) {
 // Display randomly selected posts - start/end can be dates or -53 week / -51 week */
 add_shortcode( 'get-random-posts', 'battleplan_getRandomPosts' );
 function battleplan_getRandomPosts($atts, $content = null) {	
-	$a = shortcode_atts( array( 'num'=>'1', 'offset'=>'0', 'type'=>'post', 'tax'=>'', 'terms'=>'', 'field_key'=>'', 'field_value'=>'', 'field_compare'=>'IN', 'orderby'=>'recent', 'sort'=>'asc', 'count_tease'=>'true', 'count_view'=>'false', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_social'=>'false', 'show_btn'=>'true', 'button'=>'Read More', 'btn_pos'=>'inside', 'show_content'=>'false', 'thumb_only'=>'false', 'thumb_col'=>'1', 'thumbnail'=>'force', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'link'=>'post' ), $atts );
+	$a = shortcode_atts( array( 'num'=>'1', 'offset'=>'0', 'leeway'=>'0', 'type'=>'post', 'tax'=>'', 'terms'=>'', 'field_key'=>'', 'field_value'=>'', 'field_compare'=>'IN', 'orderby'=>'recent', 'sort'=>'asc', 'count_tease'=>'true', 'count_view'=>'false', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_social'=>'false', 'show_btn'=>'true', 'button'=>'Read More', 'btn_pos'=>'inside', 'show_content'=>'false', 'thumb_only'=>'false', 'thumb_col'=>'1', 'thumbnail'=>'force', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'link'=>'post' ), $atts );
 	$num = esc_attr($a['num']);	
-	$potentialOffset = esc_attr($a['offset']);
-	$offset = rand(0,$potentialOffset);
+	$offset = esc_attr($a['offset']);
+	if ( $offset == '0' ) $offset = rand(0, esc_attr($a['leeway']));	
 	$postType = esc_attr($a['type']);	
 	$title = esc_attr($a['show_title']);	
 	$orderBy = esc_attr($a['orderby']);	
@@ -635,8 +636,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	$pause = esc_attr($a['pause']);		
 	$autoplay = esc_attr($a['auto']);		
 	$type = esc_attr($a['type']);		
-	$potentialOffset = esc_attr($a['offset']);
-	$offset = rand(0,$potentialOffset);
+	$offset = esc_attr($a['offset']);
 	$postBtn = esc_attr($a['post_btn']);	
 	$allBtn = esc_attr($a['all_btn']);	
 	$interval = esc_attr($a['interval']);		
@@ -1614,6 +1614,10 @@ function battleplan_add_acf_fields() {
 # Basic Theme Set Up
 --------------------------------------------------------------*/
 
+// Enable auto-updates on plugins and themes
+add_filter( 'auto_update_plugin', '__return_true' );
+add_filter( 'auto_update_theme', '__return_true' );
+
 // Determine how to sort custom post types
 add_action( 'pre_get_posts', 'battleplan_handle_main_query', 1 );
 function battleplan_handle_main_query( $query ) {
@@ -1791,6 +1795,19 @@ function battleplan_breadcrumbs() {
 
     return $breadcrumb_output_link;
 }
+
+// Deal with sitemaps
+add_filter( 'wpseo_sitemap_exclude_post_type', 'bp_sitemap_exclude_post_type', 10, 2 );
+function bp_sitemap_exclude_post_type( $excluded, $post_type ) {
+    return $post_type === 'elements';
+}
+
+add_filter( 'wpseo_sitemap_exclude_taxonomy', 'bp_sitemap_exclude_taxonomy', 10, 2 );
+function bp_sitemap_exclude_taxonomy( $excluded, $taxonomy ) {
+    return $taxonomy === 'image-categories' || $taxonomy === 'image-tags';
+}
+
+// https://developer.yoast.com/features/xml-sitemaps/api/#exclude-specific-posts
 
 // Set up post meta date
 function battleplan_meta_date() {
@@ -2051,7 +2068,7 @@ require_once get_stylesheet_directory() . '/functions-site.php';
 if ( is_admin() ) { require_once get_template_directory() . '/functions-admin.php'; } 
 
 // Delay execution of non-essential scripts
-if ( !is_admin() && !is_plugin_active( 'woocommerce/woocommerce.php' ) ) {
+if ( !is_admin() && !is_plugin_active( 'woocommerce/woocommerce.php' ) && strpos($_SERVER['REQUEST_URI'], '.xml') == false ) {
 	ob_start(); 
 	add_action('shutdown', function() { $final = ''; $levels = ob_get_level(); for ($i = 0; $i < $levels; $i++) { $final .= ob_get_clean(); } echo apply_filters('final_output', $final); }, 0);
 	add_filter('final_output', function($html) {
@@ -2517,6 +2534,9 @@ function battleplan_doChrons() {
 			$wpSEOSettings['company_logo_meta']['path'] = get_attached_file( attachment_url_to_postid( get_bloginfo("url").'/wp-content/uploads/logo.png' ) );
 			$wpSEOSettings['company_logo_meta']['id'] = attachment_url_to_postid( get_bloginfo("url").'/wp-content/uploads/logo.png' );
 			$wpSEOSettings['company_name'] = get_bloginfo('name');
+			
+			$wpSEOSettings['title-404-wpseo'] = 'Page Not Found %%sep%% %%sitename%%';
+
 			update_option( 'wpseo_titles', $wpSEOSettings );
 
 			$wpSEOSocial = get_option( 'wpseo_social' );		
@@ -3178,10 +3198,14 @@ function battleplan_buildParallax( $atts, $content = null ) {
 		$realH = $useH = array(round($realW[0]/$ratio), round($realW[1]/$ratio), round($realW[2]/$ratio), round($realW[3]/$ratio));
 		if ( $ratio < $useRatio ) { $useH = array(round($realW[0]/$useRatio), round($realW[1]/$useRatio), round($realW[2]/$useRatio), round($realW[3]/$useRatio)); }
 		
-		if ( $content != null ) :			
-			for ($i = 0; $i < count($realW); $i++) :			
-				$setUpElement .= do_shortcode('<section id="'.$name.'" class="section'.$style.' section-'.$width.$class.' screen-'.$realW[$i].'" style="height: auto; padding-top: '.$padding.'px; padding-bottom: '.$padding.'px; background-image: url(../../..'.$mobileSrc[0].'-'.$realW[$i].'x'.$realH[$i].'.'.$mobileSrc[1].'); background-size: cover; background-position: '.$posY." ".$posX.'">'.$content.'</section>');		
-			endfor;				
+		if ( $content != null ) :		
+			if (is_file( $_SERVER['DOCUMENT_ROOT'].$mobileSrc[0].'-mobile'.'.'.$mobileSrc[1] ) ) : 
+				$setUpElement .= do_shortcode('<section id="'.$name.'" class="section'.$style.' section-'.$width.$class.' screen-'.$realW[$i].'" style="height: auto; padding-top: '.$padding.'px; padding-bottom: '.$padding.'px; background-image: url(../../..'.$mobileSrc[0].'-mobile'.'.'.$mobileSrc[1].'); background-size: cover; background-position: '.$posY." ".$posX.'">'.$content.'</section>');
+			else:		
+				for ($i = 0; $i < count($realW); $i++) :			
+					$setUpElement .= do_shortcode('<section id="'.$name.'" class="section'.$style.' section-'.$width.$class.' screen-'.$realW[$i].'" style="height: auto; padding-top: '.$padding.'px; padding-bottom: '.$padding.'px; background-image: url(../../..'.$mobileSrc[0].'-'.$realW[$i].'x'.$realH[$i].'.'.$mobileSrc[1].'); background-size: cover; background-position: '.$posY." ".$posX.'">'.$content.'</section>');		
+				endfor;	
+			endif;
 		else : 
 			for ($i = 0; $i < count($realW); $i++) :			
 				$setUpElement .= '<section class="section'.$style.' section-'.$width.$class.' screen-'.$realW[$i].'" style="height:'.$useH[$i].'px; background-image: url(../../..'.$mobileSrc[0].'-'.$realW[$i].'x'.$realH[$i].'.'.$mobileSrc[1].'); background-size: cover; background-position: '.$posY." ".$posX.'"></section>';		

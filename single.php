@@ -1,8 +1,6 @@
-<?php
-/* The template for displaying all single posts */
+<?php /* The template for displaying all single posts */
 
-get_header();
-?>
+get_header(); ?>
  
 	<main id="primary" class="site-main">
 

@@ -1,8 +1,6 @@
-<?php
-/* The template for displaying archive pages */
+<?php /* The template for displaying archive pages */
 
-get_header(); 
-?>
+get_header(); ?>
 
 	<main id="primary" class="site-main">
 
@@ -144,4 +142,5 @@ get_header();
 	</main><!-- #primary -->
 
 <?php
+
 get_footer();

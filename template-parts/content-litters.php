@@ -1,5 +1,4 @@
-<?php
-/* Template part for displaying dogs */
+<?php /* Template part for displaying dogs */
 
 global $noPic;
 $sireNoLink = esc_attr(get_field( "sire_no_link" ));

@@ -1,9 +1,4 @@
-<?php
-/**
- * Template part for displaying results in search pages
- */
-
-?>
+<?php /*** Template part for displaying results in search pages */ ?>
 
 <article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
 	<header class="entry-header">

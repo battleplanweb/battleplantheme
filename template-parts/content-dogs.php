@@ -1,5 +1,4 @@
-<?php
-/* Template part for displaying dogs */
+<?php /* Template part for displaying dogs */
 
 global $noPic;
 $name = esc_html(get_the_title());

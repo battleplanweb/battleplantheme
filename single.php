@@ -103,7 +103,7 @@ get_header(); ?>
 								$terms = get_the_terms( get_the_ID(), $tax ); 		 
 								if ( $terms && $tags == "list" ) : if ( $getTerms ) : $getTerms; endif; endif;		
 								foreach($terms as $term):
-									$getTerms .= '<a href="'.get_term_link( $term->slug, $tax).'" rel="tag" class="'.$btnClass.'">'.$term->name.'</a>';
+									$getTerms .= '<a href="'.get_term_link( $term->slug, $tax).'" rel="tag" class="tax-'.$tax.' '.$btnClass.' '.$btnClass.'-'.$term->slug.'">'.$term->name.'</a>';
 								endforeach; 
 							endforeach;
 							$displayTerms = '<span class="'.$termClass.'">'.$getTerms.'</span>';

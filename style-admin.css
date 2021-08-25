@@ -158,7 +158,7 @@ td.title .wds-meta-details {
 	left:										0;
 	transform:									scale(1,0);
 	max-height:									0;
-	transition:									all 0.4s ease;
+	transition:									all 0.5s ease 30s;
 }
 
 .comment-item:hover .row-actions, 
@@ -171,7 +171,7 @@ td.has-row-actions:hover .row-actions {
 	position:									relative;
 	transform:									scale(1,1);
 	max-height:									120px;
-	transition:									all 0.4s ease;
+	transition:									all 0.3s ease;
 }
 
 .dashicons-no-alt::before {

@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 9.7
+Version: 9.7.1
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1395,7 +1395,8 @@ section.section {
 	gap: 										0;
 }
 
-section.section-parallax > section.section {
+section.section-parallax > section.section,
+section.section-parallax-disabled > section.section {
 	grid-column: 								1 / -1;
 }
 
@@ -1617,6 +1618,7 @@ section.section-default .flex {
 	grid-template-columns: 						[column-1-start] 1fr [column-1-end column-2-start] minmax(0, 356px) [column-2-end];
 }
 
+
 .sidebar-left.sidebar-box  #main-content,
 .sidebar-left.widget-box  #main-content,
 
@@ -1679,7 +1681,8 @@ section.section-default .flex {
 .footer-stretch .footer-strip .flex,
 .info-stretch .site-info .flex,
 section.section-stretch .flex,
-section.section-parallax section.section-stretch .flex {
+section.section-parallax section.section-stretch .flex,
+section.section-parallax-disabled section.section-stretch .flex{
 	grid-column: 								stretch-start / stretch-end;
 }
 
@@ -1691,7 +1694,8 @@ section.section-parallax section.section-stretch .flex {
 .footer-full .footer-strip .flex,
 .info-full .site-info .flex,
 section.section-full .flex,
-section.section-parallax section.section-full .flex {
+section.section-parallax section.section-full .flex,
+section.section-parallax-disabled section.section-full .flex {
 	grid-column: 								full-start / full-end;
 }
 
@@ -1703,11 +1707,13 @@ section.section-parallax section.section-full .flex {
 .footer-edge .footer-strip .flex,
 .info-edge .site-info .flex,
 section.section-edge .flex,
-section.section-parallax section.section-edge .flex {
+section.section-parallax section.section-edge .flex,
+section.section-parallax-disabled section.section-edge .flex {
 	grid-column: 								edge-start / edge-end;
 }
 
-section.section-parallax section.section-default .flex {
+section.section-parallax section.section-default .flex,
+section.section-parallax-disabled section.section-default .flex {
 	grid-column: 								default-start / default-end;
 }
 
@@ -2956,6 +2962,10 @@ h3.archive-subheadline {
 	text-align:									center;
 }
 
+.tag-buttons a.button-blog {
+	display: 									none;
+}
+
 .social-share-buttons {
 	text-align:									center;
 }
@@ -3994,6 +4004,7 @@ iframe#podium-modal {
 	content: 									"\f054";
 	font-weight: 								900;
 	font-size:									85%;
+
 }
 
 .carousel a.carousel-control-prev .carousel-control-prev-icon::after {
@@ -4538,6 +4549,7 @@ iframe#podium-modal {
 	.flex.grid-1-3:not(.break-none) .col:nth-child(2n+2) .col-inner,
 	.flex.grid-2-1:not(.break-none) .col:nth-child(2n+1) .col-inner,
 	.flex.grid-1-2:not(.break-none) .col:nth-child(2n+2) .col-inner,
+
 	.flex.grid-2-3:not(.break-none) .col .col-inner,
 	.flex.grid-3-2:not(.break-none) .col .col-inner,
 	.flex.grid-1-1:not(.break-none) .col .col-inner,

@@ -623,17 +623,17 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		return $.parseJSON(data);
 	};		
 	
-	// Set a div's height to 0 and then slide to full height
+	// Cover container with direct sibling, then slide sibling out of the way to reveal container
 	window.revealDiv = function (container, delay, speed, offset) {
 		delay = delay || 0;		
 		speed = speed || 1000;		
 		offset = offset || "100%";
-		var total = delay + speed, theEl = $(container), fixedH = theEl.outerHeight(), padT = theEl.css('padding-top'), padB = theEl.css('padding-bottom');
-		theEl.css({"height":0, "padding-top":0, "padding-bottom":0});		
+		var theEl = $(container), theNextEl = theEl.next(), fixedH = theEl.outerHeight();
+		
+		theNextEl.css({ "transform":"translateY(-"+fixedH+"px)", "transition-duration":0 });
 		setTimeout( function () { 
 			theEl.waypoint(function() {
-				theEl.animate({"height": fixedH, "padding-top":padT, "padding-bottom":padB}, speed);
-				setTimeout( function () { screenResize(); }, total);	
+				theNextEl.css({ "transform":"translateY(0)", "transition-duration":speed+"ms" });	
 			}, { offset: offset });
 		}, delay);	
 	};	

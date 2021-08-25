@@ -16,7 +16,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.7' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.7.1' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -1019,6 +1019,19 @@ function battleplan_getBBB( $atts, $content = null ) {
 	return '<a href="'.$link.'" title="Click here to view our profile page on the Better Business Bureau website."><img loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/bbb-'.$graphic.'.png" alt="We are accredited with the BBB and are proud of our A+ rating"  width="320" height="'.$height.'" style="aspect-ratio:320/'.$height.'" /></a>';
 }
 
+// Add Veteran Owned widget to Sidebar
+add_shortcode( 'get-veteran-owned', 'battleplan_getVeteranOwned' );
+function battleplan_getVeteranOwned( $atts, $content = null ) {	
+	$a = shortcode_atts( array( 'link'=>'', 'graphic'=>'1' ), $atts );
+	$link = esc_attr($a['link']);
+	$graphic = esc_attr($a['graphic']);
+	if ( $graphic == 2 ) : $width = 216; $height = 300;	
+	elseif ( $graphic == 3 ) : $width = 320; $height = 128;
+	elseif ( $graphic == 4 ) : $width = 175; $height = 200;
+	else : $width = 320; $height = 80; endif;
+	return '<img loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/veteran-owned-'.$graphic.'.png" alt="We are proud to be a Veteran Owned business."  width="'.$width.'" height="'.$height.'" style="aspect-ratio:"'.$width.'"/'.$height.'" />';
+}
+
 // Add Credit Cards widget to Sidebar
 add_shortcode( 'get-credit-cards', 'battleplan_getCreditCards' );
 function battleplan_getCreditCards( $atts, $content = null ) {	
@@ -1797,13 +1810,13 @@ function battleplan_breadcrumbs() {
 }
 
 // Deal with sitemaps
-add_filter( 'wpseo_sitemap_exclude_post_type', 'bp_sitemap_exclude_post_type', 10, 2 );
-function bp_sitemap_exclude_post_type( $excluded, $post_type ) {
+add_filter( 'wpseo_sitemap_exclude_post_type', 'battleplan_sitemap_exclude_post_type', 10, 2 );
+function battleplan_sitemap_exclude_post_type( $excluded, $post_type ) {
     return $post_type === 'elements';
 }
 
-add_filter( 'wpseo_sitemap_exclude_taxonomy', 'bp_sitemap_exclude_taxonomy', 10, 2 );
-function bp_sitemap_exclude_taxonomy( $excluded, $taxonomy ) {
+add_filter( 'wpseo_sitemap_exclude_taxonomy', 'battleplan_sitemap_exclude_taxonomy', 10, 2 );
+function battleplan_sitemap_exclude_taxonomy( $excluded, $taxonomy ) {
     return $taxonomy === 'image-categories' || $taxonomy === 'image-tags';
 }
 
@@ -1942,8 +1955,8 @@ function battleplan_widgets_init() {
 }
  
 // Disable emojis
-add_action( 'init', 'bp_disable_emojis' );
-function bp_disable_emojis() {
+add_action( 'init', 'battleplan_disable_emojis' );
+function battleplan_disable_emojis() {
 	remove_action( 'wp_head', 'print_emoji_detection_script', 7 );
 	remove_action( 'admin_print_scripts', 'print_emoji_detection_script' );
 	remove_action( 'wp_print_styles', 'print_emoji_styles' );
@@ -1951,15 +1964,15 @@ function bp_disable_emojis() {
 	remove_filter( 'the_content_feed', 'wp_staticize_emoji' );
 	remove_filter( 'comment_text_rss', 'wp_staticize_emoji' ); 
 	remove_filter( 'wp_mail', 'wp_staticize_emoji_for_email' );
-	add_filter( 'tiny_mce_plugins', 'bp_disable_emojis_tinymce' );
-	add_filter( 'wp_resource_hints', 'bp_disable_emojis_remove_dns_prefetch', 10, 2 );
+	add_filter( 'tiny_mce_plugins', 'battleplan_disable_emojis_tinymce' );
+	add_filter( 'wp_resource_hints', 'battleplan_disable_emojis_remove_dns_prefetch', 10, 2 );
 }
 
-function bp_disable_emojis_tinymce( $plugins ) {
+function battleplan_disable_emojis_tinymce( $plugins ) {
 	if ( is_array( $plugins ) ) { return array_diff( $plugins, array( 'wpemoji' ) ); } else { return array(); }
 }
 
-function bp_disable_emojis_remove_dns_prefetch( $urls, $relation_type ) {
+function battleplan_disable_emojis_remove_dns_prefetch( $urls, $relation_type ) {
 	if ( 'dns-prefetch' == $relation_type ) {
 		$emoji_svg_url = apply_filters( 'emoji_svg_url', 'https://s.w.org/images/core/emoji/2/svg/' );
 		$urls = array_diff( $urls, array( $emoji_svg_url ) );
@@ -2220,7 +2233,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( "user-message" == $tag->name ) {
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
-		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','и','д','б','й','л','ы','З','у','Я');
+		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Rony (Steve','и','д','б','й','л','ы','З','у','Я');
 		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
 		if ( $check == $name ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($badwords as $badword) {
@@ -2239,7 +2252,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
 	}
     if ( "user-email" == $tag->name ) {
         $check = isset( $_POST["user-email"] ) ? trim( $_POST["user-email"] ) : ''; 
-		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz', '@tworld.com', 'garywhi777@gmail.com', 'ronyisthebest16@gmail.com');
+		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz', '@tworld.com', 'garywhi777@gmail.com', 'ronyisthebest16@gmail.com', 'ronythomasrecruiter@gmail.com');
 		foreach($badwords as $badword) {
 			if (stripos($check,$badword) !== false) $result->invalidate( $tag, 'Message cannot be sent.');
 		}
@@ -3200,15 +3213,15 @@ function battleplan_buildParallax( $atts, $content = null ) {
 		
 		if ( $content != null ) :		
 			if (is_file( $_SERVER['DOCUMENT_ROOT'].$mobileSrc[0].'-mobile'.'.'.$mobileSrc[1] ) ) : 
-				$setUpElement .= do_shortcode('<section id="'.$name.'" class="section'.$style.' section-'.$width.$class.' screen-'.$realW[$i].'" style="height: auto; padding-top: '.$padding.'px; padding-bottom: '.$padding.'px; background-image: url(../../..'.$mobileSrc[0].'-mobile'.'.'.$mobileSrc[1].'); background-size: cover; background-position: '.$posY." ".$posX.'">'.$content.'</section>');
+				$setUpElement .= do_shortcode('<section id="'.$name.'" class="section'.$style.' section-'.$width.' section-parallax-disabled'.$class.' screen-'.$realW[$i].'" style="height: auto; padding-top: '.$padding.'px; padding-bottom: '.$padding.'px; background-image: url(../../..'.$mobileSrc[0].'-mobile'.'.'.$mobileSrc[1].'); background-size: cover; background-position: '.$posY." ".$posX.'">'.$content.'</section>');
 			else:		
 				for ($i = 0; $i < count($realW); $i++) :			
-					$setUpElement .= do_shortcode('<section id="'.$name.'" class="section'.$style.' section-'.$width.$class.' screen-'.$realW[$i].'" style="height: auto; padding-top: '.$padding.'px; padding-bottom: '.$padding.'px; background-image: url(../../..'.$mobileSrc[0].'-'.$realW[$i].'x'.$realH[$i].'.'.$mobileSrc[1].'); background-size: cover; background-position: '.$posY." ".$posX.'">'.$content.'</section>');		
+					$setUpElement .= do_shortcode('<section id="'.$name.'" class="section'.$style.' section-'.$width.' section-parallax-disabled'.$class.' screen-'.$realW[$i].'" style="height: auto; padding-top: '.$padding.'px; padding-bottom: '.$padding.'px; background-image: url(../../..'.$mobileSrc[0].'-'.$realW[$i].'x'.$realH[$i].'.'.$mobileSrc[1].'); background-size: cover; background-position: '.$posY." ".$posX.'">'.$content.'</section>');		
 				endfor;	
 			endif;
 		else : 
 			for ($i = 0; $i < count($realW); $i++) :			
-				$setUpElement .= '<section class="section'.$style.' section-'.$width.$class.' screen-'.$realW[$i].'" style="height:'.$useH[$i].'px; background-image: url(../../..'.$mobileSrc[0].'-'.$realW[$i].'x'.$realH[$i].'.'.$mobileSrc[1].'); background-size: cover; background-position: '.$posY." ".$posX.'"></section>';		
+				$setUpElement .= '<section class="section'.$style.' section-'.$width.' section-parallax-disabled'.$class.' screen-'.$realW[$i].'" style="height:'.$useH[$i].'px; background-image: url(../../..'.$mobileSrc[0].'-'.$realW[$i].'x'.$realH[$i].'.'.$mobileSrc[1].'); background-size: cover; background-position: '.$posY." ".$posX.'"></section>';		
 			endfor;						
 		endif;	
 		

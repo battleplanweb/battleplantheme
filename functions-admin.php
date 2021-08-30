@@ -1866,8 +1866,6 @@ function battleplan_save_remove_sidebar($post_id, $post, $update) {
 }
 
 // Add "duplicate post/page" function to WP core
-add_filter( 'post_row_actions', 'battleplan_duplicate_post_link', 10, 2 );
-add_filter( 'page_row_actions', 'battleplan_duplicate_post_link', 10, 2 );
 add_action( 'admin_action_battleplan_duplicate_post_as_draft', 'battleplan_duplicate_post_as_draft' );
 function battleplan_duplicate_post_as_draft(){
 	global $wpdb;
@@ -1933,12 +1931,39 @@ function battleplan_duplicate_post_as_draft(){
 	}
 }
  
-function battleplan_duplicate_post_link( $actions, $post ) {
-	if (current_user_can('edit_posts')) {
-		$actions['duplicate'] = '<a href="' . wp_nonce_url('admin.php?action=battleplan_duplicate_post_as_draft&post=' . $post->ID, basename(__FILE__), 'duplicate_nonce' ) . '" title="Clone this item" rel="permalink">Clone</a>';
-	}
-	return $actions;
+ 
+add_filter( 'post_row_actions', 'battleplan_post_row_actions', 90, 2 );
+add_filter( 'page_row_actions', 'battleplan_post_row_actions', 90, 2 );
+function battleplan_post_row_actions( $actions, $post ) {
+	$edit = str_replace( "Edit", "<i class='dashicons-edit'></i>", $actions['edit'] );
+	$view = str_replace( "View", "<i class='dashicons-view'></i>", $actions['view'] );
+	$view = str_replace( "Preview", "<i class='dashicons-view'></i>", $view );
+	$delete = str_replace( "Trash", "<i class='dashicons-trash'></i>", $actions['trash'] );
+
+	$edit = str_replace( "<a href", "<a title='Edit' target='_blank' href", $edit );
+	$clone = '<a target="_blank" href="' . wp_nonce_url('admin.php?action=battleplan_duplicate_post_as_draft&post=' . $post->ID, basename(__FILE__), 'duplicate_nonce' ) . '" title="Clone" rel="permalink"><i class="dashicons-clone"></i></a>';
+	$view = str_replace( "<a href", "<a title='View' target='_blank' href", $view );	
+	$delete = str_replace( "<a href", "<a title='Delete' href", $delete );
+	$quickEdit = '<button type="button" class="button-link editinline" aria-label="Quick edit" aria-expanded="false"><i class="dashicons-quick-edit"></i></button>';
+
+	return array( 'edit' => $edit, 'inline hide-if-no-js' => $quickEdit, 'duplicate' => $clone, 'view' => $view, 'delete' => $delete );
 }
+
+// Replace Media Library image links with icons
+add_filter('media_row_actions', 'battleplan_media_row_actions', 90, 2);
+function battleplan_media_row_actions( $actions, $post ) {
+	$edit = str_replace( "Edit", "<i class='dashicons-edit'></i>", $actions['edit'] );
+	$view = str_replace( "View", "<i class='dashicons-view'></i>", $actions['view'] );
+	$adddata = str_replace( "Replace media", "<i class='dashicons-replace'></i>", $actions['adddata'] );
+	$delete = str_replace( "Delete Permanently", "<i class='dashicons-trash'></i>", $actions['delete'] );
+	
+	$edit = str_replace( "<a href", "<a title='Edit Media' target='_blank' href", $edit );
+	$view = str_replace( "<a href", "<a title='View Media' target='_blank' href", $view );
+	$adddata = str_replace( "<a href", "<a title='Replace Media' target='_blank' href", $adddata );
+	$delete = str_replace( "<a href", "<a title='Delete Media' href", $delete );
+	
+	return array( 'edit' => $edit, 'view' => $view, 'adddata' => $adddata, 'delete' => $delete );
+}  
 
 // Automatically set the image Title, Alt-Text, Caption & Description upon upload
 add_action( 'add_attachment', 'battleplan_setImageMetaUponUpload' );

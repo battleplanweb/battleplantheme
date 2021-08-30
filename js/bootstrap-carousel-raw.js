@@ -3,6 +3,7 @@
   * Copyright 2011-2020 The Bootstrap Authors (https://github.com/twbs/bootstrap/graphs/contributors)
   * Licensed under MIT (https://github.com/twbs/bootstrap/blob/main/LICENSE)
   */
+
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('jquery'), require('popper.js')) :
   typeof define === 'function' && define.amd ? define(['exports', 'jquery', 'popper.js'], factory) :
@@ -737,6 +738,7 @@
         } else if (_config.interval && _config.ride) {
           data.pause();
           data.cycle();
+		  setTimeout( function() { data.cycle(); }, 5000);
         }
       });
     };
@@ -793,7 +795,10 @@
 
 
   $__default['default'](document).on(EVENT_CLICK_DATA_API$2, SELECTOR_DATA_SLIDE, Carousel._dataApiClickHandler);
-  $__default['default'](window).on(EVENT_LOAD_DATA_API$1, function () {
+  //$__default['default'](window).on(EVENT_LOAD_DATA_API$1, autoRun());
+  
+  autoRun();  
+  function autoRun() {
     var carousels = [].slice.call(document.querySelectorAll(SELECTOR_DATA_RIDE));
 
     for (var i = 0, len = carousels.length; i < len; i++) {
@@ -801,7 +806,8 @@
 
       Carousel._jQueryInterface.call($carousel, $carousel.data());
     }
-  });
+  }
+
   /**
    * ------------------------------------------------------------------------
    * jQuery

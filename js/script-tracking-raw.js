@@ -5,12 +5,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 # Tracking code
 --------------------------------------------------------------*/
 
-/*--------------------------------------------------------------
-# Tracking code
---------------------------------------------------------------*/
 	var siteLat = site_options.lat, siteLong = site_options.long, siteRadius = site_options.radius, timezone, userValid = "false", userLoc, userRefer, pageViews = $("body").attr("data-pageviews"), uniqueID=$("body").attr("data-unique-id"); 		
 		
-	if ( siteRadius == "default" ) { siteRadius = 100; }
+	if ( siteRadius == "default" ) { siteRadius = 100; }	
+	if ( siteLong > 0 ) { siteLong = -siteLong; }
 	
 	$(window).on( 'load', function() {
 	

@@ -153,34 +153,86 @@ td.title .wds-meta-details {
 }
 
 .row-actions {
-	display:									block;
-	position:									relative;
-	left:										0;
-	transform:									scale(1,0);
-	max-height:									0;
-	transition:									all 0.5s ease 30s;
+	font-size: 									24px;
+	color: 										transparent;
+	margin-top: 								5px;
+	opacity: 									0;
+	/*max-height: 								0;*/
+	transition: 								all 0.3s ease 0.1s;
 }
 
-.comment-item:hover .row-actions, 
-.mobile .row-actions, 
-.no-js .row-actions, 
-.row-actions.visible,
-td.column-source:hover .row-actions,
-td.has-row-actions:hover .row-actions {
-	display:									block;
-	position:									relative;
-	transform:									scale(1,1);
-	max-height:									120px;
-	transition:									all 0.3s ease;
+body.ac-wp-media .row-actions {
+	position:									relative !important;
+	left: 										0 !important;
+	text-align: 								left;
+	margin-top:									0;
+	display: 									block;
+}
+
+.row-actions span {
+	margin-right: 								-13px;
+}
+
+.row-actions span.view {
+	margin-right: 								-9px;
+}
+
+tr:hover .row-actions {
+	opacity: 									1;
+	/*max-height: 								32px;*/
+	transition: 								all 0.3s ease 0.1s;
+}
+
+.dashicons-trash::before,
+.dashicons-replace::before,
+.dashicons-edit::before,
+.dashicons-view::before,
+.dashicons-quick-edit::before,
+.dashicons-clone::before {
+	font-family: 								"dashicons";
+    content: 									"\f182";
+	font-style: 								normal;
+}
+
+.dashicons-replace::before {
+    content: 									"\f310";
+}
+
+.dashicons-edit::before {
+    content: 									"\f464"; 
+}
+
+.dashicons-view::before {
+    content: 									"\f115";
 }
 
 .dashicons-no-alt::before {
     content: 									"\f460";
-}
+} 
 
 .dashicons-yes::before {
     content: 									"\f12a";
 }
+
+.dashicons-quick-edit::before {
+    content: 									"\f347";
+}
+
+.dashicons-clone::before {
+    content: 									"\f133";
+}
+
+.row-actions span i::before {
+	display: 									inline-block;
+	transform: 									scale(0.7);
+	transition: 								transform 0.1s ease;
+}
+
+.row-actions span:hover i::before {
+	transform: 									scale(1.2);
+	transition: 								transform 0.1s ease;
+}
+
 
 span.dashicons.red {
 	color:										#000000 !important;

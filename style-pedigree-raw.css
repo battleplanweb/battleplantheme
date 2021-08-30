@@ -63,6 +63,14 @@ span.X {
 
 /* Dogs & Litters
 --------------------------------------------- */
+.fa-mars:before {
+    content: 									"\f222";
+}
+
+.fa-venus:before {
+    content: 									"\f221";
+}
+
 .col-archive .image-dogs .sex-box {
 	position:									absolute;
 	z-index:									500;
@@ -210,6 +218,7 @@ table.bracket-table td.bracket-top:nth-of-type(3) {
 	.col-litters .litter-x {
 		grid-column:								span 12;
 		order:										3;
+
 	}	
 	.col-litters .litter-x h2 {
 		display:									none;

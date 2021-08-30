@@ -45,7 +45,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	runVisitorTrendColor('trends-weekly');
 	runVisitorTrendColor('trends-monthly');
 	runVisitorTrendColor('trends-quarterly');	
-	
+		
 	/* Check meta boxes for content, collapse if empty */	
 	if ( !$('#page-top_text').html() ) { $('#page-top').addClass('closed'); }
 	if ( !$('#page-bottom_text').html() ) { $('#page-bottom').addClass('closed'); }

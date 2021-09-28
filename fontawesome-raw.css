@@ -159,6 +159,10 @@
     content: "\f082";
 }
 
+.fa-hashtag:before {
+    content: "\f292";
+}
+
 .fa-heartbeat:before {
     content: "\f21e";
 }
@@ -233,6 +237,10 @@
 
 .fa-quote-right:before {
     content: "\f10e";
+}
+
+.fa-search:before {
+    content: "\f002";
 }
 
 .fa-snapchat:before {

@@ -9,6 +9,7 @@
 # Register Custom Post Types
 # Import Advanced Custom Fields
 # Basic Theme Set Up
+# User Roles
 # Chron Jobs
 # Custom Hooks
 # AJAX Functions
@@ -16,7 +17,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '9.8' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '10.0' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -168,6 +169,17 @@ function battleplan_getDomainName() {
 // Returns url of page (minus domain)
 add_shortcode( 'get-url', 'battleplan_getURL' );
 function battleplan_getURL() { return $_SERVER['REQUEST_URI']; }
+
+// Returns url variable
+add_shortcode( 'get-url-var', 'battleplan_getURLVar' );
+function battleplan_getURLVar($atts, $content = null) {
+	$a = shortcode_atts( array( 'var'=>'', ), $atts );
+	$var = esc_attr($a['var']);	
+	$getVars = array();
+	foreach( $_GET as $key => $value ) $getVars[$key] = $value;
+	
+	return $getVars[$var]; 
+}
 
 // Show count of posts, images, etc.
 add_shortcode( 'get-count', 'battleplan_getCount' );
@@ -422,7 +434,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	$noPic = esc_attr($a['no_pic']);	
 	if ( $noPic == "" ) $noPic = "false";	
 	if ( $showBtn == "true" ) : $picADA = " ada-hidden='true'"; $titleADA = " aria-hidden='true' tabindex='-1'";
-	elseif ( $showTitle == "true" ) : $picADA = " ada-hidden='true'"; endif;
+	elseif ( $showTitle != "false" ) : $picADA = " ada-hidden='true'"; endif;
 	$thumbOnly = esc_attr($a['thumb_only']);
 		
 	if ( has_post_thumbnail() && $showThumb == "true" ) : 	
@@ -485,10 +497,10 @@ function battleplan_getBuildArchive($atts, $content = null) {
 			$archiveBody = '[accordion title="'.$title.'" excerpt="'.$excerpt.'"]'.$content.'[/accordion]';		
 		else :		
 			$archiveMeta = $archiveBody = "";
-			if ( $showTitle == "true" ) :
+			if ( $showTitle != "false" ) :
 				$archiveMeta .= "<h3 data-count-tease=".$countTease." data-count-view=".$countView." data-id=".get_the_ID().">";
-				if ( $showContent != "true" && $link != "false" ) $archiveMeta .= '<a href="'.$linkLoc.'" class="link-archive link-'.get_post_type().'"'.$titleADA.'>';		
-				$archiveMeta .= esc_html(get_the_title());  
+				if ( $showContent != "true" && $link != "false" ) $archiveMeta .= '<a href="'.$linkLoc.'" class="link-archive link-'.get_post_type().'"'.$titleADA.'>';	
+				if ( $showTitle == "true" ) : $archiveMeta .= esc_html(get_the_title()); else: $archiveMeta .= $showTitle; endif;
 				if ( $showContent != "true" && $link != "false" ) $archiveMeta .= '</a>';	
 				$archiveMeta .= "</h3>";
 			endif;		
@@ -628,7 +640,7 @@ function battleplan_getRandomPosts($atts, $content = null) {
 // Display posts & images in a Bootstrap slider 
 add_shortcode( 'get-post-slider', 'battleplan_getPostSlider' );
 function battleplan_getPostSlider($atts, $content = null ) {	
-	$a = shortcode_atts( array( 'type'=>'testimonials', 'auto'=>'yes', 'interval'=>'6000', 'loop'=>'true', 'num'=>'4', 'offset'=>'0', 'pics'=>'yes', 'caption'=>'no', 'controls'=>'yes', 'controls_pos'=>'below', 'indicators'=>'no', 'pause'=>'true', 'orderby'=>'recent', 'order'=>'asc', 'post_btn'=>'', 'all_btn'=>'View All', 'show_excerpt'=>'true', 'show_content'=>'false', 'link'=>'', 'pic_size'=>'1/3', 'text_size'=>'', 'slide_type'=>'fade', 'tax'=>'', 'terms'=>'', 'tag'=>'', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'id'=>'', 'mult'=>'1', 'class'=>'' ), $atts );
+	$a = shortcode_atts( array( 'type'=>'testimonials', 'auto'=>'yes', 'interval'=>'6000', 'loop'=>'true', 'num'=>'4', 'offset'=>'0', 'pics'=>'yes', 'caption'=>'no', 'controls'=>'yes', 'controls_pos'=>'below', 'indicators'=>'no', 'justify'=>'space-around', 'pause'=>'true', 'orderby'=>'recent', 'order'=>'asc', 'post_btn'=>'', 'all_btn'=>'View All', 'show_excerpt'=>'true', 'show_content'=>'false', 'link'=>'', 'pic_size'=>'1/3', 'text_size'=>'', 'slide_type'=>'fade', 'tax'=>'', 'terms'=>'', 'tag'=>'', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'id'=>'', 'mult'=>'1', 'class'=>'' ), $atts );
 	$num = esc_attr($a['num']);	
 	$controls = esc_attr($a['controls']);	
 	$controlsPos = esc_attr($a['controls_pos']);
@@ -645,6 +657,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	$order = esc_attr($a['order']);		
 	$pics = esc_attr($a['pics']);		
 	$caption = esc_attr($a['caption']);	
+	$justify = esc_attr($a['justify']);	
 	$showExcerpt = esc_attr($a['show_excerpt']);
 	$showContent = esc_attr($a['show_content']);
 	$picSize = esc_attr($a['pic_size']); 
@@ -707,7 +720,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 		$image_query = new WP_Query($args);		
 		if( $image_query->have_posts() ) :
 
-			$buildIndicators = '<ol class="carousel-indicators">';
+			$buildIndicators = '<ol class="carousel-indicators" style="justify-content: '.$justify.'">';
 			$buildInner = '<div class="carousel-inner">';
 
 			while ($image_query->have_posts() ) : $image_query->the_post();
@@ -723,12 +736,18 @@ function battleplan_getPostSlider($atts, $content = null ) {
 				endif;	
 
 				$image = wp_get_attachment_image_src(get_the_ID(), $size );
-				//$imgSet = wp_get_attachment_image_srcset(get_the_ID(), $size );
+				$imgSet = wp_get_attachment_image_srcset(get_the_ID(), $size );		
+		
 				if ( $link == "alt" ) $linkTo = get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true);				
 				if ( $link == "description" ) $linkTo = esc_html(get_post(get_the_ID())->post_content);
 				$buildImg = "";
 				if ( $link != "none" ) : $buildImg = "<a href='".$linkTo."' class='link-archive link-".$type."'>"; endif;	
-				$buildImg .= "<img data-id='".get_the_ID()."' ".getImgMeta(get_the_ID())." data-count-tease='true' data-count-view='true' class='img-slider ".$tags[0]."-img' loading='lazy' src = '".$image[0]."' width='".$image[1]."' height='".$image[2]."' style='aspect-ratio:".$image[1]."/".$image[2]."' alt='".get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true)."'>";
+				//$buildImg .= "<img data-id='".get_the_ID()."' ".getImgMeta(get_the_ID())." data-count-tease='true' data-count-view='true' class='img-slider ".$tags[0]."-img' loading='lazy' src = '".$image[0]."' width='".$image[1]."' height='".$image[2]."' style='aspect-ratio:".$image[1]."/".$image[2]."' alt='".get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true)."'>";
+
+				$buildImg .= '<img data-id="'.get_the_ID().'" '.getImgMeta(get_the_ID()).' data-count-tease="true" data-count-view="true" class="img-slider '.$tags[0].'-img" loading="lazy" src = "'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.get_post_meta(get_the_ID(), "_wp_attachment_image_alt", true).'">';
+				
+				/* Added srcset BACK into the formula for https://okairpro.com/ slider at top on 9/13/21 */
+				 
 		
 				if ( $caption == "yes" || $caption == "title" ) : $buildImg .= "<div class='caption-holder'><div class='img-caption'>".get_the_title(get_the_ID())."</div></div>";	
 				elseif ( $caption == "alt" ) : $buildImg .= "<div class='caption-holder'><div class='img-caption'>".get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true)."</div></div>";
@@ -1103,27 +1122,6 @@ function battleplan_getFilterButton( $atts, $content = null ) {
 	return $buildFilter;
 } 
 
-// Build custom log in form
-add_shortcode( 'get-login', 'battleplan_getLogInForm' );
-function battleplan_getLogInForm( $atts, $content = null ) {	
-	$a = shortcode_atts( array( 'username'=>'Username or Email', 'password'=>'Password', 'remember'=>'Remember Me', 'login'=>'Log In', 'redirect'=>site_url( '/log-in/' ), 'message'=>'Welcome. You are logged in.' ), $atts );
-	$username = esc_attr($a['username']);
-	$password = esc_attr($a['password']);
-	$remember = esc_attr($a['remember']);	
-	$login = esc_attr($a['login']);
-	$message = esc_attr($a['message']);
-	$redirect = esc_attr($a['redirect']);		
-
-	if ( is_user_logged_in() ) : $buildLogin = '<p>'.$message.'</p>'; 
-	else:	
-		$buildLogin = '<div class = "site-log-in" >'; 		
-		$buildLogin .= wp_login_form ( array ( 'echo' => false, 'redirect'=>__($redirect), 'label_username'=>__($username), 'label_password'=>__($password), 'label_remember'=>__($remember), 'label_log_in'=>__($login) )); 		
-		$buildLogin .= '</div>';
-	endif;	
-
-	return $buildLogin; 
-} 
-
 // Side by side images
 add_shortcode( 'side-by-side', 'battleplan_SideBySideImg' );
 function battleplan_SideBySideImg( $atts, $content = null ) {	
@@ -1195,7 +1193,7 @@ function getID($slug) {
 	return $id;
 } 
 
-// Get the Role of Current Logged in User
+// Get the Role of Current Logged in User ---- deprecated
 function getUserRole($display="slug") {
 	if ( is_user_logged_in() ) : 
 		$user = wp_get_current_user();
@@ -1207,6 +1205,34 @@ function getUserRole($display="slug") {
 		endif;
 	 else: return "not_logged_in"; 	 
 	 endif;
+}
+
+
+// Identify user based on id, email or slug
+function battleplan_identifyUser( $identifier ) {
+	if ( $identifier == null || $identifier == "" ) : return wp_get_current_user(); 
+	elseif ( is_numeric($identifier) ) : return get_user_by('id', $identifier);
+	elseif ( strpos($identifier, '@') !== false ) : return get_user_by('email', $identifier);
+	else: return get_user_by('slug', $identifier);
+	endif;
+}
+
+function battleplan_getUserRole( $identifier, $info ) {
+	$user = battleplan_identifyUser( $identifier );		
+	$userMeta = get_userdata($user->ID);
+	$userRoles = $userMeta->roles;
+	global $wp_roles;
+	$userRoleName = "";
+	$userRoleDisplay = "";	
+	foreach ($userRoles as $userRole) :	
+		$userRoleName .= $userRole;
+		$userRoleDisplay .= $wp_roles->roles[$userRole]['name'];
+		$userRoleCaps .= $user->get_role_caps();		
+	endforeach;
+	
+	if ( $info == "" || $info == "name" ) return $userRoleName;
+	if ( $info == "display" ) return $userRoleDisplay;
+	if ( $info == "caps" || $info == "capabilities" ) return $userRoleCaps;
 }
 
 // Add data-{key}="{value}" to an image based on its custom fields 
@@ -1325,6 +1351,40 @@ function adjustTerms( $post_id, $term, $taxonomy, $add_or_remove ) {
 	return wp_set_object_terms( $post_id, $new_terms, $taxonomy );
 }
 
+// Add Restrict Max & Min params in nav-menus
+add_action( 'wp_nav_menu_item_custom_fields', 'battleplan_addMenuVisibility', 10, 2 );
+function battleplan_addMenuVisibility( $item_id, $item ) {
+	$restrictMax = get_post_meta( $item_id, 'bp_menu_restrict_max', true );
+	$restrictMin = get_post_meta( $item_id, 'bp_menu_restrict_min', true );
+	?>
+	<div class="clearfix"></div>
+	<p class="description description-thin"><?php _e( "Restrict Max", 'menu-restrict-max' ); ?><br />
+	    <input type="hidden" class="nav-menu-id" value="<?php echo $item_id ;?>" />
+	    <input type="text" name="menu_restrict_max[<?php echo $item_id ;?>]" id="menu-restrict-max-<?php echo $item_id ;?>" value="<?php echo esc_attr( $restrictMax ); ?>" />
+	</p>
+	<p class="description description-thin"><?php _e( "Restrict Min", 'menu-restrict-min' ); ?><br />
+	    <input type="hidden" class="nav-menu-id" value="<?php echo $item_id ;?>" />
+	    <input type="text" name="menu_restrict_min[<?php echo $item_id ;?>]" id="menu-restrict-min-<?php echo $item_id ;?>" value="<?php echo esc_attr( $restrictMin ); ?>" />
+	</p>
+	<?php
+}
+
+add_action( 'wp_update_nav_menu_item', 'battleplan_saveMenuVisibility', 10, 2 );
+function battleplan_saveMenuVisibility( $menu_id, $item_id ) {
+	if ( isset( $_POST['menu_restrict_max'][$item_id]  ) ) {
+		$sanitized_data = sanitize_text_field( $_POST['menu_restrict_max'][$item_id] );
+		update_post_meta( $item_id, 'bp_menu_restrict_max', $sanitized_data );
+	} else {
+		delete_post_meta( $item_id, 'bp_menu_restrict_max' );
+	}
+	if ( isset( $_POST['menu_restrict_min'][$item_id]  ) ) {
+		$sanitized_data = sanitize_text_field( $_POST['menu_restrict_min'][$item_id] );
+		update_post_meta( $item_id, 'bp_menu_restrict_min', $sanitized_data );
+	} else {
+		delete_post_meta( $item_id, 'bp_menu_restrict_min' );
+	}
+}
+
 // Populate a secondary menu or sub-menu with posts/pages from any custom post type
 function fillMenu($cpt, $max = "-1", $orderby = "title", $seq = "asc") { 
 	global $cpt, $max, $orderby, $seq;	
@@ -1359,13 +1419,6 @@ function fillMenu($cpt, $max = "-1", $orderby = "title", $seq = "asc") {
 
 // Add shortcode capability to Contact Form 7
 add_filter( 'wpcf7_form_elements', 'do_shortcode' );
-
-// Custom User Roles
-add_action( 'init', 'battleplan_create_user_roles' );
-function battleplan_create_user_roles() {
-	remove_role( 'bp_manager' );
-	add_role('bp_manager', __('Manager'), get_role('editor')->capabilities);
-}
 
 /*--------------------------------------------------------------
 # Register Custom Post Types
@@ -1559,7 +1612,9 @@ function battleplan_add_acf_fields() {
 					'None' => 'None',
 					'Facebook' => 'Facebook',
 					'Google' => 'Google',
+					'Yelp' => 'Yelp',
 					'Nextdoor' => 'Nextdoor',
+					'YP' => 'YP',
 				),
 				'other_choice' => 0,
 				'save_other_choice' => 0,
@@ -1983,9 +2038,9 @@ function battleplan_disable_emojis_remove_dns_prefetch( $urls, $relation_type ) 
 // Defer jquery and other js to footer
 add_filter( 'script_loader_tag', 'defer_parsing_of_js', 10 );
 function defer_parsing_of_js( $url ) {
-    if ( is_admin() ) return $url; //don't break WP Admin
+    if ( is_admin() || $GLOBALS['pagenow'] === 'wp-login.php' ) return $url; //don't break WP Admin
     if ( FALSE === strpos( $url, '.js' ) ) return $url;
-    //if ( strpos( $url, 'jquery.js' ) ) return str_replace( ' src', ' async src', $url );
+    //if ( strpos( $url, 'user-profiles.js' ) ) return $url;
     return str_replace( ' src', ' defer src', $url );
 }
 
@@ -1996,18 +2051,18 @@ function battleplan_dequeue_unwanted_stuff() {
 	wp_dequeue_style( 'wp-block-library-theme' );  wp_deregister_style( 'wp-block-library-theme' );	
 	wp_dequeue_style( 'select2' );  wp_deregister_style( 'select2' );
 	wp_dequeue_style( 'asp-default-style' ); wp_deregister_style( 'asp-default-style' );		
-	wp_dequeue_style( 'typed-cursor' ); wp_deregister_style( 'typed-cursor' );
 	wp_dequeue_style( 'contact-form-7' ); wp_deregister_style( 'contact-form-7' );	
-	wp_dequeue_style( 'ari-fancybox' ); wp_deregister_style( 'ari-fancybox' );
+	if ( is_plugin_active( 'ari-fancy-lightbox/ari-fancy-lightbox.php' ) ) { wp_dequeue_style( 'ari-fancybox' ); wp_deregister_style( 'ari-fancybox' ); }
+	if ( is_plugin_active( 'animated-typing-effect/typingeffect.php' ) ) { wp_dequeue_style( 'typed-cursor' ); wp_deregister_style( 'typed-cursor' ); }
 
 // re-load in header
-	wp_dequeue_style( 'stripe-handler-ng-style' ); wp_deregister_style( 'stripe-handler-ng-style' );
-	wp_dequeue_style( 'cue' ); wp_deregister_style( 'cue' );
+	if ( is_plugin_active( 'stripe-payments/accept-stripe-payments.php' ) ) { wp_dequeue_style( 'stripe-handler-ng-style' ); wp_deregister_style( 'stripe-handler-ng-style' ); }
+	if ( is_plugin_active( 'cue/cue.php' ) ) { wp_dequeue_style( 'cue' ); wp_deregister_style( 'cue' ); }
 	
 // re-load in footer
 	wp_dequeue_style( 'css-animate' );  wp_deregister_style( 'css-animate' );
 	wp_dequeue_style( 'fontawesome' ); wp_deregister_style( 'fontawesome' );
-	wp_dequeue_style( 'widgetopts-styles' ); wp_deregister_style( 'widgetopts-styles' );
+	if ( is_plugin_active( 'extended-widget-options/plugin.php' ) ) { wp_dequeue_style( 'widgetopts-styles' ); wp_deregister_style( 'widgetopts-styles' ); }
 	
 // scripts
 	wp_dequeue_script( 'select2'); wp_deregister_script('select2');	
@@ -2023,7 +2078,7 @@ function battleplan_header_styles() {
 	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { wp_enqueue_style( 'battleplan-events', get_template_directory_uri()."/style-events.css", array(), _BP_VERSION ); } 	
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_enqueue_style( 'battleplan-woocommerce', get_template_directory_uri()."/style-woocommerce.css", array(), _BP_VERSION ); } 
 	if ( is_plugin_active( 'stripe-payments/accept-stripe-payments.php' ) ) { wp_enqueue_style( 'battleplan-stripe-payments', get_template_directory_uri()."/style-stripe-payments.css", array(), _BP_VERSION ); } 
-	if ( is_plugin_active( 'cue/cue.php' ) ) { wp_enqueue_style( 'battleplan-cue', get_template_directory_uri()."/cue.css", array(), _BP_VERSION ); } 
+	if ( is_plugin_active( 'cue/cue.php' ) ) { wp_enqueue_style( 'battleplan-cue', get_template_directory_uri()."/cue.css", array(), _BP_VERSION ); } 	
 	
 	wp_enqueue_style( 'parent-style', get_template_directory_uri()."/style.css", array(), _BP_VERSION );
 	wp_enqueue_style( 'battleplan-style', get_stylesheet_directory_uri()."/style-site.css", array(), _BP_VERSION );	
@@ -2035,7 +2090,8 @@ function battleplan_footer_styles() {
 	wp_enqueue_style( 'battleplan-animate', get_template_directory_uri().'/animate.css', array(), _BP_VERSION );	
 	wp_enqueue_style( 'battleplan-fontawesome', get_template_directory_uri()."/fontawesome.css", array(), _BP_VERSION );
 	if ( is_plugin_active( 'extended-widget-options/plugin.php' ) ) { wp_enqueue_style( 'widgetopts-styles', '/wp-content/plugins/extended-widget-options/assets/css/widget-options.css', array(), _BP_VERSION ); }	
-	if ( is_plugin_active( 'ari-fancy-lightbox/ari-fancy-lightbox.php' ) ) { wp_enqueue_style( 'ari-fancybox-styles', '/wp-content/plugins/ari-fancy-lightbox/assets/fancybox/jquery.fancybox.min.css', array(), _BP_VERSION ); }	
+	if ( is_plugin_active( 'ari-fancy-lightbox/ari-fancy-lightbox.php' ) ) { wp_enqueue_style( 'ari-fancybox-styles', '/wp-content/plugins/ari-fancy-lightbox/assets/fancybox/jquery.fancybox.min.css', array(), _BP_VERSION ); }		
+	if ( get_option( 'site_type' ) == 'profile' || get_option( 'site_type' ) == 'profiles' ) { wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array(), _BP_VERSION ); }		
 }
 
 // Load and enqueue remaining scripts
@@ -2044,16 +2100,16 @@ function battleplan_scripts() {
 	if ( !is_mobile() ) { wp_enqueue_script( 'battleplan-parallax', get_template_directory_uri().'/js/parallax.js', array(), _BP_VERSION, false ); }
 	wp_enqueue_script( 'battleplan-carousel', get_template_directory_uri().'/js/bootstrap-carousel.js', array(), _BP_VERSION, false );	
 	wp_enqueue_script( 'battleplan-waypoints', get_template_directory_uri().'/js/waypoints.js', array(), _BP_VERSION, false );	
-	//wp_enqueue_script( 'battleplan-script', get_template_directory_uri().'/js/script.js', array(), _BP_VERSION, false );
 		
 	if ( !is_mobile() ) { wp_enqueue_script( 'battleplan-script-desktop', get_template_directory_uri().'/js/script-desktop.js', array(), _BP_VERSION, false ); }
 	wp_enqueue_script( 'battleplan-script-essential', get_template_directory_uri().'/js/script-essential.js', array(), _BP_VERSION, false );				
 	wp_enqueue_script( 'battleplan-script-site', get_stylesheet_directory_uri().'/script-site.js', array(), _BP_VERSION, false );	
 	wp_enqueue_script( 'battleplan-script-tracking', get_template_directory_uri().'/js/script-tracking.js', array(), _BP_VERSION, false );
 	
-	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { wp_enqueue_script( 'battleplan-events', get_template_directory_uri().'/js/events.js', array(), _BP_VERSION, false ); } 
-	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_enqueue_script( 'battleplan-woocommerce', get_template_directory_uri().'/js/woocommerce.js', array(), _BP_VERSION, false ); } 	
-	if ( is_plugin_active( 'cue/cue.php' ) ) { wp_enqueue_script( 'battleplan-cue', get_template_directory_uri().'/js/cue.js', array(), _BP_VERSION, false ); } 
+	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { wp_enqueue_script( 'battleplan-script-events', get_template_directory_uri().'/js/events.js', array(), _BP_VERSION, false ); } 
+	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_enqueue_script( 'battleplan-script-woocommerce', get_template_directory_uri().'/js/woocommerce.js', array(), _BP_VERSION, false ); } 
+	if ( is_plugin_active( 'cue/cue.php' ) ) { wp_enqueue_script( 'battleplan-script-cue', get_template_directory_uri().'/js/cue.js', array(), _BP_VERSION, false ); } 
+	if ( get_option( 'site_type' ) == 'profile' || get_option( 'site_type' ) == 'profiles' ) { wp_enqueue_script( 'battleplan-script-user-profiles', get_template_directory_uri().'/js/script-user-profiles.js', array(), _BP_VERSION, false ); } 
 	
 	if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) { wp_enqueue_script( 'comment-reply' ); }
 	
@@ -2068,20 +2124,35 @@ function battleplan_scripts() {
 // Load and enqueue admin styles & scripts
 add_action( 'admin_enqueue_scripts', 'battleplan_admin_scripts' );
 function battleplan_admin_scripts() {
-	wp_enqueue_style( 'battleplan-admin-css', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION );		
-	wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array(), _BP_VERSION, false );
+	wp_enqueue_style( 'battleplan-admin-css', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION );	
+	wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array(), _BP_VERSION, false );	
+	if ( get_option( 'site_type' ) == 'profile' || get_option( 'site_type' ) == 'profiles' ) { 
+		wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array(), _BP_VERSION ); 		
+		wp_enqueue_script( 'battleplan-script-user-profiles', get_template_directory_uri().'/js/script-user-profiles.js', array(), _BP_VERSION, false ); 
+	}
 }
 
+// Load and enqueue login styles
+add_action( 'login_enqueue_scripts', 'battleplan_login_enqueue' );
+function battleplan_login_enqueue() {
+	wp_dequeue_style( 'login' );  wp_deregister_style( 'login' );
+	wp_enqueue_style( 'parent-style', get_template_directory_uri()."/style.css", array(), _BP_VERSION );
+	wp_enqueue_style( 'battleplan-style', get_stylesheet_directory_uri()."/style-site.css", array(), _BP_VERSION );	
+	wp_enqueue_style( 'battleplan-login', get_template_directory_uri()."/style-login.css", array(), _BP_VERSION );
+}
+
+// Load various includes
 if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { require_once get_template_directory() . '/includes/includes-events.php'; } 
 if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { require_once get_template_directory() . '/includes/includes-woocommerce.php'; } 
 if ( get_option( 'site_type' ) == 'hvac' ) { require_once get_template_directory() . '/includes/includes-hvac.php'; } 
 if ( get_option( 'site_type' ) == 'pedigree' ) { require_once get_template_directory() . '/includes/includes-pedigree.php'; } 
+if ( get_option( 'site_type' ) == 'profile' || get_option( 'site_type' ) == 'profiles' ) { require_once get_template_directory() . '/includes/includes-user-profiles.php'; } 
 require_once get_template_directory() . '/functions-public.php';
 require_once get_stylesheet_directory() . '/functions-site.php';
 if ( is_admin() ) { require_once get_template_directory() . '/functions-admin.php'; } 
-
-// Delay execution of non-essential scripts
-if ( !is_admin() && !is_plugin_active( 'woocommerce/woocommerce.php' ) && strpos($_SERVER['REQUEST_URI'], '.xml') == false ) {
+ 
+// Delay execution of non-essential scripts 
+if ( !is_admin() && $GLOBALS['pagenow'] !== 'wp-login.php' && !is_plugin_active( 'woocommerce/woocommerce.php' ) && strpos($_SERVER['REQUEST_URI'], '.xml') == false ) {
 	ob_start(); 
 	add_action('shutdown', function() { $final = ''; $levels = ob_get_level(); for ($i = 0; $i < $levels; $i++) { $final .= ob_get_clean(); } echo apply_filters('final_output', $final); }, 0);
 	add_filter('final_output', function($html) {
@@ -2152,6 +2223,7 @@ function battleplan_is_mobile( $classes ) {
 }
 
 //Brand log-in screen with BP Knight
+/*
 add_action( 'login_enqueue_scripts', 'battleplan_login_logo' );
 function battleplan_login_logo() { ?><style type="text/css">body.login div#login h1 a { background-image: url('/wp-content/themes/battleplantheme/common/logos/battleplan-logo.png'); padding-bottom: 120px; width: 100%; background-size: 50%} #login {padding-top:70px !important} </style> <?php }  
 
@@ -2164,6 +2236,7 @@ add_filter( 'login_headertext', 'battleplan_login_headertext' );
 function battleplan_login_headertext( $headertext ) {
    	return esc_html__( 'Powered by Battle Plan Web Design', 'battleplan' );
 }
+*/
 
 // Hide the Wordpress admin bar
 show_admin_bar( false );
@@ -2183,14 +2256,19 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 
 		$id = apply_filters( 'nav_menu_item_id', 'menu-item-'. $item->ID, $item, $args, $depth );
 		$id = $id ? ' id="' . esc_attr( $id ) . '"' : '';
+		
+		$buildOutput = "";		
+		$restrictMax = get_post_meta( $item->ID, 'bp_menu_restrict_max', true );
+		$restrictMin = get_post_meta( $item->ID, 'bp_menu_restrict_min', true );		
+		if ( $restrictMax || $restrictMin ) $buildOutput .= '[restrict max="'.$restrictMax.'" min="'.$restrictMin.'"]';
 
-		$output .= sprintf( '%s<li%s%s%s>',
+		$buildOutput .= sprintf( '%s<li%s%s%s>',
 			$indent,
 			$id,
 			$class_names,
 			in_array( 'menu-item-has-children', $item->classes ) ? ' aria-haspopup="true" aria-expanded="false" tabindex="0"' : ''
 		);
-
+		
 		$atts = array();
 		$atts['title']  = ! empty( $item->attr_title ) ? $item->attr_title : '';
 		$atts['target'] = ! empty( $item->target )     ? $item->target     : '';
@@ -2208,16 +2286,18 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 		}
 
 		$title = apply_filters( 'the_title', $item->title, $item->ID );
-
 		$title = apply_filters( 'nav_menu_item_title', $title, $item, $args, $depth );
 
-		$item_output = $args->before;
+		$item_output = $args->before;		
 		$item_output .= '<a'. $attributes .'>';
 		$item_output .= $args->link_before . $title . $args->link_after;
 		$item_output .= '</a>';
 		$item_output .= $args->after;
-
-		$output .= apply_filters( 'walker_nav_menu_start_el', $item_output, $item, $depth, $args );
+		
+		$buildOutput .= apply_filters( 'walker_nav_menu_start_el', $item_output, $item, $depth, $args );
+		if ( $restrictMax || $restrictMin ) $buildOutput .= '[/restrict]';	
+		
+		$output .= do_shortcode($buildOutput);
 	}
 }
 
@@ -2233,7 +2313,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( "user-message" == $tag->name ) {
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
-		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Rony (Steve','и','д','б','й','л','ы','З','у','Я');
+		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','relocation checklist','Rony (Steve','и','д','б','й','л','ы','З','у','Я');
 		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
 		if ( $check == $name ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($badwords as $badword) {
@@ -2252,7 +2332,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
 	}
     if ( "user-email" == $tag->name ) {
         $check = isset( $_POST["user-email"] ) ? trim( $_POST["user-email"] ) : ''; 
-		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz', '@tworld.com', 'garywhi777@gmail.com', 'ronyisthebest16@gmail.com', 'ronythomasrecruiter@gmail.com');
+		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz', '@tworld.com', 'garywhi777@gmail.com', 'ronyisthebest16@gmail.com', 'ronythomasrecruiter@gmail.com', '@ideonagency.net','axiarobbie20@gmail.com');
 		foreach($badwords as $badword) {
 			if (stripos($check,$badword) !== false) $result->invalidate( $tag, 'Message cannot be sent.');
 		}
@@ -2268,6 +2348,12 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
 // Block loading of refill file (Contact Form 7) to help speed up sites
 add_action('wp_footer', 'battleplan_no_contact_form_refill', 99); 
 function battleplan_no_contact_form_refill() { ?><script>wpcf7.cached = 0;</script><?php }
+
+// Set default From Name on automatically generated WP emails
+add_filter( 'wp_mail_from_name', 'battleplan_wp_mail_from_name' );
+function battleplan_wp_mail_from_name( $original_email_from ) {
+    return do_shortcode('[get-biz info="name"]');
+}
 
 // Remove auto <p> from around <img> & <svg>
 add_filter('the_content', 'battleplan_remove_ptags_on_images', 9999);
@@ -2306,8 +2392,14 @@ function get_srcset( $size ) {
 	return '(max-width: 575px) '.$ratio575.'vw, (max-width: 860px) '.$ratio860.'vw, (max-width: 1024px) '.$ratio1024.'vw, (max-width: 1280px) '.$ratio1280.'vw, '.$size.'px';
 }
 
+//Establish default thumbnail size
+update_option( 'thumbnail_size_w', 320 );
+update_option( 'thumbnail_size_h', 320 );
+update_option( 'thumbnail_crop', 1 );
+
 // Establish default image sizes
-if ( function_exists( 'add_image_size' ) ) {	
+if ( function_exists( 'add_image_size' ) ) {
+	add_image_size( 'thumbnail-small', 80, 80, true ); 
 	add_image_size( 'icon', 80, 80, false ); 
 	add_image_size( 'icon-2x', 160, 160, false ); 
 	add_image_size( 'quarter-s', 240, 99999, false ); 
@@ -2382,6 +2474,13 @@ function battleplan_disable_upload_sizes( $sizes, $metadata ) {
     if($filetype['type'] == 'image/gif') { $sizes = array(); }
     return $sizes;
 }   
+
+add_filter('big_image_size_threshold', 'battleplan_limit_non_admin_uploads', 999, 1);
+function battleplan_limit_non_admin_uploads( $threshold ) {
+    if ( ! current_user_can( 'manage_options' ) ) {
+		return 1000;
+	}
+}
 
 // Highlights menu option based on the post type of the current page and the title attribute given to the menu button in Appearance->Menus
 add_filter('nav_menu_css_class', 'battleplan_current_type_nav_class', 10, 2 );
@@ -2509,6 +2608,38 @@ if ( $currPage == "reviews" ) :
 endif;
 
 /*--------------------------------------------------------------
+# User Roles
+--------------------------------------------------------------*/
+function battleplan_remove_user_roles() {
+	if ( wp_roles()->is_role( 'editor' ) ) remove_role( 'editor' );
+	if ( wp_roles()->is_role( 'contributor' ) ) remove_role( 'contributor' );
+	if ( wp_roles()->is_role( 'author' ) ) remove_role( 'author' );
+	if ( wp_roles()->is_role( 'subscriber' ) ) remove_role( 'subscriber' );
+	if ( wp_roles()->is_role( 'wpseo_manager' ) ) remove_role( 'wpseo_manager' );
+	if ( wp_roles()->is_role( 'wpseo_editor' ) ) remove_role( 'wpseo_editor' );	
+}
+
+function battleplan_create_user_roles() {	
+	remove_role( 'bp_manager' );
+	add_role('bp_manager', __('Manager'), array( 'level_8'=>'true', 'level_7'=>'true', 'level_6'=>'true', 'level_5'=>'true', 'level_4'=>'true', 'level_3'=>'true', 'level_2'=>'true', 'level_1'=>'true', 'level_0'=>'true', 'read'=>'true', 'publish_pages'=>'true', 'edit_pages'=>'true', 'edit_others_pages'=>'true', 'edit_published_pages'=>'true', 'read_private_pages'=>'true', 'edit_private_pages'=>'true', 'delete_pages'=>'true', 'delete_others_pages'=>'true', 'delete_published_pages'=>'true', 'delete_private_pages'=>'true', 'publish_posts'=>'true', 'edit_posts'=>'true', 'edit_others_posts'=>'true', 'edit_published_posts'=>'true', 'read_private_posts'=>'true', 'edit_private_posts'=>'true', 'delete_posts'=>'true', 'delete_others_posts'=>'true', 'delete_published_posts'=>'true', 'delete_private_posts'=>'true', 'moderate_comments'=>'true', 'manage_categories'=>'true', 'manage_links'=>'true', 'upload_files'=>'true', 'unfiltered_html'=>'true' ));	
+	
+	remove_role( 'bp_moderator' );
+	add_role('bp_moderator', __('Moderator'), array( 'level_4'=>'true', 'level_3'=>'true', 'level_2'=>'true', 'level_1'=>'true', 'level_0'=>'true', 'read'=>'true', 'publish_posts'=>'true', 'edit_posts'=>'true', 'edit_others_posts'=>'true', 'edit_published_posts'=>'true', 'read_private_posts'=>'true', 'edit_private_posts'=>'true', 'delete_posts'=>'true', 'delete_others_posts'=>'true', 'delete_published_posts'=>'true', 'delete_private_posts'=>'true', 'moderate_comments'=>'true', 'manage_categories'=>'true', 'manage_links'=>'true', 'upload_files'=>'true', 'unfiltered_html'=>'true' ));	
+	
+	remove_role( 'bp_author' );
+	add_role('bp_author', __('Author'), array( 'level_2'=>'true', 'level_1'=>'true', 'level_0'=>'true', 'read'=>'true', 'publish_posts'=>'true', 'edit_posts'=>'true', 'edit_published_posts'=>'true', 'delete_posts'=>'true', 'delete_published_posts'=>'true', 'upload_files'=>'true', 'unfiltered_html'=>'true' ));	
+	
+	remove_role( 'bp_subscriber' );
+	add_role('bp_subscriber', __('Subscriber'), array( 'level_1'=>'true', 'level_0'=>'true', 'read'=>'true' ));	
+}
+
+//add_action('init', 'battleplan_getAndDisplayUserRoles');
+function battleplan_getAndDisplayUserRoles() {	
+	$caps = get_option('wp_user_roles');	
+	print_r( $caps );
+}
+
+/*--------------------------------------------------------------
 # Chron Jobs
 --------------------------------------------------------------*/
 add_action('init', 'battleplan_doChrons');
@@ -2518,6 +2649,9 @@ function battleplan_doChrons() {
 	$timePast = time() - $bpChrons;
 	
 	if ( $timePast > $chronSpan ) :
+	
+		battleplan_remove_user_roles();
+		battleplan_create_user_roles();
 	
 		// ARI FancyBox Settings Update
 		if ( is_plugin_active('ari-fancy-lightbox/ari-fancy-lightbox.php') ) : 
@@ -2589,6 +2723,37 @@ function battleplan_doChrons() {
 			$wpSEOLocal['hide_opening_hours'] = 'on';
 			$wpSEOLocal['address_format'] = 'address-state-postal';	
 			update_option( 'wpseo_local', $wpSEOLocal );
+		
+			delete_option( 'wp-smush-dir_path');
+			delete_option( 'wp-smush-install-type');
+			delete_option( 'wp-smush-keep_exif');
+			delete_option( 'wp-smush-resize_sizes');
+			delete_option( 'wp-smush-version');
+			delete_option( 'wpmudev_recommended_plugins_registered');			
+			delete_option( 'wphb_settings');
+			delete_option( 'wp-smush-skip-redirect');
+			delete_option( 'wp_smush_api_auth');
+			delete_option( 'smush_global_stats');
+			delete_option( 'dir_smush_stats');
+			delete_option( 'theia-upload-cleaner-progress-file');
+			delete_option( 'wp-smush-keep_exif');
+			delete_option( 'wp-smush-resize_sizes');
+			delete_option( 'wp-smush-dir_path');
+			delete_option( 'wp-smush-install-type');
+			delete_option( 'wprmenu_options');
+			delete_option( 'wr2x_rating_date');
+			delete_option( 'wphb-notice-uptime-info-show');
+			delete_option( 'wphb_version');
+			delete_option( 'wphb-new-user-tour');
+			delete_option( 'wphb-notice-http2-info-show');
+			delete_option( 'wphb_styles_collection');
+			delete_option( 'wphb_scripts_collection');
+			delete_option( 'wpmudev_recommended_plugins_registered');
+	
+			update_option( 'auto_update_core_dev', 'enabled' );
+			update_option( 'auto_update_core_minor', 'enabled' );
+			update_option( 'auto_update_core_major', 'enabled' );			
+		
 		endif;
 
 		update_option( 'bp_chrons_last_run', time() );		
@@ -2901,6 +3066,32 @@ function battleplan_expireContent( $atts, $content = null ) {
 	$end = strtotime(esc_attr($a['end']));
 	$now = time();	
 	if ( $now > $start && $now < $end ) { return do_shortcode($content); } else { return null; }
+}
+
+// Restricted Content
+add_shortcode( 'restrict', 'battleplan_restrictContent' );
+function battleplan_restrictContent( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'max'=>'administrator', 'min'=>'none' ), $atts );
+	$max = esc_attr($a['max']);
+	if ( $max == "admin" || $max == "administrator" ) : $max = "administrator"; else: $max = "bp_".$max; endif;
+	$min = esc_attr($a['min']);
+	if ( $min == "admin" || $min == "administrator" ) : $min = "administrator"; else: $min = "bp_".$min; endif;
+
+	$role = battleplan_getUserRole( $identifier, 'name' );
+	$user_caps = get_role( $role )->capabilities;
+	$max_caps = get_role( $max )->capabilities;
+	$min_caps = get_role( $min )->capabilities;	
+	$max_level = $min_level = $user_level = 0;
+	
+	for ($x = 0; $x <= 10; $x++) {
+		if ( $max_caps['level_'.$x] == 1 || $max_caps['level_'.$x] == true ) $max_level = $x;	
+		if ( $min_caps['level_'.$x] == 1 || $min_caps['level_'.$x] == true ) $min_level = $x;	
+		if ( $user_caps['level_'.$x] == 1 || $user_caps['level_'.$x] == true ) $user_level = $x;
+	} 
+
+	if ( $user_level >= $min_level && $user_level <= $max_level ) : return do_shortcode($content);
+	else: return null;
+	endif;	
 }
 
 // Section

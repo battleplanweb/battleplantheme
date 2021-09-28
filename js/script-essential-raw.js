@@ -521,7 +521,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 // Set up Logo Slider
 	$('.logo-slider').each(function() {
-		var logoSlider = $(this), logoRow = logoSlider.find('.logo-row'), speed = logoSlider.attr('data-speed'), delay = (parseInt(logoSlider.attr('data-delay'))) * 1000, maxW = getDeviceW() * (parseInt(logoSlider.attr('data-maxw')) / 100), pause = logoSlider.attr('data-pause'), spacing = getDeviceW() * (parseInt(logoSlider.attr('data-spacing')) / 100), easing = "swing", moving = true, firstLogo, secondLogo, largestW = 0, checkW = 0, thisW = 0, firstPos = 0, secondPos = 0, space = 0, containerW = 0, logoW = 0;
+		var logoSlider = $(this), logoRow = logoSlider.find('.logo-row'), speed = logoSlider.attr('data-speed'), delay = (parseInt(logoSlider.attr('data-delay'))) * 1000, time = 0, maxW = getDeviceW() * (parseInt(logoSlider.attr('data-maxw')) / 100), pause = logoSlider.attr('data-pause'), spacing = getDeviceW() * (parseInt(logoSlider.attr('data-spacing')) / 100), easing = "swing", moving = true, firstLogo, secondLogo, largestW = 0, checkW = 0, thisW = 0, firstPos = 0, secondPos = 0, space = 0, containerW = 0, logoW = 0;
 		
 		logoRow.css({'opacity': 0});
 		
@@ -539,6 +539,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				if ( thisW > largestW ) { largestW = thisW; }
 				logoW = logoW + spacing + thisW; 
 			});
+			
+			if ( delay == 0 ) {
+				logoW = 0;
+				logoSlider.find('span').find('img').each(function() { 
+					$(this).parent().width(largestW); 
+					logoW = logoW + spacing + largestW; 
+				});			
+			}
 
 			setTimeout(function() { 
 				checkW = getDeviceW() + largestW + spacing;
@@ -548,6 +556,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				if ( speed == "slow" ) { speed = logoW * 3;
 				} else if ( speed == "fast" ) { speed = logoW * 1.5;
 				} else { speed = logoW * (parseInt(speed)); }
+				
+				time = speed + delay + 15;
 				
 				logoRow.animate({ 'opacity': 1}, 300);
 
@@ -559,6 +569,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 						secondPos = secondLogo.position().left;	
 						containerW = firstLogo.width() + secondPos - firstPos; 	
 						
+						console.log (time);
+						
 						logoRow.animate({ 'margin-left': -containerW+'px'}, speed, easing, function() {
 							firstLogo.remove();
 							logoRow.find('span:last').after(firstLogo);
@@ -566,8 +578,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 						});						
 					} 	
 				}
-				if ( delay > 0 ) { delay = delay + speed; moveLogos(); }
-				var advanceLogos = setInterval( moveLogos, delay );
+				var advanceLogos = setInterval( moveLogos, time );
 			}, 10);
 		}, 1500);
 	});

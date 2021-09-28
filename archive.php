@@ -61,7 +61,7 @@ get_header(); ?>
 				$showDate = "false";				
 				$showAuthor = "false";
 				$addClass = "";
-		
+				
 		// Default Archives
 			else: 
 				$grid = "1-1-1";

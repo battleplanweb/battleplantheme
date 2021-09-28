@@ -460,9 +460,14 @@ input[type="number"] {
 	text-align:									center;
 }
 
-.theme-battleplantheme.woocommerce-page form .form-row:not(.place-order) {
+.theme-battleplantheme.woocommerce-page form .form-row:not(.place-order):not([class*="wc-pao-addon-wrap"]) {
     margin-top:									1.5em;
     margin-bottom:								1.5em;
+}
+
+.theme-battleplantheme.woocommerce-page form .wc-pao-addon-description {
+	margin-top: 								1em;
+	margin-bottom: 								1em;
 }
 
 .theme-battleplantheme.woocommerce-page .woocommerce-additional-fields {
@@ -563,6 +568,7 @@ label[for=wc-stripe-new-payment-method] {
 }
 
 .woocommerce-account .woocommerce a {
+
 
 	margin-right:								10px;
 }

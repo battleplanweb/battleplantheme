@@ -1,8 +1,9 @@
 <?php /* The template for displaying 404 pages (not found) */
 
 $getURL = str_replace("/", "", $_SERVER['REQUEST_URI']);
-$filename = "wp-content/themes/battleplantheme/includes/includes-".$getURL.".php";
-if ( !file_exists($filename) ) $filename = "wp-content/themes/battleplantheme/includes/includes-".get_option('site_type')."-".$getURL.".php";
+$getURL = strpos($getURL, "?") ? substr($getURL, 0, strpos($getURL, "?")) : $getURL;
+$filename = "wp-content/themes/battleplantheme/pages/page-".$getURL.".php";
+if ( !file_exists($filename) ) $filename = "wp-content/themes/battleplantheme/pages/page-".get_option('site_type')."-".$getURL.".php";
 if ( file_exists($filename) ) :
 	$class = 'include-page '.$getURL;
 	add_filter( 'pre_get_document_title', 'battleplan_change_title', 999, 1 );

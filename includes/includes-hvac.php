@@ -31,12 +31,12 @@ function battleplan_product_overview( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', ), $atts );
 	$type = esc_attr($a['type']);
 	
-	if (strpos($type, 'american standard') !== false) { include("wp-content/themes/battleplantheme/includes/includes-american-standard-product-overview.php"); }
-	elseif (strpos($type, 'ruud') !== false) { include("wp-content/themes/battleplantheme/includes/includes-ruud-product-overview.php"); }
-	elseif (strpos($type, 'carrier') !== false) { include("wp-content/themes/battleplantheme/includes/includes-carrier-product-overview.php"); }	
-	elseif (strpos($type, 'york') !== false) { include("wp-content/themes/battleplantheme/includes/includes-york-product-overview.php"); }
-	elseif (strpos($type, 'lennox') !== false) { include("wp-content/themes/battleplantheme/includes/includes-lennox-product-overview.php"); }
-	else { include("wp-content/themes/battleplantheme/includes/includes-generic-product-overview.php"); }
+	if (strpos($type, 'american standard') !== false) { include("wp-content/themes/battleplantheme/elements/element-product-overview-american-standard.php"); }
+	elseif (strpos($type, 'ruud') !== false) { include("wp-content/themes/battleplantheme/elements/element-product-overview-ruud.php"); }
+	elseif (strpos($type, 'carrier') !== false) { include("wp-content/themes/battleplantheme/elements/element-product-overview-carrier.php"); }	
+	elseif (strpos($type, 'york') !== false) { include("wp-content/themes/battleplantheme/elements/element-product-overview-york.php"); }
+	elseif (strpos($type, 'lennox') !== false) { include("wp-content/themes/battleplantheme/elements/element-product-overview-lennox.php"); }
+	else { include("wp-content/themes/battleplantheme/elements/element-product-overview-generic.php"); }
 	
 	return do_shortcode('
 		[col class="col-archive col-products"]
@@ -57,8 +57,7 @@ add_shortcode( 'american-standard-customer-care', 'battleplan_american_standard_
 function battleplan_american_standard_customer_care( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', ), $atts );
 	$type = esc_attr($a['type']);
-
-	return include "wp-content/themes/battleplantheme/includes/includes-customer-care-dealer.php";
+	return include "wp-content/themes/battleplantheme/pages/page-hvac-customer-care-dealer.php";
 }	
 
 /*--------------------------------------------------------------
@@ -68,8 +67,7 @@ add_shortcode( 'ruud-pro-partner', 'battleplan_ruud_pro_partner' );
 function battleplan_ruud_pro_partner( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', ), $atts );
 	$type = esc_attr($a['type']);
-
-	return include "wp-content/themes/battleplantheme/includes/includes-ruud-pro-partner.php";
+	return include "wp-content/themes/battleplantheme/pages/page-hvac-ruud-pro-partner.php";
 }				
 
 /*--------------------------------------------------------------
@@ -97,7 +95,7 @@ function battleplan_why_choose_us( $atts, $content = null ) {
 	else: $img = "/wp-content/uploads/".$img;
 	endif;
 	
-	return include "wp-content/themes/battleplantheme/includes/includes-why-choose-".$brand.".php";
+	return include "wp-content/themes/battleplantheme/pages/page-why-choose-".$brand.".php";
 }		
 	
 /*--------------------------------------------------------------
@@ -108,7 +106,7 @@ function battleplan_hvac_maintenance_tips( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', ), $atts );
 	$type = esc_attr($a['type']);
 	
-	return include "wp-content/themes/battleplantheme/includes/includes-hvac-maintenance-tips.php";
+	return include "wp-content/themes/battleplantheme/pages/page-hvac-maintenance-tips.php";
 }		
 	
 /*--------------------------------------------------------------
@@ -116,7 +114,7 @@ function battleplan_hvac_maintenance_tips( $atts, $content = null ) {
 --------------------------------------------------------------*/
 add_shortcode( 'hvac-tip-of-the-month', 'battleplan_hvac_tip_of_the_month' );
 function battleplan_hvac_tip_of_the_month( $atts, $content = null ) {
-	return include "wp-content/themes/battleplantheme/includes/includes-hvac-tip-of-the-month.php";
+	return include "wp-content/themes/battleplantheme/elements/element-hvac-tip-of-the-month.php";
 }
 
 /*--------------------------------------------------------------

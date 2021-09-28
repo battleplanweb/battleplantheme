@@ -42,18 +42,21 @@ function battleplan_add_quicktags() {
 			QTags.addButton( 'bp_button', 'button', '   [btn size="100 1/2 1/3 1/4 1/6 1/12" order="3, 1, 2" align="center, left, right" link="url to link to" get-biz="link in functions.php" new-tab="false, true" class="" icon="fas fa-chevron-right" fancy="(blank), 2" ada="text for ada button" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/btn]\n', 'button', 'Button', 1000 );	
 			QTags.addButton( 'bp_social', 'social', '   [social-btn type="email, facebook, twitter" img="none, link"]', '', 'social', 'Social', 1000 );	
 			QTags.addButton( 'bp_accordion', 'accordion', '   [accordion title="clickable title" excerpt="false, true" class="" icon="true, false" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/accordion]\n\n', 'accordion', 'Accordion', 1000 );
+			
 			QTags.addButton( 'bp_expire-content', 'expire', '[expire start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/expire]\n\n', 'expire', 'Expire', 1000 );			
+			QTags.addButton( 'bp_restrict-content', 'restrict', '[restrict max="administrator, any role" min="none, any role"]', '[/restrict]\n\n', 'restrict', 'Restrict', 1000 );	
+			
 			QTags.addButton( 'bp_lock-section', 'lock', '[lock name="becomes id attribute" style="(lock) corresponds to css" width="edge, default, stretch, full, inline" position="bottom, top, modal" delay="3000" show="session, never, always, # days" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '[/lock]\n\n', 'lock', 'Lock', 1000 );		
 			QTags.addButton( 'bp_images_side-by-side', 'side by side images', '[side-by-side img="ids" size="half-s, third-s, full" align="center, left, right" full="id" pos="bottom, top"]', '', 'side by side images', 'Side By Side Images', 1000 );			
 			QTags.addButton( 'bp_random-image', 'random image', '   [get-random-image id="" tag="random" size="thumbnail, third-s" link="no, yes" number="1" offset="" align="left, right, center" order_by="recent, rand, menu_order, title, id, post_date, modified, views" order="asc, desc" shuffle="no, yes"]\n', '', 'random image', 'Random Image', 1000 );
 			QTags.addButton( 'bp_random-post', 'random post', '   [get-random-posts num="1" offset="0" leeway="0" type="post" tax="" terms="" orderby="recent, rand, views-today, views-7day, views-30day, views-90day, views-180day, views-365day, views-all" sort="asc, desc" count_tease="true, false" count_view="true, false" thumb_only="false, true" thumb_col="1, 2, 3, 4" show_title="true, false" title_pos="outside, inside" show_date="false, true" show_author="false, true" show_excerpt="true, false" show_social="false, true" show_btn="true, false" button="Read More" btn_pos="inside, outside" thumbnail="force, false" link="post, false, cf-field_name, /link-destination/" start="" end="" exclude="" x_current="true, false" size="thumbnail, size-third-s" pic_size="1/3" text_size=""]\n', '', 'random post', 'Random Post', 1000 );
 			QTags.addButton( 'bp_random-text', 'random text', '   [get-random-text cookie="true, false" text1="" text2="" text3="" text4="" text5="" text6="" text7=""]\n', '', 'random text', 'Random Text', 1000 );
 			QTags.addButton( 'bp_row-of-pics', 'row of pics', '   [get-row-of-pics id="" tag="row-of-pics" col="4" row="1" offset="0" size="half-s, thumbnail" valign="center, start, stretch, end" link="no, yes" order_by="recent, rand, menu_order, title, id, post_date, modified, views" order="asc, desc" shuffle="no, yes" class=""]\n', '', 'row of pics', 'Row Of Pics', 1000 );
-			QTags.addButton( 'bp_post-slider', 'post slider', '   [get-post-slider type="" auto="yes, no" interval="6000" loop="true, false" num="4" offset="0" pics="yes, no" controls="yes, no" controls_pos="below, above" indicators="no, yes" pause="true, false" tax="" terms="" orderby="recent, rand, id, author, title, name, type, date, modified, parent, comment_count, relevance, menu_order, (images) views, (posts) views-today, views-7day, views-30day, views-90day, views-180day, views-365day, views-all" order="asc, desc" post_btn="" all_btn="View All" link="" start="" end="" exclude="" x_current="true, false" show_excerpt="true, false" show_content="false, true" size="thumbnail" pic_size="1/3" text_size="" class="" (images) slide_type="box, screen, fade" tag="" caption="no, yes" id="" size="thumbnail, half-s" mult="1"]\n', '', 'post slider', 'Post Slider', 1000 );
+			QTags.addButton( 'bp_post-slider', 'post slider', '   [get-post-slider type="" auto="yes, no" interval="6000" loop="true, false" num="4" offset="0" pics="yes, no" controls="yes, no" controls_pos="below, above" indicators="no, yes" justify="space-around, space-evenly, space-between, center" pause="true, false" tax="" terms="" orderby="recent, rand, id, author, title, name, type, date, modified, parent, comment_count, relevance, menu_order, (images) views, (posts) views-today, views-7day, views-30day, views-90day, views-180day, views-365day, views-all" order="asc, desc" post_btn="" all_btn="View All" link="" start="" end="" exclude="" x_current="true, false" show_excerpt="true, false" show_content="false, true" size="thumbnail, half-s" pic_size="1/3" text_size="" class="" (images) slide_type="box, screen, fade" tag="" caption="no, yes" id="" mult="1"]\n', '', 'post slider', 'Post Slider', 1000 );
 
 			QTags.addButton( 'bp_images-slider', 'Images Slider', '<div class="alignright size-half-s">[get-post-slider type="images" num="6" size="half-s" controls="no" indicators="yes" tag="featured" all_btn="" link="none, alt, description, blank" slide_type="box, screen, fade" orderby="recent"]</div>\n\n', '', 'images-slider', 'Images Slider', 1000 );	
 			QTags.addButton( 'bp_testimonial-slider', 'Testimonial Slider', '  [col]\n   <h2>What Our Customers Say...</h2>\n   [get-post-slider type="testimonials" num="6" pic_size="1/3"]\n  [/col]\n\n', '', 'testimonial-slider', 'Testimonial Slider', 1000 );
-			QTags.addButton( 'bp_random-product', 'Random Product', '  [col]\n   <h2>Featured Product</h2>\n   [get-random-posts type="products" offset="1" button="Learn More" orderby="views-30day" sort="desc"]\n  [/col]\n\n', '', 'random-product', 'Random Product', 1000 );
+			QTags.addButton( 'bp_random-product', 'Random Product', '  [col]\n   <h2>Featured Product</h2>\n   [get-random-posts type="products" offset="1" button="Learn More" orderby="views-30day" sort="desc"]\n  [/col]\n\n', '', 'random-product', 'Random Product', 1000 );		
 		</script>
 	<?php }
 }
@@ -1599,8 +1602,9 @@ function battleplan_admin_site_stats() {
 	if ( $last180Views != $last90Views) echo "<tr><td><b>Last 180 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last180Views, 'battleplan' ), number_format($last180Views) )."</td></tr>";
 	if ( $last365Views != $last180Views) echo "<tr><td><b>Last 365 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last365Views, 'battleplan' ), number_format($last365Views) )."</td></tr>";
 	echo "<tr><td>&nbsp;</td></tr>";
+	
+	/*
 	echo "<tr><td><b><u>Top 10 Most Visited Days</u></b></td><td>&nbsp;</td></tr>";
-
 	$sort = array();
 	foreach($getViews as $k=>$v) {
 		$sort['date'][$k] = $v['date'];
@@ -1615,6 +1619,7 @@ function battleplan_admin_site_stats() {
 		$rank = $x + 1;
 		if ( $dailyViews > 0 ) echo "<tr class='coloration' data-age=".$howOld."><td>&nbsp;#".$rank."&nbsp;&nbsp;&nbsp;<b>".$dailyTime."</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $dailyViews, 'battleplan' ), $dailyViews )."</td></tr>";
 	} 		
+	*/	
 	echo '</table>';
 }
 
@@ -1738,7 +1743,7 @@ function battleplan_admin_trends_stats() {
 	$getViews = readMeta($siteHeader, 'log-views');
 	$getViews = maybe_unserialize( $getViews );
 	
- 	$count = $views = $cutoff = 0;	
+ 	$count = $views = $search = $cutoff = 0;	
 	echo "<table class='trends-weekly'><tr><td><b><u>Weekly</u></b></td><td><b><u>Total</u></b></td><td><b><u>Search</u></b></td></tr>";		
 	for ($x = 0; $x < 1095; $x++) {		
 		$dailyTime = date("M j, Y", strtotime($getViews[$x]['date'])); 
@@ -1748,11 +1753,11 @@ function battleplan_admin_trends_stats() {
 		$views = $views + $dailyViews;	
 		$search = $search + $dailySearch; 
 		if ( $count == 1 ) $end = $dailyTime;
-		if ( $count == 7 ) :
+		if ( $count == 7 && $dailyTime != "Jan 1, 1970" ) :
 			if ( strtotime($end) < strtotime("Mar 23, 2021") ) $search = "";
 		 	echo "<tr class='coloration' data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
+			if ( $views < 1 ) : $cutoff++; if ( $cutoff == 5) : break; endif; endif;
  			$count = $views = $search = 0;	
-			if ( $views < 1 ) : $cutoff++; if ( $dailyTime == "Jan 1, 1970" || $cutoff == 5) : break; endif; endif;
 		endif;	
 	} 		
 	echo "</table>";
@@ -1767,17 +1772,17 @@ function battleplan_admin_trends_stats() {
 		$views = $views + $dailyViews;		
 		$search = $search + $dailySearch;
 		if ( $count == 1 ) $end = $dailyTime;
-		if ( $count == 30 ) :
+		if ( $count == 30 && $dailyTime != "Jan 1, 1970" ) :
 			if ( strtotime($end) < strtotime("Mar 23, 2021") ) $search = "";
 		 	echo "<tr class='coloration' data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
+			if ( $views < 1 ) : $cutoff++; if ( $cutoff == 2) : break; endif; endif;
  			$count = $views = $search = 0;	
-			if ( $views < 1 ) : $cutoff++; if ( $dailyTime == "Jan 1, 1970" || $cutoff == 2) : break; endif; endif;
 		endif;	
 	} 		
 	echo "</table>";
 
 	$count = $views = $search = $cutoff = 0;	
-	echo "<table class='trends-quartlery'><tr><td><b><u>Quarterly</u></b></td><td><b><u>Total</u></b></td><td><b><u>Search</u></b></td></tr>";		
+	echo "<table class='trends-quarterly'><tr><td><b><u>Quarterly</u></b></td><td><b><u>Total</u></b></td><td><b><u>Search</u></b></td></tr>";		
 	for ($x = 0; $x < 1095; $x++) {		
 		$dailyTime = date("M j, Y", strtotime($getViews[$x]['date'])); 
 		$dailyViews = intval($getViews[$x]['views']); 
@@ -1786,11 +1791,11 @@ function battleplan_admin_trends_stats() {
 		$views = $views + $dailyViews;		
 		$search = $search + $dailySearch;
 		if ( $count == 1 ) $end = $dailyTime;
-		if ( $count == 90 ) :
+		if ( $count == 90 && $dailyTime != "Jan 1, 1970" ) :
 			if ( strtotime($end) < strtotime("Mar 23, 2021") ) $search = "";
 		 	echo "<tr class='coloration' data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
- 			$count = $views = 0;	
-			if ( $views < 1 ) : $cutoff++; if ( $dailyTime == "Jan 1, 1970" || $cutoff == 1) : break; endif; endif;
+			if ( $views < 1 ) : $cutoff++; if ( $cutoff == 1) : break; endif; endif;
+			$count = $views = $search = 0;	
 		endif;	
 	} 		
 	echo "</table>";
@@ -1930,8 +1935,7 @@ function battleplan_duplicate_post_as_draft(){
 		wp_die('Post creation failed, could not find original post: ' . $post_id);
 	}
 }
- 
- 
+  
 add_filter( 'post_row_actions', 'battleplan_post_row_actions', 90, 2 );
 add_filter( 'page_row_actions', 'battleplan_post_row_actions', 90, 2 );
 function battleplan_post_row_actions( $actions, $post ) {
@@ -1998,20 +2002,6 @@ function battleplan_clearViewFields() {
 	// clear image views
 	$image_query = new WP_Query( array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>-1 ));
 	if( $image_query->have_posts() ) : while ($image_query->have_posts() ) : $image_query->the_post();
-		deleteMeta( get_the_ID(), 'post-views-now');
-		deleteMeta( get_the_ID(), 'post-views-time');
-		deleteMeta( get_the_ID(), 'post-tease-time');
-		deleteMeta( get_the_ID(), 'post-views-total-all');
-		deleteMeta( get_the_ID(), 'post-views-record');
-		deleteMeta( get_the_ID(), 'post-views-record-date');
-		deleteMeta( get_the_ID(), 'post-views-total-7day');
-		deleteMeta( get_the_ID(), 'post-views-total-30day');
-		deleteMeta( get_the_ID(), 'post-views-total-90day');
-		deleteMeta( get_the_ID(), 'post-views-total-180day');
-		deleteMeta( get_the_ID(), 'post-views-total-365day');
-		for ($x = 0; $x < 31; $x++) {
-			deleteMeta( get_the_ID(), 'post-views-day-'.$x);
-		} 		
 		updateMeta( get_the_ID(), 'log-views-now', strtotime("-1 day"));					
 		updateMeta( get_the_ID(), 'log-views-time', strtotime("-1 day"));		
 		updateMeta( get_the_ID(), 'log-tease-time', strtotime("-1 day"));			
@@ -2030,42 +2020,6 @@ function battleplan_clearViewFields() {
 	foreach ($getCPT as $postType) {
 		$getPosts = new WP_Query( array ('posts_per_page'=>-1, 'post_type'=>$postType ));
 		if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 
-			deleteMeta( get_the_ID(), '_wp_page_template');
-			deleteMeta( get_the_ID(), '_responsive_layout');
-			deleteMeta( get_the_ID(), 'post-bot-names');
-			deleteMeta( get_the_ID(), 'post-bots');
-			deleteMeta( get_the_ID(), 'add-view-fields');
-			deleteMeta( get_the_ID(), 'check-pics-for-views');
-			deleteMeta( get_the_ID(), 'clear-hummingbird-cache');
-			deleteMeta( get_the_ID(), 'last-hummingbird-cache');
-			deleteMeta( get_the_ID(), 'post-views-now');
-			deleteMeta( get_the_ID(), 'post-views-time');
-			deleteMeta( get_the_ID(), 'post-tease-time');
-			deleteMeta( get_the_ID(), 'post-views-total-all');
-			deleteMeta( get_the_ID(), 'post-views-record');
-			deleteMeta( get_the_ID(), 'post-views-record-date');
-			deleteMeta( get_the_ID(), 'post-views-total-7day');
-			deleteMeta( get_the_ID(), 'post-views-total-30day');
-			deleteMeta( get_the_ID(), 'post-views-total-90day');
-			deleteMeta( get_the_ID(), 'post-views-total-180day');
-			deleteMeta( get_the_ID(), 'post-views-total-365day');
-			for ($x = 0; $x < 31; $x++) {
-				deleteMeta( get_the_ID(), 'post-views-day-'.$x);
-			} 		
-			deleteMeta( get_the_ID(), 'site-views-now');
-			deleteMeta( get_the_ID(), 'site-views-time');
-			deleteMeta( get_the_ID(), 'site-tease-time');
-			deleteMeta( get_the_ID(), 'site-views-total-all');
-			deleteMeta( get_the_ID(), 'site-views-record');
-			deleteMeta( get_the_ID(), 'site-views-record-date');
-			deleteMeta( get_the_ID(), 'site-views-total-7day');
-			deleteMeta( get_the_ID(), 'site-views-total-30day');
-			deleteMeta( get_the_ID(), 'site-views-total-90day');
-			deleteMeta( get_the_ID(), 'site-views-total-180day');
-			deleteMeta( get_the_ID(), 'site-views-total-365day');
-			for ($x = 0; $x < 31; $x++) {
-				deleteMeta( get_the_ID(), 'site-views-day-'.$x);
-			} 		
 			updateMeta( get_the_ID(), 'log-views-now', strtotime("-1 day"));			
 			updateMeta( get_the_ID(), 'log-views-time', strtotime("-1 day"));				
 			updateMeta( get_the_ID(), 'log-tease-time', strtotime("-1 day"));			
@@ -2081,42 +2035,9 @@ function battleplan_clearViewFields() {
 		// clear page views
 		$getPosts = new WP_Query( array ('posts_per_page'=>-1, 'post_type'=>'page' ));
 		if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 
-			deleteMeta( get_the_ID(), '_wp_page_template');
-			deleteMeta( get_the_ID(), '_responsive_layout');
-			deleteMeta( get_the_ID(), 'post-bot-names');
-			deleteMeta( get_the_ID(), 'post-bots');
-			deleteMeta( get_the_ID(), 'add-view-fields');
-			deleteMeta( get_the_ID(), 'check-pics-for-views');
-			deleteMeta( get_the_ID(), 'clear-hummingbird-cache');
-			deleteMeta( get_the_ID(), 'last-hummingbird-cache');
-			deleteMeta( get_the_ID(), 'post-views-now');
-			deleteMeta( get_the_ID(), 'post-views-time');
-			deleteMeta( get_the_ID(), 'post-tease-time');
-			deleteMeta( get_the_ID(), 'post-views-total-all');
-			deleteMeta( get_the_ID(), 'post-views-record');
-			deleteMeta( get_the_ID(), 'post-views-record-date');
-			deleteMeta( get_the_ID(), 'post-views-total-7day');
-			deleteMeta( get_the_ID(), 'post-views-total-30day');
-			deleteMeta( get_the_ID(), 'post-views-total-90day');
-			deleteMeta( get_the_ID(), 'post-views-total-180day');
-			deleteMeta( get_the_ID(), 'post-views-total-365day');
-			for ($x = 0; $x < 31; $x++) {
-				deleteMeta( get_the_ID(), 'post-views-day-'.$x);
-			} 		
-			deleteMeta( get_the_ID(), 'site-views-now');
-			deleteMeta( get_the_ID(), 'site-views-time');
-			deleteMeta( get_the_ID(), 'site-tease-time');
-			deleteMeta( get_the_ID(), 'site-views-total-all');
-			deleteMeta( get_the_ID(), 'site-views-record');
-			deleteMeta( get_the_ID(), 'site-views-record-date');
-			deleteMeta( get_the_ID(), 'site-views-total-7day');
-			deleteMeta( get_the_ID(), 'site-views-total-30day');
-			deleteMeta( get_the_ID(), 'site-views-total-90day');
-			deleteMeta( get_the_ID(), 'site-views-total-180day');
-			deleteMeta( get_the_ID(), 'site-views-total-365day');
-			for ($x = 0; $x < 31; $x++) {
-				deleteMeta( get_the_ID(), 'site-views-day-'.$x);
-			} 		
+			updateMeta( get_the_ID(), 'log-views-now', strtotime("-1 day"));			
+			updateMeta( get_the_ID(), 'log-views-time', strtotime("-1 day"));				
+			updateMeta( get_the_ID(), 'log-tease-time', strtotime("-1 day"));			
 			updateMeta( get_the_ID(), 'log-views-today', '0' );		
 			updateMeta( get_the_ID(), 'log-views-total-7day', '0' );		
 			updateMeta( get_the_ID(), 'log-views-total-30day', '0' );
@@ -2193,7 +2114,7 @@ function battleplan_setupGlobalOptions() {
 		$widgetOpts['links'] = 'deactivate';
 		$widgetOpts['fixed'] = 'deactivate';
 		$widgetOpts['columns'] = 'deactivate';
-		$widgetOpts['roles'] = 'deactivate';
+		$widgetOpts['roles'] = 'activate';
 		$widgetOpts['dates'] = 'activate';
 		$widgetOpts['styling'] = 'deactivate';
 		$widgetOpts['animation'] = 'deactivate';

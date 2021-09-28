@@ -1,0 +1,136 @@
+html,
+body {
+	height: 									100%;
+	margin: 									0;
+	padding: 									0;
+}
+
+body {
+	background: 								transparent;
+	min-width: 									0;
+}
+
+#login {
+	width: 										500px;
+	max-width: 									94%;
+	padding: 									5vh 0 0 !important;
+	margin: 									0 auto;
+}
+
+#login h1 {
+	text-align: 								center;
+    background-image: 							url('/wp-content/uploads/logo.png');
+    padding-bottom: 							2vh;
+    width: 										auto;
+	height: 									30vh;
+    background-size: 							contain;	
+	background-position: 						center top;
+	background-repeat: 							no-repeat;
+	margin: 									0 auto;
+	outline: 									0;
+	overflow: 									hidden;
+	display: 									block;
+}
+
+#login h1 a {
+	display: 									none;
+}
+
+.login #pass-strength-result {
+    font-weight: 								600;
+    margin: 									-1px 5px 16px 0;
+    padding: 									6px 5px;
+    text-align: 								center;
+    width: 										100%;
+}
+#pass-strength-result.strong {
+    background-color: 							rgba(0,0,0,0.2);
+    border: 									1px solid rgba(0,0,0,0.9);
+	opacity: 									1;
+}
+
+.login form {
+	margin-top: 								20px;
+	margin-left: 								0;
+	padding: 									10px 25px;
+	overflow: 									hidden;
+	text-align: 								center;
+}
+
+.login form.shake {
+	animation: 									shake 0.2s cubic-bezier(.19,.49,.38,.79) both;
+	animation-iteration-count: 					3;
+	transform: 									translateX(0);
+}
+
+@keyframes shake {
+	25% { transform: translateX(-20px) }
+	75% { transform: translateX(20px) }
+	100% { transform: translateX(0) }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.login form.shake {
+		animation: none;
+		transform: none;
+	}
+}
+
+.login form p {
+	margin: 									1em 0;
+	text-align: 								center !important;
+	font-size: 									95%;
+}
+
+.submit.reset-pass-submit {
+	display: 									flex;
+	gap: 										0.5em 3%;
+}
+
+.submit.reset-pass-submit * {
+	font-size: 									21px;
+	flex: 										1 0 auto;
+}
+
+.login form p#reg_passmail {
+	/*margin-bottom: 								-1em;*/ /*not needed for basic register page*/
+}
+
+.login p.message,
+div#login_error {
+	margin-top: 								3vh !important;
+	text-align: 								center;
+}
+
+.login form label {
+	margin-bottom: 								0.3em;
+}
+
+input[type="text"], input[type="email"], input[type="url"], input[type="password"], input[type="search"], input[type="number"], input[type="tel"], input[type="range"], input[type="date"], input[type="month"], input[type="week"], input[type="time"], input[type="datetime"], input[type="datetime-local"], input[type="color"], textarea, select {
+	border: 									1px solid rgba(0,0,0,0.5);
+}
+
+.login #nav,
+#backtoblog {
+	margin: 									16px 0;
+	text-align: 								center;
+}
+
+#backtoblog {
+	word-break: 								break-word;
+}
+
+p.message.register {
+	text-align: 								center;
+	margin: 									3vh 0 0;
+	font-size: 									30rem;
+	font-weight: 								bold;
+}
+
+button.button-secondary.wp-hide-pw.hide-if-no-js {
+	display: 									none !important;
+}
+
+:focus {
+	outline: 									3px dotted red !important;
+}

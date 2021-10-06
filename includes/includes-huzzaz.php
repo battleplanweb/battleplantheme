@@ -1,12 +1,11 @@
 <?php
-/* Battle Plan Web Design Cue Includes
+/* Battle Plan Web Design Huzzaz Includes
  
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
 # AJAX Functions
 --------------------------------------------------------------*/
-
 
 // Load Huzzaz
 add_shortcode( 'get-huzzaz', 'battleplan_getHuzzaz' );
@@ -28,8 +27,6 @@ function battleplan_getHuzzaz( $atts, $content = null ) {
 	
 	return $buildHuzzaz;
 }
-
-
 
 /*--------------------------------------------------------------
 # AJAX Functions

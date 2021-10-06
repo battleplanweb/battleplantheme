@@ -213,6 +213,29 @@ input[type="number"] {
     color: 										inherit;
 }
 
+.theme-battleplantheme.woocommerce-page .woocommerce-checkout #payment {
+	padding-top: 								2em;
+	padding-bottom: 							2em;
+}
+
+#payment .wc_payment_methods .payment_box {
+	width: 										100% !important;
+	max-width: 									600px !important;
+	margin: 									0 auto !important;
+}
+
+#ppcp-credit-card-gateway-card-number,
+#ppcp-credit-card-gateway-card-expiry,
+#ppcp-credit-card-gateway-card-cvc {
+	margin: 									0 !important;
+	width: 										260px !important;
+}
+
+#ppcp-credit-card-gateway-card-expiry,
+#ppcp-credit-card-gateway-card-cvc {
+	width: 										120px !important;
+}
+
 .theme-battleplantheme.woocommerce-page .woocommerce-error::before, 
 .theme-battleplantheme.woocommerce-page .woocommerce-info::before, 
 .theme-battleplantheme.woocommerce-page .woocommerce-message::before {
@@ -460,11 +483,7 @@ input[type="number"] {
 	text-align:									center;
 }
 
-.theme-battleplantheme.woocommerce-page form .form-row:not(.place-order):not([class*="wc-pao-addon-wrap"]) {
-    margin-top:									1.5em;
-    margin-bottom:								1.5em;
-}
-
+.theme-battleplantheme.woocommerce-page form .form-row:not(.place-order):not([class*="wc-pao-addon-wrap"]),
 .theme-battleplantheme.woocommerce-page form .wc-pao-addon-description {
 	margin-top: 								1em;
 	margin-bottom: 								1em;
@@ -523,8 +542,18 @@ label[for=wc-stripe-new-payment-method] {
 	margin: 									-20px 0 0 13px;
 }
 
-.wc_payment_method label {
-	width:										100%;
+#ppc-button,
+#ppcp-messages,
+.payment_method_ppcp-credit-card-gateway {
+	display: 									block !important;
+	text-align: 								center;
+	margin: 									1.5em 0;
+}
+
+.payment_method_ppcp-gateway,
+#payment_method_ppcp-credit-card-gateway,
+label[for="payment_method_ppcp-credit-card-gateway"] {
+	display: 									none;
 }
 
 #order_review {
@@ -533,12 +562,6 @@ label[for=wc-stripe-new-payment-method] {
 
 #shipping_method label {
 	font-size:									100%;
-}
-
-.theme-battleplantheme.woocommerce-page .wc_payment_method .payment_box {
-	width:										100% !important;
-	max-width:									600px !important;
-	margin:										0 auto !important;
 }
 
 .theme-battleplantheme.woocommerce-page #stripe-payment-data > p:first-of-type,
@@ -568,8 +591,6 @@ label[for=wc-stripe-new-payment-method] {
 }
 
 .woocommerce-account .woocommerce a {
-
-
 	margin-right:								10px;
 }
 
@@ -647,5 +668,9 @@ label[for=wc-stripe-new-payment-method] {
 	h3#ship-to-different-address {
 		text-align:									left;
 		font-size:									18px;
+	}
+	
+	#ppcp-credit-card-gateway-card-number {
+		width: 										220px !important;
 	}
 }

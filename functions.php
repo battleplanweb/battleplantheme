@@ -17,7 +17,7 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '10.0' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '10.1' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -849,7 +849,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 // Display row of logos that slide from left to right 
 add_shortcode( 'get-logo-slider', 'battleplan_getLogoSlider' );
 function battleplan_getLogoSlider($atts, $content = null ) {	
-	$a = shortcode_atts( array( 'num'=>'-1', 'space'=>'10', 'size'=>'full', 'max_w'=>'85', 'tag'=>'featured', 'order_by'=>'rand', 'order'=>'ASC', 'shuffle'=>'false', 'speed'=>'slow', 'delay'=>'0', 'pause'=>'no', 'link'=>'false'), $atts );
+	$a = shortcode_atts( array( 'num'=>'-1', 'space'=>'10', 'size'=>'full', 'max_w'=>'85', 'tag'=>'', 'package'=>'', 'order_by'=>'rand', 'order'=>'ASC', 'shuffle'=>'false', 'speed'=>'slow', 'delay'=>'0', 'pause'=>'no', 'link'=>'false'), $atts );
 	$num = esc_attr($a['num']);			
 	$space = esc_attr($a['space']);			
 	$tag = esc_attr($a['tag']);	
@@ -863,6 +863,7 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 	$link = esc_attr($a['link']);		
 	$size = esc_attr($a['size']);			
 	$maxW = esc_attr($a['max_w']);		
+	$package = esc_attr($a['package']);	
 	
 	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>$num, 'order'=>$order, 'tax_query'=>array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags )));
 
@@ -881,8 +882,8 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 
 	$image_query = new WP_Query($args);		
 	$imageArray = array();
-
-	if( $image_query->have_posts() ) : while ($image_query->have_posts() ) : $image_query->the_post();
+	
+	if ( $image_query->have_posts() ) : while ($image_query->have_posts() ) : $image_query->the_post();
 		$totalNum = $image_query->post_count;
 		$image = wp_get_attachment_image_src( get_the_ID(), $size );
 		$getImage = "";
@@ -891,6 +892,21 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 		if ( $link != "false" ) $getImage .= '</a>';
 		$imageArray[] = '<span>'.$getImage.'</span>';			
 	endwhile; wp_reset_postdata(); endif;	
+	
+	if ( $package == "hvac" ) :
+		$addLogos = array( "amana","american-standard","bryant","carrier","goodman","heil","lennox","rheem","ruud","samsung","trane","york" );		
+		for ( $i=0; $i < count($addLogos); $i++ ) :	
+			$alt = strtolower(str_replace(" ", "-", $addLogos[$i]));
+			$alt = "We service ".ucwords($alt)." air conditioners, heaters and other HVAC equipment.";
+			$imageURL = "../wp-content/themes/battleplantheme/common/hvac-".$addLogos[$i]."/".$addLogos[$i]."-sidebar-logo.png";
+			$imagePath = get_template_directory()."/common/hvac-".$addLogos[$i]."/".$addLogos[$i]."-sidebar-logo.png";			
+			list($width, $height) = getimagesize($imagePath);
+			
+			$getImage = "";
+			$getImage .= '<img class="logo-img '.$package.'-logo-img" loading="lazy" src="'.$imageURL.'" width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" alt="'.$alt.'">';
+			$imageArray[] = '<span>'.$getImage.'</span>';		
+		endfor;
+	endif;
 	
 	if ( $shuffle != "false" ) : shuffle($imageArray); endif;
 	$buildSlider = '<div class="logo-slider" data-speed="'.$speed.'" data-delay="'.$delay.'" data-pause="'.$pause.'" data-maxw="'.$maxW.'" data-spacing="'.$space.'"><div class="logo-row">'.printArray($imageArray).'</div></div>';
@@ -2194,7 +2210,7 @@ if ( !is_admin() && $GLOBALS['pagenow'] !== 'wp-login.php' && !is_plugin_active(
 					})
 				}
 			function loadScripts() {
-				setTimeout(function() { document.querySelectorAll("[data-loading='delay']").forEach(function(elem) { elem.setAttribute("src", elem.getAttribute("data-src")) }) }, 1000);
+				setTimeout(function() { document.querySelectorAll("[data-loading='delay']").forEach(function(elem) { elem.setAttribute("src", elem.getAttribute("data-src")) }) }, 3000);
 			}
 		</script><?php
 	}
@@ -2313,7 +2329,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( "user-message" == $tag->name ) {
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
-		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','relocation checklist','Rony (Steve','и','д','б','й','л','ы','З','у','Я');
+		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','relocation checklist','Rony (Steve', 'Your company Owner','и','д','б','й','л','ы','З','у','Я');
 		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
 		if ( $check == $name ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($badwords as $badword) {
@@ -3090,7 +3106,7 @@ function battleplan_restrictContent( $atts, $content = null ) {
 	} 
 
 	if ( $user_level >= $min_level && $user_level <= $max_level ) : return do_shortcode($content);
-	else: return null;
+	else: return '<div class="restricted"></div>';
 	endif;	
 }
 
@@ -3436,7 +3452,6 @@ function battleplan_buildLockedSection( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'name'=>'', 'style'=>'lock', 'width'=>'edge', 'position'=>'bottom', 'delay'=>'3000', 'show'=>'session', 'background'=>'', 'left'=>'50', 'top'=>'50', 'class'=>'', 'start'=>'', 'end'=>'' ), $atts );
 	$name = strtolower(esc_attr($a['name']));
 	$name = preg_replace("/[\s_]/", "-", $name);
-	$pos = esc_attr($a['position']);
 	$delay = esc_attr($a['delay']);
 	$show = esc_attr($a['show']); 
 	$background = esc_attr($a['background']);
@@ -3446,6 +3461,8 @@ function battleplan_buildLockedSection( $atts, $content = null ) {
 	if ( $width != '' ) $width = " section-".$width;
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
+	$pos = esc_attr($a['position']);
+	$class = " position-".$pos;
 	$style = esc_attr($a['style']);
 	if ( $style != '' ) $style = " style-".$style;
 	if ( $name ) : $name = " id='".$name."'"; else: $name = ""; endif;

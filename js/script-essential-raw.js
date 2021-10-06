@@ -1073,9 +1073,9 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 # Set up pages
 --------------------------------------------------------------*/
 
-// Remove empty elements
-	removeDiv('p:empty, .archive-intro:empty');
-
+// Remove empty & restricted elements
+	removeDiv('p:empty, .archive-intro:empty, div.restricted, div.restricted + ul');
+	
 // Wrap content within .site-main so that widgets can be distributed properly
 	wrapDiv('.site-main','<div class="site-main-inner"></div>', 'inside');	
 
@@ -1195,7 +1195,6 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 
 	window.openSubMenu = function (el, h) {
 		$('#mobile-navigation ul.sub-menu').removeClass("active"); 
-
 		$('#mobile-navigation ul.sub-menu').height(0);
 		$(el).addClass("active"); 
 		$(el).height(h+"px");
@@ -1205,11 +1204,11 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 
 	$('#mobile-navigation ul.sub-menu').each(function() { 
 		var theSub = $(this), getSubH = theSub.outerHeight(true);
-		theSub.data('getH', getSubH );	
-		theSub.parent().click(function() {
-			if ( theSub.hasClass("active")) { closeSubMenu(theSub); } else { openSubMenu(theSub, theSub.data('getH')); }
+		theSub.data('getH', getSubH );			
+		closeSubMenu(theSub); 
+		theSub.parent().click(function() {		
+			if ( !theSub.hasClass("active")) { openSubMenu(theSub, theSub.data('getH'));}
 		}); 
-		closeSubMenu(theSub); 		
 	});	
 
 	$('#mobile-navigation').removeClass("get-sub-heights");
@@ -1367,6 +1366,16 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 					setTimeout( function() { thisLock.addClass("on-screen"); thisLock.focus(); }, initDelay);
 					thisLock.find('.closeBtn').click(function() {
 						thisLock.removeClass("on-screen");
+						setCookie("display-message","no",cookieExpire);
+					});
+				}
+			} else if ( lockPos == "header" ) { 	
+				if ( getCookie("display-message") !== "no" ) {				
+					moveDiv(thisLock,'#masthead','after');
+					moveDiv(thisLock.find('.closeBtn'), '.section-lock.position-header .col-inner', 'top');
+					thisLock.css({ "display":"grid" });
+					thisLock.find('.closeBtn').click(function() {
+						thisLock.css({ "max-height":0, "padding-top":0, "padding-bottom":0, "margin-top":0, "margin-bottom":0 });
 						setCookie("display-message","no",cookieExpire);
 					});
 				}

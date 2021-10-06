@@ -95,7 +95,7 @@ function battleplan_why_choose_us( $atts, $content = null ) {
 	else: $img = "/wp-content/uploads/".$img;
 	endif;
 	
-	return include "wp-content/themes/battleplantheme/pages/page-why-choose-".$brand.".php";
+	return include "wp-content/themes/battleplantheme/elements/element-why-choose-".$brand.".php";
 }		
 	
 /*--------------------------------------------------------------
@@ -415,13 +415,10 @@ function battleplan_getBrandLogo($atts, $content = null) {
 		$brand = strtolower(str_replace(" ", "-", get_option('site_brand')));
 		$name = ucwords($brand);
 	endif;
-	if ( $brand == "york" || $brand == "carrier" || $brand == "amana" ) : $height = 165;
-	elseif ( $brand == "trane" || $brand == "lennox" ) : $height = 116;
-	elseif ( $brand == "ruud" ) : $height = 252;
-	elseif ( $brand == "heil" ) : $height = 139;	
-	else : $height = 75; endif;
-	
-	return '<img class="noFX" loading="lazy" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$alt.'.png" alt="We offer '.$name.' heating and air conditioning products." width="400" height="'.$height.'" style="aspect-ratio:400/'.$height.'" />';
+	$imagePath = get_template_directory().'/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$alt.'.png';			
+	list($width, $height) = getimagesize($imagePath);
+
+	return '<img class="noFX" loading="lazy" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$alt.'.png" alt="We offer '.$name.' heating and air conditioning products." width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
 }
 
 // Add Symptom Checker widget to Sidebar
@@ -445,18 +442,12 @@ function battleplan_getFinancing($atts, $content = null) {
 	$bank = esc_attr($a['bank']);
 	$img = strtolower(str_replace(" ", "-", $bank));
 	$link = esc_attr($a['link']);	
-	$buildFinancing = "";
-	
-	if ( $img == "ftl-finance" ) : $height = 142;
-	elseif ( $img == "arvest-bank" ) : $height = 192;
-	elseif ( $img == "atwood-rentals" ) : $height = 200;
-	elseif ( $img == "enerbank-usa" ) : $height = 80;
-	elseif ( $img == "green-sky" ) : $height = 130;
-	elseif ( $img == "service-finance" ) : $height = 379;
-	else : $height = 160; endif;
+	$buildFinancing = "";	
+	$imagePath = get_template_directory().'/common/financing/'.$img.'.png';			
+	list($width, $height) = getimagesize($imagePath);
 	
 	if ( $link != "" ) $buildFinancing .= '<a href="'.$link.'" title="Click here to apply for financing for AC repair at '.$bank.'">';
-	$buildFinancing .= '<img src="/wp-content/themes/battleplantheme/common/financing/'.$img.'.png" loading="lazy" alt="Apply for financing for your HVAC needs at '.$bank.'" width="320" height="'.$height.'" style="aspect-ratio:320/'.$height.'" />';
+	$buildFinancing .= '<img src="/wp-content/themes/battleplantheme/common/financing/'.$img.'.png" loading="lazy" alt="Apply for financing for your HVAC needs at '.$bank.'" width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
 	if ( $link != "" ) $buildFinancing .= '</a>';
 	
 	return $buildFinancing;

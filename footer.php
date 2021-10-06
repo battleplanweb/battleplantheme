@@ -33,7 +33,7 @@
 					$buildCopyright = "";
 					$buildCopyright .= wp_nav_menu( array( 'theme_location' => 'footer-menu', 'container' => 'div', 'container_id' => 'footer-navigation', 'container_class' => 'secondary-navigation', 'menu_id' => 'footer-menu', 'menu_class' => 'menu secondary-menu', 'fallback_cb' => 'false', 'echo' => false ) );
 					if ( do_shortcode('[get-biz info="misc2"]') ) $buildCopyright .= "<div class='site-info-misc2'>".do_shortcode('[get-biz info="misc2"]')."</div>";						
-					$buildCopyright .= "<div class='site-info-copyright'>".do_shortcode('[get-biz info="copyright"]')." ".do_shortcode('[get-biz info="name"]')." • All Rights Reserved • <a href='/privacy-policy/'>Privacy Policy</a></div><div class='site-info-address'>";
+					$buildCopyright .= "<div class='site-info-copyright'>".do_shortcode('[get-biz info="copyright"]')." ".do_shortcode('[get-biz info="name"]')." • All Rights Reserved<span class='privacy-policy-link'> • <a href='/privacy-policy/'>Privacy Policy</a></span><span class='terms-conditions-link'> • <a href='/terms-conditions/'>Terms & Conditions</a></span></div><div class='site-info-address'>";
 					if ( do_shortcode('[get-biz info="street"]') ) $buildCopyright .= do_shortcode('[get-biz info="street"]')." • ";							
 					if ( do_shortcode('[get-biz info="city"]') ) :
 						$buildCopyright .= do_shortcode('[get-biz info="city"]').", ".do_shortcode('[get-biz info="state-abbr"]')." ".do_shortcode('[get-biz info="zip"]')." • ";

@@ -304,3 +304,12 @@ ul.acf-checkbox-list {
 .post-type-galleries .postbox.yoast {
 	display: 									none;
 }
+
+
+/* Yoast SEO
+--------------------------------------------- */
+#beacon-container,
+#sidebar-container.wpseo_content_cell,
+#yoast_internal_linking {
+	display: 									none !important;
+}

@@ -38,18 +38,6 @@ get_header(); ?>
 					$social = "false";
 					$tags = "false"; // list / button
 					$navigation = "false";	
-		
-			// Optimized
-				elseif ( get_post_type() == "optimized" ) :	
-					$singleHeadline = "";
-					$singleIntro = "";
-					$breadcrumbs = "false";
-					$date = "false";
-					$author = "false";
-					$comments = "false";
-					$social = "false";
-					$tags = "false"; // list / button
-					$navigation = "false";	
 
 			// Default Single
 				else:		

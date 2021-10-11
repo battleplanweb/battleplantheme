@@ -11,13 +11,14 @@
 # Basic Theme Set Up
 # User Roles
 # Chron Jobs
+# Universal Pages
 # Custom Hooks
 # AJAX Functions
 # Grid Set Up
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '10.1' ); }
+if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '10.2' ); }
 if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
 if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
 
@@ -1548,13 +1549,32 @@ function battleplan_registerPostTypes() {
 		'has_archive'=>false,
 		'capability_type'=>'page',
 	));
-
+	register_post_type( 'universal', array (
+		'label'=>__( 'universal', 'battleplan' ),
+		'labels'=>array(
+			'name'=>_x( 'Universal', 'Post Type General Name', 'battleplan' ),
+			'singular_name'=>_x( 'Universal', 'Post Type Singular Name', 'battleplan' ),
+		),
+		'public'=>true,
+		'publicly_queryable'=>true,
+		'exclude_from_search'=>false,
+		'supports'=>array( 'title', 'editor' ),
+		'hierarchical'=>false,
+		'menu_position'=>20,
+		'menu_icon'=>'dashicons-admin-site-alt3', 
+		'has_archive'=>false,
+		'capability_type' => 'page',
+		'capabilities' => array(
+			'create_posts' => false,
+		),
+		'map_meta_cap' => true,
+	));
 }
 
 // Remove 'optimized' from the url so that optimized pages look like regular pages
 add_filter( 'post_type_link', 'battleplan_remove_cpt_slug', 10, 2 );
 function battleplan_remove_cpt_slug( $post_link, $post ) {
-	if ( ('optimized' === $post->post_type || 'elements' === $post->post_type) && 'publish' === $post->post_status ) {
+	if ( 'universal' === $post->post_type || 'optimized' === $post->post_type || 'elements' === $post->post_type ) {
  		$post_link = str_replace( '/' . $post->post_type . '/', '/', $post_link );
  	}
  	return $post_link;
@@ -1565,7 +1585,7 @@ function battleplan_add_cpt_to_main_query( $query ) {
 	if ( !$query->is_main_query() ) return;
 	if ( !isset( $query->query['page'] ) || 2 !== count( $query->query ) ) return;
 	if ( empty( $query->query['name'] ) ) return;
-	$query->set( 'post_type', array( 'post', 'page', 'optimized' ) );
+	$query->set( 'post_type', array( 'post', 'page', 'optimized', 'universal' ) );
 }
 
 /*--------------------------------------------------------------
@@ -2329,7 +2349,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( "user-message" == $tag->name ) {
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
-		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','relocation checklist','Rony (Steve', 'Your company Owner','и','д','б','й','л','ы','З','у','Я');
+		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','и','д','б','й','л','ы','З','у','Я');
 		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
 		if ( $check == $name ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($badwords as $badword) {
@@ -2341,14 +2361,14 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
 	}
     if ( "user-phone" == $tag->name ) {
         $check = isset( $_POST["user-phone"] ) ? trim( $_POST["user-phone"] ) : ''; 
-		$badnumbers = array('89031234567');
+		$badnumbers = array('1234567');
 		foreach($badnumbers as $badnumber) {
 			if (stripos($check,$badnumber) !== false) $result->invalidate( $tag, 'Message cannot be sent.');
 		}
 	}
     if ( "user-email" == $tag->name ) {
         $check = isset( $_POST["user-email"] ) ? trim( $_POST["user-email"] ) : ''; 
-		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz', '@tworld.com', 'garywhi777@gmail.com', 'ronyisthebest16@gmail.com', 'ronythomasrecruiter@gmail.com', '@ideonagency.net','axiarobbie20@gmail.com');
+		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz', '@tworld.com', 'garywhi777@gmail.com', 'ronyisthebest16@gmail.com', 'ronythomas611@gmail.com', 'ronythomasrecruiter@gmail.com', '@ideonagency.net','axiarobbie20@gmail.com');
 		foreach($badwords as $badword) {
 			if (stripos($check,$badword) !== false) $result->invalidate( $tag, 'Message cannot be sent.');
 		}
@@ -2619,7 +2639,7 @@ if ( $currPage == "google" && do_shortcode('[get-biz info="pid"]') != "" ) :
 	exit; 
 endif;
 if ( $currPage == "reviews" ) : 
-	wp_redirect( "/review", 301 ); 
+	wp_redirect( "/review/", 301 ); 
 	exit; 
 endif;
 
@@ -2769,11 +2789,66 @@ function battleplan_doChrons() {
 			update_option( 'auto_update_core_dev', 'enabled' );
 			update_option( 'auto_update_core_minor', 'enabled' );
 			update_option( 'auto_update_core_major', 'enabled' );			
-		
 		endif;
+		
+		// Basic Settings		
+		$sidebars_widgets = get_option( 'sidebars_widgets' );
+     	$sidebars_widgets['wp_inactive_widgets'] = array();
+     	update_option( 'sidebars_widgets', $sidebars_widgets );
+		
+		update_option( 'admin_email', 'info@battleplanwebdesign.com' );
+		update_option( 'admin_email_lifespan', '9999999999999' );
+		update_option( 'default_comment_status', 'closed' );
+		update_option( 'default_ping_status', 'closed' );
+		update_option( 'permalink_structure', '/%postname%/' );
+		update_option( 'wpe-rand-enabled', '1' );
+		
+		delete_option( 'bp_setup_2021_08_15' );
 
 		update_option( 'bp_chrons_last_run', time() );		
 	endif;
+}
+
+/*--------------------------------------------------------------
+# Universal Pages
+--------------------------------------------------------------*/
+add_action('init', 'battleplan_buildUniversalPages');
+function battleplan_buildUniversalPages() {
+	if( is_null(get_page_by_path('customer-care-dealer', OBJECT, 'universal')) && get_option('site_type') == 'hvac' && get_option('site_brand') == 'american standard' ) wp_insert_post( array( 'post_title' => 'Customer Care Dealer', 'post_content' => '[get-universal-page slug="page-hvac-customer-care-dealer"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
+	
+	if( is_null(get_page_by_path('ruud-pro-partner', OBJECT, 'universal')) && get_option('site_type') == 'hvac' && get_option('site_brand') == 'ruud' ) wp_insert_post( array( 'post_title' => 'Ruud Pro Partner', 'post_content' => '[get-universal-page slug="page-hvac-ruud-pro-partner"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
+	
+	if( is_null(get_page_by_path('maintenance-tips', OBJECT, 'universal')) && get_option('site_type') == 'hvac' ) wp_insert_post( array( 'post_title' => 'Maintenance Tips', 'post_content' => '[get-universal-page slug="page-hvac-maintenance-tips"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
+
+	if( is_null(get_page_by_path('symptom-checker', OBJECT, 'universal')) && get_option('site_type') == 'hvac' ) wp_insert_post( array( 'post_title' => 'Symptom Checker', 'post_content' => '[get-universal-page slug="page-hvac-symptom-checker"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
+	
+	if( is_null(get_page_by_path('faq', OBJECT, 'universal')) && get_option('site_type') == 'hvac' ) wp_insert_post( array( 'post_title' => 'FAQ', 'post_content' => '[get-universal-page slug="page-hvac-faq"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
+	
+	if( is_null(get_page_by_path('profile', OBJECT, 'universal')) && get_option('site_type') == 'profile' ) wp_insert_post( array( 'post_title' => 'Profile', 'post_content' => '[get-universal-page slug="page-profile"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
+		
+	if( is_null(get_page_by_path('profile-directory', OBJECT, 'universal')) && get_option('site_type') == 'profile' ) wp_insert_post( array( 'post_title' => 'Profile Directory', 'post_content' => '[get-universal-page slug="page-profile-directory"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
+	
+	if( is_null(get_page_by_path('privacy-policy', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Privacy Policy', 'post_content' => '[get-universal-page slug="page-privacy-policy"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
+	
+	if( is_null(get_page_by_path('terms-conditions', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Terms & Conditions', 'post_content' => '[get-universal-page slug="page-terms-conditions"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
+	
+	if( is_null(get_page_by_path('review', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Review', 'post_content' => '[get-universal-page slug="page-review"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
+}
+
+add_shortcode( 'get-universal-page', 'battleplan_getUniversalPage' );
+function battleplan_getUniversalPage( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'slug'=>'' ), $atts );
+	$slug = esc_attr($a['slug']);
+	return do_shortcode(include get_template_directory().'/pages/'.$slug.'.php');	
+}
+
+// Use page template for optimized & universal pages
+add_filter('single_template', 'battleplan_usePageTemplate', 10, 1 );
+function battleplan_usePageTemplate( $original ) {
+	global $post;
+	$post_type = $post->post_type;
+	if ( $post_type == "optimized" || $post_type == "universal" ) return locate_template('page.php');
+	return $original;
 }
 
 /*--------------------------------------------------------------

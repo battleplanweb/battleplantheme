@@ -432,7 +432,7 @@ function battleplan_getSymptomChecker() {
 // Add Customer Care Dealer widget to Sidebar
 add_shortcode( 'get-customer-care', 'battleplan_getCustomerCare' );
 function battleplan_getCustomerCare() {	
-	return '<a href="/customer-care-dealer/" title="Click here to read more about the American Standard Heating & Cooling Customer Care Dealer program"><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-american-standard/customer-care-dealer-logo-alt.png" loading="lazy" alt="We are proud to be an American Standard Customer Care Dealer" width="320" height="178" style="aspect-ratio:320/178" /></a>';
+	return '<a href="/customer-care-dealer/" title="Click here to read more about the American Standard Heating & Cooling Customer Care Dealer program"><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-american-standard/customer-care-dealer-logo.png" loading="lazy" alt="We are proud to be an American Standard Customer Care Dealer" width="400" height="400" style="aspect-ratio:400/400" /></a>';
 }
 
 // Add Financing widget to Sidebar

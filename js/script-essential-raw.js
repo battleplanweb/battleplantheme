@@ -1380,19 +1380,17 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 					});
 				}
 			} else { 				
-				thisLock.css({"opacity":0}).fadeOut();				
 				if ( buttonActivated == "no" && getCookie("display-message") !== "no" ) {
-					setTimeout(function() { thisLock.css({"opacity":1}).fadeIn(); }, initDelay);
-					thisLock.focus();
+					setTimeout( function() { thisLock.addClass("on-screen"); thisLock.focus(); }, initDelay);
 					thisLock.find('.closeBtn').click(function() {
-						thisLock.fadeOut();
+						thisLock.removeClass("on-screen");
 						setCookie("display-message","no",cookieExpire);
 					});	
 				}
 
 				if ( buttonActivated == "yes" ) {				
 					$('.modal-btn').click(function() {
-						thisLock.css({"opacity":1}).fadeIn();
+						thisLock.addClass("on-screen"); thisLock.focus();
 					});
 					thisLock.find('.closeBtn').click(function() {
 						thisLock.fadeOut();

@@ -162,7 +162,7 @@ td.title .wds-meta-details {
 
 .row-actions {
 	font-size: 									24px;
-	color: 										transparent;
+	color: 										transparent !important;
 	margin-top: 								5px;
 	opacity: 									0;
 	transition: 								all 0.3s ease 0.1s;
@@ -182,6 +182,10 @@ body.ac-wp-media .row-actions {
 
 .row-actions span.view {
 	margin-right: 								-9px;
+}
+
+.row-actions .id {
+	display: 									none;
 }
 
 .plugins .row-actions span {

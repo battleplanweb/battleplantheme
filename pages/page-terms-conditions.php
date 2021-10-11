@@ -12,7 +12,7 @@ $num++;
 $printPage .= '	
 	<p><strong>'.$num.') THE AGREEMENT</strong></p>
 	
-	<p>The use of this website and services on this website provided by <strong>[get-biz info="name"]</strong> (hereinafter referred to as "Company") are subject to the following Terms &amp; Conditions (hereinafter the "Agreement"), all parts and sub-parts of which are specifically incorporated by reference here. This Agreement shall govern the use of all pages on this website (hereinafter collectively referred to as "Website") and any services provided by or on this Website ("Services").</p>';
+	<p>The use of this website and services on this website provided by <strong>[get-biz info="name"]</strong> (the "Company") are subject to the following Terms &amp; Conditions (the "Agreement"), all parts and sub-parts of which are specifically incorporated by reference here. This Agreement shall govern the use of all pages on this website at [get-domain link="true"] (the “Website”) and any services provided by or on the site ("Services").</p>';
 	
 $num++;
 $printPage .= '	

@@ -218,10 +218,20 @@ input[type="number"] {
 	padding-bottom: 							2em;
 }
 
-#payment .wc_payment_methods .payment_box {
+#payment .wc_payment_methods .payment_box,
+#ppcp-messages {
+	display: 									block;
+	text-align: 								center;
 	width: 										100% !important;
 	max-width: 									600px !important;
 	margin: 									0 auto !important;
+}
+
+#ppcp-messages {
+	margin-top: 								60px !important;
+	background: 								#ffc439 /* match PayPal Checkout button */;
+	border-radius: 								3px;
+	padding: 									20px;
 }
 
 #ppcp-credit-card-gateway-card-number,
@@ -435,6 +445,10 @@ input[type="number"] {
 
 /* Checkout Page
 --------------------------------------------- */
+.woocommerce form .form-row .input-checkbox {
+	display: 									inline-block;
+}
+
 .theme-battleplantheme.woocommerce-page table.shop_table,
 .theme-battleplantheme.woocommerce-page table.shop_table td,
 .theme-battleplantheme.woocommerce-page table.shop_table tfoot th,
@@ -542,8 +556,9 @@ label[for=wc-stripe-new-payment-method] {
 	margin: 									-20px 0 0 13px;
 }
 
+
+
 #ppc-button,
-#ppcp-messages,
 .payment_method_ppcp-credit-card-gateway {
 	display: 									block !important;
 	text-align: 								center;

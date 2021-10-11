@@ -46,7 +46,7 @@ function battleplan_add_quicktags() {
 			QTags.addButton( 'bp_expire-content', 'expire', '[expire start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/expire]\n\n', 'expire', 'Expire', 1000 );			
 			QTags.addButton( 'bp_restrict-content', 'restrict', '[restrict max="administrator, any role" min="none, any role"]', '[/restrict]\n\n', 'restrict', 'Restrict', 1000 );	
 			
-			QTags.addButton( 'bp_lock-section', 'lock', '[lock name="becomes id attribute" style="(lock) corresponds to css" width="edge, default, stretch, full, inline" position="bottom, top, modal, header" delay="3000" show="session, never, always, # days" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '[/lock]\n\n', 'lock', 'Lock', 1000 );		
+			QTags.addButton( 'bp_lock-section', 'lock', '[lock name="becomes id attribute" style="(lock) corresponds to css" width="edge, default, stretch, full, inline" position="bottom, top, modal, header" delay="3000" show="session, never, always, # days" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n [layout]\n\n', ' [/layout]\n[/lock]\n\n', 'lock', 'Lock', 1000 );		
 			QTags.addButton( 'bp_images_side-by-side', 'side by side images', '[side-by-side img="ids" size="half-s, third-s, full" align="center, left, right" full="id" pos="bottom, top"]', '', 'side by side images', 'Side By Side Images', 1000 );			
 			QTags.addButton( 'bp_random-image', 'random image', '   [get-random-image id="" tag="random" size="thumbnail, third-s" link="no, yes" number="1" offset="" align="left, right, center" order_by="recent, rand, menu_order, title, id, post_date, modified, views" order="asc, desc" shuffle="no, yes"]\n', '', 'random image', 'Random Image', 1000 );
 			QTags.addButton( 'bp_random-post', 'random post', '   [get-random-posts num="1" offset="0" leeway="0" type="post" tax="" terms="" orderby="recent, rand, views-today, views-7day, views-30day, views-90day, views-180day, views-365day, views-all" sort="asc, desc" count_tease="true, false" count_view="true, false" thumb_only="false, true" thumb_col="1, 2, 3, 4" show_title="true, false" title_pos="outside, inside" show_date="false, true" show_author="false, true" show_excerpt="true, false" show_social="false, true" show_btn="true, false" button="Read More" btn_pos="inside, outside" thumbnail="force, false" link="post, false, cf-field_name, /link-destination/" start="" end="" exclude="" x_current="true, false" size="thumbnail, size-third-s" pic_size="1/3" text_size=""]\n', '', 'random post', 'Random Post', 1000 );
@@ -2135,62 +2135,6 @@ function battleplan_setupGlobalOptions() {
 	endif;	
 		
 	if ( is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') && get_option( 'bp_setup_yoast_initial' ) != 'completed' ) :
-		delete_option( 'smush-directory-path-hash-updated' );		
-		delete_option( 'wp-smush-settings' );		
-		delete_option( 'skip-smush-setup' );		
-		delete_option( 'wp-smush-cdn_status' );		
-		delete_option( 'wp-smush-last_run_sync' );		
-		delete_option( 'wp-smush-lazy_load' );		
-		delete_option( 'wp-smush-show_upgrade_modal' );			
-		delete_option( 'bp_setup_smush_pro_initial' );			
-		for ($x = 0; $x <= 4000; $x++) {
-			delete_option( 'smush-in-progress-'.$x );		
-		} 		
-		delete_option( 'wr2x_auto_generate' );
-		delete_option( 'wr2x_full_size' );
-		delete_option( 'wr2x_method' );
-		delete_option( 'wr2x_quality' );
-		delete_option( 'wr2x_regenerate_thumbnails' );
-		delete_option( 'wr2x_disable_responsive' );
-		delete_option( 'wr2x_cdn_domain' );
-		delete_option( 'wr2x_over_http_check' );
-		delete_option( 'wr2x_debug' );
-		delete_option( 'wr2x_form_2020' );
-		delete_option( 'wr2x_retina_sizes' );
-		delete_option( 'wr2x_disabled_sizes' );
-		delete_option( 'wr2x_version_6_0_0' );
-		delete_option( 'wr2x_notice_easyio' );
-		delete_option( 'wpmudev_apikey' );
-		delete_option( 'wds-sitemap-ignore_urls' );
-		delete_option( 'wds-sitemap-ignore_post_ids' );
-		delete_option( 'wds-model-service-checkup-last' );
-		delete_option( 'wds-model-service-checkup-progress' );
-		delete_option( 'wds-model-service-seo-service-last_runtime 	' );
-		delete_option( 'wds-model-service-seo-progress' );
-		delete_option( 'wds_sitemap_options' );
-		delete_option( 'wds_autolinks_options' );
-		delete_option( 'wds_settings_options' );
-		delete_option( 'wds_taxonomy_meta' );
-		delete_option( 'wds_onpage_options' );
-		delete_option( 'wds_social_options' );
-		delete_option( 'wds-onboarding-done' );
-		delete_option( 'wds_checkup_options' );
-		delete_option( 'wds_engine_notification' );
-		delete_option( 'wds_sitemap_dashboard' );
-		delete_option( 'wds-sitemap-extras' );
-		delete_option( 'wds-redirections' );
-		delete_option( 'wds-redirections-types' );
-		delete_option( 'wds-sitemap-rewrite-rules-flushed' );
-		delete_option( 'wds-checkup-ignores' );
-		delete_option( 'wds_schema_options' );
-		delete_option( 'wds_lighthouse_options' );
-		delete_option( 'wds_health_options' );
-		delete_option( 'wds_version' );
-		delete_option( 'wds-model-service-checkup-result' );			
-		
-		delete_option( 'bp_setup_smartcrawl_initial' );
-		delete_option( 'bp_setup_smush_pro_initial' );	
-		
 		$wpSEOSettings = get_option( 'wpseo_titles' );		
 		$wpSEOSettings['separator'] = 'sc-pipe';
 		$wpSEOSettings['title-home-wpseo'] = '%%page%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';
@@ -2270,90 +2214,6 @@ function battleplan_setupGlobalOptions() {
 		
 		update_option( 'bp_setup_yoast_initial', 'completed' );
 	endif;
-
-	if ( get_option( 'bp_setup_2021_08_15' ) != 'completed' ) :
-		update_option( 'admin_email', 'info@battleplanwebdesign.com' );
-		update_option( 'admin_email_lifespan', '9999999999999' );
-		update_option( 'default_comment_status', 'closed' );
-		update_option( 'default_ping_status', 'closed' );
-		update_option( 'permalink_structure', '/%postname%/' );
-		update_option( 'wpe-rand-enabled', '1' );
-		update_option( 'recently_activated', '' );
-		update_option( 'recently_edited', '' );
-		
-		$parts = explode('.', parse_url(esc_url(get_site_url()), PHP_URL_HOST));
-		update_option( 'wp-smush-dir_path', '/nas/content/live/'.$parts[1].'/wp-content' );
-
-		delete_option( 'nearbynow_options' );
-		delete_option( 'theme_mods_responsive' );
-		delete_option( 'theme_mods_responsive-child' );
-		delete_option( 'responsive_theme_options' );
-		delete_option( 'responsive_install' );
-		delete_option( 'theme_mods_website-go-3' );
-		delete_option( 'theme_mods_website-go-4' );
-		delete_option( 'whatthefile-install-date' );
-		delete_option( 'duplicate_post_blacklist' );
-		delete_option( 'duplicate_post_copyattachments' );
-		delete_option( 'duplicate_post_copyauthor' );
-		delete_option( 'duplicate_post_copychildren' );
-		delete_option( 'duplicate_post_copycomments' );
-		delete_option( 'duplicate_post_copycontent' );
-		delete_option( 'duplicate_post_copydate' );
-		delete_option( 'duplicate_post_copyexcerpt' );
-		delete_option( 'duplicate_post_copyformat' );
-		delete_option( 'duplicate_post_copymenuorder' );
-		delete_option( 'duplicate_post_copypassword' );
-		delete_option( 'duplicate_post_copyslug' );
-		delete_option( 'duplicate_post_copystatus' );
-		delete_option( 'duplicate_post_copytemplate' );
-		delete_option( 'duplicate_post_copythumbnail' );
-		delete_option( 'duplicate_post_copytitle' );
-		delete_option( 'duplicate_post_increase_menu_order_by' );
-		delete_option( 'duplicate_post_roles' );
-		delete_option( 'duplicate_post_show_adminbar' );
-		delete_option( 'duplicate_post_show_bulkactions' );
-		delete_option( 'duplicate_post_show_notice' );
-		delete_option( 'duplicate_post_show_original_column' );
-		delete_option( 'duplicate_post_show_original_in_post_states' );
-		delete_option( 'duplicate_post_show_original_meta_box' );
-		delete_option( 'duplicate_post_show_row' );
-		delete_option( 'duplicate_post_show_submitbox' );
-		delete_option( 'duplicate_post_taxonomies_blacklist' );
-		delete_option( 'duplicate_post_title_prefix' );
-		delete_option( 'duplicate_post_title_suffix' );
-		delete_option( 'duplicate_post_types_enabled' );
-		delete_option( 'duplicate_post_version' );
-		
-		delete_option( 'seed_cspv5_settings_content' );
-		delete_option( 'seed_cspv5_token' );
-		delete_option( 'seed_cspv5_version' );
-		delete_option( 'seed_cspv5_coming_soon_page_id' );
-		delete_option( 'seed_cspv5_api_message' );
-		delete_option( 'seed_cspv5_api_nag' );
-		delete_option( 'seed_cspv5_per' );
-
-		delete_option( 'elfsight_instalink_widgets_clogged' );
-		delete_option( 'elfsight_instalink_last_check_datetime' );
-		delete_option( 'elfsight_instagram_feed_widget_hash' );
-		delete_option( 'widget_elfsight-instagram-feed' );
-		delete_option( 'elfsight_instagram_feed_widgets_clogged' );
-		delete_option( 'elfsight_instagram_feed_last_upgraded_at' );
-		
-		delete_option( 'bp_setup_2021_03_03' );
-		delete_option( 'bp_setup_2021_03_07' );
-		delete_option( 'bp_setup_2021_03_08' );		
-		delete_option( 'bp_setup_2021_08_11' );		
-		delete_option( 'bp_setup_2021_08_11b' );		
-		delete_option( 'bp_setup_2021_08_11c' );				
-		delete_option( 'bp_setup_2021_08_11d' );		
-		delete_option( 'bp_setup_widget_options_2021_08_11' );	
-		
-		$sidebars_widgets = get_option( 'sidebars_widgets' );
-     	$sidebars_widgets['wp_inactive_widgets'] = array();
-     	update_option( 'sidebars_widgets', $sidebars_widgets );
-		
-		update_option( 'bp_setup_2021_08_15', 'completed' );
-	endif;	
 	
 	//$smartCrawl = get_option( 'ari_fancy_lightbox_settings' );
 	//print_r($smartCrawl);		

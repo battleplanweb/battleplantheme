@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 10.2
+Version: 10.3
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -338,6 +338,8 @@ body.using-mouse *.tab-focus,
 body.using-mouse .block-accordion.tab-focus {
 	outline:									2px dotted red !important;
 }
+
+
 
 
 
@@ -1965,6 +1967,11 @@ section.section .flex.nested .flex {
 	padding:									2em;
 }
 
+div[class*="restrict-"] {
+	margin-top: 								1em;
+	margin-bottom: 								1.5em;
+}
+
 /* Widgets
 --------------------------------------------- */
 .widget {
@@ -2689,6 +2696,7 @@ section.section .flex.nested .flex {
 
 .top-push #page, 
 .top-push .top-strip.stuck  {
+
 	transition: 								all 0.2s linear;
 }
 
@@ -3440,6 +3448,10 @@ ul.side-by-side img {
 .coupon	{
 	background:									#ffffff;
 	border:										2px dashed #000000;
+}
+
+.coupon .coupon-inner {
+	background:									rgba(255,255,255,0);
 	padding:									1.5em;
 }
 
@@ -4207,6 +4219,9 @@ iframe#podium-modal {
 
 #wrapper-bottom .logo-slider img.logo-img {
 	border: 									none;
+	box-shadow: 								none;
+	filter: 									none;
+	background: 								none;
 }
 
 #wrapper-bottom .logo-slider img.hvac-logo-img {
@@ -4516,6 +4531,7 @@ iframe#podium-modal {
 		flex-flow:									row wrap;
 		gap:										2.5em 3%;
 		justify-content:							space-evenly;
+		align-items: 								center;
 	}
 	
 	.widget {
@@ -4528,10 +4544,19 @@ iframe#podium-modal {
 }
 
 /* 2: Phones (landscape) + Tablets (portrait) */
-@media (max-width: 860px) {		
+@media (max-width: 860px) {	
+	.section-edge h1,
+	.section-edge h2,
+	.section-edge h3,
+	.section-edge h4,
+	.section-edge h5 {
+		padding-left: 								3%;
+		padding-right: 								3%;
+	}	
+	
 	.ribbon {
-		width: 										calc(100% + 82px);
-		margin-left: 								-41px;
+		width: 										calc(100% + 64px); /* changed from 82px MCM 10/19/21 */
+		margin-left: 								-32px; /* changed from -41px MCM 10/19/21 */
 	}
 	
 	/* Responsiveness */

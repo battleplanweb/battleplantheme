@@ -1,8 +1,6 @@
 <?php
 /* Battle Plan Web Design - User Profile Page */
 
-if ( !is_user_logged_in() ) return get_option('site_login')['restricted_text'];
-
 $profileVar = do_shortcode('[get-url-var var="user"]');
 $profileID = do_shortcode('[get-user user="'.$profileVar.'" info="id"]');
 $currUserID = wp_get_current_user()->ID;
@@ -78,8 +76,11 @@ else :
 	$printPage .= '<div class="profile-social">'.$profileEmailBtn.$profileFacebookBtn.$profileTwitterBtn.$profileInstagramBtn.$profileLinkedInBtn.$profilePinterestBtn.$profileYouTubeBtn.'</div>';
 	$printPage .= '[/txt][/col]';
 endif;
-
 $printPage .= '[/section]';
 	
-return $printPage;	
+$restrictedMsg = '<h1>Log In</h1><h3>To Access Profile Pages</h3>'.do_shortcode('[get-login]');
+$restrictCode = do_shortcode('[restrict max="none"]'.$restrictedMsg.'[/restrict]');	
+$pageCode = do_shortcode('[restrict max="administrator" min="member"]'.$printPage.'[/restrict]');	
+
+return $restrictCode.$pageCode;
 ?>

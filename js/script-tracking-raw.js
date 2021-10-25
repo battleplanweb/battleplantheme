@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 # Tracking code
 --------------------------------------------------------------*/
 
-	var siteLat = site_options.lat, siteLong = site_options.long, siteRadius = site_options.radius, timezone, userValid = "false", userLoc, userRefer, pageViews = $("body").attr("data-pageviews"), uniqueID=$("body").attr("data-unique-id"); 		
+	var siteLat = site_options.lat, siteLong = site_options.long, siteRadius = site_options.radius, timezone, userValid = "false", userLoc, userRefer, pageViews = $("body").attr("data-pageviews"), uniqueID=$("body").attr("data-unique-id"), ajaxURL = 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php'; 		
 		
 	if ( siteRadius == "default" ) { siteRadius = 100; }	
 	if ( siteLong > 0 ) { siteLong = -siteLong; }
@@ -13,9 +13,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	$(window).on( 'load', function() {
 	
 	// Calculate load time for page		
-		var endTime = Date.now(); 	
-		var loadTime = ((endTime - startTime) / 1000).toFixed(1);	
-		var deviceTime = "desktop";
+		var endTime = Date.now(), loadTime = ((endTime - startTime) / 1000).toFixed(1), deviceTime = "desktop";
 		if ( getDeviceW() <= getMobileCutoff() ) { deviceTime = "mobile"; }	
 				
 	// Wait 1 second before calling the following functions 
@@ -40,13 +38,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		// Count page view 
 			var postID = $('body').attr('id');
 			$.post({
-				url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
+				url : ajaxURL,
 				data : { action: "count_post_views", id: postID, timezone: timezone, userValid: userValid, userLoc: userLoc, pagesViewed: pageViews, uniqueID: uniqueID },
 				success: function( response ) { console.log(response); } 
 			});	
+			
 		// Count site view 
 			$.post({
-				url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
+				url : ajaxURL,
 				data : { action: "count_site_views", timezone: timezone, userValid: userValid, userLoc: userLoc, userRefer: userRefer },
 				success: function( response ) { console.log(response); } 
 			});	
@@ -54,7 +53,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			// Log page load speed
 			if ( loadTime > 0.1 && loadTime < 10.0 ) { 				
 				$.post({
-					url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
+					url : ajaxURL,
 					data : { action: "log_page_load_speed", id: postID, timezone: timezone, userValid: userValid, loadTime: loadTime, deviceTime: deviceTime, userLoc: userLoc },
 					success: function( response ) { console.log(response); } 
 				});	
@@ -67,14 +66,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				var countView = $(this.element).attr('data-count-view');
 				if ( countTease == "true" ) {
 					$.post({
-						url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
+						url : ajaxURL,
 						data : { action: "count_teaser_views", id: theID, timezone: timezone, userValid: userValid, userLoc: userLoc },
 						success: function( response ) { console.log(response); } 
 					});		
 				}
 				if ( countView == "true" ) {
 					$.post({
-						url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
+						url : ajaxURL,
 						data : { action: "count_post_views", id: theID, timezone: timezone, userValid: userValid, userLoc: userLoc },
 						success: function( response ) { console.log(response); } 
 					});		

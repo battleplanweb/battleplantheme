@@ -21,30 +21,15 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	
 	if ( $("#mobile-menu-bar").is(":visible") ) { mobileMenuBarH = $("#mobile-menu-bar").outerHeight();	}
 	
-// Add Post ID as an ID attribute on body tag	
-	var postID = "noID";    
-	$.each($('body').attr('class').split(' '), function (index, className) { 
-		if (className.indexOf('postid-') === 0) { postID = className.substr(7); }
-		else if (className.indexOf('page-id-') === 0) { postID = className.substr(8); }
-	});	
-	$('body').attr('id',postID);
-
-// Add page slug as class to body
-	var slug = window.location.pathname;
-	slug = slug.substr(1).slice(0, -1).replace("/", "-");		
-	if ( slug ) { slug = "slug-"+slug; } else { slug = "slug-home"; }
-	$('body').addClass(slug);
-	
 // Is user on an Apple device?
 	window.isApple = function () {
-		var iOS = !!navigator.platform && /iPad|iPhone|iPod/.test(navigator.platform);
-		return iOS;		
+		return !!navigator.platform && /iPad|iPhone|iPod/.test(navigator.platform);
 	};	
 	
-// Get domain of current webpage
-	window.getDomain = function () {
-		return window.location.hostname;
-	};		
+// Get domain of current webpage  - deprecated 10/22/21
+//	window.getDomain = function () {
+//		return window.location.hostname;
+//	};		
 	
 // Get "slug" of current webpage
 	window.getSlug = function () {
@@ -53,28 +38,25 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	};	
 
 // Get variable from page's URL
-	window.getUrlVar = function (key) {
+	window.getUrlVar = function(key) {
 		key = key || "page";
 		var results = new RegExp('[\?&]' + key + '=([^&#]*)').exec(window.location.href);
 		if (results == null) { return null; }
 		return decodeURI(results[1]) || 0;
 	};
+	
+// Map spacebar or enter key press to mouse button click
+	window.keyPress = function(trigger) {
+		$(trigger).keyup(function(event) { if (event.keyCode === 13 || event.keyCode === 32) { $(trigger).click(); } });
+	};		
 
 // Set up Logo to link to home page	
-	$('.logo').keyup(function(event) {
-		if (event.keyCode === 13 || event.keyCode === 32) {
-			$(this).click();
-		}
-	});
+	keyPress('.logo');
 	$('.logo').attr('tabindex','0').attr('role','button').attr('aria-label','Return to Home Page').css('cursor', 'pointer').click(function() { window.location = "/"; });
 	$('.logo img').attr('aria-hidden', 'true');
 	
 	window.linkHome = function (container) {
-		$(container).keyup(function(event) {
-			if (event.keyCode === 13 || event.keyCode === 32) {
-				$(this).click();
-			}
-		});
+		keyPress(container);
 		$(container).attr('tabindex','0').attr('role','button').attr('aria-label','Return to Home Page').css('cursor', 'pointer').click(function() { window.location = "/"; });
 		$(container).find('img').attr('aria-hidden', 'true');
 	};		
@@ -112,36 +94,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	};		
 	window.deleteCookie = function(cname) {
 		setCookie(cname,"",-1);
-	};	
-
-// Check if this is a visitor's first page to view & add .first-page class to trigger special CSS
-	if ( !getCookie('first-page') ) { 
-		setCookie('first-page', 'no'); 
-		$("body").addClass("first-page"); 		
-	} else { 
-		$("body").addClass("not-first-page"); 
-	}
+	};
 	
-// Calculate how many pages user has viewed (exclude page refresh)
-	if ( !getCookie('pages-viewed') ) { 
-		uniqueID = Number(Date.now() + Math.floor(Math.random() * 100));		
-		setCookie('unique-id', uniqueID); 
-		$("body").attr("data-unique-id", uniqueID); 
-		$("body").attr("data-pageviews", 1); 
-		setCookie('pages-viewed', 1); 
-	} else { 
-		pageViews = Number(getCookie('pages-viewed'));
-		if ( getCookie('prev-page') != getSlug() ) {
-			pageViews++;
-			setCookie('pages-viewed', pageViews); 		
-			setCookie('prev-page', getSlug()); 
-		}
-		$("body").attr("data-pageviews", pageViews); 
-		$("body").attr("data-unique-id", getCookie('unique-id')); 
-	}
-
 // Extend .hasClass to .hasPartialClass
-	$.fn.hasPartialClass = function(partial){
+	$.fn.hasPartialClass = function(partial) {
 		return new RegExp(partial).test(this.prop('class')); 
 	};
 
@@ -220,64 +176,33 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		}
 	};	
 
-// Truncate long testimonial text
-	window.trimText = function (length, container) {
-		if (trimText.done) return;
-		length = length || 250;
-		container = container || ".slider-testimonials .testimonials-quote, #secondary .testimonials-quote, .random-post .testimonials-quote";
-		
-		$(container).each(function() { 
-			var theText = $(this).html(), maxLength = length, trimText = theText.substr(0, maxLength);
-			if ( trimText.length == maxLength ) {
-				trimText = trimText.substr(0, Math.min(trimText.length, trimText.lastIndexOf(" ")));
-				$(this).html(trimText  + "…" );
-			}
-		});
-		trimText.done = true; 		
-	};
-
-// Remove sidebar from specific pages
-	window.removeSidebar = function(page) {	
-		var test1 = page.replace(".", ""), test2 = "slug-"+page.replace(/\//g, "");
-		if ( $('body').hasClass(test1) || $('body').hasClass(test2) ) { 
-			$('body').removeClass('sidebar-right').removeClass('sidebar-left').addClass('sidebar-none'); 
-			removeDiv('#secondary');
-		} 
-	};
- 
 // Create faux div for sticky elements pulled out of document flow	
 	window.addStuck = function (element, faux) {
 		faux = faux || "true";	
-		var fauxElement = element.split(" ").pop();
 		if ( $(element).is(":visible") ) {						
 			$(element).addClass("stuck");	
-			if ( faux == "true" ) { addFaux(fauxElement); }
+			if ( faux == "true" ) { addFaux(element.split(" ").pop()); }
 		}
 	};
 
 	window.removeStuck = function (element, faux) {
 		faux = faux || "true";
-		var fauxElement = element.split(" ").pop();
 		$(element).removeClass("stuck");
-		if ( faux == "true" ) { removeFaux(fauxElement); }
+		if ( faux == "true" ) { removeFaux(element.split(" ").pop()); }
 	};
 
 	window.addFaux = function (element, fixedAtLoad) {
 		fixedAtLoad = fixedAtLoad || "false";
 		var theEl = $(element);
-		var elementName = element.substr(1);		
 		if ( theEl.is(":visible") ) {		
-			$( "<div class='"+elementName+"-faux'></div>" ).insertBefore( theEl );
-			var theFaux = $("."+elementName+"-faux");
-			theFaux.css({ "height":theEl.outerHeight()+"px" });
+			$( "<div class='"+element.substr(1)+"-faux'></div>" ).insertBefore( theEl );
+			$("."+element.substr(1)+"-faux").css({ "height":theEl.outerHeight()+"px" });
 			if ( fixedAtLoad == "true" ) { theEl.css({ "position":"fixed" }); }
 		}
 	};
 
 	window.removeFaux = function (element) {
-		var elementName = element.substr(1);
-		var theFaux = $("."+elementName+"-faux");
-		theFaux.remove();
+		$("."+element.substr(1)+"-faux").remove();
 	};
 
 // Stick an element to top of screen
@@ -312,16 +237,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$(container).css("top","unset");
 
 		trigger.waypoint(function(direction) {		
-			var newTop = 0;
+			var newTop = mobileMenuBarH;
 			if ( strictTop === "" ) {
 				$('.stuck').each(function() {
 					newTop = newTop + $(this).outerHeight(true);
 				});		
 			} else {
-				newTop = Number(strictTop);
+				newTop = newTop + Number(strictTop);
 			}
-
-			newTop = newTop + mobileMenuBarH;
 
 			if (direction === 'down' && ( whichWay === 'both' || whichWay === 'down' )) {			
 				addStuck(container, faux);
@@ -465,15 +388,11 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$( '.block-accordion.start-active .accordion-excerpt' ).animate({ height: "toggle", opacity: "toggle" }, 0);					
 		$( '.block-accordion.start-active .accordion-content' ).animate({ height: "toggle", opacity: "toggle" }, 0);
 
-		$(".block-accordion").keyup(function(event) {
-			if (event.keyCode === 13 || event.keyCode === 32) {
-				$(this).click();
-			}
-		});
+		keyPress('.block-accordion');
  
 		$(".block-accordion .accordion-title").click(function(e) {		
 			e.preventDefault();
-			var thisBtn = $(this), locAcc = thisBtn.closest('.block-accordion'), locIndex = locAcc.index('.block-accordion'), locPos = accPos[locIndex], topPos = accPos[0], moveTo = 0, btnText=thisBtn.attr('data-text'), btnCollapse=thisBtn.attr('data-collapse');	
+			var thisBtn = $(this), locAcc = thisBtn.closest('.block-accordion'), locPos = accPos[locAcc.index('.block-accordion')], topPos = accPos[0], moveTo = 0, btnCollapse=thisBtn.attr('data-collapse');	
 			
 			if ( !locAcc.hasClass("active") ) {
 				setTimeout( function () {
@@ -503,7 +422,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				setTimeout( function () {
 					$( '.block-accordion.active .accordion-excerpt' ).animate({ height: "toggle", opacity: "toggle" }, transSpeed);					
 					$( '.block-accordion.active .accordion-content' ).animate({ height: "toggle", opacity: "toggle" }, transSpeed);
-					if ( btnCollapse != "false" ) { thisBtn.text(btnText); } 
+					if ( btnCollapse != "false" ) { thisBtn.text(thisBtn.attr('data-text')); } 
 				}, closeDelay);	
 				setTimeout( function() {						
 					$(".block-accordion.active").removeClass('active').attr( 'aria-expanded', false );
@@ -515,8 +434,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	
 // Duplicate menu button text onto the button BG
 	$( ".main-navigation ul.main-menu li > a").each(function() { 
-		var btnText = $(this).html();			
-		$(this).parent().attr('data-content', btnText);
+		$(this).parent().attr('data-content', $(this).html());
 	});
 
 // Set up Logo Slider
@@ -553,9 +471,9 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				if ( logoW < checkW ) { logoW = checkW; }
 				logoRow.css('width', logoW); 
 				
-				if ( speed == "slow" ) { speed = logoW * 3;
-				} else if ( speed == "fast" ) { speed = logoW * 1.5;
-				} else { speed = logoW * (parseInt(speed)); }
+				if ( speed == "slow" ) { speed = logoW * 3; } 
+				else if ( speed == "fast" ) { speed = logoW * 1.5; } 
+				else { speed = logoW * (parseInt(speed)); }
 				
 				time = speed + delay + 15;
 				
@@ -568,8 +486,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 						secondLogo = logoRow.find('span:nth-of-type(2)');
 						secondPos = secondLogo.position().left;	
 						containerW = firstLogo.width() + secondPos - firstPos; 	
-						
-						console.log (time);
 						
 						logoRow.animate({ 'margin-left': -containerW+'px'}, speed, easing, function() {
 							firstLogo.remove();
@@ -613,10 +529,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	});		
 		
 	// Tabbed Content - control changing and animation of tabbed content
-	$("ul.tabs li").keyup(function(event) {
-		var thisBtn = $(this);
-		if (event.keyCode === 13 || event.keyCode === 32) { thisBtn.click(); }
-	});		
+	keyPress('ul.tabs li');
 	$('ul.tabs li').click(function() {
 		var tab_id = $(this).attr('data-tab');
 		var fadeSpeed = 150;
@@ -653,17 +566,13 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	window.btnRevealDiv = function(button, container, topSpacer, initSpeed) {	
 		initSpeed = initSpeed || 0;
 		topSpacer = topSpacer || 0;
-		var origDisplay = $( container ).css( "display" );
+		topSpacer = topSpacer + mobileMenuBarH;	
+		var origDisplay = $(container).css( "display" );		
 
-		if ( getDeviceW() < mobileCutoff ) { 
-			topSpacer = topSpacer + $("#mobile-menu-bar").outerHeight();	
-		}			
-
-		$( container ).css( "display","none");	
-		$( button ).click(function(){
-			$( container ).css( "display",origDisplay);
-			var target = container;
-			animateScroll(target, topSpacer, initSpeed);
+		$(container).css( "display","none");	
+		$(button).click(function(){
+			$(container).css( "display",origDisplay);
+			animateScroll(container, topSpacer, initSpeed);
 		});
 	};
 	
@@ -682,8 +591,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 --------------------------------------------------------------*/
 
 // Replace one class with another
-	$.fn.replaceClass = function (pFromClass, pToClass) {
-		return this.removeClass(pFromClass).addClass(pToClass);
+	$.fn.replaceClass = function (remove, add) {
+		return this.removeClass(remove).addClass(add);
 	};
 
 // Randomly select from a group of elements
@@ -692,30 +601,28 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 // Clone div and move the copy to new location
 	window.cloneDiv = function (moveThis, anchor, where) {
 		where = where || "after";
-		var thisDiv = $(moveThis), thisAnchor = $(anchor);
 		if ( where == "after" ) {
-			thisDiv.clone().insertAfter( thisAnchor );
+			$(moveThis).clone().insertAfter($(anchor));
 		} else if ( where == "before" ) {
-			thisDiv.clone().insertBefore( thisAnchor );
+			$(moveThis).clone().insertBefore($(anchor));
 		} else if ( where == "top" || "start" ) {
-			thisAnchor.prepend(thisDiv.clone());
+			$(anchor).prepend($(moveThis).clone());
 		} else {
-			thisAnchor.append(thisDiv.clone());
+			$(anchor).append($(moveThis).clone());
 		}
 	};	
 
 // Move a single div to another location
 	window.moveDiv = function (moveThis, anchor, where) {
 		where = where || "after";
-		var thisDiv = $(moveThis), thisAnchor = $(anchor);
 		if ( where == "after" ) {
-			thisDiv.insertAfter( thisAnchor );
+			$(moveThis).insertAfter($(anchor));
 		} else if ( where == "before" ) {
-			thisDiv.insertBefore( thisAnchor );
+			$(moveThis).insertBefore($(anchor));
 		} else if ( where == "top" || "start" ) {
-			thisAnchor.prepend(thisDiv);
+			$(anchor).prepend($(moveThis));
 		} else {
-			thisAnchor.append(thisDiv);
+			$(anchor).append($(moveThis));
 		}
 	};
 
@@ -740,13 +647,12 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	window.addDiv = function (target, newDiv, where) {
 		newDiv = newDiv || "<div></div>";
 		where = where || "after";
-		var addDiv = $(newDiv), currDiv = $(target);
 		if ( where == "after" ) {
-			currDiv.append( addDiv );
+			$(target).append($(newDiv));
 		} else if ( where == "before" ) {
-			currDiv.prepend( addDiv );
+			$(target).prepend($(newDiv));
 		} else {
-			addDiv.insertBefore( currDiv );
+			$(newDiv).insertBefore($(target));
 		}
 	};
 
@@ -779,16 +685,15 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	
 // Turn SVG into an element's background image
 	window.svgBG = function (svg, element, where) {
-		var thisSVG = $(svg), thisEl = $(element);
 		where = where || "top";
 		if ( where == "bottom" ) {
-			thisSVG.clone().css({"position":"absolute"}).appendTo(thisEl);
+			$(svg).clone().css({"position":"absolute"}).appendTo($(element));
 		} else if ( where == "top" ) {
-			thisSVG.clone().css({"position":"absolute"}).prependTo(thisEl);
+			$(svg).clone().css({"position":"absolute"}).prependTo($(element));
 		} else if ( where == "before" || where == "start" ) {
-			thisSVG.clone().css({"position":"absolute"}).insertBefore(thisEl);
+			$(svg).clone().css({"position":"absolute"}).insertBefore($(element));
 		} else {
-			thisSVG.clone().css({"position":"absolute"}).insertAfter(thisEl); 
+			$(svg).clone().css({"position":"absolute"}).insertAfter($(element)); 
 		} 
 	};
 		
@@ -863,8 +768,7 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 		var transDuration = parseFloat($(container).css( "transition-duration")), transDelay = parseFloat($(container).css( "transition-delay"));
 		if ( pageViews > pageLimit ) { initDelay = initDelay * speedFactor; speed = speed * speedFactor; transDuration = transDuration * speedFactor; transDelay = transDelay * speedFactor; }
 		
-		$(container).addClass('animated');
-		$(container).css({ "animation-duration": speed+"s", "transition-duration": transDuration+"s", "transition-delay": transDelay+"s"});		
+		$(container).addClass('animated').css({ "animation-duration": speed+"s", "transition-duration": transDuration+"s", "transition-delay": transDelay+"s"});		
 		$(container+".animated").waypoint(function() {
 			var thisDiv = $(this.element);	
 			setTimeout( function () { thisDiv.addClass(effect); }, initDelay);			
@@ -878,12 +782,13 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 		mainDelay = mainDelay || 100;		
 		offset = offset || "100%";
 		speed = speed || 1000;
-		speed = speed / 1000;
+		speed = speed / 1000;		
+		var theDelay = 0, currEffect = effect1, theDiv = container.split(' ').pop();
 		if ( pageViews > pageLimit ) { initDelay = initDelay * speedFactor; mainDelay = mainDelay * speedFactor; speed = speed * speedFactor; }
-		var theDelay = 0, currEffect = effect1, theParent = $(container).parent(), getDiv = container.split(' '), theDiv = getDiv.pop();
+
 		$(container).addClass('animated');
 		setTimeout( function() {
-			theParent.find(theDiv+".animated").waypoint(function() {
+			$(container).parent().find(theDiv+".animated").waypoint(function() {
 				var thisDiv = $(this.element), divIndex = thisDiv.prevAll(theDiv).length;
 				thisDiv.css({ "animation-duration": speed+"s"});
 				if ( divIndex > 6 ) {
@@ -912,49 +817,34 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 		mobile = mobile || "false";
 		speed = speed || 1000;
 		speed = speed / 1000;
+		var theDiv = container.split(' ').pop(), i, j;
 		if ( pageViews > pageLimit ) { initDelay = initDelay * speedFactor; mainDelay = mainDelay * speedFactor; speed = speed * speedFactor; }
-		var theParent = $(container).parent(), getDiv = container.split(' '), theDiv = getDiv.pop();
+
 		$(container).addClass('animated');
-		theParent.each(function() {
+		$(container).parent().each(function() {
 			var theRow = $(this), findCol = theRow.find(theDiv+".animated").length;
 			if (findCol == 1) { 
 				theRow.find(theDiv+".animated").data("animation", { effect:effect1, delay:0});
-			}
-			if (findCol == 2) { 
-				theRow.find(theDiv+".animated:nth-last-child(2)").data("animation", { effect:effect2, delay:0});
-				theRow.find(theDiv+".animated:nth-last-child(1)").data("animation", { effect:effect3, delay:1});
-			}
-			if (findCol == 3) { 
-				theRow.find(theDiv+".animated:nth-last-child(3)").data("animation", { effect:effect2, delay:0});
-				theRow.find(theDiv+".animated:nth-last-child(2)").data("animation", { effect:effect1, delay:1});
-				theRow.find(theDiv+".animated:nth-last-child(1)").data("animation", { effect:effect3, delay:2});
-			}
-			if (findCol == 4) { 
-				theRow.find(theDiv+".animated:nth-last-child(4)").data("animation", { effect:effect2, delay:0});
-				theRow.find(theDiv+".animated:nth-last-child(3)").data("animation", { effect:effect1, delay:1});
-				theRow.find(theDiv+".animated:nth-last-child(2)").data("animation", { effect:effect1, delay:2});
-				theRow.find(theDiv+".animated:nth-last-child(1)").data("animation", { effect:effect3, delay:3});
-			}		
-			if (findCol == 5 || findCol == 6) { 
-				theRow.find(theDiv+".animated:nth-last-child(6)").data("animation", { effect:effect1, delay:0});	
-				theRow.find(theDiv+".animated:nth-last-child(5)").data("animation", { effect:effect1, delay:1});			
-				theRow.find(theDiv+".animated:nth-last-child(4)").data("animation", { effect:effect1, delay:2});
-				theRow.find(theDiv+".animated:nth-last-child(3)").data("animation", { effect:effect1, delay:3});
-				theRow.find(theDiv+".animated:nth-last-child(2)").data("animation", { effect:effect1, delay:4});
-				theRow.find(theDiv+".animated:nth-last-child(1)").data("animation", { effect:effect1, delay:5});
-			}	
-			if (findCol == 7 || findCol == 8) { 
-				theRow.find(theDiv+".animated:nth-last-child(8)").data("animation", { effect:effect1, delay:0});	
-				theRow.find(theDiv+".animated:nth-last-child(7)").data("animation", { effect:effect1, delay:1});	
-				theRow.find(theDiv+".animated:nth-last-child(6)").data("animation", { effect:effect1, delay:2});	
-				theRow.find(theDiv+".animated:nth-last-child(5)").data("animation", { effect:effect1, delay:3});			
-				theRow.find(theDiv+".animated:nth-last-child(4)").data("animation", { effect:effect1, delay:4});
-				theRow.find(theDiv+".animated:nth-last-child(3)").data("animation", { effect:effect1, delay:5});
-				theRow.find(theDiv+".animated:nth-last-child(2)").data("animation", { effect:effect1, delay:6});
-				theRow.find(theDiv+".animated:nth-last-child(1)").data("animation", { effect:effect1, delay:7});
+			} else if (findCol == 2) { 
+				theRow.find(theDiv+".animated:nth-last-child(2)").data("animation", {effect:effect2, delay:0});
+				theRow.find(theDiv+".animated:nth-last-child(1)").data("animation", {effect:effect3, delay:1});
+			} else if (findCol == 3) { 
+				theRow.find(theDiv+".animated:nth-last-child(3)").data("animation", {effect:effect2, delay:0});
+				theRow.find(theDiv+".animated:nth-last-child(2)").data("animation", {effect:effect1, delay:1});
+				theRow.find(theDiv+".animated:nth-last-child(1)").data("animation", {effect:effect3, delay:2});
+			} else if (findCol == 4) { 
+				theRow.find(theDiv+".animated:nth-last-child(4)").data("animation", {effect:effect2, delay:0});
+				theRow.find(theDiv+".animated:nth-last-child(3)").data("animation", {effect:effect1, delay:1});
+				theRow.find(theDiv+".animated:nth-last-child(2)").data("animation", {effect:effect1, delay:2});
+				theRow.find(theDiv+".animated:nth-last-child(1)").data("animation", {effect:effect3, delay:3});
+			} else {			
+				for (i=0; i < findCol; i++) {
+					j = i + 1;					
+					theRow.find(theDiv+".animated:nth-child("+j+")").data("animation", {effect:effect1, delay:i});	
+				} 
 			}
 		});
-		theParent.find(theDiv+".animated").waypoint(function() {
+		$(container).parent().find(theDiv+".animated").waypoint(function() {
 			var thisDiv = $(this.element), delay = (mainDelay * thisDiv.data("animation").delay) + initDelay, effect = thisDiv.data("animation").effect;
 			thisDiv.css({ "animation-duration": speed+"s"});
 			if ( getDeviceW() > mobileCutoff || mobile == "true" ) { 
@@ -974,9 +864,9 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 		speed = speed / 1000;
 		$(container).addClass('animate');
 		$(container+".animate").waypoint(function() {
-			var thisDiv = $(this.element);	
-			thisDiv.css({ "transition-duration": speed+"s"});
-			setTimeout( function () { thisDiv.removeClass('animate'); }, initDelay);		
+			var theEl = $(this.element);
+			theEl.css({ "transition-duration": speed+"s"});
+			setTimeout( function () { theEl.removeClass('animate'); }, initDelay);		
 			this.destroy();
 		}, { offset: offset });
 	};
@@ -1000,61 +890,35 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 		}
 	};
 
-// Split string into words for animation
-	window.animateWords = function(container, effect1, effect2, initDelay, mainDelay, offset) {
-		initDelay = initDelay || 0;		
-		mainDelay = mainDelay || 100;		
-		offset = offset || "100%";
-		if ( pageViews > pageLimit ) { initDelay = initDelay * speedFactor; mainDelay = mainDelay * speedFactor; }
-		var theContainer = $(container);		
-		theContainer.each(function() {				
-			var myStr = $(this).html();
-			myStr = myStr.split(" ");
-			var myContents = "";			
-			for (var i = 0, len = myStr.length; i < len; i++) {
-				if ( i == len-1 ) {
-					myContents += '<div class="wordSplit animated">' + myStr[i];
-				} else {
-					myContents += '<div class="wordSplit animated">' + myStr[i] + '&nbsp;</div>';
-				}
-			}
-			$(this).html(myContents);	
-
-			var charDelay = initDelay, currEffect = effect1;
-			theContainer.find(".wordSplit.animated" ).waypoint(function() {
-				var thisDiv = $(this.element);
-				charDelay = charDelay + mainDelay;
-				if ( currEffect === effect2 ) { 
-					setTimeout( function () { thisDiv.addClass(effect1); }, charDelay);
-					currEffect = effect1;
-				} else {
-					setTimeout( function () { thisDiv.addClass(effect2); }, charDelay);
-					currEffect = effect2;
-				}
-				this.destroy();
-			}, { offset: offset });
-		});
-	};
-
 // Split string into characters for animation
-	window.animateCharacters = function(container, effect1, effect2, initDelay, mainDelay, offset) {	
+	window.animateCharacters = function(container, effect1, effect2, initDelay, mainDelay, offset, words) {	
 		initDelay = initDelay || 0;		
 		mainDelay = mainDelay || 100;		
 		offset = offset || "100%";
+		words = words || "false";
 		if ( pageViews > pageLimit ) { initDelay = initDelay * speedFactor; mainDelay = mainDelay * speedFactor; }
-		var theContainer = $(container);		
-		theContainer.each(function() {				
-			var myStr = $(this).html();
-			myStr = myStr.split("");
-			var myContents = "";			
-			for (var i = 0, len = myStr.length; i < len; i++) {
-				if ( myStr[i] === " " ) { myStr[i] = "&nbsp;"; }
-				myContents += '<div class="charSplit animated">' + myStr[i] + '</div>';
-			}
-			$(this).html(myContents);	
 
-			var charDelay = initDelay, currEffect = effect1;
-			theContainer.find(".charSplit.animated" ).waypoint(function() {
+		$(container).each(function() {			
+			if ( words != "false" ) {		
+				var strWords = $(this).html().split(" "), strLen = strWords.length, strContents = "", i, charDelay = initDelay, currEffect = effect1;			
+				for (i=0; i < strLen; i++) {
+					if ( i == strLen-1 ) {
+						strContents += '<div class="wordSplit animated">' + strWords[i];
+					} else {
+						strContents += '<div class="wordSplit animated">' + strWords[i] + '&nbsp;</div>';
+					}
+				}
+			} else {
+				var strWords = $(this).html().split(""), strLen = strWords.length, strContents = "", i, charDelay = initDelay, currEffect = effect1;			
+				for (i = 0; i < strLen; i++) {
+					if ( strWords[i] === " " ) { strWords[i] = "&nbsp;"; }
+					strContents += '<div class="charSplit animated">' + strWords[i] + '</div>';
+				}
+			}			
+			
+			$(this).html(strContents);	
+
+			$(container).find(".charSplit.animated, .wordSplit.animated" ).waypoint(function() {
 				var thisDiv = $(this.element);
 				charDelay = charDelay + mainDelay;
 				if ( currEffect === effect2 ) { 
@@ -1076,15 +940,11 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 // Remove empty & restricted elements
 	removeDiv('p:empty, .archive-intro:empty, div.restricted, div.restricted + ul');
 	
-// Wrap content within .site-main so that widgets can be distributed properly
-	wrapDiv('.site-main','<div class="site-main-inner"></div>', 'inside');	
-
 // Add .page-begins to the next section under masthead for purposes of locking .top-strip
-	if ( $('#wrapper-top').length ) { $('#wrapper-top').addClass('page-begins'); } else { $('#wrapper-content').addClass('page-begins'); }
+	$('#masthead + section').addClass('page-begins');
 
 // Add "noFX" class to img if it appears in any of the parent divs
-	$( "div.noFX" ).find("img").addClass("noFX");
-	$( "div.noFX" ).find("a").addClass("noFX");
+	$( "div.noFX" ).find("img, a").addClass("noFX");
 
 // Add .fa class to all icons using .far, .fas and .fab
 	$( ".far, .fas, .fab" ).addClass("fa");
@@ -1168,6 +1028,8 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 	};
 	
 // Set up mobile menu animation
+	$('#mobile-navigation li.menu-item-has-children > a').each(function() { $(this).attr('data-href', $(this).attr('href')).attr('href', 'javascript:void(0)'); });
+	
 	window.closeMenu = function () {
 		$("#mobile-menu-bar .activate-btn").removeClass("active"); 
 		$("body").removeClass("mm-active"); 
@@ -1191,20 +1053,23 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 	window.closeSubMenu = function (el) {
 		$(el).removeClass("active"); 
 		$(el).height(0);
+		$(el).prev().attr('href', 'javascript:void(0)');
 	};
 
 	window.openSubMenu = function (el, h) {
 		$('#mobile-navigation ul.sub-menu').removeClass("active"); 
 		$('#mobile-navigation ul.sub-menu').height(0);
+		$('#mobile-navigation li.menu-item-has-children > a').attr('href', 'javascript:void(0)');
 		$(el).addClass("active"); 
 		$(el).height(h+"px");
+		setTimeout( function() { $(el).prev().attr('href', $(el).prev().attr('data-href')); }, 500);
 	};
 
 	$('#mobile-navigation').addClass("get-sub-heights");
 
 	$('#mobile-navigation ul.sub-menu').each(function() { 
-		var theSub = $(this), getSubH = theSub.outerHeight(true);
-		theSub.data('getH', getSubH );			
+		var theSub = $(this);
+		theSub.data('getH', theSub.outerHeight(true) );			
 		closeSubMenu(theSub); 
 		theSub.parent().click(function() {		
 			if ( !theSub.hasClass("active")) { openSubMenu(theSub, theSub.data('getH'));}
@@ -1214,8 +1079,7 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 	$('#mobile-navigation').removeClass("get-sub-heights");
 
 	$('#mobile-navigation li:not(.menu-item-has-children)').each(function() { 
-		var theButton = $(this);
-		theButton.click(function() { closeMenu(); }); 
+		$(this).click(function() { closeMenu(); }); 
 	});	
 
 // Ensure all slides in a Bootstrap carousel are even height
@@ -1223,28 +1087,38 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 		var thisCarousel = $(this), maxH = 0, getPadding = parseInt(thisCarousel.find(".carousel-inner").css('padding-bottom'));
 		thisCarousel.data("maxH", 0);
 
-		thisCarousel.on('slid.bs.carousel', function() {
-			var thisSlideH = thisCarousel.find(".carousel-item.active").outerHeight() + getPadding;
-			if ( thisSlideH > maxH ) { 
-				thisCarousel.find(".carousel-inner").css("height",thisSlideH+"px");	
-				maxH = thisSlideH;
-			}
-		});		
+		setTimeout(function() {
+			thisCarousel.find(".carousel-item").each(function() {
+				var thisSlideH = $(this).outerHeight() + getPadding;
+				if ( thisSlideH > maxH ) { 
+					thisCarousel.find(".carousel-inner").css("height",thisSlideH+"px");	
+					maxH = thisSlideH;
+				}
+			});
+		}, 1000);
 	});			
 
 // Add star icons to reviews and ratings
 	$('.testimonials-rating').each(function() {
-		var getRating = $(this).html(), replaceRating = getRating;
+		var getRating = $(this).html(), star = ['far', 'far', 'far', 'far', 'far'], replaceRating, i;		
+		for (i=0; i < getRating; i++) { star[i] = 'fas'; }		
+		replaceRating = '<span class="rating rating-'+getRating+'-star" aria-hidden="true"><span class="sr-only">Rated '+getRating+' Stars</span>';
+		for (i=0; i < 5; i++) { replaceRating += '<i class="fa '+star[i]+' fa-star"></i>'; }
+		replaceRating += '</span>';		
+		/*
 		if ( getRating == 5) replaceRating = '<span class="rating rating-5-star" aria-hidden="true"><span class="sr-only">Rated 5 Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i></span>';
 		if ( getRating == 4) replaceRating = '<span class="rating rating-4-star" aria-hidden="true"><span class="sr-only">Rated 4 Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa far fa-star"></i></span>';
 		if ( getRating == 3) replaceRating = '<span class="rating rating-3-star" aria-hidden="true"><span class="sr-only">Rated 3 Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa far fa-star"></i><i class="fa far fa-star"></i></span>';
 		if ( getRating == 2) replaceRating = '<span class="rating rating-2-star" aria-hidden="true"><span class="sr-only">Rated 2 Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa far fa-star"></i><i class="fa far fa-star"></i><i class="fa far fa-star"></i></span>';
 		if ( getRating == 1) replaceRating = '<span class="rating rating-1-star" aria-hidden="true"><span class="sr-only">Rated 1 Star</span><i class="fa fas fa-star"></i><i class="fa far fa-star"></i><i class="fa far fa-star"></i><i class="fa far fa-star"></i><i class="fa far fa-star"></i></span>';
+		*/
 		$(this).html( replaceRating );
 	});
 
 // Determine which day of week and add active class on office-hours widget	
-	var todayIs = new Date().getDay();
+	var todayIs = new Date().getDay(), days = ['sun','mon','tue','wed','thu','fri','sat'];
+	$('.office-hours .row-'+days[todayIs]).addClass("today");
+/*	
 	if ( todayIs == 0 ) $(".office-hours .row-sun").addClass("today");
 	if ( todayIs == 1 ) $(".office-hours .row-mon").addClass("today");
 	if ( todayIs == 2 ) $(".office-hours .row-tue").addClass("today");
@@ -1252,7 +1126,8 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 	if ( todayIs == 4 ) $(".office-hours .row-thu").addClass("today");
 	if ( todayIs == 5 ) $(".office-hours .row-fri").addClass("today");
 	if ( todayIs == 6 ) $(".office-hours .row-sat").addClass("today");	
-					
+	*/
+	
 // Removes double asterisk in required forms
 	$('abbr.required, em.required, span.required').text("");
 	setTimeout( function () { $('abbr.required, em.required, span.required').text(""); }, 2000);
@@ -1265,24 +1140,20 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 
 	window.screenResize = function () {		
 	// Add class to body to determine which size screen is being viewed
-		$('body').removeClass("screen-5 screen-4 screen-3 screen-2 screen-1");
-		if ( getDeviceW() > 1280 ) { $('body').addClass("screen-5"); }	
-		if ( getDeviceW() <= 1280 && getDeviceW() > mobileCutoff ) { $('body').addClass("screen-4"); }
-		if ( getDeviceW() <= mobileCutoff && getDeviceW() > 860 ) { $('body').addClass("screen-3"); }
-		if ( getDeviceW() <= 860 && getDeviceW() > 576 ) { $('body').addClass("screen-2"); }
-		if ( getDeviceW() <= 576 ) { $('body').addClass("screen-1"); }
-
-	// Disable href on mobile menu items with children
-		$(".screen-mobile li.menu-item-has-children").children("a").attr("href", "javascript:void(0)");
+		var thisDeviceW = getDeviceW();
+		$('body').removeClass('screen-5').removeClass('screen-4').removeClass('screen-3').removeClass('screen-2').removeClass('screen-1');
+		if ( thisDeviceW > 1280 ) { $('body').addClass("screen-5"); }	
+		else if ( thisDeviceW <= 1280 && thisDeviceW > mobileCutoff ) { $('body').addClass("screen-4"); }
+		else if ( thisDeviceW <= mobileCutoff && thisDeviceW > 860 ) { $('body').addClass("screen-3"); }
+		else if ( thisDeviceW <= 860 && thisDeviceW > 576 ) { $('body').addClass("screen-2"); }
+		else { $('body').addClass("screen-1"); }
 
 	// Close any open menus on mobile (when device ratio changes)
 		closeMenu();
 
 	// Ensure "-faux" elements remain correct size
 		$('div[class*="-faux"]').each(function() {	
-			var fauxDiv = $(this);
-			var fauxClass = "."+fauxDiv.attr('class');
-			var mainClass = fauxClass.replace("-faux", "");
+			var fauxDiv = $(this), fauxClass = "."+fauxDiv.attr('class'), mainClass = fauxClass.replace("-faux", "");
 			
 			if ( !$(mainClass).length ) {
 				var mainID = "#"+fauxDiv.attr('class');
@@ -1305,12 +1176,8 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 # ADA compliance
 --------------------------------------------------------------*/	
 	// Add aria-labels to landmarks, sections and titles
-	$('#primary').attr( 'role', 'main' ).attr( 'aria-label', 'main content' );
-	$('#secondary').attr( 'role', 'complementary' ).attr( 'aria-label', 'sidebar' );	
 	$('h3 a[aria-hidden="true"]').each(function() { $(this).parent().attr( 'aria-label', $(this).text()); });
-	
-	$('form.hide-labels input, form.hide-labels textarea').each(function() { $(this).attr('title', $(this).closest('p').find('label').text()) });
-	
+	$('form.hide-labels input, form.hide-labels textarea').each(function() { $(this).attr('title', $(this).closest('p').find('label').text()) });	
 	$('span.required').attr("aria-hidden", true).after('<span class="sr-only">Required Field</span>');
 
 	// Add alt="" to all images with no alt tag
@@ -1318,14 +1185,13 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 	setTimeout(function() { $('img:not([alt])').attr('alt', ''); }, 1000);
 
 	// Menu support
-	$('[role="menubar"]' ).on( 'focus.aria mouseenter.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).attr( 'aria-expanded', true ); } );
-	$('[role="menubar"]' ).on( 'blur.aria mouseleave.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).attr( 'aria-expanded', false ); } );	
+	$('[role="menubar"]' ).on( 'focus.aria mouseenter.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).addClass('menu-item-expanded').attr( 'aria-expanded', true ); } );
+	$('[role="menubar"]' ).on( 'blur.aria mouseleave.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).removeClass('menu-item-expanded').attr( 'aria-expanded', false ); } );	
 	$('a[role="menuitem"]' ).attr( 'tabindex', '0' );
 	$('li[aria-haspopup="true"]').attr( 'tabindex', '-1' );
 
 	// Make hidden labels accessible to screen reader
 	$('form.hide-labels label:not(.show-label)').addClass('sr-only');	
-
 
 /*--------------------------------------------------------------
 # Delay parsing of JavaScript
@@ -1337,7 +1203,7 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 				
 	// Set up Locked Message position, delay, & cookie	
 		$('section.section-lock').each(function() {
-			var thisLock = $(this), initDelay = thisLock.attr('data-delay'), lockPos = thisLock.attr('data-pos'), cookieExpire = thisLock.attr('data-show'), rowH = thisLock.outerHeight() + 100, buttonActivated = "no";
+			var thisLock = $(this), initDelay = thisLock.attr('data-delay'), lockPos = thisLock.attr('data-pos'), cookieExpire = thisLock.attr('data-show'), buttonActivated = "no";
 
 			if ( cookieExpire == "always" ) { cookieExpire = 0.000001; }
 			if ( cookieExpire == "never" ) { cookieExpire = 100000; }			
@@ -1345,11 +1211,7 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 
 			addDiv(thisLock.find(".flex"), '<div class="closeBtn" aria-label="close" aria-hidden="false" tabindex="0"><i class="fa fa-times"></i></div>','before');
 			
-			thisLock.find('.closeBtn').keyup(function(event) {
-				if (event.keyCode === 13 || event.keyCode === 32) {
-					$(this).click();
-				}
-			});
+			keyPress(thisLock.find('.closeBtn'));
 			
 			if ( lockPos == "top" ) {		
 				if ( getCookie("display-message") !== "no" ) {
@@ -1391,6 +1253,7 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 				if ( buttonActivated == "yes" ) {				
 					$('.modal-btn').click(function() {
 						thisLock.addClass("on-screen"); thisLock.focus();
+
 					});
 					thisLock.find('.closeBtn').click(function() {
 						thisLock.fadeOut();
@@ -1402,10 +1265,7 @@ if ( typeof parallaxBG !== 'function' ) { window.parallaxBG = window.parallaxDiv
 			});			
 		});
 
-		setTimeout(function() {	
-			trimText();
-			buildAccordion();
-		}, 1000);
+		setTimeout(function() {	buildAccordion(); }, 1000);
 	});
 	
 })(jQuery); });

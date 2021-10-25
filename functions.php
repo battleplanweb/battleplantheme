@@ -18,9 +18,17 @@
 
 --------------------------------------------------------------*/
 
-if ( ! defined( '_BP_VERSION' ) ) { define( '_BP_VERSION', '10.2' ); }
-if ( ! defined( '_SET_ALT_TEXT_TO_TITLE' ) ) { define( '_SET_ALT_TEXT_TO_TITLE', 'false' ); }
-if ( ! defined( '_BP_COUNT_ALL_VISITS' ) ) { define( '_BP_COUNT_ALL_VISITS', 'false' ); }
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.3' );
+if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
+if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
+
+if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
+if ( !defined('_USER_LOGIN') ) define( '_USER_LOGIN', wp_get_current_user()->user_login );
+if ( !defined('_PAGE_SLUG') ) :
+	if ( basename(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ) : define( '_PAGE_SLUG', basename(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ); 
+	else: define( '_PAGE_SLUG', 'home' );
+	endif;
+endif;
 
 /*--------------------------------------------------------------
 # Shortcodes
@@ -250,7 +258,7 @@ function battleplan_getRandomImage($atts, $content = null ) {
 	$a = shortcode_atts( array( 'id'=>'', 'tag'=>'', 'size'=>'thumbnail', 'link'=>'no', 'number'=>'1', 'offset'=>'0', 'align'=>'left', 'class'=>'', 'order_by'=>'recent', 'order'=>'asc', 'shuffle'=>'no' ), $atts );
 	$tag = esc_attr($a['tag']);	
 	$tags = explode( ',', $tag );
-	if ( $tag == "page-slug" ) $tags = basename($_SERVER['REQUEST_URI']).PHP_EOL; 
+	if ( $tag == "page-slug" ) $tags = _PAGE_SLUG; 
 	$size = esc_attr($a['size']);	
 	$link = esc_attr($a['link']);	
 	$align = esc_attr($a['align']);	
@@ -296,7 +304,7 @@ function battleplan_getRandomImage($atts, $content = null ) {
 	
 		$buildImage = "";	
 		if ( $link == "yes" ) $buildImage .= '<a href="'.$full[0].'">';		
-		$buildImage .= '<img data-id="'.$getID.'"'.getImgMeta($getID).' data-count-tease="true" data-count-view="true" class="wp-image-'.$getID.' random-img '.$tags[0].'-img '.$align.' size-'.$size.$class.'" loading="lazy" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.get_post_meta($getID, '_wp_attachment_image_alt', true).'">';	
+		$buildImage .= '<img data-id="'.$getID.'"'.getImgMeta($getID).' data-count-tease="true" data-count-view="true" class="wp-image-'.$getID.' random-img '.$tags[0].'-img '.$align.' size-'.$size.$class.'" loading="lazy" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta($getID, '_wp_attachment_image_alt', true).'">';	
 		if ( $link == "yes" ) $buildImage .= '</a>';	
 		$imageArray[] = $buildImage;	
 	
@@ -351,7 +359,7 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 	
 		$getImage = "";
 		if ( $link == "yes" ) $getImage .= '<a href="'.$image[0].'">';
-		$getImage .= '<img data-id="'.$getID.'"'.getImgMeta($getID).' data-count-tease="true" data-count-view="true" class="random-img '.$tags[0].'-img '.$align.'" loading="lazy" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.get_post_meta($getID, '_wp_attachment_image_alt', true).'">';
+		$getImage .= '<img data-id="'.$getID.'"'.getImgMeta($getID).' data-count-tease="true" data-count-view="true" class="random-img '.$tags[0].'-img '.$align.'" loading="lazy" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta($getID, '_wp_attachment_image_alt', true).'">';
 		if ( $link == "yes" ) $getImage .= '</a>';
 
 		$imageArray[] = do_shortcode('[col class="col-row-of-pics'.$class.'"]'.$getImage.'[/col]');		
@@ -393,8 +401,9 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 // Build an archive
 add_shortcode( 'build-archive', 'battleplan_getBuildArchive' );
 function battleplan_getBuildArchive($atts, $content = null) {	
-	$a = shortcode_atts( array( 'type'=>'', 'count_tease'=>'false', 'count_view'=>'false', 'thumb_only'=>'false', 'show_btn'=>'false', 'btn_text'=>'Read More', 'btn_pos'=>'outside', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_social'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'add_info'=>'', 'show_thumb'=>'true', 'no_pic'=>'', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'accordion'=>'false', 'link'=>'post' ), $atts );
-	$type = esc_attr($a['type']);	
+	$a = shortcode_atts( array( 'type'=>'', 'count_tease'=>'false', 'count_view'=>'false', 'thumb_only'=>'false', 'show_btn'=>'false', 'btn_text'=>'Read More', 'btn_pos'=>'outside', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_social'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'add_info'=>'', 'show_thumb'=>'true', 'no_pic'=>'', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'accordion'=>'false', 'link'=>'post', 'truncate'=>'false' ), $atts );
+	$type = esc_attr($a['type']);
+	$truncate = esc_attr($a['truncate']);
 	$countTease = esc_attr($a['count_tease']);	
 	$countView = esc_attr($a['count_view']);	
 	$showBtn = esc_attr($a['show_btn']);	
@@ -418,6 +427,9 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		endif;
 	endif;
 	$content .= wp_kses_post($a['add_info']);
+	if ( $truncate != "false" && $truncate != "no" ) : 
+		if ($truncate == "true" || $truncate == "yes" ) : $content = truncateText($content); else: $content = truncateText($content, $truncate); endif;
+	endif;
 	$showThumb = esc_attr($a['show_thumb']);
 	if ( $showThumb != "false" ) $showThumb = "true";
 	$size = esc_attr($a['size']);	
@@ -444,8 +456,8 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	
 		if ( _SET_ALT_TEXT_TO_TITLE == "yes" ) :
 			$attachment_id = get_post_thumbnail_id( get_the_ID() );
-			if ( get_post_meta( $attachment_id, '_wp_attachment_image_alt', true ) == "" ) :
-				update_post_meta( $attachment_id, '_wp_attachment_image_alt', esc_html(get_the_title()) );
+			if ( readMeta( $attachment_id, '_wp_attachment_image_alt', true ) == "" ) :
+				updateMeta( $attachment_id, '_wp_attachment_image_alt', esc_html(get_the_title()) );
 			endif;
 		endif;	
 	
@@ -488,9 +500,14 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		if ( $testimonialMisc2 ) $buildCredentials .= "<div class='testimonials-credential testimonials-misc2'>".$testimonialMisc2."</div>";
 		if ( $testimonialMisc3 ) $buildCredentials .= "<div class='testimonials-credential testimonials-misc3'>".$testimonialMisc3."</div>";
 		if ( $testimonialMisc4 ) $buildCredentials .= "<div class='testimonials-credential testimonials-misc4'>".$testimonialMisc4."</div>";
-		if ( $testimonialRate ) $buildCredentials .= "<div class='testimonials-credential testimonials-rating'>".$testimonialRate."</div>";	
-
-		$archiveBody = '[txt class="testimonials-quote"][p]'.apply_filters('the_content', get_the_content()).'[/p][/txt][txt size="11/12" class="testimonials-credentials"]'.$buildCredentials.'[/txt][txt size="1/12" class="testimonials-platform testimonials-platform-'.$testimonialPlatform.'"][/txt]';
+		if ( $testimonialRate ) $buildCredentials .= "<div class='testimonials-credential testimonials-rating'>".$testimonialRate."</div>";
+		
+		$content = apply_filters('the_content', get_the_content()); 
+		if ( $truncate != "false" && $truncate != "no" ) : 
+			if ($truncate == "true" || $truncate == "yes" ) : $content = truncateText($content); else: $content = truncateText($content, $truncate); endif;
+		endif;
+		
+		$archiveBody = '[txt class="testimonials-quote"][p]'.$content.'[/p][/txt][txt size="11/12" class="testimonials-credentials"]'.$buildCredentials.'[/txt][txt size="1/12" class="testimonials-platform testimonials-platform-'.$testimonialPlatform.'"][/txt]';
 	} else {
 		if ( $accordion == "true" ) :		
 			$title = esc_html(get_the_title());
@@ -556,11 +573,12 @@ function battleplan_getBuildArchive($atts, $content = null) {
 // Display randomly selected posts - start/end can be dates or -53 week / -51 week */
 add_shortcode( 'get-random-posts', 'battleplan_getRandomPosts' );
 function battleplan_getRandomPosts($atts, $content = null) {	
-	$a = shortcode_atts( array( 'num'=>'1', 'offset'=>'0', 'leeway'=>'0', 'type'=>'post', 'tax'=>'', 'terms'=>'', 'field_key'=>'', 'field_value'=>'', 'field_compare'=>'IN', 'orderby'=>'recent', 'sort'=>'asc', 'count_tease'=>'true', 'count_view'=>'false', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_social'=>'false', 'show_btn'=>'true', 'button'=>'Read More', 'btn_pos'=>'inside', 'show_content'=>'false', 'thumb_only'=>'false', 'thumb_col'=>'1', 'thumbnail'=>'force', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'link'=>'post' ), $atts );
+	$a = shortcode_atts( array( 'num'=>'1', 'offset'=>'0', 'leeway'=>'0', 'type'=>'post', 'tax'=>'', 'terms'=>'', 'field_key'=>'', 'field_value'=>'', 'field_compare'=>'IN', 'orderby'=>'recent', 'sort'=>'asc', 'count_tease'=>'true', 'count_view'=>'false', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_social'=>'false', 'show_btn'=>'true', 'button'=>'Read More', 'btn_pos'=>'inside', 'show_content'=>'false', 'thumb_only'=>'false', 'thumb_col'=>'1', 'thumbnail'=>'force', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'link'=>'post', 'truncate'=>'true' ), $atts );
 	$num = esc_attr($a['num']);	
 	$offset = esc_attr($a['offset']);
 	if ( $offset == '0' ) $offset = rand(0, esc_attr($a['leeway']));	
 	$postType = esc_attr($a['type']);	
+	$truncate = esc_attr($a['truncate']);	
 	$title = esc_attr($a['show_title']);	
 	$orderBy = esc_attr($a['orderby']);	
 	$sort = esc_attr($a['sort']);		
@@ -627,7 +645,7 @@ function battleplan_getRandomPosts($atts, $content = null) {
 	global $post; 
 	$getPosts = new WP_Query( $args );
 	if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 	
-		$showPost = do_shortcode('[build-archive type="'.$postType.'" count_tease="'.$countTease.'" count_view="'.$countView.'" thumb_only="'.$thumbOnly.'" show_btn="'.$showBtn.'" btn_text="'.$button.'" btn_pos="'.$btnPos.'" show_title="'.$title.'" title_pos="'.$titlePos.'" show_date="'.$showDate.'" show_excerpt="'.$showExcerpt.'" show_social="'.$showSocial.'" show_content="'.$showContent.'" show_author="'.$showAuthor.'" size="'.$size.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" link="'.$link.'"]');	
+		$showPost = do_shortcode('[build-archive type="'.$postType.'" count_tease="'.$countTease.'" count_view="'.$countView.'" thumb_only="'.$thumbOnly.'" show_btn="'.$showBtn.'" btn_text="'.$button.'" btn_pos="'.$btnPos.'" show_title="'.$title.'" title_pos="'.$titlePos.'" show_date="'.$showDate.'" show_excerpt="'.$showExcerpt.'" show_social="'.$showSocial.'" show_content="'.$showContent.'" show_author="'.$showAuthor.'" size="'.$size.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" link="'.$link.'" truncate="'.$truncate.'"]');	
 	
 		if ( $num > 1 ) $showPost = do_shortcode('[col]'.$showPost.'[/col]');	
 		if ( has_post_thumbnail() || $thumbnail != "force" ) $combinePosts .= $showPost;
@@ -641,7 +659,7 @@ function battleplan_getRandomPosts($atts, $content = null) {
 // Display posts & images in a Bootstrap slider 
 add_shortcode( 'get-post-slider', 'battleplan_getPostSlider' );
 function battleplan_getPostSlider($atts, $content = null ) {	
-	$a = shortcode_atts( array( 'type'=>'testimonials', 'auto'=>'yes', 'interval'=>'6000', 'loop'=>'true', 'num'=>'4', 'offset'=>'0', 'pics'=>'yes', 'caption'=>'no', 'controls'=>'yes', 'controls_pos'=>'below', 'indicators'=>'no', 'justify'=>'space-around', 'pause'=>'true', 'orderby'=>'recent', 'order'=>'asc', 'post_btn'=>'', 'all_btn'=>'View All', 'show_excerpt'=>'true', 'show_content'=>'false', 'link'=>'', 'pic_size'=>'1/3', 'text_size'=>'', 'slide_type'=>'fade', 'tax'=>'', 'terms'=>'', 'tag'=>'', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'id'=>'', 'mult'=>'1', 'class'=>'' ), $atts );
+	$a = shortcode_atts( array( 'type'=>'testimonials', 'auto'=>'yes', 'interval'=>'6000', 'loop'=>'true', 'num'=>'4', 'offset'=>'0', 'pics'=>'yes', 'caption'=>'no', 'controls'=>'yes', 'controls_pos'=>'below', 'indicators'=>'no', 'justify'=>'space-around', 'pause'=>'true', 'orderby'=>'recent', 'order'=>'asc', 'post_btn'=>'', 'all_btn'=>'View All', 'show_excerpt'=>'true', 'show_content'=>'false', 'link'=>'', 'pic_size'=>'1/3', 'text_size'=>'', 'slide_type'=>'fade', 'tax'=>'', 'terms'=>'', 'tag'=>'', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'id'=>'', 'mult'=>'1', 'class'=>'', 'truncate'=>'true' ), $atts );
 	$num = esc_attr($a['num']);	
 	$controls = esc_attr($a['controls']);	
 	$controlsPos = esc_attr($a['controls_pos']);
@@ -649,6 +667,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	$pause = esc_attr($a['pause']);		
 	$autoplay = esc_attr($a['auto']);		
 	$type = esc_attr($a['type']);		
+	$truncate = esc_attr($a['truncate']);		
 	$offset = esc_attr($a['offset']);
 	$postBtn = esc_attr($a['post_btn']);	
 	$allBtn = esc_attr($a['all_btn']);	
@@ -739,19 +758,19 @@ function battleplan_getPostSlider($atts, $content = null ) {
 				$image = wp_get_attachment_image_src(get_the_ID(), $size );
 				$imgSet = wp_get_attachment_image_srcset(get_the_ID(), $size );		
 		
-				if ( $link == "alt" ) $linkTo = get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true);				
+				if ( $link == "alt" ) $linkTo = readMeta(get_the_ID(), '_wp_attachment_image_alt', true);				
 				if ( $link == "description" ) $linkTo = esc_html(get_post(get_the_ID())->post_content);
 				$buildImg = "";
 				if ( $link != "none" ) : $buildImg = "<a href='".$linkTo."' class='link-archive link-".$type."'>"; endif;	
-				//$buildImg .= "<img data-id='".get_the_ID()."' ".getImgMeta(get_the_ID())." data-count-tease='true' data-count-view='true' class='img-slider ".$tags[0]."-img' loading='lazy' src = '".$image[0]."' width='".$image[1]."' height='".$image[2]."' style='aspect-ratio:".$image[1]."/".$image[2]."' alt='".get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true)."'>";
+				//$buildImg .= "<img data-id='".get_the_ID()."' ".getImgMeta(get_the_ID())." data-count-tease='true' data-count-view='true' class='img-slider ".$tags[0]."-img' loading='lazy' src = '".$image[0]."' width='".$image[1]."' height='".$image[2]."' style='aspect-ratio:".$image[1]."/".$image[2]."' alt='".readMeta(get_the_ID(), '_wp_attachment_image_alt', true)."'>";
 
-				$buildImg .= '<img data-id="'.get_the_ID().'" '.getImgMeta(get_the_ID()).' data-count-tease="true" data-count-view="true" class="img-slider '.$tags[0].'-img" loading="lazy" src = "'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.get_post_meta(get_the_ID(), "_wp_attachment_image_alt", true).'">';
+				$buildImg .= '<img data-id="'.get_the_ID().'" '.getImgMeta(get_the_ID()).' data-count-tease="true" data-count-view="true" class="img-slider '.$tags[0].'-img" loading="lazy" src = "'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta(get_the_ID(), "_wp_attachment_image_alt", true).'">';
 				
 				/* Added srcset BACK into the formula for https://okairpro.com/ slider at top on 9/13/21 */
 				 
 		
 				if ( $caption == "yes" || $caption == "title" ) : $buildImg .= "<div class='caption-holder'><div class='img-caption'>".get_the_title(get_the_ID())."</div></div>";	
-				elseif ( $caption == "alt" ) : $buildImg .= "<div class='caption-holder'><div class='img-caption'>".get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true)."</div></div>";
+				elseif ( $caption == "alt" ) : $buildImg .= "<div class='caption-holder'><div class='img-caption'>".readMeta(get_the_ID(), '_wp_attachment_image_alt', true)."</div></div>";
 				endif;
 	
 				if ( $link != "none" ) : $buildImg .= "</a>"; endif;	
@@ -801,7 +820,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 							$buildInner .= '<div class="carousel-item carousel-item-'.$type.'" data-id="'.get_the_ID().'">';
 						endif;	
 
-						$buildInner .= do_shortcode('[build-archive type="'.$type.'" show_btn="'.$showBtn.'" btn_text="'.$postBtn.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" size="'.$size.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" link="'.$link.'"]');		
+						$buildInner .= do_shortcode('[build-archive type="'.$type.'" show_btn="'.$showBtn.'" btn_text="'.$postBtn.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" size="'.$size.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" link="'.$link.'" truncate="'.$truncate.'"]');	
 
 						$buildInner .= "</div>";	
 					endif;
@@ -889,7 +908,7 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 		$image = wp_get_attachment_image_src( get_the_ID(), $size );
 		$getImage = "";
 		if ( $link != "false" ) $getImage .= '<a href="'.$image[0].'">';
-		$getImage .= '<img data-id="'.get_the_ID().'"'.getImgMeta(get_the_ID()).' data-count-tease="true" data-count-view="true" class="logo-img '.$tags[0].'-img" loading="lazy" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'">';
+		$getImage .= '<img data-id="'.get_the_ID().'"'.getImgMeta(get_the_ID()).' data-count-tease="true" data-count-view="true" class="logo-img '.$tags[0].'-img" loading="lazy" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" alt="'.readMeta(get_the_ID(), '_wp_attachment_image_alt', true).'">';
 		if ( $link != "false" ) $getImage .= '</a>';
 		$imageArray[] = '<span>'.$getImage.'</span>';			
 	endwhile; wp_reset_postdata(); endif;	
@@ -1005,7 +1024,7 @@ function battleplan_setUpWPGallery( $atts, $content = null ) {
 		$count++;
 
 		if ( $caption != "false" ) : $captionPrint = '<figcaption><div class="image-caption image-title">'.$post->post_title.'</div></figcaption>'; endif;
-		$gallery .= '<dl class="col col-archive col-gallery id-'.$getID.'"><dt class="col-inner"><a class="link-archive link-gallery ari-fancybox" href="'.$full[0].'"><img class="img-gallery wp-image-'.get_the_ID().'" data-id="'.get_the_ID().'"'.getImgMeta($getID).' loading="lazy" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.get_post_meta(get_the_ID(), '_wp_attachment_image_alt', true).'"></a>'.$captionPrint.'</dt></dl>';
+		$gallery .= '<dl class="col col-archive col-gallery id-'.$getID.'"><dt class="col-inner"><a class="link-archive link-gallery ari-fancybox" href="'.$full[0].'"><img class="img-gallery wp-image-'.get_the_ID().'" data-id="'.get_the_ID().'"'.getImgMeta($getID).' loading="lazy" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta(get_the_ID(), '_wp_attachment_image_alt', true).'"></a>'.$captionPrint.'</dt></dl>';
 	endwhile; endif;	
 	wp_reset_postdata();
 	$gallery .= "</div>";	
@@ -1024,10 +1043,12 @@ function battleplan_coupon( $atts, $content = null ) {
 	
 	return do_shortcode('
 		[txt class="coupon"]
-			<h2 class="action">'.$action.'</h2>
-			<h2 class="discount">'.$discount.'</h2>
-			<h2 class="service">'.$service.'</h2>
-			<p class="disclaimer">'.$disclaimer.'</p>	
+			<div class="coupon-inner">
+				<h2 class="action">'.$action.'</h2>
+				<h2 class="discount">'.$discount.'</h2>
+				<h2 class="service">'.$service.'</h2>
+				<p class="disclaimer">'.$disclaimer.'</p>
+			</div>
 		[/txt]
 	');
 }
@@ -1224,7 +1245,6 @@ function getUserRole($display="slug") {
 	 endif;
 }
 
-
 // Identify user based on id, email or slug
 function battleplan_identifyUser( $identifier ) {
 	if ( $identifier == null || $identifier == "" ) : return wp_get_current_user(); 
@@ -1371,8 +1391,8 @@ function adjustTerms( $post_id, $term, $taxonomy, $add_or_remove ) {
 // Add Restrict Max & Min params in nav-menus
 add_action( 'wp_nav_menu_item_custom_fields', 'battleplan_addMenuVisibility', 10, 2 );
 function battleplan_addMenuVisibility( $item_id, $item ) {
-	$restrictMax = get_post_meta( $item_id, 'bp_menu_restrict_max', true );
-	$restrictMin = get_post_meta( $item_id, 'bp_menu_restrict_min', true );
+	$restrictMax = readMeta( $item_id, 'bp_menu_restrict_max', true );
+	$restrictMin = readMeta( $item_id, 'bp_menu_restrict_min', true );
 	?>
 	<div class="clearfix"></div>
 	<p class="description description-thin"><?php _e( "Restrict Max", 'menu-restrict-max' ); ?><br />
@@ -1390,15 +1410,15 @@ add_action( 'wp_update_nav_menu_item', 'battleplan_saveMenuVisibility', 10, 2 );
 function battleplan_saveMenuVisibility( $menu_id, $item_id ) {
 	if ( isset( $_POST['menu_restrict_max'][$item_id]  ) ) {
 		$sanitized_data = sanitize_text_field( $_POST['menu_restrict_max'][$item_id] );
-		update_post_meta( $item_id, 'bp_menu_restrict_max', $sanitized_data );
+		updateMeta( $item_id, 'bp_menu_restrict_max', $sanitized_data );
 	} else {
-		delete_post_meta( $item_id, 'bp_menu_restrict_max' );
+		deleteMeta( $item_id, 'bp_menu_restrict_max' );
 	}
 	if ( isset( $_POST['menu_restrict_min'][$item_id]  ) ) {
 		$sanitized_data = sanitize_text_field( $_POST['menu_restrict_min'][$item_id] );
-		update_post_meta( $item_id, 'bp_menu_restrict_min', $sanitized_data );
+		updateMeta( $item_id, 'bp_menu_restrict_min', $sanitized_data );
 	} else {
-		delete_post_meta( $item_id, 'bp_menu_restrict_min' );
+		deleteMeta( $item_id, 'bp_menu_restrict_min' );
 	}
 }
 
@@ -1432,6 +1452,53 @@ function fillMenu($cpt, $max = "-1", $orderby = "title", $seq = "asc") {
 			return array_merge( $items, $child_items );
 		}, 10, 3);
 	endforeach;
+}
+
+// Truncate text
+function truncateText($string, $limit="250", $break=" ", $pad="...") {
+	if (strlen($string) <= $limit) return $string;
+  	if (($breakpoint = strpos($string, $break, $limit)) !== false ) {
+    	if ($breakpoint < strlen($string) - 1) {
+      		$string = substr($string, 0, $breakpoint).$pad;
+   		}
+  	}
+  	return $string;
+}
+
+// Remove sidebar from specific pages
+function battleplan_remove_sidebar( $classes ) {
+	$classes = str_replace('sidebar-line', 'sidebar-none', $classes);
+	$classes = str_replace('sidebar-right', 'sidebar-none', $classes);
+	$classes = str_replace('sidebar-left', 'sidebar-none', $classes);
+	return $classes;
+}
+
+function removeSidebar($classes, $addClasses, $pages) {
+	foreach ($pages as $page) :
+		if ( _PAGE_SLUG == $page || in_array($page, $classes) ) return battleplan_remove_sidebar( $addClasses );
+	endforeach;		
+	return $addClasses;
+}
+
+// If post has "remove sidebar" checked, set necessary classes on <body> 
+add_filter( 'body_class', 'battleplan_CheckRemoveSidebar', 50 );
+function battleplan_CheckRemoveSidebar( $classes ) {
+	if ( readMeta( get_the_ID(), '_bp_remove_sidebar', true ) ) :
+		return battleplan_remove_sidebar( $classes );
+	else:
+		return $classes;
+	endif;
+}
+
+// Ensure all classes that have been added to <body> exist as an array
+add_filter( 'body_class', 'battleplan_bodyClassArray', 100 );
+function battleplan_bodyClassArray( $classes ) {
+	$newClasses = array();
+	foreach ($classes as $class) :
+		$class = explode(" ", $class);
+		$newClasses = array_merge( $newClasses, $class );	
+	endforeach;
+	return $newClasses;
 }
 
 // Add shortcode capability to Contact Form 7
@@ -1748,6 +1815,41 @@ function battleplan_randomize_with_pagination( $orderby ) {
 	return $orderby;
 }
 
+// Add some defining classes to body
+add_filter( 'body_class', 'battleplan_addBodyClasses', 30 );
+function battleplan_addBodyClasses( $classes ) {	
+	$classes[] = "slug-"._PAGE_SLUG; 
+	
+	if (!isset($_COOKIE['first-page'])) :
+		$classes[] = "first-page";
+		setcookie('first-page', 'no', '0', '/');
+	else:
+		$classes[] = "not-first-page";
+	endif;
+	
+ 	if ( is_mobile() ) : $classes[] = "screen-mobile"; else: $classes[] = "screen-desktop"; endif;
+	
+	return $classes;
+}	
+
+// Calculate how many pages user has viewed (exclude page refresh)
+add_filter( 'init', 'battleplan_calculatePagesViewed' );
+function battleplan_calculatePagesViewed() {
+  	if ( defined( 'DOING_AJAX' ) && DOING_AJAX ) return;
+	if (!isset($_COOKIE['unique-id'])) :
+		$uniqueID = time().rand();		
+		setcookie('unique-id', $uniqueID, '0', '/');
+		setcookie('pages-viewed', 1, '0', '/');
+	else:
+		$pageViews = $_COOKIE['pages-viewed'];		
+		if ( $_COOKIE['prev-page'] != _PAGE_SLUG ) :
+			$pageViews++;
+			setcookie('pages-viewed', $pageViews, '0', '/');
+			setcookie('prev-page', _PAGE_SLUG, '0', '/');
+		endif;		
+	endif;	
+}	
+
 // Add Breadcrumbs
 function battleplan_breadcrumbs() {
     $home_link        = home_url('/');
@@ -1926,9 +2028,7 @@ function battleplan_meta_date() {
 
 // Set up post meta author
 function battleplan_meta_author() {
-	//$byline = sprintf ( esc_html_x( '%s', 'post author', 'battleplan' ), '<span class="author vcard"><a class="url fn n" href="'.esc_url( get_author_posts_url( get_the_author_meta( 'ID' ) )).'">'.esc_html( get_the_author() ).'</a></span>' );	
 	$byline = sprintf ( esc_html_x( '%s', 'post author', 'battleplan' ), '<span class="author vcard">'.esc_html( get_the_author() ).'</span>' );
-
 	return '<span class="meta-author"><i class="fas fa-user"></i>'.$byline.'</span>';
 }
 
@@ -2017,9 +2117,9 @@ if ( ! function_exists( 'battleplan_setup' ) ) :
 		register_nav_menus( array( 'footer-menu' => esc_html__( 'Footer Menu', 'battleplan' ), ) );	
 		register_nav_menus( array( 'manual-menu' => esc_html__( 'Manual Menu', 'battleplan' ), ) );
 		add_theme_support( 'html5', array( 'search-form', 'comment-form', 'comment-list', 'gallery', 'caption', 'style', 'script', ) );
-		add_theme_support( 'custom-background', apply_filters( 'battleplan_custom_background_args', array( 'default-color' => 'ffffff', 'default-image' => '', ) ) );
 		add_theme_support( 'customize-selective-refresh-widgets' );
-		add_theme_support( 'custom-logo', array( 'height' => 250, 'width' => 250, 'flex-width'  => true, 'flex-height' => true, ) );
+		//add_theme_support( 'custom-logo', array( 'height' => 250, 'width' => 250, 'flex-width'  => true, 'flex-height' => true, ) ); deprecated 10/22/21
+		//add_theme_support( 'custom-background', apply_filters( 'battleplan_custom_background_args', array( 'default-color' => 'ffffff', 'default-image' => '', ) ) ); deprecated 10/22/21
 	}
 endif;
 
@@ -2196,7 +2296,7 @@ if ( !is_admin() && $GLOBALS['pagenow'] !== 'wp-login.php' && !is_plugin_active(
 		$dom->loadHTML($html);
 		$script = $dom->getElementsByTagName('script'); 
 
-		$targets = array('podium', 'google', 'paypal', 'carousel', 'extended-widget', 'fancybox', 'embed-player', 'cue', 'huzzaz', 'fbcdn', 'facebook');
+		$targets = array('podium', 'google', 'paypal', 'carousel', 'extended-widget', 'fancybox', 'embed-player', 'huzzaz', 'fbcdn', 'facebook');
 
 		foreach ($script as $item) :		   
 			foreach ($targets as $target) :
@@ -2236,44 +2336,6 @@ if ( !is_admin() && $GLOBALS['pagenow'] !== 'wp-login.php' && !is_plugin_active(
 	}
 }
 
-// If post has "remove sidebar" checked, set necessary classes on body 
-add_filter( 'body_class', 'battleplan_remove_sidebar', 99 );
-function battleplan_remove_sidebar( $classes ) {
-	$checkRemoveSidebar = get_post_meta( get_the_ID(), '_bp_remove_sidebar', true );
-	if ( $checkRemoveSidebar ) :
-		$classes = str_replace('sidebar-line', '', $classes);
-		//$classes = str_replace('sidebar-box', '', $classes);
-		//$classes = str_replace('widget-box', '', $classes);
-		$classes = str_replace('sidebar-right', '', $classes);
-		$classes = str_replace('sidebar-left', '', $classes);
-		$classes[] = "sidebar-none";		
-	endif;
-	return $classes;
-}
-
-// Add class that denotes mobile or desktop 
-add_filter( 'body_class', 'battleplan_is_mobile' );
-function battleplan_is_mobile( $classes ) {
- 	if ( is_mobile() ) : $classes[] = "screen-mobile"; else: $classes[] = "screen-desktop"; endif;
-	return $classes;
-}
-
-//Brand log-in screen with BP Knight
-/*
-add_action( 'login_enqueue_scripts', 'battleplan_login_logo' );
-function battleplan_login_logo() { ?><style type="text/css">body.login div#login h1 a { background-image: url('/wp-content/themes/battleplantheme/common/logos/battleplan-logo.png'); padding-bottom: 120px; width: 100%; background-size: 50%} #login {padding-top:70px !important} </style> <?php }  
-
-add_filter( 'login_headerurl', 'battleplan_login_url', 10, 1 );
-function battleplan_login_url( $url ) {
-    return esc_url("https://battleplanwebdesign.com");
-}
-
-add_filter( 'login_headertext', 'battleplan_login_headertext' ); 
-function battleplan_login_headertext( $headertext ) {
-   	return esc_html__( 'Powered by Battle Plan Web Design', 'battleplan' );
-}
-*/
-
 // Hide the Wordpress admin bar
 show_admin_bar( false );
 
@@ -2294,8 +2356,8 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 		$id = $id ? ' id="' . esc_attr( $id ) . '"' : '';
 		
 		$buildOutput = "";		
-		$restrictMax = get_post_meta( $item->ID, 'bp_menu_restrict_max', true );
-		$restrictMin = get_post_meta( $item->ID, 'bp_menu_restrict_min', true );		
+		$restrictMax = readMeta( $item->ID, 'bp_menu_restrict_max', true );
+		$restrictMin = readMeta( $item->ID, 'bp_menu_restrict_min', true );		
 		if ( $restrictMax || $restrictMin ) $buildOutput .= '[restrict max="'.$restrictMax.'" min="'.$restrictMin.'"]';
 
 		$buildOutput .= sprintf( '%s<li%s%s%s>',
@@ -2349,7 +2411,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( "user-message" == $tag->name ) {
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
-		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','и','д','б','й','л','ы','З','у','Я');
+		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','и','д','б','й','л','ы','З','у','Я');
 		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
 		if ( $check == $name ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($badwords as $badword) {
@@ -2572,14 +2634,13 @@ function battleplan_getGoogleRating() {
 		$apiKey = "AIzaSyBqf0idxwuOxaG";
 		$apiKey .= "-j3eCpef1Bunv";
 		$apiKey .= "-YVdVP8";	
-		$siteHeader = getID('site-header');
-		$dateChecked = readMeta($siteHeader, "google-review-date");	
+		$dateChecked = readMeta(_HEADER_ID, "google-review-date");	
 		$today = strtotime(date("F j, Y"));	
 		$daysSinceCheck = $today - $dateChecked;
 
 		if ( $daysSinceCheck < 6 ) :
-			$rating = readMeta($siteHeader, "google-review-rating");	
-			$number = readMeta($siteHeader, "google-review-number");		
+			$rating = readMeta(_HEADER_ID, "google-review-rating");	
+			$number = readMeta(_HEADER_ID, "google-review-number");		
 		else:	
 			$url = "https://maps.googleapis.com/maps/api/place/details/json?placeid=".$placeID."&key=".$apiKey;
 			$ch = curl_init();
@@ -2589,9 +2650,9 @@ function battleplan_getGoogleRating() {
 			$res = json_decode($result,true);
 			$rating = $res['result']['rating'];	
 			$number = $res['result']['user_ratings_total'];	
-			updateMeta( $siteHeader, "google-review-rating", $rating );	
-			updateMeta( $siteHeader, "google-review-number", $number );	
-			updateMeta( $siteHeader, "google-review-date", $today );
+			updateMeta( _HEADER_ID, "google-review-rating", $rating );	
+			updateMeta( _HEADER_ID, "google-review-number", $number );	
+			updateMeta( _HEADER_ID, "google-review-date", $today );
 			$dateChecked = $today;
 		endif;
 
@@ -2627,18 +2688,17 @@ function battleplan_getGoogleRating() {
 }
 
 // Set up URL re-directs
-$currPage = str_replace('/', '', $_SERVER['REQUEST_URI']);
-if ( $currPage == "facebook" && do_shortcode('[get-biz info="facebook"]') != "" ) : 
+if ( _PAGE_SLUG == "facebook" && do_shortcode('[get-biz info="facebook"]') != "" ) : 
 	$facebook = do_shortcode('[get-biz info="facebook"]');
 	if ( substr($facebook, -1) != '/') $facebook .= "/";
 	wp_redirect( $facebook."reviews/", 301 ); 
 	exit; 
 endif;
-if ( $currPage == "google" && do_shortcode('[get-biz info="pid"]') != "" ) : 
+if ( _PAGE_SLUG == "google" && do_shortcode('[get-biz info="pid"]') != "" ) : 
 	wp_redirect( "https://search.google.com/local/reviews?placeid=".do_shortcode('[get-biz info="pid"]')."&hl=en&gl=US", 301 ); 
 	exit; 
 endif;
-if ( $currPage == "reviews" ) : 
+if ( _PAGE_SLUG == "reviews" ) : 
 	wp_redirect( "/review/", 301 ); 
 	exit; 
 endif;
@@ -2716,17 +2776,51 @@ function battleplan_doChrons() {
 		endif;
 
 		// Yoast SEO Settings Update
-		if ( is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') ) :
+		if ( is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') ) :		
 			$wpSEOSettings = get_option( 'wpseo_titles' );		
+			$wpSEOSettings['separator'] = 'sc-bull';
+			$wpSEOSettings['title-home-wpseo'] = '%%page%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';
+			$wpSEOSettings['title-author-wpseo'] = '%%name%%, Author at %%sitename%% %%page%%';
+			$wpSEOSettings['title-archive-wpseo'] = 'Archive %%sep%% %%sitename%% %%sep%% %%date%% ';
+			$wpSEOSettings['title-search-wpseo'] = 'You searched for %%searchphrase%% %%sep%% %%sitename%%';
+			$wpSEOSettings['title-404-wpseo'] = 'Page Not Found %%sep%% %%sitename%%';
+			$wpSEOTitle = ' %%page%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';		
+			$getCPT = get_post_types(); 
+			foreach ($getCPT as $postType) :
+				if ( $postType == "post" || $postType == "page" || $postType == "optimized" ) :
+					$wpSEOSettings['title-'.$postType] = '%%title%%'.$wpSEOTitle;
+					$wpSEOSettings['social-title-'.$postType] = '%%title%%'.$wpSEOTitle;
+				elseif ( $postType == "attachment" || $postType == "revision" || $postType == "nav_menu_item" || $postType == "custom_css" || $postType == "customize_changeset" || $postType == "oembed_cache" || $postType == "user_request" || $postType == "wp_block" || $postType == "elements" || $postType == "acf-field-group" || $postType == "acf-field" || $postType == "wpcf7_contact_form" ) :
+					// nothing //
+				else:
+					$wpSEOSettings['title-'.$postType] = ucfirst($postType).$wpSEOTitle;			
+					$wpSEOSettings['social-title-'.$postType] = ucfirst($postType).$wpSEOTitle;			
+				endif;		
+			endforeach;	
+			$wpSEOSettings['social-title-author-wpseo'] = '%%name%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';
+			$wpSEOSettings['social-title-archive-wpseo'] = '%%date%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';
+			$wpSEOSettings['noindex-author-wpseo'] = '1';
+			$wpSEOSettings['noindex-author-noposts-wpseo'] = '1';
+			$wpSEOSettings['noindex-archive-wpseo'] = '1';
+			$wpSEOSettings['disable-author'] = '1';
+			$wpSEOSettings['disable-date'] = '1';
+			$wpSEOSettings['disable-attachment'] = '1';
+			$wpSEOSettings['breadcrumbs-404crumb'] = 'Error 404: Page not found';
+			$wpSEOSettings['breadcrumbs-boldlast'] = '1';
+			$wpSEOSettings['breadcrumbs-archiveprefix'] = 'Archives for';
+			$wpSEOSettings['breadcrumbs-enable'] = '1';
+			$wpSEOSettings['breadcrumbs-home'] = 'Home';
+			$wpSEOSettings['breadcrumbs-searchprefix'] = 'You searched for';
+			$wpSEOSettings['breadcrumbs-sep'] = '»';
 			$wpSEOSettings['company_logo'] = get_bloginfo("url").'/wp-content/uploads/logo.png';
 			$wpSEOSettings['company_logo_id'] = attachment_url_to_postid( get_bloginfo("url").'/wp-content/uploads/logo.png' );
 			$wpSEOSettings['company_logo_meta']['url'] = get_bloginfo("url").'/wp-content/uploads/logo.png';	
 			$wpSEOSettings['company_logo_meta']['path'] = get_attached_file( attachment_url_to_postid( get_bloginfo("url").'/wp-content/uploads/logo.png' ) );
 			$wpSEOSettings['company_logo_meta']['id'] = attachment_url_to_postid( get_bloginfo("url").'/wp-content/uploads/logo.png' );
 			$wpSEOSettings['company_name'] = get_bloginfo('name');
-			
-			$wpSEOSettings['title-404-wpseo'] = 'Page Not Found %%sep%% %%sitename%%';
-
+			$wpSEOSettings['company_or_person'] = 'company';
+			$wpSEOSettings['stripcategorybase'] = '1';
+			$wpSEOSettings['breadcrumbs-enable'] = '1';
 			update_option( 'wpseo_titles', $wpSEOSettings );
 
 			$wpSEOSocial = get_option( 'wpseo_social' );		
@@ -2758,7 +2852,6 @@ function battleplan_doChrons() {
 			$wpSEOLocal['location_coords_long'] = get_option('site_long');
 			$wpSEOLocal['hide_opening_hours'] = 'on';
 			$wpSEOLocal['address_format'] = 'address-state-postal';	
-			update_option( 'wpseo_local', $wpSEOLocal );
 		
 			delete_option( 'wp-smush-dir_path');
 			delete_option( 'wp-smush-install-type');
@@ -2873,17 +2966,15 @@ function battleplan_log_page_load_speed_ajax() {
 	$userLoc = $_POST['userLoc'];	
 	$loadTime = $_POST['loadTime'];
 	$deviceTime = $_POST['deviceTime'];
-	$userLogin = wp_get_current_user()->user_login;
 	
 	if ( $userLoc == "Ashburn, VA") :
 		$response = array( 'result' => 'Bot ignored' );		
-	elseif ( ( $userLogin != 'battleplanweb' && $userValid != "false" && ( $userValid == "true" || $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :
-		$siteHeader = getID('site-header');
-		$desktopCounted = readMeta($siteHeader, "load-number-desktop");
-		$desktopSpeed = readMeta($siteHeader, "load-speed-desktop");	
-		$mobileCounted = readMeta($siteHeader, "load-number-mobile");
-		$mobileSpeed = readMeta($siteHeader, "load-speed-mobile");		
-		$lastEmail = readMeta($siteHeader, "last-email");
+	elseif ( ( _USER_LOGIN != 'battleplanweb' && $userValid != "false" && ( $userValid == "true" || $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :
+		$desktopCounted = readMeta(_HEADER_ID, "load-number-desktop");
+		$desktopSpeed = readMeta(_HEADER_ID, "load-speed-desktop");	
+		$mobileCounted = readMeta(_HEADER_ID, "load-number-mobile");
+		$mobileSpeed = readMeta(_HEADER_ID, "load-speed-mobile");		
+		$lastEmail = readMeta(_HEADER_ID, "last-email");
 		$rightNow = strtotime(date("F j, Y, g:i a"));
 		$daysSinceEmail = (($rightNow - $lastEmail) / 60 / 60 / 24);
 		$totalCounted = $desktopCounted + $mobileCounted;	
@@ -2896,7 +2987,7 @@ function battleplan_log_page_load_speed_ajax() {
 			$subject = "Speed Report: ".$_SERVER['HTTP_HOST'];
 			$content = $_SERVER['HTTP_HOST']." Speed Report\n\nDesktop = ".$desktopSpeed."s on ".$desktopCount."\nMobile = ".$mobileSpeed."s on ".$mobileCount."\n";	
 			$desktopCounted = $desktopSpeed = $mobileCounted = $mobileSpeed = 0;
-			updateMeta( $siteHeader, "last-email", $rightNow );	
+			updateMeta( _HEADER_ID, "last-email", $rightNow );	
 			mail($emailTo, $subject, $content, $emailFrom);
 		endif;
 
@@ -2910,10 +3001,10 @@ function battleplan_log_page_load_speed_ajax() {
 			$mobileSpeed = (round($newTime / $mobileCounted, 1));
 		endif;
 
-		updateMeta( $siteHeader, "load-number-desktop", $desktopCounted );	
-		updateMeta( $siteHeader, "load-speed-desktop", $desktopSpeed );		
-		updateMeta( $siteHeader, "load-number-mobile", $mobileCounted );	
-		updateMeta( $siteHeader, "load-speed-mobile", $mobileSpeed );		
+		updateMeta( _HEADER_ID, "load-number-desktop", $desktopCounted );	
+		updateMeta( _HEADER_ID, "load-speed-desktop", $desktopSpeed );		
+		updateMeta( _HEADER_ID, "load-number-mobile", $mobileCounted );	
+		updateMeta( _HEADER_ID, "load-speed-mobile", $mobileSpeed );		
 		$response = array( 'result' => ucfirst($deviceTime.' load speed = '.$loadTime.'s' ));
 	else:
 		$response = array( 'result' => ucfirst($deviceTime.' load speed not counted' ));
@@ -2925,7 +3016,6 @@ function battleplan_log_page_load_speed_ajax() {
 add_action( 'wp_ajax_count_site_views', 'battleplan_count_site_views_ajax' );
 add_action( 'wp_ajax_nopriv_count_site_views', 'battleplan_count_site_views_ajax' );
 function battleplan_count_site_views_ajax() {
-	$siteHeader = getID('site-header');
 	$timezone = $_POST['timezone'];
 	$userValid = $_POST['userValid'];		
 	$userLoc = $_POST['userLoc'];	
@@ -2933,19 +3023,18 @@ function battleplan_count_site_views_ajax() {
 	$userRefer = parse_url($userRefer);
 	$userRefer = $userRefer['host'];
 	$userRefer = str_replace(array("www.", "http://", "https://"), "", $userRefer);	
-	$lastViewed = readMeta($siteHeader, 'log-views-time');
+	$lastViewed = readMeta(_HEADER_ID, 'log-views-time');
 	$rightNow = strtotime(date("F j, Y g:i a"));	
 	$today = strtotime(date("F j, Y"));
 	$dateDiff = (($today - $lastViewed) / 60 / 60 / 24);
-	$userLogin = wp_get_current_user()->user_login;
-	$getViews = readMeta($siteHeader, 'log-views');
+	$getViews = readMeta(_HEADER_ID, 'log-views');
 	$getViews = maybe_unserialize( $getViews );
 	if ( !is_array($getViews) ) $getViews = array();
 	$viewsToday = $views7Day = $views30Day = $views90Day = $views180Day = $views365Day = $searchToday = intval(0); 
 		
 	if ( $userLoc == "Ashburn, VA") :
 		$response = array( 'result' => 'Bot ignored' );		
-	elseif ( ( $userLogin != 'battleplanweb' && $userValid != "false" && ( $userValid == "true" || $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :
+	elseif ( ( _USER_LOGIN != 'battleplanweb' && $userValid != "false" && ( $userValid == "true" || $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :
 		if(!isset($_COOKIE['countVisit'])) :
 			if ( $dateDiff != 0 ) : // day has passed
 				for ($i = 1; $i <= $dateDiff; $i++) {	
@@ -2956,41 +3045,41 @@ function battleplan_count_site_views_ajax() {
 				$viewsToday = intval($getViews[0]['views']); 
 				$searchToday = intval($getViews[0]['search']); 
 			endif;	
-			updateMeta($siteHeader, 'log-views-now', $rightNow);
-			updateMeta($siteHeader, 'log-views-time', $today);	
+			updateMeta(_HEADER_ID, 'log-views-now', $rightNow);
+			updateMeta(_HEADER_ID, 'log-views-time', $today);	
 			$viewsToday++;
 			if ( strpos($userRefer, "google") !== false || strpos($userRefer, "yahoo") !== false || strpos($userRefer, "bing") !== false || strpos($userRefer, "duckduckgo") !== false ) $searchToday++;	
 			array_shift($getViews);	
 			array_unshift($getViews, array ('date'=>date('F j, Y', $today), 'views'=>$viewsToday, 'search'=>$searchToday));	
 			$newViews = maybe_serialize( $getViews );
-			updateMeta($siteHeader, 'log-views', $newViews);
+			updateMeta(_HEADER_ID, 'log-views', $newViews);
 
 			for ($x = 0; $x < 7; $x++) { $views7Day = $views7Day + intval($getViews[$x]['views']); } 					
 			for ($x = 0; $x < 30; $x++) { $views30Day = $views30Day + intval($getViews[$x]['views']); } 						
 			for ($x = 0; $x < 90; $x++) { $views90Day = $views90Day + intval($getViews[$x]['views']); } 		
 			for ($x = 0; $x < 180; $x++) { $views180Day = $views180Day + intval($getViews[$x]['views']); } 		
 			for ($x = 0; $x < 365; $x++) { $views365Day = $views365Day + intval($getViews[$x]['views']); } 		
-			updateMeta($siteHeader, 'log-views-total-7day', $views7Day);			
-			updateMeta($siteHeader, 'log-views-total-30day', $views30Day);			 
-			updateMeta($siteHeader, 'log-views-total-90day', $views90Day);	
-			updateMeta($siteHeader, 'log-views-total-180day', $views180Day);	
-			updateMeta($siteHeader, 'log-views-total-365day', $views365Day);	
+			updateMeta(_HEADER_ID, 'log-views-total-7day', $views7Day);			
+			updateMeta(_HEADER_ID, 'log-views-total-30day', $views30Day);			 
+			updateMeta(_HEADER_ID, 'log-views-total-90day', $views90Day);	
+			updateMeta(_HEADER_ID, 'log-views-total-180day', $views180Day);	
+			updateMeta(_HEADER_ID, 'log-views-total-365day', $views365Day);	
 			
-			$getReferrers = readMeta($siteHeader, 'log-views-referrers');
+			$getReferrers = readMeta(_HEADER_ID, 'log-views-referrers');
 			$getReferrers = maybe_unserialize( $getReferrers );
 			if ( !is_array($getReferrers) ) $getReferrers = array();
 			array_unshift($getReferrers, $userRefer);
 			if ( count($getReferrers) > $views90Day ) array_pop($getReferrers);
 			$newReferrers = maybe_serialize( $getReferrers );
-			updateMeta($siteHeader, 'log-views-referrers', $newReferrers);
+			updateMeta(_HEADER_ID, 'log-views-referrers', $newReferrers);
 
-			$getLocations = readMeta($siteHeader, 'log-views-cities');
+			$getLocations = readMeta(_HEADER_ID, 'log-views-cities');
 			$getLocations = maybe_unserialize( $getLocations );
 			if ( !is_array($getLocations) ) $getLocations = array();
 			array_unshift($getLocations, $userLoc);
 			if ( count($getLocations) > $views90Day ) array_pop($getLocations);
 			$newLocations = maybe_serialize( $getLocations );
-			updateMeta($siteHeader, 'log-views-cities', $newLocations);
+			updateMeta(_HEADER_ID, 'log-views-cities', $newLocations);
 	
 			setcookie('countVisit', 'no', time() + 600, "/"); 
 	
@@ -2999,7 +3088,7 @@ function battleplan_count_site_views_ajax() {
 			$response = array( 'result' => 'Site View NOT counted: viewer already counted');
 		endif;
 	else:
-		$response = array( 'result' => 'Site View NOT counted: user='.$userLogin.', user timezone='.$timezone.', user valid='.$userValid.', site timezone='.get_option('timezone_string'));
+		$response = array( 'result' => 'Site View NOT counted: user='._USER_LOGIN.', user timezone='.$timezone.', user valid='.$userValid.', site timezone='.get_option('timezone_string'));
 	endif;	
 	wp_send_json( $response );	
 }
@@ -3008,7 +3097,6 @@ function battleplan_count_site_views_ajax() {
 add_action( 'wp_ajax_count_post_views', 'battleplan_count_post_views_ajax' );
 add_action( 'wp_ajax_nopriv_count_post_views', 'battleplan_count_post_views_ajax' );
 function battleplan_count_post_views_ajax() {
-	$siteHeader = getID('site-header');
 	$uniqueID = $_POST['uniqueID'];
 	$pagesViewed = intval( $_POST['pagesViewed']);
 	$theID = intval( $_POST['id'] );
@@ -3020,8 +3108,7 @@ function battleplan_count_post_views_ajax() {
 	$rightNow = strtotime(date("F j, Y g:i a"));	
 	$today = strtotime(date("F j, Y"));
 	$dateDiff = (($today - $lastViewed) / 60 / 60 / 24);
-	$userLogin = wp_get_current_user()->user_login;
-	$getPageviews = readMeta($siteHeader, 'pages-viewed');
+	$getPageviews = readMeta(_HEADER_ID, 'pages-viewed');
 	$getPageviews = maybe_unserialize( $getPageviews );
 	if ( !is_array($getPageviews) ) $getPageviews = array();
 	$getViews = readMeta($theID, 'log-views');
@@ -3031,12 +3118,12 @@ function battleplan_count_post_views_ajax() {
 	
 	if ( $userLoc == "Ashburn, VA") :
 		$response = array( 'result' => 'Bot ignored' );		
-	elseif ( ( $userLogin != 'battleplanweb' && $userValid != "false" && ( $userValid == "true" || $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :	
-		$visitCutoff = readMeta($siteHeader, 'log-views-total-90day');
+	elseif ( ( _USER_LOGIN != 'battleplanweb' && $userValid != "false" && ( $userValid == "true" || $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :	
+		$visitCutoff = readMeta(_HEADER_ID, 'log-views-total-90day');
 		$getPageviews[$uniqueID] = $pagesViewed;
 		if ( count($getPageviews) > $visitCutoff ) array_shift($getPageviews);	
 		$newPageviews = maybe_serialize( $getPageviews );
-		updateMeta($siteHeader, 'pages-viewed', $newPageviews);	
+		updateMeta(_HEADER_ID, 'pages-viewed', $newPageviews);	
 	
 		if ( $dateDiff != 0 ) : // day has passed, move 29 to 30, and so on	
 			for ($i = 1; $i <= $dateDiff; $i++) {	
@@ -3068,7 +3155,7 @@ function battleplan_count_post_views_ajax() {
 		updateMeta($theID, 'log-views-total-365day', $views365Day);	
 		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' VIEW counted: Today='.$viewsToday.', Week='.$views7Day.', Month='.$views30Day.', Quarter='.$views90Day.', Year='.$views365Day) );
 	else:
-		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' view NOT counted: user='.$userLogin.', user timezone='.$timezone.', user valid='.$userValid.', site timezone='.get_option('timezone_string')) );
+		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' view NOT counted: user='._USER_LOGIN.', user timezone='.$timezone.', user valid='.$userValid.', site timezone='.get_option('timezone_string')) );
 	endif;	
 	wp_send_json( $response );	
 }
@@ -3084,15 +3171,14 @@ function battleplan_count_teaser_views_ajax() {
 	$userLoc = $_POST['userLoc'];	
 	$lastTeased = date("F j, Y g:i a", readMeta($theID, 'log-tease-time'));
 	$today = strtotime(date("F j, Y  g:i a"));
-	$userLogin = wp_get_current_user()->user_login;
 	
 	if ( $userLoc == "Ashburn, VA") :
 		$response = array( 'result' => 'Bot ignored' );		
-	elseif ( ( $userLogin != 'battleplanweb' && $userValid != "false" && ( $userValid == "true" || $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :
+	elseif ( ( _USER_LOGIN != 'battleplanweb' && $userValid != "false" && ( $userValid == "true" || $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :
 		updateMeta($theID, 'log-tease-time', $today);
 		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' TEASER counted: Prior tease = '.$lastTeased) );
 	else:
-		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' teaser NOT counted: user='.$userLogin.', user timezone='.$timezone.', user valid='.$userValid.', site timezone='.get_option('timezone_string')) );
+		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' teaser NOT counted: user='._USER_LOGIN.', user timezone='.$timezone.', user valid='.$userValid.', site timezone='.get_option('timezone_string')) );
 	endif;	
 	wp_send_json( $response );	
 }
@@ -3101,20 +3187,18 @@ function battleplan_count_teaser_views_ajax() {
 add_action( 'wp_ajax_count_link_clicks', 'battleplan_count_link_clicks_ajax' );
 add_action( 'wp_ajax_nopriv_count_link_clicks', 'battleplan_count_link_clicks_ajax' );
 function battleplan_count_link_clicks_ajax() {
-	$siteHeader = getID('site-header');
 	$type = $_POST['type'];	
-	$userLogin = wp_get_current_user()->user_login;	
 	$thisYear = strtotime(date("Y"));
 		
 	if ( $userLoc == "Ashburn, VA") :
 		$response = array( 'result' => 'Bot ignored' );		
-	elseif ( ( $userLogin != 'battleplanweb' && $userValid != "false" && ( $userValid == "true" || $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :
+	elseif ( ( _USER_LOGIN != 'battleplanweb' && $userValid != "false" && ( $userValid == "true" || $timezone == get_option('timezone_string') || _BP_COUNT_ALL_VISITS == "true" ) ) || _BP_COUNT_ALL_VISITS == "override" ) :
 		if ( $type == "Phone Call" ) : $getType = 'call-clicks';
 		elseif ( $type == "Email" ) : $getType = 'email-clicks';
 		elseif ( $type == "Wells Fargo" ) :	$getType = 'finance-clicks';
 		endif;
 	
-		$getClicks = readMeta($siteHeader, $getType);	
+		$getClicks = readMeta(_HEADER_ID, $getType);	
 		$getClicks = maybe_unserialize( $getClicks );
 		if ( !is_array($getClicks) ) $getClicks = array();
 	
@@ -3130,7 +3214,7 @@ function battleplan_count_link_clicks_ajax() {
 		endif;
 	
 		$newClicks = maybe_serialize( $getClicks );
-		updateMeta($siteHeader, $getType, $newClicks);
+		updateMeta(_HEADER_ID, $getType, $newClicks);
 
 		$response = array( 'result' => $getType.' counted = '.$numClicks);
 	else:
@@ -3164,10 +3248,9 @@ add_shortcode( 'restrict', 'battleplan_restrictContent' );
 function battleplan_restrictContent( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'max'=>'administrator', 'min'=>'none' ), $atts );
 	$max = esc_attr($a['max']);
-	if ( $max == "admin" || $max == "administrator" ) : $max = "administrator"; else: $max = "bp_".$max; endif;
+	if ( $max == "admin" || $max == "administrator" ) : $max = "administrator"; else: if ( substr($min, 0, 3) !== "bp_" ) : $max = "bp_".$max; endif; endif;
 	$min = esc_attr($a['min']);
-	if ( $min == "admin" || $min == "administrator" ) : $min = "administrator"; else: $min = "bp_".$min; endif;
-
+	if ( $min == "admin" || min == "administrator" ) : $min = "administrator"; else: if ( substr($min, 0, 3) !== "bp_" ) : $min = "bp_".$min; endif; endif;
 	$role = battleplan_getUserRole( $identifier, 'name' );
 	$user_caps = get_role( $role )->capabilities;
 	$max_caps = get_role( $max )->capabilities;
@@ -3180,7 +3263,7 @@ function battleplan_restrictContent( $atts, $content = null ) {
 		if ( $user_caps['level_'.$x] == 1 || $user_caps['level_'.$x] == true ) $user_level = $x;
 	} 
 
-	if ( $user_level >= $min_level && $user_level <= $max_level ) : return do_shortcode($content);
+	if ( $user_level >= $min_level && $user_level <= $max_level ) : return do_shortcode('<div class="restrict-'.$min.'">'.$content.'</div>');
 	else: return '<div class="restricted"></div>';
 	endif;	
 }

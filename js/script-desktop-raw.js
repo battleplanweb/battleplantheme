@@ -12,7 +12,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 # Desktop functionality
 --------------------------------------------------------------*/
 	var getUploadURI = site_dir.upload_dir_uri;
-
+	
+// Preload BG image and fade in
+	if ( $( 'body' ).hasClass( "background-image" ) ) {
+		var preloadBG = new Image();
+		preloadBG.onload = function() { animateDiv( '.parallax-mirror', 'fadeIn', 0, '', 200 ); };		
+		preloadBG.src = getUploadURI + "/" + "site-background.jpg";  
+	}
+	
 //Set full screen parallax background for desktops
 	window.parallaxBG = function (container, filename, backgroundW, backgroundH, posX, posY, bleed, speed) {
 		posX = posX || 'center';
@@ -20,10 +27,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		bleed = bleed || 20;
 		speed = speed || 3;
 
-		var theContainer = $(container);
-		var checkPageH = theContainer.outerHeight();
-		var parallaxS = (backgroundH / checkPageH) / speed;
-		theContainer.parallax({ imageSrc:getUploadURI+'/'+filename, speed:parallaxS, bleed:bleed, naturalWidth:backgroundW, naturalHeight:backgroundH, positionX:posX, positionY:posY });	
+		var checkPageH = $(container).outerHeight(), parallaxS = (backgroundH / checkPageH) / speed;
+		$(container).parallax({ imageSrc:getUploadURI+'/'+filename, speed:parallaxS, bleed:bleed, naturalWidth:backgroundW, naturalHeight:backgroundH, positionX:posX, positionY:posY });	
 	};
 
 //Control parallax movement of divs within a container
@@ -32,10 +37,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		function posParaDiv() {
 			$(container).each(function() {					
 				if ( $(this).find(element).length > 0) {
-					var elem = $(this).find(element), elemH = elem.outerHeight();
-					var conH = $(this).outerHeight(), conT = $(this).offset().top, conB = conT + conH;
-					var winH = $(window).height(), winT = $(window).scrollTop(), winB = winT + winH;		
-					var adjT = winB - conT, fullH = conH + winH, scrollPct = adjT / fullH;	
+					var elem = $(this).find(element), elemH = elem.outerHeight(), conH = $(this).outerHeight(), conT = $(this).offset().top, conB = conT + conH, winH = $(window).height(), winT = $(window).scrollTop(), winB = winT + winH, adjT = winB - conT, fullH = conH + winH, scrollPct = adjT / fullH;	
 					if ( scrollPct > 1 ) { scrollPct = 1; }
 					if ( scrollPct < 0 || scrollPct == null ) { scrollPct = 0; }
 					var moveElem = (conH - elemH) * scrollPct;					
@@ -133,8 +135,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				getMagicPct = getMagicAdj / getMagicW;
 				getMagicNow = $magicLine.position().left - getMagicSide;
 				if ( getMagicPct < 0.33 ) { $('body').removeClass('menu-alt-2').removeClass('menu-alt-3').addClass('menu-alt-1'); }
-				if ( getMagicPct >= 0.33 && getMagicPct < 0.66 ) { $('body').removeClass('menu-alt-1').removeClass('menu-alt-3').addClass('menu-alt-2'); }
-				if ( getMagicPct >= 0.66 ) { $('body').removeClass('menu-alt-1').removeClass('menu-alt-2').addClass('menu-alt-3'); }		
+				else if ( getMagicPct >= 0.33 && getMagicPct < 0.66 ) { $('body').removeClass('menu-alt-1').removeClass('menu-alt-3').addClass('menu-alt-2'); }
+				else { $('body').removeClass('menu-alt-1').removeClass('menu-alt-2').addClass('menu-alt-3'); }		
 				if ( getMagicAdj <= getMagicNow ) { $('body').addClass('menu-dir-l').removeClass('menu-dir-r'); }	
 				else { $('body').addClass('menu-dir-r').removeClass('menu-dir-l'); }
 			};	
@@ -155,8 +157,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 		menuUL.children().each(function() {
 			optW += $(this).outerWidth();
-			if ( optW < menuW ) $(this).addClass('left-menu');
-			if ( optW > menuW ) $(this).addClass('right-menu');
+			if ( optW < menuW ) { $(this).addClass('left-menu'); } else { $(this).addClass('right-menu'); }
 		});
 
 		addDiv(menuFlex, '<div class="split-menu-r"></div>', 'before'); 
@@ -186,10 +187,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		
 // Check & log heights of main elements
 		window.checkHeights = function () {
-			var primary = $('#primary').outerHeight();
-			var viewport = $(window).outerHeight();
-			var widgets = $("#secondary .sidebar-inner").outerHeight() + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom')) + compensate;			
-			var remain = primary - widgets;
+			var primary = $('#primary').outerHeight(), viewport = $(window).outerHeight(), widgets = $("#secondary .sidebar-inner").outerHeight() + parseInt($("#secondary").css('padding-top')) + parseInt($("#secondary").css('padding-bottom')) + compensate, remain = primary - widgets;
 
 			$('#wrapper-content').attr( 'data-primary', Math.round(primary) ).attr( 'data-viewport', Math.round(viewport) ).attr( 'data-widgets', Math.round(widgets) ).attr( 'data-remain', Math.round(remain) );
 			
@@ -197,8 +195,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		}
 
 // Initiate widget removal
-		window.widgetInit = function () {		
-			$('#secondary').css({ "height":"calc(100% + "+compensate+"px)" });
+		window.widgetInit = function () {
+			if ( compensate != 0 ) { $('#secondary').css({ "height":"calc(100% + "+compensate+"px)" }); }
 			$('.widget:not(.widget-important)').addClass('hide-widget');
 			addWidgets();				
 		};
@@ -226,14 +224,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
  // Move sidebar in conjunction with mouse scroll to keep it even with content
 		window.moveWidgets = function () {
 			if ( sidebarScroll == "true" ) {
-				var sidebar = $(".sidebar-inner"), scrollPct, findPos;	
-				var primary = Number($('#wrapper-content').attr('data-primary'));
-				var widgets = Number($('#wrapper-content').attr('data-widgets'));
-				var viewport = Number($('#wrapper-content').attr('data-viewport'));
-				var remain = Number($('#wrapper-content').attr('data-remain'));				
-				var primaryOffset = $("#primary").offset().top;
-				var scrollPos = Number($(window).scrollTop());
-				var adjScrollPos = scrollPos - primaryOffset;			
+				var scrollPct, findPos, primary = Number($('#wrapper-content').attr('data-primary')), widgets = Number($('#wrapper-content').attr('data-widgets')), viewport = Number($('#wrapper-content').attr('data-viewport')), remain = Number($('#wrapper-content').attr('data-remain')), primaryOffset = $("#primary").offset().top, scrollPos = Number($(window).scrollTop()), adjScrollPos = scrollPos - primaryOffset;			
 								
 				if ( scrollPos > primaryOffset ) {				
 					scrollPct = adjScrollPos / ( primary - viewport );
@@ -251,18 +242,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				if ( findPos > remain ) { findPos = remain; }
 				if ( findPos < 0 ) { findPos = 0; }
 				if ( findPos > 0 && findPos < remain ) { checkHeights(); }
-				sidebar.css({ "margin-top": findPos+"px" }); 
+				$(".sidebar-inner").css({ "margin-top": findPos+"px" }); 
 			}
 		};
-	};	
-	
-// Preload BG image and fade in
-	if ( $( 'body' ).hasClass( "background-image" ) ) {
-		var preloadBG = new Image();
-		preloadBG.onload = function() { animateDiv( '.parallax-mirror', 'fadeIn', 0, '', 200 ); };		
-		preloadBG.onerror = function() { console.log("site-background.jpg not found"); };
-		preloadBG.src = getUploadURI + "/" + "site-background.jpg";  
-	}
+	};
 	
 /*--------------------------------------------------------------
 # Browser resize
@@ -301,7 +284,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	$(document).keydown(function(e) { if( e.keyCode == 9 && !$('body').hasClass("using-mouse") ) { $('body').addClass('using-keyboard'); } });
 
 	// Remove iframe from tab order
-	$('iframe').each(function(){
+	$('iframe').each(function() {
 		$(this).attr("aria-hidden", true).attr("tabindex","-1");		
 	})
 

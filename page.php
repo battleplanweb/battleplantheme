@@ -2,8 +2,9 @@
 
 get_header(); ?>
 
-	<main id="primary" class="site-main">
-
+<main id="primary" class="site-main" role="main" aria-label="main content">
+	<div class="site-main-inner">
+	
 		<article id="post-<?php the_ID(); ?>">
 			
 			<?php the_content();?>
@@ -12,7 +13,8 @@ get_header(); ?>
 
 		<?php if ( comments_open() || get_comments_number() ) comments_template(); ?>
 
-	</main><!-- #primary -->
+	</div><!-- .site-main-inner -->
+</main><!-- #primary .site-main -->
 
 <?php
 get_footer();

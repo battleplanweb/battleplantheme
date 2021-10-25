@@ -1,8 +1,6 @@
 <?php
 /* Battle Plan Web Design - User Profile List Page */
 
-if ( !is_user_logged_in() ) return get_option('site_login')['restricted_text'];
-
 $search = ( isset($_GET["as"]) ) ? sanitize_text_field($_GET["as"]) : false ;
 $page = (get_query_var('paged')) ? get_query_var('paged') : 1;
 $offset = ($page - 1) * $number;
@@ -77,7 +75,7 @@ if ( !empty($profiles) ) :
     </li>
     <?php
 	*/
-		$buildList .= '[/col]';
+		$buildList .= '[/col]'; 
 	endforeach;
 else:
  	$buildList .= '[col]<p>No profiles found.</p>[/col]';
@@ -92,8 +90,11 @@ $displayArchive .= do_shortcode('[section width="inline" class="archive-content 
 		
 $displayArchive .= '<footer class="archive-footer">';
 	$displayArchive .= get_the_posts_pagination( array( 'mid_size' => 2, 'prev_text' => _x( '<i class="fa fa-chevron-left"></i><span class="sr-only">Previous set of posts</span>', 'Previous set of posts' ), 'next_text' => _x( '<i class="fa fa-chevron-right"></i><span class="sr-only">Next set of posts</span>', 'Next set of posts' ), ));
-$displayArchive .= '</footer><!-- .archive-footer-->';
+$displayArchive .= '</footer><!-- .archive-footer-->'; 
  
-return $displayArchive;	
+$restrictedMsg = '<h1>Log In</h1><h3>To Access The Directory</h3>'.do_shortcode('[get-login]');
+$restrictCode = do_shortcode('[restrict max="none"]'.$restrictedMsg.'[/restrict]');	
+$pageCode = do_shortcode('[restrict max="administrator" min="member"]'.$displayArchive.'[/restrict]');	
 
+return $restrictCode.$pageCode;
 ?>

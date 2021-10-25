@@ -2,8 +2,9 @@
 
 get_header(); ?>
 
-	<main id="primary" class="site-main">
-
+<main id="primary" class="site-main" role="main" aria-label="main content">
+	<div class="site-main-inner">
+	
 		<?php if ( have_posts() ) : 		
 			$archiveHeadline = "Recent Updates";		
 			$grid = "1";
@@ -23,17 +24,6 @@ get_header(); ?>
 			$link = "post"; //post, cf-custom-field, specific link, false
 			$addInfo = "";				
 			$addClass = "";
-			/*
-			ob_start(); ?>
-				<div class="row-of-buttons">
-					<div class="block block-button"><button class="males-btn" tabindex="0"><i class='fa fas fa-mars'></i> Males</button></div>
-					<div class="block block-button"><button class="females-btn" tabindex="0"><i class='fa fas fa-venus'></i> Females</button></div>
-					<div class="block block-button"><button class="all-btn" tabindex="0"><i class='fa fas fa-venus-mars'></i> All</button></div>
-				</div>
-			<?php 
-			$archiveIntro = ob_get_clean();
-			$noPic = "774";
-			*/
 			
 			if ( function_exists( 'overrideArchive' ) ) { overrideArchive( get_post_type() ); }
 
@@ -76,9 +66,13 @@ get_header(); ?>
 		
 			$displayArchive .= '<footer class="archive-footer">';
 				$displayArchive .= get_the_posts_pagination( array( 'mid_size' => 2, 'prev_text' => _x( '<i class="fa fa-chevron-left"></i>', 'Previous set of posts' ), 'next_text' => _x( '<i class="fa fa-chevron-right"></i>', 'Next set of posts' ), ));
-			$displayArchive .= '</footer><!-- .archive-footer-->';
-		
-			echo $displayArchive;	
+			$displayArchive .= '</footer><!-- .archive-footer-->';			
+			
+			$restrictedMsg = '<h1>Log In</h1><h3>To Access This Page</h3>'.do_shortcode('[get-login]');
+			$restrictCode = do_shortcode('[restrict max="none"]'.$restrictedMsg.'[/restrict]');	
+			$pageCode = do_shortcode('[restrict max="administrator" min="member"]'.$displayArchive.'[/restrict]');	
+
+			echo $restrictCode.$pageCode;
 
 		else :
 
@@ -87,7 +81,8 @@ get_header(); ?>
 		endif;
 		?>
 
-	</main><!-- #primary -->
+	</div><!-- .site-main-inner -->
+</main><!-- #primary .site-main -->
 
 <?php
 get_footer();

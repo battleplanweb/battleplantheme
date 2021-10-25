@@ -17,7 +17,7 @@
 	<?php bp_google_analytics(); ?>
 </head>
 
-<body <?php body_class(getUserRole()); ?>>
+<body id="<?php echo get_the_ID(); ?>" data-unique-id="<?php echo $_COOKIE['unique-id']; ?>" data-pageviews="<?php echo $_COOKIE['pages-viewed']; ?>" <?php body_class(getUserRole()); ?>>
 	
 <?php bp_loader(); ?>
 <?php wp_body_open(); ?>

@@ -2,8 +2,9 @@
 
 get_header(); ?>
 
-	<main id="primary" class="site-main">
-
+<main id="primary" class="site-main" role="main" aria-label="main content">
+	<div class="site-main-inner">
+	
 		<?php if ( have_posts() ) : 		
 			$archiveHeadline = "Our Dogs";		
 			$grid = "4e";		
@@ -70,7 +71,8 @@ get_header(); ?>
 		endif;
 		?>
 
-	</main><!-- #primary -->
+	</div><!-- .site-main-inner -->
+</main><!-- #primary .site-main -->
 
 <?php
 get_footer();

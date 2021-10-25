@@ -2,7 +2,8 @@
 
 get_header(); ?>
  
-	<main id="primary" class="site-main">
+<main id="primary" class="site-main" role="main" aria-label="main content">
+	<div class="site-main-inner">
 
 		<?php while ( have_posts() ) : the_post();
 
@@ -136,7 +137,8 @@ get_header(); ?>
 		
 		endwhile; ?>
 
-	</main><!-- #main -->
+	</div><!-- .site-main-inner -->
+</main><!-- #primary .site-main -->
 
 <?php
 get_footer();

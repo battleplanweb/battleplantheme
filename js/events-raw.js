@@ -88,8 +88,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			'<div class="post-links"><div class="meta-nav" aria-hidden="true">Next</div><div class="post-title">' + getNextTitle + '</div></div><div class="post-arrow"><i class="fa fas fa-chevron-right" aria-hidden="true"></i></div>'		
 		);
 		
-		$('.tribe-events-list-event-title a').attr('aria-hidden','true').attr('tabindex', '-1');
-				
+		$('.tribe-events-list-event-title a').attr('aria-hidden','true').attr('tabindex', '-1');				
 	});
 	
 })(jQuery); });

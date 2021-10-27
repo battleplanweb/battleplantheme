@@ -131,18 +131,47 @@ input[type="checkbox"], input[type="radio"] {
 }
 
 .wp-list-table th#title a,
-.wp-list-table th#title,
+.wp-list-table th.column-title a,
+.wp-list-table th#slug a, 
+.wp-list-table th#column-slug a, 
+.wp-list-table th.column-slug a,
+.wp-list-table th.column-column-slug a,
+.wp-list-table th#categories a, 
+.wp-list-table th.column-categories a,
+.wp-list-table th#tags a, 
+.wp-list-table th#gallery-tags a, 
+.wp-list-table th.column-tags a,
+.wp-list-table th.column-gallery-tags a,
+.wp-list-table th#author a, 
+.wp-list-table th.column-author a,
+.wp-list-table th#attachments a, 
+.wp-list-table th.column-attachments a, 
 .wp-list-table th#filename a,
-.wp-list-table th#filename,
 .wp-list-table th#alt-text a,
-.wp-list-table th#alt-text,
+.wp-list-table th#username a,
+.wp-list-table th.column-username a,
+.wp-list-table th#first_name a,
+.wp-list-table th.column-first_name a,
+.wp-list-table th#last_name a,
+.wp-list-table th.column-last_name a,
+.wp-list-table th.check-column,
 .wp-list-table td.title,
+.wp-list-table td.slug,
+.wp-list-table td.column-slug,
+.wp-list-table td.attachments,
 .wp-list-table td.column-source,
 .wp-list-table td.plugin-title,
 .wp-list-table td.column-description,
 .wp-list-table td.plugin-update,
 .wp-list-table td.column-filename,
-.wp-list-table td.alt-text {
+.wp-list-table td.column-categories,
+.wp-list-table td.column-tags,
+.wp-list-table td.column-gallery-tags,
+.wp-list-table td.column-author,
+.wp-list-table td.alt-text,
+.wp-list-table td.username,
+.wp-list-table td.first_name,
+.wp-list-table td.last_name {
 	text-align:									left;
 }
 
@@ -202,7 +231,8 @@ tr:hover .row-actions {
 .dashicons-edit::before,
 .dashicons-view::before,
 .dashicons-quick-edit::before,
-.dashicons-clone::before {
+.dashicons-clone::before,
+.dashicons-randomize::before {
 	font-family: 								"dashicons";
     content: 									"\f182";
 	font-style: 								normal;
@@ -234,6 +264,10 @@ tr:hover .row-actions {
 
 .dashicons-clone::before {
     content: 									"\f133";
+}
+
+.dashicons-randomize::before {
+    content: 									"\f503";
 }
 
 .row-actions span i::before {

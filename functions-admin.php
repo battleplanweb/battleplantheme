@@ -1339,7 +1339,105 @@ function battleplan_column_settings() {
 						)			
 					)
 				) );
-			endif;
+			endif;				
+			ac_register_columns( 'wp-users', array(
+			array(
+				'columns'=>array(
+					'username'=>array(
+						'type'=>'username',
+						'label'=>'Username',
+						'width'=>'200',
+						'width_unit'=>'px',
+						'edit'=>'on',
+						'sort'=>'on',
+						'name'=>'username',
+						'label_type'=>'',
+						'filter'=>'on',
+						'filter_label'=>'',
+						'bulk-editing' =>'',
+						'search'=>'on'
+					),
+					'first_name'=>array(
+						'type'=>'column-first_name',
+						'label'=>'First Name',
+						'width'=>'200',
+						'width_unit'=>'px',
+						'edit'=>'on',
+						'sort'=>'on',
+						'name'=>'first_name',
+						'label_type'=>'',
+						'filter'=>'on',
+						'filter_label'=>'',
+						'bulk-editing' =>'',
+						'search'=>'on'
+					),		
+					'last_name'=>array(
+						'type'=>'column-last_name',
+						'label'=>'Last Name',
+						'width'=>'200',
+						'width_unit'=>'px',
+						'edit'=>'on',
+						'sort'=>'on',
+						'name'=>'last_name',
+						'label_type'=>'',
+						'filter'=>'on',
+						'filter_label'=>'',
+						'bulk-editing' =>'',
+						'search'=>'on'
+					),			
+			
+					'email'=>array(
+						'type'=>'email',
+						'label'=>'Email',
+						'width'=>'200',
+						'width_unit'=>'px',
+						'edit'=>'on',
+						'sort'=>'on',
+						'name'=>'email',
+						'label_type'=>'',
+						'filter'=>'on',
+						'filter_label'=>'',
+						'bulk-editing' =>'',
+						'search'=>'on'
+					),
+					'role'=>array(
+						'type'=>'role',
+						'label'=>'Role',
+						'width'=>'200',
+						'width_unit'=>'px',
+						'edit'=>'on',
+						'sort'=>'on',
+						'name'=>'role',
+						'label_type'=>'',
+						'filter'=>'on',
+						'filter_label'=>'',
+						'bulk-editing' =>'',
+						'search'=>'on'
+					),
+					'posts'=>array(
+						'type'=>'posts',
+						'label'=>'Posts',
+						'width'=>'200',
+						'width_unit'=>'px',
+						'edit'=>'on',
+						'sort'=>'on',
+						'name'=>'posts',
+						'label_type'=>'',
+						'filter'=>'on',
+						'filter_label'=>'',
+						'bulk-editing' =>'',
+						'search'=>'on'
+					),
+				),
+				'layout'=>array(
+					'id'=>'battleplan-media-main',
+					'name'=>'Main View',
+					'roles'=>false,
+					'users'=>false,
+					'read_only'=>false
+				)			
+			)
+		) );				
 		endforeach;
 	}
 }
@@ -1936,6 +2034,7 @@ function battleplan_duplicate_post_as_draft(){
 	}
 }
   
+// Replace Page & Post links with icons
 add_filter( 'post_row_actions', 'battleplan_post_row_actions', 90, 2 );
 add_filter( 'page_row_actions', 'battleplan_post_row_actions', 90, 2 );
 function battleplan_post_row_actions( $actions, $post ) {
@@ -1967,7 +2066,18 @@ function battleplan_media_row_actions( $actions, $post ) {
 	$delete = str_replace( "<a href", "<a title='Delete Media' href", $delete );
 	
 	return array( 'edit' => $edit, 'view' => $view, 'adddata' => $adddata, 'delete' => $delete );
-}  
+} 
+
+// Replace Users links with icons
+add_filter( 'user_row_actions', 'battleplan_user_row_actions', 90, 2 );
+function battleplan_user_row_actions( $actions, $post ) {
+	$edit = str_replace( "Edit", "<i class='dashicons-edit'></i>", $actions['edit'] );
+	$delete = str_replace( "Delete", "<i class='dashicons-trash'></i>", $actions['delete'] );
+	$switch = str_replace( "Switch&nbsp;To", "<i class='dashicons-randomize'></i>", $actions['switch_to_user'] );
+
+	return array( 'edit' => $edit, 'delete' => $delete, 'switch_to_user' => $switch );
+}
+
 
 // Automatically set the image Title, Alt-Text, Caption & Description upon upload
 add_action( 'add_attachment', 'battleplan_setImageMetaUponUpload' );

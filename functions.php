@@ -18,7 +18,7 @@
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.3' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.4' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -2852,7 +2852,7 @@ function battleplan_doChrons() {
 			$wpSEOLocal['location_coords_long'] = get_option('site_long');
 			$wpSEOLocal['hide_opening_hours'] = 'on';
 			$wpSEOLocal['address_format'] = 'address-state-postal';	
-		
+			
 			delete_option( 'wp-smush-dir_path');
 			delete_option( 'wp-smush-install-type');
 			delete_option( 'wp-smush-keep_exif');
@@ -2895,12 +2895,44 @@ function battleplan_doChrons() {
 		update_option( 'default_ping_status', 'closed' );
 		update_option( 'permalink_structure', '/%postname%/' );
 		update_option( 'wpe-rand-enabled', '1' );
-		
+
+		update_option( 'client_name', do_shortcode('[get-biz info="name"]') );
+		update_option( 'client_phone', do_shortcode('[get-biz info="area"][get-biz info="phone"]') );
+		update_option( 'client_start', do_shortcode('[get-biz info="year"]') );
+		update_option( 'client_street', do_shortcode('[get-biz info="street"]') );
+		update_option( 'client_state-abbr', do_shortcode('[get-biz info="state-abbr"]') );
+		update_option( 'client_state-full', do_shortcode('[get-biz info="state-full"]') );
+		update_option( 'client_zip', do_shortcode('[get-biz info="zip"]') );
+		update_option( 'client_license', do_shortcode('[get-biz info="license"]') );
+		update_option( 'client_email', do_shortcode('[get-biz info="email"]') );
+		update_option( 'client_facebook', do_shortcode('[get-biz info="facebook"]') );
+		update_option( 'client_twitter', do_shortcode('[get-biz info="twitter"]') );
+		update_option( 'client_pinterest', do_shortcode('[get-biz info="pinterest"]') );
+		update_option( 'client_linkedin', do_shortcode('[get-biz info="linkedin"]') );
+		update_option( 'client_instagram', do_shortcode('[get-biz info="instagram"]') );
+		update_option( 'client_pid', do_shortcode('[get-biz info="pid"]') );
+
 		delete_option( 'bp_setup_2021_08_15' );
 
 		update_option( 'bp_chrons_last_run', time() );		
 	endif;
 }
+
+update_option( 'client_name', do_shortcode('[get-biz info="name"]') );
+update_option( 'client_phone', do_shortcode('[get-biz info="area"][get-biz info="phone"]') );
+update_option( 'client_start', do_shortcode('[get-biz info="year"]') );
+update_option( 'client_street', do_shortcode('[get-biz info="street"]') );
+update_option( 'client_state-abbr', do_shortcode('[get-biz info="state-abbr"]') );
+update_option( 'client_state-full', do_shortcode('[get-biz info="state-full"]') );
+update_option( 'client_zip', do_shortcode('[get-biz info="zip"]') );
+update_option( 'client_license', do_shortcode('[get-biz info="license"]') );
+update_option( 'client_email', do_shortcode('[get-biz info="email"]') );
+update_option( 'client_facebook', do_shortcode('[get-biz info="facebook"]') );
+update_option( 'client_twitter', do_shortcode('[get-biz info="twitter"]') );
+update_option( 'client_pinterest', do_shortcode('[get-biz info="pinterest"]') );
+update_option( 'client_linkedin', do_shortcode('[get-biz info="linkedin"]') );
+update_option( 'client_instagram', do_shortcode('[get-biz info="instagram"]') );
+update_option( 'client_pid', do_shortcode('[get-biz info="pid"]') );
 
 /*--------------------------------------------------------------
 # Universal Pages
@@ -3263,8 +3295,8 @@ function battleplan_restrictContent( $atts, $content = null ) {
 		if ( $user_caps['level_'.$x] == 1 || $user_caps['level_'.$x] == true ) $user_level = $x;
 	} 
 
-	if ( $user_level >= $min_level && $user_level <= $max_level ) : return do_shortcode('<div class="restrict-'.$min.'">'.$content.'</div>');
-	else: return '<div class="restricted"></div>';
+	if ( $user_level >= $min_level && $user_level <= $max_level ) : return do_shortcode($content);
+	else: return "";
 	endif;	
 }
 

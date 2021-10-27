@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 10.3
+Version: 10.4
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -47,6 +47,7 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
 	- Bootstrap Carousel	
 	- Logo Slider
 	- Review Questions & Redirect
+	- User Switching
 # Mobile Styles
 
 /*--------------------------------------------------------------
@@ -338,6 +339,7 @@ body.using-mouse *.tab-focus,
 body.using-mouse .block-accordion.tab-focus {
 	outline:									2px dotted red !important;
 }
+
 
 
 
@@ -1151,7 +1153,11 @@ input[type="radio"]:checked::after {
 }
 
 form .block-button {
-	margin-top: 								1.1em;
+	margin-top: 								2.1em;
+}
+
+#secondary form .block-button {
+	margin-top: 								1.7em;
 }
 
 a.button,
@@ -4252,6 +4258,40 @@ iframe#podium-modal {
 	margin:										0 5px;
 }
 
+/* User Switching
+--------------------------------------------- */
+p#user_switching_switch_on {
+	display: 									flex;
+	align-items: 								center;
+	justify-content: 							center;
+	position: 									fixed;
+	background: 								#f0f0f0;
+	border-bottom: 								1px solid #cccccc;	
+	margin: 									0;
+	z-index: 									100000000;
+	width: 										100%;
+	height: 									50px;
+}
+
+p#user_switching_switch_on + #page::before {
+	content: 									"";
+	display: 									block;
+	height: 									50px;
+}
+
+p#user_switching_switch_on a,
+p#user_switching_switch_on a:visited {
+	color: 										#000000;
+}
+
+p#user_switching_switch_on,
+p#user_switching_switch_on a:hover,
+p#user_switching_switch_on a:active,
+p#user_switching_switch_on a.tab-focus {
+	color: 										#8a8a8a;
+}
+
+
 /*--------------------------------------------------------------
 # Mobile Styles
 --------------------------------------------------------------*/
@@ -4468,6 +4508,10 @@ iframe#podium-modal {
 	.sidebar-shift.screen-mobile #secondary {
 		padding:									0 3%;
 		margin-bottom:								2em;
+	}
+	
+	.sidebar-shift.screen-mobile #secondary .sidebar-inner {
+		margin-top:									0 !important;
 	}
 	
 	/* Responsive Sections */
@@ -4730,6 +4774,10 @@ iframe#podium-modal {
 	}
 	
 	/* Office Hours */
+	.office-hours {
+		min-width: 										280px;
+	}
+	
 	.office-hours.horz {
 		grid-template-columns: 						1fr;
 		grid-template-rows: 						repeat(7, 1fr);
@@ -5003,7 +5051,7 @@ iframe#podium-modal {
 	}
 }
 
-@media screen and (min-width: 961px) and (max-width: 1279px) {
+@media screen and (min-width: 961px) {
 	.screen-480,
 	.screen-640,
 	.screen-960 {

@@ -30,7 +30,7 @@ if ( $type == "teaser" ) :
 		  <a href="/ruud-pro-partner/" aria-hidden="true" tabindex="-1"><img src="/wp-content/themes/battleplantheme/common/hvac-ruud/pro-partner-logo.png" loading="lazy" alt="We are proud to be a Ruud Pro Partner." class="alignright size-quarter-s noFX ruud-pro-partner-logo" width="320" height="183" style="aspect-ratio:320/183" /></a>
 
 		  <p>The Ruud Pro Partner program is made up of handpicked dealers who are ready to listen, evaluate and find solutions that work smarter for you and your home.</p>
-		  <p><strong><a href="/ruud-pro-partner/">Learn more about the Ruud Pro Partner program.</a></strong></p>
+		  [btn link="/ruud-pro-partnerr/" ada="about the Ruud Pro Partner program"]Learn More[/btn]
 		 [/txt]
 	');	
 

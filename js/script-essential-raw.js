@@ -1171,11 +1171,12 @@ if ( typeof parallaxBG !== 'function' ) {
 		}); 
 	});	
 
-// Ensure all slides in a Bootstrap carousel are even height
-	$(".carousel").each(function() {
+// Ensure all slides in a testimonial slider are even height
+	$(".carousel.slider-testimonials").each(function() {
 		var thisCarousel = $(this), maxH = 0, thisSlideH = 0, getPadding = parseInt(thisCarousel.find(".carousel-inner").css('padding-bottom'));
 		for (var i=0; i < thisCarousel.find(".carousel-item").length; i++) {					
 			thisSlideH = thisCarousel.find(".carousel-item.active").outerHeight() + getPadding;
+			console.log(thisSlideH);
 			if ( thisSlideH > maxH ) { 
 				maxH = Math.ceil(thisSlideH); 
 			}

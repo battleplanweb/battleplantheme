@@ -7,6 +7,7 @@
 # Product Overview
 # American Standard Customer Care
 # Ruud Pro Partner
+# Comfortmaker Elite Dealer
 # Why Choose Us?
 # HVAC Maintenance Tips Teaser
 # HVAC Tip Of The Month
@@ -68,7 +69,17 @@ function battleplan_ruud_pro_partner( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', ), $atts );
 	$type = esc_attr($a['type']);
 	return include "wp-content/themes/battleplantheme/pages/page-hvac-ruud-pro-partner.php";
-}				
+}	
+
+/*--------------------------------------------------------------
+# Comfortmaker Elite Dealer
+--------------------------------------------------------------*/
+add_shortcode( 'comfortmaker-elite-dealer', 'battleplan_comfortmaker_elite_dealer' );
+function battleplan_comfortmaker_elite_dealer( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'type'=>'', ), $atts );
+	$type = esc_attr($a['type']);
+	return include "wp-content/themes/battleplantheme/pages/page-hvac-comfortmaker-elite-dealer.php";
+}	
 
 /*--------------------------------------------------------------
 # Why Choose Us?
@@ -84,8 +95,9 @@ function battleplan_why_choose_us( $atts, $content = null ) {
 	$img = esc_attr($a['img']);
 	$alt = esc_attr($a['alt']);
 	if ( $brand == '' ) :
-		$brand = strtolower(str_replace(" ", "-", get_option('site_brand')));
-		$name = ucwords($brand);
+		$brand_raw = is_array( get_option('site_brand') ) ? maybe_unserialize(get_option('site_brand'))[0] : get_option('site_brand');
+		$brand = strtolower(str_replace(" ", "-", $brand_raw));
+		$name = ucwords($brand_raw);
 	endif;
 	if ( $alt == '' ) $alt='We are proud to be a dealer of '.$name.', offering the top rated HVAC products on the market.';
 	
@@ -411,28 +423,36 @@ function battleplan_getBrandLogo($atts, $content = null) {
 	$brand = esc_attr($a['brand']);
 	$name = ucwords($brand);
 	if ( $alt != '' ) $alt="-".$alt;
-	if ( $brand == '' ) :
-		$brand = strtolower(str_replace(" ", "-", get_option('site_brand')));
-		$name = ucwords($brand);
+	if ( $brand == '' ) :	
+		$brand_raw = is_array( get_option('site_brand') ) ? maybe_unserialize(get_option('site_brand'))[0] : get_option('site_brand');
+		$brand = strtolower(str_replace(" ", "-", $brand_raw));
+		$name = ucwords($brand_raw);
 	endif;
 	$imagePath = get_template_directory().'/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$alt.'.png';			
 	list($width, $height) = getimagesize($imagePath);
 
-	return '<img class="noFX" loading="lazy" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$alt.'.png" alt="We offer '.$name.' heating and air conditioning products." width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
+	return '<img class="noFX brand-logo '.$brand.'-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$alt.'.png" alt="We offer '.$name.' heating and air conditioning products." width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
 }
 
 // Add Symptom Checker widget to Sidebar
 add_shortcode( 'get-symptom-checker', 'battleplan_getSymptomChecker' );
 function battleplan_getSymptomChecker() {	
-	$brand = strtolower(str_replace(" ", "-", get_option('site_brand')));
-	if ( $brand == "" ) $brand = "american-standard";
-	return '<a href="/symptom-checker/" title="Click here for troublshooting ideas to solve common HVAC problems."><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/symptom-checker.jpg" loading="lazy" alt="HVAC unit pictured on colorful background." width="300" height="250" style="aspect-ratio:300/250" /></a>';
+	$brand_raw = is_array( get_option('site_brand') ) ? maybe_unserialize(get_option('site_brand'))[0] : get_option('site_brand');
+	$brand = strtolower(str_replace(" ", "-", $brand_raw));
+	$name = ucwords($brand_raw);
+	return '<a href="/symptom-checker/" title="Click here for troublshooting ideas to solve common HVAC problems."><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/symptom-checker.jpg" loading="lazy" alt="'.$name.' HVAC unit pictured on colorful background." width="300" height="250" style="aspect-ratio:300/250" /></a>';
 }
 
 // Add Customer Care Dealer widget to Sidebar
 add_shortcode( 'get-customer-care', 'battleplan_getCustomerCare' );
 function battleplan_getCustomerCare() {	
 	return '<a href="/customer-care-dealer/" title="Click here to read more about the American Standard Heating & Cooling Customer Care Dealer program"><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-american-standard/customer-care-dealer-logo.png" loading="lazy" alt="We are proud to be an American Standard Customer Care Dealer" width="400" height="400" style="aspect-ratio:400/400" /></a>';
+}
+
+// Add Comfortmaker Elite Dealer widget to Sidebar
+add_shortcode( 'get-comfortmaker-elite-dealer', 'battleplan_getComfortmakerEliteDealer' );
+function battleplan_getComfortmakerEliteDealer() {	
+	return '<a href="/comfortmaker-elite-dealer/" title="Click here to read more about the Comfortmaker Elite Dealer program"><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-comfortmaker/comfortmaker-elite-dealer-logo.png" loading="lazy" alt="We are proud to be a Comfortmaker Elite Dealer" width="400" height="400" style="aspect-ratio:400/400" /></a>';
 }
 
 // Add Financing widget to Sidebar

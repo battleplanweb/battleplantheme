@@ -35,7 +35,7 @@ if ( $type == "teaser" ) :
 		  <a href="/customer-care-dealer/" aria-hidden="true" tabindex="-1"><img src="/wp-content/themes/battleplantheme/common/hvac-american-standard/customer-care-dealer-logo.png" loading="lazy" alt="We are an American Standard Customer Care Dealer." class="alignright size-quarter-s noFX customer-care-logo" width="258" height="258" style="aspect-ratio:258/258" /></a>
 
 		  <p>The Customer Care program is made up of handpicked dealers who are ready to listen, evaluate and find solutions that work smarter for you and your home.</p>
-		  <p><strong><a href="/customer-care-dealer/">Learn more about the Customer Care program.</a></strong></p>
+		  [btn link="/customer-care-dealer/" ada="about the Customer Care program"]Learn More[/btn]
 		 [/txt]
 	');	
 

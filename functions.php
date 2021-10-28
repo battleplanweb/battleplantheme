@@ -18,7 +18,7 @@
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.4' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.4.1' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -2939,25 +2939,27 @@ update_option( 'client_pid', do_shortcode('[get-biz info="pid"]') );
 --------------------------------------------------------------*/
 add_action('init', 'battleplan_buildUniversalPages');
 function battleplan_buildUniversalPages() {
-	if( is_null(get_page_by_path('customer-care-dealer', OBJECT, 'universal')) && get_option('site_type') == 'hvac' && get_option('site_brand') == 'american standard' ) wp_insert_post( array( 'post_title' => 'Customer Care Dealer', 'post_content' => '[get-universal-page slug="page-hvac-customer-care-dealer"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
-	
-	if( is_null(get_page_by_path('ruud-pro-partner', OBJECT, 'universal')) && get_option('site_type') == 'hvac' && get_option('site_brand') == 'ruud' ) wp_insert_post( array( 'post_title' => 'Ruud Pro Partner', 'post_content' => '[get-universal-page slug="page-hvac-ruud-pro-partner"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
-	
-	if( is_null(get_page_by_path('maintenance-tips', OBJECT, 'universal')) && get_option('site_type') == 'hvac' ) wp_insert_post( array( 'post_title' => 'Maintenance Tips', 'post_content' => '[get-universal-page slug="page-hvac-maintenance-tips"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
+	if ( is_null(get_page_by_path('customer-care-dealer', OBJECT, 'universal')) && get_option('site_type') == 'hvac' && (get_option('site_brand') == 'american standard' || in_array('american standard', get_option('site_brand'))) ) wp_insert_post( array( 'post_title' => 'Customer Care Dealer', 'post_content' => '[get-universal-page slug="page-hvac-customer-care-dealer"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
 
-	if( is_null(get_page_by_path('symptom-checker', OBJECT, 'universal')) && get_option('site_type') == 'hvac' ) wp_insert_post( array( 'post_title' => 'Symptom Checker', 'post_content' => '[get-universal-page slug="page-hvac-symptom-checker"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
+	if ( is_null(get_page_by_path('ruud-pro-partner', OBJECT, 'universal')) && get_option('site_type') == 'hvac' && (get_option('site_brand') == 'ruud' || in_array('ruud', get_option('site_brand'))) ) wp_insert_post( array( 'post_title' => 'Ruud Pro Partner', 'post_content' => '[get-universal-page slug="page-hvac-ruud-pro-partner"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
+
+	if ( is_null(get_page_by_path('comfortmaker-elite-dealer', OBJECT, 'universal')) && get_option('site_type') == 'hvac' && (get_option('site_brand') == 'comfortmaker' || in_array('comfortmaker', get_option('site_brand'))) ) wp_insert_post( array( 'post_title' => 'Comfortmaker Elite Dealer', 'post_content' => '[get-universal-page slug="page-hvac-comfortmaker-elite-dealer"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
+
+	if ( is_null(get_page_by_path('maintenance-tips', OBJECT, 'universal')) && get_option('site_type') == 'hvac' ) wp_insert_post( array( 'post_title' => 'Maintenance Tips', 'post_content' => '[get-universal-page slug="page-hvac-maintenance-tips"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
+
+	if ( is_null(get_page_by_path('symptom-checker', OBJECT, 'universal')) && get_option('site_type') == 'hvac' ) wp_insert_post( array( 'post_title' => 'Symptom Checker', 'post_content' => '[get-universal-page slug="page-hvac-symptom-checker"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
 	
-	if( is_null(get_page_by_path('faq', OBJECT, 'universal')) && get_option('site_type') == 'hvac' ) wp_insert_post( array( 'post_title' => 'FAQ', 'post_content' => '[get-universal-page slug="page-hvac-faq"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
+	if ( is_null(get_page_by_path('faq', OBJECT, 'universal')) && get_option('site_type') == 'hvac' ) wp_insert_post( array( 'post_title' => 'FAQ', 'post_content' => '[get-universal-page slug="page-hvac-faq"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
 	
-	if( is_null(get_page_by_path('profile', OBJECT, 'universal')) && get_option('site_type') == 'profile' ) wp_insert_post( array( 'post_title' => 'Profile', 'post_content' => '[get-universal-page slug="page-profile"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
+	if ( is_null(get_page_by_path('profile', OBJECT, 'universal')) && get_option('site_type') == 'profile' ) wp_insert_post( array( 'post_title' => 'Profile', 'post_content' => '[get-universal-page slug="page-profile"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
 		
-	if( is_null(get_page_by_path('profile-directory', OBJECT, 'universal')) && get_option('site_type') == 'profile' ) wp_insert_post( array( 'post_title' => 'Profile Directory', 'post_content' => '[get-universal-page slug="page-profile-directory"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
+	if ( is_null(get_page_by_path('profile-directory', OBJECT, 'universal')) && get_option('site_type') == 'profile' ) wp_insert_post( array( 'post_title' => 'Profile Directory', 'post_content' => '[get-universal-page slug="page-profile-directory"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
 	
-	if( is_null(get_page_by_path('privacy-policy', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Privacy Policy', 'post_content' => '[get-universal-page slug="page-privacy-policy"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
+	if ( is_null(get_page_by_path('privacy-policy', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Privacy Policy', 'post_content' => '[get-universal-page slug="page-privacy-policy"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
 	
-	if( is_null(get_page_by_path('terms-conditions', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Terms & Conditions', 'post_content' => '[get-universal-page slug="page-terms-conditions"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
+	if ( is_null(get_page_by_path('terms-conditions', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Terms & Conditions', 'post_content' => '[get-universal-page slug="page-terms-conditions"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
 	
-	if( is_null(get_page_by_path('review', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Review', 'post_content' => '[get-universal-page slug="page-review"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
+	if ( is_null(get_page_by_path('review', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Review', 'post_content' => '[get-universal-page slug="page-review"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
 }
 
 add_shortcode( 'get-universal-page', 'battleplan_getUniversalPage' );

@@ -91,7 +91,7 @@ ul span.value {
 
 #battleplan_site_stats tr.coloration td,
 #battleplan_trends_stats table tr.coloration td {
-	color:										#009809;
+	color:										#484848;
 	filter:										saturate(0%);
 }
 

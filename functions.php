@@ -18,7 +18,7 @@
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.4.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.5' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -1490,6 +1490,15 @@ function battleplan_CheckRemoveSidebar( $classes ) {
 	endif;
 }
 
+// If post is an "optimized" page, add .home to body class for CSS purposes
+add_filter( 'body_class', 'battleplan_addHomeBodyClassToOptimized', 70 );
+function battleplan_addHomeBodyClassToOptimized( $classes ) {
+	if ( get_post_type() == "optimized" ) :
+		array_push($classes, 'home');
+	endif;
+	return $classes;	
+}
+
 // Ensure all classes that have been added to <body> exist as an array
 add_filter( 'body_class', 'battleplan_bodyClassArray', 100 );
 function battleplan_bodyClassArray( $classes ) {
@@ -2188,7 +2197,7 @@ function battleplan_dequeue_unwanted_stuff() {
 	wp_dequeue_style( 'select2' );  wp_deregister_style( 'select2' );
 	wp_dequeue_style( 'asp-default-style' ); wp_deregister_style( 'asp-default-style' );		
 	wp_dequeue_style( 'contact-form-7' ); wp_deregister_style( 'contact-form-7' );	
-	if ( is_plugin_active( 'ari-fancy-lightbox/ari-fancy-lightbox.php' ) ) { wp_dequeue_style( 'ari-fancybox' ); wp_deregister_style( 'ari-fancybox' ); }
+	//if ( is_plugin_active( 'ari-fancy-lightbox/ari-fancy-lightbox.php' ) ) { wp_dequeue_style( 'ari-fancybox' ); wp_deregister_style( 'ari-fancybox' ); }
 	if ( is_plugin_active( 'animated-typing-effect/typingeffect.php' ) ) { wp_dequeue_style( 'typed-cursor' ); wp_deregister_style( 'typed-cursor' ); }
 
 // re-load in header
@@ -2226,7 +2235,7 @@ function battleplan_footer_styles() {
 	wp_enqueue_style( 'battleplan-animate', get_template_directory_uri().'/animate.css', array(), _BP_VERSION );	
 	wp_enqueue_style( 'battleplan-fontawesome', get_template_directory_uri()."/fontawesome.css", array(), _BP_VERSION );
 	if ( is_plugin_active( 'extended-widget-options/plugin.php' ) ) { wp_enqueue_style( 'widgetopts-styles', '/wp-content/plugins/extended-widget-options/assets/css/widget-options.css', array(), _BP_VERSION ); }	
-	if ( is_plugin_active( 'ari-fancy-lightbox/ari-fancy-lightbox.php' ) ) { wp_enqueue_style( 'ari-fancybox-styles', '/wp-content/plugins/ari-fancy-lightbox/assets/fancybox/jquery.fancybox.min.css', array(), _BP_VERSION ); }		
+	//if ( is_plugin_active( 'ari-fancy-lightbox/ari-fancy-lightbox.php' ) ) { wp_enqueue_style( 'ari-fancybox-styles', '/wp-content/plugins/ari-fancy-lightbox/assets/fancybox/jquery.fancybox.min.css', array(), _BP_VERSION ); }		
 	if ( get_option( 'site_type' ) == 'profile' || get_option( 'site_type' ) == 'profiles' ) { wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array(), _BP_VERSION ); }		
 }
 
@@ -2296,7 +2305,7 @@ if ( !is_admin() && $GLOBALS['pagenow'] !== 'wp-login.php' && !is_plugin_active(
 		$dom->loadHTML($html);
 		$script = $dom->getElementsByTagName('script'); 
 
-		$targets = array('podium', 'google', 'paypal', 'carousel', 'extended-widget', 'fancybox', 'embed-player', 'huzzaz', 'fbcdn', 'facebook');
+		$targets = array('podium', 'google', 'paypal', 'carousel', 'extended-widget', 'embed-player', 'huzzaz', 'fbcdn', 'facebook');
 
 		foreach ($script as $item) :		   
 			foreach ($targets as $target) :
@@ -2339,6 +2348,15 @@ if ( !is_admin() && $GLOBALS['pagenow'] !== 'wp-login.php' && !is_plugin_active(
 // Hide the Wordpress admin bar
 show_admin_bar( false );
 
+// Set cookie for new home page url if user views an 'optimized' page
+add_action( 'wp', 'battleplan_setHomeBtnCookie' );
+function battleplan_setHomeBtnCookie() {
+	if ( get_post_type() == "optimized" ) :
+		$homeURL = $_SERVER['REQUEST_URI'];
+		setcookie('home-url', $homeURL, '', '/'); 	
+	endif;
+}
+
 // Set up Main Menu
 class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 	public function start_el( &$output, $item, $depth = 0, $args = array(), $id = 0 ) {
@@ -2378,7 +2396,16 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 		$attributes = '';
 		foreach ( $atts as $attr => $value ) {
 			if ( ! empty( $value ) ) {
-				$value = ( 'href' === $attr ) ? esc_url( $value ) : esc_attr( $value );
+				if ( $attr === 'href' ) :
+					if ( ( isset($_COOKIE['home-url']) || $homeURL != '' ) && ( $value == get_home_url() || $value == get_home_url().'/' )) :
+						$value = esc_url( str_replace('//', '/', $_COOKIE['home-url']) );
+					else :
+						$value = esc_url( $value );
+					endif;
+				else :
+					$value = esc_attr( $value );
+				endif;
+
 				$attributes .= ' ' . $attr . '="' . $value . '"';
 			}
 		}
@@ -2588,12 +2615,21 @@ function battleplan_current_type_nav_class($classes, $item) {
 		$classes = str_replace( 'current_page_parent', '', $classes );
 		if ( $item->url == '/'.$post_type ) : $classes = str_replace( 'menu-item', 'menu-item current_page_parent', $classes ); endif;
 	endif;
-	if ($item->attr_title != '' && $item->attr_title == $post_type) { array_push($classes, 'current-menu-item'); };
+	
+	if ($item->attr_title != '' && $item->attr_title == $post_type) { 
+		array_push($classes, 'current-menu-item');
+	};
+	
+	// Highlight HOME button if any of the Optimized pages are viewed
+	if ( $post_type == 'optimized' && ( $item->url == get_home_url() || $item->url == get_home_url().'/' )) :
+		array_push($classes, 'current-menu-item');		
+	endif;
 	
 	// Support for The Events Calendar PRO - plug-in
-	if ( ($item->attr_title == "tribe_events" || $item->attr_title == "events" ) && (strpos(battleplan_getURL(), '/event/') !== false || strpos(battleplan_getURL(), '/events/') !== false) ) {
+	if ( ($item->attr_title == "tribe_events" || $item->attr_title == "events" ) && (strpos(battleplan_getURL(), '/event/') !== false || strpos(battleplan_getURL(), '/events/') !== false) ) :
 		array_push($classes, 'current-menu-item');		
-	}
+	endif;
+	
 	return $classes;
 }
 

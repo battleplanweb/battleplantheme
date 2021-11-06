@@ -20,23 +20,24 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	
 	/* Control color of Visitor Trends box */
 	function runVisitorTrendColor(trend) {
-		var getCount = [], getTotal, getHalf, loopThru, loopNum=0, varyAmt;
+		var getCount = [], getTotal, getThird, topThird, loopThru, loopNum=0, varyAmt;
 		$("#battleplan_trends_stats ."+trend+" tr").each(function(){
 			getCount.push( $(this).attr("data-count") );
 		});	
 		getCount.shift(); 
 		getCount.sort(function(a, b){return b-a});
 		getTotal = getCount.length;
-		getHalf = Math.floor(getTotal / 2);
+		getThird = Math.floor(getTotal / 3);
+		topThird = getThird * 2;
 		getTotal--;
 
-		for (loopThru = 0; loopThru < getHalf; loopThru++) {	
-			varyAmt = 100 - ((100 / getHalf) * loopThru);
+		for (loopThru = 0; loopThru < getThird; loopThru++) {	
+			varyAmt = 100 - ((100 / getThird) * loopThru);
 			varyAmt = varyAmt * 2;
-			$('#battleplan_trends_stats .'+trend+' tr[data-count="' + getCount[loopThru] + '"]').find('td').css({ "filter": "saturate("+varyAmt+"%)" });
+			$('#battleplan_trends_stats .'+trend+' tr[data-count="' + getCount[loopThru] + '"]').find('td').css({ "color":"#009809", "filter": "saturate("+varyAmt+"%)" });
 		} 
-		for (loopThru = getTotal; loopThru > getHalf; loopThru--) {	
-			varyAmt = 100 - ((100 / getHalf) * loopNum);
+		for (loopThru = getTotal; loopThru > topThird; loopThru--) {	
+			varyAmt = 100 - ((100 / getThird) * loopNum);
 			varyAmt = varyAmt * 2;
 			$('#battleplan_trends_stats .'+trend+' tr[data-count="' + getCount[loopThru] + '"]').find('td').css({ "color":"#f00", "filter": "saturate("+varyAmt+"%)" });
 			loopNum++;

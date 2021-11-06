@@ -824,7 +824,7 @@ if ( typeof parallaxBG !== 'function' ) {
 		offset = offset || "100%";
 		speed = speed || 1000;
 		speed = speed / 1000;		
-		var theDelay = 0, currEffect = effect1, theDiv = container.split(' ').pop();
+		var theDelay = 0, currEffect = effect1, getDiv = container.split(' '), theDiv = getDiv.pop();
 		if ( pageViews > pageLimit ) { 
 			initDelay = initDelay * speedFactor;
 			mainDelay = mainDelay * speedFactor; 
@@ -866,7 +866,7 @@ if ( typeof parallaxBG !== 'function' ) {
 		mobile = mobile || "false";
 		speed = speed || 1000;
 		speed = speed / 1000;
-		var theDiv = container.split(' ').pop(), i, j;
+		var getDiv = container.split(' '), theDiv = getDiv.pop(), i, j;
 		if ( pageViews > pageLimit ) { 
 			initDelay = initDelay * speedFactor; 
 			mainDelay = mainDelay * speedFactor; 
@@ -1037,10 +1037,10 @@ if ( typeof parallaxBG !== 'function' ) {
 	moveDiv('#user_switching_switch_on','#page','before');
 
 // Add "active" & "hover" classes to menu items, assign roles for ADA compliance	
-	$(".main-navigation ul.main-menu, .widget-navigation ul.menu").attr('role','menubar');
-	$(".main-navigation li, .widget-navigation li").attr('role','none');
-	$(".main-navigation a, .widget-navigation a").attr('role','menuitem');
+	$(".main-navigation ul.main-menu, .widget-navigation ul.menu").attr('role','menu').attr('aria-label','Main Menu');
 	$(".main-navigation ul.sub-menu, .widget-navigation ul.sub-menu").attr('role','menu');
+	$(".main-navigation li, .widget-navigation li").attr('role','none');
+	$(".main-navigation a[href], .widget-navigation a[href]").attr('role','menuitem');
 
 	var	$currents = $(".main-navigation ul.main-menu > li.current-menu-item, .main-navigation ul.main-menu > li.current_page_item, .main-navigation ul.main-menu > li.current-menu-parent, .main-navigation ul.main-menu > li.current_page_parent, .main-navigation ul.main-menu > li.current-menu-ancestor, .widget-navigation ul.menu > li.current-menu-item, .widget-navigation ul.menu > li.current_page_item, .widget-navigation ul.menu > li.current-menu-parent, .widget-navigation ul.menu > li.current_page_parent, .widget-navigation ul.menu > li.current-menu-ancestor"); 
 	$currents.addClass( "active" );
@@ -1176,7 +1176,6 @@ if ( typeof parallaxBG !== 'function' ) {
 		var thisCarousel = $(this), maxH = 0, thisSlideH = 0, getPadding = parseInt(thisCarousel.find(".carousel-inner").css('padding-bottom'));
 		for (var i=0; i < thisCarousel.find(".carousel-item").length; i++) {					
 			thisSlideH = thisCarousel.find(".carousel-item.active").outerHeight() + getPadding;
-			console.log(thisSlideH);
 			if ( thisSlideH > maxH ) { 
 				maxH = Math.ceil(thisSlideH); 
 			}
@@ -1275,9 +1274,9 @@ if ( typeof parallaxBG !== 'function' ) {
 	setTimeout(function() { $('img:not([alt])').attr('alt', ''); }, 1000);
 
 	// Menu support
-	$('[role="menubar"]' ).on( 'focus.aria mouseenter.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).addClass('menu-item-expanded').attr( 'aria-expanded', true ); } );
-	$('[role="menubar"]' ).on( 'blur.aria mouseleave.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).removeClass('menu-item-expanded').attr( 'aria-expanded', false ); } );	
-	$('a[role="menuitem"]' ).attr( 'tabindex', '0' );
+	$('[role="menu"]' ).on( 'focus.aria mouseenter.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).addClass('menu-item-expanded').attr( 'aria-expanded', true ); } );
+	$('[role="menu"]' ).on( 'blur.aria mouseleave.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).removeClass('menu-item-expanded').attr( 'aria-expanded', false ); } );	
+	$('[role="menu"] a' ).attr( 'tabindex', '0' );
 	$('li[aria-haspopup="true"]').attr( 'tabindex', '-1' );
 
 	// Make hidden labels accessible to screen reader

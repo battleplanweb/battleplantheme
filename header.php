@@ -1,4 +1,5 @@
 <!doctype html>
+<?php header("Content-Security-Policy: default-src 'self'; script-src 'self' https://www.googletagmanager.com https://www.google-analytics.com 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://ipapi.co https://www.google-analytics.com; img-src 'self' https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; base-uri 'self';"); ?>
 <html <?php language_attributes(); ?>>
 <head>	
 	<script type="text/javascript">var startTime = Date.now();</script>	

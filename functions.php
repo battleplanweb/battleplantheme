@@ -18,7 +18,7 @@
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.5' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.5.1' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -3139,7 +3139,12 @@ function battleplan_count_site_views_ajax() {
 			$getReferrers = maybe_unserialize( $getReferrers );
 			if ( !is_array($getReferrers) ) $getReferrers = array();
 			array_unshift($getReferrers, $userRefer);
-			if ( count($getReferrers) > $views90Day ) array_pop($getReferrers);
+			$limitReferrerCount = count($getReferrers) - $views180Day;
+			if ( $limitReferrerCount > 0 ) :
+				for ($i=0; $i < $limitReferrerCount; $i++) :
+					array_pop($getReferrers);
+				endfor;
+			endif;
 			$newReferrers = maybe_serialize( $getReferrers );
 			updateMeta(_HEADER_ID, 'log-views-referrers', $newReferrers);
 
@@ -3147,7 +3152,12 @@ function battleplan_count_site_views_ajax() {
 			$getLocations = maybe_unserialize( $getLocations );
 			if ( !is_array($getLocations) ) $getLocations = array();
 			array_unshift($getLocations, $userLoc);
-			if ( count($getLocations) > $views90Day ) array_pop($getLocations);
+			$limitLocationCount = count($getLocations) - $views180Day;
+			if ( $limitLocationCount > 0 ) :
+				for ($i=0; $i < $limitLocationCount; $i++) :
+					array_pop($getLocations);
+				endfor;
+			endif;
 			$newLocations = maybe_serialize( $getLocations );
 			updateMeta(_HEADER_ID, 'log-views-cities', $newLocations);
 	

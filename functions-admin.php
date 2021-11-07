@@ -1662,9 +1662,12 @@ function battleplan_add_dashboard_widgets() {
 	add_meta_box( 'battleplan_site_stats', 'Site Visitors', 'battleplan_admin_site_stats', 'dashboard', 'normal', 'high' );		
 	add_meta_box( 'battleplan_speed_stats', 'Site Speed', 'battleplan_admin_speed_stats', 'dashboard', 'normal', 'high' );		
 	add_meta_box( 'battleplan_click_stats', 'Visitor Clicks', 'battleplan_admin_click_stats', 'dashboard', 'normal', 'high' );	
+	add_meta_box( 'battleplan_pageview_stats', 'Visitor Pageviews', 'battleplan_admin_pageview_stats', 'dashboard', 'normal', 'high' );
+
 	add_meta_box( 'battleplan_referrer_stats', 'Visitor Referrers', 'battleplan_admin_referrer_stats', 'dashboard', 'side', 'high' );	
-	add_meta_box( 'battleplan_location_stats', 'Visitor Locations', 'battleplan_admin_location_stats', 'dashboard', 'side', 'high' );
-	add_meta_box( 'battleplan_pageview_stats', 'Visitor Pageviews', 'battleplan_admin_pageview_stats', 'dashboard', 'side', 'high' );
+	add_meta_box( 'battleplan_location_stats', 'Visitor Locations', 'battleplan_admin_location_stats', 'dashboard', 'side', 'high' );	
+	add_meta_box( 'battleplan_pages_stats', 'Most Popular Pages', 'battleplan_admin_pages_stats', 'dashboard', 'side', 'high' );
+	
 	add_meta_box( 'battleplan_trends_stats', 'Visitor Trends', 'battleplan_admin_trends_stats', 'dashboard', 'column3', 'high' );		
 }
 
@@ -1806,6 +1809,33 @@ function battleplan_admin_location_stats() {
 	endforeach; 	
 	echo '</ul></div>';
 }
+
+// Set up Page Visits widget on dashboard
+function battleplan_admin_pages_stats() {
+	$getCPT = get_post_types();  
+	$pageStats = [];
+	unset($getCPT['attachment'], $getCPT['revision'], $getCPT['nav_menu_item'], $getCPT['custom_css'], $getCPT['customize_changeset'], $getCPT['oembed_cache'], $getCPT['user_request'], $getCPT['wp_block'], $getCPT['acf-field-group'], $getCPT['acf-field'], $getCPT['wpcf7_contact_form'], $getCPT['wphb_minify_group'], $getCPT['elements'], $getCPT['testimonials']); 	
+	foreach ($getCPT as $postType) :
+		$getPosts = new WP_Query( array ('posts_per_page'=>-1, 'post_type'=>$postType ));
+		if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 
+			$theID = get_the_ID();
+			array_push( $pageStats, array('year'=>readMeta($theID, 'log-views-total-365day'), 'month'=>readMeta($theID, 'log-views-total-30day'), 'week'=>readMeta($theID, 'log-views-total-7day'), 'title'=>get_the_title() ));
+		endwhile; wp_reset_postdata(); endif;		
+	endforeach;	
+
+	arsort($pageStats);
+	
+	echo "<div><ul>";
+	echo "<li><span class='label'><b><u>Page</u></b></span><span class='value'><b><u>Week</u></b></span><span class='value'><b><u>Month</u></b></span><span class='value'><b><u>Year</u></b></span></li>";
+	$displayNum = count($pageStats) * 0.25;
+	foreach ($pageStats as $page) :
+		$displayNum--;
+		if ( $displayNum > 0 && $page['year'] > 0 ) :
+			echo "<li><span class='label'>".$page['title']."</span><span class='value'><b>".number_format($page['week'])."</b></span><span class='value'><b>".number_format($page['month'])."</b></span><span class='value'><b>".number_format($page['year'])."</b></span></li>";
+		endif;
+	endforeach; 	
+	echo '</ul></div>';
+} 
 
 // Set up Visitor Pageviews widget on dashboard
 function battleplan_admin_pageview_stats() {

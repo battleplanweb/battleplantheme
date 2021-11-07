@@ -70,8 +70,28 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	min-width:									55px;
 }
 
-#dashboard-widgets #postbox-container-4 {
+#dashboard-widgets #postbox-container-4 { 
 	display:									none;
+}
+
+#dashboard-widgets .postbox {
+    background: 								#f6f6f6;
+    border: 									1px solid #e5e5e5;
+    box-shadow: 								2px 2px 0 0 #e5e5e5;
+    max-height: 								233px;
+    overflow: 									hidden;
+}
+
+#dashboard-widgets #battleplan_trends_stats.postbox {
+    max-height: 								743px;
+}
+
+#dashboard-widgets .postbox.active,
+#dashboard-widgets #battleplan_trends_stats.postbox.active {
+    background: 								#ffffff;
+	border: 									1px solid #c6c6c6;
+    box-shadow: 								2px 2px 0 0 #c6c6c6;
+	max-height: 								unset;
 }
 
 #battleplan_referrer_stats ul,
@@ -87,6 +107,19 @@ ul span.label {
 
 ul span.value {
 	margin-right:								20px;
+}
+
+#battleplan_pageview_stats ul span.label {
+	width: 										130px;
+}
+
+#battleplan_pages_stats ul span.label {
+	width: 										240px;
+}
+
+#battleplan_pages_stats ul span.value {
+	display: 									inline-block;
+	width: 										50px;
 }
 
 #battleplan_site_stats tr.coloration td,

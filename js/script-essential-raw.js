@@ -1012,7 +1012,7 @@ if ( typeof parallaxBG !== 'function' ) {
 --------------------------------------------------------------*/
 
 // Remove empty & restricted elements
-	removeDiv('p:empty, .archive-intro:empty, div.restricted, div.restricted + ul');
+	removeDiv('p:empty, .archive-intro:empty, div.restricted, div.restricted + ul, li.menu-item + ul.sub-menu');
 	
 // Add .page-begins to the next section under masthead for purposes of locking .top-strip
 	$('#masthead + section').addClass('page-begins');
@@ -1159,6 +1159,8 @@ if ( typeof parallaxBG !== 'function' ) {
 		theSub.parent().click(function() {		
 			if ( !theSub.hasClass("active")) { 
 				openSubMenu(theSub, theSub.data('getH'));
+			} else {
+				closeSubMenu(theSub);
 			}
 		}); 
 	});	

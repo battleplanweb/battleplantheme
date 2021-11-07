@@ -18,6 +18,16 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$(this).find('td').css({ "filter": "saturate("+getAge+"%)" });
 	});
 	
+	/* Allow for expansion of admin boxes on click */
+	$("#dashboard-widgets .postbox").click(function() { 
+		var thisPostbox = $(this);
+		if ( thisPostbox.hasClass('active') ) {
+			thisPostbox.removeClass('active');
+		} else {
+			thisPostbox.addClass('active');
+		}
+	});	
+	
 	/* Control color of Visitor Trends box */
 	function runVisitorTrendColor(trend) {
 		var getCount = [], getTotal, getThird, topThird, loopThru, loopNum=0, varyAmt;

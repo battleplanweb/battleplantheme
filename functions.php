@@ -18,7 +18,7 @@
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.5.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.5.2' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -3135,11 +3135,13 @@ function battleplan_count_site_views_ajax() {
 			updateMeta(_HEADER_ID, 'log-views-total-180day', $views180Day);	
 			updateMeta(_HEADER_ID, 'log-views-total-365day', $views365Day);	
 			
+			$minimumCount = $views90Day < 250 ? 250 : $views90Day;
+			
 			$getReferrers = readMeta(_HEADER_ID, 'log-views-referrers');
 			$getReferrers = maybe_unserialize( $getReferrers );
 			if ( !is_array($getReferrers) ) $getReferrers = array();
 			array_unshift($getReferrers, $userRefer);
-			$limitReferrerCount = count($getReferrers) - $views180Day;
+			$limitReferrerCount = count($getReferrers) - $minimumCount;
 			if ( $limitReferrerCount > 0 ) :
 				for ($i=0; $i < $limitReferrerCount; $i++) :
 					array_pop($getReferrers);
@@ -3152,7 +3154,7 @@ function battleplan_count_site_views_ajax() {
 			$getLocations = maybe_unserialize( $getLocations );
 			if ( !is_array($getLocations) ) $getLocations = array();
 			array_unshift($getLocations, $userLoc);
-			$limitLocationCount = count($getLocations) - $views180Day;
+			$limitLocationCount = count($getLocations) - $minimumCount;
 			if ( $limitLocationCount > 0 ) :
 				for ($i=0; $i < $limitLocationCount; $i++) :
 					array_pop($getLocations);
@@ -3598,31 +3600,42 @@ add_shortcode( 'accordion', 'battleplan_buildAccordion' );
 function battleplan_buildAccordion( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'title'=>'', 'excerpt'=>'', 'class'=>'', 'active'=>'false', 'btn'=>'false', 'btn_collapse'=>'false', 'icon'=>'true', 'start'=>'', 'end'=>'' ), $atts );
 	$excerpt = esc_attr($a['excerpt']);
-	if ( $excerpt != '' ) $excerpt = '<div class="accordion-excerpt"><div class="accordion-box">'.$excerpt.'</div></div>';
+	if ( $excerpt != '' ) $excerpt = '<div class="accordion-excerpt"><div class="accordion-box"><p>'.$excerpt.'</p></div></div>';
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
 	$title = esc_attr($a['title']);	
 	$icon = esc_attr($a['icon']);
 	$btnCollapse = esc_attr($a['btn_collapse']);
 	$btn = esc_attr($a['btn']);
-	if ( $btn == "true" ) :	
-		if ( $btnCollapse == "false" ) $btnCollapse = "hide";
-		if ( $title ) : $title = '<div class="block block-button"><button role="button" tabindex="0" class="accordion-title" data-text="'.$title.'" data-collapse="'.$btnCollapse.'">'.$title.'</button></div>'; endif;
-	else: 
-		if ( $icon == 'true' ) : $icon = '<span class="accordion-icon" aria-hidden="true"></span>'; else: $icon = ''; endif;	
-		if ( $title ) : $title = '<h2 role="button" tabindex="0" class="accordion-title">'.$icon.$title.'</h2>'; endif;
+	$addBtn = $thumb = '';
+	
+	if ( $icon == 'false' ) : $icon = '';
+	elseif ( $icon == 'true' ) : $icon = '<span class="accordion-icon" aria-hidden="true"></span>'; 
+	else: $thumb = '<img src="'.$icon.'" alt="'.$title.'" />'; $icon=''; 
 	endif;
+	
+	if ( $title ) $printTitle = '<h2 role="button" tabindex="0" class="accordion-title">'.$icon.$title.'</h2>';
+	
+	if ( $btn != "false" ) :	
+		if ( $btnCollapse == "false" ) $btnCollapse = "hide"; 
+		if ( $btn == "true" ) :
+			$printTitle = '<div class="block block-button"><button role="button" tabindex="0" class="accordion-title" data-text="'.$title.'" data-collapse="'.$btnCollapse.'">'.$title.'</button></div>';
+		else:
+			$addBtn = '<div class="block block-button"><button role="button" tabindex="0" class="accordion-button" data-text="'.$btn.'" data-collapse="'.$btnCollapse.'">'.$btn.'</button></div>';
+		endif;
+	endif;
+	
 	$active = esc_attr($a['active']);
 	if ( $active != "false" ) $class .= " start-active";
 	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));	
-	if ( $start || $end ) {
+	if ( $start || $end ) :
 		$now = time(); 
 		if ( $start && $now < $start ) return null;
 		if ( $end && $now > $end ) return null;		
-	}
+	endif;
 
-	return '<div class="block block-accordion'.$class.'">'.$title.$excerpt.'<div class="accordion-content"><div class="accordion-box">'.do_shortcode($content).'</div></div></div>';	
+	return '<div class="block block-accordion'.$class.'">'.$thumb.$printTitle.$excerpt.'<div class="accordion-content"><div class="accordion-box">'.do_shortcode($content).'</div></div>'.$addBtn.'</div>';	
 }
 
 // Parallax Section 

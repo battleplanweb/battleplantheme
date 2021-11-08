@@ -41,7 +41,7 @@ function battleplan_add_quicktags() {
 			QTags.addButton( 'bp_text', 'text', '   [txt size="100 1/2 1/3 1/4 1/6 1/12" order="2, 1, 3" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '   [/txt]\n', 'text', 'Text', 1000 );
 			QTags.addButton( 'bp_button', 'button', '   [btn size="100 1/2 1/3 1/4 1/6 1/12" order="3, 1, 2" align="center, left, right" link="url to link to" get-biz="link in functions.php" new-tab="false, true" class="" icon="fas fa-chevron-right" fancy="(blank), 2" ada="text for ada button" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/btn]\n', 'button', 'Button', 1000 );	
 			QTags.addButton( 'bp_social', 'social', '   [social-btn type="email, facebook, twitter" img="none, link"]', '', 'social', 'Social', 1000 );	
-			QTags.addButton( 'bp_accordion', 'accordion', '   [accordion title="clickable title" excerpt="false, true" class="" icon="true, false" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/accordion]\n\n', 'accordion', 'Accordion', 1000 );
+			QTags.addButton( 'bp_accordion', 'accordion', '   [accordion title="clickable title" class="" excerpt="false, whatever text you want the excerpt to be" active="false, true" icon="true, false, /wp-content/uploads/image.jpg" btn="false/true/ Open Button Text" btn_collapse="Close Button Text" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/accordion]\n\n', 'accordion', 'Accordion', 1000 );			
 			
 			QTags.addButton( 'bp_expire-content', 'expire', '[expire start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/expire]\n\n', 'expire', 'Expire', 1000 );			
 			QTags.addButton( 'bp_restrict-content', 'restrict', '[restrict max="administrator, any role" min="none, any role"]', '[/restrict]\n\n', 'restrict', 'Restrict', 1000 );	
@@ -1827,10 +1827,8 @@ function battleplan_admin_pages_stats() {
 	
 	echo "<div><ul>";
 	echo "<li><span class='label'><b><u>Page</u></b></span><span class='value'><b><u>Week</u></b></span><span class='value'><b><u>Month</u></b></span><span class='value'><b><u>Year</u></b></span></li>";
-	$displayNum = count($pageStats) * 0.25;
 	foreach ($pageStats as $page) :
-		$displayNum--;
-		if ( $displayNum > 0 && $page['year'] > 0 ) :
+		if ( $page['year'] > 0 ) :
 			echo "<li><span class='label'>".$page['title']."</span><span class='value'><b>".number_format($page['week'])."</b></span><span class='value'><b>".number_format($page['month'])."</b></span><span class='value'><b>".number_format($page['year'])."</b></span></li>";
 		endif;
 	endforeach; 	

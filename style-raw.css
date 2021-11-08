@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 10.5.1
+Version: 10.5.2
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -339,15 +339,6 @@ body.using-mouse *.tab-focus,
 body.using-mouse .block-accordion.tab-focus {
 	outline:									2px dotted red !important;
 }
-
-
-
-
-
-
-
-
-
 
 /*--------------------------------------------------------------
 # Base
@@ -2008,6 +1999,8 @@ div[class*="restrict-"] {
 }
 
 .sidebar-box .widget.widget-last {
+
+
 	margin-bottom:								1.5em;
 }
 
@@ -3697,7 +3690,7 @@ dl.col-gallery {
 	font-size: 									24px; 
 	line-height: 								1.1; 
 	text-transform:								none;
-	padding:									0.3em 0.3em 0.3em 2em;
+	padding:									0.3em 0.3em 0.3em 18px;
 	text-align:									left !important;
 	transition:									all 0.2s ease;
 }
@@ -3716,8 +3709,14 @@ dl.col-gallery {
 }
 
 .block-accordion .accordion-icon {
-	position: 									absolute;
+	/* position: 									absolute;
 	transform:									translateX(-1.25em);
+	
+	removed -- 11/8/2021 - Greater Fort Myers Dog Club 2022 Dog Show Page */
+	
+	position: 									relative;
+	transform: 									none;
+	margin-right: 								15px;
 }
 
 .block-accordion .accordion-icon::before {
@@ -4620,6 +4619,17 @@ p#user_switching_switch_on a.tab-focus {
 	.textwidget > * {
 		display: 									inline-block;
 	}
+	
+	.widget.widget-contact-form {
+		order: 										-1;
+	}
+	
+	/* Target ios until gap is supported */
+	@supports (-webkit-touch-callout: none) and (not (translate: none)) {
+		.widget {
+			padding: 								0.75em;
+		}
+	}	
 }
 
 /* 3: Small Tablets (landscape) ONLY */
@@ -4654,10 +4664,10 @@ p#user_switching_switch_on a.tab-focus {
 	}
 	
 	.top-strip .flex .col,
-
 	.divider-strip .flex .col,
 	.site-info .col {
-		grid-column:								span 12;
+		/*grid-column:								span 12;  changed 11/8/2021 - Align K9 - top-strip looked okay, but the grid had 11 emtpy boxes stacked at the end */
+		grid-column:								span 1;
 		text-align:									center;
 		width:										100%;
 	}
@@ -4796,7 +4806,7 @@ p#user_switching_switch_on a.tab-focus {
 	.logo-strip .brand-logo img {
 		max-height: 								20vh;
 		width: 										auto !important;
-		max-width: 									unset !important;
+		max-width: 									100% !important;
 		margin-left: 								auto;
 		margin-right: 								auto;
 	}
@@ -5031,6 +5041,7 @@ p#user_switching_switch_on a.tab-focus {
 	.grid-7e li:nth-last-child(5),
 	.grid-8e li:nth-last-child(6) {
 		display:									none !important;
+
 	}	
 	
 	.flex .col.col-row-of-pics {
@@ -5087,31 +5098,36 @@ p#user_switching_switch_on a.tab-focus {
 }
 
 @media screen and (min-width: 1281px) {
-	.hide-5 {
+	.hide-5,
+	.hide-desktop {
 		display:									none !important;
 	}
 }
 
 @media screen and (min-width: 1025px) and (max-width: 1280px) {
-	.hide-4 {
+	.hide-4,
+	.hide-desktop {
 		display:									none !important;
 	}
 }
 
 @media screen and (min-width: 861px) and (max-width: 1024px) {
-	.hide-3 {
+	.hide-3,
+	.hide-mobile {
 		display:									none !important;
 	}
 }
 
 @media screen and (min-width: 577px) and (max-width: 860px) {
-	.hide-2 {
+	.hide-2,
+	.hide-mobile {
 		display:									none !important;
 	}
 }
 
 @media screen and (max-width: 576px) {
-	.hide-1 {
+	.hide-1,
+	.hide-mobile {
 		display:									none !important;
 	}
 }

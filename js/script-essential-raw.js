@@ -406,51 +406,56 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$( '.block-accordion.start-active .accordion-excerpt' ).animate({ height: "toggle", opacity: "toggle" }, 0);					
 		$( '.block-accordion.start-active .accordion-content' ).animate({ height: "toggle", opacity: "toggle" }, 0);
 
-		keyPress('.block-accordion');
+		keyPress('.block-accordion *');
  
-		$(".block-accordion .accordion-title").click(function(e) {		
+		$(".block-accordion .accordion-title, .block-accordion .accordion-button").click(function(e) {		
 			e.preventDefault();
-			var thisBtn = $(this), locAcc = thisBtn.closest('.block-accordion'), locPos = accPos[locAcc.index('.block-accordion')], topPos = accPos[0], moveTo = 0, btnCollapse=thisBtn.attr('data-collapse');	
+			var thisAcc = $(this).closest('.block-accordion'), thisBtn = thisAcc.find('.accordion-button'), thisPos = accPos[thisAcc.index('.block-accordion')], topPos = accPos[0], moveTo = 0, thisClose=thisBtn.attr('data-collapse'), activeAcc = $('.block-accordion.active'), activeBtn = activeAcc.find('.accordion-button'), activeOpen = activeBtn.attr('data-text');	
 			
-			if ( !locAcc.hasClass("active") ) {
+			if ( !thisAcc.hasClass("active") ) {
+			
 				setTimeout( function () {
-					$( '.block-accordion.active .accordion-excerpt' ).animate({ height: "toggle", opacity: "toggle" }, transSpeed);					
-					$( '.block-accordion.active .accordion-content' ).animate({ height: "toggle", opacity: "toggle" }, transSpeed);
-					if ( btnCollapse == "hide" ) { 
-						thisBtn.fadeOut(); 
-					} else if ( btnCollapse != "false" ) { 
-						thisBtn.text(btnCollapse); 
-					} 
+					activeBtn.text(activeOpen).fadeIn();
+					activeAcc.find('.accordion-excerpt').animate({ height: "toggle", opacity: "toggle" }, transSpeed);					
+					activeAcc.find('.accordion-content').animate({ height: "toggle", opacity: "toggle" }, transSpeed);
 				}, closeDelay);
+				
 				setTimeout( function () {
-					locAcc.find('.accordion-excerpt').animate({ height: "toggle", opacity: "toggle" }, transSpeed);						
-					locAcc.find('.accordion-content').animate({ height: "toggle", opacity: "toggle" }, transSpeed);						
-					if ( btnCollapse == undefined ) {
-						if ( (locPos - topPos) > (getDeviceH() * 0.25) ) {
-							moveTo = locPos;
-							animateScroll(moveTo, topSpacer, transSpeed); 
+					thisAcc.find('.accordion-excerpt').animate({ height: "toggle", opacity: "toggle" }, transSpeed);						
+					thisAcc.find('.accordion-content').animate({ height: "toggle", opacity: "toggle" }, transSpeed);	
+					
+					//if ( thisClose == undefined ) {  removed for Greater Fort Myers Dog Club - 2022 Dog Show accordion
+						if ( (thisPos - topPos) > (getDeviceH() * 0.25) ) {
+							animateScroll(thisPos, topSpacer, transSpeed); 
 						} else {
-							moveTo = ((locPos - topPos) / 2) + topPos;						
-							animateScroll(moveTo, topSpacer, transSpeed); 
+							moveTo = ((thisPos - topPos) / 2) + topPos;						
+							animateScroll(moveTo, topSpacer, transSpeed); 							
 						}	
-					}
+					//}
+					
+					if ( thisClose == "hide" ) { 
+						thisBtn.fadeOut(); 
+					} else if ( thisClose != "false" ) {
+						thisBtn.text(thisClose); 
+					} 
+					
 				}, openDelay);
+				
 				setTimeout( function() {						
-					$(".block-accordion.active").removeClass('active').attr( 'aria-expanded', false ); 
-					locAcc.addClass('active').attr( 'aria-expanded', true );
+					activeAcc.removeClass('active').attr( 'aria-expanded', false ); 
+					thisAcc.addClass('active').attr( 'aria-expanded', true );
 				}, cssDelay);
+				
 			} else if ( clickActive == 'close' ) {
 				setTimeout( function () {
-					$( '.block-accordion.active .accordion-excerpt' ).animate({ height: "toggle", opacity: "toggle" }, transSpeed);					
-					$( '.block-accordion.active .accordion-content' ).animate({ height: "toggle", opacity: "toggle" }, transSpeed);
-					if ( btnCollapse != "false" ) { 
-						thisBtn.text(thisBtn.attr('data-text')); 
-					} 
+					activeBtn.text(activeOpen).fadeIn();
+					activeAcc.find('.accordion-excerpt').animate({ height: "toggle", opacity: "toggle" }, transSpeed);					
+					activeAcc.find('.accordion-content').animate({ height: "toggle", opacity: "toggle" }, transSpeed);
 				}, closeDelay);	
 				setTimeout( function() {						
-					$(".block-accordion.active").removeClass('active').attr( 'aria-expanded', false );
+					activeAcc.removeClass('active').attr( 'aria-expanded', false );
 				}, cssDelay);	
-			}
+			}  
 		});
 		buildAccordion.done = true;
 	};

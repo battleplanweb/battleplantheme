@@ -777,7 +777,7 @@ if ( typeof parallaxBG !== 'function' ) {
 
 		$parent.append( $lockedWidgets );
 		
-		$('.widget-set.set-a:not(:first-child), .widget-set.set-b:not(:first-child), .widget-set.set-c:not(:first-child)').addClass('hide-set').addClass('hide-widget');
+		$('.screen-desktop .widget-set.set-a:not(:first-child), .screen-desktop .widget-set.set-b:not(:first-child), .screen-desktop .widget-set.set-c:not(:first-child)').addClass('hide-set').addClass('hide-widget');
 		
 		if ( $('body').hasClass('screen-mobile') ) {
 			labelWidgets();

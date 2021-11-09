@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 10.5.2
+Version: 10.5.3
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -403,6 +403,10 @@ h6 {
 	font-size: 									21rem;
 }
 
+.widget-title {
+	font-size: 									32px;
+}
+
 h1 > a, h1 > a:hover, h1 > a.tab-focus, h1 > a:visited, h1 > span,
 h2 > a, h2 > a:hover, h2 > a.tab-focus, h2 > a:visited, h2 > span,
 h3 > a, h3 > a:hover, h3 > a.tab-focus, h3 > a:visited, h3 > span,
@@ -462,11 +466,6 @@ span {
 .ribbon:after {
 	right: 										-2px;
 	border-right: 								15px solid transparent !important;
-
-
-
-
-
 }
 
 .slant-edge:before, 
@@ -1807,6 +1806,7 @@ section.section .flex.nested .flex {
 }
 
 .animated {
+
   	will-change: 								transform;
   	transform: 									translateZ(0);
 }
@@ -1980,9 +1980,6 @@ div[class*="restrict-"] {
 }
 
 .widget-box .widget {
-
-
-
 	margin:										1.5em auto;
 }
 
@@ -1999,6 +1996,7 @@ div[class*="restrict-"] {
 }
 
 .sidebar-box .widget.widget-last {
+
 
 
 	margin-bottom:								1.5em;
@@ -2177,6 +2175,7 @@ div[class*="restrict-"] {
 	.section-lock .closeBtn {
 		top:										-2px;
 		right:										-2px;
+
 	}
 }
 
@@ -2875,6 +2874,7 @@ a.scroll-top {
 }
 
 .scroll-down a {
+
 	display:									inline-block;
 	font-size:									60px;
 	color:										rgba(255,255,255,0.5);
@@ -4562,12 +4562,42 @@ p#user_switching_switch_on a.tab-focus {
 		grid-template-columns: 						repeat(5, 1fr);
 	}
 	
+	/* Header */
+	/*.logo-strip .flex {
+		gap: 										1.5em 3%;
+	}*/
+	
+	.logo-strip .logo img,
+	.logo-strip .am-stand-logo img,
+	.logo-strip img.am-stand-logo,
+	.logo-strip .brand-logo img {
+		max-height: 								40vh;
+		width: 										auto !important;
+		max-width: 									100% !important;
+		margin-left: 								auto;
+		margin-right: 								auto;
+	}
+	
+	.logo-strip .am-stand-logo img,
+	.logo-strip img.am-stand-logo,
+	.logo-strip .brand-logo img {
+		max-height: 								8vh;
+	}
+
+	
 	/* Sidebar */
 	.content-box #primary, 
-	.sidebar-box #secondary, 
 	.widget-box .widget, 
 	.content-sidebar-box #main-content {
 		padding:									2.5em 1.5em;
+	}
+	
+	.sidebar-box #secondary {
+		padding:									2.5em 0;
+	}
+
+	.sidebar-box #secondary .sidebar-inner {
+		padding:									0 1.5em;
 	}
 	
 	#secondary {
@@ -4579,14 +4609,17 @@ p#user_switching_switch_on a.tab-focus {
 	}
 	
 	#secondary::after {
-		content: 									"Swipe to view more.";
+		content: 									"Swipe to view more";
 		font-family: 								"Open Sans", sans-serif;
 		width: 										80vw;
-		margin: 									1.5em auto 0;
+		margin: 									1em auto 0;
 		position: 									relative;
 		display: 									block;
 		text-align: 								center;
 		font-style: 								italic;
+		font-size: 									16px;
+		border-top: 								1px solid rgba(0,0,0,0.3);
+		border-bottom: 								1px solid rgba(0,0,0,0.3);
 	}
 	
 	#secondary .sidebar-inner {
@@ -4595,8 +4628,10 @@ p#user_switching_switch_on a.tab-focus {
 		gap:										2.5em 2em;
 		justify-content:							center;
 		align-items: 								center;
+		height: 									calc(100vh - 220px);
 		max-height: 								500px;
-		overflow-x: 								scroll;
+		overflow-x: 								scroll;		
+		overflow-y: 								hidden;
 		-ms-overflow-style: 						none;
   		scrollbar-width: 							none;
 	}
@@ -4607,8 +4642,8 @@ p#user_switching_switch_on a.tab-focus {
 	
 	.widget {
 		margin:										0 !important;
-		max-width: 									calc(100vw - 2em - 45px);
-		min-width: 									35vw;
+		max-width: 									calc(100% - 3em);
+		min-width: 									35%;
 		width: 										320px;
 	}
 	
@@ -4805,10 +4840,10 @@ p#user_switching_switch_on a.tab-focus {
 	.logo-strip img.am-stand-logo,
 	.logo-strip .brand-logo img {
 		max-height: 								20vh;
-		width: 										auto !important;
+		/*width: 										auto !important;
 		max-width: 									100% !important;
 		margin-left: 								auto;
-		margin-right: 								auto;
+		margin-right: 								auto;*/ /* already set in @media 3 */
 	}
 	
 	.logo-strip .am-stand-logo img,
@@ -4838,10 +4873,17 @@ p#user_switching_switch_on a.tab-focus {
 	
 	/* Content */
 	.content-box #primary,
-	.sidebar-box #secondary,
 	.widget-box .widget,
 	.content-sidebar-box #main-content {
 		padding:									1.5em 1em;
+	}
+	
+	.sidebar-box #secondary {
+		padding:									1.5em 0;
+	}
+
+	.sidebar-box #secondary .sidebar-inner {
+		padding:									0 1em;
 	}
 	
 	/* Office Hours */

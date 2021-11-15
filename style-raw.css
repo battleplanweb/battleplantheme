@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 10.5.3
+Version: 10.6
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1807,6 +1807,8 @@ section.section .flex.nested .flex {
 
 .animated {
 
+
+
   	will-change: 								transform;
   	transform: 									translateZ(0);
 }
@@ -1994,6 +1996,8 @@ div[class*="restrict-"] {
 .sidebar-box .widget.widget-first {
 	margin-top:									1.5em;
 }
+
+
 
 .sidebar-box .widget.widget-last {
 
@@ -3264,6 +3268,7 @@ img.unloaded {
 
 img.noFX,
 .noFX img  {
+
 	border:										none !important;
 	background:									none !important;
 	box-shadow:									none !important;
@@ -3674,10 +3679,13 @@ dl.col-gallery {
 /* Accordion Setup
 --------------------------------------------- */
 .block-accordion {
-	cursor:										pointer;
 	margin-top:									1.5em;
 	margin-bottom:								1.5em;
 	z-index:									10000;
+} 
+
+.block-accordion .accordion-button {
+	cursor:										pointer;
 } 
 
 .block-button + .accordion-content {

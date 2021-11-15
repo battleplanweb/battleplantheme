@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	window.keyPress = function(trigger) {
 		$(trigger).keyup(function(event) { 
 			if (event.keyCode === 13 || event.keyCode === 32) { 
-				$(trigger).click(); 
+				$(this).click(); 
 			} 
 		});
 	};		
@@ -73,14 +73,15 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	});
 			
 // Track phone number clicks
-	window.trackClicks = function(type, category, action, url) {
-		document.location = url;
+	$('.track-clicks').click(function() {
+		var thisClick = $(this), thisAction = thisClick.attr('data-action'), thisUrl = thisClick.attr('data-url');
+		document.location = thisUrl;
 		$.post({
 			url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-			data : { action: "count_link_clicks", type: action },
+			data : { action: "count_link_clicks", type: thisAction },
 			success: function( response ) { console.log(response);  } 
 		});		
-	};
+	});
 
 // Set up Cookies
 	window.setCookie = function(cname,cvalue,exdays) {
@@ -378,7 +379,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	window.buildAccordion = function (topSpacer, cssDelay, transSpeed, closeDelay, openDelay, clickActive) {
 		if (buildAccordion.done) { return; }
 		transSpeed = transSpeed || 500;
-		closeDelay = closeDelay || 0;
+		closeDelay = closeDelay || (transSpeed / 3);
 		openDelay = openDelay || 0;
 		cssDelay = cssDelay || closeDelay + openDelay;
 		topSpacer = topSpacer || 0.1;
@@ -406,9 +407,9 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$( '.block-accordion.start-active .accordion-excerpt' ).animate({ height: "toggle", opacity: "toggle" }, 0);					
 		$( '.block-accordion.start-active .accordion-content' ).animate({ height: "toggle", opacity: "toggle" }, 0);
 
-		keyPress('.block-accordion *');
+		keyPress('.block-accordion h2.accordion-button');
  
-		$(".block-accordion .accordion-title, .block-accordion .accordion-button").click(function(e) {		
+		$(".block-accordion .accordion-button").click(function(e) {		
 			e.preventDefault();
 			var thisAcc = $(this).closest('.block-accordion'), thisBtn = thisAcc.find('.accordion-button'), thisPos = accPos[thisAcc.index('.block-accordion')], topPos = accPos[0], moveTo = 0, thisClose=thisBtn.attr('data-collapse'), activeAcc = $('.block-accordion.active'), activeBtn = activeAcc.find('.accordion-button'), activeOpen = activeBtn.attr('data-text');	
 			
@@ -1002,6 +1003,7 @@ if ( typeof parallaxBG !== 'function' ) {
 					}, charDelay);
 					currEffect = effect1;
 				} else {
+
 					setTimeout( function () { 
 						thisDiv.addClass(effect2);
 					}, charDelay);

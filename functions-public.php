@@ -6,6 +6,7 @@
 ----------------------------------------------------------------
 # Metabox Constructor
 # User Switching
+# Adding Nonces
 
 --------------------------------------------------------------*/
 
@@ -1287,5 +1288,55 @@ if ( ! function_exists( 'current_user_switched' ) ) {
 
 $GLOBALS['user_switching'] = user_switching::get_instance();
 $GLOBALS['user_switching']->init_hooks();
+
+
+/*--------------------------------------------------------------
+# Adding Nonces
+--------------------------------------------------------------*/
+
+class WP_Filterable_Scripts extends WP_Scripts {
+
+    private $type_attr;
+
+    public function __construct() {
+        parent::__construct();
+		
+        if ( function_exists( 'is_admin' ) && ! is_admin() && function_exists( 'current_theme_supports' ) && ! current_theme_supports( 'html5', 'script' ) ) {
+            $this->type_attr = " type='text/javascript'";
+        }
+		
+        if ( $GLOBALS['wp_scripts'] instanceof WP_Scripts ) {
+            $missing_scripts = array_diff_key( $GLOBALS['wp_scripts']->registered, $this->registered );
+            foreach ( $missing_scripts as $mscript ) {
+                $this->registered[ $mscript->handle ] = $mscript;
+            }
+        }
+    }
+	
+    public function print_extra_script( $handle, $echo = true ) {
+        $output = $this->get_data( $handle, 'data' );
+        if ( ! $output ) { return; }
+
+        if ( ! $echo ) { return $output; }
+
+        $tag = sprintf( "<script%s id='%s-js-extra'>\n", $this->type_attr, esc_attr( $handle ) );
+
+		$tag = apply_filters( 'battleplan_csp_localized_scripts', $tag, $handle );
+
+        // CDATA is not needed for HTML 5.
+        if ( $this->type_attr ) {
+            $tag .= "/* <![CDATA[ */\n";
+        }
+
+        $tag .= "$output\n";
+        if ( $this->type_attr ) {
+            $tag .= "/* ]]> */\n";
+        }
+        $tag .= "</script>\n";
+
+        echo $tag;
+        return true;
+    }
+}
 
 ?>

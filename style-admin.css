@@ -53,12 +53,12 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	width:										48%;
 }
 
-#dashboard-widgets #postbox-container-3 table {
-	float:										left;
+#dashboard-widgets #postbox-container-3 .inside {
+	column-count: 								3;
 }
 
 #dashboard-widgets #postbox-container-3 table:not(:last-of-type) {
-	margin-right:								50px;
+	margin-right:								35px;
 }
 
 #dashboard-widgets #postbox-container-3 td.dates {

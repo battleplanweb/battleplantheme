@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 # Tracking code
 --------------------------------------------------------------*/
 
-	var siteLat = site_options.lat, siteLong = site_options.long, siteRadius = site_options.radius, timezone, userValid = "false", userLoc, userRefer, pageViews = $("body").attr("data-pageviews"), uniqueID=$("body").attr("data-unique-id"), ajaxURL = 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php'; 		
+	var siteLat = site_options.lat, siteLong = site_options.long, siteRadius = site_options.radius, userValid = "false", userLoc, userRefer, pageViews = $("body").attr("data-pageviews"), uniqueID=$("body").attr("data-unique-id"), ajaxURL = 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php'; 		
 		
 	if ( siteRadius == "default" ) { siteRadius = 100; }	
 	if ( siteLong > 0 ) { siteLong = -siteLong; }
@@ -21,9 +21,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		// Get IP data
 			$.getJSON('https://ipapi.co/json/', function(data) {
 				userLoc = data["city"] + ", " + data["region_code"];
-				timezone = data["timezone"];
-
-				if ( !siteLat ) { userValid = "undetermined"; }
 				
 				function deg2rad(deg) { return deg * (Math.PI/180) }				
 				var userLat = data["latitude"], userLong = data["longitude"], R = 3958.8, dLat = deg2rad(siteLat-userLat), dLon = deg2rad(siteLong-userLong), a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(deg2rad(userLat)) * Math.cos(deg2rad(siteLat)) * Math.sin(dLon/2) * Math.sin(dLon/2), c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)), distance = R * c; 
@@ -39,14 +36,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			var postID = $('body').attr('id');
 			$.post({
 				url : ajaxURL,
-				data : { action: "count_post_views", id: postID, timezone: timezone, userValid: userValid, userLoc: userLoc, pagesViewed: pageViews, uniqueID: uniqueID },
+				data : { action: "count_post_views", id: postID, userValid: userValid, userLoc: userLoc, pagesViewed: pageViews, uniqueID: uniqueID },
 				success: function( response ) { console.log(response); } 
 			});	
 			
 		// Count site view 
 			$.post({
 				url : ajaxURL,
-				data : { action: "count_site_views", timezone: timezone, userValid: userValid, userLoc: userLoc, userRefer: userRefer },
+				data : { action: "count_site_views", userValid: userValid, userLoc: userLoc, userRefer: userRefer },
 				success: function( response ) { console.log(response); } 
 			});	
 
@@ -54,7 +51,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			if ( loadTime > 0.1 && loadTime < 10.0 ) { 				
 				$.post({
 					url : ajaxURL,
-					data : { action: "log_page_load_speed", id: postID, timezone: timezone, userValid: userValid, loadTime: loadTime, deviceTime: deviceTime, userLoc: userLoc },
+					data : { action: "log_page_load_speed", id: postID, userValid: userValid, loadTime: loadTime, deviceTime: deviceTime, userLoc: userLoc },
 					success: function( response ) { console.log(response); } 
 				});	
 			}
@@ -67,14 +64,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				if ( countTease == "true" ) {
 					$.post({
 						url : ajaxURL,
-						data : { action: "count_teaser_views", id: theID, timezone: timezone, userValid: userValid, userLoc: userLoc },
+						data : { action: "count_teaser_views", id: theID, userValid: userValid, userLoc: userLoc },
 						success: function( response ) { console.log(response); } 
 					});		
 				}
 				if ( countView == "true" ) {
 					$.post({
 						url : ajaxURL,
-						data : { action: "count_post_views", id: theID, timezone: timezone, userValid: userValid, userLoc: userLoc },
+						data : { action: "count_post_views", id: theID, userValid: userValid, userLoc: userLoc },
 						success: function( response ) { console.log(response); } 
 					});		
 				}

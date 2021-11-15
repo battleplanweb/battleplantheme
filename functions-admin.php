@@ -1668,7 +1668,9 @@ function battleplan_add_dashboard_widgets() {
 	add_meta_box( 'battleplan_location_stats', 'Visitor Locations', 'battleplan_admin_location_stats', 'dashboard', 'side', 'high' );	
 	add_meta_box( 'battleplan_pages_stats', 'Most Popular Pages', 'battleplan_admin_pages_stats', 'dashboard', 'side', 'high' );
 	
-	add_meta_box( 'battleplan_trends_stats', 'Visitor Trends', 'battleplan_admin_trends_stats', 'dashboard', 'column3', 'high' );		
+	add_meta_box( 'battleplan_weekly_stats', 'Weekly Visitor Trends', 'battleplan_admin_weekly_stats', 'dashboard', 'column3', 'high' );		
+	add_meta_box( 'battleplan_monthly_stats', 'Monthly Visitor Trends', 'battleplan_admin_monthly_stats', 'dashboard', 'column3', 'high' );		
+	add_meta_box( 'battleplan_quarterly_stats', 'Quarterly Visitor Trends', 'battleplan_admin_quarterly_stats', 'dashboard', 'column3', 'high' );		
 }
 
 // Set up Site Stats widget on dashboard
@@ -1863,15 +1865,15 @@ function battleplan_admin_pageview_stats() {
 }
 
 // Set up Visitor Trends widget on dashboard
-function battleplan_admin_trends_stats() {
+function battleplan_admin_weekly_stats() {
 	$siteHeader = getID('site-header');
 	$today = strtotime(date("F j, Y"));
 	$getViews = readMeta($siteHeader, 'log-views');
 	$getViews = maybe_unserialize( $getViews );
 	
- 	$count = $views = $search = $cutoff = 0;	
+ 	$count = $views = $search = $cutoff = $endOfCol = 0;	
 	echo "<table class='trends-weekly'><tr><td><b><u>Weekly</u></b></td><td><b><u>Total</u></b></td><td><b><u>Search</u></b></td></tr>";		
-	for ($x = 0; $x < 1095; $x++) {		
+	for ($x = 0; $x < 1095; $x++) {	
 		$dailyTime = date("M j, Y", strtotime($getViews[$x]['date'])); 
 		$dailyViews = intval($getViews[$x]['views']); 
 		$dailySearch = intval($getViews[$x]['search']); 
@@ -1880,6 +1882,12 @@ function battleplan_admin_trends_stats() {
 		$search = $search + $dailySearch; 
 		if ( $count == 1 ) $end = $dailyTime;
 		if ( $count == 7 && $dailyTime != "Jan 1, 1970" ) :
+			if ( $endOfCol == 13 ) :
+				echo "</table><table class='trends-weekly'><tr><td><b><u>Weekly</u></b></td><td><b><u>Total</u></b></td><td><b><u>Search</u></b></td></tr>";
+				$endOfCol = 0;
+			endif;
+			$endOfCol++;
+
 			if ( strtotime($end) < strtotime("Mar 23, 2021") ) $search = "";
 		 	echo "<tr class='coloration' data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
 			if ( $views < 1 ) : $cutoff++; if ( $cutoff == 5) : break; endif; endif;
@@ -1887,8 +1895,15 @@ function battleplan_admin_trends_stats() {
 		endif;	
 	} 		
 	echo "</table>";
+}
 	
-	$count = $views = $search = $cutoff = 0;	
+function battleplan_admin_monthly_stats() {
+	$siteHeader = getID('site-header');
+	$today = strtotime(date("F j, Y"));
+	$getViews = readMeta($siteHeader, 'log-views');
+	$getViews = maybe_unserialize( $getViews );
+	
+ 	$count = $views = $search = $cutoff = $endOfCol = 0;	
 	echo "<table class='trends-monthly'><tr><td><b><u>Monthly</u></b></td><td><b><u>Total</u></b></td><td><b><u>Search</u></b></td></tr>";		
 	for ($x = 0; $x < 1095; $x++) {		
 		$dailyTime = date("M j, Y", strtotime($getViews[$x]['date'])); 
@@ -1899,6 +1914,12 @@ function battleplan_admin_trends_stats() {
 		$search = $search + $dailySearch;
 		if ( $count == 1 ) $end = $dailyTime;
 		if ( $count == 30 && $dailyTime != "Jan 1, 1970" ) :
+			if ( $endOfCol == 4 ) :
+				echo "</table><table class='trends-monthly'><tr><td><b><u>Monthly</u></b></td><td><b><u>Total</u></b></td><td><b><u>Search</u></b></td></tr>";
+				$endOfCol = 0;
+			endif;
+			$endOfCol++;
+			
 			if ( strtotime($end) < strtotime("Mar 23, 2021") ) $search = "";
 		 	echo "<tr class='coloration' data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
 			if ( $views < 1 ) : $cutoff++; if ( $cutoff == 2) : break; endif; endif;
@@ -1906,8 +1927,15 @@ function battleplan_admin_trends_stats() {
 		endif;	
 	} 		
 	echo "</table>";
+}
 
-	$count = $views = $search = $cutoff = 0;	
+function battleplan_admin_quarterly_stats() {
+	$siteHeader = getID('site-header');
+	$today = strtotime(date("F j, Y"));
+	$getViews = readMeta($siteHeader, 'log-views');
+	$getViews = maybe_unserialize( $getViews );
+	
+ 	$count = $views = $search = $cutoff = $endOfCol = 0;		
 	echo "<table class='trends-quarterly'><tr><td><b><u>Quarterly</u></b></td><td><b><u>Total</u></b></td><td><b><u>Search</u></b></td></tr>";		
 	for ($x = 0; $x < 1095; $x++) {		
 		$dailyTime = date("M j, Y", strtotime($getViews[$x]['date'])); 
@@ -1918,6 +1946,12 @@ function battleplan_admin_trends_stats() {
 		$search = $search + $dailySearch;
 		if ( $count == 1 ) $end = $dailyTime;
 		if ( $count == 90 && $dailyTime != "Jan 1, 1970" ) :
+			if ( $endOfCol == 4 ) :
+				echo "</table><table class='trends-quarterly'><tr><td><b><u>Quarterly</u></b></td><td><b><u>Total</u></b></td><td><b><u>Search</u></b></td></tr>";
+				$endOfCol = 0;
+			endif;
+			
+			$endOfCol++;
 			if ( strtotime($end) < strtotime("Mar 23, 2021") ) $search = "";
 		 	echo "<tr class='coloration' data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
 			if ( $views < 1 ) : $cutoff++; if ( $cutoff == 1) : break; endif; endif;
@@ -1925,8 +1959,6 @@ function battleplan_admin_trends_stats() {
 		endif;	
 	} 		
 	echo "</table>";
-
-	echo "<div class='clearfix'></div>";	
 }
 
 // Add custom meta boxes to posts & pages
@@ -2320,35 +2352,34 @@ function battleplan_setupGlobalOptions() {
 		update_option( 'wpseo_titles', $wpSEOSettings );
 
 		$wpSEOSocial = get_option( 'wpseo_social' );		
-		$wpSEOSocial['facebook_site'] = battleplan_getBizInfo( array ( 'info'=>'facebook' ));
-		$wpSEOSocial['instagram_url'] = battleplan_getBizInfo( array ( 'info'=>'instagram' ));
-		$wpSEOSocial['linkedin_url'] = battleplan_getBizInfo( array ( 'info'=>'linkedin' ));
+		$wpSEOSocial['facebook_site'] = $GLOBALS['customer_info']['facebook'];
+		$wpSEOSocial['instagram_url'] = $GLOBALS['customer_info']['instagram'];
+		$wpSEOSocial['linkedin_url'] = $GLOBALS['customer_info']['linkedin'];
 		$wpSEOSocial['og_default_image'] = get_bloginfo("url").'/wp-content/uploads/logo.png';
 		$wpSEOSocial['og_default_image_id'] = attachment_url_to_postid( get_bloginfo("url").'/wp-content/uploads/logo.png' );
 		$wpSEOSocial['opengraph'] = '1';
-		$wpSEOSocial['pinterest_url'] = battleplan_getBizInfo( array ( 'info'=>'pinterest' ));
-		$wpSEOSocial['twitter_site'] = battleplan_getBizInfo( array ( 'info'=>'twitter' ));
-		$wpSEOSocial['youtube_url'] = battleplan_getBizInfo( array ( 'info'=>'youtube' ));		
+		$wpSEOSocial['pinterest_url'] = $GLOBALS['customer_info']['pinterest'];
+		$wpSEOSocial['twitter_site'] = $GLOBALS['customer_info']['twitter'];
+		$wpSEOSocial['youtube_url'] = $GLOBALS['customer_info']['youtube'];	
 		update_option( 'wpseo_social', $wpSEOSocial );
-		
+
 		$wpSEOLocal = get_option( 'wpseo_local' );		
 		$wpSEOLocal['business_type'] = 'Organization';
-		$wpSEOLocal['location_address'] = battleplan_getBizInfo( array ( 'info'=>'street' ));
-		$wpSEOLocal['location_city'] = battleplan_getBizInfo( array ( 'info'=>'city' ));
-		$wpSEOLocal['location_state'] = battleplan_getBizInfo( array ( 'info'=>'state-full' ));
-		$wpSEOLocal['location_zipcode'] = battleplan_getBizInfo( array ( 'info'=>'zip' ));
+		$wpSEOLocal['location_address'] = $GLOBALS['customer_info']['street'];
+		$wpSEOLocal['location_city'] = $GLOBALS['customer_info']['site-city'];
+		$wpSEOLocal['location_state'] = $GLOBALS['customer_info']['state-full'];
+		$wpSEOLocal['location_zipcode'] = $GLOBALS['customer_info']['zip'];
 		$wpSEOLocal['location_country'] = 'US';
-		$wpSEOLocal['location_phone'] = battleplan_getBizInfo( array ( 'info'=>'area' )) . battleplan_getBizInfo( array ( 'info'=>'phone' ));
-		$wpSEOLocal['location_email'] = battleplan_getBizInfo( array ( 'info'=>'email' ));
+		$wpSEOLocal['location_phone'] = $GLOBALS['customer_info']['area'].$GLOBALS['customer_info']['phone'];
+		$wpSEOLocal['location_email'] = $GLOBALS['customer_info']['email'];
 		$wpSEOLocal['location_url'] = get_bloginfo("url");
 		$wpSEOLocal['location_price_range'] = '$$';
 		$wpSEOLocal['location_payment_accepted'] = "Cash, Credit Cards, Paypal";
-		$wpSEOLocal['location_area_served'] = battleplan_getBizInfo( array ( 'info'=>'service-area' ));
-		$wpSEOLocal['location_coords_lat'] = get_option('site_lat');
-		$wpSEOLocal['location_coords_long'] = get_option('site_long');
+		$wpSEOLocal['location_area_served'] = $GLOBALS['customer_info']['service-area'];
+		$wpSEOLocal['location_coords_lat'] = $GLOBALS['customer_info']['lat'];
+		$wpSEOLocal['location_coords_long'] = $GLOBALS['customer_info']['long'];
 		$wpSEOLocal['hide_opening_hours'] = 'on';
 		$wpSEOLocal['address_format'] = 'address-state-postal';	
-		update_option( 'wpseo_local', $wpSEOLocal );
 		
 		update_option( 'bp_setup_yoast_initial', 'completed' );
 	endif;

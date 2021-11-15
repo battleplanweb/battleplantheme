@@ -1,8 +1,17 @@
 <!doctype html>
-<?php header("Content-Security-Policy: default-src 'self'; script-src 'self' https://www.googletagmanager.com https://www.google-analytics.com 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://ipapi.co https://www.google-analytics.com; img-src 'self' https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; base-uri 'self';"); ?>
+<?php 
+	$GLOBALS['nonce'] = base64_encode(random_bytes(20));
+	$nonce = $GLOBALS['nonce'];
+	header( "Content-Security-Policy: script-src 'nonce-{$nonce}' 'strict-dynamic' 'unsafe-inline' 'unsafe-eval' https: http:; object-src 'none'; base-uri 'none'; block-all-mixed-content" ); 
+	header( "Strict-Transport-Security: max-age=63072000; includeSubDomains; preload" );
+	header( "X-Frame-Options: SAMEORIGIN" );
+	header( "X-Content-Type-Options: nosniff" );
+	header( "Referrer-Policy: strict-origin-when-cross-origin" );
+?>
+ 
 <html <?php language_attributes(); ?>>
 <head>	
-	<script type="text/javascript">var startTime = Date.now();</script>	
+	<script nonce="<?php echo $nonce; ?>" type="text/javascript">var startTime = Date.now();</script>	
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="profile" href="https://gmpg.org/xfn/11">
@@ -15,7 +24,7 @@
 	<?php bp_font_loader(); ?>	
 
 	<?php wp_head(); ?>
-	<?php bp_google_analytics(); ?>
+	<?php bp_google_tag_manager(); ?>
 </head>
 
 <body id="<?php echo get_the_ID(); ?>" data-unique-id="<?php echo $_COOKIE['unique-id']; ?>" data-pageviews="<?php echo $_COOKIE['pages-viewed']; ?>" <?php body_class(getUserRole()); ?>>

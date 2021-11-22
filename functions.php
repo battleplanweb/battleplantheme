@@ -13,12 +13,13 @@
 # Chron Jobs
 # Universal Pages
 # Custom Hooks
+# Custom Actions
 # AJAX Functions
 # Grid Set Up
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.6' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.7' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -187,8 +188,8 @@ function battleplan_getElement( $atts, $content = null ) {
 			$page_data = get_page_by_path( $page_slug, OBJECT, 'page' );
 		endif;
 	endif;
-	
-	if ( $page_data ) return apply_filters('the_content', $page_data->post_content); 
+
+	if ( $page_data && get_post_status( $page_data->ID ) == "publish" ) return apply_filters('the_content', $page_data->post_content); 
 }
 
 // Returns website address (for privacy policy, etc)
@@ -2167,8 +2168,6 @@ if ( ! function_exists( 'battleplan_setup' ) ) :
 		register_nav_menus( array( 'manual-menu' => esc_html__( 'Manual Menu', 'battleplan' ), ) );
 		add_theme_support( 'html5', array( 'search-form', 'comment-form', 'comment-list', 'gallery', 'caption', 'style', 'script', ) );
 		add_theme_support( 'customize-selective-refresh-widgets' );
-		//add_theme_support( 'custom-logo', array( 'height' => 250, 'width' => 250, 'flex-width'  => true, 'flex-height' => true, ) ); deprecated 10/22/21
-		//add_theme_support( 'custom-background', apply_filters( 'battleplan_custom_background_args', array( 'default-color' => 'ffffff', 'default-image' => '', ) ) ); deprecated 10/22/21
 	}
 endif;
 
@@ -2498,7 +2497,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( "user-message" == $tag->name ) {
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
-		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','и','д','б','й','л','ы','З','у','Я');
+		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','interested in a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','и','д','б','й','л','ы','З','у','Я');
 		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
 		if ( $check == $name ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($badwords as $badword) {
@@ -2844,6 +2843,10 @@ function battleplan_doChrons() {
 	$bpChrons = get_option( 'bp_chrons_last_run' );	
 	$timePast = time() - $bpChrons;
 	
+	function battleplan_delete_prefixed_options( $prefix ) {
+		global $wpdb;
+		$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
+	}
 	
 	if ( $timePast > $chronSpan ) :
 	
@@ -2955,22 +2958,11 @@ function battleplan_doChrons() {
 			$wpSEOLocal['hide_opening_hours'] = 'on';
 			$wpSEOLocal['address_format'] = 'address-state-postal';	
 			
-			delete_option( 'wp-smush-dir_path');
-			delete_option( 'wp-smush-install-type');
-			delete_option( 'wp-smush-keep_exif');
-			delete_option( 'wp-smush-resize_sizes');
-			delete_option( 'wp-smush-version');
 			delete_option( 'wpmudev_recommended_plugins_registered');			
 			delete_option( 'wphb_settings');
-			delete_option( 'wp-smush-skip-redirect');
-			delete_option( 'wp_smush_api_auth');
 			delete_option( 'smush_global_stats');
 			delete_option( 'dir_smush_stats');
 			delete_option( 'theia-upload-cleaner-progress-file');
-			delete_option( 'wp-smush-keep_exif');
-			delete_option( 'wp-smush-resize_sizes');
-			delete_option( 'wp-smush-dir_path');
-			delete_option( 'wp-smush-install-type');
 			delete_option( 'wprmenu_options');
 			delete_option( 'wr2x_rating_date');
 			delete_option( 'wphb-notice-uptime-info-show');
@@ -2998,26 +2990,18 @@ function battleplan_doChrons() {
 		update_option( 'permalink_structure', '/%postname%/' );
 		update_option( 'wpe-rand-enabled', '1' );
 
-		delete_option( 'client_name' );
-		delete_option( 'client_phone' );
-		delete_option( 'client_start' );
-		delete_option( 'client_street' );
-		delete_option( 'client_state-abbr' );
-		delete_option( 'client_state-full' );
-		delete_option( 'client_zip' );
-		delete_option( 'client_license' );
-		delete_option( 'client_email' );
-		delete_option( 'client_facebook' );
-		delete_option( 'client_twitter' );
-		delete_option( 'client_pinterest' );
-		delete_option( 'client_linkedin' );
-		delete_option( 'client_instagram' );
-		delete_option( 'client_pid' );
-
+		battleplan_delete_prefixed_options( 'ac_cache_data_' );
+		battleplan_delete_prefixed_options( 'ac_cache_expires_' );
+		battleplan_delete_prefixed_options( 'ac_api_request_' );	
+		battleplan_delete_prefixed_options( 'ac_sorting_' );
+		battleplan_delete_prefixed_options( 'wp-smush-' );
+		battleplan_delete_prefixed_options( 'wp_smush_' );
+		battleplan_delete_prefixed_options( 'client_' );
+		
 		delete_option( 'bp_setup_2021_08_15' );
-
+		
 		update_option( 'bp_chrons_last_run', time() );		
-	endif;
+	endif;	
 }
 
 /*--------------------------------------------------------------
@@ -3071,9 +3055,30 @@ function bp_loader() { do_action('bp_loader'); }
 function bp_font_loader() { do_action('bp_font_loader'); }
 function bp_google_tag_manager() { do_action('bp_google_tag_manager'); }
 function bp_mobile_menu_bar_items() { do_action('bp_mobile_menu_bar_items'); }
+function bp_before_masthead() { do_action('bp_before_masthead'); }
+function bp_masthead() { do_action('bp_masthead'); }
 function bp_after_masthead() { do_action('bp_after_masthead'); }
+function bp_wrapper_top() { do_action('bp_wrapper_top'); }
+function bp_before_wrapper_content() { do_action('bp_before_wrapper_content'); }
+function bp_after_wrapper_content() { do_action('bp_after_wrapper_content'); }
+function bp_before_main_content() { do_action('bp_before_main_content'); }
+function bp_after_main_content() { do_action('bp_after_main_content'); }
+function bp_before_site_main_inner() { do_action('bp_before_site_main_inner'); }
+function bp_after_site_main_inner() { do_action('bp_after_site_main_inner'); }
+function bp_before_the_content() { do_action('bp_before_the_content'); }
+function bp_after_the_content() { do_action('bp_after_the_content'); }
+function bp_before_sidebar_inner() { do_action('bp_before_sidebar_inner'); }
+function bp_after_sidebar_inner() { do_action('bp_after_sidebar_inner'); }
+function bp_before_sidebar_widgets() { do_action('bp_before_sidebar_widgets'); }
+function bp_after_sidebar_widgets() { do_action('bp_after_sidebar_widgets'); }
+function bp_before_colophon() { do_action('bp_before_colophon'); }
+function bp_after_colophon() { do_action('bp_after_colophon'); }
 
-// preload fonts
+/*--------------------------------------------------------------
+# Custom Actions
+--------------------------------------------------------------*/
+
+// Preload fonts
 add_action('bp_font_loader', 'battleplan_loadFonts');
 function battleplan_loadFonts() {
 	foreach ( $GLOBALS['customer_info']['site-fonts'] as $siteFont ) :
@@ -3082,7 +3087,7 @@ function battleplan_loadFonts() {
 	echo $buildPreload;
 }
 
-// install Google Tag Manager (analytics)
+// Install Google Tag Manager (analytics)
 add_action('bp_google_tag_manager', 'battleplan_load_tag_manager');
 function battleplan_load_tag_manager() { 
 	foreach ( $GLOBALS['customer_info']['google-tags'] as $gtag=>$value ) :
@@ -3103,6 +3108,49 @@ function battleplan_load_tag_manager() {
 	</script>
 <?php }
 
+// Build and display desktop navigation menu
+function buildNavMenu( $pos ) {
+	$printMenu .= '<nav id="desktop-navigation" class="main-navigation menu-strip" aria-label="Main Menu">';
+	$printMenu .= wp_nav_menu ( array ( 'echo' => false, 'container' => 'div', 'container_class' => 'flex', 'menu_id' => $pos.'-menu', 'menu_class' => 'menu main-menu', 'theme_location' => $pos.'-menu', 'walker' => new Aria_Walker_Nav_Menu(), ) ); 
+	$printMenu .= '</nav><!-- #site-navigation -->';
+	
+	return $printMenu;
+}
+
+function placeNavMenu() {
+	echo buildNavMenu( 'manual' );
+}
+
+add_shortcode( 'get-menu', 'returnNavMenu' );
+function returnNavMenu() {
+	return buildNavMenu( 'manual' );
+}		
+
+// Display the site header
+add_action('bp_masthead', 'battleplan_printHeader', 20);
+function battleplan_printHeader() { 
+	$printHeader = '<header id="masthead" role="banner" aria-label="header">';		
+	if ( has_nav_menu( 'top-menu', 'battleplan' ) ) $printHeader .= buildNavMenu( 'top' );		
+	$printHeader .= do_shortcode('[get-element slug="site-header"]');		
+	if ( has_nav_menu( 'header-menu', 'battleplan' ) ) $printHeader .= buildNavMenu( 'header' ); 		
+	$printHeader .= '</header><!-- #masthead -->';
+	
+	echo $printHeader;
+}
+
+// Display locked site-message
+add_action('bp_before_wrapper_content', 'battleplan_printSiteMessage', 20);
+function battleplan_printSiteMessage() { 
+	echo do_shortcode('[get-element slug="site-message"]');
+}	
+
+// Display #wrapper-top
+add_action('bp_wrapper_top', 'battleplan_printWrapperTop', 20);
+function battleplan_printWrapperTop() { 
+	$current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );
+	$textarea = get_post_meta( $current_page->ID, 'page-top_text', true );
+ 	if ( $textarea != "" ) : echo "<section id='wrapper-top'>".apply_filters('the_content', $textarea)."</section><!-- #wrapper-top -->"; endif;
+}	
 
 /*--------------------------------------------------------------
 # AJAX Functions
@@ -3795,7 +3843,7 @@ function battleplan_buildLockedSection( $atts, $content = null ) {
 	
 	$buildSection = '<section'.$name.' class="section section-lock'.$style.$width.$class.'" data-pos="'.$pos.'" data-delay="'.$delay.'" data-show="'.$show.'"';
 	if ( $background != "" ) $buildSection .= ' style="background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;"';	
-	$buildSection .= '>'.do_shortcode($content).'</section>';	
+	$buildSection .= '><div class="closeBtn" aria-label="close" aria-hidden="false" tabindex="0"><i class="fa fa-times"></i></div>'.do_shortcode($content).'</section>';	
 	
 	return $buildSection;
 }

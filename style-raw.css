@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 10.6
+Version: 10.7
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1809,6 +1809,8 @@ section.section .flex.nested .flex {
 
 
 
+
+
   	will-change: 								transform;
   	transform: 									translateZ(0);
 }
@@ -1999,10 +2001,8 @@ div[class*="restrict-"] {
 
 
 
+
 .sidebar-box .widget.widget-last {
-
-
-
 	margin-bottom:								1.5em;
 }
 
@@ -2169,9 +2169,14 @@ div[class*="restrict-"] {
 
 .section.style-lock[data-pos="modal"].on-screen,
 .section.style-lock[data-pos="center"].on-screen {
+	top: 										0;
 	opacity: 									1;
 	pointer-events: 							auto;
 	transition: 								all 0.6s ease;
+}
+
+body.locked {
+	overflow: 									hidden;
 }
 
 /* 3: Small Tablets (landscape) */
@@ -3067,6 +3072,7 @@ ul.comment-list > .comment {
 	border-bottom:								1px solid rgba(0,0,0,0.85);
 }
 
+
 ul.comment-list ul.children .comment {
 
 	margin:										2em 0 2em 4%;
@@ -3850,8 +3856,10 @@ span.descriptionText {
 	opacity:									0.35;
 }
 
+
 .product-links .descriptionText {
 	margin-bottom:								0.75em;
+
 }
 
 .disclaimerText {
@@ -4363,6 +4371,7 @@ p#user_switching_switch_on a.tab-focus {
 	}
 			
 	/* Footer font size */
+
 	.site-info, 
 	.site-info .col-inner {
 		font-size: 									14px;
@@ -4595,16 +4604,18 @@ p#user_switching_switch_on a.tab-focus {
 	
 	/* Sidebar */
 	.content-box #primary, 
-	.widget-box .widget, 
-	.content-sidebar-box #main-content {
+	.widget-box .widget {
 		padding:									2.5em 1.5em;
 	}
 	
-	.sidebar-box #secondary {
+	.sidebar-box #secondary,
+	.content-sidebar-box #main-content {
 		padding:									2.5em 0;
 	}
 
-	.sidebar-box #secondary .sidebar-inner {
+	.sidebar-box #secondary .sidebar-inner,
+	.content-sidebar-box #secondary .sidebar-inner,
+	.content-sidebar-box #primary {
 		padding:									0 1.5em;
 	}
 	
@@ -4633,10 +4644,10 @@ p#user_switching_switch_on a.tab-focus {
 	#secondary .sidebar-inner {
 		display:									flex;
 		flex-flow:									column wrap;
-		gap:										2.5em 2em;
+		gap:										2.5em 1.5em;
 		justify-content:							center;
 		align-items: 								center;
-		height: 									calc(100vh - 220px);
+		height: 									calc(100vh - 200px);
 		max-height: 								500px;
 		overflow-x: 								scroll;		
 		overflow-y: 								hidden;
@@ -4880,19 +4891,21 @@ p#user_switching_switch_on a.tab-focus {
 	}
 	
 	/* Content */
-	.content-box #primary,
-	.widget-box .widget,
-	.content-sidebar-box #main-content {
+	.content-box #primary, 
+	.widget-box .widget {
 		padding:									1.5em 1em;
 	}
 	
-	.sidebar-box #secondary {
+	.sidebar-box #secondary,
+	.content-sidebar-box #main-content {
 		padding:									1.5em 0;
 	}
 
-	.sidebar-box #secondary .sidebar-inner {
+	.sidebar-box #secondary .sidebar-inner,
+	.content-sidebar-box #secondary .sidebar-inner,
+	.content-sidebar-box #primary {
 		padding:									0 1em;
-	}
+	}	
 	
 	/* Office Hours */
 	.office-hours {

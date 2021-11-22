@@ -24,12 +24,14 @@
 	<?php bp_font_loader(); ?>	
 
 	<?php wp_head(); ?>
+	
 	<?php bp_google_tag_manager(); ?>
 </head>
 
 <body id="<?php echo get_the_ID(); ?>" data-unique-id="<?php echo $_COOKIE['unique-id']; ?>" data-pageviews="<?php echo $_COOKIE['pages-viewed']; ?>" <?php body_class(getUserRole()); ?>>
 	
 <?php bp_loader(); ?>
+
 <?php wp_body_open(); ?>
 	
 <div id="mobile-menu-bar-faux"></div>
@@ -58,53 +60,21 @@ wp_nav_menu( array(
 ) ); ?>	
 	
 <a class="skip-link sr-only" href="#primary"><?php esc_html_e( 'Skip to content', 'battleplan' ); ?></a>
-
-<?php echo do_shortcode('[get-element slug="site-message"]'); ?>
 	
 <div id="page" class="site" aria-label="page">
-	<header id="masthead" role="banner" aria-label="header">
-		
-		<?php if ( has_nav_menu( 'top-menu', 'battleplan' ) ) : ?>
-			<nav id="desktop-navigation" class="main-navigation menu-strip" aria-label="Main Menu">
-				<?php wp_nav_menu(
-					array(
-						'container'       => 'div',
-						'container_class' => 'flex',
-						'menu_id'         => 'top-menu',
-						'menu_class'	  => 'menu main-menu',
-						'theme_location'  => 'top-menu',
-						'walker'          => new Aria_Walker_Nav_Menu(),
-					)
-				); ?>
-			</nav><!-- #site-navigation -->
-		<?php endif; ?>
 
-		<?php echo do_shortcode('[get-element slug="site-header"]'); ?>
-		
-		<?php if ( has_nav_menu( 'header-menu', 'battleplan' ) ) : ?>
-			<nav id="desktop-navigation" class="main-navigation menu-strip" aria-label="Main Menu">
-				<?php wp_nav_menu(
-					array(
-						'container'       => 'div',
-						'container_class' => 'flex',
-						'menu_id'         => 'header-menu',
-						'menu_class'	  => 'menu main-menu',
-						'theme_location'  => 'header-menu',
-						'walker'          => new Aria_Walker_Nav_Menu(),
-					)
-				); ?>
-			</nav><!-- #site-navigation -->
-		<?php endif; ?>
-		
-	</header><!-- #masthead -->
+	<?php bp_before_masthead(); ?>
+
+	<?php bp_masthead(); ?>
 	
 	<?php bp_after_masthead(); ?>
+
+	<?php bp_wrapper_top(); ?>
 	
-	<?php	
-	$current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );
-	$textarea = get_post_meta( $current_page->ID, 'page-top_text', true );
- 	if ( $textarea != "" ) : echo "<section id='wrapper-top'>".apply_filters('the_content', $textarea)."</section><!-- #wrapper-top -->"; endif;
-	?>
+	<?php bp_before_wrapper_content(); ?>
 	
 	<section id="wrapper-content">
+	
+		<?php bp_before_main_content(); ?>
+		
 		<div id="main-content">

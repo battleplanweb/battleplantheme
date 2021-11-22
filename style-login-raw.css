@@ -19,6 +19,10 @@ body {
 
 #login h1 {
 	text-align: 								center;
+	background: 								transparent;
+	border: 									none;
+	box-shadow: 								none;
+	text-shadow: 								none;
     background-image: 							url('/wp-content/uploads/logo.png');
     padding-bottom: 							2vh;
     width: 										auto;

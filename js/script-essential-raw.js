@@ -231,7 +231,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			if ( $(container).next().length ) {
 				trigger = $(container).next();			
 			} else {
-				trigger = $(container).parent().next();	
+				trigger = $(container).parent().next().hasClass('section-lock') ? $(container).parent().next().next() : $(container).parent().next();
 			}
 		} else {
 			trigger = $(strictTrigger);
@@ -720,6 +720,35 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$(target).remove();
 	};		
 	
+// Size a frame according to the image or video inside it
+	window.sizeFrame = function (target, frame, scale) {
+		frame = frame || ".frame";
+		scale = scale || "0.9";
+		
+		$(target).find('img').css({ 'transform':'scale('+scale+')' });
+		
+		$(target).each(function() {
+			var thisFrame = $(this).find(frame), thisImg = $(this).find('img');
+			
+			if (target.includes('video')) { 
+				thisImg = $(this).find('iframe');
+				var frameW = thisImg.width(), frameH = thisImg.height();
+				thisFrame.width(frameW+"px").height(frameH+"px").css({'marginTop':-frameH+"px"});
+			} else {
+				if (target.includes('carousel')) { thisImg = $(this).find('.carousel-item.active img'); }
+
+				thisImg.one("load", function() {					
+					var frameW = thisImg.width(), frameH = thisImg.height();
+					thisFrame.width(frameW+"px").height(frameH+"px").css({'marginBottom':-frameH+"px"});					
+				}).each(function() {
+					if(this.complete) {
+						$(this).trigger('load');
+					}
+				});	
+			}
+		});
+	};
+	
 // Turn SVG into an element's background image
 	window.svgBG = function (svg, element, where) {
 		where = where || "top";
@@ -1003,6 +1032,7 @@ if ( typeof parallaxBG !== 'function' ) {
 					}, charDelay);
 					currEffect = effect1;
 				} else {
+
 
 					setTimeout( function () { 
 						thisDiv.addClass(effect2);
@@ -1307,18 +1337,16 @@ if ( typeof parallaxBG !== 'function' ) {
 			if ( cookieExpire == "never" ) { cookieExpire = 100000; }			
 			if ( cookieExpire == "session" ) { cookieExpire = null; }			
 
-			addDiv(thisLock.find(".flex"), '<div class="closeBtn" aria-label="close" aria-hidden="false" tabindex="0"><i class="fa fa-times"></i></div>','before');
-			
 			keyPress(thisLock.find('.closeBtn'));
 			
 			if ( lockPos == "top" ) {		
 				if ( getCookie("display-message") !== "no" ) {
 					thisLock.delay(initDelay).css({ "top":mobileMenuBarH+"px" });
 					setTimeout( function() { 
-						thisLock.addClass("on-screen"); thisLock.focus();
+						thisLock.addClass("on-screen"); $('body').addClass('locked'); thisLock.focus();
 					}, initDelay);
 					thisLock.find('.closeBtn').click(function() {
-						thisLock.removeClass("on-screen");
+						thisLock.removeClass("on-screen"); $('body').removeClass('locked');
 						setCookie("display-message","no",cookieExpire);
 					});
 				}
@@ -1326,16 +1354,15 @@ if ( typeof parallaxBG !== 'function' ) {
 				if ( getCookie("display-message") !== "no" ) {
 					thisLock.delay(initDelay).css({ "bottom":"0" });
 					setTimeout( function() { 
-						thisLock.addClass("on-screen"); thisLock.focus(); 
+						thisLock.addClass("on-screen"); $('body').addClass('locked'); thisLock.focus(); 
 					}, initDelay);
 					thisLock.find('.closeBtn').click(function() {
-						thisLock.removeClass("on-screen");
+						thisLock.removeClass("on-screen"); $('body').removeClass('locked');
 						setCookie("display-message","no",cookieExpire);
 					});
 				}
 			} else if ( lockPos == "header" ) { 	
 				if ( getCookie("display-message") !== "no" ) {				
-					moveDiv(thisLock,'#masthead','after');
 					moveDiv(thisLock.find('.closeBtn'), '.section-lock.position-header .col-inner', 'top');
 					thisLock.css({ "display":"grid" });
 					thisLock.find('.closeBtn').click(function() {
@@ -1345,21 +1372,22 @@ if ( typeof parallaxBG !== 'function' ) {
 				}
 			} else { 				
 				if ( buttonActivated == "no" && getCookie("display-message") !== "no" ) {
+					moveDiv(thisLock.find('.closeBtn'), '.section-lock .col-inner', 'top');
 					setTimeout( function() { 
-						thisLock.addClass("on-screen"); thisLock.focus(); 
+						thisLock.addClass("on-screen"); $('body').addClass('locked'); thisLock.focus(); 
 					}, initDelay);
 					thisLock.find('.closeBtn').click(function() {
-						thisLock.removeClass("on-screen");
+						thisLock.removeClass("on-screen"); $('body').removeClass('locked');
 						setCookie("display-message","no",cookieExpire);
 					});	
 				}
 
 				if ( buttonActivated == "yes" ) {				
 					$('.modal-btn').click(function() {
-						thisLock.addClass("on-screen"); thisLock.focus();
+						thisLock.addClass("on-screen"); $('body').addClass('locked'); thisLock.focus();
 					});
 					thisLock.find('.closeBtn').click(function() {
-						thisLock.fadeOut();
+						thisLock.fadeOut(); $('body').removeClass('locked');
 					});						
 				}
 			}			

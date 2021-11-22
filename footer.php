@@ -1,17 +1,23 @@
 <?php /* The template for displaying the footer */
 
 	$current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );
-	$checkRemoveSidebar = get_post_meta( $current_page->ID, '_bp_remove_sidebar', true );
-	if ( $checkRemoveSidebar != true ) : get_sidebar(); endif;
+	if ( get_post_meta( $current_page->ID, '_bp_remove_sidebar', true ) != true ) : get_sidebar(); endif;
 ?>
 
 		</div><!-- #main-content -->
+		
+		<?php bp_after_main_content(); ?>
+				
 	</section><!-- #wrapper-content -->
+	
+	<?php bp_after_wrapper_content(); ?>
 
 	<?php	
 	$textarea = get_post_meta( $current_page->ID, 'page-bottom_text', true );
  	if ( $textarea != "" ) : echo "<section id='wrapper-bottom'>".apply_filters('the_content', $textarea)."</section><!-- #wrapper-bottom -->"; endif;
 	?>
+	
+	<?php bp_before_colophon(); ?>
 
 	<footer id="colophon" role="banner" aria-label="footer">		
 		
@@ -59,6 +65,9 @@
 			
 		</section><!-- .site-info -->
 	</footer><!-- #colophon -->
+	
+	<?php bp_after_colophon(); ?>
+	
 </div><!-- #page -->
 
 <!-- Scroll to Top btn -->

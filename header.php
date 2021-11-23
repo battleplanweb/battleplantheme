@@ -40,7 +40,8 @@
 	<a class="scroll-top" href="#page"><div class="mm-bar-btn scroll-to-top-btn" aria-hidden="true"></div><span class="sr-only">Scroll To Top</span></a>
 	<?php bp_mobile_menu_bar_items(); ?>
 	<?php echo do_shortcode('[get-biz info="mm-bar-link"]') ?>
-	<a href="/contact-us/"><div class="mm-bar-btn email-btn" aria-hidden="true"></div><span class="sr-only">Contact Us</span></a>
+	<!--a href="/contact-us/"><div class="mm-bar-btn email-btn" aria-hidden="true"></div><div class="mm-bar-btn email2-btn" aria-hidden="true"></div><span class="sr-only">Contact Us</span></a-->
+	<div class="mm-bar-btn modal-btn"><div class="email-btn" aria-hidden="true"></div><div class="email2-btn" aria-hidden="true"></div><span class="sr-only">Contact Us</span></div>
 	<div class="mm-bar-btn activate-btn"><div></div><div></div><div></div></div> 
 </div>
 	

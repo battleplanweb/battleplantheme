@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 10.7
+Version: 10.8
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1811,6 +1811,8 @@ section.section .flex.nested .flex {
 
 
 
+
+
   	will-change: 								transform;
   	transform: 									translateZ(0);
 }
@@ -2118,6 +2120,7 @@ div[class*="restrict-"] {
 	width:										100vw;
 	height:										100vh;
 	background:									rgba(0,0,0,0.85);
+	padding: 									0;
 }
 
 .section.section-lock[data-pos="modal"] .flex,
@@ -2129,6 +2132,12 @@ div[class*="restrict-"] {
 	left:										50%;
 	transform: 									translate(-50%, -50%);
 	padding:									2em;
+}
+
+.screen-mobile .section.section-lock[data-pos="modal"] .flex,
+.screen-mobile .section.section-lock[data-pos="center"] .flex {
+	top:										calc(50% + 42px);
+	transform: 									translate(-50%, calc(-50% - 21px));
 }
 
 /* Style Lock */
@@ -2375,6 +2384,7 @@ body.locked {
 
 .main-navigation ul.main-menu li:hover > a, 
 .main-navigation ul.main-menu li.active > a, 
+
 .main-navigation ul.main-menu li > a.tab-focus,
 .widget-navigation ul.menu li:hover > a, 
 .widget-navigation ul.menu li.active > a, 
@@ -2566,7 +2576,7 @@ body.locked {
 }
 
 #mobile-menu-bar .mm-bar-btn {
-	width: 										auto;
+	width: 										34px;
 	height:										31px;
 	margin:										0 3px;
 	padding:									0 6px;
@@ -2582,6 +2592,8 @@ body.locked {
 	font-size:									18px; 
 	color:										rgba(255,255,255,0.75);
 	text-decoration:							none;
+	width: 										40px;
+	height: 									31px;
 }
 
 #mobile-menu-bar .mm-bar-btn.activate-btn {
@@ -2594,36 +2606,171 @@ body.locked {
 
 #mobile-menu-bar .mm-bar-btn.scroll-to-top-btn::after,
 #mobile-menu-bar .mm-bar-btn.call-btn::after,
-#mobile-menu-bar .mm-bar-btn.email-btn::after {
+#mobile-menu-bar .email-btn::after,
+#mobile-menu-bar .email2-btn::after {
 	position:									relative;
 	font-family: 								Font Awesome;
 	content:   									"\f879";
 	font-weight:								900;
-
 	font-size:									21px; 
 	top:										-1px;
 	color:										rgba(255,255,255,0.75);
 }
 
-#mobile-menu-bar .mm-bar-btn.email-btn::after {
+#mobile-menu-bar .email-btn,
+#mobile-menu-bar .email2-btn {
+	position: 									absolute;
+}
+
+#mobile-menu-bar .email-btn::after {
 	content:   									"\f0e0";
+	opacity: 									1;
+}
+
+#mobile-menu-bar .email2-btn::after {
+	content:   									"\f0ad";
+	opacity: 									0;
 }
 
 #mobile-menu-bar .mm-bar-btn.scroll-to-top-btn::after {
 	content:   									"\f077";
 }
 
+#mobile-menu-bar .mm-bar-btn.activate-btn {
+	width: 										38px;
+}
+
 #mobile-menu-bar .mm-bar-btn.activate-btn div {
-	width: 										23px;
+	width: 										24px;
 	height: 									3px;
 	background-color: 							rgba(255,255,255,0.75);
 	margin: 									5px 4px;
 	transition: 								all 0.07s ease-in;
 }
 
-#mobile-menu-bar .mm-bar-btn.activate-btn.active div:nth-of-type(1) { transform: rotate(-45deg) translate(-6px, 6px) }
-#mobile-menu-bar .mm-bar-btn.activate-btn.active div:nth-of-type(2) { opacity: 0 }
-#mobile-menu-bar .mm-bar-btn.activate-btn.active div:nth-of-type(3) { transform: rotate(45deg) translate(-5px, -6px) }
+#mobile-menu-bar .mm-bar-btn.activate-btn:not(.active) div {
+	animation-name: 							hamburger; 
+    animation-duration: 						2s; 
+    animation-iteration-count: 					infinite;
+    animation-timing-function: 					linear;
+}
+
+#mobile-menu-bar .mm-bar-btn.activate-btn div:nth-of-type(1) { animation-delay: 2s; }
+#mobile-menu-bar .mm-bar-btn.activate-btn div:nth-of-type(2) { animation-delay: 2.1s; }
+#mobile-menu-bar .mm-bar-btn.activate-btn div:nth-of-type(3) { animation-delay: 2.2s; }
+
+@keyframes hamburger {
+    0%  { width: 24px; margin-left: 4px; }
+    5% { width: 22px; margin-left: 5px; }
+    10% { width: 20px; margin-left: 6px; }
+    20%  { width: 24px; margin-left: 4px; }
+}
+
+#mobile-menu-bar .mm-bar-btn.activate-btn.active div:nth-of-type(1) { transform: rotate(-45deg) translate(-6px, 6px) scaleX(1) }
+#mobile-menu-bar .mm-bar-btn.activate-btn.active div:nth-of-type(2) { transform: scaleX(0) }
+#mobile-menu-bar .mm-bar-btn.activate-btn.active div:nth-of-type(3) { transform: rotate(45deg) translate(-5px, -6px) scaleX(1) }
+
+#mobile-menu-bar .mm-bar-btn.call-btn::after {    
+	display: 									block;
+	animation-name: 							phone-ring; 
+    animation-duration: 						4.5s; 
+    animation-iteration-count: 					infinite;
+    animation-timing-function: 					cubic-bezier(.68,-0.55,.27,1.55);
+	animation-delay: 							6s;
+}
+
+@keyframes phone-ring {
+    1% {transform: 								rotate(-10deg) scale(1) }
+    2% {transform: 								rotate(13deg)  scale(1.4) } 
+    3% {transform: 								rotate(-16deg) scale(1.4) } 
+    4% {transform: 								rotate(20deg)  scale(1.4) } 
+    5% {transform: 								rotate(-20deg) scale(1.4) } 
+    6% {transform: 								rotate(20deg)  scale(1.4) } 
+    7% {transform: 								rotate(-20deg) scale(1.4) } 
+    8% {transform: 								rotate(20deg)  scale(1.4) }    
+	9% {transform: 								rotate(-20deg) scale(1.4) } 
+    10% {transform: 							rotate(20deg)  scale(1.4) }     
+	11% {transform: 							rotate(-20deg) scale(1.4) } 
+    12% {transform: 							rotate(20deg)  scale(1.4) } 
+	13% {transform: 							rotate(-20deg) scale(1.4) } 
+    14% {transform: 							rotate(20deg)  scale(1.4) } 
+    15% {transform: 							rotate(-20deg) scale(1.4) } 
+    16% {transform: 							rotate(20deg)  scale(1.4) } 
+    17% {transform: 							rotate(-20deg) scale(1.3) } 
+    18% {transform: 							rotate(16deg)  scale(1.3) } 
+    19% {transform: 							rotate(-13deg) scale(1.2) } 
+    20% {transform: 							rotate(10deg)  scale(1.2) }
+	21% {transform: 							rotate(0deg)   scale(1) } 
+    100% {transform: 							rotate(0deg)   scale(1) } 
+}
+
+#mobile-menu-bar .email-btn::after {    
+	display: 									block;
+	animation-name: 							envelope-spin; 
+    animation-duration: 						4.5s; 
+    animation-iteration-count: 					infinite;
+    animation-timing-function: 					linear;
+	animation-delay: 							3s;
+}
+
+@keyframes envelope-spin {
+    0% {transform: 								rotate(0deg); opacity: 1 } 
+	20% {transform: 							rotate(0deg); opacity: 1 } 
+	40% {transform: 							rotate(-30deg); opacity: 1 } 
+	43% {transform: 							rotate(360deg); opacity: 0.3 } 
+	45% {transform: 							rotate(780deg); opacity: 0 } 
+	96% {transform: 							rotate(840deg); opacity: 0 } 
+	99% {transform: 							rotate(1080deg); opacity: 1 } 
+}
+
+#mobile-menu-bar .email2-btn::after {    
+	display: 									block;
+	animation-name: 							email2-spin; 
+    animation-duration: 						4.5s; 
+    animation-iteration-count: 					infinite;
+    animation-timing-function: 					linear;
+	animation-delay: 							3s;
+}
+
+@keyframes email2-spin {
+    0% {transform: 								rotate(0deg); opacity: 0 } 
+	40% {transform: 							rotate(-30deg); opacity: 0 } 
+	43% {transform: 							rotate(360deg); opacity: 0.7 } 
+	45% {transform: 							rotate(715deg); opacity: 1 } 
+	96% {transform: 							rotate(840deg); opacity: 1 } 
+	99% {transform: 							rotate(1080deg); opacity: 0 } 
+}
+
+#mobile-menu-bar a.scroll-top {
+	margin-left: 								-44%;
+}
+
+#mobile-menu-bar a.scroll-top.scroll-btn-visible {
+	margin-left: 								0;
+}
+
+#mobile-menu-bar a.scroll-btn-visible .mm-bar-btn.scroll-to-top-btn::after {
+	display: 									block;
+	animation-name: 							screen-up; 
+    animation-duration: 						3.5s; 
+    animation-iteration-count: 					infinite;
+    animation-timing-function: 					linear;
+}
+
+@keyframes screen-up {
+    0% {transform: 								translateY(0) }    
+	25% {transform: 							translateY(-2px) } 
+	50% {transform: 							translateY(4px) } 
+	75% {transform: 							translateY(-4px) } 
+}
+
+#request-quote-modal .flex {
+	gap: 										0 3%;
+}
+
+#request-quote-modal #label {
+    font-size: 									100%;
+}
 
 #mobile-navigation {
 	display:									block;
@@ -2779,7 +2926,6 @@ span.page-numbers.dots {
 	cursor:										default;
 }
 
-
 a.next i.fa,
 a.prev i.fa {
 	transform:									translateY(0);
@@ -2847,10 +2993,16 @@ a.prev i.fa {
 }
 
 /* Scroll To Top Button */	
-a.scroll-top {
+.screen-desktop a.scroll-top {
 	display:									none;
 	opacity:									0;
 }
+
+.screen-mobile a.scroll-top {
+	display:									block !important;
+	opacity:									1 !important;
+}
+
 .screen-desktop a.scroll-top {	
 	position:									fixed;
 	top:										8%;
@@ -2883,7 +3035,6 @@ a.scroll-top {
 }
 
 .scroll-down a {
-
 	display:									inline-block;
 	font-size:									60px;
 	color:										rgba(255,255,255,0.5);
@@ -4691,7 +4842,30 @@ p#user_switching_switch_on a.tab-focus {
 }
 
 /* 2: Phones (landscape) + Tablets (portrait) */
-@media (max-width: 860px) {	
+@media (max-width: 860px) {		
+	/* Header */
+	.logo-strip .flex {
+		gap: 										1.5em 3%;
+	}
+	
+	.logo-strip .logo img,
+	.logo-strip .am-stand-logo img,
+	.logo-strip img.am-stand-logo,
+	.logo-strip .brand-logo img {
+		max-height: 								20vh;
+		/*width: 										auto !important;
+		max-width: 									100% !important;
+		margin-left: 								auto;
+		margin-right: 								auto;*/ /* already set in @media 3 */
+	}
+	
+	.logo-strip .am-stand-logo img,
+	.logo-strip img.am-stand-logo,
+	.logo-strip .brand-logo img {
+		max-height: 								unset;
+		height: 									6vh;
+	}
+
 	.section-edge h1,
 	.section-edge h2,
 	.section-edge h3,
@@ -4847,28 +5021,6 @@ p#user_switching_switch_on a.tab-focus {
 	.gallery-column-7,
 	.gallery-column-8 {
 		grid-template-columns: 						repeat(3, 1fr);
-	}
-	
-	/* Header */
-	.logo-strip .flex {
-		gap: 										1.5em 3%;
-	}
-	
-	.logo-strip .logo img,
-	.logo-strip .am-stand-logo img,
-	.logo-strip img.am-stand-logo,
-	.logo-strip .brand-logo img {
-		max-height: 								20vh;
-		/*width: 										auto !important;
-		max-width: 									100% !important;
-		margin-left: 								auto;
-		margin-right: 								auto;*/ /* already set in @media 3 */
-	}
-	
-	.logo-strip .am-stand-logo img,
-	.logo-strip img.am-stand-logo,
-	.logo-strip .brand-logo img {
-		max-height: 								6vh;
 	}
 }
 

@@ -324,10 +324,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	var backToTop = $('#wrapper-content').waypoint(function(direction) {
 		if (direction === 'up') {			
 			$('a.scroll-top').animate( { opacity: 0 }, 150, function() { 
-				$('a.scroll-top').css({ "display": "none" }); 
+				$('a.scroll-top').css({ "display": "none" }).removeClass('scroll-btn-visible');; 
 			});
 		} else {
-			$('a.scroll-top').css({ "display": "block" }).animate( { opacity: 1 }, 150);
+			$('a.scroll-top').css({ "display": "block" }).animate( { opacity: 1 }, 150).addClass('scroll-btn-visible');
 		}	
 	}, { offset: '10%' });	
 
@@ -1331,7 +1331,7 @@ if ( typeof parallaxBG !== 'function' ) {
 				
 	// Set up Locked Message position, delay, & cookie	
 		$('section.section-lock').each(function() {
-			var thisLock = $(this), initDelay = thisLock.attr('data-delay'), lockPos = thisLock.attr('data-pos'), cookieExpire = thisLock.attr('data-show'), buttonActivated = "no";
+			var thisLock = $(this), initDelay = thisLock.attr('data-delay'), lockPos = thisLock.attr('data-pos'), cookieExpire = thisLock.attr('data-show'), buttonActivated = thisLock.attr('data-btn');
 
 			if ( cookieExpire == "always" ) { cookieExpire = 0.000001; }
 			if ( cookieExpire == "never" ) { cookieExpire = 100000; }			
@@ -1372,7 +1372,7 @@ if ( typeof parallaxBG !== 'function' ) {
 				}
 			} else { 				
 				if ( buttonActivated == "no" && getCookie("display-message") !== "no" ) {
-					moveDiv(thisLock.find('.closeBtn'), '.section-lock .col-inner', 'top');
+					moveDiv(thisLock.find('.closeBtn'), '.section-lock .flex', 'top');
 					setTimeout( function() { 
 						thisLock.addClass("on-screen"); $('body').addClass('locked'); thisLock.focus(); 
 					}, initDelay);
@@ -1384,10 +1384,11 @@ if ( typeof parallaxBG !== 'function' ) {
 
 				if ( buttonActivated == "yes" ) {				
 					$('.modal-btn').click(function() {
+						moveDiv(thisLock.find('.closeBtn'), '.section-lock .flex', 'top');
 						thisLock.addClass("on-screen"); $('body').addClass('locked'); thisLock.focus();
 					});
 					thisLock.find('.closeBtn').click(function() {
-						thisLock.fadeOut(); $('body').removeClass('locked');
+						thisLock.removeClass("on-screen"); $('body').removeClass('locked');
 					});						
 				}
 			}			

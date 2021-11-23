@@ -75,6 +75,7 @@
 
 <?php wp_footer(); ?>	
 	
+<?php echo do_shortcode('[lock name="request-quote-modal" style="lock" position="modal" show="always" btn-activated="yes"][layout]<h3>Request A Quote</h3>[contact-form-7 title="Quote Request Form"][/layout][/lock]'); ?>
 <?php echo '<div id="include-svg">'.do_shortcode('[get-element slug="svg"]').'</div>'; ?>
 
 </body>

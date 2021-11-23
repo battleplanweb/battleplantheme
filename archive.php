@@ -4,11 +4,11 @@ get_header(); ?>
 
 <main id="primary" class="site-main" role="main" aria-label="main content">
 
-	<?php bp_before_the_main_inner(); ?>	
+	<?php bp_before_site_main_inner(); ?>	
 		
 	<div class="site-main-inner">
 	
-		<?php bp_before_main_content(); ?>	
+		<?php bp_before_the_content(); ?>	
 	
 		<?php if ( have_posts() ) : 
 			

@@ -74,9 +74,8 @@
 <a class ="scroll-top hide-1 hide-2 hide-3" href="#page" role="button"><i class="fa fa-chevron-up" aria-hidden="true"></i><span class="sr-only">Scroll To Top</span></a>	
 
 <?php wp_footer(); ?>	
-	
-<?php echo do_shortcode('[lock name="request-quote-modal" style="lock" position="modal" show="always" btn-activated="yes"][layout]<h3>Request A Quote</h3>[contact-form-7 title="Quote Request Form"][/layout][/lock]'); ?>
-<?php echo '<div id="include-svg">'.do_shortcode('[get-element slug="svg"]').'</div>'; ?>
+
+<?php if ( get_page_by_path( 'svg', OBJECT, 'elements' ) ) echo '<div id="include-svg">'.do_shortcode('[get-element slug="svg"]').'</div>'; ?>
 
 </body>
 </html>

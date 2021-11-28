@@ -39,9 +39,13 @@
 <div id="mobile-menu-bar">
 	<a class="scroll-top" href="#page"><div class="mm-bar-btn scroll-to-top-btn" aria-hidden="true"></div><span class="sr-only">Scroll To Top</span></a>
 	<?php bp_mobile_menu_bar_items(); ?>
-	<?php echo do_shortcode('[get-biz info="mm-bar-link"]') ?>
-	<!--a href="/contact-us/"><div class="mm-bar-btn email-btn" aria-hidden="true"></div><div class="mm-bar-btn email2-btn" aria-hidden="true"></div><span class="sr-only">Contact Us</span></a-->
-	<div class="mm-bar-btn modal-btn"><div class="email-btn" aria-hidden="true"></div><div class="email2-btn" aria-hidden="true"></div><span class="sr-only">Contact Us</span></div>
+	
+	<?php echo do_shortcode('[get-biz info="mm-bar-link"]');	
+	
+	if ( get_page_by_title( 'Quote Request Form', OBJECT, 'wpcf7_contact_form' ) ) : $form = "Quote Request Form"; $title = "Request A Quote";
+	elseif ( get_page_by_title( 'Contact Us Form', OBJECT, 'wpcf7_contact_form' ) ) : $form = "Contact Us Form"; $title = "Send A Message"; endif;	
+	if ( $form && $title ) echo '<div class="mm-bar-btn modal-btn"><div class="email-btn" aria-hidden="true"></div><div class="email2-btn" aria-hidden="true"></div><span class="sr-only">Contact Us</span></div>';	?>
+	
 	<div class="mm-bar-btn activate-btn"><div></div><div></div><div></div></div> 
 </div>
 	
@@ -60,6 +64,8 @@ wp_nav_menu( array(
 	'walker'          => new Aria_Walker_Nav_Menu(),
 ) ); ?>	
 	
+<?php if ( $form && $title ) echo do_shortcode('[lock name="request-quote-modal" style="lock" position="modal" show="always" btn-activated="yes"][layout]<h3>'.$title.'</h3>[contact-form-7 title="'.$form.'"][/layout][/lock]'); ?>
+
 <a class="skip-link sr-only" href="#primary"><?php esc_html_e( 'Skip to content', 'battleplan' ); ?></a>
 	
 <div id="page" class="site" aria-label="page">

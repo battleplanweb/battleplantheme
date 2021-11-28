@@ -19,7 +19,7 @@
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.8' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.8.1' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -123,11 +123,9 @@ function battleplan_getWordPressPage( $atts, $content = null ) {
 	$slug = esc_attr($a['slug']);
 	$title = esc_attr($a['title']);
 	$display = esc_attr($a['display']);
-	$pageID = 0;
 
-	$latest_cpt = get_posts("post_type='.$type.'&numberposts=1"); $pageID = $latest_cpt[0]->ID;	
-	if ( $id != "" ) : $pageID = $id; endif;	
-	if ( $slug != "" ) : 
+	if ( $id != "" ) : $pageID = $id; 
+	elseif ( $slug != "" ) : 
 	 	if ( get_page_by_path( $slug, OBJECT, $type ) ) :
 			$pageID = get_page_by_path( $slug, OBJECT, $type )->ID; 
 		else:
@@ -136,8 +134,7 @@ function battleplan_getWordPressPage( $atts, $content = null ) {
 				if ( get_page_by_path($slug, OBJECT, $postType) ) : $pageID = get_page_by_path($slug, OBJECT, $postType)->ID; break; endif;
 			endforeach;		
 		endif;	
-	endif;	
-	if ( $title != "" ) : 
+	elseif ( $title != "" ) : 
 	 	if ( get_page_by_title( $title, OBJECT, $type ) ) :
 			$pageID = get_page_by_title( $title, OBJECT, $type )->ID; 
 		else:
@@ -146,24 +143,16 @@ function battleplan_getWordPressPage( $atts, $content = null ) {
 				if ( get_page_by_title( $title, OBJECT, $postType) ) : $pageID = get_page_by_title( $title, OBJECT, $postType)->ID; break; endif;
 			endforeach;		
 		endif;	
-	endif;	
+	else:
+		return;
+	endif;
 
-	$getPage = get_post( $pageID );
-	$title = esc_html( get_the_title($pageID) );
-	$excerpt = $getPage->post_excerpt;
-	$excerpt = apply_filters('the_excerpt', $excerpt);
-	$content = $getPage->post_content;
-	$content = apply_filters('the_content', $content);
-	$thumbnail = get_the_post_thumbnail( $pageID, 'thumbnail' );
-	$link = esc_url(get_permalink( $pageID ));
-
-	if ( $display == "content" ) : $output = $content; endif;
-	if ( $display == "title" ) : $output = $title; endif;
-	if ( $display == "excerpt" ) : $output = $excerpt; endif;
-	if ( $display == "thumbnail" ) : $output = $thumbnail; endif;
-	if ( $display == "link" ) : $output = $link; endif;
-
-	return $output;
+	$getPage = get_post($pageID);
+	if ( $display == "content" && get_post_status($getPage->ID) == "publish" ) return apply_filters('the_content', $getPage->post_content);
+	if ( $display == "title" && get_post_status($getPage->ID) == "publish" ) return esc_html( get_the_title($pageID));
+	if ( $display == "excerpt" && get_post_status($getPage->ID) == "publish" ) return apply_filters('the_excerpt', $getPage->post_excerpt);
+	if ( $display == "thumbnail" && get_post_status($getPage->ID) == "publish" ) return get_the_post_thumbnail($pageID, 'thumbnail');
+	if ( $display == "link" && get_post_status($getPage->ID) == "publish" ) return esc_url(get_permalink($pageID));
 }
 
 // Checks to see if slug exists, and if so prints it
@@ -174,22 +163,14 @@ function battleplan_getElement( $atts, $content = null ) {
 	$page_slug_home = $page_slug."-home";	
 
 	if ( is_front_page() ) :
-		if ( get_page_by_path( $page_slug_home, OBJECT, 'elements' ) ) :
-			$page_data = get_page_by_path( $page_slug_home, OBJECT, 'elements' );
-		elseif ( get_page_by_path( $page_slug_home, OBJECT, 'page' ) ) :
-			$page_data = get_page_by_path( $page_slug_home, OBJECT, 'page' );
-		endif;
+		if ( get_page_by_path( $page_slug_home, OBJECT, 'elements' ) ) : $page_data = get_page_by_path( $page_slug_home, OBJECT, 'elements' ); endif;
 	endif;
 	
 	if ( !$page_data ) :
-		if ( get_page_by_path( $page_slug, OBJECT, 'elements' ) ) :
-			$page_data = get_page_by_path( $page_slug, OBJECT, 'elements' );
-		elseif ( get_page_by_path( $page_slug, OBJECT, 'page' ) ) :
-			$page_data = get_page_by_path( $page_slug, OBJECT, 'page' );
-		endif;
+		if ( get_page_by_path( $page_slug, OBJECT, 'elements' ) ) : $page_data = get_page_by_path( $page_slug, OBJECT, 'elements' ); endif;
 	endif;
 
-	if ( $page_data && get_post_status( $page_data->ID ) == "publish" ) return apply_filters('the_content', $page_data->post_content); 
+	if ( $page_data && get_post_status($page_data->ID) == "publish" ) return apply_filters('the_content', $page_data->post_content); 
 }
 
 // Returns website address (for privacy policy, etc)

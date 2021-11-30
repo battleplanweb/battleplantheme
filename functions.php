@@ -19,7 +19,7 @@
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.8.2' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.8.3' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -55,12 +55,11 @@ function battleplan_getBizInfo($atts, $content = null ) {
 	
 	if ( $data == "area-phone" || $data == "phone-link" || strpos($data, 'phone-alt') !== false || $data == "mm-bar-link" ) :
 		$phoneFull = $GLOBALS['customer_info']['area'].'-'.$GLOBALS['customer_info']['phone'];
+		$phoneFormat = $GLOBALS['customer_info'][$data];	
 		if ( $data == "mm-bar-link" ) :
 			$phoneFormat = '<div class="mm-bar-btn call-btn" aria-hidden="true"></div><span class="sr-only">Call Us</span>';	
 		elseif ( $data == "area-phone" || $data == "phone-link" ) :
 			$phoneFormat = $GLOBALS['customer_info']['area-before'].$GLOBALS['customer_info']['area'].$GLOBALS['customer_info']['area-after'].$GLOBALS['customer_info']['phone'];	
-		else:
-			$phoneFormat = $GLOBALS['customer_info'][$data];	
 		endif;		
 		return '<a href="#" class="phone-link track-clicks" data-action="phone call" data-url="tel:1-'.$phoneFull.'">'.$phoneFormat.'</a>';
 	endif;

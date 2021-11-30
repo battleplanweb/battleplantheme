@@ -1059,6 +1059,13 @@ if ( typeof parallaxBG !== 'function' ) {
 
 // Add .fa class to all icons using .far, .fas and .fab
 	$( ".far, .fas, .fab" ).addClass("fa");
+	
+// Add unique id to labels & inputs in #request-quote-modal	for ADA compliance		
+	$('#request-quote-modal p').each(function() {
+		var theLabel = $(this).find('label'), theInput = $(this).find('input'), theAttr = theInput.attr('id');
+		theLabel.attr('for', 'modal-'+theAttr);			
+		theInput.attr('id', 'modal-'+theAttr);			
+	});	
 
 // Fade in lazy loaded images
 	$('img').addClass('unloaded');	
@@ -1089,6 +1096,7 @@ if ( typeof parallaxBG !== 'function' ) {
 		$(this).removeClass("hover");
 		$currents.replaceClass( "dormant", "active" ); 
 	});		
+
 
 	var	$subCurrents = $(".main-navigation ul.sub-menu > li.current-menu-item, .main-navigation ul.sub-menu > li.current_page_item, .main-navigation ul.sub-menu > li.current-menu-parent, .main-navigation ul.sub-menu > li.current_page_parent, .main-navigation ul.sub-menu > li.current-menu-ancestor, .widget-navigation ul.sub-menu > li.current-menu-item, .widget-navigation ul.sub-menu > li.current_page_item, .widget-navigation ul.sub-menu > li.current-menu-parent, .widget-navigation ul.sub-menu > li.current_page_parent, .widget-navigation ul.sub-menu > li.current-menu-ancestor"); 
 	$subCurrents.addClass( "active" );

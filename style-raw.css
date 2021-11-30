@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 10.8.2
+Version: 10.8.3
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1813,6 +1813,8 @@ section.section .flex.nested .flex {
 
 
 
+
+
   	will-change: 								transform;
   	transform: 									translateZ(0);
 }
@@ -2741,10 +2743,6 @@ body.locked {
 	99% {transform: 							rotate(1080deg); opacity: 0 } 
 }
 
-#mobile-menu-bar a.scroll-top {
-	margin-left: 								-44%;
-}
-
 #mobile-menu-bar a.scroll-top.scroll-btn-visible {
 	margin-left: 								0;
 }
@@ -3564,6 +3562,7 @@ ul.side-by-side img {
 
 .testimonials-platform {
 	margin:										14px 1px 0;
+
 	width:										30px;
 	height:										30px;
 	grid-column:								span 1 !important;
@@ -4399,6 +4398,7 @@ iframe#podium-modal {
 	box-shadow: 								none;
 	filter: 									none;
 	background: 								none;
+	outline: 									none;
 }
 
 #wrapper-bottom .logo-slider img.hvac-logo-img {
@@ -5022,6 +5022,11 @@ p#user_switching_switch_on a.tab-focus {
 	.gallery-column-8 {
 		grid-template-columns: 						repeat(3, 1fr);
 	}
+	
+	/* Site Navigation */		
+	#mobile-menu-bar a.scroll-top {
+		margin-left: 								-93%;
+	}
 }
 
 /* 1: Phones (portrait) */
@@ -5309,6 +5314,10 @@ p#user_switching_switch_on a.tab-focus {
 	--------------------------------------------- */	
 	#mobile-navigation li a {
 		font-size:									80%;
+	}
+	
+	#mobile-menu-bar a.scroll-top {
+		margin-left: 								-44%;
 	}
 }
 

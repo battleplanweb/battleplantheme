@@ -103,14 +103,18 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				}
 			});
 
-			$mainNav.find(" > li").hover(function() {			
+			$mainNav.find(" > li").hover(function() {	
 				$el = $(this); 
 				var getIndex = $el.index();
-				$magicLine.css({ "transform":"translate("+arrayL[getIndex]+"px, "+arrayT[getIndex]+"px)", "width": arrayW[getIndex], "height": arrayH[getIndex] });
+				setTimeout(function() { 
+					$magicLine.css({ "transform":"translate("+arrayL[getIndex]+"px, "+arrayT[getIndex]+"px)", "width": arrayW[getIndex], "height": arrayH[getIndex] });
+				}, 25);
 				$currentPage.find(">a").removeClass(linkOn).addClass(linkOff);
 				$el.find(">a").addClass(linkOn).removeClass(linkOff);
 			}, function() {
-				$magicLine.css({ "transform":"translate("+$magicLine.data('origL')+"px, "+$magicLine.data('origT')+"px)", "width": $magicLine.data('origW'), "height": $magicLine.data('origH') });
+				setTimeout(function() { 
+					$magicLine.css({ "transform":"translate("+$magicLine.data('origL')+"px, "+$magicLine.data('origT')+"px)", "width": $magicLine.data('origW'), "height": $magicLine.data('origH') }); 
+				}, 25);
 				$el.find(">a").removeClass(linkOn).addClass(linkOff);
 				$currentPage.find(">a").addClass(linkOn).removeClass(linkOff);
 			});

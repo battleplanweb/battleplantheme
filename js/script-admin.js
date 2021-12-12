@@ -80,4 +80,5 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			$('.wds-focus-keyword').css({'display':'block'});
 		});
 	}, 1000);	
+	
 })(jQuery); });

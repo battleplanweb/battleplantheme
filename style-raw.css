@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 10.8.3
+Version: 10.9
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -833,572 +833,6 @@ a[tooltip]:hover::after {
   	visibility: 								visible;
 }
 
-/* Forms
---------------------------------------------- */
-.wpcf7 form .wpcf7-response-output {
-	margin: 									2em 0.5em 1em;
-	padding: 									0.2em 1em;
-}
-
-.wpcf7 form.init .wpcf7-response-output,
-.wpcf7 form.resetting .wpcf7-response-output,
-.wpcf7 form.submitting .wpcf7-response-output {
-	display: 									none;
-}
-
-.wpcf7-form-control-wrap {
-	position: 									relative;
-}
-
-.wpcf7-not-valid-tip {
-	font-size: 									1em;
-	font-weight: 								normal;
-	display: 									block;
-}
-
-.use-floating-validation-tip .wpcf7-not-valid-tip {
-	position: 									relative;
-	top: 										-2ex;
-	left: 										1em;
-	z-index: 									100;
-	border: 									1px solid #dc3232;
-	background: 								#ffffff;
-	padding: 									.2em .8em;
-	width: 										24em;
-}
-
-.wpcf7-list-item {
-	display: 									inline-block;
-	margin: 									0 0 0 1em;
-}
-
-.wpcf7-list-item-label::before,
-.wpcf7-list-item-label::after {
-	content: 									" ";
-}
-
-.wpcf7 .ajax-loader {
-	position:									relative;
-	visibility: 								hidden;
-	display: 									inline-block;
-	background-color: 							rgba(100,100,100,0.7);
-	width: 										24px;
-	height: 									24px;
-	border: 									none;
-	border-radius: 								100%;
-	padding: 									0;
-	margin: 									0 24px;
-}
-
-.wpcf7 form.submitting .ajax-loader {
-	visibility: 								visible;
-}
-
-.wpcf7 .ajax-loader::before {
-	content: 									'';
-	position: 									absolute;
-	background-color: 							rgba(205,205,205,0.7);
-	top: 										4px;
-	left: 										4px;
-	width: 										6px;
-	height: 									6px;
-	border: 									none;
-	border-radius: 								100%;
-	transform-origin: 							8px 8px;
-	animation-name: 							spin;
-	animation-duration: 						1000ms;
-	animation-timing-function: 					linear;
-	animation-iteration-count: 					infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.wpcf7 .ajax-loader::before {
-		animation-name: 						blink;
-		animation-duration: 					2000ms;
-	}
-}
-
-@keyframes spin {
-	from { transform: rotate(0deg); }
-	to { transform: rotate(360deg); }
-}
-
-@keyframes blink {
-	from { opacity: 0; }
-	50% { opacity: 1; }
-	to { opacity: 0; }
-}
-
-.wpcf7 input[type="file"] {
-	cursor: 									pointer;
-}
-
-.wpcf7 input[type="file"]:disabled {
-	cursor: 									default;
-}
-
-.wpcf7 .wpcf7-submit:disabled {
-	cursor: 									not-allowed;
-}
-
-.wpcf7 input[type="url"],
-.wpcf7 input[type="email"],
-.wpcf7 input[type="tel"] {
-	direction: 									ltr;
-}
-
-form.wpcf7-form,
-form#loginform {
-	margin:										1em auto;
-    text-align: 								center;
-	max-width:									500px;
-}
-
-form.wpcf7-form.two-col,
-form.wpcf7-form.two-column,
-form.wpcf7-form.three-col,
-form.wpcf7-form.three-column {
-	max-width:									700px;
-}
-
-form.wpcf7-form.two-col > p:first-of-type,
-form.wpcf7-form.two-column > p:first-of-type,
-form.wpcf7-form.three-col > p:first-of-type,
-form.wpcf7-form.three-column > p:first-of-type {
-	margin-top:									0; /* added 1/6/21 for AC Services & Repair Maintenance Plans Form */
-}
-
-label {
-	display: 									inline-block;
-	font-size: 									115%;
-	font-weight: 								bold;
-	margin-bottom:								3px;
-}
-
-#secondary label,
-.inline label {
-	display:									inline-block;
-	width:										75px;
-	font-size: 									100%;
-	font-weight: 								normal;
-	text-align: 								left;
-}
-
-form.side-by-side p {
-	width: 										50%;
-	float: 										left;
-	padding: 									0 5px;
-}
-
-.required {
-	color:										red;
-	margin-top:									10px;
-}
-
-.required::after {
-	content: 									"*";
-	font-weight:								bold;
-	margin-left:								5px;
-	font-size:									14px;
-	color:										red;
-}
-
-.hide-labels .required::after {
-    position: 									relative;
-    margin-left: 								-20px;
-}
-
-.hide-labels input[type="text"], 
-.hide-labels input[type="email"], 
-.hide-labels input[type="url"], 
-.hide-labels input[type="password"], 
-.hide-labels input[type="search"], 
-.hide-labels input[type="number"], 
-.hide-labels input[type="tel"], 
-.hide-labels input[type="range"], 
-.hide-labels input[type="date"], 
-.hide-labels input[type="month"], 
-.hide-labels input[type="week"], 
-.hide-labels input[type="time"], 
-.hide-labels input[type="datetime"], 
-.hide-labels input[type="datetime-local"], 
-.hide-labels input[type="color"], 
-.hide-labels textarea, 
-.hide-labels select {
-	padding-right:								25px;
-}
-
-#secondary input:not([type="submit"]),
-.inline input:not([type="submit"]) {
-	display:									inline-block;
-	width:										calc(100% - 75px);
-}
-
-#secondary input.full-width,
-#secondary label.full-width,
-.inline input.full-width,
-.inline label.full-width {
-	width:										100%;
-}
-
-input[type="text"],
-input[type="email"],
-input[type="url"],
-input[type="password"],
-input[type="search"],
-input[type="number"],
-input[type="tel"],
-input[type="range"],
-input[type="date"],
-input[type="month"],
-input[type="week"],
-input[type="time"],
-input[type="datetime"],
-input[type="datetime-local"],
-input[type="color"],
-textarea,
-select {
-	font-size:									90%;
-	color: 										#666666;
-	background:									rgba(255,255,255,0.9);
-	border: 									none;
-	padding: 									3px 7px;
-	width:										100%;
-	min-height: 								32px; /* date picker form field on iPad 10-22-2020 */
-	transition:									all 0.2s ease;
-}
-
-input[type="text"]:focus,
-input[type="email"]:focus,
-input[type="url"]:focus,
-input[type="password"]:focus,
-input[type="search"]:focus,
-input[type="number"]:focus,
-input[type="tel"]:focus,
-input[type="range"]:focus,
-input[type="date"]:focus,
-input[type="month"]:focus,
-input[type="week"]:focus,
-input[type="time"]:focus,
-input[type="datetime"]:focus,
-input[type="datetime-local"]:focus,
-input[type="color"]:focus,
-textarea:focus,
-select:focus,
-.wpcf7 form .wpcf7-response-output {
-	color: 										#111111;
-	background:									rgba(255,255,255,1);
-	border: 									none;
-	transition:									all 0.2s ease;
-}
-
-select {
-	border: 									none;
-}
-
-textarea {
-	width: 										100%;
-	resize: 									none;
-	height:										200px;
-}
-
-::placeholder { 
-	color:										rgba(0,0,0,0.5);
-}
-
-form.hide-labels ::placeholder { 
-	color:										#000000;
-	font-weight:								bold;
-}
-
-input[type="checkbox"], 
-input[type="radio"] {
-	position: 									relative;
-	cursor: 									pointer;	
-	display:									inline-block;
-	width: 										17px !important;
-	height: 									17px !important;
-	margin-right:								10px !important;
-	appearance:									none;
-	background-color:							#ffffff;
-	border: 									2px solid #000000;
-	-webkit-appearance: none;
-	border-radius: 0;
-}
-
-input[type="checkbox"]::before, 
-input[type="radio"]::before,
-input[type="checkbox"]:checked::after, 
-input[type="radio"]:checked::after {
-	content: 									" ";
-	position: 									absolute;
-	display: 									block;
-	width: 										100%;
-	height: 									100%;
-	top: 										0;
-	left: 										0;
-	background-color:							transparent;
-	border: 									2px solid #ffffff;
-}
-
-input[type="checkbox"]:checked::after, 
-input[type="radio"]:checked::after {
-	background-color:							rgba(0,0,0,0.6);
-}
-
-form .block-button {
-	margin-top: 								2.1em;
-}
-
-#secondary form .block-button {
-	margin-top: 								1.7em;
-}
-
-a.button,
-a.page-numbers,
-span.page-numbers,
-button,
-input[type="button"],
-input[type="reset"],
-input[type="submit"],
-.file-upload-btn,
-ul.tabs li {
-	display:									inline-block;
-	font: 										normal 1.2em / 1 Helvetica, Arial, Verdana, sans-serif; 
-	background: 								rgba(0,0,0,0.2);
-	border:										none;
-	color: 										rgba(0, 0, 0, 0.8);
-	padding: 									0.3em 1em;
-	cursor:										pointer;
-	text-decoration:							none;
-	transition:									all 0.2s ease;
-}
-
-a.button:hover,
-a.page-numbers:hover,
-span.page-numbers.current,
-button:hover,
-input[type="button"]:hover,
-input[type="reset"]:hover,
-input[type="submit"]:hover,
-.file-upload-btn:hover,
-ul.tabs li:hover,
-a.button.tab-focus,
-a.page-numbers.tab-focus,
-button.tab-focus,
-input[type="button"].tab-focus,
-input[type="reset"].tab-focus,
-input[type="submit"].tab-focus,
-.file-upload-btn.tab-focus,
-ul.tabs li.tab-focus,
-a.button:active,
-a.page-numbers:active,
-button:active,
-input[type="button"]:active,
-input[type="reset"]:active,
-input[type="submit"]:active,
-.file-upload-btn:active,
-ul.tabs li:active,
-ul.tabs li.current {
-	background: 								rgba(0,0,0,0.4);
-	border:										none;
-	transition:									all 0.2s ease;
-}
-
-a.button.disabled,
-button.disabled,
-input[type="button"].disabled,
-input[type="reset"].disabled,
-input[type="submit"].disabled,
-ul.tabs li.disabled {
-	opacity:									0.5;
-	pointer-events:								none;
-}
-
-input[type="file"] {
-    display: 									none;
-}
-
-div.wpcf7 .ajax-loader {
-	width:										0;
-	margin:										0;
-}
-
-div.wpcf7 .form-submitting .ajax-loader {
-	width:										24px;
-	margin:										0 24px;
-}
-
-.wpcf7-not-valid-tip {
-    color: 										red;
-    font-size: 									90%;
-    font-weight: 								normal;
-    display: 									block;
-}
-
-.wpcf7 form.sent .wpcf7-response-output {
-    border-color: 								unset;
-}
-
-.wpcf7 form .wpcf7-response-output {
-    margin: 									1.5em 0.5em;
-    padding: 									0.4em 1em 0.5em;
-	font-size: 									90%;
-}
-
-.wpcf7 form.invalid .wpcf7-response-output, 
-.wpcf7 form.unaccepted .wpcf7-response-output {
-    border-color: 								red;
-}
-
-a.button.fancy .fancy-text,
-a.button.fancy .fancy-icon,
-a.button.fancy:hover .fancy-text,
-a.button.fancy:hover .fancy-icon,
-a.button.fancy-2 .fancy-text,
-a.button.fancy-2 .fancy-icon,
-a.button.fancy-2:hover .fancy-text,
-a.button.fancy-2:hover .fancy-icon {
-	display:									inline-block;
-	padding: 									0;
-	transition:									all 0.3s ease;
-}
-
-a.button.fancy .fancy-icon i,
-a.button.fancy-2 .fancy-icon i {
-	font-size:									85%;
-}
-
-a.button.fancy .fancy-text {
-	padding-left:								10px;
-	padding-right:								10px;
-}
-
-a.button.fancy:hover .fancy-text {
-	padding-left:								1px;
-	padding-right:								19px;
-}
-
-
-
-a.button.fancy .fancy-icon {
-	width:										0;
-	transform:									translateX(-15px);
-	opacity:									0;
-}
-
-a.button.fancy:hover .fancy-icon {
-	width:										0;
-	transform:									translateX(-9px);
-	opacity:									1;
-}
-
-a.button.fancy-2 {
-	padding:									0;	
-}
-
-a.button.fancy-2 .fancy-text,
-a.button.fancy-2:hover .fancy-text {
-	padding: 									0.3em 0.6em 0.3em 0.7em;
-}
-
-a.button.fancy-2 .fancy-icon,
-a.button.fancy-2:hover .fancy-icon {
-	padding: 									0.3em 0.5em 0.3em 0.6em;
-}
-
-a.button.fancy-2 .fancy-icon {
-	background:									rgba(0,0,0,0.2);
-}
-
-.row-of-buttons,
-ul.tabs {
-	display:									flex;
-	justify-content:							center;
-	flex-wrap:									wrap;
-}
-
-.row-of-buttons .block-button,
-ul.tabs li {
-	margin:										0.25em 1%;
-}
-
-.paypal-form {
-	max-width:									500px;
-	margin:										0 auto;
-}
-
-.paypal-form form p {
-    margin-top: 								1.5em;
-    margin-bottom: 								1.5em;
-}
-
-.paypal-form form p:last-of-type {
-    margin-bottom: 								2em;
-}
-
-.paypal-dollar {
-	display:									inline-block;
-	width:										15px;
-}
-
-input.paypal-amount {
-	width:										calc(100% - 15px);
-}
-
-/* Fancy Box Buttons */
-.fancybox-container {
-	z-index: 									9999999995 !important;
-}
-
-.fancybox-is-open .fancybox-bg {
-    opacity: 									0.9;
-    background-color: 							#000000;
-}
-
-.fancybox-infobar,
-button.fancybox-button {
-	background: 								#222222;
-	border: 									1px solid rgba(255,255,255,0.2);
-	box-shadow: 								2px 2px 2px rgba(0,0,0,1);
-	transform: 									scale(0.9);
-	margin: 									9px 5px;
-	transition: 								all 0.2s ease;
-}
-
-button.fancybox-button:hover,
-button.fancybox-button.active,
-button.fancybox-button.tab-focus {
-	background: 								#323232;
-	border: 									1px solid rgba(255,255,255,0.2);
-	box-shadow: 								none;
-	box-shadow: 								2px 2px 2px rgba(0,0,0,1);
-	transform: 									scale(1);
-	margin: 									9px 5px;
-	transition: 								all 0.2s ease;
-}
-
-.fancybox-navigation button.fancybox-button {
-    width: 										50px;
-    height: 									50px;
-    padding:									12px;
-	margin: 									-40px 10px 0;
-}
-
-.fancybox-navigation button.fancybox-button:hover,
-.fancybox-navigation button.fancybox-button.active,
-.fancybox-navigation button.fancybox-button.tab-focus {
-    width: 										50px;
-    height: 									50px;
-    padding:									12px;
-	margin: 									-40px 10px 0;
-}
-
-.fancybox-navigation button::before,
-.fancybox-caption {
-    display: 									none;
-}
-
 /*--------------------------------------------------------------
 # Grid Set Up
 --------------------------------------------------------------*/
@@ -1471,6 +905,10 @@ section.section-default .flex {
 
 .flex.grid-1-1-1-1 {
 	grid-template-columns: 						1fr 1fr 1fr 1fr;
+}
+
+.flex.grid-3-3-2 {
+	grid-template-columns: 						3fr 3fr 2fr; /* for 3 column form inputs */
 }
 
 .flex.grid-2-1-1 {
@@ -1648,8 +1086,6 @@ section.section-default .flex {
 	grid-template-columns: 						[column-1-start] 1fr [column-1-end column-2-start] minmax(0, 356px) [column-2-end];
 }
 
-
-
 .sidebar-left.sidebar-box  #main-content,
 .sidebar-left.widget-box  #main-content,
 
@@ -1806,21 +1242,505 @@ section.section .flex.nested .flex {
 }
 
 .animated {
-
-
-
-
-
-
-
-
-
   	will-change: 								transform;
   	transform: 									translateZ(0);
 }
 
 .section .col.parallax {
 	align-self: 								start;
+}
+
+/* Forms
+--------------------------------------------- */
+.wpcf7 form {
+	position:									relative;
+	display: 									grid;
+	grid-template-columns: 						1fr;
+	gap: 										1em 0;
+	width: 										100%;
+    text-align: 								center;
+	width:										100%;
+	max-width: 									850px;
+	margin: 									1.5em auto;
+}
+
+#primary .wpcf7 form {
+	margin: 									2.5em auto;
+}
+
+.wpcf7 form .flex {
+	grid-column: 								1 / -1;
+	gap: 										1.1em 1.5em;
+}
+
+.wpcf7 form .form-input {
+	position:									relative;
+	display: 									grid;
+	grid-template-columns: 						max-content 1fr;
+	gap: 										0.15em 1.5em;
+}
+
+body.form-stacked .wpcf7 form .form-input,
+.wpcf7 form.form-stacked .form-input,
+.wpcf7 form .form-stacked .form-input,
+.wpcf7 form .form-input.width-none {
+	grid-template-columns: 						1fr !important;
+}
+
+@media (min-width: 577px) {
+	.wpcf7 form .flex.grid-3-3-2 .form-input {
+		grid-template-columns: 						1fr !important;
+	}
+}
+
+.wpcf7 form .form-input.width-full,
+.wpcf7 form label.width-full,
+.wpcf7 form label.width-full + span {
+	grid-column: 								1 / -1;	
+}
+
+label {
+	font-weight: 								bold;
+	text-align: 								right;
+}
+
+.wpcf7 form label.width-full,
+body.form-stacked .wpcf7 form label,
+.wpcf7 form.form-stacked label,
+.wpcf7 form .form-stacked label,
+.wpcf7 form .flex.grid-3-3-2 label {
+	text-align: 								center;
+}
+
+#secondary .wpcf7 form.width-full {
+	margin-top: 								0.3em;
+}
+
+#secondary .wpcf7 form label.width-full {
+	text-align: 								left;
+}
+
+.wpcf7 form label.label-baseline {
+	align-self: 								end;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="url"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+input[type="tel"],
+input[type="range"],
+input[type="date"],
+input[type="month"],
+input[type="week"],
+input[type="time"],
+input[type="datetime"],
+input[type="datetime-local"],
+input[type="color"],
+textarea,
+select {
+    width: 										100%;
+	font-size:									85%;
+	color: 										#666666;
+	background:									rgba(255,255,255,0.9);
+	border: 									none;
+	padding: 									3px 7px;
+	min-height: 								32px; /* date picker form field on iPad 10-22-2020 */
+	transition:									all 0.2s ease;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="url"]:focus,
+input[type="password"]:focus,
+input[type="search"]:focus,
+input[type="number"]:focus,
+input[type="tel"]:focus,
+input[type="range"]:focus,
+input[type="date"]:focus,
+input[type="month"]:focus,
+input[type="week"]:focus,
+input[type="time"]:focus,
+input[type="datetime"]:focus,
+input[type="datetime-local"]:focus,
+input[type="color"]:focus,
+textarea:focus,
+select:focus,
+.wpcf7 form .wpcf7-response-output {
+	color: 										#111111;
+	background:									rgba(255,255,255,1);
+	border: 									none;
+	transition:									all 0.2s ease;
+}
+
+select {
+    width: 										100%;
+	border: 									none;
+}
+
+textarea {
+    width: 										100%;
+	height:										30vh;
+	resize: 									none;
+}
+
+optgroup {
+    width: 										100%;
+}
+
+::placeholder { 
+	color:										rgba(0,0,0,0.5);
+}
+
+.wpcf7 form .form-input.width-none input {
+	padding-right: 								30px;
+}
+
+.required {
+	display: 									inline-block;
+	width: 										0;
+	color:										red;
+}
+
+.width-none .required {
+    position: 									absolute;
+	right: 										0;
+	margin-right: 								28px;
+}
+
+.required::after {
+	display: 									inline-block;
+    content: 									"\f069";
+	font-family: 								Font Awesome;
+	font-weight:								900;
+	font-size:									8px;
+	color:										red;
+	margin-left:								5px;
+	transform:									translateY(-35%);
+} 
+
+.width-none .required::after {
+	transform:									translateY(-2px);
+}
+
+form.hide-labels ::placeholder { 
+	color:										#000000;
+	font-weight:								bold;
+}
+
+a.button,
+a.page-numbers,
+span.page-numbers,
+button,
+input[type="button"],
+input[type="reset"],
+input[type="submit"],
+.file-upload-btn,
+ul.tabs li {
+	display:									inline-block;
+	font: 										normal 1.2em / 1 Helvetica, Arial, Verdana, sans-serif; 
+	background: 								rgba(0,0,0,0.2);
+	border:										none;
+	color: 										rgba(0, 0, 0, 0.8);
+	padding: 									0.3em 1em;
+	cursor:										pointer;
+	text-decoration:							none;
+	transition:									all 0.2s ease;
+}
+
+a.button:hover,
+a.page-numbers:hover,
+span.page-numbers.current,
+button:hover,
+input[type="button"]:hover,
+input[type="reset"]:hover,
+input[type="submit"]:hover,
+.file-upload-btn:hover,
+ul.tabs li:hover,
+a.button.tab-focus,
+a.page-numbers.tab-focus,
+button.tab-focus,
+input[type="button"].tab-focus,
+input[type="reset"].tab-focus,
+input[type="submit"].tab-focus,
+.file-upload-btn.tab-focus,
+ul.tabs li.tab-focus,
+a.button:active,
+a.page-numbers:active,
+button:active,
+input[type="button"]:active,
+input[type="reset"]:active,
+input[type="submit"]:active,
+.file-upload-btn:active,
+ul.tabs li:active,
+ul.tabs li.current {
+	background: 								rgba(0,0,0,0.4);
+	border:										none;
+	transition:									all 0.2s ease;
+}
+
+a.button.disabled,
+button.disabled,
+input[type="button"].disabled,
+input[type="reset"].disabled,
+input[type="submit"].disabled,
+ul.tabs li.disabled {
+	opacity:									0.5;
+	pointer-events:								none;
+}
+
+.wpcf7 input[type="file"] {
+	cursor: 									pointer;
+}
+
+.wpcf7 input[type="file"]:disabled {
+	cursor: 									default;
+}
+
+.wpcf7 .wpcf7-submit:disabled {
+	cursor: 									not-allowed;
+}
+
+.wpcf7 input[type="url"],
+.wpcf7 input[type="email"],
+.wpcf7 input[type="tel"] {
+	direction: 									ltr;
+}
+
+input[type="checkbox"], 
+input[type="radio"] {
+	position: 									relative;
+	cursor: 									pointer;	
+	display:									inline-block;
+	width: 										20px !important;
+	height: 									20px !important;
+	margin-right:								10px !important;
+	transform: 									translateY(3px);
+	appearance:									none;
+	background-color:							#ffffff;
+	border: 									2px solid #000000;
+	-webkit-appearance: 						none;
+	border-radius: 								0;
+}
+
+input[type="checkbox"]::before, 
+input[type="radio"]::before,
+input[type="checkbox"]:checked::after, 
+input[type="radio"]:checked::after {
+	content: 									" ";
+	position: 									absolute;
+	display: 									block;
+	width: 										100%;
+	height: 									100%;
+	top: 										0;
+	left: 										0;
+	background-color:							transparent;
+	border: 									2px solid #ffffff;
+}
+
+input[type="checkbox"]:checked::after, 
+input[type="radio"]:checked::after {
+	background-color:							rgba(0,0,0,0.6);
+}
+
+form .block-button,
+.wpcf7-response-output {
+	grid-column: 								1 / -1;
+	margin-top: 								0.5em;
+}
+
+.wpcf7 form .wpcf7-response-output {
+	margin: 									0.6em 10% 0;
+	padding: 									0.5em 1em;
+	font-size: 									90%;
+}
+
+.wpcf7 form.init .wpcf7-response-output,
+.wpcf7 form.resetting .wpcf7-response-output,
+.wpcf7 form.submitting .wpcf7-response-output {
+	display: 									none;
+    border-color: 								unset;
+}
+
+.wpcf7 form.invalid .wpcf7-response-output, 
+.wpcf7 form.unaccepted .wpcf7-response-output {
+    border-color: 								red;
+}
+
+.wpcf7-not-valid-tip {
+	position: 									absolute;
+	z-index: 									100;
+	left: 										10%;
+	bottom: 									10%;
+	width: 										80%;
+    font-size: 									90%;
+	font-weight: 								normal;
+	padding: 									0.5em 1em;
+	background: 								#ffffff !important;
+	border: 									1px solid !important;
+	color: 										red !important;
+}
+
+input + .wpcf7-not-valid-tip {
+	display: 									none !important;
+}
+
+.wpcf7-not-valid {
+    box-shadow: 								inset 0 0 20px red;
+	animation-name: 							headShake; 
+    animation-duration: 						2s; 
+	animation-delay: 							0.5s;
+    animation-iteration-count: 					1;
+    animation-timing-function: 					ease-out;
+}
+
+/* Fancy Buttons
+--------------------------------------------- */
+a.button.fancy .fancy-text,
+a.button.fancy .fancy-icon,
+a.button.fancy:hover .fancy-text,
+a.button.fancy:hover .fancy-icon,
+a.button.fancy-2 .fancy-text,
+a.button.fancy-2 .fancy-icon,
+a.button.fancy-2:hover .fancy-text,
+a.button.fancy-2:hover .fancy-icon {
+	display:									inline-block;
+	padding: 									0;
+	transition:									all 0.3s ease;
+}
+
+a.button.fancy .fancy-icon i,
+a.button.fancy-2 .fancy-icon i {
+	font-size:									85%;
+}
+
+a.button.fancy .fancy-text {
+	padding-left:								10px;
+	padding-right:								10px;
+}
+
+a.button.fancy:hover .fancy-text {
+	padding-left:								1px;
+	padding-right:								19px;
+}
+
+a.button.fancy .fancy-icon {
+	width:										0;
+	transform:									translateX(-15px);
+	opacity:									0;
+}
+
+a.button.fancy:hover .fancy-icon {
+	width:										0;
+	transform:									translateX(-9px);
+	opacity:									1;
+}
+
+a.button.fancy-2 {
+	padding:									0;	
+}
+
+a.button.fancy-2 .fancy-text,
+a.button.fancy-2:hover .fancy-text {
+	padding: 									0.3em 0.6em 0.3em 0.7em;
+}
+
+a.button.fancy-2 .fancy-icon,
+a.button.fancy-2:hover .fancy-icon {
+	padding: 									0.3em 0.5em 0.3em 0.6em;
+}
+
+a.button.fancy-2 .fancy-icon {
+	background:									rgba(0,0,0,0.2);
+}
+
+.row-of-buttons,
+ul.tabs {
+	display:									flex;
+	justify-content:							center;
+	flex-wrap:									wrap;
+}
+
+.row-of-buttons .block-button,
+ul.tabs li {
+	margin:										0.25em 1%;
+}
+
+.paypal-form {
+	max-width:									500px;
+	margin:										0 auto;
+}
+
+.paypal-form form p {
+    margin-top: 								1.5em;
+    margin-bottom: 								1.5em;
+}
+
+.paypal-form form p:last-of-type {
+    margin-bottom: 								2em;
+}
+
+.paypal-dollar {
+	display:									inline-block;
+	width:										15px;
+}
+
+input.paypal-amount {
+	width:										calc(100% - 15px);
+}
+
+.fancybox-container {
+	z-index: 									9999999995 !important;
+}
+
+.fancybox-is-open .fancybox-bg {
+    opacity: 									0.9;
+    background-color: 							#000000;
+}
+
+.fancybox-infobar,
+button.fancybox-button {
+	background: 								#222222;
+	border: 									1px solid rgba(255,255,255,0.2);
+	box-shadow: 								2px 2px 2px rgba(0,0,0,1);
+	transform: 									scale(0.9);
+	margin: 									9px 5px;
+	transition: 								all 0.2s ease;
+}
+
+button.fancybox-button:hover,
+button.fancybox-button.active,
+button.fancybox-button.tab-focus {
+	background: 								#323232;
+	border: 									1px solid rgba(255,255,255,0.2);
+	box-shadow: 								none;
+	box-shadow: 								2px 2px 2px rgba(0,0,0,1);
+	transform: 									scale(1);
+	margin: 									9px 5px;
+	transition: 								all 0.2s ease;
+}
+
+.fancybox-navigation button.fancybox-button {
+    width: 										50px;
+    height: 									50px;
+    padding:									12px;
+	margin: 									-40px 10px 0;
+}
+
+.fancybox-navigation button.fancybox-button:hover,
+.fancybox-navigation button.fancybox-button.active,
+.fancybox-navigation button.fancybox-button.tab-focus {
+    width: 										50px;
+    height: 									50px;
+    padding:									12px;
+	margin: 									-40px 10px 0;
+}
+
+.fancybox-navigation button::before,
+.fancybox-caption {
+    display: 									none;
 }
 
 /* Blocks
@@ -1896,17 +1816,10 @@ section.section .flex.nested .flex {
 	z-index:									3000;
 }
 
-
-
-
-
-.tag-line, .phone-number {
+.tag-line, 
+.phone-number {
 	font-size:									140%;
 }
-
-
-
-
 
 .logo-strip {
 	margin:										0;
@@ -2138,8 +2051,14 @@ div[class*="restrict-"] {
 
 .screen-mobile .section.section-lock[data-pos="modal"] .flex,
 .screen-mobile .section.section-lock[data-pos="center"] .flex {
-	top:										calc(50% + 42px);
+	top:										calc(48% + 42px);
 	transform: 									translate(-50%, calc(-50% - 21px));
+}
+
+.screen-mobile .section.section-lock[data-pos="modal"] .flex.shrink,
+.screen-mobile .section.section-lock[data-pos="center"] .flex.shrink {
+	transform: 									scale(0.85) translate(-50%, calc(-50% - 21px));
+	transform-origin: 							0% 0%;
 }
 
 /* Style Lock */
@@ -2168,9 +2087,10 @@ div[class*="restrict-"] {
 
 .section.style-lock[data-pos="modal"],
 .section.style-lock[data-pos="center"] {
+	top: 										-9999px;
 	opacity: 									0;
 	pointer-events: 							none;
-	transition: 								all 0.6s ease;
+	transition: 								opacity 0.2s ease;
 }
 
 .section.style-lock.on-screen {
@@ -2183,7 +2103,7 @@ div[class*="restrict-"] {
 	top: 										0;
 	opacity: 									1;
 	pointer-events: 							auto;
-	transition: 								all 0.6s ease;
+	transition: 								opacity 0.6s ease;
 }
 
 body.locked {
@@ -2629,7 +2549,12 @@ body.locked {
 	opacity: 									1;
 }
 
-#mobile-menu-bar .email2-btn::after {
+#mobile-menu-bar .mm-bar-contact .email2-btn::after {
+	content:   									"\f1d8";
+	opacity: 									0;
+}
+
+#mobile-menu-bar .mm-bar-quote .email2-btn::after {
 	content:   									"\f0ad";
 	opacity: 									0;
 }
@@ -2720,8 +2645,8 @@ body.locked {
 	20% {transform: 							rotate(0deg); opacity: 1 } 
 	40% {transform: 							rotate(-30deg); opacity: 1 } 
 	43% {transform: 							rotate(360deg); opacity: 0.3 } 
-	45% {transform: 							rotate(780deg); opacity: 0 } 
-	96% {transform: 							rotate(840deg); opacity: 0 } 
+	45% {transform: 							rotate(740deg); opacity: 0 } 
+	96% {transform: 							rotate(750deg); opacity: 0 } 
 	99% {transform: 							rotate(1080deg); opacity: 1 } 
 }
 
@@ -2738,8 +2663,8 @@ body.locked {
     0% {transform: 								rotate(0deg); opacity: 0 } 
 	40% {transform: 							rotate(-30deg); opacity: 0 } 
 	43% {transform: 							rotate(360deg); opacity: 0.7 } 
-	45% {transform: 							rotate(715deg); opacity: 1 } 
-	96% {transform: 							rotate(840deg); opacity: 1 } 
+	45% {transform: 							rotate(720deg); opacity: 1 } 
+	96% {transform: 							rotate(750deg); opacity: 1 } 
 	99% {transform: 							rotate(1080deg); opacity: 0 } 
 }
 
@@ -2996,7 +2921,7 @@ a.prev i.fa {
 	opacity:									0;
 }
 
-.screen-mobile a.scroll-top {
+#mobile-menu-bar a.scroll-top {
 	display:									block !important;
 	opacity:									1 !important;
 }
@@ -4469,6 +4394,7 @@ p#user_switching_switch_on a.tab-focus {
 
 /* Desktops */
 @media only screen and (min-width: 1025px) { 	
+
 	/* Hide mobile menu */
 	#mobile-menu-bar-faux,
 	#mobile-menu-bar,
@@ -4832,7 +4758,7 @@ p#user_switching_switch_on a.tab-focus {
 	/* Target ios until gap is supported */
 	@supports (-webkit-touch-callout: none) and (not (translate: none)) {
 		.widget {
-			padding: 								0.75em;
+			margin: 								0.75em !important;
 		}
 	}	
 }
@@ -5021,6 +4947,11 @@ p#user_switching_switch_on a.tab-focus {
 	.gallery-column-7,
 	.gallery-column-8 {
 		grid-template-columns: 						repeat(3, 1fr);
+	}	
+	
+	/* Forms */	
+	#request-quote-modal textarea {
+		height: 									20vh;
 	}
 	
 	/* Site Navigation */		
@@ -5208,7 +5139,7 @@ p#user_switching_switch_on a.tab-focus {
 	}
 	
 	.flex .col .block {
-		grid-column: 								span 12;
+		grid-column: 								span 12; 
 	}
 	
 	.flex .col .block-image {
@@ -5304,10 +5235,13 @@ p#user_switching_switch_on a.tab-focus {
 		grid-template-columns: 						repeat(2, 1fr);
 	}
 	
-	/* Forms */
-	form.side-by-side p {
-		width: 										100%;
-		padding: 									0;
+	/* Forms */		
+	#page .wpcf7 form .flex {
+		grid-template-columns: 						1fr !important;
+	}
+		
+	#page .wpcf7 form label {
+		text-align: 								center;
 	}
 	
 	/* Site Navigation

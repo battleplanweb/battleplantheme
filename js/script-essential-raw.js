@@ -1066,6 +1066,13 @@ if ( typeof parallaxBG !== 'function' ) {
 		theLabel.attr('for', 'modal-'+theAttr);			
 		theInput.attr('id', 'modal-'+theAttr);			
 	});	
+	
+// Ensure modal pop up is not too tall for device
+	$('.screen-mobile .section.section-lock.position-modal .flex').each(function() {
+		if ( $(this).height() > (getDeviceH() - 100) ) {
+			$(this).addClass('shrink');
+		}
+	});
 
 // Fade in lazy loaded images
 	$('img').addClass('unloaded');	
@@ -1076,6 +1083,16 @@ if ( typeof parallaxBG !== 'function' ) {
 			$(this).trigger('load'); 
 		}
 	});	
+	
+// Ensure that Form labels have enough width
+	$('.wpcf7 form').each(function() {
+		var thisForm = $(this), labelMaxW = 0;
+		thisForm.find('.form-input.width-default label').each(function() {
+			var thisInput = $(this), labelW = thisInput.width();
+			if ( labelW > labelMaxW ) { labelMaxW = labelW }
+		});
+		thisForm.find('.form-input.width-default').css({ "grid-template-columns":labelMaxW+"px 1fr" });
+	});
 	
 // Move User Switching bar to top
 	moveDiv('#user_switching_switch_on','#page','before');
@@ -1096,6 +1113,7 @@ if ( typeof parallaxBG !== 'function' ) {
 		$(this).removeClass("hover");
 		$currents.replaceClass( "dormant", "active" ); 
 	});		
+
 
 
 	var	$subCurrents = $(".main-navigation ul.sub-menu > li.current-menu-item, .main-navigation ul.sub-menu > li.current_page_item, .main-navigation ul.sub-menu > li.current-menu-parent, .main-navigation ul.sub-menu > li.current_page_parent, .main-navigation ul.sub-menu > li.current-menu-ancestor, .widget-navigation ul.sub-menu > li.current-menu-item, .widget-navigation ul.sub-menu > li.current_page_item, .widget-navigation ul.sub-menu > li.current-menu-parent, .widget-navigation ul.sub-menu > li.current_page_parent, .widget-navigation ul.sub-menu > li.current-menu-ancestor"); 
@@ -1267,6 +1285,7 @@ if ( typeof parallaxBG !== 'function' ) {
 		if ( thisDeviceW > 1280 ) { 
 			$('body').addClass("screen-5").addClass("screen-desktop"); 
 		} else if ( thisDeviceW <= 1280 && thisDeviceW > mobileCutoff ) { 
+
 			$('body').addClass("screen-4").addClass("screen-desktop");
 		} else if ( thisDeviceW <= mobileCutoff && thisDeviceW > 860 ) { 
 			$('body').addClass("screen-3").addClass("screen-mobile");
@@ -1313,8 +1332,6 @@ if ( typeof parallaxBG !== 'function' ) {
 --------------------------------------------------------------*/	
 	// Add aria-labels to landmarks, sections and titles
 	$('h3 a[aria-hidden="true"]').each(function() { $(this).parent().attr( 'aria-label', $(this).text()); });
-	$('form.hide-labels input, form.hide-labels textarea').each(function() { $(this).attr('title', $(this).closest('p').find('label').text()) });	
-	$('span.required').attr("aria-hidden", true).after('<span class="sr-only">Required Field</span>');
 
 	// Add alt="" to all images with no alt tag
 	setTimeout(function() { $('img:not([alt])').attr('alt', ''); }, 50);
@@ -1325,9 +1342,6 @@ if ( typeof parallaxBG !== 'function' ) {
 	$('[role="menu"]' ).on( 'blur.aria mouseleave.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).removeClass('menu-item-expanded').attr( 'aria-expanded', false ); } );	
 	$('[role="menu"] a' ).attr( 'tabindex', '0' );
 	$('li[aria-haspopup="true"]').attr( 'tabindex', '-1' );
-
-	// Make hidden labels accessible to screen reader
-	$('form.hide-labels label:not(.show-label)').addClass('sr-only');	
 
 /*--------------------------------------------------------------
 # Delay parsing of JavaScript

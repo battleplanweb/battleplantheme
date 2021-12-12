@@ -370,15 +370,26 @@ ul.acf-checkbox-list {
 	column-gap: 								2.5em;
 }
 
+/* Contact Form 7
+--------------------------------------------- */
+.config-error,
+#informationdiv,
+.icon-in-circle {
+	display: 									none !important;
+} 
+
+[data-config-field][aria-invalid="true"] {
+    border-color: 								#2c3338 !important;
+}
+
+/* Yoast SEO
+--------------------------------------------- */
 .post-type-elements .postbox.yoast,
 .post-type-testimonials .postbox.yoast,
 .post-type-galleries .postbox.yoast {
 	display: 									none;
 }
 
-
-/* Yoast SEO
---------------------------------------------- */
 #beacon-container,
 #sidebar-container.wpseo_content_cell,
 #yoast_internal_linking {

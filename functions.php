@@ -19,7 +19,7 @@
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.8.3' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.9' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -53,11 +53,11 @@ function battleplan_getBizInfo($atts, $content = null ) {
 	
 	if ( $data == "area" ) return $GLOBALS['customer_info']['area-before'].$GLOBALS['customer_info']['area'].$GLOBALS['customer_info']['area-after'];
 	
-	if ( $data == "area-phone" || $data == "phone-link" || strpos($data, 'phone-alt') !== false || $data == "mm-bar-link" ) :
+	if ( $data == "area-phone" || $data == "phone-link" || strpos($data, 'phone-alt') !== false || $data == "mm-bar-phone" ) :
 		$phoneFull = $GLOBALS['customer_info']['area'].'-'.$GLOBALS['customer_info']['phone'];
 		$phoneFormat = $GLOBALS['customer_info'][$data];	
-		if ( $data == "mm-bar-link" ) :
-			$phoneFormat = '<div class="mm-bar-btn call-btn" aria-hidden="true"></div><span class="sr-only">Call Us</span>';	
+		if ( $data == "mm-bar-phone" ) :
+			$phoneFormat = '<div class="mm-bar-btn mm-bar-phone call-btn" aria-hidden="true"></div><span class="sr-only">Call Us</span>';	
 		elseif ( $data == "area-phone" || $data == "phone-link" ) :
 			$phoneFormat = $GLOBALS['customer_info']['area-before'].$GLOBALS['customer_info']['area'].$GLOBALS['customer_info']['area-after'].$GLOBALS['customer_info']['phone'];	
 		endif;		
@@ -181,12 +181,16 @@ function battleplan_getDomain( $atts, $content = null ) {
 	else: return '<a href="'.esc_url(get_site_url()).'">'.esc_url(get_site_url()).'</a>'; endif;
 }
 
-// Returns website address (minus https and .com)
+// Returns website address (minus https and with/without .com)
 add_shortcode( 'get-domain-name', 'battleplan_getDomainName' );
-function battleplan_getDomainName() {
+function battleplan_getDomainName( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'ext'=>'false', ), $atts );
+	$ext = esc_attr($a['ext']);	
 	$url = esc_url(get_site_url());
 	$parts = explode('.', parse_url($url, PHP_URL_HOST));
-	return $parts[1];
+	$printDomain = $parts[0];
+	if ( $ext != "false" ) $printDomain .= '.'.$parts[1];
+	return $printDomain;
 }
 
 // Returns url of page (minus domain)
@@ -553,7 +557,9 @@ function battleplan_getBuildArchive($atts, $content = null) {
 				endif;	
 				if ( $count == "" ) $count = 0;
 				$subline = sprintf( _n( '%s Photo', '%s Photos', $count, 'battleplan' ), number_format($count) );
-				$archiveBody .= '<a href="'.esc_url(get_the_permalink()).'" class="link-archive link-'.get_post_type().'" aria-hidden="true" tabindex="-1"><p class="gallery-subtitle">'.$subline.'</p></a>'; 	
+				if ( $link != "false" ) $archiveBody .= '<a href="'.esc_url(get_the_permalink()).'" class="link-archive link-'.get_post_type().'" aria-hidden="true" tabindex="-1">';
+				$archiveBody .= '<p class="gallery-subtitle">'.$subline.'</p>';
+				if ( $link != "false" ) $archiveBody .= '</a>'; 	
 			endif;
 		endif;
 	}
@@ -1203,6 +1209,23 @@ add_shortcode( 'get-nonce', 'battleplan_get_nonce' );
 function battleplan_get_nonce() {	
 	$nonce = $GLOBALS['nonce'];
 	return 'nonce="'.$nonce.'"';
+}
+
+// Display a universal page
+add_shortcode( 'get-universal-page', 'battleplan_getUniversalPage' );
+function battleplan_getUniversalPage( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'slug'=>'' ), $atts );
+	$slug = esc_attr($a['slug']);
+	return do_shortcode(include get_template_directory().'/pages/'.$slug.'.php');	
+}
+
+// Use page template for optimized & universal pages
+add_filter('single_template', 'battleplan_usePageTemplate', 10, 1 );
+function battleplan_usePageTemplate( $original ) {
+	global $post;
+	$post_type = $post->post_type;
+	if ( $post_type == "optimized" || $post_type == "universal" ) return locate_template('page.php');
+	return $original;
 }
   
 /*--------------------------------------------------------------
@@ -1859,6 +1882,8 @@ function battleplan_addBodyClasses( $classes ) {
 	
  	if ( is_mobile() ) : $classes[] = "screen-mobile"; else: $classes[] = "screen-desktop"; endif;
 	
+	if ( $GLOBALS['customer_info']['site-type'] ) $classes[] = "site-type-".$GLOBALS['customer_info']['site-type'];
+	
 	return $classes;
 }	
 
@@ -2477,14 +2502,14 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( "user-message" == $tag->name ) {
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
-		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','и','д','б','й','л','ы','З','у','Я');
+		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','Roleplay helps develop','rank your google','TRY IT RIGHT NOW FOR FREE','и','д','б','й','л','ы','З','у','Я');
 		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
-		if ( $check == $name ) $result->invalidate( $tag, 'Message cannot be sent.' );
+		if ( strtolower($check) == strtolower($name) ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($badwords as $badword) {
-			if (stripos($check,$badword) !== false) $result->invalidate( $tag, 'Message cannot be sent.' );
+			if (stripos(strtolower($check),strtolower($badword)) !== false) $result->invalidate( $tag, 'Message cannot be sent.' );
 		}
 		foreach($webwords as $webword) {
-			if (stripos($check,$webword) !== false) $result->invalidate( $tag, 'We do not accept messages containing website addresses.' );
+			if (stripos(strtolower($check),strtolower($webword)) !== false) $result->invalidate( $tag, 'We do not accept messages containing website addresses.' );
 		}		
 	}
     if ( "user-phone" == $tag->name ) {
@@ -2498,7 +2523,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
         $check = isset( $_POST["user-email"] ) ? trim( $_POST["user-email"] ) : ''; 
 		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz', '@tworld.com', 'garywhi777@gmail.com', 'ronyisthebest16@gmail.com', 'ronythomas611@gmail.com', 'ronythomasrecruiter@gmail.com', '@ideonagency.net','axiarobbie20@gmail.com');
 		foreach($badwords as $badword) {
-			if (stripos($check,$badword) !== false) $result->invalidate( $tag, 'Message cannot be sent.');
+			if (stripos(strtolower($check),strtolower($badword)) !== false) $result->invalidate( $tag, 'Message cannot be sent.');
 		}
 	}
     if ( 'user-email-confirm' == $tag->name ) {
@@ -2509,6 +2534,71 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     return $result;
 }
 
+// Contact Form 7 email - format phone numbers
+add_filter( 'wpcf7_posted_data', 'battleplan_formatMail', 10, 1 ); 
+function battleplan_formatMail( $posted_data ) { 
+	foreach ($posted_data as $key => $value) :
+		$types = array ('phone', 'cell', 'mobile', 'fax');
+		foreach ($types as $type) :
+			if ( strpos( $key, $type ) !== FALSE) :
+				$phone = preg_replace('~.*(\d{3})[^\d]{0,7}(\d{3})[^\d]{0,7}(\d{4}).*~', '($1) $2-$3', $posted_data[$key]). "\n";
+				$posted_data[$key] = $phone;
+			endif;
+		endforeach;
+	endforeach;		
+    return $posted_data;	
+}; 
+
+// Contact Form 7 email - format other fields
+add_action( 'wpcf7_before_send_mail', 'battleplan_setupFormEmail', 10, 1 ); 
+function battleplan_setupFormEmail( $contact_form ) { 
+	$formMail = $contact_form->prop( 'mail' );
+	$userLoc = $_COOKIE['user-loc'];
+	$userViews = $_COOKIE['page-views'];
+	if ( $userViews == 1 ) : $userViews = "1 page"; else: $userViews = $userViews." pages"; endif;
+	$userAgent = $_SERVER['HTTP_USER_AGENT'];
+	$userDevice = is_mobile() ? "a mobile device" : "a desktop";
+	if ( strpos($userAgent, "Mac") ) $userDevice = "a Mac";
+	if ( strpos($userAgent, "iPod") ) $userDevice = "an iPod";
+	if ( strpos($userAgent, "iPad") ) $userDevice = "an iPad";
+	if ( strpos($userAgent, "iPhone") ) $userDevice = "an iPhone";
+	if ( strpos($userAgent, "Android") ) $userDevice = "an Android";
+	if ( strpos($userAgent, "iOS") ) $userSystem = " running iOS";
+	if ( strpos($userAgent, "Windows") ) $userSystem = " running Windows";	
+	if ( strpos($userAgent, "Linux") ) $userSystem = " running Linux";
+
+	// filter recipient		
+	if ( strpos($formMail['recipient'], "get-biz") !== false ) $formMail['recipient'] = do_shortcode($formMail['recipient']);
+	
+	// filter body
+	$bodyEls = explode("\n", $formMail['body']);	
+	$buildEmail = '<div style="line-height:1.5"><p><b style="font-size:130%">'.substr($formMail['subject'], 0, strpos($formMail['subject'], " · ")).'</b></p><p>';	
+	
+	foreach ( $bodyEls as $bodyEl ) :
+		$elParts = explode("[", $bodyEl);
+		if ( $elParts[0] && $elParts[1] ) $buildEmail .= '<span style="display:inline-block; width:70px; style="font-size:90%"><em>'.$elParts[0].'</em></span>';
+		if ( $elParts[0] && !$elParts[1] ) $buildEmail .= '<span style="display:inline-block; width:100%; style="font-size:90%"><em>'.$elParts[0].'</em></span>';
+		if ( $elParts[0] && $elParts[1] ) $buildEmail .= '<span>['.$elParts[1].'</span>';		
+		if ( !$elParts[0] && $elParts[1] ) $buildEmail .= '<br/><span>['.$elParts[1].'</span>';
+		$buildEmail .= '<br/>';
+	endforeach;
+	
+	$buildEmail .= '</p></div><div style="line-height:1.5; border-top: 1px solid #8a8a8a; color: #8a8a8a; margin-top:5em;"><p>Sent from the <em>'.get_the_title(url_to_postid($_SERVER['HTTP_REFERER'])).'</em> page on the website.</p>';	
+	
+	$buildEmail .= '<p>Sender viewed';
+	if ( $_COOKIE['page-views'] ) $buildEmail .= ' '.$userViews;
+	$buildEmail .= ' using '.$userDevice.$userSystem;
+	if ( $userLoc ) $buildEmail .= ' near '.$userLoc;
+	$buildEmail .= '.<br/>';
+	$buildEmail .= '<em>Sender IP:</em> <a style="text-decoration:none; color:#8a8a8a;" href="https://whatismyipaddress.com/ip/'.$_SERVER["REMOTE_ADDR"].'">'.$_SERVER["REMOTE_ADDR"].'</a><br/>';
+	$buildEmail .= $_SERVER["HTTP_USER_AGENT"].'</p>';
+	
+	$formMail['body'] = $buildEmail;
+	
+	// send email
+	$contact_form->set_properties( array( 'mail' => $formMail ) );
+}; 	
+         
 // Block loading of refill file (Contact Form 7) to help speed up sites
 add_action('wp_footer', 'battleplan_no_contact_form_refill', 99); 
 function battleplan_no_contact_form_refill() { 
@@ -2517,22 +2607,20 @@ function battleplan_no_contact_form_refill() {
 	}
 }
 
-// Set default From Name on automatically generated WP emails
-add_filter( 'wp_mail_from_name', 'battleplan_wp_mail_from_name' );
-function battleplan_wp_mail_from_name( $original_email_from ) {
-    return do_shortcode('[get-biz info="name"]');
-}
-
 // Remove auto <p> from around <img> & <svg>
 add_filter('the_content', 'battleplan_remove_ptags_on_images', 9999);
 function battleplan_remove_ptags_on_images($content){
    $content = preg_replace('/<p>\s*(<a .*>)?\s*(<img .* \/>)\s*(<\/a>)?\s*<\/p>/iU', '\1\2\3', $content);
-   $content = preg_replace('/<p>\s*(<svg .*>)?\s*(<\/svg>)?\s*<\/p>/iU', '\1\2\3', $content);
+   $content = preg_replace('/<p>\s*(<svg .*>)?\s*(<\/svg>)?\s*<\/p>/iU', '\1\2\3', $content);   
+   $content = preg_replace('/<p>\s*(<label .*>)?\s*(<\/span>)?\s*<\/p>/iU', '\1\2\3', $content);
    return $content;   
 }
 
 // Remove auto <p> from inside widgets 
 remove_filter('widget_text_content', 'wpautop'); 
+
+// Remove auto <br> from inside forms 
+add_filter('wpcf7_autop_or_not', '__return_false');
 
 // Enable Shortcodes in Text Widgets
 add_filter('widget_text','do_shortcode');
@@ -2705,6 +2793,7 @@ $optimizedTopMeta->addWysiwyg(array( 'id' => 'page-top_text', 'label' => '' ));
 $optimizedBottomMeta = new Metabox_Constructor(array( 'id' => 'page-bottom', 'title' => 'Page Bottom', 'screen' => 'optimized', 'context' => 'normal', 'priority' => 'high' ));
 $optimizedBottomMeta->addWysiwyg(array( 'id' => 'page-bottom_text', 'label' => '' ));
 
+
 // Display Google review rating
 add_action('wp_footer', 'battleplan_getGoogleRating');
 function battleplan_getGoogleRating() {
@@ -2819,213 +2908,13 @@ function battleplan_getAndDisplayUserRoles() {
 --------------------------------------------------------------*/
 add_action('init', 'battleplan_doChrons');
 function battleplan_doChrons() {
-	$chronSpan = 7 * (24 * 60 * 60);
+	$chronSpan = 3 * (24 * 60 * 60);
 	$bpChrons = get_option( 'bp_chrons_last_run' );	
 	$timePast = time() - $bpChrons;
-	
-	function battleplan_delete_prefixed_options( $prefix ) {
-		global $wpdb;
-		$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
-	}
-	
-	if ( $timePast > $chronSpan ) :
-	
-		if (function_exists('battleplan_remove_user_roles')) battleplan_remove_user_roles();
-		if (function_exists('battleplan_create_user_roles')) battleplan_create_user_roles();
-		if (function_exists('battleplan_updateSiteOptions')) battleplan_updateSiteOptions();
-	
-		// ARI FancyBox Settings Update
-		if ( is_plugin_active('ari-fancy-lightbox/ari-fancy-lightbox.php') ) : 
-			$wpARISettings = get_option( 'ari_fancy_lightbox_settings' );
-			$wpARISettings['convert']['wp_gallery']['convert'] = '1';
-			$wpARISettings['convert']['wp_gallery']['grouping'] = '1';
-			$wpARISettings['convert']['images']['convert'] = '1';
-			$wpARISettings['convert']['images']['post_grouping'] = '1';
-			$wpARISettings['convert']['images']['grouping_selector'] = '.gallery$$A';		
-			$wpARISettings['convert']['images']['filenameToTitle'] = '1';		
-			$wpARISettings['convert']['images']['convertNameSmart'] = '1';		
-			$wpARISettings['lightbox']['loop'] = '1';		
-			$wpARISettings['lightbox']['arrows'] = '1';		
-			$wpARISettings['lightbox']['infobar'] = '1';		
-			$wpARISettings['lightbox']['keyboard'] = '1';		
-			$wpARISettings['lightbox']['autoFocus'] = '1';		
-			$wpARISettings['lightbox']['trapFocus'] = '0';		
-			$wpARISettings['lightbox']['closeClickOutside'] = '1';		
-			$wpARISettings['lightbox']['touch_enabled'] = '1';		
-			$wpARISettings['lightbox']['thumbs']['autoStart'] = '0';		
-			$wpARISettings['lightbox']['thumbs']['hideOnClose'] = '0';		
-			$wpARISettings['advanced']['load_scripts_in_footer'] = '1';			
-			update_option( 'ari_fancy_lightbox_settings', $wpARISettings ); 
-
-			delete_option( 'bp_setup_ari_fancy_lightbox_initial', 'completed' );
-		endif;
-
-		// Yoast SEO Settings Update
-		if ( is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') ) :		
-			$wpSEOSettings = get_option( 'wpseo_titles' );		
-			$wpSEOSettings['separator'] = 'sc-bull';
-			$wpSEOSettings['title-home-wpseo'] = '%%page%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';
-			$wpSEOSettings['title-author-wpseo'] = '%%name%%, Author at %%sitename%% %%page%%';
-			$wpSEOSettings['title-archive-wpseo'] = 'Archive %%sep%% %%sitename%% %%sep%% %%date%% ';
-			$wpSEOSettings['title-search-wpseo'] = 'You searched for %%searchphrase%% %%sep%% %%sitename%%';
-			$wpSEOSettings['title-404-wpseo'] = 'Page Not Found %%sep%% %%sitename%%';
-			$wpSEOTitle = ' %%page%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';		
-			$getCPT = get_post_types(); 
-			foreach ($getCPT as $postType) :
-				if ( $postType == "post" || $postType == "page" || $postType == "optimized" ) :
-					$wpSEOSettings['title-'.$postType] = '%%title%%'.$wpSEOTitle;
-					$wpSEOSettings['social-title-'.$postType] = '%%title%%'.$wpSEOTitle;
-				elseif ( $postType == "attachment" || $postType == "revision" || $postType == "nav_menu_item" || $postType == "custom_css" || $postType == "customize_changeset" || $postType == "oembed_cache" || $postType == "user_request" || $postType == "wp_block" || $postType == "elements" || $postType == "acf-field-group" || $postType == "acf-field" || $postType == "wpcf7_contact_form" ) :
-					// nothing //
-				else:
-					$wpSEOSettings['title-'.$postType] = ucfirst($postType).$wpSEOTitle;			
-					$wpSEOSettings['social-title-'.$postType] = ucfirst($postType).$wpSEOTitle;			
-				endif;		
-			endforeach;	
-			$wpSEOSettings['social-title-author-wpseo'] = '%%name%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';
-			$wpSEOSettings['social-title-archive-wpseo'] = '%%date%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';
-			$wpSEOSettings['noindex-author-wpseo'] = '1';
-			$wpSEOSettings['noindex-author-noposts-wpseo'] = '1';
-			$wpSEOSettings['noindex-archive-wpseo'] = '1';
-			$wpSEOSettings['disable-author'] = '1';
-			$wpSEOSettings['disable-date'] = '1';
-			$wpSEOSettings['disable-attachment'] = '1';
-			$wpSEOSettings['breadcrumbs-404crumb'] = 'Error 404: Page not found';
-			$wpSEOSettings['breadcrumbs-boldlast'] = '1';
-			$wpSEOSettings['breadcrumbs-archiveprefix'] = 'Archives for';
-			$wpSEOSettings['breadcrumbs-enable'] = '1';
-			$wpSEOSettings['breadcrumbs-home'] = 'Home';
-			$wpSEOSettings['breadcrumbs-searchprefix'] = 'You searched for';
-			$wpSEOSettings['breadcrumbs-sep'] = '»';
-			$wpSEOSettings['company_logo'] = get_bloginfo("url").'/wp-content/uploads/logo.png';
-			$wpSEOSettings['company_logo_id'] = attachment_url_to_postid( get_bloginfo("url").'/wp-content/uploads/logo.png' );
-			$wpSEOSettings['company_logo_meta']['url'] = get_bloginfo("url").'/wp-content/uploads/logo.png';	
-			$wpSEOSettings['company_logo_meta']['path'] = get_attached_file( attachment_url_to_postid( get_bloginfo("url").'/wp-content/uploads/logo.png' ) );
-			$wpSEOSettings['company_logo_meta']['id'] = attachment_url_to_postid( get_bloginfo("url").'/wp-content/uploads/logo.png' );
-			$wpSEOSettings['company_name'] = get_bloginfo('name');
-			$wpSEOSettings['company_or_person'] = 'company';
-			$wpSEOSettings['stripcategorybase'] = '1';
-			$wpSEOSettings['breadcrumbs-enable'] = '1';
-			update_option( 'wpseo_titles', $wpSEOSettings );
-
-			$wpSEOSocial = get_option( 'wpseo_social' );		
-			$wpSEOSocial['facebook_site'] = $GLOBALS['customer_info']['facebook'];
-			$wpSEOSocial['instagram_url'] = $GLOBALS['customer_info']['instagram'];
-			$wpSEOSocial['linkedin_url'] = $GLOBALS['customer_info']['linkedin'];
-			$wpSEOSocial['og_default_image'] = get_bloginfo("url").'/wp-content/uploads/logo.png';
-			$wpSEOSocial['og_default_image_id'] = attachment_url_to_postid( get_bloginfo("url").'/wp-content/uploads/logo.png' );
-			$wpSEOSocial['opengraph'] = '1';
-			$wpSEOSocial['pinterest_url'] = $GLOBALS['customer_info']['pinterest'];
-			$wpSEOSocial['twitter_site'] = $GLOBALS['customer_info']['twitter'];
-			$wpSEOSocial['youtube_url'] = $GLOBALS['customer_info']['youtube'];	
-			update_option( 'wpseo_social', $wpSEOSocial );
-
-			$wpSEOLocal = get_option( 'wpseo_local' );		
-			$wpSEOLocal['business_type'] = 'Organization';
-			$wpSEOLocal['location_address'] = $GLOBALS['customer_info']['street'];
-			$wpSEOLocal['location_city'] = $GLOBALS['customer_info']['site-city'];
-			$wpSEOLocal['location_state'] = $GLOBALS['customer_info']['state-full'];
-			$wpSEOLocal['location_zipcode'] = $GLOBALS['customer_info']['zip'];
-			$wpSEOLocal['location_country'] = 'US';
-			$wpSEOLocal['location_phone'] = $GLOBALS['customer_info']['area'].$GLOBALS['customer_info']['phone'];
-			$wpSEOLocal['location_email'] = $GLOBALS['customer_info']['email'];
-			$wpSEOLocal['location_url'] = get_bloginfo("url");
-			$wpSEOLocal['location_price_range'] = '$$';
-			$wpSEOLocal['location_payment_accepted'] = "Cash, Credit Cards, Paypal";
-			$wpSEOLocal['location_area_served'] = $GLOBALS['customer_info']['service-area'];
-			$wpSEOLocal['location_coords_lat'] = $GLOBALS['customer_info']['lat'];
-			$wpSEOLocal['location_coords_long'] = $GLOBALS['customer_info']['long'];
-			$wpSEOLocal['hide_opening_hours'] = 'on';
-			$wpSEOLocal['address_format'] = 'address-state-postal';	
-			
-			delete_option( 'wpmudev_recommended_plugins_registered');			
-			delete_option( 'wphb_settings');
-			delete_option( 'smush_global_stats');
-			delete_option( 'dir_smush_stats');
-			delete_option( 'theia-upload-cleaner-progress-file');
-			delete_option( 'wprmenu_options');
-			delete_option( 'wr2x_rating_date');
-			delete_option( 'wphb-notice-uptime-info-show');
-			delete_option( 'wphb_version');
-			delete_option( 'wphb-new-user-tour');
-			delete_option( 'wphb-notice-http2-info-show');
-			delete_option( 'wphb_styles_collection');
-			delete_option( 'wphb_scripts_collection');
-			delete_option( 'wpmudev_recommended_plugins_registered');
-	
-			update_option( 'auto_update_core_dev', 'enabled' );
-			update_option( 'auto_update_core_minor', 'enabled' );
-			update_option( 'auto_update_core_major', 'enabled' );			
-		endif;
 		
-		// Basic Settings		
-		$sidebars_widgets = get_option( 'sidebars_widgets' );
-     	$sidebars_widgets['wp_inactive_widgets'] = array();
-     	update_option( 'sidebars_widgets', $sidebars_widgets );
-		
-		update_option( 'admin_email', 'info@battleplanwebdesign.com' );
-		update_option( 'admin_email_lifespan', '9999999999999' );
-		update_option( 'default_comment_status', 'closed' );
-		update_option( 'default_ping_status', 'closed' );
-		update_option( 'permalink_structure', '/%postname%/' );
-		update_option( 'wpe-rand-enabled', '1' );
-
-		battleplan_delete_prefixed_options( 'ac_cache_data_' );
-		battleplan_delete_prefixed_options( 'ac_cache_expires_' );
-		battleplan_delete_prefixed_options( 'ac_api_request_' );	
-		battleplan_delete_prefixed_options( 'ac_sorting_' );
-		battleplan_delete_prefixed_options( 'wp-smush-' );
-		battleplan_delete_prefixed_options( 'wp_smush_' );
-		battleplan_delete_prefixed_options( 'client_' );
-		
-		delete_option( 'bp_setup_2021_08_15' );
-		
-		update_option( 'bp_chrons_last_run', time() );		
+	if ( $timePast > $chronSpan || get_option('bp_setup_2021_12_05') != "completed" ) :	
+		require_once get_template_directory().'/functions-chron-jobs.php';	
 	endif;	
-}
-
-/*--------------------------------------------------------------
-# Universal Pages
---------------------------------------------------------------*/
-add_action('init', 'battleplan_buildUniversalPages');
-function battleplan_buildUniversalPages() {
-	if ( is_null(get_page_by_path('customer-care-dealer', OBJECT, 'universal')) && $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'american standard' || in_array('american standard', $GLOBALS['customer_info']['site-brand'])) ) wp_insert_post( array( 'post_title' => 'Customer Care Dealer', 'post_content' => '[get-universal-page slug="page-hvac-customer-care-dealer"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
-
-	if ( is_null(get_page_by_path('ruud-pro-partner', OBJECT, 'universal')) && $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'ruud' || in_array('ruud', $GLOBALS['customer_info']['site-brand'])) ) wp_insert_post( array( 'post_title' => 'Ruud Pro Partner', 'post_content' => '[get-universal-page slug="page-hvac-ruud-pro-partner"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
-
-	if ( is_null(get_page_by_path('comfortmaker-elite-dealer', OBJECT, 'universal')) && $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'comfortmaker' || in_array('comfortmaker', $GLOBALS['customer_info']['site-brand'])) ) wp_insert_post( array( 'post_title' => 'Comfortmaker Elite Dealer', 'post_content' => '[get-universal-page slug="page-hvac-comfortmaker-elite-dealer"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
-
-	if ( is_null(get_page_by_path('maintenance-tips', OBJECT, 'universal')) && $GLOBALS['customer_info']['site-type'] == 'hvac' ) wp_insert_post( array( 'post_title' => 'Maintenance Tips', 'post_content' => '[get-universal-page slug="page-hvac-maintenance-tips"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
-
-	if ( is_null(get_page_by_path('symptom-checker', OBJECT, 'universal')) && $GLOBALS['customer_info']['site-type'] == 'hvac' ) wp_insert_post( array( 'post_title' => 'Symptom Checker', 'post_content' => '[get-universal-page slug="page-hvac-symptom-checker"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
-	
-	if ( is_null(get_page_by_path('faq', OBJECT, 'universal')) && $GLOBALS['customer_info']['site-type'] == 'hvac' ) wp_insert_post( array( 'post_title' => 'FAQ', 'post_content' => '[get-universal-page slug="page-hvac-faq"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
-	
-	if ( is_null(get_page_by_path('profile', OBJECT, 'universal')) && $GLOBALS['customer_info']['site-type'] == 'profile' ) wp_insert_post( array( 'post_title' => 'Profile', 'post_content' => '[get-universal-page slug="page-profile"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
-		
-	if ( is_null(get_page_by_path('profile-directory', OBJECT, 'universal')) && $GLOBALS['customer_info']['site-type'] == 'profile' ) wp_insert_post( array( 'post_title' => 'Profile Directory', 'post_content' => '[get-universal-page slug="page-profile-directory"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
-	
-	if ( is_null(get_page_by_path('privacy-policy', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Privacy Policy', 'post_content' => '[get-universal-page slug="page-privacy-policy"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
-	
-	if ( is_null(get_page_by_path('terms-conditions', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Terms & Conditions', 'post_content' => '[get-universal-page slug="page-terms-conditions"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
-	
-	if ( is_null(get_page_by_path('review', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Review', 'post_content' => '[get-universal-page slug="page-review"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
-}
-
-add_shortcode( 'get-universal-page', 'battleplan_getUniversalPage' );
-function battleplan_getUniversalPage( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'slug'=>'' ), $atts );
-	$slug = esc_attr($a['slug']);
-	return do_shortcode(include get_template_directory().'/pages/'.$slug.'.php');	
-}
-
-// Use page template for optimized & universal pages
-add_filter('single_template', 'battleplan_usePageTemplate', 10, 1 );
-function battleplan_usePageTemplate( $original ) {
-	global $post;
-	$post_type = $post->post_type;
-	if ( $post_type == "optimized" || $post_type == "universal" ) return locate_template('page.php');
-	return $original;
 }
 
 /*--------------------------------------------------------------
@@ -3035,6 +2924,11 @@ function bp_loader() { do_action('bp_loader'); }
 function bp_font_loader() { do_action('bp_font_loader'); }
 function bp_google_tag_manager() { do_action('bp_google_tag_manager'); }
 function bp_mobile_menu_bar_items() { do_action('bp_mobile_menu_bar_items'); }
+function bp_mobile_menu_bar_scroll() { do_action('bp_mobile_menu_bar_scroll'); }
+function bp_mobile_menu_bar_phone() { do_action('bp_mobile_menu_bar_phone'); }
+function bp_mobile_menu_bar_contact() { do_action('bp_mobile_menu_bar_contact'); }
+function bp_mobile_menu_bar_activate() { do_action('bp_mobile_menu_bar_activate'); }
+function bp_before_page() { do_action('bp_before_page'); }
 function bp_before_masthead() { do_action('bp_before_masthead'); }
 function bp_masthead() { do_action('bp_masthead'); }
 function bp_after_masthead() { do_action('bp_after_masthead'); }
@@ -3070,23 +2964,20 @@ function battleplan_loadFonts() {
 // Install Google Tag Manager (analytics)
 add_action('bp_google_tag_manager', 'battleplan_load_tag_manager');
 function battleplan_load_tag_manager() { 
-	foreach ( $GLOBALS['customer_info']['google-tags'] as $gtag=>$value ) :
-		if ( $gtag == "event" ) :
-		 	$buildTag .= "gtag('event', 'conversion', {'send_to': '".$value."'});";
-		else:
-			$buildTag .= "gtag('config', '".$value."');";
-		endif;
-		if ( $gtag == "analytics" ) $googleID = $value;
-	endforeach;
-?>	
-	<script nonce="<?php echo $GLOBALS['nonce']; ?>" async src="https://www.googletagmanager.com/gtag/js?id=<?php echo $googleID; ?>"></script>
-	<script nonce="<?php echo $GLOBALS['nonce']; ?>" async>
+	$buildTag = '';
+	$nonce = $GLOBALS['nonce'];
+	foreach ( $GLOBALS['customer_info']['google-tags'] as $gtag=>$value ) :	
+		$buildTag .= '<script nonce="'.$nonce.'" async src="https://www.googletagmanager.com/gtag/js?id='.$value.'"></script>';
+		$buildTag .= '<script nonce="'.$nonce.'" async>
 		window.dataLayer = window.dataLayer || [];
 		function gtag(){dataLayer.push(arguments);}
-		gtag('js', new Date());
-		<?php echo $buildTag; ?>
-	</script>
-<?php }
+		gtag("js", new Date());
+		gtag("config", "'.$value.'");		
+		</script>';	
+	endforeach;
+	
+	echo $buildTag;
+}
 
 // Build and display desktop navigation menu
 function buildNavMenu( $pos ) {
@@ -3106,6 +2997,40 @@ function returnNavMenu() {
 	return buildNavMenu( 'manual' );
 }		
 
+// Display Mobile Menu Bar Item - Scroll
+add_action('bp_mobile_menu_bar_scroll', 'battleplan_mobile_menu_bar_scroll', 20);
+function battleplan_mobile_menu_bar_scroll() { 
+	echo '<a class="scroll-top" href="#page"><div class="mm-bar-btn mm-bar-scroll scroll-to-top-btn" aria-hidden="true"></div><span class="sr-only">Scroll To Top</span></a>';
+}
+
+// Display Mobile Menu Bar Item - Phone
+add_action('bp_mobile_menu_bar_phone', 'battleplan_mobile_menu_bar_phone', 20);
+function battleplan_mobile_menu_bar_phone() { 
+	echo do_shortcode('[get-biz info="mm-bar-phone"]');	
+}
+
+// Display Mobile Menu Bar Item - Contact
+add_action('bp_mobile_menu_bar_contact', 'battleplan_mobile_menu_bar_contact', 20);
+function battleplan_mobile_menu_bar_contact() { 
+	if ( get_page_by_title( 'Quote Request Form', OBJECT, 'wpcf7_contact_form' ) ) : $form = "Quote Request Form"; $title = "Request A Quote"; $type = "quote";
+	elseif ( get_page_by_title( 'Contact Us Form', OBJECT, 'wpcf7_contact_form' ) ) : $form = "Contact Us Form"; $title = "Send A Message"; $type = "contact"; endif;	
+	if ( $form && $title ) echo '<div class="mm-bar-btn mm-bar-'.$type.' modal-btn"><div class="email-btn" aria-hidden="true"></div><div class="email2-btn" aria-hidden="true"></div><span class="sr-only">Contact Us</span></div>';	
+}
+
+// Display Request Quote Modal
+add_action('bp_before_page', 'battleplan_request_quote_modal', 20);
+function battleplan_request_quote_modal() { 
+	if ( get_page_by_title( 'Quote Request Form', OBJECT, 'wpcf7_contact_form' ) ) : $form = "Quote Request Form"; $title = "Request A Quote";
+	elseif ( get_page_by_title( 'Contact Us Form', OBJECT, 'wpcf7_contact_form' ) ) : $form = "Contact Us Form"; $title = "Send A Message"; endif;	
+	if ( $form && $title ) echo do_shortcode('[lock name="request-quote-modal" style="lock" position="modal" show="always" btn-activated="yes"][layout]<h3>'.$title.'</h3>[contact-form-7 title="'.$form.'"][/layout][/lock]');
+}
+
+// Display Mobile Menu Bar Item - Activate
+add_action('bp_mobile_menu_bar_activate', 'battleplan_mobile_menu_bar_activate');
+function battleplan_mobile_menu_bar_activate() { 
+	echo '<div class="mm-bar-btn mm-bar-activate activate-btn"><div></div><div></div><div></div></div> ';	
+}
+	
 // Display the site header
 add_action('bp_masthead', 'battleplan_printHeader', 20);
 function battleplan_printHeader() { 
@@ -3198,6 +3123,7 @@ function battleplan_count_site_views_ajax() {
 	$userRefer = parse_url($userRefer);
 	$userRefer = $userRefer['host'];
 	$userRefer = str_replace(array("www.", "http://", "https://"), "", $userRefer);	
+	$userIP = $_SERVER["REMOTE_ADDR"];
 	$lastViewed = readMeta(_HEADER_ID, 'log-views-time');
 	$rightNow = strtotime(date("F j, Y g:i a"));	
 	$today = strtotime(date("F j, Y"));
@@ -3206,6 +3132,14 @@ function battleplan_count_site_views_ajax() {
 	$getViews = maybe_unserialize( $getViews );
 	if ( !is_array($getViews) ) $getViews = array();
 	$viewsToday = $views7Day = $views30Day = $views90Day = $views180Day = $views365Day = $searchToday = intval(0); 
+	
+			$userIP = 'Time: '.$rightNow.' Site: '.battleplan_getDomainName().' Location: '.$userLoc.' IP: <a href="https://whatismyipaddress.com/ip/'.$_SERVER["REMOTE_ADDR"].'">'.$_SERVER["REMOTE_ADDR"].'</a><br/>';
+			$getIPs = readMeta(_HEADER_ID, 'log-views-ips');
+			$getIPs = maybe_unserialize( $getIPs );
+			if ( !is_array($getIPs) ) $getIPs = array();
+			array_unshift($getIPs, $userIP);
+			$newIPs = maybe_serialize( $getIPs );
+			updateMeta(_HEADER_ID, 'log-views-ips', $newIPs);			
 		
 	if ( _BP_COUNT_ALL_VISITS == "override" || ( _USER_LOGIN != 'battleplanweb' && $userLoc != "Ashburn, VA" && ( $userValid == "true" || _BP_COUNT_ALL_VISITS == "true" )) ) :
 		if(!isset($_COOKIE['countVisit'])) :
@@ -3852,4 +3786,31 @@ function battleplan_socialBtn( $atts, $content = null ) {
 
 	return '<a class="social-button" href="'.$prefix.$link.'" target="_blank" rel="noopener noreferrer">'.$iconLoc.'</a>';	
 }
+ 
+add_shortcode( 'seek', 'battleplan_formField' );
+function battleplan_formField( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'label'=>'Label', 'show'=>'true', 'id'=>'user-input', 'req'=>'false', 'width'=>'default' ), $atts );
+	$id = esc_attr($a['id']);
+	$label = esc_attr($a['label']);
+	$req = esc_attr($a['req']);	
+	$width = 'width-'.esc_attr($a['width']);
+	$show = esc_attr($a['show']);
+	if ( $show != 'true' ) : $width = 'width-none'; $aria = 'aria-label="'.$label.'"'; endif;	
+	$asterisk = '<span class="required"></span><span class="sr-only">Required Field</span>';
+	
+	if ( $label == "button" ) :	
+		$buildInput = '<div class="block block-button block-100">'.$content.'</div>';		
+	else:	
+		$buildInput = '<div class="form-input input-'.strtolower(preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(" ","-",$label))).' input-'.$id.' '.$width.'" '.$aria.'>';
+		if ( $show == 'true' ) $buildInput .= '<label for="'.$id.'" class="'.$width.' label-baseline">'.$label;
+		if ( $show == 'true' && $req != 'false' ) $buildInput .= $asterisk;
+		if ( $show == 'true' ) $buildInput .= '</label>';
+		$buildInput .= $content;
+		if ( $show != 'true' && $req != 'false' ) $buildInput .= $asterisk;
+		$buildInput .= '</div>';
+	endif;
+	
+	return $buildInput;
+}
+
 ?>

@@ -69,9 +69,10 @@ function battleplan_login_redirect( $redirect_to, $request, $user ) {
 
 add_action( 'login_head', 'battleplan_addBaseToLoginPage' );
 function battleplan_addBaseToLoginPage() {
+	$nonce = $GLOBALS['nonce'];
 	$addScript = '<base target="_parent">'; 
 	$findThis = "a[href*='wp-login.php']";
-	$addScript .= '<script>setTimeout(function() {var getAll = document.querySelectorAll("'.$findThis.'"); for (var i=0; i<getAll.length; i++) {getAll[i].setAttribute("target", "_self");}}, 1000);</script>';
+	$addScript .= '<script nonce="'.$nonce.'">setTimeout(function() {var getAll = document.querySelectorAll("'.$findThis.'"); for (var i=0; i<getAll.length; i++) {getAll[i].setAttribute("target", "_self");}}, 1000);</script>';
 	echo $addScript;
 } 
 
@@ -87,17 +88,104 @@ function battleplan_getUploadBtn($atts, $content = null) {
 	$browse = esc_attr($a['browse']);
 	$submit = esc_attr($a['submit']);
 	$formID = rand(1000,9999);
+	$nonce = $GLOBALS['nonce'];
 	
 	$printBtn = '<form id="image-upload_'.$formID.'" action="'.get_template_directory_uri().'/includes/includes-image-upload.php" method="post" enctype="multipart/form-data">';
 	$printBtn .= '<span class="upload-text"><b>'.$text.'&nbsp;&nbsp;</b></span><input readonly type="text" id="upload-file-name_'.$formID.'" value="'.$empty.'" />';
-	$printBtn .= '<label class="file-upload-btn"><input type="file" name="image_upload" onchange="getFile'.$formID.'(this)"/>'.$browse.'</label>';	
-	$printBtn .= '<script>function getFile'.$formID.'(object) { var file = object.files[0]; var name = file.name; document.getElementById("upload-file-name_'.$formID.'").value = name; }</script>';		
+	$printBtn .= '<label class="file-upload-btn"><input type="file" name="image_upload" onchange="getFile'.$formID.'(this)" multiple/>'.$browse.'</label>';	
+	$printBtn .= '<script nonce="'.$nonce.'">function getFile'.$formID.'(object) { var file = object.files[0]; var name = file.name; document.getElementById("upload-file-name_'.$formID.'").value = name; }</script>';		
 	$printBtn .= '<input class="file-submit-btn" type="submit" name="submit" value="'.$submit.'" />';
 	$printBtn .= '<input type="hidden" name="upload_type" value="'.$type.'" />';
 	$printBtn .= '</form>';
 	
-	return $printBtn;	
+	//return $printBtn;		
+	
+	if ( $_FILES ) {
+		$files = $_FILES["files"];  
+		$orig = $_POST["gallery-name"]; 		
+		$gallery = $orig;
+		$aux = 1;
+				
+		function checkTitle($orig, $gallery, $files, $aux) {
+			if ( get_page_by_title( $gallery, OBJECT, 'galleries' ) !== null ) {
+				$aux++;
+				$gallery = $orig." #".$aux;
+				checkTitle($orig, $gallery, $files, $aux);				
+			} else {
+				$userLogin = wp_get_current_user()->user_login;		
+				$userID = wp_get_current_user()->ID;		
+
+				$new_post = array(
+					'post_title' => $gallery,
+					'post_content' => '',
+					'post_status' => 'publish',
+					'post_type' => 'galleries',
+					'post_author' => $userID,
+					//'post_category' => $category
+				);
+
+				$pid = wp_insert_post($new_post);	
+				$accessAllowed = get_user_meta( $userID, 'access-allowed' );
+				array_push($accessAllowed, $pid);
+				update_user_meta( $userID, 'access-allowed', $accessAllowed );
+
+			if (in_array( $post->ID, $accessAllowed)) get_template_part( 'template-parts/content', get_post_type() );
+
+				$num=1;
+				foreach ($files['name'] as $key => $value) {    
+					if ($files['name'][$key]) {
+						$picNum = str_pad($num, 3, "0", STR_PAD_LEFT);
+						$picKey = base64_encode(random_bytes(30));
+						$picExt = strrchr( $files['name'][$key], '.');
+						$file = array( 
+							//'name' => $userName.'-'.$gallery.'-'.$files['name'][$key],
+							'name' => strtolower($userLogin.'-'.$gallery.'-'.$picNum.'-'.$picKey.$picExt),
+							'type' => $files['type'][$key], 
+							'tmp_name' => $files['tmp_name'][$key], 
+							'error' => $files['error'][$key],
+							'size' => $files['size'][$key]
+						);
+
+						$_FILES = array ("files" => $file); 
+						foreach ($_FILES as $file => $array) {
+							$newupload = my_handle_attachment($file, $pid); 
+							if ( $num == 1 ) set_post_thumbnail( $pid, $newupload );
+						}
+					} 
+					$num++;
+				} 
+				$_FILES = null;
+				wp_redirect( "/?p=".$pid );
+			}
+		}		
+		checkTitle($orig, $gallery, $files, $aux);
+	}
+?>
+
+
+<form class="formimages" action="" enctype="multipart/form-data" method="post">
+	<label>Select Images</label>
+	<label class="gallery-name">Gallery Name: <input type="text" class="regular_text" name="gallery-name" /></label>
+	<label class="file-upload-btn"><input type="file" name="files[]" id="gallery-photo-add" multiple /> <small>Max 2 MB (PNG, JPEG, JPEG)</small> </label>
+	<input type="submit" value="Upload" class="saveyt" name="submitdata" />
+</form>
+
+<?php
 }
+
+function my_handle_attachment($file_handler, $post_id, $set_thu=false) {
+  // check to make sure its a successful upload
+  if ($_FILES[$file_handler]['error'] !== UPLOAD_ERR_OK) __return_false();
+  require_once(ABSPATH . "wp-admin" . '/includes/image.php');
+  require_once(ABSPATH . "wp-admin" . '/includes/file.php');
+  require_once(ABSPATH . "wp-admin" . '/includes/media.php');
+   
+  $attach_id = media_handle_upload( $file_handler, $post_id );
+    
+  return $attach_id;
+}
+
+
 
 // Display user profile pic
 function displayUserPic( $identifier=null, $size='thumbnail' ) {

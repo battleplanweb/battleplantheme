@@ -73,7 +73,7 @@
 <!-- Scroll to Top btn -->
 <a class ="scroll-top hide-1 hide-2 hide-3" href="#page" role="button"><i class="fa fa-chevron-up" aria-hidden="true"></i><span class="sr-only">Scroll To Top</span></a>	
 
-<?php wp_footer(); ?>	
+<?php wp_footer(); ?>
 
 <?php if ( get_page_by_path( 'svg', OBJECT, 'elements' ) ) echo '<div id="include-svg">'.do_shortcode('[get-element slug="svg"]').'</div>'; ?>
 

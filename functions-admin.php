@@ -5,8 +5,9 @@
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
 # Shortcodes
-# Set Up Admin Columns
+# Admin Columns Set Up 
 # Admin Interface Set Up
+# Contact Form 7 Set Up
 # Set Global Options
 
 --------------------------------------------------------------*/
@@ -63,7 +64,7 @@ function battleplan_add_quicktags() {
 }
 
 /*--------------------------------------------------------------
-# Set Up Admin Columns
+# Admin Columns Set Up
 --------------------------------------------------------------*/
 add_action( 'init', 'battleplan_column_settings' );
 function battleplan_column_settings() {				
@@ -2231,6 +2232,34 @@ function battleplan_clearViewFields() {
 		updateMeta( $siteHeader, 'framework-version', _BP_VERSION );	
 	}	
 }  
+
+/*--------------------------------------------------------------
+# Contact Form 7 Set Up
+--------------------------------------------------------------*/
+
+	// add Something to Status box
+    //add_action( 'wpcf7_admin_misc_pub_section', 'bp_cf7_add_to_status_box', 10, 0 ); 
+    function bp_cf7_add_to_status_box(  ) { 
+        echo '';
+    }; 	
+	
+	// add Something after Save button
+    //add_action( 'wpcf7_admin_footer', 'bp_cf7_add_after_save_button', 10, 0 ); 
+    function bp_cf7_add_after_save_button(  ) { 
+        echo '';
+    }; 
+
+	// add Something on Mail tab, before TO field
+    //add_action( 'wpcf7_collect_mail_tags', 'bp_cf7_add_before_to_field', 10, 0 ); 
+    function bp_cf7_add_before_to_field(  ) { 
+        echo '';
+    }; 
+
+	// add Something before Panel tabs
+   // add_filter( 'wpcf7_editor_panels', 'bp_cf7_add_before_panel_tabs', 10, 1 ); 
+	function bp_cf7_add_before_panel_tabs( $panels ) { 
+        echo ''; 
+    }; 
 	
 /*--------------------------------------------------------------
 # Set Global Options
@@ -2238,15 +2267,16 @@ function battleplan_clearViewFields() {
 add_action( 'admin_init', 'battleplan_setupGlobalOptions', 999 );
 function battleplan_setupGlobalOptions() {  
 
+// WP Mail SMTP Settings
 	if ( is_plugin_active('wp-mail-smtp/wp_mail_smtp.php') && get_option( 'bp_setup_wp_mail_smtp_initial' ) != 'completed' ) : 	
 		$apiKey1 = "keysib";
 		$apiKey2 = "ef3a9074e001fa21f640578f699994cba854489d3ef793";
 		$wpMailSettings = get_option( 'wp_mail_smtp' );		
 		$wpMailSettings['mail']['from_email'] = 'email@admin.'.str_replace('https://', '', get_bloginfo('url'));
-		$wpMailSettings['mail']['from_name'] = get_bloginfo('name');
+		$wpMailSettings['mail']['from_name'] = "Website Administrator";
 		$wpMailSettings['mail']['mailer'] = sendinblue;
 		$wpMailSettings['mail']['from_email_force'] = '1';
-		$wpMailSettings['mail']['from_name_force'] = '0';		
+		$wpMailSettings['mail']['from_name_force'] = '1';		
 		$wpMailSettings['sendinblue']['api_key'] = 'x'.$apiKey1.'-d08cc84fe45b37a420'.$apiKey2.'-AafFpD2zKkIN3SBZ';
 		$wpMailSettings['sendinblue']['domain'] = 'admin.'.str_replace('https://', '', get_bloginfo('url'));		
 		update_option( 'wp_mail_smtp', $wpMailSettings );
@@ -2254,6 +2284,7 @@ function battleplan_setupGlobalOptions() {
 		update_option( 'bp_setup_wp_mail_smtp_initial', 'completed' );
 	endif;	
 
+// Widget Options - Extended Settings
 	if ( is_plugin_active('extended-widget-options/plugin.php') && get_option( 'bp_setup_widget_options_initial' ) != 'completed' ) :
 		$widgetOpts = get_option( 'widgetopts_settings' );
 				
@@ -2303,7 +2334,8 @@ function battleplan_setupGlobalOptions() {
 		
 		update_option( 'bp_setup_widget_options_initial', 'completed' );
 	endif;	
-		
+
+// Yoast SEO Settings
 	if ( is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') && get_option( 'bp_setup_yoast_initial' ) != 'completed' ) :
 		$wpSEOSettings = get_option( 'wpseo_titles' );		
 		$wpSEOSettings['separator'] = 'sc-bull';

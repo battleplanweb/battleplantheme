@@ -30,7 +30,7 @@ $printPage = '[section name="'.$profileFirst.'-'.$profileLast.'" class="user-pro
 
 if ( $currUser == true ) : 
 	$printPage .= '[col class="avatar"]'.$profileAvatar;
-	$printPage .= '[get-upload-btn][/col]';
+	//$printPage .= '[get-upload-btn][/col]';
 	
 	$printPage .= '[col class="update"]<h2>Post An Update</h2>';
 	$printPage .= '<form id="status-update" method="post" enctype="multipart/form-data">';

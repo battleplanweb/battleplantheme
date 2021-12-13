@@ -31,6 +31,10 @@
 
 /* Forms
 --------------------------------------------- */
+.theme-battleplantheme.woocommerce-page label {
+	text-align: 								left;
+}
+
 input[type="number"]::-webkit-outer-spin-button, 
 input[type="number"]::-webkit-inner-spin-button {
     -webkit-appearance: 						none;
@@ -519,6 +523,10 @@ input[type="number"] {
 .theme-battleplantheme.woocommerce-page form .form-row.woocommerce-validated input.input-text, 
 .theme-battleplantheme.woocommerce-page form .form-row.woocommerce-validated select {
     border-color: 								inherit;
+}
+
+p#billing_country_field {
+	display: 									none;
 }
 
 h3#ship-to-different-address,

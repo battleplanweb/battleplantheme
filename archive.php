@@ -32,7 +32,7 @@ get_header(); ?>
 				$showExcerpt = "false";				
 				$showContent = "false";				
 				$showDate = "false";				
-				$showAuthor = "false";
+				$showAuthor = "false"; // true (no link), profile (link to profile)
 				$addClass = "";
 
 		// Testimonials
@@ -65,7 +65,7 @@ get_header(); ?>
 				$showExcerpt = "true";
 				$showContent = "false";				
 				$showDate = "false";				
-				$showAuthor = "false";
+				$showAuthor = "false"; // true (no link), profile (link to profile)
 				$addClass = "";
 				
 		// Default Archives
@@ -83,7 +83,7 @@ get_header(); ?>
 				$showExcerpt = "true";
 				$showContent = "false";				
 				$showDate = "true";
-				$showAuthor = "false";
+				$showAuthor = "false"; // true (no link), profile (link to profile)
 				$accordion = "false";
 				$countTease = "false";
 				$countView = "false";

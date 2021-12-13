@@ -72,10 +72,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$(this).wrap('<a href="https://www.americanstandardair.com/" target="_blank" rel="noreferrer"></a>'); 
 	});
 			
-// Track phone number clicks
-	$('.track-clicks').click(function() {
-		var thisClick = $(this), thisAction = thisClick.attr('data-action'), thisUrl = thisClick.attr('data-url');
-		document.location = thisUrl;
+// Track phone & email clicks
+	$('.track-clicks, .wpcf7-submit').click(function() {
+		var thisClick = $(this), thisAction = thisClick.attr('data-action') ? thisClick.attr('data-action') : 'email', thisUrl = thisClick.attr('data-url');
+		if ( thisUrl ) { document.location = thisUrl; }
 		$.post({
 			url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
 			data : { action: "count_link_clicks", type: thisAction },
@@ -998,6 +998,7 @@ if ( typeof parallaxBG !== 'function' ) {
 		words = words || "false";
 		if ( pageViews > pageLimit ) { 
 			initDelay = initDelay * speedFactor; 
+
 			mainDelay = mainDelay * speedFactor; 
 		}
 
@@ -1285,6 +1286,7 @@ if ( typeof parallaxBG !== 'function' ) {
 		if ( thisDeviceW > 1280 ) { 
 			$('body').addClass("screen-5").addClass("screen-desktop"); 
 		} else if ( thisDeviceW <= 1280 && thisDeviceW > mobileCutoff ) { 
+
 
 			$('body').addClass("screen-4").addClass("screen-desktop");
 		} else if ( thisDeviceW <= mobileCutoff && thisDeviceW > 860 ) { 

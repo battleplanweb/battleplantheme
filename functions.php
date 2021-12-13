@@ -19,7 +19,7 @@
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.9' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.9.1' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -542,7 +542,9 @@ function battleplan_getBuildArchive($atts, $content = null) {
 			endif;		
 			if ( $showDate == "true" || $showAuthor == "true" || $showSocial == "true" ) $archiveMeta .= '<div class="archive-meta">';
 			if ( $showDate == "true" ) $archiveMeta .= '<span class="archive-date '.$type.'-date date"><i class="fas fa-calendar-alt"></i>'.get_the_date().'</span>';
-			if ( $showAuthor == "true") $archiveMeta .= '<span class="archive-author '.$type.'-author author"><i class="fas fa-user"></i>'.get_the_author().'</span>';
+			if ( $showAuthor == "profile") $archiveMeta .= '<a href="/profile/?user='.get_the_author().'">';			
+			if ( $showAuthor != "false") $archiveMeta .= '<span class="archive-author '.$type.'-author author"><i class="fas fa-user"></i>'.get_the_author().'</span>';
+			if ( $showAuthor == "profile") $archiveMeta .= '</a>';
 			if ( $showSocial == "true") $archiveMeta .= '<span class="archive-social '.$type.'-social social">'.do_shortcode('[add-share-buttons facebook="true" twitter="true"]').'</span>';
 			if ( $showDate == "true" || $showAuthor == "true" || $showSocial == "true" ) $archiveMeta .= '</div>';
 			$archiveBody .= '[p]'.$content.'[/p]';
@@ -2082,9 +2084,15 @@ function battleplan_meta_date() {
 }
 
 // Set up post meta author
-function battleplan_meta_author() {
-	$byline = sprintf ( esc_html_x( '%s', 'post author', 'battleplan' ), '<span class="author vcard">'.esc_html( get_the_author() ).'</span>' );
-	return '<span class="meta-author"><i class="fas fa-user"></i>'.$byline.'</span>';
+function battleplan_meta_author($link='false') {
+	$byline = sprintf ( esc_html_x( '%s', 'post author', 'battleplan' ), '<span class="author vcard">'.esc_html( get_the_author() ).'</span>' );	
+	$printByline = '<span class="meta-author">';
+	if ( $link == 'profile' ) $printByline .= '<a href="/profile/?user='.esc_html( get_the_author() ).'">';	
+	$printByline .= '<i class="fas fa-user"></i>'.$byline;
+	if ( $link == 'profile' ) $printByline .= '</a>';	
+	$printByline .= '</span>';
+	
+	return $printByline;
 }
 
 // Set up post meta comments
@@ -2828,7 +2836,7 @@ function battleplan_getGoogleRating() {
 			$buildPanel = '<a class="wp-gr wp-google-badge" href="https://search.google.com/local/reviews?placeid='.$placeID.'&hl=en&gl=US" target="_blank">';
 			$buildPanel .= '<div class="wp-google-border"></div>';
 			$buildPanel .= '<div class="wp-google-badge-btn">';
-			$buildPanel .= '<div class="wp-google-badge-score wp-google-rating" itemprop="aggregateRating" itemscope="" itemtype="http://schema.org/AggregateRating">';
+			$buildPanel .= '<div class="wp-google-badge-score wp-google-rating" itemprop="aggregateRating" itemscope itemtype="http://schema.org/AggregateRating">';
 			$buildPanel .= '<svg role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" height="44" width="44"><title>Google Logo</title><g fill="none" fill-rule="evenodd">';
 			$buildPanel .= '<path d="M482.56 261.36c0-16.73-1.5-32.83-4.29-48.27H256v91.29h127.01c-5.47 29.5-22.1 54.49-47.09 71.23v59.21h76.27c44.63-41.09 70.37-101.59 70.37-173.46z" fill="#4285f4"></path>';
 			$buildPanel .= '<path d="M256 492c63.72 0 117.14-21.13 156.19-57.18l-76.27-59.21c-21.13 14.16-48.17 22.53-79.92 22.53-61.47 0-113.49-41.51-132.05-97.3H45.1v61.15c38.83 77.13 118.64 130.01 210.9 130.01z" fill="#34a853"></path>';
@@ -2846,8 +2854,8 @@ function battleplan_getGoogleRating() {
 
 			$buildPanel .= '</div></div>';	
 			$buildPanel .= '<div class="wp-google-total">Click to view our ';			
-			if ( $number > 14 ) $buildPanel .= number_format($number).' ';			
-			$buildPanel .= 'Google reviews!</div>';	
+			$buildPanel .= '<span itemprop="reviewCount">'.number_format($number).'</span>';			
+			$buildPanel .= ' Google reviews!</div>';	
 			$buildPanel .= '</div></a>';
 
 			echo $buildPanel;
@@ -3301,36 +3309,31 @@ add_action( 'wp_ajax_count_link_clicks', 'battleplan_count_link_clicks_ajax' );
 add_action( 'wp_ajax_nopriv_count_link_clicks', 'battleplan_count_link_clicks_ajax' );
 function battleplan_count_link_clicks_ajax() {
 	$type = $_POST['type'];	
-	$thisYear = strtotime(date("Y"));
-		
-	if ( _BP_COUNT_ALL_VISITS == "override" || ( _USER_LOGIN != 'battleplanweb' && $userLoc != "Ashburn, VA" && ( $userValid == "true" || _BP_COUNT_ALL_VISITS == "true" )) ) :
-		if ( $type == "phone call" ) : $getType = 'call-clicks';
-		elseif ( $type == "Email" ) : $getType = 'email-clicks';
-		elseif ( $type == "Wells Fargo" ) :	$getType = 'finance-clicks';
-		endif;
-	
-		$getClicks = readMeta(_HEADER_ID, $getType);	
-		$getClicks = maybe_unserialize( $getClicks );
-		if ( !is_array($getClicks) ) $getClicks = array();
-	
-		$recentYear = $getClicks[0]['year'];
-	
-		if ( $recentYear == $thisYear ) :
-			$numClicks = intval($getClicks[0]['number']);	
-			$numClicks++;
-			array_shift($getClicks); // remove current value of year, so it can be replaced	
-			array_unshift($getClicks, array ('year'=>$thisYear, 'number'=>$numClicks));		
-		else:
-			array_unshift($getClicks, array ('year'=>$thisYear, 'number'=>1));			
-		endif;
-	
-		$newClicks = maybe_serialize( $getClicks );
-		updateMeta(_HEADER_ID, $getType, $newClicks);
+	$thisYear = strtotime(date("Y"));		
 
-		$response = array( 'result' => $getType.' counted = '.$numClicks);
+	if ( $type == "phone call" ) : $getType = 'call-clicks';
+	elseif ( $type == "email" ) : $getType = 'email-clicks';
+	endif;
+
+	$getClicks = readMeta(_HEADER_ID, $getType);	
+	$getClicks = maybe_unserialize( $getClicks );
+	if ( !is_array($getClicks) ) $getClicks = array();
+
+	$recentYear = $getClicks[0]['year'];
+
+	if ( $recentYear == $thisYear ) :
+		$numClicks = intval($getClicks[0]['number']);	
+		$numClicks++;
+		array_shift($getClicks); // remove current value of year, so it can be replaced	
+		array_unshift($getClicks, array ('year'=>$thisYear, 'number'=>$numClicks));		
 	else:
-		$response = array( 'result' => 'Click not counted' );
-	endif;	
+		array_unshift($getClicks, array ('year'=>$thisYear, 'number'=>1));			
+	endif;
+
+	$newClicks = maybe_serialize( $getClicks );
+	updateMeta(_HEADER_ID, $getType, $newClicks);
+
+	$response = array( 'result' => $getType.' counted = '.$numClicks);
 	wp_send_json( $response );	
 }
 

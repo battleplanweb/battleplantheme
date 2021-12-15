@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 10.9.1
+Version: 10.10
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1596,6 +1596,33 @@ input + .wpcf7-not-valid-tip {
     animation-timing-function: 					ease-out;
 }
 
+.wpcf7-form .wpcf7-spinner {
+	display: 									inline-block;
+	width: 										0;
+	transform: 									translate(0px, -3px);
+	opacity: 									0;
+	transition: 								all 0.1s ease;
+}
+
+.wpcf7-form.submitting .wpcf7-spinner {
+	opacity: 									1;
+	transition: 								all 0.1s ease;
+}
+
+span.wpcf7-spinner::before {
+	display:									inline-block;
+	font-family: 								Font Awesome;
+	content:   									"\f110";
+	font-weight:								900;
+	font-size:									20px;
+	margin-left:								8px;
+	color: 										rgba(255,255,255,0.8);	
+	animation-name: 							spin; 
+    animation-duration: 						1s; 
+    animation-iteration-count: 					infinite;
+	animation-timing-function: 					linear;
+}
+
 /* Fancy Buttons
 --------------------------------------------- */
 a.button.fancy .fancy-text,
@@ -3106,6 +3133,7 @@ h3.archive-subheadline {
 	flex: 										1 1 1;
 	margin:										8px;
 	text-align:									center;
+
 }
 
 .tag-buttons a.button-blog {
@@ -3348,7 +3376,6 @@ img.unloaded {
 
 img.noFX,
 .noFX img  {
-
 	border:										none !important;
 	background:									none !important;
 	box-shadow:									none !important;
@@ -4569,7 +4596,6 @@ p#user_switching_switch_on a.tab-focus {
 		margin-top:									2.5em;
 		border-left: 								none !important;		
 		border-right: 								none !important;
-
 		border-top: 								1px solid rgba(0,0,0,0.3);
 	}
 	

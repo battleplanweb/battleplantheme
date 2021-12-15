@@ -57,7 +57,7 @@ input[id*='upload-file-name'] {
 #status-update label {
 	display: 									block;
 	margin: 									0 auto;
-	max-width: 									80vw;
+	max-width: 									100%;
 	width: 										500px;
 }
 

@@ -24,18 +24,14 @@
 		<?php echo do_shortcode('[get-element slug="site-footer"]'); ?>
 		
 		<section class="section site-info">			
-			<?php if (function_exists('battleplan_siteInfo')) {
-				 battleplan_siteInfo();
-			 } else { 
-				if (function_exists('battleplan_siteInfoLeft')) {
-					$buildLeft = battleplan_siteInfoLeft();
-				} else {	
-					$buildLeft = battleplan_footer_social_box();
-				}
+			<?php if (function_exists('battleplan_siteInfo')) : battleplan_siteInfo();
+			else : 
+				if (function_exists('battleplan_siteInfoLeft')) : $buildLeft = battleplan_siteInfoLeft();
+				else : $buildLeft = battleplan_footer_social_box();
+				endif;
 	
-				if (function_exists('battleplan_siteInfoRight')) {
-					$buildRight = battleplan_siteInfoRight();
-				} else {	
+				if (function_exists('battleplan_siteInfoRight')) : $buildRight = battleplan_siteInfoRight();
+				else: 	
 					$buildCopyright = "";
 					$buildCopyright .= wp_nav_menu( array( 'theme_location' => 'footer-menu', 'container' => 'div', 'container_id' => 'footer-navigation', 'container_class' => 'secondary-navigation', 'menu_id' => 'footer-menu', 'menu_class' => 'menu secondary-menu', 'fallback_cb' => 'false', 'echo' => false ) );
 					if ( do_shortcode('[get-biz info="misc2"]') ) $buildCopyright .= "<div class='site-info-misc2'>".do_shortcode('[get-biz info="misc2"]')."</div>";						
@@ -58,10 +54,10 @@
 
 					$buildRight = do_shortcode('[img size="1/6" link = "/" class="site-icon"]<img class="site-icon noFX" src="../../../wp-content/uploads/'.$iconName.'" loading="lazy" alt="Return to Home Page"'.$iconWH.'/>[/img]');
 					$buildRight .= do_shortcode('[txt size="5/6"]'.$buildCopyright.'[/txt]');
-				}
+				endif;
 
 				echo do_shortcode('[layout grid="1-2"][col class="site-info-left"]'.$buildLeft.'[/col][col class="site-info-right"]'.$buildRight.'[/col][/layout]');
-			} ?>					
+			endif; ?>					
 			
 		</section><!-- .site-info -->
 	</footer><!-- #colophon -->

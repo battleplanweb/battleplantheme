@@ -93,7 +93,7 @@ body {
 
 .submit.reset-pass-submit * {
 	font-size: 									21px;
-	flex: 										1 0 auto;
+	flex: 										1;
 }
 
 .login form p#reg_passmail {

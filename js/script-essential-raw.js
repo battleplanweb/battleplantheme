@@ -75,7 +75,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 // Track phone & email clicks
 	$('.track-clicks, .wpcf7-submit').click(function() {
 		var thisClick = $(this), thisAction = thisClick.attr('data-action') ? thisClick.attr('data-action') : 'email', thisUrl = thisClick.attr('data-url');
-		if ( thisUrl ) { document.location = thisUrl; }
+		if ( thisUrl ) { 
+			gtag_report_conversion(thisUrl);
+			document.location = thisUrl; 
+		}
 		$.post({
 			url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
 			data : { action: "count_link_clicks", type: thisAction },
@@ -444,6 +447,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				
 				setTimeout( function() {						
 					activeAcc.removeClass('active').attr( 'aria-expanded', false ); 
+
 					thisAcc.addClass('active').attr( 'aria-expanded', true );
 				}, cssDelay);
 				
@@ -999,6 +1003,7 @@ if ( typeof parallaxBG !== 'function' ) {
 		if ( pageViews > pageLimit ) { 
 			initDelay = initDelay * speedFactor; 
 
+
 			mainDelay = mainDelay * speedFactor; 
 		}
 
@@ -1114,8 +1119,6 @@ if ( typeof parallaxBG !== 'function' ) {
 		$(this).removeClass("hover");
 		$currents.replaceClass( "dormant", "active" ); 
 	});		
-
-
 
 	var	$subCurrents = $(".main-navigation ul.sub-menu > li.current-menu-item, .main-navigation ul.sub-menu > li.current_page_item, .main-navigation ul.sub-menu > li.current-menu-parent, .main-navigation ul.sub-menu > li.current_page_parent, .main-navigation ul.sub-menu > li.current-menu-ancestor, .widget-navigation ul.sub-menu > li.current-menu-item, .widget-navigation ul.sub-menu > li.current_page_item, .widget-navigation ul.sub-menu > li.current-menu-parent, .widget-navigation ul.sub-menu > li.current_page_parent, .widget-navigation ul.sub-menu > li.current-menu-ancestor"); 
 	$subCurrents.addClass( "active" );

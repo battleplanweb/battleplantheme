@@ -6,9 +6,9 @@ $page = (get_query_var('paged')) ? get_query_var('paged') : 1;
 $offset = ($page - 1) * $number;
 $roles = array();
 $number = -1;
-$grid = "4e"; 
-$order = "asc";
-$orderby = "display_name"; // display_name, name, login, email, registered (date), post_count, ID
+$grid = "6e"; 
+$order = "desc";
+$orderby = "registered"; // display_name, name, login, email, registered (date), post_count, ID
 $valign = "stretch";
 $size = "thumbnail";
 $picSize = "100";
@@ -52,15 +52,18 @@ if ( !empty($profiles) ) :
   	foreach($profiles as $user) :
 		$profileID = $user->ID;	
 		
-		$buildList .= '[col]';
-		$buildList .= '<a href="/profile?user='.$profileID.'" class="link-archive link-profiles" ada-hidden="true"  tabindex="-1">';		
-		$buildList .= '[get-user user="'.$profileID.'" info="avatar"]';
-		$buildList .= '</a>';	
-		$buildList .= '<a href="/profile?user='.$profileID.'" class="link-archive link-profiles">';		
-		$buildList .= '<h3 class="user-name" data-count-tease='.$countTease.' data-count-view='.$countView.' data-id='.$profileID.'>';
-		$buildList .= '[get-user user="'.$profileID.'" info="first"] [get-user user="'.$profileID.'" info="last"]<br/>';
-		$buildList .= '<span class="user-roles">[get-user user="'.$profileID.'" info="role"]</span><br/>';			
-		$buildList .= '</h3></a>';
+		if ( $user->user_login != "battleplanweb" ) :		
+			$buildList .= '[col]';
+			$buildList .= '<a href="/profile?user='.$profileID.'" class="link-archive link-profiles" ada-hidden="true"  tabindex="-1">';		
+			$buildList .= '[get-user user="'.$profileID.'" info="avatar"]';
+			$buildList .= '</a>';	
+			$buildList .= '<a href="/profile?user='.$profileID.'" class="link-archive link-profiles">';		
+			$buildList .= '<h3 class="user-name" data-count-tease='.$countTease.' data-count-view='.$countView.' data-id='.$profileID.'>';
+			$buildList .= '[get-user user="'.$profileID.'" info="first"] [get-user user="'.$profileID.'" info="last"]<br/>';
+			$buildList .= '<span class="user-roles">[get-user user="'.$profileID.'" info="role"]</span><br/>';			
+			$buildList .= '</h3></a>';
+			$buildList .= '[/col]'; 
+		endif;
 		
 		/*
       <p><?php echo $userInfo->description; ?></p>
@@ -75,7 +78,6 @@ if ( !empty($profiles) ) :
     </li>
     <?php
 	*/
-		$buildList .= '[/col]'; 
 	endforeach;
 else:
  	$buildList .= '[col]<p>No profiles found.</p>[/col]';

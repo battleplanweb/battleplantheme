@@ -21,8 +21,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		// Get IP data
 			$.getJSON('https://ipapi.co/json/', function(data) {
 				userLoc = data["city"] + ", " + data["region_code"];
-				setCookie("user-loc",userLoc,'');
-				setCookie("page-views",pageViews,'');
+				setCookie("user-loc", userLoc, '');
+				//setCookie("pages-viewed", pageViews, '');
 				
 				function deg2rad(deg) { return deg * (Math.PI/180) }				
 				var userLat = data["latitude"], userLong = data["longitude"], R = 3958.8, dLat = deg2rad(siteLat-userLat), dLon = deg2rad(siteLong-userLong), a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(deg2rad(userLat)) * Math.cos(deg2rad(siteLat)) * Math.sin(dLon/2) * Math.sin(dLon/2), c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)), distance = R * c; 

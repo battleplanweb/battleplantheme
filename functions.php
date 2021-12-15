@@ -19,7 +19,7 @@
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.9.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.10' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -264,8 +264,7 @@ function battleplan_getRandomText($atts, $content = null) {
 	$printText = $textArray[$rand];
 	
 	if ( $rand == $num ) : $rand = 0; else: $rand++; endif;	
-	$cookieParam = array ( 'expires' => time() + (86400 * 7), 'secure' => true );	
-	if ( $cookie != "false" ) setcookie('random-text', $rand, $cookieParam);
+	if ( $cookie != "false" ) setcookie('random-text', $rand, time() + (86400 * 7), '/', '', true, false);
 
 	return $printText;
 }
@@ -1877,7 +1876,7 @@ function battleplan_addBodyClasses( $classes ) {
 	
 	if (!isset($_COOKIE['first-page'])) :
 		$classes[] = "first-page";
-		setcookie('first-page', 'no', '0', '/');
+		setcookie('first-page', 'no', '0', '/', '', true, false);
 	else:
 		$classes[] = "not-first-page";
 	endif;
@@ -1895,14 +1894,14 @@ function battleplan_calculatePagesViewed() {
   	if ( defined( 'DOING_AJAX' ) && DOING_AJAX ) return;
 	if (!isset($_COOKIE['unique-id'])) :
 		$uniqueID = time().rand();		
-		setcookie('unique-id', $uniqueID, '0', '/');
-		setcookie('pages-viewed', 1, '0', '/');
+		setcookie('unique-id', $uniqueID, '0', '/', '', true, false);
+		setcookie('pages-viewed', 1, '0', '/', '', true, false);
 	else:
 		$pageViews = $_COOKIE['pages-viewed'];		
-		if ( $_COOKIE['prev-page'] != _PAGE_SLUG ) :
+		if ( $_COOKIE['current-page'] != _PAGE_SLUG ) :
 			$pageViews++;
-			setcookie('pages-viewed', $pageViews, '0', '/');
-			setcookie('prev-page', _PAGE_SLUG, '0', '/');
+			setcookie('pages-viewed', $pageViews, '0', '/', '', true, false);
+			setcookie('current-page', _PAGE_SLUG, '0', '/', '', true, false);
 		endif;		
 	endif;	
 }	
@@ -2317,11 +2316,11 @@ function battleplan_scripts() {
 	if ( !is_mobile() ) { wp_enqueue_script( 'battleplan-script-desktop', get_template_directory_uri().'/js/script-desktop.js', array(), _BP_VERSION, false ); }
 	wp_enqueue_script( 'battleplan-script-essential', get_template_directory_uri().'/js/script-essential.js', array(), _BP_VERSION, false );				
 	wp_enqueue_script( 'battleplan-script-site', get_stylesheet_directory_uri().'/script-site.js', array(), _BP_VERSION, false );	
-	wp_enqueue_script( 'battleplan-script-tracking', get_template_directory_uri().'/js/script-tracking.js', array(), _BP_VERSION, false );
+	wp_enqueue_script( 'battleplan-script-tracking', get_template_directory_uri().'/js/script-tracking.js', array(), _BP_VERSION, false ); 
 	
-	//wp_enqueue_script( 'battleplan-script-cloudflare', get_template_directory_uri().'/js/script-cloudflares.js', array(), _BP_VERSION, false );
+	wp_enqueue_script( 'battleplan-script-cloudflare', get_template_directory_uri().'/js/script-cloudflare.js', array(), _BP_VERSION, false );
 	
-	wp_enqueue_script( 'battleplan-script-cloudflare', get_site_url().'/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js', array(), _BP_VERSION, false );
+	//wp_enqueue_script( 'battleplan-script-cloudflare', get_site_url().'/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js', array(), _BP_VERSION, false );
 	
 	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { wp_enqueue_script( 'battleplan-script-events', get_template_directory_uri().'/js/events.js', array(), _BP_VERSION, false ); } 
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_enqueue_script( 'battleplan-script-woocommerce', get_template_directory_uri().'/js/woocommerce.js', array(), _BP_VERSION, false ); } 
@@ -2425,7 +2424,7 @@ add_action( 'wp', 'battleplan_setHomeBtnCookie' );
 function battleplan_setHomeBtnCookie() {
 	if ( get_post_type() == "optimized" ) :
 		$homeURL = $_SERVER['REQUEST_URI'];
-		setcookie('home-url', $homeURL, '', '/'); 	
+		setcookie('home-url', $homeURL, '', '/', '', true, false);
 	endif;
 }
 
@@ -2562,7 +2561,7 @@ add_action( 'wpcf7_before_send_mail', 'battleplan_setupFormEmail', 10, 1 );
 function battleplan_setupFormEmail( $contact_form ) { 
 	$formMail = $contact_form->prop( 'mail' );
 	$userLoc = $_COOKIE['user-loc'];
-	$userViews = $_COOKIE['page-views'];
+	$userViews = $_COOKIE['pages-viewed'];
 	if ( $userViews == 1 ) : $userViews = "1 page"; else: $userViews = $userViews." pages"; endif;
 	$userAgent = $_SERVER['HTTP_USER_AGENT'];
 	$userDevice = is_mobile() ? "a mobile device" : "a desktop";
@@ -2594,7 +2593,7 @@ function battleplan_setupFormEmail( $contact_form ) {
 	$buildEmail .= '</p></div><div style="line-height:1.5; border-top: 1px solid #8a8a8a; color: #8a8a8a; margin-top:5em;"><p>Sent from the <em>'.get_the_title(url_to_postid($_SERVER['HTTP_REFERER'])).'</em> page on the website.</p>';	
 	
 	$buildEmail .= '<p>Sender viewed';
-	if ( $_COOKIE['page-views'] ) $buildEmail .= ' '.$userViews;
+	if ( $_COOKIE['pages-viewed'] ) $buildEmail .= ' '.$userViews;
 	$buildEmail .= ' using '.$userDevice.$userSystem;
 	if ( $userLoc ) $buildEmail .= ' near '.$userLoc;
 	$buildEmail .= '.<br/>';
@@ -2969,22 +2968,41 @@ function battleplan_loadFonts() {
 	echo $buildPreload;
 }
 
-// Install Google Tag Manager (analytics)
+// Install Google Global Site Tags
 add_action('bp_google_tag_manager', 'battleplan_load_tag_manager');
 function battleplan_load_tag_manager() { 
-	$buildTag = '';
 	$nonce = $GLOBALS['nonce'];
 	foreach ( $GLOBALS['customer_info']['google-tags'] as $gtag=>$value ) :	
-		$buildTag .= '<script nonce="'.$nonce.'" async src="https://www.googletagmanager.com/gtag/js?id='.$value.'"></script>';
-		$buildTag .= '<script nonce="'.$nonce.'" async>
-		window.dataLayer = window.dataLayer || [];
-		function gtag(){dataLayer.push(arguments);}
-		gtag("js", new Date());
-		gtag("config", "'.$value.'");		
-		</script>';	
+		if ( $gtag == "analytics" ) $mainAcct = $value;
+		if ( $gtag == "analytics" || $gtag == "ads" ) $buildTags .= 'gtag("config", "'.$value.'");';
+		if ( $gtag == "conversions" ) $gtagEvents[] = $value; 
 	endforeach;
 	
-	echo $buildTag;
+	$buildTagMgr .= '<script nonce="'.$nonce.'" async src="https://www.googletagmanager.com/gtag/js?id='.$mainAcct.'"></script>';
+	$buildTagMgr .= '<script nonce="'.$nonce.'" async>
+		window.dataLayer = window.dataLayer || [];
+		function gtag(){dataLayer.push(arguments);}
+		gtag("js", new Date());';
+	$buildTagMgr .= $buildTags;
+	$buildTagMgr .= '</script>';
+	
+	if ( $gtagEvents ) :
+		foreach ( $gtagEvents as $gtagEvent ) :	
+			$buildEvents .= "gtag('event', 'conversion', { 'send_to': '".$gtagEvent."', 'event_callback': callback });";  
+		endforeach;
+	
+		$buildTagMgr .= '<script nonce="'.$nonce.'">
+			function gtag_report_conversion(url) {
+  			var callback = function () {
+				if (typeof(url) != "undefined") {
+					window.location = url;
+				}
+  			};';
+		$buildTagMgr .= $buildEvents;
+		$buildTagMgr .= 'return false; }</script>';
+	endif;
+	
+	echo $buildTagMgr;
 }
 
 // Build and display desktop navigation menu
@@ -3208,7 +3226,7 @@ function battleplan_count_site_views_ajax() {
 			$newLocations = maybe_serialize( $getLocations );
 			updateMeta(_HEADER_ID, 'log-views-cities', $newLocations);
 	
-			setcookie('countVisit', 'no', time() + 600, "/"); 
+			setcookie('countVisit', 'no', time() + 600, "/", '', true, false);
 	
 			$response = array( 'result' => 'Site View counted: Today='.$viewsToday.', Week='.$views7Day.', Month='.$views30Day.', Quarter='.$views90Day.', Year= '.$views365Day);
 		else:

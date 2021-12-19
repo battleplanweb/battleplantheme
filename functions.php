@@ -19,7 +19,7 @@
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.10' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.10.1' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -3159,13 +3159,13 @@ function battleplan_count_site_views_ajax() {
 	if ( !is_array($getViews) ) $getViews = array();
 	$viewsToday = $views7Day = $views30Day = $views90Day = $views180Day = $views365Day = $searchToday = intval(0); 
 	
-			$userIP = 'Time: '.$rightNow.' Site: '.battleplan_getDomainName().' Location: '.$userLoc.' IP: <a href="https://whatismyipaddress.com/ip/'.$_SERVER["REMOTE_ADDR"].'">'.$_SERVER["REMOTE_ADDR"].'</a><br/>';
+			/*$userIP = 'Time: '.$rightNow.' Site: '.battleplan_getDomainName().' Location: '.$userLoc.' IP: <a href="https://whatismyipaddress.com/ip/'.$_SERVER["REMOTE_ADDR"].'">'.$_SERVER["REMOTE_ADDR"].'</a><br/>';
 			$getIPs = readMeta(_HEADER_ID, 'log-views-ips');
 			$getIPs = maybe_unserialize( $getIPs );
 			if ( !is_array($getIPs) ) $getIPs = array();
 			array_unshift($getIPs, $userIP);
 			$newIPs = maybe_serialize( $getIPs );
-			updateMeta(_HEADER_ID, 'log-views-ips', $newIPs);			
+			updateMeta(_HEADER_ID, 'log-views-ips', $newIPs);		*/	
 		
 	if ( _BP_COUNT_ALL_VISITS == "override" || ( _USER_LOGIN != 'battleplanweb' && $userLoc != "Ashburn, VA" && ( $userValid == "true" || _BP_COUNT_ALL_VISITS == "true" )) ) :
 		if(!isset($_COOKIE['countVisit'])) :

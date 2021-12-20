@@ -448,6 +448,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				setTimeout( function() {						
 					activeAcc.removeClass('active').attr( 'aria-expanded', false ); 
 
+
+
 					thisAcc.addClass('active').attr( 'aria-expanded', true );
 				}, cssDelay);
 				

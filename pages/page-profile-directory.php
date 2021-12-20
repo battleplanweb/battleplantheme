@@ -59,7 +59,7 @@ if ( !empty($profiles) ) :
 			$buildList .= '</a>';	
 			$buildList .= '<a href="/profile?user='.$profileID.'" class="link-archive link-profiles">';		
 			$buildList .= '<h3 class="user-name" data-count-tease='.$countTease.' data-count-view='.$countView.' data-id='.$profileID.'>';
-			$buildList .= '[get-user user="'.$profileID.'" info="first"] [get-user user="'.$profileID.'" info="last"]<br/>';
+			$buildList .= '[get-user user="'.$profileID.'" info="nickname"] [get-user user="'.$profileID.'" info="last"]<br/>';
 			$buildList .= '<span class="user-roles">[get-user user="'.$profileID.'" info="role"]</span><br/>';			
 			$buildList .= '</h3></a>';
 			$buildList .= '[/col]'; 

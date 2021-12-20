@@ -145,6 +145,7 @@ function battleplan_getUploadBtn($atts, $content = null) {
 
 					$pid = wp_insert_post($new_post);	
 					$accessAllowed = get_user_meta( $userID, 'access-allowed', true);
+					if ( !is_array($accessAllowed) ) $accessAllowed = array();
 					array_push($accessAllowed, $pid);
 					update_user_meta( $userID, 'access-allowed', $accessAllowed, false );	
 

@@ -19,7 +19,7 @@
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.10.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.10.2' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -2919,7 +2919,7 @@ function battleplan_doChrons() {
 	$bpChrons = get_option( 'bp_chrons_last_run' );	
 	$timePast = time() - $bpChrons;
 		
-	if ( $timePast > $chronSpan || get_option('bp_setup_2021_12_05') != "completed" ) :	
+	if ( $timePast > $chronSpan || get_option('bp_setup_2021_12_20') != "completed" ) :	
 		require_once get_template_directory().'/functions-chron-jobs.php';	
 	endif;	
 }
@@ -3327,7 +3327,7 @@ add_action( 'wp_ajax_count_link_clicks', 'battleplan_count_link_clicks_ajax' );
 add_action( 'wp_ajax_nopriv_count_link_clicks', 'battleplan_count_link_clicks_ajax' );
 function battleplan_count_link_clicks_ajax() {
 	$type = $_POST['type'];	
-	$thisYear = strtotime(date("Y"));		
+	$thisYear = date("Y");		
 
 	if ( $type == "phone call" ) : $getType = 'call-clicks';
 	elseif ( $type == "email" ) : $getType = 'email-clicks';

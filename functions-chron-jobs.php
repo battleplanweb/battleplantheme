@@ -25,82 +25,20 @@ endif;
 		
 // Contact Form 7 Settings Update
 if ( is_plugin_active('contact-form-7/wp-contact-form-7.php') ) : 
-$forms = get_posts( array ( 'numberposts'=>-1, 'post_type'=>'wpcf7_contact_form' ));
-foreach ( $forms as $form ) :
-	$formID = $form->ID;
-	$formMail = readMeta( $formID, "_mail" );
-	$formB = $formMail['body'];
-	$formC = readMeta( $formID, "_form" );
-	
-	$formC = str_replace('<label for="user-name">Name<span class="required"></span></label>[text* user-name akismet:author id:user-name ]', "[seek label='Name' id='user-name' req='true'][text* user-name id:user-name akismet:author][/seek]", $formC);
-	
-	$formC = str_replace('<label for="user-city">City</label>[text user-city id:user-city]', "[seek label='City' id='user-city'][text user-city id:user-city][/seek]", $formC);	
-
-	$formC = str_replace('<label for="user-email">Email<span class="required"></span></label>[email* user-email akismet:email id:user-email]', "[seek label='Email' id='user-email' req='true'][email* user-email id:user-email akismet:email][/seek]", $formC);	
-
-	$formC = str_replace('<label for="user-phone">Phone</label>[tel user-phone id:user-phone placeholder "xxx-xxx-xxxx" ]', "[seek label='Phone' id='user-phone' req='true'][tel* user-phone id:user-phone][/seek]", $formC);	
-
-	$formC = str_replace('<label for="user-message" class="full-width">What are your service needs?<span class="required"></span></label>[text* user-message class:full-width id:user-message]', "[seek label='How can we help?' id='user-message' width='full'][text user-message id:user-message][/seek]", $formC);	
-
-	$formC = str_replace('<div class="vc_clearfix"></div>', "[seek label='button'][submit 'Submit'][/seek]", $formC);	
-	$formC = str_replace('<div class="block block-button block-100">[submit "Submit"]</div>', "", $formC);	
-
-	$formC = str_replace('<label for="user-message">Your Message</label>', "[layout grid='3-3-2']
-", $formC);	
-
-	$formC = str_replace('    [textarea user-message id:user-message]'
-, "[seek label='Name' id='user-name' req='true'][text* user-name id:user-name akismet:author][/seek]", $formC);
-
-	$formC = str_replace('    [text* user-name akismet:author id:user-name]', "[seek label='Phone' id='user-phone' req='true'][tel* user-phone id:user-phone][/seek]", $formC);		
-		
-	$formC = str_replace('<label for="user-email">Email<span class="required"></span></label>', "[/layout]
-", $formC);	
-
-	$formC = str_replace('    [email* user-email akismet:email id:user-email]', "[seek label='Message' id='user-message' width='full'][textarea user-message id:user-message][/seek]", $formC);		
-
-	$formC = str_replace('<label for="user-phone">Phone</label>', "[seek label='button'][submit 'Submit'][/seek]", $formC);	
-	$formC = str_replace('    [tel user-phone id:user-phone placeholder "xxx-xxx-xxxx"]', "", $formC);	
-	$formC = str_replace('<div class="block block-button block-100">[submit "Submit"]</div>', "", $formC);
-	
-	$formC = str_replace('<label for="user-name">Name<span class="required"></span></label>', "[seek label='Email' id='user-email' req='true'][email* user-email id:user-email akismet:email][/seek]", $formC);	
-	
-	
-	$formB = str_replace('Phone: [user-phone]', 'Email2: [user-email2]', $formB);	
-	$formB = str_replace('Email: [user-email]', 'Phone: [user-phone]', $formB);	
-	$formB = str_replace('Email2: [user-email2]', 'Email: [user-email]', $formB);
-	$formB = str_replace('[user-message]', 'Message:
-[user-message]', $formB);
-	$formB = str_replace('--', '', $formB);
-	$formB = str_replace('This e-mail was sent from the "Contact Us" page on the website.', '', $formB);
-	$formB = str_replace('This e-mail was sent from the "Quote Request" form on the website.', '', $formB);
-	
-	$formB = str_replace('Service needs: Message:
-[user-message]', 'How can we help?
-[user-message]', $formB);
-
-	$formMail = array( "subject"=>"", "sender"=>"", "recipient"=>"[get-biz info='email']", "body"=>$formB, "additional_headers"=>"", "attachments"=>"", "use_html"=>0, "exclude_blank"=>1);	
-
-	updateMeta( $formID, "_form", $formC );				
-	updateMeta( $formID, "_mail", $formMail );	
-	deleteMeta ( $formID, "_mail_2" );			 
-
-endforeach;	
 	$forms = get_posts( array ( 'numberposts'=>-1, 'post_type'=>'wpcf7_contact_form' ));
 	foreach ( $forms as $form ) :
 		$formID = $form->ID;
 		$formMail = readMeta( $formID, "_mail" );
+		//$formB = $formMail['body'];
 		$formTitle = get_the_title($formID);
-		if ( strpos( strtolower($formTitle), 'contact' ) !== false) $formTitle = "Customer Contact";
-		if ( strpos( strtolower($formTitle), 'quote' ) !== false) $formTitle = "Quote Request";		
-		 
+	
 		$formMail['subject'] = $formTitle." · Website · ".$GLOBALS['customer_info']['name'];
 		$formMail['sender'] = "[user-name] <email@admin.".do_shortcode('[get-domain-name ext="true"]').">";
 		$formMail['additional_headers'] = "Reply-to: [user-name] <[user-email]>\nCc: Website Administrator <email@battleplanwebdesign.com>";
-		$formMail['use_html'] = 0;
+		$formMail['use_html'] = 1;
 		$formMail['exclude_blank'] = 1;
 
 		updateMeta( $formID, "_mail", $formMail );	
-		deleteMeta ( $formID, "_mail_2" );
 	endforeach;
 endif;
 
@@ -208,31 +146,12 @@ if ( is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') ) :
 	$wpSEOLocal['hide_opening_hours'] = 'on';
 	$wpSEOLocal['address_format'] = 'address-state-postal';	
 
-	delete_option( 'wpmudev_recommended_plugins_registered');			
-	delete_option( 'wphb_settings');
-	delete_option( 'smush_global_stats');
-	delete_option( 'dir_smush_stats');
-	delete_option( 'theia-upload-cleaner-progress-file');
-	delete_option( 'wprmenu_options');
-	delete_option( 'wr2x_rating_date');
-	delete_option( 'wphb-notice-uptime-info-show');
-	delete_option( 'wphb_version');
-	delete_option( 'wphb-new-user-tour');
-	delete_option( 'wphb-notice-http2-info-show');
-	delete_option( 'wphb_styles_collection');
-	delete_option( 'wphb_scripts_collection');
-	delete_option( 'wpmudev_recommended_plugins_registered');
-
 	update_option( 'auto_update_core_dev', 'enabled' );
 	update_option( 'auto_update_core_minor', 'enabled' );
 	update_option( 'auto_update_core_major', 'enabled' );			
 endif;
 
 // Basic Settings		
-$sidebars_widgets = get_option( 'sidebars_widgets' );
-$sidebars_widgets['wp_inactive_widgets'] = array();
-update_option( 'sidebars_widgets', $sidebars_widgets );
-
 update_option( 'blogname', $GLOBALS['customer_info']['name'] );
 update_option( 'blogdescription', $GLOBALS['customer_info']['city'].', '.$GLOBALS['customer_info']['state-abbr'] );
 update_option( 'admin_email', 'info@battleplanwebdesign.com' );
@@ -250,8 +169,13 @@ battleplan_delete_prefixed_options( 'wp-smush-' );
 battleplan_delete_prefixed_options( 'wp_smush_' );
 battleplan_delete_prefixed_options( 'client_' );
 
-delete_option( 'bp_setup_2021_08_15' );
-update_option( 'bp_setup_2021_12_05', 'completed' );
+if ( get_option('bp_setup_2021_12_20') != "completed" ) :	
+	deleteMeta( get_page_by_path('site-header', OBJECT, 'elements')->ID, 'call-clicks' );
+	deleteMeta( get_page_by_path('site-header', OBJECT, 'elements')->ID, 'email-clicks' );
+endif;	
+
+delete_option( 'bp_setup_2021_12_05' );
+update_option( 'bp_setup_2021_12_20', 'completed' );
 
 update_option( 'bp_chrons_last_run', time() );			
 

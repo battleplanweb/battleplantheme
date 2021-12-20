@@ -9,6 +9,7 @@ $number = -1;
 $grid = "6e"; 
 $order = "desc";
 $orderby = "registered"; // display_name, name, login, email, registered (date), post_count, ID
+$displayInfo = array ( 'display name', 'role' ); // 'display name', 'nickname', 'username', 'login', 'first name', 'last name', 'email', 'role'
 $valign = "stretch";
 $size = "thumbnail";
 $picSize = "100";
@@ -58,9 +59,10 @@ if ( !empty($profiles) ) :
 			$buildList .= '[get-user user="'.$profileID.'" info="avatar"]';
 			$buildList .= '</a>';	
 			$buildList .= '<a href="/profile?user='.$profileID.'" class="link-archive link-profiles">';		
-			$buildList .= '<h3 class="user-name" data-count-tease='.$countTease.' data-count-view='.$countView.' data-id='.$profileID.'>';
-			$buildList .= '[get-user user="'.$profileID.'" info="nickname"] [get-user user="'.$profileID.'" info="last"]<br/>';
-			$buildList .= '<span class="user-roles">[get-user user="'.$profileID.'" info="role"]</span><br/>';			
+			$buildList .= '<h3 class="user-name" data-count-tease='.$countTease.' data-count-view='.$countView.' data-id='.$profileID.'>';			
+			foreach ($displayInfo as $display) :
+				$buildList .= '<span class="display-'.$display.'">[get-user user="'.$profileID.'" info="'.$display.'"]</span><br/>';
+			endforeach;
 			$buildList .= '</h3></a>';
 			$buildList .= '[/col]'; 
 		endif;

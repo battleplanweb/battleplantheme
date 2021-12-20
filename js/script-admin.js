@@ -79,6 +79,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			$('.sui-box-body').css({'display':'block'});
 			$('.wds-focus-keyword').css({'display':'block'});
 		});
-	}, 1000);	
+	}, 1000);		
 	
 })(jQuery); });

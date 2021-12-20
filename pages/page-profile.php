@@ -13,14 +13,14 @@ $profileDisplay = do_shortcode('[get-user user="'.$profileVar.'" info="display"]
 $profileNickname = do_shortcode('[get-user user="'.$profileVar.'" info="nickname"]');
 $profileUsername = do_shortcode('[get-user user="'.$profileVar.'" info="username"]');
 $profileAvatar = do_shortcode('[get-user user="'.$profileVar.'" info="avatar"]');
-$profileDesc = get_the_author_meta( 'description', $profileID );
-$profileEmail = get_the_author_meta( 'user_email', $profileID );
-$profileFacebook = get_the_author_meta( 'facebook', $profileID );
-$profileTwitter = get_the_author_meta( 'twitter', $profileID );
-$profileInstagram = get_the_author_meta( 'instagram', $profileID );
-$profileLinkedIn = get_the_author_meta( 'linkedin', $profileID );
-$profilePinterest = get_the_author_meta( 'pinterest', $profileID );
-$profileYouTube = get_the_author_meta( 'youtube', $profileID );
+$profileDesc = wp_kses_post(get_the_author_meta( 'description', $profileID ));
+$profileEmail = esc_url(get_the_author_meta( 'user_email', $profileID ));
+$profileFacebook = esc_url(get_the_author_meta( 'facebook', $profileID ));
+$profileTwitter = esc_url(get_the_author_meta( 'twitter', $profileID ));
+$profileInstagram = esc_url(get_the_author_meta( 'instagram', $profileID ));
+$profileLinkedIn = esc_url(get_the_author_meta( 'linkedin', $profileID ));
+$profilePinterest = esc_url(get_the_author_meta( 'pinterest', $profileID ));
+$profileYouTube = esc_url(get_the_author_meta( 'youtube', $profileID ));
 if ( $profileEmail ) $profileEmailBtn = do_shortcode('[social-btn type="email" link="'.$profileEmail.'"]');
 if ( $profileFacebook ) $profileFacebookBtn = do_shortcode('[social-btn type="facebook" link="'.$profileFacebook.'"]');
 if ( $profileTwitter ) $profileTwitterBtn = do_shortcode('[social-btn type="twitter" link="'.$profileTwitter.'"]');
@@ -33,7 +33,7 @@ if ( $profileYouTube ) $profileYouTubeBtn = do_shortcode('[social-btn type="yout
 if ( $currUser == true ) : $printPage = '<h1>Your Profile</h1>';	
 else: $printPage = '<h1>User Profile</h1>'; endif;
  
-$printPage .= '[section name="'.$profileUsername.'-user-info" class="user-profile-section" grid="1-auto"]';
+$printPage .= '[section name="'.$profileUsername.'-user-info" class="user-profile-section" grid="auto-1"]';
 
 if (function_exists('battleplan_userProfileAvatar')) : $printPage .= battleplan_userProfileAvatar($profileID, $currUser);
 else :

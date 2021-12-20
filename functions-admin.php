@@ -83,6 +83,16 @@ function battleplan_column_settings() {
 						'name'=>'image',
 						'label_type'=>''
 					),
+					'image-id'=>array(
+						'type'=>'column-mediaid',
+						'label'=>'ID',
+						'width'=>'100',
+						'width_unit'=>'px',
+						'sort'=>'on',
+						'name'=>'image-id',
+						'label_type'=>'',
+						'search'=>'on'
+					),
 					'filename'=>array(
 						'type'=>'column-file_name',
 						'label'=>'Filename',
@@ -121,16 +131,6 @@ function battleplan_column_settings() {
 						'name'=>'date',
 						'label_type'=>'',
 						'search'=>'on',
-					),
-					'image-id'=>array(
-						'type'=>'column-mediaid',
-						'label'=>'ID',
-						'width'=>'100',
-						'width_unit'=>'px',
-						'sort'=>'on',
-						'name'=>'image-id',
-						'label_type'=>'',
-						'search'=>'on'
 					),
 					'taxonomy-image-categories'=>array(
 						'type'=>'taxonomy-image-categories',
@@ -357,6 +357,20 @@ function battleplan_column_settings() {
 		ac_register_columns( 'elements', array(
 			array(
 				'columns'=>array(
+					'post-id'=>array(
+						'type'=>'column-postid',
+						'label'=>'ID',
+						'width'=>'60',
+						'width_unit'=>'px',
+						'before'=>'',
+						'after'=>'',
+						'sort'=>'on',
+						'filter'=>'on',
+						'filter_label'=>'',
+						'name'=>'post-id',
+						'label_type'=>'',
+						'search'=>'on'
+					),
 					'title'=>array(
 						'type'=>'title',
 						'label'=>'Page',
@@ -376,20 +390,6 @@ function battleplan_column_settings() {
 						'edit'=>'on',
 						'sort'=>'on',
 						'name'=>'slug',
-						'label_type'=>'',
-						'search'=>'on'
-					),
-					'post-id'=>array(
-						'type'=>'column-postid',
-						'label'=>'ID',
-						'width'=>'60',
-						'width_unit'=>'px',
-						'before'=>'',
-						'after'=>'',
-						'sort'=>'on',
-						'filter'=>'on',
-						'filter_label'=>'',
-						'name'=>'post-id',
 						'label_type'=>'',
 						'search'=>'on'
 					),
@@ -451,6 +451,20 @@ function battleplan_column_settings() {
 		ac_register_columns( 'page', array(
 			array(
 				'columns'=>array(
+					'post-id'=>array(
+						'type'=>'column-postid',
+						'label'=>'ID',
+						'width'=>'100',
+						'width_unit'=>'px',
+						'before'=>'',
+						'after'=>'',
+						'sort'=>'on',
+						'filter'=>'on',
+						'filter_label'=>'',
+						'name'=>'post-id',
+						'label_type'=>'',
+						'search'=>'on'
+					),
 					'title'=>array(
 						'type'=>'title',
 						'label'=>'Page',
@@ -470,20 +484,6 @@ function battleplan_column_settings() {
 						'edit'=>'on',
 						'sort'=>'on',
 						'name'=>'slug',
-						'label_type'=>'',
-						'search'=>'on'
-					),
-					'post-id'=>array(
-						'type'=>'column-postid',
-						'label'=>'ID',
-						'width'=>'100',
-						'width_unit'=>'px',
-						'before'=>'',
-						'after'=>'',
-						'sort'=>'on',
-						'filter'=>'on',
-						'filter_label'=>'',
-						'name'=>'post-id',
 						'label_type'=>'',
 						'search'=>'on'
 					),
@@ -591,18 +591,7 @@ function battleplan_column_settings() {
 						'name'=>'featured-image',
 						'label_type'=>'',
 						'search'=>'on'
-					),
-					'title'=>array(
-						'type'=>'title',
-						'label'=>'Name',
-						'width'=>'200',
-						'width_unit'=>'px',
-						'edit'=>'on',
-						'sort'=>'on',
-						'name'=>'title',
-						'label_type'=>'',
-						'search'=>'on'
-					),		
+					),	
 					'post-id'=>array(
 						'type'=>'column-postid',
 						'label'=>'ID',
@@ -617,6 +606,17 @@ function battleplan_column_settings() {
 						'label_type'=>'',
 						'search'=>'on'
 					),
+					'title'=>array(
+						'type'=>'title',
+						'label'=>'Name',
+						'width'=>'200',
+						'width_unit'=>'px',
+						'edit'=>'on',
+						'sort'=>'on',
+						'name'=>'title',
+						'label_type'=>'',
+						'search'=>'on'
+					),	
 					'date-published'=>array(
 						'type'=>'column-date_published',
 						'label'=>'Published',
@@ -744,6 +744,20 @@ function battleplan_column_settings() {
 						'label_type'=>'',
 						'search'=>'on'
 					),
+					'post-id'=>array(
+						'type'=>'column-postid',
+						'label'=>'ID',
+						'width'=>'100',
+						'width_unit'=>'px',
+						'before'=>'',
+						'after'=>'',
+						'sort'=>'on',
+						'filter'=>'on',
+						'filter_label'=>'',
+						'name'=>'post-id',
+						'label_type'=>'',
+						'search'=>'on'
+					),
 					'title'=>array(
 						'type'=>'title',
 						'label'=>'Title',
@@ -763,20 +777,6 @@ function battleplan_column_settings() {
 						'edit'=>'on',
 						'sort'=>'on',
 						'name'=>'slug',
-						'label_type'=>'',
-						'search'=>'on'
-					),
-					'post-id'=>array(
-						'type'=>'column-postid',
-						'label'=>'ID',
-						'width'=>'100',
-						'width_unit'=>'px',
-						'before'=>'',
-						'after'=>'',
-						'sort'=>'on',
-						'filter'=>'on',
-						'filter_label'=>'',
-						'name'=>'post-id',
 						'label_type'=>'',
 						'search'=>'on'
 					),
@@ -867,6 +867,20 @@ function battleplan_column_settings() {
 		ac_register_columns( 'optimized', array(
 			array(
 				'columns'=>array(
+					'post-id'=>array(
+						'type'=>'column-postid',
+						'label'=>'ID',
+						'width'=>'100',
+						'width_unit'=>'px',
+						'before'=>'',
+						'after'=>'',
+						'sort'=>'on',
+						'filter'=>'on',
+						'filter_label'=>'',
+						'name'=>'post-id',
+						'label_type'=>'',
+						'search'=>'on'
+					),
 					'title'=>array(
 						'type'=>'title',
 						'label'=>'Page',
@@ -886,20 +900,6 @@ function battleplan_column_settings() {
 						'edit'=>'on',
 						'sort'=>'on',
 						'name'=>'slug',
-						'label_type'=>'',
-						'search'=>'on'
-					),
-					'post-id'=>array(
-						'type'=>'column-postid',
-						'label'=>'ID',
-						'width'=>'100',
-						'width_unit'=>'px',
-						'before'=>'',
-						'after'=>'',
-						'sort'=>'on',
-						'filter'=>'on',
-						'filter_label'=>'',
-						'name'=>'post-id',
 						'label_type'=>'',
 						'search'=>'on'
 					),
@@ -1013,6 +1013,20 @@ function battleplan_column_settings() {
 								'label_type'=>'',
 								'search'=>'on'
 							),
+							'post-id'=>array(
+								'type'=>'column-postid',
+								'label'=>'ID',
+								'width'=>'100',
+								'width_unit'=>'px',
+								'before'=>'',
+								'after'=>'',
+								'sort'=>'on',
+								'filter'=>'on',
+								'filter_label'=>'',
+								'name'=>'post-id',
+								'label_type'=>'',
+								'search'=>'on'
+							),
 							'title'=>array(
 								'type'=>'title',
 								'label'=>'Title',
@@ -1032,20 +1046,6 @@ function battleplan_column_settings() {
 								'edit'=>'on',
 								'sort'=>'on',
 								'name'=>'column-slug',
-								'label_type'=>'',
-								'search'=>'on'
-							),
-							'post-id'=>array(
-								'type'=>'column-postid',
-								'label'=>'ID',
-								'width'=>'100',
-								'width_unit'=>'px',
-								'before'=>'',
-								'after'=>'',
-								'sort'=>'on',
-								'filter'=>'on',
-								'filter_label'=>'',
-								'name'=>'post-id',
 								'label_type'=>'',
 								'search'=>'on'
 							),
@@ -1165,17 +1165,6 @@ function battleplan_column_settings() {
 								'label_type'=>'',
 								'search'=>'on'
 							),
-							'title'=>array(
-								'type'=>'title',
-								'label'=>'Title',
-								'width'=>'200',
-								'width_unit'=>'px',
-								'edit'=>'on',
-								'sort'=>'on',
-								'name'=>'title',
-								'label_type'=>'',
-								'search'=>'on'
-							),
 							'post-id'=>array(
 								'type'=>'column-postid',
 								'label'=>'ID',
@@ -1187,6 +1176,17 @@ function battleplan_column_settings() {
 								'filter'=>'on',
 								'filter_label'=>'',
 								'name'=>'post-id',
+								'label_type'=>'',
+								'search'=>'on'
+							),
+							'title'=>array(
+								'type'=>'title',
+								'label'=>'Title',
+								'width'=>'200',
+								'width_unit'=>'px',
+								'edit'=>'on',
+								'sort'=>'on',
+								'name'=>'title',
 								'label_type'=>'',
 								'search'=>'on'
 							),

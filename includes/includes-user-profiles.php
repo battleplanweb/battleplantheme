@@ -81,6 +81,8 @@ function battleplan_save_data( $user_id ) {
 			$userInviteCodesNew = array_merge($userInviteCodes, $newCodes);
 			update_user_meta( $user_id, 'user_invite_codes', $userInviteCodesNew, false );	
 			update_option( 'site_login', array ( 'invite_code'=>$siteInviteCodesNew ));
+			update_user_meta( $user_id, 'access-allowed', '', false );	
+			update_user_meta( $user_id, 'log', '', false );	
 		endif;	
 	
 	endif;	
@@ -143,12 +145,13 @@ function battleplan_getUploadBtn($atts, $content = null) {
 				else :
 					$new_post = array ( 'post_title' => $galleryName, 'post_content' => '', 'post_status' => 'publish', 'post_type' => 'galleries', 'post_author' => $userID, 'post_category' => '' );
 
-					$pid = wp_insert_post($new_post);	
+					$pid = wp_insert_post($new_post);
+					
 					$accessAllowed = get_user_meta( $userID, 'access-allowed', true);
 					if ( !is_array($accessAllowed) ) $accessAllowed = array();
 					array_push($accessAllowed, $pid);
 					update_user_meta( $userID, 'access-allowed', $accessAllowed, false );	
-
+					
 					$num=1;
 					foreach ($files['name'] as $key => $value) :    
 						if ($files['name'][$key]) :

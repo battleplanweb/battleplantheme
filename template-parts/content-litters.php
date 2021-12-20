@@ -28,6 +28,7 @@ $damHips = esc_attr(get_post_meta( $damID, 'hips', true ));
 $damElbows = esc_attr(get_post_meta( $damID, 'elbows', true ));
 $damEyes = esc_attr(get_post_meta( $damID, 'eyes', true ));
 $litterStatus = esc_attr(get_field( "litter_status" ));
+$birthDate = esc_attr(get_field( "birth_date" ));
 $readyDate = esc_attr(get_field( "ready_date" ));
 $price = esc_attr(get_field( "price" ));
 $deposit = esc_attr(get_field( "deposit" ));
@@ -66,12 +67,20 @@ $modDate = the_modified_date( 'F Y', '', '', FALSE);
 		$buildLitter = do_shortcode('[col class="col-litters"]'.$setupSire.$setupCenter.$setupDam.'[/col]'); 		
 
 		$buildLitter .= '<ul class="litter-details"><h4>Litter Details</h4>';
-		if ( $litterStatus == "Expecting" ) : $buildLitter .= '<li><span class="label">Expected: </span>'.date('F Y', strtotime($readyDate)).'</li>';		
-		elseif ( date('F j, Y') > $readyDate ) : $buildLitter .= '<li><span class="label">Ready: </span>'.$readyDate.'</li>'; 		
-		else : $buildLitter .= '<li><span class="label">Available Now</li>'; endif;
+		
 		if ( $price ) : $buildLitter .= '<li><span class="label">Price: </span>$'.number_format($price, 0, ".", ",").' <span style="font-size:70%;">+ Sales Tax</span></li>';
 		else: $buildLitter .= "Call For Price"; endif;
-		if ( $deposit ) : $buildLitter .= '<li><span class="label">Deposit: </span>$'.number_format($deposit, 0, ".", ","); endif;
+		
+		if ( $deposit && $litterStatus == "Expecting" ) : $buildLitter .= '<li><span class="label">Deposit: </span>$'.number_format($deposit, 0, ".", ","); endif;
+		
+		if ( $litterStatus == "Expecting" ) : 
+			$buildLitter .= '<li><span class="label">Expected: </span>'.date('F Y', strtotime($birthDate)).'</li>';	
+		else: 
+			$buildLitter .= '<li><span class="label">Born: </span>'.date('F j, Y', strtotime($birthDate)).'</li>';			
+			if ( date('F j, Y') < $readyDate ) : $buildLitter .= '<li><span class="label">Ready: </span>'.$readyDate.'</li>'; 		
+			else : $buildLitter .= '<li><span class="label">Ready To Go Home</li>'; 
+			endif;
+		endif;
 		
 		$singleContent = wp_kses_post(get_the_content());
 		if ( $singleContent ) $buildLitter .= do_shortcode('[p]'.$singleContent.'[/p]');

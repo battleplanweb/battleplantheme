@@ -31,6 +31,9 @@ if ( is_plugin_active('contact-form-7/wp-contact-form-7.php') ) :
 		$formMail = readMeta( $formID, "_mail" );
 		//$formB = $formMail['body'];
 		$formTitle = get_the_title($formID);
+		
+		if ( $formTitle == "Quote Request Form" ) $formTitle = "Quote Request";
+		if ( $formTitle == "Contact Us Form" ) $formTitle = "Customer Contact";		
 	
 		$formMail['subject'] = $formTitle." · Website · ".$GLOBALS['customer_info']['name'];
 		$formMail['sender'] = "[user-name] <email@admin.".do_shortcode('[get-domain-name ext="true"]').">";

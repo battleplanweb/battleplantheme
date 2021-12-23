@@ -148,10 +148,6 @@ if ( is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') ) :
 	$wpSEOLocal['location_coords_long'] = $GLOBALS['customer_info']['long'];
 	$wpSEOLocal['hide_opening_hours'] = 'on';
 	$wpSEOLocal['address_format'] = 'address-state-postal';	
-
-	update_option( 'auto_update_core_dev', 'enabled' );
-	update_option( 'auto_update_core_minor', 'enabled' );
-	update_option( 'auto_update_core_major', 'enabled' );			
 endif;
 
 // Basic Settings		
@@ -163,6 +159,10 @@ update_option( 'default_comment_status', 'closed' );
 update_option( 'default_ping_status', 'closed' );
 update_option( 'permalink_structure', '/%postname%/' );
 update_option( 'wpe-rand-enabled', '1' );
+
+update_option( 'auto_update_core_dev', 'enabled' );
+update_option( 'auto_update_core_minor', 'enabled' );
+update_option( 'auto_update_core_major', 'enabled' );			
 
 battleplan_delete_prefixed_options( 'ac_cache_data_' );
 battleplan_delete_prefixed_options( 'ac_cache_expires_' );

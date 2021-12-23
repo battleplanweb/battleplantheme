@@ -19,7 +19,7 @@
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.10.3' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.11' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -559,11 +559,14 @@ function battleplan_getBuildArchive($atts, $content = null) {
 					$all_attachments = get_posts( array( 'post_type'=>'attachment', 'post_mime_type'=>'image', 'post_parent'=>get_the_ID(), 'post_status'=>'published', 'numberposts'=>-1 ) );
 					$count = count($all_attachments); 						
 				endif;	
-				if ( $count == "" ) $count = 0;
-				$subline = sprintf( _n( '%s Photo', '%s Photos', $count, 'battleplan' ), number_format($count) );
-				if ( $link != "false" ) $archiveBody .= '<a href="'.esc_url(get_the_permalink()).'" class="link-archive link-'.get_post_type().'" aria-hidden="true" tabindex="-1">';
-				$archiveBody .= '<p class="gallery-subtitle">'.$subline.'</p>';
-				if ( $link != "false" ) $archiveBody .= '</a>'; 	
+				if ( $count != "" ) :
+					$subline = sprintf( _n( '%s Photo', '%s Photos', $count, 'battleplan' ), number_format($count) );
+					$archiveBody .= '<div class="photo-count">';
+					if ( $link != "false" ) $archiveBody .= '<a href="'.esc_url(get_the_permalink()).'" class="link-archive link-'.get_post_type().'" aria-hidden="true" tabindex="-1">';
+					$archiveBody .= '<p class="gallery-subtitle">'.$subline.'</p>';
+					if ( $link != "false" ) $archiveBody .= '</a>';
+					$archiveBody .= '</div>';
+				endif;
 			endif;
 		endif;
 	}
@@ -2089,7 +2092,7 @@ function battleplan_meta_date() {
 function battleplan_meta_author($link='false') {
 	$byline = sprintf ( esc_html_x( '%s', 'post author', 'battleplan' ), '<span class="author vcard">'.esc_html( get_the_author() ).'</span>' );	
 	$printByline = '<span class="meta-author">';
-	if ( $link == 'profile' ) $printByline .= '<a href="/profile/?user='.esc_html( get_the_author() ).'">';	
+	if ( $link == 'profile' ) $printByline .= '<a class="author-link" href="/profile/?user='.esc_html( get_the_author() ).'">';	
 	$printByline .= '<i class="fas fa-user"></i>'.$byline;
 	if ( $link == 'profile' ) $printByline .= '</a>';	
 	$printByline .= '</span>';
@@ -2296,6 +2299,9 @@ function battleplan_header_styles() {
 	if ( is_plugin_active( 'cue/cue.php' ) ) { wp_enqueue_style( 'battleplan-cue', get_template_directory_uri()."/cue.css", array(), _BP_VERSION ); } 	
 	
 	wp_enqueue_style( 'parent-style', get_template_directory_uri()."/style.css", array(), _BP_VERSION );
+	
+	if ( $GLOBALS['customer_info']['site-type'] == 'profile' || $GLOBALS['customer_info']['site-type'] == 'profiles' ) { wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array(), _BP_VERSION ); }		
+	
 	wp_enqueue_style( 'battleplan-style', get_stylesheet_directory_uri()."/style-site.css", array(), _BP_VERSION );	
 }
 
@@ -2306,7 +2312,6 @@ function battleplan_footer_styles() {
 	wp_enqueue_style( 'battleplan-fontawesome', get_template_directory_uri()."/fontawesome.css", array(), _BP_VERSION );
 	if ( is_plugin_active( 'extended-widget-options/plugin.php' ) ) { wp_enqueue_style( 'widgetopts-styles', '/wp-content/plugins/extended-widget-options/assets/css/widget-options.css', array(), _BP_VERSION ); }	
 	//if ( is_plugin_active( 'ari-fancy-lightbox/ari-fancy-lightbox.php' ) ) { wp_enqueue_style( 'ari-fancybox-styles', '/wp-content/plugins/ari-fancy-lightbox/assets/fancybox/jquery.fancybox.min.css', array(), _BP_VERSION ); }		
-	if ( $GLOBALS['customer_info']['site-type'] == 'profile' || $GLOBALS['customer_info']['site-type'] == 'profiles' ) { wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array(), _BP_VERSION ); }		
 }
 
 // Load and enqueue remaining scripts

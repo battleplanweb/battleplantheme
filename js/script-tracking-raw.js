@@ -19,8 +19,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	// Wait 1 second before calling the following functions 
 		setTimeout(function() {	
 		// Get IP data
-			$.getJSON('https://ipapi.co/json/', function(data) {
-				userLoc = data["city"] + ", " + data["region_code"];
+			$.getJSON('https://ipapi.co/json/', function(data) {			
+			
+				if ( data["country_name"] == "United States" ) {
+					userLoc = data["city"] + ", " + data["region_code"];
+				} else {
+					userLoc = data["city"] + ", " + data["country_name"];
+				}
+
 				setCookie("user-loc", userLoc, '');
 				//setCookie("pages-viewed", pageViews, '');
 				

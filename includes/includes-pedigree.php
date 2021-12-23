@@ -946,13 +946,13 @@ function battleplan_override_main_query_with_pedigree( $query ) {
       				'key' => 'litter_status',
       				'compare' => 'EXISTS'
     			)), array(
-    			'ready_date_clause' => array(
-      				'key' => 'ready_date',
+    			'birth_date_clause' => array(
+      				'key' => 'birth_date',
       				'compare' => 'EXISTS'
     			) )
 			);
 			$query->set('meta_query', $meta_query);
-			$query->set('orderby', array('status_clause' => 'ASC', 'ready_date_clause' => 'ASC'));
+			$query->set('orderby', array('status_clause' => 'ASC', 'birth_date_clause' => 'ASC'));
 		endif;
 	endif; 
 }

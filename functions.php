@@ -19,7 +19,7 @@
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.11' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.11.1' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -2326,7 +2326,7 @@ function battleplan_scripts() {
 	wp_enqueue_script( 'battleplan-script-site', get_stylesheet_directory_uri().'/script-site.js', array(), _BP_VERSION, false );	
 	wp_enqueue_script( 'battleplan-script-tracking', get_template_directory_uri().'/js/script-tracking.js', array(), _BP_VERSION, false ); 
 	
-	wp_enqueue_script( 'battleplan-script-cloudflare', get_template_directory_uri().'/js/script-cloudflare.js', array(), _BP_VERSION, false );
+	//wp_enqueue_script( 'battleplan-script-cloudflare', get_template_directory_uri().'/js/script-cloudflare.js', array(), _BP_VERSION, false );
 	
 	//wp_enqueue_script( 'battleplan-script-cloudflare', get_site_url().'/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js', array(), _BP_VERSION, false );
 	

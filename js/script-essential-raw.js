@@ -76,7 +76,9 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	$('.track-clicks, .wpcf7-submit').click(function() {
 		var thisClick = $(this), thisAction = thisClick.attr('data-action') ? thisClick.attr('data-action') : 'email', thisUrl = thisClick.attr('data-url');
 		if ( thisUrl ) { 
-			gtag_report_conversion(thisUrl);
+			if (typeof gtag_report_conversion === "function") { 
+				gtag_report_conversion(thisUrl);
+			}			
 			document.location = thisUrl; 
 		}
 		$.post({
@@ -452,6 +454,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 
 
+
 					thisAcc.addClass('active').attr( 'aria-expanded', true );
 				}, cssDelay);
 				
@@ -556,6 +559,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	};		
 		
 	// Handle the post filter button [get-filter-btn]
+
 	$(".filter-btn").click(function() {
 		var thisBtn = $(this), url = "?"+thisBtn.attr('data-url')+"=", flag=false;
 		$("input:checkbox[name=choice]:checked").each(function() {
@@ -1098,13 +1102,13 @@ if ( typeof parallaxBG !== 'function' ) {
 	});	
 	
 // Ensure that Form labels have enough width
-	$('.wpcf7 form .flex').each(function() {
+	$('.wpcf7 form, .wpcf7 form .flex').each(function() {
 		var thisForm = $(this), labelMaxW = 0;
-		thisForm.find('.form-input.width-default label').each(function() {
+		thisForm.find('> .form-input.width-default label').each(function() {
 			var thisInput = $(this), labelW = thisInput.width();
 			if ( labelW > labelMaxW ) { labelMaxW = labelW }
 		});
-		thisForm.find('.form-input.width-default').css({ "grid-template-columns":labelMaxW+"px 1fr" });
+		thisForm.find('> .form-input.width-default').css({ "grid-template-columns":labelMaxW+"px 1fr" });
 	});
 	
 // Removes double asterisk in required forms

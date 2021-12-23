@@ -21,6 +21,7 @@ $profileInstagram = esc_url(get_the_author_meta( 'instagram', $profileID ));
 $profileLinkedIn = esc_url(get_the_author_meta( 'linkedin', $profileID ));
 $profilePinterest = esc_url(get_the_author_meta( 'pinterest', $profileID ));
 $profileYouTube = esc_url(get_the_author_meta( 'youtube', $profileID ));
+$displayProfile = do_shortcode('[display-user user="'.$profileID.'"]');
 if ( $profileEmail ) $profileEmailBtn = do_shortcode('[social-btn type="email" link="'.$profileEmail.'"]');
 if ( $profileFacebook ) $profileFacebookBtn = do_shortcode('[social-btn type="facebook" link="'.$profileFacebook.'"]');
 if ( $profileTwitter ) $profileTwitterBtn = do_shortcode('[social-btn type="twitter" link="'.$profileTwitter.'"]');
@@ -49,8 +50,7 @@ else :
 		if ( $profileFirst ) $printPage .= $profileFirst;
 		if ( $profileLast ) $printPage .= ' '.$profileLast;
 	endif;
-	$printPage .= '<br>';
-	if ( $profileUsername ) $printPage .= '<span class="user-username"><i class="fas fa-user fa"></i> '.$profileUsername.'</span></p>';
+	$printPage .= '<br><span class="user-username">'.$displayProfile.'</p>';
 	if ( $profileDesc ) $printPage .= '<p>'.$profileDesc.'</p>';
 	if ( $currUser == true ) $printPage .= '<p>[get-upload-btn text="Change Avatar: "]</p>';
 	$printPage .= '[/txt][/col]';

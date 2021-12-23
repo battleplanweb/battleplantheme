@@ -450,6 +450,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 
 
+
+
 					thisAcc.addClass('active').attr( 'aria-expanded', true );
 				}, cssDelay);
 				
@@ -1080,6 +1082,9 @@ if ( typeof parallaxBG !== 'function' ) {
 		if ( $(this).height() > (getDeviceH() - 100) ) {
 			$(this).addClass('shrink');
 		}
+		if ( ($(this).height() * .85) > (getDeviceH() - 100) ) {
+			$(this).removeClass('shrink').addClass('shrink-more');
+		}
 	});
 
 // Fade in lazy loaded images
@@ -1093,7 +1098,7 @@ if ( typeof parallaxBG !== 'function' ) {
 	});	
 	
 // Ensure that Form labels have enough width
-	$('.wpcf7 form').each(function() {
+	$('.wpcf7 form .flex').each(function() {
 		var thisForm = $(this), labelMaxW = 0;
 		thisForm.find('.form-input.width-default label').each(function() {
 			var thisInput = $(this), labelW = thisInput.width();
@@ -1101,6 +1106,10 @@ if ( typeof parallaxBG !== 'function' ) {
 		});
 		thisForm.find('.form-input.width-default').css({ "grid-template-columns":labelMaxW+"px 1fr" });
 	});
+	
+// Removes double asterisk in required forms
+	$('abbr.required, em.required, span.required').text("");
+	setTimeout( function () { $('abbr.required, em.required, span.required').text(""); }, 2000);
 	
 // Move User Switching bar to top
 	moveDiv('#user_switching_switch_on','#page','before');
@@ -1273,10 +1282,6 @@ if ( typeof parallaxBG !== 'function' ) {
 	var todayIs = new Date().getDay(), days = ['sun','mon','tue','wed','thu','fri','sat'];
 	$('.office-hours .row-'+days[todayIs]).addClass("today");
 	
-// Removes double asterisk in required forms
-	$('abbr.required, em.required, span.required').text("");
-	setTimeout( function () { $('abbr.required, em.required, span.required').text(""); }, 2000);
-
 /*--------------------------------------------------------------
 # Screen resize
 --------------------------------------------------------------*/
@@ -1401,7 +1406,7 @@ if ( typeof parallaxBG !== 'function' ) {
 				}
 			} else { 				
 				if ( buttonActivated == "no" && getCookie("display-message") !== "no" ) {
-					moveDiv(thisLock.find('.closeBtn'), '.section-lock .flex', 'top');
+					moveDiv(thisLock.find('.closeBtn'), '.section-lock > .flex', 'top');
 					setTimeout( function() { 
 						thisLock.addClass("on-screen"); $('body').addClass('locked'); thisLock.focus(); 
 					}, initDelay);
@@ -1413,7 +1418,7 @@ if ( typeof parallaxBG !== 'function' ) {
 
 				if ( buttonActivated == "yes" ) {				
 					$('.modal-btn').click(function() {
-						moveDiv(thisLock.find('.closeBtn'), '.section-lock .flex', 'top');
+						moveDiv(thisLock.find('.closeBtn'), '.section-lock > .flex', 'top');
 						thisLock.addClass("on-screen"); $('body').addClass('locked'); thisLock.focus();
 					});
 					thisLock.find('.closeBtn').click(function() {

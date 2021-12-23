@@ -124,7 +124,6 @@ function battleplan_getUploadBtn($atts, $content = null) {
 	$submit = esc_attr($a['submit']);	
 	$multiple = esc_attr($a['multiple']);
 	if ( $multiple == 'false' ) : $multiple = ""; else: $multiple="multiple"; endif;
-	$formID = rand(1000,9999);
 	$nonce = $GLOBALS['nonce'];
 	
 	if ( $_FILES ) :
@@ -214,7 +213,7 @@ function battleplan_getUploadBtn($atts, $content = null) {
 		endif;
 	endif;
 
-	$printBtn = '<form id="image-upload_'.$formID.'" class="image-upload" action="" method="post" enctype="multipart/form-data">';
+	$printBtn = '<form id="image-upload" class="image-upload" action="" method="post" enctype="multipart/form-data">';
 	if ( $type == "gallery" ) : $printBtn .= '<label class="gallery-name">'.$text.' <input type="text" class="regular_text" name="gallery-name" /></label>';
 	else: $printBtn .= '<label>'.$text.'</label>';
 	endif;
@@ -281,6 +280,27 @@ function battleplan_getUser( $atts, $content = null ) {
 	endif;
 }
 
+add_shortcode( 'display-user', 'battleplan_displayUser' );
+function battleplan_displayUser( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'user'=>wp_get_current_user()->ID, 'identity'=>get_option('site_login')['identity'], 'link'=>'true', 'icon'=>get_option('site_login')['icon'] ), $atts );	
+	$user = esc_attr($a['user']);
+	$identity = esc_attr($a['identity']);
+	$link = esc_attr($a['link']);
+	$icon = esc_attr($a['icon']);
+	$displayName = "";
+	
+	if ( $link == "true" ) : $displayName .= '<a class="user-name" href="/profile?user='.$user.'">';	
+	else: '<span class="user-name">'; endif;
+	
+	if ( $icon != "false" && $icon != "no" ) $displayName .= '<i class="'.$icon.' fa"></i>';
+	$displayName .= do_shortcode('[get-user user="'.$user.'" info="'.$identity.'"]');
+	
+	if ( $link == "true" ) : $displayName .= '</a>';	
+	else: '</span>'; endif;
+	
+	return $displayName;
+}
+
 /* Handle user info update */
 if ( is_user_logged_in() && isset($_POST['user_info_upload'])) :
 	$currUserID = wp_get_current_user()->ID;
@@ -328,26 +348,65 @@ function battleplan_registerStatusUpdates() {
 /* Handle user post */
 if ( is_user_logged_in() && isset($_POST['user_post_update'])) :
 	$currUserID = wp_get_current_user()->ID;
-	$currUserLogin = wp_get_current_user()->user_login;
+	/*$currUserLogin = wp_get_current_user()->user_login;
 	$currUserEmail = wp_get_current_user()->user_email;
 	$currUserFirst = wp_get_current_user()->user_firstname;
-	$currUserLast = wp_get_current_user()->user_lastname;
+	$currUserLast = wp_get_current_user()->user_lastname;*/
+	$currUserDisplay = do_shortcode('[display-user user="'.$currUserID.'"]');
 
 	$post_title = $_POST['title'];
 	$post_content = $_POST['content'];
 	//$category = $_POST['category'];
 	//$sample_image = $_FILES['sample_image']['name'];
+	
+	$lastPos = 0;
+	$positions = array();
+	$keys = array();
+	$userLogs = array();
+	$trigger = '@';
+	$siteUsers = get_users();
+
+	while (($lastPos = strpos($post_content, $trigger, $lastPos))!== false) :
+		$positions[] = $lastPos;
+		$lastPos = $lastPos + strlen($trigger);
+	endwhile;
+
+	foreach ($positions as $pos ) :
+		$pos += strlen($trigger);
+		$len = strpos($post_content, ' ', $pos) - $pos;
+		$keys[] = substr($post_content, $pos, $len);
+	endforeach;
+
+	foreach ($keys as $key) :	
+		foreach ( $siteUsers as $siteUser ) :
+			if ( strtolower($siteUser->display_name) == strtolower($key) || strtolower($siteUser->nickname) == strtolower($key) ) :
+				$keyLink = do_shortcode('[display-user user="'.$key.'"]');
+				$key = '@'.$key;
+				$post_content = str_replace($key, $keyLink, $post_content);	
+				$userLogs[] = $siteUser->ID;				
+				break;
+			endif;
+		endforeach;
+	endforeach;	
 
 	$new_post = array(
 		'post_title' => $post_title,
 		'post_content' => $post_content,
 		'post_status' => 'publish',
 		'post_type' => 'updates',
+		'post_author' => $currUserID,
 		//'post_category' => $category
 	);
 
 	$pid = wp_insert_post($new_post);
 	add_post_meta($pid, 'meta_key', true);
+	
+	foreach ( $userLogs as $user ) :	
+		$userLog = get_user_meta($user, 'log', true);				
+		if ( !is_array($userLog) ) $userLog = array();				
+		array_push($userLog, $currUserDisplay.' mentioned you in a <a  href="/updates#update-'.$pid.'">wall post</a>.');	
+		update_user_meta( $user, 'log', $userLog, false );		
+	endforeach;				
 	
 	if ( !function_exists('wp_generate_attachment_metadata') ) :
 		require_once(ABSPATH.'wp-admin/includes/image.php');

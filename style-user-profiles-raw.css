@@ -11,6 +11,23 @@
 	display: 									none !important;
 }
 
+.user-name {
+	text-decoration: 							none;
+	font-weight: 								bold;
+	font-size: 									18px;
+}
+
+.user-name i.fa {
+	margin-left: 								0;
+	margin-right: 								8px;
+}
+
+/* Profiles
+--------------------------------------------- */
+.user-profile-section {
+	margin-bottom: 								2em;
+}
+
 .user-profile {
 	gap: 										3.5em 3%;
 }
@@ -31,10 +48,6 @@ img.user-image {
 	margin-bottom: 								10px;
 }
 
-form#image-upload {
-	text-align: 								center;
-}
-
 .file-upload-btn,
 .file-submit-btn {
 	margin: 									5px;
@@ -53,26 +66,45 @@ input[id*='upload-file-name'] {
 	margin: 									5px 5px 10px 0;
 }
 
-#userinfo-update label,
-#status-update label {
+.slug-profile label {
+	text-align: 								left;
+}
+
+.slug-profile label > * {
+	margin-top: 								0.25em;
+}
+
+#userinfo-update,
+#wall-update {
 	display: 									block;
 	margin: 									0 auto;
+	width: 										750px;
 	max-width: 									100%;
-	width: 										500px;
 }
 
-.archive-profiles h3 {
-	font-size: 									24rem;
-	max-width: 									100%;
-	overflow: 									hidden;
+#userinfo-update .flex:not(:last-child) {
+	margin-bottom: 								1.5em;
 }
 
+/* Archives
+--------------------------------------------- */
+ .archive-profiles {
+ 	text-align: 								center;
+ }
+ 
+ .archive-profiles .directory-user-info > * {
+ 	display: 									block;
+ }
+
+/* Updates
+--------------------------------------------- */
 span.user-roles {
 	font-size: 									75%;
 	font-weight: 								normal;
 }
 
-#primary .archive-updates img.user-image {
+#primary .archive-updates img.user-image,
+#primary .user-profile-section .col-updates img.user-image {
 	float: 										left;
 	width: 										80px;
 	height: 									auto;
@@ -80,16 +112,13 @@ span.user-roles {
 	filter: 									none;
 }
 
-.archive-updates a.link-updates + span.updates-author {
-	display: 									inline-block;
-	margin-top: 								20px;
-}
-
-.archive-updates span i.fa {
+.archive-updates span i.fa,
+.user-profile-section .col-updates span i.fa {
 	margin-right: 								10px;
 }
 
-.archive-updates h3 {
+.archive-updates h3,
+.user-profile-section .col-updates h3 {
 	font-family: 								"Open Sans";
 	font-size: 									21px;
 	text-align: 								left;
@@ -99,11 +128,14 @@ span.user-roles {
 .archive-updates p, 
 .archive-updates h1 + .block.block-text, 
 .archive-updates h2 + .block.block-text, 
-.archive-updates h3 + .block.block-text {
+.archive-updates h3 + .block.block-text,
+.user-profile-section .col-updates p, 
+.user-profile-section .col-updates h1 + .block.block-text, 
+.user-profile-section .col-updates h2 + .block.block-text, 
+.user-profile-section .col-updates h3 + .block.block-text {
     margin-top:									1em;
     margin-bottom: 								1em;
 }
-
 
 /* 1: Phones (portrait) */
 @media (max-width: 576px) {

@@ -7,8 +7,8 @@ $offset = ($page - 1) * $number;
 $roles = array();
 $number = -1;
 $grid = "6e"; 
-$order = "desc";
-$orderby = "registered"; // display_name, name, login, email, registered (date), post_count, ID
+$order = "asc";
+$orderby = "display_name"; // display_name, name, login, email, registered (date), post_count, ID
 $displayInfo = array ( 'display name', 'role' ); // 'display name', 'nickname', 'username', 'login', 'first name', 'last name', 'email', 'role'
 $valign = "stretch";
 $size = "thumbnail";
@@ -52,19 +52,22 @@ $buildList = "";
 if ( !empty($profiles) ) :
   	foreach($profiles as $user) :
 		$profileID = $user->ID;	
+		$num = 1;
 		
 		if ( $user->user_login != "battleplanweb" ) :		
 			$buildList .= '[col]';
-			$buildList .= '<a href="/profile?user='.$profileID.'" class="link-archive link-profiles" ada-hidden="true"  tabindex="-1">';		
-			$buildList .= '[get-user user="'.$profileID.'" info="avatar"]';
-			$buildList .= '</a>';	
-			$buildList .= '<a href="/profile?user='.$profileID.'" class="link-archive link-profiles">';		
-			$buildList .= '<h3 class="user-name" data-count-tease='.$countTease.' data-count-view='.$countView.' data-id='.$profileID.'>';			
+			$buildList .= '<a href="/profile?user='.$profileID.'" class="link-archive link-profiles" ada-hidden="true"  tabindex="-1">[get-user user="'.$profileID.'" info="avatar"]</a>';	
+			$buildList .= '<div class="directory-user-info">';
+			
 			foreach ($displayInfo as $display) :
-				$buildList .= '<span class="display-'.$display.'">[get-user user="'.$profileID.'" info="'.$display.'"]</span><br/>';
+				if ( $num == 1 ) :
+					$buildList .= do_shortcode('[display-user user="'.$profileID.'"]');					
+				else : $buildList .= '<span class="display-info display-'.$display.'">[get-user user="'.$profileID.'" info="'.$display.'"]</span><br/>';
+				endif;
+				$num++;
 			endforeach;
-			$buildList .= '</h3></a>';
-			$buildList .= '[/col]'; 
+			
+			$buildList .= '</div>[/col]'; 
 		endif;
 		
 		/*

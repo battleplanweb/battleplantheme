@@ -560,6 +560,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		
 	// Handle the post filter button [get-filter-btn]
 
+
+
 	$(".filter-btn").click(function() {
 		var thisBtn = $(this), url = "?"+thisBtn.attr('data-url')+"=", flag=false;
 		$("input:checkbox[name=choice]:checked").each(function() {
@@ -1300,8 +1302,6 @@ if ( typeof parallaxBG !== 'function' ) {
 		if ( thisDeviceW > 1280 ) { 
 			$('body').addClass("screen-5").addClass("screen-desktop"); 
 		} else if ( thisDeviceW <= 1280 && thisDeviceW > mobileCutoff ) { 
-
-
 			$('body').addClass("screen-4").addClass("screen-desktop");
 		} else if ( thisDeviceW <= mobileCutoff && thisDeviceW > 860 ) { 
 			$('body').addClass("screen-3").addClass("screen-mobile");
@@ -1322,8 +1322,8 @@ if ( typeof parallaxBG !== 'function' ) {
 		closeMenu();
 		
 	// Shift #secondary below #wrapper-bottom on mobile		
-		moveDiv('.sidebar-shift.screen-mobile #secondary','#colophon',"before");	
-		moveDiv('.sidebar-shift.screen-desktop #secondary','#primary',"after");	
+		moveDiv('.screen-mobile.not-first-page #secondary','#colophon',"before");	
+		moveDiv('.screen-desktop #secondary','#primary',"after");			
 
 	// Ensure "-faux" elements remain correct size
 		$('div[class*="-faux"]').each(function() {	

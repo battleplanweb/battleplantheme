@@ -19,7 +19,7 @@
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.11.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.11.2' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -2406,7 +2406,7 @@ if ( !is_admin() && $GLOBALS['pagenow'] !== 'wp-login.php' && !is_plugin_active(
 	add_action( 'wp_print_footer_scripts', 'battleplan_delay_nonessential_scripts');
 	function battleplan_delay_nonessential_scripts() { ?>
 		<script nonce="<?php echo $GLOBALS['nonce']; ?>" type="text/javascript" id="delay-scripts">
-			const loadScriptsTimer=setTimeout(loadScripts,4000);
+			const loadScriptsTimer=setTimeout(loadScripts,5000);
 			const userInteractionEvents=["mouseover","keydown","touchstart","touchmove","wheel"];
 			userInteractionEvents.forEach(function(event) {	
 				window.addEventListener(event, triggerScriptLoader, {passive:!0})});
@@ -2418,7 +2418,7 @@ if ( !is_admin() && $GLOBALS['pagenow'] !== 'wp-login.php' && !is_plugin_active(
 					})
 				}
 			function loadScripts() {
-				setTimeout(function() { document.querySelectorAll("[data-loading='delay']").forEach(function(elem) { elem.setAttribute("src", elem.getAttribute("data-src")) }) }, 3000);
+				setTimeout(function() { document.querySelectorAll("[data-loading='delay']").forEach(function(elem) { elem.setAttribute("src", elem.getAttribute("data-src")) }) }, 4000);
 			}
 		</script><?php
 	}

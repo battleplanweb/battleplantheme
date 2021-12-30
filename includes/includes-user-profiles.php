@@ -132,7 +132,8 @@ function battleplan_getUploadBtn($atts, $content = null) {
 		$userID = wp_get_current_user()->ID;		
 		
 		if ( $type == "gallery" ) :
-			$origGalleryName = $_POST["gallery-name"]; 		
+			$origGalleryName = $_POST["gallery-name"]; 	
+			if ( $origGalleryName == '' || $origGalleryName == null ) $origGalleryName = $userLogin;
 			$galleryName = $origGalleryName;
 			$aux = 1;
 				
@@ -143,13 +144,10 @@ function battleplan_getUploadBtn($atts, $content = null) {
 					checkTitle($origGalleryName, $galleryName, $files, $aux);				
 				else :
 					$new_post = array ( 'post_title' => $galleryName, 'post_content' => '', 'post_status' => 'publish', 'post_type' => 'galleries', 'post_author' => $userID, 'post_category' => '' );
-
+					
 					$pid = wp_insert_post($new_post);
 					
-					$accessAllowed = get_user_meta( $userID, 'access-allowed', true);
-					if ( !is_array($accessAllowed) ) $accessAllowed = array();
-					array_push($accessAllowed, $pid);
-					update_user_meta( $userID, 'access-allowed', $accessAllowed, false );	
+					if (function_exists('battleplan_profileGalleryCreated')) battleplan_profileGalleryCreated($pid);
 					
 					$num=1;
 					foreach ($files['name'] as $key => $value) :    

@@ -370,6 +370,12 @@ ul.acf-checkbox-list {
 	column-gap: 								2.5em;
 }
 
+.wp-admin .column-author img, 
+.wp-admin .column-comment .comment-author img, 
+.wp-admin .column-username img {
+	display: 									none;
+}
+
 /* Contact Form 7
 --------------------------------------------- */
 .config-error,

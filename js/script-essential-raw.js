@@ -559,9 +559,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	};		
 		
 	// Handle the post filter button [get-filter-btn]
-
-
-
 	$(".filter-btn").click(function() {
 		var thisBtn = $(this), url = "?"+thisBtn.attr('data-url')+"=", flag=false;
 		$("input:checkbox[name=choice]:checked").each(function() {
@@ -632,6 +629,9 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$(this).closest('.review-form').removeClass('active');
 		$(this).closest('.review-form').next().addClass('active');			
 	});
+	
+// This script blocked by Content Security Policy	
+	document.getElementById( "ak_js" ).setAttribute( "value", ( new Date() ).getTime() );	
 
 /*--------------------------------------------------------------
 # DOM level functions

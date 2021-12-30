@@ -2,11 +2,13 @@
 <?php 
 	$GLOBALS['nonce'] = base64_encode(random_bytes(20));
 	$nonce = $GLOBALS['nonce'];
-	header( "Content-Security-Policy: script-src 'nonce-{$nonce}' 'strict-dynamic' 'unsafe-inline' 'unsafe-eval' https: http:; object-src 'none'; base-uri 'none'; block-all-mixed-content" ); 
-	header( "Strict-Transport-Security: max-age=63072000; includeSubDomains; preload" );
-	header( "X-Frame-Options: SAMEORIGIN" );
-	header( "X-Content-Type-Options: nosniff" );
-	header( "Referrer-Policy: strict-origin-when-cross-origin" );
+	if ( get_option('disable-content-security-policy') != "true" ) :
+		header( "Content-Security-Policy: script-src 'nonce-{$nonce}' 'strict-dynamic' 'unsafe-inline' 'unsafe-eval' https: http:; object-src 'none'; base-uri 'none'; block-all-mixed-content" ); 
+		header( "Strict-Transport-Security: max-age=63072000; includeSubDomains; preload" );
+		header( "X-Frame-Options: SAMEORIGIN" );
+		header( "X-Content-Type-Options: nosniff" );
+		header( "Referrer-Policy: strict-origin-when-cross-origin" );
+	endif;
 ?>
  
 <html <?php language_attributes(); ?>>

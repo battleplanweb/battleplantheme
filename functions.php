@@ -19,7 +19,7 @@
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.11.2' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.11.3' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -2324,11 +2324,8 @@ function battleplan_scripts() {
 	if ( !is_mobile() ) { wp_enqueue_script( 'battleplan-script-desktop', get_template_directory_uri().'/js/script-desktop.js', array(), _BP_VERSION, false ); }
 	wp_enqueue_script( 'battleplan-script-essential', get_template_directory_uri().'/js/script-essential.js', array(), _BP_VERSION, false );				
 	wp_enqueue_script( 'battleplan-script-site', get_stylesheet_directory_uri().'/script-site.js', array(), _BP_VERSION, false );	
-	wp_enqueue_script( 'battleplan-script-tracking', get_template_directory_uri().'/js/script-tracking.js', array(), _BP_VERSION, false ); 
-	
-	//wp_enqueue_script( 'battleplan-script-cloudflare', get_template_directory_uri().'/js/script-cloudflare.js', array(), _BP_VERSION, false );
-	
-	//wp_enqueue_script( 'battleplan-script-cloudflare', get_site_url().'/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js', array(), _BP_VERSION, false );
+	wp_enqueue_script( 'battleplan-script-tracking', get_template_directory_uri().'/js/script-tracking.js', array(), _BP_VERSION, false ); 	
+	wp_enqueue_script( 'battleplan-script-cloudflare', get_template_directory_uri().'/js/script-cloudflare.js', array(), _BP_VERSION, false );
 	
 	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { wp_enqueue_script( 'battleplan-script-events', get_template_directory_uri().'/js/events.js', array(), _BP_VERSION, false ); } 
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_enqueue_script( 'battleplan-script-woocommerce', get_template_directory_uri().'/js/woocommerce.js', array(), _BP_VERSION, false ); } 
@@ -2517,7 +2514,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( "user-message" == $tag->name ) {
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
-		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','Roleplay helps develop','rank your google','TRY IT RIGHT NOW FOR FREE','и','д','б','й','л','ы','З','у','Я');
+		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','website','web-site','web site','web design','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','Roleplay helps develop','rank your google','TRY IT RIGHT NOW FOR FREE','put together a short guide', 'write you an article','и','д','б','й','л','ы','З','у','Я');
 		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
 		if ( strtolower($check) == strtolower($name) ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($badwords as $badword) {
@@ -2729,6 +2726,13 @@ function battleplan_remove_max_srcset_image_width( $max_width ) {
 add_filter('wp_calculate_image_sizes', 'battleplan_content_image_sizes_attr', 10 , 2);
 function battleplan_content_image_sizes_attr($sizes, $size) {
 	return get_srcset($size[0]);
+}
+
+// Selective disabling of lazy load parameter
+add_filter( 'wp_img_tag_add_loading_attr', 'battleplan_disableLazyLoad', 99, 3 );
+function battleplan_disableLazyLoad( $value, $image, $context ) {
+	if ( strpos( $image, 'logo' ) !== false ) { return false; }
+	return $value;
 }
 
 // Add attachment ID to attached images as 'data-id'
@@ -3359,7 +3363,7 @@ function battleplan_count_link_clicks_ajax() {
 	$newClicks = maybe_serialize( $getClicks );
 	updateMeta(_HEADER_ID, $getType, $newClicks);
 
-	$response = array( 'result' => $getType.' counted = '.$numClicks);
+	$response = array( 'result' => $getType.' year = '.$thisYear.' counted = '.$numClicks);
 	wp_send_json( $response );	
 }
 

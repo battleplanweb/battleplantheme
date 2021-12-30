@@ -61,4 +61,9 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$('.woocommerce-MyAccount-navigation ul').addClass('row-of-buttons');		
 	});
 	
+	// Remove "no-js" from body classes	
+	var c = document.body.className;
+	c = c.replace(/woocommerce-no-js/, 'woocommerce-js');
+	document.body.className = c;
+	
 })(jQuery); });

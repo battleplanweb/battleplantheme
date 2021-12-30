@@ -1755,11 +1755,12 @@ function battleplan_admin_click_stats() {
 	$callClicks = maybe_unserialize($callClicks);
 	$emailClicks = readMeta($siteHeader, "email-clicks");
 	$emailClicks = maybe_unserialize($emailClicks);
+	$numToShow = date("Y") - 2020;		
 	
 	echo "<table>";
 	echo "<tr><td><b>Year</b></td><td><b>Calls</b></td><td><b>Emails</b></td></tr>";
-	for ($x = 0; $x < 5; $x++) {		
-		echo "<tr><td><b>".date("Y", $callClicks[$x]['year'])."</b></td><td>".number_format($callClicks[$x]['number'])."</td><td>".number_format($emailClicks[$x]['number'])."</td></tr>";
+	for ($x = 0; $x < $numToShow; $x++) {		
+		echo "<tr><td><b>".$callClicks[$x]['year']."</b></td><td>".number_format($callClicks[$x]['number'])."</td><td>".number_format($emailClicks[$x]['number'])."</td></tr>";
 	} 			
 	echo "</table>";
 }
@@ -2140,7 +2141,6 @@ function battleplan_user_row_actions( $actions, $post ) {
 
 	return array( 'edit' => $edit, 'delete' => $delete, 'switch_to_user' => $switch );
 }
-
 
 // Automatically set the image Title, Alt-Text, Caption & Description upon upload
 add_action( 'add_attachment', 'battleplan_setImageMetaUponUpload' );

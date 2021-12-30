@@ -79,6 +79,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			$('.sui-box-body').css({'display':'block'});
 			$('.wds-focus-keyword').css({'display':'block'});
 		});
-	}, 1000);		
+	}, 1000);	
+	
+	// Contact Form icons
+	$('span.edit a').html('<i class="dashicons-edit"></i>');
+	$('span.copy a').html('<i class="dashicons-clone"></i>');
 	
 })(jQuery); });

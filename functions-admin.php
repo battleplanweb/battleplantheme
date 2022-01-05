@@ -1460,7 +1460,7 @@ add_action( 'wp_before_admin_bar_render', 'battleplan_reorderAdminBar');
 function battleplan_reorderAdminBar() {
     global $wp_admin_bar;
 	
-	$wp_admin_bar->add_node( array( 'id' => 'tagline', 'title' => '-&nbsp;&nbsp;'.get_bloginfo( 'description' ).'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;', 'href'  => esc_url(site_url()), ) );	
+	if (get_bloginfo( 'description' )) $wp_admin_bar->add_node( array( 'id' => 'tagline', 'title' => '-&nbsp;&nbsp;'.get_bloginfo( 'description' ).'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;', 'href'  => esc_url(site_url()), ) );	
 	
     $IDs_sequence = array('site-name', 'tagline', 'suspend' );
     $nodes = $wp_admin_bar->get_nodes();
@@ -1482,6 +1482,7 @@ function battleplan_reorderAdminBar() {
     $wp_admin_bar->remove_node('new-content');
     $wp_admin_bar->remove_node('wpengine_adminbar');
 	$wp_admin_bar->remove_node('view-site');	
+	$wp_admin_bar->remove_node('wpseo-menu');	
 }
 
 // Create additional admin pages
@@ -1496,8 +1497,16 @@ function battleplan_addSitePage() {
 }
 
 // Replace WordPress copyright message at bottom of admin page
-add_filter('admin_footer_text', 'battleplan_remove_footer_admin');
-function battleplan_remove_footer_admin () { echo 'Powered by <b><a href="https://battleplanwebdesign.com" target="_blank">Battle Plan Web Design</b></a><br/>Framework <b>'._BP_VERSION.'</b></b></p>'; }
+add_filter('admin_footer_text', 'battleplan_admin_footer_text');
+function battleplan_admin_footer_text() { 
+	$printFooter = '<div style="float:left; margin-right:8px;"><img src="https://battleplanwebdesign.com/wp-content/uploads/site-icon-80x80.png" /></div>';
+	$printFooter .= '<div style="float:left; margin-top:8px;"><b>Powered by <a href="https://battleplanwebdesign.com" target="_blank">Battle Plan Web Design</a></b><br>';
+	$printFooter .= '<b>Periodic Review: '.date('F j, Y', get_option( 'site_updated' )).'</b><br>'; 
+	$printFooter .= '<b>Framework '._BP_VERSION.'</b><br>';
+	$printFooter .= '<b>WP '.get_bloginfo('version').'</b><br></div>';
+	
+	echo $printFooter;
+}
 
 // Change Howdy text
 add_filter( 'admin_bar_menu', 'battleplan_replace_howdy', 25 );

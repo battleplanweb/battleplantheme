@@ -13,6 +13,34 @@ body {
 	clear:										both;
 }
 
+#wpadminbar,
+#wpadminbar .quicklinks .ab-empty-item, 
+#wpadminbar .quicklinks a, 
+#wpadminbar .shortlink-input{
+    height: 									40px;
+}
+
+#wpadminbar * {
+	font-size: 									16px;
+}
+
+.wp-admin #wpadminbar #wp-admin-bar-site-name > .ab-item::before {
+    background: 								url('../../uploads/site-icon-80x80.png') 50% 50% no-repeat !important;
+	background-size: 							contain !important;
+	width: 										31px;
+	height: 									31px;
+	content: 									"";
+	top: 										0;
+}
+
+#wpfooter {
+	bottom: 									-50px;
+}
+
+p#footer-upgrade {
+	display: 									none;
+}
+
 /* Hide "register plug in" message on Admin Columns Pro & Extended Widget Options */
 .plugin-update-tr[data-plugin*="admin-columns-pro"]:not(#admin-columns-pro-update) .update-message,
 tr.active[data-plugin*="extended-widget-options"] + tr.plugin-update-tr,

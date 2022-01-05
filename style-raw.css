@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 10.11.3
+Version: 10.11.4
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -2500,6 +2500,8 @@ body.locked {
 #off-screen.horizontal {
 
 
+
+
 	left:										-3999px;
 }
 
@@ -4604,6 +4606,7 @@ p#user_switching_switch_on a.tab-focus {
 }
 
 /* 3: Small Tablets (landscape) */
+
 @media (max-width: 1024px) {
 		
 	/* Headeline font basis */
@@ -4750,25 +4753,26 @@ p#user_switching_switch_on a.tab-focus {
 	/* Header */
 	/*.logo-strip .flex {
 		gap: 										1.5em 3%;
-	}*/
+	}
 	
 	.logo-strip .logo img,
 	.logo-strip .am-stand-logo img,
 	.logo-strip img.am-stand-logo,
 	.logo-strip .brand-logo img {
-		max-height: 								40vh;
-		width: 										auto !important;
-		/*max-width: 									unset !important;  removed 12/27/21 - Jaric & others causing jank when using max-height, max-width with vh*/
-		margin-left: 								auto;
+		height: 									25vh;
+		object-fit: 								contain; /* 1/4/22 - still trying to fix the cls jank */
+		/*width: 									auto !important;
+		max-width: 									unset !important;  removed 12/27/21 - Jaric & others causing jank when using max-height, max-width with vh*/
+/*		margin-left: 								auto;
 		margin-right: 								auto;
 	}
 	
 	.logo-strip .am-stand-logo img,
 	.logo-strip img.am-stand-logo,
 	.logo-strip .brand-logo img {
-		max-height: 								8vh;
+		height: 									7vh;
 	}
-
+*/
 	
 	/* Sidebar */
 	.content-box #primary, 
@@ -4795,6 +4799,7 @@ p#user_switching_switch_on a.tab-focus {
 		margin:										0;
 	}
 	
+
 	#secondary::after {
 		content: 									"Swipe to view more";
 		font-family: 								"Open Sans", sans-serif;
@@ -4865,14 +4870,20 @@ p#user_switching_switch_on a.tab-focus {
 		gap: 										1.5em 3%;
 	}
 	
-	.logo-strip .logo img {
-		max-height: 								200px;
+	.logo-strip .logo img,
+	.logo-strip .am-stand-logo img,
+	.logo-strip img.am-stand-logo,
+	.logo-strip .brand-logo img {
+		height: 									18vh;
+		object-fit: 								contain; /* 1/4/22 - still trying to fix the cls jank */
+		margin-left: 								auto;
+		margin-right: 								auto;
 	}
 	
 	.logo-strip .am-stand-logo img,
 	.logo-strip img.am-stand-logo,
 	.logo-strip .brand-logo img {
-		max-height: 								50px;
+		height: 									6vh;
 	}
 
 	.section-edge h1,
@@ -4954,6 +4965,7 @@ p#user_switching_switch_on a.tab-focus {
 	.flex.grid-2-3:not(.break-none) .col .col-inner,
 	.flex.grid-3-2:not(.break-none) .col .col-inner,
 	.flex.grid-1-1:not(.break-none) .col .col-inner,
+
 	.logo-strip .flex:not(.grid-1) .col .col-inner,
 	.flex.break-2 .col .col-inner,
 	.flex.grid-1-1-1.break-2 .col:nth-child(3n+3) .col-inner /*Maine Stone Landscape 9/1/21 {
@@ -5059,17 +5071,6 @@ p#user_switching_switch_on a.tab-focus {
 	/* Mobile Menu */
 	#mobile-menu-bar a.phone-link {
 		display:									block;
-	}
-	
-	/* Header */
-	.logo-strip .logo img {
-		max-height: 								120px;
-	}
-	
-	.logo-strip .am-stand-logo img,
-	.logo-strip img.am-stand-logo,
-	.logo-strip .brand-logo img {
-		max-height: 								40px;
 	}
 	
 	/* Content */

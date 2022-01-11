@@ -203,6 +203,10 @@
     content: "\f879";
 }
 
+.fa-search:before {
+    content: "\f002";
+}
+
 .fa-phone-slash:before {
     content: "\f3dd";
 }
@@ -253,6 +257,10 @@
 
 .fa-snapchat-square:before {
     content: "\f2ad";
+}
+
+.fa-sort:before {
+    content: "\f0dc";
 }
 
 .fa-spinner:before {

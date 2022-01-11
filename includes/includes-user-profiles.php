@@ -8,6 +8,8 @@
 # User Profile Pics
 # User Info
 # Status Updates
+# Restriction
+# Activity Sign Up Form
 
 
 /*--------------------------------------------------------------
@@ -39,23 +41,33 @@ function battleplan_registration_errors( $errors, $sanitized_user_login, $user_e
 	if ( isset(get_option('site_login')['invite_code']) ) : 
 		if ( empty( $_POST['invite_code'] ) || !in_array($_POST['invite_code'], get_option('site_login')['invite_code']) ) :
 			$errors->add( 'invite', __( '<strong>ERROR</strong>: Please type a valid invite code.', 'battleplan' ) );
-		endif;
+		endif;		
 	endif;
 
 	return $errors;
 }
 
+// Set user's display_name upon registration
+add_filter('pre_user_display_name','default_display_name');
+function default_display_name($name) {
+	$display = '';
+	if ( ! empty( $_POST['first_name'] ) ) $display .= sanitize_text_field(trim( $_POST['first_name'] ));
+	if ( ! empty( $_POST['first_name'] ) && ! empty( $_POST['last_name'] ) ) $display .= ' ';
+	if ( ! empty( $_POST['last_name'] ) ) $display .= sanitize_text_field(trim( $_POST['last_name'] ));
+	
+	return $display;
+}
+
 add_action( 'user_register', 'battleplan_save_data', 99 );
 function battleplan_save_data( $user_id ) {
-	if ( ! empty( $_POST['first_name'] ) ) update_user_meta( $user_id, 'first_name', esc_attr(trim( $_POST['first_name'] ))) ;		
-	if ( ! empty( $_POST['last_name'] ) ) update_user_meta( $user_id, 'last_name', esc_attr(trim( $_POST['last_name'] )));
+	if ( ! empty( $_POST['first_name'] ) ) update_user_meta( $user_id, 'first_name', sanitize_text_field(trim( $_POST['first_name'] )) );
+	if ( ! empty( $_POST['last_name'] ) ) update_user_meta( $user_id, 'last_name', sanitize_text_field(trim( $_POST['last_name'] )) );
 	
 	if ( ! empty( $_POST['invite_code'] ) ) :
 		$userInvite = trim( $_POST['invite_code'] );
 		update_user_meta( $user_id, 'invite_code_used', $userInvite );
 		
-		if ( get_option('site_login')['assign_new_codes'] != 'false' && get_option('site_login')['assign_new_codes'] != null ) :
-		
+		if ( get_option('site_login')['assign_new_codes'] != 'false' && get_option('site_login')['assign_new_codes'] != null ) :		
 			$siteInviteCodes = get_option('site_login')['invite_code'];
 			$userInviteCodes = get_user_meta( $user_id, 'user_invite_codes', true);	
 			if ( !is_array($userInviteCodes) ) $userInviteCodes = array();	
@@ -83,8 +95,7 @@ function battleplan_save_data( $user_id ) {
 			update_option( 'site_login', array ( 'invite_code'=>$siteInviteCodesNew ));
 			update_user_meta( $user_id, 'access-allowed', '', false );	
 			update_user_meta( $user_id, 'log', '', false );	
-		endif;	
-	
+		endif;		
 	endif;	
 }
 
@@ -246,10 +257,14 @@ function displayUserPic( $identifier=null, $size='thumbnail' ) {
 	if ( $getUserPicMeta['sizes'][$size]['file'] ) :
 		$getUserPicW = $getUserPicMeta['sizes'][$size]['width'];
 		$getUserPicH = $getUserPicMeta['sizes'][$size]['height'];
-	 	return '<img alt="'.$getUser->user_firstname.' '.$getUser->user_lastname.'\'s profile picture" src="'.$getUserPicSrc.'" class="avatar user-image profile-pic wp-user-'.$getUserID.' wp-image-'.$getUserPicID.'" width="'.$getUserPicW.'" height="'.$getUserPicH.'" style="aspect-ratio:'.$getUserPicW.'/'.$getUserPicH.'"/>';
 	else:
-		 return '<img alt="'.$getUser->user_firstname.' '.$getUser->user_lastname.' has no profile picture" src="/wp-content/themes/battleplantheme/common/logos/generic-user-img.png" class="avatar user-image profile-pic wp-user-'.$getUserID.' wp-image-generic" width="320" height="320" style="aspect-ratio:320/320"/>';
-	endif;
+		$getUserPicSrc = "/wp-content/themes/battleplantheme/common/logos/generic-user-img.png";
+		$getUserPicID = "generic";
+		$getUserPicW = "320";
+		$getUserPicH = "320";
+	endif;	
+	
+	return '<img alt="Profile avatar for '.$getUser->display_name.'" src="'.$getUserPicSrc.'" class="avatar user-image profile-pic wp-user-'.$getUserID.' wp-image-'.$getUserPicID.'" width="'.$getUserPicW.'" height="'.$getUserPicH.'" style="aspect-ratio:'.$getUserPicW.'/'.$getUserPicH.'"/>';	
 }
 
 /*--------------------------------------------------------------
@@ -266,32 +281,34 @@ function battleplan_getUser( $atts, $content = null ) {
 		if ( $info == "role" ) : return battleplan_getUserRole( $user->ID, 'display' ); endif;
 		if ( $info == "username" || $info == "user" ) : return $user->user_login; endif;
 		if ( $info == "email" ) : return $user->user_email; endif;
-		if ( $info == "first name" || $info == "first" ) : return $user->user_firstname; endif;
-		if ( $info == "last name" || $info == "last" ) : return $user->user_lastname; endif;		
+		if ( $info == "first_name" || $info == "first name" || $info == "first" ) : return $user->user_firstname; endif;
+		if ( $info == "last_name" || $info == "last name" || $info == "last" ) : return $user->user_lastname; endif;		
 		if ( $info == "login" || $info == "log in" ) : return $user->user_login; endif;
-		if ( $info == "display name" || $info == "display" ) : return $user->display_name; endif;		
+		if ( $info == "name" || $info == "display name" || $info == "display_name" ) : return $user->display_name; endif;		
 		if ( $info == "nickname" ) : return $user->nickname; endif;
 		if ( $info == "id" ) : return $user->ID; endif;
 		if ( $info == "pic" || $info == "picture" || $info == "image" || $info == "avatar" ) : return displayUserPic( $user->ID, $size ); endif;
 	else:
 		return "";
-	endif;
+	endif; 
 }
 
 add_shortcode( 'display-user', 'battleplan_displayUser' );
 function battleplan_displayUser( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'user'=>wp_get_current_user()->ID, 'identity'=>get_option('site_login')['identity'], 'link'=>'true', 'icon'=>get_option('site_login')['icon'] ), $atts );	
+	$a = shortcode_atts( array( 'user'=>wp_get_current_user()->ID, 'info'=>'username', 'identity'=>get_option('site_login')['identity'], 'link'=>'true' ), $atts );	
 	$user = esc_attr($a['user']);
+	$info = esc_attr($a['info']);
 	$identity = esc_attr($a['identity']);
+	if ( $info == $identity ) $icon = get_option('site_login')['icon'];
 	$link = esc_attr($a['link']);
-	$icon = esc_attr($a['icon']);
+	
 	$displayName = "";
 	
 	if ( $link == "true" ) : $displayName .= '<a class="user-name" href="/profile?user='.$user.'">';	
 	else: '<span class="user-name">'; endif;
 	
-	if ( $icon != "false" && $icon != "no" ) $displayName .= '<i class="'.$icon.' fa"></i>';
-	$displayName .= do_shortcode('[get-user user="'.$user.'" info="'.$identity.'"]');
+	if ( $icon != "" && $icon != null ) $displayName .= '<i class="'.$icon.' fa"></i>';
+	$displayName .= do_shortcode('[get-user user="'.$user.'" info="'.$info.'"]');
 	
 	if ( $link == "true" ) : $displayName .= '</a>';	
 	else: '</span>'; endif;
@@ -299,25 +316,37 @@ function battleplan_displayUser( $atts, $content = null ) {
 	return $displayName;
 }
 
-/* Handle user info update */
+// Handle user info update 
 if ( is_user_logged_in() && isset($_POST['user_info_upload'])) :
 	$currUserID = wp_get_current_user()->ID;
-	if ( isset( $_POST['first_name'] ) ) update_user_meta($currUserID, 'user_firstname', esc_attr($_POST['first_name']));
-	if ( isset( $_POST['last_name'] ) ) update_user_meta($currUserID, 'user_lastname', esc_attr($_POST['last_name']));	
-	if ( isset( $_POST['display'] ) ) update_user_meta($currUserID, 'display_name', esc_attr($_POST['display']));
-	if ( isset( $_POST['nickname'] ) ) update_user_meta($currUserID, 'nickname', esc_attr($_POST['nickname']));
-	if ( isset( $_POST['email'] ) ) update_user_meta($currUserID, 'user_email', esc_attr($_POST['email']));
-	if ( isset( $_POST['bio'] ) ) update_user_meta($currUserID, 'description', esc_attr($_POST['bio']));
-	if ( isset( $_POST['facebook'] ) ) update_user_meta($currUserID, 'facebook', esc_attr($_POST['facebook']));
-	if ( isset( $_POST['twitter'] ) ) update_user_meta($currUserID, 'twitter', esc_attr($_POST['twitter']));
-	if ( isset( $_POST['instagram'] ) ) update_user_meta($currUserID, 'instagram', esc_attr($_POST['instagram']));
-	if ( isset( $_POST['linkedin'] ) ) update_user_meta($currUserID, 'linkedin', esc_attr($_POST['linkedin']));
-	if ( isset( $_POST['pinterest'] ) ) update_user_meta($currUserID, 'pinterest', esc_attr($_POST['pinterest']));
-	if ( isset( $_POST['youtube'] ) ) update_user_meta($currUserID, 'youtube', esc_attr($_POST['youtube']));
+	if ( isset( $_POST['first_name'] ) ) update_user_meta($currUserID, 'user_firstname', sanitize_text_field($_POST['first_name']));
+	if ( isset( $_POST['last_name'] ) ) update_user_meta($currUserID, 'user_lastname', sanitize_text_field($_POST['last_name']));	
+	if ( isset( $_POST['display'] ) ) update_user_meta($currUserID, 'display_name', sanitize_text_field($_POST['display']));
+	if ( isset( $_POST['nickname'] ) ) update_user_meta($currUserID, 'nickname', sanitize_text_field($_POST['nickname']));
+	if ( isset( $_POST['email'] ) ) update_user_meta($currUserID, 'user_email', sanitize_text_field($_POST['email']));
+	if ( isset( $_POST['bio'] ) ) update_user_meta($currUserID, 'description', sanitize_text_field($_POST['bio']));
+	if ( isset( $_POST['facebook'] ) ) update_user_meta($currUserID, 'facebook', sanitize_text_field($_POST['facebook']));
+	if ( isset( $_POST['twitter'] ) ) update_user_meta($currUserID, 'twitter', sanitize_text_field($_POST['twitter']));
+	if ( isset( $_POST['instagram'] ) ) update_user_meta($currUserID, 'instagram', sanitize_text_field($_POST['instagram']));
+	if ( isset( $_POST['linkedin'] ) ) update_user_meta($currUserID, 'linkedin', sanitize_text_field($_POST['linkedin']));
+	if ( isset( $_POST['pinterest'] ) ) update_user_meta($currUserID, 'pinterest', sanitize_text_field($_POST['pinterest']));
+	if ( isset( $_POST['youtube'] ) ) update_user_meta($currUserID, 'youtube', sanitize_text_field($_POST['youtube']));
 
 	wp_redirect( "/profile/" );
 endif;
 
+// Update user activity time 
+add_action( 'init', 'battleplan_updateActivityTime', 0 );
+function battleplan_updateActivityTime() {
+	update_user_meta( wp_get_current_user()->ID, 'last-login-when', time(), false );
+}
+
+// Add role to classes on <body> 
+add_filter( 'body_class', 'battleplan_addUserRoleToBodyClass', 99 );
+function battleplan_addUserRoleToBodyClass( $classes ) {
+	array_push($classes, 'role-'.battleplan_getUserRole( wp_get_current_user()->ID, '' ));
+	return $classes;
+}
 
 /*--------------------------------------------------------------
 # Status Updates
@@ -422,5 +451,114 @@ if ( is_user_logged_in() && isset($_POST['user_post_update'])) :
 	
 	wp_redirect( "/updates/" );
 endif;
+
+/*--------------------------------------------------------------
+# Restriction
+--------------------------------------------------------------*/
+
+// Add "Restrict Page" checkbox to Page Attributes meta box
+add_action( 'page_attributes_misc_attributes', 'battleplan_restrict_page_checkbox', 10, 1 );
+function battleplan_restrict_page_checkbox($post) { 
+	echo '<p class="post-attributes-label-wrapper">';
+	$getRestrictPage = get_post_meta($post->ID, "_bp_restrict_page", true);
+
+	if ( $getRestrictPage == "" ) : echo '<input name="restrict_page" type="checkbox" value="true">';
+	else: echo '<input name="restrict_page" type="checkbox" value="true" checked>';
+	endif;	
+	
+	echo '<label class="post-attributes-label" for="restrict_page">Restrict Page</label>';
+} 
+	 
+add_action("save_post", "battleplan_save_restrict_page", 10, 3);
+function battleplan_save_restrict_page($post_id, $post, $update) {
+	if ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) return $post_id;
+	if ( defined('DOING_AJAX') && DOING_AJAX ) return $post_id;
+    if ( !current_user_can("edit_post", $post_id) ) return $post_id;
+
+    $updateRestrictPage = "";
+    if ( isset($_POST["restrict_page"]) ) $updateRestrictPage = $_POST["restrict_page"];   
+    update_post_meta($post_id, "_bp_restrict_page", $updateRestrictPage);
+}
+
+// If post has "restrict page" checked, add log in form
+add_action('bp_before_site_main_inner', 'battle_plan_restrict_the_content');
+function battle_plan_restrict_the_content () {
+	if ( readMeta( get_the_ID(), '_bp_restrict_page', true ) ) :
+		$addToContent = '[restrict max="none"]';
+		$addToContent .= '<h1>Log In</h1>';
+		$addToContent .= '<h3>To Access '.get_the_title().'</h3>';
+		$addToContent .= '[get-login]';
+		$addToContent .= '[/restrict]';
+		echo do_shortcode($addToContent);
+	endif;
+}
+
+/*--------------------------------------------------------------
+# Activity Sign Up Form
+--------------------------------------------------------------*/
+
+add_shortcode( 'get-signup-form', 'battleplan_getSignUpForm' );
+function battleplan_getSignUpForm($atts, $content = null ) {
+	$a = shortcode_atts( array( 'num' => '5', 'type' => 'ol', 'meta' => 'generic-signup-form', 'btn' => 'true', 'btn_text' => 'Sign Up', 'remove_text' => 'Remove' ), $atts );
+	$num = esc_attr($a['num']);	
+	$type = esc_attr($a['type']);
+	$meta = esc_attr($a['meta']);
+	$btn = esc_attr($a['btn']);
+	$btnText = esc_attr($a['btn_text']);
+	$removeText = esc_attr($a['remove_text']);
+	$buildSignup = '';
+	$postID = get_the_ID();
+	
+	$getCurrSignups = readMeta( $postID, '_bp_'.$meta, true );
+	if ( !is_array($getCurrSignups) ) $getCurrSignups = array();				
+		
+	if ( isset( $_POST['add-'.$meta] ) ) :	
+		if ( !in_array($_POST['add-'.$meta], $getCurrSignups) ) :
+			array_push($getCurrSignups, $_POST['add-'.$meta]);
+			updateMeta($postID, '_bp_'.$meta, $getCurrSignups);
+		endif;
+	endif;
+	
+	if ( isset( $_POST['remove-'.$meta] ) ) :	
+		if ( in_array($_POST['remove-'.$meta], $getCurrSignups) ) :
+			unset($getCurrSignups[array_search($_POST['remove-'.$meta],$getCurrSignups)]);
+			updateMeta($postID, '_bp_'.$meta, $getCurrSignups);
+		endif;
+	endif;
+	
+	$buildSignup .= '<div class = "signup-form">';
+	if ( $type == 'ol' || $type == 'ul' ) : $buildSignup .= '<'.$type.'>'; $line = 'li';
+	else: $line = $type;
+	endif;	
+	
+	for ($x = 0; $x < $num; $x++) :
+		if ( $getCurrSignups[$x] ) :
+			$buildSignup .= '<'.$line.'>[get-user user="'.$getCurrSignups[$x].'" info="name"]</'.$line.'>';	
+			$btnHide = "true";
+		else:
+			$buildSignup .= '<'.$line.'>&nbsp;</'.$line.'>';
+			$btnHide = "false";
+		endif;
+	endfor;
+	
+	if ( $btn == 'true' && $btnHide == 'false' ) :	
+		$buildSignup .= '<form id="'.$meta.'-signup" class="profiles-signup" action="" method="post" enctype="multipart/form-data">';
+		$buildSignup .= '<input type="hidden" name="add-'.$meta.'" value="'.wp_get_current_user()->ID.'"/>';
+		$buildSignup .= '<input type="submit" name="'.$meta.'-submit" id="'.$meta.'-signup-btn" value="'.$btnText.'" class="profiles-signup-btn" />';
+		$buildSignup .= '</form>';
+	endif;
+	
+	if ( in_array(wp_get_current_user()->ID, $getCurrSignups) ) :
+		$buildSignup .= '<form id="'.$meta.'-remove" class="profiles-signup" action="" method="post" enctype="multipart/form-data">';
+		$buildSignup .= '<input type="hidden" name="remove-'.$meta.'" value="'.wp_get_current_user()->ID.'"/>';
+		$buildSignup .= '<input type="submit" name="'.$meta.'-remove" id="'.$meta.'-remove-btn" value="'.$removeText.'" class="profiles-remove-btn" />';
+		$buildSignup .= '</form>';
+	endif;
+	
+	if ( $type == 'ol' || $type == 'ul' ) $buildSignup .= '</'.$type.'>';
+	$buildSignup .= '</div>';
+	
+	return do_shortcode($buildSignup);
+}
 
 ?>

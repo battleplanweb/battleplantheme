@@ -5,15 +5,19 @@ $profileVar = do_shortcode('[get-url-var var="user"]');
 $profileID = do_shortcode('[get-user user="'.$profileVar.'" info="id"]');
 $currUserID = wp_get_current_user()->ID;
 
+$profileName = do_shortcode('[display-user user="'.$profileVar.'" info="name" link="false"]');
+$profileUsername = do_shortcode('[display-user user="'.$profileVar.'" info="username" link="false"]');
+$profileRole = do_shortcode('[display-user user="'.$profileVar.'" info="role" link="false"]');
+$profileBio = wp_kses_post(get_the_author_meta( 'description', $profileID ));
+
+
 if ( !$profileVar || $profileID == $currUserID ) : $currUser = true; 
 else: $currUser = false; endif;
 $profileFirst = do_shortcode('[get-user user="'.$profileVar.'" info="first"]');
 $profileLast = do_shortcode('[get-user user="'.$profileVar.'" info="last"]');
-$profileDisplay = do_shortcode('[get-user user="'.$profileVar.'" info="display"]');
 $profileNickname = do_shortcode('[get-user user="'.$profileVar.'" info="nickname"]');
-$profileUsername = do_shortcode('[get-user user="'.$profileVar.'" info="username"]');
+//$profileUsername = do_shortcode('[get-user user="'.$profileVar.'" info="username"]');
 $profileAvatar = do_shortcode('[get-user user="'.$profileVar.'" info="avatar"]');
-$profileDesc = wp_kses_post(get_the_author_meta( 'description', $profileID ));
 $profileEmail = esc_url(get_the_author_meta( 'user_email', $profileID ));
 $profileFacebook = esc_url(get_the_author_meta( 'facebook', $profileID ));
 $profileTwitter = esc_url(get_the_author_meta( 'twitter', $profileID ));
@@ -21,7 +25,6 @@ $profileInstagram = esc_url(get_the_author_meta( 'instagram', $profileID ));
 $profileLinkedIn = esc_url(get_the_author_meta( 'linkedin', $profileID ));
 $profilePinterest = esc_url(get_the_author_meta( 'pinterest', $profileID ));
 $profileYouTube = esc_url(get_the_author_meta( 'youtube', $profileID ));
-$displayProfile = do_shortcode('[display-user user="'.$profileID.'"]');
 if ( $profileEmail ) $profileEmailBtn = do_shortcode('[social-btn type="email" link="'.$profileEmail.'"]');
 if ( $profileFacebook ) $profileFacebookBtn = do_shortcode('[social-btn type="facebook" link="'.$profileFacebook.'"]');
 if ( $profileTwitter ) $profileTwitterBtn = do_shortcode('[social-btn type="twitter" link="'.$profileTwitter.'"]');
@@ -44,15 +47,11 @@ endif;
 if (function_exists('battleplan_userProfileInfo')) : $printPage .= battleplan_userProfileInfo($profileID, $currUser);
 else :
 	$printPage .= '[col class="user-info" valign="center"][txt]';
-	$printPage .= '<p class="user-name">';
-	if ( $profileDisplay ) : $printPage .= $profileDisplay;
-	elseif ( $profileFirst || $profileLast ) :
-		if ( $profileFirst ) $printPage .= $profileFirst;
-		if ( $profileLast ) $printPage .= ' '.$profileLast;
-	endif;
-	$printPage .= '<br><span class="user-username">'.$displayProfile.'</p>';
-	if ( $profileDesc ) $printPage .= '<p>'.$profileDesc.'</p>';
-	if ( $currUser == true ) $printPage .= '<p>[get-upload-btn text="Change Avatar: "]</p>';
+	if (get_option('site_login')['hide_name'] != "true" ) $printPage .= '<div class="user-name">'.$profileName.'</div>';
+	if (get_option('site_login')['hide_username'] != "true" ) $printPage .= '<div class="user-username">'.$profileUsername.'</div>';
+	if (get_option('site_login')['hide_role'] != "true" ) $printPage .= '<div class="user-role">'.$profileRole.'</div>';
+	if ( $profileBio ) $printPage .= '<div class="user-bio">'.$profileBio.'</div>';
+	if ( $currUser == true ) $printPage .= '<div><p>[get-upload-btn text="Change Avatar: "]</p></div>';
 	$printPage .= '[/txt][/col]';
 endif;
 

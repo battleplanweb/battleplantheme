@@ -17,7 +17,22 @@
 	font-size: 									18px;
 }
 
-.user-name i.fa {
+.user-info .user-name {
+	font-size: 									24px;
+}
+
+.user-role {
+	font-weight: 								normal;
+	font-size: 									80%;
+	font-style: 								italic;
+}
+
+.user-bio {
+	margin: 									0.75em 0 1.5em;
+}
+
+.user-name i.fa,
+.user-username i.fa {
 	margin-left: 								0;
 	margin-right: 								8px;
 }
@@ -26,6 +41,22 @@
 --------------------------------------------- */
 .user-profile-section {
 	margin-bottom: 								2em;
+}
+
+.profile-bar i.fa {
+	display: 									inline-block;
+	width: 										20px;
+	margin-right: 								5px;
+}
+
+.profile-bar #search-box,
+.profile-bar #sort-box {
+	display: 									inline-block;
+	width: 										calc(100% - 25px);
+}
+
+.hide-profile {
+	display: 									none;
 }
 
 .user-profile {
@@ -67,6 +98,7 @@ input[id*='upload-file-name'] {
 }
 
 .slug-profile label {
+	display: 									block;
 	text-align: 								left;
 }
 
@@ -78,8 +110,8 @@ input[id*='upload-file-name'] {
 #wall-update {
 	display: 									block;
 	margin: 									0 auto;
-	width: 										750px;
-	max-width: 									100%;
+	width: 										100%;
+	max-width: 									750px;
 }
 
 #userinfo-update .flex:not(:last-child) {
@@ -135,6 +167,32 @@ span.user-roles {
 .user-profile-section .col-updates h3 + .block.block-text {
     margin-top:									1em;
     margin-bottom: 								1em;
+}
+
+/* Signup Forms
+--------------------------------------------- */
+div.signup-form {
+	display: 									inline-block;
+	min-width: 									33%;
+	margin-bottom: 								2.5em;
+}
+
+div.signup-form ol,
+div.signup-form ul {
+	margin-bottom: 								0;
+}
+
+div.signup-form li,
+div.signup-form div,
+div.signup-form p {
+	border-bottom: 								1px solid #000000;
+	border-color: 								inherit;
+}
+
+.profiles-signup {
+	display: 									inline-block;
+	margin-top: 								1.5em;
+	margin-right: 								1em;
 }
 
 /* 1: Phones (portrait) */

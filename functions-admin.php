@@ -1347,7 +1347,7 @@ function battleplan_column_settings() {
 					'username'=>array(
 						'type'=>'username',
 						'label'=>'Username',
-						'width'=>'200',
+						'width'=>'170',
 						'width_unit'=>'px',
 						'edit'=>'on',
 						'sort'=>'on',
@@ -1361,7 +1361,7 @@ function battleplan_column_settings() {
 					'first_name'=>array(
 						'type'=>'column-first_name',
 						'label'=>'First Name',
-						'width'=>'200',
+						'width'=>'170',
 						'width_unit'=>'px',
 						'edit'=>'on',
 						'sort'=>'on',
@@ -1375,7 +1375,7 @@ function battleplan_column_settings() {
 					'last_name'=>array(
 						'type'=>'column-last_name',
 						'label'=>'Last Name',
-						'width'=>'200',
+						'width'=>'170',
 						'width_unit'=>'px',
 						'edit'=>'on',
 						'sort'=>'on',
@@ -1384,9 +1384,23 @@ function battleplan_column_settings() {
 						'filter'=>'on',
 						'filter_label'=>'',
 						'bulk-editing' =>'',
+						'search'=>'on',
+					),			 
+					'display_name'=>array(
+						'type'=>'column-display_name',
+						'label'=>'Display Name',
+						'width'=>'170',
+						'width_unit'=>'px',
+						'edit'=>'on',
+						'sort'=>'on',
+						'name'=>'display_name',
+						'edit'=>'on',
+						'sort'=>'on',
+						'filter'=>'on',
+						'filter_label'=>'',
+						'bulk-editing' =>'on',
 						'search'=>'on'
-					),			
-			
+					),		
 					'email'=>array(
 						'type'=>'email',
 						'label'=>'Email',
@@ -2030,7 +2044,7 @@ function battleplan_remove_sidebar_checkbox($post) {
 	echo '<label class="post-attributes-label" for="remove_sidebar">Remove Sidebar</label>';
 } 
 	 
-add_action("save_post", "battleplan_save_remove_sidebar", 10, 3);
+add_action('save_post', 'battleplan_save_remove_sidebar', 10, 3);
 function battleplan_save_remove_sidebar($post_id, $post, $update) {
 	if ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) return $post_id;
 	if ( defined('DOING_AJAX') && DOING_AJAX ) return $post_id;

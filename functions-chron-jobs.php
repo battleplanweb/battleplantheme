@@ -37,7 +37,7 @@ if ( is_plugin_active('contact-form-7/wp-contact-form-7.php') ) :
 	
 		$formMail['subject'] = $formTitle." · Website · ".$GLOBALS['customer_info']['name'];
 		$formMail['sender'] = "[user-name] <email@admin.".do_shortcode('[get-domain-name ext="true"]').">";
-		$formMail['additional_headers'] = "Reply-to: [user-name] <[user-email]>\nCc: Website Administrator <email@battleplanwebdesign.com>";
+		$formMail['additional_headers'] = "Reply-to: [user-name] <[user-email]>\nBcc: Website Administrator <email@battleplanwebdesign.com>";
 		$formMail['use_html'] = 1;
 		$formMail['exclude_blank'] = 1;
 

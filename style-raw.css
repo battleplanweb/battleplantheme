@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 10.11.4
+Version: 10.12
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -104,6 +104,7 @@ pre {
 /* Remove the gray background on active links in IE 10. */
 a {
 	background-color: 							transparent;
+	text-underline-position: 					under;
 }
 
 /* Remove the bottom border in Chrome 57-. Add the correct text decoration in Chrome, Edge, IE, Opera, and Safari. */
@@ -111,6 +112,7 @@ abbr[title] {
 	border-bottom: 								none;
 	text-decoration: 							underline;
 	text-decoration: 							underline dotted;
+	text-underline-position: 					under;
 }
 
 /* Correct the inheritance and scaling of font size in all browsers. Correct the odd `em` font sizing in all browsers. */
@@ -367,6 +369,7 @@ textarea {
 	font-size: 									18px; 
 	line-height: 								1.5;
 	max-width:									100%; /* keeps input, textarea and select from expanding larger than container 8/27/2020 */
+	text-underline-position: 					under;
 }
 
 h1,
@@ -709,10 +712,6 @@ li > ol {
 
 dt {
 	font-weight: 								700;
-
-
-
-
 }
 
 dd {
@@ -2502,6 +2501,7 @@ body.locked {
 
 
 
+
 	left:										-3999px;
 }
 
@@ -3357,7 +3357,7 @@ img.unloaded {
 .aligncenter,
 .align-center {
 	float:										none;
-	margin: 									1.5em auto;
+	margin: 									2em auto;
 }
 
 .align-left.size-half-f,
@@ -3561,7 +3561,6 @@ ul.side-by-side img {
 }
 
 .testimonials-name {
-
 	font-weight:								bold;
 	font-size:									120%;
 }
@@ -4085,6 +4084,7 @@ span.descriptionText {
 .wp-gr .wp-google-rating .wp-google-stars {
     color: 										#404040;
 	width: 										122px;
+	font-size: 									18px;
 }
 
 .wp-gr .wp-google-total {
@@ -4788,6 +4788,7 @@ p#user_switching_switch_on a.tab-focus {
 	.sidebar-box #secondary .sidebar-inner,
 	.content-sidebar-box #secondary .sidebar-inner,
 	.content-sidebar-box #primary {
+
 		padding:									0 1.5em;
 	}
 	

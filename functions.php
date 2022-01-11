@@ -19,7 +19,7 @@
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.11.4' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.12' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -31,7 +31,11 @@ if ( !defined('_PAGE_SLUG') ) :
 	endif;
 endif;
 
-$GLOBALS['customer_info'] = get_option('customer_info');
+if ( !isset($_COOKIE['site-location']) || $_COOKIE['site-location'] == '1' ) :
+	$GLOBALS['customer_info'] = get_option('customer_info');
+else:
+	$GLOBALS['customer_info'] = get_option('customer_info_'.$_COOKIE['site-location']);
+endif;
 
 /*--------------------------------------------------------------
 # Shortcodes
@@ -2603,7 +2607,7 @@ function battleplan_setupFormEmail( $contact_form ) {
 	if ( $userLoc ) $buildEmail .= ' near '.$userLoc;
 	$buildEmail .= '.<br/>';
 	$buildEmail .= '<em>Sender IP:</em> <a style="text-decoration:none; color:#8a8a8a;" href="https://whatismyipaddress.com/ip/'.$_SERVER["REMOTE_ADDR"].'">'.$_SERVER["REMOTE_ADDR"].'</a><br/>';
-	$buildEmail .= $_SERVER["HTTP_USER_AGENT"].'</p>';
+	//$buildEmail .= $_SERVER["HTTP_USER_AGENT"].'</p>';
 	
 	$formMail['body'] = $buildEmail;
 	
@@ -3099,6 +3103,20 @@ function battleplan_printWrapperTop() {
 # AJAX Functions
 --------------------------------------------------------------*/
 
+// Change site option, post meta or user meta with javaScript
+add_action( 'wp_ajax_update_meta', 'battleplan_update_meta_ajax' );
+add_action( 'wp_ajax_nopriv_update_meta', 'battleplan_update_meta_ajax' );
+function battleplan_update_meta_ajax() {
+	$type = $_POST['type'];	
+	$key = $_POST['key'];	
+	$value = $_POST['value'];
+	
+	if ( $type == "site" ) update_option( $key, $value );
+	if ( $type == "user" ) update_user_meta( wp_get_current_user()->ID, $key, $value, false );
+	if ( $type == "post" || $type == "page" ) updateMeta( get_the_ID(), $key, $value );	
+	if ( $type == "cookie" ) setcookie($key, $value, time() + (86400 * 365), '/', '', true, false);
+}
+	
 // Log Page Load Speed
 add_action( 'wp_ajax_log_page_load_speed', 'battleplan_log_page_load_speed_ajax' );
 add_action( 'wp_ajax_nopriv_log_page_load_speed', 'battleplan_log_page_load_speed_ajax' );
@@ -3655,7 +3673,7 @@ function battleplan_buildButton( $atts, $content = null ) {
 	}
 
 	return '<div class="block block-button span-'.$size.$class.$align.'"'.$style.'><a'.$target.' href="'.$link.'" class="button'.$class.'">'.$content.$ada.'</a></div>';
-}
+}  
 
 // Accordion Block 
 add_shortcode( 'accordion', 'battleplan_buildAccordion' );
@@ -3683,7 +3701,7 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 		if ( $btn == "true" ) :
 			$printTitle = '<div class="block block-button"><button role="button" tabindex="0" class="accordion-title accordion-button" data-text="'.$title.'" data-collapse="'.$btnCollapse.'">'.$title.'</button></div>';
 		else:
-			$printTitle = '<h2 class="accordion-title">'.$icon.$title.'</h2>';
+			if ( $title ) $printTitle = '<h2 class="accordion-title">'.$icon.$title.'</h2>';
 			$addBtn = '<div class="block block-button"><button role="button" tabindex="0" class="accordion-button" data-text="'.$btn.'" data-collapse="'.$btnCollapse.'">'.$btn.'</button></div>';
 		endif;
 	endif;

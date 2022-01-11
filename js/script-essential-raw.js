@@ -449,12 +449,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				
 				setTimeout( function() {						
 					activeAcc.removeClass('active').attr( 'aria-expanded', false ); 
-
-
-
-
-
-
 					thisAcc.addClass('active').attr( 'aria-expanded', true );
 				}, cssDelay);
 				
@@ -559,6 +553,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	};		
 		
 	// Handle the post filter button [get-filter-btn]
+
 	$(".filter-btn").click(function() {
 		var thisBtn = $(this), url = "?"+thisBtn.attr('data-url')+"=", flag=false;
 		$("input:checkbox[name=choice]:checked").each(function() {
@@ -631,7 +626,21 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	});
 	
 // This script blocked by Content Security Policy	
-	document.getElementById( "ak_js" ).setAttribute( "value", ( new Date() ).getTime() );	
+	var ak_js = document.getElementById( 'ak_js' ), el, destinations = [];
+
+	if( !ak_js ) {
+		ak_js = document.createElement( 'input' );
+		ak_js.type = 'hidden';
+		ak_js.name = ak_js.id = 'ak_js';
+	} else {
+		ak_js.parentNode.removeChild( ak_js );
+	}
+
+	ak_js.value = ( new Date() ).getTime();
+
+	if ( el = document.getElementById( 'commentform' ) ) { destinations.push( el ); }
+	if ( ( el = document.getElementById( 'replyrow' ) ) && ( el = el.getElementsByTagName('td') ) ) { destinations.push( el.item(0) ); }
+	for ( var i = 0, j = destinations.length; i < j; i++ ) { destinations[i].appendChild( ak_js ); }
 
 /*--------------------------------------------------------------
 # DOM level functions
@@ -1077,7 +1086,7 @@ if ( typeof parallaxBG !== 'function' ) {
 	$( ".far, .fas, .fab" ).addClass("fa");
 	
 // Add unique id to labels & inputs in #request-quote-modal	for ADA compliance		
-	$('#request-quote-modal p').each(function() {
+	$('#request-quote-modal div.form-input').each(function() {
 		var theLabel = $(this).find('label'), theInput = $(this).find('input'), theAttr = theInput.attr('id');
 		theLabel.attr('for', 'modal-'+theAttr);			
 		theInput.attr('id', 'modal-'+theAttr);			

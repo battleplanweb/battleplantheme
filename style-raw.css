@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 10.12
+Version: 10.12.1
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1047,7 +1047,7 @@ section.section-default .flex {
 	display: 									grid;
 	grid-template-columns: 						repeat(12, 1fr);
 	gap: 										1.5em 3%;
-	/*height:										100%; --12/22/2021 - galleries CandaulistClub */
+	height:										100%;  
 }
 
 .section.archive-content,
@@ -4789,6 +4789,7 @@ p#user_switching_switch_on a.tab-focus {
 	.content-sidebar-box #secondary .sidebar-inner,
 	.content-sidebar-box #primary {
 
+
 		padding:									0 1.5em;
 	}
 	
@@ -4969,7 +4970,7 @@ p#user_switching_switch_on a.tab-focus {
 
 	.logo-strip .flex:not(.grid-1) .col .col-inner,
 	.flex.break-2 .col .col-inner,
-	.flex.grid-1-1-1.break-2 .col:nth-child(3n+3) .col-inner /*Maine Stone Landscape 9/1/21 {
+	.flex.grid-1-1-1.break-2 .col:nth-child(3n+3) .col-inner  { /*Maine Stone Landscape 9/1/21 .... 1/17/22 this line had de-activated the next few lines of css, not sure if it was on purpose, added it back for Ozark Business Brokers */
 		max-width:									85%;
 		margin:										0 auto;
 	}
@@ -4986,6 +4987,7 @@ p#user_switching_switch_on a.tab-focus {
 		grid-column: 								span 2; 
 	}
 	
+	.flex.grid-1-1-1.break-2 .col, /* this line 1/17/22 Ozark Business Brokers */
 	.flex.grid-3e.break-2 .col {
 		grid-column: 								span 3; 
 	}	

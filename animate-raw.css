@@ -132,20 +132,6 @@
   animation-name: shakeY;
 }
 
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-.spin {
-  animation-name: spin;
-  animation-timing-function: linear;
-}
-
-
 @keyframes headShake {
   0% {
     transform: translateX(0);
@@ -1179,6 +1165,8 @@
     transform-origin: center;
 
 
+
+
     transform: none;
     opacity: 1;
   }
@@ -1958,6 +1946,19 @@
 }
 
 /* My Custom Animations */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+.spin {
+  animation-name: spin;
+  animation-timing-function: linear;
+}
+
 @keyframes zoomInTada {
   from {
     opacity: 0;
@@ -1983,4 +1984,82 @@
 }
 .zoomInTada {
   animation-name: zoomInTada;
+}
+
+@keyframes blurIn {
+  from {
+    opacity: 0;
+	filter: blur(2em);
+  }
+  to {
+    opacity: 1;
+	filter: blur(0);
+  }
+}
+.blurIn {
+  animation-name: blurIn;
+}
+
+@keyframes blurInDown {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -100%, 0);
+	filter: blur(2em);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+	filter: blur(0);
+  }
+}
+.blurInDown {
+  animation-name: blurInDown;
+}
+
+@keyframes blurInLeft {
+  from {
+    opacity: 0;
+    transform: translate3d(-100%, 0, 0);
+	filter: blur(2em);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+	filter: blur(0);
+  }
+}
+.blurInLeft {
+  animation-name: blurInLeft;
+}
+
+@keyframes blurInRight {
+  from {
+    opacity: 0;
+    transform: translate3d(100%, 0, 0);
+	filter: blur(2em);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+	filter: blur(2em);
+  }
+}
+.blurInRight {
+  animation-name: blurInRight;
+}
+
+@keyframes blurInUp {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 100%, 0);
+	filter: blur(2em);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+	filter: blur(0);
+  }
+}
+.blurInUp {
+  animation-name: blurInUp;
 }

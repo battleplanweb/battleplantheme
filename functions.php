@@ -19,7 +19,7 @@
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.12.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.13' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -2590,12 +2590,19 @@ function battleplan_setupFormEmail( $contact_form ) {
 	$bodyEls = explode("\n", $formMail['body']);	
 	$buildEmail = '<div style="line-height:1.5"><p><b style="font-size:130%">'.substr($formMail['subject'], 0, strpos($formMail['subject'], " · ")).'</b></p><p>';	
 	
+	$maxLength = 0;		
 	foreach ( $bodyEls as $bodyEl ) :
 		$elParts = explode("[", $bodyEl);
-		if ( $elParts[0] && $elParts[1] ) $buildEmail .= '<span style="display:inline-block; width:70px; style="font-size:90%"><em>'.$elParts[0].'</em></span>';
-		if ( $elParts[0] && !$elParts[1] ) $buildEmail .= '<span style="display:inline-block; width:100%; style="font-size:90%"><em>'.$elParts[0].'</em></span>';
+		if ( $elParts[0] && $elParts[1] ) : if ( strlen($elParts[0]) > $maxLength ) : $maxLength = strlen($elParts[0]); endif; endif;
+	endforeach;	
+	$colWidth = round($maxLength * 8);
+	
+	foreach ( $bodyEls as $bodyEl ) :
+		$elParts = explode("[", $bodyEl);
+		if ( $elParts[0] && $elParts[1] ) $buildEmail .= '<span style="display:inline-block; width:'.$colWidth.'px; style="font-size:87%"><em><b>'.$elParts[0].'</b></em></span>';
+		if ( $elParts[0] && !$elParts[1] ) $buildEmail .= '<span style="display:inline-block; width:100%; style="font-size:87%"><em><b>'.$elParts[0].'</b></em></span>';
 		if ( $elParts[0] && $elParts[1] ) $buildEmail .= '<span>['.$elParts[1].'</span>';		
-		if ( !$elParts[0] && $elParts[1] ) $buildEmail .= '<br/><span>['.$elParts[1].'</span>';
+		if ( !$elParts[0] && $elParts[1] ) $buildEmail .= '<span>['.$elParts[1].'</span>';
 		$buildEmail .= '<br/>';
 	endforeach;
 	

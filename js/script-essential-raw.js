@@ -1158,7 +1158,7 @@ if ( typeof parallaxBG !== 'function' ) {
 	});
 
 // Automatically adjust for Google review bar 
-	$( '<div class="wp-google-badge-faux"></div>' ).insertAfter( $('#colophon'));
+	//$( '<div class="wp-google-badge-faux"></div>' ).insertAfter( $('#colophon'));   /* moved to footer.php */
 
 // Animate scrolling when moving up or down a page
 	$('a[href^="#"]:not(.carousel-control-next):not(.carousel-control-prev)').on('click', function (e) {

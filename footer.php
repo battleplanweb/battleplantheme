@@ -64,6 +64,15 @@
 	
 	<?php bp_after_colophon(); ?>
 	
+	<?php
+		$buildLinks = '<div style="font-size:14px" class="wp-google-badge-faux">Service Areas: ';	
+		foreach ( get_posts( array ( 'numberposts'=>-1, 'post_type'=>'optimized' ) ) as $post ) {
+			$buildLinks .= '<a href="'.get_permalink( $post->ID ).'">'.$post->post_title.'</a> · ';
+		}
+		$buildLinks .= 'other towns in '.do_shortcode('[get-biz info="state-full"]').'</div>';	
+		echo $buildLinks;
+	?>	
+		
 </div><!-- #page -->
 
 <!-- Scroll to Top btn -->

@@ -19,7 +19,7 @@
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.13' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.14' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -197,9 +197,18 @@ function battleplan_getDomainName( $atts, $content = null ) {
 	return $printDomain;
 }
 
-// Returns url of page (minus domain)
+// Returns url of page (minus domain, choose whether to include variables)
 add_shortcode( 'get-url', 'battleplan_getURL' );
-function battleplan_getURL() { return $_SERVER['REQUEST_URI']; }
+function battleplan_getURL( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'var'=>'true', ), $atts );
+	$var = esc_attr($a['var']);	
+	
+	if ( $var == "false" ) :
+		return strtok($_SERVER['REQUEST_URI'],'?');
+	else:
+		return $_SERVER['REQUEST_URI'];
+	endif;
+}
 
 // Returns url variable
 add_shortcode( 'get-url-var', 'battleplan_getURLVar' );
@@ -268,7 +277,8 @@ function battleplan_getRandomText($atts, $content = null) {
 	$printText = $textArray[$rand];
 	
 	if ( $rand == $num ) : $rand = 0; else: $rand++; endif;	
-	if ( $cookie != "false" ) setcookie('random-text', $rand, time() + (86400 * 7), '/', '', true, false);
+	//if ( $cookie != "false" ) setcookie('random-text', $rand, time() + (86400 * 7), '/', '', true, false);
+	if ( $cookie != "false" ) writeCookie('random-text', $rand, 7);
 
 	return $printText;
 }
@@ -1364,6 +1374,19 @@ function deleteMeta($id, $key) {
 	delete_post_meta( $id, $key );
 }
 
+// Set Cookies in same method as javascript
+function writeCookie($cname, $cvalue, $exdays) {
+	$parts = explode('.', parse_url(esc_url(get_site_url()), PHP_URL_HOST));
+	$domain = $parts[0].'.'.$parts[1];	
+	if ( $exdays == '' || $exdays == null || $exdays == '0' || $exdays == 0 ) :
+		$expires = '';
+	else:
+		$expires = time() + ($exdays * 24 * 60 * 60);
+	endif;
+
+	setcookie($cname, $cvalue, $expires, '/', $domain, true, false);
+}
+
 // Convert time into seconds
 function convertTime($howMany, $howMuch) {
 	if ( $howMuch == "seconds" || $howMuch == "second" ) $seconds = $howMany * 1;
@@ -1886,7 +1909,8 @@ function battleplan_addBodyClasses( $classes ) {
 	
 	if (!isset($_COOKIE['first-page'])) :
 		$classes[] = "first-page";
-		setcookie('first-page', 'no', '0', '/', '', true, false);
+		//setcookie('first-page', 'no', '0', '/', '', true, false);
+		writeCookie('first-page', 'no', '0');
 	else:
 		$classes[] = "not-first-page";
 	endif;
@@ -1904,14 +1928,18 @@ function battleplan_calculatePagesViewed() {
   	if ( defined( 'DOING_AJAX' ) && DOING_AJAX ) return;
 	if (!isset($_COOKIE['unique-id'])) :
 		$uniqueID = time().rand();		
-		setcookie('unique-id', $uniqueID, '0', '/', '', true, false);
-		setcookie('pages-viewed', 1, '0', '/', '', true, false);
+		//setcookie('unique-id', $uniqueID, '0', '/', '', true, false);
+		//setcookie('pages-viewed', 1, '0', '/', '', true, false);
+		writeCookie('unique-id', $uniqueID, '0');
+		writeCookie('pages-viewed', 1, '0');
 	else:
 		$pageViews = $_COOKIE['pages-viewed'];		
 		if ( $_COOKIE['current-page'] != _PAGE_SLUG ) :
 			$pageViews++;
-			setcookie('pages-viewed', $pageViews, '0', '/', '', true, false);
-			setcookie('current-page', _PAGE_SLUG, '0', '/', '', true, false);
+			//setcookie('pages-viewed', $pageViews, '0', '/', '', true, false);
+			//setcookie('current-page', _PAGE_SLUG, '0', '/', '', true, false);
+			writeCookie('pages-viewed', $pageViews, '0');
+			writeCookie('current-page', _PAGE_SLUG, '0');
 		endif;		
 	endif;	
 }	
@@ -2433,7 +2461,8 @@ add_action( 'wp', 'battleplan_setHomeBtnCookie' );
 function battleplan_setHomeBtnCookie() {
 	if ( get_post_type() == "optimized" ) :
 		$homeURL = $_SERVER['REQUEST_URI'];
-		setcookie('home-url', $homeURL, '', '/', '', true, false);
+		//setcookie('home-url', $homeURL, '', '/', '', true, false);
+		writeCookie('home-url', $homeURL, '0');
 	endif;
 }
 
@@ -2537,7 +2566,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
 	}
     if ( "user-email" == $tag->name ) {
         $check = isset( $_POST["user-email"] ) ? trim( $_POST["user-email"] ) : ''; 
-		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz', '@tworld.com', 'garywhi777@gmail.com', 'ronyisthebest16@gmail.com', 'ronythomas611@gmail.com', 'ronythomasrecruiter@gmail.com', '@ideonagency.net', 'axiarobbie20@gmail.com', '@hyper-tidy.com');
+		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz', '@tworld.com', 'garywhi777@gmail.com', 'ronyisthebest16@gmail.com', 'ronythomas611@gmail.com', 'ronythomasrecruiter@gmail.com', '@ideonagency.net', 'axiarobbie20@gmail.com', '@hyper-tidy.com', '@readyjob.org');
 		foreach($badwords as $badword) {
 			if (stripos(strtolower($check),strtolower($badword)) !== false) $result->invalidate( $tag, 'Message cannot be sent.');
 		}
@@ -3121,7 +3150,8 @@ function battleplan_update_meta_ajax() {
 	if ( $type == "site" ) update_option( $key, $value );
 	if ( $type == "user" ) update_user_meta( wp_get_current_user()->ID, $key, $value, false );
 	if ( $type == "post" || $type == "page" ) updateMeta( get_the_ID(), $key, $value );	
-	if ( $type == "cookie" ) setcookie($key, $value, time() + (86400 * 365), '/', '', true, false);
+	//if ( $type == "cookie" ) setcookie($key, $value, time() + (86400 * 365), '/', '', true, false);
+	if ( $type == "cookie" ) writeCookie($key, $value, 365);
 }
 	
 // Log Page Load Speed
@@ -3263,7 +3293,8 @@ function battleplan_count_site_views_ajax() {
 			$newLocations = maybe_serialize( $getLocations );
 			updateMeta(_HEADER_ID, 'log-views-cities', $newLocations);
 	
-			setcookie('countVisit', 'no', time() + 600, "/", '', true, false);
+			//setcookie('countVisit', 'no', time() + 600, "/", '', true, false);
+			writeCookie('countVisit', 'no', 0.007);
 	
 			$response = array( 'result' => 'Site View counted: Today='.$viewsToday.', Week='.$views7Day.', Month='.$views30Day.', Quarter='.$views90Day.', Year= '.$views365Day);
 		else:

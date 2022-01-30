@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 10.13
+Version: 10.14
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -181,6 +181,8 @@ button,
 [type="reset"],
 [type="submit"] {
 	-webkit-appearance: 						button;
+
+
 }
 
 /* Remove the inner border and padding in Firefox. */
@@ -626,6 +628,7 @@ body {
 
 #page {
 	position:									relative;
+	overflow: 									hidden; /* 1/28/22 to keep logo slider or other elements from causing horizontal scroll bars */ 
 }
 
 hr {
@@ -916,6 +919,7 @@ section.section-default .flex {
 }
 
 .flex.grid-1-2-1 {
+
 	grid-template-columns: 						1fr 2fr 1fr;
 }
 
@@ -2335,6 +2339,7 @@ body.locked {
 	padding-left: 								2%;
 	padding-right: 								2%;
 	font-family:								Helvetica, Arial, Verdana, sans-serif;
+
 	font-size:									24px;
 	text-transform:								capitalize;
 	font-weight:								normal;	
@@ -2797,6 +2802,12 @@ body.locked {
 	flex-direction:								column;
 	padding-left: 								10%;
 	padding-right: 								10%;
+}
+
+#mobile-navigation ul.sub-menu {
+	padding-left: 								4%;
+	padding-right: 								4%;
+	font-size: 									80%;
 }
 
 #mobile-navigation li a {
@@ -3320,7 +3331,6 @@ img.unloaded {
 }
 
 .alignleft, 
-
 .align-left,
 .thumb-left .section .alignright,
 .thumb-left .section .align-right,
@@ -3329,7 +3339,7 @@ img.unloaded {
 .thumb-right .section .switch-thumb .alignright,
 .thumb-right .section .switch-thumb .align-right {
 	float: 										left;
-	margin:										1em 1.5em 1em 0;
+	margin:										1.5em 1.5em 1em 0;
 }
 
 .alignright, 
@@ -3341,7 +3351,27 @@ img.unloaded {
 .thumb-left .section .switch-thumb .alignright,
 .thumb-left .section .switch-thumb .align-right {
 	float: 										right;
-	margin:										1em 0 1em 1.5em;
+	margin:										1.5em 0 1em 1.5em;
+}
+
+ /* made top margin 0 to raise pics a little bit (above <p> provides enough margin)  1/24/22 */
+p + .alignleft, 
+p + .align-left,
+p + .thumb-left .section .alignright,
+p + .thumb-left .section .align-right,
+p + .thumb-right .section .switch-thumb .alignleft,
+p + .thumb-right .section .switch-thumb .align-left,
+p + .thumb-right .section .switch-thumb .alignright,
+p + .thumb-right .section .switch-thumb .align-right,
+p + .alignright, 
+p + .align-right,
+p + .thumb-right .section .alignleft,
+p + .thumb-right .section .align-left,
+p + .thumb-left .section .switch-thumb .alignleft,
+p + .thumb-left .section .switch-thumb .align-left,
+p + .thumb-left .section .switch-thumb .alignright,
+p + .thumb-left .section .switch-thumb .align-right {
+	margin-top:									0;
 }
 
 .alignright img, 
@@ -4114,6 +4144,7 @@ div[class*="-faux"] {
 	position:									relative;
 	display:									block;
 	width:										100%;
+	text-align: 								center;
 }
 
 /* Podium Web Chat Module */
@@ -4534,43 +4565,44 @@ p#user_switching_switch_on a.tab-focus {
 	
 	/* Headeline font basis */
 	html {
-
 		font-size:									5.0%;
 	}
 			
 	/* Footer font size */
-
 	.site-info, 
 	.site-info .col-inner {
 		font-size: 									14px;
 	}
 	
 	/* Responsive Sections */
-	.flex.grid-1-1-1-1:not(.break-none),
-	.flex.grid-1-1-2:not(.break-none),
-	.flex.grid-1-2-1:not(.break-none),
-	.flex.grid-1-3-1:not(.break-none),
-	.flex.grid-2-1-1:not(.break-none) {
+	.flex.grid-1-1-1-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1),
+	.flex.grid-1-1-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1),	
+	.flex.grid-1-1-2:not(.break-none):not(.break-3):not(.break-2):not(.break-1),
+	.flex.grid-1-2-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1),
+	.flex.grid-1-3-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1),
+	.flex.grid-2-1-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1) {
 		grid-template-columns: 						1fr 1fr;
 	}
 	
-	.flex.grid-1-1-2:not(.break-none) .col:nth-child(3n+3),
-	.flex.grid-1-2-1:not(.break-none) .col,
-	.flex.grid-1-3-1:not(.break-none) .col,
-	.flex.grid-2-1-1:not(.break-none) .col:nth-child(3n+1) {
+	.flex.grid-1-1-2:not(.break-none):not(.break-3):not(.break-2):not(.break-1) .col:nth-child(3n+3),
+	.flex.grid-1-1-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1) .col,
+	.flex.grid-1-2-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1) .col,
+	.flex.grid-1-3-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1) .col,
+	.flex.grid-2-1-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1) .col:nth-child(3n+1) {
 		grid-column: 								span 2;
 	}
 	
-	.flex.grid-1-1-2:not(.break-none) .col:nth-child(3n+3) .col-inner,
-	.flex.grid-1-2-1:not(.break-none) .col .col-inner,
-	.flex.grid-1-3-1:not(.break-none) .col .col-inner,
-	.flex.grid-2-1-1:not(.break-none) .col:nth-child(3n+1) .col-inner {
+	.flex.grid-1-1-2:not(.break-none):not(.break-3):not(.break-2):not(.break-1) .col:nth-child(3n+3) .col-inner,
+	.flex.grid-1-1-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1) .col .col-inner,
+	.flex.grid-1-2-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1) .col .col-inner,
+	.flex.grid-1-3-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1) .col .col-inner,
+	.flex.grid-2-1-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1) .col:nth-child(3n+1) .col-inner {
 		max-width:									75%;
 		margin:										0 auto;
 	}
 	
-	.flex.grid-1-2-1:not(.break-none) .col:nth-child(3n+1) .col-inner,
-	.flex.grid-1-2-1:not(.break-none) .col:nth-child(3n+3) .col-inner {
+	.flex.grid-1-2-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1) .col:nth-child(3n+1) .col-inner,
+	.flex.grid-1-2-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1) .col:nth-child(3n+3) .col-inner {
 		max-width:									50%;
 		margin:										0 auto;
 	}
@@ -4704,15 +4736,40 @@ p#user_switching_switch_on a.tab-focus {
 	}
 	
 	/* Responsive Sections */
-	.flex.grid-1-1-1:not(.break-none) {
+	.flex.grid-1-1-1-1:not(.break-none):not(.break-2):not(.break-1),
+	.flex.grid-1-1-1:not(.break-none):not(.break-2):not(.break-1),	
+	.flex.grid-1-1-2:not(.break-none):not(.break-2):not(.break-1),
+	.flex.grid-1-2-1:not(.break-none):not(.break-2):not(.break-1),
+	.flex.grid-1-3-1:not(.break-none):not(.break-2):not(.break-1),
+	.flex.grid-2-1-1:not(.break-none):not(.break-2):not(.break-1) {
 		grid-template-columns: 						1fr 1fr;
 	}
 	
-	.flex.grid-1-1-1:not(.break-none) .col:nth-child(3n+3) {
+	.flex.grid-1-1-2:not(.break-none):not(.break-2):not(.break-1) .col:nth-child(3n+3),
+	.flex.grid-1-1-1:not(.break-none):not(.break-2):not(.break-1) .col,
+	.flex.grid-1-2-1:not(.break-none):not(.break-2):not(.break-1) .col,
+	.flex.grid-1-3-1:not(.break-none):not(.break-2):not(.break-1) .col,
+	.flex.grid-2-1-1:not(.break-none):not(.break-2):not(.break-1) .col:nth-child(3n+1),
+	.flex.grid-1-1-1:not(.break-none):not(.break-2):not(.break-1) .col:nth-child(3n+3) {
 		grid-column: 								span 2;
 	}
 	
-	.flex.grid-1-1-1:not(.break-none) .col:nth-child(3n+3) .col-inner,
+	.flex.grid-1-1-2:not(.break-none):not(.break-2):not(.break-1) .col:nth-child(3n+3) .col-inner,
+	.flex.grid-1-1-1:not(.break-none):not(.break-2):not(.break-1) .col .col-inner,
+	.flex.grid-1-2-1:not(.break-none):not(.break-2):not(.break-1) .col .col-inner,
+	.flex.grid-1-3-1:not(.break-none):not(.break-2):not(.break-1) .col .col-inner,
+	.flex.grid-2-1-1:not(.break-none):not(.break-2):not(.break-1) .col:nth-child(3n+1) .col-inner {
+		max-width:									75%;
+		margin:										0 auto;
+	}
+	
+	.flex.grid-1-2-1:not(.break-none):not(.break-2):not(.break-1) .col:nth-child(3n+1) .col-inner,
+	.flex.grid-1-2-1:not(.break-none):not(.break-2):not(.break-1) .col:nth-child(3n+3) .col-inner {
+		max-width:									50%;
+		margin:										0 auto;
+	}
+	
+	.flex.grid-1-1-1:not(.break-none):not(.break-2):not(.break-1) .col:nth-child(3n+3) .col-inner,
 	.flex.break-3 .col .col-inner {
 		max-width:									50%;
 		margin:										0 auto;
@@ -4937,34 +4994,45 @@ p#user_switching_switch_on a.tab-focus {
 	}
 			
 	/* Responsive Sections */
-	.flex.grid-3-1:not(.break-none),
-	.flex.grid-1-3:not(.break-none),
-	.flex.grid-2-1:not(.break-none),
-	.flex.grid-1-2:not(.break-none),
-	.flex.grid-3-2:not(.break-none),
-	.flex.grid-2-3:not(.break-none) {
+	.flex.grid-3-1:not(.break-none):not(.break-1),
+	.flex.grid-1-3:not(.break-none):not(.break-1),
+	.flex.grid-2-1:not(.break-none):not(.break-1),
+	.flex.grid-1-2:not(.break-none):not(.break-1),
+	.flex.grid-3-2:not(.break-none):not(.break-1),
+	.flex.grid-2-3:not(.break-none):not(.break-1),
+	.flex.grid-1-1-1:not(.break-none):not(.break-1),
+	.flex.grid-1-2-1:not(.break-none):not(.break-1),
+	.flex.grid-1-1-2:not(.break-none):not(.break-1),
+	.flex.grid-2-1-1:not(.break-none):not(.break-1) {
 		grid-template-columns: 						1fr 1fr;
 	}
 	
-	.flex.grid-3-1:not(.break-none) .col,
-	.flex.grid-1-3:not(.break-none) .col,
-	.flex.grid-2-1:not(.break-none) .col,
-	.flex.grid-1-2:not(.break-none) .col,
-	.flex.grid-1-1:not(.break-none) .col,
-	.flex.grid-3-2:not(.break-none) .col,
-	.flex.grid-2-3:not(.break-none) .col,
-	.logo-strip .flex:not(.grid-1) .col {
+	.flex.grid-3-1:not(.break-none):not(.break-1) .col,
+	.flex.grid-1-3:not(.break-none):not(.break-1) .col,
+	.flex.grid-2-1:not(.break-none):not(.break-1) .col,
+	.flex.grid-1-2:not(.break-none):not(.break-1) .col,
+	.flex.grid-1-1:not(.break-none):not(.break-1) .col,
+	.flex.grid-3-2:not(.break-none):not(.break-1) .col,
+	.flex.grid-2-3:not(.break-none):not(.break-1) .col,
+	.flex.grid-1-1-1:not(.break-none):not(.break-1) .col,
+	.flex.grid-1-2-1:not(.break-none):not(.break-1) .col,
+	.flex.grid-1-1-2:not(.break-none):not(.break-1) .col,
+	.flex.grid-2-1-1:not(.break-none):not(.break-1) .col,
+	.logo-strip .flex:not(.grid-1):not(.break-none):not(.break-1) .col {
 		grid-column: 								span 2;
 	}
 	
-	.flex.grid-3-1:not(.break-none) .col:nth-child(2n+1) .col-inner,
-	.flex.grid-1-3:not(.break-none) .col:nth-child(2n+2) .col-inner,
-	.flex.grid-2-1:not(.break-none) .col:nth-child(2n+1) .col-inner,
-	.flex.grid-1-2:not(.break-none) .col:nth-child(2n+2) .col-inner,
-	.flex.grid-2-3:not(.break-none) .col .col-inner,
-	.flex.grid-3-2:not(.break-none) .col .col-inner,
-	.flex.grid-1-1:not(.break-none) .col .col-inner,
-
+	.flex.grid-3-1:not(.break-none):not(.break-1) .col:nth-child(2n+1) .col-inner,
+	.flex.grid-1-3:not(.break-none):not(.break-1) .col:nth-child(2n+2) .col-inner,
+	.flex.grid-2-1:not(.break-none):not(.break-1) .col:nth-child(2n+1) .col-inner,
+	.flex.grid-1-2:not(.break-none):not(.break-1) .col:nth-child(2n+2) .col-inner,
+	.flex.grid-2-3:not(.break-none):not(.break-1) .col .col-inner,
+	.flex.grid-3-2:not(.break-none):not(.break-1) .col .col-inner,
+	.flex.grid-1-1:not(.break-none):not(.break-1) .col .col-inner,
+	.flex.grid-1-1-1:not(.break-none):not(.break-1) .col .col-inner,
+	.flex.grid-1-2-1:not(.break-none):not(.break-1) .col .col-inner,
+	.flex.grid-1-1-2:not(.break-none):not(.break-1) .col .col-inner,
+	.flex.grid-2-1-1:not(.break-none):not(.break-1) .col .col-inner,
 	.logo-strip .flex:not(.grid-1) .col .col-inner,
 	.flex.break-2 .col .col-inner,
 	.flex.grid-1-1-1.break-2 .col:nth-child(3n+3) .col-inner  { /*Maine Stone Landscape 9/1/21 .... 1/17/22 this line had de-activated the next few lines of css, not sure if it was on purpose, added it back for Ozark Business Brokers */
@@ -4972,10 +5040,10 @@ p#user_switching_switch_on a.tab-focus {
 		margin:										0 auto;
 	}
 	
-	.flex.grid-3-1:not(.break-none) .col:nth-child(2n+2) .col-inner,
-	.flex.grid-1-3:not(.break-none) .col:nth-child(2n+1) .col-inner,
-	.flex.grid-2-1:not(.break-none) .col:nth-child(2n+2) .col-inner,
-	.flex.grid-1-2:not(.break-none) .col:nth-child(2n+1) .col-inner{
+	.flex.grid-3-1:not(.break-none):not(.break-1) .col:nth-child(2n+2) .col-inner,
+	.flex.grid-1-3:not(.break-none):not(.break-1) .col:nth-child(2n+1) .col-inner,
+	.flex.grid-2-1:not(.break-none):not(.break-1) .col:nth-child(2n+2) .col-inner,
+	.flex.grid-1-2:not(.break-none):not(.break-1) .col:nth-child(2n+1) .col-inner{
 		max-width:									75%;
 		margin:										0 auto;
 	}
@@ -5226,7 +5294,8 @@ p#user_switching_switch_on a.tab-focus {
 	}
 	
 	/* Responsive Sections */
-	.flex.break-none {
+	.flex.break-none,
+	.flex.break-1 {
 		grid-template-columns: 						1fr 1fr;
 	}
 

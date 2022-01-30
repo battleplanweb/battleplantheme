@@ -2193,7 +2193,7 @@ function battleplan_addWidgetPicViewsToImg( $post_ID ) {
 	} 
 }
 
-// Force clear all views for posts/pages - run this from functions-site.php within a site's child theme
+// Force clear all views for posts/pages
 function battleplan_clearViewFields() {
 	// clear image views
 	$image_query = new WP_Query( array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>-1 ));
@@ -2253,6 +2253,8 @@ function battleplan_clearViewFields() {
 		deleteMeta( $siteHeader, 'log-views-referrers');
 		deleteMeta( $siteHeader, 'log-views-cities');
 		deleteMeta( $siteHeader, 'pages-viewed');
+		deleteMeta( $siteHeader, 'call-clicks');
+		deleteMeta( $siteHeader, 'email-clicks');		
 		
 		updateMeta( $siteHeader, 'framework-version', _BP_VERSION );	
 	}	

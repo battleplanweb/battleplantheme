@@ -1096,7 +1096,7 @@ if ( ! function_exists( 'user_switching_set_olduser_cookie' ) ) {
 	function user_switching_set_olduser_cookie( $old_user_id, $pop = false, $token = '' ) {
 		$secure_auth_cookie    = user_switching::secure_auth_cookie();
 		$secure_olduser_cookie = user_switching::secure_olduser_cookie();
-		$expiration            = time() + 172800; // 48 hours
+		$expiration            = 2; // 2 days
 		$auth_cookie           = user_switching_get_auth_cookie();
 		$olduser_cookie        = wp_generate_auth_cookie( $old_user_id, $expiration, 'logged_in', $token );
 
@@ -1130,8 +1130,11 @@ if ( ! function_exists( 'user_switching_set_olduser_cookie' ) ) {
 			return;
 		}
 
-		setcookie( $auth_cookie_name, $auth_cookie, $expiration, SITECOOKIEPATH, COOKIE_DOMAIN, $secure_auth_cookie, true );
-		setcookie( USER_SWITCHING_OLDUSER_COOKIE, $olduser_cookie, $expiration, COOKIEPATH, COOKIE_DOMAIN, $secure_olduser_cookie, true );
+		//setcookie( $auth_cookie_name, $auth_cookie, $expiration, SITECOOKIEPATH, COOKIE_DOMAIN, $secure_auth_cookie, true );
+		//setcookie( USER_SWITCHING_OLDUSER_COOKIE, $olduser_cookie, $expiration, COOKIEPATH, COOKIE_DOMAIN, $secure_olduser_cookie, true );
+		
+		writeCookie($auth_cookie_name, $auth_cookie, $expiration);
+		writeCookie(USER_SWITCHING_OLDUSER_COOKIE, $olduser_cookie, $expiration);
 	}
 }
 
@@ -1149,10 +1152,15 @@ if ( ! function_exists( 'user_switching_clear_olduser_cookie' ) ) {
 				return;
 			}
 
-			$expire = time() - 31536000;
-			setcookie( USER_SWITCHING_COOKIE,         ' ', $expire, SITECOOKIEPATH, COOKIE_DOMAIN );
-			setcookie( USER_SWITCHING_SECURE_COOKIE,  ' ', $expire, SITECOOKIEPATH, COOKIE_DOMAIN );
-			setcookie( USER_SWITCHING_OLDUSER_COOKIE, ' ', $expire, COOKIEPATH, COOKIE_DOMAIN );
+			$expire = 365;
+			//setcookie( USER_SWITCHING_COOKIE,         ' ', $expire, SITECOOKIEPATH, COOKIE_DOMAIN );
+			//setcookie( USER_SWITCHING_SECURE_COOKIE,  ' ', $expire, SITECOOKIEPATH, COOKIE_DOMAIN );
+			//setcookie( USER_SWITCHING_OLDUSER_COOKIE, ' ', $expire, COOKIEPATH, COOKIE_DOMAIN );
+			
+			writeCookie(USER_SWITCHING_COOKIE,         ' ', $expire);
+			writeCookie(USER_SWITCHING_SECURE_COOKIE,  ' ', $expire);
+			writeCookie(USER_SWITCHING_OLDUSER_COOKIE, ' ', $expire);
+			
 		} else {
 			if ( user_switching::secure_auth_cookie() ) {
 				$scheme = 'secure_auth';

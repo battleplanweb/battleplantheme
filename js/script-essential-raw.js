@@ -94,7 +94,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		var d = new Date(), expires='';
 		d.setTime(d.getTime()+(exdays*24*60*60*1000));
 		if ( exdays != null && exdays != "" ) {	expires = "expires="+d.toGMTString()+"; "; }
-		document.cookie = cname + "=" + cvalue + "; " + expires + "path=/; domain=" + domain +"; secure";
+		document.cookie = cname + "=" + cvalue + "; " + expires + "path=/; domain=" + domain + "; secure";
 	};
 	window.getCookie = function(cname) {
 		var name = cname + "=", ca = document.cookie.split(';');

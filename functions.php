@@ -19,7 +19,7 @@
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.14' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.15' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -31,11 +31,15 @@ if ( !defined('_PAGE_SLUG') ) :
 	endif;
 endif;
 
-if ( !isset($_COOKIE['site-location']) || $_COOKIE['site-location'] == '1' ) :
-	$GLOBALS['customer_info'] = get_option('customer_info');
-else:
-	$GLOBALS['customer_info'] = get_option('customer_info_'.$_COOKIE['site-location']);
-endif;
+
+$GLOBALS['customer_info'] = get_option('customer_info');
+
+add_action('after_setup_theme', 'battleplan_setLoc');
+function battleplan_setLoc() { 
+	if ( isset($_COOKIE['site-location']) && $_COOKIE['site-location'] != '1' ) :
+		$GLOBALS['customer_info'] = get_option('customer_info_'.$_COOKIE['site-location']);
+	endif;
+}
 
 /*--------------------------------------------------------------
 # Shortcodes
@@ -1376,15 +1380,16 @@ function deleteMeta($id, $key) {
 
 // Set Cookies in same method as javascript
 function writeCookie($cname, $cvalue, $exdays) {
-	$parts = explode('.', parse_url(esc_url(get_site_url()), PHP_URL_HOST));
-	$domain = $parts[0].'.'.$parts[1];	
+	//$parts = explode('.', parse_url(esc_url(get_site_url()), PHP_URL_HOST));
+	//$domain = $parts[0].'.'.$parts[1];	
+	//echo "domain: ".$domain;
 	if ( $exdays == '' || $exdays == null || $exdays == '0' || $exdays == 0 ) :
 		$expires = '';
 	else:
 		$expires = time() + ($exdays * 24 * 60 * 60);
 	endif;
-
-	setcookie($cname, $cvalue, $expires, '/', $domain, true, false);
+	
+	setcookie($cname, $cvalue, $expires, '/', '', true, false);
 }
 
 // Convert time into seconds
@@ -2816,7 +2821,8 @@ function battleplan_current_type_nav_class($classes, $item) {
 	endif;
 	
 	// Support for The Events Calendar PRO - plug-in
-	if ( ($item->attr_title == "tribe_events" || $item->attr_title == "events" ) && (strpos(battleplan_getURL(), '/event/') !== false || strpos(battleplan_getURL(), '/events/') !== false) ) :
+	
+	if ( ($item->attr_title == "tribe_events" || $item->attr_title == "events" ) && (strpos($_SERVER['REQUEST_URI'], '/event/') !== false || strpos($_SERVER['REQUEST_URI'], '/events/') !== false) ) :
 		array_push($classes, 'current-menu-item');		
 	endif;
 	
@@ -2929,6 +2935,14 @@ if ( _PAGE_SLUG == "reviews" ) :
 	wp_redirect( "/review/", 301 ); 
 	exit; 
 endif;
+
+function battleplan_redirect_to_url($url, $redirect) {
+	$currPage = str_replace('/', '', $_SERVER['REQUEST_URI']);
+	if ( $currPage == $url ) :
+		wp_redirect( $redirect, 301 ); 
+		exit;
+	endif;
+}
 
 /*--------------------------------------------------------------
 # User Roles
@@ -3153,7 +3167,7 @@ function battleplan_update_meta_ajax() {
 	//if ( $type == "cookie" ) setcookie($key, $value, time() + (86400 * 365), '/', '', true, false);
 	if ( $type == "cookie" ) writeCookie($key, $value, 365);
 }
-	
+
 // Log Page Load Speed
 add_action( 'wp_ajax_log_page_load_speed', 'battleplan_log_page_load_speed_ajax' );
 add_action( 'wp_ajax_nopriv_log_page_load_speed', 'battleplan_log_page_load_speed_ajax' );
@@ -3474,6 +3488,7 @@ function battleplan_buildSection( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'name'=>'', 'hash'=>'', 'style'=>'', 'width'=>'', 'grid'=>'', 'break'=>'', 'valign'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'class'=>'', 'start'=>'', 'end'=>'' ), $atts );
 	$name = strtolower(esc_attr($a['name']));
 	$name = preg_replace("/[\s_]/", "-", $name);
+	if ( $name ) : $name = " id='".$name."'"; else: $name = ""; endif;
 	$hash = esc_attr($a['hash']);
 	if ( $hash != '' ) $hash='data-hash="'.$hash.'"';
 	$background = esc_attr($a['background']);
@@ -3485,7 +3500,6 @@ function battleplan_buildSection( $atts, $content = null ) {
 	if ( $class != '' ) $class = " ".$class;
 	$style = esc_attr($a['style']);
 	if ( $style != '' ) $style = " style-".$style;
-	if ( $name ) : $name = " id='".$name."'"; else: $name = ""; endif;
 	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));	
 	if ( $start || $end ) {
@@ -3547,7 +3561,12 @@ function battleplan_buildLayout( $atts, $content = null ) {
 // Column
 add_shortcode( 'col', 'battleplan_buildColumn' );
 function battleplan_buildColumn( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'class'=>'', 'align'=>'', 'valign'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'start'=>'', 'end'=>'' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'hash'=>'', 'class'=>'', 'align'=>'', 'valign'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'start'=>'', 'end'=>'' ), $atts );
+	$name = strtolower(esc_attr($a['name']));
+	$name = preg_replace("/[\s_]/", "-", $name);
+	if ( $name ) : $name = " id='".$name."'"; else: $name = ""; endif;
+	$hash = esc_attr($a['hash']);
+	if ( $hash != '' ) $hash='data-hash="'.$hash.'"';
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
 	$align = esc_attr($a['align']);
@@ -3565,7 +3584,7 @@ function battleplan_buildColumn( $atts, $content = null ) {
 		if ( $end && $now > $end ) return null;		
 	}
 
-	$buildCol = '<div class="col '.$class.$align.$valign.'"><div class="col-inner"';
+	$buildCol = '<div'.$name.' class="col '.$class.$align.$valign.'" '.$hash.'><div class="col-inner"';
 	if ( $background != "" ) $buildCol .= 'style="background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;"';	
 	$buildCol .= '>';
 	$buildCol .= do_shortcode($content);

@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 10.14
+Version: 10.15
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -181,6 +181,8 @@ button,
 [type="reset"],
 [type="submit"] {
 	-webkit-appearance: 						button;
+
+
 
 
 }
@@ -3387,6 +3389,10 @@ p + .thumb-left .section .switch-thumb .align-right {
 	margin: 									2em auto;
 }
 
+.attachment-post-thumbnail {
+	margin: 									1.5em auto;
+}
+
 .align-left.size-half-f,
 .alignleft.size-half-f,
 .align-right.size-half-f,
@@ -3500,6 +3506,7 @@ ul.side-by-side {
 }
 
 ul.side-by-side li {
+
 	margin: 									0 !important;
 	padding: 									0 1em;
 }
@@ -4509,6 +4516,27 @@ p#user_switching_switch_on a.tab-focus {
 	color: 										#8a8a8a;
 }
 
+/* 503 - error page
+--------------------------------------------- */
+html.error503 {
+	font-size: 									4.25%;
+}
+
+html.error503 body {
+	background: 								#ffffff !important;
+}
+
+html.error503 body,
+html.error503 h1, 
+html.error503 h2,
+html.error503 h3 {
+	font-family: 								"Open Sans" !important;
+	color: 										#222222 !important;
+	text-shadow: 								none !important;
+	text-align: 								center !important;
+}
+
+
 
 /*--------------------------------------------------------------
 # Mobile Styles
@@ -5237,6 +5265,10 @@ p#user_switching_switch_on a.tab-focus {
 	}
 	
 	/* Responsive Content */
+	.attachment-post-thumbnail {
+		margin: 									0.6em auto;
+	}
+
 	.align-left.size-half-f,
 	.alignleft.size-half-f,
 	.align-right.size-half-f,

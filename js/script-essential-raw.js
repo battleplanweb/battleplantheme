@@ -94,7 +94,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		var d = new Date(), expires='';
 		d.setTime(d.getTime()+(exdays*24*60*60*1000));
 		if ( exdays != null && exdays != "" ) {	expires = "expires="+d.toGMTString()+"; "; }
-		document.cookie = cname + "=" + cvalue + "; " + expires + "path=/; domain=" + domain + "; secure";
+		//document.cookie = cname + "=" + cvalue + "; " + expires + "path=/; domain=" + domain + "; secure";		
+		document.cookie = cname + "=" + cvalue + "; " + expires + "; path=/; secure"; 
 	};
 	window.getCookie = function(cname) {
 		var name = cname + "=", ca = document.cookie.split(';');
@@ -661,6 +662,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			$(moveThis).clone().insertAfter($(anchor));
 		} else if ( where == "before" ) {
 			$(moveThis).clone().insertBefore($(anchor));
+
 		} else if ( where == "top" || "start" ) {
 			$(anchor).prepend($(moveThis).clone());
 		} else {
@@ -1175,7 +1177,7 @@ if ( typeof parallaxBG !== 'function' ) {
 				 window.location.href = "/"+target;
 			}
 		}
-	});
+	}); 	
 	
 // Control Menu Buttons on "one page" site		
 	if ( $('.menu-item:not(.no-highlight) a[href^="#"]').is(':visible') ) { 
@@ -1373,7 +1375,7 @@ if ( typeof parallaxBG !== 'function' ) {
 --------------------------------------------------------------*/
 	$(window).on( 'load', function() {
 	// Fade out pre-loader screen when site is fully loaded
-		clearInterval(bgTimer);
+		clearInterval(bgTimer);		
 		$("#loader").fadeOut("fast"); 
 				
 	// Set up Locked Message position, delay, & cookie	

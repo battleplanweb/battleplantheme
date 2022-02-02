@@ -49,6 +49,8 @@ get_header(); ?>
 				else:		
 					$singleHeadline = esc_html(get_the_title());
 					$singleIntro = "";
+					$headerImage = "false"; // display feature image as header?
+					$headerImgPos = "below"; // header image displayed above/below title & meta
 					$breadcrumbs = "true";
 					$date = "true";
 					$author = "true";
@@ -67,6 +69,8 @@ get_header(); ?>
 			// Setup & Display Post		
 			$displayHeader = '<article id="post-'.get_the_ID().'">';		
 				$displayHeader .= '<header class="entry-header">';
+				
+					if ( $headerImage == "true" && $headerImgPos == "above" && has_post_thumbnail() ) $displayHeader .= get_the_post_thumbnail();
 		
 					if ( $breadcrumbs == "true" ) $displayHeader .= battleplan_breadcrumbs();
 		
@@ -80,6 +84,8 @@ get_header(); ?>
 							if ( $social == "true" ) $displayHeader .= '<span class="meta-social">'.do_shortcode('[add-share-buttons facebook="true" twitter="true"]').'</span>';
 						$displayHeader .= '</div>';
 					endif;
+					
+					if ( $headerImage == "true" && $headerImgPos == "below" && has_post_thumbnail() ) $displayHeader .= get_the_post_thumbnail();
 		
 					$displayHeader .= '<div class="single-intro '.get_post_type().'-intro">'.$singleIntro.'</div>'; 
 				$displayHeader .= '</header><!-- .entry-header-->';	

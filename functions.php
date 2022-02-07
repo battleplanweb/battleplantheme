@@ -19,7 +19,7 @@
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.15' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.16' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -703,7 +703,9 @@ function battleplan_getRandomPosts($atts, $content = null) {
 
 // Display posts & images in a Bootstrap slider 
 add_shortcode( 'get-post-slider', 'battleplan_getPostSlider' );
-function battleplan_getPostSlider($atts, $content = null ) {	
+function battleplan_getPostSlider($atts, $content = null ) {
+	wp_enqueue_script( 'battleplan-carousel', get_template_directory_uri().'/js/bootstrap-carousel.js', array(), _BP_VERSION, false );	
+
 	$a = shortcode_atts( array( 'type'=>'testimonials', 'auto'=>'yes', 'interval'=>'6000', 'loop'=>'true', 'num'=>'4', 'offset'=>'0', 'pics'=>'yes', 'caption'=>'no', 'controls'=>'yes', 'controls_pos'=>'below', 'indicators'=>'no', 'justify'=>'space-around', 'pause'=>'true', 'orderby'=>'recent', 'order'=>'asc', 'post_btn'=>'', 'all_btn'=>'View All', 'show_excerpt'=>'true', 'show_content'=>'false', 'link'=>'', 'pic_size'=>'1/3', 'text_size'=>'', 'slide_type'=>'fade', 'tax'=>'', 'terms'=>'', 'tag'=>'', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'id'=>'', 'mult'=>'1', 'class'=>'', 'truncate'=>'true' ), $atts );
 	$num = esc_attr($a['num']);	
 	$controls = esc_attr($a['controls']);	
@@ -913,7 +915,9 @@ function battleplan_getPostSlider($atts, $content = null ) {
 
 // Display row of logos that slide from left to right 
 add_shortcode( 'get-logo-slider', 'battleplan_getLogoSlider' );
-function battleplan_getLogoSlider($atts, $content = null ) {	
+function battleplan_getLogoSlider($atts, $content = null ) {
+	wp_enqueue_script( 'battleplan-logo-slider', get_template_directory_uri().'/js/script-logo-slider.js', array(), _BP_VERSION, false );	
+
 	$a = shortcode_atts( array( 'num'=>'-1', 'space'=>'10', 'size'=>'full', 'max_w'=>'85', 'tag'=>'', 'package'=>'', 'order_by'=>'rand', 'order'=>'ASC', 'shuffle'=>'false', 'speed'=>'slow', 'delay'=>'0', 'pause'=>'no', 'link'=>'false'), $atts );
 	$num = esc_attr($a['num']);			
 	$space = esc_attr($a['space']);			
@@ -1384,9 +1388,9 @@ function writeCookie($cname, $cvalue, $exdays) {
 	//$domain = $parts[0].'.'.$parts[1];	
 	//echo "domain: ".$domain;
 	if ( $exdays == '' || $exdays == null || $exdays == '0' || $exdays == 0 ) :
-		$expires = '';
+		$expires = 0;
 	else:
-		$expires = time() + ($exdays * 24 * 60 * 60);
+		$expires = time() + (intval($exdays) * 24 * 60 * 60);
 	endif;
 	
 	setcookie($cname, $cvalue, $expires, '/', '', true, false);
@@ -2355,7 +2359,7 @@ function battleplan_footer_styles() {
 add_action( 'wp_enqueue_scripts', 'battleplan_scripts', 20 );
 function battleplan_scripts() {
 	if ( !is_mobile() ) { wp_enqueue_script( 'battleplan-parallax', get_template_directory_uri().'/js/parallax.js', array(), _BP_VERSION, false ); }
-	wp_enqueue_script( 'battleplan-carousel', get_template_directory_uri().'/js/bootstrap-carousel.js', array(), _BP_VERSION, false );	
+	//wp_enqueue_script( 'battleplan-carousel', get_template_directory_uri().'/js/bootstrap-carousel.js', array(), _BP_VERSION, false );	
 	wp_enqueue_script( 'battleplan-waypoints', get_template_directory_uri().'/js/waypoints.js', array(), _BP_VERSION, false );	
 	
 	if ( !is_mobile() ) { wp_enqueue_script( 'battleplan-script-desktop', get_template_directory_uri().'/js/script-desktop.js', array(), _BP_VERSION, false ); }
@@ -3735,6 +3739,8 @@ function battleplan_buildButton( $atts, $content = null ) {
 // Accordion Block 
 add_shortcode( 'accordion', 'battleplan_buildAccordion' );
 function battleplan_buildAccordion( $atts, $content = null ) {
+	wp_enqueue_script( 'battleplan-accordion', get_template_directory_uri().'/js/script-accordion.js', array(), _BP_VERSION, false );	
+	
 	$a = shortcode_atts( array( 'title'=>'', 'excerpt'=>'', 'class'=>'', 'active'=>'false', 'btn'=>'false', 'btn_collapse'=>'false', 'icon'=>'true', 'start'=>'', 'end'=>'' ), $atts );
 	$excerpt = esc_attr($a['excerpt']);
 	if ( $excerpt != '' ) $excerpt = '<div class="accordion-excerpt"><div class="accordion-box"><p>'.$excerpt.'</p></div></div>';

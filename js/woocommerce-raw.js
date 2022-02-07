@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	$(window).on("load", function() {
 		
 	// Set up woocommerce pages to match rest of site
-		removeParent('.woocommerce-page main#main');
+		$('.woocommerce-page main#main').unwrap();
 		$('.woocommerce-page main#main').attr('id', 'primary');		
 		
 	// Set up products in CSS grid		

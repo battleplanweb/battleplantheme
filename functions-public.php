@@ -1134,7 +1134,7 @@ if ( ! function_exists( 'user_switching_set_olduser_cookie' ) ) {
 		//setcookie( USER_SWITCHING_OLDUSER_COOKIE, $olduser_cookie, $expiration, COOKIEPATH, COOKIE_DOMAIN, $secure_olduser_cookie, true );
 		
 		writeCookie($auth_cookie_name, $auth_cookie, $expiration);
-		writeCookie(USER_SWITCHING_OLDUSER_COOKIE, $olduser_cookie, $expiration);
+		writeCookie('USER_SWITCHING_OLDUSER_COOKIE', $olduser_cookie, $expiration);
 	}
 }
 
@@ -1157,9 +1157,9 @@ if ( ! function_exists( 'user_switching_clear_olduser_cookie' ) ) {
 			//setcookie( USER_SWITCHING_SECURE_COOKIE,  ' ', $expire, SITECOOKIEPATH, COOKIE_DOMAIN );
 			//setcookie( USER_SWITCHING_OLDUSER_COOKIE, ' ', $expire, COOKIEPATH, COOKIE_DOMAIN );
 			
-			writeCookie(USER_SWITCHING_COOKIE,         ' ', $expire);
-			writeCookie(USER_SWITCHING_SECURE_COOKIE,  ' ', $expire);
-			writeCookie(USER_SWITCHING_OLDUSER_COOKIE, ' ', $expire);
+			writeCookie('USER_SWITCHING_COOKIE',         ' ', $expire);
+			writeCookie('USER_SWITCHING_SECURE_COOKIE',  ' ', $expire);
+			writeCookie('USER_SWITCHING_OLDUSER_COOKIE', ' ', $expire);
 			
 		} else {
 			if ( user_switching::secure_auth_cookie() ) {
@@ -1184,8 +1184,8 @@ if ( ! function_exists( 'user_switching_clear_olduser_cookie' ) ) {
 
 if ( ! function_exists( 'user_switching_get_olduser_cookie' ) ) {
 	function user_switching_get_olduser_cookie() {
-		if ( isset( $_COOKIE[ USER_SWITCHING_OLDUSER_COOKIE ] ) ) {
-			return wp_unslash( $_COOKIE[ USER_SWITCHING_OLDUSER_COOKIE ] );
+		if ( isset( $_COOKIE[ 'USER_SWITCHING_OLDUSER_COOKIE' ] ) ) {
+			return wp_unslash( $_COOKIE[ 'USER_SWITCHING_OLDUSER_COOKIE' ] );
 		} else {
 			return false;
 		}

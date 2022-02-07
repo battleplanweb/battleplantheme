@@ -330,7 +330,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	var backToTop = $('#wrapper-content').waypoint(function(direction) {
 		if (direction === 'up') {			
 			$('a.scroll-top').animate( { opacity: 0 }, 150, function() { 
-				$('a.scroll-top').css({ "display": "none" }).removeClass('scroll-btn-visible');; 
+				$('a.scroll-top').css({ "display": "none" }).removeClass('scroll-btn-visible');
 			});
 		} else {
 			$('a.scroll-top').css({ "display": "block" }).animate( { opacity: 1 }, 150).addClass('scroll-btn-visible');
@@ -381,161 +381,9 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		if ( XorY == "y" || XorY == "Y" ) { return matrixValues[5]; }
 	};
 	
-// Accordion section - control opening & closing of expandable text boxes
-	window.buildAccordion = function (topSpacer, cssDelay, transSpeed, closeDelay, openDelay, clickActive) {
-		if (buildAccordion.done) { return; }
-		transSpeed = transSpeed || 500;
-		closeDelay = closeDelay || (transSpeed / 3);
-		openDelay = openDelay || 0;
-		cssDelay = cssDelay || closeDelay + openDelay;
-		topSpacer = topSpacer || 0.1;
-		clickActive = clickActive || 'close';
-		var accPos = [];
-
-		if ( topSpacer < 1 ) { 
-			topSpacer = getDeviceH() * topSpacer; 
-		}		
-		if ( getDeviceW() < mobileCutoff ) { 
-			topSpacer = topSpacer + mobileMenuBarH;
-		}		
-
-		$('.block-accordion').attr( 'aria-expanded', false );
-		$('.block-accordion').first().addClass('accordion-first');
-		$('.block-accordion').last().addClass('accordion-last');
-		if ( $('.block-accordion').parents('.col-archive').length) {
-			$('.block-accordion').parents('.col-archive').addClass('archive-accordion');
-			$('.archive-accordion').each(function() { accPos.push($(this).offset().top); });			
-		} else {
-			$('.block-accordion').each(function() { accPos.push($(this).offset().top); });			
-		}
-		
-		$( '.block-accordion.start-active' ).attr( 'aria-expanded', true ).addClass('active');
-		$( '.block-accordion.start-active .accordion-excerpt' ).animate({ height: "toggle", opacity: "toggle" }, 0);					
-		$( '.block-accordion.start-active .accordion-content' ).animate({ height: "toggle", opacity: "toggle" }, 0);
-
-		keyPress('.block-accordion h2.accordion-button');
- 
-		$(".block-accordion .accordion-button").click(function(e) {		
-			e.preventDefault();
-			var thisAcc = $(this).closest('.block-accordion'), thisBtn = thisAcc.find('.accordion-button'), thisPos = accPos[thisAcc.index('.block-accordion')], topPos = accPos[0], moveTo = 0, thisClose=thisBtn.attr('data-collapse'), activeAcc = $('.block-accordion.active'), activeBtn = activeAcc.find('.accordion-button'), activeOpen = activeBtn.attr('data-text');	
-			
-			if ( !thisAcc.hasClass("active") ) {
-			
-				setTimeout( function () {
-					activeBtn.text(activeOpen).fadeIn();
-					activeAcc.find('.accordion-excerpt').animate({ height: "toggle", opacity: "toggle" }, transSpeed);					
-					activeAcc.find('.accordion-content').animate({ height: "toggle", opacity: "toggle" }, transSpeed);
-				}, closeDelay);
-				
-				setTimeout( function () {
-					thisAcc.find('.accordion-excerpt').animate({ height: "toggle", opacity: "toggle" }, transSpeed);						
-					thisAcc.find('.accordion-content').animate({ height: "toggle", opacity: "toggle" }, transSpeed);	
-					
-					//if ( thisClose == undefined ) {  removed for Greater Fort Myers Dog Club - 2022 Dog Show accordion
-						if ( (thisPos - topPos) > (getDeviceH() * 0.25) ) {
-							animateScroll(thisPos, topSpacer, transSpeed); 
-						} else {
-							moveTo = ((thisPos - topPos) / 2) + topPos;						
-							animateScroll(moveTo, topSpacer, transSpeed); 							
-						}	
-					//}
-					
-					if ( thisClose == "hide" ) { 
-						thisBtn.fadeOut(); 
-					} else if ( thisClose != "false" ) {
-						thisBtn.text(thisClose); 
-					} 
-					
-				}, openDelay);
-				
-				setTimeout( function() {						
-					activeAcc.removeClass('active').attr( 'aria-expanded', false ); 
-					thisAcc.addClass('active').attr( 'aria-expanded', true );
-				}, cssDelay);
-				
-			} else if ( clickActive == 'close' ) {
-				setTimeout( function () {
-					activeBtn.text(activeOpen).fadeIn();
-					activeAcc.find('.accordion-excerpt').animate({ height: "toggle", opacity: "toggle" }, transSpeed);					
-					activeAcc.find('.accordion-content').animate({ height: "toggle", opacity: "toggle" }, transSpeed);
-				}, closeDelay);	
-				setTimeout( function() {						
-					activeAcc.removeClass('active').attr( 'aria-expanded', false );
-				}, cssDelay);	
-			}  
-		});
-		buildAccordion.done = true;
-	};
-	
 // Duplicate menu button text onto the button BG
 	$( ".main-navigation ul.main-menu li > a").each(function() { 
 		$(this).parent().attr('data-content', $(this).html());
-	});
-
-// Set up Logo Slider
-	$('.logo-slider').each(function() {
-		var logoSlider = $(this), logoRow = logoSlider.find('.logo-row'), speed = logoSlider.attr('data-speed'), delay = (parseInt(logoSlider.attr('data-delay'))) * 1000, time = 0, maxW = getDeviceW() * (parseInt(logoSlider.attr('data-maxw')) / 100), pause = logoSlider.attr('data-pause'), spacing = getDeviceW() * (parseInt(logoSlider.attr('data-spacing')) / 100), easing = "swing", moving = true, firstLogo, secondLogo, largestW = 0, checkW = 0, thisW = 0, firstPos = 0, secondPos = 0, space = 0, containerW = 0, logoW = 0;
-		
-		logoRow.css({'opacity': 0});
-		
-		if ( delay == "0" ) { easing = "linear"; } 
-		if ( pause == "yes" || pause == "true" ) {
-			logoSlider.mouseover(function() { moving = false; });
-			logoSlider.mouseout(function() { moving = true; });
-		}		
-		if ( getDeviceW() < mobileCutoff ) { spacing = spacing * 1.5; }
-
-		setTimeout(function() { 
-			logoSlider.find('span').find('img').each(function() { 
-				thisW = parseInt($(this).attr('width'));
-				if ( thisW > maxW ) {
-					thisW = maxW; $(this).width(thisW);
-				}
-				if ( thisW > largestW ) { 
-					largestW = thisW;
-				}
-				logoW = logoW + spacing + thisW; 
-			});
-			
-			if ( delay == 0 ) {
-				logoW = 0;
-				logoSlider.find('span').find('img').each(function() { 
-					$(this).parent().width(largestW); 
-					logoW = logoW + spacing + largestW; 
-				});			
-			}
-
-			setTimeout(function() { 
-				checkW = getDeviceW() + largestW + spacing;
-				if ( logoW < checkW ) { logoW = checkW; }
-				logoRow.css('width', logoW); 
-				
-				if ( speed == "slow" ) { speed = logoW * 3; } 
-				else if ( speed == "fast" ) { speed = logoW * 1.5; } 
-				else { speed = logoW * (parseInt(speed)); }
-				
-				time = speed + delay + 15;
-				
-				logoRow.animate({ 'opacity': 1}, 300);
-
-				function moveLogos() {
-					if ( moving != false ) {								
-						firstLogo = logoRow.find('span:nth-of-type(1)');
-						firstPos = firstLogo.position().left + firstLogo.width();
-						secondLogo = logoRow.find('span:nth-of-type(2)');
-						secondPos = secondLogo.position().left;	
-						containerW = firstLogo.width() + secondPos - firstPos; 	
-						
-						logoRow.animate({ 'margin-left': -containerW+'px'}, speed, easing, function() {
-							firstLogo.remove();
-							logoRow.find('span:last').after(firstLogo);
-							logoRow.css({ 'margin-left': '0px' });
-						});						
-					} 	
-				}
-				var advanceLogos = setInterval( moveLogos, time );
-			}, 10);
-		}, 1500);
 	});
 
 	// Filter Post Archive entries according to class (hide all, arrange, show all)  ** Mill Pond Retrievers dog / litter archive
@@ -554,7 +402,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	};		
 		
 	// Handle the post filter button [get-filter-btn]
-
 	$(".filter-btn").click(function() {
 		var thisBtn = $(this), url = "?"+thisBtn.attr('data-url')+"=", flag=false;
 		$("input:checkbox[name=choice]:checked").each(function() {
@@ -662,7 +509,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			$(moveThis).clone().insertAfter($(anchor));
 		} else if ( where == "before" ) {
 			$(moveThis).clone().insertBefore($(anchor));
-
 		} else if ( where == "top" || "start" ) {
 			$(anchor).prepend($(moveThis).clone());
 		} else {
@@ -734,16 +580,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		newDiv = newDiv || "<div />";
 		$(target).wrapAll( newDiv );
 	};	
-
-// Remove parent of target div
-	window.removeParent = function (target) {
-		$(target).unwrap();
-	};	
-
-// Delete a div
-	window.removeDiv = function (target) {
-		$(target).remove();
-	};		
 	
 // Size a frame according to the image or video inside it
 	window.sizeFrame = function (target, frame, scale) {
@@ -1076,7 +912,7 @@ if ( typeof parallaxBG !== 'function' ) {
 --------------------------------------------------------------*/
 
 // Remove empty & restricted elements
-	removeDiv('p:empty, .archive-intro:empty, div.restricted, div.restricted + ul, li.menu-item + ul.sub-menu');
+	$('p:empty, .archive-intro:empty, div.restricted, div.restricted + ul, li.menu-item + ul.sub-menu').remove();
 	
 // Add .page-begins to the next section under masthead for purposes of locking .top-strip
 	$('#masthead + section').addClass('page-begins');
@@ -1444,11 +1280,7 @@ if ( typeof parallaxBG !== 'function' ) {
 			thisLock.click(function() {
 				setCookie("display-message","no",cookieExpire);
 			});			
-		});
-
-		setTimeout(function() {	
-			buildAccordion();
-		}, 1000);
+		});		
 	});
 	
 })(jQuery); });

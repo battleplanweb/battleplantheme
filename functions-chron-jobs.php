@@ -152,7 +152,11 @@ endif;
 
 // Basic Settings		
 update_option( 'blogname', $GLOBALS['customer_info']['name'] );
-update_option( 'blogdescription', $GLOBALS['customer_info']['city'].', '.$GLOBALS['customer_info']['state-abbr'] );
+$blogDesc = '';
+if ( $GLOBALS['customer_info']['city'] != '' ) $blogDesc .= $GLOBALS['customer_info']['city'];
+if ( $GLOBALS['customer_info']['city'] != '' && $GLOBALS['customer_info']['state-abbr'] != '' ) $blogDesc .= ', ';
+if ( $GLOBALS['customer_info']['state-abbr'] != '' ) $blogDesc .= $GLOBALS['customer_info']['state-abbr'];
+update_option( 'blogdescription', $blogDesc );
 update_option( 'admin_email', 'info@battleplanwebdesign.com' );
 update_option( 'admin_email_lifespan', '9999999999999' );
 update_option( 'default_comment_status', 'closed' );

@@ -1104,33 +1104,6 @@ if ( typeof parallaxBG !== 'function' ) {
 		}); 
 	});	
 
-// Ensure all slides in a testimonial slider are even height
-	$(".carousel.slider-testimonials").each(function() {
-		var thisCarousel = $(this), maxH = 0, thisSlideH = 0, getPadding = parseInt(thisCarousel.find(".carousel-inner").css('padding-bottom'));
-		for (var i=0; i < thisCarousel.find(".carousel-item").length; i++) {					
-			thisSlideH = thisCarousel.find(".carousel-item.active").outerHeight() + getPadding;
-			if ( thisSlideH > maxH ) { 
-				maxH = Math.ceil(thisSlideH); 
-			}
-			thisCarousel.click();
-		}
-		thisCarousel.find(".carousel-inner").css("height",maxH+"px");	
-	});	
-
-// Add star icons to reviews and ratings
-	$('.testimonials-rating').each(function() {
-		var getRating = $(this).html(), star = ['far', 'far', 'far', 'far', 'far'], replaceRating, i;		
-		for (i=0; i < getRating; i++) { 
-			star[i] = 'fas'; 
-		}		
-		replaceRating = '<span class="rating rating-'+getRating+'-star" aria-hidden="true"><span class="sr-only">Rated '+getRating+' Stars</span>';
-		for (i=0; i < 5; i++) { 
-			replaceRating += '<i class="fa '+star[i]+' fa-star"></i>';
-		}
-		replaceRating += '</span>';		
-		$(this).html( replaceRating );
-	});
-
 // Determine which day of week and add active class on office-hours widget	
 	var todayIs = new Date().getDay(), days = ['sun','mon','tue','wed','thu','fri','sat'];
 	$('.office-hours .row-'+days[todayIs]).addClass("today");

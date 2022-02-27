@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 10.17
+Version: 10.17.1
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -181,6 +181,7 @@ button,
 [type="reset"],
 [type="submit"] {
 	-webkit-appearance: 						button;
+
 
 
 
@@ -1243,6 +1244,7 @@ section.section .flex.nested .flex {
 }
 
 .span-6 {
+
 	grid-column:								span 6;
 }
 
@@ -2335,6 +2337,7 @@ body.locked {
 .widget-navigation {
 	position:									relative; /* anchors the position:absolute of #magic-line, added 11-5-2020 for Clay Lewis */
 }
+
 
 .main-navigation ul,
 .widget-navigation ul {
@@ -4157,9 +4160,12 @@ div[class*="-faux"] {
 }
 
 /* Podium Web Chat Module */
+/* Lead Connector Web Chat Module */
 iframe#podium-prompt, 
 iframe#podium-bubble, 
-iframe#podium-modal {
+iframe#podium-modal,
+chat-widget .lc_text-widget,
+chat-widget .lc_text-widget--btn {
 	border:										none !important;
 	box-shadow:									none !important;
 	outline:									none !important;
@@ -5493,6 +5499,7 @@ html.error503 h3 {
 }
 
 @media screen and (min-width: 961px) {
+
 	.screen-480,
 	.screen-640,
 	.screen-960 {

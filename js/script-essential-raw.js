@@ -950,6 +950,20 @@ if ( typeof parallaxBG !== 'function' ) {
 		}
 	});	
 	
+// Add star icons to reviews and ratings
+	$('.testimonials-rating').each(function() {
+		var getRating = $(this).html(), star = ['far', 'far', 'far', 'far', 'far'], replaceRating, i;		
+		for (i=0; i < getRating; i++) { 
+			star[i] = 'fas'; 
+		}		
+		replaceRating = '<span class="rating rating-'+getRating+'-star" aria-hidden="true"><span class="sr-only">Rated '+getRating+' Stars</span>';
+		for (i=0; i < 5; i++) { 
+			replaceRating += '<i class="fa '+star[i]+' fa-star"></i>';
+		}
+		replaceRating += '</span>';		
+		$(this).html( replaceRating );
+	});
+	
 // Ensure that Form labels have enough width
 	$('.wpcf7 form, .wpcf7 form .flex').each(function() {
 		var thisForm = $(this), labelMaxW = 0;

@@ -27,7 +27,7 @@
 	
 	if ( $type == "ruud furnaces" ) :
 		$title 		= "Furnaces";
-		$excerpt	= "<p>Keep your home as warm and cozy as you need it with efficient gas furnaces and oil furnaces.</p>";
+		$excerpt	= "<p>Our top-of-the-line furnaces can help provide whole-home comfort all winter long, and help manage your comfort during warmer weather by working with your cooling system to pull humidity out of the air inside your home.</p>";
 		$link 		= "/product-type/furnaces/";
 		$pic 		= "Ruud-07-320x320.jpg";
 		$alt 		= "Ruud Furnaces";

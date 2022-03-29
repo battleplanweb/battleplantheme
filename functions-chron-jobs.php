@@ -83,7 +83,7 @@ if ( is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') ) :
 	$wpSEOTitle = ' %%page%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';		
 	$getCPT = get_post_types(); 
 	foreach ($getCPT as $postType) :
-		if ( $postType == "post" || $postType == "page" || $postType == "optimized" ) :
+		if ( $postType == "post" || $postType == "page" || $postType == "optimized" || $postType == "universal" || $postType == "products" ) :
 			$wpSEOSettings['title-'.$postType] = '%%title%%'.$wpSEOTitle;
 			$wpSEOSettings['social-title-'.$postType] = '%%title%%'.$wpSEOTitle;
 		elseif ( $postType == "attachment" || $postType == "revision" || $postType == "nav_menu_item" || $postType == "custom_css" || $postType == "customize_changeset" || $postType == "oembed_cache" || $postType == "user_request" || $postType == "wp_block" || $postType == "elements" || $postType == "acf-field-group" || $postType == "acf-field" || $postType == "wpcf7_contact_form" ) :
@@ -176,13 +176,13 @@ battleplan_delete_prefixed_options( 'wp-smush-' );
 battleplan_delete_prefixed_options( 'wp_smush_' );
 battleplan_delete_prefixed_options( 'client_' );
 
-if ( get_option('bp_setup_2021_12_20') != "completed" ) :	
-	deleteMeta( get_page_by_path('site-header', OBJECT, 'elements')->ID, 'call-clicks' );
-	deleteMeta( get_page_by_path('site-header', OBJECT, 'elements')->ID, 'email-clicks' );
+if ( get_option('bp_setup_2022_03_29') != "completed" ) :	
+	//deleteMeta( get_page_by_path('site-header', OBJECT, 'elements')->ID, 'call-clicks' );
+	//deleteMeta( get_page_by_path('site-header', OBJECT, 'elements')->ID, 'email-clicks' );
 endif;	
 
-delete_option( 'bp_setup_2021_12_05' );
-update_option( 'bp_setup_2021_12_20', 'completed' );
+delete_option( 'bp_setup_2021_12_20' );
+update_option( 'bp_setup_2022_03_29', 'completed' );
 
 update_option( 'bp_chrons_last_run', time() );			
 

@@ -71,7 +71,7 @@ $modDate = the_modified_date( 'F Y', '', '', FALSE);
 		if ( $price ) : $buildLitter .= '<li><span class="label">Price: </span>$'.number_format($price, 0, ".", ",").' <span style="font-size:70%;">+ Sales Tax</span></li>';
 		else: $buildLitter .= "Call For Price"; endif;
 		
-		if ( $deposit && $litterStatus == "Expecting" ) : $buildLitter .= '<li><span class="label">Deposit: </span>$'.number_format($deposit, 0, ".", ","); endif;
+		if ( $deposit && ( $litterStatus == "Expecting" || date('F j, Y') < $readyDate ) ) : $buildLitter .= '<li><span class="label">Deposit: </span>$'.number_format($deposit, 0, ".", ","); endif;
 		
 		if ( $litterStatus == "Expecting" ) : 
 			$buildLitter .= '<li><span class="label">Expected: </span>'.date('F Y', strtotime($birthDate)).'</li>';	
@@ -80,6 +80,7 @@ $modDate = the_modified_date( 'F Y', '', '', FALSE);
 			if ( date('F j, Y') < $readyDate ) : $buildLitter .= '<li><span class="label">Ready: </span>'.$readyDate.'</li>'; 		
 			else : $buildLitter .= '<li><span class="label">Ready To Go Home</li>'; 
 			endif;
+			$buildLitter .= '<li style="margin:1em 0 -1em"><span class="label">Updated: </span>'.get_the_modified_date().'</li>'; 
 		endif;
 		
 		$singleContent = wp_kses_post(get_the_content());

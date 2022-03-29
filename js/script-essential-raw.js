@@ -1187,6 +1187,8 @@ if ( typeof parallaxBG !== 'function' ) {
 	setTimeout(function() { $('img:not([alt])').attr('alt', ''); }, 50);
 	setTimeout(function() { $('img:not([alt])').attr('alt', ''); }, 1000);
 
+
+
 	// Menu support
 	$('[role="menu"]' ).on( 'focus.aria mouseenter.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).addClass('menu-item-expanded').attr( 'aria-expanded', true ); } );
 	$('[role="menu"]' ).on( 'blur.aria mouseleave.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).removeClass('menu-item-expanded').attr( 'aria-expanded', false ); } );	
@@ -1215,10 +1217,13 @@ if ( typeof parallaxBG !== 'function' ) {
 				if ( getCookie("display-message") !== "no" ) {
 					thisLock.delay(initDelay).css({ "top":mobileMenuBarH+"px" });
 					setTimeout( function() { 
-						thisLock.addClass("on-screen"); $('body').addClass('locked'); thisLock.focus();
+						thisLock.addClass("on-screen"); 
+						$('body').addClass('locked'); 
+						thisLock.focus();
 					}, initDelay);
 					thisLock.find('.closeBtn').click(function() {
-						thisLock.removeClass("on-screen"); $('body').removeClass('locked');
+						thisLock.removeClass("on-screen"); 
+						$('body').removeClass('locked');
 						setCookie("display-message","no",cookieExpire);
 					});
 				}
@@ -1226,10 +1231,13 @@ if ( typeof parallaxBG !== 'function' ) {
 				if ( getCookie("display-message") !== "no" ) {
 					thisLock.delay(initDelay).css({ "bottom":"0" });
 					setTimeout( function() { 
-						thisLock.addClass("on-screen"); $('body').addClass('locked'); thisLock.focus(); 
+						thisLock.addClass("on-screen"); 
+						$('body').addClass('locked'); 
+						thisLock.focus(); 
 					}, initDelay);
 					thisLock.find('.closeBtn').click(function() {
-						thisLock.removeClass("on-screen"); $('body').removeClass('locked');
+						thisLock.removeClass("on-screen");
+						$('body').removeClass('locked');
 						setCookie("display-message","no",cookieExpire);
 					});
 				}
@@ -1246,10 +1254,13 @@ if ( typeof parallaxBG !== 'function' ) {
 				if ( buttonActivated == "no" && getCookie("display-message") !== "no" ) {
 					moveDiv(thisLock.find('.closeBtn'), '.section-lock > .flex', 'top');
 					setTimeout( function() { 
-						thisLock.addClass("on-screen"); $('body').addClass('locked'); thisLock.focus(); 
+						thisLock.addClass("on-screen"); 
+						$('body').addClass('locked'); 
+						thisLock.focus(); 
 					}, initDelay);
 					thisLock.find('.closeBtn').click(function() {
-						thisLock.removeClass("on-screen"); $('body').removeClass('locked');
+						thisLock.removeClass("on-screen"); 
+						$('body').removeClass('locked');
 						setCookie("display-message","no",cookieExpire);
 					});	
 				}
@@ -1257,10 +1268,13 @@ if ( typeof parallaxBG !== 'function' ) {
 				if ( buttonActivated == "yes" ) {				
 					$('.modal-btn').click(function() {
 						moveDiv(thisLock.find('.closeBtn'), '.section-lock > .flex', 'top');
-						thisLock.addClass("on-screen"); $('body').addClass('locked'); thisLock.focus();
+						thisLock.addClass("on-screen"); 
+						$('body').addClass('locked'); 
+						thisLock.focus();
 					});
 					thisLock.find('.closeBtn').click(function() {
-						thisLock.removeClass("on-screen"); $('body').removeClass('locked');
+						thisLock.removeClass("on-screen"); 
+						$('body').removeClass('locked');
 					});						
 				}
 			}			

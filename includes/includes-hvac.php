@@ -37,6 +37,8 @@ function battleplan_product_overview( $atts, $content = null ) {
 	elseif (strpos($type, 'carrier') !== false) { include("wp-content/themes/battleplantheme/elements/element-product-overview-carrier.php"); }	
 	elseif (strpos($type, 'york') !== false) { include("wp-content/themes/battleplantheme/elements/element-product-overview-york.php"); }
 	elseif (strpos($type, 'lennox') !== false) { include("wp-content/themes/battleplantheme/elements/element-product-overview-lennox.php"); }
+	elseif (strpos($type, 'rheem') !== false) { include("wp-content/themes/battleplantheme/elements/element-product-overview-rheem.php"); }	
+	elseif (strpos($type, 'tempstar') !== false) { include("wp-content/themes/battleplantheme/elements/element-product-overview-tempstar.php"); }
 	else { include("wp-content/themes/battleplantheme/elements/element-product-overview-generic.php"); }
 	
 	return do_shortcode('
@@ -49,7 +51,6 @@ function battleplan_product_overview( $atts, $content = null ) {
 		[/col]
 	');	
 }
-
 
 /*--------------------------------------------------------------
 # American Standard Customer Care
@@ -458,8 +459,10 @@ function battleplan_getComfortmakerEliteDealer() {
 // Add Financing widget to Sidebar
 add_shortcode( 'get-financing', 'battleplan_getFinancing' );
 function battleplan_getFinancing($atts, $content = null) {
-	$a = shortcode_atts( array( 'bank'=>'', 'link'=>''  ), $atts );
+	$a = shortcode_atts( array( 'bank'=>'', 'link'=>'', 'text'=>'', 'loc'=>'below'  ), $atts );
 	$bank = esc_attr($a['bank']);
+	$text = esc_attr($a['text']);
+	$loc = esc_attr($a['loc']);
 	$img = strtolower(str_replace(" ", "-", $bank));
 	$link = esc_attr($a['link']);	
 	$buildFinancing = "";	
@@ -467,7 +470,9 @@ function battleplan_getFinancing($atts, $content = null) {
 	list($width, $height) = getimagesize($imagePath);
 	
 	if ( $link != "" ) $buildFinancing .= '<a href="'.$link.'" title="Click here to apply for financing for AC repair at '.$bank.'">';
+	if ( $text != "" && $loc == "above" ) $buildFinancing .= '<span class="link-text">'.$text.'</span>';
 	$buildFinancing .= '<img src="/wp-content/themes/battleplantheme/common/financing/'.$img.'.png" loading="lazy" alt="Apply for financing for your HVAC needs at '.$bank.'" width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
+	if ( $text != "" && $loc == "below" ) $buildFinancing .= '<span class="link-text">'.$text.'</span>';
 	if ( $link != "" ) $buildFinancing .= '</a>';
 	
 	return $buildFinancing;

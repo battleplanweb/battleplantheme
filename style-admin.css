@@ -404,6 +404,17 @@ ul.acf-checkbox-list {
 	display: 									none;
 }
 
+/* HVAC Products Pages */
+.acf-field.acf-field-product-comfort,
+.acf-field.acf-field-product-efficiency,
+.acf-field.acf-field-product-price {
+	float: 										left;
+	clear: 										none;
+	width: 										33%;
+	max-width: 									100px;
+}
+
+
 /* Contact Form 7
 --------------------------------------------- */
 .config-error,

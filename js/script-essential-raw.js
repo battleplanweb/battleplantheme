@@ -923,6 +923,37 @@ if ( typeof parallaxBG !== 'function' ) {
 // Add .fa class to all icons using .far, .fas and .fab
 	$( ".far, .fas, .fab" ).addClass("fa");
 	
+// Set first page cookie		
+	if ( !getCookie('first-page') ) { 
+		$('body').addClass('first-page');
+		setCookie('first-page', 'no');
+	} else {
+		$('body').addClass('not-first-page');
+	}
+
+// Set unique ID & pages viewed cookies
+	if ( !getCookie('unique-id') ) { 
+		var unique_id = Math.floor(Date.now()) + '' + Math.floor((Math.random() * 900) + 99);
+		setCookie('unique-id', unique_id);
+		setCookie('pages-viewed', 2);
+	} else {
+		var page_views = getCookie('pages-viewed');
+		page_views++;
+		setCookie('pages-viewed', page_views);
+	}
+
+// Set optimized page as new home page
+	if ( $('body').hasClass('single-optimized') ) {
+		var get_optimized_loc = location.pathname + location.search, new_home = get_optimized_loc.replace(/\//g, "");		
+		setCookie('home-url', new_home);
+	}
+	
+	if ( getCookie('home-url') ) { 	
+		$('a[href="'+window.location.origin+'"], a[href="'+window.location.origin+'/"]').each(function() {
+			$(this).attr("href", window.location.origin + "/" + getCookie('home-url') );	
+		});
+	}	
+	
 // Add unique id to labels & inputs in #request-quote-modal	for ADA compliance		
 	$('#request-quote-modal div.form-input').each(function() {
 		var theLabel = $(this).find('label'), theInput = $(this).find('input'), theAttr = theInput.attr('id');
@@ -1186,6 +1217,7 @@ if ( typeof parallaxBG !== 'function' ) {
 	// Add alt="" to all images with no alt tag
 	setTimeout(function() { $('img:not([alt])').attr('alt', ''); }, 50);
 	setTimeout(function() { $('img:not([alt])').attr('alt', ''); }, 1000);
+
 
 
 

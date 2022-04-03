@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 # Tracking code
 --------------------------------------------------------------*/
 
-	var siteLat = site_options.lat, siteLong = site_options.long, siteRadius = site_options.radius, userValid = "false", userLoc, userRefer, pageViews = $("body").attr("data-pageviews"), uniqueID=$("body").attr("data-unique-id"), ajaxURL = 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php'; 		
+	var siteLat = site_options.lat, siteLong = site_options.long, siteRadius = site_options.radius, userValid = "false", userLoc, userRefer, ajaxURL = 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php'; 		
 		
 	if ( siteRadius == "default" ) { siteRadius = 100; }	
 	if ( siteLong > 0 ) { siteLong = -siteLong; }
@@ -28,7 +28,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				}
 
 				setCookie("user-loc", userLoc, '');
-				//setCookie("pages-viewed", pageViews, '');
 				
 				function deg2rad(deg) { return deg * (Math.PI/180) }				
 				var userLat = data["latitude"], userLong = data["longitude"], R = 3958.8, dLat = deg2rad(siteLat-userLat), dLon = deg2rad(siteLong-userLong), a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(deg2rad(userLat)) * Math.cos(deg2rad(siteLat)) * Math.sin(dLon/2) * Math.sin(dLon/2), c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)), distance = R * c; 
@@ -36,6 +35,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				if ( distance < siteRadius ) { userValid = "true"; }
 			});
 			userRefer = encodeURI(document.referrer); 
+						
 		}, 1000);
 
 	// Wait 2 seconds before calling the following functions 
@@ -44,16 +44,20 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			var postID = $('body').attr('id');
 			$.post({
 				url : ajaxURL,
-				data : { action: "count_post_views", id: postID, userValid: userValid, userLoc: userLoc, pagesViewed: pageViews, uniqueID: uniqueID },
+				data : { action: "count_post_views", id: postID, userValid: userValid, userLoc: userLoc, pagesViewed: getCookie('pages-viewed'), uniqueID: getCookie('unique-id') },
 				success: function( response ) { console.log(response); } 
 			});	
 			
 		// Count site view 
-			$.post({
-				url : ajaxURL,
-				data : { action: "count_site_views", userValid: userValid, userLoc: userLoc, userRefer: userRefer },
-				success: function( response ) { console.log(response); } 
-			});	
+			if ( !getCookie('count-visit') ) { 
+				$.post({
+					url : ajaxURL,
+					data : { action: "count_site_views", userValid: userValid, userLoc: userLoc, userRefer: userRefer },
+					success: function( response ) { console.log(response); } 
+				});	
+			
+				setCookie('count-visit', 'no', 0.007);
+			} 
 
 			// Log page load speed
 			if ( loadTime > 0.1 && loadTime < 10.0 ) { 				

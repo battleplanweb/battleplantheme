@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 10.18
+Version: 11.0
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -181,6 +181,7 @@ button,
 [type="reset"],
 [type="submit"] {
 	-webkit-appearance: 						button;
+
 
 
 
@@ -3341,6 +3342,7 @@ h3#reply-title p.reply {
 }
 
 
+
 #cancel-comment-reply-link {
 	display:									none;
 }
@@ -4027,7 +4029,7 @@ section.tab-content.current {
 	display:									none;
 }
 
-/* Products (Shearer Supply)
+/* Products (HVAC)
 --------------------------------------------- */
 .archive-headline,
 .archive-subheadline {
@@ -4086,9 +4088,22 @@ span.descriptionText {
 }
 
 
-.product-links .descriptionText {
+.product-links .product-link-cats {
 	margin-bottom:								0.75em;
+}
 
+.product-meta .brochure-btn {
+	text-align: 								center;
+}
+
+.product-links .product-link-cats .product-link-label {
+	display:									inline-block;
+	width: 										75px;
+	font-weight: 								bold;
+}	
+
+.product-links .product-link-cats a {
+	display:									inline-block;
 }
 
 .disclaimerText {
@@ -5286,11 +5301,11 @@ html.error503 h3 {
 		margin-left:								0;
 	}
 	
-	.product-links .descriptionText {
+	.product-links .product-link-cats {
 		text-align:									center;
 	}
 
-	.product-links .descriptionText a {
+	.product-links .product-link-cats a {
 		display:									block;
 	}
 	

@@ -187,10 +187,10 @@ add_action('acf/init', 'battleplan_add_acf_hvac_fields');
 function battleplan_add_acf_hvac_fields() {
 	acf_add_local_field_group(array(
 		'key' => 'group_5bd6f6742fbdb',
-		'title' => 'American Standard Products',
+		'title' => 'HVAC Products',
 		'fields' => array(
 			array(
-				'key' => 'field_55352a1d450ac',
+				'key' => 'product_comfort',
 				'label' => 'Comfort',
 				'name' => 'comfort',
 				'type' => 'radio',
@@ -207,12 +207,12 @@ function battleplan_add_acf_hvac_fields() {
 				'other_choice' => 0,
 				'save_other_choice' => 0,
 				'default_value' => 'na',
-				'layout' => 'vertical',
+				'layout' => 'horizontal',
 				'allow_null' => 0,
 				'return_format' => 'value',
 			),
 			array(
-				'key' => 'field_55352a47450ad',
+				'key' => 'product_efficiency',
 				'label' => 'Efficiency',
 				'name' => 'efficiency',
 				'type' => 'radio',
@@ -229,12 +229,12 @@ function battleplan_add_acf_hvac_fields() {
 				'other_choice' => 0,
 				'save_other_choice' => 0,
 				'default_value' => 'na',
-				'layout' => 'vertical',
+				'layout' => 'horizontal',
 				'allow_null' => 0,
 				'return_format' => 'value',
 			),
 			array(
-				'key' => 'field_55352a56450ae',
+				'key' => 'product_price',
 				'label' => 'Price',
 				'name' => 'price',
 				'type' => 'radio',
@@ -251,6 +251,18 @@ function battleplan_add_acf_hvac_fields() {
 				'other_choice' => 0,
 				'save_other_choice' => 0,
 				'default_value' => 'na',
+				'layout' => 'horizontal',
+				'allow_null' => 0,
+				'return_format' => 'value',
+			),
+			array(
+				'key' => 'product_brochure',
+				'label' => 'Brochure',
+				'name' => 'brochure',
+				'type' => 'url',
+				'required' => 0,
+				'conditional_logic' => 0,
+				'default_value' => '',
 				'layout' => 'vertical',
 				'allow_null' => 0,
 				'return_format' => 'value',
@@ -259,13 +271,13 @@ function battleplan_add_acf_hvac_fields() {
 		'location' => array(
 			array(
 				array(
-					'param' => 'post_taxonomy',
+					'param' => 'post_type',
 					'operator' => '==',
-					'value' => 'product-brand:american-standard',
+					'value' => 'products',
 				),
 			),
 		),
-		'menu_order' => 0,
+		'menu_order' => 0, 
 		'position' => 'normal',
 		'style' => 'seamless',
 		'label_placement' => 'top',

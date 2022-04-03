@@ -1,4 +1,4 @@
-<?php session_start();
+<?php 
 /* Battle Plan Web Design functions and definitions
  
 /*--------------------------------------------------------------
@@ -19,7 +19,7 @@
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '10.18' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '11.0' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -282,7 +282,7 @@ function battleplan_getRandomText($atts, $content = null) {
 	
 	if ( $rand == $num ) : $rand = 0; else: $rand++; endif;	
 	//if ( $cookie != "false" ) setcookie('random-text', $rand, time() + (86400 * 7), '/', '', true, false);
-	if ( $cookie != "false" ) writeCookie('random-text', $rand, 7);
+	//if ( $cookie != "false" ) writeCookie('random-text', $rand, 7);
 
 	return $printText;
 }
@@ -1395,13 +1395,14 @@ function deleteMeta($id, $key) {
 	delete_post_meta( $id, $key );
 }
 
-// Set Cookies in same method as javascript
+// Set Cookies in same method as javascript ---- does not work with cache so try to move all of these instances to javascript 4/3/2022
 function writeCookie($cname, $cvalue, $exdays) {
 	//$parts = explode('.', parse_url(esc_url(get_site_url()), PHP_URL_HOST));
 	//$domain = $parts[0].'.'.$parts[1];	
 	//echo "domain: ".$domain;
+	
 	if ( $exdays == '' || $exdays == null || $exdays == '0' || $exdays == 0 ) :
-		$expires = 0;
+		$expires = '0';
 	else:
 		$expires = time() + (intval($exdays) * 24 * 60 * 60);
 	endif;
@@ -1905,7 +1906,9 @@ function battleplan_handle_main_query( $query ) {
 		if ( is_post_type_archive('testimonials') ) :
 			$query->set( 'post_type','testimonials');
 			$query->set( 'posts_per_page',10);
-			$query->set( 'orderby','rand');
+			$query->set( 'meta_key', 'log-views-total-30day' );
+        	$query->set( 'orderby', 'meta_value_num' );
+        	$query->set( 'order', 'ASC');
 		endif;
 		if ( is_post_type_archive('galleries') ) :
 			$query->set( 'post_type','galleries');
@@ -1915,55 +1918,16 @@ function battleplan_handle_main_query( $query ) {
 	endif; 
 }
 
-// Maintain pagination when using orderby=rand
-add_filter( 'posts_orderby', 'battleplan_randomize_with_pagination' );
-function battleplan_randomize_with_pagination( $orderby ) { 
-	if ( $orderby == "RAND()" && isset($_COOKIE['unique-id']) ) :
-		$orderby = "RAND(".$_COOKIE['unique-id'].")";
-	endif;
-	return $orderby;
-}
-
 // Add some defining classes to body
 add_filter( 'body_class', 'battleplan_addBodyClasses', 30 );
 function battleplan_addBodyClasses( $classes ) {	
 	$classes[] = "slug-"._PAGE_SLUG; 
-	
-	if (!isset($_COOKIE['first-page'])) :
-		$classes[] = "first-page";
-		//setcookie('first-page', 'no', '0', '/', '', true, false);
-		writeCookie('first-page', 'no', '0');
-	else:
-		$classes[] = "not-first-page";
-	endif;
 	
  	if ( is_mobile() ) : $classes[] = "screen-mobile"; else: $classes[] = "screen-desktop"; endif;
 	
 	if ( $GLOBALS['customer_info']['site-type'] ) $classes[] = "site-type-".$GLOBALS['customer_info']['site-type'];
 	
 	return $classes;
-}	
-
-// Calculate how many pages user has viewed (exclude page refresh)
-add_filter( 'init', 'battleplan_calculatePagesViewed' );
-function battleplan_calculatePagesViewed() {
-  	if ( defined( 'DOING_AJAX' ) && DOING_AJAX ) return;
-	if (!isset($_COOKIE['unique-id'])) :
-		$uniqueID = time().rand();		
-		//setcookie('unique-id', $uniqueID, '0', '/', '', true, false);
-		//setcookie('pages-viewed', 1, '0', '/', '', true, false);
-		writeCookie('unique-id', $uniqueID, '0');
-		writeCookie('pages-viewed', 1, '0');
-	else:
-		$pageViews = $_COOKIE['pages-viewed'];		
-		if ( $_COOKIE['current-page'] != _PAGE_SLUG ) :
-			$pageViews++;
-			//setcookie('pages-viewed', $pageViews, '0', '/', '', true, false);
-			//setcookie('current-page', _PAGE_SLUG, '0', '/', '', true, false);
-			writeCookie('pages-viewed', $pageViews, '0');
-			writeCookie('current-page', _PAGE_SLUG, '0');
-		endif;		
-	endif;	
 }	
 
 // Add Breadcrumbs
@@ -2435,7 +2399,7 @@ if ( !is_admin() && $GLOBALS['pagenow'] !== 'wp-login.php' && !is_plugin_active(
 		$dom->loadHTML($html);
 		$script = $dom->getElementsByTagName('script'); 
 
-		$targets = array('podium', 'leadconnectorhq', 'totalsfm', 'google', 'paypal', 'carousel', 'extended-widget', 'embed-player', 'huzzaz', 'fbcdn', 'facebook', 'klaviyo');
+		$targets = array('podium', 'leadconnectorhq', 'voip', 'google', 'paypal', 'carousel', 'extended-widget', 'embed-player', 'huzzaz', 'fbcdn', 'facebook', 'klaviyo');
 
 		foreach ($script as $item) :		   
 			foreach ($targets as $target) :
@@ -2478,16 +2442,6 @@ if ( !is_admin() && $GLOBALS['pagenow'] !== 'wp-login.php' && !is_plugin_active(
 // Hide the Wordpress admin bar
 show_admin_bar( false );
 
-// Set cookie for new home page url if user views an 'optimized' page
-add_action( 'wp', 'battleplan_setHomeBtnCookie' );
-function battleplan_setHomeBtnCookie() {
-	if ( get_post_type() == "optimized" ) :
-		$homeURL = $_SERVER['REQUEST_URI'];
-		//setcookie('home-url', $homeURL, '', '/', '', true, false);
-		writeCookie('home-url', $homeURL, '0');
-	endif;
-}
-
 // Set up Main Menu
 class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 	public function start_el( &$output, $item, $depth = 0, $args = array(), $id = 0 ) {
@@ -2527,16 +2481,7 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 		$attributes = '';
 		foreach ( $atts as $attr => $value ) {
 			if ( ! empty( $value ) ) {
-				if ( $attr === 'href' ) :
-					if ( ( isset($_COOKIE['home-url']) || $homeURL != '' ) && ( $value == get_home_url() || $value == get_home_url().'/' )) :
-						$value = esc_url( str_replace('//', '/', $_COOKIE['home-url']) );
-					else :
-						$value = esc_url( $value );
-					endif;
-				else :
-					$value = esc_attr( $value );
-				endif;
-
+				$value = ( 'href' === $attr ) ? esc_url( $value ) : esc_attr( $value );
 				$attributes .= ' ' . $attr . '="' . $value . '"';
 			}
 		}
@@ -2569,7 +2514,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( "user-message" == $tag->name ) {
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
-		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','Roleplay helps develop','rank your google','TRY IT RIGHT NOW FOR FREE','house‌ ‌inspection‌ ‌process', 'write you an article','write a short article','website home page design','updated version of your website','free sample Home Page','completely Free','и','д','б','й','л','ы','З','у','Я');
+		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','Roleplay helps develop','rank your google','TRY IT RIGHT NOW FOR FREE','house‌ ‌inspection‌ ‌process', 'write you an article','write a short article','website home page design','updated version of your website','free sample Home Page','completely Free','Dear Receptionist','и','д','б','й','л','ы','З','у','Я');
 		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
 		if ( strtolower($check) == strtolower($name) ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($badwords as $badword) {
@@ -3181,8 +3126,6 @@ function battleplan_update_meta_ajax() {
 	if ( $type == "site" ) update_option( $key, $value );
 	if ( $type == "user" ) update_user_meta( wp_get_current_user()->ID, $key, $value, false );
 	if ( $type == "post" || $type == "page" ) updateMeta( get_the_ID(), $key, $value );	
-	//if ( $type == "cookie" ) setcookie($key, $value, time() + (86400 * 365), '/', '', true, false);
-	if ( $type == "cookie" ) writeCookie($key, $value, 365);
 }
 
 // Log Page Load Speed
@@ -3266,71 +3209,64 @@ function battleplan_count_site_views_ajax() {
 			updateMeta(_HEADER_ID, 'log-views-ips', $newIPs);		*/	
 		
 	if ( _BP_COUNT_ALL_VISITS == "override" || ( _USER_LOGIN != 'battleplanweb' && $userLoc != "Ashburn, VA" && ( $userValid == "true" || _BP_COUNT_ALL_VISITS == "true" )) ) :
-		if(!isset($_COOKIE['countVisit'])) :
-			if ( $dateDiff != 0 ) : // day has passed
-				for ($i = 1; $i <= $dateDiff; $i++) {	
-					$figureTime = $today - ( ($dateDiff - $i) * 86400);	
-					array_unshift($getViews, array ('date'=>date("F j, Y", $figureTime), 'views'=>$viewsToday, 'search'=>$searchToday));
-				}	
-			else:
-				$viewsToday = intval($getViews[0]['views']); 
-				$searchToday = intval($getViews[0]['search']); 
-			endif;	
-			updateMeta(_HEADER_ID, 'log-views-now', $rightNow);
-			updateMeta(_HEADER_ID, 'log-views-time', $today);	
-			$viewsToday++;
-			if ( strpos($userRefer, "google") !== false || strpos($userRefer, "yahoo") !== false || strpos($userRefer, "bing") !== false || strpos($userRefer, "duckduckgo") !== false ) $searchToday++;	
-			array_shift($getViews);	
-			array_unshift($getViews, array ('date'=>date('F j, Y', $today), 'views'=>$viewsToday, 'search'=>$searchToday));	
-			$newViews = maybe_serialize( $getViews );
-			updateMeta(_HEADER_ID, 'log-views', $newViews);
-
-			for ($x = 0; $x < 7; $x++) { $views7Day = $views7Day + intval($getViews[$x]['views']); } 					
-			for ($x = 0; $x < 30; $x++) { $views30Day = $views30Day + intval($getViews[$x]['views']); } 						
-			for ($x = 0; $x < 90; $x++) { $views90Day = $views90Day + intval($getViews[$x]['views']); } 		
-			for ($x = 0; $x < 180; $x++) { $views180Day = $views180Day + intval($getViews[$x]['views']); } 		
-			for ($x = 0; $x < 365; $x++) { $views365Day = $views365Day + intval($getViews[$x]['views']); } 		
-			updateMeta(_HEADER_ID, 'log-views-total-7day', $views7Day);			
-			updateMeta(_HEADER_ID, 'log-views-total-30day', $views30Day);			 
-			updateMeta(_HEADER_ID, 'log-views-total-90day', $views90Day);	
-			updateMeta(_HEADER_ID, 'log-views-total-180day', $views180Day);	
-			updateMeta(_HEADER_ID, 'log-views-total-365day', $views365Day);	
-			
-			$minimumCount = $views90Day < 250 ? 250 : $views90Day;
-			
-			$getReferrers = readMeta(_HEADER_ID, 'log-views-referrers');
-			$getReferrers = maybe_unserialize( $getReferrers );
-			if ( !is_array($getReferrers) ) $getReferrers = array();
-			array_unshift($getReferrers, $userRefer);
-			$limitReferrerCount = count($getReferrers) - $minimumCount;
-			if ( $limitReferrerCount > 0 ) :
-				for ($i=0; $i < $limitReferrerCount; $i++) :
-					array_pop($getReferrers);
-				endfor;
-			endif;
-			$newReferrers = maybe_serialize( $getReferrers );
-			updateMeta(_HEADER_ID, 'log-views-referrers', $newReferrers);
-
-			$getLocations = readMeta(_HEADER_ID, 'log-views-cities');
-			$getLocations = maybe_unserialize( $getLocations );
-			if ( !is_array($getLocations) ) $getLocations = array();
-			array_unshift($getLocations, $userLoc);
-			$limitLocationCount = count($getLocations) - $minimumCount;
-			if ( $limitLocationCount > 0 ) :
-				for ($i=0; $i < $limitLocationCount; $i++) :
-					array_pop($getLocations);
-				endfor;
-			endif;
-			$newLocations = maybe_serialize( $getLocations );
-			updateMeta(_HEADER_ID, 'log-views-cities', $newLocations);
-	
-			//setcookie('countVisit', 'no', time() + 600, "/", '', true, false);
-			writeCookie('countVisit', 'no', 0.007);
-	
-			$response = array( 'result' => 'Site View counted: Today='.$viewsToday.', Week='.$views7Day.', Month='.$views30Day.', Quarter='.$views90Day.', Year= '.$views365Day);
+		if ( $dateDiff != 0 ) : // day has passed
+			for ($i = 1; $i <= $dateDiff; $i++) {	
+				$figureTime = $today - ( ($dateDiff - $i) * 86400);	
+				array_unshift($getViews, array ('date'=>date("F j, Y", $figureTime), 'views'=>$viewsToday, 'search'=>$searchToday));
+			}	
 		else:
-			$response = array( 'result' => 'Site View NOT counted: viewer already counted');
+			$viewsToday = intval($getViews[0]['views']); 
+			$searchToday = intval($getViews[0]['search']); 
+		endif;	
+		updateMeta(_HEADER_ID, 'log-views-now', $rightNow);
+		updateMeta(_HEADER_ID, 'log-views-time', $today);	
+		$viewsToday++;
+		if ( strpos($userRefer, "google") !== false || strpos($userRefer, "yahoo") !== false || strpos($userRefer, "bing") !== false || strpos($userRefer, "duckduckgo") !== false ) $searchToday++;	
+		array_shift($getViews);	
+		array_unshift($getViews, array ('date'=>date('F j, Y', $today), 'views'=>$viewsToday, 'search'=>$searchToday));	
+		$newViews = maybe_serialize( $getViews );
+		updateMeta(_HEADER_ID, 'log-views', $newViews);
+
+		for ($x = 0; $x < 7; $x++) { $views7Day = $views7Day + intval($getViews[$x]['views']); } 					
+		for ($x = 0; $x < 30; $x++) { $views30Day = $views30Day + intval($getViews[$x]['views']); } 						
+		for ($x = 0; $x < 90; $x++) { $views90Day = $views90Day + intval($getViews[$x]['views']); } 		
+		for ($x = 0; $x < 180; $x++) { $views180Day = $views180Day + intval($getViews[$x]['views']); } 		
+		for ($x = 0; $x < 365; $x++) { $views365Day = $views365Day + intval($getViews[$x]['views']); } 		
+		updateMeta(_HEADER_ID, 'log-views-total-7day', $views7Day);			
+		updateMeta(_HEADER_ID, 'log-views-total-30day', $views30Day);			 
+		updateMeta(_HEADER_ID, 'log-views-total-90day', $views90Day);	
+		updateMeta(_HEADER_ID, 'log-views-total-180day', $views180Day);	
+		updateMeta(_HEADER_ID, 'log-views-total-365day', $views365Day);	
+
+		$minimumCount = $views90Day < 250 ? 250 : $views90Day;
+
+		$getReferrers = readMeta(_HEADER_ID, 'log-views-referrers');
+		$getReferrers = maybe_unserialize( $getReferrers );
+		if ( !is_array($getReferrers) ) $getReferrers = array();
+		array_unshift($getReferrers, $userRefer);
+		$limitReferrerCount = count($getReferrers) - $minimumCount;
+		if ( $limitReferrerCount > 0 ) :
+			for ($i=0; $i < $limitReferrerCount; $i++) :
+				array_pop($getReferrers);
+			endfor;
 		endif;
+		$newReferrers = maybe_serialize( $getReferrers );
+		updateMeta(_HEADER_ID, 'log-views-referrers', $newReferrers);
+
+		$getLocations = readMeta(_HEADER_ID, 'log-views-cities');
+		$getLocations = maybe_unserialize( $getLocations );
+		if ( !is_array($getLocations) ) $getLocations = array();
+		array_unshift($getLocations, $userLoc);
+		$limitLocationCount = count($getLocations) - $minimumCount;
+		if ( $limitLocationCount > 0 ) :
+			for ($i=0; $i < $limitLocationCount; $i++) :
+				array_pop($getLocations);
+			endfor;
+		endif;
+		$newLocations = maybe_serialize( $getLocations );
+		updateMeta(_HEADER_ID, 'log-views-cities', $newLocations);
+
+		$response = array( 'result' => 'Site View counted: Today='.$viewsToday.', Week='.$views7Day.', Month='.$views30Day.', Quarter='.$views90Day.', Year= '.$views365Day);
 	else:
 		$response = array( 'result' => 'Site View NOT counted: user='._USER_LOGIN.', user valid='.$userValid );
 	endif;	
@@ -3394,7 +3330,7 @@ function battleplan_count_post_views_ajax() {
 		updateMeta($theID, 'log-views-total-90day', $views90Day);	
 		updateMeta($theID, 'log-views-total-180day', $views180Day);	
 		updateMeta($theID, 'log-views-total-365day', $views365Day);	
-		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' VIEW counted: Today='.$viewsToday.', Week='.$views7Day.', Month='.$views30Day.', Quarter='.$views90Day.', Year='.$views365Day) );
+		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' VIEW counted: Today='.$viewsToday.', Week='.$views7Day.', Month='.$views30Day.', Quarter='.$views90Day.', Year='.$views365Day.', User ID='.$uniqueID.', Pages Viewed='.$pagesViewed) );
 	else:
 		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' view NOT counted: user='._USER_LOGIN.', user valid='.$userValid ));
 	endif;	

@@ -9,7 +9,7 @@
 # Ruud Pro Partner
 # Comfortmaker Elite Dealer
 # Why Choose Us?
-# HVAC Maintenance Tips Teaser
+# HVAC Maintenance Tips
 # HVAC Tip Of The Month
 # Register Custom Post Types
 # Import Advanced Custom Fields

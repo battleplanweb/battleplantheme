@@ -36,7 +36,7 @@ function battleplan_add_quicktags() {
 			QTags.addButton( 'bp_layout', 'layout', ' [layout grid="1-auto, 1-1-1-1, 5e, content" break="none, 3, 4" valign="start, stretch, center, end" class=""]\n\n', ' [/layout]\n', 'layout', 'Layout', 1000 );
 			QTags.addButton( 'bp_column', 'column', '  [col name="becomes id attribute" hash="compensation for scroll on one-page sites" align="center, left, right" valign="start, stretch, center, end" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '  [/col]\n\n', 'column', 'Column', 1000 );
 			QTags.addButton( 'bp_image', 'image', '   [img size="100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" link="url to link to" new-tab="false, true" ada-hidden="false, true" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/img]\n', 'image', 'Image', 1000 );
-			QTags.addButton( 'bp_video', 'video', '   [vid size="100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" link="url of video" class="" related="false, true" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/vid]\n', 'video', 'Video', 1000 );
+			QTags.addButton( 'bp_video', 'video', '   [vid size="100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" link="url of video" thumb="url of thumb, if not using auto" preload="false, true" class="" related="false, true" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/vid]\n', 'video', 'Video', 1000 );
 			QTags.addButton( 'bp_caption', 'caption', '[caption align="aligncenter, alignleft, alignright | size-full-s" width="800"]<img src="/filename.jpg" alt="" class="size-full-s" />Type caption here.[/caption]\n', '', 'caption', 'Caption', 1000 );
 			QTags.addButton( 'bp_group', 'group', '   [group size = "100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '   [/group]\n\n', 'group', 'Group', 1000 );	
 			QTags.addButton( 'bp_text', 'text', '   [txt size="100 1/2 1/3 1/4 1/6 1/12" order="2, 1, 3" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '   [/txt]\n', 'text', 'Text', 1000 );
@@ -1514,10 +1514,32 @@ function battleplan_addSitePage() {
 add_filter('admin_footer_text', 'battleplan_admin_footer_text');
 function battleplan_admin_footer_text() { 
 	$printFooter = '<div style="float:left; margin-right:8px;"><img src="https://battleplanwebdesign.com/wp-content/uploads/site-icon-80x80.png" /></div>';
-	$printFooter .= '<div style="float:left; margin-top:8px;"><b>Powered by <a href="https://battleplanwebdesign.com" target="_blank">Battle Plan Web Design</a></b><br>';
-	$printFooter .= '<b>Periodic Review: '.date('F j, Y', get_option( 'site_updated' )).'</b><br>'; 
-	$printFooter .= '<b>Framework '._BP_VERSION.'</b><br>';
-	$printFooter .= '<b>WP '.get_bloginfo('version').'</b><br></div>';
+	$printFooter .= '<div style="float:left; margin-top:8px;">Powered by <a href="https://battleplanwebdesign.com" target="_blank">Battle Plan Web Design</a><br>';
+	$printFooter .= 'Periodic Review: '.date('F j, Y', get_option( 'site_updated' )).'<br>'; 
+	$printFooter .= 'Framework '._BP_VERSION.'<br>';
+	$printFooter .= 'WP '.get_bloginfo('version').'<br></div>';
+	
+	$printFooter .= '<div style="float:right; margin-right: 50px">';	
+	$printFooter .= get_option('customer_info')['area-before'].get_option('customer_info')['area'].get_option('customer_info')['area-after'].get_option('customer_info')['phone'].'<br>';
+	$printFooter .= get_option('customer_info')['street'].'<br>';
+	$printFooter .= get_option('customer_info')['city'].', '.get_option('customer_info')['state-abbr'].' '.get_option('customer_info')['zip'].'<br>';
+	if ( get_option('customer_info')['lat'] ) $printFooter .= get_option('customer_info')['lat'].', '.get_option('customer_info')['long'].', '.get_option('customer_info')['radius'].'<br>';	
+	$printFooter .= '</div><div style="float:right; margin-right: 50px">';
+	
+	if ( get_option('customer_info')['pid'] ) $printFooter .= '<b>PID:</b> <a href = "https://search.google.com/local/writereview?placeid='.get_option('customer_info')['pid'].'" target="_blank">'.get_option('customer_info')['pid'].'</a><br>';
+	$printFooter .= '<b>Email:</b> <a href = "mailto:'.get_option('customer_info')['email'].'">'.get_option('customer_info')['email'].'</a><br>';
+	if ( get_option('customer_info')['owner-email'] ) $printFooter .= '<b>Owner:</b> <a href = "mailto:'.get_option('customer_info')['owner-email'].'">'.get_option('customer_info')['owner-email'].'</a><br>';	
+	if ( get_option('customer_info')['facebook'] ) $printFooter .= '<b>Facebook:</b> <a href = "'.get_option('customer_info')['facebook'].'" target="_blank">'.get_option('customer_info')['facebook'].'</a><br>';
+	if ( get_option('customer_info')['twitter'] ) $printFooter .= '<b>Twitter:</b> <a href = "'.get_option('customer_info')['twitter'].'" target="_blank">'.get_option('customer_info')['twitter'].'</a><br>';
+	if ( get_option('customer_info')['instagram'] ) $printFooter .= '<b>Instagram:</b> <a href = "'.get_option('customer_info')['instagram'].'" target="_blank">'.get_option('customer_info')['instagram'].'</a><br>';
+	if ( get_option('customer_info')['pinterest'] ) $printFooter .= '<b>Pinterest:</b> <a href = "'.get_option('customer_info')['pinterest'].'" target="_blank">'.get_option('customer_info')['pinterest'].'</a><br>';
+	if ( get_option('customer_info')['yelp'] ) $printFooter .= '<b>Yelp:</b> <a href = "'.get_option('customer_info')['yelp'].'" target="_blank">'.get_option('customer_info')['yelp'].'</a><br>';
+	if ( get_option('customer_info')['tiktok'] ) $printFooter .= '<b>Tiktok:</b> <a href = "'.get_option('customer_info')['tiktok'].'" target="_blank">'.get_option('customer_info')['tiktok'].'</a><br>';
+	if ( get_option('customer_info')['youtube'] ) $printFooter .= '<b>You Tube:</b> <a href = "'.get_option('customer_info')['youtube'].'" target="_blank">'.get_option('customer_info')['youtube'].'</a><br>';
+	
+	if ( get_option('customer_info')['google-tags']['prop-id'] ) $printFooter .= '<b>Analytics:</b> <a href = "https://analytics.google.com/analytics/web/#/p'.get_option('customer_info')['google-tags']['prop-id'].'/reports/explorer?params=_u..nav%3Dmaui%26_u..pageSize%3D25%26_r.explorerCard..selmet%3D%5B%22sessions%22%5D%26_r.explorerCard..seldim%3D%5B%22sessionDefaultChannelGrouping%22%5D&r=lifecycle-traffic-acquisition-v2&collectionId=life-cycle" target="_blank">View Stats</a><br>';
+		
+	$printFooter .= '</div>';
 	
 	echo $printFooter;
 }
@@ -1909,7 +1931,7 @@ function battleplan_admin_weekly_stats() {
 		$search = $search + $dailySearch; 
 		if ( $count == 1 ) $end = $dailyTime;
 		if ( $count == 7 && $dailyTime != "Jan 1, 1970" ) :
-			if ( $endOfCol == 13 ) :
+			if ( $endOfCol == 52 ) :
 				echo "</table><table class='trends-weekly'><tr><td><b><u>Weekly</u></b></td><td><b><u>Total</u></b></td><td><b><u>Search</u></b></td></tr>";
 				$endOfCol = 0;
 			endif;
@@ -1941,7 +1963,7 @@ function battleplan_admin_monthly_stats() {
 		$search = $search + $dailySearch;
 		if ( $count == 1 ) $end = $dailyTime;
 		if ( $count == 30 && $dailyTime != "Jan 1, 1970" ) :
-			if ( $endOfCol == 4 ) :
+			if ( $endOfCol == 12 ) :
 				echo "</table><table class='trends-monthly'><tr><td><b><u>Monthly</u></b></td><td><b><u>Total</u></b></td><td><b><u>Search</u></b></td></tr>";
 				$endOfCol = 0;
 			endif;

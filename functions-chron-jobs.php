@@ -1,6 +1,5 @@
-<?php session_start();
-/* Battle Plan Web Design Chron Jobs
- 
+<?php 
+/* Battle Plan Web Design Chron Jobs 
 
 /*--------------------------------------------------------------
 # Chron Jobs
@@ -184,7 +183,7 @@ endif;
 delete_option( 'bp_setup_2021_12_20' );
 update_option( 'bp_setup_2022_03_29', 'completed' );
 
-update_option( 'bp_chrons_last_run', time() );			
+update_option( 'bp_chrons_last_run', time() );	
 
 /*--------------------------------------------------------------
 # Universal Pages
@@ -212,6 +211,8 @@ function battleplan_buildUniversalPages() {
 	if ( is_null(get_page_by_path('terms-conditions', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Terms & Conditions', 'post_content' => '[get-universal-page slug="page-terms-conditions"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
 	
 	if ( is_null(get_page_by_path('review', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Review', 'post_content' => '[get-universal-page slug="page-review"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
+
+	if ( is_null(get_page_by_path('email-received', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Email Received', 'post_content' => '[get-universal-page slug="page-email-received"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
 }
 
 ?>

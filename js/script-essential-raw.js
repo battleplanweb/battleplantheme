@@ -87,6 +87,11 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			success: function( response ) { console.log(response);  } 
 		});		
 	});
+	
+// Redirect to 'thank you' page after form submission, to avoid double submissions
+	document.addEventListener( 'wpcf7mailsent', function( event ) { 
+		location = '/email-received/';
+	}, false ); 
 
 // Set up Cookies
 	window.setCookie = function(cname,cvalue,exdays) {
@@ -466,9 +471,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	// Set up Review Questions & Redirect
 	$('.review-form:first').addClass('active');
 	$('.review-form #gmail-yes').click(function() { window.location.href = "/google"; });	
-	$('.review-form #facebook-yes').click(function() { window.location.href = "/facebook"; });
+	$('.review-form #facebook-yes').click(function() { window.location.href = "/facebook"; });	
+	$('.review-form #yelp-yes').click(function() { window.location.href = "/yelp"; });
 	
-	$('.review-form #gmail-no, .review-form #facebook-no').click(function() {
+	$('.review-form #gmail-no, .review-form #facebook-no, .review-form #yelp-no').click(function() {
 		$(this).closest('.review-form').removeClass('active');
 		$(this).closest('.review-form').next().addClass('active');			
 	});
@@ -935,7 +941,7 @@ if ( typeof parallaxBG !== 'function' ) {
 	if ( !getCookie('unique-id') ) { 
 		var unique_id = Math.floor(Date.now()) + '' + Math.floor((Math.random() * 900) + 99);
 		setCookie('unique-id', unique_id);
-		setCookie('pages-viewed', 2);
+		setCookie('pages-viewed', 1);
 	} else {
 		var page_views = getCookie('pages-viewed');
 		page_views++;
@@ -1153,6 +1159,30 @@ if ( typeof parallaxBG !== 'function' ) {
 	var todayIs = new Date().getDay(), days = ['sun','mon','tue','wed','thu','fri','sat'];
 	$('.office-hours .row-'+days[todayIs]).addClass("today");
 	
+		
+// Handle displaying YouTube or Vimeo thumbnail, and then loading video once clicked	
+	function activateYouTubeVimeo(div) {
+		var iframe = document.createElement('iframe');
+		iframe.setAttribute('src', div.dataset.link);
+		iframe.setAttribute('frameborder', '0');
+		iframe.setAttribute('allowfullscreen', '1');
+		iframe.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture');
+		div.parentNode.replaceChild(iframe, div);
+	}
+
+	var playerElements = document.getElementsByClassName('video-player');
+	for (var n = 0; n < playerElements.length; n++) {
+		var videoId = playerElements[n].dataset.id, videoLink = playerElements[n].dataset.link, div = document.createElement('div'), thumbNode = document.createElement('img'), playButton = document.createElement('div');
+		div.setAttribute('data-id', videoId);
+		div.setAttribute('data-link', videoLink);
+		thumbNode.src = playerElements[n].dataset.thumb;
+		div.appendChild(thumbNode);
+		playButton.setAttribute('class', 'play');
+		div.appendChild(playButton);
+		div.onclick = function () { activateYouTubeVimeo(this); };
+		playerElements[n].appendChild(div);
+	}
+	
 /*--------------------------------------------------------------
 # Screen resize
 --------------------------------------------------------------*/
@@ -1217,9 +1247,6 @@ if ( typeof parallaxBG !== 'function' ) {
 	// Add alt="" to all images with no alt tag
 	setTimeout(function() { $('img:not([alt])').attr('alt', ''); }, 50);
 	setTimeout(function() { $('img:not([alt])').attr('alt', ''); }, 1000);
-
-
-
 
 	// Menu support
 	$('[role="menu"]' ).on( 'focus.aria mouseenter.aria', '[aria-haspopup="true"]', function ( ev ) { $( ev.currentTarget ).addClass('menu-item-expanded').attr( 'aria-expanded', true ); } );

@@ -35,6 +35,7 @@ body {
 
 #wpfooter {
 	bottom: 									-50px;
+	font-weight: 								bold;
 }
 
 p#footer-upgrade {

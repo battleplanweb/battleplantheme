@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 11.0
+Version: 11.1
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -3583,7 +3583,74 @@ ul.side-by-side img {
 
 .screen-mobile .parallax-mirror.mobile-hide {
 	display:									none;
-}		
+}	
+
+/* for non-preloaded YouTube & Vimeo videos */
+.video-player {
+    background-size: 							30px 30px;
+    background-image: 							linear-gradient( 45deg, rgba(255, 255, 255, .15) 25%, rgba(0, 0, 0, .15) 25%, rgba(0, 0, 0, .15) 50%, rgba(255, 255, 255, .15) 50%, rgba(255, 255, 255, .15) 75%, rgba(0, 0, 0, .15) 75%, rgba(0, 0, 0, .15) );
+	animation: 									animate-loader 2s linear infinite;
+}
+
+@keyframes animate-loader {
+    0% { background-position: 0 0; }
+    100% { background-position: 60px 0; }
+}
+
+.video-player::before {
+	content: 									"Loading...";
+	left: 										0;
+	top: 										20%;
+	position: 									absolute;
+	font-weight: 								bold;
+	text-align: 								center;
+	width: 										100%;
+	font-size: 									34px;
+	filter: 									drop-shadow(1px 1px 0 rgba(0,0,0,0.4)) drop-shadow(-1px -1px 0 rgba(255,255,255,0.3)) drop-shadow(6px 6px 2px rgba(0,0,0,0.1));
+}
+
+.video-player img {
+    position: 									absolute;
+    left: 										0;
+    bottom: 									0;
+	right: 										0;
+    top: 										0;
+	object-fit: 								cover;
+    display: 									block;
+    margin: 									auto;
+    max-width: 									100%;
+    width: 										100%;
+    border: 									none;
+    height: 									auto;
+    cursor: 									pointer;
+    transition: 								all 0.4s ease;
+ }
+
+ .video-player .play {
+    position: 									absolute;
+    background: 								url('//i.imgur.com/TxzC70f.png') no-repeat;
+	height: 									72px;
+    width: 										72px;
+    left: 										50%;
+    top: 										50%;
+    margin-left: 								-36px;
+    margin-top: 								-36px;
+    pointer-events: 							none;
+}
+  
+.video-player img:hover {
+    filter: 									brightness(75%);
+}
+
+/* Page not found graphic */
+img.img-404 {
+	filter: 									sepia(0) contrast(1) hue-rotate(0deg) drop-shadow(-1px -1px 0 rgba(0,0,0,0.3)) drop-shadow(1px 1px 0 rgba(255,255,255,0.3));
+	border: 									none !important;
+	background: 								0 0 !important;
+	box-shadow: 								none !important;
+	outline: 									0 !important;
+	transform: 									translateX(4.5%);
+}
 
 /* Captions
 --------------------------------------------- */
@@ -3984,6 +4051,7 @@ dl.col-gallery {
 	display:									none;
 	border-bottom:								1px solid rgba(0,0,0,0.1);
 }
+
 
 .accordion-box .block-accordion .accordion-content {
 	background:									rgba(0,0,0,0.1);
@@ -5179,6 +5247,10 @@ html.error503 h3 {
 		display:									none !important;
 	}	
 	
+	img.img-404 {
+		transform: 									translateX(0);
+	}
+	
 	/* Galleries */
 	.grid-4e,	
 	.grid-5e,	
@@ -5428,6 +5500,10 @@ html.error503 h3 {
 		margin: 									0 !important;
 	}
 	
+	.video-player::before {
+		font-size: 									28px;
+	}
+	
 	/* Row of Pics */ /* changed from .col to .col-row-of-pics 1/5/21 for Bubba's Cooks Country */
 	.grid-3e .col-row-of-pics:nth-last-child(1),	
 
@@ -5470,6 +5546,7 @@ html.error503 h3 {
 	.gallery {
 		gap: 										0.75em;
 	}
+
 	
 	.grid-3e,	
 	.grid-4e,	

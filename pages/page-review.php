@@ -24,6 +24,15 @@ if ( do_shortcode('[get-biz info="facebook"]') != '' ) :
 		</div>
 	';
 endif;	
+if ( do_shortcode('[get-biz info="yelp"]') != '' ) :
+	$printPage .= '	
+		<div class="review-form">
+		 <div class="question">Do you use Yelp?</div>
+		 <button id="yelp-yes">Yes</button>
+		 <button id="yelp-no">No</button>
+		</div>
+	';
+endif;	
 $printPage .= '		
 	<div class="review-form">
 	 <p>Please use this form to submit your review.  Thank you!</p>

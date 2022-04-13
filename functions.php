@@ -19,7 +19,7 @@
 
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '11.0' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '11.1' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -2514,7 +2514,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( "user-message" == $tag->name ) {
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
-		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','Roleplay helps develop','rank your google','TRY IT RIGHT NOW FOR FREE','house‌ ‌inspection‌ ‌process', 'write you an article','write a short article','website home page design','updated version of your website','free sample Home Page','completely Free','Dear Receptionist','и','д','б','й','л','ы','З','у','Я');
+		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','Roleplay helps develop','rank your google','TRY IT RIGHT NOW FOR FREE','house‌ ‌inspection‌ ‌process', 'write you an article','write a short article','We want to write','website home page design','updated version of your website','free sample Home Page','completely Free','Dear Receptionist','и','д','б','й','л','ы','З','у','Я');
 		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
 		if ( strtolower($check) == strtolower($name) ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($badwords as $badword) {
@@ -2883,14 +2883,19 @@ function battleplan_getGoogleRating() {
 }
 
 // Set up URL re-directs
+if ( _PAGE_SLUG == "google" && do_shortcode('[get-biz info="pid"]') != "" ) : 
+	wp_redirect( "https://search.google.com/local/reviews?placeid=".do_shortcode('[get-biz info="pid"]')."&hl=en&gl=US", 301 ); 
+	exit; 
+endif;
 if ( _PAGE_SLUG == "facebook" && do_shortcode('[get-biz info="facebook"]') != "" ) : 
 	$facebook = do_shortcode('[get-biz info="facebook"]');
 	if ( substr($facebook, -1) != '/') $facebook .= "/";
 	wp_redirect( $facebook."reviews/", 301 ); 
 	exit; 
 endif;
-if ( _PAGE_SLUG == "google" && do_shortcode('[get-biz info="pid"]') != "" ) : 
-	wp_redirect( "https://search.google.com/local/reviews?placeid=".do_shortcode('[get-biz info="pid"]')."&hl=en&gl=US", 301 ); 
+if ( _PAGE_SLUG == "yelp" && do_shortcode('[get-biz info="yelp"]') != "" ) : 
+	$yelp = str_replace('https://www.yelp.com/biz/', '', do_shortcode('[get-biz info="yelp"]'));
+	wp_redirect( "https://www.yelp.com/writeareview/biz/".$yelp, 301 ); 
 	exit; 
 endif;
 if ( _PAGE_SLUG == "reviews" ) : 
@@ -3581,12 +3586,13 @@ function battleplan_buildImg( $atts, $content = null ) {
 // Video Block
 add_shortcode( 'vid', 'battleplan_buildVid' );
 function battleplan_buildVid( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'link'=>'', 'class'=>'', 'related'=>'false', 'start'=>'', 'end'=>'' ), $atts );
+	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'link'=>'', 'thumb'=>'', 'preload'=>'false', 'class'=>'', 'related'=>'false', 'start'=>'', 'end'=>'' ), $atts );
 	$related = esc_attr($a['related']);	
 	$order = esc_attr($a['order']);	
 	if ( $order != '' ) $style = " order: ".$order;
 	$link = esc_attr($a['link']);	
-	if ( strpos($link, 'youtube') !== false && $related == "false" ) $link .= "?rel=0";
+	$thumb = esc_attr($a['thumb']);	
+	$preload = esc_attr($a['preload']);	
 	$size = esc_attr($a['size']);	
 	$size = convertSize($size);	
 	$height = 56.25 * ($size/12);	
@@ -3599,8 +3605,28 @@ function battleplan_buildVid( $atts, $content = null ) {
 		if ( $start && $now < $start ) return null;
 		if ( $end && $now > $end ) return null;		
 	}
+	
+	if ( ( strpos($link, 'youtube') !== false || strpos($link, 'vimeo') !== false ) && $preload == "false" ) :
+		if ( strpos($link, 'youtube') !== false ) :
+			$id = str_replace('https://www.youtube.com/embed/', '', $link);
+			$link .= "?autoplay=1";
+			if ( $thumb == '' ) : $thumb = '//i.ytimg.com/vi/'.$id.'/sddefault.jpg'; endif;		
+			if ( $related == "false" ) : $link .= "&rel=0";	endif;	
+		else:
+			$id = str_replace('https://player.vimeo.com/video/', '', $link);
+			$link .= "?autoplay=1&title=0&byline=0&portrait=0";
+			if ( $thumb == '' ) :			
+				$data = file_get_contents('https://vimeo.com/api/v2/video/'.$id.'.json');
+				$data = json_decode($data);
+				$thumb = str_replace('http:', '', $data[0]->thumbnail_large.'.jpg');
+			endif;
+		endif;
+		
+		return '<div class="block block-video span-'.$size.$class.' video-player" style="'.$style.' padding-top:'.$height.'%" data-thumb="'.$thumb.'" data-link="'.$link.'" data-id="'.$id.'"></div>';
 
-	return '<div class="block block-video span-'.$size.$class.'" style="'.$style.' padding-top:'.$height.'%"><iframe src="" data-src="'.$link.'" data-loading="delay" allowfullscreen></iframe></div>';
+	else:
+		return '<div class="block block-video span-'.$size.$class.'" style="'.$style.' padding-top:'.$height.'%"><iframe src="" data-src="'.$link.'" data-loading="delay" allowfullscreen></iframe></div>';
+	endif;	
 }
 
 // Group Block

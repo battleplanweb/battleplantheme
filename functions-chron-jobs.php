@@ -130,8 +130,31 @@ if ( is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') ) :
 	$wpSEOSocial['youtube_url'] = $GLOBALS['customer_info']['youtube'];	
 	update_option( 'wpseo_social', $wpSEOSocial );
 
-	$wpSEOLocal = get_option( 'wpseo_local' );		
-	$wpSEOLocal['business_type'] = 'Organization';
+	$wpSEOLocal = get_option( 'wpseo_local' );	
+	
+	if ( $GLOBALS['customer_info']['business-type'] == "organization" || $GLOBALS['customer_info']['business-type'] == "public figure" ) $wpSEOLocal['business_type'] = 'Organization';
+	if ( $GLOBALS['customer_info']['business-type'] == "" || $GLOBALS['customer_info']['business-type'] == "agriculture" || $GLOBALS['customer_info']['business-type'] == "animals" || $GLOBALS['customer_info']['business-type'] == "industrial" ) $wpSEOLocal['business_type'] = '— Local business';		
+
+	if ( $GLOBALS['customer_info']['business-type'] == "auto body" ) $wpSEOLocal['business_type'] = '— — — Auto body shop';		
+	if ( $GLOBALS['customer_info']['business-type'] == "automotive" ) $wpSEOLocal['business_type'] = '— — Automotive business';		
+	if ( $GLOBALS['customer_info']['business-type'] == "book store" ) $wpSEOLocal['business_type'] = '— — — Book store';	
+	if ( $GLOBALS['customer_info']['business-type'] == "cleaning" || $GLOBALS['customer_info']['business-type'] == "landscaper" || $GLOBALS['customer_info']['business-type'] == "flooring contractor" || $GLOBALS['customer_info']['business-type'] == "stone" ) $wpSEOLocal['business_type'] = '— — Home and construction business';	
+	if ( $GLOBALS['customer_info']['business-type'] == "clothing store" ) $wpSEOLocal['business_type'] = '— — — Clothing store';	
+	if ( $GLOBALS['customer_info']['business-type'] == "electrician" ) $wpSEOLocal['business_type'] = '— — — Electrician';	
+	if ( $GLOBALS['customer_info']['business-type'] == "financial" ) $wpSEOLocal['business_type'] = '— — Financial service';	
+	if ( $GLOBALS['customer_info']['business-type'] == "fire safety" || $GLOBALS['customer_info']['business-type'] == "professional" ) $wpSEOLocal['business_type'] = '— — Professional service';	
+	if ( $GLOBALS['customer_info']['business-type'] == "fitness" ) $wpSEOLocal['business_type'] = '— — — Exercise gym';	
+	if ( $GLOBALS['customer_info']['business-type'] == "government" ) $wpSEOLocal['business_type'] = '— Government organization';	
+	if ( $GLOBALS['customer_info']['business-type'] == "motel" ) $wpSEOLocal['business_type'] = '— — — Motel';	
+	if ( $GLOBALS['customer_info']['business-type'] == "musician" ) $wpSEOLocal['business_type'] = '— — Store';	
+	if ( $GLOBALS['customer_info']['business-type'] == "novelty store" ) $wpSEOLocal['business_type'] = '— — Music group';	
+	if ( $GLOBALS['customer_info']['business-type'] == "physician" || $GLOBALS['customer_info']['business-type'] == "chiropractor" ) $wpSEOLocal['business_type'] = '— — Physician';	
+	if ( $GLOBALS['customer_info']['business-type'] == "resort" ) $wpSEOLocal['business_type'] = '— — — Resort';		
+	if ( $GLOBALS['customer_info']['business-type'] == "restaurant" ) $wpSEOLocal['business_type'] = '— — — Restaurant';	
+	if ( $GLOBALS['customer_info']['business-type'] == "tattoo shop" ) $wpSEOLocal['business_type'] = '— — — Tattoo parlor';	
+
+	if ( $GLOBALS['customer_info']['site-type'] == "hvac" ) $wpSEOLocal['business_type'] = '— — — HVAC business';		
+	
 	$wpSEOLocal['location_address'] = $GLOBALS['customer_info']['street'];
 	$wpSEOLocal['location_city'] = $GLOBALS['customer_info']['site-city'];
 	$wpSEOLocal['location_state'] = $GLOBALS['customer_info']['state-full'];

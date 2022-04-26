@@ -1800,13 +1800,15 @@ function battleplan_admin_click_stats() {
 	$callClicks = maybe_unserialize($callClicks);
 	$emailClicks = readMeta($siteHeader, "email-clicks");
 	$emailClicks = maybe_unserialize($emailClicks);
-	$numToShow = date("Y") - 2020;		
-	
+	$numToShow = date("Y") - 2020;			
+	if ( !$callClicks ) $callClicks = array();	
+	if ( !$emailClicks ) $emailClicks = array();
+
 	echo "<table>";
 	echo "<tr><td><b>Year</b></td><td><b>Calls</b></td><td><b>Emails</b></td></tr>";
-	for ($x = 0; $x < $numToShow; $x++) {		
+	for ($x = 0; $x < $numToShow; $x++) :
 		echo "<tr><td><b>".$callClicks[$x]['year']."</b></td><td>".number_format($callClicks[$x]['number'])."</td><td>".number_format($emailClicks[$x]['number'])."</td></tr>";
-	} 			
+	endfor; 			
 	echo "</table>";
 }
 
@@ -1815,6 +1817,7 @@ function battleplan_admin_referrer_stats() {
 	$siteHeader = getID('site-header');
 	$referrers = readMeta($siteHeader, "log-views-referrers");
 	$referrers = maybe_unserialize($referrers);
+	if ( !$referrers ) $referrers = array();
 	$referNum = count($referrers);
 	$tallyCounts = array_count_values($referrers);
 	$uniqueReferrers = array_unique($referrers);
@@ -1842,6 +1845,7 @@ function battleplan_admin_location_stats() {
 	$siteHeader = getID('site-header');
 	$locations = readMeta($siteHeader, "log-views-cities");
 	$locations = maybe_unserialize($locations);
+	if ( !$locations ) $locations = array();
 	$locNum = count($locations);
 	$tallyCounts = array_count_values($locations);
 	$uniqueLocs = array_unique($locations);
@@ -1899,10 +1903,12 @@ function battleplan_admin_pageview_stats() {
 		else : $multiViews++; $totalMulti = $totalMulti + $views; endif;	
 	}
 	
-	$singlePct = ($singleViews / ($multiViews + $singleViews)) * 100;
-	$multiPct = ($multiViews / ($multiViews + $singleViews)) * 100;
-	$avgVisit = round( ($totalMulti + $singleViews) / ($multiViews + $singleViews), 1, PHP_ROUND_HALF_UP);
-	$avgMulti = round( ($totalMulti / $multiViews), 1, PHP_ROUND_HALF_UP);
+	if ( $totalMulti != 0 ) :	
+		$singlePct = ($singleViews / ($multiViews + $singleViews)) * 100;
+		$multiPct = ($multiViews / ($multiViews + $singleViews)) * 100;
+		$avgVisit = round( ($totalMulti + $singleViews) / ($multiViews + $singleViews), 1, PHP_ROUND_HALF_UP);
+		$avgMulti = round( ($totalMulti / $multiViews), 1, PHP_ROUND_HALF_UP);
+	endif;
 	
 	echo "<ul>";
 		echo "<li><span class='label'><b>One Page Visits</b></td><td><b></span><span class='value'>".number_format($singlePct)."%</b>&nbsp;&nbsp;&nbsp;(".number_format($singleViews).")</span></li>";

@@ -3,15 +3,13 @@
 
 $profileVar = do_shortcode('[get-url-var var="user"]');
 $profileID = do_shortcode('[get-user user="'.$profileVar.'" info="id"]');
-$currUserID = wp_get_current_user()->ID;
 
 $profileName = do_shortcode('[display-user user="'.$profileVar.'" info="name" link="false"]');
 $profileUsername = do_shortcode('[display-user user="'.$profileVar.'" info="username" link="false"]');
 $profileRole = do_shortcode('[display-user user="'.$profileVar.'" info="role" link="false"]');
 $profileBio = wp_kses_post(get_the_author_meta( 'description', $profileID ));
 
-
-if ( !$profileVar || $profileID == $currUserID ) : $currUser = true; 
+if ( !$profileVar || $profileID == _USER_ID ) : $currUser = true; 
 else: $currUser = false; endif;
 $profileFirst = do_shortcode('[get-user user="'.$profileVar.'" info="first"]');
 $profileLast = do_shortcode('[get-user user="'.$profileVar.'" info="last"]');

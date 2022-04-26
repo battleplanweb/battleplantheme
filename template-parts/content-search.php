@@ -1,26 +1,26 @@
 <?php /*** Template part for displaying results in search pages */ ?>
 
-<article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
-	<header class="entry-header">
-		<?php the_title( sprintf( '<h2 class="entry-title"><a href="%s" rel="bookmark">', esc_url( get_permalink() ) ), '</a></h2>' ); ?>
+<?php
+	$postType = get_post_type();
+	
+	if ( $postType == "optimized" || $postType == "universal" ) $postType = "page";
+	if ( $postType == "testimonials" ) $postType = "testimonial";
+	if ( $postType == "galleries" ) $postType = "gallery";	
+	
+	$buildListing .= '<li id="post-'.get_the_ID().'" class="clearfix"><p>';
 
-		<?php if ( 'post' === get_post_type() ) : ?>
-		<div class="entry-meta">
-			<?php
-			battleplan_posted_on();
-			battleplan_posted_by();
-			?>
-		</div><!-- .entry-meta -->
-		<?php endif; ?>
-	</header><!-- .entry-header -->
-
-	<?php battleplan_post_thumbnail(); ?>
-
-	<div class="entry-summary">
-		<?php the_excerpt(); ?>
-	</div><!-- .entry-summary -->
-
-	<footer class="entry-footer">
-		<?php battleplan_entry_footer(); ?>
-	</footer><!-- .entry-footer -->
-</article><!-- #post-<?php the_ID(); ?> -->
+	if ( has_post_thumbnail() ) : 	
+		$size = 'icon';
+		$meta = wp_get_attachment_metadata( get_post_thumbnail_id( get_the_ID() ) );
+		$thumbW = $meta['sizes'][$size]['width'];
+		$thumbH = $meta['sizes'][$size]['height'];
+	
+		$buildListing .= do_shortcode('[img size="100" class="search-thumbnail" link="'.esc_url( get_permalink()).'" '.$picADA.']'.get_the_post_thumbnail( get_the_ID(), $size, array( 'class'=>'align-left img-archive img-search', 'style'=>'aspect-ratio:'.$thumbW.'/'.$thumbH )).'[/img]'); 
+	endif;
+	
+	$buildListing .= '<a href = "'.esc_url( get_permalink()).'">'.get_the_title().'<span class="post-type"> - '.$postType.'</span></a><br>';
+	$buildListing .= get_the_excerpt();
+	
+	$buildListing .= '</p></li>';
+	echo do_shortcode($buildListing);
+?>

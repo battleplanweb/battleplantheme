@@ -24,7 +24,7 @@ $args = array( 'role__in' => $GLOBALS['roles'], 'offset' => $offset, 'number' =>
 
 $sortBoxChoices = array( array( 'last-login-when', 'Recent Activity', 'meta_value_num', 'desc' ), array( 'last_name', 'Last Name', 'meta_value', 'asc'), array ( 'first_name', 'First Name', 'meta_value', 'asc') );
 
-$sort = get_user_meta( wp_get_current_user()->ID, 'profile-sort', true );
+$sort = get_user_meta( _USER_ID, 'profile-sort', true );
 
 foreach ($sortBoxChoices as $sortBoxChoice ) :
 	if ( $sort == $sortBoxChoice[0] ) : $args['meta_key']=$sortBoxChoice[0]; $args['orderby']=$sortBoxChoice[3]; $args['order'] = $sortBoxChoice[4]; endif;

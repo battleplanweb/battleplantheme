@@ -30,7 +30,7 @@
 	<?php bp_google_tag_manager(); ?>
 </head>
 
-<body id="<?php echo get_the_ID(); ?>" <?php body_class(getUserRole()); ?>>
+<body id="<?php echo get_the_ID(); ?>" <?php body_class( battleplan_getUserRole() ); ?>>
 	 
 <?php bp_loader(); ?>
 

@@ -17,17 +17,12 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 # Basic site functionality
 --------------------------------------------------------------*/
 
-	var getThemeURI = site_dir.theme_dir_uri, getUploadURI = site_dir.upload_dir_uri, mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 0, pageViews, uniqueID, pageLimit = 3, speedFactor = 0.5;
+	var getThemeURI = site_dir.theme_dir_uri, getUploadURI = site_dir.upload_dir_uri, mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 0;
 	
 // Is user on an Apple device?
 	window.isApple = function () {
 		return !!navigator.platform && /iPad|iPhone|iPod/.test(navigator.platform);
 	};	
-	
-// Get domain of current webpage  - deprecated 10/22/21
-//	window.getDomain = function () {
-//		return window.location.hostname;
-//	};		
 	
 // Get "slug" of current webpage
 	window.getSlug = function () {
@@ -495,6 +490,17 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	if ( el = document.getElementById( 'commentform' ) ) { destinations.push( el ); }
 	if ( ( el = document.getElementById( 'replyrow' ) ) && ( el = el.getElementsByTagName('td') ) ) { destinations.push( el.item(0) ); }
 	for ( var i = 0, j = destinations.length; i < j; i++ ) { destinations[i].appendChild( ak_js ); }
+	
+// Control animation for menu search box
+	setTimeout(function() {
+		$('div.menu-search-box a.menu-search-bar').each(function() {
+			var searchBar = $(this), inputW = searchBar.outerWidth(), magW = searchBar.find('i.fa').outerWidth();
+			searchBar.css({ "width": magW+"px" });
+			searchBar.click(function() {
+				searchBar.animate( { "width":inputW+'px' }, 150, function() { if ( typeof centerSubNav === 'function' ) { setTimeout(function() {centerSubNav();}, 300); } });	
+			});
+		}); 
+	}, 300);
 
 /*--------------------------------------------------------------
 # DOM level functions
@@ -686,30 +692,59 @@ if ( typeof parallaxBG !== 'function' ) {
 /*--------------------------------------------------------------
 # Set up animation
 --------------------------------------------------------------*/
+	
+var pageViews=getCookie('pages-viewed'), uniqueID, pageLimit = 300, speedFactor = 0.5;
 
 // Gracefully start to fade out the pre-loader
 	var opacity = 1, loader = document.getElementById("loader"), color = getComputedStyle(loader).getPropertyValue("background-color"), [r,g,b,a] = color.match(/\d+/g).map(Number), bgTimer = setInterval(function() {
 		opacity = opacity - 0.01;
 		document.getElementById("loader").style.backgroundColor = 'rgb('+r+','+g+','+b+','+opacity+')';
-		if ( opacity < 0.3 ) { 
-			clearInterval(bgTimer) 
-		}
+		if ( opacity < 0.5 ) { clearInterval(bgTimer); }
 	}, 10);
+	window.resetLoader = function () {
+		document.getElementById("loader").style.backgroundColor = 'rgb('+r+','+g+','+b+',0.5)';
+	}
+	
+// Set up easing
+	window.convertBezier = function(easing) {
+		if ( easing == "easeInCubic" ) { easing = 'cubic-bezier(0.550, 0.055, 0.675, 0.190)'; }
+		else if ( easing == "easeInQuart" ) { easing = 'cubic-bezier(0.895, 0.030, 0.685, 0.220)'; }
+		else if ( easing == "easeInQuint" ) { easing = 'cubic-bezier(0.755, 0.050, 0.855, 0.060)'; }		
+		else if ( easing == "easeInExpo" ) { easing = 'cubic-bezier(0.950, 0.050, 0.795, 0.035)'; }
+		else if ( easing == "easeInBack" ) { easing = 'cubic-bezier(0.600, -0.280, 0.735, 0.045)'; }
+		
+		else if ( easing == "easeOutCubic" ) { easing = 'cubic-bezier(0.215, 0.610, 0.355, 1.000)'; }
+		else if ( easing == "easeOutQuart" ) { easing = 'cubic-bezier(0.165, 0.840, 0.440, 1.000)'; }
+		else if ( easing == "easeOutQuint" ) { easing = 'cubic-bezier(0.230, 1.000, 0.320, 1.000)'; }		
+		else if ( easing == "easeOutExpo" ) { easing = 'cubic-bezier(0.190, 1.000, 0.220, 1.000)'; }
+		else if ( easing == "easeOutBack" ) { easing = 'cubic-bezier(0.175, 0.885, 0.320, 1.275)'; }
+	
+		else if ( easing == "easeInOutCubic" ) { easing = 'cubic-bezier(0.645, 0.045, 0.355, 1.000)'; }
+		else if ( easing == "easeInOutQuart" ) { easing = 'cubic-bezier(0.770, 0.000, 0.175, 1.000)'; }
+		else if ( easing == "easeInOutQuint" ) { easing = 'cubic-bezier(0.860, 0.000, 0.070, 1.000)'; }		
+		else if ( easing == "easeInOutExpo" ) { easing = 'cubic-bezier(1.000, 0.000, 0.000, 1.000)'; }
+		else if ( easing == "easeInOutBack" ) { easing = 'cubic-bezier(0.680, -0.550, 0.265, 1.550)'; }
+
+		return easing;
+	}
 
 // Animate single element (using transitions from animate.css)
-	window.animateDiv = function(container, effect, initDelay, offset, speed) {
+	window.animateDiv = function(container, effect, initDelay, offset, speed, easing) {
 		initDelay = initDelay || 0;		
 		offset = offset || "100%";
 		speed = speed || 1000;
 		speed = speed / 1000;
+		easing = easing || 'ease';
+
 		var transDuration = parseFloat($(container).css( "transition-duration")), transDelay = parseFloat($(container).css( "transition-delay"));
 		if ( pageViews > pageLimit ) { 
 			initDelay = initDelay * speedFactor; 
 			speed = speed * speedFactor; 
-			transDuration = transDuration * speedFactor; transDelay = transDelay * speedFactor; 
-		}
-		
-		$(container).addClass('animated').css({ "animation-duration": speed+"s", "transition-duration": transDuration+"s", "transition-delay": transDelay+"s"});		
+			transDuration = transDuration * speedFactor; 
+			transDelay = transDelay * speedFactor;  
+		}		
+
+		$(container).addClass('animated').css({ "animation-duration": speed+"s", "transition-duration": transDuration+"s", "transition-delay": transDelay+"s", "animation-timing-function": convertBezier(easing) });		
 		$(container+".animated").waypoint(function() {
 			var thisDiv = $(this.element);	
 			setTimeout( function () { 
@@ -720,12 +755,14 @@ if ( typeof parallaxBG !== 'function' ) {
 	};
 
 // Animate multiple elements
-	window.animateDivs = function(container, effect1, effect2, initDelay, mainDelay, offset, speed) {	
+	window.animateDivs = function(container, effect1, effect2, initDelay, mainDelay, offset, speed, easing) {	
 		initDelay = initDelay || 0;		
 		mainDelay = mainDelay || 100;		
 		offset = offset || "100%";
 		speed = speed || 1000;
-		speed = speed / 1000;		
+		speed = speed / 1000;	
+		easing = easing || 'ease';
+
 		var theDelay = 0, currEffect = effect1, getDiv = container.split(' '), theDiv = getDiv.pop();
 		if ( pageViews > pageLimit ) { 
 			initDelay = initDelay * speedFactor;
@@ -737,7 +774,7 @@ if ( typeof parallaxBG !== 'function' ) {
 		setTimeout( function() {
 			$(container).parent().find(theDiv+".animated").waypoint(function() {
 				var thisDiv = $(this.element), divIndex = thisDiv.prevAll(theDiv).length;
-				thisDiv.css({ "animation-duration": speed+"s"});
+				thisDiv.css({ "animation-duration": speed+"s", "animation-timing-function": convertBezier(easing) });
 				if ( divIndex > 6 ) {
 					theDelay = mainDelay;	
 				} else {
@@ -761,13 +798,15 @@ if ( typeof parallaxBG !== 'function' ) {
 	};
 
 // Animate grid elements
-	window.animateGrid = function(container, effect1, effect2, effect3, initDelay, mainDelay, offset, mobile, speed) {
+	window.animateGrid = function(container, effect1, effect2, effect3, initDelay, mainDelay, offset, mobile, speed, easing) {
 		initDelay = initDelay || 0;		
 		mainDelay = mainDelay || 100;		
 		offset = offset || "100%";
 		mobile = mobile || "false";
 		speed = speed || 1000;
 		speed = speed / 1000;
+		easing = easing || 'ease';
+
 		var getDiv = container.split(' '), theDiv = getDiv.pop(), i, j;
 		if ( pageViews > pageLimit ) { 
 			initDelay = initDelay * speedFactor; 
@@ -799,15 +838,17 @@ if ( typeof parallaxBG !== 'function' ) {
 				} 
 			}
 		});
+		
 		$(container).parent().find(theDiv+".animated").waypoint(function() {
 			var thisDiv = $(this.element), delay = (mainDelay * thisDiv.data("animation").delay) + initDelay, effect = thisDiv.data("animation").effect;
-			thisDiv.css({ "animation-duration": speed+"s"});
+			thisDiv.css({ "animation-duration": speed+"s", "animation-timing-function": convertBezier(easing) });
 			if ( getDeviceW() > mobileCutoff || mobile == "true" ) { 
 				setTimeout( function () { 
 					thisDiv.addClass(effect);
 				}, delay);
-			} else {
-				thisDiv.addClass("fadeInUpSmall");				
+			} else {			
+				effect = effect.replace("Down", "Up");			
+				thisDiv.addClass(effect);				
 			}			
 			this.destroy();
 		}, { offset: offset });	
@@ -865,8 +906,6 @@ if ( typeof parallaxBG !== 'function' ) {
 		words = words || "false";
 		if ( pageViews > pageLimit ) { 
 			initDelay = initDelay * speedFactor; 
-
-
 			mainDelay = mainDelay * speedFactor; 
 		}
 
@@ -901,8 +940,6 @@ if ( typeof parallaxBG !== 'function' ) {
 					}, charDelay);
 					currEffect = effect1;
 				} else {
-
-
 					setTimeout( function () { 
 						thisDiv.addClass(effect2);
 					}, charDelay);
@@ -957,6 +994,20 @@ if ( typeof parallaxBG !== 'function' ) {
 	if ( getCookie('home-url') ) { 	
 		$('a[href="'+window.location.origin+'"], a[href="'+window.location.origin+'/"]').each(function() {
 			$(this).attr("href", window.location.origin + "/" + getCookie('home-url') );	
+		});
+	}	
+
+// Augment URLs with location data, if multi-location site
+	if ( getCookie('site-location') || getUrlVar('l') != null ) { 
+		var siteLoc = getCookie('site-location');
+		if ( getUrlVar('l') != null ) { siteLoc = getUrlVar('l'); }
+
+		$('a').each(function() {
+			var origLink = String($(this).attr("href")), append = '?';
+			if ( !$(this).hasClass('loc-ignore') && !origLink.includes('#') && origLink != 'undefined' ) {
+				if ( origLink.includes('?') ) {	append = '&'; }
+				$(this).attr("href", $(this).attr("href") + append + 'l=' + siteLoc );	
+			}
 		});
 	}	
 	
@@ -1149,7 +1200,7 @@ if ( typeof parallaxBG !== 'function' ) {
 
 	$('#mobile-navigation').removeClass("get-sub-heights");
 
-	$('#mobile-navigation li:not(.menu-item-has-children)').each(function() { 
+	$('#mobile-navigation li:not(.menu-item-has-children):not(.search-box)').each(function() { 
 		$(this).click(function() { 
 			closeMenu(); 
 		}); 
@@ -1260,7 +1311,10 @@ if ( typeof parallaxBG !== 'function' ) {
 	$(window).on( 'load', function() {
 	// Fade out pre-loader screen when site is fully loaded
 		clearInterval(bgTimer);		
-		$("#loader").fadeOut("fast"); 
+		$("#loader").fadeOut(300, function() { resetLoader(); });
+		
+	// Fade in pre-loader when changing pages
+		window.addEventListener('beforeunload', function (e) { $('#loader').fadeIn(300); });
 				
 	// Set up Locked Message position, delay, & cookie	
 		$('section.section-lock').each(function() {

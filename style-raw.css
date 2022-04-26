@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 11.1.1
+Version: 11.2
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -40,7 +40,8 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
 	- Accordion Setup
 	- Tabbed Content
 	- SVG
-	- Products (Shearer Supply)
+	- Search Results
+	- Products (HVAC)
 # Plugins
 	- Waypoints
 	- Podium Web Chat Module
@@ -473,6 +474,7 @@ span {
 
 .ribbon:before {
 	border-left: 								15px solid transparent !important;
+
 	left: 										-2px;
 }
 
@@ -1945,6 +1947,10 @@ button.fancybox-button.tab-focus {
 
 /* Content
 --------------------------------------------- */
+#wrapper-content {
+	min-height: 								550px;
+}
+
 #primary,
 #secondary {
 	max-width:									100%;
@@ -2340,6 +2346,7 @@ body.locked {
 	position:									absolute;
 	width:										inherit;
 	height:										inherit;
+
 	top:										0;
 	left:										0;
 	border-radius:								50%;
@@ -3339,6 +3346,7 @@ form#commentform p.form-submit {
 h3#reply-title p.reply {
 
 	margin-top:									0.5em;
+
 }
 
 
@@ -3854,6 +3862,7 @@ img.img-404 {
 	font-size:									90%;
 }
 
+
 .office-hours.horz {
 	grid-template-columns: 						repeat(7, 1fr);
 	grid-template-rows: 						1fr;
@@ -4095,6 +4104,55 @@ section.tab-content.current {
 --------------------------------------------- */
 #include-svg {
 	display:									none;
+}
+
+/* Search Results
+--------------------------------------------- */
+div.menu-search-box {
+	align-self: 								center;
+	padding-left: 								15px;
+}
+
+div.menu-search-box form.menu-search-form {
+	margin-bottom: 								0;
+}
+
+div.menu-search-box a.menu-search-bar {
+	display: 									flex;
+	padding: 									0;
+	overflow: 									hidden;
+} 
+
+div.menu-search-box a.menu-search-bar i.fa {
+	font-size: 									80%;
+	align-self: 								center;
+}
+
+div.menu-search-box a.menu-search-bar input[type="search"] {
+	margin-left: 								8px;
+}
+
+.search-results header.page-header {
+	margin-bottom: 								2em;
+}
+
+.search-results ul.search-results li,
+.search-results ol.search-results li {
+	margin-left: 								125px;
+	padding-bottom: 							1em;
+}
+
+.search-results ul.search-results li img.img-search,
+.search-results ol.search-results li img.img-search {
+	margin-top: 								8px;
+	margin-bottom: 								0;
+	margin-left: 								-125px;
+}
+
+.search-results ol.search-results li .post-type {
+	font-size: 									65%;
+	text-transform: 							uppercase;
+	font-weight: 								normal;
 }
 
 /* Products (HVAC)
@@ -4824,6 +4882,12 @@ html.error503 h3 {
 		display:									none;
 	}
 	
+	/* Mobile Menu Search */
+	div.menu-search-box {
+	  	padding-left: 								0;
+		margin-top: 								25px;
+	}
+	
 	/* Content */
 	.content-edge #main-content,
 	.sidebar-edge #main-content {
@@ -4945,7 +5009,6 @@ html.error503 h3 {
 	}	
 	
 	/* Galleries */
-
 	.grid-6e,
 	.grid-7e,
 	.grid-8e,
@@ -4954,30 +5017,6 @@ html.error503 h3 {
 	.gallery-column-8 {
 		grid-template-columns: 						repeat(5, 1fr);
 	}
-	
-	/* Header */
-	/*.logo-strip .flex {
-		gap: 										1.5em 3%;
-	}
-	
-	.logo-strip .logo img,
-	.logo-strip .am-stand-logo img,
-	.logo-strip img.am-stand-logo,
-	.logo-strip .brand-logo img {
-		height: 									25vh;
-		object-fit: 								contain; /* 1/4/22 - still trying to fix the cls jank */
-		/*width: 									auto !important;
-		max-width: 									unset !important;  removed 12/27/21 - Jaric & others causing jank when using max-height, max-width with vh*/
-/*		margin-left: 								auto;
-		margin-right: 								auto;
-	}
-	
-	.logo-strip .am-stand-logo img,
-	.logo-strip img.am-stand-logo,
-	.logo-strip .brand-logo img {
-		height: 									7vh;
-	}
-*/
 	
 	/* Sidebar */
 	.content-box #primary, 
@@ -5249,6 +5288,18 @@ html.error503 h3 {
 	
 	img.img-404 {
 		transform: 									translateX(0);
+	}
+	
+	/* Search Results */
+	.search-results ul.search-results li,
+	.search-results ol.search-results li {
+		margin-left: 								0;
+	}
+
+	.search-results ul.search-results li img.img-search.align-left,
+	.search-results ol.search-results li img.img-search.align-left {
+		float: 										right;
+		margin: 									1.5em 0 1em 1.5em;
 	}
 	
 	/* Galleries */

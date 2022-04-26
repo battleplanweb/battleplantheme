@@ -251,6 +251,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		};
 	};
 	
+// Calculate & center sub navigation under <li>	
+	window.centerSubNav = function () {
+		$('.main-navigation ul.sub-menu').each(function() {	
+			var subW = $(this).outerWidth(true), parentW = $(this).parent().width(), moveL = - Math.round((subW - parentW) / 2);
+			$(this).css({ "left":moveL+"px" });		
+		});
+	};
+	
 /*--------------------------------------------------------------
 # Browser resize
 --------------------------------------------------------------*/
@@ -270,14 +278,11 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				window.addEventListener('scroll', moveWidgets );
 			} else {
 				window.removeEventListener('scroll', moveWidgets );
-			}							
+			}
+			
+		// Calculate & center sub navigation under <li>	
+			centerSubNav();
 		}, 300); // 200 is shortest time for widgets to work
-
-	// Center the sub-menu ul under the parent li
-		$('.main-navigation ul.sub-menu').each(function() {	
-			var subW = $(this).outerWidth(true), parentW = $(this).parent().width(), moveL = - Math.round((subW - parentW) / 2);
-			$(this).css({ "left":moveL+"px" });			
-		});
 	};
 	
 /*--------------------------------------------------------------

@@ -6,12 +6,12 @@ $printPage = '
 
 	<p>Click a question below to reveal the answer.</p>
 
-	[accordion title="How does my air conditioner work?"]
+	[accordion title="How does my A/C system work?"]
 		 <p>Your air conditioning system is actually designed with two separate units which perform together to provide you the ultimate comfort you deserve. The unit on the outside of your home contains a liquid refrigerant that is distributed over the coil located indoors. Through this process,the heat and humidity are removed from the air and your comfort is maintained by cooling the house.</p>
 	[/accordion]
 
 	[accordion title="What does SEER mean?"]
-		 <p>The efficiency of a heating and cooling system is calculated by utilizing a ratio standard referred to as Seasonal Energy Efficiency Ratio (SEER). Governmental standards state that the SEER of any air conditioning system must meet a minimum of 14 SEER. An AC system that is considered to be “high efficient” must be 16 SEER or higher. In order to receive the benefits of a 14 SEER or higher, you must upgrade the entire system. [get-biz info="name"] will be happy to custom design an air conditioning and heating system that fits your needs and budget.</p>
+		 <p>The efficiency of a heating and cooling system is calculated by utilizing a ratio standard referred to as Seasonal Energy Efficiency Ratio (SEER). Governmental standards state that the SEER of any air conditioning system must meet a minimum of 13 SEER as enacted in 1992. An A/C system that is considered to be “high efficient” must be between 15-20 “SEER”. In order to receive the benefits of a 13 SEER or higher, you must upgrade the entire system. [get-biz info="name"] will be happy to custom design an air conditioning and heating system that fits your needs and budget.</p>
 	[/accordion]
 
 	[accordion title="What factors contribute to my home\'s comfort levels?"]

@@ -494,11 +494,20 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 // Control animation for menu search box
 	setTimeout(function() {
 		$('div.menu-search-box a.menu-search-bar').each(function() {
-			var searchBar = $(this), inputW = searchBar.outerWidth(), magW = searchBar.find('i.fa').outerWidth();
+			var searchBar = $(this), inputBox = searchBar.find('input[type="search"]'), inputW = searchBar.outerWidth(), magW = searchBar.find('i.fa').outerWidth();
 			searchBar.css({ "width": magW+"px" });
 			searchBar.click(function() {
 				searchBar.animate( { "width":inputW+'px' }, 150, function() { if ( typeof centerSubNav === 'function' ) { setTimeout(function() {centerSubNav();}, 300); } });	
 			});
+			if ( !isApple() ) {
+				inputBox.focus(function() {
+					var inputPos = -(getPosition(searchBar, 'top') - mobileMenuBarH - 25);
+					$('#mobile-navigation > #mobile-menu').css({"position":"relative"}).animate({ "margin-top": inputPos + "px" }, 300);
+				});
+				inputBox.blur(function() {
+					$('#mobile-navigation > #mobile-menu').css({"position":"relative"}).animate({ "margin-top": "0px)" }, 300);
+				});	
+			}
 		}); 
 	}, 300);
 
@@ -840,12 +849,12 @@ var pageViews=getCookie('pages-viewed'), uniqueID, pageLimit = 300, speedFactor 
 		});
 		
 		$(container).parent().find(theDiv+".animated").waypoint(function() {
-			var thisDiv = $(this.element), delay = (mainDelay * thisDiv.data("animation").delay) + initDelay, effect = thisDiv.data("animation").effect;
+			var thisDiv = $(this.element), theDelay = (mainDelay * thisDiv.data("animation").delay) + initDelay, effect = thisDiv.data("animation").effect;
 			thisDiv.css({ "animation-duration": speed+"s", "animation-timing-function": convertBezier(easing) });
 			if ( getDeviceW() > mobileCutoff || mobile == "true" ) { 
 				setTimeout( function () { 
 					thisDiv.addClass(effect);
-				}, delay);
+				}, theDelay);
 			} else {			
 				effect = effect.replace("Down", "Up");			
 				thisDiv.addClass(effect);				
@@ -899,54 +908,54 @@ var pageViews=getCookie('pages-viewed'), uniqueID, pageLimit = 300, speedFactor 
 	};
 
 // Split string into characters for animation
-	window.animateCharacters = function(container, effect1, effect2, initDelay, mainDelay, offset, words) {	
-		initDelay = initDelay || 0;		
-		mainDelay = mainDelay || 100;		
-		offset = offset || "100%";
-		words = words || "false";
-		if ( pageViews > pageLimit ) { 
-			initDelay = initDelay * speedFactor; 
-			mainDelay = mainDelay * speedFactor; 
-		}
-
-		$(container).each(function() {			
-			if ( words != "false" ) {		
-				var strWords = $(this).html().split(" "), strLen = strWords.length, strContents = "", i, charDelay = initDelay, currEffect = effect1;			
-				for (i=0; i < strLen; i++) {
-					if ( i == strLen-1 ) {
-						strContents += '<div class="wordSplit animated">' + strWords[i];
-					} else {
-						strContents += '<div class="wordSplit animated">' + strWords[i] + '&nbsp;</div>';
-					}
-				}
-			} else {
-				var strWords = $(this).html().split(""), strLen = strWords.length, strContents = "", i, charDelay = initDelay, currEffect = effect1;			
-				for (i = 0; i < strLen; i++) {
-					if ( strWords[i] === " " ) { 
-						strWords[i] = "&nbsp;";
-					}
-					strContents += '<div class="charSplit animated">' + strWords[i] + '</div>';
-				}
-			}			
+	window.animateCharacters = function(container, effect1, effect2, initDelay, charDelay, offset, words) {	
+		$(container).each(function() {	
+			var theContainer = $(this);			
+			initDelay = initDelay || 0;		
+			charDelay = charDelay || 100;		
+			offset = offset || "100%";
+			words = words || "false";
+			if ( pageViews > pageLimit ) { 
+				initDelay = initDelay * speedFactor; 
+				charDelay = charDelay * speedFactor; 
+			}
+			var theDelay = initDelay, testWords = theContainer.html();	
 			
-			$(this).html(strContents);	
-
-			$(container).find(".charSplit.animated, .wordSplit.animated" ).waypoint(function() {
-				var thisDiv = $(this.element);
-				charDelay = charDelay + mainDelay;
-				if ( currEffect === effect2 ) { 
-					setTimeout( function () { 
-						thisDiv.addClass(effect1);
-					}, charDelay);
-					currEffect = effect1;
+			if ( testWords.includes("<") == false ) {
+				if ( words != "false" ) {		
+					var strWords = theContainer.html().split(" "), strLen = strWords.length, strContents = "", i, currEffect = effect1;			
+					for (i=0; i < strLen; i++) {
+						if ( i == strLen-1 ) {
+							strContents += '<div class="wordSplit animated">' + strWords[i];
+						} else {
+							strContents += '<div class="wordSplit animated">' + strWords[i] + '&nbsp;</div>';
+						}
+					}
 				} else {
-					setTimeout( function () { 
-						thisDiv.addClass(effect2);
-					}, charDelay);
-					currEffect = effect2;
-				}				
-				this.destroy();
-			}, { offset: offset });
+					var strWords = theContainer.html().split(""), strLen = strWords.length, strContents = "", i, currEffect = effect1;			
+					for (i = 0; i < strLen; i++) {
+						if ( strWords[i] === " " ) { 
+							strWords[i] = "&nbsp;";
+						}
+						strContents += '<div class="charSplit animated">' + strWords[i] + '</div>';
+					}
+				}			
+
+				theContainer.html(strContents);	
+
+				theContainer.find(".charSplit.animated, .wordSplit.animated" ).waypoint(function() {
+					var thisDiv = $(this.element);
+					if ( currEffect === effect2 ) { 
+						setTimeout( function () { thisDiv.addClass(effect1); }, theDelay);
+						currEffect = effect1;
+					} else {
+						setTimeout( function () { thisDiv.addClass(effect2); }, theDelay);
+						currEffect = effect2;
+					}				
+					this.destroy();
+					theDelay = theDelay + charDelay;				
+				}, { offset: offset });
+			}
 		});
 	};
 
@@ -1200,7 +1209,7 @@ var pageViews=getCookie('pages-viewed'), uniqueID, pageLimit = 300, speedFactor 
 
 	$('#mobile-navigation').removeClass("get-sub-heights");
 
-	$('#mobile-navigation li:not(.menu-item-has-children):not(.search-box)').each(function() { 
+	$('#mobile-navigation li:not(.menu-item-has-children)').each(function() { 
 		$(this).click(function() { 
 			closeMenu(); 
 		}); 
@@ -1265,7 +1274,7 @@ var pageViews=getCookie('pages-viewed'), uniqueID, pageLimit = 300, speedFactor 
 		}
 		
 	// Close any open menus on mobile (when device ratio changes)
-		closeMenu();
+		if ( ! $('#mobile-navigation > #mobile-menu .menu-search-box input[type="search"]').is(":focus") ) { closeMenu(); }
 		
 	// Shift #secondary below #wrapper-bottom on mobile		
 		moveDiv('.screen-mobile.not-first-page #secondary','#colophon',"before");	

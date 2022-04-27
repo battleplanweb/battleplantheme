@@ -1,5 +1,5 @@
 <?php
-/* Battle Plan Web Design Functions (Public / PlugIns)
+/* Battle Plan Web Design Functions: Public (plug-ins)
  
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:

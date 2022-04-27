@@ -1,5 +1,11 @@
 <?php 
-/* Battle Plan Web Design Chron Jobs 
+/* Battle Plan Web Design Functions: Chron Jobs
+
+/*--------------------------------------------------------------
+>>> TABLE OF CONTENTS:
+----------------------------------------------------------------
+# Chron Jobs
+# Universal Pages
 
 /*--------------------------------------------------------------
 # Chron Jobs

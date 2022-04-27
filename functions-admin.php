@@ -1,5 +1,6 @@
 <?php
-/* Battle Plan Web Design Functions (Admin)
+/* Battle Plan Web Design Functions: Admin
+
  
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:

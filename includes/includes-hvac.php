@@ -96,7 +96,7 @@ function battleplan_why_choose_us( $atts, $content = null ) {
 	$img = esc_attr($a['img']);
 	$alt = esc_attr($a['alt']);
 	if ( $brand == '' ) :
-		$brand_raw = is_array( get_option('site_brand') ) ? maybe_unserialize(get_option('site_brand'))[0] : get_option('site_brand');
+		$brand_raw = $GLOBALS['customer_info']['site-brand'];
 		$brand = strtolower(str_replace(" ", "-", $brand_raw));
 		$name = ucwords($brand_raw);
 	endif;
@@ -437,7 +437,7 @@ function battleplan_getBrandLogo($atts, $content = null) {
 	$name = ucwords($brand);
 	if ( $alt != '' ) $alt="-".$alt;
 	if ( $brand == '' ) :	
-		$brand_raw = is_array( get_option('site_brand') ) ? maybe_unserialize(get_option('site_brand'))[0] : get_option('site_brand');
+		$brand_raw = $GLOBALS['customer_info']['site-brand'];
 		$brand = strtolower(str_replace(" ", "-", $brand_raw));
 		$name = ucwords($brand_raw);
 	endif;
@@ -450,7 +450,7 @@ function battleplan_getBrandLogo($atts, $content = null) {
 // Add Symptom Checker widget to Sidebar
 add_shortcode( 'get-symptom-checker', 'battleplan_getSymptomChecker' );
 function battleplan_getSymptomChecker() {	
-	$brand_raw = is_array( get_option('site_brand') ) ? maybe_unserialize(get_option('site_brand'))[0] : get_option('site_brand');
+	$brand_raw = $GLOBALS['customer_info']['site-brand'];
 	$brand = strtolower(str_replace(" ", "-", $brand_raw));
 	$name = ucwords($brand_raw);
 	return '<a href="/symptom-checker/" title="Click here for troublshooting ideas to solve common HVAC problems."><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/symptom-checker.jpg" loading="lazy" alt="'.$name.' HVAC unit pictured on colorful background." width="300" height="250" style="aspect-ratio:300/250" /></a>';

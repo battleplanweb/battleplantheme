@@ -49,7 +49,7 @@
 
 @keyframes slideInUp {
   	from {
-    	transform: 			translate3d(0, 30vh, 0);
+    	transform: 			translate3d(0, 100vh, 0);
     	visibility: 		visible;
 		opacity: 			1;
   	}
@@ -64,7 +64,7 @@
 
 @keyframes slideInDown {
   	from {
-    	transform: 			translate3d(0, -30vh, 0);
+    	transform: 			translate3d(0, -100vh, 0);
     	visibility: 		visible;
 		opacity: 			1;
   	}
@@ -80,7 +80,7 @@
 
 @keyframes slideInLeft {
   	from {
-    	transform: 			translate3d(-50vw, 0, 0);
+    	transform: 			translate3d(-100vw, 0, 0);
     	visibility: 		visible;
 		opacity: 			1;
   	}
@@ -96,7 +96,7 @@
 
 @keyframes slideInRight {
   	from {
-    	transform: 			translate3d(50vw, 0, 0);
+    	transform: 			translate3d(100vw, 0, 0);
     	visibility: 		visible;
 		opacity: 			1;
   	}

@@ -494,7 +494,7 @@ function battleplan_formField( $atts, $content = null ) {
 	$asterisk = '<span class="required"></span><span class="sr-only">Required Field</span>';
 	
 	if ( $label == "button" ) :	
-		$buildInput = '<div class="block block-button block-100">'.$content.'</div>';		
+		$buildInput .= '<div class="block block-button block-100">'.$content.'</div>';		
 	else:	
 		$buildInput = '<div class="form-input input-'.strtolower(preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(" ","-",$label))).' input-'.$id.' '.$width.'" '.$aria.'>';
 		if ( $show == 'true' ) $buildInput .= '<label for="'.$id.'" class="'.$width.' label-baseline">'.$label;

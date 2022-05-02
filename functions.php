@@ -16,7 +16,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '11.2.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '11.2.2' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -891,32 +891,34 @@ require_once get_template_directory() . '/functions-public.php';
 require_once get_stylesheet_directory() . '/functions-site.php';
 if ( is_admin() ) { require_once get_template_directory() . '/functions-admin.php'; } 
 
-// Delay execution of non-essential scripts  --- && $GLOBALS['pagenow'] !== 'index.php'  had to be removed for CHR Services? WTF
-if ( !is_admin() && $GLOBALS['pagenow'] !== 'wp-login.php' && $GLOBALS['pagenow'] !== 'wp-cron.php' && !is_plugin_active( 'woocommerce/woocommerce.php' ) && strpos($_SERVER['REQUEST_URI'], '.xml') == false ) {
+// Delay execution of non-essential scripts  --- && $GLOBALS['pagenow'] !== 'index.php'  had to be removed for CHR Services? WTF3
+if ( !is_admin() && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && strpos($GLOBALS['pagenow'], 'wp-cron.php') === false && !is_plugin_active( 'woocommerce/woocommerce.php' ) && strpos($_SERVER['REQUEST_URI'], '.xml') === false ) {
 	ob_start(); 
 	add_action('shutdown', function() { $final = ''; $levels = ob_get_level(); for ($i = 0; $i < $levels; $i++) { $final .= ob_get_clean(); } echo apply_filters('final_output', $final); }, 0);
 	add_filter('final_output', function($html) {
-		$dom = new DOMDocument();
-		$dom->loadHTML($html);
-		$script = $dom->getElementsByTagName('script'); 
+		if ( $html != '' && $html != null && $html != 'undefined') :
+			$dom = new DOMDocument();
+			$dom->loadHTML($html);
+			$script = $dom->getElementsByTagName('script'); 
 
-		$targets = array('podium', 'leadconnectorhq', 'voip', 'google', 'paypal', 'carousel', 'extended-widget', 'embed-player', 'huzzaz', 'fbcdn', 'facebook', 'klaviyo');
+			$targets = array('podium', 'leadconnectorhq', 'voip', 'google', 'paypal', 'carousel', 'extended-widget', 'embed-player', 'huzzaz', 'fbcdn', 'facebook', 'klaviyo');
 
-		foreach ($script as $item) :		   
-			foreach ($targets as $target) :
-				if (strpos($item->getAttribute("src"), $target) !== FALSE) :       
-					$item->setAttribute("data-loading", "delay");
-					if ($item->getAttribute("src")) : $item->setAttribute("data-src", $item->getAttribute("src")); $item->removeAttribute("src");
-					else: $item->setAttribute("data-src", "data:text/javascript;base64,".base64_encode($item->innertext)); $item->innertext=""; 
+			foreach ($script as $item) :		   
+				foreach ($targets as $target) :
+					if (strpos($item->getAttribute("src"), $target) !== FALSE) :       
+						$item->setAttribute("data-loading", "delay");
+						if ($item->getAttribute("src")) : $item->setAttribute("data-src", $item->getAttribute("src")); $item->removeAttribute("src");
+						else: $item->setAttribute("data-src", "data:text/javascript;base64,".base64_encode($item->innertext)); $item->innertext=""; 
+						endif;
 					endif;
-				endif;
+				endforeach;
 			endforeach;
-		endforeach;
 
-		$html = $dom->saveHTML();
-		$html = preg_replace('/<!DOCTYPE.*?<html>.*?<body><p>/ims', '', $html);
-		$html = str_replace('</p></body></html>', '', $html);
-		return $html;
+			$html = $dom->saveHTML();
+			$html = preg_replace('/<!DOCTYPE.*?<html>.*?<body><p>/ims', '', $html);
+			$html = str_replace('</p></body></html>', '', $html);
+			return $html;
+		endif;
 	}); 
 
 	add_action( 'wp_print_footer_scripts', 'battleplan_delay_nonessential_scripts');

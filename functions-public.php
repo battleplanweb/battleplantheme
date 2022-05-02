@@ -420,6 +420,19 @@
 # User Switching
 --------------------------------------------------------------*/
 
+				if ( ! defined( 'USER_SWITCHING_COOKIE' ) ) {
+					define( 'USER_SWITCHING_COOKIE', 'wordpress_user_sw_' . COOKIEHASH );
+				}
+
+				if ( ! defined( 'USER_SWITCHING_SECURE_COOKIE' ) ) {
+					define( 'USER_SWITCHING_SECURE_COOKIE', 'wordpress_user_sw_secure_' . COOKIEHASH );
+				}
+
+				if ( ! defined( 'USER_SWITCHING_OLDUSER_COOKIE' ) ) {
+					define( 'USER_SWITCHING_OLDUSER_COOKIE', 'wordpress_user_sw_olduser_' . COOKIEHASH );
+				}
+				
+
 	if ( !class_exists('user_switching') ) :
 
 		class user_switching {
@@ -449,7 +462,7 @@
 				add_action( 'switch_back_user',                	array( $this, 'forget_woocommerce_session' ) );
 			}
 
-			public function action_plugins_loaded() {
+			public function action_plugins_loaded() {	 
 				if ( ! defined( 'USER_SWITCHING_COOKIE' ) ) {
 					define( 'USER_SWITCHING_COOKIE', 'wordpress_user_sw_' . COOKIEHASH );
 				}

@@ -43,7 +43,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		
 		moveDiv ('.post-type-archive-tribe_events.slug-events #tribe-events-footer', 'section.archive-events', 'after');
 		
-		$('.post-type-archive-tribe_events.slug-events #tribe-events-content').remove();		
+//$('.post-type-archive-tribe_events.slug-events #tribe-events-content').remove(); Needs to be removed in order to display the "no events scheduled" message		
 
 		moveDivs ('.post-type-archive-tribe_events.slug-events .type-tribe_events', '.tribe-events-list-event-title', '.block-text > *:first-child', 'before');
 		

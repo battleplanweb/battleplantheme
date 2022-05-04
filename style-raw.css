@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 11.2.1
+Version: 11.3
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1947,7 +1947,7 @@ button.fancybox-button.tab-focus {
 
 /* Content
 --------------------------------------------- */
-#wrapper-content {
+#wrapper-content.extended {
 	min-height: 								550px;
 }
 
@@ -4901,6 +4901,7 @@ html.error503 h3 {
 	
 	.sidebar-line #secondary,
 	.sidebar-right.sidebar-line #secondary,
+
 	.sidebar-left.sidebar-line #secondary {
 		padding-left:								0;
 		padding-right:								0;

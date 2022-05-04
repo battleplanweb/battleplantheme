@@ -1251,7 +1251,7 @@ var pageViews=getCookie('pages-viewed'), uniqueID, pageLimit = 300, speedFactor 
 
 	window.screenResize = function () {		
 	// Add class to body to determine which size screen is being viewed
-		var thisDeviceW = getDeviceW();
+		var thisDeviceW = getDeviceW(), thisDeviceH = getDeviceH();
 		$('body').removeClass('screen-5').removeClass('screen-4').removeClass('screen-3').removeClass('screen-2').removeClass('screen-1').removeClass('screen-mobile').removeClass('screen-desktop');
 		
 		if ( thisDeviceW > 1280 ) { 
@@ -1295,7 +1295,14 @@ var pageViews=getCookie('pages-viewed'), uniqueID, pageLimit = 300, speedFactor 
 			} else {			
 				$( fauxClass ).height(0); 
 			}						
-		});		
+		});	
+		
+	// If total height of page is less than screen height, add min-height to #wrapper-content
+		if ( thisDeviceH > $('#page').outerHeight() ) { 
+			$('#wrapper-content').addClass("extended"); 
+		} else { 
+			$('#wrapper-content').removeClass("extended"); 
+		}
 	};
 
 /*--------------------------------------------------------------

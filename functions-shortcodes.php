@@ -68,6 +68,15 @@ function battleplan_getSeason($atts, $content = null) {
 	else: return $winter; endif; 
 }
 
+// Clear space under a "low-hanging" element 
+add_shortcode( 'clear', 'battleplan_clearFix' );
+function battleplan_clearFix( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'height'=>'0px' ), $atts );
+	$height = esc_attr($a['height']);
+	
+	return '<div class="clearfix" style="height:'.$height.'"></div>';
+}
+
 // Find Number of Days Between Two Dates 
 add_shortcode( 'days-ago', 'battleplan_daysAgo' );
 function battleplan_daysAgo( $atts, $content = null ) {

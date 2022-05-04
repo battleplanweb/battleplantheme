@@ -7,6 +7,7 @@ https://docs.theeventscalendar.com/reference/functions/
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
 # Shortcodes
+# Plug-in Setup
 # Set Up Admin Columns
 --------------------------------------------------------------*/
 
@@ -62,6 +63,18 @@ function battleplan_event_teasers( $atts, $content = null ) {
 		return do_shortcode($buildList);
 	endif;
 }	
+
+
+/*--------------------------------------------------------------
+# Plug-in Setup
+--------------------------------------------------------------*/
+add_filter( 'tribe_the_notices', 'change_notice', 10, 1 );
+function change_notice( $html ) {
+	if ( stristr( $html, 'There were no results found.' ) ) {
+		$html = str_replace( 'There were no results found.', 'There are no events scheduled at this time.', $html );
+	}
+	return $html; 
+}
 
 /*--------------------------------------------------------------
 # Set Up Admin Columns

@@ -1946,7 +1946,7 @@ function battleplan_admin_weekly_stats() {
 
 			if ( strtotime($end) < strtotime("Mar 23, 2021") ) $search = "";
 		 	echo "<tr class='coloration' data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
-			if ( $views < 1 ) : $cutoff++; if ( $cutoff == 5) : break; endif; endif;
+			if ( $views < 1 ) : $cutoff++; if ( $cutoff == 20) : break; endif; endif;
  			$count = $views = $search = 0;	
 		endif;	
 	} 		
@@ -1978,7 +1978,7 @@ function battleplan_admin_monthly_stats() {
 			
 			if ( strtotime($end) < strtotime("Mar 23, 2021") ) $search = "";
 		 	echo "<tr class='coloration' data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
-			if ( $views < 1 ) : $cutoff++; if ( $cutoff == 2) : break; endif; endif;
+			if ( $views < 1 ) : $cutoff++; if ( $cutoff == 5) : break; endif; endif;
  			$count = $views = $search = 0;	
 		endif;	
 	} 		
@@ -2010,7 +2010,7 @@ function battleplan_admin_quarterly_stats() {
 			$endOfCol++;
 			if ( strtotime($end) < strtotime("Mar 23, 2021") ) $search = "";
 		 	echo "<tr class='coloration' data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
-			if ( $views < 1 ) : $cutoff++; if ( $cutoff == 1) : break; endif; endif;
+			if ( $views < 1 ) : $cutoff++; if ( $cutoff == 2) : break; endif; endif;
 			$count = $views = $search = 0;	
 		endif;	
 	} 		

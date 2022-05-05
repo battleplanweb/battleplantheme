@@ -28,10 +28,10 @@ if ( $type == "teaser" ) :
 		 [txt size="100"]
 		  <h2>What is a Comfortmaker Elite Dealer?</h2>
 
-		  <a href="/comfort-maker-elite-dealer/" aria-hidden="true" tabindex="-1"><img src="/wp-content/themes/battleplantheme/common/hvac-comfortmaker/elite-dealer-logo.png" loading="lazy" alt="We are a Comfortmaker Elite Dealer." class="alignright size-quarter-s noFX comfortmaker-elite-dealer-logo" width="258" height="258" style="aspect-ratio:258/258" /></a>
+		  <a href="/comfortmaker-elite-dealer/" aria-hidden="true" tabindex="-1"><img src="/wp-content/themes/battleplantheme/common/hvac-comfortmaker/elite-dealer-logo.png" loading="lazy" alt="We are a Comfortmaker Elite Dealer." class="alignright size-quarter-s noFX comfortmaker-elite-dealer-logo" width="258" height="258" style="aspect-ratio:258/258" /></a>
 
 		  <p>To ensure dependable, lasting comfort, you want to select a dealer that offers best-of-the-best installation, maintenance and customer service.</p>
-		  [btn link="/comfort-maker-elite-dealer/" ada="about the Elite Dealer program"]Learn More[/btn]
+		  [btn link="/comfortmaker-elite-dealer/" ada="about the Elite Dealer program"]Learn More[/btn]
 		 [/txt]
 	');	
 

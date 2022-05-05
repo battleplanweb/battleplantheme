@@ -8,6 +8,7 @@
 # American Standard Customer Care
 # Ruud Pro Partner
 # Comfortmaker Elite Dealer
+# Tempstar Elite Dealer
 # Why Choose Us?
 # HVAC Maintenance Tips
 # HVAC Tip Of The Month
@@ -18,6 +19,8 @@
 	- Brand Logo
 	- Symptom Checker
 	- Customer Care Dealer
+	- Comfortmaker Elite Dealer
+	- Tempstar Elite Dealer
 	- Financing widget
 	- Wells Fargo
 # Basic Theme Set Up
@@ -83,6 +86,16 @@ function battleplan_comfortmaker_elite_dealer( $atts, $content = null ) {
 }	
 
 /*--------------------------------------------------------------
+# Tempstar Elite Dealer
+--------------------------------------------------------------*/
+add_shortcode( 'tempstar-elite-dealer', 'battleplan_tempstar_elite_dealer' );
+function battleplan_tempstar_elite_dealer( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'type'=>'', ), $atts );
+	$type = esc_attr($a['type']);
+	return include "wp-content/themes/battleplantheme/pages/page-hvac-tempstar-elite-dealer.php";
+}	
+
+/*--------------------------------------------------------------
 # Why Choose Us?
 --------------------------------------------------------------*/
 add_shortcode( 'why-choose-as', 'battleplan_why_choose_us' );
@@ -97,6 +110,7 @@ function battleplan_why_choose_us( $atts, $content = null ) {
 	$alt = esc_attr($a['alt']);
 	if ( $brand == '' ) :
 		$brand_raw = $GLOBALS['customer_info']['site-brand'];
+		if ( is_array($brand_raw) ) $brand_raw = $brand_raw[0];
 		$brand = strtolower(str_replace(" ", "-", $brand_raw));
 		$name = ucwords($brand_raw);
 	endif;
@@ -438,6 +452,7 @@ function battleplan_getBrandLogo($atts, $content = null) {
 	if ( $alt != '' ) $alt="-".$alt;
 	if ( $brand == '' ) :	
 		$brand_raw = $GLOBALS['customer_info']['site-brand'];
+		if ( is_array($brand_raw) ) $brand_raw = $brand_raw[0];
 		$brand = strtolower(str_replace(" ", "-", $brand_raw));
 		$name = ucwords($brand_raw);
 	endif;
@@ -451,6 +466,7 @@ function battleplan_getBrandLogo($atts, $content = null) {
 add_shortcode( 'get-symptom-checker', 'battleplan_getSymptomChecker' );
 function battleplan_getSymptomChecker() {	
 	$brand_raw = $GLOBALS['customer_info']['site-brand'];
+	if ( is_array($brand_raw) ) $brand_raw = $brand_raw[0];
 	$brand = strtolower(str_replace(" ", "-", $brand_raw));
 	$name = ucwords($brand_raw);
 	return '<a href="/symptom-checker/" title="Click here for troublshooting ideas to solve common HVAC problems."><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/symptom-checker.jpg" loading="lazy" alt="'.$name.' HVAC unit pictured on colorful background." width="300" height="250" style="aspect-ratio:300/250" /></a>';
@@ -466,6 +482,12 @@ function battleplan_getCustomerCare() {
 add_shortcode( 'get-comfortmaker-elite-dealer', 'battleplan_getComfortmakerEliteDealer' );
 function battleplan_getComfortmakerEliteDealer() {	
 	return '<a href="/comfortmaker-elite-dealer/" title="Click here to read more about the Comfortmaker Elite Dealer program"><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-comfortmaker/comfortmaker-elite-dealer-logo.png" loading="lazy" alt="We are proud to be a Comfortmaker Elite Dealer" width="400" height="400" style="aspect-ratio:400/400" /></a>';
+}
+
+// Add Tempstar Elite Dealer widget to Sidebar
+add_shortcode( 'get-tempstar-elite-dealer', 'battleplan_getTempstarEliteDealer' );
+function battleplan_getTempstarEliteDealer() {	
+	return '<a href="/tempstar-elite-dealer/" title="Click here to read more about the Tempstar Elite Dealer program"><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-tempstar/tempstar-elite-dealer-logo.png" loading="lazy" alt="We are proud to be a Tempstar Elite Dealer" width="400" height="400" style="aspect-ratio:400/400" /></a>';
 }
 
 // Add Financing widget to Sidebar

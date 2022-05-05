@@ -1148,6 +1148,11 @@ var pageViews=getCookie('pages-viewed'), uniqueID, pageLimit = 300, speedFactor 
 		});
 	};
 	
+// When linking to a #hash, scroll down to ensure it isn't obscurred by locked elements	
+	setTimeout(function() { 
+		if ( location.hash ) { window.scrollBy ({ top: -(getDeviceH() * 0.13), left: 0, behavior: 'smooth' }); }
+	}, 100);		
+	
 // Set up mobile menu animation
 	$('#mobile-navigation li.menu-item-has-children > a').each(function() { $(this).attr('data-href', $(this).attr('href')).attr('href', 'javascript:void(0)'); });
 	

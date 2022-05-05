@@ -122,6 +122,15 @@ if ( is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') ) :
 	$wpSEOSettings['company_or_person'] = 'company';
 	$wpSEOSettings['stripcategorybase'] = '1';
 	$wpSEOSettings['breadcrumbs-enable'] = '1';
+	
+	$wpSEOSettings['noindex-testimonials'] = '1';
+	$wpSEOSettings['post_types-testimonials-maintax'] = '1';
+	$wpSEOSettings['noindex-elements'] = '1';
+	$wpSEOSettings['post_types-elements-maintax'] = '1';	
+	$wpSEOSettings['noindex-universal'] = '1';
+	$wpSEOSettings['post_types-universal-maintax'] = '1';	
+	$wpSEOSettings['noindex-tax-image-categories'] = '1';
+	$wpSEOSettings['noindex-tax-image-tags'] = '1';	
 	update_option( 'wpseo_titles', $wpSEOSettings );
 
 	$wpSEOSocial = get_option( 'wpseo_social' );		
@@ -221,7 +230,9 @@ if ( is_null(get_page_by_path('customer-care-dealer', OBJECT, 'universal')) && $
 
 if ( is_null(get_page_by_path('ruud-pro-partner', OBJECT, 'universal')) && $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'ruud' || in_array('ruud', $GLOBALS['customer_info']['site-brand'])) ) wp_insert_post( array( 'post_title' => 'Ruud Pro Partner', 'post_content' => '[get-universal-page slug="page-hvac-ruud-pro-partner"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
 
-if ( is_null(get_page_by_path('comfortmaker-elite-dealer', OBJECT, 'universal')) && $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'comfortmaker' || in_array('comfortmaker', $GLOBALS['customer_info']['site-brand'])) ) wp_insert_post( array( 'post_title' => 'Comfortmaker Elite Dealer', 'post_content' => '[get-universal-page slug="page-hvac-comfortmaker-elite-dealer"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
+if ( is_null(get_page_by_path('comfortmaker-elite-dealer', OBJECT, 'universal')) && $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'comfortmaker' || in_array('comfortmaker', $GLOBALS['customer_info']['site-brand'])) ) wp_insert_post( array( 'post_title' => 'Comfortmaker Elite Dealer', 'post_content' => '[get-universal-page slug="page-hvac-comfortmaker-elite-dealer"]', 'post_status' => 'publish', 'post_type' => 'universal', ));		
+
+if ( is_null(get_page_by_path('tempstar-elite-dealer', OBJECT, 'universal')) && $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'tempstar' || in_array('tempstar', $GLOBALS['customer_info']['site-brand'])) ) wp_insert_post( array( 'post_title' => 'Tempstar Elite Dealer', 'post_content' => '[get-universal-page slug="page-hvac-tempstar-elite-dealer"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
 
 if ( is_null(get_page_by_path('maintenance-tips', OBJECT, 'universal')) && $GLOBALS['customer_info']['site-type'] == 'hvac' ) wp_insert_post( array( 'post_title' => 'Maintenance Tips', 'post_content' => '[get-universal-page slug="page-hvac-maintenance-tips"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
 

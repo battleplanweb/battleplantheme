@@ -207,7 +207,7 @@
   	}
   	to {
     	opacity: 			1;
-    	transform: 			none;rollOutRightvh
+    	transform: 			none;
   	}
 }
 
@@ -362,9 +362,6 @@
 }
 
 @keyframes bounceIn {
-  	from, 20%, 40%, 60%, 80%, to {
-    	animation-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
-  	}
   	0% {
     	opacity: 			0;
     	transform: 			scale3d(.3, .3, .3);
@@ -390,12 +387,10 @@
 
 .bounceIn {
   	animation-name: 		bounceIn;
+	animation-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
 }
 
 @keyframes bounceInUp {
-  	from, 60%, 75%, 90%, to {
-    	animation-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
-  	}
   	from {
     	opacity: 			0;
     	transform: 			translate3d(0, 30vh, 0);
@@ -418,12 +413,10 @@
 
 .bounceInUp {
   	animation-name: 		bounceInUp;
+	animation-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
 }
 
 @keyframes bounceInDown {
-  	from, 60%, 75%, 90%, to {
-    	animation-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
-  	}
   	0% {
    	 	opacity: 			0;
     	transform: 			translate3d(0, -30vh, 0);
@@ -446,12 +439,10 @@
 
 .bounceInDown {
   	animation-name: 		bounceInDown;
+	animation-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
 }
 
 @keyframes bounceInLeft {
-  	from, 60%, 75%, 90%, to {
-    	animation-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
-  	}
   	0% {
     	opacity: 			0;
     	transform: 			translate3d(-50vw, 0, 0);
@@ -474,12 +465,10 @@
 
 .bounceInLeft {
  	animation-name: 		bounceInLeft;
+   	animation-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
 }
 
 @keyframes bounceInRight {
-  	from, 60%, 75%, 90%, to {
-		animation-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
-	 }
   	from {
    	 	opacity: 			0;
     	transform:			translate3d(50vw, 0, 0);
@@ -502,6 +491,7 @@
 	
 .bounceInRight {
   	animation-name: 		bounceInRight;
+	animation-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
 }
 
 @keyframes dropIn {
@@ -999,4 +989,36 @@
 
 .rollInRight {
   	animation-name:			rollInRight;
+}
+
+
+@keyframes spinInLeft {
+  	from {
+   		opacity: 			0;
+    	transform: 			translate3d(-50vw, 0, 0) rotate3d(0, 0, 1, -1080deg);
+  	}
+  	to {
+    	opacity: 			1;
+    	transform: 			none;
+  	}
+}
+
+.spinIn, 
+.spinInLeft {
+  	animation-name: 		spinInLeft;
+}		
+
+@keyframes spinInRight {
+  	from {
+   	 opacity: 				0;
+    	transform: 			translate3d(50vw, 0, 0) rotate3d(0, 0, 1, 1080deg);
+  	}
+  	to {
+    	opacity: 			1;
+    	transform: 			none;
+  	}
+}
+
+.spinInRight {
+  	animation-name:			spinInRight;
 }

@@ -110,6 +110,12 @@ add_shortcode( 'layout', 'battleplan_buildLayout' );
 function battleplan_buildLayout( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'grid'=>'1', 'break'=>'', 'valign'=>'', 'class'=>'' ), $atts );
 	$grid = esc_attr($a['grid']);
+	
+	if ( strpos($grid,'px') !== false || strpos($grid,'em') !== false || strpos($grid,'fr') !== false ) :
+		$custom_grid = 'style="grid-template-columns: '.$grid.'" ';
+		$grid = 'custom';
+	endif;	
+	
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
 	$break = esc_attr($a['break']);
@@ -117,7 +123,7 @@ function battleplan_buildLayout( $atts, $content = null ) {
 	if ( $valign != '' ) $valign = " valign-".$valign;
 	if ( $break != '' ) $break = " break-".$break;
 
-	$buildLayout = '<div class="flex grid-'.$grid.$valign.$break.$class.'">'.do_shortcode($content).'</div>';	
+	$buildLayout = '<div class="flex grid-'.$grid.$valign.$break.$class.'" '.$custom_grid.'>'.do_shortcode($content).'</div>';	
 	
 	return $buildLayout;
 }
@@ -484,11 +490,13 @@ function battleplan_socialBtn( $atts, $content = null ) {
  
 add_shortcode( 'seek', 'battleplan_formField' );
 function battleplan_formField( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'label'=>'Label', 'show'=>'true', 'id'=>'user-input', 'req'=>'false', 'width'=>'default' ), $atts );
+	$a = shortcode_atts( array( 'label'=>'Label', 'show'=>'true', 'id'=>'user-input', 'req'=>'false', 'width'=>'default', 'max-w'=>''), $atts );
 	$id = esc_attr($a['id']);
 	$label = esc_attr($a['label']);
 	$req = esc_attr($a['req']);	
 	$width = 'width-'.esc_attr($a['width']);
+	$maxW = esc_attr($a['max-w']);	
+	if ( $maxW != '' ) $maxW = ' style="margin:0 auto; max-width:'.$maxW.'"';
 	$show = esc_attr($a['show']);
 	if ( $show != 'true' ) : $width = 'width-none'; $aria = 'aria-label="'.$label.'"'; endif;	
 	$asterisk = '<span class="required"></span><span class="sr-only">Required Field</span>';
@@ -496,7 +504,7 @@ function battleplan_formField( $atts, $content = null ) {
 	if ( $label == "button" ) :	
 		$buildInput .= '<div class="block block-button block-100">'.$content.'</div>';		
 	else:	
-		$buildInput = '<div class="form-input input-'.strtolower(preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(" ","-",$label))).' input-'.$id.' '.$width.'" '.$aria.'>';
+		$buildInput = '<div class="col form-input input-'.strtolower(preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(" ","-",$label))).' input-'.$id.' '.$width.'"'.$maxW.' '.$aria.'>';
 		if ( $show == 'true' ) $buildInput .= '<label for="'.$id.'" class="'.$width.' label-baseline">'.$label;
 		if ( $show == 'true' && $req != 'false' ) $buildInput .= $asterisk;
 		if ( $show == 'true' ) $buildInput .= '</label>';

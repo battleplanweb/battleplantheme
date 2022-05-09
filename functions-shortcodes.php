@@ -944,7 +944,7 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 	endwhile; wp_reset_postdata(); endif;	
 	
 	if ( $package == "hvac" ) :
-		$addLogos = array( "amana","american-standard","bryant","carrier","goodman","heil","lennox","rheem","ruud","samsung","trane","york" );		
+		$addLogos = array( "amana","american-standard","bryant","carrier","comfortmaker","goodman","heil","honeywell","lennox","rheem","ruud","samsung","tempstar","trane","york" );		
 		for ( $i=0; $i < count($addLogos); $i++ ) :	
 			$alt = strtolower(str_replace(" ", "-", $addLogos[$i]));
 			$alt = "We service ".ucwords($alt)." air conditioners, heaters and other HVAC equipment.";
@@ -1088,11 +1088,24 @@ add_shortcode( 'get-emergency-service', 'battleplan_getEmergencyService' );
 function battleplan_getEmergencyService( $atts, $content = null ) {	
 	$a = shortcode_atts( array( 'graphic'=>'1' ), $atts );
 	$graphic = esc_attr($a['graphic']);
-	if ( $graphic == 1 ) : $height = 177;
-	elseif ( $graphic == 2 || $graphic == 3 ) : $height = 237;
-	elseif ( $graphic == 4 ) : $height = 418;
-	else : $height = 320; endif;
-	return '<img class="noFX" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/24-hr-service-'.$graphic.'.png" alt="We provide 24/7 emergency service" width="320" height="'.$height.'" />';
+	
+	$imagePath = get_template_directory().'/common/logos/24-hr-service-'.$graphic.'.png';			
+	list($width, $height) = getimagesize($imagePath);
+	
+	return '<img class="noFX" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/24-hr-service-'.$graphic.'.png" alt="We provide 24/7 emergency service." width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
+}
+
+// Add Now Hiring widget to Sidebar
+add_shortcode( 'now-hiring', 'battleplan_getNowHiring' );
+function battleplan_getNowHiring( $atts, $content = null ) {	
+	$a = shortcode_atts( array( 'graphic'=>'1', 'link'=>'career-opportunities' ), $atts );
+	$graphic = esc_attr($a['graphic']);
+	$link = esc_attr($a['link']);
+	
+	$imagePath = get_template_directory().'/common/logos/now-hiring-'.$graphic.'.png';			
+	list($width, $height) = getimagesize($imagePath);
+	
+	return '<a href="/'.$link.'"><img class="noFX" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/now-hiring-'.$graphic.'.png" alt="We are hiring! Join our team." width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" /></a>';
 }
 
 // Add BBB widget to Sidebar
@@ -1101,9 +1114,11 @@ function battleplan_getBBB( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'link'=>'', 'graphic'=>'1' ), $atts );
 	$link = esc_attr($a['link']);
 	$graphic = esc_attr($a['graphic']);
-	if ( $graphic == 1 ) : $height = 221;
-	else : $height = 94; endif;
-	return '<a href="'.$link.'" title="Click here to view our profile page on the Better Business Bureau website."><img loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/bbb-'.$graphic.'.png" alt="We are accredited with the BBB and are proud of our A+ rating"  width="320" height="'.$height.'" style="aspect-ratio:320/'.$height.'" /></a>';
+
+	$imagePath = get_template_directory().'/common/logos/bbb-'.$graphic.'.png';			
+	list($width, $height) = getimagesize($imagePath);
+	
+	return '<a href="'.$link.'" title="Click here to view our profile page on the Better Business Bureau website."><img loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/bbb-'.$graphic.'.png" alt="We are accredited with the BBB and are proud of our A+ rating." width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
 }
 
 // Add Veteran Owned widget to Sidebar
@@ -1112,11 +1127,11 @@ function battleplan_getVeteranOwned( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'link'=>'', 'graphic'=>'1' ), $atts );
 	$link = esc_attr($a['link']);
 	$graphic = esc_attr($a['graphic']);
-	if ( $graphic == 2 ) : $width = 216; $height = 300;	
-	elseif ( $graphic == 3 ) : $width = 320; $height = 128;
-	elseif ( $graphic == 4 ) : $width = 175; $height = 200;
-	else : $width = 320; $height = 80; endif;
-	return '<img loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/veteran-owned-'.$graphic.'.png" alt="We are proud to be a Veteran Owned business."  width="'.$width.'" height="'.$height.'" style="aspect-ratio:"'.$width.'"/'.$height.'" />';
+	
+	$imagePath = get_template_directory().'/common/logos/veteran-owned-'.$graphic.'.png';			
+	list($width, $height) = getimagesize($imagePath);
+	
+	return '<img loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/veteran-owned-'.$graphic.'.png" alt="We are proud to be a Veteran Owned business." width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
 }
 
 // Add Credit Cards widget to Sidebar
@@ -1236,6 +1251,14 @@ function battleplan_usePageTemplate( $original ) {
 	$post_type = $post->post_type;
 	if ( $post_type == "optimized" || $post_type == "universal" ) return locate_template('page.php');
 	return $original;
+}
+
+// Add search button to menu or other areas
+add_shortcode( 'add-search-btn', 'battleplan_addSearchBtn' );
+function battleplan_addSearchBtn( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'text'=>'Search Site' ), $atts );
+	$text = esc_attr($a['text']);
+	return bp_display_menu_search($text);
 }
 
 ?>

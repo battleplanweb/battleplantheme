@@ -16,7 +16,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '11.3.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '11.4' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -949,13 +949,13 @@ show_admin_bar( false );
 class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 	public function start_el( &$output, $item, $depth = 0, $args = array(), $id = 0 ) {
 	
-		if ( $item->attr_title === "Search Form" ) : $buildOutput = bp_display_menu_search($item->title); else:
+		$classes = empty( $item->classes ) ? array() : (array) $item->classes;
+		if ( in_array('mobile-only', $classes) ) : $mobile = ' mobile-only'; else: $mobile = ''; endif;
+	
+		if ( $item->attr_title === "Search Form" ) : $buildOutput = bp_display_menu_search($item->title, $mobile); else:
 	
 			$indent = ( $depth ) ? str_repeat( "\t", $depth ) : '';
-
-			$classes = empty( $item->classes ) ? array() : (array) $item->classes;
 			$classes[] = 'menu-item-'.$item->ID.' menu-item-'.strtolower(str_replace(" ", "-", $item->title));
-
 			$args = apply_filters( 'nav_menu_item_args', $args, $item, $depth );
 
 			$class_names = join( ' ', apply_filters( 'nav_menu_css_class', array_filter( $classes ), $item, $args, $depth ) );
@@ -1009,14 +1009,14 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 	}
 }
 
-function bp_display_menu_search( $searchText ) { 
+function bp_display_menu_search( $searchText, $mobile='' ) { 
 	$searchForm = '<form role="search" method="get" class="menu-search-form" action="'.home_url( '/' ).'">';
 	$searchForm .= '<label><span class="screen-reader-text">' . _x( 'Search for:', 'label' ) . '</span></label>';
 	$searchForm .= '<input type="hidden" value="1" name="sentence" />';
 	$searchForm .= '<a class="menu-search-bar"><i class="fa fas fa-search"></i><input type="search" class="search-field" placeholder="' . esc_attr_x( $searchText, 'placeholder' ) . '" value="' . get_search_query() . '" name="s" title="' . esc_attr_x( 'Search for:', 'label' ) . '" /></a>';
 	$searchForm .= '</form>';
 		  
-	return '<div class="menu-search-box" role="none">'.$searchForm.'</div>';
+	return '<div class="menu-search-box'.$mobile.'" role="none">'.$searchForm.'</div>';
 }
 
 // Set up spam filter for Contact Form 7 emails
@@ -1082,7 +1082,6 @@ function battleplan_formatMail( $posted_data ) {
 add_action( 'wpcf7_before_send_mail', 'battleplan_setupFormEmail', 10, 1 ); 
 function battleplan_setupFormEmail( $contact_form ) { 
 	$formMail = $contact_form->prop( 'mail' );
-	$emailID = md5($formMail['body'].$formMail['from']);
 	$userLoc = $_COOKIE['user-loc'];
 	$userViews = $_COOKIE['pages-viewed'];
 	if ( $userViews == 1 ) : $userViews = "1 page"; else: $userViews = $userViews." pages"; endif;

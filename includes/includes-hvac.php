@@ -108,12 +108,12 @@ function battleplan_why_choose_us( $atts, $content = null ) {
 	$width = esc_attr($a['width']);	
 	$img = esc_attr($a['img']);
 	$alt = esc_attr($a['alt']);
-	if ( $brand == '' ) :
-		$brand_raw = $GLOBALS['customer_info']['site-brand'];
-		if ( is_array($brand_raw) ) $brand_raw = $brand_raw[0];
-		$brand = strtolower(str_replace(" ", "-", $brand_raw));
-		$name = ucwords($brand_raw);
+	if ( $brand == '' ) :	
+		$brand = $GLOBALS['customer_info']['site-brand'];
+		if ( is_array($brand) ) $brand = $brand[0];
 	endif;
+	$brand = strtolower(str_replace(" ", "-", $brand));
+	$name = ucwords($brand);
 	if ( $alt == '' ) $alt='We are proud to be a dealer of '.$name.', offering the top rated HVAC products on the market.';
 	
 	if ( $img == "grey" ) : $img = "/wp-content/themes/battleplantheme/common/hvac-".$brand."/why-choose-".$brand."-logo-grey.png";
@@ -451,11 +451,11 @@ function battleplan_getBrandLogo($atts, $content = null) {
 	$name = ucwords($brand);
 	if ( $alt != '' ) $alt="-".$alt;
 	if ( $brand == '' ) :	
-		$brand_raw = $GLOBALS['customer_info']['site-brand'];
-		if ( is_array($brand_raw) ) $brand_raw = $brand_raw[0];
-		$brand = strtolower(str_replace(" ", "-", $brand_raw));
-		$name = ucwords($brand_raw);
+		$brand = $GLOBALS['customer_info']['site-brand'];
+		if ( is_array($brand) ) $brand = $brand[0];
 	endif;
+	$brand = strtolower(str_replace(" ", "-", $brand));
+	$name = ucwords($brand);
 	$imagePath = get_template_directory().'/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$alt.'.png';			
 	list($width, $height) = getimagesize($imagePath);
 
@@ -465,10 +465,10 @@ function battleplan_getBrandLogo($atts, $content = null) {
 // Add Symptom Checker widget to Sidebar
 add_shortcode( 'get-symptom-checker', 'battleplan_getSymptomChecker' );
 function battleplan_getSymptomChecker() {	
-	$brand_raw = $GLOBALS['customer_info']['site-brand'];
-	if ( is_array($brand_raw) ) $brand_raw = $brand_raw[0];
-	$brand = strtolower(str_replace(" ", "-", $brand_raw));
-	$name = ucwords($brand_raw);
+	$brand = $GLOBALS['customer_info']['site-brand'];
+	if ( is_array($brand) ) $brand = $brand[0];
+	$brand = strtolower(str_replace(" ", "-", $brand));
+	$name = ucwords($brand);
 	return '<a href="/symptom-checker/" title="Click here for troublshooting ideas to solve common HVAC problems."><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/symptom-checker.jpg" loading="lazy" alt="'.$name.' HVAC unit pictured on colorful background." width="300" height="250" style="aspect-ratio:300/250" /></a>';
 }
 

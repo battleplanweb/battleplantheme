@@ -30,8 +30,13 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	
 	/* Control color of Visitor Trends box */
 	function runVisitorTrendColor(trend) {
-		var getCount = [], getTotal, getThird, topThird, loopThru, loopNum=0, varyAmt;
-		$("#battleplan_"+trend+"_stats .trends-"+trend+" tr").each(function(){
+		var getCount = [], getTotal, getThird, topThird, loopThru, loopNum=0, varyAmt;		
+		
+		$($("#battleplan_"+trend+"_stats .trends-"+trend+" tr").get().reverse()).each(function() { // remove all months before stats began counting
+			if ( $(this).attr("data-count") != '0' ) { return false; } else { $(this).remove(); }
+		});	
+		
+		$("#battleplan_"+trend+"_stats .trends-"+trend+" tr").each(function() {
 			getCount.push( $(this).attr("data-count") );
 		});	
 		getCount.shift(); 

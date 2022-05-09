@@ -1039,6 +1039,7 @@ var pageViews=getCookie('pages-viewed'), uniqueID, pageLimit = 300, speedFactor 
 
 // Fade in lazy loaded images
 	$('img').addClass('unloaded');	
+	$('#loader img').removeClass('unloaded');	
 	$('img').one('load', function() { 
 		$(this).removeClass('unloaded'); 
 	}).each(function() { 
@@ -1154,6 +1155,7 @@ var pageViews=getCookie('pages-viewed'), uniqueID, pageLimit = 300, speedFactor 
 	}, 100);		
 	
 // Set up mobile menu animation
+
 	$('#mobile-navigation li.menu-item-has-children > a').each(function() { $(this).attr('data-href', $(this).attr('href')).attr('href', 'javascript:void(0)'); });
 	
 	window.closeMenu = function () {

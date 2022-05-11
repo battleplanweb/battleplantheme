@@ -24,6 +24,7 @@
 	- Financing widget
 	- Wells Fargo
 # Basic Theme Set Up
+# Employment Application
 
 --------------------------------------------------------------*/
 
@@ -545,4 +546,48 @@ function battleplan_override_main_query_with_hvac( $query ) {
 		endif;
 	endif; 
 }	
+
+/*--------------------------------------------------------------
+# Employment Application
+--------------------------------------------------------------*/
+add_action( 'wpcf7_before_send_mail', 'battleplan_handleEmploymentApp', 10, 1 ); 
+function battleplan_handleEmploymentApp( $contact_form ) { 
+	$formMail = $contact_form->prop( 'mail' );	
+	$formSubject = $formMail['subject'];
+	
+	if ( str_contains($formMail, "Employment Application" ) ) :
+		$submission = WPCF7_Submission::get_instance();
+		$submitted['posted_data'] = $submission->get_posted_data();
+		$age = $submitted['posted_data']['user-age'][0] . $submitted['posted_data']['user-age'][1] ;
+		$criminal = $submitted['posted_data']['criminal-history'][0] ;
+		$license = $submitted['posted_data']['driver-license'][0];
+
+		if ( intval($age) > 20 && str_contains($criminal, "No") && str_contains($license, 'Yes') ) :
+			$preSub = "QUALIFIED";
+		else:
+			if ( intval($age) < 21 ) $preSub = "x".$preSub;
+			if ( !str_contains($criminal, "No") ) $preSub = "x".$preSub;
+			if ( !str_contains($license, 'Yes') ) $preSub = "x".$preSub;
+			$preSub = "(".$preSub.")";
+		endif;
+		
+		$formMail['subject'] = $preSub." ".$formSubject;
+		$contact_form->set_properties( array( 'mail' => $formMail ) );
+	endif;
+}; 	
+
+add_filter('wpcf7_additional_mail', 'battleplan_handleEmploymentAppResponse', 10, 2);
+function battleplan_handleEmploymentAppResponse($additional_mail, $contact_form) {
+	$submission = WPCF7_Submission::get_instance();
+	$submitted['posted_data'] = $submission->get_posted_data();
+	$age = $submitted['posted_data']['user-age'][0] . $submitted['posted_data']['user-age'][1] ;
+	$criminal = $submitted['posted_data']['criminal-history'][0] ;
+	$license = $submitted['posted_data']['driver-license'][0];
+
+	if ( intval($age) > 20 && str_contains($criminal, "No") && str_contains($license, 'Yes') ) :
+    	return $additional_mail;
+	else:
+		return;
+	endif;
+}
 ?>

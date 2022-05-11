@@ -555,7 +555,7 @@ function battleplan_handleEmploymentApp( $contact_form ) {
 	$formMail = $contact_form->prop( 'mail' );	
 	$formSubject = $formMail['subject'];
 	
-	if ( str_contains($formMail, "Employment Application" ) ) :
+	if ( str_contains( $formMail['subject'], "Employment Application" ) ) :
 		$submission = WPCF7_Submission::get_instance();
 		$submitted['posted_data'] = $submission->get_posted_data();
 		$age = $submitted['posted_data']['user-age'][0] . $submitted['posted_data']['user-age'][1] ;

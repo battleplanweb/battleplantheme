@@ -1156,6 +1156,8 @@ var pageViews=getCookie('pages-viewed'), uniqueID, pageLimit = 300, speedFactor 
 	
 // Set up mobile menu animation
 
+
+
 	$('#mobile-navigation li.menu-item-has-children > a').each(function() { $(this).attr('data-href', $(this).attr('href')).attr('href', 'javascript:void(0)'); });
 	
 	window.closeMenu = function () {

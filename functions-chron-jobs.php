@@ -124,11 +124,11 @@ if ( is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') ) :
 	$wpSEOSettings['breadcrumbs-enable'] = '1';
 	
 	$wpSEOSettings['noindex-testimonials'] = '1';
-	$wpSEOSettings['post_types-testimonials-maintax'] = '1';
+	$wpSEOSettings['display-metabox-pt-testimonials'] = '1';
 	$wpSEOSettings['noindex-elements'] = '1';
-	$wpSEOSettings['post_types-elements-maintax'] = '1';	
+	$wpSEOSettings['display-metabox-pt-elements'] = '1';	
 	$wpSEOSettings['noindex-universal'] = '1';
-	$wpSEOSettings['post_types-universal-maintax'] = '1';	
+	$wpSEOSettings['display-metabox-pt-universal'] = '1';	
 	$wpSEOSettings['noindex-tax-image-categories'] = '1';
 	$wpSEOSettings['noindex-tax-image-tags'] = '1';	
 	update_option( 'wpseo_titles', $wpSEOSettings );

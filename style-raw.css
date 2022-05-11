@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 11.4
+Version: 11.4.1
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -182,15 +182,6 @@ button,
 [type="reset"],
 [type="submit"] {
 	-webkit-appearance: 						button;
-
-
-
-
-
-
-
-
-
 }
 
 /* Remove the inner border and padding in Firefox. */
@@ -1115,6 +1106,7 @@ section.section-default .flex {
 	grid-template-columns: 						[column-1-start] 1fr [column-1-end column-2-start] minmax(0, 330px) [column-2-end];
 }
 
+
 .sidebar-left.sidebar-line  #main-content,
 .sidebar-left.sidebar-line .flex.grid-content {
 	grid-template-columns: 						[column-1-start] minmax(0, 330px) [column-1-end column-2-start] 1fr [column-2-end];
@@ -1592,6 +1584,10 @@ ul.tabs li.disabled {
 	direction: 									ltr;
 }
 
+span.wpcf7-form-control {
+	line-height: 								1.7em;
+}
+
 input[type="checkbox"], 
 input[type="radio"] {
 	position: 									relative;
@@ -1599,18 +1595,29 @@ input[type="radio"] {
 	display:									inline-block;
 	width: 										20px !important;
 	height: 									20px !important;
-	margin-right:								10px !important;
 	transform: 									translateY(3px);
 	appearance:									none;
 	background-color:							#ffffff;
 	border: 									2px solid #000000;
 	-webkit-appearance: 						none;
 	border-radius: 								0;
+	font-size: 									18px;
+	margin-right:								10px !important;
+}
+
+input[type="radio"] {
+	border-radius: 								100%;
+}
+
+span.wpcf7-list-item-label + input[type="checkbox"],
+span.wpcf7-list-item-label + input[type="radio"] {
+  	margin-left: 								10px !important;
+	margin-right: 								0 !important;
 }
 
 input[type="checkbox"]::before, 
-input[type="radio"]::before,
-input[type="checkbox"]:checked::after, 
+input[type="checkbox"]:checked::after,
+input[type="radio"]::before, 
 input[type="radio"]:checked::after {
 	content: 									" ";
 	position: 									absolute;
@@ -1620,14 +1627,57 @@ input[type="radio"]:checked::after {
 	top: 										0;
 	left: 										0;
 	background-color:							transparent;
-	border: 									2px solid #ffffff;
 }
 
-input[type="checkbox"]:checked::after, 
+input[type="checkbox"]::before, 
+input[type="checkbox"]:checked::after {
+	border: 									none;
+}
+
+input[type="radio"]::before, 
+input[type="radio"]:checked::after {
+	border: 									2px solid #ffffff;
+	border-radius: 								100%;
+}
+
+input[type="checkbox"]:checked::after { 
+	content: 									"\f00d";
+	font-family: 								"Font Awesome";
+	font-weight: 								800;
+	transform: 									translate(2px, -6px);
+}
+
+.crosses input[type="checkbox"]:checked::after { 
+	transform: 									translate(5px, -2px) rotate(45deg);
+	font-size: 									93%;
+}
+
+.checkmarks input[type="checkbox"]:checked::after { 
+	content: 									"\f00c";
+	transform: 									translate(1px, -3px);
+	font-size: 									80%;
+}
+
 input[type="radio"]:checked::after {
 	background-color:							rgba(0,0,0,0.6);
 }
 
+.application .flex {
+	border-bottom:								1px solid #000000;
+	padding: 									0 0 1em;
+} 
+
+.application .form-input:not(.input-user-message) {
+	padding: 									0.7em 0 0.9em;
+} 
+
+@media (min-width: 861px) {
+	.application .form-input:not(:last-of-type):not(.input-user-message) {
+		border-right:								1px solid #000000;
+		padding-right: 								1.5em;
+	} 
+}
+ 
 form .block-button,
 .wpcf7-response-output {
 	grid-column: 								1 / -1;

@@ -104,7 +104,6 @@ add_shortcode( 'why-choose-us', 'battleplan_why_choose_us' );
 function battleplan_why_choose_us( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'brand'=>'', 'style'=>'1', 'width'=>'stretch', 'img'=>'', 'alt'=>'' ), $atts );	
 	$brand = esc_attr($a['brand']);
-	$name = ucwords($brand);
 	$style = esc_attr($a['style']);
 	$width = esc_attr($a['width']);	
 	$img = esc_attr($a['img']);
@@ -113,8 +112,8 @@ function battleplan_why_choose_us( $atts, $content = null ) {
 		$brand = $GLOBALS['customer_info']['site-brand'];
 		if ( is_array($brand) ) $brand = $brand[0];
 	endif;
-	$brand = strtolower(str_replace(" ", "-", $brand));
 	$name = ucwords($brand);
+	$brand = strtolower(str_replace(" ", "-", $brand));
 	if ( $alt == '' ) $alt='We are proud to be a dealer of '.$name.', offering the top rated HVAC products on the market.';
 	
 	if ( $img == "grey" ) : $img = "/wp-content/themes/battleplantheme/common/hvac-".$brand."/why-choose-".$brand."-logo-grey.png";
@@ -449,14 +448,13 @@ function battleplan_getBrandLogo($atts, $content = null) {
 	$a = shortcode_atts( array( 'alt'=>'', 'brand'=>'' ), $atts );
 	$alt = esc_attr($a['alt']);
 	$brand = esc_attr($a['brand']);
-	$name = ucwords($brand);
 	if ( $alt != '' ) $alt="-".$alt;
 	if ( $brand == '' ) :	
 		$brand = $GLOBALS['customer_info']['site-brand'];
 		if ( is_array($brand) ) $brand = $brand[0];
 	endif;
-	$brand = strtolower(str_replace(" ", "-", $brand));
 	$name = ucwords($brand);
+	$brand = strtolower(str_replace(" ", "-", $brand));
 	$imagePath = get_template_directory().'/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$alt.'.png';			
 	list($width, $height) = getimagesize($imagePath);
 
@@ -468,8 +466,8 @@ add_shortcode( 'get-symptom-checker', 'battleplan_getSymptomChecker' );
 function battleplan_getSymptomChecker() {	
 	$brand = $GLOBALS['customer_info']['site-brand'];
 	if ( is_array($brand) ) $brand = $brand[0];
-	$brand = strtolower(str_replace(" ", "-", $brand));
 	$name = ucwords($brand);
+	$brand = strtolower(str_replace(" ", "-", $brand));
 	return '<a href="/symptom-checker/" title="Click here for troublshooting ideas to solve common HVAC problems."><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/symptom-checker.jpg" loading="lazy" alt="'.$name.' HVAC unit pictured on colorful background." width="300" height="250" style="aspect-ratio:300/250" /></a>';
 }
 

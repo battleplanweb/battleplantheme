@@ -48,8 +48,10 @@ function battleplan_add_quicktags() {
 			QTags.addButton( 'bp_expire-content', 'expire', '[expire start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/expire]\n\n', 'expire', 'Expire', 1000 );			
 			QTags.addButton( 'bp_restrict-content', 'restrict', '[restrict max="administrator, any role" min="none, any role"]', '[/restrict]\n\n', 'restrict', 'Restrict', 1000 );	
 			
-			QTags.addButton( 'bp_lock-section', 'lock', '[lock name="becomes id attribute" style="(lock) corresponds to css" width="edge, default, stretch, full, inline" position="bottom, top, modal, header" delay="3000" show="session, never, always, # days" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD" btn-activated="no, yes"]\n [layout]\n\n', ' [/layout]\n[/lock]\n\n', 'lock', 'Lock', 1000 );		
-			QTags.addButton( 'bp_clear', 'clear', '[clear height="px, em"]\n\n', 'clear', 'Clear', 1000 );		
+			QTags.addButton( 'bp_lock-section', 'lock', '[lock name="becomes id attribute" style="(lock) corresponds to css" width="edge, default, stretch, full, inline" position="bottom, top, modal, header" delay="3000" show="session, never, always, # days" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD" btn-activated="no, yes"]\n [layout]\n\n', ' [/layout]\n[/lock]\n\n', 'lock', 'Lock', 1000 );	
+			
+			QTags.addButton( 'bp_clear', 'clear', '[clear height="px, em"]\n\n', '', 'clear', 'Clear', 1000 );	
+			
 			QTags.addButton( 'bp_images_side-by-side', 'side by side images', '[side-by-side img="ids" size="half-s, third-s, full" align="center, left, right" full="id" pos="bottom, top"]\n\n', '', 'side by side images', 'Side By Side Images', 1000 );			
 			QTags.addButton( 'bp_random-image', 'random image', '   [get-random-image id="" tag="random" size="thumbnail, third-s" link="no, yes" number="1" offset="" align="left, right, center" order_by="recent, rand, menu_order, title, id, post_date, modified, views" order="asc, desc" shuffle="no, yes" lazy="true, false"]\n\n', '', 'random image', 'Random Image', 1000 );
 			QTags.addButton( 'bp_random-post', 'random post', '   [get-random-posts num="1" offset="0" leeway="0" type="post" tax="" terms="" orderby="recent, rand, views-today, views-7day, views-30day, views-90day, views-180day, views-365day, views-all" sort="asc, desc" count_tease="true, false" count_view="true, false" thumb_only="false, true" thumb_col="1, 2, 3, 4" show_title="true, false" title_pos="outside, inside" show_date="false, true" show_author="false, true" show_excerpt="true, false" show_social="false, true" show_btn="true, false" button="Read More" btn_pos="inside, outside" thumbnail="force, false" link="post, false, cf-field_name, /link-destination/" start="" end="" exclude="" x_current="true, false" size="thumbnail, size-third-s" pic_size="1/3" text_size=""]\n\n', '', 'random post', 'Random Post', 1000 );
@@ -1953,7 +1955,7 @@ function battleplan_admin_weekly_stats() {
 			$endOfCol++;
 
 			if ( strtotime($end) < strtotime("Mar 23, 2021") ) $search = "";
-		 	echo "<tr class='coloration' data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
+		 	echo "<tr class='coloration' data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".$views."</td><td class='search'>".$search."</td></tr>";
 			if ( $views < 1 ) : $cutoff++; if ( $cutoff == 20) : break; endif; endif;
  			$count = $views = $search = 0;	
 		endif;	
@@ -1985,7 +1987,7 @@ function battleplan_admin_monthly_stats() {
 			$endOfCol++;
 			
 			if ( strtotime($end) < strtotime("Mar 23, 2021") ) $search = "";
-		 	echo "<tr class='coloration' data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
+		 	echo "<tr class='coloration' data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".$views."</td><td class='search'>".$search."</td></tr>";
 			if ( $views < 1 ) : $cutoff++; if ( $cutoff == 5) : break; endif; endif;
  			$count = $views = $search = 0;	
 		endif;	
@@ -2017,7 +2019,7 @@ function battleplan_admin_quarterly_stats() {
 			
 			$endOfCol++;
 			if ( strtotime($end) < strtotime("Mar 23, 2021") ) $search = "";
-		 	echo "<tr class='coloration' data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".number_format($views)."</td><td class='search'>".number_format($search)."</td></tr>";
+		 	echo "<tr class='coloration' data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".$views."</td><td class='search'>".$search."</td></tr>";
 			if ( $views < 1 ) : $cutoff++; if ( $cutoff == 2) : break; endif; endif;
 			$count = $views = $search = 0;	
 		endif;	

@@ -16,7 +16,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '11.4.2' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '11.4.3' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -368,6 +368,15 @@ add_filter( 'wpcf7_form_elements', 'do_shortcode' );
 // Enable auto-updates on plugins and themes
 add_filter( 'auto_update_plugin', '__return_true' );
 add_filter( 'auto_update_theme', '__return_true' );
+
+// Disable update emails from WordPress
+add_filter('auto_plugin_update_send_email', '__return_false');
+add_filter('auto_theme_update_send_email', '__return_false');
+add_filter('auto_core_update_send_email', 'battleplan_disable_core_update_emails', 10, 4 );
+function battleplan_disable_core_update_emails( $send, $type, $core_update, $result ) {
+	if ( !empty($type) && $type == 'success' ) return false;  
+  	return true;
+}
 
 // Determine how to sort custom post types
 add_action( 'pre_get_posts', 'battleplan_handle_main_query', 1 );

@@ -68,24 +68,26 @@ $modDate = the_modified_date( 'F Y', '', '', FALSE);
 
 		$buildLitter .= '<ul class="litter-details"><h4>Litter Details</h4>';
 		
-		if ( $price ) : $buildLitter .= '<li><span class="label">Price: </span>$'.number_format($price, 0, ".", ",").' <span style="font-size:70%;">+ Sales Tax</span></li>';
+		if ( $price ) : $buildLitter .= '<li><span class="label">Price: </span>$'.number_format($price, 0, ".", ",").' <span style="font-size:70%;">+ sales tax</span></li>';
 		else: $buildLitter .= "Call For Price"; endif;
 		
-		if ( $deposit && ( $litterStatus == "Expecting" || date('F j, Y') < $readyDate ) ) : $buildLitter .= '<li><span class="label">Deposit: </span>$'.number_format($deposit, 0, ".", ","); endif;
+		if ( $deposit && ( $litterStatus == "Expecting" || strtotime(date('F j, Y')) < strtotime($readyDate)) ) : $buildLitter .= '<li style="margin-top:-0.5em"><span class="label">Deposit: </span>$'.number_format($deposit, 0, ".", ",").' <span style="font-size:70%;">to hold a pup</span></li>'; endif;
 		
 		if ( $litterStatus == "Expecting" ) : 
 			$buildLitter .= '<li><span class="label">Expected: </span>'.date('F Y', strtotime($birthDate)).'</li>';	
 		else: 
 			$buildLitter .= '<li><span class="label">Born: </span>'.date('F j, Y', strtotime($birthDate)).'</li>';			
-			if ( date('F j, Y') < $readyDate ) : $buildLitter .= '<li><span class="label">Ready: </span>'.$readyDate.'</li>'; 		
-			else : $buildLitter .= '<li><span class="label">Ready To Go Home</li>'; 
+			if ( strtotime(date('F j, Y')) < strtotime($readyDate) ) : $buildLitter .= '<li style="margin-top:-0.5em"><span class="label">Ready: </span>'.$readyDate.'</li>'; 		
+			else : $buildLitter .= '<li><span class="label label-full">Ready To Go Home</li>'; 
 			endif;
-			$buildLitter .= '<li style="margin:1em 0 -1em"><span class="label">Updated: </span>'.get_the_modified_date().'</li>'; 
 		endif;
 		
 		$singleContent = wp_kses_post(get_the_content());
+		if ( $litterStatus != "Expecting" ) $singleContent .= '<br><span style="font-size: 70%;"><em>(Updated: '.get_the_modified_date().')</em></span>'; 
+
 		if ( $singleContent ) $buildLitter .= do_shortcode('[p]'.$singleContent.'[/p]');
 		
+		 
 		$buildLitter .= "</ul>";
 		
 		$buildPedigree = do_shortcode('[bracket a1="'.$sireFull.'" a2="'.$damFull.'" b1="'.$b1.'" b2="'.$b2.'" b3="'.$b3.'" b4="'.$b4.'" c1="'.$c1.'" c2="'.$c2.'" c3="'.$c3.'" c4="'.$c4.'" c5="'.$c5.'" c6="'.$c6.'" c7="'.$c7.'" c8="'.$c8.'"]');

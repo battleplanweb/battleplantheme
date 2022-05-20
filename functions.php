@@ -16,7 +16,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '11.4.3' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '11.5' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -1044,7 +1044,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
 		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
 		if ( strtolower($check) == strtolower($name) ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($badwords as $badword) {
-			if (stripos(strtolower($check),strtolower($badword)) !== false) $result->invalidate( $tag, 'Message cannot be sent.' );
+			if (stripos(strtolower($check),strtolower($badword)) !== false) $result->invalidate( $tag, 'We cannot accept messages at this time.' );
 		}
 		foreach($webwords as $webword) {
 			if (stripos(strtolower($check),strtolower($webword)) !== false) $result->invalidate( $tag, 'We do not accept messages containing website addresses.' );
@@ -1054,14 +1054,14 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
         $check = isset( $_POST["user-phone"] ) ? trim( $_POST["user-phone"] ) : ''; 
 		$badnumbers = array('1234567');
 		foreach($badnumbers as $badnumber) {
-			if (stripos($check,$badnumber) !== false) $result->invalidate( $tag, 'Message cannot be sent.');
+			if (stripos($check,$badnumber) !== false) $result->invalidate( $tag, 'We do not accept messages without a valid phone number.');
 		}
 	}
     if ( "user-email" == $tag->name ) {
         $check = isset( $_POST["user-email"] ) ? trim( $_POST["user-email"] ) : ''; 
-		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz', '@tworld.com', 'garywhi777@gmail.com', 'ronyisthebest16@gmail.com', 'ronythomas611@gmail.com', 'ronythomasrecruiter@gmail.com', '@ideonagency.net', 'axiarobbie20@gmail.com', '@hyper-tidy.com', '@readyjob.org', '@thefranchisecreatornetwork.com', 'franchisecreatormarketing.com', '@legendarygfx.com', '@hitachi-metal-jp.com');
+		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz', '@tworld.com', 'garywhi777@gmail.com', 'ronyisthebest16@gmail.com', 'ronythomas611@gmail.com', 'ronythomasrecruiter@gmail.com', '@ideonagency.net', 'axiarobbie20@gmail.com', '@hyper-tidy.com', '@readyjob.org', '@thefranchisecreatornetwork.com', 'franchisecreatormarketing.com', '@legendarygfx.com', '@hitachi-metal-jp.com', '@expresscommerce.co');
 		foreach($badwords as $badword) {
-			if (stripos(strtolower($check),strtolower($badword)) !== false) $result->invalidate( $tag, 'Message cannot be sent.');
+			if (stripos(strtolower($check),strtolower($badword)) !== false) $result->invalidate( $tag, 'We cannot accept messages at this time.');
 		}
 	}
     if ( 'user-email-confirm' == $tag->name ) {
@@ -1399,8 +1399,8 @@ function battleplan_getGoogleRating() {
 
 			$buildPanel .= '</div></div>';	
 			$buildPanel .= '<div class="wp-google-total">Click to view our ';			
-			$buildPanel .= '<span itemprop="reviewCount">'.number_format($number).'</span>';			
-			$buildPanel .= ' Google reviews!</div>';	
+			if ( $number > 24 ) $buildPanel .= '<span itemprop="reviewCount">'.number_format($number).'</span> ';			
+			$buildPanel .= 'Google reviews!</div>';	
 			$buildPanel .= '</div></a>';
 
 			echo $buildPanel;

@@ -494,7 +494,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 // Control animation for menu search box
 	setTimeout(function() {
 		$('div.menu-search-box a.menu-search-bar').each(function() {
-			var searchBar = $(this), inputBox = searchBar.find('input[type="search"]'), inputW = searchBar.outerWidth(), magW = searchBar.find('i.fa').outerWidth();
+			var searchBar = $(this), inputBox = searchBar.find('input[type="search"]'), inputW = searchBar.outerWidth(), magW = (searchBar.find('i.fa').outerWidth()) * 1.3;
 			searchBar.css({ "width": magW+"px" });
 			searchBar.click(function() {
 				searchBar.animate( { "width":inputW+'px' }, 150, function() { if ( typeof centerSubNav === 'function' ) { setTimeout(function() {centerSubNav();}, 300); } });	
@@ -1155,9 +1155,6 @@ var pageViews=getCookie('pages-viewed'), uniqueID, pageLimit = 300, speedFactor 
 	}, 100);		
 	
 // Set up mobile menu animation
-
-
-
 	$('#mobile-navigation li.menu-item-has-children > a').each(function() { $(this).attr('data-href', $(this).attr('href')).attr('href', 'javascript:void(0)'); });
 	
 	window.closeMenu = function () {
@@ -1286,8 +1283,14 @@ var pageViews=getCookie('pages-viewed'), uniqueID, pageLimit = 300, speedFactor 
 		if ( ! $('#mobile-navigation > #mobile-menu .menu-search-box input[type="search"]').is(":focus") ) { closeMenu(); }
 		
 	// Shift #secondary below #wrapper-bottom on mobile		
-		moveDiv('.screen-mobile.not-first-page #secondary','#colophon',"before");	
-		moveDiv('.screen-desktop #secondary','#primary',"after");			
+		if ( $('body').hasClass("screen-mobile") && $('body').hasClass("not-first-page") && !$('body').hasClass("move-sidebar") ) {
+			moveDiv('.screen-mobile.not-first-page #secondary','#colophon','before');
+			$('body').addClass('move-sidebar');
+		}
+		if ( $('body').hasClass("screen-desktop") && $('body').hasClass("move-sidebar") ) {
+			moveDiv('.screen-mobile.not-first-page #secondary','#colophon','before');
+			$('body').removeClass('move-sidebar');
+		}
 
 	// Ensure "-faux" elements remain correct size
 		$('div[class*="-faux"]').each(function() {	

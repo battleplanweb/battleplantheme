@@ -14,7 +14,7 @@
 # HVAC Tip Of The Month
 # Register Custom Post Types
 # Import Advanced Custom Fields
-# Set Up Admin Columns
+# Admin Columns Set Up
 # Widgets
 	- Brand Logo
 	- Symptom Checker
@@ -305,7 +305,7 @@ function battleplan_add_acf_hvac_fields() {
 
 
 /*--------------------------------------------------------------
-# Set Up Admin Columns
+# Admin Columns Set Up
 --------------------------------------------------------------*/
 add_action( 'ac/ready', 'battleplan_hvac_column_settings' );
 function battleplan_hvac_column_settings() {

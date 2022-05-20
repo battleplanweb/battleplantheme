@@ -71,10 +71,12 @@ function battleplan_getSeason($atts, $content = null) {
 // Clear space under a "low-hanging" element 
 add_shortcode( 'clear', 'battleplan_clearFix' );
 function battleplan_clearFix( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'height'=>'0px' ), $atts );
+	$a = shortcode_atts( array( 'height'=>'0px', 'class'=>'' ), $atts );
 	$height = esc_attr($a['height']);
+	$class = esc_attr($a['class']);
+	if ( $class != '' ) $class = " ".$class;
 	
-	return '<div class="clearfix" style="height:'.$height.'"></div>';
+	return '<div class="clearfix'.$class.'" style="height:'.$height.'"></div>';
 }
 
 // Find Number of Days Between Two Dates 

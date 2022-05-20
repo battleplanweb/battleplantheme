@@ -97,8 +97,16 @@ ul.dog-info,
 }
 
 span.label {
+	display: 									inline-block;
+	width: 										33%;
+	max-width: 									100px;
 	font-weight:								bold;
 	font-size:									90%;
+}
+
+span.label-full {
+	width: 										100%;
+	max-width: 									100%;
 }
 
 .archive-litters .col-inner {
@@ -109,7 +117,7 @@ span.label {
 	width:										60%;
 	margin:										3em auto;
 	padding:									16px 25px;
-	text-align:									center;
+	text-align:									left;
 }
 
 .litter-details li {

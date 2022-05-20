@@ -504,7 +504,8 @@ function battleplan_formField( $atts, $content = null ) {
 	if ( $label == "button" ) :	
 		$buildInput .= '<div class="block block-button block-100">'.$content.'</div>';		
 	else:	
-		$buildInput = '<div class="col form-input input-'.strtolower(preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(" ","-",$label))).' input-'.$id.' '.$width.'"'.$maxW.' '.$aria.'>';
+	// removed col from classes 5/19 for animation purposes
+		$buildInput = '<div class="form-input input-'.strtolower(preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(" ","-",$label))).' input-'.$id.' '.$width.'"'.$maxW.' '.$aria.'>';
 		if ( $show == 'true' ) $buildInput .= '<label for="'.$id.'" class="'.$width.' label-baseline">'.$label;
 		if ( $show == 'true' && $req != 'false' ) $buildInput .= $asterisk;
 		if ( $show == 'true' ) $buildInput .= '</label>';

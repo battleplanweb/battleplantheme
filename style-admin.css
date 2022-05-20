@@ -215,6 +215,8 @@ input[type="checkbox"], input[type="radio"] {
 .wp-list-table th.column-first_name a,
 .wp-list-table th#last_name a,
 .wp-list-table th.column-last_name a,
+.wp-list-table th#order_number a,
+.wp-list-table td.order_number,
 .wp-list-table th.check-column,
 .wp-list-table td.title,
 .wp-list-table td.slug,
@@ -234,6 +236,14 @@ input[type="checkbox"], input[type="radio"] {
 .wp-list-table td.first_name,
 .wp-list-table td.last_name {
 	text-align:									left;
+}
+
+.post-type-shop_order .wp-list-table .column-order_total {
+  	text-align: 								center;
+}
+
+.wp-list-table th#order_number.sortable {
+	padding-left: 								1em;
 }
 
 .wp-list-table th:not(#title) a span {

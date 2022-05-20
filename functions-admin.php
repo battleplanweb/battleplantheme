@@ -50,9 +50,11 @@ function battleplan_add_quicktags() {
 			
 			QTags.addButton( 'bp_lock-section', 'lock', '[lock name="becomes id attribute" style="(lock) corresponds to css" width="edge, default, stretch, full, inline" position="bottom, top, modal, header" delay="3000" show="session, never, always, # days" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD" btn-activated="no, yes"]\n [layout]\n\n', ' [/layout]\n[/lock]\n\n', 'lock', 'Lock', 1000 );	
 			
-			QTags.addButton( 'bp_clear', 'clear', '[clear height="px, em"]\n\n', '', 'clear', 'Clear', 1000 );	
+			QTags.addButton( 'bp_clear', 'clear', '[clear height="px, em" class=""]\n\n', '', 'clear', 'Clear', 1000 );	
 			
 			QTags.addButton( 'bp_images_side-by-side', 'side by side images', '[side-by-side img="ids" size="half-s, third-s, full" align="center, left, right" full="id" pos="bottom, top"]\n\n', '', 'side by side images', 'Side By Side Images', 1000 );			
+			QTags.addButton( 'bp_get-wp-page', 'get wp page', '[get-wp-page type="page, post, cpt" id="" slug="" title="" display="content, excerpt, title, thumbnail, link"]\n\n', '', 'get wp page', 'Get WP Page', 1000 );
+			
 			QTags.addButton( 'bp_random-image', 'random image', '   [get-random-image id="" tag="random" size="thumbnail, third-s" link="no, yes" number="1" offset="" align="left, right, center" order_by="recent, rand, menu_order, title, id, post_date, modified, views" order="asc, desc" shuffle="no, yes" lazy="true, false"]\n\n', '', 'random image', 'Random Image', 1000 );
 			QTags.addButton( 'bp_random-post', 'random post', '   [get-random-posts num="1" offset="0" leeway="0" type="post" tax="" terms="" orderby="recent, rand, views-today, views-7day, views-30day, views-90day, views-180day, views-365day, views-all" sort="asc, desc" count_tease="true, false" count_view="true, false" thumb_only="false, true" thumb_col="1, 2, 3, 4" show_title="true, false" title_pos="outside, inside" show_date="false, true" show_author="false, true" show_excerpt="true, false" show_social="false, true" show_btn="true, false" button="Read More" btn_pos="inside, outside" thumbnail="force, false" link="post, false, cf-field_name, /link-destination/" start="" end="" exclude="" x_current="true, false" size="thumbnail, size-third-s" pic_size="1/3" text_size=""]\n\n', '', 'random post', 'Random Post', 1000 );
 			QTags.addButton( 'bp_random-text', 'random text', '   [get-random-text cookie="true, false" text1="" text2="" text3="" text4="" text5="" text6="" text7=""]\n\n', '', 'random text', 'Random Text', 1000 );
@@ -995,7 +997,7 @@ function battleplan_column_settings() {
 
 		$getCPT = get_post_types(); 
 		foreach ($getCPT as $postType) :
-			$exclude = array( "elements", "page", "testimonials", "galleries", "optimized", "products", "dogs", "litters", "resources", "tribe_events" );
+			$exclude = array( "elements", "page", "testimonials", "galleries", "optimized", "products", "dogs", "litters", "resources", "tribe_events", "product", "shop_order" );
 			if ( !in_array( $postType, $exclude) ):
 				ac_register_columns( $postType, array(
 					array(
@@ -1147,7 +1149,7 @@ function battleplan_column_settings() {
 					)
 				) );
 			endif;
-			$exclude = array( "elements" );
+			$exclude = array( "elements", "shop_order" );
 			if ( !in_array( $postType, $exclude) ):
 				ac_register_columns( $postType, array(
 					array(
@@ -1389,7 +1391,7 @@ function battleplan_column_settings() {
 						'filter_label'=>'',
 						'bulk-editing' =>'',
 						'search'=>'on',
-					),			 
+					),			
 					'display_name'=>array(
 						'type'=>'column-display_name',
 						'label'=>'Display Name',
@@ -1417,6 +1419,21 @@ function battleplan_column_settings() {
 						'filter'=>'on',
 						'filter_label'=>'',
 						'bulk-editing' =>'',
+						'search'=>'on'
+					), 
+					'user_registered'=>array(
+						'type'=>'column-user_registered',
+						'label'=>'Registered',
+						'width'=>'130',
+						'width_unit'=>'px',
+						'date_format'=>'wp_default',
+						'edit'=>'on',
+						'sort'=>'on',
+						'filter'=>'on',
+						'filter_label'=>'',
+						'filter_format'=>'monthly',
+						'name'=>'user_registered',
+						'label_type'=>'',
 						'search'=>'on'
 					),
 					'role'=>array(

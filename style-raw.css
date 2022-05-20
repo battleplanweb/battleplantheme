@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 11.4.3
+Version: 11.5
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1105,6 +1105,8 @@ section.section-default .flex {
 .sidebar-right.sidebar-line .flex.grid-content {
 	grid-template-columns: 						[column-1-start] 1fr [column-1-end column-2-start] minmax(0, 330px) [column-2-end];
 }
+
+
 
 
 .sidebar-left.sidebar-line  #main-content,
@@ -2595,11 +2597,6 @@ body.locked {
 }
 
 #off-screen.horizontal {
-
-
-
-
-
 	left:										-3999px;
 }
 
@@ -2886,8 +2883,6 @@ body.locked {
 	top:										42px;
 	padding-top:								1em;
 	padding-bottom:								1em;
-
-
 	z-index: 									999999998;
 	background: 								linear-gradient(0deg, #3c3c3c 0%, #000000 100%);
 	background-size:							cover;
@@ -2896,31 +2891,69 @@ body.locked {
 
 #mobile-navigation ul {
 	flex-direction:								column;
-	padding-left: 								10%;
-	padding-right: 								10%;
+	/*padding-left: 								10%;   ** 5/18/22 - make mobile menus a little more traditional
+	padding-right: 								10%;*/
+	padding-left: 								0;
+	padding-right: 								0;
 }
 
 #mobile-navigation ul.sub-menu {
-	padding-left: 								4%;
-	padding-right: 								4%;
-	font-size: 									80%;
+	font-size: 									90%; 
+}
+
+#mobile-navigation #mobile-menu > li:first-of-type {
+	border-top:									1px solid rgba(0,0,0,0.4);
+}
+
+#mobile-navigation #mobile-menu > li:last-of-type {
+	border-bottom:								1px solid rgba(255,255,255,0.3);
 }
 
 #mobile-navigation li a {
 	white-space: 								nowrap;
 	overflow: 									hidden;
 	text-overflow: 								ellipsis;
-	color:										rgba(255,255,255,0.6);
-	background: 								rgba(255,255,255,0.1);
-	margin:										6px 0;
+	color:										rgba(255,255,255,0.7);
+	background: 								transparent;
+	border: 									none;
+	border-top: 								1px solid rgba(255,255,255,0.3);
+	border-bottom: 								1px solid rgba(0,0,0,0.4);
+	margin: 									0;
 	padding:									8px 25px;
 	font-size:									90%;
+	transform: 									rotate(0) translate(0,0) scale(1);
+	line-height: 								normal;
+}
+
+.mobile-left #mobile-navigation li a {
+	text-align: 								left;
+}
+
+.mobile-right #mobile-navigation li a {
+	text-align: 								right;
+    padding-right: 								35px;
+}
+
+.mobile-left #mobile-navigation ul.sub-menu li a {
+    padding-left: 								35px;
+}
+
+.mobile-right #mobile-navigation ul.sub-menu li a {
+    padding-right: 								25px;
 }
 
 #mobile-navigation ul.main-menu li:hover > a, 
 #mobile-navigation ul.main-menu li.active > a {    
 	color:										rgba(255,255,255,1);
 	background: 								rgba(255,255,255,0.5);
+	border-top: 								1px solid rgba(0,0,0,0.4);
+	border-bottom: 								1px solid rgba(255,255,255,0.3);
+	transform: 									rotate(0) translate(0,0) scale(1);
+}
+
+#mobile-navigation li.menu-item-has-children > a::after,
+#mobile-navigation li.current_page_parent-has-children > a::after { 
+	transform:									translate(2px, 0);
 }
 
 .side-slide #mobile-navigation, 
@@ -2970,7 +3003,6 @@ body.locked {
 
 .top-push #page, 
 .top-push .top-strip.stuck  {
-
 	transition: 								all 0.2s linear;
 }
 
@@ -2979,6 +3011,7 @@ body.locked {
 	transition: 								all 0.2s linear;
 }	
 
+/*
 .top-slide #mobile-navigation ul, 
 .top-push #mobile-navigation ul {
 	flex-flow: 									row wrap;
@@ -2996,6 +3029,7 @@ body.locked {
 	padding-left:								12px;
 	padding-right:								12px;
 }	
+*/
 
 /* Footer Menu */
 #footer-navigation li {
@@ -4031,6 +4065,7 @@ img.img-404 {
 .grid-4e,
 .gallery-column-4 {
 	grid-template-columns: 						repeat(4, 1fr);
+
 }
 
 .grid-5e,
@@ -4191,7 +4226,7 @@ div.menu-search-box form.menu-search-form {
 
 div.menu-search-box a.menu-search-bar {
 	display: 									flex;
-	padding: 									0;
+	padding: 									0 0 0 2px;
 	overflow: 									hidden;
 } 
 
@@ -4225,6 +4260,18 @@ div.menu-search-box a.menu-search-bar input[type="search"] {
 	font-size: 									65%;
 	text-transform: 							uppercase;
 	font-weight: 								normal;
+}
+
+.no-results .search-field {
+  display: 										block;
+  width: 										90%;
+  max-width: 									600px;
+  margin: 										0 auto;
+}
+
+.no-results .search-submit {
+	display: 									block;
+	margin: 									1em auto;
 }
 
 /* Search Widget */
@@ -4987,15 +5034,20 @@ html.error503 h3 {
 	
 	.sidebar-line #secondary,
 	.sidebar-right.sidebar-line #secondary,
-
 	.sidebar-left.sidebar-line #secondary {
 		padding-left:								0;
 		padding-right:								0;
-		padding-top:								2.5em;
-		margin-top:									2.5em;
+		padding-top:								0;
 		border-left: 								none !important;		
 		border-right: 								none !important;
-		border-top: 								1px solid rgba(0,0,0,0.3);
+	}
+		
+	.first-page.sidebar-line #secondary,
+	.first-page.sidebar-right.sidebar-line #secondary,
+	.first-page.sidebar-left.sidebar-line #secondary {
+		margin-top:									2.5em;
+		padding-top:								1em;
+		border-top: 								1px solid rgba(0,0,0,0.3);   /* moved to .first-page 5/20/22 for Humphrey & Advantage HVAC */
 	}
 
 	.sidebar-inner {
@@ -5139,7 +5191,7 @@ html.error503 h3 {
 		content: 									"Swipe to view more";
 		font-family: 								"Open Sans", sans-serif;
 		width: 										80vw;
-		margin: 									1em auto 0;
+		margin: 									0.5em auto 2.5em /* changed top & bottom margin 5/20/22 for Advantage HVAC */;
 		position: 									relative;
 		display: 									block;
 		text-align: 								center;

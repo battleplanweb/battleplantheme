@@ -9,6 +9,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 /*--------------------------------------------------------------
 # Admin interface
 --------------------------------------------------------------*/
+
+	/* Allow useage of Admin Columns */
+	$('.disabled').removeClass("disabled").removeClass("-disabled");
+	$('select, input, button').removeAttr("disabled");
 		
 	/* Control color of Top 10 Most Visited Days box */
 	$("#battleplan_site_stats tr").each(function(){

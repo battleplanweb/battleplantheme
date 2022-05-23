@@ -1,104 +1,209 @@
 <?php
 /* Battle Plan Web Design - Mass Site Update */
  
-
-/* LOGIC ---
-
-in the includes-hvac.php file --
-readMeta in Site Header for most recent product update -- if it's before the newest update, include this file
-updateMeta with today's date, to keep file from being included again
-
---OR--
-
-
-function my_run_only_once() {
- 
-    if ( get_option( 'my_run_only_once_01' ) != 'completed' ) {
-  
-        // PLACE YOUR CODE BELOW THIS LINE
-          
-  
-         
-  
-  
-  
-        update_option( 'my_run_only_once_01', 'completed' );
-    }
-}
-add_action( 'init', 'my_run_only_once' );
-
-
-
-*/
-
-
-
+add_action( 'wp_loaded', 'add_products', 10 );
 function add_products() {
-	$check_page_exist = get_page_by_path('new-page', OBJECT, 'products');
+
+	$brand = "american-standard";
+	$productImgAlt = "American Standard Heating & Cooling Product"; 
+
+	$removeProducts = array('silver-15-heat-pump', 'american-standard-80-furnace', 'silver-95-furnace');
 	
-	if ( empty($check_page_exist) ) : 
-		$user = get_user_by('login', 'battleplanweb');
-		$userID = $user->ID;
-		$postID = wp_insert_post(array(
+	$addProducts = array (
+		array ( 
+			'post_title'	=>	'Silver S9X1 Gas Furnace',
+			'post_content' 	=>	'<span class="descriptionText">A system that works smarter. Quality and reliability with a cutting-edge design.</span>
+<ul>
+	<li>Up to 96% AFUE for efficient operation</li>
+	<li>Matches with single- and two-stage AC and HP models</li>
+	<li>High-efficiency constant torque ECM (Electronically Commutated Motor) blower motor</li>
+	<li>Exclusive Vortica™ II blower design that increases airflow efficiency</li>
+	<li>Stainless steel primary and secondary heat exchangers resist corrosion for long-lasting performance</li>
+	<li>Self-diagnosing integrated furnace control (IFC)</li>
+	<li>Certified 1% airtight, meeting stringent building codes and saving energy</li>
+	<li>ENERGY STAR certification validates performance and efficiency</li>
+	<li>Fully insulated cabinet reduces operating noise</li>
+	<li>Match your gas furnace with a heat pump to enjoy the energy-saving benefits of a hybrid system. In milder temperatures, your heat pump acts as the primary source of heat for your home. When the weather gets too cold, your system activates your furnace to deliver the heat you need.</li>
+</ul>', 
+			'post_excerpt'	=>	'A system that works smarter. Quality and reliability with a cutting-edge design.',
+			'post_type'     =>	'products',
+			'menu_order'  	=>  1250,
+			'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'furnaces', 'product-class'=>'silver-series'),
+			'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/pdf/TT_10-1173-18_AS-90-95_Gas%20Furnace_AS_SV.pdf', 'comfort'=>'na', 'efficiency'=>'na', 'price'=>4),
+			'image_name'	=>	'American-Standard-44.jpg'		
+		),
+		
+		array ( 
+			'post_title'	=>	'American Standard S9B1 Gas Furnace',
+			'post_content' 	=>	'<span class="descriptionText">Designed with value in mind, this gas furnace provides you with the comfort you want, the efficiency and durability you need and, of course, the American Standard commitment to quality you expect.</span>
+<ul>
+	<li>Converts up to 92.1% of the fuel you pay for into heat for your home.</li>
+	<li>Heavy steel cabinet holds in heat and reduces operating noise – keeping you comfortable without the extra sound.</li>
+	<li>Stainless steel, tubular primary and secondary heat exchangers are more resistant to corrosion.</li>
+	<li>Patented, durable Vortica™ II blower design is more efficient than standard blowers.</li>
+	<li>Match your gas furnace with a heat pump to enjoy the energy-saving benefits of a hybrid system. In milder temperatures, your heat pump acts as the primary source of heat for your home. When the weather gets too cold, your system activates your furnace to deliver the heat you need.</li>
+</ul>', 
+			'post_excerpt'	=>	'Designed with value in mind, this gas furnace provides you with comfort, efficiency, durability and quality.',
+			'post_type'     =>	'products',
+			'menu_order'  	=>  1220,
+			'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'furnaces', 'product-class'=>'platinum-series'),
+			'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/pdf/TT_10-1173-18_AS-90-95_Gas%20Furnace_AS_SV.pdf', 'comfort'=>2, 'efficiency'=>4, 'price'=>3),
+			'image_name'	=>	'American-Standard-45.jpg'		
+		),
+		
+		array ( 
+			'post_title'	=>	'American Standard S8B1 Gas Furnace',
+			'post_content' 	=>	'<span class="descriptionText">Get efficient performance with this gas furnace.  A solid and reliable unit, this residential furnace is designed to provide affordable heating throughout your entire home.</span>
+<ul>
+	<li>Converts up to 80 percent of the fuel that you purchase to heat your home.</li>
+	<li>Save on energy usage while also reducing greenhouse gas emissions* by significantly surpassing government efficiency standards.</li>
+	<li>This furnace provides comfort with its tubular, steel heat exchanger and patented Vortica™ II blower design.</li>
+	<li>With its heavy steel, AirTite™ cabinet this furnace is durable and holds in more heat to better warm your home.</li>
+	<li>Match your gas furnace with a heat pump to enjoy the energy-saving benefits of a hybrid system. In milder temperatures, your heat pump acts as the primary source of heat for your home. When the weather gets too cold, your system activates your furnace to deliver the heat you need.</li>
+</ul>', 
+			'post_excerpt'	=>	'A solid and reliable unit, this residential furnace is designed to provide affordable heating throughout your entire home.',
+			'post_type'     =>	'products',
+			'menu_order'  	=>  1270,
+			'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'furnaces', 'product-class'=>'silver-series'),
+			'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/pdf/TT_10-1111-26_AS%2080%20Gas%20Furnaces_AS_SV.pdf', 'comfort'=>2, 'efficiency'=>2, 'price'=>1),
+			'image_name'	=>	'American-Standard-46.jpg'		
+		),
+	);
+	
+	$editProducts = array (
+		array ( 'post_slug'	=> 'accucomfort-platinum-20-air-conditioner', 'menu_order' =>  1000, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1190-11_AS_Variable_Speed_ConsumerBrochure_SV.pdf')),
+		array ( 'post_slug'	=> 'accucomfort-platinum-18-air-conditioner', 'menu_order' =>  1010, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1190-11_AS_Variable_Speed_ConsumerBrochure_SV.pdf')),
+		array ( 'post_slug'	=> 'gold-17-air-conditioner', 'menu_order' =>  1020, 'meta_input' => array('brochure' => 'https://www.americanstandardair.com/content/dam/americanstandarair/brochure/airconditioner/10-1112-30_HR.pdf')),
+		array ( 'post_slug'	=> 'silver-16-air-conditioner', 'menu_order' =>  1030, 'meta_input' => array('brochure' => 'https://www.americanstandardair.com/content/dam/americanstandarair/brochure/airconditioner/10-1112-30_HR.pdf')),
+		array ( 'post_slug'	=> 'silver-14-air-conditioner', 'menu_order' =>  1040, 'meta_input' => array('brochure' => 'https://www.americanstandardair.com/content/dam/americanstandarair/brochure/airconditioner/10-1112-30_HR.pdf')),
+		
+		array ( 'post_slug'	=> 'accucomfort-platinum-20-heat-pump', 'menu_order' =>  1100, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1190-11_AS_Variable_Speed_ConsumerBrochure_SV.pdf')),
+		array ( 'post_slug'	=> 'accucomfort-platinum-18-heat-pump', 'menu_order' =>  1110, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1190-11_AS_Variable_Speed_ConsumerBrochure_SV.pdf')),
+		array ( 'post_slug'	=> 'gold-17-heat-pump', 'menu_order' =>  1120, 'meta_input' => array('brochure' => 'https://www.americanstandardair.com/content/dam/americanstandarair/brochure/heatpumps/10-1113-30%20AS%20Heat%20Pumps.pdf')),
+		array ( 'post_slug'	=> 'silver-16-heat-pump', 'menu_order' =>  1130, 'meta_input' => array('brochure' => 'https://www.americanstandardair.com/content/dam/americanstandarair/brochure/heatpumps/10-1113-30%20AS%20Heat%20Pumps.pdf')),
+		array ( 'post_slug'	=> 'silver-14-heat-pump', 'menu_order' =>  1140, 'meta_input' => array('brochure' => 'https://www.americanstandardair.com/content/dam/americanstandarair/brochure/heatpumps/10-1113-30%20AS%20Heat%20Pumps.pdf')),		
+		
+		array ( 'post_slug'	=> 'platinum-95-furnace', 'menu_order' =>  1200, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1173-18_AS-90-95_Gas%20Furnace_AS_SV.pdf')),
+		array ( 'post_slug'	=> 'platinum-80-furnace', 'menu_order' =>  1210, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1111-26_AS%2080%20Gas%20Furnaces_AS_SV.pdf')),
+		array ( 'post_slug'	=> 'gold-s9v2-gas-furnace', 'menu_order' =>  1230, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1173-18_AS-90-95_Gas%20Furnace_AS_SV.pdf')),
+		array ( 'post_slug'	=> 'gold-80v-furnace', 'menu_order' =>  1240, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1111-26_AS%2080%20Gas%20Furnaces_AS_SV.pdf')),
+		array ( 'post_slug'	=> 'silver-s8x1-gas-furnace', 'menu_order' =>  1260, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1111-26_AS%2080%20Gas%20Furnaces_AS_SV.pdf')),
+		
+		array ( 'post_slug'	=> 'forefront-platinum-tam9-air-handler', 'menu_order' =>  1300, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_15-4142-20_AS-Air-Handler-ConsumerBrochure_SV.pdf')),
+		array ( 'post_slug'	=> 'forefront-gold-tam4-air-handler', 'menu_order' =>  1310, 'meta_input' => array('brochure' => 'https://www.americanstandardair.com/content/dam/americanstandarair/brochure/airhandlers/15-4142-15.pdf')),
+		array ( 'post_slug'	=> 'silver-tem8-air-handler', 'menu_order' =>  1320, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_15-4142-20_AS-Air-Handler-ConsumerBrochure_SV.pdf')),
+		array ( 'post_slug'	=> 'silver-tem6-air-handler', 'menu_order' =>  1330, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_15-4142-20_AS-Air-Handler-ConsumerBrochure_SV.pdf')),
+		array ( 'post_slug'	=> 'silver-tem4-air-handler', 'menu_order' =>  1340, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_15-4142-20_AS-Air-Handler-ConsumerBrochure_SV.pdf')),
+		
+		array ( 'post_slug'	=> 'platinum-16-hybrid-system', 'menu_order' =>  1400, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf')),		
+		array ( 'post_slug'	=> 'platinum-16-gaselectric-system', 'menu_order' =>  1410, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf')),		
+		array ( 'post_slug'	=> 'platinum-16-heat-pump-system', 'menu_order' =>  1420, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf')),		
+		array ( 'post_slug'	=> 'gold-15-gaselectric-system', 'menu_order' =>  1430, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf')),		
+		array ( 'post_slug'	=> 'gold-15-heat-pump-system', 'menu_order' =>  1440, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf')),		
+		array ( 'post_slug'	=> 'gold-14-hybrid-system', 'menu_order' =>  1450, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf')),		
+		array ( 'post_slug'	=> 'silver-14-gaselectric-system', 'menu_order' =>  1460, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf')),		
+		array ( 'post_slug'	=> 'silver-14-heat-pump-system', 'menu_order' =>  1470, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf')),
+		array ( 'post_slug'	=> 'silver-14-air-conditioner-system', 'menu_order' =>  1480, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf')),		
+	);
+
+
+	$user = get_user_by('login', 'battleplanweb');
+	$userID = $user->ID;
+	
+		
+// Remove Products
+	foreach ( $removeProducts as $product ) :
+		$productPage = get_page_by_path( $product, OBJECT, 'products' );
+		if ( !empty( $productPage ) ) wp_delete_post( $productPage->ID, true );	
+	endforeach;
+	
+
+// Add Products
+	foreach ( $addProducts as $product ) :
+		$productTitle = $product['post_title'];
+		$productContent = $product['post_content'];
+		$productExcerpt = $product['post_excerpt'];
+		$productType = $product['post_type'];
+		$productOrder = $product['menu_order'];
+		$productTax = $product['tax_input'];
+		$productMeta = $product['meta_input'];
+		$productImg = $product['image_name'];
+		$productName = strtolower(str_replace(' ', '-', trim($productTitle)));		
+		$productPage = get_page_by_path( $productName, OBJECT, 'products' );
+			
+		$IMGFilePath = ABSPATH . '/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/products/'.$productImg;
+		$IMGFileTitle = str_replace('-', ' ', $productImg);
+		$checkID = getID($IMGFileTitle);		
+
+		if( $checkID == false ) :
+			$upload = wp_upload_bits($productImg , null, file_get_contents($IMGFilePath, FILE_USE_INCLUDE_PATH));
+			$imageFile = $upload['file'];
+			$wpFileType = wp_check_filetype($imageFile, null);		
+			$attachment = array(
+				 'post_mime_type' => $wpFileType['type'],
+				 'post_title' => sanitize_file_name($productImg),
+				 'post_content' => '',
+				 'post_status' => 'inherit'
+			);
+			$attachmentID = wp_insert_attachment( $attachment, $imageFile, $productPage->ID );		
+		else:
+			$attachmentID = $checkID;
+		endif;		
+				
+		require_once( ABSPATH . 'wp-admin/includes/image.php' );
+		$attach_data = wp_generate_attachment_metadata( $attachmentID, $imageFile );
+		wp_update_attachment_metadata( $attachmentID, $attach_data );
+		update_post_meta( $attachmentID, '_wp_attachment_image_alt', $productImgAlt );
+		wp_set_object_terms( $attachmentID, array('Products'), 'image-categories', true );
+		
+		if ( empty( $productPage ) ) : 
+			$productPage = wp_insert_post( array(
 				'comment_status' => 'close',
 				'ping_status'    => 'close',
 				'post_author'	 => $userID,
-				'post_title'     => ucwords('New Page'),
-				'post_name'      => strtolower(str_replace(' ', '-', trim('New Page'))),
+				'post_title'     => ucwords($productTitle),
+				'post_name'      => $productName,
+				'post_content'   => $productContent,
+				'post_excerpt'   => $productExcerpt,
+				'post_type'      => $productType,
+				'menu_order'     => $productOrder,
+				'meta_input'	 =>	$productMeta,
 				'post_status'    => 'publish',
-				'post_content'   => 'Content of the page',
-				'post_excerpt'   => 'Excerpt of the page',
-				'post_type'      => 'products',
-				'menu_order'     => 100,
-				'tax_input'		 => array('product-brand'=>'american-standard', 'product-type'=>'air-conditioners', 'product-class'=>'platinum-series'),
-				'meta_input'	 =>	array('comfort'=>5, 'efficiency'=>4, 'price'=>3),
 			));
-	else:		
-		$user = get_user_by('login', 'battleplanweb');
-		$userID = $user->ID;
-		$postID = $check_page_exist->ID;
-		wp_update_post(array(
-				'ID' 			 => $postID,
-				'post_title'     => ucwords('Newest Page'),
-				'post_content'   => 'Content of the page 2',
-				'post_excerpt'   => 'Excerpt of the page 2',
-				'menu_order'     => 100,
-				'tax_input'		 => array('product-brand'=>'samsung', 'product-type'=>'air-conditioners', 'product-class'=>'platinum-series'),
-				'meta_input'	 =>	array('comfort'=>5, 'efficiency'=>4, 'price'=>3),
+		else:		
+			wp_update_post(array(
+				'ID' 			 => $productPage->ID,
+				'post_title'     => ucwords($productTitle),
+				'post_content'   => $productContent,
+				'post_excerpt'   => $productExcerpt,
+				'menu_order'     => $productOrder,
+				'meta_input'	 =>	$productMeta,
 			));	
+		endif;
+		
+		foreach ( $productTax as $tax=>$term ) :
+			wp_set_object_terms( $productPage, $term, $tax );
+		endforeach;
+		
+		set_post_thumbnail( $productPage, $attachmentID );
+	endforeach;
+		
 	
-	endif;
-
-	$IMGFileName = 'American-Standard-01.jpg';
-	$IMGFilePath = ABSPATH . '/wp-content/themes/battleplantheme/common/hvac-american-standard/products/'.$IMGFileName;
-	$IMGFileTitle = str_replace('-', ' ', $IMGFileName);
-
-	$checkID = getID($IMGFileTitle);		
-
-	if( $checkID == false ) :
-		$upload = wp_upload_bits($IMGFileName , null, file_get_contents($IMGFilePath, FILE_USE_INCLUDE_PATH));
-		$imageFile = $upload['file'];
-		$wpFileType = wp_check_filetype($imageFile, null);		
-		$attachment = array(
-			 'post_mime_type' => $wpFileType['type'],
-			 'post_title' => sanitize_file_name($IMGFileName),
-			 'post_content' => '',
-			 'post_status' => 'inherit'
-		);
-		$attachmentId = wp_insert_attachment( $attachment, $imageFile, $postID );		
-	else:
-		$attachmentId = $checkID;
-	endif;		
-
-	require_once( ABSPATH . 'wp-admin/includes/image.php' );
-	$attach_data = wp_generate_attachment_metadata( $attachmentId, $imageFile );
-	wp_update_attachment_metadata( $attachmentId, $attach_data );	 
-
-	set_post_thumbnail( $postID, $attachmentId );
+// Edit Products
+	foreach ( $editProducts as $product ) :
+		$productName = $product['post_slug'];
+		$productOrder = $product['menu_order'];
+		$productMeta = $product['meta_input'];
+		$productPage = get_page_by_path( $productName, OBJECT, 'products' );
+		
+		if ( !empty( $productPage ) ) : 
+			wp_update_post(array(
+				'ID' 			 => $productPage->ID,
+				'menu_order'     => $productOrder,
+				'meta_input'	 =>	$productMeta,
+			));	
+		endif;
+	endforeach;
 }
-add_action( 'wp_loaded', 'add_products', 10 );
-
-
-
 
 ?>

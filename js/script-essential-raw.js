@@ -707,11 +707,11 @@ var pageViews=getCookie('pages-viewed'), uniqueID, pageLimit = 300, speedFactor 
 // Gracefully start to fade out the pre-loader
 	var opacity = 1, loader = document.getElementById("loader"), color = getComputedStyle(loader).getPropertyValue("background-color"), [r,g,b,a] = color.match(/\d+/g).map(Number), bgTimer = setInterval(function() {
 		opacity = opacity - 0.01;
-		document.getElementById("loader").style.backgroundColor = 'rgb('+r+','+g+','+b+','+opacity+')';
+		loader.style.backgroundColor = 'rgb('+r+','+g+','+b+','+opacity+')';
 		if ( opacity < 0.5 ) { clearInterval(bgTimer); }
 	}, 10);
 	window.resetLoader = function () {
-		document.getElementById("loader").style.backgroundColor = 'rgb('+r+','+g+','+b+',0.5)';
+		loader.style.backgroundColor = 'rgb('+r+','+g+','+b+',0.5)';
 	}
 	
 // Set up easing

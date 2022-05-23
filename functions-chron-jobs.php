@@ -200,6 +200,7 @@ update_option( 'default_comment_status', 'closed' );
 update_option( 'default_ping_status', 'closed' );
 update_option( 'permalink_structure', '/%postname%/' );
 update_option( 'wpe-rand-enabled', '1' );
+update_option( 'users_can_register', '0' );
 
 update_option( 'auto_update_core_dev', 'enabled' );
 update_option( 'auto_update_core_minor', 'enabled' );

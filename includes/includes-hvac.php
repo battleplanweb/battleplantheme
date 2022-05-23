@@ -25,6 +25,7 @@
 	- Wells Fargo
 # Basic Theme Set Up
 # Employment Application
+# Mass Product Update
 
 --------------------------------------------------------------*/
 
@@ -586,6 +587,21 @@ function battleplan_handleEmploymentAppResponse($additional_mail, $contact_form)
     	return $additional_mail;
 	else:
 		return;
+	endif;
+}
+
+/*--------------------------------------------------------------
+# Mass Product Update
+--------------------------------------------------------------*/
+add_action( 'init', 'battleplan_mass_product_update' );
+function battleplan_mass_product_update() { 
+	if ( $GLOBALS['customer_info']['site-brand'] == 'american standard' || in_array('american standard', $GLOBALS['customer_info']['site-brand'])) :
+	
+		if ( get_option( 'product-update-may-2022' ) != 'completed' ) :
+			require_once get_template_directory() . '/includes/includes-mass-site-update.php';
+			update_option( 'product-update-may-2022', 'completed' );
+		endif;	
+	
 	endif;
 }
 ?>

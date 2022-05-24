@@ -825,7 +825,6 @@
   exports.Carousel = Carousel;
   exports.Util = Util;
 
-  Object.defineProperty(exports, '__esModule', { value: true });
+  Object.defineProperty(exports, '__esModule', { value: true });  
 
 })));
-//# sourceMappingURL=bootstrap.js.map

@@ -595,7 +595,7 @@ function battleplan_handleEmploymentAppResponse($additional_mail, $contact_form)
 --------------------------------------------------------------*/
 add_action( 'init', 'battleplan_mass_product_update' );
 function battleplan_mass_product_update() { 
-	if ( $GLOBALS['customer_info']['site-brand'] == 'american standard' || in_array('american standard', $GLOBALS['customer_info']['site-brand'])) :
+	if ( $GLOBALS['customer_info']['site-brand'] == 'american standard' || (is_array($GLOBALS['customer_info']['site-brand']) && in_array('american standard', $GLOBALS['customer_info']['site-brand'])) ) :
 	
 		if ( get_option( 'product-update-may-2022' ) != 'completed' ) :
 			require_once get_template_directory() . '/includes/includes-mass-site-update.php';

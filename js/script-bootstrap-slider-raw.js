@@ -15,6 +15,13 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			});
 			thisCarousel.find(".carousel-inner").css("height", maxH+"px");	
 		}, 500);
+	});		
+	
+// Avoid long delay on first slide transition
+	$(".carousel.slider").each(function() {
+		if ( $(this).attr('data-auto') == "true" ) {
+			$(this).carousel('cycle');
+		}
 	});	
 			
 })(jQuery); });

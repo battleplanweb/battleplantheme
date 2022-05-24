@@ -16,7 +16,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '11.5.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '11.6' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -910,7 +910,7 @@ if ( !is_admin() && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && str
 			$dom->loadHTML($html);
 			$script = $dom->getElementsByTagName('script'); 
 
-			$targets = array('podium', 'leadconnectorhq', 'voip', 'google', 'paypal', 'carousel', 'extended-widget', 'embed-player', 'huzzaz', 'fbcdn', 'facebook', 'klaviyo');
+			$targets = array('podium', 'leadconnectorhq', 'voip', 'google', 'paypal', 'extended-widget', 'embed-player', 'huzzaz', 'fbcdn', 'facebook', 'klaviyo');
 
 			foreach ($script as $item) :		   
 				foreach ($targets as $target) :
@@ -1040,7 +1040,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( "user-message" == $tag->name ) {
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
-		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','Roleplay helps develop','rank your google','TRY IT RIGHT NOW FOR FREE','house‌ ‌inspection‌ ‌process', 'write you an article','write a short article','We want to write','website home page design','updated version of your website','free sample Home Page','completely Free','Dear Receptionist','Franchise Creator','John Romney','get in touch with ownership','и','д','б','й','л','ы','З','у','Я');
+		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','Roleplay helps develop','rank your google','TRY IT RIGHT NOW FOR FREE','house‌ ‌inspection‌ ‌process', 'write you an article','write a short article','We want to write','website home page design','updated version of your website','free sample Home Page','completely Free','Dear Receptionist','Franchise Creator','John Romney','get in touch with ownership','rebrand your business', 'Virtual Assistant Services','и','д','б','й','л','ы','З','у','Я');
 		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
 		if ( strtolower($check) == strtolower($name) ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($badwords as $badword) {
@@ -1059,7 +1059,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
 	}
     if ( "user-email" == $tag->name ) {
         $check = isset( $_POST["user-email"] ) ? trim( $_POST["user-email"] ) : ''; 
-		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz', '@tworld.com', 'garywhi777@gmail.com', 'ronyisthebest16@gmail.com', 'ronythomas611@gmail.com', 'ronythomasrecruiter@gmail.com', '@ideonagency.net', 'axiarobbie20@gmail.com', '@hyper-tidy.com', '@readyjob.org', '@thefranchisecreatornetwork.com', 'franchisecreatormarketing.com', '@legendarygfx.com', '@hitachi-metal-jp.com', '@expresscommerce.co');
+		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz', '@tworld.com', 'garywhi777@gmail.com', 'ronyisthebest16@gmail.com', 'ronythomas611@gmail.com', 'ronythomasrecruiter@gmail.com', '@ideonagency.net', 'axiarobbie20@gmail.com', '@hyper-tidy.com', '@readyjob.org', '@thefranchisecreatornetwork.com', 'franchisecreatormarketing.com', '@legendarygfx.com', '@hitachi-metal-jp.com', '@expresscommerce.co', '@zaphyrpro.com');
 		foreach($badwords as $badword) {
 			if (stripos(strtolower($check),strtolower($badword)) !== false) $result->invalidate( $tag, 'We cannot accept messages at this time.');
 		}
@@ -1481,6 +1481,8 @@ function battleplan_doChrons() {
 	if ( $timePast > $chronSpan || get_option('bp_setup_2022_05_02') != "completed" ) :	
 		require_once get_template_directory().'/functions-chron-jobs.php';	
 	endif;	
+	
+	updateMeta( $siteHeader, 'framework-version', _BP_VERSION );	
 }
 
 /*--------------------------------------------------------------

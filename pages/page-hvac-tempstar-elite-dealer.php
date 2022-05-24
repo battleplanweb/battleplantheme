@@ -9,12 +9,14 @@ $printPage = '
 
 	<p>[get-biz info="name"] is proud to be an authorized Tempstar Elite Dealer.  That means we offer best-of-the-best installation, maintenance and customer service, the perfect complement to your Tempstar® heating and cooling system.</p>
 
-	<p>As a Tempstar Elite Dealer, we have the knowledge, experience, and training to help your system achieve peak performance. When you call us, you can rest assured we will provide:</p>
+	<p>As a Tempstar Elite Dealer, we have the knowledge, experience, and training to help your system achieve peak performance. When you call us, you can rest assured we will provide:</p>	
 	
 	<ul>
     	<li><b>Expertise</b> – You can relax knowing your Elite Dealer was selected as one of the best Tempstar dealers in their region.</li>
 
     	<li><b>Product Knowledge</b> - Elite Dealers offer expertise on which products best meet your needs and are up-to-date with the latest in comfort technology and training.</li>
+
+		<img class="alignright noFX size-third-s" src="/wp-content/themes/battleplantheme/common/hvac-tempstar/tempstar-products.png" loading="lazy" alt="American Standard Heating and Cooling Products" width="320" height="280" style="aspect-ratio:320/280" />
 
     	<li><b>Payment Options</b> – Elite Dealers offer financing options, upon credit approval, to pay for your system with monthly installments instead of the full price at purchase.</li>
 

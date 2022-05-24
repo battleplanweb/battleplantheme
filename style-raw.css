@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 11.5.1
+Version: 11.6
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1105,6 +1105,8 @@ section.section-default .flex {
 .sidebar-right.sidebar-line .flex.grid-content {
 	grid-template-columns: 						[column-1-start] 1fr [column-1-end column-2-start] minmax(0, 330px) [column-2-end];
 }
+
+
 
 
 
@@ -2992,13 +2994,13 @@ body.locked {
 	box-shadow: 								0 4px 5px rgba(0,0,0,0.5);
 	width:										100%;
 	height:										auto;
-	transition: 								all 0.2s linear;
+	transition: 								all 0.6s linear;
 }
 
 .top-slide.mm-active #mobile-navigation, 
 .top-push.mm-active #mobile-navigation {
 	margin-top:									0;
-	transition: 								all 0.2s linear;
+	transition: 								all 0.3s linear;
 }
 
 .top-push #page, 
@@ -3008,7 +3010,7 @@ body.locked {
 
 .top-push.mm-active #page, 
 .top-push .top-strip.stuck  {
-	transition: 								all 0.2s linear;
+	transition: 								all 0.14s linear 0.2s;
 }	
 
 /*
@@ -5164,7 +5166,7 @@ html.error503 h3 {
 	}
 	
 	.sidebar-box #secondary,
-	.content-sidebar-box #main-content {
+	.content-sidebar-box #secondary {  /* changed to #secondary from #main-content 5/24/22 - 1 Call Heat & Air */
 		padding:									2.5em 0;
 	}
 	
@@ -5191,7 +5193,7 @@ html.error503 h3 {
 		content: 									"Swipe to view more";
 		font-family: 								"Open Sans", sans-serif;
 		width: 										80vw;
-		margin: 									0.5em auto 2.5em /* changed top & bottom margin 5/20/22 for Advantage HVAC */;
+		margin: 									1.5em auto 2.5em /* changed bottom margin 2.5em 5/20/22 for Advantage HVAC / top margin 1.5em 5/24/22 1- Call Heat & Air*/;
 		position: 									relative;
 		display: 									block;
 		text-align: 								center;
@@ -5208,7 +5210,7 @@ html.error503 h3 {
 		justify-content:							center;
 		align-items: 								center;
 		height: 									calc(100vh - 200px);
-		max-height: 								500px;
+		max-height: 								600px; /* changed from 500px 5/24/22 1- Call Heat & Air*/;
 		overflow-x: 								scroll;		
 		overflow-y: 								hidden;
 		-ms-overflow-style: 						none;
@@ -5491,14 +5493,25 @@ html.error503 h3 {
 		display:									block;
 	}
 	
+	/* Remove Link styling from phone number in headlines */
+	h1 a.phone-link,
+	h2 a.phone-link,
+	h3 a.phone-link,
+	h4 a.phone-link,
+	h5 a.phone-link,
+	h6 a.phone-link {
+		text-decoration:							none;
+	}
+	
 	/* Content */
 	.content-box #primary, 
+	.content-sidebar-box #main-content,/* added 5/24/22 - 1 Call Heat & Air */
 	.widget-box .widget {
 		padding:									1.5em 1em;
 	}
 	
 	.sidebar-box #secondary,
-	.content-sidebar-box #main-content {
+	.content-sidebar-box #secondary { /* changed to #secondary from #main-content 5/24/22 - 1 Call Heat & Air */
 		padding:									1.5em 0;
 	}
 

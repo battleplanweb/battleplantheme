@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 # Basic site functionality
 --------------------------------------------------------------*/
 
-	var getThemeURI = site_dir.theme_dir_uri, getUploadURI = site_dir.upload_dir_uri, mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 0;
+	var mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 0, ajaxURL = 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php';	
 	
 // Is user on an Apple device?
 	window.isApple = function () {
@@ -71,20 +71,20 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	$('.track-clicks, .wpcf7-submit').click(function() {
 		var thisClick = $(this), thisAction = thisClick.attr('data-action') ? thisClick.attr('data-action') : 'email', thisUrl = thisClick.attr('data-url');
 		if ( thisUrl ) { 
-			if (typeof gtag_report_conversion === "function") { 
-				gtag_report_conversion(thisUrl);
-			}			
+			//if (typeof gtag_report_conversion === "function") { 
+				//gtag_report_conversion(thisUrl);
+			//}			
 			document.location = thisUrl; 
 		}
 		$.post({
-			url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-			data : { action: "count_link_clicks", type: thisAction },
+			url : ajaxURL,
+			data : { action: "count_link_clicks", type: thisAction }, 
 			success: function( response ) { console.log(response);  } 
 		});		
 	});
 	
 // Redirect to 'thank you' page after form submission, to avoid double submissions
-	document.addEventListener( 'wpcf7mailsent', function( event ) { 
+	window.document.addEventListener( 'wpcf7mailsent', function( event ) { 
 		location = '/email-received/';
 	}, false ); 
 
@@ -964,7 +964,12 @@ var pageViews=getCookie('pages-viewed'), uniqueID, pageLimit = 300, speedFactor 
 --------------------------------------------------------------*/
 
 // Remove empty & restricted elements
-	$('p:empty, .archive-intro:empty, div.restricted, div.restricted + ul, li.menu-item + ul.sub-menu').remove();
+	$('p:empty, .archive-intro:empty, div.restricted, div.restricted + ul, li.menu-item + ul.sub-menu').each(function() {
+		var el = $(this);
+		if ( !el.attr('role') || el.attr('role') != "status" ) {
+			el.remove();
+		}
+	});
 	
 // Add .page-begins to the next section under masthead for purposes of locking .top-strip
 	$('#masthead + section').addClass('page-begins');
@@ -1013,7 +1018,7 @@ var pageViews=getCookie('pages-viewed'), uniqueID, pageLimit = 300, speedFactor 
 
 		$('a').each(function() {
 			var origLink = String($(this).attr("href")), append = '?';
-			if ( !$(this).hasClass('loc-ignore') && !origLink.includes('#') && origLink != 'undefined' ) {
+			if ( !$(this).hasClass('loc-ignore') && !origLink.includes('#') && !origLink.includes('tel:') && origLink != 'undefined' ) {
 				if ( origLink.includes('?') ) {	append = '&'; }
 				$(this).attr("href", $(this).attr("href") + append + 'l=' + siteLoc );	
 			}
@@ -1027,13 +1032,10 @@ var pageViews=getCookie('pages-viewed'), uniqueID, pageLimit = 300, speedFactor 
 		theInput.attr('id', 'modal-'+theAttr);			
 	});	
 	
-// Ensure modal pop up is not too tall for device
+// If modal popup is taller than device height, make it scrollable
 	$('.screen-mobile .section.section-lock.position-modal .flex').each(function() {
 		if ( $(this).height() > (getDeviceH() - 100) ) {
-			$(this).addClass('shrink');
-		}
-		if ( ($(this).height() * .85) > (getDeviceH() - 100) ) {
-			$(this).removeClass('shrink').addClass('shrink-more');
+			$(this).addClass('scrollable');
 		}
 	});
 

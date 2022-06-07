@@ -1523,8 +1523,8 @@ function battleplan_reorderAdminBar() {
 // Create additional admin pages
 add_action( 'admin_menu', 'battleplan_admin_menu' );
 function battleplan_admin_menu() {
-	add_menu_page( __( 'Clear Stats', 'battleplan' ), __( 'Clear Stats', 'battleplan' ), 'manage_options', 'clear-stats', 'battleplan_clearViewFields', 'dashicons-trash', 3 );
-	//add_submenu_page( 'tools.php', 'Clear Stats', 'Clear Stats', 'manage_options', 'battleplan_clearViewFields' );	
+	add_menu_page( __( 'Run Chron', 'battleplan' ), __( 'Run Chron', 'battleplan' ), 'manage_options', 'run-chron', 'battleplan_force_run_chron', 'dashicons-performance', 3 );
+	//add_submenu_page( 'tools.php', 'Clear Stats', 'Clear Stats', 'manage_options', 'battleplan_force_run_chron' );	
 }
 
 function battleplan_addSitePage() { 
@@ -1592,23 +1592,6 @@ add_filter('wp_editor_set_quality', 'av_return_100', 9999);
 // Display custom fields in WordPress admin edit screen
 //add_filter('acf/settings/remove_wp_meta_box', '__return_false');
 
-// Add 'log-views' fields to posts/pages when published 
-add_action( 'save_post', 'battleplan_addViewsToPost', 10, 3 );
-function battleplan_addViewsToPost() {
-	global $post; $post_ID = $post->ID;	
-	if ( readMeta( $post_ID, 'log-views') == '' ) {
-		updateMeta( $post_ID, 'log-views-now', strtotime("-1 day"));	
-		updateMeta( $post_ID, 'log-views-time', strtotime("-1 day"));			
-		updateMeta( $post_ID, 'log-tease-time', strtotime("-1 day"));			
-		updateMeta( $post_ID, 'log-views-total-7day', '0' );		
-		updateMeta( $post_ID, 'log-views-total-30day', '0' );
-		updateMeta( $post_ID, 'log-views-total-90day', '0' );
-		updateMeta( $post_ID, 'log-views-total-180day', '0' );
-		updateMeta( $post_ID, 'log-views-total-365day', '0' );
-		updateMeta( $post_ID, 'log-views', array( 'date' => strtotime(date("F j, Y")), 'views' => 0 ));					
-	}
-}
-
 // Add & Remove WP Admin Menu items
 add_action( 'admin_init', 'battleplan_remove_menus', 999 );
 function battleplan_remove_menus() {   
@@ -1649,9 +1632,8 @@ add_filter( 'custom_menu_order', 'battleplan_custom_menu_order', 10, 1 );
 add_filter( 'menu_order', 'battleplan_custom_menu_order', 10, 1 );
 function battleplan_custom_menu_order( $menu_ord ) {
     if ( !$menu_ord ) return true;	
-	$getCPT = get_post_types();  
 	$displayTypes = array('index.php', 'separator1', 'upload.php', 'edit.php?post_type=elements', 'edit.php?post_type=page');
-	unset($getCPT['attachment'], $getCPT['revision'], $getCPT['nav_menu_item'], $getCPT['custom_css'], $getCPT['customize_changeset'], $getCPT['oembed_cache'], $getCPT['user_request'], $getCPT['wp_block'], $getCPT['acf-field-group'], $getCPT['acf-field'], $getCPT['wpcf7_contact_form'], $getCPT['wphb_minify_group'], $getCPT['elements'], $getCPT['asp-products']); 	
+	$getCPT = getCPT();
 	foreach ($getCPT as $postType) {
 		array_push($displayTypes, 'edit.php?post_type='.$postType);
 	}
@@ -1663,8 +1645,6 @@ function battleplan_custom_menu_order( $menu_ord ) {
 add_filter( 'custom_menu_order', 'battleplan_submenu_order' );
 function battleplan_submenu_order( $menu_ord ) {
     global $submenu;	
-    //echo '<pre>'.print_r($submenu,true).'</pre>';
-
     $arr = array();
     $arr[] = $submenu['options-general.php'][10];     
     $arr[] = $submenu['options-general.php'][15];
@@ -1731,126 +1711,171 @@ function battleplan_remove_dashboard_widgets () {
 // Add new dashboard widgets
 add_action( 'wp_dashboard_setup', 'battleplan_add_dashboard_widgets' );
 function battleplan_add_dashboard_widgets() {
-    //wp_add_dashboard_widget( 'battleplan_site_stats', 'Site Stats', 'battleplan_admin_site_stats' );
-    //wp_add_dashboard_widget( 'battleplan_location_stats', 'Location Stats', 'battleplan_admin_location_stats' );
-	add_meta_box( 'battleplan_site_stats', 'Site Visitors', 'battleplan_admin_site_stats', 'dashboard', 'normal', 'high' );		
-	add_meta_box( 'battleplan_speed_stats', 'Site Speed', 'battleplan_admin_speed_stats', 'dashboard', 'normal', 'high' );		
-	add_meta_box( 'battleplan_click_stats', 'Visitor Clicks', 'battleplan_admin_click_stats', 'dashboard', 'normal', 'high' );	
-	add_meta_box( 'battleplan_pageview_stats', 'Visitor Pageviews', 'battleplan_admin_pageview_stats', 'dashboard', 'normal', 'high' );
+	add_meta_box( 'battleplan_site_stats', 'Site Visitors', 'battleplan_admin_site_stats', 'dashboard', 'normal', 'high' );				
+	add_meta_box( 'battleplan_tech_stats', 'Tech Info', 'battleplan_admin_tech_stats', 'dashboard', 'normal', 'high' );		
 
-	add_meta_box( 'battleplan_referrer_stats', 'Visitor Referrers', 'battleplan_admin_referrer_stats', 'dashboard', 'side', 'high' );	
-	add_meta_box( 'battleplan_location_stats', 'Visitor Locations', 'battleplan_admin_location_stats', 'dashboard', 'side', 'high' );	
+	add_meta_box( 'battleplan_referrer_stats', 'Referrers', 'battleplan_admin_referrer_stats', 'dashboard', 'side', 'high' );	
+	add_meta_box( 'battleplan_location_stats', 'Locations', 'battleplan_admin_location_stats', 'dashboard', 'side', 'high' );
 	add_meta_box( 'battleplan_pages_stats', 'Most Popular Pages', 'battleplan_admin_pages_stats', 'dashboard', 'side', 'high' );
 	
 	add_meta_box( 'battleplan_weekly_stats', 'Weekly Visitor Trends', 'battleplan_admin_weekly_stats', 'dashboard', 'column3', 'high' );		
 	add_meta_box( 'battleplan_monthly_stats', 'Monthly Visitor Trends', 'battleplan_admin_monthly_stats', 'dashboard', 'column3', 'high' );		
-	add_meta_box( 'battleplan_quarterly_stats', 'Quarterly Visitor Trends', 'battleplan_admin_quarterly_stats', 'dashboard', 'column3', 'high' );		
+	add_meta_box( 'battleplan_quarterly_stats', 'Quarterly Visitor Trends', 'battleplan_admin_quarterly_stats', 'dashboard', 'column3', 'high' );
 }
 
-// Set up Site Stats widget on dashboard
+
+// Set up Site Visitors widget on dashboard
 function battleplan_admin_site_stats() {
-	$siteHeader = getID('site-header');
-	$rightNow = strtotime(date("F j, Y g:i a"));
-	$today = strtotime(date("F j, Y"));
-	$getViews = readMeta($siteHeader, 'log-views');
-	$getViews = maybe_unserialize( $getViews );
-	$viewsToday = $getViews[0]['views'];
-	$firstDate = strtotime($getViews[0]['date']);
-	if ( $firstDate != $today ) $viewsToday = 0;
-	$last7Views = (int)readMeta($siteHeader, "log-views-total-7day");
-	$last30Views = (int)readMeta($siteHeader, "log-views-total-30day");
-	$last90Views = (int)readMeta($siteHeader, "log-views-total-90day");	
-	$last180Views = (int)readMeta($siteHeader, "log-views-total-180day");	
-	$last365Views = (int)readMeta($siteHeader, "log-views-total-365day");
-	$lastViewed = (int)readMeta($siteHeader, 'log-views-now');		
-	$dateDiff = (($rightNow - $lastViewed) / 60 / 60 / 24); $howLong = "day";
-	if ( $dateDiff < 1 ) : $dateDiff = (($rightNow - $lastViewed) / 60 / 60); $howLong = "hour"; endif;	
-	if ( $dateDiff < 1 ) : $dateDiff = (($rightNow - $lastViewed) / 60); $howLong = "minute"; endif;
-	if ( $dateDiff != 1 ) $howLong = $howLong."s";	
-	$dateDiff = number_format($dateDiff, 0);
-	
-	echo "<table>";		
-	echo "<tr><td><b>Last Visitor</b></td><td><b>".$dateDiff."</b> ".$howLong." ago</td></tr>";			
-	echo "<tr><td><b>Today</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $viewsToday, 'battleplan' ), number_format($viewsToday))."</td></tr>";	
-	echo "<tr><td>&nbsp;</td></tr>";
-	echo "<tr><td><b>Last 7 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last7Views, 'battleplan' ), number_format($last7Views) )."</td></tr>";
-	if ( $last30Views != $last7Views) echo "<tr><td><b>Last 30 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last30Views, 'battleplan' ), number_format($last30Views) )."</td></tr>";
-	if ( $last90Views != $last30Views) echo "<tr><td><b>Last 90 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last90Views, 'battleplan' ), number_format($last90Views) )."</td></tr>";
-	if ( $last180Views != $last90Views) echo "<tr><td><b>Last 180 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last180Views, 'battleplan' ), number_format($last180Views) )."</td></tr>";
-	if ( $last365Views != $last180Views) echo "<tr><td><b>Last 365 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last365Views, 'battleplan' ), number_format($last365Views) )."</td></tr>";
-	echo "<tr><td>&nbsp;</td></tr>";
-	
-	/*
-	echo "<tr><td><b><u>Top 10 Most Visited Days</u></b></td><td>&nbsp;</td></tr>";
-	$sort = array();
-	foreach($getViews as $k=>$v) {
-		$sort['date'][$k] = $v['date'];
-		$sort['views'][$k] = $v['views'];
-	}
-	array_multisort($sort['views'], SORT_DESC, SORT_NUMERIC, $sort['date'], SORT_DESC, $getViews);
-	
-	for ($x = 0; $x < 10; $x++) {
-		$dailyTime = date("M j, Y", strtotime($getViews[$x]['date'])); 		
-		$howOld = ($today - strtotime($getViews[$x]['date'])) / 86400;
-		$dailyViews = intval($getViews[$x]['views']); 	
-		$rank = $x + 1;
-		if ( $dailyViews > 0 ) echo "<tr class='coloration' data-age=".$howOld."><td>&nbsp;#".$rank."&nbsp;&nbsp;&nbsp;<b>".$dailyTime."</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $dailyViews, 'battleplan' ), $dailyViews )."</td></tr>";
+	$getViews = array_reverse(get_option('stats_basic'));
+ 	$count = $views = $search = $pageviews = $sessions = $engaged = $engagement = $endOfCol = 0;
+
+	for ($x = 0; $x < 1096; $x++) {	
+		$dailyTime = date("M j, Y", strtotime($getViews[$x]['date'])); 
+		$dailyViews = intval($getViews[$x]['users']); 
+		
+		$count++;
+		$views = $views + $dailyViews;	
+		
+		if ( $count == 1 ) $viewsToday = $views; 
+		if ( $count == 7 ) $last7Views = $views; $last7Avg = number_format(($last7Views / 7),1);
+		if ( $count == 30 ) $last30Views = $views; $last30Avg = number_format(($last30Views / 30),1);
+		if ( $count == 90 ) $last90Views = $views; $last90Avg = number_format(($last90Views / 90),1);
+		if ( $count == 180 ) $last180Views = $views; $last180Avg = number_format(($last180Views / 180),1);		
+		if ( $count == 365 ) $lastYearViews = $views; $lastYearAvg = number_format(($lastYearViews / 365),1);		
+		if ( $count == 730 ) $last2YearViews = $views; $last2YearAvg = number_format(($last2YearViews / 730),1);		
+		if ( $count == 1095 ) $last3YearViews = $views; $last3YearAvg = number_format(($last3YearViews / 1095),1);
 	} 		
-	*/	
-	echo '</table>';
-}
-
-// Set up Site Speed widget on dashboard
-function battleplan_admin_speed_stats() {
-	$siteHeader = getID('site-header');
-	$desktopCounted = readMeta($siteHeader, "load-number-desktop");
-	$desktopSpeed = readMeta($siteHeader, "load-speed-desktop");	
-	$mobileCounted = readMeta($siteHeader, "load-number-mobile");
-	$mobileSpeed = readMeta($siteHeader, "load-speed-mobile");
-	$lastEmail = readMeta($siteHeader, "last-email");
-	$rightNow = strtotime(date("F j, Y g:i a"));
-	$today = strtotime(date("F j, Y"));
-	$daysSinceEmail = (($rightNow - $lastEmail) / 60 / 60 / 24);
-	$totalCounted = $desktopCounted + $mobileCounted;		
+		
+	echo "<table><tr><td class='label'>Yesterday</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $viewsToday, 'battleplan' ), number_format($viewsToday))."</td></tr>";	
 	
-	echo "<table>";
-		echo "<tr><td><b>".number_format($totalCounted)."</b> pageloads</td><td> in the last ".sprintf( _n( '<b>%s</b> day', '<b>%s</b> days', $daysSinceEmail, 'battleplan' ), number_format($daysSinceEmail) )."</td></tr>";
-		echo "<tr><td>&nbsp;</td></tr>";
-		echo "<tr><td><b>Desktop</b></td><td><b>".$desktopSpeed."s</b> on ".sprintf( _n( '<b>%s</b> pageload', '<b>%s</b> pageloads', $desktopCounted, 'battleplan' ), number_format($desktopCounted) )."</td></tr>";
-		echo "<tr><td><b>Mobile</b></td><td><b>".$mobileSpeed."s</b> on ".sprintf( _n( '<b>%s</b> pageload', '<b>%s</b> pageloads', $mobileCounted, 'battleplan' ), number_format($mobileCounted) )."</td></tr>";
-	echo "</table>";
+	echo "<tr><td class='label'>This Week</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last7Views, 'battleplan' ), number_format($last7Views) )."</td><td><b>".$last7Avg."</b> /day</td></tr>";
+	
+	if ( $last30Views != $last7Views) echo "<tr><td class='label'>This Month</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last30Views, 'battleplan' ), number_format($last30Views) )."</td><td><b>".$last30Avg."</b> /day</td></tr>";
+	
+	if ( $last90Views != $last30Views) echo "<tr><td class='label'>3 Months</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last90Views, 'battleplan' ), number_format($last90Views) )."</td><td><b>".$last90Avg."</b> /day</td></tr>";
+	
+	if ( $last180Views != $last90Views) echo "<tr><td class='label'>6 Months</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last180Views, 'battleplan' ), number_format($last180Views) )."</td><td><b>".$last180Avg."</b> /day</td></tr>";
+	
+	if ( $lastYearViews != $last180Views) echo "<tr><td class='label'>1 Year</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $lastYearViews, 'battleplan' ), number_format($lastYearViews) )."</td><td><b>".$lastYearAvg."</b> /day</td></tr>";
+	
+	if ( $last2YearViews != $lastYearViews) echo "<tr><td class='label'>2 Years</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last2YearViews, 'battleplan' ), number_format($last2YearViews) )."</td><td><b>".$last2YearAvg."</b> /day</td></tr>";
+	
+	if ( $last3YearViews != $last2YearViews) echo "<tr><td class='label'>3 Years</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last3YearViews, 'battleplan' ), number_format($last3YearViews) )."</td><td><b>".$last3YearAvg."</b> /day</td></tr>";
+	
+	echo '<tr><td>&nbsp;</td></tr></table>';
 }
 
-// Set up Visitor Clicks widget on dashboard
-function battleplan_admin_click_stats() {
-	$siteHeader = getID('site-header');
-	$callClicks = readMeta($siteHeader, "call-clicks");
-	$callClicks = maybe_unserialize($callClicks);
-	$emailClicks = readMeta($siteHeader, "email-clicks");
-	$emailClicks = maybe_unserialize($emailClicks);
-	$numToShow = date("Y") - 2020;			
-	if ( !$callClicks ) $callClicks = array();	
-	if ( !$emailClicks ) $emailClicks = array();
+// Set up Tech Info widget on dashboard
+function battleplan_admin_tech_stats() {
+	$getStats = get_option('stats_tech');
+	$browserStats = $getStats['browser'];
+	$browserNum = count($browserStats);	
+	$tallyCounts = array_count_values($browserStats);
+	$uniqueTech = array_unique($browserStats);
+	$combineTech = [];
+	
+	foreach ($uniqueTech as $uniqueTech) :
+		$combineTech[$uniqueTech]=(($tallyCounts[$uniqueTech]/$browserNum)*100);
+	endforeach; 	
+	
+	uksort( $combineTech, function($a, $b) use ($combineTech) { return [$combineTech[$b], $a] <=> [$combineTech[$a], $b]; } );
+		
+	echo '<div><ul><li class="sub-label">Browser</li>';
+	foreach ($combineTech as $browser=>$browserNum) :
+		echo "<li><div class='value'><b>".number_format($browserNum,1)."%</b></div><div class='label'>".$browser."</div></li>";
+	endforeach; 	
+	echo '</ul></div>';
 
-	echo "<table>";
-	echo "<tr><td><b>Year</b></td><td><b>Calls</b></td><td><b>Emails</b></td></tr>";
-	for ($x = 0; $x < $numToShow; $x++) :
-		echo "<tr><td><b>".$callClicks[$x]['year']."</b></td><td>".number_format($callClicks[$x]['number'])."</td><td>".number_format($emailClicks[$x]['number'])."</td></tr>";
-	endfor; 			
-	echo "</table>";
+	
+	$deviceStats = $getStats['device'];
+	$deviceNum = count($deviceStats);	
+	$tallyCounts = array_count_values($deviceStats);
+	$uniqueTech = array_unique($deviceStats);
+	$combineTech = [];
+	
+	foreach ($uniqueTech as $uniqueTech) :
+		$combineTech[$uniqueTech]=(($tallyCounts[$uniqueTech]/$deviceNum)*100);
+	endforeach; 	
+	
+	uksort( $combineTech, function($a, $b) use ($combineTech) { return [$combineTech[$b], $a] <=> [$combineTech[$a], $b]; } );
+	
+	$timesDesktop = get_option('load_time_desktop');
+	$timeDesktop = array_sum($timesDesktop) / count($timesDesktop);	
+	$timesMobile = get_option('load_time_mobile');
+	$timeMobile = array_sum($timesMobile) / count($timesMobile);			
+		
+	echo '<div><ul><li class="sub-label">Devices</li>';
+	foreach ($combineTech as $device=>$deviceNum) :
+		if ( $device == "desktop" ) $deviceSpeed = $timeDesktop;
+		if ( $device == "mobile" ) $deviceSpeed = $timeMobile;
+		echo "<li><div class='value'><b>".number_format($deviceNum,1)."%</b></div><div class='label-half'>".ucwords($device)."</div><div class='label-half'>".number_format($deviceSpeed,2)." sec.</div></li>";
+	endforeach; 	
+	echo '</ul></div>';
+	
+	
+	$resolutionStats = $getStats['resolution'];
+	$resolutionNum = count($resolutionStats);	
+	foreach ($resolutionStats as $resolution) :
+		$resolution = substr($resolution, 0, strpos($resolution, 'x'));
+		$newResolution[] = $resolution;
+	endforeach; 	
+
+	$tallyCounts = array_count_values($newResolution);
+	$uniqueTech = array_unique($newResolution);
+	$combineTech = [];
+	
+	foreach ($uniqueTech as $uniqueTech) :
+		$combineTech[$uniqueTech]=(($tallyCounts[$uniqueTech]/$resolutionNum)*100);
+	endforeach; 	
+	
+	uksort( $combineTech, function($a, $b) use ($combineTech) { return [$combineTech[$b], $a] <=> [$combineTech[$a], $b]; } );
+		
+	echo '<div><ul><li class="sub-label">Screen Width</li>';
+	foreach ($combineTech as $resolution=>$resolutionNum) :
+		echo "<li><div class='value'><b>".number_format($resolutionNum,1)."%</b></div><div class='label'>".$resolution." px</div></li>";
+	endforeach; 	
+	echo '</ul></div>';
+	
+	
+	$scrolledStats = $getStats['scrolled'];
+	$scrolledNum = count($scrolledStats);	
+	$tallyCounts = array_count_values($scrolledStats);
+	$uniqueTech = array_unique($scrolledStats);
+	$combineTech = [];
+	
+	foreach ($uniqueTech as $uniqueTech) :
+		$combineTech[$uniqueTech]=(($tallyCounts[$uniqueTech]/$scrolledNum)*100);
+	endforeach; 	
+	
+	uksort( $combineTech, function($a, $b) use ($combineTech) { return [$combineTech[$b], $a] <=> [$combineTech[$a], $b]; } );
+		
+	echo '<div><ul><li class="sub-label">User Scrolling</li>';
+	foreach ($combineTech as $scrolled=>$scrolledNum) :
+		if ( $scrolled == '' ) $scrolled = "Unknown ";
+		echo "<li><div class='value'><b>".number_format($scrolledNum,1)."%</b></div><div class='label'>".$scrolled."%</div></li>";
+	endforeach; 	
+	echo '</ul></div>';
 }
+
 
 // Set up Visitor Referrers widget on dashboard
 function battleplan_admin_referrer_stats() {
-	$siteHeader = getID('site-header');
-	$referrers = readMeta($siteHeader, "log-views-referrers");
-	$referrers = maybe_unserialize($referrers);
-	if ( !$referrers ) $referrers = array();
-	$referNum = count($referrers);
-	$tallyCounts = array_count_values($referrers);
-	$uniqueReferrers = array_unique($referrers);
-	$combineReferrers = [];
+	$getStats = get_option('stats_referrers');
+	$referNum = count($getStats);
 	$thisDomain = str_replace("https://", "", get_site_url());
+	
+	foreach ($getStats as $getStat) :
+		$getStat = str_replace("https://", "", $getStat);		
+		$getStat = str_replace("www.", "", $getStat);		
+		$getStat = substr($getStat, 0, strpos($getStat, '/'));
+		if ( $getStat == $thisDomain ) $getStat = "Self";
+		if ( $getStat == '' ) $getStat = "Direct";		
+		$newStats[] = $getStat;
+	endforeach; 	
+	
+	$tallyCounts = array_count_values($newStats);
+	$uniqueReferrers = array_unique($newStats);
+	$combineReferrers = [];
 	
 	foreach ($uniqueReferrers as $uniqueReferrer) :
 		$combineReferrers[$uniqueReferrer]=$tallyCounts[$uniqueReferrer];
@@ -1858,25 +1883,21 @@ function battleplan_admin_referrer_stats() {
 	
 	uksort( $combineReferrers, function($a, $b) use ($combineReferrers) { return [$combineReferrers[$b], $a] <=> [$combineReferrers[$a], $b]; } );
 		
-	echo "<div>Last <b>".number_format($referNum)."</b> referrers</b><br/><br/>";
-	echo "<ul>";
+	echo '<div class="handle-label" data-label=" - Last '.number_format($referNum).' Visitors"><ul>';
 	foreach ($combineReferrers as $referrer=>$referNum) :
 		if ( $referrer == "" ) $referrer = "Direct";
 		if ( $referrer == $thisDomain ) $referrer = "Self";
-		echo "<li><span class='label'>".$referrer."</span><span class='value'><b>".number_format($referNum)."</b></span></li>";
+		echo "<li><div class='value'><b>".number_format($referNum)."</b></div><div class='label'>".$referrer."</div></li>";
 	endforeach; 	
 	echo '</ul></div>';
 }
 
 // Set up Visitor Locations widget on dashboard
 function battleplan_admin_location_stats() {
-	$siteHeader = getID('site-header');
-	$locations = readMeta($siteHeader, "log-views-cities");
-	$locations = maybe_unserialize($locations);
-	if ( !$locations ) $locations = array();
-	$locNum = count($locations);
-	$tallyCounts = array_count_values($locations);
-	$uniqueLocs = array_unique($locations);
+	$getStats = get_option('stats_locations');
+	$locNum = count($getStats);
+	$tallyCounts = array_count_values($getStats);
+	$uniqueLocs = array_unique($getStats);
 	$combineLocs = [];
 	
 	foreach ($uniqueLocs as $uniqueLoc) :
@@ -1885,172 +1906,96 @@ function battleplan_admin_location_stats() {
 	
 	uksort( $combineLocs, function($a, $b) use ($combineLocs) { return [$combineLocs[$b], $a] <=> [$combineLocs[$a], $b]; } );
 		
-	echo "<div>Last <b>".number_format($locNum)."</b> visitors</b><br/><br/>";
-	echo "<ul>";
+	echo '<div class="handle-label" data-label=" - Last '.number_format($locNum).' Visitors"><ul>';
 	foreach ($combineLocs as $city=>$cityNum) :
-		echo "<li><span class='label'>".$city."</span><span class='value'><b>".number_format($cityNum)."</b></span></li>";
+		echo "<li><div class='value'><b>".number_format($cityNum)."</b></div><div class='label'>".$city."</div></li>";
 	endforeach; 	
 	echo '</ul></div>';
 }
 
 // Set up Page Visits widget on dashboard
 function battleplan_admin_pages_stats() {
-	$getCPT = get_post_types();  
-	$pageStats = [];
-	unset($getCPT['attachment'], $getCPT['revision'], $getCPT['nav_menu_item'], $getCPT['custom_css'], $getCPT['customize_changeset'], $getCPT['oembed_cache'], $getCPT['user_request'], $getCPT['wp_block'], $getCPT['acf-field-group'], $getCPT['acf-field'], $getCPT['wpcf7_contact_form'], $getCPT['wphb_minify_group'], $getCPT['elements'], $getCPT['testimonials']); 	
-	foreach ($getCPT as $postType) :
-		$getPosts = new WP_Query( array ('posts_per_page'=>-1, 'post_type'=>$postType ));
-		if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 
-			$theID = get_the_ID();
-			array_push( $pageStats, array('year'=>readMeta($theID, 'log-views-total-365day'), 'month'=>readMeta($theID, 'log-views-total-30day'), 'week'=>readMeta($theID, 'log-views-total-7day'), 'title'=>get_the_title() ));
-		endwhile; wp_reset_postdata(); endif;		
-	endforeach;	
-
-	arsort($pageStats);
+	$getCPT = getCPT(); 
 	
-	echo "<div><ul>";
-	echo "<li><span class='label'><b><u>Page</u></b></span><span class='value'><b><u>Week</u></b></span><span class='value'><b><u>Month</u></b></span><span class='value'><b><u>Year</u></b></span></li>";
-	foreach ($pageStats as $page) :
-		if ( $page['year'] > 0 ) :
-			echo "<li><span class='label'>".$page['title']."</span><span class='value'><b>".number_format($page['week'])."</b></span><span class='value'><b>".number_format($page['month'])."</b></span><span class='value'><b>".number_format($page['year'])."</b></span></li>";
-		endif;
-	endforeach; 	
+	echo '<div class="handle-label" data-label=" - Last 90 Days"><ul>';
+
+	foreach ($getCPT as $postType) :
+		$printType = ucwords($postType);
+		if ( $postType == 'post' || $postType == 'page' ) $printType .= 's';
+		echo '</ul><ul><li class="sub-label">'.$printType.'</li>';
+		$getPosts = new WP_Query( array ('posts_per_page'=>-1, 'post_type'=>$postType, 'meta_key' => 'log-views-total-90day', 'orderby' => 'meta_value_num', 'order' => 'DESC' ));
+		if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 
+			echo "<li><div class='value'><b>".readMeta(get_the_ID(), 'log-views-total-90day')."</b></div><div class='label'>".get_the_title()."</div></li>";
+		endwhile; wp_reset_postdata(); endif;		
+	endforeach;
+
 	echo '</ul></div>';
 } 
 
-// Set up Visitor Pageviews widget on dashboard
-function battleplan_admin_pageview_stats() {
-	$siteHeader = getID('site-header');
-	$pageviews = readMeta($siteHeader, "pages-viewed");
-	$pageviews = maybe_unserialize($pageviews);
-	$singleViews = $multiViews = $totalMulti = $singlePct = $multiPct = 0;	
-	
-	foreach ($pageviews as $id => $views) {	
-		if ( $views < 1 ) : // ignore
-		elseif ( $views == 1 ) : $singleViews++; 
-		else : $multiViews++; $totalMulti = $totalMulti + $views; endif;	
-	}
-	
-	if ( $totalMulti != 0 ) :	
-		$singlePct = ($singleViews / ($multiViews + $singleViews)) * 100;
-		$multiPct = ($multiViews / ($multiViews + $singleViews)) * 100;
-		$avgVisit = round( ($totalMulti + $singleViews) / ($multiViews + $singleViews), 1, PHP_ROUND_HALF_UP);
-		$avgMulti = round( ($totalMulti / $multiViews), 1, PHP_ROUND_HALF_UP);
-	endif;
-	
-	echo "<ul>";
-		echo "<li><span class='label'><b>One Page Visits</b></td><td><b></span><span class='value'>".number_format($singlePct)."%</b>&nbsp;&nbsp;&nbsp;(".number_format($singleViews).")</span></li>";
-		echo "<li><span class='label'><b>Multi Page Visits</b></td><td><b></span><span class='value'>".number_format($multiPct)."%</b>&nbsp;&nbsp;&nbsp;(".number_format($multiViews).")</span></li>";
-		echo "<li>&nbsp;</li>";
-		echo "<li><span class='label'><b>Overall Avg.</b></td><td><b></span><span class='value'>".$avgVisit." pages per visit</span></li>";		
-		echo "<li><span class='label'><b>Multi Page Avg.</b></td><td><b></span><span class='value'>".$avgMulti." pages per visit</span></li>";
-	echo "</ul>";
-}
-
 // Set up Visitor Trends widget on dashboard
-function battleplan_admin_weekly_stats() {
-	$siteHeader = getID('site-header');
-	$today = strtotime(date("F j, Y"));
-	$getViews = readMeta($siteHeader, 'log-views');
-	$getViews = maybe_unserialize( $getViews );
+function battleplan_admin_stats($time,$minDays,$maxDays,$colEnd) {
+	$getViews = array_reverse(get_option('stats_basic'));
+ 	$count = $views = $search = $pageviews = $sessions = $engaged = $engagement = $endOfCol = 0;
+	$days = $minDays;
 	
- 	$count = $views = $search = $cutoff = $endOfCol = 0;	
-	echo "<table class='trends-weekly'><tr><td><b><u>Weekly</u></b></td><td><b><u>Total</u></b></td><td><b><u>Search</u></b></td></tr>";		
-	for ($x = 0; $x < 1095; $x++) {	
+	echo "<table class='trends trends-".$time."'><tr><td class='header dates'>".ucfirst($time)."</td><td class='page visits'>Visitors</td></tr>";		
+	for ($x = 0; $x < 1460; $x++) {	
 		$dailyTime = date("M j, Y", strtotime($getViews[$x]['date'])); 
-		$dailyViews = intval($getViews[$x]['views']); 
+		$dailyViews = intval($getViews[$x]['users']); 
 		$dailySearch = intval($getViews[$x]['search']); 
+		$dailyPageviews = intval($getViews[$x]['pageviews']); 
+		$dailySessions = intval($getViews[$x]['sessions']); 
+		$dailyEngaged = intval($getViews[$x]['engaged']); 
+		
 		$count++;
 		$views = $views + $dailyViews;	
 		$search = $search + $dailySearch; 
+		$pageviews = $pageviews + $dailyPageviews; 
+		$sessions = $sessions + $dailySessions; 
+		$engaged = $engaged + $dailyEngaged; 
+		if ( $views > 0 ) $pageperuser = number_format( (round(($pageviews / $views), 3)) , 1, '.', '');
+		if ( $sessions > 0 ) $engagement = number_format( ((round(($engaged / $sessions), 3)) * 100), 1, '.', '');
+								
 		if ( $count == 1 ) $end = $dailyTime;
-		if ( $count == 7 && $dailyTime != "Jan 1, 1970" ) :
-			if ( $endOfCol == 52 ) :
-				echo "</table><table class='trends-weekly'><tr><td><b><u>Weekly</u></b></td><td><b><u>Total</u></b></td><td><b><u>Search</u></b></td></tr>";
+		if ( $count == $days && $dailyTime != "Jan 1, 1970" ) :
+			if ( $endOfCol == $colEnd ) :
+				echo "</table><table class='trends trends-".$time."'><tr><td class='header dates'>".ucfirst($time)."</td><td class='page visits'>Visitors</td></tr>";
 				$endOfCol = 0;
 			endif;
 			$endOfCol++;
 
-			if ( strtotime($end) < strtotime("Mar 23, 2021") ) $search = "";
-		 	echo "<tr class='coloration' data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".$views."</td><td class='search'>".$search."</td></tr>";
-			if ( $views < 1 ) : $cutoff++; if ( $cutoff == 20) : break; endif; endif;
- 			$count = $views = $search = 0;	
-		endif;	
-	} 		
-	echo "</table>";
-}
-	
-function battleplan_admin_monthly_stats() {
-	$siteHeader = getID('site-header');
-	$today = strtotime(date("F j, Y"));
-	$getViews = readMeta($siteHeader, 'log-views');
-	$getViews = maybe_unserialize( $getViews );
-	
- 	$count = $views = $search = $cutoff = $endOfCol = 0;	
-	echo "<table class='trends-monthly'><tr><td><b><u>Monthly</u></b></td><td><b><u>Total</u></b></td><td><b><u>Search</u></b></td></tr>";		
-	for ($x = 0; $x < 1095; $x++) {		
-		$dailyTime = date("M j, Y", strtotime($getViews[$x]['date'])); 
-		$dailyViews = intval($getViews[$x]['views']); 
-		$dailySearch = intval($getViews[$x]['search']); 
-		$count++;
-		$views = $views + $dailyViews;		
-		$search = $search + $dailySearch;
-		if ( $count == 1 ) $end = $dailyTime;
-		if ( $count == 30 && $dailyTime != "Jan 1, 1970" ) :
-			if ( $endOfCol == 12 ) :
-				echo "</table><table class='trends-monthly'><tr><td><b><u>Monthly</u></b></td><td><b><u>Total</u></b></td><td><b><u>Search</u></b></td></tr>";
-				$endOfCol = 0;
-			endif;
-			$endOfCol++;
-			
-			if ( strtotime($end) < strtotime("Mar 23, 2021") ) $search = "";
-		 	echo "<tr class='coloration' data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".$views."</td><td class='search'>".$search."</td></tr>";
-			if ( $views < 1 ) : $cutoff++; if ( $cutoff == 5) : break; endif; endif;
- 			$count = $views = $search = 0;	
+		 	echo "<tr class='coloration trends users active' data-count='".$views."'><td class='dates'>".$end."</td><td class='visits'><b>".number_format($views)."</b></td></tr>";
+			echo "<tr class='coloration trends search' data-count='".$search."'><td class='dates'>".$end."</td><td class='visits'><b>".$search."</b></td></tr>";
+			echo "<tr class='coloration trends pageviews' data-count='".$pageperuser."'><td class='dates'>".$end."</td><td class='visits'><b>".$pageperuser."</b></td></tr>";
+			echo "<tr class='coloration trends engagement' data-count='".$engagement."'><td class='dates'>".$end."</td><td class='visits'><b>".$engagement."%</b></td></tr>";
+ 			$count = $views = $search = $pageviews = $sessions = $engaged = $engagement = 0;
+			if ( $days == $maxDays ) : $days = $minDays; else: $days = $maxDays; endif;
 		endif;	
 	} 		
 	echo "</table>";
 }
 
-function battleplan_admin_quarterly_stats() {
-	$siteHeader = getID('site-header');
-	$today = strtotime(date("F j, Y"));
-	$getViews = readMeta($siteHeader, 'log-views');
-	$getViews = maybe_unserialize( $getViews );
-	
- 	$count = $views = $search = $cutoff = $endOfCol = 0;		
-	echo "<table class='trends-quarterly'><tr><td><b><u>Quarterly</u></b></td><td><b><u>Total</u></b></td><td><b><u>Search</u></b></td></tr>";		
-	for ($x = 0; $x < 1095; $x++) {		
-		$dailyTime = date("M j, Y", strtotime($getViews[$x]['date'])); 
-		$dailyViews = intval($getViews[$x]['views']); 
-		$dailySearch = intval($getViews[$x]['search']); 
-		$count++;
-		$views = $views + $dailyViews;		
-		$search = $search + $dailySearch;
-		if ( $count == 1 ) $end = $dailyTime;
-		if ( $count == 90 && $dailyTime != "Jan 1, 1970" ) :
-			if ( $endOfCol == 4 ) :
-				echo "</table><table class='trends-quarterly'><tr><td><b><u>Quarterly</u></b></td><td><b><u>Total</u></b></td><td><b><u>Search</u></b></td></tr>";
-				$endOfCol = 0;
-			endif;
-			
-			$endOfCol++;
-			if ( strtotime($end) < strtotime("Mar 23, 2021") ) $search = "";
-		 	echo "<tr class='coloration' data-count='".$views."'><td class='dates'><b>".$end."</b></td><td class='visits'>".$views."</td><td class='search'>".$search."</td></tr>";
-			if ( $views < 1 ) : $cutoff++; if ( $cutoff == 2) : break; endif; endif;
-			$count = $views = $search = 0;	
-		endif;	
-	} 		
-	echo "</table>";
+function battleplan_admin_weekly_stats() {
+	echo '<div class="trend-buttons">';
+		echo do_shortcode('[btn size="1/4" class="users active"]Visitors[/btn]');
+		echo do_shortcode('[btn size="1/4" class="search"]Search[/btn]');
+		echo do_shortcode('[btn size="1/4" class="pageviews"]Pageviews[/btn]');
+		echo do_shortcode('[btn size="1/4" class="engagement"]Engagement[/btn]');
+	echo '</div>';
+
+	battleplan_admin_stats('weekly',7,7,52);
 }
+	
+function battleplan_admin_monthly_stats() { battleplan_admin_stats('monthly',30,31,12); }
+function battleplan_admin_quarterly_stats() { battleplan_admin_stats('quarterly',91,92,4); }
 
 // Add custom meta boxes to posts & pages
 add_action("add_meta_boxes", "battleplan_add_custom_meta_boxes");
 function battleplan_add_custom_meta_boxes() {
-    add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", "page", "side", "default", null);
-    add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", "post", "side", "default", null);
-	add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", "products", "side", "default", null);	
-	add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", "testimonials", "side", "default", null);
+	$getCPT = getCPT();
+	foreach ( $getCPT as $postType ) :
+		add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", $postType, "side", "default", null);
+    endforeach;
 }
 
 // Set up Page Stats widget on posts & pages
@@ -2250,7 +2195,12 @@ function battleplan_addWidgetPicViewsToImg( $post_ID ) {
 }
 
 // Force clear all views for posts/pages
-function battleplan_clearViewFields() {
+function battleplan_force_run_chron() {
+	update_option('bp_chrons_last_run', 0);	
+	header("Location: /wp-admin/index.php");
+	exit();
+	/*
+
 	// clear image views
 	$image_query = new WP_Query( array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>-1 ));
 	if( $image_query->have_posts() ) : while ($image_query->have_posts() ) : $image_query->the_post();
@@ -2316,6 +2266,7 @@ function battleplan_clearViewFields() {
 		
 		update_option( 'site_initialized', time() ); 
 	}	
+	*/
 }  
 
 /*--------------------------------------------------------------

@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 11.6
+Version: 12.0
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1027,13 +1027,6 @@ section.section-default .flex {
 }
 */
 
-.flex .col,
-.flex.valign-start .col,
-.flex .col.valign-start,
-.flex .col-inner div.valign-start {
-	align-self:									start;
-}
-
 .top-strip .flex .col,
 .divider-strip .flex .col,
 .logo-strip .flex .col,
@@ -1044,12 +1037,43 @@ section.section-default .flex {
 	align-self:									center;
 }
 
+.top-strip .flex.valign-start .col,
+.divider-strip .flex.valign-start .col,
+.logo-strip .flex.valign-start .col,
+.site-info .flex.valign-start .col,
+.top-strip .flex .col.valign-start,
+.divider-strip .flex .col.valign-start,
+.logo-strip .flex .col.valign-start,
+.site-info .flex .col.valign-start,
+.flex .col,
+.flex.valign-start .col,
+.flex .col.valign-start,
+.flex .col-inner div.valign-start {
+	align-self:									start;
+}
+
+.top-strip .flex.valign-stretch .col,
+.divider-strip .flex.valign-stretch .col,
+.logo-strip .flex.valign-stretch .col,
+.site-info .flex.valign-stretch .col,
+.top-strip .flex .col.valign-stretch,
+.divider-strip .flex .col.valign-stretch,
+.logo-strip .flex .col.valign-stretch,
+.site-info .flex .col.valign-stretch,
 .flex.valign-stretch .col,
 .flex .col.valign-stretch,
 .flex .col-inner div.valign-stretch {
 	align-self:									stretch;
 }
 
+.top-strip .flex.valign-end .col,
+.divider-strip .flex.valign-end .col,
+.logo-strip .flex.valign-end .col,
+.site-info .flex.valign-end .col,
+.top-strip .flex .col.valign-end,
+.divider-strip .flex .col.valign-end,
+.logo-strip .flex .col.valign-end,
+.site-info .flex .col.valign-end,
 .flex.valign-end .col,
 .flex .col.valign-end,
 .flex .col-inner div.valign-end {
@@ -1105,6 +1129,7 @@ section.section-default .flex {
 .sidebar-right.sidebar-line .flex.grid-content {
 	grid-template-columns: 						[column-1-start] 1fr [column-1-end column-2-start] minmax(0, 330px) [column-2-end];
 }
+
 
 
 
@@ -2181,8 +2206,8 @@ div[class*="restrict-"] {
 	background:									rgba(0,0,0,0.3);
 	color:										rgba(0,0,0,0.6);
 	border:										2px solid #000000;
-	padding:									3px 10px;
-	font-size:									20px;
+	padding:									2px 8px;
+	font-size:									16px;
 	z-index:									1000;
 	transition:									all 0.2s ease;
 }
@@ -2212,7 +2237,7 @@ div[class*="restrict-"] {
 	top:										50%;
 	left:										50%;
 	transform: 									translate(-50%, -50%);
-	padding:									2em;
+	padding:									calc(2em + 16px) 2em 2em;
 }
 
 .screen-mobile .section.section-lock[data-pos="modal"] > .flex,
@@ -2221,16 +2246,10 @@ div[class*="restrict-"] {
 	transform: 									translate(-50%, calc(-50% - 21px));
 }
 
-.screen-mobile .section.section-lock[data-pos="modal"] > .flex.shrink,
-.screen-mobile .section.section-lock[data-pos="center"] > .flex.shrink {
-	transform: 									scale(0.85) translate(-50%, calc(-50% - 21px));
-	transform-origin: 							0% 0%;
-}
-
-.screen-mobile .section.section-lock[data-pos="modal"] > .flex.shrink-more,
-.screen-mobile .section.section-lock[data-pos="center"] > .flex.shrink-more {
-	transform: 									scale(0.75) translate(-50%, calc(-50% - 21px));
-	transform-origin: 							0% 0%;
+.screen-mobile .section.section-lock[data-pos="modal"] > .flex.scrollable,
+.screen-mobile .section.section-lock[data-pos="center"] > .flex.scrollable {
+	top:										calc(42px + 1em);
+	transform: 									translate(-50%, 0);
 }
 
 /* Style Lock */
@@ -2257,8 +2276,6 @@ div[class*="restrict-"] {
 .section.style-lock[data-pos="bottom"] {
 	border-bottom:								none;
 	border-left:								none;
-
-
 	border-right:								none;
 	transform: 									translateY(100vh);
 }
@@ -2287,6 +2304,7 @@ div[class*="restrict-"] {
 	pointer-events: 							auto;
 	transform: 									translateY(0);
 	transition: 								opacity 0.6s ease;
+	overflow-y: 								scroll;
 }
 
 body.locked {
@@ -2911,6 +2929,10 @@ body.locked {
 	border-bottom:								1px solid rgba(255,255,255,0.3);
 }
 
+#mobile-navigation li {
+	margin: 									0;
+}
+
 #mobile-navigation li a {
 	white-space: 								nowrap;
 	overflow: 									hidden;
@@ -2920,11 +2942,13 @@ body.locked {
 	border: 									none;
 	border-top: 								1px solid rgba(255,255,255,0.3);
 	border-bottom: 								1px solid rgba(0,0,0,0.4);
+	border-radius: 								0;
 	margin: 									0;
 	padding:									8px 25px;
 	font-size:									90%;
 	transform: 									rotate(0) translate(0,0) scale(1);
 	line-height: 								normal;
+	transition: 								all 0.1s ease;
 }
 
 .mobile-left #mobile-navigation li a {
@@ -2951,6 +2975,7 @@ body.locked {
 	border-top: 								1px solid rgba(0,0,0,0.4);
 	border-bottom: 								1px solid rgba(255,255,255,0.3);
 	transform: 									rotate(0) translate(0,0) scale(1);
+	transition: 								all 0.1s ease;
 }
 
 #mobile-navigation li.menu-item-has-children > a::after,
@@ -5082,12 +5107,12 @@ html.error503 h3 {
 		height:										auto !important;
 	}	
 	
-	.sidebar-shift.screen-mobile #secondary {
+	.move-sidebar.screen-mobile #secondary {
 		padding:									0 3%;
 		margin-bottom:								2em;
 	}
 	
-	.sidebar-shift.screen-mobile #secondary .sidebar-inner {
+	.move-sidebar.screen-mobile #secondary .sidebar-inner {
 		margin-top:									0 !important;
 	}
 	
@@ -5175,6 +5200,7 @@ html.error503 h3 {
 	}
 
 	/*.content-sidebar-box #primary,    /*changed on 2/8/22 for Lovejoy HVAC -- not sure why we need this space, since there is padding on #main-content */
+	.no-box #secondary .sidebar-inner, 
 	.sidebar-box #secondary .sidebar-inner,
 	.content-sidebar-box #secondary .sidebar-inner,
 	.sidebar-line #secondary .sidebar-inner {
@@ -5516,6 +5542,7 @@ html.error503 h3 {
 	}
 
 	/*.content-sidebar-box #primary,    /*changed on 2/8/22 for Lovejoy HVAC -- not sure why we need this space, since there is padding on #main-content */
+	.no-box #secondary .sidebar-inner,
 	.sidebar-box #secondary .sidebar-inner,
 	.content-sidebar-box #secondary .sidebar-inner,
 	.sidebar-line #secondary .sidebar-inner {

@@ -21,20 +21,24 @@ function battleplan_getBizInfo($atts, $content = null ) {
 	
 	if ( $data == "area" ) return $GLOBALS['customer_info']['area-before'].$GLOBALS['customer_info']['area'].$GLOBALS['customer_info']['area-after'];
 	
-	if ( $data == "area-phone" || $data == "phone-link" || strpos($data, 'phone-alt') !== false || $data == "mm-bar-phone" ) :
+	if ( strpos($data, 'phone') !== false ) :
 		$phoneFull = $GLOBALS['customer_info']['area'].'-'.$GLOBALS['customer_info']['phone'];
 		$phoneFormat = $GLOBALS['customer_info'][$data];	
-		if ( $data == "mm-bar-phone" ) :
+		if ( strpos($data, 'mm-bar-phone') !== false ) :
 			$phoneFormat = '<div class="mm-bar-btn mm-bar-phone call-btn" aria-hidden="true"></div><span class="sr-only">Call Us</span>';	
-		elseif ( $data == "area-phone" || $data == "phone-link" ) :
+		else :
 			$phoneFormat = $GLOBALS['customer_info']['area-before'].$GLOBALS['customer_info']['area'].$GLOBALS['customer_info']['area-after'].$GLOBALS['customer_info']['phone'];	
-		endif;		
-		return '<a href="#" class="phone-link track-clicks" data-action="phone call" data-url="tel:1-'.$phoneFull.'">'.$phoneFormat.'</a>';
+		endif;
+		if  ( strpos($data, '-notrack') !== false ):
+			return '<a class="phone-link" href="tel:1-'.$phoneFull.'">'.$phoneFormat.'</a>';
+		else:
+			return '<a href="#" class="phone-link track-clicks" data-action="phone call" data-url="tel:1-'.$phoneFull.'">'.$phoneFormat.'</a>';
+		endif;
 	endif;
-			
+
 	return $GLOBALS['customer_info'][$data];
 }
-
+ 
 // Returns current year
 add_shortcode( 'get-year', 'battleplan_getYear' );
 function battleplan_getYear() { return date("Y"); }

@@ -219,7 +219,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				if ( $(this).height() <= checkHeights() ) { $(this).removeClass('hide-widget'); }				
 			});
 			
-			if ( !$('.widget:not(.hide-widget)').length ) { $('widget:first-of-type').removeClass('hide-widget'); } // guarantees at least 1 visible widget
+			if ( !$('.widget:not(.hide-widget)').length ) { $('.widget:first-of-type').removeClass('hide-widget'); } // guarantees at least 1 visible widget
 			
 			checkHeights();
 			labelWidgets();

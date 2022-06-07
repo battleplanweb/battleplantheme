@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "atomic-box-306317",
+  "private_key_id": "0b19b6a3a6c1995d7ba28341dd9301221679ff59",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDOtjamTwrdS8H8\nnTqFtpKzZsGzycj5biZGb2G1rT9Hy0G3uET/gSWfOsYfsBitQejU39UW94yDKUfX\npD48DMRqtVQRhM6MrLN3yCG6dPUM72GgaqckrwSqBkgxNOu4JoGJU+r7wt1lArLH\n+25TozV1GuJQ2kTl08XI+bKGQpF1RH21M5pn7pdE0lZQKX3QvS4p/vDuxZkny5+u\ne47ZCR9gwEY4B7hIxOTgW4KsY06gy5owTn8Q5oedUlHyV0VvqJzRVc2lC5tU8IC/\nTShD1uMakgHVZINu0Y4lZBLXOCVczN4elO5DteY6Wq3WSQNDAMmvEyjIOF/J8sey\n+veqptNPAgMBAAECggEACRd9ltoCJdKXsScvNENf93ENEv3Mj5/3IgDzIL0CfANm\nHBEIQ96ny3WX0jv6EeDEv1wq8Kwpq3ks1kC8lgKPvwvDq1OWjBxqdlnAlgVf49ZB\nin82Y8go4duN4FAuD/btmp8sxi7/ctpoB6C47QfQKZrpmlnHTv5+BAVrgzk5UZmB\n236HU8bgejLr8ClEsVRItZ5cdWYChllhjMSzT29J02XiuZ3YAhv70vwceSU3V4P0\nx5gMXKlyGUU/nlNK6NmsAQ50OlSWIKBarlpJh6S+yNaU5hqHhT67hh+KcLX+rHsP\nJm0k76M25Jp4kpqCByyD44HWQE/FaxYox8Smqbte3QKBgQDnGuNV4gcP3eMbacq7\n4lDV7V4yodyp9dnkY12G5JEfcu7UpZ2/jnZld8fgstPrrYhHMOk3+6uvDf5cwb7n\ntJKP3JuKKOZKdSIRaXn+BdfeLKucC/FIUMPNIRvNajNa09AxWMqFE9Zc79+MyP2a\nyJJPbxW5ajX32wHrH9hcEmwrGwKBgQDk+qPa/M4mi8zkY8xon1agcxAx/8eXo6G4\nnaVI0emFwHYAP3UmmmyFoMzgKirxB07X8cc9sdJ4C/HJRA2ITamrMsQvbsBt8PLd\nZitG2IEXLDaeNdnuRVSaFefcQBXxK6AIVr/xfPLORPyZ3667gEoPJBVCD11UL3Sr\njpykLOWn3QKBgQC4ixsQIJ69B9VrtY3jfHRKb/KxgdlAiwbEvqgXqHtOXqvieKHA\nLlXS7tRYVNSvNPJGzwLc5oYREp6UmU4FnocOg/5cVA6ZVHGw78Yvl6DqVEdxI4Q3\n1+6S5iZaYLzDgbKVRS7rF40sx4t+05zXteRHtA/n8K1Jz8P3aoWN+FQSEwKBgQDV\nrQLdJw6lL85azrqAYziub9GMJvk1i5AtvIbyBljZ5Lj5ED6dcHuW03B8Oz1pQP2V\nTF02OEuElPjjbWsHaBnN1Yj4Dmzp63BnpKD78qu8WRj62Jvu2qnRRGHiybbwIFqt\njW5+xq+6RuxGF1NyS4xQxsZDqBzao5JHScTo+7CvzQKBgHVBWzgVNMZz6OXO9tCB\nKO7U9EWPQGHTQfnJCP35rqTPTO5QgVUGHHDXYC4gHdJ6xhxZFnewhLI82qcB0zlZ\ngh0po9pTxvgZd5539d4aXYvX6rawg9OdvzeucBJYTtf3S4BbzuNaF4q7ZkK1Vs01\nfyND8EWlvDYnYJ1y87a2tiIX\n-----END PRIVATE KEY-----\n",
+  "client_email": "bp-service-account@atomic-box-306317.iam.gserviceaccount.com",
+  "client_id": "118240485124163673341",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/bp-service-account%40atomic-box-306317.iam.gserviceaccount.com"
+}

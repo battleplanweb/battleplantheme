@@ -3,6 +3,12 @@
 
 body {
 	background: 								#ffffff;
+	font-family: 								Arial;
+	font-size: 									14px;
+}
+
+.metabox-holder h2.hndle {
+	font-size: 									18px;
 }
 
 .user-admin-color-wrap {
@@ -74,28 +80,67 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 }
 
 #dashboard-widgets #postbox-container-2 {
-	width:										34%;
+	width:										30%;
 }
 
 #dashboard-widgets #postbox-container-3 {
-	width:										48%;
+	width:										52%;
+}
+
+#dashboard-widgets #postbox-container-1 td {
+	display: 									inline-block;
+	width:										80px;
+	text-align: 								right;
+}
+
+#dashboard-widgets #postbox-container-1 td.label {
+	width:										80px;
+	font-weight: 								bold;
+	text-align: 								left;
+	
 }
 
 #dashboard-widgets #postbox-container-3 .inside {
-	column-count: 								3;
+	column-count: 								4; 
 }
 
 #dashboard-widgets #postbox-container-3 table:not(:last-of-type) {
 	margin-right:								35px;
 }
 
-#dashboard-widgets #postbox-container-3 td.dates {
-	min-width:									100px;
+#dashboard-widgets #postbox-container-3 tr {
+	display: 									block;
+	width: 										160px;
 }
 
-#dashboard-widgets #postbox-container-3 td.visits,
-#dashboard-widgets #postbox-container-3 td.search {
-	min-width:									55px;
+#dashboard-widgets #postbox-container-3 tr.trends {
+	display: 									none;
+}
+
+#dashboard-widgets #postbox-container-3 tr.trends.active {
+	display: 									block;
+}
+
+#dashboard-widgets #postbox-container-3 .trends tbody tr:first-of-type {
+	background: 								rgba(0,0,0,0.1);
+	padding: 									3px 10px;
+	margin: 									0 0 5px -10px;
+}
+
+#dashboard-widgets #postbox-container-3 .trends tbody tr:first-of-type td {
+	font-size: 									15px;
+	font-weight: 								bold;
+}
+
+#dashboard-widgets #postbox-container-3 td.dates {
+	display: 									inline-block;
+	width:										95px;
+}
+
+#dashboard-widgets #postbox-container-3 td.visits {
+	display: 									inline-block;
+	text-align: 								center;
+	width:										60px;
 }
 
 #dashboard-widgets #postbox-container-4 { 
@@ -106,16 +151,21 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
     background: 								#f6f6f6;
     border: 									1px solid #e5e5e5;
     box-shadow: 								2px 2px 0 0 #e5e5e5;
-    max-height: 								233px;
+    max-height: 								250px;
     overflow: 									hidden;
 }
 
-#dashboard-widgets #battleplan_trends_stats.postbox {
-    max-height: 								743px;
+#dashboard-widgets #battleplan_tech_stats.postbox {
+	max-height: 								780px;
+}
+
+#dashboard-widgets #battleplan_pages_stats.postbox {
+    max-height: 								680px;
 }
 
 #dashboard-widgets .postbox.active,
-#dashboard-widgets #battleplan_trends_stats.postbox.active {
+#dashboard-widgets #battleplan_tech_stats.postbox.active,
+#dashboard-widgets #battleplan_pages_stats.postbox.active {
     background: 								#ffffff;
 	border: 									1px solid #c6c6c6;
     box-shadow: 								2px 2px 0 0 #c6c6c6;
@@ -127,28 +177,58 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	column-count:								2;
 }
 
-ul span.label {
+ul div.label {
 	display:									inline-block;
 	width:										210px;
 	overflow:									clip;
 }
 
-ul span.value {
+ul div.value {
 	margin-right:								20px;
 }
 
-#battleplan_pageview_stats ul span.label {
-	width: 										130px;
+#dashboard-widgets #postbox-container-1 div.label,
+#dashboard-widgets #postbox-container-2 div.label,
+#dashboard-widgets #postbox-container-1 div.label-half,
+#dashboard-widgets #postbox-container-2 div.label-half {
+	display: 									inline-block;
+	width: 										calc(100% - 70px);
 }
 
-#battleplan_pages_stats ul span.label {
-	width: 										240px;
+#dashboard-widgets #postbox-container-1 div.label-half,
+#dashboard-widgets #postbox-container-2 div.label-half {
+	width: 										calc(50% - 35px);
 }
 
-#battleplan_pages_stats ul span.value {
+#dashboard-widgets #postbox-container-1 li.sub-label,
+#dashboard-widgets #postbox-container-2 li.sub-label {
+	font-weight: 							 	bold;
+}
+
+#dashboard-widgets #postbox-container-1 li.sub-label,
+#dashboard-widgets #postbox-container-2 li.sub-label {
+	background: 								rgba(0,0,0,0.1);
+	padding: 									3px 10px;
+	margin-left: 								-12px;
+	width: 										105%;
+	font-size: 									15px;
+}
+
+#dashboard-widgets #postbox-container-1 #battleplan_tech_stats ul {
+	margin-bottom: 								25px;
+}
+
+#dashboard-widgets #postbox-container-1 div.value,
+#dashboard-widgets #postbox-container-2 div.value {
 	display: 									inline-block;
 	width: 										50px;
+	text-align: 								right;
 }
+
+#dashboard-widgets #postbox-container-2 div.value {
+	margin-right: 								15px;
+}
+
 
 #battleplan_site_stats tr.coloration td,
 #battleplan_trends_stats table tr.coloration td {
@@ -158,6 +238,21 @@ ul span.value {
 
 #battleplan_click_stats td {
 	width:										75px;
+}
+
+.trend-buttons {
+	margin-bottom: 								15px;
+}
+
+.trend-buttons .block-button {
+	display: 									inline-block;
+	margin-left: 								15px;
+}
+
+.trend-buttons .block-button .button.active {
+  	color: 										#f6f7f7;
+  	border-color: 								#2271b1;
+  	background: 								#2271b1;
 }
 
 /* Page Attributes meta box */
@@ -171,6 +266,10 @@ label.post-attributes-label {
 
 input[type="checkbox"], input[type="radio"] {
 	margin-right:								0.5em;
+}
+
+#page-stats-box td {
+	width: 										120px;
 }
 
 /* Pages, Posts, etc. */

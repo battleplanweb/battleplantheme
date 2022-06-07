@@ -16,7 +16,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '11.6' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '12.0' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -69,16 +69,19 @@ function get_the_slug() {
 
 // Get ID from page, post or custom post type by entering slug or title
 function getID($slug) { 
-	$getCPT = get_post_types(); 
-	$id = false;
-	foreach ($getCPT as $postType) :
-		if ( get_page_by_path($slug, OBJECT, $postType) ) : $id = get_page_by_path($slug, OBJECT, $postType)->ID; break; endif;
-	endforeach;	
-	if ( $id == false ) :
+	$getCPT = getCPT();
+	$id = url_to_postid($slug);	
+	
+	if ( $id == 0 ) :
+		foreach ($getCPT as $postType) :
+			if ( get_page_by_path($slug, OBJECT, $postType) ) : $id = get_page_by_path($slug, OBJECT, $postType)->ID; break; endif;
+		endforeach;	
+
 		foreach ($getCPT as $postType) :
 			if ( get_page_by_title($slug, OBJECT, $postType) ) : $id = get_page_by_title($slug, OBJECT, $postType)->ID; break; endif;
 		endforeach;	
 	endif;
+	
 	return $id;
 } 
 
@@ -144,6 +147,28 @@ function updateMeta($id, $key, $value) {
 // Delete custom field
 function deleteMeta($id, $key) {
 	delete_post_meta( $id, $key );
+}
+
+function getCPT() {
+	$getCPT = get_post_types();  
+	$removeCPT = array('acf-field', 'acf-field-group', 'asp_coupons', 'asp-products', 'attachment', 'customize_changeset', 'custom_css', 'elements', 'nav_menu_item', 'oembed_cache', 'revision', 'stripe_order', 'user_request', 'wpcf7_contact_form', 'wp_block', 'wp_global_styles', 'wphb_minify_group', 'wp_navigation', 'wp_template', 'wp_template_part');
+	foreach ($removeCPT as $remove) :
+		unset($getCPT[$remove]);
+	endforeach;
+		
+	$moveCPT = 'optimized';
+	unset($getCPT[$moveCPT]);
+	array_unshift($getCPT, $moveCPT);
+	
+	$moveCPT = 'page';
+	unset($getCPT[$moveCPT]);
+	array_unshift($getCPT, $moveCPT);
+	
+	$moveCPT = 'universal';
+	unset($getCPT[$moveCPT]);
+	$getCPT[] = $moveCPT;
+
+	return $getCPT;
 }
 
 // Convert time into seconds
@@ -442,7 +467,7 @@ function battleplan_breadcrumbs() {
     $link_before      = '<span typeof="v:Breadcrumb">';
     $link_after       = '</span>';
     $link_attr        = ' rel="v:url" property="v:title"';
-    $link             = $link_before . '<a' . $link_attr . ' href="%1$s">%2$s</a>' . $link_after;
+    $link             = $link_before.'<a'.$link_attr.' href="%1$s">%2$s</a>'.$link_after;
     $delimiter        = ' &raquo; ';              // Delimiter between crumbs
     $before           = '<span class="current">'; // Tag before the current crumb
     $after            = '</span>';                // Tag after the current crumb
@@ -459,7 +484,7 @@ function battleplan_breadcrumbs() {
         $parent         = $post_object->post_parent;
         $post_type      = $post_object->post_type;
         $post_id        = $post_object->ID;
-        $post_link      = $before . $title . $after;
+        $post_link      = $before.$title.$after;
         $parent_string  = '';
         $post_type_link = '';
 
@@ -468,8 +493,8 @@ function battleplan_breadcrumbs() {
             if ( $categories ) :
                 $category  = $categories[0];
                 $category_links = get_category_parents( $category, true, $delimiter );
-                $category_links = str_replace( '<a',   $link_before . '<a' . $link_attr, $category_links );
-                $category_links = str_replace( '</a>', '</a>' . $link_after,             $category_links );
+                $category_links = str_replace( '<a',   $link_before.'<a'.$link_attr, $category_links );
+                $category_links = str_replace( '</a>', '</a>'.$link_after,             $category_links );
             endif;
        endif;
 
@@ -491,14 +516,14 @@ function battleplan_breadcrumbs() {
         endif;
 
         if ( $parent_string ) :
-            $breadcrumb_trail = $parent_string . $delimiter . $post_link;
+            $breadcrumb_trail = $parent_string.$delimiter.$post_link;
         else :
             $breadcrumb_trail = $post_link;
         endif;
 
-        if ( $post_type_link ) : $breadcrumb_trail = $post_type_link . $delimiter . $breadcrumb_trail; endif;
+        if ( $post_type_link ) : $breadcrumb_trail = $post_type_link.$delimiter.$breadcrumb_trail; endif;
 
-        if ( $category_links ) : $breadcrumb_trail = $category_links . $breadcrumb_trail; endif;
+        if ( $category_links ) : $breadcrumb_trail = $category_links.$breadcrumb_trail; endif;
     endif;
 
     if( is_archive() ) :
@@ -509,7 +534,7 @@ function battleplan_breadcrumbs() {
             $term_name          = $term_object->name;
             $term_parent        = $term_object->parent;
             $taxonomy_object    = get_taxonomy( $taxonomy );
-            $today_term_link  = $before . $taxonomy_object->labels->name . ': ' . $term_name . $after;
+            $today_term_link  = $before.$taxonomy_object->labels->name.': '.$term_name.$after;
             $parent_term_string = '';
 
             if ( $term_parent !== 0 ) :
@@ -524,13 +549,13 @@ function battleplan_breadcrumbs() {
             endif;
 
             if ( $parent_term_string ) :
-                $breadcrumb_trail = $parent_term_string . $delimiter . $today_term_link;
+                $breadcrumb_trail = $parent_term_string.$delimiter.$today_term_link;
             else :
                 $breadcrumb_trail = $today_term_link;
             endif;
 
       	elseif ( is_author() ) :
-            $breadcrumb_trail = __( 'Author archive for ') .  $before . $queried_object->data->display_name . $after;
+            $breadcrumb_trail = __( 'Author archive for ').$before.$queried_object->data->display_name.$after;
 
         elseif ( is_date() ) :
             $year     = $wp_the_query->query_vars['year'];
@@ -542,42 +567,42 @@ function battleplan_breadcrumbs() {
                 $month_name = $date_time->format( 'F' );
             endif;
 
-            if ( is_year() ) : $breadcrumb_trail = $before . $year . $after; 
+            if ( is_year() ) : $breadcrumb_trail = $before.$year.$after; 
 
             elseif ( is_month() ) :
                 $year_link        = sprintf( $link, esc_url( get_year_link( $year ) ), $year );
-                $breadcrumb_trail = $year_link . $delimiter . $before . $month_name . $after;
+                $breadcrumb_trail = $year_link.$delimiter.$before.$month_name.$after;
 
             elseif ( is_day() ) :
                 $year_link        = sprintf( $link, esc_url( get_year_link( $year ) ),             $year       );
                 $month_link       = sprintf( $link, esc_url( get_month_link( $year, $monthnum ) ), $month_name );
-                $breadcrumb_trail = $year_link . $delimiter . $month_link . $delimiter . $before . $day . $after;
+                $breadcrumb_trail = $year_link.$delimiter.$month_link.$delimiter.$before.$day.$after;
             endif;
 
         elseif ( is_post_type_archive() ) :
             $post_type        = $wp_the_query->query_vars['post_type'];
             $post_type_object = get_post_type_object( $post_type );
-            $breadcrumb_trail = $before . $post_type_object->labels->name . $after;
+            $breadcrumb_trail = $before.$post_type_object->labels->name.$after;
         endif;
     endif;   
 
-    if ( is_search() ) : $breadcrumb_trail = __( 'Search query for: ' ) . $before . get_search_query() . $after; endif;
+    if ( is_search() ) : $breadcrumb_trail = __( 'Search query for: ' ).$before.get_search_query().$after; endif;
 
-    if ( is_404() ) : $breadcrumb_trail = $before . __( 'Error 404' ) . $after; endif;
+    if ( is_404() ) : $breadcrumb_trail = $before.__( 'Error 404' ).$after; endif;
 
     if ( is_paged() ) :
         $today_page = get_query_var( 'paged' ) ? get_query_var( 'paged' ) : get_query_var( 'page' );
-        $page_addon   = $before . sprintf( __( ' ( Page %s )' ), number_format_i18n( $today_page ) ) . $after;
+        $page_addon   = $before.sprintf( __( ' ( Page %s )' ), number_format_i18n( $today_page ) ).$after;
     endif;
 
     $breadcrumb_output_link = '<div class="breadcrumbs">';
     if ( is_home() || is_front_page() ) :
         if ( is_paged() ) :
-            $breadcrumb_output_link .= '<a href="' . $home_link . '">' . $home_text . '</a>';
+            $breadcrumb_output_link .= '<a href="'.$home_link.'">'.$home_text.'</a>';
             $breadcrumb_output_link .= $page_addon;
         endif;
     else :
-        $breadcrumb_output_link .= '<a href="' . $home_link . '" rel="v:url" property="v:title">' . $home_text . '</a>';
+        $breadcrumb_output_link .= '<a href="'.$home_link.'" rel="v:url" property="v:title">'.$home_text.'</a>';
         $breadcrumb_output_link .= $delimiter;
         $breadcrumb_output_link .= $breadcrumb_trail;
         $breadcrumb_output_link .= $page_addon;
@@ -698,7 +723,7 @@ function battleplan_wpautop_without_br( $content ) {
 add_action( 'after_setup_theme', 'battleplan_setup' );
 if ( ! function_exists( 'battleplan_setup' ) ) :
 	function battleplan_setup() {
-		load_theme_textdomain( 'battleplan', get_template_directory() . '/languages' );
+		load_theme_textdomain( 'battleplan', get_template_directory().'/languages' );
 		add_theme_support( 'automatic-feed-links' );
 		add_theme_support( 'title-tag' );
 		add_theme_support( 'post-thumbnails' );
@@ -780,10 +805,20 @@ function battleplan_add_nonce_to_localized_scripts( $tag, $handle ) {
 	$nonce = $GLOBALS['nonce'];
     $attr = "nonce='".$nonce."' ";
     if ( ! is_admin() ) {
-        $tag = str_replace( '<script ', '<script ' . $attr, $tag );
+        $tag = str_replace( '<script ', '<script '.$attr, $tag );
     }
     return $tag;
 }
+
+// remove Gutenburg crap
+add_action('after_setup_theme', function() {
+  	remove_action( 'wp_body_open', 'wp_global_styles_render_svg_filters' );
+  	remove_action('wp_enqueue_scripts', 'wp_enqueue_global_styles');
+	remove_action('wp_footer', 'wp_enqueue_global_styles', 1);
+	remove_filter('render_block', 'wp_render_duotone_support');
+  	remove_filter('render_block', 'wp_restore_group_inner_container');
+  	remove_filter('render_block', 'wp_render_layout_support_flag');
+});
 
 // Dequeue unneccesary styles & scripts
 add_action( 'wp_print_styles', 'battleplan_dequeue_unwanted_stuff', 9998 );
@@ -887,18 +922,19 @@ function battleplan_login_enqueue() {
 }
 
 // Load various includes
-if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { require_once get_template_directory() . '/includes/includes-events.php'; } 
-if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { require_once get_template_directory() . '/includes/includes-woocommerce.php'; } 
-if ( $GLOBALS['customer_info']['site-type'] == 'hvac' ) { require_once get_template_directory() . '/includes/includes-hvac.php'; } 
-if ( $GLOBALS['customer_info']['site-type'] == 'pedigree' ) { require_once get_template_directory() . '/includes/includes-pedigree.php'; } 
-if ( $GLOBALS['customer_info']['site-type'] == 'profile' || $GLOBALS['customer_info']['site-type'] == 'profiles' ) { require_once get_template_directory() . '/includes/includes-user-profiles.php'; } 
-require_once get_template_directory() . '/functions-shortcodes.php';
-require_once get_template_directory() . '/functions-cpt.php';
-require_once get_template_directory() . '/functions-ajax.php';
-require_once get_template_directory() . '/functions-grid.php';
-require_once get_template_directory() . '/functions-public.php';
-require_once get_stylesheet_directory() . '/functions-site.php';
-if ( is_admin() ) { require_once get_template_directory() . '/functions-admin.php'; } 
+if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { require_once get_template_directory().'/includes/includes-events.php'; } 
+if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { require_once get_template_directory().'/includes/includes-woocommerce.php'; } 
+if ( $GLOBALS['customer_info']['site-type'] == 'hvac' ) { require_once get_template_directory().'/includes/includes-hvac.php'; } 
+if ( $GLOBALS['customer_info']['site-type'] == 'pedigree' ) { require_once get_template_directory().'/includes/includes-pedigree.php'; } 
+if ( $GLOBALS['customer_info']['site-type'] == 'profile' || $GLOBALS['customer_info']['site-type'] == 'profiles' ) { require_once get_template_directory().'/includes/includes-user-profiles.php'; } 
+require_once get_template_directory().'/functions-shortcodes.php';
+require_once get_template_directory().'/functions-cpt.php';
+require_once get_template_directory().'/functions-ajax.php';
+require_once get_template_directory().'/functions-chron-jobs.php';	
+require_once get_template_directory().'/functions-grid.php';
+require_once get_template_directory().'/functions-public.php';
+require_once get_stylesheet_directory().'/functions-site.php';
+if ( is_admin() ) { require_once get_template_directory().'/functions-admin.php'; } 
 
 // Delay execution of non-essential scripts  --- && $GLOBALS['pagenow'] !== 'index.php'  had to be removed for CHR Services? WTF3
 if ( !is_admin() && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && strpos($GLOBALS['pagenow'], 'wp-cron.php') === false && !is_plugin_active( 'woocommerce/woocommerce.php' ) && strpos($_SERVER['REQUEST_URI'], '.xml') === false ) {
@@ -968,10 +1004,10 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 			$args = apply_filters( 'nav_menu_item_args', $args, $item, $depth );
 
 			$class_names = join( ' ', apply_filters( 'nav_menu_css_class', array_filter( $classes ), $item, $args, $depth ) );
-			$class_names = $class_names ? ' class="' . esc_attr( $class_names ) . '"' : '';
+			$class_names = $class_names ? ' class="'.esc_attr( $class_names ).'"' : '';
 
 			$id = apply_filters( 'nav_menu_item_id', 'menu-item-'. $item->ID, $item, $args, $depth );
-			$id = $id ? ' id="' . esc_attr( $id ) . '"' : '';
+			$id = $id ? ' id="'.esc_attr( $id ).'"' : '';
 
 			$buildOutput = "";		
 			$restrictMax = readMeta( $item->ID, 'bp_menu_restrict_max', true );
@@ -997,7 +1033,7 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 			foreach ( $atts as $attr => $value ) {
 				if ( ! empty( $value ) ) {
 					$value = ( 'href' === $attr ) ? esc_url( $value ) : esc_attr( $value );
-					$attributes .= ' ' . $attr . '="' . $value . '"';
+					$attributes .= ' '.$attr.'="'.$value.'"';
 				}
 			}
 
@@ -1006,7 +1042,7 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 
 			$item_output = $args->before;		
 			$item_output .= '<a'. $attributes .'>';
-			$item_output .= $args->link_before . $title . $args->link_after;
+			$item_output .= $args->link_before.$title.$args->link_after;
 			$item_output .= '</a>';
 			$item_output .= $args->after;
 
@@ -1020,9 +1056,9 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 
 function bp_display_menu_search( $searchText, $mobile='' ) { 
 	$searchForm = '<form role="search" method="get" class="menu-search-form" action="'.home_url( '/' ).'">';
-	$searchForm .= '<label><span class="screen-reader-text">' . _x( 'Search for:', 'label' ) . '</span></label>';
+	$searchForm .= '<label><span class="screen-reader-text">'._x( 'Search for:', 'label' ).'</span></label>';
 	$searchForm .= '<input type="hidden" value="1" name="sentence" />';
-	$searchForm .= '<a class="menu-search-bar"><i class="fa fas fa-search"></i><input type="search" class="search-field" placeholder="' . esc_attr_x( $searchText, 'placeholder' ) . '" value="' . get_search_query() . '" name="s" title="' . esc_attr_x( 'Search for:', 'label' ) . '" /></a>';
+	$searchForm .= '<a class="menu-search-bar"><i class="fa fas fa-search"></i><input type="search" class="search-field" placeholder="'.esc_attr_x( $searchText, 'placeholder' ).'" value="'.get_search_query().'" name="s" title="'.esc_attr_x( 'Search for:', 'label' ).'" /></a>';
 	$searchForm .= '</form>';
 		  
 	return '<div class="menu-search-box'.$mobile.'" role="none">'.$searchForm.'</div>';
@@ -1040,7 +1076,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( "user-message" == $tag->name ) {
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
-		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','Roleplay helps develop','rank your google','TRY IT RIGHT NOW FOR FREE','house‌ ‌inspection‌ ‌process', 'write you an article','write a short article','We want to write','website home page design','updated version of your website','free sample Home Page','completely Free','Dear Receptionist','Franchise Creator','John Romney','get in touch with ownership','rebrand your business', 'Virtual Assistant Services','и','д','б','й','л','ы','З','у','Я');
+		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','Roleplay helps develop','rank your google','TRY IT RIGHT NOW FOR FREE','house‌ ‌inspection‌ ‌process', 'write you an article','write a short article','We want to write','website home page design','updated version of your website','free sample Home Page','completely Free','Dear Receptionist','Franchise Creator','John Romney','get in touch with ownership','rebrand your business', 'what I would suggest for your website', 'Virtual Assistant Services','Would your readers','и','д','б','й','л','ы','З','у','Я');
 		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
 		if ( strtolower($check) == strtolower($name) ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($badwords as $badword) {
@@ -1470,22 +1506,6 @@ function battleplan_getAndDisplayUserRoles() {
 }
 
 /*--------------------------------------------------------------
-# Run Chron Jobs
---------------------------------------------------------------*/
-add_action('init', 'battleplan_doChrons');
-function battleplan_doChrons() {
-	$chronSpan = 3 * (24 * 60 * 60);
-	$bpChrons = get_option( 'bp_chrons_last_run' );	
-	$timePast = time() - $bpChrons;
-		
-	if ( $timePast > $chronSpan || get_option('bp_setup_2022_05_02') != "completed" ) :	
-		require_once get_template_directory().'/functions-chron-jobs.php';	
-	endif;	
-	
-	updateMeta( $siteHeader, 'framework-version', _BP_VERSION );	
-}
-
-/*--------------------------------------------------------------
 # Custom Hooks
 --------------------------------------------------------------*/
 function bp_loader() { do_action('bp_loader'); }
@@ -1532,38 +1552,39 @@ function battleplan_loadFonts() {
 // Install Google Global Site Tags
 add_action('bp_google_tag_manager', 'battleplan_load_tag_manager');
 function battleplan_load_tag_manager() { 
-	$nonce = $GLOBALS['nonce'];
-	foreach ( $GLOBALS['customer_info']['google-tags'] as $gtag=>$value ) :	
-		if ( $gtag == "analytics" ) $mainAcct = $value;
-		if ( $gtag == "analytics" || $gtag == "ads" ) $buildTags .= 'gtag("config", "'.$value.'");';
-		if ( $gtag == "conversions" ) $gtagEvents[] = $value; 
-	endforeach;
-	
-	$buildTagMgr .= '<script nonce="'.$nonce.'" async src="https://www.googletagmanager.com/gtag/js?id='.$mainAcct.'"></script>';
-	$buildTagMgr .= '<script nonce="'.$nonce.'" async>
-		window.dataLayer = window.dataLayer || [];
-		function gtag(){dataLayer.push(arguments);}
-		gtag("js", new Date());';
-	$buildTagMgr .= $buildTags;
-	$buildTagMgr .= '</script>';
-	
-	if ( $gtagEvents ) :
-		foreach ( $gtagEvents as $gtagEvent ) :	
-			$buildEvents .= "gtag('event', 'conversion', { 'send_to': '".$gtagEvent."', 'event_callback': callback });";  
+	if ( _USER_LOGIN != 'battleplanweb' ) :
+		$nonce = $GLOBALS['nonce'];
+		foreach ( $GLOBALS['customer_info']['google-tags'] as $gtag=>$value ) :	
+			if ( $gtag == "analytics" ) $mainAcct = $value;
+			if ( $gtag == "analytics" || $gtag == "ads" ) $buildTags .= 'gtag("config", "'.$value.'");';				
+			if ( strpos($gtag, 'conversions' ) !== false ) :
+				if ( $gtag == "conversions" ) : 
+					$gtagEvents[] = $value; 
+				else:
+					$convert = str_replace( 'conversions-', '', $gtag );
+					$current = str_replace( '/', '', do_shortcode('[get-url var="false"]') );
+					if ( $convert == $current ) : $gtagEvents[] = $value; endif;
+				endif;
+			endif;				
 		endforeach;
-	
-		$buildTagMgr .= '<script nonce="'.$nonce.'">
-			function gtag_report_conversion(url) {
-  			var callback = function () {
-				if (typeof(url) != "undefined") {
-					window.location = url;
-				}
-  			};';
-		$buildTagMgr .= $buildEvents;
-		$buildTagMgr .= 'return false; }</script>';
+
+		$buildTagMgr .= '<script nonce="'.$nonce.'" async src="https://www.googletagmanager.com/gtag/js?id='.$mainAcct.'"></script>';
+		$buildTagMgr .= '<script nonce="'.$nonce.'" async>
+			window.dataLayer = window.dataLayer || [];
+			function gtag(){dataLayer.push(arguments);}
+			gtag("js", new Date());';
+		$buildTagMgr .= $buildTags;
+		$buildTagMgr .= '</script>';
+
+		if ( $gtagEvents ) :
+			foreach ( $gtagEvents as $gtagEvent ) :	
+				$buildEvents .= "gtag('event', 'conversion', { 'send_to': '".$gtagEvent."' });";  
+			endforeach;		
+			$buildTagMgr .= '<script nonce="'.$nonce.'">'.$buildEvents.'</script>';
+		endif;
+
+		if (strpos($mainAcct, 'x') === false) echo $buildTagMgr;	
 	endif;
-	
-	if (strpos($mainAcct, 'x') === false) echo $buildTagMgr;	
 }
 
 // Build and display desktop navigation menu
@@ -1594,7 +1615,7 @@ function battleplan_mobile_menu_bar_scroll() {
 add_action('bp_mobile_menu_bar_phone', 'battleplan_mobile_menu_bar_phone', 20);
 function battleplan_mobile_menu_bar_phone() { 
 	echo do_shortcode('[get-biz info="mm-bar-phone"]');	
-}
+} 
 
 // Display Mobile Menu Bar Item - Contact
 add_action('bp_mobile_menu_bar_contact', 'battleplan_mobile_menu_bar_contact', 20);

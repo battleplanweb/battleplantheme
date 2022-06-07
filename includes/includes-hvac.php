@@ -493,19 +493,21 @@ function battleplan_getTempstarEliteDealer() {
 // Add Financing widget to Sidebar
 add_shortcode( 'get-financing', 'battleplan_getFinancing' );
 function battleplan_getFinancing($atts, $content = null) {
-	$a = shortcode_atts( array( 'bank'=>'', 'link'=>'', 'text'=>'', 'loc'=>'below'  ), $atts );
+	$a = shortcode_atts( array( 'bank'=>'', 'link'=>'', 'text'=>'', 'loc'=>'below', 'graphic'=>'' ), $atts );
 	$bank = esc_attr($a['bank']);
 	$text = esc_attr($a['text']);
 	$loc = esc_attr($a['loc']);
-	$img = strtolower(str_replace(" ", "-", $bank));
 	$link = esc_attr($a['link']);	
+	$img = strtolower(str_replace(" ", "-", $bank));
+	$graphic = esc_attr($a['graphic']);	
+	if ( $graphic != '' ) $img = $img.'-'.$graphic;
 	$buildFinancing = "";	
 	$imagePath = get_template_directory().'/common/financing/'.$img.'.png';			
 	list($width, $height) = getimagesize($imagePath);
 	
 	if ( $link != "" ) $buildFinancing .= '<a href="'.$link.'" title="Click here to apply for financing for AC repair at '.$bank.'">';
 	if ( $text != "" && $loc == "above" ) $buildFinancing .= '<span class="link-text">'.$text.'</span>';
-	$buildFinancing .= '<img src="/wp-content/themes/battleplantheme/common/financing/'.$img.'.png" loading="lazy" alt="Apply for financing for your HVAC needs at '.$bank.'" width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
+	$buildFinancing .= '<img class="financing-img" src="/wp-content/themes/battleplantheme/common/financing/'.$img.'.png" loading="lazy" alt="Apply for financing for your HVAC needs at '.$bank.'" width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
 	if ( $text != "" && $loc == "below" ) $buildFinancing .= '<span class="link-text">'.$text.'</span>';
 	if ( $link != "" ) $buildFinancing .= '</a>';
 	

@@ -1109,9 +1109,6 @@ var pageViews=getCookie('pages-viewed'), uniqueID, pageLimit = 300, speedFactor 
 		$subCurrents.replaceClass( "dormant", "active" ); 
 	});
 
-// Automatically adjust for Google review bar 
-	//$( '<div class="wp-google-badge-faux"></div>' ).insertAfter( $('#colophon'));   /* moved to footer.php */
-
 // Animate scrolling when moving up or down a page
 	$('a[href^="#"]:not(.carousel-control-next):not(.carousel-control-prev)').on('click', function (e) {
 		e.preventDefault();    

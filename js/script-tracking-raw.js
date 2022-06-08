@@ -44,7 +44,48 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				success: function( response ) { console.log(response); } 
 			});		
 			this.destroy();
-		}, { offset: 'bottom-in-view' });	 
+		}, { offset: 'bottom-in-view' });		
+		
+	// Track user scrolling and important elements viewed
+		var scrollPct = 0, lastPct = 0, screenH = screen.height, pageH = $('body').height(), uniqueID = getCookie('unique-id')+getCookie('pages-viewed');
+		setInterval(function() {
+			scrollPct = ($(window).scrollTop() + screenH) / pageH;
+			if ( scrollPct > lastPct ) {
+				if ( scrollPct > 1 ) { scrollPct = 1; }
+				$.post({
+					url : ajaxURL,
+					data : { action: 'track_interaction', key: 'page-scroll-pct', value: scrollPct, uniqueID: uniqueID },
+					success: function( response ) { console.log(response); } 
+				});	
+				lastPct = scrollPct;			
+			}	
+		}, 1000);	
+		
+		
+		/*
+		$('p, img, #wrapper-bottom section').waypoint(function() {
+			logScroll();
+			this.destroy();
+		}, { offset: '40%' });	
+		$('#wrapper-bottom section, #colophon').waypoint(function() {
+			logScroll();
+			this.destroy();
+		}, { offset: 'bottom-in-view' });	
+		function logScroll() {
+			setTimeout(function() { pause = "false"; }, 500);			
+			if ( pause == "true" ) {
+				scrollPct = ($(window).scrollTop() + screenH) / pageH;
+				if ( scrollPct > 1 ) { scrollPct = 1; }	
+			} else {			
+				$.post({
+					url : ajaxURL,
+					data : { action: 'track_interaction', key: 'page-scroll-pct', value: scrollPct, uniqueID: uniqueID },
+					success: function( response ) { console.log(response); } 
+				});		
+				pause = "true";
+			}	
+		
+		};*/
 	});
 	
 })(jQuery); });

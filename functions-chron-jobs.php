@@ -349,6 +349,7 @@ function battleplan_run_chron_jobs_ajax() {
 		$ga4_id = $GLOBALS['customer_info']['google-tags']['prop-id'];
 		$ua_id = $GLOBALS['customer_info']['google-tags']['ua-view'];
 		$client = new BetaAnalyticsDataClient(['credentials'=>get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json']);
+		$citiesToExclude = array('Orangetree','Ashburn');
 		
 		$rewind4Years = '2014-01-01';
 		
@@ -371,7 +372,6 @@ function battleplan_run_chron_jobs_ajax() {
 			if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 
 				deleteMeta( get_the_ID(), 'log-views-now');			
 				deleteMeta( get_the_ID(), 'log-views-time');					
-				deleteMeta( get_the_ID(), 'log-tease-time');			
 				deleteMeta( get_the_ID(), 'log-views-today');	
 				deleteMeta( get_the_ID(), 'log-views-total-7day');			
 				deleteMeta( get_the_ID(), 'log-views-total-30day');	
@@ -406,6 +406,7 @@ function battleplan_run_chron_jobs_ajax() {
 				'dimensions' => [
 					new Dimension([ 'name' => 'pagePath' ]),
 					new Dimension([ 'name' => 'country' ]),		
+					new Dimension([ 'name' => 'city' ]),		
 				],
 				'metrics' => [
 					new Metric([ 'name' => 'screenPageViews' ]),	
@@ -413,7 +414,7 @@ function battleplan_run_chron_jobs_ajax() {
 			]);
 
 			foreach ($response->getRows() as $row) :			
-				if ( $row->getDimensionValues()[1]->getValue() == "United States" ) :	
+				if ( $row->getDimensionValues()[1]->getValue() == "United States" && !in_array( $row->getDimensionValues()[2]->getValue(), $citiesToExclude ) ) :	
 					$pagePaths[] = $row->getDimensionValues()[0]->getValue();					
 					$views[] = $row->getMetricValues()[0]->getValue();					
 				endif;
@@ -439,13 +440,13 @@ function battleplan_run_chron_jobs_ajax() {
 				$end_date = date("Y-m-d");
 				$start_date = "-".$pageCount." Days";
 				$start_date = date("Y-m-d", strtotime($start_date));
-				$param2 = array('dimensions'=>'ga:pagePath,ga:country', 'max-results'=>10000);
+				$param2 = array('dimensions'=>'ga:pagePath,ga:country,ga:city', 'max-results'=>10000);
 				$param1 = 'ga:pageviews';				
 				$results = getResults($analytics, $ua_id, $start_date, $end_date, $param2, $param1);
 				$rows = $results->getRows();
 
 				foreach ($rows as $path) :
-					if ( $path[1] == "United States" ) :
+					if ( $path[1] == "United States" && !in_array( $path[2], $citiesToExclude ) ) :
 						if ( $path[0] == "" || $path[0] == "/" ) :
 							$id = get_option('page_on_front');					
 						else:
@@ -457,8 +458,8 @@ function battleplan_run_chron_jobs_ajax() {
 
 						$pageViews = intval(readMeta($id, $pageKey));
 
-						if ( $pageViews ) : $pageViews = $pageViews + intval($path[2]);
-						else: $pageViews = $path[2]; endif;
+						if ( $pageViews ) : $pageViews = $pageViews + intval($path[3]);
+						else: $pageViews = $path[3]; endif;
 
 						updateMeta($id, $pageKey, $pageViews);
 					endif;
@@ -481,8 +482,7 @@ function battleplan_run_chron_jobs_ajax() {
 					new Dimension([ 'name' => 'region' ]),	
 					new Dimension([ 'name' => 'browser' ]),	
 					new Dimension([ 'name' => 'screenResolution' ]),	
-					new Dimension([ 'name' => 'deviceCategory' ]),	
-					new Dimension([ 'name' => 'percentScrolled' ]),	
+					new Dimension([ 'name' => 'deviceCategory' ]),
 				],
 				'metrics' => [
 					new Metric([ 'name' => 'totalUsers' ]),	
@@ -490,19 +490,22 @@ function battleplan_run_chron_jobs_ajax() {
 			]);
 			
 			foreach ($response->getRows() as $row) :			
-				if ( $row->getDimensionValues()[1]->getValue() == "United States" ) :	
+				if ( $row->getDimensionValues()[1]->getValue() == "United States" && !in_array( $row->getDimensionValues()[2]->getValue(), $citiesToExclude ) ) :	
 					$referrers[] =$row->getDimensionValues()[0]->getValue();					
-					$location[] = $row->getDimensionValues()[2]->getValue().', '.state_abbr($row->getDimensionValues()[3]->getValue());
+					if ( $row->getDimensionValues()[2]->getValue() == '(not set)' ):
+						$location[] = $row->getDimensionValues()[3]->getValue();
+					else:
+						$location[] = $row->getDimensionValues()[2]->getValue().', '.state_abbr($row->getDimensionValues()[3]->getValue());
+					endif;
 					$browser[] = $row->getDimensionValues()[4]->getValue();					
 					$resolution[] = $row->getDimensionValues()[5]->getValue();					
 					$deviceCategory[] = $row->getDimensionValues()[6]->getValue();					
-					$scrolled[] = $row->getDimensionValues()[7]->getValue();					
 				endif;
 			endforeach;
 
 			$referrer_stats = $referrers;
 			$location_stats = $location;
-			$tech_stats = array( 'browser'=> $browser, 'device'=>$deviceCategory, 'resolution'=>$resolution, 'scrolled'=>$scrolled );		
+			$tech_stats = array( 'browser'=> $browser, 'device'=>$deviceCategory, 'resolution'=>$resolution );		
 
 		
 // Gather GA4 stats (for Visitor Trends)
@@ -513,7 +516,8 @@ function battleplan_run_chron_jobs_ajax() {
 				],
 				'dimensions' => [
 					new Dimension([ 'name' => 'date' ]),
-					new Dimension([ 'name' => 'country' ]),		
+					new Dimension([ 'name' => 'country' ]),	
+					new Dimension([ 'name' => 'city' ]),		
 					new Dimension([ 'name' => 'firstUserMedium' ]),	
 				],
 				'metrics' => [
@@ -525,9 +529,9 @@ function battleplan_run_chron_jobs_ajax() {
 			]);
 
 			foreach ($response->getRows() as $row) :			
-				if ( $row->getDimensionValues()[1]->getValue() == "United States" ) :	
+				if ( $row->getDimensionValues()[1]->getValue() == "United States" && !in_array( $row->getDimensionValues()[2]->getValue(), $citiesToExclude ) ) :	
 					$dates[] = strtotime($row->getDimensionValues()[0]->getValue());
-					$sources[] = $row->getDimensionValues()[2]->getValue();
+					$sources[] = $row->getDimensionValues()[3]->getValue();
 					$users[] = $row->getMetricValues()[0]->getValue();
 					$pageviews[] = $row->getMetricValues()[1]->getValue();
 					$sessions[] = $row->getMetricValues()[2]->getValue();
@@ -572,7 +576,7 @@ function battleplan_run_chron_jobs_ajax() {
 // Gather UA stats (for Visitor Trends)
 			if ( $ua_id ) :
 				$analytics = initializeAnalytics();			
-				$param2 = array('dimensions'=>'ga:date,ga:country', 'max-results'=>10000);
+				$param2 = array('dimensions'=>'ga:date,ga:country,ga:city', 'max-results'=>10000);
 				$param1 = 'ga:newUsers,ga:pageviews,ga:sessions,ga:bounces';
 				$param1b = $param1.',ga:organicSearches';		
 				$results = getResults($analytics, $ua_id, $rewind4Years, '2020-04-04', $param2, $param1);
@@ -580,7 +584,7 @@ function battleplan_run_chron_jobs_ajax() {
 				$cDate = 1240790400;
 
 				foreach ( $rows as $dates ) :
-					if ( $dates[1] == "United States" ) :
+					if ( $dates[1] == "United States" && !in_array( $path[2], $citiesToExclude ) ) :
 
 						if ( strtotime($dates[0]) != $cDate ) :
 							$diff = strtotime($dates[0]) - $cDate;
@@ -593,7 +597,7 @@ function battleplan_run_chron_jobs_ajax() {
 								endfor;			
 							endif;
 
-							$stats[] = array ('date'=>date( "Y-m-d", strtotime($dates[0])), 'users'=>$dates[2], 'search'=>$dates[6], 'pageviews'=>$dates[3], 'sessions'=>$dates[4], 'engaged'=>($dates[4] -$dates[5]) );
+							$stats[] = array ('date'=>date( "Y-m-d", strtotime($dates[0])), 'users'=>$dates[3], 'search'=>$dates[7], 'pageviews'=>$dates[4], 'sessions'=>$dates[5], 'engaged'=>($dates[5] -$dates[6]) );
 							$cDate = strtotime($dates[0]);
 						endif;		
 					endif;
@@ -604,7 +608,7 @@ function battleplan_run_chron_jobs_ajax() {
 				$cDate = 1586131200;
 
 				foreach ( $rows as $dates ) :
-					if ( $dates[1] == "United States" ) :
+					if ( $dates[1] == "United States" && !in_array( $path[2], $citiesToExclude ) ) :
 						if ( strtotime($dates[0]) != $cDate ) :
 							$diff = strtotime($dates[0]) - $cDate;
 							$dDate = $cDate;
@@ -616,7 +620,7 @@ function battleplan_run_chron_jobs_ajax() {
 								endfor;			
 							endif;
 
-							$stats[] = array ('date'=>date( "Y-m-d", strtotime($dates[0])), 'users'=>$dates[2], 'search'=>$dates[6], 'pageviews'=>$dates[3], 'sessions'=>$dates[4], 'engaged'=>($dates[4] -$dates[5]) );
+							$stats[] = array ('date'=>date( "Y-m-d", strtotime($dates[0])), 'users'=>$dates[3], 'search'=>$dates[7], 'pageviews'=>$dates[4], 'sessions'=>$dates[5], 'engaged'=>($dates[5] -$dates[6]) );
 							$cDate = strtotime($dates[0]);
 						endif;		
 					endif;

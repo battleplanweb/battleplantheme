@@ -38,15 +38,18 @@ function battleplan_log_page_load_speed_ajax() {
 			update_option('load_time_mobile', $timeMobile);			
 		endif;
 				
+		$response = array( 'result' => 'Logging '.$deviceTime.' load speed = '.number_format($loadTime, 2).'s' );
+	else:
 		$response = array( 'result' => ucfirst($deviceTime.' load speed = '.number_format($loadTime, 2).'s' ));
 	endif;	
+	
 	wp_send_json( $response );	
 }
 
 // Count Teaser Views
-add_action( 'wp_ajax_count_teaser_views', 'battleplan_count_teaser_views_ajax' );
-add_action( 'wp_ajax_nopriv_count_teaser_views', 'battleplan_count_teaser_views_ajax' );
-function battleplan_count_teaser_views_ajax() {
+add_action( 'wp_ajax_count_teaser', 'battleplan_count_teaser_ajax' );
+add_action( 'wp_ajax_nopriv_count_teaser', 'battleplan_count_teaser_ajax' );
+function battleplan_count_teaser_ajax() {
 	$theID = intval( $_POST['id'] );
 	$postType = get_post_type($theID);
 	$lastTeased = date("F j, Y g:i a", readMeta($theID, 'log-tease-time'));
@@ -54,7 +57,9 @@ function battleplan_count_teaser_views_ajax() {
 	
 	if ( _USER_LOGIN != 'battleplanweb' ) :
 		updateMeta($theID, 'log-tease-time', $today);
-		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' TEASER counted: Prior tease = '.$lastTeased) );
+		$response = array( 'result' => 'Logging '.$postType.' ID #'.$theID.' tease time. Prior tease = '.$lastTeased );
+	else:
+		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' last teased = '.$lastTeased) );
 	endif;	
 	wp_send_json( $response );	
 }

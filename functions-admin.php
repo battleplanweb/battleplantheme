@@ -24,7 +24,7 @@ function battleplan_delete_quicktags( $qtInit, $editor_id = 'content' ) {
 	$qtInit['buttons'] = 'strong,em,link,ul,ol,more,close';
 	return $qtInit;
 }
-
+ 
 // Add new buttons to WordPress text editor
 add_action( 'admin_print_footer_scripts', 'battleplan_add_quicktags' );
 function battleplan_add_quicktags() {
@@ -1772,7 +1772,7 @@ function battleplan_admin_tech_stats() {
 	$browserNum = count($browserStats);	
 	$tallyCounts = array_count_values($browserStats);
 	$uniqueTech = array_unique($browserStats);
-	$combineTech = [];
+	$combineTech = [];	
 	
 	foreach ($uniqueTech as $uniqueTech) :
 		$combineTech[$uniqueTech]=(($tallyCounts[$uniqueTech]/$browserNum)*100);
@@ -1791,7 +1791,8 @@ function battleplan_admin_tech_stats() {
 	$deviceNum = count($deviceStats);	
 	$tallyCounts = array_count_values($deviceStats);
 	$uniqueTech = array_unique($deviceStats);
-	$combineTech = [];
+	$combineTech = [];	
+	$totalPagesForSpeed = $deviceNum * 3;
 	
 	foreach ($uniqueTech as $uniqueTech) :
 		$combineTech[$uniqueTech]=(($tallyCounts[$uniqueTech]/$deviceNum)*100);
@@ -1802,12 +1803,21 @@ function battleplan_admin_tech_stats() {
 	$timesDesktop = get_option('load_time_desktop');
 	$timeDesktop = array_sum($timesDesktop) / count($timesDesktop);	
 	$timesMobile = get_option('load_time_mobile');
-	$timeMobile = array_sum($timesMobile) / count($timesMobile);			
+	$timeMobile = array_sum($timesMobile) / count($timesMobile);		
 		
 	echo '<div><ul><li class="sub-label">Devices</li>';
 	foreach ($combineTech as $device=>$deviceNum) :
-		if ( $device == "desktop" ) $deviceSpeed = $timeDesktop;
-		if ( $device == "mobile" ) $deviceSpeed = $timeMobile;
+		if ( $device == "desktop" ) :
+			$deviceSpeed = $timeDesktop;			
+			$getDesktopViews = round(($totalPagesForSpeed * $deviceNum) /100);	
+			$timesDesktop = array_slice($timesDesktop, 0, $getDesktopViews); 
+			update_option('load_time_desktop', $timesDesktop);
+		else:
+			$deviceSpeed = $timeMobile;
+			$getMobileViews = round(($totalPagesForSpeed * $deviceNum) /100);		
+			$timesMobile = array_slice($timesMobile, 0, $getMobileViews); 
+			update_option('load_time_mobile', $timesMobile);
+		endif;
 		echo "<li><div class='value'><b>".number_format($deviceNum,1)."%</b></div><div class='label-half'>".ucwords($device)."</div><div class='label-half'>".number_format($deviceSpeed,2)." sec.</div></li>";
 	endforeach; 	
 	echo '</ul></div>';
@@ -2105,16 +2115,6 @@ function battleplan_duplicate_post_as_draft(){
 			$wpdb->query($sql_query);
 		}
 		
-		updateMeta( $new_post_id, 'log-views-now', strtotime("-1 day"));		
-		updateMeta( $new_post_id, 'log-views-time', strtotime("-1 day"));			
-		updateMeta( $new_post_id, 'log-tease-time', strtotime("-1 day"));			
-		updateMeta( $new_post_id, 'log-views-total-7day', '0' );		
-		updateMeta( $new_post_id, 'log-views-total-30day', '0' );
-		updateMeta( $new_post_id, 'log-views-total-90day', '0' );
-		updateMeta( $new_post_id, 'log-views-total-180day', '0' );
-		updateMeta( $new_post_id, 'log-views-total-365day', '0' );
-		updateMeta( $new_post_id, 'log-views', array( 'date'=> strtotime(date("F j, Y")), 'views' => 0 ));					
-
 		wp_redirect( admin_url( 'post.php?action=edit&post=' . $new_post_id ) );
 		exit;
 	} else {
@@ -2199,74 +2199,6 @@ function battleplan_force_run_chron() {
 	update_option('bp_chrons_last_run', 0);	
 	header("Location: /wp-admin/index.php");
 	exit();
-	/*
-
-	// clear image views
-	$image_query = new WP_Query( array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>-1 ));
-	if( $image_query->have_posts() ) : while ($image_query->have_posts() ) : $image_query->the_post();
-		updateMeta( get_the_ID(), 'log-views-now', strtotime("-1 day"));					
-		updateMeta( get_the_ID(), 'log-views-time', strtotime("-1 day"));		
-		updateMeta( get_the_ID(), 'log-tease-time', strtotime("-1 day"));			
-		updateMeta( get_the_ID(), 'log-views-today', '0' );				
-		updateMeta( get_the_ID(), 'log-views-total-7day', '0' );		
-		updateMeta( get_the_ID(), 'log-views-total-30day', '0' );
-		updateMeta( get_the_ID(), 'log-views-total-90day', '0' );
-		updateMeta( get_the_ID(), 'log-views-total-180day', '0' );
-		updateMeta( get_the_ID(), 'log-views-total-365day', '0' );
-		updateMeta( get_the_ID(), 'log-views', array( 'date' => strtotime(date("F j, Y")), 'views' => 0 ));		
-	endwhile; wp_reset_postdata(); endif;
-
-	// clear posts views
-	$getCPT = get_post_types();  
-	unset($getCPT['attachment'], $getCPT['page'], $getCPT['revision'], $getCPT['nav_menu_item'], $getCPT['custom_css'], $getCPT['customize_changeset'], $getCPT['oembed_cache'], $getCPT['user_request'], $getCPT['wp_block'], $getCPT['acf-field-group'], $getCPT['acf-field'], $getCPT['wpcf7_contact_form'], $getCPT['wphb_minify_group']); 	
-	foreach ($getCPT as $postType) {
-		$getPosts = new WP_Query( array ('posts_per_page'=>-1, 'post_type'=>$postType ));
-		if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 
-			updateMeta( get_the_ID(), 'log-views-now', strtotime("-1 day"));			
-			updateMeta( get_the_ID(), 'log-views-time', strtotime("-1 day"));				
-			updateMeta( get_the_ID(), 'log-tease-time', strtotime("-1 day"));			
-			updateMeta( get_the_ID(), 'log-views-today', '0' );		
-			updateMeta( get_the_ID(), 'log-views-total-7day', '0' );		
-			updateMeta( get_the_ID(), 'log-views-total-30day', '0' );
-			updateMeta( get_the_ID(), 'log-views-total-90day', '0' );
-			updateMeta( get_the_ID(), 'log-views-total-180day', '0' );
-			updateMeta( get_the_ID(), 'log-views-total-365day', '0' );
-			updateMeta( get_the_ID(), 'log-views', array( 'date' => strtotime(date("F j, Y")), 'views' => 0 ));					
-		endwhile; wp_reset_postdata(); endif;		
-			
-		// clear page views
-		$getPosts = new WP_Query( array ('posts_per_page'=>-1, 'post_type'=>'page' ));
-		if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 
-			updateMeta( get_the_ID(), 'log-views-now', strtotime("-1 day"));			
-			updateMeta( get_the_ID(), 'log-views-time', strtotime("-1 day"));				
-			updateMeta( get_the_ID(), 'log-tease-time', strtotime("-1 day"));			
-			updateMeta( get_the_ID(), 'log-views-today', '0' );		
-			updateMeta( get_the_ID(), 'log-views-total-7day', '0' );		
-			updateMeta( get_the_ID(), 'log-views-total-30day', '0' );
-			updateMeta( get_the_ID(), 'log-views-total-90day', '0' );
-			updateMeta( get_the_ID(), 'log-views-total-180day', '0' );
-			updateMeta( get_the_ID(), 'log-views-total-365day', '0' );
-			updateMeta( get_the_ID(), 'log-views', array( 'date' => strtotime(date("F j, Y")), 'views' => 0 ));					
-		endwhile; wp_reset_postdata(); endif;		
-
-		// clear site load speed logs
-		$siteHeader = getID('site-header');
-		updateMeta( $siteHeader, 'load-number-desktop', '0' );			
-		updateMeta( $siteHeader, 'load-speed-desktop', '0' );			
-		updateMeta( $siteHeader, 'load-number-mobile', '0' );			
-		updateMeta( $siteHeader, 'load-speed-mobile', '0' );
-		updateMeta( $siteHeader, 'log-views', array( 'date' => strtotime(date("F j, Y")), 'views' => 0, 'search' => 0 ));					
-		deleteMeta( $siteHeader, 'log-views-referrers');
-		deleteMeta( $siteHeader, 'log-views-cities');
-		deleteMeta( $siteHeader, 'pages-viewed');
-		deleteMeta( $siteHeader, 'call-clicks');
-		deleteMeta( $siteHeader, 'email-clicks');		
-		
-		updateMeta( $siteHeader, 'framework-version', _BP_VERSION );	
-		
-		update_option( 'site_initialized', time() ); 
-	}	
-	*/
 }  
 
 /*--------------------------------------------------------------
@@ -2310,7 +2242,7 @@ function battleplan_setupGlobalOptions() {
 		$wpMailSettings = get_option( 'wp_mail_smtp' );		
 		$wpMailSettings['mail']['from_email'] = 'email@admin.'.str_replace('https://', '', get_bloginfo('url'));
 		$wpMailSettings['mail']['from_name'] = "Website Administrator";
-		$wpMailSettings['mail']['mailer'] = sendinblue;
+		$wpMailSettings['mail']['mailer'] = 'sendinblue';
 		$wpMailSettings['mail']['from_email_force'] = '1';
 		$wpMailSettings['mail']['from_name_force'] = '1';		
 		$wpMailSettings['sendinblue']['api_key'] = 'x'.$apiKey1.'-d08cc84fe45b37a420'.$apiKey2.'-AafFpD2zKkIN3SBZ';

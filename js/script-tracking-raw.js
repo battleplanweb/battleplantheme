@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				success: function( response ) { console.log(response);  }
 			});
 
-			// Log page load speed
+		// Log page load speed
 			if ( deviceTime == "desktop" ) {
 				loadTime = loadTime + 0.3;
 			} else {
@@ -32,21 +32,19 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				data : { action: "log_page_load_speed", id: $('body').attr('id'), loadTime: loadTime, deviceTime: deviceTime },
 				success: function( response ) { console.log(response); } 
 			});	
+		}, 1000);		
 
-		// Count random post widget, testimonial & images - teases & views
-			$('.carousel img.img-slider, #primary .testimonials-name, .widget:not(.hide-widget) .testimonials-name, #wrapper-bottom .testimonials-name, #primary img.random-img, .widget:not(.hide-widget) img.random-img, #wrapper-bottom img.random-img, #primary h3, .widget:not(.hide-widget) h3, #wrapper-bottom h3').waypoint(function() {		
-				var theID = $(this.element).attr('data-id');
-				var countTease = $(this.element).attr('data-count-tease');				
-				var countView = $(this.element).attr('data-count-view');
-				$.post({
-					url : ajaxURL,
-					data : { action: "count_teaser_views", id: theID },
-					success: function( response ) { console.log(response); } 
-				});		
-				this.destroy();
-			}, { offset: 'bottom-in-view' });	 	
-
-		}, 1000);
+	// Log tease time of random post widget, testimonial & images
+		$('.carousel img.img-slider, #primary .testimonials-name, .widget:not(.hide-widget) .testimonials-name, #wrapper-bottom .testimonials-name, #primary img.random-img, .widget:not(.hide-widget) img.random-img, #wrapper-bottom img.random-img').waypoint(function() {		
+			var theID = $(this.element).attr('data-id');
+			var countTease = $(this.element).attr('data-count-tease');				
+			$.post({
+				url : ajaxURL,
+				data : { action: "count_teaser", id: theID },
+				success: function( response ) { console.log(response); } 
+			});		
+			this.destroy();
+		}, { offset: 'bottom-in-view' });	 
 	});
 	
 })(jQuery); });

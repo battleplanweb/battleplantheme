@@ -25,14 +25,22 @@ add_action( 'wp_ajax_run_chron_jobs', 'battleplan_run_chron_jobs_ajax' );
 add_action( 'wp_ajax_nopriv_run_chron_jobs', 'battleplan_run_chron_jobs_ajax' );
 function battleplan_run_chron_jobs_ajax() {
 	$admin = $_POST['admin'];	
+	$runChron = "false";
 
-	if ( $admin == "true" ) : $chronSpan = 600; 
-	else: $chronSpan = 2 * (24 * 60 * 60); endif;
-	
-	$bpChrons = get_option( 'bp_chrons_last_run' );	
-	$timePast = time() - $bpChrons;
+	if ( $admin == "true" ) : 
+		$chronSpan = 900; // every 15 min
+		$bpChrons = get_option( 'bp_chrons_last_run' );	
+		$timePast = time() - $bpChrons;		
+		if ( $timePast > $chronSpan ) : $runChron = "true";	endif;	
+	else: 
+		$chronViews = 30; // every 30 pageviews
+		$bpChrons = get_option( 'bp_chrons_pages' );	
+		if ( !$bpChrons ) : $bpChrons = 0; endif;
+		$pagesLeft = $chronViews - $bpChrons;		
+		if ( $pagesLeft <= 0 ) : $runChron = "true"; endif;
+	endif;
 		
-	if ( $timePast > $chronSpan || get_option('bp_setup_2022_05_02') != "completed" ) :	
+	if ( $runChron == "true" || get_option('bp_setup_2022_05_02') != "completed" ) :	
 
 		if (function_exists('battleplan_remove_user_roles')) battleplan_remove_user_roles();
 		if (function_exists('battleplan_create_user_roles')) battleplan_create_user_roles();
@@ -43,12 +51,40 @@ function battleplan_run_chron_jobs_ajax() {
 			global $wpdb;
 			$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
 		}	
+		
+// ARI FancyBox Settings Update
+		if ( is_plugin_active('ari-fancy-lightbox/ari-fancy-lightbox.php') ) : 
+			$wpARISettings = get_option( 'ari_fancy_lightbox_settings' );
+			$wpARISettings['convert']['wp_gallery']['convert'] = 'true';
+			$wpARISettings['convert']['wp_gallery']['grouping'] = '1';
+			$wpARISettings['convert']['images']['convert'] = '1';
+			$wpARISettings['convert']['images']['post_grouping'] = '1';
+			$wpARISettings['convert']['images']['grouping_selector'] = '.gallery$$A';		
+			$wpARISettings['convert']['images']['filenameToTitle'] = '1';		
+			$wpARISettings['convert']['images']['convertNameSmart'] = '1';		
+			$wpARISettings['lightbox']['loop'] = '1';		
+			$wpARISettings['lightbox']['arrows'] = '1';		
+			$wpARISettings['lightbox']['infobar'] = '1';		
+			$wpARISettings['lightbox']['keyboard'] = '1';		
+			$wpARISettings['lightbox']['autoFocus'] = '1';		
+			$wpARISettings['lightbox']['trapFocus'] = '0';		
+			$wpARISettings['lightbox']['closeClickOutside'] = '1';		
+			$wpARISettings['lightbox']['touch_enabled'] = '1';		
+			$wpARISettings['lightbox']['thumbs']['autoStart'] = '0';		
+			$wpARISettings['lightbox']['thumbs']['hideOnClose'] = '0';		
+			$wpARISettings['advanced']['load_scripts_in_footer'] = '1';						
+			update_option( 'ari_fancy_lightbox_settings', $wpARISettings ); 
+		endif;
 
 // WP Mail SMTP Settings Update
 		if ( is_plugin_active('wp-mail-smtp/wp_mail_smtp.php') ) : 	
-			$wpMailSettings = get_option( 'wp_mail_smtp' );		
-			$wpMailSettings['mail']['from_name'] = "Website Administrator";
-			$wpMailSettings['mail']['from_name_force'] = '0';		
+			$wpMailSettings = get_option( 'wp_mail_smtp' );			
+			$wpMailSettings['mail']['from_email'] = 'email@admin.'.str_replace('https://', '', get_bloginfo('url'));
+			$wpMailSettings['mail']['from_name'] = 'Website Administrator';
+			$wpMailSettings['mail']['mailer'] = 'sendinblue';
+			$wpMailSettings['mail']['from_email_force'] = '1';
+			$wpMailSettings['mail']['from_name_force'] = '1';		
+			$wpMailSettings['sendinblue']['domain'] = 'admin.'.str_replace('https://', '', get_bloginfo('url'));				
 			update_option( 'wp_mail_smtp', $wpMailSettings );
 		endif;
 
@@ -72,32 +108,6 @@ function battleplan_run_chron_jobs_ajax() {
 
 				updateMeta( $formID, "_mail", $formMail );	
 			endforeach;
-		endif;
-
-// ARI FancyBox Settings Update
-		if ( is_plugin_active('ari-fancy-lightbox/ari-fancy-lightbox.php') ) : 
-			$wpARISettings = get_option( 'ari_fancy_lightbox_settings' );
-			$wpARISettings['convert']['wp_gallery']['convert'] = '1';
-			$wpARISettings['convert']['wp_gallery']['grouping'] = '1';
-			$wpARISettings['convert']['images']['convert'] = '1';
-			$wpARISettings['convert']['images']['post_grouping'] = '1';
-			$wpARISettings['convert']['images']['grouping_selector'] = '.gallery$$A';		
-			$wpARISettings['convert']['images']['filenameToTitle'] = '1';		
-			$wpARISettings['convert']['images']['convertNameSmart'] = '1';		
-			$wpARISettings['lightbox']['loop'] = '1';		
-			$wpARISettings['lightbox']['arrows'] = '1';		
-			$wpARISettings['lightbox']['infobar'] = '1';		
-			$wpARISettings['lightbox']['keyboard'] = '1';		
-			$wpARISettings['lightbox']['autoFocus'] = '1';		
-			$wpARISettings['lightbox']['trapFocus'] = '0';		
-			$wpARISettings['lightbox']['closeClickOutside'] = '1';		
-			$wpARISettings['lightbox']['touch_enabled'] = '1';		
-			$wpARISettings['lightbox']['thumbs']['autoStart'] = '0';		
-			$wpARISettings['lightbox']['thumbs']['hideOnClose'] = '0';		
-			$wpARISettings['advanced']['load_scripts_in_footer'] = '1';			
-			update_option( 'ari_fancy_lightbox_settings', $wpARISettings ); 
-
-			delete_option( 'bp_setup_ari_fancy_lightbox_initial', 'completed' );
 		endif;
 
 // Yoast SEO Settings Update
@@ -621,14 +631,26 @@ function battleplan_run_chron_jobs_ajax() {
 			delete_option( 'stats_page_stats', $page_stats);
 		endif;			
 
-
 		update_option( 'bp_chrons_last_run', time() );	
-		$response = array( 'chron' => 'Updated'.$chronUpdated.'!' );		
-	else: 	 
-		$timeUntil = (($chronSpan - $timePast) / 60) + 1;		
-		if ( floor($timeUntil / 60) > 0 ) $hours = floor($timeUntil / 60)." hours & ";
-    	$response = array( 'chron' => 'Will run in '.$hours.($timeUntil % 60).' minutes.' );
+		delete_option( 'bp_chrons_pages' );
+		update_option( 'bp_chrons_pages', 0 );	
+		$response = array( 'chron' => 'Updated!' );		
+	else: 	 	
+		if ( $admin == "true" ) :
+			$timeUntil = (($chronSpan - $timePast) / 60) + 1;		
+			if ( floor($timeUntil / 60) > 0 ) $hours = floor($timeUntil / 60)." hours & ";
+			$response = array( 'chron' => 'Will run in '.$hours.($timeUntil % 60).' minutes.' );
+		else:
+			$response = array( 'chron' => 'Will run after '.$pagesLeft.' more views.' );
+		endif;	
 	endif;	
+
+	if ( $admin == "false" ) :
+		$bpChrons = get_option( 'bp_chrons_pages' );
+		delete_option( 'bp_chrons_pages' );
+		$bpChrons++;
+		update_option( 'bp_chrons_pages', $bpChrons );	
+	endif;
 			
 	wp_send_json( $response );	
 }

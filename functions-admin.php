@@ -1768,25 +1768,8 @@ function battleplan_admin_site_stats() {
 // Set up Tech Info widget on dashboard
 function battleplan_admin_tech_stats() {
 	$getStats = get_option('stats_tech');
-	$browserStats = $getStats['browser'];
-	$browserNum = count($browserStats);	
-	$tallyCounts = array_count_values($browserStats);
-	$uniqueTech = array_unique($browserStats);
-	$combineTech = [];	
-	
-	foreach ($uniqueTech as $uniqueTech) :
-		$combineTech[$uniqueTech]=(($tallyCounts[$uniqueTech]/$browserNum)*100);
-	endforeach; 	
-	
-	uksort( $combineTech, function($a, $b) use ($combineTech) { return [$combineTech[$b], $a] <=> [$combineTech[$a], $b]; } );
-		
-	echo '<div><ul><li class="sub-label">Browser</li>';
-	foreach ($combineTech as $browser=>$browserNum) :
-		echo "<li><div class='value'><b>".number_format($browserNum,1)."%</b></div><div class='label'>".$browser."</div></li>";
-	endforeach; 	
-	echo '</ul></div>';
 
-	
+//Devices	
 	$deviceStats = $getStats['device'];
 	$deviceNum = count($deviceStats);	
 	$tallyCounts = array_count_values($deviceStats);
@@ -1822,7 +1805,63 @@ function battleplan_admin_tech_stats() {
 	endforeach; 	
 	echo '</ul></div>';
 	
+// Scrolling Pct
+	$scrolledStats = get_option('page-scroll-pct');
+	$scrolledNum = count($scrolledStats);	
+	$totalPct = array_sum($scrolledStats);
+	$overallAvg = ( $totalPct / $scrolledNum ) * 100;
+	$count30 = $count40 = $count50 = $count60 = $count70 = $count90 = $count90 = 0;
 	
+	foreach ( $scrolledStats as $key=>$page ):
+		if ( $page > .30 ) $count30++;
+		if ( $page > .40 ) $count40++;
+		if ( $page > .50 ) $count50++;
+		if ( $page > .60 ) $count60++;
+		if ( $page > .70 ) $count70++;
+		if ( $page > .80 ) $count80++;
+		if ( $page > .90 ) $count90++;
+	endforeach;
+	
+	$count30 = ($count30 / $scrolledNum) * 100;
+	$count40 = ($count40 / $scrolledNum) * 100;
+	$count50 = ($count50 / $scrolledNum) * 100;
+	$count60 = ($count60 / $scrolledNum) * 100;
+	$count70 = ($count70 / $scrolledNum) * 100;
+	$count80 = ($count80 / $scrolledNum) * 100;
+	$count90 = ($count90 / $scrolledNum) * 100;
+		
+	echo '<div><ul><li class="sub-label">Scrolling</li>';
+		echo "<li><div class='value'><b>".number_format($overallAvg,1)."%</b></div><div class='label'>Overall Average (".$scrolledNum." pages)</div></li>";
+		echo "<br>";
+		echo "<li><div class='value'><b>".number_format($count30,1)."%</b></div><div class='label'>More than 30%</div></li>";		
+		echo "<li><div class='value'><b>".number_format($count40,1)."%</b></div><div class='label'>More than 40%</div></li>";		
+		echo "<li><div class='value'><b>".number_format($count50,1)."%</b></div><div class='label'>More than 50%</div></li>";		
+		echo "<li><div class='value'><b>".number_format($count60,1)."%</b></div><div class='label'>More than 60%</div></li>";		
+		echo "<li><div class='value'><b>".number_format($count70,1)."%</b></div><div class='label'>More than 70%</div></li>";		
+		echo "<li><div class='value'><b>".number_format($count80,1)."%</b></div><div class='label'>More than 80%</div></li>";		
+		echo "<li><div class='value'><b>".number_format($count90,1)."%</b></div><div class='label'>More than 90%</div></li>";		
+	echo '</ul></div>';
+
+//Browser
+	$browserStats = $getStats['browser'];
+	$browserNum = count($browserStats);	
+	$tallyCounts = array_count_values($browserStats);
+	$uniqueTech = array_unique($browserStats);
+	$combineTech = [];	
+	
+	foreach ($uniqueTech as $uniqueTech) :
+		$combineTech[$uniqueTech]=(($tallyCounts[$uniqueTech]/$browserNum)*100);
+	endforeach; 	
+	
+	uksort( $combineTech, function($a, $b) use ($combineTech) { return [$combineTech[$b], $a] <=> [$combineTech[$a], $b]; } );
+		
+	echo '<div><ul><li class="sub-label">Browser</li>';
+	foreach ($combineTech as $browser=>$browserNum) :
+		echo "<li><div class='value'><b>".number_format($browserNum,1)."%</b></div><div class='label'>".$browser."</div></li>";
+	endforeach; 	
+	echo '</ul></div>';
+	
+// Screen Resolution	
 	$resolutionStats = $getStats['resolution'];
 	$resolutionNum = count($resolutionStats);	
 	foreach ($resolutionStats as $resolution) :
@@ -1843,26 +1882,6 @@ function battleplan_admin_tech_stats() {
 	echo '<div><ul><li class="sub-label">Screen Width</li>';
 	foreach ($combineTech as $resolution=>$resolutionNum) :
 		echo "<li><div class='value'><b>".number_format($resolutionNum,1)."%</b></div><div class='label'>".$resolution." px</div></li>";
-	endforeach; 	
-	echo '</ul></div>';
-	
-	
-	$scrolledStats = $getStats['scrolled'];
-	$scrolledNum = count($scrolledStats);	
-	$tallyCounts = array_count_values($scrolledStats);
-	$uniqueTech = array_unique($scrolledStats);
-	$combineTech = [];
-	
-	foreach ($uniqueTech as $uniqueTech) :
-		$combineTech[$uniqueTech]=(($tallyCounts[$uniqueTech]/$scrolledNum)*100);
-	endforeach; 	
-	
-	uksort( $combineTech, function($a, $b) use ($combineTech) { return [$combineTech[$b], $a] <=> [$combineTech[$a], $b]; } );
-		
-	echo '<div><ul><li class="sub-label">User Scrolling</li>';
-	foreach ($combineTech as $scrolled=>$scrolledNum) :
-		if ( $scrolled == '' ) $scrolled = "Unknown ";
-		echo "<li><div class='value'><b>".number_format($scrolledNum,1)."%</b></div><div class='label'>".$scrolled."%</div></li>";
 	endforeach; 	
 	echo '</ul></div>';
 }

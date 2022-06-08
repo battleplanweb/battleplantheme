@@ -16,6 +16,26 @@ function battleplan_update_meta_ajax() {
 	if ( $type == "site" ) update_option( $key, $value );
 	if ( $type == "user" ) update_user_meta( wp_get_current_user()->ID, $key, $value, false );
 	if ( $type == "post" || $type == "page" ) updateMeta( get_the_ID(), $key, $value );	
+	
+	$response = array( 'result' => 'Saved '.$value. ' to '.$key  );
+	wp_send_json( $response );	
+}
+
+// Tracking logic for page scrolls & element views
+add_action( 'wp_ajax_track_interaction', 'battleplan_track_interaction_ajax' );
+add_action( 'wp_ajax_nopriv_track_interaction', 'battleplan_track_interaction_ajax' );
+function battleplan_track_interaction_ajax() {
+	$key = $_POST['key'];	
+	$value = $_POST['value'];
+	$uniqueID = $_POST['uniqueID'];
+	
+	$tracking = get_option( $key );
+	unset($tracking[$uniqueID]);
+	$tracking[$uniqueID] = $value;
+	update_option( $key, $tracking );
+	
+	$response = array( 'result' => $uniqueID . ' tracked '.$value. ' to '.$key.' in '.$tracking );
+	wp_send_json( $response );	
 }
 
 // Log Page Load Speed

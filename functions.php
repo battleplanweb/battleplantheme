@@ -16,7 +16,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '12.0' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '12.0.1' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -897,8 +897,8 @@ function battleplan_scripts() {
 	wp_localize_script( 'battleplan-script-essential', 'site_dir', $saveDir );	
 	wp_localize_script( 'battleplan-script-desktop', 'site_dir', $saveDir );	
 	
-    $saveOptions = array ( 'lat' => $GLOBALS['customer_info']['lat'], 'long' => $GLOBALS['customer_info']['long'], 'radius' => $GLOBALS['customer_info']['radius'] );
-    wp_localize_script('battleplan-script-tracking', 'site_options', $saveOptions);
+    //$saveOptions = array ( 'lat' => $GLOBALS['customer_info']['lat'], 'long' => $GLOBALS['customer_info']['long'], 'radius' => $GLOBALS['customer_info']['radius'] );
+    //wp_localize_script('battleplan-script-tracking', 'site_options', $saveOptions);
 }
 
 // Load and enqueue admin styles & scripts

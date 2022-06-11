@@ -44,9 +44,58 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				success: function( response ) { console.log(response); } 
 			});		
 			this.destroy();
-		}, { offset: 'bottom-in-view' });		
+		}, { offset: 'bottom-in-view' });	
+				
+	// Track percentage of content viewed
+		var scrollPct = 0, lastPct = 0, screenH = screen.height, topH = $('#masthead').height() + $('#wrapper-top').height(), contentH = $('#wrapper-content').height(), uniqueID = getCookie('unique-id')+getCookie('pages-viewed');
+		$('#primary p, #primary img').waypoint(function() {
+			logScroll();
+			this.destroy();
+		}, { offset: 'bottom-in-view' });	
+		function logScroll() {
+			scrollPct = ( $(window).scrollTop() + screenH - topH) / contentH;
+			if ( scrollPct > 1 ) { scrollPct = 1; }
+			if ( scrollPct > lastPct ) {
+				console.log('ajaxing ' + scrollPct);
+				$.post({
+					url : ajaxURL,
+					data : { action: 'track_interaction', key: 'content-scroll-pct', scroll: scrollPct, uniqueID: uniqueID },
+					success: function( response ) { console.log(response); } 
+				});	
+				lastPct = scrollPct;
+			}
+		};
+
+				console.log('alert 17');
+
 		
-	// Track user scrolling and important elements viewed
+	// Track sections & elements when viewed
+		var numCol = $('#wrapper-bottom > section > .flex > .col').length, colView = 0, lastView = 0;
+		$('#masthead, #wrapper-bottom > section > .flex > .col').waypoint(function() {
+			logSection(this.element);
+			this.destroy();
+		}, { offset: 'bottom-in-view' });	
+		function logSection(section) {
+			colView = ($('#wrapper-bottom > section > .flex > .col').index(section)) + 1;			
+			if ( colView > lastView ) {
+								console.log('ajaxing ' + colView);
+
+				$.post({
+					url : ajaxURL,
+					data : { action: 'track_interaction', key: 'content-column-views', viewed: colView, total: numCol,  uniqueID: uniqueID },
+					success: function( response ) { console.log(response); } 
+				});	
+			};
+			lastView = colView;
+		};
+
+		
+		
+
+		
+/*		
+		
+		*** WORKING script for full page scrolling pct
 		var scrollPct = 0, lastPct = 0, screenH = screen.height, pageH = $('body').height(), uniqueID = getCookie('unique-id')+getCookie('pages-viewed');
 		setInterval(function() {
 			scrollPct = ($(window).scrollTop() + screenH) / pageH;
@@ -60,7 +109,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				lastPct = scrollPct;			
 			}	
 		}, 1000);	
-		
+		*/
 		
 		/*
 		$('p, img, #wrapper-bottom section').waypoint(function() {

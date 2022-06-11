@@ -26,15 +26,28 @@ add_action( 'wp_ajax_track_interaction', 'battleplan_track_interaction_ajax' );
 add_action( 'wp_ajax_nopriv_track_interaction', 'battleplan_track_interaction_ajax' );
 function battleplan_track_interaction_ajax() {
 	$key = $_POST['key'];	
-	$value = $_POST['value'];
+	$scroll = $_POST['scroll'];
+	$viewed = $_POST['viewed'];
+	$total = $_POST['total'];
 	$uniqueID = $_POST['uniqueID'];
 	
-	$tracking = get_option( $key );
-	unset($tracking[$uniqueID]);
-	$tracking[$uniqueID] = $value;
-	update_option( $key, $tracking );
-	
-	$response = array( 'result' => $uniqueID . ' tracked '.$value. ' to '.$key.' in '.$tracking );
+	if ( $scroll ) :	
+		$tracking = get_option( $key );
+		if ( $scroll > $tracking[$unique] ) :
+			unset($tracking[$uniqueID]);
+			$tracking[$uniqueID] = $scroll;
+			update_option( $key, $tracking );
+			$response = array( 'result' => $uniqueID . ' scrolled '.$scroll. '% of content' );
+		endif;
+	else:
+		$tracking = get_option( $key );
+		if ( $viewed > $tracking[$uniqueID]['viewed'] ) :
+			unset($tracking[$uniqueID]);
+			$tracking[$uniqueID] = array('viewed'=>$viewed, 'total'=>$total);
+			update_option( $key, $tracking );
+			$response = array( 'result' => $uniqueID . ' viewed '.$viewed. ' out of '.$total.' columns.' );
+		endif;	
+	endif;
 	wp_send_json( $response );	
 }
 

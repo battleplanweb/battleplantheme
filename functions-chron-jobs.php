@@ -350,7 +350,7 @@ function battleplan_run_chron_jobs_ajax() {
 		$ua_id = $GLOBALS['customer_info']['google-tags']['ua-view'];
 		$client = new BetaAnalyticsDataClient(['credentials'=>get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json']);
 		$citiesToExclude = array('Orangetree','Ashburn');
-		
+		$ua_end = date( "Y-m-d" );		
 		$rewind4Years = '2014-01-01';
 		
 		function initializeAnalytics() {
@@ -398,40 +398,42 @@ function battleplan_run_chron_jobs_ajax() {
 		$pageCounts = array(1,7,30,90,180,365);
 
 		foreach ($pageCounts as $pageCount) :
-			$response = $client->runReport([
-				'property' => 'properties/'.$ga4_id,
-				'dateRanges' => [
-					new DateRange([ 'start_date' => $pageCount.'daysAgo', 'end_date' => 'today' ]),
-				],
-				'dimensions' => [
-					new Dimension([ 'name' => 'pagePath' ]),
-					new Dimension([ 'name' => 'country' ]),		
-					new Dimension([ 'name' => 'city' ]),		
-				],
-				'metrics' => [
-					new Metric([ 'name' => 'screenPageViews' ]),	
-				]
-			]);
+			if ( $ga4_id ) :
+				$response = $client->runReport([
+					'property' => 'properties/'.$ga4_id,
+					'dateRanges' => [
+						new DateRange([ 'start_date' => $pageCount.'daysAgo', 'end_date' => 'today' ]),
+					],
+					'dimensions' => [
+						new Dimension([ 'name' => 'pagePath' ]),
+						new Dimension([ 'name' => 'country' ]),		
+						new Dimension([ 'name' => 'city' ]),		
+					],
+					'metrics' => [
+						new Metric([ 'name' => 'screenPageViews' ]),	
+					]
+				]);
 
-			foreach ($response->getRows() as $row) :			
-				if ( $row->getDimensionValues()[1]->getValue() == "United States" && !in_array( $row->getDimensionValues()[2]->getValue(), $citiesToExclude ) ) :	
-					$pagePaths[] = $row->getDimensionValues()[0]->getValue();					
-					$views[] = $row->getMetricValues()[0]->getValue();					
-				endif;
-			endforeach;
+				foreach ($response->getRows() as $row) :			
+					if ( $row->getDimensionValues()[1]->getValue() == "United States" && !in_array( $row->getDimensionValues()[2]->getValue(), $citiesToExclude ) ) :	
+						$pagePaths[] = $row->getDimensionValues()[0]->getValue();					
+						$views[] = $row->getMetricValues()[0]->getValue();					
+					endif;
+				endforeach;
 
-			foreach ($pagePaths as $key=>$path) :
-				if ( $path == "" || $path == "/" ) :
-					$id = get_option('page_on_front');					
-				else:
-					$id = getID($path);
-				endif;				
+				foreach ($pagePaths as $key=>$path) :
+					if ( $path == "" || $path == "/" ) :
+						$id = get_option('page_on_front');					
+					else:
+						$id = getID($path);
+					endif;				
 
-				if ( $pageCount == 1) : $pageKey = 'log-views-today';
-				else: $pageKey = 'log-views-total-'.$pageCount.'day'; endif;
+					if ( $pageCount == 1) : $pageKey = 'log-views-today';
+					else: $pageKey = 'log-views-total-'.$pageCount.'day'; endif;
 
-				updateMeta($id, $pageKey, $views[$key]);
-			endforeach; 	
+					updateMeta($id, $pageKey, $views[$key]);
+				endforeach; 	
+			endif;
 
 // Gather UA stats (for Popular Pages Stats)
 			if ( $ua_id ) :
@@ -470,107 +472,109 @@ function battleplan_run_chron_jobs_ajax() {
 		if ( $admin == true ) :
 		
 // Gather GA4 Advanced Stats
-			$response = $client->runReport([
-				'property' => 'properties/'.$ga4_id,
-				'dateRanges' => [
-					new DateRange([ 'start_date' => '90daysAgo', 'end_date' => 'today' ]),
-				],
-				'dimensions' => [
-					new Dimension([ 'name' => 'pageReferrer' ]),
-					new Dimension([ 'name' => 'country' ]),	
-					new Dimension([ 'name' => 'city' ]),	
-					new Dimension([ 'name' => 'region' ]),	
-					new Dimension([ 'name' => 'browser' ]),	
-					new Dimension([ 'name' => 'screenResolution' ]),	
-					new Dimension([ 'name' => 'deviceCategory' ]),
-				],
-				'metrics' => [
-					new Metric([ 'name' => 'totalUsers' ]),	
-				]
-			]);
-			
-			foreach ($response->getRows() as $row) :			
-				if ( $row->getDimensionValues()[1]->getValue() == "United States" && !in_array( $row->getDimensionValues()[2]->getValue(), $citiesToExclude ) ) :	
-					$referrers[] =$row->getDimensionValues()[0]->getValue();					
-					if ( $row->getDimensionValues()[2]->getValue() == '(not set)' ):
-						$location[] = $row->getDimensionValues()[3]->getValue();
-					else:
-						$location[] = $row->getDimensionValues()[2]->getValue().', '.state_abbr($row->getDimensionValues()[3]->getValue());
+			if ( $ga4_id ) :
+				$response = $client->runReport([
+					'property' => 'properties/'.$ga4_id,
+					'dateRanges' => [
+						new DateRange([ 'start_date' => '90daysAgo', 'end_date' => 'today' ]),
+					],
+					'dimensions' => [
+						new Dimension([ 'name' => 'pageReferrer' ]),
+						new Dimension([ 'name' => 'country' ]),	
+						new Dimension([ 'name' => 'city' ]),	
+						new Dimension([ 'name' => 'region' ]),	
+						new Dimension([ 'name' => 'browser' ]),	
+						new Dimension([ 'name' => 'screenResolution' ]),	
+						new Dimension([ 'name' => 'deviceCategory' ]),
+					],
+					'metrics' => [
+						new Metric([ 'name' => 'totalUsers' ]),	
+					]
+				]);
+
+				foreach ($response->getRows() as $row) :			
+					if ( $row->getDimensionValues()[1]->getValue() == "United States" && !in_array( $row->getDimensionValues()[2]->getValue(), $citiesToExclude ) ) :	
+						$referrers[] =$row->getDimensionValues()[0]->getValue();					
+						if ( $row->getDimensionValues()[2]->getValue() == '(not set)' ):
+							$location[] = $row->getDimensionValues()[3]->getValue();
+						else:
+							$location[] = $row->getDimensionValues()[2]->getValue().', '.state_abbr($row->getDimensionValues()[3]->getValue());
+						endif;
+						$browser[] = $row->getDimensionValues()[4]->getValue();					
+						$resolution[] = $row->getDimensionValues()[5]->getValue();					
+						$deviceCategory[] = $row->getDimensionValues()[6]->getValue();					
 					endif;
-					$browser[] = $row->getDimensionValues()[4]->getValue();					
-					$resolution[] = $row->getDimensionValues()[5]->getValue();					
-					$deviceCategory[] = $row->getDimensionValues()[6]->getValue();					
-				endif;
-			endforeach;
+				endforeach;
 
-			$referrer_stats = $referrers;
-			$location_stats = $location;
-			$tech_stats = array( 'browser'=> $browser, 'device'=>$deviceCategory, 'resolution'=>$resolution );		
+				$referrer_stats = $referrers;
+				$location_stats = $location;
+				$tech_stats = array( 'browser'=> $browser, 'device'=>$deviceCategory, 'resolution'=>$resolution );		
 
-		
-// Gather GA4 stats (for Visitor Trends)
-			$response = $client->runReport([
-				'property' => 'properties/'.$ga4_id,
-				'dateRanges' => [
-					new DateRange([ 'start_date' => $rewind4Years, 'end_date' => 'today' ]),
-				],
-				'dimensions' => [
-					new Dimension([ 'name' => 'date' ]),
-					new Dimension([ 'name' => 'country' ]),	
-					new Dimension([ 'name' => 'city' ]),		
-					new Dimension([ 'name' => 'firstUserMedium' ]),	
-				],
-				'metrics' => [
-					new Metric([ 'name' => 'totalUsers' ]),	
-					new Metric([ 'name' => 'screenPageViews' ]),	
-					new Metric([ 'name' => 'sessions' ]),	
-					new Metric([ 'name' => 'engagedSessions' ]),
-				]
-			]);
 
-			foreach ($response->getRows() as $row) :			
-				if ( $row->getDimensionValues()[1]->getValue() == "United States" && !in_array( $row->getDimensionValues()[2]->getValue(), $citiesToExclude ) ) :	
-					$dates[] = strtotime($row->getDimensionValues()[0]->getValue());
-					$sources[] = $row->getDimensionValues()[3]->getValue();
-					$users[] = $row->getMetricValues()[0]->getValue();
-					$pageviews[] = $row->getMetricValues()[1]->getValue();
-					$sessions[] = $row->getMetricValues()[2]->getValue();
-					$engaged[] = $row->getMetricValues()[3]->getValue();
-				endif;
-			endforeach;
+	// Gather GA4 stats (for Visitor Trends)
+				$response = $client->runReport([
+					'property' => 'properties/'.$ga4_id,
+					'dateRanges' => [
+						new DateRange([ 'start_date' => $rewind4Years, 'end_date' => 'today' ]),
+					],
+					'dimensions' => [
+						new Dimension([ 'name' => 'date' ]),
+						new Dimension([ 'name' => 'country' ]),	
+						new Dimension([ 'name' => 'city' ]),		
+						new Dimension([ 'name' => 'firstUserMedium' ]),	
+					],
+					'metrics' => [
+						new Metric([ 'name' => 'totalUsers' ]),	
+						new Metric([ 'name' => 'screenPageViews' ]),	
+						new Metric([ 'name' => 'sessions' ]),	
+						new Metric([ 'name' => 'engagedSessions' ]),
+					]
+				]);
 
-			array_multisort($dates, $sources, $users, $pageviews, $sessions, $engaged);
-			
-			$days = count($dates);
-
-			$cDate = $dates[0];
-			$cUsers = $cPageviews = $cSearch = $cSessions = $cEngaged = 0;
-
-			foreach ( $dates as $key=>$date ) :
-				if ( $date != $cDate ) :
-					$diff = $date - $cDate;
-					$dDate = $cDate;
-					if ( $diff > 86400 ) :
-						$skip = ( $diff / 86400 ) - 1;		
-						for ( $x=0; $x<$skip; $x++ ) :
-							$dDate = $dDate + 86400;
-							$stats[] = array ('date'=>date( "Y-m-d", $dDate), 'users'=>0, 'search'=>0, 'pageviews'=>0, 'sessions'=>0, 'engaged'=>0 );
-						endfor;			
+				foreach ($response->getRows() as $row) :			
+					if ( $row->getDimensionValues()[1]->getValue() == "United States" && !in_array( $row->getDimensionValues()[2]->getValue(), $citiesToExclude ) ) :	
+						$dates[] = strtotime($row->getDimensionValues()[0]->getValue());
+						$sources[] = $row->getDimensionValues()[3]->getValue();
+						$users[] = $row->getMetricValues()[0]->getValue();
+						$pageviews[] = $row->getMetricValues()[1]->getValue();
+						$sessions[] = $row->getMetricValues()[2]->getValue();
+						$engaged[] = $row->getMetricValues()[3]->getValue();
 					endif;
+				endforeach;
 
-					$stats[] = array ('date'=>date( "Y-m-d", $cDate), 'users'=>$cUsers, 'search'=>$cSearch, 'pageviews'=>$cPageviews, 'sessions'=>$cSessions, 'engaged'=>$cEngaged );
-				
-					$cUsers = $cPageviews = $cSearch = $cSessions = $cEngaged = 0;
-					$cDate = $date;
-				endif;	
-				$cUsers = $cUsers + $users[$key];	
-				$cPageviews = $cPageviews + $pageviews[$key];	
-				$cSessions = $cSessions + $sessions[$key];	
-				$cEngaged = $cEngaged + $engaged[$key];	
-				if ( $sources[$key] == 'organic' ) : $cSearch = $cSearch + $users[$key]; endif;
-			endforeach;
+				array_multisort($dates, $sources, $users, $pageviews, $sessions, $engaged);
 
-			$ua_end = $stats[0]['date'];
+				$days = count($dates);
+
+				$cDate = $dates[0];
+				$cUsers = $cPageviews = $cSearch = $cSessions = $cEngaged = 0;
+
+				foreach ( $dates as $key=>$date ) :
+					if ( $date != $cDate ) :
+						$diff = $date - $cDate;
+						$dDate = $cDate;
+						if ( $diff > 86400 ) :
+							$skip = ( $diff / 86400 ) - 1;		
+							for ( $x=0; $x<$skip; $x++ ) :
+								$dDate = $dDate + 86400;
+								$stats[] = array ('date'=>date( "Y-m-d", $dDate), 'users'=>0, 'search'=>0, 'pageviews'=>0, 'sessions'=>0, 'engaged'=>0 );
+							endfor;			
+						endif;
+
+						$stats[] = array ('date'=>date( "Y-m-d", $cDate), 'users'=>$cUsers, 'search'=>$cSearch, 'pageviews'=>$cPageviews, 'sessions'=>$cSessions, 'engaged'=>$cEngaged );
+
+						$cUsers = $cPageviews = $cSearch = $cSessions = $cEngaged = 0;
+						$cDate = $date;
+					endif;	
+					$cUsers = $cUsers + $users[$key];	
+					$cPageviews = $cPageviews + $pageviews[$key];	
+					$cSessions = $cSessions + $sessions[$key];	
+					$cEngaged = $cEngaged + $engaged[$key];	
+					if ( $sources[$key] == 'organic' ) : $cSearch = $cSearch + $users[$key]; endif;
+				endforeach;
+
+				$ua_end = $stats[0]['date'];
+			endif;
 
 
 // Gather UA stats (for Visitor Trends)

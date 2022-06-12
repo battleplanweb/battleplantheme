@@ -109,6 +109,59 @@ function battleplan_run_chron_jobs_ajax() {
 				updateMeta( $formID, "_mail", $formMail );	
 			endforeach;
 		endif;
+		
+// Widget Options - Extended Settings
+		if ( is_plugin_active('extended-widget-options/plugin.php') ) :
+			$widgetOpts = get_option( 'widgetopts_settings' );
+
+			$widgetOpts['settings']['visibility']['post_type'] = '1';
+			$widgetOpts['settings']['visibility']['taxonomies'] = '1';
+			$widgetOpts['settings']['visibility']['misc'] = '1';		
+
+			$widgetOpts['settings']['classes']['id'] = '1';
+			$widgetOpts['settings']['classes']['type'] = 'both';
+			$widgetOpts['settings']['classes']['classlists']['0'] = 'lock-to-top';
+			$widgetOpts['settings']['classes']['classlists']['1'] = 'lock-to-bottom';
+			$widgetOpts['settings']['classes']['classlists']['2'] = 'widget-essential';
+			$widgetOpts['settings']['classes']['classlists']['3'] = 'widget-important';
+			$widgetOpts['settings']['classes']['classlists']['4'] = 'remove-first';
+			$widgetOpts['settings']['classes']['classlists']['5'] = 'widget-image';
+			$widgetOpts['settings']['classes']['classlists']['6'] = 'widget-financing';
+			$widgetOpts['settings']['classes']['classlists']['7'] = 'widget-set';
+
+			$widgetOpts['settings']['dates']['days'] = '1';		
+			$widgetOpts['settings']['dates']['date_range'] = '1';		
+
+			$widgetOpts['visibility'] = 'activate';		
+			$widgetOpts['devices'] = 'deactivate';
+			$widgetOpts['urls'] = 'activate';
+			$widgetOpts['alignment'] = 'deactivate';
+			$widgetOpts['hide_title'] = 'activate';
+			$widgetOpts['classes'] = 'activate';
+			$widgetOpts['logic'] = 'deactivate';
+			$widgetOpts['move'] = 'deactivate';
+			$widgetOpts['clone'] = 'activate';
+			$widgetOpts['links'] = 'deactivate';
+			$widgetOpts['fixed'] = 'deactivate';
+			$widgetOpts['columns'] = 'deactivate';
+			$widgetOpts['roles'] = 'deactivate';			
+			$widgetOpts['state'] = 'deactivate';
+			$widgetOpts['dates'] = 'activate';			
+			$widgetOpts['styling'] = 'deactivate';
+			$widgetOpts['animation'] = 'deactivate';
+			$widgetOpts['taxonomies'] = 'deactivate';
+			$widgetOpts['disable_widgets'] = 'deactivate';
+			$widgetOpts['permission'] = 'deactivate';
+			$widgetOpts['shortcodes'] = 'deactivate';		
+			$widgetOpts['cache'] = 'deactivate';
+			$widgetOpts['search'] = 'deactivate';
+			$widgetOpts['widget_area'] = 'deactivate';		
+			$widgetOpts['import_export'] = 'deactivate';
+			$widgetOpts['elementor'] = 'deactivate';
+			$widgetOpts['beaver'] = 'deactivate';
+			$widgetOpts['acf'] = 'deactivate';						
+			update_option( 'widgetopts_settings', $widgetOpts );
+		endif;	
 
 // Yoast SEO Settings Update
 		if ( is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') ) :		

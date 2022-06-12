@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 ----------------------------------------------------------------
 # Basic site functionality
 # DOM level functions
-# Setup Sidebar
+# Set up sidebar
 # Set up animation
 # Set up pages
 # Screen resize
@@ -158,6 +158,25 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
     		[array[i], array[j]] = [array[j], array[i]];
   		}
 	}	
+	
+// Shuffle set of jQuery elements
+	window.shuffleElements = function (array) {		
+		var count = array.length, shuffled_array = [], newArray = [], i, index1, index2, temp_val;
+
+		for (i = 0; i < count; i++) { shuffled_array.push(i); }
+		
+		for (i = 0; i < count; i++) {
+			index1 = (Math.random() * count) | 0;
+			index2 = (Math.random() * count) | 0;
+			temp_val = shuffled_array[index1];
+			shuffled_array[index1] = shuffled_array[index2];
+			shuffled_array[index2] = temp_val;
+		}		
+		
+		for (i = 0; i < count; i++) { newArray[i] = array.eq(shuffled_array[i]); }
+		
+		return newArray;
+	}
 
 // Find & Replace text or html in a Div	
 	window.replaceText = function (container, find, replace, type, all) {
@@ -652,49 +671,29 @@ if ( typeof parallaxBG !== 'function' ) {
 /*--------------------------------------------------------------
 # Set up sidebar
 --------------------------------------------------------------*/
-	window.setupSidebar = function (compensate, sidebarScroll, shuffle) {
+	window.setupSidebar = function (compensate, sidebarScroll) {
 		sidebarScroll = sidebarScroll || "true";
-		shuffle = shuffle || "true";		
 		compensate = compensate || 0;
 		
 // Add classes for first, last, even and odd widgets
 		window.labelWidgets = function () {
 			$(".widget:not(.hide-widget)").first().addClass("widget-first");  
 			$(".widget:not(.hide-widget)").last().addClass("widget-last"); 
-			$(".widget:not(.hide-widget):odd").addClass("widget-even"); 
-			$(".widget:not(.hide-widget):even").addClass("widget-odd"); 	
 		};		
 
 // Shuffle non-locked widgets
-		var $shuffledWidgets = $('.widget:not(.lock-to-top):not(.lock-to-bottom)'), count = $shuffledWidgets.length, $parent = $shuffledWidgets.parent(), i, index1, index2, temp_val, shuffled_array = [], $lockedWidgets = $(".widget.lock-to-bottom").detach();
-
-		for (i = 0; i < count; i++) { 
-			shuffled_array.push(i); 
-		}
-
-		if ( shuffle == "true" ) {
-			for (i = 0; i < count; i++) {
-				index1 = (Math.random() * count) | 0;
-				index2 = (Math.random() * count) | 0;
-				temp_val = shuffled_array[index1];
-				shuffled_array[index1] = shuffled_array[index2];
-				shuffled_array[index2] = temp_val;
-			}
-		}
+		var $shuffledWidgets = $('.widget:not(.lock-to-top):not(.lock-to-bottom):not(.widget-financing):not(.widget-event)'), $parent = $shuffledWidgets.parent(), $bottomWidgets = $(".widget.lock-to-bottom").detach(), $financingWidgets = $('.widget.widget-financing').detach(), $eventWidgets = $('.widget.widget-event').detach();
 
 		$shuffledWidgets.detach();
-		for (i = 0; i < count; i++) { 
-			$parent.append( $shuffledWidgets.eq(shuffled_array[i]) );
-		}			
-
-		$parent.append( $lockedWidgets );
-		
-		$('.screen-desktop .widget-set.set-a:not(:first-child), .screen-desktop .widget-set.set-b:not(:first-child), .screen-desktop .widget-set.set-c:not(:first-child)').addClass('hide-set').addClass('hide-widget');
+		$parent.append( shuffleElements($eventWidgets) );
+		$parent.append( shuffleElements($financingWidgets) );
+		$parent.append( shuffleElements($shuffledWidgets) );
+		$parent.append( $bottomWidgets );
 		
 		if ( $('body').hasClass('screen-mobile') ) {
 			labelWidgets();
 		} else {
-			desktopSidebar(compensate, sidebarScroll, shuffle);
+			desktopSidebar(compensate, sidebarScroll);
 		}
 	};	
 	
@@ -702,7 +701,7 @@ if ( typeof parallaxBG !== 'function' ) {
 # Set up animation
 --------------------------------------------------------------*/
 	
-var pageViews=getCookie('pages-viewed'), uniqueID, pageLimit = 300, speedFactor = 0.5;
+var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 
 // Gracefully start to fade out the pre-loader
 	var opacity = 1, loader = document.getElementById("loader"), color = getComputedStyle(loader).getPropertyValue("background-color"), [r,g,b,a] = color.match(/\d+/g).map(Number), bgTimer = setInterval(function() {
@@ -989,8 +988,9 @@ var pageViews=getCookie('pages-viewed'), uniqueID, pageLimit = 300, speedFactor 
 	}
 
 // Set unique ID & pages viewed cookies
-	if ( !getCookie('unique-id') ) { 
-		var unique_id = Math.floor(Date.now()) + '' + Math.floor((Math.random() * 900) + 99);
+	if ( !getCookie('unique-id') ) { 	
+		var unique_id = Math.floor(Date.now()) + '' + Math.floor((Math.random() * 99)) + '' + Math.floor((Math.random() * 99));
+		unique_id = unique_id.slice(3);
 		setCookie('unique-id', unique_id);
 		setCookie('pages-viewed', 1);
 	} else {

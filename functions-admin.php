@@ -1806,40 +1806,70 @@ function battleplan_admin_tech_stats() {
 	echo '</ul></div>';
 	
 // Scrolling Pct
-	$scrolledStats = get_option('page-scroll-pct');
-	$scrolledNum = count($scrolledStats);	
-	$totalPct = array_sum($scrolledStats);
-	$overallAvg = ( $totalPct / $scrolledNum ) * 100;
-	$count30 = $count40 = $count50 = $count60 = $count70 = $count90 = $count90 = 0;
-	
-	foreach ( $scrolledStats as $key=>$page ):
-		if ( $page > .30 ) $count30++;
-		if ( $page > .40 ) $count40++;
-		if ( $page > .50 ) $count50++;
-		if ( $page > .60 ) $count60++;
-		if ( $page > .70 ) $count70++;
-		if ( $page > .80 ) $count80++;
-		if ( $page > .90 ) $count90++;
+	$contentTracking = get_option('content-tracking');
+	$columnScroll = get_option('content-column-views');	
+	$contentScroll = get_option('content-scroll-pct');
+	$contentScrollNum = count($contentScroll);	
+	$contentScrollTotal = array_sum($contentScroll);	
+	$contentScrollMean = ( $contentScrollTotal / $contentScrollNum ) * 100;
+
+	foreach ($contentScroll as $key=>$scroll) :
+		$contentScrollValues .= (round($scroll,1) * 100) .',';
 	endforeach;
 	
-	$count30 = ($count30 / $scrolledNum) * 100;
-	$count40 = ($count40 / $scrolledNum) * 100;
-	$count50 = ($count50 / $scrolledNum) * 100;
-	$count60 = ($count60 / $scrolledNum) * 100;
-	$count70 = ($count70 / $scrolledNum) * 100;
-	$count80 = ($count80 / $scrolledNum) * 100;
-	$count90 = ($count90 / $scrolledNum) * 100;
+	$contentScrollMode = array_count_values(explode(",", $contentScrollValues));  
+	arsort($contentScrollMode); 
 		
-	echo '<div><ul><li class="sub-label">Scrolling</li>';
-		echo "<li><div class='value'><b>".number_format($overallAvg,1)."%</b></div><div class='label'>Overall Average (".$scrolledNum." pages)</div></li>";
-		echo "<br>";
-		echo "<li><div class='value'><b>".number_format($count30,1)."%</b></div><div class='label'>More than 30%</div></li>";		
-		echo "<li><div class='value'><b>".number_format($count40,1)."%</b></div><div class='label'>More than 40%</div></li>";		
-		echo "<li><div class='value'><b>".number_format($count50,1)."%</b></div><div class='label'>More than 50%</div></li>";		
-		echo "<li><div class='value'><b>".number_format($count60,1)."%</b></div><div class='label'>More than 60%</div></li>";		
-		echo "<li><div class='value'><b>".number_format($count70,1)."%</b></div><div class='label'>More than 70%</div></li>";		
-		echo "<li><div class='value'><b>".number_format($count80,1)."%</b></div><div class='label'>More than 80%</div></li>";		
-		echo "<li><div class='value'><b>".number_format($count90,1)."%</b></div><div class='label'>More than 90%</div></li>";		
+	foreach ( $columnScroll as $columns ) :
+		$colViews = $columns['viewed'];
+		$colTotal = $columns['total'];
+		
+		for($x=0;$x<$colViews;$x++) :
+			if ( $col[$x]['viewed'] ) : 
+				$col[$x]['viewed'] = $col[$x]['viewed'] + 1;
+			else: 
+				$col[$x]['viewed'] = 1; 
+			endif;
+		endfor;
+		
+		for($x=0;$x<$colTotal;$x++) :
+			if ( $col[$x]['total'] ) : 
+				$col[$x]['total'] = $col[$x]['total'] + 1;
+			else: 
+				$col[$x]['total'] = 1; 
+			endif;
+		endfor;	
+	endforeach;	
+	
+	$visitsTracked = count($contentTracking);
+	foreach ($contentTracking as $visitor) :
+		foreach ($visitor as $key=>$tracking) :
+			
+		
+		
+		
+		
+		endforeach;
+	endforeach;
+		
+	echo '<div><ul><li class="sub-label">Content</li>';
+		echo "<li><div class='value'><b>".number_format($contentScrollMean,1)."%</b></div><div class='label'>Mean Viewed (".$contentScrollNum." pages)</div></li>";		
+		echo "<li><div class='value'><b>".array_key_first($contentScrollMode)."%</b></div><div class='label'>Mode Viewed (".$contentScrollNum." pages)</div></li>";	
+		
+		echo "<br><div style='column-count:2'>";
+		foreach($col as $theCol) :
+			$colNum++;
+			$findPct = round( (($theCol['viewed'] / $theCol['total']) * 100) ,1);
+			echo "<li><div class='value'><b>".$findPct."%</b></div><div class='label'>Col #".$colNum."</div></li>";	
+		endforeach;		
+		echo "</div><br>";		
+		
+		
+
+		//echo "<li><div class='value'><b>".$findPct."%</b></div><div class='label'>Column #".$visitsTracked."</div></li>";	
+
+
+		
 	echo '</ul></div>';
 
 //Browser

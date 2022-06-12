@@ -187,7 +187,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 /*--------------------------------------------------------------
 # Set up sidebar
 --------------------------------------------------------------*/
-	window.desktopSidebar = function (compensate, sidebarScroll, shuffle) {
+	window.desktopSidebar = function (compensate, sidebarScroll) {
 		
 // Check & log heights of main elements
 		window.checkHeights = function () {
@@ -201,24 +201,39 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 // Initiate widget removal
 		window.widgetInit = function () {
 			if ( compensate != 0 ) { $('#secondary').css({ "height":"calc(100% + "+compensate+"px)" }); }
-			$('.widget:not(.widget-important)').addClass('hide-widget');
+			
+			$('.widget').attr('data-priority', 2).addClass('hide-widget');			
+			$('.widget.widget-priority-5, .widget.widget-essential, .widget.widget_nav_menu').attr('data-priority', 5).removeClass('hide-widget');
+			$('.widget.widget-priority-4, .widget.widget-important').attr('data-priority', 4);
+			$('.widget.widget-priority-3, .widget.widget-event, .widget.widget-financing').attr('data-priority', 3);
+			$('.widget.widget-priority-1, .widget.remove-first').attr('data-priority', 1);
+			var handleSets = 0;
+			$('.widget.widget-set.set-a').each(function() {
+				if ( handleSets > 0 ) { $(this).attr('data-priority', 0); }		
+				handleSets++;
+			});
+			handleSets = 0;
+			$('.widget.widget-set.set-b').each(function() {
+				if ( handleSets > 0 ) { $(this).attr('data-priority', 0); }		
+				handleSets++;
+			});
+			handleSets = 0;
+			$('.widget.widget-set.set-c').each(function() {
+				if ( handleSets > 0 ) { $(this).attr('data-priority', 0); }		
+				handleSets++;
+			});
+
 			addWidgets();				
 		};
-		
+
 // Add widget one by one as long as they fit
 		window.addWidgets = function () {
-			$('.hide-widget:not(.remove-first):not(.hide-set)').each(function() {
-				if ( $(this).height() <= checkHeights() ) { $(this).removeClass('hide-widget'); }	 			
-			});
-			
-			$('.hide-widget:not(.remove-first)').each(function() {
-				if ( $(this).height() <= checkHeights() ) { $(this).removeClass('hide-widget'); }	 			
-			});
-	
-			$('.hide-widget').each(function(){
-				if ( $(this).height() <= checkHeights() ) { $(this).removeClass('hide-widget'); }				
-			});
-			
+			for (var i = 4; i >= 0; i--) {
+				$('.hide-widget').each(function() {
+					if ( $(this).attr('data-priority') == i && $(this).height() <= checkHeights() ) { $(this).removeClass('hide-widget'); }						
+				});
+			}
+				
 			if ( !$('.widget:not(.hide-widget)').length ) { $('.widget:first-of-type').removeClass('hide-widget'); } // guarantees at least 1 visible widget
 			
 			checkHeights();

@@ -29,25 +29,37 @@ function battleplan_track_interaction_ajax() {
 	$scroll = $_POST['scroll'];
 	$viewed = $_POST['viewed'];
 	$total = $_POST['total'];
+	$track = $_POST['track'];
 	$uniqueID = $_POST['uniqueID'];
+	$tracking = get_option( $key );
 	
-	if ( $scroll ) :	
-		$tracking = get_option( $key );
-		if ( $scroll > $tracking[$unique] ) :
-			unset($tracking[$uniqueID]);
-			$tracking[$uniqueID] = $scroll;
+	if ( _USER_LOGIN != 'battleplanweb' ) :
+		if ( $scroll ) :	
+			if ( $scroll > $tracking[$uniqueID] ) :
+				unset($tracking[$uniqueID]);
+				$tracking[$uniqueID] = $scroll;
+				update_option( $key, $tracking );
+				$response = array( 'result' => $uniqueID . ' scrolled '.round(($scroll*100),1). '% of content' );
+			endif;
+		elseif ( $viewed ) :
+			if ( $viewed > $tracking[$uniqueID]['viewed'] ) :
+				unset($tracking[$uniqueID]);
+				$tracking[$uniqueID] = array('viewed'=>$viewed, 'total'=>$total);
+				update_option( $key, $tracking );
+				$response = array( 'result' => $uniqueID . ' viewed '.$viewed. ' out of '.$total.' columns.' );
+			endif;
+		else:
+			$tracking[$uniqueID][$track] = "true";
 			update_option( $key, $tracking );
-			$response = array( 'result' => $uniqueID . ' scrolled '.$scroll. '% of content' );
+			$response = array( 'result' => $uniqueID . ' tracked '.$track.'.' );
 		endif;
-	else:
-		$tracking = get_option( $key );
-		if ( $viewed > $tracking[$uniqueID]['viewed'] ) :
-			unset($tracking[$uniqueID]);
-			$tracking[$uniqueID] = array('viewed'=>$viewed, 'total'=>$total);
-			update_option( $key, $tracking );
-			$response = array( 'result' => $uniqueID . ' viewed '.$viewed. ' out of '.$total.' columns.' );
-		endif;	
 	endif;
+	
+	
+	//delete_option('content-scroll-pct');
+	//delete_option('content-column-views');
+	//delete_option('content-tracking');
+	
 	wp_send_json( $response );	
 }
 

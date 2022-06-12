@@ -16,7 +16,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '12.0.3' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '12.0.4' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -933,6 +933,7 @@ require_once get_template_directory().'/functions-ajax.php';
 require_once get_template_directory().'/functions-chron-jobs.php';	
 require_once get_template_directory().'/functions-grid.php';
 require_once get_template_directory().'/functions-public.php';
+require_once get_template_directory().'/functions-widgets.php';
 require_once get_stylesheet_directory().'/functions-site.php';
 if ( is_admin() ) { require_once get_template_directory().'/functions-admin.php'; } 
 

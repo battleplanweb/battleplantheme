@@ -288,6 +288,8 @@ function battleplan_run_chron_jobs_ajax() {
 		update_option( 'permalink_structure', '/%postname%/' );
 		update_option( 'wpe-rand-enabled', '1' );
 		update_option( 'users_can_register', '0' );
+		
+		update_option( 'wpe-rand-enabled', '1' );
 
 		update_option( 'auto_update_core_dev', 'enabled' );
 		update_option( 'auto_update_core_minor', 'enabled' );
@@ -626,7 +628,7 @@ function battleplan_run_chron_jobs_ajax() {
 					if ( $sources[$key] == 'organic' ) : $cSearch = $cSearch + $users[$key]; endif;
 				endforeach;
 
-				$ua_end = $stats[0]['date'];
+				if ( $stats[0]['date'] ) $ua_end = $stats[0]['date'];
 			endif;
 
 

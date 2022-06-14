@@ -19,10 +19,10 @@
 	<link rel="profile" href="https://gmpg.org/xfn/11">
 	
 	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/open-sans-v17-latin-regular.woff2" crossorigin="anonymous">
-	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/open-sans-v17-latin-700.woff2" crossorigin="anonymous">
-	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/fa-regular-400.woff2" crossorigin="anonymous">
+	<!--link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/open-sans-v17-latin-700.woff2" crossorigin="anonymous"-->
+	<!--link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/fa-regular-400.woff2" crossorigin="anonymous"-->
 	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/fa-solid-900.woff2" crossorigin="anonymous">
-	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/fa-brands-400.woff2" crossorigin="anonymous">
+	<!--link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/fa-brands-400.woff2" crossorigin="anonymous"-->
 	<?php bp_font_loader(); ?>	
 
 	<?php wp_head(); ?>

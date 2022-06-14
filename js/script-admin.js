@@ -140,7 +140,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$(this).find('a').addClass('active');
 		$('table.trends td.page').text('Engaged');
 	})
+		
+	$('.col.when').click(function() {
+		$('.col.notes').fadeIn();	
+	});
 	
+	$('.col.notes').click(function() {
+		$('.col.notes').fadeOut();	
+	});	
 	
     
 	// Contact Form icons

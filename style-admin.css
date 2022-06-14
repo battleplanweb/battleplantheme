@@ -549,3 +549,190 @@ ul.acf-checkbox-list {
 #yoast_internal_linking {
 	display: 									none !important;
 }
+
+/* Site Audit
+--------------------------------------------- */
+/* Remove arrow buttons on number fields on Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  	-webkit-appearance: 						none;
+  	margin: 									0;
+}
+
+/* Remove arrow buttons on number fields on Firefox */
+input[type=number] {
+  	-moz-appearance: 							textfield;
+}
+
+section.section {
+	position:									relative;
+	width:										100%;
+}
+
+.flex {
+	grid-column: 								default-start / default-end;
+	display: 									grid;
+	gap: 										2.5em 3%;
+}
+
+.flex.inputs {
+	grid-template-columns: 						300px 300px 1fr;
+}
+
+.flex.stats {
+	grid-template-columns: 						115px repeat(45, 35px);
+	gap: 										0.5em 15px;
+	text-align: 								center;
+}
+
+.flex .col {
+	grid-column:								span 1;
+}
+
+.flex .col .form-input {
+	margin: 									0 0 10px 0;
+}
+
+.flex .col label {
+	display: 									inline-block;
+	width: 										180px;
+}
+
+.flex .col input {
+	display: 									inline-block;
+	width: 										50px;
+	text-align: 								center;
+}
+
+.flex .col submit {
+	width: 										auto;
+	padding: 									2px 13px;
+}
+
+.flex .col textarea {
+	width: 										900px;
+	height: 									400px;
+	text-align: 								left;
+}
+
+.scroll-stats {
+	overflow-y: 								scroll;
+	padding: 									2em 0.5em;
+}
+
+.flex .col.empty {
+	opacity: 									0;
+}
+
+.flex.stats .col.headline {
+	width: 										200px;
+	transform: 									translate(-24px, -24px) rotate(-45deg);
+	text-align: 								left;
+	z-index: 									10;
+	padding: 									2px 0 2px 30px;
+	border-top: 								1px solid rgba(0,0,0,0.05);
+	border-bottom: 								1px solid rgba(0,0,0,0.4);
+}
+
+.flex.stats .col.subhead  {
+	text-align: 								center;
+	border-top: 								1px solid rgba(0,0,0,0.05);
+	border-bottom: 								2px solid rgba(0,0,0,0.3);
+	border-left: 								2px solid rgba(0,0,0,0.05);
+	border-right: 								2px solid rgba(0,0,0,0.3);
+	margin: 									30px 0 5px;
+	z-index: 									20;
+	padding: 									5px 0 3px;
+	font-weight: 								bold;
+	font-size: 									105%;
+}
+
+.span-all,
+.flex.stats .col.notes {
+	grid-column:								1 / -1 !important;
+	text-align: 								left;
+}
+
+.flex.stats .col.site-elements {
+	grid-column:								span 19;
+}
+
+.flex.stats .col.lighthouse {
+	grid-column:								span 7;
+}
+
+.flex.stats .col.citations,
+.flex.stats .col.gmb {
+	grid-column:								span 4;
+}
+
+.flex.stats .col.keywords,
+.flex.stats .col.site-speed {
+	grid-column:								span 2;
+}
+
+.flex.stats .col.when,
+.flex.stats .col.stat,
+.flex.stats .col.notes {
+	z-index: 									30;
+	padding: 									3px;
+	border-top: 								1px solid rgba(0,0,0,0.05);
+	border-bottom: 								1px solid rgba(0,0,0,0.3);
+	border-left: 								1px solid rgba(0,0,0,0.05);
+	border-right: 								1px solid rgba(0,0,0,0.3);
+}
+
+.flex.stats .col {
+	background: 								rgb(226,226,190); 
+}
+
+.flex.stats .col.notes {
+	background: 								#ffffff;
+	margin-left: 								130px;
+	width: 										calc(100% - 140px);
+	margin-bottom: 								5px;
+	display: 									none;
+	cursor: 									pointer;
+}
+
+.flex.stats .col.headline:nth-of-type(45n+9),
+.flex.stats .col.headline:nth-of-type(45n+10),
+.flex.stats .col.headline:nth-of-type(45n+11),
+.flex.stats .col.headline:nth-of-type(45n+12),
+.flex.stats .col.headline:nth-of-type(45n+13),
+.flex.stats .col.headline:nth-of-type(45n+14),
+.flex.stats .col.headline:nth-of-type(45n+15),
+.flex.stats .col.headline:nth-of-type(45n+18),
+.flex.stats .col.headline:nth-of-type(45n+19),
+.flex.stats .col.headline:nth-of-type(45n+20),
+.flex.stats .col.headline:nth-of-type(45n+21),
+.flex.stats .col.headline:nth-of-type(45n+26),
+.flex.stats .col.headline:nth-of-type(45n+27),
+.flex .col.desktop,
+.flex .col.citations,
+.flex .col.site-speed,
+.flex .col.date,
+.flex.stats .col.stat:nth-of-type(47n+16),
+.flex.stats .col.stat:nth-of-type(47n+17),
+.flex.stats .col.stat:nth-of-type(47n+18),
+.flex.stats .col.stat:nth-of-type(47n+19),
+.flex.stats .col.stat:nth-of-type(47n+20),
+.flex.stats .col.stat:nth-of-type(47n+21),
+.flex.stats .col.stat:nth-of-type(47n+22),
+.flex.stats .col.stat:nth-of-type(47n+25),
+.flex.stats .col.stat:nth-of-type(47n+26),
+.flex.stats .col.stat:nth-of-type(47n+27),
+.flex.stats .col.stat:nth-of-type(47n+28),
+.flex.stats .col.stat:nth-of-type(47n+33),
+.flex.stats .col.stat:nth-of-type(47n+34),
+.flex.stats .col.when {
+	background: 								rgb(207,218,241);
+}
+
+.flex.stats .col.when {
+	cursor: 									pointer;
+}
+
+
+
+

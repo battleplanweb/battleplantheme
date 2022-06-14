@@ -26,7 +26,7 @@ function battleplan_getBizInfo($atts, $content = null ) {
 		$phoneFormat = $GLOBALS['customer_info'][$data];	
 		if ( strpos($data, 'mm-bar-phone') !== false ) :
 			$phoneFormat = '<div class="mm-bar-btn mm-bar-phone call-btn" aria-hidden="true"></div><span class="sr-only">Call Us</span>';	
-		else :
+		elseif ( $data == "area-phone" || $data == "phone-link" ) :
 			$phoneFormat = $GLOBALS['customer_info']['area-before'].$GLOBALS['customer_info']['area'].$GLOBALS['customer_info']['area-after'].$GLOBALS['customer_info']['phone'];	
 		endif;
 		if  ( strpos($data, '-notrack') !== false ):
@@ -1212,15 +1212,17 @@ function battleplan_getFilterButton( $atts, $content = null ) {
 // Side by side images
 add_shortcode( 'side-by-side', 'battleplan_SideBySideImg' );
 function battleplan_SideBySideImg( $atts, $content = null ) {	
-	$a = shortcode_atts( array( 'img'=>'', 'size'=>'half-s', 'align'=>'center', 'full'=>'', 'pos'=>'bottom' ), $atts );	
+	$a = shortcode_atts( array( 'img'=>'', 'size'=>'half-s', 'align'=>'center', 'full'=>'', 'pos'=>'bottom', 'break'=>'' ), $atts );	
 	$size = esc_attr($a['size']);
 	$full = esc_attr($a['full']);	
-	$pos = esc_attr($a['pos']);
+	$pos = esc_attr($a['pos']);	
+	$break = esc_attr($a['break']);
+	if ( $break == "none" ) $break = ' break-none';
 	$align = "align".esc_attr($a['align']);
 	$images = explode(',', esc_attr($a['img']));
 	$num = count($images);
 	
-	$buildFlex = '<ul class="side-by-side '.$align.'">';
+	$buildFlex = '<ul class="side-by-side '.$align.$break.'">';
 	for ($i=0; $i<$num; $i++) :
 		$img = wp_get_attachment_image_src( $images[$i], $size );
 		list ($src, $width, $height ) = $img;

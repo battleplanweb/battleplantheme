@@ -686,7 +686,7 @@ section.section {
 	text-align: 								left;
 }
 
-.flex.stats .col.site-elements {
+.flex.stats:not(.hvac) .col.site-elements {
 	grid-column:								span 11;
 }
 
@@ -732,37 +732,37 @@ section.section {
 	cursor: 									pointer;
 }
 
-.flex.stats .col.headline:nth-of-type(37n+9),
-.flex.stats .col.headline:nth-of-type(37n+10),
-.flex.stats .col.headline:nth-of-type(37n+11),
-.flex.stats .col.headline:nth-of-type(37n+12),
-.flex.stats .col.headline:nth-of-type(37n+13),
-.flex.stats .col.headline:nth-of-type(37n+14),
-.flex.stats .col.headline:nth-of-type(37n+15),
-.flex.stats .col.headline:nth-of-type(37n+18),
-.flex.stats .col.headline:nth-of-type(37n+19),
-.flex.stats .col.headline:nth-of-type(37n+20),
-.flex.stats .col.headline:nth-of-type(37n+21),
-.flex.stats .col.headline:nth-of-type(37n+26),
-.flex.stats .col.headline:nth-of-type(37n+27),
-.flex .col.desktop,
-.flex .col.citations,
-.flex .col.site-speed,
-.flex .col.date,
-.flex.stats .col.stat:nth-of-type(39n+16),
-.flex.stats .col.stat:nth-of-type(39n+17),
-.flex.stats .col.stat:nth-of-type(39n+18),
-.flex.stats .col.stat:nth-of-type(39n+19),
-.flex.stats .col.stat:nth-of-type(39n+20),
-.flex.stats .col.stat:nth-of-type(39n+21),
-.flex.stats .col.stat:nth-of-type(39n+22),
-.flex.stats .col.stat:nth-of-type(39n+25),
-.flex.stats .col.stat:nth-of-type(39n+26),
-.flex.stats .col.stat:nth-of-type(39n+27),
-.flex.stats .col.stat:nth-of-type(39n+28),
-.flex.stats .col.stat:nth-of-type(39n+33),
-.flex.stats .col.stat:nth-of-type(39n+34),
-.flex.stats .col.when {
+.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+9),
+.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+10),
+.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+11),
+.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+12),
+.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+13),
+.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+14),
+.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+15),
+.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+18),
+.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+19),
+.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+20),
+.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+21),
+.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+26),
+.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+27),
+.flex:not(.hvac) .col.desktop,
+.flex:not(.hvac) .col.citations,
+.flex:not(.hvac) .col.site-speed,
+.flex:not(.hvac) .col.date,
+.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+16),
+.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+17),
+.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+18),
+.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+19),
+.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+20),
+.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+21),
+.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+22),
+.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+25),
+.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+26),
+.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+27),
+.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+28),
+.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+33),
+.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+34),
+.flex.stats:not(.hvac) .col.when {
 	background: 								rgb(207,218,241);
 }
 
@@ -784,10 +784,10 @@ section.section {
 .flex.stats.hvac .col.headline:nth-of-type(45n+21),
 .flex.stats.hvac .col.headline:nth-of-type(45n+26),
 .flex.stats.hvac .col.headline:nth-of-type(45n+27),
-.flex .col.desktop,
-.flex .col.citations,
-.flex .col.site-speed,
-.flex .col.date,
+.flex.hvac .col.desktop,
+.flex.hvac .col.citations,
+.flex.hvac .col.site-speed,
+.flex.hvac .col.date,
 .flex.stats.hvac .col.stat:nth-of-type(47n+16),
 .flex.stats.hvac .col.stat:nth-of-type(47n+17),
 .flex.stats.hvac .col.stat:nth-of-type(47n+18),

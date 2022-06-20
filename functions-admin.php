@@ -1682,7 +1682,7 @@ function battleplan_unregister_default_widgets() {
 	unregister_widget('WP_Widget_RSS');
 	unregister_widget('WP_Widget_Tag_Cloud');
 	unregister_widget('WPE_Powered_By_Widget');
-	unregister_widget('Twenty_Eleven_Ephemera_Widget');
+	unregister_widget('Twenty_Eleven_Ephemera_Widget');	
 }
 
 // Remove unwanted dashboard widgets
@@ -1709,6 +1709,7 @@ function battleplan_remove_dashboard_widgets () {
 	remove_meta_box('wp_mail_smtp_reports_widget_lite','dashboard','side');		//WP Mail SMTP
 	remove_meta_box('wpseo-dashboard-overview','dashboard','normal');			//Yoast
 	remove_meta_box('wpseo-dashboard-overview','dashboard','side');				//Yoast	
+	remove_meta_box('wp_mail_smtp_reports_widget_pro','dashboard','normal');	// WP Mail SMTP Pro
 }
 
 // Add new dashboard widgets
@@ -1917,7 +1918,7 @@ function battleplan_admin_referrer_stats() {
 		echo '<div class="handle-label handle-label'.$variation.'"><ul>';		
 
 		foreach ( $referrerStats as $referrer=>$referrals ) :
-			$switchRef = array ('google'=>'Google', 'facebook'=>'Facebook', 'yelp'=>'Yelp', 'yahoo'=>'Yahoo', 'bing'=>'Bing', 'duckduckgo'=>'DuckDuckGo', 'youtube'=>'YouTube');
+			$switchRef = array ('google'=>'Google', 'facebook'=>'Facebook', 'yelp'=>'Yelp', 'yahoo'=>'Yahoo', 'bing'=>'Bing', 'duckduckgo'=>'DuckDuckGo', 'youtube'=>'YouTube', 'instagram'=>'Instagram');
 			foreach ( $switchRef as $find=>$replace ) :
 				if ( strpos( $referrer, $find ) !== false ) $referrer = $replace;
 			endforeach;

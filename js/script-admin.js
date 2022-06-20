@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$.post({
 			url : ajaxURL,
 			data : { action: "run_chron_jobs", admin: "true" },
-			success: function( response ) { console.log(response);  }
+			success: function( response ) { $('#wp-admin-bar-my-account > a.ab-item').text(response.dashboard);	}
 		});
 	}, 200);
 

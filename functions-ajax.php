@@ -17,7 +17,7 @@ function battleplan_update_meta_ajax() {
 	if ( $type == "user" ) update_user_meta( wp_get_current_user()->ID, $key, $value, false );
 	if ( $type == "post" || $type == "page" ) updateMeta( get_the_ID(), $key, $value );	
 	
-	$response = array( 'result' => 'Saved '.$value. ' to '.$key  );
+	$response = array( 'dashboard' => 'Saved '.$value. ' to '.$key.'.'  );
 	wp_send_json( $response );	
 }
 
@@ -39,19 +39,19 @@ function battleplan_track_interaction_ajax() {
 				unset($tracking[$uniqueID]);
 				$tracking[$uniqueID] = $scroll;
 				update_option( $key, $tracking );
-				$response = array( 'result' => $uniqueID . ' scrolled '.round(($scroll*100),1). '% of content' );
+				$response = array( 'dashboard' => $uniqueID . ' scrolled '.round(($scroll*100),1). '% of content.' );
 			endif;
 		elseif ( $viewed ) :
 			if ( $viewed > $tracking[$uniqueID]['viewed'] ) :
 				unset($tracking[$uniqueID]);
 				$tracking[$uniqueID] = array('viewed'=>$viewed, 'total'=>$total);
 				update_option( $key, $tracking );
-				$response = array( 'result' => $uniqueID . ' viewed '.$viewed. ' out of '.$total.' columns.' );
+				$response = array( 'dashboard' => $uniqueID . ' viewed '.$viewed. ' out of '.$total.' columns.' );
 			endif;
 		else:
 			$tracking[$uniqueID][$track] = "true";
 			update_option( $key, $tracking );
-			$response = array( 'result' => $uniqueID . ' tracked '.$track.'.' );
+			$response = array( 'dashboard' => $uniqueID . ' tracked '.$track.'.' );
 		endif;
 	endif;
 	
@@ -83,9 +83,9 @@ function battleplan_log_page_load_speed_ajax() {
 			update_option('load_time_mobile', $timeMobile);			
 		endif;
 				
-		$response = array( 'result' => 'Logging '.$deviceTime.' load speed = '.number_format($loadTime, 2).'s' );
+		$response = array( 'dashboard' => 'Logging '.$deviceTime.' load speed = '.number_format($loadTime, 2).'s' );
 	else:
-		$response = array( 'result' => ucfirst($deviceTime.' load speed = '.number_format($loadTime, 2).'s' ));
+		$response = array( 'dashboard' => ucfirst($deviceTime.' load speed = '.number_format($loadTime, 2).'s' ));
 	endif;	
 	
 	wp_send_json( $response );	
@@ -102,9 +102,9 @@ function battleplan_count_teaser_ajax() {
 	
 	if ( _USER_LOGIN != 'battleplanweb' ) :
 		updateMeta($theID, 'log-tease-time', $today);
-		$response = array( 'result' => 'Logging '.$postType.' ID #'.$theID.' tease time. Prior tease = '.$lastTeased );
+		$response = array( 'dashboard' => 'Logging '.$postType.' ID #'.$theID.' tease time. Prior tease = '.$lastTeased );
 	else:
-		$response = array( 'result' => ucfirst($postType.' ID #'.$theID.' last teased = '.$lastTeased) );
+		$response = array( 'dashboard' => ucfirst($postType.' ID #'.$theID.' last teased = '.$lastTeased) );
 	endif;	
 	wp_send_json( $response );	
 }

@@ -26,6 +26,20 @@ body {
     height: 									40px;
 }
 
+.logged-in #wpadminbar {
+  	color: 										#15141a;
+  	background: 								#f9f9fb;
+  	border-bottom: 								1px solid #cccccc;
+}
+
+.logged-in #page {
+	padding-top: 								8px;
+}
+
+.logged-in #wpadminbar a.ab-item {
+  	color: 										#15141a;
+}
+
 #wpadminbar * {
 	font-size: 									16px;
 }
@@ -37,6 +51,10 @@ body {
 	height: 									31px;
 	content: 									"";
 	top: 										0;
+}
+
+#wp-admin-bar-my-account > a.ab-item {
+	padding-right: 								10px;
 }
 
 #wpfooter {

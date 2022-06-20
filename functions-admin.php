@@ -1917,7 +1917,7 @@ function battleplan_admin_referrer_stats() {
 		echo '<div class="handle-label handle-label'.$variation.'"><ul>';		
 
 		foreach ( $referrerStats as $referrer=>$referrals ) :
-			$switchRef = array ('google'=>'Google', 'facebook'=>'Facebook', 'yelp'=>'Yelp', 'yahoo'=>'Yahoo', 'bing'=>'Bing', 'duckduckgo'=>'DuckDuckGo');
+			$switchRef = array ('google'=>'Google', 'facebook'=>'Facebook', 'yelp'=>'Yelp', 'yahoo'=>'Yahoo', 'bing'=>'Bing', 'duckduckgo'=>'DuckDuckGo', 'youtube'=>'YouTube');
 			foreach ( $switchRef as $find=>$replace ) :
 				if ( strpos( $referrer, $find ) !== false ) $referrer = $replace;
 			endforeach;

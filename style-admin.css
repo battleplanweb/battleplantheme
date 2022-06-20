@@ -246,7 +246,9 @@ ul div.value {
 
 .trend-buttons,
 .last-visitors-buttons {
-	margin-bottom: 								15px;
+	z-index: 									9999999999;
+	position: 									fixed;
+	top: 										5px;
 }
 
 .trend-buttons .block-button,
@@ -255,11 +257,31 @@ ul div.value {
 	margin-left: 								15px;
 }
 
+.wp-core-ui .trend-buttons .block-button .button,
+.wp-core-ui .last-visitors-buttons .block-button .button {
+  	color: 										#000000;
+ 	background: 								#f6f7f7;
+  	font-weight: 								bold;
+	box-shadow: 								inset 3px 3px 6px 0 rgba(0,0,0,0.2);
+	border: 									1px solid rgba(255,255,255,0.1);
+	transition: 								all 0.2s ease;
+}
+
+.wp-core-ui .trend-buttons .block-button:hover .button,
+.wp-core-ui .last-visitors-buttons .block-button:hover .button {
+ 	background: 								#ffffff;
+	box-shadow: 								inset 3px 3px 6px 0 rgba(0,0,0,0.1);
+	border: 									1px solid rgba(255,255,255,0.1);
+	transition: 								all 0.2s ease;
+}
+
 .trend-buttons .block-button .button.active,
 .last-visitors-buttons .block-button .button.active {
-  	color: 										#f6f7f7;
-  	border-color: 								#2271b1;
-  	background: 								#2271b1;
+  	color: 										#f6f7f7 !important;
+  	background: 								#2271b1 !important;
+	box-shadow: 								inset 3px 3px 6px 0 rgba(0,0,0,0.2) !important;
+	border: 									1px solid #2271b1 !important;
+	transition: 								all 0.2s ease;
 }
 
 /* Page Attributes meta box */

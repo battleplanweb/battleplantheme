@@ -113,28 +113,32 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	// Visitor Trend buttons
 	$('#postbox-container-3').prepend($('.trend-buttons'));
 		
-	$('.trend-buttons .users').click(function() {
+	$('.trend-buttons .users').click(function(event) {
+		event.preventDefault();
 		$('table.trends tr.trends, .trend-buttons div a').removeClass('active');
 		$('table.trends tr.trends.users').addClass('active');		
 		$(this).find('a').addClass('active');
 		$('table.trends td.page').text('Visitors');
 	});
 		
-	$('.trend-buttons .search').click(function() {
+	$('.trend-buttons .search').click(function(event) {
+		event.preventDefault();
 		$('table.trends tr.trends, .trend-buttons div a').removeClass('active');
 		$('table.trends tr.trends.search').addClass('active');	
 		$(this).find('a').addClass('active');
 		$('table.trends td.page').text('Search');
 	});
 		
-	$('.trend-buttons .pageviews').click(function() {
+	$('.trend-buttons .pageviews').click(function(event) {
+		event.preventDefault();
 		$('table.trends tr.trends, .trend-buttons div a').removeClass('active');
 		$('table.trends tr.trends.pageviews').addClass('active');	
 		$(this).find('a').addClass('active');
 		$('table.trends td.page').text('Pages');
 	});
 		
-	$('.trend-buttons .engagement').click(function() {
+	$('.trend-buttons .engagement').click(function(event) {
+		event.preventDefault();
 		$('table.trends tr.trends, .trend-buttons div a').removeClass('active');
 		$('table.trends tr.trends.engagement').addClass('active');	
 		$(this).find('a').addClass('active');
@@ -144,25 +148,29 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	// Last ??? Visitors buttons
 	$('#postbox-container-2').prepend($('.last-visitors-buttons'));
 		
-	$('.last-visitors-buttons .last-100').click(function() {
+	$('.last-visitors-buttons .last-100').click(function(event) {
+		event.preventDefault();
 		$('.handle-label, .last-visitors-buttons div, .last-visitors-buttons div a').removeClass('active');
 		$('.handle-label_100').addClass('active');		
 		$(this).find('a').addClass('active');
 	});	
 	
-	$('.last-visitors-buttons .last-250').click(function() {
+	$('.last-visitors-buttons .last-250').click(function(event) {
+		event.preventDefault();
 		$('.handle-label, .last-visitors-buttons div, .last-visitors-buttons div a').removeClass('active');
 		$('.handle-label_250').addClass('active');		
 		$(this).find('a').addClass('active');
 	});
 	
-	$('.last-visitors-buttons .last-500').click(function() {
+	$('.last-visitors-buttons .last-500').click(function(event) {
+		event.preventDefault();
 		$('.handle-label, .last-visitors-buttons div, .last-visitors-buttons div a').removeClass('active');
 		$('.handle-label_500').addClass('active');		
 		$(this).find('a').addClass('active');
 	});
 	
-	$('.last-visitors-buttons .all-time').click(function() {
+	$('.last-visitors-buttons .all-time').click(function(event) {
+		event.preventDefault();
 		$('.handle-label, .last-visitors-buttons div, .last-visitors-buttons div a').removeClass('active');
 		$('.handle-label_AT').addClass('active');		
 		$(this).find('a').addClass('active');

@@ -9,7 +9,7 @@
 # Convert States to Abbr
 # Sync with Google Analytics
 
-/*--------------------------------------------------------------
+/*--------------------------------------------------------------go
 # Chron Jobs
 --------------------------------------------------------------*/
 
@@ -379,24 +379,6 @@ function battleplan_run_chron_jobs_ajax() {
 
 		if ( is_null(get_page_by_path('email-received', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Email Received', 'post_content' => '[get-universal-page slug="page-email-received"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
 		
-		
-/*--------------------------------------------------------------
-# Convert States to Abbr
---------------------------------------------------------------*/				
-		function state_abbr($name) {
-			$states = array('alabama'=>'AL','alaska'=>'AK','arizona'=>'AZ','arkansas'=>'AR','california'=>'CA','colorado'=>'CO','connecticut'=>'CT','delaware'=>'DE','dist of columbia'=>'DC','dist. of columbia'=>'DC','district of columbia'=>'DC','florida'=>'FL','georgia'=>'GA','guam'=>'GU','hawaii'=>'HI','idaho'=>'ID','illinois'=>'IL','indiana'=>'IN','iowa'=>'IA','kansas'=>'KS','kentucky'=>'KY','louisiana'=>'LA','maine'=>'ME','maryland'=>'MD','massachusetts'=>'MA','michigan'=>'MI','minnesota'=>'MN','mississippi'=>'MS','missouri'=>'MO','montana'=>'MT','nebraska'=>'NE','nevada'=>'NV','new hampshire'=>'NH','new jersey'=>'NJ','new mexico'=>'NM','new york'=>'NY','north carolina'=>'NC','north dakota'=>'ND','ohio'=>'OH','oklahoma'=>'OK','oregon'=>'OR','pennsylvania'=>'PA','puerto rico'=>'PR','rhode island'=>'RI','south carolina'=>'SC','south dakota'=>'SD','tennessee'=>'TN','texas'=>'TX','utah'=>'UT','vermont'=>'VT','virgin islands'=>'VI','virginia'=>'VA','washington'=>'WA','washington d.c.'=>'DC','washington dc'=>'DC','west virginia'=>'WV','wisconsin'=>'WI','wyoming'=>'WY','armed forces africa'=>'AF','armed forces americas'=>'AA','armed forces canada'=>'AC','armed forces europe'=>'AE','armed forces middle east'=>'AM','armed forces pacific'=>'AP','alberta'=>'AB','british columbia'=>'BC','manitoba'=>'MB','new brunswick'=>'NB','newfoundland & labrador'=>'NL','northwest territories'=>'NT','nova scotia'=>'NS','nunavut'=>'NU','ontario'=>'ON','prince edward island'=>'PE','quebec'=>'QC','saskatchewan'=>'SK','yukon territory'=>'YT');
-			if ($name) $name = trim($name);
-			$new = $states[strtolower($name)];
-			if (!$new) :
-				foreach ($states as $str => $res) :
-					if (strpos($str,$name) !== false) $state[] .= $res;
-				endforeach;
-				if (count($state) < 2) return ($state[0]) ? $state[0] : false;
-			endif;
-
-			return ($new) ? $new : (isset($req) ? false : ucwords(strtolower($name)));
-		}		
-		
 /*--------------------------------------------------------------
 # Sync with Google Analytics
 --------------------------------------------------------------*/
@@ -404,9 +386,12 @@ function battleplan_run_chron_jobs_ajax() {
 		$ga4_id = $GLOBALS['customer_info']['google-tags']['prop-id'];
 		$ua_id = $GLOBALS['customer_info']['google-tags']['ua-view'];
 		$client = new BetaAnalyticsDataClient(['credentials'=>get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json']);
+		$today = $ua_end = date( "Y-m-d" );		
+		$rewind = date('Y-m-d', strtotime('-5 years'));
+		
 		$citiesToExclude = array('Orangetree','Ashburn');
-		$ua_end = date( "Y-m-d" );		
-		$rewind4Years = '2014-01-01';
+		$states = array('alabama'=>'AL', 'arizona'=>'AZ', 'arkansas'=>'AR', 'california'=>'CA', 'colorado'=>'CO', 'connecticut'=>'CT', 'delaware'=>'DE', 'dist of columbia'=>'DC', 'dist. of columbia'=>'DC', 'district of columbia'=>'DC', 'florida'=>'FL', 'georgia'=>'GA', 'idaho'=>'ID', 'illinois'=>'IL', 'indiana'=>'IN', 'iowa'=>'IA', 'kansas'=>'KS', 'kentucky'=>'KY', 'louisiana'=>'LA', 'maine'=>'ME', 'maryland'=>'MD', 'massachusetts'=>'MA', 'michigan'=>'MI', 'minnesota'=>'MN', 'mississippi'=>'MS', 'missouri'=>'MO', 'montana'=>'MT', 'nebraska'=>'NE', 'nevada'=>'NV', 'new hampshire'=>'NH', 'new jersey'=>'NJ', 'new mexico'=>'NM', 'new york'=>'NY', 'north carolina'=>'NC', 'north dakota'=>'ND', 'ohio'=>'OH', 'oklahoma'=>'OK', 'oregon'=>'OR', 'pennsylvania'=>'PA', 'rhode island'=>'RI', 'south carolina'=>'SC', 'south dakota'=>'SD', 'tennessee'=>'TN', 'texas'=>'TX', 'utah'=>'UT', 'vermont'=>'VT', 'virginia'=>'VA', 'washington'=>'WA', 'washington d.c.'=>'DC', 'washington dc'=>'DC', 'west virginia'=>'WV', 'wisconsin'=>'WI', 'wyoming'=>'WY');
+		$removedStates = array('alaska'=>'AK', 'hawaii'=>'HI',);
 		
 		function initializeAnalytics() {
 			$client = new Google_Client();
@@ -420,64 +405,207 @@ function battleplan_run_chron_jobs_ajax() {
 		function getResults($analytics, $ua_id, $start_date, $end_date, $param2, $param1) {
 			return $analytics->data_ga->get ( 'ga:'.$ua_id, $start_date, $end_date, $param1, $param2 );
 		}
-		
-		$getCPT = getCPT();
-		foreach ($getCPT as $postType) :
-			$getPosts = new WP_Query( array ('posts_per_page'=>-1, 'post_type'=>$postType ));
-			if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 
-				deleteMeta( get_the_ID(), 'log-views-now');			
-				deleteMeta( get_the_ID(), 'log-views-time');					
-				deleteMeta( get_the_ID(), 'log-views-today');	
-				deleteMeta( get_the_ID(), 'log-views-total-7day');			
-				deleteMeta( get_the_ID(), 'log-views-total-30day');	
-				deleteMeta( get_the_ID(), 'log-views-total-90day');	
-				deleteMeta( get_the_ID(), 'log-views-total-180day');	
-				deleteMeta( get_the_ID(), 'log-views-total-365day');	
-				deleteMeta( get_the_ID(), 'log-views');				
-			endwhile; wp_reset_postdata(); endif;		
-		endforeach;
-		$siteHeader = getID('site-header');
-		deleteMeta( $siteHeader, 'load-number-desktop');			
-		deleteMeta( $siteHeader, 'load-speed-desktop');		
-		deleteMeta( $siteHeader, 'load-number-mobile');				
-		deleteMeta( $siteHeader, 'load-speed-mobile');	
-		deleteMeta( $siteHeader, 'log-views');					
-		deleteMeta( $siteHeader, 'log-views-referrers');
-		deleteMeta( $siteHeader, 'log-views-cities');
-		deleteMeta( $siteHeader, 'pages-viewed');
-		deleteMeta( $siteHeader, 'call-clicks');
-		deleteMeta( $siteHeader, 'email-clicks');		
 
+// Gather GA4 Stats 
+		if ( $ga4_id ) :
+			$response = $client->runReport([
+				'property' => 'properties/'.$ga4_id,
+				'dateRanges' => [
+					new DateRange([ 'start_date' => $rewind, 'end_date' => $today ]),
+				],
+				'dimensions' => [
+					new Dimension([ 'name' => 'date' ]),
+					new Dimension([ 'name' => 'city' ]),
+					new Dimension([ 'name' => 'region' ]),	
+					new Dimension([ 'name' => 'firstUserMedium' ]),	
+					new Dimension([ 'name' => 'pageReferrer' ]),	
+					new Dimension([ 'name' => 'pagePath' ]),
+					new Dimension([ 'name' => 'browser' ]),	
+					new Dimension([ 'name' => 'screenResolution' ]),	
+					new Dimension([ 'name' => 'deviceCategory' ]),
+				],
+				'metrics' => [
+					new Metric([ 'name' => 'userEngagementDuration' ]),					
+					new Metric([ 'name' => 'screenPageViews' ]),
+					new Metric([ 'name' => 'sessions' ]),
+					new Metric([ 'name' => 'engagedSessions' ]),
+				]
+			]);
 
-// Gather GA4 stats (for Popular Pages Stats)
-		$pageCounts = array(1,7,30,90,180,365);
+			foreach ( $response->getRows() as $row ) :
+				$date = $row->getDimensionValues()[0]->getValue();
+				$city = $row->getDimensionValues()[1]->getValue();
+				$state = strtolower($row->getDimensionValues()[2]->getValue());
+				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
+				$medium = $row->getDimensionValues()[3]->getValue();
+				$referrer = $row->getDimensionValues()[4]->getValue();
+				$page = $row->getDimensionValues()[5]->getValue();
+				$browser = $row->getDimensionValues()[6]->getValue();
+				$screenResolution = $row->getDimensionValues()[7]->getValue();
+				$deviceCategory = $row->getDimensionValues()[8]->getValue();
+				$duration = $row->getMetricValues()[0]->getValue();				
+				$pagesViewed = $row->getMetricValues()[1]->getValue();				
+				$sessions = $row->getMetricValues()[2]->getValue();				
+				$engaged = $row->getMetricValues()[3]->getValue();							
+					
+				if ( $states[$state] && !in_array( $city, $citiesToExclude ) ) :					
+					if ( $city == '(not set)' ) $location = ucwords($state);					
+					$page = rtrim($page, '/\\');
+					$referrer = str_replace('http://', '', $referrer);
+					$referrer = str_replace('https://', '', $referrer);
+					$referrer = str_replace('www.', '', $referrer);					
+					$referrer = substr($referrer, 0, strpos($referrer, '/'));	
+					if ( $referrer == "" ) $referrer = "Direct";
+										
+					$pageviews[] = array ('date'=>$date, 'location'=>$location, 'medium'=>$medium, 'referrer'=>$referrer, 'page'=>$page, 'browser'=>$browser, 'resolution'=>$screenResolution, 'device'=>$deviceCategory, 'duration'=>$duration, 'pages-viewed'=>$pagesViewed, 'sessions'=>$sessions, 'engaged'=>$engaged );	
+					
+					$dailyStats[ date('Y-m-d', strtotime($date)) ] = array( 'total-users'=>0, 'search-users'=>0, 'pages-viewed'=>0, 'sessions'=>0, 'engaged'=>0 );
+				endif;
+			endforeach;
+			
+			arsort($pageviews);			
+			$dailyUsers = $searchUsers = $pagesViewed = $sessions = $engagedSessions = 0;
+			$referrerStats = $locationStats = $compilePages = $compilePageDur = $compileBrowsers= array();
+			$log100 = $log250 = $log500 = "false";
+			$today = $lastView = date('Ymd');
+			$deleteOptions = array ('bp_referrer_stats_100', 'bp_referrer_stats_250', 'bp_referrer_stats_500', 'bp_referrer_stats', 'bp_location_stats_100', 'bp_location_stats_250', 'bp_location_stats_500', 'bp_location_stats', 'bp_page_stats_100', 'bp_page_stats_250', 'bp_page_stats_500', 'bp_page_stats', 'bp_daily_stats');
+			foreach ( $deleteOptions as $delete ) delete_option($delete);
 
-		foreach ($pageCounts as $pageCount) :
-			if ( $ga4_id ) :
+			foreach ( $pageviews as $pageview ) :	
+				$processing = $pageview['date'];
+				$daysSinceToday = $today - $processing;				
+				$daysSinceLastView = $lastView - $processing;	
+				
+				if ( $daysSinceLastView > 0 ) :
+					$dailyStats[ date('Y-m-d', strtotime($processing + 1)) ] = array( 'total-users'=>$dailyUsers, 'search-users'=>$searchUsers, 'pages-viewed'=>$pagesViewed, 'sessions'=>$sessions, 'engaged'=>$engagedSessions );
+					
+					$dailyUsers = $searchUsers = $pagesViewed = $sessions = $engagedSessions = 0;
+				endif;
+									
+				$lastView = $processing;	
+				
+				if ( strpos( $pageview['referrer'], parse_url( get_site_url(), PHP_URL_HOST ) ) === false ) :	
+					if ( array_key_exists($pageview['referrer'], $referrerStats ) ) :
+						$referrerStats[$pageview['referrer']] += $pageview['pages-viewed'];
+					else:
+						$referrerStats[$pageview['referrer']] = $pageview['pages-viewed'];
+					endif;					
+									
+					if ( array_key_exists($pageview['location'], $locationStats ) ) :
+						$locationStats[$pageview['location']] += $pageview['pages-viewed'];
+					else:
+						$locationStats[$pageview['location']] = $pageview['pages-viewed'];
+					endif;					
+				
+					if ( array_key_exists($pageview['browser'], $browserStats ) ) :
+						$browserStats[$pageview['browser']] += $pageview['pages-viewed'];
+					else:
+						$browserStats[$pageview['browser']] = $pageview['pages-viewed'];
+					endif;											
+				
+					if ( array_key_exists($pageview['resolution'], $resolutionStats ) ) :
+						$resolutionStats[$pageview['resolution']] += $pageview['pages-viewed'];
+					else:
+						$resolutionStats[$pageview['resolution']] = $pageview['pages-viewed'];
+					endif;												
+				
+					if ( array_key_exists($pageview['device'], $deviceStats ) ) :
+						$deviceStats[$pageview['device']] += $pageview['pages-viewed'];
+					else:
+						$deviceStats[$pageview['device']] = $pageview['pages-viewed'];
+					endif;		
+					
+					$dailyUsers++;
+					if ( $pageview['medium'] == "organic" ) $searchUsers++;
+					$sessions = $sessions + $pageview['sessions'];
+					
+				endif;
+							
+				$engagedSessions = $engagedSessions + $pageview['engaged'];
+				$pagesViewed = $pagesViewed + $pageview['pages-viewed'];
+								
+				if ( array_key_exists($pageview['page'], $compilePages ) ) :
+					$compilePages[$pageview['page']] += $pageview['pages-viewed'];
+					$compilePageDur[$pageview['page']] += $pageview['duration'];
+				else:
+					$compilePages[$pageview['page']] = $pageview['pages-viewed'];
+					$compilePageDur[$pageview['page']] = $pageview['duration'];
+				endif;		
+				
+				if ( $daysSinceToday > 6 && $log100 == "false" ) : 
+					update_option('bp_referrer_stats_100', $referrerStats); 
+					update_option('bp_location_stats_100', $locationStats); 
+					update_option('bp_page_stats_100', array ('views'=>$compilePages, 'duration'=>$compilePageDur));
+					update_option('bp_tech_stats_100', array( 'browser'=>$browserStats, 'resolution'=>$resolutionStats, 'device'=>$deviceStats ));
+					$log100 = "true";
+				endif;
+
+				if ( $daysSinceToday > 29 && $log250 == "false" ) : 
+					update_option('bp_referrer_stats_250', $referrerStats); 
+					update_option('bp_location_stats_250', $locationStats); 
+					update_option('bp_page_stats_250', array ('views'=>$compilePages, 'duration'=>$compilePageDur));
+					update_option('bp_tech_stats_250', array( 'browser'=>$browserStats, 'resolution'=>$resolutionStats, 'device'=>$deviceStats ));
+					$log250 = "true";
+				endif;
+
+				if ( $daysSinceToday > 89 && $log500 == "false" ) : 
+					update_option('bp_referrer_stats_500', $referrerStats); 
+					update_option('bp_location_stats_500', $locationStats); 
+					update_option('bp_page_stats_500', array ('views'=>$compilePages, 'duration'=>$compilePageDur));
+					update_option('bp_tech_stats_500', array( 'browser'=>$browserStats, 'resolution'=>$resolutionStats, 'device'=>$deviceStats ));
+					$log500 = "true";
+				endif;
+				
+			endforeach;
+			
+			krsort($dailyStats);		
+			update_option('bp_daily_stats', $dailyStats);					
+			update_option('bp_referrer_stats', $referrerStats); 
+			update_option('bp_location_stats', $locationStats);
+			update_option('bp_page_stats', array ('views'=>$compilePages, 'duration'=>$compilePageDur));	
+			update_option('bp_tech_stats', array( 'browser'=>$browserStats, 'resolution'=>$resolutionStats, 'device'=>$deviceStats ));
+			
+			// Gather page view stats to attach to the individual IDs			
+			$pageCounts = array(7,30,90,365);
+			foreach ($pageCounts as $pageCount) :	
+				$start = date('Y-m-d', strtotime('-'.$pageCount.' days'));	
+				$end = date( "Y-m-d" );		
 				$response = $client->runReport([
 					'property' => 'properties/'.$ga4_id,
 					'dateRanges' => [
-						new DateRange([ 'start_date' => $pageCount.'daysAgo', 'end_date' => 'today' ]),
+						new DateRange([ 'start_date' => $start, 'end_date' => $end ]),
 					],
 					'dimensions' => [
-						new Dimension([ 'name' => 'pagePath' ]),
+						new Dimension([ 'name' => 'city' ]),
 						new Dimension([ 'name' => 'country' ]),		
-						new Dimension([ 'name' => 'city' ]),		
+						new Dimension([ 'name' => 'pagePath' ]),
 					],
 					'metrics' => [
-						new Metric([ 'name' => 'screenPageViews' ]),	
+						new Metric([ 'name' => 'screenPageViews' ]),
 					]
 				]);
 
-				foreach ($response->getRows() as $row) :			
-					if ( $row->getDimensionValues()[1]->getValue() == "United States" && !in_array( $row->getDimensionValues()[2]->getValue(), $citiesToExclude ) ) :	
-						$pagePaths[] = $row->getDimensionValues()[0]->getValue();					
-						$views[] = $row->getMetricValues()[0]->getValue();					
+				unset($compilePaths);
+				$complilePaths = array();
+
+				foreach ( $response->getRows() as $row ) :
+					$city = $row->getDimensionValues()[0]->getValue();
+					$country = $row->getDimensionValues()[1]->getValue();
+					$path = $row->getDimensionValues()[2]->getValue();
+					$views = $row->getMetricValues()[0]->getValue();
+
+					if ( $country == "United States" && !in_array( $city, $citiesToExclude ) ) :					
+						if ( $path == "" || $path == "/" ) $path = "Home";
+						if ( array_key_exists($path, $compilePaths ) ) :
+							$compilePaths[$path] += $views;
+						else:
+							$compilePaths[$path] = $views;
+						endif;
 					endif;
 				endforeach;
 
-				foreach ($pagePaths as $key=>$path) :
-					if ( $path == "" || $path == "/" ) :
+				foreach ($compilePaths as $path=>$pathViews) :
+					if ( $path == "Home" ) :
 						$id = get_option('page_on_front');					
 					else:
 						$id = getID($path);
@@ -486,213 +614,11 @@ function battleplan_run_chron_jobs_ajax() {
 					if ( $pageCount == 1) : $pageKey = 'log-views-today';
 					else: $pageKey = 'log-views-total-'.$pageCount.'day'; endif;
 
-					updateMeta($id, $pageKey, $views[$key]);
-				endforeach; 	
-			endif;
-
-// Gather UA stats (for Popular Pages Stats)
-			if ( $ua_id ) :
-				$analytics = initializeAnalytics();
-
-				$end_date = date("Y-m-d");
-				$start_date = "-".$pageCount." Days";
-				$start_date = date("Y-m-d", strtotime($start_date));
-				$param2 = array('dimensions'=>'ga:pagePath,ga:country,ga:city', 'max-results'=>10000);
-				$param1 = 'ga:pageviews';				
-				$results = getResults($analytics, $ua_id, $start_date, $end_date, $param2, $param1);
-				$rows = $results->getRows();
-
-				foreach ($rows as $path) :
-					if ( $path[1] == "United States" && !in_array( $path[2], $citiesToExclude ) ) :
-						if ( $path[0] == "" || $path[0] == "/" ) :
-							$id = get_option('page_on_front');					
-						else:
-							$id = getID($path[0]);
-						endif;				
-
-						if ( $pageCount == 1) : $pageKey = 'log-views-today';
-						else: $pageKey = 'log-views-total-'.$pageCount.'day'; endif;
-
-						$pageViews = intval(readMeta($id, $pageKey));
-
-						if ( $pageViews ) : $pageViews = $pageViews + intval($path[3]);
-						else: $pageViews = $path[3]; endif;
-
-						updateMeta($id, $pageKey, $pageViews);
-					endif;
-				endforeach; 
-			endif;
-		endforeach;	
-		
-		if ( $admin == true ) :
-		
-// Gather GA4 Advanced Stats
-			if ( $ga4_id ) :
-				$response = $client->runReport([
-					'property' => 'properties/'.$ga4_id,
-					'dateRanges' => [
-						new DateRange([ 'start_date' => '90daysAgo', 'end_date' => 'today' ]),
-					],
-					'dimensions' => [
-						new Dimension([ 'name' => 'pageReferrer' ]),
-						new Dimension([ 'name' => 'country' ]),	
-						new Dimension([ 'name' => 'city' ]),	
-						new Dimension([ 'name' => 'region' ]),	
-						new Dimension([ 'name' => 'browser' ]),	
-						new Dimension([ 'name' => 'screenResolution' ]),	
-						new Dimension([ 'name' => 'deviceCategory' ]),
-					],
-					'metrics' => [
-						new Metric([ 'name' => 'totalUsers' ]),	
-					]
-				]);
-
-				foreach ($response->getRows() as $row) :			
-					if ( $row->getDimensionValues()[1]->getValue() == "United States" && !in_array( $row->getDimensionValues()[2]->getValue(), $citiesToExclude ) ) :	
-						$referrers[] =$row->getDimensionValues()[0]->getValue();					
-						if ( $row->getDimensionValues()[2]->getValue() == '(not set)' ):
-							$location[] = $row->getDimensionValues()[3]->getValue();
-						else:
-							$location[] = $row->getDimensionValues()[2]->getValue().', '.state_abbr($row->getDimensionValues()[3]->getValue());
-						endif;
-						$browser[] = $row->getDimensionValues()[4]->getValue();					
-						$resolution[] = $row->getDimensionValues()[5]->getValue();					
-						$deviceCategory[] = $row->getDimensionValues()[6]->getValue();					
-					endif;
+					updateMeta($id, 'log-views-total-'.$pageCount.'day', $pathViews);		
 				endforeach;
 
-				$referrer_stats = $referrers;
-				$location_stats = $location;
-				$tech_stats = array( 'browser'=> $browser, 'device'=>$deviceCategory, 'resolution'=>$resolution );		
-
-
-	// Gather GA4 stats (for Visitor Trends)
-				$response = $client->runReport([
-					'property' => 'properties/'.$ga4_id,
-					'dateRanges' => [
-						new DateRange([ 'start_date' => $rewind4Years, 'end_date' => 'today' ]),
-					],
-					'dimensions' => [
-						new Dimension([ 'name' => 'date' ]),
-						new Dimension([ 'name' => 'country' ]),	
-						new Dimension([ 'name' => 'city' ]),		
-						new Dimension([ 'name' => 'firstUserMedium' ]),	
-					],
-					'metrics' => [
-						new Metric([ 'name' => 'totalUsers' ]),	
-						new Metric([ 'name' => 'screenPageViews' ]),	
-						new Metric([ 'name' => 'sessions' ]),	
-						new Metric([ 'name' => 'engagedSessions' ]),
-					]
-				]);
-
-				foreach ($response->getRows() as $row) :			
-					if ( $row->getDimensionValues()[1]->getValue() == "United States" && !in_array( $row->getDimensionValues()[2]->getValue(), $citiesToExclude ) ) :	
-						$dates[] = strtotime($row->getDimensionValues()[0]->getValue());
-						$sources[] = $row->getDimensionValues()[3]->getValue();
-						$users[] = $row->getMetricValues()[0]->getValue();
-						$pageviews[] = $row->getMetricValues()[1]->getValue();
-						$sessions[] = $row->getMetricValues()[2]->getValue();
-						$engaged[] = $row->getMetricValues()[3]->getValue();
-					endif;
-				endforeach;
-
-				array_multisort($dates, $sources, $users, $pageviews, $sessions, $engaged);
-
-				$days = count($dates);
-
-				$cDate = $dates[0];
-				$cUsers = $cPageviews = $cSearch = $cSessions = $cEngaged = 0;
-
-				foreach ( $dates as $key=>$date ) :
-					if ( $date != $cDate ) :
-						$diff = $date - $cDate;
-						$dDate = $cDate;
-						if ( $diff > 86400 ) :
-							$skip = ( $diff / 86400 ) - 1;		
-							for ( $x=0; $x<$skip; $x++ ) :
-								$dDate = $dDate + 86400;
-								$stats[] = array ('date'=>date( "Y-m-d", $dDate), 'users'=>0, 'search'=>0, 'pageviews'=>0, 'sessions'=>0, 'engaged'=>0 );
-							endfor;			
-						endif;
-
-						$stats[] = array ('date'=>date( "Y-m-d", $cDate), 'users'=>$cUsers, 'search'=>$cSearch, 'pageviews'=>$cPageviews, 'sessions'=>$cSessions, 'engaged'=>$cEngaged );
-
-						$cUsers = $cPageviews = $cSearch = $cSessions = $cEngaged = 0;
-						$cDate = $date;
-					endif;	
-					$cUsers = $cUsers + $users[$key];	
-					$cPageviews = $cPageviews + $pageviews[$key];	
-					$cSessions = $cSessions + $sessions[$key];	
-					$cEngaged = $cEngaged + $engaged[$key];	
-					if ( $sources[$key] == 'organic' ) : $cSearch = $cSearch + $users[$key]; endif;
-				endforeach;
-
-				if ( $stats[0]['date'] ) $ua_end = $stats[0]['date'];
-			endif;
-
-
-// Gather UA stats (for Visitor Trends)
-			if ( $ua_id ) :
-				$analytics = initializeAnalytics();			
-				$param2 = array('dimensions'=>'ga:date,ga:country,ga:city', 'max-results'=>10000);
-				$param1 = 'ga:newUsers,ga:pageviews,ga:sessions,ga:bounces';
-				$param1b = $param1.',ga:organicSearches';		
-				$results = getResults($analytics, $ua_id, $rewind4Years, '2020-04-04', $param2, $param1);
-				$rows = $results->getRows();
-				$cDate = 1240790400;
-
-				foreach ( $rows as $dates ) :
-					if ( $dates[1] == "United States" && !in_array( $path[2], $citiesToExclude ) ) :
-
-						if ( strtotime($dates[0]) != $cDate ) :
-							$diff = strtotime($dates[0]) - $cDate;
-							$dDate = $cDate;
-							if ( $diff > 86400 ) :
-								$skip = ( $diff / 86400 ) - 1;		
-								for ( $x=0; $x<$skip; $x++ ):
-									$dDate = $dDate + 86400;
-									$stats[] = array ('date'=>date( "Y-m-d", $dDate), 'users'=>0, 'search'=>0, 'pageviews'=>0, 'sessions'=>0, 'engaged'=>0 );
-								endfor;			
-							endif;
-
-							$stats[] = array ('date'=>date( "Y-m-d", strtotime($dates[0])), 'users'=>$dates[3], 'search'=>$dates[7], 'pageviews'=>$dates[4], 'sessions'=>$dates[5], 'engaged'=>($dates[5] -$dates[6]) );
-							$cDate = strtotime($dates[0]);
-						endif;		
-					endif;
-				endforeach;
-
-				$results = getResults($analytics, $ua_id, '2020-04-05', $ua_end, $param2, $param1b);
-				$rows = $results->getRows();
-				$cDate = 1586131200;
-
-				foreach ( $rows as $dates ) :
-					if ( $dates[1] == "United States" && !in_array( $path[2], $citiesToExclude ) ) :
-						if ( strtotime($dates[0]) != $cDate ) :
-							$diff = strtotime($dates[0]) - $cDate;
-							$dDate = $cDate;
-							if ( $diff > 86400 ) :
-								$skip = ( $diff / 86400 ) - 1;		
-								for ( $x=0; $x<$skip; $x++ ):
-									$dDate = $dDate + 86400;
-									$stats[] = array ('date'=>date( "Y-m-d", $dDate), 'users'=>0, 'search'=>0, 'pageviews'=>0, 'sessions'=>0, 'engaged'=>0 );
-								endfor;			
-							endif;
-
-							$stats[] = array ('date'=>date( "Y-m-d", strtotime($dates[0])), 'users'=>$dates[3], 'search'=>$dates[7], 'pageviews'=>$dates[4], 'sessions'=>$dates[5], 'engaged'=>($dates[5] -$dates[6]) );
-							$cDate = strtotime($dates[0]);
-						endif;		
-					endif;
-				endforeach;
-			endif;
-
-			asort($stats);
-			update_option( 'stats_basic', $stats );
-			update_option( 'stats_referrers', $referrer_stats);			
-			update_option( 'stats_locations', $location_stats);
-			update_option( 'stats_tech', $tech_stats);
-			delete_option( 'stats_page_stats', $page_stats);
-		endif;			
+			endforeach;	
+		endif;
 
 		update_option( 'bp_chrons_last_run', time() );	
 		delete_option( 'bp_chrons_pages' );

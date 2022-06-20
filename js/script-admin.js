@@ -105,9 +105,9 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	}, 1000);	
 	
 
-	$('#battleplan_referrer_stats h2.hndle').text( $('#battleplan_referrer_stats h2.hndle').text() + $('#battleplan_referrer_stats div.handle-label').attr('data-label') );
-	$('#battleplan_location_stats h2.hndle').text( $('#battleplan_location_stats h2.hndle').text() + $('#battleplan_location_stats div.handle-label').attr('data-label') );
-	$('#battleplan_pages_stats h2.hndle').text( $('#battleplan_pages_stats h2.hndle').text() + $('#battleplan_pages_stats div.handle-label').attr('data-label') );
+	//$('#battleplan_referrer_stats h2.hndle').text( $('#battleplan_referrer_stats h2.hndle').text() + $('#battleplan_referrer_stats div.handle-label').attr('data-label') );
+	//$('#battleplan_location_stats h2.hndle').text( $('#battleplan_location_stats h2.hndle').text() + $('#battleplan_location_stats div.handle-label').attr('data-label') );
+	//$('#battleplan_pages_stats h2.hndle').text( $('#battleplan_pages_stats h2.hndle').text() + $('#battleplan_pages_stats div.handle-label').attr('data-label') );
 		
 		
 	// Visitor Trend buttons
@@ -117,29 +117,60 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$('table.trends tr.trends, .trend-buttons div a').removeClass('active');
 		$('table.trends tr.trends.users').addClass('active');		
 		$(this).find('a').addClass('active');
-		$('table.trends td.page').text('Users');
-	})
+		$('table.trends td.page').text('Visitors');
+	});
 		
 	$('.trend-buttons .search').click(function() {
 		$('table.trends tr.trends, .trend-buttons div a').removeClass('active');
 		$('table.trends tr.trends.search').addClass('active');	
 		$(this).find('a').addClass('active');
 		$('table.trends td.page').text('Search');
-	})
+	});
 		
 	$('.trend-buttons .pageviews').click(function() {
 		$('table.trends tr.trends, .trend-buttons div a').removeClass('active');
 		$('table.trends tr.trends.pageviews').addClass('active');	
 		$(this).find('a').addClass('active');
 		$('table.trends td.page').text('Pages');
-	})
+	});
 		
 	$('.trend-buttons .engagement').click(function() {
 		$('table.trends tr.trends, .trend-buttons div a').removeClass('active');
 		$('table.trends tr.trends.engagement').addClass('active');	
 		$(this).find('a').addClass('active');
 		$('table.trends td.page').text('Engaged');
-	})
+	});
+	
+	// Last ??? Visitors buttons
+	$('#postbox-container-2').prepend($('.last-visitors-buttons'));
+		
+	$('.last-visitors-buttons .last-100').click(function() {
+		$('.handle-label, .last-visitors-buttons div, .last-visitors-buttons div a').removeClass('active');
+		$('.handle-label_100').addClass('active');		
+		$(this).find('a').addClass('active');
+	});	
+	
+	$('.last-visitors-buttons .last-250').click(function() {
+		$('.handle-label, .last-visitors-buttons div, .last-visitors-buttons div a').removeClass('active');
+		$('.handle-label_250').addClass('active');		
+		$(this).find('a').addClass('active');
+	});
+	
+	$('.last-visitors-buttons .last-500').click(function() {
+		$('.handle-label, .last-visitors-buttons div, .last-visitors-buttons div a').removeClass('active');
+		$('.handle-label_500').addClass('active');		
+		$(this).find('a').addClass('active');
+	});
+	
+	$('.last-visitors-buttons .all-time').click(function() {
+		$('.handle-label, .last-visitors-buttons div, .last-visitors-buttons div a').removeClass('active');
+		$('.handle-label_AT').addClass('active');		
+		$(this).find('a').addClass('active');
+	});
+	
+	
+	
+// Site Audit
 		
 	$('.col.when').click(function() {
 		$('.col.notes').fadeIn();	

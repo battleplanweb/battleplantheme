@@ -623,14 +623,14 @@ function battleplan_run_chron_jobs_ajax() {
 		update_option( 'bp_chrons_last_run', time() );	
 		delete_option( 'bp_chrons_pages' );
 		update_option( 'bp_chrons_pages', 0 );	
-		$response = array( 'chron' => 'Updated!' );		
+		$response = array( 'dashboard' => 'The chron has updated.' );		
 	else: 	 	
 		if ( $admin == "true" ) :
 			$timeUntil = (($chronSpan - $timePast) / 60) + 1;		
 			if ( floor($timeUntil / 60) > 0 ) $hours = floor($timeUntil / 60)." hours & ";
-			$response = array( 'chron' => 'Will run in '.$hours.($timeUntil % 60).' minutes.' );
+			$response = array( 'dashboard' => 'The chron will update in '.$hours.($timeUntil % 60).' minutes.' );
 		else:
-			$response = array( 'chron' => 'Will run after '.$pagesLeft.' more views.' );
+			$response = array( 'dashboard' => 'The chron will update after '.$pagesLeft.' more views.' );
 		endif;	
 	endif;	
 

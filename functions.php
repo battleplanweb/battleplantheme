@@ -16,7 +16,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '12.1.3' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '12.1.4' );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -896,6 +896,11 @@ function battleplan_scripts() {
 	
 	if ( ($GLOBALS['customer_info']['site-type'] == 'profile' || (is_array($GLOBALS['customer_info']['site-type']) && in_array('profile', $GLOBALS['customer_info']['site-type']))) || ($GLOBALS['customer_info']['site-type'] == 'profiles' || (is_array($GLOBALS['customer_info']['site-type']) && in_array('profiles', $GLOBALS['customer_info']['site-type']))) ) wp_enqueue_script( 'battleplan-script-user-profiles', get_template_directory_uri().'/js/script-user-profiles.js', array(), _BP_VERSION, false ); 
 	
+	if ( _USER_LOGIN == "battleplanweb" ) :
+		wp_enqueue_style( 'battleplan-admin-css', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION );	
+		wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array(), _BP_VERSION, false );	
+	endif;
+	
 	if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) { wp_enqueue_script( 'comment-reply' ); }
 	
 	$saveDir = array( 'theme_dir_uri'=>get_stylesheet_directory_uri(), 'upload_dir_uri'=>wp_upload_dir()['baseurl'] );
@@ -937,7 +942,7 @@ require_once get_template_directory().'/functions-grid.php';
 require_once get_template_directory().'/functions-public.php';
 require_once get_template_directory().'/functions-widgets.php';
 require_once get_stylesheet_directory().'/functions-site.php';
-if ( is_admin() ) { require_once get_template_directory().'/functions-admin.php'; } 
+if ( is_admin() || _USER_LOGIN == "battleplanweb" ) { require_once get_template_directory().'/functions-admin.php'; } 
 
 // Delay execution of non-essential scripts  --- && $GLOBALS['pagenow'] !== 'index.php'  had to be removed for CHR Services? WTF3
 if ( !is_admin() && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && strpos($GLOBALS['pagenow'], 'wp-cron.php') === false && !is_plugin_active( 'woocommerce/woocommerce.php' ) && strpos($_SERVER['REQUEST_URI'], '.xml') === false ) {
@@ -991,7 +996,7 @@ if ( !is_admin() && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && str
 }
 
 // Hide the Wordpress admin bar
-show_admin_bar( false );
+//show_admin_bar( false );
 
 // Set up Main Menu
 class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {

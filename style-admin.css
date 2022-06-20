@@ -113,10 +113,14 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	width: 										160px;
 }
 
+#dashboard-widgets #postbox-container-1 div.handle-label,
+#dashboard-widgets #postbox-container-2 div.handle-label,
 #dashboard-widgets #postbox-container-3 tr.trends {
 	display: 									none;
 }
 
+#dashboard-widgets #postbox-container-1 div.handle-label.active,
+#dashboard-widgets #postbox-container-2 div.handle-label.active,
 #dashboard-widgets #postbox-container-3 tr.trends.active {
 	display: 									block;
 }
@@ -240,16 +244,19 @@ ul div.value {
 	width:										75px;
 }
 
-.trend-buttons {
+.trend-buttons,
+.last-visitors-buttons {
 	margin-bottom: 								15px;
 }
 
-.trend-buttons .block-button {
+.trend-buttons .block-button,
+.last-visitors-buttons .block-button {
 	display: 									inline-block;
 	margin-left: 								15px;
 }
 
-.trend-buttons .block-button .button.active {
+.trend-buttons .block-button .button.active,
+.last-visitors-buttons .block-button .button.active {
   	color: 										#f6f7f7;
   	border-color: 								#2271b1;
   	background: 								#2271b1;
@@ -580,9 +587,13 @@ section.section {
 }
 
 .flex.stats {
-	grid-template-columns: 						115px repeat(45, 35px);
+	grid-template-columns: 						115px repeat(37, 50px);
 	gap: 										0.5em 15px;
 	text-align: 								center;
+}
+
+.flex.stats.hvac {
+	grid-template-columns: 						115px repeat(45, 50px);
 }
 
 .flex .col {
@@ -604,7 +615,7 @@ section.section {
 	text-align: 								center;
 }
 
-.flex .col submit {
+.flex .col input[type="submit"] {
 	width: 										auto;
 	padding: 									2px 13px;
 }
@@ -626,10 +637,10 @@ section.section {
 
 .flex.stats .col.headline {
 	width: 										200px;
-	transform: 									translate(-24px, -24px) rotate(-45deg);
+	transform: 									translate(-21px, -16px) rotate(-45deg);
 	text-align: 								left;
 	z-index: 									10;
-	padding: 									2px 0 2px 30px;
+	padding: 									5px 0 5px 30px;
 	border-top: 								1px solid rgba(0,0,0,0.05);
 	border-bottom: 								1px solid rgba(0,0,0,0.4);
 }
@@ -654,6 +665,10 @@ section.section {
 }
 
 .flex.stats .col.site-elements {
+	grid-column:								span 11;
+}
+
+.flex.stats.hvac .col.site-elements {
 	grid-column:								span 19;
 }
 
@@ -695,39 +710,79 @@ section.section {
 	cursor: 									pointer;
 }
 
-.flex.stats .col.headline:nth-of-type(45n+9),
-.flex.stats .col.headline:nth-of-type(45n+10),
-.flex.stats .col.headline:nth-of-type(45n+11),
-.flex.stats .col.headline:nth-of-type(45n+12),
-.flex.stats .col.headline:nth-of-type(45n+13),
-.flex.stats .col.headline:nth-of-type(45n+14),
-.flex.stats .col.headline:nth-of-type(45n+15),
-.flex.stats .col.headline:nth-of-type(45n+18),
-.flex.stats .col.headline:nth-of-type(45n+19),
-.flex.stats .col.headline:nth-of-type(45n+20),
-.flex.stats .col.headline:nth-of-type(45n+21),
-.flex.stats .col.headline:nth-of-type(45n+26),
-.flex.stats .col.headline:nth-of-type(45n+27),
+.flex.stats .col.headline:nth-of-type(37n+9),
+.flex.stats .col.headline:nth-of-type(37n+10),
+.flex.stats .col.headline:nth-of-type(37n+11),
+.flex.stats .col.headline:nth-of-type(37n+12),
+.flex.stats .col.headline:nth-of-type(37n+13),
+.flex.stats .col.headline:nth-of-type(37n+14),
+.flex.stats .col.headline:nth-of-type(37n+15),
+.flex.stats .col.headline:nth-of-type(37n+18),
+.flex.stats .col.headline:nth-of-type(37n+19),
+.flex.stats .col.headline:nth-of-type(37n+20),
+.flex.stats .col.headline:nth-of-type(37n+21),
+.flex.stats .col.headline:nth-of-type(37n+26),
+.flex.stats .col.headline:nth-of-type(37n+27),
 .flex .col.desktop,
 .flex .col.citations,
 .flex .col.site-speed,
 .flex .col.date,
-.flex.stats .col.stat:nth-of-type(47n+16),
-.flex.stats .col.stat:nth-of-type(47n+17),
-.flex.stats .col.stat:nth-of-type(47n+18),
-.flex.stats .col.stat:nth-of-type(47n+19),
-.flex.stats .col.stat:nth-of-type(47n+20),
-.flex.stats .col.stat:nth-of-type(47n+21),
-.flex.stats .col.stat:nth-of-type(47n+22),
-.flex.stats .col.stat:nth-of-type(47n+25),
-.flex.stats .col.stat:nth-of-type(47n+26),
-.flex.stats .col.stat:nth-of-type(47n+27),
-.flex.stats .col.stat:nth-of-type(47n+28),
-.flex.stats .col.stat:nth-of-type(47n+33),
-.flex.stats .col.stat:nth-of-type(47n+34),
+.flex.stats .col.stat:nth-of-type(39n+16),
+.flex.stats .col.stat:nth-of-type(39n+17),
+.flex.stats .col.stat:nth-of-type(39n+18),
+.flex.stats .col.stat:nth-of-type(39n+19),
+.flex.stats .col.stat:nth-of-type(39n+20),
+.flex.stats .col.stat:nth-of-type(39n+21),
+.flex.stats .col.stat:nth-of-type(39n+22),
+.flex.stats .col.stat:nth-of-type(39n+25),
+.flex.stats .col.stat:nth-of-type(39n+26),
+.flex.stats .col.stat:nth-of-type(39n+27),
+.flex.stats .col.stat:nth-of-type(39n+28),
+.flex.stats .col.stat:nth-of-type(39n+33),
+.flex.stats .col.stat:nth-of-type(39n+34),
 .flex.stats .col.when {
 	background: 								rgb(207,218,241);
 }
+
+
+.flex.stats.hvac .col {
+	background: 								rgb(226,226,190); 
+}
+
+.flex.stats.hvac .col.headline:nth-of-type(45n+9),
+.flex.stats.hvac .col.headline:nth-of-type(45n+10),
+.flex.stats.hvac .col.headline:nth-of-type(45n+11),
+.flex.stats.hvac .col.headline:nth-of-type(45n+12),
+.flex.stats.hvac .col.headline:nth-of-type(45n+13),
+.flex.stats.hvac .col.headline:nth-of-type(45n+14),
+.flex.stats.hvac .col.headline:nth-of-type(45n+15),
+.flex.stats.hvac .col.headline:nth-of-type(45n+18),
+.flex.stats.hvac .col.headline:nth-of-type(45n+19),
+.flex.stats.hvac .col.headline:nth-of-type(45n+20),
+.flex.stats.hvac .col.headline:nth-of-type(45n+21),
+.flex.stats.hvac .col.headline:nth-of-type(45n+26),
+.flex.stats.hvac .col.headline:nth-of-type(45n+27),
+.flex .col.desktop,
+.flex .col.citations,
+.flex .col.site-speed,
+.flex .col.date,
+.flex.stats.hvac .col.stat:nth-of-type(47n+16),
+.flex.stats.hvac .col.stat:nth-of-type(47n+17),
+.flex.stats.hvac .col.stat:nth-of-type(47n+18),
+.flex.stats.hvac .col.stat:nth-of-type(47n+19),
+.flex.stats.hvac .col.stat:nth-of-type(47n+20),
+.flex.stats.hvac .col.stat:nth-of-type(47n+21),
+.flex.stats.hvac .col.stat:nth-of-type(47n+22),
+.flex.stats.hvac .col.stat:nth-of-type(47n+25),
+.flex.stats.hvac .col.stat:nth-of-type(47n+26),
+.flex.stats.hvac .col.stat:nth-of-type(47n+27),
+.flex.stats.hvac .col.stat:nth-of-type(47n+28),
+.flex.stats.hvac .col.stat:nth-of-type(47n+33),
+.flex.stats.hvac .col.stat:nth-of-type(47n+34),
+.flex.stats.hvac .col.when {
+	background: 								rgb(207,218,241);
+}
+
 
 .flex.stats .col.when {
 	cursor: 									pointer;

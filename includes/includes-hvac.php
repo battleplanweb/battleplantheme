@@ -21,7 +21,7 @@
 	- Customer Care Dealer
 	- Comfortmaker Elite Dealer
 	- Tempstar Elite Dealer
-	- Financing widget
+	- Financing Widget
 	- Wells Fargo
 # Basic Theme Set Up
 # Employment Application
@@ -505,7 +505,7 @@ function battleplan_getFinancing($atts, $content = null) {
 	$imagePath = get_template_directory().'/common/financing/'.$img.'.png';			
 	list($width, $height) = getimagesize($imagePath);
 	
-	if ( $link != "" ) $buildFinancing .= '<a href="'.$link.'" title="Click here to apply for financing for AC repair at '.$bank.'">';
+	if ( $link != "" ) $buildFinancing .= '<a href="'.$link.'" title="Click here to apply for financing for AC repair at '.$bank.'" target="_blank">';
 	if ( $text != "" && $loc == "above" ) $buildFinancing .= '<span class="link-text">'.$text.'</span>';
 	$buildFinancing .= '<img class="financing-img" src="/wp-content/themes/battleplantheme/common/financing/'.$img.'.png" loading="lazy" alt="Apply for financing for your HVAC needs at '.$bank.'" width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
 	if ( $text != "" && $loc == "below" ) $buildFinancing .= '<span class="link-text">'.$text.'</span>';
@@ -530,7 +530,7 @@ function battleplan_getWellsFargo($atts, $content = null) {
 	if ($ad=="Wells-Fargo-C.png" || $ad=="Wells-Fargo-D.png") : $alt = "Special financing available. This credit card is issued with approved credit by Wells Fargo Bank, N.A. Equal Housing Lender. Learn more."; $width="300"; $height="250"; endif;
 	if ($ad=="Wells-Fargo-E.png") : $alt = "Financing available through Wells Fargo Bank, NA. This credit card is issued with approved credit.  Equal Housing Lender."; $width="200"; $height="152"; endif;	
 	if ($ad=="Wells-Fargo-Splash-A.png" || $ad=="Wells-Fargo-Splash-B.png" || $ad=="Wells-Fargo-Splash-C.png" || $ad=="Wells-Fargo-Splash-D.png") : $alt = "Buy today, pay over time with this Wells Fargo credit card. Learn more."; $width="600"; $height="300"; endif;		
-	$output = '<a href="'.$link.'" title="Click to learn more about Wells Fargo financing options."><img src="/wp-content/themes/battleplantheme/common/financing/'.$ad.'" loading="lazy" alt="'.$alt.'" '.$class.' width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" /></a>';
+	$output = '<a href="'.$link.'" title="Click to learn more about Wells Fargo financing options." target="_blank"><img src="/wp-content/themes/battleplantheme/common/financing/'.$ad.'" loading="lazy" alt="'.$alt.'" '.$class.' width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" /></a>';
 	return $output; 
 }
 

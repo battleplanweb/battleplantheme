@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 12.1.4
+Version: 12.2
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -63,6 +63,7 @@ html {
 
 body { 
 	margin: 									0;
+	word-spacing: 							 	0.1em;
 }
 
 *, 
@@ -691,6 +692,7 @@ p.indent-double {
 
 p:first-child,
 ul:first-child,
+
 ol:first-child {
 	margin-top:									0;
 }
@@ -1236,6 +1238,7 @@ section.section-default .flex {
 .header-stretch .logo-strip .flex, 
 .menu-stretch .menu-strip .flex,
 .content-stretch #main-content, 
+
 .footer-stretch .footer-strip .flex,
 .info-stretch .site-info .flex,
 section.section-stretch .flex,
@@ -3298,6 +3301,11 @@ h3.archive-subheadline {
 .breadcrumbs {
 	font-size:									85%;
 	margin-bottom:								1em;
+	line-height: 								2;
+}
+
+.single-products .entry-header .breadcrumbs {
+	display: 									none;
 }
 
 .archive-meta {
@@ -3805,6 +3813,7 @@ img.img-404 {
 	outline: 									0 !important;
 	transform: 									translateX(4.5%);
 }
+
 
 
 /* Captions
@@ -4351,6 +4360,7 @@ span.descriptionText {
 	font-weight:								bold;
 }
 
+/*
 .price-full::after, 
 
 .price-empty::after, 
@@ -4386,24 +4396,36 @@ span.descriptionText {
 .efficiency-empty::after {
 	opacity:									0.35;
 }
-
-
-.product-links .product-link-cats {
-	margin-bottom:								0.75em;
-}
+*/
 
 .product-meta .brochure-btn {
 	text-align: 								center;
 }
 
+.product-links .product-link-cats {
+	margin-bottom:								0.75em;
+}
+
+.product-links .product-link-cats .product-link-buttons {
+	display:									flex;
+	justify-content:							center;
+	flex-flow: 								 	row wrap;
+	align-items:								center;
+	gap: 										1.5em;
+}
+
 .product-links .product-link-cats .product-link-label {
-	display:									inline-block;
-	width: 										75px;
+	display:									block;
+	margin: 									2.5em 0 0.5em;
+	width: 										100%;
+	text-align: 								center;
 	font-weight: 								bold;
 }	
 
 .product-links .product-link-cats a {
-	display:									inline-block;
+	flex: 										1 1 auto;
+	text-align: 								center;
+	align-self: 								center;
 }
 
 .disclaimerText {
@@ -4447,7 +4469,7 @@ span.descriptionText {
 	height:										5px;
 }
 
-.wp-gr .wp-google-badge-score {
+.wp-gr .wp-google-badge-score .wp-google-review {
 	display:									flex;
 	flex-flow: 									row wrap;
 	justify-content: 							center;
@@ -5439,6 +5461,15 @@ html.error503 h3 {
 		column-count:								2;
 	}	
 	 
+	/* Content */	
+	.breadcrumbs {
+		text-align: 								center;
+	}
+	
+	.product-links .product-link-cats .product-link-buttons {
+		gap: 										1em;
+	}
+
 	/* Media */
 	ul.side-by-side li.full-top {
 		flex: 										100% !important;

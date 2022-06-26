@@ -424,7 +424,7 @@ function battleplan_buildParallax( $atts, $content = null ) {
 
 		return $setUpElement;
 	else:
-		return do_shortcode('<'.$div.' id="'.$name.'" class="'.$type.$style.' '.$type.'-'.$width.' '.$type.'-parallax'.$class.'" style="height:'.$height.'" data-parallax="scroll" data-natural-width="'.$imgW.'" data-natural-height="'.$imgH.'" data-position-x="'.$posX.'" data-position-y="'.$posY.'" data-z-index="1" data-bleed="'.$bleed.'" data-speed="'.$speed.'" data-image-src="'.$image.'">'.$content.$buildScrollBtn.'</'.$div.'>');				
+		return do_shortcode('<'.$div.' id="'.$name.'" class="'.$type.$style.' '.$type.'-'.$width.' '.$type.'-parallax'.$class.'" style="height:'.$height.'" data-parallax="scroll" data-id="'.$name.'" data-natural-width="'.$imgW.'" data-natural-height="'.$imgH.'" data-position-x="'.$posX.'" data-position-y="'.$posY.'" data-z-index="1" data-bleed="'.$bleed.'" data-speed="'.$speed.'" data-image-src="'.$image.'">'.$content.$buildScrollBtn.'</'.$div.'>');				
 	endif;	
 }
 

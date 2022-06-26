@@ -1,7 +1,7 @@
 @charset "utf-8";
 /* CSS Document */
 
-body {
+.wp-admin body {
 	background: 								#ffffff;
 	font-family: 								Arial;
 	font-size: 									14px;
@@ -19,6 +19,7 @@ body {
 	clear:										both;
 }
 
+/* Admin bar on live pages, added when logged in */
 #wpadminbar,
 #wpadminbar .quicklinks .ab-empty-item, 
 #wpadminbar .quicklinks a, 
@@ -26,25 +27,42 @@ body {
     height: 									40px;
 }
 
+.logged-in {
+	margin-top: 								-32px !important; /* compensate for the margin automatically placed on html */
+}
+
 .logged-in #wpadminbar {
+	z-index: 									9999999999;
+  	color: 										#c8c8c8;
+  	background: 								#d3d3d3;
+	border-top: 								1px solid #fff;
+	border-bottom: 								1px solid rgba(0,0,0,0.2);
+	filter: 									drop-shadow(0 -1px 0 rgba(0,0,0,0.2)) drop-shadow(0 1px 0 #fff);
+	top: 										unset;
+	bottom: 									1px;
+}  
+
+.logged-in #wpadminbar a.ab-item,
+.logged-in #wpadminbar #adminbarsearch::before, 
+.logged-in #wpadminbar .ab-icon::before, 
+.logged-in #wpadminbar .ab-item::before {
   	color: 										#15141a;
-  	background: 								#f9f9fb;
-  	border-bottom: 								1px solid #cccccc;
 }
 
-.logged-in #page {
-	padding-top: 								8px;
+.logged-in .wp-gr.wp-google-badge {
+	bottom: 									41px;
 }
 
-.logged-in #wpadminbar a.ab-item {
-  	color: 										#15141a;
+.logged-in .wp-google-badge-faux {
+	height: 									103px !important;
 }
 
 #wpadminbar * {
 	font-size: 									16px;
 }
 
-.wp-admin #wpadminbar #wp-admin-bar-site-name > .ab-item::before {
+.wp-admin #wpadminbar #wp-admin-bar-site-name > .ab-item::before,
+.logged-in #wpadminbar #wp-admin-bar-site-name > .ab-item::before {
     background: 								url('../../uploads/site-icon-80x80.png') 50% 50% no-repeat !important;
 	background-size: 							contain !important;
 	width: 										31px;
@@ -53,15 +71,49 @@ body {
 	top: 										0;
 }
 
+.logged-in #wpadminbar .ab-top-menu > li > .ab-item, 
+.logged-in #wpadminbar:not(.mobile) .ab-top-menu > li > .ab-item {
+  	background: 								transparent;
+	border: 									none;
+	border-bottom: 								1px solid transparent;
+  	color: 										#15141a;
+	height: 									38px;
+	transition: 								all 0.2s ease;
+}
+
+.logged-in #wpadminbar .ab-top-menu > li.hover > .ab-item, 
+.logged-in #wpadminbar.nojq .quicklinks .ab-top-menu > li > .ab-item:focus, 
+.logged-in #wpadminbar:not(.mobile) .ab-top-menu > li:hover > .ab-item, 
+.logged-in #wpadminbar:not(.mobile) .ab-top-menu > li > .ab-item:focus {
+  	background: 								#ffffff;
+	border-bottom: 								1px solid rgba(0,0,0,0.2);
+	transition: 								all 0.2s ease;
+}
+
+.logged-in #wpadminbar .menupop .ab-sub-wrapper, 
+.logged-in #wpadminbar .shortlink-input {
+  	background: 								#ffffff;
+  	bottom: 									40px;
+	box-shadow: 								0 -3px 5px rgba(0,0,0,.2);
+}
+
+.logged-in #wpadminbar .ab-top-menu > li.hover > .ab-sub-wrapper  {
+  	display: 									block;
+}
+
+.logged-in #wpadminbar .ab-top-menu > li.hover > .ab-sub-wrapper *  {
+  	color: 										#15141a;
+}
+
 #wp-admin-bar-my-account > a.ab-item {
 	padding-right: 								10px;
 }
 
-#wpfooter {
+.wp-admin #wpfooter {
 	bottom: 									-50px;
 }
 
-p#footer-upgrade {
+.wp-admin p#footer-upgrade {
 	display: 									none;
 }
 
@@ -199,13 +251,13 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	column-count:								2;
 }
 
-ul div.label {
+.wp-admin ul div.label {
 	display:									inline-block;
 	width:										210px;
 	overflow:									clip;
 }
 
-ul div.value {
+.wp-admin ul div.value {
 	margin-right:								20px;
 }
 
@@ -303,19 +355,19 @@ ul div.value {
 }
 
 /* Page Attributes meta box */
-p.post-attributes-help-text {
+.wp-admin p.post-attributes-help-text {
 	display:									none;
 }
 
-label.post-attributes-label {
+.wp-admin label.post-attributes-label {
 	vertical-align:								middle;
 }
 
-input[type="checkbox"], input[type="radio"] {
+.wp-admin input[type="checkbox"], input[type="radio"] {
 	margin-right:								0.5em;
 }
 
-#page-stats-box td {
+.wp-admin #page-stats-box td {
 	width: 										120px;
 }
 
@@ -398,15 +450,15 @@ input[type="checkbox"], input[type="radio"] {
 	float:										none;
 }
 
-td.title {
+.wp-admin td.title {
 	cursor:										pointer;
 }
 
-td.title .wds-meta-details {
+.wp-admin td.title .wds-meta-details {
 	display:									none;
 }
 
-.row-actions {
+.wp-admin .row-actions {
 	font-size: 									24px;
 	color: 										transparent !important;
 	margin-top: 								5px;
@@ -422,23 +474,23 @@ body.ac-wp-media .row-actions {
 	display: 									block;
 }
 
-.row-actions span {
+.wp-admin .row-actions span {
 	margin-right: 								-13px;
 }
 
-.row-actions span.view {
+.wp-admin .row-actions span.view {
 	margin-right: 								-9px;
 }
 
-.row-actions .id {
+.wp-admin .row-actions .id {
 	display: 									none;
 }
 
-.plugins .row-actions span {
+.wp-admin .plugins .row-actions span {
 	margin-right: 								0;
 }
 
-tr:hover .row-actions {
+.wp-admin tr:hover .row-actions {
 	opacity: 									1;
 	transition: 								all 0.3s ease 0.1s;
 }
@@ -487,25 +539,25 @@ tr:hover .row-actions {
     content: 									"\f503";
 }
 
-.row-actions span i::before {
+.wp-admin .row-actions span i::before {
 	display: 									inline-block;
 	transform: 									scale(0.7);
 	transition: 								transform 0.1s ease;
 }
 
-.row-actions span:hover i::before {
+.wp-admin .row-actions span:hover i::before {
 	transform: 									scale(1.2);
 	transition: 								transform 0.1s ease;
 }
 
 
-span.dashicons.red {
+.wp-admin span.dashicons.red {
 	color:										#000000 !important;
 }
 
-a[data-wp-action="disable"],
-.auto-update-time,
-.column-auto-updates * {
+.wp-admin a[data-wp-action="disable"],
+.wp-admin .auto-update-time,
+.wp-admin .column-auto-updates * {
 	opacity:									0.35;
 }
 
@@ -527,29 +579,29 @@ a[data-wp-action="disable"],
 	width: 										100%;
 }
 
-#page-top {
+.wp-admin #page-top {
 	order: 										1;
 }
 
-#page-bottom {
+.wp-admin #page-bottom {
 	order: 										2;
 }
 
-#wpseo_meta {
+.wp-admin #wpseo_meta {
 	order: 										3;
 }
 
-#commentstatusdiv {
+.wp-admin #commentstatusdiv {
 	order: 										4;
 }
 
-#page-top_text,
-#page-bottom_text {
+.wp-admin #page-top_text,
+.wp-admin #page-bottom_text {
 	max-height:									700px;
 	resize: 									none;
 } 
 
-ul.acf-checkbox-list {
+.wp-admin ul.acf-checkbox-list {
 	column-count:								4;
 	column-gap: 								2.5em;
 }
@@ -561,9 +613,9 @@ ul.acf-checkbox-list {
 }
 
 /* HVAC Products Pages */
-.acf-field.acf-field-product-comfort,
-.acf-field.acf-field-product-efficiency,
-.acf-field.acf-field-product-price {
+.wp-admin .acf-field.acf-field-product-comfort,
+.wp-admin .acf-field.acf-field-product-efficiency,
+.wp-admin .acf-field.acf-field-product-price {
 	float: 										left;
 	clear: 										none;
 	width: 										33%;
@@ -573,13 +625,13 @@ ul.acf-checkbox-list {
 
 /* Contact Form 7
 --------------------------------------------- */
-.config-error,
-#informationdiv,
-.icon-in-circle {
+.wp-admin .config-error,
+.wp-admin #informationdiv,
+.wp-admin .icon-in-circle {
 	display: 									none !important;
 } 
 
-[data-config-field][aria-invalid="true"] {
+.wp-admin [data-config-field][aria-invalid="true"] {
     border-color: 								#2c3338 !important;
 }
 
@@ -600,82 +652,82 @@ ul.acf-checkbox-list {
 /* Site Audit
 --------------------------------------------- */
 /* Remove arrow buttons on number fields on Chrome, Safari, Edge, Opera */
-input::-webkit-outer-spin-button,
-input::-webkit-inner-spin-button {
+.wp-admin input::-webkit-outer-spin-button,
+.wp-admin input::-webkit-inner-spin-button {
   	-webkit-appearance: 						none;
   	margin: 									0;
 }
 
 /* Remove arrow buttons on number fields on Firefox */
-input[type=number] {
+.wp-admin input[type=number] {
   	-moz-appearance: 							textfield;
 }
 
-section.section {
+.wp-admin section.section {
 	position:									relative;
 	width:										100%;
 }
 
-.flex {
+.wp-admin .flex {
 	grid-column: 								default-start / default-end;
 	display: 									grid;
 	gap: 										2.5em 3%;
 }
 
-.flex.inputs {
+.wp-admin .flex.inputs {
 	grid-template-columns: 						300px 300px 1fr;
 }
 
-.flex.stats {
+.wp-admin .flex.stats {
 	grid-template-columns: 						115px repeat(37, 50px);
 	gap: 										0.5em 15px;
 	text-align: 								center;
 }
 
-.flex.stats.hvac {
+.wp-admin .flex.stats.hvac {
 	grid-template-columns: 						115px repeat(45, 50px);
 }
 
-.flex .col {
+.wp-admin .flex .col {
 	grid-column:								span 1;
 }
 
-.flex .col .form-input {
+.wp-admin .flex .col .form-input {
 	margin: 									0 0 10px 0;
 }
 
-.flex .col label {
+.wp-admin .flex .col label {
 	display: 									inline-block;
 	width: 										180px;
 }
 
-.flex .col input {
+.wp-admin .flex .col input {
 	display: 									inline-block;
 	width: 										50px;
 	text-align: 								center;
 }
 
-.flex .col input[type="submit"] {
+.wp-admin .flex .col input[type="submit"] {
 	width: 										auto;
 	padding: 									2px 13px;
 }
 
-.flex .col textarea {
+.wp-admin .flex .col textarea {
 	width: 										900px;
 	height: 									400px;
 	text-align: 								left;
 }
 
-.scroll-stats {
+.wp-admin .scroll-stats {
 	overflow-y: 								scroll;
 	padding: 									2em 0.5em;
 }
 
-.flex .col.empty {
+.wp-admin .flex .col.empty {
 	opacity: 									0;
 }
 
-.flex.stats .col.headline {
+.wp-admin .flex.stats .col.headline {
 	width: 										200px;
 	transform: 									translate(-21px, -16px) rotate(-45deg);
 	text-align: 								left;
@@ -685,7 +737,7 @@ section.section {
 	border-bottom: 								1px solid rgba(0,0,0,0.4);
 }
 
-.flex.stats .col.subhead  {
+.wp-admin .flex.stats .col.subhead  {
 	text-align: 								center;
 	border-top: 								1px solid rgba(0,0,0,0.05);
 	border-bottom: 								2px solid rgba(0,0,0,0.3);
@@ -698,37 +750,37 @@ section.section {
 	font-size: 									105%;
 }
 
-.span-all,
-.flex.stats .col.notes {
+.wp-admin .span-all,
+.wp-admin .flex.stats .col.notes {
 	grid-column:								1 / -1 !important;
 	text-align: 								left;
 }
 
-.flex.stats:not(.hvac) .col.site-elements {
+.wp-admin .flex.stats:not(.hvac) .col.site-elements {
 	grid-column:								span 11;
 }
 
-.flex.stats.hvac .col.site-elements {
+.wp-admin .flex.stats.hvac .col.site-elements {
 	grid-column:								span 19;
 }
 
-.flex.stats .col.lighthouse {
+.wp-admin .flex.stats .col.lighthouse {
 	grid-column:								span 7;
 }
 
-.flex.stats .col.citations,
-.flex.stats .col.gmb {
+.wp-admin .flex.stats .col.citations,
+.wp-admin .flex.stats .col.gmb {
 	grid-column:								span 4;
 }
 
-.flex.stats .col.keywords,
-.flex.stats .col.site-speed {
+.wp-admin .flex.stats .col.keywords,
+.wp-admin .flex.stats .col.site-speed {
 	grid-column:								span 2;
 }
 
-.flex.stats .col.when,
-.flex.stats .col.stat,
-.flex.stats .col.notes {
+.wp-admin .flex.stats .col.when,
+.wp-admin .flex.stats .col.stat,
+.wp-admin .flex.stats .col.notes {
 	z-index: 									30;
 	padding: 									3px;
 	border-top: 								1px solid rgba(0,0,0,0.05);
@@ -737,11 +789,11 @@ section.section {
 	border-right: 								1px solid rgba(0,0,0,0.3);
 }
 
-.flex.stats .col {
+.wp-admin .flex.stats .col {
 	background: 								rgb(226,226,190); 
 }
 
-.flex.stats .col.notes {
+.wp-admin .flex.stats .col.notes {
 	background: 								#ffffff;
 	margin-left: 								130px;
 	width: 										calc(100% - 140px);
@@ -750,84 +802,80 @@ section.section {
 	cursor: 									pointer;
 }
 
-.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+9),
-.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+10),
-.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+11),
-.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+12),
-.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+13),
-.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+14),
-.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+15),
-.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+18),
-.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+19),
-.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+20),
-.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+21),
-.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+26),
-.flex.stats:not(.hvac) .col.headline:nth-of-type(37n+27),
-.flex:not(.hvac) .col.desktop,
-.flex:not(.hvac) .col.citations,
-.flex:not(.hvac) .col.site-speed,
-.flex:not(.hvac) .col.date,
-.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+16),
-.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+17),
-.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+18),
-.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+19),
-.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+20),
-.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+21),
-.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+22),
-.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+25),
-.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+26),
-.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+27),
-.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+28),
-.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+33),
-.flex.stats:not(.hvac) .col.stat:nth-of-type(39n+34),
-.flex.stats:not(.hvac) .col.when {
+.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(37n+9),
+.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(37n+10),
+.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(37n+11),
+.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(37n+12),
+.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(37n+13),
+.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(37n+14),
+.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(37n+15),
+.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(37n+18),
+.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(37n+19),
+.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(37n+20),
+.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(37n+21),
+.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(37n+26),
+.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(37n+27),
+.wp-admin .flex:not(.hvac) .col.desktop,
+.wp-admin .flex:not(.hvac) .col.citations,
+.wp-admin .flex:not(.hvac) .col.site-speed,
+.wp-admin .flex:not(.hvac) .col.date,
+.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(39n+16),
+.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(39n+17),
+.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(39n+18),
+.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(39n+19),
+.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(39n+20),
+.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(39n+21),
+.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(39n+22),
+.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(39n+25),
+.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(39n+26),
+.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(39n+27),
+.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(39n+28),
+.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(39n+33),
+.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(39n+34),
+.wp-admin .flex.stats:not(.hvac) .col.when {
 	background: 								rgb(207,218,241);
 }
 
 
-.flex.stats.hvac .col {
+.wp-admin .flex.stats.hvac .col {
 	background: 								rgb(226,226,190); 
 }
 
-.flex.stats.hvac .col.headline:nth-of-type(45n+9),
-.flex.stats.hvac .col.headline:nth-of-type(45n+10),
-.flex.stats.hvac .col.headline:nth-of-type(45n+11),
-.flex.stats.hvac .col.headline:nth-of-type(45n+12),
-.flex.stats.hvac .col.headline:nth-of-type(45n+13),
-.flex.stats.hvac .col.headline:nth-of-type(45n+14),
-.flex.stats.hvac .col.headline:nth-of-type(45n+15),
-.flex.stats.hvac .col.headline:nth-of-type(45n+18),
-.flex.stats.hvac .col.headline:nth-of-type(45n+19),
-.flex.stats.hvac .col.headline:nth-of-type(45n+20),
-.flex.stats.hvac .col.headline:nth-of-type(45n+21),
-.flex.stats.hvac .col.headline:nth-of-type(45n+26),
-.flex.stats.hvac .col.headline:nth-of-type(45n+27),
-.flex.hvac .col.desktop,
-.flex.hvac .col.citations,
-.flex.hvac .col.site-speed,
-.flex.hvac .col.date,
-.flex.stats.hvac .col.stat:nth-of-type(47n+16),
-.flex.stats.hvac .col.stat:nth-of-type(47n+17),
-.flex.stats.hvac .col.stat:nth-of-type(47n+18),
-.flex.stats.hvac .col.stat:nth-of-type(47n+19),
-.flex.stats.hvac .col.stat:nth-of-type(47n+20),
-.flex.stats.hvac .col.stat:nth-of-type(47n+21),
-.flex.stats.hvac .col.stat:nth-of-type(47n+22),
-.flex.stats.hvac .col.stat:nth-of-type(47n+25),
-.flex.stats.hvac .col.stat:nth-of-type(47n+26),
-.flex.stats.hvac .col.stat:nth-of-type(47n+27),
-.flex.stats.hvac .col.stat:nth-of-type(47n+28),
-.flex.stats.hvac .col.stat:nth-of-type(47n+33),
-.flex.stats.hvac .col.stat:nth-of-type(47n+34),
-.flex.stats.hvac .col.when {
+.wp-admin .flex.stats.hvac .col.headline:nth-of-type(45n+9),
+.wp-admin .flex.stats.hvac .col.headline:nth-of-type(45n+10),
+.wp-admin .flex.stats.hvac .col.headline:nth-of-type(45n+11),
+.wp-admin .flex.stats.hvac .col.headline:nth-of-type(45n+12),
+.wp-admin .flex.stats.hvac .col.headline:nth-of-type(45n+13),
+.wp-admin .flex.stats.hvac .col.headline:nth-of-type(45n+14),
+.wp-admin .flex.stats.hvac .col.headline:nth-of-type(45n+15),
+.wp-admin .flex.stats.hvac .col.headline:nth-of-type(45n+18),
+.wp-admin .flex.stats.hvac .col.headline:nth-of-type(45n+19),
+.wp-admin .flex.stats.hvac .col.headline:nth-of-type(45n+20),
+.wp-admin .flex.stats.hvac .col.headline:nth-of-type(45n+21),
+.wp-admin .flex.stats.hvac .col.headline:nth-of-type(45n+26),
+.wp-admin .flex.stats.hvac .col.headline:nth-of-type(45n+27),
+.wp-admin .flex.hvac .col.desktop,
+.wp-admin .flex.hvac .col.citations,
+.wp-admin .flex.hvac .col.site-speed,
+.wp-admin .flex.hvac .col.date,
+.wp-admin .flex.stats.hvac .col.stat:nth-of-type(47n+16),
+.wp-admin .flex.stats.hvac .col.stat:nth-of-type(47n+17),
+.wp-admin .flex.stats.hvac .col.stat:nth-of-type(47n+18),
+.wp-admin .flex.stats.hvac .col.stat:nth-of-type(47n+19),
+.wp-admin .flex.stats.hvac .col.stat:nth-of-type(47n+20),
+.wp-admin .flex.stats.hvac .col.stat:nth-of-type(47n+21),
+.wp-admin .flex.stats.hvac .col.stat:nth-of-type(47n+22),
+.wp-admin .flex.stats.hvac .col.stat:nth-of-type(47n+25),
+.wp-admin .flex.stats.hvac .col.stat:nth-of-type(47n+26),
+.wp-admin .flex.stats.hvac .col.stat:nth-of-type(47n+27),
+.wp-admin .flex.stats.hvac .col.stat:nth-of-type(47n+28),
+.wp-admin .flex.stats.hvac .col.stat:nth-of-type(47n+33),
+.wp-admin .flex.stats.hvac .col.stat:nth-of-type(47n+34),
+.wp-admin .flex.stats.hvac .col.when {
 	background: 								rgb(207,218,241);
 }
 
 
-.flex.stats .col.when {
+.wp-admin .flex.stats .col.when {
 	cursor: 									pointer;
 }
-
-
-
-

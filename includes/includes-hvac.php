@@ -204,7 +204,7 @@ function battleplan_add_acf_hvac_fields() {
 		'key' => 'group_5bd6f6742fbdb',
 		'title' => 'HVAC Products',
 		'fields' => array(
-			array(
+			/*array(
 				'key' => 'product_comfort',
 				'label' => 'Comfort',
 				'name' => 'comfort',
@@ -270,6 +270,7 @@ function battleplan_add_acf_hvac_fields() {
 				'allow_null' => 0,
 				'return_format' => 'value',
 			),
+			*/
 			array(
 				'key' => 'product_brochure',
 				'label' => 'Brochure',

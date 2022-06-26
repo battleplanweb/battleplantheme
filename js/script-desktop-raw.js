@@ -21,14 +21,15 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	}
 	
 //Set full screen parallax background for desktops
-	window.parallaxBG = function (container, filename, backgroundW, backgroundH, posX, posY, bleed, speed) {
+	window.parallaxBG = function (container, filename, backgroundW, backgroundH, posX, posY, bleed, speed, id) {
 		posX = posX || 'center';
 		posY = posY || 'center';
 		bleed = bleed || 20;
 		speed = speed || 3;
+		id = id || container.replace('#','');
 
 		var checkPageH = $(container).outerHeight(), parallaxS = (backgroundH / checkPageH) / speed;
-		$(container).parallax({ imageSrc:getUploadURI+'/'+filename, speed:parallaxS, bleed:bleed, naturalWidth:backgroundW, naturalHeight:backgroundH, positionX:posX, positionY:posY });	
+		$(container).parallax({ imageSrc:getUploadURI+'/'+filename, speed:parallaxS, bleed:bleed, naturalWidth:backgroundW, naturalHeight:backgroundH, positionX:posX, positionY:posY, id: id });	
 	};
 
 //Control parallax movement of divs within a container

@@ -3,7 +3,7 @@
 
 return do_shortcode('
 	[section name="Why Choose Amana" class="why-choose-us" style="'.$style.'" width="'.$width.'"]
-		[layout grid="1-1-1-1"] 
+		[layout grid="1-1-1-1" valign="stretch"] 
 			[col class="span-all"]
 				[txt]
 					<img src="'.$img.'" loading="lazy" alt="'.$alt.'" class="noFX" width="496" height="142" style="aspect-ratio:496/142" />

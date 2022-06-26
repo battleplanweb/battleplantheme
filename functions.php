@@ -16,7 +16,8 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '12.1.4' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '12.2' );
+update_option( 'battleplan_framework', _BP_VERSION );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
@@ -391,8 +392,28 @@ add_filter( 'wpcf7_form_elements', 'do_shortcode' );
 --------------------------------------------------------------*/
 
 // Enable auto-updates on plugins and themes
-add_filter( 'auto_update_plugin', '__return_true' );
 add_filter( 'auto_update_theme', '__return_true' );
+add_filter( 'auto_update_plugin', '__return_true' );
+
+add_filter( 'plugin_auto_update_setting_html', 'battleplan_auto_update_setting_html', 999, 3 );
+function battleplan_auto_update_setting_html( $html, $plugin_file, $plugin_data ) {
+   	$disableAutoUpdates = [ 'ari-fancy-lightbox/ari-fancy-lightbox.php', 'admin-columns-pro/admin-columns-pro.php', 'extended-widget-options/plugin.php', 'wpseo-local/local-seo.php', 'wordpress-seo-premium/wp-seo-premium.php', 'events-calendar-pro/events-calendar-pro.php' ];
+	
+   	if ( in_array($plugin_file, $disableAutoUpdates)) $html = __( '', 'battleplan' );
+    return $html;
+}
+
+add_filter( 'site_transient_update_plugins', 'battleplan_disable_plugin_updates', 999, 1 );
+function battleplan_disable_plugin_updates( $value ) {
+   	$disableAutoUpdates = [ 'ari-fancy-lightbox/ari-fancy-lightbox.php', 'admin-columns-pro/admin-columns-pro.php', 'extended-widget-options/plugin.php', 'wpseo-local/local-seo.php', 'wordpress-seo-premium/wp-seo-premium.php', 'events-calendar-pro/events-calendar-pro.php' ];
+
+  	if ( isset($value) && is_object($value) ) :
+    	foreach ($disableAutoUpdates as $plugin) :
+        	if ( isset( $value->response[$plugin] ) ) unset( $value->response[$plugin] );
+        endforeach;
+  	endif;
+  return $value;
+}
 
 // Disable update emails from WordPress
 add_filter('auto_plugin_update_send_email', '__return_false');
@@ -828,7 +849,7 @@ function battleplan_dequeue_unwanted_stuff() {
 	wp_dequeue_style( 'select2' );  wp_deregister_style( 'select2' );
 	wp_dequeue_style( 'asp-default-style' ); wp_deregister_style( 'asp-default-style' );		
 	wp_dequeue_style( 'contact-form-7' ); wp_deregister_style( 'contact-form-7' );	
-	//if ( is_plugin_active( 'ari-fancy-lightbox/ari-fancy-lightbox.php' ) ) { wp_dequeue_style( 'ari-fancybox' ); wp_deregister_style( 'ari-fancybox' ); }
+	if ( is_plugin_active( 'ari-fancy-lightbox/ari-fancy-lightbox.php') && ( !is_single() || get_post_type(get_the_ID()) != "galleries" ) ) { wp_dequeue_style( 'ari-fancybox' ); wp_deregister_style( 'ari-fancybox' ); }
 	if ( is_plugin_active( 'animated-typing-effect/typingeffect.php' ) ) { wp_dequeue_style( 'typed-cursor' ); wp_deregister_style( 'typed-cursor' ); }
 
 // re-load in header
@@ -845,7 +866,8 @@ function battleplan_dequeue_unwanted_stuff() {
 	wp_dequeue_script( 'wphb-global' ); wp_deregister_script( 'wphb-global' );
 	wp_dequeue_script( 'wp-embed' ); wp_deregister_script( 'wp-embed' );
 	wp_dequeue_script( 'modernizr' ); wp_deregister_script( 'modernizr' );		
-	if ( !is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_dequeue_script( 'underscore' ); wp_deregister_script( 'underscore' ); } 
+	if ( is_plugin_active( 'ari-fancy-lightbox/ari-fancy-lightbox.php') && ( !is_single() || get_post_type(get_the_ID()) != "galleries" ) ) { wp_dequeue_script( 'ari-fancybox' ); wp_deregister_script( 'ari-fancybox' ); } 
+	if ( !is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_dequeue_script( 'underscore' ); wp_deregister_script( 'underscore' ); } 	
 }
 
 // Load and enqueue styles in header
@@ -869,8 +891,7 @@ function battleplan_footer_styles() {
 	wp_enqueue_style( 'battleplan-animate', get_template_directory_uri().'/animate.css', array(), _BP_VERSION );	
 	//wp_enqueue_style( 'battleplan-animate-xtra', get_template_directory_uri().'/animate-xtra.css', array(), _BP_VERSION );	
 	wp_enqueue_style( 'battleplan-fontawesome', get_template_directory_uri()."/fontawesome.css", array(), _BP_VERSION );
-	if ( is_plugin_active( 'extended-widget-options/plugin.php' ) ) { wp_enqueue_style( 'widgetopts-styles', '/wp-content/plugins/extended-widget-options/assets/css/widget-options.css', array(), _BP_VERSION ); }	
-	//if ( is_plugin_active( 'ari-fancy-lightbox/ari-fancy-lightbox.php' ) ) { wp_enqueue_style( 'ari-fancybox-styles', '/wp-content/plugins/ari-fancy-lightbox/assets/fancybox/jquery.fancybox.min.css', array(), _BP_VERSION ); }		
+	if ( is_plugin_active( 'extended-widget-options/plugin.php' ) ) { wp_enqueue_style( 'widgetopts-styles', '/wp-content/plugins/extended-widget-options/assets/css/widget-options.css', array(), _BP_VERSION ); }		
 }
 
 // Load and enqueue remaining scripts
@@ -889,7 +910,7 @@ function battleplan_scripts() {
 	wp_enqueue_script( 'battleplan-script-site', get_stylesheet_directory_uri().'/script-site.js', array(), _BP_VERSION, false );	
 	wp_enqueue_script( 'battleplan-script-tracking', get_template_directory_uri().'/js/script-tracking.js', array(), _BP_VERSION, false ); 	
 	wp_enqueue_script( 'battleplan-script-cloudflare', get_template_directory_uri().'/js/script-cloudflare.js', array(), _BP_VERSION, false );
-	
+
 	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { wp_enqueue_script( 'battleplan-script-events', get_template_directory_uri().'/js/events.js', array(), _BP_VERSION, false ); } 
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_enqueue_script( 'battleplan-script-woocommerce', get_template_directory_uri().'/js/woocommerce.js', array(), _BP_VERSION, false ); } 
 	if ( is_plugin_active( 'cue/cue.php' ) ) { wp_enqueue_script( 'battleplan-script-cue', get_template_directory_uri().'/js/cue.js', array(), _BP_VERSION, false ); } 
@@ -1026,7 +1047,7 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 				$indent,
 				$id,
 				$class_names,
-				in_array( 'menu-item-has-children', $item->classes ) ? ' aria-haspopup="true" aria-expanded="false" tabindex="0"' : ''
+				is_array($item->classes) && in_array( 'menu-item-has-children', $item->classes ) ? ' aria-haspopup="true" aria-expanded="false" tabindex="0"' : ''
 			);
 
 			$atts = array();
@@ -1084,7 +1105,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( "user-message" == $tag->name ) {
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
-		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','Roleplay helps develop','rank your google','TRY IT RIGHT NOW FOR FREE','house‌ ‌inspection‌ ‌process', 'write you an article','write a short article','We want to write','website home page design','updated version of your website','free sample Home Page','completely Free','Dear Receptionist','Franchise Creator','John Romney','get in touch with ownership','rebrand your business', 'what I would suggest for your website', 'Virtual Assistant Services','Would your readers','organic traffic','и','д','б','й','л','ы','З','у','Я');
+		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','Roleplay helps develop','rank your google','TRY IT RIGHT NOW FOR FREE','house‌ ‌inspection‌ ‌process', 'write you an article','write a short article','We want to write','website home page design','updated version of your website','free sample Home Page','completely Free','Dear Receptionist','Franchise Creator','John Romney','get in touch with ownership','rebrand your business', 'what I would suggest for your website', 'Virtual Assistant Services','Would your readers','organic traffic','We do Estimation','и','д','б','й','л','ы','З','у','Я');
 		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
 		if ( strtolower($check) == strtolower($name) ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($badwords as $badword) {
@@ -1161,7 +1182,7 @@ function battleplan_setupFormEmail( $contact_form ) {
 		$elParts = explode("[", $bodyEl);
 		if ( $elParts[0] && $elParts[1] ) : if ( strlen($elParts[0]) > $maxLength ) : $maxLength = strlen($elParts[0]); endif; endif;
 	endforeach;	
-	$colWidth = round($maxLength * 8);
+	$colWidth = round($maxLength * 12);
 	
 	foreach ( $bodyEls as $bodyEl ) :
 		$elParts = explode("[", $bodyEl);
@@ -1401,7 +1422,7 @@ function battleplan_getGoogleRating() {
 		$apiKey .= "-YVdVP8";	
 		$dateChecked = readMeta(_HEADER_ID, "google-review-date");	
 		$today = strtotime(date("F j, Y"));	
-		$daysSinceCheck = $today - $dateChecked;
+		$daysSinceCheck = $today - intval($dateChecked);
 
 		if ( $daysSinceCheck < 6 ) :
 			$rating = readMeta(_HEADER_ID, "google-review-rating");	
@@ -1424,9 +1445,9 @@ function battleplan_getGoogleRating() {
 		if ( $rating > 3.99 ) :
 			$buildPanel = '<a class="wp-gr wp-google-badge" href="https://search.google.com/local/reviews?placeid='.$placeID.'&hl=en&gl=US" target="_blank">';
 			$buildPanel .= '<div class="wp-google-border"></div>';
-			$buildPanel .= '<div class="wp-google-badge-btn">';
-			$buildPanel .= '<div class="wp-google-badge-score wp-google-rating" itemprop="aggregateRating" itemscope itemtype="http://schema.org/AggregateRating">';
-			$buildPanel .= '<svg role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" height="25" width="25"><title>Google Logo</title><g fill="none" fill-rule="evenodd">';
+			$buildPanel .= '<div class="wp-google-badge-btn" itemscope itemtype="http://schema.org/AggregateRating">';
+			$buildPanel .= '<div class="wp-google-badge-score wp-google-rating" itemprop="itemReviewed" itemscope itemtype="https://schema.org/'.get_option('wpseo_local')['business_type'].'">';
+			$buildPanel .= '<div class="wp-google-review"><svg role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" height="25" width="25"><title>Google Logo</title><g fill="none" fill-rule="evenodd">';
 			$buildPanel .= '<path d="M482.56 261.36c0-16.73-1.5-32.83-4.29-48.27H256v91.29h127.01c-5.47 29.5-22.1 54.49-47.09 71.23v59.21h76.27c44.63-41.09 70.37-101.59 70.37-173.46z" fill="#4285f4"></path>';
 			$buildPanel .= '<path d="M256 492c63.72 0 117.14-21.13 156.19-57.18l-76.27-59.21c-21.13 14.16-48.17 22.53-79.92 22.53-61.47 0-113.49-41.51-132.05-97.3H45.1v61.15c38.83 77.13 118.64 130.01 210.9 130.01z" fill="#34a853"></path>';
 			$buildPanel .= '<path d="M123.95 300.84c-4.72-14.16-7.4-29.29-7.4-44.84s2.68-30.68 7.4-44.84V150.01H45.1C29.12 181.87 20 217.92 20 256c0 38.08 9.12 74.13 25.1 105.99l78.85-61.15z" fill="#fbbc05"></path>';
@@ -1443,9 +1464,9 @@ function battleplan_getGoogleRating() {
 
 			$buildPanel .= '</div></div>';	
 			$buildPanel .= '<div class="wp-google-total">Click to view our ';			
-			if ( $number > 24 ) $buildPanel .= '<span itemprop="reviewCount">'.number_format($number).'</span> ';			
+			if ( $number > 4 ) $buildPanel .= '<span itemprop="reviewCount">'.number_format($number).'</span> ';			
 			$buildPanel .= 'Google reviews!</div>';	
-			$buildPanel .= '</div></a>';
+			$buildPanel .= '</div></div></a>';
 
 			echo $buildPanel;
 		endif;

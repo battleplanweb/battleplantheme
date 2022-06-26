@@ -142,7 +142,7 @@
       sliderExisted = true;
     }
 
-    this.$mirror.addClass('parallax-mirror').css({
+    this.$mirror.addClass( 'parallax-mirror parallax-' + this.id ).css({
       visibility: 'hidden',
       zIndex: this.zIndex,
       position: 'fixed',

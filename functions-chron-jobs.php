@@ -13,6 +13,15 @@
 # Chron Jobs
 --------------------------------------------------------------*/
 
+if ( get_option('bp_setup_2022_06_26') != "completed" ) :	
+	require_once get_template_directory().'/includes/includes-mass-site-update.php';
+endif;	
+
+delete_option( 'bp_setup_2022_05_02' );
+update_option( 'bp_setup_2022_06_26', 'completed' );
+		
+		
+
 require_once get_template_directory().'/vendor/autoload.php';
 require_once get_template_directory().'/google-api-php-client/vendor/autoload.php';
 
@@ -28,23 +37,28 @@ function battleplan_run_chron_jobs_ajax() {
 	$runChron = "false";
 
 	if ( $admin == "true" ) : 
-		$chronSpan = 900; // every 15 min
+		if (function_exists('battleplan_updateSiteOptions')) battleplan_updateSiteOptions();
+		$chronSpan = 3600; // every 60 min
 		$bpChrons = get_option( 'bp_chrons_last_run' );	
 		$timePast = time() - $bpChrons;		
 		if ( $timePast > $chronSpan ) : $runChron = "true";	endif;	
-	else: 
-		$chronViews = 30; // every 30 pageviews
-		$bpChrons = get_option( 'bp_chrons_pages' );	
-		if ( !$bpChrons ) : $bpChrons = 0; endif;
-		$pagesLeft = $chronViews - $bpChrons;		
-		if ( $pagesLeft <= 0 ) : $runChron = "true"; endif;
 	endif;
+	
+	$chronViews = get_option('bp_page_stats_250')['views'];
+	if ( is_array($chronViews) ) :
+		$chronViews = round(intval(array_sum($chronViews)) / 15); // get avg pageviews for 2 days
+	else:
+		$chronViews = 10;
+	endif;
+	$bpChrons = get_option( 'bp_chrons_pages' );	
+	if ( !$bpChrons ) : $bpChrons = 0; endif;
+	$pagesLeft = $chronViews - $bpChrons;		
+	if ( $pagesLeft <= 0 ) : $runChron = "true"; endif;	
 		
 	if ( $runChron == "true" || get_option('bp_setup_2022_05_02') != "completed" ) :	
 
 		if (function_exists('battleplan_remove_user_roles')) battleplan_remove_user_roles();
 		if (function_exists('battleplan_create_user_roles')) battleplan_create_user_roles();
-		if (function_exists('battleplan_updateSiteOptions')) battleplan_updateSiteOptions();
 
 // delete all options that begin with {$prefix}
 		function battleplan_delete_prefixed_options( $prefix ) {
@@ -54,26 +68,33 @@ function battleplan_run_chron_jobs_ajax() {
 		
 // ARI FancyBox Settings Update
 		if ( is_plugin_active('ari-fancy-lightbox/ari-fancy-lightbox.php') ) : 
+		    //delete_option( 'ari_fancy_lightbox_settings' );
+			
+			/*
 			$wpARISettings = get_option( 'ari_fancy_lightbox_settings' );
-			$wpARISettings['convert']['wp_gallery']['convert'] = 'true';
-			$wpARISettings['convert']['wp_gallery']['grouping'] = '1';
-			$wpARISettings['convert']['images']['convert'] = '1';
-			$wpARISettings['convert']['images']['post_grouping'] = '1';
+			$wpARISettings['convert']['wp_gallery']['convert'] = true;			
+			$wpARISettings['convert']['wp_gallery']['grouping'] = true;
+			
+			$wpARISettings['convert']['images']['convert'] = true;			
+			$wpARISettings['convert']['images']['post_grouping'] = true;
 			$wpARISettings['convert']['images']['grouping_selector'] = '.gallery$$A';		
-			$wpARISettings['convert']['images']['filenameToTitle'] = '1';		
-			$wpARISettings['convert']['images']['convertNameSmart'] = '1';		
-			$wpARISettings['lightbox']['loop'] = '1';		
-			$wpARISettings['lightbox']['arrows'] = '1';		
-			$wpARISettings['lightbox']['infobar'] = '1';		
-			$wpARISettings['lightbox']['keyboard'] = '1';		
-			$wpARISettings['lightbox']['autoFocus'] = '1';		
-			$wpARISettings['lightbox']['trapFocus'] = '0';		
-			$wpARISettings['lightbox']['closeClickOutside'] = '1';		
-			$wpARISettings['lightbox']['touch_enabled'] = '1';		
-			$wpARISettings['lightbox']['thumbs']['autoStart'] = '0';		
-			$wpARISettings['lightbox']['thumbs']['hideOnClose'] = '0';		
-			$wpARISettings['advanced']['load_scripts_in_footer'] = '1';						
+			$wpARISettings['convert']['images']['filenameToTitle'] = true;		
+			$wpARISettings['convert']['images']['convertNameSmart'] = true;		
+					
+			$wpARISettings['lightbox']['thumbs']['autoStart'] = false;	
+			$wpARISettings['lightbox']['loop'] = true;		
+			$wpARISettings['lightbox']['arrows'] = true;			
+			$wpARISettings['lightbox']['closeClickOutside'] = true;	
+			$wpARISettings['lightbox']['keyboard'] = true;	
+			$wpARISettings['lightbox']['touch_enabled'] = true;			
+			$wpARISettings['lightbox']['autoFocus'] = true;		
+			$wpARISettings['lightbox']['infobar'] = true;		
+			$wpARISettings['lightbox']['trapFocus'] = false;	
+			
+			$wpARISettings['lightbox']['thumbs']['hideOnClose'] = false;		
+			$wpARISettings['advanced']['load_scripts_in_footer'] = true;						
 			update_option( 'ari_fancy_lightbox_settings', $wpARISettings ); 
+			*/
 		endif;
 
 // WP Mail SMTP Settings Update
@@ -209,15 +230,20 @@ function battleplan_run_chron_jobs_ajax() {
 			$wpSEOSettings['company_or_person'] = 'company';
 			$wpSEOSettings['stripcategorybase'] = '1';
 			$wpSEOSettings['breadcrumbs-enable'] = '1';
-
 			$wpSEOSettings['noindex-testimonials'] = '1';
-			$wpSEOSettings['display-metabox-pt-testimonials'] = '1';
+			$wpSEOSettings['display-metabox-pt-testimonials'] = '0';
 			$wpSEOSettings['noindex-elements'] = '1';
-			$wpSEOSettings['display-metabox-pt-elements'] = '1';	
+			$wpSEOSettings['display-metabox-pt-elements'] = '0';	
 			$wpSEOSettings['noindex-universal'] = '1';
-			$wpSEOSettings['display-metabox-pt-universal'] = '1';	
+			$wpSEOSettings['display-metabox-pt-universal'] = '0';				
+			$wpSEOSettings['noindex-tax-gallery-type'] = '1';	
+			$wpSEOSettings['display-metabox-tax-gallery-type'] = '0';				
+			$wpSEOSettings['noindex-tax-gallery-tags'] = '1';	
+			$wpSEOSettings['display-metabox-tax-gallery-tags'] = '0';				
 			$wpSEOSettings['noindex-tax-image-categories'] = '1';
+			$wpSEOSettings['display-metabox-tax-image-categories'] = '0';	
 			$wpSEOSettings['noindex-tax-image-tags'] = '1';	
+			$wpSEOSettings['display-metabox-tax-image-tags'] = '0';	
 			update_option( 'wpseo_titles', $wpSEOSettings );
 
 			$wpSEOSocial = get_option( 'wpseo_social' );		
@@ -261,7 +287,7 @@ function battleplan_run_chron_jobs_ajax() {
 			$wpSEOLocal['location_state'] = $GLOBALS['customer_info']['state-full'];
 			$wpSEOLocal['location_zipcode'] = $GLOBALS['customer_info']['zip'];
 			$wpSEOLocal['location_country'] = 'US';
-			$wpSEOLocal['location_phone'] = $GLOBALS['customer_info']['area'].$GLOBALS['customer_info']['phone'];
+			$wpSEOLocal['location_phone'] = $GLOBALS['customer_info']['area'].'-'.$GLOBALS['customer_info']['phone'];
 			$wpSEOLocal['location_email'] = $GLOBALS['customer_info']['email'];
 			$wpSEOLocal['location_url'] = get_bloginfo("url");
 			$wpSEOLocal['location_price_range'] = '$$';
@@ -303,13 +329,7 @@ function battleplan_run_chron_jobs_ajax() {
 		battleplan_delete_prefixed_options( 'wp_smush_' );
 		battleplan_delete_prefixed_options( 'client_' );
 
-		if ( get_option('bp_setup_2022_05_02') != "completed" ) :	
-			//deleteMeta( get_page_by_path('site-header', OBJECT, 'elements')->ID, 'call-clicks' );
-			//deleteMeta( get_page_by_path('site-header', OBJECT, 'elements')->ID, 'email-clicks' );
-		endif;	
 
-		delete_option( 'bp_setup_2022_03_29' );
-		update_option( 'bp_setup_2022_05_02', 'completed' );
 
 /*--------------------------------------------------------------
 # Universal Pages
@@ -389,7 +409,7 @@ function battleplan_run_chron_jobs_ajax() {
 		$today = $ua_end = date( "Y-m-d" );		
 		$rewind = date('Y-m-d', strtotime('-5 years'));
 		
-		$citiesToExclude = array('Orangetree','Ashburn');
+		$citiesToExclude = array('Orangetree', 'Ashburn', 'Boardman');
 		$states = array('alabama'=>'AL', 'arizona'=>'AZ', 'arkansas'=>'AR', 'california'=>'CA', 'colorado'=>'CO', 'connecticut'=>'CT', 'delaware'=>'DE', 'dist of columbia'=>'DC', 'dist. of columbia'=>'DC', 'district of columbia'=>'DC', 'florida'=>'FL', 'georgia'=>'GA', 'idaho'=>'ID', 'illinois'=>'IL', 'indiana'=>'IN', 'iowa'=>'IA', 'kansas'=>'KS', 'kentucky'=>'KY', 'louisiana'=>'LA', 'maine'=>'ME', 'maryland'=>'MD', 'massachusetts'=>'MA', 'michigan'=>'MI', 'minnesota'=>'MN', 'mississippi'=>'MS', 'missouri'=>'MO', 'montana'=>'MT', 'nebraska'=>'NE', 'nevada'=>'NV', 'new hampshire'=>'NH', 'new jersey'=>'NJ', 'new mexico'=>'NM', 'new york'=>'NY', 'north carolina'=>'NC', 'north dakota'=>'ND', 'ohio'=>'OH', 'oklahoma'=>'OK', 'oregon'=>'OR', 'pennsylvania'=>'PA', 'rhode island'=>'RI', 'south carolina'=>'SC', 'south dakota'=>'SD', 'tennessee'=>'TN', 'texas'=>'TX', 'utah'=>'UT', 'vermont'=>'VT', 'virginia'=>'VA', 'washington'=>'WA', 'washington d.c.'=>'DC', 'washington dc'=>'DC', 'west virginia'=>'WV', 'wisconsin'=>'WI', 'wyoming'=>'WY');
 		$removedStates = array('alaska'=>'AK', 'hawaii'=>'HI',);
 		
@@ -485,31 +505,31 @@ function battleplan_run_chron_jobs_ajax() {
 				$lastView = $processing;	
 				
 				if ( strpos( $pageview['referrer'], parse_url( get_site_url(), PHP_URL_HOST ) ) === false ) :	
-					if ( array_key_exists($pageview['referrer'], $referrerStats ) ) :
+					if ( is_array($referrerStats) && array_key_exists($pageview['referrer'], $referrerStats ) ) :
 						$referrerStats[$pageview['referrer']] += $pageview['pages-viewed'];
 					else:
 						$referrerStats[$pageview['referrer']] = $pageview['pages-viewed'];
 					endif;					
 									
-					if ( array_key_exists($pageview['location'], $locationStats ) ) :
+					if ( is_array($locationStats) && array_key_exists($pageview['location'], $locationStats ) ) :
 						$locationStats[$pageview['location']] += $pageview['pages-viewed'];
 					else:
 						$locationStats[$pageview['location']] = $pageview['pages-viewed'];
 					endif;					
 				
-					if ( array_key_exists($pageview['browser'], $browserStats ) ) :
+					if ( is_array($browserStats) && array_key_exists($pageview['browser'], $browserStats ) ) :
 						$browserStats[$pageview['browser']] += $pageview['pages-viewed'];
 					else:
 						$browserStats[$pageview['browser']] = $pageview['pages-viewed'];
 					endif;											
 				
-					if ( array_key_exists($pageview['resolution'], $resolutionStats ) ) :
+					if ( is_array($$resolutionStats) && array_key_exists($pageview['resolution'], $resolutionStats ) ) :
 						$resolutionStats[$pageview['resolution']] += $pageview['pages-viewed'];
 					else:
 						$resolutionStats[$pageview['resolution']] = $pageview['pages-viewed'];
 					endif;												
 				
-					if ( array_key_exists($pageview['device'], $deviceStats ) ) :
+					if ( is_array($deviceStats) && array_key_exists($pageview['device'], $deviceStats ) ) :
 						$deviceStats[$pageview['device']] += $pageview['pages-viewed'];
 					else:
 						$deviceStats[$pageview['device']] = $pageview['pages-viewed'];
@@ -524,7 +544,7 @@ function battleplan_run_chron_jobs_ajax() {
 				$engagedSessions = $engagedSessions + $pageview['engaged'];
 				$pagesViewed = $pagesViewed + $pageview['pages-viewed'];
 								
-				if ( array_key_exists($pageview['page'], $compilePages ) ) :
+				if ( is_array($compilePages) && array_key_exists($pageview['page'], $compilePages ) ) :
 					$compilePages[$pageview['page']] += $pageview['pages-viewed'];
 					$compilePageDur[$pageview['page']] += $pageview['duration'];
 				else:
@@ -596,7 +616,7 @@ function battleplan_run_chron_jobs_ajax() {
 
 					if ( $country == "United States" && !in_array( $city, $citiesToExclude ) ) :					
 						if ( $path == "" || $path == "/" ) $path = "Home";
-						if ( array_key_exists($path, $compilePaths ) ) :
+						if ( is_array($compilePaths) && array_key_exists($path, $compilePaths ) ) :
 							$compilePaths[$path] += $views;
 						else:
 							$compilePaths[$path] = $views;
@@ -625,13 +645,7 @@ function battleplan_run_chron_jobs_ajax() {
 		update_option( 'bp_chrons_pages', 0 );	
 		$response = array( 'dashboard' => 'The chron has updated.' );		
 	else: 	 	
-		if ( $admin == "true" ) :
-			$timeUntil = (($chronSpan - $timePast) / 60) + 1;		
-			if ( floor($timeUntil / 60) > 0 ) $hours = floor($timeUntil / 60)." hours & ";
-			$response = array( 'dashboard' => 'The chron will update in '.$hours.($timeUntil % 60).' minutes.' );
-		else:
-			$response = array( 'dashboard' => 'The chron will update after '.$pagesLeft.' more views.' );
-		endif;	
+		$response = array( 'dashboard' => 'The chron will update after '.$pagesLeft.' more pageviews.' );
 	endif;	
 
 	if ( $admin == "false" ) :

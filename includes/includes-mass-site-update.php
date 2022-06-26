@@ -7,8 +7,10 @@ function add_products() {
 	$brand = "american-standard";
 	$productImgAlt = "American Standard Heating & Cooling Product"; 
 
+	/*
 	$removeProducts = array('silver-15-heat-pump', 'american-standard-80-furnace', 'silver-95-furnace');
 	
+	/*
 	$addProducts = array (
 		array ( 
 			'post_title'	=>	'Silver S9X1 Gas Furnace',
@@ -69,42 +71,85 @@ function add_products() {
 			'image_name'	=>	'American-Standard-46.jpg'		
 		),
 	);
-	
+
+*/
+
 	$editProducts = array (
-		array ( 'post_slug'	=> 'accucomfort-platinum-20-air-conditioner', 'menu_order' =>  1000, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1190-11_AS_Variable_Speed_ConsumerBrochure_SV.pdf')),
-		array ( 'post_slug'	=> 'accucomfort-platinum-18-air-conditioner', 'menu_order' =>  1010, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1190-11_AS_Variable_Speed_ConsumerBrochure_SV.pdf')),
-		array ( 'post_slug'	=> 'gold-17-air-conditioner', 'menu_order' =>  1020, 'meta_input' => array('brochure' => 'https://www.americanstandardair.com/content/dam/americanstandarair/brochure/airconditioner/10-1112-30_HR.pdf')),
-		array ( 'post_slug'	=> 'silver-16-air-conditioner', 'menu_order' =>  1030, 'meta_input' => array('brochure' => 'https://www.americanstandardair.com/content/dam/americanstandarair/brochure/airconditioner/10-1112-30_HR.pdf')),
-		array ( 'post_slug'	=> 'silver-14-air-conditioner', 'menu_order' =>  1040, 'meta_input' => array('brochure' => 'https://www.americanstandardair.com/content/dam/americanstandarair/brochure/airconditioner/10-1112-30_HR.pdf')),
+	// Air Conditioners
+		array ( 'post_slug'	=> 'accucomfort-platinum-20-air-conditioner', 'menu_order' => 1000, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1190-11_AS_Variable_Speed_ConsumerBrochure_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'air-conditioners', 'product-class'=>'best')),
 		
-		array ( 'post_slug'	=> 'accucomfort-platinum-20-heat-pump', 'menu_order' =>  1100, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1190-11_AS_Variable_Speed_ConsumerBrochure_SV.pdf')),
-		array ( 'post_slug'	=> 'accucomfort-platinum-18-heat-pump', 'menu_order' =>  1110, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1190-11_AS_Variable_Speed_ConsumerBrochure_SV.pdf')),
-		array ( 'post_slug'	=> 'gold-17-heat-pump', 'menu_order' =>  1120, 'meta_input' => array('brochure' => 'https://www.americanstandardair.com/content/dam/americanstandarair/brochure/heatpumps/10-1113-30%20AS%20Heat%20Pumps.pdf')),
-		array ( 'post_slug'	=> 'silver-16-heat-pump', 'menu_order' =>  1130, 'meta_input' => array('brochure' => 'https://www.americanstandardair.com/content/dam/americanstandarair/brochure/heatpumps/10-1113-30%20AS%20Heat%20Pumps.pdf')),
-		array ( 'post_slug'	=> 'silver-14-heat-pump', 'menu_order' =>  1140, 'meta_input' => array('brochure' => 'https://www.americanstandardair.com/content/dam/americanstandarair/brochure/heatpumps/10-1113-30%20AS%20Heat%20Pumps.pdf')),		
+		array ( 'post_slug'	=> 'accucomfort-platinum-18-air-conditioner', 'menu_order' => 1010, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1190-11_AS_Variable_Speed_ConsumerBrochure_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'air-conditioners', 'product-class'=>'best')),
 		
-		array ( 'post_slug'	=> 'platinum-95-furnace', 'menu_order' =>  1200, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1173-18_AS-90-95_Gas%20Furnace_AS_SV.pdf')),
-		array ( 'post_slug'	=> 'platinum-80-furnace', 'menu_order' =>  1210, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1111-26_AS%2080%20Gas%20Furnaces_AS_SV.pdf')),
-		array ( 'post_slug'	=> 'gold-s9v2-gas-furnace', 'menu_order' =>  1230, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1173-18_AS-90-95_Gas%20Furnace_AS_SV.pdf')),
-		array ( 'post_slug'	=> 'gold-80v-furnace', 'menu_order' =>  1240, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1111-26_AS%2080%20Gas%20Furnaces_AS_SV.pdf')),
-		array ( 'post_slug'	=> 'silver-s8x1-gas-furnace', 'menu_order' =>  1260, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1111-26_AS%2080%20Gas%20Furnaces_AS_SV.pdf')),
+		array ( 'post_slug'	=> 'gold-17-air-conditioner', 'menu_order' => 1020, 'meta_input' => array('brochure' => 'https://www.americanstandardair.com/content/dam/americanstandarair/brochure/airconditioner/10-1112-30_HR.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'air-conditioners', 'product-class'=>'better')),
 		
-		array ( 'post_slug'	=> 'forefront-platinum-tam9-air-handler', 'menu_order' =>  1300, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_15-4142-20_AS-Air-Handler-ConsumerBrochure_SV.pdf')),
-		array ( 'post_slug'	=> 'forefront-gold-tam4-air-handler', 'menu_order' =>  1310, 'meta_input' => array('brochure' => 'https://www.americanstandardair.com/content/dam/americanstandarair/brochure/airhandlers/15-4142-15.pdf')),
-		array ( 'post_slug'	=> 'silver-tem8-air-handler', 'menu_order' =>  1320, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_15-4142-20_AS-Air-Handler-ConsumerBrochure_SV.pdf')),
-		array ( 'post_slug'	=> 'silver-tem6-air-handler', 'menu_order' =>  1330, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_15-4142-20_AS-Air-Handler-ConsumerBrochure_SV.pdf')),
-		array ( 'post_slug'	=> 'silver-tem4-air-handler', 'menu_order' =>  1340, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_15-4142-20_AS-Air-Handler-ConsumerBrochure_SV.pdf')),
+		array ( 'post_slug'	=> 'silver-16-air-conditioner', 'menu_order' => 1030, 'meta_input' => array('brochure' => 'https://www.americanstandardair.com/content/dam/americanstandarair/brochure/airconditioner/10-1112-30_HR.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'air-conditioners', 'product-class'=>'good')),
 		
-		array ( 'post_slug'	=> 'platinum-16-hybrid-system', 'menu_order' =>  1400, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf')),		
-		array ( 'post_slug'	=> 'platinum-16-gaselectric-system', 'menu_order' =>  1410, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf')),		
-		array ( 'post_slug'	=> 'platinum-16-heat-pump-system', 'menu_order' =>  1420, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf')),		
-		array ( 'post_slug'	=> 'gold-15-gaselectric-system', 'menu_order' =>  1430, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf')),		
-		array ( 'post_slug'	=> 'gold-15-heat-pump-system', 'menu_order' =>  1440, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf')),		
-		array ( 'post_slug'	=> 'gold-14-hybrid-system', 'menu_order' =>  1450, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf')),		
-		array ( 'post_slug'	=> 'silver-14-gaselectric-system', 'menu_order' =>  1460, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf')),		
-		array ( 'post_slug'	=> 'silver-14-heat-pump-system', 'menu_order' =>  1470, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf')),
-		array ( 'post_slug'	=> 'silver-14-air-conditioner-system', 'menu_order' =>  1480, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf')),		
+		array ( 'post_slug'	=> 'silver-14-air-conditioner', 'menu_order' => 1040, 'meta_input' => array('brochure' => 'https://www.americanstandardair.com/content/dam/americanstandarair/brochure/airconditioner/10-1112-30_HR.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'air-conditioners', 'product-class'=>'good')),
+		
+	// Air Handlers		
+		array ( 'post_slug'	=> 'forefront-platinum-tam9-air-handler', 'menu_order' => 1300, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_15-4142-20_AS-Air-Handler-ConsumerBrochure_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'air-handlers', 'product-class'=>'best')),
+		
+		array ( 'post_slug'	=> 'forefront-gold-tam4-air-handler', 'menu_order' => 1310, 'meta_input' => array('brochure' => 'https://www.americanstandardair.com/content/dam/americanstandarair/brochure/airhandlers/15-4142-15.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'air-handlers', 'product-class'=>'better')),
+		
+		array ( 'post_slug'	=> 'silver-tem8-air-handler', 'menu_order' => 1320, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_15-4142-20_AS-Air-Handler-ConsumerBrochure_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'air-handlers', 'product-class'=>'good')),
+		
+		array ( 'post_slug'	=> 'silver-tem6-air-handler', 'menu_order' => 1330, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_15-4142-20_AS-Air-Handler-ConsumerBrochure_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'air-handlers', 'product-class'=>'good')),
+		
+		array ( 'post_slug'	=> 'silver-tem4-air-handler', 'menu_order' => 1340, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_15-4142-20_AS-Air-Handler-ConsumerBrochure_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'air-handlers', 'product-class'=>'good')),
+		
+	// Furnaces		
+		array ( 'post_slug'	=> 'platinum-95-furnace', 'menu_order' => 1200, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1173-18_AS-90-95_Gas%20Furnace_AS_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'furnaces', 'product-class'=>'best')),
+		
+		array ( 'post_slug'	=> 'platinum-80-furnace', 'menu_order' => 1210, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1111-26_AS%2080%20Gas%20Furnaces_AS_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'furnaces', 'product-class'=>'best')),		
+		
+		array ( 'post_slug'	=> 'american-standard-s9b1-gas-furnace', 'menu_order' => 1220, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1173-18_AS-90-95_Gas%20Furnace_AS_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'furnaces', 'product-class'=>'best')),
+
+		array ( 'post_slug'	=> 'gold-s9v2-gas-furnace', 'menu_order' => 1230, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1173-18_AS-90-95_Gas%20Furnace_AS_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'furnaces', 'product-class'=>'better')),
+		
+		array ( 'post_slug'	=> 'gold-80v-furnace', 'menu_order' => 1240, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1111-26_AS%2080%20Gas%20Furnaces_AS_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'furnaces', 'product-class'=>'better')),		
+		
+		array ( 'post_slug'	=> 'silver-s9x1-gas-furnace', 'menu_order' => 1250, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1173-18_AS-90-95_Gas%20Furnace_AS_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'furnaces', 'product-class'=>'good')),
+		
+		array ( 'post_slug'	=> 'silver-s8x1-gas-furnace', 'menu_order' => 1260, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1111-26_AS%2080%20Gas%20Furnaces_AS_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'furnaces', 'product-class'=>'good')),		
+				
+		array ( 'post_slug'	=> 'american-standard-s8b1-gas-furnace', 'menu_order' => 1270, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1111-26_AS%2080%20Gas%20Furnaces_AS_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'furnaces', 'product-class'=>'good')),		
+		
+	// Heat Pumps	
+		array ( 'post_slug'	=> 'accucomfort-platinum-20-heat-pump', 'menu_order' => 1100, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1190-11_AS_Variable_Speed_ConsumerBrochure_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'heat-pumps', 'product-class'=>'best')),		
+		
+		array ( 'post_slug'	=> 'accucomfort-platinum-18-heat-pump', 'menu_order' => 1110, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1190-11_AS_Variable_Speed_ConsumerBrochure_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'heat-pumps', 'product-class'=>'best')),		
+		
+		array ( 'post_slug'	=> 'gold-17-heat-pump', 'menu_order' => 1120, 'meta_input' => array('brochure' => 'https://www.americanstandardair.com/content/dam/americanstandarair/brochure/heatpumps/10-1113-30%20AS%20Heat%20Pumps.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'heat-pumps', 'product-class'=>'better')),		
+		
+		array ( 'post_slug'	=> 'silver-16-heat-pump', 'menu_order' => 1130, 'meta_input' => array('brochure' => 'https://www.americanstandardair.com/content/dam/americanstandarair/brochure/heatpumps/10-1113-30%20AS%20Heat%20Pumps.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'heat-pumps', 'product-class'=>'good')),		
+		
+		array ( 'post_slug'	=> 'silver-14-heat-pump', 'menu_order' => 1140, 'meta_input' => array('brochure' => 'https://www.americanstandardair.com/content/dam/americanstandarair/brochure/heatpumps/10-1113-30%20AS%20Heat%20Pumps.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'heat-pumps', 'product-class'=>'good')),			
+				
+	// Package Units
+		array ( 'post_slug'	=> 'platinum-16-hybrid-system', 'menu_order' => 1400, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'best')),		
+		
+		array ( 'post_slug'	=> 'platinum-16-gaselectric-system', 'menu_order' => 1410, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'best')),		
+		
+		array ( 'post_slug'	=> 'platinum-16-heat-pump-system', 'menu_order' => 1420, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'best')),		
+		
+		array ( 'post_slug'	=> 'gold-15-gaselectric-system', 'menu_order' => 1430, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'better')),		
+		
+		array ( 'post_slug'	=> 'gold-15-heat-pump-system', 'menu_order' => 1440, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'better')),		
+		
+		array ( 'post_slug'	=> 'gold-14-hybrid-system', 'menu_order' => 1450, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'better')),		
+		
+		array ( 'post_slug'	=> 'silver-14-gaselectric-system', 'menu_order' => 1460, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'good')),		
+		
+		array ( 'post_slug'	=> 'silver-14-heat-pump-system', 'menu_order' => 1470, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'good')),		
+		
+		array ( 'post_slug'	=> 'silver-14-air-conditioner-system', 'menu_order' => 1480, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'good')),		
 	);
+
+	
+	
+	
+	
+	
 
 
 	$user = get_user_by('login', 'battleplanweb');
@@ -187,23 +232,42 @@ function add_products() {
 		
 		set_post_thumbnail( $productPage, $attachmentID );
 	endforeach;
-		
 	
+			
 // Edit Products
 	foreach ( $editProducts as $product ) :
 		$productName = $product['post_slug'];
 		$productOrder = $product['menu_order'];
 		$productMeta = $product['meta_input'];
+		$productTax = $product['tax_input'];
+		
 		$productPage = get_page_by_path( $productName, OBJECT, 'products' );
 		
 		if ( !empty( $productPage ) ) : 
 			wp_update_post(array(
 				'ID' 			 => $productPage->ID,
-				'menu_order'     => $productOrder,
-				'meta_input'	 =>	$productMeta,
+				//'menu_order'     => $productOrder,
+				//'meta_input'	 =>	$productMeta,
+				'tax_input'	 =>	$productTax,
 			));	
 		endif;
 	endforeach;
-}
 
+// Add, Edit & Delete Taxonomies & Terms
+	$editTerms = array( 'best' => 'Best', 'better' => 'Better', 'good' => 'Good');
+	
+	foreach ( $editTerms as $slug=>$name ) :
+		$findTerm = get_term_by( 'slug', $slug, 'product-class' );
+		if ( $findTerm !== false ) wp_update_term( $findTerm->term_id, 'product-class', array ( 'name' => $name) );	
+	endforeach;
+	
+	$deleteTerms = array( 'platinum-series', 'gold-series', 'silver-series', 'samsung-series');
+	
+	foreach ( $deleteTerms as $slug ) :
+		$findTerm = get_term_by( 'slug', $slug, 'product-class' );
+		if ( $findTerm !== false ) wp_delete_term( $findTerm->term_id, 'product-class');
+	endforeach;
+
+
+}
 ?>

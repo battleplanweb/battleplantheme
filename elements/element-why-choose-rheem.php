@@ -3,7 +3,7 @@
 
 return do_shortcode('
 	[section name="Why Choose Rheem" class="why-choose-us" style="'.$style.'" width="'.$width.'"]
-		[layout grid="1-1-1-1"] 
+		[layout grid="1-1-1-1" valign="stretch"] 
 			[col class="span-all"]
 				[txt]
 					<img src="'.$img.'" loading="lazy" alt="'.$alt.'" class="noFX" width="300" height="149" style="aspect-ratio:300/149" />

@@ -1196,25 +1196,6 @@ function battleplan_column_settings() {
 								'label_type'=>'',
 								'search'=>'on'
 							),
-							'last_viewed'=>array(
-								'type'=>'column-meta',
-								'label'=>'Last Viewed',
-								'width'=>'',
-								'width_unit'=>'%',
-								'field'=>'log-views-now',
-								'field_type'=>'date',
-								'date_format'=>'wp_default',
-								'before'=>'',
-								'after'=>'',
-								'edit'=>'off',
-								'sort'=>'on',
-								'filter'=>'off',
-								'filter_label'=>'',
-								'filter_format'=>'monthly',
-								'name'=>'last_viewed',
-								'label_type'=>'',
-								'search'=>'on'
-							),	
 							'last_teased'=>array(
 								'type'=>'column-meta',
 								'label'=>'Last Teased',
@@ -1236,7 +1217,7 @@ function battleplan_column_settings() {
 							),	
 							'views_today'=>array(
 								'type'=>'column-meta',
-								'label'=>'Today',
+								'label'=>'Yesterday',
 								'width'=>'',
 								'width_unit'=>'%',
 								'field'=>'log-views-today',
@@ -1299,23 +1280,6 @@ function battleplan_column_settings() {
 								'filter'=>'off',
 								'filter_label'=>'',
 								'name'=>'views_quarter',
-								'label_type'=>'',
-								'search'=>'on'
-							),
-							'views_semester'=>array(
-								'type'=>'column-meta',
-								'label'=>'Semester',
-								'width'=>'',
-								'width_unit'=>'%',
-								'field'=>'log-views-total-180day',
-								'field_type'=>'numeric',
-								'before'=>'',
-								'after'=>'',
-								'edit'=>'off',
-								'sort'=>'on',
-								'filter'=>'off',
-								'filter_label'=>'',
-								'name'=>'views_semester',
 								'label_type'=>'',
 								'search'=>'on'
 							),
@@ -1539,7 +1503,7 @@ function battleplan_admin_footer_text() {
 	$printFooter .= '<div style="float:left; margin-top:8px;">Powered by <a href="https://battleplanwebdesign.com" target="_blank">Battle Plan Web Design</a><br>';
 	$printFooter .= 'Site Audit: '.date('F j, Y', strtotime(get_option( 'site_updated' ))).'<br>'; 
 	$printFooter .= 'Framework '._BP_VERSION.'<br>';
-	$printFooter .= 'WP '.get_bloginfo('version').'<br></div>';
+	$printFooter .= 'WP '.get_bloginfo('version').'<br></div>';	
 	
 	$printFooter .= '<div style="float:right; margin-right: 50px">';	
 	$printFooter .= get_option('customer_info')['area-before'].get_option('customer_info')['area'].get_option('customer_info')['area-after'].get_option('customer_info')['phone'].'<br>';
@@ -1777,6 +1741,7 @@ function battleplan_admin_tech_stats() {
 
 	foreach ( $variations as $variation ) :		
 		$deviceStats = get_option('bp_tech_stats'.$variation)['device'];
+		if ( !is_array($deviceStats) ) $deviceStats = array();
 		arsort($deviceStats);
 		
 		if ( $variation == '' ) $variation = "_AT";
@@ -1811,6 +1776,7 @@ function battleplan_admin_tech_stats() {
 	arsort($contentScrollMode); 
 		
 	foreach ( $columnScroll as $columns ) :
+		if ( !is_array($columns)) $columns = array();
 		$colViews = $columns['viewed'];
 		$colTotal = $columns['total'];
 		
@@ -1859,6 +1825,7 @@ function battleplan_admin_tech_stats() {
 
 	foreach ( $variations as $variation ) :		
 		$browserStats = get_option('bp_tech_stats'.$variation)['browser'];
+		if ( !is_array($browserStats) ) $browserStats = array();
 		arsort($browserStats);
 		
 		if ( $variation == '' ) $variation = "_AT";
@@ -1879,6 +1846,7 @@ function battleplan_admin_tech_stats() {
 
 	foreach ( $variations as $variation ) :		
 		$resolutionStats = get_option('bp_tech_stats'.$variation)['resolution'];
+		if ( !is_array($resolutionStats) ) $resolutionStats = array();
 		arsort($resolutionStats);
 		
 		if ( $variation == '' ) $variation = "_AT";
@@ -1909,6 +1877,7 @@ function battleplan_admin_referrer_stats() {
 	
 	foreach ( $variations as $variation ) :		
 		$referrerStats = get_option('bp_referrer_stats'.$variation);
+		if ( !is_array($referrerStats) ) $referrerStats = array();
 		arsort($referrerStats);
 		$checkForDupes = array();
 		
@@ -1946,6 +1915,7 @@ function battleplan_admin_location_stats() {
 
 	foreach ( $variations as $variation ) :		
 		$locationStats = get_option('bp_location_stats'.$variation);
+		if ( !is_array($locationStats) ) $locationStats = array();
 		arsort($locationStats);
 		
 		if ( $variation == '' ) $variation = "_AT";
@@ -1961,13 +1931,15 @@ function battleplan_admin_location_stats() {
 	endforeach;
 }
 
-// Set up Page Visits widget on dashboard
+// Set up Popular Pages widget on dashboard
 function battleplan_admin_pages_stats() {
 	$variations = array('_100', '_250', '_500', '');
 
 	foreach ( $variations as $variation ) :		
 		$pageViews = get_option('bp_page_stats'.$variation)['views'];
 		$pageDur = get_option('bp_page_stats'.$variation)['duration'];
+		if ( !is_array($pageViews) ) $pageViews = array();
+		if ( !is_array($pageDur) ) $pageDur = array();
 		arsort($pageViews);
 		
 		if ( $variation == '' ) $variation = "_AT";
@@ -1996,7 +1968,9 @@ function battleplan_admin_pages_stats() {
 // Set up Visitor Trends widget on dashboard
 function battleplan_admin_stats($time,$minDays,$maxDays,$colEnd) {
 	$dailyStats = get_option('bp_daily_stats');
-	if ( is_array($dailyStats) ) : array_reverse($dailyStats); $dates = array_keys($dailyStats); endif;
+	if ( !is_array($dailyStats) ) $dailyStats = array();	
+	array_reverse($dailyStats); 
+	$dates = array_keys($dailyStats);
 	
 	$count = $users = $search = $pagesViewed = $sessions = $engaged = $engagement = $endOfCol = 0;
 	$days = $minDays;
@@ -2085,9 +2059,7 @@ function battleplan_page_stats() {
 	$dateDiff = number_format($dateDiff, 0);	
 	
 	echo "<table>";		
-	echo "<tr><td><b>Last Viewed</b></td><td><b>".$dateDiff."</b> ".$howLong." ago</td></tr>";	
-	echo "<tr><td>&nbsp;</td></tr>";		
-	echo "<tr><td><b>Today</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $viewsToday, 'battleplan' ), number_format($viewsToday) )."</td></tr>";	
+	echo "<tr><td><b>Yesterday</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $viewsToday, 'battleplan' ), number_format($viewsToday) )."</td></tr>";	
 	echo "<tr><td><b>Last 7 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last7Views, 'battleplan' ), number_format($last7Views) )."</td></tr>";
 	if ( $last30Views != $last7Views) echo "<tr><td><b>Last 30 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last30Views, 'battleplan' ), number_format($last30Views) )."</td></tr>";
 	if ( $last90Views != $last30Views) echo "<tr><td><b>Last 90 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last90Views, 'battleplan' ), number_format($last90Views) )."</td></tr>";
@@ -2265,6 +2237,7 @@ function battleplan_site_audit() {
 	
 	if ( $submitCheck == "true" ) :
 		$siteAudit = get_option('bp_site_audit_details');
+		if ( !is_array($siteAudit) ) $siteAudit = array();	
 		foreach ( $criteria as $log ) :
 			if ( $_POST[$log] || $_POST[$log] == '0' ) :
 				$updateNum = number_format((string)$_POST[$log],1);

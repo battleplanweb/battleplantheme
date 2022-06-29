@@ -1227,7 +1227,7 @@ function battleplan_SideBySideImg( $atts, $content = null ) {
 		$img = wp_get_attachment_image_src( $images[$i], $size );
 		list ($src, $width, $height ) = $img;
 		if ( $images[$i] == $full ) : $class=' class="full-'.$pos.'" '; else: $class=''; endif;
-		$ratio = $width/$height;	
+		if ($height > 0) $ratio = $width/$height;	
 		$buildFlex .= '<li style="flex: '.$ratio.'"'.$class.'>'.wp_get_attachment_image( $images[$i], $size ).'</li>';	
 	endfor;
 	$buildFlex .= '</ul>';

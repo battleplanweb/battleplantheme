@@ -16,7 +16,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '12.3' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '12.3.1' );
 update_option( 'battleplan_framework', _BP_VERSION );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
@@ -1614,7 +1614,7 @@ function battleplan_load_tag_manager() {
 		$nonce = $GLOBALS['nonce'];
 		foreach ( $GLOBALS['customer_info']['google-tags'] as $gtag=>$value ) :	
 			if ( $gtag == "analytics" ) $mainAcct = $value;
-			if ( $gtag == "analytics" || $gtag == "ads" ) $buildTags .= 'gtag("config", "'.$value.'");';				
+			if ( $gtag == "analytics" || $gtag == "ads" || $gtag == "searchkings" ) $buildTags .= 'gtag("config", "'.$value.'");';				
 			if ( strpos($gtag, 'conversions' ) !== false ) :
 				if ( $gtag == "conversions" ) : 
 					$gtagEvents[] = $value; 

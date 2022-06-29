@@ -44,9 +44,9 @@ function battleplan_run_chron_jobs_ajax() {
 		if ( $timePast > $chronSpan ) : $runChron = "true";	endif;	
 	endif;
 	
-	$chronViews = get_option('bp_page_stats_250')['views'];
-	if ( is_array($chronViews) ) :
-		$chronViews = round(intval(array_sum($chronViews)) / 15); // get avg pageviews for 2 days
+	$chronViews = get_option('bp_chron_trigger');
+	if ( $chronViews > 10 ) :
+		$chronViews = round($chronViews / 15); // get avg pageviews for 2 days
 	else:
 		$chronViews = 10;
 	endif;
@@ -409,7 +409,6 @@ function battleplan_run_chron_jobs_ajax() {
 		$today = $ua_end = date( "Y-m-d" );		
 		$rewind = date('Y-m-d', strtotime('-4 years'));		
 		
-		$citiesToExclude = array('Orangetree', 'Ashburn', 'Boardman');
 		$states = array('alabama'=>'AL', 'arizona'=>'AZ', 'arkansas'=>'AR', 'california'=>'CA', 'colorado'=>'CO', 'connecticut'=>'CT', 'delaware'=>'DE', 'dist of columbia'=>'DC', 'dist. of columbia'=>'DC', 'district of columbia'=>'DC', 'florida'=>'FL', 'georgia'=>'GA', 'idaho'=>'ID', 'illinois'=>'IL', 'indiana'=>'IN', 'iowa'=>'IA', 'kansas'=>'KS', 'kentucky'=>'KY', 'louisiana'=>'LA', 'maine'=>'ME', 'maryland'=>'MD', 'massachusetts'=>'MA', 'michigan'=>'MI', 'minnesota'=>'MN', 'mississippi'=>'MS', 'missouri'=>'MO', 'montana'=>'MT', 'nebraska'=>'NE', 'nevada'=>'NV', 'new hampshire'=>'NH', 'new jersey'=>'NJ', 'new mexico'=>'NM', 'new york'=>'NY', 'north carolina'=>'NC', 'north dakota'=>'ND', 'ohio'=>'OH', 'oklahoma'=>'OK', 'oregon'=>'OR', 'pennsylvania'=>'PA', 'rhode island'=>'RI', 'south carolina'=>'SC', 'south dakota'=>'SD', 'tennessee'=>'TN', 'texas'=>'TX', 'utah'=>'UT', 'vermont'=>'VT', 'virginia'=>'VA', 'washington'=>'WA', 'washington d.c.'=>'DC', 'washington dc'=>'DC', 'west virginia'=>'WV', 'wisconsin'=>'WI', 'wyoming'=>'WY');
 		$removedStates = array('alaska'=>'AK', 'hawaii'=>'HI',);
 		
@@ -466,7 +465,7 @@ function battleplan_run_chron_jobs_ajax() {
 				$engaged = $row->getMetricValues()[1]->getValue();							
 				$newUsers = $row->getMetricValues()[2]->getValue();							
 					
-				if ( $states[$state] && !in_array( $city, $citiesToExclude ) ) :					
+				if ( $states[$state] ) :					
 					if ( $city == '(not set)' ) $location = ucwords($state);					
 					$page = rtrim($page, '/\\');
 									
@@ -499,7 +498,7 @@ function battleplan_run_chron_jobs_ajax() {
 				$engaged = $sessions - $row[9];			
 				$newUsers = $row[10];						
 
-				if ( $states[$state] && !in_array( $city, $citiesToExclude ) && $sessions != '' ) :					
+				if ( $states[$state] && $sessions != '' ) :					
 					if ( $city == '(not set)' ) $location = ucwords($state);					
 					$page = rtrim($page, '/\\');
 					
@@ -552,91 +551,14 @@ function battleplan_run_chron_jobs_ajax() {
 					$siteHits[] = array ('date'=>$date, 'page'=>$page, 'pages-viewed'=>$pageviews, 'sessions'=>'0', 'engaged'=>$engaged );				
 				endif;
 			endif;
-
 		endforeach;
-
-// Set up array accounting for each day, no skips	
-		$blankDate = strtotime($siteHits[array_key_last($siteHits)]['date']);
-		$totalDays = (strtotime($today) - $blankDate) / 86400;
-		
-		for ( $x=0;$x<$totalDays;$x++) :
-			$blankDate = $blankDate + 86400;		
-			$dailyStats[ date('Y-m-d', $blankDate) ] = array ('location'=>array(), 'source'=>array(), 'medium'=>array(), 'page'=>array(), 'browser'=>array(), 'device'=>array(), 'resolution'=>array(), 'pages-viewed'=>'0', 'sessions'=>'0', 'engaged'=>'0', 'new-users'=>'0' );
-		endfor;
 				
-// Compile data into daily stats
-		foreach ( $siteHits as $siteHit ) :	
-			$processing = strtotime($siteHit['date']);
-			$timeSinceToday = $today - $processing;				
-			$timeSinceLastView = $lastView - $processing;			
-			$daysSinceToday = $timeSinceToday / 86400;
-
-			if ( $timeSinceLastView > 0 ) :			
-				$dailyStats[ date('Y-m-d', ($processing + 86400)) ] = array ('location'=>$allLocations, 'source'=>$allSources, 'medium'=>$allMediums, 'page'=>$allPages, 'browser'=>$allBrowsers, 'device'=>$allDevices, 'resolution'=>$allResolutions, 'pages-viewed'=>$totalPageviews, 'sessions'=>$totalSessions, 'engaged'=>$totalEngaged, 'new-users'=>$totalNewUsers );	
-
-				$allLocations = $allSources = $allMediums = $allPages = $allBrowsers = $allDevices = $allResolutions = array();
-				$totalPageviews = $totalSessions = $totalEngaged = $totalNewUsers = 0;
-			endif;
-
-			$lastView = $processing;
-
-			$totalPageviews = $totalPageviews + $siteHit['pages-viewed'];
-			$totalSessions = $totalSessions + $siteHit['sessions'];
-			$totalEngaged = $totalEngaged + $siteHit['engaged'];
-			$totalNewUsers = $totalNewUsers + $siteHit['new-users'];											
-			
-			if ( is_array($allPages) && array_key_exists($siteHit['page'], $allPages ) ) :
-				$allPages[$siteHit['page']] += $siteHit['pages-viewed'];
-			else:
-				$allPages[$siteHit['page']] = $siteHit['pages-viewed'];
-			endif;	
-			
-			if ( $siteHit['sessions'] == 1 ) :			
-				if ( is_array($allLocations) && array_key_exists($siteHit['location'], $allLocations ) ) :
-					$allLocations[$siteHit['location']] += 1;
-				else:
-					$allLocations[$siteHit['location']] = 1;
-				endif;									
-			
-				if ( is_array($allSources) && array_key_exists($siteHit['source'], $allSources ) ) :
-					$allSources[$siteHit['source']] += 1;
-				else:
-					$allSources[$siteHit['source']] = 1;
-				endif;									
-			
-				if ( is_array($allMediums) && array_key_exists($siteHit['medium'], $allMediums ) ) :
-					$allMediums[$siteHit['medium']] += 1;
-				else:
-					$allMediums[$siteHit['medium']] = 1;
-				endif;									
-			
-				if ( is_array($allBrowsers) && array_key_exists($siteHit['browser'], $allBrowsers ) ) :
-					$allBrowsers[$siteHit['browser']] += 1;
-				else:
-					$allBrowsers[$siteHit['browser']] = 1;
-				endif;									
-			
-				if ( is_array($allDevices) && array_key_exists($siteHit['device'], $allDevices ) ) :
-					$allDevices[$siteHit['device']] += 1;
-				else:
-					$allDevices[$siteHit['device']] = 1;
-				endif;													
-			
-				if ( is_array($allResolutions) && array_key_exists($siteHit['resolution'], $allResolutions ) ) :
-					$allResolutions[$siteHit['resolution']] += 1;
-				else:
-					$allResolutions[$siteHit['resolution']] = 1;
-				endif;				
-			endif;
-			
-		endforeach;	
-
-		krsort($dailyStats);
-		array_shift($dailyStats);
-		update_option('bp_daily_stats', $dailyStats);	
+		update_option('bp_site_hits', $siteHits);	
+		//update_option('bp_debug', $siteHits);	
 		
 
 		
+		delete_option('bp_daily_stats'); 
 		delete_option('bp_referrer_stats_100'); 
 		delete_option('bp_location_stats_100'); 
 		delete_option('bp_page_stats_100'); 

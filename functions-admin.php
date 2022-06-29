@@ -1691,29 +1691,123 @@ function battleplan_add_dashboard_widgets() {
 	add_meta_box( 'battleplan_quarterly_stats', 'Quarterly Visitor Trends', 'battleplan_admin_quarterly_stats', 'dashboard', 'column3', 'high' );
 }
 
+// Set up dashboard stats review
+$GLOBALS['displayTerms'] = array( 'week'=>7, 'month'=>30, 'quarter'=>90, 'year'=>365 );	
+$GLOBALS['btn1'] = get_option('bp_admin_btn1');
+$GLOBALS['btn2'] = get_option('bp_admin_btn2');
+$GLOBALS['btn3'] = get_option('bp_admin_btn3');
+$siteHits = get_option('bp_site_hits');
+$today = date( "Y-m-d" );		
+$citiesToExclude = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, OR');
+
+// Set up array accounting for each day, no skips	
+$blankDate = strtotime($siteHits[array_key_last($siteHits)]['date']);
+$totalDays = (strtotime($today) - $blankDate) / 86400;
+
+for ( $x=0;$x<$totalDays;$x++) :
+	$blankDate = $blankDate + 86400;		
+	$dailyStats[ date('Y-m-d', $blankDate) ] = array ('location'=>array(), 'source'=>array(), 'medium'=>array(), 'page'=>array(), 'browser'=>array(), 'device'=>array(), 'resolution'=>array(), 'pages-viewed'=>'0', 'sessions'=>'0', 'engaged'=>'0', 'new-users'=>'0' );
+endfor;
+
+// Compile data into daily stats
+foreach ( $siteHits as $siteHit ) :	
+	if ( !in_array( $siteHit['location'], $citiesToExclude ) ) :
+		if ( $GLOBALS['btn3'] != " active" || ( $siteHit['location'] == get_option('customer_info')['state-full'] || str_contains($siteHit['location'], get_option('customer_info')['state-abbr'] ) )) :
+	
+			$processing = strtotime($siteHit['date']);
+			$timeSinceToday = $today - $processing;				
+			$timeSinceLastView = $lastView - $processing;			
+			$daysSinceToday = $timeSinceToday / 86400;
+
+			if ( $timeSinceLastView > 0 ) :			
+				$dailyStats[ date('Y-m-d', ($processing + 86400)) ] = array ('location'=>$allLocations, 'source'=>$allSources, 'medium'=>$allMediums, 'page'=>$allPages, 'browser'=>$allBrowsers, 'device'=>$allDevices, 'resolution'=>$allResolutions, 'pages-viewed'=>$totalPageviews, 'sessions'=>$totalSessions, 'engaged'=>$totalEngaged, 'new-users'=>$totalNewUsers );	
+
+				$allLocations = $allSources = $allMediums = $allPages = $allBrowsers = $allDevices = $allResolutions = array();
+				$totalPageviews = $totalSessions = $totalEngaged = $totalNewUsers = 0;
+			endif;
+
+			$lastView = $processing;
+
+			$totalPageviews = $totalPageviews + $siteHit['pages-viewed'];
+			$totalSessions = $totalSessions + $siteHit['sessions'];
+			$totalEngaged = $totalEngaged + $siteHit['engaged'];
+			$totalNewUsers = $totalNewUsers + $siteHit['new-users'];											
+
+			if ( is_array($allPages) && array_key_exists($siteHit['page'], $allPages ) ) :
+				$allPages[$siteHit['page']] += $siteHit['pages-viewed'];
+			else:
+				$allPages[$siteHit['page']] = $siteHit['pages-viewed'];
+			endif;	
+
+			if ( $siteHit['sessions'] == 1 ) :			
+				if ( is_array($allLocations) && array_key_exists($siteHit['location'], $allLocations ) ) :
+					$allLocations[$siteHit['location']] += 1;
+				else:
+					$allLocations[$siteHit['location']] = 1;
+				endif;									
+
+				if ( is_array($allSources) && array_key_exists($siteHit['source'], $allSources ) ) :
+					$allSources[$siteHit['source']] += 1;
+				else:
+					$allSources[$siteHit['source']] = 1;
+				endif;									
+
+				if ( is_array($allMediums) && array_key_exists($siteHit['medium'], $allMediums ) ) :
+					$allMediums[$siteHit['medium']] += 1;
+				else:
+					$allMediums[$siteHit['medium']] = 1;
+				endif;									
+
+				if ( is_array($allBrowsers) && array_key_exists($siteHit['browser'], $allBrowsers ) ) :
+					$allBrowsers[$siteHit['browser']] += 1;
+				else:
+					$allBrowsers[$siteHit['browser']] = 1;
+				endif;									
+
+				if ( is_array($allDevices) && array_key_exists($siteHit['device'], $allDevices ) ) :
+					$allDevices[$siteHit['device']] += 1;
+				else:
+					$allDevices[$siteHit['device']] = 1;
+				endif;													
+
+				if ( is_array($allResolutions) && array_key_exists($siteHit['resolution'], $allResolutions ) ) :
+					$allResolutions[$siteHit['resolution']] += 1;
+				else:
+					$allResolutions[$siteHit['resolution']] = 1;
+				endif;	
+			endif;
+		endif;
+	endif;
+endforeach;	
+
+krsort($dailyStats);
+array_shift($dailyStats);
+$GLOBALS['dailyStats'] = $dailyStats;
+if ( !is_array($GLOBALS['dailyStats']) ) $GLOBALS['dailyStats'] = array();	
+$GLOBALS['dates'] = array_keys($GLOBALS['dailyStats']);
+
 // Set up Site Visitors widget on dashboard
 function battleplan_admin_site_stats() {
 	$lastVisitTime = timeElapsed( get_option('last_visitor_time'), 2);
-	$dailyStats = get_option('bp_daily_stats');
-	if ( is_array($dailyStats) ) : array_reverse($dailyStats); $dates = array_keys($dailyStats); endif;
+	
+	
 	
 	$count = $users = $search = $pagesViewed = $sessions = $engaged = $engagement = $endOfCol = 0;
 	$days = $minDays;
 		
 	for ($x = 0; $x < 1096; $x++) {	
-		$theDate = $dates[$x];
-		$dailyTime = date("M j, Y", strtotime($theDate)); 
-		$dailyUsers = intval($dailyStats[$theDate]['total-users']); 
-		$views = $views + $dailyUsers;	
+		$theDate = $GLOBALS['dates'][$x];
+		$dailyUsers = intval($GLOBALS['dailyStats'][$theDate]['new-users']); 
+		$users = $users + $dailyUsers;	
 		
-		if ( $x == 1 ) $viewsToday = $views; 
-		if ( $x == 7 ) $last7Views = $views; $last7Avg = number_format(($last7Views / 7),1);
-		if ( $x == 30 ) $last30Views = $views; $last30Avg = number_format(($last30Views / 30),1);
-		if ( $x == 90 ) $last90Views = $views; $last90Avg = number_format(($last90Views / 90),1);
-		if ( $x == 180 ) $last180Views = $views; $last180Avg = number_format(($last180Views / 180),1);		
-		if ( $x == 365 ) $lastYearViews = $views; $lastYearAvg = number_format(($lastYearViews / 365),1);		
-		if ( $x == 730 ) $last2YearViews = $views; $last2YearAvg = number_format(($last2YearViews / 730),1);		
-		if ( $x == 1095 ) $last3YearViews = $views; $last3YearAvg = number_format(($last3YearViews / 1095),1);
+		if ( $x == 1 ) $viewsToday = $users; 
+		if ( $x == 7 ) $last7Views = $users; $last7Avg = number_format(($last7Views / 7),1);
+		if ( $x == 30 ) $last30Views = $users; $last30Avg = number_format(($last30Views / 30),1);
+		if ( $x == 90 ) $last90Views = $users; $last90Avg = number_format(($last90Views / 90),1);
+		if ( $x == 180 ) $last180Views = $users; $last180Avg = number_format(($last180Views / 180),1);		
+		if ( $x == 365 ) $lastYearViews = $users; $lastYearAvg = number_format(($lastYearViews / 365),1);		
+		if ( $x == 730 ) $last2YearViews = $users; $last2YearAvg = number_format(($last2YearViews / 730),1);		
+		if ( $x == 1095 ) $last3YearViews = $users; $last3YearAvg = number_format(($last3YearViews / 1095),1);
 	} 		
 		
 	echo "<table><tr><td class='label'>Last Visit</td><td style='width:160px'>".$lastVisitTime." ago</td></tr>";
@@ -1739,14 +1833,10 @@ function battleplan_admin_site_stats() {
 	echo '<tr><td>&nbsp;</td></tr></table>';
 }
 
-$GLOBALS['displayTerms'] = array( 'week'=>7, 'month'=>30, 'quarter'=>90, 'year'=>365 );	
-$GLOBALS['dailyStats'] = get_option('bp_daily_stats');
-if ( !is_array($GLOBALS['dailyStats']) ) $GLOBALS['dailyStats'] = array();	
-$GLOBALS['dates'] = array_keys($GLOBALS['dailyStats']);
 
 // Set up Tech Info widget on dashboard
 function battleplan_admin_tech_stats() {
-//Devices
+// Devices
 	foreach ( $GLOBALS['displayTerms'] as $display=>$days ) :
 		$allDevices = array();
 		for ($x = 0; $x < $days; $x++) :	
@@ -1764,11 +1854,16 @@ function battleplan_admin_tech_stats() {
 		
 		arsort($allDevices);
 		
-		echo '<div class="handle-label handle-label-'.$display.'"><ul><li class="sub-label">Devices</li>';	
+		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
+		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul><li class="sub-label">Devices</li>';	
 		
 		foreach ( $allDevices as $device=>$count ) :
-			$count = ($count / array_sum($allDevices)) * 100;	
-			echo "<li><div class='value'><b>".number_format($count,1)."%</b></div><div class='label'>".ucwords($device)."</div></li>";
+			$count = ($count / array_sum($allDevices)) * 100;				
+			if ( $device == "mobile" ) $speed = number_format(array_sum(get_option('load_time_mobile')) / count(get_option('load_time_mobile')),1) . ' sec';	
+			if ( $device == "desktop" ) $speed = number_format(array_sum(get_option('load_time_desktop')) / count(get_option('load_time_desktop')),1) . ' sec';				
+			if ( $device == "tablet" ) $speed = '';		
+		
+			echo "<li><div class='value'><b>".number_format($count,1)."%</b></div><div class='label-half'>".ucwords($device)."</div><div class='label-half'>".$speed."</div></li>";
 		endforeach;			
 			
 		echo '</ul></div>';		
@@ -1815,11 +1910,17 @@ function battleplan_admin_tech_stats() {
 	endforeach;	
 	
 	$visitsTracked = count($contentTracking);
-	foreach ($contentTracking as $visitor) :
-		foreach ($visitor as $key=>$tracking) :		
+	foreach ($contentTracking as $content) :
+		foreach ($content as $key=>$tracking) :	
+			if ( $tracking == "true" ) : $count = 1; else: $count = 0; endif;
+			if ( is_array($allTracking) && array_key_exists($key, $allTracking ) ) :
+				$allTracking[$key] += $count;
+			else:
+				$allTracking[$key] = $count;
+			endif;		
 		endforeach;
 	endforeach;
-		
+			
 	echo '<div><ul><li class="sub-label">Content</li>';
 		echo "<li><div class='value'><b>".number_format($contentScrollMean,1)."%</b></div><div class='label'>Mean Viewed (".$contentScrollNum." pages)</div></li>";		
 		echo "<li><div class='value'><b>".array_key_first($contentScrollMode)."%</b></div><div class='label'>Mode Viewed (".$contentScrollNum." pages)</div></li>";	
@@ -1829,13 +1930,21 @@ function battleplan_admin_tech_stats() {
 			$colNum++;
 			$findPct = round( (($theCol['viewed'] / $theCol['total']) * 100) ,1);
 			echo "<li><div class='value'><b>".$findPct."%</b></div><div class='label'>Col #".$colNum."</div></li>";	
-		endforeach;		
-		echo "</div><br>";	
-
-		//echo "<li><div class='value'><b>".$findPct."%</b></div><div class='label'>Column #".$visitsTracked."</div></li>";	
-
+		endforeach;	
 		
-	echo '</ul></div>';
+		echo "</div><br><div>";
+		
+		foreach($allTracking as $track=>$count) :
+			if ( $track == "visitor" ) : $totalTracks = $count;
+			else:
+				$findPct = round( (($count / $totalTracks) * 100), 1);
+				echo "<li><div class='value'><b>".$findPct."%</b></div><div class='label'>".ucwords($track)."</div></li>";	
+				update_option('pct-viewed-'.$track, $findPct);
+			endif;
+		endforeach;		
+		echo "</div>";		
+		
+	echo '</ul><a href="#" class="clear-content-tracking">Clear</a></div>';
 
 //Browser
 	foreach ( $GLOBALS['displayTerms'] as $display=>$days ) :
@@ -1855,7 +1964,8 @@ function battleplan_admin_tech_stats() {
 		
 		arsort($allBrowsers);
 		
-		echo '<div class="handle-label handle-label-'.$display.'"><ul><li class="sub-label">Browsers</li>';	
+		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
+		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul><li class="sub-label">Browsers</li>';	
 		
 		foreach ( $allBrowsers as $browser=>$count ) :
 			$count = ($count / array_sum($allBrowsers)) * 100;	
@@ -1885,7 +1995,8 @@ function battleplan_admin_tech_stats() {
 		
 		arsort($allResolutions); 
 		
-		echo '<div class="handle-label handle-label-'.$display.'"><ul><li class="sub-label">Screen Widths</li>';	
+		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
+		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul><li class="sub-label">Screen Widths</li>';	
 		
 		foreach ( $allResolutions as $resolution=>$count ) :
 			$resolution = substr($resolution, 0, strpos($resolution, 'x'));
@@ -1901,9 +2012,12 @@ function battleplan_admin_tech_stats() {
 function battleplan_admin_referrer_stats() {
 	echo '<div class="last-visitors-buttons">';	
 		foreach ( $GLOBALS['displayTerms'] as $display=>$days ) :
-			echo do_shortcode('[btn size="1/4" class="'.$display.'"]'.ucwords($display).'[/btn]');	
+			if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
+			echo do_shortcode('[btn size="1/5" class="'.$display.$active.'"]'.ucwords($display).'[/btn]');	
 		endforeach;	
 	echo '</div>';
+				
+	echo '<div class="local-visitors-buttons">'.do_shortcode('[btn size="1/5" class="local'.$GLOBALS['btn3'].'"]Local[/btn]').'</div>';	
 	
 	foreach ( $GLOBALS['displayTerms'] as $display=>$days ) :
 		$allSources = array();
@@ -1927,7 +2041,8 @@ function battleplan_admin_referrer_stats() {
 		
 		arsort($allSources);
 		
-		echo '<div class="handle-label handle-label-'.$display.'"><ul>';		
+		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
+		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul>';		
 		echo '<li class="sub-label" style="column-span: all">Last '.number_format(array_sum($allSources)).' Sessions</li>';	
 		
 		foreach ( $allSources as $source=>$count ) :
@@ -1957,7 +2072,8 @@ function battleplan_admin_location_stats() {
 		
 		arsort($allLocations);
 		
-		echo '<div class="handle-label handle-label-'.$display.'"><ul>';		
+		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
+		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul>';		
 		echo '<li class="sub-label" style="column-span: all">Last '.number_format(array_sum($allLocations)).' Sessions</li>';	
 		
 		foreach ( $allLocations as $location=>$count ) :
@@ -1995,8 +2111,11 @@ function battleplan_admin_pages_stats() {
 		
 		arsort($allPages);
 		
-		echo '<div class="handle-label handle-label-'.$display.'"><ul>';		
-		echo '<li class="sub-label" style="column-span: all">Last '.number_format(array_sum($allPages)).' Pageviews</li>';		
+		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
+		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul>';		
+		echo '<li class="sub-label" style="column-span: all">Last '.number_format(array_sum($allPages)).' Pageviews</li>';	
+		
+		if ( $display == "month" ) update_option('bp_chron_trigger', array_sum($allPages));
 		
 		foreach ( $allPages as $page=>$count ) :
 			if ( $page == "" ) :
@@ -2022,7 +2141,7 @@ function battleplan_admin_stats($time,$minDays,$maxDays,$colEnd) {
 	$count = $sessions = $search = $users = $pagesViewed = $engaged = $engagement = $endOfCol = 0;
 	$days = $minDays;		
 		
-	echo "<table class='trends trends-".$time."'><tr><td class='header dates'>".ucfirst($time)."</td><td class='page visits'>Sessions</td></tr>";		
+	echo "<table class='trends trends-".$time."'><tr><td class='header dates'>".ucfirst($time)."</td><td class='page visits'>".ucwords($GLOBALS['btn2'])."</td></tr>";		
 	
 	for ($x = 0; $x < 1460; $x++) {	
 		$theDate = $GLOBALS['dates'][$x];
@@ -2046,16 +2165,19 @@ function battleplan_admin_stats($time,$minDays,$maxDays,$colEnd) {
 		if ( $count == 1 ) $end = $dailyTime;
 		if ( $count == $days && $dailyTime != "Jan 1, 1970" ) :
 			if ( $endOfCol == $colEnd ) :
-				echo "</table><table class='trends trends-".$time."'><tr><td class='header dates'>".ucfirst($time)."</td><td class='page visits'>Sessions</td></tr>";
+				echo "</table><table class='trends trends-".$time."'><tr><td class='header dates'>".ucfirst($time)."</td><td class='page visits'>".ucwords($GLOBALS['btn2'])."</td></tr>";
 				$endOfCol = 0;
 			endif;
 			$endOfCol++;
+			
+			$active['sessions'] = $active['search'] = $active['new'] = $active['pages'] = $active['engaged'] = '';
+			$active[$GLOBALS['btn2']] = " active";
 
-		 	echo "<tr class='coloration trends sessions active' data-count='".$sessions."'><td class='dates'>".$end."</td><td class='visits'><b>".number_format($sessions)."</b></td></tr>";
-			echo "<tr class='coloration trends search' data-count='".$search."'><td class='dates'>".$end."</td><td class='visits'><b>".number_format($search)."</b></td></tr>";			
-		 	echo "<tr class='coloration trends users' data-count='".$users."'><td class='dates'>".$end."</td><td class='visits'><b>".number_format($users)."</b></td></tr>";
-			echo "<tr class='coloration trends pageviews' data-count='".$pagesViewed."'><td class='dates'>".$end."</td><td class='visits'><b>".number_format($pagesPerSession,1)."</b></td></tr>";
-			echo "<tr class='coloration trends engagement' data-count='".$engagement."'><td class='dates'>".$end."</td><td class='visits'><b>".$engagement."%</b></td></tr>";
+		 	echo "<tr class='coloration trends sessions".$active['sessions']."' data-count='".$sessions."'><td class='dates'>".$end."</td><td class='visits'><b>".number_format($sessions)."</b></td></tr>";
+			echo "<tr class='coloration trends search".$active['search']."' data-count='".$search."'><td class='dates'>".$end."</td><td class='visits'><b>".number_format($search)."</b></td></tr>";			
+		 	echo "<tr class='coloration trends new".$active['new']."' data-count='".$users."'><td class='dates'>".$end."</td><td class='visits'><b>".number_format($users)."</b></td></tr>";
+			echo "<tr class='coloration trends pages".$active['pages']."' data-count='".$pagesViewed."'><td class='dates'>".$end."</td><td class='visits'><b>".number_format($pagesPerSession,1)."</b></td></tr>";
+			echo "<tr class='coloration trends engaged".$active['engaged']."' data-count='".$engagement."'><td class='dates'>".$end."</td><td class='visits'><b>".$engagement."%</b></td></tr>";
 			$count = $sessions = $search = $users = $pagesViewed = $engaged = $engagement = 0;
 			if ( $days == $maxDays ) : $days = $minDays; else: $days = $maxDays; endif;
 		endif;	
@@ -2064,12 +2186,15 @@ function battleplan_admin_stats($time,$minDays,$maxDays,$colEnd) {
 }
 
 function battleplan_admin_weekly_stats() {
+	$active['sessions'] = $active['search'] = $active['new'] = $active['pages'] = $active['engaged'] = '';
+	$active[$GLOBALS['btn2']] = " active";
+	
 	echo '<div class="trend-buttons">';
-		echo do_shortcode('[btn size="1/5" class="sessions active"]Sessions[/btn]');
-		echo do_shortcode('[btn size="1/5" class="search"]Search[/btn]');
-		echo do_shortcode('[btn size="1/5" class="users"]New[/btn]');
-		echo do_shortcode('[btn size="1/5" class="pageviews"]Pageviews[/btn]');
-		echo do_shortcode('[btn size="1/5" class="engagement"]Engagement[/btn]');
+		echo do_shortcode('[btn size="1/5" class="sessions'.$active['sessions'].'"]Sessions[/btn]');
+		echo do_shortcode('[btn size="1/5" class="search'.$active['search'].'"]Search[/btn]');
+		echo do_shortcode('[btn size="1/5" class="new'.$active['new'].'"]New[/btn]');
+		echo do_shortcode('[btn size="1/5" class="pages'.$active['pages'].'"]Pageviews[/btn]');
+		echo do_shortcode('[btn size="1/5" class="engaged'.$active['engaged'].'"]Engagement[/btn]');
 	echo '</div>';
 
 	battleplan_admin_stats('weekly',7,7,52);
@@ -2299,9 +2424,9 @@ function battleplan_site_audit() {
 		endforeach;	
 	endif;
 		
-	array_push( $criteria, 'load_time_mobile', 'load_time_desktop', 'optimized', 'testimonials', 'menu-testimonials', 'coupon', 'blog', 'galleries', 'home-call-to-action', 'homepage-teasers', 'logo-slider', 'service-map', 'bbb-link');	
+	array_push( $criteria, 'load_time_mobile', 'load_time_desktop', 'optimized', 'testimonials', 'menu-testimonials', 'testimonials-pct', 'coupon', 'coupon-pct', 'blog', 'galleries', 'home-call-to-action', 'homepage-teasers', 'logo-slider', 'service-map', 'bbb-link');	
 	
-	if ( $siteType == "hvac" ) array_push( $criteria, 'financing-link', 'menu-finance', 'why-choose', 'emergency-service', 'symptom-checker', 'faq', 'tip-of-the-month', 'maintenance-tips');	
+	if ( $siteType == "hvac" ) array_push( $criteria, 'financing-link', 'menu-finance', 'finance-pct', 'why-choose', 'emergency-service', 'symptom-checker', 'faq', 'tip-of-the-month', 'maintenance-tips');	
 	
 	if ( $submitCheck == "true" ) :
 		if ( $_POST['notes'] ) :
@@ -2309,7 +2434,11 @@ function battleplan_site_audit() {
 		endif;		
 
 		$siteAudit[$today]['load_time_mobile'] = number_format(array_sum(get_option('load_time_mobile')) / count(get_option('load_time_mobile')),1);	
-		$siteAudit[$today]['load_time_desktop'] =  number_format(array_sum(get_option('load_time_desktop')) / count(get_option('load_time_desktop')),1);
+		$siteAudit[$today]['load_time_desktop'] = number_format(array_sum(get_option('load_time_desktop')) / count(get_option('load_time_desktop')),1);
+		
+		$siteAudit[$today]['testimonials-pct'] = get_option('pct-viewed-testimonials').'%';
+		$siteAudit[$today]['coupon-pct'] = get_option('pct-viewed-coupon').'%';
+		$siteAudit[$today]['finance-pct'] = get_option('pct-viewed-financing').'%';
 		
 		if ( wp_count_posts( 'post' )->publish > 0 ) : $siteAudit[$today]['blog'] = wp_count_posts( 'post' )->publish; else: $siteAudit[$today]['blog'] = "false"; endif;
 		
@@ -2470,8 +2599,10 @@ function battleplan_site_audit() {
 	$siteAuditPage .= '[col class="headline"]Desktop[/col]';			
 	$siteAuditPage .= '[col class="headline"]Optimized[/col]';
 	$siteAuditPage .= '[col class="headline"]Testimonials[/col]';		
-	$siteAuditPage .= '[col class="headline"]Testimonials Button[/col]';	
-	$siteAuditPage .= '[col class="headline"]Coupon[/col]';		
+	$siteAuditPage .= '[col class="headline"]Testimonials Button[/col]';		
+	$siteAuditPage .= '[col class="headline"]Testimonials View %[/col]';	
+	$siteAuditPage .= '[col class="headline"]Coupon[/col]';				
+	$siteAuditPage .= '[col class="headline"]Coupon View %[/col]';
 	$siteAuditPage .= '[col class="headline"]Blog[/col]';	
 	$siteAuditPage .= '[col class="headline"]Galleries[/col]';	
 	$siteAuditPage .= '[col class="headline"]Home Call To Action[/col]';			
@@ -2482,7 +2613,8 @@ function battleplan_site_audit() {
 	
 	if ( $siteType == "hvac" ) :
 		$siteAuditPage .= '[col class="headline"]Financing Ad[/col]';
-		$siteAuditPage .= '[col class="headline"]Financing Button[/col]';
+		$siteAuditPage .= '[col class="headline"]Financing Button[/col]';		
+		$siteAuditPage .= '[col class="headline"]Financing View %[/col]';
 		$siteAuditPage .= '[col class="headline"]Why Choose Us[/col]';		
 		$siteAuditPage .= '[col class="headline"]24/7 Service[/col]';	
 		$siteAuditPage .= '[col class="headline"]Symptom Checker[/col]';			

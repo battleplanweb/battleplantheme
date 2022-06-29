@@ -110,4 +110,4 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		}, 300);	
 	});
 	
-})(jQuery); });			success: function( response ) { $('#wp-admin-bar-my-account > a.ab-item').text(response.dashboard);	}
+})(jQuery); });

@@ -71,6 +71,9 @@ function battleplan_log_page_load_speed_ajax() {
 	$deviceTime = $_POST['deviceTime'];
 	
 	if ( _USER_LOGIN != 'battleplanweb' ) :
+	
+		update_option('last_visitor_time', time());
+		
 		if ( $deviceTime == "desktop" ) :
 			$timeDesktop = get_option('load_time_desktop');
 			if ( is_array($timeDesktop) ) : array_unshift($timeDesktop, $loadTime);

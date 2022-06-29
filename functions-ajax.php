@@ -12,12 +12,18 @@ function battleplan_update_meta_ajax() {
 	$type = $_POST['type'];	
 	$key = $_POST['key'];	
 	$value = $_POST['value'];
+	$clear = $_Post['clear'];
+	$keyArray = explode(", ", $key);	
 	
-	if ( $type == "site" ) update_option( $key, $value );
-	if ( $type == "user" ) update_user_meta( wp_get_current_user()->ID, $key, $value, false );
-	if ( $type == "post" || $type == "page" ) updateMeta( get_the_ID(), $key, $value );	
-	
-	$response = array( 'dashboard' => 'Saved '.$value. ' to '.$key.'.'  );
+	if ( $clear == "true" ) :
+		foreach ($keyArray as $key) delete_option( $key );
+	else:	
+		if ( $type == "site" ) update_option( $key, $value );
+		if ( $type == "user" ) update_user_meta( wp_get_current_user()->ID, $key, $value, false );
+		if ( $type == "post" || $type == "page" ) updateMeta( get_the_ID(), $key, $value );	
+
+		$response = array( 'dashboard' => 'Saved '.$value. ' to '.$key.'.'  );	
+	endif;
 	wp_send_json( $response );	
 }
 
@@ -53,8 +59,7 @@ function battleplan_track_interaction_ajax() {
 			update_option( $key, $tracking );
 			$response = array( 'dashboard' => $uniqueID . ' tracked '.$track.'.' );
 		endif;
-	endif;
-	
+	endif;	
 	
 	//delete_option('content-scroll-pct');
 	//delete_option('content-column-views');

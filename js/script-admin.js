@@ -45,7 +45,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	
 	/* Control color of Visitor Trends box */
 	function runVisitorTrendColor(trend) {
-		var trends = new Array('sessions', 'search', 'users','pageviews','engagement');		
+		var trends = new Array('sessions', 'search', 'new','pages','engaged');		
 		for (var subtrend of trends) {
 			var getCount = [], getTotal, getThird, topThird, loopThru, loopNum=0, varyAmt;		
 
@@ -109,6 +109,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	//$('#battleplan_location_stats h2.hndle').text( $('#battleplan_location_stats h2.hndle').text() + $('#battleplan_location_stats div.handle-label').attr('data-label') );
 	//$('#battleplan_pages_stats h2.hndle').text( $('#battleplan_pages_stats h2.hndle').text() + $('#battleplan_pages_stats div.handle-label').attr('data-label') );
 		
+	function saveBtnChoice(btn_no, choice) {
+		var key = 'bp_admin_'+btn_no;
+		$.post({
+			url : ajaxURL,
+			data : { action: "update_meta", type: 'site', key: key, value: choice },
+			success: function( response ) { $('#wp-admin-bar-my-account > a.ab-item').text(response.dashboard);	}
+		});
+	}
 		
 	// Visitor Trend buttons
 	$('#postbox-container-3').prepend($('.trend-buttons'));		
@@ -119,6 +127,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$('table.trends tr.trends.sessions').addClass('active');		
 		$(this).find('a').addClass('active');
 		$('table.trends td.page').text('Sessions');
+		saveBtnChoice('btn2', 'sessions');
 	});
 
 	$('.trend-buttons .search').click(function(event) {
@@ -127,42 +136,46 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$('table.trends tr.trends.search').addClass('active');	
 		$(this).find('a').addClass('active');
 		$('table.trends td.page').text('Search');
+		saveBtnChoice('btn2', 'search');
 	});
 	
-	$('.trend-buttons .users').click(function(event) {
+	$('.trend-buttons .new').click(function(event) {
 		event.preventDefault();
 		$('table.trends tr.trends, .trend-buttons div a').removeClass('active');
-		$('table.trends tr.trends.users').addClass('active');		
+		$('table.trends tr.trends.new').addClass('active');		
 		$(this).find('a').addClass('active');
 		$('table.trends td.page').text('New');
+		saveBtnChoice('btn2', 'new');
 	});
 		
-	$('.trend-buttons .pageviews').click(function(event) {
+	$('.trend-buttons .pages').click(function(event) {
 		event.preventDefault();
 		$('table.trends tr.trends, .trend-buttons div a').removeClass('active');
-		$('table.trends tr.trends.pageviews').addClass('active');	
+		$('table.trends tr.trends.pages').addClass('active');	
 		$(this).find('a').addClass('active');
 		$('table.trends td.page').text('Pages');
+		saveBtnChoice('btn2', 'pages');
 	});
 		
-	$('.trend-buttons .engagement').click(function(event) {
+	$('.trend-buttons .engaged').click(function(event) {
 		event.preventDefault();
 		$('table.trends tr.trends, .trend-buttons div a').removeClass('active');
-		$('table.trends tr.trends.engagement').addClass('active');	
+		$('table.trends tr.trends.engaged').addClass('active');	
 		$(this).find('a').addClass('active');
 		$('table.trends td.page').text('Engaged');
+		saveBtnChoice('btn2', 'engaged');
 	});
 	
 	// Last ??? Visitors buttons
+	$('#postbox-container-2').prepend($('.local-visitors-buttons'));
 	$('#postbox-container-2').prepend($('.last-visitors-buttons'));
-	$('.last-visitors-buttons .week').find('a').addClass('active');
-	$('.handle-label-week').addClass('active');		
-		
+	
 	$('.last-visitors-buttons .week').click(function(event) {
 		event.preventDefault();
 		$('.handle-label, .last-visitors-buttons div, .last-visitors-buttons div a').removeClass('active');
 		$('.handle-label-week').addClass('active');		
 		$(this).find('a').addClass('active');
+		saveBtnChoice('btn1', 'week');
 	});	
 	
 	$('.last-visitors-buttons .month').click(function(event) {
@@ -170,6 +183,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$('.handle-label, .last-visitors-buttons div, .last-visitors-buttons div a').removeClass('active');
 		$('.handle-label-month').addClass('active');		
 		$(this).find('a').addClass('active');
+		saveBtnChoice('btn1', 'month');
 	});
 	
 	$('.last-visitors-buttons .quarter').click(function(event) {
@@ -177,6 +191,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$('.handle-label, .last-visitors-buttons div, .last-visitors-buttons div a').removeClass('active');
 		$('.handle-label-quarter').addClass('active');		
 		$(this).find('a').addClass('active');
+		saveBtnChoice('btn1', 'quarter');
 	});
 	
 	$('.last-visitors-buttons .year').click(function(event) {
@@ -184,10 +199,31 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$('.handle-label, .last-visitors-buttons div, .last-visitors-buttons div a').removeClass('active');
 		$('.handle-label-year').addClass('active');		
 		$(this).find('a').addClass('active');
+		saveBtnChoice('btn1', 'year');
 	});
 	
-	
-	
+	$('.local-visitors-buttons .local').click(function(event) {
+		event.preventDefault();
+		if ( $(this).find('a').hasClass('active') ) {
+			$(this).find('a').removeClass('active');
+			saveBtnChoice('btn3', ' not-active');
+		} else {
+			$(this).find('a').addClass('active');
+			saveBtnChoice('btn3', ' active');
+		}
+		setTimeout(function(){ location.reload(); }, 1000);
+	});	 
+		
+	$('a.clear-content-tracking').click(function(event) {
+		event.preventDefault();
+		$.post({
+			url : ajaxURL,
+			data : { action: "update_meta", type: 'site', key: 'content-tracking, content-column-views, content-scroll-pct', clear: true },
+			success: function( response ) { $('#wp-admin-bar-my-account > a.ab-item').text(response.dashboard);	}
+		});
+		setTimeout(function(){ location.reload(); }, 1000);
+	});	 
+			
 // Site Audit
 		
 	$('.col.when').click(function() {

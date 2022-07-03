@@ -30,38 +30,8 @@ $buildProduct = '<div class="entry-content">';
 	$buildProduct .= '</div>';
 
 	$buildProduct .= get_the_content( sprintf ( wp_kses( __( 'Continue reading<span class="screen-reader-text"> "%s"</span>', 'battleplan' ), array( 'span' => array( 'class' => array(), ), ) ), wp_kses_post( get_the_title() ) ) ); 
-
-
-
-		/*
-		if ( $comfort != "na" && $comfort != "" ) : 
-			$buildProduct .= '<div class="product-rating">';
-				$buildProduct .= '<span class="rating-label">Comfort: </span>';
-				if ( $comfort == 1 ) : $buildProduct .= '<span class="comfort-full"></span><span class="comfort-empty"></span><span class="comfort-empty"></span><span class="comfort-empty"></span><span class="comfort-empty"></span>';
-				elseif ( $comfort == 2 ) : $buildProduct .= '<span class="comfort-full"></span><span class="comfort-full"></span><span class="comfort-empty"></span><span class="comfort-empty"></span><span class="comfort-empty"></span>';
-				elseif ( $comfort == 3 ) : $buildProduct .= '<span class="comfort-full"></span><span class="comfort-full"></span><span class="comfort-full"></span><span class="comfort-empty"></span><span class="comfort-empty"></span>';
-				elseif ( $comfort == 4 ) : $buildProduct .= '<span class="comfort-full"></span><span class="comfort-full"></span><span class="comfort-full"></span><span class="comfort-full"></span><span class="comfort-empty"></span>';
-				elseif ( $comfort == 5 ) : $buildProduct .= '<span class="comfort-full"></span><span class="comfort-full"></span><span class="comfort-full"></span><span class="comfort-full"></span><span class="comfort-full"></span>';
-				endif; 
-			$buildProduct .= '</div>';
-		endif; 
-
-		if ( $efficiency != "na" && $efficiency != "" ) : 
-			$buildProduct .= '<div class="product-rating">';
-				$buildProduct .= '<span class="rating-label">Efficiency: </span>';
-				if ( $efficiency == 1 ) : $buildProduct .= '<span class="efficiency-full"></span><span class="efficiency-empty"></span><span class="efficiency-empty"></span><span class="efficiency-empty"></span><span class="efficiency-empty"></span>';
-				elseif ( $efficiency == 2 ) : $buildProduct .= '<span class="efficiency-full"></span><span class="efficiency-full"></span><span class="efficiency-empty"></span><span class="efficiency-empty"></span><span class="efficiency-empty"></span>';
-				elseif ( $efficiency == 3 ) : $buildProduct .= '<span class="efficiency-full"></span><span class="efficiency-full"></span><span class="efficiency-full"></span><span class="efficiency-empty"></span><span class="efficiency-empty"></span>';
-				elseif ( $efficiency == 4 ) : $buildProduct .= '<span class="efficiency-full"></span><span class="efficiency-full"></span><span class="efficiency-full"></span><span class="efficiency-full"></span><span class="efficiency-empty"></span>';
-				elseif ( $efficiency == 5 ) : $buildProduct .= '<span class="efficiency-full"></span><span class="efficiency-full"></span><span class="efficiency-full"></span><span class="efficiency-full"></span><span class="efficiency-full"></span>';
-				endif; 
-			$buildProduct .= '</div>';
-		endif; 		
-		*/
-		
-
-
-$buildProduct .= '<div class="product-links">';
+	
+	$buildProduct .= '<div class="product-links">';
 
 	if ( $thisBrand ) :
 		$buildProduct .= '<div class="product-link-cats"><div class="product-link-label">Find Products by Brand:</div><div class="product-link-buttons">';
@@ -85,5 +55,5 @@ $buildProduct .= '<div class="product-links">';
 	
 	$buildProduct .= '</div></div><!-- .entry-content -->';		
 		
-echo $buildProduct;
+echo do_shortcode($buildProduct);
 ?>

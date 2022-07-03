@@ -10,14 +10,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 # Admin interface
 --------------------------------------------------------------*/
 
-	var ajaxURL = 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php';	
-
+	var ajaxURL = 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php';			 
+		
 	setTimeout(function() {			
 	// Check chron jobs	
 		$.post({
 			url : ajaxURL,
 			data : { action: "run_chron_jobs", admin: "true" },
-			success: function( response ) { $('#wp-admin-bar-my-account > a.ab-item').text(response.dashboard);	}
+			success: function( response ) { ajax_response(response.dashboard);	}
 		});
 	}, 200);
 
@@ -114,7 +114,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$.post({
 			url : ajaxURL,
 			data : { action: "update_meta", type: 'site', key: key, value: choice },
-			success: function( response ) { $('#wp-admin-bar-my-account > a.ab-item').text(response.dashboard);	}
+			success: function( response ) { ajax_response(response.dashboard);	}
 		});
 	}
 		
@@ -205,11 +205,11 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	$('.local-visitors-buttons .local').click(function(event) {
 		event.preventDefault();
 		if ( $(this).find('a').hasClass('active') ) {
-			$(this).find('a').removeClass('active');
-			saveBtnChoice('btn3', ' not-active');
+			$(this).find('a').removeClass('active').addClass('not-active');
+			saveBtnChoice('btn3', 'not-active');
 		} else {
-			$(this).find('a').addClass('active');
-			saveBtnChoice('btn3', ' active');
+			$(this).find('a').removeClass('not-active').addClass('active');
+			saveBtnChoice('btn3', 'active');
 		}
 		setTimeout(function(){ location.reload(); }, 1000);
 	});	 
@@ -218,8 +218,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		event.preventDefault();
 		$.post({
 			url : ajaxURL,
-			data : { action: "update_meta", type: 'site', key: 'content-tracking, content-column-views, content-scroll-pct', clear: true },
-			success: function( response ) { $('#wp-admin-bar-my-account > a.ab-item').text(response.dashboard);	}
+			data : { action: "update_meta", type: "site", key: "content-tracking, content-column-views, content-scroll-pct", clear: "true" },
+			success: function( response ) { ajax_response(response.dashboard);	}
 		});
 		setTimeout(function(){ location.reload(); }, 1000);
 	});	 

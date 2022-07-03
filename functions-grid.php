@@ -516,4 +516,36 @@ function battleplan_formField( $atts, $content = null ) {
 	
 	return $buildInput;
 }
+
+// Widgets 
+add_shortcode( 'widget', 'battleplan_buildWidget' );
+function battleplan_buildWidget( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'title'=>'Widget Title', 'hide_title'=>'true', 'lock'=>'none', 'priority'=>'2', 'image'=>'no', 'financing'=>'no', 'set'=>'none', 'class'=>'' ), $atts );
+	$title = esc_attr($a['title']);	
+	$name = strtolower(preg_replace("/[\s_]/", "-", $title));
+	$hideTitle = esc_attr($a['hide_title']);
+	$lock = esc_attr($a['lock']);
+	$priority = esc_attr($a['priority']);
+	$image = esc_attr($a['image']);
+	$financing = esc_attr($a['financing']);
+	$set = esc_attr($a['set']);
+	$class = esc_attr($a['class']);
+	
+	$buildClasses = 'widget widget-'.$name.' widget-priority-'.$priority;
+	if ( $image != "no" ) $buildClasses .= ' widget-image';
+	if ( $financing != "no" ) $buildClasses .= ' widget-financing';
+	if ( $set != "none" ) $buildClasses .= ' widget-set set-'.$set;	
+	if ( $lock != "none" ) $buildClasses .= ' lock-to-'.$lock;
+	if ( $class != "" ) $buildClasses .= ' '.$class;	
+	
+	$buildWidget = '<div id="'.$name.'" class="'.$buildClasses.'">';
+	if ( $hideTitle != "true" ) $buildWidget .= '<h3 class="widget-title">'.$title.'</h3>';
+	$buildWidget .= '<div class="textwidget">'.do_shortcode($content).'</div>';
+	$buildWidget .= '</div>';
+
+	return $buildWidget;				
+}
+
+
+
 ?>

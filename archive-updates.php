@@ -54,7 +54,7 @@ get_header(); ?>
 				if ( current_user_can('delete_post', get_the_ID()) ) $buildUpdate .= '<a class="delete-post" href="'.get_delete_post_link( get_the_ID() ).'"><span><i class="fas fa-times"></i>Delete Post</span></a><br/>';
 				$buildUpdate .= '<span class="archive-author '.get_post_type().'-author author"><a href="/profile?user='.$profileID.'" class="link-archive link-'.get_post_type().'"><i class="fas fa-user"></i>[get-user user="'.$profileID.'" info="display"]</a></span><br/>';
 				$buildUpdate .= '<span class="archive-date '.get_post_type().'-date date"><i class="fas fa-calendar-alt"></i>'.get_the_date().'</span></p>';
-				$buildUpdate .= "<h3 data-count-tease=".$countTease." data-count-view=".$countView." data-id=".get_the_ID().">";
+				$buildUpdate .= "<h3 data-count-view=".$countView." data-id=".get_the_ID().">";
 				$buildUpdate .= esc_html(get_the_title());  
 				$buildUpdate .= "</h3>";
 				$buildUpdate .= do_shortcode('[p]'.wp_kses_post( get_the_content() ).'[/p]');					

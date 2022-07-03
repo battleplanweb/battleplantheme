@@ -20,101 +20,141 @@
 }
 
 /* Admin bar on live pages, added when logged in */
-#wpadminbar,
-#wpadminbar .quicklinks .ab-empty-item, 
-#wpadminbar .quicklinks a, 
-#wpadminbar .shortlink-input{
-    height: 									40px;
+@media (max-width: 1024px) {
+	#wpadminbar {
+		display: 								 none;
+	}
+	
+	body {
+	  margin-top: 								-32px !important;
+	}
 }
 
-.logged-in {
-	margin-top: 								-32px !important; /* compensate for the margin automatically placed on html */
-}
+@media (min-width: 1025px) {
+	#wpadminbar {
+		background: 								none;
+	}
+	
+	#wp-toolbar {
+		height: 									40px;
+		background: 								#1d2327;
+	}
+		
+	#wpadminbar .quicklinks .ab-empty-item, 
+	#wpadminbar .quicklinks a, 
+	#wpadminbar .shortlink-input{
+		height: 									40px;
+	}
+	
+	#wp-admin-bar-top-secondary {
+		/*height: 									100vh;*/
+	}
+	
+	#wpadminbar .ab-top-menu > .menupop > .ab-sub-wrapper {
+		width: 										750px;
+	}
+	
+	#wpadminbar #wp-admin-bar-user-info span {
+		height: 									26px;
+	}
 
-.logged-in #wpadminbar {
-	z-index: 									9999999999;
-  	color: 										#c8c8c8;
-  	background: 								#d3d3d3;
-	border-top: 								1px solid #fff;
-	border-bottom: 								1px solid rgba(0,0,0,0.2);
-	filter: 									drop-shadow(0 -1px 0 rgba(0,0,0,0.2)) drop-shadow(0 1px 0 #fff);
-	top: 										unset;
-	bottom: 									1px;
-}  
+	.logged-in {
+		margin-top: 								-32px !important; /* compensate for the margin automatically placed on html */
+	}
 
-.logged-in #wpadminbar a.ab-item,
-.logged-in #wpadminbar #adminbarsearch::before, 
-.logged-in #wpadminbar .ab-icon::before, 
-.logged-in #wpadminbar .ab-item::before {
-  	color: 										#15141a;
-}
+	.logged-in #wpadminbar {
+		z-index: 									9999999999;
+		height: 									40px;
+		color: 										#c8c8c8;
+		top: 										unset;
+		bottom: 									2px;
+	}   
+	
+	.logged-in #wp-toolbar {
+		background: 								#d3d3d3;
+		filter: 									drop-shadow(0 -1px 0 rgba(0,0,0,0.2)) drop-shadow(0 1px 0 #fff);
+		border-bottom: 								1px solid rgba(0,0,0,0.2);
+	}
 
-.logged-in .wp-gr.wp-google-badge {
-	bottom: 									41px;
-}
+	.logged-in #wpadminbar a.ab-item,
+	.logged-in #wpadminbar #adminbarsearch::before, 
+	.logged-in #wpadminbar .ab-icon::before, 
+	.logged-in #wpadminbar .ab-item::before {
+		color: 										#15141a;
+	}
+	
+	#wpadminbar #wp-admin-bar-my-account.with-avatar #wp-admin-bar-user-actions > li.console {
+		margin-left: 								35px;
+		list-style: 								square;
+	}
 
-.logged-in .wp-google-badge-faux {
-	height: 									103px !important;
-}
+	.logged-in .wp-gr.wp-google-badge {
+		bottom: 									41px;
+	}
 
-#wpadminbar * {
-	font-size: 									16px;
-}
+	.logged-in .wp-google-badge-faux {
+		height: 									103px !important;
+	}
 
-.wp-admin #wpadminbar #wp-admin-bar-site-name > .ab-item::before,
-.logged-in #wpadminbar #wp-admin-bar-site-name > .ab-item::before {
-    background: 								url('../../uploads/site-icon-80x80.png') 50% 50% no-repeat !important;
-	background-size: 							contain !important;
-	width: 										31px;
-	height: 									31px;
-	content: 									"";
-	top: 										0;
-}
+	#wpadminbar * {
+		font-size: 									16px;
+	}
 
-.logged-in #wpadminbar .ab-top-menu > li > .ab-item, 
-.logged-in #wpadminbar:not(.mobile) .ab-top-menu > li > .ab-item {
-  	background: 								transparent;
-	border: 									none;
-	border-bottom: 								1px solid transparent;
-  	color: 										#15141a;
-	height: 									38px;
-	transition: 								all 0.2s ease;
-}
+	.wp-admin #wpadminbar #wp-admin-bar-site-name > .ab-item::before,
+	.logged-in #wpadminbar #wp-admin-bar-site-name > .ab-item::before {
+		background: 								url('../../uploads/site-icon-80x80.png') 50% 50% no-repeat !important;
+		background-size: 							contain !important;
+		width: 										31px;
+		height: 									31px;
+		content: 									"";
+		top: 										0;
+	}
 
-.logged-in #wpadminbar .ab-top-menu > li.hover > .ab-item, 
-.logged-in #wpadminbar.nojq .quicklinks .ab-top-menu > li > .ab-item:focus, 
-.logged-in #wpadminbar:not(.mobile) .ab-top-menu > li:hover > .ab-item, 
-.logged-in #wpadminbar:not(.mobile) .ab-top-menu > li > .ab-item:focus {
-  	background: 								#ffffff;
-	border-bottom: 								1px solid rgba(0,0,0,0.2);
-	transition: 								all 0.2s ease;
-}
+	.logged-in #wpadminbar .ab-top-menu > li > .ab-item, 
+	.logged-in #wpadminbar:not(.mobile) .ab-top-menu > li > .ab-item {
+		background: 								transparent;
+		border: 									none;
+		border-bottom: 								1px solid transparent;
+		color: 										#15141a;
+		height: 									38px;
+		transition: 								all 0.2s ease;
+	}
 
-.logged-in #wpadminbar .menupop .ab-sub-wrapper, 
-.logged-in #wpadminbar .shortlink-input {
-  	background: 								#ffffff;
-  	bottom: 									40px;
-	box-shadow: 								0 -3px 5px rgba(0,0,0,.2);
-}
+	.logged-in #wpadminbar .ab-top-menu > li.hover > .ab-item, 
+	.logged-in #wpadminbar.nojq .quicklinks .ab-top-menu > li > .ab-item:focus, 
+	.logged-in #wpadminbar:not(.mobile) .ab-top-menu > li:hover > .ab-item, 
+	.logged-in #wpadminbar:not(.mobile) .ab-top-menu > li > .ab-item:focus {
+		background: 								#ffffff;
+		border-bottom: 								1px solid rgba(0,0,0,0.2);
+		transition: 								all 0.2s ease;
+	}
 
-.logged-in #wpadminbar .ab-top-menu > li.hover > .ab-sub-wrapper  {
-  	display: 									block;
-}
+	.logged-in #wpadminbar .menupop .ab-sub-wrapper, 
+	.logged-in #wpadminbar .shortlink-input {
+		background: 								#ffffff;
+		bottom: 									40px;
+		box-shadow: 								0 -3px 5px rgba(0,0,0,.2);
+	}
 
-.logged-in #wpadminbar .ab-top-menu > li.hover > .ab-sub-wrapper *  {
-  	color: 										#15141a;
-}
+	.logged-in #wpadminbar .ab-top-menu > li.hover > .ab-sub-wrapper  {
+		display: 									block;
+	}
 
-#wp-admin-bar-my-account > a.ab-item {
-	padding-right: 								10px;
-}
+	.logged-in #wpadminbar .ab-top-menu > li.hover > .ab-sub-wrapper *  {
+		color: 										#15141a;
+	}
 
-.wp-admin #wpfooter {
-	bottom: 									-50px;
-}
+	#wp-admin-bar-my-account > a.ab-item {
+		padding-right: 								10px;
+	}
 
-.wp-admin p#footer-upgrade {
-	display: 									none;
+	.wp-admin #wpfooter {
+		bottom: 									-50px;
+	}
+
+	.wp-admin p#footer-upgrade {
+		display: 									none;
+	}
 }
 
 /* Hide "register plug in" message on Admin Columns Pro & Extended Widget Options */
@@ -146,20 +186,20 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 }
 
 #dashboard-widgets #postbox-container-1 {
-	width:										18%;
+	width:										27%;
 }
 
 #dashboard-widgets #postbox-container-2 {
-	width:										30%;
+	width:										25%;
 }
 
 #dashboard-widgets #postbox-container-3 {
-	width:										52%;
+	width:										48%;
 }
 
 #dashboard-widgets #postbox-container-1 td {
 	display: 									inline-block;
-	width:										80px;
+	width:										100px;
 	text-align: 								right;
 }
 
@@ -288,6 +328,11 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	font-size: 									15px;
 }
 
+#dashboard-widgets #postbox-container-1 .last-visit {
+	width: 										calc(100% - 85px);
+	text-align: 								center;
+}
+
 #dashboard-widgets #postbox-container-1 #battleplan_tech_stats ul {
 	margin-bottom: 								25px;
 }
@@ -322,8 +367,12 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	top: 										5px;
 }
 
+.last-visitors-buttons {
+	left: 										27%;
+}
+
 .local-visitors-buttons {
-	left: 										45%;
+	left: 										47%;
 }
 
 .trend-buttons .block-button,
@@ -846,7 +895,6 @@ body.ac-wp-media .row-actions {
 	background: 								rgb(207,218,241);
 }
 
-
 .wp-admin .flex.stats.hvac .col {
 	background: 								rgb(226,226,190); 
 }
@@ -884,7 +932,6 @@ body.ac-wp-media .row-actions {
 .wp-admin .flex.stats.hvac .col.when {
 	background: 								rgb(207,218,241);
 }
-
 
 .wp-admin .flex.stats .col.when {
 	cursor: 									pointer;

@@ -13,6 +13,13 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 	var mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 0, ajaxURL = 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php';	
 	
+	window.ajax_response = function (response) {
+		console.log(response);
+		var theText = "<li class='console'>" + response + "</li>" + $('#wp-admin-bar-my-account #wp-admin-bar-user-actions').html();	
+		$('#wp-admin-bar-my-account #wp-admin-bar-user-actions').html(theText);
+		$('#wp-admin-bar-my-account > a.ab-item').text(response);
+	}
+	
 // Is user on an Apple device?
 	window.isApple = function () {
 		return !!navigator.platform && /iPad|iPhone|iPod/.test(navigator.platform);
@@ -73,7 +80,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$.post({
 			url : ajaxURL,
 			data : { action: "count_link_clicks", type: thisAction }, 
-			success: function( response ) { console.log(response);  } 
+			success: function( response ) { ajax_response(response.dashboard);	}
 		});		
 	});
 	

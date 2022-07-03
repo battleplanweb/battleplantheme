@@ -13,14 +13,60 @@
 # Chron Jobs
 --------------------------------------------------------------*/
 
-if ( get_option('bp_setup_2022_06_26') != "completed" ) :	
-	require_once get_template_directory().'/includes/includes-mass-site-update.php';
-endif;	
+if ( get_option('bp_setup_2022_07_04') != "completed" ) :	
 
-delete_option( 'bp_setup_2022_05_02' );
-update_option( 'bp_setup_2022_06_26', 'completed' );
-		
-		
+	delete_option('content-scroll-pct');
+	delete_option('content-column-views');
+	delete_option('content-tracking');
+	delete_option('bp_daily_stats'); 
+	delete_option('bp_referrer_stats_100'); 
+	delete_option('bp_location_stats_100'); 
+	delete_option('bp_page_stats_100'); 
+	delete_option('bp_tech_stats_100'); 
+	delete_option('bp_referrer_stats_250'); 
+	delete_option('bp_location_stats_250'); 
+	delete_option('bp_page_stats_250'); 
+	delete_option('bp_tech_stats_250'); 
+	delete_option('bp_referrer_stats_500'); 
+	delete_option('bp_location_stats_500'); 
+	delete_option('bp_page_stats_500'); 
+	delete_option('bp_tech_stats_500'); 
+	delete_option('bp_referrer_stats'); 
+	delete_option('bp_location_stats');  
+	delete_option('bp_page_stats'); 
+	delete_option('bp_tech_stats'); 
+	delete_option( 'bp_setup_2022_05_02' );
+	delete_option( 'bp_setup_2022_06_26' );
+	delete_option( 'bp_setup_2022_06_30' );
+	delete_option( 'bp_setup_2022_07_03' );			
+	delete_option( 'bp_setup_2022_07_03b' );				
+	delete_option( 'bp_setup_2022_07_03c' );			
+	delete_option( 'bp_setup_2022_07_03d' );			
+
+	global $wpdb;
+	$results = $wpdb->get_results(" SELECT * FROM $wpdb->postmeta WHERE meta_key = '_wp_attachment_metadata' AND meta_value LIKE '%width%' ");
+	foreach($results as $result) {
+		updateMeta( $result->post_id, 'log-last-viewed', strtotime("-1 day"));
+		deleteMeta( $result->post_id, 'log-views-now');		
+		deleteMeta( $result->post_id, 'log-views-time');
+		deleteMeta( $result->post_id, 'log-tease-time');
+		deleteMeta( $result->post_id, 'log-views-total-180day');		
+	}
+	
+	$results = $wpdb->get_results(" SELECT * FROM $wpdb->postmeta WHERE meta_key = 'testimonial_name' ");
+	foreach($results as $result) {
+		updateMeta( $result->post_id, 'log-last-viewed', strtotime("-1 day"));
+		deleteMeta( $result->post_id, 'log-views-now');		
+		deleteMeta( $result->post_id, 'log-views-time');
+		deleteMeta( $result->post_id, 'log-tease-time');
+		deleteMeta( $result->post_id, 'log-views-total-180day');		
+	}
+
+	update_option( 'bp_setup_2022_07_04', 'completed' );			
+	
+	require_once get_template_directory().'/includes/includes-mass-site-update.php';
+endif;		
+
 
 require_once get_template_directory().'/vendor/autoload.php';
 require_once get_template_directory().'/google-api-php-client/vendor/autoload.php';
@@ -313,10 +359,8 @@ function battleplan_run_chron_jobs_ajax() {
 		update_option( 'default_ping_status', 'closed' );
 		update_option( 'permalink_structure', '/%postname%/' );
 		update_option( 'wpe-rand-enabled', '1' );
-		update_option( 'users_can_register', '0' );
-		
+		update_option( 'users_can_register', '0' );		
 		update_option( 'wpe-rand-enabled', '1' );
-
 		update_option( 'auto_update_core_dev', 'enabled' );
 		update_option( 'auto_update_core_minor', 'enabled' );
 		update_option( 'auto_update_core_major', 'enabled' );			
@@ -328,8 +372,6 @@ function battleplan_run_chron_jobs_ajax() {
 		battleplan_delete_prefixed_options( 'wp-smush-' );
 		battleplan_delete_prefixed_options( 'wp_smush_' );
 		battleplan_delete_prefixed_options( 'client_' );
-
-
 
 /*--------------------------------------------------------------
 # Universal Pages
@@ -472,7 +514,7 @@ function battleplan_run_chron_jobs_ajax() {
 					$analytics[] = array ('date'=>$date, 'location'=>$location, 'source'=>$source, 'page'=>$page, 'browser'=>$browser, 'device'=>$device, 'pages-viewed'=>$pagesViewed, 'resolution'=>$resolution, 'referrer'=>$referrer, 'engaged'=>$engaged, 'new-users'=>$newUsers );	
 				endif;
 			endforeach;			
-			arsort($analytics);			
+			if ( is_array($analytics) ) arsort($analytics) ;			
 			$ua_end = date('Y-m-d', strtotime($analytics[0]['date']));
 		endif;
 		
@@ -507,7 +549,7 @@ function battleplan_run_chron_jobs_ajax() {
 			endforeach;
 		endif;
 		
-		arsort($analytics);			
+		if ( is_array($analytics) ) arsort($analytics);			
 		$ua_end = date('Y-m-d', strtotime($analytics[0]['date']));	
 		
 // Split session data into site hits
@@ -553,88 +595,47 @@ function battleplan_run_chron_jobs_ajax() {
 			endif;
 		endforeach;
 				
-		update_option('bp_site_hits', $siteHits);	
-		//update_option('bp_debug', $siteHits);	
+		update_option('bp_site_hits', $siteHits);
 		
+	// Compile hits on specific pages
+		$pageCounts = array(1, 7, 30, 90, 365);
+		$today = strtotime($today);		
+		$citiesToExclude = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, OR'); // also change in functions-admin.php
 
-		
-		delete_option('bp_daily_stats'); 
-		delete_option('bp_referrer_stats_100'); 
-		delete_option('bp_location_stats_100'); 
-		delete_option('bp_page_stats_100'); 
-		delete_option('bp_tech_stats_100'); 
-		delete_option('bp_referrer_stats_250'); 
-		delete_option('bp_location_stats_250'); 
-		delete_option('bp_page_stats_250'); 
-		delete_option('bp_tech_stats_250'); 
-		delete_option('bp_referrer_stats_500'); 
-		delete_option('bp_location_stats_500'); 
-		delete_option('bp_page_stats_500'); 
-		delete_option('bp_tech_stats_500'); 
-		delete_option('bp_referrer_stats'); 
-		delete_option('bp_location_stats');  
-		delete_option('bp_page_stats'); 
-		delete_option('bp_tech_stats'); 
-		
-		
-		
-			
-	/*	if ( $ga4_id ) :			
-// Gather page view stats to attach to the individual IDs			
-			$pageCounts = array(7,30,90,365);
-			foreach ($pageCounts as $pageCount) :	
-				$start = date('Y-m-d', strtotime('-'.$pageCount.' days'));	
-				$end = date( "Y-m-d" );		
-				$response = $client->runReport([
-					'property' => 'properties/'.$ga4_id,
-					'dateRanges' => [
-						new DateRange([ 'start_date' => $start, 'end_date' => $end ]),
-					],
-					'dimensions' => [
-						new Dimension([ 'name' => 'city' ]),
-						new Dimension([ 'name' => 'country' ]),		
-						new Dimension([ 'name' => 'pagePath' ]),
-					],
-					'metrics' => [
-						new Metric([ 'name' => 'screenPageViews' ]),
-					]
-				]);
+		foreach ( $siteHits as $siteHit ) :		
+			$page = $siteHit['page'];
+			if ( !in_array( $siteHit['location'], $citiesToExclude) && strpos($page, 'fbclid') === false && strpos($page, 'reportkey') === false ) :					
+				if ( $page == "" || $page == "/" ) $page = "Home";
+				if ( is_array($compilePaths) && array_key_exists($page, $compilePaths ) ) :
+					$compilePaths[$page] += $siteHit['pages-viewed'];
+				else:
+					$compilePaths[$page] = $siteHit['pages-viewed'];
+				endif;
+			endif;
 
-				unset($compilePaths);
-				$complilePaths = array();
-
-				foreach ( $response->getRows() as $row ) :
-					$city = $row->getDimensionValues()[0]->getValue();
-					$country = $row->getDimensionValues()[1]->getValue();
-					$path = $row->getDimensionValues()[2]->getValue();
-					$views = $row->getMetricValues()[0]->getValue();
-
-					if ( $country == "United States" && !in_array( $city, $citiesToExclude ) ) :					
-						if ( $path == "" || $path == "/" ) $path = "Home";
-						if ( is_array($compilePaths) && array_key_exists($path, $compilePaths ) ) :
-							$compilePaths[$path] += $views;
+			$checkDate = strtotime($siteHit['date']);
+			$howLong = $today - $checkDate;
+						
+			foreach ( $pageCounts as $count ) :
+				if ( $howLong > (($count + 1) * 86400) ) :				
+					foreach ($compilePaths as $page=>$pageViews) :
+					
+						if ( $page == "Home" ) :
+							$id = get_option('page_on_front');					
 						else:
-							$compilePaths[$path] = $views;
-						endif;
-					endif;
-				endforeach;
+							$id = getID($page);
+						endif;				
+						if ( $count == 1) : $pageKey = 'log-views-today';
+						else: $pageKey = 'log-views-total-'.$count.'day'; endif;
 
-				foreach ($compilePaths as $path=>$pathViews) :
-					if ( $path == "Home" ) :
-						$id = get_option('page_on_front');					
-					else:
-						$id = getID($path);
-					endif;				
-
-					if ( $pageCount == 1) : $pageKey = 'log-views-today';
-					else: $pageKey = 'log-views-total-'.$pageCount.'day'; endif;
-
-					updateMeta($id, 'log-views-total-'.$pageCount.'day', $pathViews);		
-				endforeach;
-
+						updateMeta($id, $pageKey, $pageViews);
+					
+					endforeach;
+					array_shift($pageCounts);						
+				endif;
 			endforeach;	
-		endif;
-*/
+		endforeach;	
+
 		update_option( 'bp_chrons_last_run', time() );	
 		delete_option( 'bp_chrons_pages' );
 		update_option( 'bp_chrons_pages', 0 );	

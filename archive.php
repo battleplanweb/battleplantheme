@@ -85,7 +85,6 @@ get_header(); ?>
 				$showDate = "true";
 				$showAuthor = "false"; // true (no link), profile (link to profile)
 				$accordion = "false";
-				$countTease = "false";
 				$countView = "false";
 				$link = "post"; //post, cf-custom-field, specific link, false
 				$addInfo = "";				
@@ -121,7 +120,7 @@ get_header(); ?>
 
 				$classes = 'col-archive col-'.get_post_type().' col-'.get_the_ID().$addTags.$addClass;
 		
-				$buildArchive .= do_shortcode('[col class="'.$classes.'"][build-archive type="'.get_post_type().'" show_thumb="'.$showThumb.'" size="'.$size.'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" accordion="'.$accordion.'" count_tease="'.$countTease.'" count_view="'.$countView.'" add_info="'.$addInfo.'" link="'.$link.'"][/col]');
+				$buildArchive .= do_shortcode('[col class="'.$classes.'"][build-archive type="'.get_post_type().'" show_thumb="'.$showThumb.'" size="'.$size.'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" accordion="'.$accordion.'" count_view="'.$countView.'" add_info="'.$addInfo.'" link="'.$link.'"][/col]');
 			endwhile; 
 
 		// Display Archive

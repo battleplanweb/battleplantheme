@@ -145,13 +145,6 @@ function add_products() {
 		array ( 'post_slug'	=> 'silver-14-air-conditioner-system', 'menu_order' => 1480, 'meta_input' => array('brochure' => 'https://americanstandardair.com/assets/pdf/TT_10-1174-11_AS_Package_Unit_ConsumerBrochure_SV.pdf'), 'tax_input' =>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'good')),		
 	);
 
-	
-	
-	
-	
-	
-
-
 	$user = get_user_by('login', 'battleplanweb');
 	$userID = $user->ID;
 	
@@ -268,6 +261,38 @@ function add_products() {
 		if ( $findTerm !== false ) wp_delete_term( $findTerm->term_id, 'product-class');
 	endforeach;
 
+
+// Update 
+	$productPage = get_page_by_path('reme·halo', OBJECT, 'products' );
+	if ( empty( $productPage ) ) $productPage = get_page_by_path('reme-halo', OBJECT, 'products' );
+	if ( empty( $productPage ) ) $productPage = get_page_by_path('products/reme·halo', OBJECT, 'products' );
+	if ( empty( $productPage ) ) $productPage = get_page_by_path('products/reme-halo', OBJECT, 'products' );
+	
+		
+	if ( !empty( $productPage ) ) : 
+		wp_update_post(array(
+			'ID' 			 => $productPage->ID,
+			'menu_order'     => 100,
+			'post_content' => '<span class="descriptionText">Join the evolution of clean air!  The Reme·Halo neutralizes odors, particulates, air pollutants, VOCs (chemical odors), smoke, mold bacteria and viruses.</span>
+
+<p>The Reme·Halo is proactive and sends ionized aggressive advanced oxidizers into conditioned areas to destroy pollutants at the source in the air and on surfaces, before they can reach humans. This process ensures that microbials are killed at the source for 99% reduction.</p>
+
+<p>Easily mounted into air conditioning and heating system air ducts, the Reme·Halo creates an Advanced Oxidation Plasma consisting of Ionized Hydro-Peroxides, Super Oxide ions and Hydroxide ions that revert back to Oxygen and Hydrogen after the oxidation of the pollutants.  This occurs any time the HVAC system is in operation.</p>
+
+<ul>
+	<li>Kills airborne and surface microbials, bacteria, viruses and mold</li>
+        <li>Reduces smoke, odors, VOCs, allergens, dust and particulates</li>
+        <li>Automatic self-cleaning ionizers with carbon fiber brushes</li>
+        <li>Unlimited cycling capability designed to turn on/off with HVAC</li>
+        <li>Enhanced zinc ceramic catalyst for superior bacteria and virus reduction</li>
+        <li>7 year limited warranty; 4 year cell warranty</li>
+	<li>Recommended by major hotel and restaurant chains & cruise lines</li>
+</ul>
+
+[vid link="https://www.youtube.com/embed/L-t1JyUGUf4"]',
+		));	
+	endif;
+			
 
 }
 ?>

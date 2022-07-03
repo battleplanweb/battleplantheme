@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 12.3.1
+Version: 12.4
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -693,6 +693,7 @@ p.indent-double {
 p:first-child,
 ul:first-child,
 
+
 ol:first-child {
 	margin-top:									0;
 }
@@ -1237,6 +1238,8 @@ section.section-default .flex {
 .header-stretch .divider-strip .flex, 
 .header-stretch .logo-strip .flex, 
 .menu-stretch .menu-strip .flex,
+
+
 .content-stretch #main-content, 
 
 .footer-stretch .footer-strip .flex,
@@ -2305,6 +2308,8 @@ div[class*="restrict-"] {
 	margin: 									0 !important;
 	border-radius: 								0 !important;
 	animation-name: 							none !important;
+
+
 	transition: 								opacity 0.2s ease;
 }
 
@@ -4411,7 +4416,7 @@ span.descriptionText {
 	justify-content:							center;
 	flex-flow: 								 	row wrap;
 	align-items:								center;
-	gap: 										1.5em;
+	gap: 										0.7em;
 }
 
 .product-links .product-link-cats .product-link-label {
@@ -4426,6 +4431,7 @@ span.descriptionText {
 	flex: 										1 1 auto;
 	text-align: 								center;
 	align-self: 								center;
+	font-size: 									90%;
 }
 
 .disclaimerText {
@@ -5021,6 +5027,7 @@ html.error503 h3 {
 	}
 	
 	/* Row of Pics */
+
 	.grid-7e .col:nth-last-child(1),
 	.grid-8e .col:nth-last-child(1),
 	.grid-8e .col:nth-last-child(2),
@@ -5467,7 +5474,7 @@ html.error503 h3 {
 	}
 	
 	.product-links .product-link-cats .product-link-buttons {
-		gap: 										1em;
+		gap: 										0.5em;
 	}
 
 	/* Media */

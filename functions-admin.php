@@ -32,6 +32,10 @@ function battleplan_add_quicktags() {
 		<script type="text/javascript">
 			QTags.addButton( 'bp_paragraph', 'p', '<p>', '</p>\n', 'p', 'Paragraph Tag', 1 );
 			QTags.addButton( 'bp_li', 'li', ' <li>', '</li>', 'li', 'List Item', 100 );
+			
+			
+			QTags.addButton( 'bp_widget', 'widget', '[widget title="Brand Logo" hide_title="true, false" lock="none, top, bottom" priority="1, 2, 3, 4, 5" image="no, yes" financing="no, yes" set="none, param"]\n', '[/widget]\n\n', 'widget', 'Widget', 1000 );		
+
 
 			QTags.addButton( 'bp_section', 'section', '[section name="becomes id attribute" hash="compensation for scroll on one-page sites" style="corresponds to css" width="default, stretch, full, edge, inline" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '[/section]\n\n', 'section', 'Section', 1000 );		
 			QTags.addButton( 'bp_layout', 'layout', ' [layout grid="1-auto, 1-1-1-1, 5e, content, 80px 100px 1fr" break="none, 3, 4" valign="start, stretch, center, end" class=""]\n\n', ' [/layout]\n', 'layout', 'Layout', 1000 );
@@ -56,10 +60,10 @@ function battleplan_add_quicktags() {
 			QTags.addButton( 'bp_get-wp-page', 'get wp page', '[get-wp-page type="page, post, cpt" id="" slug="" title="" display="content, excerpt, title, thumbnail, link"]\n\n', '', 'get wp page', 'Get WP Page', 1000 );
 			
 			QTags.addButton( 'bp_random-image', 'random image', '   [get-random-image id="" tag="random" size="thumbnail, third-s" link="no, yes" number="1" offset="" align="left, right, center" order_by="recent, rand, menu_order, title, id, post_date, modified, views" order="asc, desc" shuffle="no, yes" lazy="true, false"]\n\n', '', 'random image', 'Random Image', 1000 );
-			QTags.addButton( 'bp_random-post', 'random post', '   [get-random-posts num="1" offset="0" leeway="0" type="post" tax="" terms="" orderby="recent, rand, views-today, views-7day, views-30day, views-90day, views-180day, views-365day, views-all" sort="asc, desc" count_tease="true, false" count_view="true, false" thumb_only="false, true" thumb_col="1, 2, 3, 4" show_title="true, false" title_pos="outside, inside" show_date="false, true" show_author="false, true" show_excerpt="true, false" show_social="false, true" show_btn="true, false" button="Read More" btn_pos="inside, outside" thumbnail="force, false" link="post, false, cf-field_name, /link-destination/" start="" end="" exclude="" x_current="true, false" size="thumbnail, size-third-s" pic_size="1/3" text_size=""]\n\n', '', 'random post', 'Random Post', 1000 );
+			QTags.addButton( 'bp_random-post', 'random post', '   [get-random-posts num="1" offset="0" leeway="0" type="post" tax="" terms="" orderby="recent, rand, views-today, views-7day, views-30day, views-90day, views-365day, views-all" sort="asc, desc" count_view="true, false" thumb_only="false, true" thumb_col="1, 2, 3, 4" show_title="true, false" title_pos="outside, inside" show_date="false, true" show_author="false, true" show_excerpt="true, false" show_social="false, true" show_btn="true, false" button="Read More" btn_pos="inside, outside" thumbnail="force, false" link="post, false, cf-field_name, /link-destination/" start="" end="" exclude="" x_current="true, false" size="thumbnail, size-third-s" pic_size="1/3" text_size=""]\n\n', '', 'random post', 'Random Post', 1000 );
 			QTags.addButton( 'bp_random-text', 'random text', '   [get-random-text cookie="true, false" text1="" text2="" text3="" text4="" text5="" text6="" text7=""]\n\n', '', 'random text', 'Random Text', 1000 );
 			QTags.addButton( 'bp_row-of-pics', 'row of pics', '   [get-row-of-pics id="" tag="row-of-pics" col="4" row="1" offset="0" size="half-s, thumbnail" valign="center, start, stretch, end" link="no, yes" order_by="recent, rand, menu_order, title, id, post_date, modified, views" order="asc, desc" shuffle="no, yes" lazy="true, false" class=""]\n\n', '', 'row of pics', 'Row Of Pics', 1000 );
-			QTags.addButton( 'bp_post-slider', 'post slider', '   [get-post-slider type="" auto="yes, no" interval="6000" loop="true, false" num="4" offset="0" pics="yes, no" controls="yes, no" controls_pos="below, above" indicators="no, yes" justify="space-around, space-evenly, space-between, center" pause="true, false" tax="" terms="" orderby="recent, rand, id, author, title, name, type, date, modified, parent, comment_count, relevance, menu_order, (images) views, (posts) views-today, views-7day, views-30day, views-90day, views-180day, views-365day, views-all" order="asc, desc" post_btn="" all_btn="View All" link="" start="" end="" exclude="" x_current="true, false" show_excerpt="true, false" show_content="false, true" size="thumbnail, half-s" pic_size="1/3" text_size="" class="" (images) slide_type="box, screen, fade" tag="" caption="no, yes" id="" mult="1" truncate="true, false, # of characters" lazy="true, false"]\n\n', '', 'post slider', 'Post Slider', 1000 );
+			QTags.addButton( 'bp_post-slider', 'post slider', '   [get-post-slider type="" auto="yes, no" interval="6000" loop="true, false" num="4" offset="0" pics="yes, no" controls="yes, no" controls_pos="below, above" indicators="no, yes" justify="space-around, space-evenly, space-between, center" pause="true, false" tax="" terms="" orderby="recent, rand, id, author, title, name, type, date, modified, parent, comment_count, relevance, menu_order, (images) views, (posts) views-today, views-7day, views-30day, views-90day, views-365day, views-all" order="asc, desc" post_btn="" all_btn="View All" link="" start="" end="" exclude="" x_current="true, false" show_excerpt="true, false" show_content="false, true" size="thumbnail, half-s" pic_size="1/3" text_size="" class="" (images) slide_type="box, screen, fade" tag="" caption="no, yes" id="" mult="1" truncate="true, false, # of characters" lazy="true, false"]\n\n', '', 'post slider', 'Post Slider', 1000 );
 
 			QTags.addButton( 'bp_images-slider', 'Images Slider', '<div class="alignright size-half-s">[get-post-slider type="images" num="6" size="half-s" controls="no" indicators="yes" tag="featured" all_btn="" link="none, alt, description, blank" slide_type="box, screen, fade" orderby="recent"]</div>\n\n', '', 'images-slider', 'Images Slider', 1000 );	
 			QTags.addButton( 'bp_testimonial-slider', 'Testimonial Slider', '  [col]\n   <h2>What Our Customers Say...</h2>\n   [get-post-slider type="testimonials" num="6" pic_size="1/3"]\n  [/col]\n\n', '', 'testimonial-slider', 'Testimonial Slider', 1000 );
@@ -215,9 +219,9 @@ function battleplan_column_settings() {
 						'label'=>'Last Viewed',
 						'width'=>'',
 						'width_unit'=>'%',
-						'field'=>'log-views-now',
+						'field'=>'log-last-viewed',
 						'field_type'=>'date',
-						'date_format'=>'wp_default',
+						'date_format'=>'diff',
 						'before'=>'',
 						'after'=>'',
 						'edit'=>'off',
@@ -228,26 +232,7 @@ function battleplan_column_settings() {
 						'name'=>'last_viewed',
 						'label_type'=>'',
 						'search'=>'on'
-					),	
-					'last_teased'=>array(
-						'type'=>'column-meta',
-						'label'=>'Last Teased',
-						'width'=>'',
-						'width_unit'=>'%',
-						'field'=>'log-tease-time',
-						'field_type'=>'date',
-						'date_format'=>'wp_default',
-						'before'=>'',
-						'after'=>'',
-						'edit'=>'off',
-						'sort'=>'on',
-						'filter'=>'off',
-						'filter_label'=>'',
-						'filter_format'=>'monthly',
-						'name'=>'last_teased',
-						'label_type'=>'',
-						'search'=>'on'
-					),	
+					),
 					'views_today'=>array(
 						'type'=>'column-meta',
 						'label'=>'Today',
@@ -313,23 +298,6 @@ function battleplan_column_settings() {
 						'filter'=>'off',
 						'filter_label'=>'',
 						'name'=>'views_quarter',
-						'label_type'=>'',
-						'search'=>'on'
-					),
-					'views_semester'=>array(
-						'type'=>'column-meta',
-						'label'=>'Semester',
-						'width'=>'',
-						'width_unit'=>'%',
-						'field'=>'log-views-total-180day',
-						'field_type'=>'numeric',
-						'before'=>'',
-						'after'=>'',
-						'edit'=>'off',
-						'sort'=>'on',
-						'filter'=>'off',
-						'filter_label'=>'',
-						'name'=>'views_semester',
 						'label_type'=>'',
 						'search'=>'on'
 					),
@@ -1196,14 +1164,14 @@ function battleplan_column_settings() {
 								'label_type'=>'',
 								'search'=>'on'
 							),
-							'last_teased'=>array(
+							'last_viewed'=>array(
 								'type'=>'column-meta',
-								'label'=>'Last Teased',
+								'label'=>'Last Viewed',
 								'width'=>'',
 								'width_unit'=>'%',
-								'field'=>'log-tease-time',
+								'field'=>'log-last-viewed',
 								'field_type'=>'date',
-								'date_format'=>'wp_default',
+								'date_format'=>'diff',
 								'before'=>'',
 								'after'=>'',
 								'edit'=>'off',
@@ -1211,7 +1179,7 @@ function battleplan_column_settings() {
 								'filter'=>'off',
 								'filter_label'=>'',
 								'filter_format'=>'monthly',
-								'name'=>'last_teased',
+								'name'=>'last_viewed',
 								'label_type'=>'',
 								'search'=>'on'
 							),	
@@ -1222,6 +1190,10 @@ function battleplan_column_settings() {
 								'width_unit'=>'%',
 								'field'=>'log-views-today',
 								'field_type'=>'numeric',
+								'number_format'=>'formatted',
+                				'number_decimals'=>'0',
+                				'number_decimal_point'=>'.',
+                				'number_thousands_separator'=>',',
 								'before'=>'',
 								'after'=>'',
 								'edit'=>'off',
@@ -1239,6 +1211,10 @@ function battleplan_column_settings() {
 								'width_unit'=>'%',
 								'field'=>'log-views-total-7day',
 								'field_type'=>'numeric',
+								'number_format'=>'formatted',
+                				'number_decimals'=>'0',
+                				'number_decimal_point'=>'.',
+                				'number_thousands_separator'=>',',
 								'before'=>'',
 								'after'=>'',
 								'edit'=>'off',
@@ -1256,6 +1232,10 @@ function battleplan_column_settings() {
 								'width_unit'=>'%',
 								'field'=>'log-views-total-30day',
 								'field_type'=>'numeric',
+								'number_format'=>'formatted',
+                				'number_decimals'=>'0',
+                				'number_decimal_point'=>'.',
+                				'number_thousands_separator'=>',',
 								'before'=>'',
 								'after'=>'',
 								'edit'=>'off',
@@ -1273,6 +1253,10 @@ function battleplan_column_settings() {
 								'width_unit'=>'%',
 								'field'=>'log-views-total-90day',
 								'field_type'=>'numeric',
+								'number_format'=>'formatted',
+                				'number_decimals'=>'0',
+                				'number_decimal_point'=>'.',
+                				'number_thousands_separator'=>',',
 								'before'=>'',
 								'after'=>'',
 								'edit'=>'off',
@@ -1290,6 +1274,10 @@ function battleplan_column_settings() {
 								'width_unit'=>'%',
 								'field'=>'log-views-total-365day',
 								'field_type'=>'numeric',
+								'number_format'=>'formatted',
+                				'number_decimals'=>'0',
+                				'number_decimal_point'=>'.',
+                				'number_thousands_separator'=>',',
 								'before'=>'',
 								'after'=>'',
 								'edit'=>'off',
@@ -1697,11 +1685,11 @@ $GLOBALS['btn1'] = get_option('bp_admin_btn1');
 $GLOBALS['btn2'] = get_option('bp_admin_btn2');
 $GLOBALS['btn3'] = get_option('bp_admin_btn3');
 $siteHits = get_option('bp_site_hits');
-$today = date( "Y-m-d" );		
-$citiesToExclude = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, OR');
+$today = date( "Y-m-d" );	
+$citiesToExclude = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, OR'); // also change in functions-chron-jobs.php
 
 // Set up array accounting for each day, no skips	
-$blankDate = strtotime($siteHits[array_key_last($siteHits)]['date']);
+if ( is_array($siteHits) ) $blankDate = strtotime($siteHits[array_key_last($siteHits)]['date']);
 $totalDays = (strtotime($today) - $blankDate) / 86400;
 
 for ( $x=0;$x<$totalDays;$x++) :
@@ -1712,7 +1700,7 @@ endfor;
 // Compile data into daily stats
 foreach ( $siteHits as $siteHit ) :	
 	if ( !in_array( $siteHit['location'], $citiesToExclude ) ) :
-		if ( $GLOBALS['btn3'] != " active" || ( $siteHit['location'] == get_option('customer_info')['state-full'] || str_contains($siteHit['location'], get_option('customer_info')['state-abbr'] ) )) :
+		if ( $GLOBALS['btn3'] != "active" || ( $siteHit['location'] == get_option('customer_info')['state-full'] || str_contains($siteHit['location'], get_option('customer_info')['state-abbr'] ) )) :
 	
 			$processing = strtotime($siteHit['date']);
 			$timeSinceToday = $today - $processing;				
@@ -1808,9 +1796,9 @@ function battleplan_admin_site_stats() {
 		if ( $x == 365 ) $lastYearViews = $users; $lastYearAvg = number_format(($lastYearViews / 365),1);		
 		if ( $x == 730 ) $last2YearViews = $users; $last2YearAvg = number_format(($last2YearViews / 730),1);		
 		if ( $x == 1095 ) $last3YearViews = $users; $last3YearAvg = number_format(($last3YearViews / 1095),1);
-	} 		
+	} 		 
 		
-	echo "<table><tr><td class='label'>Last Visit</td><td style='width:160px'>".$lastVisitTime." ago</td></tr>";
+	echo "<table><tr><td class='label'>Last Visit</td><td class='last-visit'>".$lastVisitTime." ago</td></tr>";
 	
 	echo "<tr><td>&nbsp;</td></tr>";	
 	
@@ -1852,7 +1840,7 @@ function battleplan_admin_tech_stats() {
 			endforeach;		
 		endfor;		
 		
-		arsort($allDevices);
+		if ( is_array($allDevices) ) arsort($allDevices);
 		
 		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
 		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul><li class="sub-label">Devices</li>';	
@@ -1885,29 +1873,18 @@ function battleplan_admin_tech_stats() {
 	endforeach;
 	
 	$contentScrollMode = array_count_values(explode(",", $contentScrollValues));  
-	arsort($contentScrollMode); 
+	if ( is_array($contentScrollMode) ) arsort($contentScrollMode); 
 		
-	foreach ( $columnScroll as $columns ) :
-		if ( !is_array($columns)) $columns = array();
-		$colViews = $columns['viewed'];
-		$colTotal = $columns['total'];
-		
-		for($x=0;$x<$colViews;$x++) :
-			if ( $col[$x]['viewed'] ) : 
-				$col[$x]['viewed'] = $col[$x]['viewed'] + 1;
-			else: 
-				$col[$x]['viewed'] = 1; 
-			endif;
-		endfor;
-		
-		for($x=0;$x<$colTotal;$x++) :
-			if ( $col[$x]['total'] ) : 
-				$col[$x]['total'] = $col[$x]['total'] + 1;
-			else: 
-				$col[$x]['total'] = 1; 
-			endif;
-		endfor;	
-	endforeach;	
+	foreach ( $columnScroll as $columns=>$column ) :	
+		foreach ( $column as $col ) :		
+			if ( is_array($columnTracking) && array_key_exists($col, $columnTracking ) ) :
+				$columnTracking[$col] += 1;
+			else:
+				$columnTracking[$col] = 1;
+			endif;		
+		endforeach;		
+	endforeach;
+	if ( is_array($columnTracking) ) arsort($columnTracking); 
 	
 	$visitsTracked = count($contentTracking);
 	foreach ($contentTracking as $content) :
@@ -1926,10 +1903,8 @@ function battleplan_admin_tech_stats() {
 		echo "<li><div class='value'><b>".array_key_first($contentScrollMode)."%</b></div><div class='label'>Mode Viewed (".$contentScrollNum." pages)</div></li>";	
 		
 		echo "<br><div style='column-count:2'>";
-		foreach($col as $theCol) :
-			$colNum++;
-			$findPct = round( (($theCol['viewed'] / $theCol['total']) * 100) ,1);
-			echo "<li><div class='value'><b>".$findPct."%</b></div><div class='label'>Col #".$colNum."</div></li>";	
+		foreach($columnTracking as $theCol=>$count) :
+			echo "<li><div class='value'><b>".$count."</b></div><div class='label'>".$theCol."</div></li>";	
 		endforeach;	
 		
 		echo "</div><br><div>";
@@ -1962,7 +1937,7 @@ function battleplan_admin_tech_stats() {
 			endforeach;		
 		endfor;		
 		
-		arsort($allBrowsers);
+		if ( is_array($allBrowsers) ) arsort($allBrowsers);
 		
 		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
 		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul><li class="sub-label">Browsers</li>';	
@@ -1993,10 +1968,10 @@ function battleplan_admin_tech_stats() {
 			endforeach;		
 		endfor;		
 		
-		arsort($allResolutions); 
+		if ( is_array($allResolutions) ) arsort($allResolutions); 
 		
 		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
-		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul><li class="sub-label">Screen Widths</li>';	
+		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul><li class="sub-label">Screen Widths</li><div style="column-count:2">';	
 		
 		foreach ( $allResolutions as $resolution=>$count ) :
 			$resolution = substr($resolution, 0, strpos($resolution, 'x'));
@@ -2004,7 +1979,7 @@ function battleplan_admin_tech_stats() {
 			if ( $count > 2) echo "<li><div class='value'><b>".number_format($count,1)."%</b></div><div class='label'>".ucwords($resolution)." px</div></li>";
 		endforeach;			
 			
-		echo '</ul></div>';		
+		echo '</div></ul></div>';		
 	endforeach;	
 }
 
@@ -2017,7 +1992,7 @@ function battleplan_admin_referrer_stats() {
 		endforeach;	
 	echo '</div>';
 				
-	echo '<div class="local-visitors-buttons">'.do_shortcode('[btn size="1/5" class="local'.$GLOBALS['btn3'].'"]Local[/btn]').'</div>';	
+	echo '<div class="local-visitors-buttons">'.do_shortcode('[btn size="1/5" class="local '.$GLOBALS['btn3'].'"]Local[/btn]').'</div>';	
 	
 	foreach ( $GLOBALS['displayTerms'] as $display=>$days ) :
 		$allSources = array();
@@ -2039,7 +2014,7 @@ function battleplan_admin_referrer_stats() {
 			endforeach;		
 		endfor;		
 		
-		arsort($allSources);
+		if ( is_array($allSources) ) arsort($allSources);
 		
 		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
 		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul>';		
@@ -2070,7 +2045,7 @@ function battleplan_admin_location_stats() {
 			endforeach;		
 		endfor;		
 		
-		arsort($allLocations);
+		if ( is_array($allLocations) ) arsort($allLocations);
 		
 		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
 		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul>';		
@@ -2109,7 +2084,7 @@ function battleplan_admin_pages_stats() {
 			endforeach;		
 		endfor;		
 		
-		arsort($allPages);
+		if ( is_array($allPages) ) arsort($allPages);
 		
 		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
 		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul>';		
@@ -2384,13 +2359,10 @@ function battleplan_setImageMetaUponUpload( $post_ID ) {
 add_action( 'add_attachment', 'battleplan_addWidgetPicViewsToImg' );
 function battleplan_addWidgetPicViewsToImg( $post_ID ) {
 	if ( wp_attachment_is_image( $post_ID ) ) {		
-		updateMeta( $post_ID, 'log-views-now', strtotime("-1 day"));		
-		updateMeta( $post_ID, 'log-views-time', strtotime("-1 day"));		
-		updateMeta( $post_ID, 'log-tease-time', strtotime("-1 day"));		
+		updateMeta( $post_ID, 'log-last-viewed', strtotime("-1 day"));		
 		updateMeta( $post_ID, 'log-views-total-7day', '0' );		
 		updateMeta( $post_ID, 'log-views-total-30day', '0' );
 		updateMeta( $post_ID, 'log-views-total-90day', '0' );
-		updateMeta( $post_ID, 'log-views-total-180day', '0' );
 		updateMeta( $post_ID, 'log-views-total-365day', '0' );
 		updateMeta( $post_ID, 'log-views', array( 'date'=> strtotime(date("F j, Y")), 'views' => 0 ));					
 	} 
@@ -2634,7 +2606,7 @@ function battleplan_site_audit() {
 	
 	$siteAudit = get_option('bp_site_audit_details');
 	
-	$siteAudit = array_reverse($siteAudit);
+	if (is_array($siteAudit) )$siteAudit = array_reverse($siteAudit);
 	foreach ( $siteAudit as $date=>$auditDetails ) :
 		$siteAuditPage .= '[col class="when"]'.date("M j, Y", strtotime($date)).'[/col]';
 		foreach ( $criteria as $auditDetail ) :			

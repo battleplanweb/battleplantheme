@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 ----------------------------------------------------------------
 # Tracking code
 --------------------------------------------------------------*/
-	var ajaxURL = 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php', uniqueID = getCookie('unique-id'), uniquePage = uniqueID + getCookie('pages-viewed'); 		
+	var ajaxURL = 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php', uniqueID = getCookie('unique-id'), uniquePage = uniqueID + getCookie('pages-viewed'), pageID = $('body').attr('id'); 		
 	
 	$(window).on( 'load', function() {
 	
@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			$.post({
 				url : ajaxURL,
 				data : { action: "run_chron_jobs", admin: "false" },
-				success: function( response ) { $('#wp-admin-bar-my-account > a.ab-item').text(response.dashboard);	}
+				success: function( response ) { ajax_response(response.dashboard);	}
 			});
 
 		// Log page load speed
@@ -33,15 +33,15 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			}
 			$.post({
 				url : ajaxURL,
-				data : { action: "log_page_load_speed", id: $('body').attr('id'), loadTime: loadTime, deviceTime: deviceTime },
-				success: function( response ) { $('#wp-admin-bar-my-account > a.ab-item').text(response.dashboard);	}
+				data : { action: "log_page_load_speed", id: pageID, loadTime: loadTime, deviceTime: deviceTime },
+				success: function( response ) { ajax_response(response.dashboard);	}
 			});	
 			
 		// Initialize new user for tracking elements			
 			$.post({
 				url : ajaxURL,
 				data : { action: "track_interaction", key: 'content-tracking', track: 'visitor', uniqueID: uniqueID },
-				success: function( response ) { $('#wp-admin-bar-my-account > a.ab-item').text(response.dashboard);	}
+				success: function( response ) { ajax_response(response.dashboard);	}
 			});	
 		}, 1000);		
 
@@ -58,7 +58,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 						$.post({
 							url : ajaxURL,
 							data : { action: 'track_interaction', key: 'content-scroll-pct', scroll: scrollPct, uniqueID: uniquePage },
-							success: function( response ) { $('#wp-admin-bar-my-account > a.ab-item').text(response.dashboard);	}
+							success: function( response ) { ajax_response(response.dashboard);	}
 						});	
 						lastPct = scrollPct;
 					}
@@ -67,31 +67,34 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			}, { offset: 'bottom-in-view' });	
 
 		// Track how many people see sections/columns on site
-			var numCol = $('#wrapper-bottom > section > .flex > .col').length, colView = 0, lastView = 0;
 			$('#wrapper-bottom > section > .flex > .col').waypoint(function() {
-				colView = ($('#wrapper-bottom > section > .flex > .col').index(this.element)) + 1;				
-				setTimeout(function() {
-					if ( colView > lastView ) {
-						$.post({
-							url : ajaxURL,
-							data : { action: 'track_interaction', key: 'content-column-views', viewed: colView, total: numCol,  uniqueID: uniquePage },
-							success: function( response ) { $('#wp-admin-bar-my-account > a.ab-item').text(response.dashboard);	}
-						});	
-					};
-					lastView = colView;
-				}, (colView*10));
+				var theCol = $(this.element), theSec = $(this.element).parent().parent(), colIndex = theSec.find('.flex > .col').index( theCol ) + 1, secIndex = $('#wrapper-bottom > section').index(theSec) + 1, completeView = secIndex+'.'+colIndex;
+				$.post({
+					url : ajaxURL,
+					data : { action: 'track_interaction', key: 'content-column-views', viewed: completeView, page: pageID,  uniqueID: uniquePage },
+					success: function( response ) { ajax_response(response.dashboard);	}
+				});	
 				this.destroy();
 			}, { offset: 'bottom-in-view' });	
 		
-	// Log tease time of testimonials, random posts & random images
-			//$('#primary img.random-img, .widget:not(.hide-widget) img.random-img, #wrapper-bottom img.random-img').waypoint(function() {	
+	// Log view time of testimonials, random posts & random images
+			$('#primary img.random-img, .widget:not(.hide-widget) img.random-img, #wrapper-bottom img.random-img').waypoint(function() {	
+				var theID = $(this.element).attr('data-id');
+				$.post({
+					url : ajaxURL,
+					data : { action: "count_view", id: theID },
+					success: function( response ) { ajax_response(response.dashboard);	}
+				});				
+				this.destroy();
+			}, { offset: 'bottom-in-view' });
+			
 			$('.carousel.slider-testimonials').waypoint(function() {		
 				$(this.element).find('.testimonials-credential.testimonials-name').each(function() {
 					var theID = $(this).attr('data-id');
 					$.post({
 						url : ajaxURL,
-						data : { action: "count_teaser", id: theID },
-						success: function( response ) { $('#wp-admin-bar-my-account > a.ab-item').text(response.dashboard);	}
+						data : { action: "count_view", id: theID },
+						success: function( response ) { ajax_response(response.dashboard);	}
 					});				
 				});				
 				this.destroy();
@@ -103,7 +106,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				$.post({
 					url : ajaxURL,
 					data : { action: "track_interaction", key: 'content-tracking', track: track, uniqueID: uniqueID },
-					success: function( response ) { $('#wp-admin-bar-my-account > a.ab-item').text(response.dashboard);	}
+					success: function( response ) { ajax_response(response.dashboard);	}
 				});				
 				this.destroy();
 			}, { offset: 'bottom-in-view' });	

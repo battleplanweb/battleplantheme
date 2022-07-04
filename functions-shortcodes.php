@@ -152,7 +152,7 @@ function battleplan_getElement( $atts, $content = null ) {
 		if ( get_page_by_path( $page_slug, OBJECT, 'elements' ) ) : $page_data = get_page_by_path( $page_slug, OBJECT, 'elements' ); endif;
 	endif;
 
-	if ( $page_data && get_post_status($page_data->ID) == "publish" ) return apply_filters('the_content', $page_data->post_content); 
+	if ( $page_data && get_post_status($page_data->ID) == "publish" ) return apply_filters('the_content', $page_data->post_content); 	
 }
 
 // Returns website address (for privacy policy, etc)

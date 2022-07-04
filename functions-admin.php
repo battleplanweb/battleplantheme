@@ -1571,8 +1571,28 @@ function battleplan_remove_menus() {
 	remove_submenu_page( 'wpseo_dashboard', 'wpseo_redirects' );   					//Yoast SEO => Redirects
 
 	add_submenu_page( 'upload.php', 'Favicon', 'Favicon', 'manage_options', 'customize.php' );	
-	add_submenu_page( 'edit.php?post_type=elements', 'Menus', 'Menus', 'manage_options', 'nav-menus.php' );	
-	add_submenu_page( 'edit.php?post_type=elements', 'Widgets', 'Widgets', 'manage_options', 'widgets.php' );	
+	
+	add_submenu_page( 'edit.php?post_type=elements', 'Site Header', 'Site Header', 'manage_options', '/post.php?post='.get_page_by_path('site-header', OBJECT, 'elements')->ID.'&action=edit' );
+	
+	if ( is_null(get_page_by_path('widgets', OBJECT, 'elements')) ) :
+		add_submenu_page( 'edit.php?post_type=elements', 'Widgets', 'Widgets', 'manage_options', 'widgets.php' );
+	else:
+		add_submenu_page( 'edit.php?post_type=elements', 'Widgets', 'Widgets', 'manage_options', '/post.php?post='.get_page_by_path('widgets', OBJECT, 'elements')->ID.'&action=edit' );
+	endif;	
+	
+	if ( !is_null(get_page_by_path('site-footer', OBJECT, 'elements')) ) :
+		add_submenu_page( 'edit.php?post_type=elements', 'Site Footer', 'Site Footer', 'manage_options', '/post.php?post='.get_page_by_path('site-footer', OBJECT, 'elements')->ID.'&action=edit' );
+	endif;
+		
+	if ( !is_null(get_page_by_path('site-message', OBJECT, 'elements')) ) :
+		add_submenu_page( 'edit.php?post_type=elements', 'Site Message', 'Site Message', 'manage_options', '/post.php?post='.get_page_by_path('site-message', OBJECT, 'elements')->ID.'&action=edit' );
+	endif;
+	
+	if ( !is_null(get_page_by_path('svg', OBJECT, 'elements')) ) :
+		add_submenu_page( 'edit.php?post_type=elements', 'SVG', 'SVG', 'manage_options', '/post.php?post='.get_page_by_path('svg', OBJECT, 'elements')->ID.'&action=edit' );
+	endif;	
+
+	add_submenu_page( 'edit.php?post_type=elements', 'Menus', 'Menus', 'manage_options', 'nav-menus.php' );		
 	add_submenu_page( 'edit.php?post_type=elements', 'Contact Forms', 'Contact Forms', 'manage_options', 'admin.php?page=wpcf7' );	
 	add_submenu_page( 'edit.php?post_type=elements', 'Comments', 'Comments', 'manage_options', 'edit-comments.php' );
 	add_submenu_page( 'edit.php?post_type=elements', 'Custom Fields', 'Custom Fields', 'manage_options', 'edit.php?post_type=acf-field-group' );		

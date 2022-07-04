@@ -520,30 +520,78 @@ function battleplan_formField( $atts, $content = null ) {
 // Widgets 
 add_shortcode( 'widget', 'battleplan_buildWidget' );
 function battleplan_buildWidget( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'title'=>'Widget Title', 'hide_title'=>'true', 'lock'=>'none', 'priority'=>'2', 'image'=>'no', 'financing'=>'no', 'set'=>'none', 'class'=>'' ), $atts );
-	$title = esc_attr($a['title']);	
-	$name = strtolower(preg_replace("/[\s_]/", "-", $title));
-	$hideTitle = esc_attr($a['hide_title']);
+	$a = shortcode_atts( array( 'type'=>'basic', 'title'=>'hide', 'lock'=>'none', 'priority'=>'2', 'set'=>'none', 'class'=>'', 'show'=>'', 'hide'=>'' ), $atts );
+	$type = strtolower(preg_replace("/[\s_]/", "-", esc_attr($a['type'])));	
+	$title = esc_attr($a['title']);
 	$lock = esc_attr($a['lock']);
 	$priority = esc_attr($a['priority']);
-	$image = esc_attr($a['image']);
-	$financing = esc_attr($a['financing']);
 	$set = esc_attr($a['set']);
 	$class = esc_attr($a['class']);
+	$show = esc_attr($a['show']);
+	$hide = esc_attr($a['hide']);
+	$display = true;
+	$brand = $GLOBALS['customer_info']['site-brand'];	
 	
-	$buildClasses = 'widget widget-'.$name.' widget-priority-'.$priority;
-	if ( $image != "no" ) $buildClasses .= ' widget-image';
-	if ( $financing != "no" ) $buildClasses .= ' widget-financing';
+	if ( $type == "form" ) : $lock = "top"; $priority = '4'; $addHide = "404, contact"; endif;
+	if ( $type == "form" && $title == "hide" ) : $title = 'Service Request'; endif;
+	if ( $type == "form" && $content == null ) : $content = '[contact-form-7 title="Quote Request Form"]'; endif;
+	
+	if ( $type == "brand-logo" ) : $lock = 'top'; $priority = '4'; endif; 	
+	if ( $type == "brand-logo" && $content == null ) : $content = '[get-brand-logo]'; endif;
+	
+	if ( $type == "financing" ) : $priority = '3'; endif; 
+	
+	if ( $type == "customer-care" ) : $addClass = ' widget-image'; $addHide = 'customer-care'; endif;
+	if ( $type == "customer-care" && $content == null && ( $brand == 'american standard' || ( is_array( $brand ) && in_array( 'american standard', $brand ) ))) : $content = '[get-customer-care]'; endif;
+	
+	if ( $type == "symptom-checker" ) : $addClass = ' widget-image'; $priority = '1'; $addHide = 'symptom-checker'; endif;
+	if ( $type == "symptom-checker" && $content == null ) : $content = '[get-symptom-checker]'; endif;
+	
+	if ( $type == "credit-cards" ) : $addClass = ' widget-image'; $lock = 'bottom'; $priority = '3'; endif;
+	if ( $type == "credit-cards" && $content == null ) : $content = '[get-credit-cards]'; endif;
+	
+	if ( $type == "event" ) : $addClass = ' widget-image'; $addHide = 'event'; endif;
+
+	if ( $type == "topper" ) : $addClass = ' widget-image'; $priority = '5'; $lock = 'top';  endif;
+
+
+
+
+	if ( $hide ) : if ( $addHide ) : $hide .= ', '.$addHide; endif;
+	else: if ( $addHide ) : $hide = $addHide; endif; endif;
+
+	if ( $title != 'hide' ) $name = ' widget-'.strtolower(preg_replace("/[\s_]/", "-", $title));	
+	
+	$buildClasses = 'widget widget-'.$type.$addClass.$name.' widget-priority-'.$priority;
 	if ( $set != "none" ) $buildClasses .= ' widget-set set-'.$set;	
 	if ( $lock != "none" ) $buildClasses .= ' lock-to-'.$lock;
 	if ( $class != "" ) $buildClasses .= ' '.$class;	
 	
-	$buildWidget = '<div id="'.$name.'" class="'.$buildClasses.'">';
-	if ( $hideTitle != "true" ) $buildWidget .= '<h3 class="widget-title">'.$title.'</h3>';
-	$buildWidget .= '<div class="textwidget">'.do_shortcode($content).'</div>';
-	$buildWidget .= '</div>';
+	$buildWidget = '<div class="'.$buildClasses.'">';
+	if ( $title != "hide" ) $buildWidget .= '<h3 class="widget-title">'.$title.'</h3>';
+	$buildWidget .= '<div class="widget-content">'.do_shortcode($content).'</div>';
+	$buildWidget .= '</div>';	
+	
+	if ( $show != '' ) : 
+		$show = str_replace(" ", "", $show); 
+		$show = explode(",", $show);		
+		$display = false;
+	
+		foreach ( $show as $check ) :
+			if ( strpos( get_the_slug(), $check ) !== false ) $display = true;
+		endforeach;
+	endif;	
+	
+	if ( $hide != '' ) : 
+		$hide = str_replace(" ", "", $hide); 
+		$hide = explode(",", $hide); 
 
-	return $buildWidget;				
+		foreach ( $hide as $check ) :
+			if ( strpos( get_the_slug(), $check ) !== false || ( $check == '404' && in_array( 'error404', get_body_class() ))) $display = false; 
+		endforeach;
+	endif;
+
+	if ( $display == true) return $buildWidget;				
 }
 
 

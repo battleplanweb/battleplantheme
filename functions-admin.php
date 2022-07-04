@@ -1700,10 +1700,10 @@ function battleplan_add_dashboard_widgets() {
 }
 
 // Set up dashboard stats review
-$GLOBALS['displayTerms'] = array( 'week'=>7, 'month'=>30, 'quarter'=>90, 'year'=>365 );	
-$GLOBALS['btn1'] = get_option('bp_admin_btn1');
-$GLOBALS['btn2'] = get_option('bp_admin_btn2');
-$GLOBALS['btn3'] = get_option('bp_admin_btn3');
+$GLOBALS['displayTerms'] = array( 'week'=>7, 'month'=>30, 'quarter'=>90, 'year'=>365 );
+$GLOBALS['btn1'] = get_option('bp_admin_btn1') != null ? get_option('bp_admin_btn1') : "month";
+$GLOBALS['btn2'] = get_option('bp_admin_btn2') != null ? get_option('bp_admin_btn2') : "sessions";
+$GLOBALS['btn3'] = get_option('bp_admin_btn3') != null ? get_option('bp_admin_btn3') : "not-active";
 $siteHits = get_option('bp_site_hits');
 $today = date( "Y-m-d" );	
 $citiesToExclude = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, OR'); // also change in functions-chron-jobs.php

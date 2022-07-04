@@ -388,7 +388,8 @@ function battleplan_run_chron_jobs_ajax() {
 			$wpSEOSettings['company_name'] = get_bloginfo('name');
 			$wpSEOSettings['company_or_person'] = 'company';
 			$wpSEOSettings['stripcategorybase'] = '1';
-			$wpSEOSettings['breadcrumbs-enable'] = '1';
+			$wpSEOSettings['breadcrumbs-enable'] = '1';				
+			$wpSEOSettings['noindex-ptarchive-optimized'] = '1';			
 			$wpSEOSettings['noindex-testimonials'] = '1';
 			$wpSEOSettings['display-metabox-pt-testimonials'] = '0';
 			$wpSEOSettings['noindex-elements'] = '1';
@@ -562,7 +563,8 @@ function battleplan_run_chron_jobs_ajax() {
 		$ua_id = $GLOBALS['customer_info']['google-tags']['ua-view'];
 		$client = new BetaAnalyticsDataClient(['credentials'=>get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json']);
 		$today = $ua_end = date( "Y-m-d" );		
-		$rewind = date('Y-m-d', strtotime('-4 years'));		
+		$rewind = date('Y-m-d', strtotime('-4 years'));	
+		if ( $rewind == '1970-01-01' ) $rewind = '2005-01-02';
 		
 		$states = array('alabama'=>'AL', 'arizona'=>'AZ', 'arkansas'=>'AR', 'california'=>'CA', 'colorado'=>'CO', 'connecticut'=>'CT', 'delaware'=>'DE', 'dist of columbia'=>'DC', 'dist. of columbia'=>'DC', 'district of columbia'=>'DC', 'florida'=>'FL', 'georgia'=>'GA', 'idaho'=>'ID', 'illinois'=>'IL', 'indiana'=>'IN', 'iowa'=>'IA', 'kansas'=>'KS', 'kentucky'=>'KY', 'louisiana'=>'LA', 'maine'=>'ME', 'maryland'=>'MD', 'massachusetts'=>'MA', 'michigan'=>'MI', 'minnesota'=>'MN', 'mississippi'=>'MS', 'missouri'=>'MO', 'montana'=>'MT', 'nebraska'=>'NE', 'nevada'=>'NV', 'new hampshire'=>'NH', 'new jersey'=>'NJ', 'new mexico'=>'NM', 'new york'=>'NY', 'north carolina'=>'NC', 'north dakota'=>'ND', 'ohio'=>'OH', 'oklahoma'=>'OK', 'oregon'=>'OR', 'pennsylvania'=>'PA', 'rhode island'=>'RI', 'south carolina'=>'SC', 'south dakota'=>'SD', 'tennessee'=>'TN', 'texas'=>'TX', 'utah'=>'UT', 'vermont'=>'VT', 'virginia'=>'VA', 'washington'=>'WA', 'washington d.c.'=>'DC', 'washington dc'=>'DC', 'west virginia'=>'WV', 'wisconsin'=>'WI', 'wyoming'=>'WY');
 		$removedStates = array('alaska'=>'AK', 'hawaii'=>'HI',);
@@ -629,6 +631,7 @@ function battleplan_run_chron_jobs_ajax() {
 			endforeach;			
 			if ( is_array($analytics) ) arsort($analytics) ;			
 			$ua_end = date('Y-m-d', strtotime($analytics[0]['date']));
+			if ( $ua_end == '1970-01-01' ) $ua_end = date( "Y-m-d" );
 		endif;
 		
 // Gather UA Stats		 
@@ -663,7 +666,7 @@ function battleplan_run_chron_jobs_ajax() {
 		endif;
 		
 		if ( is_array($analytics) ) arsort($analytics);			
-		$ua_end = date('Y-m-d', strtotime($analytics[0]['date']));	
+		//$ua_end = date('Y-m-d', strtotime($analytics[0]['date']));	
 		
 // Split session data into site hits
 		foreach ( $analytics as $analyze ) :

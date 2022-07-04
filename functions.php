@@ -16,7 +16,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '12.4' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '13.0' );
 update_option( 'battleplan_framework', _BP_VERSION );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
@@ -424,24 +424,24 @@ add_filter( 'wpcf7_form_elements', 'do_shortcode' );
 add_filter( 'auto_update_theme', '__return_true' );
 add_filter( 'auto_update_plugin', '__return_true' );
 
-add_filter( 'plugin_auto_update_setting_html', 'battleplan_auto_update_setting_html', 999, 3 );
+//add_filter( 'plugin_auto_update_setting_html', 'battleplan_auto_update_setting_html', 999, 3 );
 function battleplan_auto_update_setting_html( $html, $plugin_file, $plugin_data ) {
-   	$disableAutoUpdates = [ 'ari-fancy-lightbox/ari-fancy-lightbox.php', 'admin-columns-pro/admin-columns-pro.php', 'extended-widget-options/plugin.php', 'wpseo-local/local-seo.php', 'wordpress-seo-premium/wp-seo-premium.php', 'events-calendar-pro/events-calendar-pro.php' ];
+   	//$disableAutoUpdates = [ 'ari-fancy-lightbox/ari-fancy-lightbox.php', 'admin-columns-pro/admin-columns-pro.php', 'extended-widget-options/plugin.php', 'wpseo-local/local-seo.php', 'wordpress-seo-premium/wp-seo-premium.php', 'events-calendar-pro/events-calendar-pro.php' ];
 	
-   	if ( in_array($plugin_file, $disableAutoUpdates)) $html = __( '', 'battleplan' );
-    return $html;
+   	//if ( in_array($plugin_file, $disableAutoUpdates)) $html = __( '', 'battleplan' );
+    //return $html;
 }
 
-add_filter( 'site_transient_update_plugins', 'battleplan_disable_plugin_updates', 999, 1 );
+//add_filter( 'site_transient_update_plugins', 'battleplan_disable_plugin_updates', 999, 1 );
 function battleplan_disable_plugin_updates( $value ) {
-   	$disableAutoUpdates = [ 'ari-fancy-lightbox/ari-fancy-lightbox.php', 'admin-columns-pro/admin-columns-pro.php', 'extended-widget-options/plugin.php', 'wpseo-local/local-seo.php', 'wordpress-seo-premium/wp-seo-premium.php', 'events-calendar-pro/events-calendar-pro.php' ];
+   	//$disableAutoUpdates = [ 'ari-fancy-lightbox/ari-fancy-lightbox.php', 'admin-columns-pro/admin-columns-pro.php', 'extended-widget-options/plugin.php', 'wpseo-local/local-seo.php', 'wordpress-seo-premium/wp-seo-premium.php', 'events-calendar-pro/events-calendar-pro.php' ];
 
-  	if ( isset($value) && is_object($value) ) :
-    	foreach ($disableAutoUpdates as $plugin) :
-        	if ( isset( $value->response[$plugin] ) ) unset( $value->response[$plugin] );
-        endforeach;
-  	endif;
-  return $value;
+  	//if ( isset($value) && is_object($value) ) :
+    	//foreach ($disableAutoUpdates as $plugin) :
+        	//if ( isset( $value->response[$plugin] ) ) unset( $value->response[$plugin] );
+        //endforeach;
+  	//endif;
+ // return $value;
 }
 
 // Disable update emails from WordPress
@@ -926,29 +926,30 @@ function battleplan_footer_styles() {
 // Load and enqueue remaining scripts
 add_action( 'wp_enqueue_scripts', 'battleplan_scripts', 20 );
 function battleplan_scripts() {
+	wp_enqueue_script( 'battleplan-waypoints', get_template_directory_uri().'/js/waypoints.js', array('jquery'), _BP_VERSION, false );		
+	wp_enqueue_script( 'battleplan-script-essential', get_template_directory_uri().'/js/script-essential.js', array('jquery'), _BP_VERSION, false );				
+	wp_enqueue_script( 'battleplan-script-pages', get_template_directory_uri().'/js/script-pages.js', array('jquery'), _BP_VERSION, false );				
+	
 	if ( !is_mobile() ) : 
-		wp_enqueue_script( 'battleplan-parallax', get_template_directory_uri().'/js/parallax.js', array(), _BP_VERSION, false ); 
-		wp_enqueue_script( 'battleplan-script-desktop', get_template_directory_uri().'/js/script-desktop.js', array(), _BP_VERSION, false );
+		wp_enqueue_script( 'battleplan-parallax', get_template_directory_uri().'/js/parallax.js', array('jquery'), _BP_VERSION, false ); 
+		wp_enqueue_script( 'battleplan-script-desktop', get_template_directory_uri().'/js/script-desktop.js', array('jquery'), _BP_VERSION, false );
 
-		if ( is_array($GLOBALS['customer_info']['scripts']) && in_array('magic-menu', $GLOBALS['customer_info']['scripts']) ) : wp_enqueue_script( 'battleplan-script-magic-menu', get_template_directory_uri().'/js/script-magic-menu.js', array(), _BP_VERSION, false ); endif;
+		if ( is_array($GLOBALS['customer_info']['scripts']) && in_array('magic-menu', $GLOBALS['customer_info']['scripts']) ) : wp_enqueue_script( 'battleplan-script-magic-menu', get_template_directory_uri().'/js/script-magic-menu.js', array('jquery'), _BP_VERSION, false ); endif;
 	endif;
 
-	wp_enqueue_script( 'battleplan-waypoints', get_template_directory_uri().'/js/waypoints.js', array(), _BP_VERSION, false );		
-	wp_enqueue_script( 'battleplan-script-essential', get_template_directory_uri().'/js/script-essential.js', array(), _BP_VERSION, false );				
-	wp_enqueue_script( 'battleplan-script-pages', get_template_directory_uri().'/js/script-pages.js', array(), _BP_VERSION, false );				
-	wp_enqueue_script( 'battleplan-script-site', get_stylesheet_directory_uri().'/script-site.js', array(), _BP_VERSION, false );	
-	wp_enqueue_script( 'battleplan-script-tracking', get_template_directory_uri().'/js/script-tracking.js', array(), _BP_VERSION, false ); 	
-	wp_enqueue_script( 'battleplan-script-cloudflare', get_template_directory_uri().'/js/script-cloudflare.js', array(), _BP_VERSION, false );
+	wp_enqueue_script( 'battleplan-script-site', get_stylesheet_directory_uri().'/script-site.js', array('jquery'), _BP_VERSION, false );	
+	wp_enqueue_script( 'battleplan-script-tracking', get_template_directory_uri().'/js/script-tracking.js', array('jquery'), _BP_VERSION, false ); 	
+	wp_enqueue_script( 'battleplan-script-cloudflare', get_template_directory_uri().'/js/script-cloudflare.js', array('jquery'), _BP_VERSION, false );
 
-	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { wp_enqueue_script( 'battleplan-script-events', get_template_directory_uri().'/js/events.js', array(), _BP_VERSION, false ); } 
-	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_enqueue_script( 'battleplan-script-woocommerce', get_template_directory_uri().'/js/woocommerce.js', array(), _BP_VERSION, false ); } 
-	if ( is_plugin_active( 'cue/cue.php' ) ) { wp_enqueue_script( 'battleplan-script-cue', get_template_directory_uri().'/js/cue.js', array(), _BP_VERSION, false ); } 
+	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) { wp_enqueue_script( 'battleplan-script-events', get_template_directory_uri().'/js/events.js', array('jquery'), _BP_VERSION, false ); } 
+	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { wp_enqueue_script( 'battleplan-script-woocommerce', get_template_directory_uri().'/js/woocommerce.js', array('jquery'), _BP_VERSION, false ); } 
+	if ( is_plugin_active( 'cue/cue.php' ) ) { wp_enqueue_script( 'battleplan-script-cue', get_template_directory_uri().'/js/cue.js', array('jquery'), _BP_VERSION, false ); } 
 	
-	if ( ($GLOBALS['customer_info']['site-type'] == 'profile' || (is_array($GLOBALS['customer_info']['site-type']) && in_array('profile', $GLOBALS['customer_info']['site-type']))) || ($GLOBALS['customer_info']['site-type'] == 'profiles' || (is_array($GLOBALS['customer_info']['site-type']) && in_array('profiles', $GLOBALS['customer_info']['site-type']))) ) wp_enqueue_script( 'battleplan-script-user-profiles', get_template_directory_uri().'/js/script-user-profiles.js', array(), _BP_VERSION, false ); 
+	if ( ($GLOBALS['customer_info']['site-type'] == 'profile' || (is_array($GLOBALS['customer_info']['site-type']) && in_array('profile', $GLOBALS['customer_info']['site-type']))) || ($GLOBALS['customer_info']['site-type'] == 'profiles' || (is_array($GLOBALS['customer_info']['site-type']) && in_array('profiles', $GLOBALS['customer_info']['site-type']))) ) wp_enqueue_script( 'battleplan-script-user-profiles', get_template_directory_uri().'/js/script-user-profiles.js', array('jquery'), _BP_VERSION, false ); 
 	
 	if ( _USER_LOGIN == "battleplanweb" ) :
 		wp_enqueue_style( 'battleplan-admin-css', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION );	
-		wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array(), _BP_VERSION, false );	
+		wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array('jquery'), _BP_VERSION, false );	
 	endif;
 	
 	if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) { wp_enqueue_script( 'comment-reply' ); }
@@ -990,7 +991,6 @@ require_once get_template_directory().'/functions-ajax.php';
 require_once get_template_directory().'/functions-chron-jobs.php';	
 require_once get_template_directory().'/functions-grid.php';
 require_once get_template_directory().'/functions-public.php';
-require_once get_template_directory().'/functions-widgets.php';
 require_once get_stylesheet_directory().'/functions-site.php';
 if ( is_admin() || _USER_LOGIN == "battleplanweb" ) { require_once get_template_directory().'/functions-admin.php'; } 
 
@@ -1134,7 +1134,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( "user-message" == $tag->name ) {
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
-		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','Roleplay helps develop','rank your google','TRY IT RIGHT NOW FOR FREE','house‌ ‌inspection‌ ‌process', 'write you an article','write a short article','We want to write','website home page design','updated version of your website','free sample Home Page','completely Free','Dear Receptionist','Franchise Creator','John Romney','get in touch with ownership','rebrand your business', 'what I would suggest for your website', 'Virtual Assistant Services','Would your readers','organic traffic','We do Estimation','get your site published','high quality appointments and leads','Does this sound interesting?','и','д','б','й','л','ы','З','у','Я');
+		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','Roleplay helps develop','rank your google','TRY IT RIGHT NOW FOR FREE','house‌ ‌inspection‌ ‌process', 'write you an article','write a short article','We want to write','website home page design','updated version of your website','free sample Home Page','completely Free','Dear Receptionist','Franchise Creator','John Romney','get in touch with ownership','rebrand your business', 'what I would suggest for your website', 'Virtual Assistant Services','Would your readers','organic traffic','We do Estimation','get your site published','high quality appointments and leads','Does this sound interesting?','I notice that your website is very basic','appeal to more clients','improve your sales','и','д','б','й','л','ы','З','у','Я');
 		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
 		if ( strtolower($check) == strtolower($name) ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($badwords as $badword) {

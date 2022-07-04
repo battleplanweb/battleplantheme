@@ -68,6 +68,119 @@ if ( get_option('bp_setup_2022_07_04') != "completed" ) :
 endif;		
 
 
+
+if ( get_option('bp_setup_2022_07_04b') != "completed" ) :	
+	$site = do_shortcode('[get-domain-name]');
+	
+	if ( $site == "jeffaugustine" ) update_option('bp_launch_date', '2008-04-01' );	
+	if ( $site == "jimsoldfashionservice" ) update_option('bp_launch_date', '2009-05-01' );
+	if ( $site == "nwastone" ) update_option('bp_launch_date', '2010-02-01' );
+	if ( $site == "sharpsautobodycollision" ) update_option('bp_launch_date', '2010-10-01' );	
+	if ( $site == "kin-tecindustries" ) update_option('bp_launch_date', '2010-10-01' );
+	if ( $site == "ironworkswelds" ) update_option('bp_launch_date', '2011-04-01' );
+	if ( $site == "kytykittens" ) update_option('bp_launch_date', '2012-12-01' );
+	if ( $site == "everglades-fishing" ) update_option('bp_launch_date', '2012-08-01' );	
+	if ( $site == "firesafetyflorida" ) update_option('bp_launch_date', '2013-05-01' );		
+	if ( $site == "alwaysbuyingbooks" ) update_option('bp_launch_date', '2013-05-01' );	
+	if ( $site == "gulfcoastpba" ) update_option('bp_launch_date', '2013-05-01' );
+	if ( $site == "urtfc" ) update_option('bp_launch_date', '2013-06-01' );
+	if ( $site == "millerservicearkansas" ) update_option('bp_launch_date', '2013-10-01' );
+	if ( $site == "johnstonheatingandair" ) update_option('bp_launch_date', '2013-11-01' );	
+	if ( $site == "sslheatandair" ) update_option('bp_launch_date', '2013-11-01' );
+	if ( $site == "fiasislandwoman" ) update_option('bp_launch_date', '2013-11-01' );
+	if ( $site == "forthefieldapparel" ) update_option('bp_launch_date', '2013-11-01' );
+	if ( $site == "millpondretrievers" ) update_option('bp_launch_date', '2014-02-01' );
+	if ( $site == "garlandsindoorcomfort" ) update_option('bp_launch_date', '2014-02-01' );
+	if ( $site == "advancedelectricalfl" ) update_option('bp_launch_date', '2014-03-01' );
+	if ( $site == "hillenburghvac" ) update_option('bp_launch_date', '2014-04-01' );
+	if ( $site == "siscoheatandair" ) update_option('bp_launch_date', '2014-05-01' );
+	if ( $site == "kiefhabers" ) update_option('bp_launch_date', '2014-05-01' );
+	if ( $site == "texomamaintenance" ) update_option('bp_launch_date', '2014-07-01' );
+	if ( $site == "limitouthunting" ) update_option('bp_launch_date', '2014-09-01' );
+	if ( $site == "allamericanrefrigerationhvac" ) update_option('bp_launch_date', '2014-10-01' );
+	if ( $site == "compressedairpros" ) update_option('bp_launch_date', '2014-12-01' );
+	if ( $site == "trailsidemoteldanbury" ) update_option('bp_launch_date', '2015-03-01' );
+	if ( $site == "acserviceandrepairs" ) update_option('bp_launch_date', '2015-03-01' );
+	if ( $site == "norrismechanicalshop" ) update_option('bp_launch_date', '2015-05-01' );
+	if ( $site == "alignk9" ) update_option('bp_launch_date', '2015-07-01' );
+	if ( $site == "innovativeheatandairsolutions" ) update_option('bp_launch_date', '2015-09-01' );
+	if ( $site == "claylewiselectric" ) update_option('bp_launch_date', '2015-11-01' );
+	if ( $site == "prosperair" ) update_option('bp_launch_date', '2015-11-01' );
+	if ( $site == "enidairpro" ) update_option('bp_launch_date', '2015-11-01' );
+	if ( $site == "welterinc" ) update_option('bp_launch_date', '2015-12-01' );
+	if ( $site == "markrogersheatandair" ) update_option('bp_launch_date', '2016-01-01' );
+	if ( $site == "blankenshiphvac" ) update_option('bp_launch_date', '2016-03-01' );
+	if ( $site == "actionairconditioningla" ) update_option('bp_launch_date', '2016-03-01' );
+	if ( $site == "mikelecornuheatandair" ) update_option('bp_launch_date', '2017-01-01' );
+	if ( $site == "cleanairsystemsiaq" ) update_option('bp_launch_date', '2017-02-01' );
+	if ( $site == "humphreyac" ) update_option('bp_launch_date', '2017-02-01' );
+	if ( $site == "waxahachieheatandair" ) update_option('bp_launch_date', '2017-03-01' );
+	if ( $site == "dyerservicesunlimited" ) update_option('bp_launch_date', '2017-04-01' );
+	if ( $site == "ejsheatandair" ) update_option('bp_launch_date', '2017-04-01' );
+	if ( $site == "airrighttx" ) update_option('bp_launch_date', '2017-05-01' );
+	if ( $site == "cherokeeserviceshvac" ) update_option('bp_launch_date', '2017-08-01' );
+	if ( $site == "paradisetattoofmb" ) update_option('bp_launch_date', '2017-10-01' );
+	if ( $site == "mathisair" ) update_option('bp_launch_date', '2017-12-01' );
+	if ( $site == "alfordacandheating" ) update_option('bp_launch_date', '2017-12-01' );
+	if ( $site == "mobile-detail" ) update_option('bp_launch_date', '2017-12-01' );
+	if ( $site == "firehouseheatingandair" ) update_option('bp_launch_date', '2018-01-01' );
+	if ( $site == "greenstarhvactx" ) update_option('bp_launch_date', '2018-03-01' );
+	if ( $site == "mnmair" ) update_option('bp_launch_date', '2018-04-01' );
+	if ( $site == "advantagehvacpro" ) update_option('bp_launch_date', '2018-04-01' );
+	if ( $site == "gojaric" ) update_option('bp_launch_date', '2018-05-01' );
+	if ( $site == "okairpro" ) update_option('bp_launch_date', '2018-05-01' );
+	if ( $site == "nicholsandsonshvac" ) update_option('bp_launch_date', '2018-05-01' );
+	if ( $site == "acsolutionswaco" ) update_option('bp_launch_date', '2018-08-01' );
+	if ( $site == "reyeshvacservices" ) update_option('bp_launch_date', '2018-09-01' );
+	if ( $site == "superdaveshvac" ) update_option('bp_launch_date', '2018-09-01' );
+	if ( $site == "mcmhvac" ) update_option('bp_launch_date', '2018-11-01' );
+	if ( $site == "advancedairservice" ) update_option('bp_launch_date', '2019-02-01' );
+	if ( $site == "dobbsac" ) update_option('bp_launch_date', '2019-03-01' );
+	if ( $site == "tulsa-hvac" ) update_option('bp_launch_date', '2019-04-01' );
+	if ( $site == "michaelscomfort" ) update_option('bp_launch_date', '2019-05-01' );
+	if ( $site == "jacksonsheatingandair" ) update_option('bp_launch_date', '2019-06-01' );
+	if ( $site == "crouchheatingandcooling" ) update_option('bp_launch_date', '2019-12-01' );
+	if ( $site == "aaleac" ) update_option('bp_launch_date', '2019-12-01' );
+	if ( $site == "jerryberryhvac" ) update_option('bp_launch_date', '2019-12-01' );
+	if ( $site == "jimmycarvershvac" ) update_option('bp_launch_date', '2020-01-01' );
+	if ( $site == "asairconditioning" ) update_option('bp_launch_date', '2020-02-01' );
+	if ( $site == "haywardair" ) update_option('bp_launch_date', '2020-03-01' );
+	if ( $site == "supertechheatandair" ) update_option('bp_launch_date', '2020-05-01' );
+	if ( $site == "blainservices" ) update_option('bp_launch_date', '2020-06-01' );
+	if ( $site == "commercialairdallas" ) update_option('bp_launch_date', '2020-07-01' );
+	if ( $site == "searkhvac" ) update_option('bp_launch_date', '2020-11-01' );
+	if ( $site == "liebermech" ) update_option('bp_launch_date', '2020-11-01' );
+	if ( $site == "sernaservice" ) update_option('bp_launch_date', '2020-12-01' );
+	if ( $site == "txclimatecontrol" ) update_option('bp_launch_date', '2021-01-01' );
+	if ( $site == "knightsservicecompany" ) update_option('bp_launch_date', '2021-01-01' );
+	if ( $site == "duttonhvac" ) update_option('bp_launch_date', '2021-03-01' );
+	if ( $site == "deerhollowcabins" ) update_option('bp_launch_date', '2021-03-01' );
+	if ( $site == "consumerairconditioning" ) update_option('bp_launch_date', '2021-04-01' );
+	if ( $site == "phiheatingandairconditioning" ) update_option('bp_launch_date', '2021-04-01' );
+	if ( $site == "wrightsair1945" ) update_option('bp_launch_date', '2021-05-01' );
+	if ( $site == "lovejoyhvac" ) update_option('bp_launch_date', '2021-05-01' );
+	if ( $site == "hendrylabellerecreation" ) update_option('bp_launch_date', '2021-06-01' );
+	if ( $site == "airmaxsolutions" ) update_option('bp_launch_date', '2021-08-01' );
+	if ( $site == "greaterfortmyersdogclub" ) update_option('bp_launch_date', '2021-08-01' );
+	if ( $site == "mainestonelandscape" ) update_option('bp_launch_date', '2021-09-01' );
+	if ( $site == "infinityairandelectric" ) update_option('bp_launch_date', '2021-11-01' );
+	if ( $site == "acrescue" ) update_option('bp_launch_date', '2021-12-01' );
+	if ( $site == "ucoolplano" ) update_option('bp_launch_date', '2022-02-01' );
+	if ( $site == "ozarkbusinessbrokers" ) update_option('bp_launch_date', '2022-02-01' );
+	if ( $site == "sherrellair" ) update_option('bp_launch_date', '2022-02-01' );
+	if ( $site == "delstreeservices" ) update_option('bp_launch_date', '2022-02-01' );	
+	if ( $site == "selectmechanicalservices" ) update_option('bp_launch_date', '2022-04-01' );
+	if ( $site == "bradsheatingandair" ) update_option('bp_launch_date', '2022-04-01' );
+	if ( $site == "magnoliaplumbinghvac" ) update_option('bp_launch_date', '2022-04-01' );
+	if ( $site == "chrservice.com" ) update_option('bp_launch_date', '2022-04-01' );
+	if ( $site == "fivestarheatingandac" ) update_option('bp_launch_date', '2022-05-01' );
+	if ( $site == "1callheatandair" ) update_option('bp_launch_date', '2022-06-01' );
+	if ( $site == "flatlandhvac" ) update_option('bp_launch_date', '2022-07-01' );
+
+	update_option( 'bp_setup_2022_07_04b', 'completed' );			
+endif;	
+
+
 require_once get_template_directory().'/vendor/autoload.php';
 require_once get_template_directory().'/google-api-php-client/vendor/autoload.php';
 
@@ -580,7 +693,7 @@ function battleplan_run_chron_jobs_ajax() {
 				if ( $sessions > 1 ) :			
 					$pageviews = $pageviews / $sessions;
 					$engaged = $engaged / $sessions;
-					$newUsers = $newUsers / $newUsers;
+					$newUsers = $newUsers / $sessions;
 
 					for ( $x=0;$x<$sessions;$x++) :			
 						$siteHits[] = array ('date'=>$date, 'location'=>$location, 'source'=>$source, 'medium'=>$medium, 'page'=>$page, 'browser'=>$browser, 'device'=>$device, 'pages-viewed'=>$pageviews, 'sessions'=>'1', 'engaged'=>$engaged, 'new-users'=>$newUsers );	

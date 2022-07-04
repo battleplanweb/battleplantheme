@@ -81,7 +81,7 @@
 	.logged-in #wpadminbar .ab-icon::before, 
 	.logged-in #wpadminbar .ab-item::before {
 		color: 										#15141a;
-	}
+	} 
 	
 	#wpadminbar #wp-admin-bar-my-account.with-avatar #wp-admin-bar-user-actions > li.console {
 		margin-left: 								35px;

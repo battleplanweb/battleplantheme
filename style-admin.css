@@ -854,7 +854,7 @@ body.ac-wp-media .row-actions {
 .wp-admin .flex.stats .col.notes {
 	background: 								#ffffff;
 	margin-left: 								130px;
-	width: 										calc(100% - 393px);
+	width: 										calc(100vw - 393px);
 	margin-bottom: 								5px;
 	display: 									none;
 	cursor: 									pointer;

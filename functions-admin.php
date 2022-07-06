@@ -1470,6 +1470,7 @@ function battleplan_reorderAdminBar() {
     $wp_admin_bar->remove_node('wpengine_adminbar');
 	$wp_admin_bar->remove_node('view-site');	
 	$wp_admin_bar->remove_node('wpseo-menu');	
+	$wp_admin_bar->remove_node('tribe-events');	
 }
 
 // Create additional admin pages
@@ -1572,7 +1573,7 @@ function battleplan_remove_menus() {
 
 	add_submenu_page( 'upload.php', 'Favicon', 'Favicon', 'manage_options', 'customize.php' );	
 	
-	add_submenu_page( 'edit.php?post_type=elements', 'Site Header', 'Site Header', 'manage_options', '/post.php?post='.get_page_by_path('site-header', OBJECT, 'elements')->ID.'&action=edit' );
+	add_submenu_page( 'edit.php?post_type=elements', 'Header', 'Header', 'manage_options', '/post.php?post='.get_page_by_path('site-header', OBJECT, 'elements')->ID.'&action=edit' );
 	
 	if ( is_null(get_page_by_path('widgets', OBJECT, 'elements')) ) :
 		add_submenu_page( 'edit.php?post_type=elements', 'Widgets', 'Widgets', 'manage_options', 'widgets.php' );
@@ -1581,11 +1582,11 @@ function battleplan_remove_menus() {
 	endif;	
 	
 	if ( !is_null(get_page_by_path('site-footer', OBJECT, 'elements')) ) :
-		add_submenu_page( 'edit.php?post_type=elements', 'Site Footer', 'Site Footer', 'manage_options', '/post.php?post='.get_page_by_path('site-footer', OBJECT, 'elements')->ID.'&action=edit' );
+		add_submenu_page( 'edit.php?post_type=elements', 'Footer', 'Footer', 'manage_options', '/post.php?post='.get_page_by_path('site-footer', OBJECT, 'elements')->ID.'&action=edit' );
 	endif;
 		
 	if ( !is_null(get_page_by_path('site-message', OBJECT, 'elements')) ) :
-		add_submenu_page( 'edit.php?post_type=elements', 'Site Message', 'Site Message', 'manage_options', '/post.php?post='.get_page_by_path('site-message', OBJECT, 'elements')->ID.'&action=edit' );
+		add_submenu_page( 'edit.php?post_type=elements', 'Message', 'Message', 'manage_options', '/post.php?post='.get_page_by_path('site-message', OBJECT, 'elements')->ID.'&action=edit' );
 	endif;
 	
 	if ( !is_null(get_page_by_path('svg', OBJECT, 'elements')) ) :
@@ -1796,9 +1797,7 @@ $GLOBALS['dates'] = array_keys($GLOBALS['dailyStats']);
 
 // Set up Site Visitors widget on dashboard
 function battleplan_admin_site_stats() {
-	$lastVisitTime = timeElapsed( get_option('last_visitor_time'), 2);
-	
-	
+	$lastVisitTime = timeElapsed( get_option('last_visitor_time'), 2);	
 	
 	$count = $users = $search = $pagesViewed = $sessions = $engaged = $engagement = $endOfCol = 0;
 	$days = $minDays;
@@ -2390,7 +2389,7 @@ function battleplan_addWidgetPicViewsToImg( $post_ID ) {
 
 // Force clear all views for posts/pages
 function battleplan_force_run_chron() {
-	update_option('bp_chrons_last_run', 0);	
+	update_option('bp_chrons_pages', 10000);	
 	header("Location: /wp-admin/index.php");
 	exit();
 }  
@@ -2451,7 +2450,7 @@ function battleplan_site_audit() {
 			if ( strpos(get_the_permalink(), "contact") !== false && strpos($checkContent, "map") !== false ) $serviceMap = "true";
 
 			$checkContent = $checkContent.get_post_meta( get_the_ID(), 'page-bottom_text' )[0];			
-			if ( strpos($checkContent, "[coupon") !== false ) $coupon = "true";	
+			if ( strpos($checkContent, "coupon") !== false ) $coupon = "true";	
 			if ( strpos($checkContent, "[why-choose") !== false ) $whyChoose = "true";	
 			if ( strpos($checkContent, "[get-logo-slider") !== false ) $logoSlider = "true";			
 			if ( strpos($checkContent, "[hvac-tip-of-the-month") !== false ) $tip = "true";	
@@ -2470,13 +2469,15 @@ function battleplan_site_audit() {
 			endif;
 		endforeach;
 		
-		ob_start();
-        dynamic_sidebar();
-        $sidebar_contents = ob_get_clean();
-		if ( strpos( $sidebar_contents, "[get-emergency-service") !== false ) $emergency = "true";	
-		if ( strpos( $sidebar_contents, "[get-bbb") !== false ) $bbb = "true";
-		if ( strpos( $sidebar_contents, "[get-financing") !== false || strpos($sidebar_contents, "[get-wells-fargo") !== 'false' ) $financing = "true";	
-		if ( strpos( $sidebar_contents, "[get-symptom-checker") !== false ) $symptomChecker = "true";	
+		$args = array ('posts_per_page'=>-1, 'post_type'=>'elements', 's' => 'Widgets');
+		$check_posts = new WP_Query($args);	
+		if( $check_posts->have_posts() ) : while ($check_posts->have_posts() ) : $check_posts->the_post();	
+			$checkContent = strtolower(get_the_content());	
+			if ( strpos( $checkContent, "emergency service") !== false || strpos( $checkContent, "emergency-service") !== false ) $emergency = "true";	
+			if ( strpos( $checkContent, "bbb") !== false ) $bbb = "true";
+			if ( strpos( $checkContent, "[get-financing") !== false || strpos($sidebar_contents, "[get-wells-fargo") !== 'false' ) $financing = "true";	
+			if ( strpos( $checkContent, "symptom checker") !== false || strpos( $checkContent, "symptom-checker") !== false ) $symptomChecker = "true";
+		endwhile; endif; wp_reset_postdata();
 
 		$siteAudit[$today]['coupon'] = $coupon;	
 		$siteAudit[$today]['why-choose'] = $whyChoose;	

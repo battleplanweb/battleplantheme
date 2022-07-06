@@ -12,13 +12,22 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 	var ajaxURL = 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php';			 
 		
+	window.ajax_response = function (response) {
+		console.log(response);
+		var theText = "<li class='console'>" + response + "</li>" + $('#wp-admin-bar-my-account #wp-admin-bar-user-actions').html();	
+		$('#wp-admin-bar-my-account #wp-admin-bar-user-actions').html(theText);
+		$('#wp-admin-bar-my-account > a.ab-item').text(response);
+	}
+	
 	setTimeout(function() {			
 	// Check chron jobs	
-		$.post({
-			url : ajaxURL,
-			data : { action: "run_chron_jobs", admin: "true" },
-			success: function( response ) { ajax_response(response.dashboard);	}
-		});
+		if ( $('body').hasClass('wp-admin') ) {
+			$.post({
+				url : ajaxURL,
+				data : { action: "run_chron_jobs", admin: "true" },
+				success: function( response ) { ajax_response(response.dashboard);	}
+			});
+		}
 	}, 200);
 
 	/* Allow useage of Admin Columns */
@@ -237,8 +246,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
     
 	// Contact Form icons
 	$('span.edit a').html('<i class="dashicons-edit"></i>');
-	$('span.copy a').html('<i class="dashicons-clone"></i>');
-			
-			
+	$('span.copy a').html('<i class="dashicons-clone"></i>');			
 	
 })(jQuery); });

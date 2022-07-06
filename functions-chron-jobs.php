@@ -180,6 +180,8 @@ if ( get_option('bp_setup_2022_07_04b') != "completed" ) :
 	update_option( 'bp_setup_2022_07_04b', 'completed' );			
 endif;	
 
+delete_option ('bp_chrons_last_run');
+
 
 require_once get_template_directory().'/vendor/autoload.php';
 require_once get_template_directory().'/google-api-php-client/vendor/autoload.php';
@@ -192,29 +194,21 @@ use Google\Analytics\Data\V1beta\Metric;
 add_action( 'wp_ajax_run_chron_jobs', 'battleplan_run_chron_jobs_ajax' );
 add_action( 'wp_ajax_nopriv_run_chron_jobs', 'battleplan_run_chron_jobs_ajax' );
 function battleplan_run_chron_jobs_ajax() {
-	$admin = $_POST['admin'];	
-	$runChron = "false";
+	$admin = $_POST['admin'];		
+	$bpChrons = get_option( 'bp_chrons_pages' ) != null ? get_option( 'bp_chrons_pages' ) : 0;
+	$chronViews = get_option( 'bp_chron_trigger' ) > 10 ? round(get_option( 'bp_chron_trigger' ) / 15) : 10;
 
 	if ( $admin == "true" ) : 
 		if (function_exists('battleplan_updateSiteOptions')) battleplan_updateSiteOptions();
-		$chronSpan = 3600; // every 60 min
-		$bpChrons = get_option( 'bp_chrons_last_run' );	
-		$timePast = time() - $bpChrons;		
-		if ( $timePast > $chronSpan ) : $runChron = "true";	endif;	
+		$bpChrons = $bpChrons + 2;
 	endif;
 	
-	$chronViews = get_option('bp_chron_trigger');
-	if ( $chronViews > 10 ) :
-		$chronViews = round($chronViews / 15); // get avg pageviews for 2 days
-	else:
-		$chronViews = 10;
-	endif;
-	$bpChrons = get_option( 'bp_chrons_pages' );	
-	if ( !$bpChrons ) : $bpChrons = 0; endif;
-	$pagesLeft = $chronViews - $bpChrons;		
-	if ( $pagesLeft <= 0 ) : $runChron = "true"; endif;	
-		
-	if ( $runChron == "true" || get_option('bp_setup_2022_06_26') != "completed" ) :	
+	$pagesLeft = $chronViews - $bpChrons;	
+	
+	$bpChrons++;
+	update_option( 'bp_chrons_pages', $bpChrons );	
+	
+	if ( $pagesLeft <= 0 ) :	
 
 		if (function_exists('battleplan_remove_user_roles')) battleplan_remove_user_roles();
 		if (function_exists('battleplan_create_user_roles')) battleplan_create_user_roles();
@@ -399,7 +393,8 @@ function battleplan_run_chron_jobs_ajax() {
 			$wpSEOSettings['noindex-tax-gallery-type'] = '1';	
 			$wpSEOSettings['display-metabox-tax-gallery-type'] = '0';				
 			$wpSEOSettings['noindex-tax-gallery-tags'] = '1';	
-			$wpSEOSettings['display-metabox-tax-gallery-tags'] = '0';				
+			$wpSEOSettings['display-metabox-tax-gallery-tags'] = '0';			
+			$wpSEOSettings['noindex-ptarchive-galleries'] = '1';				
 			$wpSEOSettings['noindex-tax-image-categories'] = '1';
 			$wpSEOSettings['display-metabox-tax-image-categories'] = '0';	
 			$wpSEOSettings['noindex-tax-image-tags'] = '1';	
@@ -666,7 +661,6 @@ function battleplan_run_chron_jobs_ajax() {
 		endif;
 		
 		if ( is_array($analytics) ) arsort($analytics);			
-		//$ua_end = date('Y-m-d', strtotime($analytics[0]['date']));	
 		
 // Split session data into site hits
 		foreach ( $analytics as $analyze ) :
@@ -752,21 +746,12 @@ function battleplan_run_chron_jobs_ajax() {
 			endforeach;	
 		endforeach;	
 
-		update_option( 'bp_chrons_last_run', time() );	
-		delete_option( 'bp_chrons_pages' );
 		update_option( 'bp_chrons_pages', 0 );	
 		$response = array( 'dashboard' => 'The chron has updated.' );		
 	else: 	 	
 		$response = array( 'dashboard' => 'The chron will update after '.$pagesLeft.' more pageviews.' );
 	endif;	
-
-	if ( $admin == "false" ) :
-		$bpChrons = get_option( 'bp_chrons_pages' );
-		delete_option( 'bp_chrons_pages' );
-		$bpChrons++;
-		update_option( 'bp_chrons_pages', $bpChrons );	
-	endif;
-			
+		
 	wp_send_json( $response );	
 }
 

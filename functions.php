@@ -16,7 +16,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '13.0.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '13.0.2' );
 update_option( 'battleplan_framework', _BP_VERSION );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
@@ -27,6 +27,11 @@ if ( !defined('_USER_ID') ) define( '_USER_ID', wp_get_current_user()->ID );
 if ( !defined('_PAGE_SLUG') ) :
 	if ( basename(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ) : define( '_PAGE_SLUG', basename(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ); 
 	else: define( '_PAGE_SLUG', 'home' );
+	endif;
+endif;
+if ( !defined('_PAGE_SLUG_FULL') ) :
+	if ( $_SERVER['REQUEST_URI'] ) : define( '_PAGE_SLUG_FULL', $_SERVER['REQUEST_URI'] ); 
+	else: define( '_PAGE_SLUG_FULL', 'home' );
 	endif;
 endif;
 
@@ -51,7 +56,7 @@ function is_mobile() {
     return preg_match("/(android|avantgo|blackberry|bolt|boost|cricket|docomo|fone|hiptop|mini|mobi|palm|phone|pie|tablet|up\.browser|up\.link|webos|wos)/i", $_SERVER["HTTP_USER_AGENT"]);
 }
 
-// Get slug of current page
+// Get slug of current page --- can also use _PAGE_SLUG (slug only) and _PAGE_SLUG_FULL (slug + preceding directories)
 function the_slug() {
 	$slug = basename(get_permalink());
 	do_action('before_slug', $slug);
@@ -963,10 +968,10 @@ function battleplan_scripts() {
 add_action( 'admin_enqueue_scripts', 'battleplan_admin_scripts' );
 function battleplan_admin_scripts() {
 	wp_enqueue_style( 'battleplan-admin-css', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION );	
-	wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array(), _BP_VERSION, false );	
+	wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array('jquery'), _BP_VERSION, false );	
 	if ( $GLOBALS['customer_info']['site-type'] == 'profile' || $GLOBALS['customer_info']['site-type'] == 'profiles' ) { 
-		wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array(), _BP_VERSION ); 		
-		wp_enqueue_script( 'battleplan-script-user-profiles', get_template_directory_uri().'/js/script-user-profiles.js', array(), _BP_VERSION, false ); 
+		wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array('jquery'), _BP_VERSION ); 		
+		wp_enqueue_script( 'battleplan-script-user-profiles', get_template_directory_uri().'/js/script-user-profiles.js', array('jquery'), _BP_VERSION, false ); 
 	}
 }
 

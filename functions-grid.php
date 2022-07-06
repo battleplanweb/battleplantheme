@@ -542,7 +542,7 @@ function battleplan_buildWidget( $atts, $content = null ) {
 	if ( $type == "financing" ) : $priority = '3'; endif; 
 	
 	if ( $type == "customer-care" ) : $addClass = ' widget-image'; $addHide = 'customer-care'; endif;
-	if ( $type == "customer-care" && $content == null && ( $brand == 'american standard' || ( is_array( $brand ) && in_array( 'american standard', $brand ) ))) : $content = '[get-customer-care]'; endif;
+	if ( $type == "customer-care" && $content == null && ( ( !is_array( $brand ) && $brand == 'american standard' ) || ( is_array( $brand ) && in_array( 'american standard', $brand ) ))) : $content = '[get-customer-care]'; endif;
 	
 	if ( $type == "symptom-checker" ) : $addClass = ' widget-image'; $priority = '1'; $addHide = 'symptom-checker'; endif;
 	if ( $type == "symptom-checker" && $content == null ) : $content = '[get-symptom-checker]'; endif;
@@ -578,7 +578,7 @@ function battleplan_buildWidget( $atts, $content = null ) {
 		$display = false;
 	
 		foreach ( $show as $check ) :
-			if ( strpos( get_the_slug(), $check ) !== false ) $display = true;
+			if ( strpos( _PAGE_SLUG_FULL, $check ) !== false ) $display = true;
 		endforeach;
 	endif;	
 	
@@ -587,7 +587,7 @@ function battleplan_buildWidget( $atts, $content = null ) {
 		$hide = explode(",", $hide); 
 
 		foreach ( $hide as $check ) :
-			if ( strpos( get_the_slug(), $check ) !== false || ( $check == '404' && in_array( 'error404', get_body_class() )) || ( $check == 'home' && in_array( 'home', get_body_class() ))) $display = false; 
+			if ( strpos( _PAGE_SLUG_FULL, $check ) !== false || ( $check == '404' && in_array( 'error404', get_body_class() )) || ( $check == 'home' && in_array( 'home', get_body_class() ))) $display = false; 
 		endforeach;
 	endif;
 

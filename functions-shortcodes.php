@@ -42,6 +42,27 @@ function battleplan_getBizInfo($atts, $content = null ) {
 // Returns current year
 add_shortcode( 'get-year', 'battleplan_getYear' );
 function battleplan_getYear() { return date("Y"); }
+ 
+// Returns current month
+add_shortcode( 'get-month', 'battleplan_getMonth' );
+function battleplan_getMonth($atts, $content = null) {
+	$a = shortcode_atts( array( 'style'=>'full', ), $atts );
+	$style = esc_attr($a['style']);	
+	if ( $style == "abbr" || $style == "short" ) : return date("M");	
+	elseif ( $style == "numeric" ) : return date("n");
+	else: return date("F"); endif;
+}
+ 
+// Returns current day of week
+add_shortcode( 'get-day', 'battleplan_getDay' );
+function battleplan_getDay($atts, $content = null) {
+	$a = shortcode_atts( array( 'style'=>'full', ), $atts );
+	$style = esc_attr($a['style']);	
+	if ( $style == "abbr" || $style == "short" ) : return date("D");	
+	elseif ( $style == "numeric" ) : return date("j");
+	elseif ( $style == "suffix" ) : return date("jS");	
+	else: return date("l"); endif;
+}
 
 // Get the Number of Years in Business
 add_shortcode( 'get-years', 'battleplan_getYears' );

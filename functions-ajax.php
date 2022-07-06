@@ -17,13 +17,13 @@ function battleplan_update_meta_ajax() {
 	
 	if ( $clear == "true" ) :
 		foreach ($keyArray as $key) delete_option( $key );
-		$response = array( 'dashboard' => 'Content Tracking deleted.'  );	
+		$response = array( 'dashboard' => 'Content tracking cleared'  );	
 	else:	
 		if ( $type == "site" ) update_option( $key, $value );
 		if ( $type == "user" ) update_user_meta( wp_get_current_user()->ID, $key, $value, false );
 		if ( $type == "post" || $type == "page" ) updateMeta( get_the_ID(), $key, $value );	
 
-		$response = array( 'dashboard' => 'Saved '.$value. ' to '.$key.'.'  );	
+		$response = array( 'dashboard' => 'Updated {'.$key.'} to new value {'.$value.'}' );
 	endif;
 	wp_send_json( $response );	
 }
@@ -43,25 +43,26 @@ function battleplan_track_interaction_ajax() {
 	$tracking = get_option( $key );
 	if ( !is_array($tracking) ) $tracking = array();
 	
-	if ( _USER_LOGIN != 'battleplanweb' ) :
-		if ( $scroll ) :	
-			if ( $scroll > $tracking[$uniqueID] ) :
-				unset($tracking[$uniqueID]);
-				$tracking[$uniqueID] = $scroll;
-				update_option( $key, $tracking );
-				$response = array( 'dashboard' => $uniqueID . ' scrolled '.round(($scroll*100),1). '% of content.' );
-			endif;
-		elseif ( $viewed ) :
+	if ( $scroll ) :	
+		if ( _USER_LOGIN != 'battleplanweb' && $scroll > $tracking[$uniqueID] ) :
+			unset($tracking[$uniqueID]);
+			$tracking[$uniqueID] = $scroll;
+			update_option( $key, $tracking );
+		endif;
+		$response = array( 'dashboard' => 'User scrolled '.round(($scroll*100),1). '% of content' );
+	elseif ( $viewed ) :
+		if ( _USER_LOGIN != 'battleplanweb' ) :
 			$tracking[$uniqueID][] = ucwords($page).' - '.$viewed;
 			update_option( $key, $tracking );
-			$response = array( 'dashboard' => $uniqueID . ' viewed '.ucwords($page).' - '.$viewed );
-		else:
+		endif;
+		$response = array( 'dashboard' => 'User viewed '.ucwords($page).' - '.$viewed );
+	else:
+		if ( _USER_LOGIN != 'battleplanweb' ) :
 			$tracking[$uniqueID][$track] = "true";
 			update_option( $key, $tracking );
-			$response = array( 'dashboard' => $uniqueID . ' tracked '.$track.'.' );
 		endif;
-	 endif;	
-	
+		$response = array( 'dashboard' => 'User tracked '.$track.'.' );
+	endif;
 	wp_send_json( $response );	
 }
 
@@ -143,7 +144,7 @@ function battleplan_count_view_ajax() {
 
 		$response = array( 'dashboard' => 'Logging ID #'.$theID.' as viewed. Previous view = '.date("F j, Y g:i a", $lastViewed ));
 	else:
-		$response = array( 'dashboard' => ucfirst('ID #'.$theID.' last viewed = '.$lastViewed) );
+		$response = array( 'dashboard' => 'ID #'.$theID.' last viewed = '.$lastViewed );
 	endif;	
 	wp_send_json( $response );	
 }

@@ -17,13 +17,15 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		if ( getDeviceW() <= getMobileCutoff() ) { deviceTime = "mobile"; }	
 
 	// Delay 1 second before calling the following functions 
-		setTimeout(function() {			
+		setTimeout(function() {	
 		// Check chron jobs	
-			$.post({
-				url : ajaxURL,
-				data : { action: "run_chron_jobs", admin: "false" },
-				success: function( response ) { ajax_response(response.dashboard);	}
-			});
+			if ( !$('body').hasClass('wp-admin') ) {
+				$.post({
+					url : ajaxURL,
+					data : { action: "run_chron_jobs", admin: "false" },
+					success: function( response ) { ajax_response(response.dashboard);	}
+				});
+			}
 
 		// Log page load speed
 			if ( deviceTime == "desktop" ) {

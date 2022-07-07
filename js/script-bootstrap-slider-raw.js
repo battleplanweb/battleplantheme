@@ -23,5 +23,13 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			$(this).carousel('cycle');
 		}
 	});	
+	
+// Set up "blurred" background
+	wrapDiv ( '.slider-images.slider-blur .img-slider', '<div class="img-holder"></div>', 'outside');
+	addDiv ('.slider-images.slider-blur .img-holder', '<div class="img-bg"></div>', 'after'); 
+
+	$('.slider-images.slider-blur .img-slider').each(function() {
+		$(this).parent().find('.img-bg').css({ "background":"url('"+$(this).attr('src')+"')" });			
+	});
 			
 })(jQuery); });

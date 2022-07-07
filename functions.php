@@ -16,7 +16,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '13.0.2' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '13.1' );
 update_option( 'battleplan_framework', _BP_VERSION );
 if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
 if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
@@ -127,11 +127,13 @@ function getImgMeta($id) {
 	if ( $keys = array_keys( $custom ) ) {		
 		$addMeta = "";
 		foreach ($keys as $key) :
-			$value = esc_attr(get_field( $key, $id));			
-			if ( substr($value, 0, 5) != "field" && !is_array($value) && $value != "" && $value != null && $value != "Array" ) :				
-				$key = ltrim($key, '_');
-				$key = ltrim($key, '-');
-				$addMeta .= ' data-'.$key.' = "'.$value.'"';	
+			if ( $key != "log-views" ) :
+				$value = esc_attr(get_field( $key, $id));			
+				if ( substr($value, 0, 5) != "field" && !is_array($value) && $value != "" && $value != null && $value != "Array" ) :				
+					$key = ltrim($key, '_');
+					$key = ltrim($key, '-');
+					$addMeta .= ' data-'.$key.' = "'.$value.'"';	
+				endif;
 			endif;
 		endforeach; 		
 		return $addMeta;

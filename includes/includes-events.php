@@ -17,7 +17,7 @@ https://docs.theeventscalendar.com/reference/functions/
 // display teasers of upcoming events 
 add_shortcode( 'event_teasers', 'battleplan_event_teasers' );
 function battleplan_event_teasers( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'style'=>'1', 'width'=>'default', 'grid'=>'1-1-1', 'tag'=>'featured', 'max'=>'3', 'start'=>'today', 'end'=>'', 'valign'=>'stretch', 'show_btn'=>'true', 'btn_text'=>'Read More' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'style'=>'1', 'width'=>'default', 'grid'=>'1-1-1', 'tag'=>'featured', 'max'=>'3', 'offset'=>'0', 'start'=>'today', 'end'=>'', 'valign'=>'stretch', 'show_btn'=>'true', 'btn_text'=>'Read More', 'excerpt'=>'true' ), $atts );
 	$name = esc_attr($a['name']);
 	$style = esc_attr($a['style']);
 	$width = esc_attr($a['cat']);
@@ -25,16 +25,17 @@ function battleplan_event_teasers( $atts, $content = null ) {
 	$tag = esc_attr($a['tag']);
 	$num = 0;
 	$max = esc_attr($a['max']);
-	$get = $max * 3;
+	$offset = esc_attr($a['offset']);
 	$cutoff = esc_attr($a['start']);	
 	$start = strtotime($cutoff."-7 days");
 	$end = esc_attr($a['end']);
 	$valign = esc_attr($a['valign']);
 	$showBtn = esc_attr($a['show_btn']);
 	$btnText = esc_attr($a['btn_text']);
+	$excerpt = esc_attr($a['excerpt']);
 	$buildEvents = "";
 	
-	$events = tribe_get_events( [ 'start_date' => $start, 'end_date' => $end, 'eventDisplay' => 'list', 'posts_per_page' => $get, 'tag' => $tag] );
+	$events = tribe_get_events( [ 'start_date' => $start, 'end_date' => $end, 'eventDisplay' => 'list', 'posts_per_page' => $max, 'offset' => $offset, 'tag' => $tag] );
 	
 	if ( $events ) :
 		foreach ( $events as $post ) {
@@ -46,7 +47,8 @@ function battleplan_event_teasers( $atts, $content = null ) {
 				$buildEvents .= '<p class="event-meta"><span class="tribe-event-date-start">'.tribe_get_start_date($post, false);
 				if ( tribe_get_end_date($post, false) != tribe_get_start_date( $post, false ) ) $buildEvents .= ' to '.tribe_get_end_date($post, false);			
 				if ( tribe_get_start_time($post) ) $buildEvents .= '<br/><span class="tribe-event-time-start">'.tribe_get_start_time($post) .' to '. tribe_get_end_time($post);			
-				$buildEvents .= '</p><p>'.$post->post_excerpt.'</p>';		
+				$buildEvents .= '</p>';
+				if ( $excerpt == "true" ) $buildEvents.= '<p>'.$post->post_excerpt.'</p>';		
 				$buildEvents .= '[/txt]';
 				if ( $showBtn == "true" ) $buildEvents .= '[btn link="'.esc_url(get_the_permalink($post->ID)).'"]'.$btnText.'[/btn]';			
 				$buildEvents .= '[/col]';

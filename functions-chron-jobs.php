@@ -456,6 +456,18 @@ function battleplan_run_chron_jobs_ajax() {
 		endif;
 
 // Basic Settings		
+		$update_menu_order = array ('svg'=>0, 'site-header'=>100, 'widgets'=>200, 'office-hours'=>700, 'coupon'=>700, 'site-message'=>800, 'site-footer'=>900);
+
+		foreach ($update_menu_order as $page=>$order) :
+			$updatePage = get_page_by_path($page, OBJECT, 'elements' );
+			if ( !empty( $updatePage ) ) : 
+				wp_update_post(array(
+					'ID' 			 => $updatePage->ID,
+					'menu_order'     => $order,
+				));	
+			endif;
+		endforeach;
+
 		update_option( 'blogname', $GLOBALS['customer_info']['name'] );
 		$blogDesc = '';
 		if ( $GLOBALS['customer_info']['city'] != '' ) $blogDesc .= $GLOBALS['customer_info']['city'];

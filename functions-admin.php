@@ -396,6 +396,20 @@ function battleplan_column_settings() {
 						'name'=>'date-published',
 						'label_type'=>'',
 						'search'=>'on'
+					),					
+					'menu-order'=>array(
+						'type'=>'column-order',
+						'label'=>'Order',
+						'width'=>'100',
+						'width_unit'=>'px',
+						'edit'=>'on',
+						'enable_term_creation'=>'on',
+						'sort'=>'on',
+						'filter'=>'on',
+						'filter_label'=>'',
+						'name'=>'menu-order',
+						'label_type'=>'',
+						'search'=>''
 					),
 					'attachments'=>array(
 						'type'=>'column-attachment',
@@ -1573,24 +1587,14 @@ function battleplan_remove_menus() {
 
 	add_submenu_page( 'upload.php', 'Favicon', 'Favicon', 'manage_options', 'customize.php' );	
 	
-	add_submenu_page( 'edit.php?post_type=elements', 'Header', 'Header', 'manage_options', '/post.php?post='.get_page_by_path('site-header', OBJECT, 'elements')->ID.'&action=edit' );
+	$the_query = new WP_Query( array('post_type' => 'elements', 'posts_per_page' => -1, 'orderby' => 'menu_order', 'order' => 'asc') );
+	if ( $the_query->have_posts() ) : while ( $the_query->have_posts() ) : $the_query->the_post();
+		add_submenu_page( 'edit.php?post_type=elements', get_the_title(), get_the_title(), 'manage_options', '/post.php?post='.get_the_ID().'&action=edit' );
+	endwhile; endif;			
+	wp_reset_postdata();	
 	
 	if ( is_null(get_page_by_path('widgets', OBJECT, 'elements')) ) :
 		add_submenu_page( 'edit.php?post_type=elements', 'Widgets', 'Widgets', 'manage_options', 'widgets.php' );
-	else:
-		add_submenu_page( 'edit.php?post_type=elements', 'Widgets', 'Widgets', 'manage_options', '/post.php?post='.get_page_by_path('widgets', OBJECT, 'elements')->ID.'&action=edit' );
-	endif;	
-	
-	if ( !is_null(get_page_by_path('site-footer', OBJECT, 'elements')) ) :
-		add_submenu_page( 'edit.php?post_type=elements', 'Footer', 'Footer', 'manage_options', '/post.php?post='.get_page_by_path('site-footer', OBJECT, 'elements')->ID.'&action=edit' );
-	endif;
-		
-	if ( !is_null(get_page_by_path('site-message', OBJECT, 'elements')) ) :
-		add_submenu_page( 'edit.php?post_type=elements', 'Message', 'Message', 'manage_options', '/post.php?post='.get_page_by_path('site-message', OBJECT, 'elements')->ID.'&action=edit' );
-	endif;
-	
-	if ( !is_null(get_page_by_path('svg', OBJECT, 'elements')) ) :
-		add_submenu_page( 'edit.php?post_type=elements', 'SVG', 'SVG', 'manage_options', '/post.php?post='.get_page_by_path('svg', OBJECT, 'elements')->ID.'&action=edit' );
 	endif;	
 
 	add_submenu_page( 'edit.php?post_type=elements', 'Menus', 'Menus', 'manage_options', 'nav-menus.php' );		

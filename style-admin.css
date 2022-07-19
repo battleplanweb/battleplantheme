@@ -269,12 +269,13 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
     overflow: 									hidden;
 }
 
-#dashboard-widgets #battleplan_tech_stats.postbox {
-	max-height: 								780px;
+#dashboard-widgets #battleplan_tech_stats.postbox,
+#dashboard-widgets #battleplan_content_stats.postbox {
+	max-height: 								860px;
 }
 
 #dashboard-widgets #battleplan_pages_stats.postbox {
-    max-height: 								680px;
+    max-height: 								506px;
 }
 
 #dashboard-widgets .postbox.active,
@@ -815,7 +816,7 @@ body.ac-wp-media .row-actions {
 }
 
 .wp-admin .flex.stats:not(.hvac) .col.site-elements {
-	grid-column:								span 14;
+	grid-column:								span 13;
 }
 
 .wp-admin .flex.stats.hvac .col.site-elements {

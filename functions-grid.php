@@ -520,7 +520,7 @@ function battleplan_formField( $atts, $content = null ) {
 // Widgets 
 add_shortcode( 'widget', 'battleplan_buildWidget' );
 function battleplan_buildWidget( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'type'=>'basic', 'title'=>'hide', 'lock'=>'none', 'priority'=>'2', 'set'=>'none', 'class'=>'', 'show'=>'', 'hide'=>'' ), $atts );
+	$a = shortcode_atts( array( 'type'=>'basic', 'title'=>'hide', 'lock'=>'none', 'priority'=>'2', 'set'=>'none', 'class'=>'', 'show'=>'', 'hide'=>'', 'start'=>'', 'end'=>''), $atts );
 	$type = strtolower(preg_replace("/[\s_]/", "-", esc_attr($a['type'])));	
 	$title = esc_attr($a['title']);
 	$lock = esc_attr($a['lock']);
@@ -529,6 +529,14 @@ function battleplan_buildWidget( $atts, $content = null ) {
 	$class = esc_attr($a['class']);
 	$show = esc_attr($a['show']);
 	$hide = esc_attr($a['hide']);
+	$start = strtotime(esc_attr($a['start']));
+	$end = strtotime(esc_attr($a['end']));	
+	if ( $start || $end ) {
+		$now = time(); 
+		if ( $start && $now < $start ) return null;
+		if ( $end && $now > $end ) return null;		
+	}
+
 	$display = true;
 	$brand = $GLOBALS['customer_info']['site-brand'];	
 	
@@ -553,45 +561,52 @@ function battleplan_buildWidget( $atts, $content = null ) {
 	if ( $type == "event" ) : $addClass = ' widget-image'; $addHide = 'event'; endif;
 
 	if ( $type == "topper" ) : $addClass = ' widget-image'; $priority = '5'; $lock = 'top';  endif;
-
-
-
-
-	if ( $hide ) : if ( $addHide ) : $hide .= ', '.$addHide; endif;
-	else: if ( $addHide ) : $hide = $addHide; endif; endif;
-
-	if ( $title != 'hide' ) $name = ' widget-'.strtolower(preg_replace("/[\s_]/", "-", $title));	
 	
-	$buildClasses = 'widget widget-'.$type.$addClass.$name.' widget-priority-'.$priority;
-	if ( $set != "none" ) $buildClasses .= ' widget-set set-'.$set;	
-	if ( $lock != "none" ) $buildClasses .= ' lock-to-'.$lock;
-	if ( $class != "" ) $buildClasses .= ' '.$class;	
-	
-	$buildWidget = '<div class="'.$buildClasses.'">';
-	if ( $title != "hide" ) $buildWidget .= '<h3 class="widget-title">'.$title.'</h3>';
-	$buildWidget .= '<div class="widget-content">'.do_shortcode($content).'</div>';
-	$buildWidget .= '</div>';	
-	
-	if ( $show != '' ) : 
-		$show = str_replace(" ", "", $show); 
-		$show = explode(",", $show);		
-		$display = false;
-	
-		foreach ( $show as $check ) :
-			if ( strpos( _PAGE_SLUG_FULL, $check ) !== false ) $display = true;
-		endforeach;
-	endif;	
-	
-	if ( $hide != '' ) : 
-		$hide = str_replace(" ", "", $hide); 
-		$hide = explode(",", $hide); 
+	if ( $type == "filler" ) : $priority = '5'; $content = "&nbsp;"; endif;	
 
-		foreach ( $hide as $check ) :
-			if ( strpos( _PAGE_SLUG_FULL, $check ) !== false || ( $check == '404' && in_array( 'error404', get_body_class() )) || ( $check == 'home' && in_array( 'home', get_body_class() ))) $display = false; 
-		endforeach;
+	if ( $type == "menu" ) :		
+		$buildWidget = '<div id="desktop-navigation" class="widget widget-navigation widget-priority-5 lock-to-top widget_nav_menu hide-1 hide-2 hide-2 " data-priority="5">';
+		$buildWidget .= wp_nav_menu ( array ( 'echo' => false, 'container' => 'div', 'container_class' => 'menu-main-menu-container', 'menu_id' => 'main-menu-menu', 'menu_class' => 'menu', 'theme_location' =>'widget-menu', 'walker' => new Aria_Walker_Nav_Menu(), ) );
+		$buildWidget .= '</div>';
+
+		return $buildWidget;
+	else:
+		if ( $hide ) : if ( $addHide ) : $hide .= ', '.$addHide; endif;
+		else: if ( $addHide ) : $hide = $addHide; endif; endif;
+
+		if ( $title != 'hide' ) $name = ' widget-'.strtolower(preg_replace("/[\s_]/", "-", $title));	
+
+		$buildClasses = 'widget widget-'.$type.$addClass.$name.' widget-priority-'.$priority;
+		if ( $set != "none" ) $buildClasses .= ' widget-set set-'.$set;	
+		if ( $lock != "none" ) $buildClasses .= ' lock-to-'.$lock;
+		if ( $class != "" ) $buildClasses .= ' '.$class;	
+
+		$buildWidget = '<div class="'.$buildClasses.'">';
+		if ( $title != "hide" ) $buildWidget .= '<h3 class="widget-title">'.$title.'</h3>';
+		$buildWidget .= '<div class="widget-content">'.do_shortcode($content).'</div>';
+		$buildWidget .= '</div>';	
+
+		if ( $show != '' ) : 
+			$show = str_replace(" ", "", $show); 
+			$show = explode(",", $show);		
+			$display = false;
+
+			foreach ( $show as $check ) :
+				if ( strpos( _PAGE_SLUG_FULL, $check ) !== false ) $display = true;
+			endforeach;
+		endif;	
+
+		if ( $hide != '' ) : 
+			$hide = str_replace(" ", "", $hide); 
+			$hide = explode(",", $hide); 
+
+			foreach ( $hide as $check ) :
+				if ( strpos( _PAGE_SLUG_FULL, $check ) !== false || ( $check == '404' && in_array( 'error404', get_body_class() )) || ( $check == 'home' && in_array( 'home', get_body_class() ))) $display = false; 
+			endforeach;
+		endif;
+
+		if ( $display == true) return $buildWidget;	
 	endif;
-
-	if ( $display == true) return $buildWidget;				
 }
 
 

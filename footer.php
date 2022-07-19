@@ -81,7 +81,9 @@
 
 <?php wp_footer(); ?>
 
-<?php if ( get_page_by_path( 'svg', OBJECT, 'elements' ) ) echo '<div id="include-svg">'.do_shortcode('[get-element slug="svg"]').'</div>'; ?>
+<?php //if ( get_page_by_path( 'svg', OBJECT, 'elements' ) ) echo '<div id="include-svg">'.do_shortcode('[get-element slug="svg"]').'</div>'; ?>
+
+<?php if ( shortcode_exists( 'get-svg' ) ) echo '<div id="include-svg">'.do_shortcode('[get-svg]').'</div>' ?>
 
 </body>
 </html>

@@ -13,7 +13,7 @@ get_header(); ?>
 		<article class="<?php echo $class;?>">
 			
 			<?php				
-				$headlines = array("Well, that's embarrassing.", "We took a wrong turn.", "Something went wrong.", "Don't panic.", "Keep calm.", "Oops... our mistake.", "Hmmmmm... interesting.", "Blame the website guy.", "Well, this is unfortunate.");
+				$headlines = array("Well, this is embarrassing.", "We took a wrong turn.", "Something went wrong.", "Don't panic.", "Keep calm.", "Oops... our mistake.", "Hmmmmm... interesting.", "Blame the website guy.", "Well, this is unfortunate.", "Houston, we have a problem.", "We hit a wall.", "This page was shredded.");
 				
 				$num = count($headlines) - 1;				
 				$rand = rand(0,$num);

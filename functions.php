@@ -16,14 +16,13 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '13.2' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '13.3' );
 update_option( 'battleplan_framework', _BP_VERSION );
-if ( !defined('_SET_ALT_TEXT_TO_TITLE') ) define( '_SET_ALT_TEXT_TO_TITLE', 'false' );
-if ( !defined('_BP_COUNT_ALL_VISITS') ) define( '_BP_COUNT_ALL_VISITS', 'false' );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
 if ( !defined('_USER_LOGIN') ) define( '_USER_LOGIN', wp_get_current_user()->user_login );
 if ( !defined('_USER_ID') ) define( '_USER_ID', wp_get_current_user()->ID );
+
 if ( !defined('_PAGE_SLUG') ) :
 	if ( basename(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ) : define( '_PAGE_SLUG', basename(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ); 
 	else: define( '_PAGE_SLUG', 'home' );

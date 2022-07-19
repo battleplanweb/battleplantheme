@@ -13,175 +13,33 @@
 # Chron Jobs
 --------------------------------------------------------------*/
 
-if ( get_option('bp_setup_2022_07_04') != "completed" ) :	
 
-	delete_option('content-scroll-pct');
-	delete_option('content-column-views');
-	delete_option('content-tracking');
-	delete_option('bp_daily_stats'); 
-	delete_option('bp_referrer_stats_100'); 
-	delete_option('bp_location_stats_100'); 
-	delete_option('bp_page_stats_100'); 
-	delete_option('bp_tech_stats_100'); 
-	delete_option('bp_referrer_stats_250'); 
-	delete_option('bp_location_stats_250'); 
-	delete_option('bp_page_stats_250'); 
-	delete_option('bp_tech_stats_250'); 
-	delete_option('bp_referrer_stats_500'); 
-	delete_option('bp_location_stats_500'); 
-	delete_option('bp_page_stats_500'); 
-	delete_option('bp_tech_stats_500'); 
-	delete_option('bp_referrer_stats'); 
-	delete_option('bp_location_stats');  
-	delete_option('bp_page_stats'); 
-	delete_option('bp_tech_stats'); 
-	delete_option( 'bp_setup_2022_05_02' );
-	delete_option( 'bp_setup_2022_06_26' );
-	delete_option( 'bp_setup_2022_06_30' );
-	delete_option( 'bp_setup_2022_07_03' );			
-	delete_option( 'bp_setup_2022_07_03b' );				
-	delete_option( 'bp_setup_2022_07_03c' );			
-	delete_option( 'bp_setup_2022_07_03d' );			
+	delete_option('bp_site_debug');		
+		
 
+// delete all options that begin with {$prefix}
+function battleplan_delete_prefixed_options( $prefix ) {
 	global $wpdb;
-	$results = $wpdb->get_results(" SELECT * FROM $wpdb->postmeta WHERE meta_key = '_wp_attachment_metadata' AND meta_value LIKE '%width%' ");
-	foreach($results as $result) {
-		updateMeta( $result->post_id, 'log-last-viewed', strtotime("-1 day"));
-		deleteMeta( $result->post_id, 'log-views-now');		
-		deleteMeta( $result->post_id, 'log-views-time');
-		deleteMeta( $result->post_id, 'log-tease-time');
-		deleteMeta( $result->post_id, 'log-views-total-180day');		
-	}
-	
-	$results = $wpdb->get_results(" SELECT * FROM $wpdb->postmeta WHERE meta_key = 'testimonial_name' ");
-	foreach($results as $result) {
-		updateMeta( $result->post_id, 'log-last-viewed', strtotime("-1 day"));
-		deleteMeta( $result->post_id, 'log-views-now');		
-		deleteMeta( $result->post_id, 'log-views-time');
-		deleteMeta( $result->post_id, 'log-tease-time');
-		deleteMeta( $result->post_id, 'log-views-total-180day');		
-	}
+	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
+}	
 
-	update_option( 'bp_setup_2022_07_04', 'completed' );			
-	
-	require_once get_template_directory().'/includes/includes-mass-site-update.php';
-endif;		
+if ( get_option('bp_setup_2022_07_19') != "completed" ) :
+	delete_option( 'mobmenu_options' );				
+	delete_option( 'amazon_ai_polly_enable' );			
+	delete_option( 'amazon_polly_podcast_enabled' );			
+	delete_option( 'amazon_polly_valid_keys' );			
+	delete_option( 'Activated_phoenix_media_rename' );			
+	delete_option( 'bp_chron_trigger' );			
+	delete_option( 'bp_setup_2022_07_04' );	
+	delete_option( 'bp_setup_2022_07_04b' );	
+				
+	battleplan_delete_prefixed_options( 'monsterinsights' );
+	battleplan_delete_prefixed_options( 'googlesitekit' );	
+	battleplan_delete_prefixed_options( 'smush-' );
+	battleplan_delete_prefixed_options( 'snapshot-' );
 
-
-
-if ( get_option('bp_setup_2022_07_04b') != "completed" ) :	
-	$site = do_shortcode('[get-domain-name]');
-	
-	if ( $site == "jeffaugustine" ) update_option('bp_launch_date', '2008-04-01' );	
-	if ( $site == "jimsoldfashionservice" ) update_option('bp_launch_date', '2009-05-01' );
-	if ( $site == "nwastone" ) update_option('bp_launch_date', '2010-02-01' );
-	if ( $site == "sharpsautobodycollision" ) update_option('bp_launch_date', '2010-10-01' );	
-	if ( $site == "kin-tecindustries" ) update_option('bp_launch_date', '2010-10-01' );
-	if ( $site == "ironworkswelds" ) update_option('bp_launch_date', '2011-04-01' );
-	if ( $site == "kytykittens" ) update_option('bp_launch_date', '2012-12-01' );
-	if ( $site == "everglades-fishing" ) update_option('bp_launch_date', '2012-08-01' );	
-	if ( $site == "firesafetyflorida" ) update_option('bp_launch_date', '2013-05-01' );		
-	if ( $site == "alwaysbuyingbooks" ) update_option('bp_launch_date', '2013-05-01' );	
-	if ( $site == "gulfcoastpba" ) update_option('bp_launch_date', '2013-05-01' );
-	if ( $site == "urtfc" ) update_option('bp_launch_date', '2013-06-01' );
-	if ( $site == "millerservicearkansas" ) update_option('bp_launch_date', '2013-10-01' );
-	if ( $site == "johnstonheatingandair" ) update_option('bp_launch_date', '2013-11-01' );	
-	if ( $site == "sslheatandair" ) update_option('bp_launch_date', '2013-11-01' );
-	if ( $site == "fiasislandwoman" ) update_option('bp_launch_date', '2013-11-01' );
-	if ( $site == "forthefieldapparel" ) update_option('bp_launch_date', '2013-11-01' );
-	if ( $site == "millpondretrievers" ) update_option('bp_launch_date', '2014-02-01' );
-	if ( $site == "garlandsindoorcomfort" ) update_option('bp_launch_date', '2014-02-01' );
-	if ( $site == "advancedelectricalfl" ) update_option('bp_launch_date', '2014-03-01' );
-	if ( $site == "hillenburghvac" ) update_option('bp_launch_date', '2014-04-01' );
-	if ( $site == "siscoheatandair" ) update_option('bp_launch_date', '2014-05-01' );
-	if ( $site == "kiefhabers" ) update_option('bp_launch_date', '2014-05-01' );
-	if ( $site == "texomamaintenance" ) update_option('bp_launch_date', '2014-07-01' );
-	if ( $site == "limitouthunting" ) update_option('bp_launch_date', '2014-09-01' );
-	if ( $site == "allamericanrefrigerationhvac" ) update_option('bp_launch_date', '2014-10-01' );
-	if ( $site == "compressedairpros" ) update_option('bp_launch_date', '2014-12-01' );
-	if ( $site == "trailsidemoteldanbury" ) update_option('bp_launch_date', '2015-03-01' );
-	if ( $site == "acserviceandrepairs" ) update_option('bp_launch_date', '2015-03-01' );
-	if ( $site == "norrismechanicalshop" ) update_option('bp_launch_date', '2015-05-01' );
-	if ( $site == "alignk9" ) update_option('bp_launch_date', '2015-07-01' );
-	if ( $site == "innovativeheatandairsolutions" ) update_option('bp_launch_date', '2015-09-01' );
-	if ( $site == "claylewiselectric" ) update_option('bp_launch_date', '2015-11-01' );
-	if ( $site == "prosperair" ) update_option('bp_launch_date', '2015-11-01' );
-	if ( $site == "enidairpro" ) update_option('bp_launch_date', '2015-11-01' );
-	if ( $site == "welterinc" ) update_option('bp_launch_date', '2015-12-01' );
-	if ( $site == "markrogersheatandair" ) update_option('bp_launch_date', '2016-01-01' );
-	if ( $site == "blankenshiphvac" ) update_option('bp_launch_date', '2016-03-01' );
-	if ( $site == "actionairconditioningla" ) update_option('bp_launch_date', '2016-03-01' );
-	if ( $site == "mikelecornuheatandair" ) update_option('bp_launch_date', '2017-01-01' );
-	if ( $site == "cleanairsystemsiaq" ) update_option('bp_launch_date', '2017-02-01' );
-	if ( $site == "humphreyac" ) update_option('bp_launch_date', '2017-02-01' );
-	if ( $site == "waxahachieheatandair" ) update_option('bp_launch_date', '2017-03-01' );
-	if ( $site == "dyerservicesunlimited" ) update_option('bp_launch_date', '2017-04-01' );
-	if ( $site == "ejsheatandair" ) update_option('bp_launch_date', '2017-04-01' );
-	if ( $site == "airrighttx" ) update_option('bp_launch_date', '2017-05-01' );
-	if ( $site == "cherokeeserviceshvac" ) update_option('bp_launch_date', '2017-08-01' );
-	if ( $site == "paradisetattoofmb" ) update_option('bp_launch_date', '2017-10-01' );
-	if ( $site == "mathisair" ) update_option('bp_launch_date', '2017-12-01' );
-	if ( $site == "alfordacandheating" ) update_option('bp_launch_date', '2017-12-01' );
-	if ( $site == "mobile-detail" ) update_option('bp_launch_date', '2017-12-01' );
-	if ( $site == "firehouseheatingandair" ) update_option('bp_launch_date', '2018-01-01' );
-	if ( $site == "greenstarhvactx" ) update_option('bp_launch_date', '2018-03-01' );
-	if ( $site == "mnmair" ) update_option('bp_launch_date', '2018-04-01' );
-	if ( $site == "advantagehvacpro" ) update_option('bp_launch_date', '2018-04-01' );
-	if ( $site == "gojaric" ) update_option('bp_launch_date', '2018-05-01' );
-	if ( $site == "okairpro" ) update_option('bp_launch_date', '2018-05-01' );
-	if ( $site == "nicholsandsonshvac" ) update_option('bp_launch_date', '2018-05-01' );
-	if ( $site == "acsolutionswaco" ) update_option('bp_launch_date', '2018-08-01' );
-	if ( $site == "reyeshvacservices" ) update_option('bp_launch_date', '2018-09-01' );
-	if ( $site == "superdaveshvac" ) update_option('bp_launch_date', '2018-09-01' );
-	if ( $site == "mcmhvac" ) update_option('bp_launch_date', '2018-11-01' );
-	if ( $site == "advancedairservice" ) update_option('bp_launch_date', '2019-02-01' );
-	if ( $site == "dobbsac" ) update_option('bp_launch_date', '2019-03-01' );
-	if ( $site == "tulsa-hvac" ) update_option('bp_launch_date', '2019-04-01' );
-	if ( $site == "michaelscomfort" ) update_option('bp_launch_date', '2019-05-01' );
-	if ( $site == "jacksonsheatingandair" ) update_option('bp_launch_date', '2019-06-01' );
-	if ( $site == "crouchheatingandcooling" ) update_option('bp_launch_date', '2019-12-01' );
-	if ( $site == "aaleac" ) update_option('bp_launch_date', '2019-12-01' );
-	if ( $site == "jerryberryhvac" ) update_option('bp_launch_date', '2019-12-01' );
-	if ( $site == "jimmycarvershvac" ) update_option('bp_launch_date', '2020-01-01' );
-	if ( $site == "asairconditioning" ) update_option('bp_launch_date', '2020-02-01' );
-	if ( $site == "haywardair" ) update_option('bp_launch_date', '2020-03-01' );
-	if ( $site == "supertechheatandair" ) update_option('bp_launch_date', '2020-05-01' );
-	if ( $site == "blainservices" ) update_option('bp_launch_date', '2020-06-01' );
-	if ( $site == "commercialairdallas" ) update_option('bp_launch_date', '2020-07-01' );
-	if ( $site == "searkhvac" ) update_option('bp_launch_date', '2020-11-01' );
-	if ( $site == "liebermech" ) update_option('bp_launch_date', '2020-11-01' );
-	if ( $site == "sernaservice" ) update_option('bp_launch_date', '2020-12-01' );
-	if ( $site == "txclimatecontrol" ) update_option('bp_launch_date', '2021-01-01' );
-	if ( $site == "knightsservicecompany" ) update_option('bp_launch_date', '2021-01-01' );
-	if ( $site == "duttonhvac" ) update_option('bp_launch_date', '2021-03-01' );
-	if ( $site == "deerhollowcabins" ) update_option('bp_launch_date', '2021-03-01' );
-	if ( $site == "consumerairconditioning" ) update_option('bp_launch_date', '2021-04-01' );
-	if ( $site == "phiheatingandairconditioning" ) update_option('bp_launch_date', '2021-04-01' );
-	if ( $site == "wrightsair1945" ) update_option('bp_launch_date', '2021-05-01' );
-	if ( $site == "lovejoyhvac" ) update_option('bp_launch_date', '2021-05-01' );
-	if ( $site == "hendrylabellerecreation" ) update_option('bp_launch_date', '2021-06-01' );
-	if ( $site == "airmaxsolutions" ) update_option('bp_launch_date', '2021-08-01' );
-	if ( $site == "greaterfortmyersdogclub" ) update_option('bp_launch_date', '2021-08-01' );
-	if ( $site == "mainestonelandscape" ) update_option('bp_launch_date', '2021-09-01' );
-	if ( $site == "infinityairandelectric" ) update_option('bp_launch_date', '2021-11-01' );
-	if ( $site == "acrescue" ) update_option('bp_launch_date', '2021-12-01' );
-	if ( $site == "ucoolplano" ) update_option('bp_launch_date', '2022-02-01' );
-	if ( $site == "ozarkbusinessbrokers" ) update_option('bp_launch_date', '2022-02-01' );
-	if ( $site == "sherrellair" ) update_option('bp_launch_date', '2022-02-01' );
-	if ( $site == "delstreeservices" ) update_option('bp_launch_date', '2022-02-01' );	
-	if ( $site == "selectmechanicalservices" ) update_option('bp_launch_date', '2022-04-01' );
-	if ( $site == "bradsheatingandair" ) update_option('bp_launch_date', '2022-04-01' );
-	if ( $site == "magnoliaplumbinghvac" ) update_option('bp_launch_date', '2022-04-01' );
-	if ( $site == "chrservice.com" ) update_option('bp_launch_date', '2022-04-01' );
-	if ( $site == "fivestarheatingandac" ) update_option('bp_launch_date', '2022-05-01' );
-	if ( $site == "1callheatandair" ) update_option('bp_launch_date', '2022-06-01' );
-	if ( $site == "flatlandhvac" ) update_option('bp_launch_date', '2022-07-01' );
-
-	update_option( 'bp_setup_2022_07_04b', 'completed' );			
+	update_option( 'bp_setup_2022_07_19', 'completed' );			
 endif;	
-
-delete_option ('bp_chrons_last_run');
-
 
 require_once get_template_directory().'/vendor/autoload.php';
 require_once get_template_directory().'/google-api-php-client/vendor/autoload.php';
@@ -196,14 +54,13 @@ add_action( 'wp_ajax_nopriv_run_chron_jobs', 'battleplan_run_chron_jobs_ajax' );
 function battleplan_run_chron_jobs_ajax() {
 	$admin = $_POST['admin'];		
 	$bpChrons = get_option( 'bp_chrons_pages' ) != null ? get_option( 'bp_chrons_pages' ) : 0;
-	$chronViews = get_option( 'bp_chron_trigger' ) > 10 ? round(get_option( 'bp_chron_trigger' ) / 15) : 10;
 
 	if ( $admin == "true" ) : 
 		if (function_exists('battleplan_updateSiteOptions')) battleplan_updateSiteOptions();
 		$bpChrons = $bpChrons + 2;
 	endif;
 	
-	$pagesLeft = $chronViews - $bpChrons;	
+	$pagesLeft = 25 - $bpChrons;	
 	
 	$bpChrons++;
 	update_option( 'bp_chrons_pages', $bpChrons );	
@@ -212,43 +69,6 @@ function battleplan_run_chron_jobs_ajax() {
 
 		if (function_exists('battleplan_remove_user_roles')) battleplan_remove_user_roles();
 		if (function_exists('battleplan_create_user_roles')) battleplan_create_user_roles();
-
-// delete all options that begin with {$prefix}
-		function battleplan_delete_prefixed_options( $prefix ) {
-			global $wpdb;
-			$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
-		}	
-		
-// ARI FancyBox Settings Update
-		if ( is_plugin_active('ari-fancy-lightbox/ari-fancy-lightbox.php') ) : 
-		    //delete_option( 'ari_fancy_lightbox_settings' );
-			
-			/*
-			$wpARISettings = get_option( 'ari_fancy_lightbox_settings' );
-			$wpARISettings['convert']['wp_gallery']['convert'] = true;			
-			$wpARISettings['convert']['wp_gallery']['grouping'] = true;
-			
-			$wpARISettings['convert']['images']['convert'] = true;			
-			$wpARISettings['convert']['images']['post_grouping'] = true;
-			$wpARISettings['convert']['images']['grouping_selector'] = '.gallery$$A';		
-			$wpARISettings['convert']['images']['filenameToTitle'] = true;		
-			$wpARISettings['convert']['images']['convertNameSmart'] = true;		
-					
-			$wpARISettings['lightbox']['thumbs']['autoStart'] = false;	
-			$wpARISettings['lightbox']['loop'] = true;		
-			$wpARISettings['lightbox']['arrows'] = true;			
-			$wpARISettings['lightbox']['closeClickOutside'] = true;	
-			$wpARISettings['lightbox']['keyboard'] = true;	
-			$wpARISettings['lightbox']['touch_enabled'] = true;			
-			$wpARISettings['lightbox']['autoFocus'] = true;		
-			$wpARISettings['lightbox']['infobar'] = true;		
-			$wpARISettings['lightbox']['trapFocus'] = false;	
-			
-			$wpARISettings['lightbox']['thumbs']['hideOnClose'] = false;		
-			$wpARISettings['advanced']['load_scripts_in_footer'] = true;						
-			update_option( 'ari_fancy_lightbox_settings', $wpARISettings ); 
-			*/
-		endif;
 
 // WP Mail SMTP Settings Update
 		if ( is_plugin_active('wp-mail-smtp/wp_mail_smtp.php') ) : 	
@@ -284,59 +104,6 @@ function battleplan_run_chron_jobs_ajax() {
 			endforeach;
 		endif;
 		
-// Widget Options - Extended Settings
-		if ( is_plugin_active('extended-widget-options/plugin.php') ) :
-			$widgetOpts = get_option( 'widgetopts_settings' );
-
-			$widgetOpts['settings']['visibility']['post_type'] = '1';
-			$widgetOpts['settings']['visibility']['taxonomies'] = '1';
-			$widgetOpts['settings']['visibility']['misc'] = '1';		
-
-			$widgetOpts['settings']['classes']['id'] = '1';
-			$widgetOpts['settings']['classes']['type'] = 'both';
-			$widgetOpts['settings']['classes']['classlists']['0'] = 'lock-to-top';
-			$widgetOpts['settings']['classes']['classlists']['1'] = 'lock-to-bottom';
-			$widgetOpts['settings']['classes']['classlists']['2'] = 'widget-essential';
-			$widgetOpts['settings']['classes']['classlists']['3'] = 'widget-important';
-			$widgetOpts['settings']['classes']['classlists']['4'] = 'remove-first';
-			$widgetOpts['settings']['classes']['classlists']['5'] = 'widget-image';
-			$widgetOpts['settings']['classes']['classlists']['6'] = 'widget-financing';
-			$widgetOpts['settings']['classes']['classlists']['7'] = 'widget-set';
-
-			$widgetOpts['settings']['dates']['days'] = '1';		
-			$widgetOpts['settings']['dates']['date_range'] = '1';		
-
-			$widgetOpts['visibility'] = 'activate';		
-			$widgetOpts['devices'] = 'deactivate';
-			$widgetOpts['urls'] = 'activate';
-			$widgetOpts['alignment'] = 'deactivate';
-			$widgetOpts['hide_title'] = 'activate';
-			$widgetOpts['classes'] = 'activate';
-			$widgetOpts['logic'] = 'deactivate';
-			$widgetOpts['move'] = 'deactivate';
-			$widgetOpts['clone'] = 'activate';
-			$widgetOpts['links'] = 'deactivate';
-			$widgetOpts['fixed'] = 'deactivate';
-			$widgetOpts['columns'] = 'deactivate';
-			$widgetOpts['roles'] = 'deactivate';			
-			$widgetOpts['state'] = 'deactivate';
-			$widgetOpts['dates'] = 'activate';			
-			$widgetOpts['styling'] = 'deactivate';
-			$widgetOpts['animation'] = 'deactivate';
-			$widgetOpts['taxonomies'] = 'deactivate';
-			$widgetOpts['disable_widgets'] = 'deactivate';
-			$widgetOpts['permission'] = 'deactivate';
-			$widgetOpts['shortcodes'] = 'deactivate';		
-			$widgetOpts['cache'] = 'deactivate';
-			$widgetOpts['search'] = 'deactivate';
-			$widgetOpts['widget_area'] = 'deactivate';		
-			$widgetOpts['import_export'] = 'deactivate';
-			$widgetOpts['elementor'] = 'deactivate';
-			$widgetOpts['beaver'] = 'deactivate';
-			$widgetOpts['acf'] = 'deactivate';						
-			update_option( 'widgetopts_settings', $widgetOpts );
-		endif;	
-
 // Yoast SEO Settings Update
 		if ( is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') ) :		
 			$wpSEOSettings = get_option( 'wpseo_titles' );		
@@ -454,9 +221,21 @@ function battleplan_run_chron_jobs_ajax() {
 			$wpSEOLocal['address_format'] = 'address-state-postal';
 			update_option( 'wpseo_local', $wpSEOLocal );
 		endif;
+		
+// Widget Options - Extended Settings
+		if ( !is_plugin_active('extended-widget-options/plugin.php') ) :
+		
+			delete_option( 'bp_setup_widget_options_initial' );			
+		
+			battleplan_delete_prefixed_options( '_extended_widgetopts' );
+			battleplan_delete_prefixed_options( '_transient_widgetopts' );
+			battleplan_delete_prefixed_options( '_widgetopts' );
+			battleplan_delete_prefixed_options( 'widgetopts' );
+			battleplan_delete_prefixed_options( 'widget_' );			
+		endif;
 
 // Basic Settings		
-		$update_menu_order = array ('svg'=>0, 'site-header'=>100, 'widgets'=>200, 'office-hours'=>700, 'coupon'=>700, 'site-message'=>800, 'site-footer'=>900);
+		$update_menu_order = array ('site-header'=>100, 'widgets'=>200, 'office-hours'=>700, 'coupon'=>700, 'site-message'=>800, 'site-footer'=>900);
 
 		foreach ($update_menu_order as $page=>$order) :
 			$updatePage = get_page_by_path($page, OBJECT, 'elements' );
@@ -569,9 +348,18 @@ function battleplan_run_chron_jobs_ajax() {
 		$ga4_id = $GLOBALS['customer_info']['google-tags']['prop-id'];
 		$ua_id = $GLOBALS['customer_info']['google-tags']['ua-view'];
 		$client = new BetaAnalyticsDataClient(['credentials'=>get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json']);
-		$today = $ua_end = date( "Y-m-d" );		
-		$rewind = date('Y-m-d', strtotime('-4 years'));	
-		if ( $rewind == '1970-01-01' ) $rewind = '2005-01-02';
+		$today = $ua_end = date( "Y-m-d" );	
+		$rewind = get_option('bp_chrons_rewind') ? get_option('bp_chrons_rewind') : date('Y-m-d', strtotime('-3 years'));
+		if ( $rewind == '1970-01-01' ) $rewind = '2019-01-01';
+		
+		$prevHits = get_option('bp_site_hits');		
+		foreach ( $prevHits as $hit=>$data ) :
+			if ( strtotime($data['date'] ) >= strtotime($rewind) ) :
+				unset($prevHits[$hit]);
+			else:
+				break;
+			endif;				
+		endforeach;	
 		
 		$states = array('alabama'=>'AL', 'arizona'=>'AZ', 'arkansas'=>'AR', 'california'=>'CA', 'colorado'=>'CO', 'connecticut'=>'CT', 'delaware'=>'DE', 'dist of columbia'=>'DC', 'dist. of columbia'=>'DC', 'district of columbia'=>'DC', 'florida'=>'FL', 'georgia'=>'GA', 'idaho'=>'ID', 'illinois'=>'IL', 'indiana'=>'IN', 'iowa'=>'IA', 'kansas'=>'KS', 'kentucky'=>'KY', 'louisiana'=>'LA', 'maine'=>'ME', 'maryland'=>'MD', 'massachusetts'=>'MA', 'michigan'=>'MI', 'minnesota'=>'MN', 'mississippi'=>'MS', 'missouri'=>'MO', 'montana'=>'MT', 'nebraska'=>'NE', 'nevada'=>'NV', 'new hampshire'=>'NH', 'new jersey'=>'NJ', 'new mexico'=>'NM', 'new york'=>'NY', 'north carolina'=>'NC', 'north dakota'=>'ND', 'ohio'=>'OH', 'oklahoma'=>'OK', 'oregon'=>'OR', 'pennsylvania'=>'PA', 'rhode island'=>'RI', 'south carolina'=>'SC', 'south dakota'=>'SD', 'tennessee'=>'TN', 'texas'=>'TX', 'utah'=>'UT', 'vermont'=>'VT', 'virginia'=>'VA', 'washington'=>'WA', 'washington d.c.'=>'DC', 'washington dc'=>'DC', 'west virginia'=>'WV', 'wisconsin'=>'WI', 'wyoming'=>'WY');
 		$removedStates = array('alaska'=>'AK', 'hawaii'=>'HI',);
@@ -716,7 +504,8 @@ function battleplan_run_chron_jobs_ajax() {
 				endif;
 			endif;
 		endforeach;
-				
+		
+		if ( $prevHits ) $siteHits = $siteHits + $prevHits;					
 		update_option('bp_site_hits', $siteHits);
 		
 	// Compile hits on specific pages
@@ -758,7 +547,9 @@ function battleplan_run_chron_jobs_ajax() {
 			endforeach;	
 		endforeach;	
 
-		update_option( 'bp_chrons_pages', 0 );	
+		update_option( 'bp_chrons_pages', 0 );
+		update_option( 'bp_chrons_rewind', date('Y-m-d', strtotime("-2 days")));
+				
 		$response = array( 'dashboard' => 'The chron has updated.' );		
 	else: 	 	
 		$response = array( 'dashboard' => 'The chron will update after '.$pagesLeft.' more pageviews.' );

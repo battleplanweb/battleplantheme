@@ -31,11 +31,9 @@ function battleplan_add_quicktags() {
 	if ( wp_script_is( 'quicktags' ) ) { ?>
 		<script type="text/javascript">
 			QTags.addButton( 'bp_paragraph', 'p', '<p>', '</p>\n', 'p', 'Paragraph Tag', 1 );
-			QTags.addButton( 'bp_li', 'li', ' <li>', '</li>', 'li', 'List Item', 100 );
+			QTags.addButton( 'bp_li', 'li', ' <li>', '</li>', 'li', 'List Item', 100 );			
 			
-			
-			QTags.addButton( 'bp_widget', 'widget', '[widget title="Brand Logo" hide_title="true, false" lock="none, top, bottom" priority="1, 2, 3, 4, 5" image="no, yes" financing="no, yes" set="none, param"]\n', '[/widget]\n\n', 'widget', 'Widget', 1000 );		
-
+			QTags.addButton( 'bp_widget', 'widget', '[widget title="Brand Logo" hide_title="true, false" lock="none, top, bottom" priority="1, 2, 3, 4, 5" image="no, yes" financing="no, yes" set="none, param"]\n', '[/widget]\n\n', 'widget', 'Widget', 1000 );	
 
 			QTags.addButton( 'bp_section', 'section', '[section name="becomes id attribute" hash="compensation for scroll on one-page sites" style="corresponds to css" width="default, stretch, full, edge, inline" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '[/section]\n\n', 'section', 'Section', 1000 );		
 			QTags.addButton( 'bp_layout', 'layout', ' [layout grid="1-auto, 1-1-1-1, 5e, content, 80px 100px 1fr" break="none, 3, 4" valign="start, stretch, center, end" class=""]\n\n', ' [/layout]\n', 'layout', 'Layout', 1000 );
@@ -1504,7 +1502,7 @@ add_filter('admin_footer_text', 'battleplan_admin_footer_text');
 function battleplan_admin_footer_text() { 
 	$printFooter = '<div style="float:left; margin-right:8px;"><img src="https://battleplanwebdesign.com/wp-content/uploads/site-icon-80x80.png" /></div>';
 	$printFooter .= '<div style="float:left; margin-top:8px;">Powered by <a href="https://battleplanwebdesign.com" target="_blank">Battle Plan Web Design</a><br>';
-	$printFooter .= 'Site Audit: '.date('F j, Y', strtotime(get_option( 'site_updated' ))).'<br>'; 
+	if ( _USER_LOGIN == "battleplanweb" ) $printFooter .= 'Site Audit: '.date("F j, Y", strtotime(get_option( "site_updated" ))).'<br>'; 
 	$printFooter .= 'Framework '._BP_VERSION.'<br>';
 	$printFooter .= 'WP '.get_bloginfo('version').'<br></div>';	
 	
@@ -1692,16 +1690,19 @@ function battleplan_remove_dashboard_widgets () {
 // Add new dashboard widgets
 add_action( 'wp_dashboard_setup', 'battleplan_add_dashboard_widgets' );
 function battleplan_add_dashboard_widgets() {
-	add_meta_box( 'battleplan_site_stats', 'Site Visitors', 'battleplan_admin_site_stats', 'dashboard', 'normal', 'high' );				
-	add_meta_box( 'battleplan_tech_stats', 'Tech Info', 'battleplan_admin_tech_stats', 'dashboard', 'normal', 'high' );		
+	if ( _USER_LOGIN == "battleplanweb" ) :
+		add_meta_box( 'battleplan_site_stats', 'Site Visitors', 'battleplan_admin_site_stats', 'dashboard', 'normal', 'high' );
+		add_meta_box( 'battleplan_referrer_stats', 'Referrers', 'battleplan_admin_referrer_stats', 'dashboard', 'normal', 'high' );
+		add_meta_box( 'battleplan_location_stats', 'Locations', 'battleplan_admin_location_stats', 'dashboard', 'normal', 'high' );
+		add_meta_box( 'battleplan_tech_stats', 'Tech Info', 'battleplan_admin_tech_stats', 'dashboard', 'normal', 'high' );	
 
-	add_meta_box( 'battleplan_referrer_stats', 'Referrers', 'battleplan_admin_referrer_stats', 'dashboard', 'side', 'high' );	
-	add_meta_box( 'battleplan_location_stats', 'Locations', 'battleplan_admin_location_stats', 'dashboard', 'side', 'high' );
-	add_meta_box( 'battleplan_pages_stats', 'Most Popular Pages', 'battleplan_admin_pages_stats', 'dashboard', 'side', 'high' );
-	
-	add_meta_box( 'battleplan_weekly_stats', 'Weekly Visitor Trends', 'battleplan_admin_weekly_stats', 'dashboard', 'column3', 'high' );		
-	add_meta_box( 'battleplan_monthly_stats', 'Monthly Visitor Trends', 'battleplan_admin_monthly_stats', 'dashboard', 'column3', 'high' );		
-	add_meta_box( 'battleplan_quarterly_stats', 'Quarterly Visitor Trends', 'battleplan_admin_quarterly_stats', 'dashboard', 'column3', 'high' );
+		add_meta_box( 'battleplan_pages_stats', 'Most Popular Pages', 'battleplan_admin_pages_stats', 'dashboard', 'side', 'high' );
+		add_meta_box( 'battleplan_content_stats', 'Content Visibility', 'battleplan_admin_content_stats', 'dashboard', 'side', 'high' );
+
+		add_meta_box( 'battleplan_weekly_stats', 'Weekly Visitor Trends', 'battleplan_admin_weekly_stats', 'dashboard', 'column3', 'high' );		
+		add_meta_box( 'battleplan_monthly_stats', 'Monthly Visitor Trends', 'battleplan_admin_monthly_stats', 'dashboard', 'column3', 'high' );		
+		add_meta_box( 'battleplan_quarterly_stats', 'Quarterly Visitor Trends', 'battleplan_admin_quarterly_stats', 'dashboard', 'column3', 'high' );
+	endif;
 }
 
 // Set up dashboard stats review
@@ -1844,9 +1845,111 @@ function battleplan_admin_site_stats() {
 	echo '<tr><td>&nbsp;</td></tr></table>';
 }
 
+// Set up Content Info widget on dashboard
+function battleplan_admin_content_stats() {
+
+// Scrolling Pct
+	$contentTracking = get_option('content-tracking');
+	if ( !is_array($contentTracking) ) $contentTracking = array();
+	$columnScroll = get_option('content-column-views');
+	if ( !is_array($columnScroll) ) $columnScroll = array();	
+	$contentScroll = get_option('content-scroll-pct');
+	if ( !is_array($contentScroll) ) $contentScroll = array();
+	$contentScrollNum = count($contentScroll);	
+	$contentScrollTotal = array_sum($contentScroll);	
+	if ($contentScrollNum > 0) $contentScrollMean = ( $contentScrollTotal / $contentScrollNum ) * 100;
+
+	foreach ($contentScroll as $key=>$scroll) :
+		$scroll = (round($scroll,1) * 100);
+		if ( $scroll == 100 ) $contentViz[0]++;
+		if ( $scroll >= 85 ) $contentViz[1]++;
+		if ( $scroll >= 70 ) $contentViz[2]++;
+		if ( $scroll < 15 ) $contentViz[3]++;
+	endforeach;
+		
+	$visitsTracked = count($contentTracking);
+	foreach ($contentTracking as $content) :
+		foreach ($content as $key=>$tracking) :	
+			if ( $tracking == "true" ) : $count = 1; else: $count = 0; endif;
+			if ( is_array($allTracking) && array_key_exists($key, $allTracking ) ) :
+				$allTracking[$key] += $count;
+			else:
+				$allTracking[$key] = $count;
+			endif;		
+		endforeach;
+	endforeach;
+	if ( is_array($allTracking) ) arsort($allTracking); 
+			
+	foreach ( $columnScroll as $columns=>$column ) :	
+		foreach ( $column as $col ) :		
+			if ( is_array($columnTracking) && array_key_exists($col, $columnTracking ) ) :
+				$columnTracking[$col] += 1;
+			else:
+				$columnTracking[$col] = 1;
+			endif;		
+		endforeach;		
+	endforeach;
+	if ( is_array($columnTracking) ) arsort($columnTracking); 
+			
+	echo '<div><ul><li class="sub-label">Last '.number_format($contentScrollNum).' Pageviews</li>';
+		echo "<li><div class='value'><b>".number_format((round($contentViz[0]/$contentScrollNum,3) * 100),1)."%</b></div><div class='label'><b>viewed ALL of main content</b></div></li>";	
+		echo "<li><div class='value'><b>".(round($contentViz[1]/$contentScrollNum,3) * 100)."%</b></div><div class='label'><b>viewed at least 85% of main content</b></div></li>";	
+		echo "<li><div class='value'><b>".(round($contentViz[2]/$contentScrollNum,3) * 100)."%</b></div><div class='label'><b>viewed at least 70% of main content</b></div></li>";	
+		echo "<li><div class='value'><b>".(round($contentViz[3]/$contentScrollNum,3) * 100)."%</b></div><div class='label'><b>viewed less than 15% of main content</b></div></li>";	
+	
+	echo '</ul><ul><li class="sub-label">Components</li>';
+		
+	foreach($allTracking as $track=>$count) :
+		if ( $track == "visitor" ) : $totalTracks = $count;
+		else:
+			$findPct = round( (($count / $totalTracks) * 100), 1);
+			echo "<li><div class='value'><b>".$findPct."%</b></div><div class='label'>".ucwords($track)."</div></li>";	
+			update_option('pct-viewed-'.$track, $findPct);
+		endif;
+	endforeach;		
+
+	echo '</ul><ul><li class="sub-label">Best Column Positions</li>';
+
+		echo "<div style='column-count:2'>";
+		foreach($columnTracking as $theCol=>$count) :
+			echo "<li><div class='value'><b>".$count."</b></div><div class='label'>".$theCol."</div></li>";	
+		endforeach;			
+		echo "</div>";		
+		
+	echo '</ul><a href="#" class="clear-content-tracking">Clear</a></div>';
+}
 
 // Set up Tech Info widget on dashboard
 function battleplan_admin_tech_stats() {
+//Browser
+	foreach ( $GLOBALS['displayTerms'] as $display=>$days ) :
+		$allBrowsers = array();
+		for ($x = 0; $x < $days; $x++) :	
+			$theDate = $GLOBALS['dates'][$x];
+			$browsers = $GLOBALS['dailyStats'][$theDate]['browser'];	
+			
+			foreach ( $browsers as $browser=>$counts ) :			
+				if ( is_array($allBrowsers) && array_key_exists($browser, $allBrowsers ) ) :
+					$allBrowsers[$browser] += $counts;
+				else:
+					$allBrowsers[$browser] = $counts;
+				endif;		
+			endforeach;		
+		endfor;		
+		
+		if ( is_array($allBrowsers) ) arsort($allBrowsers);
+		
+		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
+		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul><li class="sub-label">Browsers</li>';	
+		
+		foreach ( $allBrowsers as $browser=>$count ) :
+			$count = ($count / array_sum($allBrowsers)) * 100;	
+			if ( $count > 3) echo "<li><div class='value'><b>".number_format($count,1)."%</b></div><div class='label'>".ucwords($browser)."</div></li>";
+		endforeach;			
+			
+		echo '</ul></div>';		
+	endforeach;		
+
 // Devices
 	foreach ( $GLOBALS['displayTerms'] as $display=>$days ) :
 		$allDevices = array();
@@ -1875,99 +1978,6 @@ function battleplan_admin_tech_stats() {
 			if ( $device == "tablet" ) $speed = '';		
 		
 			echo "<li><div class='value'><b>".number_format($count,1)."%</b></div><div class='label-half'>".ucwords($device)."</div><div class='label-half'>".$speed."</div></li>";
-		endforeach;			
-			
-		echo '</ul></div>';		
-	endforeach;		
-	
-// Scrolling Pct
-	$contentTracking = get_option('content-tracking');
-	if ( !is_array($contentTracking) ) $contentTracking = array();
-	$columnScroll = get_option('content-column-views');
-	if ( !is_array($columnScroll) ) $columnScroll = array();	
-	$contentScroll = get_option('content-scroll-pct');
-	if ( !is_array($contentScroll) ) $contentScroll = array();
-	$contentScrollNum = count($contentScroll);	
-	$contentScrollTotal = array_sum($contentScroll);	
-	if ($contentScrollNum > 0) $contentScrollMean = ( $contentScrollTotal / $contentScrollNum ) * 100;
-
-	foreach ($contentScroll as $key=>$scroll) :
-		$contentScrollValues .= (round($scroll,1) * 100) .',';
-	endforeach;
-	
-	$contentScrollMode = array_count_values(explode(",", $contentScrollValues));  
-	if ( is_array($contentScrollMode) ) arsort($contentScrollMode); 
-		
-	foreach ( $columnScroll as $columns=>$column ) :	
-		foreach ( $column as $col ) :		
-			if ( is_array($columnTracking) && array_key_exists($col, $columnTracking ) ) :
-				$columnTracking[$col] += 1;
-			else:
-				$columnTracking[$col] = 1;
-			endif;		
-		endforeach;		
-	endforeach;
-	if ( is_array($columnTracking) ) arsort($columnTracking); 
-	
-	$visitsTracked = count($contentTracking);
-	foreach ($contentTracking as $content) :
-		foreach ($content as $key=>$tracking) :	
-			if ( $tracking == "true" ) : $count = 1; else: $count = 0; endif;
-			if ( is_array($allTracking) && array_key_exists($key, $allTracking ) ) :
-				$allTracking[$key] += $count;
-			else:
-				$allTracking[$key] = $count;
-			endif;		
-		endforeach;
-	endforeach;
-			
-	echo '<div><ul><li class="sub-label">Content</li>';
-		echo "<li><div class='value'><b>".number_format($contentScrollMean,1)."%</b></div><div class='label'>Mean Viewed (".$contentScrollNum." pages)</div></li>";		
-		echo "<li><div class='value'><b>".array_key_first($contentScrollMode)."%</b></div><div class='label'>Mode Viewed (".$contentScrollNum." pages)</div></li>";	
-		
-		echo "<br><div style='column-count:2'>";
-		foreach($columnTracking as $theCol=>$count) :
-			echo "<li><div class='value'><b>".$count."</b></div><div class='label'>".$theCol."</div></li>";	
-		endforeach;	
-		
-		echo "</div><br><div>";
-		
-		foreach($allTracking as $track=>$count) :
-			if ( $track == "visitor" ) : $totalTracks = $count;
-			else:
-				$findPct = round( (($count / $totalTracks) * 100), 1);
-				echo "<li><div class='value'><b>".$findPct."%</b></div><div class='label'>".ucwords($track)."</div></li>";	
-				update_option('pct-viewed-'.$track, $findPct);
-			endif;
-		endforeach;		
-		echo "</div>";		
-		
-	echo '</ul><a href="#" class="clear-content-tracking">Clear</a></div>';
-
-//Browser
-	foreach ( $GLOBALS['displayTerms'] as $display=>$days ) :
-		$allBrowsers = array();
-		for ($x = 0; $x < $days; $x++) :	
-			$theDate = $GLOBALS['dates'][$x];
-			$browsers = $GLOBALS['dailyStats'][$theDate]['browser'];	
-			
-			foreach ( $browsers as $browser=>$counts ) :			
-				if ( is_array($allBrowsers) && array_key_exists($browser, $allBrowsers ) ) :
-					$allBrowsers[$browser] += $counts;
-				else:
-					$allBrowsers[$browser] = $counts;
-				endif;		
-			endforeach;		
-		endfor;		
-		
-		if ( is_array($allBrowsers) ) arsort($allBrowsers);
-		
-		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
-		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul><li class="sub-label">Browsers</li>';	
-		
-		foreach ( $allBrowsers as $browser=>$count ) :
-			$count = ($count / array_sum($allBrowsers)) * 100;	
-			if ( $count > 3) echo "<li><div class='value'><b>".number_format($count,1)."%</b></div><div class='label'>".ucwords($browser)."</div></li>";
 		endforeach;			
 			
 		echo '</ul></div>';		
@@ -2112,8 +2122,6 @@ function battleplan_admin_pages_stats() {
 		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
 		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul>';		
 		echo '<li class="sub-label" style="column-span: all">Last '.number_format(array_sum($allPages)).' Pageviews</li>';	
-		
-		if ( $display == "month" ) update_option('bp_chron_trigger', array_sum($allPages));
 		
 		foreach ( $allPages as $page=>$count ) :
 			if ( $page == "" ) :
@@ -2395,7 +2403,7 @@ function battleplan_addWidgetPicViewsToImg( $post_ID ) {
 function battleplan_force_run_chron() {
 	update_option('bp_chrons_pages', 10000);	
 	header("Location: /wp-admin/index.php");
-	exit();
+//	exit();
 }  
 
 // Keep logs of site audits

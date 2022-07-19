@@ -22,16 +22,17 @@ function battleplan_getBizInfo($atts, $content = null ) {
 	if ( $data == "area" ) return $GLOBALS['customer_info']['area-before'].$GLOBALS['customer_info']['area'].$GLOBALS['customer_info']['area-after'];
 	
 	if ( strpos($data, 'phone') !== false ) :
-		$phoneFull = $GLOBALS['customer_info']['area'].'-'.$GLOBALS['customer_info']['phone'];
+		$phoneBasic = $GLOBALS['customer_info']['area'].'-'.$GLOBALS['customer_info']['phone'];
+		$phoneFormat = $GLOBALS['customer_info']['area-before'].$GLOBALS['customer_info']['area'].$GLOBALS['customer_info']['area-after'].$GLOBALS['customer_info']['phone'];		
 		if ( strpos($data, 'mm-bar-phone') !== false ) :
 			$phoneFormat = '<div class="mm-bar-btn mm-bar-phone call-btn" aria-hidden="true"></div><span class="sr-only">Call Us</span>';	
-		else:
-			$phoneFormat = $GLOBALS['customer_info']['area-before'].$GLOBALS['customer_info']['area'].$GLOBALS['customer_info']['area-after'].$GLOBALS['customer_info']['phone'];	
+		elseif ( strpos($data, 'alt') !== false ) :
+			$phoneFormat = $GLOBALS['customer_info'][$data];	
 		endif;
-		if  ( strpos($data, '-notrack') !== false ):
-			return '<a class="phone-link" href="tel:1-'.$phoneFull.'">'.$phoneFormat.'</a>';
+		if ( strpos($data, '-notrack') !== false ):
+			return '<a class="phone-link" href="tel:1-'.$phoneBasic.'">'.$phoneFormat.'</a>';
 		else:
-			return '<a href="#" class="phone-link track-clicks" data-action="phone call" data-url="tel:1-'.$phoneFull.'">'.$phoneFormat.'</a>';
+			return '<a href="#" class="phone-link track-clicks" data-action="phone call" data-url="tel:1-'.$phoneBasic.'">'.$phoneFormat.'</a>';
 		endif;
 	endif;
 
@@ -487,13 +488,6 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	
 		$buildImg = do_shortcode('[img size="'.$picSize.'" class="image-'.$type.'" link="'.$linkLoc.'" '.$picADA.']'.get_the_post_thumbnail( get_the_ID(), $size, array( 'class'=>'img-archive img-'.$type.$googleTag, 'style'=>'aspect-ratio:'.$thumbW.'/'.$thumbH )).'[/img]'); 
 		if ( $textSize == "" ) : $textSize = getTextSize($picSize); endif;
-	
-		if ( _SET_ALT_TEXT_TO_TITLE == "yes" ) :
-			$attachment_id = get_post_thumbnail_id( get_the_ID() );
-			if ( readMeta( $attachment_id, '_wp_attachment_image_alt', true ) == "" ) :
-				updateMeta( $attachment_id, '_wp_attachment_image_alt', esc_html(get_the_title()) );
-			endif;
-		endif;	
 	
 	elseif ( $noPic != "false") : 	
 		$buildImg = do_shortcode("[img size='".$picSize."' class='image-".$type." block-placeholder placeholder-".$type."' link='".$linkLoc."' ".$picADA."]".wp_get_attachment_image( $noPic, $size, array( 'class'=>'img-archive img-'.$type.$googleTag ))."[/img]"); 

@@ -1510,7 +1510,7 @@ function battleplan_admin_footer_text() {
 	$printFooter .= get_option('customer_info')['area-before'].get_option('customer_info')['area'].get_option('customer_info')['area-after'].get_option('customer_info')['phone'].'<br>';
 	$printFooter .= get_option('customer_info')['street'].'<br>';
 	$printFooter .= get_option('customer_info')['city'].', '.get_option('customer_info')['state-abbr'].' '.get_option('customer_info')['zip'].'<br>';
-	if ( get_option('customer_info')['lat'] ) $printFooter .= get_option('customer_info')['lat'].', '.get_option('customer_info')['long'].', '.get_option('customer_info')['radius'].'<br>';	
+	if ( get_option('customer_info')['lat'] ) $printFooter .= get_option('customer_info')['lat'].', '.get_option('customer_info')['long'].'<br>';	
 	$printFooter .= '</div><div style="float:right; margin-right: 50px">';
 	
 	if ( get_option('customer_info')['pid'] ) $printFooter .= '<b>PID:</b> <a href = "https://search.google.com/local/writereview?placeid='.get_option('customer_info')['pid'].'" target="_blank">'.get_option('customer_info')['pid'].'</a><br>';
@@ -1710,7 +1710,10 @@ $GLOBALS['displayTerms'] = array( 'week'=>7, 'month'=>30, 'quarter'=>90, 'year'=
 $GLOBALS['btn1'] = get_option('bp_admin_btn1') != null ? get_option('bp_admin_btn1') : "month";
 $GLOBALS['btn2'] = get_option('bp_admin_btn2') != null ? get_option('bp_admin_btn2') : "sessions";
 $GLOBALS['btn3'] = get_option('bp_admin_btn3') != null ? get_option('bp_admin_btn3') : "not-active";
-$siteHits = get_option('bp_site_hits');
+//$siteHits = get_option('bp_site_hits');
+
+$siteHits = get_option('bp_site_hits_ga4') + get_option('bp_site_hits_ua');
+
 $today = date( "Y-m-d" );	
 $citiesToExclude = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, OR'); // also change in functions-chron-jobs.php
 
@@ -1890,12 +1893,19 @@ function battleplan_admin_content_stats() {
 		endforeach;		
 	endforeach;
 	if ( is_array($columnTracking) ) arsort($columnTracking); 
+	
+	if ( $contentScrollNum != 0 ) :
+		$contentAll = number_format((round($contentViz[0]/$contentScrollNum,3) * 100),1);
+		$content85 = number_format((round($contentViz[1]/$contentScrollNum,3) * 100),1);
+		$content70 = number_format((round($contentViz[2]/$contentScrollNum,3) * 100),1);
+		$content15 = number_format((round($contentViz[3]/$contentScrollNum,3) * 100),1);
+	endif;
 			
 	echo '<div><ul><li class="sub-label">Last '.number_format($contentScrollNum).' Pageviews</li>';
-		echo "<li><div class='value'><b>".number_format((round($contentViz[0]/$contentScrollNum,3) * 100),1)."%</b></div><div class='label'><b>viewed ALL of main content</b></div></li>";	
-		echo "<li><div class='value'><b>".(round($contentViz[1]/$contentScrollNum,3) * 100)."%</b></div><div class='label'><b>viewed at least 85% of main content</b></div></li>";	
-		echo "<li><div class='value'><b>".(round($contentViz[2]/$contentScrollNum,3) * 100)."%</b></div><div class='label'><b>viewed at least 70% of main content</b></div></li>";	
-		echo "<li><div class='value'><b>".(round($contentViz[3]/$contentScrollNum,3) * 100)."%</b></div><div class='label'><b>viewed less than 15% of main content</b></div></li>";	
+		echo "<li><div class='value'><b>".$contentAll."%</b></div><div class='label'><b>viewed ALL of main content</b></div></li>";	
+		echo "<li><div class='value'><b>".$content85."%</b></div><div class='label'><b>viewed at least 85% of main content</b></div></li>";	
+		echo "<li><div class='value'><b>".$content70."%</b></div><div class='label'><b>viewed at least 70% of main content</b></div></li>";	
+		echo "<li><div class='value'><b>".$content15."%</b></div><div class='label'><b>viewed less than 15% of main content</b></div></li>";	
 	
 	echo '</ul><ul><li class="sub-label">Components</li>';
 		

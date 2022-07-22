@@ -1712,7 +1712,8 @@ $GLOBALS['btn2'] = get_option('bp_admin_btn2') != null ? get_option('bp_admin_bt
 $GLOBALS['btn3'] = get_option('bp_admin_btn3') != null ? get_option('bp_admin_btn3') : "not-active";
 //$siteHits = get_option('bp_site_hits');
 
-$siteHits = get_option('bp_site_hits_ga4') + get_option('bp_site_hits_ua');
+$siteHits = get_option('bp_site_hits_ga4');	
+if ( get_option('bp_site_hits_ua') ) $siteHits = $siteHits + get_option('bp_site_hits_ua');
 
 $today = date( "Y-m-d" );	
 $citiesToExclude = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, OR'); // also change in functions-chron-jobs.php

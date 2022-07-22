@@ -521,8 +521,9 @@ function battleplan_run_chron_jobs_ajax() {
 
 			update_option('bp_site_hits_ua', $siteHitsUA);		
 		endif;
-
-	$siteHits = get_option('bp_site_hits_ga4') + get_option('bp_site_hits_ua');
+		
+	$siteHits = get_option('bp_site_hits_ga4');	
+	if ( get_option('bp_site_hits_ua') ) $siteHits = $siteHits + get_option('bp_site_hits_ua');
 		
 	// Compile hits on specific pages
 		$pageCounts = array(1, 7, 30, 90, 365);

@@ -14,7 +14,7 @@
 --------------------------------------------------------------*/
 
 
-	delete_option('bp_site_debug');		
+delete_option('bp_site_debug');		
 		
 
 // delete all options that begin with {$prefix}
@@ -348,18 +348,19 @@ function battleplan_run_chron_jobs_ajax() {
 		$ga4_id = $GLOBALS['customer_info']['google-tags']['prop-id'];
 		$ua_id = $GLOBALS['customer_info']['google-tags']['ua-view'];
 		$client = new BetaAnalyticsDataClient(['credentials'=>get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json']);
-		$today = $ua_end = date( "Y-m-d" );	
-		$rewind = get_option('bp_chrons_rewind') ? get_option('bp_chrons_rewind') : date('Y-m-d', strtotime('-3 years'));
-		if ( $rewind == '1970-01-01' ) $rewind = '2019-01-01';
+		$today = $start = date( "Y-m-d" );	
+		//$rewind = get_option('bp_chrons_rewind') ? get_option('bp_chrons_rewind') : date('Y-m-d', strtotime('-3 years'));
+		$rewind = date('Y-m-d', strtotime('-4 years'));
+		if ( $rewind == '1970-01-01' ) $rewind = '2018-01-01';
 		
-		$prevHits = get_option('bp_site_hits');		
-		foreach ( $prevHits as $hit=>$data ) :
-			if ( strtotime($data['date'] ) >= strtotime($rewind) ) :
-				unset($prevHits[$hit]);
-			else:
-				break;
-			endif;				
-		endforeach;	
+		//$prevHits = get_option('bp_site_hits');		
+		//foreach ( $prevHits as $hit=>$data ) :
+		//	if ( strtotime($data['date'] ) >= strtotime($rewind) ) :
+		//		unset($prevHits[$hit]);
+		//	else:
+		//		break;
+		//	endif;				
+		//endforeach;	
 		
 		$states = array('alabama'=>'AL', 'arizona'=>'AZ', 'arkansas'=>'AR', 'california'=>'CA', 'colorado'=>'CO', 'connecticut'=>'CT', 'delaware'=>'DE', 'dist of columbia'=>'DC', 'dist. of columbia'=>'DC', 'district of columbia'=>'DC', 'florida'=>'FL', 'georgia'=>'GA', 'idaho'=>'ID', 'illinois'=>'IL', 'indiana'=>'IN', 'iowa'=>'IA', 'kansas'=>'KS', 'kentucky'=>'KY', 'louisiana'=>'LA', 'maine'=>'ME', 'maryland'=>'MD', 'massachusetts'=>'MA', 'michigan'=>'MI', 'minnesota'=>'MN', 'mississippi'=>'MS', 'missouri'=>'MO', 'montana'=>'MT', 'nebraska'=>'NE', 'nevada'=>'NV', 'new hampshire'=>'NH', 'new jersey'=>'NJ', 'new mexico'=>'NM', 'new york'=>'NY', 'north carolina'=>'NC', 'north dakota'=>'ND', 'ohio'=>'OH', 'oklahoma'=>'OK', 'oregon'=>'OR', 'pennsylvania'=>'PA', 'rhode island'=>'RI', 'south carolina'=>'SC', 'south dakota'=>'SD', 'tennessee'=>'TN', 'texas'=>'TX', 'utah'=>'UT', 'vermont'=>'VT', 'virginia'=>'VA', 'washington'=>'WA', 'washington d.c.'=>'DC', 'washington dc'=>'DC', 'west virginia'=>'WV', 'wisconsin'=>'WI', 'wyoming'=>'WY');
 		$removedStates = array('alaska'=>'AK', 'hawaii'=>'HI',);
@@ -376,7 +377,7 @@ function battleplan_run_chron_jobs_ajax() {
 		function getResults($initAnalytics, $ua_id, $start_date, $end_date, $param2, $param1) {
 			return $initAnalytics->data_ga->get ( 'ga:'.$ua_id, $start_date, $end_date, $param1, $param2 );
 		}
-
+		
 // Gather GA4 Stats 
 		if ( $ga4_id ) :
 			$response = $client->runReport([
@@ -421,13 +422,38 @@ function battleplan_run_chron_jobs_ajax() {
 					if ( $city == '(not set)' ) $location = ucwords($state);					
 					$page = rtrim($page, '/\\');
 									
-					$analytics[] = array ('date'=>$date, 'location'=>$location, 'source'=>$source, 'page'=>$page, 'browser'=>$browser, 'device'=>$device, 'pages-viewed'=>$pagesViewed, 'resolution'=>$resolution, 'referrer'=>$referrer, 'engaged'=>$engaged, 'new-users'=>$newUsers );	
+					$analyticsGA4[] = array ('date'=>$date, 'location'=>$location, 'source'=>$source, 'page'=>$page, 'browser'=>$browser, 'device'=>$device, 'pages-viewed'=>$pagesViewed, 'resolution'=>$resolution, 'referrer'=>$referrer, 'engaged'=>$engaged, 'new-users'=>$newUsers );	
 				endif;
 			endforeach;			
-			if ( is_array($analytics) ) arsort($analytics) ;			
-			$ua_end = date('Y-m-d', strtotime($analytics[0]['date']));
-			if ( $ua_end == '1970-01-01' ) $ua_end = date( "Y-m-d" );
+			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);	
+			
+			$start = date('Y-m-d', strtotime($analyticsGA4[0]['date']));
+		
+			// Split session data into site hits
+			foreach ( $analyticsGA4 as $analyze ) :
+				$date = $analyze['date'];
+				$location = $analyze['location'];
+				$page = $analyze['page'];
+				$browser = $analyze['browser'];
+				$device = $analyze['device'];	
+				$resolution = $analyze['resolution'];
+				$pageviews = $analyze['pages-viewed'];
+				$sessions = (int)$analyze['sessions'];
+				$engaged = $analyze['engaged'];
+				$newUsers = $analyze['new-users'];
+				$referrer = $analyze['referrer'];
+				list($source, $medium) = explode(" / ", $analyze['source']);
+
+				if ( strpos( $referrer, parse_url( get_site_url(), PHP_URL_HOST ) ) === false ) :	
+					$siteHitsGA4[] = array ('date'=>$date, 'location'=>$location, 'source'=>$source, 'medium'=>$medium, 'page'=>$page, 'browser'=>$browser, 'device'=>$device, 'resolution'=>$resolution, 'pages-viewed'=>$pageviews, 'sessions'=>'1', 'engaged'=>$engaged, 'new-users'=>$newUsers );	
+				else :
+					$siteHitsGA4[] = array ('date'=>$date, 'page'=>$page, 'pages-viewed'=>$pageviews, 'sessions'=>'0', 'engaged'=>$engaged );				
+				endif;
+			endforeach;
+			
+			update_option('bp_site_hits_ga4', $siteHitsGA4);		
 		endif;
+
 		
 // Gather UA Stats		 
 		if ( $ua_id ) :
@@ -435,7 +461,7 @@ function battleplan_run_chron_jobs_ajax() {
 			$param2 = array('dimensions'=>'ga:date, ga:city, ga:region, ga:sourceMedium, ga:pagePath, ga:browser, ga:deviceCategory', 'max-results'=>10000);
 			$param1 = 'ga:pageviews, ga:sessions, ga:bounces, ga:newUsers';
 			
-			$results = getResults($initAnalytics, $ua_id, $rewind, $ua_end, $param2, $param1);
+			$results = getResults($initAnalytics, $ua_id, $rewind, $start, $param2, $param1);
 			
 			foreach ( $results->getRows() as $row ) : 
 				$date = $row[0];
@@ -455,58 +481,48 @@ function battleplan_run_chron_jobs_ajax() {
 					if ( $city == '(not set)' ) $location = ucwords($state);					
 					$page = rtrim($page, '/\\');
 					
-					$analytics[] = array ('date'=>$date, 'location'=>$location, 'source'=>$source, 'page'=>$page, 'browser'=>$browser, 'device'=>$device, 'pages-viewed'=>$pagesViewed, 'sessions'=>$sessions, 'engaged'=>$engaged, 'new-users'=>$newUsers );	
+					$analyticsUA[] = array ('date'=>$date, 'location'=>$location, 'source'=>$source, 'page'=>$page, 'browser'=>$browser, 'device'=>$device, 'pages-viewed'=>$pagesViewed, 'sessions'=>$sessions, 'engaged'=>$engaged, 'new-users'=>$newUsers );	
 				endif;
 			endforeach;
-		endif;
 		
-		if ( is_array($analytics) ) arsort($analytics);			
-		
-// Split session data into site hits
-		foreach ( $analytics as $analyze ) :
-			$date = $analyze['date'];
-			$location = $analyze['location'];
-			$page = $analyze['page'];
-			$browser = $analyze['browser'];
-			$device = $analyze['device'];	
-			$resolution = $analyze['resolution'];
-			$pageviews = $analyze['pages-viewed'];
-			$sessions = (int)$analyze['sessions'];
-			$engaged = $analyze['engaged'];
-			$newUsers = $analyze['new-users'];
-			$referrer = $analyze['referrer'];
-			list($source, $medium) = explode(" / ", $analyze['source']);
-			
-	// Handle GA4 data points
-			if ( $referrer ) :
-				if ( strpos( $referrer, parse_url( get_site_url(), PHP_URL_HOST ) ) === false ) :	
-					$siteHits[] = array ('date'=>$date, 'location'=>$location, 'source'=>$source, 'medium'=>$medium, 'page'=>$page, 'browser'=>$browser, 'device'=>$device, 'resolution'=>$resolution, 'pages-viewed'=>$pageviews, 'sessions'=>'1', 'engaged'=>$engaged, 'new-users'=>$newUsers );	
-				else :
-					$siteHits[] = array ('date'=>$date, 'page'=>$page, 'pages-viewed'=>$pageviews, 'sessions'=>'0', 'engaged'=>$engaged );				
-				endif;
+			if ( is_array($analyticsUA) ) arsort($analyticsUA);			
 
-	// Handle UA data points
-			else:			
+			// Split session data into site hits
+			foreach ( $analyticsUA as $analyze ) :
+				$date = $analyze['date'];
+				$location = $analyze['location'];
+				$page = $analyze['page'];
+				$browser = $analyze['browser'];
+				$device = $analyze['device'];	
+				$resolution = $analyze['resolution'];
+				$pageviews = $analyze['pages-viewed'];
+				$sessions = (int)$analyze['sessions'];
+				$engaged = $analyze['engaged'];
+				$newUsers = $analyze['new-users'];
+				$referrer = $analyze['referrer'];
+				list($source, $medium) = explode(" / ", $analyze['source']);			
+
 				if ( $sessions > 1 ) :			
 					$pageviews = $pageviews / $sessions;
 					$engaged = $engaged / $sessions;
 					$newUsers = $newUsers / $sessions;
 
 					for ( $x=0;$x<$sessions;$x++) :			
-						$siteHits[] = array ('date'=>$date, 'location'=>$location, 'source'=>$source, 'medium'=>$medium, 'page'=>$page, 'browser'=>$browser, 'device'=>$device, 'pages-viewed'=>$pageviews, 'sessions'=>'1', 'engaged'=>$engaged, 'new-users'=>$newUsers );	
+						$siteHitsUA[] = array ('date'=>$date, 'location'=>$location, 'source'=>$source, 'medium'=>$medium, 'page'=>$page, 'browser'=>$browser, 'device'=>$device, 'pages-viewed'=>$pageviews, 'sessions'=>'1', 'engaged'=>$engaged, 'new-users'=>$newUsers );	
 					endfor;
 
 				elseif ( $sessions == 1 ) :			
-					$siteHits[] = array ('date'=>$date, 'location'=>$location, 'source'=>$source, 'medium'=>$medium, 'page'=>$page, 'browser'=>$browser, 'device'=>$device, 'pages-viewed'=>$pageviews, 'sessions'=>'1', 'engaged'=>$engaged, 'new-users'=>$newUsers );	
+					$siteHitsUA[] = array ('date'=>$date, 'location'=>$location, 'source'=>$source, 'medium'=>$medium, 'page'=>$page, 'browser'=>$browser, 'device'=>$device, 'pages-viewed'=>$pageviews, 'sessions'=>'1', 'engaged'=>$engaged, 'new-users'=>$newUsers );	
 
 				elseif ( $sessions == 0 ) :
-					$siteHits[] = array ('date'=>$date, 'page'=>$page, 'pages-viewed'=>$pageviews, 'sessions'=>'0', 'engaged'=>$engaged );				
+					$siteHitsUA[] = array ('date'=>$date, 'page'=>$page, 'pages-viewed'=>$pageviews, 'sessions'=>'0', 'engaged'=>$engaged );				
 				endif;
-			endif;
-		endforeach;
-		
-		if ( $prevHits ) $siteHits = $siteHits + $prevHits;					
-		update_option('bp_site_hits', $siteHits);
+			endforeach;
+
+			update_option('bp_site_hits_ua', $siteHitsUA);		
+		endif;
+
+	$siteHits = get_option('bp_site_hits_ga4') + get_option('bp_site_hits_ua');
 		
 	// Compile hits on specific pages
 		$pageCounts = array(1, 7, 30, 90, 365);

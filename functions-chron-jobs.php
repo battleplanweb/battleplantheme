@@ -13,15 +13,18 @@
 # Chron Jobs
 --------------------------------------------------------------*/
 
-
-delete_option('bp_site_debug');		
-		
+delete_option('bp_site_debug');				
 
 // delete all options that begin with {$prefix}
 function battleplan_delete_prefixed_options( $prefix ) {
 	global $wpdb;
 	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
 }	
+
+if ( get_option('bp_setup_2022_07_22') != "completed" ) :
+	update_option('bp_chrons_pages', 10000);
+	update_option( 'bp_setup_2022_07_22', 'completed' );			
+endif;	
 
 if ( get_option('bp_setup_2022_07_19') != "completed" ) :
 	delete_option( 'mobmenu_options' );				
@@ -349,7 +352,6 @@ function battleplan_run_chron_jobs_ajax() {
 		$ua_id = $GLOBALS['customer_info']['google-tags']['ua-view'];
 		$client = new BetaAnalyticsDataClient(['credentials'=>get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json']);
 		$today = $start = date( "Y-m-d" );	
-		//$rewind = get_option('bp_chrons_rewind') ? get_option('bp_chrons_rewind') : date('Y-m-d', strtotime('-3 years'));
 		$rewind = date('Y-m-d', strtotime('-4 years'));
 		if ( $rewind == '1970-01-01' ) $rewind = '2018-01-01';
 		
@@ -364,19 +366,6 @@ function battleplan_run_chron_jobs_ajax() {
 		
 		$states = array('alabama'=>'AL', 'arizona'=>'AZ', 'arkansas'=>'AR', 'california'=>'CA', 'colorado'=>'CO', 'connecticut'=>'CT', 'delaware'=>'DE', 'dist of columbia'=>'DC', 'dist. of columbia'=>'DC', 'district of columbia'=>'DC', 'florida'=>'FL', 'georgia'=>'GA', 'idaho'=>'ID', 'illinois'=>'IL', 'indiana'=>'IN', 'iowa'=>'IA', 'kansas'=>'KS', 'kentucky'=>'KY', 'louisiana'=>'LA', 'maine'=>'ME', 'maryland'=>'MD', 'massachusetts'=>'MA', 'michigan'=>'MI', 'minnesota'=>'MN', 'mississippi'=>'MS', 'missouri'=>'MO', 'montana'=>'MT', 'nebraska'=>'NE', 'nevada'=>'NV', 'new hampshire'=>'NH', 'new jersey'=>'NJ', 'new mexico'=>'NM', 'new york'=>'NY', 'north carolina'=>'NC', 'north dakota'=>'ND', 'ohio'=>'OH', 'oklahoma'=>'OK', 'oregon'=>'OR', 'pennsylvania'=>'PA', 'rhode island'=>'RI', 'south carolina'=>'SC', 'south dakota'=>'SD', 'tennessee'=>'TN', 'texas'=>'TX', 'utah'=>'UT', 'vermont'=>'VT', 'virginia'=>'VA', 'washington'=>'WA', 'washington d.c.'=>'DC', 'washington dc'=>'DC', 'west virginia'=>'WV', 'wisconsin'=>'WI', 'wyoming'=>'WY');
 		$removedStates = array('alaska'=>'AK', 'hawaii'=>'HI',);
-		
-		function initializeAnalytics() {
-			$client = new Google_Client();
-			$client->setApplicationName("Stats Reporting");
-			$client->setAuthConfig(get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json');
-			$client->setScopes(['https://www.googleapis.com/auth/analytics.readonly']);
-			$initAnalytics = new Google_Service_Analytics($client);
-			return $initAnalytics; 
-		}
-
-		function getResults($initAnalytics, $ua_id, $start_date, $end_date, $param2, $param1) {
-			return $initAnalytics->data_ga->get ( 'ga:'.$ua_id, $start_date, $end_date, $param1, $param2 );
-		}
 		
 // Gather GA4 Stats 
 		if ( $ga4_id ) :
@@ -453,10 +442,23 @@ function battleplan_run_chron_jobs_ajax() {
 			
 			update_option('bp_site_hits_ga4', $siteHitsGA4);		
 		endif;
-
 		
 // Gather UA Stats		 
-		if ( $ua_id ) :
+		if ( $ua_id && !get_option('bp_site_hits_ua') ) :
+		
+			function initializeAnalytics() {
+				$client = new Google_Client();
+				$client->setApplicationName("Stats Reporting");
+				$client->setAuthConfig(get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json');
+				$client->setScopes(['https://www.googleapis.com/auth/analytics.readonly']);
+				$initAnalytics = new Google_Service_Analytics($client);
+				return $initAnalytics; 
+			}
+
+			function getResults($initAnalytics, $ua_id, $start_date, $end_date, $param2, $param1) {
+				return $initAnalytics->data_ga->get ( 'ga:'.$ua_id, $start_date, $end_date, $param1, $param2 );
+			}
+		
 			$initAnalytics = initializeAnalytics();			
 			$param2 = array('dimensions'=>'ga:date, ga:city, ga:region, ga:sourceMedium, ga:pagePath, ga:browser, ga:deviceCategory', 'max-results'=>10000);
 			$param1 = 'ga:pageviews, ga:sessions, ga:bounces, ga:newUsers';
@@ -522,8 +524,8 @@ function battleplan_run_chron_jobs_ajax() {
 			update_option('bp_site_hits_ua', $siteHitsUA);		
 		endif;
 		
-	$siteHits = get_option('bp_site_hits_ga4');	
-	if ( get_option('bp_site_hits_ua') ) $siteHits = $siteHits + get_option('bp_site_hits_ua');
+		$siteHits = get_option('bp_site_hits_ga4');	
+		if ( get_option('bp_site_hits_ua') ) $siteHits = $siteHits + get_option('bp_site_hits_ua');
 		
 	// Compile hits on specific pages
 		$pageCounts = array(1, 7, 30, 90, 365);

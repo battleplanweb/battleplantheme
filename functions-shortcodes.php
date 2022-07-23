@@ -1108,6 +1108,18 @@ function battleplan_getEmergencyService( $atts, $content = null ) {
 	return '<img class="noFX" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/24-hr-service-'.$graphic.'.png" alt="We provide 24/7 emergency service." width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
 }
 
+// Add Google Guaranteed widget to Sidebar
+add_shortcode( 'get-google-guaranteed', 'battleplan_getGoogleGuaranteed' );
+function battleplan_getGoogleGuaranteed( $atts, $content = null ) {	
+	$a = shortcode_atts( array( 'graphic'=>'1' ), $atts );
+	$graphic = esc_attr($a['graphic']);
+	
+	$imagePath = get_template_directory().'/common/logos/google-guaranteed.png';			
+	list($width, $height) = getimagesize($imagePath);
+	
+	return '<img class="noFX" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/google-guaranteed.png" alt="We are proud to be Google Guaranteed." width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
+}
+
 // Add Now Hiring widget to Sidebar
 add_shortcode( 'now-hiring', 'battleplan_getNowHiring' );
 function battleplan_getNowHiring( $atts, $content = null ) {	

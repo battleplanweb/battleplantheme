@@ -43,8 +43,8 @@ function battleplan_track_interaction_ajax() {
 	$tracking = get_option( $key );
 	if ( !is_array($tracking) ) $tracking = array();
 	
-	if ( $scroll ) :	
-		if ( _USER_LOGIN != 'battleplanweb' && $scroll > $tracking[$uniqueID] ) :
+	if ( $scroll && $scroll > $tracking[$uniqueID] ) :	
+		if ( _USER_LOGIN != 'battleplanweb' ) :
 			unset($tracking[$uniqueID]);
 			$tracking[$uniqueID] = $scroll;
 			update_option( $key, $tracking );

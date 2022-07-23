@@ -16,7 +16,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '13.4.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '13.4.2' );
 update_option( 'battleplan_framework', _BP_VERSION );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 

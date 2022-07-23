@@ -53,18 +53,20 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			var scrollPct = 0, lastPct = 0, topH = getPosition($('#wrapper-content'), 'top'), contentH = $('#wrapper-content').height(), googleH = $('.wp-google-badge').height() || 0;
 
 			$('#primary p, #primary img, #primary div, #wrapper-content').waypoint(function() {
-				scrollPct = ( (Math.round(getPosition(this.element, 'bottom'))) - Math.round(googleH) - Math.round(topH) ) / Math.round(contentH);
-				if ( scrollPct > 1 ) { scrollPct = 1; }
-				setTimeout(function() {
-					if ( scrollPct > lastPct ) {
-						$.post({
-							url : ajaxURL,
-							data : { action: 'track_interaction', key: 'content-scroll-pct', scroll: scrollPct, uniqueID: uniquePage },
-							success: function( response ) { ajax_response(response.dashboard);	}
-						});	
-						lastPct = scrollPct;
-					}
-				}, (scrollPct*100) );
+				if ( this.element.id == "wrapper-content" ) {
+					scrollPct = 1;
+				} else {
+					scrollPct = ( (Math.round(getPosition(this.element, 'bottom'))) - Math.round(googleH) - Math.round(topH) ) / Math.round(contentH);
+					if ( scrollPct > 1 ) { scrollPct = 1; }
+				}
+				if ( scrollPct > lastPct ) {
+					lastPct = scrollPct;
+					$.post({
+						url : ajaxURL,
+						data : { action: 'track_interaction', key: 'content-scroll-pct', scroll: scrollPct, uniqueID: uniquePage },
+						success: function( response ) { ajax_response(response.dashboard);	}
+					});	
+				}
 				this.destroy();
 			}, { offset: 'bottom-in-view' });	
 

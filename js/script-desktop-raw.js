@@ -51,16 +51,25 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	};
 		
 // Set up Split Menu
-	window.splitMenu = function (menu, logo, compensate) {
+	window.splitMenu = function (menu, logo, compensate, override) {
 		menu = menu || "#desktop-navigation";
 		logo = logo || ".logo img";			
-		compensate = compensate || 0;			
-		var menuFlex = $(menu).find('.flex'), menuUL = $(menu).find('ul.menu'), logoW = $(logo).outerWidth() + compensate, menuW = menuUL.width() / 2, optW = 0;
+		compensate = compensate || 0;	
+		override = override || false;
+		var menuFlex = $(menu).find('.flex'), menuUL = $(menu).find('ul.menu'), menuLI = $(menu).find('ul.menu li'), logoW = $(logo).outerWidth() + compensate, menuW = menuUL.width() / 2, totalOpt = menuLI.length, maxOpt = Math.round(totalOpt / 2), currOpt = 0;
 
-		menuUL.children().each(function() {
-			optW += $(this).outerWidth();
-			if ( optW < menuW ) { $(this).addClass('left-menu'); } else { $(this).addClass('right-menu'); }
-		});
+		if ( override == false ) {
+			menuUL.children().each(function() {
+				currOpt += $(this).outerWidth();
+				if ( currOpt < menuW ) { $(this).addClass('left-menu'); } else { $(this).addClass('right-menu'); }
+			});
+		} else {
+			if ( override != true ) { maxOpt = override; }
+			menuUL.children().each(function() {
+				currOpt++;
+				if ( currOpt <= maxOpt ) { $(this).addClass('left-menu'); } else { $(this).addClass('right-menu'); }
+			});		
+		}
 
 		addDiv(menuFlex, '<div class="split-menu-r"></div>', 'before'); 
 		addDiv(menuFlex, '<div class="split-menu-l"></div>', 'before'); 			

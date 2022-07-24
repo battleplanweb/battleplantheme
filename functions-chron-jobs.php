@@ -13,35 +13,21 @@
 # Chron Jobs
 --------------------------------------------------------------*/
 
-delete_option('bp_site_debug');				
-
 // delete all options that begin with {$prefix}
 function battleplan_delete_prefixed_options( $prefix ) {
 	global $wpdb;
 	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
 }	
 
-if ( get_option('bp_setup_2022_07_22') != "completed" ) :
-	update_option('bp_chrons_pages', 10000);
-	update_option( 'bp_setup_2022_07_22', 'completed' );			
-endif;	
+if ( get_option('bp_setup_2022_07_24') != "completed" ) :
+	delete_option('bp_site_hits_ua');
+	delete_option( 'bp_setup_2022_07_22' );			
+	delete_option( 'bp_setup_2022_07_19' );	
+	delete_option('bp_site_debug');		
+	delete_option('bp_debug');
 
-if ( get_option('bp_setup_2022_07_19') != "completed" ) :
-	delete_option( 'mobmenu_options' );				
-	delete_option( 'amazon_ai_polly_enable' );			
-	delete_option( 'amazon_polly_podcast_enabled' );			
-	delete_option( 'amazon_polly_valid_keys' );			
-	delete_option( 'Activated_phoenix_media_rename' );			
-	delete_option( 'bp_chron_trigger' );			
-	delete_option( 'bp_setup_2022_07_04' );	
-	delete_option( 'bp_setup_2022_07_04b' );	
-				
-	battleplan_delete_prefixed_options( 'monsterinsights' );
-	battleplan_delete_prefixed_options( 'googlesitekit' );	
-	battleplan_delete_prefixed_options( 'smush-' );
-	battleplan_delete_prefixed_options( 'snapshot-' );
-
-	update_option( 'bp_setup_2022_07_19', 'completed' );			
+	update_option('bp_chrons_pages', 10000, false);
+	update_option( 'bp_setup_2022_07_24', 'completed', false );			
 endif;	
 
 require_once get_template_directory().'/vendor/autoload.php';
@@ -52,13 +38,12 @@ use Google\Analytics\Data\V1beta\DateRange;
 use Google\Analytics\Data\V1beta\Dimension;
 use Google\Analytics\Data\V1beta\Metric;
 
-add_action( 'wp_ajax_run_chron_jobs', 'battleplan_run_chron_jobs_ajax' );
-add_action( 'wp_ajax_nopriv_run_chron_jobs', 'battleplan_run_chron_jobs_ajax' );
-function battleplan_run_chron_jobs_ajax() {
-	$admin = $_POST['admin'];		
+
+// convert from ajax to regular chron
+
 	$bpChrons = get_option( 'bp_chrons_pages' ) != null ? get_option( 'bp_chrons_pages' ) : 0;
 
-	if ( $admin == "true" ) : 
+	if ( is_admin() ) : 
 		if (function_exists('battleplan_updateSiteOptions')) battleplan_updateSiteOptions();
 		$bpChrons = $bpChrons + 2;
 	endif;
@@ -66,7 +51,7 @@ function battleplan_run_chron_jobs_ajax() {
 	$pagesLeft = 25 - $bpChrons;	
 	
 	$bpChrons++;
-	update_option( 'bp_chrons_pages', $bpChrons );	
+	update_option( 'bp_chrons_pages', $bpChrons, false );	
 	
 	if ( $pagesLeft <= 0 ) :	
 
@@ -82,7 +67,7 @@ function battleplan_run_chron_jobs_ajax() {
 			$wpMailSettings['mail']['from_email_force'] = '1';
 			$wpMailSettings['mail']['from_name_force'] = '1';		
 			$wpMailSettings['sendinblue']['domain'] = 'admin.'.str_replace('https://', '', get_bloginfo('url'));				
-			update_option( 'wp_mail_smtp', $wpMailSettings );
+			update_option( 'wp_mail_smtp', $wpMailSettings, false );
 		endif;
 
 // Contact Form 7 Settings Update
@@ -169,7 +154,7 @@ function battleplan_run_chron_jobs_ajax() {
 			$wpSEOSettings['display-metabox-tax-image-categories'] = '0';	
 			$wpSEOSettings['noindex-tax-image-tags'] = '1';	
 			$wpSEOSettings['display-metabox-tax-image-tags'] = '0';	
-			update_option( 'wpseo_titles', $wpSEOSettings );
+			update_option( 'wpseo_titles', $wpSEOSettings, false );
 
 			$wpSEOSocial = get_option( 'wpseo_social' );		
 			$wpSEOSocial['facebook_site'] = $GLOBALS['customer_info']['facebook'];
@@ -181,7 +166,7 @@ function battleplan_run_chron_jobs_ajax() {
 			$wpSEOSocial['pinterest_url'] = $GLOBALS['customer_info']['pinterest'];
 			$wpSEOSocial['twitter_site'] = $GLOBALS['customer_info']['twitter'];
 			$wpSEOSocial['youtube_url'] = $GLOBALS['customer_info']['youtube'];	
-			update_option( 'wpseo_social', $wpSEOSocial );
+			update_option( 'wpseo_social', $wpSEOSocial, false );
 
 			$wpSEOLocal = get_option( 'wpseo_local' );		
 			if ( $GLOBALS['customer_info']['business-type'] == "organization" || $GLOBALS['customer_info']['business-type'] == "public figure" ) $wpSEOLocal['business_type'] = 'Organization';
@@ -222,7 +207,7 @@ function battleplan_run_chron_jobs_ajax() {
 			$wpSEOLocal['location_coords_long'] = $GLOBALS['customer_info']['long'];
 			$wpSEOLocal['hide_opening_hours'] = 'on';
 			$wpSEOLocal['address_format'] = 'address-state-postal';
-			update_option( 'wpseo_local', $wpSEOLocal );
+			update_option( 'wpseo_local', $wpSEOLocal, false );
 		endif;
 		
 // Widget Options - Extended Settings
@@ -256,17 +241,17 @@ function battleplan_run_chron_jobs_ajax() {
 		if ( $GLOBALS['customer_info']['city'] != '' && $GLOBALS['customer_info']['state-abbr'] != '' ) $blogDesc .= ', ';
 		if ( $GLOBALS['customer_info']['state-abbr'] != '' ) $blogDesc .= $GLOBALS['customer_info']['state-abbr'];
 		update_option( 'blogdescription', $blogDesc );
-		update_option( 'admin_email', 'info@battleplanwebdesign.com' );
-		update_option( 'admin_email_lifespan', '9999999999999' );
-		update_option( 'default_comment_status', 'closed' );
-		update_option( 'default_ping_status', 'closed' );
-		update_option( 'permalink_structure', '/%postname%/' );
-		update_option( 'wpe-rand-enabled', '1' );
-		update_option( 'users_can_register', '0' );		
-		update_option( 'wpe-rand-enabled', '1' );
-		update_option( 'auto_update_core_dev', 'enabled' );
-		update_option( 'auto_update_core_minor', 'enabled' );
-		update_option( 'auto_update_core_major', 'enabled' );			
+		update_option( 'admin_email', 'info@battleplanwebdesign.com', false );
+		update_option( 'admin_email_lifespan', '9999999999999', false );
+		update_option( 'default_comment_status', 'closed', false );
+		update_option( 'default_ping_status', 'closed', false );
+		update_option( 'permalink_structure', '/%postname%/', false );
+		update_option( 'wpe-rand-enabled', '1', false );
+		update_option( 'users_can_register', '0', false );		
+		update_option( 'wpe-rand-enabled', '1', false );
+		update_option( 'auto_update_core_dev', 'enabled', false );
+		update_option( 'auto_update_core_minor', 'enabled', false );
+		update_option( 'auto_update_core_major', 'enabled', false );			
 
 		battleplan_delete_prefixed_options( 'ac_cache_data_' );
 		battleplan_delete_prefixed_options( 'ac_cache_expires_' );
@@ -351,7 +336,7 @@ function battleplan_run_chron_jobs_ajax() {
 		$ga4_id = $GLOBALS['customer_info']['google-tags']['prop-id'];
 		$ua_id = $GLOBALS['customer_info']['google-tags']['ua-view'];
 		$client = new BetaAnalyticsDataClient(['credentials'=>get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json']);
-		$today = $start = date( "Y-m-d" );	
+		$today = $end = date( "Y-m-d" );	
 		$rewind = date('Y-m-d', strtotime('-4 years'));
 		if ( $rewind == '1970-01-01' ) $rewind = '2018-01-01';
 		
@@ -416,7 +401,7 @@ function battleplan_run_chron_jobs_ajax() {
 			endforeach;			
 			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);	
 			
-			$start = date('Y-m-d', strtotime($analyticsGA4[0]['date']));
+			$end = date('Y-m-d', strtotime(end($analyticsGA4)['date']));
 		
 			// Split session data into site hits
 			foreach ( $analyticsGA4 as $analyze ) :
@@ -440,12 +425,11 @@ function battleplan_run_chron_jobs_ajax() {
 				endif;
 			endforeach;
 			
-			update_option('bp_site_hits_ga4', $siteHitsGA4);		
+			update_option('bp_site_hits_ga4', $siteHitsGA4, false);		
 		endif;
 		
 // Gather UA Stats		 
-		if ( $ua_id && !get_option('bp_site_hits_ua') ) :
-		
+		if ( $ua_id ) :		
 			function initializeAnalytics() {
 				$client = new Google_Client();
 				$client->setApplicationName("Stats Reporting");
@@ -463,7 +447,13 @@ function battleplan_run_chron_jobs_ajax() {
 			$param2 = array('dimensions'=>'ga:date, ga:city, ga:region, ga:sourceMedium, ga:pagePath, ga:browser, ga:deviceCategory', 'max-results'=>10000);
 			$param1 = 'ga:pageviews, ga:sessions, ga:bounces, ga:newUsers';
 			
-			$results = getResults($initAnalytics, $ua_id, $rewind, $start, $param2, $param1);
+			$getHitsUA = get_option('bp_site_hits_ua');			
+			if ( $getHitsUA ) $end = date('Y-m-d', strtotime(end($getHitsUA)['date']));	
+			
+			$end = date('Y-m-d', strtotime($end.' - 1 day'));
+			$rewind = date('Y-m-d', strtotime($end.' - 31 days'));
+						
+			$results = getResults($initAnalytics, $ua_id, $rewind, $end, $param2, $param1);
 			
 			foreach ( $results->getRows() as $row ) : 
 				$date = $row[0];
@@ -487,8 +477,9 @@ function battleplan_run_chron_jobs_ajax() {
 				endif;
 			endforeach;
 		
-			if ( is_array($analyticsUA) ) arsort($analyticsUA);			
-
+			if ( is_array($analyticsUA) ) arsort($analyticsUA);		
+			$siteHitsUA = get_option('bp_site_hits_ua');
+			
 			// Split session data into site hits
 			foreach ( $analyticsUA as $analyze ) :
 				$date = $analyze['date'];
@@ -520,12 +511,14 @@ function battleplan_run_chron_jobs_ajax() {
 					$siteHitsUA[] = array ('date'=>$date, 'page'=>$page, 'pages-viewed'=>$pageviews, 'sessions'=>'0', 'engaged'=>$engaged );				
 				endif;
 			endforeach;
-
-			update_option('bp_site_hits_ua', $siteHitsUA);		
+			
+			update_option('bp_site_hits_ua', $siteHitsUA, false);				
 		endif;
 		
 		$siteHits = get_option('bp_site_hits_ga4');	
-		if ( get_option('bp_site_hits_ua') ) $siteHits = $siteHits + get_option('bp_site_hits_ua');
+		$getHitsUA = get_option('bp_site_hits_ua');
+		
+		if ( $getHitsUA ) $siteHits = array_merge($siteHits, $getHitsUA);
 		
 	// Compile hits on specific pages
 		$pageCounts = array(1, 7, 30, 90, 365);
@@ -566,15 +559,7 @@ function battleplan_run_chron_jobs_ajax() {
 			endforeach;	
 		endforeach;	
 
-		update_option( 'bp_chrons_pages', 0 );
-		update_option( 'bp_chrons_rewind', date('Y-m-d', strtotime("-2 days")));
-				
-		$response = array( 'dashboard' => 'The chron has updated.' );		
-	else: 	 	
-		$response = array( 'dashboard' => 'The chron will update after '.$pagesLeft.' more pageviews.' );
+		update_option( 'bp_chrons_pages', 0, false );
+		//update_option( 'bp_chrons_rewind', date('Y-m-d', strtotime("-2 days")), false);
 	endif;	
-		
-	wp_send_json( $response );	
-}
-
 ?>

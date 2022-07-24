@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 13.4.2
+Version: 13.4.3
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -2009,6 +2009,14 @@ button.fancybox-button.tab-focus {
 	align-self:									end;
 }
 
+.block-image {
+	text-align: 								center; /* 7/4/2022 - Blue Tango "home page teasers" - confines shadow to width of pic, rather than width of entire col */
+}
+
+.block-image a {
+	display: 									inline-block; /* 7/4/2022 - Blue Tango "home page teasers" - confines shadow to width of pic, rather than width of entire col */
+}
+
 
 /*--------------------------------------------------------------
 # Components
@@ -2936,7 +2944,7 @@ body.locked {
 
 #mobile-navigation ul {
 	flex-direction:								column;
-	/*padding-left: 								10%;   ** 5/18/22 - make mobile menus a little more traditional
+	/*padding-left: 							10%;   ** 5/18/22 - make mobile menus a little more traditional
 	padding-right: 								10%;*/
 	padding-left: 								0;
 	padding-right: 								0;
@@ -2976,6 +2984,11 @@ body.locked {
 	transition: 								all 0.1s ease;
 }
 
+.top-flex #mobile-navigation li a {
+	border-left: 								1px solid rgba(255,255,255,0.3);
+	border-right: 								1px solid rgba(0,0,0,0.4);
+}
+
 .mobile-left #mobile-navigation li a {
 	text-align: 								left;
 }
@@ -3001,6 +3014,12 @@ body.locked {
 	border-bottom: 								1px solid rgba(255,255,255,0.3);
 	transform: 									rotate(0) translate(0,0) scale(1);
 	transition: 								all 0.1s ease;
+}
+
+.top-flex #mobile-navigation ul.main-menu li:hover > a, 
+.top-flex #mobile-navigation ul.main-menu li.active > a {
+	border-right: 								1px solid rgba(255,255,255,0.3);
+	border-left: 								1px solid rgba(0,0,0,0.4);
 }
 
 #mobile-navigation li.menu-item-has-children > a::after,
@@ -3063,25 +3082,23 @@ body.locked {
 	transition: 								all 0.14s linear 0.2s;
 }	
 
-/*
-.top-slide #mobile-navigation ul, 
-.top-push #mobile-navigation ul {
+.top-slide.top-flex #mobile-navigation ul, 
+.top-push.top-flex #mobile-navigation ul {
 	flex-flow: 									row wrap;
+	padding: 									0 8px;
 }
 
-.top-slide #mobile-navigation li, 
-.top-push #mobile-navigation li {
+.top-slide.top-flex #mobile-navigation li, 
+.top-push.top-flex #mobile-navigation li {
 	flex: 										1 1 0;
-	margin-left:								8px;
-	margin-right:								8px;
+	margin:										8px;
 }
 
-.top-slide #mobile-navigation li a, 
-.top-push #mobile-navigation li a {
+.top-slide.top-flex #mobile-navigation li a, 
+.top-push.top-flex #mobile-navigation li a {
 	padding-left:								12px;
 	padding-right:								12px;
 }	
-*/
 
 /* Footer Menu */
 #footer-navigation li {
@@ -3486,6 +3503,7 @@ form#commentform {
 form#commentform p {
 	text-align:									center;
 }
+
 
 
 
@@ -4554,6 +4572,7 @@ chat-widget .lc_text-widget--btn {
 }
 
 .carousel.pointer-event {
+
   	-ms-touch-action: 							pan-y;
   	touch-action: 								pan-y;
 }
@@ -4688,7 +4707,8 @@ chat-widget .lc_text-widget--btn {
 }
 
 .carousel .block-button {
-	flex:										0 1 auto;
+	/*flex:										0 1 auto;*/
+	flex:										1 0 auto; /* 7/24/2022 keeps "View All" button from breaking into 2 lines */
 	margin:										0 0.5em;
 }
 
@@ -5093,7 +5113,6 @@ html.error503 h3 {
 }
 
 /* 3: Small Tablets (landscape) */
-
 @media (max-width: 1024px) {
 		
 	/* Headeline font basis */
@@ -5177,6 +5196,7 @@ html.error503 h3 {
 	/* Responsiveness */
 	.site-main,
 	.sidebar-right .site-main,
+
 	.sidebar-left .site-main,
 	.widget-area,
 	.sidebar-right .widget-area,
@@ -5634,6 +5654,13 @@ html.error503 h3 {
 		text-decoration:							none;
 	}
 	
+	/* Carousel Buttons */
+	a.button.carousel-control-prev,
+	a.button.carousel-control-next {
+		padding-left: 							0.5em;
+		padding-right: 							0.5em;
+	}
+	
 	/* Content */
 	.content-box #primary, 
 	.content-sidebar-box #main-content,/* added 5/24/22 - 1 Call Heat & Air */
@@ -5795,9 +5822,12 @@ html.error503 h3 {
 	}
 	
 	/* Responsive Sections */
-	.flex.break-none,
-	.flex.break-1 {
+	.flex.break-none {
 		grid-template-columns: 						1fr 1fr;
+	}
+	
+	.flex.break-1 {
+		grid-template-columns: 						1fr;
 	}
 
 	.flex .col {
@@ -5940,6 +5970,7 @@ html.error503 h3 {
 		display:									none !important;
 	}
 }
+
 
 @media screen and (min-width: 861px) and (max-width: 1024px) {
 	.hide-3,

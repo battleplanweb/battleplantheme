@@ -16,8 +16,8 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '13.4.2' );
-update_option( 'battleplan_framework', _BP_VERSION );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '13.4.3' );
+update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
 if ( !defined('_USER_LOGIN') ) define( '_USER_LOGIN', wp_get_current_user()->user_login );
@@ -35,7 +35,7 @@ if ( !defined('_PAGE_SLUG_FULL') ) :
 endif;
 
 if ( !defined('_RAND_SEED') ) :
-	if ( (time() - get_option('rand-seed')) > 14000 ) update_option('rand-seed', time());
+	if ( (time() - get_option('rand-seed')) > 14000 ) update_option('rand-seed', time(), false);
 	define( '_RAND_SEED', get_option('rand-seed') );
 endif;
 

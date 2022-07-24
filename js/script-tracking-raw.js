@@ -19,13 +19,13 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	// Delay 1 second before calling the following functions 
 		setTimeout(function() {	
 		// Check chron jobs	
-			if ( !$('body').hasClass('wp-admin') ) {
-				$.post({
-					url : ajaxURL,
-					data : { action: "run_chron_jobs", admin: "false" },
-					success: function( response ) { ajax_response(response.dashboard);	}
-				});
-			}
+			//if ( !$('body').hasClass('wp-admin') ) {
+				//$.post({
+					//url : ajaxURL,
+					//data : { action: "run_chron_jobs", admin: "false" },
+					//success: function( response ) { ajax_response(response.dashboard);	}
+				//});
+			//}
 
 		// Log page load speed
 			if ( deviceTime == "desktop" ) {

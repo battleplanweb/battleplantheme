@@ -16,7 +16,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '13.4.7' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '13.4.8' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -1616,39 +1616,37 @@ function battleplan_loadFonts() {
 // Install Google Global Site Tags
 add_action('bp_google_tag_manager', 'battleplan_load_tag_manager');
 function battleplan_load_tag_manager() { 
-	if ( _USER_LOGIN != 'battleplanweb' ) :
-		$nonce = $GLOBALS['nonce'];
-		foreach ( $GLOBALS['customer_info']['google-tags'] as $gtag=>$value ) :	
-			if ( $gtag == "analytics" ) $mainAcct = $value;
-			if ( $gtag == "analytics" || $gtag == "ads" || $gtag == "searchkings" ) $buildTags .= 'gtag("config", "'.$value.'");';				
-			if ( strpos($gtag, 'conversions' ) !== false ) :
-				if ( $gtag == "conversions" ) : 
-					$gtagEvents[] = $value; 
-				else:
-					$convert = str_replace( 'conversions-', '', $gtag );
-					$current = str_replace( '/', '', do_shortcode('[get-url var="false"]') );
-					if ( $convert == $current ) : $gtagEvents[] = $value; endif;
-				endif;
-			endif;				
-		endforeach;
+	$nonce = $GLOBALS['nonce'];
+	foreach ( $GLOBALS['customer_info']['google-tags'] as $gtag=>$value ) :	
+		if ( $gtag == "analytics" ) : if ( _USER_LOGIN != 'battleplanweb' ) : $mainAcct = $value; else: $mainAcct = "null"; endif; endif;
+		if ( $gtag == "analytics" || $gtag == "ads" || $gtag == "searchkings" ) $buildTags .= 'gtag("config", "'.$value.'");';				
+		if ( strpos($gtag, 'conversions' ) !== false ) :
+			if ( $gtag == "conversions" ) : 
+				$gtagEvents[] = $value; 
+			else:
+				$convert = str_replace( 'conversions-', '', $gtag );
+				$current = str_replace( '/', '', do_shortcode('[get-url var="false"]') );
+				if ( $convert == $current ) : $gtagEvents[] = $value; endif;
+			endif;
+		endif;				
+	endforeach;
 
-		$buildTagMgr .= '<script nonce="'.$nonce.'" async src="https://www.googletagmanager.com/gtag/js?id='.$mainAcct.'"></script>';
-		$buildTagMgr .= '<script nonce="'.$nonce.'" async>
-			window.dataLayer = window.dataLayer || [];
-			function gtag(){dataLayer.push(arguments);}
-			gtag("js", new Date());';
-		$buildTagMgr .= $buildTags;
-		$buildTagMgr .= '</script>';
+	$buildTagMgr .= '<script nonce="'.$nonce.'" async src="https://www.googletagmanager.com/gtag/js?id='.$mainAcct.'"></script>';
+	$buildTagMgr .= '<script nonce="'.$nonce.'" async>
+		window.dataLayer = window.dataLayer || [];
+		function gtag(){dataLayer.push(arguments);}
+		gtag("js", new Date());';
+	$buildTagMgr .= $buildTags;
+	$buildTagMgr .= '</script>';
 
-		if ( $gtagEvents ) :
-			foreach ( $gtagEvents as $gtagEvent ) :	
-				$buildEvents .= "gtag('event', 'conversion', { 'send_to': '".$gtagEvent."' });";  
-			endforeach;		
-			$buildTagMgr .= '<script nonce="'.$nonce.'">'.$buildEvents.'</script>';
-		endif;
-
-		if (strpos($mainAcct, 'x') === false) echo $buildTagMgr;	
-	endif;
+	if ( $gtagEvents ) :
+		foreach ( $gtagEvents as $gtagEvent ) :	
+			$buildEvents .= "gtag('event', 'conversion', { 'send_to': '".$gtagEvent."' });";  
+		endforeach;		
+		$buildTagMgr .= '<script nonce="'.$nonce.'">'.$buildEvents.'</script>';
+	endif;		
+	
+	if (strpos($mainAcct, 'x') === false) echo $buildTagMgr;
 }
 
 // Build and display desktop navigation menu

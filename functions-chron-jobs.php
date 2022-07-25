@@ -568,15 +568,11 @@ use Google\Analytics\Data\V1beta\Filter;
 		
 		
 		
-		
 		// Gather GA4 Stats 
 		if ( $ga4_id && is_admin() ) :
 
 			$today = date( "Y-m-d" );	
 			$rewind = date('Y-m-d', strtotime($today.' - 10 days'));
-			
-			$today = "2022-07-25";
-			$rewind = "2022-07-20";
 
 			$response = $client->runReport([
 				'property' => 'properties/'.$ga4_id,
@@ -604,7 +600,7 @@ use Google\Analytics\Data\V1beta\Filter;
 			endforeach;	
 			
 			foreach ( $allEvents as $event=>$count ) :			
-				update_option('bp_track_l_'.$event, $count, false);		
+				update_option('bp_track_content_'.$event, $count, false);		
 			endforeach;	
 
 			

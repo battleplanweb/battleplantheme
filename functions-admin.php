@@ -1914,7 +1914,7 @@ function battleplan_admin_content_stats() {
 	foreach($allTracking as $track=>$count) :
 		if ( $track == "visitor" ) : $totalTracks = $count;
 		else:
-			$findPct = round( (($count / $totalTracks) * 100), 1);
+			if ( $totalTracks > 0 ) { $findPct = round( (($count / $totalTracks) * 100), 1); }
 			echo "<li><div class='value'><b>".$findPct."%</b></div><div class='label'>".ucwords($track)."</div></li>";	
 			update_option('pct-viewed-'.$track, $findPct, false);
 		endif;

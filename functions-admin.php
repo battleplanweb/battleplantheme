@@ -1865,7 +1865,7 @@ function battleplan_admin_content_stats() {
 	if ($contentScrollNum > 0) $contentScrollMean = ( $contentScrollTotal / $contentScrollNum ) * 100;
 
 	foreach ($contentScroll as $key=>$scroll) :
-		$scroll = (round($scroll,1) * 100);
+		$scroll = (round(intval($scroll),1) * 100);
 		if ( $scroll == 100 ) $contentViz[0]++;
 		if ( $scroll >= 85 ) $contentViz[1]++;
 		if ( $scroll >= 70 ) $contentViz[2]++;

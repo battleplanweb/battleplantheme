@@ -28,7 +28,8 @@ if ( get_option('bp_setup_2022_07_24') != "completed" ) :
 
 	update_option('bp_chrons_pages', 10000, false);
 	update_option( 'bp_setup_2022_07_24', 'completed', false );			
-endif;	
+endif;
+
 
 require_once get_template_directory().'/vendor/autoload.php';
 require_once get_template_directory().'/google-api-php-client/vendor/autoload.php';
@@ -37,7 +38,8 @@ use Google\Analytics\Data\V1beta\BetaAnalyticsDataClient;
 use Google\Analytics\Data\V1beta\DateRange;
 use Google\Analytics\Data\V1beta\Dimension;
 use Google\Analytics\Data\V1beta\Metric;
-
+use Google\Analytics\Data\V1beta\FilterExpression;
+use Google\Analytics\Data\V1beta\Filter;
 
 // convert from ajax to regular chron
 
@@ -53,7 +55,7 @@ use Google\Analytics\Data\V1beta\Metric;
 	$bpChrons++;
 	update_option( 'bp_chrons_pages', $bpChrons, false );	
 	
-	if ( $pagesLeft <= 0 ) :	
+	if ( $pagesLeft <= 0 ) :		
 
 		if (function_exists('battleplan_remove_user_roles')) battleplan_remove_user_roles();
 		if (function_exists('battleplan_create_user_roles')) battleplan_create_user_roles();
@@ -558,6 +560,75 @@ use Google\Analytics\Data\V1beta\Metric;
 				endif;
 			endforeach;	
 		endforeach;	
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		// Gather GA4 Stats 
+		if ( $ga4_id && is_admin() ) :
+
+			$today = date( "Y-m-d" );	
+			$rewind = date('Y-m-d', strtotime($today.' - 10 days'));
+			
+			$today = "2022-07-25";
+			$rewind = "2022-07-20";
+
+			$response = $client->runReport([
+				'property' => 'properties/'.$ga4_id,
+				'dateRanges' => [
+					new DateRange([ 'start_date' => $rewind, 'end_date' => $today ]),
+				],
+				'dimensions' => [
+					new Dimension([ 'name' => 'level' ]),
+					new Dimension([ 'name' => 'city' ]),
+				],
+			]);
+			
+
+			foreach ( $response->getRows() as $row ) :
+				$event = $row->getDimensionValues()[0]->getValue();
+				$city = $row->getDimensionValues()[1]->getValue();					
+
+				if ( is_array($allEvents) && array_key_exists($event, $allEvents ) ) :
+					$allEvents[$event] += 1;
+				else:
+					$allEvents[$event] = 1;
+				endif;									
+					
+				//$analyticsGA4[] = array ('event'=>$event, 'location'=>$city, 'count'=>$count );					
+			endforeach;	
+			
+			foreach ( $allEvents as $event=>$count ) :			
+				update_option('bp_track_l_'.$event, $count, false);		
+			endforeach;	
+
+			
+
+			// Split session data into site hits
+			/*
+			foreach ( $analyticsGA4 as $analyze ) :
+				$event = $analyze['event'];
+				$location = $analyze['location'];
+				$count = $analyze['count'];
+
+				if ( strpos( $referrer, parse_url( get_site_url(), PHP_URL_HOST ) ) === false ) :	
+					$siteHitsGA4[] = array ('date'=>$date, 'location'=>$location, 'source'=>$source, 'medium'=>$medium, 'page'=>$page, 'browser'=>$browser, 'device'=>$device, 'resolution'=>$resolution, 'pages-viewed'=>$pageviews, 'sessions'=>'1', 'engaged'=>$engaged, 'new-users'=>$newUsers );	
+				else :
+					$siteHitsGA4[] = array ('date'=>$date, 'page'=>$page, 'pages-viewed'=>$pageviews, 'sessions'=>'0', 'engaged'=>$engaged );				
+				endif;
+			endforeach;
+			*/
+			
+		endif;
+
+
+
+
 
 		update_option( 'bp_chrons_pages', 0, false );
 		//update_option( 'bp_chrons_rewind', date('Y-m-d', strtotime("-2 days")), false);

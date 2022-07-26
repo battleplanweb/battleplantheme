@@ -21,6 +21,7 @@ function battleplan_delete_prefixed_options( $prefix ) {
 
 if ( get_option('bp_setup_2022_07_26') != "completed" ) :
 	delete_option('bp_site_hits_ua');
+	delete_option('bp_site_hits');
 	delete_option( 'bp_setup_2022_07_24' );				
 	deleteMeta(_HEADER_ID, "google-review-date");
 	deleteMeta(_HEADER_ID, "google-review-rating");
@@ -441,9 +442,14 @@ if ( $pagesLeft <= 0 ) :
 			return $initAnalytics->data_ga->get ( 'ga:'.$ua_id, $start_date, $end_date, $param1, $param2 );
 		}
 
-		$initAnalytics = initializeAnalytics();			
-
-		$siteHitsUA = array_merge( get_option('bp_site_hits_ua_1'), get_option('bp_site_hits_ua_2'), get_option('bp_site_hits_ua_3'), get_option('bp_site_hits_ua_4'), get_option('bp_site_hits_ua_5'));
+		$initAnalytics = initializeAnalytics();	
+		
+		$siteHitsUA1 = get_option('bp_site_hits_ua_1') ? get_option('bp_site_hits_ua_1') : array();
+		$siteHitsUA2 = get_option('bp_site_hits_ua_2') ? get_option('bp_site_hits_ua_2') : array();
+		$siteHitsUA3 = get_option('bp_site_hits_ua_3') ? get_option('bp_site_hits_ua_3') : array();
+		$siteHitsUA4 = get_option('bp_site_hits_ua_4') ? get_option('bp_site_hits_ua_4') : array();
+		$siteHitsUA5 = get_option('bp_site_hits_ua_5') ? get_option('bp_site_hits_ua_5') : array();
+		$siteHitsUA = array_merge( $siteHitsUA1, $siteHitsUA2, $siteHitsUA3, $siteHitsUA4, $siteHitsUA5);
 		
 		if ( $siteHitsUA ) $end = date('Y-m-d', strtotime(end($siteHitsUA)['date']));	
 

@@ -1713,8 +1713,12 @@ $GLOBALS['btn3'] = get_option('bp_admin_btn3') != null ? get_option('bp_admin_bt
 //$siteHits = get_option('bp_site_hits');
 
 $siteHits = get_option('bp_site_hits_ga4');	
-
-$siteHitsUA = array_merge( get_option('bp_site_hits_ua_1'), get_option('bp_site_hits_ua_2'), get_option('bp_site_hits_ua_3'), get_option('bp_site_hits_ua_4'), get_option('bp_site_hits_ua_5'));
+$siteHitsUA1 = get_option('bp_site_hits_ua_1') ? get_option('bp_site_hits_ua_1') : array();
+$siteHitsUA2 = get_option('bp_site_hits_ua_2') ? get_option('bp_site_hits_ua_2') : array();
+$siteHitsUA3 = get_option('bp_site_hits_ua_3') ? get_option('bp_site_hits_ua_3') : array();
+$siteHitsUA4 = get_option('bp_site_hits_ua_4') ? get_option('bp_site_hits_ua_4') : array();
+$siteHitsUA5 = get_option('bp_site_hits_ua_5') ? get_option('bp_site_hits_ua_5') : array();
+$siteHitsUA = array_merge( $siteHitsUA1, $siteHitsUA2, $siteHitsUA3, $siteHitsUA4, $siteHitsUA5);
 if ( $siteHitsUA ) $siteHits = array_merge($siteHits, $siteHitsUA);
 
 $today = date( "Y-m-d" );	

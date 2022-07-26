@@ -74,7 +74,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$.post({
 			url : ajaxURL,
 			data : { action: "count_link_clicks", type: thisAction }, 
-			success: function( response ) { ajax_response(response.dashboard);	}
+			success: function( response ) { console.log(response); }
 		});	
 		*/
 	});

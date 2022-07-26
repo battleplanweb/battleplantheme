@@ -11,14 +11,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 # Basic site functionality
 --------------------------------------------------------------*/
 
-	var mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 0, ajaxURL = 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php';	
-	
-	window.ajax_response = function (response) {
-		console.log(response);
-		var theText = "<li class='console'>" + response + "</li>" + $('#wp-admin-bar-my-account #wp-admin-bar-user-actions').html();	
-		$('#wp-admin-bar-my-account #wp-admin-bar-user-actions').html(theText);
-		$('#wp-admin-bar-my-account > a.ab-item').text(response);
-	}
+	var mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 0;	
 	
 // Is user on an Apple device?
 	window.isApple = function () {
@@ -77,11 +70,13 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			//}			
 			document.location = thisUrl; 
 		}
+		/*
 		$.post({
 			url : ajaxURL,
 			data : { action: "count_link_clicks", type: thisAction }, 
 			success: function( response ) { ajax_response(response.dashboard);	}
-		});		
+		});	
+		*/
 	});
 	
 // Redirect to 'thank you' page after form submission, to avoid double submissions

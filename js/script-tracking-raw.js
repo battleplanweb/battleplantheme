@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict"; (function($) {
 /*--------------------------------------------------------------
->>> TABLE OF CONTENTS:
+>>> TABLE OF CONTENTS: 
 ----------------------------------------------------------------
 # Tracking code
 --------------------------------------------------------------*/
@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			$.post({
 				url : ajaxURL,
 				data : { action: "log_page_load_speed", id: pageID, loadTime: loadTime, deviceTime: deviceTime },
-				success: function( response ) { ajax_response(response.dashboard);	}
+				success: function( response ) { console.log(response); }
 			});	
 			
 		// Initialize new user for tracking elements

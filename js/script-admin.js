@@ -10,30 +10,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 # Admin interface
 --------------------------------------------------------------*/
 
-	var ajaxURL = 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php';			 
-		
-	window.ajax_response = function (response) {
-		console.log(response);
-		var theText = "<li class='console'>" + response + "</li>" + $('#wp-admin-bar-my-account #wp-admin-bar-user-actions').html();	
-		$('#wp-admin-bar-my-account #wp-admin-bar-user-actions').html(theText);
-		$('#wp-admin-bar-my-account > a.ab-item').text(response);
-	}
-	
-	/*
-	
-	setTimeout(function() {			
-	// Check chron jobs	
-		if ( $('body').hasClass('wp-admin') ) {
-			$.post({
-				url : ajaxURL,
-				data : { action: "run_chron_jobs", admin: "true" },
-				success: function( response ) { ajax_response(response.dashboard);	}
-			});
-		}
-	}, 200);
-	
-	*/
-
 	/* Allow useage of Admin Columns */
 	$('.disabled').removeClass("disabled").removeClass("-disabled");
 	$('select, input, button').removeAttr("disabled");
@@ -125,9 +101,9 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	function saveBtnChoice(btn_no, choice) {
 		var key = 'bp_admin_'+btn_no;
 		$.post({
-			url : ajaxURL,
+			url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
 			data : { action: "update_meta", type: 'site', key: key, value: choice },
-			success: function( response ) { ajax_response(response.dashboard);	}
+			success: function( response ) { console.log(response); }
 		});
 	}
 		
@@ -227,6 +203,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		setTimeout(function(){ location.reload(); }, 1000);
 	});	 
 		
+		/*
 	$('a.clear-content-tracking').click(function(event) {
 		event.preventDefault();
 		$.post({
@@ -235,7 +212,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			success: function( response ) { ajax_response(response.dashboard);	}
 		});
 		setTimeout(function(){ location.reload(); }, 1000);
-	});	 
+	});	 */
 			
 // Site Audit
 		

@@ -19,6 +19,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$('#wp-admin-bar-my-account > a.ab-item').text(response);
 	}
 	
+	/*
+	
 	setTimeout(function() {			
 	// Check chron jobs	
 		if ( $('body').hasClass('wp-admin') ) {
@@ -29,6 +31,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			});
 		}
 	}, 200);
+	
+	*/
 
 	/* Allow useage of Admin Columns */
 	$('.disabled').removeClass("disabled").removeClass("-disabled");

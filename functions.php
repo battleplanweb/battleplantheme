@@ -16,7 +16,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '13.4.8' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '13.4.9' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -35,7 +35,7 @@ if ( !defined('_PAGE_SLUG_FULL') ) :
 endif;
 
 if ( !defined('_RAND_SEED') ) :
-	if ( (time() - get_option('rand-seed')) > 14000 ) update_option('rand-seed', time(), false);
+	if ( (time() - get_option('rand-seed')) > 14000 ) update_option('rand-seed', time());
 	define( '_RAND_SEED', get_option('rand-seed') );
 endif;
 
@@ -154,6 +154,12 @@ function updateMeta($id, $key, $value) {
 // Delete custom field
 function deleteMeta($id, $key) {
 	delete_post_meta( $id, $key );
+}
+
+// Delete site option, then update it -- to ensure it won't be cached
+function updateOption($option, $value, $autoload=null) {
+	delete_option($option);
+	update_option($option, $value, $autoload);
 }
 
 function getCPT() {
@@ -1455,29 +1461,24 @@ function battleplan_getGoogleRating() {
 		$apiKey = "AIzaSyBqf0idxwuOxaG";
 		$apiKey .= "-j3eCpef1Bunv";
 		$apiKey .= "-YVdVP8";	
-		$dateChecked = readMeta(_HEADER_ID, "google-review-date");	
+		$googleInfo = get_option('bp_google_reviews');
 		$today = strtotime(date("F j, Y"));	
-		$daysSinceCheck = $today - intval($dateChecked);
+		$daysSinceCheck = $today - intval($googleInfo['date']);
 
-		if ( $daysSinceCheck < 6 ) :
-			$rating = readMeta(_HEADER_ID, "google-review-rating");	
-			$number = readMeta(_HEADER_ID, "google-review-number");		
-		else:	
+		if ( $daysSinceCheck > 5 ) :	
 			$url = "https://maps.googleapis.com/maps/api/place/details/json?placeid=".$placeID."&key=".$apiKey;
 			$ch = curl_init();
 			curl_setopt ($ch, CURLOPT_URL, $url);
 			curl_setopt ($ch, CURLOPT_RETURNTRANSFER, 1);
 			$result = curl_exec ($ch);
 			$res = json_decode($result,true);
-			$rating = $res['result']['rating'];	
-			$number = $res['result']['user_ratings_total'];	
-			updateMeta( _HEADER_ID, "google-review-rating", $rating );	
-			updateMeta( _HEADER_ID, "google-review-number", $number );	
-			updateMeta( _HEADER_ID, "google-review-date", $today );
-			$dateChecked = $today;
+			$googleInfo['rating'] = $res['result']['rating'];	
+			$googleInfo['number'] = $res['result']['user_ratings_total'];	
+			$googleInfo['date'] = $today;	
+			updateOption('bp_google_reviews', $googleInfo);	
 		endif;
 
-		if ( $rating > 3.99 ) :
+		if ( $googleInfo['rating'] > 3.99 ) :
 			$buildPanel = '<a class="wp-gr wp-google-badge" href="https://search.google.com/local/reviews?placeid='.$placeID.'&hl=en&gl=US" target="_blank">';
 			$buildPanel .= '<div class="wp-google-border"></div>';
 			$buildPanel .= '<div class="wp-google-badge-btn" itemscope itemtype="http://schema.org/AggregateRating">';
@@ -1489,17 +1490,17 @@ function battleplan_getGoogleRating() {
 			$buildPanel .= '<path d="M256 113.86c34.65 0 65.76 11.91 90.22 35.29l67.69-67.69C373.03 43.39 319.61 20 256 20c-92.25 0-172.07 52.89-210.9 130.01l78.85 61.15c18.56-55.78 70.59-97.3 132.05-97.3z" fill="#ea4335"></path>';
 			$buildPanel .= '<path d="M20 20h472v472H20V20z"></path>';
 			$buildPanel .= '</g></svg>';
-			$buildPanel .= '<div data-as-of="'.$dateChecked.'" class="wp-google-value" itemprop="ratingValue">'.number_format($rating, 1, '.', ',').'</div>';
+			$buildPanel .= '<div data-as-of="'.date("F j, Y", $googleInfo['date']).'" class="wp-google-value" itemprop="ratingValue">'.number_format($googleInfo['rating'], 1, '.', ',').'</div>';
 			$buildPanel .= '<div class="wp-google-stars">';
 
-			if ( $rating >= 4.7) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($rating, 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i></span>';	
-			if ( $rating >= 4.2 && $rating <= 4.6 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($rating, 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star-half-alt"></i></span>';
-			if ( $rating >= 3.7 && $rating <= 4.1 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($rating, 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa far fa-star"></i></span>';		
-			if ( $rating >= 3.2 && $rating <= 3.6 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($rating, 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star-half-alt"></i><i class="fa far fa-star"></i></span>';
+			if ( $googleInfo['rating'] >= 4.7) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo['rating'], 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i></span>';
+			if ( $googleInfo['rating'] >= 4.2 && $googleInfo['rating'] <= 4.6 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo['rating'], 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star-half-alt"></i></span>';
+			if ( $googleInfo['rating'] >= 3.7 && $googleInfo['rating'] <= 4.1 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo['rating'], 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa far fa-star"></i></span>';		
+			if ( $googleInfo['rating'] >= 3.2 && $googleInfo['rating'] <= 3.6 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo['rating'], 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star-half-alt"></i><i class="fa far fa-star"></i></span>';
 
 			$buildPanel .= '</div></div>';	
 			$buildPanel .= '<div class="wp-google-total">Click to view our ';			
-			if ( $number > 4 ) $buildPanel .= '<span itemprop="reviewCount">'.number_format($number).'</span> ';			
+			if ( $googleInfo['number'] > 4 ) $buildPanel .= '<span itemprop="reviewCount">'.number_format($googleInfo['number']).'</span> ';			
 			$buildPanel .= 'Google reviews!</div>';	
 			$buildPanel .= '</div></div></a>';
 

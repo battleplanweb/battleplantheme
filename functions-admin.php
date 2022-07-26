@@ -1713,7 +1713,9 @@ $GLOBALS['btn3'] = get_option('bp_admin_btn3') != null ? get_option('bp_admin_bt
 //$siteHits = get_option('bp_site_hits');
 
 $siteHits = get_option('bp_site_hits_ga4');	
-if ( get_option('bp_site_hits_ua') ) $siteHits = array_merge($siteHits, get_option('bp_site_hits_ua'));
+
+$siteHitsUA = array_merge( get_option('bp_site_hits_ua_1'), get_option('bp_site_hits_ua_2'), get_option('bp_site_hits_ua_3'), get_option('bp_site_hits_ua_4'), get_option('bp_site_hits_ua_5'));
+if ( $siteHitsUA ) $siteHits = array_merge($siteHits, $siteHitsUA);
 
 $today = date( "Y-m-d" );	
 $citiesToExclude = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, OR'); // also change in functions-chron-jobs.php
@@ -2413,9 +2415,9 @@ function battleplan_addWidgetPicViewsToImg( $post_ID ) {
 
 // Force clear all views for posts/pages
 function battleplan_force_run_chron() {
-	update_option('bp_chrons_pages', 10000, false);	
+	updateOption('bp_chrons_pages', 10000);	
 	header("Location: /wp-admin/index.php");
-//	exit();
+	exit();
 }  
 
 // Keep logs of site audits
@@ -2519,7 +2521,7 @@ function battleplan_site_audit() {
 		$siteAudit[$today]['home-call-to-action'] = $homeCallToAction;
 		$siteAudit[$today]['service-map'] = $serviceMap;						
 
-		update_option('bp_site_audit_details', $siteAudit, false);
+		updateOption('bp_site_audit_details', $siteAudit);
 	endif;
 	
 	$siteAuditPage = '<div class="wrap">';
@@ -2674,7 +2676,7 @@ function battleplan_site_audit() {
 	$siteAuditPage .= '[/layout][/section]</div></div> <!--site-audit-wrap-->';
 	echo do_shortcode($siteAuditPage);
 	
-	update_option( 'site_updated', array_key_first($siteAudit), false ); 
+	updateOption( 'site_updated', array_key_first($siteAudit) ); 
 	exit();
 }  
 
@@ -2724,9 +2726,9 @@ function battleplan_setupGlobalOptions() {
 		$wpMailSettings['mail']['from_name_force'] = '1';		
 		$wpMailSettings['sendinblue']['api_key'] = 'x'.$apiKey1.'-d08cc84fe45b37a420'.$apiKey2.'-AafFpD2zKkIN3SBZ';
 		$wpMailSettings['sendinblue']['domain'] = 'admin.'.str_replace('https://', '', get_bloginfo('url'));		
-		update_option( 'wp_mail_smtp', $wpMailSettings, false );
+		update_option( 'wp_mail_smtp', $wpMailSettings );
 		
-		update_option( 'bp_setup_wp_mail_smtp_initial', 'completed', false );
+		update_option( 'bp_setup_wp_mail_smtp_initial', 'completed' );
 	endif;	
 
 // Widget Options - Extended Settings
@@ -2775,9 +2777,9 @@ function battleplan_setupGlobalOptions() {
 		$widgetOpts['elementor'] = 'deactivate';
 		$widgetOpts['beaver'] = 'deactivate';
 		$widgetOpts['acf'] = 'activate';						
-		update_option( 'widgetopts_settings', $widgetOpts, false );
+		update_option( 'widgetopts_settings', $widgetOpts );
 		
-		update_option( 'bp_setup_widget_options_initial', 'completed', false );
+		update_option( 'bp_setup_widget_options_initial', 'completed' );
 	endif;	
 
 // Yoast SEO Settings
@@ -2826,7 +2828,7 @@ function battleplan_setupGlobalOptions() {
 		$wpSEOSettings['company_or_person'] = 'company';
 		$wpSEOSettings['stripcategorybase'] = '1';
 		$wpSEOSettings['breadcrumbs-enable'] = '1';
-		update_option( 'wpseo_titles', $wpSEOSettings, false );
+		update_option( 'wpseo_titles', $wpSEOSettings );
 
 		$wpSEOSocial = get_option( 'wpseo_social' );		
 		$wpSEOSocial['facebook_site'] = $GLOBALS['customer_info']['facebook'];
@@ -2838,7 +2840,7 @@ function battleplan_setupGlobalOptions() {
 		$wpSEOSocial['pinterest_url'] = $GLOBALS['customer_info']['pinterest'];
 		$wpSEOSocial['twitter_site'] = $GLOBALS['customer_info']['twitter'];
 		$wpSEOSocial['youtube_url'] = $GLOBALS['customer_info']['youtube'];	
-		update_option( 'wpseo_social', $wpSEOSocial, false );
+		update_option( 'wpseo_social', $wpSEOSocial );
 
 		$wpSEOLocal = get_option( 'wpseo_local' );		
 		$wpSEOLocal['business_type'] = 'Organization';
@@ -2858,7 +2860,7 @@ function battleplan_setupGlobalOptions() {
 		$wpSEOLocal['hide_opening_hours'] = 'on';
 		$wpSEOLocal['address_format'] = 'address-state-postal';	
 		
-		update_option( 'bp_setup_yoast_initial', 'completed', false );
+		update_option( 'bp_setup_yoast_initial', 'completed' );
 	endif;
 	
 	//$smartCrawl = get_option( 'ari_fancy_lightbox_settings' );

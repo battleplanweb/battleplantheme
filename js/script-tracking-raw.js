@@ -88,7 +88,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 					console.log('event: '+pageID+'-60');
 					view60 = true;
 				}
-				if ( scrollPct >= 0.80 && view80 == false ) {
+				if ( scrollPct >= 0.8 && view80 == false ) {
 					gtag("event", "level_up", { level: pageID+'-80' });
 					console.log('event: '+pageID+'-80');
 					view80 = true;

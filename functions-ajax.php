@@ -19,7 +19,7 @@ function battleplan_update_meta_ajax() {
 		foreach ($keyArray as $key) delete_option( $key );
 		$response = array( 'dashboard' => 'Content tracking cleared'  );	
 	else:	
-		if ( $type == "site" ) update_option( $key, $value, false );
+		if ( $type == "site" ) updateOption( $key, $value );
 		if ( $type == "user" ) update_user_meta( wp_get_current_user()->ID, $key, $value, false );
 		if ( $type == "post" || $type == "page" ) updateMeta( get_the_ID(), $key, $value );	
 
@@ -76,19 +76,19 @@ function battleplan_log_page_load_speed_ajax() {
 	
 	if ( _USER_LOGIN != 'battleplanweb' ) :
 	
-		update_option( 'last_visitor_time', time(), false );
+		updateOption( 'last_visitor_time', time() );
 		updateMeta( $postID, 'log-last-viewed', time() );
 		
 		if ( $deviceTime == "desktop" ) :
 			$timeDesktop = get_option('load_time_desktop');
 			if ( is_array($timeDesktop) ) : array_unshift($timeDesktop, $loadTime);
 			else: $timeDesktop = array($loadTime); endif;
-			update_option('load_time_desktop', $timeDesktop, false);	
+			updateOption('load_time_desktop', $timeDesktop);	
 		else:
 			$timeMobile = get_option('load_time_mobile');
 			if ( is_array($timeMobile) ) : array_unshift($timeMobile, $loadTime);
 			else: $timeMobile = array($loadTime); endif;
-			update_option('load_time_mobile', $timeMobile, false);			
+			updateOption('load_time_mobile', $timeMobile);			
 		endif;
 				
 		$response = array( 'dashboard' => 'Logging '.$deviceTime.' load speed = '.number_format($loadTime, 2).'s' );

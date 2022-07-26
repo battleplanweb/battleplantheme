@@ -209,7 +209,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$.post({
 			url : ajaxURL,
 			data : { action: "update_meta", type: "site", key: "content-tracking, content-column-views, content-scroll-pct", clear: "true" },
-			success: function( response ) { ajax_response(response.dashboard);	}
+			success: function( response ) { console.log(response);}
 		});
 		setTimeout(function(){ location.reload(); }, 1000);
 	});	 */

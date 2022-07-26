@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				//$.post({
 					//url : ajaxURL,
 					//data : { action: "run_chron_jobs", admin: "false" },
-					//success: function( response ) { ajax_response(response.dashboard);	}
+					//success: function( response ) { console.log(response); }
 				//});
 			//}
 
@@ -44,7 +44,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			$.post({
 				url : ajaxURL,
 				data : { action: "track_interaction", key: 'content-tracking', track: 'visitor', uniqueID: uniqueID },
-				success: function( response ) { ajax_response(response.dashboard);	}
+				success: function( response ) { console.log(response); }
 			});	
 			*/
 		}, 1000);		
@@ -103,7 +103,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 					$.post({
 						url : ajaxURL,
 						data : { action: 'track_interaction', key: 'content-scroll-pct', scroll: scrollPct, uniqueID: uniquePage },
-						success: function( response ) { ajax_response(response.dashboard);	}
+						success: function( response ) { console.log(response); }
 					});	
 					*/
 					
@@ -122,7 +122,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				$.post({
 					url : ajaxURL,
 					data : { action: 'track_interaction', key: 'content-column-views', viewed: completeView, page: pageID,  uniqueID: uniquePage },
-					success: function( response ) { ajax_response(response.dashboard);	}
+					success: function( response ) { console.log(response); }
 				});	
 				*/
 				this.destroy();
@@ -134,7 +134,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				$.post({
 					url : ajaxURL,
 					data : { action: "count_view", id: theID },
-					success: function( response ) { ajax_response(response.dashboard);	}
+					success: function( response ) { console.log(response); }
 				});				
 				this.destroy();
 			}, { offset: 'bottom-in-view' });
@@ -145,7 +145,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 					$.post({
 						url : ajaxURL,
 						data : { action: "count_view", id: theID },
-						success: function( response ) { ajax_response(response.dashboard);	}
+						success: function( response ) { console.log(response); }
 					});				
 				});				
 				this.destroy();
@@ -165,7 +165,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				$.post({
 					url : ajaxURL,
 					data : { action: "track_interaction", key: 'content-tracking', track: track, uniqueID: uniqueID },
-					success: function( response ) { ajax_response(response.dashboard);	}
+					success: function( response ) { console.log(response); }
 				});	
 				*/
 				this.destroy();

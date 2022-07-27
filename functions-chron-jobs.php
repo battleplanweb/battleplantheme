@@ -602,7 +602,7 @@ if ( $pagesLeft <= 0 ) :
 	if ( $ga4_id && is_admin() ) :
 
 		$today = date( "Y-m-d" );	
-		$rewind = date('Y-m-d', strtotime($today.' - 2 days'));
+		$rewind = date('Y-m-d', strtotime($today.' - 10 days'));
 
 		$response = $client->runReport([
 			'property' => 'properties/'.$ga4_id,
@@ -610,30 +610,57 @@ if ( $pagesLeft <= 0 ) :
 				new DateRange([ 'start_date' => $rewind, 'end_date' => $today ]),
 			],
 			'dimensions' => [
-				new Dimension([ 'name' => 'level' ]),
+				new Dimension([ 'name' => 'achievementId' ]),
+				new Dimension([ 'name' => 'groupId' ]),
 				new Dimension([ 'name' => 'city' ]),
 			],
 		]);
 
-
 		foreach ( $response->getRows() as $row ) :
-			$event = $row->getDimensionValues()[0]->getValue();
-			$city = $row->getDimensionValues()[1]->getValue();					
+			$tracking = $row->getDimensionValues()[0]->getValue();			
+			$speed = $row->getDimensionValues()[1]->getValue();
+			$city = $row->getDimensionValues()[2]->getValue();	
 
-			if ( is_array($allEvents) && array_key_exists($event, $allEvents ) ) :
-				$allEvents[$event] += 1;
+			if ( is_array($allTracking) && array_key_exists($tracking, $allTracking ) ) :
+				$allTracking[$tracking] += 1;
 			else:
-				$allEvents[$event] = 1;
+				$allTracking[$tracking] = 1;
+			endif;			
+			
+			$pageID = strtok($speed,  '»');
+			if ( strpos($speed, 'desktop') !== false ) : $device = "desktop"; else: $device = "mobile"; endif;			
+			$speed = (int)substr($speed, strpos($speed, "«") + 1);    
+			
+			if ( is_array($allSpeed) && array_key_exists($pageID, $allSpeed ) ) :
+				$allSpeed[$pageID]['speed'] += $speed;
+				$allSpeed[$pageID]['hits'] += 1;
+			else:
+				$allSpeed[$pageID]['speed'] = $speed;
+				$allSpeed[$pageID]['hits'] = 1;
 			endif;									
+			
+			if ( is_array($allSpeed) && array_key_exists($device, $allSpeed ) ) :
+				$allSpeed[$device]['speed'] += $speed;
+				$allSpeed[$device]['hits'] += 1;
+			else:
+				$allSpeed[$device]['speed'] = $speed;
+				$allSpeed[$device]['hits'] = 1;
+			endif;			
 
-			//$analyticsGA4[] = array ('event'=>$event, 'location'=>$city, 'count'=>$count );					
 		endforeach;	
 
-		foreach ( $allEvents as $event=>$count ) :			
+		foreach ( $allTracking as $event=>$count ) :			
 			updateOption('bp_track_content_'.$event, $count, false);		
 		endforeach;	
-
-
+		
+		foreach ( $allSpeed as $speeds ) :		
+			foreach ( $speeds as $speed ) :
+				$totalSpeed = (int)$speed['speed'];
+				$totalHits = (int)$speed['hits'];
+				if ( $totalHits > 0 ) $avgSpeed = round($totalSpeed / $totalHits, 2);				
+				updateOption('bp_track_speed_'.$speed, $avgSpeed, false);				
+			endforeach;	
+		endforeach;	
 
 		// Split session data into site hits
 		/*
@@ -651,9 +678,6 @@ if ( $pagesLeft <= 0 ) :
 		*/
 
 	endif;
-
-
-
 
 
 	updateOption( 'bp_chrons_pages', 0, true );

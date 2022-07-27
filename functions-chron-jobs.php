@@ -427,38 +427,47 @@ if ( $pagesLeft <= 0 ) :
 		update_option('bp_site_hits_ga4', $siteHitsGA4, false);		
 	endif;
 
-// Gather UA Stats		 
-	if ( $ua_id ) :		
-		function initializeAnalytics() {
-			$client = new Google_Client();
-			$client->setApplicationName("Stats Reporting");
-			$client->setAuthConfig(get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json');
-			$client->setScopes(['https://www.googleapis.com/auth/analytics.readonly']);
-			$initAnalytics = new Google_Service_Analytics($client);
-			return $initAnalytics; 
-		}
+// Gather UA Stats	
+	$siteHitsUA1 = get_option('bp_site_hits_ua_1');
+	$siteHitsUA2 = get_option('bp_site_hits_ua_2');
+	$siteHitsUA3 = get_option('bp_site_hits_ua_3');
+	$siteHitsUA4 = get_option('bp_site_hits_ua_4');
+	$siteHitsUA5 = get_option('bp_site_hits_ua_5');
+	//$siteHitsUA = array_merge( $siteHitsUA1, $siteHitsUA2, $siteHitsUA3, $siteHitsUA4, $siteHitsUA5);
+	
+	if ( $siteHitsUA1 ) $siteHitsUA = $siteHitsUA1;
+	if ( $siteHitsUA2 ) $siteHitsUA = array_merge( $siteHitsUA, $siteHitsUA2 );
+	if ( $siteHitsUA3 ) $siteHitsUA = array_merge( $siteHitsUA, $siteHitsUA3 );
+	if ( $siteHitsUA4 ) $siteHitsUA = array_merge( $siteHitsUA, $siteHitsUA4 );
+	if ( $siteHitsUA5 ) $siteHitsUA = array_merge( $siteHitsUA, $siteHitsUA5 );
 
-		function getResults($initAnalytics, $ua_id, $start_date, $end_date, $param2, $param1) {
-			return $initAnalytics->data_ga->get ( 'ga:'.$ua_id, $start_date, $end_date, $param1, $param2 );
-		}
-
-		$initAnalytics = initializeAnalytics();	
-		
-		$siteHitsUA1 = get_option('bp_site_hits_ua_1') ? get_option('bp_site_hits_ua_1') : array();
-		$siteHitsUA2 = get_option('bp_site_hits_ua_2') ? get_option('bp_site_hits_ua_2') : array();
-		$siteHitsUA3 = get_option('bp_site_hits_ua_3') ? get_option('bp_site_hits_ua_3') : array();
-		$siteHitsUA4 = get_option('bp_site_hits_ua_4') ? get_option('bp_site_hits_ua_4') : array();
-		$siteHitsUA5 = get_option('bp_site_hits_ua_5') ? get_option('bp_site_hits_ua_5') : array();
-		$siteHitsUA = array_merge( $siteHitsUA1, $siteHitsUA2, $siteHitsUA3, $siteHitsUA4, $siteHitsUA5);
+	if ( $ua_id && !get_option('bp_analytics_ua_complete') ) :		
 		
 		if ( $siteHitsUA ) $end = date('Y-m-d', strtotime(end($siteHitsUA)['date']));	
 
 		$end = date('Y-m-d', strtotime($end.' - 1 day'));
-		$rewind = date('Y-m-d', strtotime($end.' - 90 days'));
+		$rewind = date('Y-m-d', strtotime($end.' - 100 days'));
 		
-		if ( strtotime($end) < strtotime($today.' - 1600 days') ) :
-			updateOption('bp_debug_end_2', strtotime($end).' - '.strtotime($today.' - 1600 days') );
+		if ( strtotime($end) < 1532995200 ) : // July 31, 2018
+		
+			updateOption('bp_analytics_ua_complete', date('Y-m-d'));
+		
 		else:
+		
+			function initializeAnalytics() {
+				$client = new Google_Client();
+				$client->setApplicationName("Stats Reporting");
+				$client->setAuthConfig(get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json');
+				$client->setScopes(['https://www.googleapis.com/auth/analytics.readonly']);
+				$initAnalytics = new Google_Service_Analytics($client);
+				return $initAnalytics; 
+			}
+
+			function getResults($initAnalytics, $ua_id, $start_date, $end_date, $param2, $param1) {
+				return $initAnalytics->data_ga->get ( 'ga:'.$ua_id, $start_date, $end_date, $param1, $param2 );
+			}
+
+			$initAnalytics = initializeAnalytics();	
 
 			if ( strtotime($rewind) < 1590969600 ) :
 				$param2 = array('dimensions'=>'ga:date, ga:city, ga:region, ga:date, ga:date, ga:date, ga:date', 'max-results'=>10000);
@@ -532,11 +541,11 @@ if ( $pagesLeft <= 0 ) :
 				endif;
 			endforeach;
 
-			update_option('bp_site_hits_ua_1', array_slice($siteHitsUA, 0, 40000), false);	
-			update_option('bp_site_hits_ua_2', array_slice($siteHitsUA, 40000, 40000), false);	
-			update_option('bp_site_hits_ua_3', array_slice($siteHitsUA, 80000, 40000), false);	
-			update_option('bp_site_hits_ua_4', array_slice($siteHitsUA, 120000, 40000), false);	
-			update_option('bp_site_hits_ua_5', array_slice($siteHitsUA, 160000, 40000), false);	
+			if ( array_slice($siteHitsUA, 0, 40000) ) updateOption('bp_site_hits_ua_1', array_slice($siteHitsUA, 0, 40000), false);	
+			if ( array_slice($siteHitsUA, 40000, 40000) ) updateOption('bp_site_hits_ua_2', array_slice($siteHitsUA, 40000, 40000), false);	
+			if ( array_slice($siteHitsUA, 80000, 40000) ) updateOption('bp_site_hits_ua_3', array_slice($siteHitsUA, 80000, 40000), false);	
+			if ( array_slice($siteHitsUA, 120000, 40000) ) updateOption('bp_site_hits_ua_4', array_slice($siteHitsUA, 120000, 40000), false);	
+			if ( array_slice($siteHitsUA, 160000, 40000) ) updateOption('bp_site_hits_ua_5', array_slice($siteHitsUA, 160000, 40000), false);	
 		endif;
 	endif;
 
@@ -593,7 +602,7 @@ if ( $pagesLeft <= 0 ) :
 	if ( $ga4_id && is_admin() ) :
 
 		$today = date( "Y-m-d" );	
-		$rewind = date('Y-m-d', strtotime($today.' - 10 days'));
+		$rewind = date('Y-m-d', strtotime($today.' - 2 days'));
 
 		$response = $client->runReport([
 			'property' => 'properties/'.$ga4_id,

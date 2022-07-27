@@ -2164,10 +2164,11 @@ function battleplan_admin_pages_stats() {
 function battleplan_admin_stats($time,$minDays,$maxDays,$colEnd) {
 	$count = $sessions = $search = $users = $pagesViewed = $engaged = $engagement = $endOfCol = 0;
 	$days = $minDays;		
-		
-	echo "<table class='trends trends-".$time."'><tr><td class='header dates'>".ucfirst($time)."</td><td class='page visits'>".ucwords($GLOBALS['btn2'])."</td></tr>";	
+	$colNum = 1;
 	
-	for ($x = 0; $x < 1460; $x++) {	
+	echo "<table class='trends trends-".$time." trends-col-".$colNum."'><tr><td class='header dates'>".ucfirst($time)."</td><td class='page visits'>".ucwords($GLOBALS['btn2'])."</td></tr>";	
+
+	for ($x = 0; $x < 1500; $x++) {	
 		$theDate = $GLOBALS['dates'][$x];
 		$dailyTime = date("M j, Y", strtotime($theDate)); 
 		$dailySessions = intval($GLOBALS['dailyStats'][$theDate]['sessions']); 
@@ -2181,7 +2182,7 @@ function battleplan_admin_stats($time,$minDays,$maxDays,$colEnd) {
 		$search = $search + $dailySearch; 
 		$users = $users + $dailyUsers;			
 		$pagesViewed = $pagesViewed + $dailyPageviews; 		
-		$engaged = $engaged + $dailyEngaged; 		
+		$engaged = $engaged + $dailyEngaged; 
 		
 		if ( $sessions > 0 ) $pagesPerSession = number_format( (round(($pagesViewed / $sessions), 3)) , 1, '.', '');
 		if ( $sessions > 0 ) $engagement = number_format( ((round(($engaged / $sessions), 3)) * 100), 1, '.', '');		
@@ -2189,7 +2190,8 @@ function battleplan_admin_stats($time,$minDays,$maxDays,$colEnd) {
 		if ( $count == 1 ) $end = $dailyTime;
 		if ( $count == $days && $dailyTime != "Jan 1, 1970" ) :
 			if ( $endOfCol == $colEnd ) :
-				echo "</table><table class='trends trends-".$time."'><tr><td class='header dates'>".ucfirst($time)."</td><td class='page visits'>".ucwords($GLOBALS['btn2'])."</td></tr>";
+				$colNum++;
+				echo "</table><table class='trends trends-".$time." trends-col-".$colNum."'><tr><td class='header dates'>".ucfirst($time)."</td><td class='page visits'>".ucwords($GLOBALS['btn2'])."</td></tr>";
 				$endOfCol = 0;
 			endif;
 			$endOfCol++;

@@ -33,11 +33,16 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			} else {
 				loadTime = loadTime + 0.6;
 			}
+			/*
 			$.post({
 				url : ajaxURL,
 				data : { action: "log_page_load_speed", id: pageID, loadTime: loadTime, deviceTime: deviceTime },
 				success: function( response ) { console.log(response); }
 			});	
+			*/
+			
+			gtag("event", "post_score", { score: loadTime, level: pageID, character: deviceTime });
+			console.log(deviceTime + ' load speed: ' + loadTime + 's');	
 			
 		// Initialize new user for tracking elements
 		/*
@@ -63,38 +68,38 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				}
 				
 				if ( scrollPct < 0.2 && view0 == false ) {
-					gtag("event", "level_up", { level: pageID+'-init' });
+					gtag("event", "unlock_achievement", { achievement_id: pageID+'-init' });
 					console.log('event: '+pageID+'-init');
 					view0 = true;					
 					
 					if ( !getCookie('track') ) {				
-						gtag("event", "level_up", { level: 'track-init' });
+						gtag("event", "unlock_achievement", { achievement_id: 'track-init' });
 						console.log('event: track-init');	
 						setCookie('track', true);
 					}				
 				}								
 				if ( scrollPct >= 0.2 && view20 == false ) {
-					gtag("event", "level_up", { level: pageID+'-20' });
+					gtag("event", "unlock_achievement", { achievement_id: pageID+'-20' });
 					console.log('event: '+pageID+'-20');
 					view20 = true;
 				}				
 				if ( scrollPct >= 0.4 && view40 == false ) {
-					gtag("event", "level_up", { level: pageID+'-40' });
+					gtag("event", "unlock_achievement", { achievement_id: pageID+'-40' });
 					console.log('event: '+pageID+'-40');
 					view40 = true;
 				}
 				if ( scrollPct >= 0.6 && view60 == false ) {
-					gtag("event", "level_up", { level: pageID+'-60' });
+					gtag("event", "unlock_achievement", { achievement_id: pageID+'-60' });
 					console.log('event: '+pageID+'-60');
 					view60 = true;
 				}
 				if ( scrollPct >= 0.8 && view80 == false ) {
-					gtag("event", "level_up", { level: pageID+'-80' });
+					gtag("event", "unlock_achievement", { achievement_id: pageID+'-80' });
 					console.log('event: '+pageID+'-80');
 					view80 = true;
 				}
 				if ( scrollPct == 1 && view100 == false ) {
-					gtag("event", "level_up", { level: pageID+'-100' });
+					gtag("event", "unlock_achievement", { achievement_id: pageID+'-100' });
 					console.log('event: '+pageID+'-100');
 					view100 = true;
 				}
@@ -115,7 +120,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			$('#wrapper-bottom > section > .flex > .col').waypoint(function() {
 				var theCol = $(this.element), theSec = $(this.element).parent().parent(), colIndex = theSec.find('.flex > .col').index( theCol ) + 1, secIndex = $('#wrapper-bottom > section').index(theSec) + 1, completeView = secIndex+'.'+colIndex;
 								
-				gtag("event", "level_up", { level: pageID+'-'+completeView });
+				gtag("event", "unlock_achievement", { achievement_id: pageID+'-'+completeView });
 				console.log('event: ' + pageID+'-'+completeView);			
 				
 				/*
@@ -130,7 +135,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		
 	// Log view time of testimonials, random posts & random images
 			$('#primary img.random-img, .widget:not(.hide-widget) img.random-img, #wrapper-bottom img.random-img').waypoint(function() {	
-				var theID = $(this.element).attr('data-id');
+				var theID = new Array( $(this.element).attr('data-id') );
 				$.post({
 					url : ajaxURL,
 					data : { action: "count_view", id: theID },
@@ -139,14 +144,16 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				this.destroy();
 			}, { offset: 'bottom-in-view' });
 			
-			$('.carousel.slider-testimonials').waypoint(function() {		
+			$('.carousel.slider-testimonials').waypoint(function() {	
+				var theID = new Array();
 				$(this.element).find('.testimonials-credential.testimonials-name').each(function() {
-					var theID = $(this).attr('data-id');
-					$.post({
-						url : ajaxURL,
-						data : { action: "count_view", id: theID },
-						success: function( response ) { console.log(response); }
-					});				
+					theID.push( $(this).attr('data-id') );
+					
+				});					
+				$.post({
+					url : ajaxURL,
+					data : { action: "count_view", id: theID },
+					success: function( response ) { console.log(response); }
 				});				
 				this.destroy();
 			}, { offset: 'bottom-in-view' });
@@ -156,7 +163,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				var track = $(this.element).attr('data-track');
 				
 				if ( !getCookie(track) ) {				
-					gtag("event", "level_up", { level: 'track-'+track });
+					gtag("event", "unlock_achievement", { achievement_id: 'track-'+track });
 					console.log('event: ' + 'track-'+track);	
 					setCookie(track, true);
 				}

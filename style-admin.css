@@ -225,7 +225,8 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 
 #dashboard-widgets #postbox-container-1 div.handle-label,
 #dashboard-widgets #postbox-container-2 div.handle-label,
-#dashboard-widgets #postbox-container-3 tr.trends {
+#dashboard-widgets #postbox-container-3 tr.trends,
+#dashboard-widgets #postbox-container-3 table.trends-col-5 {
 	display: 									none;
 }
 

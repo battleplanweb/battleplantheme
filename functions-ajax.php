@@ -103,50 +103,50 @@ function battleplan_log_page_load_speed_ajax() {
 add_action( 'wp_ajax_count_view', 'battleplan_count_view_ajax' );
 add_action( 'wp_ajax_nopriv_count_view', 'battleplan_count_view_ajax' );
 function battleplan_count_view_ajax() {
-	$theID = intval( $_POST['id'] );
-	$lastViewed = strtotime(readMeta($theID, 'log-last-viewed'));
+	$idArray = $_POST['id'];
 	$rightNow = strtotime(date("F j, Y g:i a")) - 14400;	
 	$today = strtotime(date("F j, Y"));		
-	$dateDiff = (($today - $lastViewed) / 60 / 60 / 24);	
 	
-	if ( _USER_LOGIN != 'battleplanweb' ) :	
-		$getViews = readMeta($theID, 'log-views');
-		$getViews = maybe_unserialize( $getViews );
-		if ( !is_array($getViews) ) $getViews = array();
-		$viewsToday = $views7Day = $views30Day = $views90Day = $views180Day = $views365Day = intval(0); 
+	foreach ( $idArray as $theID ) :
+		$lastViewed = strtotime(readMeta($theID, 'log-last-viewed'));
+		$dateDiff = (($today - $lastViewed) / 60 / 60 / 24);	
 
-		if ( $dateDiff != 0 ) : // day has passed, move 29 to 30, and so on	
-			for ($i = 1; $i <= $dateDiff; $i++) {	
-				$figureTime = $today - ( ($dateDiff - $i) * 86400);	
-				array_unshift($getViews, array ('date'=>date("F j, Y", $figureTime), 'views'=>$viewsToday));
-			}	
-		else:
-			$viewsToday = intval($getViews[0]['views']); 
-		endif;
+		if ( _USER_LOGIN != 'battleplanweb' ) :	
+			$getViews = readMeta($theID, 'log-views');
+			$getViews = maybe_unserialize( $getViews );
+			if ( !is_array($getViews) ) $getViews = array();
+			$viewsToday = $views7Day = $views30Day = $views90Day = $views180Day = $views365Day = intval(0); 
 
-		$viewsToday++;
+			if ( $dateDiff != 0 ) : // day has passed, move 29 to 30, and so on	
+				for ($i = 1; $i <= $dateDiff; $i++) {	
+					$figureTime = $today - ( ($dateDiff - $i) * 86400);	
+					array_unshift($getViews, array ('date'=>date("F j, Y", $figureTime), 'views'=>$viewsToday));
+				}	
+			else:
+				$viewsToday = intval($getViews[0]['views']); 
+			endif;
 
-		array_shift($getViews);	
-		array_unshift($getViews, array ('date'=>date('F j, Y', $today), 'views'=>$viewsToday));	
-		$newViews = maybe_serialize( $getViews );
-		updateMeta($theID, 'log-views', $newViews);	
-		updateMeta($theID, 'log-last-viewed', $rightNow);
-		
-		for ($x = 0; $x < 7; $x++) { $views7Day = $views7Day + intval($getViews[$x]['views']); } 					
-		for ($x = 0; $x < 30; $x++) { $views30Day = $views30Day + intval($getViews[$x]['views']); } 						
-		for ($x = 0; $x < 90; $x++) { $views90Day = $views90Day + intval($getViews[$x]['views']); } 		
-		for ($x = 0; $x < 365; $x++) { $views365Day = $views365Day + intval($getViews[$x]['views']); } 		
-		updateMeta($theID, 'log-views-today', $viewsToday);					
-		updateMeta($theID, 'log-views-total-7day', $views7Day);			
-		updateMeta($theID, 'log-views-total-30day', $views30Day);			 
-		updateMeta($theID, 'log-views-total-90day', $views90Day);	
-		updateMeta($theID, 'log-views-total-365day', $views365Day);	
+			$viewsToday++;
 
+			array_shift($getViews);	
+			array_unshift($getViews, array ('date'=>date('F j, Y', $today), 'views'=>$viewsToday));	
+			$newViews = maybe_serialize( $getViews );
+			updateMeta($theID, 'log-views', $newViews);	
+			updateMeta($theID, 'log-last-viewed', $rightNow);
+
+			for ($x = 0; $x < 7; $x++) { $views7Day = $views7Day + intval($getViews[$x]['views']); } 					
+			for ($x = 0; $x < 30; $x++) { $views30Day = $views30Day + intval($getViews[$x]['views']); } 						
+			for ($x = 0; $x < 90; $x++) { $views90Day = $views90Day + intval($getViews[$x]['views']); } 		
+			for ($x = 0; $x < 365; $x++) { $views365Day = $views365Day + intval($getViews[$x]['views']); } 		
+			updateMeta($theID, 'log-views-today', $viewsToday);					
+			updateMeta($theID, 'log-views-total-7day', $views7Day);			
+			updateMeta($theID, 'log-views-total-30day', $views30Day);			 
+			updateMeta($theID, 'log-views-total-90day', $views90Day);	
+			updateMeta($theID, 'log-views-total-365day', $views365Day);	
+		endif;	
 		$response = array( 'dashboard' => 'Logging ID #'.$theID.' as viewed. Previous view = '.date("F j, Y g:i a", $lastViewed ));
-	else:
-		$response = array( 'dashboard' => 'ID #'.$theID.' last viewed = '.$lastViewed );
-	endif;	
-	wp_send_json( $response );	
+		wp_send_json( $response );	
+	endforeach;
 }
 
 ?>

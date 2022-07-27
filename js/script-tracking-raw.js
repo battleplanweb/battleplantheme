@@ -41,8 +41,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			});	
 			*/
 			
-			gtag("event", "post_score", { score: loadTime, level: pageID, character: deviceTime });
-			console.log(deviceTime + ' load speed: ' + loadTime + 's');	
+			loadTime = loadTime.toFixed(1);
+			
+			gtag("event", "join_group", { group_id: pageID + "»" + deviceTime + "«" + loadTime });
+			console.log(pageID + "»" + deviceTime + "«" + loadTime + "s");	
 			
 		// Initialize new user for tracking elements
 		/*

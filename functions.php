@@ -16,7 +16,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '13.4.14' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '13.5' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -197,32 +197,44 @@ function convertTime($howMany, $howMuch) {
 }
 
 // Display time elapsed since a UNIX stamp
-function timeElapsed($time, $precision = 5) { // precision 5, 4, 3, 2, 1
+function timeElapsed($time, $precision = 5, $display="all") { // precision 5, 4, 3, 2, 1, 0 (only use 0 if NOT using display=all)   // display="all, months, days, hours, minutes, seconds
 	$time = time() - $time;
 	$buildTime = '';
+	
+	if ( $display == "month" || $display == "months" ) :
+		return number_format($time/2592000, $precision).' months';
+	elseif ( $display == "day" || $display == "days" ) :
+		return number_format($time/86400, $precision).' days';
+	elseif ( $display == "hour" || $display == "hours" ) :
+		return number_format($time/3600, $precision).' hours';
+	elseif ( $display == "minute" || $display == "minutes" ) :
+		return number_format($time/60, $precision).' minutes';
+	elseif ( $display == "second" || $display == "seconds" ) :
+		return number_format($time, $precision).' seconds';
+	else:
+		$s = $time%60;
+		$m = floor(($time%3600)/60);
+		$h = floor(($time%86400)/3600);
+		$d = floor(($time%2592000)/86400);
+		$M = floor($time/2592000);
 
-	$s = $time%60;
-	$m = floor(($time%3600)/60);
-	$h = floor(($time%86400)/3600);
-	$d = floor(($time%2592000)/86400);
-	$M = floor($time/2592000);
-	
-	$timeElapsed = array( 'month'=>'', 'day'=>'', 'hour'=>'', 'minute'=>'', 'second'=>'' );
-	
-	if ( $M > 0 ) $timeElapsed['month'] = $M.' month';
-	if ( $d > 0 ) $timeElapsed['day'] = $d.' day';
-	if ( $h > 0 ) $timeElapsed['hour'] = $h.' hour';
-	if ( $m > 0 ) $timeElapsed['minute'] = $m.' minute';
-	if ( $s > 0 ) $timeElapsed['second'] = $s.' second';
+		$timeElapsed = array( 'month'=>'', 'day'=>'', 'hour'=>'', 'minute'=>'', 'second'=>'' );
 
-	if ( $M > 1 ) $timeElapsed['month'] .= 's';
-	if ( $d > 1 ) $timeElapsed['day'] .= 's';
-	if ( $h > 1 ) $timeElapsed['hour'] .= 's';
-	if ( $m > 1 ) $timeElapsed['minute'] .= 's';
-	if ( $s > 1 ) $timeElapsed['second'] .= 's';
-	
-	$timeElapsed = array_filter($timeElapsed);	
-	return implode(', ', array_slice($timeElapsed, 0, $precision));
+		if ( $M > 0 ) $timeElapsed['month'] = $M.' month';
+		if ( $d > 0 ) $timeElapsed['day'] = $d.' day';
+		if ( $h > 0 ) $timeElapsed['hour'] = $h.' hour';
+		if ( $m > 0 ) $timeElapsed['minute'] = $m.' minute';
+		if ( $s > 0 ) $timeElapsed['second'] = $s.' second';
+
+		if ( $M > 1 ) $timeElapsed['month'] .= 's';
+		if ( $d > 1 ) $timeElapsed['day'] .= 's';
+		if ( $h > 1 ) $timeElapsed['hour'] .= 's';
+		if ( $m > 1 ) $timeElapsed['minute'] .= 's';
+		if ( $s > 1 ) $timeElapsed['second'] .= 's';
+
+		$timeElapsed = array_filter($timeElapsed);	
+		return implode(', ', array_slice($timeElapsed, 0, $precision));
+	endif;
 }
 
 // Convert Sizes

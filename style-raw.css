@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 13.4.14
+Version: 13.5
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -692,6 +692,7 @@ p.indent-double {
 
 p:first-child,
 ul:first-child,
+
 
 
 
@@ -1951,6 +1952,13 @@ button.fancybox-button.tab-focus {
 .fancybox-navigation button::before,
 .fancybox-caption {
     display: 									none;
+}
+
+.fancybox-active .fancybox-navigation,
+.fancybox-active .fancybox-infobar {
+	display: 									block;
+	visibility: 								visible;
+	opacity: 									1;
 }
 
 /* Blocks
@@ -5565,6 +5573,7 @@ html.error503 h3 {
 			
 	/* Row of Pics */ /* changed from .col to .col-row-of-pics 1/5/21 for Bubba's Cooks Country */
 	.grid-4e .col-row-of-pics:nth-last-child(1),
+
 	.grid-5e .col-row-of-pics:nth-last-child(1),
 	.grid-5e .col-row-of-pics:nth-last-child(2),
 	.grid-6e .col-row-of-pics:nth-last-child(2),

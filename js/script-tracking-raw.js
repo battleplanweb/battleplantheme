@@ -14,46 +14,22 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		
 	// Calculate load time for page		
 		var endTime = Date.now(), loadTime = (endTime - startTime) / 1000, deviceTime = "desktop";
+		if ( getDeviceW() <= getTabletCutoff() ) { deviceTime = "tablet"; }	
 		if ( getDeviceW() <= getMobileCutoff() ) { deviceTime = "mobile"; }	
 
 	// Delay 1 second before calling the following functions 
 		setTimeout(function() {	
-		// Check chron jobs	
-			//if ( !$('body').hasClass('wp-admin') ) {
-				//$.post({
-					//url : ajaxURL,
-					//data : { action: "run_chron_jobs", admin: "false" },
-					//success: function( response ) { console.log(response); }
-				//});
-			//}
-
 		// Log page load speed
 			if ( deviceTime == "desktop" ) {
 				loadTime = loadTime + 0.3;
 			} else {
 				loadTime = loadTime + 0.6;
 			}
-			/*
-			$.post({
-				url : ajaxURL,
-				data : { action: "log_page_load_speed", id: pageID, loadTime: loadTime, deviceTime: deviceTime },
-				success: function( response ) { console.log(response); }
-			});	
-			*/
 			
 			loadTime = loadTime.toFixed(1);
 			
 			gtag("event", "join_group", { group_id: pageID + "»" + deviceTime + "«" + loadTime });
-			console.log(pageID + "»" + deviceTime + "«" + loadTime + "s");	
-			
-		// Initialize new user for tracking elements
-		/*
-			$.post({
-				url : ajaxURL,
-				data : { action: "track_interaction", key: 'content-tracking', track: 'visitor', uniqueID: uniqueID },
-				success: function( response ) { console.log(response); }
-			});	
-			*/
+			console.log(pageID + "»" + deviceTime + "«" + loadTime + "s");				
 		}, 1000);		
 
 	// Delay 0.3s to allow accurate contentH  
@@ -104,17 +80,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 					gtag("event", "unlock_achievement", { achievement_id: pageID+'-100' });
 					console.log('event: '+pageID+'-100');
 					view100 = true;
-				}
-					/*
-					
-					$.post({
-						url : ajaxURL,
-						data : { action: 'track_interaction', key: 'content-scroll-pct', scroll: scrollPct, uniqueID: uniquePage },
-						success: function( response ) { console.log(response); }
-					});	
-					*/
-					
-					
+				}					
 				this.destroy();
 			}, { offset: 'bottom-in-view' });	
 
@@ -123,15 +89,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				var theCol = $(this.element), theSec = $(this.element).parent().parent(), colIndex = theSec.find('.flex > .col').index( theCol ) + 1, secIndex = $('#wrapper-bottom > section').index(theSec) + 1, completeView = secIndex+'.'+colIndex;
 								
 				gtag("event", "unlock_achievement", { achievement_id: pageID+'-'+completeView });
-				console.log('event: ' + pageID+'-'+completeView);			
+				console.log('event: ' + pageID+'-'+completeView);
 				
-				/*
-				$.post({
-					url : ajaxURL,
-					data : { action: 'track_interaction', key: 'content-column-views', viewed: completeView, page: pageID,  uniqueID: uniquePage },
-					success: function( response ) { console.log(response); }
-				});	
-				*/
 				this.destroy();
 			}, { offset: 'bottom-in-view' });	
 		
@@ -149,8 +108,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			$('.carousel.slider-testimonials').waypoint(function() {	
 				var theID = new Array();
 				$(this.element).find('.testimonials-credential.testimonials-name').each(function() {
-					theID.push( $(this).attr('data-id') );
-					
+					theID.push( $(this).attr('data-id') );					
 				});					
 				$.post({
 					url : ajaxURL,
@@ -169,14 +127,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 					console.log('event: ' + 'track-'+track);	
 					setCookie(track, true);
 				}
-				
-				/*
-				$.post({
-					url : ajaxURL,
-					data : { action: "track_interaction", key: 'content-tracking', track: track, uniqueID: uniqueID },
-					success: function( response ) { console.log(response); }
-				});	
-				*/
 				this.destroy();
 			}, { offset: 'bottom-in-view' });	
 		}, 300);	

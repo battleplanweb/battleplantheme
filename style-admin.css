@@ -186,15 +186,15 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 }
 
 #dashboard-widgets #postbox-container-1 {
-	width:										27%;
+	width:										26%;
 }
 
 #dashboard-widgets #postbox-container-2 {
-	width:										25%;
+	width:										29%;
 }
 
 #dashboard-widgets #postbox-container-3 {
-	width:										48%;
+	width:										45%;
 }
 
 #dashboard-widgets #postbox-container-1 td {
@@ -281,7 +281,8 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 
 #dashboard-widgets .postbox.active,
 #dashboard-widgets #battleplan_tech_stats.postbox.active,
-#dashboard-widgets #battleplan_pages_stats.postbox.active {
+#dashboard-widgets #battleplan_pages_stats.postbox.active,
+#dashboard-widgets #battleplan_content_stats.postbox.active {
     background: 								#ffffff;
 	border: 									1px solid #c6c6c6;
     box-shadow: 								2px 2px 0 0 #c6c6c6;

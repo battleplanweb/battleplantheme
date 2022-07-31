@@ -104,14 +104,16 @@ add_action( 'wp_ajax_count_view', 'battleplan_count_view_ajax' );
 add_action( 'wp_ajax_nopriv_count_view', 'battleplan_count_view_ajax' );
 function battleplan_count_view_ajax() {
 	$idArray = $_POST['id'];
-	$rightNow = strtotime(date("F j, Y g:i a")) - 14400;	
-	$today = strtotime(date("F j, Y"));		
+	$rightNow = strtotime(date("F j, Y g:i a")) - (2400 * 8);	
+	$today = strtotime(date("F j, Y"));	
 	
 	foreach ( $idArray as $theID ) :
 		$lastViewed = strtotime(readMeta($theID, 'log-last-viewed'));
 		$dateDiff = (($today - $lastViewed) / 60 / 60 / 24);	
 
 		if ( _USER_LOGIN != 'battleplanweb' ) :	
+			updateOption('last_visitor_time', $rightNow);	
+
 			$getViews = readMeta($theID, 'log-views');
 			$getViews = maybe_unserialize( $getViews );
 			if ( !is_array($getViews) ) $getViews = array();
@@ -144,7 +146,7 @@ function battleplan_count_view_ajax() {
 			updateMeta($theID, 'log-views-total-90day', $views90Day);	
 			updateMeta($theID, 'log-views-total-365day', $views365Day);	
 		endif;	
-		$response = array( 'dashboard' => 'Logging ID #'.$theID.' as viewed. Previous view = '.date("F j, Y g:i a", $lastViewed ));
+		$response = array( 'response' => 'Logging ID #'.$theID.' as viewed. Previous view = '.date("F j, Y g:i a", $lastViewed ));
 		wp_send_json( $response );	
 	endforeach;
 }

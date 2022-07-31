@@ -218,7 +218,7 @@ if ( $pagesLeft <= 0 ) :
 		battleplan_delete_prefixed_options( '_transient_widgetopts' );
 		battleplan_delete_prefixed_options( '_widgetopts' );
 		battleplan_delete_prefixed_options( 'widgetopts' );
-		battleplan_delete_prefixed_options( 'widget_' );			
+		battleplan_delete_prefixed_options( 'widget_' );
 	endif;
 
 // Basic Settings		
@@ -258,7 +258,12 @@ if ( $pagesLeft <= 0 ) :
 	battleplan_delete_prefixed_options( 'ac_sorting_' );
 	battleplan_delete_prefixed_options( 'wp-smush-' );
 	battleplan_delete_prefixed_options( 'wp_smush_' );
-	battleplan_delete_prefixed_options( 'client_' );
+	battleplan_delete_prefixed_options( 'client_' );	
+	
+	battleplan_delete_prefixed_options( 'bp_track_content_' );					
+	battleplan_delete_prefixed_options( 'bp_track_speed_' );	
+	battleplan_delete_prefixed_options( 'bp_track_l_' );	
+	battleplan_delete_prefixed_options( 'pct-viewed-' );
 
 /*--------------------------------------------------------------
 # Universal Pages
@@ -517,11 +522,11 @@ if ( $pagesLeft <= 0 ) :
 				$browser = $analyze['browser'];
 				$device = $analyze['device'];	
 				$resolution = $analyze['resolution'];
-				$pageviews = $analyze['pages-viewed'];
+				$pageviews = (int)$analyze['pages-viewed'];
 				$sessions = (int)$analyze['sessions'];
-				$engaged = $analyze['engaged'];
-				$newUsers = $analyze['new-users'];
-				$referrer = $analyze['referrer'];
+				$engaged = (int)$analyze['engaged'];
+				$newUsers = (int)$analyze['new-users'];
+				$referrer = (int)$analyze['referrer'];
 				list($source, $medium) = explode(" / ", $analyze['source']);			
 
 				if ( $sessions > 1 ) :			
@@ -562,9 +567,9 @@ if ( $pagesLeft <= 0 ) :
 		if ( !in_array( $siteHit['location'], $citiesToExclude) && strpos($page, 'fbclid') === false && strpos($page, 'reportkey') === false ) :					
 			if ( $page == "" || $page == "/" ) $page = "Home";
 			if ( is_array($compilePaths) && array_key_exists($page, $compilePaths ) ) :
-				$compilePaths[$page] += $siteHit['pages-viewed'];
+				$compilePaths[$page] += (int)$siteHit['pages-viewed'];
 			else:
-				$compilePaths[$page] = $siteHit['pages-viewed'];
+				$compilePaths[$page] = (int)$siteHit['pages-viewed'];
 			endif;
 		endif;
 
@@ -591,18 +596,10 @@ if ( $pagesLeft <= 0 ) :
 		endforeach;	
 	endforeach;	
 
-
-
-
-
-
-
-
-	// Gather GA4 Stats 
+	// Gather Content Tracking & Speed Tracking stats
 	if ( $ga4_id && is_admin() ) :
-
 		$today = date( "Y-m-d" );	
-		$rewind = date('Y-m-d', strtotime($today.' - 10 days'));
+		$rewind = date('Y-m-d', strtotime($today.' - 31 days'));
 
 		$response = $client->runReport([
 			'property' => 'properties/'.$ga4_id,
@@ -613,72 +610,22 @@ if ( $pagesLeft <= 0 ) :
 				new Dimension([ 'name' => 'achievementId' ]),
 				new Dimension([ 'name' => 'groupId' ]),
 				new Dimension([ 'name' => 'city' ]),
+				new Dimension([ 'name' => 'region' ]),	
 			],
 		]);
 
 		foreach ( $response->getRows() as $row ) :
-			$tracking = $row->getDimensionValues()[0]->getValue();			
-			$speed = $row->getDimensionValues()[1]->getValue();
+			$content_tracking = $row->getDimensionValues()[0]->getValue();			
+			$site_speed = $row->getDimensionValues()[1]->getValue();
 			$city = $row->getDimensionValues()[2]->getValue();	
-
-			if ( is_array($allTracking) && array_key_exists($tracking, $allTracking ) ) :
-				$allTracking[$tracking] += 1;
-			else:
-				$allTracking[$tracking] = 1;
-			endif;			
+			$state = strtolower($row->getDimensionValues()[3]->getValue());
+			if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
+			if ( $city == '(not set)' ) $location = ucwords($state);	
 			
-			$pageID = strtok($speed,  '»');
-			if ( strpos($speed, 'desktop') !== false ) : $device = "desktop"; else: $device = "mobile"; endif;			
-			$speed = (int)substr($speed, strpos($speed, "«") + 1);    
-			
-			if ( is_array($allSpeed) && array_key_exists($pageID, $allSpeed ) ) :
-				$allSpeed[$pageID]['speed'] += $speed;
-				$allSpeed[$pageID]['hits'] += 1;
-			else:
-				$allSpeed[$pageID]['speed'] = $speed;
-				$allSpeed[$pageID]['hits'] = 1;
-			endif;									
-			
-			if ( is_array($allSpeed) && array_key_exists($device, $allSpeed ) ) :
-				$allSpeed[$device]['speed'] += $speed;
-				$allSpeed[$device]['hits'] += 1;
-			else:
-				$allSpeed[$device]['speed'] = $speed;
-				$allSpeed[$device]['hits'] = 1;
-			endif;			
-
-		endforeach;	
-
-		foreach ( $allTracking as $event=>$count ) :			
-			updateOption('bp_track_content_'.$event, $count, false);		
-		endforeach;	
-		
-		foreach ( $allSpeed as $speeds ) :		
-			foreach ( $speeds as $speed ) :
-				$totalSpeed = (int)$speed['speed'];
-				$totalHits = (int)$speed['hits'];
-				if ( $totalHits > 0 ) $avgSpeed = round($totalSpeed / $totalHits, 2);				
-				updateOption('bp_track_speed_'.$speed, $avgSpeed, false);				
-			endforeach;	
-		endforeach;	
-
-		// Split session data into site hits
-		/*
-		foreach ( $analyticsGA4 as $analyze ) :
-			$event = $analyze['event'];
-			$location = $analyze['location'];
-			$count = $analyze['count'];
-
-			if ( strpos( $referrer, parse_url( get_site_url(), PHP_URL_HOST ) ) === false ) :	
-				$siteHitsGA4[] = array ('date'=>$date, 'location'=>$location, 'source'=>$source, 'medium'=>$medium, 'page'=>$page, 'browser'=>$browser, 'device'=>$device, 'resolution'=>$resolution, 'pages-viewed'=>$pageviews, 'sessions'=>'1', 'engaged'=>$engaged, 'new-users'=>$newUsers );	
-			else :
-				$siteHitsGA4[] = array ('date'=>$date, 'page'=>$page, 'pages-viewed'=>$pageviews, 'sessions'=>'0', 'engaged'=>$engaged );				
-			endif;
+			$allTracking[] = array('content'=>$content_tracking, 'speed'=>$site_speed, 'location'=>$location);		
+			updateOption('bp_tracking_content', $allTracking);		
 		endforeach;
-		*/
-
 	endif;
-
 
 	updateOption( 'bp_chrons_pages', 0, true );
 	//updateOption( 'bp_chrons_rewind', date('Y-m-d', strtotime("-2 days")));

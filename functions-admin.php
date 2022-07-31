@@ -1752,15 +1752,15 @@ foreach ( $siteHits as $siteHit ) :
 
 			$lastView = $processing;
 
-			$totalPageviews = $totalPageviews + $siteHit['pages-viewed'];
-			$totalSessions = $totalSessions + $siteHit['sessions'];
-			$totalEngaged = $totalEngaged + $siteHit['engaged'];
-			$totalNewUsers = $totalNewUsers + $siteHit['new-users'];											
+			$totalPageviews = $totalPageviews + (int)$siteHit['pages-viewed'];
+			$totalSessions = $totalSessions + (int)$siteHit['sessions'];
+			$totalEngaged = $totalEngaged + (int)$siteHit['engaged'];
+			$totalNewUsers = $totalNewUsers + (int)$siteHit['new-users'];											
 
 			if ( is_array($allPages) && array_key_exists($siteHit['page'], $allPages ) ) :
-				$allPages[$siteHit['page']] += $siteHit['pages-viewed'];
+				$allPages[$siteHit['page']] += (int)$siteHit['pages-viewed'];
 			else:
-				$allPages[$siteHit['page']] = $siteHit['pages-viewed'];
+				$allPages[$siteHit['page']] = (int)$siteHit['pages-viewed'];
 			endif;	
 
 			if ( $siteHit['sessions'] == 1 ) :			
@@ -1856,184 +1856,6 @@ function battleplan_admin_site_stats() {
 	echo '<tr><td>&nbsp;</td></tr></table>';
 }
 
-// Set up Content Info widget on dashboard
-function battleplan_admin_content_stats() {
-
-// Scrolling Pct
-	$contentTracking = get_option('content-tracking');
-	if ( !is_array($contentTracking) ) $contentTracking = array();
-	$columnScroll = get_option('content-column-views');
-	if ( !is_array($columnScroll) ) $columnScroll = array();	
-	$contentScroll = get_option('content-scroll-pct');
-	if ( !is_array($contentScroll) ) $contentScroll = array();
-	$contentScrollNum = count($contentScroll);	
-	$contentScrollTotal = array_sum($contentScroll);	
-	if ($contentScrollNum > 0) $contentScrollMean = ( $contentScrollTotal / $contentScrollNum ) * 100;
-
-	foreach ($contentScroll as $key=>$scroll) :
-		$scroll = (round(intval($scroll),1) * 100);
-		if ( $scroll == 100 ) $contentViz[0]++;
-		if ( $scroll >= 85 ) $contentViz[1]++;
-		if ( $scroll >= 70 ) $contentViz[2]++;
-		if ( $scroll < 15 ) $contentViz[3]++;
-	endforeach;
-		
-	$visitsTracked = count($contentTracking);
-	foreach ($contentTracking as $content) :
-		foreach ($content as $key=>$tracking) :	
-			if ( $tracking == "true" ) : $count = 1; else: $count = 0; endif;
-			if ( is_array($allTracking) && array_key_exists($key, $allTracking ) ) :
-				$allTracking[$key] += $count;
-			else:
-				$allTracking[$key] = $count;
-			endif;		
-		endforeach;
-	endforeach;
-	if ( is_array($allTracking) ) arsort($allTracking); 
-			
-	foreach ( $columnScroll as $columns=>$column ) :	
-		foreach ( $column as $col ) :		
-			if ( is_array($columnTracking) && array_key_exists($col, $columnTracking ) ) :
-				$columnTracking[$col] += 1;
-			else:
-				$columnTracking[$col] = 1;
-			endif;		
-		endforeach;		
-	endforeach;
-	if ( is_array($columnTracking) ) arsort($columnTracking); 
-	
-	if ( $contentScrollNum != 0 ) :
-		$contentAll = number_format((round($contentViz[0]/$contentScrollNum,3) * 100),1);
-		$content85 = number_format((round($contentViz[1]/$contentScrollNum,3) * 100),1);
-		$content70 = number_format((round($contentViz[2]/$contentScrollNum,3) * 100),1);
-		$content15 = number_format((round($contentViz[3]/$contentScrollNum,3) * 100),1);
-	endif;
-			
-	echo '<div><ul><li class="sub-label">Last '.number_format($contentScrollNum).' Pageviews</li>';
-		echo "<li><div class='value'><b>".$contentAll."%</b></div><div class='label'><b>viewed ALL of main content</b></div></li>";	
-		echo "<li><div class='value'><b>".$content85."%</b></div><div class='label'><b>viewed at least 85% of main content</b></div></li>";	
-		echo "<li><div class='value'><b>".$content70."%</b></div><div class='label'><b>viewed at least 70% of main content</b></div></li>";	
-		echo "<li><div class='value'><b>".$content15."%</b></div><div class='label'><b>viewed less than 15% of main content</b></div></li>";	
-	
-	echo '</ul><ul><li class="sub-label">Components</li>';
-		
-	foreach($allTracking as $track=>$count) :
-		if ( $track == "visitor" ) : $totalTracks = $count;
-		else:
-			if ( $totalTracks > 0 ) { $findPct = round( (($count / $totalTracks) * 100), 1); }
-			echo "<li><div class='value'><b>".$findPct."%</b></div><div class='label'>".ucwords($track)."</div></li>";	
-			update_option('pct-viewed-'.$track, $findPct, false);
-		endif;
-	endforeach;		
-
-	echo '</ul><ul><li class="sub-label">Best Column Positions</li>';
-
-		echo "<div style='column-count:2'>";
-		foreach($columnTracking as $theCol=>$count) :
-			echo "<li><div class='value'><b>".$count."</b></div><div class='label'>".$theCol."</div></li>";	
-		endforeach;			
-		echo "</div>";		
-		
-	echo '</ul><a href="#" class="clear-content-tracking">Clear</a></div>';
-}
-
-// Set up Tech Info widget on dashboard
-function battleplan_admin_tech_stats() {
-//Browser
-	foreach ( $GLOBALS['displayTerms'] as $display=>$days ) :
-		$allBrowsers = array();
-		for ($x = 0; $x < $days; $x++) :	
-			$theDate = $GLOBALS['dates'][$x];
-			$browsers = $GLOBALS['dailyStats'][$theDate]['browser'];	
-			
-			foreach ( $browsers as $browser=>$counts ) :			
-				if ( is_array($allBrowsers) && array_key_exists($browser, $allBrowsers ) ) :
-					$allBrowsers[$browser] += $counts;
-				else:
-					$allBrowsers[$browser] = $counts;
-				endif;		
-			endforeach;		
-		endfor;		
-		
-		if ( is_array($allBrowsers) ) arsort($allBrowsers);
-		
-		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
-		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul><li class="sub-label">Browsers</li>';	
-		
-		foreach ( $allBrowsers as $browser=>$count ) :
-			$count = ($count / array_sum($allBrowsers)) * 100;	
-			if ( $count > 3) echo "<li><div class='value'><b>".number_format($count,1)."%</b></div><div class='label'>".ucwords($browser)."</div></li>";
-		endforeach;			
-			
-		echo '</ul></div>';		
-	endforeach;		
-
-// Devices
-	foreach ( $GLOBALS['displayTerms'] as $display=>$days ) :
-		$allDevices = array();
-		for ($x = 0; $x < $days; $x++) :	
-			$theDate = $GLOBALS['dates'][$x];
-			$devices = $GLOBALS['dailyStats'][$theDate]['device'];	
-			
-			foreach ( $devices as $device=>$counts ) :			
-				if ( is_array($allDevices) && array_key_exists($device, $allDevices ) ) :
-					$allDevices[$device] += $counts;
-				else:
-					$allDevices[$device] = $counts;
-				endif;		
-			endforeach;		
-		endfor;		
-		
-		if ( is_array($allDevices) ) arsort($allDevices);
-		
-		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
-		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul><li class="sub-label">Devices</li>';	
-		
-		foreach ( $allDevices as $device=>$count ) :
-			$count = ($count / array_sum($allDevices)) * 100;				
-			if ( $device == "mobile" ) $speed = number_format(array_sum(get_option('load_time_mobile')) / count(get_option('load_time_mobile')),1) . ' sec';	
-			if ( $device == "desktop" ) $speed = number_format(array_sum(get_option('load_time_desktop')) / count(get_option('load_time_desktop')),1) . ' sec';				
-			if ( $device == "tablet" ) $speed = '';		
-		
-			echo "<li><div class='value'><b>".number_format($count,1)."%</b></div><div class='label-half'>".ucwords($device)."</div><div class='label-half'>".$speed."</div></li>";
-		endforeach;			
-			
-		echo '</ul></div>';		
-	endforeach;		
-	
-// Screen Resolution	
-	foreach ( $GLOBALS['displayTerms'] as $display=>$days ) :
-		$allResolutions = array();
-		for ($x = 0; $x < $days; $x++) :	
-			$theDate = $GLOBALS['dates'][$x];
-			$resolutions = $GLOBALS['dailyStats'][$theDate]['resolution'];	
-			
-			foreach ( $resolutions as $resolution=>$counts ) :	
-				if ( $resolution ) :
-					if ( is_array($allResolutions) && array_key_exists($resolution, $allResolutions ) ) :
-						$allResolutions[$resolution] += $counts;
-					else:
-						$allResolutions[$resolution] = $counts;
-					endif;	
-				endif;
-			endforeach;		
-		endfor;		
-		
-		if ( is_array($allResolutions) ) arsort($allResolutions); 
-		
-		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
-		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul><li class="sub-label">Screen Widths</li><div style="column-count:2">';	
-		
-		foreach ( $allResolutions as $resolution=>$count ) :
-			$resolution = substr($resolution, 0, strpos($resolution, 'x'));
-			$count = ($count / array_sum($allResolutions)) * 100;
-			if ( $count > 2) echo "<li><div class='value'><b>".number_format($count,1)."%</b></div><div class='label'>".ucwords($resolution)." px</div></li>";
-		endforeach;			
-			
-		echo '</div></ul></div>';		
-	endforeach;	
-}
-
 // Set up Visitor Referrers widget on dashboard
 function battleplan_admin_referrer_stats() {
 	echo '<div class="last-visitors-buttons">';	
@@ -2109,6 +1931,201 @@ function battleplan_admin_location_stats() {
 		echo '</ul></div>';		
 	endforeach;			
 }
+
+// Set up Tech Info widget on dashboard
+function battleplan_admin_tech_stats() {
+//Browser
+	foreach ( $GLOBALS['displayTerms'] as $display=>$days ) :
+		$allBrowsers = array();
+		for ($x = 0; $x < $days; $x++) :	
+			$theDate = $GLOBALS['dates'][$x];
+			$browsers = $GLOBALS['dailyStats'][$theDate]['browser'];	
+			
+			foreach ( $browsers as $browser=>$counts ) :			
+				if ( is_array($allBrowsers) && array_key_exists($browser, $allBrowsers ) ) :
+					$allBrowsers[$browser] += $counts;
+				else:
+					$allBrowsers[$browser] = $counts;
+				endif;		
+			endforeach;		
+		endfor;		
+		
+		if ( is_array($allBrowsers) ) arsort($allBrowsers);
+		
+		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
+		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul><li class="sub-label">Browsers</li>';	
+		
+		foreach ( $allBrowsers as $browser=>$count ) :
+			$count = ($count / array_sum($allBrowsers)) * 100;	
+			if ( $count > 3) echo "<li><div class='value'><b>".number_format($count,1)."%</b></div><div class='label'>".ucwords($browser)."</div></li>";
+		endforeach;			
+			
+		echo '</ul></div>';		
+	endforeach;		
+
+// Devices
+	$allTracking = get_option('bp_tracking_content');
+	foreach ( $allTracking as $tracking ) :
+		$site_speed = $tracking['speed'];
+		$location = $tracking['location'];
+
+		if ( !in_array( $location, $citiesToExclude) && $site_speed != '' ) :			
+			$pageID = strtok($site_speed,  '»');
+			if ( strpos($site_speed, 'desktop') !== false ) : $device = "desktop"; else: $device = "mobile"; endif;			
+			$speed = str_replace($pageID.'»'.$device.'«', '', $site_speed);
+
+			if ( is_array($allSpeed) && array_key_exists($pageID, $allSpeed ) ) :
+				$allSpeed[$pageID]['speed'] += $speed;
+				$allSpeed[$pageID]['hits'] += 1;
+			else:
+				$allSpeed[$pageID]['speed'] = $speed;
+				$allSpeed[$pageID]['hits'] = 1;
+			endif;						 		
+
+			if ( $allSpeed[$pageID]['hits'] > 0 ) $allSpeed[$pageID]['avg'] = round($allSpeed[$pageID]['speed'] / $allSpeed[$pageID]['hits'], 2);	
+
+			if ( is_array($allSpeed) && array_key_exists($device, $allSpeed ) ) :
+				$allSpeed[$device]['speed'] += $speed;
+				$allSpeed[$device]['hits'] += 1;
+			else:
+				$allSpeed[$device]['speed'] = $speed;
+				$allSpeed[$device]['hits'] = 1;
+			endif;	
+
+			if ( $allSpeed[$device]['hits'] > 0 ) $allSpeed[$device]['avg'] = round($allSpeed[$device]['speed'] / $allSpeed[$device]['hits'], 2);	
+		endif;			
+	endforeach;		
+		
+	foreach ( $GLOBALS['displayTerms'] as $display=>$days ) :
+		$allDevices = array();
+		for ($x = 0; $x < $days; $x++) :	
+			$theDate = $GLOBALS['dates'][$x];
+			$devices = $GLOBALS['dailyStats'][$theDate]['device'];	
+			
+			foreach ( $devices as $device=>$counts ) :			
+				if ( is_array($allDevices) && array_key_exists($device, $allDevices ) ) :
+					$allDevices[$device] += $counts;
+				else:
+					$allDevices[$device] = $counts;
+				endif;		
+			endforeach;		
+		endfor;		
+		
+		if ( is_array($allDevices) ) arsort($allDevices);
+		
+		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
+		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul><li class="sub-label">Devices</li>';	
+		
+		foreach ( $allDevices as $device=>$count ) :
+			$count = ($count / array_sum($allDevices)) * 100;				
+			echo '<li><div class="value"><b>'.number_format($count,1).'%</b></div><div class="label-half">'.ucwords($device).'</div><div class="label-half">'.number_format($allSpeed[$device]['avg'],1).' sec</div></li>';
+			updateOption('load_time_'.$device, number_format($allSpeed[$device]['avg'],1) );
+		endforeach;			
+			
+		echo '</ul></div>';		
+	endforeach;		
+	
+// Screen Resolution	
+	foreach ( $GLOBALS['displayTerms'] as $display=>$days ) :
+		$allResolutions = array();
+		for ($x = 0; $x < $days; $x++) :	
+			$theDate = $GLOBALS['dates'][$x];
+			$resolutions = $GLOBALS['dailyStats'][$theDate]['resolution'];	
+			
+			foreach ( $resolutions as $resolution=>$counts ) :	
+				if ( $resolution ) :
+					if ( is_array($allResolutions) && array_key_exists($resolution, $allResolutions ) ) :
+						$allResolutions[$resolution] += $counts;
+					else:
+						$allResolutions[$resolution] = $counts;
+					endif;	
+				endif;
+			endforeach;		
+		endfor;		
+		
+		if ( is_array($allResolutions) ) arsort($allResolutions); 
+		
+		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
+		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul><li class="sub-label">Screen Widths</li><div style="column-count:2">';	
+		
+		foreach ( $allResolutions as $resolution=>$count ) :
+			$resolution = substr($resolution, 0, strpos($resolution, 'x'));
+			$count = ($count / array_sum($allResolutions)) * 100;
+			if ( $count > 2) echo "<li><div class='value'><b>".number_format($count,1)."%</b></div><div class='label'>".ucwords($resolution)." px</div></li>";
+		endforeach;			
+			
+		echo '</div></ul></div>';		
+	endforeach;	
+}
+
+// Set up Content Info widget on dashboard
+function battleplan_admin_content_stats() {
+	$allTracking = get_option('bp_tracking_content');
+	foreach ( $allTracking as $tracking ) :
+		$content_tracking = $tracking['content'];			
+		$location = $tracking['location'];
+
+		if ( !in_array( $location, $citiesToExclude) && $content_tracking != '' ) :
+			$pageID = strtok($content_tracking,  '-');
+			$track = str_replace($pageID.'-', '', $content_tracking);
+		
+			if ( is_array($contentTracking) && array_key_exists($pageID, $contentTracking ) ) :
+				$contentTracking[$pageID][$track] += 1;
+			else:
+				$contentTracking[$pageID][$track] = 1;
+			endif;	
+		endif;			
+	endforeach;
+	
+	foreach ( $contentTracking as $id=>$content) :
+		foreach ( $content as $track=>$count ) :	
+			if ( $id == "track" ) :
+				if ( is_array($componentTracking) && array_key_exists($track, $componentTracking ) ) :
+					$componentTracking[$track] += $count;
+				else:
+					$componentTracking[$track] = $count;
+				endif;				
+			elseif ( strpos($track, '.') !== false ) :
+				$track = explode(".", $track);
+				$page = ucwords(get_the_title($id));
+				$page = (strlen($page) > 17) ? substr($page,0,15).'&hellip;' : $page;			
+				$column = $page.' · s'.$track[0].' c'.$track[1];
+				if ( is_array($colTracking) && array_key_exists($column, $colTracking ) ) :
+					$colTracking[$column] += $count;
+				else:
+					$colTracking[$column] = $count;
+				endif;				
+			else :
+				if ( is_array($totalTracking) && array_key_exists($track, $totalTracking ) ) :
+					$totalTracking[$track] += $count;
+				else:
+					$totalTracking[$track] = $count;
+				endif;				
+			endif;
+		endforeach;
+	endforeach;
+	
+	echo '<div><ul><li class="sub-label">Last '.$totalTracking['init'].' Pageviews</li>';
+		echo "<li><div class='value'><b>".number_format((round($totalTracking['100']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed ALL of main content</b></div></li>";	
+		echo "<li><div class='value'><b>".number_format((round($totalTracking['80']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed at least 80% of main content</b></div></li>";	
+		echo "<li><div class='value'><b>".number_format((round($totalTracking['60']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed at least 60% of main content</b></div></li>";	
+		echo "<li><div class='value'><b>".number_format((round($totalTracking['40']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed at least 40% of main content</b></div></li>";	
+		echo "<li><div class='value'><b>".number_format(100-(round($totalTracking['20']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed less than 20% of main content</b></div></li>";	
+	
+	echo '</ul><ul><li class="sub-label">Components</li>';
+	
+	foreach($componentTracking as $track=>$count) :
+		if ( $track != "init" ) echo "<li><div class='value'><b>".number_format((round($componentTracking[$track]/$componentTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>".ucwords($track)."</b></div></li>";	
+	endforeach;		
+
+	echo '</ul><ul><li class="sub-label">Best Column Positions</li><div style="column-count:2">';		
+		
+	arsort($colTracking);
+	foreach ( $colTracking as $page=>$count) :
+		echo "<li><div class='value'><b>".$count."</b></div><div class='label'>".$page."</div></li>";	
+	endforeach;
+	
+	echo '</div></ul></div>';
 
 // Set up Popular Pages widget on dashboard
 function battleplan_admin_pages_stats() {

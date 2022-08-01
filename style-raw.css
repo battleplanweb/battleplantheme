@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 13.5.1
+Version: 13.5.2
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1743,6 +1743,7 @@ form .block-button,
 
 .wpcf7 form.init .wpcf7-response-output,
 .wpcf7 form.resetting .wpcf7-response-output,
+.wpcf7 form.validating .wpcf7-response-output,
 .wpcf7 form.submitting .wpcf7-response-output {
 	display: 									none;
     border-color: 								unset;

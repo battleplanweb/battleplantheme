@@ -550,7 +550,13 @@ function battleplan_buildWidget( $atts, $content = null ) {
 	if ( $type == "financing" ) : $priority = '3'; endif; 
 	
 	if ( $type == "customer-care" ) : $addClass = ' widget-image'; $addHide = 'customer-care'; endif;
-	if ( $type == "customer-care" && $content == null && ( ( !is_array( $brand ) && $brand == 'american standard' ) || ( is_array( $brand ) && in_array( 'american standard', $brand ) ))) : $content = '[get-customer-care]'; endif;
+	if ( $type == "customer-care" && $content == null ) :	
+		if ( (!is_array( $brand ) && $brand == 'american standard' ) || ( is_array( $brand ) && $brand[0] == 'american standard' )) : $content = '[get-customer-care]'; 
+		elseif ( (!is_array( $brand ) && $brand == 'ruud' ) || ( is_array( $brand ) && $brand[0] == 'ruud' )) : $content = '[ruud-pro-partner]'; 
+		elseif ( (!is_array( $brand ) && $brand == 'comfortmaker' ) || ( is_array( $brand ) && $brand[0] == 'comfortmaker' )) : $content = '[get-comfortmaker-elite-dealer]'; 
+		elseif ( (!is_array( $brand ) && $brand == 'tempstar' ) || ( is_array( $brand ) && $brand[0] == 'tempstar' )) : $content = '[get-tempstar-elite-dealer]';
+		endif;
+	endif;
 	
 	if ( $type == "symptom-checker" ) : $addClass = ' widget-image'; $priority = '1'; $addHide = 'symptom-checker'; endif;
 	if ( $type == "symptom-checker" && $content == null ) : $content = '[get-symptom-checker]'; endif;

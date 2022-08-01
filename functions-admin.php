@@ -1502,7 +1502,7 @@ add_filter('admin_footer_text', 'battleplan_admin_footer_text');
 function battleplan_admin_footer_text() { 
 	$printFooter = '<div style="float:left; margin-right:8px;"><img src="https://battleplanwebdesign.com/wp-content/uploads/site-icon-80x80.png" /></div>';
 	$printFooter .= '<div style="float:left; margin-top:8px;">Powered by <a href="https://battleplanwebdesign.com" target="_blank">Battle Plan Web Design</a><br>';
-	if ( _USER_LOGIN == "battleplanweb" ) $printFooter .= 'Site Audit: '.date("F j, Y", strtotime(get_option( "site_updated" ))).'<br>'; 
+	if ( _USER_LOGIN == "battleplanweb" ) $printFooter .= 'Site Audit: '.date("F j, Y", get_option( "site_updated" )).'<br>'; 
 	$printFooter .= 'Framework '._BP_VERSION.'<br>';
 	$printFooter .= 'WP '.get_bloginfo('version').'<br></div>';	
 	
@@ -2106,21 +2106,23 @@ function battleplan_admin_content_stats() {
 	endforeach;
 	
 	echo '<div><ul><li class="sub-label">Last '.$totalTracking['init'].' Pageviews</li>';
-		echo "<li><div class='value'><b>".number_format((round($totalTracking['100']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed ALL of main content</b></div></li>";	
-		echo "<li><div class='value'><b>".number_format((round($totalTracking['80']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed at least 80% of main content</b></div></li>";	
-		echo "<li><div class='value'><b>".number_format((round($totalTracking['60']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed at least 60% of main content</b></div></li>";	
-		echo "<li><div class='value'><b>".number_format((round($totalTracking['40']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed at least 40% of main content</b></div></li>";	
-		echo "<li><div class='value'><b>".number_format(100-(round($totalTracking['20']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed less than 20% of main content</b></div></li>";	
+		if ( $totalTracking['init'] > 0 ) :
+			echo "<li><div class='value'><b>".number_format((round($totalTracking['100']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed ALL of main content</b></div></li>";	
+			echo "<li><div class='value'><b>".number_format((round($totalTracking['80']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed at least 80% of main content</b></div></li>";	
+			echo "<li><div class='value'><b>".number_format((round($totalTracking['60']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed at least 60% of main content</b></div></li>";	
+			echo "<li><div class='value'><b>".number_format((round($totalTracking['40']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed at least 40% of main content</b></div></li>";	
+			echo "<li><div class='value'><b>".number_format(100-(round($totalTracking['20']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed less than 20% of main content</b></div></li>";	
+		endif;
 	
 	echo '</ul><ul><li class="sub-label">Components</li>';
 	
 	foreach($componentTracking as $track=>$count) :
-		if ( $track != "init" ) echo "<li><div class='value'><b>".number_format((round($componentTracking[$track]/$componentTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>".ucwords($track)."</b></div></li>";	
+		if ( $track != "init" && $componentTracking['init'] > 0 ) echo "<li><div class='value'><b>".number_format((round($componentTracking[$track]/$componentTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>".ucwords($track)."</b></div></li>";	
 	endforeach;		
 
 	echo '</ul><ul><li class="sub-label">Best Column Positions</li><div style="column-count:2">';		
 		
-	arsort($colTracking);
+	if ( is_array($colTracking)) arsort($colTracking);
 	foreach ( $colTracking as $page=>$count) :
 		echo "<li><div class='value'><b>".$count."</b></div><div class='label'>".$page."</div></li>";	
 	endforeach;
@@ -2306,6 +2308,9 @@ function battleplan_save_remove_sidebar($post_id, $post, $update) {
 	if ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) return $post_id;
 	if ( defined('DOING_AJAX') && DOING_AJAX ) return $post_id;
     if ( !current_user_can("edit_post", $post_id) ) return $post_id;
+			
+	$lastViewed = readMeta( $post_id, 'log-last-viewed' );
+	if ( !$lastViewed ) updateMeta( $post_id, 'log-last-viewed', strtotime("-20 years"));	
 
     $updateRemoveSidebar = "";
     if ( isset($_POST["remove_sidebar"]) ) $updateRemoveSidebar = $_POST["remove_sidebar"];   
@@ -2428,7 +2433,7 @@ function battleplan_setImageMetaUponUpload( $post_ID ) {
 add_action( 'add_attachment', 'battleplan_addWidgetPicViewsToImg' );
 function battleplan_addWidgetPicViewsToImg( $post_ID ) {
 	if ( wp_attachment_is_image( $post_ID ) ) {		
-		updateMeta( $post_ID, 'log-last-viewed', strtotime("-1 day"));		
+		updateMeta( $post_ID, 'log-last-viewed', strtotime("-20 years"));		
 		updateMeta( $post_ID, 'log-views-total-7day', '0' );		
 		updateMeta( $post_ID, 'log-views-total-30day', '0' );
 		updateMeta( $post_ID, 'log-views-total-90day', '0' );
@@ -2450,7 +2455,7 @@ function battleplan_site_audit() {
 	$submitCheck = $_POST['submit_check'];
 	$siteType = get_option('customer_info')['site-type'];
 	
-	$criteria = array ('lighthouse-mobile-score', 'lighthouse-mobile-fcp', 'lighthouse-mobile-si', 'lighthouse-mobile-lcp', 'lighthouse-mobile-tti', 'lighthouse-mobile-tbt', 'lighthouse-mobile-cls', 'lighthouse-desktop-score', 'lighthouse-desktop-fcp', 'lighthouse-desktop-si', 'lighthouse-desktop-lcp', 'lighthouse-desktop-tti', 'lighthouse-desktop-tbt', 'lighthouse-desktop-cls', 'keyword-page-1', 'keyword-needs-attn', 'cite-bright-local', 'cite-backlinks', 'cite-domains', 'cite-authority', 'gmb-overview', 'gmb-calls', 'gmb-msg', 'gmb-clicks');
+	$criteria = array ('lighthouse-mobile-score', 'lighthouse-mobile-fcp', 'lighthouse-mobile-si', 'lighthouse-mobile-lcp', 'lighthouse-mobile-tti', 'lighthouse-mobile-tbt', 'lighthouse-mobile-cls', 'lighthouse-desktop-score', 'lighthouse-desktop-fcp', 'lighthouse-desktop-si', 'lighthouse-desktop-lcp', 'lighthouse-desktop-tti', 'lighthouse-desktop-tbt', 'lighthouse-desktop-cls', 'keyword-page-1', 'keyword-needs-attn', 'cite-citations', 'cite-industry-links', 'cite-local-links', 'cite-domains', 'gmb-overview', 'gmb-calls', 'gmb-msg', 'gmb-clicks', 'google-rating', 'google-reviews');
 	
 	if ( $submitCheck == "true" ) :
 		$siteAudit = get_option('bp_site_audit_details');
@@ -2472,10 +2477,14 @@ function battleplan_site_audit() {
 	if ( $submitCheck == "true" ) :
 		if ( $_POST['notes'] ) :
 			$siteAudit[$today]['notes'] .= "  ".$_POST['notes'];
-		endif;		
+		endif;	
+		
+		$googleInfo = get_option('bp_google_reviews');
+		$siteAudit[$today]['google-rating'] = $googleInfo['rating'];
+		$siteAudit[$today]['google-reviews'] = $googleInfo['number'];
 
-		$siteAudit[$today]['load_time_mobile'] = number_format(array_sum(get_option('load_time_mobile')) / count(get_option('load_time_mobile')),1);	
-		$siteAudit[$today]['load_time_desktop'] = number_format(array_sum(get_option('load_time_desktop')) / count(get_option('load_time_desktop')),1);
+		if ( is_array (get_option('load_time_mobile')) ) $siteAudit[$today]['load_time_mobile'] = number_format(array_sum(get_option('load_time_mobile')) / count(get_option('load_time_mobile')),1);	
+		if ( is_array (get_option('load_time_desktop')) ) $siteAudit[$today]['load_time_desktop'] = number_format(array_sum(get_option('load_time_desktop')) / count(get_option('load_time_desktop')),1);
 		
 		$siteAudit[$today]['testimonials-pct'] = get_option('pct-viewed-testimonials').'%';
 		$siteAudit[$today]['coupon-pct'] = get_option('pct-viewed-coupon').'%';
@@ -2583,11 +2592,11 @@ function battleplan_site_audit() {
 		
 		$siteAuditPage .= '<br>';
 
-		$siteAuditPage .= '<h1>Citations</h1>';	
-		$siteAuditPage .= '<div class="form-input"><label for="cite-bright-local">Bright Local:</label><input id="cite-bright-local" type="text" name="cite-bright-local" value=""></div>';
-		$siteAuditPage .= '<div class="form-input"><label for="cite-backlinks">Backlinks:</label><input id="cite-backlinks" type="text" name="cite-backlinks" value=""></div>';
+		$siteAuditPage .= '<h1>Backlinks</h1>';	
+		$siteAuditPage .= '<div class="form-input"><label for="cite-citations">Citations:</label><input id="cite-citations" type="text" name="cite-citations" value=""></div>';
+		$siteAuditPage .= '<div class="form-input"><label for="cite-industry-links">Industry Links:</label><input id="cite-industry-links" type="text" name="cite-industry-links" value=""></div>';
+		$siteAuditPage .= '<div class="form-input"><label for="cite-local-links">Local Links:</label><input id="cite-local-links" type="text" name="cite-local-links" value=""></div>';
 		$siteAuditPage .= '<div class="form-input"><label for="cite-domains">Linking Domains:</label><input id="cite-domains" type="text" name="cite-domains" value=""></div>';
-		$siteAuditPage .= '<div class="form-input"><label for="cite-authority">Page Authority:</label><input id="cite-authority" type="text" name="cite-authority" value=""></div>';
 		
 		$siteAuditPage .= '<br>';
 
@@ -2630,14 +2639,16 @@ function battleplan_site_audit() {
 	$siteAuditPage .= '[col class="headline"]Cumulative Layout Shift[/col]';	
 	$siteAuditPage .= '[col class="headline"]Page One[/col]';	
 	$siteAuditPage .= '[col class="headline"]Needs Attention[/col]';	
-	$siteAuditPage .= '[col class="headline"]Bright Local[/col]';	
-	$siteAuditPage .= '[col class="headline"]Backlinks[/col]';	
-	$siteAuditPage .= '[col class="headline"]Linking Domains[/col]';	
-	$siteAuditPage .= '[col class="headline"]Page Authority[/col]';
+	$siteAuditPage .= '[col class="headline"]Citations[/col]';	
+	$siteAuditPage .= '[col class="headline"]Industry Links[/col]';	
+	$siteAuditPage .= '[col class="headline"]Local Links[/col]';	
+	$siteAuditPage .= '[col class="headline"]Linking Domains[/col]';
 	$siteAuditPage .= '[col class="headline"]Overview[/col]';	
 	$siteAuditPage .= '[col class="headline"]Calls[/col]';	
 	$siteAuditPage .= '[col class="headline"]Messages[/col]';	
 	$siteAuditPage .= '[col class="headline"]Clicks[/col]';		
+	$siteAuditPage .= '[col class="headline"]Rating[/col]';		
+	$siteAuditPage .= '[col class="headline"]Number[/col]';	
 	$siteAuditPage .= '[col class="headline"]Mobile[/col]';		
 	$siteAuditPage .= '[col class="headline"]Desktop[/col]';			
 	$siteAuditPage .= '[col class="headline"]Optimized[/col]';
@@ -2671,7 +2682,8 @@ function battleplan_site_audit() {
 	$siteAuditPage .= '[col class="subhead lighthouse desktop"]Desktop[/col]';	
 	$siteAuditPage .= '[col class="subhead keywords"]Keywords[/col]';	
 	$siteAuditPage .= '[col class="subhead citations"]Citations[/col]';	
-	$siteAuditPage .= '[col class="subhead gmb"]Google My Business[/col]';	
+	$siteAuditPage .= '[col class="subhead gmb"]Google My Business[/col]';		
+	$siteAuditPage .= '[col class="subhead google-reviews"]Reviews[/col]';	
 	$siteAuditPage .= '[col class="subhead site-speed"]Site Speed[/col]';	
 	$siteAuditPage .= '[col class="subhead site-elements"]Site Elements[/col]';	
 	
@@ -2700,7 +2712,7 @@ function battleplan_site_audit() {
 	$siteAuditPage .= '[/layout][/section]</div></div> <!--site-audit-wrap-->';
 	echo do_shortcode($siteAuditPage);
 	
-	updateOption( 'site_updated', array_key_first($siteAudit) ); 
+	updateOption( 'site_updated', strtotime(array_key_first($siteAudit)) ); 
 	exit();
 }  
 

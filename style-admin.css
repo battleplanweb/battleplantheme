@@ -740,13 +740,13 @@ body.ac-wp-media .row-actions {
 }
 
 .wp-admin .flex.stats {
-	grid-template-columns: 						115px repeat(39, 50px);
+	grid-template-columns: 						115px repeat(41, 50px); /* add new elements to 41 */
 	gap: 										0.5em 15px;
 	text-align: 								center;
 }
 
 .wp-admin .flex.stats.hvac {
-	grid-template-columns: 						115px repeat(48, 50px);
+	grid-template-columns: 						115px repeat(50, 50px); /* add new elements to 50 */
 }
 
 .wp-admin .flex .col {
@@ -835,6 +835,7 @@ body.ac-wp-media .row-actions {
 }
 
 .wp-admin .flex.stats .col.keywords,
+.wp-admin .flex.stats .col.google-reviews,
 .wp-admin .flex.stats .col.site-speed {
 	grid-column:								span 2;
 }
@@ -864,31 +865,31 @@ body.ac-wp-media .row-actions {
 	padding: 									3px 8px 5px;
 }
 
-.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+9),
-.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+10),
-.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+11),
-.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+12),
-.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+13),
-.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+14),
-.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+15),
+.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+2),
+.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+3),
+.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+4),
+.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+5),
+.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+6),
+.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+7),
+.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+8),
 .wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+18),
 .wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+19),
 .wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+20),
 .wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+21),
 .wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+26),
 .wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+27),
-.wp-admin .flex:not(.hvac) .col.desktop,
-.wp-admin .flex:not(.hvac) .col.citations,
+.wp-admin .flex:not(.hvac) .col.mobile,
+.wp-admin .flex:not(.hvac) .col.keywords,
+.wp-admin .flex:not(.hvac) .col.gmb,
 .wp-admin .flex:not(.hvac) .col.site-speed,
-.wp-admin .flex:not(.hvac) .col.date,
+.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+12),
+.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+13),
+.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+14),
+.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+15),
 .wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+16),
 .wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+17),
 .wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+18),
-.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+19),
-.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+20),
-.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+21),
-.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+22),
-.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+25),
+.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+25), 
 .wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+26),
 .wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+27),
 .wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+28),
@@ -902,24 +903,24 @@ body.ac-wp-media .row-actions {
 	background: 								rgb(226,226,190); 
 }
 
-.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+9),
-.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+10),
-.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+11),
-.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+12),
-.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+13),
-.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+14),
-.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+15),
+.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+2),
+.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+3),
+.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+4),
+.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+5),
+.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+6),
+.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+7),
+.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+8),
 .wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+18),
 .wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+19),
 .wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+20),
 .wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+21),
 .wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+26),
 .wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+27),
-.wp-admin .flex.hvac .col.desktop,
-.wp-admin .flex.hvac .col.citations,
+.wp-admin .flex.hvac .col.mobile,
+.wp-admin .flex.hvac .col.keywords,
+.wp-admin .flex.hvac .col.gmb,
 .wp-admin .flex.hvac .col.site-speed,
-.wp-admin .flex.hvac .col.date,
-.wp-admin .flex.stats.hvac .col.stat:nth-of-type(50n+16),
+.wp-admin .flex.stats.hvac .col.stat:nth-of-type(50n+12),
 .wp-admin .flex.stats.hvac .col.stat:nth-of-type(50n+17),
 .wp-admin .flex.stats.hvac .col.stat:nth-of-type(50n+18),
 .wp-admin .flex.stats.hvac .col.stat:nth-of-type(50n+19),

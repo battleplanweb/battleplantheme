@@ -2126,6 +2126,7 @@ function battleplan_admin_content_stats() {
 	endforeach;
 	
 	echo '</div></ul></div>';
+}
 
 // Set up Popular Pages widget on dashboard
 function battleplan_admin_pages_stats() {

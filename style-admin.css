@@ -740,16 +740,12 @@ body.ac-wp-media .row-actions {
 }
 
 .wp-admin .flex.stats {
-	grid-template-columns: 						115px repeat(41, 50px); /* add new elements to 41 */
+	grid-template-columns: 						115px repeat(50, 50px); /* add new elements to 50 */
 	gap: 										0.5em 15px;
 	text-align: 								center;
 }
 
-.wp-admin .flex.stats.hvac {
-	grid-template-columns: 						115px repeat(50, 50px); /* add new elements to 50 */
-}
-
-.wp-admin .flex .col {
+.wp-admin .flex.stats .col {
 	grid-column:								span 1;
 }
 
@@ -817,12 +813,12 @@ body.ac-wp-media .row-actions {
 	text-align: 								left;
 }
 
-.wp-admin .flex.stats:not(.hvac) .col.site-elements {
+.wp-admin .flex.stats .col.site-elements {
 	grid-column:								span 13;
 }
 
-.wp-admin .flex.stats.hvac .col.site-elements {
-	grid-column:								span 22;
+.wp-admin .flex.stats .col.site-hvac {
+	grid-column:								span 9;
 }
 
 .wp-admin .flex.stats .col.lighthouse {
@@ -835,7 +831,7 @@ body.ac-wp-media .row-actions {
 }
 
 .wp-admin .flex.stats .col.keywords,
-.wp-admin .flex.stats .col.google-reviews,
+.wp-admin .flex.stats .col.revs,
 .wp-admin .flex.stats .col.site-speed {
 	grid-column:								span 2;
 }
@@ -852,11 +848,11 @@ body.ac-wp-media .row-actions {
 }
 
 .wp-admin .flex.stats .col {
-	background: 								rgb(226,226,190); 
+	background: 								rgb(244, 217, 217); 
 }
 
 .wp-admin .flex.stats .col.notes {
-	background: 								#ffffff;
+	background: 								#dbdbdb;
 	margin-left: 								130px;
 	width: 										calc(100vw - 393px);
 	margin-bottom: 								5px;
@@ -865,76 +861,83 @@ body.ac-wp-media .row-actions {
 	padding: 									3px 8px 5px;
 }
 
-.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+2),
-.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+3),
-.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+4),
-.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+5),
-.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+6),
-.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+7),
-.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+8),
-.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+18),
-.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+19),
-.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+20),
-.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+21),
-.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+26),
-.wp-admin .flex.stats:not(.hvac) .col.headline:nth-of-type(39n+27),
-.wp-admin .flex:not(.hvac) .col.mobile,
-.wp-admin .flex:not(.hvac) .col.keywords,
-.wp-admin .flex:not(.hvac) .col.gmb,
-.wp-admin .flex:not(.hvac) .col.site-speed,
-.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+12),
-.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+13),
-.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+14),
-.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+15),
-.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+16),
-.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+17),
-.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+18),
-.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+25), 
-.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+26),
-.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+27),
-.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+28),
-.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+33),
-.wp-admin .flex.stats:not(.hvac) .col.stat:nth-of-type(41n+34),
-.wp-admin .flex.stats:not(.hvac) .col.when {
+.wp-admin .flex.stats .col[class*="lighthouse-mobile"],
+.wp-admin .flex.stats .col[class*="keyword"],
+.wp-admin .flex.stats .col[class*="gmb"],
+.wp-admin .flex.stats .col[class*="load_time"],
+.wp-admin .flex.stats .col.optimized,
+.wp-admin .flex.stats .col.testimonials,
+.wp-admin .flex.stats .col.menu-testimonials,
+.wp-admin .flex.stats .col.testimonials-pct,
+.wp-admin .flex.stats .col.coupon,
+.wp-admin .flex.stats .col.coupon-pct,
+.wp-admin .flex.stats .col.blog,
+.wp-admin .flex.stats .col.galleries,
+.wp-admin .flex.stats .col.home-call-to-action,
+.wp-admin .flex.stats .col.homepage-teasers,
+.wp-admin .flex.stats .col.logo-slider,
+.wp-admin .flex.stats .col.service-map,
+.wp-admin .flex.stats .col.bbb-link,
+.wp-admin .flex.stats .col.financing-link,
+.wp-admin .flex.stats .col.menu-finance,
+.wp-admin .flex.stats .col.finance-pct,
+.wp-admin .flex.stats .col.why-choose,
+.wp-admin .flex.stats .col.emergency-service,
+.wp-admin .flex.stats .col.symptom-checker,
+.wp-admin .flex.stats .col.faq,
+.wp-admin .flex.stats .col.tip-of-the-month,
+.wp-admin .flex.stats .col.maintenance-tips,
+.wp-admin .flex .col.mobile,
+.wp-admin .flex .col.keywords,
+.wp-admin .flex .col.gmb,
+.wp-admin .flex .col.site-speed,
+.wp-admin .flex .col.site-hvac  { 
 	background: 								rgb(207,218,241);
+} 
+
+.wp-admin .flex.stats .col[class*="lighthouse-desktop"],
+.wp-admin .flex.stats .col[class*="cite"],
+.wp-admin .flex.stats .col[class*="google"],
+.wp-admin .flex.stats .col.optimized,
+.wp-admin .flex.stats .col.testimonials,
+.wp-admin .flex.stats .col.menu-testimonials,
+.wp-admin .flex.stats .col.testimonials-pct,
+.wp-admin .flex.stats .col.coupon,
+.wp-admin .flex.stats .col.coupon-pct,
+.wp-admin .flex.stats .col.blog,
+.wp-admin .flex.stats .col.galleries,
+.wp-admin .flex.stats .col.home-call-to-action,
+.wp-admin .flex.stats .col.homepage-teasers,
+.wp-admin .flex.stats .col.logo-slider,
+.wp-admin .flex.stats .col.service-map,
+.wp-admin .flex.stats .col.bbb-link,
+.wp-admin .flex.stats .col.financing-link,
+.wp-admin .flex.stats .col.menu-finance,
+.wp-admin .flex.stats .col.finance-pct,
+.wp-admin .flex.stats .col.why-choose,
+.wp-admin .flex.stats .col.emergency-service,
+.wp-admin .flex.stats .col.symptom-checker,
+.wp-admin .flex.stats .col.faq,
+.wp-admin .flex.stats .col.tip-of-the-month,
+.wp-admin .flex.stats .col.maintenance-tips,
+.wp-admin .flex .col.desktop,
+.wp-admin .flex .col.citations,
+.wp-admin .flex .col.revs,
+.wp-admin .flex .col.site-elements  { 
+	background: 								rgb(244, 217, 217); 
 }
 
-.wp-admin .flex.stats.hvac .col {
-	background: 								rgb(226,226,190); 
-}
-
-.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+2),
-.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+3),
-.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+4),
-.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+5),
-.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+6),
-.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+7),
-.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+8),
-.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+18),
-.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+19),
-.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+20),
-.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+21),
-.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+26),
-.wp-admin .flex.stats.hvac .col.headline:nth-of-type(48n+27),
-.wp-admin .flex.hvac .col.mobile,
-.wp-admin .flex.hvac .col.keywords,
-.wp-admin .flex.hvac .col.gmb,
-.wp-admin .flex.hvac .col.site-speed,
-.wp-admin .flex.stats.hvac .col.stat:nth-of-type(50n+12),
-.wp-admin .flex.stats.hvac .col.stat:nth-of-type(50n+17),
-.wp-admin .flex.stats.hvac .col.stat:nth-of-type(50n+18),
-.wp-admin .flex.stats.hvac .col.stat:nth-of-type(50n+19),
-.wp-admin .flex.stats.hvac .col.stat:nth-of-type(50n+20),
-.wp-admin .flex.stats.hvac .col.stat:nth-of-type(50n+21),
-.wp-admin .flex.stats.hvac .col.stat:nth-of-type(50n+22),
-.wp-admin .flex.stats.hvac .col.stat:nth-of-type(50n+25),
-.wp-admin .flex.stats.hvac .col.stat:nth-of-type(50n+26),
-.wp-admin .flex.stats.hvac .col.stat:nth-of-type(50n+27),
-.wp-admin .flex.stats.hvac .col.stat:nth-of-type(50n+28),
-.wp-admin .flex.stats.hvac .col.stat:nth-of-type(50n+33),
-.wp-admin .flex.stats.hvac .col.stat:nth-of-type(50n+34),
-.wp-admin .flex.stats.hvac .col.when {
-	background: 								rgb(207,218,241);
+.wp-admin .flex:not(.hvac) .col.site-hvac,
+.wp-admin .flex.stats:not(.hvac) .col.financing-link,
+.wp-admin .flex.stats:not(.hvac) .col.menu-finance,
+.wp-admin .flex.stats:not(.hvac) .col.finance-pct,
+.wp-admin .flex.stats:not(.hvac) .col.why-choose,
+.wp-admin .flex.stats:not(.hvac) .col.emergency-service,
+.wp-admin .flex.stats:not(.hvac) .col.symptom-checker,
+.wp-admin .flex.stats:not(.hvac) .col.faq,
+.wp-admin .flex.stats:not(.hvac) .col.tip-of-the-month,
+.wp-admin .flex.stats:not(.hvac) .col.maintenance-tips {
+	opacity: 									0.1;
 }
 
 .wp-admin .flex.stats .col.when {

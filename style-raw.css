@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 13.5.2
+Version: 13.6
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -692,6 +692,7 @@ p.indent-double {
 
 p:first-child,
 ul:first-child,
+
 
 
 
@@ -1435,6 +1436,8 @@ input[type="email"],
 input[type="url"],
 input[type="password"],
 input[type="search"],
+
+
 input[type="number"],
 input[type="tel"],
 input[type="range"],
@@ -1619,6 +1622,8 @@ ul.tabs li.disabled {
 
 .wpcf7 input[type="file"] {
 	cursor: 									pointer;
+	width: 										100%;
+	overflow: 									hidden;
 }
 
 .wpcf7 input[type="file"]:disabled {
@@ -1778,6 +1783,7 @@ input + .wpcf7-not-valid-tip {
     animation-duration: 						2s; 
 	animation-delay: 							0.5s;
     animation-iteration-count: 					1;
+
     animation-timing-function: 					ease-out;
 }
 
@@ -2271,25 +2277,27 @@ div[class*="restrict-"] {
 
 .section.section-lock[data-pos="modal"] > .flex,
 .section.section-lock[data-pos="center"] > .flex {
-	position:									fixed !important;
+	position:									absolute !important; /* absolute instead of fixed makes scrollable on iphone 8/3/22 */
 	width: 										96%;
     max-width: 									800px;
 	top:										50%;
 	left:										50%;
 	transform: 									translate(-50%, -50%);
-	padding:									calc(2em + 16px) 2em 2em;
+	padding:									calc(2em + 18px) 2em 2em;
 }
 
 .screen-mobile .section.section-lock[data-pos="modal"] > .flex,
 .screen-mobile .section.section-lock[data-pos="center"] > .flex {
 	top:										calc(48% + 42px);
 	transform: 									translate(-50%, calc(-50% - 21px));
+	padding:									calc(5% + 18px) 5%;
 }
 
 .screen-mobile .section.section-lock[data-pos="modal"] > .flex.scrollable,
 .screen-mobile .section.section-lock[data-pos="center"] > .flex.scrollable {
 	top:										calc(42px + 1em);
 	transform: 									translate(-50%, 0);
+	padding-bottom:								calc(5% + 80px);
 }
 
 /* Style Lock */
@@ -2329,8 +2337,6 @@ div[class*="restrict-"] {
 	margin: 									0 !important;
 	border-radius: 								0 !important;
 	animation-name: 							none !important;
-
-
 	transition: 								opacity 0.2s ease;
 }
 
@@ -4364,6 +4370,7 @@ div.menu-search-box a.menu-search-bar input[type="search"] {
 
 /* Search Widget */
 .widget-search > div {
+
 	display: 									flex;
 }
 
@@ -4876,6 +4883,7 @@ chat-widget .lc_text-widget--btn {
 	object-fit: 								cover;
 	align-self: 								center;
 	max-height: 								100%;
+
 }
 
 .slider-blur .img-bg {
@@ -5309,6 +5317,7 @@ html.error503 h3 {
 		padding:									2.5em 1.5em;
 	}
 	
+
 	.sidebar-box #secondary,
 	.content-sidebar-box #secondary {  /* changed to #secondary from #main-content 5/24/22 - 1 Call Heat & Air */
 		padding:									2.5em 0;

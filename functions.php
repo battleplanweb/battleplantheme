@@ -16,7 +16,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '13.5.2' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '13.6' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -439,11 +439,52 @@ function battleplan_bodyClassArray( $classes ) {
 // Add shortcode capability to Contact Form 7
 add_filter( 'wpcf7_form_elements', 'do_shortcode' );
 
+// Stamp images and teasers with date and figure counts
+function battleplan_countTease( $id ) {
+	$lastViewed = strtotime(readMeta($id, 'log-last-viewed'));
+	$rightNow = strtotime(date("F j, Y g:i a")) - 14450;	
+	$today = strtotime(date("F j, Y"));
+	$dateDiff = (int)(($today - $lastViewed) / 60 / 60 / 24);	
+
+	$getViews = readMeta($id, 'log-views');
+	if ( !is_array($getViews) ) $getViews = array();
+	$viewsToday = $views7Day = $views30Day = $views90Day = $views180Day = $views365Day = intval(0); 	
+	
+	if ( $dateDiff != 0 ) : // day has passed, move 29 to 30, and so on	
+		for ($i = 1; $i <= $dateDiff; $i++) {	
+			$figureTime = $today - ( ($dateDiff - $i) * 86400);	
+			array_unshift($getViews, array ('date'=>date("F j, Y", $figureTime), 'views'=>$viewsToday));
+		}	
+	else:
+		$viewsToday = (int)$getViews[0]['views']; 
+	endif;
+	
+	updateOption('last_visitor_time', $rightNow);
+	updateMeta($id, 'log-last-viewed', $rightNow);	
+	
+	$viewsToday++;
+	array_shift($getViews);	
+	array_unshift($getViews, array ('date'=>date('F j, Y', $today), 'views'=>$viewsToday));	
+	updateMeta($id, 'log-views', $getViews);
+
+	for ($x = 0; $x < 7; $x++) { $views7Day = $views7Day + (int)$getViews[$x]['views']; } 					
+	for ($x = 0; $x < 30; $x++) { $views30Day = $views30Day + (int)$getViews[$x]['views']; } 						
+	for ($x = 0; $x < 90; $x++) { $views90Day = $views90Day + (int)$getViews[$x]['views']; } 		
+	for ($x = 0; $x < 180; $x++) { $views180Day = $views180Day + (int)$getViews[$x]['views']; } 		
+	for ($x = 0; $x < 365; $x++) { $views365Day = $views365Day + (int)$getViews[$x]['views']; } 		
+	updateMeta($id, 'log-views-today', $viewsToday);					
+	updateMeta($id, 'log-views-total-7day', $views7Day);			
+	updateMeta($id, 'log-views-total-30day', $views30Day);			 
+	updateMeta($id, 'log-views-total-90day', $views90Day);	
+	updateMeta($id, 'log-views-total-180day', $views180Day);	
+	updateMeta($id, 'log-views-total-365day', $views365Day);
+	
+	//print_r($getViews[0]);
+}
 
 /*--------------------------------------------------------------
 # Basic Theme Set Up
 --------------------------------------------------------------*/
-
 // Enable auto-updates on plugins and themes
 add_filter( 'auto_update_theme', '__return_true' );
 add_filter( 'auto_update_plugin', '__return_true' );

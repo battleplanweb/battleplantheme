@@ -11,7 +11,16 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 # Basic site functionality
 --------------------------------------------------------------*/
 
-	var mobileCutoff = 1024, tabletCutoff = 576, mobileMenuBarH = 0;	
+	var mobileCutoff = 1024, tabletCutoff = 576;	
+
+// Determine whether or not to leave space for mobile menu header
+	window.mobileMenuBarH = function () {
+	if ( getDeviceW() > mobileCutoff ) { 
+			return 0; 
+		} else {  
+			return $("#mobile-menu-bar").outerHeight(); 
+		}
+	};			
 	
 // Is user on an Apple device?
 	window.isApple = function () {
@@ -271,7 +280,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$(container).css("top","unset");
 
 		trigger.waypoint(function(direction) {		
-			var newTop = mobileMenuBarH;
+			var newTop = mobileMenuBarH();
 			if ( strictTop === "" ) {
 				$('.stuck').each(function() {
 					newTop = newTop + $(this).outerHeight(true);
@@ -324,7 +333,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		var newTop=0, newLoc=0;
 		initSpeed = initSpeed || 0;
 		topSpacer = topSpacer || 0;
-		topSpacer = topSpacer + mobileMenuBarH;	
+		topSpacer = topSpacer + mobileMenuBarH();	
 
 		$('.stuck').each(function() {
 			newTop = newTop + $(this).outerHeight();	
@@ -468,7 +477,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	window.btnRevealDiv = function(button, container, topSpacer, initSpeed) {	
 		initSpeed = initSpeed || 0;
 		topSpacer = topSpacer || 0;
-		topSpacer = topSpacer + mobileMenuBarH;	
+		topSpacer = topSpacer + mobileMenuBarH();	
 		var origDisplay = $(container).css( "display" );		
 
 		$(container).css( "display","none");	
@@ -516,7 +525,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			});
 			if ( !isApple() ) {
 				inputBox.focus(function() {
-					var inputPos = -(getPosition(searchBar, 'top') - mobileMenuBarH - 25);
+					var inputPos = -(getPosition(searchBar, 'top') - mobileMenuBarH() - 25);
 					$('#mobile-navigation > #mobile-menu').css({"position":"relative"}).animate({ "margin-top": inputPos + "px" }, 300);
 				});
 				inputBox.blur(function() {

@@ -11,7 +11,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 --------------------------------------------------------------*/
 
-	var mobileCutoff = getMobileCutoff(), tabletCutoff = getTabletCutoff(), mobileMenuBarH = 0;		
+	var mobileCutoff = getMobileCutoff(), tabletCutoff = getTabletCutoff();		
 		
 /*--------------------------------------------------------------
 # Set up sidebar
@@ -505,14 +505,14 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 		$("#mobile-menu-bar .activate-btn").removeClass("active"); 
 		$("body").removeClass("mm-active"); 
 		$(".top-push.screen-mobile #page").css({ "top": "0" });
-		$(".top-push.screen-mobile .top-strip.stuck").css({ "top": mobileMenuBarH+"px" });
+		$(".top-push.screen-mobile .top-strip.stuck").css({ "top": mobileMenuBarH()+"px" });
 	};
 
 	window.openMenu = function () {
 		$("#mobile-menu-bar .activate-btn").addClass("active"); 
 		$("body").addClass("mm-active"); 
 		var getMenuH = $("#mobile-navigation").outerHeight();
-		var getTotalH = getMenuH + mobileMenuBarH;
+		var getTotalH = getMenuH + mobileMenuBarH();
 		$(".top-push.screen-mobile.mm-active #page").css({ "top": getMenuH+"px" });	
 		$(".top-push.screen-mobile.mm-active .top-strip.stuck").css({ "top": getTotalH+"px" });
 	};
@@ -615,14 +615,7 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 		} else {
 			$('body').addClass("screen-1").addClass("screen-mobile"); 
 		}
-		
-	// Determine whether or not to leave space at top for mobile menu bar
-		if ( thisDeviceW > mobileCutoff ) { 
-			mobileMenuBarH = 0; 
-		} else { 
-			mobileMenuBarH = $("#mobile-menu-bar").outerHeight(); 
-		}
-		
+				
 	// Close any open menus on mobile (when device ratio changes)
 		if ( ! $('#mobile-navigation > #mobile-menu .menu-search-box input[type="search"]').is(":focus") ) { closeMenu(); }
 		
@@ -700,7 +693,7 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 			
 			if ( lockPos == "top" ) {		
 				if ( getCookie("display-message") !== "no" ) {
-					thisLock.delay(initDelay).css({ "top":mobileMenuBarH+"px" });
+					thisLock.delay(initDelay).css({ "top":mobileMenuBarH()+"px" });
 					setTimeout( function() { 
 						thisLock.addClass("on-screen"); 
 						$('body').addClass('locked'); 

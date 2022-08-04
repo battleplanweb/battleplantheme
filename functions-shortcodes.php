@@ -335,9 +335,12 @@ function battleplan_getRandomImage($atts, $content = null ) {
 	
 		$buildImage = "";	
 		if ( $link == "yes" ) $buildImage .= '<a href="'.$full[0].'">';		
-		$buildImage .= '<img data-id="'.$getID.'"'.getImgMeta($getID).' data-count-view="true" class="wp-image-'.$getID.' random-img '.$tags[0].'-img '.$align.' size-'.$size.$class.'" loading="'.$lazy.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta($getID, '_wp_attachment_image_alt', true).'">';	
+		//$buildImage .= '<img data-id="'.$getID.'"'.getImgMeta($getID).' data-count-view="true" class="wp-image-'.$getID.' random-img '.$tags[0].'-img '.$align.' size-'.$size.$class.'" loading="'.$lazy.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta($getID, '_wp_attachment_image_alt', true).'">';	
+		$buildImage .= '<img class="wp-image-'.$getID.' random-img '.$tags[0].'-img '.$align.' size-'.$size.$class.'" loading="'.$lazy.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta($getID, '_wp_attachment_image_alt', true).'">';	
 		if ( $link == "yes" ) $buildImage .= '</a>';	
-		$imageArray[] = $buildImage;	
+		$imageArray[] = $buildImage;
+		
+		battleplan_countTease( $getID );	
 	
 	endwhile; wp_reset_postdata(); endif;	
 	if ( $shuffle != "no" ) : shuffle($imageArray); endif;
@@ -391,8 +394,11 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 	
 		$getImage = "";
 		if ( $link == "yes" ) $getImage .= '<a href="'.$image[0].'">';
-		$getImage .= '<img data-id="'.$getID.'"'.getImgMeta($getID).' data-count-view="true" class="random-img '.$tags[0].'-img '.$align.'" loading="'.$lazy.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta($getID, '_wp_attachment_image_alt', true).'">';
+		//$getImage .= '<img data-id="'.$getID.'"'.getImgMeta($getID).' data-count-view="true" class="random-img '.$tags[0].'-img '.$align.'" loading="'.$lazy.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta($getID, '_wp_attachment_image_alt', true).'">';
+		$getImage .= '<img class="random-img '.$tags[0].'-img '.$align.'" loading="'.$lazy.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta($getID, '_wp_attachment_image_alt', true).'">';
 		if ( $link == "yes" ) $getImage .= '</a>';
+		
+		battleplan_countTease( $getID );	
 
 		$imageArray[] = do_shortcode('[col class="col-row-of-pics'.$class.'"]'.$getImage.'[/col]');		
 		$ratioArray[] = $image[2] / $image[1];	
@@ -511,7 +517,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		$testimonialMisc3 = esc_attr(get_field( "testimonial_misc3" ));	
 		$testimonialMisc4 = esc_attr(get_field( "testimonial_misc4" ));
 		
-		$buildCredentials = "<div class='testimonials-credential testimonials-name' data-count-view='true' data-count-view='true' data-id=".get_the_ID().">".$testimonialName;
+		$buildCredentials = "<div class='testimonials-credential testimonials-name'>".$testimonialName;
 		if ( $testimonialTitle ) $buildCredentials .= "<span class='testimonials-title'>, ".$testimonialTitle."</span>";
 		$buildCredentials .= "</div>";
 		if ( $testimonialBiz ) :
@@ -544,7 +550,8 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		else :		
 			$archiveMeta = $archiveBody = "";
 			if ( $showTitle != "false" ) :
-				$archiveMeta .= "<h3 data-count-view=".$countView." data-id=".get_the_ID().">";
+				//$archiveMeta .= "<h3 data-count-view=".$countView." data-id=".get_the_ID().">";
+				$archiveMeta .= "<h3 data-count-view=".$countView.">";
 				if ( $showContent != "true" && $link != "false" ) $archiveMeta .= '<a href="'.$linkLoc.'" class="link-archive link-'.get_post_type().'"'.$titleADA.'>';	
 				if ( $showTitle == "true" ) : $archiveMeta .= esc_html(get_the_title()); else: $archiveMeta .= $showTitle; endif;
 				if ( $showContent != "true" && $link != "false" ) $archiveMeta .= '</a>';	
@@ -603,6 +610,9 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		if ( $titlePos != "inside" ) $showArchive .= $archiveMeta;	
 		$showArchive .= $buildImg.do_shortcode($buildBody);
 		if ( $btnPos != "inside" ) $showArchive .= $buildBtn;
+		
+		battleplan_countTease( get_the_ID() );	
+
 	endif;	
 	
 	return $showArchive;
@@ -787,13 +797,11 @@ function battleplan_getPostSlider($atts, $content = null ) {
 			while ($image_query->have_posts() ) : $image_query->the_post();
 				$numDisplay++; 	
 				if ( $rowDisplay == 0 ) :
-					if ( $numDisplay == 0 ) : 
-						$buildIndicators .= '<li data-target="#'.$type.'Slider'.$sliderNum.'" data-slide-to="'.$numDisplay.'" class="active"></li>';
-						$buildInner .= '<div class="carousel-item active">';
-					else : 
-						$buildIndicators .= '<li data-target="#'.$type.'Slider'.$sliderNum.'" data-slide-to="'.$numDisplay.'"></li>'; 
-						$buildInner .= '<!--div class="clearfix"></div--></div><div class="carousel-item">';
-					endif;	
+					if ( $numDisplay == 0 ) : $active = "active"; else: $active = ""; endif;
+					$buildIndicators .= '<li data-target="#'.$type.'Slider'.$sliderNum.'" data-slide-to="'.$numDisplay.'" class="'.$active.'"></li>';
+					if ( $numDisplay != 0 ) $buildInner .= '</div>';
+					//$buildInner .= '<div class="'.$active.' carousel-item carousel-item-'.$type.'" data-id="'.get_the_ID().'">';
+					$buildInner .= '<div class="'.$active.' carousel-item carousel-item-'.$type.'">';
 				endif;	
 
 				$image = wp_get_attachment_image_src(get_the_ID(), $size );
@@ -805,10 +813,9 @@ function battleplan_getPostSlider($atts, $content = null ) {
 				if ( $link != "none" ) : $buildImg = "<a href='".$linkTo."' class='link-archive link-".$type."'>"; endif;	
 				//$buildImg .= "<img data-id='".get_the_ID()."' ".getImgMeta(get_the_ID())." data-count-view='true' data-count-view='true' class='img-slider ".$tags[0]."-img' loading='lazy' src = '".$image[0]."' width='".$image[1]."' height='".$image[2]."' style='aspect-ratio:".$image[1]."/".$image[2]."' alt='".readMeta(get_the_ID(), '_wp_attachment_image_alt', true)."'>";
 
-				$buildImg .= '<img data-id="'.get_the_ID().'" '.getImgMeta(get_the_ID()).' data-count-view="true" data-count-view="true" class="img-slider '.$tags[0].'-img" loading="'.$lazy.'" src = "'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta(get_the_ID(), "_wp_attachment_image_alt", true).'">';
-				
-				/* Added srcset BACK into the formula for https://okairpro.com/ slider at top on 9/13/21 */
-				 
+				$buildImg .= '<img class="img-slider '.$tags[0].'-img" loading="'.$lazy.'" src = "'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta(get_the_ID(), "_wp_attachment_image_alt", true).'">';
+	
+				battleplan_countTease( get_the_ID() );				 
 		
 				if ( $caption == "yes" || $caption == "title" ) : $buildImg .= "<div class='caption-holder'><div class='img-caption'>".get_the_title(get_the_ID())."</div></div>";	
 				elseif ( $caption == "alt" ) : $buildImg .= "<div class='caption-holder'><div class='img-caption'>".readMeta(get_the_ID(), '_wp_attachment_image_alt', true)."</div></div>";
@@ -852,13 +859,10 @@ function battleplan_getPostSlider($atts, $content = null ) {
 				if ( $numDisplay < $num ) : 
 					if ( $pics == "no" || has_post_thumbnail() ) :
 						$numDisplay++; 
-						if ( $numDisplay == 0 ) : 
-							$buildIndicators .= '<li data-target="#'.$type.'Slider'.$sliderNum.'" data-slide-to="'.$numDisplay.'" class="active"></li>';
-							$buildInner .= '<div class="active carousel-item carousel-item-'.$type.'" data-id="'.get_the_ID().'">';
-						else : 
-							$buildIndicators .= '<li data-target="#'.$type.'Slider'.$sliderNum.'" data-slide-to="'.$numDisplay.'"></li>'; 
-							$buildInner .= '<div class="carousel-item carousel-item-'.$type.'" data-id="'.get_the_ID().'">';
-						endif;	
+						if ( $numDisplay == 0 ) : $active = "active"; else: $active = ""; endif;
+						$buildIndicators .= '<li data-target="#'.$type.'Slider'.$sliderNum.'" data-slide-to="'.$numDisplay.'" class="'.$active.'"></li>';
+						/*$buildInner .= '<div class="'.$active.' carousel-item carousel-item-'.$type.'" data-id="'.get_the_ID().'">';*/
+						$buildInner .= '<div class="'.$active.' carousel-item carousel-item-'.$type.'">';
 
 						$buildInner .= do_shortcode('[build-archive type="'.$type.'" show_btn="'.$showBtn.'" btn_text="'.$postBtn.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" size="'.$size.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" link="'.$link.'" truncate="'.$truncate.'"]');	
 
@@ -951,7 +955,8 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 		$image = wp_get_attachment_image_src( get_the_ID(), $size );
 		$getImage = "";
 		if ( $link != "false" ) $getImage .= '<a href="'.$image[0].'">';
-		$getImage .= '<img data-id="'.get_the_ID().'"'.getImgMeta(get_the_ID()).' data-count-view="true" data-count-view="true" class="logo-img '.$tags[0].'-img" loading="'.$lazy.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" alt="'.readMeta(get_the_ID(), '_wp_attachment_image_alt', true).'">';
+		//$getImage .= '<img data-id="'.get_the_ID().'"'.getImgMeta(get_the_ID()).' data-count-view="true" data-count-view="true" class="logo-img '.$tags[0].'-img" loading="'.$lazy.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" alt="'.readMeta(get_the_ID(), '_wp_attachment_image_alt', true).'">';
+		$getImage .= '<img class="logo-img '.$tags[0].'-img" loading="'.$lazy.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" alt="'.readMeta(get_the_ID(), '_wp_attachment_image_alt', true).'">';
 		if ( $link != "false" ) $getImage .= '</a>';
 		$imageArray[] = '<span>'.$getImage.'</span>';			
 	endwhile; wp_reset_postdata(); endif;	
@@ -1067,7 +1072,8 @@ function battleplan_setUpWPGallery( $atts, $content = null ) {
 		$count++;
 
 		if ( $caption != "false" ) : $captionPrint = '<figcaption><div class="image-caption image-title">'.$post->post_title.'</div></figcaption>'; endif;
-		$gallery .= '<dl class="col col-archive col-gallery id-'.$getID.'"><dt class="col-inner"><a class="link-archive link-gallery ari-fancybox" href="'.$full[0].'"><img class="img-gallery wp-image-'.get_the_ID().'" data-id="'.get_the_ID().'"'.getImgMeta($getID).' loading="lazy" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta(get_the_ID(), '_wp_attachment_image_alt', true).'"></a>'.$captionPrint.'</dt></dl>';
+		//$gallery .= '<dl class="col col-archive col-gallery id-'.$getID.'"><dt class="col-inner"><a class="link-archive link-gallery ari-fancybox" href="'.$full[0].'"><img class="img-gallery wp-image-'.get_the_ID().'" data-id="'.get_the_ID().'"'.getImgMeta($getID).' loading="lazy" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta(get_the_ID(), '_wp_attachment_image_alt', true).'"></a>'.$captionPrint.'</dt></dl>';
+		$gallery .= '<dl class="col col-archive col-gallery id-'.$getID.'"><dt class="col-inner"><a class="link-archive link-gallery ari-fancybox" href="'.$full[0].'"><img class="img-gallery wp-image-'.get_the_ID().'" loading="lazy" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta(get_the_ID(), '_wp_attachment_image_alt', true).'"></a>'.$captionPrint.'</dt></dl>';
 	endwhile; endif;	
 	wp_reset_postdata();
 	$gallery .= "</div>";	
@@ -1246,6 +1252,7 @@ function battleplan_SideBySideImg( $atts, $content = null ) {
 	$buildFlex = '<ul class="side-by-side '.$align.$break.'">';
 	for ($i=0; $i<$num; $i++) :
 		$img = wp_get_attachment_image_src( $images[$i], $size );
+
 		list ($src, $width, $height ) = $img;
 		if ( $images[$i] == $full ) : $class=' class="full-'.$pos.'" '; else: $class=''; endif;
 		if ($height > 0) $ratio = $width/$height;	

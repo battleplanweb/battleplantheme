@@ -233,7 +233,7 @@ function battleplan_column_settings() {
 					),
 					'views_today'=>array(
 						'type'=>'column-meta',
-						'label'=>'Today',
+						'label'=>'Yesterday',
 						'width'=>'',
 						'width_unit'=>'%',
 						'field'=>'log-views-today',
@@ -1502,7 +1502,8 @@ add_filter('admin_footer_text', 'battleplan_admin_footer_text');
 function battleplan_admin_footer_text() { 
 	$printFooter = '<div style="float:left; margin-right:8px;"><img src="https://battleplanwebdesign.com/wp-content/uploads/site-icon-80x80.png" /></div>';
 	$printFooter .= '<div style="float:left; margin-top:8px;">Powered by <a href="https://battleplanwebdesign.com" target="_blank">Battle Plan Web Design</a><br>';
-	if ( _USER_LOGIN == "battleplanweb" ) $printFooter .= 'Site Audit: '.date("F j, Y", get_option( "site_updated" )).'<br>'; 
+	$siteUpdated = str_replace('-', '', get_option( "site_updated" ));
+	if ( _USER_LOGIN == "battleplanweb" ) $printFooter .= 'Site Audit: '.date("F j, Y", (int)$siteUpdated).'<br>'; 
 	$printFooter .= 'Framework '._BP_VERSION.'<br>';
 	$printFooter .= 'WP '.get_bloginfo('version').'<br></div>';	
 	
@@ -1722,7 +1723,7 @@ $siteHitsUA = array_merge( $siteHitsUA1, $siteHitsUA2, $siteHitsUA3, $siteHitsUA
 if ( $siteHitsUA ) $siteHits = array_merge($siteHits, $siteHitsUA);
 
 $today = date( "Y-m-d" );	
-$citiesToExclude = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, OR'); // also change in functions-chron-jobs.php
+$GLOBALS['citiesToExclude'] = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, OR'); // also change in functions-chron-jobs.php
 
 // Set up array accounting for each day, no skips	
 if ( is_array($siteHits) ) $blankDate = strtotime($siteHits[array_key_last($siteHits)]['date']);
@@ -1735,7 +1736,7 @@ endfor;
 
 // Compile data into daily stats
 foreach ( $siteHits as $siteHit ) :	
-	if ( !in_array( $siteHit['location'], $citiesToExclude ) ) :
+	if ( !in_array( $siteHit['location'], $GLOBALS['citiesToExclude'] ) ) :
 		if ( $GLOBALS['btn3'] != "active" || ( $siteHit['location'] == get_option('customer_info')['state-full'] || str_contains($siteHit['location'], get_option('customer_info')['state-abbr'] ) )) :
 	
 			$processing = strtotime($siteHit['date']);
@@ -1969,7 +1970,7 @@ function battleplan_admin_tech_stats() {
 		$site_speed = $tracking['speed'];
 		$location = $tracking['location'];
 
-		if ( !in_array( $location, $citiesToExclude) && $site_speed != '' ) :			
+		if ( !in_array( $location, $GLOBALS['citiesToExclude']) && $site_speed != '' ) :			
 			$pageID = strtok($site_speed,  '»');
 			if ( strpos($site_speed, 'desktop') !== false ) : $device = "desktop"; else: $device = "mobile"; endif;			
 			$speed = str_replace($pageID.'»'.$device.'«', '', $site_speed);
@@ -2065,7 +2066,7 @@ function battleplan_admin_content_stats() {
 		$content_tracking = $tracking['content'];			
 		$location = $tracking['location'];
 
-		if ( !in_array( $location, $citiesToExclude) && $content_tracking != '' ) :
+		if ( !in_array( $location, $GLOBALS['citiesToExclude']) && $content_tracking != '' ) :
 			$pageID = strtok($content_tracking,  '-');
 			$track = str_replace($pageID.'-', '', $content_tracking);
 		
@@ -2434,6 +2435,7 @@ add_action( 'add_attachment', 'battleplan_addWidgetPicViewsToImg' );
 function battleplan_addWidgetPicViewsToImg( $post_ID ) {
 	if ( wp_attachment_is_image( $post_ID ) ) {		
 		updateMeta( $post_ID, 'log-last-viewed', strtotime("-20 years"));		
+		updateMeta( $post_ID, 'log-views-today', '0' );		
 		updateMeta( $post_ID, 'log-views-total-7day', '0' );		
 		updateMeta( $post_ID, 'log-views-total-30day', '0' );
 		updateMeta( $post_ID, 'log-views-total-90day', '0' );
@@ -2455,7 +2457,7 @@ function battleplan_site_audit() {
 	$submitCheck = $_POST['submit_check'];
 	$siteType = get_option('customer_info')['site-type'];
 	
-	$criteria = array ('lighthouse-mobile-score', 'lighthouse-mobile-fcp', 'lighthouse-mobile-si', 'lighthouse-mobile-lcp', 'lighthouse-mobile-tti', 'lighthouse-mobile-tbt', 'lighthouse-mobile-cls', 'lighthouse-desktop-score', 'lighthouse-desktop-fcp', 'lighthouse-desktop-si', 'lighthouse-desktop-lcp', 'lighthouse-desktop-tti', 'lighthouse-desktop-tbt', 'lighthouse-desktop-cls', 'keyword-page-1', 'keyword-needs-attn', 'cite-citations', 'cite-industry-links', 'cite-local-links', 'cite-domains', 'gmb-overview', 'gmb-calls', 'gmb-msg', 'gmb-clicks', 'google-rating', 'google-reviews');
+	$criteria = array ('lighthouse-mobile-score', 'lighthouse-mobile-fcp', 'lighthouse-mobile-si', 'lighthouse-mobile-lcp', 'lighthouse-mobile-tti', 'lighthouse-mobile-tbt', 'lighthouse-mobile-cls', 'lighthouse-desktop-score', 'lighthouse-desktop-fcp', 'lighthouse-desktop-si', 'lighthouse-desktop-lcp', 'lighthouse-desktop-tti', 'lighthouse-desktop-tbt', 'lighthouse-desktop-cls', 'keyword-page-1', 'keyword-needs-attn', 'cite-citations', 'cite-total-links', 'cite-local-links', 'cite-domains', 'gmb-overview', 'gmb-calls', 'gmb-msg', 'gmb-clicks', 'google-rating', 'google-reviews');
 	
 	if ( $submitCheck == "true" ) :
 		$siteAudit = get_option('bp_site_audit_details');
@@ -2470,9 +2472,7 @@ function battleplan_site_audit() {
 		endforeach;	
 	endif;
 		
-	array_push( $criteria, 'load_time_mobile', 'load_time_desktop', 'optimized', 'testimonials', 'menu-testimonials', 'testimonials-pct', 'coupon', 'coupon-pct', 'blog', 'galleries', 'home-call-to-action', 'homepage-teasers', 'logo-slider', 'service-map', 'bbb-link');	
-	
-	if ( $siteType == "hvac" ) array_push( $criteria, 'financing-link', 'menu-finance', 'finance-pct', 'why-choose', 'emergency-service', 'symptom-checker', 'faq', 'tip-of-the-month', 'maintenance-tips');	
+	array_push( $criteria, 'load_time_mobile', 'load_time_desktop', 'optimized', 'testimonials', 'menu-testimonials', 'testimonials-pct', 'coupon', 'coupon-pct', 'blog', 'galleries', 'home-call-to-action', 'homepage-teasers', 'logo-slider', 'service-map', 'bbb-link', 'financing-link', 'menu-finance', 'finance-pct', 'why-choose', 'emergency-service', 'symptom-checker', 'faq', 'tip-of-the-month', 'maintenance-tips');	
 	
 	if ( $submitCheck == "true" ) :
 		if ( $_POST['notes'] ) :
@@ -2482,10 +2482,8 @@ function battleplan_site_audit() {
 		$googleInfo = get_option('bp_google_reviews');
 		$siteAudit[$today]['google-rating'] = $googleInfo['rating'];
 		$siteAudit[$today]['google-reviews'] = $googleInfo['number'];
-
-		if ( is_array (get_option('load_time_mobile')) ) $siteAudit[$today]['load_time_mobile'] = number_format(array_sum(get_option('load_time_mobile')) / count(get_option('load_time_mobile')),1);	
-		if ( is_array (get_option('load_time_desktop')) ) $siteAudit[$today]['load_time_desktop'] = number_format(array_sum(get_option('load_time_desktop')) / count(get_option('load_time_desktop')),1);
-		
+		$siteAudit[$today]['load_time_mobile'] = get_option('load_time_mobile');	
+		$siteAudit[$today]['load_time_desktop'] = get_option('load_time_desktop');		
 		$siteAudit[$today]['testimonials-pct'] = get_option('pct-viewed-testimonials').'%';
 		$siteAudit[$today]['coupon-pct'] = get_option('pct-viewed-coupon').'%';
 		$siteAudit[$today]['finance-pct'] = get_option('pct-viewed-financing').'%';
@@ -2594,7 +2592,7 @@ function battleplan_site_audit() {
 
 		$siteAuditPage .= '<h1>Backlinks</h1>';	
 		$siteAuditPage .= '<div class="form-input"><label for="cite-citations">Citations:</label><input id="cite-citations" type="text" name="cite-citations" value=""></div>';
-		$siteAuditPage .= '<div class="form-input"><label for="cite-industry-links">Industry Links:</label><input id="cite-industry-links" type="text" name="cite-industry-links" value=""></div>';
+		$siteAuditPage .= '<div class="form-input"><label for="cite-total-links">Total Links:</label><input id="cite-total-links" type="text" name="cite-total-links" value=""></div>';
 		$siteAuditPage .= '<div class="form-input"><label for="cite-local-links">Local Links:</label><input id="cite-local-links" type="text" name="cite-local-links" value=""></div>';
 		$siteAuditPage .= '<div class="form-input"><label for="cite-domains">Linking Domains:</label><input id="cite-domains" type="text" name="cite-domains" value=""></div>';
 		
@@ -2623,59 +2621,56 @@ function battleplan_site_audit() {
 		
 	$siteAuditPage .= '[section][layout class="stats '.$siteType.'"]';	
 	$siteAuditPage .= '[col class="empty"][/col]';
-	$siteAuditPage .= '[col class="headline"]Performance Score[/col]';	
-	$siteAuditPage .= '[col class="headline"]First Contentful Paint[/col]';	
-	$siteAuditPage .= '[col class="headline"]Speed Index[/col]';	
-	$siteAuditPage .= '[col class="headline"]Largest Contentful Paint[/col]';	
-	$siteAuditPage .= '[col class="headline"]Time To Interactive[/col]';	
-	$siteAuditPage .= '[col class="headline"]Total Blocking Time[/col]';	
-	$siteAuditPage .= '[col class="headline"]Cumulative Layout Shift[/col]';
-	$siteAuditPage .= '[col class="headline"]Performance Score[/col]';	
-	$siteAuditPage .= '[col class="headline"]First Contentful Paint[/col]';	
-	$siteAuditPage .= '[col class="headline"]Speed Index[/col]';	
-	$siteAuditPage .= '[col class="headline"]Largest Contentful Paint[/col]';	
-	$siteAuditPage .= '[col class="headline"]Time To Interactive[/col]';	
-	$siteAuditPage .= '[col class="headline"]Total Blocking Time[/col]';	
-	$siteAuditPage .= '[col class="headline"]Cumulative Layout Shift[/col]';	
-	$siteAuditPage .= '[col class="headline"]Page One[/col]';	
-	$siteAuditPage .= '[col class="headline"]Needs Attention[/col]';	
-	$siteAuditPage .= '[col class="headline"]Citations[/col]';	
-	$siteAuditPage .= '[col class="headline"]Industry Links[/col]';	
-	$siteAuditPage .= '[col class="headline"]Local Links[/col]';	
-	$siteAuditPage .= '[col class="headline"]Linking Domains[/col]';
-	$siteAuditPage .= '[col class="headline"]Overview[/col]';	
-	$siteAuditPage .= '[col class="headline"]Calls[/col]';	
-	$siteAuditPage .= '[col class="headline"]Messages[/col]';	
-	$siteAuditPage .= '[col class="headline"]Clicks[/col]';		
-	$siteAuditPage .= '[col class="headline"]Rating[/col]';		
-	$siteAuditPage .= '[col class="headline"]Number[/col]';	
-	$siteAuditPage .= '[col class="headline"]Mobile[/col]';		
-	$siteAuditPage .= '[col class="headline"]Desktop[/col]';			
-	$siteAuditPage .= '[col class="headline"]Optimized[/col]';
-	$siteAuditPage .= '[col class="headline"]Testimonials[/col]';		
-	$siteAuditPage .= '[col class="headline"]Testimonials Button[/col]';		
-	$siteAuditPage .= '[col class="headline"]Testimonials View %[/col]';	
-	$siteAuditPage .= '[col class="headline"]Coupon[/col]';				
-	$siteAuditPage .= '[col class="headline"]Coupon View %[/col]';
-	$siteAuditPage .= '[col class="headline"]Blog[/col]';	
-	$siteAuditPage .= '[col class="headline"]Galleries[/col]';	
-	$siteAuditPage .= '[col class="headline"]Home Call To Action[/col]';			
-	$siteAuditPage .= '[col class="headline"]Home Page Teasers[/col]';	
-	$siteAuditPage .= '[col class="headline"]Logo Slider[/col]';			
-	$siteAuditPage .= '[col class="headline"]Service Map[/col]';		
-	$siteAuditPage .= '[col class="headline"]BBB[/col]';
-	
-	if ( $siteType == "hvac" ) :
-		$siteAuditPage .= '[col class="headline"]Financing Ad[/col]';
-		$siteAuditPage .= '[col class="headline"]Financing Button[/col]';		
-		$siteAuditPage .= '[col class="headline"]Financing View %[/col]';
-		$siteAuditPage .= '[col class="headline"]Why Choose Us[/col]';		
-		$siteAuditPage .= '[col class="headline"]24/7 Service[/col]';	
-		$siteAuditPage .= '[col class="headline"]Symptom Checker[/col]';			
-		$siteAuditPage .= '[col class="headline"]FAQ[/col]';				
-		$siteAuditPage .= '[col class="headline"]Tip Of The Month[/col]';			
-		$siteAuditPage .= '[col class="headline"]Maintenance Tips[/col]';
-	endif;
+	$siteAuditPage .= '[col class="headline lighthouse-mobile-score"]Performance Score[/col]';	
+	$siteAuditPage .= '[col class="headline lighthouse-mobile-fcp"]First Contentful Paint[/col]';	
+	$siteAuditPage .= '[col class="headline lighthouse-mobile-si"]Speed Index[/col]';	
+	$siteAuditPage .= '[col class="headline lighthouse-mobile-lcp"]Largest Contentful Paint[/col]';	
+	$siteAuditPage .= '[col class="headline lighthouse-mobile-tti"]Time To Interactive[/col]';	
+	$siteAuditPage .= '[col class="headline lighthouse-mobile-tbt"]Total Blocking Time[/col]';	
+	$siteAuditPage .= '[col class="headline lighthouse-mobile-cls"]Cumulative Layout Shift[/col]';
+	$siteAuditPage .= '[col class="headline lighthouse-desktop-score"]Performance Score[/col]';	
+	$siteAuditPage .= '[col class="headline lighthouse-desktop-fcp"]First Contentful Paint[/col]';	
+	$siteAuditPage .= '[col class="headline lighthouse-desktop-si"]Speed Index[/col]';	
+	$siteAuditPage .= '[col class="headline lighthouse-desktop-lcp"]Largest Contentful Paint[/col]';	
+	$siteAuditPage .= '[col class="headline lighthouse-desktop-tti"]Time To Interactive[/col]';	
+	$siteAuditPage .= '[col class="headline lighthouse-desktop-tbt"]Total Blocking Time[/col]';	
+	$siteAuditPage .= '[col class="headline lighthouse-desktop-cls"]Cumulative Layout Shift[/col]';	
+	$siteAuditPage .= '[col class="headline keyword-page-1"]Page One[/col]';	
+	$siteAuditPage .= '[col class="headline keyword-needs-attn"]Needs Attention[/col]';	
+	$siteAuditPage .= '[col class="headline cite-citations"]Citations[/col]';	
+	$siteAuditPage .= '[col class="headline cite-total-links"]Total Links[/col]';	
+	$siteAuditPage .= '[col class="headline cite-local-links"]Local Links[/col]';	
+	$siteAuditPage .= '[col class="headline cite-domains"]Linking Domains[/col]';
+	$siteAuditPage .= '[col class="headline gmb-overview"]Overview[/col]';	
+	$siteAuditPage .= '[col class="headline gmb-calls"]Calls[/col]';	
+	$siteAuditPage .= '[col class="headline gmb-msg"]Messages[/col]';	
+	$siteAuditPage .= '[col class="headline gmb-clicks"]Clicks[/col]';		
+	$siteAuditPage .= '[col class="headline google-rating"]Rating[/col]';		
+	$siteAuditPage .= '[col class="headline google-reviews"]Number[/col]';	
+	$siteAuditPage .= '[col class="headline load_time_mobile"]Mobile[/col]';		
+	$siteAuditPage .= '[col class="headline load_time_desktop"]Desktop[/col]';			
+	$siteAuditPage .= '[col class="headline optimized"]Optimized[/col]';
+	$siteAuditPage .= '[col class="headline testimonials"]Testimonials[/col]';		
+	$siteAuditPage .= '[col class="headline menu-testimonials"]Testimonials Button[/col]';		
+	$siteAuditPage .= '[col class="headline testimonials-pct"]Testimonials View %[/col]';	
+	$siteAuditPage .= '[col class="headline coupon"]Coupon[/col]';				
+	$siteAuditPage .= '[col class="headline coupon-pct"]Coupon View %[/col]';
+	$siteAuditPage .= '[col class="headline blog"]Blog[/col]';	
+	$siteAuditPage .= '[col class="headline galleries"]Galleries[/col]';	
+	$siteAuditPage .= '[col class="headline home-call-to-action"]Home Call To Action[/col]';			
+	$siteAuditPage .= '[col class="headline homepage-teasers"]Home Page Teasers[/col]';	
+	$siteAuditPage .= '[col class="headline logo-slider"]Logo Slider[/col]';			
+	$siteAuditPage .= '[col class="headline service-map"]Service Map[/col]';		
+	$siteAuditPage .= '[col class="headline bbb-link"]BBB[/col]';	
+	$siteAuditPage .= '[col class="headline financing-link"]Financing Ad[/col]';
+	$siteAuditPage .= '[col class="headline menu-finance"]Financing Button[/col]';		
+	$siteAuditPage .= '[col class="headline finance-pct"]Financing View %[/col]';
+	$siteAuditPage .= '[col class="headline why-choose"]Why Choose Us[/col]';		
+	$siteAuditPage .= '[col class="headline emergency-service"]24/7 Service[/col]';	
+	$siteAuditPage .= '[col class="headline symptom-checker"]Symptom Checker[/col]';			
+	$siteAuditPage .= '[col class="headline faq"]FAQ[/col]';				
+	$siteAuditPage .= '[col class="headline tip-of-the-month"]Tip Of The Month[/col]';			
+	$siteAuditPage .= '[col class="headline maintenance-tips"]Maintenance Tips[/col]';
 	
 	$siteAuditPage .= '[col class="subhead date"]Date[/col]';	
 	$siteAuditPage .= '[col class="subhead lighthouse mobile"]Mobile[/col]';	
@@ -2683,9 +2678,10 @@ function battleplan_site_audit() {
 	$siteAuditPage .= '[col class="subhead keywords"]Keywords[/col]';	
 	$siteAuditPage .= '[col class="subhead citations"]Citations[/col]';	
 	$siteAuditPage .= '[col class="subhead gmb"]Google My Business[/col]';		
-	$siteAuditPage .= '[col class="subhead google-reviews"]Reviews[/col]';	
+	$siteAuditPage .= '[col class="subhead revs"]Reviews[/col]';	
 	$siteAuditPage .= '[col class="subhead site-speed"]Site Speed[/col]';	
-	$siteAuditPage .= '[col class="subhead site-elements"]Site Elements[/col]';	
+	$siteAuditPage .= '[col class="subhead site-elements"]Site Elements[/col]';
+	$siteAuditPage .= '[col class="subhead site-hvac"]HVAC Elements[/col]';	
 	
 	$siteAudit = get_option('bp_site_audit_details');
 	
@@ -2693,7 +2689,7 @@ function battleplan_site_audit() {
 	foreach ( $siteAudit as $date=>$auditDetails ) :
 		$siteAuditPage .= '[col class="when"]'.date("M j, Y", strtotime($date)).'[/col]';
 		foreach ( $criteria as $auditDetail ) :			
-			$siteAuditPage .= '[col class="stat"]';
+			$siteAuditPage .= '[col class="stat '.$auditDetail.'"]';
 			
 			if ( $auditDetails[$auditDetail] == "true" ) :
 				$siteAuditPage .= '●';

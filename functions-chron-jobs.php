@@ -31,6 +31,27 @@ if ( get_option('bp_setup_2022_07_26') != "completed" ) :
 	updateOption( 'bp_setup_2022_07_26', 'completed' );			
 endif;
 
+if ( get_option('bp_setup_2022_08_03') != "completed" ) :
+	delete_option('bp_setup_2022_07_04');
+	delete_option('bp_setup_2022_07_04b');
+	
+	$args = array( 'post_type'=>array('attachment', 'testimonials'), 'post_status'=>'any', 'posts_per_page'=>-1 );
+	$image_query = new WP_Query($args);		
+	
+	if ( $image_query->have_posts() ) : while ($image_query->have_posts() ) : $image_query->the_post();
+		$post_ID = get_the_ID();
+		updateMeta( $post_ID, 'log-last-viewed', strtotime("-2 days"));		
+		updateMeta( $post_ID, 'log-views-today', '0' );		
+		updateMeta( $post_ID, 'log-views-total-7day', '0' );		
+		updateMeta( $post_ID, 'log-views-total-30day', '0' );
+		updateMeta( $post_ID, 'log-views-total-90day', '0' );
+		updateMeta( $post_ID, 'log-views-total-365day', '0' );
+		updateMeta( $post_ID, 'log-views', maybe_serialize(array( 'date'=> strtotime(date("F j, Y")), 'views' => 0 )));	
+	endwhile; endif;
+
+	updateOption( 'bp_setup_2022_08_03', 'completed' );			
+endif;
+
 //wp_cache_delete ( 'alloptions', 'options' );
 	
 if ( is_admin() ) : 

@@ -19,45 +19,34 @@ function battleplan_delete_prefixed_options( $prefix ) {
 	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
 }	
 
-if ( get_option('bp_setup_2022_07_26') != "completed" ) :
-	delete_option('bp_site_hits_ua');
+if ( get_option('bp_setup_2022_08_09') != "completed" ) :
+	delete_option('bp_setup_2022_07_26');
+	delete_option('bp_setup_2022_08_03');
+	
+	delete_option('stats_basic');
+	delete_option('stats_referrers');
+	delete_option('stats_locations');	
+	delete_option('stats_tech');	
 	delete_option('bp_site_hits');
-	delete_option( 'bp_setup_2022_07_24' );				
-	deleteMeta(_HEADER_ID, "google-review-date");
-	deleteMeta(_HEADER_ID, "google-review-rating");
-	deleteMeta(_HEADER_ID, "google-review-number");
-
-	updateOption('bp_chrons_pages', 10000, true);
-	updateOption( 'bp_setup_2022_07_26', 'completed' );			
-endif;
-
-if ( get_option('bp_setup_2022_08_03') != "completed" ) :
-	delete_option('bp_setup_2022_07_04');
-	delete_option('bp_setup_2022_07_04b');
+	delete_option('sidebars_widgets');
+	delete_option('page-scroll-pct');
+	delete_option('bg_debug');
+	delete_option('content-tracking');
+	delete_option('content-scroll-pct');
 	
-	$args = array( 'post_type'=>array('attachment', 'testimonials'), 'post_status'=>'any', 'posts_per_page'=>-1 );
-	$image_query = new WP_Query($args);		
+	battleplan_delete_prefixed_options( 'strx-magic-floating-sidebar-' );	
+	battleplan_delete_prefixed_options( 'ewww_image_optimizer' );
+	battleplan_delete_prefixed_options( 'gplkit_' );
+	battleplan_delete_prefixed_options( 'wp_rocket' );
+	battleplan_delete_prefixed_options( 'aam_' );
+	battleplan_delete_prefixed_options( 'bp_track_content_' );
 	
-	if ( $image_query->have_posts() ) : while ($image_query->have_posts() ) : $image_query->the_post();
-		$post_ID = get_the_ID();
-		updateMeta( $post_ID, 'log-last-viewed', strtotime("-2 days"));		
-		updateMeta( $post_ID, 'log-views-today', '0' );		
-		updateMeta( $post_ID, 'log-views-total-7day', '0' );		
-		updateMeta( $post_ID, 'log-views-total-30day', '0' );
-		updateMeta( $post_ID, 'log-views-total-90day', '0' );
-		updateMeta( $post_ID, 'log-views-total-365day', '0' );
-		updateMeta( $post_ID, 'log-views', maybe_serialize(array( 'date'=> strtotime(date("F j, Y")), 'views' => 0 )));	
-	endwhile; endif;
 
-	updateOption( 'bp_setup_2022_08_03', 'completed' );			
+	updateOption( 'bp_setup_2022_08_09', 'completed', false );			
 endif;
 
 //wp_cache_delete ( 'alloptions', 'options' );
 	
-if ( is_admin() ) : 
-	if (function_exists('battleplan_updateSiteOptions')) battleplan_updateSiteOptions();
-endif;
-
 $bpChrons = get_option( 'bp_chrons_pages' ) ? get_option( 'bp_chrons_pages' ) : 0;
 $pagesLeft = 500 - $bpChrons;	
 $bpChrons++;
@@ -233,8 +222,8 @@ if ( $pagesLeft <= 0 ) :
 // Widget Options - Extended Settings
 	if ( !is_plugin_active('extended-widget-options/plugin.php') ) :
 
-		delete_option( 'bp_setup_widget_options_initial' );			
-
+		delete_option( 'bp_setup_widget_options_initial' );	
+		
 		battleplan_delete_prefixed_options( '_extended_widgetopts' );
 		battleplan_delete_prefixed_options( '_transient_widgetopts' );
 		battleplan_delete_prefixed_options( '_widgetopts' );

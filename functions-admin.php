@@ -17,6 +17,10 @@
 # Shortcodes
 --------------------------------------------------------------*/
 
+if ( is_admin() ) : 
+	if (function_exists('battleplan_updateSiteOptions')) battleplan_updateSiteOptions();
+endif;
+
 // Remove buttons from WordPress text editor
 add_filter( 'quicktags_settings', 'battleplan_delete_quicktags', 10, 2 );
 function battleplan_delete_quicktags( $qtInit, $editor_id = 'content' ) {
@@ -2020,7 +2024,7 @@ function battleplan_admin_tech_stats() {
 		foreach ( $allDevices as $device=>$count ) :
 			$count = ($count / array_sum($allDevices)) * 100;				
 			echo '<li><div class="value"><b>'.number_format($count,1).'%</b></div><div class="label-half">'.ucwords($device).'</div><div class="label-half">'.number_format($allSpeed[$device]['avg'],1).' sec</div></li>';
-			updateOption('load_time_'.$device, number_format($allSpeed[$device]['avg'],1) );
+			updateOption('load_time_'.$device, number_format($allSpeed[$device]['avg'],1), false );
 		endforeach;			
 			
 		echo '</ul></div>';		
@@ -2552,7 +2556,7 @@ function battleplan_site_audit() {
 		$siteAudit[$today]['home-call-to-action'] = $homeCallToAction;
 		$siteAudit[$today]['service-map'] = $serviceMap;						
 
-		updateOption('bp_site_audit_details', $siteAudit);
+		updateOption('bp_site_audit_details', $siteAudit, false);
 	endif;
 	
 	$siteAuditPage = '<div class="wrap">';

@@ -1977,7 +1977,7 @@ function battleplan_admin_tech_stats() {
 		if ( !in_array( $location, $GLOBALS['citiesToExclude']) && $site_speed != '' ) :			
 			$pageID = strtok($site_speed,  '»');
 			if ( strpos($site_speed, 'desktop') !== false ) : $device = "desktop"; else: $device = "mobile"; endif;			
-			$speed = str_replace($pageID.'»'.$device.'«', '', $site_speed);
+			$speed = (float)str_replace($pageID.'»'.$device.'«', '', $site_speed);
 
 			if ( is_array($allSpeed) && array_key_exists($pageID, $allSpeed ) ) :
 				$allSpeed[$pageID]['speed'] += $speed;
@@ -2712,7 +2712,7 @@ function battleplan_site_audit() {
 	$siteAuditPage .= '[/layout][/section]</div></div> <!--site-audit-wrap-->';
 	echo do_shortcode($siteAuditPage);
 	
-	updateOption( 'site_updated', strtotime(array_key_first($siteAudit)) ); 
+	if ( is_array($siteAudit)) updateOption( 'site_updated', strtotime(array_key_first($siteAudit)) ); 
 	exit();
 }  
 

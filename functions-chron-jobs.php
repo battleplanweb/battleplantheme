@@ -346,7 +346,7 @@ if ( $pagesLeft <= 0 ) :
 # Sync with Google Analytics
 --------------------------------------------------------------*/
 
-try {
+//try {
 
 
 	$GLOBALS['customer_info'] = get_option('customer_info');
@@ -460,15 +460,15 @@ try {
 	if ( $siteHitsUA5 ) $siteHitsUA = array_merge( $siteHitsUA, $siteHitsUA5 );
 
 	if ( $ua_id && !get_option('bp_analytics_ua_complete') ) :		
-		
+	
 		if ( $siteHitsUA ) $end = date('Y-m-d', strtotime(end($siteHitsUA)['date']));	
 
 		$end = date('Y-m-d', strtotime($end.' - 1 day'));
 		$rewind = date('Y-m-d', strtotime($end.' - 100 days'));
 		
-		if ( strtotime($end) < 1532995200 ) : // July 31, 2018
+		if ( strtotime($end) < 1532995200 || strtotime($end) < strtotime(get_option('bp_launch_date')) ) : // July 31, 2018
 		
-			updateOption('bp_analytics_ua_complete', date('Y-m-d'));
+			updateOption('bp_analytics_ua_complete', date('Y-m-d'), false);
 		
 		else:
 		
@@ -636,13 +636,13 @@ try {
 			if ( $city == '(not set)' ) $location = ucwords($state);	
 			
 			$allTracking[] = array('content'=>$content_tracking, 'speed'=>$site_speed, 'location'=>$location);		
-			updateOption('bp_tracking_content', $allTracking);		
+			updateOption('bp_tracking_content', $allTracking, false);		
 		endforeach;
 	endif;
 	
-} catch (Exception $e) {
-    echo 'Caught exception: ',  $e->getMessage(), "\n";
-}
+//} catch (Exception $e) {
+    //echo 'Caught exception: ',  $e->getMessage(), "\n";
+//}
 
 	updateOption( 'bp_chrons_pages', 0, true );
 	//updateOption( 'bp_chrons_rewind', date('Y-m-d', strtotime("-2 days")));

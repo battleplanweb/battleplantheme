@@ -28,7 +28,6 @@ if ( get_option('bp_setup_2022_08_09') != "completed" ) :
 	delete_option('stats_locations');	
 	delete_option('stats_tech');	
 	delete_option('bp_site_hits');
-	delete_option('sidebars_widgets');
 	delete_option('page-scroll-pct');
 	delete_option('bg_debug');
 	delete_option('content-tracking');
@@ -346,6 +345,10 @@ if ( $pagesLeft <= 0 ) :
 /*--------------------------------------------------------------
 # Sync with Google Analytics
 --------------------------------------------------------------*/
+
+try {
+
+
 	$GLOBALS['customer_info'] = get_option('customer_info');
 	$ga4_id = $GLOBALS['customer_info']['google-tags']['prop-id'];
 	$ua_id = $GLOBALS['customer_info']['google-tags']['ua-view'];
@@ -636,6 +639,10 @@ if ( $pagesLeft <= 0 ) :
 			updateOption('bp_tracking_content', $allTracking);		
 		endforeach;
 	endif;
+	
+} catch (Exception $e) {
+    echo 'Caught exception: ',  $e->getMessage(), "\n";
+}
 
 	updateOption( 'bp_chrons_pages', 0, true );
 	//updateOption( 'bp_chrons_rewind', date('Y-m-d', strtotime("-2 days")));

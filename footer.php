@@ -43,12 +43,12 @@
 						$buildCopyright .= do_shortcode('[get-biz info="region"]')." • "; 
 					endif;
 					if ( do_shortcode('[get-biz info="phone-link"]') ) $buildCopyright .= do_shortcode('[get-biz info="phone-link"]');								
-					$buildCopyright .= "</div><div class='site-info-battleplan'>Website developed & maintained by <a href='http://battleplanwebdesign.com' target='_blank' rel='noreferrer'>Battle Plan Web Design</a></div>";
 					if ( do_shortcode('[get-biz info="misc3"]') ) $buildCopyright .= "<div class='site-info-misc3'>".do_shortcode('[get-biz info="misc3"]')."</div>";	
 					$buildCopyright .= "<div class='site-info-links'>";
 					if ( do_shortcode('[get-biz info="license"]') ) $buildCopyright .= "License ".do_shortcode('[get-biz info="license"]')." • "; 
 					$buildCopyright .= "<span class='privacy-policy-link'><a href='/privacy-policy/'>Privacy Policy</a></span><span class='terms-conditions-link'> • <a href='/terms-conditions/'>Terms & Conditions</a></span>";
-					if ( do_shortcode('[get-biz info="misc1"]') ) $buildCopyright .= " • ".do_shortcode('[get-biz info="misc1"]');	
+					if ( do_shortcode('[get-biz info="misc1"]') ) $buildCopyright .= " • ".do_shortcode('[get-biz info="misc1"]');
+					$buildCopyright .= "</div><div class='site-info-battleplan'>Website developed & maintained by <a href='http://battleplanwebdesign.com' target='_blank' rel='noreferrer'>Battle Plan Web Design</a></div>";
 					$buildCopyright .= "</div>";					
 					
 					if (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-icon-80x80.png' ) ) : $iconName = "site-icon-80x80.png"; $iconWH = " width='80' height='80'"; else: $iconName = "site-icon.png"; endif; 

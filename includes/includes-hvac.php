@@ -44,6 +44,7 @@ function battleplan_product_overview( $atts, $content = null ) {
 	elseif (strpos($type, 'lennox') !== false) { include("wp-content/themes/battleplantheme/elements/element-product-overview-lennox.php"); }
 	elseif (strpos($type, 'rheem') !== false) { include("wp-content/themes/battleplantheme/elements/element-product-overview-rheem.php"); }	
 	elseif (strpos($type, 'tempstar') !== false) { include("wp-content/themes/battleplantheme/elements/element-product-overview-tempstar.php"); }
+	elseif (strpos($type, 'trane') !== false) { include("wp-content/themes/battleplantheme/elements/element-product-overview-trane.php"); }
 	else { include("wp-content/themes/battleplantheme/elements/element-product-overview-generic.php"); }
 	
 	return do_shortcode('

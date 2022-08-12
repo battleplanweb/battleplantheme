@@ -1,6 +1,35 @@
 <?php
 /* Battle Plan Web Design - Lennox Product Overview */
 
+	if ( $type == "lennox air conditioners" ) :
+		$title 		= "Air Conditioners";
+		$excerpt	= "<p>Exacting precision makes Lennox® air conditioners among the quietest and most energy-efficient units you can buy. Explore the precision of Lennox® Air Conditioners.</p>";
+		$link 		= "/product-type/air-conditioners/";
+		$pic 		= "Lennox-AC-01-320x320.jpg";
+		$alt 		= "Lennox Air Conditioners";
+	endif;
+
+	if ( $type == "lennox heat pumps" ) :
+		$title 		= "Heat Pumps";
+		$excerpt	= "<p>Enjoy innovation in every season with precise, quietly efficient Lennox® heat pumps that keep your life simply perfect. Explore the precision of Lennox® Air Conditioners.</p>";
+		$link 		= "/product-type/heat-pumps/";
+		$pic 		= "Lennox-HP-01-320x320.jpg";
+		$alt 		= "Lennox Heat Pumps";
+	endif;
+
+	if ( $type == "lennox furnaces" ) :
+		$title 		= "Furnaces";
+		$excerpt	= "<p>Lennox® furnaces are some of the most efficient and quietest heating systems you can buy. They’re engineered for perfect warmth and savings. Explore the precision of Lennox® Furnaces.</p>";
+		$link 		= "/product-type/furnaces/";
+		$pic 		= "Lennox-F-01-320x320.jpg";
+		$alt 		= "Lennox Furnaces";
+	endif;
+
+	
+	
+	
+	
+
 	if ( $type == "lennox commercial rooftop units" ) :
 		$title 		= "Rooftop Units";
 		$excerpt	= "<p>Packaged rooftop units represent some of the most innovative technology in the market. Combining industry-leading efficiency with fast, easy installation and service, Lennox continues to offer reliable systems that deliver exceptional comfort in commercial buildings.</p>";

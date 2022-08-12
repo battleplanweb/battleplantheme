@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 13.7
+Version: 13.7.1
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -3275,7 +3275,7 @@ a.prev i.fa {
 .scroll-down {
 	display: 									block;
 	position: 									fixed;  
-	bottom: 									4vh; 
+	bottom: 									calc(4vh + 75px); 
 	left:										0;
 	width:										100%;
 	text-align:									center;
@@ -4725,6 +4725,7 @@ chat-widget .lc_text-widget--btn {
 	.carousel-fade .carousel-item-prev, 
 	.carousel-fade .carousel-item.active { 
 		transform: 									translate3d(0, 0, 0);
+
 
 	}
 }

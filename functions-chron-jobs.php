@@ -464,12 +464,10 @@ if ( $pagesLeft <= 0 ) :
 		if ( $siteHitsUA ) $end = date('Y-m-d', strtotime(end($siteHitsUA)['date']));	
 
 		$end = date('Y-m-d', strtotime($end.' - 1 day'));
-		$rewind = date('Y-m-d', strtotime($end.' - 100 days'));
+		$rewind = date('Y-m-d', strtotime($end.' - 30 days'));
 		
-		if ( strtotime($end) < 1532995200 || strtotime($end) < strtotime(get_option('bp_launch_date')) ) : // July 31, 2018
-		
-			updateOption('bp_analytics_ua_complete', date('Y-m-d'), false);
-		
+		if ( strtotime($end) < 1532995200 || strtotime($end) < strtotime(get_option('bp_launch_date')) ) : // July 31, 2018		
+			updateOption('bp_analytics_ua_complete', date('Y-m-d'), false);		
 		else:
 		
 			function initializeAnalytics() {

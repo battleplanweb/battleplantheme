@@ -39,6 +39,16 @@ function battleplan_getBizInfo($atts, $content = null ) {
 	return $GLOBALS['customer_info'][$data];
 }
  
+// Use Google ratings in content
+add_shortcode( 'get-google-rating', 'battleplan_displayGoogleRating' );
+function battleplan_displayGoogleRating($atts, $content = null) {
+	$a = shortcode_atts( array( 'detail'=>'rating', ), $atts );  
+	$detail = esc_attr($a['detail']);	
+ 	$googleInfo = get_option('bp_google_reviews');
+	if ( $detail == 'rating' ) return number_format($googleInfo['rating'], 1, '.', ',');
+	return $googleInfo['number'];
+}		
+		
 // Returns current year
 add_shortcode( 'get-year', 'battleplan_getYear' );
 function battleplan_getYear() { return date("Y"); }
@@ -753,12 +763,13 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	$lazy = esc_attr($a['lazy']);	
 	if ( $lazy == "true" ) : $lazy = "lazy"; else: $lazy = "eager"; endif;
 	$mult = esc_attr($a['mult']);		
-	if ( $mult == 1 ) $imgSize = 100; 
-	if ( $mult == 2 ) $imgSize = 50;	
-	if ( $mult == 3 ) $imgSize = 33;
-	if ( $mult == 4 ) $imgSize = 25;
-	if ( $mult == 5 ) $imgSize = 20;	
-	if ( $mult == 6 ) $imgSize = 17;
+	if ( $mult == 1 ) : $multSize = $imgSize = 100; 
+	elseif ( $mult == 2 ) : $multSize = $imgSize = 50;	
+	elseif ( $mult == 3 ) : $multSize = $imgSize = 33;
+	elseif ( $mult == 4 ) : $multSize = $imgSize = 25;
+	elseif ( $mult == 5 ) : $multSize = $imgSize = 20;	
+	else : $multSize = $imgSize = 17; endif;
+	if ( $mult > 1 ) $num--;
 	$numDisplay = -1;
 	$rowDisplay = 0;
 	$sliderNum = rand(100,999);
@@ -858,15 +869,27 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	
 				if ( $numDisplay < $num ) : 
 					if ( $pics == "no" || has_post_thumbnail() ) :
+					
 						$numDisplay++; 
-						if ( $numDisplay == 0 ) : $active = "active"; else: $active = ""; endif;
-						$buildIndicators .= '<li data-target="#'.$type.'Slider'.$sliderNum.'" data-slide-to="'.$numDisplay.'" class="'.$active.'"></li>';
-						/*$buildInner .= '<div class="'.$active.' carousel-item carousel-item-'.$type.'" data-id="'.get_the_ID().'">';*/
-						$buildInner .= '<div class="'.$active.' carousel-item carousel-item-'.$type.'">';
+						$multDisplay++;
+					
+						$buildArchive = do_shortcode('[build-archive type="'.$type.'" show_btn="'.$showBtn.'" btn_text="'.$postBtn.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" size="'.$size.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" link="'.$link.'" truncate="'.$truncate.'"]');	
+						
+						if ( $multDisplay == 1 ) :
+							if ( $numDisplay == 0 ) : $active = "active"; else: $active = ""; endif;
+							$buildIndicators .= '<li data-target="#'.$type.'Slider'.$sliderNum.'" data-slide-to="'.$numDisplay.'" class="'.$active.'"></li>';
+							/*$buildInner .= '<div class="'.$active.' carousel-item carousel-item-'.$type.'" data-id="'.get_the_ID().'">';*/
+							$buildInner .= '<div class="'.$active.' carousel-item carousel-item-'.$type.'">';
+						endif;
 
-						$buildInner .= do_shortcode('[build-archive type="'.$type.'" show_btn="'.$showBtn.'" btn_text="'.$postBtn.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" size="'.$size.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" link="'.$link.'" truncate="'.$truncate.'"]');	
+						if ( $mult == 1 ) : $buildInner .= $buildArchive;
+						else: $buildInner .= do_shortcode('[group size="'.$multSize.'"]'.$buildArchive.'[/group]');						
+						endif;						
 
-						$buildInner .= "</div>";	
+						if ( $multDisplay == $mult ) :
+							$buildInner .= "</div>";	
+							$multDisplay = 0;
+						endif;
 					endif;
 				endif;
 			endwhile; 

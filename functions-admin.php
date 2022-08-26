@@ -28,52 +28,6 @@ function battleplan_delete_quicktags( $qtInit, $editor_id = 'content' ) {
 	$qtInit['buttons'] = 'strong,em,link,ul,ol,more,close';
 	return $qtInit;
 }
- 
-// Add new buttons to WordPress text editor
-add_action( 'admin_print_footer_scripts', 'battleplan_add_quicktags' );
-function battleplan_add_quicktags() {
-	if ( wp_script_is( 'quicktags' ) ) { ?>
-		<script type="text/javascript">
-			QTags.addButton( 'bp_paragraph', 'p', '<p>', '</p>\n', 'p', 'Paragraph Tag', 1 );
-			QTags.addButton( 'bp_li', 'li', ' <li>', '</li>', 'li', 'List Item', 100 );			
-			
-			QTags.addButton( 'bp_widget', 'widget', '[widget title="Brand Logo" hide_title="true, false" lock="none, top, bottom" priority="1, 2, 3, 4, 5" image="no, yes" financing="no, yes" set="none, param"]\n', '[/widget]\n\n', 'widget', 'Widget', 1000 );	
-
-			QTags.addButton( 'bp_section', 'section', '[section name="becomes id attribute" hash="compensation for scroll on one-page sites" style="corresponds to css" width="default, stretch, full, edge, inline" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '[/section]\n\n', 'section', 'Section', 1000 );		
-			QTags.addButton( 'bp_layout', 'layout', ' [layout grid="1-auto, 1-1-1-1, 5e, content, 80px 100px 1fr" break="none, 3, 4" valign="start, stretch, center, end" class=""]\n\n', ' [/layout]\n', 'layout', 'Layout', 1000 );
-			QTags.addButton( 'bp_column', 'column', '  [col name="becomes id attribute" hash="compensation for scroll on one-page sites" align="center, left, right" valign="start, stretch, center, end" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '  [/col]\n\n', 'column', 'Column', 1000 );
-			QTags.addButton( 'bp_image', 'image', '   [img size="100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" link="url to link to" new-tab="false, true" ada-hidden="false, true" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/img]\n', 'image', 'Image', 1000 );
-			QTags.addButton( 'bp_video', 'video', '   [vid size="100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" link="url of video" thumb="url of thumb, if not using auto" preload="false, true" class="" related="false, true" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/vid]\n', 'video', 'Video', 1000 );
-			QTags.addButton( 'bp_caption', 'caption', '[caption align="aligncenter, alignleft, alignright | size-full-s" width="800"]<img src="/filename.jpg" alt="" class="size-full-s" />Type caption here.[/caption]\n', '', 'caption', 'Caption', 1000 );
-			QTags.addButton( 'bp_group', 'group', '   [group size = "100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '   [/group]\n\n', 'group', 'Group', 1000 );	
-			QTags.addButton( 'bp_text', 'text', '   [txt size="100 1/2 1/3 1/4 1/6 1/12" order="2, 1, 3" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '   [/txt]\n', 'text', 'Text', 1000 );
-			QTags.addButton( 'bp_button', 'button', '   [btn size="100 1/2 1/3 1/4 1/6 1/12" order="3, 1, 2" align="center, left, right" link="url to link to" get-biz="link in functions.php" new-tab="false, true" class="" icon="fas fa-chevron-right" fancy="(blank), 2" ada="text for ada button" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/btn]\n', 'button', 'Button', 1000 );	
-			QTags.addButton( 'bp_social', 'social', '   [social-btn type="email, facebook, twitter" img="none, link"]', '', 'social', 'Social', 1000 );	
-			QTags.addButton( 'bp_accordion', 'accordion', '   [accordion title="clickable title" class="" excerpt="false, whatever text you want the excerpt to be" active="false, true" icon="true, false, /wp-content/uploads/image.jpg" btn="false/true/ Open Button Text" btn_collapse="Close Button Text" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/accordion]\n\n', 'accordion', 'Accordion', 1000 );			
-			
-			QTags.addButton( 'bp_expire-content', 'expire', '[expire start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/expire]\n\n', 'expire', 'Expire', 1000 );			
-			QTags.addButton( 'bp_restrict-content', 'restrict', '[restrict max="administrator, any role" min="none, any role"]', '[/restrict]\n\n', 'restrict', 'Restrict', 1000 );	
-			
-			QTags.addButton( 'bp_lock-section', 'lock', '[lock name="becomes id attribute" style="(lock) corresponds to css" width="edge, default, stretch, full, inline" position="bottom, top, modal, header" delay="3000" show="session, never, always, # days" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD" btn-activated="no, yes"]\n [layout]\n\n', ' [/layout]\n[/lock]\n\n', 'lock', 'Lock', 1000 );	
-			
-			QTags.addButton( 'bp_clear', 'clear', '[clear height="px, em" class=""]\n\n', '', 'clear', 'Clear', 1000 );	
-			
-			QTags.addButton( 'bp_images_side-by-side', 'side by side images', '[side-by-side img="ids" size="half-s, third-s, full" align="center, left, right" full="id" pos="bottom, top" break="2, none"]\n\n', '', 'side by side images', 'Side By Side Images', 1000 );			
-			QTags.addButton( 'bp_get-wp-page', 'get wp page', '[get-wp-page type="page, post, cpt" id="" slug="" title="" display="content, excerpt, title, thumbnail, link"]\n\n', '', 'get wp page', 'Get WP Page', 1000 );
-			
-			QTags.addButton( 'bp_random-image', 'random image', '   [get-random-image id="" tag="random" size="thumbnail, third-s" link="no, yes" number="1" offset="" align="left, right, center" order_by="recent, rand, menu_order, title, id, post_date, modified, views" order="asc, desc" shuffle="no, yes" lazy="true, false"]\n\n', '', 'random image', 'Random Image', 1000 );
-			QTags.addButton( 'bp_random-post', 'random post', '   [get-random-posts num="1" offset="0" leeway="0" type="post" tax="" terms="" orderby="recent, rand, views-today, views-7day, views-30day, views-90day, views-365day, views-all" sort="asc, desc" count_view="true, false" thumb_only="false, true" thumb_col="1, 2, 3, 4" show_title="true, false" title_pos="outside, inside" show_date="false, true" show_author="false, true" show_excerpt="true, false" show_social="false, true" show_btn="true, false" button="Read More" btn_pos="inside, outside" thumbnail="force, false" link="post, false, cf-field_name, /link-destination/" start="" end="" exclude="" x_current="true, false" size="thumbnail, size-third-s" pic_size="1/3" text_size=""]\n\n', '', 'random post', 'Random Post', 1000 );
-			QTags.addButton( 'bp_random-text', 'random text', '   [get-random-text cookie="true, false" text1="" text2="" text3="" text4="" text5="" text6="" text7=""]\n\n', '', 'random text', 'Random Text', 1000 );
-			QTags.addButton( 'bp_row-of-pics', 'row of pics', '   [get-row-of-pics id="" tag="row-of-pics" col="4" row="1" offset="0" size="half-s, thumbnail" valign="center, start, stretch, end" link="no, yes" order_by="recent, rand, menu_order, title, id, post_date, modified, views" order="asc, desc" shuffle="no, yes" lazy="true, false" class=""]\n\n', '', 'row of pics', 'Row Of Pics', 1000 );
-			QTags.addButton( 'bp_post-slider', 'post slider', '   [get-post-slider type="" auto="yes, no" interval="6000" loop="true, false" num="4" offset="0" pics="yes, no" controls="yes, no" controls_pos="below, above" indicators="no, yes" justify="space-around, space-evenly, space-between, center" pause="true, false" tax="" terms="" orderby="recent, rand, id, author, title, name, type, date, modified, parent, comment_count, relevance, menu_order, (images) views, (posts) views-today, views-7day, views-30day, views-90day, views-365day, views-all" order="asc, desc" post_btn="" all_btn="View All" link="" start="" end="" exclude="" x_current="true, false" show_excerpt="true, false" show_content="false, true" size="thumbnail, half-s" pic_size="1/3" text_size="" class="" (images) slide_type="box, screen, fade" tag="" caption="no, yes" id="" mult="1" truncate="true, false, # of characters" lazy="true, false" blur="false, true"]\n\n', '', 'post slider', 'Post Slider', 1000 );
-
-			QTags.addButton( 'bp_images-slider', 'Images Slider', '<div class="alignright size-half-s">[get-post-slider type="images" num="6" size="half-s" controls="no" indicators="yes" tag="featured" all_btn="" link="none, alt, description, blank" slide_type="box, screen, fade" orderby="recent" blur="false, true"]</div>\n\n', '', 'images-slider', 'Images Slider', 1000 );	
-			QTags.addButton( 'bp_testimonial-slider', 'Testimonial Slider', '  [col]\n   <h2>What Our Customers Say...</h2>\n   [get-post-slider type="testimonials" num="6" pic_size="1/3"]\n  [/col]\n\n', '', 'testimonial-slider', 'Testimonial Slider', 1000 );
-			QTags.addButton( 'bp_logo-slider', 'Logo Slider', '[section name="Logo Slider" style="1" width="edge"]\n [layout]\n  [col]\n   [get-logo-slider num="-1" space="15" size="full, thumbnail, quarter-s" max_w="85" tag="featured" package="null, hvac" orderby="rand, id, title, date, modified, menu_order, recent, views" order="asc, desc" shuffle="false, true" speed="slow, fast, #" delay="0" pause="no, yes" link="false, true"]\n  [/col]\n [/layout]\n[/section]\n\n', '', 'logo-slider', 'Logo Slider', 1000 );
-			QTags.addButton( 'bp_random-product', 'Random Product', '  [col]\n   <h2>Featured Product</h2>\n   [get-random-posts type="products" leeway="1" button="Learn More" orderby="views-30day" sort="desc"]\n  [/col]\n\n', '', 'random-product', 'Random Product', 1000 );		
-		</script>
-	<?php }
-}
 
 /*--------------------------------------------------------------
 # Admin Columns Set Up
@@ -1493,6 +1447,8 @@ function battleplan_reorderAdminBar() {
 add_action( 'admin_menu', 'battleplan_admin_menu' );
 function battleplan_admin_menu() {
 	//add_menu_page( __( 'Run Chron', 'battleplan' ), __( 'Run Chron', 'battleplan' ), 'manage_options', 'run-chron', 'battleplan_force_run_chron', 'dashicons-performance', 3 );
+	add_submenu_page( 'index.php', 'Clear ALL', 'Clear ALL', 'manage_options', 'clear-all', 'battleplan_clear_all' );	
+	add_submenu_page( 'index.php', 'Clear HVAC', 'Clear HVAC', 'manage_options', 'clear-hvac', 'battleplan_clear_hvac' );	
 	add_submenu_page( 'index.php', 'Run Chron', 'Run Chron', 'manage_options', 'run-chron', 'battleplan_force_run_chron' );	
 	add_submenu_page( 'index.php', 'Site Audit', 'Site Audit', 'manage_options', 'site-audit', 'battleplan_site_audit' );	
 }
@@ -1724,7 +1680,7 @@ $siteHitsUA3 = get_option('bp_site_hits_ua_3') ? get_option('bp_site_hits_ua_3')
 $siteHitsUA4 = get_option('bp_site_hits_ua_4') ? get_option('bp_site_hits_ua_4') : array();
 $siteHitsUA5 = get_option('bp_site_hits_ua_5') ? get_option('bp_site_hits_ua_5') : array();
 $siteHitsUA = array_merge( $siteHitsUA1, $siteHitsUA2, $siteHitsUA3, $siteHitsUA4, $siteHitsUA5);
-if ( $siteHitsUA ) $siteHits = array_merge($siteHits, $siteHitsUA);
+if ( $siteHitsUA && is_array($siteHits)) $siteHits = array_merge($siteHits, $siteHitsUA);
 
 $today = date( "Y-m-d" );	
 $GLOBALS['citiesToExclude'] = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, OR'); // also change in functions-chron-jobs.php
@@ -2121,8 +2077,11 @@ function battleplan_admin_content_stats() {
 	
 	echo '</ul><ul><li class="sub-label">Components</li>';
 	
+	if ( is_array($componentTracking)) arsort($componentTracking);
 	foreach($componentTracking as $track=>$count) :
 		if ( $track != "init" && $componentTracking['init'] > 0 ) echo "<li><div class='value'><b>".number_format((round($componentTracking[$track]/$componentTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>".ucwords($track)."</b></div></li>";	
+		
+		updateOption('pct-viewed-'.$track, number_format((round($componentTracking[$track]/$componentTracking['init'],3) * 100),1), false );
 	endforeach;		
 
 	echo '</ul><ul><li class="sub-label">Best Column Positions</li><div style="column-count:2">';		
@@ -2315,7 +2274,7 @@ function battleplan_save_remove_sidebar($post_id, $post, $update) {
     if ( !current_user_can("edit_post", $post_id) ) return $post_id;
 			
 	$lastViewed = readMeta( $post_id, 'log-last-viewed' );
-	if ( !$lastViewed ) updateMeta( $post_id, 'log-last-viewed', strtotime("-20 years"));	
+	if ( !$lastViewed ) updateMeta( $post_id, 'log-last-viewed', strtotime("-2 days"));	
 
     $updateRemoveSidebar = "";
     if ( isset($_POST["remove_sidebar"]) ) $updateRemoveSidebar = $_POST["remove_sidebar"];   
@@ -2438,7 +2397,7 @@ function battleplan_setImageMetaUponUpload( $post_ID ) {
 add_action( 'add_attachment', 'battleplan_addWidgetPicViewsToImg' );
 function battleplan_addWidgetPicViewsToImg( $post_ID ) {
 	if ( wp_attachment_is_image( $post_ID ) ) {		
-		updateMeta( $post_ID, 'log-last-viewed', strtotime("-20 years"));		
+		updateMeta( $post_ID, 'log-last-viewed', strtotime("-2 days"));		
 		updateMeta( $post_ID, 'log-views-today', '0' );		
 		updateMeta( $post_ID, 'log-views-total-7day', '0' );		
 		updateMeta( $post_ID, 'log-views-total-30day', '0' );
@@ -2468,7 +2427,10 @@ function battleplan_site_audit() {
 		if ( !is_array($siteAudit) ) $siteAudit = array();	
 		foreach ( $criteria as $log ) :
 			if ( $_POST[$log] || $_POST[$log] == '0' ) :
-				$updateNum = number_format((string)$_POST[$log],1);
+				$decimals = 0;
+				if ( $log == "lighthouse-mobile-si" || $log == "lighthouse-desktop-si" || $log == "lighthouse-mobile-fcp" || $log == "lighthouse-desktop-fcp" || $log == "lighthouse-mobile-lcp" || $log == "lighthouse-desktop-lcp" || $log == "lighthouse-mobile-tti" || $log == "lighthouse-desktop-tti" ) : $decimals = 1; endif;
+				if ( $log == "lighthouse-mobile-cls" || $log == "lighthouse-desktop-cls" ) : $decimals = 3; endif;
+				$updateNum = number_format((string)$_POST[$log], $decimals);
 				$siteAudit[$today][$log] = str_replace('.0', '', $updateNum);
 			elseif ( !$siteAudit[$today][$log] && $siteAudit[$today][$log] != '0' ) : 
 				$siteAudit[$today][$log] = "n/a";
@@ -2484,7 +2446,7 @@ function battleplan_site_audit() {
 		endif;	
 		
 		$googleInfo = get_option('bp_google_reviews');
-		$siteAudit[$today]['google-rating'] = $googleInfo['rating'];
+		$siteAudit[$today]['google-rating'] = number_format($googleInfo['rating'], 1, '.', ',');
 		$siteAudit[$today]['google-reviews'] = $googleInfo['number'];
 		$siteAudit[$today]['load_time_mobile'] = get_option('load_time_mobile');	
 		$siteAudit[$today]['load_time_desktop'] = get_option('load_time_desktop');		
@@ -2508,7 +2470,7 @@ function battleplan_site_audit() {
 
 			$checkContent = get_the_content();	
 			if ( rtrim(get_the_permalink(),'/') == get_site_url() && strpos(substr(trim($checkContent), -7), "</h") !== false ) $homeCallToAction = "true";
-			if ( strpos(get_the_permalink(), "contact") !== false && strpos($checkContent, "map") !== false ) $serviceMap = "true";
+			if ( strpos(get_the_permalink(), "contact") !== false && ( strpos($checkContent, "map") !== false || strpos($checkContent, "Map") !== false )) $serviceMap = "true";
 
 			$checkContent = $checkContent.get_post_meta( get_the_ID(), 'page-bottom_text' )[0];			
 			if ( strpos($checkContent, "coupon") !== false ) $coupon = "true";	
@@ -2716,6 +2678,61 @@ function battleplan_site_audit() {
 	exit();
 }  
 
+// Set up brand new site
+function battleplan_clear_all() {
+	$products = get_posts( array('post_type'=>'products', 'numberposts'=>-1) );
+	foreach ($products as $post) wp_delete_post( $post->ID, true );
+
+	$args = array( 'post_status' => 'inherit', 'posts_per_page' => -1, 'post_type' => 'attachment', 'post_mime_type' => 'image', );
+	$args['tax_query'] = array( array( 'taxonomy' => 'image-categories', 'terms' => 'products', 'field' => 'slug', ),);
+	$getImg = new WP_Query( $args );
+
+	if ( $getImg->have_posts() ) : while ( $getImg->have_posts() ) :
+		$getImg->the_post();		
+		wp_delete_attachment( get_the_ID(), true );
+	endwhile; endif;
+
+	wp_reset_postdata();	
+	battleplan_clear_hvac();
+}
+
+function battleplan_clear_hvac() {
+	$optimized = get_posts( array('post_type'=>'optimized', 'numberposts'=>-1) );
+	$testimonials = get_posts( array('post_type'=>'testimonials', 'numberposts'=>-1) );
+	$galleries = get_posts( array('post_type'=>'galleries', 'numberposts'=>-1) );
+	$posts = get_posts( array('post_type'=>'post', 'numberposts'=>-1) );
+	foreach ($optimized as $post) wp_delete_post( $post->ID, true );
+	foreach ($testimonials as $post) wp_delete_post( $post->ID, true );
+	foreach ($galleries as $post) wp_delete_post( $post->ID, true );
+	foreach ($posts as $post) wp_delete_post( $post->ID, true );
+
+	$args = array( 'post_status' => 'inherit', 'posts_per_page' => -1, 'post_type' => 'attachment', 'post_mime_type' => 'image', );
+	$terms = array ('testimonials', 'photos', 'graphics', 'logos');
+	$args['tax_query'] = array( array( 'taxonomy' => 'image-categories', 'terms' => $terms, 'field' => 'slug', ),);
+	$getImg = new WP_Query( $args );
+
+	if ( $getImg->have_posts() ) : while ( $getImg->have_posts() ) :
+		$getImg->the_post();		
+		if ( basename( get_attached_file( get_the_ID() )) != 'logo.png' && basename( get_attached_file( get_the_ID() )) != 'site-icon.png' && basename( get_attached_file( get_the_ID() )) != 'favicon.png' ) wp_delete_attachment( get_the_ID(), true );
+	endwhile; endif;
+
+	wp_reset_postdata();
+	
+	updateOption('bp_chrons_pages', 0);
+	updateOption('bp_launch_date', date('Y-m-d'));
+	
+	delete_option('bp_google_reviews');		
+	delete_option('bp_site_hits_ga4');	
+	delete_option('bp_site_hits_ua_1');	
+	delete_option('bp_site_hits_ua_2');		
+	delete_option('bp_site_hits_ua_3');		
+	delete_option('bp_site_hits_ua_4');		
+	delete_option('bp_site_hits_ua_5');	
+	
+	header("Location: /wp-admin/index.php");
+	exit();
+}  
+
 /*--------------------------------------------------------------
 # Contact Form 7 Set Up
 --------------------------------------------------------------*/
@@ -2765,57 +2782,6 @@ function battleplan_setupGlobalOptions() {
 		update_option( 'wp_mail_smtp', $wpMailSettings );
 		
 		update_option( 'bp_setup_wp_mail_smtp_initial', 'completed' );
-	endif;	
-
-// Widget Options - Extended Settings
-	if ( is_plugin_active('extended-widget-options/plugin.php') && get_option( 'bp_setup_widget_options_initial' ) != 'completed' ) :
-		$widgetOpts = get_option( 'widgetopts_settings' );
-				
-		$widgetOpts['settings']['visibility']['post_type'] = '1';
-		$widgetOpts['settings']['visibility']['taxonomies'] = '1';
-		$widgetOpts['settings']['visibility']['misc'] = '1';		
-		
-		$widgetOpts['settings']['classes']['id'] = '1';
-		$widgetOpts['settings']['classes']['type'] = 'both';
-		$widgetOpts['settings']['classes']['classlists']['0'] = 'remove-first';
-		$widgetOpts['settings']['classes']['classlists']['1'] = 'lock-to-top';
-		$widgetOpts['settings']['classes']['classlists']['2'] = 'lock-to-bottom';
-		$widgetOpts['settings']['classes']['classlists']['3'] = 'widget-important';
-		$widgetOpts['settings']['classes']['classlists']['4'] = 'widget-set';
-		
-		$widgetOpts['settings']['dates']['days'] = '1';		
-		$widgetOpts['settings']['dates']['date_range'] = '1';		
-	
-		$widgetOpts['visibility'] = 'activate';		
-		$widgetOpts['devices'] = 'deactivate';
-		$widgetOpts['urls'] = 'activate';
-		$widgetOpts['alignment'] = 'deactivate';
-		$widgetOpts['hide_title'] = 'activate';
-		$widgetOpts['classes'] = 'activate';
-		$widgetOpts['logic'] = 'deactivate';
-		$widgetOpts['move'] = 'deactivate';
-		$widgetOpts['clone'] = 'activate';
-		$widgetOpts['links'] = 'deactivate';
-		$widgetOpts['fixed'] = 'deactivate';
-		$widgetOpts['columns'] = 'deactivate';
-		$widgetOpts['roles'] = 'activate';
-		$widgetOpts['dates'] = 'activate';
-		$widgetOpts['styling'] = 'deactivate';
-		$widgetOpts['animation'] = 'deactivate';
-		$widgetOpts['taxonomies'] = 'deactivate';
-		$widgetOpts['disable_widgets'] = 'deactivate';
-		$widgetOpts['permission'] = 'deactivate';
-		$widgetOpts['shortcodes'] = 'deactivate';		
-		$widgetOpts['cache'] = 'deactivate';
-		$widgetOpts['search'] = 'deactivate';
-		$widgetOpts['widget_area'] = 'deactivate';		
-		$widgetOpts['import_export'] = 'deactivate';
-		$widgetOpts['elementor'] = 'deactivate';
-		$widgetOpts['beaver'] = 'deactivate';
-		$widgetOpts['acf'] = 'activate';						
-		update_option( 'widgetopts_settings', $widgetOpts );
-		
-		update_option( 'bp_setup_widget_options_initial', 'completed' );
 	endif;	
 
 // Yoast SEO Settings

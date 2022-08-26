@@ -181,6 +181,23 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 }
 
 /* Admin dashboard */
+#adminmenu .wp-submenu li a[href="index.php?page=clear-all"],
+#adminmenu .wp-submenu li a[href="nav-menus.php"],
+#adminmenu .wp-submenu li a[href="edit.php?post_type=acf-field-group"],
+#adminmenu .wp-submenu li a[href="options-general.php?page=git-updater"] {
+	padding-top: 								10px;
+	margin-top: 								10px;
+	border-top: 								1px solid rgba(255,255,255,0.15);
+}
+
+#adminmenu .wp-submenu li a[href="index.php?page=clear-hvac"],
+#adminmenu .wp-submenu li a[href="post-new.php?post_type=elements"],
+#adminmenu .wp-submenu li a[href="options-permalink.php"] {
+	padding-bottom:								10px;
+	margin-bottom: 								10px;
+	border-bottom: 								1px solid rgba(255,255,255,0.15);
+}
+
 #dashboard-widgets .postbox-container .empty-container {
 	opacity:									0;
 }

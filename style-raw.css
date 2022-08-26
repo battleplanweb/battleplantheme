@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 13.7.3
+Version: 14.0
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1621,6 +1621,7 @@ ul.tabs li:active,
 ul.tabs li.current {
 	background: 								rgba(0,0,0,0.4);
 	border:										none;
+	text-decoration:							none;
 	transition:									all 0.2s ease;
 }
 
@@ -4732,16 +4733,30 @@ chat-widget .lc_text-widget--btn {
 
 .carousel .controls {
 	display:									flex;
-	flex-flow: 									row nowrap;
+	flex-flow: 									row wrap;
 	justify-content:							center;
 	align-items:								center;
-	margin:										1em 0;
+	margin:										0.5em 0;
 }
 
 .carousel .block-button {
 	/*flex:										0 1 auto;*/
-	flex:										1 0 auto; /* 7/24/2022 keeps "View All" button from breaking into 2 lines */
-	margin:										0 0.5em;
+	/*flex:										1 0 auto; /* 7/24/2022 keeps "View All" button from breaking into 2 lines */
+	/*margin:									0 0.5em;*/
+	margin:										0.5em;
+	order: 										1;
+}
+
+.carousel .block-button:nth-of-type(2) {
+	order: 										2;
+}
+
+.carousel .block-button:nth-of-type(3) {
+	order: 										3;
+}
+
+.carousel .block-button a {
+	width: 										100%;
 }
 
 .carousel a.carousel-control-next .carousel-control-next-icon::after, 
@@ -5182,6 +5197,7 @@ html.error503 h3 {
 	#desktop-navigation {
 		display:									none;
 	}
+
 	
 	/* Mobile Menu Search */
 	div.menu-search-box {
@@ -5658,6 +5674,22 @@ html.error503 h3 {
 	/* Site Navigation */		
 	#mobile-menu-bar a.scroll-top {
 		margin-left: 								-93%;
+	}
+	
+	/* Carousel */
+	.carousel .block-button:nth-of-type(1) {
+		order: 										1;
+		width: 										calc(50% - 1em);
+	}
+	
+	.carousel .block-button:nth-of-type(2) {
+		order: 										3;
+		width: 										calc(100% - 1em);
+	}
+
+	.carousel .block-button:nth-of-type(3) {
+		order: 										2;
+		width: 										calc(50% - 1em);
 	}
 }
 

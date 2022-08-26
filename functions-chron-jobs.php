@@ -195,7 +195,8 @@ if ( $pagesLeft <= 0 ) :
 		if ( $GLOBALS['customer_info']['business-type'] == "novelty store" ) $wpSEOLocal['business_type'] = 'MusicGroup';	
 		if ( $GLOBALS['customer_info']['business-type'] == "physician" || $GLOBALS['customer_info']['business-type'] == "chiropractor" ) $wpSEOLocal['business_type'] = 'Physician';	
 		if ( $GLOBALS['customer_info']['business-type'] == "resort" ) $wpSEOLocal['business_type'] = 'Resort';		
-		if ( $GLOBALS['customer_info']['business-type'] == "restaurant" ) $wpSEOLocal['business_type'] = 'Restaurant';	
+		if ( $GLOBALS['customer_info']['business-type'] == "restaurant" ) $wpSEOLocal['business_type'] = 'Restaurant';			
+		if ( $GLOBALS['customer_info']['business-type'] == "real estate" ) $wpSEOLocal['business_type'] = 'RealEstateAgent';		
 		if ( $GLOBALS['customer_info']['business-type'] == "tattoo shop" ) $wpSEOLocal['business_type'] = 'Tattoo parlor';	
 
 		if ( $GLOBALS['customer_info']['site-type'] == "hvac" ) $wpSEOLocal['business_type'] = 'HVACBusiness';		
@@ -370,7 +371,7 @@ if ( $pagesLeft <= 0 ) :
 	$removedStates = array('alaska'=>'AK', 'hawaii'=>'HI',);
 
 // Gather GA4 Stats 
-	if ( $ga4_id ) :
+	if ( $ga4_id && substr($ga4_id, 0, 2) != '00' ) :
 		$response = $client->runReport([
 			'property' => 'properties/'.$ga4_id,
 			'dateRanges' => [
@@ -416,9 +417,10 @@ if ( $pagesLeft <= 0 ) :
 				$analyticsGA4[] = array ('date'=>$date, 'location'=>$location, 'source'=>$source, 'page'=>$page, 'browser'=>$browser, 'device'=>$device, 'pages-viewed'=>$pagesViewed, 'resolution'=>$resolution, 'referrer'=>$referrer, 'engaged'=>$engaged, 'new-users'=>$newUsers );	
 			endif;
 		endforeach;			
-		if ( is_array($analyticsGA4) ) arsort($analyticsGA4);	
-
-		$end = date('Y-m-d', strtotime(end($analyticsGA4)['date']));
+		if ( is_array($analyticsGA4) ) :
+			arsort($analyticsGA4);
+			$end = date('Y-m-d', strtotime(end($analyticsGA4)['date']));
+		endif;
 
 		// Split session data into site hits
 		foreach ( $analyticsGA4 as $analyze ) :
@@ -446,25 +448,25 @@ if ( $pagesLeft <= 0 ) :
 	endif;
 
 // Gather UA Stats	
-	$siteHitsUA1 = get_option('bp_site_hits_ua_1');
-	$siteHitsUA2 = get_option('bp_site_hits_ua_2');
-	$siteHitsUA3 = get_option('bp_site_hits_ua_3');
-	$siteHitsUA4 = get_option('bp_site_hits_ua_4');
-	$siteHitsUA5 = get_option('bp_site_hits_ua_5');
+	$siteHitsUA1 = get_option('bp_site_hits_ua_1') ? get_option('bp_site_hits_ua_1') : array();
+	$siteHitsUA2 = get_option('bp_site_hits_ua_2') ? get_option('bp_site_hits_ua_2') : array();
+	$siteHitsUA3 = get_option('bp_site_hits_ua_3') ? get_option('bp_site_hits_ua_3') : array();
+	$siteHitsUA4 = get_option('bp_site_hits_ua_4') ? get_option('bp_site_hits_ua_4') : array();
+	$siteHitsUA5 = get_option('bp_site_hits_ua_5') ? get_option('bp_site_hits_ua_5') : array();
 	//$siteHitsUA = array_merge( $siteHitsUA1, $siteHitsUA2, $siteHitsUA3, $siteHitsUA4, $siteHitsUA5);
 	
 	if ( $siteHitsUA1 ) $siteHitsUA = $siteHitsUA1;
-	if ( $siteHitsUA2 ) $siteHitsUA = array_merge( $siteHitsUA, $siteHitsUA2 );
-	if ( $siteHitsUA3 ) $siteHitsUA = array_merge( $siteHitsUA, $siteHitsUA3 );
-	if ( $siteHitsUA4 ) $siteHitsUA = array_merge( $siteHitsUA, $siteHitsUA4 );
-	if ( $siteHitsUA5 ) $siteHitsUA = array_merge( $siteHitsUA, $siteHitsUA5 );
+	if ( $siteHitsUA2 && is_array($siteHitsUA2) && is_array($siteHitsUA) ) $siteHitsUA = array_merge( $siteHitsUA, $siteHitsUA2 );
+	if ( $siteHitsUA3 && is_array($siteHitsUA3) && is_array($siteHitsUA) ) $siteHitsUA = array_merge( $siteHitsUA, $siteHitsUA3 );
+	if ( $siteHitsUA4 && is_array($siteHitsUA4) && is_array($siteHitsUA) ) $siteHitsUA = array_merge( $siteHitsUA, $siteHitsUA4 );
+	if ( $siteHitsUA5 && is_array($siteHitsUA5) && is_array($siteHitsUA) ) $siteHitsUA = array_merge( $siteHitsUA, $siteHitsUA5 );
 
-	if ( $ua_id && !get_option('bp_analytics_ua_complete') ) :		
+	if ( $ua_id && substr($ua_id, 0, 2) != '00' && !get_option('bp_analytics_ua_complete') ) :		
 	
 		if ( $siteHitsUA ) $end = date('Y-m-d', strtotime(end($siteHitsUA)['date']));	
 
 		$end = date('Y-m-d', strtotime($end.' - 1 day'));
-		$rewind = date('Y-m-d', strtotime($end.' - 30 days'));
+		$rewind = date('Y-m-d', strtotime($end.' - 21 days'));
 		
 		if ( strtotime($end) < 1532995200 || strtotime($end) < strtotime(get_option('bp_launch_date')) ) : // July 31, 2018		
 			updateOption('bp_analytics_ua_complete', date('Y-m-d'), false);		
@@ -557,18 +559,20 @@ if ( $pagesLeft <= 0 ) :
 				endif;
 			endforeach;
 
-			if ( array_slice($siteHitsUA, 0, 40000) ) updateOption('bp_site_hits_ua_1', array_slice($siteHitsUA, 0, 40000), false);	
-			if ( array_slice($siteHitsUA, 40000, 40000) ) updateOption('bp_site_hits_ua_2', array_slice($siteHitsUA, 40000, 40000), false);	
-			if ( array_slice($siteHitsUA, 80000, 40000) ) updateOption('bp_site_hits_ua_3', array_slice($siteHitsUA, 80000, 40000), false);	
-			if ( array_slice($siteHitsUA, 120000, 40000) ) updateOption('bp_site_hits_ua_4', array_slice($siteHitsUA, 120000, 40000), false);	
-			if ( array_slice($siteHitsUA, 160000, 40000) ) updateOption('bp_site_hits_ua_5', array_slice($siteHitsUA, 160000, 40000), false);	
+			if ( array_slice($siteHitsUA, 160000, 40000) ) : updateOption('bp_site_hits_ua_5', array_slice($siteHitsUA, 160000, 40000), false);	
+			elseif ( array_slice($siteHitsUA, 120000, 40000) ) : updateOption('bp_site_hits_ua_4', array_slice($siteHitsUA, 120000, 40000), false);	
+			//elseif ( array_slice($siteHitsUA, 80000, 40000) ) : updateOption('bp_site_hits_ua_3', array_slice($siteHitsUA, 80000, 40000), false);	
+			//elseif ( array_slice($siteHitsUA, 40000, 40000) ) : updateOption('bp_site_hits_ua_2', array_slice($siteHitsUA, 40000, 40000), false);	
+			//elseif ( array_slice($siteHitsUA, 0, 40000) ) : updateOption('bp_site_hits_ua_1', array_slice($siteHitsUA, 0, 40000), false);	
+			endif;
 		endif;
 	endif;
 
 	$siteHits = $siteHitsGA4;
-	if ( $siteHitsUA ) $siteHits = array_merge($siteHitsGA4, $siteHitsUA);
+	if ( $siteHitsUA && is_array($siteHitsGA4) ) $siteHits = array_merge($siteHitsGA4, $siteHitsUA);
 
 // Compile hits on specific pages
+/*
 	$pageCounts = array(1, 7, 30, 90, 365);
 	$today = strtotime($today);		
 	$citiesToExclude = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, OR'); // also change in functions-admin.php
@@ -637,7 +641,7 @@ if ( $pagesLeft <= 0 ) :
 			updateOption('bp_tracking_content', $allTracking, false);		
 		endforeach;
 	endif;
-	
+	*/
 //} catch (Exception $e) {
     //echo 'Caught exception: ',  $e->getMessage(), "\n";
 //}

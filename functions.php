@@ -16,7 +16,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '13.7.3' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.0' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -39,7 +39,6 @@ if ( !defined('_RAND_SEED') ) :
 	define( '_RAND_SEED', get_option('rand-seed') );
 endif;
 
-  
 /*--------------------------------------------------------------
 # Functions to extend WordPress 
 --------------------------------------------------------------*/
@@ -349,13 +348,13 @@ function fillMenu($cpt, $max = "-1", $orderby = "title", $seq = "asc") {
 			$menu_order = count($items); 
 			$parent_item_id = NULL;
 
-			foreach ( $items as $item ) {
-				if ( in_array($type, $item->classes) ) { $parent_item_id = $item->ID; }
-			}
+			foreach ( $items as $item ) :
+				if ( is_array($item->classes) && in_array($type, $item->classes) ) $parent_item_id = $item->ID;
+			endforeach;
 
 			$args = array ( 'numberposts'=>$max, 'offset'=>0, 'category'=>'', 'orderby'=>$orderby, 'order'=>$seq, 'post_type'=>$type, 'suppress_filters'=>true, );
 
-			foreach ( get_posts( $args ) as $post ) {
+			foreach ( get_posts( $args ) as $post ) :
 				$post->menu_item_parent = $parent_item_id;
 				$post->post_type = 'nav_menu_item';
 				$post->object = 'custom';
@@ -364,7 +363,7 @@ function fillMenu($cpt, $max = "-1", $orderby = "title", $seq = "asc") {
 				$post->title = $post->post_title;
 				$post->url = get_permalink( $post->ID );
 				array_push($child_items, $post);
-			}
+			endforeach;
 			return array_merge( $items, $child_items );
 		}, 10, 3);
 	endforeach;

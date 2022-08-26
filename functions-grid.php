@@ -198,16 +198,18 @@ function battleplan_buildImg( $atts, $content = null ) {
 // Video Block
 add_shortcode( 'vid', 'battleplan_buildVid' );
 function battleplan_buildVid( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'link'=>'', 'thumb'=>'', 'preload'=>'false', 'class'=>'', 'related'=>'false', 'start'=>'', 'end'=>'' ), $atts );
+	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'link'=>'', 'thumb'=>'', 'preload'=>'false', 'class'=>'', 'related'=>'false', 'start'=>'', 'end'=>'', 'fullscreen'=>'false' ), $atts );
 	$related = esc_attr($a['related']);	
 	$order = esc_attr($a['order']);	
-	if ( $order != '' ) $style = " order: ".$order;
+	if ( $order != '' ) $style = "order: ".$order."; ";
 	$link = esc_attr($a['link']);	
 	$thumb = esc_attr($a['thumb']);	
 	$preload = esc_attr($a['preload']);	
 	$size = esc_attr($a['size']);	
 	$size = convertSize($size);	
 	$height = 56.25 * ($size/12);	
+	$fullscreen = esc_attr($a['fullscreen']);
+	if ( $fullscreen == 'true' ) $style = "margin: 0; ";
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
 	$start = strtotime(esc_attr($a['start']));
@@ -234,10 +236,17 @@ function battleplan_buildVid( $atts, $content = null ) {
 			endif;
 		endif;
 		
-		return '<div class="block block-video span-'.$size.$class.' video-player" style="'.$style.' padding-top:'.$height.'%" data-thumb="'.$thumb.'" data-link="'.$link.'" data-id="'.$id.'"></div>';
+		return '<div class="block block-video span-'.$size.$class.' video-player" style="'.$style.'padding-top:'.$height.'%" data-thumb="'.$thumb.'" data-link="'.$link.'" data-id="'.$id.'"></div>';
 
 	else:
-		return '<div class="block block-video span-'.$size.$class.'" style="'.$style.' padding-top:'.$height.'%"><iframe src="" data-src="'.$link.'" data-loading="delay" allowfullscreen></iframe></div>';
+		//return '<div class="block block-video span-'.$size.$class.'" style="'.$style.' padding-top:'.$height.'%"><iframe src="" data-src="'.$link.'" data-loading="delay" allowfullscreen></iframe></div>';
+		$buildVid = '<div class="block block-video span-'.$size.$class.'" style="'.$style.'">';
+		$buildVid .= '<video autoplay="" loop="" muted="" poster="'.$thumb.'" style="position:relative; top:0; left:0; width:100%; height:100%">';
+		$buildVid .= '<source src="'.$link.'" type="video/mp4">';
+		$buildVid .= '<img src="'.$thumb.'">';
+		$buildVid .= '</video></div>';
+		
+		return $buildVid;
 	endif;	
 }
 

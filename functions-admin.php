@@ -8,6 +8,8 @@
 # Shortcodes
 # Admin Columns Set Up 
 # Admin Interface Set Up
+# Site Stats
+# Site Audit Set Up
 # Contact Form 7 Set Up
 # Set Global Options
 
@@ -1441,6 +1443,7 @@ function battleplan_reorderAdminBar() {
 	$wp_admin_bar->remove_node('view-site');	
 	$wp_admin_bar->remove_node('wpseo-menu');	
 	$wp_admin_bar->remove_node('tribe-events');	
+	$wp_admin_bar->remove_node('wp-mail-smtp-menu');	
 }
 
 // Create additional admin pages
@@ -1538,10 +1541,12 @@ function battleplan_remove_menus() {
 	remove_submenu_page( 'options-general.php', 'akismet-key-config' );   			//Settings => Akismet	
 	remove_submenu_page( 'options-general.php', 'srs-config' );   					//Settings => Referral Spam 	
 	remove_submenu_page( 'options-general.php', 'widgetopts_plugin_settings' );   	//Settings => Widget Options
+	remove_submenu_page( 'options-general.php', 'git-updater' );   					//Settings => Git Updater
 	remove_submenu_page( 'tools.php', 'export-personal-data.php' );   				//Tools => Export Personal Data  
 	remove_submenu_page( 'tools.php', 'erase-personal-data.php' );   				//Tools => Erase Personal Data
 	remove_submenu_page( 'wpseo_dashboard', 'wpseo_workouts' );   					//Yoast SEO => Workouts
 	remove_submenu_page( 'wpseo_dashboard', 'wpseo_licenses' );   					//Yoast SEO => Premium
+	remove_submenu_page( 'wpseo_dashboard', 'wpseo_redirects' );   					//Yoast SEO => Redirects
 	remove_submenu_page( 'wpseo_dashboard', 'wpseo_redirects' );   					//Yoast SEO => Redirects
 
 	add_submenu_page( 'upload.php', 'Favicon', 'Favicon', 'manage_options', 'customize.php' );	
@@ -1563,7 +1568,7 @@ function battleplan_remove_menus() {
 	add_submenu_page( 'edit.php?post_type=elements', 'Themes', 'Themes', 'manage_options', 'themes.php' );		
 	if ( is_plugin_active( 'ari-fancy-lightbox/ari-fancy-lightbox.php' ) ) { add_submenu_page( 'options-general.php', 'Lightbox', 'Lightbox', 'manage_options', 'admin.php?page=ari-fancy-lightbox' );	 }		
 	add_submenu_page( 'options-general.php', 'Options', 'Options', 'manage_options', 'options.php' );
-	add_submenu_page( 'tools.php', 'Git Updater', 'Git Updater', 'manage_options', 'options-general.php?page=git-updater' );
+	if ( _USER_ID == "battleplanweb" ) add_submenu_page( 'tools.php', 'Git Updater', 'Git Updater', 'manage_options', 'options-general.php?page=git-updater' );
 }
 
 // Reorder WP Admin Menu Items
@@ -1666,12 +1671,15 @@ function battleplan_add_dashboard_widgets() {
 	endif;
 }
 
+/*--------------------------------------------------------------
+# Site Stats
+--------------------------------------------------------------*/
+
 // Set up dashboard stats review
 $GLOBALS['displayTerms'] = array( 'week'=>7, 'month'=>30, 'quarter'=>90, 'year'=>365 );
 $GLOBALS['btn1'] = get_option('bp_admin_btn1') != null ? get_option('bp_admin_btn1') : "month";
 $GLOBALS['btn2'] = get_option('bp_admin_btn2') != null ? get_option('bp_admin_btn2') : "sessions";
 $GLOBALS['btn3'] = get_option('bp_admin_btn3') != null ? get_option('bp_admin_btn3') : "not-active";
-//$siteHits = get_option('bp_site_hits');
 
 $siteHits = get_option('bp_site_hits_ga4');	
 $siteHitsUA1 = get_option('bp_site_hits_ua_1') ? get_option('bp_site_hits_ua_1') : array();
@@ -1686,6 +1694,7 @@ $today = date( "Y-m-d" );
 $GLOBALS['citiesToExclude'] = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, OR'); // also change in functions-chron-jobs.php
 
 // Set up array accounting for each day, no skips	
+$blankDate = 0;
 if ( is_array($siteHits) ) $blankDate = strtotime($siteHits[array_key_last($siteHits)]['date']);
 $totalDays = (strtotime($today) - $blankDate) / 86400;
 
@@ -1695,6 +1704,7 @@ for ( $x=0;$x<$totalDays;$x++) :
 endfor;
 
 // Compile data into daily stats
+if ( !is_array($siteHits) ) $siteHits = array();
 foreach ( $siteHits as $siteHit ) :	
 	if ( !in_array( $siteHit['location'], $GLOBALS['citiesToExclude'] ) ) :
 		if ( $GLOBALS['btn3'] != "active" || ( $siteHit['location'] == get_option('customer_info')['state-full'] || str_contains($siteHit['location'], get_option('customer_info')['state-abbr'] ) )) :
@@ -2413,6 +2423,10 @@ function battleplan_force_run_chron() {
 	header("Location: /wp-admin/index.php");
 	exit();
 }  
+
+/*--------------------------------------------------------------
+# Site Audit Set Up
+--------------------------------------------------------------*/
 
 // Keep logs of site audits
 function battleplan_site_audit() {

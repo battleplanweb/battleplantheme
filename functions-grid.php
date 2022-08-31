@@ -114,6 +114,7 @@ function battleplan_buildLayout( $atts, $content = null ) {
 	if ( strpos($grid,'px') !== false || strpos($grid,'em') !== false || strpos($grid,'fr') !== false ) :
 		$custom_grid = 'style="grid-template-columns: '.$grid.'" ';
 		$grid = 'custom';
+	else: $custom_grid = '';
 	endif;	
 	
 	$class = esc_attr($a['class']);
@@ -168,7 +169,7 @@ add_shortcode( 'img', 'battleplan_buildImg' );
 function battleplan_buildImg( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'link'=>'', 'new-tab'=>'', 'ada-hidden'=>'false', 'class'=>'', 'start'=>'', 'end'=>'' ), $atts );
 	$order = esc_attr($a['order']);	
-	if ( $order != '' ) $style = " style='order: ".$order." !important'";
+	if ( $order != '' ) : $style = " style='order: ".$order." !important'"; else: $style = ""; endif;
 	$link = esc_attr($a['link']);	
 	$size = esc_attr($a['size']);	
 	$size = convertSize($size);
@@ -201,6 +202,7 @@ function battleplan_buildVid( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'link'=>'', 'thumb'=>'', 'preload'=>'false', 'class'=>'', 'related'=>'false', 'start'=>'', 'end'=>'', 'fullscreen'=>'false' ), $atts );
 	$related = esc_attr($a['related']);	
 	$order = esc_attr($a['order']);	
+	$style = '';
 	if ( $order != '' ) $style = "order: ".$order."; ";
 	$link = esc_attr($a['link']);	
 	$thumb = esc_attr($a['thumb']);	
@@ -256,7 +258,8 @@ function battleplan_buildGroup( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'class'=>'', 'start'=>'', 'end'=>'' ), $atts );
 	$size = esc_attr($a['size']);	
 	$size = convertSize($size);
-	$order = esc_attr($a['order']);	
+	$order = esc_attr($a['order']);
+	$style = '';
 	if ( $order != '' ) $style = " style='order: ".$order." !important'";
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
@@ -278,7 +281,7 @@ function battleplan_buildText( $atts, $content = null ) {
 	$size = esc_attr($a['size']);	
 	$size = convertSize($size);
 	$order = esc_attr($a['order']);	
-	if ( $order != '' ) $style = " style='order: ".$order." !important'";
+	if ( $order != '' ) : $style = " style='order: ".$order." !important'"; else: $style = ""; endif;
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
 	$start = strtotime(esc_attr($a['start']));
@@ -308,6 +311,7 @@ function battleplan_buildButton( $atts, $content = null ) {
 	$align = esc_attr($a['align']);	
 	if ( $align != "center" ) : $align = " button-".$align; else: $align = ""; endif;
 	$order = esc_attr($a['order']);	
+	$style = '';
 	if ( $order != '' ) $style = " style='order: ".$order." !important'";
 	$class = esc_attr($a['class']);
 	$ada = esc_attr($a['ada']);
@@ -507,6 +511,7 @@ function battleplan_formField( $atts, $content = null ) {
 	$maxW = esc_attr($a['max-w']);	
 	if ( $maxW != '' ) $maxW = ' style="margin:0 auto; max-width:'.$maxW.'"';
 	$show = esc_attr($a['show']);
+	$aria = $buildInput = '';
 	if ( $show != 'true' ) : $width = 'width-none'; $aria = 'aria-label="'.$label.'"'; endif;	
 	$asterisk = '<span class="required"></span><span class="sr-only">Required Field</span>';
 	
@@ -545,6 +550,7 @@ function battleplan_buildWidget( $atts, $content = null ) {
 		if ( $start && $now < $start ) return null;
 		if ( $end && $now > $end ) return null;		
 	}
+	$addHide = $addClass = $name = '';
 
 	$display = true;
 	$brand = $GLOBALS['customer_info']['site-brand'];	

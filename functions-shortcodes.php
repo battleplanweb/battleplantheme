@@ -27,7 +27,7 @@ function battleplan_getBizInfo($atts, $content = null ) {
 		if ( strpos($data, 'mm-bar-phone') !== false ) :
 			$phoneFormat = '<div class="mm-bar-btn mm-bar-phone call-btn" aria-hidden="true"></div><span class="sr-only">Call Us</span>';	
 		elseif ( strpos($data, 'alt') !== false ) :
-			$phoneFormat = $GLOBALS['customer_info'][$data];	
+			if ( isset($GLOBALS['customer_info'][$data]) ) $phoneFormat = $GLOBALS['customer_info'][$data];	
 		endif;
 		if ( strpos($data, '-notrack') !== false ):
 			return '<a class="phone-link" href="tel:1-'.$phoneBasic.'">'.$phoneFormat.'</a>';
@@ -36,7 +36,7 @@ function battleplan_getBizInfo($atts, $content = null ) {
 		endif;
 	endif;
 
-	return $GLOBALS['customer_info'][$data];
+	if ( isset($GLOBALS['customer_info'][$data]) ) return $GLOBALS['customer_info'][$data];
 }
  
 // Use Google ratings in content
@@ -179,11 +179,11 @@ function battleplan_getElement( $atts, $content = null ) {
 		if ( get_page_by_path( $page_slug_home, OBJECT, 'elements' ) ) : $page_data = get_page_by_path( $page_slug_home, OBJECT, 'elements' ); endif;
 	endif;
 	
-	if ( !$page_data ) :
+	if ( !isset($page_data) ) :
 		if ( get_page_by_path( $page_slug, OBJECT, 'elements' ) ) : $page_data = get_page_by_path( $page_slug, OBJECT, 'elements' ); endif;
 	endif;
 
-	if ( $page_data && get_post_status($page_data->ID) == "publish" ) return apply_filters('the_content', $page_data->post_content); 	
+	if ( isset($page_data) && get_post_status($page_data->ID) == "publish" ) return apply_filters('the_content', $page_data->post_content); 	
 }
 
 // Returns website address (for privacy policy, etc)
@@ -228,7 +228,7 @@ function battleplan_getURLVar($atts, $content = null) {
 	$getVars = array();
 	foreach( $_GET as $key => $value ) $getVars[$key] = $value;
 	
-	return $getVars[$var]; 
+	if ( isset($getVars[$var]) ) return $getVars[$var]; 
 }
 
 // Show count of posts, images, etc.
@@ -484,7 +484,6 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	$picSize = esc_attr($a['pic_size']);	
 	$textSize = esc_attr($a['text_size']);		
 	$accordion = esc_attr($a['accordion']);			
-	$format = esc_attr($a['format_text']);
 	$link = esc_attr($a['link']);	
 	if ( strpos($link, 'cf-') === 0 ) : $linkLoc = esc_url(get_field(str_replace('cf-', '', $link)));
 	elseif ( $type == "testimonials" ) : $linkLoc = "/testimonials/";
@@ -496,17 +495,18 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	if ( $showBtn == "true" ) : $picADA = " ada-hidden='true'"; $titleADA = " aria-hidden='true' tabindex='-1'";
 	elseif ( $showTitle != "false" ) : $picADA = " ada-hidden='true'"; endif;
 	$thumbOnly = esc_attr($a['thumb_only']);
+	$archiveMeta = $buildBtn = '';
 		
 	if ( has_post_thumbnail() && $showThumb == "true" ) : 	
 		$meta = wp_get_attachment_metadata( get_post_thumbnail_id( get_the_ID() ) );
 		$thumbW = $meta['sizes'][$size]['width'];
 		$thumbH = $meta['sizes'][$size]['height'];
 	
-		$buildImg = do_shortcode('[img size="'.$picSize.'" class="image-'.$type.'" link="'.$linkLoc.'" '.$picADA.']'.get_the_post_thumbnail( get_the_ID(), $size, array( 'class'=>'img-archive img-'.$type.$googleTag, 'style'=>'aspect-ratio:'.$thumbW.'/'.$thumbH )).'[/img]'); 
+		$buildImg = do_shortcode('[img size="'.$picSize.'" class="image-'.$type.'" link="'.$linkLoc.'" '.$picADA.']'.get_the_post_thumbnail( get_the_ID(), $size, array( 'class'=>'img-archive img-'.$type, 'style'=>'aspect-ratio:'.$thumbW.'/'.$thumbH )).'[/img]'); 
 		if ( $textSize == "" ) : $textSize = getTextSize($picSize); endif;
 	
 	elseif ( $noPic != "false") : 	
-		$buildImg = do_shortcode("[img size='".$picSize."' class='image-".$type." block-placeholder placeholder-".$type."' link='".$linkLoc."' ".$picADA."]".wp_get_attachment_image( $noPic, $size, array( 'class'=>'img-archive img-'.$type.$googleTag ))."[/img]"); 
+		$buildImg = do_shortcode("[img size='".$picSize."' class='image-".$type." block-placeholder placeholder-".$type."' link='".$linkLoc."' ".$picADA."]".wp_get_attachment_image( $noPic, $size, array( 'class'=>'img-archive img-'.$type ))."[/img]"); 
 		if ( $textSize == "" ) : $textSize = getTextSize($picSize); endif;	
 	
 	else : $textSize = "100"; endif;
@@ -679,6 +679,7 @@ function battleplan_getRandomPosts($atts, $content = null) {
 		$showThumb = "true";
 	endif;
 	$thumbCol = esc_attr($a['thumb_col']);
+	$combinePosts = '';
 
 	$args = array ('posts_per_page'=>$num, 'offset'=>$offset, 'date_query'=>array( array( 'after'=>$start, 'before'=>$end, 'inclusive'=>true, ), ), 'order'=>$sort, 'post_type'=>$postType, 'post__not_in'=>$exclude);
 
@@ -718,7 +719,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	wp_enqueue_script( 'battleplan-carousel', get_template_directory_uri().'/js/bootstrap-carousel.js', array('jquery-core'), _BP_VERSION, false );		
 	wp_enqueue_script( 'battleplan-carousel-slider', get_template_directory_uri().'/js/script-bootstrap-slider.js', array('battleplan-carousel'), _BP_VERSION, false );	
 
-	$a = shortcode_atts( array( 'type'=>'testimonials', 'auto'=>'yes', 'interval'=>'6000', 'loop'=>'true', 'num'=>'4', 'offset'=>'0', 'pics'=>'yes', 'caption'=>'no', 'controls'=>'yes', 'controls_pos'=>'below', 'indicators'=>'no', 'justify'=>'center', 'pause'=>'true', 'orderby'=>'recent', 'order'=>'asc', 'post_btn'=>'', 'all_btn'=>'View All', 'show_excerpt'=>'true', 'show_content'=>'false', 'link'=>'', 'pic_size'=>'1/3', 'text_size'=>'', 'slide_type'=>'fade', 'tax'=>'', 'terms'=>'', 'tag'=>'', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'id'=>'', 'mult'=>'1', 'class'=>'', 'truncate'=>'true', 'lazy'=>'true', 'blur'=>'false' ), $atts );
+	$a = shortcode_atts( array( 'type'=>'testimonials', 'auto'=>'yes', 'interval'=>'6000', 'loop'=>'true', 'num'=>'4', 'offset'=>'0', 'pics'=>'yes', 'caption'=>'no', 'controls'=>'yes', 'controls_pos'=>'below', 'indicators'=>'no', 'justify'=>'center', 'pause'=>'true', 'orderby'=>'recent', 'order'=>'asc', 'post_btn'=>'', 'all_btn'=>'View All', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'link'=>'', 'pic_size'=>'1/3', 'text_size'=>'', 'slide_type'=>'fade', 'tax'=>'', 'terms'=>'', 'tag'=>'', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'id'=>'', 'mult'=>'1', 'class'=>'', 'truncate'=>'true', 'lazy'=>'true', 'blur'=>'false' ), $atts );
 	$num = esc_attr($a['num']);	
 	$controls = esc_attr($a['controls']);	
 	$controlsPos = esc_attr($a['controls_pos']);
@@ -737,6 +738,8 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	$pics = esc_attr($a['pics']);		
 	$caption = esc_attr($a['caption']);	
 	$justify = esc_attr($a['justify']);	
+	$showDate = esc_attr($a['show_date']);	
+	$showAuthor = esc_attr($a['show_author']);	
 	$showExcerpt = esc_attr($a['show_excerpt']);
 	$showContent = esc_attr($a['show_content']);
 	$picSize = esc_attr($a['pic_size']); 
@@ -770,11 +773,14 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	elseif ( $mult == 5 ) : $multSize = $imgSize = 20;	
 	else : $multSize = $imgSize = 17; endif;
 	if ( $mult > 1 ) $num--;
+	$multDisplay = 0;
 	$numDisplay = -1;
 	$rowDisplay = 0;
 	$sliderNum = rand(100,999);
-
-	if ( $controls == "yes" && $btnText == "no" && $indicators == "no" ) $controlClass = " only-controls";	
+	
+	$controlClass = "";
+	//if ( $controls == "yes" && $btnText == "no" && $indicators == "no" ) $controlClass = " only-controls";  $btnText doesn't exist		
+	if ( $controls == "yes" && $indicators == "no" ) $controlClass = " only-controls";	
 	if ( $postBtn == "" ) : $showBtn = "false"; else: $showBtn = "true"; endif;
 	if ( $pause == "true" ) : $pause = "hover"; else: $pause = "false"; endif;
 	if ( $link == "" ) : $linkTo = "/".$type."/"; elseif ( $link == "none" || $link == "false" || $link == "no" ) : $link = "none"; endif;		
@@ -818,9 +824,9 @@ function battleplan_getPostSlider($atts, $content = null ) {
 				$image = wp_get_attachment_image_src(get_the_ID(), $size );
 				$imgSet = wp_get_attachment_image_srcset(get_the_ID(), $size );		
 		
+				$linkTo = $buildImg = '';
 				if ( $link == "alt" ) $linkTo = readMeta(get_the_ID(), '_wp_attachment_image_alt', true);				
 				if ( $link == "description" ) $linkTo = esc_html(get_post(get_the_ID())->post_content);
-				$buildImg = "";
 				if ( $link != "none" ) : $buildImg = "<a href='".$linkTo."' class='link-archive link-".$type."'>"; endif;	
 				//$buildImg .= "<img data-id='".get_the_ID()."' ".getImgMeta(get_the_ID())." data-count-view='true' data-count-view='true' class='img-slider ".$tags[0]."-img' loading='lazy' src = '".$image[0]."' width='".$image[1]."' height='".$image[2]."' style='aspect-ratio:".$image[1]."/".$image[2]."' alt='".readMeta(get_the_ID(), '_wp_attachment_image_alt', true)."'>";
 
@@ -901,7 +907,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	$buildInner .= '</div>';
 
 	$controlsPrevBtn = '<div class="block block-button"><a class="button carousel-control-prev'.$controlClass.'" href="#'.$type.'Slider'.$sliderNum.'" data-slide="prev"><span class="carousel-control-prev-icon" aria-label="Previous Slide"><span class="sr-only">Previous Slide</span></span></a></div>';
-	$controlsNextBtn .= '<div class="block block-button"><a class="button carousel-control-next'.$controlClass.'" href="#'.$type.'Slider'.$sliderNum.'" data-slide="next"><span class="carousel-control-next-icon" aria-label="Next Slide"><span class="sr-only">Next Slide</span></span></a></div>';
+	$controlsNextBtn = '<div class="block block-button"><a class="button carousel-control-next'.$controlClass.'" href="#'.$type.'Slider'.$sliderNum.'" data-slide="next"><span class="carousel-control-next-icon" aria-label="Next Slide"><span class="sr-only">Next Slide</span></span></a></div>';
 	$viewMoreBtn = do_shortcode('[btn link="'.$linkTo.'"]'.$allBtn.'[/btn]');	
 
 	$buildControls = "<div class='controls controls-".$controlsPos."'>";	
@@ -909,6 +915,8 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	if ( $allBtn != "" ) $buildControls .= $viewMoreBtn;
 	$buildControls .= $controlsNextBtn;	
 	$buildControls .= "</div>";	
+	
+	$style = '';
 
 	if ( $slideType == "box" ) : $style = "style='margin-left:auto; margin-right:auto;'"; $slideClass="box-slider"; elseif ( $slideType == "screen" ) : $style = "style='width: calc(100vw - 17px); left: 50%; transform: translateX(calc(-50vw + 8px));'"; $slideClass="screen-slider"; elseif ( $slideType == "fade" ) : $slideClass="carousel-fade"; else: $slideClass="carousel-fade"; endif;	
 	
@@ -965,10 +973,6 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 	elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="log-views-total-365day"; $args['orderby']='meta_value_num';	
 	elseif ( $orderBy == 'recent' ) : $args['meta_key']="log-last-viewed"; $args['orderby']='meta_value_num';	
 	else : $args['orderby']=$orderBy; endif;		
-	
-	if ( $id != '' ) : 
-		$args['post_parent']=$id;
-	endif;
 
 	$image_query = new WP_Query($args);		
 	$imageArray = array();
@@ -1317,5 +1321,55 @@ function battleplan_addSearchBtn( $atts, $content = null ) {
 	$text = esc_attr($a['text']);
 	return bp_display_menu_search($text);
 }
+
+// Display RSS feed
+add_shortcode( 'get-rss', 'battleplan_getRSS' );
+function battleplan_getRSS( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'link'=>'', 'num'=>'5', 'menu'=>'true' ), $atts );
+	$link = esc_attr($a['link']);
+	$rss = fetch_feed( $link );
+	$num = esc_attr($a['num']);
+	$menu = esc_attr($a['menu']);
+	include_once( ABSPATH . WPINC . '/feed.php' );
+	
+	$buildHeader = '<h1>Recent Blog Posts</h1>';
+	$buildHeader .= do_shortcode('[clear height="15px"]');  
+  
+	if ( ! is_wp_error( $rss ) ) :
+		$maxitems = $rss->get_item_quantity( $num ); 
+    	$rss_items = $rss->get_items( 0, $maxitems );  
+	endif;
+
+	$buildMenu = '<ul class="rss-menu two-col">';
+	$buildArchive = '<div class="rss-feed">';	
+    
+	if ( $maxitems == 0 ) :
+		$buildArchive .= '<div>No posts found.</div>';
+    else :
+		foreach ( $rss_items as $item ) : 
+	   		$title = esc_html( $item->get_title() );
+			$title = str_replace(' [INFOGRAPHIC]', '', $title);
+			$hash = str_replace(' ', '-', $title);
+			$hash = str_replace(array('.', '?', '[', ']', "’", "'", '"', ';', ':', '(', ')' ), '', $hash);
+
+			$permalink = esc_url( $item->get_permalink() );
+			$content = wp_kses_post( $item->get_content() );
+			$date = $item->get_date('F j, Y');
+
+	   		$buildMenu .= '<li><div class="link"><a href="#'.$hash.'" title="'.$date.'">'.$title.'</a></div><div class="meta-data">'.$date.'</div></li>';
+	   		$buildArchive .= '<div id="'.$hash.'"><h2><a href="'.$permalink.'" title="'.$title.'">'.$title.'</a></h2><div class="meta-data">'.$date.'</div>';
+			$buildArchive .= $content.'</div>';
+        endforeach; 
+	endif;
+	
+	$buildMenu .= '</ul>';
+	$buildArchive .= '</div>';
+	
+	$displayArchive = $buildHeader;
+	if ( $menu == "true" ) $displayArchive .= $buildMenu;
+	$displayArchive .= $buildArchive;	
+	return $displayArchive;
+}
+
 
 ?>

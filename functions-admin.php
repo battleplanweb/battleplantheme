@@ -1474,23 +1474,23 @@ function battleplan_admin_footer_text() {
 	$printFooter .= get_option('customer_info')['area-before'].get_option('customer_info')['area'].get_option('customer_info')['area-after'].get_option('customer_info')['phone'].'<br>';
 	$printFooter .= get_option('customer_info')['street'].'<br>';
 	$printFooter .= get_option('customer_info')['city'].', '.get_option('customer_info')['state-abbr'].' '.get_option('customer_info')['zip'].'<br>';
-	if ( get_option('customer_info')['lat'] ) $printFooter .= get_option('customer_info')['lat'].', '.get_option('customer_info')['long'].'<br>';	
+	if ( isset(get_option('customer_info')['lat']) ) $printFooter .= get_option('customer_info')['lat'].', '.get_option('customer_info')['long'].'<br>';	
 	$printFooter .= '</div><div style="float:right; margin-right: 50px">';
 	
-	if ( get_option('customer_info')['pid'] ) $printFooter .= '<b>PID:</b> <a href = "https://search.google.com/local/writereview?placeid='.get_option('customer_info')['pid'].'" target="_blank">'.get_option('customer_info')['pid'].'</a><br>';
+	if ( isset(get_option('customer_info')['pid']) ) $printFooter .= '<b>PID:</b> <a href = "https://search.google.com/local/writereview?placeid='.get_option('customer_info')['pid'].'" target="_blank">'.get_option('customer_info')['pid'].'</a><br>';
 	$printFooter .= '<b>Email:</b> <a href = "mailto:'.get_option('customer_info')['email'].'">'.get_option('customer_info')['email'].'</a><br>';
-	if ( get_option('customer_info')['owner-email'] ) $printFooter .= '<b>Owner:</b> <a href = "mailto:'.get_option('customer_info')['owner-email'].'">'.get_option('customer_info')['owner-email'].'</a><br>';	
-	if ( get_option('customer_info')['facebook'] ) $printFooter .= '<b>Facebook:</b> <a href = "'.get_option('customer_info')['facebook'].'" target="_blank">'.get_option('customer_info')['facebook'].'</a><br>';
-	if ( get_option('customer_info')['twitter'] ) $printFooter .= '<b>Twitter:</b> <a href = "'.get_option('customer_info')['twitter'].'" target="_blank">'.get_option('customer_info')['twitter'].'</a><br>';
-	if ( get_option('customer_info')['instagram'] ) $printFooter .= '<b>Instagram:</b> <a href = "'.get_option('customer_info')['instagram'].'" target="_blank">'.get_option('customer_info')['instagram'].'</a><br>';
-	if ( get_option('customer_info')['pinterest'] ) $printFooter .= '<b>Pinterest:</b> <a href = "'.get_option('customer_info')['pinterest'].'" target="_blank">'.get_option('customer_info')['pinterest'].'</a><br>';
-	if ( get_option('customer_info')['yelp'] ) $printFooter .= '<b>Yelp:</b> <a href = "'.get_option('customer_info')['yelp'].'" target="_blank">'.get_option('customer_info')['yelp'].'</a><br>';
-	if ( get_option('customer_info')['tiktok'] ) $printFooter .= '<b>Tiktok:</b> <a href = "'.get_option('customer_info')['tiktok'].'" target="_blank">'.get_option('customer_info')['tiktok'].'</a><br>';
-	if ( get_option('customer_info')['youtube'] ) $printFooter .= '<b>You Tube:</b> <a href = "'.get_option('customer_info')['youtube'].'" target="_blank">'.get_option('customer_info')['youtube'].'</a><br>';
+	if ( isset(get_option('customer_info')['owner-email']) ) $printFooter .= '<b>Owner:</b> <a href = "mailto:'.get_option('customer_info')['owner-email'].'">'.get_option('customer_info')['owner-email'].'</a><br>';	
+	if ( isset(get_option('customer_info')['facebook']) ) $printFooter .= '<b>Facebook:</b> <a href = "'.get_option('customer_info')['facebook'].'" target="_blank">'.get_option('customer_info')['facebook'].'</a><br>';
+	if ( isset(get_option('customer_info')['twitter']) ) $printFooter .= '<b>Twitter:</b> <a href = "'.get_option('customer_info')['twitter'].'" target="_blank">'.get_option('customer_info')['twitter'].'</a><br>';
+	if ( isset(get_option('customer_info')['instagram']) ) $printFooter .= '<b>Instagram:</b> <a href = "'.get_option('customer_info')['instagram'].'" target="_blank">'.get_option('customer_info')['instagram'].'</a><br>';
+	if ( isset(get_option('customer_info')['pinterest']) ) $printFooter .= '<b>Pinterest:</b> <a href = "'.get_option('customer_info')['pinterest'].'" target="_blank">'.get_option('customer_info')['pinterest'].'</a><br>';
+	if ( isset(get_option('customer_info')['yelp']) ) $printFooter .= '<b>Yelp:</b> <a href = "'.get_option('customer_info')['yelp'].'" target="_blank">'.get_option('customer_info')['yelp'].'</a><br>';
+	if ( isset(get_option('customer_info')['tiktok']) ) $printFooter .= '<b>Tiktok:</b> <a href = "'.get_option('customer_info')['tiktok'].'" target="_blank">'.get_option('customer_info')['tiktok'].'</a><br>';
+	if ( isset(get_option('customer_info')['youtube']) ) $printFooter .= '<b>You Tube:</b> <a href = "'.get_option('customer_info')['youtube'].'" target="_blank">'.get_option('customer_info')['youtube'].'</a><br>';
 	
-	if ( get_option('customer_info')['google-tags']['prop-id'] ) $printFooter .= '<b>Analytics:</b> <a href = "https://analytics.google.com/analytics/web/#/p'.get_option('customer_info')['google-tags']['prop-id'].'/reports/explorer?params=_u..nav%3Dmaui%26_u..pageSize%3D25%26_r.explorerCard..selmet%3D%5B%22sessions%22%5D%26_r.explorerCard..seldim%3D%5B%22sessionDefaultChannelGrouping%22%5D&r=lifecycle-traffic-acquisition-v2&collectionId=life-cycle" target="_blank">View Stats</a><br>';
+	if ( isset(get_option('customer_info')['google-tags']['prop-id']) ) $printFooter .= '<b>Analytics:</b> <a href = "https://analytics.google.com/analytics/web/#/p'.get_option('customer_info')['google-tags']['prop-id'].'/reports/explorer?params=_u..nav%3Dmaui%26_u..pageSize%3D25%26_r.explorerCard..selmet%3D%5B%22sessions%22%5D%26_r.explorerCard..seldim%3D%5B%22sessionDefaultChannelGrouping%22%5D&r=lifecycle-traffic-acquisition-v2&collectionId=life-cycle" target="_blank">View Stats</a><br>';
 	
-	if ( get_option('customer_info')['serpfox'] ) $printFooter .= '<b>Keywords:</b> <a href = "//app.serpfox.com/shared/'.get_option('customer_info')['serpfox'].'" target="_blank">View Rankings</a><br>';
+	if ( isset(get_option('customer_info')['serpfox']) ) $printFooter .= '<b>Keywords:</b> <a href = "//app.serpfox.com/shared/'.get_option('customer_info')['serpfox'].'" target="_blank">View Rankings</a><br>';
 		
 	$printFooter .= '</div>';
 	
@@ -1568,7 +1568,7 @@ function battleplan_remove_menus() {
 	add_submenu_page( 'edit.php?post_type=elements', 'Themes', 'Themes', 'manage_options', 'themes.php' );		
 	if ( is_plugin_active( 'ari-fancy-lightbox/ari-fancy-lightbox.php' ) ) { add_submenu_page( 'options-general.php', 'Lightbox', 'Lightbox', 'manage_options', 'admin.php?page=ari-fancy-lightbox' );	 }		
 	add_submenu_page( 'options-general.php', 'Options', 'Options', 'manage_options', 'options.php' );
-	if ( _USER_ID == "battleplanweb" ) add_submenu_page( 'tools.php', 'Git Updater', 'Git Updater', 'manage_options', 'options-general.php?page=git-updater' );
+	if ( _USER_LOGIN == "battleplanweb" ) add_submenu_page( 'tools.php', 'Git Updater', 'Git Updater', 'manage_options', 'options-general.php?page=git-updater' );
 }
 
 // Reorder WP Admin Menu Items
@@ -1705,12 +1705,15 @@ endfor;
 
 // Compile data into daily stats
 if ( !is_array($siteHits) ) $siteHits = array();
+$lastView = $totalPageviews = $totalSessions = $totalEngaged = $totalNewUsers = $allPages = 0;
+$allLocations = $allSources = $allMediums = $allPages = $allBrowsers = $allDevices = $allResolutions = array();
+
 foreach ( $siteHits as $siteHit ) :	
-	if ( !in_array( $siteHit['location'], $GLOBALS['citiesToExclude'] ) ) :
+	if ( isset($siteHit['location']) && !in_array( $siteHit['location'], $GLOBALS['citiesToExclude'] ) ) :
 		if ( $GLOBALS['btn3'] != "active" || ( $siteHit['location'] == get_option('customer_info')['state-full'] || str_contains($siteHit['location'], get_option('customer_info')['state-abbr'] ) )) :
 	
 			$processing = strtotime($siteHit['date']);
-			$timeSinceToday = $today - $processing;				
+			$timeSinceToday = strtotime($today) - $processing;				
 			$timeSinceLastView = $lastView - $processing;			
 			$daysSinceToday = $timeSinceToday / 86400;
 
@@ -1723,53 +1726,67 @@ foreach ( $siteHits as $siteHit ) :
 
 			$lastView = $processing;
 
-			$totalPageviews = $totalPageviews + (int)$siteHit['pages-viewed'];
-			$totalSessions = $totalSessions + (int)$siteHit['sessions'];
-			$totalEngaged = $totalEngaged + (int)$siteHit['engaged'];
-			$totalNewUsers = $totalNewUsers + (int)$siteHit['new-users'];											
+			if ( isset($siteHit['pages-viewed']) ) $totalPageviews = $totalPageviews + (int)$siteHit['pages-viewed'];
+			if ( isset($siteHit['sessions']) ) $totalSessions = $totalSessions + (int)$siteHit['sessions'];
+			if ( isset($siteHit['engaged']) ) $totalEngaged = $totalEngaged + (int)$siteHit['engaged'];
+			if ( isset($siteHit['new-users']) ) $totalNewUsers = $totalNewUsers + (int)$siteHit['new-users'];											
 
-			if ( is_array($allPages) && array_key_exists($siteHit['page'], $allPages ) ) :
-				$allPages[$siteHit['page']] += (int)$siteHit['pages-viewed'];
-			else:
-				$allPages[$siteHit['page']] = (int)$siteHit['pages-viewed'];
-			endif;	
-
-			if ( $siteHit['sessions'] == 1 ) :			
-				if ( is_array($allLocations) && array_key_exists($siteHit['location'], $allLocations ) ) :
-					$allLocations[$siteHit['location']] += 1;
+			if ( isset($siteHit['page']) && isset($siteHit['pages-viewed']) ) :
+				if ( is_array($allPages) && array_key_exists($siteHit['page'], $allPages ) ) :
+					$allPages[$siteHit['page']] += (int)$siteHit['pages-viewed'];
 				else:
-					$allLocations[$siteHit['location']] = 1;
-				endif;									
-
-				if ( is_array($allSources) && array_key_exists($siteHit['source'], $allSources ) ) :
-					$allSources[$siteHit['source']] += 1;
-				else:
-					$allSources[$siteHit['source']] = 1;
-				endif;									
-
-				if ( is_array($allMediums) && array_key_exists($siteHit['medium'], $allMediums ) ) :
-					$allMediums[$siteHit['medium']] += 1;
-				else:
-					$allMediums[$siteHit['medium']] = 1;
-				endif;									
-
-				if ( is_array($allBrowsers) && array_key_exists($siteHit['browser'], $allBrowsers ) ) :
-					$allBrowsers[$siteHit['browser']] += 1;
-				else:
-					$allBrowsers[$siteHit['browser']] = 1;
-				endif;									
-
-				if ( is_array($allDevices) && array_key_exists($siteHit['device'], $allDevices ) ) :
-					$allDevices[$siteHit['device']] += 1;
-				else:
-					$allDevices[$siteHit['device']] = 1;
-				endif;													
-
-				if ( is_array($allResolutions) && array_key_exists($siteHit['resolution'], $allResolutions ) ) :
-					$allResolutions[$siteHit['resolution']] += 1;
-				else:
-					$allResolutions[$siteHit['resolution']] = 1;
+					$allPages[$siteHit['page']] = (int)$siteHit['pages-viewed'];
 				endif;	
+			endif;
+
+			if ( $siteHit['sessions'] == 1 ) :
+				if ( isset($siteHit['location']) ) :
+					if ( is_array($allLocations) && array_key_exists($siteHit['location'], $allLocations ) ) :
+						$allLocations[$siteHit['location']] += 1;
+					else:
+						$allLocations[$siteHit['location']] = 1;
+					endif;									
+				endif;									
+
+				if ( isset($siteHit['source']) ) :
+					if ( is_array($allSources) && array_key_exists($siteHit['source'], $allSources ) ) :
+						$allSources[$siteHit['source']] += 1;
+					else:
+						$allSources[$siteHit['source']] = 1;
+					endif;									
+				endif;									
+
+				if ( isset($siteHit['medium']) ) :
+					if ( is_array($allMediums) && array_key_exists($siteHit['medium'], $allMediums ) ) :
+						$allMediums[$siteHit['medium']] += 1;
+					else:
+						$allMediums[$siteHit['medium']] = 1;
+					endif;									
+				endif;									
+
+				if ( isset($siteHit['browser']) ) :
+					if ( is_array($allBrowsers) && array_key_exists($siteHit['browser'], $allBrowsers ) ) :
+						$allBrowsers[$siteHit['browser']] += 1;
+					else:
+						$allBrowsers[$siteHit['browser']] = 1;
+					endif;									
+				endif;									
+
+				if ( isset($siteHit['device']) ) :
+					if ( is_array($allDevices) && array_key_exists($siteHit['device'], $allDevices ) ) :
+						$allDevices[$siteHit['device']] += 1;
+					else:
+						$allDevices[$siteHit['device']] = 1;
+					endif;									
+				endif;									
+
+				if ( isset($siteHit['resolution']) ) :
+					if ( is_array($allResolutions) && array_key_exists($siteHit['resolution'], $allResolutions ) ) :
+						$allResolutions[$siteHit['resolution']] += 1;
+					else:
+						$allResolutions[$siteHit['resolution']] = 1;
+					endif;									
+				endif;									
 			endif;
 		endif;
 	endif;
@@ -1786,14 +1803,14 @@ $GLOBALS['dates'] = array_keys($GLOBALS['dailyStats']);
 function battleplan_admin_site_stats() {
 	$lastVisitTime = timeElapsed( get_option('last_visitor_time'), 2);	
 	
-	$count = $users = $search = $pagesViewed = $sessions = $engaged = $engagement = $endOfCol = 0;
-	$days = $minDays;
+	$count = $users = $search = $pagesViewed = $sessions = $engaged = $engagement = $endOfCol = $viewsToday = $last7Views = $last30Views = $last90Views = $last180Views = $lastYearViews = $last2YearViews = $last3YearViews = 0;
 		
 	for ($x = 0; $x < 1096; $x++) {	
+		if ( !isset($GLOBALS['dates'][$x])) break;
 		$theDate = $GLOBALS['dates'][$x];
-		$dailyUsers = intval($GLOBALS['dailyStats'][$theDate]['new-users']); 
-		$users = $users + $dailyUsers;	
-		
+		if ( isset ($GLOBALS['dailyStats'][$theDate]['new-users']) ) $dailyUsers = intval($GLOBALS['dailyStats'][$theDate]['new-users']); 
+		$users = $users + $dailyUsers;			
+				
 		if ( $x == 1 ) $viewsToday = $users; 
 		if ( $x == 7 ) $last7Views = $users; $last7Avg = number_format(($last7Views / 7),1);
 		if ( $x == 30 ) $last30Views = $users; $last30Avg = number_format(($last30Views / 30),1);
@@ -1841,8 +1858,9 @@ function battleplan_admin_referrer_stats() {
 	foreach ( $GLOBALS['displayTerms'] as $display=>$days ) :
 		$allSources = array();
 		for ($x = 0; $x < $days; $x++) :	
+		 	if ( !isset($GLOBALS['dates'][$x])) break;
 			$theDate = $GLOBALS['dates'][$x];
-			$sources = $GLOBALS['dailyStats'][$theDate]['source'];	
+			if ( isset ($GLOBALS['dailyStats'][$theDate]['source']) ) $sources = $GLOBALS['dailyStats'][$theDate]['source'];	
 			
 			foreach ( $sources as $source=>$counts ) :			
 				$switchRef = array ('(direct)'=>'Direct', 'google'=>'Google', 'facebook'=>'Facebook', 'yelp'=>'Yelp', 'yahoo'=>'Yahoo', 'bing'=>'Bing', 'duckduckgo'=>'DuckDuckGo', 'youtube'=>'YouTube', 'instagram'=>'Instagram');
@@ -1877,8 +1895,9 @@ function battleplan_admin_location_stats() {
 	foreach ( $GLOBALS['displayTerms'] as $display=>$days ) :
 		$allLocations = array();
 		for ($x = 0; $x < $days; $x++) :	
+			if ( !isset($GLOBALS['dates'][$x])) break;
 			$theDate = $GLOBALS['dates'][$x];
-			$locations = $GLOBALS['dailyStats'][$theDate]['location'];	
+			if ( isset ($GLOBALS['dailyStats'][$theDate]['location']) ) $locations = $GLOBALS['dailyStats'][$theDate]['location'];	
 			
 			foreach ( $locations as $location=>$counts ) :			
 				if ( is_array($allLocations) && array_key_exists($location, $allLocations ) ) :
@@ -1909,8 +1928,9 @@ function battleplan_admin_tech_stats() {
 	foreach ( $GLOBALS['displayTerms'] as $display=>$days ) :
 		$allBrowsers = array();
 		for ($x = 0; $x < $days; $x++) :	
+			if ( !isset($GLOBALS['dates'][$x])) break;
 			$theDate = $GLOBALS['dates'][$x];
-			$browsers = $GLOBALS['dailyStats'][$theDate]['browser'];	
+			if ( isset ($GLOBALS['dailyStats'][$theDate]['browser']) ) $browsers = $GLOBALS['dailyStats'][$theDate]['browser'];	
 			
 			foreach ( $browsers as $browser=>$counts ) :			
 				if ( is_array($allBrowsers) && array_key_exists($browser, $allBrowsers ) ) :
@@ -1936,42 +1956,47 @@ function battleplan_admin_tech_stats() {
 
 // Devices
 	$allTracking = get_option('bp_tracking_content');
-	foreach ( $allTracking as $tracking ) :
-		$site_speed = $tracking['speed'];
-		$location = $tracking['location'];
+	$allSpeed = array();
 
-		if ( !in_array( $location, $GLOBALS['citiesToExclude']) && $site_speed != '' ) :			
-			$pageID = strtok($site_speed,  '»');
-			if ( strpos($site_speed, 'desktop') !== false ) : $device = "desktop"; else: $device = "mobile"; endif;			
-			$speed = (float)str_replace($pageID.'»'.$device.'«', '', $site_speed);
+	if ( isset($allTracking) && is_array($allTracking) ) :
+		foreach ( $allTracking as $tracking ) :
+			$site_speed = $tracking['speed'];
+			$location = $tracking['location'];
 
-			if ( is_array($allSpeed) && array_key_exists($pageID, $allSpeed ) ) :
-				$allSpeed[$pageID]['speed'] += $speed;
-				$allSpeed[$pageID]['hits'] += 1;
-			else:
-				$allSpeed[$pageID]['speed'] = $speed;
-				$allSpeed[$pageID]['hits'] = 1;
-			endif;						 		
+			if ( !in_array( $location, $GLOBALS['citiesToExclude']) && $site_speed != '' ) :			
+				$pageID = strtok($site_speed,  '»');
+				if ( strpos($site_speed, 'desktop') !== false ) : $device = "desktop"; else: $device = "mobile"; endif;			
+				$speed = (float)str_replace($pageID.'»'.$device.'«', '', $site_speed);
 
-			if ( $allSpeed[$pageID]['hits'] > 0 ) $allSpeed[$pageID]['avg'] = round($allSpeed[$pageID]['speed'] / $allSpeed[$pageID]['hits'], 2);	
+				if ( is_array($allSpeed) && array_key_exists($pageID, $allSpeed ) ) :
+					$allSpeed[$pageID]['speed'] += $speed;
+					$allSpeed[$pageID]['hits'] += 1;
+				else:
+					$allSpeed[$pageID]['speed'] = $speed;
+					$allSpeed[$pageID]['hits'] = 1;
+				endif;						 		
 
-			if ( is_array($allSpeed) && array_key_exists($device, $allSpeed ) ) :
-				$allSpeed[$device]['speed'] += $speed;
-				$allSpeed[$device]['hits'] += 1;
-			else:
-				$allSpeed[$device]['speed'] = $speed;
-				$allSpeed[$device]['hits'] = 1;
-			endif;	
+				if ( $allSpeed[$pageID]['hits'] > 0 ) $allSpeed[$pageID]['avg'] = round($allSpeed[$pageID]['speed'] / $allSpeed[$pageID]['hits'], 2);	
 
-			if ( $allSpeed[$device]['hits'] > 0 ) $allSpeed[$device]['avg'] = round($allSpeed[$device]['speed'] / $allSpeed[$device]['hits'], 2);	
-		endif;			
-	endforeach;		
-		
+				if ( is_array($allSpeed) && array_key_exists($device, $allSpeed ) ) :
+					$allSpeed[$device]['speed'] += $speed;
+					$allSpeed[$device]['hits'] += 1;
+				else:
+					$allSpeed[$device]['speed'] = $speed;
+					$allSpeed[$device]['hits'] = 1;
+				endif;	
+
+				if ( $allSpeed[$device]['hits'] > 0 ) $allSpeed[$device]['avg'] = round($allSpeed[$device]['speed'] / $allSpeed[$device]['hits'], 2);	
+			endif;			
+		endforeach;		
+	endif;
+	
 	foreach ( $GLOBALS['displayTerms'] as $display=>$days ) :
 		$allDevices = array();
 		for ($x = 0; $x < $days; $x++) :	
+			if ( !isset($GLOBALS['dates'][$x])) break;
 			$theDate = $GLOBALS['dates'][$x];
-			$devices = $GLOBALS['dailyStats'][$theDate]['device'];	
+			if ( isset ($GLOBALS['dailyStats'][$theDate]['device']) ) $devices = $GLOBALS['dailyStats'][$theDate]['device'];	
 			
 			foreach ( $devices as $device=>$counts ) :			
 				if ( is_array($allDevices) && array_key_exists($device, $allDevices ) ) :
@@ -1988,9 +2013,11 @@ function battleplan_admin_tech_stats() {
 		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul><li class="sub-label">Devices</li>';	
 		
 		foreach ( $allDevices as $device=>$count ) :
-			$count = ($count / array_sum($allDevices)) * 100;				
-			echo '<li><div class="value"><b>'.number_format($count,1).'%</b></div><div class="label-half">'.ucwords($device).'</div><div class="label-half">'.number_format($allSpeed[$device]['avg'],1).' sec</div></li>';
-			updateOption('load_time_'.$device, number_format($allSpeed[$device]['avg'],1), false );
+			$count = ($count / array_sum($allDevices)) * 100;
+			if ( isset($allSpeed[$device]['avg'])) :
+				echo '<li><div class="value"><b>'.number_format($count,1).'%</b></div><div class="label-half">'.ucwords($device).'</div><div class="label-half">'.number_format($allSpeed[$device]['avg'],1).' sec</div></li>';
+				updateOption('load_time_'.$device, number_format($allSpeed[$device]['avg'],1), false );
+			endif;
 		endforeach;			
 			
 		echo '</ul></div>';		
@@ -2000,8 +2027,9 @@ function battleplan_admin_tech_stats() {
 	foreach ( $GLOBALS['displayTerms'] as $display=>$days ) :
 		$allResolutions = array();
 		for ($x = 0; $x < $days; $x++) :	
+			if ( !isset($GLOBALS['dates'][$x])) break;
 			$theDate = $GLOBALS['dates'][$x];
-			$resolutions = $GLOBALS['dailyStats'][$theDate]['resolution'];	
+			if ( isset ($GLOBALS['dailyStats'][$theDate]['resolution']) ) $resolutions = $GLOBALS['dailyStats'][$theDate]['resolution'];	
 			
 			foreach ( $resolutions as $resolution=>$counts ) :	
 				if ( $resolution ) :
@@ -2031,77 +2059,94 @@ function battleplan_admin_tech_stats() {
 
 // Set up Content Info widget on dashboard
 function battleplan_admin_content_stats() {
+	$contentTracking = $totalTracking = array();
 	$allTracking = get_option('bp_tracking_content');
-	foreach ( $allTracking as $tracking ) :
-		$content_tracking = $tracking['content'];			
-		$location = $tracking['location'];
+	
+	if ( isset($allTracking) && is_array ($allTracking) ) :
+		foreach ( $allTracking as $tracking ) :
+			$content_tracking = $tracking['content'];			
+			$location = $tracking['location'];
 
-		if ( !in_array( $location, $GLOBALS['citiesToExclude']) && $content_tracking != '' ) :
-			$pageID = strtok($content_tracking,  '-');
-			$track = str_replace($pageID.'-', '', $content_tracking);
-		
-			if ( is_array($contentTracking) && array_key_exists($pageID, $contentTracking ) ) :
-				$contentTracking[$pageID][$track] += 1;
-			else:
-				$contentTracking[$pageID][$track] = 1;
-			endif;	
-		endif;			
-	endforeach;
-	
-	foreach ( $contentTracking as $id=>$content) :
-		foreach ( $content as $track=>$count ) :	
-			if ( $id == "track" ) :
-				if ( is_array($componentTracking) && array_key_exists($track, $componentTracking ) ) :
-					$componentTracking[$track] += $count;
-				else:
-					$componentTracking[$track] = $count;
-				endif;				
-			elseif ( strpos($track, '.') !== false ) :
-				$track = explode(".", $track);
-				$page = ucwords(get_the_title($id));
-				$page = (strlen($page) > 17) ? substr($page,0,15).'&hellip;' : $page;			
-				$column = $page.' · s'.$track[0].' c'.$track[1];
-				if ( is_array($colTracking) && array_key_exists($column, $colTracking ) ) :
-					$colTracking[$column] += $count;
-				else:
-					$colTracking[$column] = $count;
-				endif;				
-			else :
-				if ( is_array($totalTracking) && array_key_exists($track, $totalTracking ) ) :
-					$totalTracking[$track] += $count;
-				else:
-					$totalTracking[$track] = $count;
-				endif;				
-			endif;
+			if ( !in_array( $location, $GLOBALS['citiesToExclude']) && $content_tracking != '' ) :
+				$pageID = strtok($content_tracking,  '-');
+				$track = str_replace($pageID.'-', '', $content_tracking);
+
+				if ( isset($contentTracking) ):		
+					if ( is_array($contentTracking) && array_key_exists($pageID, $contentTracking ) ) :
+						$contentTracking[$pageID][$track] += 1;
+					else:
+						$contentTracking[$pageID][$track] = 1;
+					endif;	
+				endif;
+			endif;			
 		endforeach;
-	endforeach;
+	endif;
 	
-	echo '<div><ul><li class="sub-label">Last '.$totalTracking['init'].' Pageviews</li>';
+	if ( isset($contentTracking) && is_array ($contentTracking) ) :
+		foreach ( $contentTracking as $id=>$content) :
+			foreach ( $content as $track=>$count ) :	
+				if ( $id == "track" ) :
+					if ( is_array($componentTracking) && array_key_exists($track, $componentTracking ) ) :
+						$componentTracking[$track] += $count;
+					else:
+						$componentTracking[$track] = $count;
+					endif;				
+				elseif ( strpos($track, '.') !== false ) :
+					$track = explode(".", $track);
+					$page = ucwords(get_the_title($id));
+					$page = (strlen($page) > 17) ? substr($page,0,15).'&hellip;' : $page;			
+					$column = $page.' · s'.$track[0].' c'.$track[1];
+					if ( is_array($colTracking) && array_key_exists($column, $colTracking ) ) :
+						$colTracking[$column] += $count;
+					else:
+						$colTracking[$column] = $count;
+					endif;				
+				else :
+					if ( is_array($totalTracking) && array_key_exists($track, $totalTracking ) ) :
+						$totalTracking[$track] += $count;
+					else:
+						$totalTracking[$track] = $count;
+					endif;				
+				endif;
+			endforeach;
+		endforeach;
+	endif;
+	
+	echo '<div>';
+	
+	if ( isset($totalTracking['init'])) : 
+		echo '<ul><li class="sub-label">Last '.$totalTracking['init'].' Pageviews</li>';
 		if ( $totalTracking['init'] > 0 ) :
 			echo "<li><div class='value'><b>".number_format((round($totalTracking['100']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed ALL of main content</b></div></li>";	
 			echo "<li><div class='value'><b>".number_format((round($totalTracking['80']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed at least 80% of main content</b></div></li>";	
 			echo "<li><div class='value'><b>".number_format((round($totalTracking['60']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed at least 60% of main content</b></div></li>";	
 			echo "<li><div class='value'><b>".number_format((round($totalTracking['40']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed at least 40% of main content</b></div></li>";	
-			echo "<li><div class='value'><b>".number_format(100-(round($totalTracking['20']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed less than 20% of main content</b></div></li>";	
+			echo "<li><div class='value'><b>".number_format(100-(round($totalTracking['20']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed less than 20% of main content</b></div></li>";
 		endif;
+		echo '</ul>';
+	endif;
 	
-	echo '</ul><ul><li class="sub-label">Components</li>';
-	
-	if ( is_array($componentTracking)) arsort($componentTracking);
-	foreach($componentTracking as $track=>$count) :
-		if ( $track != "init" && $componentTracking['init'] > 0 ) echo "<li><div class='value'><b>".number_format((round($componentTracking[$track]/$componentTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>".ucwords($track)."</b></div></li>";	
-		
-		updateOption('pct-viewed-'.$track, number_format((round($componentTracking[$track]/$componentTracking['init'],3) * 100),1), false );
-	endforeach;		
+	if ( isset($componentTracking) && is_array($componentTracking)) :
+		arsort($componentTracking);
+		echo '<ul><li class="sub-label">Components</li>';
+		foreach($componentTracking as $track=>$count) :
+			if ( $track != "init" && $componentTracking['init'] > 0 ) echo "<li><div class='value'><b>".number_format((round($componentTracking[$track]/$componentTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>".ucwords($track)."</b></div></li>";	
 
-	echo '</ul><ul><li class="sub-label">Best Column Positions</li><div style="column-count:2">';		
-		
-	if ( is_array($colTracking)) arsort($colTracking);
-	foreach ( $colTracking as $page=>$count) :
-		echo "<li><div class='value'><b>".$count."</b></div><div class='label'>".$page."</div></li>";	
-	endforeach;
+			updateOption('pct-viewed-'.$track, number_format((round($componentTracking[$track]/$componentTracking['init'],3) * 100),1), false );
+		endforeach;	
+		echo '</ul>';
+	endif;
+
+	if ( isset($colTracking) && is_array($colTracking)) :
+		arsort($colTracking);
+		echo '<ul><li class="sub-label">Best Column Positions</li><div style="column-count:2">';		
+		foreach ( $colTracking as $page=>$count) :
+			echo "<li><div class='value'><b>".$count."</b></div><div class='label'>".$page."</div></li>";	
+		endforeach;
+		echo '</div></ul>';
+	endif;
 	
-	echo '</div></ul></div>';
+	echo '</div>';
 }
 
 // Set up Popular Pages widget on dashboard
@@ -2109,8 +2154,9 @@ function battleplan_admin_pages_stats() {
 	foreach ( $GLOBALS['displayTerms'] as $display=>$days ) :
 		$allPages = array();
 		for ($x = 0; $x < $days; $x++) :	
+			if ( !isset($GLOBALS['dates'][$x])) break;
 			$theDate = $GLOBALS['dates'][$x];
-			$pages = $GLOBALS['dailyStats'][$theDate]['page'];	
+			if ( isset ($GLOBALS['dailyStats'][$theDate]['page']) ) $pages = $GLOBALS['dailyStats'][$theDate]['page'];	
 			
 			foreach ( $pages as $page=>$counts ) :	
 				$excludePage = false;
@@ -2163,20 +2209,21 @@ function battleplan_admin_stats($time,$minDays,$maxDays,$colEnd) {
 	echo "<table class='trends trends-".$time." trends-col-".$colNum."'><tr><td class='header dates'>".ucfirst($time)."</td><td class='page visits'>".ucwords($GLOBALS['btn2'])."</td></tr>";	
 
 	for ($x = 0; $x < 1500; $x++) {	
+		if ( !isset($GLOBALS['dates'][$x])) break;
 		$theDate = $GLOBALS['dates'][$x];
 		$dailyTime = date("M j, Y", strtotime($theDate)); 
-		$dailySessions = intval($GLOBALS['dailyStats'][$theDate]['sessions']); 
-		$dailySearch = intval($GLOBALS['dailyStats'][$theDate]['medium']['organic']); 
-		$dailyUsers = intval($GLOBALS['dailyStats'][$theDate]['new-users']); 		
-		$dailyPageviews = intval($GLOBALS['dailyStats'][$theDate]['pages-viewed']);
-		$dailyEngaged = intval($GLOBALS['dailyStats'][$theDate]['engaged']); 
+		if ( isset($GLOBALS['dailyStats'][$theDate]['sessions'])) $dailySessions = intval($GLOBALS['dailyStats'][$theDate]['sessions']); 
+		if ( isset($GLOBALS['dailyStats'][$theDate]['medium']['organic'])) $dailySearch = intval($GLOBALS['dailyStats'][$theDate]['medium']['organic']); 
+		if ( isset($GLOBALS['dailyStats'][$theDate]['new-users'])) $dailyUsers = intval($GLOBALS['dailyStats'][$theDate]['new-users']); 		
+		if ( isset($GLOBALS['dailyStats'][$theDate]['pages-viewed'])) $dailyPageviews = intval($GLOBALS['dailyStats'][$theDate]['pages-viewed']);
+		if ( isset($GLOBALS['dailyStats'][$theDate]['engaged'])) $dailyEngaged = intval($GLOBALS['dailyStats'][$theDate]['engaged']); 
 		
 		$count++;		
-		$sessions = $sessions + $dailySessions; 		
-		$search = $search + $dailySearch; 
-		$users = $users + $dailyUsers;			
-		$pagesViewed = $pagesViewed + $dailyPageviews; 		
-		$engaged = $engaged + $dailyEngaged; 
+		if (isset($dailySessions) ) $sessions = $sessions + $dailySessions; 		
+		if (isset($dailySearch) ) $search = $search + $dailySearch; 
+		if (isset($dailyUsers) ) $users = $users + $dailyUsers;			
+		if (isset($$dailyPageviews) ) $pagesViewed = $pagesViewed + $dailyPageviews; 		
+		if (isset($dailyEngaged) ) $engaged = $engaged + $dailyEngaged; 
 		
 		if ( $sessions > 0 ) $pagesPerSession = number_format( (round(($pagesViewed / $sessions), 3)) , 1, '.', '');
 		if ( $sessions > 0 ) $engagement = number_format( ((round(($engaged / $sessions), 3)) * 100), 1, '.', '');		

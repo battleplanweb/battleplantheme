@@ -165,15 +165,15 @@ if ( $pagesLeft <= 0 ) :
 		update_option( 'wpseo_titles', $wpSEOSettings );
 
 		$wpSEOSocial = get_option( 'wpseo_social' );		
-		$wpSEOSocial['facebook_site'] = $GLOBALS['customer_info']['facebook'];
-		$wpSEOSocial['instagram_url'] = $GLOBALS['customer_info']['instagram'];
-		$wpSEOSocial['linkedin_url'] = $GLOBALS['customer_info']['linkedin'];
+		if ( isset($GLOBALS['customer_info']['facebook']) ) $wpSEOSocial['facebook_site'] = $GLOBALS['customer_info']['facebook'];
+		if ( isset($GLOBALS['customer_info']['instagram']) ) $wpSEOSocial['instagram_url'] = $GLOBALS['customer_info']['instagram'];
+		if ( isset($GLOBALS['customer_info']['linkedin']) ) $wpSEOSocial['linkedin_url'] = $GLOBALS['customer_info']['linkedin'];
 		$wpSEOSocial['og_default_image'] = get_bloginfo("url").'/wp-content/uploads/logo.png';
 		$wpSEOSocial['og_default_image_id'] = attachment_url_to_postid( get_bloginfo("url").'/wp-content/uploads/logo.png' );
 		$wpSEOSocial['opengraph'] = '1';
-		$wpSEOSocial['pinterest_url'] = $GLOBALS['customer_info']['pinterest'];
-		$wpSEOSocial['twitter_site'] = $GLOBALS['customer_info']['twitter'];
-		$wpSEOSocial['youtube_url'] = $GLOBALS['customer_info']['youtube'];	
+		if ( isset($GLOBALS['customer_info']['pinterest']) ) $wpSEOSocial['pinterest_url'] = $GLOBALS['customer_info']['pinterest'];
+		if ( isset($GLOBALS['customer_info']['twitter']) ) $wpSEOSocial['twitter_site'] = $GLOBALS['customer_info']['twitter'];
+		if ( isset($GLOBALS['customer_info']['youtube']) ) $wpSEOSocial['youtube_url'] = $GLOBALS['customer_info']['youtube'];	
 		update_option( 'wpseo_social', $wpSEOSocial );
 
 		$wpSEOLocal = get_option( 'wpseo_local' );		
@@ -201,19 +201,19 @@ if ( $pagesLeft <= 0 ) :
 
 		if ( $GLOBALS['customer_info']['site-type'] == "hvac" ) $wpSEOLocal['business_type'] = 'HVACBusiness';		
 
-		$wpSEOLocal['location_address'] = $GLOBALS['customer_info']['street'];
-		$wpSEOLocal['location_city'] = $GLOBALS['customer_info']['site-city'];
-		$wpSEOLocal['location_state'] = $GLOBALS['customer_info']['state-full'];
-		$wpSEOLocal['location_zipcode'] = $GLOBALS['customer_info']['zip'];
+		if ( isset($GLOBALS['customer_info']['street']) ) $wpSEOLocal['location_address'] = $GLOBALS['customer_info']['street'];
+		if ( isset($GLOBALS['customer_info']['site-city']) ) $wpSEOLocal['location_city'] = $GLOBALS['customer_info']['site-city'];
+		if ( isset($GLOBALS['customer_info']['state-full']) ) $wpSEOLocal['location_state'] = $GLOBALS['customer_info']['state-full'];
+		if ( isset($GLOBALS['customer_info']['zip']) ) $wpSEOLocal['location_zipcode'] = $GLOBALS['customer_info']['zip'];
 		$wpSEOLocal['location_country'] = 'US';
-		$wpSEOLocal['location_phone'] = $GLOBALS['customer_info']['area'].'-'.$GLOBALS['customer_info']['phone'];
-		$wpSEOLocal['location_email'] = $GLOBALS['customer_info']['email'];
+		if ( isset($GLOBALS['customer_info']['area']) && isset($GLOBALS['customer_info']['phone']) ) $wpSEOLocal['location_phone'] = $GLOBALS['customer_info']['area'].'-'.$GLOBALS['customer_info']['phone'];
+		if ( isset($GLOBALS['customer_info']['email']) ) $wpSEOLocal['location_email'] = $GLOBALS['customer_info']['email'];
 		$wpSEOLocal['location_url'] = get_bloginfo("url");
 		$wpSEOLocal['location_price_range'] = '$$';
 		$wpSEOLocal['location_payment_accepted'] = "Cash, Credit Cards, Paypal";
-		$wpSEOLocal['location_area_served'] = $GLOBALS['customer_info']['service-area'];
-		$wpSEOLocal['location_coords_lat'] = $GLOBALS['customer_info']['lat'];
-		$wpSEOLocal['location_coords_long'] = $GLOBALS['customer_info']['long'];
+		if ( isset($GLOBALS['customer_info']['service-area']) ) $wpSEOLocal['location_area_served'] = $GLOBALS['customer_info']['service-area'];
+		if ( isset($GLOBALS['customer_info']['lat']) ) $wpSEOLocal['location_coords_lat'] = $GLOBALS['customer_info']['lat'];
+		if ( isset($GLOBALS['customer_info']['long']) ) $wpSEOLocal['location_coords_long'] = $GLOBALS['customer_info']['long'];
 		$wpSEOLocal['hide_opening_hours'] = 'on';
 		$wpSEOLocal['address_format'] = 'address-state-postal';
 		update_option( 'wpseo_local', $wpSEOLocal );
@@ -466,7 +466,7 @@ if ( $pagesLeft <= 0 ) :
 		if ( $siteHitsUA ) $end = date('Y-m-d', strtotime(end($siteHitsUA)['date']));	
 
 		$end = date('Y-m-d', strtotime($end.' - 1 day'));
-		$rewind = date('Y-m-d', strtotime($end.' - 21 days'));
+		$rewind = date('Y-m-d', strtotime($end.' - 80 days'));
 		
 		if ( strtotime($end) < 1532995200 || strtotime($end) < strtotime(get_option('bp_launch_date')) ) : // July 31, 2018		
 			updateOption('bp_analytics_ua_complete', date('Y-m-d'), false);		
@@ -516,7 +516,7 @@ if ( $pagesLeft <= 0 ) :
 				if ( $row[9] != $date ) $engaged = $sessions - $row[9];			
 				$newUsers = $row[10];						
 
-				if ( $states[$state] && $sessions != '' ) :					
+				if ( isset($states[$state]) && $sessions != '' ) :					
 					if ( $city == '(not set)' ) $location = ucwords($state);					
 					$page = rtrim($page, '/\\');
 
@@ -529,18 +529,18 @@ if ( $pagesLeft <= 0 ) :
 
 			// Split session data into site hits
 			foreach ( $analyticsUA as $analyze ) :
-				$date = $analyze['date'];
-				$location = $analyze['location'];
-				$page = $analyze['page'];
-				$browser = $analyze['browser'];
-				$device = $analyze['device'];	
-				$resolution = $analyze['resolution'];
-				$pageviews = (int)$analyze['pages-viewed'];
-				$sessions = (int)$analyze['sessions'];
-				$engaged = (int)$analyze['engaged'];
-				$newUsers = (int)$analyze['new-users'];
-				$referrer = (int)$analyze['referrer'];
-				list($source, $medium) = explode(" / ", $analyze['source']);			
+				if ( isset ($analyze['date']) ) $date = $analyze['date'];
+				if ( isset ($analyze['location']) ) $location = $analyze['location'];
+				if ( isset ($analyze['page']) ) $page = $analyze['page'];
+				if ( isset ($analyze['browser']) ) $browser = $analyze['browser'];
+				if ( isset ($analyze['device']) ) $device = $analyze['device'];	
+				if ( isset ($analyze['resolution']) ) $resolution = $analyze['resolution'];
+				if ( isset ($analyze['pages-viewed']) ) $pageviews = (int)$analyze['pages-viewed'];
+				if ( isset ($analyze['sessions']) ) $sessions = (int)$analyze['sessions'];
+				if ( isset ($analyze['engaged']) ) $engaged = (int)$analyze['engaged'];
+				if ( isset ($analyze['new-users']) ) $newUsers = (int)$analyze['new-users'];
+				if ( isset ($analyze['referrer']) ) $referrer = (int)$analyze['referrer'];
+				if ( isset ($analyze['source']) ) list($source, $medium) = explode(" / ", $analyze['source']);			
 
 				if ( $sessions > 1 ) :			
 					$pageviews = $pageviews / $sessions;
@@ -559,12 +559,11 @@ if ( $pagesLeft <= 0 ) :
 				endif;
 			endforeach;
 
-			if ( array_slice($siteHitsUA, 160000, 40000) ) : updateOption('bp_site_hits_ua_5', array_slice($siteHitsUA, 160000, 40000), false);	
-			elseif ( array_slice($siteHitsUA, 120000, 40000) ) : updateOption('bp_site_hits_ua_4', array_slice($siteHitsUA, 120000, 40000), false);	
-			//elseif ( array_slice($siteHitsUA, 80000, 40000) ) : updateOption('bp_site_hits_ua_3', array_slice($siteHitsUA, 80000, 40000), false);	
-			//elseif ( array_slice($siteHitsUA, 40000, 40000) ) : updateOption('bp_site_hits_ua_2', array_slice($siteHitsUA, 40000, 40000), false);	
-			//elseif ( array_slice($siteHitsUA, 0, 40000) ) : updateOption('bp_site_hits_ua_1', array_slice($siteHitsUA, 0, 40000), false);	
-			endif;
+			if ( array_slice($siteHitsUA, 160000, 40000) ) updateOption('bp_site_hits_ua_5', array_slice($siteHitsUA, 160000, 40000), false);	
+			if ( array_slice($siteHitsUA, 120000, 40000) ) updateOption('bp_site_hits_ua_4', array_slice($siteHitsUA, 120000, 40000), false);	
+			if ( array_slice($siteHitsUA, 80000, 40000) ) updateOption('bp_site_hits_ua_3', array_slice($siteHitsUA, 80000, 40000), false);	
+			if ( array_slice($siteHitsUA, 40000, 40000) ) updateOption('bp_site_hits_ua_2', array_slice($siteHitsUA, 40000, 40000), false);	
+			if ( array_slice($siteHitsUA, 0, 40000) ) updateOption('bp_site_hits_ua_1', array_slice($siteHitsUA, 0, 40000), false);	
 		endif;
 	endif;
 

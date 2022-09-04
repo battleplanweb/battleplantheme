@@ -28,7 +28,7 @@ function battleplan_restrictContent( $atts, $content = null ) {
 	$max = esc_attr($a['max']);
 	if ( $max == "admin" || $max == "administrator" ) : $max = "administrator"; else: if ( substr($min, 0, 3) !== "bp_" ) : $max = "bp_".$max; endif; endif;
 	$min = esc_attr($a['min']);
-	if ( $min == "admin" || min == "administrator" ) : $min = "administrator"; else: if ( substr($min, 0, 3) !== "bp_" ) : $min = "bp_".$min; endif; endif;
+	if ( $min == "admin" || $min == "administrator" ) : $min = "administrator"; else: if ( substr($min, 0, 3) !== "bp_" ) : $min = "bp_".$min; endif; endif;
 	$role = battleplan_getUserRole( $identifier, 'name' );
 	$user_caps = get_role( $role )->capabilities;
 	$max_caps = get_role( $max )->capabilities;
@@ -407,8 +407,9 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	$scrollBtn = esc_attr($a['scroll-btn']); 
 	$scrollLoc = esc_attr($a['scroll-loc']); 
 	$scrollIcon = esc_attr($a['scroll-icon']); 
-	if ( $scrollBtn != "false" ) $buildScrollBtn = '<div class="scroll-down"><a href="'.$scrollLoc.'"><i class="fas '.$scrollIcon.' aria-hidden="true"></i><span class="sr-only">Scroll Down</span></a></div>';
+	if ( $scrollBtn != "false" ) : $buildScrollBtn = '<div class="scroll-down"><a href="'.$scrollLoc.'"><i class="fas '.$scrollIcon.' aria-hidden="true"></i><span class="sr-only">Scroll Down</span></a></div>'; else: $buildScrollBtn = ''; endif;
 	if ( !$name ) $name = "section-".rand(10000,99999);	
+	$setUpElement = '';
 		
 	if ( $type == "col" ) :	$div = "div"; else: $div = $type; endif;
 	
@@ -629,7 +630,5 @@ function battleplan_buildWidget( $atts, $content = null ) {
 		if ( $display == true) return $buildWidget;	
 	endif;
 }
-
-
 
 ?>

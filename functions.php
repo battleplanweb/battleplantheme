@@ -15,8 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.0.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.0.2' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -447,45 +446,46 @@ add_filter( 'wpcf7_form_elements', 'do_shortcode' );
 
 // Stamp images and teasers with date and figure counts
 function battleplan_countTease( $id ) {
-	$getViews = readMeta($id, 'log-views');
-	if ( !is_array($getViews) ) $getViews = array();
-	$viewsToday = $views7Day = $views30Day = $views90Day = $views180Day = $views365Day = intval(0); 	
-	
-	//$rightNow = strtotime(date("F j, Y g:i a")) - 14450;	
-	$rightNow = strtotime(date("F j, Y g:i a"));	
-	$today = strtotime(date("F j, Y"));
-	$lastViewed = strtotime($getViews[0]['date']);	
-	$dateDiff = (int)(($today - $lastViewed) / 60 / 60 / 24);	
-	
-	if ( $dateDiff != 0 ) : // day has passed, move 29 to 30, and so on	
-		for ($i = 1; $i <= $dateDiff; $i++) {	
-			$figureTime = $today - ( ($dateDiff - $i) * 86400);	
-			array_unshift($getViews, array ('date'=>date("F j, Y", $figureTime), 'views'=>$viewsToday));
-		}	
-	else:
-		$viewsToday = (int)$getViews[0]['views']; 
-	endif;
-	
-	updateOption('last_visitor_time', $rightNow);
-	updateMeta($id, 'log-last-viewed', $rightNow);	
-	
-	$viewsToday++;
-	array_shift($getViews);	
-	array_unshift($getViews, array ('date'=>date('F j, Y', $today), 'views'=>$viewsToday));	
-	updateMeta($id, 'log-views', $getViews);
+	if ( _USER_LOGIN != "battleplanweb" ) :
+		$getViews = readMeta($id, 'log-views');
+		if ( !is_array($getViews) ) $getViews = array();
+		$viewsToday = $views7Day = $views30Day = $views90Day = $views180Day = $views365Day = intval(0); 	
 
-	for ($x = 0; $x < 7; $x++) { $views7Day = $views7Day + (int)$getViews[$x]['views']; } 					
-	for ($x = 0; $x < 30; $x++) { $views30Day = $views30Day + (int)$getViews[$x]['views']; } 						
-	for ($x = 0; $x < 90; $x++) { $views90Day = $views90Day + (int)$getViews[$x]['views']; } 		
-	for ($x = 0; $x < 180; $x++) { $views180Day = $views180Day + (int)$getViews[$x]['views']; } 		
-	for ($x = 0; $x < 365; $x++) { $views365Day = $views365Day + (int)$getViews[$x]['views']; } 		
-	updateMeta($id, 'log-views-today', $viewsToday);					
-	updateMeta($id, 'log-views-total-7day', $views7Day);			
-	updateMeta($id, 'log-views-total-30day', $views30Day);			 
-	updateMeta($id, 'log-views-total-90day', $views90Day);	
-	updateMeta($id, 'log-views-total-180day', $views180Day);	
-	updateMeta($id, 'log-views-total-365day', $views365Day);
-	
+		//$rightNow = strtotime(date("F j, Y g:i a")) - 14450;	
+		$rightNow = strtotime(date("F j, Y g:i a"));	
+		$today = strtotime(date("F j, Y"));
+		$lastViewed = strtotime($getViews[0]['date']);	
+		$dateDiff = (int)(($today - $lastViewed) / 60 / 60 / 24);	
+
+		if ( $dateDiff != 0 ) : // day has passed, move 29 to 30, and so on	
+			for ($i = 1; $i <= $dateDiff; $i++) {	
+				$figureTime = $today - ( ($dateDiff - $i) * 86400);	
+				array_unshift($getViews, array ('date'=>date("F j, Y", $figureTime), 'views'=>$viewsToday));
+			}	
+		else:
+			$viewsToday = (int)$getViews[0]['views']; 
+		endif;
+
+		updateOption('last_visitor_time', $rightNow);
+		updateMeta($id, 'log-last-viewed', $rightNow);	
+
+		$viewsToday++;
+		array_shift($getViews);	
+		array_unshift($getViews, array ('date'=>date('F j, Y', $today), 'views'=>$viewsToday));	
+		updateMeta($id, 'log-views', $getViews);
+
+		for ($x = 0; $x < 7; $x++) { $views7Day = $views7Day + (int)$getViews[$x]['views']; } 					
+		for ($x = 0; $x < 30; $x++) { $views30Day = $views30Day + (int)$getViews[$x]['views']; } 						
+		for ($x = 0; $x < 90; $x++) { $views90Day = $views90Day + (int)$getViews[$x]['views']; } 		
+		for ($x = 0; $x < 180; $x++) { $views180Day = $views180Day + (int)$getViews[$x]['views']; } 		
+		for ($x = 0; $x < 365; $x++) { $views365Day = $views365Day + (int)$getViews[$x]['views']; } 		
+		updateMeta($id, 'log-views-today', $viewsToday);					
+		updateMeta($id, 'log-views-total-7day', $views7Day);			
+		updateMeta($id, 'log-views-total-30day', $views30Day);			 
+		updateMeta($id, 'log-views-total-90day', $views90Day);	
+		updateMeta($id, 'log-views-total-180day', $views180Day);	
+		updateMeta($id, 'log-views-total-365day', $views365Day);
+	endif;	
 	//print_r($getViews[0]);
 }
 
@@ -911,8 +911,7 @@ function battleplan_disable_emojis_remove_dns_prefetch( $urls, $relation_type ) 
 add_filter('script_loader_tag', 'battleplan_add_data_attribute', 10, 3);
 function battleplan_add_data_attribute($tag, $handle, $src) {
     if ( is_admin() || $GLOBALS['pagenow'] === 'wp-login.php' || strpos( $src, '.js' ) === FALSE ) return $tag;
-	$nonce = $GLOBALS['nonce'];
-	$tag = '<script nonce="'.$nonce.'" id="'.$handle.'" defer src="'.esc_url( $src ).'"></script>'; 
+	$tag = '<script nonce="'._BP_NONCE.'" id="'.$handle.'" defer src="'.esc_url( $src ).'"></script>'; 
     return $tag;
 }
 
@@ -924,11 +923,9 @@ function battleplan_filter_localized_scripts() {
 
 add_filter( 'battleplan_csp_localized_scripts', 'battleplan_add_nonce_to_localized_scripts', 0, 2 );
 function battleplan_add_nonce_to_localized_scripts( $tag, $handle ) {
-	$nonce = $GLOBALS['nonce'];
-    $attr = "nonce='".$nonce."' ";
-    if ( ! is_admin() ) {
-        $tag = str_replace( '<script ', '<script '.$attr, $tag );
-    }
+	if ( !is_admin() && strpos($GLOBALS['pagenow'], 'wp-login.php') === false ) :
+		$tag = str_replace( '<script ', '<script nonce="'._BP_NONCE.'" ', $tag );
+    endif;
     return $tag;
 }
 
@@ -1225,7 +1222,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
 	}
     if ( "user-email" == $tag->name ) {
         $check = isset( $_POST["user-email"] ) ? trim( $_POST["user-email"] ) : ''; 
-		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz', '@tworld.com', 'garywhi777@gmail.com', 'ronyisthebest16@gmail.com', 'ronythomas611@gmail.com', 'ronythomasrecruiter@gmail.com', '@ideonagency.net', 'axiarobbie20@gmail.com', '@hyper-tidy.com', '@readyjob.org', '@thefranchisecreatornetwork.com', 'franchisecreatormarketing.com', '@legendarygfx.com', '@hitachi-metal-jp.com', '@expresscommerce.co', '@zaphyrpro.com', 'erjconsult.com', 'christymkts@gmail.com', '@theheritageseo.com');
+		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz', '@tworld.com', 'garywhi777@gmail.com', 'ronyisthebest16@gmail.com', 'ronythomas611@gmail.com', 'ronythomasrecruiter@gmail.com', '@ideonagency.net', 'axiarobbie20@gmail.com', '@hyper-tidy.com', '@readyjob.org', '@thefranchisecreatornetwork.com', 'franchisecreatormarketing.com', '@legendarygfx.com', '@hitachi-metal-jp.com', '@expresscommerce.co', '@zaphyrpro.com', 'erjconsult.com', 'christymkts@gmail.com', '@theheritageseo.com', '@freedomwebdesigns.com');
 		foreach($badwords as $badword) {
 			if (stripos(strtolower($check),strtolower($badword)) !== false) $result->invalidate( $tag, 'We cannot accept messages at this time.');
 		}
@@ -1314,7 +1311,7 @@ function battleplan_setupFormEmail( $contact_form ) {
 add_action('wp_footer', 'battleplan_no_contact_form_refill', 99); 
 function battleplan_no_contact_form_refill() { 
 	if ( is_plugin_active( 'contact-form-7/wp-contact-form-7.php' ) ) {	
-		?><script nonce="<?php echo $GLOBALS['nonce']; ?>">wpcf7.cached = 0;</script><?php	
+		?><script nonce="<?php echo _BP_NONCE; ?>">wpcf7.cached = 0;</script><?php	
 	}
 }
 
@@ -1633,7 +1630,7 @@ function battleplan_getAndDisplayUserRoles() {
 // Hide battleplanweb from any other admin user
 add_action('pre_user_query','battleplan_pre_user_query');
 function battleplan_pre_user_query($user_search) {
-	if (_USER_ID != 'battleplanweb') :
+	if (_USER_LOGIN != 'battleplanweb') :
     	global $wpdb;
     	$user_search->query_where = str_replace('WHERE 1=1', "WHERE 1=1 AND {$wpdb->users}.user_login != 'battleplanweb'",$user_search->query_where);
 	endif;
@@ -1642,7 +1639,7 @@ function battleplan_pre_user_query($user_search) {
 // Hide certain plug-ins from other admin users
 add_action('pre_current_active_plugins', 'battleplan_plugin_hide');
 function battleplan_plugin_hide() {
-  	if (_USER_ID != 'battleplanweb') : 
+  	if (_USER_LOGIN != 'battleplanweb') : 
 		global $wp_list_table;
 		$hidearr = array('enable-media-replace/enable-media-replace.php', 'git-updater/git-updater.php', 'git-updater/github-updater.php', 'git-updater-pro/git-updater-pro.php', 'stop-referrer-spam/stop-referrer-spam.php');  
 
@@ -1703,7 +1700,6 @@ function battleplan_loadFonts() {
 // Install Google Global Site Tags
 add_action('bp_google_tag_manager', 'battleplan_load_tag_manager');
 function battleplan_load_tag_manager() { 
-	$nonce = $GLOBALS['nonce'];
 	$buildTags = $buildTagMgr = '';
 	$gtagEvents = array();
 	foreach ( $GLOBALS['customer_info']['google-tags'] as $gtag=>$value ) :	
@@ -1720,8 +1716,8 @@ function battleplan_load_tag_manager() {
 		endif;				
 	endforeach;
 
-	$buildTagMgr .= '<script nonce="'.$nonce.'" async src="https://www.googletagmanager.com/gtag/js?id='.$mainAcct.'"></script>';
-	$buildTagMgr .= '<script nonce="'.$nonce.'" async>
+	$buildTagMgr .= '<script nonce="'._BP_NONCE.'" async src="https://www.googletagmanager.com/gtag/js?id='.$mainAcct.'"></script>';
+	$buildTagMgr .= '<script nonce="'._BP_NONCE.'" async>
 		window.dataLayer = window.dataLayer || [];
 		function gtag(){dataLayer.push(arguments);}
 		gtag("js", new Date());';
@@ -1732,7 +1728,7 @@ function battleplan_load_tag_manager() {
 		foreach ( $gtagEvents as $gtagEvent ) :	
 			$buildEvents .= "gtag('event', 'conversion', { 'send_to': '".$gtagEvent."' });";  
 		endforeach;		
-		$buildTagMgr .= '<script nonce="'.$nonce.'">'.$buildEvents.'</script>';
+		$buildTagMgr .= '<script nonce="'._BP_NONCE.'">'.$buildEvents.'</script>';
 	endif;		
 	
 	if (strpos($mainAcct, 'x') === false) echo $buildTagMgr;
@@ -1742,7 +1738,7 @@ function battleplan_load_tag_manager() {
 function buildNavMenu( $pos ) {
 	$printMenu = '<nav id="desktop-navigation" class="main-navigation menu-strip" aria-label="Main Menu">';
 	$printMenu .= wp_nav_menu ( array ( 'echo' => false, 'container' => 'div', 'container_class' => 'flex', 'menu_id' => $pos.'-menu', 'menu_class' => 'menu main-menu', 'theme_location' => $pos.'-menu', 'walker' => new Aria_Walker_Nav_Menu(), ) ); 
-	$printMenu .= '</nav><!-- #site-navigation -->';
+	$printMenu .= '</nav>';
 	
 	return $printMenu;
 }

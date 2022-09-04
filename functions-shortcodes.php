@@ -405,7 +405,7 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 		$getImage = "";
 		if ( $link == "yes" ) $getImage .= '<a href="'.$image[0].'">';
 		//$getImage .= '<img data-id="'.$getID.'"'.getImgMeta($getID).' data-count-view="true" class="random-img '.$tags[0].'-img '.$align.'" loading="'.$lazy.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta($getID, '_wp_attachment_image_alt', true).'">';
-		$getImage .= '<img class="random-img '.$tags[0].'-img '.$align.'" loading="'.$lazy.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta($getID, '_wp_attachment_image_alt', true).'">';
+		$getImage .= '<img class="random-img '.$tags[0].'-img" loading="'.$lazy.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta($getID, '_wp_attachment_image_alt', true).'">';
 		if ( $link == "yes" ) $getImage .= '</a>';
 		
 		battleplan_countTease( $getID );	
@@ -442,7 +442,7 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 		$imageArray = array_merge($right, array_reverse($left));
 	endif;
 							   
-	$print .= do_shortcode('[layout grid="'.$col.'e" valign="'.$valign.'"]'.printArray($imageArray).'[/layout]'); 
+	$print = do_shortcode('[layout grid="'.$col.'e" valign="'.$valign.'"]'.printArray($imageArray).'[/layout]'); 
 	return $print;
 }
 
@@ -492,6 +492,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	else: $linkLoc = $link;	endif;
 	$noPic = esc_attr($a['no_pic']);	
 	if ( $noPic == "" ) $noPic = "false";	
+	$picADA = $titleADA = "";
 	if ( $showBtn == "true" ) : $picADA = " ada-hidden='true'"; $titleADA = " aria-hidden='true' tabindex='-1'";
 	elseif ( $showTitle != "false" ) : $picADA = " ada-hidden='true'"; endif;
 	$thumbOnly = esc_attr($a['thumb_only']);
@@ -1293,8 +1294,7 @@ function battleplan_SideBySideImg( $atts, $content = null ) {
 // Make the nonce generated in header.php available to WP pages
 add_shortcode( 'get-nonce', 'battleplan_get_nonce' );
 function battleplan_get_nonce() {	
-	$nonce = $GLOBALS['nonce'];
-	return 'nonce="'.$nonce.'"';
+	return 'nonce="'._BP_NONCE.'"';
 }
 
 // Display a universal page

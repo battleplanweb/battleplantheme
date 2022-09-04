@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 14.0.1
+Version: 14.0.2
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -793,6 +793,13 @@ table {
 .three-column {
 	column-count:								3;
 	column-gap: 								2.5em;
+}
+
+.two-col > *,
+.two-column > *,
+.three-col > *,
+.three-column > * {
+	break-inside: 								avoid;
 }
 
 .left,
@@ -2305,6 +2312,7 @@ div[class*="restrict-"] {
 .screen-mobile .section.section-lock[data-pos="center"] > .flex {
 	top:										calc(48% + 42px);
 	transform: 									translate(-50%, calc(-50% - 21px));
+
 	padding:									calc(5% + 18px) 5%;
 }
 
@@ -5690,6 +5698,19 @@ html.error503 h3 {
 	.carousel .block-button:nth-of-type(3) {
 		order: 										2;
 		width: 										calc(50% - 1em);
+	}
+	
+	.carousel.mult-2 .carousel-inner .carousel-item .span-6,
+	.carousel.mult-3 .carousel-inner .carousel-item .span-4,
+	.carousel.mult-4 .carousel-inner .carousel-item .span-3 {
+		display: 									none;
+	}
+	
+	.carousel.mult-2 .carousel-inner .carousel-item .span-6:first-of-type,
+	.carousel.mult-3 .carousel-inner .carousel-item .span-4:first-of-type,
+	.carousel.mult-4 .carousel-inner .carousel-item .span-3:first-of-type {
+		display: 									block;
+		grid-column: 								span 12;
 	}
 }
 

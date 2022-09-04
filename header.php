@@ -1,7 +1,8 @@
 <!doctype html>
 <?php 
-	$GLOBALS['nonce'] = base64_encode(random_bytes(20));
-	$nonce = $GLOBALS['nonce'];
+	$nonce = base64_encode(random_bytes(20));	
+	if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', $nonce );
+
 	if ( get_option('disable-content-security-policy') != "true" ) :
 		header( "Content-Security-Policy: script-src 'nonce-{$nonce}' 'strict-dynamic' 'unsafe-inline' 'unsafe-eval' https: http:; object-src 'none'; base-uri 'none'; block-all-mixed-content" ); 
 		header( "Strict-Transport-Security: max-age=63072000; includeSubDomains; preload" );
@@ -13,7 +14,7 @@
  
 <html <?php language_attributes(); ?>>
 <head>	
-	<script nonce="<?php echo $nonce; ?>" type="text/javascript">var startTime = Date.now();</script>	
+	<script nonce="<?php echo _BP_NONCE; ?>" type="text/javascript">var startTime = Date.now();</script>	
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="profile" href="https://gmpg.org/xfn/11">

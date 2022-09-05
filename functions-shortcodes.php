@@ -98,8 +98,8 @@ function battleplan_getSeason($atts, $content = null) {
 	if ( $spring == '' ) $spring = $summer;
 	if ( $fall == '' ) $fall = $winter;
 	if (date("m")>="03" && date("m")<="05") : return $spring; 
-	elseif (date("m")>="06" && date("m")<="08") : return $summer; 
-	elseif (date("m")>="09" && date("m")<="11") : return $fall; 
+	elseif (date("m")>="06" && date("m")<="09") : return $summer; 
+	elseif (date("m")>="10" && date("m")<="11") : return $fall; 
 	else: return $winter; endif; 
 }
 

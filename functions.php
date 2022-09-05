@@ -15,12 +15,20 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.0.2' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.1' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
 if ( !defined('_USER_LOGIN') ) define( '_USER_LOGIN', wp_get_current_user()->user_login );
 if ( !defined('_USER_ID') ) define( '_USER_ID', wp_get_current_user()->ID );
+
+$googlebots = array( 'google', 'lighthouse' );
+$bots = array('bot', 'crawler', 'spider', 'facebook', 'bing', 'linkedin', 'zgrab', 'addthis', 'fetcher', 'barkrowler', 'newspaper', 'yeti', 'daum', 'riddler', 'panscient', 'dataprovider', 'gigablast', 'qwantify', 'admantx', 'audit', 'docomo', 'yahoo', 'wayback', 'adbeat', 'netcraft');
+$bots = array_merge($bots, $googlebots);
+foreach ( $bots as $bot ) if ( strpos( strtolower($_SERVER["HTTP_USER_AGENT"]), $bot) !== false && !defined('_IS_BOT') ) define( '_IS_BOT', true );
+foreach ( $googlebots as $googlebot ) if ( strpos( strtolower($_SERVER["HTTP_USER_AGENT"]), $googlebot) !== false && !defined('_IS_GOOGLEBOT') ) define( '_IS_GOOGLEBOT', true );
+if ( !defined('_IS_BOT') ) define( '_IS_BOT', false );
+if ( !defined('_IS_GOOGLEBOT') ) define( '_IS_GOOGLEBOT', false );
 
 if ( !defined('_PAGE_SLUG') ) :
 	if ( basename(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ) : define( '_PAGE_SLUG', basename(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ); 
@@ -37,6 +45,8 @@ if ( !defined('_RAND_SEED') ) :
 	if ( (time() - get_option('rand-seed')) > 14000 ) update_option('rand-seed', time());
 	define( '_RAND_SEED', get_option('rand-seed') );
 endif;
+
+
 
 /*--------------------------------------------------------------
 # Functions to extend WordPress 
@@ -1063,10 +1073,17 @@ require_once get_template_directory().'/functions-public.php';
 require_once get_stylesheet_directory().'/functions-site.php';
 if ( is_admin() || _USER_LOGIN == "battleplanweb" ) { require_once get_template_directory().'/functions-admin.php'; } 
 
+// Add filter to search & replace final HTML output
+ob_start(); 
+add_action('shutdown', function() { 
+	$final = ''; 
+	$levels = ob_get_level();
+	for ($i = 0; $i < $levels; $i++) $final .= ob_get_clean();
+	echo apply_filters('final_output', $final);
+}, 0);
+	
 // Delay execution of non-essential scripts  --- && $GLOBALS['pagenow'] !== 'index.php'  had to be removed for CHR Services? WTF3
 if ( !is_admin() && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && strpos($GLOBALS['pagenow'], 'wp-cron.php') === false && !is_plugin_active( 'woocommerce/woocommerce.php' ) && strpos($_SERVER['REQUEST_URI'], '.xml') === false ) {
-	ob_start(); 
-	add_action('shutdown', function() { $final = ''; $levels = ob_get_level(); for ($i = 0; $i < $levels; $i++) { $final .= ob_get_clean(); } echo apply_filters('final_output', $final); }, 0);
 	add_filter('final_output', function($html) {
 		if ( $html != '' && $html != null && $html != 'undefined') :
 			$dom = new DOMDocument();
@@ -1094,23 +1111,25 @@ if ( !is_admin() && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && str
 	}); 
 
 	add_action( 'wp_print_footer_scripts', 'battleplan_delay_nonessential_scripts');
-	function battleplan_delay_nonessential_scripts() { ?>
-		<script nonce="<?php echo $GLOBALS['nonce']; ?>" type="text/javascript" id="delay-scripts">
-			const loadScriptsTimer=setTimeout(loadScripts,5000);
-			const userInteractionEvents=["mouseover","keydown","touchstart","touchmove","wheel"];
-			userInteractionEvents.forEach(function(event) {	
-				window.addEventListener(event, triggerScriptLoader, {passive:!0})});
-				function triggerScriptLoader() {
-					loadScripts();
-					clearTimeout(loadScriptsTimer);
-					userInteractionEvents.forEach(function(event) {
-						window.removeEventListener(event, triggerScriptLoader, {passive:!0})
-					})
+	function battleplan_delay_nonessential_scripts() { 
+		if ( !_IS_BOT ) : ?>
+			<script nonce="<?php echo $GLOBALS['nonce']; ?>" type="text/javascript" id="delay-scripts">
+				const loadScriptsTimer=setTimeout(loadScripts,2500);
+				const userInteractionEvents=["mouseover","keydown","touchstart","touchmove","wheel"];
+				userInteractionEvents.forEach(function(event) {	
+					window.addEventListener(event, triggerScriptLoader, {passive:!0})});
+					function triggerScriptLoader() {
+						loadScripts();
+						clearTimeout(loadScriptsTimer);
+						userInteractionEvents.forEach(function(event) {
+							window.removeEventListener(event, triggerScriptLoader, {passive:!0})
+						})
+					}
+				function loadScripts() {
+					setTimeout(function() { document.querySelectorAll("[data-loading='delay']").forEach(function(elem) { elem.setAttribute("src", elem.getAttribute("data-src")) }) }, 2500);
 				}
-			function loadScripts() {
-				setTimeout(function() { document.querySelectorAll("[data-loading='delay']").forEach(function(elem) { elem.setAttribute("src", elem.getAttribute("data-src")) }) }, 4000);
-			}
-		</script><?php
+			</script><?php
+		endif;
 	}
 }
 

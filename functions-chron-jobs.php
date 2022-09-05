@@ -38,16 +38,21 @@ if ( get_option('bp_setup_2022_08_09') != "completed" ) :
 	battleplan_delete_prefixed_options( 'gplkit_' );
 	battleplan_delete_prefixed_options( 'wp_rocket' );
 	battleplan_delete_prefixed_options( 'aam_' );
-	battleplan_delete_prefixed_options( 'bp_track_content_' );
-	
+	battleplan_delete_prefixed_options( 'bp_track_content_' );	
 
 	updateOption( 'bp_setup_2022_08_09', 'completed', false );			
 endif;
 
+$customerInfo = get_option( 'customer_info' );
+if ( get_option('bp_analytics_ua_complete') ) unset($customerInfo['google-tags']['ua-view']);
+if ( $customerInfo['site-type'] != 'profile' ) delete_option('site_login');
+unset($customerInfo['radius']);
+update_option( 'customer_info', $customerInfo );
+
 //wp_cache_delete ( 'alloptions', 'options' );
 	
 $bpChrons = get_option( 'bp_chrons_pages' ) ? get_option( 'bp_chrons_pages' ) : 0;
-$pagesLeft = 500 - $bpChrons;	
+$pagesLeft = 50 - $bpChrons;	
 $bpChrons++;
 updateOption( 'bp_chrons_pages', $bpChrons );
 
@@ -61,7 +66,7 @@ use Google\Analytics\Data\V1beta\Metric;
 //use Google\Analytics\Data\V1beta\FilterExpression;
 //use Google\Analytics\Data\V1beta\Filter;
 
-if ( $pagesLeft <= 0 ) :
+if ( ( $pagesLeft <= 0 || _IS_BOT ) && !_IS_GOOGLEBOT && !is_mobile() ) :
 
 	if (function_exists('battleplan_remove_user_roles')) battleplan_remove_user_roles();
 	if (function_exists('battleplan_create_user_roles')) battleplan_create_user_roles();
@@ -221,14 +226,21 @@ if ( $pagesLeft <= 0 ) :
 
 // Widget Options - Extended Settings
 	if ( !is_plugin_active('extended-widget-options/plugin.php') ) :
-
-		delete_option( 'bp_setup_widget_options_initial' );	
-		
+		delete_option( 'bp_setup_widget_options_initial' );			
 		battleplan_delete_prefixed_options( '_extended_widgetopts' );
 		battleplan_delete_prefixed_options( '_transient_widgetopts' );
 		battleplan_delete_prefixed_options( '_widgetopts' );
 		battleplan_delete_prefixed_options( 'widgetopts' );
 		battleplan_delete_prefixed_options( 'widget_' );
+	endif;
+	
+// Blackhold for Bad Bots
+	if ( is_plugin_active('blackhole-bad-bots/blackhole.php') ) : 	
+		$blackholeSettings = get_option( 'bbb_options' );			
+		$blackholeSettings['email_alerts'] = 1;
+		$blackholeSettings['email_address'] = get_option( 'admin_email' );
+		$blackholeSettings['email_from'] = get_option( 'wp_mail_smtp' )['mail']['from_email'];
+		update_option( 'bbb_options', $blackholeSettings );
 	endif;
 
 // Basic Settings		
@@ -346,9 +358,6 @@ if ( $pagesLeft <= 0 ) :
 /*--------------------------------------------------------------
 # Sync with Google Analytics
 --------------------------------------------------------------*/
-
-//try {
-
 
 	$GLOBALS['customer_info'] = get_option('customer_info');
 	$ga4_id = $GLOBALS['customer_info']['google-tags']['prop-id'];
@@ -559,11 +568,11 @@ if ( $pagesLeft <= 0 ) :
 				endif;
 			endforeach;
 
-			if ( array_slice($siteHitsUA, 160000, 40000) ) updateOption('bp_site_hits_ua_5', array_slice($siteHitsUA, 160000, 40000), false);	
-			if ( array_slice($siteHitsUA, 120000, 40000) ) updateOption('bp_site_hits_ua_4', array_slice($siteHitsUA, 120000, 40000), false);	
-			if ( array_slice($siteHitsUA, 80000, 40000) ) updateOption('bp_site_hits_ua_3', array_slice($siteHitsUA, 80000, 40000), false);	
-			if ( array_slice($siteHitsUA, 40000, 40000) ) updateOption('bp_site_hits_ua_2', array_slice($siteHitsUA, 40000, 40000), false);	
-			if ( array_slice($siteHitsUA, 0, 40000) ) updateOption('bp_site_hits_ua_1', array_slice($siteHitsUA, 0, 40000), false);	
+			if ( is_array($siteHitsUA) && array_slice($siteHitsUA, 160000, 40000) ) updateOption('bp_site_hits_ua_5', array_slice($siteHitsUA, 160000, 40000), false);	
+			if ( is_array($siteHitsUA) && array_slice($siteHitsUA, 120000, 40000) ) updateOption('bp_site_hits_ua_4', array_slice($siteHitsUA, 120000, 40000), false);	
+			if ( is_array($siteHitsUA) && array_slice($siteHitsUA, 80000, 40000) ) updateOption('bp_site_hits_ua_3', array_slice($siteHitsUA, 80000, 40000), false);	
+			if ( is_array($siteHitsUA) && array_slice($siteHitsUA, 40000, 40000) ) updateOption('bp_site_hits_ua_2', array_slice($siteHitsUA, 40000, 40000), false);	
+			if ( is_array($siteHitsUA) && array_slice($siteHitsUA, 0, 40000) ) updateOption('bp_site_hits_ua_1', array_slice($siteHitsUA, 0, 40000), false);	
 		endif;
 	endif;
 
@@ -571,7 +580,6 @@ if ( $pagesLeft <= 0 ) :
 	if ( $siteHitsUA && is_array($siteHitsGA4) ) $siteHits = array_merge($siteHitsGA4, $siteHitsUA);
 
 // Compile hits on specific pages
-/*
 	$pageCounts = array(1, 7, 30, 90, 365);
 	$today = strtotime($today);		
 	$citiesToExclude = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, OR'); // also change in functions-admin.php
@@ -640,10 +648,6 @@ if ( $pagesLeft <= 0 ) :
 			updateOption('bp_tracking_content', $allTracking, false);		
 		endforeach;
 	endif;
-	*/
-//} catch (Exception $e) {
-    //echo 'Caught exception: ',  $e->getMessage(), "\n";
-//}
 
 	updateOption( 'bp_chrons_pages', 0, true );
 	//updateOption( 'bp_chrons_rewind', date('Y-m-d', strtotime("-2 days")));

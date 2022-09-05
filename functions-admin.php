@@ -11,7 +11,6 @@
 # Site Stats
 # Site Audit Set Up
 # Contact Form 7 Set Up
-# Set Global Options
 
 --------------------------------------------------------------*/
 
@@ -1449,10 +1448,11 @@ function battleplan_reorderAdminBar() {
 // Create additional admin pages
 add_action( 'admin_menu', 'battleplan_admin_menu' );
 function battleplan_admin_menu() {
+	$chron = 50 - get_option( 'bp_chrons_pages' );
 	//add_menu_page( __( 'Run Chron', 'battleplan' ), __( 'Run Chron', 'battleplan' ), 'manage_options', 'run-chron', 'battleplan_force_run_chron', 'dashicons-performance', 3 );
 	add_submenu_page( 'index.php', 'Clear ALL', 'Clear ALL', 'manage_options', 'clear-all', 'battleplan_clear_all' );	
 	add_submenu_page( 'index.php', 'Clear HVAC', 'Clear HVAC', 'manage_options', 'clear-hvac', 'battleplan_clear_hvac' );	
-	add_submenu_page( 'index.php', 'Run Chron', 'Run Chron', 'manage_options', 'run-chron', 'battleplan_force_run_chron' );	
+	add_submenu_page( 'index.php', 'Run Chron', 'Run Chron <span class="awaiting-mod">'.$chron.'</span>', 'manage_options', 'run-chron', 'battleplan_force_run_chron' );	
 	add_submenu_page( 'index.php', 'Site Audit', 'Site Audit', 'manage_options', 'site-audit', 'battleplan_site_audit' );	
 }
 
@@ -2071,7 +2071,7 @@ function battleplan_admin_content_stats() {
 				$pageID = strtok($content_tracking,  '-');
 				$track = str_replace($pageID.'-', '', $content_tracking);
 
-				if ( isset($contentTracking) ):		
+				if ( isset($contentTracking) && isset($contentTracking[$pageID]) ):		
 					if ( is_array($contentTracking) && array_key_exists($pageID, $contentTracking ) ) :
 						$contentTracking[$pageID][$track] += 1;
 					else:
@@ -2431,9 +2431,9 @@ function battleplan_media_row_actions( $actions, $post ) {
 // Replace Users links with icons
 add_filter( 'user_row_actions', 'battleplan_user_row_actions', 90, 2 );
 function battleplan_user_row_actions( $actions, $post ) {
-	$edit = str_replace( "Edit", "<i class='dashicons-edit'></i>", $actions['edit'] );
-	$delete = str_replace( "Delete", "<i class='dashicons-trash'></i>", $actions['delete'] );
-	$switch = str_replace( "Switch&nbsp;To", "<i class='dashicons-randomize'></i>", $actions['switch_to_user'] );
+	if ( isset($actions['edit']) ) $edit = str_replace( "Edit", "<i class='dashicons-edit'></i>", $actions['edit'] );
+	if ( isset($actions['delete']) ) $delete = str_replace( "Delete", "<i class='dashicons-trash'></i>", $actions['delete'] );
+	if ( isset($actions['switch_to_user']) ) $switch = str_replace( "Switch&nbsp;To", "<i class='dashicons-randomize'></i>", $actions['switch_to_user'] );
 
 	return array( 'edit' => $edit, 'delete' => $delete, 'switch_to_user' => $switch );
 }
@@ -2821,115 +2821,4 @@ function battleplan_clear_hvac() {
 	function bp_cf7_add_before_panel_tabs( $panels ) { 
         echo ''; 
     }; 
-	
-/*--------------------------------------------------------------
-# Set Global Options
---------------------------------------------------------------*/
-add_action( 'admin_init', 'battleplan_setupGlobalOptions', 999 );
-function battleplan_setupGlobalOptions() {  
-
-// WP Mail SMTP Settings
-	if ( is_plugin_active('wp-mail-smtp/wp_mail_smtp.php') && get_option( 'bp_setup_wp_mail_smtp_initial' ) != 'completed' ) : 	
-		$apiKey1 = "keysib";
-		$apiKey2 = "ef3a9074e001fa21f640578f699994cba854489d3ef793";
-		$wpMailSettings = get_option( 'wp_mail_smtp' );		
-		$wpMailSettings['mail']['from_email'] = 'email@admin.'.str_replace('https://', '', get_bloginfo('url'));
-		$wpMailSettings['mail']['from_name'] = "Website Administrator";
-		$wpMailSettings['mail']['mailer'] = 'sendinblue';
-		$wpMailSettings['mail']['from_email_force'] = '1';
-		$wpMailSettings['mail']['from_name_force'] = '1';		
-		$wpMailSettings['sendinblue']['api_key'] = 'x'.$apiKey1.'-d08cc84fe45b37a420'.$apiKey2.'-AafFpD2zKkIN3SBZ';
-		$wpMailSettings['sendinblue']['domain'] = 'admin.'.str_replace('https://', '', get_bloginfo('url'));		
-		update_option( 'wp_mail_smtp', $wpMailSettings );
-		
-		update_option( 'bp_setup_wp_mail_smtp_initial', 'completed' );
-	endif;	
-
-// Yoast SEO Settings
-	if ( is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') && get_option( 'bp_setup_yoast_initial' ) != 'completed' ) :
-		$wpSEOSettings = get_option( 'wpseo_titles' );		
-		$wpSEOSettings['separator'] = 'sc-bull';
-		$wpSEOSettings['title-home-wpseo'] = '%%page%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';
-		$wpSEOSettings['title-author-wpseo'] = '%%name%%, Author at %%sitename%% %%page%%';
-		$wpSEOSettings['title-archive-wpseo'] = 'Archive %%sep%% %%sitename%% %%sep%% %%date%% ';
-		$wpSEOSettings['title-search-wpseo'] = 'You searched for %%searchphrase%% %%sep%% %%sitename%%';
-		$wpSEOSettings['title-404-wpseo'] = 'Page Not Found %%sep%% %%sitename%%';
-		$wpSEOTitle = ' %%page%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';		
-		$getCPT = get_post_types(); 
-		foreach ($getCPT as $postType) :
-			if ( $postType == "post" || $postType == "page" || $postType == "optimized" ) :
-				$wpSEOSettings['title-'.$postType] = '%%title%%'.$wpSEOTitle;
-				$wpSEOSettings['social-title-'.$postType] = '%%title%%'.$wpSEOTitle;
-			elseif ( $postType == "attachment" || $postType == "revision" || $postType == "nav_menu_item" || $postType == "custom_css" || $postType == "customize_changeset" || $postType == "oembed_cache" || $postType == "user_request" || $postType == "wp_block" || $postType == "elements" || $postType == "acf-field-group" || $postType == "acf-field" || $postType == "wpcf7_contact_form" ) :
-				// nothing //
-			else:
-				$wpSEOSettings['title-'.$postType] = ucfirst($postType).$wpSEOTitle;			
-				$wpSEOSettings['social-title-'.$postType] = ucfirst($postType).$wpSEOTitle;			
-			endif;		
-		endforeach;	
-		$wpSEOSettings['social-title-author-wpseo'] = '%%name%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';
-		$wpSEOSettings['social-title-archive-wpseo'] = '%%date%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';
-		$wpSEOSettings['noindex-author-wpseo'] = '1';
-		$wpSEOSettings['noindex-author-noposts-wpseo'] = '1';
-		$wpSEOSettings['noindex-archive-wpseo'] = '1';
-		$wpSEOSettings['disable-author'] = '1';
-		$wpSEOSettings['disable-date'] = '1';
-		$wpSEOSettings['disable-attachment'] = '1';
-		$wpSEOSettings['breadcrumbs-404crumb'] = 'Error 404: Page not found';
-		$wpSEOSettings['breadcrumbs-boldlast'] = '1';
-		$wpSEOSettings['breadcrumbs-archiveprefix'] = 'Archives for';
-		$wpSEOSettings['breadcrumbs-enable'] = '1';
-		$wpSEOSettings['breadcrumbs-home'] = 'Home';
-		$wpSEOSettings['breadcrumbs-searchprefix'] = 'You searched for';
-		$wpSEOSettings['breadcrumbs-sep'] = '»';
-		$wpSEOSettings['company_logo'] = get_bloginfo("url").'/wp-content/uploads/logo.png';
-		$wpSEOSettings['company_logo_id'] = attachment_url_to_postid( get_bloginfo("url").'/wp-content/uploads/logo.png' );
-		$wpSEOSettings['company_logo_meta']['url'] = get_bloginfo("url").'/wp-content/uploads/logo.png';	
-		$wpSEOSettings['company_logo_meta']['path'] = get_attached_file( attachment_url_to_postid( get_bloginfo("url").'/wp-content/uploads/logo.png' ) );
-		$wpSEOSettings['company_logo_meta']['id'] = attachment_url_to_postid( get_bloginfo("url").'/wp-content/uploads/logo.png' );
-		$wpSEOSettings['company_name'] = get_bloginfo('name');
-		$wpSEOSettings['company_or_person'] = 'company';
-		$wpSEOSettings['stripcategorybase'] = '1';
-		$wpSEOSettings['breadcrumbs-enable'] = '1';
-		update_option( 'wpseo_titles', $wpSEOSettings );
-
-		$wpSEOSocial = get_option( 'wpseo_social' );		
-		$wpSEOSocial['facebook_site'] = $GLOBALS['customer_info']['facebook'];
-		$wpSEOSocial['instagram_url'] = $GLOBALS['customer_info']['instagram'];
-		$wpSEOSocial['linkedin_url'] = $GLOBALS['customer_info']['linkedin'];
-		$wpSEOSocial['og_default_image'] = get_bloginfo("url").'/wp-content/uploads/logo.png';
-		$wpSEOSocial['og_default_image_id'] = attachment_url_to_postid( get_bloginfo("url").'/wp-content/uploads/logo.png' );
-		$wpSEOSocial['opengraph'] = '1';
-		$wpSEOSocial['pinterest_url'] = $GLOBALS['customer_info']['pinterest'];
-		$wpSEOSocial['twitter_site'] = $GLOBALS['customer_info']['twitter'];
-		$wpSEOSocial['youtube_url'] = $GLOBALS['customer_info']['youtube'];	
-		update_option( 'wpseo_social', $wpSEOSocial );
-
-		$wpSEOLocal = get_option( 'wpseo_local' );		
-		$wpSEOLocal['business_type'] = 'Organization';
-		$wpSEOLocal['location_address'] = $GLOBALS['customer_info']['street'];
-		$wpSEOLocal['location_city'] = $GLOBALS['customer_info']['site-city'];
-		$wpSEOLocal['location_state'] = $GLOBALS['customer_info']['state-full'];
-		$wpSEOLocal['location_zipcode'] = $GLOBALS['customer_info']['zip'];
-		$wpSEOLocal['location_country'] = 'US';
-		$wpSEOLocal['location_phone'] = $GLOBALS['customer_info']['area'].$GLOBALS['customer_info']['phone'];
-		$wpSEOLocal['location_email'] = $GLOBALS['customer_info']['email'];
-		$wpSEOLocal['location_url'] = get_bloginfo("url");
-		$wpSEOLocal['location_price_range'] = '$$';
-		$wpSEOLocal['location_payment_accepted'] = "Cash, Credit Cards, Paypal";
-		$wpSEOLocal['location_area_served'] = $GLOBALS['customer_info']['service-area'];
-		$wpSEOLocal['location_coords_lat'] = $GLOBALS['customer_info']['lat'];
-		$wpSEOLocal['location_coords_long'] = $GLOBALS['customer_info']['long'];
-		$wpSEOLocal['hide_opening_hours'] = 'on';
-		$wpSEOLocal['address_format'] = 'address-state-postal';	
-		
-		update_option( 'bp_setup_yoast_initial', 'completed' );
-	endif;
-	
-	//$smartCrawl = get_option( 'ari_fancy_lightbox_settings' );
-	//print_r($smartCrawl);		
-	//echo "------------------------------------------------------------>".get_attached_file( attachment_url_to_postid( get_bloginfo("url").'/wp-content/uploads/logo.png' ) );	
-	
-}
-
 ?>

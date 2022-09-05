@@ -44,7 +44,10 @@ if ( get_option('bp_setup_2022_08_09') != "completed" ) :
 endif;
 
 $customerInfo = get_option( 'customer_info' );
-if ( get_option('bp_analytics_ua_complete') ) unset($customerInfo['google-tags']['ua-view']);
+if ( get_option('bp_analytics_ua_complete') ) :
+	unset($customerInfo['google-tags']['ua-view']);
+	unset($GLOBALS['customer_info']['google-tags']['ua-view']);
+endif;
 if ( $customerInfo['site-type'] != 'profile' ) delete_option('site_login');
 unset($customerInfo['radius']);
 update_option( 'customer_info', $customerInfo );
@@ -52,7 +55,7 @@ update_option( 'customer_info', $customerInfo );
 //wp_cache_delete ( 'alloptions', 'options' );
 	
 $bpChrons = get_option( 'bp_chrons_pages' ) ? get_option( 'bp_chrons_pages' ) : 0;
-$pagesLeft = 50 - $bpChrons;	
+$pagesLeft = 50 - $bpChrons;	// change 50 in functions-admin.php to get accurate count on Run Chron menu item
 $bpChrons++;
 updateOption( 'bp_chrons_pages', $bpChrons );
 
@@ -70,19 +73,33 @@ if ( ( $pagesLeft <= 0 || _IS_BOT ) && !_IS_GOOGLEBOT && !is_mobile() ) :
 
 	if (function_exists('battleplan_remove_user_roles')) battleplan_remove_user_roles();
 	if (function_exists('battleplan_create_user_roles')) battleplan_create_user_roles();
+		
+	// Needed to clear out the unnecessary customer_info options such as 'ua-view' and 'radius'
+	if ( $GLOBALS['site-loc'] && $GLOBALS['site-loc'] != 1 ) :
+		delete_option('customer_info_'.$loc);
+		if (function_exists('battleplan_updateSiteOptions')) battleplan_updateSiteOptions();
+		$GLOBALS['customer_info'] = get_option('customer_info_'.$loc);
+	else:
+		delete_option('customer_info');
+		if (function_exists('battleplan_updateSiteOptions')) battleplan_updateSiteOptions();
+		$GLOBALS['customer_info'] = get_option('customer_info');
+	endif;
 
 // WP Mail SMTP Settings Update
-	if ( is_plugin_active('wp-mail-smtp/wp_mail_smtp.php') ) : 	
+	if ( is_plugin_active('wp-mail-smtp/wp_mail_smtp.php') ) : 
+		$apiKey1 = "keysib";
+		$apiKey2 = "ef3a9074e001fa21f640578f699994cba854489d3ef793";
 		$wpMailSettings = get_option( 'wp_mail_smtp' );			
 		$wpMailSettings['mail']['from_email'] = 'email@admin.'.str_replace('https://', '', get_bloginfo('url'));
 		$wpMailSettings['mail']['from_name'] = 'Website Administrator';
 		$wpMailSettings['mail']['mailer'] = 'sendinblue';
 		$wpMailSettings['mail']['from_email_force'] = '1';
-		$wpMailSettings['mail']['from_name_force'] = '1';		
+		$wpMailSettings['mail']['from_name_force'] = '1';	
+		$wpMailSettings['sendinblue']['api_key'] = 'x'.$apiKey1.'-d08cc84fe45b37a420'.$apiKey2.'-AafFpD2zKkIN3SBZ';
 		$wpMailSettings['sendinblue']['domain'] = 'admin.'.str_replace('https://', '', get_bloginfo('url'));				
 		update_option( 'wp_mail_smtp', $wpMailSettings );
 	endif;
-
+	
 // Contact Form 7 Settings Update
 	if ( is_plugin_active('contact-form-7/wp-contact-form-7.php') ) : 
 		$forms = get_posts( array ( 'numberposts'=>-1, 'post_type'=>'wpcf7_contact_form' ));
@@ -181,28 +198,30 @@ if ( ( $pagesLeft <= 0 || _IS_BOT ) && !_IS_GOOGLEBOT && !is_mobile() ) :
 		if ( isset($GLOBALS['customer_info']['youtube']) ) $wpSEOSocial['youtube_url'] = $GLOBALS['customer_info']['youtube'];	
 		update_option( 'wpseo_social', $wpSEOSocial );
 
-		$wpSEOLocal = get_option( 'wpseo_local' );		
-		if ( $GLOBALS['customer_info']['business-type'] == "organization" || $GLOBALS['customer_info']['business-type'] == "public figure" ) $wpSEOLocal['business_type'] = 'Organization';
-		if ( $GLOBALS['customer_info']['business-type'] == "" || $GLOBALS['customer_info']['business-type'] == "agriculture" || $GLOBALS['customer_info']['business-type'] == "animals" || $GLOBALS['customer_info']['business-type'] == "industrial" ) $wpSEOLocal['business_type'] = 'LocalBusiness';		
+		$wpSEOLocal = get_option( 'wpseo_local' );
+		if ( isset($GLOBALS['customer_info']['business-type']) ) :
+			if ( $GLOBALS['customer_info']['business-type'] == "organization" || $GLOBALS['customer_info']['business-type'] == "public figure" ) $wpSEOLocal['business_type'] = 'Organization';
+			if ( $GLOBALS['customer_info']['business-type'] == "" || $GLOBALS['customer_info']['business-type'] == "agriculture" || $GLOBALS['customer_info']['business-type'] == "animals" || $GLOBALS['customer_info']['business-type'] == "industrial" ) $wpSEOLocal['business_type'] = 'LocalBusiness';		
 
-		if ( $GLOBALS['customer_info']['business-type'] == "auto body" ) $wpSEOLocal['business_type'] = 'AutoBodyShop';		
-		if ( $GLOBALS['customer_info']['business-type'] == "automotive" ) $wpSEOLocal['business_type'] = 'AutomotiveBusiness';		
-		if ( $GLOBALS['customer_info']['business-type'] == "book store" ) $wpSEOLocal['business_type'] = 'BookStore';	
-		if ( $GLOBALS['customer_info']['business-type'] == "cleaning" || $GLOBALS['customer_info']['business-type'] == "landscaper" || $GLOBALS['customer_info']['business-type'] == "flooring contractor" || $GLOBALS['customer_info']['business-type'] == "stone" ) $wpSEOLocal['business_type'] = 'HomeAndConstructionBusiness';	
-		if ( $GLOBALS['customer_info']['business-type'] == "clothing store" ) $wpSEOLocal['business_type'] = 'ClothingStore';	
-		if ( $GLOBALS['customer_info']['business-type'] == "electrician" ) $wpSEOLocal['business_type'] = 'Electrician';	
-		if ( $GLOBALS['customer_info']['business-type'] == "financial" ) $wpSEOLocal['business_type'] = 'FinancialService';	
-		if ( $GLOBALS['customer_info']['business-type'] == "fire safety" || $GLOBALS['customer_info']['business-type'] == "professional" ) $wpSEOLocal['business_type'] = 'ProfessionalService';	
-		if ( $GLOBALS['customer_info']['business-type'] == "fitness" ) $wpSEOLocal['business_type'] = 'ExerciseGym';	
-		if ( $GLOBALS['customer_info']['business-type'] == "government" ) $wpSEOLocal['business_type'] = 'GovernmentOrganization';	
-		if ( $GLOBALS['customer_info']['business-type'] == "motel" ) $wpSEOLocal['business_type'] = 'Motel';	
-		if ( $GLOBALS['customer_info']['business-type'] == "musician" ) $wpSEOLocal['business_type'] = 'Store';	
-		if ( $GLOBALS['customer_info']['business-type'] == "novelty store" ) $wpSEOLocal['business_type'] = 'MusicGroup';	
-		if ( $GLOBALS['customer_info']['business-type'] == "physician" || $GLOBALS['customer_info']['business-type'] == "chiropractor" ) $wpSEOLocal['business_type'] = 'Physician';	
-		if ( $GLOBALS['customer_info']['business-type'] == "resort" ) $wpSEOLocal['business_type'] = 'Resort';		
-		if ( $GLOBALS['customer_info']['business-type'] == "restaurant" ) $wpSEOLocal['business_type'] = 'Restaurant';			
-		if ( $GLOBALS['customer_info']['business-type'] == "real estate" ) $wpSEOLocal['business_type'] = 'RealEstateAgent';		
-		if ( $GLOBALS['customer_info']['business-type'] == "tattoo shop" ) $wpSEOLocal['business_type'] = 'Tattoo parlor';	
+			if ( $GLOBALS['customer_info']['business-type'] == "auto body" ) $wpSEOLocal['business_type'] = 'AutoBodyShop';		
+			if ( $GLOBALS['customer_info']['business-type'] == "automotive" ) $wpSEOLocal['business_type'] = 'AutomotiveBusiness';		
+			if ( $GLOBALS['customer_info']['business-type'] == "book store" ) $wpSEOLocal['business_type'] = 'BookStore';	
+			if ( $GLOBALS['customer_info']['business-type'] == "cleaning" || $GLOBALS['customer_info']['business-type'] == "landscaper" || $GLOBALS['customer_info']['business-type'] == "flooring contractor" || $GLOBALS['customer_info']['business-type'] == "stone" ) $wpSEOLocal['business_type'] = 'HomeAndConstructionBusiness';	
+			if ( $GLOBALS['customer_info']['business-type'] == "clothing store" ) $wpSEOLocal['business_type'] = 'ClothingStore';	
+			if ( $GLOBALS['customer_info']['business-type'] == "electrician" ) $wpSEOLocal['business_type'] = 'Electrician';	
+			if ( $GLOBALS['customer_info']['business-type'] == "financial" ) $wpSEOLocal['business_type'] = 'FinancialService';	
+			if ( $GLOBALS['customer_info']['business-type'] == "fire safety" || $GLOBALS['customer_info']['business-type'] == "professional" ) $wpSEOLocal['business_type'] = 'ProfessionalService';	
+			if ( $GLOBALS['customer_info']['business-type'] == "fitness" ) $wpSEOLocal['business_type'] = 'ExerciseGym';	
+			if ( $GLOBALS['customer_info']['business-type'] == "government" ) $wpSEOLocal['business_type'] = 'GovernmentOrganization';	
+			if ( $GLOBALS['customer_info']['business-type'] == "motel" ) $wpSEOLocal['business_type'] = 'Motel';	
+			if ( $GLOBALS['customer_info']['business-type'] == "musician" ) $wpSEOLocal['business_type'] = 'Store';	
+			if ( $GLOBALS['customer_info']['business-type'] == "novelty store" ) $wpSEOLocal['business_type'] = 'MusicGroup';	
+			if ( $GLOBALS['customer_info']['business-type'] == "physician" || $GLOBALS['customer_info']['business-type'] == "chiropractor" ) $wpSEOLocal['business_type'] = 'Physician';	
+			if ( $GLOBALS['customer_info']['business-type'] == "resort" ) $wpSEOLocal['business_type'] = 'Resort';		
+			if ( $GLOBALS['customer_info']['business-type'] == "restaurant" ) $wpSEOLocal['business_type'] = 'Restaurant';			
+			if ( $GLOBALS['customer_info']['business-type'] == "real estate" ) $wpSEOLocal['business_type'] = 'RealEstateAgent';		
+			if ( $GLOBALS['customer_info']['business-type'] == "tattoo shop" ) $wpSEOLocal['business_type'] = 'Tattoo parlor';	
+		endif;
 
 		if ( $GLOBALS['customer_info']['site-type'] == "hvac" ) $wpSEOLocal['business_type'] = 'HVACBusiness';		
 
@@ -360,8 +379,8 @@ if ( ( $pagesLeft <= 0 || _IS_BOT ) && !_IS_GOOGLEBOT && !is_mobile() ) :
 --------------------------------------------------------------*/
 
 	$GLOBALS['customer_info'] = get_option('customer_info');
-	$ga4_id = $GLOBALS['customer_info']['google-tags']['prop-id'];
-	$ua_id = $GLOBALS['customer_info']['google-tags']['ua-view'];
+	$ga4_id = isset($GLOBALS['customer_info']['google-tags']['prop-id']) ? $GLOBALS['customer_info']['google-tags']['prop-id'] : null;
+	$ua_id = isset($GLOBALS['customer_info']['google-tags']['ua-view']) ? $GLOBALS['customer_info']['google-tags']['ua-view'] : null;
 	$client = new BetaAnalyticsDataClient(['credentials'=>get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json']);
 	$today = $end = date( "Y-m-d" );	
 	$rewind = date('Y-m-d', strtotime('-4 years'));
@@ -419,7 +438,7 @@ if ( ( $pagesLeft <= 0 || _IS_BOT ) && !_IS_GOOGLEBOT && !is_mobile() ) :
 			$engaged = $row->getMetricValues()[1]->getValue();							
 			$newUsers = $row->getMetricValues()[2]->getValue();							
 
-			if ( $states[$state] ) :					
+			if ( isset($states[$state]) ) :					
 				if ( $city == '(not set)' ) $location = ucwords($state);					
 				$page = rtrim($page, '/\\');
 
@@ -433,17 +452,17 @@ if ( ( $pagesLeft <= 0 || _IS_BOT ) && !_IS_GOOGLEBOT && !is_mobile() ) :
 
 		// Split session data into site hits
 		foreach ( $analyticsGA4 as $analyze ) :
-			$date = $analyze['date'];
-			$location = $analyze['location'];
-			$page = $analyze['page'];
-			$browser = $analyze['browser'];
-			$device = $analyze['device'];	
-			$resolution = $analyze['resolution'];
-			$pageviews = $analyze['pages-viewed'];
-			$sessions = (int)$analyze['sessions'];
-			$engaged = $analyze['engaged'];
-			$newUsers = $analyze['new-users'];
-			$referrer = $analyze['referrer'];
+			$date = isset($analyze['date']) ? $analyze['date'] : null;
+			$location = isset($analyze['location']) ? $analyze['location'] : null;
+			$page = isset($analyze['page']) ? $analyze['page'] : null;
+			$browser = isset($analyze['browser']) ? $analyze['browser'] : null;
+			$device = isset($analyze['device']) ? $analyze['device'] : null;
+			$resolution = isset($analyze['resolution']) ? $analyze['resolution'] : null;
+			$pageviews = isset($analyze['pages-viewed']) ? $analyze['pages-viewed'] : null;
+			$sessions = isset($analyze['sessions']) ? $analyze['sessions'] : null;
+			$engaged = isset($analyze['engaged']) ? $analyze['engaged'] : null;
+			$newUsers = isset($analyze['new-users']) ? $analyze['new-users'] : null;
+			$referrer = isset($analyze['referrer']) ? $analyze['referrer'] : null;
 			list($source, $medium) = explode(" / ", $analyze['source']);
 
 			if ( strpos( $referrer, parse_url( get_site_url(), PHP_URL_HOST ) ) === false ) :	
@@ -586,9 +605,9 @@ if ( ( $pagesLeft <= 0 || _IS_BOT ) && !_IS_GOOGLEBOT && !is_mobile() ) :
 
 	foreach ( $siteHits as $siteHit ) :		
 		$page = $siteHit['page'];
-		if ( !in_array( $siteHit['location'], $citiesToExclude) && strpos($page, 'fbclid') === false && strpos($page, 'reportkey') === false ) :					
+		if ( isset($siteHit['location']) && !in_array( $siteHit['location'], $citiesToExclude) && strpos($page, 'fbclid') === false && strpos($page, 'reportkey') === false ) :					
 			if ( $page == "" || $page == "/" ) $page = "Home";
-			if ( is_array($compilePaths) && array_key_exists($page, $compilePaths ) ) :
+			if ( isset($compilePaths) && is_array($compilePaths) && array_key_exists($page, $compilePaths ) ) :
 				$compilePaths[$page] += (int)$siteHit['pages-viewed'];
 			else:
 				$compilePaths[$page] = (int)$siteHit['pages-viewed'];

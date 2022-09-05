@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.1.1' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -45,8 +45,6 @@ if ( !defined('_RAND_SEED') ) :
 	if ( (time() - get_option('rand-seed')) > 14000 ) update_option('rand-seed', time());
 	define( '_RAND_SEED', get_option('rand-seed') );
 endif;
-
-
 
 /*--------------------------------------------------------------
 # Functions to extend WordPress 
@@ -567,10 +565,11 @@ function battleplan_random_seed($orderby_statement) {
     return $orderby_statement;
 }
 
-// Set up for multi-location sites
+// Store customer_info option into $GLOBALS['customer_info']
 $GLOBALS['customer_info'] = get_option('customer_info');
 $GLOBALS['site-loc'] = 1;		
 		
+// Set up for multi-location sites	
 add_action('after_setup_theme', 'battleplan_setLoc');
 function battleplan_setLoc() { 
 	$loc = do_shortcode('[get-url-var var="l"]');
@@ -1087,6 +1086,7 @@ if ( !is_admin() && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && str
 	add_filter('final_output', function($html) {
 		if ( $html != '' && $html != null && $html != 'undefined') :
 			$dom = new DOMDocument();
+			libxml_use_internal_errors(true);
 			$dom->loadHTML($html);
 			$script = $dom->getElementsByTagName('script'); 
 
@@ -1106,6 +1106,7 @@ if ( !is_admin() && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && str
 			$html = $dom->saveHTML();
 			$html = preg_replace('/<!DOCTYPE.*?<html>.*?<body><p>/ims', '', $html);
 			$html = str_replace('</p></body></html>', '', $html);
+			libxml_clear_errors();
 			return $html;
 		endif;
 	}); 
@@ -1113,7 +1114,7 @@ if ( !is_admin() && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && str
 	add_action( 'wp_print_footer_scripts', 'battleplan_delay_nonessential_scripts');
 	function battleplan_delay_nonessential_scripts() { 
 		if ( !_IS_BOT ) : ?>
-			<script nonce="<?php echo $GLOBALS['nonce']; ?>" type="text/javascript" id="delay-scripts">
+			<script nonce="<?php echo isset($GLOBALS['nonce']) ? $GLOBALS['nonce'] : null; ?>" type="text/javascript" id="delay-scripts">
 				const loadScriptsTimer=setTimeout(loadScripts,2500);
 				const userInteractionEvents=["mouseover","keydown","touchstart","touchmove","wheel"];
 				userInteractionEvents.forEach(function(event) {	
@@ -1660,7 +1661,7 @@ add_action('pre_current_active_plugins', 'battleplan_plugin_hide');
 function battleplan_plugin_hide() {
   	if (_USER_LOGIN != 'battleplanweb') : 
 		global $wp_list_table;
-		$hidearr = array('enable-media-replace/enable-media-replace.php', 'git-updater/git-updater.php', 'git-updater/github-updater.php', 'git-updater-pro/git-updater-pro.php', 'stop-referrer-spam/stop-referrer-spam.php');  
+		$hidearr = array('enable-media-replace/enable-media-replace.php', 'git-updater/git-updater.php', 'git-updater/github-updater.php', 'git-updater-pro/git-updater-pro.php', 'blackhole-bad-bots/blackhole.php');  
 
 		$myplugins = $wp_list_table->items;
 		foreach ($myplugins as $key => $val) :

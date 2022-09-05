@@ -38,7 +38,7 @@ return do_shortcode('
 				<div class="icon"><i class="fa fas fa-heartbeat" aria-hidden="true"></i></div>
 				[txt]
 					<h2>Air Quality</h2>
-					<p>American Standard’s line of indoor air quality solutions help keep your air cleaner and fresher. We offer plenty of options to improve your air quality from humidity and allergens.</p>
+					<p>American Standard’s line of indoor air quality solutions help keep your air cleaner and fresher. We offer plenty of options to improve your air quality from humidity and harmful allergens.</p>
 				[/txt]
 			[/col]
 		[/layout]

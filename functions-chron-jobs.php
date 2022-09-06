@@ -54,11 +54,6 @@ update_option( 'customer_info', $customerInfo );
 
 //wp_cache_delete ( 'alloptions', 'options' );
 	
-$bpChrons = get_option( 'bp_chrons_pages' ) ? get_option( 'bp_chrons_pages' ) : 0;
-$pagesLeft = 50 - $bpChrons;	// change 50 in functions-admin.php to get accurate count on Run Chron menu item
-$bpChrons = $bpChrons + 0.5;
-updateOption( 'bp_chrons_pages', $bpChrons );
-
 require_once get_template_directory().'/vendor/autoload.php';
 require_once get_template_directory().'/google-api-php-client/vendor/autoload.php';
 
@@ -69,22 +64,27 @@ use Google\Analytics\Data\V1beta\Metric;
 //use Google\Analytics\Data\V1beta\FilterExpression;
 //use Google\Analytics\Data\V1beta\Filter;
 
-if ( ( $pagesLeft <= 0 || _IS_BOT ) && !_IS_GOOGLEBOT && !is_mobile() ) :
+$bpChrons = get_option( 'bp_chrons_pages' ) ? get_option( 'bp_chrons_pages' ) : 0;
+$pagesLeft = 50 - $bpChrons;	// change 50 in functions-admin.php to get accurate count on Run Chron menu item
+$isDelay = get_option('chron_delay') !== null ? get_option('chron_delay') : false;
 
+if ( _IS_BOT && !_IS_GOOGLEBOT && ( $isDelay == false || $isDelay < time() ) ) :
+	update_option('chron_delay', time() + 43200);
+	processChron();
+elseif ( $pagesLeft <= 0 && !is_mobile() ) :
+	delete_option('chron_delay');
+	processChron();
+else:
+	if ( _USER_LOGIN != "battleplanweb" ) :
+		$bpChrons = $bpChrons + 0.5;
+		updateOption( 'bp_chrons_pages', $bpChrons );
+	endif;
+endif;
+	
+function processChron() {
 	if (function_exists('battleplan_remove_user_roles')) battleplan_remove_user_roles();
 	if (function_exists('battleplan_create_user_roles')) battleplan_create_user_roles();
 		
-	// Needed to clear out the unnecessary customer_info options such as 'ua-view' and 'radius'
-	if ( $GLOBALS['site-loc'] && $GLOBALS['site-loc'] != 1 ) :
-		delete_option('customer_info_'.$loc);
-		if (function_exists('battleplan_updateSiteOptions')) battleplan_updateSiteOptions();
-		$GLOBALS['customer_info'] = get_option('customer_info_'.$loc);
-	else:
-		delete_option('customer_info');
-		if (function_exists('battleplan_updateSiteOptions')) battleplan_updateSiteOptions();
-		$GLOBALS['customer_info'] = get_option('customer_info');
-	endif;
-
 // WP Mail SMTP Settings Update
 	if ( is_plugin_active('wp-mail-smtp/wp_mail_smtp.php') ) : 
 		$apiKey1 = "keysib";
@@ -259,6 +259,10 @@ if ( ( $pagesLeft <= 0 || _IS_BOT ) && !_IS_GOOGLEBOT && !is_mobile() ) :
 		$blackholeSettings['email_alerts'] = 1;
 		$blackholeSettings['email_address'] = get_option( 'admin_email' );
 		$blackholeSettings['email_from'] = get_option( 'wp_mail_smtp' )['mail']['from_email'];
+		$blackholeSettings['message_display'] = 'custom';
+		$blackholeSettings['message_custom'] = '<h1>Service Unavailable</h1>';
+		$blackholeSettings['bot_whitelist'] = '';
+		$blackholeSettings['ip_whitelist'] = '73.28.89.12';
 		update_option( 'bbb_options', $blackholeSettings );
 	endif;
 
@@ -675,12 +679,9 @@ if ( ( $pagesLeft <= 0 || _IS_BOT ) && !_IS_GOOGLEBOT && !is_mobile() ) :
 	$txt = "User Agent: ".$_SERVER['HTTP_USER_AGENT']."\r\n";
 	if ( _IS_BOT == true ) $txt .= "Flagged as Bot\r\n";
 	if ( _IS_GOOGLEBOT == true ) $txt .= "Flagged as Googlebot\r\n";
-	if ( _IS_BOT == false ) $txt .= "Not a Bot\r\n";
-	if ( _IS_GOOGLEBOT == false ) $txt .= "Not a Googlebot\r\n";
 	$headers = "From: ".get_option( 'wp_mail_smtp' )['mail']['from_email'];
 
 	mail($to,$subject,$txt,$headers);
-
 	//updateOption( 'bp_chrons_rewind', date('Y-m-d', strtotime("-2 days")));
-endif;	
+}
 ?>

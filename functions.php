@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.1.3' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.1.4' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -1027,7 +1027,7 @@ function battleplan_scripts() {
 	
 	if ( _USER_LOGIN == "battleplanweb" ) :
 		wp_enqueue_style( 'battleplan-admin-css', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION );	
-		wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array('jquery'), _BP_VERSION, false );	
+		wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array('quicktags'), _BP_VERSION, false );	
 	endif;
 	
 	if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) { wp_enqueue_script( 'comment-reply' ); }
@@ -1720,22 +1720,23 @@ function battleplan_loadFonts() {
 // Install Google Global Site Tags
 add_action('bp_google_tag_manager', 'battleplan_load_tag_manager');
 function battleplan_load_tag_manager() { 
-	$buildTags = $buildTagMgr = '';
-	$gtagEvents = array();
-	foreach ( $GLOBALS['customer_info']['google-tags'] as $gtag=>$value ) :	
-		if ( $gtag == "analytics" ) : if ( _USER_LOGIN != 'battleplanweb' && _IS_BOT != true ) : $mainAcct = $value; else: $mainAcct = "null"; endif; endif;
-		if ( $gtag == "analytics" || $gtag == "ads" || $gtag == "searchkings" ) $buildTags .= 'gtag("config", "'.$value.'");';				
-		if ( strpos($gtag, 'conversions' ) !== false ) :
-			if ( $gtag == "conversions" ) : 
-				$gtagEvents[] = $value; 
-			else:
-				$convert = str_replace( 'conversions-', '', $gtag );
-				$current = str_replace( '/', '', do_shortcode('[get-url var="false"]') );
-				if ( $convert == $current ) : $gtagEvents[] = $value; endif;
-			endif;
-		endif;				
-	endforeach;
-
+	if ( isset($GLOBALS['customer_info']['google-tags']) && is_array($GLOBALS['customer_info']['google-tags']) ) :
+		$buildTags = $buildTagMgr = '';
+		$gtagEvents = array();
+		foreach ( $GLOBALS['customer_info']['google-tags'] as $gtag=>$value ) :	
+			if ( $gtag == "analytics" ) : if ( _USER_LOGIN != 'battleplanweb' && _IS_BOT != true ) : $mainAcct = $value; else: $mainAcct = null; endif; endif;
+			if ( $gtag == "analytics" || $gtag == "ads" || $gtag == "searchkings" ) $buildTags .= 'gtag("config", "'.$value.'");';				
+			if ( strpos($gtag, 'conversions' ) !== false ) :
+				if ( $gtag == "conversions" ) : 
+					$gtagEvents[] = $value; 
+				else:
+					$convert = str_replace( 'conversions-', '', $gtag );
+					$current = str_replace( '/', '', do_shortcode('[get-url var="false"]') );
+					if ( $convert == $current ) : $gtagEvents[] = $value; endif;
+				endif;
+			endif;				
+		endforeach;
+	endif;
 	$buildTagMgr .= '<script nonce="'._BP_NONCE.'" async src="https://www.googletagmanager.com/gtag/js?id='.$mainAcct.'"></script>';
 	$buildTagMgr .= '<script nonce="'._BP_NONCE.'" async>
 		window.dataLayer = window.dataLayer || [];
@@ -1750,7 +1751,7 @@ function battleplan_load_tag_manager() {
 		endforeach;		
 		$buildTagMgr .= '<script nonce="'._BP_NONCE.'">'.$buildEvents.'</script>';
 	endif;		
-	
+
 	if (strpos($mainAcct, 'x') === false) echo $buildTagMgr;
 }
 

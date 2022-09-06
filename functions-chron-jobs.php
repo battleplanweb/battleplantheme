@@ -253,7 +253,7 @@ function processChron() {
 		battleplan_delete_prefixed_options( 'widget_' );
 	endif;
 	
-// Blackhold for Bad Bots
+// Blackhole for Bad Bots
 	if ( is_plugin_active('blackhole-bad-bots/blackhole.php') ) : 	
 		$blackholeSettings = get_option( 'bbb_options' );			
 		$blackholeSettings['email_alerts'] = 1;
@@ -264,6 +264,37 @@ function processChron() {
 		$blackholeSettings['bot_whitelist'] = '';
 		$blackholeSettings['ip_whitelist'] = '73.28.89.12';
 		update_option( 'bbb_options', $blackholeSettings );
+		
+		$blackholeList = get_option( 'bbb_badbots' );			
+		
+		$newList = array ( 
+			array ( "ip_address"=>"69.160.160.53", "request_uri"=>"/?blackhole=6c5f999ffa", "remote_host"=>"crawler-53.nicecrawler.com", "query_string"=>"blackhole=6c5f999ffa", "user_agent"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36", "referrer"=>"", "protocol"=>"HTTP/1.0", "method"=>"GET", "date"=>"2022/09/05 @ 01:19:06 pm" ), 
+			array ( "ip_address"=>"34.77.95.18", "request_uri"=>"/?blackhole=19191a8112", "remote_host"=>"18.95.77.34.bc.googleusercontent.com", "query_string"=>"blackhole=19191a8112", "user_agent"=>"Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:52.0) Gecko/20100101 Firefox/52.0", "referrer"=>"", "protocol"=>"HTTP/1.0", "method"=>"GET", "date"=>"2022/09/05 @ 02:09:27 pm" ), 
+			array ( "ip_address"=>"154.6.13.10", "request_uri"=>"/?blackhole=898d4a7722", "remote_host"=>"154.6.13.10", "query_string"=>"blackhole=898d4a7722", "user_agent"=>"panscient.com", "referrer"=>"", "protocol"=>"HTTP/1.0", "method"=>"GET", "date"=>"2022/09/05 @ 02:55:07 pm" ),  
+			array ( "ip_address"=>"119.135.67.238", "request_uri"=>"/?blackhole=25656d9c31", "remote_host"=>"119.135.67.238", "query_string"=>"blackhole=25656d9c31", "user_agent"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36", "referrer"=>"", "protocol"=>"HTTP/1.0", "method"=>"GET", "date"=>"2022/09/05 @ 04:48:57 pm" ),  
+			array ( "date"=>"2022/09/05 @ 10:12:04 pm", "request_uri"=>"/?blackhole=f2ff40259f", "query_string"=>"blackhole=f2ff40259f", "ip_address"=>"207.241.234.182", "remote_host"=>"crawl804.us.archive.org", "user_agent"=>"Mozilla/5.0 (compatible; archive.org_bot +http://archive.org/details/archive.org_bot)", "referrer"=>"", "protocol"=>"HTTP/1.0", "method"=>"GET" ),  
+			array ( "date"=>"2022/09/05 @ 11:03:11 pm", "request_uri"=>"/?blackhole=ffc37d8821", "query_string"=>"blackhole=ffc37d8821", "ip_address"=>"146.19.175.160", "remote_host"=>"146.19.175.160", "user_agent"=>"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/94.0.4606.61 Safari/537.36", "referrer"=>"", "protocol"=>"HTTP/1.0", "method"=>"GET" ), 
+		);
+		
+		function unique_multidim_array($array, $key) {
+			$temp_array = array();
+			$i = 0;
+			$key_array = array();
+
+			foreach($array as $val) {
+				if (!in_array($val[$key], $key_array)) {
+					$key_array[$i] = $val[$key];
+					$temp_array[$i] = $val;
+				}
+				$i++;
+			}
+			return $temp_array;
+		} 
+		
+		$blackholeList = array_merge($blackholeList, $newList);
+		$overwriteList = unique_multidim_array($blackholeList,'ip_address'); 
+		
+		update_option( 'bbb_badbots', $overwriteList );	
 	endif;
 
 // Basic Settings		

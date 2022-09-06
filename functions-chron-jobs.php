@@ -673,8 +673,10 @@ if ( ( $pagesLeft <= 0 || _IS_BOT ) && !_IS_GOOGLEBOT && !is_mobile() ) :
 	$to = get_option( 'admin_email' );
 	$subject = "Chron Job: ".get_bloginfo('url');
 	$txt = "User Agent: ".$_SERVER['HTTP_USER_AGENT']."\r\n";
-	$txt .= "Flagged as Bot: "._IS_BOT."\r\n";
-	$txt .= "Flagged as Googlebot: "._IS_GOOGLEBOT;
+	if ( _IS_BOT == true ) $txt .= "Flagged as Bot\r\n";
+	if ( _IS_GOOGLEBOT == true ) $txt .= "Flagged as Googlebot\r\n";
+	if ( _IS_BOT == false ) $txt .= "Not a Bot\r\n";
+	if ( _IS_GOOGLEBOT == false ) $txt .= "Not a Googlebot\r\n";
 	$headers = "From: ".get_option( 'wp_mail_smtp' )['mail']['from_email'];
 
 	mail($to,$subject,$txt,$headers);

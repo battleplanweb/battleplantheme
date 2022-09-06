@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.1.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.1.2' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -454,7 +454,7 @@ add_filter( 'wpcf7_form_elements', 'do_shortcode' );
 
 // Stamp images and teasers with date and figure counts
 function battleplan_countTease( $id ) {
-	if ( _USER_LOGIN != "battleplanweb" ) :
+	if ( _USER_LOGIN != "battleplanweb" && _IS_BOT != true ) :
 		$getViews = readMeta($id, 'log-views');
 		if ( !is_array($getViews) ) $getViews = array();
 		$viewsToday = $views7Day = $views30Day = $views90Day = $views180Day = $views365Day = intval(0); 	
@@ -1723,7 +1723,7 @@ function battleplan_load_tag_manager() {
 	$buildTags = $buildTagMgr = '';
 	$gtagEvents = array();
 	foreach ( $GLOBALS['customer_info']['google-tags'] as $gtag=>$value ) :	
-		if ( $gtag == "analytics" ) : if ( _USER_LOGIN != 'battleplanweb' ) : $mainAcct = $value; else: $mainAcct = "null"; endif; endif;
+		if ( $gtag == "analytics" ) : if ( _USER_LOGIN != 'battleplanweb' && _IS_BOT != true ) : $mainAcct = $value; else: $mainAcct = "null"; endif; endif;
 		if ( $gtag == "analytics" || $gtag == "ads" || $gtag == "searchkings" ) $buildTags .= 'gtag("config", "'.$value.'");';				
 		if ( strpos($gtag, 'conversions' ) !== false ) :
 			if ( $gtag == "conversions" ) : 

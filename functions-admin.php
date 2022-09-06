@@ -1448,7 +1448,7 @@ function battleplan_reorderAdminBar() {
 // Create additional admin pages
 add_action( 'admin_menu', 'battleplan_admin_menu' );
 function battleplan_admin_menu() {
-	$chron = 50 - get_option( 'bp_chrons_pages' );
+	$chron = round(50 - get_option( 'bp_chrons_pages' ));
 	//add_menu_page( __( 'Run Chron', 'battleplan' ), __( 'Run Chron', 'battleplan' ), 'manage_options', 'run-chron', 'battleplan_force_run_chron', 'dashicons-performance', 3 );
 	add_submenu_page( 'index.php', 'Clear ALL', 'Clear ALL', 'manage_options', 'clear-all', 'battleplan_clear_all' );	
 	add_submenu_page( 'index.php', 'Clear HVAC', 'Clear HVAC', 'manage_options', 'clear-hvac', 'battleplan_clear_hvac' );	

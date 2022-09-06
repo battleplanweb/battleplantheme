@@ -56,7 +56,7 @@ update_option( 'customer_info', $customerInfo );
 	
 $bpChrons = get_option( 'bp_chrons_pages' ) ? get_option( 'bp_chrons_pages' ) : 0;
 $pagesLeft = 50 - $bpChrons;	// change 50 in functions-admin.php to get accurate count on Run Chron menu item
-$bpChrons++;
+$bpChrons = $bpChrons + 0.5;
 updateOption( 'bp_chrons_pages', $bpChrons );
 
 require_once get_template_directory().'/vendor/autoload.php';
@@ -669,6 +669,16 @@ if ( ( $pagesLeft <= 0 || _IS_BOT ) && !_IS_GOOGLEBOT && !is_mobile() ) :
 	endif;
 
 	updateOption( 'bp_chrons_pages', 0, true );
+	
+	$to = get_option( 'admin_email' );
+	$subject = "Chron Job: ".get_bloginfo('url');
+	$txt = "User Agent: ".$_SERVER['HTTP_USER_AGENT']."\r\n";
+	$txt .= "Flagged as Bot: "._IS_BOT."\r\n";
+	$txt .= "Flagged as Googlebot: "._IS_GOOGLEBOT;
+	$headers = "From: ".get_option( 'wp_mail_smtp' )['mail']['from_email'];
+
+	mail($to,$subject,$txt,$headers);
+
 	//updateOption( 'bp_chrons_rewind', date('Y-m-d', strtotime("-2 days")));
 endif;	
 ?>

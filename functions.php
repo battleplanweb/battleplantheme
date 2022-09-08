@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.1.6' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.1.7' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -23,7 +23,7 @@ if ( !defined('_USER_LOGIN') ) define( '_USER_LOGIN', wp_get_current_user()->use
 if ( !defined('_USER_ID') ) define( '_USER_ID', wp_get_current_user()->ID );
 
 $googlebots = array( 'google', 'lighthouse' );
-$bots = array('bot', 'crawler', 'spider', 'facebook', 'bing', 'linkedin', 'zgrab', 'addthis', 'fetcher', 'barkrowler', 'newspaper', 'yeti', 'daum', 'riddler', 'panscient', 'dataprovider', 'gigablast', 'qwantify', 'admantx', 'audit', 'docomo', 'yahoo', 'wayback', 'adbeat', 'netcraft');
+$bots = array('bot', 'crawler', 'spider', 'facebook', 'bing', 'linkedin', 'zgrab', 'addthis', 'fetcher', 'barkrowler', 'newspaper', 'yeti', 'daum', 'riddler', 'panscient', 'dataprovider', 'gigablast', 'qwantify', 'admantx', 'audit', 'docomo', 'yahoo', 'wayback', 'adbeat', 'netcraft', 'wordpress');
 $bots = array_merge($bots, $googlebots);
 foreach ( $bots as $bot ) if ( strpos( strtolower($_SERVER["HTTP_USER_AGENT"]), $bot) !== false && !defined('_IS_BOT') ) define( '_IS_BOT', true );
 foreach ( $googlebots as $googlebot ) if ( strpos( strtolower($_SERVER["HTTP_USER_AGENT"]), $googlebot) !== false && !defined('_IS_GOOGLEBOT') ) define( '_IS_GOOGLEBOT', true );
@@ -210,20 +210,40 @@ function convertTime($howMany, $howMuch) {
 }
 
 // Display time elapsed since a UNIX stamp
-function timeElapsed($time, $precision = 5, $display="all") { // precision 5, 4, 3, 2, 1, 0 (only use 0 if NOT using display=all)   // display="all, months, days, hours, minutes, seconds
+function timeElapsed($time, $precision = 5, $display="all", $abbr="none") { // precision= 5, 4, 3, 2, 1, 0 (only use 0 if NOT using display=all)   // display=all, months, days, hours, minutes, seconds    // abbr=none, short (min sec hr), full (m s h)
 	$time = time() - $time;
 	$buildTime = '';
 	
+	if ( $abbr == "full" ) :
+		$month = $months = 'M';
+		$day = $days = 'd';
+		$hour = $hours = 'h';
+		$minute = $minutes = 'm';
+		$second = $seconds = 's';
+	elseif ( $abbr == "short" ) :
+		$month = $months = 'mo';
+		$day = $days = 'day';
+		$hour = $hours = 'hr';
+		$minute = $minutes = 'min';
+		$second = $seconds = 'sec';
+	else: 
+		$month = 'month'; $months = 'months';
+		$day = 'day'; $days = 'days';
+		$hour = 'hour'; $hours = 'hours';
+		$minute = 'minute'; $minutes = 'minutes';
+		$second = 'second'; $seconds = 'seconds';		
+	endif;
+	
 	if ( $display == "month" || $display == "months" ) :
-		return number_format($time/2592000, $precision).' months';
+		return number_format($time/2592000, $precision).' '.(number_format($time/2592000, $precision) == 1 ? $month : $months);
 	elseif ( $display == "day" || $display == "days" ) :
-		return number_format($time/86400, $precision).' days';
+		return number_format($time/86400, $precision).' '.(number_format($time/86400, $precision) == 1 ? $day : $days);
 	elseif ( $display == "hour" || $display == "hours" ) :
-		return number_format($time/3600, $precision).' hours';
+		return number_format($time/3600, $precision).' '.(number_format($time/3600, $precision) == 1 ? $hour : $hours);
 	elseif ( $display == "minute" || $display == "minutes" ) :
-		return number_format($time/60, $precision).' minutes';
+		return number_format($time/60, $precision).' '.(number_format($time/60, $precision) == 1 ? $minute : $minutes);
 	elseif ( $display == "second" || $display == "seconds" ) :
-		return number_format($time, $precision).' seconds';
+		return number_format($time, $precision).' '.(number_format($time, $precision) == 1 ? $second : $seconds);
 	else:
 		$s = $time%60;
 		$m = floor(($time%3600)/60);
@@ -233,17 +253,17 @@ function timeElapsed($time, $precision = 5, $display="all") { // precision 5, 4,
 
 		$timeElapsed = array( 'month'=>'', 'day'=>'', 'hour'=>'', 'minute'=>'', 'second'=>'' );
 
-		if ( $M > 0 ) $timeElapsed['month'] = $M.' month';
-		if ( $d > 0 ) $timeElapsed['day'] = $d.' day';
-		if ( $h > 0 ) $timeElapsed['hour'] = $h.' hour';
-		if ( $m > 0 ) $timeElapsed['minute'] = $m.' minute';
-		if ( $s > 0 ) $timeElapsed['second'] = $s.' second';
+		if ( $M > 0 ) $timeElapsed['month'] = $M.' '.$month;
+		if ( $d > 0 ) $timeElapsed['day'] = $d.' '.$day;
+		if ( $h > 0 ) $timeElapsed['hour'] = $h.' '.$hour;
+		if ( $m > 0 ) $timeElapsed['minute'] = $m.' '.$minute;
+		if ( $s > 0 ) $timeElapsed['second'] = $s.' '.$second;
 
-		if ( $M > 1 ) $timeElapsed['month'] .= 's';
-		if ( $d > 1 ) $timeElapsed['day'] .= 's';
-		if ( $h > 1 ) $timeElapsed['hour'] .= 's';
-		if ( $m > 1 ) $timeElapsed['minute'] .= 's';
-		if ( $s > 1 ) $timeElapsed['second'] .= 's';
+		if ( $M > 1 ) $timeElapsed['month'] = $M.' '.$months;
+		if ( $d > 1 ) $timeElapsed['day'] = $d.' '.$days;
+		if ( $h > 1 ) $timeElapsed['hour'] = $h.' '.$hours;
+		if ( $m > 1 ) $timeElapsed['minute'] = $m.' '.$minutes;
+		if ( $s > 1 ) $timeElapsed['second'] = $s.' '.$seconds;
 
 		$timeElapsed = array_filter($timeElapsed);	
 		return implode(', ', array_slice($timeElapsed, 0, $precision));

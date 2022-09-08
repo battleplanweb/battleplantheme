@@ -614,7 +614,7 @@ function battleplan_buildWidget( $atts, $content = null ) {
 			$display = false;
 
 			foreach ( $show as $check ) :
-				if ( strpos( _PAGE_SLUG_FULL, $check ) !== false ) $display = true;
+				if ( strpos( _PAGE_SLUG_FULL, $check ) !== false || ( $check == '404' && in_array( 'error404', get_body_class() )) || ( $check == 'home' && in_array( 'home', get_body_class() ))) $display = true; 
 			endforeach;
 		endif;	
 

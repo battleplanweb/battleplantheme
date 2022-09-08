@@ -562,16 +562,14 @@ function battleplan_handleEmploymentApp( $contact_form ) {
 		$submission = WPCF7_Submission::get_instance();
 		$submitted['posted_data'] = $submission->get_posted_data();
 		$age = $submitted['posted_data']['user-age'][0] . $submitted['posted_data']['user-age'][1] ;
-		$criminal = $submitted['posted_data']['criminal-history'][0] ;
-		$license = $submitted['posted_data']['driver-license'][0];
+		$criminal = $submitted['posted_data']['criminal-history'][0] !== null ? $submitted['posted_data']['criminal-history'][0] : null;
+		$license = $submitted['posted_data']['driver-license'][0] !== null ? $submitted['posted_data']['driver-license'][0] : null;
+		$background = $submitted['posted_data']['background-chk'][0] !== null ? $submitted['posted_data']['background-chk'][0] : null;
 
-		if ( intval($age) > 20 && str_contains($criminal, "No") && str_contains($license, 'Yes') ) :
-			$preSub = "QUALIFIED";
+		if ( intval($age) > 20 && ($criminal == null || str_contains($criminal, "No")) && ($license == null || str_contains($license, "Yes")) && ($background == null || str_contains($background, "Yes")) ):
+			$preSub = "< QUALIFIED >";
 		else:
-			if ( intval($age) < 21 ) $preSub = "x".$preSub;
-			if ( !str_contains($criminal, "No") ) $preSub = "x".$preSub;
-			if ( !str_contains($license, 'Yes') ) $preSub = "x".$preSub;
-			$preSub = "(".$preSub.")";
+			$preSub = "< unqualified >";
 		endif;
 		
 		$formMail['subject'] = $preSub." ".$formSubject;
@@ -584,10 +582,11 @@ function battleplan_handleEmploymentAppResponse($additional_mail, $contact_form)
 	$submission = WPCF7_Submission::get_instance();
 	$submitted['posted_data'] = $submission->get_posted_data();
 	$age = $submitted['posted_data']['user-age'][0] . $submitted['posted_data']['user-age'][1] ;
-	$criminal = $submitted['posted_data']['criminal-history'][0] ;
-	$license = $submitted['posted_data']['driver-license'][0];
+	$criminal = $submitted['posted_data']['criminal-history'][0] !== null ? $submitted['posted_data']['criminal-history'][0] : null;
+	$license = $submitted['posted_data']['driver-license'][0] !== null ? $submitted['posted_data']['driver-license'][0] : null;
+	$background = $submitted['posted_data']['background-chk'][0] !== null ? $submitted['posted_data']['background-chk'][0] : null;
 
-	if ( intval($age) > 20 && str_contains($criminal, "No") && str_contains($license, 'Yes') ) :
+	if ( intval($age) > 20 && ($criminal == null || str_contains($criminal, "No")) && ($license == null || str_contains($license, "Yes")) && ($background == null || str_contains($background, "Yes")) ):
     	return $additional_mail;
 	else:
 		return;

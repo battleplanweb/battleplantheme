@@ -1448,12 +1448,16 @@ function battleplan_reorderAdminBar() {
 // Create additional admin pages
 add_action( 'admin_menu', 'battleplan_admin_menu' );
 function battleplan_admin_menu() {
-	$chron = round(50 - get_option( 'bp_chrons_pages' ));
+	$chronTime = timeElapsed( get_option('bp_chron_time'), 2, 'all', 'short');
+	$siteUpdated = str_replace('-', '', get_option( "site_updated" ));
 	//add_menu_page( __( 'Run Chron', 'battleplan' ), __( 'Run Chron', 'battleplan' ), 'manage_options', 'run-chron', 'battleplan_force_run_chron', 'dashicons-performance', 3 );
-	add_submenu_page( 'index.php', 'Clear ALL', 'Clear ALL', 'manage_options', 'clear-all', 'battleplan_clear_all' );	
-	add_submenu_page( 'index.php', 'Clear HVAC', 'Clear HVAC', 'manage_options', 'clear-hvac', 'battleplan_clear_hvac' );	
-	add_submenu_page( 'index.php', 'Run Chron', 'Run Chron <span class="awaiting-mod">'.$chron.'</span>', 'manage_options', 'run-chron', 'battleplan_force_run_chron' );	
-	add_submenu_page( 'index.php', 'Site Audit', 'Site Audit', 'manage_options', 'site-audit', 'battleplan_site_audit' );	
+	
+	if ( _USER_LOGIN == "battleplanweb" ) :
+		add_submenu_page( 'index.php', 'Clear ALL', 'Clear ALL', 'manage_options', 'clear-all', 'battleplan_clear_all' );	
+		add_submenu_page( 'index.php', 'Clear HVAC', 'Clear HVAC', 'manage_options', 'clear-hvac', 'battleplan_clear_hvac' );	
+		add_submenu_page( 'index.php', 'Run Chron', 'Run Chron <div class="admin-note">'.$chronTime.'</div>', 'manage_options', 'run-chron', 'battleplan_force_run_chron' );	
+		add_submenu_page( 'index.php', 'Site Audit', 'Site Audit <div class="admin-note">'.date("F j, Y", (int)$siteUpdated).'</div>', 'manage_options', 'site-audit', 'battleplan_site_audit' );	
+	endif;
 }
 
 function battleplan_addSitePage() { 
@@ -1466,7 +1470,6 @@ function battleplan_admin_footer_text() {
 	$printFooter = '<div style="float:left; margin-right:8px;"><img src="https://battleplanwebdesign.com/wp-content/uploads/site-icon-80x80.png" /></div>';
 	$printFooter .= '<div style="float:left; margin-top:8px;">Powered by <a href="https://battleplanwebdesign.com" target="_blank">Battle Plan Web Design</a><br>';
 	$siteUpdated = str_replace('-', '', get_option( "site_updated" ));
-	if ( _USER_LOGIN == "battleplanweb" ) $printFooter .= 'Site Audit: '.date("F j, Y", (int)$siteUpdated).'<br>'; 
 	$printFooter .= 'Framework '._BP_VERSION.'<br>';
 	$printFooter .= 'WP '.get_bloginfo('version').'<br></div>';	
 	
@@ -1546,8 +1549,8 @@ function battleplan_remove_menus() {
 	remove_submenu_page( 'tools.php', 'erase-personal-data.php' );   				//Tools => Erase Personal Data
 	remove_submenu_page( 'wpseo_dashboard', 'wpseo_workouts' );   					//Yoast SEO => Workouts
 	remove_submenu_page( 'wpseo_dashboard', 'wpseo_licenses' );   					//Yoast SEO => Premium
-	remove_submenu_page( 'wpseo_dashboard', 'wpseo_redirects' );   					//Yoast SEO => Redirects
-	remove_submenu_page( 'wpseo_dashboard', 'wpseo_redirects' );   					//Yoast SEO => Redirects
+	//remove_submenu_page( 'wpseo_dashboard', 'wpseo_redirects' );   					//Yoast SEO => Redirects
+
 
 	add_submenu_page( 'upload.php', 'Favicon', 'Favicon', 'manage_options', 'customize.php' );	
 	
@@ -2466,7 +2469,7 @@ function battleplan_addWidgetPicViewsToImg( $post_ID ) {
 
 // Force clear all views for posts/pages
 function battleplan_force_run_chron() {
-	updateOption('bp_chrons_pages', 10000);	
+	updateOption('bp_force_chron', true);		
 	header("Location: /wp-admin/index.php");
 	exit();
 }  
@@ -2779,7 +2782,7 @@ function battleplan_clear_hvac() {
 
 	wp_reset_postdata();
 	
-	updateOption('bp_chrons_pages', 0);
+	updateOption('bp_chron_time', 0);
 	updateOption('bp_launch_date', date('Y-m-d'));
 	
 	delete_option('bp_google_reviews');		

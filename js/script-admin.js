@@ -234,7 +234,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	QTags.addButton( 'bp_paragraph', 'p', '<p>', '</p>\n', 'p', 'Paragraph Tag', 1 );
 	QTags.addButton( 'bp_li', 'li', ' <li>', '</li>', 'li', 'List Item', 100 );			
 
-	QTags.addButton( 'bp_widget', 'widget', '[widget title="Brand Logo" hide_title="true, false" lock="none, top, bottom" priority="1, 2, 3, 4, 5" image="no, yes" financing="no, yes" set="none, param"]\n', '[/widget]\n\n', 'widget', 'Widget', 1000 );	
+	QTags.addButton( 'bp_widget', 'widget', '[widget type="basic" title="Brand Logo (omit to hide)" lock="none, top, bottom" priority="2, 1, 3, 4, 5" set="none, param" class="" show="slug" hide="slud" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '[/widget]\n\n', 'widget', 'Widget', 1000 );			
 
 	QTags.addButton( 'bp_section', 'section', '[section name="becomes id attribute" hash="compensation for scroll on one-page sites" style="corresponds to css" width="default, stretch, full, edge, inline" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '[/section]\n\n', 'section', 'Section', 1000 );		
 	QTags.addButton( 'bp_layout', 'layout', ' [layout grid="1-auto, 1-1-1-1, 5e, content, 80px 100px 1fr" break="none, 3, 4" valign="start, stretch, center, end" class=""]\n\n', ' [/layout]\n', 'layout', 'Layout', 1000 );

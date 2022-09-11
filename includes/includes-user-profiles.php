@@ -120,10 +120,9 @@ function battleplan_login_redirect( $redirect_to, $request, $user ) {
 
 add_action( 'login_head', 'battleplan_addBaseToLoginPage' );
 function battleplan_addBaseToLoginPage() {
-	$nonce = $GLOBALS['nonce'];
 	$addScript = '<base target="_parent">'; 
 	$findThis = "a[href*='wp-login.php']";
-	$addScript .= '<script nonce="'.$nonce.'">setTimeout(function() {var getAll = document.querySelectorAll("'.$findThis.'"); for (var i=0; i<getAll.length; i++) {getAll[i].setAttribute("target", "_self");}}, 1000);</script>';
+	$addScript .= '<script nonce="'._BP_NONCE.'">setTimeout(function() {var getAll = document.querySelectorAll("'.$findThis.'"); for (var i=0; i<getAll.length; i++) {getAll[i].setAttribute("target", "_self");}}, 1000);</script>';
 	echo $addScript;
 } 
 
@@ -138,7 +137,6 @@ function battleplan_getUploadBtn($atts, $content = null) {
 	$submit = esc_attr($a['submit']);	
 	$multiple = esc_attr($a['multiple']);
 	if ( $multiple == 'false' ) : $multiple = ""; else: $multiple="multiple"; endif;
-	$nonce = $GLOBALS['nonce'];
 	
 	if ( $_FILES ) :
 		$files = $_FILES["files"];

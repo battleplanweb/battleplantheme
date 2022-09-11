@@ -519,10 +519,12 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	setTimeout(function() {
 		$('div.menu-search-box a.menu-search-bar').each(function() {
 			var searchBar = $(this), inputBox = searchBar.find('input[type="search"]'), inputW = searchBar.outerWidth(), magW = (searchBar.find('i.fa').outerWidth()) * 1.3;
-			searchBar.css({ "width": magW+"px" });
-			searchBar.click(function() {
-				searchBar.animate( { "width":inputW+'px' }, 150, function() { if ( typeof centerSubNav === 'function' ) { setTimeout(function() {centerSubNav();}, 300); } });	
-			});
+			if ( $(this).hasClass('reveal-click')) { 
+				searchBar.css({ "width": magW+"px" }); 
+				searchBar.click(function() {
+					searchBar.animate( { "width":inputW+'px' }, 150, function() { if ( typeof centerSubNav === 'function' ) { setTimeout(function() {centerSubNav();}, 300); } });	
+				});
+			}
 			if ( !isApple() ) {
 				inputBox.focus(function() {
 					var inputPos = -(getPosition(searchBar, 'top') - mobileMenuBarH() - 25);

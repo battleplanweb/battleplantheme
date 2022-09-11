@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.1.7' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.1.8' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -1133,8 +1133,8 @@ if ( !is_admin() && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && str
 
 	add_action( 'wp_print_footer_scripts', 'battleplan_delay_nonessential_scripts');
 	function battleplan_delay_nonessential_scripts() { 
-		if ( !_IS_BOT ) : ?>
-			<script nonce="<?php echo isset($GLOBALS['nonce']) ? $GLOBALS['nonce'] : null; ?>" type="text/javascript" id="delay-scripts">
+		if ( _IS_BOT != true ) : ?>
+			<script nonce="<?php echo _BP_NONCE !== null ? _BP_NONCE : null; ?>" type="text/javascript" id="delay-scripts">
 				const loadScriptsTimer=setTimeout(loadScripts,2500);
 				const userInteractionEvents=["mouseover","keydown","touchstart","touchmove","wheel"];
 				userInteractionEvents.forEach(function(event) {	
@@ -1147,7 +1147,12 @@ if ( !is_admin() && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && str
 						})
 					}
 				function loadScripts() {
-					setTimeout(function() { document.querySelectorAll("[data-loading='delay']").forEach(function(elem) { elem.setAttribute("src", elem.getAttribute("data-src")) }) }, 2500);
+					setTimeout(function() { 
+						document.querySelectorAll("[data-loading='delay']").forEach(function(elem) { 
+							elem.setAttribute("src", elem.getAttribute("data-src"));
+							elem..removeAttribute("data-src"); 
+						})
+					}, 2500);
 				}
 			</script><?php
 		endif;
@@ -1221,11 +1226,11 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 	}
 }
 
-function bp_display_menu_search( $searchText, $mobile='' ) { 
+function bp_display_menu_search( $searchText, $mobile='', $reveal='click' ) { 
 	$searchForm = '<form role="search" method="get" class="menu-search-form" action="'.home_url( '/' ).'">';
 	$searchForm .= '<label><span class="screen-reader-text">'._x( 'Search for:', 'label' ).'</span></label>';
 	$searchForm .= '<input type="hidden" value="1" name="sentence" />';
-	$searchForm .= '<a class="menu-search-bar"><i class="fa fas fa-search"></i><input type="search" class="search-field" placeholder="'.esc_attr_x( $searchText, 'placeholder' ).'" value="'.get_search_query().'" name="s" title="'.esc_attr_x( 'Search for:', 'label' ).'" /></a>';
+	$searchForm .= '<a class="menu-search-bar reveal-'.$reveal.'"><i class="fa fas fa-search"></i><input type="search" class="search-field" placeholder="'.esc_attr_x( $searchText, 'placeholder' ).'" value="'.get_search_query().'" name="s" title="'.esc_attr_x( 'Search for:', 'label' ).'" /></a>';
 	$searchForm .= '</form>';
 		  
 	return '<div class="menu-search-box'.$mobile.'" role="none">'.$searchForm.'</div>';

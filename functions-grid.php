@@ -29,7 +29,7 @@ function battleplan_restrictContent( $atts, $content = null ) {
 	if ( $max == "admin" || $max == "administrator" ) : $max = "administrator"; else: if ( substr($min, 0, 3) !== "bp_" ) : $max = "bp_".$max; endif; endif;
 	$min = esc_attr($a['min']);
 	if ( $min == "admin" || $min == "administrator" ) : $min = "administrator"; else: if ( substr($min, 0, 3) !== "bp_" ) : $min = "bp_".$min; endif; endif;
-	$role = battleplan_getUserRole( $identifier, 'name' );
+	$role = battleplan_getUserRole( '', 'name' );
 	$user_caps = get_role( $role )->capabilities;
 	$max_caps = get_role( $max )->capabilities;
 	$min_caps = get_role( $min )->capabilities;	

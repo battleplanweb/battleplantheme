@@ -300,9 +300,8 @@ add_action('shutdown', function() {
 	echo apply_filters('final_output', $final);
 }, 0);
 add_filter('final_output', function($content) {
-	$nonce = $GLOBALS['nonce'];
 	if ( !is_admin() ) : 
-		$content = str_replace("src='https://js.stripe.com","nonce='".$nonce."' src='https://js.stripe.com", $content); 
+		$content = str_replace("src='https://js.stripe.com","nonce='"._BP_NONCE."' src='https://js.stripe.com", $content); 
 	endif;
 	return $content;
 }); 

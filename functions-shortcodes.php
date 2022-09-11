@@ -1317,9 +1317,11 @@ function battleplan_usePageTemplate( $original ) {
 // Add search button to menu or other areas
 add_shortcode( 'add-search-btn', 'battleplan_addSearchBtn' );
 function battleplan_addSearchBtn( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'text'=>'Search Site' ), $atts );
+	$a = shortcode_atts( array( 'text'=>'Search Site', 'reveal'=>'click' ), $atts );
 	$text = esc_attr($a['text']);
-	return bp_display_menu_search($text);
+	$reveal = esc_attr($a['reveal']);
+	$mobile = '';
+	return bp_display_menu_search($text, $mobile, $reveal);
 }
 
 // Display RSS feed

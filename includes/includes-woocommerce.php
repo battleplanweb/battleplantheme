@@ -293,7 +293,7 @@ add_theme_support( 'woocommerce' );
 
 // Add nonce to Stripe payment form
 add_filter('final_output', function($content) {
-	if ( !is_admin() ) : 
+	if ( !is_admin() && defined('_BP_NONCE') ) : 
 		$content = str_replace("src='https://js.stripe.com","nonce='"._BP_NONCE."' src='https://js.stripe.com", $content); 
 	endif;
 	return $content;

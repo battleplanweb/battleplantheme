@@ -588,10 +588,9 @@ function battleplan_buildWidget( $atts, $content = null ) {
 
 	if ( $type == "menu" ) :		
 		$buildWidget = '<div id="desktop-navigation" class="widget widget-navigation widget-priority-5 lock-to-top widget_nav_menu hide-1 hide-2 hide-2 " data-priority="5">';
+		if ( $title != "hide" ) $buildWidget .= '<h3 class="widget-title">'.$title.'</h3>';
 		$buildWidget .= wp_nav_menu ( array ( 'echo' => false, 'container' => 'div', 'container_class' => 'menu-main-menu-container', 'menu_id' => 'main-menu-menu', 'menu_class' => 'menu', 'theme_location' =>'widget-menu', 'walker' => new Aria_Walker_Nav_Menu(), ) );
 		$buildWidget .= '</div>';
-
-		return $buildWidget;
 	else:
 		if ( $hide ) : if ( $addHide ) : $hide .= ', '.$addHide; endif;
 		else: if ( $addHide ) : $hide = $addHide; endif; endif;
@@ -607,28 +606,28 @@ function battleplan_buildWidget( $atts, $content = null ) {
 		if ( $title != "hide" ) $buildWidget .= '<h3 class="widget-title">'.$title.'</h3>';
 		$buildWidget .= '<div class="widget-content">'.do_shortcode($content).'</div>';
 		$buildWidget .= '</div>';	
-
-		if ( $show != '' ) : 
-			$show = str_replace(" ", "", $show); 
-			$show = explode(",", $show);		
-			$display = false;
-
-			foreach ( $show as $check ) :
-				if ( strpos( _PAGE_SLUG_FULL, $check ) !== false || ( $check == '404' && in_array( 'error404', get_body_class() )) || ( $check == 'home' && in_array( 'home', get_body_class() ))) $display = true; 
-			endforeach;
-		endif;	
-
-		if ( $hide != '' ) : 
-			$hide = str_replace(" ", "", $hide); 
-			$hide = explode(",", $hide); 
-
-			foreach ( $hide as $check ) :
-				if ( strpos( _PAGE_SLUG_FULL, $check ) !== false || ( $check == '404' && in_array( 'error404', get_body_class() )) || ( $check == 'home' && in_array( 'home', get_body_class() ))) $display = false; 
-			endforeach;
-		endif;
-
-		if ( $display == true) return $buildWidget;	
 	endif;
+
+	if ( $show != '' ) : 
+		$show = str_replace(" ", "", $show); 
+		$show = explode(",", $show);		
+		$display = false;
+
+		foreach ( $show as $check ) :
+			if ( strpos( _PAGE_SLUG_FULL, $check ) !== false || ( $check == '404' && in_array( 'error404', get_body_class() )) || ( $check == 'home' && in_array( 'home', get_body_class() ))) $display = true; 
+		endforeach;
+	endif;	
+
+	if ( $hide != '' ) : 
+		$hide = str_replace(" ", "", $hide); 
+		$hide = explode(",", $hide); 
+
+		foreach ( $hide as $check ) :
+			if ( strpos( _PAGE_SLUG_FULL, $check ) !== false || ( $check == '404' && in_array( 'error404', get_body_class() )) || ( $check == 'home' && in_array( 'home', get_body_class() ))) $display = false; 
+		endforeach;
+	endif;
+
+	if ( $display == true) return $buildWidget;	
 }
 
 ?>

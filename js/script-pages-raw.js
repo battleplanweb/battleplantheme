@@ -422,6 +422,7 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 // Removes double asterisk in required forms
 	$('abbr.required, em.required, span.required').text("");
 	setTimeout( function () { $('abbr.required, em.required, span.required').text(""); }, 2000);
+	setTimeout( function () { $('abbr.required, em.required, span.required').text(""); }, 6000);
 	
 // Move User Switching bar to top
 	moveDiv('#user_switching_switch_on','#page','before');

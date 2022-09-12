@@ -1680,9 +1680,10 @@ function battleplan_add_dashboard_widgets() {
 
 // Set up dashboard stats review
 $GLOBALS['displayTerms'] = array( 'week'=>7, 'month'=>30, 'quarter'=>90, 'year'=>365 );
-$GLOBALS['btn1'] = get_option('bp_admin_btn1') != null ? get_option('bp_admin_btn1') : "month";
-$GLOBALS['btn2'] = get_option('bp_admin_btn2') != null ? get_option('bp_admin_btn2') : "sessions";
-$GLOBALS['btn3'] = get_option('bp_admin_btn3') != null ? get_option('bp_admin_btn3') : "not-active";
+$bp_admin_settings = get_option('bp_admin_settings');
+$GLOBALS['btn1'] = $bp_admin_settings['btn1'] != null ? $bp_admin_settings['btn1'] : "month";
+$GLOBALS['btn2'] = $bp_admin_settings['btn2'] != null ? $bp_admin_settings['btn2'] : "sessions";
+$GLOBALS['btn3'] = $bp_admin_settings['btn3'] != null ? $bp_admin_settings['btn3'] : "not-active";
 
 $siteHits = get_option('bp_site_hits_ga4');	
 $siteHitsUA1 = get_option('bp_site_hits_ua_1') ? get_option('bp_site_hits_ua_1') : array();

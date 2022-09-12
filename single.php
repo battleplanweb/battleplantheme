@@ -92,16 +92,25 @@ get_header(); ?>
 		
 				$displayFooter = '<footer class="entry-footer">';
 		
-					if ( $tags != "false" ) :				
+					if ( $tags != "false" ) :	
+						$getTerms = '';
 						$displayFooter .= '<div class="single-tags '.get_post_type().'-tags">';
 		
 							$taxonomies = get_post_taxonomies();
 
-							if ( $tags == "list" ) : $btnClass = ""; $termClass = "tag-list"; else: $btnClass = "button"; $termClass = "tag-buttons"; endif;
+							if ( $tags == "list" ) : 
+								$btnClass = ""; 
+								$termClass = "tag-list";
+							else: 
+								$btnClass = "button"; 
+								$termClass = "tag-buttons";
+							endif;
 		
 							foreach ( $taxonomies as $tax) :		
 								$terms = get_the_terms( get_the_ID(), $tax ); 		 
-								if ( $terms && $tags == "list" ) : if ( $getTerms ) : $getTerms; endif; endif;		
+								if ( $terms && $tags == "list" ) :
+									if ( $getTerms ) $getTerms; 
+								endif;		
 								foreach($terms as $term):
 									if ( $term !== "blog" && $term !== "Blog" ) :
 										$getTerms .= '<a href="'.get_term_link( $term->slug, $tax).'" rel="tag" class="tax-'.$tax.' '.$btnClass.' '.$btnClass.'-'.$term->slug.'">'.$term->name.'</a>';

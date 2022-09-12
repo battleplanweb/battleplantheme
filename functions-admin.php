@@ -1602,7 +1602,7 @@ function battleplan_submenu_order( $menu_ord ) {
     $arr[] = $submenu['options-general.php'][45];
     $arr[] = $submenu['options-general.php'][49];
     $arr[] = $submenu['options-general.php'][46];
-    $arr[] = $submenu['options-general.php'][48];
+    $arr[] = $submenu['options-general.php'][48]; 
     $arr[] = $submenu['options-general.php'][47];
     $submenu['options-general.php'] = $arr;
 
@@ -2061,9 +2061,9 @@ function battleplan_admin_tech_stats() {
 	endforeach;	
 }
 
-// Set up Content Info widget on dashboard
+// Set up Content Visibility widget on dashboard
 function battleplan_admin_content_stats() {
-	$contentTracking = $totalTracking = array();
+	$contentTracking = $componentTracking = $colTracking = $totalTracking = array();
 	$allTracking = get_option('bp_tracking_content');
 	
 	if ( isset($allTracking) && is_array ($allTracking) ) :
@@ -2075,46 +2075,42 @@ function battleplan_admin_content_stats() {
 				$pageID = strtok($content_tracking,  '-');
 				$track = str_replace($pageID.'-', '', $content_tracking);
 
-				if ( isset($contentTracking) && isset($contentTracking[$pageID]) ):		
-					if ( is_array($contentTracking) && array_key_exists($pageID, $contentTracking ) ) :
-						$contentTracking[$pageID][$track] += 1;
-					else:
-						$contentTracking[$pageID][$track] = 1;
-					endif;	
-				endif;
+				if ( array_key_exists($pageID, $contentTracking ) && isset($contentTracking[$pageID][$track]) ) :
+					$contentTracking[$pageID][$track] += 1;
+				else:
+					$contentTracking[$pageID][$track] = 1;
+				endif;	
 			endif;			
 		endforeach;
 	endif;
 	
-	if ( isset($contentTracking) && is_array ($contentTracking) ) :
-		foreach ( $contentTracking as $id=>$content) :
-			foreach ( $content as $track=>$count ) :	
-				if ( $id == "track" ) :
-					if ( is_array($componentTracking) && array_key_exists($track, $componentTracking ) ) :
-						$componentTracking[$track] += $count;
-					else:
-						$componentTracking[$track] = $count;
-					endif;				
-				elseif ( strpos($track, '.') !== false ) :
-					$track = explode(".", $track);
-					$page = ucwords(get_the_title($id));
-					$page = (strlen($page) > 17) ? substr($page,0,15).'&hellip;' : $page;			
-					$column = $page.' · s'.$track[0].' c'.$track[1];
-					if ( is_array($colTracking) && array_key_exists($column, $colTracking ) ) :
-						$colTracking[$column] += $count;
-					else:
-						$colTracking[$column] = $count;
-					endif;				
-				else :
-					if ( is_array($totalTracking) && array_key_exists($track, $totalTracking ) ) :
-						$totalTracking[$track] += $count;
-					else:
-						$totalTracking[$track] = $count;
-					endif;				
-				endif;
-			endforeach;
+	foreach ( $contentTracking as $id=>$content) :
+		foreach ( $content as $track=>$count ) :	
+			if ( $id == "track" ) :
+				if ( array_key_exists($track, $componentTracking ) ) :
+					$componentTracking[$track] += $count;
+				else:
+					$componentTracking[$track] = $count;
+				endif;				
+			elseif ( strpos($track, '.') !== false ) :
+				$track = explode(".", $track);
+				$page = ucwords(get_the_title($id));
+				$page = (strlen($page) > 17) ? substr($page,0,15).'&hellip;' : $page;			
+				$column = $page.' · s'.$track[0].' c'.$track[1];
+				if ( array_key_exists($column, $colTracking ) ) :
+					$colTracking[$column] += $count;
+				else:
+					$colTracking[$column] = $count;
+				endif;				
+			else :
+				if ( array_key_exists($track, $totalTracking ) ) :
+					$totalTracking[$track] += $count;
+				else:
+					$totalTracking[$track] = $count;
+				endif;				
+			endif;
 		endforeach;
-	endif;
+	endforeach;
 	
 	echo '<div>';
 	
@@ -2158,9 +2154,9 @@ function battleplan_admin_pages_stats() {
 	foreach ( $GLOBALS['displayTerms'] as $display=>$days ) :
 		$allPages = array();
 		for ($x = 0; $x < $days; $x++) :	
-			if ( !isset($GLOBALS['dates'][$x])) break;
+			if ( !isset($GLOBALS['dates'][$x]) ) break;
 			$theDate = $GLOBALS['dates'][$x];
-			if ( isset ($GLOBALS['dailyStats'][$theDate]['page']) ) $pages = $GLOBALS['dailyStats'][$theDate]['page'];	
+			$pages = $GLOBALS['dailyStats'][$theDate]['page'];	
 			
 			foreach ( $pages as $page=>$counts ) :	
 				$excludePage = false;
@@ -2170,7 +2166,7 @@ function battleplan_admin_pages_stats() {
 				endforeach;		
 			
 				if ( $excludePage == false ) :
-					if ( is_array($allPages) && array_key_exists($page, $allPages ) ) :
+					if ( array_key_exists($page, $allPages ) ) :
 						$allPages[$page] += $counts;
 					else:
 						$allPages[$page] = $counts;
@@ -2179,7 +2175,7 @@ function battleplan_admin_pages_stats() {
 			endforeach;		
 		endfor;		
 		
-		if ( is_array($allPages) ) arsort($allPages);
+		arsort($allPages);
 		
 		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
 		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul>';		
@@ -2206,11 +2202,11 @@ function battleplan_admin_pages_stats() {
 
 // Set up Visitor Trends widget on dashboard
 function battleplan_admin_stats($time,$minDays,$maxDays,$colEnd) {
-	$count = $sessions = $search = $users = $pagesViewed = $engaged = $engagement = $endOfCol = 0;
+	$count = $sessions = $search = $users = $pagesViewed = $engaged = $engagement = $endOfCol = $pagesPerSession = 0;
 	$days = $minDays;		
 	$colNum = 1;
 	
-	echo "<table class='trends trends-".$time." trends-col-".$colNum."'><tr><td class='header dates'>".ucfirst($time)."</td><td class='page visits'>".ucwords($GLOBALS['btn2'])."</td></tr>";	
+	echo "<table class='trends trends-".$time." trends-col-".$colNum."'><tr><td class='header dates'>".ucfirst($time)."</td><td class='page visits'>".ucwords($GLOBALS['btn2'])."</td></tr>";
 
 	for ($x = 0; $x < 1500; $x++) {	
 		if ( !isset($GLOBALS['dates'][$x])) break;

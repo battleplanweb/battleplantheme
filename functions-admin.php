@@ -1686,11 +1686,11 @@ $GLOBALS['btn2'] = $bp_admin_settings['btn2'] != null ? $bp_admin_settings['btn2
 $GLOBALS['btn3'] = $bp_admin_settings['btn3'] != null ? $bp_admin_settings['btn3'] : "not-active";
 
 $siteHits = get_option('bp_site_hits_ga4');	
-$siteHitsUA1 = get_option('bp_site_hits_ua_1') ? get_option('bp_site_hits_ua_1') : array();
-$siteHitsUA2 = get_option('bp_site_hits_ua_2') ? get_option('bp_site_hits_ua_2') : array();
-$siteHitsUA3 = get_option('bp_site_hits_ua_3') ? get_option('bp_site_hits_ua_3') : array();
-$siteHitsUA4 = get_option('bp_site_hits_ua_4') ? get_option('bp_site_hits_ua_4') : array();
-$siteHitsUA5 = get_option('bp_site_hits_ua_5') ? get_option('bp_site_hits_ua_5') : array();
+$siteHitsUA1 = is_array(get_option('bp_site_hits_ua_1')) ? get_option('bp_site_hits_ua_1') : array();
+$siteHitsUA2 = is_array(get_option('bp_site_hits_ua_2')) ? get_option('bp_site_hits_ua_2') : array();
+$siteHitsUA3 = is_array(get_option('bp_site_hits_ua_3')) ? get_option('bp_site_hits_ua_3') : array();
+$siteHitsUA4 = is_array(get_option('bp_site_hits_ua_4')) ? get_option('bp_site_hits_ua_4') : array();
+$siteHitsUA5 = is_array(get_option('bp_site_hits_ua_5')) ? get_option('bp_site_hits_ua_5') : array();
 $siteHitsUA = array_merge( $siteHitsUA1, $siteHitsUA2, $siteHitsUA3, $siteHitsUA4, $siteHitsUA5);
 if ( $siteHitsUA && is_array($siteHits)) $siteHits = array_merge($siteHits, $siteHitsUA);
 

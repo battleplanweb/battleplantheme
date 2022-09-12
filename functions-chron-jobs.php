@@ -22,6 +22,18 @@ function battleplan_delete_prefixed_options( $prefix ) {
 if ( get_option('bp_setup_2022_09_12') != "completed" ) :
 	delete_option('bp_setup_2022_08_09');
 	
+	$bp_ua_1 = get_option('bp_site_hits_ua_1') != null ? get_option('bp_site_hits_ua_1') : null;
+	$bp_ua_2 = get_option('bp_site_hits_ua_2') != null ? get_option('bp_site_hits_ua_2') : null;
+	$bp_ua_3 = get_option('bp_site_hits_ua_3') != null ? get_option('bp_site_hits_ua_3') : null;
+	$bp_ua_4 = get_option('bp_site_hits_ua_4') != null ? get_option('bp_site_hits_ua_4') : null;
+	$bp_ua_5 = get_option('bp_site_hits_ua_5') != null ? get_option('bp_site_hits_ua_5') : null;
+	
+	if ( $bp_ua_1 != null ) updateOption('bp_site_hits_ua_1_backup', $bp_ua_1, false);
+	if ( $bp_ua_2 != null ) updateOption('bp_site_hits_ua_2_backup', $bp_ua_2, false);
+	if ( $bp_ua_3 != null ) updateOption('bp_site_hits_ua_3_backup', $bp_ua_3, false);
+	if ( $bp_ua_4 != null ) updateOption('bp_site_hits_ua_4_backup', $bp_ua_4, false);
+	if ( $bp_ua_5 != null ) updateOption('bp_site_hits_ua_5_backup', $bp_ua_5, false);
+	
 	delete_option('site_lat');
 	delete_option('site_long');
 	delete_option('site_radius');	
@@ -33,6 +45,7 @@ if ( get_option('bp_setup_2022_09_12') != "completed" ) :
 	
 	delete_option('chron_delay');
 	delete_option('bp_chrons_pages');
+	delete_option('bp_chrons_rewind');
 	
 	delete_option('content-tracking');
 	delete_option('content-scroll-pct');
@@ -58,8 +71,7 @@ if ( get_option('bp_setup_2022_09_12') != "completed" ) :
 
 	if ( $customerInfo['site-type'] != 'profile' ) delete_option('site_login');
 	unset($customerInfo['radius']);
-	update_option( 'customer_info', $customerInfo );
-	
+	updateOption( 'customer_info', $customerInfo );	
 	
 	$bp_btn_1 = get_option('bp_admin_btn1') != null ? get_option('bp_admin_btn1') : "month";
 	$bp_btn_2 = get_option('bp_admin_btn2') != null ? get_option('bp_admin_btn2') : "sessions";
@@ -545,5 +557,6 @@ function processChron() {
 			updateOption('bp_tracking_content', $allTracking, false);		
 		endforeach;
 	endif;
+
 }
 ?>

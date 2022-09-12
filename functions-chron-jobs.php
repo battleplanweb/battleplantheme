@@ -73,16 +73,7 @@ if ( get_option('bp_setup_2022_09_12') != "completed" ) :
 	unset($customerInfo['radius']);
 	updateOption( 'customer_info', $customerInfo );	
 	
-	$bp_btn_1 = get_option('bp_admin_btn1') != null ? get_option('bp_admin_btn1') : "month";
-	$bp_btn_2 = get_option('bp_admin_btn2') != null ? get_option('bp_admin_btn2') : "sessions";
-	$bp_btn_3 = get_option('bp_admin_btn3') != null ? get_option('bp_admin_btn3') : "not-active";
-	
-	delete_option('bp_admin_btn1');
-	delete_option('bp_admin_btn2');
-	delete_option('bp_admin_btn3');
-
-	$bp_admin_settings = array( 'btn1'=>$bp_btn_1, 'btn2'=>$bp_btn_2, 'btn3'=>$bp_btn_3 );	
-	updateOption( 'bp_admin_settings', $bp_admin_settings, false );	
+	delete_option('bp_admin_settings');
 	
 	updateOption( 'bp_setup_2022_09_12', 'completed', false );			
 endif;
@@ -492,12 +483,13 @@ function processChron() {
 	$pageCounts = array(1, 7, 30, 90, 365);
 	$today = strtotime($today);		
 	$citiesToExclude = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, OR'); // also change in functions-admin.php
+	$compilePaths = array();
 
 	foreach ( $siteHits as $siteHit ) :		
 		$page = $siteHit['page'];
 		if ( isset($siteHit['location']) && !in_array( $siteHit['location'], $citiesToExclude) && strpos($page, 'fbclid') === false && strpos($page, 'reportkey') === false ) :					
 			if ( $page == "" || $page == "/" ) $page = "Home";
-			if ( isset($compilePaths) && is_array($compilePaths) && array_key_exists($page, $compilePaths ) ) :
+			if ( array_key_exists($page, $compilePaths ) ) :
 				$compilePaths[$page] += (int)$siteHit['pages-viewed'];
 			else:
 				$compilePaths[$page] = (int)$siteHit['pages-viewed'];
@@ -554,9 +546,8 @@ function processChron() {
 			if ( $city == '(not set)' ) $location = ucwords($state);	
 			
 			$allTracking[] = array('content'=>$content_tracking, 'speed'=>$site_speed, 'location'=>$location);		
-			updateOption('bp_tracking_content', $allTracking, false);		
 		endforeach;
+		updateOption('bp_tracking_content', $allTracking, false);	
 	endif;
-
 }
 ?>

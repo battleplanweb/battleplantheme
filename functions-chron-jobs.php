@@ -19,83 +19,78 @@ function battleplan_delete_prefixed_options( $prefix ) {
 	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
 }	
 
-if ( get_option('bp_setup_2022_08_09') != "completed" ) :
-	delete_option('bp_setup_2022_07_26');
-	delete_option('bp_setup_2022_08_03');
+if ( get_option('bp_setup_2022_09_12') != "completed" ) :
+	delete_option('bp_setup_2022_08_09');
 	
-	delete_option('stats_basic');
-	delete_option('stats_referrers');
-	delete_option('stats_locations');	
-	delete_option('stats_tech');	
-	delete_option('bp_site_hits');
-	delete_option('page-scroll-pct');
-	delete_option('bg_debug');
+	delete_option('site_lat');
+	delete_option('site_long');
+	delete_option('site_radius');	
+	
+	delete_option('bp_setup_wp_mail_smtp_initial');	
+	delete_option('bp_setup_yoast_initial');
+	delete_option('product-update-may-2022');
+	delete_option('bp_analytics_ua_complete');
+	
+	delete_option('chron_delay');
+	delete_option('bp_chrons_pages');
+	
 	delete_option('content-tracking');
 	delete_option('content-scroll-pct');
 	
-	battleplan_delete_prefixed_options( 'strx-magic-floating-sidebar-' );	
-	battleplan_delete_prefixed_options( 'ewww_image_optimizer' );
-	battleplan_delete_prefixed_options( 'gplkit_' );
-	battleplan_delete_prefixed_options( 'wp_rocket' );
-	battleplan_delete_prefixed_options( 'aam_' );
-	battleplan_delete_prefixed_options( 'bp_track_content_' );	
-
-	updateOption( 'bp_setup_2022_08_09', 'completed', false );			
-endif;
-
-$customerInfo = get_option( 'customer_info' );
-if ( get_option('bp_analytics_ua_complete') ) :
+	delete_option( 'bp_setup_widget_options_initial' );			
+	battleplan_delete_prefixed_options( '_extended_widgetopts' );
+	battleplan_delete_prefixed_options( '_transient_widgetopts' );
+	battleplan_delete_prefixed_options( '_widgetopts' );
+	battleplan_delete_prefixed_options( 'widgetopts' );
+	battleplan_delete_prefixed_options( 'widget_' );
+	
+	battleplan_delete_prefixed_options( 'wp-smush-' );
+	battleplan_delete_prefixed_options( 'wp_smush_' );
+	
+	battleplan_delete_prefixed_options( 'bp_track_content_' );					
+	battleplan_delete_prefixed_options( 'bp_track_speed_' );	
+	battleplan_delete_prefixed_options( 'bp_track_l_' );	
+	battleplan_delete_prefixed_options( 'pct-viewed-' );
+	
+	$customerInfo = get_option( 'customer_info' );
 	unset($customerInfo['google-tags']['ua-view']);
 	unset($GLOBALS['customer_info']['google-tags']['ua-view']);
-endif;
-if ( $customerInfo['site-type'] != 'profile' ) delete_option('site_login');
-unset($customerInfo['radius']);
-update_option( 'customer_info', $customerInfo );
 
-//wp_cache_delete ( 'alloptions', 'options' );
+	if ( $customerInfo['site-type'] != 'profile' ) delete_option('site_login');
+	unset($customerInfo['radius']);
+	update_option( 'customer_info', $customerInfo );
 	
-require_once get_template_directory().'/vendor/autoload.php';
-require_once get_template_directory().'/google-api-php-client/vendor/autoload.php';
+	
+	$bp_btn_1 = get_option('bp_admin_btn1') != null ? get_option('bp_admin_btn1') : "month";
+	$bp_btn_2 = get_option('bp_admin_btn2') != null ? get_option('bp_admin_btn2') : "sessions";
+	$bp_btn_3 = get_option('bp_admin_btn3') != null ? get_option('bp_admin_btn3') : "not-active";
+	
+	delete_option('bp_admin_btn1');
+	delete_option('bp_admin_btn2');
+	delete_option('bp_admin_btn3');
 
+	$bp_admin_settings = array( 'btn1'=>$bp_btn_1, 'btn2'=>$bp_btn_2, 'btn3'=>$bp_btn_3 );	
+	updateOption( 'bp_admin_settings', $bp_admin_settings, false );	
+	
+	updateOption( 'bp_setup_2022_09_12', 'completed', false );			
+endif;
+
+// Determine if Chron should run
+require_once get_template_directory().'/vendor/autoload.php';
 use Google\Analytics\Data\V1beta\BetaAnalyticsDataClient;
 use Google\Analytics\Data\V1beta\DateRange;
 use Google\Analytics\Data\V1beta\Dimension;
 use Google\Analytics\Data\V1beta\Metric;
-//use Google\Analytics\Data\V1beta\FilterExpression;
-//use Google\Analytics\Data\V1beta\Filter;
 
 $forceChron = get_option('bp_force_chron') !== null ? get_option('bp_force_chron') : false;
 $chronTime = get_option('bp_chron_time') !== null ? get_option('bp_chron_time') : 0;
 $chronDue = $chronTime + 43200;
 
-delete_option('chron_delay');
-delete_option('bp_chrons_pages');
-delete_option('bp_force_chron');
-
 if ( $forceChron == true || ( _IS_BOT && !_IS_GOOGLEBOT && ( $chronDue < time() ) )) :
+	delete_option('bp_force_chron');
 	update_option('bp_chron_time', time());
 	processChron();
 endif;
-
-/*
-
-$bpChrons = get_option( 'bp_chrons_pages' ) ? get_option( 'bp_chrons_pages' ) : 0;
-$pagesLeft = 50 - $bpChrons;	// change 50 in functions-admin.php to get accurate count on Run Chron menu item
-$isDelay = get_option('chron_delay') !== null ? get_option('chron_delay') : false;
-
-if ( _IS_BOT && !_IS_GOOGLEBOT && ( $isDelay == false || $isDelay < time() ) ) :
-	update_option('chron_delay', time() + 43200);
-	processChron();
-elseif ( $pagesLeft <= 0 && !is_mobile() ) :
-	delete_option('chron_delay');
-	processChron();
-else:
-	if ( _USER_LOGIN != "battleplanweb" ) :
-		$bpChrons = $bpChrons + 0.5;
-		updateOption( 'bp_chrons_pages', $bpChrons );
-	endif;
-endif;
-*/
 	
 function processChron() {
 	if (function_exists('battleplan_remove_user_roles')) battleplan_remove_user_roles();
@@ -107,7 +102,7 @@ function processChron() {
 		$apiKey2 = "ef3a9074e001fa21f640578f699994cba854489d3ef793";
 		$wpMailSettings = get_option( 'wp_mail_smtp' );			
 		$wpMailSettings['mail']['from_email'] = 'email@admin.'.str_replace('https://', '', get_bloginfo('url'));
-		$wpMailSettings['mail']['from_name'] = 'Website Administrator';
+		$wpMailSettings['mail']['from_name'] = 'Website Administrator · '.$GLOBALS['customer_info']['name'];
 		$wpMailSettings['mail']['mailer'] = 'sendinblue';
 		$wpMailSettings['mail']['from_email_force'] = '1';
 		$wpMailSettings['mail']['from_name_force'] = '1';	
@@ -128,7 +123,7 @@ function processChron() {
 			if ( $formTitle == "Quote Request Form" ) $formTitle = "Quote Request";
 			if ( $formTitle == "Contact Us Form" ) $formTitle = "Customer Contact";		
 
-			$formMail['subject'] = $formTitle." · Website · ".$GLOBALS['customer_info']['name'];
+			$formMail['subject'] = $formTitle." · [user-name]";
 			$formMail['sender'] = "[user-name] <email@admin.".do_shortcode('[get-domain-name ext="true"]').">";
 			$formMail['additional_headers'] = "Reply-to: [user-name] <[user-email]>\nBcc: Website Administrator <email@battleplanwebdesign.com>";
 			$formMail['use_html'] = 1;
@@ -259,16 +254,6 @@ function processChron() {
 		update_option( 'wpseo_local', $wpSEOLocal );
 	endif;
 
-// Widget Options - Extended Settings
-	if ( !is_plugin_active('extended-widget-options/plugin.php') ) :
-		delete_option( 'bp_setup_widget_options_initial' );			
-		battleplan_delete_prefixed_options( '_extended_widgetopts' );
-		battleplan_delete_prefixed_options( '_transient_widgetopts' );
-		battleplan_delete_prefixed_options( '_widgetopts' );
-		battleplan_delete_prefixed_options( 'widgetopts' );
-		battleplan_delete_prefixed_options( 'widget_' );
-	endif;
-	
 // Blackhole for Bad Bots
 	if ( is_plugin_active('blackhole-bad-bots/blackhole.php') ) : 	
 		$blackholeSettings = get_option( 'bbb_options' );			
@@ -307,8 +292,7 @@ function processChron() {
 	update_option( 'default_ping_status', 'closed' );
 	update_option( 'permalink_structure', '/%postname%/' );
 	update_option( 'wpe-rand-enabled', '1' );
-	update_option( 'users_can_register', '0' );		
-	update_option( 'wpe-rand-enabled', '1' );
+	update_option( 'users_can_register', '0' );	
 	update_option( 'auto_update_core_dev', 'enabled' );
 	update_option( 'auto_update_core_minor', 'enabled' );
 	update_option( 'auto_update_core_major', 'enabled' );			
@@ -317,14 +301,7 @@ function processChron() {
 	battleplan_delete_prefixed_options( 'ac_cache_expires_' );
 	battleplan_delete_prefixed_options( 'ac_api_request_' );	
 	battleplan_delete_prefixed_options( 'ac_sorting_' );
-	battleplan_delete_prefixed_options( 'wp-smush-' );
-	battleplan_delete_prefixed_options( 'wp_smush_' );
 	battleplan_delete_prefixed_options( 'client_' );	
-	
-	battleplan_delete_prefixed_options( 'bp_track_content_' );					
-	battleplan_delete_prefixed_options( 'bp_track_speed_' );	
-	battleplan_delete_prefixed_options( 'bp_track_l_' );	
-	battleplan_delete_prefixed_options( 'pct-viewed-' );
 
 /*--------------------------------------------------------------
 # Universal Pages
@@ -397,23 +374,11 @@ function processChron() {
 /*--------------------------------------------------------------
 # Sync with Google Analytics
 --------------------------------------------------------------*/
-
 	$GLOBALS['customer_info'] = get_option('customer_info');
 	$ga4_id = isset($GLOBALS['customer_info']['google-tags']['prop-id']) ? $GLOBALS['customer_info']['google-tags']['prop-id'] : null;
-	$ua_id = isset($GLOBALS['customer_info']['google-tags']['ua-view']) ? $GLOBALS['customer_info']['google-tags']['ua-view'] : null;
 	$client = new BetaAnalyticsDataClient(['credentials'=>get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json']);
 	$today = $end = date( "Y-m-d" );	
-	$rewind = date('Y-m-d', strtotime('-4 years'));
-	if ( $rewind == '1970-01-01' ) $rewind = '2018-01-01';
-
-	//$prevHits = get_option('bp_site_hits');		
-	//foreach ( $prevHits as $hit=>$data ) :
-	//	if ( strtotime($data['date'] ) >= strtotime($rewind) ) :
-	//		unset($prevHits[$hit]);
-	//	else:
-	//		break;
-	//	endif;				
-	//endforeach;	
+	$rewind = date('Y-m-d', ($chronTime - 172800));
 
 	$states = array('alabama'=>'AL', 'arizona'=>'AZ', 'arkansas'=>'AR', 'california'=>'CA', 'colorado'=>'CO', 'connecticut'=>'CT', 'delaware'=>'DE', 'dist of columbia'=>'DC', 'dist. of columbia'=>'DC', 'district of columbia'=>'DC', 'florida'=>'FL', 'georgia'=>'GA', 'idaho'=>'ID', 'illinois'=>'IL', 'indiana'=>'IN', 'iowa'=>'IA', 'kansas'=>'KS', 'kentucky'=>'KY', 'louisiana'=>'LA', 'maine'=>'ME', 'maryland'=>'MD', 'massachusetts'=>'MA', 'michigan'=>'MI', 'minnesota'=>'MN', 'mississippi'=>'MS', 'missouri'=>'MO', 'montana'=>'MT', 'nebraska'=>'NE', 'nevada'=>'NV', 'new hampshire'=>'NH', 'new jersey'=>'NJ', 'new mexico'=>'NM', 'new york'=>'NY', 'north carolina'=>'NC', 'north dakota'=>'ND', 'ohio'=>'OH', 'oklahoma'=>'OK', 'oregon'=>'OR', 'pennsylvania'=>'PA', 'rhode island'=>'RI', 'south carolina'=>'SC', 'south dakota'=>'SD', 'tennessee'=>'TN', 'texas'=>'TX', 'utah'=>'UT', 'vermont'=>'VT', 'virginia'=>'VA', 'washington'=>'WA', 'washington d.c.'=>'DC', 'washington dc'=>'DC', 'west virginia'=>'WV', 'wisconsin'=>'WI', 'wyoming'=>'WY');
 	$removedStates = array('alaska'=>'AK', 'hawaii'=>'HI',);
@@ -501,7 +466,6 @@ function processChron() {
 	$siteHitsUA3 = get_option('bp_site_hits_ua_3') ? get_option('bp_site_hits_ua_3') : array();
 	$siteHitsUA4 = get_option('bp_site_hits_ua_4') ? get_option('bp_site_hits_ua_4') : array();
 	$siteHitsUA5 = get_option('bp_site_hits_ua_5') ? get_option('bp_site_hits_ua_5') : array();
-	//$siteHitsUA = array_merge( $siteHitsUA1, $siteHitsUA2, $siteHitsUA3, $siteHitsUA4, $siteHitsUA5);
 	
 	if ( $siteHitsUA1 ) $siteHitsUA = $siteHitsUA1;
 	if ( $siteHitsUA2 && is_array($siteHitsUA2) && is_array($siteHitsUA) ) $siteHitsUA = array_merge( $siteHitsUA, $siteHitsUA2 );
@@ -509,114 +473,8 @@ function processChron() {
 	if ( $siteHitsUA4 && is_array($siteHitsUA4) && is_array($siteHitsUA) ) $siteHitsUA = array_merge( $siteHitsUA, $siteHitsUA4 );
 	if ( $siteHitsUA5 && is_array($siteHitsUA5) && is_array($siteHitsUA) ) $siteHitsUA = array_merge( $siteHitsUA, $siteHitsUA5 );
 
-	if ( $ua_id && substr($ua_id, 0, 2) != '00' && !get_option('bp_analytics_ua_complete') ) :		
-	
-		if ( $siteHitsUA ) $end = date('Y-m-d', strtotime(end($siteHitsUA)['date']));	
-
-		$end = date('Y-m-d', strtotime($end.' - 1 day'));
-		$rewind = date('Y-m-d', strtotime($end.' - 80 days'));
-		
-		if ( strtotime($end) < 1532995200 || strtotime($end) < strtotime(get_option('bp_launch_date')) ) : // July 31, 2018		
-			updateOption('bp_analytics_ua_complete', date('Y-m-d'), false);		
-		else:
-		
-			function initializeAnalytics() {
-				$client = new Google_Client();
-				$client->setApplicationName("Stats Reporting");
-				$client->setAuthConfig(get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json');
-				$client->setScopes(['https://www.googleapis.com/auth/analytics.readonly']);
-				$initAnalytics = new Google_Service_Analytics($client);
-				return $initAnalytics; 
-			}
-
-			function getResults($initAnalytics, $ua_id, $start_date, $end_date, $param2, $param1) {
-				return $initAnalytics->data_ga->get ( 'ga:'.$ua_id, $start_date, $end_date, $param1, $param2 );
-			}
-
-			$initAnalytics = initializeAnalytics();	
-
-			if ( strtotime($rewind) < 1590969600 ) :
-				$param2 = array('dimensions'=>'ga:date, ga:city, ga:region, ga:date, ga:date, ga:date, ga:date', 'max-results'=>10000);
-				$param1 = 'ga:users, ga:users, ga:users, ga:users';
-			else :		
-				$param2 = array('dimensions'=>'ga:date, ga:city, ga:region, ga:sourceMedium, ga:pagePath, ga:browser, ga:deviceCategory', 'max-results'=>10000);
-				$param1 = 'ga:pageviews, ga:sessions, ga:bounces, ga:newUsers';
-			endif;
-
-			$results = getResults($initAnalytics, $ua_id, $rewind, $end, $param2, $param1);
-
-			foreach ( $results->getRows() as $row ) : 
-				$date = $row[0];
-				$city = $row[1];
-				$state = strtolower($row[2]);
-				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
-				$source = $row[3];
-				if ( $source == $date ) $source = "";
-				$page = $row[4];
-				if ( $page == $date ) $page = "";
-				$browser = $row[5];
-				if ( $browser == $date ) $browser = "";
-				$device = $row[6];		
-				if ( $device == $date ) $device = "";
-				$pagesViewed = $row[7];		
-				$sessions = $row[8];
-				if ( $sessions == $pagesViewed ) $pagesViewed = "";
-				if ( $row[9] != $date ) $engaged = $sessions - $row[9];			
-				$newUsers = $row[10];						
-
-				if ( isset($states[$state]) && $sessions != '' ) :					
-					if ( $city == '(not set)' ) $location = ucwords($state);					
-					$page = rtrim($page, '/\\');
-
-					$analyticsUA[] = array ('date'=>$date, 'location'=>$location, 'source'=>$source, 'page'=>$page, 'browser'=>$browser, 'device'=>$device, 'pages-viewed'=>$pagesViewed, 'sessions'=>$sessions, 'engaged'=>$engaged, 'new-users'=>$newUsers );	
-				endif;
-			endforeach;
-
-			if ( is_array($analyticsUA) ) arsort($analyticsUA);		
-			//$siteHitsUA = get_option('bp_site_hits_ua');
-
-			// Split session data into site hits
-			foreach ( $analyticsUA as $analyze ) :
-				if ( isset ($analyze['date']) ) $date = $analyze['date'];
-				if ( isset ($analyze['location']) ) $location = $analyze['location'];
-				if ( isset ($analyze['page']) ) $page = $analyze['page'];
-				if ( isset ($analyze['browser']) ) $browser = $analyze['browser'];
-				if ( isset ($analyze['device']) ) $device = $analyze['device'];	
-				if ( isset ($analyze['resolution']) ) $resolution = $analyze['resolution'];
-				if ( isset ($analyze['pages-viewed']) ) $pageviews = (int)$analyze['pages-viewed'];
-				if ( isset ($analyze['sessions']) ) $sessions = (int)$analyze['sessions'];
-				if ( isset ($analyze['engaged']) ) $engaged = (int)$analyze['engaged'];
-				if ( isset ($analyze['new-users']) ) $newUsers = (int)$analyze['new-users'];
-				if ( isset ($analyze['referrer']) ) $referrer = (int)$analyze['referrer'];
-				if ( isset ($analyze['source']) ) list($source, $medium) = explode(" / ", $analyze['source']);			
-
-				if ( $sessions > 1 ) :			
-					$pageviews = $pageviews / $sessions;
-					$engaged = $engaged / $sessions;
-					$newUsers = $newUsers / $sessions;
-
-					for ( $x=0;$x<$sessions;$x++) :			
-						$siteHitsUA[] = array ('date'=>$date, 'location'=>$location, 'source'=>$source, 'medium'=>$medium, 'page'=>$page, 'browser'=>$browser, 'device'=>$device, 'pages-viewed'=>$pageviews, 'sessions'=>'1', 'engaged'=>$engaged, 'new-users'=>$newUsers );	
-					endfor;
-
-				elseif ( $sessions == 1 ) :			
-					$siteHitsUA[] = array ('date'=>$date, 'location'=>$location, 'source'=>$source, 'medium'=>$medium, 'page'=>$page, 'browser'=>$browser, 'device'=>$device, 'pages-viewed'=>$pageviews, 'sessions'=>'1', 'engaged'=>$engaged, 'new-users'=>$newUsers );	
-
-				elseif ( $sessions == 0 ) :
-					$siteHitsUA[] = array ('date'=>$date, 'page'=>$page, 'pages-viewed'=>$pageviews, 'sessions'=>'0', 'engaged'=>$engaged );				
-				endif;
-			endforeach;
-
-			if ( is_array($siteHitsUA) && array_slice($siteHitsUA, 160000, 40000) ) updateOption('bp_site_hits_ua_5', array_slice($siteHitsUA, 160000, 40000), false);	
-			if ( is_array($siteHitsUA) && array_slice($siteHitsUA, 120000, 40000) ) updateOption('bp_site_hits_ua_4', array_slice($siteHitsUA, 120000, 40000), false);	
-			if ( is_array($siteHitsUA) && array_slice($siteHitsUA, 80000, 40000) ) updateOption('bp_site_hits_ua_3', array_slice($siteHitsUA, 80000, 40000), false);	
-			if ( is_array($siteHitsUA) && array_slice($siteHitsUA, 40000, 40000) ) updateOption('bp_site_hits_ua_2', array_slice($siteHitsUA, 40000, 40000), false);	
-			if ( is_array($siteHitsUA) && array_slice($siteHitsUA, 0, 40000) ) updateOption('bp_site_hits_ua_1', array_slice($siteHitsUA, 0, 40000), false);	
-		endif;
-	endif;
-
 	$siteHits = $siteHitsGA4;
-	if ( $siteHitsUA && is_array($siteHitsGA4) ) $siteHits = array_merge($siteHitsGA4, $siteHitsUA);
+	if ( $siteHitsUA && is_array($siteHitsUA) && is_array($siteHitsGA4) ) $siteHits = array_merge($siteHitsGA4, $siteHitsUA);
 
 // Compile hits on specific pages
 	$pageCounts = array(1, 7, 30, 90, 365);
@@ -687,15 +545,5 @@ function processChron() {
 			updateOption('bp_tracking_content', $allTracking, false);		
 		endforeach;
 	endif;
-
-	$to = get_option( 'admin_email' );
-	$subject = "Chron Job: ".get_bloginfo('url');
-	$txt = "User Agent: ".$_SERVER['HTTP_USER_AGENT']."\r\n";
-	if ( _IS_BOT == true ) $txt .= "Flagged as Bot\r\n";
-	if ( _IS_GOOGLEBOT == true ) $txt .= "Flagged as Googlebot\r\n";
-	$headers = "From: ".get_option( 'wp_mail_smtp' )['mail']['from_email'];
-
-	mail($to,$subject,$txt,$headers);
-	//updateOption( 'bp_chrons_rewind', date('Y-m-d', strtotime("-2 days")));
 }
 ?>

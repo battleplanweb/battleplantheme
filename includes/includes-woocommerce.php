@@ -292,13 +292,6 @@ function battleplan_woo_column_settings() {
 add_theme_support( 'woocommerce' );
 
 // Add nonce to Stripe payment form
-ob_start();
-add_action('shutdown', function() {
-    $final = '';
-    $levels = ob_get_level();
-    for ($i = 0; $i < $levels; $i++) { $final .= ob_get_clean(); }
-	echo apply_filters('final_output', $final);
-}, 0);
 add_filter('final_output', function($content) {
 	if ( !is_admin() ) : 
 		$content = str_replace("src='https://js.stripe.com","nonce='"._BP_NONCE."' src='https://js.stripe.com", $content); 

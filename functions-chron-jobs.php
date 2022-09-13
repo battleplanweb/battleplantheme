@@ -87,7 +87,7 @@ use Google\Analytics\Data\V1beta\Metric;
 
 $forceChron = get_option('bp_force_chron') !== null ? get_option('bp_force_chron') : false;
 $chronTime = get_option('bp_chron_time') !== null ? get_option('bp_chron_time') : 0;
-$chronDue = $chronTime + 43200;
+$chronDue = $chronTime + rand(40000,70000);
 
 if ( $forceChron == true || ( _IS_BOT && !_IS_GOOGLEBOT && ( $chronDue < time() ) )) :
 	delete_option('bp_force_chron');

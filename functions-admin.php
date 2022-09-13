@@ -1561,7 +1561,7 @@ function battleplan_remove_menus() {
 	wp_reset_postdata();	
 	
 	if ( is_null(get_page_by_path('widgets', OBJECT, 'elements')) ) :
-		add_submenu_page( 'edit.php?post_type=elements', 'Widgets', 'Widgets', 'manage_options', 'widgets.php' );
+		//add_submenu_page( 'edit.php?post_type=elements', 'Widgets', 'Widgets', 'manage_options', 'widgets.php' );
 	endif;	
 
 	add_submenu_page( 'edit.php?post_type=elements', 'Menus', 'Menus', 'manage_options', 'nav-menus.php' );		
@@ -2494,7 +2494,7 @@ function battleplan_site_audit() {
 				if ( $log == "lighthouse-mobile-si" || $log == "lighthouse-desktop-si" || $log == "lighthouse-mobile-fcp" || $log == "lighthouse-desktop-fcp" || $log == "lighthouse-mobile-lcp" || $log == "lighthouse-desktop-lcp" || $log == "lighthouse-mobile-tti" || $log == "lighthouse-desktop-tti" ) : $decimals = 1; endif;
 				if ( $log == "lighthouse-mobile-cls" || $log == "lighthouse-desktop-cls" ) : $decimals = 3; endif;
 				$updateNum = number_format((string)$_POST[$log], $decimals);
-				$siteAudit[$today][$log] = str_replace('.0', '', $updateNum);
+				//$siteAudit[$today][$log] = str_replace('.0', '', $updateNum);
 			elseif ( !$siteAudit[$today][$log] && $siteAudit[$today][$log] != '0' ) : 
 				$siteAudit[$today][$log] = "n/a";
 			endif;		

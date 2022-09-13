@@ -60,6 +60,7 @@
 
 	.logged-in {
 		margin-top: 								-32px !important; /* compensate for the margin automatically placed on html */
+		margin-bottom: 								41px !important;
 	}
 
 	.logged-in #wpadminbar {
@@ -92,9 +93,9 @@
 		bottom: 									41px;
 	}
 
-	.logged-in .wp-google-badge-faux {
-		height: 									103px !important;
-	}
+	/*.logged-in .wp-google-badge-faux {
+		height: 									41px !important;
+	}*/
 
 	#wpadminbar * {
 		font-size: 									16px;

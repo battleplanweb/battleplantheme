@@ -66,8 +66,8 @@ if ( get_option('bp_setup_2022_09_12') != "completed" ) :
 	battleplan_delete_prefixed_options( 'pct-viewed-' );
 	
 	$customerInfo = get_option( 'customer_info' );
-	unset($customerInfo['google-tags']['ua-view']);
-	unset($GLOBALS['customer_info']['google-tags']['ua-view']);
+	if ( isset($customerInfo['google-tags']['ua-view'])) unset($customerInfo['google-tags']['ua-view']);
+	if ( isset($customerInfo['google-tags']['ua-view'])) unset($GLOBALS['customer_info']['google-tags']['ua-view']);
 
 	if ( $customerInfo['site-type'] != 'profile' ) delete_option('site_login');
 	unset($customerInfo['radius']);
@@ -260,7 +260,7 @@ function processChron() {
 // Blackhole for Bad Bots
 	if ( is_plugin_active('blackhole-bad-bots/blackhole.php') ) : 	
 		$blackholeSettings = get_option( 'bbb_options' );			
-		$blackholeSettings['email_alerts'] = 1;
+		$blackholeSettings['email_alerts'] = 0;
 		$blackholeSettings['email_address'] = get_option( 'admin_email' );
 		$blackholeSettings['email_from'] = get_option( 'wp_mail_smtp' )['mail']['from_email'];
 		$blackholeSettings['message_display'] = 'custom';

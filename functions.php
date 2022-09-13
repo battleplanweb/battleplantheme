@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.2.4' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.2.5' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -1148,9 +1148,9 @@ if ( !is_admin() && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && str
 					}
 				function loadScripts() {
 					setTimeout(function() { 
-						document.querySelectorAll("[data-loading='delay']").forEach(function(elem) { 
+						document.querySelectorAll("[data-loading='delay']").forEach(function(elem) {  
 							elem.setAttribute("src", elem.getAttribute("data-src"));
-							elem..removeAttribute("data-src"); 
+							elem.removeAttribute("data-src"); 
 						})
 					}, 2500);
 				}

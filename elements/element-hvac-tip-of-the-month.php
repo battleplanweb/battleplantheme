@@ -95,7 +95,7 @@ endif;
 if ( $month == "September" ) :
 	$image = $imageBase."tip-of-the-month-september.jpg";
 	$alt = "Clean your bathroom fans.";
-	$headline = "Clean Bathroom Fans";
+	$headline = "Clean Your Bathroom Fans";
 	$tip = do_shortcode("
 		<p>Your bathroom fans work hard all year, and this is the perfect time to ensure the work they do is as efficient as possible.</p>
 		<p>Remove the covers from your fans, and wash them thoroughly with soap and water. Once the covers are off, use a toothbrush to clean the fan blades before reapplying the cover.</p>
@@ -138,7 +138,7 @@ endif;
 
 return do_shortcode('
 	[txt size="100"]
-	 <h2>'.$headline.'</h2>
+	 <h2><span style="font-size:70%">'.$month.' Tip Of The Month</span></h2><h2>'.$headline.'</h2>
 
 	 <img src="'.$image.'" alt="'.$alt.'" class="alignright size-third-s" width="260" height="260" style="aspect-ratio:260/260" />
 

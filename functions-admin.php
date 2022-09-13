@@ -1680,7 +1680,6 @@ function battleplan_add_dashboard_widgets() {
 
 // Set up dashboard stats review
 $GLOBALS['displayTerms'] = array( 'week'=>7, 'month'=>30, 'quarter'=>90, 'year'=>365 );
-$bp_admin_settings = get_option('bp_admin_settings');
 $GLOBALS['btn1'] = get_option('bp_admin_btn1') != null ? get_option('bp_admin_btn1') : "month";
 $GLOBALS['btn2'] = get_option('bp_admin_btn2') != null ? get_option('bp_admin_btn2') : "sessions";
 $GLOBALS['btn3'] = get_option('bp_admin_btn3') != null ? get_option('bp_admin_btn3') : "not-active";
@@ -1699,7 +1698,11 @@ $GLOBALS['citiesToExclude'] = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, 
 
 // Set up array accounting for each day, no skips	
 $blankDate = 0;
-if ( is_array($siteHits) ) $blankDate = strtotime($siteHits[array_key_last($siteHits)]['date']);
+if ( is_array($siteHits) ) :
+	$blankDate = strtotime($siteHits[array_key_last($siteHits)]['date']);
+else:
+	$siteHits = array();
+endif;
 $totalDays = (strtotime($today) - $blankDate) / 86400;
 
 for ( $x=0;$x<$totalDays;$x++) :
@@ -1708,7 +1711,6 @@ for ( $x=0;$x<$totalDays;$x++) :
 endfor;
 
 // Compile data into daily stats
-if ( !is_array($siteHits) ) $siteHits = array();
 $lastView = $totalPageviews = $totalSessions = $totalEngaged = $totalNewUsers = $allPages = 0;
 $allLocations = $allSources = $allMediums = $allPages = $allBrowsers = $allDevices = $allResolutions = array();
 
@@ -1736,7 +1738,7 @@ foreach ( $siteHits as $siteHit ) :
 			if ( isset($siteHit['new-users']) ) $totalNewUsers = $totalNewUsers + (int)$siteHit['new-users'];											
 
 			if ( isset($siteHit['page']) && isset($siteHit['pages-viewed']) ) :
-				if ( is_array($allPages) && array_key_exists($siteHit['page'], $allPages ) ) :
+				if ( array_key_exists($siteHit['page'], $allPages) ) :
 					$allPages[$siteHit['page']] += (int)$siteHit['pages-viewed'];
 				else:
 					$allPages[$siteHit['page']] = (int)$siteHit['pages-viewed'];
@@ -1745,7 +1747,7 @@ foreach ( $siteHits as $siteHit ) :
 
 			if ( $siteHit['sessions'] == 1 ) :
 				if ( isset($siteHit['location']) ) :
-					if ( is_array($allLocations) && array_key_exists($siteHit['location'], $allLocations ) ) :
+					if ( array_key_exists($siteHit['location'], $allLocations ) ) :
 						$allLocations[$siteHit['location']] += 1;
 					else:
 						$allLocations[$siteHit['location']] = 1;
@@ -1753,7 +1755,7 @@ foreach ( $siteHits as $siteHit ) :
 				endif;									
 
 				if ( isset($siteHit['source']) ) :
-					if ( is_array($allSources) && array_key_exists($siteHit['source'], $allSources ) ) :
+					if ( array_key_exists($siteHit['source'], $allSources ) ) :
 						$allSources[$siteHit['source']] += 1;
 					else:
 						$allSources[$siteHit['source']] = 1;
@@ -1761,7 +1763,7 @@ foreach ( $siteHits as $siteHit ) :
 				endif;									
 
 				if ( isset($siteHit['medium']) ) :
-					if ( is_array($allMediums) && array_key_exists($siteHit['medium'], $allMediums ) ) :
+					if ( array_key_exists($siteHit['medium'], $allMediums ) ) :
 						$allMediums[$siteHit['medium']] += 1;
 					else:
 						$allMediums[$siteHit['medium']] = 1;
@@ -1769,7 +1771,7 @@ foreach ( $siteHits as $siteHit ) :
 				endif;									
 
 				if ( isset($siteHit['browser']) ) :
-					if ( is_array($allBrowsers) && array_key_exists($siteHit['browser'], $allBrowsers ) ) :
+					if ( array_key_exists($siteHit['browser'], $allBrowsers ) ) :
 						$allBrowsers[$siteHit['browser']] += 1;
 					else:
 						$allBrowsers[$siteHit['browser']] = 1;
@@ -1777,7 +1779,7 @@ foreach ( $siteHits as $siteHit ) :
 				endif;									
 
 				if ( isset($siteHit['device']) ) :
-					if ( is_array($allDevices) && array_key_exists($siteHit['device'], $allDevices ) ) :
+					if ( array_key_exists($siteHit['device'], $allDevices ) ) :
 						$allDevices[$siteHit['device']] += 1;
 					else:
 						$allDevices[$siteHit['device']] = 1;
@@ -1785,7 +1787,7 @@ foreach ( $siteHits as $siteHit ) :
 				endif;									
 
 				if ( isset($siteHit['resolution']) ) :
-					if ( is_array($allResolutions) && array_key_exists($siteHit['resolution'], $allResolutions ) ) :
+					if ( array_key_exists($siteHit['resolution'], $allResolutions ) ) :
 						$allResolutions[$siteHit['resolution']] += 1;
 					else:
 						$allResolutions[$siteHit['resolution']] = 1;
@@ -1864,7 +1866,7 @@ function battleplan_admin_referrer_stats() {
 		for ($x = 0; $x < $days; $x++) :	
 		 	if ( !isset($GLOBALS['dates'][$x])) break;
 			$theDate = $GLOBALS['dates'][$x];
-			if ( isset ($GLOBALS['dailyStats'][$theDate]['source']) ) $sources = $GLOBALS['dailyStats'][$theDate]['source'];	
+			$sources = isset($GLOBALS['dailyStats'][$theDate]['source']) ? $GLOBALS['dailyStats'][$theDate]['source'] : array();	
 			
 			foreach ( $sources as $source=>$counts ) :			
 				$switchRef = array ('(direct)'=>'Direct', 'google'=>'Google', 'facebook'=>'Facebook', 'yelp'=>'Yelp', 'yahoo'=>'Yahoo', 'bing'=>'Bing', 'duckduckgo'=>'DuckDuckGo', 'youtube'=>'YouTube', 'instagram'=>'Instagram');
@@ -1872,7 +1874,7 @@ function battleplan_admin_referrer_stats() {
 					if ( strpos( $source, $find ) !== false ) $source = $replace;
 				endforeach;
 				
-				if ( is_array($allSources) && array_key_exists($source, $allSources ) ) :
+				if ( array_key_exists($source, $allSources ) ) :
 					$allSources[$source] += $counts;
 				else:
 					$allSources[$source] = $counts;
@@ -1880,7 +1882,7 @@ function battleplan_admin_referrer_stats() {
 			endforeach;		
 		endfor;		
 		
-		if ( is_array($allSources) ) arsort($allSources);
+		arsort($allSources);
 		
 		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
 		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul>';		
@@ -1904,7 +1906,7 @@ function battleplan_admin_location_stats() {
 			if ( isset ($GLOBALS['dailyStats'][$theDate]['location']) ) $locations = $GLOBALS['dailyStats'][$theDate]['location'];	
 			
 			foreach ( $locations as $location=>$counts ) :			
-				if ( is_array($allLocations) && array_key_exists($location, $allLocations ) ) :
+				if ( array_key_exists($location, $allLocations ) ) :
 					$allLocations[$location] += $counts;
 				else:
 					$allLocations[$location] = $counts;
@@ -1912,7 +1914,7 @@ function battleplan_admin_location_stats() {
 			endforeach;		
 		endfor;		
 		
-		if ( is_array($allLocations) ) arsort($allLocations);
+		arsort($allLocations);
 		
 		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
 		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul>';		
@@ -1937,7 +1939,7 @@ function battleplan_admin_tech_stats() {
 			if ( isset ($GLOBALS['dailyStats'][$theDate]['browser']) ) $browsers = $GLOBALS['dailyStats'][$theDate]['browser'];	
 			
 			foreach ( $browsers as $browser=>$counts ) :			
-				if ( is_array($allBrowsers) && array_key_exists($browser, $allBrowsers ) ) :
+				if ( array_key_exists($browser, $allBrowsers ) ) :
 					$allBrowsers[$browser] += $counts;
 				else:
 					$allBrowsers[$browser] = $counts;
@@ -1945,7 +1947,7 @@ function battleplan_admin_tech_stats() {
 			endforeach;		
 		endfor;		
 		
-		if ( is_array($allBrowsers) ) arsort($allBrowsers);
+		arsort($allBrowsers);
 		
 		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
 		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul><li class="sub-label">Browsers</li>';	
@@ -1972,7 +1974,7 @@ function battleplan_admin_tech_stats() {
 				if ( strpos($site_speed, 'desktop') !== false ) : $device = "desktop"; else: $device = "mobile"; endif;			
 				$speed = (float)str_replace($pageID.'»'.$device.'«', '', $site_speed);
 
-				if ( is_array($allSpeed) && array_key_exists($pageID, $allSpeed ) ) :
+				if ( array_key_exists($pageID, $allSpeed ) && isset($allSpeed[$pageID]['speed']) ) :
 					$allSpeed[$pageID]['speed'] += $speed;
 					$allSpeed[$pageID]['hits'] += 1;
 				else:
@@ -1982,7 +1984,7 @@ function battleplan_admin_tech_stats() {
 
 				if ( $allSpeed[$pageID]['hits'] > 0 ) $allSpeed[$pageID]['avg'] = round($allSpeed[$pageID]['speed'] / $allSpeed[$pageID]['hits'], 2);	
 
-				if ( is_array($allSpeed) && array_key_exists($device, $allSpeed ) ) :
+				if ( array_key_exists($device, $allSpeed ) && isset($allSpeed[$device]['speed']) ) :
 					$allSpeed[$device]['speed'] += $speed;
 					$allSpeed[$device]['hits'] += 1;
 				else:
@@ -2003,7 +2005,7 @@ function battleplan_admin_tech_stats() {
 			if ( isset ($GLOBALS['dailyStats'][$theDate]['device']) ) $devices = $GLOBALS['dailyStats'][$theDate]['device'];	
 			
 			foreach ( $devices as $device=>$counts ) :			
-				if ( is_array($allDevices) && array_key_exists($device, $allDevices ) ) :
+				if ( array_key_exists($device, $allDevices ) ) :
 					$allDevices[$device] += $counts;
 				else:
 					$allDevices[$device] = $counts;
@@ -2011,7 +2013,7 @@ function battleplan_admin_tech_stats() {
 			endforeach;		
 		endfor;		
 		
-		if ( is_array($allDevices) ) arsort($allDevices);
+		arsort($allDevices);
 		
 		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
 		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul><li class="sub-label">Devices</li>';	
@@ -2037,7 +2039,7 @@ function battleplan_admin_tech_stats() {
 			
 			foreach ( $resolutions as $resolution=>$counts ) :	
 				if ( $resolution ) :
-					if ( is_array($allResolutions) && array_key_exists($resolution, $allResolutions ) ) :
+					if ( array_key_exists($resolution, $allResolutions ) ) :
 						$allResolutions[$resolution] += $counts;
 					else:
 						$allResolutions[$resolution] = $counts;
@@ -2046,7 +2048,7 @@ function battleplan_admin_tech_stats() {
 			endforeach;		
 		endfor;		
 		
-		if ( is_array($allResolutions) ) arsort($allResolutions); 
+		arsort($allResolutions); 
 		
 		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
 		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul><li class="sub-label">Screen Widths</li><div style="column-count:2">';	

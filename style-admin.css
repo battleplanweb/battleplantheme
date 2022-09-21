@@ -799,6 +799,10 @@ body.ac-wp-media .row-actions {
 	text-align: 								center;
 }
 
+.wp-admin .flex .col input[type="checkbox"] {
+	width: 										17px;
+}
+
 .wp-admin .flex .col input[type="submit"] {
 	width: 										auto;
 	padding: 									2px 13px;

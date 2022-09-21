@@ -2389,6 +2389,14 @@ function battleplan_duplicate_post_as_draft(){
 			$wpdb->query($sql_query);
 		}
 		
+		updateMeta( $new_post_id, 'log-last-viewed', strtotime("-2 days"));		
+		updateMeta( $new_post_id, 'log-views-today', '0' );		
+		updateMeta( $new_post_id, 'log-views-total-7day', '0' );		
+		updateMeta( $new_post_id, 'log-views-total-30day', '0' );
+		updateMeta( $new_post_id, 'log-views-total-90day', '0' );
+		updateMeta( $new_post_id, 'log-views-total-365day', '0' );
+		updateMeta( $new_post_id, 'log-views', array( 'date'=> strtotime(date("F j, Y")), 'views' => 0 ));					
+		
 		wp_redirect( admin_url( 'post.php?action=edit&post=' . $new_post_id ) );
 		exit;
 	} else {
@@ -2495,6 +2503,7 @@ function battleplan_site_audit() {
 				if ( $log == "lighthouse-mobile-cls" || $log == "lighthouse-desktop-cls" ) : $decimals = 3; endif;
 				$updateNum = number_format((string)$_POST[$log], $decimals);
 				//$siteAudit[$today][$log] = str_replace('.0', '', $updateNum);
+				$siteAudit[$today][$log] = $updateNum;
 			elseif ( !$siteAudit[$today][$log] && $siteAudit[$today][$log] != '0' ) : 
 				$siteAudit[$today][$log] = "n/a";
 			endif;		
@@ -2505,7 +2514,11 @@ function battleplan_site_audit() {
 	
 	if ( $submitCheck == "true" ) :
 		if ( $_POST['notes'] ) :
-			$siteAudit[$today]['notes'] .= "  ".$_POST['notes'];
+			if ( isset( $_POST['erase-note'] ) ) :
+				$siteAudit[$today]['notes'] = $_POST['notes'];
+			else:
+				$siteAudit[$today]['notes'] .= "  ".$_POST['notes'];
+			endif;
 		endif;	
 		
 		$googleInfo = get_option('bp_google_reviews');
@@ -2568,12 +2581,12 @@ function battleplan_site_audit() {
 		$siteAudit[$today]['coupon'] = $coupon;	
 		$siteAudit[$today]['why-choose'] = $whyChoose;	
 		$siteAudit[$today]['logo-slider'] = $logoSlider;	
-		$siteAudit[$today]['tip-of-the-month'] = $tip;	
+		$siteAudit[$today]['tip-of-the-month'] = $tip;	 
 		$siteAudit[$today]['maintenance-tips'] = $hvacMaint;	
 		$siteAudit[$today]['homepage-teasers'] = $homeTeasers;	
 		$siteAudit[$today]['emergency-service'] = $emergency;	
 		$siteAudit[$today]['bbb-link'] = $bbb;	
-		$siteAudit[$today]['financing-link'] = $financing;	
+		$siteAudit[$today]['financing-link'] = $financing;	 
 		$siteAudit[$today]['symptom-checker'] = $symptomChecker;	
 		$siteAudit[$today]['faq'] = $faq;	
 		$siteAudit[$today]['menu-testimonials'] = $menuTestimonials;	
@@ -2638,6 +2651,7 @@ function battleplan_site_audit() {
 		$siteAuditPage .= '<h1>Notes</h1>';	
 		$siteAuditPage .= '<div class="form-input"><textarea id="notes" name="notes" cols="40" rows="10"></textarea></div>';
 		$siteAuditPage .= '<input type="hidden" id="submit_check" name="submit_check" value="true">';
+		$siteAuditPage .= '<br><input type="checkbox" id="erase-note" name="erase-note" value="Erase"><label for="clear-note"> Erase</label><br>';			
 		$siteAuditPage .= '<br><input type="submit" value="Submit">';	
 		
 	$siteAuditPage .= '[/col][/layout][/section]';	

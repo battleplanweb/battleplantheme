@@ -199,19 +199,23 @@ function battleplan_buildImg( $atts, $content = null ) {
 // Video Block
 add_shortcode( 'vid', 'battleplan_buildVid' );
 function battleplan_buildVid( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'link'=>'', 'thumb'=>'', 'preload'=>'false', 'class'=>'', 'related'=>'false', 'start'=>'', 'end'=>'', 'fullscreen'=>'false' ), $atts );
+	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'link'=>'', 'thumb'=>'', 'preload'=>'false', 'class'=>'', 'related'=>'false', 'start'=>'', 'end'=>'', 'fullscreen'=>'false', 'controls'=>'true', 'autoplay'=>'false', 'loop'=>'false', 'muted'=>'false' ), $atts );
 	$related = esc_attr($a['related']);	
 	$order = esc_attr($a['order']);	
 	$style = '';
-	if ( $order != '' ) $style = "order: ".$order."; ";
+	if ( $order != '' ) $style .= "order: ".$order."; ";
 	$link = esc_attr($a['link']);	
 	$thumb = esc_attr($a['thumb']);	
 	$preload = esc_attr($a['preload']);	
 	$size = esc_attr($a['size']);	
 	$size = convertSize($size);	
 	$height = 56.25 * ($size/12);	
+	$controls = esc_attr($a['controls']);
+	$autoplay = esc_attr($a['autoplay']);
+	$loop = esc_attr($a['loop']);
+	$muted = esc_attr($a['muted']);
 	$fullscreen = esc_attr($a['fullscreen']);
-	if ( $fullscreen == 'true' ) $style = "margin: 0; ";
+	if ( $fullscreen == 'true' ) $style .= "margin: 0; ";
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
 	$start = strtotime(esc_attr($a['start']));
@@ -243,7 +247,12 @@ function battleplan_buildVid( $atts, $content = null ) {
 	else:
 		//return '<div class="block block-video span-'.$size.$class.'" style="'.$style.' padding-top:'.$height.'%"><iframe src="" data-src="'.$link.'" data-loading="delay" allowfullscreen></iframe></div>';
 		$buildVid = '<div class="block block-video span-'.$size.$class.'" style="'.$style.'">';
-		$buildVid .= '<video autoplay="" loop="" muted="" poster="'.$thumb.'" style="position:relative; top:0; left:0; width:100%; height:100%">';
+		$buildVid .= '<video ';
+		if ( $controls == 'true' ) $buildVid .= 'controls ';
+		if ( $autoplay == 'true' ) $buildVid .= 'autoplay ';
+		if ( $loop == 'true' ) $buildVid .= 'loop ';
+		if ( $muted == 'true' ) $buildVid .= 'muted ';
+		$buildVid .= 'poster="'.$thumb.'" style="position:relative; top:0; left:0; width:100%; height:100%">';
 		$buildVid .= '<source src="'.$link.'" type="video/mp4">';
 		$buildVid .= '<img src="'.$thumb.'">';
 		$buildVid .= '</video></div>';
@@ -556,7 +565,7 @@ function battleplan_buildWidget( $atts, $content = null ) {
 	$display = true;
 	$brand = $GLOBALS['customer_info']['site-brand'];	
 	
-	if ( $type == "form" ) : $lock = "top"; $priority = '4'; $addHide = "404, contact"; endif;
+	if ( $type == "form" ) : $lock = "top"; $priority = '4'; $addHide = "404, contact, review"; endif;
 	if ( $type == "form" && $title == "hide" ) : $title = 'Service Request'; endif;
 	if ( $type == "form" && $content == null ) : $content = '[contact-form-7 title="Quote Request Form"]'; endif;
 	

@@ -759,6 +759,10 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 			}			
 			thisLock.click(function() {
 				setCookie("display-message","no",cookieExpire);
+				$('video').each(function(index) {
+            		this.pause();
+					this.currentTime = 0;
+        		});
 			});			
 		});		
 	});

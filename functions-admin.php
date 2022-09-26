@@ -1549,7 +1549,7 @@ function battleplan_remove_menus() {
 	remove_submenu_page( 'tools.php', 'erase-personal-data.php' );   				//Tools => Erase Personal Data
 	remove_submenu_page( 'wpseo_dashboard', 'wpseo_workouts' );   					//Yoast SEO => Workouts
 	remove_submenu_page( 'wpseo_dashboard', 'wpseo_licenses' );   					//Yoast SEO => Premium
-	//remove_submenu_page( 'wpseo_dashboard', 'wpseo_redirects' );   					//Yoast SEO => Redirects
+	//remove_submenu_page( 'wpseo_dashboard', 'wpseo_redirects' );   				//Yoast SEO => Redirects
 
 
 	add_submenu_page( 'upload.php', 'Favicon', 'Favicon', 'manage_options', 'customize.php' );	
@@ -1565,7 +1565,7 @@ function battleplan_remove_menus() {
 	endif;	
 
 	add_submenu_page( 'edit.php?post_type=elements', 'Menus', 'Menus', 'manage_options', 'nav-menus.php' );		
-	add_submenu_page( 'edit.php?post_type=elements', 'Contact Forms', 'Contact Forms', 'manage_options', 'admin.php?page=wpcf7' );	
+	add_submenu_page( 'edit.php?post_type=elements', 'Contact Forms', 'Contact Forms', 'manage_options', 'admin.php?page=wpcf7' );		
 	add_submenu_page( 'edit.php?post_type=elements', 'Comments', 'Comments', 'manage_options', 'edit-comments.php' );
 	add_submenu_page( 'edit.php?post_type=elements', 'Custom Fields', 'Custom Fields', 'manage_options', 'edit.php?post_type=acf-field-group' );		
 	add_submenu_page( 'edit.php?post_type=elements', 'Themes', 'Themes', 'manage_options', 'themes.php' );		
@@ -2568,7 +2568,7 @@ function battleplan_site_audit() {
 			endif;
 		endforeach;
 		
-		$args = array ('posts_per_page'=>-1, 'post_type'=>'elements', 's' => 'Widgets');
+		$args = array ('posts_per_page'=>-1, 'post_type'=>array('elements'));
 		$check_posts = new WP_Query($args);	
 		if( $check_posts->have_posts() ) : while ($check_posts->have_posts() ) : $check_posts->the_post();	
 			$checkContent = strtolower(get_the_content());	

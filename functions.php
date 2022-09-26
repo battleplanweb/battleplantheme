@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.2.6' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.3' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -1244,39 +1244,46 @@ add_filter( 'wpcf7_validate_email', 'battleplan_contact_form_spam_blocker', 20, 
 add_filter( 'wpcf7_validate_email*', 'battleplan_contact_form_spam_blocker', 20, 2 );
 add_filter( 'wpcf7_validate_tel', 'battleplan_contact_form_spam_blocker', 20, 2 );
 add_filter( 'wpcf7_validate_tel*', 'battleplan_contact_form_spam_blocker', 20, 2 );
-function battleplan_contact_form_spam_blocker( $result, $tag ) {
-    if ( "user-message" == $tag->name ) {
+function battleplan_contact_form_spam_blocker( $result, $tag ) {	
+    if ( stripos($tag->name,"message") !== false ) :
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
 		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','Roleplay helps develop','rank your google','TRY IT RIGHT NOW FOR FREE','house‌ ‌inspection‌ ‌process', 'write you an article','write a short article','We want to write','website home page design','updated version of your website','free sample Home Page','completely Free','Dear Receptionist','Franchise Creator','John Romney','get in touch with ownership','rebrand your business', 'what I would suggest for your website', 'Virtual Assistant Services','Would your readers','organic traffic','We do Estimation','get your site published','high quality appointments and leads', 'new website','Does this sound interesting?','I notice that your website is very basic','appeal to more clients','improve your sales','и','д','б','й','л','ы','З','у','Я');
 		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
 		if ( strtolower($check) == strtolower($name) ) $result->invalidate( $tag, 'Message cannot be sent.' );
-		foreach($badwords as $badword) {
-			if (stripos(strtolower($check),strtolower($badword)) !== false) $result->invalidate( $tag, 'We cannot accept messages at this time.' );
-		}
-		foreach($webwords as $webword) {
-			if (stripos(strtolower($check),strtolower($webword)) !== false) $result->invalidate( $tag, 'We do not accept messages containing website addresses.' );
-		}		
-	}
-    if ( "user-phone" == $tag->name ) {
+		foreach($badwords as $badword) :
+			if (stripos($check,$badword) !== false) $result->invalidate( $tag, 'We are sorry, but our messaging system is down. Please try later.' );
+		endforeach;
+		foreach($webwords as $webword) :
+			if (stripos($check,$webword) !== false) $result->invalidate( $tag, 'In order to reduce spam, website addresses are not allowed.' );
+		endforeach;		
+	endif;
+	if ( stripos($tag->name,"name") !== false ) :
+		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
+		$badwords = array('Cryto');
+		foreach($badwords as $badword) :
+			if (stripos($name,$badword) !== false) $result->invalidate( $tag, 'We are sorry, but our messaging system is down. Please try later.' );
+		endforeach;
+	endif;
+	if ( stripos($tag->name,"phone") !== false ) :
         $check = isset( $_POST["user-phone"] ) ? trim( $_POST["user-phone"] ) : ''; 
 		$badnumbers = array('1234567');
-		foreach($badnumbers as $badnumber) {
+		foreach($badnumbers as $badnumber) :
 			if (stripos($check,$badnumber) !== false) $result->invalidate( $tag, 'We do not accept messages without a valid phone number.');
-		}
-	}
-    if ( "user-email" == $tag->name ) {
+		endforeach;
+	endif;
+	if ( stripos($tag->name,"email") !== false ) :
         $check = isset( $_POST["user-email"] ) ? trim( $_POST["user-email"] ) : ''; 
-		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz', '@tworld.com', 'garywhi777@gmail.com', 'ronyisthebest16@gmail.com', 'ronythomas611@gmail.com', 'ronythomasrecruiter@gmail.com', '@ideonagency.net', 'axiarobbie20@gmail.com', '@hyper-tidy.com', '@readyjob.org', '@thefranchisecreatornetwork.com', 'franchisecreatormarketing.com', '@legendarygfx.com', '@hitachi-metal-jp.com', '@expresscommerce.co', '@zaphyrpro.com', 'erjconsult.com', 'christymkts@gmail.com', '@theheritageseo.com', '@freedomwebdesigns.com');
-		foreach($badwords as $badword) {
-			if (stripos(strtolower($check),strtolower($badword)) !== false) $result->invalidate( $tag, 'We cannot accept messages at this time.');
-		}
-	}
-    if ( 'user-email-confirm' == $tag->name ) {
+		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz', '@tworld.com', 'garywhi777@gmail.com', 'ronyisthebest16@gmail.com', 'ronythomas611@gmail.com', 'ronythomasrecruiter@gmail.com', '@ideonagency.net', 'axiarobbie20@gmail.com', '@hyper-tidy.com', '@readyjob.org', '@thefranchisecreatornetwork.com', 'franchisecreatormarketing.com', '@legendarygfx.com', '@hitachi-metal-jp.com', '@expresscommerce.co', '@zaphyrpro.com', 'erjconsult.com', 'christymkts@gmail.com', '@theheritageseo.com', '@freedomwebdesigns.com', 'wesavesmallbusinesses@gmail.com');
+		foreach($badwords as $badword) :
+			if (stripos($check,$badword) !== false) $result->invalidate( $tag, 'We are sorry, but our messaging system is down. Please try later.');
+		endforeach;
+	endif;
+	if ( stripos($tag->name,"email-confirm") !== false ) :
         $user_email = isset( $_POST['user-email'] ) ? trim( $_POST['user-email'] ) : '';
         $user_email_confirm = isset( $_POST['user-email-confirm'] ) ? trim( $_POST['user-email-confirm'] ) : '';
         if ( $user_email != $user_email_confirm ) $result->invalidate( $tag, "Are you sure this is the correct email?" );
-    } 
+    endif;
     return $result;
 }
 

@@ -66,12 +66,11 @@ function battleplan_event_teasers( $atts, $content = null ) {
 	endif;
 }	
 
-
 /*--------------------------------------------------------------
 # Plug-in Setup
 --------------------------------------------------------------*/
-add_filter( 'tribe_the_notices', 'change_notice', 10, 1 );
-function change_notice( $html ) {
+add_filter( 'tribe_the_notices', 'bp_change_notice', 10, 1 );
+function bp_change_notice( $html ) {
 	if ( stristr( $html, 'There were no results found.' ) ) {
 		$html = str_replace( 'There were no results found.', 'There are no events scheduled at this time.', $html );
 	}

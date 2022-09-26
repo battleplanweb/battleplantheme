@@ -132,7 +132,7 @@ function battleplan_buildLayout( $atts, $content = null ) {
 // Column
 add_shortcode( 'col', 'battleplan_buildColumn' );
 function battleplan_buildColumn( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'hash'=>'', 'class'=>'', 'align'=>'', 'valign'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'start'=>'', 'end'=>'' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'hash'=>'', 'order'=>'', 'class'=>'', 'align'=>'', 'valign'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'start'=>'', 'end'=>'' ), $atts );
 	$name = strtolower(esc_attr($a['name']));
 	$name = preg_replace("/[\s_]/", "-", $name);
 	if ( $name ) : $name = " id='".$name."'"; else: $name = ""; endif;
@@ -148,14 +148,16 @@ function battleplan_buildColumn( $atts, $content = null ) {
 	$left = esc_attr($a['left']);
 	$top = esc_attr($a['top']);
 	$start = strtotime(esc_attr($a['start']));
-	$end = strtotime(esc_attr($a['end']));	
+	$end = strtotime(esc_attr($a['end']));
+	$order = esc_attr($a['order']);	
+	if ( $order != '' ) : $style = " style='order: ".$order." !important'"; else: $style = ""; endif;
 	if ( $start || $end ) {
 		$now = time(); 
 		if ( $start && $now < $start ) return null;
 		if ( $end && $now > $end ) return null;		
 	}
 
-	$buildCol = '<div'.$name.' class="col '.$class.$align.$valign.'" '.$hash.'><div class="col-inner"';
+	$buildCol = '<div'.$name.' class="col '.$class.$align.$valign.'" '.$hash.$style.'><div class="col-inner"';
 	if ( $background != "" ) $buildCol .= 'style="background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;"';	
 	$buildCol .= '>';
 	$buildCol .= do_shortcode($content);
@@ -202,8 +204,7 @@ function battleplan_buildVid( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'link'=>'', 'thumb'=>'', 'preload'=>'false', 'class'=>'', 'related'=>'false', 'start'=>'', 'end'=>'', 'fullscreen'=>'false', 'controls'=>'true', 'autoplay'=>'false', 'loop'=>'false', 'muted'=>'false' ), $atts );
 	$related = esc_attr($a['related']);	
 	$order = esc_attr($a['order']);	
-	$style = '';
-	if ( $order != '' ) $style .= "order: ".$order."; ";
+	if ( $order != '' ) : $style = " style='order: ".$order." !important'"; else: $style = ""; endif;
 	$link = esc_attr($a['link']);	
 	$thumb = esc_attr($a['thumb']);	
 	$preload = esc_attr($a['preload']);	
@@ -267,9 +268,8 @@ function battleplan_buildGroup( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'class'=>'', 'start'=>'', 'end'=>'' ), $atts );
 	$size = esc_attr($a['size']);	
 	$size = convertSize($size);
-	$order = esc_attr($a['order']);
-	$style = '';
-	if ( $order != '' ) $style = " style='order: ".$order." !important'";
+	$order = esc_attr($a['order']);	
+	if ( $order != '' ) : $style = " style='order: ".$order." !important'"; else: $style = ""; endif;
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
 	$start = strtotime(esc_attr($a['start']));
@@ -320,8 +320,7 @@ function battleplan_buildButton( $atts, $content = null ) {
 	$align = esc_attr($a['align']);	
 	if ( $align != "center" ) : $align = " button-".$align; else: $align = ""; endif;
 	$order = esc_attr($a['order']);	
-	$style = '';
-	if ( $order != '' ) $style = " style='order: ".$order." !important'";
+	if ( $order != '' ) : $style = " style='order: ".$order." !important'"; else: $style = ""; endif;
 	$class = esc_attr($a['class']);
 	$ada = esc_attr($a['ada']);
 	if ( $ada != '' ) $ada = ' <span class="screen-reader-text">'.$ada.'</span>';

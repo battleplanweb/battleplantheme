@@ -141,7 +141,7 @@ input[type="number"] {
 }
 
 .account-buttons a {
-	margin-left:								1em;
+	margin:										0 0.6em;
 	color:										#4169e1; 
 	cursor:										pointer;
 	text-decoration:							none;
@@ -155,6 +155,14 @@ input[type="number"] {
 
 .woocommerce .woocommerce-breadcrumb a {
 	color: 										all;
+}
+
+.account-buttons a.cart-btn {
+	font-size: 									16px;
+}
+
+.account-buttons a i.fa::before {
+	font-size: 									19px;
 }
 
 /* Overrides
@@ -525,9 +533,9 @@ input[type="number"] {
     border-color: 								inherit;
 }
 
-p#billing_country_field {
-	display: 									none;
-}
+/*p#billing_country_field {
+	display: 									none;  7/24/2022 for the field apparel
+}*/
 
 h3#ship-to-different-address,
 label[for=wc-stripe-new-payment-method] {

@@ -198,8 +198,22 @@ h2#tribe-events-calendar-header {
 	margin-bottom: 								1.25em;
 }
 
-footer.events-footer {
+footer.events-footer,
+footer.event-footer {
+	clear: 										both;
 	padding: 									1.5em 0 1em;
+}
+
+.block.calendar-view-prev {
+	order: 									1 !important;
+}
+
+.block.calendar-view-next {
+	order: 									3 !important;
+}
+
+.block.calendar-view-detail {
+	order: 									2 !important;
 }
 
 /* 3: Small Tablets (landscape) */
@@ -212,13 +226,13 @@ footer.events-footer {
 
 /* 2: Phones (landscape) + Tablets (portrait) */
 @media (max-width: 860px) {		
-	.block-button.calendar-view-prev,
-	.block-button.calendar-view-next {
+	.block.calendar-view-prev,
+	.block.calendar-view-next {
 		grid-column: 							span 6;
 		order: 									1 !important;
 	}
 		
-	.block-button.calendar-view-detail {
+	.block.calendar-view-detail {
 		grid-column: 							span 12;
 		order: 									2 !important;
 	}

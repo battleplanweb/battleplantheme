@@ -21,9 +21,17 @@
 			<footer class="archive-footer events-footer">	
 				<?php 
 					$buildBtn = '';
-					if ( $prev_url ) $buildBtn .= '[btn size="1/3" link="'.esc_url( $prev_url ).'" class="calendar-view-prev"]« '.date('M Y',  strtotime(rtrim(substr($prev_url, -8), '/'))).'[/btn]';
+					if ( $prev_url ) :
+						$buildBtn .= '[btn size="1/3" link="'.esc_url( $prev_url ).'" class="calendar-view-prev"]« '.date('M Y',  strtotime(rtrim(substr($prev_url, -8), '/'))).'[/btn]';
+					else:
+						$buildBtn .= '[group size="1/3" class="calendar-view-prev"][/group]';
+					endif;
 					$buildBtn .= '[btn size="1/3" link="/events/list" class="calendar-view-detail"]Detailed View[/btn]';
-					if ( $next_url ) $buildBtn .= '[btn size="1/3" link="'.esc_url( $next_url ).'" class="calendar-view-next"]'.date('M Y',  strtotime(rtrim(substr($next_url, -8), '/'))).' »[/btn]';
+					if ( $next_url ) :
+						$buildBtn .= '[btn size="1/3" link="'.esc_url( $next_url ).'" class="calendar-view-next"]'.date('M Y',  strtotime(rtrim(substr($next_url, -8), '/'))).' »[/btn]';
+					else:
+						$buildBtn .= '[group size="1/3" class="calendar-view-next"][/group]';
+					endif;
 					echo do_shortcode('[col]'.$buildBtn.'[/col]');
 				?>
 			</footer>

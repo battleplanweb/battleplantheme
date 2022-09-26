@@ -134,7 +134,7 @@ function processChron() {
 
 			updateMeta( $formID, "_mail", $formMail );	
 		endforeach;
-	endif;
+	endif; 
 
 // Yoast SEO Settings Update
 	if ( is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') ) :		
@@ -148,7 +148,7 @@ function processChron() {
 		$wpSEOTitle = ' %%page%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';		
 		$getCPT = get_post_types(); 
 		foreach ($getCPT as $postType) :
-			if ( $postType == "post" || $postType == "page" || $postType == "optimized" || $postType == "universal" || $postType == "products" ) :
+			if ( $postType == "post" || $postType == "page" || $postType == "optimized" || $postType == "universal" || $postType == "products" || $postType == "tribe_events" ) :
 				$wpSEOSettings['title-'.$postType] = '%%title%%'.$wpSEOTitle;
 				$wpSEOSettings['social-title-'.$postType] = '%%title%%'.$wpSEOTitle;
 			elseif ( $postType == "attachment" || $postType == "revision" || $postType == "nav_menu_item" || $postType == "custom_css" || $postType == "customize_changeset" || $postType == "oembed_cache" || $postType == "user_request" || $postType == "wp_block" || $postType == "elements" || $postType == "acf-field-group" || $postType == "acf-field" || $postType == "wpcf7_contact_form" ) :
@@ -269,7 +269,17 @@ function processChron() {
 		$blackholeSettings['ip_whitelist'] = '73.28.89.12';
 		update_option( 'bbb_options', $blackholeSettings );		
 	endif;
-
+	
+// The Events Calendar
+	if ( is_plugin_active('the-events-calendar/the-events-calendar.php') ) : 	
+		global $post; 
+		$getPosts = new WP_Query( array ('posts_per_page'=>-1, 'post_type'=>'tribe_events') );
+		if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 	
+			$end = strtotime(get_post_meta( get_the_id(), '_EventEndDate', true ));		
+			if ( $end < time() ) wp_set_post_tags( get_the_id(), array( 'expired' ) );		
+		endwhile; wp_reset_postdata(); endif;	
+	endif;
+	
 // Basic Settings		
 	$update_menu_order = array ('site-header'=>100, 'widgets'=>200, 'office-hours'=>700, 'coupon'=>700, 'site-message'=>800, 'site-footer'=>900);
 

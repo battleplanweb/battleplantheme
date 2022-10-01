@@ -82,7 +82,7 @@ function battleplan_getYears($atts, $content = null) {
 	$label = esc_attr($a['label']);	
 	$multiplier = esc_attr($a['mult']);	
 	$currYear=date("Y"); 
-	$years = ( $currYear - $startYear ) * $multiplier;
+	$years = ( $currYear - (float)$startYear ) * (float)$multiplier;
 	if ( $label == "no" || $label == "false" ) : return $years;
 	else: if ( $years == 1 ) : return "1 year"; else: return $years." years"; endif; endif;
 }
@@ -510,7 +510,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		$buildImg = do_shortcode("[img size='".$picSize."' class='image-".$type." block-placeholder placeholder-".$type."' link='".$linkLoc."' ".$picADA."]".wp_get_attachment_image( $noPic, $size, array( 'class'=>'img-archive img-'.$type ))."[/img]"); 
 		if ( $textSize == "" ) : $textSize = getTextSize($picSize); endif;	
 	
-	else : $textSize = "100"; endif;
+	else : $buildImg = ""; $textSize = "100"; endif;
 	
 	if ( $type == "testimonials" ) {
 		$testimonialName = esc_attr(get_field( "testimonial_name" ));
@@ -1373,5 +1373,40 @@ function battleplan_getRSS( $atts, $content = null ) {
 	return $displayArchive;
 }
 
+// Display Count-Up widget
+ add_shortcode("get-countup", "battleplan_countUp");
+ function battleplan_countUp($atts, $content) {
+ 	 wp_enqueue_script( 'battleplan-count-up', get_template_directory_uri().'/js/count-up.js', array('jquery'), _BP_VERSION, false );	
 
+	 $a = shortcode_atts( array( 'name'=>'', 'start'=>'0', 'end'=>'0', 'decimals'=>'0', 'duration'=>'5', 'delay'=>'0', 'waypoint'=>'85%', 'easing'=>'easeOutExpo', 'grouping'=>'true', 'separator'=>',', 'decimal'=>'.', 'prefix'=>'', 'suffix'=>'' ), $atts );
+	 $id = strtolower(esc_attr($a['name']));	 
+	 $id = str_replace('-', '_', $id);
+	 $id = str_replace(' ', '_', $id);	
+	 $decimals = esc_attr($a['decimals']);
+	 $duration = esc_attr($a['duration']);
+	 $delay = esc_attr($a['delay']) * 1000;
+	 $waypoint = esc_attr($a['waypoint']);
+	 $easing = esc_attr($a['easing']);
+	 $grouping = esc_attr($a['grouping']);
+	 $separator = esc_attr($a['separator']);
+	 $decimal = esc_attr($a['decimal']);
+	 $prefix = esc_attr($a['prefix']);
+	 $suffix = esc_attr($a['suffix']);	 
+	  
+	 $start = esc_attr($a['start']);
+	 if (substr($start, 0, 1) === '{') $start = do_shortcode(str_replace( array("{","}","&#039;","&quot;"), array("[","]","'","'"), $start ));
+	 
+	 $end = esc_attr($a['end']);
+	 if (substr($end, 0, 1) === '{') $end = do_shortcode(str_replace( array("{","}","&#039;","&quot;"), array("[","]","'","'"), $end ));
+
+	 $buildCountUp = '<div class="count-up">';
+	 $buildCountUp .= '<script nonce='._BP_NONCE.'>document.addEventListener("DOMContentLoaded", function () {	"use strict"; (function($) {';
+	 $buildCountUp .= 'var options = { useEasing : "'.$easing.'", useGrouping : '.$grouping.', separator : "'.$separator.'", decimal : "'.$decimal.'", prefix : "'.$prefix.'", suffix : "'.$suffix.'" };';
+	 $buildCountUp .= 'var '.$id.' = new CountUp("'.$id.'", '.$start.', '.$end.', '.$decimals.', '.$duration.', options);';
+	 $buildCountUp .= '$("#'.$id.'").waypoint(function() { setTimeout(function() { '.$id.'.start(); }, '.$delay.'); this.destroy(); }, { offset: "'.$waypoint.'" });';	
+	 $buildCountUp .= '})(jQuery); }); </script>';
+	 $buildCountUp .= '<span id="'.$id.'" style="white-space:pre;"></span></div>';
+	 	 
+	 return $buildCountUp;
+}
 ?>

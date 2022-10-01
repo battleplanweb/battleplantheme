@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.3.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.4' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -83,17 +83,17 @@ function getID($slug) {
 	$getCPT = getCPT();
 	$id = url_to_postid($slug);	
 	
-	if ( $id == 0 ) :
+	if ( $id != 0 ) :
+		return $id;
+	else :
 		foreach ($getCPT as $postType) :
-			if ( get_page_by_path($slug, OBJECT, $postType) ) : $id = get_page_by_path($slug, OBJECT, $postType)->ID; break; endif;
+			if ( get_page_by_path($slug, OBJECT, $postType) ) return get_page_by_path($slug, OBJECT, $postType)->ID;
 		endforeach;	
 
 		foreach ($getCPT as $postType) :
-			if ( get_page_by_title($slug, OBJECT, $postType) ) : $id = get_page_by_title($slug, OBJECT, $postType)->ID; break; endif;
-		endforeach;	
+			if ( get_page_by_title($slug, OBJECT, $postType) ) return get_page_by_title($slug, OBJECT, $postType)->ID;
+		endforeach;			
 	endif;
-	
-	return $id;
 } 
 
 // Identify user based on id, email or slug
@@ -502,11 +502,11 @@ function battleplan_countTease( $id ) {
 		array_unshift($getViews, array ('date'=>date('F j, Y', $today), 'views'=>$viewsToday));	
 		updateMeta($id, 'log-views', $getViews);
 
-		for ($x = 0; $x < 7; $x++) { $views7Day = $views7Day + (int)$getViews[$x]['views']; } 					
-		for ($x = 0; $x < 30; $x++) { $views30Day = $views30Day + (int)$getViews[$x]['views']; } 						
-		for ($x = 0; $x < 90; $x++) { $views90Day = $views90Day + (int)$getViews[$x]['views']; } 		
-		for ($x = 0; $x < 180; $x++) { $views180Day = $views180Day + (int)$getViews[$x]['views']; } 		
-		for ($x = 0; $x < 365; $x++) { $views365Day = $views365Day + (int)$getViews[$x]['views']; } 		
+		for ($x = 0; $x < 7; $x++) { if ( isset($getViews[$x]['views'])) $views7Day = $views7Day + (int)$getViews[$x]['views']; } 					
+		for ($x = 0; $x < 30; $x++) { if ( isset($getViews[$x]['views'])) $views30Day = $views30Day + (int)$getViews[$x]['views']; } 						
+		for ($x = 0; $x < 90; $x++) { if ( isset($getViews[$x]['views'])) $views90Day = $views90Day + (int)$getViews[$x]['views']; } 		
+		for ($x = 0; $x < 180; $x++) { if ( isset($getViews[$x]['views'])) $views180Day = $views180Day + (int)$getViews[$x]['views']; } 		
+		for ($x = 0; $x < 365; $x++) { if ( isset($getViews[$x]['views'])) $views365Day = $views365Day + (int)$getViews[$x]['views']; } 		
 		updateMeta($id, 'log-views-today', $viewsToday);					
 		updateMeta($id, 'log-views-total-7day', $views7Day);			
 		updateMeta($id, 'log-views-total-30day', $views30Day);			 
@@ -1248,7 +1248,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( stripos($tag->name,"message") !== false ) :
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
-		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','Roleplay helps develop','rank your google','TRY IT RIGHT NOW FOR FREE','house‌ ‌inspection‌ ‌process', 'write you an article','write a short article','We want to write','website home page design','updated version of your website','free sample Home Page','completely Free','Dear Receptionist','Franchise Creator','John Romney','get in touch with ownership','rebrand your business', 'what I would suggest for your website', 'Virtual Assistant Services','Would your readers','organic traffic','We do Estimation','get your site published','high quality appointments and leads', 'new website','Does this sound interesting?','I notice that your website is very basic','appeal to more clients','improve your sales','и','д','б','й','л','ы','З','у','Я');
+		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','Roleplay helps develop','rank your google','TRY IT RIGHT NOW FOR FREE','house‌ ‌inspection‌ ‌process', 'write you an article','write a short article','We want to write','website home page design','updated version of your website','free sample Home Page','completely Free','Dear Receptionist','Franchise Creator','John Romney','get in touch with ownership','rebrand your business', 'what I would suggest for your website', 'Virtual Assistant Services','Would your readers','organic traffic','We do Estimation','get your site published','high quality appointments and leads', 'new website','Does this sound interesting?','I notice that your website is very basic','appeal to more clients','improve your sales','Exceptional Cleaners','free estimate from our company','и','д','б','й','л','ы','З','у','Я');
 		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
 		if ( strtolower($check) == strtolower($name) ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($badwords as $badword) :
@@ -1274,7 +1274,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
 	endif;
 	if ( stripos($tag->name,"email") !== false ) :
         $check = isset( $_POST["user-email"] ) ? trim( $_POST["user-email"] ) : ''; 
-		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz', '@tworld.com', 'garywhi777@gmail.com', 'ronyisthebest16@gmail.com', 'ronythomas611@gmail.com', 'ronythomasrecruiter@gmail.com', '@ideonagency.net', 'axiarobbie20@gmail.com', '@hyper-tidy.com', '@readyjob.org', '@thefranchisecreatornetwork.com', 'franchisecreatormarketing.com', '@legendarygfx.com', '@hitachi-metal-jp.com', '@expresscommerce.co', '@zaphyrpro.com', 'erjconsult.com', 'christymkts@gmail.com', '@theheritageseo.com', '@freedomwebdesigns.com', 'wesavesmallbusinesses@gmail.com');
+		$badwords = array('testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz', '@tworld.com', 'garywhi777@gmail.com', 'ronyisthebest16@gmail.com', 'ronythomas611@gmail.com', 'ronythomasrecruiter@gmail.com', '@ideonagency.net', 'axiarobbie20@gmail.com', '@hyper-tidy.com', '@readyjob.org', '@thefranchisecreatornetwork.com', 'franchisecreatormarketing.com', '@legendarygfx.com', '@hitachi-metal-jp.com', '@expresscommerce.co', '@zaphyrpro.com', 'erjconsult.com', 'christymkts@gmail.com', '@theheritageseo.com', '@freedomwebdesigns.com', 'wesavesmallbusinesses@gmail.com', '@bimservicesllc.net');
 		foreach($badwords as $badword) :
 			if (stripos($check,$badword) !== false) $result->invalidate( $tag, 'We are sorry, but our messaging system is down. Please try later.');
 		endforeach;

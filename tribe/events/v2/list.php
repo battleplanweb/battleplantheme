@@ -8,12 +8,21 @@
 		<?php $this->template( 'components/before' ); ?>
 
 		<header class="archive-header events-header">
-			<?php $eventType = do_shortcode('[get-url-var var="eventDisplay"]');
-			if ( strtolower($eventType) == "past" ) :
-				echo '<h1 class="page-headline archive-headline events-headline">Past Events</h1>';
-			else:
-				echo '<h1 class="page-headline archive-headline events-headline">Upcoming Events</h1>';
-			endif;
+			<?php 
+				$eventType = do_shortcode('[get-url-var var="eventDisplay"]');
+				$numEvents = count($events);
+				$eventLabel = "";
+
+				if ( $numEvents < 1 ) $eventLabel .= "No ";			
+				if ( strtolower($eventType) == "past" ) :
+					$eventLabel .= "Past ";
+				else:
+					$eventLabel .= "Upcoming ";
+				endif;
+				$eventLabel .= "Event";
+				if ( $numEvents != 1 ) $eventLabel .= "s";
+
+				echo '<h1 class="page-headline archive-headline events-headline">'.$eventLabel.'</h1>';
 			?>
 		</header>
 
@@ -21,11 +30,13 @@
 
 		<section class="section section-inline archive-content archive-events">
 			<div class="flex grid-1 valign-start">
-				<?php foreach ( $events as $event ) : ?>
-					<?php $this->setup_postdata( $event ); ?>
-					<?php $this->template( 'list/month-separator', [ 'event' => $event ] ); ?>
-					<?php $this->template( 'list/event', [ 'event' => $event ] ); ?>
-				<?php endforeach; ?>
+				<?php
+					foreach ( $events as $event ) : 
+						$this->setup_postdata( $event ); 
+						$this->template( 'list/month-separator', [ 'event' => $event ] );
+						$this->template( 'list/event', [ 'event' => $event ] ); 
+					endforeach; 
+				?>
 			</div>
 		</section>
 		

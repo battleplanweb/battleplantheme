@@ -390,8 +390,11 @@ function processChron() {
 	$GLOBALS['customer_info'] = get_option('customer_info');
 	$ga4_id = isset($GLOBALS['customer_info']['google-tags']['prop-id']) ? $GLOBALS['customer_info']['google-tags']['prop-id'] : null;
 	$client = new BetaAnalyticsDataClient(['credentials'=>get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json']);
-	$today = $end = date( "Y-m-d" );	
+	$today = date( "Y-m-d" );
+	$chronTime = get_option('bp_chron_time') !== null ? get_option('bp_chron_time') : 0;
 	$rewind = date('Y-m-d', ($chronTime - 172800));
+	$rewind = '2022-09-01';	
+	$siteHitsGA4 = is_array(get_option('bp_site_hits_ga4')) ? get_option('bp_site_hits_ga4') : array();		
 
 	$states = array('alabama'=>'AL', 'arizona'=>'AZ', 'arkansas'=>'AR', 'california'=>'CA', 'colorado'=>'CO', 'connecticut'=>'CT', 'delaware'=>'DE', 'dist of columbia'=>'DC', 'dist. of columbia'=>'DC', 'district of columbia'=>'DC', 'florida'=>'FL', 'georgia'=>'GA', 'idaho'=>'ID', 'illinois'=>'IL', 'indiana'=>'IN', 'iowa'=>'IA', 'kansas'=>'KS', 'kentucky'=>'KY', 'louisiana'=>'LA', 'maine'=>'ME', 'maryland'=>'MD', 'massachusetts'=>'MA', 'michigan'=>'MI', 'minnesota'=>'MN', 'mississippi'=>'MS', 'missouri'=>'MO', 'montana'=>'MT', 'nebraska'=>'NE', 'nevada'=>'NV', 'new hampshire'=>'NH', 'new jersey'=>'NJ', 'new mexico'=>'NM', 'new york'=>'NY', 'north carolina'=>'NC', 'north dakota'=>'ND', 'ohio'=>'OH', 'oklahoma'=>'OK', 'oregon'=>'OR', 'pennsylvania'=>'PA', 'rhode island'=>'RI', 'south carolina'=>'SC', 'south dakota'=>'SD', 'tennessee'=>'TN', 'texas'=>'TX', 'utah'=>'UT', 'vermont'=>'VT', 'virginia'=>'VA', 'washington'=>'WA', 'washington d.c.'=>'DC', 'washington dc'=>'DC', 'west virginia'=>'WV', 'wisconsin'=>'WI', 'wyoming'=>'WY');
 	$removedStates = array('alaska'=>'AK', 'hawaii'=>'HI',);
@@ -438,56 +441,46 @@ function processChron() {
 
 			if ( isset($states[$state]) ) :					
 				if ( $city == '(not set)' ) $location = ucwords($state);					
-				$page = rtrim($page, '/\\');
 
 				$analyticsGA4[] = array ('date'=>$date, 'location'=>$location, 'source'=>$source, 'page'=>$page, 'browser'=>$browser, 'device'=>$device, 'pages-viewed'=>$pagesViewed, 'resolution'=>$resolution, 'referrer'=>$referrer, 'engaged'=>$engaged, 'new-users'=>$newUsers );	
 			endif;
-		endforeach;			
-		if ( is_array($analyticsGA4) ) :
-			arsort($analyticsGA4);
-			$end = date('Y-m-d', strtotime(end($analyticsGA4)['date']));
-		endif;
-
+		endforeach;	
+		
+		if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
+		
 		// Split session data into site hits
 		foreach ( $analyticsGA4 as $analyze ) :
-			$date = isset($analyze['date']) ? $analyze['date'] : null;
-			$location = isset($analyze['location']) ? $analyze['location'] : null;
-			$page = isset($analyze['page']) ? $analyze['page'] : null;
-			$browser = isset($analyze['browser']) ? $analyze['browser'] : null;
-			$device = isset($analyze['device']) ? $analyze['device'] : null;
-			$resolution = isset($analyze['resolution']) ? $analyze['resolution'] : null;
-			$pageviews = isset($analyze['pages-viewed']) ? $analyze['pages-viewed'] : null;
-			$sessions = isset($analyze['sessions']) ? $analyze['sessions'] : null;
-			$engaged = isset($analyze['engaged']) ? $analyze['engaged'] : null;
-			$newUsers = isset($analyze['new-users']) ? $analyze['new-users'] : null;
-			$referrer = isset($analyze['referrer']) ? $analyze['referrer'] : null;
+			$date = $analyze['date'];
+			$location = $analyze['location'];
+			$page = $analyze['page'];
+			$browser = $analyze['browser'];
+			$device = $analyze['device'];
+			$resolution = $analyze['resolution'];
+			$pageviews = $analyze['pages-viewed'];
+			$engaged = $analyze['engaged'];
+			$newUsers = $analyze['new-users'];
+			$referrer = $analyze['referrer'];
 			list($source, $medium) = explode(" / ", $analyze['source']);
-
+			
 			if ( strpos( $referrer, parse_url( get_site_url(), PHP_URL_HOST ) ) === false ) :	
 				$siteHitsGA4[] = array ('date'=>$date, 'location'=>$location, 'source'=>$source, 'medium'=>$medium, 'page'=>$page, 'browser'=>$browser, 'device'=>$device, 'resolution'=>$resolution, 'pages-viewed'=>$pageviews, 'sessions'=>'1', 'engaged'=>$engaged, 'new-users'=>$newUsers );	
 			else :
 				$siteHitsGA4[] = array ('date'=>$date, 'page'=>$page, 'pages-viewed'=>$pageviews, 'sessions'=>'0', 'engaged'=>$engaged );				
 			endif;
-		endforeach;
-
-		update_option('bp_site_hits_ga4', $siteHitsGA4, false);		
+		endforeach;		
+		
+		$bpSiteHitsGA4 = array_intersect_key( $siteHitsGA4, array_unique( array_map('serialize', $siteHitsGA4 )));
+		update_option('bp_site_hits_ga4', $bpSiteHitsGA4, false);		
 	endif;
 
 // Gather UA Stats	
-	$siteHitsUA1 = get_option('bp_site_hits_ua_1') ? get_option('bp_site_hits_ua_1') : array();
-	$siteHitsUA2 = get_option('bp_site_hits_ua_2') ? get_option('bp_site_hits_ua_2') : array();
-	$siteHitsUA3 = get_option('bp_site_hits_ua_3') ? get_option('bp_site_hits_ua_3') : array();
-	$siteHitsUA4 = get_option('bp_site_hits_ua_4') ? get_option('bp_site_hits_ua_4') : array();
-	$siteHitsUA5 = get_option('bp_site_hits_ua_5') ? get_option('bp_site_hits_ua_5') : array();
-	
-	if ( $siteHitsUA1 ) $siteHitsUA = $siteHitsUA1;
-	if ( $siteHitsUA2 && is_array($siteHitsUA2) && is_array($siteHitsUA) ) $siteHitsUA = array_merge( $siteHitsUA, $siteHitsUA2 );
-	if ( $siteHitsUA3 && is_array($siteHitsUA3) && is_array($siteHitsUA) ) $siteHitsUA = array_merge( $siteHitsUA, $siteHitsUA3 );
-	if ( $siteHitsUA4 && is_array($siteHitsUA4) && is_array($siteHitsUA) ) $siteHitsUA = array_merge( $siteHitsUA, $siteHitsUA4 );
-	if ( $siteHitsUA5 && is_array($siteHitsUA5) && is_array($siteHitsUA) ) $siteHitsUA = array_merge( $siteHitsUA, $siteHitsUA5 );
-
-	$siteHits = $siteHitsGA4;
-	if ( $siteHitsUA && is_array($siteHitsUA) && is_array($siteHitsGA4) ) $siteHits = array_merge($siteHitsGA4, $siteHitsUA);
+	$siteHits = is_array($siteHitsGA4) ? $siteHitsGA4 : array();
+	$siteHitsUA1 = is_array(get_option('bp_site_hits_ua_1')) ? get_option('bp_site_hits_ua_1') : array();
+	$siteHitsUA2 = is_array(get_option('bp_site_hits_ua_2')) ? get_option('bp_site_hits_ua_2') : array();
+	$siteHitsUA3 = is_array(get_option('bp_site_hits_ua_3')) ? get_option('bp_site_hits_ua_3') : array();
+	$siteHitsUA4 = is_array(get_option('bp_site_hits_ua_4')) ? get_option('bp_site_hits_ua_4') : array();
+	$siteHitsUA5 = is_array(get_option('bp_site_hits_ua_5')) ? get_option('bp_site_hits_ua_5') : array();
+	$siteHits = array_merge( $siteHits, $siteHitsUA1, $siteHitsUA2, $siteHitsUA3, $siteHitsUA4, $siteHitsUA5);
 
 // Compile hits on specific pages
 	$pageCounts = array(1, 7, 30, 90, 365);
@@ -496,7 +489,7 @@ function processChron() {
 	$compilePaths = array();
 
 	foreach ( $siteHits as $siteHit ) :		
-		$page = $siteHit['page'];
+		$page = rtrim($siteHit['page'], "/");
 		if ( isset($siteHit['location']) && !in_array( $siteHit['location'], $citiesToExclude) && strpos($page, 'fbclid') === false && strpos($page, 'reportkey') === false ) :					
 			if ( $page == "" || $page == "/" ) $page = "Home";
 			if ( array_key_exists($page, $compilePaths ) ) :

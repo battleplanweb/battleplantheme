@@ -255,13 +255,14 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 
 #dashboard-widgets #postbox-container-3 tr {
 	display: 									block;
-	width: 										160px;
+	width: 										160px; 
 }
 
 #dashboard-widgets #postbox-container-1 div.handle-label,
 #dashboard-widgets #postbox-container-2 div.handle-label,
 #dashboard-widgets #postbox-container-3 tr.trends,
-#dashboard-widgets #postbox-container-3 table.trends-col-5 {
+#dashboard-widgets #postbox-container-3 table.trends-col-5,
+#dashboard-widgets #postbox-container-3 table tr[class*="feb-29"] {
 	display: 									none;
 }
 

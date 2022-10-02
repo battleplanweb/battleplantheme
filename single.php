@@ -105,7 +105,7 @@ get_header(); ?>
 									//endif;	
 									if ( is_array($terms) ) :
 										foreach($terms as $term):
-											if ( strtolower($term) !== "blog" ) :												
+											if ( $term !== "blog" && $term !== "Blog" ) :												
 												$btnClass = ($tags == "list") ? "" : " button button-".$term->slug;
 												
 												$getTerms .= '<a href="'.get_term_link( $term->slug, $tax).'" rel="tag" class="tax-'.$tax.$btnClass.'">'.$term->name.'</a>';

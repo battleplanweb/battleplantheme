@@ -1418,7 +1418,10 @@ add_action( 'wp_before_admin_bar_render', 'battleplan_reorderAdminBar');
 function battleplan_reorderAdminBar() {
     global $wp_admin_bar;
 	
-	if (get_bloginfo( 'description' )) $wp_admin_bar->add_node( array( 'id' => 'tagline', 'title' => '-&nbsp;&nbsp;'.get_bloginfo( 'description' ).'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;', 'href'  => esc_url(site_url()), ) );	
+	$loc = get_bloginfo( 'description' );
+	$locMap = 'https://www.google.com/maps/place/'.str_replace(", ", "+", $loc).'/';
+	
+	if (get_bloginfo( 'description' )) $wp_admin_bar->add_node( array( 'id' => 'tagline', 'title' => '-&nbsp;&nbsp;'.$loc.'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;', 'href'  => $locMap, ) );	
 	
     $IDs_sequence = array('site-name', 'tagline', 'suspend' );
     $nodes = $wp_admin_bar->get_nodes();
@@ -1663,6 +1666,19 @@ if ( isset(get_option('customer_info')['google-tags']['prop-id']) && get_option(
 /*--------------------------------------------------------------
 # Admin Page Set Up
 --------------------------------------------------------------*/
+// Add "Remove Sidebar" checkbox to Page Attributes meta box
+add_action( 'page_attributes_misc_attributes', 'battleplan_remove_sidebar_checkbox', 10, 1 );
+function battleplan_remove_sidebar_checkbox($post) { 
+	echo '<p class="post-attributes-label-wrapper">';
+	$getRemoveSidebar = get_post_meta($post->ID, "_bp_remove_sidebar", true);
+
+	if ( $getRemoveSidebar == "" ) : echo '<input name="remove_sidebar" type="checkbox" value="true">';
+	else: echo '<input name="remove_sidebar" type="checkbox" value="true" checked>';
+	endif;	
+	
+	echo '<label class="post-attributes-label" for="remove_sidebar">Remove Sidebar</label>';
+} 
+
 add_action('save_post', 'battleplan_save_remove_sidebar', 10, 3);
 function battleplan_save_remove_sidebar($post_id, $post, $update) {
 	if ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) return $post_id;
@@ -1911,7 +1927,7 @@ function battleplan_site_audit() {
 			$checkContent = strtolower(get_the_content());	
 			if ( strpos( $checkContent, "emergency service") !== false || strpos( $checkContent, "emergency-service") !== false ) $emergency = "true";	
 			if ( strpos( $checkContent, "bbb") !== false ) $bbb = "true";
-			if ( strpos( $checkContent, "[get-financing") !== false || strpos($sidebar_contents, "[get-wells-fargo") !== 'false' ) $financing = "true";	
+			if ( strpos( $checkContent, "[get-financing") !== false || strpos($checkContent, "[get-wells-fargo") !== 'false' ) $financing = "true";	
 			if ( strpos( $checkContent, "symptom checker") !== false || strpos( $checkContent, "symptom-checker") !== false ) $symptomChecker = "true";
 		endwhile; endif; wp_reset_postdata();
 

@@ -372,9 +372,19 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 	
 // Add unique id to labels & inputs in #request-quote-modal	for ADA compliance		
 	$('#request-quote-modal div.form-input').each(function() {
-		var theLabel = $(this).find('label'), theInput = $(this).find('input'), theAttr = theInput.attr('id');
+		var theLabel = $(this).find('label'), theInput = $(this).find('input'), theTextarea = $(this).find('textarea'), theSelect = $(this).find('select'), theAttr = theInput.attr('id');
+		
+		if ( theAttr == 'undefined' ) {
+			theAttr = theTextarea.attr('id');
+			if ( theAttr == 'undefined' ) {
+				theAttr = theSelect.attr('id'); 
+			}
+		}		
+		 
 		theLabel.attr('for', 'modal-'+theAttr);			
 		theInput.attr('id', 'modal-'+theAttr);			
+		theTextarea.attr('id', 'modal-'+theAttr);			
+		theSelect.attr('id', 'modal-'+theAttr);			
 	});	
 	
 // If modal popup is taller than device height, make it scrollable

@@ -512,13 +512,14 @@ function battleplan_socialBtn( $atts, $content = null ) {
  
 add_shortcode( 'seek', 'battleplan_formField' );
 function battleplan_formField( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'label'=>'Label', 'show'=>'true', 'id'=>'user-input', 'req'=>'false', 'width'=>'default', 'max-w'=>''), $atts );
+	$a = shortcode_atts( array( 'label'=>'Label', 'show'=>'true', 'id'=>'user-input', 'req'=>'false', 'width'=>'default', 'max-w'=>'', 'class'=>''), $atts );
 	$id = esc_attr($a['id']);
 	$label = esc_attr($a['label']);
 	$req = esc_attr($a['req']);	
 	$width = 'width-'.esc_attr($a['width']);
 	$maxW = esc_attr($a['max-w']);	
 	if ( $maxW != '' ) $maxW = ' style="margin:0 auto; max-width:'.$maxW.'"';
+	$class = esc_attr($a['class']) != '' ? " ".esc_attr($a['class']) : '';
 	$show = esc_attr($a['show']);
 	$aria = $buildInput = '';
 	if ( $show != 'true' ) : $width = 'width-none'; $aria = 'aria-label="'.$label.'"'; endif;	
@@ -528,7 +529,7 @@ function battleplan_formField( $atts, $content = null ) {
 		$buildInput .= '<div class="block block-button block-100">'.$content.'</div>';		
 	else:	
 	// removed col from classes 5/19 for animation purposes
-		$buildInput = '<div class="form-input input-'.strtolower(preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(" ","-",$label))).' input-'.$id.' '.$width.'"'.$maxW.' '.$aria.'>';
+		$buildInput = '<div class="form-input input-'.strtolower(preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(" ","-",$label))).' input-'.$id.' '.$width.$class.'"'.$maxW.' '.$aria.'>';
 		if ( $show == 'true' ) $buildInput .= '<label for="'.$id.'" class="'.$width.' label-baseline">'.$label;
 		if ( $show == 'true' && $req != 'false' ) $buildInput .= $asterisk;
 		if ( $show == 'true' ) $buildInput .= '</label>';

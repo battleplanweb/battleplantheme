@@ -85,5 +85,7 @@
 
 <?php if ( shortcode_exists( 'get-svg' ) ) echo '<div id="include-svg">'.do_shortcode('[get-svg]').'</div>' ?>
 
+<?php if ( _USER_LOGIN != "battleplanweb" && _IS_BOT != true ) updateOption('last_visitor_time', strtotime(date("F j, Y g:i a"))); ?>
+
 </body>
 </html>

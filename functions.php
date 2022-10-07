@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.4.2' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.4.3' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -494,7 +494,6 @@ function battleplan_countTease( $id ) {
 			$viewsToday = (int)$getViews[0]['views']; 
 		endif;
 
-		updateOption('last_visitor_time', $rightNow);
 		updateMeta($id, 'log-last-viewed', $rightNow);	
 
 		$viewsToday++;
@@ -514,7 +513,6 @@ function battleplan_countTease( $id ) {
 		updateMeta($id, 'log-views-total-180day', $views180Day);	
 		updateMeta($id, 'log-views-total-365day', $views365Day);
 	endif;	
-	//print_r($getViews[0]);
 }
 
 /*--------------------------------------------------------------
@@ -1248,7 +1246,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( stripos($tag->name,"message") !== false ) :
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
-		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','Roleplay helps develop','rank your google','TRY IT RIGHT NOW FOR FREE','house‌ ‌inspection‌ ‌process', 'write you an article','write a short article','We want to write','website home page design','updated version of your website','free sample Home Page','completely Free','Dear Receptionist','Franchise Creator','John Romney','get in touch with ownership','rebrand your business', 'what I would suggest for your website', 'Virtual Assistant Services','Would your readers','organic traffic','We do Estimation','get your site published','high quality appointments and leads', 'new website','Does this sound interesting?','I notice that your website is very basic','appeal to more clients','improve your sales','Exceptional Cleaners','free estimate from our company','In order to get a better idea of our work','и','д','б','й','л','ы','З','у','Я');
+		$badwords = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','Roleplay helps develop','rank your google','TRY IT RIGHT NOW FOR FREE','house‌ ‌inspection‌ ‌process', 'write you an article','write a short article','We want to write','website home page design','updated version of your website','free sample Home Page','completely Free','Dear Receptionist','Franchise Creator','John Romney','get in touch with ownership','rebrand your business', 'what I would suggest for your website', 'Virtual Assistant Services','Would your readers','organic traffic','We do Estimation','get your site published','high quality appointments and leads', 'new website','Does this sound interesting?','I notice that your website is very basic','appeal to more clients','improve your sales','Exceptional Cleaners','free estimate from our company','In order to get a better idea of our work','facility janitorial needs','и','д','б','й','л','ы','З','у','Я');
 		$webwords = array('.com','http://','https://','.net','.org','www.','.buzz');
 		if ( strtolower($check) == strtolower($name) ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($badwords as $badword) :
@@ -1852,7 +1850,7 @@ function battleplan_printHeader() {
 }
 
 // Display locked site-message
-add_action('bp_before_wrapper_content', 'battleplan_printSiteMessage', 20);
+add_action('bp_before_masthead', 'battleplan_printSiteMessage', 20);
 function battleplan_printSiteMessage() { 
 	echo do_shortcode('[get-element slug="site-message"]');
 }	

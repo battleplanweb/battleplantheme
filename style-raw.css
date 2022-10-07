@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 14.4.2
+Version: 14.4.3
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -3444,6 +3444,8 @@ h3.archive-subheadline {
 .updated:not(.published) {
 	display: 									none;
 
+
+
 }
 
 .entry-content {
@@ -4980,20 +4982,20 @@ chat-widget .lc_text-widget--btn {
 
 /* Logo Slider
 --------------------------------------------- */
-#wrapper-bottom .logo-slider .logo-row {
+.logo-slider .logo-row {
 	display:									flex;
 	flex-flow: 									row nowrap;
 	justify-content:							space-between;
 	align-items:								stretch;
 }
 
-#wrapper-bottom .logo-slider .logo-row span,
-#wrapper-bottom .logo-slider .logo-row span a {
+.logo-slider .logo-row span,
+.logo-slider .logo-row span a {
 	display: 									grid;
 	/*padding:									0; /*removed 9/28/2022 for Legend Air HVAC slider.  If we need this, then go into Legend Air and fix */
 }
 
-#wrapper-bottom .logo-slider img.logo-img {
+.logo-slider img.logo-img {
 	border: 									none;
 	box-shadow: 								none;
 	filter: 									none;
@@ -5002,7 +5004,7 @@ chat-widget .lc_text-widget--btn {
 	align-self: 								center;
 }
 
-#wrapper-bottom .logo-slider img.hvac-logo-img {
+.logo-slider img.hvac-logo-img {
 	max-height: 								150px;
 	width: 										auto;
 }

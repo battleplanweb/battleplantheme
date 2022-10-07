@@ -19,8 +19,8 @@ function battleplan_delete_prefixed_options( $prefix ) {
 	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
 }	
 
-if ( get_option('bp_setup_2022_09_12') != "completed" ) :
-	delete_option('bp_setup_2022_08_09');
+if ( get_option('bp_setup_2022_10_05') != "completed" ) :
+	delete_option('bp_setup_2022_09_12');
 	
 	$bp_ua_1 = get_option('bp_site_hits_ua_1') != null ? get_option('bp_site_hits_ua_1') : null;
 	$bp_ua_2 = get_option('bp_site_hits_ua_2') != null ? get_option('bp_site_hits_ua_2') : null;
@@ -34,23 +34,8 @@ if ( get_option('bp_setup_2022_09_12') != "completed" ) :
 	if ( $bp_ua_4 != null ) updateOption('bp_site_hits_ua_4_backup', $bp_ua_4, false);
 	if ( $bp_ua_5 != null ) updateOption('bp_site_hits_ua_5_backup', $bp_ua_5, false);
 	
-	delete_option('site_lat');
-	delete_option('site_long');
-	delete_option('site_radius');	
+	delete_option('sidebars_widgets');
 	
-	delete_option('bp_setup_wp_mail_smtp_initial');	
-	delete_option('bp_setup_yoast_initial');
-	delete_option('product-update-may-2022');
-	delete_option('bp_analytics_ua_complete');
-	
-	delete_option('chron_delay');
-	delete_option('bp_chrons_pages');
-	delete_option('bp_chrons_rewind');
-	
-	delete_option('content-tracking');
-	delete_option('content-scroll-pct');
-	
-	delete_option( 'bp_setup_widget_options_initial' );			
 	battleplan_delete_prefixed_options( '_extended_widgetopts' );
 	battleplan_delete_prefixed_options( '_transient_widgetopts' );
 	battleplan_delete_prefixed_options( '_widgetopts' );
@@ -65,6 +50,8 @@ if ( get_option('bp_setup_2022_09_12') != "completed" ) :
 	battleplan_delete_prefixed_options( 'bp_track_l_' );	
 	battleplan_delete_prefixed_options( 'pct-viewed-' );
 	
+	battleplan_delete_prefixed_options( 'wdp_' );
+	
 	$customerInfo = get_option( 'customer_info' );
 	if ( isset($customerInfo['google-tags']['ua-view'])) unset($customerInfo['google-tags']['ua-view']);
 	if ( isset($customerInfo['google-tags']['ua-view'])) unset($GLOBALS['customer_info']['google-tags']['ua-view']);
@@ -73,9 +60,7 @@ if ( get_option('bp_setup_2022_09_12') != "completed" ) :
 	unset($customerInfo['radius']);
 	updateOption( 'customer_info', $customerInfo );	
 	
-	delete_option('bp_admin_settings');
-	
-	updateOption( 'bp_setup_2022_09_12', 'completed', false );			
+	updateOption( 'bp_setup_2022_10_05', 'completed', false );			
 endif;
 
 // Determine if Chron should run

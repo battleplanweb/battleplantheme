@@ -1472,7 +1472,7 @@ add_filter('admin_footer_text', 'battleplan_admin_footer_text');
 function battleplan_admin_footer_text() { 
 	$printFooter = '<div style="float:left; margin-right:8px;"><img src="https://battleplanwebdesign.com/wp-content/uploads/site-icon-80x80.png" /></div>';
 	$printFooter .= '<div style="float:left; margin-top:8px;">Powered by <a href="https://battleplanwebdesign.com" target="_blank">Battle Plan Web Design</a><br>';
-	$siteUpdated = str_replace('-', '', get_option( "site_updated" ));
+	$printFooter .= 'Launched '.date('F Y', strtotime(get_option('bp_launch_date'))).'<br>';
 	$printFooter .= 'Framework '._BP_VERSION.'<br>';
 	$printFooter .= 'WP '.get_bloginfo('version').'<br></div>';	
 	
@@ -1481,22 +1481,22 @@ function battleplan_admin_footer_text() {
 	$printFooter .= get_option('customer_info')['street'].'<br>';
 	$printFooter .= get_option('customer_info')['city'].', '.get_option('customer_info')['state-abbr'].' '.get_option('customer_info')['zip'].'<br>';
 	if ( isset(get_option('customer_info')['lat']) ) $printFooter .= get_option('customer_info')['lat'].', '.get_option('customer_info')['long'].'<br>';	
-	$printFooter .= '</div><div style="float:right; margin-right: 50px">';
+	$printFooter .= '</div><div style="float:right; margin-right: 50px; margin-top: 40px;">';
 	
-	if ( isset(get_option('customer_info')['pid']) ) $printFooter .= '<b>PID:</b> <a href = "https://search.google.com/local/writereview?placeid='.get_option('customer_info')['pid'].'" target="_blank">'.get_option('customer_info')['pid'].'</a><br>';
-	$printFooter .= '<b>Email:</b> <a href = "mailto:'.get_option('customer_info')['email'].'">'.get_option('customer_info')['email'].'</a><br>';
-	if ( isset(get_option('customer_info')['owner-email']) ) $printFooter .= '<b>Owner:</b> <a href = "mailto:'.get_option('customer_info')['owner-email'].'">'.get_option('customer_info')['owner-email'].'</a><br>';	
-	if ( isset(get_option('customer_info')['facebook']) ) $printFooter .= '<b>Facebook:</b> <a href = "'.get_option('customer_info')['facebook'].'" target="_blank">'.get_option('customer_info')['facebook'].'</a><br>';
-	if ( isset(get_option('customer_info')['twitter']) ) $printFooter .= '<b>Twitter:</b> <a href = "'.get_option('customer_info')['twitter'].'" target="_blank">'.get_option('customer_info')['twitter'].'</a><br>';
-	if ( isset(get_option('customer_info')['instagram']) ) $printFooter .= '<b>Instagram:</b> <a href = "'.get_option('customer_info')['instagram'].'" target="_blank">'.get_option('customer_info')['instagram'].'</a><br>';
-	if ( isset(get_option('customer_info')['pinterest']) ) $printFooter .= '<b>Pinterest:</b> <a href = "'.get_option('customer_info')['pinterest'].'" target="_blank">'.get_option('customer_info')['pinterest'].'</a><br>';
-	if ( isset(get_option('customer_info')['yelp']) ) $printFooter .= '<b>Yelp:</b> <a href = "'.get_option('customer_info')['yelp'].'" target="_blank">'.get_option('customer_info')['yelp'].'</a><br>';
-	if ( isset(get_option('customer_info')['tiktok']) ) $printFooter .= '<b>Tiktok:</b> <a href = "'.get_option('customer_info')['tiktok'].'" target="_blank">'.get_option('customer_info')['tiktok'].'</a><br>';
-	if ( isset(get_option('customer_info')['youtube']) ) $printFooter .= '<b>You Tube:</b> <a href = "'.get_option('customer_info')['youtube'].'" target="_blank">'.get_option('customer_info')['youtube'].'</a><br>';
+	if ( isset(get_option('customer_info')['pid']) ) $printFooter .= '<a class="button" href = "https://search.google.com/local/writereview?placeid='.get_option('customer_info')['pid'].'" target="_blank">Google GBP</a>';
+	$printFooter .= '<a class="button" href = "mailto:'.get_option('customer_info')['email'].'">Email</a>';
+	if ( isset(get_option('customer_info')['owner-email']) ) $printFooter .= '<a class="button" href = "mailto:'.get_option('customer_info')['owner-email'].'">Owner</a>';	
+	if ( isset(get_option('customer_info')['facebook']) ) $printFooter .= '<a class="button" href = "'.get_option('customer_info')['facebook'].'" target="_blank">Facebook</a>';
+	if ( isset(get_option('customer_info')['twitter']) ) $printFooter .= '<a class="button" href = "'.get_option('customer_info')['twitter'].'" target="_blank">Twitter</a>';
+	if ( isset(get_option('customer_info')['instagram']) ) $printFooter .= '<a class="button" href = "'.get_option('customer_info')['instagram'].'" target="_blank">Instagram</a>';
+	if ( isset(get_option('customer_info')['pinterest']) ) $printFooter .= '<a class="button" href = "'.get_option('customer_info')['pinterest'].'" target="_blank">Pinterest</a>';
+	if ( isset(get_option('customer_info')['yelp']) ) $printFooter .= '<a class="button" href = "'.get_option('customer_info')['yelp'].'" target="_blank">Yelp</a>';
+	if ( isset(get_option('customer_info')['tiktok']) ) $printFooter .= '<a class="button" href = "'.get_option('customer_info')['tiktok'].'" target="_blank">TikTok</a>';
+	if ( isset(get_option('customer_info')['youtube']) ) $printFooter .= '<a class="button" href = "'.get_option('customer_info')['youtube'].'" target="_blank">You Tube</a>';
 	
-	if ( isset(get_option('customer_info')['google-tags']['prop-id']) ) $printFooter .= '<b>Analytics:</b> <a href = "https://analytics.google.com/analytics/web/#/p'.get_option('customer_info')['google-tags']['prop-id'].'/reports/explorer?params=_u..nav%3Dmaui%26_u..pageSize%3D25%26_r.explorerCard..selmet%3D%5B%22sessions%22%5D%26_r.explorerCard..seldim%3D%5B%22sessionDefaultChannelGrouping%22%5D&r=lifecycle-traffic-acquisition-v2&collectionId=life-cycle" target="_blank">View Stats</a><br>';
+	if ( isset(get_option('customer_info')['google-tags']['prop-id']) ) $printFooter .= '<a class="button" href = "https://analytics.google.com/analytics/web/#/p'.get_option('customer_info')['google-tags']['prop-id'].'/reports/explorer?params=_u..nav%3Dmaui%26_u..pageSize%3D25%26_r.explorerCard..selmet%3D%5B%22sessions%22%5D%26_r.explorerCard..seldim%3D%5B%22sessionDefaultChannelGrouping%22%5D&r=lifecycle-traffic-acquisition-v2&collectionId=life-cycle" target="_blank">Analytics</a>';
 	
-	if ( isset(get_option('customer_info')['serpfox']) ) $printFooter .= '<b>Keywords:</b> <a href = "//app.serpfox.com/shared/'.get_option('customer_info')['serpfox'].'" target="_blank">View Rankings</a><br>';
+	if ( isset(get_option('customer_info')['serpfox']) ) $printFooter .= '<a href = "//app.serpfox.com/shared/'.get_option('customer_info')['serpfox'].'" target="_blank">Keywords</a>';
 		
 	$printFooter .= '</div>';
 	
@@ -1780,15 +1780,15 @@ add_filter('media_row_actions', 'battleplan_media_row_actions', 90, 2);
 function battleplan_media_row_actions( $actions, $post ) {
 	$edit = str_replace( "Edit", "<i class='dashicons-edit'></i>", $actions['edit'] );
 	$view = str_replace( "View", "<i class='dashicons-view'></i>", $actions['view'] );
-	$adddata = str_replace( "Replace media", "<i class='dashicons-replace'></i>", $actions['adddata'] );
+	$media_replace = str_replace( "Replace media", "<i class='dashicons-replace'></i>", $actions['media_replace'] );
 	$delete = str_replace( "Delete Permanently", "<i class='dashicons-trash'></i>", $actions['delete'] );
 	
 	$edit = str_replace( "<a href", "<a title='Edit Media' target='_blank' href", $edit );
 	$view = str_replace( "<a href", "<a title='View Media' target='_blank' href", $view );
-	$adddata = str_replace( "<a href", "<a title='Replace Media' target='_blank' href", $adddata );
+	$media_replace = str_replace( "<a href", "<a title='Replace Media' target='_blank' href", $media_replace );
 	$delete = str_replace( "<a href", "<a title='Delete Media' href", $delete );
 	
-	return array( 'edit' => $edit, 'view' => $view, 'adddata' => $adddata, 'delete' => $delete );
+	return array( 'edit' => $edit, 'view' => $view, 'media_replace' => $media_replace, 'delete' => $delete );
 } 
 
 // Replace Users links with icons

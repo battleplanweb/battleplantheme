@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 ----------------------------------------------------------------
 # Tracking code
 --------------------------------------------------------------*/
-	var ajaxURL = 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php', uniqueID = getCookie('unique-id'), uniquePage = uniqueID + getCookie('pages-viewed'), pageID = $('body').attr('id'); 		
+	var pageID = $('body').attr('id'); 		
 	
 	$(window).on( 'load', function() {
 	
@@ -29,7 +29,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			loadTime = loadTime.toFixed(1);
 			
 			gtag("event", "join_group", { group_id: pageID + "»" + deviceTime + "«" + loadTime });
-			//console.log(pageID + "»" + deviceTime + "«" + loadTime + "s");				
 		}, 1000);		
 
 	// Delay 0.3s to allow accurate contentH  
@@ -47,38 +46,31 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				
 				if ( scrollPct < 0.2 && view0 == false ) {
 					gtag("event", "unlock_achievement", { achievement_id: pageID+'-init' });
-					//console.log('event: '+pageID+'-init');
 					view0 = true;					
 					
 					if ( !getCookie('track') ) {				
 						gtag("event", "unlock_achievement", { achievement_id: 'track-init' });
-						//console.log('event: track-init');	
 						setCookie('track', true);
 					}				
 				}								
 				if ( scrollPct >= 0.2 && view20 == false ) {
 					gtag("event", "unlock_achievement", { achievement_id: pageID+'-20' });
-					//console.log('event: '+pageID+'-20');
 					view20 = true;
 				}				
 				if ( scrollPct >= 0.4 && view40 == false ) {
 					gtag("event", "unlock_achievement", { achievement_id: pageID+'-40' });
-					//console.log('event: '+pageID+'-40');
 					view40 = true;
 				}
 				if ( scrollPct >= 0.6 && view60 == false ) {
 					gtag("event", "unlock_achievement", { achievement_id: pageID+'-60' });
-					//console.log('event: '+pageID+'-60');
 					view60 = true;
 				}
 				if ( scrollPct >= 0.8 && view80 == false ) {
 					gtag("event", "unlock_achievement", { achievement_id: pageID+'-80' });
-					//console.log('event: '+pageID+'-80');
 					view80 = true;
 				}
 				if ( scrollPct == 1 && view100 == false ) {
 					gtag("event", "unlock_achievement", { achievement_id: pageID+'-100' });
-					//console.log('event: '+pageID+'-100');
 					view100 = true;
 				}					
 				this.destroy();
@@ -89,47 +81,20 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				var theCol = $(this.element), theSec = $(this.element).parent().parent(), colIndex = theSec.find('.flex > .col').index( theCol ) + 1, secIndex = $('#wrapper-bottom > section').index(theSec) + 1, completeView = secIndex+'.'+colIndex;
 								
 				gtag("event", "unlock_achievement", { achievement_id: pageID+'-'+completeView });
-				//console.log('event: ' + pageID+'-'+completeView);
 				
 				this.destroy();
 			}, { offset: 'bottom-in-view' });	
 		
-	// Log view time of testimonials, random posts & random images
-			$('#primary img.random-img, .widget:not(.hide-widget) img.random-img, #wrapper-bottom img.random-img').waypoint(function() {	
-				var theID = new Array( $(this.element).attr('data-id') );
-				/*$.post({
-					url : ajaxURL,
-					data : { action: "count_view", id: theID },
-					success: function( response ) { console.log(response); }
-				});	*/			
-				this.destroy();
-			}, { offset: 'bottom-in-view' });
-			
-			$('.carousel.slider').waypoint(function() {	
-				var theID="";
-				$(this.element).find('[data-id]').each(function() {
-					theID = theID + $(this).attr('data-id') + "#" ;					
-				});	/*				
-				$.post({
-					url : ajaxURL,
-					data : { action: "count_view", id: theID },
-					success: function( response ) { console.log(response); }
-				});	*/			
-				this.destroy();
-			}, { offset: 'bottom-in-view' });
-
 		// Log what percentage of users see various trackable elements
 			$('.tracking').waypoint(function() {		
 				var track = $(this.element).attr('data-track');
 				
 				if ( !getCookie(track) ) {				
 					gtag("event", "unlock_achievement", { achievement_id: 'track-'+track });
-					//console.log('event: ' + 'track-'+track);	
 					setCookie(track, true);
 				}
 				this.destroy();
 			}, { offset: 'bottom-in-view' });	
 		}, 300);	
-	});
-	
+	});	
 })(jQuery); });

@@ -398,29 +398,30 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	width:										75px;
 }
 
-.trend-buttons,
-.last-visitors-buttons,
-.local-visitors-buttons {
+.wp-core-ui .trend-buttons,
+.wp-core-ui .last-visitors-buttons,
+.wp-core-ui .local-visitors-buttons {
 	z-index: 									9999999999;
 	position: 									fixed;
 	top: 										5px;
 }
 
-.last-visitors-buttons {
+.wp-core-ui .last-visitors-buttons {
 	left: 										27%;
 }
 
-.local-visitors-buttons {
+.wp-core-ui .local-visitors-buttons {
 	left: 										47%;
 }
 
-.trend-buttons .block-button,
-.last-visitors-buttons .block-button,
-.local-visitors-buttons .block-button {
+.wp-core-ui .trend-buttons .block-button,
+.wp-core-ui .last-visitors-buttons .block-button,
+.wp-core-ui .local-visitors-buttons .block-button {
 	display: 									inline-block;
 	margin-left: 								15px;
 }
 
+.wp-core-ui #wpfooter a.button,
 .wp-core-ui .trend-buttons .block-button .button,
 .wp-core-ui .last-visitors-buttons .block-button .button,
 .wp-core-ui .local-visitors-buttons .block-button .button {
@@ -432,6 +433,24 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	transition: 								all 0.2s ease;
 }
 
+.wp-core-ui #wpfooter a.button {
+	background: 								#ffffff;
+	box-shadow: 								inset 3px 3px 6px 0 rgba(0,0,0,0.1);
+	border: 									1px solid rgba(255,255,255,0.1);
+	margin: 									0 5px;
+}
+
+.wp-core-ui #wpfooter a.button:hover,
+.wp-core-ui .trend-buttons .block-button .button.active,
+.wp-core-ui .last-visitors-buttons .block-button .button.active,
+.wp-core-ui .local-visitors-buttons .block-button .button.active {
+  	color: 										#f6f7f7 !important;
+  	background: 								#2271b1 !important;
+	box-shadow: 								inset 3px 3px 6px 0 rgba(0,0,0,0.2) !important;
+	border: 									1px solid #2271b1 !important;
+	transition: 								all 0.2s ease;
+}
+
 .wp-core-ui .trend-buttons .block-button:hover .button,
 .wp-core-ui .last-visitors-buttons .block-button:hover .button,
 .wp-core-ui .local-visitors-buttons .block-button:hover .button {
@@ -439,16 +458,10 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	box-shadow: 								inset 3px 3px 6px 0 rgba(0,0,0,0.1);
 	border: 									1px solid rgba(255,255,255,0.1);
 	transition: 								all 0.2s ease;
-}
+} 
 
-.trend-buttons .block-button .button.active,
-.last-visitors-buttons .block-button .button.active,
-.local-visitors-buttons .block-button .button.active {
-  	color: 										#f6f7f7 !important;
-  	background: 								#2271b1 !important;
-	box-shadow: 								inset 3px 3px 6px 0 rgba(0,0,0,0.2) !important;
-	border: 									1px solid #2271b1 !important;
-	transition: 								all 0.2s ease;
+.wp-core-ui #wpfooter a.button:hover {
+	border: 									1px solid #0e4877 !important;
 }
 
 /* Page Attributes meta box */

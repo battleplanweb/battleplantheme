@@ -99,7 +99,10 @@ ul.nav-links {
 }
 
 .tribe_events .tribe-events /* Add To Calendar button */,
-.tribe-events-view-loader {
+.tribe-events-view-loader,
+.tribe-events-related-events-title, /* Related Events Title */
+.tribe-related-events.tribe-clearfix, /* Related Events */
+.tribe-events-calendar-list__event-datetime-recurring-link { /* SVG for recurring events */
 	display: 									none !important;
 }
 

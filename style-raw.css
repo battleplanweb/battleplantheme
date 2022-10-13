@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 14.5
+Version: 14.6
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -2326,6 +2326,8 @@ a#bbblink {
 	top:										50%;
 	left:										50%;
 	transform: 									translate(-50%, -50%);
+
+
 	padding:									calc(2em + 18px) 2em 2em;
 	overflow-x: 								hidden;
 	overflow-y: 								auto;
@@ -3167,8 +3169,9 @@ body.locked {
 	display:									inline;
 }
 
-#footer-navigation li:not(:first-of-type)::before {
-	content:									" • ";
+#footer-navigation ul#footer-menu li:not(.menu-item-has-children)::before,
+#footer-navigation ul#footer-menu::after {
+	content:									" | ";
 }
 
 /* Posts & Comment Navigation */
@@ -4382,9 +4385,11 @@ div.menu-search-box form.menu-search-form {
 
 div.menu-search-box a.menu-search-bar {
 	display: 									flex;
+
 	padding: 									0 0 0 2px;
 	overflow: 									hidden;
 } 
+
 
 div.menu-search-box a.menu-search-bar i.fa {
 	font-size: 									80%;
@@ -4995,7 +5000,8 @@ chat-widget .lc_text-widget--btn {
 	/*padding:									0; /*removed 9/28/2022 for Legend Air HVAC slider.  If we need this, then go into Legend Air and fix */
 }
 
-.logo-slider img.logo-img {
+.logo-slider img.logo-img,
+#wrapper-bottom .logo-slider img.logo-img {
 	border: 									none;
 	box-shadow: 								none;
 	filter: 									none;
@@ -5004,7 +5010,8 @@ chat-widget .lc_text-widget--btn {
 	align-self: 								center;
 }
 
-.logo-slider img.hvac-logo-img {
+.logo-slider img.hvac-logo-img,
+#wrapper-bottom .logo-slider img.hvac-logo-img {
 	max-height: 								150px;
 	width: 										auto;
 }
@@ -5207,6 +5214,7 @@ html.error503 h3 {
 	}	
 	
 	/* Galleries */
+
 	.grid-7e,
 	.grid-8e,
 	.gallery-column-7,
@@ -5932,6 +5940,7 @@ html.error503 h3 {
 	.alignright.size-third-f,
 	.align-left.size-third-s,
 	.alignleft.size-third-s,
+
 	.align-right.size-third-s,
 	.alignright.size-third-s {
 		max-width:									65%;

@@ -315,6 +315,9 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 		}
 	});
 	
+// Remove current page from footer-menu
+	$('ul#footer-menu').find('a[href="'+window.location+'"').parent('li').css({"display":"none"});
+	
 // Add .page-begins to the next section under masthead for purposes of locking .top-strip
 	$('#masthead + section').addClass('page-begins');
 

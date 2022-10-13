@@ -77,6 +77,15 @@ function bp_change_notice( $html ) {
 	return $html; 
 }
 
+// Display past events in reverse order in list view
+add_filter( 'tribe_events_views_v2_view_list_template_vars', 'bp_reverse_chronological', 100 );
+add_filter( 'tribe_events_views_v2_view_photo_template_vars', 'bp_reverse_chronological', 100 );
+function bp_reverse_chronological( $template_vars ) { 
+ 	if ( ! empty( $template_vars['is_past'] ) ) $template_vars['events'] = array_reverse( $template_vars['events'] );
+ 
+  	return $template_vars;
+}
+
 /*--------------------------------------------------------------
 # Set Up Admin Columns
 --------------------------------------------------------------*/

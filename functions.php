@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.6' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.6.1' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -886,7 +886,7 @@ function battleplan_disable_emojis_remove_dns_prefetch( $urls, $relation_type ) 
 	if ( 'dns-prefetch' == $relation_type ) :
 		$emoji_svg_url = apply_filters( 'emoji_svg_url', 'https://s.w.org/images/core/emoji/2/svg/' );
 		$urls = array_diff( $urls, array( $emoji_svg_url ) );
-	endif;}
+	endif;
 	return $urls;
 }
 

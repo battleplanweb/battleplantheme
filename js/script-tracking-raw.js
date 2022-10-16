@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 ----------------------------------------------------------------
 # Tracking code
 --------------------------------------------------------------*/
-	var pageID = $('body').attr('id'); 		
+	var pageID = $('body').attr('id'); 			
 	
 	$(window).on( 'load', function() {
 	
@@ -96,5 +96,35 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				this.destroy();
 			}, { offset: 'bottom-in-view' });	
 		}, 300);	
+		
+		//Test for real user or bot		
+		setTimeout(function() {
+			// Get IP data
+			$.getJSON('https://ipapi.co/json/', function(data) {
+			
+				function deg2rad(deg) {
+					return deg * (Math.PI/180) 
+				}					
+				
+				var siteLat = site_options.lat, siteLong = site_options.long, userLat = data["latitude"], userLong = data["longitude"], R = 3958.8, dLat = deg2rad(siteLat-userLat), dLon = deg2rad(siteLong-userLong), a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(deg2rad(userLat)) * Math.cos(deg2rad(siteLat)) * Math.sin(dLon/2) * Math.sin(dLon/2), c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)), distance = R * c, location; 				
+			
+				if ( data["country_name"] == "United States" ) {
+					location = data["city"] + ", " + data["region_code"];
+				} else {
+					location = data["city"] + ", " + data["country_name"];
+				}
+				
+				setCookie("user-loc", location, '');
+								
+				if ( distance < 250 ) { 			
+					$.post({
+						url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
+						data : { action: "check_user", distance: distance, location: location },
+						success: function( response ) { console.log(response); } 
+					});					
+				}
+			});
+		}, 4000);	
+
 	});	
 })(jQuery); });

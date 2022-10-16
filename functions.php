@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.6.2' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.7' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -23,10 +23,15 @@ if ( !defined('_USER_LOGIN') ) define( '_USER_LOGIN', wp_get_current_user()->use
 if ( !defined('_USER_ID') ) define( '_USER_ID', wp_get_current_user()->ID );
 
 $googlebots = array( 'google', 'lighthouse' );
-$bots = array('bot', 'crawler', 'spider', 'facebook', 'bing', 'linkedin', 'zgrab', 'addthis', 'fetcher', 'barkrowler', 'newspaper', 'yeti', 'daum', 'riddler', 'panscient', 'dataprovider', 'gigablast', 'qwantify', 'admantx', 'audit', 'docomo', 'yahoo', 'wayback', 'adbeat', 'netcraft', 'wordpress');
-$bots = array_merge($bots, $googlebots);
-foreach ( $bots as $bot ) if ( strpos( strtolower($_SERVER["HTTP_USER_AGENT"]), $bot) !== false && !defined('_IS_BOT') ) define( '_IS_BOT', true );
-foreach ( $googlebots as $googlebot ) if ( strpos( strtolower($_SERVER["HTTP_USER_AGENT"]), $googlebot) !== false && !defined('_IS_GOOGLEBOT') ) define( '_IS_GOOGLEBOT', true );
+$bots = array_merge(array('bot', 'crawler', 'spider', 'facebook', 'bing', 'linkedin', 'zgrab', 'addthis', 'fetcher', 'barkrowler', 'newspaper', 'yeti', 'daum', 'riddler', 'panscient', 'dataprovider', 'gigablast', 'qwantify', 'admantx', 'audit', 'docomo', 'yahoo', 'wayback', 'adbeat', 'netcraft', 'wordpress'), $googlebots);
+$spammers = explode("\n", file_get_contents( get_template_directory().'/spammers.txt' ));
+$bad_ips = get_option('bbb_badbots');
+
+foreach ( $googlebots as $googlebot ) if ( stripos( $_SERVER["HTTP_USER_AGENT"], $googlebot) !== false && !defined('_IS_GOOGLEBOT') ) define( '_IS_GOOGLEBOT', true );
+foreach ( $bots as $bot ) if ( stripos( $_SERVER["HTTP_USER_AGENT"], $bot) !== false && !defined('_IS_BOT') ) define( '_IS_BOT', true );
+foreach ( $spammers as $spammer ) if ( stripos( $_SERVER["HTTP_REFERER"], $spammer) !== false && !defined('_IS_BOT') ) define( '_IS_BOT', true );
+foreach ( $bad_ips as $ip ) if ( stripos( $_SERVER["REMOTE_ADDR"], $ip['ip_address'] ) !== false && !defined('_IS_BOT') ) define( '_IS_BOT', true );
+
 if ( !defined('_IS_BOT') ) define( '_IS_BOT', false );
 if ( !defined('_IS_GOOGLEBOT') ) define( '_IS_GOOGLEBOT', false );
 
@@ -1029,6 +1034,9 @@ function battleplan_scripts() {
 	$saveDir = array( 'theme_dir_uri'=>get_stylesheet_directory_uri(), 'upload_dir_uri'=>wp_upload_dir()['baseurl'] );
 	//wp_localize_script( 'battleplan-script-essential', 'site_dir', $saveDir );	
 	wp_localize_script( 'battleplan-script-desktop', 'site_dir', $saveDir );	
+	
+	$saveOptions = array ( 'lat' => $GLOBALS['customer_info']['lat'], 'long' => $GLOBALS['customer_info']['long'] );
+    wp_localize_script('battleplan-script-tracking', 'site_options', $saveOptions);
 }
 
 // Load and enqueue admin styles & scripts

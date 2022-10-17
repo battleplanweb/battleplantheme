@@ -18,14 +18,11 @@
 # Shortcodes
 --------------------------------------------------------------*/
 
-if ( is_admin() ) : 
-	if (function_exists('battleplan_updateSiteOptions')) battleplan_updateSiteOptions();
-endif;
+if ( is_admin() && function_exists('battleplan_updateSiteOptions') ) battleplan_updateSiteOptions();
 
 // Remove buttons from WordPress text editor
 add_filter( 'quicktags_settings', 'battleplan_delete_quicktags', 10, 2 );
 function battleplan_delete_quicktags( $qtInit, $editor_id = 'content' ) {
-	//$qtInit['buttons'] = 'strong,em,link,block,del,ins,img,ul,ol,code,more,close';
 	$qtInit['buttons'] = 'strong,em,link,ul,ol,more,close';
 	return $qtInit;
 }
@@ -1404,7 +1401,6 @@ function battleplan_column_settings() {
 /*--------------------------------------------------------------
 # Admin Interface Set Up
 --------------------------------------------------------------*/
-
 // Disable Gutenburg
 add_filter( 'use_block_editor_for_post', '__return_false' );
 add_filter( 'gutenberg_use_widgets_block_editor', '__return_false' );
@@ -1558,14 +1554,15 @@ function battleplan_remove_menus() {
 	add_submenu_page( 'upload.php', 'Favicon', 'Favicon', 'manage_options', 'customize.php' );	
 	
 	$the_query = new WP_Query( array('post_type' => 'elements', 'posts_per_page' => -1, 'orderby' => 'menu_order', 'order' => 'asc') );
-	if ( $the_query->have_posts() ) : while ( $the_query->have_posts() ) : $the_query->the_post();
-		add_submenu_page( 'edit.php?post_type=elements', get_the_title(), get_the_title(), 'manage_options', '/post.php?post='.get_the_ID().'&action=edit' );
-	endwhile; endif;			
-	wp_reset_postdata();	
+	if ( $the_query->have_posts() ) : 
+		while ( $the_query->have_posts() ) : 
+			$the_query->the_post();
+			add_submenu_page( 'edit.php?post_type=elements', get_the_title(), get_the_title(), 'manage_options', '/post.php?post='.get_the_ID().'&action=edit' );
+		endwhile;
+		wp_reset_postdata();	
+	endif;			
 	
-	if ( is_null(get_page_by_path('widgets', OBJECT, 'elements')) ) :
-		//add_submenu_page( 'edit.php?post_type=elements', 'Widgets', 'Widgets', 'manage_options', 'widgets.php' );
-	endif;	
+	if ( is_null(get_page_by_path('widgets', OBJECT, 'elements')) ) add_submenu_page( 'edit.php?post_type=elements', 'Widgets', 'Widgets', 'manage_options', 'widgets.php' );
 
 	add_submenu_page( 'edit.php?post_type=elements', 'Menus', 'Menus', 'manage_options', 'nav-menus.php' );		
 	add_submenu_page( 'edit.php?post_type=elements', 'Contact Forms', 'Contact Forms', 'manage_options', 'admin.php?page=wpcf7' );		
@@ -1584,9 +1581,7 @@ function battleplan_custom_menu_order( $menu_ord ) {
     if ( !$menu_ord ) return true;	
 	$displayTypes = array('index.php', 'separator1', 'upload.php', 'edit.php?post_type=elements', 'edit.php?post_type=page');
 	$getCPT = getCPT();
-	foreach ($getCPT as $postType) {
-		array_push($displayTypes, 'edit.php?post_type='.$postType);
-	}
+	foreach ($getCPT as $postType) array_push($displayTypes, 'edit.php?post_type='.$postType);
 	array_push($displayTypes, 'edit.php', 'separator2', 'plugins.php', 'options-general.php', 'tools.php', 'users.php', 'separator-last', 'wpengine-common', 'wpseo_dashboard', 'edit.php?post_type=asp-products');	
 	return $displayTypes;
 }
@@ -1672,8 +1667,10 @@ function battleplan_remove_sidebar_checkbox($post) {
 	echo '<p class="post-attributes-label-wrapper">';
 	$getRemoveSidebar = get_post_meta($post->ID, "_bp_remove_sidebar", true);
 
-	if ( $getRemoveSidebar == "" ) : echo '<input name="remove_sidebar" type="checkbox" value="true">';
-	else: echo '<input name="remove_sidebar" type="checkbox" value="true" checked>';
+	if ( $getRemoveSidebar == "" ) : 
+		echo '<input name="remove_sidebar" type="checkbox" value="true">';
+	else: 
+		echo '<input name="remove_sidebar" type="checkbox" value="true" checked>';
 	endif;	
 	
 	echo '<label class="post-attributes-label" for="remove_sidebar">Remove Sidebar</label>';
@@ -1697,17 +1694,15 @@ function battleplan_save_remove_sidebar($post_id, $post, $update) {
 add_action( 'admin_action_battleplan_duplicate_post_as_draft', 'battleplan_duplicate_post_as_draft' );
 function battleplan_duplicate_post_as_draft(){
 	global $wpdb;
-	if (! ( isset( $_GET['post']) || isset( $_POST['post'])  || ( isset($_REQUEST['action']) && 'battleplan_duplicate_post_as_draft' == $_REQUEST['action'] ) ) ) {
-		wp_die('No post to duplicate has been supplied!');
-	}
-	if ( !isset( $_GET['duplicate_nonce'] ) || !wp_verify_nonce( $_GET['duplicate_nonce'], basename( __FILE__ ) ) )
-		return;
+	
+	if (! ( isset( $_GET['post']) || isset( $_POST['post'])  || ( isset($_REQUEST['action']) && 'battleplan_duplicate_post_as_draft' == $_REQUEST['action'] ) ) ) wp_die('No post to duplicate has been supplied!');
+	if ( !isset( $_GET['duplicate_nonce'] ) || !wp_verify_nonce( $_GET['duplicate_nonce'], basename( __FILE__ ) ) )	return;
 	
 	$post_id = (isset($_GET['post']) ? absint( $_GET['post'] ) : absint( $_POST['post'] ) );
 	$post = get_post( $post_id );
 	$current_user = wp_get_current_user();
 	$new_post_author = $current_user->ID;
-	if (isset( $post ) && $post != null) {
+	if (isset( $post ) && $post != null) :
 		$args = array(
 			'comment_status' => $post->comment_status,
 			'ping_status'    => $post->ping_status,
@@ -1725,22 +1720,23 @@ function battleplan_duplicate_post_as_draft(){
 		);
 		$new_post_id = wp_insert_post( $args );
 		$taxonomies = get_object_taxonomies($post->post_type);
-		foreach ($taxonomies as $taxonomy) {
+		foreach ($taxonomies as $taxonomy) :
 			$post_terms = wp_get_object_terms($post_id, $taxonomy, array('fields' => 'slugs'));
 			wp_set_object_terms($new_post_id, $post_terms, $taxonomy, false);
-		}
+		endforeach;
+		
 		$post_meta_infos = $wpdb->get_results("SELECT meta_key, meta_value FROM $wpdb->postmeta WHERE post_id=$post_id");
-		if (count($post_meta_infos)!=0) {
+		if (count($post_meta_infos)!=0) :
 			$sql_query = "INSERT INTO $wpdb->postmeta (post_id, meta_key, meta_value) ";
-			foreach ($post_meta_infos as $meta_info) {
+			foreach ($post_meta_infos as $meta_info) :
 				$meta_key = $meta_info->meta_key;
 				if( $meta_key == '_wp_old_slug' ) continue;
 				$meta_value = addslashes($meta_info->meta_value);
 				$sql_query_sel[]= "SELECT $new_post_id, '$meta_key', '$meta_value'";
-			}
+			endforeach;
 			$sql_query.= implode(" UNION ALL ", $sql_query_sel);
 			$wpdb->query($sql_query);
-		}
+		endif;
 		
 		updateMeta( $new_post_id, 'log-last-viewed', strtotime("-2 days"));		
 		updateMeta( $new_post_id, 'log-views-today', '0' );		
@@ -1752,9 +1748,9 @@ function battleplan_duplicate_post_as_draft(){
 		
 		wp_redirect( admin_url( 'post.php?action=edit&post=' . $new_post_id ) );
 		exit;
-	} else {
-		wp_die('Post creation failed, could not find original post: ' . $post_id);
-	}
+	else :
+		wp_die('Post creation failed, could not find original post: '.$post_id);
+	endif;
 }
   
 // Replace Page & Post links with icons
@@ -1804,19 +1800,19 @@ function battleplan_user_row_actions( $actions, $post ) {
 // Automatically set the image Title, Alt-Text, Caption & Description upon upload
 add_action( 'add_attachment', 'battleplan_setImageMetaUponUpload' );
 function battleplan_setImageMetaUponUpload( $post_ID ) {
-	if ( wp_attachment_is_image( $post_ID ) ) {
+	if ( wp_attachment_is_image( $post_ID ) ) :
 		$imageTitle = get_post( $post_ID )->post_title;
 		$imageTitle = ucwords( preg_replace( '%\s*[-_\s]+\s*%', ' ', $imageTitle )); // remove hyphens, underscores & extra spaces and capitalize
 		$imageMeta = array ( 'ID' => $post_ID, 'post_title' => $imageTitle ) /* post title */;			 
 		update_post_meta( $post_ID, '_wp_attachment_image_alt', $imageTitle ) /* alt text */;
 		wp_update_post( $imageMeta );
-	} 
+	endif;
 }
 
 // Add 'log-views' fields to an image when it is uploaded
 add_action( 'add_attachment', 'battleplan_addWidgetPicViewsToImg' );
 function battleplan_addWidgetPicViewsToImg( $post_ID ) {
-	if ( wp_attachment_is_image( $post_ID ) ) {		
+	if ( wp_attachment_is_image( $post_ID ) ) :	
 		updateMeta( $post_ID, 'log-last-viewed', strtotime("-2 days"));		
 		updateMeta( $post_ID, 'log-views-today', '0' );		
 		updateMeta( $post_ID, 'log-views-total-7day', '0' );		
@@ -1824,7 +1820,7 @@ function battleplan_addWidgetPicViewsToImg( $post_ID ) {
 		updateMeta( $post_ID, 'log-views-total-90day', '0' );
 		updateMeta( $post_ID, 'log-views-total-365day', '0' );
 		updateMeta( $post_ID, 'log-views', array( 'date'=> strtotime(date("F j, Y")), 'views' => 0 ));					
-	} 
+	endif;
 }
 
 // Force clear all views for posts/pages
@@ -2117,10 +2113,12 @@ function battleplan_clear_all() {
 	$args['tax_query'] = array( array( 'taxonomy' => 'image-categories', 'terms' => 'products', 'field' => 'slug', ),);
 	$getImg = new WP_Query( $args );
 
-	if ( $getImg->have_posts() ) : while ( $getImg->have_posts() ) :
-		$getImg->the_post();		
-		wp_delete_attachment( get_the_ID(), true );
-	endwhile; endif;
+	if ( $getImg->have_posts() ) : 
+		while ( $getImg->have_posts() ) :
+			$getImg->the_post();		
+			wp_delete_attachment( get_the_ID(), true );
+		endwhile; 
+	endif;
 
 	wp_reset_postdata();	
 	battleplan_clear_hvac();
@@ -2141,13 +2139,14 @@ function battleplan_clear_hvac() {
 	$args['tax_query'] = array( array( 'taxonomy' => 'image-categories', 'terms' => $terms, 'field' => 'slug', ),);
 	$getImg = new WP_Query( $args );
 
-	if ( $getImg->have_posts() ) : while ( $getImg->have_posts() ) :
-		$getImg->the_post();		
-		if ( basename( get_attached_file( get_the_ID() )) != 'logo.png' && basename( get_attached_file( get_the_ID() )) != 'site-icon.png' && basename( get_attached_file( get_the_ID() )) != 'favicon.png' ) wp_delete_attachment( get_the_ID(), true );
-	endwhile; endif;
+	if ( $getImg->have_posts() ) : 
+		while ( $getImg->have_posts() ) :
+			$getImg->the_post();		
+			if ( basename( get_attached_file( get_the_ID() )) != 'logo.png' && basename( get_attached_file( get_the_ID() )) != 'site-icon.png' && basename( get_attached_file( get_the_ID() )) != 'favicon.png' ) wp_delete_attachment( get_the_ID(), true );
+		endwhile; 
+		wp_reset_postdata();
+	endif;
 
-	wp_reset_postdata();
-	
 	updateOption('bp_chron_time', 0);
 	updateOption('bp_launch_date', date('Y-m-d'));
 	
@@ -2162,32 +2161,4 @@ function battleplan_clear_hvac() {
 	header("Location: /wp-admin/index.php");
 	exit();
 }  
-
-/*--------------------------------------------------------------
-# Contact Form 7 Set Up
---------------------------------------------------------------*/
-
-	// add Something to Status box
-    //add_action( 'wpcf7_admin_misc_pub_section', 'bp_cf7_add_to_status_box', 10, 0 ); 
-    function bp_cf7_add_to_status_box(  ) { 
-        echo '';
-    }; 	
-	
-	// add Something after Save button
-    //add_action( 'wpcf7_admin_footer', 'bp_cf7_add_after_save_button', 10, 0 ); 
-    function bp_cf7_add_after_save_button(  ) { 
-        echo '';
-    }; 
-
-	// add Something on Mail tab, before TO field
-    //add_action( 'wpcf7_collect_mail_tags', 'bp_cf7_add_before_to_field', 10, 0 ); 
-    function bp_cf7_add_before_to_field(  ) { 
-        echo '';
-    }; 
-
-	// add Something before Panel tabs
-   // add_filter( 'wpcf7_editor_panels', 'bp_cf7_add_before_panel_tabs', 10, 1 ); 
-	function bp_cf7_add_before_panel_tabs( $panels ) { 
-        echo ''; 
-    }; 
 ?>

@@ -49,12 +49,13 @@ function battleplan_restrictContent( $atts, $content = null ) {
 // Section
 add_shortcode( 'section', 'battleplan_buildSection' );
 function battleplan_buildSection( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'hash'=>'', 'style'=>'', 'width'=>'', 'grid'=>'', 'break'=>'', 'valign'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'class'=>'', 'start'=>'', 'end'=>'' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'hash'=>'', 'style'=>'', 'width'=>'', 'grid'=>'', 'break'=>'', 'valign'=>'', 'css'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'class'=>'', 'start'=>'', 'end'=>'' ), $atts );
 	$name = strtolower(esc_attr($a['name']));
 	$name = preg_replace("/[\s_]/", "-", $name);
 	if ( $name ) : $name = " id='".$name."'"; else: $name = ""; endif;
 	$hash = esc_attr($a['hash']);
 	if ( $hash != '' ) $hash='data-hash="'.$hash.'"';
+	$css = esc_attr($a['css']);
 	$background = esc_attr($a['background']);
 	$left = esc_attr($a['left']);
 	$top = esc_attr($a['top']);
@@ -82,7 +83,12 @@ function battleplan_buildSection( $atts, $content = null ) {
 		$buildLayout = do_shortcode($content);
 	endif;	
 	$buildSection = '<section'.$name.' class="section'.$style.$width.$class.'" '.$hash;
-	if ( $background != "" ) $buildSection .= ' style="background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;"';	
+	if ( $background != "" || $css != "" ) :
+		$buildSection .= ' style="';
+		if ( $css != "" ) $buildSection .= $css;
+		if ( $background != "" ) $buildSection .= ' background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;';	
+		$buildSection .= '"';
+	endif;
 	$buildSection .= '>'.$buildLayout.'</section>';	
 	
 	return $buildSection;
@@ -132,7 +138,7 @@ function battleplan_buildLayout( $atts, $content = null ) {
 // Column
 add_shortcode( 'col', 'battleplan_buildColumn' );
 function battleplan_buildColumn( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'hash'=>'', 'order'=>'', 'class'=>'', 'align'=>'', 'valign'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'start'=>'', 'end'=>'' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'hash'=>'', 'order'=>'', 'class'=>'', 'align'=>'', 'valign'=>'', 'css'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'start'=>'', 'end'=>'' ), $atts );
 	$name = strtolower(esc_attr($a['name']));
 	$name = preg_replace("/[\s_]/", "-", $name);
 	if ( $name ) : $name = " id='".$name."'"; else: $name = ""; endif;
@@ -144,6 +150,7 @@ function battleplan_buildColumn( $atts, $content = null ) {
 	if ( $align != '' ) $align = " text-".$align;
 	$valign = esc_attr($a['valign']);
 	if ( $valign != '' ) $valign = " valign-".$valign;
+	$css = esc_attr($a['css']);
 	$background = esc_attr($a['background']);
 	$left = esc_attr($a['left']);
 	$top = esc_attr($a['top']);
@@ -156,9 +163,13 @@ function battleplan_buildColumn( $atts, $content = null ) {
 		if ( $start && $now < $start ) return null;
 		if ( $end && $now > $end ) return null;		
 	}
-
 	$buildCol = '<div'.$name.' class="col '.$class.$align.$valign.'" '.$hash.$style.'><div class="col-inner"';
-	if ( $background != "" ) $buildCol .= 'style="background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;"';	
+	if ( $background != "" || $css != "" ) :
+		$buildCol .= ' style="';
+		if ( $css != "" ) $buildCol .= $css;
+		if ( $background != "" ) $buildCol .= ' background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;';	
+		$buildCol .= '"';
+	endif;
 	$buildCol .= '>';
 	$buildCol .= do_shortcode($content);
 	$buildCol .= '</div></div>';	
@@ -453,11 +464,12 @@ function battleplan_buildParallax( $atts, $content = null ) {
 // Locked Section 
 add_shortcode( 'lock', 'battleplan_buildLockedSection' );
 function battleplan_buildLockedSection( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'style'=>'lock', 'width'=>'edge', 'position'=>'bottom', 'delay'=>'3000', 'show'=>'session', 'background'=>'', 'left'=>'50', 'top'=>'50', 'class'=>'', 'start'=>'', 'end'=>'', 'btn-activated'=>'no' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'style'=>'lock', 'width'=>'edge', 'position'=>'bottom', 'delay'=>'3000', 'show'=>'session', 'css'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'class'=>'', 'start'=>'', 'end'=>'', 'btn-activated'=>'no' ), $atts );
 	$name = strtolower(esc_attr($a['name']));
 	$name = preg_replace("/[\s_]/", "-", $name);
 	$delay = esc_attr($a['delay']);
 	$show = esc_attr($a['show']); 
+	$css = esc_attr($a['css']);
 	$background = esc_attr($a['background']);
 	$left = esc_attr($a['left']);
 	$top = esc_attr($a['top']);
@@ -481,7 +493,14 @@ function battleplan_buildLockedSection( $atts, $content = null ) {
 	if ($btnActivated == "true" || $btnActivated == "yes" ) $btnActivated = "yes";
 	
 	$buildSection = '<section'.$name.' class="section section-lock'.$style.$width.$class.'" data-pos="'.$pos.'" data-delay="'.$delay.'" data-show="'.$show.'" data-btn="'.$btnActivated.'"';
-	if ( $background != "" ) $buildSection .= ' style="background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;"';	
+	
+	if ( $background != "" || $css != "" ) :
+		$buildSection .= ' style="';
+		if ( $css != "" ) $buildSection .= $css;
+		if ( $background != "" ) $buildSection .= ' background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;';	
+		$buildSection .= '"';
+	endif;
+	
 	$buildSection .= '><div class="closeBtn" aria-label="close" aria-hidden="false" tabindex="0"><i class="fa fa-times"></i></div>'.do_shortcode($content).'</section>';	
 	
 	return $buildSection;

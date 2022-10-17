@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 14.7
+Version: 14.7.1
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1801,11 +1801,7 @@ form .block-button,
 }
 
 .wpcf7-not-valid-tip {
-	position: 									absolute;
-	z-index: 									100;
-	left: 										10%;
-	bottom: 									10%;
-	width: 										80%;
+	display: 									block;
     font-size: 									90%;
 	font-weight: 								normal;
 	padding: 									0.5em 1em;
@@ -2326,6 +2322,7 @@ a#bbblink {
 	top:										50%;
 	left:										50%;
 	transform: 									translate(-50%, -50%);
+
 
 
 	padding:									calc(2em + 18px) 2em 2em;
@@ -2951,6 +2948,7 @@ body.locked {
 	display: 									block;
 	animation-name: 							email2-spin; 
     animation-duration: 						4.5s; 
+
     animation-iteration-count: 					infinite;
     animation-timing-function: 					linear;
 	animation-delay: 							3s;
@@ -5207,6 +5205,7 @@ html.error503 h3 {
 	.grid-7e .col:nth-last-child(1),
 	.grid-8e .col:nth-last-child(1),
 	.grid-8e .col:nth-last-child(2),
+
 	.grid-7e li:nth-last-child(1),
 	.grid-8e li:nth-last-child(1),
 	.grid-8e li:nth-last-child(2) {

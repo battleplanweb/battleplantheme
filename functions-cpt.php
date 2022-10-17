@@ -152,9 +152,7 @@ function battleplan_registerPostTypes() {
 // Remove 'optimized' from the url so that optimized pages look like regular pages
 add_filter( 'post_type_link', 'battleplan_remove_cpt_slug', 10, 2 );
 function battleplan_remove_cpt_slug( $post_link, $post ) {
-	if ( 'universal' === $post->post_type || 'optimized' === $post->post_type || 'elements' === $post->post_type ) {
- 		$post_link = str_replace( '/' . $post->post_type . '/', '/', $post_link );
- 	}
+	if ( 'universal' === $post->post_type || 'optimized' === $post->post_type || 'elements' === $post->post_type ) $post_link = str_replace( '/' . $post->post_type . '/', '/', $post_link );
  	return $post_link;
 }
 

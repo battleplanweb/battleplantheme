@@ -262,9 +262,7 @@ function battleplan_admin_location_stats() {
 		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul>';		
 		echo '<li class="sub-label" style="column-span: all">Last '.number_format(array_sum($allLocations)).' Sessions</li>';	
 		
-		foreach ( $allLocations as $location=>$count ) :
-			echo "<li><div class='value'><b>".number_format($count)."</b></div><div class='label'>".$location."</div></li>";
-		endforeach;			
+		foreach ( $allLocations as $location=>$count ) echo "<li><div class='value'><b>".number_format($count)."</b></div><div class='label'>".$location."</div></li>";
 			
 		echo '</ul></div>';		
 	endforeach;			
@@ -312,7 +310,11 @@ function battleplan_admin_tech_stats() {
 
 		if ( !in_array( $location, $GLOBALS['citiesToExclude']) && $site_speed != '' ) :			
 			$pageID = strtok($site_speed, '»');
-			if ( strpos($site_speed, 'desktop') !== false ) : $device = "desktop"; else: $device = "mobile"; endif;			
+			if ( strpos($site_speed, 'desktop') !== false ) : 
+				$device = "desktop"; 
+			else: 
+				$device = "mobile"; 
+			endif;			
 			$speed = (float)str_replace($pageID.'»'.$device.'«', '', $site_speed);
 			
 			if ( $speed < 10 ) :
@@ -479,9 +481,7 @@ function battleplan_admin_content_stats() {
 
 	arsort($colTracking);
 	echo '<ul><li class="sub-label">Best Column Positions</li><div style="column-count:2">';		
-	foreach ( $colTracking as $page=>$count) :
-		echo "<li><div class='value'><b>".$count."</b></div><div class='label'>".$page."</div></li>";	
-	endforeach;
+	foreach ( $colTracking as $page=>$count) echo "<li><div class='value'><b>".$count."</b></div><div class='label'>".$page."</div></li>";	
 	echo '</div></ul>';
 	
 	echo '</div>';
@@ -618,9 +618,7 @@ function battleplan_admin_quarterly_stats() { battleplan_admin_stats('quarterly'
 add_action("add_meta_boxes", "battleplan_add_custom_meta_boxes");
 function battleplan_add_custom_meta_boxes() {
 	$getCPT = getCPT();
-	foreach ( $getCPT as $postType ) :
-		add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", $postType, "side", "default", null);
-    endforeach;
+	foreach ( $getCPT as $postType ) add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", $postType, "side", "default", null);
 }
 
 // Set up Page Stats widget on posts & pages
@@ -653,5 +651,5 @@ function battleplan_page_stats() {
 	if ( $last180Views != $last90Views) echo "<tr><td><b>Last 180 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last180Views, 'battleplan' ), number_format($last180Views) )."</td></tr>";
 	if ( $last365Views != $last180Views) echo "<tr><td><b>Last 365 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last365Views, 'battleplan' ), number_format($last365Views) )."</td></tr>";
 	echo "</table>";		
-    }; 
+}; 
 ?>

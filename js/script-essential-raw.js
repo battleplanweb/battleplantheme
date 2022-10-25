@@ -217,10 +217,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	window.addStuck = function (element, faux) {
 		faux = faux || "true";	
 		if ( $(element).is(":visible") ) {						
-			$(element).addClass("stuck");	
 			if ( faux == "true" ) { 
 				addFaux(element.split(" ").pop()); 
 			}
+			$(element).addClass("stuck");
 		}
 	};
 
@@ -471,6 +471,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				theNextEl.css({ "transform":"translateY(0)", "transition-duration":speed+"ms" });	
 			}, { offset: offset });
 		}, delay);	
+
 	};	
 		
 // Button to reveal a hidden div

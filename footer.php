@@ -80,12 +80,6 @@
 <a class ="scroll-top hide-1 hide-2 hide-3" href="#page" role="button"><i class="fa fa-chevron-up" aria-hidden="true"></i><span class="sr-only">Scroll To Top</span></a>	
 
 <?php wp_footer(); ?>
-
-<?php //if ( get_page_by_path( 'svg', OBJECT, 'elements' ) ) echo '<div id="include-svg">'.do_shortcode('[get-element slug="svg"]').'</div>'; ?>
-
 <?php if ( shortcode_exists( 'get-svg' ) ) echo '<div id="include-svg">'.do_shortcode('[get-svg]').'</div>' ?>
-
-<?php //if ( _USER_LOGIN != "battleplanweb" && _IS_BOT != true && ( stripos($_SERVER['HTTP_REFERER'], 'google') !== 'false' || stripos($_SERVER['HTTP_REFERER'], 'bing') !== 'false' || stripos($_SERVER['HTTP_REFERER'], 'yahoo') !== 'false' ) ) updateOption('last_visitor_time', strtotime(date("F j, Y g:i a"))); ?>
-
 </body>
 </html>

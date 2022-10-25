@@ -97,8 +97,8 @@ function battleplan_getSeason($atts, $content = null) {
 	$a = shortcode_atts( array( 'spring'=>'', 'summer'=>'', 'fall'=>'', 'winter'=>'',  ), $atts );
 	$summer = wp_kses_post($a['summer']);	
 	$winter = wp_kses_post($a['winter']);	
-	$spring = wp_kses_post($a['spring']) != $summer ? wp_kses_post($a['spring']) : $summer;	
-	$fall = wp_kses_post($a['fall']) != $winter ? wp_kses_post($a['fall']) : $winter;	
+	$spring = wp_kses_post($a['spring']) != '' ? wp_kses_post($a['spring']) : $summer;	
+	$fall = wp_kses_post($a['fall']) != '' ? wp_kses_post($a['fall']) : $winter;	
 
 	if (date("m")>="03" && date("m")<="05") : 
 		return $spring; 
@@ -938,7 +938,7 @@ add_shortcode( 'get-logo-slider', 'battleplan_getLogoSlider' );
 function battleplan_getLogoSlider($atts, $content = null ) {
 	wp_enqueue_script( 'battleplan-logo-slider', get_template_directory_uri().'/js/script-logo-slider.js', array(), _BP_VERSION, false );	
 
-	$a = shortcode_atts( array( 'num'=>'-1', 'space'=>'10', 'size'=>'full', 'max_w'=>'85', 'tag'=>'', 'package'=>'', 'order_by'=>'rand', 'order'=>'ASC', 'shuffle'=>'false', 'speed'=>'slow', 'delay'=>'0', 'pause'=>'no', 'link'=>'false', 'lazy'=>'true'), $atts );
+	$a = shortcode_atts( array( 'num'=>'-1', 'space'=>'10', 'size'=>'full', 'max_w'=>'85', 'tag'=>'', 'package'=>'', 'order_by'=>'rand', 'order'=>'ASC', 'shuffle'=>'false', 'speed'=>'slow', 'delay'=>'0', 'pause'=>'no', 'link'=>'false', 'lazy'=>'true', 'direction'=>'normal'), $atts );
 	$tags = explode( ',', esc_attr($a['tag']) );
 	$orderBy = esc_attr($a['order_by']);		
 	$link = esc_attr($a['link']);		
@@ -990,7 +990,7 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 	
 	if ( esc_attr($a['shuffle']) != "false" ) shuffle($imageArray); 
 	
-	return '<div class="logo-slider" data-speed="'.esc_attr($a['speed']).'" data-delay="'.esc_attr($a['delay']).'" data-pause="'.esc_attr($a['pause']).'" data-maxw="'.esc_attr($a['max_w']).'" data-spacing="'.esc_attr($a['space']).'"><div class="logo-row">'.printArray($imageArray).'</div></div>';
+	return '<div class="logo-slider" data-speed="'.esc_attr($a['speed']).'" data-direction="'.esc_attr($a['direction']).'" data-delay="'.esc_attr($a['delay']).'" data-pause="'.esc_attr($a['pause']).'" data-maxw="'.esc_attr($a['max_w']).'" data-spacing="'.esc_attr($a['space']).'"><div class="logo-row">'.printArray($imageArray).'</div></div>';
 }
 
 // Generate an array of IDs for images, filtered by image-tags

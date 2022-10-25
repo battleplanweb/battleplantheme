@@ -2,7 +2,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 // Set up Logo Slider
 	$('.logo-slider').each(function() {
-		var logoSlider = $(this), logoRow = logoSlider.find('.logo-row'), speed = logoSlider.attr('data-speed'), delay = (parseInt(logoSlider.attr('data-delay'))) * 1000, time = 0, maxW = getDeviceW() * (parseInt(logoSlider.attr('data-maxw')) / 100), pause = logoSlider.attr('data-pause'), spacing = getDeviceW() * (parseInt(logoSlider.attr('data-spacing')) / 100), easing = "swing", moving = true, firstLogo, secondLogo, largestW = 0, checkW = 0, thisW = 0, firstPos = 0, secondPos = 0, space = 0, containerW = 0, logoW = 0;
+		var logoSlider = $(this), logoRow = logoSlider.find('.logo-row'), direction = logoSlider.attr('data-direction'), speed = logoSlider.attr('data-speed'), delay = (parseInt(logoSlider.attr('data-delay'))) * 1000, time = 0, maxW = getDeviceW() * (parseInt(logoSlider.attr('data-maxw')) / 100), pause = logoSlider.attr('data-pause'), spacing = getDeviceW() * (parseInt(logoSlider.attr('data-spacing')) / 100), easing = "swing", moving = true, firstLogo, secondLogo, largestW = 0, checkW = 0, thisW = 0, firstPos = 0, secondPos = 0, space = 0, containerW = 0, logoW = 0;
 		
 		logoRow.css({'opacity': 0});
 		
@@ -48,23 +48,40 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				logoRow.animate({ 'opacity': 1}, 300);
 
 				function moveLogos() {
-					if ( moving != false ) {								
-						firstLogo = logoRow.find('span:nth-of-type(1)');
-						firstPos = firstLogo.position().left + firstLogo.width();
-						secondLogo = logoRow.find('span:nth-of-type(2)');
-						secondPos = secondLogo.position().left;	
-						containerW = firstLogo.width() + secondPos - firstPos; 	
-						
-						logoRow.animate({ 'margin-left': -containerW+'px'}, speed, easing, function() {
-							firstLogo.remove();
-							logoRow.find('span:last').after(firstLogo);
-							logoRow.css({ 'margin-left': '0px' });
-						});						
-					} 	
+					if ( moving != false ) {	
+						if ( direction == "normal" ) {
+							firstLogo = logoRow.find('span:nth-of-type(1)');
+							firstPos = firstLogo.position().left + firstLogo.width();
+							secondLogo = logoRow.find('span:nth-of-type(2)');
+							secondPos = secondLogo.position().left;	
+							containerW = firstLogo.width() + secondPos - firstPos; 	
+
+							logoRow.animate({ 'margin-left': -containerW+'px'}, speed, easing, function() {
+								firstLogo.remove();
+								logoRow.find('span:last').after(firstLogo);
+								logoRow.css({ 'margin-left': '0px' });
+							});						
+
+						} else {
+							firstLogo = logoRow.find('span:nth-last-of-type(1)');
+							firstPos = firstLogo.position().left + firstLogo.width();
+							secondLogo = logoRow.find('span:nth-last-of-type(2)');
+							secondPos = secondLogo.position().left;	
+							containerW = firstLogo.width() + secondPos - firstPos; 	
+							logoRow.css({ 'margin-left': containerW+'px' });
+
+							logoRow.animate({ 'margin-left': '0px'}, speed, easing, function() {
+								firstLogo.remove();
+								logoRow.find('span:first').before(firstLogo);
+								logoRow.css({ 'margin-left': containerW+'px' });
+							});
+						}
+					} 	 
 				}
-				var advanceLogos = setInterval( moveLogos, time );
+				moveLogos();
+				setInterval( moveLogos, time );
 			}, 10);
-		}, 1500);
+		}, 500);
 	});
 	
 })(jQuery); });

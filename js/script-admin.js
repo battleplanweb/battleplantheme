@@ -65,7 +65,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			} 
 		}
 	}	
-	runVisitorTrendColor('daily');	
+	//runVisitorTrendColor('daily');	
 	runVisitorTrendColor('weekly');
 	runVisitorTrendColor('monthly');
 	runVisitorTrendColor('quarterly');

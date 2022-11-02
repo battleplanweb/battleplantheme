@@ -212,7 +212,7 @@ function battleplan_buildImg( $atts, $content = null ) {
 // Video Block
 add_shortcode( 'vid', 'battleplan_buildVid' );
 function battleplan_buildVid( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'link'=>'', 'thumb'=>'', 'preload'=>'false', 'class'=>'', 'related'=>'false', 'start'=>'', 'end'=>'', 'fullscreen'=>'false', 'controls'=>'true', 'autoplay'=>'false', 'loop'=>'false', 'muted'=>'false' ), $atts );
+	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'link'=>'', 'thumb'=>'', 'preload'=>'false', 'class'=>'', 'related'=>'false', 'start'=>'', 'end'=>'', 'fullscreen'=>'false', 'controls'=>'true', 'autoplay'=>'false', 'loop'=>'false', 'muted'=>'false', 'begin'=>'' ), $atts );
 	$related = esc_attr($a['related']);	
 	$order = esc_attr($a['order']);	
 	if ( $order != '' ) : $style = " style='order: ".$order." !important'"; else: $style = ""; endif;
@@ -226,6 +226,7 @@ function battleplan_buildVid( $atts, $content = null ) {
 	$autoplay = esc_attr($a['autoplay']);
 	$loop = esc_attr($a['loop']);
 	$muted = esc_attr($a['muted']);
+	$begin = esc_attr($a['begin']);
 	$fullscreen = esc_attr($a['fullscreen']);
 	if ( $fullscreen == 'true' ) $style .= "margin: 0; ";
 	$class = esc_attr($a['class']);
@@ -244,6 +245,7 @@ function battleplan_buildVid( $atts, $content = null ) {
 			$link .= "?autoplay=1";
 			if ( $thumb == '' ) : $thumb = '//i.ytimg.com/vi/'.$id.'/hqdefault.jpg'; endif;		
 			if ( $related == "false" ) : $link .= "&rel=0";	endif;	
+			if ( $begin != "" ) : $link .= "&start=".$begin; endif;	
 		else:
 			$id = str_replace('https://player.vimeo.com/video/', '', $link);
 			$link .= "?autoplay=1&title=0&byline=0&portrait=0";
@@ -404,7 +406,7 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 // Parallax Section 
 add_shortcode( 'parallax', 'battleplan_buildParallax' );
 function battleplan_buildParallax( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'style'=>'', 'type'=>'section', 'width'=>'edge', 'img-w'=>'2000', 'img-h'=>'1333', 'height'=>'800', 'padding'=>'50', 'pos-x'=>'center', 'pos-y'=>'top', 'bleed'=>'10', 'speed'=>'0.7', 'image'=>'', 'class'=>'', 'scroll-btn'=>'false', 'scroll-loc'=>'#page', 'scroll-icon'=>'fa-chevron-down' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'style'=>'', 'type'=>'section', 'width'=>'edge', 'img-w'=>'2000', 'img-h'=>'1333', 'height'=>'800', 'padding'=>'50', 'pos-x'=>'center', 'pos-y'=>'top', 'bleed'=>'10', 'speed'=>'0.7', 'image'=>'', 'class'=>'', 'scroll-btn'=>'false', 'scroll-loc'=>'#page', 'scroll-icon'=>'fa-chevron-down', 'z-index'=>'2' ), $atts );
 	$name = strtolower(esc_attr($a['name']));
 	$name = preg_replace("/[\s_]/", "-", $name);
 	$style = esc_attr($a['style']);
@@ -422,6 +424,7 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	$speed = esc_attr($a['speed']);
 	$image = esc_attr($a['image']);	
 	$class = esc_attr($a['class']); 
+	$zIndex = esc_attr($a['z-index']); 
 	if ( $class != '' ) $class = " ".$class;
 	$scrollBtn = esc_attr($a['scroll-btn']); 
 	$scrollLoc = esc_attr($a['scroll-loc']); 
@@ -457,7 +460,7 @@ function battleplan_buildParallax( $atts, $content = null ) {
 
 		return $setUpElement;
 	else:
-		return do_shortcode('<'.$div.' id="'.$name.'" class="'.$type.$style.' '.$type.'-'.$width.' '.$type.'-parallax'.$class.'" style="height:'.$height.'" data-parallax="scroll" data-id="'.$name.'" data-natural-width="'.$imgW.'" data-natural-height="'.$imgH.'" data-position-x="'.$posX.'" data-position-y="'.$posY.'" data-z-index="1" data-bleed="'.$bleed.'" data-speed="'.$speed.'" data-image-src="'.$image.'">'.$content.$buildScrollBtn.'</'.$div.'>');				
+		return do_shortcode('<'.$div.' id="'.$name.'" class="'.$type.$style.' '.$type.'-'.$width.' '.$type.'-parallax'.$class.'" style="height:'.$height.'" data-parallax="scroll" data-id="'.$name.'" data-natural-width="'.$imgW.'" data-natural-height="'.$imgH.'" data-position-x="'.$posX.'" data-position-y="'.$posY.'" data-z-index="'.$zIndex.'" data-bleed="'.$bleed.'" data-speed="'.$speed.'" data-image-src="'.$image.'">'.$content.$buildScrollBtn.'</'.$div.'>');				
 	endif;	
 }
 

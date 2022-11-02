@@ -2157,8 +2157,9 @@ function battleplan_clear_hvac() {
 	delete_option('bp_site_hits_ua_3');		
 	delete_option('bp_site_hits_ua_4');		
 	delete_option('bp_site_hits_ua_5');	
+	delete_option('bp_site_audit_details');
 	
-	header("Location: /wp-admin/index.php");
+	header("Location: /wp-admin/");
 	exit();
 }  
 ?>

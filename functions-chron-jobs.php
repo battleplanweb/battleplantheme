@@ -376,9 +376,8 @@ function processChron() {
 	$ga4_id = isset($GLOBALS['customer_info']['google-tags']['prop-id']) ? $GLOBALS['customer_info']['google-tags']['prop-id'] : null;
 	$client = new BetaAnalyticsDataClient(['credentials'=>get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json']);
 	$today = date( "Y-m-d" );
-	$chronTime = get_option('bp_chron_time') !== null ? get_option('bp_chron_time') : 0;
-	$rewind = date('Y-m-d', ($chronTime - 172800));
-	$rewind = '2022-09-01';	
+	$rewind = date("Y-m-d", strtotime("-5 day"));
+
 	$siteHitsGA4 = is_array(get_option('bp_site_hits_ga4')) ? get_option('bp_site_hits_ga4') : array();		
 
 	$states = array('alabama'=>'AL', 'arizona'=>'AZ', 'arkansas'=>'AR', 'california'=>'CA', 'colorado'=>'CO', 'connecticut'=>'CT', 'delaware'=>'DE', 'dist of columbia'=>'DC', 'dist. of columbia'=>'DC', 'district of columbia'=>'DC', 'florida'=>'FL', 'georgia'=>'GA', 'idaho'=>'ID', 'illinois'=>'IL', 'indiana'=>'IN', 'iowa'=>'IA', 'kansas'=>'KS', 'kentucky'=>'KY', 'louisiana'=>'LA', 'maine'=>'ME', 'maryland'=>'MD', 'massachusetts'=>'MA', 'michigan'=>'MI', 'minnesota'=>'MN', 'mississippi'=>'MS', 'missouri'=>'MO', 'montana'=>'MT', 'nebraska'=>'NE', 'nevada'=>'NV', 'new hampshire'=>'NH', 'new jersey'=>'NJ', 'new mexico'=>'NM', 'new york'=>'NY', 'north carolina'=>'NC', 'north dakota'=>'ND', 'ohio'=>'OH', 'oklahoma'=>'OK', 'oregon'=>'OR', 'pennsylvania'=>'PA', 'rhode island'=>'RI', 'south carolina'=>'SC', 'south dakota'=>'SD', 'tennessee'=>'TN', 'texas'=>'TX', 'utah'=>'UT', 'vermont'=>'VT', 'virginia'=>'VA', 'washington'=>'WA', 'washington d.c.'=>'DC', 'washington dc'=>'DC', 'west virginia'=>'WV', 'wisconsin'=>'WI', 'wyoming'=>'WY');
@@ -472,6 +471,7 @@ function processChron() {
 	$today = strtotime($today);		
 	$citiesToExclude = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, OR'); // also change in functions-admin.php
 	$compilePaths = array();
+	$lastKnownVisit = get_option('last_visitor_time');
 
 	foreach ( $siteHits as $siteHit ) :		
 		$page = rtrim($siteHit['page'], "/");
@@ -486,6 +486,7 @@ function processChron() {
 
 		$checkDate = strtotime($siteHit['date']);
 		$howLong = $today - $checkDate;
+		if ( $lastKnownVisit < $checkDate ) $lastKnownVisit = $checkDate;
 
 		foreach ( $pageCounts as $count ) :
 			if ( $howLong > (($count + 1) * 86400) ) :				
@@ -506,9 +507,11 @@ function processChron() {
 			endif;
 		endforeach;	
 	endforeach;	
+	
+	updateOption('last_visitor_time', $lastKnownVisit); 
 
 	// Gather Content Tracking & Speed Tracking stats
-	if ( $ga4_id && is_admin() ) :
+	if ( $ga4_id ) :
 		$today = date( "Y-m-d" );	
 		$rewind = date('Y-m-d', strtotime($today.' - 31 days'));
 
@@ -535,7 +538,7 @@ function processChron() {
 			
 			$allTracking[] = array('content'=>$content_tracking, 'speed'=>$site_speed, 'location'=>$location);		
 		endforeach;
-		updateOption('bp_tracking_content', $allTracking, false);	
+		updateOption('bp_tracking_content', $allTracking, false);					
 	endif;
 }
 ?>

@@ -48,8 +48,12 @@ $today = date( "Y-m-d" );
 $GLOBALS['citiesToExclude'] = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, OR'); // also change in functions-chron-jobs.php
 
 // Set up array accounting for each day, no skips	
-$blankDate = strtotime($siteHits[array_key_last($siteHits)]['date']);
-$totalDays = (strtotime($today) - $blankDate) / 86400;
+$blankDate = strtotime($today);
+foreach ( $siteHits as $siteHit ) :	
+	$theDate = strtotime($siteHit['date']);
+	if ( $theDate < $blankDate ) $blankDate = $theDate;
+endforeach;
+$totalDays = (strtotime($today) - $blankDate) / 86400; 
 
 for ( $x=0;$x<$totalDays;$x++) :
 	$blankDate = $blankDate + 86400;		

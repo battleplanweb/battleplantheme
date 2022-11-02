@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 14.7.2
+Version: 14.8
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1281,11 +1281,7 @@ section.section-default .flex {
 .header-stretch .divider-strip .flex, 
 .header-stretch .logo-strip .flex, 
 .menu-stretch .menu-strip .flex,
-
-
-
 .content-stretch #main-content, 
-
 .footer-stretch .footer-strip .flex,
 .info-stretch .site-info .flex,
 section.section-stretch .flex,
@@ -1312,6 +1308,7 @@ section.section-parallax-disabled section.section-full .flex {
 .header-edge .logo-strip .flex, 
 .split-menu .menu-strip .flex,
 .menu-edge .menu-strip .flex,
+.content-edge #main-content, 
 .footer-edge .footer-strip .flex,
 .info-edge .site-info .flex,
 section.section-edge .flex,
@@ -1794,6 +1791,7 @@ form .block-button,
 	display: 									none;
     border-color: 								unset;
 }
+
 
 .wpcf7 form.invalid .wpcf7-response-output, 
 .wpcf7 form.unaccepted .wpcf7-response-output {
@@ -2426,14 +2424,16 @@ body.locked {
 	padding-bottom:								2em;
 }
 
-.site-info, 
+.site-info {
+	align-items:								center;
+	font-size:									15px;
+	color:										#000000;
+}
+
 .site-info .col-inner {
 	align-items:								center;
 	font-size:									15px;
-}
-
-.site-info {
-	color:										#000000;
+	gap: 										1.1em;
 }
 
 .site-info a,
@@ -2450,6 +2450,7 @@ body.locked {
 
 .site-info .col-inner .block-image {
 	order:										1;
+	text-align: 								right;
 }
 
 .site-info .col-inner .block-text {
@@ -3829,6 +3830,7 @@ ul.side-by-side img {
 .block-video.span-4,
 .block-video.span-3 {
 	width:										75%;
+
 	margin-left:								auto;	
 	margin-right:								auto;
 }
@@ -4657,7 +4659,6 @@ chat-widget .lc_text-widget--btn {
 }
 
 .carousel.pointer-event {
-
   	-ms-touch-action: 							pan-y;
   	touch-action: 								pan-y;
 }
@@ -4687,11 +4688,9 @@ chat-widget .lc_text-widget--btn {
 
 .carousel-item-next, 
 .carousel-item-prev, 
-
-
 .carousel-item.active {
     display: 									grid;
-    transition: 								transform 0.6s ease;
+    transition: 								all 0.6s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -4713,45 +4712,70 @@ chat-widget .lc_text-widget--btn {
 
 .carousel-item-next.carousel-item-left, 
 .carousel-item-prev.carousel-item-right { 
-	transform: 									translateX(0);
-}
-
-@supports ((-webkit-transform-style:preserve-3d) or (transform-style:preserve-3d)) {
-    .carousel-item-next.carousel-item-left, 
-	.carousel-item-prev.carousel-item-right { 
-		transform: 									translate3d(0, 0, 0);
-	}
+	transform: 									translate3d(0,0,0);
 }
 
 .active.carousel-item-right, 
 .carousel-item-next { 
-	transform: 									translateX(100%);
-}
-
-@supports ((-webkit-transform-style:preserve-3d) or (transform-style:preserve-3d)) {
-    .active.carousel-item-right, 
-	.carousel-item-next { 
-		transform: 									translate3d(100%, 0, 0);
-	}
+	transform: 									translate3d(100%,0,0);
 }
 
 .active.carousel-item-left, 
 .carousel-item-prev { 
-	transform: 									translateX(-100%);
+	transform: 									translate3d(-100%,0,0);
 }
 
-@supports ((-webkit-transform-style:preserve-3d) or (transform-style:preserve-3d)) {
-    .active.carousel-item-left, 
-	.carousel-item-prev { 
-		transform: 									translate3d(-100%, 0, 0);
-	}
+.carousel.effect-trade .active.carousel-item { 
+	transform: 									translate3d(0,0,0);
+	transition-delay: 							0s;
+	transition-timing-function: 				ease-in-out;
+}
+
+.carousel.effect-trade .active.carousel-item-left,
+.carousel.effect-boomerang .active.carousel-item-left { 
+	transform: 									translate3d(100%,0,0);
+	transition-delay: 							0s;
+	transition-timing-function: 				ease-in-out;
+}
+
+.carousel.effect-trade .active.carousel-item-right,
+.carousel.effect-boomerang .active.carousel-item-right { 
+	transform: 									translate3d(-100%,0,0);
+	transition-delay: 							0s;
+	transition-timing-function: 				ease-in-out;
+}
+
+.carousel.effect-boomerang .carousel-item-next.carousel-item-left,
+.carousel.effect-boomerang .carousel-item-prev.carousel-item-right { 
+	transform: 									translate3d(0,0,0);
+	transition-delay: 							0.5s;
+	transition-timing-function: 				ease-in-out;
+}
+
+.carousel.effect-away .carousel-item-next.carousel-item-left, 
+.carousel.effect-away .carousel-item-prev.carousel-item-right,
+.carousel.effect-away .carousel-item { 
+	opacity: 									0;
+	z-index: 									1;
+	transition-timing-function: 				ease-in;
+}
+
+.carousel.effect-away .active.carousel-item {
+    opacity: 									1;
+	z-index: 									2;
+	transition-timing-function: 				ease-out; 
+}
+
+.carousel.effect-away .carousel-item-next,
+.carousel.effect-away .carousel-item-prev,
+.carousel.effect-away .active.carousel-item-left,
+.carousel.effect-away .active.carousel-item-right { 
+	transform: 									perspective(500px) translate3d(0,0,-400px);
+	transition-speed: 							0.3s;
 }
 
 .carousel-fade .carousel-item {
     opacity: 									0;
-
-    transition-duration: 						0.6s;
-    transition-property: 						opacity
 }
 
 .carousel-fade .carousel-item-next.carousel-item-left, 
@@ -4770,19 +4794,7 @@ chat-widget .lc_text-widget--btn {
 .carousel-fade .carousel-item-next, 
 .carousel-fade .carousel-item-prev, 
 .carousel-fade .carousel-item.active { 
-	transform: 									translateX(0);
-}
-
-@supports ((-webkit-transform-style:preserve-3d) or (transform-style:preserve-3d)) {
-    .carousel-fade .active.carousel-item-left, 
-	.carousel-fade .active.carousel-item-prev, 
-	.carousel-fade .carousel-item-next, 
-	.carousel-fade .carousel-item-prev, 
-	.carousel-fade .carousel-item.active { 
-		transform: 									translate3d(0, 0, 0);
-
-
-	}
+	transform: 									translate3d(0, 0, 0);
 }
 
 .carousel .controls {
@@ -4831,9 +4843,6 @@ chat-widget .lc_text-widget--btn {
     display: 									-ms-flexbox;
     display: 									flex;
 	flex-wrap:									wrap;
-
-    -ms-flex-pack: 								center;
-
     padding-left: 								5%;
    	padding-right: 								5%;
 	margin:										1em 0;
@@ -4912,7 +4921,6 @@ chat-widget .lc_text-widget--btn {
 .carousel-caption {
     position: 									absolute;
     right: 										15%;
-
     bottom: 									20px;
     left: 										15%;
     z-index: 									10;
@@ -5268,7 +5276,7 @@ html.error503 h3 {
 	}
 	
 	/* Content */
-	.content-edge #main-content,
+	.mobile-content-edge #main-content,
 	.sidebar-edge #main-content {
 		grid-column: 								edge-start / edge-end;
 	}
@@ -5374,21 +5382,17 @@ html.error503 h3 {
 		margin:										0 auto;
 	}
 	
-	/* .flex.grid-1-1-1:not(.break-none):not(.break-2):not(.break-1) .col:nth-child(3n+3) .col-inner,*** not sure why I did this, but it messes up layouts like Home Page Teasers */
-	.flex.break-3 .col .col-inner {
-		max-width:									50%;
-		margin:										0 auto;
-	}	
-	
 	.flex.break-3 .col {
 		/*grid-column: 								span 2; */
 		grid-column: 								1/-1;  /* 7/22/22 - Sherrell Air, any site that uses layout="1fr 320px 1fr" or more than 2 columns */
-	}
-	
+	}	
+		
+	/* .flex.grid-1-1-1:not(.break-none):not(.break-2):not(.break-1) .col:nth-child(3n+3) .col-inner,*** not sure why I did this, but it messes up layouts like Home Page Teasers */
 	.flex.break-3 .col .col-inner {
 		max-width: 									100% !important;
-	}
-		
+		margin:										0 auto;
+	}	
+			
 	/* Row of Pics */
 	.grid-6e .col:nth-last-child(1),
 	.grid-7e .col:nth-last-child(2),
@@ -5470,6 +5474,7 @@ html.error503 h3 {
   		scrollbar-width: 							none;
 	}
 	
+
 	#secondary .sidebar-inner::-webkit-scrollbar {
 	  	display: 									none;
 	}

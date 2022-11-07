@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.8' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '14.9' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -1093,7 +1093,7 @@ if ( !is_admin() && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && str
 			$dom->loadHTML($html);
 			$script = $dom->getElementsByTagName('script'); 
 
-			$targets = array('podium', 'leadconnectorhq', 'voip', 'google', 'paypal', 'extended-widget', 'embed-player', 'huzzaz', 'fbcdn', 'facebook', 'klaviyo');
+			$targets = array('podium', 'leadconnectorhq', 'voip', 'google', 'clickcease', 'paypal', 'extended-widget', 'embed-player', 'huzzaz', 'fbcdn', 'facebook', 'klaviyo');
 
 			foreach ($script as $item) :		   
 				foreach ($targets as $target) :
@@ -1405,71 +1405,80 @@ $optimizedBottomMeta->addWysiwyg(array( 'id' => 'page-bottom_text', 'label' => '
 // Display Google review rating
 add_action('wp_footer', 'battleplan_getGoogleRating');
 function battleplan_getGoogleRating() {
-	$placeID = do_shortcode('[get-biz info="pid"]');	
-	if ( $placeID != '' ) :
-		$apiKey = "AIzaSyBqf0idxwuOxaG";
-		$apiKey .= "-j3eCpef1Bunv";
-		$apiKey .= "-YVdVP8";	
-		$googleInfo = get_option('bp_google_reviews');
-		$today = strtotime(date("F j, Y"));	
-		$daysSinceCheck = $today - intval($googleInfo['date']);
+	$placeIDs = $GLOBALS['customer_info']['pid'];
+	$apiKey = "AIzaSyBqf";
+	$apiKey .= "0idxwuOxaG";
+	$apiKey .= "-j3eCpef1Bunv";
+	$apiKey .= "-YVdVP8";	
+	$googleInfo = get_option('bp_google_reviews');
+	$today = strtotime(date("F j, Y"));	
+	$daysSinceCheck = $today - intval($googleInfo['date']);
+	if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
+		
+	if ( $daysSinceCheck > 5 ) :
+		$gRating = $gNumber = 0;		
+		foreach ( $placeIDs as $placeID ) :	
+			if ( strlen($placeID) > 10 ) :
+				$url = "https://maps.googleapis.com/maps/api/place/details/json?placeid=".$placeID."&key=".$apiKey;
+				$ch = curl_init();
+				curl_setopt ($ch, CURLOPT_URL, $url);
+				curl_setopt ($ch, CURLOPT_RETURNTRANSFER, 1);
+				$result = curl_exec ($ch);
+				$res = json_decode($result,true);
+				$gNumber = $gNumber + $res['result']['user_ratings_total'];
+				$gRating = $gRating + ( $res['result']['rating'] * $res['result']['user_ratings_total'] );
+			endif;
+		endforeach;
+	
+		$googleInfo['number'] = $gNumber;	
+		$googleInfo['rating'] = $gRating / $gNumber;	
+		$googleInfo['date'] = $today;				
+		updateOption('bp_google_reviews', $googleInfo);	
+	endif;
 
-		if ( $daysSinceCheck > 5 ) :	
-			$url = "https://maps.googleapis.com/maps/api/place/details/json?placeid=".$placeID."&key=".$apiKey;
-			$ch = curl_init();
-			curl_setopt ($ch, CURLOPT_URL, $url);
-			curl_setopt ($ch, CURLOPT_RETURNTRANSFER, 1);
-			$result = curl_exec ($ch);
-			$res = json_decode($result,true);
-			$googleInfo['rating'] = $res['result']['rating'];	
-			$googleInfo['number'] = $res['result']['user_ratings_total'];	
-			$googleInfo['date'] = $today;	
-			updateOption('bp_google_reviews', $googleInfo);	
-		endif;
+	if ( $googleInfo['rating'] > 3.99 ) :
+		$buildPanel = '<a class="wp-gr wp-google-badge" href="https://search.google.com/local/reviews?placeid='.$placeIDs[0].'&hl=en&gl=US" target="_blank">';
+		$buildPanel .= '<div class="wp-google-border"></div>';
+		$buildPanel .= '<div class="wp-google-badge-btn" itemscope itemtype="http://schema.org/AggregateRating">';
+		$buildPanel .= '<div class="wp-google-badge-score wp-google-rating" itemprop="itemReviewed" itemscope itemtype="https://schema.org/'.get_option('wpseo_local')['business_type'].'">';
+		$buildPanel .= '<div class="wp-google-review"><svg role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" height="25" width="25"><title>Google Logo</title><g fill="none" fill-rule="evenodd">';
+		$buildPanel .= '<path d="M482.56 261.36c0-16.73-1.5-32.83-4.29-48.27H256v91.29h127.01c-5.47 29.5-22.1 54.49-47.09 71.23v59.21h76.27c44.63-41.09 70.37-101.59 70.37-173.46z" fill="#4285f4"></path>';
+		$buildPanel .= '<path d="M256 492c63.72 0 117.14-21.13 156.19-57.18l-76.27-59.21c-21.13 14.16-48.17 22.53-79.92 22.53-61.47 0-113.49-41.51-132.05-97.3H45.1v61.15c38.83 77.13 118.64 130.01 210.9 130.01z" fill="#34a853"></path>';
+		$buildPanel .= '<path d="M123.95 300.84c-4.72-14.16-7.4-29.29-7.4-44.84s2.68-30.68 7.4-44.84V150.01H45.1C29.12 181.87 20 217.92 20 256c0 38.08 9.12 74.13 25.1 105.99l78.85-61.15z" fill="#fbbc05"></path>';
+		$buildPanel .= '<path d="M256 113.86c34.65 0 65.76 11.91 90.22 35.29l67.69-67.69C373.03 43.39 319.61 20 256 20c-92.25 0-172.07 52.89-210.9 130.01l78.85 61.15c18.56-55.78 70.59-97.3 132.05-97.3z" fill="#ea4335"></path>';
+		$buildPanel .= '<path d="M20 20h472v472H20V20z"></path>';
+		$buildPanel .= '</g></svg>';
+		$buildPanel .= '<div data-as-of="'.date("F j, Y", $googleInfo['date']).'" class="wp-google-value" itemprop="ratingValue">'.number_format($googleInfo['rating'], 1, '.', ',').'</div>';
+		$buildPanel .= '<div class="wp-google-stars">';
 
-		if ( $googleInfo['rating'] > 3.99 ) :
-			$buildPanel = '<a class="wp-gr wp-google-badge" href="https://search.google.com/local/reviews?placeid='.$placeID.'&hl=en&gl=US" target="_blank">';
-			$buildPanel .= '<div class="wp-google-border"></div>';
-			$buildPanel .= '<div class="wp-google-badge-btn" itemscope itemtype="http://schema.org/AggregateRating">';
-			$buildPanel .= '<div class="wp-google-badge-score wp-google-rating" itemprop="itemReviewed" itemscope itemtype="https://schema.org/'.get_option('wpseo_local')['business_type'].'">';
-			$buildPanel .= '<div class="wp-google-review"><svg role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" height="25" width="25"><title>Google Logo</title><g fill="none" fill-rule="evenodd">';
-			$buildPanel .= '<path d="M482.56 261.36c0-16.73-1.5-32.83-4.29-48.27H256v91.29h127.01c-5.47 29.5-22.1 54.49-47.09 71.23v59.21h76.27c44.63-41.09 70.37-101.59 70.37-173.46z" fill="#4285f4"></path>';
-			$buildPanel .= '<path d="M256 492c63.72 0 117.14-21.13 156.19-57.18l-76.27-59.21c-21.13 14.16-48.17 22.53-79.92 22.53-61.47 0-113.49-41.51-132.05-97.3H45.1v61.15c38.83 77.13 118.64 130.01 210.9 130.01z" fill="#34a853"></path>';
-			$buildPanel .= '<path d="M123.95 300.84c-4.72-14.16-7.4-29.29-7.4-44.84s2.68-30.68 7.4-44.84V150.01H45.1C29.12 181.87 20 217.92 20 256c0 38.08 9.12 74.13 25.1 105.99l78.85-61.15z" fill="#fbbc05"></path>';
-			$buildPanel .= '<path d="M256 113.86c34.65 0 65.76 11.91 90.22 35.29l67.69-67.69C373.03 43.39 319.61 20 256 20c-92.25 0-172.07 52.89-210.9 130.01l78.85 61.15c18.56-55.78 70.59-97.3 132.05-97.3z" fill="#ea4335"></path>';
-			$buildPanel .= '<path d="M20 20h472v472H20V20z"></path>';
-			$buildPanel .= '</g></svg>';
-			$buildPanel .= '<div data-as-of="'.date("F j, Y", $googleInfo['date']).'" class="wp-google-value" itemprop="ratingValue">'.number_format($googleInfo['rating'], 1, '.', ',').'</div>';
-			$buildPanel .= '<div class="wp-google-stars">';
+		if ( $googleInfo['rating'] >= 4.7) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo['rating'], 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i></span>';
+		if ( $googleInfo['rating'] >= 4.2 && $googleInfo['rating'] <= 4.6 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo['rating'], 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star-half-alt"></i></span>';
+		if ( $googleInfo['rating'] >= 3.7 && $googleInfo['rating'] <= 4.1 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo['rating'], 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa far fa-star"></i></span>';		
+		if ( $googleInfo['rating'] >= 3.2 && $googleInfo['rating'] <= 3.6 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo['rating'], 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star-half-alt"></i><i class="fa far fa-star"></i></span>';
 
-			if ( $googleInfo['rating'] >= 4.7) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo['rating'], 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i></span>';
-			if ( $googleInfo['rating'] >= 4.2 && $googleInfo['rating'] <= 4.6 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo['rating'], 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star-half-alt"></i></span>';
-			if ( $googleInfo['rating'] >= 3.7 && $googleInfo['rating'] <= 4.1 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo['rating'], 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa far fa-star"></i></span>';		
-			if ( $googleInfo['rating'] >= 3.2 && $googleInfo['rating'] <= 3.6 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo['rating'], 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star-half-alt"></i><i class="fa far fa-star"></i></span>';
+		$buildPanel .= '</div></div>';	
+		$buildPanel .= '<div class="wp-google-total">Click to view our ';			
+		if ( $googleInfo['number'] > 4 ) $buildPanel .= '<span itemprop="reviewCount">'.number_format($googleInfo['number']).'</span> ';			
+		$buildPanel .= 'Google reviews!</div>';	
+		$buildPanel .= '</div></div></a>';
 
-			$buildPanel .= '</div></div>';	
-			$buildPanel .= '<div class="wp-google-total">Click to view our ';			
-			if ( $googleInfo['number'] > 4 ) $buildPanel .= '<span itemprop="reviewCount">'.number_format($googleInfo['number']).'</span> ';			
-			$buildPanel .= 'Google reviews!</div>';	
-			$buildPanel .= '</div></div></a>';
-
-			echo $buildPanel;
-		endif;
+		echo $buildPanel;
 	endif;
 }
 
 // Set up URL re-directs
-if ( _PAGE_SLUG == "google" && do_shortcode('[get-biz info="pid"]') != "" ) : 
-	wp_redirect( "https://search.google.com/local/reviews?placeid=".do_shortcode('[get-biz info="pid"]')."&hl=en&gl=US", 301 ); 
+$pid = is_array($GLOBALS['customer_info']['pid']) ? $GLOBALS['customer_info']['pid'][0] : $GLOBALS['customer_info']['pid'];
+if ( _PAGE_SLUG == "google" && strlen( $pid ) > 10 ) : 
+	wp_redirect( "https://search.google.com/local/reviews?placeid=".$pid."&hl=en&gl=US", 301 ); 
 	exit; 
 endif;
-if ( _PAGE_SLUG == "facebook" && do_shortcode('[get-biz info="facebook"]') != "" ) : 
+if ( _PAGE_SLUG == "facebook" && strlen( $GLOBALS['customer_info']['facebook'] ) > 10 ) : 
 	$facebook = do_shortcode('[get-biz info="facebook"]');
 	if ( substr($facebook, -1) != '/') $facebook .= "/";
 	wp_redirect( $facebook."reviews/", 301 ); 
 	exit; 
 endif;
-if ( _PAGE_SLUG == "yelp" && do_shortcode('[get-biz info="yelp"]') != "" ) : 
+if ( _PAGE_SLUG == "yelp" && strlen( $GLOBALS['customer_info']['yelp'] ) > 10 ) : 
 	$yelp = str_replace('https://www.yelp.com/biz/', '', do_shortcode('[get-biz info="yelp"]'));
 	wp_redirect( "https://www.yelp.com/writeareview/biz/".$yelp, 301 ); 
 	exit; 

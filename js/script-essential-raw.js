@@ -472,6 +472,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			}, { offset: offset });
 		}, delay);	
 
+
+
 	};	
 		
 // Button to reveal a hidden div
@@ -489,6 +491,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	};
 	
 	// Set up Review Questions & Redirect
+	/*
 	$('.review-form:first').addClass('active');
 	$('.review-form #gmail-yes').click(function() { window.location.href = "/google"; });	
 	$('.review-form #facebook-yes').click(function() { window.location.href = "/facebook"; });	
@@ -498,6 +501,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$(this).closest('.review-form').removeClass('active');
 		$(this).closest('.review-form').next().addClass('active');			
 	});
+	*/
+	
+	
+	
 	
 // This script blocked by Content Security Policy	
 	var ak_js = document.getElementById( 'ak_js' ), el, destinations = [];

@@ -376,7 +376,7 @@ function processChron() {
 	$ga4_id = isset($GLOBALS['customer_info']['google-tags']['prop-id']) ? $GLOBALS['customer_info']['google-tags']['prop-id'] : null;
 	$client = new BetaAnalyticsDataClient(['credentials'=>get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json']);
 	$today = date( "Y-m-d" );
-	$rewind = date("Y-m-d", strtotime("-5 day"));
+	$rewind = date("Y-m-d", strtotime("-12 month"));
 
 	$siteHitsGA4 = is_array(get_option('bp_site_hits_ga4')) ? get_option('bp_site_hits_ga4') : array();		
 
@@ -470,48 +470,46 @@ function processChron() {
 	$pageCounts = array(1, 7, 30, 90, 365);
 	$today = strtotime($today);		
 	$citiesToExclude = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, OR'); // also change in functions-admin.php
-	$compilePaths = array();
+	$compilePaths = $statOverview = array();
 	$lastKnownVisit = get_option('last_visitor_time');
 
 	foreach ( $siteHits as $siteHit ) :		
 		$page = rtrim($siteHit['page'], "/");
-		if ( isset($siteHit['location']) && !in_array( $siteHit['location'], $citiesToExclude) && strpos($page, 'fbclid') === false && strpos($page, 'reportkey') === false ) :					
+		if ( isset($siteHit['location']) && !in_array( $siteHit['location'], $citiesToExclude) && strpos($page, 'fbclid') === false && strpos($page, 'reportkey') === false ) :			
 			if ( $page == "" || $page == "/" ) $page = "Home";
 			if ( array_key_exists($page, $compilePaths ) ) :
 				$compilePaths[$page] += (int)$siteHit['pages-viewed'];
 			else:
 				$compilePaths[$page] = (int)$siteHit['pages-viewed'];
-			endif;
+			endif; 
 		endif;
 
 		$checkDate = strtotime($siteHit['date']);
 		$howLong = $today - $checkDate;
 		if ( $lastKnownVisit < $checkDate ) $lastKnownVisit = $checkDate;
-
+		
 		foreach ( $pageCounts as $count ) :
 			if ( $howLong > (($count + 1) * 86400) ) :				
 				foreach ($compilePaths as $page=>$pageViews) :
-
 					if ( $page == "Home" ) :
 						$id = get_option('page_on_front');					
 					else:
 						$id = getID($page);
-					endif;				
-					if ( $count == 1) : $pageKey = 'log-views-today';
-					else: $pageKey = 'log-views-total-'.$count.'day'; endif;
-
+					endif;		
+					
+					$pageKey = $count==1 ? 'log-views-today' : 'log-views-total-'.$count.'day';
 					updateMeta($id, $pageKey, $pageViews);
-
 				endforeach;
-				array_shift($pageCounts);						
-			endif;
+			
+				array_shift($pageCounts);			
+			endif;	
 		endforeach;	
 	endforeach;	
 	
-	updateOption('last_visitor_time', $lastKnownVisit); 
+	updateOption('last_visitor_time', $lastKnownVisit, false); 
 
-	// Gather Content Tracking & Speed Tracking stats
 	if ( $ga4_id ) :
+		// Gather Content Tracking & Speed Tracking stats
 		$today = date( "Y-m-d" );	
 		$rewind = date('Y-m-d', strtotime($today.' - 31 days'));
 
@@ -538,7 +536,46 @@ function processChron() {
 			
 			$allTracking[] = array('content'=>$content_tracking, 'speed'=>$site_speed, 'location'=>$location);		
 		endforeach;
-		updateOption('bp_tracking_content', $allTracking, false);					
+		updateOption('bp_tracking_content', $allTracking, false);		
+		
+		// Tally sessions for use on bp stats page
+		$statOverview = array();		
+		$pageCounts = array(7, 30, 90, 365);		
+		foreach ( $pageCounts as $count ) :
+			$totalViews = 0;	
+			$statKey = $count==365 ? 'lastYearViews' : 'last'.$count.'Views';
+			$today = date( "Y-m-d" );	
+			$rewind = date('Y-m-d', strtotime($today.' - '.$count.' days'));
+
+			$response = $client->runReport([
+				'property' => 'properties/'.$ga4_id,
+				'dateRanges' => [
+					new DateRange([ 'start_date' => $rewind, 'end_date' => $today ]),
+				],
+				'dimensions' => [
+					new Dimension([ 'name' => 'city' ]),
+					new Dimension([ 'name' => 'region' ]),	
+				],
+				'metrics' => [
+					new Metric([ 'name' => 'engagedSessions' ]),
+				]
+			]);
+
+			foreach ( $response->getRows() as $row ) :
+				$city = $row->getDimensionValues()[0]->getValue();
+				$state = strtolower($row->getDimensionValues()[1]->getValue());
+				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
+				$sessions = $row->getMetricValues()[0]->getValue();							
+
+				if ( isset($states[$state]) && !in_array( $location, $citiesToExclude) ) :	
+					$totalViews = $totalViews + $sessions;
+				endif;
+			endforeach;			
+
+			$statOverview[$statKey] = $totalViews;
+		endforeach;
+		
+		updateOption('stat-overview', $statOverview, false );	
 	endif;
 }
 ?>

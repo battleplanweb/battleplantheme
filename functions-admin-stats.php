@@ -153,6 +153,7 @@ else:
 endif;
 
 $GLOBALS['dates'] = array_keys($GLOBALS['dailyStats']);
+$statOverview = array();
 
 // Set up Site Visitors widget on dashboard
 function battleplan_admin_site_stats() {
@@ -175,7 +176,7 @@ function battleplan_admin_site_stats() {
 		if ( $x == 729 ) $last2YearViews = $users; $last2YearAvg = number_format(($last2YearViews / 730),1);		
 		if ( $x == 1095 ) $last3YearViews = $users; $last3YearAvg = number_format(($last3YearViews / 1095),1);
 	} 		 
-		
+					
 	echo "<table><tr><td class='label'>Last Visit</td><td class='last-visit'>".$lastVisitTime." ago</td></tr>";	
 	echo "<tr><td>&nbsp;</td></tr>";		
 	echo "<tr><td class='label'>Yesterday</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $viewsToday, 'battleplan' ), number_format($viewsToday))."</td></tr>";	

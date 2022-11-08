@@ -286,6 +286,7 @@ function processChron() {
 --------------------------------------------------------------*/	
 	if ( function_exists('battleplan_updateSiteOptions') ) battleplan_updateSiteOptions();	
 		 
+	$updateInfo = false;
 	$customer_info = get_option('customer_info');
 	$placeIDs = $customer_info['pid'];
 	if ( isset($placeIDs) ) :
@@ -302,6 +303,7 @@ function processChron() {
 			$gRating = $gNumber = 0;		
 			foreach ( $placeIDs as $placeID ) :	
 				if ( strlen($placeID) > 10 ) :
+					$updateInfo = true;
 					$url = "https://maps.googleapis.com/maps/api/place/details/json?placeid=".$placeID."&key=".$apiKey;
 					$ch = curl_init();
 					curl_setopt ($ch, CURLOPT_URL, $url);
@@ -354,31 +356,31 @@ function processChron() {
 			$googleInfo['date'] = $today;				
 			updateOption('bp_gbp_update', $googleInfo);	
 		endif;
-
-		$primePID = $placeIDs[0];
 		
-		$customer_info['area'] = $googleInfo[$primePID]['area'];		
-		$customer_info['phone'] = $googleInfo[$primePID]['phone'];
-		$customer_info['phone-format'] = $googleInfo[$primePID]['phone-format'];
-		$customer_info['name'] = $googleInfo[$primePID]['name'];
-		$customer_info['street'] = $googleInfo[$primePID]['street'];
-		$customer_info['city'] = $googleInfo[$primePID]['city'];
-		$customer_info['state-abbr'] = $googleInfo[$primePID]['state-abbr'];
-		$customer_info['state-full'] = $googleInfo[$primePID]['state-full'];
-		$customer_info['zip'] = $googleInfo[$primePID]['zip'];
-		$customer_info['lat'] = $googleInfo[$primePID]['lat'];
-		$customer_info['long'] = $googleInfo[$primePID]['long'];
-		$customer_info['hours-sun'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][6], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][6], ": ") + 2);
-		$customer_info['hours-mon'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][0], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][0], ": ") + 2);
-		$customer_info['hours-tue'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][1], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][1], ": ") + 2);
-		$customer_info['hours-wed'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][2], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][2], ": ") + 2);
-		$customer_info['hours-thu'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][3], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][3], ": ") + 2);
-		$customer_info['hours-fri'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][4], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][4], ": ") + 2);
-		$customer_info['hours-sat'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][5], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][5], ": ") + 2);
+		if ( $updateInfo == true ) :
+			$primePID = $placeIDs[0];		
+			$customer_info['area'] = $googleInfo[$primePID]['area'];		
+			$customer_info['phone'] = $googleInfo[$primePID]['phone'];
+			$customer_info['phone-format'] = $googleInfo[$primePID]['phone-format'];
+			$customer_info['name'] = $googleInfo[$primePID]['name'];
+			$customer_info['street'] = $googleInfo[$primePID]['street'];
+			$customer_info['city'] = $googleInfo[$primePID]['city'];
+			$customer_info['state-abbr'] = $googleInfo[$primePID]['state-abbr'];
+			$customer_info['state-full'] = $googleInfo[$primePID]['state-full'];
+			$customer_info['zip'] = $googleInfo[$primePID]['zip'];
+			$customer_info['lat'] = $googleInfo[$primePID]['lat'];
+			$customer_info['long'] = $googleInfo[$primePID]['long'];
+			$customer_info['hours-sun'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][6], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][6], ": ") + 2);
+			$customer_info['hours-mon'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][0], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][0], ": ") + 2);
+			$customer_info['hours-tue'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][1], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][1], ": ") + 2);
+			$customer_info['hours-wed'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][2], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][2], ": ") + 2);
+			$customer_info['hours-thu'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][3], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][3], ": ") + 2);
+			$customer_info['hours-fri'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][4], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][4], ": ") + 2);
+			$customer_info['hours-sat'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][5], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][5], ": ") + 2);
 
-		updateOption( 'customer_info', $customer_info );
-		$GLOBALS['customer_info'] = $customer_info;
-
+			updateOption( 'customer_info', $customer_info );
+			$GLOBALS['customer_info'] = $customer_info;
+		endif;
 	endif;
 
 /*--------------------------------------------------------------

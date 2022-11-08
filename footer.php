@@ -32,22 +32,33 @@
 	
 				if (function_exists('battleplan_siteInfoRight')) : $buildRight = battleplan_siteInfoRight();
 				else: 	
+				
+					$googleInfo = get_option('bp_gbp_update');
+
 					$buildCopyright = "";
 					$buildCopyright .= wp_nav_menu( array( 'theme_location' => 'footer-menu', 'container' => 'div', 'container_id' => 'footer-navigation', 'container_class' => 'secondary-navigation', 'menu_id' => 'footer-menu', 'menu_class' => 'menu secondary-menu', 'fallback_cb' => 'false', 'echo' => false ) );
-					if ( do_shortcode('[get-biz info="misc2"]') ) $buildCopyright .= "<div class='site-info-misc2'>".do_shortcode('[get-biz info="misc2"]')."</div>";						
-					$buildCopyright .= "<div class='site-info-copyright'>".do_shortcode('[get-biz info="copyright"]')." ".do_shortcode('[get-biz info="name"]')." • All Rights Reserved</div><div class='site-info-address'>";
-					if ( do_shortcode('[get-biz info="street"]') ) $buildCopyright .= do_shortcode('[get-biz info="street"]')." • ";							
-					if ( do_shortcode('[get-biz info="city"]') ) :
-						$buildCopyright .= do_shortcode('[get-biz info="city"]').", ".do_shortcode('[get-biz info="state-abbr"]')." ".do_shortcode('[get-biz info="zip"]')." • ";
-					elseif ( do_shortcode('[get-biz info="region"]') ) : 
-						$buildCopyright .= do_shortcode('[get-biz info="region"]')." • "; 
-					endif;
-					if ( do_shortcode('[get-biz info="phone-link"]') ) $buildCopyright .= do_shortcode('[get-biz info="phone-link"]');								
-					if ( do_shortcode('[get-biz info="misc3"]') ) $buildCopyright .= "<div class='site-info-misc3'>".do_shortcode('[get-biz info="misc3"]')."</div>";	
+					if ( $GLOBALS['customer_info']['misc2'] ) $buildCopyright .= "<div class='site-info-misc2'>".$GLOBALS['customer_info']['misc2']."</div>";						
+					$buildCopyright .= "<div class='site-info-copyright'>".$GLOBALS['customer_info']['copyright']." ".$GLOBALS['customer_info']['name']." • All Rights Reserved</div>";
+					
+					$placeIDs = $GLOBALS['customer_info']['pid'];
+					if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
+					foreach ( $placeIDs as $placeID ) :	
+						$buildCopyright .= "<div class='site-info-address'>";
+						if ( $googleInfo[$placeID]['street'] != '' ) $buildCopyright .= trim($googleInfo[$placeID]['street']).", ";							
+						if ( $googleInfo[$placeID]['city'] ) :
+							$buildCopyright .= $googleInfo[$placeID]['city'].", ".$googleInfo[$placeID]['state-abbr']." ".$googleInfo[$placeID]['zip']." • ";
+						elseif ( $googleInfo[$placeID]['region'] ) : 
+							$buildCopyright .= $googleInfo[$placeID]['region']." • "; 
+						endif;
+						if ( $googleInfo[$placeID]['phone-format'] ) $buildCopyright .= $googleInfo[$placeID]['phone-format'];
+						$buildCopyright .= "</div>";
+					endforeach;
+					
+					if ( $GLOBALS['customer_info']['misc3'] ) $buildCopyright .= "<div class='site-info-misc3'>".$GLOBALS['customer_info']['misc3']."</div>";	
 					$buildCopyright .= "<div class='site-info-links'>";
-					if ( do_shortcode('[get-biz info="license"]') ) $buildCopyright .= "License ".do_shortcode('[get-biz info="license"]')." • "; 
+					if ( $GLOBALS['customer_info']['license'] ) $buildCopyright .= "License ".$GLOBALS['customer_info']['license']." • "; 
 					$buildCopyright .= "<span class='privacy-policy-link'><a href='/privacy-policy/'>Privacy Policy</a></span><span class='terms-conditions-link'> • <a href='/terms-conditions/'>Terms & Conditions</a></span>";
-					if ( do_shortcode('[get-biz info="misc1"]') ) $buildCopyright .= " • ".do_shortcode('[get-biz info="misc1"]');
+					if ( $GLOBALS['customer_info']['misc1'] ) $buildCopyright .= " • ".$GLOBALS['customer_info']['misc1'];
 					$buildCopyright .= "</div><div class='site-info-battleplan'>Website developed & maintained by <a href='http://battleplanwebdesign.com' target='_blank' rel='noreferrer'>Battle Plan Web Design</a></div>";
 					$buildCopyright .= "</div>";					
 					
@@ -82,7 +93,7 @@
 		foreach ( get_posts( array ( 'numberposts'=>-1, 'post_type'=>'optimized' ) ) as $post ) {
 			$buildLinks .= '<a href="'.get_permalink( $post->ID ).'">'.$post->post_title.'</a> · ';
 		}
-		$buildLinks .= 'other towns in '.do_shortcode('[get-biz info="state-full"]').'</div>';	
+		$buildLinks .= 'other towns in '.$GLOBALS['customer_info']['state-full'].'</div>';	
 		echo $buildLinks;
 	?>	
 		

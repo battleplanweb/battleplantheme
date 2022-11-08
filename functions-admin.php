@@ -18,8 +18,6 @@
 # Shortcodes
 --------------------------------------------------------------*/
 
-if ( is_admin() && function_exists('battleplan_updateSiteOptions') ) battleplan_updateSiteOptions();
-
 // Remove buttons from WordPress text editor
 add_filter( 'quicktags_settings', 'battleplan_delete_quicktags', 10, 2 );
 function battleplan_delete_quicktags( $qtInit, $editor_id = 'content' ) {
@@ -1466,22 +1464,30 @@ function battleplan_addSitePage() {
 // Replace WordPress copyright message at bottom of admin page
 add_filter('admin_footer_text', 'battleplan_admin_footer_text');
 function battleplan_admin_footer_text() { 
-	$printFooter = '<div style="float:left; margin-right:8px;"><img src="https://battleplanwebdesign.com/wp-content/uploads/site-icon-80x80.png" /></div>';
-	$printFooter .= '<div style="float:left; margin-top:8px;">Powered by <a href="https://battleplanwebdesign.com" target="_blank">Battle Plan Web Design</a><br>';
+	$printFooter = '<section><div class="flex" style="grid-template-columns: 80px 300px 1fr; gap: 20px">';
+	$printFooter .= '<div style="grid-row: span 2; align-self: center;"><img src="https://battleplanwebdesign.com/wp-content/uploads/site-icon-80x80.png" /></div>';
+	$printFooter .= '<div style="grid-row: span 2; align-self: center;">Powered by <a href="https://battleplanwebdesign.com" target="_blank">Battle Plan Web Design</a><br>';
 	$printFooter .= 'Launched '.date('F Y', strtotime(get_option('bp_launch_date'))).'<br>';
 	$printFooter .= 'Framework '._BP_VERSION.'<br>';
-	$printFooter .= 'WP '.get_bloginfo('version').'<br></div>';	
+	$printFooter .= 'WP '.get_bloginfo('version').'<br></div><div style="justify-self: end;">';	
+	 
+	$placeIDs = get_option('customer_info')['pid'];
+	$googleInfo = get_option('bp_gbp_update');					
+	if ( isset($placeIDs)) :
+		if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
+		foreach ( $placeIDs as $placeID ) :	
+			$printFooter .= '<div style="float:left; margin-right: 50px;">';	
+			$printFooter .= '<a class="button" style="margin: 0 0 10px -5px" href = "https://search.google.com/local/writereview?placeid='.$placeID.'" target="_blank">GBP: '.$googleInfo[$placeID]['city'].'</a><br>';
+			$printFooter .= get_option('customer_info')['area-before'].$googleInfo[$placeID]['area'].get_option('customer_info')['area-after'].$googleInfo[$placeID]['phone'].'<br>';
+			$printFooter .= $googleInfo[$placeID]['street'].'<br>';
+			$printFooter .= $googleInfo[$placeID]['city'].', '.$googleInfo[$placeID]['state-abbr'].' '.$googleInfo[$placeID]['zip'].'<br>';
+			if ( isset($googleInfo[$placeID]['lat']) ) $printFooter .= $googleInfo[$placeID]['lat'].', '.$googleInfo[$placeID]['long'].'<br>';	
+			$printFooter .= '</div>';
+		endforeach;
+	endif;
 	
-	$printFooter .= '<div style="float:right; margin-right: 50px">';	
-	$printFooter .= get_option('customer_info')['area-before'].get_option('customer_info')['area'].get_option('customer_info')['area-after'].get_option('customer_info')['phone'].'<br>';
-	$printFooter .= get_option('customer_info')['street'].'<br>';
-	$printFooter .= get_option('customer_info')['city'].', '.get_option('customer_info')['state-abbr'].' '.get_option('customer_info')['zip'].'<br>';
-	if ( isset(get_option('customer_info')['lat']) ) $printFooter .= get_option('customer_info')['lat'].', '.get_option('customer_info')['long'].'<br>';	
-	$printFooter .= '</div><div style="float:right; margin-right: 50px; margin-top: 40px;">';
-	
-	if ( isset(get_option('customer_info')['pid']) ) $printFooter .= '<a class="button" href = "https://search.google.com/local/writereview?placeid='.get_option('customer_info')['pid'].'" target="_blank">Google GBP</a>';
-	$printFooter .= '<a class="button" href = "mailto:'.get_option('customer_info')['email'].'">Email</a>';
-	if ( isset(get_option('customer_info')['owner-email']) ) $printFooter .= '<a class="button" href = "mailto:'.get_option('customer_info')['owner-email'].'">Owner</a>';	
+	$printFooter .= '</div><div style="justify-self: end; margin-right: 50px; margin-bottom:15px;"><a class="button" href = "mailto:'.get_option('customer_info')['email'].'">Contact Email</a>';
+	if ( isset(get_option('customer_info')['owner-email']) ) $printFooter .= '<a class="button" href = "mailto:'.get_option('customer_info')['owner-email'].'">Owner Email</a>';	
 	if ( isset(get_option('customer_info')['facebook']) ) $printFooter .= '<a class="button" href = "'.get_option('customer_info')['facebook'].'" target="_blank">Facebook</a>';
 	if ( isset(get_option('customer_info')['twitter']) ) $printFooter .= '<a class="button" href = "'.get_option('customer_info')['twitter'].'" target="_blank">Twitter</a>';
 	if ( isset(get_option('customer_info')['instagram']) ) $printFooter .= '<a class="button" href = "'.get_option('customer_info')['instagram'].'" target="_blank">Instagram</a>';
@@ -1494,9 +1500,9 @@ function battleplan_admin_footer_text() {
 	
 	if ( isset(get_option('customer_info')['serpfox']) ) $printFooter .= '<a class="button" href = "//app.serpfox.com/shared/'.get_option('customer_info')['serpfox'].'" target="_blank">Keywords</a>';
 		
-	$printFooter .= '</div>';
+	$printFooter .= '</div></div></section>';
 	
-	echo $printFooter;
+	echo do_shortcode($printFooter);
 }
 
 // Change Howdy text
@@ -1870,7 +1876,7 @@ function battleplan_site_audit() {
 			endif;
 		endif;	
 		
-		$googleInfo = get_option('bp_google_reviews');
+		$googleInfo = get_option('bp_gbp_update');
 		$siteAudit[$today]['google-rating'] = number_format($googleInfo['rating'], 1, '.', ',');
 		$siteAudit[$today]['google-reviews'] = $googleInfo['number'];
 		$siteAudit[$today]['load_time_mobile'] = get_option('load_time_mobile');	
@@ -2150,7 +2156,7 @@ function battleplan_clear_hvac() {
 	updateOption('bp_chron_time', 0);
 	updateOption('bp_launch_date', date('Y-m-d'));
 	
-	delete_option('bp_google_reviews');		
+	delete_option('bp_gbp_update');		
 	delete_option('bp_site_hits_ga4');	
 	delete_option('bp_site_hits_ua_1');	
 	delete_option('bp_site_hits_ua_2');		

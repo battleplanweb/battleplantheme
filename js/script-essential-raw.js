@@ -304,6 +304,18 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		lockDiv('#desktop-navigation');	
 	};
 	
+// Shortcut to lock #colophon under rest of content
+	window.lockColophon = function() {	
+		var deviceH = getDeviceH() * 0.9, colophonH = $('#colophon').outerHeight();
+		if ( colophonH < deviceH ) {	
+			addFaux( '#colophon', 'true' );
+			setTimeout( function() {
+				var bottom = getDeviceH() - getPosition($('.wp-gr.wp-google-badge'), 'top', 'false');
+				$('#colophon').addClass('fixed').css({"bottom":bottom+"px"});	
+			}, 10);
+		}
+	};
+	
 // Add stroke to text & transparent objects
 	window.addStroke = function(element, width, topColor, bottomColor, leftColor, rightColor) {	
   		var shadow = "", steps = 16, spacing = width - 1, color, angle, cos, sin;
@@ -471,6 +483,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				theNextEl.css({ "transform":"translateY(0)", "transition-duration":speed+"ms" });	
 			}, { offset: offset });
 		}, delay);	
+
 
 
 

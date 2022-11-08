@@ -606,7 +606,7 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 		div.onclick = function () { activateYouTubeVimeo(this); };
 		playerElements[n].appendChild(div);
 	}
-	
+		
 /*--------------------------------------------------------------
 # Screen resize
 --------------------------------------------------------------*/
@@ -665,6 +665,17 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 			$('#wrapper-content').addClass("extended"); 
 		} else { 
 			$('#wrapper-content').removeClass("extended"); 
+		}		
+	
+	// Handle multiple Google review locations on mobile
+		if ( getDeviceW() > mobileCutoff ) {
+			$('.wp-google-badge').find('.wp-google-badge-btn').css({ 'display':'block' });
+		} else {		
+			if ( $('.wp-google-badge').find('.wp-google-badge-btn').length > 1 ) {
+				$('.wp-google-badge').find('.wp-google-badge-btn').css({ 'display':'none' });
+				var rand = Math.floor(Math.random() * $('.wp-google-badge').find('.wp-google-badge-btn').length) + 1;
+				$('.wp-google-badge').find('.wp-google-badge-btn:nth-of-type('+rand+')').css({ 'display':'block' });
+			}	
 		}
 	};
 

@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 14.9
+Version: 15.0
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1793,6 +1793,8 @@ form .block-button,
 }
 
 
+
+
 .wpcf7 form.invalid .wpcf7-response-output, 
 .wpcf7 form.unaccepted .wpcf7-response-output {
     border-color: 								red;
@@ -2416,6 +2418,17 @@ body.locked {
 	background:									#cccccc;
 	border:										none;
 	z-index:									3000;
+}
+
+#colophon.fixed {
+	position: 									fixed;
+	bottom: 									0;
+	z-index: 									1;
+	width: 										100%;
+}
+
+.colophon-faux {
+	pointer-events: 							none;
 }
 
 .footer-strip, 
@@ -3645,6 +3658,7 @@ img.unloaded {
 	margin:										1.5em 0 1em 1.5em;
 }
 
+
  /* made top margin 0 to raise pics a little bit (above <p> provides enough margin)  1/24/22 */
 p + .alignleft, 
 p + .align-left,
@@ -4099,6 +4113,7 @@ img.img-404 {
 
 .office-hours .col-day {
 	text-align:									left;
+	text-transform: 							capitalize;
 }
 
 .office-hours .col-morning, 
@@ -4118,11 +4133,9 @@ img.img-404 {
 	margin-top:									-1px;
 }
 
-.office-hours div:not(:first-of-type) .col-all, 
-.office-hours div:not(:first-of-type) .col-morning, 
-
-
-.office-hours div:not(:first-of-type) .col-afternoon {
+.office-hours div.row .col-all, 
+.office-hours div.row .col-morning,
+.office-hours div.row .col-afternoon {
 	font-size:									90%;
 }
 
@@ -4564,23 +4577,23 @@ span.descriptionText {
 /* Google Reviews
 --------------------------------------------- */
 .wp-gr.wp-google-badge {
+	background:									#ffffff;
 	position:									fixed;
+	display: 									flex;
+	flex-flow: 									row nowrap;
+	justify-content: 							space-evenly;
 	z-index:									10000;
 	left: 										0;
 	right: 										0;
 	bottom: 									0;
 	text-align:									center;
-	text-decoration:							none;
+	border-top: 								5px solid #cccccc;
+	margin-top: 								-1px;
 }
 
 .wp-gr .wp-google-badge-btn {
-	background:									#ffffff;
 	padding:									6px 0;
-}
-
-.wp-gr .wp-google-border {
-    background: 								#cccccc;
-	height:										5px;
+	text-decoration:							none;
 }
 
 .wp-gr .wp-google-badge-score .wp-google-review {
@@ -4600,11 +4613,10 @@ span.descriptionText {
     color: 										#404040;
 	width: 										122px;
 	font-size: 									18px;
-
-
 }
 
 .wp-gr .wp-google-total {
+	width: 										100%;
     color: 										#404040;
 	font-size:									75%;
 	font-style:									italic;
@@ -5056,6 +5068,7 @@ p#user_switching_switch_on {
 	border-bottom: 								1px solid #cccccc;	
 	margin: 									0;
 	z-index: 									100000000;
+
 	width: 										100%;
 	height: 									50px;
 }

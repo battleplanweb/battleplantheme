@@ -23,7 +23,7 @@ function battleplan_getBizInfo($atts, $content = null ) {
 	
 	if ( strpos($data, 'phone') !== false ) :
 		$phoneBasic = $GLOBALS['customer_info']['area'].'-'.$GLOBALS['customer_info']['phone'];
-		$phoneFormat = $GLOBALS['customer_info']['area-before'].$GLOBALS['customer_info']['area'].$GLOBALS['customer_info']['area-after'].$GLOBALS['customer_info']['phone'];		
+		$phoneFormat = $GLOBALS['customer_info']['phone-format'];		
 		if ( strpos($data, 'mm-bar-phone') !== false ) :
 			$phoneFormat = '<div class="mm-bar-btn mm-bar-phone call-btn" aria-hidden="true"></div><span class="sr-only">Call Us</span>';	
 		elseif ( strpos($data, 'alt') !== false ) :
@@ -43,8 +43,8 @@ function battleplan_getBizInfo($atts, $content = null ) {
 add_shortcode( 'get-google-rating', 'battleplan_displayGoogleRating' );
 function battleplan_displayGoogleRating($atts, $content = null) {
 	$a = shortcode_atts( array( 'detail'=>'rating', ), $atts );  
- 	$googleInfo = get_option('bp_google_reviews');
-	return esc_attr($a['detail']) == 'rating' ? number_format($googleInfo['rating'], 1, '.', ',') : $googleInfo['number'];
+ 	$googleInfo = get_option('bp_gbp_update');
+	return esc_attr($a['detail']) == 'rating' ? number_format($googleInfo['google-rating'], 1, '.', ',') : $googleInfo['google-reviews'];
 }		
 		
 // Returns current year
@@ -266,6 +266,33 @@ function battleplan_addShareButtons( $atts, $content = null ) {
  
     return $output;	
 };
+
+// Display Business Hours
+add_shortcode( 'get-hours', 'battleplan_addBusinessHours' );
+function battleplan_addBusinessHours( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'direction'=>'vert', 'start'=>'sun', 'abbr'=>'true' ), $atts );
+	$direction = esc_attr($a['direction']) == "vert" ? "vert" : "horz";
+	$days = array('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday');
+	if ( esc_attr($a['start']) == "sun" || esc_attr($a['start']) == "sunday" ) :
+		array_unshift($days, 'sunday');
+	else:
+		array_push($days, 'sunday');
+	endif;		 
+	
+	$buildHours = '<div class="office-hours '.$direction.'">';
+	
+	foreach ( $days as $day ) :
+		$buildHours .= '<div class="row row-'.substr($day, 0, 3).'">';
+		$printDay = esc_attr($a['abbr']) == "true" ? substr($day, 0, 3) : $day;
+		$buildHours .= '<div class="col-day">'.$printDay.'</div>';
+		$buildHours .= '<div class="col-all">[get-biz info="hours-'.substr($day, 0, 3).'"]</div>';
+		$buildHours .= '</div>';
+	endforeach;
+	
+	$buildHours .= '</div>';
+	
+	return do_shortcode($buildHours);
+}
 
 // Choose random text from given choices
 add_shortcode( 'get-random-text', 'battleplan_getRandomText' );

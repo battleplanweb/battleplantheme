@@ -148,9 +148,9 @@
 	#wp-admin-bar-my-account > a.ab-item {
 		padding-right: 								10px;
 	}
-
-	.wp-admin #wpfooter {
-		bottom: 									-50px;
+	
+	.wp-admin #wpfooter { 
+		bottom: 									-200px;
 	}
 
 	.wp-admin p#footer-upgrade {

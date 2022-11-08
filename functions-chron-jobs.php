@@ -19,8 +19,8 @@ function battleplan_delete_prefixed_options( $prefix ) {
 	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
 }	
 
-if ( get_option('bp_setup_2022_10_05') != "completed" ) :
-	delete_option('bp_setup_2022_09_12');
+if ( get_option('bp_setup_2022_11_08') != "completed" ) :
+	delete_option('bp_setup_2022_10_05');
 	
 	$bp_ua_1 = get_option('bp_site_hits_ua_1') != null ? get_option('bp_site_hits_ua_1') : null;
 	$bp_ua_2 = get_option('bp_site_hits_ua_2') != null ? get_option('bp_site_hits_ua_2') : null;
@@ -34,33 +34,13 @@ if ( get_option('bp_setup_2022_10_05') != "completed" ) :
 	if ( $bp_ua_4 != null ) updateOption('bp_site_hits_ua_4_backup', $bp_ua_4, false);
 	if ( $bp_ua_5 != null ) updateOption('bp_site_hits_ua_5_backup', $bp_ua_5, false);
 	
-	delete_option('sidebars_widgets');
+	delete_option('bp_google_reviews');
 	
-	battleplan_delete_prefixed_options( '_extended_widgetopts' );
-	battleplan_delete_prefixed_options( '_transient_widgetopts' );
-	battleplan_delete_prefixed_options( '_widgetopts' );
-	battleplan_delete_prefixed_options( 'widgetopts' );
-	battleplan_delete_prefixed_options( 'widget_' );
-	
-	battleplan_delete_prefixed_options( 'wp-smush-' );
-	battleplan_delete_prefixed_options( 'wp_smush_' );
-	
-	battleplan_delete_prefixed_options( 'bp_track_content_' );					
-	battleplan_delete_prefixed_options( 'bp_track_speed_' );	
-	battleplan_delete_prefixed_options( 'bp_track_l_' );	
-	battleplan_delete_prefixed_options( 'pct-viewed-' );
-	
-	battleplan_delete_prefixed_options( 'wdp_' );
-	
-	$customerInfo = get_option( 'customer_info' );
-	if ( isset($customerInfo['google-tags']['ua-view'])) unset($customerInfo['google-tags']['ua-view']);
-	if ( isset($customerInfo['google-tags']['ua-view'])) unset($GLOBALS['customer_info']['google-tags']['ua-view']);
+	//battleplan_delete_prefixed_options( 'wdp_' );
 
 	if ( $customerInfo['site-type'] != 'profile' ) delete_option('site_login');
-	unset($customerInfo['radius']);
-	updateOption( 'customer_info', $customerInfo );	
-	
-	updateOption( 'bp_setup_2022_10_05', 'completed', false );			
+
+	updateOption( 'bp_setup_2022_11_08', 'completed', false );			
 endif;
 
 // Determine if Chron should run
@@ -266,7 +246,7 @@ function processChron() {
 	endif;
 	
 // Basic Settings		
-	$update_menu_order = array ('site-header'=>100, 'widgets'=>200, 'office-hours'=>700, 'coupon'=>700, 'site-message'=>800, 'site-footer'=>900);
+	$update_menu_order = array ('site-header'=>100, 'widgets'=>200, 'office-hours'=>700, 'hours'=>700, 'coupon'=>700, 'site-message'=>800, 'site-footer'=>900);
 
 	foreach ($update_menu_order as $page=>$order) :
 		$updatePage = get_page_by_path($page, OBJECT, 'elements' );
@@ -299,7 +279,109 @@ function processChron() {
 	battleplan_delete_prefixed_options( 'ac_cache_expires_' );
 	battleplan_delete_prefixed_options( 'ac_api_request_' );	
 	battleplan_delete_prefixed_options( 'ac_sorting_' );
-	battleplan_delete_prefixed_options( 'client_' );	
+	battleplan_delete_prefixed_options( 'client_' );
+	
+/*--------------------------------------------------------------
+# Update 'customer_info' with Google Business Profile info
+--------------------------------------------------------------*/	
+	if ( function_exists('battleplan_updateSiteOptions') ) battleplan_updateSiteOptions();	
+		 
+	$customer_info = get_option('customer_info');
+	$placeIDs = $customer_info['pid'];
+	if ( isset($placeIDs) ) :
+		$apiKey = "AIzaSyBqf";
+		$apiKey .= "0idxwuOxaG";
+		$apiKey .= "-j3eCpef1Bunv";
+		$apiKey .= "-YVdVP8";	
+		$googleInfo = get_option('bp_gbp_update');
+		$today = strtotime(date("F j, Y"));	
+		$daysSinceCheck = $today - intval($googleInfo['date']);
+		if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
+		
+		$daysSinceCheck = 1000;
+		
+		if ( $forceChron == true || $daysSinceCheck > 5 ) :
+			$gRating = $gNumber = 0;		
+			foreach ( $placeIDs as $placeID ) :	
+				if ( strlen($placeID) > 10 ) :
+					$url = "https://maps.googleapis.com/maps/api/place/details/json?placeid=".$placeID."&key=".$apiKey;
+					$ch = curl_init();
+					curl_setopt ($ch, CURLOPT_URL, $url);
+					curl_setopt ($ch, CURLOPT_RETURNTRANSFER, 1);
+					$result = curl_exec ($ch);
+					$res = json_decode($result,true);
+					$googleInfo[$placeID]['google-reviews'] = $res['result']['user_ratings_total'];						
+					$googleInfo[$placeID]['google-rating'] = $res['result']['rating'];						
+					$gNumber = $gNumber + $res['result']['user_ratings_total'];
+					$gRating = $gRating + ( $res['result']['rating'] * $res['result']['user_ratings_total'] );					
+					$googleInfo[$placeID]['area'] = preg_replace('/(.*)\((.*)\)(.*)/s', '\2', $res['result']['formatted_phone_number']);	
+					$googleInfo[$placeID]['phone'] = substr($res['result']['formatted_phone_number'], strpos($res['result']['formatted_phone_number'], ") ") + 2);					
+					$googleInfo[$placeID]['phone-format'] = $GLOBALS['customer_info']['area-before'].$googleInfo[$placeID]['area'].$GLOBALS['customer_info']['area-after'].$googleInfo[$placeID]['phone'];					
+					$googleInfo[$placeID]['name'] = ucwords(strtolower($res['result']['name']));	
+					
+					$streetNumber = $street = $subpremise = $city = $state_abbr = $state_full = $county = $country = $zip = '';
+					$googleInfo[$placeID]['address_components'] = $res['result']['address_components'];					
+					$googleInfo[$placeID]['adr_address'] = $res['result']['adr_address'];
+					foreach ( $googleInfo[$placeID]['address_components'] as $comp ) :
+						if ( $comp['types'][0] == "street_number" ) $streetNumber = $comp['long_name'];
+						if ( $comp['types'][0] == "subpremise" ) $subpremise = $comp['short_name'];
+						if ( $comp['types'][0] == "route" ) $street = $comp['short_name'];						
+						if ( $comp['types'][0] == "locality" ) $city = $comp['long_name'];
+						if ( $comp['types'][0] == "administrative_area_level_1" ) :
+						 	$state_abbr = $comp['short_name'];
+							$state_full = $comp['long_name'];
+						endif;
+						if ( $comp['types'][0] == "administrative_area_level_2" ) $county = $comp['long_name'];
+						if ( $comp['types'][0] == "country" ) $country = $comp['long_name'];
+						if ( $comp['types'][0] == "postal_code" ) $zip = $comp['short_name'];
+					endforeach;		
+					
+					$googleInfo[$placeID]['street'] = $streetNumber.' '.$street.' '.$subpremise;					
+					if ( $googleInfo[$placeID]['street'] == '  ' ) $googleInfo[$placeID]['street'] = strtok( $googleInfo[$placeID]['adr_address'], ',' );					
+					$googleInfo[$placeID]['city'] = $city;
+					$googleInfo[$placeID]['state-abbr'] = $state_abbr;
+					$googleInfo[$placeID]['state-full'] = $state_full;
+					$googleInfo[$placeID]['county'] = $county;					
+					$googleInfo[$placeID]['country'] = $country;					
+					$googleInfo[$placeID]['zip'] = $zip;					
+					$googleInfo[$placeID]['lat'] = $res['result']['geometry']['location']['lat'];
+					$googleInfo[$placeID]['long'] = $res['result']['geometry']['location']['lng'];	
+					$googleInfo[$placeID]['hours'] = $res['result']['opening_hours'];
+					$googleInfo[$placeID]['current-hours'] = $res['result']['current_opening_hours'];
+				endif;
+			endforeach;
+
+			$googleInfo['google-reviews'] = $gNumber;	
+			if ( $gNumber > 0 ) $googleInfo['google-rating'] = $gRating / $gNumber;	
+			$googleInfo['date'] = $today;				
+			updateOption('bp_gbp_update', $googleInfo);	
+		endif;
+
+		$primePID = $placeIDs[0];
+		
+		$customer_info['area'] = $googleInfo[$primePID]['area'];		
+		$customer_info['phone'] = $googleInfo[$primePID]['phone'];
+		$customer_info['phone-format'] = $googleInfo[$primePID]['phone-format'];
+		$customer_info['name'] = $googleInfo[$primePID]['name'];
+		$customer_info['street'] = $googleInfo[$primePID]['street'];
+		$customer_info['city'] = $googleInfo[$primePID]['city'];
+		$customer_info['state-abbr'] = $googleInfo[$primePID]['state-abbr'];
+		$customer_info['state-full'] = $googleInfo[$primePID]['state-full'];
+		$customer_info['zip'] = $googleInfo[$primePID]['zip'];
+		$customer_info['lat'] = $googleInfo[$primePID]['lat'];
+		$customer_info['long'] = $googleInfo[$primePID]['long'];
+		$customer_info['hours-sun'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][6], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][6], ": ") + 2);
+		$customer_info['hours-mon'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][0], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][0], ": ") + 2);
+		$customer_info['hours-tue'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][1], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][1], ": ") + 2);
+		$customer_info['hours-wed'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][2], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][2], ": ") + 2);
+		$customer_info['hours-thu'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][3], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][3], ": ") + 2);
+		$customer_info['hours-fri'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][4], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][4], ": ") + 2);
+		$customer_info['hours-sat'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][5], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][5], ": ") + 2);
+
+		updateOption( 'customer_info', $customer_info );
+		$GLOBALS['customer_info'] = $customer_info;
+
+	endif;
 
 /*--------------------------------------------------------------
 # Universal Pages
@@ -367,7 +449,7 @@ function processChron() {
 
 	if ( is_null(get_page_by_path('review', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Review', 'post_content' => '[get-universal-page slug="page-review"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
 
-	if ( is_null(get_page_by_path('email-received', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Email Received', 'post_content' => '[get-universal-page slug="page-email-received"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
+	if ( is_null(get_page_by_path('email-received', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Email Received', 'post_content' => '[get-universal-page slug="page-email-received"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
 
 /*--------------------------------------------------------------
 # Sync with Google Analytics

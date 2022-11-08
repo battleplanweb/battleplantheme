@@ -298,8 +298,6 @@ function processChron() {
 		$daysSinceCheck = $today - intval($googleInfo['date']);
 		if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
 		
-		$daysSinceCheck = 1000;
-		
 		if ( $forceChron == true || $daysSinceCheck > 5 ) :
 			$gRating = $gNumber = 0;		
 			foreach ( $placeIDs as $placeID ) :	

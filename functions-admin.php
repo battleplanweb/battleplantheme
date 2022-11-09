@@ -1492,23 +1492,25 @@ function battleplan_admin_footer_text() {
 	$googleInfo = get_option('bp_gbp_update');					
 	if ( isset($placeIDs) ) :
 		if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
+		$primePID = true;
 		foreach ( $placeIDs as $placeID ) :	
-			if ( strlen($placeID) > 10 ) :
-				$printFooter .= '<div style="float:left; margin-right: 50px;">';	
-				$printFooter .= '<a class="button" style="margin: 0 0 10px -5px" href = "https://search.google.com/local/writereview?placeid='.$placeID.'" target="_blank">GBP: '.$googleInfo[$placeID]['city'].', '.$googleInfo[$placeID]['state-abbr'].'</a><br>';
-				$printFooter .= get_option('customer_info')['area-before'].$googleInfo[$placeID]['area'].get_option('customer_info')['area-after'].$googleInfo[$placeID]['phone'].'<br>';
-				$printFooter .= $googleInfo[$placeID]['street'].'<br>';
-				$printFooter .= $googleInfo[$placeID]['city'].', '.$googleInfo[$placeID]['state-abbr'].' '.$googleInfo[$placeID]['zip'].'<br>';
-				if ( isset($googleInfo[$placeID]['lat']) ) $printFooter .= $googleInfo[$placeID]['lat'].', '.$googleInfo[$placeID]['long'].'<br>';	
-				$printFooter .= '</div>';
+			if ( $primePID == true ) :
+				$customer_info = $GLOBALS['customer_info'];
+				$primePID = false;
 			else:
-				$printFooter .= '<div style="float:left; margin-right: 50px;">';	
-				$printFooter .= get_option('customer_info')['area-before'].get_option('customer_info')['area'].get_option('customer_info')['area-after'].get_option('customer_info')['phone'].'<br>';
-				$printFooter .= get_option('customer_info')['street'].'<br>';
-				$printFooter .= get_option('customer_info')['city'].', '.get_option('customer_info')['state-abbr'].' '.get_option('customer_info')['zip'].'<br>';
-				if ( isset(get_option('customer_info')['lat']) ) $printFooter .= get_option('customer_info')['lat'].', '.get_option('customer_info')['long'].'<br>';	
-				$printFooter .= '</div>';
+				$customer_info = $googleInfo[$placeID];
 			endif;
+			
+			$printFooter .= '<div style="float:left; margin-right: 50px;">';	
+
+			if ( strlen($placeID) > 10 && $googleInfo[$placeID]['city'] ) $printFooter .= '<a class="button" style="margin: 0 0 10px -5px" href = "https://search.google.com/local/writereview?placeid='.$placeID.'" target="_blank">GBP: '.$googleInfo[$placeID]['city'].', '.$googleInfo[$placeID]['state-abbr'].'</a><br>';
+			
+			$printFooter .= $GLOBALS['customer_info']['area-before'].$customer_info['area'].$GLOBALS['customer_info']['area-after'].$customer_info['phone'].'<br>';
+			$printFooter .= $customer_info['street'].'<br>';
+			$printFooter .= $customer_info['city'].', '.$customer_info['state-abbr'].' '.$customer_info['zip'].'<br>';
+			if ( isset($customer_info['lat']) ) $printFooter .= $customer_info['lat'].', '.$customer_info['long'].'<br>';	
+			$printFooter .= '</div>';
+
 		endforeach;
 	endif;
 			

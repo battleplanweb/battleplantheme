@@ -44,24 +44,36 @@
 					
 					$placeIDs = $GLOBALS['customer_info']['pid'];
 					if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
+					$primePID = true;
 					foreach ( $placeIDs as $placeID ) :	
-						$buildCopyright .= "<div class='site-info-address'>";
-						if ( strlen($googleInfo[$placeID]['street']) > 5 ) $buildCopyright .= trim($googleInfo[$placeID]['street']).", ";							
-						if ( $googleInfo[$placeID]['city'] ) :
-							$buildCopyright .= $googleInfo[$placeID]['city'].", ".$googleInfo[$placeID]['state-abbr']." ".$googleInfo[$placeID]['zip'];
-						elseif ( isset($GLOBALS['customer_info']['region']) ) : 
-							$buildCopyright .= $googleInfo[$placeID]['region']; 
+						if ( $primePID == true ) :
+							$customer_info = $GLOBALS['customer_info'];
+							$primePID = false;
+						else:
+							$customer_info = $googleInfo[$placeID];
 						endif;
-						if ( isset($GLOBALS['customer_info']['phone-format']) && $googleInfo[$placeID]['phone-format'] ) $buildCopyright .= " • ".$googleInfo[$placeID]['phone-format'];
+						$buildCopyright .= "<div class='site-info-address'>";
+						if ( strlen($customer_info['street']) > 5 ) $buildCopyright .= trim($customer_info['street']).", ";							
+						if ( $customer_info['city'] ) :
+							$buildCopyright .= $customer_info['city'].", ".$customer_info['state-abbr']." ".$customer_info['zip'];
+						elseif ( isset($GLOBALS['customer_info']['region']) ) : 
+							$buildCopyright .= $customer_info['region']; 
+						endif;
+						if ( isset($customer_info['phone-format']) && $customer_info['phone-format'] ) $buildCopyright .= " • ".$customer_info['phone-format'];
 						$buildCopyright .= "</div>";
 					endforeach;
 					
 					if ( isset($GLOBALS['customer_info']['misc3']) ) $buildCopyright .= "<div class='site-info-misc3'>".$GLOBALS['customer_info']['misc3']."</div>";	
 					$buildCopyright .= "<div class='site-info-links'>";
+					
 					if ( isset($GLOBALS['customer_info']['license']) ) $buildCopyright .= "License ".$GLOBALS['customer_info']['license']." • "; 
+					
 					$buildCopyright .= "<span class='privacy-policy-link'><a href='/privacy-policy/'>Privacy Policy</a></span><span class='terms-conditions-link'> • <a href='/terms-conditions/'>Terms & Conditions</a></span>";
+					
 					if ( isset($GLOBALS['customer_info']['misc1']) ) $buildCopyright .= " • ".$GLOBALS['customer_info']['misc1'];
+					
 					$buildCopyright .= "</div><div class='site-info-battleplan'>Website developed & maintained by <a href='http://battleplanwebdesign.com' target='_blank' rel='noreferrer'>Battle Plan Web Design</a></div>";
+					
 					$buildCopyright .= "</div>";					
 					
 					if (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-icon-80x80.webp' ) ) : 

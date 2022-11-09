@@ -1469,24 +1469,10 @@ function battleplan_admin_footer_text() {
 	$printFooter .= '<div style="grid-row: span 2; align-self: center;">Powered by <a href="https://battleplanwebdesign.com" target="_blank">Battle Plan Web Design</a><br>';
 	$printFooter .= 'Launched '.date('F Y', strtotime(get_option('bp_launch_date'))).'<br>';
 	$printFooter .= 'Framework '._BP_VERSION.'<br>';
-	$printFooter .= 'WP '.get_bloginfo('version').'<br></div><div style="justify-self: end;">';	
-	 
-	$placeIDs = get_option('customer_info')['pid'];
-	$googleInfo = get_option('bp_gbp_update');					
-	if ( isset($placeIDs)) :
-		if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
-		foreach ( $placeIDs as $placeID ) :	
-			$printFooter .= '<div style="float:left; margin-right: 50px;">';	
-			$printFooter .= '<a class="button" style="margin: 0 0 10px -5px" href = "https://search.google.com/local/writereview?placeid='.$placeID.'" target="_blank">GBP: '.$googleInfo[$placeID]['city'].'</a><br>';
-			$printFooter .= get_option('customer_info')['area-before'].$googleInfo[$placeID]['area'].get_option('customer_info')['area-after'].$googleInfo[$placeID]['phone'].'<br>';
-			$printFooter .= $googleInfo[$placeID]['street'].'<br>';
-			$printFooter .= $googleInfo[$placeID]['city'].', '.$googleInfo[$placeID]['state-abbr'].' '.$googleInfo[$placeID]['zip'].'<br>';
-			if ( isset($googleInfo[$placeID]['lat']) ) $printFooter .= $googleInfo[$placeID]['lat'].', '.$googleInfo[$placeID]['long'].'<br>';	
-			$printFooter .= '</div>';
-		endforeach;
-	endif;
+	$printFooter .= 'WP '.get_bloginfo('version').'<br></div>';
 	
-	$printFooter .= '</div><div style="justify-self: end; margin-right: 50px; margin-bottom:15px;"><a class="button" href = "mailto:'.get_option('customer_info')['email'].'">Contact Email</a>';
+	$printFooter .= '<div style="justify-self: end; margin-right: 50px;"><a class="button" href = "mailto:'.get_option('customer_info')['email'].'">Contact Email</a>';
+		
 	if ( isset(get_option('customer_info')['owner-email']) ) $printFooter .= '<a class="button" href = "mailto:'.get_option('customer_info')['owner-email'].'">Owner Email</a>';	
 	if ( isset(get_option('customer_info')['facebook']) ) $printFooter .= '<a class="button" href = "'.get_option('customer_info')['facebook'].'" target="_blank">Facebook</a>';
 	if ( isset(get_option('customer_info')['twitter']) ) $printFooter .= '<a class="button" href = "'.get_option('customer_info')['twitter'].'" target="_blank">Twitter</a>';
@@ -1500,6 +1486,32 @@ function battleplan_admin_footer_text() {
 	
 	if ( isset(get_option('customer_info')['serpfox']) ) $printFooter .= '<a class="button" href = "//app.serpfox.com/shared/'.get_option('customer_info')['serpfox'].'" target="_blank">Keywords</a>';
 		
+	$printFooter .= '</div><div style="justify-self: end; margin-bottom:15px;">';	
+	 
+	$placeIDs = get_option('customer_info')['pid'];
+	$googleInfo = get_option('bp_gbp_update');					
+	if ( isset($placeIDs) ) :
+		if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
+		foreach ( $placeIDs as $placeID ) :	
+			if ( strlen($placeID) > 10 ) :
+				$printFooter .= '<div style="float:left; margin-right: 50px;">';	
+				$printFooter .= '<a class="button" style="margin: 0 0 10px -5px" href = "https://search.google.com/local/writereview?placeid='.$placeID.'" target="_blank">GBP: '.$googleInfo[$placeID]['city'].', '.$googleInfo[$placeID]['state-abbr'].'</a><br>';
+				$printFooter .= get_option('customer_info')['area-before'].$googleInfo[$placeID]['area'].get_option('customer_info')['area-after'].$googleInfo[$placeID]['phone'].'<br>';
+				$printFooter .= $googleInfo[$placeID]['street'].'<br>';
+				$printFooter .= $googleInfo[$placeID]['city'].', '.$googleInfo[$placeID]['state-abbr'].' '.$googleInfo[$placeID]['zip'].'<br>';
+				if ( isset($googleInfo[$placeID]['lat']) ) $printFooter .= $googleInfo[$placeID]['lat'].', '.$googleInfo[$placeID]['long'].'<br>';	
+				$printFooter .= '</div>';
+			else:
+				$printFooter .= '<div style="float:left; margin-right: 50px;">';	
+				$printFooter .= get_option('customer_info')['area-before'].get_option('customer_info')['area'].get_option('customer_info')['area-after'].get_option('customer_info')['phone'].'<br>';
+				$printFooter .= get_option('customer_info')['street'].'<br>';
+				$printFooter .= get_option('customer_info')['city'].', '.get_option('customer_info')['state-abbr'].' '.get_option('customer_info')['zip'].'<br>';
+				if ( isset(get_option('customer_info')['lat']) ) $printFooter .= get_option('customer_info')['lat'].', '.get_option('customer_info')['long'].'<br>';	
+				$printFooter .= '</div>';
+			endif;
+		endforeach;
+	endif;
+			
 	$printFooter .= '</div></div></section>';
 	
 	echo do_shortcode($printFooter);

@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '15.0.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '15.1' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -54,6 +54,13 @@ if ( !defined('_RAND_SEED') ) :
 	if ( (time() - get_option('rand-seed')) > 14000 ) update_option('rand-seed', time());
 	define( '_RAND_SEED', get_option('rand-seed') );
 endif;
+
+// Store customer_info option into $GLOBALS['customer_info']
+$GLOBALS['customer_info'] = get_option('customer_info');
+$currYear=date("Y"); 
+$startYear = $GLOBALS['customer_info']['year'];
+$GLOBALS['customer_info']['copyright'] = $startYear == $currYear ? "© ".$currYear : "© ".$startYear."-".$currYear; 
+$GLOBALS['site-loc'] = 1;		
 
 /*--------------------------------------------------------------
 # Functions to extend WordPress 
@@ -551,10 +558,6 @@ function battleplan_random_seed($orderby_statement) {
     return $orderby_statement;
 }
 
-// Store customer_info option into $GLOBALS['customer_info']
-$GLOBALS['customer_info'] = get_option('customer_info');
-$GLOBALS['site-loc'] = 1;		
-		
 // Set up for multi-location sites	
 add_action('after_setup_theme', 'battleplan_setLoc');
 function battleplan_setLoc() { 
@@ -1568,11 +1571,13 @@ function bp_after_colophon() { do_action('bp_after_colophon'); }
 // Preload fonts
 add_action('bp_font_loader', 'battleplan_loadFonts');
 function battleplan_loadFonts() {
-	$buildPreload = '';
-	foreach ( $GLOBALS['customer_info']['site-fonts'] as $siteFont ) :
-		if ( $siteFont != "" ) $buildPreload .= '<link rel="preload" as="font" type="font/woff2" href="'.get_site_url().'/wp-content/themes/battleplantheme-site/fonts/'.$siteFont.'.woff2" crossorigin="anonymous">';
-	endforeach;
-	echo $buildPreload;
+	if ( isset($GLOBALS['customer_info']['site-fonts']) ) :
+		$buildPreload = '';
+		foreach ( $GLOBALS['customer_info']['site-fonts'] as $siteFont ) :
+			if ( $siteFont != "" ) $buildPreload .= '<link rel="preload" as="font" type="font/woff2" href="'.get_site_url().'/wp-content/themes/battleplantheme-site/fonts/'.$siteFont.'.woff2" crossorigin="anonymous">';
+		endforeach;
+		echo $buildPreload;
+	endif;
 }
 
 // Install Google Global Site Tags

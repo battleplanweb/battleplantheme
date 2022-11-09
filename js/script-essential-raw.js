@@ -307,7 +307,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 // Shortcut to lock #colophon under rest of content
 	window.lockColophon = function() {	
 		var deviceH = getDeviceH() * 0.9, colophonH = $('#colophon').outerHeight();
-		if ( colophonH < deviceH ) {	
+		if ( colophonH < deviceH && !$('body').hasClass('background-image') ) {	
 			addFaux( '#colophon', 'true' );
 			setTimeout( function() {
 				var bottom = getDeviceH() - getPosition($('.wp-gr.wp-google-badge'), 'top', 'false');

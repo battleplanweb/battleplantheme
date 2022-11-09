@@ -304,7 +304,7 @@ function processChron($forceChron) {
 		$daysSinceCheck = $today - intval($googleInfo['date']);
 		if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
 		
-		if ( $forceChron == 'true' || $daysSinceCheck > 5 ) :
+		if ( $forceChron == true || $daysSinceCheck > 5 ) :
 			$gRating = $gNumber = 0;		
 			foreach ( $placeIDs as $placeID ) :	
 				if ( strlen($placeID) > 10 ) :
@@ -325,8 +325,10 @@ function processChron($forceChron) {
 					$googleInfo[$placeID]['phone'] = substr($res['result']['formatted_phone_number'], strpos($res['result']['formatted_phone_number'], ") ") + 2);					
 					if ( str_contains($customer_info['area-after'], '.') ) $googleInfo[$placeID]['phone'] = str_replace($googleInfo[$placeID]['phone'], '-', '.');			
 					$googleInfo[$placeID]['phone-format'] = $customer_info['area-before'].$googleInfo[$placeID]['area'].$customer_info['area-after'].$googleInfo[$placeID]['phone'];	
-					
-					$googleInfo[$placeID]['name'] = ucwords(strtolower($res['result']['name']));	
+
+					$name = strtolower($res['result']['name']);					
+					$name = str_replace( array('llc', 'hvac'), array('LLC', 'HVAC'), $name);
+					$googleInfo[$placeID]['name'] = ucwords($name);
 					
 					$streetNumber = $street = $subpremise = $city = $state_abbr = $state_full = $county = $country = $zip = '';
 					$googleInfo[$placeID]['address_components'] = $res['result']['address_components'];					

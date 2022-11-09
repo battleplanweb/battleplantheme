@@ -170,12 +170,9 @@
     if (this.naturalHeight && this.naturalWidth || this.$slider[0].complete || slider.length > 0) {
       this.$slider.trigger('load');
     }
-
   }
 
-
   // Parallax Instance Methods
-
   $.extend(Parallax.prototype, {
     speed:    0.2,
     bleed:    0,

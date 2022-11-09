@@ -43,6 +43,11 @@ if ( get_option('bp_setup_2022_11_08') != "completed" ) :
 	updateOption( 'bp_setup_2022_11_08', 'completed', false );			
 endif;
 
+if ( get_option('bp_setup_2022_11_09') != "completed" ) :
+	processChron(true);
+	updateOption( 'bp_setup_2022_11_09', 'completed', false );			
+endif;
+
 // Determine if Chron should run
 require_once get_template_directory().'/vendor/autoload.php';
 use Google\Analytics\Data\V1beta\BetaAnalyticsDataClient;
@@ -50,17 +55,17 @@ use Google\Analytics\Data\V1beta\DateRange;
 use Google\Analytics\Data\V1beta\Dimension;
 use Google\Analytics\Data\V1beta\Metric;
 
-$forceChron = get_option('bp_force_chron') !== null ? get_option('bp_force_chron') : false;
+$forceChron = get_option('bp_force_chron') !== null ? get_option('bp_force_chron') : 'false';
 $chronTime = get_option('bp_chron_time') !== null ? get_option('bp_chron_time') : 0;
 $chronDue = $chronTime + rand(40000,70000);
 
 if ( $forceChron == true || ( _IS_BOT && !_IS_GOOGLEBOT && ( $chronDue < time() ) )) :
 	delete_option('bp_force_chron');
 	update_option('bp_chron_time', time());
-	processChron();
+	processChron($forceChron);
 endif;
 	
-function processChron() {
+function processChron($forceChron) {
 	if (function_exists('battleplan_remove_user_roles')) battleplan_remove_user_roles();
 	if (function_exists('battleplan_create_user_roles')) battleplan_create_user_roles();
 		
@@ -299,7 +304,7 @@ function processChron() {
 		$daysSinceCheck = $today - intval($googleInfo['date']);
 		if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
 		
-		if ( $forceChron == true || $daysSinceCheck > 5 ) :
+		if ( $forceChron == 'true' || $daysSinceCheck > 5 ) :
 			$gRating = $gNumber = 0;		
 			foreach ( $placeIDs as $placeID ) :	
 				if ( strlen($placeID) > 10 ) :
@@ -310,22 +315,26 @@ function processChron() {
 					curl_setopt ($ch, CURLOPT_RETURNTRANSFER, 1);
 					$result = curl_exec ($ch);
 					$res = json_decode($result,true);
+					
 					$googleInfo[$placeID]['google-reviews'] = $res['result']['user_ratings_total'];						
 					$googleInfo[$placeID]['google-rating'] = $res['result']['rating'];						
 					$gNumber = $gNumber + $res['result']['user_ratings_total'];
-					$gRating = $gRating + ( $res['result']['rating'] * $res['result']['user_ratings_total'] );					
+					$gRating = $gRating + ( $res['result']['rating'] * $res['result']['user_ratings_total'] );	
+					
 					$googleInfo[$placeID]['area'] = preg_replace('/(.*)\((.*)\)(.*)/s', '\2', $res['result']['formatted_phone_number']);	
 					$googleInfo[$placeID]['phone'] = substr($res['result']['formatted_phone_number'], strpos($res['result']['formatted_phone_number'], ") ") + 2);					
-					$googleInfo[$placeID]['phone-format'] = $GLOBALS['customer_info']['area-before'].$googleInfo[$placeID]['area'].$GLOBALS['customer_info']['area-after'].$googleInfo[$placeID]['phone'];					
+					if ( str_contains($customer_info['area-after'], '.') ) $googleInfo[$placeID]['phone'] = str_replace($googleInfo[$placeID]['phone'], '-', '.');			
+					$googleInfo[$placeID]['phone-format'] = $customer_info['area-before'].$googleInfo[$placeID]['area'].$customer_info['area-after'].$googleInfo[$placeID]['phone'];	
+					
 					$googleInfo[$placeID]['name'] = ucwords(strtolower($res['result']['name']));	
 					
 					$streetNumber = $street = $subpremise = $city = $state_abbr = $state_full = $county = $country = $zip = '';
 					$googleInfo[$placeID]['address_components'] = $res['result']['address_components'];					
 					$googleInfo[$placeID]['adr_address'] = $res['result']['adr_address'];
 					foreach ( $googleInfo[$placeID]['address_components'] as $comp ) :
-						if ( $comp['types'][0] == "street_number" ) $streetNumber = $comp['long_name'];
-						if ( $comp['types'][0] == "subpremise" ) $subpremise = $comp['short_name'];
-						if ( $comp['types'][0] == "route" ) $street = $comp['short_name'];						
+						//if ( $comp['types'][0] == "street_number" ) $streetNumber = $comp['long_name'];
+						//if ( $comp['types'][0] == "subpremise" ) $subpremise = $comp['short_name'];
+						//if ( $comp['types'][0] == "route" ) $street = $comp['short_name'];						
 						if ( $comp['types'][0] == "locality" ) $city = $comp['long_name'];
 						if ( $comp['types'][0] == "administrative_area_level_1" ) :
 						 	$state_abbr = $comp['short_name'];
@@ -336,8 +345,9 @@ function processChron() {
 						if ( $comp['types'][0] == "postal_code" ) $zip = $comp['short_name'];
 					endforeach;		
 					
-					$googleInfo[$placeID]['street'] = $streetNumber.' '.$street.' '.$subpremise;					
-					if ( $googleInfo[$placeID]['street'] == '  ' ) $googleInfo[$placeID]['street'] = strtok( $googleInfo[$placeID]['adr_address'], ',' );					
+					//$googleInfo[$placeID]['street'] = $streetNumber.' '.$street.' '.$subpremise;					
+					$googleInfo[$placeID]['street'] = strtok( $googleInfo[$placeID]['adr_address'], ',' );
+					if ( strlen($googleInfo[$placeID]['street']) < 5 ) $googleInfo[$placeID]['street'] = $customer_info['street'];			
 					$googleInfo[$placeID]['city'] = $city;
 					$googleInfo[$placeID]['state-abbr'] = $state_abbr;
 					$googleInfo[$placeID]['state-full'] = $state_full;
@@ -359,17 +369,17 @@ function processChron() {
 		
 		if ( $updateInfo == true ) :
 			$primePID = $placeIDs[0];		
-			$customer_info['area'] = $googleInfo[$primePID]['area'];		
-			$customer_info['phone'] = $googleInfo[$primePID]['phone'];
-			$customer_info['phone-format'] = $googleInfo[$primePID]['phone-format'];
-			$customer_info['name'] = $googleInfo[$primePID]['name'];
-			$customer_info['street'] = $googleInfo[$primePID]['street'];
-			$customer_info['city'] = $googleInfo[$primePID]['city'];
-			$customer_info['state-abbr'] = $googleInfo[$primePID]['state-abbr'];
-			$customer_info['state-full'] = $googleInfo[$primePID]['state-full'];
-			$customer_info['zip'] = $googleInfo[$primePID]['zip'];
-			$customer_info['lat'] = $googleInfo[$primePID]['lat'];
-			$customer_info['long'] = $googleInfo[$primePID]['long'];
+			$customer_info['area'] = $googleInfo[$primePID]['area'] != null ? $googleInfo[$primePID]['area'] : $customer_info['area'];		
+			$customer_info['phone'] = $googleInfo[$primePID]['phone'] != null ? $googleInfo[$primePID]['phone'] : $customer_info['phone'];		
+			$customer_info['phone-format'] = $customer_info['area-before'].$customer_info['area'].$customer_info['area-after'].$customer_info['phone'];	
+			$customer_info['name'] = $googleInfo[$primePID]['name'] != null ? $googleInfo[$primePID]['name'] : $customer_info['name'];		
+			$customer_info['street'] = strlen($googleInfo[$primePID]['street']) > 5 ? $googleInfo[$primePID]['street'] : $customer_info['street'];		
+			$customer_info['city'] = $googleInfo[$primePID]['city'] != null ? $googleInfo[$primePID]['city'] : $customer_info['city'];		
+			$customer_info['state-abbr'] = $googleInfo[$primePID]['state-abbr'] != null ? $googleInfo[$primePID]['state-abbr'] : $customer_info['state-abbr'];		
+			$customer_info['state-full'] = $googleInfo[$primePID]['state-full'] != null ? $googleInfo[$primePID]['state-full'] : $customer_info['state-full'];		
+			$customer_info['zip'] = $googleInfo[$primePID]['zip'] != null ? $googleInfo[$primePID]['zip'] : $customer_info['zip'];		
+			$customer_info['lat'] = $googleInfo[$primePID]['lat'] != null ? $googleInfo[$primePID]['lat'] : $customer_info['lat'];		
+			$customer_info['long'] = $googleInfo[$primePID]['long'] != null ? $googleInfo[$primePID]['long'] : $customer_info['long'];		
 			$customer_info['hours-sun'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][6], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][6], ": ") + 2);
 			$customer_info['hours-mon'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][0], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][0], ": ") + 2);
 			$customer_info['hours-tue'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][1], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][1], ": ") + 2);
@@ -379,7 +389,7 @@ function processChron() {
 			$customer_info['hours-sat'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][5], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][5], ": ") + 2);
 
 			updateOption( 'customer_info', $customer_info );
-			$GLOBALS['customer_info'] = $customer_info;
+			$GLOBALS['customer_info'] = get_option('customer_info');
 		endif;
 	endif;
 

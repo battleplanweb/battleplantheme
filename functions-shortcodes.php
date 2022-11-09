@@ -11,19 +11,11 @@ function battleplan_getBizInfo($atts, $content = null ) {
 	$a = shortcode_atts( array( 'info' => 'name', ), $atts );
 	$data = esc_attr($a['info']);
 	
-	if ( $data == "copyright" ) :
-		$currYear=date("Y"); 
-		$startYear = $GLOBALS['customer_info']['year'];
-		if ( $startYear == $currYear ) : return "© ".$currYear;
-		else: return "© ".$startYear."-".$currYear; 
-		endif;
-	endif;
-	
 	if ( $data == "area" ) return $GLOBALS['customer_info']['area-before'].$GLOBALS['customer_info']['area'].$GLOBALS['customer_info']['area-after'];
 	
 	if ( strpos($data, 'phone') !== false ) :
 		$phoneBasic = $GLOBALS['customer_info']['area'].'-'.$GLOBALS['customer_info']['phone'];
-		$phoneFormat = $GLOBALS['customer_info']['phone-format'];		
+		$phoneFormat = $GLOBALS['customer_info']['area-before'].$GLOBALS['customer_info']['area'].$GLOBALS['customer_info']['area-after'].$GLOBALS['customer_info']['phone'];		
 		if ( strpos($data, 'mm-bar-phone') !== false ) :
 			$phoneFormat = '<div class="mm-bar-btn mm-bar-phone call-btn" aria-hidden="true"></div><span class="sr-only">Call Us</span>';	
 		elseif ( strpos($data, 'alt') !== false ) :

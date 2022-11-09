@@ -37,28 +37,30 @@
 
 					$buildCopyright = "";
 					$buildCopyright .= wp_nav_menu( array( 'theme_location' => 'footer-menu', 'container' => 'div', 'container_id' => 'footer-navigation', 'container_class' => 'secondary-navigation', 'menu_id' => 'footer-menu', 'menu_class' => 'menu secondary-menu', 'fallback_cb' => 'false', 'echo' => false ) );
-					if ( $GLOBALS['customer_info']['misc2'] ) $buildCopyright .= "<div class='site-info-misc2'>".$GLOBALS['customer_info']['misc2']."</div>";						
+					
+					if ( isset($GLOBALS['customer_info']['misc2']) ) $buildCopyright .= "<div class='site-info-misc2'>".$GLOBALS['customer_info']['misc2']."</div>";					
+					
 					$buildCopyright .= "<div class='site-info-copyright'>".$GLOBALS['customer_info']['copyright']." ".$GLOBALS['customer_info']['name']." • All Rights Reserved</div>";
 					
 					$placeIDs = $GLOBALS['customer_info']['pid'];
 					if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
 					foreach ( $placeIDs as $placeID ) :	
 						$buildCopyright .= "<div class='site-info-address'>";
-						if ( $googleInfo[$placeID]['street'] != '' ) $buildCopyright .= trim($googleInfo[$placeID]['street']).", ";							
+						if ( strlen($googleInfo[$placeID]['street']) > 5 ) $buildCopyright .= trim($googleInfo[$placeID]['street']).", ";							
 						if ( $googleInfo[$placeID]['city'] ) :
-							$buildCopyright .= $googleInfo[$placeID]['city'].", ".$googleInfo[$placeID]['state-abbr']." ".$googleInfo[$placeID]['zip']." • ";
-						elseif ( $googleInfo[$placeID]['region'] ) : 
-							$buildCopyright .= $googleInfo[$placeID]['region']." • "; 
+							$buildCopyright .= $googleInfo[$placeID]['city'].", ".$googleInfo[$placeID]['state-abbr']." ".$googleInfo[$placeID]['zip'];
+						elseif ( isset($GLOBALS['customer_info']['region']) ) : 
+							$buildCopyright .= $googleInfo[$placeID]['region']; 
 						endif;
-						if ( $googleInfo[$placeID]['phone-format'] ) $buildCopyright .= $googleInfo[$placeID]['phone-format'];
+						if ( isset($GLOBALS['customer_info']['phone-format']) && $googleInfo[$placeID]['phone-format'] ) $buildCopyright .= " • ".$googleInfo[$placeID]['phone-format'];
 						$buildCopyright .= "</div>";
 					endforeach;
 					
-					if ( $GLOBALS['customer_info']['misc3'] ) $buildCopyright .= "<div class='site-info-misc3'>".$GLOBALS['customer_info']['misc3']."</div>";	
+					if ( isset($GLOBALS['customer_info']['misc3']) ) $buildCopyright .= "<div class='site-info-misc3'>".$GLOBALS['customer_info']['misc3']."</div>";	
 					$buildCopyright .= "<div class='site-info-links'>";
-					if ( $GLOBALS['customer_info']['license'] ) $buildCopyright .= "License ".$GLOBALS['customer_info']['license']." • "; 
+					if ( isset($GLOBALS['customer_info']['license']) ) $buildCopyright .= "License ".$GLOBALS['customer_info']['license']." • "; 
 					$buildCopyright .= "<span class='privacy-policy-link'><a href='/privacy-policy/'>Privacy Policy</a></span><span class='terms-conditions-link'> • <a href='/terms-conditions/'>Terms & Conditions</a></span>";
-					if ( $GLOBALS['customer_info']['misc1'] ) $buildCopyright .= " • ".$GLOBALS['customer_info']['misc1'];
+					if ( isset($GLOBALS['customer_info']['misc1']) ) $buildCopyright .= " • ".$GLOBALS['customer_info']['misc1'];
 					$buildCopyright .= "</div><div class='site-info-battleplan'>Website developed & maintained by <a href='http://battleplanwebdesign.com' target='_blank' rel='noreferrer'>Battle Plan Web Design</a></div>";
 					$buildCopyright .= "</div>";					
 					

@@ -13,6 +13,12 @@
 # Chron Jobs
 --------------------------------------------------------------*/
 
+require_once get_template_directory().'/vendor/autoload.php';
+use Google\Analytics\Data\V1beta\BetaAnalyticsDataClient;
+use Google\Analytics\Data\V1beta\DateRange;
+use Google\Analytics\Data\V1beta\Dimension;
+use Google\Analytics\Data\V1beta\Metric;
+
 // delete all options that begin with {$prefix}
 function battleplan_delete_prefixed_options( $prefix ) {
 	global $wpdb;
@@ -49,12 +55,6 @@ if ( get_option('bp_setup_2022_11_09') != "completed" ) :
 endif;
 
 // Determine if Chron should run
-require_once get_template_directory().'/vendor/autoload.php';
-use Google\Analytics\Data\V1beta\BetaAnalyticsDataClient;
-use Google\Analytics\Data\V1beta\DateRange;
-use Google\Analytics\Data\V1beta\Dimension;
-use Google\Analytics\Data\V1beta\Metric;
-
 $forceChron = get_option('bp_force_chron') !== null ? get_option('bp_force_chron') : 'false';
 $chronTime = get_option('bp_chron_time') !== null ? get_option('bp_chron_time') : 0;
 $chronDue = $chronTime + rand(40000,70000);

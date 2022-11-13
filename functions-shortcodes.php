@@ -321,7 +321,7 @@ function battleplan_getRandomImage($atts, $content = null ) {
 	$class = esc_attr($a['class']) != '' ? " ".esc_attr($a['class']) : "";
 	$align = esc_attr($a['align']) != '' ? "align".esc_attr($a['align']) : "";
 	
-	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>esc_attr($a['number']), 'offset'=>esc_attr($a['offset']), 'order'=>esc_attr($a['order']));
+	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>esc_attr($a['number']), 'offset'=>esc_attr($a['offset']), 'order'=>esc_attr($a['order']));
 
 	$args['orderby']='meta_value_num';	
 	if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; 	
@@ -380,7 +380,7 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 	$class = esc_attr($a['class']) != '' ? " ".$class : "";
 	$id = esc_attr($a['id']) == "current" ? get_the_ID() : esc_attr($a['id']);
 	
-	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>$num, 'offset'=>esc_attr($a['offset']), 'order'=>esc_attr($a['order']), 'tax_query'=>array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags )));
+	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>$num, 'offset'=>esc_attr($a['offset']), 'order'=>esc_attr($a['order']), 'tax_query'=>array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags )));
 
 	$args['orderby']='meta_value_num';	
 	if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; 	
@@ -720,7 +720,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	wp_enqueue_script( 'battleplan-carousel', get_template_directory_uri().'/js/bootstrap-carousel.js', array('jquery-core'), _BP_VERSION, false );		
 	wp_enqueue_script( 'battleplan-carousel-slider', get_template_directory_uri().'/js/script-bootstrap-slider.js', array('battleplan-carousel'), _BP_VERSION, false );	
 
-	$a = shortcode_atts( array( 'type'=>'testimonials', 'auto'=>'yes', 'interval'=>'6000', 'loop'=>'true', 'num'=>'4', 'offset'=>'0', 'pics'=>'yes', 'caption'=>'no', 'controls'=>'yes', 'controls_pos'=>'below', 'indicators'=>'no', 'justify'=>'center', 'pause'=>'true', 'orderby'=>'recent', 'order'=>'asc', 'post_btn'=>'', 'all_btn'=>'View All', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'link'=>'', 'pic_size'=>'1/3', 'text_size'=>'', 'slide_type'=>'fade', 'slide_effect'=>'', 'tax'=>'', 'terms'=>'', 'tag'=>'', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'id'=>'', 'mult'=>'1', 'class'=>'', 'truncate'=>'true', 'lazy'=>'true', 'blur'=>'false' ), $atts );
+	$a = shortcode_atts( array( 'type'=>'testimonials', 'auto'=>'yes', 'interval'=>'6000', 'loop'=>'true', 'num'=>'4', 'offset'=>'0', 'pics'=>'yes', 'caption'=>'no', 'controls'=>'yes', 'controls_pos'=>'below', 'indicators'=>'no', 'justify'=>'center', 'pause'=>'true', 'orderby'=>'recent', 'order'=>'asc', 'post_btn'=>'', 'all_btn'=>'View All', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'link'=>'', 'pic_size'=>'1/3', 'text_size'=>'', 'slide_type'=>'box', 'slide_effect'=>'fade', 'tax'=>'', 'terms'=>'', 'tag'=>'', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'id'=>'', 'mult'=>'1', 'class'=>'', 'truncate'=>'true', 'lazy'=>'true', 'blur'=>'false' ), $atts );
 	$num = esc_attr($a['num']);	
 	$controls = esc_attr($a['controls']);	
 	$controlsPos = esc_attr($a['controls_pos']);
@@ -768,15 +768,18 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	$rowDisplay = 0;
 	$sliderNum = rand(100,999);
 	
-	$controlClass = "";
-	if ( $controls == "yes" && $indicators == "no" ) $controlClass = " only-controls";	
+	$controlClass = $controls == "yes" && $indicators == "no" ? " only-controls" : "";
 	$showBtn = $postBtn == "" ? "false" : "true";	
 	$pause = esc_attr($a['pause']) == "true" ? "hover" : "false";			
 		
-	if ( $link == "" ) : $linkTo = "/".$type."/"; elseif ( $link == "none" || $link == "false" || $link == "no" ) : $link = "none"; endif;		
+	if ( $link == "" ) : 
+		$linkTo = "/".$type."/"; 
+	elseif ( $link == "none" || $link == "false" || $link == "no" ) : 
+		$link = "none"; 
+	endif;		
 	
 	if ( $type == "image" || $type == "images" ) :
-		$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>$num, 'order'=>$order);
+		$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>$num, 'order'=>$order);
 
 		$args['orderby']='meta_value_num';	
 		if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; 	
@@ -908,23 +911,11 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	$buildControls .= $controlsPrevBtn;
 	if ( $allBtn != "" ) $buildControls .= $viewMoreBtn;
 	$buildControls .= $controlsNextBtn;	
-	$buildControls .= "</div>";	
+	$buildControls .= "</div>";		
 	
-	$style = '';
-	$slideClass = $slideEffect != '' ? ' effect-'.$slideEffect.' ' : '';
-
-	if ( $slideType == "box" ) : 
-		$style = "style='margin-left:auto; margin-right:auto;'"; 
-		$slideClass .= "box-slider"; 
-	elseif ( $slideType == "screen" ) :
-		$style = "style='width: calc(100vw - 17px); left: 50%; transform: translateX(calc(-50vw + 8px));'"; 
-		$slideClass.= "screen-slider"; 
-	else:
-		$slideClass .= "carousel-fade";
-	endif;	
+	$slideClass = esc_attr($a['class'])." carousel-".$slideType." effect-".$slideEffect;
 	
-	
-	$buildSlider = '<div id="'.$type.'Slider'.$sliderNum.'" class="carousel slide slider slider-'.$type.' '.$slideClass.' '.esc_attr($a['class']).' mult-'.$mult.$blur.'" '.$style.' data-interval="'.esc_attr($a['interval']).'" data-pause="'.$pause.'" data-wrap="'.esc_attr($a['loop']).'" data-touch="true"';	
+	$buildSlider = '<div id="'.$type.'Slider'.$sliderNum.'" class="carousel slide slider slider-'.$type.' '.$slideClass.' mult-'.$mult.$blur.'" data-interval="'.esc_attr($a['interval']).'" data-pause="'.$pause.'" data-wrap="'.esc_attr($a['loop']).'" data-touch="true"';	
 	
 	if ( $autoplay == "yes" || $autoplay == "true" ) $buildSlider .= ' data-auto="true"';
 	
@@ -971,7 +962,7 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 	$package = esc_attr($a['package']);	
 	$lazy = esc_attr($a['lazy']) == "true" ? "lazy" : "eager"; 
 	
-	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>esc_attr($a['num']), 'order'=>esc_attr($a['order']), 'tax_query'=>array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags )));
+	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>esc_attr($a['num']), 'order'=>esc_attr($a['order']), 'tax_query'=>array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags )));
 
 	$args['orderby']='meta_value_num';	
 	if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; 	
@@ -1036,13 +1027,13 @@ function battleplan_loadImagesByTag( $atts, $content = null ) {
 	if ( $compare == "equal" || $compare == "" ) $compare="=";
 	if ( $compare == "not equal" ) $compare="!=";
 	if ( $field != "" ) :
-		$image_attachments = new WP_Query( array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>$max, 'meta_query'=>array(array( 'key'=>$field, 'value'=>esc_attr($a['value']), 'type'=>esc_attr($a['type']), 'compare'=>$compare )), 'orderby'=>$orderBy, 'order'=>$order,  ));
+		$image_attachments = new WP_Query( array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>$max, 'meta_query'=>array(array( 'key'=>$field, 'value'=>esc_attr($a['value']), 'type'=>esc_attr($a['type']), 'compare'=>$compare )), 'orderby'=>$orderBy, 'order'=>$order,  ));
 	elseif ( $tags == "" ) :
 		$tags = get_the_slug();
-		$image_attachments = new WP_Query( array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>$max, 'tax_query'=>array(array( 'taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags, )), 'orderby'=>$orderBy, 'order'=>$order,  ));
+		$image_attachments = new WP_Query( array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>$max, 'tax_query'=>array(array( 'taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags, )), 'orderby'=>$orderBy, 'order'=>$order,  ));
 	else:
 		$tags = explode(',', $tags);
-		$image_attachments = new WP_Query( array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>$max, 'tax_query'=>array(array( 'taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>array_values($tags))), 'orderby'=>$orderBy, 'order'=>$order,  ));					
+		$image_attachments = new WP_Query( array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>$max, 'tax_query'=>array(array( 'taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>array_values($tags))), 'orderby'=>$orderBy, 'order'=>$order,  ));					
 	endif;
 	
 	$imageIDs = array();
@@ -1073,7 +1064,7 @@ function battleplan_setUpWPGallery( $atts, $content = null ) {
 	$class = esc_attr($a['class']);
 	if ( $class != "" ) $class = " ".$class;
 	
-	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg,image/gif,image/jpg,image/png', 'posts_per_page'=>esc_attr($a['max']), 'order'=>esc_attr($a['order']), 'date_query'=>array( array( 'after'=>esc_attr($a['start']), 'before'=>esc_attr($a['end']), 'inclusive'=>'true' )));	
+	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>esc_attr($a['max']), 'order'=>esc_attr($a['order']), 'date_query'=>array( array( 'after'=>esc_attr($a['start']), 'before'=>esc_attr($a['end']), 'inclusive'=>'true' )));	
 	
 	if ( $exclude ) : 
 		$exclude = explode(',', $exclude); 

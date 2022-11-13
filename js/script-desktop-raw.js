@@ -13,13 +13,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 --------------------------------------------------------------*/
 	var getUploadURI = site_dir.upload_dir_uri;
 	
-// Preload BG image and fade in
-	if ( $( 'body' ).hasClass( "background-image" ) ) {
-		var preloadBG = new Image();
-		preloadBG.onload = function() { animateDiv( '.parallax-mirror', 'fadeIn', 0, '', 200 ); };		
-		preloadBG.src = getUploadURI + "/" + "site-background.jpg";  
-	}
-	
 //Set full screen parallax background for desktops
 	window.parallaxBG = function (container, filename, backgroundW, backgroundH, posX, posY, bleed, speed, id) {
 		posX = posX || 'center';

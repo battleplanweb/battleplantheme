@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '15.1.3' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '15.2' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -568,6 +568,21 @@ function battleplan_setLoc() {
 	endif;
 }
 
+// Preload site-background.jpg or site-background.webp if it exists
+add_action( 'wp_footer', 'battleplan_preload_bg' );
+function battleplan_preload_bg() {
+	$file = null;
+	if (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-background.jpg' ) ) : 
+		$file = "site-background.jpg";
+	elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-background.webp' ) ) : 
+		$file = "site-background.webp";
+	endif;
+	
+	if ( $file ) ?>
+		<script nonce="<?php echo _BP_NONCE; ?>">var preloadBG = new Image(); preloadBG.onload = function() { animateDiv( ".parallax-mirror", "fadeIn", 0, "", 200 ); }; preloadBG.src = "<?php echo wp_upload_dir()['baseurl']; ?>/<?php echo $file ?>";</script>
+	<?php	
+}
+
 // Add some defining classes to body
 add_filter( 'body_class', 'battleplan_addBodyClasses', 30 );
 function battleplan_addBodyClasses( $classes ) {	
@@ -1075,7 +1090,7 @@ require_once get_template_directory().'/functions-ajax.php';
 require_once get_template_directory().'/functions-grid.php';
 require_once get_template_directory().'/functions-public.php';
 require_once get_stylesheet_directory().'/functions-site.php';
-require_once get_template_directory().'/functions-chron-jobs.php';	
+//require_once get_template_directory().'/functions-chron-jobs.php';	
 if ( is_admin() || _USER_LOGIN == "battleplanweb" ) require_once get_template_directory().'/functions-admin.php';  
 
 // Add filter to search & replace final HTML output

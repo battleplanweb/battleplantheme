@@ -1469,7 +1469,8 @@ function battleplan_admin_footer_text() {
 	$printFooter .= '<div style="grid-row: span 2; align-self: center;">Powered by <a href="https://battleplanwebdesign.com" target="_blank">Battle Plan Web Design</a><br>';
 	$printFooter .= 'Launched '.date('F Y', strtotime(get_option('bp_launch_date'))).'<br>';
 	$printFooter .= 'Framework '._BP_VERSION.'<br>';
-	$printFooter .= 'WP '.get_bloginfo('version').'<br></div>';
+	$printFooter .= 'WP '.get_bloginfo('version').'<br>';
+	$printFooter .=  'Local Time: '.wp_date("h:i a", null, new DateTimeZone( wp_timezone_string() ) ).'<br></div>';
 	
 	$printFooter .= '<div style="justify-self: end; margin-right: 50px;"><a class="button" href = "mailto:'.get_option('customer_info')['email'].'">Contact Email</a>';
 		
@@ -1846,7 +1847,7 @@ function battleplan_addWidgetPicViewsToImg( $post_ID ) {
 // Force clear all views for posts/pages
 function battleplan_force_run_chron() {
 	updateOption('bp_force_chron', true);		
-	header("Location: /wp-admin/index.php");
+	header("Location: /wp-admin/");
 	exit();
 }  
 

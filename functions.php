@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '15.2' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '15.3' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -1557,6 +1557,7 @@ function bp_google_tag_manager() { do_action('bp_google_tag_manager'); }
 function bp_mobile_menu_bar_items() { do_action('bp_mobile_menu_bar_items'); }
 function bp_mobile_menu_bar_scroll() { do_action('bp_mobile_menu_bar_scroll'); }
 function bp_mobile_menu_bar_phone() { do_action('bp_mobile_menu_bar_phone'); }
+function bp_mobile_menu_bar_middle() { do_action('bp_mobile_menu_bar_middle'); }
 function bp_mobile_menu_bar_contact() { do_action('bp_mobile_menu_bar_contact'); }
 function bp_mobile_menu_bar_activate() { do_action('bp_mobile_menu_bar_activate'); }
 function bp_before_page() { do_action('bp_before_page'); }

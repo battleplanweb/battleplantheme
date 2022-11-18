@@ -293,6 +293,7 @@ function processChron($forceChron) {
 		 
 	$updateInfo = false;
 	$customer_info = get_option('customer_info');
+	$pidSync = $customer_info['pid-sync'] == "true" ? true : false;
 	$placeIDs = $customer_info['pid'];
 	if ( isset($placeIDs) ) :
 		$apiKey = "AIzaSyBqf";
@@ -369,8 +370,18 @@ function processChron($forceChron) {
 			updateOption('bp_gbp_update', $googleInfo);	
 		endif;
 		
-		if ( $updateInfo == true ) :
+		if ( $updateInfo == true && $pidSync == true ) :
 			$primePID = $placeIDs[0];		
+			
+			$changed = $customer_info['area'] != $googleInfo[$primePID]['area'] ? 'Area Code<br>' : '';
+			$changed .= $customer_info['phone'] != $googleInfo[$primePID]['phone'] ? 'Phone<br>' : '';
+			$changed .= $customer_info['name'] != $googleInfo[$primePID]['name'] ? 'Name<br>' : '';
+			$changed .= $customer_info['street'] != $googleInfo[$primePID]['street'] ? 'Street<br>' : '';
+			$changed .= $customer_info['city'] != $googleInfo[$primePID]['city'] ? 'Phone<br>' : '';
+			$changed .= $customer_info['state-abbr'] != $googleInfo[$primePID]['state-abbr'] ? 'State Abbr<br>' : '';
+			$changed .= $customer_info['state-full'] != $googleInfo[$primePID]['state-full'] ? 'State Full<br>' : '';
+			$changed .= $customer_info['zip'] != $googleInfo[$primePID]['zip'] ? 'Zip<br>' : '';
+			
 			$customer_info['area'] = $googleInfo[$primePID]['area'] != null ? $googleInfo[$primePID]['area'] : $customer_info['area'];		
 			$customer_info['phone'] = $googleInfo[$primePID]['phone'] != null ? $googleInfo[$primePID]['phone'] : $customer_info['phone'];		
 			$customer_info['phone-format'] = $customer_info['area-before'].$customer_info['area'].$customer_info['area-after'].$customer_info['phone'];	
@@ -391,7 +402,9 @@ function processChron($forceChron) {
 			$customer_info['hours-sat'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][5], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][5], ": ") + 2);
 
 			updateOption( 'customer_info', $customer_info );
-			$GLOBALS['customer_info'] = get_option('customer_info');
+			$GLOBALS['customer_info'] = get_option('customer_info');			
+			
+			if ( $changed != '' ) mail("glendon@battleplanwebdesign.com", "Google Business Info Changed: ".$customer_info['name'], $changed);
 		endif;
 	endif;
 

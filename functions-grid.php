@@ -49,22 +49,18 @@ function battleplan_restrictContent( $atts, $content = null ) {
 // Section
 add_shortcode( 'section', 'battleplan_buildSection' );
 function battleplan_buildSection( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'hash'=>'', 'style'=>'', 'width'=>'', 'grid'=>'', 'break'=>'', 'valign'=>'', 'css'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'class'=>'', 'start'=>'', 'end'=>'' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'hash'=>'', 'style'=>'', 'theme'=>'', 'width'=>'', 'grid'=>'', 'break'=>'', 'valign'=>'', 'css'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'class'=>'', 'start'=>'', 'end'=>'' ), $atts );
 	$name = strtolower(esc_attr($a['name']));
 	$name = preg_replace("/[\s_]/", "-", $name);
-	if ( $name ) : $name = " id='".$name."'"; else: $name = ""; endif;
-	$hash = esc_attr($a['hash']);
-	if ( $hash != '' ) $hash='data-hash="'.$hash.'"';
+	$name = $name ? ' id="'.$name.'"' : '';
+	$hash = esc_attr($a['hash']) != '' ? 'data-hash="'.esc_attr($a['hash']).'"' : '';
 	$css = esc_attr($a['css']);
 	$background = esc_attr($a['background']);
 	$left = esc_attr($a['left']);
 	$top = esc_attr($a['top']);
-	$width = esc_attr($a['width']);
-	if ( $width != '' ) $width = " section-".$width;
-	$class = esc_attr($a['class']);
-	if ( $class != '' ) $class = " ".$class;
-	$style = esc_attr($a['style']);
-	if ( $style != '' ) $style = " style-".$style;
+	$width = esc_attr($a['width']) != '' ? ' section-'.esc_attr($a['width']) : '';
+	$class = esc_attr($a['class']) != '' ? ' '.esc_attr($a['class']) : '';
+	$style = esc_attr($a['style']) != '' ? ' style-'.esc_attr($a['style']) : '';
 	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));	
 	if ( $start || $end ) {
@@ -72,17 +68,11 @@ function battleplan_buildSection( $atts, $content = null ) {
 		if ( $start && $now < $start ) return null;
 		if ( $end && $now > $end ) return null;		
 	}
-	$grid = esc_attr($a['grid']);
-	$break = esc_attr($a['break']);
-	$valign = esc_attr($a['valign']);
-	if ( $valign != '' ) $valign = " valign-".$valign;
-	if ( $break != '' ) $break = " break-".$break;
-	if ( $grid != '' ) :
-		$buildLayout = '<div class="flex grid-'.$grid.$valign.$break.$class.'">'.do_shortcode($content).'</div>';
-	else:
-		$buildLayout = do_shortcode($content);
-	endif;	
-	$buildSection = '<section'.$name.' class="section'.$style.$width.$class.'" '.$hash;
+	$theme = esc_attr($a['theme']) != '' ? ' style-'.esc_attr($a['theme']) : '';
+	$valign = esc_attr($a['valign']) != '' ? ' valign-'.esc_attr($a['valign']) : '';
+	$break = esc_attr($a['break']) != '' ? ' break-'.esc_attr($a['break']) : '';
+	$buildLayout = esc_attr($a['grid']) != '' ? '<div class="flex grid-'.esc_attr($a['grid']).$valign.$break.$class.'">'.do_shortcode($content).'</div>' : do_shortcode($content);
+	$buildSection = '<section'.$name.' class="section'.$style.$theme.$width.$class.'" '.$hash;
 	if ( $background != "" || $css != "" ) :
 		$buildSection .= ' style="';
 		if ( $css != "" ) $buildSection .= $css;
@@ -268,7 +258,7 @@ function battleplan_buildVid( $atts, $content = null ) {
 		if ( $muted == 'true' ) $buildVid .= 'muted ';
 		$buildVid .= 'poster="'.$thumb.'" style="position:relative; top:0; left:0; width:100%; height:100%">';
 		$buildVid .= '<source src="'.$link.'" type="video/mp4">';
-		$buildVid .= '<img src="'.$thumb.'">';
+		$buildVid .= '<img loading="lazy" src="'.$thumb.'">';
 		$buildVid .= '</video></div>';
 		
 		return $buildVid;

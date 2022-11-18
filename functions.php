@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '15.3' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '15.4' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -75,6 +75,22 @@ function is_wplogin() {
 // Check if user is on a mobile device
 function is_mobile() {
     return preg_match("/(android|avantgo|blackberry|bolt|boost|cricket|docomo|fone|hiptop|mini|mobi|palm|phone|pie|tablet|up\.browser|up\.link|webos|wos)/i", $_SERVER["HTTP_USER_AGENT"]);
+}
+
+// Check if business is currently open
+function is_biz_open() {
+ 	$googleInfo = get_option('bp_gbp_update');
+	$day = wp_date("w", null, new DateTimeZone( wp_timezone_string() )) - 1;
+	$time = wp_date("Hi", null, new DateTimeZone( wp_timezone_string() ));
+	$placeIDs = $GLOBALS['customer_info']['pid'];	
+	if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
+	$primePID = $placeIDs[0];
+	$open = $googleInfo[$primePID]['current-hours']['periods'][$day]['open']['time'];
+	$close = $googleInfo[$primePID]['current-hours']['periods'][$day]['close']['time'];
+	$open24 = $googleInfo[$primePID]['current-hours']['periods'][0]['open']['time'] == 0000 ? true : false;	
+	//return true;
+		
+	return $open24 == true || ($time > $open && $time < $close) ? true : false;
 }
 
 // Get slug of current page --- can also use _PAGE_SLUG (slug only) and _PAGE_SLUG_FULL (slug + preceding directories)
@@ -587,13 +603,7 @@ function battleplan_preload_bg() {
 add_filter( 'body_class', 'battleplan_addBodyClasses', 30 );
 function battleplan_addBodyClasses( $classes ) {	
 	$classes[] = "slug-"._PAGE_SLUG; 
-	
- 	if ( is_mobile() ) : 
-		$classes[] = "screen-mobile"; 
-	else: 
-		$classes[] = "screen-desktop";
-	endif;
-	
+	$classes[] = is_mobile() ? "screen-mobile" : "screen-desktop";
 	if ( $GLOBALS['customer_info']['site-type'] ) $classes[] = "site-type-".$GLOBALS['customer_info']['site-type'];
 	
 	return $classes;
@@ -1000,6 +1010,7 @@ function battleplan_header_styles() {
 	if ( is_plugin_active( 'stripe-payments/accept-stripe-payments.php' ) ) wp_enqueue_style( 'battleplan-stripe-payments', get_template_directory_uri()."/style-stripe-payments.css", array(), _BP_VERSION );  
 	if ( is_plugin_active( 'cue/cue.php' ) ) wp_enqueue_style( 'battleplan-cue', get_template_directory_uri()."/cue.css", array(), _BP_VERSION );  	
 	
+	wp_enqueue_style( 'normalize-style', get_template_directory_uri()."/style-normalize.css", array(), _BP_VERSION );
 	wp_enqueue_style( 'parent-style', get_template_directory_uri()."/style.css", array(), _BP_VERSION );
 	
 	if ( $GLOBALS['customer_info']['site-type'] == 'profile' || $GLOBALS['customer_info']['site-type'] == 'profiles' ) wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array(), _BP_VERSION );		
@@ -1090,7 +1101,7 @@ require_once get_template_directory().'/functions-ajax.php';
 require_once get_template_directory().'/functions-grid.php';
 require_once get_template_directory().'/functions-public.php';
 require_once get_stylesheet_directory().'/functions-site.php';
-//require_once get_template_directory().'/functions-chron-jobs.php';	
+require_once get_template_directory().'/functions-chron-jobs.php';	
 if ( is_admin() || _USER_LOGIN == "battleplanweb" ) require_once get_template_directory().'/functions-admin.php';  
 
 // Add filter to search & replace final HTML output
@@ -1563,6 +1574,7 @@ function bp_mobile_menu_bar_activate() { do_action('bp_mobile_menu_bar_activate'
 function bp_before_page() { do_action('bp_before_page'); }
 function bp_before_masthead() { do_action('bp_before_masthead'); }
 function bp_masthead() { do_action('bp_masthead'); }
+function bp_open_banner() { do_action('bp_open_banner'); }
 function bp_after_masthead() { do_action('bp_after_masthead'); }
 function bp_wrapper_top() { do_action('bp_wrapper_top'); }
 function bp_before_wrapper_content() { do_action('bp_before_wrapper_content'); }
@@ -1697,6 +1709,12 @@ add_action('bp_mobile_menu_bar_activate', 'battleplan_mobile_menu_bar_activate')
 function battleplan_mobile_menu_bar_activate() { 
 	echo '<div class="mm-bar-btn mm-bar-activate activate-btn"><div></div><div></div><div></div></div> ';	
 }
+
+// Display locked site-message
+add_action('bp_before_masthead', 'battleplan_printSiteMessage', 20);
+function battleplan_printSiteMessage() { 
+	echo do_shortcode('[get-element slug="site-message"]');
+}	
 	
 // Display the site header
 add_action('bp_masthead', 'battleplan_printHeader', 20);
@@ -1710,11 +1728,11 @@ function battleplan_printHeader() {
 	echo $printHeader;
 }
 
-// Display locked site-message
-add_action('bp_before_masthead', 'battleplan_printSiteMessage', 20);
-function battleplan_printSiteMessage() { 
-	echo do_shortcode('[get-element slug="site-message"]');
-}	
+// Display the "we're open" banner on desktop
+add_action('bp_before_masthead', 'battleplan_printOpenBanner', 30);
+function battleplan_printOpenBanner() { 
+	echo is_biz_open() && !is_mobile() ? '<div class="currently-open-banner"><p>Call Us Now... We\'re Open!</p></div>' : '';
+}
 
 // Display #wrapper-top
 add_action('bp_wrapper_top', 'battleplan_printWrapperTop', 20);

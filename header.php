@@ -36,11 +36,11 @@
 <?php wp_body_open(); ?>
 	
 <div id="mobile-menu-bar-faux"></div>	
-<div id="mobile-menu-bar" class="<?php echo do_shortcode('[get-hours-open open="currently-open"]'); ?>"</div>
+<div id="mobile-menu-bar" class="<?php echo do_shortcode('[get-hours-open open="currently-open" closed="not-currently-open"]'); ?>"</div>
 	<?php //bp_mobile_menu_bar_items(); ?>
 	<?php bp_mobile_menu_bar_contact(); ?>	
 	<?php bp_mobile_menu_bar_phone(); ?>
-	<?php echo do_shortcode('[get-hours-open closed="<div></div>"]'); ?>
+	<?php if ( !is_biz_open() ) echo '<div class="hide-2 hide-3 hide-4 hide-5"></div>'; ?>
 	<?php bp_mobile_menu_bar_scroll(); ?>
 	<?php bp_mobile_menu_bar_activate(); ?>
 </div>

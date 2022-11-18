@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		addDiv('.menu-with-logo','<div class="menu-logo"><img src = "'+imageFile+'" alt=""></div>','before');
 		$('.menu-with-logo .menu-logo').height($('.menu-with-logo').height());
 		linkHome('.menu-logo');
-	};
+	};	
 	
 /*--------------------------------------------------------------
 # Set up sidebar
@@ -172,7 +172,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			var subW = $(this).outerWidth(true), parentW = $(this).parent().width(), moveL = - Math.round((subW - parentW) / 2);
 			$(this).css({ "left":moveL+"px" });		
 		});
-	};
+	};	
+	
+// Reveal "Are We Open" banner
+setTimeout(function() {
+	var posY = getPosition ($('#masthead .phone-link'), 'center-y', 'window'), posX = getPosition ($('#masthead .phone-link'), 'right', 'window'); 
+	$('.currently-open-banner').css({"top":posY+"px", "left":posX+"px"});
+	$('.currently-open-banner').addClass('reveal-open');
+}, 2000);
 	
 /*--------------------------------------------------------------
 # Browser resize

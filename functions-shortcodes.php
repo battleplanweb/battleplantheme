@@ -17,7 +17,8 @@ function battleplan_getBizInfo($atts, $content = null ) {
 		$phoneBasic = $GLOBALS['customer_info']['area'].'-'.$GLOBALS['customer_info']['phone'];
 		$phoneFormat = $GLOBALS['customer_info']['area-before'].$GLOBALS['customer_info']['area'].$GLOBALS['customer_info']['area-after'].$GLOBALS['customer_info']['phone'];		
 		if ( strpos($data, 'mm-bar-phone') !== false ) :
-			$phoneFormat = do_shortcode('<div class="mm-bar-btn mm-bar-phone call-btn" aria-hidden="true"><span>[get-hours-open open="Call Us, We\'re Open!"]</span></div><span class="sr-only">Call Us</span>');
+			$openMessage = is_biz_open() ? "<span>Call Us, We're Open!</span>" : "";
+			$phoneFormat = do_shortcode('<div class="mm-bar-btn mm-bar-phone call-btn" aria-hidden="true">'.$openMessage.'</div><span class="sr-only">Call Us</span>');
 		elseif ( strpos($data, 'alt') !== false ) :
 			if ( isset($GLOBALS['customer_info'][$data]) ) $phoneFormat = $GLOBALS['customer_info'][$data];	
 		endif;
@@ -286,24 +287,11 @@ function battleplan_addBusinessHours( $atts, $content = null ) {
 	return do_shortcode($buildHours);
 }	
 
-// Determine if current moment is within publiched business hours
+// Print text based on whether business is open or not
 add_shortcode( 'get-hours-open', 'battleplan_isOpen' );
 function battleplan_isOpen($atts, $content = null) {
 	$a = shortcode_atts( array( 'open'=>'', 'closed'=>'' ), $atts );
- 	$googleInfo = get_option('bp_gbp_update');
-	$day = wp_date("w", null, new DateTimeZone( wp_timezone_string() )) - 1;
-	$time = wp_date("Hi", null, new DateTimeZone( wp_timezone_string() ));
-	$placeIDs = $GLOBALS['customer_info']['pid'];	
-	if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
-	$primePID = $placeIDs[0];
-	$open = $googleInfo[$primePID]['current-hours']['periods'][$day]['open']['time'];
-	$close = $googleInfo[$primePID]['current-hours']['periods'][$day]['close']['time'];
-		
-	if ( $time > $open && $time < $close ) :
-		return esc_attr($a['open']);
-	else:
-		return esc_attr($a['closed']);
-	endif;	
+	return is_biz_open() ? esc_attr($a['open']) : esc_attr($a['closed']);
 }	
 
 // Choose random text from given choices

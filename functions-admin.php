@@ -1470,7 +1470,7 @@ function battleplan_admin_footer_text() {
 	$printFooter .= 'Launched '.date('F Y', strtotime(get_option('bp_launch_date'))).'<br>';
 	$printFooter .= 'Framework '._BP_VERSION.'<br>';
 	$printFooter .= 'WP '.get_bloginfo('version').'<br>';
-	$printFooter .=  'Local Time: '.wp_date("h:i a", null, new DateTimeZone( wp_timezone_string() ) ).'<br></div>';
+	$printFooter .=  'Local Time: '.wp_date("g:i a", null, new DateTimeZone( wp_timezone_string() ) ).'<br></div>';
 	
 	$printFooter .= '<div style="justify-self: end; margin-right: 50px;"><a class="button" href = "mailto:'.get_option('customer_info')['email'].'">Contact Email</a>';
 		
@@ -1892,8 +1892,8 @@ function battleplan_site_audit() {
 		endif;	
 		
 		$googleInfo = get_option('bp_gbp_update');
-		$siteAudit[$today]['google-rating'] = number_format($googleInfo['rating'], 1, '.', ',');
-		$siteAudit[$today]['google-reviews'] = $googleInfo['number'];
+		$siteAudit[$today]['google-rating'] = number_format($googleInfo['google-rating'], 1, '.', ',');
+		$siteAudit[$today]['google-reviews'] = $googleInfo['google-reviews'];
 		$siteAudit[$today]['load_time_mobile'] = get_option('load_time_mobile');	
 		$siteAudit[$today]['load_time_desktop'] = get_option('load_time_desktop');		
 		$siteAudit[$today]['testimonials-pct'] = get_option('pct-viewed-testimonials').'%';

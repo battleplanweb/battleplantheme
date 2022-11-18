@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '15.4' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '15.4.1' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -79,6 +79,7 @@ function is_mobile() {
 
 // Check if business is currently open
 function is_biz_open() {
+	if ( $GLOBALS['customer_info']['pid-sync'] != true ) return false;
  	$googleInfo = get_option('bp_gbp_update');
 	$day = wp_date("w", null, new DateTimeZone( wp_timezone_string() )) - 1;
 	$time = wp_date("Hi", null, new DateTimeZone( wp_timezone_string() ));

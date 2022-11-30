@@ -1528,15 +1528,17 @@ function battleplan_replace_howdy( $wp_admin_bar ) {
 	 $wp_admin_bar->add_node( array( 'id'=>'my-account', 'title'=>$newtitle, ) );
  }
 
-// Remove https://domain.com, add aspect-ratio - <img> inserted by WordPress
-add_filter( 'image_send_to_editor', 'battleplan_remove_junk_from_image', 10 );
-function battleplan_remove_junk_from_image( $html ) {
-	$pattern = '/(<img.*)width="(\d+)" height="(\d+)"(.*class=")(.*)" \/(>)/';
-	$style = '$1class="$5" width="$2" height="$3" style="aspect-ratio:$2/$3" />';
-	$html = preg_replace($pattern, $style, $html);
-	$html = str_replace( get_site_url(), "", $html );
-
-   return $html;
+// Re-build <img> tag in WordPress editor
+add_filter( 'image_send_to_editor', 'battleplan_remove_junk_from_image', 10, 8 );
+function battleplan_remove_junk_from_image( $html, $id, $caption, $title, $align, $url, $size, $alt ) {
+	$size_full = wp_get_attachment_image_src($id, 'full');
+	$size_requested = wp_get_attachment_image_src($id, $size);	
+	$size = $size == 'full' ? 'orig' : $size;
+	$data_orig = $size == 'orig' ? '' : ' data-orig="'.$size_full[1].'x'.$size_full[2].'"';
+	$url = str_replace( get_site_url(), "", $size_requested[0] );
+	$alt = $alt == get_the_title($id) ? '' : $alt;
+		
+	return '<img src="'.$url.'"'.$data_orig.' width="'.$size_requested[1].'" height="'.$size_requested[2].'" style="aspect-ratio:'.$size_requested[1].'/'.$size_requested[2].'" class="align'.$align.' size-'.$size.' wp-image-'.$id.'" alt="'.$alt.'" />';
 }
 
 // Set the quality of compression on various WordPress generated image sizes

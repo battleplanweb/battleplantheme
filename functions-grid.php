@@ -128,26 +128,23 @@ function battleplan_buildLayout( $atts, $content = null ) {
 // Column
 add_shortcode( 'col', 'battleplan_buildColumn' );
 function battleplan_buildColumn( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'hash'=>'', 'order'=>'', 'class'=>'', 'align'=>'', 'valign'=>'', 'css'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'start'=>'', 'end'=>'' ), $atts );
-	$name = strtolower(esc_attr($a['name']));
-	$name = preg_replace("/[\s_]/", "-", $name);
-	if ( $name ) : $name = " id='".$name."'"; else: $name = ""; endif;
-	$hash = esc_attr($a['hash']);
-	if ( $hash != '' ) $hash='data-hash="'.$hash.'"';
-	$class = esc_attr($a['class']);
-	if ( $class != '' ) $class = " ".$class;
-	$align = esc_attr($a['align']);
-	if ( $align != '' ) $align = " text-".$align;
-	$valign = esc_attr($a['valign']);
-	if ( $valign != '' ) $valign = " valign-".$valign;
+	$a = shortcode_atts( array( 'name'=>'', 'hash'=>'', 'order'=>'', 'class'=>'', 'align'=>'', 'valign'=>'', 'h-span'=>'', 'v-span'=>'', 'css'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'start'=>'', 'end'=>'' ), $atts );
+	$name = preg_replace("/[\s_]/", "-", strtolower(esc_attr($a['name'])));
+	$name = $name ? " id='".$name."'" : '';
+	$hash = esc_attr($a['hash']) != '' ? 'data-hash="'.esc_attr($a['hash']).'"' : '';
+	$class = esc_attr($a['class']) != '' ? " ".esc_attr($a['class']) : '';
+	$align = esc_attr($a['align']) != '' ? " text-".esc_attr($a['align']) : '';
+	$valign = esc_attr($a['valign']) != '' ? " valign-".esc_attr($a['valign']) : '';
 	$css = esc_attr($a['css']);
 	$background = esc_attr($a['background']);
 	$left = esc_attr($a['left']);
 	$top = esc_attr($a['top']);
 	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));
-	$order = esc_attr($a['order']);	
-	if ( $order != '' ) : $style = " style='order: ".$order." !important'"; else: $style = ""; endif;
+	$order = esc_attr($a['order']) != '' ? 'order: '.esc_attr($a['order']).' !important;' : '';
+	$hSpan = esc_attr($a['h-span']) != '' ? 'grid-column: span '.esc_attr($a['h-span']).' !important;' : '';
+	$vSpan = esc_attr($a['v-span']) != '' ? 'grid-row: span '.esc_attr($a['v-span']).' !important;' : '';	
+	$style = $order || $hSpan || $vSpan ? " style='".$order.$hSpan.$vSpan."'" : '';
 	if ( $start || $end ) {
 		$now = time(); 
 		if ( $start && $now < $start ) return null;

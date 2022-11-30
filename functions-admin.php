@@ -2164,8 +2164,10 @@ function battleplan_clear_hvac() {
 
 	if ( $getImg->have_posts() ) : 
 		while ( $getImg->have_posts() ) :
-			$getImg->the_post();		
-			if ( basename( get_attached_file( get_the_ID() )) != 'logo.png' && basename( get_attached_file( get_the_ID() )) != 'site-icon.png' && basename( get_attached_file( get_the_ID() )) != 'favicon.png' ) wp_delete_attachment( get_the_ID(), true );
+			$getImg->the_post();	
+			$keepImg = array( 'logo.png', 'logo.webp', 'site-icon.png', 'site-icon.webp', 'favicon.png', 'favicon.webp');
+			
+			if ( !in_array( basename( get_attached_file( get_the_ID() )), $keepImg) ) wp_delete_attachment( get_the_ID(), true );
 		endwhile; 
 		wp_reset_postdata();
 	endif;

@@ -34,7 +34,7 @@ a.tab-focus {
 	border: 									none;
 	box-shadow: 								none;
 	text-shadow: 								none;
-    background-image: 							url('/wp-content/uploads/logo.png');
+    background-image: 							url('/wp-content/uploads/logo.png'), url('/wp-content/uploads/logo.webp');
     padding-bottom: 							2vh;
     width: 										auto;
 	height: 									28vh;

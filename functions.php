@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '15.4.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '16.0' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -1017,6 +1017,13 @@ function battleplan_header_styles() {
 	if ( $GLOBALS['customer_info']['site-type'] == 'profile' || $GLOBALS['customer_info']['site-type'] == 'profiles' ) wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array(), _BP_VERSION );		
 	
 	wp_enqueue_style( 'battleplan-style', get_stylesheet_directory_uri()."/style-site.css", array(), _BP_VERSION );	
+
+	$start = strtotime(date("Y").'-12-08');
+	$end = strtotime(date("Y").'-12-31');
+	if ( time() > $start && time() < $end ) :
+	 	wp_enqueue_style( 'battleplan-style-holiday', get_template_directory_uri()."/style-holiday.css", array(), _BP_VERSION );	
+		wp_enqueue_script( 'battleplan-holiday', get_template_directory_uri().'/js/holiday.js', array('jquery'), _BP_VERSION, false );		
+	endif;
 }
 
 // Load and enqueue styles in footer
@@ -1321,7 +1328,8 @@ function battleplan_image_sizes($sizes) {
 		"half-f"=>__( "Full 50%"), 		
 		"full-f"=>__( "Full 100%"), 		
 		"third-f-2x"=>__( "Extra"), 		
-		"max"=>__( "Max"), 		
+		"max"=>__( "Max"), 				
+		"full"=>__( "Original"), 		
 	);
 	return $new_sizes;
 }
@@ -1438,14 +1446,22 @@ function battleplan_getGoogleRating() {
 	$placeIDs = $GLOBALS['customer_info']['pid'];
 	if ( isset($placeIDs) ) :
 		$googleInfo = get_option('bp_gbp_update');
+		$singleLoc = !is_array($placeIDs) ? true : false;
 		if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
 		
 		$buildPanel = '<div class="wp-gr wp-google-badge">';
 		
 		foreach ( $placeIDs as $placeID ) :
-			if ( $googleInfo[$placeID]['google-rating'] > 3.99 ) :
-				$buildPanel .= '<a class="wp-google-badge-btn" itemscope itemtype="http://schema.org/AggregateRating" href="https://search.google.com/local/reviews?placeid='.$placeID.'&hl=en&gl=US" target="_blank">';
-				$buildPanel .= '<div class="wp-google-badge-score wp-google-rating" itemprop="itemReviewed" itemscope itemtype="https://schema.org/'.get_option('wpseo_local')['business_type'].'">';
+			if ( $googleInfo[$placeID]['google-rating'] > 3.99 ) :			
+				$buildPanel .= '<div id="google-review-schema" style="display:none" itemscope itemtype="https://schema.org/AggregateRating">';
+				$buildPanel .= '<div itemprop="itemReviewed" itemscope itemtype="https://schema.org/'.get_option("wpseo_local")["business_type"].'">';
+				$buildPanel .= '<span itemprop="name">'.get_bloginfo('name').'</span><br><span itemprop="telephone">'.$googleInfo[$placeID]['phone-format'].'</span><br><span itemprop="address">'.trim($googleInfo[$placeID]['street']).", ".$googleInfo[$placeID]['city'].", ".$googleInfo[$placeID]['state-abbr']." ".$googleInfo[$placeID]['zip'].'</span><br>';				
+				$buildPanel .= '</div>';
+				$buildPanel .= '<span itemprop="ratingValue">'.number_format($googleInfo[$placeID]['google-rating'], 1, '.', ',').'</span> out of <span itemprop="bestRating">5</span> stars - <span itemprop="ratingCount">'.number_format($googleInfo[$placeID]['google-reviews']).'</span> reviews';
+				$buildPanel .= '</div>';			
+			
+				$buildPanel .= '<a class="wp-google-badge-btn" href="https://search.google.com/local/reviews?placeid='.$placeID.'&hl=en&gl=US" target="_blank">';
+				$buildPanel .= '<div class="wp-google-badge-score wp-google-rating">';
 				$buildPanel .= '<div class="wp-google-review"><svg role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" height="25" width="25"><title>Google Logo</title><g fill="none" fill-rule="evenodd">';
 				$buildPanel .= '<path d="M482.56 261.36c0-16.73-1.5-32.83-4.29-48.27H256v91.29h127.01c-5.47 29.5-22.1 54.49-47.09 71.23v59.21h76.27c44.63-41.09 70.37-101.59 70.37-173.46z" fill="#4285f4"></path>';
 				$buildPanel .= '<path d="M256 492c63.72 0 117.14-21.13 156.19-57.18l-76.27-59.21c-21.13 14.16-48.17 22.53-79.92 22.53-61.47 0-113.49-41.51-132.05-97.3H45.1v61.15c38.83 77.13 118.64 130.01 210.9 130.01z" fill="#34a853"></path>';
@@ -1453,7 +1469,7 @@ function battleplan_getGoogleRating() {
 				$buildPanel .= '<path d="M256 113.86c34.65 0 65.76 11.91 90.22 35.29l67.69-67.69C373.03 43.39 319.61 20 256 20c-92.25 0-172.07 52.89-210.9 130.01l78.85 61.15c18.56-55.78 70.59-97.3 132.05-97.3z" fill="#ea4335"></path>';
 				$buildPanel .= '<path d="M20 20h472v472H20V20z"></path>';
 				$buildPanel .= '</g></svg>';
-				$buildPanel .= '<div data-as-of="'.date("F j, Y", $googleInfo['date']).'" class="wp-google-value" itemprop="ratingValue">'.number_format($googleInfo[$placeID]['google-rating'], 1, '.', ',').'</div>';
+				$buildPanel .= '<div data-as-of="'.date("F j, Y", $googleInfo['date']).'" class="wp-google-value">'.number_format($googleInfo[$placeID]['google-rating'], 1, '.', ',').'</div>';
 				$buildPanel .= '<div class="wp-google-stars">';
 
 				if ( $googleInfo[$placeID]['google-rating'] >= 4.7) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo[$placeID]['google-rating'], 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i></span>';
@@ -1463,8 +1479,12 @@ function battleplan_getGoogleRating() {
 
 				$buildPanel .= '</div>';	
 				$buildPanel .= '<div class="wp-google-total">Click to view our ';			
-				if ( $googleInfo[$placeID]['google-reviews'] > 4 ) $buildPanel .= '<span itemprop="reviewCount">'.number_format($googleInfo[$placeID]['google-reviews']).'</span> ';			
-				$buildPanel .= 'reviews in '.$googleInfo[$placeID]['city'].'</div>';	
+				if ( $googleInfo[$placeID]['google-reviews'] > 4 ) $buildPanel .= '<span>'.number_format($googleInfo[$placeID]['google-reviews']).'</span> ';		
+				if ( $singleLoc == true ) :
+					$buildPanel .= 'Google reviews</div>';	
+				else:				
+					$buildPanel .= 'reviews in '.$googleInfo[$placeID]['city'].'</div>';	
+				endif;
 				$buildPanel .= '</div></div></a>';
 			endif;
 		endforeach;

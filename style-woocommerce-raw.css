@@ -181,7 +181,7 @@ input[type="number"] {
 }
 
 .theme-battleplantheme.woocommerce-page table.shop_table_responsive tr {
-	border-bottom:								1px solid rgba(0,0,0,0.15);
+	border-bottom:								1px solid var(--black-lowest);
 	padding-bottom:								1em;
 }
 
@@ -328,7 +328,7 @@ input[type="number"] {
 	left:										-0.5em;
 	right:										auto;
 	padding:									0;
-    background-color: 							rgba(0,0,0,1);
+    background-color: 							var(--black);
 }
 
 .theme-battleplantheme.woocommerce-page ul.products li.product .price del {
@@ -559,13 +559,13 @@ label[for=wc-stripe-new-payment-method] {
 #add_payment_method #payment div.payment_box, 
 .woocommerce-cart #payment div.payment_box, 
 .woocommerce-checkout #payment div.payment_box {
-    background-color: 							rgba(0,0,0,0.15);
+    background-color: 							var(--black-lowest);
 }
 
 #add_payment_method #payment div.payment_box::before,
 .woocommerce-cart #payment div.payment_box::before, 
 .woocommerce-checkout #payment div.payment_box::before {
-    border: 									1em solid rgba(0,0,0,0.15);
+    border: 									1em solid var(--black-lowest);
     border-right-color: 						transparent;
     border-left-color: 							transparent;
     border-top-color: 							transparent;

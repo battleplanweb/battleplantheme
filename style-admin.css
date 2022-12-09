@@ -2,7 +2,7 @@
 /* CSS Document */
 
 .wp-admin body {
-	background: 								#ffffff;
+	background: 								var(--white);
 	font-family: 								Arial;
 	font-size: 									14px;
 }
@@ -73,7 +73,7 @@
 	
 	.logged-in #wp-toolbar {
 		background: 								#d3d3d3;
-		filter: 									drop-shadow(0 -1px 0 rgba(0,0,0,0.2)) drop-shadow(0 1px 0 #fff);
+		filter: 									drop-shadow(0 -1px 0 rgba(0,0,0,0.2)) drop-shadow(0 1px 0 var(--white));
 		border-bottom: 								1px solid rgba(0,0,0,0.2);
 	}
 
@@ -125,14 +125,14 @@
 	.logged-in #wpadminbar.nojq .quicklinks .ab-top-menu > li > .ab-item:focus, 
 	.logged-in #wpadminbar:not(.mobile) .ab-top-menu > li:hover > .ab-item, 
 	.logged-in #wpadminbar:not(.mobile) .ab-top-menu > li > .ab-item:focus {
-		background: 								#ffffff;
+		background: 								var(--white);
 		border-bottom: 								1px solid rgba(0,0,0,0.2);
 		transition: 								all 0.2s ease;
 	}
 
 	.logged-in #wpadminbar .menupop .ab-sub-wrapper, 
 	.logged-in #wpadminbar .shortlink-input {
-		background: 								#ffffff;
+		background: 								var(--white);
 		bottom: 									40px;
 		box-shadow: 								0 -3px 5px rgba(0,0,0,.2);
 	}
@@ -151,7 +151,7 @@
 	
 	.wp-admin #wpfooter { 
 		bottom: 									-200px;
-		border-top: 								1px solid rgba(0,0,0,0.1);
+		border-top: 								1px solid var(--black-lowest);
 		padding-top: 								2em;
 	}
 
@@ -173,14 +173,14 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 }
 
 .plugins tr {
-	outline: 									1px solid rgba(0,0,0,0.1);
+	outline: 									1px solid var(--black-lowest);
 	transform: 									translateY(-1px);
 }
 
 .plugins tr#admin-columns-pro-update {
 	outline:									none;
-	border-left:								1px solid rgba(0,0,0,0.1);
-	border-right:								1px solid rgba(0,0,0,0.1);
+	border-left:								1px solid var(--black-lowest);
+	border-right:								1px solid var(--black-lowest);
 }
 
 /* Admin dashboard */
@@ -191,11 +191,11 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	padding: 									0 8px 1px;
 	height: 									18px;
 	border-radius: 								9px;
-	background-color: 							rgba(255,255,255,0.1);
+	background-color: 							var(--white-lowest);
 	border: 									1px solid rgba(255,255,255,0.05);
-	border-left: 								1px solid rgba(0,0,0,0.6);
-	border-top: 								1px solid rgba(0,0,0,0.6);
-	color: 										#fff;
+	border-left: 								1px solid var(--black-med);
+	border-top: 								1px solid var(--black-med);
+	color: 										var(--white);
 	font-size: 									11px;
 	line-height: 								1.6;
 	text-align: 								center;
@@ -208,7 +208,7 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 #adminmenu .wp-submenu li a[href="options-general.php?page=git-updater"] {
 	padding-top: 								10px;
 	margin-top: 								10px;
-	border-top: 								1px solid rgba(255,255,255,0.15);
+	border-top: 								1px solid var(--white-lowest);
 }
 
 #adminmenu .wp-submenu li a[href="index.php?page=clear-hvac"],
@@ -216,7 +216,7 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 #adminmenu .wp-submenu li a[href="options-permalink.php"] {
 	padding-bottom:								10px;
 	margin-bottom: 								10px;
-	border-bottom: 								1px solid rgba(255,255,255,0.15);
+	border-bottom: 								1px solid var(--white-lowest);
 }
 
 #dashboard-widgets .postbox-container .empty-container {
@@ -275,7 +275,7 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 }
 
 #dashboard-widgets #postbox-container-3 .trends tbody tr:first-of-type {
-	background: 								rgba(0,0,0,0.1);
+	background: 								var(--black-lowest);
 	padding: 									3px 10px;
 	margin: 									0 0 5px -10px;
 }
@@ -321,7 +321,7 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 #dashboard-widgets #battleplan_tech_stats.postbox.active,
 #dashboard-widgets #battleplan_pages_stats.postbox.active,
 #dashboard-widgets #battleplan_content_stats.postbox.active {
-    background: 								#ffffff;
+    background: 								var(--white);
 	border: 									1px solid #c6c6c6;
     box-shadow: 								2px 2px 0 0 #c6c6c6;
 	max-height: 								unset;
@@ -362,7 +362,7 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 
 #dashboard-widgets #postbox-container-1 li.sub-label,
 #dashboard-widgets #postbox-container-2 li.sub-label {
-	background: 								rgba(0,0,0,0.1);
+	background: 								var(--black-lowest);
 	padding: 									3px 10px;
 	margin-left: 								-12px;
 	width: 										105%;
@@ -427,18 +427,18 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 .wp-core-ui .trend-buttons .block-button .button,
 .wp-core-ui .last-visitors-buttons .block-button .button,
 .wp-core-ui .local-visitors-buttons .block-button .button {
-  	color: 										#000000;
+  	color: 										var(--black);
  	background: 								#f6f7f7;
   	font-weight: 								bold;
 	box-shadow: 								inset 3px 3px 6px 0 rgba(0,0,0,0.2);
-	border: 									1px solid rgba(255,255,255,0.1);
+	border: 									1px solid var(--white-lowest);
 	transition: 								all 0.2s ease;
 }
 
 .wp-core-ui #wpfooter a.button {
-	background: 								#ffffff;
-	box-shadow: 								inset 3px 3px 6px 0 rgba(0,0,0,0.1);
-	border: 									1px solid rgba(255,255,255,0.1);
+	background: 								var(--white);
+	box-shadow: 								inset 3px 3px 6px 0 var(--black-lowest);
+	border: 									1px solid var(--white-lowest);
 	margin: 									0 5px;
 }
 
@@ -456,9 +456,9 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 .wp-core-ui .trend-buttons .block-button:hover .button,
 .wp-core-ui .last-visitors-buttons .block-button:hover .button,
 .wp-core-ui .local-visitors-buttons .block-button:hover .button {
- 	background: 								#ffffff;
-	box-shadow: 								inset 3px 3px 6px 0 rgba(0,0,0,0.1);
-	border: 									1px solid rgba(255,255,255,0.1);
+ 	background: 								var(--white);
+	box-shadow: 								inset 3px 3px 6px 0 var(--black-lowest);
+	border: 									1px solid var(--white-lowest);
 	transition: 								all 0.2s ease;
 } 
 
@@ -664,7 +664,7 @@ body.ac-wp-media .row-actions {
 
 
 .wp-admin span.dashicons.red {
-	color:										#000000 !important;
+	color:										var(--black) !important;
 }
 
 .wp-admin a[data-wp-action="disable"],

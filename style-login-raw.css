@@ -81,7 +81,7 @@ input[type="datetime-local"],
 input[type="color"],
 textarea,
 select {
-	color: 										#000000;
+	color: 										var(--black);
 	background:									rgba(255,255,255,0.7);
 	border: 									1px solid #e2e2e2;
 	border-bottom: 								1px solid #969696;
@@ -106,8 +106,8 @@ input[type="color"]:focus,
 textarea:focus,
 select:focus,
 .wpcf7 form .wpcf7-response-output {
-	color: 										#000000;
-	background:									rgba(255,255,255,1);
+	color: 										var(--black);
+	background:									var(--white);
 	border: 									1px solid #e2e2e2;
 	border-bottom: 								1px solid #969696;
 	border-right: 								1px solid #969696;
@@ -148,7 +148,7 @@ input[type="button"]:active,
 input[type="reset"]:active,
 input[type="submit"]:active,
 button.active {
-	color: 										#fff;
+	color: 										var(--white);
 	background: 								rgba(0,0,0,0.8);
 	border: 									1px solid #e2e2e2;
 	border-bottom: 								1px solid #969696;
@@ -217,7 +217,7 @@ div#login_error {
 }
 
 input[type="text"], input[type="email"], input[type="url"], input[type="password"], input[type="search"], input[type="number"], input[type="tel"], input[type="range"], input[type="date"], input[type="month"], input[type="week"], input[type="time"], input[type="datetime"], input[type="datetime-local"], input[type="color"], textarea, select {
-	border: 									1px solid rgba(0,0,0,0.5);
+	border: 									1px solid var(--black-med);
 }
 
 .login #nav,
@@ -242,7 +242,7 @@ button.button-secondary.wp-hide-pw.hide-if-no-js {
 }
 
 input[type="checkbox"]:checked::after, input[type="radio"]:checked::after {
-  background-color: 							#000;
+  background-color: 							var(--black);
 }
 
 :focus {

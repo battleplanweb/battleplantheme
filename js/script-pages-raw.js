@@ -606,6 +606,12 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 		div.onclick = function () { activateYouTubeVimeo(this); };
 		playerElements[n].appendChild(div);
 	}
+	
+	// Add 'alt' class to sections to trigger the alternate input & button styles
+	window.addAltStyle = function (sections, style) {
+		style = style || 'style-alt';
+		$(sections).addClass(style); 
+	};
 		
 /*--------------------------------------------------------------
 # Screen resize

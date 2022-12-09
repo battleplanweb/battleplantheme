@@ -65,7 +65,7 @@
 
 img.user-image {
 	padding: 									4px;
-	background: 								#ffffff;
+	background: 								var(--white);
 	border: 									2px solid rgba(0,0,0,0.8);
 	border-radius: 								100%;
 	max-width: 									100%;
@@ -185,7 +185,7 @@ div.signup-form ul {
 div.signup-form li,
 div.signup-form div,
 div.signup-form p {
-	border-bottom: 								1px solid #000000;
+	border-bottom: 								1px solid var(--black);
 	border-color: 								inherit;
 }
 
@@ -208,7 +208,7 @@ div.signup-form p {
 	
 	img.user-image {
 		padding: 4px;
-		background: #ffffff;
+		background: var(--white);
 		border: 2px solid rgba(0,0,0,0.8);
 		border-radius: 100%;
 		max-width: 100%;

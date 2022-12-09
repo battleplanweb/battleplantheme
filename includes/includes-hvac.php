@@ -501,6 +501,7 @@ function battleplan_getFinancing($atts, $content = null) {
 	$loc = esc_attr($a['loc']);
 	$link = esc_attr($a['link']);	
 	$img = strtolower(str_replace(" ", "-", $bank));
+	if ( $img == "enerbank-usa" ) $img = "Enerbank-USA";
 	$graphic = esc_attr($a['graphic']);	
 	if ( $graphic != '' ) $img = $img.'-'.$graphic;
 	$buildFinancing = "";	

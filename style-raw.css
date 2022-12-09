@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 16.0.2
+Version: 16.1
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -109,6 +109,8 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --input-border: 								none;
   --input-box-shadow: 							none;
   --input-border-radius: 						0;
+  --input-text-shadow: 							none;
+  --input-filter: 								none;  
   --input-transform: 							none;	
   
   --input-color-focus: 							var(--input-color);
@@ -118,6 +120,8 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --input-border-focus: 						var(--input-border);
   --input-box-shadow-focus: 					var(--input-box-shadow);
   --input-border-radius-focus: 					var(--input-border-radius);
+  --input-text-shadow-focus: 					var(--input-text-shadow);
+  --input-filter-focus: 						var(--input-filter);
   --input-transform-focus: 						var(--input-transform);
   
   --input-color-alt:							var(--input-color);
@@ -128,6 +132,8 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --input-border-alt: 							var(--input-border);
   --input-box-shadow-alt: 						var(--input-box-shadow);
   --input-border-radius-alt: 					var(--input-border-radius);
+  --input-text-shadow-alt: 						var(--input-text-shadow);
+  --input-filter-alt: 							var(--input-filter);
   --input-transform-alt: 						var(--input-transform);
   
   --input-color-focus-alt: 						var(--input-color-alt);
@@ -137,6 +143,8 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --input-border-focus-alt: 					var(--input-border-alt);
   --input-box-shadow-focus-alt: 				var(--input-box-shadow-alt);
   --input-border-radius-focus-alt: 				var(--input-border-radius-alt);
+  --input-text-shadow-focus-alt: 				var(--input-text-shadow-alt);
+  --input-filter-focus-alt: 					var(--input-filter-alt);
   --input-transform-focus-alt:					var(--input-transform-alt);
   
   --button-color: 								var(--black-med);
@@ -151,6 +159,7 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --button-transform: 							none;
   --button-text-shadow: 						none;
   --button-outline: 							none;
+  --button-filter: 								none;
   --button-text-transform: 						capitalize;
   --button-font-variant: 						none;
   --button-letter-spacing: 						0;
@@ -168,6 +177,7 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --button-transform-hover: 					var(--button-transform);
   --button-text-shadow-hover: 					var(--button-text-shadow);
   --button-outline-hover: 						var(--button-outline);
+  --button-filter-hover: 						var(--button-filter);
   --button-text-transform-hover: 				var(--button-text-transform);
   --button-font-variant-hover: 					var(--button-font-variant);
   --button-letter-spacing-hover: 				var(--button-letter-spacing);
@@ -185,6 +195,7 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --button-transform-alt: 						var(--button-transform);
   --button-text-shadow-alt: 					var(--button-text-shadow);
   --button-outline-alt: 						var(--button-outline);
+  --button-filter-alt: 							var(--button-filter);
   --button-text-transform-alt: 					var(--button-text-transform);
   --button-font-variant-alt: 					var(--button-font-variant);
   --button-letter-spacing-alt: 					var(--button-letter-spacing);
@@ -202,6 +213,7 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --button-transform-hover-alt: 				var(--button-transform-alt);
   --button-text-shadow-hover-alt: 				var(--button-text-shadow-alt);
   --button-outline-hover-alt: 					var(--button-outline-alt);
+  --button-filter-hover-alt: 					var(--button-filter-alt);
   --button-text-transform-hover-alt: 			var(--button-text-transform-alt);
   --button-font-variant-hover-alt: 				var(--button-font-variant-alt);
   --button-letter-spacing-hover-alt: 			var(--button-letter-spacing-alt);
@@ -987,7 +999,7 @@ section.section .flex.nested .flex {
 .wpcf7 form .flex,
 .wpcf7 form > .form-input {
 	grid-column: 								1 / -1;
-	gap: 										var(--measure-large) var(--measure-base);
+	gap: 										var(--measure-base);
 }
 
 .wpcf7 form .form-input {
@@ -1068,7 +1080,9 @@ select {
 	border: 									var(--input-border);
 	box-shadow:									var(--input-box-shadow);
 	border-radius:								var(--input-border-radius);
+	text-shadow: 								var(--input-text-shadow);
 	transform: 									var(--input-transform);
+	filter: 									var(--input-filter);
 	min-height: 								32px; /* date picker form field on iPad 10-22-2020 */
 	transition:									all var(--main-trans-speed) var(--main-trans-easing);
 }
@@ -1098,8 +1112,10 @@ select:focus,
 	background:									var(--input-background-focus);
 	border: 									var(--input-border-focus);
 	box-shadow:									var(--input-box-shadow-focus);
-	border-radius:								var(--input-border-radius-focus);
+	border-radius:								var(--input-border-radius-focus);	
+	text-shadow: 								var(--input-text-shadow-focus);
 	transform: 									var(--input-transform-focus);
+	filter: 									var(--input-filter-focus);
 	transition:									all var(--main-trans-speed) var(--main-trans-easing);
 }
 
@@ -1127,8 +1143,10 @@ select:focus,
 	background:									var(--input-background-alt);
 	border: 									var(--input-border-alt);
 	box-shadow:									var(--input-box-shadow-alt);
-	border-radius:								var(--input-border-radius-alt);
+	border-radius:								var(--input-border-radius-alt);	
+	text-shadow: 								var(--input-text-shadow-alt);
 	transform: 									var(--input-transform-alt);
+	filter: 									var(--input-filter-alt);
 }
 
 .style-alt input[type="text"]:focus,
@@ -1156,8 +1174,10 @@ select:focus,
 	background:									var(--input-background-focus-alt);
 	border: 									var(--input-border-focus-alt);
 	box-shadow:									var(--input-box-shadow-focus-alt);
-	border-radius:								var(--input-border-radius-focus-alt);
+	border-radius:								var(--input-border-radius-focus-alt);	
+	text-shadow: 								var(--input-text-shadow-focus-alt);
 	transform: 									var(--input-transform-focus-alt);
+	filter: 									var(--input-filter-focus-alt);
 }
 
 select {
@@ -1264,6 +1284,7 @@ ul.tabs li {
 	padding: 									var(--button-padding);
 	text-shadow: 								var(--button-text-shadow);
   	outline: 									var(--button-outline);
+  	filter: 									var(--button-filter);
   	text-transform: 							var(--button-text-transform);
 	transform: 									var(--button-transform);
 	transition:									all var(--main-trans-speed) var(--main-trans-easing);
@@ -1304,6 +1325,7 @@ ul.tabs li.current {
 	padding: 									var(--button-padding-hover);	
 	text-shadow: 								var(--button-text-shadow-hover);
   	outline: 									var(--button-outline-hover);
+  	filter: 									var(--button-filter-hover);
   	text-transform: 							var(--button-text-transform-hover);
 	transform: 									var(--button-transform-hover);
 	transition:									all var(--main-trans-speed) var(--main-trans-easing);
@@ -1326,6 +1348,7 @@ ul.tabs li.current {
 	box-shadow:									var(--button-box-shadow-alt);
 	text-shadow: 								var(--button-text-shadow-alt);
   	outline: 									var(--button-outline-alt);
+  	filter: 									var(--button-filter-alt);
   	text-transform: 							var(--button-text-transform-alt);
 	transform: 									var(--button-transform-alt);
 }
@@ -1364,6 +1387,7 @@ ul.tabs li.current {
 	box-shadow:									var(--button-box-shadow-hover-alt);
 	text-shadow: 								var(--button-text-shadow-hover-alt);
   	outline: 									var(--button-outline-hover-alt);
+  	filter: 									var(--button-outline-filter-alt);
   	text-transform: 							var(--button-text-transform-hover-alt);
 	transform: 									var(--button-transform-hover-alt);
 }
@@ -2007,7 +2031,7 @@ a#bbblink {
 	cursor:										pointer;
 	background:									var(--close-btn-background);
 	color:										var(--close-btn-color);
-	border:										2px solid var(--close-btn-border);
+	border:										var(--close-btn-border);
 	padding:									2px 8px 1px 7px;
 	font-size:									16px;
 	z-index:									1000;
@@ -2018,7 +2042,7 @@ a#bbblink {
 .closeBtn:hover {
 	background:									var(--close-btn-background-hover);
 	color:										var(--close-btn-color-hover);
-	border:										2px solid var(--close-btn-border-hover);
+	border:										var(--close-btn-border-hover);
 	transition:									all var(--main-trans-speed) var(--main-trans-easing);
 }
 
@@ -2064,11 +2088,17 @@ a#bbblink {
 	visibility: 								hidden;
 }
 
-.section.style-lock,
+.section.style-lock {
+	background:									var(--locked-background);
+	border:										var(--locked-border);
+	color:										var(--locked-color);
+	transition: 								all 0.6s var(--main-trans-easing);
+}
+
 .section.style-lock[data-pos="modal"] > .flex,
 .section.style-lock[data-pos="center"] > .flex {
 	background:									var(--modal-background);
-	border:										2px solid var(--modal-border);
+	border:										var(--modal-border);
 	color:										var(--modal-color);
 	transition: 								all 0.6s var(--main-trans-easing);
 }
@@ -3921,6 +3951,7 @@ img.img-404 {
 	transform: 									translateX(110vw) rotate(-100deg);
 	background: 								var(--accent-background);
 	color: 										var(--accent-color);
+	font-size: 									18px;
 	font-weight: 								bold;
 	line-height: 								1.2;
 	padding: 									4px 0 7px 8px;
@@ -5953,6 +5984,7 @@ html.error503 h3 {
 	/* Forms */		
 	body .wpcf7 form .flex {
 		grid-template-columns: 						1fr !important;
+
 	}
 		
 	body .wpcf7 form label {

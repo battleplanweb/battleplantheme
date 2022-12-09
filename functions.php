@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '16.0.2' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '16.1' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -1018,9 +1018,9 @@ function battleplan_header_styles() {
 	
 	wp_enqueue_style( 'battleplan-style', get_stylesheet_directory_uri()."/style-site.css", array(), _BP_VERSION );	
 
-	$start = strtotime(date("Y").'-12-08');
+	$start = strtotime(date("Y").'-12-04');
 	$end = strtotime(date("Y").'-12-31');
-	if ( time() > $start && time() < $end ) :
+	if ( $GLOBALS['customer_info']['cancel-holiday'] != 'true' && time() > $start && time() < $end ) :
 	 	wp_enqueue_style( 'battleplan-style-holiday', get_template_directory_uri()."/style-holiday.css", array(), _BP_VERSION );	
 		wp_enqueue_script( 'battleplan-holiday', get_template_directory_uri().'/js/holiday.js', array('jquery'), _BP_VERSION, false );		
 	endif;

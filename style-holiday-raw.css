@@ -32,7 +32,7 @@
 	transform: 									scaleY(-1);
 	background: 								url('../battleplantheme/common/holiday/lights-3.webp') repeat-x;
 	background-position: 						0% 50%;
-	z-index: 									10000;
+	z-index: 									1000000;
 }  
 
 #page::before,

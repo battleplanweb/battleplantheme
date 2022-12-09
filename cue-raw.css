@@ -128,12 +128,12 @@
 }
 
 .mejs-controls .mejs-time-rail .mejs-time-current {
-	background:									rgba(255,255,255,1);
+	background:									var(--white);
 	z-index:									30;
 }
 
 .mejs-controls .mejs-time-rail .mejs-time-handle {
- 	background:									rgba(0,0,0,1);
+ 	background:									var(--black);
  	width:										8px;
 	z-index:									40;
 }
@@ -145,8 +145,8 @@
 	height:										30px;
 	left:										11px !important;
 	font-size:									80%;
-	background:									#ffffff;
-	border:										1px solid #000000;
+	background:									var(--white);
+	border:										1px solid var(--black);
 	padding:									3px;
 	z-index:									50;
 
@@ -187,7 +187,7 @@
 }
 
 .cue-playlist .cue-tracks {
- 	background:									rgba(255,255,255,0.15);
+ 	background:									var(--white-lowest);
  	border:										2px solid rgba(0,0,0,0.35);
  	list-style:									none;
  	margin:										0;
@@ -211,7 +211,7 @@
 
 .cue-playlist li.cue-track {
 	background:									none;
- 	border-bottom:								2px solid rgba(0,0,0,0.15);
+ 	border-bottom:								2px solid var(--black-lowest);
 	cursor:										pointer;
  	margin:										0 !important;
  	padding:									10px;

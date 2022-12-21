@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 16.1
+Version: 17.0
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -107,10 +107,16 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --input-font-size: 							85%;
   --input-font-weight: 							normal;
   --input-border: 								none;
+  --input-border-top:							var(--input-border);
+  --input-border-right:							var(--input-border);
+  --input-border-bottom:						var(--input-border);
+  --input-border-left:							var(--input-border);
+  --input-outline: 								none;
   --input-box-shadow: 							none;
   --input-border-radius: 						0;
   --input-text-shadow: 							none;
-  --input-filter: 								none;  
+  --input-filter: 								none; 
+  --input-backdrop-filter:						none;
   --input-transform: 							none;	
   
   --input-color-focus: 							var(--input-color);
@@ -118,10 +124,16 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --input-font-size-focus: 						var(--input-font-size);
   --input-font-weight-focus:					var(--input-font-weight);
   --input-border-focus: 						var(--input-border);
+  --input-border-top-focus:						var(--input-border-focus);
+  --input-border-right-focus:					var(--input-border-focus);
+  --input-border-bottom-focus:					var(--input-border-focus);
+  --input-border-left-focus:					var(--input-border-focus);
+  --input-outline-focus: 						var(--input-outline);
   --input-box-shadow-focus: 					var(--input-box-shadow);
   --input-border-radius-focus: 					var(--input-border-radius);
   --input-text-shadow-focus: 					var(--input-text-shadow);
   --input-filter-focus: 						var(--input-filter);
+  --input-backdrop-filter-focus:				none;
   --input-transform-focus: 						var(--input-transform);
   
   --input-color-alt:							var(--input-color);
@@ -130,10 +142,16 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --input-font-size-alt:						var(--input-font-size);
   --input-font-weight-alt:						var(--input-font-weight);
   --input-border-alt: 							var(--input-border);
+  --input-border-top-alt:						var(--input-border-alt);
+  --input-border-right-alt:						var(--input-border-alt);
+  --input-border-bottom-alt:					var(--input-border-alt);
+  --input-border-left-alt:						var(--input-border-alt);
+  --input-outline-alt: 							var(--input-outline);
   --input-box-shadow-alt: 						var(--input-box-shadow);
   --input-border-radius-alt: 					var(--input-border-radius);
   --input-text-shadow-alt: 						var(--input-text-shadow);
   --input-filter-alt: 							var(--input-filter);
+  --input-backdrop-filter-alt:					var(--input-backdrop-filter);
   --input-transform-alt: 						var(--input-transform);
   
   --input-color-focus-alt: 						var(--input-color-alt);
@@ -141,10 +159,16 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --input-font-size-focus-alt: 					var(--input-font-size-alt);
   --input-font-weight-focus-alt: 				var(--input-font-weight-alt);
   --input-border-focus-alt: 					var(--input-border-alt);
+  --input-border-top-focus-alt:					var(--input-border-focus-alt);
+  --input-border-right-focus-alt:				var(--input-border-focus-alt);
+  --input-border-bottom-focus-alt:				var(--input-border-focus-alt);
+  --input-border-left-focus-alt:				var(--input-border-focus-alt);
+  --input-outline-focus-alt: 					var(--input-outline-alt);
   --input-box-shadow-focus-alt: 				var(--input-box-shadow-alt);
   --input-border-radius-focus-alt: 				var(--input-border-radius-alt);
   --input-text-shadow-focus-alt: 				var(--input-text-shadow-alt);
   --input-filter-focus-alt: 					var(--input-filter-alt);
+  --input-backdrop-filter-focus-alt:			var(--input-backdrop-filter-alt);
   --input-transform-focus-alt:					var(--input-transform-alt);
   
   --button-color: 								var(--black-med);
@@ -153,6 +177,10 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --button-font-weight: 						normal;
   --button-font-size: 							1.2em;
   --button-border: 								none;
+  --button-border-top:							var(--button-border);
+  --button-border-right:						var(--button-border);
+  --button-border-bottom:						var(--button-border);
+  --button-border-left:							var(--button-border);
   --button-padding: 							0.3em 1em;
   --button-box-shadow: 							none;
   --button-border-radius: 						0;
@@ -171,6 +199,10 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --button-font-weight-hover: 					var(--button-font-weight);
   --button-font-size-hover: 					var(--button-font-size);
   --button-border-hover: 						var(--button-border);
+  --button-border-top-hover:					var(--button-border-top);
+  --button-border-right-hover:					var(--button-border-right);
+  --button-border-bottom-hover:					var(--button-border-bottom);
+  --button-border-left-hover:					var(--button-border-left);
   --button-padding-hover: 						var(--button-padding);
   --button-box-shadow-hover: 					var(--button-box-shadow);
   --button-border-radius-hover: 				var(--button-border-radius);
@@ -189,6 +221,10 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --button-font-weight-alt: 					var(--button-font-weight);
   --button-font-size-alt: 						var(--button-font-size);
   --button-border-alt: 							var(--button-border);
+  --button-border-top-alt:						var(--button-border-top);
+  --button-border-right-alt:					var(--button-border-right);
+  --button-border-bottom-alt:					var(--button-border-bottom);
+  --button-border-left-alt:						var(--button-border-left);
   --button-padding-alt: 						var(--button-padding);
   --button-box-shadow-alt: 						var(--button-box-shadow);
   --button-border-radius-alt: 					var(--button-border-radius);
@@ -207,6 +243,10 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --button-font-weight-hover-alt: 				var(--button-font-weight-alt);
   --button-font-size-hover-alt: 				var(--button-font-size-alt);
   --button-border-hover-alt: 					var(--button-border-alt);
+  --button-border-top-hover-alt:				var(--button-border-top-alt);
+  --button-border-right-hover-alt:				var(--button-border-right-alt);
+  --button-border-bottom-hover-alt:				var(--button-border-bottom-alt);
+  --button-border-left-hover-alt:				var(--button-border-left-alt);
   --button-padding-hover-alt: 					var(--button-padding-alt);
   --button-box-shadow-hover-alt: 				var(--button-box-shadow-alt);
   --button-border-radius-hover-alt: 			var(--button-border-radius-alt);
@@ -244,7 +284,8 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --measure-small: 								1.0em;
   --measure-large: 								2.5em;
   
-  --google-guaranteed-green: 					rgba(0, 161, 79, 1);
+  --google-guaranteed-green: 					rgba(0, 161, 79, 1);  
+  --paypal-yellow: 			 					rgba(255, 196, 57, 1);
 }
 
 /*--------------------------------------------------------------
@@ -352,6 +393,7 @@ a.skip-link:active,
 a.skip-link.tab-focus {
 	background: 								var(--white);
 	color: 										var(--black);
+
 	padding: 									var(--measure-small) var(--measure-small);
 	text-align: 								center;
 }
@@ -1077,12 +1119,16 @@ select {
 	font-weight: 								var(--input-font-weight);
 	color: 										var(--input-color);
 	background:									var(--input-background);
-	border: 									var(--input-border);
+	border-top: 								var(--input-border-top);
+	border-right: 								var(--input-border-right);
+	border-bottom:								var(--input-border-bottom);
+	border-left: 								var(--input-border-left);
 	box-shadow:									var(--input-box-shadow);
 	border-radius:								var(--input-border-radius);
 	text-shadow: 								var(--input-text-shadow);
 	transform: 									var(--input-transform);
-	filter: 									var(--input-filter);
+	filter: 									var(--input-filter);	
+	backdrop-filter:							var(--input-filter);
 	min-height: 								32px; /* date picker form field on iPad 10-22-2020 */
 	transition:									all var(--main-trans-speed) var(--main-trans-easing);
 }
@@ -1110,12 +1156,16 @@ select:focus,
 	font-size:									var(--input-font-size-focus);
 	font-weight: 								var(--input-font-weight-focus);
 	background:									var(--input-background-focus);
-	border: 									var(--input-border-focus);
+	border-top: 								var(--input-border-top-focus);
+	border-right: 								var(--input-border-right-focus);
+	border-bottom:								var(--input-border-bottom-focus);
+	border-left: 								var(--input-border-left-focus);
 	box-shadow:									var(--input-box-shadow-focus);
 	border-radius:								var(--input-border-radius-focus);	
 	text-shadow: 								var(--input-text-shadow-focus);
 	transform: 									var(--input-transform-focus);
 	filter: 									var(--input-filter-focus);
+	backdrop-filter:							var(--input-backdrop-filter-focus);
 	transition:									all var(--main-trans-speed) var(--main-trans-easing);
 }
 
@@ -1141,12 +1191,16 @@ select:focus,
 	font-size:									var(--input-font-size-alt);
 	font-weight: 								var(--input-font-weight-alt);
 	background:									var(--input-background-alt);
-	border: 									var(--input-border-alt);
+	border-top: 								var(--input-border-top-alt);
+	border-right: 								var(--input-border-right-alt);
+	border-bottom:								var(--input-border-bottom-alt);
+	border-left: 								var(--input-border-left-alt);
 	box-shadow:									var(--input-box-shadow-alt);
 	border-radius:								var(--input-border-radius-alt);	
 	text-shadow: 								var(--input-text-shadow-alt);
 	transform: 									var(--input-transform-alt);
 	filter: 									var(--input-filter-alt);
+	backdrop-filter:							var(--input-backdrop-filter-alt);
 }
 
 .style-alt input[type="text"]:focus,
@@ -1172,12 +1226,16 @@ select:focus,
 	font-size:									var(--input-font-size-focus-alt);
 	font-weight: 								var(--input-font-weight-focus-alt);
 	background:									var(--input-background-focus-alt);
-	border: 									var(--input-border-focus-alt);
+	border-top: 								var(--input-border-top-focus-alt);
+	border-right: 								var(--input-border-right-focus-alt);
+	border-bottom:								var(--input-border-bottom-focus-alt);
+	border-left: 								var(--input-border-left-focus-alt);
 	box-shadow:									var(--input-box-shadow-focus-alt);
 	border-radius:								var(--input-border-radius-focus-alt);	
 	text-shadow: 								var(--input-text-shadow-focus-alt);
 	transform: 									var(--input-transform-focus-alt);
 	filter: 									var(--input-filter-focus-alt);
+	backdrop-filter:							var(--input-backdrop-filter-focus-alt);
 }
 
 select {
@@ -1277,6 +1335,10 @@ ul.tabs li {
 	color: 										var(--button-color);
 	background: 								var(--button-background);
 	border:										var(--button-border);	
+	border-top: 								var(--button-border-top);
+	border-right: 								var(--button-border-right);
+	border-bottom:								var(--button-border-bottom);
+	border-left: 								var(--button-border-left);
 	border-radius:								var(--button-border-radius);
 	box-shadow:									var(--button-box-shadow);
 	cursor:										pointer;
@@ -1286,6 +1348,8 @@ ul.tabs li {
   	outline: 									var(--button-outline);
   	filter: 									var(--button-filter);
   	text-transform: 							var(--button-text-transform);
+	font-variant: 								var(--button-font-variant);
+	letter-spacing: 							var(--button-letter-spacing);
 	transform: 									var(--button-transform);
 	transition:									all var(--main-trans-speed) var(--main-trans-easing);
 }
@@ -1319,6 +1383,10 @@ ul.tabs li.current {
 	color: 										var(--button-color-hover);
 	background: 								var(--button-background-hover);
 	border:										var(--button-border-hover);
+	border-top: 								var(--button-border-top-hover);
+	border-right: 								var(--button-border-right-hover);
+	border-bottom:								var(--button-border-bottom-hover);
+	border-left: 								var(--button-border-left-hover);
 	border-radius:								var(--button-border-radius-hover);
 	box-shadow:									var(--button-box-shadow-hover);
 	text-decoration:							none;
@@ -1326,7 +1394,9 @@ ul.tabs li.current {
 	text-shadow: 								var(--button-text-shadow-hover);
   	outline: 									var(--button-outline-hover);
   	filter: 									var(--button-filter-hover);
-  	text-transform: 							var(--button-text-transform-hover);
+  	text-transform: 							var(--button-text-transform-hover);	
+	font-variant: 								var(--button-font-variant-hover);
+	letter-spacing: 							var(--button-letter-spacing-hover);
 	transform: 									var(--button-transform-hover);
 	transition:									all var(--main-trans-speed) var(--main-trans-easing);
 }
@@ -1340,16 +1410,25 @@ ul.tabs li.current {
 .style-alt input[type="submit"],
 .style-alt .file-upload-btn,
 .style-alt ul.tabs li {
+	font-family: 								var(--button-font-family-alt);
+	font-weight: 								var(--button-font-weight-alt);
+	font-size: 									var(--button-font-size-alt);
 	color: 										var(--button-color-alt);
 	background: 								var(--button-background-alt);
-	padding: 									var(--button-padding-alt);
 	border:										var(--button-border-alt);
+	border-top: 								var(--button-border-top-alt);
+	border-right: 								var(--button-border-right-alt);
+	border-bottom:								var(--button-border-bottom-alt);
+	border-left: 								var(--button-border-left-alt);
 	border-radius:								var(--button-border-radius-alt);
 	box-shadow:									var(--button-box-shadow-alt);
+	padding: 									var(--button-padding-alt);
 	text-shadow: 								var(--button-text-shadow-alt);
   	outline: 									var(--button-outline-alt);
   	filter: 									var(--button-filter-alt);
   	text-transform: 							var(--button-text-transform-alt);
+	font-variant: 								var(--button-font-variant-alt);
+	letter-spacing: 							var(--button-letter-spacing-alt);
 	transform: 									var(--button-transform-alt);
 }
 
@@ -1382,13 +1461,19 @@ ul.tabs li.current {
 	color: 										var(--button-color-hover-alt);
 	background: 								var(--button-background-hover-alt);
 	border:										var(--button-border-hover-alt);
-	padding: 									var(--button-padding-hover-alt);
+	border-top: 								var(--button-border-top-hover-alt);
+	border-right: 								var(--button-border-right-hover-alt);
+	border-bottom:								var(--button-border-bottom-hover-alt);
+	border-left: 								var(--button-border-left-hover-alt);
 	border-radius:								var(--button-border-radius-hover-alt);
 	box-shadow:									var(--button-box-shadow-hover-alt);
+	padding: 									var(--button-padding-hover-alt);	
 	text-shadow: 								var(--button-text-shadow-hover-alt);
   	outline: 									var(--button-outline-hover-alt);
-  	filter: 									var(--button-outline-filter-alt);
+  	filter: 									var(--button-filter-hover-alt);
   	text-transform: 							var(--button-text-transform-hover-alt);
+	font-variant: 								var(--button-font-variant-hover-alt);
+	letter-spacing: 							var(--button-letter-spacing-hover-alt);
 	transform: 									var(--button-transform-hover-alt);
 }
 
@@ -1435,8 +1520,8 @@ input[type="radio"] {
 	height: 									20px !important;
 	transform: 									translateY(3px);
 	appearance:									none;
-	background-color:							var(--white);
-	border: 									2px solid var(--black);
+	background-color:							var(--input-background);
+	border: 									var(--input-border);
 	-webkit-appearance: 						none;
 	border-radius: 								0;
 	font-size: 									var(--font-size-text);
@@ -1474,7 +1559,6 @@ input[type="checkbox"]:checked::after {
 
 input[type="radio"]::before, 
 input[type="radio"]:checked::after {
-	border: 									2px solid var(--white);
 	border-radius: 								100%;
 }
 
@@ -1482,6 +1566,7 @@ input[type="checkbox"]:checked::after {
 	content: 									"\f00d";
 	font-family: 								var(--font-awesome);
 	font-weight: 								800;
+	color: 										var(--input-color);
 	transform: 									translate(2px, -6px);
 }
 
@@ -1497,7 +1582,8 @@ input[type="checkbox"]:checked::after {
 }
 
 input[type="radio"]:checked::after {
-	background-color:							var(--black-med);
+	background-color: 							var(--input-color);
+	border: 									3px solid var(--white);
 }
 
 .application .flex {
@@ -1546,8 +1632,8 @@ form .block-button,
     font-size: 									90%;
 	font-weight: 								normal;
 	padding: 									0.5em var(--measure-small);
-	background: 								var(--white) !important;
-	border: 									1px solid !important;
+	background: 								var(--input-background) !important;
+	border: 									var(--input-border) !important;
 	color: 										red !important;
 }
 
@@ -1585,7 +1671,7 @@ span.wpcf7-spinner::before {
 	font-weight:								900;
 	font-size:									20px;
 	margin-left:								8px;
-	color: 										var(--white-high);
+	color: 										var(--input-background);
 	animation-name: 							spin; 
     animation-duration: 						1s; 
     animation-iteration-count: 					infinite;
@@ -1685,66 +1771,6 @@ ul.tabs li {
 
 input.paypal-amount {
 	width:										calc(100% - 15px);
-}
-
-.fancybox-container {
-	z-index: 									9999999995 !important;
-}
-
-.fancybox-is-open .fancybox-bg {
-    opacity: 									0.9;
-    background-color: 							var(--black);
-}
-
-.fancybox-infobar,
-button.fancybox-button {
-	background: 								var(--dark-grey);
-	border: 									1px solid var(--white-low);
-	box-shadow: 								2px 2px 2px var(--black);
-	transform: 									scale(0.9);
-	margin: 									9px 5px;
-	transition: 								all var(--main-trans-speed) var(--main-trans-easing);
-}
-
-button.fancybox-button:hover,
-button.fancybox-button.active,
-button.fancybox-button.tab-focus {
-	background: 								var(--dark-grey);
-	border: 									1px solid var(--white-low);
-	box-shadow: 								none;
-	box-shadow: 								2px 2px 2px var(--black);
-	transform: 									scale(1);
-	margin: 									9px 5px;
-	transition: 								all var(--main-trans-speed) var(--main-trans-easing);
-}
-
-.fancybox-navigation button.fancybox-button {
-
-    width: 										50px;
-    height: 									50px;
-    padding:									12px;
-	margin: 									-40px 10px 0;
-}
-
-.fancybox-navigation button.fancybox-button:hover,
-.fancybox-navigation button.fancybox-button.active,
-.fancybox-navigation button.fancybox-button.tab-focus {
-    width: 										50px;
-    height: 									50px;
-    padding:									12px;
-	margin: 									-40px 10px 0;
-}
-
-.fancybox-navigation button::before,
-.fancybox-caption {
-    display: 									none;
-}
-
-.fancybox-active .fancybox-navigation,
-.fancybox-active .fancybox-infobar {
-	display: 									block;
-	visibility: 								visible;
-	opacity: 									1;
 }
 
 /* Blocks
@@ -1914,6 +1940,7 @@ div[class*="restrict-"] {
 --------------------------------------------- */
 .widget {
 	margin: 									3em auto;
+	text-align: 								center;
 }
 
 .widget-box .widget {
@@ -4305,6 +4332,7 @@ span.descriptionText {
 	text-align: 								center;
 }
 
+
 .product-links .product-link-cats {
 	margin-bottom:								0.75em;
 }
@@ -5612,6 +5640,7 @@ html.error503 h3 {
 	.gallery-column-8 {
 		grid-template-columns: 						repeat(3, 1fr);
 	}	
+
 	
 	/* Forms */	
 	#request-quote-modal textarea {

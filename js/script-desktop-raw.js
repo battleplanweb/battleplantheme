@@ -175,12 +175,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	};	
 	
 // Reveal "Are We Open" banner
-setTimeout(function() {
-	var posY = getPosition ($('#masthead .phone-link'), 'center-y', 'window'), posX = getPosition ($('#masthead .phone-link'), 'right', 'window'), breakpoint = getDeviceW() - posX;
-	if ( breakpoint < 133 ) { $('.currently-open-banner').addClass('horz'); }
-	$('.currently-open-banner').css({"top":posY+"px", "left":posX+"px"});
-	$('.currently-open-banner').addClass('reveal-open');
-}, 2000);
+if ( $( "#masthead .phone-link" ).length ) {
+	setTimeout(function() {
+		var posY = getPosition ($('#masthead .phone-link'), 'center-y', 'window'), posX = getPosition ($('#masthead .phone-link'), 'right', 'window'), breakpoint = getDeviceW() - posX;
+		if ( breakpoint < 133 ) { $('.currently-open-banner').addClass('horz'); }
+		$('.currently-open-banner').css({"top":posY+"px", "left":posX+"px"});
+		$('.currently-open-banner').addClass('reveal-open');
+	}, 2000);
+}
 	
 /*--------------------------------------------------------------
 # Browser resize

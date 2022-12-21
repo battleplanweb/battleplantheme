@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '16.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '17.0' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -956,15 +956,14 @@ add_action('after_setup_theme', function() {
 // Dequeue unneccesary styles & scripts
 add_action( 'wp_print_styles', 'battleplan_dequeue_unwanted_stuff', 9998 );
 function battleplan_dequeue_unwanted_stuff() {
+	wp_dequeue_style( 'parent-style' );  wp_deregister_style( 'parent-style' );
+	wp_dequeue_style( 'battleplan-style' );  wp_deregister_style( 'battleplan-style' );	
+	
 	wp_dequeue_style( 'wp-block-library' );  wp_deregister_style( 'wp-block-library' );
 	wp_dequeue_style( 'wp-block-library-theme' );  wp_deregister_style( 'wp-block-library-theme' );	
 	wp_dequeue_style( 'select2' );  wp_deregister_style( 'select2' );
 	wp_dequeue_style( 'asp-default-style' ); wp_deregister_style( 'asp-default-style' );		
 	wp_dequeue_style( 'contact-form-7' ); wp_deregister_style( 'contact-form-7' );	
-	if ( is_plugin_active( 'ari-fancy-lightbox/ari-fancy-lightbox.php') && ( !is_single() || get_post_type(get_the_ID()) != "galleries" ) ) :
-		wp_dequeue_style( 'ari-fancybox' ); 
-		wp_deregister_style( 'ari-fancybox' );
-	endif;
 	if ( is_plugin_active( 'animated-typing-effect/typingeffect.php' ) ) :
 		wp_dequeue_style( 'typed-cursor' ); 
 		wp_deregister_style( 'typed-cursor' );
@@ -993,10 +992,6 @@ function battleplan_dequeue_unwanted_stuff() {
 	wp_dequeue_script( 'wphb-global' ); wp_deregister_script( 'wphb-global' );
 	wp_dequeue_script( 'wp-embed' ); wp_deregister_script( 'wp-embed' );
 	wp_dequeue_script( 'modernizr' ); wp_deregister_script( 'modernizr' );		
-	if ( is_plugin_active( 'ari-fancy-lightbox/ari-fancy-lightbox.php') && ( !is_single() || get_post_type(get_the_ID()) != "galleries" ) ) :
-		wp_dequeue_script( 'ari-fancybox' ); 
-		wp_deregister_script( 'ari-fancybox' );
-	endif;
 	if ( !is_plugin_active( 'woocommerce/woocommerce.php' ) ) :
 		wp_dequeue_script( 'underscore' );
 		wp_deregister_script( 'underscore' );
@@ -1004,26 +999,27 @@ function battleplan_dequeue_unwanted_stuff() {
 }
 
 // Load and enqueue styles in header
-add_action( 'wp_print_styles', 'battleplan_header_styles', 9999 );
+add_action( 'wp_print_styles', 'battleplan_header_styles', 9998 );
 function battleplan_header_styles() {
-	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) wp_enqueue_style( 'battleplan-events', get_template_directory_uri()."/style-events.css", array(), _BP_VERSION );  	
-	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) wp_enqueue_style( 'battleplan-woocommerce', get_template_directory_uri()."/style-woocommerce.css", array(), _BP_VERSION ); 
-	if ( is_plugin_active( 'stripe-payments/accept-stripe-payments.php' ) ) wp_enqueue_style( 'battleplan-stripe-payments', get_template_directory_uri()."/style-stripe-payments.css", array(), _BP_VERSION );  
-	if ( is_plugin_active( 'cue/cue.php' ) ) wp_enqueue_style( 'battleplan-cue', get_template_directory_uri()."/cue.css", array(), _BP_VERSION );  	
-	
 	wp_enqueue_style( 'normalize-style', get_template_directory_uri()."/style-normalize.css", array(), _BP_VERSION );
-	wp_enqueue_style( 'parent-style', get_template_directory_uri()."/style.css", array(), _BP_VERSION );
 	
-	if ( $GLOBALS['customer_info']['site-type'] == 'profile' || $GLOBALS['customer_info']['site-type'] == 'profiles' ) wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array(), _BP_VERSION );		
+	wp_enqueue_style( 'parent-style', get_template_directory_uri()."/style.css", array('normalize-style'), _BP_VERSION );
 	
-	wp_enqueue_style( 'battleplan-style', get_stylesheet_directory_uri()."/style-site.css", array(), _BP_VERSION );	
-
+	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) wp_enqueue_style( 'battleplan-events', get_template_directory_uri()."/style-events.css", array('parent-style'), _BP_VERSION );  	
+	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) wp_enqueue_style( 'battleplan-woocommerce', get_template_directory_uri()."/style-woocommerce.css", array('parent-style'), _BP_VERSION ); 
+	if ( is_plugin_active( 'stripe-payments/accept-stripe-payments.php' ) ) wp_enqueue_style( 'battleplan-stripe-payments', get_template_directory_uri()."/style-stripe-payments.css", array('parent-style'), _BP_VERSION );  
+	if ( is_plugin_active( 'cue/cue.php' ) ) wp_enqueue_style( 'battleplan-cue', get_template_directory_uri()."/cue.css", array('parent-style'), _BP_VERSION );  
+	
+	if ( $GLOBALS['customer_info']['site-type'] == 'profile' || $GLOBALS['customer_info']['site-type'] == 'profiles' ) wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array('parent-style'), _BP_VERSION );		
+	
 	$start = strtotime(date("Y").'-12-04');
 	$end = strtotime(date("Y").'-12-31');
 	if ( $GLOBALS['customer_info']['cancel-holiday'] != 'true' && time() > $start && time() < $end ) :
-	 	wp_enqueue_style( 'battleplan-style-holiday', get_template_directory_uri()."/style-holiday.css", array(), _BP_VERSION );	
+	 	wp_enqueue_style( 'battleplan-style-holiday', get_template_directory_uri()."/style-holiday.css", array('parent-style'), _BP_VERSION );	
 		wp_enqueue_script( 'battleplan-holiday', get_template_directory_uri().'/js/holiday.js', array('jquery'), _BP_VERSION, false );		
 	endif;
+
+	wp_enqueue_style( 'battleplan-style', get_stylesheet_directory_uri()."/style-site.css", array('parent-style'), _BP_VERSION );	
 }
 
 // Load and enqueue styles in footer
@@ -1031,8 +1027,8 @@ add_action( 'wp_footer', 'battleplan_footer_styles' );
 function battleplan_footer_styles() {
 	wp_enqueue_style( 'battleplan-animate', get_template_directory_uri().'/animate.css', array(), _BP_VERSION );	
 	//wp_enqueue_style( 'battleplan-animate-xtra', get_template_directory_uri().'/animate-xtra.css', array(), _BP_VERSION );	
-	wp_enqueue_style( 'battleplan-fontawesome', get_template_directory_uri()."/fontawesome.css", array(), _BP_VERSION );
-	if ( is_plugin_active( 'extended-widget-options/plugin.php' ) ) wp_enqueue_style( 'widgetopts-styles', '/wp-content/plugins/extended-widget-options/assets/css/widget-options.css', array(), _BP_VERSION );		
+	wp_enqueue_style( 'battleplan-fontawesome', get_template_directory_uri()."/fontawesome.css", array(), _BP_VERSION );		
+	wp_enqueue_style( 'battleplan-glightbox', get_template_directory_uri()."/style-glightbox.css", array('parent-style'), _BP_VERSION );  		
 }
 
 // Load and enqueue remaining scripts
@@ -1054,6 +1050,7 @@ function battleplan_scripts() {
 	wp_enqueue_script( 'battleplan-script-site', get_stylesheet_directory_uri().'/script-site.js', array('jquery'), _BP_VERSION, false );	
 	wp_enqueue_script( 'battleplan-script-tracking', get_template_directory_uri().'/js/script-tracking.js', array('jquery'), _BP_VERSION, false ); 	
 	wp_enqueue_script( 'battleplan-script-cloudflare', get_template_directory_uri().'/js/script-cloudflare.js', array('jquery'), _BP_VERSION, false );
+	wp_enqueue_script( 'battleplan-script-glightbox', get_template_directory_uri().'/js/glightbox.js', array('jquery'), _BP_VERSION, false ); 
 
 	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) wp_enqueue_script( 'battleplan-script-events', get_template_directory_uri().'/js/events.js', array('jquery'), _BP_VERSION, false );  
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) wp_enqueue_script( 'battleplan-script-woocommerce', get_template_directory_uri().'/js/woocommerce.js', array('jquery'), _BP_VERSION, false ); 
@@ -1128,19 +1125,24 @@ if ( !is_admin() && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && str
 			$dom = new DOMDocument();
 			libxml_use_internal_errors(true);
 			$dom->loadHTML($html);
-			$script = $dom->getElementsByTagName('script'); 
+			$scripts = $dom->getElementsByTagName('script'); 
 
-			$targets = array('podium', 'leadconnectorhq', 'voip', 'google', 'clickcease', 'paypal', 'extended-widget', 'embed-player', 'huzzaz', 'fbcdn', 'facebook', 'klaviyo');
+			$targets = array('podium', 'leadconnectorhq', 'voip', 'google', 'clickcease', 'paypal', 'embed-player', 'huzzaz', 'fbcdn', 'facebook', 'klaviyo');
+			$exclusions = array('recaptcha');
 
-			foreach ($script as $item) :		   
+			foreach ($scripts as $script) :		   
 				foreach ($targets as $target) :
-					if (strpos($item->getAttribute("src"), $target) !== FALSE) :       
-						$item->setAttribute("data-loading", "delay");
-						if ($item->getAttribute("src")) : 
-							$item->setAttribute("data-src", $item->getAttribute("src")); $item->removeAttribute("src");
-						else: 
-							$item->setAttribute("data-src", "data:text/javascript;base64,".base64_encode($item->innertext)); $item->innertext=""; 
-						endif;
+					if (strpos($script->getAttribute("src"), $target) !== FALSE) : 
+						foreach ($exclusions as $exclusion) :
+							if (strpos($script->getAttribute("src"), $exclusion) === FALSE) :						
+								$script->setAttribute("data-loading", "delay");
+								if ($script->getAttribute("src")) : 
+									$script->setAttribute("data-src", $script->getAttribute("src")); $script->removeAttribute("src");
+								else: 
+									$script->setAttribute("data-src", "data:text/javascript;base64,".base64_encode($script->innertext)); $script->innertext=""; 
+								endif;
+							endif;
+						endforeach;
 					endif;
 				endforeach;
 			endforeach;

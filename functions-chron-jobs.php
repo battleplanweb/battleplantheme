@@ -329,7 +329,7 @@ function processChron($forceChron) {
 					$googleInfo[$placeID]['phone-format'] = $customer_info['area-before'].$googleInfo[$placeID]['area'].$customer_info['area-after'].$googleInfo[$placeID]['phone'];	
 
 					$name = strtolower($res['result']['name']);					
-					$name = str_replace( array('llc', 'hvac'), array('LLC', 'HVAC'), $name);
+					$name = str_replace( array('llc', 'hvac', 'a/c'), array('LLC', 'HVAC', 'A/C'), $name);
 					$googleInfo[$placeID]['name'] = ucwords($name);
 					
 					$streetNumber = $street = $subpremise = $city = $state_abbr = $state_full = $county = $country = $zip = '';

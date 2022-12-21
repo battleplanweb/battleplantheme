@@ -1557,7 +1557,6 @@ function battleplan_remove_menus() {
 	remove_menu_page( 'wpcf7' );       												//Contact Forms	
 	remove_menu_page( 'edit.php?post_type=acf-field-group' );       				//Custom Fields
 	remove_menu_page( 'themes.php' );       										//Appearance
-	remove_menu_page( 'ari-fancy-lightbox' );       								//ARI Fancy Lightbox
 	remove_submenu_page( 'plugins.php', 'plugin-editor.php' );        				//Plugins => Plugin Editor
 	remove_submenu_page( 'options-general.php', 'options-writing.php' );   			//Settings => Writing 		
 	remove_submenu_page( 'options-general.php', 'options-reading.php' );   			//Settings => Reading 	
@@ -1592,7 +1591,6 @@ function battleplan_remove_menus() {
 	add_submenu_page( 'edit.php?post_type=elements', 'Comments', 'Comments', 'manage_options', 'edit-comments.php' );
 	add_submenu_page( 'edit.php?post_type=elements', 'Custom Fields', 'Custom Fields', 'manage_options', 'edit.php?post_type=acf-field-group' );		
 	add_submenu_page( 'edit.php?post_type=elements', 'Themes', 'Themes', 'manage_options', 'themes.php' );		
-	if ( is_plugin_active( 'ari-fancy-lightbox/ari-fancy-lightbox.php' ) ) { add_submenu_page( 'options-general.php', 'Lightbox', 'Lightbox', 'manage_options', 'admin.php?page=ari-fancy-lightbox' );	 }		
 	add_submenu_page( 'options-general.php', 'Options', 'Options', 'manage_options', 'options.php' );
 	if ( _USER_LOGIN == "battleplanweb" ) add_submenu_page( 'tools.php', 'Git Updater', 'Git Updater', 'manage_options', 'options-general.php?page=git-updater' );
 }

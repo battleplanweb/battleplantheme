@@ -45,21 +45,67 @@ input[type="number"] {
     -moz-appearance: 							textfield;
 }
 
+#add_payment_method table.cart td.actions .coupon .input-text,
+.woocommerce-cart table.cart td.actions .coupon .input-text, 
+.woocommerce-checkout table.cart td.actions .coupon .input-text {
+    width: 										100%;
+	padding: 									var(--input-padding);
+	font-size:									var(--input-font-size);
+	font-weight: 								var(--input-font-weight);
+	color: 										var(--input-color);
+	background:									var(--input-background);
+	border: 									var(--input-border);
+	box-shadow:									var(--input-box-shadow);
+	border-radius:								var(--input-border-radius);
+	text-shadow: 								var(--input-text-shadow);
+	transform: 									var(--input-transform);
+	filter: 									var(--input-filter);	
+	backdrop-filter:							var(--input-filter);
+	min-height: 								32px; /* date picker form field on iPad 10-22-2020 */
+	transition:									all var(--main-trans-speed) var(--main-trans-easing);
+}
+
+#add_payment_method table.cart td.actions .coupon .input-text:focus,
+.woocommerce-cart table.cart td.actions .coupon .input-text:focus, 
+.woocommerce-checkout table.cart td.actions .coupon .input-text:focus {
+	padding: 									var(--input-padding);
+	color: 										var(--input-color-focus);
+	font-size:									var(--input-font-size-focus);
+	font-weight: 								var(--input-font-weight-focus);
+	background:									var(--input-background-focus);
+	border: 									var(--input-border-focus);
+	box-shadow:									var(--input-box-shadow-focus);
+	border-radius:								var(--input-border-radius-focus);	
+	text-shadow: 								var(--input-text-shadow-focus);
+	transform: 									var(--input-transform-focus);
+	filter: 									var(--input-filter-focus);
+	backdrop-filter:							var(--input-backdrop-filter-focus);
+	transition:									all var(--main-trans-speed) var(--main-trans-easing);
+}
+
 .theme-battleplantheme.woocommerce-page button.button,
 .theme-battleplantheme.woocommerce-page a.button,
 .theme-battleplantheme.woocommerce-page #respond input#submit,  
 .theme-battleplantheme.woocommerce-page input.button {
 	display:									inline-block;
-	font: 										normal 1.2em / 1 Helvetica, Arial, Verdana, sans-serif; 
-	background: 								rgba(0,0,0,0.2);
-	background-color:							rgba(0,0,0,0.2);
-	border:										none;
-	color: 										rgba(0, 0, 0, 0.8);
-	padding: 									0.3em 1em;
+	font-family: 								var(--button-font-family);
+	font-weight: 								var(--button-font-weight);
+	font-size: 									var(--button-font-size);
+	line-height: 								1;
+	color: 										var(--button-color);
+	background: 								var(--button-background);
+	border:										var(--button-border);	
+	border-radius:								var(--button-border-radius);
+	box-shadow:									var(--button-box-shadow);
 	cursor:										pointer;
 	text-decoration:							none;
-	transition:									all 0.2s ease;
-	text-transform:								capitalize;
+	padding: 									var(--button-padding);
+	text-shadow: 								var(--button-text-shadow);
+  	outline: 									var(--button-outline);
+  	filter: 									var(--button-filter);
+  	text-transform: 							var(--button-text-transform);
+	transform: 									var(--button-transform);
+	transition:									all var(--main-trans-speed) var(--main-trans-easing);
 }
 
 .theme-battleplantheme.woocommerce-page button.button:hover,
@@ -74,9 +120,19 @@ input[type="number"] {
 .theme-battleplantheme.woocommerce-page a.button:active,
 .theme-battleplantheme.woocommerce-page #respond input#submit:active,  
 .theme-battleplantheme.woocommerce-page input.button:active {
-	background: 								rgba(0,0,0,0.4);
-	border:										none;
-	transition:									all 0.2s ease;
+	color: 										var(--button-color-hover);
+	background: 								var(--button-background-hover);
+	border:										var(--button-border-hover);
+	border-radius:								var(--button-border-radius-hover);
+	box-shadow:									var(--button-box-shadow-hover);
+	text-decoration:							none;
+	padding: 									var(--button-padding-hover);	
+	text-shadow: 								var(--button-text-shadow-hover);
+  	outline: 									var(--button-outline-hover);
+  	filter: 									var(--button-filter-hover);
+  	text-transform: 							var(--button-text-transform-hover);
+	transform: 									var(--button-transform-hover);
+	transition:									all var(--main-trans-speed) var(--main-trans-easing);
 }
 
 .theme-battleplantheme.woocommerce-page #respond input#submit.disabled, 
@@ -127,11 +183,11 @@ input[type="number"] {
 .theme-battleplantheme.woocommerce-page input.button:disabled[disabled]:hover, 
 .theme-battleplantheme.woocommerce-page input.button:disabled[disabled].tab-focus, 
 .theme-battleplantheme.woocommerce-page input.button:disabled[disabled]:active {
-	background-color:							rgba(40,40,40,0.2);
-	border:										none;
-	color: 										rgba(40, 40, 40, 0.8);
-	cursor:										not-allowed;
-	padding: 									0.3em 1em;
+	color: 										var(--button-color);
+	background: 								var(--button-background);
+	opacity: 									0.5;
+	padding: 									var(--button-padding);
+	pointer-events:								none;
 }
 
 /* Links
@@ -142,7 +198,7 @@ input[type="number"] {
 
 .account-buttons a {
 	margin:										0 0.6em;
-	color:										#4169e1; 
+	color:										var(--medium-grey); 
 	cursor:										pointer;
 	text-decoration:							none;
 }
@@ -150,7 +206,7 @@ input[type="number"] {
 .account-buttons a:hover,
 .account-buttons a:active,
 .account-buttons a.tab-focus {
-	color:										#191970;
+	color:										var(--black);
 }
 
 .woocommerce .woocommerce-breadcrumb a {
@@ -182,7 +238,7 @@ input[type="number"] {
 
 .theme-battleplantheme.woocommerce-page table.shop_table_responsive tr {
 	border-bottom:								1px solid var(--black-lowest);
-	padding-bottom:								1em;
+	padding-bottom:								var(--measure-small);
 }
 
 .theme-battleplantheme.woocommerce-page table.shop_table_responsive tr td {
@@ -190,14 +246,14 @@ input[type="number"] {
 }
 
 .theme-battleplantheme.woocommerce-page table.shop_table_responsive tr td.actions {
-    padding-top:								2em;
+    padding-top:								calc(var(--measure-large) * 0.8);
 }
 
 /* Info & Error Boxes
 --------------------------------------------- */
 .theme-battleplantheme.woocommerce-page .woocommerce-notices-wrapper {
-	margin-top:									2em;
-	margin-bottom:								2.5em;
+	margin-top:									calc(var(--measure-large) * 0.8);
+	margin-bottom:								var(--measure-large);
 }
 
 .theme-battleplantheme.woocommerce-page .woocommerce-form-login-toggle, 
@@ -219,15 +275,15 @@ input[type="number"] {
 .theme-battleplantheme.woocommerce-page #add_payment_method #payment, 
 .theme-battleplantheme.woocommerce-page .woocommerce-cart #payment, 
 .theme-battleplantheme.woocommerce-page .woocommerce-checkout #payment {
-    border-top: 								3px solid rgba(60,60,60,0.7);
-	background-color: 							rgba(255,255,255,0.7);
+    border-top: 								3px solid var(--medium-grey);
+	background-color: 							var(--white-high);
 	border-radius:								0;
     color: 										inherit;
 }
 
 .theme-battleplantheme.woocommerce-page .woocommerce-checkout #payment {
-	padding-top: 								2em;
-	padding-bottom: 							2em;
+	padding-top: 								calc(var(--measure-large) * 0.8);
+	padding-bottom: 							calc(var(--measure-large) * 0.8);
 }
 
 #payment .wc_payment_methods .payment_box,
@@ -241,7 +297,7 @@ input[type="number"] {
 
 #ppcp-messages {
 	margin-top: 								60px !important;
-	background: 								#ffc439 /* match PayPal Checkout button */;
+	background: 								var(--paypal-yellow);
 	border-radius: 								3px;
 	padding: 									20px;
 }
@@ -289,13 +345,13 @@ input[type="number"] {
 /* Catalog Page
 --------------------------------------------- */
 .theme-battleplantheme.woocommerce-page .woocommerce-ordering {
-    margin: 									0 0 2em;
+    margin: 									0 0 calc(var(--measure-large) * 0.8);
 }
 
 .theme-battleplantheme.woocommerce-page ul.products {
-	margin: 									0 0 1.5em;
+	margin: 									0 0 var(--measure-base);
 	display: 									grid;
-	gap: 										4em 1.75em;
+	gap: 										calc(var(--measure-large) * 2) var(--measure-large);
 }
 
 .theme-battleplantheme.woocommerce-page ul.products li.product,
@@ -351,9 +407,9 @@ input[type="number"] {
 	margin: 									0 3px;
 	padding: 									0.3em 0.5em;
 	overflow: 									visible;
-	background: 								rgba(0,0,0,0.2);
+	background: 								var(--black-low);
 	border:										none;
-	color: 										rgba(0, 0, 0, 0.8);
+	color: 										var(--black-high);
 	cursor:										pointer;
 	text-decoration:							none;
 	transition:									all 0.2s ease;
@@ -362,7 +418,7 @@ input[type="number"] {
 .theme-battleplantheme.woocommerce-page nav.woocommerce-pagination ul li a.page-numbers:hover,
 .theme-battleplantheme.woocommerce-page nav.woocommerce-pagination ul li a.page-numbers.tab-focus,
 .theme-battleplantheme.woocommerce-page nav.woocommerce-pagination ul li a.page-numbers:active {
-	background: 								rgba(0,0,0,0.4);
+	background: 								var(--black-med);
 	border:										none;
 	transition:									all 0.2s ease;
 }
@@ -389,8 +445,8 @@ input[type="number"] {
 .theme-battleplantheme.woocommerce-page div.product div.images .flex-control-thumbs li {
     display: 									inline-block;
     float: 										none;
-	max-width: 									100px;
-    margin: 									20px 10px;
+	max-width: 									50px;
+    margin: 									20px 2aaaaaaaapx;
 }
 
 .theme-battleplantheme.woocommerce-page div.product p.price, 
@@ -407,7 +463,7 @@ input[type="number"] {
 }
 
 .theme-battleplantheme.woocommerce-page .woocommerce-product-details__short-description {
-	margin-bottom:								1.5em;
+	margin-bottom:								var(--measure-base);
 }
 
 .theme-battleplantheme.woocommerce-page form.variations_form label {
@@ -425,7 +481,7 @@ input[type="number"] {
 }
 
 .theme-battleplantheme.woocommerce-page .woocommerce-variation > * {
-	margin-bottom:								1em;
+	margin-bottom:								var(--measure-small);
 }
 
 .theme-battleplantheme.woocommerce-page .woocommerce-variation-price,
@@ -452,7 +508,7 @@ input[type="number"] {
 }
 
 .theme-battleplantheme.woocommerce-page section.related.products ul.products {
-	margin-top:									1em;
+	margin-top:									var(--measure-small);
 }
 
 /* Checkout Page
@@ -468,12 +524,12 @@ input[type="number"] {
 .woocommerce-cart .cart-collaterals .cart_totals tr td {
     border: 									none;
 	border-radius:								0;
-	margin-top:									1.5em;
+	margin-top:									var(--measure-base);
 }
 
 .theme-battleplantheme.woocommerce-page.woocommerce-cart table.shop_table,
 .theme-battleplantheme.woocommerce-page table.shop_table thead th {
-	border-bottom: 								1px solid rgba(0,0,0,0.3);
+	border-bottom: 								1px solid var(--black-low);
 	border-radius:								0;
 }
 
@@ -501,7 +557,7 @@ input[type="number"] {
 .theme-battleplantheme.woocommerce-page .col-2 {
     width: 										98%;
 	max-width:									600px;
-	margin:										0 auto 1.5em;
+	margin:										0 auto var(--measure-base);
 	float:										none;
 }
 
@@ -511,16 +567,16 @@ input[type="number"] {
 
 .theme-battleplantheme.woocommerce-page form .form-row:not(.place-order):not([class*="wc-pao-addon-wrap"]),
 .theme-battleplantheme.woocommerce-page form .wc-pao-addon-description {
-	margin-top: 								1em;
-	margin-bottom: 								1em;
+	margin-top: 								var(--measure-small);
+	margin-bottom: 								var(--measure-small);
 }
 
 .theme-battleplantheme.woocommerce-page .woocommerce-additional-fields {
-    margin-top:									1.5em;
+    margin-top:									var(--measure-base);
 }
 
 .theme-battleplantheme.woocommerce-page #customer_details {
-    margin-bottom:								2.5em;
+    margin-bottom:								var(--measure-large);
 }
 
 .select2 {
@@ -578,7 +634,7 @@ label[for=wc-stripe-new-payment-method] {
 .payment_method_ppcp-credit-card-gateway {
 	display: 									block !important;
 	text-align: 								center;
-	margin: 									1.5em 0;
+	margin: 									var(--measure-base) 0;
 }
 
 .payment_method_ppcp-gateway,
@@ -588,7 +644,7 @@ label[for="payment_method_ppcp-credit-card-gateway"] {
 }
 
 #order_review {
-	margin-top:									1.5em;
+	margin-top:									var(--measure-base);
 }
 
 #shipping_method label {
@@ -618,7 +674,7 @@ label[for="payment_method_ppcp-credit-card-gateway"] {
 
 .woocommerce-MyAccount-navigation-link {
 	list-style:									none;
-	margin:										0 1em;
+	margin:										0 var(--measure-small);
 }
 
 .woocommerce-account .woocommerce a {
@@ -683,7 +739,7 @@ label[for="payment_method_ppcp-credit-card-gateway"] {
 	
 	.theme-battleplantheme.woocommerce-page td.actions .coupon button.button {
 		width:										100%;
-		margin-top:									1em;
+		margin-top:									var(--measure-small);
 	}
 	
 	.theme-battleplantheme.woocommerce-page form .form-row-first, 

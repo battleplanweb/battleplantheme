@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '17.0' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '17.1' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -1012,8 +1012,8 @@ function battleplan_header_styles() {
 	
 	if ( $GLOBALS['customer_info']['site-type'] == 'profile' || $GLOBALS['customer_info']['site-type'] == 'profiles' ) wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array('parent-style'), _BP_VERSION );		
 	
-	$start = strtotime(date("Y").'-12-04');
-	$end = strtotime(date("Y").'-12-31');
+	$start = strtotime(date("Y").'-12-08');
+	$end = strtotime(date("Y").'-12-28');
 	if ( $GLOBALS['customer_info']['cancel-holiday'] != 'true' && time() > $start && time() < $end ) :
 	 	wp_enqueue_style( 'battleplan-style-holiday', get_template_directory_uri()."/style-holiday.css", array('parent-style'), _BP_VERSION );	
 		wp_enqueue_script( 'battleplan-holiday', get_template_directory_uri().'/js/holiday.js', array('jquery'), _BP_VERSION, false );		
@@ -1028,7 +1028,6 @@ function battleplan_footer_styles() {
 	wp_enqueue_style( 'battleplan-animate', get_template_directory_uri().'/animate.css', array(), _BP_VERSION );	
 	//wp_enqueue_style( 'battleplan-animate-xtra', get_template_directory_uri().'/animate-xtra.css', array(), _BP_VERSION );	
 	wp_enqueue_style( 'battleplan-fontawesome', get_template_directory_uri()."/fontawesome.css", array(), _BP_VERSION );		
-	wp_enqueue_style( 'battleplan-glightbox', get_template_directory_uri()."/style-glightbox.css", array('parent-style'), _BP_VERSION );  		
 }
 
 // Load and enqueue remaining scripts
@@ -1050,7 +1049,6 @@ function battleplan_scripts() {
 	wp_enqueue_script( 'battleplan-script-site', get_stylesheet_directory_uri().'/script-site.js', array('jquery'), _BP_VERSION, false );	
 	wp_enqueue_script( 'battleplan-script-tracking', get_template_directory_uri().'/js/script-tracking.js', array('jquery'), _BP_VERSION, false ); 	
 	wp_enqueue_script( 'battleplan-script-cloudflare', get_template_directory_uri().'/js/script-cloudflare.js', array('jquery'), _BP_VERSION, false );
-	wp_enqueue_script( 'battleplan-script-glightbox', get_template_directory_uri().'/js/glightbox.js', array('jquery'), _BP_VERSION, false ); 
 
 	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) wp_enqueue_script( 'battleplan-script-events', get_template_directory_uri().'/js/events.js', array('jquery'), _BP_VERSION, false );  
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) wp_enqueue_script( 'battleplan-script-woocommerce', get_template_directory_uri().'/js/woocommerce.js', array('jquery'), _BP_VERSION, false ); 
@@ -1711,7 +1709,11 @@ function battleplan_mobile_menu_bar_contact() {
 		$title = "Send A Message"; 
 		$type = "contact"; 
 	endif;	
-	if ( $form && $title ) echo '<div class="mm-bar-btn mm-bar-'.$type.' modal-btn"><div class="email-btn" aria-hidden="true"></div><div class="email2-btn" aria-hidden="true"></div><span class="sr-only">Contact Us</span></div>';	
+	if ( $form && $title ) :
+		echo '<div class="mm-bar-btn mm-bar-'.$type.' modal-btn"><div class="email-btn" aria-hidden="true"></div><div class="email2-btn" aria-hidden="true"></div><span class="sr-only">Contact Us</span></div>';	
+	else:
+		echo '<div class="mm-bar-btn mm-bar-empty"></div>';	
+	endif;
 }
 
 // Display Request Quote Modal

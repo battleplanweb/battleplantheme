@@ -1059,11 +1059,15 @@ function battleplan_loadImagesByTag( $atts, $content = null ) {
 // Genearate a WordPress gallery and filter
 add_shortcode( 'get-gallery', 'battleplan_setUpWPGallery' );
 function battleplan_setUpWPGallery( $atts, $content = null ) {
+	wp_enqueue_script( 'battleplan-script-glightbox', get_template_directory_uri().'/js/glightbox.js', array('jquery'), _BP_VERSION, false ); 
+	wp_enqueue_style( 'battleplan-glightbox', get_template_directory_uri()."/style-glightbox.css", array('parent-style'), _BP_VERSION );  
+
 	$a = shortcode_atts( array( 'name'=>'', 'size'=>'thumbnail', 'id'=>'', 'columns'=>'5', 'max'=>'-1', 'caption'=>'false', 'start'=>'', 'end'=>'', 'order_by'=>'menu_order', 'order'=>'ASC', 'tags'=>'', 'field'=>'', 'class'=>'', 'include'=>'', 'exclude'=>'', 'value'=>'', 'type'=>'', 'compare'=>'' ), $atts );
 	$id = esc_attr($a['id']);	
 	if ( $id == '' ) global $post; $id = intval( $post->ID );  
 	$name = esc_attr($a['name']) == '' ? $id : esc_attr($a['name']);
 	$size = esc_attr($a['size']);
+	$caption = esc_attr($a['caption']);
 	$orderBy = esc_attr($a['order_by']);
 	$exclude = esc_attr($a['exclude']);
 	$include = esc_attr($a['include']);	
@@ -1089,7 +1093,9 @@ function battleplan_setUpWPGallery( $atts, $content = null ) {
 	if ( $imageIDs ) $args['post__in']=$imageIDs; $args['orderby']="post__in"; 
 	if ( !$imageIDs && !$include ) $args['post_parent']=$id; $args['orderby']=$orderBy;
 	
-	$gallery = '<div id="gallery-'.$name.'" class="gallery gallery-'.$id.' gallery-column-'.esc_attr($a['columns']).' gallery-size-'.$size.'">';
+	$gallery = '<script defer nonce="'._BP_NONCE.'">window.addEventListener("DOMContentLoaded", function() { (function($) { const lightbox = GLightbox({ touchNavigation: true,	loop: true,	autoplayVideos: true }); })(jQuery); }); </script>';	
+		
+	$gallery .= '<div id="gallery-'.$name.'" class="gallery gallery-'.$id.' gallery-column-'.esc_attr($a['columns']).' gallery-size-'.$size.'">';
 
 	$image_attachments = new WP_Query($args);
 	
@@ -1100,12 +1106,12 @@ function battleplan_setUpWPGallery( $atts, $content = null ) {
 			$full = wp_get_attachment_image_src($getID, 'full');
 			$image = wp_get_attachment_image_src($getID, $size);
 			$imgSet = wp_get_attachment_image_srcset($getID, $size );
+			$picAlt = get_post_meta($getID , '_wp_attachment_image_alt', true);
+			$picDesc = wp_get_attachment_caption() ? wp_get_attachment_caption() : $picAlt;
+			$addCaption = $caption != "false" ? 'data-title="'.get_the_title().'" data-description="'.$picDesc.'" data-desc-position="'.$caption.'" ' : '';
 			$count++;
-			
-			$captionPrint = '';
-			if ( esc_attr($a['caption']) != "false" ) $captionPrint = '<figcaption><div class="image-caption image-title">'.$post->post_title.'</div></figcaption>'; 
 
-			$gallery .= '<dl class="col col-archive col-gallery id-'.$getID.'"><dt class="col-inner"><a class="link-archive link-gallery glightbox" href="'.$full[0].'"><img class="img-gallery wp-image-'.get_the_ID().'" loading="lazy" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta(get_the_ID(), '_wp_attachment_image_alt', true).'"></a>'.$captionPrint.'</dt></dl>';
+			$gallery .= '<dl class="col col-archive col-gallery id-'.$getID.'"><dt class="col-inner"><a class="link-archive link-gallery glightbox" href="'.$full[0].'" '.$addCaption.'data-effect="fade" data-zoomable="true" data-draggable="true"><img class="img-gallery wp-image-'.get_the_ID().'" loading="lazy" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.$picAlt.'"></a></dt></dl>';
 		endwhile; 
 		wp_reset_postdata();
 	endif;	

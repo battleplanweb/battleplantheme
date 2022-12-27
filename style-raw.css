@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 17.0
+Version: 17.1
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -178,7 +178,7 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --button-font-size: 							1.2em;
   --button-border: 								none;
   --button-border-top:							var(--button-border);
-  --button-border-right:						var(--button-border);
+  --button-border-right:						var(--button-border); /* don't change */
   --button-border-bottom:						var(--button-border);
   --button-border-left:							var(--button-border);
   --button-padding: 							0.3em 1em;
@@ -199,10 +199,10 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --button-font-weight-hover: 					var(--button-font-weight);
   --button-font-size-hover: 					var(--button-font-size);
   --button-border-hover: 						var(--button-border);
-  --button-border-top-hover:					var(--button-border-top);
-  --button-border-right-hover:					var(--button-border-right);
-  --button-border-bottom-hover:					var(--button-border-bottom);
-  --button-border-left-hover:					var(--button-border-left);
+  --button-border-top-hover:					var(--button-border-hover); /* don't change */
+  --button-border-right-hover:					var(--button-border-hover);
+  --button-border-bottom-hover:					var(--button-border-hover);
+  --button-border-left-hover:					var(--button-border-hover);
   --button-padding-hover: 						var(--button-padding);
   --button-box-shadow-hover: 					var(--button-box-shadow);
   --button-border-radius-hover: 				var(--button-border-radius);
@@ -221,10 +221,10 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --button-font-weight-alt: 					var(--button-font-weight);
   --button-font-size-alt: 						var(--button-font-size);
   --button-border-alt: 							var(--button-border);
-  --button-border-top-alt:						var(--button-border-top);
-  --button-border-right-alt:					var(--button-border-right);
-  --button-border-bottom-alt:					var(--button-border-bottom);
-  --button-border-left-alt:						var(--button-border-left);
+  --button-border-top-alt:						var(--button-border-alt); /* don't change */
+  --button-border-right-alt:					var(--button-border-alt);
+  --button-border-bottom-alt:					var(--button-border-alt);
+  --button-border-left-alt:						var(--button-border-alt);
   --button-padding-alt: 						var(--button-padding);
   --button-box-shadow-alt: 						var(--button-box-shadow);
   --button-border-radius-alt: 					var(--button-border-radius);
@@ -243,10 +243,10 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --button-font-weight-hover-alt: 				var(--button-font-weight-alt);
   --button-font-size-hover-alt: 				var(--button-font-size-alt);
   --button-border-hover-alt: 					var(--button-border-alt);
-  --button-border-top-hover-alt:				var(--button-border-top-alt);
-  --button-border-right-hover-alt:				var(--button-border-right-alt);
-  --button-border-bottom-hover-alt:				var(--button-border-bottom-alt);
-  --button-border-left-hover-alt:				var(--button-border-left-alt);
+  --button-border-top-hover-alt:				var(--button-border-hover-alt); /* don't change */
+  --button-border-right-hover-alt:				var(--button-border-hover-alt);
+  --button-border-bottom-hover-alt:				var(--button-border-hover-alt);
+  --button-border-left-hover-alt:				var(--button-border-hover-alt);
   --button-padding-hover-alt: 					var(--button-padding-alt);
   --button-box-shadow-hover-alt: 				var(--button-box-shadow-alt);
   --button-border-radius-hover-alt: 			var(--button-border-radius-alt);
@@ -393,6 +393,7 @@ a.skip-link:active,
 a.skip-link.tab-focus {
 	background: 								var(--white);
 	color: 										var(--black);
+
 
 	padding: 									var(--measure-small) var(--measure-small);
 	text-align: 								center;
@@ -2597,6 +2598,11 @@ body.locked {
 	text-align:									center;
 }
 
+#mobile-menu-bar .mm-bar-btn .mm-bar-empty {
+	background: 								transparent;
+	border: 									1px solid transparent;
+}
+
 #mobile-menu-bar .mm-bar-btn.mm-bar-quote {
 	padding: 									1px 5px 0 9px;
 }
@@ -4015,10 +4021,6 @@ img.img-404 {
 .currently-open-banner.horz.reveal-open {
   	transform: 									translate(-260px,30px) rotate(0); 
 }
-
-
-
-
 
 #mobile-menu-bar.currently-open .call-btn {
 	background: 								var(--accent-background);
@@ -5966,6 +5968,7 @@ html.error503 h3 {
 	.block-video.span-8,
 	.block-video.span-6,
 	.block-video.span-4,
+
 	.block-video.span-3 {
 		width:										100%;
 	}

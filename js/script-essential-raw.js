@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	if ( getDeviceW() > mobileCutoff ) { 
 			return 0; 
 		} else {  
-			return $("#mobile-menu-bar").outerHeight(); 
+			return $("#mobile-menu-bar").outerHeight(true); 
 		}
 	};			
 	
@@ -237,7 +237,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		var theEl = $(element);
 		if ( theEl.is(":visible") ) {		
 			$( "<div class='"+element.substr(1)+"-faux'></div>" ).insertBefore( theEl );
-			$("."+element.substr(1)+"-faux").css({ "height":theEl.outerHeight()+"px" });
+			$("."+element.substr(1)+"-faux").css({ "height":theEl.outerHeight(true)+"px" });
 			if ( fixedAtLoad == "true" ) { 
 				theEl.css({ "position":"fixed" }); 
 			}
@@ -269,9 +269,9 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		
 		if ( strictOffset === "" ) {
 			if ( strictTop === "" ) {
-				offset = $(container).outerHeight();
+				offset = $(container).outerHeight(true);
 			} else {				
-				offset = $(container).outerHeight() + Number(strictTop);
+				offset = $(container).outerHeight(true) + Number(strictTop);
 			}				
 		} else {
 			offset = Number(strictOffset);	
@@ -306,7 +306,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	
 // Shortcut to lock #colophon under rest of content
 	window.lockColophon = function() {	
-		var deviceH = getDeviceH() * 0.9, colophonH = $('#colophon').outerHeight();
+		var deviceH = getDeviceH() * 0.9, colophonH = $('#colophon').outerHeight(true);
 		if ( colophonH < deviceH && !$('body').hasClass('background-image') ) {	
 			addFaux( '#colophon', 'true' );
 			setTimeout( function() {
@@ -348,7 +348,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		topSpacer = topSpacer + mobileMenuBarH();	
 
 		$('.stuck').each(function() {
-			newTop = newTop + $(this).outerHeight();	
+			newTop = newTop + $(this).outerHeight(true);	
 		});		
 
 		if ( typeof target === 'object' || typeof target === 'string' ) {		
@@ -471,11 +471,12 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	};		
 	
 	// Cover container with direct sibling, then slide sibling out of the way to reveal container
+
 	window.revealDiv = function (container, delay, speed, offset) {
 		delay = delay || 0;		
 		speed = speed || 1000;		
 		offset = offset || "100%";
-		var theEl = $(container), theNextEl = theEl.next(), fixedH = theEl.outerHeight();
+		var theEl = $(container), theNextEl = theEl.next(), fixedH = theEl.outerHeight(true);
 		
 		theNextEl.css({ "transform":"translateY(-"+fixedH+"px)", "transition-duration":0 });
 		setTimeout( function () { 

@@ -1923,10 +1923,10 @@ function battleplan_site_audit() {
 			if ( strpos($checkContent, "[why-choose") !== false ) $whyChoose = "true";	
 			if ( strpos($checkContent, "[get-logo-slider") !== false ) $logoSlider = "true";			
 			if ( strpos($checkContent, "[hvac-tip-of-the-month") !== false ) $tip = "true";	
-			if ( strpos($checkContent, "[hvac-maintenance-tips") !== false ) $hvacMaint = "true";	
+			if ( strpos($checkContent, "[hvac-maintenance-tips") !== false || strpos($checkContent, "/maintenance-tips/") !== false ) $hvacMaint = "true";	
 			if ( strpos($checkContent, "Home Page Teasers") !== false ) $homeTeasers = "true";					
 			if ( strpos($checkContent, "[get-emergency-service") !== false ) $emergency = "true";	
-			if ( strpos($checkContent, "[get-financing") !== false || strpos($checkContent, "[get-wells-fargo") !== 'false' ) $financing = "true";	
+			if ( strpos($checkContent, "[get-financing") !== false || strpos($checkContent, "[get-wells-fargo") !== false ) $financing = "true";	
 		endwhile; endif; wp_reset_postdata();
 
 		$check_menus = wp_get_nav_menu_items('main-menu');
@@ -1944,7 +1944,7 @@ function battleplan_site_audit() {
 			$checkContent = strtolower(get_the_content());	
 			if ( strpos( $checkContent, "emergency service") !== false || strpos( $checkContent, "emergency-service") !== false ) $emergency = "true";	
 			if ( strpos( $checkContent, "bbb") !== false ) $bbb = "true";
-			if ( strpos( $checkContent, "[get-financing") !== false || strpos($checkContent, "[get-wells-fargo") !== 'false' ) $financing = "true";	
+			if ( strpos( $checkContent, "[get-financing") !== false || strpos($checkContent, "[get-wells-fargo") !== false ) $financing = "true";	
 			if ( strpos( $checkContent, "symptom checker") !== false || strpos( $checkContent, "symptom-checker") !== false ) $symptomChecker = "true";
 		endwhile; endif; wp_reset_postdata();
 

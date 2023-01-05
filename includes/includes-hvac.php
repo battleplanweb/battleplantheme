@@ -36,16 +36,14 @@ add_shortcode( 'product-overview', 'battleplan_product_overview' );
 function battleplan_product_overview( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', ), $atts );
 	$type = esc_attr($a['type']);
+	$brands = array('american standard', 'bryant', 'carrier', 'lennox', 'rheem', 'ruud', 'tempstar', 'trane', 'york');
+	$file = 'generic';
 	
-	if (strpos($type, 'american standard') !== false) { include("wp-content/themes/battleplantheme/elements/element-product-overview-american-standard.php"); }
-	elseif (strpos($type, 'ruud') !== false) { include("wp-content/themes/battleplantheme/elements/element-product-overview-ruud.php"); }
-	elseif (strpos($type, 'carrier') !== false) { include("wp-content/themes/battleplantheme/elements/element-product-overview-carrier.php"); }	
-	elseif (strpos($type, 'york') !== false) { include("wp-content/themes/battleplantheme/elements/element-product-overview-york.php"); }
-	elseif (strpos($type, 'lennox') !== false) { include("wp-content/themes/battleplantheme/elements/element-product-overview-lennox.php"); }
-	elseif (strpos($type, 'rheem') !== false) { include("wp-content/themes/battleplantheme/elements/element-product-overview-rheem.php"); }	
-	elseif (strpos($type, 'tempstar') !== false) { include("wp-content/themes/battleplantheme/elements/element-product-overview-tempstar.php"); }
-	elseif (strpos($type, 'trane') !== false) { include("wp-content/themes/battleplantheme/elements/element-product-overview-trane.php"); }
-	else { include("wp-content/themes/battleplantheme/elements/element-product-overview-generic.php"); }
+	foreach( $brands as $brand ) :	
+		if (strpos($type, $brand) !== false) $file = str_replace( ' ', '-', $brand );
+	endforeach;
+
+	include('wp-content/themes/battleplantheme/elements/element-product-overview-'.$file.'.php');
 	
 	return do_shortcode('
 		[col class="col-archive col-products"]

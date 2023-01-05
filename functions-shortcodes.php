@@ -468,6 +468,7 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 add_shortcode( 'build-archive', 'battleplan_getBuildArchive' );
 function battleplan_getBuildArchive($atts, $content = null) {	
 	$a = shortcode_atts( array( 'type'=>'', 'count_view'=>'false', 'thumb_only'=>'false', 'show_btn'=>'false', 'btn_text'=>'Read More', 'btn_pos'=>'outside', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_social'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'add_info'=>'', 'show_thumb'=>'true', 'no_pic'=>'', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'accordion'=>'false', 'link'=>'post', 'truncate'=>'false' ), $atts );
+	$postID = get_the_ID();
 	$type = esc_attr($a['type']);
 	$truncate = esc_attr($a['truncate']);
 	$showBtn = esc_attr($a['show_btn']);	
@@ -481,10 +482,10 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	$showContent = esc_attr($a['show_content']);		
 	if ( $showContent == "true" ) : 
 		$showExcerpt = "false"; 
-		$content = apply_filters('the_content', get_the_content()); 
+		$content = apply_filters('the_content', get_the_content($postID)); 
 	else:
 		if ( $showExcerpt == "true" ) :
-			$content = apply_filters('the_excerpt', get_the_excerpt());
+			$content = apply_filters('the_excerpt', get_the_excerpt($postID));
 		else:
 			$content = "";
 		endif;
@@ -493,7 +494,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	if ( $truncate != "false" && $truncate != "no" ) : 
 		$content = $truncate == "true" || $truncate == "yes" ? truncateText($content) : truncateText($content, $truncate);
 	endif;
-	$showThumb = esc_attr($a['show_thumb']) != "false" ? "true" : esc_attr($a['show_thumb']);
+	$showThumb = esc_attr($a['show_thumb']);
 	$size = esc_attr($a['size']);
 	$picSize = esc_attr($a['pic_size']);	
 	$textSize = esc_attr($a['text_size']);		
@@ -505,7 +506,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	elseif ( $link == "false" || $link == "no" ) : 
 		$link = "false"; $linkLoc = "";
 	elseif ( $link == "" || $link == "post" ) : 
-		$linkLoc = esc_url(get_the_permalink(get_the_ID()));	
+		$linkLoc = esc_url(get_the_permalink($postID));	
 	else: 
 		$linkLoc = $link;	
 	endif;
@@ -519,12 +520,31 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	endif;
 	$archiveMeta = $buildBtn = '';
 		
-	if ( has_post_thumbnail() && $showThumb == "true" ) : 	
-		$meta = wp_get_attachment_metadata( get_post_thumbnail_id( get_the_ID() ) );
+	if ( $showThumb != "true" && $showThumb != "false" ) : 	
+		$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>'1', 'post_parent'=>$postID, 'order_by'=>'rand', 'tax_query'=> array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$showThumb)));
+		
+		$image_query = new WP_Query($args);		
+		$imageArray = array();
+
+		if( $image_query->have_posts() ) : while ($image_query->have_posts() ) : $image_query->the_post();
+			$picID = get_the_ID();
+			$full = wp_get_attachment_image_src($picID, 'full');
+			$image = wp_get_attachment_image_src($picID, $size);
+			$imgSet = wp_get_attachment_image_srcset($picID, $size );
+
+			$buildImg = do_shortcode('[img size="'.$picSize.'" class="image-'.$type.'" link="'.$linkLoc.'" '.$picADA.']<img class="image-'.$type.' img-archive '.$tags[0].'-img" src = "'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta(get_the_ID($picID), "_wp_attachment_image_alt", true).'">[/img]'); 
+		endwhile; wp_reset_postdata(); endif;	
+		
+		if ( $textSize == "" ) : 
+			$textSize = getTextSize($picSize); 
+		endif;	
+
+	elseif ( has_post_thumbnail() && $showThumb == "true" ) : 	
+		$meta = wp_get_attachment_metadata( get_post_thumbnail_id( $postID ) );
 		$thumbW = $meta['sizes'][$size]['width'];
 		$thumbH = $meta['sizes'][$size]['height'];
 	
-		$buildImg = do_shortcode('[img size="'.$picSize.'" class="image-'.$type.'" link="'.$linkLoc.'" '.$picADA.']'.get_the_post_thumbnail( get_the_ID(), $size, array( 'class'=>'img-archive img-'.$type, 'style'=>'aspect-ratio:'.$thumbW.'/'.$thumbH )).'[/img]'); 
+		$buildImg = do_shortcode('[img size="'.$picSize.'" class="image-'.$type.'" link="'.$linkLoc.'" '.$picADA.']'.get_the_post_thumbnail( $postID, $size, array( 'class'=>'img-archive img-'.$type, 'style'=>'aspect-ratio:'.$thumbW.'/'.$thumbH )).'[/img]'); 
 		if ( $textSize == "" ) : 
 			$textSize = getTextSize($picSize); 
 		endif;	
@@ -569,7 +589,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		if ( $testimonialMisc4 ) $buildCredentials .= "<div class='testimonials-credential testimonials-misc4'>".$testimonialMisc4."</div>";
 		if ( $testimonialRate ) $buildCredentials .= "<div class='testimonials-credential testimonials-rating'>".$testimonialRate."</div>";
 		
-		$content = apply_filters('the_content', get_the_content()); 
+		$content = apply_filters('the_content', get_the_content($postID)); 
 		if ( $truncate != "false" && $truncate != "no" ) : 
 			$content = $truncate == "true" || $truncate == "yes" ? truncateText($content) : truncateText($content, $truncate);
 		endif;
@@ -577,14 +597,14 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		$archiveBody = '[txt class="testimonials-quote"][p]'.$content.'[/p][/txt][txt size="11/12" class="testimonials-credentials"]'.$buildCredentials.'[/txt][txt size="1/12" class="testimonials-platform testimonials-platform-'.$testimonialPlatform.'"][/txt]';
 	} else {
 		if ( esc_attr($a['accordion']) == "true" ) :		
-			$archiveBody = '[accordion title="'.esc_html(get_the_title()).'" excerpt="'.wp_kses_post(get_the_excerpt()).'"]'.$content.'[/accordion]';		
+			$archiveBody = '[accordion title="'.esc_html(get_the_title($postID)).'" excerpt="'.wp_kses_post(get_the_excerpt($postID)).'"]'.$content.'[/accordion]';		
 		else :		
 			$archiveMeta = $archiveBody = "";
 			if ( $showTitle != "false" ) :
 				$archiveMeta .= "<h3 data-count-view=".esc_attr($a['count_view']).">";
-				if ( $showContent != "true" && $link != "false" ) $archiveMeta .= '<a href="'.$linkLoc.'" class="link-archive link-'.get_post_type().'"'.$titleADA.'>';	
+				if ( $showContent != "true" && $link != "false" ) $archiveMeta .= '<a href="'.$linkLoc.'" class="link-archive link-'.get_post_type($postID).'"'.$titleADA.'>';	
 				if ( $showTitle == "true" ) :
-					$archiveMeta .= esc_html(get_the_title()); 
+					$archiveMeta .= esc_html(get_the_title($postID)); 
 				else:
 					$archiveMeta .= $showTitle; 
 				endif;
@@ -608,13 +628,13 @@ function battleplan_getBuildArchive($atts, $content = null) {
 				elseif ( has_term( 'shortcode', 'gallery-type' ) ) :
 					$count = esc_attr(get_field("image_number")); 						
 				else:
-					$all_attachments = get_posts( array( 'post_type'=>'attachment', 'post_mime_type'=>'image', 'post_parent'=>get_the_ID(), 'post_status'=>'published', 'numberposts'=>-1 ) );
+					$all_attachments = get_posts( array( 'post_type'=>'attachment', 'post_mime_type'=>'image', 'post_parent'=>$postID, 'post_status'=>'published', 'numberposts'=>-1 ) );
 					$count = count($all_attachments); 						
 				endif;	
 				if ( $count != "" ) :
 					$subline = sprintf( _n( '%s Photo', '%s Photos', $count, 'battleplan' ), number_format($count) );
 					$archiveBody .= '<div class="photo-count">';
-					if ( $link != "false" ) $archiveBody .= '<a href="'.esc_url(get_the_permalink()).'" class="link-archive link-'.get_post_type().'" aria-hidden="true" tabindex="-1">';
+					if ( $link != "false" ) $archiveBody .= '<a href="'.esc_url(get_the_permalink($postID)).'" class="link-archive link-'.get_post_type($postID).'" aria-hidden="true" tabindex="-1">';
 					$archiveBody .= '<p class="gallery-subtitle">'.$subline.'</p>';
 					if ( $link != "false" ) $archiveBody .= '</a>';
 					$archiveBody .= '</div>';
@@ -624,7 +644,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	}
 	
 	if ( $showBtn == "true" ) : 
-		$ada = $type == "testimonials" ? " testimonials" : ' about '.esc_html(get_the_title()); 	
+		$ada = $type == "testimonials" ? " testimonials" : ' about '.esc_html(get_the_title($postID)); 	
 		$buildBtn = do_shortcode('[btn class="button-'.$type.'" link="'.$linkLoc.'" ada="'.$ada.'"]'.esc_attr($a['btn_text']).'[/btn]'); 	
 	endif;
 			
@@ -645,7 +665,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		$showArchive .= $buildImg.do_shortcode($buildBody);
 		if ( $btnPos != "inside" ) $showArchive .= $buildBtn;
 		
-		battleplan_countTease( get_the_ID() );	
+		battleplan_countTease( $postID );	
 
 	endif;	
 	
@@ -655,7 +675,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 // Display randomly selected posts - start/end can be dates or -53 week / -51 week */
 add_shortcode( 'get-random-posts', 'battleplan_getRandomPosts' );
 function battleplan_getRandomPosts($atts, $content = null) {	
-	$a = shortcode_atts( array( 'num'=>'1', 'offset'=>'0', 'leeway'=>'0', 'type'=>'post', 'tax'=>'', 'terms'=>'', 'field_key'=>'', 'field_value'=>'', 'field_compare'=>'IN', 'orderby'=>'recent', 'sort'=>'asc', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_social'=>'false', 'show_btn'=>'true', 'button'=>'Read More', 'btn_pos'=>'inside', 'show_content'=>'false', 'thumb_only'=>'false', 'thumb_col'=>'1', 'thumbnail'=>'force', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'link'=>'post', 'truncate'=>'true' ), $atts );
+	$a = shortcode_atts( array( 'num'=>'1', 'offset'=>'0', 'leeway'=>'0', 'type'=>'post', 'tax'=>'', 'terms'=>'', 'field_key'=>'', 'field_value'=>'', 'field_compare'=>'IN', 'orderby'=>'recent', 'sort'=>'asc', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_social'=>'false', 'show_btn'=>'true', 'button'=>'Read More', 'btn_pos'=>'inside', 'show_content'=>'false', 'thumb_only'=>'false', 'show_thumb'=>'true', 'thumb_col'=>'1', 'thumbnail'=>'force', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'link'=>'post', 'truncate'=>'true' ), $atts );
 	$num = esc_attr($a['num']);	
 	$offset = esc_attr($a['offset']) == '0' ? rand(0, esc_attr($a['leeway'])) :	esc_attr($a['offset']);
 	$postType = esc_attr($a['type']);	
@@ -684,7 +704,6 @@ function battleplan_getRandomPosts($atts, $content = null) {
 	if ( $thumbOnly == "true" ) : 
 		$title = $showDate = $showExcerpt = $showContent = $showAuthor = $showSocial = $showBtn = "false";
 		$picSize = "100";
-		$showThumb = "true";
 	endif;
 	$combinePosts = '';
 
@@ -709,7 +728,7 @@ function battleplan_getRandomPosts($atts, $content = null) {
 		while ( $getPosts->have_posts() ) : 
 			$getPosts->the_post(); 	
 			
-			$showPost = do_shortcode('[build-archive type="'.$postType.'" count_view="'.$countView.'" thumb_only="'.$thumbOnly.'" show_btn="'.$showBtn.'" btn_text="'.esc_attr($a['button']).'" btn_pos="'.esc_attr($a['btn_pos']).'" show_title="'.$title.'" title_pos="'.$titlePos.'" show_date="'.$showDate.'" show_excerpt="'.$showExcerpt.'" show_social="'.$showSocial.'" show_content="'.$showContent.'" show_author="'.$showAuthor.'" size="'.esc_attr($a['size']).'" pic_size="'.$picSize.'" text_size="'.esc_attr($a['text_size']).'" link="'.esc_attr($a['link']).'" truncate="'.esc_attr($a['truncate']).'"]');	
+			$showPost = do_shortcode('[build-archive type="'.$postType.'" count_view="'.$countView.'" show_thumb="'.esc_attr($a['show_thumb']).'" thumb_only="'.$thumbOnly.'" show_btn="'.$showBtn.'" btn_text="'.esc_attr($a['button']).'" btn_pos="'.esc_attr($a['btn_pos']).'" show_title="'.$title.'" title_pos="'.$titlePos.'" show_date="'.$showDate.'" show_excerpt="'.$showExcerpt.'" show_social="'.$showSocial.'" show_content="'.$showContent.'" show_author="'.$showAuthor.'" size="'.esc_attr($a['size']).'" pic_size="'.$picSize.'" text_size="'.esc_attr($a['text_size']).'" link="'.esc_attr($a['link']).'" truncate="'.esc_attr($a['truncate']).'"]');
 
 			if ( $num > 1 ) $showPost = do_shortcode('[col]'.$showPost.'[/col]');	
 			if ( has_post_thumbnail() || esc_attr($a['thumbnail']) != "force" ) $combinePosts .= $showPost;
@@ -728,7 +747,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	wp_enqueue_script( 'battleplan-carousel', get_template_directory_uri().'/js/bootstrap-carousel.js', array('jquery-core'), _BP_VERSION, false );		
 	wp_enqueue_script( 'battleplan-carousel-slider', get_template_directory_uri().'/js/script-bootstrap-slider.js', array('battleplan-carousel'), _BP_VERSION, false );	
 
-	$a = shortcode_atts( array( 'type'=>'testimonials', 'auto'=>'yes', 'interval'=>'6000', 'loop'=>'true', 'num'=>'4', 'offset'=>'0', 'pics'=>'yes', 'caption'=>'no', 'controls'=>'yes', 'controls_pos'=>'below', 'indicators'=>'no', 'justify'=>'center', 'pause'=>'true', 'orderby'=>'recent', 'order'=>'asc', 'post_btn'=>'', 'all_btn'=>'View All', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'link'=>'', 'pic_size'=>'1/3', 'text_size'=>'', 'slide_type'=>'box', 'slide_effect'=>'fade', 'tax'=>'', 'terms'=>'', 'tag'=>'', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'id'=>'', 'mult'=>'1', 'class'=>'', 'truncate'=>'true', 'lazy'=>'true', 'blur'=>'false' ), $atts );
+	$a = shortcode_atts( array( 'type'=>'testimonials', 'auto'=>'yes', 'interval'=>'6000', 'loop'=>'true', 'num'=>'4', 'offset'=>'0', 'pics'=>'yes', 'caption'=>'no', 'controls'=>'yes', 'controls_pos'=>'below', 'indicators'=>'no', 'justify'=>'center', 'pause'=>'true', 'orderby'=>'recent', 'order'=>'asc', 'post_btn'=>'', 'show_thumb'=>'true', 'all_btn'=>'View All', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'link'=>'', 'pic_size'=>'1/3', 'text_size'=>'', 'slide_type'=>'box', 'slide_effect'=>'fade', 'tax'=>'', 'terms'=>'', 'tag'=>'', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'id'=>'', 'mult'=>'1', 'class'=>'', 'truncate'=>'true', 'lazy'=>'true', 'blur'=>'false' ), $atts );
 	$num = esc_attr($a['num']);	
 	$controls = esc_attr($a['controls']);	
 	$controlsPos = esc_attr($a['controls_pos']);
@@ -883,7 +902,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 						$numDisplay++; 
 						$multDisplay++;
 					
-						$buildArchive = do_shortcode('[build-archive type="'.$type.'" show_btn="'.$showBtn.'" btn_text="'.$postBtn.'" show_excerpt="'.esc_attr($a['show_excerpt']).'" show_content="'.esc_attr($a['show_content']).'" show_date="'.esc_attr($a['show_date']).'" show_author="'.esc_attr($a['show_author']).'" size="'.$size.'" pic_size="'.esc_attr($a['pic_size']).'" text_size="'.esc_attr($a['text_size']).'" link="'.$link.'" truncate="'.esc_attr($a['truncate']).'"]');	
+						$buildArchive = do_shortcode('[build-archive type="'.$type.'" show_btn="'.$showBtn.'" btn_text="'.$postBtn.'" show_thumb="'.esc_attr($a['show_thumb']).'" show_excerpt="'.esc_attr($a['show_excerpt']).'" show_content="'.esc_attr($a['show_content']).'" show_date="'.esc_attr($a['show_date']).'" show_author="'.esc_attr($a['show_author']).'" size="'.$size.'" pic_size="'.esc_attr($a['pic_size']).'" text_size="'.esc_attr($a['text_size']).'" link="'.$link.'" truncate="'.esc_attr($a['truncate']).'"]');	
 						
 						if ( $multDisplay == 1 ) :
 							$active = $numDisplay == 0 ? "active" : "";

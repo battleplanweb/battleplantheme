@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 17.1
+Version: 17.2
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -373,7 +373,7 @@ b,
 strong, 
 i:not(.fa), 
 em, 
-span:not(.page-numbers) {
+span:not(.page-numbers):not(.unique) {
 	font-family:								inherit; 
 	color: 										inherit !important; 
 	text-align:									inherit; 
@@ -1327,7 +1327,9 @@ input[type="button"],
 input[type="reset"],
 input[type="submit"],
 .file-upload-btn,
-ul.tabs li {
+ul.tabs li,
+a.button:visited,
+a.page-numbers:visited {
 	display:									inline-block;
 	font-family: 								var(--button-font-family);
 	font-weight: 								var(--button-font-weight);
@@ -1410,7 +1412,9 @@ ul.tabs li.current {
 .style-alt input[type="reset"],
 .style-alt input[type="submit"],
 .style-alt .file-upload-btn,
-.style-alt ul.tabs li {
+.style-alt ul.tabs li,
+.style-alt a.button:visited,
+.style-alt a.page-numbers:visited {
 	font-family: 								var(--button-font-family-alt);
 	font-weight: 								var(--button-font-weight-alt);
 	font-size: 									var(--button-font-size-alt);
@@ -2063,6 +2067,7 @@ a#bbblink {
 	padding:									2px 8px 1px 7px;
 	font-size:									16px;
 	z-index:									1000;
+
 	transition:									all var(--main-trans-speed) var(--main-trans-easing);
 }
 
@@ -4436,6 +4441,16 @@ span.descriptionText {
 	margin-right:								10px;
 }
 
+.bp-service-areas {
+  	position: 									fixed;
+	font-size: 									14px;
+  	left: 										0;
+	bottom: 									-40px;
+  	display: 									block;
+  	width: 										100%;
+  	height: 									30px;
+}
+
 /*--------------------------------------------------------------
 # Plugins
 --------------------------------------------------------------*/
@@ -5968,6 +5983,7 @@ html.error503 h3 {
 	.block-video.span-8,
 	.block-video.span-6,
 	.block-video.span-4,
+
 
 	.block-video.span-3 {
 		width:										100%;

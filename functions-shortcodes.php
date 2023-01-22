@@ -260,6 +260,27 @@ function battleplan_addShareButtons( $atts, $content = null ) {
     return $output;	
 };
 
+add_shortcode( 'social-btn', 'battleplan_socialBtn' );
+function battleplan_socialBtn( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'type'=>'', 'img'=>'', 'link'=>'' ), $atts );
+	$type = $icon = esc_attr($a['type']);
+	$link = esc_attr($a['link']) == '' ? do_shortcode('[get-biz info="'.$type.'"]') : esc_attr($a['link']);
+	$prefix = "";
+	$img = esc_attr($a['img']);
+	$alt = "Visit us on ".$type;
+			
+	if ( $type == "email" ) : $prefix = "mailto:"; $icon = "fas fa-envelope"; $alt="Email us";	
+	elseif ( $type == "facebook" ) : $icon = "fab fa-facebook-f";	
+	elseif ( $type == "pinterest" ) : $icon = "fab fa-pinterest-p";	
+	elseif ( $type == "linkedin" ) : $icon = "fab fa-linkedin-in";
+	else: $icon = "fab fa-".$type; endif;
+	
+	if ( $img == '' ) : $iconLoc = '<i class="'.$icon.'" aria-hidden="true"></i><span class="sr-only">'.$type.'</span><span class="social-bg"></span>';
+	else: $iconLoc = '<img loading="lazy" src = "'.$img.'" alt="'.$alt.'"/>'; endif;
+
+	return '<a class="social-button '.$type.'-button" href="'.$prefix.$link.'" target="_blank" rel="noopener noreferrer">'.$iconLoc.'</a>';	
+}
+
 // Display Business Hours
 add_shortcode( 'get-hours', 'battleplan_addBusinessHours' );
 function battleplan_addBusinessHours( $atts, $content = null ) {
@@ -1234,7 +1255,7 @@ function battleplan_getCreditCards( $atts, $content = null ) {
 // Add Crypto Currency widget to Sidebar
 add_shortcode( 'get-crypto', 'battleplan_getCrypto' );
 function battleplan_getCrypto( $atts, $content = null ) {	
-	$a = shortcode_atts( array( 'bitcoin'=>'yes', 'cardano'=>'yes', 'chainlink'=>'yes', 'dogecoin'=>'yes', 'monero'=>'yes', 'polygon'=>'yes', 'stellar'=>'yes' ), $atts );
+	$a = shortcode_atts( array( 'bitcoin'=>'no', 'cardano'=>'no', 'chainlink'=>'no', 'dogecoin'=>'no', 'monero'=>'no', 'polygon'=>'no', 'stellar'=>'no', 'ethereum'=>'no', 'shibainu'=>'no', 'sand'=>'no', 'icp'=>'no' ), $atts );
 
 	$buildCrypto = '<div id="crypto" class="currency">';
 	if ( esc_attr($a['bitcoin']) == "yes" ) $buildCrypto .= '<img class="crypto-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-bitcoin.png" alt="We accept Bitcoin crypto currency" width="100" height="100" style="aspect-ratio:100/100" />';
@@ -1244,6 +1265,10 @@ function battleplan_getCrypto( $atts, $content = null ) {
 	if ( esc_attr($a['monero']) == "yes" ) $buildCrypto .= '<img class="crypto-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-monero.png" alt="We accept Monero crypto currency" width="100" height="100" style="aspect-ratio:100/100" />';
 	if ( esc_attr($a['polygon']) == "yes" ) $buildCrypto .= '<img class="crypto-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-polygon.png" alt="We accept Polygon crypto currency" width="100" height="100" style="aspect-ratio:100/100" />';
 	if ( esc_attr($a['stellar']) == "yes" ) $buildCrypto .= '<img class="crypto-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-stellar.png" alt="We accept Stellar crypto currency" width="100" height="100" style="aspect-ratio:100/100" />';
+	if ( esc_attr($a['ethereum']) == "yes" ) $buildCrypto .= '<img class="crypto-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-ethereum.png" alt="We accept Ethereum crypto currency" width="100" height="100" style="aspect-ratio:100/100" />';
+	if ( esc_attr($a['shibainu']) == "yes" ) $buildCrypto .= '<img class="crypto-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-shibainu.png" alt="We accept Shiba Inu crypto currency" width="100" height="100" style="aspect-ratio:100/100" />';
+	if ( esc_attr($a['sand']) == "yes" ) $buildCrypto .= '<img class="crypto-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-sand.png" alt="We accept Sand crypto currency" width="100" height="100" style="aspect-ratio:100/100" />';
+	if ( esc_attr($a['icp']) == "yes" ) $buildCrypto .= '<img class="crypto-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-icp.png" alt="We accept ICP crypto currency" width="100" height="100" style="aspect-ratio:100/100" />';
 	$buildCrypto .= '</div>';  					  
 										 			  
 	return $buildCrypto;

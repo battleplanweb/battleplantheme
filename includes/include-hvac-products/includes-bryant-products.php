@@ -391,6 +391,140 @@ function add_bryant_products() {
 			'meta_input'	=>	array('brochure'=>'https://www.shareddocs.com/hvac/docs/1010/Public/00/01-8110-1429-01.pdf'),
 			'image_name'	=>	'bryant-ah-01.jpg'		
 		),
+		
+			
+	// Ductless Systems
+		array ( 
+			'post_title'	=>	'Evolution™ Heat Pump with Basepan Heater',
+			'post_content' 	=>	'<span class="descriptionText">If maximum performance and efficiency are key, look no further than our Evolution™ System heat pump. </span>
+<p>This ENERGY STAR® qualified ductless system comes with a 42 SEER rating when paired with the 619PHA High Wall – there’s nothing more efficient! Even when temps drop to as low as -22° F outside, your interior environment stays cozy (when properly sized and matched with specific indoor units). Powerful yet quiet, our best ductless outdoor solution delivers results.</p>
+
+<ul>
+	<li>Up to 42.0 SEER cooling efficiency</li>
+ 	<li>100% Heating Capacity at 0° F (-17° C)</li>
+	<li>100% Cooling capacity at -22° F (-30° C) without additional kit</li>
+	<li>Up to 75% of Heating Capacity at -22° F (-30° C)</li>
+	<li>Inverter Compressor</li>
+	<li>Available in 208/230V</li>
+	<li>Sizes: 09 / 12</li>
+	<li>Built-in basepan heater</li>
+	<li>Auto-restart function</li>
+	<li>Refrigerant leakage detection</li>
+	<li>Quiet outdoor operation, as low as 55 dB(A)</li>
+	<li>Anti-corrosive fin coating</li>
+	<li>10-year parts limited warranty upon timely registration</li>
+</ul>', 
+			'post_excerpt'	=>	'If maximum performance and efficiency are key, look no further than our Evolution™ System heat pump. ',
+			'post_type'     =>	'products',
+			'menu_order'  	=>  1400,
+			'tax_input'		=>  array('product-brand'=>'Bryant', 'product-type'=>'ductless-systems', 'product-class'=>'best'),
+			'meta_input'	=>	array('brochure'=>'https://www.shareddocs.com/hvac/docs/1010/Public/0D/01-DLS-017-BR-01.pdf'),
+			'image_name'	=>	'bryant-ms-01.jpg'		
+		),
+
+		array ( 
+			'post_title'	=>	'Preferred™ Heat Pump with Basepan Heater',
+			'post_content' 	=>	'<span class="descriptionText">Versitle heating and cooling for year-round comfort.</span>
+<p>The 38MARB heat pump can be matched with an indoor fan coil to provide reliable cooling efficiency up to 28.1 SEER and heating efficiency up to 14 HSPF. This unit can operate in a wide range of outdoor temperatures, providing year-round comfort regardless of the temperature outside.</p>
+
+<ul>
+	<li>Up to 28.1 SEER cooling efficiency</li>
+	<li>Up to 14 HSPF heating efficiency</li>
+	<li>100% Heating Capacity at 5° F (-15° C)</li>
+	<li>Inverter Compressor</li>
+	<li>Select sizes are ENERGY STAR® certified based on indoor unit pairing</li>
+	<li>Available in 115V and 208/230V</li>
+	<li>Sizes ranging from 06 to 36</li>
+	<li>Built-in basepan heater</li>
+	<li>Piping length 82-213 ft. depending on unit capacity and system configuration</li>
+	<li>Refrigerant leakage detection</li>
+	<li>Condenser high-temperature protection</li>
+	<li>Quiet outdoor sound operation, as low as 54 decibels</li>
+	<li>46° F heating mode (heating setback)</li>
+	<li>10-year parts limited warranty upon timely registration</li>
+</ul>', 
+			'post_excerpt'	=>	'This unit can operate in a wide range of outdoor temperatures, providing year-round comfort regardless of the temperature outside.',
+			'post_type'     =>	'products',
+			'menu_order'  	=>  1410,
+			'tax_input'		=>  array('product-brand'=>'Bryant', 'product-type'=>'ductless-systems', 'product-class'=>'better'),
+			'meta_input'	=>	array('brochure'=>'https://www.shareddocs.com/hvac/docs/1010/Public/0D/01-DLS-017-BR-01.pdf'),
+			'image_name'	=>	'bryant-ms-01.jpg'		
+		),
+
+		array ( 
+			'post_title'	=>	'Legacy™ Line Air Conditioner',
+			'post_content' 	=>	'<span class="descriptionText">Cool, Space-Saving Comfort</span>
+<p>The Legacy™ Line 38MHRC Ductless air conditioner is the ideal complement to our Legacy Line 40MHHC High Wall Ductless indoor unit. With a compact design to fit limited outdoor spaces, it is a vital component for cooling a room addition or newly converted space. Our most affordable ductless air conditioner, this model includes auto-restart after a power interruption, system protection features for reliability and corrosion-resistant components for lasting performance.</p>
+
+<ul>
+	<li>Up to 17.5 SEER</li>
+	<li>Sizes: 09 / 12 / 18 / 24</li>
+	<li>Available in 115V and 208/230V</li>
+	<li>Refrigerant leakage detection</li>
+	<li>Auto-restart function</li>
+	<li>Quiet outdoor operation, as low as 50.5 decibels</li>
+	<li>Aluminum Blue Hydrophilic pre-coated fins</li>
+	<li>10-year parts limited warranty upon timely registration</li>
+</ul>', 
+			'post_excerpt'	=>	'This ductless system is a vital component for cooling a room addition or newly converted space.',
+			'post_type'     =>	'products',
+			'menu_order'  	=>  1420,
+			'tax_input'		=>  array('product-brand'=>'Bryant', 'product-type'=>'ductless-systems', 'product-class'=>'good'),
+			'meta_input'	=>	array('brochure'=>'https://www.shareddocs.com/hvac/docs/1010/Public/0D/01-DLS-017-BR-01.pdf'),
+			'image_name'	=>	'bryant-ms-01.jpg'		
+		),
+		
+			
+	// Geothermal
+		array ( 
+			'post_title'	=>	'Evolution™ Split System Geothermal Heat Pump',
+			'post_content' 	=>	'<span class="descriptionText">A Preferred Match with Your High Efficiency Furnace or Fan Coil</span>
+<p>The Bryant® GZ model offers high-efficiency geothermal cooling performance and is designed to be coupled with a gas/propane furnace or fan coil. It features a quiet, two-stage scroll compressor and, in the right combination, can allow you to enjoy the benefits of Hybrid Heat® technology to gain efficient geothermal heating before switching over to gas in colder weather.</p>
+
+<ul>
+	<li>Closed loop cooling EER - Up to 28.8</li>
+	<li>Closed loop heating COP - Up to 4.6</li>
+	<li>Two-stage scroll compressor operation allows longer, more consistent cycles in lower stage</li>
+	<li>Optimal dehumidification capability with the Evolution Connex™ control</li>
+	<li>Insulated cabinet and compressor blanket for quiet operation</li>
+	<li>Wide operating temperature range with exceptional cold weather performance</li>
+	<li>Compatible with a wide range of furnaces and fan coils</li>
+	<li>10-year parts limited warranty upon timely registration</li>
+</ul>', 
+			'post_excerpt'	=>	'Enjoy the benefits of Hybrid Heat® technology to gain efficient geothermal heating before switching over to gas in colder weather.',
+			'post_type'     =>	'products',
+			'menu_order'  	=>  1500,
+			'tax_input'		=>  array('product-brand'=>'Bryant', 'product-type'=>'geothermal-heat-pumps', 'product-class'=>'best'),
+			'meta_input'	=>	array('brochure'=>'https://www.shareddocs.com/hvac/docs/1010/Public/07/01-8110-1616-01.pdf'),
+			'image_name'	=>	'bryant-gt-01.jpg'		
+		),
+		
+		array ( 
+			'post_title'	=>	'Evolution™ Variable-speed Geothermal Heat Pump',
+			'post_content' 	=>	'<span class="descriptionText">High-Efficiency  Models for Exceptional Comfort and Energy Savings</span>
+<p>For the ultimate in quiet operation and comfort, consider the versatile and feature-rich Evolution Series GC models with two-stage compressor operation and variable-speed blower. Our top-of-the-line Evolution geothermal products deliver the highest efficiencies we offer. When installed with the Evolution Connex™ control you\'ll receive optimal summer dehumidification and even temperatures. </p>
+
+<ul>
+	<li>Closed loop cooling EER - Up to 32.0</li>
+	<li>Closed loop heating COP - Up to 4.7</li>
+	<li>Optimal dehumidification capability with the Evolution Connex™ control</li>
+	<li>Enjoy the ultra-quiet performance and even-temperature comfort of variable-speed air delivery</li>
+	<li>Two-stage scroll compressor operation allows longer, more consistent cycles in lower stage for savings and comfort </li>
+	<li>Superior summer dehumidification</li>
+	<li>Smart startup for smoother operation</li>
+	<li>Insulated cabinet and compressor blanket for quiet operation</li>
+	<li>Wide operating temperature range with exceptional cold weather performance</li>
+	<li>Corrosion-resistant coil for durability</li>
+	<li>2" MERV 13 filtration</li>
+	<li>10-year parts limited warranty upon timely registration</li>
+</ul>', 
+			'post_excerpt'	=>	'For the ultimate in quiet operation and comfort, consider this two-stage compressor operation and variable-speed blower.',
+			'post_type'     =>	'products',
+			'menu_order'  	=>  1510,
+			'tax_input'		=>  array('product-brand'=>'Bryant', 'product-type'=>'geothermal-heat-pumps', 'product-class'=>'best'),
+			'meta_input'	=>	array('brochure'=>'https://www.shareddocs.com/hvac/docs/1010/Public/07/01-8110-1616-01.pdf'),
+			'image_name'	=>	'bryant-gt-02.jpg'		
+		),
 
 			
 	);

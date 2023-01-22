@@ -472,6 +472,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	
 	// Cover container with direct sibling, then slide sibling out of the way to reveal container
 
+
+
 	window.revealDiv = function (container, delay, speed, offset) {
 		delay = delay || 0;		
 		speed = speed || 1000;		

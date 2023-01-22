@@ -32,5 +32,21 @@
 		$pic 		= "bryant-ah-01-320x320.jpg";
 		$alt 		= "Bryant Air Handlers";
 	endif;	
+	
+	if ( $type == "bryant ductless systems" ) :
+		$title 		= "Ductless Systems";
+		$excerpt	= "<p>Bryant Ductless Systems are a flexible solution for room additions or anywhere ductwork is a challenge. Cool one room or an entire home. Indoor units can be installed high on the wall, in the ceiling or near the floor.</p>";
+		$link 		= "/product-type/ductless-systems/";
+		$pic 		= "bryant-ms-01-320x320.jpg";
+		$alt 		= "Bryant Ductless Systems";
+	endif;	
+	
+	if ( $type == "bryant geothermal heat pumps" ) :
+		$title 		= "Geothermal Heat Pumps";
+		$excerpt	= "<p>Bryant® geothermal heating and cooling systems use thermal energy found underneath the Earth’s surface to help heat and cool your home. By harnessing this energy, geothermal heat pumps are able to maintain very high efficiencies on even the coldest winter nights or the hottest summer days.</p>";
+		$link 		= "/product-type/geothermal-heat-pumps/";
+		$pic 		= "bryant-gt-02-320x320.jpg";
+		$alt 		= "Bryant Geothermal Heat Pumps";
+	endif;	
 
 ?>

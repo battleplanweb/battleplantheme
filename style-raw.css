@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 17.2
+Version: 17.3
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -301,12 +301,7 @@ html {
 	font-size:									var(--font-base-5);
 }
 
-body,
-button,
-input,
-select,
-optgroup,
-textarea {
+body {
 	font-family: 								var(--font-text);
 	color: 										var(--dark-grey);
 	font-weight: 								normal;
@@ -2068,6 +2063,7 @@ a#bbblink {
 	font-size:									16px;
 	z-index:									1000;
 
+
 	transition:									all var(--main-trans-speed) var(--main-trans-easing);
 }
 
@@ -2400,6 +2396,10 @@ body.locked {
 	transition:									all var(--main-trans-speed) var(--main-trans-easing);
 }
 
+.main-navigation ul.main-menu li:hover {
+	cursor: 									pointer;
+}
+
 /* Menu Button BG */
 #desktop-navigation ul.main-menu li::before, 
 #desktop-navigation ul.main-menu li::after { 
@@ -2695,6 +2695,7 @@ body.locked {
 	width: 										24px;
 	height: 									3px;
 	background-color: 							var(--white-high);
+
 	margin: 									5px 4px;
 	transition: 								all 0.07s ease-in;
 }
@@ -3459,6 +3460,7 @@ img.unloaded {
 .alignright, 
 .align-right,
 .thumb-right .section .alignleft,
+
 .thumb-right .section .align-left,
 .thumb-left .section .switch-thumb .alignleft,
 .thumb-left .section .switch-thumb .align-left,
@@ -3623,6 +3625,7 @@ ul.side-by-side li {
 	margin: 									0 !important;
 	padding: 									0;
 }
+
 
 ul.side-by-side img {
 	box-sizing: 								content-box;

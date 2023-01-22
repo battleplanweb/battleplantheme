@@ -612,6 +612,12 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 		style = style || 'style-alt';
 		$(sections).addClass(style); 
 	};
+	
+	// Get link from a href and attach to the li (for use with Menu BG)	
+	$('#desktop-navigation ul.main-menu > li:not(.menu-item-has-children), #desktop-navigation ul.sub-menu > li').click(function() {
+		var btn = $(this), link = btn.find('a').attr('href');	
+		window.location.href = link;
+	});
 		
 /*--------------------------------------------------------------
 # Screen resize

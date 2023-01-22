@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '17.2' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '17.3' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -487,6 +487,7 @@ function battleplan_bodyClassArray( $classes ) {
 	endforeach;
 	return $newClasses;
 }
+
 // Stamp images and teasers with date and figure counts
 function battleplan_countTease( $id, $override=false ) {
 	if ( $override==true || ( _USER_LOGIN != "battleplanweb" && _IS_BOT != true ) ) :
@@ -1417,6 +1418,7 @@ add_filter( 'excerpt_length', 'battleplan_excerpt_length', 999 );
 function battleplan_excerpt_length( $length ) { 
 	return 300; 
 } 
+
 add_filter('get_the_excerpt', 'end_with_sentence');
 function end_with_sentence( $excerpt ) {	
 	if ( !has_excerpt() ) :		

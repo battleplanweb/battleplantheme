@@ -183,8 +183,8 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 #adminmenu .admin-note {
 	display: 									block;
 	position: 									relative;
- 	margin: 									6px 0 -1px 2px;
-	padding: 									0 8px 1px;
+ 	margin: 									2px 0 -1px 2px;
+	padding: 									0 8px 5px;
 	height: 									18px;
 	border-radius: 								9px;
 	background-color: 							var(--white-lowest);
@@ -207,7 +207,7 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	border-top: 								1px solid var(--white-lowest);
 }
 
-#adminmenu .wp-submenu li a[href="index.php?page=clear-hvac"],
+#adminmenu .wp-submenu li a[href="index.php?page=launch-site"],
 #adminmenu .wp-submenu li a[href="post-new.php?post_type=elements"],
 #adminmenu .wp-submenu li a[href="options-permalink.php"] {
 	padding-bottom:								10px;

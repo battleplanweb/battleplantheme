@@ -14,7 +14,7 @@ function battleplan_add_ptags( $atts, $content = null ) {
 // Expire Content
 add_shortcode( 'expire', 'battleplan_expireContent' );
 function battleplan_expireContent( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'start'=>'', 'end'=>'' ), $atts );
+	$a = shortcode_atts( array( 'start'=>'1980-01-01', 'end'=>'3000-12-31' ), $atts );
 	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));
 	$now = time();	
@@ -494,29 +494,6 @@ function battleplan_buildLockedSection( $atts, $content = null ) {
 	$buildSection .= '><div class="closeBtn" aria-label="close" aria-hidden="false" tabindex="0"><i class="fa fa-times"></i></div>'.do_shortcode($content).'</section>';	
 	
 	return $buildSection;
-}
- 
-// Social Media Buttons 
-add_shortcode( 'social-btn', 'battleplan_socialBtn' );
-function battleplan_socialBtn( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'type'=>'', 'img'=>'', 'link'=>'' ), $atts );
-	$type = $icon = esc_attr($a['type']);
-	$link = esc_attr($a['link']);
-	if ( $link == '' ) $link = do_shortcode('[get-biz info="'.$type.'"]');
-	$prefix = "";
-	$img = esc_attr($a['img']);
-	$alt = "Visit us on ".$type;
-			
-	if ( $type == "email" ) : $prefix = "mailto:"; $icon = "fas fa-envelope"; $alt="Email us";	
-	elseif ( $type == "facebook" ) : $icon = "fab fa-facebook-f";	
-	elseif ( $type == "pinterest" ) : $icon = "fab fa-pinterest-p";	
-	elseif ( $type == "linkedin" ) : $icon = "fab fa-linkedin-in";
-	else: $icon = "fab fa-".$type; endif;
-	
-	if ( $img == '' ) : $iconLoc = '<i class="'.$icon.'" aria-hidden="true"></i><span class="sr-only">'.$type.'</span><span class="social-bg"></span>';
-	else: $iconLoc = '<img loading="lazy" src = "'.$img.'" alt="'.$alt.'"/>'; endif;
-
-	return '<a class="social-button '.$type.'-button" href="'.$prefix.$link.'" target="_blank" rel="noopener noreferrer">'.$iconLoc.'</a>';	
 }
  
 add_shortcode( 'seek', 'battleplan_formField' );

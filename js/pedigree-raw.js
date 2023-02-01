@@ -9,27 +9,43 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		// add "sex-box" to each dog profile on archive page
 		addDiv(".col-dogs.dogs-female .image-dogs a", "<div class='sex-box'><i class='fa fas fa-venus'></i></div>", "inside"); 
 		addDiv(".col-dogs.dogs-male .image-dogs a", "<div class='sex-box'><i class='fa fas fa-mars'></i></div>", "inside"); 
-			
+		addDiv(".col-dogs.dogs-legacy .image-dogs a", "<div class='sex-box'><i class='fa fas fa-medal'></i></div>", "inside"); 
+		
 		// setup filtering of dogs & litters archive pages with buttons		
-		$("button.females-btn, button.males-btn, button.all-btn, button.available-btn, button.expecting-btn").keyup(function(event) {
+		$("button.female-btn, button.male-btn, button.legacy-btn, button.all-btn, button.available-btn, button.expecting-btn").keyup(function(event) {
 			var thisBtn = $(this);
 			if (event.keyCode === 13 || event.keyCode === 32) { thisBtn.click(); }
-		});		 
+		});	
 		
-		$('button.females-btn').click( function() { filterArchives("dogs-female"); $('button').removeClass("active"); $('button.females-btn').addClass("active"); });
-		$('button.males-btn').click( function() { filterArchives("dogs-male"); $('button').removeClass("active"); $('button.males-btn').addClass("active"); });
-		$('button.all-btn').click( function() { filterArchives(); $('button').removeClass("active"); $('button.all-btn').addClass("active"); });
+		function chooseCategory(cat) {
+			if ( cat == 'all' ) { 
+				filterArchives();
+			} else {
+				filterArchives("dogs-"+cat);
+			}
+			$('button').removeClass("active");
+			$('.p-intro').removeClass("active");
+			$('button.'+cat+'-btn').addClass("active");			
+			$('.intro-'+cat).addClass("active");
+		}
+				
+		$('button.female-btn').click( function() { chooseCategory('female'); });
+		$('button.male-btn').click( function() { chooseCategory('male'); });
+		$('button.legacy-btn').click( function() { chooseCategory('legacy'); });
+		$('button.all-btn').click( function() { chooseCategory('all'); });
+		
+		if ( getUrlVar('page') == "males" ) { chooseCategory('male'); }
+		else if ( getUrlVar('page') == "legacy" ) { chooseCategory('legacy'); }
+		else if ( getUrlVar('page') == "females" ) { chooseCategory('female'); }
+		else { chooseCategory('all'); }		
 
 		$('button.available-btn').click( function() { filterArchives("litter-available"); $('button').removeClass("active"); $('button.available-btn').addClass("active"); });
-		$('button.expecting-btn').click( function() { filterArchives("litter-expecting"); $('button').removeClass("active"); $('button.expecting-btn').addClass("active"); });
-
-		if ( getUrlVar('page') == "males" ) { filterArchives("dogs-male"); $('button').removeClass("active"); $('button.males-btn').addClass("active"); }
-		else if ( getUrlVar('page') == "females" ) { filterArchives("dogs-female"); $('button').removeClass("active"); $('button.females-btn').addClass("active"); }
-		else { filterArchives(); $('button').removeClass("active"); $('button.all-btn').addClass("active"); }
-		
+		$('button.expecting-btn').click( function() { filterArchives("litter-expecting"); $('button').removeClass("active"); $('button.expecting-btn').addClass("active"); });		
 		if ( getUrlVar('page') == "available" ) { filterArchives("litter-available"); $('button').removeClass("active"); $('button.available-btn').addClass("active"); }
 		if ( getUrlVar('page') == "expecting" ) { filterArchives("litter-expecting"); $('button').removeClass("active"); $('button.expecting-btn').addClass("active"); }		
 		
+		
+		/*
 		// AJAX - insert Call Name before the "headline" (full name) of each dog pic			
 		var addName = function(callname, thisDiv) {	
 			var thisLoc = thisDiv.find(".block.text-dogs");		
@@ -44,7 +60,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				data : { action: "get_callname", filename : filename },
 				success: function( response ) { addName(response.callname, thisDiv); }
 			});		
-		});				
+		});	
+		*/
+		
+		
 	});
 	
 })(jQuery); });

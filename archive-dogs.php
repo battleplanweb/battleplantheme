@@ -12,8 +12,8 @@ get_header(); ?>
 	
 		<?php if ( have_posts() ) : 		
 			$archiveHeadline = "Our Dogs";		
-			$grid = "4e";		
-			$valign = "stretch";
+			$grid = "3e";		
+			$valign = "start";
 			$showThumb = "true";
 			$picSize = "100";
 			$textSize = "100";
@@ -27,9 +27,17 @@ get_header(); ?>
 			$addClass = "";
 			ob_start(); ?>
 				<div class="row-of-buttons">
-					<div class="block block-button"><button class="males-btn" tabindex="0"><i class='fa fas fa-mars'></i> Males</button></div>
-					<div class="block block-button"><button class="females-btn" tabindex="0"><i class='fa fas fa-venus'></i> Females</button></div>
 					<div class="block block-button"><button class="all-btn" tabindex="0"><i class='fa fas fa-venus-mars'></i> All</button></div>
+					<div class="block block-button"><button class="female-btn" tabindex="0"><i class='fa fas fa-venus'></i> Females</button></div>
+					<div class="block block-button"><button class="male-btn" tabindex="0"><i class='fa fas fa-mars'></i> Males</button></div>
+					<div class="block block-button"><button class="legacy-btn" tabindex="0"><i class='fa fas fa-medal'></i> Legacy Sires</button></div>
+				</div>
+				
+				<div class="dog-description"> 
+					<p class="p-intro intro-all">The following list includes our own dogs, sires we use and Legacy sires.</p>
+					<p class="p-intro intro-female">The following list includes our own dogs.</p>
+					<p class="p-intro intro-male">The following list includes our own dogs and sires we use.</p>
+					<p class="p-intro intro-legacy">The following list includes Legacy sires; we have semen from these dogs in our own collection.<br><a href="/legacy-info/">Looking to purchase a breeding?</a><br><a href="/legacy-info/">Want to list your breeding on our site?</a></p>
 				</div>
 			<?php 
 			$archiveIntro = ob_get_clean();
@@ -51,7 +59,7 @@ get_header(); ?>
 				$classes = 'col-archive col-'.get_post_type().' col-'.get_the_ID().$addTags.$addClass;
 				$classes .= " dogs-".strtolower(esc_attr(get_field( "sex" )));
 		
-				$buildArchive .= do_shortcode('[col class="'.$classes.'"][build-archive type="'.get_post_type().'" show_thumb="'.$showThumb.'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" accordion="'.$accordion.'" no_pic="'.$noPic.'"][/col]');
+				$buildArchive .= do_shortcode('[col class="'.$classes.'"][build-archive type="'.get_post_type().'" show_thumb="'.$showThumb.'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" accordion="'.$accordion.'" add_info="" no_pic="'.$noPic.'"][/col]');
 		
 			endwhile; 
 

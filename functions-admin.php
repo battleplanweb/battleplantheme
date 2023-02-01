@@ -2134,11 +2134,13 @@ function battleplan_clear_all() {
 function battleplan_clear_hvac($all=false) {
 	$deleteImgs = array ('testimonials', 'photos', 'graphics', 'logos');
 	$keepPages = array ('home', 'contact-us', 'product-overview');
+	$keepElements = array ('site-header', 'widgets');
 
 	$optimized = get_posts( array('post_type'=>'optimized', 'numberposts'=>-1) );
 	$testimonials = get_posts( array('post_type'=>'testimonials', 'numberposts'=>-1) );
 	$galleries = get_posts( array('post_type'=>'galleries', 'numberposts'=>-1) );
 	$posts = get_posts( array('post_type'=>'post', 'numberposts'=>-1) );
+	$elements = get_posts( array('post_type'=>'elements', 'numberposts'=>-1) );
 	$pages = get_posts( array('post_type'=>'page', 'numberposts'=>-1) );
 	
 	if ( $all == true ) :
@@ -2152,6 +2154,7 @@ function battleplan_clear_hvac($all=false) {
 	foreach ($testimonials as $post) wp_delete_post( $post->ID, true );
 	foreach ($galleries as $post) wp_delete_post( $post->ID, true );
 	foreach ($posts as $post) wp_delete_post( $post->ID, true );
+	foreach ($elements as $post) if ( !in_array( $post->post_name, $keepElements) ) wp_delete_post( $post->ID, true );
 	foreach ($pages as $post) if ( !in_array( $post->post_name, $keepPages) ) wp_delete_post( $post->ID, true );
 
 	$args = array( 'post_status' => 'inherit', 'posts_per_page' => -1, 'post_type' => 'attachment', 'post_mime_type' => 'image', );

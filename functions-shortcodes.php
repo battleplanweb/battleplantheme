@@ -446,7 +446,7 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 		wp_reset_postdata(); 
 	endif;
 	
-	if ( $shuffle == "yes" || $shuffle == "true" || $shuffle == "random" ) : 
+	if ( $shuffle == "yes" || $shuffle == "true" || $shuffle == "random" || !is_array($ratioArray) ) : 
 		shuffle($imageArray); 
 	elseif ( $shuffle == "peak" || $shuffle == "valley" ) :	
 		if ( $shuffle == "peak" ) :	
@@ -539,7 +539,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	elseif ( $showTitle != "false" ) : 
 		$picADA = " ada-hidden='true'"; 
 	endif;
-	$archiveMeta = $buildBtn = '';
+	$archiveMeta = $archiveBtn = '';
 		
 	if ( $showThumb != "true" && $showThumb != "false" ) : 	
 		$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>'1', 'post_parent'=>$postID, 'order_by'=>'rand', 'tax_query'=> array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$showThumb)));
@@ -553,7 +553,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 			$image = wp_get_attachment_image_src($picID, $size);
 			$imgSet = wp_get_attachment_image_srcset($picID, $size );
 
-			$buildImg = do_shortcode('[img size="'.$picSize.'" class="image-'.$type.'" link="'.$linkLoc.'" '.$picADA.']<img class="image-'.$type.' img-archive '.$tags[0].'-img" src = "'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta(get_the_ID($picID), "_wp_attachment_image_alt", true).'">[/img]'); 
+			$archiveImg = do_shortcode('[img size="'.$picSize.'" class="image-'.$type.'" link="'.$linkLoc.'" '.$picADA.']<img class="image-'.$type.' img-archive '.$tags[0].'-img" src = "'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta(get_the_ID($picID), "_wp_attachment_image_alt", true).'">[/img]'); 
 		endwhile; wp_reset_postdata(); endif;	
 		
 		if ( $textSize == "" ) : 
@@ -565,18 +565,20 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		$thumbW = $meta['sizes'][$size]['width'];
 		$thumbH = $meta['sizes'][$size]['height'];
 	
-		$buildImg = do_shortcode('[img size="'.$picSize.'" class="image-'.$type.'" link="'.$linkLoc.'" '.$picADA.']'.get_the_post_thumbnail( $postID, $size, array( 'class'=>'img-archive img-'.$type, 'style'=>'aspect-ratio:'.$thumbW.'/'.$thumbH )).'[/img]'); 
+		$archiveImg = do_shortcode('[img size="'.$picSize.'" class="image-'.$type.'" link="'.$linkLoc.'" '.$picADA.']'.get_the_post_thumbnail( $postID, $size, array( 'class'=>'img-archive img-'.$type, 'style'=>'aspect-ratio:'.$thumbW.'/'.$thumbH )).'[/img]'); 
 		if ( $textSize == "" ) : 
 			$textSize = getTextSize($picSize); 
 		endif;	
 	elseif ( $noPic != "false") : 	
-		$buildImg = do_shortcode("[img size='".$picSize."' class='image-".$type." block-placeholder placeholder-".$type."' link='".$linkLoc."' ".$picADA."]".wp_get_attachment_image( $noPic, $size, array( 'class'=>'img-archive img-'.$type ))."[/img]"); 
+		$archiveImg = do_shortcode("[img size='".$picSize."' class='image-".$type." block-placeholder placeholder-".$type."' link='".$linkLoc."' ".$picADA."]".wp_get_attachment_image( $noPic, $size, array( 'class'=>'img-archive img-'.$type ))."[/img]"); 
 		if ( $textSize == "" ) : 
 			$textSize = getTextSize($picSize); 
 		endif;		
 	else : 
-		$buildImg = ""; $textSize = "100";
+		$archiveImg = ""; $textSize = "100";
 	endif;
+	
+	$archiveImg = apply_filters( 'bp_archive_filter_img', $archiveImg );
 	
 	if ( $type == "testimonials" ) {
 		$testimonialPhone = esc_attr(get_field( "testimonial_phone" ));
@@ -620,29 +622,32 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		if ( esc_attr($a['accordion']) == "true" ) :		
 			$archiveBody = '[accordion title="'.esc_html(get_the_title($postID)).'" excerpt="'.wp_kses_post(get_the_excerpt($postID)).'"]'.$content.'[/accordion]';		
 		else :		
-			$archiveMeta = $archiveBody = "";
+			$archiveTitle = $archiveMeta = $archiveBody = "";
 			if ( $showTitle != "false" ) :
-				$archiveMeta .= "<h3 data-count-view=".esc_attr($a['count_view']).">";
-				if ( $showContent != "true" && $link != "false" ) $archiveMeta .= '<a href="'.$linkLoc.'" class="link-archive link-'.get_post_type($postID).'"'.$titleADA.'>';	
+				$archiveTitle .= '<h3 data-count-view="'.esc_attr($a['count_view']).'">';
 				if ( $showTitle == "true" ) :
-					$archiveMeta .= esc_html(get_the_title($postID)); 
-				else:
-					$archiveMeta .= $showTitle; 
+					$archiveTitle .= esc_html(get_the_title($postID)); 
+				else: 
+					$archiveTitle .= $showTitle; 
 				endif;
-				if ( $showContent != "true" && $link != "false" ) $archiveMeta .= '</a>';	
-				$archiveMeta .= "</h3>";
+				$archiveTitle .= "</h3>";	
+				$archiveTitle = apply_filters( 'bp_archive_filter_title', $archiveTitle );
+				if ( $showContent != "true" && $link != "false" ) $archiveTitle = '<a href="'.$linkLoc.'" class="link-archive link-'.get_post_type($postID).'"'.$titleADA.'>'.$archiveTitle.'</a>';	
 			endif;		
 			if ( $showDate == "true" || $showAuthor == "true" || $showSocial == "true" ) $archiveMeta .= '<div class="archive-meta">';			
-				if ( function_exists( 'overrideArchiveMeta' ) ) : $archiveMeta .= overrideArchiveMeta( $type );
-				else :			
-					if ( $showDate == "true" ) $archiveMeta .= '<span class="archive-date '.$type.'-date date"><i class="fas fa-calendar-alt"></i>'.get_the_date().'</span>';
-					if ( $showAuthor == "profile") $archiveMeta .= '<a href="/profile/?user='.get_the_author().'">';			
-					if ( $showAuthor != "false") $archiveMeta .= '<span class="archive-author '.$type.'-author author"><i class="fas fa-user"></i>'.get_the_author().'</span>';
-					if ( $showAuthor == "profile") $archiveMeta .= '</a>';
-					if ( $showSocial == "true") $archiveMeta .= '<span class="archive-social '.$type.'-social social">'.do_shortcode('[add-share-buttons facebook="true" twitter="true"]').'</span>';
-				endif;
+			if ( function_exists( 'overrideArchiveMeta' ) ) : $archiveMeta .= overrideArchiveMeta( $type );
+			else :			
+				if ( $showDate == "true" ) $archiveMeta .= '<span class="archive-date '.$type.'-date date"><i class="fas fa-calendar-alt"></i>'.get_the_date().'</span>';
+				if ( $showAuthor == "profile") $archiveMeta .= '<a href="/profile/?user='.get_the_author().'">';			
+				if ( $showAuthor != "false") $archiveMeta .= '<span class="archive-author '.$type.'-author author"><i class="fas fa-user"></i>'.get_the_author().'</span>';
+				if ( $showAuthor == "profile") $archiveMeta .= '</a>';
+				if ( $showSocial == "true") $archiveMeta .= '<span class="archive-social '.$type.'-social social">'.do_shortcode('[add-share-buttons facebook="true" twitter="true"]').'</span>';
+			endif;
 			if ( $showDate == "true" || $showAuthor == "true" || $showSocial == "true" ) $archiveMeta .= '</div>';
+			$archiveMeta = apply_filters( 'bp_archive_filter_meta', $archiveMeta );
+			
 			$archiveBody .= '[p]'.$content.'[/p]';
+
 			if ( $type == "galleries" ) :
 				if ( has_term( 'auto-generated', 'gallery-type' ) ) :
 					$count = esc_attr(get_field("image_number")); 						
@@ -661,30 +666,33 @@ function battleplan_getBuildArchive($atts, $content = null) {
 					$archiveBody .= '</div>';
 				endif;
 			endif;
+			
+			$archiveBody = apply_filters( 'bp_archive_filter_body', $archiveBody );	
 		endif;
 	}
 	
 	if ( $showBtn == "true" ) : 
 		$ada = $type == "testimonials" ? " testimonials" : ' about '.esc_html(get_the_title($postID)); 	
-		$buildBtn = do_shortcode('[btn class="button-'.$type.'" link="'.$linkLoc.'" ada="'.$ada.'"]'.esc_attr($a['btn_text']).'[/btn]'); 	
-	endif;
+		$archiveBtn = do_shortcode('[btn class="button-'.$type.'" link="'.$linkLoc.'" ada="'.$ada.'"]'.esc_attr($a['btn_text']).'[/btn]'); 
+		$archiveBtn = apply_filters( 'bp_archive_filter_btn', $archiveBtn );
+	endif;	
 			
 	if ( esc_attr($a['thumb_only']) == "true" ) :
-		$showArchive = $buildImg;
+		$showArchive = $archiveImg;
 	else:
 		$buildBody = "";
 		if ( $titlePos == "inside" || $btnPos == "inside" || $type == "testimonials" ) : $groupSize = $textSize; $textSize = "100"; $buildBody .= "[group size='".$groupSize."' class='group-".$type."']"; endif;	
 		if ( $type != "testimonials" ) $buildBody .= "[txt size='".$textSize."' class='text-".$type."']";
-		if ( $titlePos == "inside" ) $buildBody .= $archiveMeta;	
+		if ( $titlePos == "inside" ) $buildBody .= $archiveTitle.$archiveMeta;	
 		$buildBody .= do_shortcode($archiveBody);
 		if ( $type != "testimonials" ) $buildBody .= "[/txt]";	
-		if ( $btnPos == "inside" ) $buildBody .= $buildBtn;	
+		if ( $btnPos == "inside" ) $buildBody .= $archiveBtn;	
 		if ( $titlePos == "inside" || $btnPos == "inside" || $type == "testimonials" ) $buildBody .= "[/group]";
 
 		$showArchive = "";
-		if ( $titlePos != "inside" ) $showArchive .= $archiveMeta;	
-		$showArchive .= $buildImg.do_shortcode($buildBody);
-		if ( $btnPos != "inside" ) $showArchive .= $buildBtn;
+		if ( $titlePos != "inside" ) $showArchive .= $archiveTitle.$archiveMeta;	
+		$showArchive .= $archiveImg.do_shortcode($buildBody);
+		if ( $btnPos != "inside" ) $showArchive .= $archiveBtn;
 		
 		battleplan_countTease( $postID );	
 
@@ -696,7 +704,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 // Display randomly selected posts - start/end can be dates or -53 week / -51 week */
 add_shortcode( 'get-random-posts', 'battleplan_getRandomPosts' );
 function battleplan_getRandomPosts($atts, $content = null) {	
-	$a = shortcode_atts( array( 'num'=>'1', 'offset'=>'0', 'leeway'=>'0', 'type'=>'post', 'tax'=>'', 'terms'=>'', 'field_key'=>'', 'field_value'=>'', 'field_compare'=>'IN', 'orderby'=>'recent', 'sort'=>'asc', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_social'=>'false', 'show_btn'=>'true', 'button'=>'Read More', 'btn_pos'=>'inside', 'show_content'=>'false', 'thumb_only'=>'false', 'show_thumb'=>'true', 'thumb_col'=>'1', 'thumbnail'=>'force', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'link'=>'post', 'truncate'=>'true' ), $atts );
+	$a = shortcode_atts( array( 'num'=>'1', 'offset'=>'0', 'leeway'=>'0', 'type'=>'post', 'tax'=>'', 'terms'=>'', 'field_key'=>'', 'field_value'=>'', 'field_compare'=>'IN', 'orderby'=>'recent', 'sort'=>'asc', 'show_title'=>'true', 'title_pos'=>'outside', 'count_view'=>'false', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_social'=>'false', 'show_btn'=>'true', 'button'=>'Read More', 'btn_pos'=>'inside', 'show_content'=>'false', 'thumb_only'=>'false', 'show_thumb'=>'true', 'thumb_col'=>'1', 'thumbnail'=>'force', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'link'=>'post', 'truncate'=>'true' ), $atts );
 	$num = esc_attr($a['num']);	
 	$offset = esc_attr($a['offset']) == '0' ? rand(0, esc_attr($a['leeway'])) :	esc_attr($a['offset']);
 	$postType = esc_attr($a['type']);	
@@ -749,7 +757,7 @@ function battleplan_getRandomPosts($atts, $content = null) {
 		while ( $getPosts->have_posts() ) : 
 			$getPosts->the_post(); 	
 			
-			$showPost = do_shortcode('[build-archive type="'.$postType.'" count_view="'.$countView.'" show_thumb="'.esc_attr($a['show_thumb']).'" thumb_only="'.$thumbOnly.'" show_btn="'.$showBtn.'" btn_text="'.esc_attr($a['button']).'" btn_pos="'.esc_attr($a['btn_pos']).'" show_title="'.$title.'" title_pos="'.$titlePos.'" show_date="'.$showDate.'" show_excerpt="'.$showExcerpt.'" show_social="'.$showSocial.'" show_content="'.$showContent.'" show_author="'.$showAuthor.'" size="'.esc_attr($a['size']).'" pic_size="'.$picSize.'" text_size="'.esc_attr($a['text_size']).'" link="'.esc_attr($a['link']).'" truncate="'.esc_attr($a['truncate']).'"]');
+			$showPost = do_shortcode('[build-archive type="'.$postType.'" count_view="'.esc_attr($a['count_view']).'" show_thumb="'.esc_attr($a['show_thumb']).'" thumb_only="'.$thumbOnly.'" show_btn="'.$showBtn.'" btn_text="'.esc_attr($a['button']).'" btn_pos="'.esc_attr($a['btn_pos']).'" show_title="'.$title.'" title_pos="'.$titlePos.'" show_date="'.$showDate.'" show_excerpt="'.$showExcerpt.'" show_social="'.$showSocial.'" show_content="'.$showContent.'" show_author="'.$showAuthor.'" size="'.esc_attr($a['size']).'" pic_size="'.$picSize.'" text_size="'.esc_attr($a['text_size']).'" link="'.esc_attr($a['link']).'" truncate="'.esc_attr($a['truncate']).'"]');
 
 			if ( $num > 1 ) $showPost = do_shortcode('[col]'.$showPost.'[/col]');	
 			if ( has_post_thumbnail() || esc_attr($a['thumbnail']) != "force" ) $combinePosts .= $showPost;

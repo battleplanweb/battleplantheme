@@ -21,6 +21,10 @@
 	margin:										-17px 0 5px;
 }
 
+.widget-content .text-dogs h2 {
+	margin-top: 								0;
+}
+
 .col-litters .text-dogs h2 {
 	margin-top:									17px;
 }
@@ -71,6 +75,10 @@ span.X {
     content: 									"\f221";
 }
 
+.fa-medal:before {
+    content: 									"\f5a2";
+}
+
 .col-archive .image-dogs .sex-box {
 	position:									absolute;
 	z-index:									500;
@@ -79,6 +87,19 @@ span.X {
 .col-archive .image-dogs .sex-box .fa {
 	font-size:									24px;
 	transform:									translateY(-1px);
+}
+
+div.dog-description {
+	margin: 									30px 0 -50px;
+}
+
+p.p-intro {
+	display: 									none;
+	text-align: 								center;
+}
+
+p.p-intro.active {
+	display: 									block;
 }
 
 .dog-info h3,
@@ -168,6 +189,30 @@ table.bracket-table td.bracket-top, table.bracket-table td.bracket-bottom {
 
 table.bracket-table td.bracket-top:nth-of-type(3) {
 	padding-top:								40px;
+}
+
+/* Buttons
+--------------------------------------------- */
+button.active {
+	color: 										var(--button-color-hover);
+	background: 								var(--button-background-hover);
+	border:										var(--button-border-hover);
+	border-top: 								var(--button-border-top-hover);
+	border-right: 								var(--button-border-right-hover);
+	border-bottom:								var(--button-border-bottom-hover);
+	border-left: 								var(--button-border-left-hover);
+	border-radius:								var(--button-border-radius-hover);
+	box-shadow:									var(--button-box-shadow-hover);
+	text-decoration:							none;
+	padding: 									var(--button-padding-hover);	
+	text-shadow: 								var(--button-text-shadow-hover);
+  	outline: 									var(--button-outline-hover);
+  	filter: 									var(--button-filter-hover);
+  	text-transform: 							var(--button-text-transform-hover);	
+	font-variant: 								var(--button-font-variant-hover);
+	letter-spacing: 							var(--button-letter-spacing-hover);
+	transform: 									var(--button-transform-hover);
+	transition:									all var(--main-trans-speed) var(--main-trans-easing);
 }
 
 /*--------------------------------------------------------------

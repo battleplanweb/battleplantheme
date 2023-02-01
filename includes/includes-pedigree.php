@@ -104,6 +104,7 @@ function battleplan_add_acf_pedigree_fields() {
 				'choices' => array(
 					'Male' => 'Male',
 					'Female' => 'Female',
+					'Legacy' => 'Legacy',
 				),
 				'allow_null' => 0,
 				'other_choice' => 0,
@@ -983,22 +984,10 @@ function battleplan_pedigree_scripts() {
 	wp_enqueue_script( 'battleplan-script-pedigree', get_template_directory_uri().'/js/pedigree.js', array(), _BP_VERSION, true );
 }
 
-/*--------------------------------------------------------------
-# AJAX Functions
---------------------------------------------------------------*/
-// Find Call Name of a dog from the filename of its post
-add_action( 'wp_ajax_get_callname', 'get_callname_ajax' );
-add_action( 'wp_ajax_nopriv_get_callname', 'get_callname_ajax' );
-function get_callname_ajax() {	
-	$filename = $_POST['filename'];	
-	$id = url_to_postid( $filename );
-	$linkLoc = get_permalink($id);
-	$callname = get_field( "call_name", $id );
-	
-	if ( $callname ) : $addCallName = '<h2><a href="'.$linkLoc.'" class="link-archive link-dogs" aria-hidden="true" tabindex="-1">“ '.$callname.' ”</a></h2>'; else: $addCallName = "<h2>&nbsp;</h2>"; endif;
-	
-    $response = array( 'result' => 'successful', 'callname' => $addCallName);
-  	wp_send_json( $response );
+// Add call name to archives and random widgets
+add_filter( 'bp_archive_filter_title', 'battleplan_add_callname' );
+function battleplan_add_callname($archiveTitle) {
+	return '<h2>“'.esc_attr(get_field( "call_name" )).'”</h2>'.$archiveTitle;
 }
 
 /*--------------------------------------------------------------
@@ -1030,4 +1019,9 @@ function battleplan_buildBracket( $atts, $content = null ) {
 
 	return $buildBracket;	
 }	
+
+//Establish default thumbnail size
+update_option( 'thumbnail_size_w', 280 );
+update_option( 'thumbnail_size_h', 255 );
+update_option( 'thumbnail_crop', 1 );
 ?>

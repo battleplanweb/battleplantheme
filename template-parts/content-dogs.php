@@ -6,7 +6,7 @@ $callname = esc_attr(get_field( "call_name" ));
 $birth_date = esc_attr(get_field( "birth_date" ));
 $birthdate = date_create($birth_date);
 $birthdate = date_format($birthdate,"M j, Y");
-$sex = esc_attr(get_field( "sex" ));
+$sex = esc_attr(get_field( "sex" )) == "Legacy" ? "Male" : esc_attr(get_field( "sex" ));
 $color = esc_attr(get_field( "color" ));
 $geno = esc_attr(get_field( "geno" )) == "Both" ? "Yellow & Chocolate" : esc_attr(get_field( "geno" ));
 $studFee = esc_attr(get_field( "stud_fee" ));

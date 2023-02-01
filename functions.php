@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '17.3' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '17.4' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -89,7 +89,7 @@ function is_biz_open() {
 	$open = $googleInfo[$primePID]['current-hours']['periods'][$day]['open']['time'];
 	$close = $googleInfo[$primePID]['current-hours']['periods'][$day]['close']['time'];
 	$open24 = $googleInfo[$primePID]['current-hours']['periods'][0]['open']['time'] == 0000 ? true : false;	
-	//return true;
+	if ( $open24 != false && ( !$open || !$close ) ) return false;
 		
 	return $open24 == true || ($time > $open && $time < $close) ? true : false;
 }

@@ -131,7 +131,7 @@ function processChron($forceChron) {
 		$wpSEOSettings['social-title-author-wpseo'] = '%%name%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';
 		$wpSEOSettings['social-title-archive-wpseo'] = '%%date%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';
 		$wpSEOSettings['noindex-author-wpseo'] = '1';
-		$wpSEOSettings['noindex-author-noposts-wpseo'] = '1';
+		$wpSEOSettings['noindex-author-noposts-wpseo'] = '1';		
 		$wpSEOSettings['noindex-archive-wpseo'] = '1';
 		$wpSEOSettings['disable-author'] = '1';
 		$wpSEOSettings['disable-date'] = '1';
@@ -154,10 +154,14 @@ function processChron($forceChron) {
 		$wpSEOSettings['stripcategorybase'] = '1';
 		$wpSEOSettings['breadcrumbs-enable'] = '1';				
 		$wpSEOSettings['noindex-ptarchive-optimized'] = '1';			
-		$wpSEOSettings['noindex-testimonials'] = '1';
+		$wpSEOSettings['noindex-testimonials'] = '1';					
+		$wpSEOSettings['noindex-ptarchive-testimonials'] = '1';	
 		$wpSEOSettings['display-metabox-pt-testimonials'] = '0';
 		$wpSEOSettings['noindex-elements'] = '1';
 		$wpSEOSettings['display-metabox-pt-elements'] = '0';	
+		$wpSEOSettings['noindex-products'] = '1';						
+		$wpSEOSettings['noindex-ptarchive-products'] = '1';	
+		$wpSEOSettings['display-metabox-pt-products'] = '0';	
 		$wpSEOSettings['noindex-universal'] = '1';
 		$wpSEOSettings['display-metabox-pt-universal'] = '0';				
 		$wpSEOSettings['noindex-tax-gallery-type'] = '1';	

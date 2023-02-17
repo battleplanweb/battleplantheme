@@ -624,15 +624,18 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		else :		
 			$archiveTitle = $archiveMeta = $archiveBody = "";
 			if ( $showTitle != "false" ) :
+				$archiveLink = '<a href="'.$linkLoc.'" class="link-archive link-'.get_post_type($postID).'"'.$titleADA.'>';
 				$archiveTitle .= '<h3 data-count-view="'.esc_attr($a['count_view']).'">';
+				if ( $showContent != "true" && $link != "false" ) $archiveTitle .= $archiveLink;	
 				if ( $showTitle == "true" ) :
 					$archiveTitle .= esc_html(get_the_title($postID)); 
-				else: 
+				else:
 					$archiveTitle .= $showTitle; 
 				endif;
-				$archiveTitle .= "</h3>";	
-				$archiveTitle = apply_filters( 'bp_archive_filter_title', $archiveTitle );
-				if ( $showContent != "true" && $link != "false" ) $archiveTitle = '<a href="'.$linkLoc.'" class="link-archive link-'.get_post_type($postID).'"'.$titleADA.'>'.$archiveTitle.'</a>';	
+				if ( $showContent != "true" && $link != "false" ) $archiveTitle .= '</a>';	
+				$archiveTitle .= "</h3>";
+
+				$archiveTitle = apply_filters( 'bp_archive_filter_title', $archiveTitle, $archiveLink );
 			endif;		
 			if ( $showDate == "true" || $showAuthor == "true" || $showSocial == "true" ) $archiveMeta .= '<div class="archive-meta">';			
 			if ( function_exists( 'overrideArchiveMeta' ) ) : $archiveMeta .= overrideArchiveMeta( $type );

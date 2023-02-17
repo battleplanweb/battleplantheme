@@ -107,7 +107,40 @@ function processChron($forceChron) {
 	endif; 
 
 // Yoast SEO Settings Update
-	if ( is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') ) :		
+	if ( is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') ) :	
+		$wpSEOBase = get_option( 'wpseo' );		
+		$wpSEOBase['enable_admin_bar_menu'] = 0;
+		$wpSEOBase['enable_cornerstone_content'] = 0;
+		$wpSEOBase['enable_xml_sitemap'] = 1;		
+		$wpSEOBase['remove_feed_global'] = 1;
+		$wpSEOBase['remove_feed_global_comments'] = 1;
+		$wpSEOBase['remove_feed_post_comments'] = 1;
+		$wpSEOBase['remove_feed_authors'] = 1;
+		$wpSEOBase['remove_feed_categories'] = 1;
+		$wpSEOBase['remove_feed_tags'] = 1;
+		$wpSEOBase['remove_feed_custom_taxonomies'] = 1;
+		$wpSEOBase['remove_feed_post_types'] = 1;
+		$wpSEOBase['remove_feed_search'] = 1;
+		$wpSEOBase['remove_atom_rdf_feeds'] = 1;
+		$wpSEOBase['remove_shortlinks'] = 1;
+		$wpSEOBase['remove_rest_api_links'] = 1;
+		$wpSEOBase['remove_rsd_wlw_links'] = 1;
+		$wpSEOBase['remove_oembed_links'] = 1;
+		$wpSEOBase['remove_generator'] = 1;
+		$wpSEOBase['remove_emoji_scripts'] = 1;
+		$wpSEOBase['remove_powered_by_header'] = 1;
+		$wpSEOBase['remove_pingback_header'] = 1;
+		$wpSEOBase['clean_campaign_tracking_urls'] = 1;
+		$wpSEOBase['clean_permalinks'] = 1;
+		$wpSEOBase['clean_permalinks_extra_variables'] = 1;
+		$wpSEOBase['search_cleanup'] = 1;
+		$wpSEOBase['search_cleanup_emoji'] = 1;
+		$wpSEOBase['search_cleanup_patterns'] = 1;
+		$wpSEOBase['deny_search_crawling'] = 1;
+		$wpSEOBase['deny_wp_json_crawling'] = 1;
+		$wpSEOBase['redirect_search_pretty_urls'] = 1;
+		update_option( 'wpseo', $wpSEOBase );	
+	
 		$wpSEOSettings = get_option( 'wpseo_titles' );		
 		$wpSEOSettings['separator'] = 'sc-bull';
 		$wpSEOSettings['title-home-wpseo'] = '%%page%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';
@@ -215,7 +248,7 @@ function processChron($forceChron) {
 		if ( $GLOBALS['customer_info']['site-type'] == "hvac" ) $wpSEOLocal['business_type'] = 'HVACBusiness';		
 
 		if ( isset($GLOBALS['customer_info']['street']) ) $wpSEOLocal['location_address'] = $GLOBALS['customer_info']['street'];
-		if ( isset($GLOBALS['customer_info']['site-city']) ) $wpSEOLocal['location_city'] = $GLOBALS['customer_info']['site-city'];
+		if ( isset($GLOBALS['customer_info']['city']) ) $wpSEOLocal['location_city'] = $GLOBALS['customer_info']['city'];
 		if ( isset($GLOBALS['customer_info']['state-full']) ) $wpSEOLocal['location_state'] = $GLOBALS['customer_info']['state-full'];
 		if ( isset($GLOBALS['customer_info']['zip']) ) $wpSEOLocal['location_zipcode'] = $GLOBALS['customer_info']['zip'];
 		$wpSEOLocal['location_country'] = 'US';
@@ -226,8 +259,21 @@ function processChron($forceChron) {
 		$wpSEOLocal['location_payment_accepted'] = "Cash, Credit Cards, Paypal";
 		if ( isset($GLOBALS['customer_info']['service-area']) ) $wpSEOLocal['location_area_served'] = $GLOBALS['customer_info']['service-area'];
 		if ( isset($GLOBALS['customer_info']['lat']) ) $wpSEOLocal['location_coords_lat'] = $GLOBALS['customer_info']['lat'];
-		if ( isset($GLOBALS['customer_info']['long']) ) $wpSEOLocal['location_coords_long'] = $GLOBALS['customer_info']['long'];
-		$wpSEOLocal['hide_opening_hours'] = 'on';
+		if ( isset($GLOBALS['customer_info']['long']) ) $wpSEOLocal['location_coords_long'] = $GLOBALS['customer_info']['long'];		
+		if ( isset($GLOBALS['customer_info']['hours']) && $GLOBALS['customer_info']['hours'] != "na" ) :
+			$wpSEOLocal['hide_opening_hours'] = 'off';				
+			$days = array('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday');
+			$num = 0;
+			foreach( $days as $day) :			
+				$wpSEOLocal['opening_hours_'.$day.'_from'] = $GLOBALS['customer_info']['hours']['periods'][$num]['open']['time'] != "" ? rtrim(chunk_split(substr($GLOBALS['customer_info']['hours']['periods'][$num]['open']['time'],-4),2,':'),':') : "Closed";				
+				$wpSEOLocal['opening_hours_'.$day.'_to'] = $GLOBALS['customer_info']['hours']['periods'][$num]['close']['time'] != "" ? rtrim(chunk_split(substr($GLOBALS['customer_info']['hours']['periods'][$num]['close']['time'],-4),2,':'),':') : "Closed";			
+				$wpSEOLocal['opening_hours_'.$day.'_second_from'] = $wpSEOLocal['opening_hours_'.$day.'_second_to'] = "";				
+				$num++;			
+			endforeach;
+		else:
+			$wpSEOLocal['hide_opening_hours'] = 'on';		
+		endif;				
+		$wpSEOLocal['location_timezone'] = get_option('timezone_string');		
 		$wpSEOLocal['address_format'] = 'address-state-postal';
 		update_option( 'wpseo_local', $wpSEOLocal );
 	endif;
@@ -329,7 +375,7 @@ function processChron($forceChron) {
 					
 					$googleInfo[$placeID]['area'] = preg_replace('/(.*)\((.*)\)(.*)/s', '\2', $res['result']['formatted_phone_number']);	
 					$googleInfo[$placeID]['phone'] = substr($res['result']['formatted_phone_number'], strpos($res['result']['formatted_phone_number'], ") ") + 2);					
-					if ( str_contains($customer_info['area-after'], '.') ) $googleInfo[$placeID]['phone'] = str_replace($googleInfo[$placeID]['phone'], '-', '.');			
+					if ( str_contains($customer_info['area-after'], '.') ) $googleInfo[$placeID]['phone'] = str_replace('-', '.', $googleInfo[$placeID]['phone']);			
 					$googleInfo[$placeID]['phone-format'] = $customer_info['area-before'].$googleInfo[$placeID]['area'].$customer_info['area-after'].$googleInfo[$placeID]['phone'];	
 
 					$name = strtolower($res['result']['name']);					
@@ -354,7 +400,9 @@ function processChron($forceChron) {
 					endforeach;		
 					
 					//$googleInfo[$placeID]['street'] = $streetNumber.' '.$street.' '.$subpremise;					
-					$googleInfo[$placeID]['street'] = strtok( $googleInfo[$placeID]['adr_address'], ',' );
+					$googleInfo[$placeID]['street'] = strtok( $googleInfo[$placeID]['adr_address'], ',' );					
+					$googleInfo[$placeID]['street'] = str_replace('<span class="street-address">', '', $googleInfo[$placeID]['street']);
+					$googleInfo[$placeID]['street'] = str_replace('</span>', '', $googleInfo[$placeID]['street']);					
 					if ( strlen($googleInfo[$placeID]['street']) < 5 ) $googleInfo[$placeID]['street'] = $customer_info['street'];			
 					$googleInfo[$placeID]['city'] = $city;
 					$googleInfo[$placeID]['state-abbr'] = $state_abbr;
@@ -398,6 +446,7 @@ function processChron($forceChron) {
 			$customer_info['zip'] = $googleInfo[$primePID]['zip'] != null ? $googleInfo[$primePID]['zip'] : $customer_info['zip'];		
 			$customer_info['lat'] = $googleInfo[$primePID]['lat'] != null ? $googleInfo[$primePID]['lat'] : $customer_info['lat'];		
 			$customer_info['long'] = $googleInfo[$primePID]['long'] != null ? $googleInfo[$primePID]['long'] : $customer_info['long'];		
+			$customer_info['hours'] = $googleInfo[$primePID]['hours'] != null ? $googleInfo[$primePID]['hours'] : "na";		
 			$customer_info['hours-sun'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][6], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][6], ": ") + 2);
 			$customer_info['hours-mon'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][0], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][0], ": ") + 2);
 			$customer_info['hours-tue'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][1], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][1], ": ") + 2);

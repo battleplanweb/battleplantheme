@@ -985,9 +985,9 @@ function battleplan_pedigree_scripts() {
 }
 
 // Add call name to archives and random widgets
-add_filter( 'bp_archive_filter_title', 'battleplan_add_callname' );
-function battleplan_add_callname($archiveTitle) {
-	return '<h2>“'.esc_attr(get_field( "call_name" )).'”</h2>'.$archiveTitle;
+add_filter( 'bp_archive_filter_title', 'battleplan_add_callname', 10, 2 );
+function battleplan_add_callname($archiveTitle, $archiveLink) {
+	return '<h2>'.$archiveLink.'“'.esc_attr(get_field( "call_name" )).'”</a></h2>'.$archiveTitle;
 }
 
 /*--------------------------------------------------------------

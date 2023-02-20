@@ -1,9 +1,197 @@
 @charset "utf-8";
 /* CSS Document */
 
+/*--------------------------------------------------------------
+# CSS Variables
+--------------------------------------------- */
+
+:root {
+  --font-primary: 								Arial; 
+  
+  --white: 										rgba(255, 255, 255, 1);
+  --lightest-grey: 								rgba(225, 225, 225, 1);
+  --light-grey: 								rgba(200, 200, 200, 1);
+  --medium-grey: 								rgba(130, 130, 130, 1);
+  --dark-grey: 									rgba(60, 60, 60, 1);
+  --darkest-grey: 								rgba(30, 30, 30, 1);
+  --black: 										rgba(0, 0, 0, 1);
+
+  --white-lowest: 								rgba(255, 255, 255, 0.1);
+  --white-low: 									rgba(255, 255, 255, 0.25);
+  --white-med: 									rgba(255, 255, 255, 0.5);
+  --white-high: 								rgba(255, 255, 255, 0.75);  
+  --white-highest: 								rgba(255, 255, 255, 0.9);
+  
+  --black-lowest: 								rgba(0, 0, 0, 0.1);  
+  --black-low: 									rgba(0, 0, 0, 0.25);
+  --black-med: 									rgba(0, 0, 0, 0.5);
+  --black-high: 								rgba(0, 0, 0, 0.75);
+  --black-highest: 								rgba(0, 0, 0, 0.9);
+
+  --main-blue: 									rgba(34, 112, 175, 1);
+  --pale-blue: 									rgba(207, 218, 241, 1);
+  --pale-red: 									rgba(244, 217, 217, 1);
+
+  --font-base-5: 								6.25%;
+
+  --input-color: 								var(--medium-grey);
+  --input-background: 							var(--white-highest);
+  --input-padding: 								3px 7px;
+  --input-font-size: 							85%;
+  --input-font-weight: 							normal;
+  --input-border: 								none;
+  --input-border-top:							var(--input-border);
+  --input-border-right:							var(--input-border);
+  --input-border-bottom:						var(--input-border);
+  --input-border-left:							var(--input-border);
+  --input-outline: 								none;
+  --input-box-shadow: 							none;
+  --input-border-radius: 						0;
+  --input-filter: 								none;
+  --input-backdrop-filter: 						none;
+  --input-transform: 							none;	
+  
+  --input-color-focus: 							var(--input-color);
+  --input-background-focus: 					var(--input-background);
+  --input-font-size-focus: 						var(--input-font-size);
+  --input-font-weight-focus:					var(--input-font-weight);
+  --input-border-focus: 						var(--input-border);
+  --input-border-top-focus:						var(--input-border-top);
+  --input-border-right-focus:					var(--input-border-right);
+  --input-border-bottom-focus:					var(--input-border-bottom);
+  --input-border-left-focus:					var(--input-border-left);
+  --input-outline-focus: 						var(--input-outline);
+  --input-box-shadow-focus: 					var(--input-box-shadow);
+  --input-border-radius-focus: 					var(--input-border-radius);
+  --input-filter-focus: 						var(--input-filter);
+  --input-backdrop-filter-focus:				var(--input-backdrop-filter);
+  --input-transform-focus: 						var(--input-transform);
+  
+/*
+  --input-color-alt:							var(--input-color);
+  --input-background-alt: 						var(--input-background);
+  --input-padding-alt: 							var(--input-padding);
+  --input-font-size-alt:						var(--input-font-size);
+  --input-font-weight-alt:						var(--input-font-weight);
+  --input-border-alt: 							var(--input-border);
+  --input-border-top-alt:						var(--input-border-alt);
+  --input-border-right-alt:						var(--input-border-alt);
+  --input-border-bottom-alt:					var(--input-border-alt);
+  --input-border-left-alt:						var(--input-border-alt);
+  --input-outline-alt: 							var(--input-outline);
+  --input-box-shadow-alt: 						var(--input-box-shadow);
+  --input-border-radius-alt: 					var(--input-border-radius);
+  --input-filter-alt:							var(--input-filter);
+  --input-backdrop-filter-alt:					var(--input-backdrop-filter);
+  --input-transform-alt: 						var(--input-transform);
+  
+  --input-color-focus-alt: 						var(--input-color-alt);
+  --input-background-focus-alt: 				var(--input-background-alt);
+  --input-font-size-focus-alt: 					var(--input-font-size-alt);
+  --input-font-weight-focus-alt: 				var(--input-font-weight-alt);
+  --input-border-focus-alt: 					var(--input-border-alt);
+  --input-border-top-focus-alt:					var(--input-border-top-alt);
+  --input-border-right-focus-alt:				var(--input-border-right-alt);
+  --input-border-bottom-focus-alt:				var(--input-border-bottom-alt);
+  --input-border-left-focus-alt:				var(--input-border-left-alt);
+  --input-outline-focus-alt: 					var(--input-outline-alt);
+  --input-box-shadow-focus-alt: 				var(--input-box-shadow-alt);
+  --input-border-radius-focus-alt: 				var(--input-border-radius-alt);
+  --input-filter-focus-alt: 					var(--input-filter-alt);
+  --input-backdrop-filter-focus-alt:			var(--input-backdrop-filter-alt);
+  --input-transform-focus-alt:					var(--input-transform-alt);
+*/
+  
+  --button-color: 								var(--darkest-grey);
+  --button-background: 							var(--white);
+  --button-border: 								1px solid var(--white);
+  --button-box-shadow: 							inset 3px 3px 6px 0 var(--black-low);
+  --button-font-weight: 						bold;
+  
+  --button-color-hover: 						var(--white);
+  --button-background-hover: 					var(--main-blue);
+  --button-border-hover: 						1px solid var(--main-blue);
+  --button-box-shadow-hover: 					inset 3px 3px 6px 0 var(--black-low);
+  
+  
+/*
+  --button-color-alt: 							var(--button-color);
+  --button-background-alt: 						var(--button-background);
+  --button-font-family-alt: 					var(--button-font-family);
+  --button-font-weight-alt: 					var(--button-font-weight);
+  --button-font-size-alt: 						var(--button-font-size);
+  --button-border-alt: 							var(--button-border);
+  --button-border-top-alt:						var(--button-border-top);
+  --button-border-right-alt:					var(--button-border-right);
+  --button-border-bottom-alt:					var(--button-border-bottom);
+  --button-border-left-alt:						var(--button-border-left);
+  --button-padding-alt: 						var(--button-padding);
+  --button-box-shadow-alt: 						var(--button-box-shadow);
+  --button-border-radius-alt: 					var(--button-border-radius);
+  --button-transform-alt: 						var(--button-transform);
+  --button-text-shadow-alt: 					var(--button-text-shadow);
+  --button-outline-alt: 						var(--button-outline);
+  --button-filter-alt: 							var(--button-filter);
+  --button-text-transform-alt: 					var(--button-text-transform);
+  --button-font-variant-alt: 					var(--button-font-variant);
+  --button-letter-spacing-alt: 					var(--button-letter-spacing);
+  --button-transition-alt: 						var(--button-transition);
+  
+  --button-color-hover-alt: 					var(--button-color-alt);
+  --button-background-hover-alt: 				var(--button-background-alt);
+  --button-font-family-hover-alt: 				var(--button-font-family-alt);
+  --button-font-weight-hover-alt: 				var(--button-font-weight-alt);
+  --button-font-size-hover-alt: 				var(--button-font-size-alt);
+  --button-border-hover-alt: 					var(--button-border-alt);
+  --button-border-top-hover-alt:				var(--button-border-top-alt);
+  --button-border-right-hover-alt:				var(--button-border-right-alt);
+  --button-border-bottom-hover-alt:				var(--button-border-bottom-alt);
+  --button-border-left-hover-alt:				var(--button-border-left-alt);
+  --button-padding-hover-alt: 					var(--button-padding-alt);
+  --button-box-shadow-hover-alt: 				var(--button-box-shadow-alt);
+  --button-border-radius-hover-alt: 			var(--button-border-radius-alt);
+  --button-transform-hover-alt: 				var(--button-transform-alt);
+  --button-text-shadow-hover-alt: 				var(--button-text-shadow-alt);
+  --button-outline-hover-alt: 					var(--button-outline-alt);
+  --button-filter-hover-alt: 					var(--button-filter-alt);
+  --button-text-transform-hover-alt: 			var(--button-text-transform-alt);
+  --button-font-variant-hover-alt: 				var(--button-font-variant-alt);
+  --button-letter-spacing-hover-alt: 			var(--button-letter-spacing-alt);
+  --button-transition-hover-alt: 				var(--button-transition-alt);
+*/
+  
+  --locked-color: 								var(--white);
+  --locked-background: 							var(--black-high);
+  --locked-border: 								none;
+  --modal-color: 								var(--locked-color);
+  --modal-background: 							var(--locked-background);
+  --modal-border: 								var(--locked-border);
+  --close-btn-color: 							var(--button-color);
+  --close-btn-background: 						var(--button-background);
+  --close-btn-border: 							var(--button-border);
+  --close-btn-color-hover:						var(--button-color-hover);
+  --close-btn-background-hover: 				var(--button-background-hover);
+  --close-btn-border-hover: 					var(--button-border-hover);
+  
+/*  
+  --font-size-text: 							18px;
+  --font-size-big: 	 							132%;
+  --font-size-small: 							77%;
+  --font-size-icon: 							40px;
+  
+  --main-trans-speed: 							0.2s;
+  --main-trans-easing: 							ease;
+  
+  --measure-base: 								1.5em;
+  --measure-small: 								1.0em;
+  --measure-large: 								2.5em;
+*/
+}
+
+
 .wp-admin body {
 	background: 								var(--white);
-	font-family: 								Arial;
+	font-family: 								var(--font-family);
 	font-size: 									14px;
 }
 
@@ -17,6 +205,10 @@
 
 .clearfix {
 	clear:										both;
+}
+
+a {
+  color: 										var(--main-blue);
 }
 
 /* Admin bar on live pages, added when logged in */
@@ -37,7 +229,7 @@
 	
 	#wp-toolbar {
 		height: 									40px;
-		background: 								#1d2327;
+		background: 								var(--darkest-grey);
 	}
 		
 	#wpadminbar .quicklinks .ab-empty-item, 
@@ -66,22 +258,22 @@
 	.logged-in #wpadminbar {
 		z-index: 									9999999999;
 		height: 									40px;
-		color: 										#c8c8c8;
+		color: 										var(--lightest-grey);
 		top: 										unset;
 		bottom: 									2px;
 	}   
 	
 	.logged-in #wp-toolbar {
 		background: 								#d3d3d3;
-		filter: 									drop-shadow(0 -1px 0 rgba(0,0,0,0.2)) drop-shadow(0 1px 0 var(--white));
-		border-bottom: 								1px solid rgba(0,0,0,0.2);
+		filter: 									drop-shadow(0 -1px 0 var(--black-low)) drop-shadow(0 1px 0 var(--white));
+		border-bottom: 								1px solid var(--black-low);
 	}
 
 	.logged-in #wpadminbar a.ab-item,
 	.logged-in #wpadminbar #adminbarsearch::before, 
 	.logged-in #wpadminbar .ab-icon::before, 
 	.logged-in #wpadminbar .ab-item::before {
-		color: 										#15141a;
+		color: 										var(--darkest-grey);
 	} 
 	
 	#wpadminbar #wp-admin-bar-my-account.with-avatar #wp-admin-bar-user-actions > li.console {
@@ -99,8 +291,10 @@
 
 	.wp-admin #wpadminbar #wp-admin-bar-site-name > .ab-item::before,
 	.logged-in #wpadminbar #wp-admin-bar-site-name > .ab-item::before {
-		background: 								url('../../uploads/site-icon-80x80.png') 50% 50% no-repeat !important;
-		background-size: 							contain !important;
+		background-image: 							url('../../uploads/site-icon-80x80.png'), url('../../uploads/site-icon-80x80.webp') !important;
+		background-position: 						50% 50%;
+		background-repeat: 							no-repeat;
+		background-size: 							contain;
 		width: 										31px;
 		height: 									31px;
 		content: 									"";
@@ -112,7 +306,7 @@
 		background: 								transparent;
 		border: 									none;
 		border-bottom: 								1px solid transparent;
-		color: 										#15141a;
+		color: 										var(--darkest-grey);
 		height: 									38px;
 		transition: 								all 0.2s ease;
 	}
@@ -122,7 +316,7 @@
 	.logged-in #wpadminbar:not(.mobile) .ab-top-menu > li:hover > .ab-item, 
 	.logged-in #wpadminbar:not(.mobile) .ab-top-menu > li > .ab-item:focus {
 		background: 								var(--white);
-		border-bottom: 								1px solid rgba(0,0,0,0.2);
+		border-bottom: 								1px solid var(--black-low);
 		transition: 								all 0.2s ease;
 	}
 
@@ -130,7 +324,7 @@
 	.logged-in #wpadminbar .shortlink-input {
 		background: 								var(--white);
 		bottom: 									40px;
-		box-shadow: 								0 -3px 5px rgba(0,0,0,.2);
+		box-shadow: 								0 -3px 5px var(--black-low);
 	}
 
 	.logged-in #wpadminbar .ab-top-menu > li.hover > .ab-sub-wrapper  {
@@ -138,7 +332,7 @@
 	}
 
 	.logged-in #wpadminbar .ab-top-menu > li.hover > .ab-sub-wrapper *  {
-		color: 										#15141a;
+		color: 										var(--darkest-grey);
 	}
 
 	#wp-admin-bar-my-account > a.ab-item {
@@ -184,11 +378,11 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	display: 									block;
 	position: 									relative;
  	margin: 									2px 0 -1px 2px;
-	padding: 									0 8px 5px;
+	padding: 									2px 8px;
 	height: 									18px;
 	border-radius: 								9px;
 	background-color: 							var(--white-lowest);
-	border: 									1px solid rgba(255,255,255,0.05);
+	border: 									1px solid var(--white-lowest);
 	border-left: 								1px solid var(--black-med);
 	border-top: 								1px solid var(--black-med);
 	color: 										var(--white);
@@ -297,9 +491,9 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 }
 
 #dashboard-widgets .postbox {
-    background: 								#f6f6f6;
-    border: 									1px solid #e5e5e5;
-    box-shadow: 								2px 2px 0 0 #e5e5e5;
+    background: 								var(--white);
+    border: 									1px solid var(--lightest-grey);
+    box-shadow: 								2px 2px 0 0 var(--lightest-grey);
     max-height: 								250px;
     overflow: 									hidden;
 }
@@ -318,8 +512,8 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 #dashboard-widgets #battleplan_pages_stats.postbox.active,
 #dashboard-widgets #battleplan_content_stats.postbox.active {
     background: 								var(--white);
-	border: 									1px solid #c6c6c6;
-    box-shadow: 								2px 2px 0 0 #c6c6c6;
+	border: 									1px solid var(--light-grey);
+    box-shadow: 								2px 2px 0 0 var(--light-grey);
 	max-height: 								unset;
 }
 
@@ -388,7 +582,7 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 
 #battleplan_site_stats tr.coloration td,
 #battleplan_trends_stats table tr.coloration td {
-	color:										#484848;
+	color:										var(--dark-grey);
 	filter:										saturate(0%);
 }
 
@@ -423,18 +617,20 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 .wp-core-ui .trend-buttons .block-button .button,
 .wp-core-ui .last-visitors-buttons .block-button .button,
 .wp-core-ui .local-visitors-buttons .block-button .button {
-  	color: 										var(--black);
- 	background: 								#f6f7f7;
-  	font-weight: 								bold;
-	box-shadow: 								inset 3px 3px 6px 0 rgba(0,0,0,0.2);
-	border: 									1px solid var(--white-lowest);
-	transition: 								all 0.2s ease;
+  	color: 										var(--button-color);
+	background: 								var(--button-background);
+	box-shadow: 								var(--button-box-shadow);
+	border: 									var(--button-border);
+	font-weight: 								var(--button-font-weight);
+	box-shadow: 								var(--button-box-shadow);
+	border: 									var(--button-border);
 }
 
 .wp-core-ui #wpfooter a.button {
-	background: 								var(--white);
-	box-shadow: 								inset 3px 3px 6px 0 var(--black-lowest);
-	border: 									1px solid var(--white-lowest);
+  	color: 										var(--button-color);
+	background: 								var(--button-background);
+	box-shadow: 								var(--button-box-shadow);
+	border: 									var(--button-border);
 	margin: 									0 5px;
 }
 
@@ -442,24 +638,23 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 .wp-core-ui .trend-buttons .block-button .button.active,
 .wp-core-ui .last-visitors-buttons .block-button .button.active,
 .wp-core-ui .local-visitors-buttons .block-button .button.active {
-  	color: 										#f6f7f7 !important;
-  	background: 								#2271b1 !important;
-	box-shadow: 								inset 3px 3px 6px 0 rgba(0,0,0,0.2) !important;
-	border: 									1px solid #2271b1 !important;
-	transition: 								all 0.2s ease;
+  	color: 										var(--button-color-hover) !important;
+  	background: 								var(--button-background-hover) !important;
+	box-shadow: 								var(--button-box-shadow-hover) !important;
+	border: 									var(--button-border-hover) !important;
 }
 
 .wp-core-ui .trend-buttons .block-button:hover .button,
 .wp-core-ui .last-visitors-buttons .block-button:hover .button,
 .wp-core-ui .local-visitors-buttons .block-button:hover .button {
- 	background: 								var(--white);
-	box-shadow: 								inset 3px 3px 6px 0 var(--black-lowest);
-	border: 									1px solid var(--white-lowest);
-	transition: 								all 0.2s ease;
+  	color: 										var(--button-color-hover);
+ 	background: 								var(--button-background-hover);
+	box-shadow: 								var(--button-box-shadow-hover);
+	border: 									var(--button-border-hover);
 } 
 
 .wp-core-ui #wpfooter a.button:hover {
-	border: 									1px solid #0e4877 !important;
+	border: 									1px solid var(--main-blue) !important;
 }
 
 /* Page Attributes meta box */
@@ -739,7 +934,7 @@ body.ac-wp-media .row-actions {
 } 
 
 .wp-admin [data-config-field][aria-invalid="true"] {
-    border-color: 								#2c3338 !important;
+    border-color: 								var(--dark-grey) !important;
 }
 
 /* Yoast SEO
@@ -841,16 +1036,16 @@ body.ac-wp-media .row-actions {
 	text-align: 								left;
 	z-index: 									10;
 	padding: 									5px 0 5px 30px;
-	border-top: 								1px solid rgba(0,0,0,0.05);
-	border-bottom: 								1px solid rgba(0,0,0,0.4);
+	border-top: 								1px solid var(--black-lowest);
+	border-bottom: 								1px solid var(--black-med));
 }
 
 .wp-admin .flex.stats .col.subhead  {
 	text-align: 								center;
-	border-top: 								1px solid rgba(0,0,0,0.05);
-	border-bottom: 								2px solid rgba(0,0,0,0.3);
-	border-left: 								2px solid rgba(0,0,0,0.05);
-	border-right: 								2px solid rgba(0,0,0,0.3);
+	border-top: 								1px solid var(--black-lowest);
+	border-bottom: 								2px solid var(--black-low);
+	border-left: 								2px solid var(--black-lowest);
+	border-right: 								2px solid var(--black-low);
 	margin: 									30px 0 5px;
 	z-index: 									20;
 	padding: 									5px 0 3px;
@@ -892,10 +1087,10 @@ body.ac-wp-media .row-actions {
 .wp-admin .flex.stats .col.notes {
 	z-index: 									30;
 	padding: 									3px;
-	border-top: 								1px solid rgba(0,0,0,0.05);
-	border-bottom: 								1px solid rgba(0,0,0,0.3);
-	border-left: 								1px solid rgba(0,0,0,0.05);
-	border-right: 								1px solid rgba(0,0,0,0.3);
+	border-top: 								1px solid var(--black-lowest);
+	border-bottom: 								1px solid var(--black-low);
+	border-left: 								1px solid var(--black-lowest);
+	border-right: 								1px solid var(--black-low);
 }
 
 .wp-admin .flex.stats .col {
@@ -943,7 +1138,7 @@ body.ac-wp-media .row-actions {
 .wp-admin .flex .col.gmb,
 .wp-admin .flex .col.site-speed,
 .wp-admin .flex .col.site-hvac  { 
-	background: 								rgb(207,218,241);
+	background: 								var(--pale-blue);
 } 
 
 .wp-admin .flex.stats .col[class*="lighthouse-desktop"],
@@ -966,7 +1161,7 @@ body.ac-wp-media .row-actions {
 .wp-admin .flex .col.citations,
 .wp-admin .flex .col.revs,
 .wp-admin .flex .col.site-elements  { 
-	background: 								rgb(244, 217, 217); 
+	background: 								var(--pale-red); 
 }
 
 .wp-admin .flex:not(.hvac) .col.site-hvac,

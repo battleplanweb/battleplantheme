@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 17.5
+Version: 17.6
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1566,7 +1566,7 @@ input[type="checkbox"]:checked::after {
 	font-family: 								var(--font-awesome);
 	font-weight: 								800;
 	color: 										var(--input-color);
-	transform: 									translate(2px, -6px);
+	transform: 									translate(1px, -4px);
 }
 
 .crosses input[type="checkbox"]:checked::after { 
@@ -2694,6 +2694,8 @@ body.locked {
 	width: 										24px;
 	height: 									3px;
 	background-color: 							var(--white-high);
+
+
 
 
 
@@ -5099,6 +5101,7 @@ html.error503 h3 {
 	}
 			
 	.flex.break-4 .col {
+
 		/*grid-column: 								span 2; */
 		grid-column: 								1/-1;  /* 7/22/22 - Sherrell Air, any site that uses layout="1fr 320px 1fr" or more than 2 columns */
 	}

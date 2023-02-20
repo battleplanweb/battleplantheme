@@ -8,17 +8,17 @@ body {
 body {
 	background: 								#f2f2f2;
 	min-width: 									0;
-	color: 										rgba(0,0,0,0.9);
+	color: 										var(--black-highest);
 }
 
 a {
-	color: 										rgba(0,0,0,0.7);
+	color: 										var(--black-high);
 }
 
 a:hover, 
 a:active, 
 a.tab-focus {
-  color: 										rgba(0,0,0,0.9);
+  color: 										var(--black-highest);
 }
 
 #login {
@@ -60,7 +60,7 @@ a.tab-focus {
 }
 #pass-strength-result.strong {
     background-color: 							rgba(0,0,0,0.2);
-    border: 									1px solid rgba(0,0,0,0.9);
+    border: 									1px solid var(--black-highest);
 	opacity: 									1;
 }
 
@@ -81,78 +81,33 @@ input[type="datetime-local"],
 input[type="color"],
 textarea,
 select {
-	color: 										var(--black);
-	background:									rgba(255,255,255,0.7);
-	border: 									1px solid #e2e2e2;
-	border-bottom: 								1px solid #969696;
-	border-right: 								1px solid #969696;
+  	width: 										90%;
 }
 
-input[type="text"]:focus,
-input[type="email"]:focus,
-input[type="url"]:focus,
-input[type="password"]:focus,
-input[type="search"]:focus,
-input[type="number"]:focus,
-input[type="tel"]:focus,
-input[type="range"]:focus,
-input[type="date"]:focus,
-input[type="month"]:focus,
-input[type="week"]:focus,
-input[type="time"]:focus,
-input[type="datetime"]:focus,
-input[type="datetime-local"]:focus,
-input[type="color"]:focus,
-textarea:focus,
-select:focus,
-.wpcf7 form .wpcf7-response-output {
-	color: 										var(--black);
-	background:									var(--white);
-	border: 									1px solid #e2e2e2;
-	border-bottom: 								1px solid #969696;
-	border-right: 								1px solid #969696;
+input[type="checkbox"], 
+input[type="radio"] {
+  	transform: 									translateY(6px);
+	border: 									1px solid var(--black-low);
+	margin-right: 								2px !important;
 }
 
-a.button,
-a.page-numbers,
-span.page-numbers,
-button,
-input[type="button"],
-input[type="reset"],
-input[type="submit"] {
-	font-family: 								"Open Sans"; 
-	color: 										rgba(0, 0, 0, 0.8);
-	background: 								rgba(0,0,0,0.2);
-	border: 									1px solid #e2e2e2;
-	border-bottom: 								1px solid #969696;
-	border-right: 								1px solid #969696;
+input[type="checkbox"]:checked::after {
+  	transform: 									translate(0);
+	content: 									"";
 }
 
-a.button:hover,
-a.page-numbers:hover,
-span.page-numbers.current,
-button:hover,
-input[type="button"]:hover,
-input[type="reset"]:hover,
-input[type="submit"]:hover,
-a.button.tab-focus,
-a.page-numbers.tab-focus,
-button.tab-focus,
-input[type="button"].tab-focus,
-input[type="reset"].tab-focus,
-input[type="submit"].tab-focus,
-a.button:active,
-a.page-numbers:active,
-button:active,
-input[type="button"]:active,
-input[type="reset"]:active,
-input[type="submit"]:active,
-button.active {
-	color: 										var(--white);
-	background: 								rgba(0,0,0,0.8);
-	border: 									1px solid #e2e2e2;
-	border-bottom: 								1px solid #969696;
-	border-right: 								1px solid #969696;
+:root {
+	--input-border: 							1px solid var(--black-low);
+	
+	--input-color-focus: 						var(--black);
+
+	--button-color: 							var(--black);
+	--button-background: 						var(--black-lowest);
+	--button-border: 							1px solid var(--black-low);
+	
+	--button-background-hover: 					var(--white-high);
+	--button-border-hover:						1px solid var(--black-med);
+
 }
 
 .login form {
@@ -161,16 +116,15 @@ button.active {
 	padding: 									10px 25px;
 	overflow: 									hidden;
 	text-align: 								center;
-	background: 								#cccccc;
-	border: 									1px solid #e2e2e2;
-	border-bottom: 								1px solid #969696;
-	border-right: 								1px solid #969696;
+	background: 								var(--light-grey);
+	border: 									1px solid var(--black-low);
 }
 
 .login form.shake {
 	animation: 									shake 0.2s cubic-bezier(.19,.49,.38,.79) both;
 	animation-iteration-count: 					3;
 	transform: 									translateX(0);
+
 }
 
 @keyframes shake {
@@ -213,11 +167,8 @@ div#login_error {
 }
 
 .login form label {
+	display: 									inline-block;
 	margin-bottom: 								0.3em;
-}
-
-input[type="text"], input[type="email"], input[type="url"], input[type="password"], input[type="search"], input[type="number"], input[type="tel"], input[type="range"], input[type="date"], input[type="month"], input[type="week"], input[type="time"], input[type="datetime"], input[type="datetime-local"], input[type="color"], textarea, select {
-	border: 									1px solid var(--black-med);
 }
 
 .login #nav,

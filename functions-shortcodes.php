@@ -230,7 +230,7 @@ function battleplan_getCount($atts, $content = null) {
 	$a = shortcode_atts( array( 'type'=>'post', 'status'=>'publish', 'tax'=>'', 'term'=>'',  ), $atts );
 	$postType = esc_attr($a['type']);	
 	$postStatus = esc_attr($a['status']);	
-	$args = esc_attr($a['tax']) == '' ? array( 'post_type'=>$postType, 'post_status'=>$postStatus, 'posts_per_page'=>-1) :  array( 'post_type'=>$postType, 'post_status'=>$postStatus, 'posts_per_page'=>-1, 'tax_query'=>array( 'relation'=>'AND', array( 'taxonomy'=>esc_attr($a['tax']), 'field'=>'slug', 'terms'=>esc_attr($a['term']) )));
+	$args = esc_attr($a['tax']) == '' ? array( 'post_type'=>$postType, 'post_status'=>$postStatus, 'posts_per_page'=>-1, 'cache_results'=>false, 'update_post_meta_cache'=>false, 'update_post_term_cache'=>false ) : array( 'post_type'=>$postType, 'post_status'=>$postStatus, 'posts_per_page'=>-1, 'cache_results'=>false, 'update_post_meta_cache'=>false, 'update_post_term_cache'=>false, 'tax_query'=>array( 'relation'=>'AND', array( 'taxonomy'=>esc_attr($a['tax']), 'field'=>'slug', 'terms'=>esc_attr($a['term']) )));
 
 	$query = new WP_Query($args);
 	return number_format((int)$query->post_count);
@@ -350,7 +350,7 @@ function battleplan_getRandomImage($atts, $content = null ) {
 	$class = esc_attr($a['class']) != '' ? " ".esc_attr($a['class']) : "";
 	$align = esc_attr($a['align']) != '' ? "align".esc_attr($a['align']) : "";
 	
-	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>esc_attr($a['number']), 'offset'=>esc_attr($a['offset']), 'order'=>esc_attr($a['order']));
+	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>esc_attr($a['number']), 'offset'=>esc_attr($a['offset']), 'order'=>esc_attr($a['order']), 'cache_results'=>false, 'update_post_meta_cache'=>false, 'update_post_term_cache'=>false );
 
 	$args['orderby']='meta_value_num';	
 	if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; 	
@@ -409,7 +409,7 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 	$class = esc_attr($a['class']) != '' ? " ".$class : "";
 	$id = esc_attr($a['id']) == "current" ? get_the_ID() : esc_attr($a['id']);
 	
-	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>$num, 'offset'=>esc_attr($a['offset']), 'order'=>esc_attr($a['order']), 'tax_query'=>array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags )));
+	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>$num, 'offset'=>esc_attr($a['offset']), 'order'=>esc_attr($a['order']), 'tax_query'=>array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags )), 'cache_results'=>false, 'update_post_meta_cache'=>false, 'update_post_term_cache'=>false );
 
 	$args['orderby']='meta_value_num';	
 	if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; 	
@@ -539,10 +539,10 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	elseif ( $showTitle != "false" ) : 
 		$picADA = " ada-hidden='true'"; 
 	endif;
-	$archiveMeta = $archiveBtn = '';
+	$archiveTitle = $archiveMeta = $archiveBody = $archiveBtn = "";
 		
 	if ( $showThumb != "true" && $showThumb != "false" ) : 	
-		$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>'1', 'post_parent'=>$postID, 'order_by'=>'rand', 'tax_query'=> array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$showThumb)));
+		$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>'1', 'cache_results'=>false, 'update_post_meta_cache'=>false, 'update_post_term_cache'=>false, 'post_parent'=>$postID, 'order_by'=>'rand', 'tax_query'=> array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$showThumb)));
 		
 		$image_query = new WP_Query($args);		
 		$imageArray = array();
@@ -622,7 +622,6 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		if ( esc_attr($a['accordion']) == "true" ) :		
 			$archiveBody = '[accordion title="'.esc_html(get_the_title($postID)).'" excerpt="'.wp_kses_post(get_the_excerpt($postID)).'"]'.$content.'[/accordion]';		
 		else :		
-			$archiveTitle = $archiveMeta = $archiveBody = "";
 			if ( $showTitle != "false" ) :
 				$archiveLink = '<a href="'.$linkLoc.'" class="link-archive link-'.get_post_type($postID).'"'.$titleADA.'>';
 				$archiveTitle .= '<h3 data-count-view="'.esc_attr($a['count_view']).'">';
@@ -739,7 +738,7 @@ function battleplan_getRandomPosts($atts, $content = null) {
 	endif;
 	$combinePosts = '';
 
-	$args = array ('posts_per_page'=>$num, 'offset'=>$offset, 'date_query'=>array( array( 'after'=>esc_attr($a['start']), 'before'=>esc_attr($a['end']), 'inclusive'=>true, ), ), 'order'=>esc_attr($a['sort']), 'post_type'=>$postType, 'post__not_in'=>$exclude);
+	$args = array ( 'posts_per_page'=>$num, 'offset'=>$offset, 'date_query'=>array( array( 'after'=>esc_attr($a['start']), 'before'=>esc_attr($a['end']), 'inclusive'=>true, ), ), 'order'=>esc_attr($a['sort']), 'post_type'=>$postType, 'post__not_in'=>$exclude, 'cache_results'=>false, 'update_post_meta_cache'=>false, 'update_post_term_cache'=>false );
 
 	$args['orderby']='meta_value_num';	
 	if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; 	
@@ -838,7 +837,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	endif;		
 	
 	if ( $type == "image" || $type == "images" ) :
-		$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>$num, 'order'=>$order);
+		$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>$num, 'order'=>$order, 'cache_results'=>false, 'update_post_meta_cache'=>false, 'update_post_term_cache'=>false );
 
 		$args['orderby']='meta_value_num';	
 		if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; 	
@@ -904,7 +903,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 			wp_reset_postdata();
 		endif;
 	else :
-		$args = array ('posts_per_page'=>-1, 'offset'=>esc_attr($a['offset']), 'date_query'=>array( array( 'after'=>esc_attr($a['start']), 'before'=>esc_attr($a['end']), 'inclusive'=>true, ), ), 'order'=>$order, 'post_type'=>$type, 'post__not_in'=>$exclude);
+		$args = array ( 'posts_per_page'=>-1, 'offset'=>esc_attr($a['offset']), 'date_query'=>array( array( 'after'=>esc_attr($a['start']), 'before'=>esc_attr($a['end']), 'inclusive'=>true, ), ), 'order'=>$order, 'post_type'=>$type, 'post__not_in'=>$exclude, 'cache_results'=>false, 'update_post_meta_cache'=>false, 'update_post_term_cache'=>false );
 
 		$args['orderby']='meta_value_num';	
 		if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; 	
@@ -1021,7 +1020,7 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 	$package = esc_attr($a['package']);	
 	$lazy = esc_attr($a['lazy']) == "true" ? "lazy" : "eager"; 
 	
-	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>esc_attr($a['num']), 'order'=>esc_attr($a['order']), 'tax_query'=>array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags )));
+	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>esc_attr($a['num']), 'order'=>esc_attr($a['order']), 'tax_query'=>array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags )), 'cache_results'=>false, 'update_post_meta_cache'=>false, 'update_post_term_cache'=>false );
 
 	$args['orderby']='meta_value_num';	
 	if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; 	
@@ -1086,13 +1085,13 @@ function battleplan_loadImagesByTag( $atts, $content = null ) {
 	if ( $compare == "equal" || $compare == "" ) $compare="=";
 	if ( $compare == "not equal" ) $compare="!=";
 	if ( $field != "" ) :
-		$image_attachments = new WP_Query( array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>$max, 'meta_query'=>array(array( 'key'=>$field, 'value'=>esc_attr($a['value']), 'type'=>esc_attr($a['type']), 'compare'=>$compare )), 'orderby'=>$orderBy, 'order'=>$order,  ));
+		$image_attachments = new WP_Query( array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>$max, 'cache_results'=>false, 'update_post_meta_cache'=>false, 'update_post_term_cache'=>false, 'meta_query'=>array(array( 'key'=>$field, 'value'=>esc_attr($a['value']), 'type'=>esc_attr($a['type']), 'compare'=>$compare )), 'orderby'=>$orderBy, 'order'=>$order, ));
 	elseif ( $tags == "" ) :
 		$tags = get_the_slug();
-		$image_attachments = new WP_Query( array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>$max, 'tax_query'=>array(array( 'taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags, )), 'orderby'=>$orderBy, 'order'=>$order,  ));
+		$image_attachments = new WP_Query( array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>$max, 'cache_results'=>false, 'update_post_meta_cache'=>false, 'update_post_term_cache'=>false, 'tax_query'=>array(array( 'taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags, )), 'orderby'=>$orderBy, 'order'=>$order,  ));
 	else:
 		$tags = explode(',', $tags);
-		$image_attachments = new WP_Query( array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>$max, 'tax_query'=>array(array( 'taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>array_values($tags))), 'orderby'=>$orderBy, 'order'=>$order,  ));					
+		$image_attachments = new WP_Query( array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>$max, 'cache_results'=>false, 'update_post_meta_cache'=>false, 'update_post_term_cache'=>false, 'tax_query'=>array(array( 'taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>array_values($tags))), 'orderby'=>$orderBy, 'order'=>$order,  ));					
 	endif;
 	
 	$imageIDs = array();
@@ -1127,7 +1126,7 @@ function battleplan_setUpWPGallery( $atts, $content = null ) {
 	$class = esc_attr($a['class']);
 	if ( $class != "" ) $class = " ".$class;
 	
-	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>esc_attr($a['max']), 'order'=>esc_attr($a['order']), 'date_query'=>array( array( 'after'=>esc_attr($a['start']), 'before'=>esc_attr($a['end']), 'inclusive'=>'true' )));	
+	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>esc_attr($a['max']), 'cache_results'=>false, 'update_post_meta_cache'=>false, 'update_post_term_cache'=>false, 'order'=>esc_attr($a['order']), 'date_query'=>array( array( 'after'=>esc_attr($a['start']), 'before'=>esc_attr($a['end']), 'inclusive'=>'true' )));	
 	
 	if ( $exclude ) : 
 		$exclude = explode(',', $exclude); 

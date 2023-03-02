@@ -2,7 +2,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 // Ensure all slides in a testimonial slider are even height
 	$(".carousel.slider-testimonials").each(function() {
-		var thisCarousel = $(this), maxH = 0;		
+		var thisCarousel = $(this), maxH = 260;		
 		setTimeout(function(){
 			thisCarousel.find('.carousel-item').each( function() {
 				var thisItem = $(this), itemH = 0;
@@ -10,11 +10,11 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				itemH = thisItem.outerHeight(true);
 				thisItem.removeClass('calculating');
 				if ( itemH > maxH ) { 
-					maxH = Math.ceil(itemH+20); 
+					maxH = Math.ceil(itemH * 1.2); 
 				}		
 			});
-			thisCarousel.find(".carousel-inner").css("height", maxH+"px");	
-		}, 500);
+			thisCarousel.find(".carousel-inner").css("height", maxH+"px");	 
+		}, 1000);
 	});		
 	
 // Avoid long delay on first slide transition

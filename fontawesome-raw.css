@@ -340,9 +340,7 @@
     font-style: normal;
     font-weight: 400;
     font-display: block;
-    src: url(../battleplantheme/fonts/fa-regular-400.eot);
-    src: url(../battleplantheme/fonts/fa-regular-400.eot?#iefix) format("embedded-opentype"), url(../battleplantheme/fonts/fa-regular-400.woff2) format("woff2"), url(../battleplantheme/fonts/fa-regular-400.woff) format("woff"),
-        url(../battleplantheme/fonts/fa-regular-400.ttf) format("truetype"), url(../battleplantheme/fonts/fa-regular-400.svg#fontawesome) format("svg");
+    src: url(../battleplantheme/fonts/fa-regular-400.woff2) format("woff2"), url(../battleplantheme/fonts/fa-regular-400.woff) format("woff");
 }
 
 .far {
@@ -355,9 +353,7 @@
     font-style: normal;
     font-weight: 900;
     font-display: block;
-    src: url(../battleplantheme/fonts/fa-solid-900.eot);
-    src: url(../battleplantheme/fonts/fa-solid-900.eot?#iefix) format("embedded-opentype"), url(../battleplantheme/fonts/fa-solid-900.woff2) format("woff2"), url(../battleplantheme/fonts/fa-solid-900.woff) format("woff"),
-        url(../battleplantheme/fonts/fa-solid-900.ttf) format("truetype"), url(../battleplantheme/fonts/fa-solid-900.svg#fontawesome) format("svg");
+    src: url(../battleplantheme/fonts/fa-solid-900.woff2) format("woff2"), url(../battleplantheme/fonts/fa-solid-900.woff) format("woff")
 }
 
 .fa,
@@ -371,9 +367,7 @@
     font-style: normal;
     font-weight: 400;
     font-display: block;
-    src: url(../battleplantheme/fonts/fa-brands-400.eot);
-    src: url(../battleplantheme/fonts/fa-brands-400.eot?#iefix) format("embedded-opentype"), url(../battleplantheme/fonts/fa-brands-400.woff2) format("woff2"), url(../battleplantheme/fonts/fa-brands-400.woff) format("woff"),
-        url(../battleplantheme/fonts/fa-brands-400.ttf) format("truetype"), url(../battleplantheme/fonts/fa-brands-400.svg#fontawesome) format("svg");
+    src: url(../battleplantheme/fonts/fa-brands-400.woff2) format("woff2"), url(../battleplantheme/fonts/fa-brands-400.woff) format("woff")
 }
 
 .fab {

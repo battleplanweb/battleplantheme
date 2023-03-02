@@ -11,7 +11,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon"><i class="fa fa-fw fas fa-cog" aria-hidden="true"></i></div>
+				<div class="icon"><i class="fa fa-fw fas fa-clipboard-check" aria-hidden="true"></i></div>
 				[txt]
 					<h2>Quality</h2>
 					<p>We live and breathe our motto: <em>Whatever It Takes.</em> Our experienced and well-trained dealers work hard within your local community to deliver quality you can rely on for over a century.</p>
@@ -35,10 +35,10 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon"><i class="fa fa-fw fas fa-clipboard-check" aria-hidden="true"></i></div>
+				<div class="icon"><i class="fa fa-fw fas fa-cog" aria-hidden="true"></i></div>
 				[txt]
-					<h2>Quality Products</h2>
-					<p>We have a reputation for going above and beyond to give you the home comfort you deserve. We deliver home comfort by installing quality products you can rely on and service you can trust.</p>
+					<h2>Above & Beyond</h2>
+					<p>We have a reputation for going above and beyond to give you the home comfort you deserve. We only install quality products you can rely on, with service you can trust.</p>
 				[/txt]
 			[/col]
 		[/layout]

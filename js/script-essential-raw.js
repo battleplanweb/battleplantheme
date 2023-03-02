@@ -486,10 +486,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				theNextEl.css({ "transform":"translateY(0)", "transition-duration":speed+"ms" });	
 			}, { offset: offset });
 		}, delay);	
-
-
-
-
 	};	
 		
 // Button to reveal a hidden div
@@ -505,22 +501,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			animateScroll(container, topSpacer, initSpeed);
 		});
 	};
-	
-	// Set up Review Questions & Redirect
-	/*
-	$('.review-form:first').addClass('active');
-	$('.review-form #gmail-yes').click(function() { window.location.href = "/google"; });	
-	$('.review-form #facebook-yes').click(function() { window.location.href = "/facebook"; });	
-	$('.review-form #yelp-yes').click(function() { window.location.href = "/yelp"; });
-	
-	$('.review-form #gmail-no, .review-form #facebook-no, .review-form #yelp-no').click(function() {
-		$(this).closest('.review-form').removeClass('active');
-		$(this).closest('.review-form').next().addClass('active');			
-	});
-	*/
-	
-	
-	
 	
 // This script blocked by Content Security Policy	
 	var ak_js = document.getElementById( 'ak_js' ), el, destinations = [];

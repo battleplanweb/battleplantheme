@@ -1,5 +1,12 @@
 <?php
 /* Battle Plan Web Design - Mass Site Update */
+
+/*  ADD TO FUNCTIONS-SITE
+if ( get_option('bp_product_upload_2022_08_11') != "completed" ) :
+ 	require_once get_template_directory().'/includes/include-hvac-products/includes-bryant-products.php';
+	updateOption( 'bp_product_upload_2022_08_11', 'completed', false );			
+endif; 
+*/
  
 add_action( 'wp_loaded', 'add_bryant_products', 10 );
 function add_bryant_products() {

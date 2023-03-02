@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 17.6
+Version: 17.7
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -43,7 +43,7 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
 	- Products (HVAC)
 # Plugins
 	- Waypoints
-	- Podium Web Chat Module
+	- Chat Modules
 	- Bootstrap Carousel	
 	- Logo Slider
 	- Review Questions & Redirect
@@ -294,8 +294,8 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
 
 /* Typography
 --------------------------------------------- */
-@font-face { font-family: 'Open Sans'; font-display: fallback; font-style: normal; font-weight: 400; src: url('../battleplantheme/fonts/open-sans-v17-latin-regular.eot'); src: local('Open Sans Regular'), local('OpenSans-Regular'), url('../battleplantheme/fonts/open-sans-v17-latin-regular.eot?#iefix') format('embedded-opentype'), url('../battleplantheme/fonts/open-sans-v17-latin-regular.woff2') format('woff2'), url('../battleplantheme/fonts/open-sans-v17-latin-regular.woff') format('woff'), url('../battleplantheme/fonts/open-sans-v17-latin-regular.ttf') format('truetype'), url('../battleplantheme/fonts/open-sans-v17-latin-regular.svg#OpenSans') format('svg') }
-@font-face { font-family: 'Open Sans'; font-display: fallback; font-style: normal; font-weight: 700; src: url('../battleplantheme/fonts/open-sans-v17-latin-700.eot'); src: local('Open Sans Bold'), local('OpenSans-Bold'), url('../battleplantheme/fonts/open-sans-v17-latin-700.eot?#iefix') format('embedded-opentype'), url('../battleplantheme/fonts/open-sans-v17-latin-700.woff2') format('woff2'), url('../battleplantheme/fonts/open-sans-v17-latin-700.woff') format('woff'), url('../battleplantheme/fonts/open-sans-v17-latin-700.ttf') format('truetype'), url('../battleplantheme/fonts/open-sans-v17-latin-700.svg#OpenSans') format('svg') }
+@font-face { font-family: 'Open Sans'; font-display: fallback; font-style: normal; font-weight: 400; src: url('../battleplantheme/fonts/open-sans-v17-latin-regular.woff2') format('woff2'), url('../battleplantheme/fonts/open-sans-v17-latin-regular.woff') format('woff') }
+@font-face { font-family: 'Open Sans'; font-display: fallback; font-style: normal; font-weight: 700; src: url('../battleplantheme/fonts/open-sans-v17-latin-700.woff2') format('woff2'), url('../battleplantheme/fonts/open-sans-v17-latin-700.woff') format('woff') }
 
 html {
 	font-size:									var(--font-base-5);
@@ -1071,19 +1071,17 @@ label {
 	text-align: 								right;
 }
 
-.wpcf7 form label.width-full,
-body.form-stacked .wpcf7 form label,
-.wpcf7 form.form-stacked label,
-.wpcf7 form .form-stacked label,
-.wpcf7 form .flex.grid-3-3-2 label {
-	text-align: 								center;
-}
-
 #secondary .wpcf7 form.width-full {
 	margin-top: 								0.3em;
 }
 
-#secondary .wpcf7 form label.width-full {
+#secondary .wpcf7 form label.width-full,
+.wpcf7 form label.width-full,
+body.form-stacked .wpcf7 form label,
+.wpcf7 form.form-stacked label,
+.wpcf7 form .flex.grid-3-3-2 label,
+.wpcf7 form .form-stacked label,
+.wpcf7 form span.wpcf7-form-control-wrap {
 	text-align: 								left;
 }
 
@@ -1262,12 +1260,14 @@ optgroup {
 }
 
 .wpcf7 form .wpcf7-list-item {
-	margin-left: 								10px;
-	margin-right: 								10px;
+	margin-left: 								0;
+	margin-right: 								20px;
 }
 
-.wpcf7 form .wpcf7-checkbox > .wpcf7-list-item > label {
-	display: 									inline-block; /* added 5/8/22 for Application (positions interested in) so label and input do not break up */	
+.wpcf7 form .wpcf7-checkbox > .wpcf7-list-item > label,
+.wpcf7 form .wpcf7-list-item label,
+.wpcf7 form .wpcf7-list-item span {
+	display: 									inline-block;
 }
 
 .wpcf7 form .accept-this {
@@ -1519,9 +1519,13 @@ input[type="radio"] {
 	height: 									20px !important;
 	transform: 									translateY(3px);
 	appearance:									none;
-	background-color:							var(--input-background);
-	border: 									var(--input-border);
 	-webkit-appearance: 						none;
+	background-color:							var(--input-background);
+	border-top: 								var(--input-border-top);
+	border-right: 								var(--input-border-right);
+	border-bottom:								var(--input-border-bottom);
+	border-left: 								var(--input-border-left);
+	box-shadow:									var(--input-box-shadow);
 	border-radius: 								0;
 	font-size: 									var(--font-size-text);
 	margin-right:								10px !important;
@@ -1566,7 +1570,9 @@ input[type="checkbox"]:checked::after {
 	font-family: 								var(--font-awesome);
 	font-weight: 								800;
 	color: 										var(--input-color);
-	transform: 									translate(1px, -4px);
+	/*transform: 									translate(4px, 0); /* 2/21/23 - Blankenship Careers Form */
+	text-align: 								center;
+	line-height: 								1;
 }
 
 .crosses input[type="checkbox"]:checked::after { 
@@ -2701,6 +2707,7 @@ body.locked {
 
 
 
+
 	margin: 									5px 4px;
 	transition: 								all 0.07s ease-in;
 }
@@ -3131,6 +3138,7 @@ a.prev i.fa {
 }
 
 .screen-desktop a.scroll-top {	
+
 	position:									fixed;
 	top:										8%;
 	right:										1%;
@@ -3268,8 +3276,6 @@ h3.archive-subheadline {
 	transform:									translateY(0);
 }
 
-
-
 .archive-meta i.fa-user,
 .single-meta i.fa-user {
 	margin-left:								8px;
@@ -3328,6 +3334,10 @@ h3.archive-subheadline {
 .social-share-buttons .share-button {
 	margin-left:								8px;
 	margin-right:								8px;
+}
+
+.ad-promo {
+	margin: 									1.5em auto 2em;
 }
 
 /* Comments
@@ -4354,6 +4364,7 @@ span.descriptionText {
 
 .product-links .product-link-cats {
 	margin-bottom:								0.75em;
+
 }
 
 .product-links .product-link-cats .product-link-buttons {
@@ -4482,17 +4493,18 @@ div[class*="-faux"] {
 	text-align: 								center;
 }
 
-/* Podium Web Chat Module */
-/* Lead Connector Web Chat Module */
+/* Chat Modules */
 iframe#podium-prompt, 
 iframe#podium-bubble, 
 iframe#podium-modal,
+iframe#tenant-sitechat-frame,
 chat-widget .lc_text-widget,
 chat-widget .lc_text-widget--btn {
 	border:										none !important;
 	box-shadow:									none !important;
 	outline:									none !important;
-	transform: 									translateY(-40px); 
+	filter: 									none !important;
+	transform: 									translateY(-45px); 
 }
 
 /* Bootstrap Carousel
@@ -4511,6 +4523,7 @@ chat-widget .lc_text-widget--btn {
     position: 									relative;
     width: 										inherit;
     overflow: 									hidden;
+
 }
 
 .carousel-item {
@@ -5702,7 +5715,7 @@ html.error503 h3 {
 	.carousel.mult-2 .carousel-inner .carousel-item .span-6:first-of-type,
 	.carousel.mult-3 .carousel-inner .carousel-item .span-4:first-of-type,
 	.carousel.mult-4 .carousel-inner .carousel-item .span-3:first-of-type {
-		display: 									block;
+		display: 									grid;
 		grid-column: 								span 12;
 	}
 

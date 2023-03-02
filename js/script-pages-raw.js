@@ -618,6 +618,13 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 		var btn = $(this), link = btn.find('a').attr('href');	
 		window.location.href = link;
 	});
+	
+	// Move ad promo on blog pages	
+	if ( $('.ad-promo').length ) {
+		var numP = $('.single-post .entry-content *').length, posP = Math.ceil(numP / 2);		
+		if ( numP > 30 ) { posP = 10; }
+		moveDiv ('.ad-promo', '.single-post .entry-content *:nth-child('+posP+')', 'after'); 
+	}
 		
 /*--------------------------------------------------------------
 # Screen resize

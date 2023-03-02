@@ -821,9 +821,8 @@ function battleplan_getPostSlider($atts, $content = null ) {
 		$multSize = $imgSize = 17; 
 	endif;
 	if ( $mult > 1 ) $num--;
-	$multDisplay = 0;
+	$multDisplay = $rowDisplay = 0;
 	$numDisplay = -1;
-	$rowDisplay = 0;
 	$sliderNum = rand(100,999);
 	
 	$controlClass = $controls == "yes" && $indicators == "no" ? " only-controls" : "";

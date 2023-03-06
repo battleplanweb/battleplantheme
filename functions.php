@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '17.7' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '17.7.1' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -776,7 +776,7 @@ function battleplan_sitemap_exclude_taxonomy( $excluded, $taxonomy ) {
 // Install featured image on blog
 add_action( 'bp_before_site_main_inner', 'battleplan_featured_img' );
 function battleplan_featured_img() {
-	if ( is_single() ) :
+	if ( is_single('post') ) :
 		$current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );
 		$featured_image = get_the_post_thumbnail($current_page->ID, 'full');
 		if ( $featured_image ) echo $featured_image;

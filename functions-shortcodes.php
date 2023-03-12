@@ -569,11 +569,16 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		if ( $textSize == "" ) : 
 			$textSize = getTextSize($picSize); 
 		endif;	
-	elseif ( $noPic != "false") : 	
+	elseif ( $noPic != "false" ) : 	
 		$archiveImg = do_shortcode("[img size='".$picSize."' class='image-".$type." block-placeholder placeholder-".$type."' link='".$linkLoc."' ".$picADA."]".wp_get_attachment_image( $noPic, $size, array( 'class'=>'img-archive img-'.$type ))."[/img]"); 
 		if ( $textSize == "" ) : 
 			$textSize = getTextSize($picSize); 
-		endif;		
+		endif;			
+	elseif ( $type == "testimonials" ) : 	
+		$archiveImg = do_shortcode("[img size='".$picSize."' class='image-".$type." testimonials-generic-icon']<img src='/wp-content/themes/battleplantheme/common/logos/anonymous-icon.webp' class='img-archive img-testimonials wp-post-image' alt='' />[/img]"); 
+		if ( $textSize == "" ) : 
+			$textSize = getTextSize($picSize); 
+		endif;	
 	else : 
 		$archiveImg = ""; $textSize = "100";
 	endif;
@@ -927,7 +932,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 				$fetchPost->the_post();
 	
 				if ( $numDisplay < $num ) : 
-					if ( esc_attr($a['pics']) == "no" || has_post_thumbnail() ) :
+					if ( esc_attr($a['pics']) == "no" || has_post_thumbnail() || $type == "testimonials" ) :
 					
 						$numDisplay++; 
 						$multDisplay++;
@@ -1313,7 +1318,7 @@ add_shortcode( 'side-by-side', 'battleplan_SideBySideImg' );
 function battleplan_SideBySideImg( $atts, $content = null ) {	
 	$a = shortcode_atts( array( 'img'=>'', 'size'=>'half-s', 'align'=>'center', 'full'=>'', 'pos'=>'bottom', 'break'=>'' ), $atts );	
 	$size = esc_attr($a['size']);
-	$break = esc_attr($a['break']) == "none" ? ' break-none' : esc_attr($a['break']);
+	$break = esc_attr($a['break']) == "none" ? ' break-none' : ' break-'.esc_attr($a['break']);
 	$align = "align".esc_attr($a['align']);
 	$images = explode(',', esc_attr($a['img']));
 	

@@ -402,8 +402,12 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	$width = esc_attr($a['width']); 
 	$imgW = esc_attr($a['img-w']);
 	$imgH = esc_attr($a['img-h']);
-	$height = esc_attr($a['height']);
-	if ( $height == "full" ) : $height = "100vh"; elseif ( $height != "auto" ) : $height = $height."px"; endif;
+	$height = esc_attr($a['height']); 
+	if ( $height == "full" ) : 
+		$height = "100vh"; 
+	elseif ( strpos($height, "calc") === false && $height != "auto" ) : 
+		$height = $height."px"; 
+	endif; 
 	$posX = esc_attr($a['pos-x']);
 	$posY = esc_attr($a['pos-y']);
 	$bleed = esc_attr($a['bleed']); 

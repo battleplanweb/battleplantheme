@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 17.8.1
+Version: 17.8.2
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1200,6 +1200,8 @@ select:focus,
 
 
 
+
+
 .style-alt input[type="text"]:focus,
 .style-alt input[type="email"]:focus,
 .style-alt input[type="url"]:focus,
@@ -1448,6 +1450,7 @@ ul.tabs li.current {
 .style-alt a.page-numbers.tab-focus,
 .style-alt button.tab-focus,
 .style-alt input[type="button"].tab-focus,
+
 .style-alt input[type="reset"].tab-focus,
 .style-alt input[type="submit"].tab-focus,
 .style-alt .file-upload-btn.tab-focus,
@@ -1740,6 +1743,7 @@ a.button.fancy-2:hover .fancy-text {
 
 a.button.fancy-2 .fancy-icon,
 a.button.fancy-2:hover .fancy-icon {
+
 	padding: 									0.3em 0.5em 0.3em 0.6em;
 }
 
@@ -3132,15 +3136,22 @@ a.prev i.fa {
 }
 
 .follow_us_on_fb {
-	margin: 									20px 10px;
+	margin: 									20px auto;
+	width: 										235px;
 }
 
-.follow_us_on_fb iframe {
+.follow_us_on_fb .iframe {
 	display: 									inline-block;
+	width: 										85px;
 }
 
-.follow_us_on_fb span {
+.follow_us_on_fb .iframe iframe {
+	margin: 									0 0 0 auto;
+}
+
+.follow_us_on_fb .text {
 	display: 									inline-block;
+	width: 										150px;
 	transform: 									translate(5px, -10px);
 	font-family: 								Arial !important;
 	font-size: 									15px !important;
@@ -3656,6 +3667,7 @@ ul.side-by-side {
 	display: 									flex; 
 	flex-flow:									row wrap; 
 	list-style: 								none;
+
 	padding: 									0;
 	gap: 										2em;
 }
@@ -4848,6 +4860,7 @@ chat-widget .lc_text-widget--btn {
 
 .carousel-emboss .carousel-indicators .active::after, 
 .carousel-emboss .carousel-indicators li:hover::after, 
+
 .carousel-emboss .carousel-indicators li.tab-focus::after {
     content: 									'';
     width: 										11px;
@@ -5293,6 +5306,7 @@ html.error503 h3 {
 	.flex.grid-1-3-1:not(.break-none):not(.break-2):not(.break-1),
 	.flex.grid-2-1-1:not(.break-none):not(.break-2):not(.break-1) {
 		grid-template-columns: 						1fr 1fr;
+
 	}
 	
 	.flex.grid-1-1-2:not(.break-none):not(.break-2):not(.break-1) .col:nth-child(3n+3),

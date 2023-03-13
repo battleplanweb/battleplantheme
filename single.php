@@ -60,7 +60,7 @@ get_header(); ?>
 					$navigation = "true";
 					$facebookBtn = "false"; // display Facebook like/share button
 					$facebookBtnPos = "both"; // above article, below article, both
-					$facebookBtnCode = '<div class="follow_us_on_fb"><iframe src="https://www.facebook.com/plugins/like.php?href='.$GLOBALS['customer_info']['facebook'].'&width=85&layout=box_count&action&size=large&share=false&height=60&appId=630963613764335" width="85" height="60" style="border:none;overflow:hidden" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe><span>us on Facebook!</span></div>';
+					$facebookBtnCode = '<div class="follow_us_on_fb"><div class="iframe"><iframe src="https://www.facebook.com/plugins/like.php?href='.$GLOBALS['customer_info']['facebook'].'&width=85&layout=box_count&action=like&size=large&share=false&height=60&appId=630963613764335" width="85" height="60" style="border:none;overflow:hidden" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe></div><div class="text">Follow us on Facebook for more!</div></div>';
 				endif;
 		
 			if ( function_exists( 'overrideSingle' ) ) { overrideSingle( get_post_type() ); }

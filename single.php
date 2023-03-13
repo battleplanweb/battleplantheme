@@ -57,7 +57,10 @@ get_header(); ?>
 					$comments = "true";
 					$social = "false";
 					$tags = "list"; // list / button
-					$navigation = "true";	
+					$navigation = "true";
+					$facebookBtn = "false"; // display Facebook like/share button
+					$facebookBtnPos = "both"; // above article, below article, both
+					$facebookBtnCode = '<div class="follow_us_on_fb"><iframe src="https://www.facebook.com/plugins/like.php?href='.$GLOBALS['customer_info']['facebook'].'&width=85&layout=box_count&action&size=large&share=false&height=60&appId=630963613764335" width="85" height="60" style="border:none;overflow:hidden" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe><span>us on Facebook!</span></div>';
 				endif;
 		
 			if ( function_exists( 'overrideSingle' ) ) { overrideSingle( get_post_type() ); }
@@ -85,12 +88,16 @@ get_header(); ?>
 						$displayHeader .= '</div>';
 					endif;
 					
+					if ( $facebookBtn == "true" && ( $facebookBtnPos == "above" || $facebookBtnPos == "both") ) $displayHeader .= $facebookBtnCode;				
+					
 					if ( $headerImage == "true" && $headerImgPos == "below" && has_post_thumbnail() ) $displayHeader .= get_the_post_thumbnail();
 		
 					$displayHeader .= '<div class="single-intro '.get_post_type().'-intro">'.$singleIntro.'</div>'; 
 				$displayHeader .= '</header><!-- .entry-header-->';	
 		
 				$displayFooter = '<footer class="entry-footer">';
+									
+					if ( $facebookBtn == "true" && ( $facebookBtnPos == "below" || $facebookBtnPos == "both") ) $displayFooter .= $facebookBtnCode;
 		
 					if ( $tags != "false" ) :	
 						$getTerms = '';

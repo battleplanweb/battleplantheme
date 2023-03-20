@@ -25,34 +25,28 @@ function battleplan_delete_prefixed_options( $prefix ) {
 	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
 }	
 
-if ( get_option('bp_setup_2022_11_08') != "completed" ) :
-	delete_option('bp_setup_2022_10_05');
+if ( get_option('bp_setup_2023_03_20') != "completed" ) :
+	battleplan_delete_prefixed_options( 'bp_setup_' );
 	
-	$bp_ua_1 = get_option('bp_site_hits_ua_1') != null ? get_option('bp_site_hits_ua_1') : null;
-	$bp_ua_2 = get_option('bp_site_hits_ua_2') != null ? get_option('bp_site_hits_ua_2') : null;
-	$bp_ua_3 = get_option('bp_site_hits_ua_3') != null ? get_option('bp_site_hits_ua_3') : null;
-	$bp_ua_4 = get_option('bp_site_hits_ua_4') != null ? get_option('bp_site_hits_ua_4') : null;
-	$bp_ua_5 = get_option('bp_site_hits_ua_5') != null ? get_option('bp_site_hits_ua_5') : null;
+	$bbb = get_option('bbb_badbots') != null ? get_option('bbb_badbots') : null;
+	updateOption( 'bbb_badbots', $bbb, false );	
 	
-	if ( $bp_ua_1 != null ) updateOption('bp_site_hits_ua_1_backup', $bp_ua_1, false);
-	if ( $bp_ua_2 != null ) updateOption('bp_site_hits_ua_2_backup', $bp_ua_2, false);
-	if ( $bp_ua_3 != null ) updateOption('bp_site_hits_ua_3_backup', $bp_ua_3, false);
-	if ( $bp_ua_4 != null ) updateOption('bp_site_hits_ua_4_backup', $bp_ua_4, false);
-	if ( $bp_ua_5 != null ) updateOption('bp_site_hits_ua_5_backup', $bp_ua_5, false);
+	$ccv = get_option('content-column-views') != null ? get_option('content-column-views') : null;
+	updateOption( 'content-column-views', $ccv, false );
 	
-	delete_option('bp_google_reviews');
+	delete_option('ari_fancy_lightbox_settings');
 	
 	//battleplan_delete_prefixed_options( 'wdp_' );
 
-	if ( $customerInfo['site-type'] != 'profile' ) delete_option('site_login');
+	//if ( $customerInfo['site-type'] != 'profile' ) delete_option('site_login');
 
-	updateOption( 'bp_setup_2022_11_08', 'completed', false );			
+	updateOption( 'bp_setup_2023_03_20', 'completed', false );			
 endif;
 
-if ( get_option('bp_setup_2022_11_09') != "completed" ) :
-	processChron(true);
-	updateOption( 'bp_setup_2022_11_09', 'completed', false );			
-endif;
+//if ( get_option('bp_setup_2022_11_09') != "completed" ) :
+	//processChron(true);
+	//updateOption( 'bp_setup_2022_11_09', 'completed', false );			
+//endif;
 
 // Determine if Chron should run
 $forceChron = get_option('bp_force_chron') !== null ? get_option('bp_force_chron') : 'false';

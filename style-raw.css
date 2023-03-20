@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 17.9.1
+Version: 17.9.2
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1204,6 +1204,8 @@ select:focus,
 
 
 
+
+
 .style-alt input[type="text"]:focus,
 .style-alt input[type="email"]:focus,
 .style-alt input[type="url"]:focus,
@@ -1345,6 +1347,7 @@ a.page-numbers:visited {
 	border-bottom:								var(--button-border-bottom);
 	border-left: 								var(--button-border-left);
 	border-radius:								var(--button-border-radius);
+
 	box-shadow:									var(--button-box-shadow);
 	cursor:										pointer;
 	text-decoration:							none;
@@ -1919,6 +1922,7 @@ input.paypal-amount {
 }
 
 .sidebar-inner {
+
 	display:									inline-block;
 	max-width:									100%;
 	width:										100%;
@@ -2251,6 +2255,7 @@ body.locked {
 }
 
 .site-info .col-inner .block-image {
+
 	order:										1;
 	text-align: 								right;
 }
@@ -3506,6 +3511,7 @@ img.unloaded {
 .thumb-right .section .switch-thumb .align-left,
 .thumb-right .section .switch-thumb .alignright,
 .thumb-right .section .switch-thumb .align-right {
+
 	float: 										left;
 	margin:										var(--measure-base) var(--measure-base) var(--measure-small) 0;
 }
@@ -3826,6 +3832,15 @@ img.img-404 {
 
 /* Testimonials
 --------------------------------------------- */
+.block-image.image-testimonials {
+	max-width: 									100%;
+	margin: 									0 auto;
+}
+
+.block-image.image-testimonials.testimonials-generic-icon {
+	max-width: 									60%;
+}
+
 .testimonials-generic-icon img {
 	background:									var(--accent-background);
 }
@@ -4004,6 +4019,7 @@ img.img-404 {
 	border-bottom:								2px solid var(--black-highest);
 	background:									var(--black-low);
 	margin-top:									-1px;
+
 }
 
 .office-hours div.row .col-all, 
@@ -4860,6 +4876,7 @@ chat-widget .lc_text-widget--btn {
 .carousel-dot .carousel-indicators .active, 
 .carousel-dot .carousel-indicators li:hover, 
 .carousel-dot .carousel-indicators li.tab-focus {
+
 }
 
 .carousel-emboss .carousel-indicators li,
@@ -6007,6 +6024,16 @@ html.error503 h3 {
 	.three-column {
 		column-count:								1;
 	}	
+	
+	/* Testimonials */
+	
+	.block-image.image-testimonials {
+		max-width: 									75%;
+	}
+
+	.block-image.image-testimonials.testimonials-generic-icon {
+		max-width: 									50%;
+	}
 	
 	/* Media */
 	ul.side-by-side:not(.break-none) {

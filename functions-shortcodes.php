@@ -315,6 +315,33 @@ function battleplan_isOpen($atts, $content = null) {
 	return is_biz_open() ? esc_attr($a['open']) : esc_attr($a['closed']);
 }	
 
+// Print list of service areas (from functions-site.php)
+add_shortcode( 'get-service-areas', 'battleplan_getServiceAreas' );
+function battleplan_getServiceAreas($atts, $content = null) {
+	$states = array('alabama'=>'AL', 'arizona'=>'AZ', 'arkansas'=>'AR', 'california'=>'CA', 'colorado'=>'CO', 'connecticut'=>'CT', 'delaware'=>'DE', 'dist of columbia'=>'DC', 'dist. of columbia'=>'DC', 'district of columbia'=>'DC', 'florida'=>'FL', 'georgia'=>'GA', 'idaho'=>'ID', 'illinois'=>'IL', 'indiana'=>'IN', 'iowa'=>'IA', 'kansas'=>'KS', 'kentucky'=>'KY', 'louisiana'=>'LA', 'maine'=>'ME', 'maryland'=>'MD', 'massachusetts'=>'MA', 'michigan'=>'MI', 'minnesota'=>'MN', 'mississippi'=>'MS', 'missouri'=>'MO', 'montana'=>'MT', 'nebraska'=>'NE', 'nevada'=>'NV', 'new hampshire'=>'NH', 'new jersey'=>'NJ', 'new mexico'=>'NM', 'new york'=>'NY', 'north carolina'=>'NC', 'north dakota'=>'ND', 'ohio'=>'OH', 'oklahoma'=>'OK', 'oregon'=>'OR', 'pennsylvania'=>'PA', 'rhode island'=>'RI', 'south carolina'=>'SC', 'south dakota'=>'SD', 'tennessee'=>'TN', 'texas'=>'TX', 'utah'=>'UT', 'vermont'=>'VT', 'virginia'=>'VA', 'washington'=>'WA', 'washington d.c.'=>'DC', 'washington dc'=>'DC', 'west virginia'=>'WV', 'wisconsin'=>'WI', 'wyoming'=>'WY');
+
+	$cities[$GLOBALS['customer_info']['city'].', '.$GLOBALS['customer_info']['state-abbr']] = '';
+	if ( is_array($GLOBALS['customer_info']['service-areas']) ) :
+		foreach ( $GLOBALS['customer_info']['service-areas'] as $city ) :
+			$buildCity = $city[0];
+			if ( array_key_exists( strtolower($city[1]), $states) ) $buildCity .= ', '.$states[strtolower($city[1])];
+			$cities[$buildCity] = '';
+		endforeach;
+	endif;	
+	foreach ( get_posts( array ( 'numberposts'=>-1, 'post_type'=>'optimized' ) ) as $post ) $cities[$post->post_title] = get_permalink( $post->ID );
+
+	foreach ( $cities as $serviceArea=>$areaLink ) :
+		$buildLinks .= '<li>';
+		if ( $areaLink != '' ) $buildLinks .= '<a href="'.$areaLink.'">';
+		$buildLinks .= $serviceArea;
+		if ( $areaLink != '' ) $buildLinks .= '</a>';
+		$buildLinks .= '</li>';
+	endforeach;
+	$buildLinks .= '<li>Surrounding Areas</li>';			
+
+	return $buildLinks;
+}		
+
 // Choose random text from given choices
 add_shortcode( 'get-random-text', 'battleplan_getRandomText' );
 function battleplan_getRandomText($atts, $content = null) {

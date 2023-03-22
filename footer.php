@@ -102,16 +102,12 @@
 	
 	<?php bp_after_colophon(); ?>
 	
-	<?php
-		$buildLinks = '<div class="wp-google-badge-faux"></div>';	
-		
-		$buildLinks .= '<div class="bp-service-areas">Service Areas: ';	
-		foreach ( get_posts( array ( 'numberposts'=>-1, 'post_type'=>'optimized' ) ) as $post ) {
-			$buildLinks .= '<a href="'.get_permalink( $post->ID ).'">'.$post->post_title.'</a> · ';
-		}
-		$buildLinks .= 'surrounding areas in '.$GLOBALS['customer_info']['state-full'].'</div>';			
-		
-		echo $buildLinks;
+	<?php 
+		$buildLinks = '<div class="wp-google-badge-faux"></div>';		
+		$buildLinks .= '<div class="bp-service-areas">Our Service Areas:<br><ul class="three-col">';
+		$buildLinks .= do_shortcode('[get-service-areas]');
+		$buildLinks .= '</ul></div>';	
+		echo $buildLinks;	
 	?>	
 		
 </div><!-- #page -->

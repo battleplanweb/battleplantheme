@@ -102,6 +102,7 @@ function processChron($forceChron) {
 
 // Yoast SEO Settings Update
 	if ( is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') ) :	
+		$schema = get_option( 'bp_schema' );
 		$wpSEOBase = get_option( 'wpseo' );		
 		$wpSEOBase['enable_admin_bar_menu'] = 0;
 		$wpSEOBase['enable_cornerstone_content'] = 0;
@@ -170,12 +171,21 @@ function processChron($forceChron) {
 		$wpSEOSettings['breadcrumbs-home'] = 'Home';
 		$wpSEOSettings['breadcrumbs-searchprefix'] = 'You searched for';
 		$wpSEOSettings['breadcrumbs-sep'] = '»';		
-		$logo = is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/logo.png' ) ? $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/logo.png' : $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/logo.webp';		
-		$wpSEOSettings['company_logo'] = $logo;
-		$wpSEOSettings['company_logo_id'] = attachment_url_to_postid( $logo );
-		$wpSEOSettings['company_logo_meta']['url'] = $logo;	
-		$wpSEOSettings['company_logo_meta']['path'] = get_attached_file( attachment_url_to_postid( $logo ) );
-		$wpSEOSettings['company_logo_meta']['id'] = attachment_url_to_postid( $logo );
+		if (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/logo.png' ) ) : $logoFile = "logo.png";
+		elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/logo.webp' ) ) : $logoFile = "logo.webp";
+		elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/logo.jpg' ) ) : $logoFile = "logo.jpg";
+		elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-icon.png' ) ) : $logoFile = "site-icon.png";
+		elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-icon.jpg' ) ) : $logoFile = "site-icon.jpg";
+		elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-icon.webp' ) ) : $logoFile = "site-icon.webp";
+		elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/favicon.png' ) ) : $logoFile = "favicon.png";
+		elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/favicon.jpg' ) ) : $logoFile = "favicon.jpg";
+		elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/favicon.webp' ) ) : $logoFile = "favicon.webp";
+		endif;	
+		$wpSEOSettings['company_logo'] = $schema['company_logo'] = $logoFile;
+		$wpSEOSettings['company_logo_id'] = attachment_url_to_postid( $logoFile );
+		$wpSEOSettings['company_logo_meta']['url'] = $logoFile;	
+		$wpSEOSettings['company_logo_meta']['path'] = get_attached_file( attachment_url_to_postid( $logoFile ) );
+		$wpSEOSettings['company_logo_meta']['id'] = attachment_url_to_postid( $logoFile );
 		$wpSEOSettings['company_name'] = get_bloginfo('name');
 		$wpSEOSettings['company_or_person'] = 'company';
 		$wpSEOSettings['stripcategorybase'] = '1';
@@ -206,8 +216,8 @@ function processChron($forceChron) {
 		if ( isset($GLOBALS['customer_info']['facebook']) ) $wpSEOSocial['facebook_site'] = $GLOBALS['customer_info']['facebook'];
 		if ( isset($GLOBALS['customer_info']['instagram']) ) $wpSEOSocial['instagram_url'] = $GLOBALS['customer_info']['instagram'];
 		if ( isset($GLOBALS['customer_info']['linkedin']) ) $wpSEOSocial['linkedin_url'] = $GLOBALS['customer_info']['linkedin'];
-		$wpSEOSocial['og_default_image'] = $logo;
-		$wpSEOSocial['og_default_image_id'] = attachment_url_to_postid( $logo );
+		$wpSEOSocial['og_default_image'] = $logoFile;
+		$wpSEOSocial['og_default_image_id'] = attachment_url_to_postid( $logoFile );
 		$wpSEOSocial['opengraph'] = '1';
 		if ( isset($GLOBALS['customer_info']['pinterest']) ) $wpSEOSocial['pinterest_url'] = $GLOBALS['customer_info']['pinterest'];
 		if ( isset($GLOBALS['customer_info']['twitter']) ) $wpSEOSocial['twitter_site'] = $GLOBALS['customer_info']['twitter'];
@@ -239,7 +249,12 @@ function processChron($forceChron) {
 			if ( $GLOBALS['customer_info']['business-type'] == "tattoo shop" ) $wpSEOLocal['business_type'] = 'Tattoo parlor';	
 		endif;
 
-		if ( $GLOBALS['customer_info']['site-type'] == "hvac" ) $wpSEOLocal['business_type'] = 'HVACBusiness';		
+		if ( $GLOBALS['customer_info']['site-type'] == "hvac" ) :
+			$wpSEOLocal['business_type'] = $schema['business_type'] = 'HVACBusiness';
+		 	$schema['additional_type'] = "Heating,_ventilation,_and_air_conditioning";	
+		else:
+			$schema['business_type'] = $wpSEOLocal['business_type'];
+		endif;
 
 		if ( isset($GLOBALS['customer_info']['street']) ) $wpSEOLocal['location_address'] = $GLOBALS['customer_info']['street'];
 		if ( isset($GLOBALS['customer_info']['city']) ) $wpSEOLocal['location_city'] = $GLOBALS['customer_info']['city'];
@@ -258,10 +273,14 @@ function processChron($forceChron) {
 			$wpSEOLocal['hide_opening_hours'] = 'off';				
 			$days = array('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday');
 			$num = 0;
+			$schema['hours'] = null;
 			foreach( $days as $day) :			
 				$wpSEOLocal['opening_hours_'.$day.'_from'] = $GLOBALS['customer_info']['hours']['periods'][$num]['open']['time'] != "" ? rtrim(chunk_split(substr($GLOBALS['customer_info']['hours']['periods'][$num]['open']['time'],-4),2,':'),':') : "Closed";				
 				$wpSEOLocal['opening_hours_'.$day.'_to'] = $GLOBALS['customer_info']['hours']['periods'][$num]['close']['time'] != "" ? rtrim(chunk_split(substr($GLOBALS['customer_info']['hours']['periods'][$num]['close']['time'],-4),2,':'),':') : "Closed";			
-				$wpSEOLocal['opening_hours_'.$day.'_second_from'] = $wpSEOLocal['opening_hours_'.$day.'_second_to'] = "";				
+				$wpSEOLocal['opening_hours_'.$day.'_second_from'] = $wpSEOLocal['opening_hours_'.$day.'_second_to'] = "";
+				
+				$schema['hours'] .= ucwords(substr($day, 0, 2)).' '.$wpSEOLocal['opening_hours_'.$day.'_from'];
+				$schema['hours'] .= $wpSEOLocal['opening_hours_'.$day.'_from'] != "Closed" ? '-'.$wpSEOLocal['opening_hours_'.$day.'_to'].' ' : ' ';
 				$num++;			
 			endforeach;
 		else:
@@ -270,6 +289,7 @@ function processChron($forceChron) {
 		$wpSEOLocal['location_timezone'] = get_option('timezone_string');		
 		$wpSEOLocal['address_format'] = 'address-state-postal';
 		update_option( 'wpseo_local', $wpSEOLocal );
+		update_option( 'bp_schema', $schema );
 	endif;
 
 // Blackhole for Bad Bots

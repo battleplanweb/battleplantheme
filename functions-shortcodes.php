@@ -1296,20 +1296,15 @@ function battleplan_getCreditCards( $atts, $content = null ) {
 // Add Crypto Currency widget to Sidebar
 add_shortcode( 'get-crypto', 'battleplan_getCrypto' );
 function battleplan_getCrypto( $atts, $content = null ) {	
-	$a = shortcode_atts( array( 'bitcoin'=>'no', 'cardano'=>'no', 'chainlink'=>'no', 'dogecoin'=>'no', 'monero'=>'no', 'polygon'=>'no', 'stellar'=>'no', 'ethereum'=>'no', 'shibainu'=>'no', 'sand'=>'no', 'icp'=>'no' ), $atts );
+	$a = shortcode_atts( array( 'include'=>'bitcoin cardano chainlink dogecoin monero polygon stellar ethereum shibainu sand icp xpr' ), $atts );
+	$cryptos = explode(" ", esc_attr($a['include']) );
 
 	$buildCrypto = '<div id="crypto" class="currency">';
-	if ( esc_attr($a['bitcoin']) == "yes" ) $buildCrypto .= '<img class="crypto-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-bitcoin.png" alt="We accept Bitcoin crypto currency" width="100" height="100" style="aspect-ratio:100/100" />';
-	if ( esc_attr($a['cardano']) == "yes" ) $buildCrypto .= '<img class="crypto-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-cardano.png" alt="We accept Cardano crypto currency" width="100" height="100" style="aspect-ratio:100/100" />';
-	if ( esc_attr($a['chainlink']) == "yes" ) $buildCrypto .= '<img class="crypto-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-chainlink.png" alt="We accept Chainlink crypto currency" width="100" height="100" style="aspect-ratio:100/100" />';
-	if ( esc_attr($a['dogecoin']) == "yes" ) $buildCrypto .= '<img class="crypto-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-dogecoin.png" alt="We accept Dogecoin crypto currency" width="100" height="100" style="aspect-ratio:100/100" />';
-	if ( esc_attr($a['monero']) == "yes" ) $buildCrypto .= '<img class="crypto-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-monero.png" alt="We accept Monero crypto currency" width="100" height="100" style="aspect-ratio:100/100" />';
-	if ( esc_attr($a['polygon']) == "yes" ) $buildCrypto .= '<img class="crypto-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-polygon.png" alt="We accept Polygon crypto currency" width="100" height="100" style="aspect-ratio:100/100" />';
-	if ( esc_attr($a['stellar']) == "yes" ) $buildCrypto .= '<img class="crypto-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-stellar.png" alt="We accept Stellar crypto currency" width="100" height="100" style="aspect-ratio:100/100" />';
-	if ( esc_attr($a['ethereum']) == "yes" ) $buildCrypto .= '<img class="crypto-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-ethereum.png" alt="We accept Ethereum crypto currency" width="100" height="100" style="aspect-ratio:100/100" />';
-	if ( esc_attr($a['shibainu']) == "yes" ) $buildCrypto .= '<img class="crypto-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-shibainu.png" alt="We accept Shiba Inu crypto currency" width="100" height="100" style="aspect-ratio:100/100" />';
-	if ( esc_attr($a['sand']) == "yes" ) $buildCrypto .= '<img class="crypto-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-sand.png" alt="We accept Sand crypto currency" width="100" height="100" style="aspect-ratio:100/100" />';
-	if ( esc_attr($a['icp']) == "yes" ) $buildCrypto .= '<img class="crypto-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-icp.png" alt="We accept ICP crypto currency" width="100" height="100" style="aspect-ratio:100/100" />';
+	
+	foreach ( $cryptos as $crypto ) :	
+		$buildCrypto .= '<img class="crypto-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-'.$crypto.'.png" alt="We accept '.$crypto.' crypto currency" width="100" height="100" style="aspect-ratio:100/100" />';		
+	endforeach;	
+
 	$buildCrypto .= '</div>';  					  
 										 			  
 	return $buildCrypto;

@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '18.0' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '18.1' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -25,12 +25,11 @@ if ( !defined('_USER_ID') ) define( '_USER_ID', wp_get_current_user()->ID );
 $googlebots = array( 'google', 'lighthouse' );
 $bots = array_merge(array('bot', 'crawler', 'spider', 'facebook', 'bing', 'linkedin', 'zgrab', 'addthis', 'fetcher', 'barkrowler', 'newspaper', 'yeti', 'daum', 'riddler', 'panscient', 'dataprovider', 'gigablast', 'qwantify', 'admantx', 'audit', 'docomo', 'yahoo', 'wayback', 'adbeat', 'netcraft', 'wordpress'), $googlebots);
 $spammers = explode("\n", file_get_contents( get_template_directory().'/spammers.txt' ));
-$bad_ips = is_array( get_option('bbb_badbots') ) ? get_option('bbb_badbots') : array();
+//https://github.com/matomo-org/referrer-spam-list/blob/master/spammers.txt
 
 foreach ( $googlebots as $googlebot ) if ( isset($_SERVER["HTTP_USER_AGENT"]) && stripos( $_SERVER["HTTP_USER_AGENT"], $googlebot) !== false && !defined('_IS_GOOGLEBOT') ) define( '_IS_GOOGLEBOT', true );
 foreach ( $bots as $bot ) if ( isset($_SERVER["HTTP_USER_AGENT"]) && stripos( $_SERVER["HTTP_USER_AGENT"], $bot) !== false && !defined('_IS_BOT') ) define( '_IS_BOT', true );
 foreach ( $spammers as $spammer ) if ( isset($_SERVER["HTTP_REFERER"]) && stripos( $_SERVER["HTTP_REFERER"], $spammer) !== false && !defined('_IS_BOT') ) define( '_IS_BOT', true );
-foreach ( $bad_ips as $ip ) if ( isset($_SERVER["REMOTE_ADDR"]) && stripos( $_SERVER["REMOTE_ADDR"], $ip['ip_address'] ) !== false && !defined('_IS_BOT') ) define( '_IS_BOT', true );
 
 if ( !defined('_IS_BOT') ) define( '_IS_BOT', false );
 if ( !defined('_IS_GOOGLEBOT') ) define( '_IS_GOOGLEBOT', false );
@@ -1551,7 +1550,7 @@ function battleplan_addSchema() {
 			"url": "<?php echo get_site_url(); ?>/",
 			"logo": "<?php echo get_site_url().'/wp-content/uploads/'.$schema['company_logo'] ?>",
 			"image": "<?php echo $imageFile ?>",
-			"description": "<?php echo str_replace('&#038;', '&', get_the_excerpt()) ?>",			
+			"description": "<?php echo str_replace(array('&#038;', '&#8217;'), array('&', "'"), get_the_excerpt()) ?>",			
 			"telephone": "(<?php echo $GLOBALS['customer_info']['area'] ?>) <?php echo $GLOBALS['customer_info']['phone'] ?>",
 			"email":"<?php echo $GLOBALS['customer_info']['email'] ?>",
 			"address": {

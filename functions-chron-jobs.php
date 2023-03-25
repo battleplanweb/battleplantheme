@@ -25,11 +25,9 @@ function battleplan_delete_prefixed_options( $prefix ) {
 	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
 }	
 
-if ( get_option('bp_setup_2023_03_20') != "completed" ) :
-	battleplan_delete_prefixed_options( 'bp_setup_' );
-	
-	$bbb = get_option('bbb_badbots') != null ? get_option('bbb_badbots') : null;
-	updateOption( 'bbb_badbots', $bbb, false );	
+if ( get_option('bp_setup_2023_03_25z') != "completed" ) :
+	battleplan_delete_prefixed_options( 'bp_setup_' );	
+	battleplan_delete_prefixed_options( 'bbb_' );
 	
 	$ccv = get_option('content-column-views') != null ? get_option('content-column-views') : null;
 	updateOption( 'content-column-views', $ccv, false );
@@ -37,10 +35,27 @@ if ( get_option('bp_setup_2023_03_20') != "completed" ) :
 	delete_option('ari_fancy_lightbox_settings');
 	
 	//battleplan_delete_prefixed_options( 'wdp_' );
-
 	//if ( $customerInfo['site-type'] != 'profile' ) delete_option('site_login');
 
-	updateOption( 'bp_setup_2023_03_20', 'completed', false );			
+	// Deactivate and uninstall specific plugin
+	add_action('after_setup_theme', 'bp_deactivate_uninstall_plugin');
+	function bp_deactivate_uninstall_plugin() {
+		$plugin_path = 'blackhole-bad-bots/blackhole.php';
+
+		if (is_plugin_active($plugin_path)) :
+			deactivate_plugins($plugin_path);
+			if (!is_plugin_active($plugin_path)) :
+				if (file_exists(WP_PLUGIN_DIR . '/' . $plugin_path)) :
+					require_once ABSPATH . 'wp-admin/includes/plugin.php';
+					require_once ABSPATH . 'wp-admin/includes/file.php';
+					uninstall_plugin($plugin_path);
+					delete_plugins(array($plugin_path));
+				endif;
+			endif;
+		endif;
+	}
+
+	updateOption( 'bp_setup_2023_03_25z', 'completed', false );			
 endif;
 
 //if ( get_option('bp_setup_2022_11_09') != "completed" ) :

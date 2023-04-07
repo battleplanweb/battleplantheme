@@ -1,3 +1,6 @@
+/* https://github.com/biati-digital/glightbox/blob/master/README.md
+*/
+
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define(factory) :

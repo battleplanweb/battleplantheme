@@ -218,6 +218,12 @@ a {
 	}
 	
 	body {
+	  	margin-top: 							-32px !important;
+	}
+}
+
+@media (max-width: 860px) {
+	body {
 	  	margin-top: 							-46px !important;
 	}
 }
@@ -249,6 +255,8 @@ a {
 	#wpadminbar #wp-admin-bar-user-info span {
 		height: 									26px;
 	}
+	
+	
 
 	.logged-in {
 		margin-top: 								-32px !important; /* compensate for the margin automatically placed on html */

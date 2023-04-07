@@ -36,7 +36,7 @@ add_shortcode( 'product-overview', 'battleplan_product_overview' );
 function battleplan_product_overview( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', ), $atts );
 	$type = esc_attr($a['type']);
-	$brands = array('american standard', 'bryant', 'carrier', 'lennox', 'rheem', 'ruud', 'tempstar', 'trane', 'york');
+	$brands = array('amana', 'american standard', 'bryant', 'carrier', 'lennox', 'rheem', 'ruud', 'tempstar', 'trane', 'york');
 	$file = 'generic';
 	
 	foreach( $brands as $brand ) :	

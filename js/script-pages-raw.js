@@ -624,7 +624,10 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 		var numP = $('.single-post .entry-content *').length, posP = Math.ceil(numP / 2);	
 		if ( numP > 30 ) { posP = 10; }
 		
-		if ( $('.single-post .entry-content h2').length > 1 ) {
+		if ( $('div.insert-promo').length > 0 ) {
+			moveDiv ('.ad-promo', '.single-post .entry-content div.insert-promo', 'before'); 
+			$('div.insert-promo').remove();
+		} else if ( $('.single-post .entry-content h2').length > 1 ) {
 			moveDiv ('.ad-promo', '.single-post .entry-content h2:nth-of-type(2)', 'before'); 
 		} else if ( $('.single-post .entry-content h2').length == 1 ) {
 			moveDiv ('.ad-promo', '.single-post .entry-content h2', 'before'); 		

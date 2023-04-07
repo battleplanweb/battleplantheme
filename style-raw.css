@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 18.1
+Version: 18.2
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1206,6 +1206,8 @@ select:focus,
 
 
 
+
+
 .style-alt input[type="text"]:focus,
 .style-alt input[type="email"]:focus,
 .style-alt input[type="url"]:focus,
@@ -2097,6 +2099,7 @@ a#bbblink {
 /* Modal Box */
 .section.section-lock[data-pos="modal"],
 .section.section-lock[data-pos="center"] {
+
 	width:										100vw;
 	height:										100vh;
 	background:									var(--black-highest);
@@ -2384,7 +2387,9 @@ body.locked {
 }
 
 #desktop-navigation li.mobile-only,
-#desktop-navigation div.menu-search-box.mobile-only {
+#desktop-navigation div.menu-search-box.mobile-only, 
+#mobile-navigation li.desktop-only,
+#mobile-navigation div.menu-search-box.desktop-only {
 	display:									none;
 }
 
@@ -3512,6 +3517,7 @@ img.unloaded {
 .thumb-right .section .switch-thumb .alignright,
 .thumb-right .section .switch-thumb .align-right {
 
+
 	float: 										left;
 	margin:										var(--measure-base) var(--measure-base) var(--measure-small) 0;
 }
@@ -3784,18 +3790,25 @@ ul.side-by-side img {
 
  .video-player .play {
     position: 									absolute;
-    background: 								url('//i.imgur.com/TxzC70f.png') no-repeat;
-	height: 									72px;
-    width: 										72px;
+    background: 								url('../battleplantheme/common/logos/video-play-btn.webp') no-repeat;
+    width: 										80px;
+	height: 									56px;
     left: 										50%;
     top: 										50%;
-    margin-left: 								-36px;
-    margin-top: 								-36px;
+    margin-left: 								-40px;
+    margin-top: 								-27px;
     pointer-events: 							none;
+    filter: 									brightness(75%);
+	transition: 								all 0.3s ease;
 }
   
 .video-player img:hover {
     filter: 									brightness(75%);
+}
+
+.video-player img:hover + .play {
+    filter: 									brightness(100%);
+	transition: 								all 0.3s ease;
 }
 
 /* Page not found graphic */
@@ -3838,6 +3851,7 @@ img.img-404 {
 }
 
 .block-image.image-testimonials.testimonials-generic-icon {
+
 	max-width: 									60%;
 }
 
@@ -5994,7 +6008,12 @@ html.error503 h3 {
 	.flex.break-1 {
 		grid-template-columns: 						1fr;
 	}
-
+			
+	.flex.break-none .col {
+		grid-column: 								span 1;
+	}
+	
+	.flex.grid-custom .col,
 	.flex .col {
 		/*grid-column: 								span 2; */
 		grid-column: 								1/-1;  /* 7/22/22 - Sherrell Air, any site that uses layout="1fr 320px 1fr" or more than 2 columns */
@@ -6056,7 +6075,6 @@ html.error503 h3 {
 	
 	/* Row of Pics */ /* changed from .col to .col-row-of-pics 1/5/21 for Bubba's Cooks Country */
 	.grid-3e .col-row-of-pics:nth-last-child(1),	
-
 	.grid-4e .col-row-of-pics:nth-last-child(2),
 	.grid-5e .col-row-of-pics:nth-last-child(3),
 	.grid-6e .col-row-of-pics:nth-last-child(4),

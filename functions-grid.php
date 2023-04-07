@@ -349,7 +349,7 @@ add_shortcode( 'accordion', 'battleplan_buildAccordion' );
 function battleplan_buildAccordion( $atts, $content = null ) {
 	wp_enqueue_script( 'battleplan-accordion', get_template_directory_uri().'/js/script-accordion.js', array(), _BP_VERSION, false );	
 	
-	$a = shortcode_atts( array( 'title'=>'', 'excerpt'=>'', 'class'=>'', 'active'=>'false', 'btn'=>'false', 'btn_collapse'=>'false', 'icon'=>'true', 'start'=>'', 'end'=>'' ), $atts );
+	$a = shortcode_atts( array( 'title'=>'', 'excerpt'=>'', 'class'=>'', 'active'=>'false', 'btn'=>'false', 'btn_collapse'=>'false', 'icon'=>'true', 'start'=>'', 'end'=>'', 'scroll'=>'true' ), $atts );
 	$excerpt = esc_attr($a['excerpt']);
 	if ( $excerpt != '' ) $excerpt = '<div class="accordion-excerpt"><div class="accordion-box"><p>'.$excerpt.'</p></div></div>';
 	$class = esc_attr($a['class']);
@@ -358,6 +358,7 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 	$icon = esc_attr($a['icon']); 
 	$btnCollapse = esc_attr($a['btn_collapse']);
 	$btn = esc_attr($a['btn']);
+	$scroll = esc_attr($a['btn_scroll']) == "true" ? "" : " no-scroll";
 	$addBtn = $thumb = '';
 	
 	if ( $icon == 'false' ) : $icon = '';
@@ -365,15 +366,15 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 	else: $thumb = '<img src="'.$icon.'" alt="'.$title.'" />'; $icon=''; 
 	endif;
 	
-	if ( $title ) $printTitle = '<h2 role="button" tabindex="0" class="accordion-title accordion-button">'.$icon.$title.'</h2>';
+	if ( $title ) $printTitle = '<h2 role="button" tabindex="0" class="accordion-title accordion-button'.$scroll.'">'.$icon.$title.'</h2>';
 	
 	if ( $btn != "false" ) :	
 		if ( $btnCollapse == "false" ) $btnCollapse = "hide"; 
 		if ( $btn == "true" ) :
-			$printTitle = '<div class="block block-button"><button role="button" tabindex="0" class="accordion-title accordion-button" data-text="'.$title.'" data-collapse="'.$btnCollapse.'">'.$title.'</button></div>';
+			$printTitle = '<div class="block block-button"><button role="button" tabindex="0" class="accordion-title accordion-button'.$scroll.'" data-text="'.$title.'" data-collapse="'.$btnCollapse.'">'.$title.'</button></div>';
 		else:
 			if ( $title ) $printTitle = '<h2 class="accordion-title">'.$icon.$title.'</h2>';
-			$addBtn = '<div class="block block-button"><button role="button" tabindex="0" class="accordion-button" data-text="'.$btn.'" data-collapse="'.$btnCollapse.'">'.$btn.'</button></div>';
+			$addBtn = '<div class="block block-button"><button role="button" tabindex="0" class="accordion-button'.$scroll.'" data-text="'.$btn.'" data-collapse="'.$btnCollapse.'">'.$btn.'</button></div>';
 		endif;
 	endif;
 	

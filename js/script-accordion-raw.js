@@ -51,12 +51,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 					thisAcc.find('.accordion-content').animate({ height: "toggle", opacity: "toggle" }, transSpeed);	
 					
 					//if ( thisClose == undefined ) {  removed for Greater Fort Myers Dog Club - 2022 Dog Show accordion
+					if ( !$(this).hasClass('no-scroll') ) {
 						if ( (thisPos - topPos) > (getDeviceH() * 0.25) ) {
 							animateScroll(thisPos, topSpacer, transSpeed); 
 						} else {
 							moveTo = ((thisPos - topPos) / 2) + topPos;						
 							animateScroll(moveTo, topSpacer, transSpeed); 							
 						}	
+					}
 					//}
 					
 					if ( thisClose == "hide" ) { 

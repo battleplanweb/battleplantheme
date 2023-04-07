@@ -474,6 +474,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 
 
+
+
 	window.revealDiv = function (container, delay, speed, offset) {
 		delay = delay || 0;		
 		speed = speed || 1000;		

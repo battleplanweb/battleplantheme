@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '18.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '18.2' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -59,7 +59,8 @@ $GLOBALS['customer_info'] = get_option('customer_info');
 $currYear=date("Y"); 
 $startYear = $GLOBALS['customer_info']['year'];
 $GLOBALS['customer_info']['copyright'] = $startYear == $currYear ? "© ".$currYear : "© ".$startYear."-".$currYear; 
-$GLOBALS['site-loc'] = 1;		
+$GLOBALS['site-loc'] = 1;	
+$GLOBALS['do_not_repeat'] = array(); 
 
 /*--------------------------------------------------------------
 # Functions to extend WordPress 
@@ -778,6 +779,11 @@ function battleplan_promo() {
 		$current_ad = do_shortcode('[get-element slug="ad"]');
 		if ( $current_ad ) echo '<div class="ad-promo">'.$current_ad.'</div>';
 	endif;	
+}
+
+add_shortcode( 'insert-promo', 'battleplan_GetPromo' );
+function battleplan_GetPromo($atts, $content = null ) {
+	return '<div class="insert-promo"></div>';
 }
 
 // Set up post meta date
@@ -1536,65 +1542,68 @@ function battleplan_redirect_to_url($url, $redirect) {
 // Include schema in head of each page
 add_action('wp_head', 'battleplan_addSchema');
 function battleplan_addSchema() { 
-	$schema = get_option( 'bp_schema' );
-	$attach = get_children( array( 'post_parent' => get_the_ID(), 'post_type' => 'attachment', 'post_mime_type' => 'image', 'order' => 'ASC', 'numberposts' => 1 ) );
-    if( is_array( $attach ) && is_object( current( $attach ) ) ) $imageFile = current( $attach )->guid;
-	$mapID = $GLOBALS['customer_info']['cid'] ? "https://maps.google.com/?cid=".$GLOBALS['customer_info']['cid'] : null;
-	
-	?><script type="application/ld+json" defer nonce="<?php echo _BP_NONCE; ?>" >
-		{ 
-			"@context": "http://schema.org",
-			"@type": "<?php echo $schema['business_type'] ?>",
-			"additionalType": "http://productontology.org/id/<?php echo $schema['additional_type'] ?>",
-			"name": "<?php echo $GLOBALS['customer_info']['name'] ?>",
-			"url": "<?php echo get_site_url(); ?>/",
-			"logo": "<?php echo get_site_url().'/wp-content/uploads/'.$schema['company_logo'] ?>",
-			"image": "<?php echo $imageFile ?>",
-			"description": "<?php echo str_replace(array('&#038;', '&#8217;'), array('&', "'"), get_the_excerpt()) ?>",			
-			"telephone": "(<?php echo $GLOBALS['customer_info']['area'] ?>) <?php echo $GLOBALS['customer_info']['phone'] ?>",
-			"email":"<?php echo $GLOBALS['customer_info']['email'] ?>",
-			"address": {
-				"@type":"PostalAddress",
-				"streetAddress": "<?php echo $GLOBALS['customer_info']['street'] ?>",
-				"addressLocality": "<?php echo $GLOBALS['customer_info']['city'] ?>",
-				"addressRegion": "<?php echo $GLOBALS['customer_info']['state-full'] ?>",
-				"postalCode": "<?php echo $GLOBALS['customer_info']['zip'] ?>"
-			},
-			"geo": {
-				"@type":"GeoCoordinates",
-				"latitude":"<?php echo $GLOBALS['customer_info']['lat'] ?>",
-				"longitude":"<?php echo $GLOBALS['customer_info']['long'] ?>"
-			},
-			"openingHours": "<?php echo $schema['hours'] ?>",
-			"areaServed": [{
-				"@type": "City",
-				"name": "<?php echo $GLOBALS['customer_info']['city'] ?>",
-				"sameAs": "https://en.wikipedia.org/wiki/<?php echo $GLOBALS['customer_info']['city'] ?>,_<?php echo $GLOBALS['customer_info']['state-full'] ?>"
-		<?php foreach ( $GLOBALS['customer_info']['service-areas'] as $city ) : ?>			  
-			},
-			{
-				"@type": "City",
-				"name": "<?php echo $city[0] ?>",
-				"sameAs": "https://en.wikipedia.org/wiki/<?php echo $city[0] ?>,_<?php echo $city[1] ?>"
-		<?php endforeach; ?>
-			}],	
-			"makesOffer": {
-				"@type":"Offer",
-				"areaServed": {
-					"@type":"GeoShape",
-					"address": {
-						"@type":"PostalAddress",
-						"addressLocality":"<?php echo $GLOBALS['customer_info']['city'] ?>",
-						"addressRegion":"<?php echo $GLOBALS['customer_info']['state-full'] ?>",
-						"postalCode":"<?php echo $GLOBALS['customer_info']['zip'] ?>",
-						"addressCountry":"United States"
+	if ( !isset($GLOBALS['customer_info']['schema']) || $GLOBALS['customer_info']['schema'] != 'false' ) :
+		$schema = get_option( 'bp_schema' );
+		$attach = get_children( array( 'post_parent' => get_the_ID(), 'post_type' => 'attachment', 'post_mime_type' => 'image', 'order' => 'ASC', 'numberposts' => 1 ) );
+		if( is_array( $attach ) && is_object( current( $attach ) ) ) $imageFile = current( $attach )->guid;
+		$mapID = $GLOBALS['customer_info']['cid'] ? "https://maps.google.com/?cid=".$GLOBALS['customer_info']['cid'] : null;
+
+		?><script type="application/ld+json" defer nonce="<?php echo _BP_NONCE; ?>" >
+			{ 
+				"@context": "http://schema.org",
+				"@type": "<?php echo $schema['business_type'] ?>",
+				"additionalType": "http://productontology.org/id/<?php echo $schema['additional_type'] ?>",
+				"name": "<?php echo $GLOBALS['customer_info']['name'] ?>",
+				"url": "<?php echo get_site_url(); ?>/",
+				"logo": "<?php echo get_site_url().'/wp-content/uploads/'.$schema['company_logo'] ?>",
+				"image": "<?php echo $imageFile ?>",
+				"description": "<?php echo str_replace(array('&#038;', '&#8217;'), array('&', "'"), get_the_excerpt()) ?>",			
+				"telephone": "(<?php echo $GLOBALS['customer_info']['area'] ?>) <?php echo $GLOBALS['customer_info']['phone'] ?>",
+				"email":"<?php echo $GLOBALS['customer_info']['email'] ?>",
+				"address": {
+					"@type":"PostalAddress",
+					"streetAddress": "<?php echo $GLOBALS['customer_info']['street'] ?>",
+					"addressLocality": "<?php echo $GLOBALS['customer_info']['city'] ?>",
+					"addressRegion": "<?php echo $GLOBALS['customer_info']['state-full'] ?>",
+					"postalCode": "<?php echo $GLOBALS['customer_info']['zip'] ?>"
+				},
+				"geo": {
+					"@type":"GeoCoordinates",
+					"latitude":"<?php echo $GLOBALS['customer_info']['lat'] ?>",
+					"longitude":"<?php echo $GLOBALS['customer_info']['long'] ?>"
+				},
+				"openingHours": "<?php echo $schema['hours'] ?>",
+				"areaServed": [{
+					"@type": "City",
+					"name": "<?php echo $GLOBALS['customer_info']['city'] ?>",
+					"sameAs": "https://en.wikipedia.org/wiki/<?php echo $GLOBALS['customer_info']['city'] ?>,_<?php echo $GLOBALS['customer_info']['state-full'] ?>"
+			<?php foreach ( $GLOBALS['customer_info']['service-areas'] as $city ) : ?>			  
+				},
+				{
+					"@type": "City",
+					"name": "<?php echo $city[0] ?>",
+					"sameAs": "https://en.wikipedia.org/wiki/<?php echo $city[0] ?>,_<?php echo $city[1] ?>"
+			<?php endforeach; ?>
+				}],	
+				"makesOffer": {
+					"@type":"Offer",
+					"areaServed": {
+						"@type":"GeoShape",
+						"address": {
+							"@type":"PostalAddress",
+							"addressLocality":"<?php echo $GLOBALS['customer_info']['city'] ?>",
+							"addressRegion":"<?php echo $GLOBALS['customer_info']['state-full'] ?>",
+							"postalCode":"<?php echo $GLOBALS['customer_info']['zip'] ?>",
+							"addressCountry":"United States"
+						}
 					}
+				},
+				"hasMap": "<?php echo $mapID ?>"
 				}
-			},
-			"hasMap": "<?php echo $mapID ?>"
-		}
-</script>
-<?php }
+		</script>
+	
+<?php endif;
+}
 
 /*--------------------------------------------------------------
 # User Roles

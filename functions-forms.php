@@ -22,7 +22,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( stripos($tag->name,"message") !== false ) :
 		$check = isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : ''; 
 		$name = isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : ''; 
-		$web_words = array('.com','http://','https://','.net','.org','www.','.buzz');
+		$web_words = array('.com','http://','https://','.net','.org','www.','.buzz', 'bit.ly');
 		if ( strtolower($check) == strtolower($name) ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($web_words as $web_word) :
 			if (stripos($check,$web_word) !== false) $result->invalidate( $tag, 'In order to reduce spam, website addresses are not allowed.' );
@@ -111,37 +111,36 @@ function battleplan_setupFormEmail( $contact_form, &$abort, $submission ) {
 	$formMail['body'] = $buildEmail;		
 		
 	// intercept spammers	
-	$name = $submission->get_posted_data( 'user-name' );
+	$ip = $_SERVER["REMOTE_ADDR"];
+	//$name = $submission->get_posted_data( 'user-name' );
 	$email = $submission->get_posted_data( 'user-email' );
-	$city = $submission->get_posted_data( 'user-city' );
+	$phone = $submission->get_posted_data( 'user-phone' );
+	//$city = $submission->get_posted_data( 'user-city' );
 	$message = $submission->get_posted_data( 'user-message' );
-	$spamIntercept = false;
 	
-	$bad_names = array('Cryto');
-	
-	$bad_cities = array('Prague');
+	$bad_ips = array('37.19.199', '37.19.221', '45.89.173', '82.221.113', '89.187.177', '89.187.179', '89.187.180', '91.223.133', '93.190.140', '138.199.52', '143.244.44', '146.70.147', '154.13.63', '156.146.54', '161.123.150', '185.147.214', '195.181.163');
 
 	$bad_emails= array($_SERVER['HTTP_HOST'], 'testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz', '@tworld.com', 'garywhi777@gmail.com', 'ronyisthebest16@gmail.com', 'ronythomas611@gmail.com', 'ronythomasrecruiter@gmail.com', '@ideonagency.net', 'axiarobbie20@gmail.com', '@hyper-tidy.com', '@readyjob.org', '@thefranchisecreatornetwork.com', 'franchisecreatormarketing.com', '@legendarygfx.com', '@hitachi-metal-jp.com', '@expresscommerce.co', '@zaphyrpro.com', 'erjconsult.com', 'christymkts@gmail.com', '@theheritageseo.com', '@freedomwebdesigns.com', 'wesavesmallbusinesses@gmail.com', '@bimservicesllc.net', '@spamhunter.co', '@myspamburner.co', '@spamshield.co', '@excelestimation.net', '@dmccreativesolutions.com', '@mdhmx.com', 'digitalmarketingvas.com');
 	
-	$bad_words = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','Roleplay helps develop','rank your google','TRY IT RIGHT NOW FOR FREE','house‌ ‌inspection‌ ‌process', 'write you an article','write a short article','We want to write','website home page design','updated version of your website','free sample Home Page','completely Free','Dear Receptionist','Franchise Creator','John Romney','get in touch with ownership','rebrand your business', 'what I would suggest for your website', 'Virtual Assistant Services','Would your readers','organic traffic','We do Estimation','get your site published','high quality appointments and leads', 'new website','Does this sound interesting?','I notice that your website is very basic','appeal to more clients','improve your sales','Exceptional Cleaners','free estimate from our company','blocks spam leads','block spam messages,','In order to get a better idea of our work','facility janitorial needs','I\'m a telemarketer','block unwanted messages','Would you be interested in an article','SpamBurner','cost estimates and take-off','If you\'ve made it this far','home services advertising','Do you need help with graphic design','I have an Audit of your website', 'Can we talk about your Website?', 'HELLO SALES','we would like to cooperate with your company','и','д','б','й','л','ы','З','у','Я');
+	$bad_words = array('Pandemic Recovery','bitcoin','mаlwаre','antivirus','marketing','SEO','Wordpress','Chiirp','@Getreviews','Cost Estimation','Guarantee Estimation','World Wide Estimating','Postmates delivery','health coverage plans','loans for small businesses','New Hire HVAC Employee','SO BE IT','profusa hydrogel','Divine Gatekeeper','witchcraft powers','I will like to make a inquiry','Mark Of The Beast','fuck','dogloverclub.store','Getting a Leg Up','ultimate smashing machine','Get more reviews, Get more customers','We write the reviews','write an article','a free article','relocation checklist','Rony (Steve', 'Your company Owner','We are looking forward to hiring an HVAC contracting company','keyword targeted traffic','downsizing your living space','Roleplay helps develop','rank your google','TRY IT RIGHT NOW FOR FREE','house‌ ‌inspection‌ ‌process', 'write you an article','write a short article','We want to write','website home page design','updated version of your website','free sample Home Page','completely Free','Dear Receptionist','Franchise Creator','John Romney','get in touch with ownership','rebrand your business', 'what I would suggest for your website', 'Virtual Assistant Services','Would your readers','organic traffic','We do Estimation','get your site published','high quality appointments and leads', 'new website','Does this sound interesting?','I notice that your website is very basic','appeal to more clients','improve your sales','Exceptional Cleaners','free estimate from our company','blocks spam leads','block spam messages,','In order to get a better idea of our work','facility janitorial needs','I\'m a telemarketer','block unwanted messages','Would you be interested in an article','SpamBurner','cost estimates and take-off','If you\'ve made it this far','home services advertising','Do you need help with graphic design','I have an Audit of your website', 'Can we talk about your Website?', 'HELLO SALES','we would like to cooperate with your company', 'big influencers on Instagram', 'complimentary cleaning analysis', 'и','д','б','й','л','ы','З','у','Я');
 	
-	foreach($bad_names as $bad_name) :
-		if (stripos($name, $bad_name) !== false) $spamIntercept = true;
-	endforeach;
+	$spamIntercept = '';
+
+	foreach($bad_ips as $bad_ip) :
+		if (stripos($ip, $bad_ip) !== false) $spamIntercept .= ' Blocked IP;';
+	endforeach;	
 
 	foreach($bad_emails as $bad_email) :
-		if (stripos($email, $bad_email) !== false) $spamIntercept = true;
-	endforeach;
-
-	foreach($bad_cities as $bad_city) :
-		if (stripos($city, $bad_city) !== false) $spamIntercept = true;
-	endforeach;
-
-	foreach($bad_words as $bad_word) :
-		if (stripos($message, $bad_word) !== false) $spamIntercept = true;
+		if (stripos($email, $bad_email) !== false) $spamIntercept .= ' Blocked Email;';
 	endforeach;
 	
-	if ( $spamIntercept == true ) : $formMail['recipient'] = 'email@battleplanwebdesign.com'; $formMail['subject'] = '<- SPAM -> '.$formMail['subject']; endif;
+	if ( $email[0] == 0 ) $spamIntercept .= ' Blocked Phone;';
+
+	foreach($bad_words as $bad_word) :
+		if (stripos($message, $bad_word) !== false) $spamIntercept .= ' Blocked Word;';
+	endforeach;
+	
+	if ( $spamIntercept != '' ) : $formMail['recipient'] = 'email@battleplanwebdesign.com'; $formMail['subject'] = '<- SPAM: ' .$spamIntercept .'-> '.$formMail['subject']; endif;
 	
 	// send email
 	$contact_form->set_properties( array( 'mail' => $formMail ) );

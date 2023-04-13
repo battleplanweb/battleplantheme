@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '18.4.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '18.4.2' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -36,9 +36,7 @@ foreach ( $spamURLs as $spamURL ) if ( isset($_SERVER["HTTP_REFERER"]) && stripo
 if ( !defined('_IS_BOT') ) define( '_IS_BOT', false );
 if ( !defined('_IS_GOOGLEBOT') ) define( '_IS_GOOGLEBOT', false );
 
-if ( _IS_BOT == true ) :
-	remove_shortcode('contact-form-7');
-endif;			
+//if ( _IS_BOT == true ) remove_shortcode('contact-form-7');			
 
 if ( !defined('_PAGE_SLUG') ) :
 	if ( basename(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ) : 

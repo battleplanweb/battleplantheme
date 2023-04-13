@@ -319,7 +319,7 @@ function processChron($forceChron) {
 	
 // Block Spammer IPs
 	$bad_ips = array('23.81.62', '37.19.199', '37.19.221', '45.89.173', '82.221.113', '89.187.177', '89.187.179', '89.187.180', '91.223.133', '93.190.140', '138.199.52', '143.244.44', '146.70.147', '154.13.63', '156.146.54', '161.123.150', '172.94.53', '173.213.85', '185.147.214', '195.181.163');
-	update_option( 'bp_bad_ips', $bad_ips );		
+	update_option( 'bp_bad_ips', $bad_ips );	 	
 	
 // Basic Settings		
 	$update_menu_order = array ('site-header'=>100, 'widgets'=>200, 'office-hours'=>700, 'hours'=>700, 'coupon'=>700, 'site-message'=>800, 'site-footer'=>900);
@@ -503,6 +503,12 @@ function processChron($forceChron) {
 		if (is_null(get_page_by_path('comfortmaker-elite-dealer', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'Comfortmaker Elite Dealer', 'post_content' => '[get-universal-page slug="page-hvac-comfortmaker-elite-dealer"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
 	else:
 		$getPage = get_page_by_path('comfortmaker-elite-dealer', OBJECT, 'universal'); if ( $getPage) wp_delete_post( $getPage->ID, true );
+	endif;
+
+	if ( $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'york' || (is_array($GLOBALS['customer_info']['site-brand']) && in_array('york', $GLOBALS['customer_info']['site-brand']))) ) :
+		if (is_null(get_page_by_path('york-cert-comfort-expert', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'York Certified Comfort Expert', 'post_content' => '[get-universal-page slug="page-hvac-york-cert-comfort-expert"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
+	else:
+		$getPage = get_page_by_path('york-cert-comfort-expert', OBJECT, 'universal'); if ( $getPage) wp_delete_post( $getPage->ID, true );
 	endif;
 
 	if ( $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'tempstar' || (is_array($GLOBALS['customer_info']['site-brand']) && in_array('tempstar', $GLOBALS['customer_info']['site-brand']))) ) :

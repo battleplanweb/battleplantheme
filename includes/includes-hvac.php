@@ -88,6 +88,16 @@ function battleplan_comfortmaker_elite_dealer( $atts, $content = null ) {
 }	
 
 /*--------------------------------------------------------------
+# York Certified Comfort Expert
+--------------------------------------------------------------*/
+add_shortcode( 'york-cert-comfort-expert', 'battleplan_york_cert_comfort_expert' );
+function battleplan_york_cert_comfort_expert( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'type'=>'', ), $atts );
+	$type = esc_attr($a['type']);
+	return include "wp-content/themes/battleplantheme/pages/page-hvac-york-cert-comfort-expert.php";
+}	
+
+/*--------------------------------------------------------------
 # Tempstar Elite Dealer
 --------------------------------------------------------------*/
 add_shortcode( 'tempstar-elite-dealer', 'battleplan_tempstar_elite_dealer' );

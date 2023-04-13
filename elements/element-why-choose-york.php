@@ -29,7 +29,7 @@ return do_shortcode('
 			[col]
 				<div class="icon"><i class="fa fa-fw fas fa-award" aria-hidden="true"></i></div>
 				[txt]
-					<h2>Industry Leader</h2>
+					<h2>Leader</h2>
 					<p>Our advanced design and manufacturing processes are leading the industry with products recognized for reliability, energy savings and ease of use. Our designs are reinventing home comfort.</p>
 				[/txt]
 			[/col]

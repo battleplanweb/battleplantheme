@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '18.4' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '18.4.1' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -37,8 +37,7 @@ if ( !defined('_IS_BOT') ) define( '_IS_BOT', false );
 if ( !defined('_IS_GOOGLEBOT') ) define( '_IS_GOOGLEBOT', false );
 
 if ( _IS_BOT == true ) :
-	$plugin_path = 'contact-form-7/wp-contact-form-7.php';
-	if (is_plugin_active($plugin_path)) deactivate_plugins($plugin_path);
+	remove_shortcode('contact-form-7');
 endif;			
 
 if ( !defined('_PAGE_SLUG') ) :

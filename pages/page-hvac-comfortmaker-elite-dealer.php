@@ -16,7 +16,7 @@ $printPage = '
 
     	<li><b>Product Knowledge</b> - Elite Dealers offer expertise on which products best meet your needs and are up-to-date with the latest in comfort technology and training.</li>
 		
-		<img class="alignright noFX size-third-s" src="/wp-content/themes/battleplantheme/common/hvac-comfortmaker/comfortmaker-product-family.png" loading="lazy" alt="American Standard Heating and Cooling Products" width="300" height="300" style="aspect-ratio:300/300" />
+		<img class="alignright noFX size-third-s" src="/wp-content/themes/battleplantheme/common/hvac-comfortmaker/comfortmaker-product-family.png" loading="lazy" alt="Comfortmaker Heating and Cooling Products" width="300" height="300" style="aspect-ratio:300/300" />
 
     	<li><b>Payment Options</b> – Elite Dealers offer financing options, upon credit approval, to pay for your system with monthly installments instead of the full price at purchase.</li>
 

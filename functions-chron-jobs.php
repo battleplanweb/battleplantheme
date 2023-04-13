@@ -306,19 +306,6 @@ function processChron($forceChron) {
 		update_option( 'wpseo_local', $wpSEOLocal );
 		update_option( 'bp_schema', $schema );
 	endif;
-
-// Blackhole for Bad Bots
-	if ( is_plugin_active('blackhole-bad-bots/blackhole.php') ) : 	
-		$blackholeSettings = get_option( 'bbb_options' );			
-		$blackholeSettings['email_alerts'] = 0;
-		$blackholeSettings['email_address'] = get_option( 'admin_email' );
-		$blackholeSettings['email_from'] = get_option( 'wp_mail_smtp' )['mail']['from_email'];
-		$blackholeSettings['message_display'] = 'custom';
-		$blackholeSettings['message_custom'] = '<h1>Service Unavailable</h1>';
-		$blackholeSettings['bot_whitelist'] = '';
-		$blackholeSettings['ip_whitelist'] = '73.28.89.12';
-		update_option( 'bbb_options', $blackholeSettings );		
-	endif;
 	
 // The Events Calendar
 	if ( is_plugin_active('the-events-calendar/the-events-calendar.php') ) : 	
@@ -329,6 +316,10 @@ function processChron($forceChron) {
 			if ( $end < time() ) wp_set_post_tags( get_the_id(), array( 'expired' ) );		
 		endwhile; wp_reset_postdata(); endif;	
 	endif;
+	
+// Block Spammer IPs
+	$bad_ips = array('23.81.62', '37.19.199', '37.19.221', '45.89.173', '82.221.113', '89.187.177', '89.187.179', '89.187.180', '91.223.133', '93.190.140', '138.199.52', '143.244.44', '146.70.147', '154.13.63', '156.146.54', '161.123.150', '172.94.53', '173.213.85', '185.147.214', '195.181.163');
+	update_option( 'bp_bad_ips', $bad_ips );		
 	
 // Basic Settings		
 	$update_menu_order = array ('site-header'=>100, 'widgets'=>200, 'office-hours'=>700, 'hours'=>700, 'coupon'=>700, 'site-message'=>800, 'site-footer'=>900);

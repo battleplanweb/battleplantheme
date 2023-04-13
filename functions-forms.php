@@ -118,7 +118,7 @@ function battleplan_setupFormEmail( $contact_form, &$abort, $submission ) {
 	//$city = $submission->get_posted_data( 'user-city' );
 	$message = $submission->get_posted_data( 'user-message' );
 	
-	$bad_ips = array('37.19.199', '37.19.221', '45.89.173', '82.221.113', '89.187.177', '89.187.179', '89.187.180', '91.223.133', '93.190.140', '138.199.52', '143.244.44', '146.70.147', '154.13.63', '156.146.54', '161.123.150', '185.147.214', '195.181.163');
+	$bad_ips = array('23.81.62', '37.19.199', '37.19.221', '45.89.173', '82.221.113', '89.187.177', '89.187.179', '89.187.180', '91.223.133', '93.190.140', '138.199.52', '143.244.44', '146.70.147', '154.13.63', '156.146.54', '161.123.150', '172.94.53', '173.213.85', '185.147.214', '195.181.163');
 
 	$bad_emails= array($_SERVER['HTTP_HOST'], 'testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz', '@tworld.com', 'garywhi777@gmail.com', 'ronyisthebest16@gmail.com', 'ronythomas611@gmail.com', 'ronythomasrecruiter@gmail.com', '@ideonagency.net', 'axiarobbie20@gmail.com', '@hyper-tidy.com', '@readyjob.org', '@thefranchisecreatornetwork.com', 'franchisecreatormarketing.com', '@legendarygfx.com', '@hitachi-metal-jp.com', '@expresscommerce.co', '@zaphyrpro.com', 'erjconsult.com', 'christymkts@gmail.com', '@theheritageseo.com', '@freedomwebdesigns.com', 'wesavesmallbusinesses@gmail.com', '@bimservicesllc.net', '@spamhunter.co', '@myspamburner.co', '@spamshield.co', '@excelestimation.net', '@dmccreativesolutions.com', '@mdhmx.com', 'digitalmarketingvas.com');
 	
@@ -127,20 +127,20 @@ function battleplan_setupFormEmail( $contact_form, &$abort, $submission ) {
 	$spamIntercept = '';
 
 	foreach($bad_ips as $bad_ip) :
-		if (stripos($ip, $bad_ip) !== false) $spamIntercept .= ' Blocked IP;';
+		if (stripos($ip, $bad_ip) !== false) $spamIntercept .= ' IP;';
 	endforeach;	
 
 	foreach($bad_emails as $bad_email) :
-		if (stripos($email, $bad_email) !== false) $spamIntercept .= ' Blocked Email;';
+		if (stripos($email, $bad_email) !== false) $spamIntercept .= ' Email;';
 	endforeach;
 	
-	if ( $email[0] == 0 ) $spamIntercept .= ' Blocked Phone;';
+	if ( $email[0] == '0' ) $spamIntercept .= ' Phone;';
 
 	foreach($bad_words as $bad_word) :
-		if (stripos($message, $bad_word) !== false) $spamIntercept .= ' Blocked Word;';
+		if (stripos($message, $bad_word) !== false) $spamIntercept .= ' Words;';
 	endforeach;
 	
-	if ( $spamIntercept != '' ) : $formMail['recipient'] = 'email@battleplanwebdesign.com'; $formMail['subject'] = '<- SPAM: ' .$spamIntercept .'-> '.$formMail['subject']; endif;
+	if ( $spamIntercept != '' ) : $formMail['recipient'] = 'email@battleplanwebdesign.com'; $formMail['subject'] = '<- SPAM: Blocked' .$spamIntercept .'-> '.$formMail['subject']; endif;
 	
 	// send email
 	$contact_form->set_properties( array( 'mail' => $formMail ) );

@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '18.3' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '18.4' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -24,15 +24,22 @@ if ( !defined('_USER_ID') ) define( '_USER_ID', wp_get_current_user()->ID );
 
 $googlebots = array( 'google', 'lighthouse' );
 $bots = array_merge(array('bot', 'crawler', 'spider', 'facebook', 'bing', 'linkedin', 'zgrab', 'addthis', 'fetcher', 'barkrowler', 'newspaper', 'yeti', 'daum', 'riddler', 'panscient', 'dataprovider', 'gigablast', 'qwantify', 'admantx', 'audit', 'docomo', 'yahoo', 'wayback', 'adbeat', 'netcraft', 'wordpress'), $googlebots);
-$spammers = explode("\n", file_get_contents( get_template_directory().'/spammers.txt' ));
+$spamIPs = get_option('bp_bad_ips');
+$spamURLs = explode("\n", file_get_contents( get_template_directory().'/spammers.txt' ));
 //https://github.com/matomo-org/referrer-spam-list/blob/master/spammers.txt
 
 foreach ( $googlebots as $googlebot ) if ( isset($_SERVER["HTTP_USER_AGENT"]) && stripos( $_SERVER["HTTP_USER_AGENT"], $googlebot) !== false && !defined('_IS_GOOGLEBOT') ) define( '_IS_GOOGLEBOT', true );
 foreach ( $bots as $bot ) if ( isset($_SERVER["HTTP_USER_AGENT"]) && stripos( $_SERVER["HTTP_USER_AGENT"], $bot) !== false && !defined('_IS_BOT') ) define( '_IS_BOT', true );
-foreach ( $spammers as $spammer ) if ( isset($_SERVER["HTTP_REFERER"]) && stripos( $_SERVER["HTTP_REFERER"], $spammer) !== false && !defined('_IS_BOT') ) define( '_IS_BOT', true );
+foreach ( $spamIPs as $spamIP ) if ( isset($_SERVER["REMOTE_ADDR"]) && stripos( $_SERVER["REMOTE_ADDR"], $spamIP) !== false && !defined('_IS_BOT') ) define( '_IS_BOT', true );
+foreach ( $spamURLs as $spamURL ) if ( isset($_SERVER["HTTP_REFERER"]) && stripos( $_SERVER["HTTP_REFERER"], $spamURL) !== false && !defined('_IS_BOT') ) define( '_IS_BOT', true );
 
 if ( !defined('_IS_BOT') ) define( '_IS_BOT', false );
 if ( !defined('_IS_GOOGLEBOT') ) define( '_IS_GOOGLEBOT', false );
+
+if ( _IS_BOT == true ) :
+	$plugin_path = 'contact-form-7/wp-contact-form-7.php';
+	if (is_plugin_active($plugin_path)) deactivate_plugins($plugin_path);
+endif;			
 
 if ( !defined('_PAGE_SLUG') ) :
 	if ( basename(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ) : 

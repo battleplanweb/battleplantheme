@@ -23,6 +23,7 @@
 	- Tempstar Elite Dealer
 	- Financing Widget
 	- Wells Fargo
+# Shortcodes
 # Basic Theme Set Up
 # Employment Application
 # Mass Product Update
@@ -536,6 +537,59 @@ function battleplan_getWellsFargo($atts, $content = null) {
 }
 
 /*--------------------------------------------------------------
+# Shortcodes
+--------------------------------------------------------------*/
+// Set up "good better best" product comparison display
+add_shortcode( 'get-product-comparison', 'battleplan_getProductComparison' );
+function battleplan_getProductComparison($atts, $content = null ) {
+	$a = shortcode_atts( array( 'products' => '', 'size'=>'100', 'pic_size'=>'100'), $atts );
+	$size = esc_attr($a['size']);
+	$picSize = esc_attr($a['pic_size']);
+	$products = esc_attr($a['products']) != '' ? esc_attr($a['products']) : 'air-conditioners,heat-pumps,furnaces';
+	$productList = explode(",", $products);
+	$class = 'current';
+	
+	$buildBox = '<ul class="tabs">';
+	foreach ( $productList as $product ) :
+		$buildBox .= '<li data-tab="'.$product.'" tabindex="0" class="'.$class.'">'.ucwords(str_replace("-", " ", $product)).'</li>';
+		$class = '';	
+	endforeach;
+	$buildBox .= '</ul>';
+	$buildBox .= '<div class="tab-content-holder">';
+	$class = ' current';
+
+	foreach ( $productList as $product ) :
+		$buildBox .= '[section name="'.$product.'" class="tab-content'.$class.'"][layout grid="3e"]';
+
+		$args = array( 'post_type' => 'products', 'tax_query' => array( array( 'taxonomy' => 'product-type', 'field' => 'slug', 'terms' => $product, ), ), 'posts_per_page' => -1, 'orderby' => 'menu_order', 'order' => 'DESC', );	
+		$products_query = new WP_Query( $args );	
+		$current_product_class = '';
+
+		if ( $products_query->have_posts() ) :
+			while ( $products_query->have_posts() ) :
+				$products_query->the_post();
+				$product_class = get_the_terms( get_the_ID(), 'product-class' )[0]->name;
+				if ( $product_class !== $current_product_class ) :
+					$buildBox .= '[col]'; 
+					$buildBox .=  '<h2>'.$product_class.'</h2>';
+					$buildBox .= do_shortcode('[build-archive type="products" show_thumb="true" size="'.$size.'" show_btn="true" btn_text="Learn More" title_pos="inside" show_excerpt="true" show_date="false" show_author="false" pic_size="'.$picSize.'"]');
+					$buildBox .= '[/col]';
+					$current_product_class = $product_class;
+				endif;
+			endwhile;
+		endif;
+
+		wp_reset_postdata();
+		$class = '';	
+		$buildBox .= '[/layout][/section]';
+	endforeach;	
+	
+	$buildBox .= '</div>';	
+	
+	return do_shortcode($buildBox);	
+}
+
+/*--------------------------------------------------------------
 # Basic Theme Set Up
 --------------------------------------------------------------*/
 add_action( 'pre_get_posts', 'battleplan_override_main_query_with_hvac', 10 );
@@ -595,7 +649,7 @@ function battleplan_handleEmploymentAppResponse($additional_mail, $contact_form)
 /*--------------------------------------------------------------
 # Mass Product Update
 --------------------------------------------------------------*/
-add_action( 'init', 'battleplan_mass_product_update' );
+//add_action( 'init', 'battleplan_mass_product_update' );
 function battleplan_mass_product_update() { 
 	if ( $GLOBALS['customer_info']['site-brand'] == 'american standard' || (is_array($GLOBALS['customer_info']['site-brand']) && in_array('american standard', $GLOBALS['customer_info']['site-brand'])) ) :
 	

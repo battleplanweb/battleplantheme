@@ -318,7 +318,8 @@ function processChron($forceChron) {
 	endif;
 	
 // Block Spammer IPs
-	$bad_ips = array('23.81.62', '37.19.199', '37.19.221', '45.89.173', '82.221.113', '89.187.177', '89.187.179', '89.187.180', '91.223.133', '93.190.140', '138.199.52', '143.244.44', '146.70.147', '154.13.63', '156.146.54', '161.123.150', '172.94.53', '173.213.85', '185.147.214', '195.181.163');
+	$bad_ips = array('23.81.62', '37.19.199', '37.19.205', '37.19.221', '38.125.112', '45.89.173', '63.141.62', '82.221.113', '89.187.177', '89.187.179', '89.187.180', '91.197.36', '91.223.133', '93.190.140', '138.199.38', '138.199.52', '143.244.44', '146.70.45.85', '146.70.147', '154.13.63', '156.146.54', '161.123.150', '162.218.15', '172.94.53', '173.213.85', '185.147.214', '185.254.64', '192.46.203', '192.53.67', '192.53.69', '195.181.163', '199.85.208');
+
 	update_option( 'bp_bad_ips', $bad_ips );	 	
 	
 // Basic Settings		
@@ -506,7 +507,7 @@ function processChron($forceChron) {
 	endif;
 
 	if ( $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'york' || (is_array($GLOBALS['customer_info']['site-brand']) && in_array('york', $GLOBALS['customer_info']['site-brand']))) ) :
-		if (is_null(get_page_by_path('york-cert-comfort-expert', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'York Certified Comfort Expert', 'post_content' => '[get-universal-page slug="page-hvac-york-cert-comfort-expert"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
+		if (is_null(get_page_by_path('york-certified-comfort-expert', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'York Certified Comfort Expert', 'post_content' => '[get-universal-page slug="page-hvac-york-cert-comfort-expert"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
 	else:
 		$getPage = get_page_by_path('york-cert-comfort-expert', OBJECT, 'universal'); if ( $getPage) wp_delete_post( $getPage->ID, true );
 	endif;

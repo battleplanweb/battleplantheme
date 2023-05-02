@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 18.4.2
+Version: 18.5
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1208,6 +1208,8 @@ select:focus,
 
 
 
+
+
 .style-alt input[type="text"]:focus,
 .style-alt input[type="email"]:focus,
 .style-alt input[type="url"]:focus,
@@ -1888,11 +1890,16 @@ input.paypal-amount {
 }
 
 .menu-strip {
-	margin:										0;
+	margin:									0;
 	padding-top:								0;
-	padding-bottom:								0;
-	background:									var(--light-grey);
+	padding-bottom:							0;
+	background:								var(--light-grey);
 	z-index:									2000;
+}
+
+.menu-clip .menu-strip {
+	overflow: 								visible;
+	clip-path: 								polygon(0% 0%, 100% 0%, 100% calc(100% + 80vh), 0% calc(100% + 80vh));
 }
 
 .fixed-strip {
@@ -2722,14 +2729,6 @@ body.locked {
 	width: 										24px;
 	height: 									3px;
 	background-color: 							var(--white-high);
-
-
-
-
-
-
-
-
 	margin: 									5px 4px;
 	transition: 								all 0.07s ease-in;
 }
@@ -4820,6 +4819,14 @@ chat-widget .lc_text-widget--btn {
 	width: 										100%;
 }
 
+.carousel .controls.controls-center {
+  	position: 									absolute;
+ 	width: 										100%;
+ 	top: 										50%;
+	justify-content: 								space-between;
+	padding: 										0 3vw;
+}
+
 .carousel a.carousel-control-next .carousel-control-next-icon::after, 
 .carousel a.carousel-control-prev .carousel-control-prev-icon::after {
 	font-family: 								var(--font-awesome);
@@ -4877,6 +4884,7 @@ chat-widget .lc_text-widget--btn {
 }
 
 .carousel-indicators li::after {
+
 	top: 										0;
     bottom:										-15px;
 }

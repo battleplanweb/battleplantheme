@@ -34,7 +34,7 @@ function battleplan_column_settings() {
 		ac_register_columns( 'wp-media', array(
 			array(
 				'columns'=>array(
-					'image'=>array(
+					/*'image'=>array(
 						'type'=>'column-image',
 						'label'=>'Image',
 						'width'=>'140',
@@ -45,6 +45,32 @@ function battleplan_column_settings() {
 						'name'=>'image',
 						'label_type'=>''
 					),
+					'filename'=>array(
+						'type'=>'column-file_name',
+						'label'=>'Filename',
+						'width'=>'200',
+						'width_unit'=>'px',
+						'sort'=>'on',
+						'name'=>'filename',
+						'label_type'=>''
+					),*/
+					
+					
+					'title'=>array(
+						'type'=>'column-title_raw',
+						'label'=>'Title',
+                		'post_link_to'=>'edit_post',
+						'width'=>'400',
+						'width_unit'=>'px',
+						'sort'=>'on',
+						'name'=>'filename',
+						'label_type'=>'',
+						'export'=>'on',
+                		'sort'=>'on',
+                		'edit'=>'on',
+                		'bulk_edit'=>'on',
+                		'search'=>'on',
+					),					
 					'image-id'=>array(
 						'type'=>'column-mediaid',
 						'label'=>'ID',
@@ -54,15 +80,6 @@ function battleplan_column_settings() {
 						'name'=>'image-id',
 						'label_type'=>'',
 						'search'=>'on'
-					),
-					'filename'=>array(
-						'type'=>'column-file_name',
-						'label'=>'Filename',
-						'width'=>'200',
-						'width_unit'=>'px',
-						'sort'=>'on',
-						'name'=>'filename',
-						'label_type'=>''
 					),
 					'alt-text' => array(
 						'type' => 'column-alternate_text',
@@ -79,21 +96,22 @@ function battleplan_column_settings() {
 						'bulk-editing' =>'',
 						'export' => '',
 						'search' => ''
-					),
+					),			
 					'date'=>array(
-						'type'=>'date',
+						'type'=>'column-modified',
 						'label'=>'Date',
 						'width'=>'100',
 						'width_unit'=>'px',
 						'edit'=>'off',
 						'sort'=>'on',
 						'filter'=>'on',
-						'filter_label'=>'',
+						'filter_label'=>'',						
+						'date_format'=>'F j, Y g:i a',
 						'filter_format'=>'monthly',
 						'name'=>'date',
 						'label_type'=>'',
 						'search'=>'on',
-					),
+					),				
 					'taxonomy-image-categories'=>array(
 						'type'=>'taxonomy-image-categories',
 						'label'=>'Categories',
@@ -121,16 +139,15 @@ function battleplan_column_settings() {
 						'name'=>'taxonomy-image-tags',
 						'label_type'=>'',
 						'search'=>'on'
-					),
-					'sizes'=>array(
-						'type'=>'column-available_sizes',
-						'label'=>'Sizes',
-						'width'=>'200',
+					),			
+					'size'=>array(
+						'type'=>'column-dimensions',
+						'label'=>'Size',
+						'width'=>'115',
 						'width_unit'=>'px',
-						'include_missing_sizes'=>'',
-						'sort'=>'off',
-						'name'=>'sizes',
-						'label_type'=>''
+                		'export'=>'on',
+                		'sort'=>'on',
+						'name'=>'size',
 					)
 				),
 				'layout'=>array(
@@ -339,7 +356,7 @@ function battleplan_column_settings() {
 						'label'=>'Published',
 						'width'=>'130',
 						'width_unit'=>'px',
-						'date_format'=>'wp_default',
+						'date_format'=>'F j, Y g:i a',
 						'edit'=>'on',
 						'sort'=>'on',
 						'filter'=>'on',
@@ -477,7 +494,7 @@ function battleplan_column_settings() {
 						'label'=>'Published',
 						'width'=>'130',
 						'width_unit'=>'px',
-						'date_format'=>'wp_default',
+						'date_format'=>'F j, Y g:i a',
 						'edit'=>'on',
 						'sort'=>'on',
 						'filter'=>'on',
@@ -562,7 +579,7 @@ function battleplan_column_settings() {
 						'label'=>'Published',
 						'width'=>'',
 						'width_unit'=>'%',
-						'date_format'=>'wp_default',
+						'date_format'=>'F j, Y g:i a',
 						'edit'=>'off',
 						'sort'=>'on',
 						'filter'=>'on',
@@ -755,7 +772,7 @@ function battleplan_column_settings() {
 						'label'=>'Published',
 						'width'=>'',
 						'width_unit'=>'%',
-						'date_format'=>'wp_default',
+						'date_format'=>'F j, Y g:i a',
 						'edit'=>'on',
 						'sort'=>'on',
 						'filter'=>'on',
@@ -893,7 +910,7 @@ function battleplan_column_settings() {
 						'label'=>'Published',
 						'width'=>'130',
 						'width_unit'=>'px',
-						'date_format'=>'wp_default',
+						'date_format'=>'F j, Y g:i a',
 						'edit'=>'on',
 						'sort'=>'on',
 						'filter'=>'on',
@@ -1009,7 +1026,7 @@ function battleplan_column_settings() {
 								'label'=>'Published',
 								'width'=>'130',
 								'width_unit'=>'px',
-								'date_format'=>'wp_default',
+								'date_format'=>'F j, Y g:i a',
 								'edit'=>'on',
 								'sort'=>'on',
 								'filter'=>'on',
@@ -1344,7 +1361,7 @@ function battleplan_column_settings() {
 						'label'=>'Registered',
 						'width'=>'130',
 						'width_unit'=>'px',
-						'date_format'=>'wp_default',
+						'date_format'=>'F j, Y g:i a',
 						'edit'=>'on',
 						'sort'=>'on',
 						'filter'=>'on',

@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '18.4.2' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '18.5' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -83,7 +83,7 @@ function is_mobile() {
 
 // Check if business is currently open
 function is_biz_open() {
-	if ( $GLOBALS['customer_info']['pid-sync'] != true ) return false;
+	if ( $GLOBALS['customer_info']['pid-sync'] != "true" ) return false;
  	$googleInfo = get_option('bp_gbp_update');
 	$day = wp_date("w", null, new DateTimeZone( wp_timezone_string() )) - 1;
 	$time = wp_date("Hi", null, new DateTimeZone( wp_timezone_string() ));
@@ -780,7 +780,7 @@ function battleplan_sitemap_exclude_taxonomy( $excluded, $taxonomy ) {
 add_action( 'bp_after_the_content', 'battleplan_promo' );
 function battleplan_promo() {
 	if ( is_single() ) :
-		$current_ad = do_shortcode('[get-element slug="ad"]');
+		$current_ad = do_shortcode('[get-element slug="coupon"]');
 		if ( $current_ad ) echo '<div class="ad-promo">'.$current_ad.'</div>';
 	endif;	
 }
@@ -1115,6 +1115,7 @@ if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) require
 if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) require_once get_template_directory().'/includes/includes-woocommerce.php'; 
 if ( $GLOBALS['customer_info']['site-type'] == 'hvac' ) require_once get_template_directory().'/includes/includes-hvac.php'; 
 if ( $GLOBALS['customer_info']['site-type'] == 'pedigree' ) require_once get_template_directory().'/includes/includes-pedigree.php'; 
+if ( $GLOBALS['customer_info']['site-type'] == 'carte-du-jour' ) require_once get_template_directory().'/includes/includes-carte-du-jour.php'; 
 if ( $GLOBALS['customer_info']['site-type'] == 'profile' || $GLOBALS['customer_info']['site-type'] == 'profiles' ) require_once get_template_directory().'/includes/includes-user-profiles.php';  
 require_once get_template_directory().'/functions-shortcodes.php';
 require_once get_template_directory().'/functions-forms.php';

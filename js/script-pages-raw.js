@@ -80,6 +80,13 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 
 		return easing;
 	}
+	
+// Overflow: assist in hiding overflow during animation and then making it visible again
+	window.animateOverflow = function(container, delay) {
+		delay = delay || 2000;		
+		$(container).css({"overflow":"hidden"});
+		setTimeout(function(){ $(container).css({"overflow":"visible"}); }, delay);
+	};
 
 // Animate single element (using transitions from animate.css)
 	window.animateDiv = function(container, effect, initDelay, offset, speed, easing) {

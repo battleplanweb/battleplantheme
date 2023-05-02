@@ -307,7 +307,7 @@ function battleplan_buildText( $atts, $content = null ) {
 // Button Block
 add_shortcode( 'btn', 'battleplan_buildButton' );
 function battleplan_buildButton( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'align'=>'center', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'', 'class'=>'', 'fancy'=>'', 'icon'=>'false', 'ada'=>'', 'start'=>'', 'end'=>'' ), $atts );
+	$a = shortcode_atts( array( 'size'=>'100', 'align'=>'center', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'', 'class'=>'', 'track'=>'', 'fancy'=>'', 'icon'=>'false', 'ada'=>'', 'start'=>'', 'end'=>'' ), $atts );
 	$getBiz = esc_attr($a['get-biz']);
 	if ( $getBiz == "" ) :
 		$link = esc_attr($a['link']);
@@ -322,6 +322,8 @@ function battleplan_buildButton( $atts, $content = null ) {
 	$order = esc_attr($a['order']);	
 	if ( $order != '' ) : $style = " style='order: ".$order." !important'"; else: $style = ""; endif;
 	$class = esc_attr($a['class']);
+	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
+	if ( $tracking != '' ) $class .= " tracking";
 	$ada = esc_attr($a['ada']);
 	if ( $ada != '' ) $ada = ' <span class="screen-reader-text">'.$ada.'</span>';
 	$target = esc_attr($a['new-tab']);
@@ -341,7 +343,7 @@ function battleplan_buildButton( $atts, $content = null ) {
 		if ( $end && $now > $end ) return null;		
 	}
 
-	return '<div class="block block-button span-'.$size.$class.$align.'"'.$style.'><a'.$target.' href="'.$link.'" class="button'.$class.'">'.$content.$ada.'</a></div>';
+	return '<div class="block block-button span-'.$size.$class.$align.'"'.$style.'><a'.$target.' href="'.$link.'" class="button'.$class.'"'.$tracking.'>'.$content.$ada.'</a></div>';
 }  
 
 // Accordion Block 

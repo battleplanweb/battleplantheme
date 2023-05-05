@@ -317,11 +317,12 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	};
 	
 // Add stroke to text & transparent objects
-	window.addStroke = function(element, width, topColor, bottomColor, leftColor, rightColor) {	
+	window.addStroke = function(element, width, topColor, bottomColor, leftColor, rightColor, text) {	
   		var shadow = "", steps = 16, spacing = width - 1, color, angle, cos, sin;
 		leftColor = leftColor || topColor;
 		bottomColor = bottomColor || topColor;
-		rightColor = rightColor || bottomColor;
+		rightColor = rightColor || bottomColor;		
+		text = text || 'true';
 		
   		for (var i = 0; i < steps; i++) {
     		angle = (i * 2 * Math.PI) / steps;
@@ -331,12 +332,22 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			if ( cos >= 0 && sin >= 0 ) { color = bottomColor; }
 			if ( cos <= 0 && sin >= 0 ) { color = leftColor; }
 			if ( cos >= 0 && sin <= 0 ) { color = rightColor; }
-			shadow += "calc("+ width + "px * " + cos + ") calc("+ width + "px * " + sin + ") 0 "+ color;
-	 		if ( i < (steps-1) ) { shadow += ", "; }	  
+			if ( text == 'true' ) {
+				shadow += "calc("+ width + "px * " + cos + ") calc("+ width + "px * " + sin + ") 0 "+ color;
+				if ( i < (steps-1) ) { shadow += ", "; }	  
+			} else {
+				shadow += "drop-shadow(calc("+ width + "px * " + cos + ") calc("+ width + "px * " + sin + ") 0 "+ color + ") ";
+			}
   		}			
 		
 		var style = document.createElement('style');
-		style.innerHTML = element + " { text-shadow: "+shadow+"; letter-spacing: "+spacing+"px; }";
+		
+		if ( text == 'true' ) {
+			style.innerHTML = element + " { text-shadow: "+shadow+"; letter-spacing: "+spacing+"px; }";
+		} else {
+			style.innerHTML = element + " { filter: "+shadow+"; }";
+		}
+		
 		document.head.appendChild(style);
 	};
 

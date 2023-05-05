@@ -59,7 +59,7 @@ add_action( 'bp_mobile_menu_bar_phone', 'battleplan_remove_mm_btn' );
 function battleplan_remove_mm_btn() {
 	remove_action('bp_mobile_menu_bar_phone', 'battleplan_mobile_menu_bar_phone', 20);
 	
-	$buildPhone = '<div class="hide-unknown">';	
+	$buildPhone = '<div class="hide-unknown hide-2 hide-3 hide-4 hide-5">';	
 	foreach ( get_option('cdj_locations') as $loc ) :	
 		$buildPhone .= '<a href="#" class="show-'.$loc['slug'].' phone-link track-clicks" data-action="phone call" data-url="tel:1-'.$loc['phone'].'"><div class="mm-bar-btn mm-bar-phone call-btn" aria-hidden="true"></div><span class="sr-only">Call Us</span></a>';
 	endforeach;

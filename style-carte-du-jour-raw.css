@@ -10,8 +10,9 @@
 --------------------------------------------- */
 
 /* Mobile Menu */
-.location-unknown #mobile-menu-bar {
-  	grid-template-columns: 						38px 1fr 38px 38px; 
+
+.location-unknown.screen-1 #mobile-menu-bar {
+  	grid-template-columns: 						38px 1fr 38px 38px;; 
 }
 
 

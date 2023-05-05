@@ -734,6 +734,15 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 /*--------------------------------------------------------------
 # Delay parsing of JavaScript
 --------------------------------------------------------------*/
+	$(window).on('pageshow', function(event) {
+  		// Check if the page is loaded from the cache or not
+  		if (event.originalEvent.persisted || window.performance && window.performance.navigation.type === 2) {
+    		// Page is loaded from the cache or navigated using the back button
+    			clearInterval(bgTimer);
+    			$("#loader").fadeOut(300, function() { resetLoader(); });
+		}
+	});
+	
 	$(window).on( 'load', function() {
 	// Fade out pre-loader screen when site is fully loaded
 		clearInterval(bgTimer);		

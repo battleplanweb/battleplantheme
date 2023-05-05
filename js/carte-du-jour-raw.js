@@ -30,7 +30,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			
 			$('body').addClass('location-'+loc);			
 			$('.location-unknown, .loc').fadeOut(100);
-			$('.show-'+loc).fadeIn(500);
+			$('.show-'+loc).fadeIn(500);			
+			
 			setCookie('cdj-location', loc, 30);		
 		}
 		

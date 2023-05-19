@@ -1,7 +1,7 @@
 <?php /* The template for displaying the footer */
 
 	$current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );
-	if ( get_post_meta( $current_page->ID, '_bp_remove_sidebar', true ) != true ) : get_sidebar(); endif;
+	if ( get_post_meta( $current_page->ID ?? 0, '_bp_remove_sidebar', true ) != true ) : get_sidebar(); endif;
 ?>
 
 		</div><!-- #main-content -->
@@ -13,7 +13,7 @@
 	<?php bp_after_wrapper_content(); ?>
 
 	<?php	
-	$textarea = get_post_meta( $current_page->ID, 'page-bottom_text', true );
+	$textarea = get_post_meta( $current_page->ID ?? 0, 'page-bottom_text', true );
  	if ( $textarea != "" ) : echo "<section id='wrapper-bottom'>".apply_filters('the_content', $textarea)."</section><!-- #wrapper-bottom -->"; endif;
 	?>
 	
@@ -42,7 +42,7 @@
 					
 					$buildCopyright .= "<div class='site-info-copyright'>".$GLOBALS['customer_info']['copyright']." ".$GLOBALS['customer_info']['name']." • All Rights Reserved</div>";
 					
-					$placeIDs = $GLOBALS['customer_info']['pid'];
+					$placeIDs = $GLOBALS['customer_info']['pid'] ?? null;
 					if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
 					$primePID = true;
 					foreach ( $placeIDs as $placeID ) :	
@@ -54,9 +54,9 @@
 						endif;
 						$buildCopyright .= "<div class='site-info-address'>";
 						if ( strlen($customer_info['street']) > 5 ) $buildCopyright .= trim($customer_info['street']).", ";							
-						if ( $customer_info['city'] ) :
+						if ( array_key_exists('city', $customer_info) ) :
 							$buildCopyright .= $customer_info['city'].", ".$customer_info['state-abbr']." ".$customer_info['zip'];
-						elseif ( isset($GLOBALS['customer_info']['region']) ) : 
+						elseif ( array_key_exists('region', $customer_info) ) : 
 							$buildCopyright .= $customer_info['region']; 
 						endif;
 						if ( isset($customer_info['phone-format']) && $customer_info['phone-format'] ) $buildCopyright .= " • ".$customer_info['phone-format'];

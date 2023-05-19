@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 18.6
+Version: 18.7
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1195,6 +1195,8 @@ select:focus,
 	filter: 									var(--input-filter-alt);
 	backdrop-filter:							var(--input-backdrop-filter-alt);
 }
+
+
 
 
 
@@ -2835,6 +2837,7 @@ body.locked {
 #mobile-menu-bar a.scroll-btn-visible .mm-bar-btn.scroll-to-top-btn::after {
 	display: 									block;
 	animation-name: 							screen-up; 
+
     animation-duration: 						3.5s; 
     animation-iteration-count: 					infinite;
     animation-timing-function: 					linear;
@@ -3511,6 +3514,7 @@ img.unloaded {
 .alignleft, 
 .align-left,
 .thumb-left .section .alignright,
+
 .thumb-left .section .align-right,
 .thumb-right .section .switch-thumb .alignleft,
 
@@ -4034,7 +4038,6 @@ img.img-404 {
 	border-bottom:								2px solid var(--black-highest);
 	background:									var(--black-low);
 	margin-top:									-1px;
-
 }
 
 .office-hours div.row .col-all, 
@@ -4072,10 +4075,10 @@ img.img-404 {
 }
 
 .office-hours.horz > div.today {
-	border:										none;
+	border:									none;
 	border-left:								2px solid var(--black-highest);
 	border-right:								2px solid var(--black-highest);
-	margin-top:									0;
+	margin-top:								0;
 }
 
 /* Are We Open Banner
@@ -4097,7 +4100,7 @@ img.img-404 {
 }
 
 .currently-open-banner.reveal-open {
-	transform: 									translate(0) rotate(10deg);
+	transform: 								translate(15px, -10px) rotate(10deg);
 	transition: 								all 1s cubic-bezier(0.175, 0.885, 0.320, 1.275);
 }
 
@@ -4330,6 +4333,64 @@ section.tab-content {
 section.tab-content.current {
 	display:									inherit;
 }
+
+/* Dotted separator between left and right columns */
+.dotted-tabs .flex {
+	gap: 									0;
+}
+
+.dotted-tabs .flex.nested {
+	gap: 									2em 10%;
+}
+
+.dotted-tabs .col:not(.extra-line) .col-inner {
+   	display: 									flex;
+   	justify-content: 							space-between;
+   	align-items: 								center;
+	gap: 									0 15px;
+ }
+
+.dotted-tabs .col:not(.extra-line)  .block-text {
+	position: 								relative;
+   	flex: 									1 0 auto;
+   	font-weight: 								bold;
+   	text-align: 								left;
+	font-size: 								calc(var(--font-size-text) * 1.2);
+ }
+
+.dotted-tabs .col:not(.extra-line)  .block-text:nth-of-type(3) {
+   	text-align: 								right;
+ }
+
+.dotted-tabs .col:not(.extra-line)  .block-text:nth-of-type(2) {
+   	flex: 									1 1 auto;
+	width: 									100%;
+ }
+
+.dotted-tabs .col:not(.extra-line)  .block-text:nth-of-type(2)::after {
+   	content: 									"";
+   	display: 									block;
+  	position: 								absolute;
+	width: 									100%;
+	height: 									100%;
+   	transform: 								translateY(200%);
+   	border-bottom:								3px dotted var(--black);
+ }
+
+.menu-page .col span.extra-line,
+.menu-page .col.extra-line {
+	font-size: 								calc(var(--font-size-text) * 0.9);
+	font-weight: 								normal;
+	font-style: 								italic;
+	text-align: 								left;
+}
+
+.menu-page .col:not(:first-of-type) span.extra-line,
+.menu-page .col.extra-line {
+	display: 									inline-block;
+	text-indent: 								20px;
+}
+
 
 /* SVG
 --------------------------------------------- */
@@ -5709,6 +5770,7 @@ html.error503 h3 {
 		order: 										-1;
 		margin-bottom: 								var(--measure-base) !important;
 	}	
+
 	
 	ul.side-by-side li.full-bottom {
 		flex: 										100% !important;
@@ -5977,6 +6039,7 @@ html.error503 h3 {
 	.alignright.size-third-f,
 	.align-left.size-third-s,
 	.alignleft.size-third-s,
+
 
 	.align-right.size-third-s,
 	.alignright.size-third-s {

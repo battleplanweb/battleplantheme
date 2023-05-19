@@ -7,9 +7,6 @@
 
 # Basic Theme Set Up
 
-
-
-
 /*--------------------------------------------------------------
 # Basic Theme Set Up
 --------------------------------------------------------------*/
@@ -17,7 +14,7 @@
 add_action( 'wp_enqueue_scripts', 'battleplan_carte_du_jour_scripts' );
 function battleplan_carte_du_jour_scripts() {
 	wp_enqueue_style( 'battleplan-css-carte-du-jour', get_template_directory_uri().'/style-carte-du-jour.css', array(), _BP_VERSION );	 
-	wp_enqueue_script( 'battleplan-script-carte-du-jour', get_template_directory_uri().'/js/carte-du-jour.js', array(), _BP_VERSION, true );
+	wp_enqueue_script( 'battleplan-script-carte-du-jour', get_template_directory_uri().'/js/carte-du-jour.js', array(), _BP_VERSION, false );
 }
 
 //Load Titles & Descriptions (Alt Text) of images and save for javascript

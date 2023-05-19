@@ -5,55 +5,131 @@ $printPage = '
 	<h1>Frequently Asked Questions</h1>
 
 	<p>Click a question below to reveal the answer.</p>
+	
 
-	[accordion title="How does my A/C system work?"]
-		 <p>Your air conditioning system is actually designed with two separate units which perform together to provide you the ultimate comfort you deserve. The unit on the outside of your home contains a liquid refrigerant that is distributed over the coil located indoors. Through this process,the heat and humidity are removed from the air and your comfort is maintained by cooling the house.</p>
+	[accordion title="How long does an HVAC system typically last?"]
+		 <p>On average, HVAC systems last between 10 and 20 years. The amount of time you can expect from your HVAC will vary greatly depending on the specific model, how often you have it serviced, how often you change the air filter, and your specific usage patterns.</p>
 	[/accordion]
+	
 
-	[accordion title="What does SEER mean?"]
-		 <p>The efficiency of a heating and cooling system is calculated by utilizing a ratio standard referred to as Seasonal Energy Efficiency Ratio (SEER). Governmental standards state that the SEER of any air conditioning system must meet a minimum of 13 SEER as enacted in 1992. An A/C system that is considered to be “high efficient” must be between 15-20 “SEER”. In order to receive the benefits of a 13 SEER or higher, you must upgrade the entire system. [get-biz info="name"] will be happy to custom design an air conditioning and heating system that fits your needs and budget.</p>
+	[accordion title="Why is my air conditioner blowing warm air?"]
+		 <p>If your air conditioner is blowing warm air, it could be due to several reasons. The most common causes include a dirty air filter, low refrigerant levels, a malfunctioning thermostat, or issues with the outside unit.</p>
 	[/accordion]
+	
 
-	[accordion title="What factors contribute to my home\'s comfort levels?"]
-	   <p>There are four contributing factors that play a vital role to the efficiency of your air conditioning and heating system.</p>
-	   <ul>
-		<li><b>Temperature:</b> To the average consumer, temperature is typically the beginning and the end of discussion when the topic of indoor comfort arises. However, temperature is actually just the beginning. At [get-biz info="name"], we will recommend a heating and cooling system customized to your needs.</li>
-		<li><b>Clean and Fresh Air:</b> A dusty home can have disastrous effects on both the efficiency of your heating and cooling system and your health. Our specialists at [get-biz info="name"] will be happy to suggest an air purifier that will assist to remove the dust and other allergens within your homes air so that not only will you and your family breath easier but your system will also have the opportunity to run more effectively.</li>
-		<li><b>Humidity:</b> During the winter months, the air is very dry which causes static electricity and itchy skin. If humidity is added, the uncomfortable feelings of dry skin is relieved. In the summer months, if the humidity is removed, the air becomes less sticky and the summer becomes more enjoyable.</li>
-		<li><b>System Control:</b> On a daily basis we seem to always answer the same question. Why are the temperatures so inconsistent from room to room? The front of the house is warmer or cooler than the back and vice versa. Why?? Your answer to that question is a self-adjusting thermostat will balance the air throughout your home and provide an even distribution of air throughout the home. Our specialists at [get-biz info="name"] will be happy to suggest a programmable thermostat designed for your needs.</li>
-	   </ul>
+	[accordion title="What does it mean if my furnace is making a strange noise?"]
+		 <p>Unusual noises from your furnace could indicate a mechanical problem, airflow reductions, or a clogged burner. If you are experiencing this, call [get-biz info="name"] at [get-biz info="phone-link"] and let us assess the situation as soon as possible to prevent potential damage or failure of the system.</p>
 	[/accordion]
+	
 
-	[accordion title="What causes a condensation leak problem?"]
-	   <p>The evaporator or cooling coil is located in the unit inside the home. As it creates condensation by removing moisture from the air, a drain pan will normally collect the water. If the drain line becomes clogged, a leak occurs from the overflow. Factors that lead to a clog in a drain line include algae build-up, crimped lines, settled wood platforms, snakes or other animals or just poor system maintenance.</p>
+	[accordion title="Why is my HVAC system constantly running?"]
+		 <p>An HVAC system that is constantly running can be a symptom of a few different problems, such as a thermostat set to "continuous run" mode, a system that is too small for the space it is cooling or heating, or a possible malfunction that needs professional attention.</p>
 	[/accordion]
+	
 
-	[accordion title="Why are my indoor coils, pipes or compressor covered with ice?"]
-	   <p>There are two reasons why ice would be found on coils, pipes, etc. The first being a low level of refrigerant or a clogged air filter. If the problem is not corrected as soon as possible, it could have disastrous effects on the compressor of the system. Should you notice freezing, you should first turn the system off, check and change the air filter and if the air filter is not clogged, then immediately consult our professionals at [get-biz info="name"]. We will promptly be at your service to resolve your freezing problem.</p>
+	[accordion title="How often should I have my HVAC system serviced?"]
+		 <p>At [get-biz info="name"], we recommended that you have your HVAC system serviced twice per year, ideally in the spring before the summer heat, and in the fall before the winter cold sets in.</p>
 	[/accordion]
+	
 
-	[accordion title="What can be done to make my home\'s air cleaner?"]
-	  <p>Ensuring your home has the proper ventilation can reduce moisture levels, which can greatly increase indoor air quality. Salt lamps, activated charcoal and houseplants have been found to naturally purify indoor air. Your carpets are a toxic sponge, and should be cleaned regularly.  Avoid smoking and using chemicals in the air.  And finally, the best way to improve your indoor air quality is to install a whole house air filtration system.  Our system can remove up to 99.98% of airborne allergens from your air.</p>
+	[accordion title="Why is regular HVAC maintenance important?"]
+		 <p>Regular HVAC maintenance helps keep your system running efficiently, which can save you money on energy bills. It can also prolong the life of the system, prevent costly repairs or breakdowns, and ensure a healthy and comfortable indoor environment.</p>
 	[/accordion]
+	
 
-	[accordion title="How often should my filters be cleaned or replaced?"]
-	  <p>It is recommended to inspect your filters at least once each month. Cleaning and replacement should be done on an as needed basis. As with the rest of your heating and cooling system, cleaner is always better.</p>
+	[accordion title="My energy bills have skyrocketed. Could this be related to my HVAC system?"]
+		 <p>Yes, a sudden increase in your energy bills could indicate that your HVAC system is not running efficiently. This could be due to a number of factors, such as a dirty or clogged filter, leaks in your ductwork, or a system that is nearing the end of its lifespan. [get-biz info="name"] would be happy to come out and take a look, and give you our recommendation.</p>
 	[/accordion]
+	
 
-	[accordion title="Why should I consider a new high-efficiency filter?"]
-	  <p>High-efficiency filters remove more of the smaller particles from the air. This will help us breathe better and reduce sinus problems, headaches and colds. Many people miss fewer days from school and work and use less allergy medication. The air is filtered before entering the air conditioning and furnace.</p>
+	[accordion title="How often should I change my HVAC filter?"]
+		 <p>The frequency with which you should change your HVAC filter depends on the type of filter, the air quality in your area, and if there are pets in the home. However, a good rule of thumb is to check it once a month and replace it at least every 3 months.</p>
 	[/accordion]
+	
 
-	[accordion title="Why is regular maintenance important?"]
-	  <p>Just like you take your car to the shop for oil changes and tune-ups, your home comfort system should receive the same kind of attention. Scheduled maintenance by a trained technician provides a variety of benefits to your HVAC equipment, which can help your systems perform efficiently and prevent costly breakdowns.</p>	  
-	  
-	  <p>To ensure your system operates at its maximum efficiency, our experts at [get-biz info="name"] recommend a thorough check-up twice a year. Ask us about our preventative maintenance agreement, which will provide two scheduled visits per year plus a number of cost saving perks!</p>
+	[accordion title="What are the signs I may need a new HVAC system?"]
+		 <p> If your HVAC system is over 15 years old, requires frequent repairs, struggles to maintain a comfortable temperature, or is resulting in unusually high energy bills, it might be time to consider a replacement.  Call [get-biz info="name"] at [get-biz info="phone-link"] and ask us about a free quote on a new high-efficiency system.</p>
 	[/accordion]
+	
 
-	[accordion title="How much am I overpaying on utility bills?"]
-	  <p>For any system that is in excess of 10 years old, unfortunately you are paying an average of 30% more on your overall utility expenses due to a lack in efficiency standard. For example, by upgrading a unit which has a 10 SEER rating to a new updated system with a minimum of 13 SEER, you will see a savings of at least 30%. An important point to remember is that when you upgrade to a 13 SEER or higher, you must install an ARI matched system.</p>
+	[accordion title="Can I perform my own HVAC repairs?"]
+		 <p>While small maintenance tasks such as changing filters or cleaning your outdoor unit can be done yourself, most HVAC repairs involve complex machinery that requires professional training to service properly. Attempting to perform your own repairs could potentially be dangerous and usually voids any existing warranties.</p>
 	[/accordion]
-	';
+	
+
+	[accordion title="What is the ideal temperature to set my thermostat at during the summer and winter?"]
+		 <p>The ideal temperature setting can vary based on personal comfort, but generally, 78° in the summer and 68° in the winter are recommended to balance comfort with energy efficiency.</p>
+	[/accordion]
+	
+
+	[accordion title="What is a SEER rating?"]
+		 <p>SEER stands for Seasonal Energy Efficiency Ratio. It measures the cooling efficiency of your air conditioner or heat pump. A higher SEER rating means greater energy efficiency. In order to receive the benefits of a higher SEER rating, you must upgrade the entire system. [get-biz info="name"] will be happy to custom design an air conditioning and heating system that fits your needs and budget.</p>
+	[/accordion]
+	
+
+	[accordion title="What is the difference between a central air system and a heat pump?"]
+		 <p>A central air system only cools or heats the air, while a heat pump can do both. In the winter, a heat pump pulls heat from the outside air to warm your home. In the summer, it pulls heat from your home to cool it.</p>
+	[/accordion]
+	
+
+	[accordion title="Why is my HVAC system freezing up?"]
+		 <p>Your HVAC system can freeze up due to a lack of airflow from a dirty filter or ductwork, low refrigerant, or the system being run when the outside temperature is too cold.</p>
+	[/accordion]
+	
+
+	[accordion title="What size HVAC system do I need for my home?"]
+		 <p>The size of your HVAC system depends on a variety of factors including the total square footage of your home, the type and quality of insulation, the number and type of windows, and even the number of people living in the home. [get-biz info="name"] would be happy to conduct a load calculation to determine the right size for your home.</p>
+	[/accordion]
+	
+
+	[accordion title="What is HVAC zoning?"]
+		 <p>HVAC zoning involves dividing your home into different areas or "zones," each controlled by its own thermostat. This allows for more precise control of temperature and airflow throughout your home, potentially saving energy and improving comfort.</p>
+	[/accordion]
+	
+
+	[accordion title="Can a smart thermostat really save me money?"]
+		 <p>Yes, a smart thermostat can save you money by allowing you to schedule temperature changes based on when you\'ll be home, away, or asleep. Some models can even learn your habits and adjust accordingly to maximize efficiency.</p>
+	[/accordion]
+	
+
+	[accordion title="What are some signs of poor indoor air quality?"]
+		 <p>Signs of poor indoor air quality can include persistent headaches, fatigue, dizziness, coughing, sneezing, and eye, nose, or throat irritation. If you notice these symptoms are worse at home and improve when you leave, it might be a sign of poor indoor air quality.</p>
+	[/accordion]
+	
+
+	[accordion title="How can I improve my home\'s indoor air quality?"]
+		 <p>Regularly replacing your HVAC filters, scheduling routine maintenance, and installing air purifiers can all help improve your home\'s air quality. Additionally, controlling humidity and ensuring proper ventilation can also make a big difference.</p>
+	[/accordion]
+	
+
+	[accordion title="What is a ductless mini-split system?"]
+		 <p>A ductless mini-split system is a type of HVAC system that doesn\'t require ductwork. It consists of an outdoor compressor unit and one or more indoor air handling units. They can be a good option for home additions or places where installing ductwork isn\'t practical.</p>
+	[/accordion]
+	
+
+	[accordion title="What is refrigerant and what does it do in my HVAC system?"]
+		 <p>Refrigerant is a special fluid in your HVAC system that absorbs heat from the air in your home and releases it outside. If your system is low on refrigerant, it won\'t cool your home as efficiently.</p>
+	[/accordion]
+	
+
+	[accordion title="What is the difference between a single-stage and a two-stage HVAC system?"]
+		 <p>A single-stage HVAC system operates at full capacity whenever it\'s on, while a two-stage system can operate at both full and partial capacity. Two-stage systems are generally more efficient because they don\'t use as much energy on mild days when full capacity isn\'t needed.</p>
+	[/accordion]
+	
+
+	[accordion title="How do I know if I have a leak in my ductwork?"]
+		 <p>Signs of a ductwork leak can include unusually high energy bills, rooms that are difficult to heat or cool, and dusty air immediately after the system starts.</p>
+	[/accordion]
+	
+
+	[accordion title="Can I just replace the outdoor unit on an older HVAC system to save money?"]
+		 <p>While it might seem like a cost-saving measure, mismatching a new outdoor unit with an older indoor unit can lead to efficiency problems and potentially cause the new unit to fail sooner. [get-biz info="name"] generally recommends that the entire system is replaced at once.</p>
+	[/accordion]
+	
+
+	[accordion title="How can I reduce strain on my HVAC system?"]
+		 <p>Regular maintenance, changing or cleaning filters regularly, ensuring proper insulation, using ceiling fans to circulate air, and keeping vents unblocked can all help reduce strain on your HVAC system.</p>
+	[/accordion]';
  
 return $printPage;	
 ?>

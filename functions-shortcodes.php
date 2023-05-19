@@ -14,8 +14,9 @@ function battleplan_getBizInfo($atts, $content = null ) {
 	if ( $data == "area" ) return $GLOBALS['customer_info']['area-before'].$GLOBALS['customer_info']['area'].$GLOBALS['customer_info']['area-after'];
 	
 	if ( strpos($data, 'phone') !== false ) :
-		$phoneBasic = strpos($data, 'replace') !== false ? $GLOBALS['customer_info'][$data] : $GLOBALS['customer_info']['area'].'-'.$GLOBALS['customer_info']['phone'];
-		$phoneFormat = $GLOBALS['customer_info']['area-before'].$GLOBALS['customer_info']['area'].$GLOBALS['customer_info']['area-after'].$GLOBALS['customer_info']['phone'];		
+		$phoneBasic = strpos($data, 'replace') !== false ? $GLOBALS['customer_info'][$data] : $GLOBALS['customer_info']['area'].'-'.$GLOBALS['customer_info']['phone'];	
+		$phoneFormat = $GLOBALS['customer_info']['area-before'].$GLOBALS['customer_info']['area'].$GLOBALS['customer_info']['area-after'].$GLOBALS['customer_info']['phone'];	
+	
 		if ( strpos($data, 'mm-bar-phone') !== false ) :
 			$openMessage = is_biz_open() ? "<span>Call Us, We're Open!</span>" : "";
 			$phoneFormat = do_shortcode('<div class="mm-bar-btn mm-bar-phone call-btn" aria-hidden="true">'.$openMessage.'</div><span class="sr-only">Call Us</span>');
@@ -320,7 +321,8 @@ add_shortcode( 'get-service-areas', 'battleplan_getServiceAreas' );
 function battleplan_getServiceAreas($atts, $content = null) {
 	$states = array('alabama'=>'AL', 'arizona'=>'AZ', 'arkansas'=>'AR', 'california'=>'CA', 'colorado'=>'CO', 'connecticut'=>'CT', 'delaware'=>'DE', 'dist of columbia'=>'DC', 'dist. of columbia'=>'DC', 'district of columbia'=>'DC', 'florida'=>'FL', 'georgia'=>'GA', 'idaho'=>'ID', 'illinois'=>'IL', 'indiana'=>'IN', 'iowa'=>'IA', 'kansas'=>'KS', 'kentucky'=>'KY', 'louisiana'=>'LA', 'maine'=>'ME', 'maryland'=>'MD', 'massachusetts'=>'MA', 'michigan'=>'MI', 'minnesota'=>'MN', 'mississippi'=>'MS', 'missouri'=>'MO', 'montana'=>'MT', 'nebraska'=>'NE', 'nevada'=>'NV', 'new hampshire'=>'NH', 'new jersey'=>'NJ', 'new mexico'=>'NM', 'new york'=>'NY', 'north carolina'=>'NC', 'north dakota'=>'ND', 'ohio'=>'OH', 'oklahoma'=>'OK', 'oregon'=>'OR', 'pennsylvania'=>'PA', 'rhode island'=>'RI', 'south carolina'=>'SC', 'south dakota'=>'SD', 'tennessee'=>'TN', 'texas'=>'TX', 'utah'=>'UT', 'vermont'=>'VT', 'virginia'=>'VA', 'washington'=>'WA', 'washington d.c.'=>'DC', 'washington dc'=>'DC', 'west virginia'=>'WV', 'wisconsin'=>'WI', 'wyoming'=>'WY');
 
-	$cities[$GLOBALS['customer_info']['city'].', '.$GLOBALS['customer_info']['state-abbr']] = '';
+	//$cities[$GLOBALS['customer_info']['city'].', '.$GLOBALS['customer_info']['state-abbr']] = '';
+	$cities = array();
 	if ( is_array($GLOBALS['customer_info']['service-areas']) ) :
 		foreach ( $GLOBALS['customer_info']['service-areas'] as $city ) :
 			$buildCity = $city[0];
@@ -330,6 +332,7 @@ function battleplan_getServiceAreas($atts, $content = null) {
 	endif;	
 	foreach ( get_posts( array ( 'numberposts'=>-1, 'post_type'=>'optimized' ) ) as $post ) $cities[$post->post_title] = get_permalink( $post->ID );
 
+	$buildLinks = '';
 	foreach ( $cities as $serviceArea=>$areaLink ) :
 		$buildLinks .= '<li>';
 		if ( $areaLink != '' ) $buildLinks .= '<a href="'.$areaLink.'">';

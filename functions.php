@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '18.6' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '18.7' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
@@ -24,7 +24,7 @@ if ( !defined('_USER_ID') ) define( '_USER_ID', wp_get_current_user()->ID );
 
 $googlebots = array( 'google', 'lighthouse' );
 $bots = array_merge(array('bot', 'crawler', 'spider', 'facebook', 'bing', 'linkedin', 'zgrab', 'addthis', 'fetcher', 'barkrowler', 'newspaper', 'yeti', 'daum', 'riddler', 'panscient', 'dataprovider', 'gigablast', 'qwantify', 'admantx', 'audit', 'docomo', 'yahoo', 'wayback', 'adbeat', 'netcraft', 'wordpress'), $googlebots);
-$spamIPs = get_option('bp_bad_ips');
+$spamIPs = get_option('bp_bad_ips') ? get_option('bp_bad_ips') : array();
 $spamURLs = explode("\n", file_get_contents( get_template_directory().'/spammers.txt' ));
 //https://github.com/matomo-org/referrer-spam-list/blob/master/spammers.txt
 
@@ -54,17 +54,38 @@ if ( !defined('_PAGE_SLUG_FULL') ) :
 endif;
 
 if ( !defined('_RAND_SEED') ) :
-	if ( (time() - get_option('rand-seed')) > 14000 ) update_option('rand-seed', time());
-	define( '_RAND_SEED', get_option('rand-seed') );
+	if ( (time() - get_option('rand-seed') ?? 0) > 14000 ) update_option('rand-seed', time());
+	define( '_RAND_SEED', get_option('rand-seed') ?? 0 );
 endif;
 
 // Store customer_info option into $GLOBALS['customer_info']
-$GLOBALS['customer_info'] = get_option('customer_info');
+$GLOBALS['customer_info'] = get_option('customer_info') ?? array();
 $currYear=date("Y"); 
-$startYear = $GLOBALS['customer_info']['year'];
+$startYear = $GLOBALS['customer_info']['year'] ?? 0;
 $GLOBALS['customer_info']['copyright'] = $startYear == $currYear ? "© ".$currYear : "© ".$startYear."-".$currYear; 
 $GLOBALS['site-loc'] = 1;	
-$GLOBALS['do_not_repeat'] = array(); 
+$GLOBALS['do_not_repeat'] = array(); 	
+if ( !array_key_exists('copyright', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['copyright'] = '';
+if ( !array_key_exists('name', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['name'] = '';
+if ( !array_key_exists('area', $GLOBALS['customer_info']) ) $GLOBALS['customer_info']['area'] = '000';
+if ( !array_key_exists('phone', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['phone'] = '000-0000';
+if ( !array_key_exists('area-before', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['area-before'] = '()';
+if ( !array_key_exists('area-after', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['area-after'] = ') ';
+if ( !array_key_exists('street', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['street'] = '';
+if ( !array_key_exists('city', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['city'] = '';
+if ( !array_key_exists('state-abbr', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['state-abbr'] = '';
+if ( !array_key_exists('state-full', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['state-full'] = '';
+if ( !array_key_exists('zip', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['zip'] = '';
+if ( !array_key_exists('email', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['email'] = '';
+
+if ( !array_key_exists('service-areas', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['service-areas'] = array();
+if ( !array_key_exists('site-type', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['site-type'] = '';
+if ( !array_key_exists('cid', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['cid'] = null;
+if ( !array_key_exists('pid', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['pid'] = 'false';
+if ( !array_key_exists('pid-sync', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['pid-sync'] = 'false';
+if ( !array_key_exists('lat', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['lat'] = null;
+if ( !array_key_exists('long', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['long'] = null;
+if ( !array_key_exists('schema', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['schema'] = 'false';
 
 /*--------------------------------------------------------------
 # Functions to extend WordPress 
@@ -84,15 +105,15 @@ function is_mobile() {
 // Check if business is currently open
 function is_biz_open() {
 	if ( $GLOBALS['customer_info']['pid-sync'] != "true" ) return false;
- 	$googleInfo = get_option('bp_gbp_update');
+ 	$googleInfo = get_option('bp_gbp_update') ?? array();
 	$day = wp_date("w", null, new DateTimeZone( wp_timezone_string() )) - 1;
 	$time = wp_date("Hi", null, new DateTimeZone( wp_timezone_string() ));
-	$placeIDs = $GLOBALS['customer_info']['pid'];	
+	$placeIDs = $GLOBALS['customer_info']['pid'] ?? 0;	
 	if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
 	$primePID = $placeIDs[0];
-	$open = $googleInfo[$primePID]['current-hours']['periods'][$day]['open']['time'];
-	$close = $googleInfo[$primePID]['current-hours']['periods'][$day]['close']['time'];
-	$open24 = $googleInfo[$primePID]['current-hours']['periods'][0]['open']['time'] == 0000 ? true : false;	
+	$open = $googleInfo[$primePID]['current-hours']['periods'][$day]['open']['time'] ?? '';
+	$close = $googleInfo[$primePID]['current-hours']['periods'][$day]['close']['time'] ?? '';
+	$open24 = $googleInfo[$primePID]['current-hours']['periods'][0]['open']['time'] ?? '' == 0000 ? true : false;	
 	if ( $open24 != false && ( !$open || !$close ) ) return false;
 		
 	return $open24 == true || ($time > $open && $time < $close) ? true : false;
@@ -586,7 +607,7 @@ function battleplan_setLoc() {
 	$loc = do_shortcode('[get-url-var var="l"]');
 	if ( $loc && $loc != 1 ) :
 		$GLOBALS['site-loc'] = $loc;
-		$GLOBALS['customer_info'] = get_option('customer_info_'.$loc);
+		$GLOBALS['customer_info'] = get_option('customer_info_'.$loc) ?? array();
 	endif;
 }
 
@@ -610,7 +631,7 @@ add_filter( 'body_class', 'battleplan_addBodyClasses', 30 );
 function battleplan_addBodyClasses( $classes ) {	
 	$classes[] = "slug-"._PAGE_SLUG; 
 	$classes[] = is_mobile() ? "screen-mobile" : "screen-desktop";
-	if ( $GLOBALS['customer_info']['site-type'] ) $classes[] = "site-type-".$GLOBALS['customer_info']['site-type'];
+	$classes[] = "site-type-".$GLOBALS['customer_info']['site-type'];
 	
 	return $classes;
 }	
@@ -1086,7 +1107,7 @@ function battleplan_scripts() {
 	//wp_localize_script( 'battleplan-script-essential', 'site_dir', $saveDir );	
 	wp_localize_script( 'battleplan-script-desktop', 'site_dir', $saveDir );	
 	
-	$saveOptions = array ( 'lat' => $GLOBALS['customer_info']['lat'], 'long' => $GLOBALS['customer_info']['long'] );
+	$saveOptions = array ( 'lat' => $GLOBALS['customer_info']['lat'] ?? 0, 'long' => $GLOBALS['customer_info']['long'] ?? 0 );
     wp_localize_script('battleplan-script-tracking', 'site_options', $saveOptions);
 }
 
@@ -1464,53 +1485,57 @@ $optimizedBottomMeta->addWysiwyg(array( 'id' => 'page-bottom_text', 'label' => '
 // Display Google review rating
 add_action('wp_footer', 'battleplan_getGoogleRating');
 function battleplan_getGoogleRating() {
-	$placeIDs = $GLOBALS['customer_info']['pid'];
-	if ( isset($placeIDs) ) :
-		$googleInfo = get_option('bp_gbp_update');
-		$singleLoc = !is_array($placeIDs) ? true : false;
-		if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
-		
-		$buildPanel = '<div class="wp-gr wp-google-badge">';
-		
-		foreach ( $placeIDs as $placeID ) :
-			if ( $googleInfo[$placeID]['google-rating'] > 3.99 ) :			
-				$buildPanel .= '<div id="google-review-schema" style="display:none" itemscope itemtype="https://schema.org/AggregateRating">';
-				$buildPanel .= '<div itemprop="itemReviewed" itemscope itemtype="https://schema.org/'.get_option("wpseo_local")["business_type"].'">';
-				$buildPanel .= '<span itemprop="name">'.get_bloginfo('name').'</span><br><span itemprop="telephone">'.$googleInfo[$placeID]['phone-format'].'</span><br><span itemprop="address">'.trim($googleInfo[$placeID]['street']).", ".$googleInfo[$placeID]['city'].", ".$googleInfo[$placeID]['state-abbr']." ".$googleInfo[$placeID]['zip'].'</span><br>';				
-				$buildPanel .= '</div>';
-				$buildPanel .= '<span itemprop="ratingValue">'.number_format($googleInfo[$placeID]['google-rating'], 1, '.', ',').'</span> out of <span itemprop="bestRating">5</span> stars - <span itemprop="ratingCount">'.number_format($googleInfo[$placeID]['google-reviews']).'</span> reviews';
-				$buildPanel .= '</div>';			
-			
-				$buildPanel .= '<a class="wp-google-badge-btn" href="https://search.google.com/local/reviews?placeid='.$placeID.'&hl=en&gl=US" target="_blank">';
-				$buildPanel .= '<div class="wp-google-badge-score wp-google-rating">';
-				$buildPanel .= '<div class="wp-google-review"><svg role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" height="25" width="25"><title>Google Logo</title><g fill="none" fill-rule="evenodd">';
-				$buildPanel .= '<path d="M482.56 261.36c0-16.73-1.5-32.83-4.29-48.27H256v91.29h127.01c-5.47 29.5-22.1 54.49-47.09 71.23v59.21h76.27c44.63-41.09 70.37-101.59 70.37-173.46z" fill="#4285f4"></path>';
-				$buildPanel .= '<path d="M256 492c63.72 0 117.14-21.13 156.19-57.18l-76.27-59.21c-21.13 14.16-48.17 22.53-79.92 22.53-61.47 0-113.49-41.51-132.05-97.3H45.1v61.15c38.83 77.13 118.64 130.01 210.9 130.01z" fill="#34a853"></path>';
-				$buildPanel .= '<path d="M123.95 300.84c-4.72-14.16-7.4-29.29-7.4-44.84s2.68-30.68 7.4-44.84V150.01H45.1C29.12 181.87 20 217.92 20 256c0 38.08 9.12 74.13 25.1 105.99l78.85-61.15z" fill="#fbbc05"></path>';
-				$buildPanel .= '<path d="M256 113.86c34.65 0 65.76 11.91 90.22 35.29l67.69-67.69C373.03 43.39 319.61 20 256 20c-92.25 0-172.07 52.89-210.9 130.01l78.85 61.15c18.56-55.78 70.59-97.3 132.05-97.3z" fill="#ea4335"></path>';
-				$buildPanel .= '<path d="M20 20h472v472H20V20z"></path>';
-				$buildPanel .= '</g></svg>';
-				$buildPanel .= '<div data-as-of="'.date("F j, Y", $googleInfo['date']).'" class="wp-google-value">'.number_format($googleInfo[$placeID]['google-rating'], 1, '.', ',').'</div>';
-				$buildPanel .= '<div class="wp-google-stars">';
+	if ( $GLOBALS['customer_info']['pid'] ) :
+		$placeIDs = $GLOBALS['customer_info']['pid'];
+		if ( isset($placeIDs) ) :
+			$googleInfo = get_option('bp_gbp_update') ?? array();
 
-				if ( $googleInfo[$placeID]['google-rating'] >= 4.7) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo[$placeID]['google-rating'], 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i></span>';
-				if ( $googleInfo[$placeID]['google-rating'] >= 4.2 && $googleInfo[$placeID]['google-rating'] <= 4.6 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo[$placeID]['google-rating'], 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star-half-alt"></i></span>';
-				if ( $googleInfo[$placeID]['google-rating'] >= 3.7 && $googleInfo[$placeID]['google-rating'] <= 4.1 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo[$placeID]['google-rating'], 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa far fa-star"></i></span>';		
-				if ( $googleInfo[$placeID]['google-rating'] >= 3.2 && $googleInfo[$placeID]['google-rating'] <= 3.6 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo[$placeID]['google-rating'], 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star-half-alt"></i><i class="fa far fa-star"></i></span>';
+			$singleLoc = !is_array($placeIDs) ? true : false;
+			if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
 
-				$buildPanel .= '</div>';	
-				$buildPanel .= '<div class="wp-google-total">Click to view our ';			
-				if ( $googleInfo[$placeID]['google-reviews'] > 4 ) $buildPanel .= '<span>'.number_format($googleInfo[$placeID]['google-reviews']).'</span> ';		
-				if ( $singleLoc == true ) :
-					$buildPanel .= 'Google reviews</div>';	
-				else:				
-					$buildPanel .= 'reviews in '.$googleInfo[$placeID]['city'].'</div>';	
+			$buildPanel = '<div class="wp-gr wp-google-badge">';
+
+			foreach ( $placeIDs as $placeID ) : 
+				if ( $googleInfo[$placeID]['google-rating'] ?? 0 > 3.99 ) :			
+					$buildPanel .= '<div id="google-review-schema" style="display:none" itemscope itemtype="https://schema.org/AggregateRating">';
+					$buildPanel .= '<div itemprop="itemReviewed" itemscope itemtype="https://schema.org/'.get_option("wpseo_local")["business_type"].'">';
+	
+					$buildPanel .= '<span itemprop="name">'.get_bloginfo('name').'</span><br><span itemprop="telephone">'.$googleInfo[$placeID]['phone-format'].'</span><br><span itemprop="address">'.trim($googleInfo[$placeID]['street']).", ".$googleInfo[$placeID]['city'].", ".$googleInfo[$placeID]['state-abbr']." ".$googleInfo[$placeID]['zip'];
+	
+					$buildPanel .= '<span itemprop="ratingValue">'.number_format($googleInfo[$placeID]['google-rating'], 1, '.', ',').'</span> out of <span itemprop="bestRating">5</span> stars - <span itemprop="ratingCount">'.number_format($googleInfo[$placeID]['google-reviews'], 0).'</span> reviews';
+					$buildPanel .= '</div>';			
+
+					$buildPanel .= '<a class="wp-google-badge-btn" href="https://search.google.com/local/reviews?placeid='.$placeID.'&hl=en&gl=US" target="_blank">';
+					$buildPanel .= '<div class="wp-google-badge-score wp-google-rating">';
+					$buildPanel .= '<div class="wp-google-review"><svg role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" height="25" width="25"><title>Google Logo</title><g fill="none" fill-rule="evenodd">';
+					$buildPanel .= '<path d="M482.56 261.36c0-16.73-1.5-32.83-4.29-48.27H256v91.29h127.01c-5.47 29.5-22.1 54.49-47.09 71.23v59.21h76.27c44.63-41.09 70.37-101.59 70.37-173.46z" fill="#4285f4"></path>';
+					$buildPanel .= '<path d="M256 492c63.72 0 117.14-21.13 156.19-57.18l-76.27-59.21c-21.13 14.16-48.17 22.53-79.92 22.53-61.47 0-113.49-41.51-132.05-97.3H45.1v61.15c38.83 77.13 118.64 130.01 210.9 130.01z" fill="#34a853"></path>';
+					$buildPanel .= '<path d="M123.95 300.84c-4.72-14.16-7.4-29.29-7.4-44.84s2.68-30.68 7.4-44.84V150.01H45.1C29.12 181.87 20 217.92 20 256c0 38.08 9.12 74.13 25.1 105.99l78.85-61.15z" fill="#fbbc05"></path>';
+					$buildPanel .= '<path d="M256 113.86c34.65 0 65.76 11.91 90.22 35.29l67.69-67.69C373.03 43.39 319.61 20 256 20c-92.25 0-172.07 52.89-210.9 130.01l78.85 61.15c18.56-55.78 70.59-97.3 132.05-97.3z" fill="#ea4335"></path>';
+					$buildPanel .= '<path d="M20 20h472v472H20V20z"></path>';
+					$buildPanel .= '</g></svg>';
+					$buildPanel .= '<div data-as-of="'.date("F j, Y", $googleInfo['date']).'" class="wp-google-value">'.number_format($googleInfo[$placeID]['google-rating'], 1, '.', ',').'</div>';
+					$buildPanel .= '<div class="wp-google-stars">';
+
+					if ( $googleInfo[$placeID]['google-rating'] >= 4.7) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo[$placeID]['google-rating'], 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i></span>';
+					if ( $googleInfo[$placeID]['google-rating'] >= 4.2 && $googleInfo[$placeID]['google-rating'] <= 4.6 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo[$placeID]['google-rating'], 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star-half-alt"></i></span>';
+					if ( $googleInfo[$placeID]['google-rating'] >= 3.7 && $googleInfo[$placeID]['google-rating'] <= 4.1 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo[$placeID]['google-rating'], 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa far fa-star"></i></span>';		
+					if ( $googleInfo[$placeID]['google-rating'] >= 3.2 && $googleInfo[$placeID]['google-rating'] <= 3.6 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo[$placeID]['google-rating'], 1, '.', ',').' Stars</span><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star"></i><i class="fa fas fa-star-half-alt"></i><i class="fa far fa-star"></i></span>';
+
+					$buildPanel .= '</div>';	
+					$buildPanel .= '<div class="wp-google-total">Click to view our ';			
+					if ( $googleInfo[$placeID]['google-reviews'] > 4 ) $buildPanel .= '<span>'.number_format($googleInfo[$placeID]['google-reviews']).'</span> ';		
+					if ( $singleLoc == true ) :
+						$buildPanel .= 'Google reviews</div>';	
+					else:				
+						$buildPanel .= 'reviews in '.$googleInfo[$placeID]['city'].'</div>';	
+					endif;
+					$buildPanel .= '</div></div></a>';
 				endif;
-				$buildPanel .= '</div></div></a>';
-			endif;
-		endforeach;
-		$buildPanel .= '</div>';
-		echo $buildPanel;
+			endforeach;
+			$buildPanel .= '</div>';
+			echo $buildPanel;
+		endif;
 	endif;
 }
 
@@ -1548,10 +1573,15 @@ function battleplan_redirect_to_url($url, $redirect) {
 add_action('wp_head', 'battleplan_addSchema');
 function battleplan_addSchema() { 
 	if ( !isset($GLOBALS['customer_info']['schema']) || $GLOBALS['customer_info']['schema'] != 'false' ) :
-		$schema = get_option( 'bp_schema' );
+		$schema = get_option( 'bp_schema' ) ?? array();
+		if ( !array_key_exists('business_type', $schema ) ) $schema['business_type'] = '';
+		if ( !array_key_exists('additional_type', $schema ) ) $schema['additional_type'] = '';
+		if ( !array_key_exists('company_logo', $schema ) ) $schema['company_logo'] = 'logo.webp';
+		if ( !array_key_exists('hours', $schema ) ) $schema['hours'] = null;
+	
 		$attach = get_children( array( 'post_parent' => get_the_ID(), 'post_type' => 'attachment', 'post_mime_type' => 'image', 'order' => 'ASC', 'numberposts' => 1 ) );
-		if( is_array( $attach ) && is_object( current( $attach ) ) ) $imageFile = current( $attach )->guid;
-		$mapID = $GLOBALS['customer_info']['cid'] ? "https://maps.google.com/?cid=".$GLOBALS['customer_info']['cid'] : null;
+		$imageFile = is_array( $attach ) && is_object( current( $attach ) ) ? current( $attach )->guid : '';
+		$mapID = "https://maps.google.com/?cid=".$GLOBALS['customer_info']['cid'];
 
 		?><script type="application/ld+json" defer nonce="<?php echo _BP_NONCE; ?>" >
 			{ 
@@ -1587,7 +1617,7 @@ function battleplan_addSchema() {
 				{
 					"@type": "City",
 					"name": "<?php echo $city[0] ?>",
-					"sameAs": "https://en.wikipedia.org/wiki/<?php echo $city[0] ?>,_<?php echo $city[1] ?>"
+					"sameAs": "https://en.wikipedia.org/wiki/<?php echo $city[0] ?? '' ?>,_<?php echo $city[1] ?>"
 			<?php endforeach; ?>
 				}],	
 				"makesOffer": {
@@ -1638,7 +1668,7 @@ function battleplan_create_user_roles() {
 
 //add_action('init', 'battleplan_getAndDisplayUserRoles');
 function battleplan_getAndDisplayUserRoles() {	
-	$caps = get_option('wp_user_roles');	
+	$caps = get_option('wp_user_roles') ?? array();	
 	print_r( $caps );
 }
 
@@ -1719,11 +1749,13 @@ function battleplan_loadFonts() {
 // Install Google Global Site Tags
 add_action('bp_google_tag_manager', 'battleplan_load_tag_manager');
 function battleplan_load_tag_manager() { 
+	$buildTags = $buildTagMgr = $buildEvents = $mainAcct = '';
+	$gtagEvents = array();
+	
 	if ( isset($GLOBALS['customer_info']['google-tags']) && is_array($GLOBALS['customer_info']['google-tags']) ) :
-		$buildTags = $buildTagMgr = $buildEvents = '';
-		$gtagEvents = array();
+
 		foreach ( $GLOBALS['customer_info']['google-tags'] as $gtag=>$value ) :	
-			if ( $gtag == "analytics" ) : if ( _USER_LOGIN != 'battleplanweb' && _IS_BOT != true ) : $mainAcct = $value; else: $mainAcct = null; endif; endif;
+			if ( $gtag == "analytics" ) : if ( _USER_LOGIN != 'battleplanweb' && _IS_BOT != true ) : $mainAcct = $value; endif; endif;
 			if ( $gtag == "analytics" || $gtag == "ads" || $gtag == "searchkings" ) $buildTags .= 'gtag("config", "'.$value.'");';				
 			if ( strpos($gtag, 'conversions' ) !== false ) :
 				if ( $gtag == "conversions" ) : 
@@ -1850,7 +1882,7 @@ function battleplan_printOpenBanner() {
 add_action('bp_wrapper_top', 'battleplan_printWrapperTop', 20);
 function battleplan_printWrapperTop() { 
 	$current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );
-	$textarea = get_post_meta( $current_page->ID, 'page-top_text', true );
+	$textarea = get_post_meta( $current_page->ID ?? 0, 'page-top_text', true );
  	if ( $textarea != "" ) echo "<section id='wrapper-top'>".apply_filters('the_content', $textarea)."</section><!-- #wrapper-top -->";
 }	
 ?>

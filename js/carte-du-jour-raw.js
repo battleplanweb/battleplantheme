@@ -13,8 +13,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			$( '.show-'+locations[i][1]['slug'] ).addClass('loc');
 			$( 'a.button.'+locations[i][1]['slug'] ).addClass('loc-btn');
 		}	
-
-		function displayLocation(loc) {
+		
+		window.displayLocation = function (loc) {
 			$('a.button').removeClass('active');
 			$('a.button.'+loc).addClass('active');
 			
@@ -28,7 +28,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			  	}
 			});			
 			
-			$('body').addClass('location-'+loc);			
+			$('body').addClass('location-'+loc);			 
 			$('.location-unknown, .loc').fadeOut(100);
 			$('.show-'+loc).fadeIn(500);			
 			
@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		
 		if ( cdj_location ) { displayLocation(cdj_location); }		
 		
-		$('a.button').click(function() { 			
+		$('a.button').click(function() { 	
 			for (var i = 0; i < locations.length; i++) {
 				if ( $(this).hasClass(locations[i][1]['slug']) ) {					
 					displayLocation(locations[i][1]['slug']);

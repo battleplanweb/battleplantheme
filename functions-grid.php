@@ -87,7 +87,10 @@ function battleplan_buildSection( $atts, $content = null ) {
 // Layout (Nested)
 add_shortcode( 'nested', 'battleplan_buildNested' );
 function battleplan_buildNested( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'grid'=>'1', 'break'=>'', 'valign'=>'', 'class'=>'' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'grid'=>'1', 'break'=>'', 'valign'=>'', 'class'=>'' ), $atts );
+	$name = strtolower(esc_attr($a['name']));
+	$name = preg_replace("/[\s_]/", "-", $name);
+	$name = $name ? ' id="'.$name.'"' : '';
 	$grid = esc_attr($a['grid']);
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
@@ -96,7 +99,7 @@ function battleplan_buildNested( $atts, $content = null ) {
 	if ( $valign != '' ) $valign = " valign-".$valign;
 	if ( $break != '' ) $break = " break-".$break;
 
-	$buildLayout = '<div class="flex nested grid-'.$grid.$valign.$break.$class.'">'.do_shortcode($content).'</div>';	
+	$buildLayout = '<div'.$name.' class="flex nested grid-'.$grid.$valign.$break.$class.'">'.do_shortcode($content).'</div>';	
 	
 	return $buildLayout;
 }
@@ -104,7 +107,7 @@ function battleplan_buildNested( $atts, $content = null ) {
 // Layout
 add_shortcode( 'layout', 'battleplan_buildLayout' );
 function battleplan_buildLayout( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'grid'=>'1', 'break'=>'', 'valign'=>'', 'class'=>'' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'grid'=>'1', 'break'=>'', 'valign'=>'', 'class'=>'' ), $atts );
 	$grid = esc_attr($a['grid']);
 	
 	if ( strpos($grid,'px') !== false || strpos($grid,'em') !== false || strpos($grid,'fr') !== false ) :
@@ -113,6 +116,9 @@ function battleplan_buildLayout( $atts, $content = null ) {
 	else: $custom_grid = '';
 	endif;	
 	
+	$name = strtolower(esc_attr($a['name']));
+	$name = preg_replace("/[\s_]/", "-", $name);
+	$name = $name ? ' id="'.$name.'"' : '';	
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
 	$break = esc_attr($a['break']);
@@ -120,7 +126,7 @@ function battleplan_buildLayout( $atts, $content = null ) {
 	if ( $valign != '' ) $valign = " valign-".$valign;
 	if ( $break != '' ) $break = " break-".$break;
 
-	$buildLayout = '<div class="flex grid-'.$grid.$valign.$break.$class.'" '.$custom_grid.'>'.do_shortcode($content).'</div>';	
+	$buildLayout = '<div'.$name.' class="flex grid-'.$grid.$valign.$break.$class.'" '.$custom_grid.'>'.do_shortcode($content).'</div>';	
 	
 	return $buildLayout;
 }

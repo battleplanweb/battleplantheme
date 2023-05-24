@@ -170,6 +170,15 @@ function battleplan_getWordPressPage( $atts, $content = null ) {
 	if ( $display == "link" && get_post_status($getPage->ID) == "publish" ) return esc_url(get_permalink($pageID));
 }
 
+// Display the page or post's featured image
+add_shortcode( 'get-featured-image', 'battleplan_getFeaturedImg' );
+function battleplan_getFeaturedImg( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'size'=>'full' ), $atts );
+	global $post;
+    	$featured_image = '';
+    	if (has_post_thumbnail($post->ID)) return get_the_post_thumbnail($post->ID, esc_attr($a['size']));
+}
+
 // Checks to see if slug exists, and if so prints it
 add_shortcode( 'get-element', 'battleplan_getElement' );
 function battleplan_getElement( $atts, $content = null ) {

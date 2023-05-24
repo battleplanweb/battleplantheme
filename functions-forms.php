@@ -118,7 +118,7 @@ function battleplan_setupFormEmail( $contact_form, &$abort, $submission ) {
 	//$city = $submission->get_posted_data( 'user-city' );
 	$message = $submission->get_posted_data( 'user-message' );
 	
-	$bad_ips = array('15.204.148', '23.81.62', '37.19.199', '37.19.205', '37.19.221', '38.125.112', '38.153.99', '45.89.173', '45.248.55', '63.141.62', '82.221.113', '89.187.177', '89.187.179', '89.187.180', '91.197.36', '91.197.37', '91.223.133', '93.190.140', '104.227.228', '138.199.38', '138.199.52', '143.244.44', '146.70.45.85', '146.70.147', '154.13.63', '154.38.146', '156.146.54', '161.123.150', '162.218.15', '172.94.53', '173.213.85', '181.214.107', '185.147.214', '185.254.64', '192.46.200.146', '192.46.203', '192.53.67', '192.53.69', '195.181.163', '195.181.171', '196.51.53', '199.85.208', '206.228.117', '206.228.118');
+	$bad_ips = array('15.204.148', '23.81.62', '37.19.199', '37.19.205', '37.19.221', '38.125.112', '38.153.99', '45.89.173', '45.248.55', '63.141.62', '82.221.113', '89.187.177', '89.187.179', '89.187.180', '91.197.36', '91.197.37', '91.223.133', '93.190.140', '104.148.28', '104.227.228', '138.199.38', '138.199.52', '143.244.44', '146.70.45.85', '146.70.147', '154.3.232', '154.9.177', '154.13.56', '154.13.63', '154.38.146', '156.146.54', '161.123.150', '162.218.15', '172.94.53', '173.213.85', '181.214.107', '185.147.214', '185.254.64', '192.46.200.146', '192.46.203', '192.53.67', '192.53.69', '195.181.163', '195.181.171', '196.51.53', '199.85.208', '206.228.117', '206.228.118');
 
 	$bad_emails= array($_SERVER['HTTP_HOST'], 'testing.com', 'test@', 'b2blistbuilding.com', 'amy.wilsonmkt@gmail.com', '@agency.leads.fish', 'landrygeorge8@gmail.com', '@digitalconciergeservice.com', '@themerchantlendr.com', '@fluidbusinessresources.com', '@focal-pointcoaching.net', '@zionps.com', '@rddesignsllc.com', '@domainworld.com', 'marketing.ynsw@gmail.com', 'seoagetechnology@gmail.com', '@excitepreneur.net', '@bullmarket.biz', '@tworld.com', 'garywhi777@gmail.com', 'ronyisthebest16@gmail.com', 'ronythomas611@gmail.com', 'ronythomasrecruiter@gmail.com', '@ideonagency.net', 'axiarobbie20@gmail.com', '@hyper-tidy.com', '@readyjob.org', '@thefranchisecreatornetwork.com', 'franchisecreatormarketing.com', '@legendarygfx.com', '@hitachi-metal-jp.com', '@expresscommerce.co', '@zaphyrpro.com', 'erjconsult.com', 'christymkts@gmail.com', '@theheritageseo.com', '@freedomwebdesigns.com', 'wesavesmallbusinesses@gmail.com', '@bimservicesllc.net', '@spamhunter.co', '@myspamburner.co', '@spamshield.co', '@excelestimation.net', '@dmccreativesolutions.com', '@mdhmx.com', '@digitalmarketingvas.com', '@rushmoreblueprint.co');
 	
@@ -134,7 +134,7 @@ function battleplan_setupFormEmail( $contact_form, &$abort, $submission ) {
 		if (stripos($email, $bad_email) !== false) $spamIntercept .= ' Email;';
 	endforeach;
 	
-	if (strpos($phone, '0') === 0) $spamIntercept .= ' Phone;';
+	if (strpos($phone, '0') === 0 || strpos($phone, '(0') === 0) $spamIntercept .= ' Phone;';
 
 	foreach($bad_words as $bad_word) :
 		if (stripos($message, $bad_word) !== false) $spamIntercept .= ' Words;';

@@ -493,7 +493,7 @@ function battleplan_handleEmploymentApp( $contact_form ) {
 		$license = $submitted['posted_data']['driver-license'][0] !== null ? $submitted['posted_data']['driver-license'][0] : null;
 		$background = $submitted['posted_data']['background-chk'][0] !== null ? $submitted['posted_data']['background-chk'][0] : null;
 
-		if ( intval($age) > 20 && ($criminal == null || str_contains($criminal, "No")) && ($license == null || str_contains($license, "Yes")) && ($background == null || str_contains($background, "Yes")) ):
+		if ( ($criminal == null || str_contains($criminal, "No")) && ($license == null || str_contains($license, "Yes")) && ($background == null || str_contains($background, "Yes")) ):
 			$preSub = "< QUALIFIED >";
 		else:
 			$preSub = "< unqualified >";
@@ -513,8 +513,8 @@ function battleplan_handleEmploymentAppResponse($additional_mail, $contact_form)
 	$license = $submitted['posted_data']['driver-license'][0] !== null ? $submitted['posted_data']['driver-license'][0] : null;
 	$background = $submitted['posted_data']['background-chk'][0] !== null ? $submitted['posted_data']['background-chk'][0] : null;
 
-	if ( intval($age) > 20 && ($criminal == null || str_contains($criminal, "No")) && ($license == null || str_contains($license, "Yes")) && ($background == null || str_contains($background, "Yes")) ):
-    	return $additional_mail;
+	if ( ($criminal == null || str_contains($criminal, "No")) && ($license == null || str_contains($license, "Yes")) && ($background == null || str_contains($background, "Yes")) ):
+		return $additional_mail;
 	else:
 		return;
 	endif;

@@ -382,8 +382,9 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 }
 
 /* Admin dashboard */
-#adminmenu .admin-note {
-	display: 									block;
+#adminmenu .admin-note,
+#adminmenu .admin-badge {
+ 	display: 									block;
 	position: 									relative;
  	margin: 									2px 0 -1px 2px;
 	padding: 									2px 8px;
@@ -397,7 +398,15 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	font-size: 									11px;
 	line-height: 								1.6;
 	text-align: 								center;
-	z-index: 									26;
+	z-index: 									26; 
+}
+
+#adminmenu .admin-badge {
+ 	display: 									inline;
+}
+
+#adminmenu .admin-badge-holder {
+	float: 									right;
 }
 
 #adminmenu .wp-submenu li a[href="index.php?page=clear-all"],

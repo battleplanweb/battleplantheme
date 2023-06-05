@@ -44,6 +44,17 @@ get_header(); ?>
 					$social = "false";
 					$tags = "false"; // list / button
 					$navigation = "false";	
+		
+			// Events
+				elseif ( get_post_type() == "events" ) :	
+					$singleHeadline = esc_html(get_the_title());
+					$singleIntro = "";
+					$breadcrumbs = "true";
+					$author = "false";
+					$comments = "false";
+					$social = "false";
+					$tags = "false"; // list / button
+					$navigation = "false";	
 
 			// Default Single
 				else:		

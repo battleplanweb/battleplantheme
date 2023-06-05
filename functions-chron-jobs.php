@@ -318,7 +318,7 @@ function processChron($forceChron) {
 	endif;
 	
 // Block Spammer IPs
-	$bad_ips = array('23.81.62', '37.19.199', '37.19.205', '37.19.221', '38.125.112', '45.89.173', '63.141.62', '82.221.113', '89.187.177', '89.187.179', '89.187.180', '91.197.36', '91.223.133', '93.190.140', '138.199.38', '138.199.52', '143.244.44', '146.70.45.85', '146.70.147', '154.13.63', '156.146.54', '161.123.150', '162.218.15', '172.94.53', '173.213.85', '185.147.214', '185.254.64', '192.46.203', '192.53.67', '192.53.69', '195.181.163', '199.85.208');
+	$bad_ips = array('5.254.43', '15.204.148', '23.81.62', '23.237.26', '37.19.199', '37.19.205', '37.19.221', '37.46.122', '38.125.112', '38.153.99', '45.89.173', '45.248.55', '63.141.62', '63.161.26', '82.221.113', '89.187.177', '89.187.179', '89.187.180', '91.197.36', '91.197.37', '91.223.133', '93.190.140', '104.148.28', '104.227.228', '138.199.38', '138.199.52', '143.244.44', '146.70.45.85', '146.70.147', '154.3.232', '154.9.177', '154.13.56', '154.13.63', '154.38.146', '156.146.54', '161.123.150', '162.218.15', '172.94.53', '173.213.85', '181.214.107', '185.147.214', '185.254.64', '192.46.200.146', '192.46.203', '192.53.67', '192.53.69', '195.181.163', '195.181.171', '196.51.53', '199.85.208', '206.228.117', '206.228.118');
 
 	update_option( 'bp_bad_ips', $bad_ips );	 	
 	
@@ -491,61 +491,67 @@ function processChron($forceChron) {
 	if ( $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'american standard' || (is_array($GLOBALS['customer_info']['site-brand']) && in_array('american standard', $GLOBALS['customer_info']['site-brand']))) ) :
 		if (is_null(get_page_by_path('customer-care-dealer', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'Customer Care Dealer', 'post_content' => '[get-universal-page slug="page-hvac-customer-care-dealer"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
 	else:
-		$getPage = get_page_by_path('customer-care-dealer', OBJECT, 'universal'); if ( $getPage) wp_delete_post( $getPage->ID, true );
+		$getPage = get_page_by_path('customer-care-dealer', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
 	endif;
 
 	if ( $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'ruud' || (is_array($GLOBALS['customer_info']['site-brand']) && in_array('ruud', $GLOBALS['customer_info']['site-brand']))) ) :
 		if (is_null(get_page_by_path('ruud-pro-partner', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'Ruud Pro Partner', 'post_content' => '[get-universal-page slug="page-hvac-ruud-pro-partner"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
 	else:
-		$getPage = get_page_by_path('ruud-pro-partner', OBJECT, 'universal'); if ( $getPage) wp_delete_post( $getPage->ID, true );
+		$getPage = get_page_by_path('ruud-pro-partner', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
 	endif;
 
 	if ( $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'comfortmaker' || (is_array($GLOBALS['customer_info']['site-brand']) && in_array('comfortmaker', $GLOBALS['customer_info']['site-brand']))) ) :
 		if (is_null(get_page_by_path('comfortmaker-elite-dealer', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'Comfortmaker Elite Dealer', 'post_content' => '[get-universal-page slug="page-hvac-comfortmaker-elite-dealer"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
 	else:
-		$getPage = get_page_by_path('comfortmaker-elite-dealer', OBJECT, 'universal'); if ( $getPage) wp_delete_post( $getPage->ID, true );
+		$getPage = get_page_by_path('comfortmaker-elite-dealer', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
 	endif;
 
 	if ( $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'york' || (is_array($GLOBALS['customer_info']['site-brand']) && in_array('york', $GLOBALS['customer_info']['site-brand']))) ) :
 		if (is_null(get_page_by_path('york-certified-comfort-expert', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'York Certified Comfort Expert', 'post_content' => '[get-universal-page slug="page-hvac-york-cert-comfort-expert"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
 	else:
-		$getPage = get_page_by_path('york-cert-comfort-expert', OBJECT, 'universal'); if ( $getPage) wp_delete_post( $getPage->ID, true );
+		$getPage = get_page_by_path('york-cert-comfort-expert', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
 	endif;
 
 	if ( $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'tempstar' || (is_array($GLOBALS['customer_info']['site-brand']) && in_array('tempstar', $GLOBALS['customer_info']['site-brand']))) ) :
 		if (is_null(get_page_by_path('tempstar-elite-dealer', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'Tempstar Elite Dealer', 'post_content' => '[get-universal-page slug="page-hvac-tempstar-elite-dealer"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
 	else:
-		$getPage = get_page_by_path('tempstar-elite-dealer', OBJECT, 'universal'); if ( $getPage) wp_delete_post( $getPage->ID, true );
+		$getPage = get_page_by_path('tempstar-elite-dealer', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
 	endif;
 
 	if ( $GLOBALS['customer_info']['site-type'] == 'hvac' ) :
 		if (is_null(get_page_by_path('maintenance-tips', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'Maintenance Tips', 'post_content' => '[get-universal-page slug="page-hvac-maintenance-tips"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
 	else:
-		$getPage = get_page_by_path('maintenance-tips', OBJECT, 'universal'); if ( $getPage) wp_delete_post( $getPage->ID, true );
+		$getPage = get_page_by_path('maintenance-tips', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
 	endif;
 
 	if ( $GLOBALS['customer_info']['site-type'] == 'hvac' ) :
 		if (is_null(get_page_by_path('symptom-checker', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'Symptom Checker', 'post_content' => '[get-universal-page slug="page-hvac-symptom-checker"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
 	else:
-		$getPage = get_page_by_path('symptom-checker', OBJECT, 'universal'); if ( $getPage) wp_delete_post( $getPage->ID, true );
+		$getPage = get_page_by_path('symptom-checker', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
 	endif;
 
 	if ( $GLOBALS['customer_info']['site-type'] == 'hvac' ) :
 		if (is_null(get_page_by_path('faq', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'FAQ', 'post_content' => '[get-universal-page slug="page-hvac-faq"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
 	else:
-		$getPage = get_page_by_path('faq', OBJECT, 'universal'); if ( $getPage) wp_delete_post( $getPage->ID, true );
+		$getPage = get_page_by_path('faq', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
 	endif;
 
 	if ( $GLOBALS['customer_info']['site-type'] == 'profile' ) :
 		if (is_null(get_page_by_path('profile', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'Profile', 'post_content' => '[get-universal-page slug="page-profile"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
 	else:
-		$getPage = get_page_by_path('profile', OBJECT, 'universal'); if ( $getPage) wp_delete_post( $getPage->ID, true );
+		$getPage = get_page_by_path('profile', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
 	endif;
 
 	if ( $GLOBALS['customer_info']['site-type'] == 'profile' ) :
 		if (is_null(get_page_by_path('profile-directory', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'Profile Directory', 'post_content' => '[get-universal-page slug="page-profile-directory"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
 	else:
-		$getPage = get_page_by_path('profile-directory', OBJECT, 'universal'); if ( $getPage) wp_delete_post( $getPage->ID, true );
+		$getPage = get_page_by_path('profile-directory', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
+	endif;
+ 
+	if ( get_option('event_calendar')['install'] == 'true' ) :
+		if (is_null(get_page_by_path('calendar', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'Calendar', 'post_content' => '[get-event-calendar]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
+	else:
+		$getPage = get_page_by_path('calendar', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
 	endif;
 
 	/* Add generic pages */
@@ -566,7 +572,7 @@ function processChron($forceChron) {
 	$ga4_id = isset($GLOBALS['customer_info']['google-tags']['prop-id']) ? $GLOBALS['customer_info']['google-tags']['prop-id'] : null;
 	$client = new BetaAnalyticsDataClient(['credentials'=>get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json']);
 	$today = date( "Y-m-d" );
-	$rewind = date("Y-m-d", strtotime("-12 month"));
+	$rewind = date("Y-m-d", strtotime("-18 month"));
 
 	$siteHitsGA4 = is_array(get_option('bp_site_hits_ga4')) ? get_option('bp_site_hits_ga4') : array();		
 

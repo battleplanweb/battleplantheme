@@ -136,7 +136,7 @@ function battleplan_registerPostTypes() {
 		'publicly_queryable'=>true,
 		'exclude_from_search'=>false,
 		'show_in_nav_menus'=>false,
-		'supports'=>array( 'title', 'editor' ),
+		'supports'=>array( 'title', 'editor', 'thumbnail' ),
 		'hierarchical'=>false,
 		'menu_position'=>20,
 		'menu_icon'=>'dashicons-admin-site-alt3', 

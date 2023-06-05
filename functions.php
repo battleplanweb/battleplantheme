@@ -15,9 +15,10 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '18.8' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '19.0' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
+if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
 if ( !defined('_USER_LOGIN') ) define( '_USER_LOGIN', wp_get_current_user()->user_login );
 if ( !defined('_USER_ID') ) define( '_USER_ID', wp_get_current_user()->ID );
@@ -591,6 +592,13 @@ function battleplan_handle_main_query( $query ) {
 			$query->set( 'posts_per_page',-1);
 			$query->set( 'orderby','rand');
 		endif;
+		if ( is_post_type_archive('events') ) :
+			$query->set( 'post_type','events');
+			$query->set( 'posts_per_page',-1);
+			$query->set( 'meta_key', 'start_date' );
+        		$query->set( 'orderby', 'meta_value_num' );
+        		$query->set( 'order', 'ASC');
+		endif;
 	endif; 
 }
 
@@ -1041,11 +1049,11 @@ function battleplan_dequeue_unwanted_stuff() {
 // Load and enqueue styles in header
 add_action( 'wp_print_styles', 'battleplan_header_styles', 9998 );
 function battleplan_header_styles() {
-	wp_enqueue_style( 'normalize-style', get_template_directory_uri()."/style-normalize.css", array(), _BP_VERSION );
-	
+	wp_enqueue_style( 'normalize-style', get_template_directory_uri()."/style-normalize.css", array(), _BP_VERSION );	
 	wp_enqueue_style( 'parent-style', get_template_directory_uri()."/style.css", array('normalize-style'), _BP_VERSION );
 	
-	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) wp_enqueue_style( 'battleplan-events', get_template_directory_uri()."/style-events.css", array('parent-style'), _BP_VERSION );  	
+	if ( get_option('event_calendar')['install'] == 'true' )  wp_enqueue_style( 'battleplan-events', get_template_directory_uri()."/style-events.css", array('parent-style'), _BP_VERSION ); 	
+
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) wp_enqueue_style( 'battleplan-woocommerce', get_template_directory_uri()."/style-woocommerce.css", array('parent-style'), _BP_VERSION ); 
 	if ( is_plugin_active( 'stripe-payments/accept-stripe-payments.php' ) ) wp_enqueue_style( 'battleplan-stripe-payments', get_template_directory_uri()."/style-stripe-payments.css", array('parent-style'), _BP_VERSION );  
 	if ( is_plugin_active( 'cue/cue.php' ) ) wp_enqueue_style( 'battleplan-cue', get_template_directory_uri()."/cue.css", array('parent-style'), _BP_VERSION );  
@@ -1090,7 +1098,8 @@ function battleplan_scripts() {
 	wp_enqueue_script( 'battleplan-script-tracking', get_template_directory_uri().'/js/script-tracking.js', array('jquery'), _BP_VERSION, false ); 	
 	wp_enqueue_script( 'battleplan-script-cloudflare', get_template_directory_uri().'/js/script-cloudflare.js', array('jquery'), _BP_VERSION, false );
 
-	if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) wp_enqueue_script( 'battleplan-script-events', get_template_directory_uri().'/js/events.js', array('jquery'), _BP_VERSION, false );  
+	if ( get_option('event_calendar')['install'] == 'true' ) wp_enqueue_script( 'battleplan-script-events', get_template_directory_uri().'/js/events.js', array('jquery'), _BP_VERSION, false );   
+	
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) wp_enqueue_script( 'battleplan-script-woocommerce', get_template_directory_uri().'/js/woocommerce.js', array('jquery'), _BP_VERSION, false ); 
 	if ( is_plugin_active( 'cue/cue.php' ) ) wp_enqueue_script( 'battleplan-script-cue', get_template_directory_uri().'/js/cue.js', array('jquery'), _BP_VERSION, false ); 
 	
@@ -1132,8 +1141,9 @@ function battleplan_login_enqueue() {
 }
 
 // Load various includes
-if ( is_plugin_active( 'the-events-calendar/the-events-calendar.php' ) ) require_once get_template_directory().'/includes/includes-events.php'; 
 if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) require_once get_template_directory().'/includes/includes-woocommerce.php'; 
+if ( get_option('event_calendar')['install'] == 'true' ) require_once get_template_directory().'/includes/includes-events.php'; 
+
 if ( $GLOBALS['customer_info']['site-type'] == 'hvac' ) require_once get_template_directory().'/includes/includes-hvac.php'; 
 if ( $GLOBALS['customer_info']['site-type'] == 'pedigree' ) require_once get_template_directory().'/includes/includes-pedigree.php'; 
 if ( $GLOBALS['customer_info']['site-type'] == 'carte-du-jour' ) require_once get_template_directory().'/includes/includes-carte-du-jour.php'; 
@@ -1443,9 +1453,6 @@ function battleplan_current_type_nav_class($classes, $item) {
 	
 	// Highlight HOME button if any of the Optimized pages are viewed
 	if ( $post_type == 'optimized' && ( $item->url == get_home_url() || $item->url == get_home_url().'/' )) array_push($classes, 'current-menu-item');	
-	
-	// Support for The Events Calendar PRO - plug-in	
-	if ( ($item->attr_title == "tribe_events" || $item->attr_title == "events" ) && (strpos($_SERVER['REQUEST_URI'], '/event/') !== false || strpos($_SERVER['REQUEST_URI'], '/events/') !== false) ) array_push($classes, 'current-menu-item');
 	
 	return $classes;
 }

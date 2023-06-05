@@ -1070,7 +1070,7 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 	$a = shortcode_atts( array( 'num'=>'-1', 'space'=>'10', 'size'=>'full', 'max_w'=>'85', 'tag'=>'', 'package'=>'', 'order_by'=>'rand', 'order'=>'ASC', 'shuffle'=>'false', 'speed'=>'slow', 'delay'=>'0', 'pause'=>'no', 'link'=>'false', 'lazy'=>'true', 'direction'=>'normal'), $atts );
 	$tags = explode( ',', esc_attr($a['tag']) );
 	$orderBy = esc_attr($a['order_by']);		
-	$link = esc_attr($a['link']);		
+	$link = esc_attr($a['link']);	
 	$package = esc_attr($a['package']);	
 	$lazy = esc_attr($a['lazy']) == "true" ? "lazy" : "eager"; 
 	
@@ -1094,10 +1094,11 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 			$image_query->the_post();
 			$totalNum = $image_query->post_count;
 			$image = wp_get_attachment_image_src( get_the_ID(), esc_attr($a['size']) );
+			$imgLink = $link == 'desc' || $link == 'description' ? get_the_content(get_the_ID()) : $image[0];
 			$getImage = "";
-			if ( $link != "false" ) $getImage .= '<a href="'.$image[0].'">';
+			if ( $link != "false" && $imgLink != '' ) $getImage .= '<a href="'.$imgLink.'">';
 			$getImage .= '<img class="logo-img '.$tags[0].'-img" loading="'.$lazy.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" alt="'.readMeta(get_the_ID(), '_wp_attachment_image_alt', true).'">';
-			if ( $link != "false" ) $getImage .= '</a>';
+			if ( $link != "false" && $imgLink != '' ) $getImage .= '</a>';
 			$imageArray[] = '<span>'.$getImage.'</span>';			
 		endwhile; 
 		wp_reset_postdata(); 

@@ -1,8 +1,6 @@
 <!doctype html>
 <?php 
-	$nonce = base64_encode(random_bytes(20));	
-	if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', $nonce );
-
+	$nonce = _BP_NONCE;
 	if ( get_option('disable-content-security-policy') != 'true' ) :
 		header( "Content-Security-Policy: script-src 'nonce-{$nonce}' 'strict-dynamic' 'unsafe-inline' 'unsafe-eval' https: http:; object-src 'none'; base-uri 'none'; block-all-mixed-content" ); 
 		header( "Strict-Transport-Security: max-age=63072000; includeSubDomains; preload" );

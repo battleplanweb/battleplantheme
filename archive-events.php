@@ -12,7 +12,7 @@ get_header(); ?>
 	
 		<?php if ( have_posts() ) : 		
 			$archiveHeadline = 'Upcoming Events';
-			$archiveIntro = '<div class="show-expired-checkbox"><input type="checkbox" id="show-expired"> Show Past Events</div>';
+			$archiveIntro = '<div class="calender-btn-row">[btn class="show-expired-btn"]Show Past Events[/btn][btn link="/calendar/"]Calender View[/btn]</div>';
 			$grid = "3e";		
 			$valign = "start";
 			$break = "2";
@@ -24,7 +24,7 @@ get_header(); ?>
 			$titlePos = "inside";
 			$showExcerpt = "false";
 			$showContent = "false";				
-			$showDate = "false";
+			$showDate = "true";
 			$showAuthor = "false";
 			$accordion = "false";
 			$addClass = "";
@@ -49,9 +49,9 @@ get_header(); ?>
 					$buildArchive .= '<h2 class="month-divider span-all">'.$currentMonth.'</h2>'; 
 				endif;
 		
-				$buildMeta = include('wp-content/themes/battleplantheme/elements/element-events-meta.php');	
+				$classes = 'col-archive col-'.get_post_type().' col-'.get_the_ID().' '.$addClass;
 	
-				$buildArchive .= do_shortcode('[col class="'.$classes.' '.$addClass.'"][build-archive type="'.get_post_type().'" show_thumb="'.$showThumb.'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" accordion="'.$accordion.'" add_info="'.$buildMeta.'" no_pic="'.$noPic.'"][group]'.$buildMeta.'[/group][/col]');		
+				$buildArchive .= do_shortcode('[col class="'.$classes.'"][build-archive type="'.get_post_type().'" show_thumb="'.$showThumb.'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" accordion="'.$accordion.'" add_info="'.$buildMeta.'" no_pic="'.$noPic.'"][group]'.$buildMeta.'[/group][/col]');		
 			endwhile; 
 
 		// Display Archive
@@ -66,7 +66,7 @@ get_header(); ?>
 				$displayArchive .= get_the_posts_pagination( array( 'mid_size' => 2, 'prev_text' => _x( '<i class="fa fa-chevron-left"></i>', 'Previous set of posts' ), 'next_text' => _x( '<i class="fa fa-chevron-right"></i>', 'Next set of posts' ), ));
 			$displayArchive .= '</footer><!-- .archive-footer-->';
 		
-			echo $displayArchive;	
+			echo do_shortcode($displayArchive);	
 
 		else :
 

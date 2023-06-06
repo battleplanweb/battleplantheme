@@ -110,21 +110,29 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		}
 		
 	// Handle the "expired events" toggle checkbox	
-		 $('#show-expired').on('change', function() {
-			 var expiredEvents = $('.col.expired');
-			 if ($(this).is(':checked')) {
+		var expiredEvents = $('.col.expired'); 
+
+		if ( getCookie('ecal-show-exp') == 'true' ) {
+			$('a.show-expired-btn').text('Hide Past Events');
+			expiredEvents.fadeIn();
+		}
+		
+		if ( expiredEvents.length < 1 ) {
+			$('a.show-expired-btn').addClass('disabled');
+		}
+		
+		$('a.show-expired-btn').click(function() {
+			 var thisBtn = $(this), showExpired = getCookie('ecal-show-exp');
+			 if ( showExpired == 'false' ) {
+				 thisBtn.text('Hide Past Events');
 				 expiredEvents.fadeIn();
 				 setCookie('ecal-show-exp', 'true', 365);
 			 } else {
 				 expiredEvents.fadeOut();
+				 thisBtn.text('Show Past Events');
 				 setCookie('ecal-show-exp', 'false', 365);
-			}
+			 }
 		 });
-
-		if ( getCookie('ecal-show-exp') == 'true' ) {
-			$("#show-expired").prop("checked", true);
-			expiredEvents.fadeIn();
-		}
 	});
 	
 })(jQuery); }); 

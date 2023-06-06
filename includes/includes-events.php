@@ -69,6 +69,16 @@ function battleplan_registerEventPostType() {
 		'capability_type'=>		'post',
 	));
 	
+	register_taxonomy( 'event-cats', array( 'events' ), array(
+		'labels'=>array(
+			'name'=>			_x( 'Event Categories', 'Taxonomy General Name', 'text_domain' ),
+			'singular_name'=>	_x( 'Event Category', 'Taxonomy Singular Name', 'text_domain' ),
+		),
+		'hierarchical'=>		true,
+		'show_ui'=>			true,
+        	'show_admin_column'=>	true,
+	));
+	
 	register_taxonomy( 'event-tags', array( 'events' ), array(
 		'labels'=>array(
 			'name'=>			_x( 'Event Tags', 'Taxonomy General Name', 'text_domain' ),
@@ -238,74 +248,58 @@ function battleplan_getEventCalendar($atts, $content = null ) {
 	//$a = shortcode_atts( array( 'info' => 'name', ), $atts );
 	//$info = esc_attr($a['info']);
 	
-	$buildCalendar = '<div id="calendar"></div>';
+	
+	$buildCalendar = '<h1 class="page-headline calendar-headline events-headline">Upcoming Events</h1>';
+		
+	$buildCalendar .= '<div class="calendar-intro events-intro"><div class="calender-btn-row">[btn class="show-expired-btn"]Show Past Events[/btn][btn link="/events/"]List View[/btn]</div></div>';
+	
+	$buildCalendar .= '<div id="calendar"></div>';
 	$buildCalendar .= '<div class="calendar-buttons">';
 	$buildCalendar .= '<button id="prevButton" aria-label="Previous Month"><span class="sr-only">Previous Month</span></button>';
 	$buildCalendar .= '<button id="currentButton">Return To Today</button>';
 	$buildCalendar .= '<button id="nextButton" aria-label="Next Month"><span class="sr-only">Next Month</span></button>';
 	$buildCalendar .= '</div>';
 	
-	echo $buildCalendar;
+	echo do_shortcode($buildCalendar);
 }
 
-
-
-
-
-
-
-/*--------------------------------------------------------------
-# Shortcodes
---------------------------------------------------------------*/
-// display teasers of upcoming events 
+// Display teasers of upcoming events 
 add_shortcode( 'event_teasers', 'battleplan_event_teasers' );
 function battleplan_event_teasers( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'style'=>'1', 'width'=>'default', 'grid'=>'1-1-1', 'tag'=>'featured', 'max'=>'3', 'offset'=>'0', 'start'=>'today', 'end'=>'', 'valign'=>'stretch', 'show_btn'=>'true', 'btn_text'=>'Read More', 'excerpt'=>'true' ), $atts );
-	$name = esc_attr($a['name']);
-	$style = esc_attr($a['style']);
-	$width = esc_attr($a['cat']);
-	$grid = esc_attr($a['grid']);
-	$tag = esc_attr($a['tag']);
-	$num = 0;
-	$max = esc_attr($a['max']);
-	$offset = esc_attr($a['offset']);
-	$cutoff = esc_attr($a['start']);	
-	$start = strtotime($cutoff."-7 days");
-	$end = esc_attr($a['end']);
-	$valign = esc_attr($a['valign']);
-	$showBtn = esc_attr($a['show_btn']);
-	$btnText = esc_attr($a['btn_text']);
-	$excerpt = esc_attr($a['excerpt']);
+	$a = shortcode_atts( array( 'name'=>'', 'style'=>'1', 'width'=>'default', 'grid'=>'1-1-1', 'tag'=>'featured', 'max'=>'3', 'offset'=>'0', 'start'=>'today', 'end'=>'1 year', 'valign'=>'stretch', 'show_btn'=>'true', 'btn_text'=>'Read More', 'excerpt'=>'true' ), $atts );
+	$start = date('Y-m-d', strtotime(esc_attr($a['start'])));	
+	$end = date('Y-m-d', strtotime(esc_attr($a['end'])));
 	$buildEvents = "";
 	
-	$events = tribe_get_events( [ 'start_date' => $start, 'end_date' => $end, 'eventDisplay' => 'list', 'posts_per_page' => $max, 'offset' => $offset, 'tag' => $tag] );
+	//$time = ($end - $start ) / 86400;
+	//echo 'start'.$start.' end'.$end.' time'.$time;
 	
-	if ( $events ) :
-		foreach ( $events as $post ) {
-			setup_postdata( $post );			
-			if ( tribe_get_end_date($post, false) < $cutoff && $num <= $max ) {			
-				$buildEvents .= '[col]';		
-				$buildEvents .= get_the_post_thumbnail( $post->ID, 'thumbnail', array( 'class' => 'aligncenter' ) ); 
-				$buildEvents .= '[txt]<h3>'.$post->post_title.'</h3>';
-				$buildEvents .= '<p class="event-meta"><span class="tribe-event-date-start">'.tribe_get_start_date($post, false);
-				if ( tribe_get_end_date($post, false) != tribe_get_start_date( $post, false ) ) $buildEvents .= ' to '.tribe_get_end_date($post, false);			
-				if ( tribe_get_start_time($post) ) $buildEvents .= '<br/><span class="tribe-event-time-start">'.tribe_get_start_time($post) .' to '. tribe_get_end_time($post);			
-				$buildEvents .= '</p>';
-				if ( $excerpt == "true" ) $buildEvents.= '<p>'.$post->post_excerpt.'</p>';		
-				$buildEvents .= '[/txt]';
-				if ( $showBtn == "true" ) $buildEvents .= '[btn link="'.esc_url(get_the_permalink($post->ID)).'"]'.$btnText.'[/btn]';			
-				$buildEvents .= '[/col]';
-				$num++;
-			}
-		}
+	$events = new WP_Query(array( 'post_type' => 'events', 'posts_per_page' => esc_attr($a['max']), 'offset' => esc_attr($a['offset']), 'tax_query' => array( array( 'taxonomy' => 'event-tags', 'field' => 'slug', 'terms' => esc_attr($a['tag']))), 'meta_key' => 'start_date', 'orderby' => 'meta_value_num', 'order' => 'ASC', 'meta_query' => array( 'relation' => 'AND', array( 'key' => 'start_date', 'value' => $start, 'compare' => '>=', 'type' => 'DATE' ), array( 'key' => 'start_date', 'value' => $end, 'compare' => '<=', 'type' => 'DATE' ) )));
+
+	if ($events->have_posts()) :
+		while ($events->have_posts()) :	
+			$events->the_post();
 	
-		if ( $buildEvents ) :
-			$buildList = '[section name="'.$name.'" style="'.$style.'" width="'.$width.'" class="event-teasers"]';
-			$buildList .= '[layout grid="'.$grid.'" valign="'.$valign.'"]';		
-			$buildList .= $buildEvents;
-			$buildList .= '[/layout][/section]';	
-		endif;
-		return do_shortcode($buildList);
+			$buildEvents .= '[col]';		
+			$buildEvents .= get_the_post_thumbnail( get_the_ID(), 'thumbnail', array( 'class' => 'aligncenter' ) ); 
+			$buildEvents .= '[txt]<h3>'.get_the_title().'</h3>';
+			$buildEvents .= include('wp-content/themes/battleplantheme/elements/element-events-meta.php');	
+			if ( esc_attr($a['excerpt']) == "true" ) $buildEvents.= '<p>'.get_the_excerpt().'</p>';		
+			$buildEvents .= '[/txt]';
+			if ( esc_attr($a['show_btn']) == "true" ) $buildEvents .= '[btn link="'.esc_url(get_the_permalink($post->ID)).'"]'.esc_attr($a['btn_text']).'[/btn]';			
+			$buildEvents .= '[/col]';
+			$num++;	
+	  	endwhile;
 	endif;
+	
+	wp_reset_postdata();
+
+	if ( $buildEvents ) :
+		$buildList = '[section name="'.esc_attr($a['name']).'" style="'.esc_attr($a['style']).'" width="'.esc_attr($a['width']).'" class="event-teasers"]';
+		$buildList .= '[layout grid="'.esc_attr($a['grid']).'" valign="'.esc_attr($a['valign']).'"]';		
+		$buildList .= $buildEvents;
+		$buildList .= '[/layout][/section]';	
+	endif;
+	return do_shortcode($buildList);
 }
 ?>

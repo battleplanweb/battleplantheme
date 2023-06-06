@@ -268,7 +268,7 @@ function battleplan_submenu_order( $menu_ord ) {
 // Count number of each post type and add an admin note to the menu button
 add_action('admin_menu', 'battleplan_custom_post_type_counts');
 function battleplan_custom_post_type_counts() {	
-	$getCPT = array_diff( get_post_types(), array('attachment', 'revision', 'nav_menu_item', 'custom_css', 'customize_changeset', 'oembed_cache', 'user_request', 'wp_block', 'acf-field-group', 'acf-field', 'wpcf7_contact_form', 'user_request' ) );
+	$getCPT = array_diff( get_post_types(), array('elements', 'attachment', 'revision', 'nav_menu_item', 'custom_css', 'customize_changeset', 'oembed_cache', 'user_request', 'wp_block', 'acf-field-group', 'acf-field', 'wpcf7_contact_form', 'user_request' ) );
 	
 	foreach ($getCPT as $postType) :
 		$count_posts = wp_count_posts($postType);

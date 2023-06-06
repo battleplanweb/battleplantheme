@@ -685,8 +685,9 @@ function battleplan_getBuildArchive($atts, $content = null) {
 			endif;		
 			if ( $showDate == "true" || $showAuthor == "true" || $showSocial == "true" ) $archiveMeta .= '<div class="archive-meta">';			
 			if ( function_exists( 'overrideArchiveMeta' ) ) : $archiveMeta .= overrideArchiveMeta( $type );
-			else :			
-				if ( $showDate == "true" ) $archiveMeta .= '<span class="archive-date '.$type.'-date date"><i class="fas fa-calendar-alt"></i>'.get_the_date().'</span>';
+			else :					
+				if ( $showDate == "true" && is_post_type_archive('events') ) $archiveMeta .= include('wp-content/themes/battleplantheme/elements/element-events-meta.php');		
+				if ( $showDate == "true" && !is_post_type_archive('events') ) $archiveMeta .= '<span class="archive-date '.$type.'-date date"><i class="fas fa-calendar-alt"></i>'.get_the_date().'</span>';
 				if ( $showAuthor == "profile") $archiveMeta .= '<a href="/profile/?user='.get_the_author().'">';			
 				if ( $showAuthor != "false") $archiveMeta .= '<span class="archive-author '.$type.'-author author"><i class="fas fa-user"></i>'.get_the_author().'</span>';
 				if ( $showAuthor == "profile") $archiveMeta .= '</a>';

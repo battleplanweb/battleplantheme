@@ -19,12 +19,19 @@
   --calendar-background: 						var(--white);
   --calendar-background-today: 					rgba(0, 0, 0, 0.1);
   --calendar-background-empty: 					rgba(0, 0, 0, 0.025);
+  --calendar-title-color: 						var(--darkest-grey);
+  --calendar-day-color: 							var(--darkest-grey);
+  --calendar-day-today-color:               			var(--darkest-grey);
 }
 
 
 /*--------------------------------------------------------------
 # Calendar
 --------------------------------------------- */
+.events-intro {
+  margin-top: 										var(--measure-base);
+  margin-bottom: 									2em;
+}
 
 #calendar .header {
 	font-size: 									var(--font-size-h1);
@@ -52,6 +59,7 @@
 	position: 									relative;
 	width: 										14.28%;
 	box-sizing: 									border-box;
+	color: 										var(--calendar-title-color);
 }
 
 #calendar .body .day {
@@ -59,6 +67,7 @@
 	border-top: 									var(--calendar-border-width) var(--calendar-border-style) var(--calendar-border-color);
 	border-left: 									var(--calendar-border-width) var(--calendar-border-style) var(--calendar-border-color);
 	background: 									var(--calendar-background);
+	color: 										var(--calendar-day-color);
 }
 
 #calendar .body .day:nth-child(7n) {
@@ -71,6 +80,7 @@
 
 #calendar .body .day.current-day {
 	background: 									var(--calendar-background-today);
+	color: 										var(--calendar-day-today-color);
 }    
 
 #calendar .body .day.day-empty {
@@ -107,8 +117,9 @@
 }
 
 #calendar .body .event img {
-	width: 										60px;
-	height: 										60px;
+	width: 										40%;
+	height: 										auto;
+	max-width: 									80px;
 	margin: 										0 auto 5px;
 	border: 										var(--calendar-border-width) var(--calendar-border-style) var(--calendar-border-color);
 }
@@ -120,8 +131,7 @@
 	align-items:									center;
 	gap: 										15px 30px;
 	margin:										50px auto 30px;
-	width: 										90%;
-	padding: 										0 3vw;
+	width: 										98%;
 }
 
 .calendar-buttons .block-button {
@@ -192,9 +202,11 @@
 /*--------------------------------------------------------------
 # Event Archives
 --------------------------------------------- */
-.show-expired-checkbox {
-	text-align: 									center;
-	margin-top: 									-15px;
+.calender-btn-row .block-button {
+	display: 										inline-block;
+	width: 										50%;
+	font-size: 									calc(var(--button-font-size) * 0.7);
+	margin-bottom: 								1.5em;
 }
 
 .col.expired {

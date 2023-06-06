@@ -49,12 +49,12 @@ get_header(); ?>
 				elseif ( get_post_type() == "events" ) :	
 					$singleHeadline = esc_html(get_the_title());
 					$singleIntro = "";
-					$breadcrumbs = "true";
+					$breadcrumbs = "false";
 					$author = "false";
 					$comments = "false";
 					$social = "false";
 					$tags = "false"; // list / button
-					$navigation = "false";	
+					$navigation = "true";	
 
 			// Default Single
 				else:		
@@ -85,6 +85,8 @@ get_header(); ?>
 				$displayHeader .= '<header class="entry-header">';
 				
 					if ( $headerImage == "true" && $headerImgPos == "above" && has_post_thumbnail() ) $displayHeader .= get_the_post_thumbnail();
+		
+					if ( get_post_type() == "events" ) $displayHeader .= '<div class="calender-btn-row">[btn link="/calendar/"]Calender View[/btn][btn link="/events/"]List View[/btn]</div>';
 		
 					if ( $breadcrumbs == "true" ) $displayHeader .= battleplan_breadcrumbs();
 		
@@ -168,9 +170,9 @@ get_header(); ?>
 				$displayFooter .= '</footer><!-- .entry-footer-->';		
 			$displayFooter .= '</article><!-- #post-'.get_the_ID().' -->';
 		
-			if ( $singleHeadline != '' ) echo $displayHeader;
+			if ( $singleHeadline != '' ) echo do_shortcode($displayHeader);
 			get_template_part( 'template-parts/content', get_post_type() );		
-			echo $displayFooter;	
+			echo do_shortcode($displayFooter);	
 		
 			if ( ( comments_open() || get_comments_number() ) && $comments == "true" ) comments_template();
 		

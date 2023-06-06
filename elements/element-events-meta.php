@@ -1,5 +1,12 @@
 <?php
 /* Battle Plan Web Design - Meta Data for Events */
+	$venue = esc_attr(get_field( "venue" ));
+	$location = esc_attr(get_field( "location" ));
+	$venueLink = esc_url(get_field( "venue_link" ));
+	$startTime = esc_attr(get_field( "start_time" ));
+	$endTime = esc_attr(get_field( "end_time" ));
+	$startDate = esc_attr(get_field( "start_date" ));
+	$endDate = esc_attr(get_field( "end_date" ));
 	$startMonth = date('F', strtotime($startDate)); 
 	$endMonth = date('F', strtotime($endDate)); 
 	$startYear = date('Y', strtotime($startDate)); 
@@ -27,13 +34,13 @@
 			$buildMeta .= '<div class="event-date"><span class="date-icon"></span>'.$startDate;
 			if ( $endDate ) $buildMeta .= ' - '.$endDate;
 			if ( $currentEvent == false ) $buildMeta .= ' <div class="event-passed">(this event has passed)</div>';
-			$buildMeta .= '</div> <!-- .event-date -->';
+			$buildMeta .= '</div><!-- .event-date -->';
 		endif;
 
 		if ( $startTime && $currentEvent == true ) :
 			$buildMeta .= '<div class="event-time"><span class="time-icon"></span>'.$startTime;
 			if ( $endTime ) $buildMeta .= ' - '.$endTime;
-			$buildMeta .= '</div> <!-- .event-time -->';
+			$buildMeta .= '</div><!-- .event-time -->';
 		endif;
 
 		if ( $venue || $location ) :
@@ -51,10 +58,10 @@
 				$buildMeta .= $location;
 				if ( !$venue && $venueLink && $currentEvent == true && $archivePage == false ) $buildMeta .= '</a>';
 			endif;
-			$buildMeta .= '</div> <!-- .event-location -->';
+			$buildMeta .= '</div><!-- .event-location -->';
 		endif;
 
-		$buildMeta .= '</div> <!-- .event-meta -->';
+		$buildMeta .= '</div><!-- .event-meta -->';
 
 		return $buildMeta;
 	endif;

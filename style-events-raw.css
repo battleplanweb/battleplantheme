@@ -20,6 +20,7 @@
   --calendar-background-today: 					rgba(0, 0, 0, 0.1);
   --calendar-background-empty: 					rgba(0, 0, 0, 0.025);
   --calendar-title-color: 						var(--darkest-grey);
+  --calendar-title-size: 						var(--font-size-h6);
   --calendar-day-color: 							var(--darkest-grey);
   --calendar-day-today-color:               			var(--darkest-grey);
 }
@@ -33,16 +34,21 @@
   margin-bottom: 									2em;
 }
 
+h2.month-divider,
 #calendar .header {
-	font-size: 									var(--font-size-h1);
-	text-align: 									center;
-	font-weight: 									bold;
 	font-family: 									var(--font-primary);
-	margin-bottom: 								0.4em;
+	font-size: 									var(--font-size-h2);
+	font-weight: 									normal;
+	text-align: 									center;
+	margin-bottom: 								1.2em;
+ }
+
+h2.month-divider {
+	margin-bottom: 								0;
 }
 
 #calendar .titles .title {
-	font-size: 									var(--font-size-h6);
+	font-size: 									var(--calendar-title-size);
 	text-align: 									center;
 	font-weight: 									bold;
 }
@@ -156,10 +162,12 @@
 /*--------------------------------------------------------------
 # Event Pages
 --------------------------------------------- */
-.event-meta {
+.single-events .event-meta,
+.archive-meta .event-meta {
 	width: 										360px;
 	max-width: 									94%;
-	margin: 										0 auto;
+  	margin: 										0.5em 0 1.5em;
+	text-align: 									left;
 }
 
 .event-meta .event-passed {

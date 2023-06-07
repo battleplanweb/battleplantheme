@@ -228,6 +228,7 @@ function battleplan_add_acf_fields() {
 					'Nextdoor' => 'Nextdoor',
 					'YP' => 'YP',
 					'Jobber' => 'Jobber',
+					'Angi' => 'Angi',
 				),
 				'other_choice' => 0,
 				'save_other_choice' => 0,

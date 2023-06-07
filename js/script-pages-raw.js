@@ -642,7 +642,16 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 			moveDiv ('.ad-promo', '.single-post .entry-content *:nth-child('+posP+')', 'after'); 
 		}
 	}
-		
+	
+	// Apply border-radius from img.testimonial to anonymous svg
+	var borderRadius = $('.img-testimonials').css('border-radius');
+	$('.anonymous-icon').css({'border-radius':borderRadius});	
+	
+	// Allow sub-menu to appear, even if initially set to overflow:hidden	
+	setTimeout(function() {
+		$('.menu-clip .menu-strip').css({'overflow':'visible'});
+	}, 2500);
+	
 /*--------------------------------------------------------------
 # Screen resize
 --------------------------------------------------------------*/

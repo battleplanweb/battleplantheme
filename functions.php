@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '19.3' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '19.31' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -1503,7 +1503,7 @@ function battleplan_getGoogleRating() {
 			$buildPanel = '<div class="wp-gr wp-google-badge">';
 
 			foreach ( $placeIDs as $placeID ) : 
-				if ( array_key_exists('google-rating', $googleInfo[$placeID]) && $googleInfo[$placeID]['google-rating'] > 3.99 ) :			
+				if ( is_array($googleInfo[$placeID]) && array_key_exists('google-rating', $googleInfo[$placeID]) && $googleInfo[$placeID]['google-rating'] > 3.99 ) :			
 					$buildPanel .= '<div id="google-review-schema" style="display:none" itemscope itemtype="https://schema.org/AggregateRating">';
 					$buildPanel .= '<div itemprop="itemReviewed" itemscope itemtype="https://schema.org/'.get_option("wpseo_local")["business_type"].'">';
 	

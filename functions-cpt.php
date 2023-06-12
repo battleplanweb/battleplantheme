@@ -229,6 +229,7 @@ function battleplan_add_acf_fields() {
 					'YP' => 'YP',
 					'Jobber' => 'Jobber',
 					'Angi' => 'Angi',
+					'Houzz' => 'Houzz',
 				),
 				'other_choice' => 0,
 				'save_other_choice' => 0,

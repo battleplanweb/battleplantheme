@@ -644,8 +644,8 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 	}
 	
 	// Apply border-radius from img.testimonial to anonymous svg
-	var borderRadius = $('.img-testimonials').css('border-radius');
-	$('.anonymous-icon').css({'border-radius':borderRadius});	
+	var iconRadius = $('.img-testimonials').css('border-radius'), iconBorder = $('.img-testimonials').css('border');
+	$('.anonymous-icon').css({'border-radius':iconRadius, 'border':iconBorder});	
 	
 	// Allow sub-menu to appear, even if initially set to overflow:hidden	
 	setTimeout(function() {

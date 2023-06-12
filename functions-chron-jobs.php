@@ -572,7 +572,7 @@ function processChron($forceChron) {
 	$ga4_id = isset($GLOBALS['customer_info']['google-tags']['prop-id']) ? $GLOBALS['customer_info']['google-tags']['prop-id'] : null;
 	$client = new BetaAnalyticsDataClient(['credentials'=>get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json']);
 	$today = date( "Y-m-d" );
-	$rewind = date("Y-m-d", strtotime("-18 month"));
+	$rewind = date("Y-m-d", strtotime("2023-01-01"));
 
 	$siteHitsGA4 = is_array(get_option('bp_site_hits_ga4')) ? get_option('bp_site_hits_ga4') : array();		
 
@@ -627,7 +627,7 @@ function processChron($forceChron) {
 		endforeach;	
 		
 		if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
-		
+	
 		// Split session data into site hits
 		foreach ( $analyticsGA4 as $analyze ) :
 			$date = $analyze['date'];
@@ -647,8 +647,8 @@ function processChron($forceChron) {
 			else :
 				$siteHitsGA4[] = array ('date'=>$date, 'page'=>$page, 'pages-viewed'=>$pageviews, 'sessions'=>'0', 'engaged'=>$engaged );				
 			endif;
-		endforeach;		
-		
+		endforeach;	
+	
 		$bpSiteHitsGA4 = array_intersect_key( $siteHitsGA4, array_unique( array_map('serialize', $siteHitsGA4 )));
 		update_option('bp_site_hits_ga4', $bpSiteHitsGA4, false);		
 	endif;

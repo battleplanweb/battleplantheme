@@ -35,7 +35,7 @@ get_header(); ?>
 
 		// Build Archive
 			while ( have_posts() ) : the_post(); 
-				$addClass = has_term('expired', 'event-tags', get_the_ID()) ? 'expired' : 'upcoming';
+				$addClass = has_term('expired', 'event-tags', get_the_ID()) ? 'event-expired' : 'event-upcoming';
 				$venue = esc_attr(get_field( "venue" ));
 				$location = esc_attr(get_field( "location" ));
 				$venueLink = esc_url(get_field( "venue_link" ));

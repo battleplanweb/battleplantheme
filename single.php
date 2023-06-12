@@ -143,11 +143,37 @@ get_header(); ?>
 					endif;
 		
 					if ( $navigation == "true" ) :
+						if ( get_post_type() != "events" ) :
+							$prev_post = get_previous_post();
+							$next_post = get_next_post(); 
+						else:		
+							$displayed_post = get_the_ID(); 
+							$query = new WP_Query(array( 'post_type' => 'events', 'posts_per_page' => -1, 'meta_key' => 'start_date', 'orderby' => 'meta_value', 'order' => 'ASC', 'tax_query' => array( array( 'taxonomy' => 'event-tags', 'field' => 'slug', 'terms' => 'upcoming', ), ), ));
+							$current_post_index = -1;
+
+							while ($query->have_posts()) :
+							    $query->the_post();
+							    if (get_the_ID() === $displayed_post) :
+								   $current_post_index = $query->current_post;
+								   break;
+							    endif;
+							endwhile;
+
+							$query->rewind_posts();
+							$prev_post = $next_post = null;
+
+							if ($current_post_index !== -1) :
+							    if ($current_post_index > 0) $prev_post = get_post($query->posts[$current_post_index - 1]);
+							    if ($current_post_index < $query->post_count - 1) $next_post = get_post($query->posts[$current_post_index + 1]);
+							endif;
+
+							wp_reset_postdata();		
+						endif;
+		
 						$displayFooter .= '<nav class="navigation single" role="navigation" aria-label="Posts">';
 							$displayFooter .= '<h2 class="screen-reader-text">Posts navigation</h2>';
 							$displayFooter .= '<div class="nav-links">';
 
-								$prev_post = get_previous_post(); 		
 								if ( $prev_post ) : 
 									$prev_title = strip_tags(str_replace('"', '', esc_html($prev_post->post_title))); 			
 									$displayFooter .= '<a class="nav-previous prev" href="'.get_permalink( $prev_post->ID ).'" rel="prev"><div class="post-arrow"><i class="fa fas fa-chevron-left" aria-hidden="true"></i></div><div class="post-links"><div class="meta-nav" aria-hidden="true">Previous</div><div class="post-title">'.$prev_title.'</div></div></a>';
@@ -155,7 +181,6 @@ get_header(); ?>
 									$displayFooter .= '<div class="nav-previous prev"></div>';
 								endif;
 
-								$next_post = get_next_post(); 		
 								if ( $next_post ) : 
 									$next_title = strip_tags(str_replace('"', '', esc_html($next_post->post_title))); 			
 									$displayFooter .= '<a class="nav-next next" href="'.get_permalink( $next_post->ID ).'" rel="next"><div class="post-links"><div class="meta-nav" aria-hidden="true">Next</div><div class="post-title">'.$next_title.'</div></div><div class="post-arrow"><i class="fa fas fa-chevron-right" aria-hidden="true"></i></div></a>';
@@ -164,7 +189,7 @@ get_header(); ?>
 								endif;
 
 							$displayFooter .= '</div>';
-						$displayFooter .= '</nav>';
+						$displayFooter .= '</nav>';		
 					endif;
 
 				$displayFooter .= '</footer><!-- .entry-footer-->';		

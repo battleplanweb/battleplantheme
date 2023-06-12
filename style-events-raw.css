@@ -217,7 +217,7 @@ h2.month-divider {
 	margin-bottom: 								1.5em;
 }
 
-.col.expired {
+.event-expired {
 	display: 										none;
 }
 

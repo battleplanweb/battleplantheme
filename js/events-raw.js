@@ -110,7 +110,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		}
 		
 	// Handle the "expired events" toggle checkbox	
-		var expiredEvents = $('.col.expired'); 
+		var expiredEvents = $('.event-expired'); 
 
 		if ( getCookie('ecal-show-exp') == 'true' ) {
 			$('a.show-expired-btn').text('Hide Past Events');

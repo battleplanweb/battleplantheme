@@ -26,10 +26,16 @@ function battleplan_createEventLog() {
 			$eventStart = strtotime(esc_attr(get_field( "start_date" )));			
 			$eventEnd = esc_attr(get_field( "end_date" )) ? strtotime(esc_attr(get_field( "end_date" ))) : $eventStart;
 			$days = (($eventEnd - $eventStart) / 86400) + 1;
-	
+			$tag = '';
+			$eventTags = wp_get_post_terms(get_the_ID(), 'event-tags', array('field' => 'slug')); 
+			$eventSlugs = wp_list_pluck($eventTags, 'slug');
+			foreach ($eventSlugs as $eventSlug ) :
+				$tag .= ' event-'.$eventSlug;
+			endforeach;
+
 			for ($i=0; $i<$days; $i++) :
 				$eventDate = date('j, n, Y', $eventStart + ( 86400 * $i));
-				$eventData[] =  array('date' => $eventDate, 'event'=>'<div class="event"><a href="'. get_permalink().'">'.get_the_post_thumbnail(get_the_ID(), "thumbnail", array( 'class' => 'calendar-event-icon' )).'<span class="hide-3 hide-2 hide-1">'.get_the_title().'</span></a></div>' );
+				$eventData[] =  array('date' => $eventDate, 'event'=>'<div class="event'.$tag.'"><a href="'. get_permalink().'">'.get_the_post_thumbnail(get_the_ID(), "thumbnail", array( 'class' => 'calendar-event-icon' )).'<span class="hide-3 hide-2 hide-1">'.get_the_title().'</span></a></div>' );
 			endfor;
 	
 			if ( $eventEnd < time() ) wp_set_object_terms(get_the_ID(), 'expired', 'event-tags', false);			

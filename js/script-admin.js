@@ -203,6 +203,17 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		}
 		setTimeout(function(){ location.reload(); }, 1000);
 	});	
+	
+	// Add title of the page being edited to the "View Post" button in the admin banner
+	var pageTitleInput = $('#title');
+
+    	function updatePageTitle() {
+        	var pageTitle = pageTitleInput.val();
+        	$('#wp-admin-bar-view a.ab-item').text("View: "+pageTitle);
+    	}
+
+    	pageTitleInput.on('input', updatePageTitle);
+    	updatePageTitle();
 			
 // Site Audit		
 	$('.col.when').click(function() {

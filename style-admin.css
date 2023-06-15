@@ -211,6 +211,7 @@ a {
   color: 										var(--main-blue);
 }
 
+
 /* Admin bar on live pages, added when logged in */
 @media (max-width: 1024px) {
 	#wpadminbar {
@@ -409,6 +410,10 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	float: 									right;
 }
 
+#menu-tools li.wp-first-item {
+	display: none;
+}
+
 #adminmenu .wp-submenu li a[href="index.php?page=clear-all"],
 #adminmenu .wp-submenu li a[href="nav-menus.php"],
 #adminmenu .wp-submenu li a[href="edit.php?post_type=acf-field-group"],
@@ -418,9 +423,10 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	border-top: 								1px solid var(--white-lowest);
 }
 
+/*#adminmenu .wp-submenu li a[href="options-permalink.php"]*/
 #adminmenu .wp-submenu li a[href="index.php?page=launch-site"],
 #adminmenu .wp-submenu li a[href="post-new.php?post_type=elements"],
-#adminmenu .wp-submenu li a[href="options-permalink.php"] {
+#adminmenu .wp-submenu li a[href="options-general.php?page=wp-mail-smtp"] {
 	padding-bottom:								10px;
 	margin-bottom: 								10px;
 	border-bottom: 								1px solid var(--white-lowest);
@@ -1210,4 +1216,27 @@ table.acp-ie-table .title.column-title .acp-ie-controls {
 
 .wp-admin .flex.stats .col.when {
 	cursor: 									pointer;
+}
+
+
+
+
+
+
+
+/* 1: Phones (portrait) */
+@media (max-width: 576px) {
+	
+	.trend-buttons,
+	.last-visitors-buttons,
+	.local-visitors-buttons {
+		display: none !important;
+	}
+}
+	
+	
+	
+	
+	
+	
 }

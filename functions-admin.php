@@ -56,22 +56,22 @@ function battleplan_reorderAdminBar() {
     $IDs_sequence = array('site-name', 'tagline', 'suspend' );
     $nodes = $wp_admin_bar->get_nodes();
     foreach ( $IDs_sequence as $id ) {
-        if ( ! isset($nodes[$id]) ) continue;
-        $wp_admin_bar->remove_menu($id);
-        $wp_admin_bar->add_node($nodes[$id]);
-        unset($nodes[$id]);
+        	if ( ! isset($nodes[$id]) ) continue;
+	    	$wp_admin_bar->remove_menu($id);
+	    	$wp_admin_bar->add_node($nodes[$id]);
+        	unset($nodes[$id]);
     }
     foreach ( $nodes as $id => &$obj ) {
-        if ( ! empty($obj->parent) ) continue;
-        $wp_admin_bar->remove_menu($id);
-        $wp_admin_bar->add_node($obj);
+        	if ( ! empty($obj->parent) ) continue;
+        	$wp_admin_bar->remove_menu($id);
+        	$wp_admin_bar->add_node($obj);
     }
 	$wp_admin_bar->remove_node('wp-logo');
 	$wp_admin_bar->remove_node('wphb');
 	$wp_admin_bar->remove_node('updates');
-    $wp_admin_bar->remove_node('comments');
-    $wp_admin_bar->remove_node('new-content');
-    $wp_admin_bar->remove_node('wpengine_adminbar');
+	$wp_admin_bar->remove_node('comments');
+    	$wp_admin_bar->remove_node('new-content');
+    	$wp_admin_bar->remove_node('wpengine_adminbar');
 	$wp_admin_bar->remove_node('view-site');	
 	$wp_admin_bar->remove_node('wpseo-menu');	
 	$wp_admin_bar->remove_node('tribe-events');	
@@ -189,27 +189,37 @@ add_filter('wp_editor_set_quality', 'av_return_100', 9999);
 // Add & Remove WP Admin Menu items
 add_action( 'admin_init', 'battleplan_remove_menus', 999 );
 function battleplan_remove_menus() {   
-	remove_menu_page( 'link-manager.php' );       									//Links
-	remove_menu_page( 'edit-comments.php' );       									//Comments	
-	remove_menu_page( 'wpcf7' );       												//Contact Forms	
-	remove_menu_page( 'edit.php?post_type=acf-field-group' );       				//Custom Fields
-	remove_menu_page( 'themes.php' );       										//Appearance
-	remove_submenu_page( 'plugins.php', 'plugin-editor.php' );        				//Plugins => Plugin Editor
-	remove_submenu_page( 'options-general.php', 'options-writing.php' );   			//Settings => Writing 		
-	remove_submenu_page( 'options-general.php', 'options-reading.php' );   			//Settings => Reading 	
-	remove_submenu_page( 'options-general.php', 'options-media.php' );   			//Settings => Media 	
-	remove_submenu_page( 'options-general.php', 'options-privacy.php' );   			//Settings => Privacy 	
-	remove_submenu_page( 'options-general.php', 'akismet-key-config' );   			//Settings => Akismet	
-	remove_submenu_page( 'options-general.php', 'srs-config' );   					//Settings => Referral Spam 	
-	remove_submenu_page( 'options-general.php', 'widgetopts_plugin_settings' );   	//Settings => Widget Options
-	remove_submenu_page( 'options-general.php', 'git-updater' );   					//Settings => Git Updater
-	remove_submenu_page( 'tools.php', 'export-personal-data.php' );   				//Tools => Export Personal Data  
-	remove_submenu_page( 'tools.php', 'erase-personal-data.php' );   				//Tools => Erase Personal Data
-	remove_submenu_page( 'wpseo_dashboard', 'wpseo_workouts' );   					//Yoast SEO => Workouts
-	remove_submenu_page( 'wpseo_dashboard', 'wpseo_licenses' );   					//Yoast SEO => Premium
-	//remove_submenu_page( 'wpseo_dashboard', 'wpseo_redirects' );   				//Yoast SEO => Redirects
-
-
+	remove_menu_page( 'link-manager.php' );       									// Links
+	remove_menu_page( 'edit-comments.php' );       									// Comments	
+	remove_menu_page( 'wpcf7' );       											// Contact Forms	
+	remove_menu_page( 'edit.php?post_type=acf-field-group' );       						// Custom Fields
+	remove_menu_page( 'themes.php' );       										// Appearance
+	remove_menu_page( 'wpengine-common' );   										// WP Engine
+	remove_menu_page( 'wp-mail-smtp' );   											// WP Mail SMTP
+	remove_menu_page( 'wpseo_dashboard' );   										// Yoast SEO
+	
+	remove_submenu_page( 'plugins.php', 'plugin-editor.php' );        					// Plugins => Plugin Editor
+	remove_submenu_page( 'options-general.php', 'options-writing.php' );   				// Settings => Writing 		
+	remove_submenu_page( 'options-general.php', 'options-reading.php' );   				// Settings => Reading 	
+	remove_submenu_page( 'options-general.php', 'options-media.php' );   					// Settings => Media 	
+	remove_submenu_page( 'options-general.php', 'options-privacy.php' );   				// Settings => Privacy 	
+	remove_submenu_page( 'options-general.php', 'akismet-key-config' );   				// Settings => Akismet	
+	remove_submenu_page( 'options-general.php', 'git-updater' );   						// Settings => Git Updater 
+	remove_submenu_page( 'options-general.php', 'git-updater-account' );   				// Settings => Git Updater Account		
+	remove_submenu_page( 'options-general.php', 'codepress-admin-columns' );   			// Settings => Admin Columns
+	remove_submenu_page( 'tools.php', 'export-personal-data.php' );   					// Tools => Export Personal Data  
+	remove_submenu_page( 'tools.php', 'erase-personal-data.php' );   					// Tools => Erase Personal Data
+	remove_submenu_page( 'wpseo_dashboard', 'wpseo_workouts' );   						// Yoast SEO => Workouts
+	remove_submenu_page( 'wpseo_dashboard', 'wpseo_licenses' );   						// Yoast SEO => Premium
+	remove_submenu_page( 'wpseo_dashboard', 'wpseo_page_academy' );   					// Yoast SEO => Academy
+	remove_submenu_page( 'wpseo_dashboard', 'wpseo_tools' );   							// Yoast SEO => Tools
+	remove_submenu_page( 'wpseo_dashboard', 'wpseo_integrations' );   					// Yoast SEO => Integrations
+	remove_submenu_page( 'wpseo_dashboard', 'wpseo_dashboard' );   						// Yoast SEO => General
+	remove_submenu_page( 'wp-mail-smtp', 'wp-mail-smtp-logs' );   						// WP Mail SMTP => Email Log
+	remove_submenu_page( 'wp-mail-smtp', 'wp-mail-smtp-reports' );   					// WP Mail SMTP => Email Reports
+	remove_submenu_page( 'wp-mail-smtp', 'wp-mail-smtp-about' );   						// WP Mail SMTP => About Us	
+	
+	
 	add_submenu_page( 'upload.php', 'Favicon', 'Favicon', 'manage_options', 'customize.php' );	
 	
 	$the_query = new WP_Query( array('post_type' => 'elements', 'posts_per_page' => -1, 'orderby' => 'menu_order', 'order' => 'asc') );
@@ -229,7 +239,17 @@ function battleplan_remove_menus() {
 	add_submenu_page( 'edit.php?post_type=elements', 'Custom Fields', 'Custom Fields', 'manage_options', 'edit.php?post_type=acf-field-group' );		
 	add_submenu_page( 'edit.php?post_type=elements', 'Themes', 'Themes', 'manage_options', 'themes.php' );		
 	add_submenu_page( 'options-general.php', 'Options', 'Options', 'manage_options', 'options.php' );
-	if ( _USER_LOGIN == "battleplanweb" ) add_submenu_page( 'tools.php', 'Git Updater', 'Git Updater', 'manage_options', 'options-general.php?page=git-updater' );
+	add_submenu_page( 'tools.php', 'WP Engine', 'WP Engine', 'manage_options', 'options-general.php?page=wpengine-common' );
+	
+	if ( _USER_LOGIN == "battleplanweb" ) :
+		add_submenu_page( 'tools.php', 'Git Updater', 'Git Updater', 'manage_options', 'options-general.php?page=git-updater' );
+		add_submenu_page( 'tools.php', 'Admin Columns', 'Admin Columns', 'manage_options', 'options-general.php?page=codepress-admin-columns' );
+		add_submenu_page( 'tools.php', 'WP Mail SMTP', 'WP Mail SMTP', 'manage_options', 'options-general.php?page=wp-mail-smtp' );
+
+		add_submenu_page( 'tools.php', 'Yoast Settings', 'Yoast Settings', 'manage_options', 'admin.php?page=wpseo_page_settings' );
+		add_submenu_page( 'tools.php', 'Yoast Local', 'Yoast Local', 'manage_options', 'admin.php?page=wpseo_local' );
+		add_submenu_page( 'tools.php', 'Yoast Redirects', 'Yoast Redirects', 'manage_options', 'admin.php?page=wpseo_redirects' );
+	endif;		
 }
 
 // Reorder WP Admin Menu Items
@@ -284,51 +304,36 @@ function battleplan_custom_post_type_counts() {
 	endforeach;	
 }
 
-// Remove unwanted widgets from Elements
-add_action('widgets_init', 'battleplan_unregister_default_widgets', 11);
-function battleplan_unregister_default_widgets() {
-	unregister_widget('Akismet_Widget');
-	unregister_widget('WP_Widget_Custom_HTML');	
-	unregister_widget('WP_Widget_Links');
-	unregister_widget('WP_Widget_Media_Audio');
-	unregister_widget('WP_Widget_Media_Gallery');
-	unregister_widget('WP_Widget_Media_Image');
-	unregister_widget('WP_Widget_Media_Video');
-	unregister_widget('WP_Widget_Meta');
-	unregister_widget('WP_Widget_Pages');
-	unregister_widget('WP_Widget_Recent_Comments');
-	unregister_widget('WP_Widget_Recent_Posts');
-	unregister_widget('WP_Widget_RSS');
-	unregister_widget('WP_Widget_Tag_Cloud');
-	unregister_widget('WPE_Powered_By_Widget');
-	unregister_widget('Twenty_Eleven_Ephemera_Widget');	
-}
-
 // Remove unwanted dashboard widgets
 add_action('wp_dashboard_setup', 'battleplan_remove_dashboard_widgets');
 function battleplan_remove_dashboard_widgets () {
+	/*
 	remove_action('welcome_panel','wp_welcome_panel'); 							//Welcome to WordPress!
-	remove_meta_box('dashboard_primary','dashboard','normal'); 					//WordPress.com Blog
-	remove_meta_box('dashboard_primary','dashboard','side'); 					//WordPress.com Blog
-	remove_meta_box('dashboard_right_now','dashboard','normal');	
-	remove_meta_box('dashboard_right_now','dashboard','side');
-	remove_meta_box('dashboard_quick_press','dashboard','normal'); 				//Quick Press widget
-	remove_meta_box('dashboard_quick_press','dashboard','side'); 				//Quick Press widget
-	remove_meta_box('tribe_dashboard_widget', 'dashboard', 'normal'); 			//News From Modern Tribe	
-	remove_meta_box('tribe_dashboard_widget', 'dashboard', 'side'); 			//News From Modern Tribe
-	remove_meta_box('wpe_dify_news_feed','dashboard','normal'); 				//WP Engine	
-	remove_meta_box('wpe_dify_news_feed','dashboard','side'); 					//WP Engine
-	remove_meta_box('dashboard_activity','dashboard','normal');					//Activity
-	remove_meta_box('dashboard_activity','dashboard','side');					//Activity
-	remove_meta_box('dashboard_site_health','dashboard','normal');				//Site Health
-	remove_meta_box('dashboard_site_health','dashboard','side');				//Site Health
-	remove_meta_box('woocommerce_dashboard_status','dashboard','normal');		//Woocommerce
-	remove_meta_box('woocommerce_dashboard_status','dashboard','side');			//Woocommerce
-	remove_meta_box('wp_mail_smtp_reports_widget_lite','dashboard','normal');	//WP Mail SMTP
-	remove_meta_box('wp_mail_smtp_reports_widget_lite','dashboard','side');		//WP Mail SMTP
-	remove_meta_box('wpseo-dashboard-overview','dashboard','normal');			//Yoast
-	remove_meta_box('wpseo-dashboard-overview','dashboard','side');				//Yoast	
-	remove_meta_box('wp_mail_smtp_reports_widget_pro','dashboard','normal');	// WP Mail SMTP Pro
+	remove_meta_box('tribe_dashboard_widget', 'dashboard', 'normal'); 				//News From Modern Tribe	
+	remove_meta_box('tribe_dashboard_widget', 'dashboard', 'side'); 					//News From Modern Tribe
+	remove_meta_box('wpe_dify_news_feed','dashboard','normal'); 					//WP Engine	
+	remove_meta_box('wpe_dify_news_feed','dashboard','side'); 						//WP Engine
+	*/	
+	remove_meta_box('dashboard_activity','dashboard','normal');						// Activity
+	remove_meta_box('dashboard_activity','dashboard','side');						// Activity
+	remove_meta_box('dashboard_right_now','dashboard','normal');					// At A Glance
+	remove_meta_box('dashboard_right_now','dashboard','side');						// At A Glance
+	remove_meta_box('dashboard_quick_press','dashboard','normal'); 					// Quick Draft
+	remove_meta_box('dashboard_quick_press','dashboard','side'); 					// Quick Draft
+	remove_meta_box('dashboard_site_health','dashboard','normal');					// Site Health
+	remove_meta_box('dashboard_site_health','dashboard','side');					// Site Health
+	remove_meta_box('woocommerce_dashboard_status','dashboard','normal');				// Woocommerce
+	remove_meta_box('woocommerce_dashboard_status','dashboard','side');				// Woocommerce
+	remove_meta_box('dashboard_primary','dashboard','normal'); 						// WordPress Events and News
+	remove_meta_box('dashboard_primary','dashboard','side'); 						// WordPress Events and News
+	remove_meta_box('wp_mail_smtp_reports_widget_lite','dashboard','normal');			// WP Mail SMTP
+	remove_meta_box('wp_mail_smtp_reports_widget_lite','dashboard','side');			// WP Mail SMTP
+	remove_meta_box('wp_mail_smtp_reports_widget_pro','dashboard','normal');			// WP Mail SMTP Pro
+	remove_meta_box('wp_mail_smtp_reports_widget_pro','dashboard','side');			// WP Mail SMTP Pro	
+	remove_meta_box('wpseo-dashboard-overview','dashboard','normal');				// Yoast SEO Posts Overview
+	remove_meta_box('wpseo-dashboard-overview','dashboard','side');					// Yoast SEO Posts Overview
+	remove_meta_box('wpseo-wincher-dashboard-overview','dashboard','normal');			// Yoast SEO / Wincher Top Keyphrases
+	remove_meta_box('wpseo-wincher-dashboard-overview','dashboard','side');			// Yoast SEO / Wincher Top Keyphrases	
 }
 
 // Load site stats if hooked to Google Analytics

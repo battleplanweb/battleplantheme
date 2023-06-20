@@ -84,7 +84,7 @@ function processChron($forceChron) {
 		$apiKey2 = "ef3a9074e001fa21f640578f699994cba854489d3ef793";
 		$wpMailSettings = get_option( 'wp_mail_smtp' );			
 		$wpMailSettings['mail']['from_email'] = 'email@admin.'.str_replace('https://', '', get_bloginfo('url'));
-		$wpMailSettings['mail']['from_name'] = 'Website Administrator · '.$GLOBALS['customer_info']['name'];
+		$wpMailSettings['mail']['from_name'] = strip_tags('Website Administrator · '.$GLOBALS['customer_info']['name']);
 		$wpMailSettings['mail']['mailer'] = 'sendinblue';
 		$wpMailSettings['mail']['from_email_force'] = '1';
 		$wpMailSettings['mail']['from_name_force'] = '1';	
@@ -92,6 +92,9 @@ function processChron($forceChron) {
 		$wpMailSettings['sendinblue']['domain'] = 'admin.'.str_replace('https://', '', get_bloginfo('url'));				
 		update_option( 'wp_mail_smtp', $wpMailSettings );
 	endif;
+	
+		$formMail['from_name'] = strip_tags($formMail['from_name']);
+	
 	
 // Contact Form 7 Settings Update
 	if ( is_plugin_active('contact-form-7/wp-contact-form-7.php') ) : 

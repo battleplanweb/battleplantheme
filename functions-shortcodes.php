@@ -858,7 +858,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	$link = esc_attr($a['link']);		
 	$id = esc_attr($a['id']);	
 	$blur = esc_attr($a['blur']) == "true" ? " slider-blur" : "";	
-	$lazy = esc_attr($a['lazy']) == "true" ? "lazy" : "eager";
+	$lazy = esc_attr($a['lazy']) == "true" && $slideEffect != "dissolve" ? "lazy" : "eager";
 	$mult = esc_attr($a['mult']);		
 	if ( $mult == 1 ) : 
 		$multSize = $imgSize = 100; 

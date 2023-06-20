@@ -482,8 +482,7 @@ function battleplan_buildLockedSection( $atts, $content = null ) {
 	if ( $class != '' ) $class = " ".$class;
 	$pos = esc_attr($a['position']);
 	$class = " position-".$pos;
-	$style = esc_attr($a['style']);
-	if ( $style != '' ) $style = " style-".$style;
+	$style = esc_attr($a['style']) == "lock" ? "" : " style-".esc_attr($a['style']);
 	if ( $name ) : $name = " id='".$name."'"; else: $name = ""; endif;
 	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));	
@@ -495,7 +494,7 @@ function battleplan_buildLockedSection( $atts, $content = null ) {
 	$btnActivated = esc_attr($a['btn-activated']);
 	if ($btnActivated == "true" || $btnActivated == "yes" ) $btnActivated = "yes";
 	
-	$buildSection = '<section'.$name.' class="section section-lock'.$style.$width.$class.'" data-pos="'.$pos.'" data-delay="'.$delay.'" data-show="'.$show.'" data-btn="'.$btnActivated.'"';
+	$buildSection = '<section'.$name.' class="section section-lock style-lock'.$style.$width.$class.'" data-pos="'.$pos.'" data-delay="'.$delay.'" data-show="'.$show.'" data-btn="'.$btnActivated.'"';
 	
 	if ( $background != "" || $css != "" ) :
 		$buildSection .= ' style="';

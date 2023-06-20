@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '20.0' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '20.1' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -1176,7 +1176,7 @@ if ( !is_admin() && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && str
 			$dom->loadHTML($html);
 			$scripts = $dom->getElementsByTagName('script'); 
 
-			$targets = array('podium', 'leadconnectorhq', 'voip', 'google', 'clickcease', 'paypal', 'embed-player', 'huzzaz', 'fbcdn', 'facebook', 'klaviyo');
+			$targets = array('podium', 'xapp', 'leadconnectorhq', 'voip', 'clickcease', 'paypal', 'embed-player', 'huzzaz', 'fbcdn', 'facebook', 'klaviyo'); //, 'google'
 			$exclusions = array('recaptcha');
 
 			foreach ($scripts as $script) :		   
@@ -1208,7 +1208,7 @@ if ( !is_admin() && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && str
 	function battleplan_delay_nonessential_scripts() { 
 		if ( _IS_BOT != true ) : ?>
 			<script nonce="<?php echo _BP_NONCE !== null ? _BP_NONCE : null; ?>" type="text/javascript" id="delay-scripts">
-				const loadScriptsTimer=setTimeout(loadScripts,2500);
+				const loadScriptsTimer=setTimeout(loadScripts,1500);
 				const userInteractionEvents=["mouseover","keydown","touchstart","touchmove","wheel"];
 				userInteractionEvents.forEach(function(event) {	
 					window.addEventListener(event, triggerScriptLoader, {passive:!0})});
@@ -1225,7 +1225,7 @@ if ( !is_admin() && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && str
 							elem.setAttribute("src", elem.getAttribute("data-src"));
 							elem.removeAttribute("data-src"); 
 						})
-					}, 2500);
+					}, 1500);
 				}
 			</script><?php
 		endif;

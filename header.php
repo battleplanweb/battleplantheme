@@ -19,6 +19,7 @@
 	
 	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/open-sans-v17-latin-regular.woff2" crossorigin="anonymous">
 	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/fa-solid-900.woff2" crossorigin="anonymous">
+	<link rel="preconnect" href="https://googletagmanager.com/">
 
 	<?php bp_font_loader(); ?>	
 
@@ -57,10 +58,10 @@ wp_nav_menu( array(
 	'theme_location'  => $mainMenuLoc,
 	'walker'          => new Aria_Walker_Nav_Menu(),
 ) ); ?>	
-	
-<?php bp_before_page(); ?>
 
 <a class="skip-link sr-only" href="#primary"><?php esc_html_e( 'Skip to content', 'battleplan' ); ?></a>
+	
+<?php bp_before_page(); ?>
 	
 <div id="page" class="site" aria-label="page">
 

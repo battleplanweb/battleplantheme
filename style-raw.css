@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 20.0
+Version: 20.1
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -286,6 +286,7 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --measure-base: 								1.5em;
   --measure-small: 								1.0em;
   --measure-large: 								2.5em;
+  --sidebar-width: 								356px;
   
   --google-guaranteed-green: 						rgba(0, 161, 79, 1);  
   --paypal-yellow: 			 					rgba(255, 196, 57, 1);
@@ -845,7 +846,7 @@ section.section-default .flex {
 .sidebar-right.sidebar-box .flex.grid-content,
 .widget-box .flex.grid-content,
 .sidebar-right.widget-box .flex.grid-content {
-	grid-template-columns: 							[column-1-start] 1fr [column-1-end column-2-start] minmax(0, 356px) [column-2-end];
+	grid-template-columns: 							[column-1-start] 1fr [column-1-end column-2-start] minmax(0, var(--sidebar-width)) [column-2-end];
 }
 
 .sidebar-left.sidebar-box  #main-content,
@@ -853,7 +854,7 @@ section.section-default .flex {
 
 .sidebar-left.sidebar-box .flex.grid-content,
 .sidebar-left.widget-box .flex.grid-content {
-	grid-template-columns: 							[column-1-start] minmax(0, 356px) [column-1-end column-2-start] 1fr [column-2-end];
+	grid-template-columns: 							[column-1-start] minmax(0, var(--sidebar-width)) [column-1-end column-2-start] 1fr [column-2-end];
 }
 
 .sidebar-none #main-content,
@@ -1889,7 +1890,7 @@ input.paypal-amount {
 
 .menu-clip .menu-strip {
 	overflow: 									hidden;
-	/*clip-path: 									polygon(0% 0%, 100% 0%, 100% calc(100% + 80vh), 0% calc(100% + 80vh));*/
+	clip-path: 									polygon(0% 0%, 100% 0%, 100% calc(100% + 80vh), 0% calc(100% + 80vh));
 }	
 
 .fixed-strip {
@@ -2190,6 +2191,14 @@ a#bbblink {
 	transform: 									translateY(0);
 	transition: 									opacity 0.6s var(--main-trans-easing);
 	overflow-y: 									scroll;
+}
+ 
+.section.style-lock + #page {
+	pointer-events: 								auto;
+}
+
+.section.style-lock.on-screen + #page {
+	pointer-events: 								none;
 }
 
 body.locked {
@@ -3842,8 +3851,8 @@ img.img-404 {
 }
 
 .block-image.image-testimonials.testimonials-generic-icon {
-	width: 										70%;
-	margin: 										0 auto;
+	width: 										80%;
+	margin: 										10% auto;
 }
 
 .testimonials-generic-icon .anonymous-icon {
@@ -3930,6 +3939,11 @@ img.img-404 {
 
 .testimonials-platform-houzz {
 	background:									url('../battleplantheme/common/logos/houzz.png');
+	background-size:								contain;
+}
+
+.testimonials-platform-bbb {
+	background:									url('../battleplantheme/common/logos/bbb.png');
 	background-size:								contain;
 }
 
@@ -4464,6 +4478,7 @@ div.menu-search-box a.menu-search-bar input[type="search"] {
 	display: 									flex;
 }
 
+
 .widget-search div.menu-search-box {
 	margin: 									0 auto;
 	padding-left: 								0;
@@ -4638,12 +4653,14 @@ iframe#podium-bubble,
 iframe#podium-modal,
 iframe#tenant-sitechat-frame,
 chat-widget .lc_text-widget,
-chat-widget .lc_text-widget--btn {
+chat-widget .lc_text-widget--btn,
+#xapp-widget .xapp-chat-button,
+#xapp-widget .widget-container {
 	border:										none !important;
 	box-shadow:									none !important;
 	outline:									none !important;
 	filter: 									none !important;
-	transform: 									translateY(-45px); 
+	transform: 									translateY(-45px) !important;
 	z-index: 									999999996 !important;	
 }
 
@@ -4722,6 +4739,7 @@ chat-widget .lc_text-widget--btn {
 	opacity: 									1;
 	transform: 									perspective(500px) translate3d(0,0,0);
     transition: 								all 0.5s var(--main-trans-easing);
+	z-index:1000;
 }
 
 .carousel-item.carousel-item-next.carousel-item-left,
@@ -4733,6 +4751,10 @@ chat-widget .lc_text-widget--btn {
 .carousel.effect-fade .carousel-item.active.carousel-item-right,
 .carousel.effect-fade .carousel-item.carousel-item-next.carousel-item-left,
 .carousel.effect-fade .carousel-item.carousel-item-prev.carousel-item-right,
+.carousel.effect-dissolve .carousel-item.active.carousel-item-left,
+.carousel.effect-dissolve .carousel-item.active.carousel-item-right,
+.carousel.effect-dissolve .carousel-item.carousel-item-next.carousel-item-left,
+.carousel.effect-dissolve .carousel-item.carousel-item-prev.carousel-item-right,
 .carousel.effect-fade-cycle .carousel-item.active.carousel-item-left,
 .carousel.effect-fade-cycle .carousel-item.active.carousel-item-right,
 .carousel.effect-cycle-fade .carousel-item.carousel-item-next.carousel-item-left,
@@ -4750,6 +4772,13 @@ chat-widget .lc_text-widget--btn {
 .carousel.effect-zoom-fade .carousel-item.active.carousel-item-right,
 .carousel.effect-zoom-fade .carousel-item.carousel-item-prev.carousel-item-right {
 	opacity: 									0;
+}
+
+
+.carousel.effect-dissolve .carousel-item.carousel-item-next.carousel-item-left,
+.carousel.effect-dissolve .carousel-item.carousel-item-prev.carousel-item-right {
+	opacity: 									1;
+	z-index: 									999;
 }
 
 .carousel.effect-cycle .carousel-item.active,
@@ -4818,6 +4847,7 @@ chat-widget .lc_text-widget--btn {
 .carousel.effect-cycle-fade .carousel-item.carousel-item-next.carousel-item-left,
 .carousel.effect-cycle-fade .carousel-item.carousel-item-prev.carousel-item-right,
 .carousel.effect-fade-zoom .carousel-item.active.carousel-item-left,
+
 .carousel.effect-fade-zoom .carousel-item.active.carousel-item-right,
 .carousel.effect-zoom-fade .carousel-item.carousel-item-next.carousel-item-left,
 .carousel.effect-zoom-fade .carousel-item.carousel-item-prev.carousel-item-right {
@@ -6039,8 +6069,6 @@ html.error503 h3 {
 	.alignright.size-third-f,
 	.align-left.size-third-s,
 	.alignleft.size-third-s,
-
-
 	.align-right.size-third-s,
 	.alignright.size-third-s {
 		max-width:									65%;
@@ -6131,7 +6159,8 @@ html.error503 h3 {
 	}
 
 	.block-image.image-testimonials.testimonials-generic-icon {
-		max-width: 									50%;
+		max-width: 									60%;
+		margin: 										20% auto;
 	}
 	
 	/* Media */

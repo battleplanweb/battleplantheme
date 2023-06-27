@@ -296,7 +296,7 @@ function battleplan_custom_post_type_counts() {
 		global $menu;
 
 		foreach ($menu as $key => $value) :
-			if ($menu[$key][2] === 'edit.php?post_type=' . $postType) :				  		  
+			if ( $menu[$key][2] === 'edit.php?post_type=' . $postType || ( $menu[$key][2] === 'edit.php' && $postType == 'post') ) :				  		  
 		 		$menu[$key][0] = $menu[$key][0].' <span class="admin-badge-holder count-'.$num_posts.'"><span class="admin-badge">'.$num_posts.'</span></span>';
 			 	break;
 		  	endif;

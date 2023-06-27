@@ -530,8 +530,8 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 // Build an archive
 add_shortcode( 'build-archive', 'battleplan_getBuildArchive' );
 function battleplan_getBuildArchive($atts, $content = null) {	
-	$a = shortcode_atts( array( 'type'=>'', 'count_view'=>'false', 'thumb_only'=>'false', 'show_btn'=>'false', 'btn_text'=>'Read More', 'btn_pos'=>'outside', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_social'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'add_info'=>'', 'show_thumb'=>'true', 'no_pic'=>'', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'accordion'=>'false', 'link'=>'post', 'truncate'=>'false' ), $atts );
-	$postID = get_the_ID();
+	$a = shortcode_atts( array( 'id'=>get_the_ID(), 'type'=>'', 'count_view'=>'false', 'thumb_only'=>'false', 'show_btn'=>'false', 'btn_text'=>'Read More', 'btn_pos'=>'outside', 'show_title'=>'true', 'title_pos'=>'outside', 'show_date'=>'false', 'show_author'=>'false', 'show_social'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'add_info'=>'', 'show_thumb'=>'true', 'no_pic'=>'', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'accordion'=>'false', 'link'=>'post', 'truncate'=>'false' ), $atts );
+	$postID = esc_attr($a['id']);
 	$type = esc_attr($a['type']);
 	$truncate = esc_attr($a['truncate']);
 	$showBtn = esc_attr($a['show_btn']);	

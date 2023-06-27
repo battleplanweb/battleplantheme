@@ -21,6 +21,7 @@ get_header(); ?>
 				$archiveIntro = "<p>Click a photo below to open up the full album.</p>";
 				$grid = "1-1-1";
 				$valign = "start";
+				$tags = "false"; // drop / list / button / false
 				$showThumb = "true";
 				$size = "thumbnail";
 				$picSize = "100";
@@ -42,6 +43,7 @@ get_header(); ?>
 				$facebookIcon = "Facebook-Like-Us-1";
 				$grid = "1";
 				$valign = "start";
+				$tags = "false"; // drop / list / button / false
 				$showThumb = "true";
 				$size = "thumbnail";
 				$picSize = "1/4";
@@ -54,6 +56,7 @@ get_header(); ?>
 				$archiveHeadline = "Products";
 				$grid = "1";
 				$valign = "start";
+				$tags = "false"; // drop / list / button / false
 				$showThumb = "true";
 				$size = "thumbnail";
 				$picSize = "1/3";
@@ -72,6 +75,7 @@ get_header(); ?>
 			else: 
 				$grid = "1-1-1";
 				$valign = "stretch";
+				$tags = "false"; // drop / list / button / false
 				$showThumb = "true";
 				$size = "thumbnail";
 				$picSize = "100";
@@ -122,12 +126,47 @@ get_header(); ?>
 		
 				$buildArchive .= do_shortcode('[col class="'.$classes.'"][build-archive type="'.get_post_type().'" show_thumb="'.$showThumb.'" size="'.$size.'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" accordion="'.$accordion.'" count_view="'.$countView.'" add_info="'.$addInfo.'" link="'.$link.'"][/col]');
 			endwhile; 
+		
+		// Build Tag List
+			if ( $tags != "false" ) :	
+				$getTags = get_tags(array( 'orderby' => 'count', 'order' => 'DESC' ));
+		
+				if ( $tags == "drop" ) :
+					$tagClass = "hide-1 hide-2 hide-3 hide-4 hide-5";
+					$dropClass = "";		
+				elseif ( $tags == "list" ) :
+					$tagClass = "tag-list hide-1 hide-2";
+					$dropClass = "hide-3 hide-4 hide-5";		
+				else:
+					$tagClass = "tag-buttons hide-1 hide-2";
+					$dropClass = "hide-3 hide-4 hide-5";
+				endif;
+		
+				$buildTagList = '<span class="'.$tagClass.'">';
+				$buildTagDrop = '<select name="tag-dropdown" id="tag-dropdown" class="'.$dropClass.'">';
+				$buildTagDrop .= '<option value="">Topics</option>';
+		
+				foreach ($getTags as $tag) :		
+					$btnClass = ($tags == "button") ? " button button-".$tag->slug : "";
+					$buildTagList .= '<a href="'.get_tag_link( $tag->term_id ).'" rel="tag" class="tag-'.$tag->slug.$btnClass.'">'.$tag->name.' (' . $tag->count . ')</a>';
+					$buildTagDrop .= '<option value="'.get_tag_link( $tag->term_id ).'">'.$tag->name . ' (' . $tag->count . ')</option>';
+				endforeach;
 
+				$buildTagList .= '</span>';
+				$buildTagDrop .= '</select>';
+		
+				$buildTagMenu = '<div class="archive-tags '.get_post_type().'-tags">';
+				$buildTagMenu .= $buildTagList . $buildTagDrop;
+				$buildTagMenu .= '</div>';		
+			endif;
+		
 		// Display Archive
 			$displayArchive = '<header class="archive-header">';
 				$displayArchive .= '<h1 class="page-headline archive-headline '.get_post_type().'-headline">'.$archiveHeadline.'</h1>';
 				$displayArchive .= '<div class="archive-description archive-intro '.get_post_type().'-intro">'.$archiveIntro.'</div>'; 
 			$displayArchive .= '</header><!-- .archive-header-->';
+		
+			$displayArchive .= $buildTagMenu;
 		
 			$displayArchive .= do_shortcode('[section width="inline" class="archive-content archive-'.get_post_type().'"][layout grid="'.$grid.'" valign="'.$valign.'"]'.$buildArchive.'[/layout][/section]');
 		

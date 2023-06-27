@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 20.1
+Version: 20.2
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -3092,6 +3092,7 @@ a.prev i.fa {
 	align-items: 									center;
   	justify-content: 								space-between;
   	flex-direction: 								row;
+	gap: 										0 var(--measure-base);
 }
 
 .navigation.single .nav-links .nav-previous,
@@ -3351,7 +3352,12 @@ h3.archive-subheadline {
 	margin-bottom:									var(--measure-base);
 }
 
+.archive-header + .archive-tags {
+	margin-top:									var(--measure-base);
+}
+
 .tag-list a {
+	display: 										inline-block;
 	margin-left:									10px;
 	margin-right:									10px;
 }
@@ -3365,11 +3371,23 @@ h3.archive-subheadline {
 	flex: 										1 1 1;
 	margin:										8px;
 	text-align:									center;
-
 }
 
 .tag-buttons a.button-blog {
 	display: 										none;
+}
+
+.archive-tags #tag-dropdown {
+	display: 										block;
+	width: 										400px;
+	max-width: 									96%;
+	margin: 										0 auto;
+}
+
+.single.related h3 {
+	font-family: 									var(--font-text);
+	font-size: 									calc(var(--font-size-text) * 1.1);
+	font-weight: 									bold;
 }
 
 .social-share-buttons {
@@ -3600,6 +3618,7 @@ p + .thumb-left .section .switch-thumb .align-right {
 .alignleft.size-quarter-f,
 .align-right.size-quarter-f,
 .alignright.size-quarter-f,
+
 .align-left.size-quarter-s,
 .alignleft.size-quarter-s,
 .align-right.size-quarter-s,
@@ -3941,6 +3960,7 @@ img.img-404 {
 	background:									url('../battleplantheme/common/logos/houzz.png');
 	background-size:								contain;
 }
+
 
 .testimonials-platform-bbb {
 	background:									url('../battleplantheme/common/logos/bbb.png');

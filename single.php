@@ -31,7 +31,8 @@ get_header(); ?>
 					$comments = "false";
 					$social = "false";
 					$tags = "false";
-					$navigation = "false";	
+					$navigation = "false";
+					$relatedPosts = "0";	
 		
 			// Products
 				elseif ( get_post_type() == "products" ) :	
@@ -44,6 +45,7 @@ get_header(); ?>
 					$social = "false";
 					$tags = "false"; // list / button
 					$navigation = "false";	
+					$relatedPosts = "0";
 		
 			// Events
 				elseif ( get_post_type() == "events" ) :	
@@ -54,7 +56,8 @@ get_header(); ?>
 					$comments = "false";
 					$social = "false";
 					$tags = "false"; // list / button
-					$navigation = "true";	
+					$navigation = "true";
+					$relatedPosts = "0";	
 
 			// Default Single
 				else:		
@@ -69,6 +72,7 @@ get_header(); ?>
 					$social = "false";
 					$tags = "list"; // list / button
 					$navigation = "true";
+					$relatedPosts = "0"; // 0 or number you want to display
 					$facebookBtn = "false"; // display Facebook like/share button
 					$facebookBtnPos = "both"; // above article, below article, both
 					$facebookBtnCode = '<div class="follow_us_on_fb"><div class="iframe"><iframe src="https://www.facebook.com/plugins/like.php?href='.$GLOBALS['customer_info']['facebook'].'&width=85&layout=box_count&action=like&size=large&share=false&height=60&appId=630963613764335" width="85" height="60" style="border:none;overflow:hidden" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe></div><div class="text">Follow us on Facebook for more!</div></div>';
@@ -190,6 +194,60 @@ get_header(); ?>
 
 							$displayFooter .= '</div>';
 						$displayFooter .= '</nav>';		
+					endif;
+		
+					if ( intval($relatedPosts) > 0  ) :		
+
+						$currentID = get_the_ID();
+						$current_tag_ids = array_map(function ($tag) { return $tag->term_id; }, wp_get_post_tags($currentID));		
+						$related_posts = array();
+						$post_num = 1;
+
+						$all_posts = new WP_Query(array('post_type' => get_post_type(), 'posts_per_page' => -1));
+						if ($all_posts->have_posts()) :
+							while ($all_posts->have_posts()) :
+								$all_posts->the_post();
+
+							   	if (get_the_ID() == $currentID) continue;  
+ 
+							   	$post_tags =  wp_get_post_tags(get_the_ID());		
+		
+							   	if ($post_tags) :
+				        				$post_tag_ids = array_map(function ($tag) { return $tag->term_id; }, $post_tags);
+								  	$tag_similarity = count(array_intersect($current_tag_ids, $post_tag_ids));
+								  	$related_posts[get_the_ID()] = $tag_similarity;
+							   	endif;
+						    	endwhile;
+						endif;
+
+						if (!empty($related_posts)) :		
+							arsort($related_posts);	
+		
+							if ( intval($relatedPosts) == 1 ) : $relatedGrid = "1";
+							elseif ( intval($relatedPosts) == 3 ) : $relatedGrid = "1-1-1";
+							else : $relatedGrid = "1-1";
+							endif;
+	
+							$displayFooter .= '<nav class="related single" role="navigation" aria-label="Posts">';
+							$displayFooter .= '<h2 class="screen-reader-text">Related posts</h2>';
+							$displayFooter .= '<div class="related-links">';	
+    							$displayFooter .= '<h2 class="related">Related Posts:</h2>';
+    							$displayRelated = '[section width="inline"][layout grid="'.$relatedGrid.'"]';
+							
+    							foreach ($related_posts as $post_id => $tag_similarity) :
+								if ( $post_num > intval($relatedPosts) ) break;
+								$post_num++;		
+								$displayRelated .= '[col][build-archive id="'.$post_id.'" type="'.get_post_type().'" size="thumbnail" show_thumb="true" show_btn="true" btn_text="Read More" btn_pos="below" title_pos="inside" show_date="false" show_author="false" show_excerpt="false" pic_size="100"][/col]';		
+    							endforeach;
+							
+        						$displayRelated .= '[/layout][/section]';	
+							$displayFooter .= do_shortcode($displayRelated);
+							$displayFooter .= '</div>';
+							$displayFooter .= '</nav>';						
+						endif;
+
+						wp_reset_postdata();
+	
 					endif;
 
 				$displayFooter .= '</footer><!-- .entry-footer-->';		

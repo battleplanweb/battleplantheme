@@ -478,10 +478,9 @@ function battleplan_buildLockedSection( $atts, $content = null ) {
 	$top = esc_attr($a['top']);
 	$width = esc_attr($a['width']);
 	if ( $width != '' ) $width = " section-".$width;
-	$class = esc_attr($a['class']);
-	if ( $class != '' ) $class = " ".$class;
+	$class = esc_attr($a['class']) != '' ? " ".esc_attr($a['class']) : '';
 	$pos = esc_attr($a['position']);
-	$class = " position-".$pos;
+	$class .= " position-".$pos;
 	$style = esc_attr($a['style']) == "lock" ? "" : " style-".esc_attr($a['style']);
 	if ( $name ) : $name = " id='".$name."'"; else: $name = ""; endif;
 	$start = strtotime(esc_attr($a['start']));

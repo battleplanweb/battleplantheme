@@ -214,6 +214,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
     	pageTitleInput.on('input', updatePageTitle);
     	updatePageTitle();
+	$('#wp-admin-bar-view a').attr('target','_blank');
 			
 // Site Audit		
 	$('.col.when').click(function() {

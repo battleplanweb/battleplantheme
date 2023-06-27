@@ -643,6 +643,12 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 		}
 	}
 	
+	// Blog Archive page - tag list drop-down functionality
+	$('#tag-dropdown').change(function() {
+    		var tagLink = $(this).val();
+    		if (tagLink) { window.location.href = tagLink; }
+  	});	
+	
 	// Apply border-radius from img.testimonial to anonymous svg
 	var iconRadius = $('.img-testimonials').css('border-radius'), iconBorder = $('.img-testimonials').css('border');
 	$('.anonymous-icon').css({'border-radius':iconRadius, 'border':iconBorder});	

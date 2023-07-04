@@ -182,7 +182,7 @@ function battleplan_registerHVACPostTypes() {
 		),
 		'hierarchical'=>false,
 		'show_ui'=>true,
-        'show_admin_column'=>true,
+        	'show_admin_column'=>true,
 	));
 	register_taxonomy( 'product-type', array( 'products' ), array(
 		'labels'=>array(
@@ -191,7 +191,7 @@ function battleplan_registerHVACPostTypes() {
 		),
 		'hierarchical'=>false,
 		'show_ui'=>true,
-        'show_admin_column'=>true,
+        	'show_admin_column'=>true,
 	));
 	register_taxonomy( 'product-class', array( 'products' ), array(
 		'labels'=>array(
@@ -200,7 +200,7 @@ function battleplan_registerHVACPostTypes() {
 		),
 		'hierarchical'=>false,
 		'show_ui'=>true,
-        'show_admin_column'=>true,
+        	'show_admin_column'=>true,
 	));
 }
 

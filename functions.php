@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '20.2' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '20.3' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -808,7 +808,7 @@ function battleplan_sitemap_exclude_taxonomy( $excluded, $taxonomy ) {
 // Install promo on blog
 add_action( 'bp_after_the_content', 'battleplan_promo' );
 function battleplan_promo() {
-	if ( is_single() ) :
+	if ( is_single() && get_post_type() == "post" ) :
 		$current_ad = do_shortcode('[get-element slug="coupon"]');
 		if ( $current_ad ) echo '<div class="ad-promo">'.$current_ad.'</div>';
 	endif;	
@@ -1504,15 +1504,17 @@ function battleplan_getGoogleRating() {
 
 			foreach ( $placeIDs as $placeID ) : 
 				if ( is_array($googleInfo[$placeID]) && array_key_exists('google-rating', $googleInfo[$placeID]) && $googleInfo[$placeID]['google-rating'] > 3.99 ) :			
-					$buildPanel .= '<div id="google-review-schema" style="display:none" itemscope itemtype="https://schema.org/AggregateRating">';
-					$buildPanel .= '<div itemprop="itemReviewed" itemscope itemtype="https://schema.org/'.get_option("wpseo_local")["business_type"].'">';
+					$buildPanel .= '<a class="wp-google-badge-btn" href="https://search.google.com/local/reviews?placeid='.$placeID.'&hl=en&gl=US" target="_blank">';	    
+					
+					$buildPanel .= '<div id="google-review-schema" style="display: none;" itemscope itemtype="http://schema.org/AggregateRating">';
+					$buildPanel .= '<div itemprop="itemReviewed" itemscope itemtype="http://schema.org/'.get_option("wpseo_local")["business_type"].'">';
 	
 					$buildPanel .= '<span itemprop="name">'.get_bloginfo('name').'</span><br><span itemprop="telephone">'.$googleInfo[$placeID]['phone-format'].'</span><br><span itemprop="address">'.trim($googleInfo[$placeID]['street']).", ".$googleInfo[$placeID]['city'].", ".$googleInfo[$placeID]['state-abbr']." ".$googleInfo[$placeID]['zip'].'</span>';
 	
+					$buildPanel .= '</div><div itemprop="aggregateRating" itemscope itemtype="http://schema.org/AggregateRating">';	
 					$buildPanel .= '<span itemprop="ratingValue">'.number_format($googleInfo[$placeID]['google-rating'], 1, '.', ',').'</span> out of <span itemprop="bestRating">5</span> stars - <span itemprop="ratingCount">'.number_format($googleInfo[$placeID]['google-reviews'], 0).'</span> reviews';
 					$buildPanel .= '</div></div>';			
 
-					$buildPanel .= '<a class="wp-google-badge-btn" href="https://search.google.com/local/reviews?placeid='.$placeID.'&hl=en&gl=US" target="_blank">';
 					$buildPanel .= '<div class="wp-google-badge-score wp-google-rating">';
 					$buildPanel .= '<div class="wp-google-review"><svg role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" height="25" width="25"><title>Google Logo</title><g fill="none" fill-rule="evenodd">';
 					$buildPanel .= '<path d="M482.56 261.36c0-16.73-1.5-32.83-4.29-48.27H256v91.29h127.01c-5.47 29.5-22.1 54.49-47.09 71.23v59.21h76.27c44.63-41.09 70.37-101.59 70.37-173.46z" fill="#4285f4"></path>';
@@ -1581,7 +1583,9 @@ function battleplan_redirect_to_url($url, $redirect) {
 // Include schema in head of each page
 add_action('wp_head', 'battleplan_addSchema');
 function battleplan_addSchema() { 
-	if ( !isset($GLOBALS['customer_info']['schema']) || $GLOBALS['customer_info']['schema'] != 'false' ) :
+	//if ( !isset($GLOBALS['customer_info']['schema']) || $GLOBALS['customer_info']['schema'] != 'false' ) :  // removed 7/4/2023 to fix the issue with Search Console (not even sure why this is here)
+	//if ( isset($GLOBALS['customer_info']['schema']) && is_array($GLOBALS['customer_info']['schema']) ) : // if you end up needing this, try this line instead (same as the Google Tag setup below)
+
 		$schema = get_option( 'bp_schema' ) ? get_option( 'bp_schema' ) : array();
 		if ( !array_key_exists('business_type', $schema ) ) $schema['business_type'] = '';
 		if ( !array_key_exists('additional_type', $schema ) ) $schema['additional_type'] = '';
@@ -1646,7 +1650,7 @@ function battleplan_addSchema() {
 				}
 		</script>
 	
-<?php endif;
+<?php //endif;
 }
 
 /*--------------------------------------------------------------

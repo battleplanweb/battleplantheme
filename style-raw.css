@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 20.2
+Version: 20.3
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -3352,6 +3352,12 @@ h3.archive-subheadline {
 	margin-bottom:									var(--measure-base);
 }
 
+.single-post h2.related {
+	margin-top: 									1em;
+	padding-top: 									1em;
+	border-top: 									var(--accent-border);
+}
+
 .archive-header + .archive-tags {
 	margin-top:									var(--measure-base);
 }
@@ -3388,6 +3394,7 @@ h3.archive-subheadline {
 	font-family: 									var(--font-text);
 	font-size: 									calc(var(--font-size-text) * 1.1);
 	font-weight: 									bold;
+	text-transform: 								none;
 }
 
 .social-share-buttons {
@@ -4299,6 +4306,8 @@ dl.col-gallery {
 .accordion-box .block-accordion:hover h2, 
 .accordion-box .block-accordion h2.tab-focus { 
 	background:									var(--black-lowest);
+
+
 }
 
 .block-accordion .accordion-icon {
@@ -4469,6 +4478,7 @@ div.menu-search-box a.menu-search-bar input[type="search"] {
 }
 
 .search-results ul.search-results li img.img-search,
+
 .search-results ol.search-results li img.img-search {
 	margin-top: 								8px;
 	margin-bottom: 								0;
@@ -5958,6 +5968,7 @@ html.error503 h3 {
 	
 	/* Carousel Buttons */
 	a.button.carousel-control-prev,
+
 	a.button.carousel-control-next {
 		padding-left: 							0.5em;
 		padding-right: 							0.5em;

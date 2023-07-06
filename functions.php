@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '20.3.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '20.3.2' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -1504,17 +1504,8 @@ function battleplan_getGoogleRating() {
 
 			foreach ( $placeIDs as $placeID ) : 
 				if ( is_array($googleInfo[$placeID]) && array_key_exists('google-rating', $googleInfo[$placeID]) && $googleInfo[$placeID]['google-rating'] > 3.99 ) :			
-					$buildPanel .= '<a class="wp-google-badge-btn" href="https://search.google.com/local/reviews?placeid='.$placeID.'&hl=en&gl=US" target="_blank">';	    
-					
-					$buildPanel .= '<div id="google-review-schema" style="display: none;" itemscope itemtype="http://schema.org/AggregateRating">';
-					$buildPanel .= '<div itemprop="itemReviewed" itemscope itemtype="http://schema.org/'.get_option("wpseo_local")["business_type"].'">';
-	
-					$buildPanel .= '<span itemprop="name">'.get_bloginfo('name').'</span><br><span itemprop="telephone">'.$googleInfo[$placeID]['phone-format'].'</span><br><span itemprop="address">'.trim($googleInfo[$placeID]['street']).", ".$googleInfo[$placeID]['city'].", ".$googleInfo[$placeID]['state-abbr']." ".$googleInfo[$placeID]['zip'].'</span>';
-	
-					$buildPanel .= '</div><div itemprop="aggregateRating" itemscope itemtype="http://schema.org/AggregateRating">';	
-					$buildPanel .= '<span itemprop="ratingValue">'.number_format($googleInfo[$placeID]['google-rating'], 1, '.', ',').'</span> out of <span itemprop="bestRating">5</span> stars - <span itemprop="ratingCount">'.number_format($googleInfo[$placeID]['google-reviews'], 0).'</span> reviews';
-					$buildPanel .= '</div></div>';			
-
+					$buildPanel .= '<a class="wp-google-badge-btn" href="https://search.google.com/local/reviews?placeid='.$placeID.'&hl=en&gl=US" target="_blank">';
+						
 					$buildPanel .= '<div class="wp-google-badge-score wp-google-rating">';
 					$buildPanel .= '<div class="wp-google-review"><svg role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" height="25" width="25"><title>Google Logo</title><g fill="none" fill-rule="evenodd">';
 					$buildPanel .= '<path d="M482.56 261.36c0-16.73-1.5-32.83-4.29-48.27H256v91.29h127.01c-5.47 29.5-22.1 54.49-47.09 71.23v59.21h76.27c44.63-41.09 70.37-101.59 70.37-173.46z" fill="#4285f4"></path>';
@@ -1594,7 +1585,6 @@ function battleplan_addSchema() {
 	
 		$attach = get_children( array( 'post_parent' => get_the_ID(), 'post_type' => 'attachment', 'post_mime_type' => 'image', 'order' => 'ASC', 'numberposts' => 1 ) );
 		$imageFile = is_array( $attach ) && is_object( current( $attach ) ) ? current( $attach )->guid : '';
-		$mapID = "https://maps.google.com/?cid=".$GLOBALS['customer_info']['cid'];
 
 		?><script type="application/ld+json" defer nonce="<?php echo _BP_NONCE; ?>" >
 			{ 
@@ -1646,10 +1636,28 @@ function battleplan_addSchema() {
 						}
 					}
 				},
-				"hasMap": "<?php echo $mapID ?>"
-				}
-		</script>
-	
+				<?php if ( isset($GLOBALS['customer_info']['cid']) && $GLOBALS['customer_info']['cid'] != '' && $GLOBALS['customer_info']['cid'] != null ) ?>"hasMap": "https://maps.google.com/?cid=<?php echo $GLOBALS['customer_info']['cid']; ?>",
+				"priceRange": "$$",
+				<?php if ( $GLOBALS['customer_info']['pid'] ) :
+					$placeIDs = $GLOBALS['customer_info']['pid'];
+					if ( isset($placeIDs) ) :
+						$googleInfo = get_option('bp_gbp_update') ? get_option('bp_gbp_update') : array();
+
+						if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);	
+						$primePID = $placeIDs[0];
+
+						if ( $googleInfo[$primePID]['google-rating'] > 3.99 ) : ?>							
+							"aggregateRating": {
+								"@type": "AggregateRating",						
+								"ratingValue": "<?php echo number_format($googleInfo[$primePID]['google-rating'], 1, '.', ','); ?>",
+								"bestRating": "5.0",
+								"ratingCount": "<?php echo number_format($googleInfo[$primePID]['google-reviews'], 0); ?>"
+							}							
+						<?php endif;
+					endif;
+				endif; ?>
+			}
+		</script>	
 <?php //endif;
 }
 

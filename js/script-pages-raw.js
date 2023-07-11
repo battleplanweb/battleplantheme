@@ -680,6 +680,18 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 		} else {
 			$('body').addClass("screen-1").addClass("screen-mobile"); 
 		}
+		
+	// Resize video on mobile, if necessary
+		if ( thisDeviceW <= 860 ) { 
+			$('.block-video video[data-mobile-w]').each(function() {
+				var mobileW = $(this).attr('data-mobile-w'), mobileL = -((mobileW-100)/2);
+				$(this).css({'width':mobileW+'%', 'left':mobileL+'%'});
+			})
+		} else {
+			$('.block-video video[data-mobile-w]').each(function() {
+				$(this).css({ 'width':'100%', 'left':'0%' });
+			})
+		}
 				
 	// Close any open menus on mobile (when device ratio changes)
 		if ( ! $('#mobile-navigation > #mobile-menu .menu-search-box input[type="search"]').is(":focus") ) { closeMenu(); }

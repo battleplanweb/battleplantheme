@@ -205,16 +205,16 @@ function battleplan_buildImg( $atts, $content = null ) {
 // Video Block
 add_shortcode( 'vid', 'battleplan_buildVid' );
 function battleplan_buildVid( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'link'=>'', 'thumb'=>'', 'preload'=>'false', 'class'=>'', 'related'=>'false', 'start'=>'', 'end'=>'', 'fullscreen'=>'false', 'controls'=>'true', 'autoplay'=>'false', 'loop'=>'false', 'muted'=>'false', 'begin'=>'' ), $atts );
+	$a = shortcode_atts( array( 'size'=>'100', 'mobile'=>'100', 'order'=>'', 'link'=>'', 'thumb'=>'', 'preload'=>'false', 'class'=>'', 'related'=>'false', 'start'=>'', 'end'=>'', 'fullscreen'=>'false', 'controls'=>'true', 'autoplay'=>'false', 'loop'=>'false', 'muted'=>'false', 'begin'=>'' ), $atts );
 	$related = esc_attr($a['related']);	
 	$order = esc_attr($a['order']);	
 	if ( $order != '' ) : $style = " style='order: ".$order." !important'"; else: $style = ""; endif;
 	$link = esc_attr($a['link']);	
 	$thumb = esc_attr($a['thumb']);	
 	$preload = esc_attr($a['preload']);	
-	$size = esc_attr($a['size']);	
-	$size = convertSize($size);	
+	$size = convertSize(esc_attr($a['size']));	
 	$height = 56.25 * ($size/12);	
+	$mobile = esc_attr($a['mobile']);	
 	$controls = esc_attr($a['controls']);
 	$autoplay = esc_attr($a['autoplay']);
 	$loop = esc_attr($a['loop']);
@@ -222,8 +222,7 @@ function battleplan_buildVid( $atts, $content = null ) {
 	$begin = esc_attr($a['begin']);
 	$fullscreen = esc_attr($a['fullscreen']);
 	if ( $fullscreen == 'true' ) $style .= "margin: 0; ";
-	$class = esc_attr($a['class']);
-	if ( $class != '' ) $class = " ".$class;
+	$class = esc_attr($a['class']) == '' ? '' : ' '.esc_attr($a["class"]);
 	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));	
 	if ( $start || $end ) {
@@ -253,14 +252,17 @@ function battleplan_buildVid( $atts, $content = null ) {
 
 	else:
 		//return '<div class="block block-video span-'.$size.$class.'" style="'.$style.' padding-top:'.$height.'%"><iframe src="" data-src="'.$link.'" data-loading="delay" allowfullscreen></iframe></div>';
+		$extension = substr($link, strpos($link, '.') + 1);
 		$buildVid = '<div class="block block-video span-'.$size.$class.'" style="'.$style.'">';
 		$buildVid .= '<video ';
 		if ( $controls == 'true' ) $buildVid .= 'controls ';
 		if ( $autoplay == 'true' ) $buildVid .= 'autoplay ';
 		if ( $loop == 'true' ) $buildVid .= 'loop ';
 		if ( $muted == 'true' ) $buildVid .= 'muted ';
-		$buildVid .= 'poster="'.$thumb.'" style="position:relative; top:0; left:0; width:100%; height:100%">';
-		$buildVid .= '<source src="'.$link.'" type="video/mp4">';
+		$add_data = $mobile != '100' ? ' data-mobile-w="'.$mobile.'"' : '';
+	
+		$buildVid .= 'poster="'.$thumb.'" style="position:relative; top:0; left:0; width:100%; height:100%"'.$add_data.'>';
+		$buildVid .= '<source src="'.$link.'" type="video/'.$extension.'">';
 		$buildVid .= '<img loading="lazy" src="'.$thumb.'">';
 		$buildVid .= '</video></div>';
 		

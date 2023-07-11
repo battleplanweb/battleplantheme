@@ -84,7 +84,7 @@ function processChron($forceChron) {
 		$apiKey2 = "ef3a9074e001fa21f640578f699994cba854489d3ef793";
 		$wpMailSettings = get_option( 'wp_mail_smtp' );			
 		$wpMailSettings['mail']['from_email'] = 'email@admin.'.str_replace('https://', '', get_bloginfo('url'));
-		$wpMailSettings['mail']['from_name'] = strip_tags('Website Administrator · '.$GLOBALS['customer_info']['name']);
+		$wpMailSettings['mail']['from_name'] = strip_tags('Website Administrator · '.str_replace(',', '', $GLOBALS['customer_info']['name']));
 		$wpMailSettings['mail']['mailer'] = 'sendinblue';
 		$wpMailSettings['mail']['from_email_force'] = '1';
 		$wpMailSettings['mail']['from_name_force'] = '1';	
@@ -93,23 +93,20 @@ function processChron($forceChron) {
 		update_option( 'wp_mail_smtp', $wpMailSettings );
 	endif;
 	
-		$formMail['from_name'] = strip_tags($formMail['from_name']);
-	
-	
 // Contact Form 7 Settings Update
 	if ( is_plugin_active('contact-form-7/wp-contact-form-7.php') ) : 
 		$forms = get_posts( array ( 'numberposts'=>-1, 'post_type'=>'wpcf7_contact_form' ));
 		foreach ( $forms as $form ) :
 			$formID = $form->ID;
 			$formMail = readMeta( $formID, "_mail" );
-			//$formB = $formMail['body'];
 			$formTitle = get_the_title($formID);
 
 			if ( $formTitle == "Quote Request Form" ) $formTitle = "Quote Request";
 			if ( $formTitle == "Contact Us Form" ) $formTitle = "Customer Contact";		
 
 			$formMail['subject'] = $formTitle." · [user-name]";
-			$formMail['sender'] = "[user-name] <email@admin.".do_shortcode('[get-domain-name ext="true"]').">";
+			//$formMail['sender'] = "[user-name] <email@admin.".do_shortcode('[get-domain-name ext="true"]').">";
+			$formMail['sender'] = "Website Administrator · ".str_replace(',', '', $GLOBALS['customer_info']['name'])." <email@admin.".str_replace('https://', '', get_bloginfo('url')).">";
 			$formMail['additional_headers'] = "Reply-to: [user-name] <[user-email]>\nBcc: Website Administrator <email@battleplanwebdesign.com>";
 			$formMail['use_html'] = 1;
 			$formMail['exclude_blank'] = 1;

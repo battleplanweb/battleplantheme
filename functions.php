@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '20.4' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '20.5' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -1590,12 +1590,12 @@ function battleplan_addSchema() {
 			{ 
 				"@context": "http://schema.org",
 				"@type": "<?php echo $schema['business_type'] ?>",
-				"additionalType": "http://productontology.org/id/<?php echo $schema['additional_type'] ?>",
+				"additionalType": "http://productontology.org/id/<?php echo $schema['additional_type'] ?>", 
 				"name": "<?php echo $GLOBALS['customer_info']['name'] ?>",
 				"url": "<?php echo get_site_url(); ?>/",
 				"logo": "<?php echo get_site_url().'/wp-content/uploads/'.$schema['company_logo'] ?>",
 				"image": "<?php echo $imageFile ?>",
-				"description": "<?php echo str_replace(array('&#038;', '&#8217;'), array('&', "'"), get_the_excerpt()) ?>",			
+				"description": "<?php echo str_replace(array('&#038;', '&#8217;', '&#8221;', '"'), array('&', "'", "'", "'"), get_the_excerpt()) ?>",			
 				"telephone": "(<?php echo $GLOBALS['customer_info']['area'] ?>) <?php echo $GLOBALS['customer_info']['phone'] ?>",
 				"email":"<?php echo $GLOBALS['customer_info']['email'] ?>",
 				"address": {

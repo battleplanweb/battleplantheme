@@ -1368,11 +1368,11 @@ function battleplan_getFilterButton( $atts, $content = null ) {
 // Side by side images
 add_shortcode( 'side-by-side', 'battleplan_SideBySideImg' );
 function battleplan_SideBySideImg( $atts, $content = null ) {	
-	$a = shortcode_atts( array( 'img'=>'', 'size'=>'half-s', 'align'=>'center', 'full'=>'', 'pos'=>'bottom', 'break'=>'' ), $atts );	
+	$a = shortcode_atts( array( 'img'=>'', 'size'=>'half-s', 'align'=>'center', 'full'=>'', 'pos'=>'bottom', 'break'=>'none'), $atts );	
 	$size = esc_attr($a['size']);
 	$break = esc_attr($a['break']) == "none" ? ' break-none' : ' break-'.esc_attr($a['break']);
 	$align = "align".esc_attr($a['align']);
-	$images = explode(',', esc_attr($a['img']));
+	$images = explode(',', esc_attr($a['img']));	
 	
 	$buildFlex = '<ul class="side-by-side '.$align.$break.'">';
 	for ($i = 0; $i < count($images); $i++) :
@@ -1380,7 +1380,7 @@ function battleplan_SideBySideImg( $atts, $content = null ) {
 
 		list ($src, $width, $height ) = $img;
 		$class = $images[$i] == esc_attr($a['full']) ? ' class="full-'.esc_attr($a['pos']).'" ' : '';
-		if ($height > 0) $ratio = $width/$height;	
+		if ($height > 0) $ratio = $width / $height;	
 		$buildFlex .= '<li style="flex: '.$ratio.'"'.$class.'>'.wp_get_attachment_image( $images[$i], $size ).'</li>';	
 	endfor;
 	$buildFlex .= '</ul>';

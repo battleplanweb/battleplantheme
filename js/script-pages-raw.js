@@ -740,6 +740,24 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 				$('.wp-google-badge').find('.wp-google-badge-btn:nth-of-type('+rand+')').css({ 'display':'block' });
 			}	
 		}
+		
+	// Position side-by-side images that have borders, outlines, etc.
+		$('ul.side-by-side').each(function() {
+			var chk_image = $(this).find('img'), cssFilter = chk_image.css('filter'), dropShadowComponents = cssFilter.split("drop-shadow(").slice(1), chk_first, chk_second, totalWidth = 0;   
+			var chk_filter = dropShadowComponents.map(function(component) {
+				chk_first = parseFloat(component.split(" ")[3].replace(/[)-]|px/g, '')), chk_second = parseFloat(component.split(" ")[4].replace(/[)-]|px/g, ''));
+
+				if ( chk_first < 1 && chk_first > 0 ) {
+					totalWidth = totalWidth + chk_second;
+				} else {
+					totalWidth = totalWidth + chk_first;
+				}					
+			});
+
+			totalWidth = totalWidth + parseInt(chk_image.css('borderLeftWidth')) + parseInt(chk_image.css('borderRightWidth')) + parseInt(chk_image.css('outlineWidth'));
+			
+			$(this).css({"padding":totalWidth+'px', "margin-left":-(totalWidth/2)+"px"});
+		})
 	};
 
 /*--------------------------------------------------------------

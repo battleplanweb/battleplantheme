@@ -81,14 +81,14 @@ function processChron($forceChron) {
 // WP Mail SMTP Settings Update
 	if ( is_plugin_active('wp-mail-smtp/wp_mail_smtp.php') ) : 
 		$apiKey1 = "keysib";
-		$apiKey2 = "ef3a9074e001fa21f640578f699994cba854489d3ef793";
+		$apiKey2 = "a9074e001fa21f640578f699994cba854489d3ef793";
 		$wpMailSettings = get_option( 'wp_mail_smtp' );			
 		$wpMailSettings['mail']['from_email'] = 'email@admin.'.str_replace('https://', '', get_bloginfo('url'));
 		$wpMailSettings['mail']['from_name'] = strip_tags('Website Administrator · '.str_replace(',', '', $GLOBALS['customer_info']['name']));
 		$wpMailSettings['mail']['mailer'] = 'sendinblue';
 		$wpMailSettings['mail']['from_email_force'] = '1';
 		$wpMailSettings['mail']['from_name_force'] = '1';	
-		$wpMailSettings['sendinblue']['api_key'] = 'x'.$apiKey1.'-d08cc84fe45b37a420'.$apiKey2.'-AafFpD2zKkIN3SBZ';
+		$wpMailSettings['sendinblue']['api_key'] = 'x'.$apiKey1.'-d08cc84fe45b37a420ef3'.$apiKey2.'-bzWkS9dgt05KccIF';
 		$wpMailSettings['sendinblue']['domain'] = 'admin.'.str_replace('https://', '', get_bloginfo('url'));				
 		update_option( 'wp_mail_smtp', $wpMailSettings );
 	endif;

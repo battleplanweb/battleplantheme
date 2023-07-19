@@ -24,6 +24,18 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		}
 	});	
 	
+// Make slides react to arrow keypresses	
+	$(document).keydown(function(e) {
+    		if (e.keyCode === 37) {
+			$(".carousel.slider").carousel('prev');
+       		return false;
+		}
+    		if (e.keyCode === 39) {
+       	$(".carousel.slider").carousel('next');
+       	return false;
+    		}
+	});
+	
 // Set up "blurred" background
 	wrapDiv ( '.slider-images.slider-blur .img-slider', '<div class="img-holder"></div>', 'outside');
 	addDiv ('.slider-images.slider-blur .img-holder', '<div class="img-bg"></div>', 'after'); 

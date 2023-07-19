@@ -230,6 +230,7 @@ function battleplan_add_acf_fields() {
 					'Jobber' => 'Jobber',
 					'Angi' => 'Angi',
 					'Houzz' => 'Houzz',
+					'Home_advisor' => 'Home Advisor',
 					'BBB' => 'BBB',
 				),
 				'other_choice' => 0,

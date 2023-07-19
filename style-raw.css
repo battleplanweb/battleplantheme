@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 20.4
+Version: 20.5
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -3709,7 +3709,6 @@ ul.side-by-side {
 	display: 										flex; 
 	flex-flow:									row wrap; 
 	list-style: 									none;
-
 	padding: 										0;
 	gap: 										2em;
 }
@@ -3965,6 +3964,11 @@ img.img-404 {
 
 .testimonials-platform-houzz {
 	background:									url('../battleplantheme/common/logos/houzz.png');
+	background-size:								contain;
+}
+
+.testimonials-platform-home_advisor {
+	background:									url('../battleplantheme/common/logos/home_advisor.png');
 	background-size:								contain;
 }
 
@@ -4306,6 +4310,7 @@ dl.col-gallery {
 .accordion-box .block-accordion:hover h2, 
 .accordion-box .block-accordion h2.tab-focus { 
 	background:									var(--black-lowest);
+
 
 
 }
@@ -5840,7 +5845,6 @@ html.error503 h3 {
 	
 	ul.side-by-side.break-2 {
 		flex-flow: 									column;
-		gap: 										1.6em;
 	}
 			
 	/* Row of Pics */ /* changed from .col to .col-row-of-pics 1/5/21 for Bubba's Cooks Country */
@@ -6192,16 +6196,14 @@ html.error503 h3 {
 	/* Media */
 	ul.side-by-side:not(.break-none) {
 		flex-flow: 									column;
-		gap: 										1.6em;
 	}
 	
 	ul.side-by-side.break-none {
-		gap: 										1.2em;
+		/*gap: 										1.2em; removed 7/17/23 when the javascript code added to calculate border width and adjust positioning */
 	}
 	
 	ul.side-by-side li.full-top,
 	ul.side-by-side li.full-bottom {
-
 		margin: 									0 !important;
 	}
 	

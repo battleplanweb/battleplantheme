@@ -9,7 +9,8 @@
 add_action( 'wp_ajax_update_meta', 'battleplan_update_meta_ajax' );
 add_action( 'wp_ajax_nopriv_update_meta', 'battleplan_update_meta_ajax' );
 function battleplan_update_meta_ajax() {
-
+	$type = $_POST['type'];	
+	$key = $_POST['key'];	
 	$value = $_POST['value'];
 	$clear = $_POST['clear'];
 	$keyArray = explode(", ", $key);	

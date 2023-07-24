@@ -37,7 +37,10 @@ function battleplan_check_user_ajax() {
 
 	if ( _USER_LOGIN != "battleplanweb" && _IS_BOT != true ) :
 		updateOption('last_visitor_time', strtotime(date("F j, Y g:i a"))); 
-		//$response = 'Counting a user from '.$location.', which is '.$distance.' miles from the business.';
+		$response = 'Counting a user from '.$location.', which is '.$distance.' miles from the business.';
+	else: 
+		$response = 'Non-counted visitor from '.$location.', which is '.$distance.' miles from the business.';
 	endif;
+	wp_send_json( $response );
 }
 ?>

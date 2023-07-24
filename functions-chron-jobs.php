@@ -25,37 +25,59 @@ function battleplan_delete_prefixed_options( $prefix ) {
 	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
 }	
 
-if ( get_option('bp_setup_2023_03_25z') != "completed" ) :
-	battleplan_delete_prefixed_options( 'bp_setup_' );	
-	battleplan_delete_prefixed_options( 'bbb_' );
-	
-	$ccv = get_option('content-column-views') != null ? get_option('content-column-views') : null;
-	updateOption( 'content-column-views', $ccv, false );
-	
-	delete_option('ari_fancy_lightbox_settings');
-	
-	//battleplan_delete_prefixed_options( 'wdp_' );
-	//if ( $customerInfo['site-type'] != 'profile' ) delete_option('site_login');
+if ( get_option('bp_setup_2023_07_23') != "completed" ) :
 
-	// Deactivate and uninstall specific plugin
-	add_action('after_setup_theme', 'bp_deactivate_uninstall_plugin');
-	function bp_deactivate_uninstall_plugin() {
-		$plugin_path = 'blackhole-bad-bots/blackhole.php';
+ 	$args = array(
+        	'post_type'      => 'optimized',
+        	'posts_per_page' => -1,
+    	);
 
-		if (is_plugin_active($plugin_path)) :
-			deactivate_plugins($plugin_path);
-			if (!is_plugin_active($plugin_path)) :
-				if (file_exists(WP_PLUGIN_DIR . '/' . $plugin_path)) :
-					require_once ABSPATH . 'wp-admin/includes/plugin.php';
-					require_once ABSPATH . 'wp-admin/includes/file.php';
-					uninstall_plugin($plugin_path);
-					delete_plugins(array($plugin_path));
-				endif;
-			endif;
-		endif;
-	}
+    	$optimized_posts = get_posts( $args );
 
-	updateOption( 'bp_setup_2023_03_25z', 'completed', false );			
+    	if ( $optimized_posts ) {
+        	foreach ( $optimized_posts as $post ) {
+            	$new_post = array(
+                	'post_title'   => $post->post_title,
+                	'post_content' => $post->post_content,
+                	'post_status'  => 'publish',
+                	'post_type'    => 'landing',
+            	);
+
+            	$new_post_id = wp_insert_post( $new_post );
+
+            	// Copy meta information (if any)
+            	$post_meta = get_post_meta( $post->ID );
+            	if ( $post_meta ) {
+                	foreach ( $post_meta as $meta_key => $meta_values ) {
+                    	foreach ( $meta_values as $meta_value ) {
+                        		add_post_meta( $new_post_id, $meta_key, $meta_value );
+                    	}
+                	}
+            	}
+
+            	// Copy featured image (if any)
+            	if ( has_post_thumbnail( $post->ID ) ) {
+                	$thumbnail_id = get_post_thumbnail_id( $post->ID );
+                	set_post_thumbnail( $new_post_id, $thumbnail_id );
+            	}
+        	}
+    	}	
+
+	$args = array(
+        	'post_type'      => 'optimized',
+        	'posts_per_page' => -1,
+        	'fields'         => 'ids',
+    	);
+
+    	$optimized_posts = get_posts( $args );
+
+    	if ( $optimized_posts ) {
+        	foreach ( $optimized_posts as $post_id ) {
+            	wp_delete_post( $post_id, true ); // Set to true to move posts to Trash, false to permanently delete.
+        	}
+    	}
+
+	updateOption( 'bp_setup_2023_07_23', 'completed', false );			
 endif;
 
 //if ( get_option('bp_setup_2022_11_09') != "completed" ) :
@@ -80,19 +102,32 @@ function processChron($forceChron) {
 		
 // WP Mail SMTP Settings Update
 	if ( is_plugin_active('wp-mail-smtp/wp_mail_smtp.php') ) : 
+		$site = str_replace('https://', '', get_bloginfo('url'));	
+	
+		if ( $site == "sweetiepiesribeyes.com" || $site == "bubbascookscountry.com" ) :	
+			$apiKey2 = "-b916aeccb98bf3fcca73";
+			$apiKey3 = "a606526cefdf92084ce7a9048d5cf734124e09f9bb26";
+			$apiKey4 = "-YcYFamx5FrGvCxXe";
+			$wpMailSettings['mail']['from_email'] = 'customer@website.'.$site;
+			$wpMailSettings['sendinblue']['domain'] = 'website.'.$site;				
+		else :	
+			$apiKey2 = "-d08cc84fe45b37a420ef3";
+			$apiKey3 = "a9074e001fa21f640578f699994cba854489d3ef793";
+			$apiKey4 = "-bzWkS9dgt05KccIF";
+			$wpMailSettings['mail']['from_email'] = 'email@admin.'.$site;
+			$wpMailSettings['sendinblue']['domain'] = 'admin.'.$site;				
+		endif;
+		
 		$apiKey1 = "keysib";
-		$apiKey2 = "a9074e001fa21f640578f699994cba854489d3ef793";
 		$wpMailSettings = get_option( 'wp_mail_smtp' );			
-		$wpMailSettings['mail']['from_email'] = 'email@admin.'.str_replace('https://', '', get_bloginfo('url'));
 		$wpMailSettings['mail']['from_name'] = strip_tags('Website Administrator · '.str_replace(',', '', $GLOBALS['customer_info']['name']));
 		$wpMailSettings['mail']['mailer'] = 'sendinblue';
 		$wpMailSettings['mail']['from_email_force'] = '1';
 		$wpMailSettings['mail']['from_name_force'] = '1';	
-		$wpMailSettings['sendinblue']['api_key'] = 'x'.$apiKey1.'-d08cc84fe45b37a420ef3'.$apiKey2.'-bzWkS9dgt05KccIF';
-		$wpMailSettings['sendinblue']['domain'] = 'admin.'.str_replace('https://', '', get_bloginfo('url'));				
+		$wpMailSettings['sendinblue']['api_key'] = 'x'.$apiKey1.$apiKey2.$apiKey3.$apiKey4;
 		update_option( 'wp_mail_smtp', $wpMailSettings );
 	endif;
-	
+		
 // Contact Form 7 Settings Update
 	if ( is_plugin_active('contact-form-7/wp-contact-form-7.php') ) : 
 		$forms = get_posts( array ( 'numberposts'=>-1, 'post_type'=>'wpcf7_contact_form' ));

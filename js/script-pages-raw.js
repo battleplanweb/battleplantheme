@@ -355,8 +355,8 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 	}
 
 // Set optimized page as new home page
-	if ( $('body').hasClass('single-optimized') ) {
-		var get_optimized_loc = location.pathname + location.search, new_home = get_optimized_loc.replace(/\//g, "");		
+	if ( $('body').hasClass('alt-home') ) {
+		var get_alt_loc = location.pathname + location.search, new_home = get_alt_loc.replace(/\//g, "");		
 		setCookie('home-url', new_home);
 	}
 	

@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 20.5.2
+Version: 20.6
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -2389,6 +2389,8 @@ body.locked {
 }
 
 #desktop-navigation li {
+
+
 	flex-grow:									1;
 }
 
@@ -3105,6 +3107,8 @@ a.prev i.fa {
 }
 
 .navigation.single .nav-links .nav-next {
+
+
 	text-align: 									right;
 	justify-content:								flex-end;
 }
@@ -4664,6 +4668,7 @@ span.descriptionText {
 }
 
 /*--------------------------------------------------------------
+
 # Plugins
 --------------------------------------------------------------*/
 
@@ -4975,6 +4980,7 @@ chat-widget .lc_text-widget--btn,
 	flex-wrap:									wrap;
     padding-left: 								5%;
    	padding-right: 								5%;
+
 	margin:										var(--measure-small) 0;
     list-style: 								none;
 }
@@ -5806,6 +5812,7 @@ html.error503 h3 {
 	
 	.flex.break-2 .col {
 		/*grid-column: 								span 2; */
+
 		grid-column: 								1/-1;  /* 7/22/22 - Sherrell Air, any site that uses layout="1fr 320px 1fr" or more than 2 columns */
 	}
 	
@@ -6189,8 +6196,18 @@ html.error503 h3 {
 	
 	/* Testimonials */
 	.block-image.image-testimonials.testimonials-generic-icon {
-		width: 										90%;
+		width: 										100%;
 		margin: 										0 auto;
+	}		
+	
+	.slider-testimonials img.img-testimonials,
+	.slider-testimonials .img-frame, 
+	.slider-testimonials .inset-shadow {
+		max-width: 									70vw;
+	}
+	
+	.testimonials-generic-icon .anonymous-icon {
+		max-width: 									60vw;
 	}
 	
 	/* Media */
@@ -6231,12 +6248,6 @@ html.error503 h3 {
 	
 	.flex .col.col-row-of-pics {
 		grid-column: 								span 1;
-	}
-	
-	.slider-testimonials img.img-testimonials,
-	.slider-testimonials .img-frame, 
-	.slider-testimonials .inset-shadow {
-		max-width: 									70vw;
 	}
 			
 	/* Videos */
@@ -6312,6 +6323,7 @@ html.error503 h3 {
 	.hide-desktop {
 		display:									none !important;
 	}
+
 }
 
 @media screen and (min-width: 1025px) and (max-width: 1280px) {

@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				itemH = thisItem.outerHeight(true);
 				thisItem.removeClass('calculating');
 				if ( itemH > maxH ) { 
-					maxH = Math.ceil(itemH * 1.2); 
+					maxH = Math.ceil(itemH * 1.0); 
 				}		
 			});
 			thisCarousel.find(".carousel-inner").css("height", maxH+"px");	 

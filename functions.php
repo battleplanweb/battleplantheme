@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '20.5.2' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '20.6' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -87,6 +87,23 @@ if ( !array_key_exists('pid-sync', $GLOBALS['customer_info'] ) ) $GLOBALS['custo
 if ( !array_key_exists('lat', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['lat'] = null;
 if ( !array_key_exists('long', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['long'] = null;
 if ( !array_key_exists('schema', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['schema'] = 'false';
+
+if ( !defined('_USER_LOCATION') ) :
+	$cities = array('1026171'=>'Addison, TX', '1020242'=>'Carrollton, TX', '9051933'=>'Farmers Branch, TX', '1019935'=>'Lewisville, TX', '1022561'=>'Mesquite, TX', '1016775'=>'Plano, TX', '1026729'=>'Richardson, TX', '1026741'=>'Rockwall, TX', '1026750'=>'Rowlett, TX', '1026751'=>'Royse City, TX', '1026755'=>'Sachse, TX', '1026899'=>'Wylie, TX');
+	$location = 'none';
+
+	foreach( $_GET as $key => $value ) :		
+		if ( $key == "loc" && array_key_exists($value, $cities)) $location = $cities[$value];
+		if ( $key == "int" && array_key_exists($value, $cities)) $location = $cities[$value];
+	endforeach;
+
+	$title = get_the_title();	 
+	if ( preg_match('/, [A-Z]{2}$/', get_the_title()) === 1 ) :
+		$location = get_the_title();
+	endif;	 
+
+	define( '_USER_LOCATION', $location );
+endif;
 
 /*--------------------------------------------------------------
 # Functions to extend WordPress 
@@ -233,7 +250,7 @@ function updateOption($option, $value, $autoload=null) {
 function getCPT() {
 	$getCPT = get_post_types();  
 	$removeCPT = array('acf-field', 'acf-field-group', 'asp_coupons', 'asp-products', 'attachment', 'customize_changeset', 'custom_css', 'elements', 'nav_menu_item', 'oembed_cache', 'revision', 'stripe_order', 'user_request', 'wpcf7_contact_form', 'wp_block', 'wp_global_styles', 'wphb_minify_group', 'wp_navigation', 'wp_template', 'wp_template_part');
-	$moveCPTs = array ('optimized', 'page', 'universal');
+	$moveCPTs = array ('optimized', 'landing', 'page', 'universal');
 	
 	foreach ($removeCPT as $remove) unset($getCPT[$remove]);
 	
@@ -489,8 +506,11 @@ function battleplan_CheckRemoveSidebar( $classes ) {
 // If post is an "optimized" page, add .home to body class for CSS purposes
 add_filter( 'body_class', 'battleplan_addHomeBodyClassToOptimized', 70 );
 function battleplan_addHomeBodyClassToOptimized( $classes ) {
-	if ( get_post_type() == "optimized" ) array_push($classes, 'home');
-	return $classes;	
+	if ( get_post_type() == "optimized" ) array_push($classes, 'home', 'alt-home');
+	
+	if ( get_post_type() == "landing" && preg_match ('/, [A-Z]{2}$/', get_the_title() ) === 1 ) array_push($classes, 'home', 'alt-home');
+	
+	return $classes;
 }
 
 // If search page, remove .home from body class
@@ -1452,7 +1472,9 @@ function battleplan_current_type_nav_class($classes, $item) {
 	if ($item->attr_title != '' && $item->attr_title == $post_type) array_push($classes, 'current-menu-item');
 	
 	// Highlight HOME button if any of the Optimized pages are viewed
-	if ( $post_type == 'optimized' && ( $item->url == get_home_url() || $item->url == get_home_url().'/' )) array_push($classes, 'current-menu-item');	
+	if ( $post_type == 'optimized' && preg_match ('/, [A-Z]{2}$/', get_the_title() ) === 1 && ( $item->url == get_home_url() || $item->url == get_home_url().'/' )) array_push($classes, 'current-menu-item');	
+	
+	if ( $post_type == 'landing' && preg_match ('/, [A-Z]{2}$/', get_the_title() ) === 1 && ( $item->url == get_home_url() || $item->url == get_home_url().'/' )) array_push($classes, 'current-menu-item');	
 	
 	return $classes;
 }
@@ -1488,6 +1510,10 @@ $optimizedTopMeta = new Metabox_Constructor(array( 'id' => 'page-top', 'title' =
 $optimizedTopMeta->addWysiwyg(array( 'id' => 'page-top_text', 'label' => '' ));
 $optimizedBottomMeta = new Metabox_Constructor(array( 'id' => 'page-bottom', 'title' => 'Page Bottom', 'screen' => 'optimized', 'context' => 'normal', 'priority' => 'high' ));
 $optimizedBottomMeta->addWysiwyg(array( 'id' => 'page-bottom_text', 'label' => '' ));
+$landingTopMeta = new Metabox_Constructor(array( 'id' => 'page-top', 'title' => 'Page Top', 'screen' => 'landing', 'context' => 'normal', 'priority' => 'high' ));
+$landingTopMeta->addWysiwyg(array( 'id' => 'page-top_text', 'label' => '' ));
+$landingBottomMeta = new Metabox_Constructor(array( 'id' => 'page-bottom', 'title' => 'Page Bottom', 'screen' => 'landing', 'context' => 'normal', 'priority' => 'high' ));
+$landingBottomMeta->addWysiwyg(array( 'id' => 'page-bottom_text', 'label' => '' ));
 
 // Display Google review rating
 add_action('wp_footer', 'battleplan_getGoogleRating');
@@ -1636,9 +1662,10 @@ function battleplan_addSchema() {
 						}
 					}
 				},
-				<?php if ( isset($GLOBALS['customer_info']['cid']) && $GLOBALS['customer_info']['cid'] != '' && $GLOBALS['customer_info']['cid'] != null ) ?>"hasMap": "https://maps.google.com/?cid=<?php echo $GLOBALS['customer_info']['cid']; ?>",
-				"priceRange": "$$",
-				<?php if ( $GLOBALS['customer_info']['pid'] ) :
+				<?php if ( strlen($GLOBALS['customer_info']['cid']) > 1 ) : ?>
+					"hasMap": "https://maps.google.com/?cid=<?php echo $GLOBALS['customer_info']['cid']; ?>",
+				<?php endif;
+				if ( $GLOBALS['customer_info']['pid'] ) :
 					$placeIDs = $GLOBALS['customer_info']['pid'];
 					if ( isset($placeIDs) ) :
 						$googleInfo = get_option('bp_gbp_update') ? get_option('bp_gbp_update') : array();
@@ -1652,10 +1679,11 @@ function battleplan_addSchema() {
 								"ratingValue": "<?php echo number_format($googleInfo[$primePID]['google-rating'], 1, '.', ','); ?>",
 								"bestRating": "5.0",
 								"ratingCount": "<?php echo number_format($googleInfo[$primePID]['google-reviews'], 0); ?>"
-							}							
+							},							
 						<?php endif;
 					endif;
-				endif; ?>
+				endif; ?>				
+				"priceRange": "$$"
 			}
 		</script>	
 <?php //endif;
@@ -1776,7 +1804,7 @@ function battleplan_load_tag_manager() {
 	if ( isset($GLOBALS['customer_info']['google-tags']) && is_array($GLOBALS['customer_info']['google-tags']) ) :
 
 		foreach ( $GLOBALS['customer_info']['google-tags'] as $gtag=>$value ) :	
-			if ( $gtag == "analytics" ) : if ( _USER_LOGIN != 'battleplanweb' && _IS_BOT != true ) : $mainAcct = $value; endif; endif;
+			if ( $gtag == "analytics" && _USER_LOGIN != 'battleplanweb' && _IS_BOT != true ) $mainAcct = $value;
 			if ( $gtag == "analytics" || $gtag == "ads" || $gtag == "searchkings" ) $buildTags .= 'gtag("config", "'.$value.'");';				
 			if ( strpos($gtag, 'conversions' ) !== false ) :
 				if ( $gtag == "conversions" ) : 

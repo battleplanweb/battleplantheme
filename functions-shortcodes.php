@@ -338,9 +338,16 @@ function battleplan_getServiceAreas($atts, $content = null) {
 			if ( array_key_exists( strtolower($city[1]), $states) ) $buildCity .= ', '.$states[strtolower($city[1])];
 			$cities[$buildCity] = '';
 		endforeach;
-	endif;	
-	foreach ( get_posts( array ( 'numberposts'=>-1, 'post_type'=>'optimized' ) ) as $post ) $cities[$post->post_title] = get_permalink( $post->ID );
-
+	endif;
+	
+	foreach ( get_posts( array ( 'numberposts'=>-1, 'post_type'=>'optimized' ) ) as $post ) :
+		if ( preg_match ('/, [A-Z]{2}$/', $post->post_title) === 1 ) $cities[$post->post_title] = get_permalink( $post->ID );
+	endforeach;
+	
+	foreach ( get_posts( array ( 'numberposts'=>-1, 'post_type'=>'landing' ) ) as $post ) :
+		if ( preg_match ('/, [A-Z]{2}$/', $post->post_title) === 1 ) $cities[$post->post_title] = get_permalink( $post->ID );
+	endforeach;
+	
 	$buildLinks = '';
 	foreach ( $cities as $serviceArea=>$areaLink ) :
 		$buildLinks .= '<li>';
@@ -1406,7 +1413,7 @@ add_filter('single_template', 'battleplan_usePageTemplate', 10, 1 );
 function battleplan_usePageTemplate( $original ) {
 	global $post;
 	$post_type = $post->post_type;
-	if ( $post_type == "optimized" || $post_type == "universal" ) return locate_template('page.php');
+	if ( $post_type == "optimized" || $post_type == "landing" || $post_type == "universal" ) return locate_template('page.php');
 	return $original;
 }
 
@@ -1489,4 +1496,33 @@ function battleplan_getRSS( $atts, $content = null ) {
 	 	 
 	 return $buildCountUp;
 }
+
+// Insert the city / state of either company address, or the city-specific landing page
+ add_shortcode("get-location", "battleplan_getLocation");
+ function battleplan_getLocation($atts, $content) {
+	 $a = shortcode_atts( array( 'state'=>'true', 'default'=>'', 'before'=>'', 'after'=>'' ), $atts );
+	 $default = esc_attr($a['default']);	
+	 $before = esc_attr($a['before']);	
+	 $after = esc_attr($a['after']);	
+	 $location = _USER_LOCATION;
+	 if ( $location == 'none' && $default != '' ) return $default;
+	 if ( $location == 'none' && $default == '' ) $location = $GLOBALS['customer_info']['city'].', '.$GLOBALS['customer_info']['state-abbr'];
+	 return esc_attr($a['state']) == "true" ? $before.$location.','.$after : $before.strstr($location, ',', true).$after;
+}
+
+// Copy the section from the home page, or any other defined page
+ add_shortcode("copy-content", "battleplan_copyContent");
+ function battleplan_copyContent($atts, $content) { 
+	 $a = shortcode_atts( array( 'slug'=>'home', 'section'=>'' ), $atts );
+	 $slug = esc_attr($a['slug']) == 'home' ? get_option('page_on_front') : url_to_postid(esc_attr($a['slug']));
+	 $section = strtolower(esc_attr($a['section']));
+	 
+	 if ( $section == 'page top' || $section == 'page-top' || $section == 'top' || $section == 'wrapper-top') : $section_content = get_post_meta($slug, 'page-top_text', true);
+	 elseif ( $section == 'page bottom' || $section == 'page-bottom' || $section == 'bottom' || $section == 'wrapper-bottom') : $section_content = get_post_meta($slug, 'page-bottom_text', true);
+	 else: $section_content = get_post_field('post_content', $slug); endif;
+	 
+	 return apply_filters('the_content', $section_content);	 
+}
+
+	
 ?>

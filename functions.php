@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '20.6' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '20.7' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -64,7 +64,6 @@ $GLOBALS['customer_info'] = get_option('customer_info') ? get_option('customer_i
 $currYear=date("Y"); 
 $startYear = $GLOBALS['customer_info']['year'] ? $GLOBALS['customer_info']['year'] : 0;
 $GLOBALS['customer_info']['copyright'] = $startYear == $currYear ? "© ".$currYear : "© ".$startYear."-".$currYear; 
-$GLOBALS['site-loc'] = 1;	
 $GLOBALS['do_not_repeat'] = array(); 	
 if ( !array_key_exists('copyright', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['copyright'] = '';
 if ( !array_key_exists('name', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['name'] = '';
@@ -88,19 +87,44 @@ if ( !array_key_exists('lat', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_i
 if ( !array_key_exists('long', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['long'] = null;
 if ( !array_key_exists('schema', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['schema'] = 'false';
 
+if ( !array_key_exists('default-loc', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['default-loc'] = $GLOBALS['customer_info']['city'].', '.$GLOBALS['customer_info']['state-abbr'];
+
 if ( !defined('_USER_LOCATION') ) :
-	$cities = array('1026171'=>'Addison, TX', '1020242'=>'Carrollton, TX', '9051933'=>'Farmers Branch, TX', '1019935'=>'Lewisville, TX', '1022561'=>'Mesquite, TX', '1016775'=>'Plano, TX', '1026729'=>'Richardson, TX', '1026741'=>'Rockwall, TX', '1026750'=>'Rowlett, TX', '1026751'=>'Royse City, TX', '1026755'=>'Sachse, TX', '1026899'=>'Wylie, TX');
+	$cities = array('1026171'=>'Addison, TX', '1026178'=>'Allen, TX', '1026187'=>'Anna, TX', '1026200'=>'Aubrey, TX', '1020242'=>'Carrollton, TX', '1026349'=>'Denison, TX', '9051926'=>'Fairview, TX', '9051933'=>'Farmers Branch, TX', '1026407'=>'Frisco, TX', '1026482'=>'Howe, TX', '1019935'=>'Lewisville, TX', '9052357'=>'Lucas, TX', '1026607'=>'McKinney, TX', '1026611'=>'Melissa, TX', '1022561'=>'Mesquite, TX', '9052495'=>'Murphy, TX', '1016775'=>'Plano, TX', '1026710'=>'Pottsboro, TX', '1026729'=>'Richardson, TX', '1026741'=>'Rockwall, TX', '1026750'=>'Rowlett, TX', '1026751'=>'Royse City, TX', '1026755'=>'Sachse, TX', '1026788'=>'Sherman, TX', '1026885'=>'Whitesboro, TX', '1026899'=>'Wylie, TX');
+
 	$location = 'none';
 
-	foreach( $_GET as $key => $value ) :		
-		if ( $key == "loc" && array_key_exists($value, $cities)) $location = $cities[$value];
-		if ( $key == "int" && array_key_exists($value, $cities)) $location = $cities[$value];
-	endforeach;
+	// Google Ads > Location specific landing page > cookie
 
-	$title = get_the_title();	 
-	if ( preg_match('/, [A-Z]{2}$/', get_the_title()) === 1 ) :
-		$location = get_the_title();
-	endif;	 
+	// Does this user come from a Google Ad?
+	foreach( $_GET as $key => $value ) :		
+		if ( ( $key == "loc" || $key == "int" ) && array_key_exists($value, $cities)) $location = $cities[$value];
+		if ( $key == "loc" || $key == "int" ) :
+ 			$saveLocInfo = get_option('bp_loc_info') ? get_option('bp_loc_info') : array();
+			array_push($saveLocInfo, $value);
+			updateOption('bp_loc_info', $saveLocInfo, false);
+		endif;
+	endforeach;
+	
+	$page_slug = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/'); 
+	if ( $location == "none" && ( preg_match('/-[a-z]{2}$/', $page_slug) === 1 || isset($_COOKIE['site-loc']) ) ) :
+		if ( preg_match('/-[a-z]{2}$/', $page_slug) === 1 ) :
+			$pieces = explode(' ', ucwords(str_replace('-', ' ', $page_slug))); // Is this a location specific landing page?
+		else:
+			$pieces = explode(' ', ucwords(str_replace('-', ' ', $_COOKIE['site-loc']))); // Has this user already had location set?
+		endif;
+		$state = strtoupper(substr(end($pieces), -2));
+		array_pop($pieces);
+		$city = implode(' ', $pieces);
+		$location = $city.', '.$state;
+	endif;
+
+	if ( $location != "none" ) :
+		$site_loc = strtolower(str_replace(array(', ', ' '), array('-', '-'), $location));
+		?><script nonce="<?php echo _BP_NONCE; ?>" type="text/javascript">var site_loc = '<?php echo $site_loc; ?>';</script><?php 
+	else:
+		?><script nonce="<?php echo _BP_NONCE; ?>" type="text/javascript">var site_loc = null;</script><?php 
+	endif;
 
 	define( '_USER_LOCATION', $location );
 endif;

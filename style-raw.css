@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 20.6
+Version: 20.7
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -261,6 +261,21 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --button-font-variant-hover-alt: 				var(--button-font-variant-alt);
   --button-letter-spacing-hover-alt: 				var(--button-letter-spacing-alt);
   --button-transition-hover-alt: 					var(--button-transition-alt);
+	
+  --break-out-width: 							100%;
+  --break-out-max-width: 						960px;
+  --break-out-background: 						var(--black-lowest);
+  --break-out-border-top:						2px solid var(--black);
+  --break-out-border-bottom:						2px solid var(--black);
+  --break-out-border-right:						none; 
+  --break-out-border-left:						none;
+  --break-out-padding: 							1.5em 2.5em;
+  --break-out-margin: 							2.5em auto;
+  --break-out-box-shadow: 						none;
+  --break-out-border-radius: 						0;
+  --break-out-outline: 							none;
+  --break-out-filter: 							none;
+  --break-out-transition: 						all var(--main-trans-speed) var(--main-trans-easing);
   
   --locked-color: 								var(--white);
   --locked-background: 							var(--black-high);
@@ -274,7 +289,7 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --close-btn-color-hover:						var(--button-color-hover);
   --close-btn-background-hover: 					var(--button-background-hover);
   --close-btn-border-hover: 						var(--button-border-hover);
-  
+	
   --font-size-text: 							18px;
   --font-size-big: 	 							132%;
   --font-size-small: 							77%;
@@ -2025,7 +2040,7 @@ a#bbblink {
 
 /* Sections
 --------------------------------------------- */
-.section.section-inline {
+.section.section-inline:not(.break-out) {
 	margin-top:									var(--measure-base);
 	margin-bottom:									var(--measure-base);
 }
@@ -2213,6 +2228,26 @@ body.locked {
 	}
 }
 
+/* Break Out */
+.break-out,
+section.break-out,
+section.section.break-out {		
+	width: 										var(--break-out-width);
+	max-width: 									var(--break-out-max-width);
+	background: 									var(--break-out-background);
+	border-top: 									var(--break-out-border-top);
+	border-right: 									var(--break-out-border-right);
+	border-bottom:									var(--break-out-border-bottom);
+	border-left: 									var(--break-out-border-left);
+	border-radius:									var(--break-out-border-radius);
+	box-shadow:									var(--break-out-box-shadow);
+	padding: 										var(--break-out-padding);
+	margin: 										var(--break-out-margin);
+  	outline: 										var(--break-out-outline);
+  	filter: 										var(--break-out-filter);
+	transition:									var(--break-out-transition);
+}
+
 /* Footer
 --------------------------------------------- */
 #colophon {
@@ -2389,6 +2424,7 @@ body.locked {
 }
 
 #desktop-navigation li {
+
 
 
 	flex-grow:									1;
@@ -6239,6 +6275,7 @@ html.error503 h3 {
 	.grid-4e li:nth-last-child(2),
 	.grid-5e li:nth-last-child(3),
 	.grid-6e li:nth-last-child(4),
+
 	.grid-7e li:nth-last-child(5),
 	.grid-8e li:nth-last-child(6) {
 

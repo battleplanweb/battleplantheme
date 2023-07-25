@@ -1375,13 +1375,14 @@ function battleplan_getFilterButton( $atts, $content = null ) {
 // Side by side images
 add_shortcode( 'side-by-side', 'battleplan_SideBySideImg' );
 function battleplan_SideBySideImg( $atts, $content = null ) {	
-	$a = shortcode_atts( array( 'img'=>'', 'size'=>'half-s', 'align'=>'center', 'full'=>'', 'pos'=>'bottom', 'break'=>'none'), $atts );	
+	$a = shortcode_atts( array( 'img'=>'', 'size'=>'half-s', 'align'=>'center', 'full'=>'', 'pos'=>'bottom', 'break'=>'none', 'class'=>''), $atts );	
 	$size = esc_attr($a['size']);
+	$class = esc_attr($a['class']) == '' ? '' : ' '.esc_attr($a['class']);
 	$break = esc_attr($a['break']) == "none" ? ' break-none' : ' break-'.esc_attr($a['break']);
-	$align = "align".esc_attr($a['align']);
+	$align = "align".esc_attr($a['align']);	
 	$images = explode(',', esc_attr($a['img']));	
 	
-	$buildFlex = '<ul class="side-by-side '.$align.$break.'">';
+	$buildFlex = '<ul class="side-by-side '.$class.$align.$break.'">';
 	for ($i = 0; $i < count($images); $i++) :
 		$img = wp_get_attachment_image_src( $images[$i], $size );
 
@@ -1500,14 +1501,15 @@ function battleplan_getRSS( $atts, $content = null ) {
 // Insert the city / state of either company address, or the city-specific landing page
  add_shortcode("get-location", "battleplan_getLocation");
  function battleplan_getLocation($atts, $content) {
-	 $a = shortcode_atts( array( 'state'=>'true', 'default'=>'', 'before'=>'', 'after'=>'' ), $atts );
+	 $a = shortcode_atts( array( 'state'=>'true', 'default'=>'blank', 'before'=>'', 'after'=>'' ), $atts );
 	 $default = esc_attr($a['default']);	
 	 $before = esc_attr($a['before']);	
 	 $after = esc_attr($a['after']);	
 	 $location = _USER_LOCATION;
-	 if ( $location == 'none' && $default != '' ) return $default;
-	 if ( $location == 'none' && $default == '' ) $location = $GLOBALS['customer_info']['city'].', '.$GLOBALS['customer_info']['state-abbr'];
-	 return esc_attr($a['state']) == "true" ? $before.$location.','.$after : $before.strstr($location, ',', true).$after;
+	 if ( $location == 'none' && $default != 'blank' ) return $default;
+	 if ( $location == 'none' ) $location = $GLOBALS['customer_info']['default-loc'];	 
+	 if ( preg_match('/,\s*[A-Z]{2}$/', $location) === 1 && esc_attr($a['state']) != "true" ) $location = strstr($location, ',', true);
+	 return $before.$location.$after;
 }
 
 // Copy the section from the home page, or any other defined page

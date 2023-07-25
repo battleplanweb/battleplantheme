@@ -354,16 +354,22 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 		setCookie('pages-viewed', page_views);
 	}
 
-// Set optimized page as new home page
+// Set city-specific landing page as home-url cookig
 	if ( $('body').hasClass('alt-home') ) {
 		var get_alt_loc = location.pathname + location.search, new_home = get_alt_loc.replace(/\//g, "");		
 		setCookie('home-url', new_home);
 	}
 	
+// Set city-specific landing page as new home page
 	if ( getCookie('home-url') ) { 	
 		$('a[href="'+window.location.origin+'"], a[href="'+window.location.origin+'/"]').each(function() {
 			$(this).attr("href", window.location.origin + "/" + getCookie('home-url') );	
 		});
+	}
+	
+// Set Google Ads landing page as site-loc cookie
+	if ( site_loc != null ) {
+		setCookie('site-loc', site_loc);
 	}	
 
 // Augment URLs with location data, if multi-location site

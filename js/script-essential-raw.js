@@ -396,13 +396,17 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 //Find screen position of element
 	window.getPosition = function (container, neededPos, scope) {
 		scope = scope || 'window';	
-		var theContainer = $(container), getLeft, getTop, conW, conH, getBottom, getRight, getCenterX, getCenterY;		
+		var theContainer = $(container), theScope = $(scope), getLeftOffset, getTopOffset, getLeft, getTop, conW, conH, getBottom, getRight, getCenterX, getCenterY;		
 		if ( scope == 'window' || scope == "screen" ) {
-			getLeft = theContainer.offset().left; 
-			getTop = theContainer.offset().top; 
+			getLeftOffset = theContainer.offset(); 
+			getTopOffset = theContainer.offset(); 			
+			getLeft = getLeftOffset.left; 
+			getTop = getTopOffset.top; 
 		} else {
-			getLeft = theContainer.position().left; 
-			getTop = theContainer.position().top; 
+			getLeftOffset = theScope.position(); 
+			getTopOffset = theScope.position(); 			
+			getLeft = getLeftOffset.left; 
+			getTop = getTopOffset.top; 
 		}
 		conW = theContainer.outerWidth(true);
 		conH = theContainer.outerHeight(true);		
@@ -416,7 +420,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		if ( neededPos == "bottom" || neededPos == "b") { return getBottom; }
 		if ( neededPos == "right" || neededPos == "r") { return getRight; }		
 		if ( neededPos == "centerX" || neededPos == "centerx" || neededPos == "center-x" ) { return getCenterX; }		
-		if ( neededPos == "centerY" || neededPos == "centery" || neededPos == "center-y" ) { return getCenterY; }		
+		if ( neededPos == "centerY" || neededPos == "centery" || neededPos == "center-y" ) { return getCenterY; }	
 	};
 
 //Find translateY or translateX of element

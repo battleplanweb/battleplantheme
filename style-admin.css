@@ -759,6 +759,7 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 .wp-list-table td.username,
 .wp-list-table td.first_name,
 .wp-list-table td.last_name {
+	position: 									relative;
 	text-align:									left;
 }
 
@@ -798,8 +799,8 @@ body.ac-wp-media .row-actions {
 	width: 										calc(100% - 94px);
 	left: 										0 !important;
   	bottom: 									8px;
-  	text-align: 								left;
-  	margin-left: 								94px;
+  	text-align: 								left; 
+  	margin-left: 								100px !important;
 }
 
 .wp-admin .row-actions span {

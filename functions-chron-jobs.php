@@ -181,7 +181,7 @@ function processChron($forceChron) {
 		$wpSEOBase['remove_pingback_header'] = 1;
 		$wpSEOBase['clean_campaign_tracking_urls'] = 1;
 		$wpSEOBase['clean_permalinks'] = 1;
-		$wpSEOBase['clean_permalinks_extra_variables'] = 1;
+		$wpSEOBase['clean_permalinks_extra_variables'] = 'loc,int';	
 		$wpSEOBase['search_cleanup'] = 1;
 		$wpSEOBase['search_cleanup_emoji'] = 1;
 		$wpSEOBase['search_cleanup_patterns'] = 1;
@@ -344,16 +344,6 @@ function processChron($forceChron) {
 		$wpSEOLocal['address_format'] = 'address-state-postal';
 		update_option( 'wpseo_local', $wpSEOLocal );
 		update_option( 'bp_schema', $schema );
-	endif;
-	
-// The Events Calendar
-	if ( is_plugin_active('the-events-calendar/the-events-calendar.php') ) : 	
-		global $post; 
-		$getPosts = new WP_Query( array ('posts_per_page'=>-1, 'post_type'=>'tribe_events') );
-		if ( $getPosts->have_posts() ) : while ( $getPosts->have_posts() ) : $getPosts->the_post(); 	
-			$end = strtotime(get_post_meta( get_the_id(), '_EventEndDate', true ));		
-			if ( $end < time() ) wp_set_post_tags( get_the_id(), array( 'expired' ) );		
-		endwhile; wp_reset_postdata(); endif;	
 	endif;
 	
 // Basic Settings		

@@ -536,8 +536,8 @@ ol:first-child {
 }
 
 p:last-child,
-img.aligncenter:last-child,
-img.align-center:last-child,
+#wrapper-content img.aligncenter:last-child,
+#wrapper-content img.align-center:last-child,
 ul:last-child,
 ol:not(.carousel-indicators):last-child,
 h1 + .block.block-text:last-child,

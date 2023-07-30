@@ -436,14 +436,18 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 	});
 	
 // Ensure that Form labels have enough width
-	$('.wpcf7 form, .wpcf7 form .flex').each(function() {
-		var thisForm = $(this), labelMaxW = 0;
-		thisForm.find('> .form-input.width-default label').each(function() {
-			var thisInput = $(this), labelW = thisInput.width();
-			if ( labelW > labelMaxW ) { labelMaxW = labelW }
+	window.formLabelWidth = function () {		
+		$('.wpcf7 form, .wpcf7 form .flex').each(function() {
+			var thisForm = $(this), labelMaxW = 0;
+			thisForm.find('> .form-input.width-default label').each(function() {
+				var thisInput = $(this), labelW = thisInput.width();
+				if ( labelW > labelMaxW ) { labelMaxW = labelW }
+			});
+			thisForm.find('> .form-input.width-default').css({ "grid-template-columns":labelMaxW+"px 1fr" });
 		});
-		thisForm.find('> .form-input.width-default').css({ "grid-template-columns":labelMaxW+"px 1fr" });
-	});
+	}
+	formLabelWidth();
+	setTimeout(function() { formLabelWidth(); }, 500);
 	
 // Removes double asterisk in required forms
 	$('abbr.required, em.required, span.required').text("");
@@ -764,6 +768,9 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 			
 			$(this).css({"padding":totalWidth+'px', "margin-left":-(totalWidth/2)+"px"});
 		})
+		
+	// Additional Functions
+		formLabelWidth();
 	};
 
 /*--------------------------------------------------------------

@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '20.7' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '20.7.1' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -89,9 +89,10 @@ if ( !array_key_exists('schema', $GLOBALS['customer_info'] ) ) $GLOBALS['custome
 
 if ( !array_key_exists('default-loc', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['default-loc'] = $GLOBALS['customer_info']['city'].', '.$GLOBALS['customer_info']['state-abbr'];
 
-if ( !defined('_USER_LOCATION') ) :
+if ( !is_admin() && !is_plugin_active( 'woocommerce/woocommerce.php' ) && !defined('_USER_LOCATION') ) :
 	$cities = array('1026171'=>'Addison, TX', '1026178'=>'Allen, TX', '1026187'=>'Anna, TX', '1026200'=>'Aubrey, TX', '1020242'=>'Carrollton, TX', '1026349'=>'Denison, TX', '9051926'=>'Fairview, TX', '9051933'=>'Farmers Branch, TX', '1026407'=>'Frisco, TX', '1026482'=>'Howe, TX', '1019935'=>'Lewisville, TX', '9052357'=>'Lucas, TX', '1026607'=>'McKinney, TX', '1026611'=>'Melissa, TX', '1022561'=>'Mesquite, TX', '9052495'=>'Murphy, TX', '1016775'=>'Plano, TX', '1026710'=>'Pottsboro, TX', '1026729'=>'Richardson, TX', '1026741'=>'Rockwall, TX', '1026750'=>'Rowlett, TX', '1026751'=>'Royse City, TX', '1026755'=>'Sachse, TX', '1026788'=>'Sherman, TX', '1026885'=>'Whitesboro, TX', '1026899'=>'Wylie, TX');
 
+	$common = array('am', 'an', 'as', 'at', 'be', 'by', 'do', 'if', 'is', 'it', 'me', 'my', 'no', 'of', 'on', 'or', 'so', 'to', 'up', 'us', 'we');
 	$location = 'none';
 
 	// Google Ads > Location specific landing page > cookie
@@ -107,12 +108,14 @@ if ( !defined('_USER_LOCATION') ) :
 	endforeach;
 	
 	$page_slug = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/'); 
-	if ( $location == "none" && ( preg_match('/-[a-z]{2}$/', $page_slug) === 1 || isset($_COOKIE['site-loc']) ) ) :
-		if ( preg_match('/-[a-z]{2}$/', $page_slug) === 1 ) :
+
+	if ( $location == "none" && ( ( preg_match('/-[a-z]{2}$/', $page_slug) === 1 && !in_array( substr($page_slug, -2), $common) ) || isset($_COOKIE['site-loc']) ) ) :
+		if ( preg_match('/-[a-z]{2}$/', $page_slug) === 1 && !in_array( substr($page_slug, -2), $common) ) :
 			$pieces = explode(' ', ucwords(str_replace('-', ' ', $page_slug))); // Is this a location specific landing page?
 		else:
 			$pieces = explode(' ', ucwords(str_replace('-', ' ', $_COOKIE['site-loc']))); // Has this user already had location set?
 		endif;
+
 		$state = strtoupper(substr(end($pieces), -2));
 		array_pop($pieces);
 		$city = implode(' ', $pieces);
@@ -124,7 +127,7 @@ if ( !defined('_USER_LOCATION') ) :
 		?><script nonce="<?php echo _BP_NONCE; ?>" type="text/javascript">var site_loc = '<?php echo $site_loc; ?>';</script><?php 
 	else:
 		?><script nonce="<?php echo _BP_NONCE; ?>" type="text/javascript">var site_loc = null;</script><?php 
-	endif;
+	endif; 
 
 	define( '_USER_LOCATION', $location );
 endif;
@@ -1198,7 +1201,7 @@ require_once get_template_directory().'/functions-cpt.php';
 require_once get_template_directory().'/functions-ajax.php';
 require_once get_template_directory().'/functions-grid.php';
 require_once get_template_directory().'/functions-public.php';
-require_once get_stylesheet_directory().'/functions-site.php';
+if (file_exists(get_stylesheet_directory().'/functions-site.php')) require_once get_stylesheet_directory().'/functions-site.php';
 require_once get_template_directory().'/functions-chron-jobs.php';	
 if ( is_admin() || _USER_LOGIN == "battleplanweb" ) require_once get_template_directory().'/functions-admin.php';  
 

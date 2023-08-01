@@ -12,7 +12,14 @@
  
 <html <?php language_attributes(); ?>>
 <head>	
-	<script nonce="<?php echo _BP_NONCE; ?>" type="text/javascript">var startTime = Date.now();</script>	
+	<script nonce="<?php echo _BP_NONCE; ?>" type="text/javascript">
+		var startTime = Date.now();		
+		<?php if ( _USER_LOCATION != "none" ) :
+			?>var site_loc = '<?php echo strtolower(str_replace(array(', ', ' '), array('-', '-'), _USER_LOCATION)); ?>';
+		<?php else:
+			?>var site_loc = null;<?php 
+		endif; ?>	
+	</script>	
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="profile" href="https://gmpg.org/xfn/11">

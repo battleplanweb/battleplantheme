@@ -368,7 +368,7 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 	}
 	
 // Set Google Ads landing page as site-loc cookie
-	if ( site_loc != null ) {
+	if ( typeof site_loc !== 'undefined' && site_loc != null ) {
 		setCookie('site-loc', site_loc);
 	}	
 

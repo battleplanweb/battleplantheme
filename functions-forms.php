@@ -79,11 +79,6 @@ function battleplan_setupFormEmail( $contact_form, &$abort, $submission ) {
 	// filter recipient		
 	if ( strpos($formMail['recipient'], "get-biz") !== false ) $formMail['recipient'] = do_shortcode($formMail['recipient']);
 	
-	// filter sender		
-	//$formMail['sender'] = str_replace('=?utf-8?q?', '', $formMail['sender']);	
-	//$formMail['sender'] = str_replace('=C2=B7_', ' · ', $formMail['sender']);	
-	//$formMail['sender'] = str_replace('_', ' ', $formMail['sender']);	
-	
 	// filter body
 	$bodyEls = explode("\n", $formMail['body']);	
 	$buildEmail = '<div style="line-height:1.5"><p><b style="font-size:130%">'.substr($formMail['subject'], 0, strpos($formMail['subject'], " · ")).'</b></p><p>';	
@@ -151,11 +146,11 @@ function battleplan_setupFormEmail( $contact_form, &$abort, $submission ) {
 	
 	if ( $spamIntercept != '' ) : $formMail['recipient'] = 'email@battleplanwebdesign.com'; $formMail['subject'] = '<- SPAM: Blocked' .$spamIntercept .'-> '.$formMail['subject']; endif;
 	
-	// update list of bad ips to block
-	update_option( 'bp_bad_ips', $bad_ips );	 	
-
 	// send email
 	$contact_form->set_properties( array( 'mail' => $formMail ) );
+	
+	// update list of bad ips to block
+	update_option( 'bp_bad_ips', $bad_ips );	 	
 }; 	
          
 // Block loading of refill file (Contact Form 7) to help speed up sites

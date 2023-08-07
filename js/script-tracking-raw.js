@@ -116,7 +116,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 				
 				setCookie("user-loc", location, '');
 								
-				if ( distance < 250 ) { 	 		
+				if ( distance < 3000 ) { 	 		
 					$.post({
 						url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
 						data : { action: "check_user", distance: distance, location: location },

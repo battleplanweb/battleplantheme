@@ -15,650 +15,588 @@
 // Add new dashboard widgets
 add_action( 'wp_dashboard_setup', 'battleplan_add_dashboard_widgets' );
 function battleplan_add_dashboard_widgets() {
-	if ( _USER_LOGIN == "battleplanweb" ) :
+	if ( _USER_LOGIN == "battleplanweb" ) :	
 		add_meta_box( 'battleplan_site_stats', 'Site Visitors', 'battleplan_admin_site_stats', 'dashboard', 'normal', 'high' );
-		add_meta_box( 'battleplan_referrer_stats', 'Referrers', 'battleplan_admin_referrer_stats', 'dashboard', 'normal', 'high' );
-		add_meta_box( 'battleplan_location_stats', 'Locations', 'battleplan_admin_location_stats', 'dashboard', 'normal', 'high' );
+		add_meta_box( 'battleplan_admin_referrer_stats', 'Referrers', 'battleplan_admin_referrer_stats', 'dashboard', 'normal', 'high' ); 
+		add_meta_box( 'battleplan_admin_location_stats', 'Locations', 'battleplan_admin_location_stats', 'dashboard', 'normal', 'high' );
 		add_meta_box( 'battleplan_tech_stats', 'Tech Info', 'battleplan_admin_tech_stats', 'dashboard', 'normal', 'high' );	
 
 		add_meta_box( 'battleplan_content_stats', 'Content Visibility', 'battleplan_admin_content_stats', 'dashboard', 'side', 'high' );
 		add_meta_box( 'battleplan_pages_stats', 'Most Popular Pages', 'battleplan_admin_pages_stats', 'dashboard', 'side', 'high' );
-
+	
 		add_meta_box( 'battleplan_weekly_stats', 'Weekly Visitor Trends', 'battleplan_admin_weekly_stats', 'dashboard', 'column3', 'high' );		
 		add_meta_box( 'battleplan_monthly_stats', 'Monthly Visitor Trends', 'battleplan_admin_monthly_stats', 'dashboard', 'column3', 'high' );		
 		add_meta_box( 'battleplan_quarterly_stats', 'Quarterly Visitor Trends', 'battleplan_admin_quarterly_stats', 'dashboard', 'column3', 'high' );
-		add_meta_box( 'battleplan_daily_stats', 'Daily Visitors', 'battleplan_admin_daily_stats', 'dashboard', 'column3', 'high' );		
+		add_meta_box( 'battleplan_daily_stats', 'Daily Visitors', 'battleplan_admin_daily_stats', 'dashboard', 'column3', 'high' );	
 	endif;
 }
 
-// Set up dashboard stats review
-$GLOBALS['displayPeriods'] = array( 'week'=>7, 'month'=>30, 'quarter'=>90, 'year'=>365 );
-$GLOBALS['btn1'] = get_option('bp_admin_btn1') != null ? get_option('bp_admin_btn1') : "month";
-$GLOBALS['btn2'] = get_option('bp_admin_btn2') != null ? get_option('bp_admin_btn2') : "sessions";
-$GLOBALS['btn3'] = get_option('bp_admin_btn3') != null ? get_option('bp_admin_btn3') : "not-active";
+// Set up dashboard stats review 
+$GLOBALS['dataTerms'] = array('week'=>7, 'month'=>30, 'quarter'=>90, 'semester'=>180, 'year'=>365);
+updateOption('bp_data_terms', $GLOBALS['dataTerms'], false );
+$ga4_trends_data = is_array(get_option('bp_ga4_trends_01')) ? get_option('bp_ga4_trends_01') : array();
+$ga4_visitors_data = is_array(get_option('bp_ga4_visitors_01')) ? get_option('bp_ga4_visitors_01') : array();
+$ga4_pages_data = is_array(get_option('bp_ga4_pages_01')) ? get_option('bp_ga4_pages_01') : array();
+$ga4_referrers_data = is_array(get_option('bp_ga4_referrers_01')) ? get_option('bp_ga4_referrers_01') : array();
+$ga4_locations_data = is_array(get_option('bp_ga4_locations_01')) ? get_option('bp_ga4_locations_01') : array();
+$ga4_browsers_data = is_array(get_option('bp_ga4_browsers_01')) ? get_option('bp_ga4_browsers_01') : array();
+$ga4_devices_data = is_array(get_option('bp_ga4_devices_01')) ? get_option('bp_ga4_devices_01') : array();
+$ga4_speed_data = is_array(get_option('bp_ga4_speed_01')) ? get_option('bp_ga4_speed_01') : array();
+$ga4_resolution_data = is_array(get_option('bp_ga4_resolution_01')) ? get_option('bp_ga4_resolution_01') : array();
+$ga4_achievementId_data = is_array(get_option('bp_ga4_achievementId_01')) ? get_option('bp_ga4_achievementId_01') : array();
+$excludeCities = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, OR'); 
 
-$siteHits = is_array(get_option('bp_site_hits_ga4')) ? get_option('bp_site_hits_ga4') : array();
-$siteHitsUA1 = is_array(get_option('bp_site_hits_ua_1')) ? get_option('bp_site_hits_ua_1') : array();
-$siteHitsUA2 = is_array(get_option('bp_site_hits_ua_2')) ? get_option('bp_site_hits_ua_2') : array();
-$siteHitsUA3 = is_array(get_option('bp_site_hits_ua_3')) ? get_option('bp_site_hits_ua_3') : array();
-$siteHitsUA4 = is_array(get_option('bp_site_hits_ua_4')) ? get_option('bp_site_hits_ua_4') : array();
-$siteHitsUA5 = is_array(get_option('bp_site_hits_ua_5')) ? get_option('bp_site_hits_ua_5') : array();
-$siteHits = array_merge( $siteHits, $siteHitsUA1, $siteHitsUA2, $siteHitsUA3, $siteHitsUA4, $siteHitsUA5);
-
-$today = date( "Y-m-d" );	
-$GLOBALS['citiesToExclude'] = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, OR'); // also change in functions-chron-jobs.php
-
-// Set up array accounting for each day, no skips	
-$blankDate = strtotime($today);
-foreach ( $siteHits as $siteHit ) :	
-	$theDate = strtotime($siteHit['date']);
-	if ( $theDate < $blankDate ) $blankDate = $theDate;
-endforeach;
-$totalDays = (strtotime($today) - $blankDate) / 86400; 
-
-for ( $x=0;$x<$totalDays;$x++) :
-	$blankDate = $blankDate + 86400;		
-	$dailyStats[ date('Y-m-d', $blankDate) ] = array ('location'=>array(), 'source'=>array(), 'medium'=>array(), 'page'=>array(), 'browser'=>array(), 'device'=>array(), 'resolution'=>array(), 'pages-viewed'=>'0', 'sessions'=>'0', 'engaged'=>'0', 'new-users'=>'0' );
-endfor;
-
-// Compile data into daily stats
-$dateOfLastHit = $totalPageviews = $totalSessions = $totalEngaged = $totalNewUsers = $allPages = 0;
-$allLocations = $allSources = $allMediums = $allPages = $allBrowsers = $allDevices = $allResolutions = array();
-
-foreach ( $siteHits as $siteHit ) :	
-	if ( !isset($siteHit['location']) || ( isset($siteHit['location']) && !in_array( $siteHit['location'], $GLOBALS['citiesToExclude'] ) )) :
-		if ( $GLOBALS['btn3'] != "active" || ( $siteHit['location'] == get_option('customer_info')['state-full'] || str_contains($siteHit['location'], get_option('customer_info')['state-abbr'] ) )) :
-	
-			$dateOfHit = strtotime($siteHit['date']);
-
-			if ( $dateOfHit != $dateOfLastHit ) :			
-				$dailyStats[ date('Y-m-d', ($dateOfHit + 86400)) ] = array ('location'=>$allLocations, 'source'=>$allSources, 'medium'=>$allMediums, 'page'=>$allPages, 'browser'=>$allBrowsers, 'device'=>$allDevices, 'resolution'=>$allResolutions, 'pages-viewed'=>$totalPageviews, 'sessions'=>$totalSessions, 'engaged'=>$totalEngaged, 'new-users'=>$totalNewUsers );	
-
-				$allLocations = $allSources = $allMediums = $allPages = $allBrowsers = $allDevices = $allResolutions = array();
-				$totalPageviews = $totalSessions = $totalEngaged = $totalNewUsers = 0;
-			endif;
-
-			$dateOfLastHit = $dateOfHit;
-
-			if ( isset($siteHit['pages-viewed'])) $totalPageviews = $totalPageviews + (int)$siteHit['pages-viewed'];
-			if ( isset($siteHit['sessions'])) $totalSessions = $totalSessions + (int)$siteHit['sessions'];
-			if ( isset($siteHit['engaged'])) $totalEngaged = $totalEngaged + (int)$siteHit['engaged'];
-			if ( isset($siteHit['new-users'])) $totalNewUsers = $totalNewUsers + (int)$siteHit['new-users'];											
-
-			$checkPage = rtrim($siteHit['page'], "/");
-			if ( array_key_exists($checkPage, $allPages) ) :
-				$allPages[$checkPage] += (int)$siteHit['pages-viewed'];
-			else:
-				$allPages[$checkPage] = (int)$siteHit['pages-viewed'];
-			endif;	
-
-			if ( $siteHit['sessions'] == 1 ) :
-				if ( isset($siteHit['location']) ) :
-					if ( array_key_exists($siteHit['location'], $allLocations ) ) :
-						$allLocations[$siteHit['location']] += 1;
-					else:
-						$allLocations[$siteHit['location']] = 1;
-					endif;									
-				endif;									
-
-				if ( isset($siteHit['source']) ) :
-					if ( array_key_exists($siteHit['source'], $allSources ) ) :
-						$allSources[$siteHit['source']] += 1;
-					else:
-						$allSources[$siteHit['source']] = 1;
-					endif;									
-				endif;									
-
-				if ( isset($siteHit['medium']) ) :
-					if ( array_key_exists($siteHit['medium'], $allMediums ) ) :
-						$allMediums[$siteHit['medium']] += 1;
-					else:
-						$allMediums[$siteHit['medium']] = 1;
-					endif;									
-				endif;									
-
-				if ( isset($siteHit['browser']) ) :
-					if ( array_key_exists($siteHit['browser'], $allBrowsers ) ) :
-						$allBrowsers[$siteHit['browser']] += 1;
-					else:
-						$allBrowsers[$siteHit['browser']] = 1;
-					endif;									
-				endif;									
-
-				if ( isset($siteHit['device']) ) :
-					if ( array_key_exists($siteHit['device'], $allDevices ) ) :
-						$allDevices[$siteHit['device']] += 1;
-					else:
-						$allDevices[$siteHit['device']] = 1;
-					endif;									
-				endif;									
-
-				if ( isset($siteHit['resolution']) ) :
-					if ( array_key_exists($siteHit['resolution'], $allResolutions ) ) :
-						$allResolutions[$siteHit['resolution']] += 1;
-					else:
-						$allResolutions[$siteHit['resolution']] = 1;
-					endif;									
-				endif;									
-			endif;
-		endif;
-	endif;
-endforeach;	
-
-if ( is_array($dailyStats)) :
-	krsort($dailyStats);
-	array_shift($dailyStats);
-	$GLOBALS['dailyStats'] = $dailyStats;
-else:
-	$GLOBALS['dailyStats'] = array();
-endif;
-
-$GLOBALS['dates'] = array_keys($GLOBALS['dailyStats']);
-$statOverview = array();
-
-// Set up Site Visitors widget on dashboard
-function battleplan_admin_site_stats() {
-	$lastVisitTime = timeElapsed( get_option('last_visitor_time'), 2);	
-	
-	$count = $users = $search = $pagesViewed = $sessions = $engaged = $engagement = $endOfCol = $viewsToday = $last7Views = $last30Views = $last90Views = $last180Views = $lastYearViews = $last2YearViews = $last3YearViews = 0;
-		
-	for ($x = 0; $x < 1096; $x++) {	
-		if ( !isset($GLOBALS['dates'][$x])) break;
-		$theDate = $GLOBALS['dates'][$x];
-		$dailyUsers = isset($GLOBALS['dailyStats'][$theDate]['new-users']) ? intval($GLOBALS['dailyStats'][$theDate]['new-users']) : 0;
-		$users = $users + $dailyUsers;			
-				
-		if ( $x == 0 ) $viewsToday = $users; 
-		if ( $x == 6 ) $last7Views = $users; $last7Avg = number_format(($last7Views / 7),1);
-		if ( $x == 29 ) $last30Views = $users; $last30Avg = number_format(($last30Views / 30),1);
-		if ( $x == 89 ) $last90Views = $users; $last90Avg = number_format(($last90Views / 90),1);
-		if ( $x == 179 ) $last180Views = $users; $last180Avg = number_format(($last180Views / 180),1);		
-		if ( $x == 364 ) $lastYearViews = $users; $lastYearAvg = number_format(($lastYearViews / 365),1);		
-		if ( $x == 729 ) $last2YearViews = $users; $last2YearAvg = number_format(($last2YearViews / 730),1);		
-		if ( $x == 1095 ) $last3YearViews = $users; $last3YearAvg = number_format(($last3YearViews / 1095),1);
-	} 		 
-					
-	echo "<table><tr><td class='label'>Last Visit</td><td class='last-visit'>".$lastVisitTime." ago</td></tr>";	
-	echo "<tr><td>&nbsp;</td></tr>";		
-	echo "<tr><td class='label'>Yesterday</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $viewsToday, 'battleplan' ), number_format($viewsToday))."</td></tr>";	
-	echo "<tr><td class='label'>This Week</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last7Views, 'battleplan' ), number_format($last7Views) )."</td><td><b>".$last7Avg."</b> /day</td></tr>";
-	
-	if ( $last30Views != $last7Views) echo "<tr><td class='label'>This Month</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last30Views, 'battleplan' ), number_format($last30Views) )."</td><td><b>".$last30Avg."</b> /day</td></tr>";
-	
-	if ( $last90Views != $last30Views) echo "<tr><td class='label'>3 Months</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last90Views, 'battleplan' ), number_format($last90Views) )."</td><td><b>".$last90Avg."</b> /day</td></tr>";
-	
-	if ( $last180Views != $last90Views) echo "<tr><td class='label'>6 Months</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last180Views, 'battleplan' ), number_format($last180Views) )."</td><td><b>".$last180Avg."</b> /day</td></tr>";
-	
-	if ( $lastYearViews != $last180Views) echo "<tr><td class='label'>1 Year</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $lastYearViews, 'battleplan' ), number_format($lastYearViews) )."</td><td><b>".$lastYearAvg."</b> /day</td></tr>";
-	
-	if ( $last2YearViews != $lastYearViews) echo "<tr><td class='label'>2 Years</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last2YearViews, 'battleplan' ), number_format($last2YearViews) )."</td><td><b>".$last2YearAvg."</b> /day</td></tr>";
-	
-	if ( $last3YearViews != $last2YearViews) echo "<tr><td class='label'>3 Years</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last3YearViews, 'battleplan' ), number_format($last3YearViews) )."</td><td><b>".$last3YearAvg."</b> /day</td></tr>";
-	
-	echo '<tr><td>&nbsp;</td></tr></table>';
-}
-
-// Set up Visitor Referrers widget on dashboard
-function battleplan_admin_referrer_stats() {
-	echo '<div class="last-visitors-buttons">';	
-		foreach ( $GLOBALS['displayPeriods'] as $display=>$days ) :
-			if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
-			echo do_shortcode('[btn size="1/5" class="'.$display.$active.'"]'.ucwords($display).'[/btn]');	
-		endforeach;	
-	echo '</div>';
-				
-	echo '<div class="local-visitors-buttons">'.do_shortcode('[btn size="1/5" class="local '.$GLOBALS['btn3'].'"]Local[/btn]').'</div>';	
-	
-	foreach ( $GLOBALS['displayPeriods'] as $display=>$days ) :
-		$allSources = array();
-		for ($x = 0; $x < $days; $x++) :	
-		 	if ( !isset($GLOBALS['dates'][$x])) break;
-			$theDate = $GLOBALS['dates'][$x];
-			$sources = isset($GLOBALS['dailyStats'][$theDate]['source']) ? $GLOBALS['dailyStats'][$theDate]['source'] : array();	
-			
-			foreach ( $sources as $source=>$counts ) :			
-				$switchRef = array ('(direct)'=>'Direct', 'google'=>'Google', 'facebook'=>'Facebook', 'yelp'=>'Yelp', 'yahoo'=>'Yahoo', 'bing'=>'Bing', 'duckduckgo'=>'DuckDuckGo', 'youtube'=>'YouTube', 'instagram'=>'Instagram');
-				foreach ( $switchRef as $find=>$replace ) :
-					if ( strpos( $source, $find ) !== false ) $source = $replace;
-				endforeach;
-				
-				if ( array_key_exists($source, $allSources ) ) :
-					$allSources[$source] += $counts;
-				else:
-					$allSources[$source] = $counts;
-				endif;		
-			endforeach;		
-		endfor;		
-		
-		arsort($allSources);
-		
-		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
-		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul>';		
-		echo '<li class="sub-label" style="column-span: all">Last '.number_format(array_sum($allSources)).' Sessions</li>';	
-		
-		foreach ( $allSources as $source=>$count ) :
-			echo "<li><div class='value'><b>".number_format($count)."</b></div><div class='label'>".$source."</div></li>";
-		endforeach;			
-			
-		echo '</ul></div>';		
-	endforeach;			
-}
-
-// Set up Visitor Locations widget on dashboard
-function battleplan_admin_location_stats() {
-	foreach ( $GLOBALS['displayPeriods'] as $display=>$days ) :
-		$allLocations = array();
-		for ($x = 0; $x < $days; $x++) :	
-			if ( !isset($GLOBALS['dates'][$x])) break;
-			$theDate = $GLOBALS['dates'][$x];
-			$locations = isset($GLOBALS['dailyStats'][$theDate]['location']) ? $GLOBALS['dailyStats'][$theDate]['location'] : array();	
-			
-			foreach ( $locations as $location=>$counts ) :			
-				if ( array_key_exists($location, $allLocations ) ) :
-					$allLocations[$location] += $counts;
-				else:
-					$allLocations[$location] = $counts;
-				endif;		
-			endforeach;		
-		endfor;		
-		
-		arsort($allLocations);
-		
-		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
-		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul>';		
-		echo '<li class="sub-label" style="column-span: all">Last '.number_format(array_sum($allLocations)).' Sessions</li>';	
-		
-		foreach ( $allLocations as $location=>$count ) echo "<li><div class='value'><b>".number_format($count)."</b></div><div class='label'>".$location."</div></li>";
-			
-		echo '</ul></div>';		
-	endforeach;			
-}
-
-// Set up Tech Info widget on dashboard
-function battleplan_admin_tech_stats() {
-//Browser
-	foreach ( $GLOBALS['displayPeriods'] as $display=>$days ) :
-		$allBrowsers = array();
-		for ($x = 0; $x < $days; $x++) :	
-			if ( !isset($GLOBALS['dates'][$x])) break;
-			$theDate = $GLOBALS['dates'][$x];
-			$browsers = isset($GLOBALS['dailyStats'][$theDate]['browser']) ? $GLOBALS['dailyStats'][$theDate]['browser'] : array();	
-			
-			foreach ( $browsers as $browser=>$counts ) :			
-				if ( array_key_exists($browser, $allBrowsers ) ) :
-					$allBrowsers[$browser] += $counts;
-				else:
-					$allBrowsers[$browser] = $counts;
-				endif;		
-			endforeach;		
-		endfor;		
-		
-		arsort($allBrowsers);
-		
-		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
-		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul><li class="sub-label">Browsers</li>';	
-		
-		foreach ( $allBrowsers as $browser=>$count ) :
-			$count = ($count / array_sum($allBrowsers)) * 100;	
-			if ( $count > 3) echo "<li><div class='value'><b>".number_format($count,1)."%</b></div><div class='label'>".ucwords($browser)."</div></li>";
-		endforeach;			
-			
-		echo '</ul></div>';		
-	endforeach;		
-
-// Devices
-	$allTracking = is_array(get_option('bp_tracking_content')) ? get_option('bp_tracking_content') : array();
-	$allSpeed = array();
-
-	foreach ( $allTracking as $tracking ) :
-		$site_speed = $tracking['speed'];
-		$location = $tracking['location'];
-
-		if ( !in_array( $location, $GLOBALS['citiesToExclude']) && $site_speed != '' ) :			
-			$pageID = strtok($site_speed, '»');
-			if ( strpos($site_speed, 'desktop') !== false ) : 
-				$device = "desktop"; 
-			else: 
-				$device = "mobile"; 
-			endif;			
-			$speed = (float)str_replace($pageID.'»'.$device.'«', '', $site_speed);
-			
-			if ( $speed < 10 ) :
-				if ( array_key_exists($pageID, $allSpeed ) && isset($allSpeed[$pageID]['speed']) ) :
-					$allSpeed[$pageID]['speed'] += $speed;
-					$allSpeed[$pageID]['hits'] += 1;
-				else:
-					$allSpeed[$pageID]['speed'] = $speed;
-					$allSpeed[$pageID]['hits'] = 1;
-				endif;						 		
-
-				if ( $allSpeed[$pageID]['hits'] > 0 ) $allSpeed[$pageID]['avg'] = round($allSpeed[$pageID]['speed'] / $allSpeed[$pageID]['hits'], 2);	
-
-				if ( array_key_exists($device, $allSpeed ) && isset($allSpeed[$device]['speed']) ) :
-					$allSpeed[$device]['speed'] += $speed;
-					$allSpeed[$device]['hits'] += 1;
-				else:
-					$allSpeed[$device]['speed'] = $speed;
-					$allSpeed[$device]['hits'] = 1;
-				endif;	
-			endif;
-
-			if ( $allSpeed[$device]['hits'] > 0 ) $allSpeed[$device]['avg'] = round($allSpeed[$device]['speed'] / $allSpeed[$device]['hits'], 2);	
-		endif;			
-	endforeach;		
-	
-	foreach ( $GLOBALS['displayPeriods'] as $display=>$days ) :
-		$allDevices = array();
-		for ($x = 0; $x < $days; $x++) :	
-			if ( !isset($GLOBALS['dates'][$x])) break;
-			$theDate = $GLOBALS['dates'][$x];
-			$devices = isset($GLOBALS['dailyStats'][$theDate]['device']) ? $GLOBALS['dailyStats'][$theDate]['device'] : array();	
-		
-			foreach ( $devices as $device=>$counts ) :			
-				if ( array_key_exists($device, $allDevices ) ) :
-					$allDevices[$device] += $counts;
-				else:
-					$allDevices[$device] = $counts;
-				endif;		
-			endforeach;		
-		endfor;		
-		
-		arsort($allDevices);
-		
-		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
-		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul><li class="sub-label">Devices</li>';	
-		
-		foreach ( $allDevices as $device=>$count ) :
-			$count = ($count / array_sum($allDevices)) * 100;
-			if ( isset($allSpeed[$device]['avg'])) :
-				echo '<li><div class="value"><b>'.number_format($count,1).'%</b></div><div class="label-half">'.ucwords($device).'</div><div class="label-half">'.number_format($allSpeed[$device]['avg'],1).' sec</div></li>';
-				updateOption('load_time_'.$device, number_format($allSpeed[$device]['avg'],1), false );
-			endif;
-		endforeach;			
-			
-		echo '</ul></div>';		
-	endforeach;		
-	
-// Screen Resolution	
-	foreach ( $GLOBALS['displayPeriods'] as $display=>$days ) :
-		$allResolutions = array();
-		for ($x = 0; $x < $days; $x++) :	
-			if ( !isset($GLOBALS['dates'][$x])) break;
-			$theDate = $GLOBALS['dates'][$x];
-			$resolutions = isset($GLOBALS['dailyStats'][$theDate]['resolution']) ? $GLOBALS['dailyStats'][$theDate]['resolution'] : array();	
-			
-			foreach ( $resolutions as $resolution=>$counts ) :	
-				if ( $resolution ) :
-					if ( array_key_exists($resolution, $allResolutions ) ) :
-						$allResolutions[$resolution] += $counts;
-					else:
-						$allResolutions[$resolution] = $counts;
-					endif;	
-				endif;
-			endforeach;		
-		endfor;		
-		
-		arsort($allResolutions); 
-		
-		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
-		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul><li class="sub-label">Screen Widths</li><div style="column-count:2">';	
-		
-		foreach ( $allResolutions as $resolution=>$count ) :
-			$resolution = substr($resolution, 0, strpos($resolution, 'x'));
-			$count = ($count / array_sum($allResolutions)) * 100;
-			if ( $count > 2) echo "<li><div class='value'><b>".number_format($count,1)."%</b></div><div class='label'>".ucwords($resolution)." px</div></li>";
-		endforeach;			
-			
-		echo '</div></ul></div>';		
-	endforeach;	
-}
-
-// Set up Content Visibility widget on dashboard
-function battleplan_admin_content_stats() {
-	$contentTracking = $componentTracking = $colTracking = $totalTracking = array();
-	$allTracking = is_array(get_option('bp_tracking_content')) ? get_option('bp_tracking_content') : array();
-	
-	foreach ( $allTracking as $tracking ) :
-		$content_tracking = $tracking['content'];			
-		$location = $tracking['location'];
-
-		if ( !in_array( $location, $GLOBALS['citiesToExclude']) && $content_tracking != '' ) :
-			$pageID = strtok($content_tracking,  '-');
-			$track = str_replace($pageID.'-', '', $content_tracking);
-
-			if ( array_key_exists($pageID, $contentTracking ) && isset($contentTracking[$pageID][$track]) ) :
-				$contentTracking[$pageID][$track] += 1;
-			else:
-				$contentTracking[$pageID][$track] = 1;
-			endif;	
-		endif;			
-	endforeach;
-	
-	foreach ( $contentTracking as $id=>$content) :
-		foreach ( $content as $track=>$count ) :	
-			if ( $id == "track" ) :
-				if ( array_key_exists($track, $componentTracking ) ) :
-					$componentTracking[$track] += $count;
-				else:
-					$componentTracking[$track] = $count;
-				endif;				
-			elseif ( strpos($track, '.') !== false ) :
-				$track = explode(".", $track);
-				$page = ucwords(get_the_title($id));
-				$page = (strlen($page) > 17) ? substr($page,0,15).'&hellip;' : $page;			
-				$column = $page.' · s'.$track[0].' c'.$track[1];
-				if ( array_key_exists($column, $colTracking ) ) :
-					$colTracking[$column] += $count;
-				else:
-					$colTracking[$column] = $count;
-				endif;				
-			else :
-				if ( array_key_exists($track, $totalTracking ) ) :
-					$totalTracking[$track] += $count;
-				else:
-					$totalTracking[$track] = $count;
-				endif;				
-			endif;
-		endforeach;
-	endforeach;
-	
-	echo '<div>';
-	
-	if ( isset($totalTracking['init'])) : 
-		echo '<ul><li class="sub-label">Last '.$totalTracking['init'].' Pageviews</li>';
-		if ( $totalTracking['init'] > 0 ) :
-			echo "<li><div class='value'><b>".number_format((round($totalTracking['100']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed ALL of main content</b></div></li>";	
-			echo "<li><div class='value'><b>".number_format((round($totalTracking['80']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed at least 80% of main content</b></div></li>";	
-			echo "<li><div class='value'><b>".number_format((round($totalTracking['60']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed at least 60% of main content</b></div></li>";	
-			echo "<li><div class='value'><b>".number_format((round($totalTracking['40']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed at least 40% of main content</b></div></li>";	
-			echo "<li><div class='value'><b>".number_format(100-(round($totalTracking['20']/$totalTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>viewed less than 20% of main content</b></div></li>";
-		endif;
-		echo '</ul>';
-	endif;
-	
-	arsort($componentTracking);
-	echo '<ul><li class="sub-label">Components</li>';
-	foreach($componentTracking as $track=>$count) :
-		if ( $track != "init" && $componentTracking['init'] > 0 ) echo "<li><div class='value'><b>".number_format((round($componentTracking[$track]/$componentTracking['init'],3) * 100),1)."%</b></div><div class='label'><b>".ucwords($track)."</b></div></li>";	
-
-		updateOption('pct-viewed-'.$track, number_format((round($componentTracking[$track]/$componentTracking['init'],3) * 100),1), false );
-	endforeach;	
-	echo '</ul>';
-
-	/*
-	arsort($colTracking);
-	echo '<ul><li class="sub-label">Best Column Positions</li><div style="column-count:2">';		
-	foreach ( $colTracking as $page=>$count) echo "<li><div class='value'><b>".$count."</b></div><div class='label'>".$page."</div></li>";	
-	echo '</div></ul>';
-	*/
-	
-	echo '</div>';
-}
-
-// Set up Popular Pages widget on dashboard
-function battleplan_admin_pages_stats() {
-	foreach ( $GLOBALS['displayPeriods'] as $display=>$days ) :
-		$allPages = array();
-		for ($x = 0; $x < $days; $x++) :	
-			if ( !isset($GLOBALS['dates'][$x]) ) break;
-			$theDate = $GLOBALS['dates'][$x];
-			$pages = isset($GLOBALS['dailyStats'][$theDate]['page']) ? $GLOBALS['dailyStats'][$theDate]['page'] : array();	
-			
-			foreach ( $pages as $page=>$counts ) :	
-				$excludePage = false;
-				$excludes = array ( '?fbclid', '?dMe', '?_sm_nck', '?mscl' );
-				foreach ( $excludes as $exclude ) :
-					if ( strpos( $page, $exclude ) !== false ) $excludePage = true;
-				endforeach;		
-			
-				if ( $excludePage == false ) :
-					if ( array_key_exists($page, $allPages ) ) :
-						$allPages[$page] += $counts;
-					else:
-						$allPages[$page] = $counts;
-					endif;	
-				endif;
-			endforeach;		
-		endfor;		
-		
-		arsort($allPages);
-		
-		if ( $GLOBALS['btn1'] == $display ) : $active = " active"; else: $active = ""; endif;
-		echo '<div class="handle-label handle-label-'.$display.$active.'"><ul>';		
-		echo '<li class="sub-label" style="column-span: all">Last '.number_format(array_sum($allPages)).' Pageviews</li>';	
-		
-		foreach ( $allPages as $page=>$count ) :
-			if ( $page == "" ) :
-				$title = "Home";					
-			else:
-				$pageID = getID($page);
-		
-				if ( !$pageID ) :
-					$page = str_replace('/', ' » ', $page);				
-					$page = str_replace('-', ' ', $page);				
-					$title = ucwords($page);
-				else:
-					$title = get_the_title($pageID);				
-				endif;
-			endif;	
-
-			echo "<li><div class='value'><b>".number_format($count)."</b></div><div class='label'>".$title."</div></li>";
-		endforeach;			
-			
-		echo '</ul></div>';		
-	endforeach;			
-}
 
 // Set up Visitor Trends widget on dashboard
-function battleplan_admin_stats($time,$minDays,$maxDays,$colEnd) {
-	$count = $sessions = $search = $users = $pagesViewed = $engaged = $engagement = $endOfCol = $pagesPerSession = 0;
-	$days = $minDays;		
-	$colNum = 1;
+$GLOBALS['ga4_date'] = array();
+$currDate = -1;
+$chkDate = date("Ymd", strtotime($currDate." day"));
+$totalUsers = $newUsers = $sessions = $engagedSessions = $sessionDuration = $pageViews = 0;
+
+foreach ( $ga4_trends_data as $ga4_point ) :
+	$location = $ga4_point['location'];
+
+	if ( !in_array($location, $excludeCities) ) :
+		$date = $ga4_point['date'];
+		if ( $date == $chkDate ) : 
+			$totalUsers += $ga4_point['total-users'];
+			$newUsers += $ga4_point['new-users'];
+			$sessions += $ga4_point['sessions'];
+			$engagedSessions += $ga4_point['engaged-sessions'];
+			$sessionDuration += $ga4_point['session-duration'];
+			$pageViews += $ga4_point['page-views'];
+		else:
+			$GLOBALS['ga4_date'][$chkDate] = array('total-users'=>$totalUsers, 'new-users'=>$newUsers, 'sessions'=>$sessions, 'engaged-sessions'=>$engagedSessions, 'session-duration'=>$sessionDuration, 'page-views'=>$pageViews );	
+
+			while ($date !== $chkDate) :
+				$currDate--;
+				$chkDate = date("Ymd", strtotime($currDate." days"));
+
+				if ( $date != $chkDate ) : 
+					$GLOBALS['ga4_date'][$chkDate] = array('total-users'=>0, 'new-users'=>0, 'sessions'=>0, 'engaged-sessions'=>0, 'session-duration'=>0, 'page-views'=>0 );
+				endif;
+			endwhile;
+
+			$chkDate = $date;
+			$totalUsers = $ga4_point['total-users'];
+			$newUsers = $ga4_point['new-users'];
+			$sessions = $ga4_point['sessions'];
+			$engagedSessions = $ga4_point['engaged-sessions'];
+			$sessionDuration = $ga4_point['session-duration'];
+			$pageViews = $ga4_point['page-views'];
+		endif;
+	endif;
+endforeach;
+
+krsort($GLOBALS['ga4_date']);
+
+function battleplan_visitor_trends($time, $minDays, $maxDays, $colEnd) {
+	$totalUsers = $newUsers = $sessions = $engagedSessions = $sessionDuration = $pageViews = $pagesPerSession = $engagementPct = $avgSessionDuration = $avgEngagedDuration = $newUserPct = 0;
+	$day = $col = $row = 1;
+	$term = $minDays;	
+	$termEnd = date("M j, Y", strtotime("-1 day"));
 	
-	echo "<table class='trends trends-".$time." trends-col-".$colNum."'><tr><td class='header dates'>".ucfirst($time)."</td><td class='page visits'>".ucwords($GLOBALS['btn2'])."</td></tr>";
+	echo "<table class='trends trends-".$time." trends-col-".$col."'><tr><td class='header'>".ucfirst($time)."</td><td class='span page sessions'></td></tr>";
+	
+	foreach ( $GLOBALS['ga4_date'] as $ga4_date=>$dailyData ) :
+		$theDate = date("M j, Y", strtotime($ga4_date)); 
+		
+		$totalUsers += $dailyData['total-users'];
+		$newUsers += $dailyData['new-users'];
+		$sessions += $dailyData['sessions'];
+		$engagedSessions += $dailyData['engaged-sessions'];
+		$sessionDuration += $dailyData['session-duration'];
+		$pageViews += $dailyData['page-views'];
 
-	for ($x = 0; $x < 1500; $x++) {	
-		if ( !isset($GLOBALS['dates'][$x])) break;
-		$theDate = $GLOBALS['dates'][$x];
-		$dailyTime = date("M j, Y", strtotime($theDate)); 
-		
-		$dailySessions = isset($GLOBALS['dailyStats'][$theDate]['sessions']) ? intval($GLOBALS['dailyStats'][$theDate]['sessions']) : 0;
-		$dailySearch = isset($GLOBALS['dailyStats'][$theDate]['medium']['organic']) ? intval($GLOBALS['dailyStats'][$theDate]['medium']['organic']) : 0;
-		$dailyUsers = isset($GLOBALS['dailyStats'][$theDate]['new-users']) ? intval($GLOBALS['dailyStats'][$theDate]['new-users']) : 0;
-		$dailyPageviews = isset($GLOBALS['dailyStats'][$theDate]['pages-viewed']) ? intval($GLOBALS['dailyStats'][$theDate]['pages-viewed']) : 0;
-		$dailyEngaged = isset($GLOBALS['dailyStats'][$theDate]['engaged']) ? intval($GLOBALS['dailyStats'][$theDate]['engaged']) : 0;
-		
-		$count++;		
-		$sessions = $sessions + $dailySessions; 		
-		$search = $search + $dailySearch; 
-		$users = $users + $dailyUsers;			
-		$pagesViewed = $pagesViewed + $dailyPageviews; 		
-		$engaged = $engaged + $dailyEngaged; 
-		
-		if ( $sessions > 0 ) $pagesPerSession = number_format( (round(($pagesViewed / $sessions), 3)) , 1, '.', '');
-		if ( $sessions > 0 ) $engagement = number_format( ((round(($engaged / $sessions), 3)) * 100), 1, '.', '');		
-								
-		if ( $count == 1 ) $end = $dailyTime;
-		if ( $count == $days ) :
-			if ( $endOfCol == $colEnd ) :
-				$colNum++;
-				echo "</table><table class='trends trends-".$time." trends-col-".$colNum."'><tr><td class='header dates'>".ucfirst($time)."</td><td class='page visits'>".ucwords($GLOBALS['btn2'])."</td></tr>";
-				$endOfCol = 0;
-			endif;
-			$endOfCol++;
-			
-			$active['sessions'] = $active['search'] = $active['new'] = $active['pages'] = $active['engaged'] = '';
-			$active[$GLOBALS['btn2']] = " active";
+		if ( $totalUsers > 0 ) $pagesPerSession = number_format( (round(($pageViews / $totalUsers), 3)) , 1, '.', '');
+		if ( $sessions > 0 ) $engagementPct = number_format( ((round(($engagedSessions / $sessions), 3)) * 100), 1, '.', '');		
+		if ( $sessions > 0 ) $avgSessionDuration = number_format( (round(($sessionDuration / $sessions), 3)) , 1, '.', '');	
+		if ( $engagedSessions > 0 ) $avgEngagedDuration = number_format( (round(($sessionDuration / $engagedSessions), 3)) , 1, '.', '');	
+		if ( $totalUsers > 0 ) $newUserPct = number_format( ((round(($newUsers / $totalUsers), 3)) * 100), 1, '.', '');
 
-			$timeClass = strtolower(str_replace(array(" ",","), array("-",""), $dailyTime));
-		 	echo "<tr class='coloration trends sessions".$active['sessions']." trends-".$timeClass."' data-count='".$sessions."'><td class='dates'>".$end."</td><td class='visits'><b>".number_format($sessions)."</b></td></tr>";
-			echo "<tr class='coloration trends search".$active['search']."' data-count='".$search."'><td class='dates'>".$end."</td><td class='visits'><b>".number_format($search)."</b></td></tr>";			
-		 	echo "<tr class='coloration trends new".$active['new']."' data-count='".$users."'><td class='dates'>".$end."</td><td class='visits'><b>".number_format($users)."</b></td></tr>";
-			echo "<tr class='coloration trends pages".$active['pages']."' data-count='".$pagesViewed."'><td class='dates'>".$end."</td><td class='visits'><b>".number_format($pagesPerSession,1)."</b></td></tr>";
-			echo "<tr class='coloration trends engaged".$active['engaged']."' data-count='".$engagement."'><td class='dates'>".$end."</td><td class='visits'><b>".$engagement."%</b></td></tr>";
-			$count = $sessions = $search = $users = $pagesViewed = $engaged = $engagement = $pagesPerSession = 0;
-			if ( $days == $maxDays ) : $days = $minDays; else: $days = $maxDays; endif;
-		endif;	
-	} 		
-	echo "</table>";
+		$day++;
+
+		if ( $day > $term ) :		
+		 	echo "<tr class='coloration trends sessions active' data-count='".$sessions."'><td>".$termEnd."</td><td><b>".number_format($sessions)."</b><td><b>".number_format($totalUsers)."</b></td></tr>";		
+		 	echo "<tr class='coloration trends new' data-count='".$newUsers."'><td>".$termEnd."</td><td><b>".number_format($newUsers)."</b></td><td>".number_format($newUserPct,1)."%</td></tr>";
+			echo "<tr class='coloration trends engagement' data-count='".$engagedSessions."'><td>".$termEnd."</td><td><b>".$engagedSessions."</b></td><td>".$engagementPct."%</td></tr>";
+			echo "<tr class='coloration trends search' data-count='".$search."'><td>".$termEnd."</td><td class='span'><b>".number_format($search)."</b></td></tr>";	
+			echo "<tr class='coloration trends pageviews' data-count='".$pageViews."'><td>".$termEnd."</td><td><b>".$pageViews.'</b></td><td>'.number_format($pagesPerSession,1)."</td></tr>";
+			echo "<tr class='coloration trends duration' data-count='".$avgEngagedDuration."'><td>".$termEnd."</td><td><b>".floor($avgEngagedDuration / 60)."m ".number_format($avgEngagedDuration % 60) . "s</b></td><td><b>".floor($avgSessionDuration / 60)."m ".number_format($avgSessionDuration % 60) . "s</b></td></tr>";
+	
+			$totalUsers = $newUsers = $sessions = $engagedSessions = $sessionDuration = $pageViews = $pagesPerSession = $engagementPct = $avgSessionDuration = $avgEngagedDuration = $newUserPct = 0;
+			$day = 1;
+			$row++;
+			$term = $maxDays == 1 || $term == $maxDays ? $minDays : $maxDays;	
+			$termEnd = date("M j, Y", strtotime("-1 day", strtotime($theDate)));
+		endif;
+		
+		if ( $row > $colEnd ) :
+			$col++;
+			$row = 1;
+
+			echo "</table><table class='trends trends-".$time." trends-col-".$col."'><tr><td class='header'>".ucfirst($time)."</td><td class='span page sessions'></td></tr>";
+		endif;
+	endforeach;
+	
+	echo "</table>";	
 }
 
 function battleplan_admin_daily_stats() {
-	$active['sessions'] = $active['search'] = $active['new'] = $active['pages'] = $active['engaged'] = '';
-	$active[$GLOBALS['btn2']] = " active";
+	echo '<div class="last-visitors-buttons">';	
+		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) :
+			$active = 'month' == $termTitle ? " active" : "";
+			echo do_shortcode('[btn size="1/5" class="'.$termTitle.$active.'"]'.ucwords($termTitle).'[/btn]');	
+		endforeach;	
+	echo '</div>';
 	
+	$metrics = array('sessions', 'new', 'engagement', 'search', 'pageviews', 'duration');
 	echo '<div class="trend-buttons">';
-		echo do_shortcode('[btn size="1/5" class="sessions'.$active['sessions'].'"]Sessions[/btn]');
-		echo do_shortcode('[btn size="1/5" class="search'.$active['search'].'"]Search[/btn]');
-		echo do_shortcode('[btn size="1/5" class="new'.$active['new'].'"]New[/btn]');
-		echo do_shortcode('[btn size="1/5" class="pages'.$active['pages'].'"]Pageviews[/btn]');
-		echo do_shortcode('[btn size="1/5" class="engaged'.$active['engaged'].'"]Engagement[/btn]');
+		foreach ( $metrics as $metric ) :
+			$active = 'sessions' == $metric ? " active" : "";
+			echo do_shortcode('[btn size="1/6" class="'.$metric.$active.'"]'.ucwords($metric).'[/btn]');	
+		endforeach;
 	echo '</div>';
 
-	battleplan_admin_stats('daily',1,1,365);
+	battleplan_visitor_trends('daily',1,1,365);
 }
 
-function battleplan_admin_weekly_stats() { battleplan_admin_stats('weekly',7,7,52); }
-function battleplan_admin_monthly_stats() { battleplan_admin_stats('monthly',30,31,12); }
-function battleplan_admin_quarterly_stats() { battleplan_admin_stats('quarterly',91,92,4); }
+function battleplan_admin_weekly_stats() { battleplan_visitor_trends('weekly',7,7,52); }
+function battleplan_admin_monthly_stats() { battleplan_visitor_trends('monthly',30,31,12); }
+function battleplan_admin_quarterly_stats() { battleplan_visitor_trends('quarterly',91,92,4); }
 
-// Add custom meta boxes to posts & pages
-add_action("add_meta_boxes", "battleplan_add_custom_meta_boxes");
-function battleplan_add_custom_meta_boxes() {
-	$getCPT = getCPT();
-	foreach ( $getCPT as $postType ) add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", $postType, "side", "default", null);
-}
 
-// Set up Page Stats widget on posts & pages
-function battleplan_page_stats() {
-	global $post;
-	$rightNow = strtotime(date("F j, Y g:i a"));
-	$today = strtotime(date("F j, Y"));
-	$lastViewed = strtotime(readMeta($post->ID, 'log-views-now'));		
-	$getViews = readMeta($post->ID, 'log-views');
-	$getViews = maybe_unserialize( $getViews );
-	//$viewsToday = $getViews[0]['views'];
-	//$firstDate = strtotime($getViews[0]['date']);
-	if ( $firstDate != $today ) $viewsToday = 0;
-	$last7Views = (int)readMeta($post->ID, "log-views-total-7day");
-	$last30Views = (int)readMeta($post->ID, "log-views-total-30day");
-	$last90Views = (int)readMeta($post->ID, "log-views-total-90day");	
-	$last180Views = (int)readMeta($post->ID, "log-views-total-180day");	
-	$last365Views = (int)readMeta($post->ID, "log-views-total-365day");
-	$dateDiff = (($rightNow - $lastViewed) / 60 / 60 / 24); $howLong = "day";
-	if ( $dateDiff < 1 ) : $dateDiff = (($rightNow - $lastViewed) / 60 / 60); $howLong = "hour"; endif;	
-	if ( $dateDiff < 1 ) : $dateDiff = (($rightNow - $lastViewed) / 60); $howLong = "minute"; endif;
-	if ( $dateDiff != 1 ) $howLong = $howLong."s";	
-	$dateDiff = number_format($dateDiff, 0);	
+// Set up Site Visitors widget on dashboard
+$GLOBALS['ga4_visitor'] = array();
+$chkLocation = '';
+foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $visitorSessions[$termDays] = 0;
+
+foreach ( $ga4_visitors_data as $visitorLocation=>$locationData ) :
+	foreach ( $locationData as $termLength=>$totalSessions ) :
+		if ( !in_array($visitorLocation, $excludeCities) ) :
+			$GLOBALS['ga4_visitor'][$termLength] += $totalSessions;
+		endif;
+	endforeach;
+
+endforeach;
+
+function battleplan_admin_site_stats() {
+	$lastVisitTime = timeElapsed( get_option('last_visitor_time'), 2);
+
+	echo "<table><tr><td class='label'>Last Visit</td><td class='last-visit'>".$lastVisitTime." ago</td></tr>";	
+	echo "<tr><td>&nbsp;</td></tr>";		
+	echo "<tr><td class='label'>Yesterday</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', number_format($GLOBALS['ga4_visitor']['page-views-1']), 'battleplan' ), number_format($GLOBALS['ga4_visitor']['page-views-1']))."</td></tr>";	
+	echo "<tr><td class='label'>This Week</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $GLOBALS['ga4_visitor']['page-views-7'], 'battleplan' ), number_format($GLOBALS['ga4_visitor']['page-views-7']) )."</td><td><b>".number_format(($GLOBALS['ga4_visitor']['page-views-30'])/7,1)."</b> /day</td></tr>";
 	
-	echo "<table>";		
-	echo "<tr><td><b>Yesterday</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $viewsToday, 'battleplan' ), number_format($viewsToday) )."</td></tr>";	
-	echo "<tr><td><b>Last 7 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last7Views, 'battleplan' ), number_format($last7Views) )."</td></tr>";
-	if ( $last30Views != $last7Views) echo "<tr><td><b>Last 30 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last30Views, 'battleplan' ), number_format($last30Views) )."</td></tr>";
-	if ( $last90Views != $last30Views) echo "<tr><td><b>Last 90 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last90Views, 'battleplan' ), number_format($last90Views) )."</td></tr>";
-	if ( $last180Views != $last90Views) echo "<tr><td><b>Last 180 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last180Views, 'battleplan' ), number_format($last180Views) )."</td></tr>";
-	if ( $last365Views != $last180Views) echo "<tr><td><b>Last 365 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last365Views, 'battleplan' ), number_format($last365Views) )."</td></tr>";
-	echo "</table>";		
-}; 
+	if ( $GLOBALS['ga4_visitor']['page-views-30'] != $GLOBALS['ga4_visitor']['page-views-7']) echo "<tr><td class='label'>This Month</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $GLOBALS['ga4_visitor']['page-views-30'], 'battleplan' ), number_format($GLOBALS['ga4_visitor']['page-views-30']) )."</td><td><b>".number_format(($GLOBALS['ga4_visitor']['page-views-30'])/30,1)."</b> /day</td></tr>";
+	
+	if ( $GLOBALS['ga4_visitor']['page-views-90'] != $GLOBALS['ga4_visitor']['page-views-30']) echo "<tr><td class='label'>3 Months</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $GLOBALS['ga4_visitor']['page-views-90'], 'battleplan' ), number_format($GLOBALS['ga4_visitor']['page-views-90']) )."</td><td><b>".number_format(($GLOBALS['ga4_visitor']['page-views-30'])/90,1)."</b> /day</td></tr>";
+	
+	if ( $GLOBALS['ga4_visitor']['page-views-180'] != $GLOBALS['ga4_visitor']['page-views-90']) echo "<tr><td class='label'>6 Months</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $GLOBALS['ga4_visitor']['page-views-180'], 'battleplan' ), number_format($GLOBALS['ga4_visitor']['page-views-180']) )."</td><td><b>".number_format(($GLOBALS['ga4_visitor']['page-views-30'])/180,1)."</b> /day</td></tr>";
+	
+	if ( $GLOBALS['ga4_visitor']['page-views-365'] != $GLOBALS['ga4_visitor']['page-views-180']) echo "<tr><td class='label'>1 Year</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $GLOBALS['ga4_visitor']['page-views-365'], 'battleplan' ), number_format($GLOBALS['ga4_visitor']['page-views-365']) )."</td><td><b>".number_format(($GLOBALS['ga4_visitor']['page-views-30'])/365,1)."</b> /day</td></tr>";
+		
+	echo '<tr><td>&nbsp;</td></tr></table>';
+}
+	
+
+// Set up Referrers widget on dashboard
+$GLOBALS['ga4_referrer'] = $referSessions = array();
+$chkReferrer = '';
+foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $referSessions[$termDays] = 0;
+
+foreach ( $ga4_referrers_data as $referrer=>$referrerData ) :
+	foreach ( $referrerData as $referrerLocation=>$totalSessions ) :
+		if ( !in_array($referrerLocation, $excludeCities) ) :
+			if ( $referrer == $chkReferrer ) : 
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $referSessions[$termDays] += $totalSessions['sessions-'.$termDays];
+			else:
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $GLOBALS['ga4_referrer'][$chkReferrer]['sessions-'.$termDays] = $referSessions[$termDays];	
+				$chkReferrer = $referrer;
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $referSessions[$termDays] = $totalSessions['sessions-'.$termDays];
+			endif;
+		endif;
+	endforeach; 
+endforeach;
+
+function battleplan_admin_referrer_stats() {
+	$ga4_referrer = array();
+
+	foreach ($GLOBALS['ga4_referrer'] as $referrerTitle => $referrerMetrics) :
+	    foreach ($referrerMetrics as $metricKey => $sessions) $ga4_referrer[$metricKey][$referrerTitle] = $sessions;
+	endforeach;
+
+	foreach ($ga4_referrer as $metricKey => &$referrerAndSessions) :
+    		arsort($referrerAndSessions);
+	endforeach;
+
+	foreach ($ga4_referrer as $metricKey => $referrerAndSessions) :
+		$active = 'sessions-30' == $metricKey ? " active" : "";
+
+		echo '<div class="handle-label handle-label-'.(int)substr($metricKey, strrpos($metricKey, '-') + 1).$active.'"><ul>';	
+		echo '<li class="sub-label" style="column-span: all">Last '.number_format(array_sum($referrerAndSessions)).' Engaged Sessions</li>';		
+
+		foreach ($referrerAndSessions as $referrerTitle =>$referSessions) :
+		   	if ( $referSessions > 0 ) echo "<li><div class='value'><b>".number_format($referSessions)."</b></div><div class='label'>".$referrerTitle."</div></li>";
+		endforeach;
+
+		echo '</ul></div>';	
+	endforeach;
+}
+	
+
+// Set up Locations widget on dashboard
+$GLOBALS['ga4_location'] = $locationSessions = array();
+$chkLocation = '';
+foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $locationSessions[$termDays] = 0;
+
+foreach ( $ga4_locations_data as $location=>$totalSessions ) :
+	if ( !in_array($location, $excludeCities) ) :
+		if ( $location == $chkLocation ) : 
+			foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $locationSessions[$termDays] += $totalSessions['sessions-'.$termDays];
+		else:
+			foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $GLOBALS['ga4_location'][$chkLocation]['sessions-'.$termDays] = $locationSessions[$termDays];	
+			$chkLocation = $location;
+			foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $locationSessions[$termDays] = $totalSessions['sessions-'.$termDays];
+		endif;
+	endif;
+endforeach; 
+
+function battleplan_admin_location_stats() {
+	$ga4_location = array();
+
+	foreach ($GLOBALS['ga4_location'] as $locationTitle => $locationMetrics) :
+	    foreach ($locationMetrics as $metricKey => $sessions) $ga4_location[$metricKey][$locationTitle] = $sessions;
+	endforeach;
+
+	foreach ($ga4_location as $metricKey => &$locationAndSessions) :
+    		arsort($locationAndSessions);
+	endforeach;
+
+	foreach ($ga4_location as $metricKey => $locationAndSessions) :
+		$active = 'sessions-30' == $metricKey ? " active" : "";
+		$locationTotalSessions = array_sum($locationAndSessions);
+
+		echo '<div class="handle-label handle-label-'.(int)substr($metricKey, strrpos($metricKey, '-') + 1).$active.'"><ul>';	
+		echo '<li class="sub-label" style="column-span: all">Last '.number_format($locationTotalSessions).' Engaged Sessions</li>';		
+		echo '<div style="column-count:2">';		
+	
+		foreach ($locationAndSessions as $locationTitle =>$locationSessions) :
+		   	if ( $locationSessions > ($locationTotalSessions * 0.005) ) echo "<li><div class='value'><b>".number_format($locationSessions)."</b></div><div class='label'>".$locationTitle."</div></li>";
+		endforeach;
+
+		echo '</div></ul></div>';	
+	endforeach;
+}
+	
+
+// Set up Browsers widget on dashboard
+$GLOBALS['ga4_browser'] = $browserSessions = array();
+$chkBrowser = '';
+foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $browserSessions[$termDays] = 0;
+
+foreach ( $ga4_browsers_data as $browser=>$browserData ) :
+	foreach ( $browserData as $browserLocation=>$totalSessions ) :
+		if ( !in_array($browserLocation, $excludeCities) ) :
+			if ( $browser == $chkBrowser ) : 
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $browserSessions[$termDays] += $totalSessions['sessions-'.$termDays];
+			else:
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $GLOBALS['ga4_browser'][$chkBrowser]['sessions-'.$termDays] = $browserSessions[$termDays];	
+				$chkBrowser = $browser;
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $browserSessions[$termDays] = $totalSessions['sessions-'.$termDays];
+			endif;
+		endif;
+	endforeach; 
+endforeach;
+
+// Set up Devices widget on dashboard
+$GLOBALS['ga4_device'] = $deviceSessions = array();
+$chkDevice = '';
+foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $deviceSessions[$termDays] = 0;
+
+foreach ( $ga4_devices_data as $device=>$deviceData ) :
+	foreach ( $deviceData as $deviceLocation=>$totalSessions ) :
+		if ( !in_array($deviceLocation, $excludeCities) ) :
+			if ( $device == $chkDevice ) : 
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $deviceSessions[$termDays] += $totalSessions['sessions-'.$termDays];
+			else:
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $GLOBALS['ga4_device'][$chkDevice]['sessions-'.$termDays] = $deviceSessions[$termDays];	
+				$chkDevice = $device;
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $deviceSessions[$termDays] = $totalSessions['sessions-'.$termDays];
+			endif;
+		endif;
+	endforeach; 
+endforeach;
+
+// Set up Speed widget on dashboard
+/*
+$GLOBALS['ga4_speed'] = $speedSessions = array();
+$chkDevice = '';
+foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $speedSessions[$termDays] = 0;
+
+foreach ( $ga4_speed_data as $speed=>$speedData ) :
+	foreach ( $speedData as $speedLocation=>$totalSessions ) :
+		if ( !in_array($speedLocation, $excludeCities) ) :
+			if ( $speed == $chkDevice ) : 
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $speedSessions[$termDays] += $totalSessions['sessions-'.$termDays];
+			else:
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $GLOBALS['ga4_speed'][$chkDevice]['sessions-'.$termDays] = $speedSessions[$termDays];	
+				$chkDevice = $speed;
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $speedSessions[$termDays] = $totalSessions['sessions-'.$termDays];
+			endif;
+		endif;
+	endforeach; 
+endforeach;
+
+$desktopSpeed = $mobileSpeed = array();
+foreach ( $ga4_speed_data as $sessions=>$speedData) :
+	foreach ( $speedData as $key=>$speed ) :
+		if (strpos($speed, 'desktop') !== false ) :	
+			$speed = substr($speed, strpos($speed, "«") + 1);
+			$desktopSpeed[] = (float)substr($speed, 1);
+		endif;
+		if (strpos($speed, 'mobile') !== false ) :			
+			$speed = substr($speed, strpos($speed, "«") + 1);
+			$mobileSpeed[] = (float)substr($speed, 1);
+		endif;
+	endforeach;
+endforeach;
+
+
+
+$desktopSpeed = array_filter($desktopSpeed, function($desktopSpeed) {
+    return $desktopSpeed <= 60;
+});
+
+sort($desktopSpeed);
+array_splice($desktopSpeed, 0, 5);
+array_splice($desktopSpeed, -ceil(0.10 * count($desktopSpeed)));
+
+$length = count($desktopSpeed);
+$middle = floor($length / 2);
+
+if ($length % 2) {
+    $median = $desktopSpeed[$middle];
+} else {
+    $median = ($desktopSpeed[$middle - 1] +$desktopSpeed[$middle]) / 2;
+}
+echo 'Avg: '.array_sum($desktopSpeed) / count($desktopSpeed).'<br>';
+echo 'Median: '.$median.'<br>';
+echo print_r($desktopSpeed);
+
+*/
+
+// Set up Screen Resolutions widget on dashboard
+$GLOBALS['ga4_resolution'] = $resolutionSessions = array();
+$chkDevice = '';
+foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $resolutionSessions[$termDays] = 0;
+
+foreach ( $ga4_resolution_data as $resolution=>$resolutionData ) :
+	foreach ( $resolutionData as $resolutionLocation=>$totalSessions ) :
+		if ( !in_array($resolutionLocation, $excludeCities) ) :
+
+			$resolution = substr($resolution, 0, strpos($resolution, 'x'));
+			if ( $resolution == $chkDevice ) : 
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $resolutionSessions[$termDays] += $totalSessions['sessions-'.$termDays];
+			else:
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $GLOBALS['ga4_resolution'][$chkDevice]['sessions-'.$termDays] = $resolutionSessions[$termDays];	
+				$chkDevice = $resolution;
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $resolutionSessions[$termDays] = $totalSessions['sessions-'.$termDays];
+			endif;
+		endif;
+	endforeach; 
+endforeach;
+
+// Set up Tech widget on dashboard
+function battleplan_admin_tech_stats() {
+	$ga4_browser = array();
+
+	foreach ($GLOBALS['ga4_browser'] as $browserTitle => $browserMetrics) :
+	    foreach ($browserMetrics as $metricKey => $sessions) $ga4_browser[$metricKey][$browserTitle] = $sessions;
+	endforeach;
+
+	foreach ($ga4_browser as $metricKey => &$browserAndSessions) :
+    		arsort($browserAndSessions);
+	endforeach;
+
+	foreach ($ga4_browser as $metricKey => $browserAndSessions) :
+		$active = 'sessions-30' == $metricKey ? " active" : "";
+		$browserTotalSessions = array_sum($browserAndSessions);
+
+		echo '<div class="handle-label handle-label-'.(int)substr($metricKey, strrpos($metricKey, '-') + 1).$active.'"><ul>';	
+		echo '<li class="sub-label" style="column-span: all">Browsers</li>';		
+
+		foreach ($browserAndSessions as $browserTitle =>$browserSessions) :			
+			if ( $browserSessions > ($browserTotalSessions * 0.001) ) echo "<li><div class='value'><b>".number_format(($browserSessions / $browserTotalSessions)*100,1)."%</b></div><div class='label'>".$browserTitle."</div></li>";
+		endforeach;
+
+		echo '</ul></div>';	
+	endforeach;
+	
+	$ga4_device = array();
+
+	foreach ($GLOBALS['ga4_device'] as $deviceTitle => $deviceMetrics) :
+	    foreach ($deviceMetrics as $metricKey => $sessions) $ga4_device[$metricKey][$deviceTitle] = $sessions;
+	endforeach;
+
+	foreach ($ga4_device as $metricKey => &$deviceAndSessions) :
+    		arsort($deviceAndSessions);
+	endforeach;
+
+	foreach ($ga4_device as $metricKey => $deviceAndSessions) :
+		$active = 'sessions-30' == $metricKey ? " active" : "";
+		$deviceTotalSessions = array_sum($deviceAndSessions);
+
+		echo '<div class="handle-label handle-label-'.(int)substr($metricKey, strrpos($metricKey, '-') + 1).$active.'"><ul>';	
+		echo '<li class="sub-label" style="column-span: all">Devices</li>';		
+
+		foreach ($deviceAndSessions as $deviceTitle =>$deviceSessions) :			
+			if ( $deviceSessions > 0 ) echo "<li><div class='value'><b>".number_format(($deviceSessions / $deviceTotalSessions)*100,1)."%</b></div><div class='label'>".ucwords($deviceTitle)."</div></li>";
+		endforeach;
+
+		echo '</ul></div>';	
+	endforeach;
+	
+	$ga4_resolution = array();
+
+	foreach ($GLOBALS['ga4_resolution'] as $resolutionTitle => $resolutionMetrics) :
+	    foreach ($resolutionMetrics as $metricKey => $sessions) $ga4_resolution[$metricKey][$resolutionTitle] = $sessions;
+	endforeach;
+
+	foreach ($ga4_resolution as $metricKey => &$resolutionAndSessions) :
+    		arsort($resolutionAndSessions);
+	endforeach;
+
+	foreach ($ga4_resolution as $metricKey => $resolutionAndSessions) :
+		$active = 'sessions-30' == $metricKey ? " active" : "";
+		$resolutionTotalSessions = array_sum($resolutionAndSessions);
+
+		echo '<div class="handle-label handle-label-'.(int)substr($metricKey, strrpos($metricKey, '-') + 1).$active.'"><ul>';	
+		echo '<li class="sub-label" style="column-span: all">Screen Widths</li>';		
+		echo '<div style="column-count:2">';		
+
+		foreach ($resolutionAndSessions as $resolutionTitle =>$resolutionSessions) :			
+			if ( $resolutionSessions > ($resolutionTotalSessions * 0.001) ) echo "<li><div class='value'><b>".number_format(($resolutionSessions / $resolutionTotalSessions)*100,1)."%</b></div><div class='label'>".ucwords($resolutionTitle)." px</div></li>";
+		endforeach;
+
+		echo '</div></ul></div>';	
+	endforeach;
+}
+	
+
+// Set up Content Visibility widget on dashboard
+$GLOBALS['ga4_contentVis'] = $contentVisSessions = array();
+$chkContentVis = '';
+foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $contentVisSessions[$termDays] = 0;
+
+foreach ( $ga4_achievementId_data as $contentVis=>$contentVisData ) :
+	foreach ( $contentVisData as $contentVisLocation=>$totalSessions ) :
+		if ( !in_array($contentVisLocation, $excludeCities) ) :
+			if ( $contentVis == $chkContentVis ) : 
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $contentVisSessions[$termDays] += $totalSessions['sessions-'.$termDays];
+			else:
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $GLOBALS['ga4_contentVis'][$chkContentVis]['sessions-'.$termDays] = $contentVisSessions[$termDays];	
+				$chkContentVis = $contentVis;
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $contentVisSessions[$termDays] = $totalSessions['sessions-'.$termDays];
+			endif;
+		endif;
+	endforeach; 
+endforeach;
+
+function battleplan_admin_content_stats() {
+	$ga4_contentVis = array();
+
+	foreach ($GLOBALS['ga4_contentVis'] as $contentVisTitle => $contentVisMetrics) :
+	    foreach ($contentVisMetrics as $metricKey => $sessions) $ga4_contentVis[$metricKey][$contentVisTitle] = $sessions;
+	endforeach;
+
+	foreach ($ga4_contentVis as $metricKey => $contentVisAndSessions) :
+		$active = 'sessions-30' == $metricKey ? " active" : "";
+		ksort($contentVisAndSessions);
+	
+		echo '<div class="handle-label handle-label-'.(int)substr($metricKey, strrpos($metricKey, '-') + 1).$active.'"><ul>';
+	
+		$pctCalc = array('init', '40', '60', '80', '100', '1.1', '1.2', '1.3', '1.4', '2.1', '2.2', '2.3', '2.4');
+		$contentCalc = array();
+		foreach ($contentVisAndSessions as $key=>$value) :
+			foreach ( $pctCalc as $pct ) :
+				if (strpos($key, '-'.$pct) !== false && strpos($key, 'track-') === false ) :
+					$contentCalc[$pct] += $value;
+			    	endif;
+			endforeach;
+		endforeach;
+		
+		$init = $contentCalc['init'];
+		arsort($contentCalc);
+	
+		echo '<li class="sub-label" style="column-span: all">Last '.number_format($init).' Pageviews</li>';		
+		foreach ($contentCalc as $pct=>$total) :
+			if ( $pct != 'init' ) :
+				if (strpos($pct, '.') !== false) :
+					$label = "viewed position ".$pct;
+				else:
+					$label = $pct != 100 ? "viewed at least ".$pct."%  of main content" : "<b>viewed ALL of main content</b>";
+				endif;
+				echo "<li><div class='value'><b>".number_format(($total/$init)*100,1)."%</b></div><div class='label'>".$label."</div></li>";
+			endif;
+		endforeach;		
+	
+		echo '</ul><li class="sub-label" style="column-span: all">Tracked Components & Events</li><ul>';	
+		$track_init = $contentVisAndSessions['track-init'];	
+		foreach ($contentVisAndSessions as $key=>$value) :
+		 	if (strpos($key, 'track-') === 0) :
+				$trackItem = str_replace('track-', '', $key);
+				if ( $trackItem != 'init' ) echo "<li><div class='value'><b>".number_format(($value/$track_init) * 100,1)."%</b></div><div class='label'>".ucwords($trackItem)."</div></li>";
+		    endif;
+		endforeach;
+		echo '</ul></div>';	
+	endforeach;
+}
+
+
+// Set up Most Popular Pages widget on dashboard
+$GLOBALS['ga4_page'] = $pageViews = array();
+$chkPage = '';
+foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $pageViews[$termDays] = 0;
+
+foreach ( $ga4_pages_data as $pagePath=>$pageData ) :
+	foreach ( $pageData as $pageLocation=>$totalViews ) :
+		if ( !in_array($pageLocation, $excludeCities) ) :
+			if ( $pagePath == $chkPage ) : 
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $pageViews[$termDays] += $totalViews['page-views-'.$termDays];
+			else:
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $GLOBALS['ga4_page'][$chkPage]['page-views-'.$termDays] = $pageViews[$termDays];	
+				$chkPage = $pagePath;
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $pageViews[$termDays] = $totalViews['page-views-'.$termDays];
+			endif;
+		endif;
+	endforeach; 
+endforeach;
+
+function battleplan_admin_pages_stats() {
+	$ga4_page = array();
+
+	foreach ($GLOBALS['ga4_page'] as $pageTitle => $pageMetrics) :
+	    foreach ($pageMetrics as $metricKey => $views) $ga4_page[$metricKey][$pageTitle] = $views;
+	endforeach;
+
+	foreach ($ga4_page as $metricKey => &$titlesAndViews) :
+    		arsort($titlesAndViews);
+	endforeach;
+
+	foreach ($ga4_page as $metricKey => $titlesAndViews) :
+		$active = 'page-views-30' == $metricKey ? " active" : "";
+
+		echo '<div class="handle-label handle-label-'.(int)substr($metricKey, strrpos($metricKey, '-') + 1).$active.'"><ul>';	
+		echo '<li class="sub-label" style="column-span: all">Last '.number_format(array_sum($titlesAndViews)).' Pageviews</li>';		
+
+		foreach ($titlesAndViews as $pageTitle =>$pageViews) :
+		   	if ( $pageViews > 0 ) echo "<li><div class='value'><b>".number_format($pageViews)."</b></div><div class='label'>".$pageTitle."</div></li>";
+		endforeach;
+
+		echo '</ul></div>';	
+	endforeach;
+}
+
 
 ?>

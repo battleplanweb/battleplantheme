@@ -396,16 +396,15 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 //Find screen position of element
 	window.getPosition = function (container, neededPos, scope) {
 		scope = scope || 'window';	
-		var theContainer = $(container), theScope = $(scope), getContOffset, getScopeOffset, getLeft, getTop, conW, conH, getBottom, getRight, getCenterX, getCenterY;		
-		if ( scope == "window" || scope == "screen" ) {
-			getContOffset = theContainer.offset(); 
-			getLeft = getContOffset.left; 
-			getTop = getContOffset.top; 
-		} else {
-			getScopeOffset = theScope.offset(); 
-			getContOffset = theContainer.offset(); 
-			getLeft = getContOffset.left- getScopeOffset.left ; 
-			getTop = getContOffset.top - getScopeOffset.top; 
+		var theContainer = $(container), theScope = $(scope), getContOffset = theContainer.offset(), getScopeOffset = theScope.offset(), getLeft, getTop, conW, conH, getBottom, getRight, getCenterX, getCenterY;
+		if (typeof getContOffset !== 'undefined') {
+			if ( scope == "window" || scope == "screen" ) {
+				getLeft = getContOffset.left; 
+				getTop = getContOffset.top; 
+			} else {
+				getLeft = getContOffset.left - getScopeOffset.left; 
+				getTop = getContOffset.top - getScopeOffset.top; 
+			}
 		}
 		
 		conW = theContainer.outerWidth(true);

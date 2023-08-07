@@ -81,6 +81,8 @@ if ( get_option('bp_setup_2023_07_23') != "completed" ) :
 endif;
 
 delete_option('bp_setup_2023_03_25z');
+delete_option('bp_admin_settings');
+battleplan_delete_prefixed_options( 'bp_admin_btn' );
 
 
 
@@ -591,11 +593,12 @@ function processChron($forceChron) {
 # Sync with Google Analytics
 --------------------------------------------------------------*/
 	$GLOBALS['customer_info'] = get_option('customer_info');
+	$GLOBALS['dataTerms'] = get_option('bp_data_terms');
 	$ga4_id = isset($GLOBALS['customer_info']['google-tags']['prop-id']) ? $GLOBALS['customer_info']['google-tags']['prop-id'] : null;
 	$client = new BetaAnalyticsDataClient(['credentials'=>get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json']);
-	$today = date( "Y-m-d" );
-	$rewind = date("Y-m-d", strtotime("-3 months"));
-
+	$today = date("Y-m-d", strtotime("-1 day"));
+	$rewind = date("Y-m-d", strtotime("-6 years"));
+	
 	$siteHitsGA4 = is_array(get_option('bp_site_hits_ga4')) ? get_option('bp_site_hits_ga4') : array();		
 
 	$states = array('alabama'=>'AL', 'arizona'=>'AZ', 'arkansas'=>'AR', 'california'=>'CA', 'colorado'=>'CO', 'connecticut'=>'CT', 'delaware'=>'DE', 'dist of columbia'=>'DC', 'dist. of columbia'=>'DC', 'district of columbia'=>'DC', 'florida'=>'FL', 'georgia'=>'GA', 'idaho'=>'ID', 'illinois'=>'IL', 'indiana'=>'IN', 'iowa'=>'IA', 'kansas'=>'KS', 'kentucky'=>'KY', 'louisiana'=>'LA', 'maine'=>'ME', 'maryland'=>'MD', 'massachusetts'=>'MA', 'michigan'=>'MI', 'minnesota'=>'MN', 'mississippi'=>'MS', 'missouri'=>'MO', 'montana'=>'MT', 'nebraska'=>'NE', 'nevada'=>'NV', 'new hampshire'=>'NH', 'new jersey'=>'NJ', 'new mexico'=>'NM', 'new york'=>'NY', 'north carolina'=>'NC', 'north dakota'=>'ND', 'ohio'=>'OH', 'oklahoma'=>'OK', 'oregon'=>'OR', 'pennsylvania'=>'PA', 'rhode island'=>'RI', 'south carolina'=>'SC', 'south dakota'=>'SD', 'tennessee'=>'TN', 'texas'=>'TX', 'utah'=>'UT', 'vermont'=>'VT', 'virginia'=>'VA', 'washington'=>'WA', 'washington d.c.'=>'DC', 'washington dc'=>'DC', 'west virginia'=>'WV', 'wisconsin'=>'WI', 'wyoming'=>'WY');
@@ -603,6 +606,9 @@ function processChron($forceChron) {
 
 // Gather GA4 Stats 
 	if ( $ga4_id && substr($ga4_id, 0, 2) != '00' ) :
+	
+		// Weekly Visitor Trends
+		$analyticsGA4 = array();
 		$response = $client->runReport([
 			'property' => 'properties/'.$ga4_id,
 			'dateRanges' => [
@@ -612,43 +618,420 @@ function processChron($forceChron) {
 				new Dimension([ 'name' => 'date' ]),
 				new Dimension([ 'name' => 'city' ]),
 				new Dimension([ 'name' => 'region' ]),	
-				new Dimension([ 'name' => 'firstUserSourceMedium' ]),	
-				new Dimension([ 'name' => 'pagePath' ]),
-				new Dimension([ 'name' => 'browser' ]),		
-				new Dimension([ 'name' => 'deviceCategory' ]),
-				new Dimension([ 'name' => 'screenResolution' ]),
-				new Dimension([ 'name' => 'pageReferrer' ]),
 			],
 			'metrics' => [
-				new Metric([ 'name' => 'screenPageViews' ]),
-				new Metric([ 'name' => 'engagedSessions' ]),
+				new Metric([ 'name' => 'totalUsers' ]),
 				new Metric([ 'name' => 'newUsers' ]),
+				new Metric([ 'name' => 'sessions' ]),
+				new Metric([ 'name' => 'engagedSessions' ]),
+				new Metric([ 'name' => 'userEngagementDuration' ]),
+				new Metric([ 'name' => 'screenPageViews' ]),
 			]
 		]);
-
+	
 		foreach ( $response->getRows() as $row ) :
 			$date = $row->getDimensionValues()[0]->getValue();
 			$city = $row->getDimensionValues()[1]->getValue();
 			$state = strtolower($row->getDimensionValues()[2]->getValue());
 			if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
-			$source = $row->getDimensionValues()[3]->getValue();	
-			$page = $row->getDimensionValues()[4]->getValue();
-			$browser = $row->getDimensionValues()[5]->getValue();
-			$device = $row->getDimensionValues()[6]->getValue();
-			$resolution = $row->getDimensionValues()[7]->getValue();							
-			$referrer = $row->getDimensionValues()[8]->getValue();							
-			$pagesViewed = $row->getMetricValues()[0]->getValue();				
-			$engaged = $row->getMetricValues()[1]->getValue();							
-			$newUsers = $row->getMetricValues()[2]->getValue();							
 
+			$totalUsers = $row->getMetricValues()[0]->getValue();	
+			$newUsers = $row->getMetricValues()[1]->getValue();				
+			$sessions = $row->getMetricValues()[2]->getValue();				
+			$engagedSessions = $row->getMetricValues()[3]->getValue();				
+			$sessionDuration = $row->getMetricValues()[4]->getValue();	
+			$pageViews = $row->getMetricValues()[5]->getValue();	
+	
 			if ( isset($states[$state]) ) :					
 				if ( $city == '(not set)' ) $location = ucwords($state);					
 
-				$analyticsGA4[] = array ('date'=>$date, 'location'=>$location, 'source'=>$source, 'page'=>$page, 'browser'=>$browser, 'device'=>$device, 'pages-viewed'=>$pagesViewed, 'resolution'=>$resolution, 'referrer'=>$referrer, 'engaged'=>$engaged, 'new-users'=>$newUsers );	
+				$analyticsGA4[] = array ('date'=>$date, 'location'=>$location, 'total-users'=>$totalUsers, 'new-users'=>$newUsers, 'sessions'=>$sessions, 'engaged-sessions'=>$engagedSessions, 'session-duration'=>$sessionDuration, 'page-views'=>$pageViews );	
 			endif;
+		endforeach;		
+	
+		if ( is_array($analyticsGA4) ) arsort($analyticsGA4);	
+		update_option('bp_ga4_trends_01', $analyticsGA4, false);		
+
+	
+
+	
+	
+	
+	
+	
+	
+		// Site Visitors	
+		$analyticsGA4 = array();
+		$dataTerms = array('day' => 1) + $GLOBALS['dataTerms'];
+		foreach ( $dataTerms as $termTitle=>$termDays ) :		
+			$response = $client->runReport([
+				'property' => 'properties/'.$ga4_id,
+				'dateRanges' => [
+					new DateRange([ 'start_date' => date("Y-m-d", strtotime("-".$termDays." days")), 'end_date' => $today ]),
+				],
+				'dimensions' => [
+					new Dimension([ 'name' => 'city' ]),
+					new Dimension([ 'name' => 'region' ]),	
+				],
+				'metrics' => [
+					new Metric([ 'name' => 'totalUsers' ]),
+				]
+			]);
+
+			foreach ( $response->getRows() as $row ) :
+				$city = $row->getDimensionValues()[0]->getValue();
+				$state = strtolower($row->getDimensionValues()[1]->getValue());
+				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
+				$totalUsers = $row->getMetricValues()[0]->getValue();	
+
+				if ( isset($states[$state]) ) :					
+					if ( $city == '(not set)' ) $location = ucwords($state);	
+					$analyticsGA4[$location]['page-views-'.$termDays] = $totalUsers;	
+				endif;
+			endforeach;		 
+
+			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
+
+			update_option('bp_ga4_visitors_01', $analyticsGA4, false);	
+	
 		endforeach;	
-		
-		if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
+	
+	
+		// Most Popular Pages	
+		$analyticsGA4 = array();
+		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) :		
+			$response = $client->runReport([
+				'property' => 'properties/'.$ga4_id,
+				'dateRanges' => [
+					new DateRange([ 'start_date' => date("Y-m-d", strtotime("-".$termDays." days")), 'end_date' => $today ]),
+				],
+				'dimensions' => [
+					new Dimension([ 'name' => 'pagePath' ]),				
+					new Dimension([ 'name' => 'city' ]),
+					new Dimension([ 'name' => 'region' ]),	
+				],
+				'metrics' => [
+					new Metric([ 'name' => 'screenPageViews' ]),
+				]
+			]);
+
+			foreach ( $response->getRows() as $row ) :
+				$pagePath = $row->getDimensionValues()[0]->getValue();
+				$city = $row->getDimensionValues()[1]->getValue();
+				$state = strtolower($row->getDimensionValues()[2]->getValue());
+				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
+				$pageViews = $row->getMetricValues()[0]->getValue();	
+
+				if ( $pagePath == "/" ) $pagePath = "Home";
+				$pagePath = str_replace('-', ' ', trim($pagePath, '/'));				
+				$pagePath = str_replace('/', ' » ', $pagePath);				
+				$pagePath = ucwords($pagePath);
+
+				if ( isset($states[$state]) ) :					
+					if ( $city == '(not set)' ) $location = ucwords($state);	
+					$analyticsGA4[$pagePath][$location]['page-views-'.$termDays] = $pageViews;	
+				endif;
+			endforeach;		 
+
+			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
+
+			update_option('bp_ga4_pages_01', $analyticsGA4, false);	
+		endforeach;	
+	
+			
+		// Referrers
+		$analyticsGA4 = array();
+		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) :	
+	
+			$response = $client->runReport([
+				'property' => 'properties/'.$ga4_id,
+				'dateRanges' => [
+					new DateRange([ 'start_date' => date("Y-m-d", strtotime("-".$termDays." days")), 'end_date' => $today ]),
+				],
+				'dimensions' => [
+					new Dimension([ 'name' => 'pageReferrer' ]),				
+					new Dimension([ 'name' => 'city' ]),
+					new Dimension([ 'name' => 'region' ]),	
+				],
+				'metrics' => [
+					//new Metric([ 'name' => 'sessions' ]),					
+					new Metric([ 'name' => 'engagedSessions' ]),
+				]
+			]);
+
+			foreach ( $response->getRows() as $row ) :
+				$pageReferrer = $row->getDimensionValues()[0]->getValue();
+				$city = $row->getDimensionValues()[1]->getValue();
+				$state = strtolower($row->getDimensionValues()[2]->getValue());
+				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
+				$sessions = $row->getMetricValues()[0]->getValue();	
+	
+				$switchRef = array ('google'=>'Google', 'facebook'=>'Facebook', 'yelp'=>'Yelp', 'yahoo'=>'Yahoo', 'bing'=>'Bing', 'duckduckgo'=>'DuckDuckGo', 'youtube'=>'YouTube', 'instagram'=>'Instagram');
+	
+				if (strpos($pageReferrer, $_SERVER['HTTP_HOST']) === false) :
+					foreach ( $switchRef as $find=>$replace ) :
+						if ( strpos( $pageReferrer, $find ) !== false ) $pageReferrer = $replace;
+					endforeach;		
+	
+					if ( $pageReferrer == '' ) $pageReferrer = "Direct";
+	
+					if ( isset($states[$state]) ) :					
+						if ( $city == '(not set)' ) $location = ucwords($state);	
+						$sessions += $analyticsGA4[$pageReferrer][$location]['sessions-'.$termDays];
+						$analyticsGA4[$pageReferrer][$location]['sessions-'.$termDays] = $sessions;	
+					endif;
+				endif;
+			endforeach;		 
+
+			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
+	
+			update_option('bp_ga4_referrers_01', $analyticsGA4, false);		
+		endforeach;	
+	
+			
+		// Locations
+		$analyticsGA4 = array();
+		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) :	
+	
+			$response = $client->runReport([
+				'property' => 'properties/'.$ga4_id,
+				'dateRanges' => [
+					new DateRange([ 'start_date' => date("Y-m-d", strtotime("-".$termDays." days")), 'end_date' => $today ]),
+				],
+				'dimensions' => [
+					new Dimension([ 'name' => 'city' ]),
+					new Dimension([ 'name' => 'region' ]),	
+				],
+				'metrics' => [
+					//new Metric([ 'name' => 'sessions' ]),					
+					new Metric([ 'name' => 'engagedSessions' ]),
+				]
+			]);
+
+			foreach ( $response->getRows() as $row ) :
+				$city = $row->getDimensionValues()[0]->getValue();
+				$state = strtolower($row->getDimensionValues()[1]->getValue());
+				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
+				$sessions = $row->getMetricValues()[0]->getValue();	
+	
+				if ( isset($states[$state]) ) :					
+					if ( $city == '(not set)' ) $location = ucwords($state);	
+					$analyticsGA4[$location]['sessions-'.$termDays] = $sessions;	
+				endif;
+
+			endforeach;		 
+
+			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
+	
+			update_option('bp_ga4_locations_01', $analyticsGA4, false);	
+		endforeach;		
+	
+			
+		// Browsers
+		$analyticsGA4 = array();
+		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) :	
+	
+			$response = $client->runReport([
+				'property' => 'properties/'.$ga4_id,
+				'dateRanges' => [
+					new DateRange([ 'start_date' => date("Y-m-d", strtotime("-".$termDays." days")), 'end_date' => $today ]),
+				],
+				'dimensions' => [
+					new Dimension([ 'name' => 'browser' ]),				
+					new Dimension([ 'name' => 'city' ]),
+					new Dimension([ 'name' => 'region' ]),	
+				],
+				'metrics' => [
+					//new Metric([ 'name' => 'sessions' ]),					
+					new Metric([ 'name' => 'engagedSessions' ]),
+				]
+			]);
+
+			foreach ( $response->getRows() as $row ) :
+				$browser = $row->getDimensionValues()[0]->getValue();
+				$city = $row->getDimensionValues()[1]->getValue();
+				$state = strtolower($row->getDimensionValues()[2]->getValue());
+				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
+				$sessions = $row->getMetricValues()[0]->getValue();	
+
+				if ( isset($states[$state]) ) :					
+					if ( $city == '(not set)' ) $location = ucwords($state);	
+					$sessions += $analyticsGA4[$browser][$location]['sessions-'.$termDays];
+					$analyticsGA4[$browser][$location]['sessions-'.$termDays] = $sessions;	
+				endif;
+			endforeach;		 
+
+			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
+	
+			update_option('bp_ga4_browsers_01', $analyticsGA4, false);		
+		endforeach;		
+	
+			
+		// Devices
+		$analyticsGA4 = array();
+		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) :	
+	
+			$response = $client->runReport([
+				'property' => 'properties/'.$ga4_id,
+				'dateRanges' => [
+					new DateRange([ 'start_date' => date("Y-m-d", strtotime("-".$termDays." days")), 'end_date' => $today ]),
+				],
+				'dimensions' => [
+					//new Dimension([ 'name' => 'mobileDeviceBranding' ]),				
+					new Dimension([ 'name' => 'deviceCategory' ]),				
+					new Dimension([ 'name' => 'city' ]),
+					new Dimension([ 'name' => 'region' ]),	
+				],
+				'metrics' => [
+					//new Metric([ 'name' => 'sessions' ]),					
+					new Metric([ 'name' => 'engagedSessions' ]),
+				]
+			]);
+
+			foreach ( $response->getRows() as $row ) :
+				$deviceType = $row->getDimensionValues()[0]->getValue();
+				$city = $row->getDimensionValues()[1]->getValue();
+				$state = strtolower($row->getDimensionValues()[2]->getValue());
+				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
+				$sessions = $row->getMetricValues()[0]->getValue();	
+
+				if ( isset($states[$state]) ) :					
+					if ( $city == '(not set)' ) $location = ucwords($state);	
+					$sessions += $analyticsGA4[$deviceType][$location]['sessions-'.$termDays];
+					$analyticsGA4[$deviceType][$location]['sessions-'.$termDays] = $sessions;	
+				endif;
+			endforeach;		 
+
+			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
+	
+			update_option('bp_ga4_devices_01', $analyticsGA4, false);		
+		endforeach;				
+	
+			/*
+		// Site Load Speed
+		$analyticsGA4 = array();
+		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) :	
+	
+			$response = $client->runReport([
+				'property' => 'properties/'.$ga4_id,
+				'dateRanges' => [
+					new DateRange([ 'start_date' => date("Y-m-d", strtotime("-".$termDays." days")), 'end_date' => $today ]),
+				],
+				'dimensions' => [
+					new Dimension([ 'name' => 'groupId' ]),				
+					//new Dimension([ 'name' => 'city' ]),
+					//new Dimension([ 'name' => 'region' ]),	
+				],
+				'metrics' => [
+					//new Metric([ 'name' => 'sessions' ]),					
+					//new Metric([ 'name' => 'engagedSessions' ]),
+				]
+			]);
+
+			foreach ( $response->getRows() as $row ) :
+				$groupId = $row->getDimensionValues()[0]->getValue();
+				//$city = $row->getDimensionValues()[1]->getValue();
+				//$state = strtolower($row->getDimensionValues()[2]->getValue());
+				//if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
+				//$sessions = $row->getMetricValues()[0]->getValue();	
+
+				//if ( isset($states[$state]) ) :					
+					//if ( $city == '(not set)' ) $location = ucwords($state);	
+					$analyticsGA4['sessions-'.$termDays][] = $groupId;	
+				//endif;
+			endforeach;		 
+
+			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
+	
+			update_option('bp_ga4_speed_01', $analyticsGA4, false);		
+		endforeach;			
+	*/
+			
+		// Screen Resolutions
+		$analyticsGA4 = array();
+		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) :	
+	
+			$response = $client->runReport([
+				'property' => 'properties/'.$ga4_id,
+				'dateRanges' => [
+					new DateRange([ 'start_date' => date("Y-m-d", strtotime("-".$termDays." days")), 'end_date' => $today ]),
+				],
+				'dimensions' => [
+					new Dimension([ 'name' => 'screenResolution' ]),				
+					new Dimension([ 'name' => 'city' ]),
+					new Dimension([ 'name' => 'region' ]),	
+				],
+				'metrics' => [
+					//new Metric([ 'name' => 'sessions' ]),					
+					new Metric([ 'name' => 'engagedSessions' ]),
+				]
+			]);
+
+			foreach ( $response->getRows() as $row ) :
+				$screenResolution = $row->getDimensionValues()[0]->getValue();
+				$city = $row->getDimensionValues()[1]->getValue();
+				$state = strtolower($row->getDimensionValues()[2]->getValue());
+				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
+				$sessions = $row->getMetricValues()[0]->getValue();	
+
+				if ( isset($states[$state]) ) :					
+					if ( $city == '(not set)' ) $location = ucwords($state);	
+					$sessions += $analyticsGA4[$screenResolution][$location]['sessions-'.$termDays];
+					$analyticsGA4[$screenResolution][$location]['sessions-'.$termDays] = $sessions;	
+				endif;
+			endforeach;		 
+
+			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
+	
+			update_option('bp_ga4_resolution_01', $analyticsGA4, false);		
+		endforeach;			
+	
+			
+		// Content Visibility
+		$analyticsGA4 = array();
+		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) :	
+	
+			$response = $client->runReport([
+				'property' => 'properties/'.$ga4_id,
+				'dateRanges' => [
+					new DateRange([ 'start_date' => date("Y-m-d", strtotime("-".$termDays." days")), 'end_date' => $today ]),
+				],
+				'dimensions' => [
+					new Dimension([ 'name' => 'achievementId' ]),				
+					new Dimension([ 'name' => 'city' ]),
+					new Dimension([ 'name' => 'region' ]),	
+				],
+				'metrics' => [
+					new Metric([ 'name' => 'sessions' ]),					
+					//new Metric([ 'name' => 'engagedSessions' ]),
+				]
+			]);
+
+			foreach ( $response->getRows() as $row ) :
+				$achievementId = $row->getDimensionValues()[0]->getValue();
+				$city = $row->getDimensionValues()[1]->getValue();
+				$state = strtolower($row->getDimensionValues()[2]->getValue());
+				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
+				$sessions = $row->getMetricValues()[0]->getValue();	
+
+				if ( isset($states[$state]) ) :					
+					if ( $city == '(not set)' ) $location = ucwords($state);	
+					$sessions += $analyticsGA4[$achievementId][$location]['sessions-'.$termDays];
+					$analyticsGA4[$achievementId][$location]['sessions-'.$termDays] = $sessions;	
+				endif;
+			endforeach;		 
+
+			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
+	
+			update_option('bp_ga4_achievementId_01', $analyticsGA4, false);		
+		endforeach;	
+	
+	
+	
+	
+	
+	
+	
 	
 		// Split session data into site hits
 		foreach ( $analyticsGA4 as $analyze ) :
@@ -755,7 +1138,7 @@ function processChron($forceChron) {
 			$allTracking[] = array('content'=>$content_tracking, 'speed'=>$site_speed, 'location'=>$location);		
 		endforeach;
 		updateOption('bp_tracking_content', $allTracking, false);		
-		
+	
 		// Tally sessions for use on bp stats page
 		$statOverview = array();		
 		$pageCounts = array(7, 30, 90, 365);		
@@ -794,6 +1177,7 @@ function processChron($forceChron) {
 		endforeach;
 		
 		updateOption('stat-overview', $statOverview, false );	
+	
 	endif;
 }
 ?>

@@ -34,7 +34,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	
 	/* Control color of Visitor Trends box */
 	function runVisitorTrendColor(trend) {
-		var trends = new Array('sessions', 'search', 'new','pages','engaged');		
+		var trends = new Array('sessions', 'new', 'engagement', 'search', 'pageviews', 'duration');		
 		for (var subtrend of trends) {
 			var getCount = [], getTotal, getThird, topThird, loopThru, loopNum=0, varyAmt;		
 
@@ -109,24 +109,26 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	}
 		
 	// Visitor Trend buttons
-	$('#postbox-container-3').prepend($('.trend-buttons'));		
+	$('#postbox-container-3').prepend($('.trend-buttons'));
+	
+	function changeHeaders() {
+		if ( $('table.trends tr.trends.active').hasClass("sessions") ) { $('table.trends td.page').text('Sessions • Users'); }
+		if ( $('table.trends tr.trends.active').hasClass("new") ) { $('table.trends td.page').text('New Users • Pct %'); }
+		if ( $('table.trends tr.trends.active').hasClass("engagement") ) { $('table.trends td.page').text('Engaged • Pct %'); }
+		if ( $('table.trends tr.trends.active').hasClass("search") ) { $('table.trends td.page').text('Search'); }
+		if ( $('table.trends tr.trends.active').hasClass("pageviews") ) { $('table.trends td.page').text('Pageviews • Per User'); }
+		if ( $('table.trends tr.trends.active').hasClass("duration") ) { $('table.trends td.page').text('Engaged • Total'); }
+	}
+	changeHeaders();
+
 	
 	$('.trend-buttons .sessions').click(function(event) {
 		event.preventDefault();
 		$('table.trends tr.trends, .trend-buttons div a').removeClass('active');
 		$('table.trends tr.trends.sessions').addClass('active');		
 		$(this).find('a').addClass('active');
-		$('table.trends td.page').text('Sessions');
+		changeHeaders();
 		saveBtnChoice('btn2', 'sessions');
-	});
-
-	$('.trend-buttons .search').click(function(event) {
-		event.preventDefault();
-		$('table.trends tr.trends, .trend-buttons div a').removeClass('active');
-		$('table.trends tr.trends.search').addClass('active');	
-		$(this).find('a').addClass('active');
-		$('table.trends td.page').text('Search');
-		saveBtnChoice('btn2', 'search');
 	});
 	
 	$('.trend-buttons .new').click(function(event) {
@@ -134,26 +136,44 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$('table.trends tr.trends, .trend-buttons div a').removeClass('active');
 		$('table.trends tr.trends.new').addClass('active');		
 		$(this).find('a').addClass('active');
-		$('table.trends td.page').text('New');
+		changeHeaders();
 		saveBtnChoice('btn2', 'new');
 	});
 		
-	$('.trend-buttons .pages').click(function(event) {
+	$('.trend-buttons .engagement').click(function(event) {
 		event.preventDefault();
 		$('table.trends tr.trends, .trend-buttons div a').removeClass('active');
-		$('table.trends tr.trends.pages').addClass('active');	
+		$('table.trends tr.trends.engagement').addClass('active');	
 		$(this).find('a').addClass('active');
-		$('table.trends td.page').text('Pages');
-		saveBtnChoice('btn2', 'pages');
+		changeHeaders();
+		saveBtnChoice('btn2', 'engagement');
+	});
+
+	$('.trend-buttons .search').click(function(event) {
+		event.preventDefault();
+		$('table.trends tr.trends, .trend-buttons div a').removeClass('active');
+		$('table.trends tr.trends.search').addClass('active');	
+		$(this).find('a').addClass('active');
+		changeHeaders();
+		saveBtnChoice('btn2', 'search');
 	});
 		
-	$('.trend-buttons .engaged').click(function(event) {
+	$('.trend-buttons .pageviews').click(function(event) {
 		event.preventDefault();
 		$('table.trends tr.trends, .trend-buttons div a').removeClass('active');
-		$('table.trends tr.trends.engaged').addClass('active');	
+		$('table.trends tr.trends.pageviews').addClass('active');	
 		$(this).find('a').addClass('active');
-		$('table.trends td.page').text('Engaged');
-		saveBtnChoice('btn2', 'engaged');
+		changeHeaders();
+		saveBtnChoice('btn2', 'pageviews');
+	});
+		
+	$('.trend-buttons .duration').click(function(event) {
+		event.preventDefault();
+		$('table.trends tr.trends, .trend-buttons div a').removeClass('active');
+		$('table.trends tr.trends.duration').addClass('active');	
+		$(this).find('a').addClass('active');
+		changeHeaders();
+		saveBtnChoice('btn2', 'duration');
 	});
 	
 	// Last ??? Visitors buttons
@@ -163,7 +183,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	$('.last-visitors-buttons .week').click(function(event) {
 		event.preventDefault();
 		$('.handle-label, .last-visitors-buttons div, .last-visitors-buttons div a').removeClass('active');
-		$('.handle-label-week').addClass('active');		
+		$('.handle-label-7').addClass('active');		
 		$(this).find('a').addClass('active');
 		saveBtnChoice('btn1', 'week');
 	});	
@@ -171,7 +191,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	$('.last-visitors-buttons .month').click(function(event) {
 		event.preventDefault();
 		$('.handle-label, .last-visitors-buttons div, .last-visitors-buttons div a').removeClass('active');
-		$('.handle-label-month').addClass('active');		
+		$('.handle-label-30').addClass('active');		
 		$(this).find('a').addClass('active');
 		saveBtnChoice('btn1', 'month');
 	});
@@ -179,15 +199,23 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	$('.last-visitors-buttons .quarter').click(function(event) {
 		event.preventDefault();
 		$('.handle-label, .last-visitors-buttons div, .last-visitors-buttons div a').removeClass('active');
-		$('.handle-label-quarter').addClass('active');		
+		$('.handle-label-90').addClass('active');		
 		$(this).find('a').addClass('active');
 		saveBtnChoice('btn1', 'quarter');
 	});
 	
+	$('.last-visitors-buttons .semester').click(function(event) {
+		event.preventDefault();
+		$('.handle-label, .last-visitors-buttons div, .last-visitors-buttons div a').removeClass('active');
+		$('.handle-label-180').addClass('active');		
+		$(this).find('a').addClass('active');
+		saveBtnChoice('btn1', 'semester');
+	});
+		
 	$('.last-visitors-buttons .year').click(function(event) {
 		event.preventDefault();
 		$('.handle-label, .last-visitors-buttons div, .last-visitors-buttons div a').removeClass('active');
-		$('.handle-label-year').addClass('active');		
+		$('.handle-label-365').addClass('active');		
 		$(this).find('a').addClass('active');
 		saveBtnChoice('btn1', 'year');
 	});
@@ -203,6 +231,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		}
 		setTimeout(function(){ location.reload(); }, 1000);
 	});	
+	
 	
 	// Add title of the page being edited to the "View Post" button in the admin banner
 	var pageTitleInput = $('#title');

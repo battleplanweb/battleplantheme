@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '20.7.3' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '20.8' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -32,8 +32,17 @@ $spamURLs = explode("\n", file_get_contents( get_template_directory().'/spammers
 foreach ( $googlebots as $googlebot ) if ( isset($_SERVER["HTTP_USER_AGENT"]) && stripos( $_SERVER["HTTP_USER_AGENT"], $googlebot) !== false && !defined('_IS_GOOGLEBOT') ) define( '_IS_GOOGLEBOT', true );
 foreach ( $bots as $bot ) if ( isset($_SERVER["HTTP_USER_AGENT"]) && stripos( $_SERVER["HTTP_USER_AGENT"], $bot) !== false && !defined('_IS_BOT') ) define( '_IS_BOT', true );
 foreach ( $spamIPs as $spamIP ) if ( isset($_SERVER["REMOTE_ADDR"]) && stripos( $_SERVER["REMOTE_ADDR"], $spamIP) !== false && !defined('_IS_BOT') ) define( '_IS_BOT', true );
-foreach ( $spamURLs as $spamURL ) if ( isset($_SERVER["HTTP_REFERER"]) && stripos( $_SERVER["HTTP_REFERER"], $spamURL) !== false && !defined('_IS_BOT') ) define( '_IS_BOT', true );
 
+
+//temporary -> to log spammers + IPs -> when finished, delete this code and remove bp_log_spammers from options
+	foreach ( $spamURLs as $spamURL ) :
+		if ( isset($_SERVER["HTTP_REFERER"]) && $spamURL != '' && $spamURL != null && stripos( $_SERVER["HTTP_REFERER"], $spamURL) !== false && !defined('_IS_BOT') ) :
+			$getList = get_option('bp_log_spammers') ? get_option('bp_log_spammers') : array();
+			$getList[$spamURL] = $_SERVER["REMOTE_ADDR"] ;
+			updateOption('bp_log_spammers', $getList);
+		endif;
+	endforeach;
+ 
 if ( !defined('_IS_BOT') ) define( '_IS_BOT', false );
 if ( !defined('_IS_GOOGLEBOT') ) define( '_IS_GOOGLEBOT', false );
 
@@ -90,7 +99,7 @@ if ( !array_key_exists('schema', $GLOBALS['customer_info'] ) ) $GLOBALS['custome
 if ( !array_key_exists('default-loc', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['default-loc'] = $GLOBALS['customer_info']['city'].', '.$GLOBALS['customer_info']['state-abbr'];
 
 if ( !is_admin() && !defined('_USER_LOCATION') ) :
-	$cities = array('1026171'=>'Addison, TX', '1026178'=>'Allen, TX', '1026187'=>'Anna, TX', '1026200'=>'Aubrey, TX', '9026973'=>'Blue Ridge, TX', '1020242'=>'Carrollton, TX', '9026851'=>'Coppell, TX', '9051771'=>'Corinth, TX', '1026339'=>'Dallas, TX', '9026913'=>'Dallas, TX', '9026941'=>'Dallas, TX', '1026349'=>'Denison, TX', '9051926'=>'Fairview, TX', '9026831'=>'Fairview, TX', '9051933'=>'Farmers Branch, TX', '9028405'=>'Friona, TX', '1026407'=>'Frisco, TX', '9026807'=>'Frisco, TX', '9026808'=>'Frisco, TX', '1026482'=>'Howe, TX', '9026827'=>'Irving, TX', '1019935'=>'Lewisville, TX', '9052357'=>'Lucas, TX', '1026607'=>'McKinney, TX', '9026833'=>'McKinney, TX', '1026611'=>'Melissa, TX', '1022561'=>'Mesquite, TX', '9052495'=>'Murphy, TX', '9026848'=>'Murphy, TX', '1016775'=>'Plano, TX', '1026695'=>'Plano, TX', '9026802'=>'Plano, TX', '9026913'=>'Plano, TX', '9026803'=>'Plano, TX', '9026847'=>'Plano, TX', '1026710'=>'Pottsboro, TX', '9026838'=>'Prosper, TX', '1026729'=>'Richardson, TX', '1026741'=>'Rockwall, TX', '1026750'=>'Rowlett, TX', '1026751'=>'Royse City, TX', '1026755'=>'Sachse, TX', '1026788'=>'Sherman, TX', '9027240'=>'Springtown, TX', '1026885'=>'Whitesboro, TX', '1026899'=>'Wylie, TX');
+	$cities = array('1026171'=>'Addison, TX', '9026791'=>'Addison, TX', '1026178'=>'Allen, TX', '9026797'=>'Allen, TX', '1026187'=>'Anna, TX', '1026200'=>'Aubrey, TX', '9026973'=>'Blue Ridge, TX', '1020242'=>'Carrollton, TX', '9026851'=>'Coppell, TX', '9051771'=>'Corinth, TX', '1026339'=>'Dallas, TX', '9026913'=>'Dallas, TX', '9026941'=>'Dallas, TX', '9026930'=>'Dallas, TX', '9026915'=>'Dallas, TX', '9026940'=>'Dallas, TX', '9026919'=>'Dallas, TX', '1026349'=>'Denison, TX', '9051926'=>'Fairview, TX', '9026831'=>'Fairview, TX', '9051933'=>'Farmers Branch, TX', '9028405'=>'Friona, TX', '1026407'=>'Frisco, TX', '9026807'=>'Frisco, TX', '9026808'=>'Frisco, TX', '9026820'=>'Grand Prairie, TX', '1026482'=>'Howe, TX', '9026827'=>'Irving, TX', '1019935'=>'Lewisville, TX', '9052357'=>'Lucas, TX', '1026607'=>'McKinney, TX', '9026833'=>'McKinney, TX', '1026611'=>'Melissa, TX', '1022561'=>'Mesquite, TX', '9026881'=>'Mesquite, TX', '9052495'=>'Murphy, TX', '9026848'=>'Murphy, TX', '1016775'=>'Plano, TX', '1026695'=>'Plano, TX', '9026802'=>'Plano, TX', '9026913'=>'Plano, TX', '9026803'=>'Plano, TX', '9026847'=>'Plano, TX', '9026835'=>'Plano, TX', '9026795'=>'Plano, TX','1026710'=>'Pottsboro, TX', '9026838'=>'Prosper, TX', '1026729'=>'Richardson, TX', '1026741'=>'Rockwall, TX', '1026750'=>'Rowlett, TX', '1026751'=>'Royse City, TX', '1026755'=>'Sachse, TX', '1026788'=>'Sherman, TX', '9027240'=>'Springtown, TX', '9026895'=>'Waxahachie, TX', '1026885'=>'Whitesboro, TX', '1026899'=>'Wylie, TX');
 
 	$common = array('am', 'an', 'as', 'at', 'be', 'by', 'do', 'if', 'is', 'it', 'me', 'my', 'no', 'of', 'on', 'or', 'so', 'to', 'up', 'us', 'we');
 	$location = 'none';

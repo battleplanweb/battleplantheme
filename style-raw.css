@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 20.8
+Version: 20.8.1
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -3717,7 +3717,8 @@ p + .thumb-left .section .switch-thumb .align-right {
 }
 
 img.noFX,
-.noFX img  {
+.noFX img,
+.follow_us_on_fb iframe {
 	border:										none !important;
 	background:									none !important;
 	box-shadow:									none !important;
@@ -4276,6 +4277,7 @@ img.img-404 {
 .grid-3e,
 .gallery-column-3 {
 	grid-template-columns: 						repeat(3, 1fr);
+
 }
 
 .grid-4e,
@@ -4884,6 +4886,7 @@ chat-widget .lc_text-widget--btn,
 .carousel.effect-zoom .carousel-item.carousel-item-prev.carousel-item-right,
 .carousel.effect-fade-zoom .carousel-item.carousel-item-next.carousel-item-left,
 .carousel.effect-fade-zoom .carousel-item.carousel-item-prev.carousel-item-right,
+
 .carousel.effect-zoom-fade .carousel-item.carousel-item-next.carousel-item-left,
 .carousel.effect-zoom-fade .carousel-item.carousel-item-prev.carousel-item-right {
 	transition-timing-function: 				ease-in;
@@ -5677,6 +5680,7 @@ html.error503 h3 {
 	.widget.priority-1,
 	.widget.lock-to-bottom {
 		order: 										5;
+
 	}
 	
 	.widget.widget-form {

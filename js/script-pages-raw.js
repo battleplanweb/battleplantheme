@@ -354,7 +354,7 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 		setCookie('pages-viewed', page_views);
 	}
 
-// Set city-specific landing page as home-url cookig
+// Set city-specific landing page as home-url cookie
 	if ( $('body').hasClass('alt-home') ) {
 		var get_alt_loc = location.pathname + location.search, new_home = get_alt_loc.replace(/\//g, "");		
 		setCookie('home-url', new_home);
@@ -368,7 +368,7 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 	}
 	
 // Set Google Ads landing page as site-loc cookie
-	if ( site_loc != null ) {
+	if ( typeof site_loc !== 'undefined' && site_loc != null ) {
 		setCookie('site-loc', site_loc);
 	}	
 

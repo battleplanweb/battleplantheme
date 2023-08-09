@@ -92,23 +92,6 @@ function battleplan_registerPostTypes() {
 		'exclude_from_search'=>true,
 		'show_in_nav_menus'=>false,
 	));
-	register_post_type( 'optimized', array (
-		'label'=>__( 'optimized', 'battleplan' ),
-		'labels'=>array(
-			'name'=>_x( 'Optimized', 'Post Type General Name', 'battleplan' ),
-			'singular_name'=>_x( 'Optimized', 'Post Type Singular Name', 'battleplan' ),
-		),
-		'public'=>true,
-		'publicly_queryable'=>true,
-		'exclude_from_search'=>false,
-		'show_in_nav_menus'=>false,
-		'supports'=>array( 'title', 'editor', 'thumbnail', 'page-attributes', 'custom-fields' ),
-		'hierarchical'=>false,
-		'menu_position'=>20,
-		'menu_icon'=>'dashicons-edit-page',
-		'has_archive'=>true,
-		'capability_type'=>'page',
-	));
 	register_post_type( 'landing', array (
 		'label'=>__( 'landing', 'battleplan' ),
 		'labels'=>array(
@@ -166,10 +149,10 @@ function battleplan_registerPostTypes() {
 	));
 }
 
-// Remove 'optimized' from the url so that optimized pages look like regular pages
+// Remove 'landing', 'universal', and 'elements' from the url so that pages look like regular pages
 add_filter( 'post_type_link', 'battleplan_remove_cpt_slug', 10, 2 );
 function battleplan_remove_cpt_slug( $post_link, $post ) {
-	if ( 'universal' === $post->post_type || 'optimized' === $post->post_type || 'landing' === $post->post_type || 'elements' === $post->post_type ) $post_link = str_replace( '/' . $post->post_type . '/', '/', $post_link );
+	if ( 'universal' === $post->post_type || 'landing' === $post->post_type || 'elements' === $post->post_type ) $post_link = str_replace( '/' . $post->post_type . '/', '/', $post_link );
  	return $post_link;
 }
 
@@ -178,7 +161,7 @@ function battleplan_add_cpt_to_main_query( $query ) {
 	if ( !$query->is_main_query() ) return;
 	if ( !isset( $query->query['page'] ) || 2 !== count( $query->query ) ) return;
 	if ( empty( $query->query['name'] ) ) return;
-	$query->set( 'post_type', array( 'post', 'page', 'optimized', 'landing', 'universal' ) );
+	$query->set( 'post_type', array( 'post', 'page', 'landing', 'universal' ) );
 }
 
 /*--------------------------------------------------------------

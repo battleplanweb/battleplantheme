@@ -5,6 +5,17 @@
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
 # Site Stats
+	- Set up dashboard stats review 
+	- Set up Visitor Trends widget on dashboard
+	- Set up Site Visitors widget on dashboard
+	- Set up Referrers widget on dashboard
+	- Set up Locations widget on dashboard
+	- Set up Browsers widget on dashboard
+	- Set up Devices widget on dashboard
+	- Set up Screen Resolutions widget on dashboard
+	- Set up Tech widget on dashboard
+	- Set up Content Visibility widget on dashboard
+	- Set up Most Popular Pages widget on dashboard
 
 --------------------------------------------------------------*/
 
@@ -186,15 +197,15 @@ function battleplan_admin_site_stats() {
 	echo "<table><tr><td class='label'>Last Visit</td><td class='last-visit'>".$lastVisitTime." ago</td></tr>";	
 	echo "<tr><td>&nbsp;</td></tr>";		
 	echo "<tr><td class='label'>Yesterday</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', number_format($GLOBALS['ga4_visitor']['page-views-1']), 'battleplan' ), number_format($GLOBALS['ga4_visitor']['page-views-1']))."</td></tr>";	
-	echo "<tr><td class='label'>This Week</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $GLOBALS['ga4_visitor']['page-views-7'], 'battleplan' ), number_format($GLOBALS['ga4_visitor']['page-views-7']) )."</td><td><b>".number_format(($GLOBALS['ga4_visitor']['page-views-30'])/7,1)."</b> /day</td></tr>";
+	echo "<tr><td class='label'>This Week</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $GLOBALS['ga4_visitor']['page-views-7'], 'battleplan' ), number_format($GLOBALS['ga4_visitor']['page-views-7']) )."</td><td><b>".number_format(($GLOBALS['ga4_visitor']['page-views-7'])/7,1)."</b> /day</td></tr>";
 	
 	if ( $GLOBALS['ga4_visitor']['page-views-30'] != $GLOBALS['ga4_visitor']['page-views-7']) echo "<tr><td class='label'>This Month</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $GLOBALS['ga4_visitor']['page-views-30'], 'battleplan' ), number_format($GLOBALS['ga4_visitor']['page-views-30']) )."</td><td><b>".number_format(($GLOBALS['ga4_visitor']['page-views-30'])/30,1)."</b> /day</td></tr>";
 	
-	if ( $GLOBALS['ga4_visitor']['page-views-90'] != $GLOBALS['ga4_visitor']['page-views-30']) echo "<tr><td class='label'>3 Months</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $GLOBALS['ga4_visitor']['page-views-90'], 'battleplan' ), number_format($GLOBALS['ga4_visitor']['page-views-90']) )."</td><td><b>".number_format(($GLOBALS['ga4_visitor']['page-views-30'])/90,1)."</b> /day</td></tr>";
+	if ( $GLOBALS['ga4_visitor']['page-views-90'] != $GLOBALS['ga4_visitor']['page-views-30']) echo "<tr><td class='label'>3 Months</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $GLOBALS['ga4_visitor']['page-views-90'], 'battleplan' ), number_format($GLOBALS['ga4_visitor']['page-views-90']) )."</td><td><b>".number_format(($GLOBALS['ga4_visitor']['page-views-90'])/90,1)."</b> /day</td></tr>";
 	
-	if ( $GLOBALS['ga4_visitor']['page-views-180'] != $GLOBALS['ga4_visitor']['page-views-90']) echo "<tr><td class='label'>6 Months</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $GLOBALS['ga4_visitor']['page-views-180'], 'battleplan' ), number_format($GLOBALS['ga4_visitor']['page-views-180']) )."</td><td><b>".number_format(($GLOBALS['ga4_visitor']['page-views-30'])/180,1)."</b> /day</td></tr>";
+	if ( $GLOBALS['ga4_visitor']['page-views-180'] != $GLOBALS['ga4_visitor']['page-views-90']) echo "<tr><td class='label'>6 Months</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $GLOBALS['ga4_visitor']['page-views-180'], 'battleplan' ), number_format($GLOBALS['ga4_visitor']['page-views-180']) )."</td><td><b>".number_format(($GLOBALS['ga4_visitor']['page-views-180'])/180,1)."</b> /day</td></tr>";
 	
-	if ( $GLOBALS['ga4_visitor']['page-views-365'] != $GLOBALS['ga4_visitor']['page-views-180']) echo "<tr><td class='label'>1 Year</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $GLOBALS['ga4_visitor']['page-views-365'], 'battleplan' ), number_format($GLOBALS['ga4_visitor']['page-views-365']) )."</td><td><b>".number_format(($GLOBALS['ga4_visitor']['page-views-30'])/365,1)."</b> /day</td></tr>";
+	if ( $GLOBALS['ga4_visitor']['page-views-365'] != $GLOBALS['ga4_visitor']['page-views-180']) echo "<tr><td class='label'>1 Year</td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $GLOBALS['ga4_visitor']['page-views-365'], 'battleplan' ), number_format($GLOBALS['ga4_visitor']['page-views-365']) )."</td><td><b>".number_format(($GLOBALS['ga4_visitor']['page-views-365'])/365,1)."</b> /day</td></tr>";
 		
 	echo '<tr><td>&nbsp;</td></tr></table>';
 }

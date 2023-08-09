@@ -3,7 +3,7 @@
 <?php
 	$postType = get_post_type();
 	
-	if ( $postType == "optimized" || $postType == "landing" || $postType == "universal" ) $postType = "page";
+	if ( $postType == "landing" || $postType == "universal" ) $postType = "page";
 	if ( $postType == "testimonials" ) $postType = "testimonial";
 	if ( $postType == "galleries" ) $postType = "gallery";	
 	

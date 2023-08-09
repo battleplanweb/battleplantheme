@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '20.8.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '20.8.2' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -24,7 +24,7 @@ if ( !defined('_USER_LOGIN') ) define( '_USER_LOGIN', wp_get_current_user()->use
 if ( !defined('_USER_ID') ) define( '_USER_ID', wp_get_current_user()->ID );
 
 $googlebots = array( 'google', 'lighthouse' );
-$bots = array_merge(array('bot', 'crawler', 'spider', 'facebook', 'bing', 'linkedin', 'zgrab', 'addthis', 'fetcher', 'barkrowler', 'newspaper', 'yeti', 'daum', 'riddler', 'panscient', 'dataprovider', 'gigablast', 'qwantify', 'admantx', 'audit', 'docomo', 'yahoo', 'wayback', 'adbeat', 'netcraft', 'wordpress'), $googlebots);
+$bots = array_merge(array('adbeat', 'addthis', 'admantx', 'audit', 'barkrowler', 'bing', 'bot', 'crawler', 'dataprovider', 'daum', 'docomo', 'duckduck', 'facebook', 'fetcher', 'gigablast', 'linkedin', 'majestic', 'netcraft', 'newspaper', 'okhttp', 'panscient', 'qwantify', 'riddler', 'wayback', 'slurp', 'spider', 'wordpress', 'yahoo', 'yeti', 'zgrab'), $googlebots);
 $spamIPs = get_option('bp_bad_ips') ? get_option('bp_bad_ips') : array();
 $spamURLs = explode("\n", file_get_contents( get_template_directory().'/spammers.txt' ));
 //https://github.com/matomo-org/referrer-spam-list/blob/master/spammers.txt
@@ -99,7 +99,7 @@ if ( !array_key_exists('schema', $GLOBALS['customer_info'] ) ) $GLOBALS['custome
 if ( !array_key_exists('default-loc', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['default-loc'] = $GLOBALS['customer_info']['city'].', '.$GLOBALS['customer_info']['state-abbr'];
 
 if ( !is_admin() && !defined('_USER_LOCATION') ) :
-	$cities = array('1026171'=>'Addison, TX', '9026791'=>'Addison, TX', '1026178'=>'Allen, TX', '9026797'=>'Allen, TX', '1026187'=>'Anna, TX', '1026200'=>'Aubrey, TX', '9026973'=>'Blue Ridge, TX', '1020242'=>'Carrollton, TX', '9026851'=>'Coppell, TX', '9051771'=>'Corinth, TX', '1026339'=>'Dallas, TX', '9026913'=>'Dallas, TX', '9026941'=>'Dallas, TX', '9026930'=>'Dallas, TX', '9026915'=>'Dallas, TX', '9026940'=>'Dallas, TX', '9026919'=>'Dallas, TX', '1026349'=>'Denison, TX', '9051926'=>'Fairview, TX', '9026831'=>'Fairview, TX', '9051933'=>'Farmers Branch, TX', '9028405'=>'Friona, TX', '1026407'=>'Frisco, TX', '9026807'=>'Frisco, TX', '9026808'=>'Frisco, TX', '9026820'=>'Grand Prairie, TX', '1026482'=>'Howe, TX', '9026827'=>'Irving, TX', '1019935'=>'Lewisville, TX', '9052357'=>'Lucas, TX', '1026607'=>'McKinney, TX', '9026833'=>'McKinney, TX', '1026611'=>'Melissa, TX', '1022561'=>'Mesquite, TX', '9026881'=>'Mesquite, TX', '9052495'=>'Murphy, TX', '9026848'=>'Murphy, TX', '1016775'=>'Plano, TX', '1026695'=>'Plano, TX', '9026802'=>'Plano, TX', '9026913'=>'Plano, TX', '9026803'=>'Plano, TX', '9026847'=>'Plano, TX', '9026835'=>'Plano, TX', '9026795'=>'Plano, TX','1026710'=>'Pottsboro, TX', '9026838'=>'Prosper, TX', '1026729'=>'Richardson, TX', '1026741'=>'Rockwall, TX', '1026750'=>'Rowlett, TX', '1026751'=>'Royse City, TX', '1026755'=>'Sachse, TX', '1026788'=>'Sherman, TX', '9027240'=>'Springtown, TX', '9026895'=>'Waxahachie, TX', '1026885'=>'Whitesboro, TX', '1026899'=>'Wylie, TX');
+	$cities = array('1026171'=>'Addison, TX', '9026791'=>'Addison, TX', '9041344'=>'Addison, TX', '1026178'=>'Allen, TX', '9026797'=>'Allen, TX', '1026187'=>'Anna, TX', '9027199'=>'Arlington, TX', '9027202'=>'Arlington, TX', '1026200'=>'Aubrey, TX', '9027261'=>'Benbrook, TX', '9026973'=>'Blue Ridge, TX', '1020242'=>'Carrollton, TX', '9026796'=>'Carrollton, TX', '9026794'=>'Carrollton, TX', '9026851'=>'Coppell, TX', '9051771'=>'Corinth, TX', '9026860'=>'Crandall, TX', '1026339'=>'Dallas, TX', '9026913'=>'Dallas, TX', '9026941'=>'Dallas, TX', '9026930'=>'Dallas, TX', '9026915'=>'Dallas, TX', '9026940'=>'Dallas, TX', '9026919'=>'Dallas, TX', '9026927'=>'Dallas, TX', '9026903'=>'Dallas, TX', '9026906'=>'Dallas, TX', '9026921'=>'Dallas, TX', '9026918'=>'Dallas, TX', '9026944'=>'Dallas, TX', '9026955'=>'Dallas, TX', '9026926'=>'Dallas, TX', '9026914'=>'Dallas, TX', '9026945'=>'Dallas, TX', '9059462'=>'Dallas County, TX', '1026349'=>'Denison, TX', '9026861'=>'DeSoto, TX', '9026871'=>'Duncanville, TX', '9027006'=>'East Tawakoni, TX', '9051926'=>'Fairview, TX', '9026831'=>'Fairview, TX', '9051933'=>'Farmers Branch, TX', '9026902'=>'Fate, TX', '9026805'=>'Flower Mound, TX', '1026411'=>'Fort Worth, TX', '9027284'=>'Fort Worth, TX', '9027266'=>'Fort Worth, TX', '9028405'=>'Friona, TX', '1026407'=>'Frisco, TX', '9026807'=>'Frisco, TX', '9026808'=>'Frisco, TX', '1026419'=>'Garland, TX', '9026811'=>'Garland, TX', '9026815'=>'Garland, TX', '9026820'=>'Grand Prairie, TX', '1026442'=>'Greenville, TX', '9026867'=>'Heath, TX', '9026828'=>'Hickory Creek, TX', '9027107'=>'Hideaway, TX', '1026482'=>'Howe, TX', '1026497'=>'Irving, TX', '9026827'=>'Irving, TX', '9026826'=>'Irving, TX', '9026824'=>'Irving, TX', '9026825'=>'Irving, TX', '9027307'=>'Keller, TX', '9026877'=>'Lancaster, TX', '1019935'=>'Lewisville, TX', '9026829'=>'Lewisville, TX', '9052357'=>'Lucas, TX', '1026607'=>'McKinney, TX', '9026833'=>'McKinney, TX', '1026611'=>'Melissa, TX', '1022561'=>'Mesquite, TX', '9026900'=>'Mesquite, TX', '9026899'=>'Mesquite, TX', '9026881'=>'Mesquite, TX', '9052495'=>'Murphy, TX', '9026848'=>'Murphy, TX', '9027394'=>'Palo Pinto, TX', '1016775'=>'Plano, TX', '1026695'=>'Plano, TX', '9026804'=>'Plano, TX', '9026834'=>'Plano, TX', '9026802'=>'Plano, TX', '9026803'=>'Plano, TX', '9026847'=>'Plano, TX', '9026835'=>'Plano, TX', '9026795'=>'Plano, TX','1026710'=>'Pottsboro, TX', '9026836'=>'Pottsboro, TX', '9026958'=>'Princeton, TX', '9026838'=>'Prosper, TX', '1026726'=>'Red Oak, TX', '9026884'=>'Red Oak, TX', '1026729'=>'Richardson, TX', '9026840'=>'Richardson, TX', '9026839'=>'Richardson', '9060114'=>'Richland College, TX', '1026741'=>'Rockwall, TX', '9026806'=>'Rockwall, TX', '1026750'=>'Rowlett, TX', '1026751'=>'Royse City, TX', '1026755'=>'Sachse, TX', '9027283'=>'Saginaw, TX', '9026889'=>'Seagoville, TX', '1026788'=>'Sherman, TX', '9027240'=>'Springtown, TX', '1026836'=>'The Colony, TX', '9026890'=>'Terrell, TX', '9026845'=>'Tom Bean, TX', '9027025'=>'Van Alstyne, TX', '1026873'=>'Waxahachie, TX', '9026895'=>'Waxahachie, TX', '9026849'=>'Weston, TX', '1026885'=>'Whitesboro, TX', '1026899'=>'Wylie, TX', '9026850'=>'Wylie, TX');
 
 	$common = array('am', 'an', 'as', 'at', 'be', 'by', 'do', 'if', 'is', 'it', 'me', 'my', 'no', 'of', 'on', 'or', 'so', 'to', 'up', 'us', 'we');
 	$location = 'none';
@@ -108,12 +108,17 @@ if ( !is_admin() && !defined('_USER_LOCATION') ) :
 
 	// Does this user come from a Google Ad?
 	foreach( $_GET as $key => $value ) :		
-		if ( ( $key == "loc" || $key == "int" ) && array_key_exists($value, $cities)) $location = $cities[$value];
 		if ( $key == "loc" || $key == "int" ) :
- 			$saveLocInfo = get_option('bp_loc_info') ? get_option('bp_loc_info') : array();
-			array_push($saveLocInfo, $value);
-			updateOption('bp_loc_info', $saveLocInfo, false);
-		endif;
+			if ( array_key_exists($value, $cities)) :
+				$location = $cities[$value];
+			else:
+				$saveLocInfo = get_option('bp_loc_info') ? get_option('bp_loc_info') : array();
+				if ( !in_array( $value, $saveLocInfo )) :
+					array_push($saveLocInfo, $value);
+					updateOption('bp_loc_info', $saveLocInfo, false);
+				endif;
+			endif;		    
+		 endif;
 	endforeach;
 	
 	$page_slug = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/'); 
@@ -133,6 +138,9 @@ if ( !is_admin() && !defined('_USER_LOCATION') ) :
 
 	define( '_USER_LOCATION', $location );
 endif;
+
+if ( !defined('_USER_LOCATION') ) define( '_USER_LOCATION', null );
+
 
 /*--------------------------------------------------------------
 # Functions to extend WordPress 
@@ -279,7 +287,7 @@ function updateOption($option, $value, $autoload=null) {
 function getCPT() {
 	$getCPT = get_post_types();  
 	$removeCPT = array('acf-field', 'acf-field-group', 'asp_coupons', 'asp-products', 'attachment', 'customize_changeset', 'custom_css', 'elements', 'nav_menu_item', 'oembed_cache', 'revision', 'stripe_order', 'user_request', 'wpcf7_contact_form', 'wp_block', 'wp_global_styles', 'wphb_minify_group', 'wp_navigation', 'wp_template', 'wp_template_part');
-	$moveCPTs = array ('optimized', 'landing', 'page', 'universal');
+	$moveCPTs = array ('landing', 'page', 'universal');
 	
 	foreach ($removeCPT as $remove) unset($getCPT[$remove]);
 	
@@ -532,11 +540,9 @@ function battleplan_CheckRemoveSidebar( $classes ) {
 	endif;
 }
 
-// If post is an "optimized" page, add .home to body class for CSS purposes
+// If post is an "landing" page, add .home to body class for CSS purposes
 add_filter( 'body_class', 'battleplan_addHomeBodyClassToOptimized', 70 );
 function battleplan_addHomeBodyClassToOptimized( $classes ) {
-	if ( get_post_type() == "optimized" ) array_push($classes, 'home', 'alt-home');
-	
 	if ( get_post_type() == "landing" && preg_match ('/, [A-Z]{2}$/', get_the_title() ) === 1 ) array_push($classes, 'home', 'alt-home');
 	
 	return $classes;
@@ -1500,9 +1506,7 @@ function battleplan_current_type_nav_class($classes, $item) {
 	
 	if ($item->attr_title != '' && $item->attr_title == $post_type) array_push($classes, 'current-menu-item');
 	
-	// Highlight HOME button if any of the Optimized pages are viewed
-	if ( $post_type == 'optimized' && preg_match ('/, [A-Z]{2}$/', get_the_title() ) === 1 && ( $item->url == get_home_url() || $item->url == get_home_url().'/' )) array_push($classes, 'current-menu-item');	
-	
+	// Highlight HOME button if any of the Landing pages are viewed
 	if ( $post_type == 'landing' && preg_match ('/, [A-Z]{2}$/', get_the_title() ) === 1 && ( $item->url == get_home_url() || $item->url == get_home_url().'/' )) array_push($classes, 'current-menu-item');	
 	
 	return $classes;
@@ -1535,10 +1539,6 @@ $pageTopMeta = new Metabox_Constructor(array( 'id' => 'page-top', 'title' => 'Pa
 $pageTopMeta->addWysiwyg(array( 'id' => 'page-top_text', 'label' => '' ));
 $pageBottomMeta = new Metabox_Constructor(array( 'id' => 'page-bottom', 'title' => 'Page Bottom', 'screen' => 'page', 'context' => 'normal', 'priority' => 'high' ));
 $pageBottomMeta->addWysiwyg(array( 'id' => 'page-bottom_text', 'label' => '' ));
-$optimizedTopMeta = new Metabox_Constructor(array( 'id' => 'page-top', 'title' => 'Page Top', 'screen' => 'optimized', 'context' => 'normal', 'priority' => 'high' ));
-$optimizedTopMeta->addWysiwyg(array( 'id' => 'page-top_text', 'label' => '' ));
-$optimizedBottomMeta = new Metabox_Constructor(array( 'id' => 'page-bottom', 'title' => 'Page Bottom', 'screen' => 'optimized', 'context' => 'normal', 'priority' => 'high' ));
-$optimizedBottomMeta->addWysiwyg(array( 'id' => 'page-bottom_text', 'label' => '' ));
 $landingTopMeta = new Metabox_Constructor(array( 'id' => 'page-top', 'title' => 'Page Top', 'screen' => 'landing', 'context' => 'normal', 'priority' => 'high' ));
 $landingTopMeta->addWysiwyg(array( 'id' => 'page-top_text', 'label' => '' ));
 $landingBottomMeta = new Metabox_Constructor(array( 'id' => 'page-bottom', 'title' => 'Page Bottom', 'screen' => 'landing', 'context' => 'normal', 'priority' => 'high' ));

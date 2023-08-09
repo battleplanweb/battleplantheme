@@ -310,9 +310,9 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		if ( colophonH < deviceH && !$('body').hasClass('background-image') ) {	
 			addFaux( '#colophon', 'true' );
 			setTimeout( function() {
-				var bottom = getDeviceH() - getPosition($('.wp-gr.wp-google-badge'), 'top', 'false');
-				$('#colophon').addClass('fixed').css({"bottom":bottom+"px"});	
-			}, 10);
+				var bottom = getDeviceH() - getPosition($('.wp-gr.wp-google-badge'), 'top', 'window');
+				$('#colophon').addClass('fixed').css({"bottom":bottom+"px", "width":"100%", "z-index":1});	
+			}, 20);
 		}
 	};
 	
@@ -370,6 +370,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		
 		if ( target !== "#tab-description" ) { // 03/23/2021 --- Kin-Tec Industries
 			window.scroll({ top: newLoc, left: 0, behavior: 'smooth' }); 
+
 		}
 	};
 

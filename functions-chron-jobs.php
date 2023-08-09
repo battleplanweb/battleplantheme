@@ -25,71 +25,21 @@ function battleplan_delete_prefixed_options( $prefix ) {
 	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
 }	
 
-if ( get_option('bp_setup_2023_07_23') != "completed" ) :
+if ( get_option('bp_setup_2023_08_09') != "completed" ) :
 
- 	$args = array(
-        	'post_type'      => 'optimized',
-        	'posts_per_page' => -1,
-    	);
+	battleplan_delete_prefixed_options( 'bp_admin_btn' );
+	delete_option('bp_admin_settings');
+	delete_option('bp_setup_2023_07_23');
+	battleplan_delete_prefixed_options( 'bp_site_hits' );
+	delete_option('stat-overview');
+	delete_option('bp_tracking_content');
+	delete_option('pct-viewed-financing');
+	delete_option('pct-viewed-init');
+	delete_option('pct-viewed-testimonials');
 
-    	$optimized_posts = get_posts( $args );
-
-    	if ( $optimized_posts ) {
-        	foreach ( $optimized_posts as $post ) {
-            	$new_post = array(
-                	'post_title'   => $post->post_title,
-                	'post_content' => $post->post_content,
-                	'post_status'  => 'publish',
-                	'post_type'    => 'landing',
-            	);
-
-            	$new_post_id = wp_insert_post( $new_post );
-
-            	// Copy meta information (if any)
-            	$post_meta = get_post_meta( $post->ID );
-            	if ( $post_meta ) {
-                	foreach ( $post_meta as $meta_key => $meta_values ) {
-                    	foreach ( $meta_values as $meta_value ) {
-                        		add_post_meta( $new_post_id, $meta_key, $meta_value );
-                    	}
-                	}
-            	}
-
-            	// Copy featured image (if any)
-            	if ( has_post_thumbnail( $post->ID ) ) {
-                	$thumbnail_id = get_post_thumbnail_id( $post->ID );
-                	set_post_thumbnail( $new_post_id, $thumbnail_id );
-            	}
-        	}
-    	}	
-
-	$args = array(
-        	'post_type'      => 'optimized',
-        	'posts_per_page' => -1,
-        	'fields'         => 'ids',
-    	);
-
-    	$optimized_posts = get_posts( $args );
-
-    	if ( $optimized_posts ) {
-        	foreach ( $optimized_posts as $post_id ) {
-            	wp_delete_post( $post_id, true ); // Set to true to move posts to Trash, false to permanently delete.
-        	}
-    	}
-
-	updateOption( 'bp_setup_2023_07_23', 'completed', false );			
+	updateOption( 'bp_setup_2023_08_09', 'completed', false );	
 endif;
 
-delete_option('bp_setup_2023_03_25z');
-delete_option('bp_admin_settings');
-battleplan_delete_prefixed_options( 'bp_admin_btn' );
-
-
-
-//if ( get_option('bp_setup_2022_11_09') != "completed" ) :
-	//processChron(true);
-	//updateOption( 'bp_setup_2022_11_09', 'completed', false );			
-//endif;
 
 // Determine if Chron should run
 $forceChron = get_option('bp_force_chron') !== null ? get_option('bp_force_chron') : 'false';
@@ -202,7 +152,7 @@ function processChron($forceChron) {
 		$wpSEOTitle = ' %%page%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';		
 		$getCPT = get_post_types(); 
 		foreach ($getCPT as $postType) :
-			if ( $postType == "post" || $postType == "page" || $postType == "optimized" || $postType == "universal" || $postType == "products" || $postType == "tribe_events" ) :
+			if ( $postType == "post" || $postType == "page" || $postType == "universal" || $postType == "products" || $postType == "tribe_events" ) :
 				$wpSEOSettings['title-'.$postType] = '%%title%%'.$wpSEOTitle;
 				$wpSEOSettings['social-title-'.$postType] = '%%title%%'.$wpSEOTitle;
 			elseif ( $postType == "attachment" || $postType == "revision" || $postType == "nav_menu_item" || $postType == "custom_css" || $postType == "customize_changeset" || $postType == "oembed_cache" || $postType == "user_request" || $postType == "wp_block" || $postType == "elements" || $postType == "acf-field-group" || $postType == "acf-field" || $postType == "wpcf7_contact_form" ) :
@@ -1024,160 +974,7 @@ function processChron($forceChron) {
 			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
 	
 			update_option('bp_ga4_achievementId_01', $analyticsGA4, false);		
-		endforeach;	
-	
-	
-	
-	
-	
-	
-	
-	
-		// Split session data into site hits
-		foreach ( $analyticsGA4 as $analyze ) :
-			$date = $analyze['date'];
-			$location = $analyze['location'];
-			$page = $analyze['page'];
-			$browser = $analyze['browser'];
-			$device = $analyze['device'];
-			$resolution = $analyze['resolution'];
-			$pageviews = $analyze['pages-viewed'];
-			$engaged = $analyze['engaged'];
-			$newUsers = $analyze['new-users'];
-			$referrer = $analyze['referrer'];
-			list($source, $medium) = explode(" / ", $analyze['source']);
-			
-			if ( strpos( $referrer, parse_url( get_site_url(), PHP_URL_HOST ) ) === false ) :	
-				$siteHitsGA4[] = array ('date'=>$date, 'location'=>$location, 'source'=>$source, 'medium'=>$medium, 'page'=>$page, 'browser'=>$browser, 'device'=>$device, 'resolution'=>$resolution, 'pages-viewed'=>$pageviews, 'sessions'=>'1', 'engaged'=>$engaged, 'new-users'=>$newUsers );	
-			else :
-				$siteHitsGA4[] = array ('date'=>$date, 'page'=>$page, 'pages-viewed'=>$pageviews, 'sessions'=>'0', 'engaged'=>$engaged );				
-			endif;
-		endforeach;	
-	
-		$bpSiteHitsGA4 = array_intersect_key( $siteHitsGA4, array_unique( array_map('serialize', $siteHitsGA4 )));
-		update_option('bp_site_hits_ga4', $bpSiteHitsGA4, false);		
-	endif;
-
-// Gather UA Stats	
-	$siteHits = is_array($siteHitsGA4) ? $siteHitsGA4 : array();
-	$siteHitsUA1 = is_array(get_option('bp_site_hits_ua_1')) ? get_option('bp_site_hits_ua_1') : array();
-	$siteHitsUA2 = is_array(get_option('bp_site_hits_ua_2')) ? get_option('bp_site_hits_ua_2') : array();
-	$siteHitsUA3 = is_array(get_option('bp_site_hits_ua_3')) ? get_option('bp_site_hits_ua_3') : array();
-	$siteHitsUA4 = is_array(get_option('bp_site_hits_ua_4')) ? get_option('bp_site_hits_ua_4') : array();
-	$siteHitsUA5 = is_array(get_option('bp_site_hits_ua_5')) ? get_option('bp_site_hits_ua_5') : array();
-	$siteHits = array_merge( $siteHits, $siteHitsUA1, $siteHitsUA2, $siteHitsUA3, $siteHitsUA4, $siteHitsUA5);
-
-// Compile hits on specific pages
-	$pageCounts = array(1, 7, 30, 90, 365);
-	$today = strtotime($today);		
-	$citiesToExclude = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, OR'); // also change in functions-admin.php
-	$compilePaths = $statOverview = array();
-	$lastKnownVisit = get_option('last_visitor_time');
-
-	foreach ( $siteHits as $siteHit ) :		
-		$page = rtrim($siteHit['page'], "/");
-		if ( isset($siteHit['location']) && !in_array( $siteHit['location'], $citiesToExclude) && strpos($page, 'fbclid') === false && strpos($page, 'reportkey') === false ) :			
-			if ( $page == "" || $page == "/" ) $page = "Home";
-			if ( array_key_exists($page, $compilePaths ) ) :
-				$compilePaths[$page] += (int)$siteHit['pages-viewed'];
-			else:
-				$compilePaths[$page] = (int)$siteHit['pages-viewed'];
-			endif; 
-		endif;
-
-		$checkDate = strtotime($siteHit['date']);
-		$howLong = $today - $checkDate;
-		if ( $lastKnownVisit < $checkDate ) $lastKnownVisit = $checkDate;
-		
-		foreach ( $pageCounts as $count ) :
-			if ( $howLong > (($count + 1) * 86400) ) :				
-				foreach ($compilePaths as $page=>$pageViews) :
-					if ( $page == "Home" ) :
-						$id = get_option('page_on_front');					
-					else:
-						$id = getID($page);
-					endif;		
-					
-					$pageKey = $count==1 ? 'log-views-today' : 'log-views-total-'.$count.'day';
-					updateMeta($id, $pageKey, $pageViews);
-				endforeach;
-			
-				array_shift($pageCounts);			
-			endif;	
-		endforeach;	
-	endforeach;	
-	
-	updateOption('last_visitor_time', $lastKnownVisit, false); 
-
-	if ( $ga4_id ) :
-		// Gather Content Tracking & Speed Tracking stats
-		$today = date( "Y-m-d" );	
-		$rewind = date('Y-m-d', strtotime($today.' - 31 days'));
-
-		$response = $client->runReport([
-			'property' => 'properties/'.$ga4_id,
-			'dateRanges' => [
-				new DateRange([ 'start_date' => $rewind, 'end_date' => $today ]),
-			],
-			'dimensions' => [
-				new Dimension([ 'name' => 'achievementId' ]),
-				new Dimension([ 'name' => 'groupId' ]),
-				new Dimension([ 'name' => 'city' ]),
-				new Dimension([ 'name' => 'region' ]),	
-			],
-		]);
-
-		foreach ( $response->getRows() as $row ) :
-			$content_tracking = $row->getDimensionValues()[0]->getValue();			
-			$site_speed = $row->getDimensionValues()[1]->getValue();
-			$city = $row->getDimensionValues()[2]->getValue();	
-			$state = strtolower($row->getDimensionValues()[3]->getValue());
-			if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
-			if ( $city == '(not set)' ) $location = ucwords($state);	
-			
-			$allTracking[] = array('content'=>$content_tracking, 'speed'=>$site_speed, 'location'=>$location);		
-		endforeach;
-		updateOption('bp_tracking_content', $allTracking, false);		
-	
-		// Tally sessions for use on bp stats page
-		$statOverview = array();		
-		$pageCounts = array(7, 30, 90, 365);		
-		foreach ( $pageCounts as $count ) :
-			$totalViews = 0;	
-			$statKey = $count==365 ? 'lastYearViews' : 'last'.$count.'Views';
-			$today = date( "Y-m-d" );	
-			$rewind = date('Y-m-d', strtotime($today.' - '.$count.' days'));
-
-			$response = $client->runReport([
-				'property' => 'properties/'.$ga4_id,
-				'dateRanges' => [
-					new DateRange([ 'start_date' => $rewind, 'end_date' => $today ]),
-				],
-				'dimensions' => [
-					new Dimension([ 'name' => 'city' ]),
-					new Dimension([ 'name' => 'region' ]),	
-				],
-				'metrics' => [
-					new Metric([ 'name' => 'engagedSessions' ]),
-				]
-			]);
-
-			foreach ( $response->getRows() as $row ) :
-				$city = $row->getDimensionValues()[0]->getValue();
-				$state = strtolower($row->getDimensionValues()[1]->getValue());
-				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
-				$sessions = $row->getMetricValues()[0]->getValue();							
-
-				if ( isset($states[$state]) && !in_array( $location, $citiesToExclude) ) :	
-					$totalViews = $totalViews + $sessions;
-				endif;
-			endforeach;			
-
-			$statOverview[$statKey] = $totalViews;
-		endforeach;
-		
-		updateOption('stat-overview', $statOverview, false );	
-	
+		endforeach;		
 	endif;
 }
 ?>

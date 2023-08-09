@@ -541,7 +541,7 @@ function battleplan_site_audit() {
 		endforeach;	
 	endif;
 		
-	array_push( $criteria, 'load_time_mobile', 'load_time_desktop', 'optimized', 'testimonials', 'menu-testimonials', 'testimonials-pct', 'coupon', 'coupon-pct', 'blog', 'galleries', 'home-call-to-action', 'homepage-teasers', 'logo-slider', 'service-map', 'bbb-link', 'financing-link', 'menu-finance', 'finance-pct', 'why-choose', 'emergency-service', 'symptom-checker', 'faq', 'tip-of-the-month', 'maintenance-tips');	
+	array_push( $criteria, 'load_time_mobile', 'load_time_desktop', 'landing', 'testimonials', 'menu-testimonials', 'testimonials-pct', 'coupon', 'coupon-pct', 'blog', 'galleries', 'home-call-to-action', 'homepage-teasers', 'logo-slider', 'service-map', 'bbb-link', 'financing-link', 'menu-finance', 'finance-pct', 'why-choose', 'emergency-service', 'symptom-checker', 'faq', 'tip-of-the-month', 'maintenance-tips');	
 	
 	if ( $submitCheck == "true" ) :
 		if ( $_POST['notes'] ) :
@@ -563,7 +563,7 @@ function battleplan_site_audit() {
 		
 		if ( wp_count_posts( 'post' )->publish > 0 ) : $siteAudit[$today]['blog'] = wp_count_posts( 'post' )->publish; else: $siteAudit[$today]['blog'] = "false"; endif;
 		
-		if ( wp_count_posts( 'optimized' )->publish > 0 ) : $siteAudit[$today]['optimized'] = wp_count_posts( 'optimized' )->publish; else: $siteAudit[$today]['optimized'] = "false"; endif;
+		if ( wp_count_posts( 'landing' )->publish > 0 ) : $siteAudit[$today]['landing'] = wp_count_posts( 'landing' )->publish; else: $siteAudit[$today]['landing'] = "false"; endif;
 		
 		if ( wp_count_posts( 'testimonials' )->publish > 0 ) : $siteAudit[$today]['testimonials'] = wp_count_posts( 'testimonials' )->publish; else: $siteAudit[$today]['testimonials'] = "false"; endif;
 		
@@ -571,7 +571,7 @@ function battleplan_site_audit() {
 		
 		$coupon = $whyChoose = $logoSlider = $tip = $hvacMaint = $homeTeasers = $emergency = $bbb = $financing = $symptomChecker = $faq = $menuTestimonials = $menuFinance = $homeCallToAction = $serviceMap = "false";
 
-		$args = array ('posts_per_page'=>-1, 'post_type'=>array('page', 'post', 'optimized'));
+		$args = array ('posts_per_page'=>-1, 'post_type'=>array('page', 'post', 'landing'));
 		$check_posts = new WP_Query($args);		
 		if( $check_posts->have_posts() ) : while ($check_posts->have_posts() ) : $check_posts->the_post();	
 
@@ -723,7 +723,7 @@ function battleplan_site_audit() {
 	$siteAuditPage .= '[col class="headline google-reviews"]Number[/col]';	
 	$siteAuditPage .= '[col class="headline load_time_mobile"]Mobile[/col]';		
 	$siteAuditPage .= '[col class="headline load_time_desktop"]Desktop[/col]';			
-	$siteAuditPage .= '[col class="headline optimized"]Optimized[/col]';
+	$siteAuditPage .= '[col class="headline landing"]Landing[/col]';
 	$siteAuditPage .= '[col class="headline testimonials"]Testimonials[/col]';		
 	$siteAuditPage .= '[col class="headline menu-testimonials"]Testimonials Button[/col]';		
 	$siteAuditPage .= '[col class="headline testimonials-pct"]Testimonials View %[/col]';	
@@ -796,7 +796,7 @@ function battleplan_clear_hvac($all=false) {
 	$keepPages = array ('home', 'contact-us', 'product-overview');
 	$keepElements = array ('site-header', 'widgets');
 
-	$optimized = get_posts( array('post_type'=>'optimized', 'numberposts'=>-1) );
+	$landing = get_posts( array('post_type'=>'landing', 'numberposts'=>-1) );
 	$testimonials = get_posts( array('post_type'=>'testimonials', 'numberposts'=>-1) );
 	$galleries = get_posts( array('post_type'=>'galleries', 'numberposts'=>-1) );
 	$posts = get_posts( array('post_type'=>'post', 'numberposts'=>-1) );
@@ -810,7 +810,7 @@ function battleplan_clear_hvac($all=false) {
 		if (in_array('product-overview', $keepPages)) unset($keepPages[array_search('product-overview', $keepPages)]);
 	endif;
 
-	foreach ($optimized as $post) wp_delete_post( $post->ID, true );
+	foreach ($landing as $post) wp_delete_post( $post->ID, true );
 	foreach ($testimonials as $post) wp_delete_post( $post->ID, true );
 	foreach ($galleries as $post) wp_delete_post( $post->ID, true );
 	foreach ($posts as $post) wp_delete_post( $post->ID, true );

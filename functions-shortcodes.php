@@ -340,10 +340,6 @@ function battleplan_getServiceAreas($atts, $content = null) {
 		endforeach;
 	endif;
 	
-	foreach ( get_posts( array ( 'numberposts'=>-1, 'post_type'=>'optimized' ) ) as $post ) :
-		if ( preg_match ('/, [A-Z]{2}$/', $post->post_title) === 1 ) $cities[$post->post_title] = get_permalink( $post->ID );
-	endforeach;
-	
 	foreach ( get_posts( array ( 'numberposts'=>-1, 'post_type'=>'landing' ) ) as $post ) :
 		if ( preg_match ('/, [A-Z]{2}$/', $post->post_title) === 1 ) $cities[$post->post_title] = get_permalink( $post->ID );
 	endforeach;
@@ -1409,12 +1405,12 @@ function battleplan_getUniversalPage( $atts, $content = null ) {
 	return do_shortcode(include get_template_directory().'/pages/'.esc_attr($a['slug']).'.php');	
 }
 
-// Use page template for optimized & universal pages
+// Use page template for landing & universal pages
 add_filter('single_template', 'battleplan_usePageTemplate', 10, 1 );
 function battleplan_usePageTemplate( $original ) {
 	global $post;
 	$post_type = $post->post_type;
-	if ( $post_type == "optimized" || $post_type == "landing" || $post_type == "universal" ) return locate_template('page.php');
+	if ( $post_type == "landing" || $post_type == "universal" ) return locate_template('page.php');
 	return $original;
 }
 

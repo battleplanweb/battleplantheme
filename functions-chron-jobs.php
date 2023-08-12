@@ -542,8 +542,8 @@ function processChron($forceChron) {
 /*--------------------------------------------------------------
 # Sync with Google Analytics
 --------------------------------------------------------------*/
-	$GLOBALS['customer_info'] = get_option('customer_info');
-	$GLOBALS['dataTerms'] = get_option('bp_data_terms');
+	$GLOBALS['customer_info'] = get_option('customer_info') ? get_option('customer_info') : array();
+	$GLOBALS['dataTerms'] = get_option('bp_data_terms') ? get_option('bp_data_terms') : array();
 	$ga4_id = isset($GLOBALS['customer_info']['google-tags']['prop-id']) ? $GLOBALS['customer_info']['google-tags']['prop-id'] : null;
 	$client = new BetaAnalyticsDataClient(['credentials'=>get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json']);
 	$today = date("Y-m-d", strtotime("-1 day"));
@@ -602,14 +602,7 @@ function processChron($forceChron) {
 		if ( is_array($analyticsGA4) ) arsort($analyticsGA4);	
 		update_option('bp_ga4_trends_01', $analyticsGA4, false);		
 
-	
-
-	
-	
-	
-	
-	
-	
+		
 		// Site Visitors	
 		$analyticsGA4 = array();
 		$dataTerms = array('day' => 1) + $GLOBALS['dataTerms'];

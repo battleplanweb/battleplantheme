@@ -49,6 +49,7 @@ $ga4_trends_data = is_array(get_option('bp_ga4_trends_01')) ? get_option('bp_ga4
 $ga4_visitors_data = is_array(get_option('bp_ga4_visitors_01')) ? get_option('bp_ga4_visitors_01') : array();
 $ga4_pages_data = is_array(get_option('bp_ga4_pages_01')) ? get_option('bp_ga4_pages_01') : array();
 $ga4_referrers_data = is_array(get_option('bp_ga4_referrers_01')) ? get_option('bp_ga4_referrers_01') : array();
+$ga4_search_data = is_array(get_option('bp_ga4_search_01')) ? get_option('bp_ga4_search_01') : array();
 $ga4_locations_data = is_array(get_option('bp_ga4_locations_01')) ? get_option('bp_ga4_locations_01') : array();
 $ga4_browsers_data = is_array(get_option('bp_ga4_browsers_01')) ? get_option('bp_ga4_browsers_01') : array();
 $ga4_devices_data = is_array(get_option('bp_ga4_devices_01')) ? get_option('bp_ga4_devices_01') : array();
@@ -131,7 +132,6 @@ function battleplan_visitor_trends($time, $minDays, $maxDays, $colEnd) {
 		 	echo "<tr class='coloration trends sessions active' data-count='".$sessions."'><td>".$termEnd."</td><td><b>".number_format($sessions)."</b><td><b>".number_format($totalUsers)."</b></td></tr>";		
 		 	echo "<tr class='coloration trends new' data-count='".$newUsers."'><td>".$termEnd."</td><td><b>".number_format($newUsers)."</b></td><td>".number_format($newUserPct,1)."%</td></tr>";
 			echo "<tr class='coloration trends engagement' data-count='".$engagedSessions."'><td>".$termEnd."</td><td><b>".$engagedSessions."</b></td><td>".$engagementPct."%</td></tr>";
-			echo "<tr class='coloration trends search' data-count='".$search."'><td>".$termEnd."</td><td class='span'><b>".number_format($search)."</b></td></tr>";	
 			echo "<tr class='coloration trends pageviews' data-count='".$pageViews."'><td>".$termEnd."</td><td><b>".$pageViews.'</b></td><td>'.number_format($pagesPerSession,1)."</td></tr>";
 			echo "<tr class='coloration trends duration' data-count='".$avgEngagedDuration."'><td>".$termEnd."</td><td><b>".floor($avgEngagedDuration / 60)."m ".number_format($avgEngagedDuration % 60) . "s</b></td><td><b>".floor($avgSessionDuration / 60)."m ".number_format($avgSessionDuration % 60) . "s</b></td></tr>";
 	
@@ -161,7 +161,7 @@ function battleplan_admin_daily_stats() {
 		endforeach;	
 	echo '</div>';
 	
-	$metrics = array('sessions', 'new', 'engagement', 'search', 'pageviews', 'duration');
+	$metrics = array('sessions', 'new', 'engagement', 'pageviews', 'duration');
 	echo '<div class="trend-buttons">';
 		foreach ( $metrics as $metric ) :
 			$active = 'sessions' == $metric ? " active" : "";
@@ -240,6 +240,8 @@ function battleplan_admin_referrer_stats() {
 	foreach ($ga4_referrer as $metricKey => &$referrerAndSessions) :
     		arsort($referrerAndSessions);
 	endforeach;
+	
+	unset($referrerAndSessions);
 
 	foreach ($ga4_referrer as $metricKey => $referrerAndSessions) :
 		$active = 'sessions-30' == $metricKey ? " active" : "";
@@ -247,8 +249,12 @@ function battleplan_admin_referrer_stats() {
 		echo '<div class="handle-label handle-label-'.(int)substr($metricKey, strrpos($metricKey, '-') + 1).$active.'"><ul>';	
 		echo '<li class="sub-label" style="column-span: all">Last '.number_format(array_sum($referrerAndSessions)).' Engaged Sessions</li>';		
 
-		foreach ($referrerAndSessions as $referrerTitle =>$referSessions) :
-		   	if ( $referSessions > 0 ) echo "<li><div class='value'><b>".number_format($referSessions)."</b></div><div class='label'>".$referrerTitle."</div></li>";
+		foreach ($referrerAndSessions as $referrerTitle => $referSessions) :
+			$search = array( '(direct) / (none)' , ' / referral', ' / organic', ' / cpc', 'google', 'bing', 'yahoo', 'duckduckgo' );
+			$replace = array( 'Direct' , '', ' (organic)', ' (paid)', 'Google', 'Bing', 'Yahoo', 'DuckDuckGo' );
+			$referrerTitle = str_replace( $search, $replace, $referrerTitle);
+	
+			if ( $referSessions > 0 ) echo "<li><div class='value'><b>".number_format($referSessions)."</b></div><div class='label'>".$referrerTitle."</div></li>";
 		endforeach;
 
 		echo '</ul></div>';	
@@ -282,7 +288,9 @@ function battleplan_admin_location_stats() {
 
 	foreach ($ga4_location as $metricKey => &$locationAndSessions) :
     		arsort($locationAndSessions);
-	endforeach;
+	endforeach;	
+	
+	unset($locationAndSessions);
 
 	foreach ($ga4_location as $metricKey => $locationAndSessions) :
 		$active = 'sessions-30' == $metricKey ? " active" : "";
@@ -339,63 +347,37 @@ foreach ( $ga4_devices_data as $device=>$deviceData ) :
 	endforeach; 
 endforeach;
 
+
 // Set up Speed widget on dashboard
-/*
-$GLOBALS['ga4_speed'] = $speedSessions = array();
-$chkDevice = '';
-foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $speedSessions[$termDays] = 0;
+$GLOBALS['fastSessions'] = $GLOBALS['speedSessions'] = $GLOBALS['speedTotal'] = array();
+$mobileTarget = 3;
+$desktopTarget = $mobileTarget / 2;
 
-foreach ( $ga4_speed_data as $speed=>$speedData ) :
-	foreach ( $speedData as $speedLocation=>$totalSessions ) :
-		if ( !in_array($speedLocation, $excludeCities) ) :
-			if ( $speed == $chkDevice ) : 
-				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $speedSessions[$termDays] += $totalSessions['sessions-'.$termDays];
-			else:
-				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $GLOBALS['ga4_speed'][$chkDevice]['sessions-'.$termDays] = $speedSessions[$termDays];	
-				$chkDevice = $speed;
-				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $speedSessions[$termDays] = $totalSessions['sessions-'.$termDays];
-			endif;
-		endif;
-	endforeach; 
+foreach ( $ga4_speed_data as $speedLocation=>$speedData ) :
+	if ( !in_array($speedLocation, $excludeCities) ) :
+		foreach ( $speedData as $term=>$speeds ) :
+			foreach ( $speeds as $speed ):
+				if (strpos($speed, 'desktop') !== false ) :	
+					$speed = (float)substr(substr($speed, strpos($speed, "«") + 1), 1);
+					if ( $speed < ($desktopTarget * 10) ) :
+						$GLOBALS['speedSessions'][$term]['desktop'] += 1;
+						if ( $speed <= $desktopTarget ) $GLOBALS['fastSessions'][$term]['desktop'] += 1;
+						$GLOBALS['speedTotal'][$term]['desktop'] += $speed;		
+					endif;
+				endif;
+				if (strpos($speed, 'mobile') !== false ) :			
+					$speed = (float)substr(substr($speed, strpos($speed, "«") + 1), 1);
+					if ( $speed < ($mobileTarget * 10) ) :
+						$GLOBALS['speedSessions'][$term]['mobile'] += 1;
+						if ( $speed <= $mobileTarget ) $GLOBALS['fastSessions'][$term]['mobile'] += 1;
+						$GLOBALS['speedTotal'][$term]['mobile'] += $speed;
+					endif;
+				endif;
+			endforeach;
+		endforeach;
+	endif;
 endforeach;
 
-$desktopSpeed = $mobileSpeed = array();
-foreach ( $ga4_speed_data as $sessions=>$speedData) :
-	foreach ( $speedData as $key=>$speed ) :
-		if (strpos($speed, 'desktop') !== false ) :	
-			$speed = substr($speed, strpos($speed, "«") + 1);
-			$desktopSpeed[] = (float)substr($speed, 1);
-		endif;
-		if (strpos($speed, 'mobile') !== false ) :			
-			$speed = substr($speed, strpos($speed, "«") + 1);
-			$mobileSpeed[] = (float)substr($speed, 1);
-		endif;
-	endforeach;
-endforeach;
-
-
-
-$desktopSpeed = array_filter($desktopSpeed, function($desktopSpeed) {
-    return $desktopSpeed <= 60;
-});
-
-sort($desktopSpeed);
-array_splice($desktopSpeed, 0, 5);
-array_splice($desktopSpeed, -ceil(0.10 * count($desktopSpeed)));
-
-$length = count($desktopSpeed);
-$middle = floor($length / 2);
-
-if ($length % 2) {
-    $median = $desktopSpeed[$middle];
-} else {
-    $median = ($desktopSpeed[$middle - 1] +$desktopSpeed[$middle]) / 2;
-}
-echo 'Avg: '.array_sum($desktopSpeed) / count($desktopSpeed).'<br>';
-echo 'Median: '.$median.'<br>';
-echo print_r($desktopSpeed);
-
-*/
 
 // Set up Screen Resolutions widget on dashboard
 $GLOBALS['ga4_resolution'] = $resolutionSessions = array();
@@ -429,6 +411,8 @@ function battleplan_admin_tech_stats() {
 	foreach ($ga4_browser as $metricKey => &$browserAndSessions) :
     		arsort($browserAndSessions);
 	endforeach;
+	
+	unset($browserAndSessions);
 
 	foreach ($ga4_browser as $metricKey => $browserAndSessions) :
 		$active = 'sessions-30' == $metricKey ? " active" : "";
@@ -453,16 +437,22 @@ function battleplan_admin_tech_stats() {
 	foreach ($ga4_device as $metricKey => &$deviceAndSessions) :
     		arsort($deviceAndSessions);
 	endforeach;
+	
+	unset($deviceAndSessions);
 
 	foreach ($ga4_device as $metricKey => $deviceAndSessions) :
 		$active = 'sessions-30' == $metricKey ? " active" : "";
 		$deviceTotalSessions = array_sum($deviceAndSessions);
 
 		echo '<div class="handle-label handle-label-'.(int)substr($metricKey, strrpos($metricKey, '-') + 1).$active.'"><ul>';	
-		echo '<li class="sub-label" style="column-span: all">Devices</li>';		
-
+		echo '<li class="sub-label" style="column-span: all">Devices</li>';	
+	
 		foreach ($deviceAndSessions as $deviceTitle =>$deviceSessions) :			
-			if ( $deviceSessions > 0 ) echo "<li><div class='value'><b>".number_format(($deviceSessions / $deviceTotalSessions)*100,1)."%</b></div><div class='label'>".ucwords($deviceTitle)."</div></li>";
+			$total = $GLOBALS['speedTotal'][$metricKey][$deviceTitle];
+			$sessions = $GLOBALS['speedSessions'][$metricKey][$deviceTitle];			
+			$fastSessions = $GLOBALS['fastSessions'][$metricKey][$deviceTitle];	
+	
+			if ( $deviceSessions > 0 ) echo "<li><div class='value'><b>".number_format(($deviceSessions / $deviceTotalSessions)*100,1)."%</b></div><div class='label-half' style='width:calc(35% - 35px)'>".ucwords($deviceTitle)."</div><div class='label-half style='width:calc(65% - 35px)'>".number_format($total / $sessions, 1)."s&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;".number_format(($fastSessions / $sessions)*100, 1)."% above target</div></li>";
 		endforeach;
 
 		echo '</ul></div>';	
@@ -477,6 +467,8 @@ function battleplan_admin_tech_stats() {
 	foreach ($ga4_resolution as $metricKey => &$resolutionAndSessions) :
     		arsort($resolutionAndSessions);
 	endforeach;
+	
+	unset($resolutionAndSessions);
 
 	foreach ($ga4_resolution as $metricKey => $resolutionAndSessions) :
 		$active = 'sessions-30' == $metricKey ? " active" : "";
@@ -576,7 +568,20 @@ foreach ( $ga4_pages_data as $pagePath=>$pageData ) :
 			if ( $pagePath == $chkPage ) : 
 				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $pageViews[$termDays] += $totalViews['page-views-'.$termDays];
 			else:
-				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $GLOBALS['ga4_page'][$chkPage]['page-views-'.$termDays] = $pageViews[$termDays];	
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) :					
+					$GLOBALS['ga4_page'][$chkPage]['page-views-'.$termDays] = $pageViews[$termDays];
+					
+					if (strpos($chkPage, '»') === false ) :	
+						foreach ( getCPT() as $type ) :
+							$pageID = get_page_by_title($chkPage, OBJECT, $type);
+							if ($pageID) :
+								updateMeta($pageID->ID, 'bp_views_'.$termDays, $pageViews[$termDays]);
+								break;
+							endif;
+						endforeach;
+					endif;
+
+				endforeach;
 				$chkPage = $pagePath;
 				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $pageViews[$termDays] = $totalViews['page-views-'.$termDays];
 			endif;
@@ -594,6 +599,8 @@ function battleplan_admin_pages_stats() {
 	foreach ($ga4_page as $metricKey => &$titlesAndViews) :
     		arsort($titlesAndViews);
 	endforeach;
+	
+	unset($titlesAndViews);
 
 	foreach ($ga4_page as $metricKey => $titlesAndViews) :
 		$active = 'page-views-30' == $metricKey ? " active" : "";
@@ -608,6 +615,37 @@ function battleplan_admin_pages_stats() {
 		echo '</ul></div>';	
 	endforeach;
 }
+
+
+// Add custom meta boxes to posts & pages
+add_action("add_meta_boxes", "battleplan_add_custom_meta_boxes");
+function battleplan_add_custom_meta_boxes() {
+	foreach ( getCPT() as $postType ) add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", $postType, "side", "default", null);
+}
+
+// Set up Page Stats widget on posts & pages
+function battleplan_page_stats() {
+	global $post;
+	$rightNow = strtotime(date("F j, Y g:i a"));
+	$today = strtotime(date("F j, Y"));
+	
+	$last7Views = (float)readMeta(get_the_ID(), 'bp_views_7', true);
+	$last30Views = (float)readMeta(get_the_ID(), 'bp_views_30', true);
+	$last90Views = (float)readMeta(get_the_ID(), 'bp_views_90', true);
+	$last180Views = (float)readMeta(get_the_ID(), 'bp_views_180', true);
+	$last365Views = (float)readMeta(get_the_ID(), 'bp_views_365', true);
+	
+	echo "<table>";	
+		echo "<tr><td><b>Yesterday</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $viewsToday, 'battleplan' ), number_format($viewsToday) )."</td></tr>";	
+		echo "<tr><td><b>Last 7 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last7Views, 'battleplan' ), number_format($last7Views) )."</td></tr>";
+		if ( $last30Views != $last7Views) echo "<tr><td><b>Last 30 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last30Views, 'battleplan' ), number_format($last30Views) )."</td></tr>";
+		if ( $last90Views != $last30Views) echo "<tr><td><b>Last 90 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last90Views, 'battleplan' ), number_format($last90Views) )."</td></tr>";
+		if ( $last180Views != $last90Views) echo "<tr><td><b>Last 180 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last180Views, 'battleplan' ), number_format($last180Views) )."</td></tr>";
+		if ( $last365Views != $last180Views) echo "<tr><td><b>Last 365 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last365Views, 'battleplan' ), number_format($last365Views) )."</td></tr>";
+	echo "</table>";		
+
+} 
+
 
 
 ?>

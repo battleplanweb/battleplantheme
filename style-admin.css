@@ -159,8 +159,6 @@ a {
 		height: 										26px;
 	}
 	
-	
-
 	.logged-in {
 		margin-top: 									-32px !important; /* compensate for the margin automatically placed on html */
 		margin-bottom: 								41px !important;
@@ -915,6 +913,12 @@ table.acp-ie-table .title.column-title .acp-ie-controls {
 #yoast_internal_linking,
 .yoast-premium-badge {
 	display: 										none !important;
+}
+
+/* Woocommerce
+--------------------------------------------- */
+.notice.wcs-nux__notice {
+	display: none; /* remove Jetpack ad */
 }
 
 /* Site Audit

@@ -25,20 +25,25 @@ function battleplan_delete_prefixed_options( $prefix ) {
 	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
 }	
 
-if ( get_option('bp_setup_2023_08_09') != "completed" ) :
+if ( get_option('bp_setup_2023_08_15') != "completed" ) :
 
 	battleplan_delete_prefixed_options( 'bp_admin_btn' );
 	delete_option('bp_admin_settings');
-	delete_option('bp_setup_2023_07_23');
 	battleplan_delete_prefixed_options( 'bp_site_hits' );
 	delete_option('stat-overview');
 	delete_option('bp_tracking_content');
 	delete_option('pct-viewed-financing');
 	delete_option('pct-viewed-init');
 	delete_option('pct-viewed-testimonials');
+	battleplan_delete_prefixed_options( 'log-tease' );
+	battleplan_delete_prefixed_options( 'log-views' );
+	battleplan_delete_prefixed_options( 'log-last-view' );
+	battleplan_delete_prefixed_options( 'widget-pic' );
 
-	updateOption( 'bp_setup_2023_08_09', 'completed', false );	
+	delete_option('bp_setup_2023_08_09');
+	updateOption( 'bp_setup_2023_08_15', 'completed', false );	
 endif;
+
 
 
 // Determine if Chron should run
@@ -692,7 +697,7 @@ function processChron($forceChron) {
 					new DateRange([ 'start_date' => date("Y-m-d", strtotime("-".$termDays." days")), 'end_date' => $today ]),
 				],
 				'dimensions' => [
-					new Dimension([ 'name' => 'pageReferrer' ]),				
+					new Dimension([ 'name' => 'firstUserSourceMedium' ]),				
 					new Dimension([ 'name' => 'city' ]),
 					new Dimension([ 'name' => 'region' ]),	
 				],
@@ -709,7 +714,7 @@ function processChron($forceChron) {
 				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
 				$sessions = $row->getMetricValues()[0]->getValue();	
 	
-				$switchRef = array ('google'=>'Google', 'facebook'=>'Facebook', 'yelp'=>'Yelp', 'yahoo'=>'Yahoo', 'bing'=>'Bing', 'duckduckgo'=>'DuckDuckGo', 'youtube'=>'YouTube', 'instagram'=>'Instagram');
+				$switchRef = array ('facebook'=>'Facebook', 'yelp'=>'Yelp', 'youtube'=>'YouTube', 'instagram'=>'Instagram');
 	
 				if (strpos($pageReferrer, $_SERVER['HTTP_HOST']) === false) :
 					foreach ( $switchRef as $find=>$replace ) :
@@ -729,9 +734,9 @@ function processChron($forceChron) {
 			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
 	
 			update_option('bp_ga4_referrers_01', $analyticsGA4, false);		
-		endforeach;	
+		endforeach;		
+
 	
-			
 		// Locations
 		$analyticsGA4 = array();
 		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) :	
@@ -850,7 +855,7 @@ function processChron($forceChron) {
 			update_option('bp_ga4_devices_01', $analyticsGA4, false);		
 		endforeach;				
 	
-			/*
+			
 		// Site Load Speed
 		$analyticsGA4 = array();
 		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) :	
@@ -862,8 +867,8 @@ function processChron($forceChron) {
 				],
 				'dimensions' => [
 					new Dimension([ 'name' => 'groupId' ]),				
-					//new Dimension([ 'name' => 'city' ]),
-					//new Dimension([ 'name' => 'region' ]),	
+					new Dimension([ 'name' => 'city' ]),
+					new Dimension([ 'name' => 'region' ]),	
 				],
 				'metrics' => [
 					//new Metric([ 'name' => 'sessions' ]),					
@@ -873,22 +878,23 @@ function processChron($forceChron) {
 
 			foreach ( $response->getRows() as $row ) :
 				$groupId = $row->getDimensionValues()[0]->getValue();
-				//$city = $row->getDimensionValues()[1]->getValue();
-				//$state = strtolower($row->getDimensionValues()[2]->getValue());
-				//if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
+				$city = $row->getDimensionValues()[1]->getValue();
+				$state = strtolower($row->getDimensionValues()[2]->getValue());
+				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
 				//$sessions = $row->getMetricValues()[0]->getValue();	
 
-				//if ( isset($states[$state]) ) :					
-					//if ( $city == '(not set)' ) $location = ucwords($state);	
-					$analyticsGA4['sessions-'.$termDays][] = $groupId;	
-				//endif;
+				if ( isset($states[$state]) ) :					
+					if ( $city == '(not set)' ) $location = ucwords($state);	
+					$analyticsGA4[$location]['sessions-'.$termDays][] = $groupId;
+				endif;
 			endforeach;		 
 
 			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
 	
+	echo print_r ($analyticsGA4);
 			update_option('bp_ga4_speed_01', $analyticsGA4, false);		
 		endforeach;			
-	*/
+	
 			
 		// Screen Resolutions
 		$analyticsGA4 = array();

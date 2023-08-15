@@ -106,8 +106,12 @@ function battleplan_registerPostTypes() {
 		'hierarchical'=>false,
 		'menu_position'=>20,
 		'menu_icon'=>'dashicons-edit-page',
-		'has_archive'=>true,
-		'capability_type'=>'page',
+		'has_archive'=>false,
+		'capability_type' => 'page',
+		'capabilities' => array(
+			'create_posts' => false,
+		),
+		'map_meta_cap' => true,
 	));
 	register_post_type( 'elements', array (
 		'label'=>__( 'elements', 'battleplan' ),

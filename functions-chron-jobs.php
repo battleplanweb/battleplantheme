@@ -44,7 +44,7 @@ if ( get_option('bp_setup_2023_08_15') != "completed" ) :
 	updateOption( 'bp_setup_2023_08_15', 'completed', false );	
 endif;
 
-
+battleplan_delete_prefixed_options( 'bp_admin_btn' );
 
 // Determine if Chron should run
 $forceChron = get_option('bp_force_chron') !== null ? get_option('bp_force_chron') : 'false';
@@ -65,7 +65,7 @@ function processChron($forceChron) {
 	if ( is_plugin_active('wp-mail-smtp/wp_mail_smtp.php') ) : 
 		$site = str_replace('https://', '', get_bloginfo('url'));	
 	
-		if ( $site == "sweetiepiesribeyes.com" || $site == "bubbascookscountry.com" ) :	
+		if ( $site == "sweetiepiesribeyes.com" || $site == "bubbascookscountry.com" || $site == "babeschicken.com" ) :	
 			$apiKey2 = "-b916aeccb98bf3fcca73";
 			$apiKey3 = "a606526cefdf92084ce7a9048d5cf734124e09f9bb26";
 			$apiKey4 = "-YcYFamx5FrGvCxXe";
@@ -338,6 +338,23 @@ function processChron($forceChron) {
 	battleplan_delete_prefixed_options( 'ac_api_request_' );	
 	battleplan_delete_prefixed_options( 'ac_sorting_' );
 	battleplan_delete_prefixed_options( 'client_' );
+		
+// Prune weak testimonials
+	$args = array ( 'post_type' => 'testimonials', 'post_status' => 'publish', 'posts_per_page' => -1 );
+	$getTestimonials = new WP_Query($args);
+	if ( $getTestimonials->found_posts > 20 ) :
+
+    		while ($getTestimonials->have_posts()) : $getTestimonials->the_post();
+			if ( !has_post_thumbnail() && get_field( "testimonial_quality" )[0] != 1 ) :
+				if ( strlen(wp_strip_all_tags(get_the_content(), true)) < 300 ) :	
+			  		wp_update_post( array ( 'ID' => get_the_ID(), 'post_status' => 'draft' ));
+					break;
+				endif;
+       		endif;
+    		endwhile;
+
+		wp_reset_postdata();
+	endif;	
 	
 /*--------------------------------------------------------------
 # Update 'customer_info' with Google Business Profile info

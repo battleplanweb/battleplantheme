@@ -283,6 +283,7 @@ function battleplan_socialBtn( $atts, $content = null ) {
 	elseif ( $type == "facebook" ) : $icon = "fab fa-facebook-f";	
 	elseif ( $type == "pinterest" ) : $icon = "fab fa-pinterest-p";	
 	elseif ( $type == "linkedin" ) : $icon = "fab fa-linkedin-in";
+	elseif ( $type == "location" ) : $icon = "fas fa-map-marker-alt";
 	else: $icon = "fab fa-".$type; endif;
 	
 	if ( $img == '' ) : $iconLoc = '<i class="'.$icon.'" aria-hidden="true"></i><span class="sr-only">'.$type.'</span><span class="social-bg"></span>';
@@ -644,7 +645,9 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		$testimonialMisc3 = esc_attr(get_field( "testimonial_misc3" ));	
 		$testimonialMisc4 = esc_attr(get_field( "testimonial_misc4" ));
 		
-		$buildCredentials = "<div class='testimonials-credential testimonials-name'>".esc_attr(get_field( "testimonial_name" ));
+		$addNewTag = get_the_date('Y-m-d') > date('Y-m-d', strtotime('-3 months')) ? '<img class="noFX new" src="../wp-content/themes/battleplantheme/common/logos/new-1.png" />' : '';
+		
+		$buildCredentials = "<div class='testimonials-credential testimonials-name'>".$addNewTag.get_the_title();
 		if ( $testimonialTitle ) $buildCredentials .= "<span class='testimonials-title'>, ".$testimonialTitle."</span>";
 		$buildCredentials .= "</div>";
 		if ( esc_attr(get_field( "testimonial_biz" )) ) :
@@ -666,7 +669,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		$content = apply_filters('the_content', get_the_content($postID)); 
 		if ( $truncate != "false" && $truncate != "no" ) : 
 			$content = $truncate == "true" || $truncate == "yes" ? truncateText($content) : truncateText($content, $truncate);
-		endif;
+		endif;			
 		
 		$archiveBody = '[txt class="testimonials-quote"][p]'.$content.'[/p][/txt][txt size="11/12" class="testimonials-credentials"]'.$buildCredentials.'[/txt][txt size="1/12" class="testimonials-platform testimonials-platform-'.$testimonialPlatform.'"][/txt]';
 	} else {
@@ -923,8 +926,8 @@ function battleplan_getPostSlider($atts, $content = null ) {
 				$image_query->the_post();
 				$numDisplay++; 	
 				if ( $rowDisplay == 0 ) :
-				 	$active = $numDisplay == 0 ? "active" : "";
-					$buildIndicators .= '<li data-target="#'.$type.'Slider'.$sliderNum.'" data-slide-to="'.$numDisplay.'" class="'.$active.'"></li>';
+				 	$active = $numDisplay == 0 ? " active" : "";
+					$buildIndicators .= '<li data-target="#'.$type.'Slider'.$sliderNum.'" data-slide-to="'.$numDisplay.'" class="carousel-icon'.$active.'"></li>';
 					if ( $numDisplay != 0 ) $buildInner .= '</div>';
 					$buildInner .= '<div class="'.$active.' carousel-item carousel-item-'.$type.'">';
 				endif;	

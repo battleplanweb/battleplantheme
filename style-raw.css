@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 20.9
+Version: 20.10
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -2989,9 +2989,10 @@ section.section.break-out {
 }
 
 .side-slide #mobile-navigation, 
-.side-push #mobile-navigation {
+.side-push #mobile-navigation,
+.top-drop #mobile-navigation {
 	right:										0;
-	margin-right:									-110%;
+	margin-right:									-110vw;
 	border-left: 									1px solid var(--black);
 	box-shadow: 									-4px 0 5px var(--black-med);
 	width:										440px;
@@ -3000,9 +3001,20 @@ section.section.break-out {
 	transition: 									all var(--main-trans-speed) linear;
 }
 
+.top-drop #mobile-navigation {
+	right:										0;
+	margin-right:									0;
+	margin-top: 									-110vh;
+}
+
 .side-slide.mm-active #mobile-navigation, 
 .side-push.mm-active #mobile-navigation {
 	margin-right:									0;
+	transition: 									all var(--main-trans-speed) linear;
+}
+
+.top-drop.mm-active #mobile-navigation {
+	margin-top:									0;
 	transition: 									all var(--main-trans-speed) linear;
 }
 
@@ -3017,7 +3029,6 @@ section.section.break-out {
 }
 
 .top-slide #mobile-navigation, 
-
 .top-push #mobile-navigation {
 	left:										0;
 	margin-top:									calc(-100% - 70px);
@@ -3960,9 +3971,13 @@ img.img-404 {
 	margin-right:									-5px;
 }
 
+.testimonials-credential img.new {
+	display: 										inline-block;
+  	margin: 										0 20px -32px 0;
+}
+
 .testimonials-platform {
 	margin:										14px 1px 0;
-
 	width:										30px;
 	height:										30px;
 	grid-column:									span 1 !important;
@@ -5402,6 +5417,7 @@ html.error503 h3 {
 	.grid-7e,
 	.grid-8e,
 	.gallery-column-7,
+
 	.gallery-column-8 {
 		grid-template-columns: 						repeat(6, 1fr);
 	}

@@ -339,7 +339,26 @@ function battleplan_remove_dashboard_widgets () {
 // Load site stats if hooked to Google Analytics
 if ( isset(get_option('customer_info')['google-tags']['prop-id']) && get_option('customer_info')['google-tags']['prop-id'] > 1 && is_admin() && _USER_LOGIN == "battleplanweb" ) require_once get_template_directory().'/functions-admin-stats.php';
 
-
+// Adjust the number of of posts listed on admin pages
+add_filter( 'edit_posts_per_page', 'custom_posts_per_page_based_on_type_in_admin', 10, 2 );
+function custom_posts_per_page_based_on_type_in_admin( $per_page, $post_type ) {
+	if ( _USER_LOGIN == 'battleplanweb' ) :
+		$last_logins = is_array(get_option('bp_last_login')) ? get_option('bp_last_login') : array();
+		define( '_LAST_LOGIN', $last_logins);
+		$last_logins[$post_type] = time();
+		update_option( 'bp_last_login', $last_logins, false);
+	endif;
+	
+	if ( defined('_LAST_LOGIN') && _LAST_LOGIN[$post_type] < (time() - 30000) ) :	
+        	if( $post_type == 'post' || $post_type == 'page' || $post_type == 'landing' || $post_type == 'galleries' ) : return 30;        	
+		elseif( $post_type == 'testimonials' || $post_type == 'products' || $post_type == 'product' ) : return 50;
+		else : return 100;
+		endif;
+	endif;
+	
+    return $per_page;
+}
+ 
 /*--------------------------------------------------------------
 # Admin Page Set Up
 --------------------------------------------------------------*/
@@ -555,11 +574,11 @@ function battleplan_site_audit() {
 		$googleInfo = get_option('bp_gbp_update');
 		$siteAudit[$today]['google-rating'] = number_format($googleInfo['google-rating'], 1, '.', ',');
 		$siteAudit[$today]['google-reviews'] = $googleInfo['google-reviews'];
-		$siteAudit[$today]['load_time_mobile'] = get_option('load_time_mobile');	
-		$siteAudit[$today]['load_time_desktop'] = get_option('load_time_desktop');		
-		$siteAudit[$today]['testimonials-pct'] = get_option('pct-viewed-testimonials').'%';
-		$siteAudit[$today]['coupon-pct'] = get_option('pct-viewed-coupon').'%';
-		$siteAudit[$today]['finance-pct'] = get_option('pct-viewed-financing').'%';
+		$siteAudit[$today]['load_time_mobile'] = number_format($GLOBALS['speedTotal']['sessions-30']['mobile'] / $GLOBALS['speedSessions']['sessions-30']['mobile'], 1); 	
+		$siteAudit[$today]['load_time_desktop'] = number_format($GLOBALS['speedTotal']['sessions-30']['desktop'] / $GLOBALS['speedSessions']['sessions-30']['desktop'], 1); 		
+		$siteAudit[$today]['testimonials-pct'] = $GLOBALS['ga4_contentVis']['track-init']['sessions-30'] > 0 ? number_format(($GLOBALS['ga4_contentVis']['track-testimonials']['sessions-30'] / $GLOBALS['ga4_contentVis']['track-init']['sessions-30']*100), 1).'%' : ''; 		
+		$siteAudit[$today]['coupon-pct'] = $GLOBALS['ga4_contentVis']['track-init']['sessions-30'] > 0 ? number_format(($GLOBALS['ga4_contentVis']['track-coupon']['sessions-30'] / $GLOBALS['ga4_contentVis']['track-init']['sessions-30'])*100, 1).'%' : ''; 		
+		$siteAudit[$today]['finance-pct'] = $GLOBALS['ga4_contentVis']['track-init']['sessions-30'] > 0 ? number_format(($GLOBALS['ga4_contentVis']['track-finance']['sessions-30'] / $GLOBALS['ga4_contentVis']['track-init']['sessions-30'])*100, 1).'%' : ''; 		
 		
 		if ( wp_count_posts( 'post' )->publish > 0 ) : $siteAudit[$today]['blog'] = wp_count_posts( 'post' )->publish; else: $siteAudit[$today]['blog'] = "false"; endif;
 		
@@ -796,12 +815,15 @@ function battleplan_clear_hvac($all=false) {
 	$keepPages = array ('home', 'contact-us', 'product-overview');
 	$keepElements = array ('site-header', 'widgets');
 
+	$elements = get_posts( array('post_type'=>'elements', 'numberposts'=>-1) );
+	$pages = get_posts( array('post_type'=>'page', 'numberposts'=>-1) );
 	$landing = get_posts( array('post_type'=>'landing', 'numberposts'=>-1) );
 	$testimonials = get_posts( array('post_type'=>'testimonials', 'numberposts'=>-1) );
 	$galleries = get_posts( array('post_type'=>'galleries', 'numberposts'=>-1) );
 	$posts = get_posts( array('post_type'=>'post', 'numberposts'=>-1) );
-	$elements = get_posts( array('post_type'=>'elements', 'numberposts'=>-1) );
-	$pages = get_posts( array('post_type'=>'page', 'numberposts'=>-1) );
+	$woo_products = get_posts( array('post_type'=>'product', 'numberposts'=>-1) );
+	$woo_orders = get_posts( array('post_type'=>'shop_order', 'numberposts'=>-1) );
+	$users = get_users( array('fields' => array('ID', 'user_login'),));
 	
 	if ( $all == true ) :
 		$products = get_posts( array('post_type'=>'products', 'numberposts'=>-1) );
@@ -810,12 +832,21 @@ function battleplan_clear_hvac($all=false) {
 		if (in_array('product-overview', $keepPages)) unset($keepPages[array_search('product-overview', $keepPages)]);
 	endif;
 
+	foreach ($elements as $post) if ( !in_array( $post->post_name, $keepElements) ) wp_delete_post( $post->ID, true );
+	foreach ($pages as $post) if ( !in_array( $post->post_name, $keepPages) ) wp_delete_post( $post->ID, true );
 	foreach ($landing as $post) wp_delete_post( $post->ID, true );
 	foreach ($testimonials as $post) wp_delete_post( $post->ID, true );
 	foreach ($galleries as $post) wp_delete_post( $post->ID, true );
 	foreach ($posts as $post) wp_delete_post( $post->ID, true );
-	foreach ($elements as $post) if ( !in_array( $post->post_name, $keepElements) ) wp_delete_post( $post->ID, true );
-	foreach ($pages as $post) if ( !in_array( $post->post_name, $keepPages) ) wp_delete_post( $post->ID, true );
+	foreach ($woo_products as $post) wp_delete_post( $post->ID, true );	
+	foreach ($woo_orders as $post) wp_delete_post( $post->ID, true );
+	
+	foreach ($users as $user) :
+	 	if ($user->user_login !== 'battleplanweb') :
+			require_once(ABSPATH.'wp-admin/includes/user.php' );
+        		wp_delete_user($user->ID);
+		endif;
+	endforeach;
 
 	$args = array( 'post_status' => 'inherit', 'posts_per_page' => -1, 'post_type' => 'attachment', 'post_mime_type' => 'image', );
 	$args['tax_query'] = array( array( 'taxonomy' => 'image-categories', 'terms' => $deleteImgs, 'field' => 'slug', ),);
@@ -836,17 +867,6 @@ function battleplan_clear_hvac($all=false) {
 
 function battleplan_launch_site() {
 	delete_option('bp_gbp_update');		
-	delete_option('bp_site_hits_ga4');	
-	delete_option('bp_site_hits_ua_1');	
-	delete_option('bp_site_hits_ua_2');		
-	delete_option('bp_site_hits_ua_3');		
-	delete_option('bp_site_hits_ua_4');		
-	delete_option('bp_site_hits_ua_5');
-	delete_option('bp_site_hits_ua_1_backup');	
-	delete_option('bp_site_hits_ua_2_backup');		
-	delete_option('bp_site_hits_ua_3_backup');		
-	delete_option('bp_site_hits_ua_4_backup');		
-	delete_option('bp_site_hits_ua_5_backup');	
 	delete_option('bp_site_audit_details');
 
 	updateOption('bp_chron_time', 0);

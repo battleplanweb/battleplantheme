@@ -250,8 +250,8 @@ function battleplan_admin_referrer_stats() {
 		echo '<li class="sub-label" style="column-span: all">Last '.number_format(array_sum($referrerAndSessions)).' Engaged Sessions</li>';		
 
 		foreach ($referrerAndSessions as $referrerTitle => $referSessions) :
-			$search = array( '(direct) / (none)' , ' / referral', ' / organic', ' / cpc', 'google', 'bing', 'yahoo', 'duckduckgo' );
-			$replace = array( 'Direct' , '', ' (organic)', ' (paid)', 'Google', 'Bing', 'Yahoo', 'DuckDuckGo' );
+			$search = array( '(direct) / (none)' , ' / referral', ' / organic', ' / cpc', ' / display', 'google', 'GMB', 'bing', 'yahoo', 'duckduckgo' );
+			$replace = array( 'Direct' , '', ' (organic)', ' (paid)', ' (display)', 'Google', 'GBP', 'Bing', 'Yahoo', 'DuckDuckGo' );
 			$referrerTitle = str_replace( $search, $replace, $referrerTitle);
 	
 			if ( $referSessions > 0 ) echo "<li><div class='value'><b>".number_format($referSessions)."</b></div><div class='label'>".$referrerTitle."</div></li>";
@@ -575,7 +575,7 @@ foreach ( $ga4_pages_data as $pagePath=>$pageData ) :
 						foreach ( getCPT() as $type ) :
 							$pageID = get_page_by_title($chkPage, OBJECT, $type);
 							if ($pageID) :
-								updateMeta($pageID->ID, 'bp_views_'.$termDays, $pageViews[$termDays]);
+								updateMeta($pageID->ID, 'bp_views_'.$termDays, $GLOBALS['ga4_page'][$chkPage]['page-views-'.$termDays]);
 								break;
 							endif;
 						endforeach;

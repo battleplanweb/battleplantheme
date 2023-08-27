@@ -370,6 +370,7 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	z-index: 										100;
 }
 
+/* Expand to the full screen when you have more than 3 years worth of stats */
 #dashboard-widgets #postbox-container-3 .postbox.active {
 	position: 									absolute;
 	width: 										calc(100% - 23px);
@@ -452,16 +453,16 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 }
 
 #dashboard-widgets #battleplan_pages_stats.postbox {
-    max-height: 									506px;
+    	max-height: 									506px;
 }
 
 #dashboard-widgets .postbox.active,
 #dashboard-widgets #battleplan_tech_stats.postbox.active,
 #dashboard-widgets #battleplan_pages_stats.postbox.active,
 #dashboard-widgets #battleplan_content_stats.postbox.active {
-    background: 									var(--white);
+    	background: 									var(--white);
 	border: 										1px solid var(--light-grey);
-    box-shadow: 									2px 2px 0 0 var(--light-grey);
+    	box-shadow: 									2px 2px 0 0 var(--light-grey);
 	max-height: 									unset;
 }
 
@@ -825,6 +826,16 @@ table.media .column-title .media-icon img {
 
 table.acp-ie-table .title.column-title .acp-ie-controls {
 	display: 										none !important;
+}
+
+.wp-admin .acf-field-testimonial-rating,
+.wp-admin .acf-field-testimonial-quality,
+.wp-admin .acf-field-business-name,
+.wp-admin .acf-field-business-website {
+	float: 										left;
+	width: 										50%;
+	clear: 										none;
+	
 }
 
 /* Page Meta Box structure */

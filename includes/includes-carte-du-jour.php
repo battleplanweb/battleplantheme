@@ -52,8 +52,8 @@ function battleplan_saveLocations() {
 }
 
 // Remove / display correct phone number on mobile menu bar
-add_action( 'bp_mobile_menu_bar_phone', 'battleplan_remove_mm_btn' );
-function battleplan_remove_mm_btn() {
+add_action( 'bp_mobile_menu_bar_phone', 'battleplan_carte_du_jour_phone' );
+function battleplan_carte_du_jour_phone() {
 	remove_action('bp_mobile_menu_bar_phone', 'battleplan_mobile_menu_bar_phone', 20);
 	
 	$buildPhone = '<div class="hide-unknown hide-2 hide-3 hide-4 hide-5">';	

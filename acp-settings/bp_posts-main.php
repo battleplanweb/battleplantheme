@@ -27,7 +27,7 @@ return array (
 		'post-id'=>array(
 			'type'=>'column-postid',
 			'label'=>'ID',
-			'width'=>'100',
+			'width'=>'60',
 			'width_unit'=>'px',
 			'before'=>'',
 			'after'=>'',
@@ -38,10 +38,23 @@ return array (
 			'label_type'=>'',
 			'search'=>'on'
 		),
+		'reference'=>array(
+			'type'=>'column-meta',
+			'label'=>'Ref #',
+			'width'=>'65',
+			'width_unit'=>'px',
+			'field'=>'reference',
+			'edit'=>'on',
+			'sort'=>'on',
+			'filter'=>'on',
+			'filter_label'=>'',
+			'label_type'=>'',
+			'search'=>'on'
+		),		
 		'title'=>array(
 			'type'=>'title',
 			'label'=>'Title',
-			'width'=>'200',
+			'width'=>'250',
 			'width_unit'=>'px',
 			'edit'=>'on',
 			'sort'=>'on',
@@ -52,7 +65,7 @@ return array (
 		'column-slug'=>array(
 			'type'=>'column-slug',
 			'label'=>'Slug',
-			'width'=>'15',
+			'width'=>'12',
 			'width_unit'=>'%',
 			'edit'=>'on',
 			'sort'=>'on',
@@ -78,7 +91,7 @@ return array (
 		'date-published'=>array(
 			'type'=>'column-date_published',
 			'label'=>'Published',
-			'width'=>'130',
+			'width'=>'140',
 			'width_unit'=>'px',
 			'date_format'=>'F j, Y g:i a',
 			'edit'=>'on',
@@ -107,7 +120,7 @@ return array (
 		'tags'=>array(
 			'type'=>'tags',
 			'label'=>'Tags',
-			'width'=>'100',
+			'width'=>'200',
 			'width_unit'=>'px',
 			'edit'=>'on',
 			'enable_term_creation'=>'on',
@@ -132,7 +145,7 @@ return array (
 		'menu-order'=>array(
 			'type'=>'column-order',
 			'label'=>'Order',
-			'width'=>'100',
+			'width'=>'50',
 			'width_unit'=>'px',
 			'edit'=>'on',
 			'enable_term_creation'=>'on',

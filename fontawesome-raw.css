@@ -195,6 +195,10 @@
     content: "\f0e1";
 }
 
+.fa-map-marker-alt:before {
+    content: "\f3c5";
+}
+
 .fa-phone:before {
     content: "\f095";
 }

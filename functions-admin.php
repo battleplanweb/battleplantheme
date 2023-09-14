@@ -350,7 +350,7 @@ function custom_posts_per_page_based_on_type_in_admin( $per_page, $post_type ) {
 	endif;
 	
 	if ( defined('_LAST_LOGIN') && _LAST_LOGIN[$post_type] < (time() - 30000) ) :	
-        	if( $post_type == 'post' || $post_type == 'page' || $post_type == 'landing' || $post_type == 'galleries' ) : return 30;        	
+        	if( $post_type == 'post' || $post_type == 'page' || $post_type == 'landing' || $post_type == 'galleries' || $post_type == 'attachment' ) : return 30;        	
 		elseif( $post_type == 'testimonials' || $post_type == 'products' || $post_type == 'product' ) : return 50;
 		else : return 100;
 		endif;

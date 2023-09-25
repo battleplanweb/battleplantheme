@@ -25,26 +25,21 @@ function battleplan_delete_prefixed_options( $prefix ) {
 	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
 }	
 
-if ( get_option('bp_setup_2023_08_15') != "completed" ) :
+if ( get_option('bp_setup_2023_09_15') != "completed" ) :
 
-	battleplan_delete_prefixed_options( 'bp_admin_btn' );
-	delete_option('bp_admin_settings');
-	battleplan_delete_prefixed_options( 'bp_site_hits' );
-	delete_option('stat-overview');
-	delete_option('bp_tracking_content');
-	delete_option('pct-viewed-financing');
-	delete_option('pct-viewed-init');
-	delete_option('pct-viewed-testimonials');
-	battleplan_delete_prefixed_options( 'log-tease' );
-	battleplan_delete_prefixed_options( 'log-views' );
-	battleplan_delete_prefixed_options( 'log-last-view' );
-	battleplan_delete_prefixed_options( 'widget-pic' );
+	add_action("init", "bp_remove_cron_job"); 
+	function bp_remove_cron_job() {
+		wp_clear_scheduled_hook("wphb_clear_logs"); 
+		wp_clear_scheduled_hook("wphb_minify_clear_files"); 
+		wp_clear_scheduled_hook("wpmudev_scheduled_jobs"); 
+	}
 
-	delete_option('bp_setup_2023_08_09');
-	updateOption( 'bp_setup_2023_08_15', 'completed', false );	
+	//battleplan_delete_prefixed_options( 'bp_admin_btn' );
+	//delete_option('bp_admin_settings');
+
+	delete_option('bp_setup_2023_08_15');
+	updateOption( 'bp_setup_2023_09_15', 'completed', false );	
 endif;
-
-battleplan_delete_prefixed_options( 'bp_admin_btn' );
 
 // Determine if Chron should run
 $forceChron = get_option('bp_force_chron') !== null ? get_option('bp_force_chron') : 'false';
@@ -340,22 +335,20 @@ function processChron($forceChron) {
 	battleplan_delete_prefixed_options( 'client_' );
 		
 // Prune weak testimonials
-	$args = array ( 'post_type' => 'testimonials', 'post_status' => 'publish', 'posts_per_page' => -1 );
+	$args = array ( 'post_type' => 'testimonials', 'post_status' => 'publish', 'posts_per_page' => -1, 'orderby' => 'date', 'order' => 'DESC' );
 	$getTestimonials = new WP_Query($args);
-	if ( $getTestimonials->found_posts > 20 ) :
-
-    		while ($getTestimonials->have_posts()) : $getTestimonials->the_post();
-			if ( !has_post_thumbnail() && get_field( "testimonial_quality" )[0] != 1 ) :
-				if ( strlen(wp_strip_all_tags(get_the_content(), true)) < 300 ) :	
-			  		wp_update_post( array ( 'ID' => get_the_ID(), 'post_status' => 'draft' ));
-					break;
-				endif;
-       		endif;
-    		endwhile;
-
-		wp_reset_postdata();
-	endif;	
 	
+  	while ($getTestimonials->have_posts()) : $getTestimonials->the_post();
+		$quality = get_field( "testimonial_quality" );	
+        if ( $getTestimonials->found_posts > 20 && !has_post_thumbnail() && $quality[0] != 1 && strlen(wp_strip_all_tags(get_the_content(), true)) < 300 ) $draft = get_the_id();	
+		if ( has_post_thumbnail() && $quality[0] != 1 ) $quality[0] = 1;
+		update_field('testimonial_quality', $quality);
+    endwhile;
+
+	wp_reset_postdata();
+    if ( $draft ) wp_update_post( array ( 'ID' => $draft, 'post_status' => 'draft' ));
+
+
 /*--------------------------------------------------------------
 # Update 'customer_info' with Google Business Profile info
 --------------------------------------------------------------*/	
@@ -908,7 +901,6 @@ function processChron($forceChron) {
 
 			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
 	
-	echo print_r ($analyticsGA4);
 			update_option('bp_ga4_speed_01', $analyticsGA4, false);		
 		endforeach;			
 	

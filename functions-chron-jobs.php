@@ -341,9 +341,11 @@ function processChron($forceChron) {
   	while ($getTestimonials->have_posts()) : $getTestimonials->the_post();
 		$quality = get_field( "testimonial_quality" );	
         if ( $getTestimonials->found_posts > 20 && !has_post_thumbnail() && $quality[0] != 1 && strlen(wp_strip_all_tags(get_the_content(), true)) < 300 ) $draft = get_the_id();	
-		if ( has_post_thumbnail() && $quality[0] != 1 ) $quality[0] = 1;
-		update_field('testimonial_quality', $quality);
-    endwhile;
+		if ( has_post_thumbnail() && $quality[0] != 1 ) :
+			$quality[0] = 1;
+			update_field('testimonial_quality', $quality);
+		endif;
+    endwhile; 
 
 	wp_reset_postdata();
     if ( $draft ) wp_update_post( array ( 'ID' => $draft, 'post_status' => 'draft' ));

@@ -623,6 +623,11 @@ table {
 .three-column > * {
 	break-inside: 								avoid;
 }
+	
+  ul.paragraphs li,
+  ul.paragraph li {
+      margin-bottom:   							var(--measure-small);
+  }
 
 .left,
 .text-left {

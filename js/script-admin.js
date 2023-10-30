@@ -9,6 +9,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 /*--------------------------------------------------------------
 # Admin interface
 --------------------------------------------------------------*/
+	
+	
 
 	/* Allow useage of Admin Columns */
 	$('.disabled').removeClass("disabled").removeClass("-disabled");

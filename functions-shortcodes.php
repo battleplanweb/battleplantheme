@@ -104,6 +104,31 @@ function battleplan_getSeason($atts, $content = null) {
 		return $winter;
 	endif; 
 }
+ 
+// Retrieves and displays a Facebook post
+add_shortcode( 'get-fb-posts', 'battleplan_getFBPosts' );
+function battleplan_getFBPosts($atts, $content = null ) {
+	$a = shortcode_atts( array( 'prefix'=>'', 'links'=>'', 'width'=>'', 'lazy'=>'false', 'text'=>'true', 'max'=>'', 'shuffle'=>'true' ), $atts );
+	$prefix = esc_attr($a['prefix']);
+	$links = explode( ',', str_replace(' ', '', esc_attr($a['links'])) );
+	$width = esc_attr($a['width']);
+	$lazy = esc_attr($a['lazy']);
+	$text = esc_attr($a['text']);
+	$max = esc_attr($a['max']);	
+	$shuffle = esc_attr($a['shuffle']);
+	
+	if ( $shuffle == 'true' ) shuffle($links);
+	if ( $max != '' ) $links = array_slice($links, 0, $max);
+	
+	$display = '[col class="span-all hide-desktop hide-mobile"]<script defer nonce="'._BP_NONCE.'">window.fbAsyncInit = function() { FB.init({ xfbml : true, version : "v18.0" }); }; </script>';
+	$display .= '<script async defer nonce="'._BP_NONCE.'" src="https://connect.facebook.net/en_US/sdk.js"></script>[/col]';
+	
+	foreach ( $links as $link ) :	
+		$display .= '[col]<div style="background: #fff;" class="fb-post" data-href="'.$prefix.$link.'" data-width="'.$width.'" data-lazy="'.$lazy.'" data-show-text="'.$text.'"></div>[/col]';
+	endforeach;	
+	
+	return do_shortcode($display);	
+}
 
 // Clear space under a "low-hanging" element 
 add_shortcode( 'clear', 'battleplan_clearFix' );
@@ -214,6 +239,11 @@ function battleplan_getDomainName( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'ext'=>'false', ), $atts );
 	$parts = explode('.', parse_url(esc_url(get_site_url()), PHP_URL_HOST));	
 	return esc_attr($a['ext']) != "false" ? $parts[0].'.'.$parts[1] : $parts[0];
+	
+	
+	
+	
+	
 }
 
 // Returns url of page (minus domain, choose whether to include variables)
@@ -398,10 +428,10 @@ function battleplan_getRandomImage($atts, $content = null ) {
 
 	$args['orderby']='meta_value_num';	
 	if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; 	
-	elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="log-views-total-7day"; 	
-	elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="log-views-total-30day";
-	elseif ( $orderBy == 'views-90day' ) : $args['meta_key']="log-views-total-90day"; 
-	elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="log-views-total-365day"; 
+	elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="bp_views_7"; 	
+	elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="bp_views_30";
+	elseif ( $orderBy == 'views-90day' ) : $args['meta_key']="bp_views_90"; 
+	elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="bp_views_365"; 
 	elseif ( $orderBy == 'recent' ) : $args['meta_key']="log-last-viewed";
 	else : $args['orderby']=$orderBy;
 	endif;		
@@ -458,10 +488,10 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 
 	$args['orderby']='meta_value_num';	
 	if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; 	
-	elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="log-views-total-7day"; 	
-	elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="log-views-total-30day";
-	elseif ( $orderBy == 'views-90day' ) : $args['meta_key']="log-views-total-90day"; 
-	elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="log-views-total-365day"; 
+	elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="bp_views_7"; 	
+	elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="bp_views_30";
+	elseif ( $orderBy == 'views-90day' ) : $args['meta_key']="bp_views_90"; 
+	elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="bp_views_365"; 
 	elseif ( $orderBy == 'recent' ) : $args['meta_key']="log-last-viewed";
 	else : $args['orderby']=$orderBy;
 	endif;		
@@ -611,7 +641,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		$thumbW = $meta['sizes'][$size]['width'];
 		$thumbH = $meta['sizes'][$size]['height'];
 	
-		$archiveImg = do_shortcode('[img size="'.$picSize.'" class="image-'.$type.'" link="'.$linkLoc.'" '.$picADA.']'.get_the_post_thumbnail( $postID, $size, array( 'class'=>'img-archive img-'.$type, 'style'=>'aspect-ratio:'.$thumbW.'/'.$thumbH )).'[/img]'); 
+		$archiveImg = do_shortcode('[img size="'.$picSize.'" class="image-'.$type.'" link="'.$linkLoc.'" '.$picADA.']'.get_the_post_thumbnail( $postID, $size, array( 'loading' => 'lazy', 'class'=>'img-archive img-'.$type, 'style'=>'aspect-ratio:'.$thumbW.'/'.$thumbH )).'[/img]'); 
 		if ( $textSize == "" ) : 
 			$textSize = getTextSize($picSize); 
 		endif;	
@@ -645,7 +675,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		$testimonialMisc3 = esc_attr(get_field( "testimonial_misc3" ));	
 		$testimonialMisc4 = esc_attr(get_field( "testimonial_misc4" ));
 		
-		$addNewTag = get_the_date('Y-m-d') > date('Y-m-d', strtotime('-3 months')) ? '<img class="noFX new" src="../wp-content/themes/battleplantheme/common/logos/new-1.png" />' : '';
+		$addNewTag = get_the_date('Y-m-d') > date('Y-m-d', strtotime('-3 months')) ? '<img class="noFX new" loading="lazy" src="../wp-content/themes/battleplantheme/common/logos/new-1.png" width="58" height="52" style="aspect-ratio:58/52" />' : '';
 		
 		$buildCredentials = "<div class='testimonials-credential testimonials-name'>".$addNewTag.get_the_title();
 		if ( $testimonialTitle ) $buildCredentials .= "<span class='testimonials-title'>, ".$testimonialTitle."</span>";
@@ -798,10 +828,10 @@ function battleplan_getRandomPosts($atts, $content = null) {
 
 	$args['orderby']='meta_value_num';	
 	if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; 	
-	elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="log-views-total-7day"; 	
-	elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="log-views-total-30day";
-	elseif ( $orderBy == 'views-90day' ) : $args['meta_key']="log-views-total-90day"; 
-	elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="log-views-total-365day"; 
+	elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="bp_views_7"; 	
+	elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="bp_views_30";
+	elseif ( $orderBy == 'views-90day' ) : $args['meta_key']="bp_views_90"; 
+	elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="bp_views_365"; 
 	elseif ( $orderBy == 'recent' ) : $args['meta_key']="log-last-viewed";
 	else : $args['orderby']=$orderBy;
 	endif;		
@@ -836,7 +866,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	wp_enqueue_script( 'battleplan-carousel', get_template_directory_uri().'/js/bootstrap-carousel.js', array('jquery-core'), _BP_VERSION, false );		
 	wp_enqueue_script( 'battleplan-carousel-slider', get_template_directory_uri().'/js/script-bootstrap-slider.js', array('battleplan-carousel'), _BP_VERSION, false );	
 
-	$a = shortcode_atts( array( 'type'=>'testimonials', 'auto'=>'yes', 'interval'=>'6000', 'loop'=>'true', 'num'=>'4', 'offset'=>'0', 'pics'=>'yes', 'caption'=>'no', 'controls'=>'yes', 'controls_pos'=>'below', 'indicators'=>'no', 'justify'=>'center', 'pause'=>'true', 'orderby'=>'recent', 'order'=>'asc', 'post_btn'=>'', 'show_thumb'=>'true', 'all_btn'=>'View All', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'link'=>'', 'pic_size'=>'1/3', 'text_size'=>'', 'slide_type'=>'box', 'slide_effect'=>'fade', 'tax'=>'', 'terms'=>'', 'tag'=>'', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'id'=>'', 'mult'=>'1', 'class'=>'', 'truncate'=>'true', 'lazy'=>'true', 'blur'=>'false' ), $atts );
+	$a = shortcode_atts( array( 'type'=>'testimonials', 'auto'=>'yes', 'interval'=>'6000', 'loop'=>'true', 'num'=>'4', 'offset'=>'0', 'pics'=>'yes', 'caption'=>'no', 'controls'=>'yes', 'controls_pos'=>'below', 'indicators'=>'no', 'justify'=>'center', 'pause'=>'true', 'orderby'=>'recent', 'order'=>'asc', 'post_btn'=>'', 'show_thumb'=>'true', 'all_btn'=>'View All', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'title_pos'=>'', 'link'=>'', 'pic_size'=>'1/3', 'text_size'=>'', 'slide_type'=>'box', 'slide_effect'=>'fade', 'tax'=>'', 'terms'=>'', 'tag'=>'', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'id'=>'', 'mult'=>'1', 'class'=>'', 'truncate'=>'true', 'lazy'=>'true', 'blur'=>'false' ), $atts );
 	$num = esc_attr($a['num']);	
 	$controls = esc_attr($a['controls']);	
 	$controlsPos = esc_attr($a['controls_pos']);
@@ -899,10 +929,10 @@ function battleplan_getPostSlider($atts, $content = null ) {
 
 		$args['orderby']='meta_value_num';	
 		if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; 	
-		elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="log-views-total-7day"; 	
-		elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="log-views-total-30day";
-		elseif ( $orderBy == 'views-90day' ) : $args['meta_key']="log-views-total-90day"; 
-		elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="log-views-total-365day"; 
+		elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="bp_views_7"; 	
+		elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="bp_views_30";
+		elseif ( $orderBy == 'views-90day' ) : $args['meta_key']="bp_views_90"; 
+		elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="bp_views_365"; 
 		elseif ( $orderBy == 'recent' ) : $args['meta_key']="log-last-viewed";
 		else : $args['orderby']=$orderBy;
 		endif;		
@@ -967,10 +997,10 @@ function battleplan_getPostSlider($atts, $content = null ) {
 
 		$args['orderby']='meta_value_num';	
 		if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; 	
-		elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="log-views-total-7day"; 	
-		elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="log-views-total-30day";
-		elseif ( $orderBy == 'views-90day' ) : $args['meta_key']="log-views-total-90day"; 
-		elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="log-views-total-365day"; 
+		elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="bp_views_7"; 	
+		elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="bp_views_30";
+		elseif ( $orderBy == 'views-90day' ) : $args['meta_key']="bp_views_90"; 
+		elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="bp_views_365"; 
 		elseif ( $orderBy == 'recent' ) : $args['meta_key']="log-last-viewed";
 		else : $args['orderby']=$orderBy;
 		endif;		
@@ -993,7 +1023,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 						$numDisplay++; 
 						$multDisplay++;
 					
-						$buildArchive = do_shortcode('[build-archive type="'.$type.'" show_btn="'.$showBtn.'" btn_text="'.$postBtn.'" show_thumb="'.esc_attr($a['show_thumb']).'" show_excerpt="'.esc_attr($a['show_excerpt']).'" show_content="'.esc_attr($a['show_content']).'" show_date="'.esc_attr($a['show_date']).'" show_author="'.esc_attr($a['show_author']).'" size="'.$size.'" pic_size="'.esc_attr($a['pic_size']).'" text_size="'.esc_attr($a['text_size']).'" link="'.$link.'" truncate="'.esc_attr($a['truncate']).'"]');	
+						$buildArchive = do_shortcode('[build-archive type="'.$type.'" show_btn="'.$showBtn.'" btn_text="'.$postBtn.'" show_thumb="'.esc_attr($a['show_thumb']).'" show_excerpt="'.esc_attr($a['show_excerpt']).'" show_content="'.esc_attr($a['show_content']).'" show_date="'.esc_attr($a['show_date']).'" show_author="'.esc_attr($a['show_author']).'" title_pos="'.esc_attr($a['title_pos']).'" size="'.$size.'" pic_size="'.esc_attr($a['pic_size']).'" text_size="'.esc_attr($a['text_size']).'" link="'.$link.'" truncate="'.esc_attr($a['truncate']).'"]');	
 						
 						if ( $multDisplay == 1 ) :
 							$active = $numDisplay == 0 ? "active" : "";
@@ -1086,10 +1116,10 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 
 	$args['orderby']='meta_value_num';	
 	if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; 	
-	elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="log-views-total-7day"; 	
-	elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="log-views-total-30day";
-	elseif ( $orderBy == 'views-90day' ) : $args['meta_key']="log-views-total-90day"; 
-	elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="log-views-total-365day"; 
+	elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="bp_views_7"; 	
+	elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="bp_views_30";
+	elseif ( $orderBy == 'views-90day' ) : $args['meta_key']="bp_views_90"; 
+	elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="bp_views_365"; 
 	elseif ( $orderBy == 'recent' ) : $args['meta_key']="log-last-viewed";
 	else : $args['orderby']=$orderBy;
 	endif;		
@@ -1376,7 +1406,7 @@ add_shortcode( 'side-by-side', 'battleplan_SideBySideImg' );
 function battleplan_SideBySideImg( $atts, $content = null ) {	
 	$a = shortcode_atts( array( 'img'=>'', 'size'=>'half-s', 'align'=>'center', 'full'=>'', 'pos'=>'bottom', 'break'=>'none', 'class'=>''), $atts );	
 	$size = esc_attr($a['size']);
-	$class = esc_attr($a['class']) == '' ? '' : ' '.esc_attr($a['class']);
+	$class = esc_attr($a['class']) == '' ? '' : ' '.esc_attr($a['class']).' ';
 	$break = esc_attr($a['break']) == "none" ? ' break-none' : ' break-'.esc_attr($a['break']);
 	$align = "align".esc_attr($a['align']);	
 	$images = explode(',', esc_attr($a['img']));	
@@ -1386,9 +1416,9 @@ function battleplan_SideBySideImg( $atts, $content = null ) {
 		$img = wp_get_attachment_image_src( $images[$i], $size );
 
 		list ($src, $width, $height ) = $img;
-		$class = $images[$i] == esc_attr($a['full']) ? ' class="full-'.esc_attr($a['pos']).'" ' : '';
+		$liClass = $images[$i] == esc_attr($a['full']) ? ' class="full-'.esc_attr($a['pos']).'" ' : '';
 		if ($height > 0) $ratio = $width / $height;	
-		$buildFlex .= '<li style="flex: '.$ratio.'"'.$class.'>'.wp_get_attachment_image( $images[$i], $size ).'</li>';	
+		$buildFlex .= '<li style="flex: '.$ratio.'"'.$liClass.'>'.wp_get_attachment_image( $images[$i], $size, "", ["class" => $class] ).'</li>';	
 	endfor;
 	$buildFlex .= '</ul>';
 	
@@ -1495,6 +1525,23 @@ function battleplan_getRSS( $atts, $content = null ) {
 	 $buildCountUp .= '<span id="'.$id.'" style="white-space:pre;"></span></div>';
 	 	 
 	 return $buildCountUp;
+}
+
+// Display Count-Down widget
+ add_shortcode("get-countdown", "battleplan_countDown");
+ function battleplan_countDown($atts, $content) {
+ 	 wp_enqueue_script( 'battleplan-count-down', get_template_directory_uri().'/js/count-down.js', array('jquery'), _BP_VERSION, false );	
+	 
+	 $a = shortcode_atts( array( 'month'=>'', 'date'=>'', 'year'=>'', 'hour'=>'', 'minute'=>'', 'separator'=>', ', 'offset'=>'0', 'class'=>'' ), $atts );
+
+	 $buildCountDown = '<div id="countdown">';
+	 $buildCountDown .= '<span data-separator="'.esc_attr($a['separator']).'" data-offset="'.esc_attr($a['offset']).'" data-year="'.esc_attr($a['year']).'" data-month="'.esc_attr($a['month']).'" data-day="'.esc_attr($a['date']).'" data-hour="'.esc_attr($a['hour']).'" data-minute="'.esc_attr($a['minute']).'" id="bp_countdown_days" class="'.esc_attr($a['class']).'"></span>';
+	 $buildCountDown .= '<span id="bp_countdown_hours" class="'.esc_attr($a['class']).'"></span>';
+	 $buildCountDown .= '<span id="bp_countdown_minutes" class="'.esc_attr($a['class']).'"></span>';
+	 $buildCountDown .= '<span id="bp_countdown_seconds" class="'.esc_attr($a['class']).'"></span>';
+	 $buildCountDown .= '</div>';	 
+	 	 
+	 return $buildCountDown;
 }
 
 // Insert the city / state of either company address, or the city-specific landing page

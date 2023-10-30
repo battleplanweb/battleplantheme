@@ -43,6 +43,9 @@ add_filter( 'wp_use_widgets_block_editor', '__return_false' );
 // Disable Visual Editor
 add_filter( 'user_can_richedit' , '__return_false', 50 );
 
+// Allow separate editing of thumbnails in image editor
+add_filter( 'image_edit_thumbnails_separately', '__return_true' );
+
 // Add, Remove and Reorder Items in Admin Bar
 add_action( 'wp_before_admin_bar_render', 'battleplan_reorderAdminBar');
 function battleplan_reorderAdminBar() {
@@ -342,20 +345,23 @@ if ( isset(get_option('customer_info')['google-tags']['prop-id']) && get_option(
 // Adjust the number of of posts listed on admin pages
 add_filter( 'edit_posts_per_page', 'custom_posts_per_page_based_on_type_in_admin', 10, 2 );
 function custom_posts_per_page_based_on_type_in_admin( $per_page, $post_type ) {
-	if ( _USER_LOGIN == 'battleplanweb' ) :
-		$last_logins = is_array(get_option('bp_last_login')) ? get_option('bp_last_login') : array();
-		define( '_LAST_LOGIN', $last_logins);
-		$last_logins[$post_type] = time();
-		update_option( 'bp_last_login', $last_logins, false);
-	endif;
-	
-	if ( defined('_LAST_LOGIN') && _LAST_LOGIN[$post_type] < (time() - 30000) ) :	
-        	if( $post_type == 'post' || $post_type == 'page' || $post_type == 'landing' || $post_type == 'galleries' ) : return 30;        	
-		elseif( $post_type == 'testimonials' || $post_type == 'products' || $post_type == 'product' ) : return 50;
-		else : return 100;
+	/*
+		if ( _USER_LOGIN == 'battleplanweb' ) :
+			$last_logins = is_array(get_option('bp_last_login')) ? get_option('bp_last_login') : array();
+			define( '_LAST_LOGIN', $last_logins);
+			$last_logins[$post_type] = time();
+			update_option( 'bp_last_login', $last_logins, false);
 		endif;
-	endif;
+
+		if ( defined('_LAST_LOGIN') && _LAST_LOGIN[$post_type] < (time() - 30000) ) :	
+			if( $post_type == 'post' || $post_type == 'page' || $post_type == 'landing' || $post_type == 'galleries' || $post_type == 'attachment' ) : return 30;        	
+			elseif( $post_type == 'testimonials' || $post_type == 'products' || $post_type == 'product' ) : return 30;
+			else : return 50;
+			endif;
+		endif;
+	*/
 	
+	if ( $post_type == 'testimonials' || $post_type == 'attachment' )  return 30;     	
     return $per_page;
 }
  

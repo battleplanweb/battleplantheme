@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		}
 		window.addEventListener('scroll', function() { posParaDiv(); });			
 		posParaDiv();
-	};
+	}; 
 		
 // Set up Split Menu
 	window.splitMenu = function (menu, logo, compensate, override) {

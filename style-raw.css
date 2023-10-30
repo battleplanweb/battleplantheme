@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 20.10
+Version: 20.11.1
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -58,26 +58,26 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --font-primary: 								Helvetica, Arial, Verdana, sans-serif; 
   --font-secondary: 							var(--font-primary);
   --font-tertiary: 								var(--font-secondary);
-  --font-text: 								"Open Sans", sans-serif;
+  --font-text: 									"Open Sans", sans-serif;
   --font-awesome: 								Font Awesome;
   
-  --white: 									rgba(255, 255, 255, 1);
+  --white: 										rgba(255, 255, 255, 1);
   --lightest-grey: 								rgba(225, 225, 225, 1);
   --light-grey: 								rgba(200, 200, 200, 1);
   --medium-grey: 								rgba(130, 130, 130, 1);
-  --dark-grey: 								rgba(60, 60, 60, 1);
+  --dark-grey: 									rgba(60, 60, 60, 1);
   --darkest-grey: 								rgba(30, 30, 30, 1);
-  --black: 									rgba(0, 0, 0, 1);
+  --black: 										rgba(0, 0, 0, 1);
 
   --white-lowest: 								rgba(255, 255, 255, 0.1);
-  --white-low: 								rgba(255, 255, 255, 0.25);
-  --white-med: 								rgba(255, 255, 255, 0.5);
+  --white-low: 									rgba(255, 255, 255, 0.25);
+  --white-med: 									rgba(255, 255, 255, 0.5);
   --white-high: 								rgba(255, 255, 255, 0.75);  
   --white-highest: 								rgba(255, 255, 255, 0.9);
   
   --black-lowest: 								rgba(0, 0, 0, 0.1);  
-  --black-low: 								rgba(0, 0, 0, 0.25);
-  --black-med: 								rgba(0, 0, 0, 0.5);
+  --black-low: 									rgba(0, 0, 0, 0.25);
+  --black-med: 									rgba(0, 0, 0, 0.5);
   --black-high: 								rgba(0, 0, 0, 0.75);
   --black-highest: 								rgba(0, 0, 0, 0.9);
   
@@ -87,7 +87,7 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   
   --warning: 									rgba(255, 0, 0, 1);  
 	
-  --anon-icon: 								var(--accent-color);
+  --anon-icon: 									var(--accent-color);
   --anon-icon-bg: 								var(--accent-background);
   
   --font-base-5: 								6.25%;
@@ -112,7 +112,7 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --input-border: 								none;
   --input-border-top:							var(--input-border);
   --input-border-right:							var(--input-border);
-  --input-border-bottom:							var(--input-border);
+  --input-border-bottom:						var(--input-border);
   --input-border-left:							var(--input-border);
   --input-outline: 								none;
   --input-box-shadow: 							none;
@@ -123,72 +123,72 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --input-transform: 							none;	
   
   --input-color-focus: 							var(--input-color);
-  --input-background-focus: 						var(--input-background);
+  --input-background-focus: 					var(--input-background);
   --input-font-size-focus: 						var(--input-font-size);
-  --input-font-weight-focus:						var(--input-font-weight);
-  --input-border-focus: 							var(--input-border);
+  --input-font-weight-focus:					var(--input-font-weight);
+  --input-border-focus: 						var(--input-border);
   --input-border-top-focus:						var(--input-border-focus);
-  --input-border-right-focus:						var(--input-border-focus);
+  --input-border-right-focus:					var(--input-border-focus);
   --input-border-bottom-focus:					var(--input-border-focus);
-  --input-border-left-focus:						var(--input-border-focus);
+  --input-border-left-focus:					var(--input-border-focus);
   --input-outline-focus: 						var(--input-outline);
-  --input-box-shadow-focus: 						var(--input-box-shadow);
+  --input-box-shadow-focus: 					var(--input-box-shadow);
   --input-border-radius-focus: 					var(--input-border-radius);
-  --input-text-shadow-focus: 						var(--input-text-shadow);
-  --input-filter-focus: 							var(--input-filter);
-  --input-backdrop-filter-focus:					none;
+  --input-text-shadow-focus: 					var(--input-text-shadow);
+  --input-filter-focus: 						var(--input-filter);
+  --input-backdrop-filter-focus:				none;
   --input-transform-focus: 						var(--input-transform);
   
   --input-color-alt:							var(--input-color);
   --input-background-alt: 						var(--input-background);
   --input-padding-alt: 							var(--input-padding);
-  --input-font-size-alt:							var(--input-font-size);
+  --input-font-size-alt:						var(--input-font-size);
   --input-font-weight-alt:						var(--input-font-weight);
   --input-border-alt: 							var(--input-border);
   --input-border-top-alt:						var(--input-border-alt);
   --input-border-right-alt:						var(--input-border-alt);
-  --input-border-bottom-alt:						var(--input-border-alt);
+  --input-border-bottom-alt:					var(--input-border-alt);
   --input-border-left-alt:						var(--input-border-alt);
   --input-outline-alt: 							var(--input-outline);
   --input-box-shadow-alt: 						var(--input-box-shadow);
-  --input-border-radius-alt: 						var(--input-border-radius);
+  --input-border-radius-alt: 					var(--input-border-radius);
   --input-text-shadow-alt: 						var(--input-text-shadow);
   --input-filter-alt: 							var(--input-filter);
   --input-backdrop-filter-alt:					var(--input-backdrop-filter);
   --input-transform-alt: 						var(--input-transform);
   
   --input-color-focus-alt: 						var(--input-color-alt);
-  --input-background-focus-alt: 					var(--input-background-alt);
+  --input-background-focus-alt: 				var(--input-background-alt);
   --input-font-size-focus-alt: 					var(--input-font-size-alt);
-  --input-font-weight-focus-alt: 					var(--input-font-weight-alt);
-  --input-border-focus-alt: 						var(--input-border-alt);
+  --input-font-weight-focus-alt: 				var(--input-font-weight-alt);
+  --input-border-focus-alt: 					var(--input-border-alt);
   --input-border-top-focus-alt:					var(--input-border-focus-alt);
-  --input-border-right-focus-alt:					var(--input-border-focus-alt);
-  --input-border-bottom-focus-alt:					var(--input-border-focus-alt);
-  --input-border-left-focus-alt:					var(--input-border-focus-alt);
-  --input-outline-focus-alt: 						var(--input-outline-alt);
-  --input-box-shadow-focus-alt: 					var(--input-box-shadow-alt);
+  --input-border-right-focus-alt:				var(--input-border-focus-alt);
+  --input-border-bottom-focus-alt:				var(--input-border-focus-alt);
+  --input-border-left-focus-alt:				var(--input-border-focus-alt);
+  --input-outline-focus-alt: 					var(--input-outline-alt);
+  --input-box-shadow-focus-alt: 				var(--input-box-shadow-alt);
   --input-border-radius-focus-alt: 				var(--input-border-radius-alt);
-  --input-text-shadow-focus-alt: 					var(--input-text-shadow-alt);
-  --input-filter-focus-alt: 						var(--input-filter-alt);
-  --input-backdrop-filter-focus-alt:				var(--input-backdrop-filter-alt);
+  --input-text-shadow-focus-alt: 				var(--input-text-shadow-alt);
+  --input-filter-focus-alt: 					var(--input-filter-alt);
+  --input-backdrop-filter-focus-alt:			var(--input-backdrop-filter-alt);
   --input-transform-focus-alt:					var(--input-transform-alt);
   
   --button-color: 								var(--black-med);
   --button-background: 							var(--black-low);
-  --button-font-family: 							var(--font-secondary);
-  --button-font-weight: 							normal;
+  --button-font-family: 						var(--font-secondary);
+  --button-font-weight: 						normal;
   --button-font-size: 							1.2em;
   --button-border: 								none;
   --button-border-top:							var(--button-border);
-  --button-border-right:							var(--button-border); /* don't change */
+  --button-border-right:						var(--button-border); /* don't change */
   --button-border-bottom:						var(--button-border);
   --button-border-left:							var(--button-border);
   --button-padding: 							0.3em 1em;
   --button-box-shadow: 							none;
   --button-border-radius: 						0;
   --button-transform: 							none;
-  --button-text-shadow: 							none;
+  --button-text-shadow: 						none;
   --button-outline: 							none;
   --button-filter: 								none;
   --button-text-transform: 						capitalize;
@@ -196,71 +196,71 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --button-letter-spacing: 						0;
   --button-transition: 						    all var(--main-trans-speed) var(--main-trans-easing);
   
-  --button-color-hover: 							var(--button-color);
-  --button-background-hover: 						var(--button-background);
+  --button-color-hover: 						var(--button-color);
+  --button-background-hover: 					var(--button-background);
   --button-font-family-hover: 					var(--button-font-family);
   --button-font-weight-hover: 					var(--button-font-weight);
-  --button-font-size-hover: 						var(--button-font-size);
+  --button-font-size-hover: 					var(--button-font-size);
   --button-border-hover: 						var(--button-border);
-  --button-border-top-hover:						var(--button-border-hover); /* don't change */
+  --button-border-top-hover:					var(--button-border-hover); /* don't change */
   --button-border-right-hover:					var(--button-border-hover);
   --button-border-bottom-hover:					var(--button-border-hover);
-  --button-border-left-hover:						var(--button-border-hover);
+  --button-border-left-hover:					var(--button-border-hover);
   --button-padding-hover: 						var(--button-padding);
-  --button-box-shadow-hover: 						var(--button-box-shadow);
-  --button-border-radius-hover: 					var(--button-border-radius);
-  --button-transform-hover: 						var(--button-transform);
+  --button-box-shadow-hover: 					var(--button-box-shadow);
+  --button-border-radius-hover: 				var(--button-border-radius);
+  --button-transform-hover: 					var(--button-transform);
   --button-text-shadow-hover: 					var(--button-text-shadow);
   --button-outline-hover: 						var(--button-outline);
   --button-filter-hover: 						var(--button-filter);
-  --button-text-transform-hover: 					var(--button-text-transform);
+  --button-text-transform-hover: 				var(--button-text-transform);
   --button-font-variant-hover: 					var(--button-font-variant);
-  --button-letter-spacing-hover: 					var(--button-letter-spacing);
-  --button-transition-hover: 						var(--button-transition);
+  --button-letter-spacing-hover: 				var(--button-letter-spacing);
+  --button-transition-hover: 					var(--button-transition);
   
   --button-color-alt: 							var(--button-color);
   --button-background-alt: 						var(--button-background);
-  --button-font-family-alt: 						var(--button-font-family);
-  --button-font-weight-alt: 						var(--button-font-weight);
+  --button-font-family-alt: 					var(--button-font-family);
+  --button-font-weight-alt: 					var(--button-font-weight);
   --button-font-size-alt: 						var(--button-font-size);
   --button-border-alt: 							var(--button-border);
   --button-border-top-alt:						var(--button-border-alt); /* don't change */
-  --button-border-right-alt:						var(--button-border-alt);
-  --button-border-bottom-alt:						var(--button-border-alt);
+  --button-border-right-alt:					var(--button-border-alt);
+  --button-border-bottom-alt:					var(--button-border-alt);
   --button-border-left-alt:						var(--button-border-alt);
-  --button-padding-alt: 							var(--button-padding);
+  --button-padding-alt: 						var(--button-padding);
   --button-box-shadow-alt: 						var(--button-box-shadow);
   --button-border-radius-alt: 					var(--button-border-radius);
   --button-transform-alt: 						var(--button-transform);
-  --button-text-shadow-alt: 						var(--button-text-shadow);
-  --button-outline-alt: 							var(--button-outline);
+  --button-text-shadow-alt: 					var(--button-text-shadow);
+  --button-outline-alt: 						var(--button-outline);
   --button-filter-alt: 							var(--button-filter);
   --button-text-transform-alt: 					var(--button-text-transform);
-  --button-font-variant-alt: 						var(--button-font-variant);
+  --button-font-variant-alt: 					var(--button-font-variant);
   --button-letter-spacing-alt: 					var(--button-letter-spacing);
   --button-transition-alt: 						var(--button-transition);
   
-  --button-color-hover-alt: 						var(--button-color-alt);
-  --button-background-hover-alt: 					var(--button-background-alt);
-  --button-font-family-hover-alt: 					var(--button-font-family-alt);
-  --button-font-weight-hover-alt: 					var(--button-font-weight-alt);
-  --button-font-size-hover-alt: 					var(--button-font-size-alt);
-  --button-border-hover-alt: 						var(--button-border-alt);
-  --button-border-top-hover-alt:					var(--button-border-hover-alt); /* don't change */
-  --button-border-right-hover-alt:					var(--button-border-hover-alt);
+  --button-color-hover-alt: 					var(--button-color-alt);
+  --button-background-hover-alt: 				var(--button-background-alt);
+  --button-font-family-hover-alt: 				var(--button-font-family-alt);
+  --button-font-weight-hover-alt: 				var(--button-font-weight-alt);
+  --button-font-size-hover-alt: 				var(--button-font-size-alt);
+  --button-border-hover-alt: 					var(--button-border-alt);
+  --button-border-top-hover-alt:				var(--button-border-hover-alt); /* don't change */
+  --button-border-right-hover-alt:				var(--button-border-hover-alt);
   --button-border-bottom-hover-alt:				var(--button-border-hover-alt);
-  --button-border-left-hover-alt:					var(--button-border-hover-alt);
+  --button-border-left-hover-alt:				var(--button-border-hover-alt);
   --button-padding-hover-alt: 					var(--button-padding-alt);
-  --button-box-shadow-hover-alt: 					var(--button-box-shadow-alt);
-  --button-border-radius-hover-alt: 				var(--button-border-radius-alt);
-  --button-transform-hover-alt: 					var(--button-transform-alt);
-  --button-text-shadow-hover-alt: 					var(--button-text-shadow-alt);
+  --button-box-shadow-hover-alt: 				var(--button-box-shadow-alt);
+  --button-border-radius-hover-alt: 			var(--button-border-radius-alt);
+  --button-transform-hover-alt: 				var(--button-transform-alt);
+  --button-text-shadow-hover-alt: 				var(--button-text-shadow-alt);
   --button-outline-hover-alt: 					var(--button-outline-alt);
-  --button-filter-hover-alt: 						var(--button-filter-alt);
-  --button-text-transform-hover-alt: 				var(--button-text-transform-alt);
+  --button-filter-hover-alt: 					var(--button-filter-alt);
+  --button-text-transform-hover-alt: 			var(--button-text-transform-alt);
   --button-font-variant-hover-alt: 				var(--button-font-variant-alt);
-  --button-letter-spacing-hover-alt: 				var(--button-letter-spacing-alt);
-  --button-transition-hover-alt: 					var(--button-transition-alt);
+  --button-letter-spacing-hover-alt: 			var(--button-letter-spacing-alt);
+  --button-transition-hover-alt: 				var(--button-transition-alt);
 	
   --break-out-width: 							100%;
   --break-out-max-width: 						960px;
@@ -272,7 +272,7 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --break-out-padding: 							1.5em 2.5em;
   --break-out-margin: 							2.5em auto;
   --break-out-box-shadow: 						none;
-  --break-out-border-radius: 						0;
+  --break-out-border-radius: 					0;
   --break-out-outline: 							none;
   --break-out-filter: 							none;
   --break-out-transition: 						all var(--main-trans-speed) var(--main-trans-easing);
@@ -287,8 +287,8 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --close-btn-background: 						var(--button-background);
   --close-btn-border: 							var(--button-border);
   --close-btn-color-hover:						var(--button-color-hover);
-  --close-btn-background-hover: 					var(--button-background-hover);
-  --close-btn-border-hover: 						var(--button-border-hover);
+  --close-btn-background-hover: 				var(--button-background-hover);
+  --close-btn-border-hover: 					var(--button-border-hover);
 	
   --font-size-text: 							18px;
   --font-size-big: 	 							132%;
@@ -303,7 +303,7 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --measure-large: 								2.5em;
   --sidebar-width: 								356px;
   
-  --google-guaranteed-green: 						rgba(0, 161, 79, 1);  
+  --google-guaranteed-green: 					rgba(0, 161, 79, 1);  
   --paypal-yellow: 			 					rgba(255, 196, 57, 1);
 }
 
@@ -2672,6 +2672,7 @@ section.section.break-out {
 	border-radius: 								5px;
 	border: 										1px solid var(--black-low);
 	text-align:									center;
+
 }
 
 #mobile-menu-bar .mm-bar-btn .mm-bar-empty {
@@ -3120,20 +3121,20 @@ span.page-numbers.current.tab-focus {
 }
 
 span.page-numbers.current {
-	cursor:										default;
+	cursor:											default;
 }
 
 span.page-numbers.dots {
-	background:									none !important;
-	border:										none !important;
-	box-shadow:									none !important;
-	cursor:										default;
+	background:										none !important;
+	border:											none !important;
+	box-shadow:										none !important;
+	cursor:											default;
 }
 
 a.next i.fa,
 a.prev i.fa {
-	transform:									translateY(0);
-	font-size: 									90%;
+	transform:										translateY(0);
+	font-size: 										90%;
 }
 
 .navigation.single .nav-links {
@@ -3141,15 +3142,15 @@ a.prev i.fa {
 	align-items: 									center;
   	justify-content: 								space-between;
   	flex-direction: 								row;
-	gap: 										0 var(--measure-base);
+	gap: 											0 var(--measure-base);
 }
 
 .navigation.single .nav-links .nav-previous,
 .navigation.single .nav-links .nav-next {
 	display:										flex;
 	align-items:									center;
-	flex: 										1 0 50%;
-	text-align:									left;
+	flex: 											1 0 calc(50% - var(--measure-base));
+	text-align:										left;
 	justify-content:								flex-start;
 }
 
@@ -3166,12 +3167,12 @@ a.prev i.fa {
 
 .nav-links .nav-previous .post-arrow {
 	margin-right:									10px;
-	font-size: 									210%;
+	font-size: 										210%;
 }
 
 .nav-links .nav-next .post-arrow {
 	margin-left:									10px;
-	font-size: 									210%;
+	font-size: 										210%;
 }
 
 .nav-links .meta-nav {
@@ -3914,8 +3915,8 @@ img.img-404 {
 
 .wp-caption .wp-caption-text {
 	display:										inline-block; /* Air Right 1/27/21 */
-	width:										100%; /* Air Right 1/27/21 */
-	font-size:									90%; /* Air Right 1/27/21 */
+	width:											100%; /* Air Right 1/27/21 */
+	font-size:										90%; /* Air Right 1/27/21 */
 	text-align: 									center;
 	margin: 										8px 0; /* EJ's 12/18/20 */
 }
@@ -3923,26 +3924,27 @@ img.img-404 {
 /* Testimonials
 --------------------------------------------- */
 .block-image.image-testimonials {
-	max-width: 									100%;
+	width: 											100%;
+	max-width: 										100%;
 	margin: 										0 auto;
 }
 
-.block-image.image-testimonials.testimonials-generic-icon {
-	width: 										80%;
+.carousel.mult-1 .block-image.image-testimonials.testimonials-generic-icon {
+	width: 											80%;
 	margin: 										10% auto;
 }
 
 .testimonials-generic-icon .anonymous-icon {
-	background:									var(--anon-icon-bg);
+	background:										var(--anon-icon-bg);
 }
 
 .testimonials-generic-icon .anonymous-icon .user-icon {
-	fill:										var(--anon-icon);
+	fill:											var(--anon-icon);
 }
 
 .testimonials-credentials {
-	text-align:									right;
-	color:										var(--black);
+	text-align:										right;
+	color:											var(--black);
 	grid-column:									span 11 !important;
 }
 
@@ -3951,8 +3953,8 @@ img.img-404 {
     font-family: 									var(--font-awesome);
     content: 										"\f10d";
 	font-weight:									900;
-	color:										var(--black);
-    font-size: 									130%;
+	color:											var(--black);
+    font-size: 										130%;
     text-align: 									left;
     padding-right: 									7px;
 }
@@ -6250,16 +6252,22 @@ html.error503 h3 {
 		column-count:								1;
 	}	
 	
+	ul.paragraphs li,
+	ul.paragraph li {
+		margin-bottom:   							--var(--measure-small);
+	}
+	
 	/* Testimonials */
 	.block-image.image-testimonials.testimonials-generic-icon {
 		width: 										100%;
-		margin: 										0 auto;
+		margin: 									0 auto;
 	}		
 	
 	.slider-testimonials img.img-testimonials,
 	.slider-testimonials .img-frame, 
 	.slider-testimonials .inset-shadow {
 		max-width: 									70vw;
+		margin: 									0 auto;
 	}
 	
 	.testimonials-generic-icon .anonymous-icon {

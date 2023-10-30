@@ -26,15 +26,16 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	};
 
 //Control parallax movement of divs within a container
-	window.parallaxDiv = function (container, element) {
+	window.parallaxDiv = function (container, element, adjustment) {
 		element = element || ".parallax";
+		adjustment = adjustment || 0;
 		function posParaDiv() {
 			$(container).each(function() {					
 				if ( $(this).find(element).length > 0) {
 					var elem = $(this).find(element), elemH = elem.outerHeight(), conH = $(this).outerHeight(), conT = $(this).offset().top, conB = conT + conH, winH = $(window).height(), winT = $(window).scrollTop(), winB = winT + winH, adjT = winB - conT, fullH = conH + winH, scrollPct = adjT / fullH;	
 					if ( scrollPct > 1 ) { scrollPct = 1; }
 					if ( scrollPct < 0 || scrollPct == null ) { scrollPct = 0; }
-					var moveElem = (conH - elemH) * scrollPct;					
+					var moveElem = (conH - elemH + adjustment) * scrollPct;					
 					if ( conT < winB && conB > winT ) { elem.css("margin-top",moveElem+"px"); }
 				}
 			});

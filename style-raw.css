@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 20.12.1
+Version: 21.0
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1102,6 +1102,7 @@ body.form-stacked .wpcf7 form label,
 .wpcf7 form .form-stacked label,
 .wpcf7 form span.wpcf7-form-control-wrap {
 	text-align: 									left;
+	align-self: 									end; /* 11/6/2023 - added for forms when a label takes up 2 lines, and throws off other labels */
 }
 
 .wpcf7 form label.label-baseline {
@@ -1765,6 +1766,21 @@ a.button.fancy-2:hover .fancy-icon {
 a.button.fancy-2 .fancy-icon {
 	background:									var(--black-low);
 }
+ 
+a.graphic-icon {
+	display: 										grid;
+	grid-template-columns: 							auto 1fr;
+	align-items: 									center;
+	justify-items: 									start;
+	gap: 											10px;
+}
+
+a.graphic-icon span {
+	text-align: 									left;
+}
+
+
+
 
 .row-of-buttons,
 ul.tabs {
@@ -2066,7 +2082,7 @@ a#bbblink {
 }
 
 /* Section Lock */
-.section-lock:not(.position-header) {
+.section.section-lock:not(.position-header) {
 	position:										fixed !important;
 	z-index:										999999997 /* between mobile menu & a.scroll-top */;
 	/*opacity: 									0;*/
@@ -2075,16 +2091,16 @@ a#bbblink {
 	border: 										var(--locked-border);
 }
 
-.section-lock.position-header {
+.section.section-lock.position-header {
 	display: 										none;
 	transition: 									all var(--main-trans-speed) var(--main-trans-easing);
 }
  
-.section-lock.position-header .col-inner {
+.section.section-lock.position-header .col-inner {
  	position: 									relative;
 }
  
-.section-lock .closeBtn, 
+.section.section-lock .closeBtn, 
 .closeBtn {
 	position:										absolute;
 	top:											15px;
@@ -2101,12 +2117,19 @@ a#bbblink {
 	transition:									all var(--main-trans-speed) var(--main-trans-easing);
 }
 
-.section-lock .closeBtn:hover, 
+.section.section-lock .closeBtn:hover, 
 .closeBtn:hover {
 	background:									var(--close-btn-background-hover);
 	color:										var(--close-btn-color-hover);
 	border:										var(--close-btn-border-hover);
 	transition:									all var(--main-trans-speed) var(--main-trans-easing);
+}
+
+.section.section-lock h2,
+.section.section-lock h3,
+.section.section-lock p {
+	text-align: 								center;
+	font-weight: 								bold;
 }
 
 /* Modal Box */
@@ -2153,57 +2176,59 @@ a#bbblink {
 }
 
 .section.style-lock {
-	background:									var(--locked-background);
-	border:										var(--locked-border);
-	color:										var(--locked-color);
+	background:										var(--locked-background);
+	border:											var(--locked-border);
+	color:											var(--locked-color);
 	transition: 									all 0.6s var(--main-trans-easing);
 }
 
 .section.style-lock[data-pos="modal"] > .flex,
 .section.style-lock[data-pos="center"] > .flex {
-	background:									var(--modal-background);
-	border:										var(--modal-border);
-	color:										var(--modal-color);
+	background:										var(--modal-background);
+	border:											var(--modal-border);
+	color:											var(--modal-color);
 	transition: 									all 0.6s var(--main-trans-easing);
 }
 
 .section.style-lock[data-pos="top"] {
-	border-top:									none;
+	border-top:										none;
 	border-left:									none;
 	border-right:									none;
-	transform: 									translateY(-100vh);
+	transform: 										translateY(-100vh);
 }
 
 .section.style-lock[data-pos="bottom"] {
 	border-bottom:									none;
 	border-left:									none;
 	border-right:									none;
-	transform: 									translateY(100vh);
-}
+		transform: 									translateY(100vh);
+	}
 
 .section.style-lock[data-pos="modal"],
 .section.style-lock[data-pos="center"] {
-	top: 										0;
+	top: 											0;
 	opacity: 										0;
 	pointer-events: 								none;
-	transform: 									translateY(-9999px);
+	transform: 										translateY(-9999px);
 	margin: 										0 !important;
-	border-radius: 								0 !important;
+	border-radius: 									0 !important;
 	animation-name: 								none !important;
 	transition: 									opacity var(--main-trans-speed) var(--main-trans-easing);
 }
 
 .section.style-lock.on-screen {
 	visibility: 									visible;
-	transform: 									translateY(0);
+	transform: 										translateY(0);
 	transition: 									all 0.6s var(--main-trans-easing);
+	padding-left: 									55px;
+	padding-right: 									55px; /* keep anything from clashing with X button */
 }
 
 .section.style-lock[data-pos="modal"].on-screen,
 .section.style-lock[data-pos="center"].on-screen {
 	opacity: 										1;
 	pointer-events: 								auto;
-	transform: 									translateY(0);
+	transform: 										translateY(0);
 	transition: 									opacity 0.6s var(--main-trans-easing);
 	overflow-y: 									scroll;
 }
@@ -2217,14 +2242,14 @@ a#bbblink {
 }
 
 body.locked {
-	overflow: 									hidden;
+	overflow: 										hidden;
 }
 
 /* 3: Small Tablets (landscape) */
 @media (max-width: 1024px) {
-	.section-lock .closeBtn {
-		top:											-2px;
-		right:										-2px;
+	.section.section-lock .closeBtn {
+		top:										10px;
+		right:										10px;
 	}
 }
 
@@ -3078,6 +3103,7 @@ section.section.break-out {
 
 .top-slide.top-flex #mobile-navigation ul, 
 .top-push.top-flex #mobile-navigation ul {
+
 	flex-flow: 									row wrap;
 
 	padding: 										0 8px;
@@ -3980,7 +4006,7 @@ img.img-404 {
 
 .testimonials-name {
 	font-weight:									bold;
-	font-size:									120%;
+	font-size:										120%;
 }
 
 .testimonials-location {
@@ -3988,7 +4014,7 @@ img.img-404 {
 }
 
 .testimonials-rating {
-	color:										var(--black);
+	color:											var(--paypal-yellow);
 	margin-right:									-5px;
 }
 
@@ -3998,9 +4024,9 @@ img.img-404 {
 }
 
 .testimonials-platform {
-	margin:										14px 1px 0;
-	width:										30px;
-	height:										30px;
+	margin:											14px 1px 0;
+	width:											30px;
+	height:											30px;
 	grid-column:									span 1 !important;
 }
 
@@ -5764,7 +5790,8 @@ html.error503 h3 {
 	.logo-strip .am-stand-logo img,
 	.logo-strip img.am-stand-logo,
 	.logo-strip .brand-logo img {
-		height: 									18vh;
+		/*height: 									18vh;*/
+		max-height: 								18vh; /* 11/1/23 - changed to max-height for logos like Adjusted Life */
 		object-fit: 								contain; /* 1/4/22 - still trying to fix the cls jank */
 		margin-left: 								auto;
 		margin-right: 								auto;

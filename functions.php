@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '20.12.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '21.0' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -1109,7 +1109,9 @@ function battleplan_header_styles() {
 	wp_enqueue_style( 'normalize-style', get_template_directory_uri()."/style-normalize.css", array(), _BP_VERSION );	
 	wp_enqueue_style( 'parent-style', get_template_directory_uri()."/style.css", array('normalize-style'), _BP_VERSION );
 	
-	if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 'true' )  wp_enqueue_style( 'battleplan-events', get_template_directory_uri()."/style-events.css", array('parent-style'), _BP_VERSION ); 	
+	if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 'true' )  wp_enqueue_style( 'battleplan-events', get_template_directory_uri()."/style-events.css", array('parent-style'), _BP_VERSION ); 
+	
+	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' )  wp_enqueue_style( 'battleplan-jobsite_geo', get_template_directory_uri()."/style-jobsite_geo.css", array('parent-style'), _BP_VERSION ); 	
 
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) wp_enqueue_style( 'battleplan-woocommerce', get_template_directory_uri()."/style-woocommerce.css", array('parent-style'), _BP_VERSION ); 
 	if ( is_plugin_active( 'stripe-payments/accept-stripe-payments.php' ) ) wp_enqueue_style( 'battleplan-stripe-payments', get_template_directory_uri()."/style-stripe-payments.css", array('parent-style'), _BP_VERSION );  
@@ -1157,6 +1159,8 @@ function battleplan_scripts() {
 
 	if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 'true' ) wp_enqueue_script( 'battleplan-script-events', get_template_directory_uri().'/js/events.js', array('jquery'), _BP_VERSION, false );   
 	
+	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) wp_enqueue_script( 'battleplan-script-jobsite_geo', get_template_directory_uri().'/js/jobsite_geo.js', array('jquery'), _BP_VERSION, false );   
+	
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) wp_enqueue_script( 'battleplan-script-woocommerce', get_template_directory_uri().'/js/woocommerce.js', array('jquery'), _BP_VERSION, false ); 
 	if ( is_plugin_active( 'cue/cue.php' ) ) wp_enqueue_script( 'battleplan-script-cue', get_template_directory_uri().'/js/cue.js', array('jquery'), _BP_VERSION, false ); 
 	
@@ -1186,6 +1190,8 @@ function battleplan_admin_scripts() {
 		wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array('jquery'), _BP_VERSION ); 		
 		wp_enqueue_script( 'battleplan-script-user-profiles', get_template_directory_uri().'/js/script-user-profiles.js', array('jquery'), _BP_VERSION, false ); 
 	endif;
+	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' )  wp_enqueue_style( 'battleplan-admin-jobsite-geo-css', get_template_directory_uri()."/style-jobsite-geo-admin.css", array(), _BP_VERSION ); 		
+
 }
 
 // Load and enqueue login styles
@@ -1197,9 +1203,12 @@ function battleplan_login_enqueue() {
 	wp_enqueue_style( 'battleplan-login', get_template_directory_uri()."/style-login.css", array(), _BP_VERSION );
 }
 
+ 
+
 // Load various includes
 if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) require_once get_template_directory().'/includes/includes-woocommerce.php'; 
 if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 'true' ) require_once get_template_directory().'/includes/includes-events.php'; 
+if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) require_once get_template_directory().'/includes/includes-jobsite-geo.php'; 
 
 if ( $GLOBALS['customer_info']['site-type'] == 'hvac' ) require_once get_template_directory().'/includes/includes-hvac.php'; 
 if ( $GLOBALS['customer_info']['site-type'] == 'pedigree' ) require_once get_template_directory().'/includes/includes-pedigree.php'; 
@@ -1740,6 +1749,9 @@ function battleplan_create_user_roles() {
 	
 	remove_role( 'bp_moderator' );
 	add_role('bp_moderator', __('Moderator'), array( 'level_4'=>'true', 'level_3'=>'true', 'level_2'=>'true', 'level_1'=>'true', 'level_0'=>'true', 'read'=>'true', 'publish_posts'=>'true', 'edit_posts'=>'true', 'edit_others_posts'=>'true', 'edit_published_posts'=>'true', 'read_private_posts'=>'true', 'edit_private_posts'=>'true', 'delete_posts'=>'true', 'delete_others_posts'=>'true', 'delete_published_posts'=>'true', 'delete_private_posts'=>'true', 'moderate_comments'=>'true', 'manage_categories'=>'true', 'manage_links'=>'true', 'upload_files'=>'true', 'unfiltered_html'=>'true' ));	
+	
+	remove_role( 'bp_jobsite_geo_mgr' );
+	add_role('bp_jobsite_geo_mgr', __('Jobsite GEO'), array( 'level_2'=>'true', 'level_1'=>'true', 'level_0'=>'true', 'read'=>'true', 'publish_posts'=>'true', 'edit_posts'=>'true', 'edit_published_posts'=>'true', 'delete_posts'=>'true', 'delete_published_posts'=>'true', 'upload_files'=>'true', 'unfiltered_html'=>'true' ));
 	
 	remove_role( 'bp_author' );
 	add_role('bp_author', __('Author'), array( 'level_2'=>'true', 'level_1'=>'true', 'level_0'=>'true', 'read'=>'true', 'publish_posts'=>'true', 'edit_posts'=>'true', 'edit_published_posts'=>'true', 'delete_posts'=>'true', 'delete_published_posts'=>'true', 'upload_files'=>'true', 'unfiltered_html'=>'true' ));	

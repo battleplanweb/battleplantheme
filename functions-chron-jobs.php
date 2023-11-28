@@ -55,12 +55,13 @@ endif;
 function processChron($forceChron) {
 	if (function_exists('battleplan_remove_user_roles')) battleplan_remove_user_roles();
 	if (function_exists('battleplan_create_user_roles')) battleplan_create_user_roles();
-		
-// WP Mail SMTP Settings Update
-	if ( is_plugin_active('wp-mail-smtp/wp_mail_smtp.php') ) : 
-		$site = str_replace('https://', '', get_bloginfo('url'));	
 	
-		if ( $site == "sweetiepiesribeyes.com" || $site == "bubbascookscountry.com" || $site == "babeschicken.com" ) :	
+	$site = str_replace('https://', '', get_bloginfo('url'));	
+	$rovin = $site == "sweetiepiesribeyes.com" || $site == "bubbascookscountry.com" || $site == "babeschicken.com" ? "true" : "false";
+	
+// WP Mail SMTP Settings Update
+	if ( is_plugin_active('wp-mail-smtp/wp_mail_smtp.php') ) : 	
+		if ( $rovin == "true" ) :	
 			$apiKey2 = "-b916aeccb98bf3fcca73";
 			$apiKey3 = "a606526cefdf92084ce7a9048d5cf734124e09f9bb26";
 			$apiKey4 = "-YcYFamx5FrGvCxXe";
@@ -76,7 +77,7 @@ function processChron($forceChron) {
 		
 		$apiKey1 = "keysib";
 		$wpMailSettings = get_option( 'wp_mail_smtp' );			
-		$wpMailSettings['mail']['from_name'] = strip_tags('Website Administrator · '.str_replace(',', '', $GLOBALS['customer_info']['name']));
+		$wpMailSettings['mail']['from_name'] = strip_tags('Website · '.str_replace(',', '', $GLOBALS['customer_info']['name']));
 		$wpMailSettings['mail']['mailer'] = 'sendinblue';
 		$wpMailSettings['mail']['from_email_force'] = '1';
 		$wpMailSettings['mail']['from_name_force'] = '1';	
@@ -94,11 +95,20 @@ function processChron($forceChron) {
 
 			if ( $formTitle == "Quote Request Form" ) $formTitle = "Quote Request";
 			if ( $formTitle == "Contact Us Form" ) $formTitle = "Customer Contact";		
-
-			$formMail['subject'] = $formTitle." · [user-name]";
-			//$formMail['sender'] = "[user-name] <email@admin.".do_shortcode('[get-domain-name ext="true"]').">";
-			$formMail['sender'] = "Website Administrator · ".str_replace(',', '', $GLOBALS['customer_info']['name'])." <email@admin.".str_replace('https://', '', get_bloginfo('url')).">";
+			if ( $formTitle == "Request A Catering Quote" ) $formTitle = "Catering Quote";			
+	
+			$formMail['subject'] = $formTitle." · [user-name]";	
+			$formMail['sender'] = "Website · ".str_replace(',', '', $GLOBALS['customer_info']['name'])." <email@admin.".str_replace('https://', '', get_bloginfo('url')).">";
 			$formMail['additional_headers'] = "Reply-to: [user-name] <[user-email]>\nBcc: Website Administrator <email@battleplanwebdesign.com>";
+	
+			if ( $rovin == "true" ) :	
+				if ( $formTitle != "Catering Quote" ) :
+					$formMail['subject'] = "[user-subject]";
+				else:
+					$formMail['additional_headers'] .= "\nCc: Kristin <kristin@babescatering.com>";	
+				endif;
+			endif;
+	
 			$formMail['use_html'] = 1;
 			$formMail['exclude_blank'] = 1;
 

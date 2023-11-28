@@ -73,8 +73,8 @@ function battleplan_reorderAdminBar() {
 	$wp_admin_bar->remove_node('wphb');
 	$wp_admin_bar->remove_node('updates');
 	$wp_admin_bar->remove_node('comments');
-    	$wp_admin_bar->remove_node('new-content');
-    	$wp_admin_bar->remove_node('wpengine_adminbar');
+    $wp_admin_bar->remove_node('new-content');
+    $wp_admin_bar->remove_node('wpengine_adminbar');
 	$wp_admin_bar->remove_node('view-site');	
 	$wp_admin_bar->remove_node('wpseo-menu');	
 	$wp_admin_bar->remove_node('tribe-events');	
@@ -192,14 +192,14 @@ add_filter('wp_editor_set_quality', 'av_return_100', 9999);
 // Add & Remove WP Admin Menu items
 add_action( 'admin_init', 'battleplan_remove_menus', 999 );
 function battleplan_remove_menus() {   
-	remove_menu_page( 'link-manager.php' );       									// Links
-	remove_menu_page( 'edit-comments.php' );       									// Comments	
-	remove_menu_page( 'wpcf7' );       											// Contact Forms	
-	remove_menu_page( 'edit.php?post_type=acf-field-group' );       						// Custom Fields
-	remove_menu_page( 'themes.php' );       										// Appearance
-	remove_menu_page( 'wpengine-common' );   										// WP Engine
-	remove_menu_page( 'wp-mail-smtp' );   											// WP Mail SMTP
-	remove_menu_page( 'wpseo_dashboard' );   										// Yoast SEO
+	remove_menu_page( 'link-manager.php' );       										// Links
+	remove_menu_page( 'edit-comments.php' );       										// Comments	
+	//remove_menu_page( 'wpcf7' );       													// Contact Forms	
+	remove_menu_page( 'edit.php?post_type=acf-field-group' );       					// Custom Fields
+	remove_menu_page( 'themes.php' );       											// Appearance
+	remove_menu_page( 'wpengine-common' );   											// WP Engine
+	remove_menu_page( 'wp-mail-smtp' );   												// WP Mail SMTP
+	remove_menu_page( 'wpseo_dashboard' );   											// Yoast SEO
 	
 	remove_submenu_page( 'plugins.php', 'plugin-editor.php' );        					// Plugins => Plugin Editor
 	remove_submenu_page( 'options-general.php', 'options-writing.php' );   				// Settings => Writing 		
@@ -342,6 +342,7 @@ function battleplan_remove_dashboard_widgets () {
 // Load site stats if hooked to Google Analytics
 if ( isset(get_option('customer_info')['google-tags']['prop-id']) && get_option('customer_info')['google-tags']['prop-id'] > 1 && is_admin() && _USER_LOGIN == "battleplanweb" ) require_once get_template_directory().'/functions-admin-stats.php';
 
+
 // Adjust the number of of posts listed on admin pages
 add_filter( 'edit_posts_per_page', 'custom_posts_per_page_based_on_type_in_admin', 10, 2 );
 function custom_posts_per_page_based_on_type_in_admin( $per_page, $post_type ) {
@@ -385,9 +386,9 @@ function battleplan_remove_sidebar_checkbox($post) {
 
 add_action('save_post', 'battleplan_save_remove_sidebar', 10, 3);
 function battleplan_save_remove_sidebar($post_id, $post, $update) {
-	if ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) return $post_id;
-	if ( defined('DOING_AJAX') && DOING_AJAX ) return $post_id;
-    if ( !current_user_can("edit_post", $post_id) ) return $post_id;
+	if ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) return;
+	if ( defined('DOING_AJAX') && DOING_AJAX ) return;
+    if ( !current_user_can("edit_post", $post_id) ) return;
 			
 	$lastViewed = readMeta( $post_id, 'log-last-viewed' );
 	if ( !$lastViewed ) updateMeta( $post_id, 'log-last-viewed', strtotime("-2 days"));	

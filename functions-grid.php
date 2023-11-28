@@ -33,7 +33,7 @@ function battleplan_restrictContent( $atts, $content = null ) {
 	$user_caps = get_role( $role )->capabilities;
 	$max_caps = get_role( $max )->capabilities;
 	$min_caps = get_role( $min )->capabilities;	
-	$max_level = $min_level = $user_level = 0;
+	$max_level = $min_level = $user_level = 0; 
 	
 	for ($x = 0; $x <= 10; $x++) {
 		if ( $max_caps['level_'.$x] == 1 || $max_caps['level_'.$x] == true ) $max_level = $x;	
@@ -332,7 +332,7 @@ function battleplan_buildText( $atts, $content = null ) {
 // Button Block
 add_shortcode( 'btn', 'battleplan_buildButton' );
 function battleplan_buildButton( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'align'=>'center', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'', 'class'=>'', 'track'=>'', 'fancy'=>'', 'icon'=>'false', 'ada'=>'', 'start'=>'', 'end'=>'', 'track'=>'' ), $atts );
+	$a = shortcode_atts( array( 'size'=>'100', 'align'=>'center', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'', 'class'=>'', 'track'=>'', 'fancy'=>'', 'icon'=>'false', 'graphic'=>'false', 'graphic-w'=>'40', 'ada'=>'', 'start'=>'', 'end'=>'', 'track'=>'' ), $atts );
 	$getBiz = esc_attr($a['get-biz']);
 	if ( $getBiz == "" ) :
 		$link = esc_attr($a['link']);
@@ -354,9 +354,12 @@ function battleplan_buildButton( $atts, $content = null ) {
 	if ( $class != '' ) $class = " ".$class;
 	$fancy = esc_attr($a['fancy']);	
 	$icon = esc_attr($a['icon']);	
+	$graphic = esc_attr($a['graphic']);	
+	$graphicW = esc_attr($a['graphic-w']);	
 	if ( $icon == "true" ) $icon = "fas fa-chevron-right";	
 	if ( $fancy != "" ) $fancy = "-".$fancy;
 	if ( $icon != "false" ) : $class .= " fancy".$fancy; $content = '<span class="fancy-text">'.$content.'</span><span class="fancy-icon"><i class="'.$icon.'"></i></span>'; endif;
+	if ( $graphic != "false" ) : $class .= " graphic-icon"; $content = '<img src="/wp-content/uploads/'.$graphic.'" width="'.$graphicW.'" height="'.$graphicW.'" style="aspect-ratio:'.$graphicW.'/'.$graphicW.'" alt="" /><span class="unique">'.$content.'</span>'; endif;
 	
 	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));	

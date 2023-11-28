@@ -558,6 +558,11 @@ li:not(.menu-item):not(.carousel-icon):not(:last-child) {
 	margin-bottom:								0.3em;
 }
 
+ul.paragraphs li:not(.menu-item):not(.carousel-icon):not(:last-child),
+ul.paragraph li:not(.menu-item):not(.carousel-icon):not(:last-child) {
+    margin-bottom:   							var(--measure-small);
+}
+
 li.filter-choice {
 	list-style:									none;
 }
@@ -623,11 +628,6 @@ table {
 .three-column > * {
 	break-inside: 								avoid;
 }
-	
-  ul.paragraphs li,
-  ul.paragraph li {
-      margin-bottom:   							var(--measure-small);
-  }
 
 .left,
 .text-left {

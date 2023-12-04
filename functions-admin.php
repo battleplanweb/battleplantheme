@@ -581,10 +581,15 @@ function battleplan_site_audit() {
 		$googleInfo = get_option('bp_gbp_update');
 		$siteAudit[$today]['google-rating'] = number_format($googleInfo['google-rating'], 1, '.', ',');
 		$siteAudit[$today]['google-reviews'] = $googleInfo['google-reviews'];
-		$siteAudit[$today]['load_time_mobile'] = number_format($GLOBALS['speedTotal']['sessions-30']['mobile'] / $GLOBALS['speedSessions']['sessions-30']['mobile'], 1); 	
-		$siteAudit[$today]['load_time_desktop'] = number_format($GLOBALS['speedTotal']['sessions-30']['desktop'] / $GLOBALS['speedSessions']['sessions-30']['desktop'], 1); 		
+	
+		$siteAudit[$today]['load_time_mobile'] = $GLOBALS['speedSessions']['sessions-30']['mobile'] > 0 ? number_format($GLOBALS['speedTotal']['sessions-30']['mobile'] / $GLOBALS['speedSessions']['sessions-30']['mobile'], 1) : 0; 	
+	
+		$siteAudit[$today]['load_time_desktop'] = $GLOBALS['speedSessions']['sessions-30']['desktop'] > 0 ? number_format($GLOBALS['speedTotal']['sessions-30']['desktop'] / $GLOBALS['speedSessions']['sessions-30']['desktop'], 1) : 0; 	
+	
 		$siteAudit[$today]['testimonials-pct'] = $GLOBALS['ga4_contentVis']['track-init']['sessions-30'] > 0 ? number_format(($GLOBALS['ga4_contentVis']['track-testimonials']['sessions-30'] / $GLOBALS['ga4_contentVis']['track-init']['sessions-30']*100), 1).'%' : ''; 		
+	
 		$siteAudit[$today]['coupon-pct'] = $GLOBALS['ga4_contentVis']['track-init']['sessions-30'] > 0 ? number_format(($GLOBALS['ga4_contentVis']['track-coupon']['sessions-30'] / $GLOBALS['ga4_contentVis']['track-init']['sessions-30'])*100, 1).'%' : ''; 		
+	
 		$siteAudit[$today]['finance-pct'] = $GLOBALS['ga4_contentVis']['track-init']['sessions-30'] > 0 ? number_format(($GLOBALS['ga4_contentVis']['track-finance']['sessions-30'] / $GLOBALS['ga4_contentVis']['track-init']['sessions-30'])*100, 1).'%' : ''; 		
 		
 		if ( wp_count_posts( 'post' )->publish > 0 ) : $siteAudit[$today]['blog'] = wp_count_posts( 'post' )->publish; else: $siteAudit[$today]['blog'] = "false"; endif;

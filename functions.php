@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '21.0' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '21.1' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -1119,8 +1119,8 @@ function battleplan_header_styles() {
 	
 	if ( $GLOBALS['customer_info']['site-type'] == 'profile' || $GLOBALS['customer_info']['site-type'] == 'profiles' ) wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array('parent-style'), _BP_VERSION );		
 	
-	$start = strtotime(date("Y").'-12-08');
-	$end = strtotime(date("Y").'-12-28');
+	$start = strtotime(date("Y").'-12-03'); 
+	$end = strtotime(date("Y").'-12-30');
 	if ( isset($GLOBALS['customer_info']['cancel-holiday']) && $GLOBALS['customer_info']['cancel-holiday'] != 'true' && time() > $start && time() < $end ) :
 	 	wp_enqueue_style( 'battleplan-style-holiday', get_template_directory_uri()."/style-holiday.css", array('parent-style'), _BP_VERSION );	
 		wp_enqueue_script( 'battleplan-holiday', get_template_directory_uri().'/js/holiday.js', array('jquery'), _BP_VERSION, false );		
@@ -1299,6 +1299,38 @@ if ( !is_admin() && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && str
 		endif;
 	}
 endif;
+
+// Add nonce to trusted scripts
+add_filter('final_output', function($content) {
+	if ( !is_admin() ) : 
+		// customize support code by WP
+		$pattern = "/<script>\s*\(\s*function\(\)\s*\{\s*var\s+request,\s+b\s*=\s*document\.body,\s+c\s*=\s*'className',\s+cs\s*=\s*'customize-support',\s+rcs\s*=\s*new\s+RegExp/";
+		$replace = '<script nonce="'._BP_NONCE.'">(function() {var request, b = document.body, c = "className", cs = "customize-support", rcs = new RegExp';
+		$updatedContent = preg_replace($pattern, $replace, $content);
+		if ($updatedContent !== null) $content = $updatedContent;
+
+		// Contact Form 7
+		$pattern = '/<script>document\.getElementById\(\s*"ak_js_1"\s*\)\.setAttribute\(\s*"value",\s*\(\s*new\s+Date\(\s*\)\s*\)\.getTime\(\s*\)\s*\);\s*<\/script>/';
+		$replace = '<script nonce="'._BP_NONCE.'">document.getElementById( "ak_js_1" ).setAttribute( "value", ( new Date() ).getTime() );</script>';
+		$updatedContent = preg_replace($pattern, $replace, $content);
+		if ($updatedContent !== null) $content = $updatedContent;	
+
+		// Contact Form 7
+		$pattern = '/<script>document\.getElementById\(\s*"ak_js_2"\s*\)\.setAttribute\(\s*"value",\s*\(\s*new\s+Date\(\s*\)\s*\)\.getTime\(\s*\)\s*\);\s*<\/script>/';
+		$replace = '<script nonce="'._BP_NONCE.'">document.getElementById( "ak_js_2" ).setAttribute( "value", ( new Date() ).getTime() );</script>';
+		$updatedContent = preg_replace($pattern, $replace, $content);
+		if ($updatedContent !== null) $content = $updatedContent;
+	endif;
+	return $content;
+});  
+
+add_filter('script_loader_tag', 'add_nonce_to_script', 10, 2);
+function add_nonce_to_script($tag, $handle) {
+    if ($handle == 'stripe') {
+        $tag = str_replace('src=', 'nonce="'._BP_NONCE.'" defer src=', $tag);
+    }
+    return $tag;
+}
 
 // Hide the Wordpress admin bar
 //show_admin_bar( false );

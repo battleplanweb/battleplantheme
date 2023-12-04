@@ -443,7 +443,9 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 				var thisInput = $(this), labelW = thisInput.width();
 				if ( labelW > labelMaxW ) { labelMaxW = labelW }
 			});
-			thisForm.find('> .form-input.width-default').css({ "grid-template-columns":labelMaxW+"px 1fr" });
+			if ( labelMaxW > 0 ) {
+				thisForm.find('> .form-input.width-default').css({ "grid-template-columns":labelMaxW+"px 1fr" });
+			}
 		});
 	}
 	formLabelWidth();

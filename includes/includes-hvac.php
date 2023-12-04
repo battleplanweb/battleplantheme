@@ -5,10 +5,12 @@
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
 # Product Overview
-# American Standard Customer Care
-# Ruud Pro Partner
-# Comfortmaker Elite Dealer
-# Tempstar Elite Dealer
+# Customer Care / Pro Partners
+	- American Standard Customer Care
+	- Rheem Pro Partner
+	- Ruud Pro Partner
+	- Comfortmaker Elite Dealer
+	- Tempstar Elite Dealer
 # Why Choose Us?
 # HVAC Maintenance Tips
 # HVAC Tip Of The Month
@@ -36,7 +38,7 @@ add_shortcode( 'product-overview', 'battleplan_product_overview' );
 function battleplan_product_overview( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', ), $atts );
 	$type = esc_attr($a['type']);
-	$brands = array('amana', 'american standard', 'bryant', 'carrier', 'lennox', 'rheem', 'ruud', 'tempstar', 'trane', 'york');
+	$brands = array('amana', 'american standard', 'bryant', 'carrier', 'lennox', 'mitsubishi', 'rheem', 'ruud', 'tempstar', 'trane', 'york');
 	$file = 'generic';
 	
 	foreach( $brands as $brand ) :	
@@ -64,6 +66,16 @@ function battleplan_american_standard_customer_care( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', ), $atts );
 	$type = esc_attr($a['type']);
 	return include "wp-content/themes/battleplantheme/pages/page-hvac-customer-care-dealer.php";
+}	
+
+/*--------------------------------------------------------------
+# Rheem Pro Partner
+--------------------------------------------------------------*/
+add_shortcode( 'rheem-pro-partner', 'battleplan_rheem_pro_partner' );
+function battleplan_rheem_pro_partner( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'type'=>'', ), $atts );
+	$type = esc_attr($a['type']);
+	return include "wp-content/themes/battleplantheme/pages/page-hvac-rheem-pro-partner.php";
 }	
 
 /*--------------------------------------------------------------

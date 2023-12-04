@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 21.0
+Version: 21.1
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -646,11 +646,11 @@ section.section {
 .flex {
 	grid-column: 									default-start / default-end;
 	display: 										grid;
-	gap: 										var(--measure-large) 3%;
+	gap: 											var(--measure-large) 3%;
 }
 
 section.section-default .flex {
-	gap: 										var(--measure-large) 4.5%;
+	gap: 											var(--measure-large) 4.5%;
 }
 
 .flex.grid-1-auto {
@@ -688,22 +688,22 @@ section.section-default .flex {
 
 .flex.grid-2-3 {
 	grid-template-columns: 							2fr 3fr;
-	gap: 										var(--measure-large) 6%;
+	gap: 											var(--measure-large) 6%;
 }
 
 .flex.grid-3-2 {
 	grid-template-columns: 							3fr 2fr;
-	gap: 										var(--measure-large) 6%;
+	gap: 											var(--measure-large) 6%;
 }
 
 .flex.grid-3-1 {
 	grid-template-columns: 							3fr 1fr;
-	gap: 										var(--measure-large) 4%;
+	gap: 											var(--measure-large) 4%;
 }
 
 .flex.grid-1-3 {
 	grid-template-columns: 							1fr 3fr;
-	gap: 										var(--measure-large) 4%;
+	gap: 											var(--measure-large) 4%;
 }
 
 .flex.grid-1-1-1 {
@@ -712,21 +712,25 @@ section.section-default .flex {
 
 .flex.grid-2-1 {
 	grid-template-columns: 							2fr 1fr;
-	gap: 										var(--measure-large) 5%;
+	gap: 											var(--measure-large) 5%;
 }
 
 .flex.grid-1-2 {
 	grid-template-columns: 							1fr 2fr;
-	gap: 										var(--measure-large) 5%;
+	gap: 											var(--measure-large) 5%;
 }
 
 .flex.grid-1-1 {
 	grid-template-columns: 							1fr 1fr;
-	gap: 										var(--measure-large) 5%;
+	gap: 											var(--measure-large) 5%;
 }
 
 .flex.grid-1 {
 	grid-template-columns: 							1fr;
+}
+
+.flex.grid-custom {
+	width: 											100% /* 11/30/23 for Big D Mechanical, layout with grid-custom 1fr 320px 1fr */
 }
 
 .flex .col {
@@ -740,7 +744,7 @@ section.section-default .flex {
 .flex.valign-center .col,
 .flex .col.valign-center,
 .flex .col-inner div.valign-center {
-	align-self:									center;
+	align-self:										center;
 }
 
 .top-strip .flex.valign-start .col,
@@ -755,7 +759,7 @@ section.section-default .flex {
 .flex.valign-start .col,
 .flex .col.valign-start,
 .flex .col-inner div.valign-start {
-	align-self:									start;
+	align-self:										start;
 }
 
 .top-strip .flex.valign-stretch .col,
@@ -769,7 +773,7 @@ section.section-default .flex {
 .flex.valign-stretch .col,
 .flex .col.valign-stretch,
 .flex .col-inner div.valign-stretch {
-	align-self:									stretch;
+	align-self:										stretch;
 }
 
 .top-strip .flex.valign-end .col,
@@ -783,36 +787,115 @@ section.section-default .flex {
 .flex.valign-end .col,
 .flex .col.valign-end,
 .flex .col-inner div.valign-end {
-	align-self:									end;
+	align-self:										end;
 }
 
+
+
+/* 11/30/23 -- added justify-self for Big D Mechanical header */
+.top-strip .flex.align-center .col,
+.divider-strip .flex.align-center .col,
+.logo-strip .flex.align-center .col,
+.site-info .flex.align-center .col,
+.top-strip .flex .col.align-center,
+.divider-strip .flex .col.align-center,
+.logo-strip .flex .col.align-center,
+.site-info .flex .col.align-center,
+.flex.align-center .col,
+.flex .col.align-center,
+.flex .col-inner div.align-center,
+.top-strip .flex.aligncenter .col,
+.divider-strip .flex.aligncenter .col,
+.logo-strip .flex.aligncenter .col,
+.site-info .flex.aligncenter .col,
+.top-strip .flex .col.aligncenter,
+.divider-strip .flex .col.aligncenter,
+.logo-strip .flex .col.aligncenter,
+.site-info .flex .col.aligncenter,
+.flex.aligncenter .col,
+.flex .col.aligncenter,
+.flex .col-inner div.aligncenter {
+	justify-self:									center;
+}
+
+.top-strip .flex.align-left .col,
+.divider-strip .flex.align-left .col,
+.logo-strip .flex.align-left .col,
+.site-info .flex.align-left .col,
+.top-strip .flex .col.align-left,
+.divider-strip .flex .col.align-left,
+.logo-strip .flex .col.align-left,
+.site-info .flex .col.align-left,
+.flex.align-left .col,
+.flex .col.align-left,
+.flex .col-inner div.align-left,
+.top-strip .flex.alignleft .col,
+.divider-strip .flex.alignleft .col,
+.logo-strip .flex.alignleft .col,
+.site-info .flex.alignleft .col,
+.top-strip .flex .col.alignleft,
+.divider-strip .flex .col.alignleft,
+.logo-strip .flex .col.alignleft,
+.site-info .flex .col.alignleft,
+.flex.alignleft .col,
+.flex .col.alignleft,
+.flex .col-inner div.alignleft{
+	justify-self:									start;
+}
+
+.top-strip .flex.align-right .col,
+.divider-strip .flex.align-right .col,
+.logo-strip .flex.align-right .col,
+.site-info .flex.align-right .col,
+.top-strip .flex .col.align-right,
+.divider-strip .flex .col.align-right,
+.logo-strip .flex .col.align-right,
+.site-info .flex .col.align-right,
+.flex.align-right .col,
+.flex .col.align-right,
+.flex .col-inner div.align-right,
+.top-strip .flex.alignright .col,
+.divider-strip .flex.alignright .col,
+.logo-strip .flex.alignright .col,
+.site-info .flex.alignright .col,
+.top-strip .flex .col.alignright,
+.divider-strip .flex .col.alignright,
+.logo-strip .flex .col.alignright,
+.site-info .flex .col.alignright,
+.flex.alignright .col,
+.flex .col.alignright,
+.flex .col-inner div.alignright{
+	justify-self:									end;
+}
+
+
 .inherit-grid {
-	display:  									inherit;
-	gap: 										inherit;
+	display:  										inherit;
+	gap: 											inherit;
 	grid-template-columns: 							inherit;
-	align-content: 								inherit;
+	align-content: 									inherit;
 	justify-content: 								inherit;
 	align-items: 									inherit;
-	justify-items: 								inherit;
+	justify-items: 									inherit;
 }
 
 .block-group,
 .col-inner {
 	display: 										grid;
 	grid-template-columns: 							repeat(12, 1fr);
-	gap: 										var(--measure-base) 3%;
-	height:										100%;  
+	gap: 											var(--measure-base) 3%;
+	height:											100%;  
 }
 
 .section.archive-content,
 .section.section-inline.archive-content {
-	width:										100%;
-	margin-top:									4em;
+	width:											100%;
+	margin-top:										4em;
 	margin-bottom:									4em;
 }
 
 .section.archive-content .flex {
-	gap: 										4em 3%;
+	gap: 											4em 3%;
 }
 
 #main-content,
@@ -2231,6 +2314,8 @@ a#bbblink {
 	transform: 										translateY(0);
 	transition: 									opacity 0.6s var(--main-trans-easing);
 	overflow-y: 									scroll;
+	padding-left: 									10px;
+	padding-right: 									10px;
 }
  
 .section.style-lock + #page {
@@ -2255,6 +2340,7 @@ body.locked {
 
 /* Break Out */
 .break-out,
+
 section.break-out,
 section.section.break-out {		
 	width: 										var(--break-out-width);
@@ -2985,6 +3071,7 @@ section.section.break-out {
 	margin: 										0;
 	padding:										8px 25px;
 	font-size:									90%;
+
 	transform: 									rotate(0) translate(0,0) scale(1);
 	line-height: 									normal;
 	transition: 									all 0.1s var(--main-trans-easing);
@@ -3608,6 +3695,7 @@ img {
 	opacity:										1;
 	transition:									opacity var(--main-trans-speed) var(--main-trans-easing);
 }
+
 
 img.unloaded {
 	opacity:										0.2;

@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 21.1
+Version: 21.1.1
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -2218,23 +2218,22 @@ a#bbblink {
 /* Modal Box */
 .section.section-lock[data-pos="modal"],
 .section.section-lock[data-pos="center"] {
-
-	width:										100vw;
-	height:										100vh;
-	background:									var(--black-highest);
+	width:											100vw;
+	height:											100vh;
+	background:										var(--black-highest);
 	padding: 										0;
 }
 
 .section.section-lock[data-pos="modal"] > .flex,
 .section.section-lock[data-pos="center"] > .flex {
 	position:										absolute !important; /* absolute instead of fixed makes scrollable on iphone 8/3/22 */
-	width: 										96%;
-    max-width: 									1000px;
+	width: 											96%;
+    max-width: 										1000px;
 	max-height: 									calc(95vh - 60px);	
 	top:											50%;
-	left:										50%;
-	transform: 									translate(-50%, -50%);
-	padding:										calc(2em + 18px) 2em 2em;
+	left:											50%;
+	transform: 										translate(-50%, -50%);
+	padding:										calc(2em + 27px) 2em 2em;
 	overflow-x: 									hidden;
 	overflow-y: 									auto;
 }
@@ -2242,15 +2241,29 @@ a#bbblink {
 .screen-mobile .section.section-lock[data-pos="modal"] > .flex,
 .screen-mobile .section.section-lock[data-pos="center"] > .flex {
 	top:											calc(48% + 42px);
-	transform: 									translate(-50%, calc(-50% - 21px));
-	padding:										calc(5% + 18px) 5%;
+	transform: 										translate(-50%, calc(-50% - 21px));
+	padding:										calc(5% + 27px) 5%;
 }
 
 .screen-mobile .section.section-lock[data-pos="modal"] > .flex.scrollable,
 .screen-mobile .section.section-lock[data-pos="center"] > .flex.scrollable {
 	top:											calc(42px + var(--measure-small));
-	transform: 									translate(-50%, 0);
-	padding-bottom:								calc(5% + 80px);
+	transform: 										translate(-50%, 0);
+	padding-bottom:									calc(5% + 80px);
+}
+
+.section.section-lock[data-pos="modal"].content-image > .flex,
+.section.section-lock[data-pos="center"].content-image > .flex {
+	width: 											auto;
+	padding: 										0;
+}
+
+.screen-mobile .section.section-lock[data-pos="modal"].content-image > .flex,
+.screen-mobile .section.section-lock[data-pos="center"].content-image > .flex,
+.screen-mobile .section.section-lock[data-pos="modal"].content-image > .flex.scrollable,
+.screen-mobile .section.section-lock[data-pos="center"].content-image > .flex.scrollable {
+	width: 											100%;
+	padding: 										0;
 }
 
 /* Style Lock */
@@ -2317,6 +2330,12 @@ a#bbblink {
 	padding-left: 									10px;
 	padding-right: 									10px;
 }
+
+.section.style-lock[data-pos="modal"].on-screen.content-image,
+.section.style-lock[data-pos="center"].on-screen.content-image {
+	padding-left: 									0;
+	padding-right: 									0;
+}
  
 .section.style-lock + #page {
 	pointer-events: 								auto;
@@ -2340,6 +2359,7 @@ body.locked {
 
 /* Break Out */
 .break-out,
+
 
 section.break-out,
 section.section.break-out {		
@@ -3746,6 +3766,7 @@ img.unloaded {
 	margin:										var(--measure-base) 0 var(--measure-small) var(--measure-base);
 }
 
+
  /* made top margin 0 to raise pics a little bit (above <p> provides enough margin)  1/24/22 */
 p + .alignleft, 
 p + .align-left,
@@ -4370,6 +4391,7 @@ img.img-404 {
 
 #mobile-menu-bar.currently-open .call-btn,
 #mobile-menu-bar.currently-open .mm-bar-btn.call-btn::before {
+
 	color: 										var(--accent-color);
 }
 
@@ -5791,6 +5813,7 @@ html.error503 h3 {
 	}
 	
 	#secondary .sidebar-inner {
+
 		display:									flex;
 		flex-flow:									column wrap;
 		gap:										var(--measure-large) var(--measure-base);
@@ -5955,6 +5978,7 @@ html.error503 h3 {
 	.flex.grid-1-2-1:not(.break-none):not(.break-1),
 	.flex.grid-1-1-2:not(.break-none):not(.break-1),
 	.flex.grid-2-1-1:not(.break-none):not(.break-1),
+
 	.flex.grid-custom:not(.break-none):not(.break-1) {
 		grid-template-columns: 						1fr 1fr;
 	}

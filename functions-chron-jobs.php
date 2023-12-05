@@ -102,9 +102,9 @@ function processChron($forceChron) {
 			$formMail['additional_headers'] = "Reply-to: [user-name] <[user-email]>\nBcc: Website Administrator <email@battleplanwebdesign.com>";
 	
 			if ( $rovin == "true" ) :					
-				$formMail['additional_headers'] .= "\nBcc: Victor <victorv@babeschicken.com>";
 				if ( $formTitle != "Catering Quote" ) :
-					$formMail['subject'] = "[user-subject]";
+					$formMail['subject'] = "[_raw_user-subject]";				
+					$formMail['additional_headers'] .= "\nBcc: Victor <victorv@babeschicken.com>";
 				else:
 					$formMail['additional_headers'] .= "\nCc: Kristin <kristin@babescatering.com>";	
 				endif;

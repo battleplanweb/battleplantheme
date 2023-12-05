@@ -493,7 +493,7 @@ function battleplan_buildParallax( $atts, $content = null ) {
 // Locked Section 
 add_shortcode( 'lock', 'battleplan_buildLockedSection' );
 function battleplan_buildLockedSection( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'style'=>'lock', 'width'=>'edge', 'position'=>'bottom', 'delay'=>'3000', 'show'=>'session', 'css'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'class'=>'', 'start'=>'', 'end'=>'', 'btn-activated'=>'no', 'track'=>'' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'style'=>'lock', 'width'=>'edge', 'position'=>'bottom', 'delay'=>'3000', 'show'=>'session', 'css'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'class'=>'', 'start'=>'', 'end'=>'', 'btn-activated'=>'no', 'track'=>'', 'content'=>'text' ), $atts );
 	$name = strtolower(esc_attr($a['name']));
 	$name = preg_replace("/[\s_]/", "-", $name);
 	$delay = esc_attr($a['delay']);
@@ -517,11 +517,12 @@ function battleplan_buildLockedSection( $atts, $content = null ) {
 		if ( $end && $now > $end ) return null;		
 	}
 	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
+	$contentType = esc_attr($a['content']) == 'text' ? ' content-text' : ' content-image';
 	if ( $tracking != '' ) $class .= " tracking";
 	$btnActivated = esc_attr($a['btn-activated']);
 	if ($btnActivated == "true" || $btnActivated == "yes" ) $btnActivated = "yes";
 	
-	$buildSection = '<section'.$name.' class="section section-lock style-lock'.$style.$width.$class.'"'.$tracking.' data-pos="'.$pos.'" data-delay="'.$delay.'" data-show="'.$show.'" data-btn="'.$btnActivated.'"';
+	$buildSection = '<section'.$name.' class="section section-lock style-lock'.$style.$width.$contentType.$class.'"'.$tracking.' data-pos="'.$pos.'" data-delay="'.$delay.'" data-show="'.$show.'" data-btn="'.$btnActivated.'"';
 	
 	if ( $background != "" || $css != "" ) :
 		$buildSection .= ' style="';

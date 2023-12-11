@@ -194,12 +194,13 @@ add_action( 'admin_init', 'battleplan_remove_menus', 999 );
 function battleplan_remove_menus() {   
 	remove_menu_page( 'link-manager.php' );       										// Links
 	remove_menu_page( 'edit-comments.php' );       										// Comments	
-	//remove_menu_page( 'wpcf7' );       													// Contact Forms	
+	remove_menu_page( 'wpcf7' );       													// Contact Forms	
 	remove_menu_page( 'edit.php?post_type=acf-field-group' );       					// Custom Fields
 	remove_menu_page( 'themes.php' );       											// Appearance
 	remove_menu_page( 'wpengine-common' );   											// WP Engine
 	remove_menu_page( 'wp-mail-smtp' );   												// WP Mail SMTP
-	remove_menu_page( 'wpseo_dashboard' );   											// Yoast SEO
+	remove_menu_page( 'wpseo_dashboard' );   											// Yoast SEO	
+	remove_menu_page( 'wpseo_workouts' );   											// Yoast SEO
 	
 	remove_submenu_page( 'plugins.php', 'plugin-editor.php' );        					// Plugins => Plugin Editor
 	remove_submenu_page( 'options-general.php', 'options-writing.php' );   				// Settings => Writing 		

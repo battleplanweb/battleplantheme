@@ -185,7 +185,7 @@ function battleplan_registerHVACPostTypes() {
 		'menu_position'=>20,
 		'menu_icon'=>'dashicons-cart',
 		'has_archive'=>true,
-		'capability_type'=>'post',
+		'capability_type'=>'page',
 	));
 	register_taxonomy( 'product-brand', array( 'products' ), array(
 		'labels'=>array(
@@ -194,7 +194,7 @@ function battleplan_registerHVACPostTypes() {
 		),
 		'hierarchical'=>false,
 		'show_ui'=>true,
-        	'show_admin_column'=>true,
+        'show_admin_column'=>true,
 	));
 	register_taxonomy( 'product-type', array( 'products' ), array(
 		'labels'=>array(
@@ -203,7 +203,7 @@ function battleplan_registerHVACPostTypes() {
 		),
 		'hierarchical'=>false,
 		'show_ui'=>true,
-        	'show_admin_column'=>true,
+        'show_admin_column'=>true,
 	));
 	register_taxonomy( 'product-class', array( 'products' ), array(
 		'labels'=>array(
@@ -212,7 +212,7 @@ function battleplan_registerHVACPostTypes() {
 		),
 		'hierarchical'=>false,
 		'show_ui'=>true,
-        	'show_admin_column'=>true,
+        'show_admin_column'=>true,
 	));
 }
 
@@ -225,73 +225,6 @@ function battleplan_add_acf_hvac_fields() {
 		'key' => 'group_5bd6f6742fbdb',
 		'title' => 'HVAC Products',
 		'fields' => array(
-			/*array(
-				'key' => 'product_comfort',
-				'label' => 'Comfort',
-				'name' => 'comfort',
-				'type' => 'radio',
-				'required' => 0,
-				'conditional_logic' => 0,
-				'choices' => array(
-					5 => '5',
-					4 => '4',
-					3 => '3',
-					2 => '2',
-					1 => '1',
-					'na' => 'n/a',
-				),
-				'other_choice' => 0,
-				'save_other_choice' => 0,
-				'default_value' => 'na',
-				'layout' => 'horizontal',
-				'allow_null' => 0,
-				'return_format' => 'value',
-			),
-			array(
-				'key' => 'product_efficiency',
-				'label' => 'Efficiency',
-				'name' => 'efficiency',
-				'type' => 'radio',
-				'required' => 0,
-				'conditional_logic' => 0,
-				'choices' => array(
-					5 => '5',
-					4 => '4',
-					3 => '3',
-					2 => '2',
-					1 => '1',
-					'na' => 'n/a',
-				),
-				'other_choice' => 0,
-				'save_other_choice' => 0,
-				'default_value' => 'na',
-				'layout' => 'horizontal',
-				'allow_null' => 0,
-				'return_format' => 'value',
-			),
-			array(
-				'key' => 'product_price',
-				'label' => 'Price',
-				'name' => 'price',
-				'type' => 'radio',
-				'required' => 0,
-				'conditional_logic' => 0,
-				'choices' => array(
-					5 => '5',
-					4 => '4',
-					3 => '3',
-					2 => '2',
-					1 => '1',
-					'na' => 'n/a',
-				),
-				'other_choice' => 0,
-				'save_other_choice' => 0,
-				'default_value' => 'na',
-				'layout' => 'horizontal',
-				'allow_null' => 0,
-				'return_format' => 'value',
-			),
-			*/
 			array(
 				'key' => 'product_brochure',
 				'label' => 'Brochure',

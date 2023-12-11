@@ -71,7 +71,7 @@ function battleplan_registerEventPostType() {
 		'hierarchical'=>		false,
 		'menu_position'=>		20,
 		'menu_icon'=>			'dashicons-calendar-alt',
-		'has_archive'=>		true,
+		'has_archive'=>			true,
 		'capability_type'=>		'post',
 	));
 	

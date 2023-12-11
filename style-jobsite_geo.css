@@ -1,0 +1,39 @@
+/*--------------------------------------------------------------
+>>> TABLE OF CONTENTS:
+----------------------------------------------------------------
+# Page Styling
+# Navigation
+	- Mobile Menu
+
+/*--------------------------------------------------------------
+# Page Styling
+--------------------------------------------- */
+
+#map.map-jobsite_geo {
+	margin: 									1.5em 0 3em;
+}
+
+
+.col.col-jobsite_geo .block.block-group { 
+	gap: 										var(--measure-base) 3%;
+}
+
+.col.col-jobsite_geo .jobsite-photos {
+	margin: 									0;
+}
+
+.col.col-jobsite_geo .jobsite-review {
+	display: 									grid;
+  	grid-template-columns: 						repeat(12,1fr);
+  	gap: 										var(--measure-base) 3%;
+  	height: 									100%;
+} 
+
+.section.archive-content.archive-jobsite_geo .flex {
+	gap: 										0;
+}
+
+.col.col-archive.col-jobsite_geo {
+	border-top: 								1px solid var(--black-lowest);
+  	padding: 									2.5em 0;
+}

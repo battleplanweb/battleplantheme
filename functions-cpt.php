@@ -28,7 +28,7 @@ function battleplan_registerPostTypes() {
 		'menu_position'=>20,
 		'menu_icon'=>'dashicons-format-quote',
 		'has_archive'=>true,
-		'capability_type'=>'post',
+		'capability_type'=>'page',
 	));
 	register_post_type( 'galleries', array (
 		'label'=>__( 'galleries', 'battleplan' ),
@@ -44,7 +44,7 @@ function battleplan_registerPostTypes() {
 		'menu_position'=>20,
 		'menu_icon'=>'dashicons-images-alt',
 		'has_archive'=>true,
-		'capability_type'=>'post',
+		'capability_type'=>'page',
 	));
 	register_taxonomy( 'gallery-type', array( 'galleries' ), array(
 		'labels'=>array(
@@ -108,7 +108,6 @@ function battleplan_registerPostTypes() {
 		'menu_icon'=>'dashicons-edit-page',
 		'has_archive'=>false,
 		'capability_type' => 'page',
-		'map_meta_cap' => true,
 	));
 	register_post_type( 'elements', array (
 		'label'=>__( 'elements', 'battleplan' ),

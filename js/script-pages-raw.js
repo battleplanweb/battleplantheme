@@ -639,21 +639,22 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 	});
 	
 	// Move ad promo on blog pages	
-	if ( $('.ad-promo').length ) {
+	
+	if ( $('.place-ad').length ) {
 		var numP = $('.single-post .entry-content *').length, posP = Math.ceil(numP / 2);	
 		if ( numP > 30 ) { posP = 10; }
 		
 		if ( $('div.insert-promo').length > 0 ) {
-			moveDiv ('.ad-promo', '.single-post .entry-content div.insert-promo', 'before'); 
+			moveDiv ('.place-ad', '.single-post .entry-content div.insert-promo', 'before'); 
 			$('div.insert-promo').remove();
 		} else if ( $('.single-post .entry-content h2').length > 1 ) {
-			moveDiv ('.ad-promo', '.single-post .entry-content h2:nth-of-type(2)', 'before'); 
+			moveDiv ('.place-ad', '.single-post .entry-content h2:nth-of-type(2)', 'before'); 
 		} else if ( $('.single-post .entry-content h2').length == 1 ) {
-			moveDiv ('.ad-promo', '.single-post .entry-content h2', 'before'); 		
+			moveDiv ('.place-ad', '.single-post .entry-content h2', 'before'); 		
 		} else {
-			moveDiv ('.ad-promo', '.single-post .entry-content *:nth-child('+posP+')', 'after'); 
+			moveDiv ('.place-ad', '.single-post .entry-content *:nth-child('+posP+')', 'after'); 
 		}
-	}
+	} 
 	
 	// Blog Archive page - tag list drop-down functionality
 	$('#tag-dropdown').change(function() {

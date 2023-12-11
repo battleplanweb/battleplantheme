@@ -15,7 +15,7 @@
 /*--------------------------------------------------------------
 # Set Constants
 --------------------------------------------------------------*/
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '21.1.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '21.1.2' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -865,7 +865,7 @@ add_action( 'bp_after_the_content', 'battleplan_promo' );
 function battleplan_promo() {
 	if ( is_single() && get_post_type() == "post" ) :
 		$current_ad = do_shortcode('[get-element slug="coupon"]');
-		if ( $current_ad ) echo '<div class="ad-promo">'.$current_ad.'</div>';
+		if ( $current_ad ) echo '<div class="place-ad">'.$current_ad.'</div>';
 	endif;	
 }
 
@@ -1111,7 +1111,7 @@ function battleplan_header_styles() {
 	
 	if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 'true' )  wp_enqueue_style( 'battleplan-events', get_template_directory_uri()."/style-events.css", array('parent-style'), _BP_VERSION ); 
 	
-	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' )  wp_enqueue_style( 'battleplan-jobsite_geo', get_template_directory_uri()."/style-jobsite_geo.css", array('parent-style'), _BP_VERSION ); 	
+	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) wp_enqueue_style( 'battleplan-jobsite_geo', get_template_directory_uri()."/style-jobsite_geo.css", array('parent-style'), _BP_VERSION ); 	
 
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) wp_enqueue_style( 'battleplan-woocommerce', get_template_directory_uri()."/style-woocommerce.css", array('parent-style'), _BP_VERSION ); 
 	if ( is_plugin_active( 'stripe-payments/accept-stripe-payments.php' ) ) wp_enqueue_style( 'battleplan-stripe-payments', get_template_directory_uri()."/style-stripe-payments.css", array('parent-style'), _BP_VERSION );  
@@ -1119,13 +1119,15 @@ function battleplan_header_styles() {
 	
 	if ( $GLOBALS['customer_info']['site-type'] == 'profile' || $GLOBALS['customer_info']['site-type'] == 'profiles' ) wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array('parent-style'), _BP_VERSION );		
 	
-	$start = strtotime(date("Y").'-12-03'); 
-	$end = strtotime(date("Y").'-12-30');
-	if ( isset($GLOBALS['customer_info']['cancel-holiday']) && $GLOBALS['customer_info']['cancel-holiday'] != 'true' && time() > $start && time() < $end ) :
+	$start = strtotime(date("Y").'-12-01'); 
+	$end = strtotime(date("Y").'-12-30');	
+	$cancel_holiday = isset( $GLOBALS['customer_info']['cancel-holiday'] ) ? $GLOBALS['customer_info']['cancel-holiday'] : "false";
+	
+	if ( $cancel_holiday == "false" && time() > $start && time() < $end ) :
 	 	wp_enqueue_style( 'battleplan-style-holiday', get_template_directory_uri()."/style-holiday.css", array('parent-style'), _BP_VERSION );	
 		wp_enqueue_script( 'battleplan-holiday', get_template_directory_uri().'/js/holiday.js', array('jquery'), _BP_VERSION, false );		
 	endif;
-
+		
 	wp_enqueue_style( 'battleplan-style', get_stylesheet_directory_uri()."/style-site.css", array('parent-style'), _BP_VERSION );	
 }
 
@@ -1159,7 +1161,7 @@ function battleplan_scripts() {
 
 	if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 'true' ) wp_enqueue_script( 'battleplan-script-events', get_template_directory_uri().'/js/events.js', array('jquery'), _BP_VERSION, false );   
 	
-	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) wp_enqueue_script( 'battleplan-script-jobsite_geo', get_template_directory_uri().'/js/jobsite_geo.js', array('jquery'), _BP_VERSION, false );   
+	//if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) wp_enqueue_script( 'battleplan-script-jobsite_geo', get_template_directory_uri().'/js/jobsite_geo.js', array('jquery'), _BP_VERSION, false );   
 	
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) wp_enqueue_script( 'battleplan-script-woocommerce', get_template_directory_uri().'/js/woocommerce.js', array('jquery'), _BP_VERSION, false ); 
 	if ( is_plugin_active( 'cue/cue.php' ) ) wp_enqueue_script( 'battleplan-script-cue', get_template_directory_uri().'/js/cue.js', array('jquery'), _BP_VERSION, false ); 
@@ -1773,25 +1775,208 @@ function battleplan_remove_user_roles() {
 	if ( wp_roles()->is_role( 'subscriber' ) ) remove_role( 'subscriber' );
 	if ( wp_roles()->is_role( 'wpseo_manager' ) ) remove_role( 'wpseo_manager' );
 	if ( wp_roles()->is_role( 'wpseo_editor' ) ) remove_role( 'wpseo_editor' );	
+	if ( wp_roles()->is_role( 'bp_moderator' ) ) remove_role( 'bp_moderator' );	
+	if ( wp_roles()->is_role( 'bp_contributor' ) ) remove_role( 'bp_moderator' );	
+	if ( wp_roles()->is_role( 'bp_author' ) ) remove_role( 'bp_author' );	
+	if ( wp_roles()->is_role( 'bp_super_author' ) ) remove_role( 'bp_super_author' );	
+	if ( wp_roles()->is_role( 'bp_manager' ) ) remove_role( 'bp_manager' );	
+	if ( wp_roles()->is_role( 'bp_super_manager' ) ) remove_role( 'bp_super_manager' );	
 }
 
 function battleplan_create_user_roles() {	
-	remove_role( 'bp_manager' );
-	add_role('bp_manager', __('Manager'), array( 'level_8'=>'true', 'level_7'=>'true', 'level_6'=>'true', 'level_5'=>'true', 'level_4'=>'true', 'level_3'=>'true', 'level_2'=>'true', 'level_1'=>'true', 'level_0'=>'true', 'read'=>'true', 'publish_pages'=>'true', 'edit_pages'=>'true', 'edit_others_pages'=>'true', 'edit_published_pages'=>'true', 'read_private_pages'=>'true', 'edit_private_pages'=>'true', 'delete_pages'=>'true', 'delete_others_pages'=>'true', 'delete_published_pages'=>'true', 'delete_private_pages'=>'true', 'publish_posts'=>'true', 'edit_posts'=>'true', 'edit_others_posts'=>'true', 'edit_published_posts'=>'true', 'read_private_posts'=>'true', 'edit_private_posts'=>'true', 'delete_posts'=>'true', 'delete_others_posts'=>'true', 'delete_published_posts'=>'true', 'delete_private_posts'=>'true', 'moderate_comments'=>'true', 'manage_categories'=>'true', 'manage_links'=>'true', 'upload_files'=>'true', 'unfiltered_html'=>'true' ));	
+	$role = get_role('administrator');               
+    $role->add_cap( 'publish_jobsites');
+    $role->add_cap( 'edit_jobsites' );
+    $role->add_cap( 'delete_jobsites' );
+    $role->add_cap( 'edit_others_jobsites' );
+    $role->add_cap( 'delete_others_jobsites' );
+    $role->add_cap( 'edit_published_jobsites' );
+    $role->add_cap( 'delete_published_jobsites' );
+    $role->add_cap( 'read_private_jobsites' );
+    $role->add_cap( 'edit_private_jobsites' );
+    $role->add_cap( 'delete_private_jobsites' );
+    $role->add_cap( 'copy_jobsites' );	
 	
-	remove_role( 'bp_moderator' );
-	add_role('bp_moderator', __('Moderator'), array( 'level_4'=>'true', 'level_3'=>'true', 'level_2'=>'true', 'level_1'=>'true', 'level_0'=>'true', 'read'=>'true', 'publish_posts'=>'true', 'edit_posts'=>'true', 'edit_others_posts'=>'true', 'edit_published_posts'=>'true', 'read_private_posts'=>'true', 'edit_private_posts'=>'true', 'delete_posts'=>'true', 'delete_others_posts'=>'true', 'delete_published_posts'=>'true', 'delete_private_posts'=>'true', 'moderate_comments'=>'true', 'manage_categories'=>'true', 'manage_links'=>'true', 'upload_files'=>'true', 'unfiltered_html'=>'true' ));	
+	$caps_admin = array (
+		'update_core'					=> true,
+		'install_themes'				=> true,
+		'update_themes'					=> true,
+		'switch_themes' 				=> true,
+		'edit_themes'					=> true,
+		'edit_theme_options'			=> true,
+		'delete_themes'					=> true,
+		'manage_options'				=> true,
+		'manage_links'					=> true,
+		'import'						=> true,
+		'export'						=> true,
+		'edit_dashboard'				=> true,
+		'install_plugins'				=> true,
+		'activate_plugins' 				=> true,
+		'update_plugins'				=> true,
+		'edit_plugins'					=> true,
+		'delete_plugins'				=> true,
+		'manage_admin_columns'			=> true,
+		'manage_snapshots_items'		=> true,
+		'manage_snapshots_destinations'	=> true,
+		'manage_snapshots_settings'		=> true,
+		'manage_snapshots_import'		=> true,
+		'wpseo_manage_options'			=> true,
+		'wpseo_manage_redirects'		=> true,	
+		'edit_files'					=> true,
+		'moderate_comments' 			=> true,
+		'manage_categories' 			=> true,
+		'unfiltered_html'				=> true,
+		'publish_pages'					=> true,
+		'edit_pages'					=> true,
+		'delete_pages'					=> true,
+		'edit_others_pages'				=> true,
+		'delete_others_pages'	 		=> true,
+		'edit_published_pages'			=> true,
+		'delete_published_pages'		=> true,
+		'read_private_pages'			=> true,
+		'edit_private_pages'			=> true,
+		'delete_private_pages'			=> true,
+		'publish_posts'					=> true,
+		'edit_posts'					=> true,
+		'delete_posts'					=> true,
+		'edit_others_posts'				=> true,
+		'delete_others_posts'			=> true,
+		'edit_published_posts'			=> true,
+		'delete_published_posts'		=> true,
+		'read_private_posts'			=> true,
+		'edit_private_posts'			=> true,
+		'delete_private_posts'			=> true,
+		'copy_posts'					=> true,
+		'list_users'					=> true,
+		'create_users'					=> true,
+		'edit_users'					=> true,
+		'promote_users'					=> true,
+		'remove_users'					=> true,
+		'delete_users'					=> true,
+		'unfiltered_upload'				=> true,
+		'upload_files'					=> true,
+		'read'							=> true,
+	);
 	
+	$caps_subscriber = array (
+		'read'							=> true,	
+	);
+		
+	$caps_manage_plugins = array (		
+		'install_plugins'				=> true,
+		'activate_plugins' 				=> true,
+		'update_plugins'				=> true,
+		'edit_plugins'					=> true,
+		'delete_plugins'				=> true,
+		'upload_files'					=> true,
+		'read'							=> true,
+	);
+		
+	$caps_manage_users = array (
+		'list_users'					=> true,
+		'create_users'					=> true,
+		'edit_users'					=> true,
+		'promote_users'					=> true,
+		'remove_users'					=> true,
+		'delete_users'					=> true,
+		'upload_files'					=> true,
+		'read'							=> true,
+	);	
+		
+	$caps_jobsite_geo = array (
+		'publish_jobsites'				=> true,
+		'edit_jobsites'					=> true,
+		'delete_jobsites'				=> true,
+		'edit_others_jobsites'			=> true,
+		'delete_others_jobsites'		=> true,
+		'edit_published_jobsites'		=> true,
+		'delete_published_jobsites'		=> true,
+		'read_private_jobsites'			=> true,
+		'edit_private_jobsites'			=> true,
+		'delete_private_jobsites'		=> true,
+		'copy_jobsites'					=> true,
+		'upload_files'					=> true,
+		'read'							=> true,
+	);	
+	
+	$caps_post_editor = array (
+		'publish_posts'					=> true,
+		'edit_posts'					=> true,
+		'delete_posts'					=> true,
+		'edit_others_posts'				=> true,
+		'delete_others_posts'			=> true,
+		'edit_published_posts'			=> true,
+		'delete_published_posts'		=> true,
+		'read_private_posts'			=> true,
+		'edit_private_posts'			=> true,
+		'delete_private_posts'			=> true,
+		'copy_posts'					=> true,
+		'upload_files'					=> true,
+		'read'							=> true,
+	);	
+	
+	$caps_post_author = array (
+		'publish_posts'					=> true,
+		'edit_posts'					=> true,
+		'delete_posts'					=> true,
+		'copy_posts'					=> true,
+		'upload_files'					=> true,
+		'read'							=> true,	
+	);
+	
+	$caps_page_editor = array (
+		'publish_pages'					=> true,
+		'edit_pages'					=> true,
+		'delete_pages'					=> true,
+		'edit_others_pages'				=> true,
+		'delete_others_pages'	 		=> true,
+		'edit_published_pages'			=> true,
+		'delete_published_pages'		=> true,
+		'read_private_pages'			=> true,
+		'edit_private_pages'			=> true,
+		'delete_private_pages'			=> true,
+		'copy_posts'					=> true,
+		'upload_files'					=> true,
+		'read'							=> true,
+	);
+	
+	$caps_page_author = array (
+		'publish_pages'					=> true,
+		'edit_pages'					=> true,
+		'delete_pages'					=> true,
+		'copy_posts'					=> true,
+		'upload_files'					=> true,
+		'read'							=> true,
+	);
+
 	remove_role( 'bp_jobsite_geo_mgr' );
-	add_role('bp_jobsite_geo_mgr', __('Jobsite GEO'), array( 'level_2'=>'true', 'level_1'=>'true', 'level_0'=>'true', 'read'=>'true', 'publish_posts'=>'true', 'edit_posts'=>'true', 'edit_published_posts'=>'true', 'delete_posts'=>'true', 'delete_published_posts'=>'true', 'upload_files'=>'true', 'unfiltered_html'=>'true' ));
+	add_role('bp_jobsite_geo_mgr', __('Jobsite GEO'), array_merge( $caps_subscriber, $caps_jobsite_geo) );	
 	
-	remove_role( 'bp_author' );
-	add_role('bp_author', __('Author'), array( 'level_2'=>'true', 'level_1'=>'true', 'level_0'=>'true', 'read'=>'true', 'publish_posts'=>'true', 'edit_posts'=>'true', 'edit_published_posts'=>'true', 'delete_posts'=>'true', 'delete_published_posts'=>'true', 'upload_files'=>'true', 'unfiltered_html'=>'true' ));	
+	remove_role( 'bp_manage_plugins' );
+	add_role('bp_manage_plugins', __('Manage Plugins'), $caps_manage_plugins );
+	
+	remove_role( 'bp_manage_users' );
+	add_role('bp_manage_users', __('Manage Users'), $caps_manage_users );		
+	
+	remove_role( 'bp_page_editor' );
+	add_role('bp_page_editor', __('Page Editor'), $caps_page_editor );		
+	
+	remove_role( 'bp_page_author' );
+	add_role('bp_page_author', __('Page Author'), $caps_page_author );		
+	
+	remove_role( 'bp_post_editor' );
+	add_role('bp_post_editor', __('Post Editor'), $caps_post_editor );		
+	
+	remove_role( 'bp_post_author' );
+	add_role('bp_post_author', __('Post Author'), $caps_post_author );		
 	
 	remove_role( 'bp_subscriber' );
-	add_role('bp_subscriber', __('Subscriber'), array( 'level_1'=>'true', 'level_0'=>'true', 'read'=>'true' ));	
+	add_role('bp_subscriber', __('Subscriber'), $caps_subscriber );	
 }
 
+
+//add_action('init', 'battleplan_create_user_roles');	
+	
 //add_action('init', 'battleplan_getAndDisplayUserRoles');
 function battleplan_getAndDisplayUserRoles() {	
 	$caps = get_option('wp_user_roles') ? get_option('wp_user_roles') : array();	
@@ -1812,7 +1997,7 @@ add_action('pre_current_active_plugins', 'battleplan_plugin_hide');
 function battleplan_plugin_hide() {
   	if (_USER_LOGIN != 'battleplanweb') : 
 		global $wp_list_table;
-		$hidearr = array('enable-media-replace/enable-media-replace.php', 'git-updater/git-updater.php', 'git-updater/github-updater.php', 'git-updater-pro/git-updater-pro.php', 'blackhole-bad-bots/blackhole.php');  
+		$hidearr = array('admin-column-pro/admin-columns-pro.php', 'enable-media-replace/enable-media-replace.php', 'git-updater/git-updater.php', 'git-updater/github-updater.php', 'git-updater-pro/git-updater-pro.php');  
 
 		$myplugins = $wp_list_table->items;
 		foreach ($myplugins as $key => $val) :

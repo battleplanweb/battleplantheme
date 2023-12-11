@@ -96,18 +96,11 @@ function processChron($forceChron) {
 			if ( $formTitle == "Quote Request Form" ) $formTitle = "Quote Request";
 			if ( $formTitle == "Contact Us Form" ) $formTitle = "Customer Contact";		
 			if ( $formTitle == "Request A Catering Quote" ) $formTitle = "Catering Quote";			
-	
-			$formMail['subject'] = $formTitle." · [user-name]";	
-			$formMail['sender'] = "Website · ".str_replace(',', '', $GLOBALS['customer_info']['name'])." <email@admin.".str_replace('https://', '', get_bloginfo('url')).">";
-			$formMail['additional_headers'] = "Reply-to: [user-name] <[user-email]>\nBcc: Website Administrator <email@battleplanwebdesign.com>";
-	
-			if ( $rovin == "true" ) :					
-				if ( $formTitle != "Catering Quote" ) :
-					$formMail['subject'] = "[_raw_user-subject]";				
-					$formMail['additional_headers'] .= "\nBcc: Victor <victorv@babeschicken.com>";
-				else:
-					$formMail['additional_headers'] .= "\nCc: Kristin <kristin@babescatering.com>";	
-				endif;
+
+			if ( $rovin != "true" ) :					
+				$formMail['subject'] = $formTitle." · [user-name]";	
+				$formMail['sender'] = "Website · ".str_replace(',', '', $GLOBALS['customer_info']['name'])." <email@admin.".str_replace('https://', '', get_bloginfo('url')).">";
+				$formMail['additional_headers'] = "Reply-to: [user-name] <[user-email]>\nBcc: Website Administrator <email@battleplanwebdesign.com>";
 			endif;
 	
 			$formMail['use_html'] = 1;

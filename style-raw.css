@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 21.1.1
+Version: 21.1.2
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1513,7 +1513,18 @@ ul.tabs li.current {
 .style-alt .file-upload-btn,
 .style-alt ul.tabs li,
 .style-alt a.button:visited,
-.style-alt a.page-numbers:visited {
+.style-alt a.page-numbers:visited,
+a.button.style-alt,
+a.page-numbers.style-alt,
+span.page-numbers.style-alt,
+button.style-alt,
+input[type="button"].style-alt,
+input[type="reset"].style-alt,
+input[type="submit"].style-alt,
+.file-upload-btn.style-alt,
+ul.tabs li.style-alt,
+a.button.style-alt:visited,
+a.page-numbers.style-alt:visited{
 	font-family: 									var(--button-font-family-alt);
 	font-weight: 									var(--button-font-weight-alt);
 	font-size: 									var(--button-font-size-alt);
@@ -1549,7 +1560,6 @@ ul.tabs li.current {
 .style-alt a.page-numbers.tab-focus,
 .style-alt button.tab-focus,
 .style-alt input[type="button"].tab-focus,
-
 .style-alt input[type="reset"].tab-focus,
 .style-alt input[type="submit"].tab-focus,
 .style-alt .file-upload-btn.tab-focus,
@@ -1562,7 +1572,34 @@ ul.tabs li.current {
 .style-alt input[type="submit"]:active,
 .style-alt .file-upload-btn:active,
 .style-alt ul.tabs li:active,
-.style-alt ul.tabs li.current {
+.style-alt ul.tabs li.current,
+a.button.style-alt:hover,
+a.page-numbers.style-alt:hover,
+span.page-numbers.current.style-alt ,
+button.style-alt:hover,
+input[type="button"].style-alt:hover,
+input[type="reset"].style-alt:hover,
+input[type="submit"].style-alt:hover,
+.file-upload-btn.style-alt:hover,
+ul.tabs li.style-alt:hover,
+a.button.style-alt.tab-focus,
+a.page-numbers.style-alt.tab-focus,
+button.style-alt.tab-focus,
+input[type="button"].style-alt.tab-focus,
+input[type="reset"].style-alt.tab-focus,
+input[type="submit"].style-alt.tab-focus,
+.file-upload-btn.style-alt.tab-focus,
+ul.tabs li.style-alt.tab-focus,
+a.button.style-alt:active,
+a.page-numbers.style-alt:active,
+button.style-alt:active,
+input[type="button"].style-alt:active,
+input[type="reset"].style-alt:active,
+input[type="submit"].style-alt:active,
+.file-upload-btn.style-alt:active,
+ul.tabs li.style-alt:active,
+ul.tabs li.style-alt.current {
+
 	color: 										var(--button-color-hover-alt);
 	background: 									var(--button-background-hover-alt);
 	border:										var(--button-border-hover-alt);
@@ -3610,7 +3647,7 @@ h3.archive-subheadline {
 	margin-right:									8px;
 }
 
-.ad-promo {
+.place-ad {
 	margin: 										1.5em auto 2em;
 }
 
@@ -4894,6 +4931,8 @@ div[class*="-faux"] {
 	position:									relative;
 	display:									block;
 	width:										100%;
+
+
 	text-align: 								center;
 }
 
@@ -5018,6 +5057,7 @@ chat-widget .lc_text-widget--btn,
 .carousel.effect-fade-zoom .carousel-item.active.carousel-item-right,
 .carousel.effect-fade-zoom .carousel-item.carousel-item-prev.carousel-item-right,
 .carousel.effect-zoom-fade .carousel-item.active.carousel-item-left,
+
 .carousel.effect-zoom-fade .carousel-item.carousel-item-next.carousel-item-left,
 .carousel.effect-zoom-fade .carousel-item.active.carousel-item-right,
 .carousel.effect-zoom-fade .carousel-item.carousel-item-prev.carousel-item-right {
@@ -5523,6 +5563,7 @@ html.error503 h3 {
 	.flex.grid-1-1-2:not(.break-none):not(.break-3):not(.break-2):not(.break-1),
 	.flex.grid-1-2-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1),
 	.flex.grid-1-3-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1),
+
 	.flex.grid-2-1-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1) {
 		grid-template-columns: 						1fr 1fr;
 	}

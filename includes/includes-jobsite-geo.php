@@ -4,68 +4,49 @@
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
-# Setup
-# Setup Custom Events + Fields
-# Shortcodes
+# Admin
+# Register Custom Post Types
+# Setup Advanced Custom Fields
+# Basic Site Setup
 --------------------------------------------------------------*/
+
+
+ //wp_enqueue_script( 'battleplan-jobsite-geo', get_template_directory_uri().'/js/jobsite-geo.js', array('jquery'), _BP_VERSION, false );	
 
 
 
 /*--------------------------------------------------------------
-# Setup
+# Admin
 --------------------------------------------------------------*/
-// Set up javascript param with all events + expire old events
-//add_action( 'wp_head', 'battleplan_createEventLog', 0 );
-function battleplan_createEventLog() {	
-	$eventData = array();
-	$events = new WP_Query(array( 'post_type' => 'events', 'posts_per_page' => -1, ));
 
-	if ($events->have_posts()) :
-		while ($events->have_posts()) :
-			$events->the_post();	
-			$eventStart = strtotime(esc_attr(get_field( "start_date" )));			
-			$eventEnd = esc_attr(get_field( "end_date" )) ? strtotime(esc_attr(get_field( "end_date" ))) : $eventStart;
-			$days = (($eventEnd - $eventStart) / 86400) + 1;
-			$tag = '';
-			$eventTags = wp_get_post_terms(get_the_ID(), 'event-tags', array('field' => 'slug')); 
-			$eventSlugs = wp_list_pluck($eventTags, 'slug');
-			foreach ($eventSlugs as $eventSlug ) :
-				$tag .= ' event-'.$eventSlug;
-			endforeach;
-
-			for ($i=0; $i<$days; $i++) :
-				$eventDate = date('j, n, Y', $eventStart + ( 86400 * $i));
-				$eventData[] =  array('date' => $eventDate, 'event'=>'<div class="event'.$tag.'"><a href="'. get_permalink().'">'.get_the_post_thumbnail(get_the_ID(), "thumbnail", array( 'class' => 'calendar-event-icon' )).'<span class="hide-3 hide-2 hide-1">'.get_the_title().'</span></a></div>' );
-			endfor;
+// save important info to meta data upon publishing or updating post
+add_action('save_post', 'battleplan_saveJobsite', 10, 3);
+function battleplan_saveJobsite($post_id, $post, $update) {
+    if ( ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) || !current_user_can('edit_post', $post_id) || get_post_type($post_id) != 'jobsite_geo') return;
 	
-			if ( $eventEnd < time() ) wp_set_object_terms(get_the_ID(), 'expired', 'event-tags', false);			
-			if ( $eventEnd < strtotime('-2 months') ) wp_update_post(array( 'ID' => get_the_ID(), 'post_status' => 'draft' ));
+	// retrieve lat & long from Google API and add as post meta	
+	$address = esc_attr(get_field( "address" )).', '.esc_attr(get_field( "city" )).', '.esc_attr(get_field( "state" )).' '.esc_attr(get_field( "zip" ));
+	$googleAPI = "https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address)."&key=AIzaSyBqf0idxwuOxaG-j3eCpef1Bunv-YVdVP8";	
 	
-	  	endwhile;
+    $response = wp_remote_get($googleAPI);
+    if ( !is_wp_error($response)) :
+		$body = wp_remote_retrieve_body($response);
+		$data = json_decode($body, true);
+		if ($data['status'] == 'OK') update_post_meta($post_id, 'geocode', $data['results'][0]['geometry']['location']);
 	endif;
 	
-	wp_reset_postdata();
 	
-
-}
-
-
-
-
-add_action('add_meta_boxes', 'battleplan_move_tag_meta_box');
-function battleplan_move_tag_meta_box() {
-    remove_meta_box('tagsdiv-jobsite_geo-services', 'jobsite_geo', 'side'); 
-    add_meta_box('tagsdiv-jobsite_geo-services', 'Jobsite Services', 'post_tags_meta_box', 'jobsite_geo', 'normal', 'low'); 
+	// add city-state as location tag
+    $locationTag = esc_attr(get_field("city")).'-'.esc_attr(get_field("state")); 
+    $term = term_exists($locationTag, 'jobsite_geo-service-areas');
+    if (empty($term)) $term = wp_insert_term($locationTag, 'jobsite_geo-service-areas');
+    if (!is_wp_error($term)) wp_set_post_terms($post_id, $locationTag, 'jobsite_geo-service-areas');	
 	
-	remove_meta_box('tagsdiv-jobsite_geo-techs', 'jobsite_geo', 'side');
-    add_meta_box('tagsdiv-jobsite_geo-techs', 'Jobsite Technicians', 'post_tags_meta_box', 'jobsite_geo', 'normal', 'low'); 
 }
-
-
 
 
 /*--------------------------------------------------------------
-# Setup Custom Events + Fields
+# Register Custom Post Types
 --------------------------------------------------------------*/
 add_action( 'init', 'battleplan_registerJobsiteGEOPostType', 0 );
 function battleplan_registerJobsiteGEOPostType() {
@@ -79,59 +60,102 @@ function battleplan_registerJobsiteGEOPostType() {
 		'publicly_queryable'=>	true,
 		'exclude_from_search'=>	false,
 		'show_in_nav_menus'=>	true,
-		'supports'=>			array( 'title', 'editor',  'thumbnail', 'custom-fields', 'post-formats' ),
+		'supports'=>			array( 'title', 'editor', 'thumbnail', 'custom-fields', 'post-formats' ),
 		'hierarchical'=>		false,
 		'menu_position'=>		20,
 		'menu_icon'=>			'dashicons-location',
 		'has_archive'=>			true,
-		'capability_type'=>		'post',
-	));
-/*
-	register_taxonomy( 'event-cats', array( 'events' ), array(
-		'labels'=>array(
-			'name'=>			_x( 'Event Categories', 'Taxonomy General Name', 'text_domain' ),
-			'singular_name'=>	_x( 'Event Category', 'Taxonomy Singular Name', 'text_domain' ),
+		'capability_type' => 	'post',
+		'capabilities' => array(
+			'create_posts' => 	false,
 		),
-		'hierarchical'=>		true,
-		'show_ui'=>			true,
-        'show_admin_column'=>	true,
+		'map_meta_cap' => true,
 	));
-	*/
 	
 	register_taxonomy( 'jobsite_geo-services', array( 'jobsite_geo' ), array(
 		'labels'=>array(
-			'name'=>			_x( 'Jobsite Services', 'Taxonomy General Name', 'text_domain' ),
-			'singular_name'=>	_x( 'Jobsite Service', 'Taxonomy Singular Name', 'text_domain' ),
+			'name'=>			_x( 'Services', 'Taxonomy General Name', 'text_domain' ),
+			'singular_name'=>	_x( 'Service', 'Taxonomy Singular Name', 'text_domain' ),
+        	'menu_name' => 		'Services',
 		),
+        'public' => 			true,
 		'hierarchical'=>		false,
-		'show_ui'=>				true,
-        'show_admin_column'=>	true,
+        'show_ui' => 			true,
+        'show_in_menu' => 		true,
+        'show_in_nav_menus' => 	true,
+        'show_admin_column' => 	true,
+        'rewrite' => array(
+            'slug' => 			'services',
+            'with_front' => 	false,
+        ),
 	));
 	
 	register_taxonomy( 'jobsite_geo-techs', array( 'jobsite_geo' ), array(
 		'labels'=>array(
-			'name'=>			_x( 'Jobsite Technicians', 'Taxonomy General Name', 'text_domain' ),
-			'singular_name'=>	_x( 'Jobsite Technician', 'Taxonomy Singular Name', 'text_domain' ),
+			'name'=>			_x( 'Technicians', 'Taxonomy General Name', 'text_domain' ),
+			'singular_name'=>	_x( 'Technician', 'Taxonomy Singular Name', 'text_domain' ),
+        	'menu_name' => 		'Technicians',
 		),
+        'public' => 			true,
 		'hierarchical'=>		false,
-		'show_ui'=>				true,
-        'show_admin_column'=>	true,
+        'show_ui' => 			true,
+        'show_in_menu' => 		true,
+        'show_in_nav_menus' => 	true,
+        'show_admin_column' => 	true,
+        'rewrite' => array(
+            'slug' => 			'techs',
+            'with_front' => 	false,
+        ),
+	));
+	
+	register_taxonomy( 'jobsite_geo-service-areas', array( 'jobsite_geo' ), array(
+		'labels'=>array(
+			'name'=>			_x( 'Service Areas', 'Taxonomy General Name', 'text_domain' ),
+			'singular_name'=>	_x( 'Service Area', 'Taxonomy Singular Name', 'text_domain' ),
+        	'menu_name' => 		'Service Areas',
+		),
+        'public' => 			true,
+		'hierarchical'=>		false,
+        'show_ui' => 			true,
+        'show_in_menu' => 		true,
+        'show_in_nav_menus' => 	true,
+        'show_admin_column' => 	true,
+        'rewrite' => array(
+            'slug' => 			'service-areas',
+            'with_front' => 	false,
+        ),
 	));
 
 	//wp_insert_term( 'upcoming', 'event-tags' );	
 	//wp_insert_term( 'expired', 'event-tags' );	
 	//wp_insert_term( 'featured', 'event-tags' );	
 }
+	
+add_filter( 'register_post_type_args', 'battleplan_changeJobsiteGEOCaps' , 10, 2 );
+function battleplan_changeJobsiteGEOCaps( $args, $post_type ) {
+    if ( $post_type !== 'jobsite_geo'  ) return $args;
+
+    $args['capabilities'] = array(
+		'publish_posts'					=> 'publish_jobsites',
+		'edit_posts'					=> 'edit_jobsites',
+		'delete_posts'					=> 'delete_jobsites',
+		'edit_others_posts'				=> 'edit_others_jobsites',
+		'delete_others_posts'			=> 'delete_others_jobsites',
+		'edit_published_posts'			=> 'edit_published_jobsites',
+		'delete_published_posts'		=> 'delete_published_jobsites',
+		'read_private_posts'			=> 'read_private_jobsites',
+		'edit_private_posts'			=> 'edit_private_jobsites',
+		'delete_private_posts'			=> 'delete_private_jobsites',
+		'copy_posts'					=> 'copy_jobsites',
+    );
+
+    return $args;
+}
 
 
-
-
-
-
-
-
-
-
+/*--------------------------------------------------------------
+# Setup Advanced Custom Fields
+--------------------------------------------------------------*/
 add_action('acf/init', 'battleplan_add_jobsite_geo_acf_fields');
 function battleplan_add_jobsite_geo_acf_fields() {
 	acf_add_local_field_group( array(
@@ -510,11 +534,10 @@ function battleplan_add_jobsite_geo_acf_fields() {
 				'taxonomy' => '',
 				'return_format' => 'id',
 				'multiple' => 0,
-				'allow_null' => 0,
+				'allow_null' => 1,
 				'bidirectional' => 0,
 				'ui' => 1,
-				'bidirectional_target' => array(
-				),
+				'bidirectional_target' => array(),
 			),
 		),
 		'location' => array(
@@ -539,48 +562,30 @@ function battleplan_add_jobsite_geo_acf_fields() {
 }
 
 
-
 /*--------------------------------------------------------------
-# Shortcodes
+# Basic Site Setup
 --------------------------------------------------------------*/
 
-// Display teasers of upcoming events 
-//add_shortcode( 'event_teasers', 'battleplan_event_teasers' );
-function battleplan_event_teasers( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'style'=>'1', 'width'=>'default', 'grid'=>'1-1-1', 'tag'=>'featured', 'max'=>'3', 'offset'=>'0', 'start'=>'today', 'end'=>'1 year', 'valign'=>'stretch', 'show_btn'=>'true', 'btn_text'=>'Read More', 'excerpt'=>'true' ), $atts );
-	$start = date('Y-m-d', strtotime(esc_attr($a['start'])));	
-	$end = date('Y-m-d', strtotime(esc_attr($a['end'])));
-	$buildEvents = "";
-	
-	//$time = ($end - $start ) / 86400;
-	//echo 'start'.$start.' end'.$end.' time'.$time;
-	
-	$events = new WP_Query(array( 'post_type' => 'events', 'posts_per_page' => esc_attr($a['max']), 'offset' => esc_attr($a['offset']), 'tax_query' => array( array( 'taxonomy' => 'event-tags', 'field' => 'slug', 'terms' => esc_attr($a['tag']))), 'meta_key' => 'start_date', 'orderby' => 'meta_value_num', 'order' => 'ASC', 'meta_query' => array( 'relation' => 'AND', array( 'key' => 'start_date', 'value' => $start, 'compare' => '>=', 'type' => 'DATE' ), array( 'key' => 'start_date', 'value' => $end, 'compare' => '<=', 'type' => 'DATE' ) )));
-
-	if ($events->have_posts()) :
-		while ($events->have_posts()) :	
-			$events->the_post();
-	
-			$buildEvents .= '[col]';		
-			$buildEvents .= get_the_post_thumbnail( get_the_ID(), 'thumbnail', array( 'class' => 'aligncenter' ) ); 
-			$buildEvents .= '[txt]<h3>'.get_the_title().'</h3>';
-			$buildEvents .= include('wp-content/themes/battleplantheme/elements/element-events-meta.php');	
-			if ( esc_attr($a['excerpt']) == "true" ) $buildEvents.= '<p>'.get_the_excerpt().'</p>';		
-			$buildEvents .= '[/txt]';
-			if ( esc_attr($a['show_btn']) == "true" ) $buildEvents .= '[btn link="'.esc_url(get_the_permalink($post->ID)).'"]'.esc_attr($a['btn_text']).'[/btn]';			
-			$buildEvents .= '[/col]';
-			$num++;	
-	  	endwhile;
-	endif;
-	
-	wp_reset_postdata();
-
-	if ( $buildEvents ) :
-		$buildList = '[section name="'.esc_attr($a['name']).'" style="'.esc_attr($a['style']).'" width="'.esc_attr($a['width']).'" class="event-teasers"]';
-		$buildList .= '[layout grid="'.esc_attr($a['grid']).'" valign="'.esc_attr($a['valign']).'"]';		
-		$buildList .= $buildEvents;
-		$buildList .= '[/layout][/section]';	
-	endif;
-	return do_shortcode($buildList);
+add_action( 'pre_get_posts', 'battleplan_override_jobsite_query', 10 );
+function battleplan_override_jobsite_query( $query ) {
+	if (!is_admin() && $query->is_main_query()) :		
+		if ( is_post_type_archive('jobsite_geo') || is_tax('jobsite_geo-service-areas') || is_tax('jobsite_geo-services') || is_tax('jobsite_geo-techs') ) : 
+			$query->set( 'post_type','jobsite_geo');
+			$query->set( 'posts_per_page', 10);
+			$query->set( 'meta_key', 'job_date' );
+        	$query->set( 'orderby', 'meta_value_num' );
+        	$query->set( 'order', 'DESC');
+		endif;
+	endif; 
 }
+
+add_filter('template_include', 'battleplan_jobsite_template');
+function battleplan_jobsite_template($template) {
+    if ( is_tax('jobsite_geo-service-areas') || is_tax('jobsite_geo-services') || is_tax('jobsite_geo-techs') ) {
+        $template = get_template_directory().'/archive-jobsite_geo.php';
+    }
+    return $template;
+}
+
+
 ?>

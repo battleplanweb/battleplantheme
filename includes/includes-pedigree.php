@@ -30,7 +30,7 @@ function battleplan_registerPedigreePostTypes() {
 		'menu_position'       => 20,
 		'menu_icon'           => 'dashicons-paperclip',
 		'has_archive'         => true,
-		'capability_type'     => 'post',
+		'capability_type'     => 'page',
 	));
 	register_post_type( 'dogs', array (
 		'label'               => __( 'dogs', 'battleplan' ),
@@ -46,7 +46,7 @@ function battleplan_registerPedigreePostTypes() {
 		'menu_position'       => 20,
 		'menu_icon'           => 'dashicons-exerpt-view',
 		'has_archive'         => true,
-		'capability_type'     => 'post',
+		'capability_type'     => 'page',
 	));
 	register_taxonomy( 'dog-tags', array( 'dogs' ), array(
 		'labels'=>array(
@@ -72,7 +72,7 @@ function battleplan_registerPedigreePostTypes() {
 		'menu_position'       => 20,
 		'menu_icon'           => 'dashicons-clock',
 		'has_archive'         => true,
-		'capability_type'     => 'post',
+		'capability_type'     => 'page',
 	));
 }
 

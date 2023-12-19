@@ -114,7 +114,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 					location = data["city"] + ", " + data["country_name"];
 				}
 				
-				setCookie("user-loc", location, '');
+				setCookie("user-loc", location, '');				
+				setCookie("user-country", data["country_name"], '');
 								
 				if ( distance < 3000 ) { 	 		
 					$.post({

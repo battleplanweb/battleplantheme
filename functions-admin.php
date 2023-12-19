@@ -238,7 +238,10 @@ function battleplan_remove_menus() {
 	if ( is_null(get_page_by_path('widgets', OBJECT, 'elements')) ) add_submenu_page( 'edit.php?post_type=elements', 'Widgets', 'Widgets', 'manage_options', 'widgets.php' );
 
 	add_submenu_page( 'edit.php?post_type=elements', 'Menus', 'Menus', 'manage_options', 'nav-menus.php' );		
-	add_submenu_page( 'edit.php?post_type=elements', 'Contact Forms', 'Contact Forms', 'manage_options', 'admin.php?page=wpcf7' );		
+	add_submenu_page( 'edit.php?post_type=elements', 'Contact Forms', 'Contact Forms', 'manage_options', 'admin.php?page=wpcf7' );	
+	
+	add_submenu_page( 'edit.php?post_type=elements', 'Contact Forms Integration', '&nbsp;└&nbsp;Integration', 'manage_options', 'admin.php?page=wpcf7-integration' );		
+	
 	add_submenu_page( 'edit.php?post_type=elements', 'Comments', 'Comments', 'manage_options', 'edit-comments.php' );
 	add_submenu_page( 'edit.php?post_type=elements', 'Custom Fields', 'Custom Fields', 'manage_options', 'edit.php?post_type=acf-field-group' );		
 	add_submenu_page( 'edit.php?post_type=elements', 'Themes', 'Themes', 'manage_options', 'themes.php' );		
@@ -251,8 +254,8 @@ function battleplan_remove_menus() {
 		add_submenu_page( 'tools.php', 'WP Mail SMTP', 'WP Mail SMTP', 'manage_options', 'options-general.php?page=wp-mail-smtp' );
 
 		add_submenu_page( 'tools.php', 'Yoast Settings', 'Yoast Settings', 'manage_options', 'admin.php?page=wpseo_page_settings' );
-		add_submenu_page( 'tools.php', 'Yoast Local', 'Yoast Local', 'manage_options', 'admin.php?page=wpseo_local' );
-		add_submenu_page( 'tools.php', 'Yoast Redirects', 'Yoast Redirects', 'manage_options', 'admin.php?page=wpseo_redirects' );
+		add_submenu_page( 'tools.php', 'Yoast Local', '&nbsp;└&nbsp;Local', 'manage_options', 'admin.php?page=wpseo_local' );
+		add_submenu_page( 'tools.php', 'Yoast Redirects', '&nbsp;└&nbsp;Redirects', 'manage_options', 'admin.php?page=wpseo_redirects' );
 	endif;		
 }
 

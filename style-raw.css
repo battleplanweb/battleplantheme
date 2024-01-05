@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 21.2
+Version: 22.0
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -2644,6 +2644,8 @@ section.section.break-out {
 .main-navigation ul.main-menu li.active > a, 
 .main-navigation ul.main-menu li > a.tab-focus,
 .widget-navigation ul.menu li:hover > a, 
+
+
 .widget-navigation ul.menu li.active > a, 
 .widget-navigation ul.menu li > a.tab-focus {    
 	color: 										var(--white);
@@ -2790,6 +2792,7 @@ section.section.break-out {
 
 .menu-edge .menu-with-logo .menu-logo {
 	grid-column:									edge-start;
+
 }
 
 	.menu-with-logo.stuck .menu-logo {
@@ -4120,7 +4123,8 @@ img.img-404 {
 	margin: 										0 auto;
 }
 
-.carousel.mult-1 .block-image.image-testimonials.testimonials-generic-icon {
+.carousel.mult-1 .block-image.image-testimonials.testimonials-generic-icon,
+.block-image.image-testimonials.testimonials-generic-icon {  /* 2023-12-31 added this without the .carousel.mult-1 so that it works when testimonials are used on Jobsite GEO */
 	width: 											80%;
 	margin: 										10% auto;
 }

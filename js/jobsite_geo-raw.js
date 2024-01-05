@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		
 		
 		
+		$('#map img').addClass('noFX');
 		
 		
 		

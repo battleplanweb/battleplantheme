@@ -8,12 +8,8 @@
 # Register Custom Post Types
 # Setup Advanced Custom Fields
 # Basic Site Setup
+# Setup Re-directs
 --------------------------------------------------------------*/
-
-
- //wp_enqueue_script( 'battleplan-jobsite-geo', get_template_directory_uri().'/js/jobsite-geo.js', array('jquery'), _BP_VERSION, false );	
-
-
 
 /*--------------------------------------------------------------
 # Admin
@@ -41,7 +37,7 @@ function battleplan_saveJobsite($post_id, $post, $update) {
     $term = term_exists($locationTag, 'jobsite_geo-service-areas');
     if (empty($term)) $term = wp_insert_term($locationTag, 'jobsite_geo-service-areas');
     if (!is_wp_error($term)) wp_set_post_terms($post_id, $locationTag, 'jobsite_geo-service-areas');	
-	
+	set_post_thumbnail($post_id, esc_attr(get_field( "jobsite_photo_1")) );	
 }
 
 
@@ -156,6 +152,8 @@ function battleplan_changeJobsiteGEOCaps( $args, $post_type ) {
 /*--------------------------------------------------------------
 # Setup Advanced Custom Fields
 --------------------------------------------------------------*/
+$media_library = get_option('jobsite_geo')['media_library'] == 'limited' ? 'uploadedTo' : 'all';
+
 add_action('acf/init', 'battleplan_add_jobsite_geo_acf_fields');
 function battleplan_add_jobsite_geo_acf_fields() {
 	acf_add_local_field_group( array(
@@ -346,7 +344,7 @@ function battleplan_add_jobsite_geo_acf_fields() {
 					'id' => '',
 				),
 				'return_format' => 'id',
-				'library' => 'uploadedTo',
+				'library' => $media_library,
 				'min_width' => '',
 				'min_height' => '',
 				'min_size' => '',
@@ -371,7 +369,7 @@ function battleplan_add_jobsite_geo_acf_fields() {
 					'id' => '',
 				),
 				'return_format' => 'id',
-				'library' => 'uploadedTo',
+				'library' => $media_library,
 				'min_width' => '',
 				'min_height' => '',
 				'min_size' => '',
@@ -396,7 +394,7 @@ function battleplan_add_jobsite_geo_acf_fields() {
 					'id' => '',
 				),
 				'return_format' => 'id',
-				'library' => 'uploadedTo',
+				'library' => $media_library,
 				'min_width' => '',
 				'min_height' => '',
 				'min_size' => '',
@@ -421,7 +419,7 @@ function battleplan_add_jobsite_geo_acf_fields() {
 					'id' => '',
 				),
 				'return_format' => 'id',
-				'library' => 'uploadedTo',
+				'library' => $media_library,
 				'min_width' => '',
 				'min_height' => '',
 				'min_size' => '',
@@ -585,6 +583,26 @@ function battleplan_jobsite_template($template) {
         $template = get_template_directory().'/archive-jobsite_geo.php';
     }
     return $template;
+}
+
+
+/*--------------------------------------------------------------
+# Setup Re-directs
+--------------------------------------------------------------*/
+add_action('template_redirect', 'battleplan_redirect_to_service_area_archive');
+function battleplan_redirect_to_service_area_archive() {
+    if (is_singular('jobsite_geo')) :
+        $post_id = get_the_ID();
+		$taxonomy = 'jobsite_geo-service-areas';
+		$terms = get_the_terms($post_id, $taxonomy);
+
+		if ($terms && !is_wp_error($terms)) :
+			$term_names = array();    
+			foreach ($terms as $term) $term_names[] = $term->name;
+		endif;
+
+		wp_redirect('/service-areas/'.$term_names[0], 301);
+	endif;
 }
 
 

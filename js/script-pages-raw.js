@@ -46,7 +46,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 # Set up animation
 --------------------------------------------------------------*/
 	
-var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
+	var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 
 // Gracefully start to fade out the pre-loader
 	var opacity = 1, loader = document.getElementById("loader"), color = getComputedStyle(loader).getPropertyValue("background-color"), [r,g,b,a] = color.match(/\d+/g).map(Number), bgTimer = setInterval(function() {
@@ -795,23 +795,24 @@ var pageViews=getCookie('pages-viewed'), pageLimit = 300, speedFactor = 0.5;
 /*--------------------------------------------------------------
 # Delay parsing of JavaScript
 --------------------------------------------------------------*/
-	$(window).on('pageshow', function(event) {
+	window.addEventListener('pageshow', (event) => {
   		// Check if the page is loaded from the cache or not
-  		if (event.originalEvent.persisted || window.performance && window.performance.navigation.type === 2) {
+  		if (event.persisted || window.performance && window.performance.navigation.type === 2) {
     		// Page is loaded from the cache or navigated using the back button
-    			clearInterval(bgTimer);
-    			$("#loader").fadeOut(300, function() { resetLoader(); });
+            $("#loader").fadeOut(300, function() { });
+            clearInterval(bgTimer);
 		}
 	});
 	
 	$(window).on( 'load', function() {
 	// Fade out pre-loader screen when site is fully loaded
 		clearInterval(bgTimer);		
-		$("#loader").fadeOut(300, function() { resetLoader(); });
+		//$("#loader").fadeOut(300, function() { resetLoader(); });
+		$("#loader").fadeOut(300, function() { });
 		
 	// Fade in pre-loader when changing pages
-		window.addEventListener('beforeunload', function (e) { $('#loader').fadeIn(300); });
-				
+		//window.addEventListener('beforeunload', function (e) { $('#loader').fadeIn(300); });
+								
 	// Set up Locked Message position, delay, & cookie	
 		$('section.section-lock').each(function() {
 			var thisLock = $(this), initDelay = thisLock.attr('data-delay'), lockPos = thisLock.attr('data-pos'), cookieExpire = thisLock.attr('data-show'), buttonActivated = thisLock.attr('data-btn');

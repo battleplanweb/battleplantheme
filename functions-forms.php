@@ -131,7 +131,7 @@ function battleplan_setupFormEmail( $contact_form, &$abort, $submission ) {
 
 	$spamIntercept = '';
 	
-	if ( $userCountry != "United States" ) $spamIntercept .= ' Country;';
+	if ( stripos($buildEmail, "Babe's Chicken") === false && stripos($buildEmail, "Sweetie Pie's") === false && stripos($buildEmail, "Bubba's Cooks") === false && $userCountry != "United States" ) $spamIntercept .= ' Country;';
 
 	foreach($bad_ips as $bad_ip) :
 		if (stripos($ip, $bad_ip) !== false) $spamIntercept .= ' IP;';

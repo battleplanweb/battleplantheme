@@ -21,7 +21,10 @@ function battleplan_getBizInfo($atts, $content = null ) {
 			$openMessage = is_biz_open() ? "<span>Call Us, We're Open!</span>" : "";
 			$phoneFormat = do_shortcode('<div class="mm-bar-btn mm-bar-phone call-btn" aria-hidden="true">'.$openMessage.'</div><span class="sr-only">Call Us</span>');
 		elseif ( strpos($data, 'alt') !== false ) :
-			if ( isset($GLOBALS['customer_info'][$data]) ) $phoneFormat = $GLOBALS['customer_info'][$data];	
+			if ( isset($GLOBALS['customer_info'][$data]) ) :
+				$phoneFormat = $GLOBALS['customer_info'][$data];
+				$phoneBasic = str_replace(array('(', ')', '-', '.', ' '), '', $phoneFormat);
+			endif;
 		endif;
 		if ( strpos($data, '-notrack') !== false ):
 			return '<a class="phone-link" href="tel:1-'.$phoneBasic.'">'.$phoneFormat.'</a>';
@@ -332,15 +335,24 @@ function battleplan_addBusinessHours( $atts, $content = null ) {
 		array_unshift($days, 'sunday');
 	else:
 		array_push($days, 'sunday');
-	endif;		 
+	endif;		 	
+	
+ 	$googleInfo = get_option('bp_gbp_update') ? get_option('bp_gbp_update') : array();
+	$placeIDs = $GLOBALS['customer_info']['pid'] ? $GLOBALS['customer_info']['pid'] : 0;	
+	if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
+	$primePID = $placeIDs[0];
+	
+	$getHours = array( 'monday'=>$googleInfo[$primePID]['hours']['weekday_text'][0], 'tuesday'=>$googleInfo[$primePID]['hours']['weekday_text'][1], 'wednesday'=>$googleInfo[$primePID]['hours']['weekday_text'][2], 'thursday'=>$googleInfo[$primePID]['hours']['weekday_text'][3], 'friday'=>$googleInfo[$primePID]['hours']['weekday_text'][4], 'saturday'=>$googleInfo[$primePID]['hours']['weekday_text'][5], 'sunday'=>$googleInfo[$primePID]['hours']['weekday_text'][6] );
 	
 	$buildHours = '<div class="office-hours '.$direction.'">';
 	
 	foreach ( $days as $day ) :
+		$removeDay = strpos($getHours[$day], ": ");
+		if ( $removeDay !== false ) $hours = substr($getHours[$day], $removeDay + 2);
 		$buildHours .= '<div class="row row-'.substr($day, 0, 3).'">';
 		$printDay = esc_attr($a['abbr']) == "true" ? substr($day, 0, 3) : $day;
 		$buildHours .= '<div class="col-day">'.$printDay.'</div>';
-		$buildHours .= '<div class="col-all">[get-biz info="hours-'.substr($day, 0, 3).'"]</div>';
+		$buildHours .= '<div class="col-all">'.$hours.'</div>';
 		$buildHours .= '</div>';
 	endforeach;
 	
@@ -651,7 +663,6 @@ function battleplan_getBuildArchive($atts, $content = null) {
 			$textSize = getTextSize($picSize); 
 		endif;			
 	elseif ( $type == "testimonials" ) : 	
-		//$archiveImg = do_shortcode("[img size='".$picSize."' class='image-".$type." testimonials-generic-icon']<img src='/wp-content/themes/battleplantheme/common/logos/anonymous-icon.webp' class='img-archive img-testimonials wp-post-image' alt='' />[/img]"); 
 		$archiveImg = do_shortcode("[img size='".$picSize."' class='image-".$type." testimonials-generic-icon']<svg version='1.1' class='anonymous-icon' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' x='0px' y='0px' viewBox='0 0 400 400' xml:space='preserve'><g><path class='user-icon' d='M332,319c-34.9,30-80.2,48.2-129.8,48.4h-1.7c-49.7-0.2-95.2-18.5-130.1-48.7c12.6-69,51.6-123.1,100.6-139c-27.6-11.8-46.9-39.1-46.9-71c0-42.6,34.5-77.1,77-77.1s77.1,34.5,77.1,77.1c0,31.9-19.3,59.2-46.9,71C276.7,195,315.7,249,332,319z'/></g></svg>[/img]"); 		
 		if ( $textSize == "" ) : 
 			$textSize = getTextSize($picSize); 

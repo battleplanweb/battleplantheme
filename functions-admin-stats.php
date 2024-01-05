@@ -56,8 +56,8 @@ $ga4_devices_data = is_array(get_option('bp_ga4_devices_01')) ? get_option('bp_g
 $ga4_speed_data = is_array(get_option('bp_ga4_speed_01')) ? get_option('bp_ga4_speed_01') : array();
 $ga4_resolution_data = is_array(get_option('bp_ga4_resolution_01')) ? get_option('bp_ga4_resolution_01') : array();
 $ga4_achievementId_data = is_array(get_option('bp_ga4_achievementId_01')) ? get_option('bp_ga4_achievementId_01') : array();
-$excludeCities = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, OR'); 
-
+$excludeCities = array('Orangetree, FL', 'Ashburn, VA', 'Boardman, OR', 'Irvine, CA', 'Prineville, OR', 'Forest City, NC', 'Altoona, IA'); 
+//https://fullpath.zendesk.com/hc/en-us/articles/360039889971-Facebook-Google-Bot-Traffic
 
 // Set up Visitor Trends widget on dashboard
 $GLOBALS['ga4_date'] = array();

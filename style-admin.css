@@ -1161,6 +1161,68 @@ table.acp-ie-table .title.column-title .acp-ie-controls {
 	cursor: 										pointer;
 }
 
+/* 2: Phones (landscape) + Tablets (portrait) */
+@media (max-width: 860px) {	
+	#adminmenumain {
+		height: 									46px;
+	}
+	
+	#adminmenu {
+		margin: 									-1px 0 0;
+	}
+	
+	#adminmenuback {
+		top: 										46px;
+	}
+	
+	#wpadminbar {
+		display: 									block;
+	}
+	
+	#wpcontent {
+		padding: 									0 7px;
+  	}
+	
+	#dashboard-widgets {
+  		grid-template-columns: 						1fr;
+	}
+	
+	.wp-admin .row-actions {
+  		opacity: 									1;
+		justify-content: 							end;
+	}
+	
+	.tablenav.top,
+	.wp-list-table.table-view-list.posts tfoot,
+	#postbox-container-1 #submitdiv #minor-publishing #visibility,
+	#postbox-container-1 #submitdiv #minor-publishing #yoast-seo-publishbox-section {
+		display: 									none !important;
+	}
+	
+	#post-body,
+	#postbox-container-1 #side-sortables {
+		display: 									grid;
+		grid-template-columns: 						1fr;
+	}
+	
+	#post-body-content,
+	#postbox-container-1 #side-sortables div {
+		order: 										1;
+	}
+	
+	#postbox-container-1 {
+		order: 										3;
+		margin-top: 								20px;
+	}
+	
+	#postbox-container-2,
+	#postbox-container-1 #side-sortables #submitdiv {
+		order: 										2;
+	}	
+}	
+
+
+
 /* 1: Phones (portrait) */
 @media (max-width: 576px) {	
 	.trend-buttons,

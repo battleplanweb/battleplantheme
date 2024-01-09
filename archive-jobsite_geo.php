@@ -56,16 +56,18 @@ get_header(); ?>
 				$now = new DateTime();
     			$interval = $now->diff($jobDateTimeImm);
 
-    			if ($interval->y > 0) {
-        			$when = $interval->y == 1 ? 'a year ago' : $interval->y . ' years ago';
-				} elseif ($interval->m > 0) {
-        			$when =  $interval->m == 1 ? 'a month ago' : $interval->m . ' months ago';
-    			} elseif ($interval->d >= 7) {
+    			if ($interval->y > 0) :
+        			$when = $interval->y == 1 ? 'A Year Ago' : $interval->y . ' Years Ago';
+				elseif ($interval->m > 0) :
+        			$when =  $interval->m == 1 ? 'A Month Ago' : $interval->m . ' Months Ago';
+    			elseif ($interval->d >= 7) :
         			$weeks = floor($interval->d / 7);
-       				$when =  $weeks == 1 ? 'a week ago' : $weeks . ' weeks ago';
-    			} elseif ($interval->d > 0) {
-        			$when =  $interval->d == 1 ? 'a day ago' : $interval->d . ' days ago';
-    			} 		
+       				$when =  $weeks == 1 ? 'A Week Ago' : $weeks . ' Weeks Ago';
+    			elseif ($interval->d > 0) :
+        			$when =  $interval->d == 1 ? 'Yesterday' : $interval->d . ' Days Ago';
+    			else:
+        			$when =  'Today';
+				endif;
 				
 				$name = get_the_title();
 				$address = esc_attr(get_field( "address" ));
@@ -231,7 +233,7 @@ get_header(); ?>
 		
 			endwhile; 		
 		
-		$GLOBALS['mapPins'] = json_encode($lat_lng);		
+		$GLOBALS['mapPins'] = json_encode($lat_lng);	
 		
 		// Set up javascript to build map	
 		add_action('wp_footer', 'battleplan_googleMapsAPI');
@@ -239,7 +241,9 @@ get_header(); ?>
 			<script defer nonce="<?php echo _BP_NONCE; ?>">
 				var addresses = <?php echo $GLOBALS['mapPins']; ?>;
 				var geocoder, map, totalDis = 0, midLat = 0, midLng = 0, maxLat = 0, minLat = 0, maxLng = 0, minLng = 0, totalPins = addresses.length;
-
+				var pinX = <?php echo get_option('jobsite_geo')['pin_anchor_x']; ?>;
+				var pinY = <?php echo get_option('jobsite_geo')['pin_anchor_y']; ?>;								
+					
 				function initMap() { 
 					geocoder = new google.maps.Geocoder();
 					
@@ -290,7 +294,7 @@ get_header(); ?>
 								url: '<?php echo site_url() ?>/wp-content/uploads/jobsite_geo-pin.webp', 
 								scaledSize: new google.maps.Size(60, 60),
 								origin: new google.maps.Point(0, 0), 
-								anchor: new google.maps.Point(30, 55)
+								anchor: new google.maps.Point(pinX, pinY)
 							};
 
 							if (!isNaN(lat) && !isNaN(lng)) {

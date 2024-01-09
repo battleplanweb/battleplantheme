@@ -153,6 +153,7 @@ function battleplan_changeJobsiteGEOCaps( $args, $post_type ) {
 # Setup Advanced Custom Fields
 --------------------------------------------------------------*/
 $media_library = get_option('jobsite_geo')['media_library'] == 'limited' ? 'uploadedTo' : 'all';
+$default_state = get_option('jobsite_geo')['default_state'] != '' ? get_option('jobsite_geo')['default_state'] : '';
 
 add_action('acf/init', 'battleplan_add_jobsite_geo_acf_fields');
 function battleplan_add_jobsite_geo_acf_fields() {
@@ -216,7 +217,8 @@ function battleplan_add_jobsite_geo_acf_fields() {
 				'type' => 'text',
 				'instructions' => '',
 				'required' => 1,
-				'conditional_logic' => 0,
+				'conditional_logic' => 0,				
+				'default_value' => $default_state,
 				'wrapper' => array(
 					'width' => '7%',
 					'class' => '',
@@ -328,7 +330,53 @@ function battleplan_add_jobsite_geo_acf_fields() {
 					'class' => '',
 					'id' => '',
 				),
-			),						
+			),		
+						
+			array(
+				'key' => 'field_auto_make',
+				'label' => 'Make',
+				'name' => 'auto_make',
+				'aria-label' => '',
+				'type' => 'text',
+				'instructions' => '',
+				'required' => 0,
+				'conditional_logic' => 0,
+				'wrapper' => array(
+					'width' => '33%',
+					'class' => '',
+					'id' => '',
+				),
+			),
+			array(
+				'key' => 'field_auto_model',
+				'label' => 'Model',
+				'name' => 'auto_model',
+				'aria-label' => '',
+				'type' => 'text',
+				'instructions' => '',
+				'required' => 0,
+				'conditional_logic' => 0,
+				'wrapper' => array(
+					'width' => '33%',
+					'class' => '',
+					'id' => '',
+				),
+			),
+			array(
+				'key' => 'field_auto_year',
+				'label' => 'Year',
+				'name' => 'auto_year',
+				'aria-label' => '',
+				'type' => 'text',
+				'instructions' => '',
+				'required' => 0,
+				'conditional_logic' => 0,
+				'wrapper' => array(
+					'width' => '33%',
+					'class' => '',
+					'id' => '',
+				),
+			),		
 			array(
 				'key' => 'field_photo_1',
 				'label' => 'Photo #1',
@@ -559,7 +607,6 @@ function battleplan_add_jobsite_geo_acf_fields() {
 	));
 }
 
-
 /*--------------------------------------------------------------
 # Basic Site Setup
 --------------------------------------------------------------*/
@@ -584,6 +631,23 @@ function battleplan_jobsite_template($template) {
     }
     return $template;
 }
+
+// rename files for jobsite geo images
+add_filter('wp_handle_upload_prefilter', 'battleplan_handle_jobsite_geo_image_upload');
+function battleplan_handle_jobsite_geo_image_upload($file) {
+	$current_user = wp_get_current_user();
+	
+	if ( isset($_REQUEST['post_id']) ) :
+        $post_id = $_REQUEST['post_id'];
+        $post = get_post($post_id);
+	endif;
+
+    if ( ($post && $post->post_type === 'jobsite_geo') || in_array('bp_jobsite_geo_mgr', $current_user->roles) ):
+   		$file['name'] = 'jobsite_geo-'.$post_id.'--'. $file['name'];
+    endif;	
+	
+    return $file;
+};
 
 
 /*--------------------------------------------------------------

@@ -12,7 +12,7 @@
 #map.map-jobsite_geo {
 	width: 										700px;
 	height: 									700px;
-	margin: 									1.5em 0 3em;
+	margin: 									1.5em auto 3em;
 }
 
 .section.archive-content.archive-jobsite_geo .jobsite_geo-job_meta {

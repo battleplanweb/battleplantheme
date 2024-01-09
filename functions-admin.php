@@ -373,6 +373,22 @@ function custom_posts_per_page_based_on_type_in_admin( $per_page, $post_type ) {
 /*--------------------------------------------------------------
 # Admin Page Set Up
 --------------------------------------------------------------*/
+// Add important info as body classes
+// Define a function to add the option value to body class
+add_filter('admin_body_class', 'battleplan_add_body_classes');
+function battleplan_add_body_classes($classes) {
+    $siteType = $GLOBALS['customer_info']['site-type'];
+    $bizType = $GLOBALS['customer_info']['business-type'];
+
+    if ( $siteType ) $classes .= ' site-type-'.$siteType;
+    if ( $bizType ) $classes .= ' business-type-'.$bizType;
+
+    return $classes;
+}
+
+// Hook the function to the admin_body_class filter
+
+
 // Add "Remove Sidebar" checkbox to Page Attributes meta box
 add_action( 'page_attributes_misc_attributes', 'battleplan_remove_sidebar_checkbox', 10, 1 );
 function battleplan_remove_sidebar_checkbox($post) { 

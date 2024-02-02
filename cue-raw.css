@@ -42,8 +42,7 @@
 
 .mejs-button button::before {
 	display:									inline-block;
-	font-family: 								Font Awesome;
-	font-weight:								900;
+	font-family: 								var(--font-icons);
 	font-size:									20px;
 }
 

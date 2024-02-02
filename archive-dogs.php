@@ -27,10 +27,10 @@ get_header(); ?>
 			$addClass = "";
 			ob_start(); ?>
 				<div class="row-of-buttons">
-					<div class="block block-button"><button class="all-btn" tabindex="0"><i class='fa fas fa-venus-mars'></i> All</button></div>
-					<div class="block block-button"><button class="female-btn" tabindex="0"><i class='fa fas fa-venus'></i> Females</button></div>
-					<div class="block block-button"><button class="male-btn" tabindex="0"><i class='fa fas fa-mars'></i> Males</button></div>
-					<div class="block block-button"><button class="legacy-btn" tabindex="0"><i class='fa fas fa-medal'></i> Legacy Sires</button></div>
+					<div class="block block-button"><button class="all-btn" tabindex="0"><span class='icon sex-both'></span> All</button></div>
+					<div class="block block-button"><button class="female-btn" tabindex="0"><span class='icon sex-female'></span> Females</button></div>
+					<div class="block block-button"><button class="male-btn" tabindex="0"><span class='icon sex-male'></span> Males</button></div>
+					<div class="block block-button"><button class="legacy-btn" tabindex="0"><span class='icon medal'></span> Legacy Sires</button></div>
 				</div>
 				
 				<div class="dog-description"> 
@@ -72,7 +72,7 @@ get_header(); ?>
 			$displayArchive .= do_shortcode('[section width="inline" class="archive-content archive-'.get_post_type().'"][layout grid="'.$grid.'" valign="'.$valign.'"]'.$buildArchive.'[/layout][/section]');
 		
 			$displayArchive .= '<footer class="archive-footer">';
-				$displayArchive .= get_the_posts_pagination( array( 'mid_size' => 2, 'prev_text' => _x( '<i class="fa fa-chevron-left"></i>', 'Previous set of posts' ), 'next_text' => _x( '<i class="fa fa-chevron-right"></i>', 'Next set of posts' ), ));
+				$displayArchive .= get_the_posts_pagination( array( 'mid_size' => 2, 'prev_text' => _x( '<span class="icon chevron-left" aria-hidden="true"></span>', 'Previous set of posts' ), 'next_text' => _x( '<span class="icon chevron-right" aria-hidden="true"></span>', 'Next set of posts' ), ));
 			$displayArchive .= '</footer><!-- .archive-footer-->';
 		
 			echo $displayArchive;	

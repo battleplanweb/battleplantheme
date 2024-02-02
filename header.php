@@ -2,15 +2,15 @@
 <?php 
 	$nonce = _BP_NONCE;
 	if ( get_option('disable-content-security-policy') != 'true' ) :
-		////header( "Content-Security-Policy: script-src 'nonce-{$nonce}' 'strict-dynamic' 'unsafe-eval'; object-src 'none'; base-uri 'none'; block-all-mixed-content" ); 
-		//header( "Strict-Transport-Security: max-age=63072000; includeSubDomains; preload" );
-		//header( "X-Frame-Options: SAMEORIGIN" );
-		//header( "X-Content-Type-Options: nosniff" );
-		//header( "Referrer-Policy: strict-origin-when-cross-origin" );
+		header( "Content-Security-Policy: script-src 'nonce-{$nonce}' 'strict-dynamic' 'unsafe-eval'; object-src 'none'; base-uri 'none'; block-all-mixed-content" ); 
+		header( "Strict-Transport-Security: max-age=63072000; includeSubDomains; preload" );
+		header( "X-Frame-Options: SAMEORIGIN" );
+		header( "X-Content-Type-Options: nosniff" );
+		header( "Referrer-Policy: strict-origin-when-cross-origin" );
 	endif;
-?>
+?> 
  
-<html <?php language_attributes(); ?>>
+<html lang="en">
 <head>	
 	<script nonce="<?php echo _BP_NONCE; ?>" type="text/javascript">
 		var startTime = Date.now();		
@@ -25,7 +25,8 @@
 	<link rel="profile" href="https://gmpg.org/xfn/11">
 	
 	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/open-sans-v17-latin-regular.woff2" crossorigin="anonymous">
-	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/fa-solid-900.woff2" crossorigin="anonymous">
+	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/fa-solid-900.woff2" crossorigin="anonymous">	
+	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/BP-Icons.woff2" crossorigin="anonymous">
 	<link rel="preconnect" href="https://googletagmanager.com/">
 
 	<?php bp_font_loader(); ?>	

@@ -796,7 +796,7 @@ body.ac-wp-media .row-actions {
 
 .wp-admin .row-actions span i::before {
 	display: 										inline-block;
-	transform: 									scale(0.7);
+	transform: 										scale(0.7);
 	transition: 									transform 0.1s ease;
 }
 

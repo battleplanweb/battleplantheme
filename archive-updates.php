@@ -51,9 +51,9 @@ get_header(); ?>
 				
 				$buildUpdate .= '[col id="update-'.get_the_ID().'" class="'.$classes.'"][txt]';
 				$buildUpdate .= '<p><a href="/profile?user='.$profileID.'" class="link-archive link-'.get_post_type().'" ada-hidden="true"  tabindex="-1">[get-user user="'.$profileID.'" info="avatar" size="thumbnail-small"]</a>';					
-				if ( current_user_can('delete_post', get_the_ID()) ) $buildUpdate .= '<a class="delete-post" href="'.get_delete_post_link( get_the_ID() ).'"><span><i class="fas fa-times"></i>Delete Post</span></a><br/>';
-				$buildUpdate .= '<span class="archive-author '.get_post_type().'-author author"><a href="/profile?user='.$profileID.'" class="link-archive link-'.get_post_type().'"><i class="fas fa-user"></i>[get-user user="'.$profileID.'" info="display"]</a></span><br/>';
-				$buildUpdate .= '<span class="archive-date '.get_post_type().'-date date"><i class="fas fa-calendar-alt"></i>'.get_the_date().'</span></p>';
+				if ( current_user_can('delete_post', get_the_ID()) ) $buildUpdate .= '<a class="delete-post" href="'.get_delete_post_link( get_the_ID() ).'"><span><span class="icon x-large"></span>Delete Post</span></a><br/>';
+				$buildUpdate .= '<span class="archive-author '.get_post_type().'-author author"><a href="/profile?user='.$profileID.'" class="link-archive link-'.get_post_type().'"><span class="icon user"></span>[get-user user="'.$profileID.'" info="display"]</a></span><br/>';
+				$buildUpdate .= '<span class="archive-date '.get_post_type().'-date date"><span class="icon calendar"></span>'.get_the_date().'</span></p>';
 				$buildUpdate .= "<h3 data-count-view=".$countView." data-id=".get_the_ID().">";
 				$buildUpdate .= esc_html(get_the_title());  
 				$buildUpdate .= "</h3>";
@@ -70,7 +70,7 @@ get_header(); ?>
 			$displayArchive .= do_shortcode('[section width="inline" class="archive-content archive-'.get_post_type().'"][layout grid="'.$grid.'" valign="'.$valign.'"]'.$buildUpdate.'[/layout][/section]');
 		
 			$displayArchive .= '<footer class="archive-footer">';
-				$displayArchive .= get_the_posts_pagination( array( 'mid_size' => 2, 'prev_text' => _x( '<i class="fa fa-chevron-left"></i>', 'Previous set of posts' ), 'next_text' => _x( '<i class="fa fa-chevron-right"></i>', 'Next set of posts' ), ));
+				$displayArchive .= get_the_posts_pagination( array( 'mid_size' => 2, 'prev_text' => _x( '<span class="icon chevron-left" aria-hidden="true"></span>', 'Previous set of posts' ), 'next_text' => _x( '<span class="icon chevron-right" aria-hidden="true"></span>', 'Next set of posts' ), ));
 			$displayArchive .= '</footer><!-- .archive-footer-->';			
 			
 			$restrictedMsg = '<h1>Log In</h1><h3>To Access This Page</h3>'.do_shortcode('[get-login]');

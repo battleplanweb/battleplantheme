@@ -551,6 +551,25 @@ function battleplan_addWidgetPicViewsToImg( $post_ID ) {
 	endif;
 }
 
+// Add 'image-category' to testimonials and jobsite geo posts
+add_action('add_attachment', 'battleplan_auto_add_image_category');
+function battleplan_auto_add_image_category($attachment_id) {
+    $parent_post_id = get_post($attachment_id)->post_parent;
+    $parent_post = get_post($parent_post_id);
+
+    if ($parent_post && $parent_post->post_type === 'jobsite_geo') {
+        $term = 'Jobsite GEO'; 
+        if (!term_exists($term, 'image-categories')) wp_insert_term($term, 'image-categories');
+        wp_set_object_terms($attachment_id, $term, 'image-categories', true);
+    }
+
+    if ($parent_post && $parent_post->post_type === 'testimonials') {
+        $term = 'Testimonials'; 
+        if (!term_exists($term, 'image-categories')) wp_insert_term($term, 'image-categories');
+        wp_set_object_terms($attachment_id, $term, 'image-categories', true);
+    }
+}
+
 // Force clear all views for posts/pages
 function battleplan_force_run_chron() {
 	updateOption('bp_force_chron', true);		

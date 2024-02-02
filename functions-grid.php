@@ -356,9 +356,9 @@ function battleplan_buildButton( $atts, $content = null ) {
 	$icon = esc_attr($a['icon']);	
 	$graphic = esc_attr($a['graphic']);	
 	$graphicW = esc_attr($a['graphic-w']);	
-	if ( $icon == "true" ) $icon = "fas fa-chevron-right";	
+	if ( $icon == "true" ) $icon = "chevron-right";	
 	if ( $fancy != "" ) $fancy = "-".$fancy;
-	if ( $icon != "false" ) : $class .= " fancy".$fancy; $content = '<span class="fancy-text">'.$content.'</span><span class="fancy-icon"><i class="'.$icon.'"></i></span>'; endif;
+	if ( $icon != "false" ) : $class .= " fancy".$fancy; $content = '<span class="fancy-text">'.$content.'</span><span class="fancy-icon"><span class="icon '.$icon.'"></span></span>'; endif;
 	if ( $graphic != "false" ) : $class .= " graphic-icon"; $content = '<img src="/wp-content/uploads/'.$graphic.'" width="'.$graphicW.'" height="'.$graphicW.'" style="aspect-ratio:'.$graphicW.'/'.$graphicW.'" alt="" /><span class="unique">'.$content.'</span>'; endif;
 	
 	$start = strtotime(esc_attr($a['start']));
@@ -371,7 +371,7 @@ function battleplan_buildButton( $atts, $content = null ) {
 	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
 	if ( $tracking != '' ) $class .= " tracking";
 
-	return '<div class="block block-button span-'.$size.$class.$align.'"'.$tracking.$style.'><a'.$target.' href="'.$link.'" class="button'.$class.'">'.$content.$ada.'</a></div>';
+	return '<div class="block block-button span-'.$size.$class.$align.'"'.$tracking.$style.'><a'.$target.' href="'.$link.'" class="button'.$class.'">'.do_shortcode($content).$ada.'</a></div>';
 }  
 
 // Accordion Block 
@@ -426,7 +426,7 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 // Parallax Section 
 add_shortcode( 'parallax', 'battleplan_buildParallax' );
 function battleplan_buildParallax( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'style'=>'', 'type'=>'section', 'width'=>'edge', 'img-w'=>'2000', 'img-h'=>'1333', 'height'=>'800', 'padding'=>'50', 'pos-x'=>'center', 'pos-y'=>'top', 'bleed'=>'10', 'speed'=>'0.7', 'image'=>'', 'class'=>'', 'scroll-btn'=>'false', 'scroll-loc'=>'#page', 'scroll-icon'=>'fa-chevron-down', 'z-index'=>'2', 'track'=>'' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'style'=>'', 'type'=>'section', 'width'=>'edge', 'img-w'=>'2000', 'img-h'=>'1333', 'height'=>'800', 'padding'=>'50', 'pos-x'=>'center', 'pos-y'=>'top', 'bleed'=>'10', 'speed'=>'0.7', 'image'=>'', 'class'=>'', 'scroll-btn'=>'false', 'scroll-loc'=>'#page', 'scroll-icon'=>'chevron-down', 'z-index'=>'2', 'track'=>'' ), $atts );
 	$name = strtolower(esc_attr($a['name']));
 	$name = preg_replace("/[\s_]/", "-", $name);
 	$style = esc_attr($a['style']);
@@ -453,7 +453,7 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	$scrollBtn = esc_attr($a['scroll-btn']); 
 	$scrollLoc = esc_attr($a['scroll-loc']); 
 	$scrollIcon = esc_attr($a['scroll-icon']); 
-	if ( $scrollBtn != "false" ) : $buildScrollBtn = '<div class="scroll-down"><a href="'.$scrollLoc.'"><i class="fas '.$scrollIcon.' aria-hidden="true"></i><span class="sr-only">Scroll Down</span></a></div>'; else: $buildScrollBtn = ''; endif;
+	if ( $scrollBtn != "false" ) : $buildScrollBtn = '<div class="scroll-down"><a href="'.$scrollLoc.'"><span class="icon '.$scrollIcon.' aria-hidden="true"></span><span class="sr-only">Scroll Down</span></a></div>'; else: $buildScrollBtn = ''; endif;
 	if ( !$name ) $name = "section-".rand(10000,99999);	
 	$setUpElement = '';
 	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
@@ -531,7 +531,7 @@ function battleplan_buildLockedSection( $atts, $content = null ) {
 		$buildSection .= '"';
 	endif;
 	
-	$buildSection .= '><div class="closeBtn" aria-label="close" aria-hidden="false" tabindex="0"><i class="fa fa-times"></i></div>'.do_shortcode($content).'</section>';	
+	$buildSection .= '><div class="closeBtn" aria-label="close" aria-hidden="false" tabindex="0"><span class="icon x-large"></span></div>'.do_shortcode($content).'</section>';	
 	
 	return $buildSection;
 }

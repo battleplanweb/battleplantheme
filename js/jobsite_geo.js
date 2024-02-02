@@ -1,13 +1,1 @@
-document.addEventListener("DOMContentLoaded", function () {	"use strict"; (function($) {
-
-	$(window).on("load", function() {
-		
-		
-		
-		$('#map img').addClass('noFX');
-		
-		
-		
-	});
-	
-})(jQuery); });
+document.addEventListener("DOMContentLoaded",function(){"use strict";(function(a){a(window).on("load",function(){a("#map img").addClass("noFX")})})(jQuery)});

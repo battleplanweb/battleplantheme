@@ -62,7 +62,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			
 			if ( link ) {
 				menuExists = true;				
-				link = '<a href="'+link+'" class="glightbox" data-gallery="' + gallery + '" data-glightbox="title: ' + title + '; description: ' + desc + '; descPosition: left; type: image; effect: fade; zoomable: true; draggable: true;"><i class="fa fa-search-plus menu-img-btn" aria-hidden="true"></i></a>';				
+				link = '<a href="'+link+'" class="glightbox" data-gallery="' + gallery + '" data-glightbox="title: ' + title + '; description: ' + desc + '; descPosition: left; type: image; effect: fade; zoomable: true; draggable: true;"><span class="icon search-plus menu-img-btn" aria-hidden="true"></span></a>';				
 				$(this).prepend(link);
 			}
 		});

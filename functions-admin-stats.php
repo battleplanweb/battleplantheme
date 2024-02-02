@@ -540,7 +540,8 @@ function battleplan_admin_content_stats() {
 				else:
 					$label = $pct != 100 ? "viewed at least ".$pct."%  of main content" : "<b>viewed ALL of main content</b>";
 				endif;
-				echo "<li><div class='value'><b>".number_format(($total/$init)*100,1)."%</b></div><div class='label'>".$label."</div></li>";
+	
+				if ( $init > 0 ) echo "<li><div class='value'><b>".number_format(($total/$init)*100,1)."%</b></div><div class='label'>".$label."</div></li>";
 			endif;
 		endforeach;		
 	
@@ -549,7 +550,7 @@ function battleplan_admin_content_stats() {
 		foreach ($contentVisAndSessions as $key=>$value) :
 		 	if (strpos($key, 'track-') === 0) :
 				$trackItem = str_replace('track-', '', $key);
-				if ( $trackItem != 'init' ) echo "<li><div class='value'><b>".number_format(($value/$track_init) * 100,1)."%</b></div><div class='label'>".ucwords($trackItem)."</div></li>";
+				if ( $trackItem != 'init' && $track_init > 0 ) echo "<li><div class='value'><b>".number_format(($value/$track_init) * 100,1)."%</b></div><div class='label'>".ucwords($trackItem)."</div></li>";
 		    endif;
 		endforeach;
 		echo '</ul></div>';	

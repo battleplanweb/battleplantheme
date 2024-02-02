@@ -332,7 +332,7 @@ get_header(); ?>
 			$displayArchive .= do_shortcode('[section width="inline" class="'.get_post_type().'-content '.get_post_type().'-intro"][layout grid="'.$mapGrid.'"]'.$buildIntro.'[/layout][/section]');			
 		
 			$displayArchive .= '<footer class="archive-footer">';
-				$displayArchive .= get_the_posts_pagination( array( 'mid_size' => 2, 'prev_text' => _x( '<i class="fa fa-chevron-left"></i>', 'Previous set of posts' ), 'next_text' => _x( '<i class="fa fa-chevron-right"></i>', 'Next set of posts' ), ));
+				$displayArchive .= get_the_posts_pagination( array( 'mid_size' => 2, 'prev_text' => _x( '<span class="icon chevron-left" aria-hidden="true"></span>', 'Previous set of posts' ), 'next_text' => _x( '<span class="icon chevron-right" aria-hidden="true"></span>', 'Next set of posts' ), ));
 			$displayArchive .= '</footer><!-- .archive-footer-->';
 		
 			echo $displayArchive;	

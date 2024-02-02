@@ -11,7 +11,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon"><i class="fa fa-fw fas fa-cog" aria-hidden="true"></i></div>
+				<div class="icon-box">[get-icon type="cog"]</div>
 				[txt]
 					<h2>Tough</h2>
 					<p>We test our products for 2,600 hours in bone-chilling cold and blistering heat. We push our technology so the system you get serves you for up to 12-20 years.</p>
@@ -19,7 +19,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon"><i class="fa fa-fw fas fa-leaf" aria-hidden="true"></i></div>
+				<div class="icon-box">[get-icon type="leaf"]</div>
 				[txt]
 					<h2>Efficient</h2>
 					<p>We build HVAC systems that are ENERGY STAR® certified. Look for efficiency ratings on our products to see how much you may save on your monthly electric bill.</p>
@@ -27,7 +27,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon"><i class="fa fa-fw fas fa-lightbulb" aria-hidden="true"></i></div>
+				<div class="icon-box">[get-icon type="lightbulb"]</div>
 				[txt]
 					<h2>Innovative </h2>
 					<p>Our HVAC systems have come far, but we never settle. With 1,500 heating and cooling patents, our technology is engineered to be better than the rest.</p>
@@ -35,7 +35,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon"><i class="fa fa-fw fas fa-clipboard-check" aria-hidden="true"></i></div>
+				<div class="icon-box">[get-icon type="clipboard-check"]</div>
 				[txt]
 					<h2>Trusted </h2>
 					<p>For 120 years, we’ve been market leaders at improving HVAC systems. Trane grew into a household name as our customers continued to return to reliable products. </p>

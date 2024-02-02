@@ -113,9 +113,17 @@
 </div><!-- #page -->
 
 <!-- Scroll to Top btn -->
-<a class ="scroll-top hide-1 hide-2 hide-3" href="#page" role="button"><i class="fa fa-chevron-up" aria-hidden="true"></i><span class="sr-only">Scroll To Top</span></a>	
+<!--a class ="scroll-top hide-1 hide-2 hide-3" href="#page" role="button"><?php //echo do_shortcode('[get-icon type="chevron-up"]') ?><span class="sr-only">Scroll To Top</span></a-->	
+
+<?php echo do_shortcode('[get-icon type="chevron-up" class="scroll-top hide-1 hide-2 hide-3" link="#page" sr="Scroll To Top"]'); ?>
 
 <?php wp_footer(); ?>
 <?php if ( shortcode_exists( 'get-svg' ) ) echo '<div id="include-svg">'.do_shortcode('[get-svg]').'</div>' ?>
+
+<?php $icon_css = array_unique($GLOBALS['icon-css']);
+ 	foreach ( $icon_css as $icon ) $icon_style .= '.icon.'.$icon.'::after { content: "'.$GLOBALS['icons'][$icon].'"; }'; 		  
+?>
+<style><?php echo $icon_style; ?></style>
+
 </body>
 </html>

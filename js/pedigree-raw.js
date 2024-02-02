@@ -7,9 +7,9 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		moveDiv('#wrapper-bracket','#colophon','before');
 		
 		// add "sex-box" to each dog profile on archive page
-		addDiv(".col-dogs.dogs-female .image-dogs a", "<div class='sex-box'><i class='fa fas fa-venus'></i></div>", "inside"); 
-		addDiv(".col-dogs.dogs-male .image-dogs a", "<div class='sex-box'><i class='fa fas fa-mars'></i></div>", "inside"); 
-		addDiv(".col-dogs.dogs-legacy .image-dogs a", "<div class='sex-box'><i class='fa fas fa-medal'></i></div>", "inside"); 
+		addDiv(".col-dogs.dogs-female .image-dogs a", "<div class='sex-box'><span class='icon sex-female'></span></div>", "inside"); 
+		addDiv(".col-dogs.dogs-male .image-dogs a", "<div class='sex-box'><span class='icon sex-male'></span></div>", "inside"); 
+		addDiv(".col-dogs.dogs-legacy .image-dogs a", "<div class='sex-box'><span class='icon medal'></span></div>", "inside"); 
 		
 		// setup filtering of dogs & litters archive pages with buttons		
 		$("button.female-btn, button.male-btn, button.legacy-btn, button.all-btn, button.available-btn, button.expecting-btn").keyup(function(event) {

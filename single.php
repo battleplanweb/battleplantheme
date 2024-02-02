@@ -180,14 +180,14 @@ get_header(); ?>
 
 								if ( $prev_post ) : 
 									$prev_title = strip_tags(str_replace('"', '', esc_html($prev_post->post_title))); 			
-									$displayFooter .= '<a class="nav-previous prev" href="'.get_permalink( $prev_post->ID ).'" rel="prev"><div class="post-arrow"><i class="fa fas fa-chevron-left" aria-hidden="true"></i></div><div class="post-links"><div class="meta-nav" aria-hidden="true">Previous</div><div class="post-title">'.$prev_title.'</div></div></a>';
+									$displayFooter .= '<a class="nav-previous prev" href="'.get_permalink( $prev_post->ID ).'" rel="prev"><div class="post-arrow"><span class="icon chevron-left" aria-hidden="true"></span></div><div class="post-links"><div class="meta-nav">Previous</div><div class="post-title">'.$prev_title.'</div></div></a>';
 								else:
 									$displayFooter .= '<div class="nav-previous prev"></div>';
 								endif;
 
 								if ( $next_post ) : 
 									$next_title = strip_tags(str_replace('"', '', esc_html($next_post->post_title))); 			
-									$displayFooter .= '<a class="nav-next next" href="'.get_permalink( $next_post->ID ).'" rel="next"><div class="post-links"><div class="meta-nav" aria-hidden="true">Next</div><div class="post-title">'.$next_title.'</div></div><div class="post-arrow"><i class="fa fas fa-chevron-right" aria-hidden="true"></i></div></a>';
+									$displayFooter .= '<a class="nav-next next" href="'.get_permalink( $next_post->ID ).'" rel="next"><div class="post-links"><div class="meta-nav">Next</div><div class="post-title">'.$next_title.'</div></div><div class="post-arrow"><span class="icon fa-chevron-right" aria-hidden="true"></span></div></a>';
 								else:
 									$displayFooter .= '<div class="nav-next next"></div>';
 								endif;

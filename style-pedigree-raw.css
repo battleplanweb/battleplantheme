@@ -68,15 +68,15 @@ span.X {
 /* Dogs & Litters
 --------------------------------------------- */
 .fa-mars:before {
-    content: 									"\f222";
+    content: 									"\e1e3";
 }
 
 .fa-venus:before {
-    content: 									"\f221";
+    content: 									"\e1e2";
 }
 
 .fa-medal:before {
-    content: 									"\f5a2";
+    content: 									"\e09e";
 }
 
 .col-archive .image-dogs .sex-box {

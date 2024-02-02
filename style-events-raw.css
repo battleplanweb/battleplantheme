@@ -147,15 +147,14 @@ h2.month-divider {
 
 .calendar-buttons #prevButton::before, 
 .calendar-buttons #nextButton:after { 
-	font-family: 									var(--font-awesome);
-	content: 										"\f053";
-	font-weight: 									900;
+	font-family: 									var(--font-icons);
+	content: 										"\e216";
 	font-size:										85%;
 	margin: 										0 20px 0 0;
 }
 
 .calendar-buttons #nextButton:after  {
-	content:										"\f054";
+	content:										"\e218";
 	margin: 										0 0 0 20px;
 }
 
@@ -190,18 +189,17 @@ h2.month-divider {
 .event-date .date-icon::before, 
 .event-time .time-icon::before, 
 .event-location .location-icon::before {
-	font-family: 									var(--font-awesome);
-	content: 										"\f073";
-	font-weight: 									600;
+	font-family: 									var(--font-icons);
+	content: 										"\e077";
 	color: 											inherit;
 }
 
 .event-time .time-icon::before {
-	content: 										"\f017";
+	content: 										"\e07a";
 	font-size:										calc(var(--font-size-text) * .92);
 }
 .event-location .location-icon::before {
-	content: 										"\f3c5";
+	content: 										"\e0b7";
 	font-size:										calc(var(--font-size-text) * 1.13);
 
 }

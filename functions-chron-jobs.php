@@ -431,6 +431,53 @@ function processChron($forceChron) {
 					$googleInfo[$placeID]['long'] = $res['result']['geometry']['location']['lng'];	
 					$googleInfo[$placeID]['hours'] = $res['result']['opening_hours'];
 					$googleInfo[$placeID]['current-hours'] = $res['result']['current_opening_hours'];
+	
+	
+				// Add any new reviews to testimonials 	
+					if (isset($res['result']['reviews']) && is_array($res['result']['reviews'])) :
+						$reviews = $res['result']['reviews'];
+						$googleInfo[$placeID]['reviews'] = array();
+
+						foreach ($reviews as $review) :
+							$reviewData = array(
+								'author_name' => $review['author_name'],
+								'rating' => $review['rating'],
+								'text' => $review['text'],
+								'time' => $review['time'],
+								'author_url' => $review['author_url']
+							);
+							if ( $review['rating'] > 3 ) $googleInfo[$placeID]['reviews'][] = $reviewData;
+						endforeach;
+					endif;
+	
+					$args = array( 'post_type' => 'testimonials', 'posts_per_page' => -1, 'fields' => 'ids', );
+					$existing_posts = new WP_Query($args);
+					$existing_titles = [];
+
+					if ($existing_posts->have_posts()) : while ($existing_posts->have_posts()) :
+							$existing_posts->the_post();
+							$existing_titles[] = get_the_title();
+						endwhile;
+					endif;
+
+					foreach ($googleInfo[$placeID]['reviews'] as $review) :
+						if (!in_array($review['author_name'], $existing_titles)) :
+							$new_post = array(
+								'post_title'   => wp_strip_all_tags($review['author_name']),
+								'post_content' => $review['text'],
+								'post_status'  => 'publish',
+								'post_type'    => 'testimonials',
+							);
+
+							$new_post_id = wp_insert_post($new_post);
+							if (!is_wp_error($new_post_id)) :
+								wp_set_object_terms($new_post_id, $review['rating'], 'testimonial_rating', false);
+								wp_set_object_terms($new_post_id, 'Google', 'platform', false);            
+								wp_set_object_terms($new_post_id, $review['author_url'], 'testimonial_website', false);
+							endif;
+						endif;
+					endforeach;	
+	
 				endif;
 			endforeach;
 

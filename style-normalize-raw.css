@@ -454,20 +454,6 @@ body.using-mouse .block-accordion.tab-focus {
 /*--------------------------------------------------------------
 # My Normals
 --------------------------------------------- */
-.fa, 
-.fa::before {
-	font-size:									inherit;
-	line-height:								inherit;
-}
-
-.fa.fas {
-	font-weight:								900;
-}
-
-.fa.far {
-	font-weight:								400;
-}
-
 .wordSplit,
 .charSplit {
 	display:									inline-block;

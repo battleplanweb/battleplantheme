@@ -19,8 +19,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		$('nav.woocommerce-breadcrumb').addClass('breadcrumbs').removeClass('woocommerce-breadcrumb');
 				
 	// Reset pagination buttons to common look	
-		replaceText('.theme-battleplantheme.woocommerce-js nav.woocommerce-pagination ul li a.prev', '', '<i class="fa fa-chevron-left"></i>', 'html');
-		replaceText('.theme-battleplantheme.woocommerce-js nav.woocommerce-pagination ul li a.next', '', '<i class="fa fa-chevron-right"></i>', 'html');
+		replaceText('.theme-battleplantheme.woocommerce-js nav.woocommerce-pagination ul li a.prev', '', '<span class="icon chevron-left"></span>', 'html');
+		replaceText('.theme-battleplantheme.woocommerce-js nav.woocommerce-pagination ul li a.next', '', '<span class="icon chevron-right"></span>>', 'html');
 		 
 	// Change product page to CSS grid
 		/*$('.theme-battleplantheme.woocommerce-js div.product').addClass('flex').addClass('grid-1-1');*/

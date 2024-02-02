@@ -332,7 +332,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	$( "div.noFX" ).find("img, a").addClass("noFX");
 
 // Add .fa class to all icons using .far, .fas and .fab
-	$( ".far, .fas, .fab" ).addClass("fa");
+	//$( ".far, .fas, .fab" ).addClass("fa");
 	
 // Set first page cookie		
 	if ( !getCookie('first-page') ) { 
@@ -387,6 +387,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	}	
 	
 // Add unique id to labels & inputs in #request-quote-modal	for ADA compliance		
+	$('div.form-input').each(function() {
+		var theLabel = $(this).find('label'), theLabelAttr = theLabel.attr('for'), theInput = $(this).find('input'), theTextarea = $(this).find('textarea'), theSelect = $(this).find('select'), theAttr = theInput.attr('id');
+		 
+		theInput.attr('id', theLabelAttr);			
+		theTextarea.attr('id', theLabelAttr);			
+		theSelect.attr('id', theLabelAttr);			
+	});		
+	
 	$('#request-quote-modal div.form-input').each(function() {
 		var theLabel = $(this).find('label'), theInput = $(this).find('input'), theTextarea = $(this).find('textarea'), theSelect = $(this).find('select'), theAttr = theInput.attr('id');
 		
@@ -423,17 +431,21 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	
 // Add star icons to reviews and ratings
 	$('.testimonials-rating').each(function() {
-		var getRating = $(this).html(), star = ['far', 'far', 'far', 'far', 'far'], replaceRating, i;		
+		var getRating = $(this).html(), star = ['star-o', 'star-o', 'star-o', 'star-o', 'star-o'], replaceRating, i;		
 		for (i=0; i < getRating; i++) { 
-			star[i] = 'fas'; 
+			star[i] = 'star'; 
 		}		
 		replaceRating = '<span class="rating rating-'+getRating+'-star" aria-hidden="true"><span class="sr-only">Rated '+getRating+' Stars</span>';
 		for (i=0; i < 5; i++) { 
-			replaceRating += '<i class="fa '+star[i]+' fa-star"></i>';
+			replaceRating += '<span class="icon '+star[i]+'"></span>';
 		}
 		replaceRating += '</span>';		
 		$(this).html( replaceRating );
 	});
+	
+// Ensure initial for anonymous icon is positioned appropriately
+	var svgH = $('svg.anonymous-icon').height();
+	$('.testimonials-generic-letter').css({ 'height': svgH+"px"});
 	
 // Ensure that Form labels have enough width
 	window.formLabelWidth = function () {		
@@ -668,7 +680,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	
 	// Allow sub-menu to appear, even if initially set to overflow:hidden	
 	setTimeout(function() {
-		$('.menu-clip .menu-strip').css({'overflow':'visible'});
+		$('.menu-clip .menu-strip').css({'overflow':'visible', 'clip-path':'none'});
 	}, 2500);
 	
 /*--------------------------------------------------------------
@@ -896,6 +908,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
         		});
 			});			
 		});		
-	});
+	});	
 	
 })(jQuery); });

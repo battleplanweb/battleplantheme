@@ -175,8 +175,8 @@ function battleplan_add_jobsite_geo_acf_fields() {
 					'class' => '',
 					'id' => '',
 				),
-				'display_format' => 'F j, Y',
-				'return_format' => 'F j, Y',
+				'display_format' => 'Y-m-d',
+				'return_format' => 'Y-m-d',
 				'first_day' => 0,
 			),	
 			array(
@@ -648,7 +648,6 @@ function battleplan_handle_jobsite_geo_image_upload($file) {
 	
     return $file;
 };
-
 
 /*--------------------------------------------------------------
 # Setup Re-directs

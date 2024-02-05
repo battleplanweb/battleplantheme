@@ -98,5 +98,5 @@ $modDate = the_modified_date( 'F Y', '', '', FALSE);
 			$singleContent = $buildLitter;	
 		endif;
 		
-		echo $singleContent; ?>
+		echo do_shortcode($singleContent); ?>
 	</div><!-- .entry-content -->

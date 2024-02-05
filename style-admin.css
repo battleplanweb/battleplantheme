@@ -400,7 +400,6 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	grid-column: 									2 / 4;
 }
 
-
 #dashboard-widgets #postbox-container-1 div.handle-label,
 #dashboard-widgets #postbox-container-2 div.handle-label,
 #dashboard-widgets #postbox-container-3 tr.trends,
@@ -630,11 +629,11 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 
 .wp-list-table th {
 	text-align:									center;
-	padding:										2px 0 6px;
+	padding:									2px 0 6px;
 }
 
 .wp-list-table th:not(#title).sortable {
-	padding:										8px 0 0;
+	padding:									8px 0 0;
 }
 
 .wp-list-table td {
@@ -889,6 +888,10 @@ table.acp-ie-table .title.column-title .acp-ie-controls {
 	display: 										none;
 }
 
+div#submitpost div#yoast-seo-publishbox-section {
+	display: 										none;
+}
+
 /* HVAC Products Pages */
 .wp-admin .acf-field.acf-field-product-comfort,
 .wp-admin .acf-field.acf-field-product-efficiency,
@@ -929,7 +932,17 @@ table.acp-ie-table .title.column-title .acp-ie-controls {
 /* Woocommerce
 --------------------------------------------- */
 .notice.wcs-nux__notice {
-	display: none; /* remove Jetpack ad */
+	display: 										none; /* remove Jetpack ad */
+}
+
+/* Post to Google My Business
+--------------------------------------------- */
+div.pgmb-widget.postbox.pgmb-notifications-container,
+div#wpcontent div.fs-notice.updated.promotion.fs-sticky.fs-has-title.fs-slug-post-to-google-my-business.fs-type-plugin,
+a#pgmb_evergreen_settings-tab,
+a#mbp_misc-tab,
+.wrap.mbp-settings > p {
+	display: 										none !important;
 }
 
 /* Site Audit

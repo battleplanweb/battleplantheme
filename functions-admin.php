@@ -201,11 +201,12 @@ function battleplan_remove_menus() {
 	remove_menu_page( 'wp-mail-smtp' );   												// WP Mail SMTP
 	remove_menu_page( 'wpseo_dashboard' );   											// Yoast SEO	
 	remove_menu_page( 'wpseo_workouts' );   											// Yoast SEO
+	remove_menu_page( 'post_to_google_my_business');									// Post to GMB
 	
 	remove_submenu_page( 'plugins.php', 'plugin-editor.php' );        					// Plugins => Plugin Editor
 	remove_submenu_page( 'options-general.php', 'options-writing.php' );   				// Settings => Writing 		
 	remove_submenu_page( 'options-general.php', 'options-reading.php' );   				// Settings => Reading 	
-	remove_submenu_page( 'options-general.php', 'options-media.php' );   					// Settings => Media 	
+	remove_submenu_page( 'options-general.php', 'options-media.php' );   				// Settings => Media 	
 	remove_submenu_page( 'options-general.php', 'options-privacy.php' );   				// Settings => Privacy 	
 	remove_submenu_page( 'options-general.php', 'akismet-key-config' );   				// Settings => Akismet	
 	remove_submenu_page( 'options-general.php', 'git-updater' );   						// Settings => Git Updater 
@@ -249,16 +250,19 @@ function battleplan_remove_menus() {
 	add_submenu_page( 'tools.php', 'WP Engine', 'WP Engine', 'manage_options', 'options-general.php?page=wpengine-common' );
 	
 	if ( _USER_LOGIN == "battleplanweb" ) :
-		add_submenu_page( 'tools.php', 'Git Updater', 'Git Updater', 'manage_options', 'options-general.php?page=git-updater' );
-		add_submenu_page( 'tools.php', 'Admin Columns', 'Admin Columns', 'manage_options', 'options-general.php?page=codepress-admin-columns' );
-		add_submenu_page( 'tools.php', 'WP Mail SMTP', 'WP Mail SMTP', 'manage_options', 'options-general.php?page=wp-mail-smtp' );
+		if ( is_plugin_active( 'git-updater/git-updater.php' ) ) add_submenu_page( 'tools.php', 'Git Updater', 'Git Updater', 'manage_options', 'options-general.php?page=git-updater' );
+		if ( is_plugin_active( 'admin-columns-pro/admin-columns-pro.php' ) ) add_submenu_page( 'tools.php', 'Admin Columns', 'Admin Columns', 'manage_options', 'options-general.php?page=codepress-admin-columns' );
+		if ( is_plugin_active( 'wp-mail-smtp/wp_mail_smtp.php' ) ) add_submenu_page( 'tools.php', 'WP Mail SMTP', 'WP Mail SMTP', 'manage_options', 'options-general.php?page=wp-mail-smtp' );
 
-		add_submenu_page( 'tools.php', 'Yoast Settings', 'Yoast Settings', 'manage_options', 'admin.php?page=wpseo_page_settings' );
-		add_submenu_page( 'tools.php', 'Yoast Local', '&nbsp;└&nbsp;Local', 'manage_options', 'admin.php?page=wpseo_local' );
-		add_submenu_page( 'tools.php', 'Yoast Redirects', '&nbsp;└&nbsp;Redirects', 'manage_options', 'admin.php?page=wpseo_redirects' );
+		if ( is_plugin_active( 'wordpress-seo-premium/wp-seo-premium.php' ) ) add_submenu_page( 'tools.php', 'Yoast Settings', 'Yoast Settings', 'manage_options', 'admin.php?page=wpseo_page_settings' );
+		if ( is_plugin_active( 'wpseo-local/local-seo.php' ) ) add_submenu_page( 'tools.php', 'Yoast Local', '&nbsp;└&nbsp;Local', 'manage_options', 'admin.php?page=wpseo_local' );
+		if ( is_plugin_active( 'wordpress-seo-premium/wp-seo-premium.php' ) ) add_submenu_page( 'tools.php', 'Yoast Redirects', '&nbsp;└&nbsp;Redirects', 'manage_options', 'admin.php?page=wpseo_redirects' );
+
+		if ( is_plugin_active( 'post-to-google-my-business/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Settings', 'GBP Settings', 'manage_options', 'admin.php?page=pgmb_settings' );
+		if ( is_plugin_active( 'post-to-google-my-business/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Calendar', '&nbsp;└&nbsp;Calendar', 'manage_options', 'admin.php?page=post_to_google_my_business' );
 	endif;		
 }
-
+		
 // Reorder WP Admin Menu Items
 add_filter( 'custom_menu_order', 'battleplan_custom_menu_order', 10, 1 );
 add_filter( 'menu_order', 'battleplan_custom_menu_order', 10, 1 );
@@ -382,6 +386,9 @@ function battleplan_add_body_classes($classes) {
 
     if ( $siteType ) $classes .= ' site-type-'.$siteType;
     if ( $bizType ) $classes .= ' business-type-'.$bizType;
+	
+	$user = wp_get_current_user();
+	if ( $user->exists() ) $classes .= ' user-'.$user->user_login;
 
     return $classes;
 }

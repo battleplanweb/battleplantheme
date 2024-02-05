@@ -33,8 +33,23 @@ body.business-type-automotive .acf-field-old-equipment,
 body.business-type-automotive .acf-field-old-model-no,
 body.business-type-automotive .acf-field-new-brand,
 body.business-type-automotive .acf-field-new-equipment,
-body.business-type-automotive .acf-field-new-model-no {
-	display: 										none;
+body.business-type-automotive .acf-field-new-model-no,
+body.site-type-hvac .acf-field-auto-make,
+body.site-type-hvac .acf-field-auto-model,
+body.site-type-hvac .acf-field-auto-year,
+body.post-type-jobsite_geo div#page-stats-box,
+body:not(.user-battleplanweb) div#acf-group_jobsite_details .acf-field-review-link,
+body:not(.user-battleplanweb) div#pgmb_post_creation_metabox,
+body:not(.user-battleplanweb) div#tagsdiv-jobsite_geo-service-areas,
+body.post-type-jobsite_geo:not(.user-battleplanweb) div#postimagediv {
+	display: 										none !important;
+}
+
+body.user-battleplanweb div#acf-group_jobsite_details .acf-field-review-link,
+body.user-battleplanweb div#pgmb_post_creation_metabox,
+body.user-battleplanweb div#tagsdiv-jobsite_geo-service-areas,
+body.post-type-jobsite_geo.user-battleplanweb div#postimagediv {
+	background: 									var(--lightest-grey);
 }
 
 /*--------------------------------------------------------------

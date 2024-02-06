@@ -1137,9 +1137,13 @@ function battleplan_getPostSlider($atts, $content = null ) {
 			$buildIndicators = '<ol class="carousel-indicators">';
 			$buildInner = '<div class="carousel-inner">';
 
-			foreach ( $all_posts as $post ) :
+			foreach ( $all_posts as $post_object ) :
 				if ( $numDisplay < $num ) : 
 					if ( esc_attr($a['pics']) == "no" || has_post_thumbnail() || $type == "testimonials" ) :
+	
+						global $post;
+						$post = $post_object;
+						setup_postdata($post);
 					
 						$numDisplay++; 
 						$multDisplay++;
@@ -1164,6 +1168,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 						endif;
 						
 						array_push( $GLOBALS['do_not_repeat'], get_the_ID() );
+						wp_reset_postdata();
 					endif;
 				endif;
 			endforeach; 

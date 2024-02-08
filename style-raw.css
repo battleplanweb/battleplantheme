@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 23.4
+Version: 23.5
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -26,7 +26,7 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
 	- Content
 	- Widgets
 	- Sections
-	- Icons
+	- Icons & Social Media
 	- Site Navigation
 	- Posts and Pages
 	- Comments
@@ -272,6 +272,7 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --break-out-border-right:						none; 
   --break-out-border-left:						none;
   --break-out-padding: 							1.5em 2.5em;
+
   --break-out-margin: 							2.5em auto;
   --break-out-box-shadow: 						none;
   --break-out-border-radius: 					0;
@@ -2195,20 +2196,20 @@ a#bbblink {
 
 /* Style 1 */
 .section.style-1 {
-	background:									var(--light-grey);
+	background:										var(--light-grey);
 }
 
 /* Style 2 */
 .section.style-2 {
-	background:									var(--lightest-grey);
+	background:										var(--lightest-grey);
 }
 
 /* Section Lock */
 .section.section-lock:not(.position-header) {
 	position:										fixed !important;
 	z-index:										999999997 /* between mobile menu & a.scroll-top */;
-	/*opacity: 									0;*/
-	color: 										var(--locked-color);
+	/*opacity: 										0;*/
+	color: 											var(--locked-color);
 	background: 									var(--locked-background);
 	border: 										var(--locked-border);
 }
@@ -2219,39 +2220,45 @@ a#bbblink {
 }
  
 .section.section-lock.position-header .col-inner {
- 	position: 									relative;
+ 	position: 										relative;
 }
  
 .section.section-lock .closeBtn, 
 .closeBtn {
 	position:										absolute;
 	top:											15px;
-	right:										15px;
-	cursor:										pointer;
-	background:									var(--close-btn-background);
-	color:										var(--close-btn-color);
-	border:										var(--close-btn-border);
-	padding:										2px 8px 1px 7px;
-	font-size:									16px;
+	right:											15px;
+	cursor:											pointer;
+	background:										var(--close-btn-background);
+	color:											var(--close-btn-color);
+	border:											var(--close-btn-border);
+	padding:										0;
+	font-size:										16px;
 	z-index:										1000;
-
-
-	transition:									all var(--main-trans-speed) var(--main-trans-easing);
+	transition:										all var(--main-trans-speed) var(--main-trans-easing);
 }
 
 .section.section-lock .closeBtn:hover, 
 .closeBtn:hover {
-	background:									var(--close-btn-background-hover);
-	color:										var(--close-btn-color-hover);
-	border:										var(--close-btn-border-hover);
-	transition:									all var(--main-trans-speed) var(--main-trans-easing);
+	background:										var(--close-btn-background-hover);
+	color:											var(--close-btn-color-hover);
+	border:											var(--close-btn-border-hover);
+	transition:										all var(--main-trans-speed) var(--main-trans-easing);
+}
+
+.section.section-lock .closeBtn .icon,
+.closeBtn .icon {
+	display: 										flex;
+ 	justify-content: 								center;
+ 	align-items: 									center;
+	padding: 										6px;
 }
 
 .section.section-lock h2,
 .section.section-lock h3,
 .section.section-lock p {
-	text-align: 								center;
-	font-weight: 								bold;
+	text-align: 									center;
+	font-weight: 									bold;
 }
 
 /* Modal Box */
@@ -2620,6 +2627,14 @@ a.icon-btn.tab-focus .icon-bg {
 	font-size: 										110%;
 }
 
+span.icon.x-large::after {
+	content: 										"\e138";
+}
+
+span.icon.chevron-right::after {
+	content: 										"\e218";
+}
+
 
 /*
 .social-button {
@@ -2814,7 +2829,7 @@ a.icon-btn.tab-focus .icon-bg {
 	display:										inline-block;
 	font-family: 									var(--font-icons);
 	content:   										"\e22d";
-	font-size:										28px;
+	font-size:										22px;
 	margin-left:									8px;
 	transform:										translate(1px, -1px);
 }
@@ -3041,7 +3056,7 @@ a.icon-btn.tab-focus .icon-bg {
 }
 
 #mobile-menu-bar .mm-bar-contact .email2-btn::after {
-	content:   										"\e266";
+	content:   										"\e046";
 	opacity: 										0;
 }
 
@@ -4395,6 +4410,11 @@ img.img-404 {
 
 /* Coupon
 --------------------------------------------- */
+.block.coupon	{
+	display: 										grid;   /* added 2/6/24 for Matthews Heating & Air */
+	align-content: 									center; /* added 2/6/24 for Matthews Heating & Air */
+}
+
 .coupon	{
 	background:										var(--white);
 	border:											2px dashed var(--black);
@@ -5042,7 +5062,8 @@ span.descriptionText {
 }
 
 .wp-google-stars .icon.star::after,
-.wp-google-stars .icon.star-o::after {
+.wp-google-stars .icon.star-o::after,
+.wp-google-stars .icon.star-half::after {
 	content: 										"\e01b";
 	font-size: 										18px;
   	margin: 										2px;
@@ -5054,6 +5075,9 @@ span.descriptionText {
 	content: 										"\e01c";
 }
 
+.wp-google-stars .icon.star-half::after {
+	content: 										"\e01d;
+}
 
 .wp-gr .wp-google-total {
 	width: 										100%;
@@ -5367,6 +5391,12 @@ chat-widget .lc_text-widget--btn,
 
 .carousel .block-button a {
 	width: 											100%;
+}
+
+.carousel .block-button a.carousel-control-next,
+.carousel .block-button a.carousel-control-prev {
+  	padding-top: 									0;
+  	padding-bottom: 								0;
 }
 
 .carousel .controls.controls-center {
@@ -5805,6 +5835,7 @@ html.error503 h3 {
 	.screen-mobile h4,
 	.screen-mobile h5,
 	.screen-mobile h6 {
+
 		text-align:									center;
 	}
 	

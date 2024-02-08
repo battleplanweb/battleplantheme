@@ -103,7 +103,7 @@ return array (
 			'filter_label'=>'',
 			'name'=>'product-class',
 			'label_type'=>'',
-			'search'=>''
+			'search'=>'',
 		),
 		'menu-order'=>array(
 			'type'=>'column-order',

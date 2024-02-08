@@ -332,7 +332,7 @@ function battleplan_buildText( $atts, $content = null ) {
 // Button Block
 add_shortcode( 'btn', 'battleplan_buildButton' );
 function battleplan_buildButton( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'align'=>'center', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'', 'class'=>'', 'track'=>'', 'fancy'=>'', 'icon'=>'false', 'graphic'=>'false', 'graphic-w'=>'40', 'ada'=>'', 'start'=>'', 'end'=>'', 'track'=>'' ), $atts );
+	$a = shortcode_atts( array( 'size'=>'100', 'align'=>'center', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'', 'class'=>'', 'track'=>'', 'fancy'=>'', 'icon'=>'false', 'top'=>0, 'left'=>0, 'graphic'=>'false', 'graphic-w'=>'40', 'ada'=>'', 'start'=>'', 'end'=>'', 'track'=>'' ), $atts );
 	$getBiz = esc_attr($a['get-biz']);
 	if ( $getBiz == "" ) :
 		$link = esc_attr($a['link']);
@@ -355,11 +355,15 @@ function battleplan_buildButton( $atts, $content = null ) {
 	$fancy = esc_attr($a['fancy']);	
 	$icon = esc_attr($a['icon']);	
 	$graphic = esc_attr($a['graphic']);	
-	$graphicW = esc_attr($a['graphic-w']);	
+	$graphicW = esc_attr($a['graphic-w']);		
+	$left = esc_attr($a['left']);
+	$top = esc_attr($a['top']);
+	$adjust = $left != 0 || $top != 0 ? ' style="transform: translate('.$left.'px, '.$top.'px)"' : '';
 	if ( $icon == "true" ) $icon = "chevron-right";	
 	if ( $fancy != "" ) $fancy = "-".$fancy;
-	if ( $icon != "false" ) : $class .= " fancy".$fancy; $content = '<span class="fancy-text">'.$content.'</span><span class="fancy-icon"><span class="icon '.$icon.'"></span></span>'; endif;
-	if ( $graphic != "false" ) : $class .= " graphic-icon"; $content = '<img src="/wp-content/uploads/'.$graphic.'" width="'.$graphicW.'" height="'.$graphicW.'" style="aspect-ratio:'.$graphicW.'/'.$graphicW.'" alt="" /><span class="unique">'.$content.'</span>'; endif;
+	if ( $icon != "false" ) : $class .= " fancy".$fancy; $content = '<span class="fancy-text">'.$content.'</span><span class="fancy-icon"><span class="icon '.$icon.'"'.$adjust.'></span></span>'; endif;
+	if ( $graphic != "false" ) : $class .= " graphic-icon"; $content = '<img src="/wp-content/uploads/'.$graphic.'" width="'.$graphicW.'" height="'.$graphicW.'" style="aspect-ratio:'.$graphicW.'/'.$graphicW.'" alt="" /><span class="unique">'.$content.'</span>'; endif;	
+
 	
 	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));	

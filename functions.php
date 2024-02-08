@@ -602,14 +602,14 @@ function battleplan_breadcrumbs() {
                 $category  = $categories[0];
                 $category_links = get_category_parents( $category, true, $delimiter );
                 $category_links = str_replace( '<a',   $link_before.'<a'.$link_attr, $category_links );
-                $category_links = str_replace( '</a>', '</a>'.$link_after,             $category_links );
+                $category_links = str_replace( '</a>', '</a>'.$link_after, $category_links );
             endif;
        endif;
 
         if ( !in_array( $post_type, ['post', 'page', 'attachment'] ) ) :
             $post_type_object = get_post_type_object( $post_type );
             $archive_link = esc_url( get_post_type_archive_link( $post_type ) );
-            $post_type_link = sprintf( $link, $archive_link, $post_type_object->labels->name );
+			if ($achive_link) $post_type_link = sprintf( $link, $archive_link, $post_type_object->labels->name );
        	endif;
 
         if ( $parent !== 0 ) :
@@ -1111,7 +1111,7 @@ add_action('shutdown', function() {
 }, 0);
 
 // Delay execution of non-essential scripts  --- && $GLOBALS['pagenow'] !== 'index.php'  had to be removed for CHR Services? WTF3
-if ( !is_admin() && strpos($_SERVER['REQUEST_URI'], 'wp-json') === false && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && strpos($GLOBALS['pagenow'], 'wp-cron.php') === false && !is_plugin_active( 'woocommerce/woocommerce.php' ) && strpos($_SERVER['REQUEST_URI'], '.xml') === false ) :
+if ( !is_admin() && strpos($_SERVER['REQUEST_URI'], 'wp-json') === false && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && strpos($GLOBALS['pagenow'], 'wp-cron.php') === false && strpos($_SERVER['REQUEST_URI'], '.xml') === false && !is_plugin_active( 'woocommerce/woocommerce.php' )) :
 	add_filter('final_output', function($html) {
 		if ( $html != '' && $html != null && $html != 'undefined') :
 			$dom = new DOMDocument();
@@ -1274,7 +1274,7 @@ function bp_display_menu_search( $searchText, $mobile='', $reveal='click' ) {
 	$searchForm = '<form role="search" method="get" class="menu-search-form" action="'.home_url( '/' ).'">';
 	$searchForm .= '<label><span class="screen-reader-text">'._x( 'Search for:', 'label' ).'</span></label>';
 	$searchForm .= '<input type="hidden" value="1" name="sentence" />';
-	$searchForm .= '<a class="menu-search-bar reveal-'.$reveal.'">[get-icon type="search"]<input type="search" class="search-field" placeholder="'.esc_attr_x( $searchText, 'placeholder' ).'" value="'.get_search_query().'" name="s" title="'.esc_attr_x( 'Search for:', 'label' ).'" /></a>';
+	$searchForm .= '<a class="menu-search-bar reveal-'.$reveal.'"><span class="icon search" aria-hidden="true"></span><input type="search" class="search-field" placeholder="'.esc_attr_x( $searchText, 'placeholder' ).'" value="'.get_search_query().'" name="s" title="'.esc_attr_x( 'Search for:', 'label' ).'" /></a>';
 	$searchForm .= '</form>';
 		  
 	return '<div class="menu-search-box'.$mobile.'" role="none">'.$searchForm.'</div>';
@@ -1444,7 +1444,7 @@ function battleplan_excerpt_length( $length ) {
 add_filter('get_the_excerpt', 'end_with_sentence');
 function end_with_sentence( $excerpt ) {	
 	if ( !has_excerpt() ) :		
-		$sentences = preg_split( "/(\.|\!|\?)/", $excerpt, NULL, PREG_SPLIT_DELIM_CAPTURE);
+		$sentences = preg_split( "/(\.|\!|\?)/", $excerpt, -1, PREG_SPLIT_DELIM_CAPTURE);
 		$newExcerpt = implode('', array_slice($sentences, 0, 4));	
 		if ( strlen($newExcerpt) > 200 ) $newExcerpt = implode('', array_slice($sentences, 0, 2));
 
@@ -1925,18 +1925,6 @@ function bp_after_colophon() { do_action('bp_after_colophon'); }
 /*--------------------------------------------------------------
 # Custom Actions
 --------------------------------------------------------------*/
-
-// Preload fonts
-add_action('bp_font_loader', 'battleplan_loadFonts');
-function battleplan_loadFonts() {
-	if ( isset($GLOBALS['customer_info']['site-fonts']) ) :
-		$buildPreload = '';
-		foreach ( $GLOBALS['customer_info']['site-fonts'] as $siteFont ) :
-			if ( $siteFont != "" ) $buildPreload .= '<link rel="preload" as="font" type="font/woff2" href="'.get_site_url().'/wp-content/themes/battleplantheme-site/fonts/'.$siteFont.'.woff2" crossorigin="anonymous">';
-		endforeach;
-		echo $buildPreload;
-	endif;
-}
 
 // Install Google Global Site Tags
 add_action('bp_google_tag_manager', 'battleplan_load_tag_manager');

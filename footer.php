@@ -90,7 +90,7 @@
 						$iconWH = "";
 					endif; 
 
-					$buildRight = do_shortcode('[img size="1/6" link = "/" class="site-icon"]<img class="site-icon noFX" src="../../../wp-content/uploads/'.$iconName.'" loading="lazy" alt="Return to Home Page"'.$iconWH.'/>[/img]');
+					$buildRight = do_shortcode('[img size="1/6" link = "/" class="site-icon"]<img class="site-icon noFX" src="/wp-content/uploads/'.$iconName.'" loading="lazy" alt="Return to Home Page"'.$iconWH.'/>[/img]');
 					$buildRight .= do_shortcode('[txt size="5/6"]'.$buildCopyright.'[/txt]');
 				endif;
 

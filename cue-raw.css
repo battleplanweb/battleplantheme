@@ -13,6 +13,7 @@
 	gap: 										1em 4%;
 	font-size:									85%;
 	align-items:								flex-start;
+	padding: 									10px;
 }
 
 .cue-audio,
@@ -27,7 +28,7 @@
 }
 
 .mejs-track-details {
-	margin-top:									0.75em;
+	margin-top:									0;
 	text-align:									center;
 	font-size:									115%;
 }
@@ -40,34 +41,44 @@
 	margin:										1em 0 0;
 }
 
+.mejs-button button {
+	display:									flex;
+	justify-content: 							center;
+	align-items: 								center;
+	padding: 									0;
+	width: 										50px;
+	aspect-ratio: 								1/1;
+}
+
 .mejs-button button::before {
 	display:									inline-block;
 	font-family: 								var(--font-icons);
-	font-size:									20px;
+	font-size:									26px;
+	font-weight: 								normal;
 }
 
 .mejs-previous button::before {
-	content:   									"\f04a";
+	content:   									"\e23d";
 }
 
 .mejs-next button::before {
-	content:   									"\f04e";
+	content:   									"\e23f";
 }
 
 .mejs-play button::before {
-	content:   									"\f04b";
+	content:   									"\e23e";
 }
 
 .mejs-pause button::before {
-	content:   									"\f04c";
+	content:   									"\e240";
 }
 
 .mejs-mute button::before {
-	content:   									"\f028";
+	content:   									"\e244";
 }
 
 .mejs-unmute button::before {
-	content:   									"\f6a9";
+	content:   									"\e245";
 }
 
 .mejs-horizontal-volume-slider {
@@ -213,7 +224,7 @@
  	border-bottom:								2px solid var(--black-lowest);
 	cursor:										pointer;
  	margin:										0 !important;
- 	padding:									10px;
+ 	padding:									4px 10px;
  	width:										100%;
 	transition:									all 0.3s ease;
 }
@@ -241,6 +252,10 @@
 .cue-playlist .cue-track p:last-child {
  	margin-bottom:								0;
 	display:									none;
+}
+
+.cue-playlist + p {
+	display: 									none;
 }
 
 .mejs-track-details .mejs-track-title,

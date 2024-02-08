@@ -222,8 +222,7 @@ function battleplan_remove_menus() {
 	remove_submenu_page( 'wpseo_dashboard', 'wpseo_dashboard' );   						// Yoast SEO => General
 	remove_submenu_page( 'wp-mail-smtp', 'wp-mail-smtp-logs' );   						// WP Mail SMTP => Email Log
 	remove_submenu_page( 'wp-mail-smtp', 'wp-mail-smtp-reports' );   					// WP Mail SMTP => Email Reports
-	remove_submenu_page( 'wp-mail-smtp', 'wp-mail-smtp-about' );   						// WP Mail SMTP => About Us	
-	
+	remove_submenu_page( 'wp-mail-smtp', 'wp-mail-smtp-about' );   						// WP Mail SMTP => About Us		
 	
 	add_submenu_page( 'upload.php', 'Favicon', 'Favicon', 'manage_options', 'customize.php' );	
 	
@@ -303,7 +302,7 @@ function battleplan_custom_post_type_counts() {
 	
 	foreach ($getCPT as $postType) :
 		$count_posts = wp_count_posts($postType);
-		$num_posts = $count_posts > 0 ? $count_posts->publish : 0;
+		$num_posts = $count_posts->publish > 0 ? $count_posts->publish : 0;
 		global $menu;
 
 		foreach ($menu as $key => $value) :
@@ -333,17 +332,17 @@ function battleplan_remove_dashboard_widgets () {
 	remove_meta_box('dashboard_quick_press','dashboard','side'); 					// Quick Draft
 	remove_meta_box('dashboard_site_health','dashboard','normal');					// Site Health
 	remove_meta_box('dashboard_site_health','dashboard','side');					// Site Health
-	remove_meta_box('woocommerce_dashboard_status','dashboard','normal');				// Woocommerce
+	remove_meta_box('woocommerce_dashboard_status','dashboard','normal');			// Woocommerce
 	remove_meta_box('woocommerce_dashboard_status','dashboard','side');				// Woocommerce
 	remove_meta_box('dashboard_primary','dashboard','normal'); 						// WordPress Events and News
 	remove_meta_box('dashboard_primary','dashboard','side'); 						// WordPress Events and News
-	remove_meta_box('wp_mail_smtp_reports_widget_lite','dashboard','normal');			// WP Mail SMTP
+	remove_meta_box('wp_mail_smtp_reports_widget_lite','dashboard','normal');		// WP Mail SMTP
 	remove_meta_box('wp_mail_smtp_reports_widget_lite','dashboard','side');			// WP Mail SMTP
-	remove_meta_box('wp_mail_smtp_reports_widget_pro','dashboard','normal');			// WP Mail SMTP Pro
+	remove_meta_box('wp_mail_smtp_reports_widget_pro','dashboard','normal');		// WP Mail SMTP Pro
 	remove_meta_box('wp_mail_smtp_reports_widget_pro','dashboard','side');			// WP Mail SMTP Pro	
 	remove_meta_box('wpseo-dashboard-overview','dashboard','normal');				// Yoast SEO Posts Overview
 	remove_meta_box('wpseo-dashboard-overview','dashboard','side');					// Yoast SEO Posts Overview
-	remove_meta_box('wpseo-wincher-dashboard-overview','dashboard','normal');			// Yoast SEO / Wincher Top Keyphrases
+	remove_meta_box('wpseo-wincher-dashboard-overview','dashboard','normal');		// Yoast SEO / Wincher Top Keyphrases
 	remove_meta_box('wpseo-wincher-dashboard-overview','dashboard','side');			// Yoast SEO / Wincher Top Keyphrases	
 }
 
@@ -381,8 +380,8 @@ function custom_posts_per_page_based_on_type_in_admin( $per_page, $post_type ) {
 // Define a function to add the option value to body class
 add_filter('admin_body_class', 'battleplan_add_body_classes');
 function battleplan_add_body_classes($classes) {
-    $siteType = $GLOBALS['customer_info']['site-type'];
-    $bizType = $GLOBALS['customer_info']['business-type'];
+    $siteType = isset($GLOBALS['customer_info']['site-type']) ? $GLOBALS['customer_info']['site-type'] : null;
+    $bizType = isset($GLOBALS['customer_info']['business-type']) ? $GLOBALS['customer_info']['business-type'] : null;
 
     if ( $siteType ) $classes .= ' site-type-'.$siteType;
     if ( $bizType ) $classes .= ' business-type-'.$bizType;

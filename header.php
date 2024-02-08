@@ -22,11 +22,20 @@
 	</script>	
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<link rel="profile" href="https://gmpg.org/xfn/11">
+	<link rel="profile" href="https://gmpg.org/xfn/11">	
 	
+	<?php if ( isset($GLOBALS['customer_info']['lcp']) ) : ?>
+		<link rel="preload" fetchpriority="high" as="image" href="<?php echo get_site_url() ?>/wp-content/uploads/<?php echo $GLOBALS['customer_info']['lcp'][0] ?>.<?php echo $GLOBALS['customer_info']['lcp'][1] ?>" type="image/<?php echo $GLOBALS['customer_info']['lcp'][1] ?>">	
+	<?php endif; ?>
 	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/open-sans-v17-latin-regular.woff2" crossorigin="anonymous">
-	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/fa-solid-900.woff2" crossorigin="anonymous">	
 	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/BP-Icons.woff2" crossorigin="anonymous">
+
+	<?php if ( isset($GLOBALS['customer_info']['site-fonts']) ) :
+		foreach ( $GLOBALS['customer_info']['site-fonts'] as $siteFont ) :
+			if ( $siteFont != "" ) echo '<link rel="preload" as="font" type="font/woff2" href="'.get_site_url().'/wp-content/themes/battleplantheme-site/fonts/'.$siteFont.'.woff2" crossorigin="anonymous">';
+		endforeach;
+	endif; ?>
+	
 	<link rel="preconnect" href="https://googletagmanager.com/">
 
 	<?php bp_font_loader(); ?>	

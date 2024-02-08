@@ -13,13 +13,19 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '23.4' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '23.5' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
 if ( !defined('_USER_LOGIN') ) define( '_USER_LOGIN', wp_get_current_user()->user_login );
 if ( !defined('_USER_ID') ) define( '_USER_ID', wp_get_current_user()->ID );
+
+if ( _USER_LOGIN == 'battleplanweb' ) :
+	//if ( !defined('WP_DEBUG' )) define('WP_DEBUG', true);
+    //@ini_set('display_errors', 1);
+   	//@error_reporting(E_ALL);
+endif;
 
 $googlebots = array( 'google', 'lighthouse' );
 $bots = array_merge(array('adbeat', 'addthis', 'admantx', 'audit', 'barkrowler', 'bing', 'bot', 'crawler', 'dataprovider', 'daum', 'docomo', 'duckduck', 'facebook', 'fetcher', 'gigablast', 'linkedin', 'majestic', 'netcraft', 'newspaper', 'okhttp', 'panscient', 'qwantify', 'riddler', 'wayback', 'slurp', 'spider', 'wordpress', 'yahoo', 'yeti', 'zgrab'), $googlebots);
@@ -177,9 +183,10 @@ $GLOBALS['icons']['finger-5'] = '\e1a5';
 $GLOBALS['icons']['heartbeat'] = '\e12f';
 $GLOBALS['icons']['home'] = '\e000';
 $GLOBALS['icons']['house-magnify'] = '\e003';
-$GLOBALS['icons']['instagram'] = '\1c9';
+$GLOBALS['icons']['instagram'] = '\e1c9';
 $GLOBALS['icons']['leaf'] = '\e111';
 $GLOBALS['icons']['linkedin'] = '\e1d1';
+$GLOBALS['icons']['location'] = '\e0b9';
 $GLOBALS['icons']['phone'] = '\e027';
 $GLOBALS['icons']['pinterest'] = '\e1d0';
 $GLOBALS['icons']['search'] = '\e0ce';

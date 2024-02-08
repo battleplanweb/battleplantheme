@@ -185,7 +185,7 @@ foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $visitorSessions[$ter
 foreach ( $ga4_visitors_data as $visitorLocation=>$locationData ) :
 	foreach ( $locationData as $termLength=>$totalSessions ) :
 		if ( !in_array($visitorLocation, $excludeCities) ) :
-			$GLOBALS['ga4_visitor'][$termLength] += $totalSessions;
+			$GLOBALS['ga4_visitor'][$termLength] = isset($GLOBALS['ga4_visitor'][$termLength]) ? $GLOBALS['ga4_visitor'][$termLength] + $totalSessions : 0;
 		endif;
 	endforeach;
 
@@ -360,17 +360,17 @@ foreach ( $ga4_speed_data as $speedLocation=>$speedData ) :
 				if (strpos($speed, 'desktop') !== false ) :	
 					$speed = (float)substr(substr($speed, strpos($speed, "«") + 1), 1);
 					if ( $speed < ($desktopTarget * 10) ) :
-						$GLOBALS['speedSessions'][$term]['desktop'] += 1;
-						if ( $speed <= $desktopTarget ) $GLOBALS['fastSessions'][$term]['desktop'] += 1;
-						$GLOBALS['speedTotal'][$term]['desktop'] += $speed;		
+						$GLOBALS['speedSessions'][$term]['desktop'] = isset($GLOBALS['speedSessions'][$term]['desktop']) ? $GLOBALS['speedSessions'][$term]['desktop'] + 1 : 0;
+						if ( $speed <= $desktopTarget ) $GLOBALS['fastSessions'][$term]['desktop'] = isset($GLOBALS['fastSessions'][$term]['desktop']) ? $GLOBALS['fastSessions'][$term]['desktop'] + 1 : 0;
+						$GLOBALS['speedTotal'][$term]['desktop'] = isset($GLOBALS['speedTotal'][$term]['desktop']) ? $GLOBALS['speedTotal'][$term]['desktop'] + $speed : 0;
 					endif;
 				endif;
 				if (strpos($speed, 'mobile') !== false ) :			
 					$speed = (float)substr(substr($speed, strpos($speed, "«") + 1), 1);
 					if ( $speed < ($mobileTarget * 10) ) :
-						$GLOBALS['speedSessions'][$term]['mobile'] += 1;
-						if ( $speed <= $mobileTarget ) $GLOBALS['fastSessions'][$term]['mobile'] += 1;
-						$GLOBALS['speedTotal'][$term]['mobile'] += $speed;
+						$GLOBALS['speedSessions'][$term]['mobile'] = isset($GLOBALS['speedSessions'][$term]['mobile']) ? $GLOBALS['speedSessions'][$term]['mobile'] + 1 : 0;
+						if ( $speed <= $mobileTarget ) $GLOBALS['fastSessions'][$term]['mobile'] = isset($GLOBALS['fastSessions'][$term]['mobile']) ? $GLOBALS['fastSessions'][$term]['mobile'] + 1 : 0;
+						$GLOBALS['speedTotal'][$term]['mobile'] = isset($GLOBALS['speedTotal'][$term]['mobile']) ? $GLOBALS['speedTotal'][$term]['mobile'] + $speed : 0;
 					endif;
 				endif;
 			endforeach;
@@ -630,6 +630,7 @@ function battleplan_page_stats() {
 	$rightNow = strtotime(date("F j, Y g:i a"));
 	$today = strtotime(date("F j, Y"));
 	
+	$viewsToday = (float)readMeta(get_the_ID(), 'bp_views_today', true);	
 	$last7Views = (float)readMeta(get_the_ID(), 'bp_views_7', true);
 	$last30Views = (float)readMeta(get_the_ID(), 'bp_views_30', true);
 	$last90Views = (float)readMeta(get_the_ID(), 'bp_views_90', true);
@@ -643,10 +644,6 @@ function battleplan_page_stats() {
 		if ( $last90Views != $last30Views) echo "<tr><td><b>Last 90 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last90Views, 'battleplan' ), number_format($last90Views) )."</td></tr>";
 		if ( $last180Views != $last90Views) echo "<tr><td><b>Last 180 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last180Views, 'battleplan' ), number_format($last180Views) )."</td></tr>";
 		if ( $last365Views != $last180Views) echo "<tr><td><b>Last 365 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last365Views, 'battleplan' ), number_format($last365Views) )."</td></tr>";
-	echo "</table>";		
-
+	echo "</table>";	
 } 
-
-
-
 ?>

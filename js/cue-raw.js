@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			var thisPlaylist = $(this);	
 
 			// make tracklist same height as player
-			var cueH = thisPlaylist.find('.mejs-container').outerHeight();
+			var cueH = thisPlaylist.find('.mejs-container').outerHeight() * 2;
 			thisPlaylist.find('.cue-playlist .cue-tracks').css({"max-height":cueH+"px"});	
 
 			// swap track details in player		

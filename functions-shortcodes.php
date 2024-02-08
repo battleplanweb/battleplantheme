@@ -732,7 +732,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		$testimonialMisc3 = esc_attr(get_field( "testimonial_misc3" ));	
 		$testimonialMisc4 = esc_attr(get_field( "testimonial_misc4" ));
 		
-		$addNewTag = get_the_date('Y-m-d') > date('Y-m-d', strtotime('-3 months')) ? '<img class="noFX new" loading="lazy" src="../wp-content/themes/battleplantheme/common/logos/new-1.png" width="58" height="52" style="aspect-ratio:58/52" />' : '';
+		$addNewTag = get_the_date('Y-m-d') > date('Y-m-d', strtotime('-3 months')) ? '<img class="noFX new" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/new-1.png" width="58" height="52" style="aspect-ratio:58/52" />' : '';
 		
 		$buildCredentials = "<div class='testimonials-credential testimonials-name'>".$addNewTag.get_the_title();
 		if ( $testimonialTitle ) $buildCredentials .= "<span class='testimonials-title'>, ".$testimonialTitle."</span>";
@@ -1179,9 +1179,9 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	$buildIndicators .= '</ol>';
 	$buildInner .= '</div>';
 
-	$controlsPrevBtn = '<div class="block block-button"><a class="button carousel-control-prev'.$controlClass.'" href="#'.$type.'Slider'.$sliderNum.'" data-slide="prev"><span class="carousel-control-prev-icon" aria-label="Previous Slide"><span class="sr-only">Previous Slide</span></span></a></div>';
-	$controlsNextBtn = '<div class="block block-button"><a class="button carousel-control-next'.$controlClass.'" href="#'.$type.'Slider'.$sliderNum.'" data-slide="next"><span class="carousel-control-next-icon" aria-label="Next Slide"><span class="sr-only">Next Slide</span></span></a></div>';
-	$viewMoreBtn = do_shortcode('[btn link="'.$linkTo.'"]'.$allBtn.'[/btn]');	
+	$controlsPrevBtn = '<div class="block block-button button-prev"><a class="button carousel-control-prev'.$controlClass.'" href="#'.$type.'Slider'.$sliderNum.'" data-slide="prev"><span class="carousel-control-prev-icon" aria-label="Previous Slide"><span class="sr-only">Previous Slide</span></span></a></div>';
+	$controlsNextBtn = '<div class="block block-button button-next"><a class="button carousel-control-next'.$controlClass.'" href="#'.$type.'Slider'.$sliderNum.'" data-slide="next"><span class="carousel-control-next-icon" aria-label="Next Slide"><span class="sr-only">Next Slide</span></span></a></div>';
+	$viewMoreBtn = do_shortcode('[btn link="'.$linkTo.'" class="button-all"]'.$allBtn.'[/btn]');	
 
 	$buildControls = "<div class='controls controls-".$controlsPos."'>";	
 	$buildControls .= $controlsPrevBtn;
@@ -1285,7 +1285,7 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 		$addLogos = array( "amana","american-standard","bryant","carrier","comfortmaker","goodman","heil","honeywell","lennox","rheem","ruud","samsung","tempstar","trane","york" );		
 		for ( $i=0; $i < count($addLogos); $i++ ) :	
 			$alt = "We service ".ucwords(strtolower(str_replace(" ", "-", $addLogos[$i])))." air conditioners, heaters and other HVAC equipment.";
-			$imageURL = "../wp-content/themes/battleplantheme/common/hvac-".$addLogos[$i]."/".$addLogos[$i]."-sidebar-logo.png";
+			$imageURL = "/wp-content/themes/battleplantheme/common/hvac-".$addLogos[$i]."/".$addLogos[$i]."-sidebar-logo.png";
 			$imagePath = get_template_directory()."/common/hvac-".$addLogos[$i]."/".$addLogos[$i]."-sidebar-logo.png";			
 			list($width, $height) = getimagesize($imagePath);
 			

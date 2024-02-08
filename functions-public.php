@@ -34,7 +34,7 @@
 				$this->_meta_box = array_merge($defaults, $meta_box_config);
 				$this->_nonce_name = $meta_box_config['id'] . '_nonce';
 				$this->_folder_name = 'wp-metabox-constructor-class';
-				$this->_path = plugins_url($this->_folder_name, plugin_basename(dirname( __FILE__ )));
+				$this->_path = plugins_url($this->_folder_name, __FILE__);
 
 				add_action('add_meta_boxes', array($this, 'add'));
 				add_action('save_post', array($this, 'save'));

@@ -11,7 +11,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon-box">[get-icon type="cog"]</div>
+				<div class="icon-box">[get-icon type="rocket"]</div>
 				[txt]
 					<h2>Innovation</h2>
 					<p>From industry-leading technologies to next-generation energy efficiencies, Rheem has been a pioneer in developing some of the most innovative advancements. With a long list of award-winning solutions, Rheem continues to deliver advanced comfort, savings and experiences to our customers.</p>

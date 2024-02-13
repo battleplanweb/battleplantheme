@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 23.5
+Version: 23.6
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -272,6 +272,8 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --break-out-border-right:						none; 
   --break-out-border-left:						none;
   --break-out-padding: 							1.5em 2.5em;
+
+
 
   --break-out-margin: 							2.5em auto;
   --break-out-box-shadow: 						none;
@@ -2627,12 +2629,16 @@ a.icon-btn.tab-focus .icon-bg {
 	font-size: 										110%;
 }
 
-span.icon.x-large::after {
-	content: 										"\e138";
-}
-
 span.icon.chevron-right::after {
 	content: 										"\e218";
+}
+
+span.icon.cog::after {
+	content: 										"\e218";
+}
+
+span.icon.x-large::after {
+	content: 										"\e138";
 }
 
 
@@ -3198,6 +3204,7 @@ span.icon.chevron-right::after {
 @keyframes screen-up {
     0% {transform: 								translateY(0) }    
 	25% {transform: 							translateY(-2px) } 
+
 	50% {transform: 							translateY(4px) } 
 	75% {transform: 							translateY(-4px) } 
 }
@@ -4314,7 +4321,7 @@ img.img-404 {
 }
 
 .testimonials-rating {
-	color:											var(--paypal-yellow);
+	color: 											var(--google-star);
 	margin-right:									-5px;
 }
 
@@ -4323,7 +4330,7 @@ img.img-404 {
 	content: 										"\e01b";
 	font-size: 										28px;
   	margin: 										3px;
-	color: 											var(--google-star);
+	color: 											inherit;
 	text-shadow: 									1px 0 0 var(--google-star-shadow), -1px 0 0 var(--google-star-shadow), 0 -1px 0 var(--google-star-shadow), 0 1px 0 var(--google-star-shadow), 1px 1px 1px var(--google-star-shadow);
 }
 
@@ -5600,6 +5607,7 @@ chat-widget .lc_text-widget--btn,
 .logo-slider img.logo-img,
 #wrapper-bottom .logo-slider img.logo-img {
 	border: 									none;
+	border-radius: 								0;
 	box-shadow: 								none;
 	filter: 									none;
 	background: 								none;

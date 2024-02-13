@@ -680,7 +680,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	
 	// Allow sub-menu to appear, even if initially set to overflow:hidden	
 	setTimeout(function() {
-		$('.menu-clip .menu-strip').css({'overflow':'visible', 'clip-path':'none'});
+		//$('.menu-clip .menu-strip').css({'overflow':'visible', 'clip-path':'none'});
+		$('.menu-clip .menu-strip').css({'clip-path':'none'}); // changed because MAK Comfort buttons were showing in header
 	}, 2500);
 	
 /*--------------------------------------------------------------

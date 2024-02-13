@@ -11,7 +11,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon-box">[get-icon type="dollar-sign"]</div>
+				<div class="icon-box">[get-icon type="money-bag"]</div>
 				[txt]
 					<h2>Affordability</h2>
 					<p>Amana believes in putting the ability in afford–ability. That\'s why our appliances cost less, but really deliver — so both you and your wallet stay happy. Our quality products provide only the features you need without any of the hassle.</p>
@@ -19,7 +19,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon-box">[get-icon type="cog"]</div>
+				<div class="icon-box">[get-icon type="rocket"]</div>
 				[txt]
 					<h2>Innovation</h2>
 					<p>Amana has a rich history of creating appliances that changed the American household. We have always made sure that when it comes to hassle-free living, our customers always come first.</p>

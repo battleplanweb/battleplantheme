@@ -11,7 +11,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon-box">[get-icon type="cog"]</div>
+				<div class="icon-box">[get-icon type="strong-arm"]</div>
 				[txt]
 					<h2>Tough</h2>
 					<p>We test our products for 2,600 hours in bone-chilling cold and blistering heat. We push our technology so the system you get serves you for up to 12-20 years.</p>

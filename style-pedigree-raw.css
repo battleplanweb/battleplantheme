@@ -67,15 +67,21 @@ span.X {
 
 /* Dogs & Litters
 --------------------------------------------- */
-.fa-mars:before {
-    content: 									"\e1e3";
+.icon.sex-male::after,
+.icon.male::after {
+    content: 									"\e18a";
 }
 
-.fa-venus:before {
-    content: 									"\e1e2";
+.icon.sex-female::after,
+.icon.female::after { 
+    content: 									"\e189";
 }
 
-.fa-medal:before {
+.icon.sex-both::after { 
+    content: 									"\e18b";
+}
+
+.icon.medal::after {
     content: 									"\e09e";
 }
 
@@ -84,9 +90,11 @@ span.X {
 	z-index:									500;
 }
 
-.col-archive .image-dogs .sex-box .fa {
-	font-size:									24px;
-	transform:									translateY(-1px);
+.col-archive .image-dogs .sex-box .icon {
+	display: 									grid;
+  	justify-content: 							center;
+  	align-items: 								center;
+	font-size:									22px;
 }
 
 div.dog-description {
@@ -251,7 +259,7 @@ button.active {
 		grid-column: 								span 1;
 	}
 	
-	.col-archive .image-dogs .sex-box .fa {
+	.col-archive .image-dogs .sex-box .icon {
 		font-size: 									21px;
 	}
 	

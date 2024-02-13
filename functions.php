@@ -1765,6 +1765,22 @@ function battleplan_create_user_roles() {
 	);	
 		
 	$caps_jobsite_geo = array (
+		//'publish_jobsites'				=> true,
+		'edit_jobsites'					=> true,
+		'delete_jobsites'				=> true,
+		//'edit_others_jobsites'			=> true,
+		//'delete_others_jobsites'		=> true,
+		//'edit_published_jobsites'		=> true,
+		//'delete_published_jobsites'		=> true,
+		'read_private_jobsites'			=> true,
+		//'edit_private_jobsites'			=> true,
+		//'delete_private_jobsites'		=> true,
+		'copy_jobsites'					=> true,
+		'upload_files'					=> true,
+		'read'							=> true,
+	);	
+		
+	$caps_jobsite_geo_mgr = array (
 		'publish_jobsites'				=> true,
 		'edit_jobsites'					=> true,
 		'delete_jobsites'				=> true,
@@ -1831,7 +1847,10 @@ function battleplan_create_user_roles() {
 	);
 
 	remove_role( 'bp_jobsite_geo_mgr' );
-	add_role('bp_jobsite_geo_mgr', __('Jobsite GEO'), array_merge( $caps_subscriber, $caps_jobsite_geo) );	
+	add_role('bp_jobsite_geo_mgr', __('Jobsite GEO Manager'), array_merge( $caps_subscriber, $caps_jobsite_geo_mgr) );	
+		
+	remove_role( 'bp_jobsite_geo' );
+	add_role('bp_jobsite_geo', __('Jobsite GEO'), array_merge( $caps_subscriber, $caps_jobsite_geo) );	
 	
 	remove_role( 'bp_manage_plugins' );
 	add_role('bp_manage_plugins', __('Manage Plugins'), $caps_manage_plugins );

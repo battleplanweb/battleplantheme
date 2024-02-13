@@ -456,12 +456,12 @@ function processChron($forceChron) {
 
 					if ($existing_posts->have_posts()) : while ($existing_posts->have_posts()) :
 							$existing_posts->the_post();
-							$existing_titles[] = get_the_title();
+							$existing_titles[] = strtolower(get_the_title());
 						endwhile;
 					endif;
 
 					foreach ($googleInfo[$placeID]['reviews'] as $review) :
-						if (!in_array($review['author_name'], $existing_titles)) :
+						if (!in_array( strtolower($review['author_name']), $existing_titles)) :
 							$new_post = array(
 								'post_title'   => wp_strip_all_tags($review['author_name']),
 								'post_content' => $review['text'],
@@ -471,9 +471,9 @@ function processChron($forceChron) {
 
 							$new_post_id = wp_insert_post($new_post);
 							if (!is_wp_error($new_post_id)) :
-								wp_set_object_terms($new_post_id, $review['rating'], 'testimonial_rating', false);
-								wp_set_object_terms($new_post_id, 'Google', 'platform', false);            
-								wp_set_object_terms($new_post_id, $review['author_url'], 'testimonial_website', false);
+								update_field('testimonial_rating', $review['rating'], $new_post_id);
+								update_field('platform', 'Google', $new_post_id);
+								update_field('testimonial_website', $review['author_url'], $new_post_id);
 							endif;
 						endif;
 					endforeach;	

@@ -18,7 +18,7 @@
 // save important info to meta data upon publishing or updating post
 add_action('save_post', 'battleplan_saveJobsite', 10, 3);
 function battleplan_saveJobsite($post_id, $post, $update) {
-    if ( ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) || !current_user_can('edit_post', $post_id) || get_post_type($post_id) != 'jobsite_geo') return;
+    if ( ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) || ( defined('DOING_AJAX') && DOING_AJAX ) || !current_user_can('edit_post', $post_id) || get_post_type($post_id) != 'jobsite_geo') return;
 	
 	// retrieve lat & long from Google API and add as post meta	
 	$address = esc_attr(get_field( "address" )).', '.esc_attr(get_field( "city" )).', '.esc_attr(get_field( "state" )).' '.esc_attr(get_field( "zip" ));
@@ -29,14 +29,24 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 		$body = wp_remote_retrieve_body($response);
 		$data = json_decode($body, true);
 		if ($data['status'] == 'OK') update_post_meta($post_id, 'geocode', $data['results'][0]['geometry']['location']);
-	endif;
-	
+	endif;	
 	
 	// add city-state as location tag
     $locationTag = esc_attr(get_field("city")).'-'.esc_attr(get_field("state")); 
     $term = term_exists($locationTag, 'jobsite_geo-service-areas');
     if (empty($term)) $term = wp_insert_term($locationTag, 'jobsite_geo-service-areas');
     if (!is_wp_error($term)) wp_set_post_terms($post_id, $locationTag, 'jobsite_geo-service-areas');	
+	
+	// add username as technician tag
+	$current_user = wp_get_current_user();
+	if ( in_array( 'bp_jobsite_geo', $current_user->roles ) ) :
+		$techTag = $current_user->user_firstname.'-'.$current_user->user_lastname; 
+		$term = term_exists($techTag, 'jobsite_geo-techs');
+		if (empty($term)) $term = wp_insert_term($techTag, 'jobsite_geo-techs');
+		if (!is_wp_error($term)) wp_set_post_terms($post_id, $techTag, 'jobsite_geo-techs');	
+	endif;
+
+	// set first uploaded pic as jobsite thumbnail
 	set_post_thumbnail($post_id, esc_attr(get_field( "jobsite_photo_1")) );	
 }
 
@@ -642,7 +652,7 @@ function battleplan_handle_jobsite_geo_image_upload($file) {
         $post = get_post($post_id);
 	endif;
 
-    if ( ($post && $post->post_type === 'jobsite_geo') || in_array('bp_jobsite_geo_mgr', $current_user->roles) ):
+    if ( ($post && $post->post_type === 'jobsite_geo') || in_array('bp_jobsite_geo_mgr', $current_user->roles) || in_array('bp_jobsite_geo', $current_user->roles) ):
    		$file['name'] = 'jobsite_geo-'.$post_id.'--'. $file['name'];
     endif;	
 	

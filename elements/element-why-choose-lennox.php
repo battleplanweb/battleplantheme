@@ -19,7 +19,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon-box">[get-icon type="cog"]</div>
+				<div class="icon-box">[get-icon type="rocket"]</div>
 				[txt]
 					<h2>Innovation</h2>
 					<p>The Lennox Ultimate Comfort System is innovative and customized to your needs, helping to create an ideal environment in your home or workplace.</p>
@@ -35,7 +35,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon-box">[get-icon type="award"]</div>
+				<div class="icon-box">[get-icon type="award-alt"]</div>
 				[txt]
 					<h2>Superior Service</h2>
 					<p>We understand that actions speak louder than words, so instead of just talking quality, we practice it through listening and responding to your comfort needs.</p>

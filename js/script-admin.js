@@ -263,7 +263,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	
 	
 	// Set up custom QTags	
-	QTags.addButton( 'bp_paragraph', 'p', '<p>', '</p>\n', 'p', 'Paragraph Tag', 1 );
+	QTags.addButton( 'bp_paragraph', 'p', '<p>', '</p>', 'p', 'Paragraph Tag', 1 );
 	QTags.addButton( 'bp_li', 'li', ' <li>', '</li>', 'li', 'List Item', 100 );			
 
 	QTags.addButton( 'bp_widget', 'widget', '[widget type="basic" title="Brand Logo (omit to hide)" lock="none, top, bottom" priority="2, 1, 3, 4, 5" set="none, param" class="" show="slug" hide="slud" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '[/widget]\n\n', 'widget', 'Widget', 1000 );			

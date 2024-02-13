@@ -11,7 +11,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon-box">[get-icon type="clipboard-check"]"</div>
+				<div class="icon-box">[get-icon type="checkmark-seal"]"</div>
 				[txt]
 					<h2>Quality</h2>
 					<p>We live and breathe our motto: <em>Whatever It Takes.</em> Our experienced and well-trained dealers work hard within your local community to deliver quality you can rely on for over a century.</p>
@@ -35,7 +35,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon-box">[get-icon type="cog"]</div>
+				<div class="icon-box">[get-icon type="rocket"]</div>
 				[txt]
 					<h2>Above & Beyond</h2>
 					<p>We have a reputation for going above and beyond to give you the home comfort you deserve. We only install quality products you can rely on, with service you can trust.</p>

@@ -11,7 +11,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon-box">[get-icon type="thumbs-up"]</div>
+				<div class="icon-box">[get-icon type="checkmark-seal"]</div>
 				[txt]
 					<h2>Quality</h2>
 					<p>When you choose Tempstar, you’re choosing enhanced dependability and innovation in home comfort. We take pride in surpassing your expectations and delivering quality you can feel. </p>
@@ -19,7 +19,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon-box">[get-icon type="cog"</div>
+				<div class="icon-box">[get-icon type="chain-link"</div>
 				[txt]
 					<h2>Durability</h2>
 					<p>Our products are backed by exceptional warranties that are hard to surpass.  So while experiencing the comfort and safety that comes with a superior HVAC system, you also get peace of mind.</p>
@@ -35,7 +35,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon-box">[get-icon type="dollar-sign"]</div>
+				<div class="icon-box">[get-icon type="money-bag"]</div>
 				[txt]
 					<h2>Affordability</h2>
 					<p>Tempstar believes in putting the ability in afford–ability.  Not only do we keep the pricing on our products low, we also work hard to help our customers obtain the financing they need.</p>

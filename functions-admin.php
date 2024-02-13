@@ -412,9 +412,7 @@ function battleplan_remove_sidebar_checkbox($post) {
 
 add_action('save_post', 'battleplan_save_remove_sidebar', 10, 3);
 function battleplan_save_remove_sidebar($post_id, $post, $update) {
-	if ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) return;
-	if ( defined('DOING_AJAX') && DOING_AJAX ) return;
-    if ( !current_user_can("edit_post", $post_id) ) return;
+	if ( ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) || ( defined('DOING_AJAX') && DOING_AJAX ) || !current_user_can('edit_post', $post_id) ) return;
 			
 	$lastViewed = readMeta( $post_id, 'log-last-viewed' );
 	if ( !$lastViewed ) updateMeta( $post_id, 'log-last-viewed', strtotime("-2 days"));	
@@ -422,6 +420,32 @@ function battleplan_save_remove_sidebar($post_id, $post, $update) {
     $updateRemoveSidebar = "";
     if ( isset($_POST["remove_sidebar"]) ) $updateRemoveSidebar = $_POST["remove_sidebar"];   
     update_post_meta($post_id, "_bp_remove_sidebar", $updateRemoveSidebar);
+	
+	// check for duplicate before posting a new testimonial
+	if ( $post->post_type == 'testimonials') :	
+		$new_post_title = $post->post_title;
+		$query = new WP_Query( array( 'post_type' => 'testimonials', 'post_status' => 'publish', 'posts_per_page' => -1, 'post__not_in' => array($post_id) ));
+
+		$found_duplicate = false;
+
+		if ($query->have_posts()) :	while ($query->have_posts()) : $query->the_post();
+				if ( strtolower(get_the_title()) == strtolower($new_post_title)) :
+					$found_duplicate = true;
+					$existing_post_id = get_the_ID();
+					break;
+				endif;
+			endwhile;
+		endif;
+
+		wp_reset_postdata();
+
+		if ($found_duplicate) :
+			wp_delete_post($post_id, true);
+			$edit_post_url = get_edit_post_link($existing_post_id, 'raw');
+			wp_redirect($edit_post_url);
+			exit;
+		endif;
+	endif;	
 }
 
 // Add "duplicate post/page" function to WP core

@@ -138,7 +138,7 @@ function battleplan_getSeason($atts, $content = null) {
 // Retrieves and displays a Facebook post
 add_shortcode( 'get-fb-posts', 'battleplan_getFBPosts' );
 function battleplan_getFBPosts($atts, $content = null ) {
-	$a = shortcode_atts( array( 'prefix'=>'', 'links'=>'', 'width'=>'', 'lazy'=>'false', 'text'=>'true', 'max'=>'', 'shuffle'=>'true' ), $atts );
+	$a = shortcode_atts( array( 'prefix'=>'', 'links'=>'', 'width'=>'', 'lazy'=>'false', 'text'=>'true', 'max'=>1, 'shuffle'=>'true' ), $atts );
 	$prefix = esc_attr($a['prefix']);
 	$links = explode( ',', str_replace(' ', '', esc_attr($a['links'])) );
 	$width = esc_attr($a['width']);
@@ -148,7 +148,7 @@ function battleplan_getFBPosts($atts, $content = null ) {
 	$shuffle = esc_attr($a['shuffle']);
 	
 	if ( $shuffle == 'true' ) shuffle($links);
-	if ( $max != '' ) $links = array_slice($links, 0, $max);
+	if ( $max > 1 ) $links = array_slice($links, 0, $max);
 	
 	$display = '[col class="span-all hide-desktop hide-mobile"]<script defer nonce="'._BP_NONCE.'">window.fbAsyncInit = function() { FB.init({ xfbml : true, version : "v18.0" }); }; </script>';
 	$display .= '<script async defer nonce="'._BP_NONCE.'" src="https://connect.facebook.net/en_US/sdk.js"></script>[/col]';

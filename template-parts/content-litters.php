@@ -32,18 +32,22 @@ $birthDate = esc_attr(get_field( "birth_date" ));
 $readyDate = esc_attr(get_field( "ready_date" ));
 $price = esc_attr(get_field( "price" ));
 $deposit = esc_attr(get_field( "deposit" ));
-$b1 = esc_attr(get_post_meta( $sireID, 'sire', true ));
-$b2 = esc_attr(get_post_meta( $sireID, 'dam', true ));
-$c1 = esc_attr(get_post_meta( $sireID, 'grandparent_1', true ));
-$c2 = esc_attr(get_post_meta( $sireID, 'grandparent_2', true ));
-$c3 = esc_attr(get_post_meta( $sireID, 'grandparent_3', true ));
-$c4 = esc_attr(get_post_meta( $sireID, 'grandparent_4', true ));
-$b3 = esc_attr(get_post_meta( $damID, 'sire', true ));
-$b4 = esc_attr(get_post_meta( $damID, 'dam', true ));
-$c5 = esc_attr(get_post_meta( $damID, 'grandparent_1', true ));
-$c6 = esc_attr(get_post_meta( $damID, 'grandparent_2', true ));
-$c7 = esc_attr(get_post_meta( $damID, 'grandparent_3', true ));
-$c8 = esc_attr(get_post_meta( $damID, 'grandparent_4', true ));
+
+$search = ['( BLK )', '( YLW )', '( CHOC )'];
+$replace = ['', '', ''];
+
+$b1 = str_replace( $search, $replace, esc_attr(get_post_meta( $sireID, 'sire', true )) );
+$b2 = str_replace( $search, $replace, esc_attr(get_post_meta( $sireID, 'dam', true )) );
+$c1 = str_replace( $search, $replace, esc_attr(get_post_meta( $sireID, 'grandparent_1', true )) );
+$c2 = str_replace( $search, $replace, esc_attr(get_post_meta( $sireID, 'grandparent_2', true )) );
+$c3 = str_replace( $search, $replace, esc_attr(get_post_meta( $sireID, 'grandparent_3', true )) );
+$c4 = str_replace( $search, $replace, esc_attr(get_post_meta( $sireID, 'grandparent_4', true )) );
+$b3 = str_replace( $search, $replace, esc_attr(get_post_meta( $damID, 'sire', true )) );
+$b4 = str_replace( $search, $replace, esc_attr(get_post_meta( $damID, 'dam', true )) );
+$c5 = str_replace( $search, $replace, esc_attr(get_post_meta( $damID, 'grandparent_1', true )) );
+$c6 = str_replace( $search, $replace, esc_attr(get_post_meta( $damID, 'grandparent_2', true )) );
+$c7 = str_replace( $search, $replace, esc_attr(get_post_meta( $damID, 'grandparent_3', true )) );
+$c8 = str_replace( $search, $replace, esc_attr(get_post_meta( $damID, 'grandparent_4', true )) );
 $postDate = the_date('F Y', '', '', FALSE); 
 $modDate = the_modified_date( 'F Y', '', '', FALSE);
 ?>

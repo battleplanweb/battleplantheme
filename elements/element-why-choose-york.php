@@ -11,7 +11,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon-box">[get-icon type="cog"]</div>
+				<div class="icon-box">[get-icon type="rocket"]</div>
 				[txt]
 					<h2>Innovation</h2>
 					<p>At YORK, comfort is more than a feeling – it\'s a promise: to innovate, to assure and, most of all, to deliver. Our innovations make homes & businesses more comfortable and sustainable. </p>
@@ -27,7 +27,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon-box">[get-icon type="award"]</div>
+				<div class="icon-box">[get-icon type="award-alt"]</div>
 				[txt]
 					<h2>Leader</h2>
 					<p>Our advanced design and manufacturing processes are leading the industry with products recognized for reliability, energy savings and ease of use. Our designs are reinventing home comfort.</p>
@@ -35,7 +35,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon-box">[get-icon type="lightbulb"]</div>
+				<div class="icon-box">[get-icon type="cog"]</div>
 				[txt]
 					<h2>Expertise</h2>
 					<p>Our Certified Comfort Experts are highly trained in home heating and cooling needs, and can provide you with a personalized solution that\'s right for your home. </p>

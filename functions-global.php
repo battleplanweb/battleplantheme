@@ -13,7 +13,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '23.5' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '23.6' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -161,15 +161,20 @@ if ( !defined('_USER_LOCATION') ) define( '_USER_LOCATION', null );
 
 $GLOBALS['icons'] = $GLOBALS['icon-css'] = array();
 
+$GLOBALS['icons']['award'] = '\e09c';
+$GLOBALS['icons']['award-alt'] = '\e09d';
 $GLOBALS['icons']['calendar'] = '\e077';
 $GLOBALS['icons']['calendar-clock'] = '\e078';
 $GLOBALS['icons']['camera'] = '\e194';
 $GLOBALS['icons']['camera-security'] = '\e195';
+$GLOBALS['icons']['chain-link'] = '\e116';
 $GLOBALS['icons']['checkmark-seal'] = '\e0a3';
 $GLOBALS['icons']['chevron-down'] = '\e219';
 $GLOBALS['icons']['chevron-left'] = '\e216';
 $GLOBALS['icons']['chevron-right'] = '\e218';
 $GLOBALS['icons']['chevron-up'] = '\e217';
+$GLOBALS['icons']['clipboard-check'] = '\e06e';
+$GLOBALS['icons']['cog'] = '\e0ea';
 $GLOBALS['icons']['construction-concrete-truck'] = '\e0ef';
 $GLOBALS['icons']['construction-foreman'] = '\e0f0';
 $GLOBALS['icons']['email'] = '\e042';
@@ -180,15 +185,19 @@ $GLOBALS['icons']['finger-2'] = '\e1a2';
 $GLOBALS['icons']['finger-3'] = '\e1a3';
 $GLOBALS['icons']['finger-4'] = '\e1a4';
 $GLOBALS['icons']['finger-5'] = '\e1a5';
+$GLOBALS['icons']['handshake'] = '\e1af';
 $GLOBALS['icons']['heartbeat'] = '\e12f';
 $GLOBALS['icons']['home'] = '\e000';
 $GLOBALS['icons']['house-magnify'] = '\e003';
 $GLOBALS['icons']['instagram'] = '\e1c9';
 $GLOBALS['icons']['leaf'] = '\e111';
+$GLOBALS['icons']['lightbulb'] = '\e114';
 $GLOBALS['icons']['linkedin'] = '\e1d1';
 $GLOBALS['icons']['location'] = '\e0b9';
+$GLOBALS['icons']['money-bag'] = '\e16d';
 $GLOBALS['icons']['phone'] = '\e027';
 $GLOBALS['icons']['pinterest'] = '\e1d0';
+$GLOBALS['icons']['rocket'] = '\e105';
 $GLOBALS['icons']['search'] = '\e0ce';
 $GLOBALS['icons']['search-plus'] = '\e0cf';
 $GLOBALS['icons']['sex-both'] = '\e18b';
@@ -199,6 +208,7 @@ $GLOBALS['icons']['sort'] = '\e22e';
 $GLOBALS['icons']['star'] = '\e01b';
 $GLOBALS['icons']['star-o'] = '\e01c';
 $GLOBALS['icons']['star-half'] = '\e01d';
+$GLOBALS['icons']['strong-arm'] = '\e24c';
 $GLOBALS['icons']['thumbs-up'] = '\e1ad';
 $GLOBALS['icons']['thumbs-up-alt'] = '\e1a6';
 $GLOBALS['icons']['tiktok'] = '\e1cf';

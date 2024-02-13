@@ -11,7 +11,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon-box">[get-icon type="thumbs-up"]</div>
+				<div class="icon-box">[get-icon type="handshake"]</div>
 				[txt]
 					<h2>Reliability</h2>
 					<p>You can always depend on the reliability of American Standard. Since 1881, we have built systems that deliver quality heating and cooling during your family\'s most precious moments.</p>

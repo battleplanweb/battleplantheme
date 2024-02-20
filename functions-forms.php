@@ -62,7 +62,7 @@ function battleplan_formatMail( $posted_data ) {
 add_action( 'wpcf7_before_send_mail', 'battleplan_setupFormEmail', 10, 3 ); 
 function battleplan_setupFormEmail( $contact_form, &$abort, $submission ) { 
 	$formMail = $contact_form->prop( 'mail' );
-	$userLoc = $_COOKIE['user-loc'];
+	$userLoc = $_COOKIE['user-city'];
 	$userCountry = $_COOKIE['user-country'];
 	$userViews = $_COOKIE['pages-viewed'];
 	if ( $userViews == 1 ) : $userViews = "1 page"; else: $userViews = $userViews." pages"; endif;

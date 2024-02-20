@@ -15,9 +15,9 @@
 	<script nonce="<?php echo _BP_NONCE; ?>" type="text/javascript">
 		var startTime = Date.now();		
 		<?php if ( _GOOGLE_AD_LOCATION != "none" ) :
-			?>var site_loc = '<?php echo strtolower(str_replace(array(', ', ' '), array('-', '-'), _GOOGLE_AD_LOCATION)); ?>';
+			?>var google_ad_location = '<?php echo strtolower(str_replace(array(', ', ' '), array('-', '-'), _GOOGLE_AD_LOCATION)); ?>';
 		<?php else:
-			?>var site_loc = null;<?php 
+			?>var google_ad_location = null;<?php 
 		endif; ?>	
 	</script>	
 	<meta charset="<?php bloginfo( 'charset' ); ?>">

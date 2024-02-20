@@ -13,7 +13,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '23.7.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '23.7.2' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -23,7 +23,11 @@ $get_user = wp_get_current_user();
 $roles = ( array ) $user->roles;
 if ( !defined('_USER_LOGIN') ) define( '_USER_LOGIN', $get_user->user_login );
 if ( !defined('_USER_ID') ) define( '_USER_ID', $get_user->ID );
-if ( !defined('_USER_ROLES') ) define( '_USER_ROLES', $roles );
+if ( !defined('_USER_ROLES') && $roles ) :
+	define( '_USER_ROLES', $roles );
+else:
+	if ( !defined('_USER_ROLES') ) define( '_USER_ROLES', array() );
+endif;
 
 if ( _USER_LOGIN == 'battleplanweb' ) :
 	//if ( !defined('WP_DEBUG' )) define('WP_DEBUG', true);
@@ -141,11 +145,11 @@ if ( !is_admin() && !defined('_GOOGLE_AD_LOCATION') ) :
 	
 	$page_slug = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/'); 
 
-	if ( $location == "none" && ( ( preg_match('/-[a-z]{2}$/', $page_slug) === 1 && !in_array( substr($page_slug, -2), $common) ) || isset($_COOKIE['site-loc']) ) ) :
+	if ( $location == "none" && ( ( preg_match('/-[a-z]{2}$/', $page_slug) === 1 && !in_array( substr($page_slug, -2), $common) ) || isset($_COOKIE['google-loc']) ) ) :
 		if ( preg_match('/-[a-z]{2}$/', $page_slug) === 1 && !in_array( substr($page_slug, -2), $common) ) :
 			$pieces = explode(' ', ucwords(str_replace('-', ' ', $page_slug))); // Is this a location specific landing page?
 		else:
-			$pieces = explode(' ', ucwords(str_replace('-', ' ', $_COOKIE['site-loc']))); // Has this user already had location set?
+			$pieces = explode(' ', ucwords(str_replace('-', ' ', $_COOKIE['google-loc']))); // Has this user already had location set?
 		endif;
 
 		$state = strtoupper(substr(end($pieces), -2));

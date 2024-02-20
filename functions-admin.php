@@ -222,44 +222,51 @@ function battleplan_remove_menus() {
 	remove_submenu_page( 'wpseo_dashboard', 'wpseo_dashboard' );   						// Yoast SEO => General
 	remove_submenu_page( 'wp-mail-smtp', 'wp-mail-smtp-logs' );   						// WP Mail SMTP => Email Log
 	remove_submenu_page( 'wp-mail-smtp', 'wp-mail-smtp-reports' );   					// WP Mail SMTP => Email Reports
-	remove_submenu_page( 'wp-mail-smtp', 'wp-mail-smtp-about' );   						// WP Mail SMTP => About Us		
+	remove_submenu_page( 'wp-mail-smtp', 'wp-mail-smtp-about' );   						// WP Mail SMTP => About Us			
 	
 	add_submenu_page( 'upload.php', 'Favicon', 'Favicon', 'manage_options', 'customize.php' );	
 	
-	$the_query = new WP_Query( array('post_type' => 'elements', 'posts_per_page' => -1, 'orderby' => 'menu_order', 'order' => 'asc') );
-	if ( $the_query->have_posts() ) : 
-		while ( $the_query->have_posts() ) : 
-			$the_query->the_post();
-			add_submenu_page( 'edit.php?post_type=elements', get_the_title(), get_the_title(), 'manage_options', '/post.php?post='.get_the_ID().'&action=edit' );
-		endwhile;
-		wp_reset_postdata();	
-	endif;			
+	
+	if ( _USER_LOGIN != "battleplanweb" && !in_array('Administrator', _USER_ROLES) ) remove_menu_page( 'edit.php?post_type=elements');	
+	if ( _USER_LOGIN != "battleplanweb" && !in_array('Administrator', _USER_ROLES) ) remove_menu_page( 'edit.php?post_type=landing');	
+	
+	if ( _USER_LOGIN != "battleplanweb" ) remove_menu_page( 'edit.php?post_type=universal');		 
+	if ( _USER_LOGIN != "battleplanweb" ) remove_menu_page( 'tools.php');	
+	if ( _USER_LOGIN != "battleplanweb" ) remove_menu_page( 'edit.php?post_type=stripe_order');	
+		
+
+    $the_query = new WP_Query( array('post_type' => 'elements', 'posts_per_page' => -1, 'orderby' => 'menu_order', 'order' => 'asc') );
+    if ( $the_query->have_posts() ) : 
+        while ( $the_query->have_posts() ) : 
+            $the_query->the_post();
+            add_submenu_page( 'edit.php?post_type=elements', get_the_title(), get_the_title(), 'manage_options', '/post.php?post='.get_the_ID().'&action=edit' );
+        endwhile;
+        wp_reset_postdata();	
+    endif;	
 	
 	if ( is_null(get_page_by_path('widgets', OBJECT, 'elements')) ) add_submenu_page( 'edit.php?post_type=elements', 'Widgets', 'Widgets', 'manage_options', 'widgets.php' );
 
 	add_submenu_page( 'edit.php?post_type=elements', 'Menus', 'Menus', 'manage_options', 'nav-menus.php' );		
 	add_submenu_page( 'edit.php?post_type=elements', 'Contact Forms', 'Contact Forms', 'manage_options', 'admin.php?page=wpcf7' );	
 	
-	add_submenu_page( 'edit.php?post_type=elements', 'Contact Forms Integration', '&nbsp;└&nbsp;Integration', 'manage_options', 'admin.php?page=wpcf7-integration' );		
+	if ( _USER_LOGIN == "battleplanweb" ) add_submenu_page( 'edit.php?post_type=elements', 'Contact Forms Integration', '&nbsp;└&nbsp;Integration', 'manage_options', 'admin.php?page=wpcf7-integration' );		
 	
 	add_submenu_page( 'edit.php?post_type=elements', 'Comments', 'Comments', 'manage_options', 'edit-comments.php' );
-	add_submenu_page( 'edit.php?post_type=elements', 'Custom Fields', 'Custom Fields', 'manage_options', 'edit.php?post_type=acf-field-group' );		
-	add_submenu_page( 'edit.php?post_type=elements', 'Themes', 'Themes', 'manage_options', 'themes.php' );		
-	add_submenu_page( 'options-general.php', 'Options', 'Options', 'manage_options', 'options.php' );
+	if ( _USER_LOGIN == "battleplanweb" ) add_submenu_page( 'edit.php?post_type=elements', 'Custom Fields', 'Custom Fields', 'manage_options', 'edit.php?post_type=acf-field-group' );		
+	if ( _USER_LOGIN == "battleplanweb" ) add_submenu_page( 'edit.php?post_type=elements', 'Themes', 'Themes', 'manage_options', 'themes.php' );		
+	if ( _USER_LOGIN == "battleplanweb" ) add_submenu_page( 'options-general.php', 'Options', 'Options', 'manage_options', 'options.php' );
 	add_submenu_page( 'tools.php', 'WP Engine', 'WP Engine', 'manage_options', 'options-general.php?page=wpengine-common' );
 	
-	if ( _USER_LOGIN == "battleplanweb" ) :
-		if ( is_plugin_active( 'git-updater/git-updater.php' ) ) add_submenu_page( 'tools.php', 'Git Updater', 'Git Updater', 'manage_options', 'options-general.php?page=git-updater' );
-		if ( is_plugin_active( 'admin-columns-pro/admin-columns-pro.php' ) ) add_submenu_page( 'tools.php', 'Admin Columns', 'Admin Columns', 'manage_options', 'options-general.php?page=codepress-admin-columns' );
-		if ( is_plugin_active( 'wp-mail-smtp/wp_mail_smtp.php' ) ) add_submenu_page( 'tools.php', 'WP Mail SMTP', 'WP Mail SMTP', 'manage_options', 'options-general.php?page=wp-mail-smtp' );
+	if ( _USER_LOGIN == "battleplanweb" && is_plugin_active( 'git-updater/git-updater.php' ) ) add_submenu_page( 'tools.php', 'Git Updater', 'Git Updater', 'manage_options', 'options-general.php?page=git-updater' );
+	if ( _USER_LOGIN == "battleplanweb" && is_plugin_active( 'admin-columns-pro/admin-columns-pro.php' ) ) add_submenu_page( 'tools.php', 'Admin Columns', 'Admin Columns', 'manage_options', 'options-general.php?page=codepress-admin-columns' );
+	if ( _USER_LOGIN == "battleplanweb" && is_plugin_active( 'wp-mail-smtp/wp_mail_smtp.php' ) ) add_submenu_page( 'tools.php', 'WP Mail SMTP', 'WP Mail SMTP', 'manage_options', 'options-general.php?page=wp-mail-smtp' );
 
-		if ( is_plugin_active( 'wordpress-seo-premium/wp-seo-premium.php' ) ) add_submenu_page( 'tools.php', 'Yoast Settings', 'Yoast Settings', 'manage_options', 'admin.php?page=wpseo_page_settings' );
-		if ( is_plugin_active( 'wpseo-local/local-seo.php' ) ) add_submenu_page( 'tools.php', 'Yoast Local', '&nbsp;└&nbsp;Local', 'manage_options', 'admin.php?page=wpseo_local' );
-		if ( is_plugin_active( 'wordpress-seo-premium/wp-seo-premium.php' ) ) add_submenu_page( 'tools.php', 'Yoast Redirects', '&nbsp;└&nbsp;Redirects', 'manage_options', 'admin.php?page=wpseo_redirects' );
+	if ( _USER_LOGIN == "battleplanweb" && is_plugin_active( 'wordpress-seo-premium/wp-seo-premium.php' ) ) add_submenu_page( 'tools.php', 'Yoast Settings', 'Yoast Settings', 'manage_options', 'admin.php?page=wpseo_page_settings' );
+	if ( _USER_LOGIN == "battleplanweb" && is_plugin_active( 'wpseo-local/local-seo.php' ) ) add_submenu_page( 'tools.php', 'Yoast Local', '&nbsp;└&nbsp;Local', 'manage_options', 'admin.php?page=wpseo_local' );
+	if ( _USER_LOGIN == "battleplanweb" && is_plugin_active( 'wordpress-seo-premium/wp-seo-premium.php' ) ) add_submenu_page( 'tools.php', 'Yoast Redirects', '&nbsp;└&nbsp;Redirects', 'manage_options', 'admin.php?page=wpseo_redirects' );
 
-		if ( is_plugin_active( 'post-to-google-my-business/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Settings', 'GBP Settings', 'manage_options', 'admin.php?page=pgmb_settings' );
-		if ( is_plugin_active( 'post-to-google-my-business/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Calendar', '&nbsp;└&nbsp;Calendar', 'manage_options', 'admin.php?page=post_to_google_my_business' );
-	endif;		
+	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Settings', 'GBP Settings', 'manage_options', 'admin.php?page=pgmb_settings' );
+	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Calendar', '&nbsp;└&nbsp;Calendar', 'manage_options', 'admin.php?page=post_to_google_my_business' );
 }
 		
 // Reorder WP Admin Menu Items

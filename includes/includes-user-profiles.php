@@ -150,10 +150,12 @@ function battleplan_getUploadBtn($atts, $content = null) {
 			$aux = 1;
 				
 			function checkTitle($origGalleryName, $galleryName, $files, $aux) {
-				if ( get_page_by_title( $galleryName, OBJECT, 'galleries' ) !== null ) :
+				$posts = get_posts( array( 'posts_per_page' => 1, 'post_type' => 'galleries', 'title' => $galleryName, 'post_status' => 'any' ) );
+
+				if (!empty($posts)) :
 					$aux++;
-					$galleryName = $origGalleryName." #".$aux;
-					checkTitle($origGalleryName, $galleryName, $files, $aux);				
+					$galleryName = $origGalleryName . " #" . $aux;
+					checkTitle($origGalleryName, $galleryName, $files, $aux);
 				else :
 					$new_post = array ( 'post_title' => $galleryName, 'post_content' => '', 'post_status' => 'publish', 'post_type' => 'galleries', 'post_author' => _USER_ID, 'post_category' => '' );
 					

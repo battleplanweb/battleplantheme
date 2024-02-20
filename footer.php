@@ -121,14 +121,17 @@
 <?php if ( shortcode_exists( 'get-svg' ) ) echo '<div id="include-svg">'.do_shortcode('[get-svg]').'</div>' ?>
 
 <?php  	
+	$icon_style = '';
 	if (is_array($GLOBALS['icon-css'])) :
 		$icon_css = array_unique($GLOBALS['icon-css']);
 		foreach ($icon_css as $icon) :
 			if (is_array($GLOBALS['icons']) && array_key_exists($icon, $GLOBALS['icons'])) $icon_style .= '.icon.' . $icon . '::after { content: "' . $GLOBALS['icons'][$icon] . '"; }';
-		 endforeach;
+		endforeach;
 	endif;
+	if ( $icon_style != '' ) : ?>
+		<style><?php echo $icon_style; ?></style>
+	<?php endif; 
 ?>
-<style><?php echo $icon_style; ?></style>
 
 </body>
 </html>

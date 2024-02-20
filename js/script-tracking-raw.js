@@ -17,9 +17,37 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		if ( getDeviceW() <= getTabletCutoff() ) { deviceTime = "tablet"; }	
 		if ( getDeviceW() <= getMobileCutoff() ) { deviceTime = "mobile"; }	
 
-	// Delay 1 second before calling the following functions 
-		setTimeout(function() {	
-		// Log page load speed
+	// Wait a few seconds before sending load time to Google Analytics, to ensure counting engaged sessions as much as possible		
+		setTimeout(function() {
+			$.getJSON('https://ipapi.co/json/', function(data) {
+			/*
+				function deg2rad(deg) {
+					return deg * (Math.PI/180) 
+				}					
+				
+				var siteLat = site_options.lat, siteLong = site_options.long, userLat = data["latitude"], userLong = data["longitude"], R = 3958.8, dLat = deg2rad(siteLat-userLat), dLon = deg2rad(siteLong-userLong), a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(deg2rad(userLat)) * Math.cos(deg2rad(siteLat)) * Math.sin(dLon/2) * Math.sin(dLon/2), c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)), distance = R * c, location; 				
+			*/
+				if ( data["country_name"] == "United States" ) {
+					location = data["city"] + ", " + data["region_code"];
+				} else {
+					location = data["city"] + ", " + data["country_name"];
+				}
+				
+				setCookie("user-loc", location, '');				
+				setCookie("user-country", data["country_name"], '');
+				
+				/* removing 2-13-2024 because it doesn't seem to be returning correct distance, so no need for ajax call
+				if ( distance < 3000 ) { 	 		
+					$.post({
+						url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
+						data : { action: "check_user", distance: distance, location: location },
+						success: function( response ) { console.log(response); } 
+					});					
+				}
+				*/
+
+			});
+					  
 			if ( deviceTime == "desktop" ) {
 				loadTime = loadTime + 0.3;
 			} else {
@@ -29,7 +57,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			loadTime = loadTime.toFixed(1);
 			
 			gtag("event", "join_group", { group_id: pageID + "»" + deviceTime + "«" + loadTime });
-		}, 1000);		
+			
+		}, 4000);		
 
 	// Delay 0.3s to allow accurate contentH  
 		setTimeout(function() {		
@@ -97,35 +126,5 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			}, { offset: 'bottom-in-view' });	
 		}, 300);	
 		
-		//Test for real user or bot		
-		setTimeout(function() {
-			// Get IP data
-			$.getJSON('https://ipapi.co/json/', function(data) {
-			
-				function deg2rad(deg) {
-					return deg * (Math.PI/180) 
-				}					
-				
-				var siteLat = site_options.lat, siteLong = site_options.long, userLat = data["latitude"], userLong = data["longitude"], R = 3958.8, dLat = deg2rad(siteLat-userLat), dLon = deg2rad(siteLong-userLong), a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(deg2rad(userLat)) * Math.cos(deg2rad(siteLat)) * Math.sin(dLon/2) * Math.sin(dLon/2), c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)), distance = R * c, location; 				
-			
-				if ( data["country_name"] == "United States" ) {
-					location = data["city"] + ", " + data["region_code"];
-				} else {
-					location = data["city"] + ", " + data["country_name"];
-				}
-				
-				setCookie("user-loc", location, '');				
-				setCookie("user-country", data["country_name"], '');
-								
-				if ( distance < 3000 ) { 	 		
-					$.post({
-						url : 'https://'+window.location.hostname+'/wp-admin/admin-ajax.php',
-						data : { action: "check_user", distance: distance, location: location },
-						success: function( response ) { console.log(response); } 
-					});					
-				}
-			});
-		}, 4000);	
-
 	});	
 })(jQuery); });

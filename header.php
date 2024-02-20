@@ -14,8 +14,8 @@
 <head>	
 	<script nonce="<?php echo _BP_NONCE; ?>" type="text/javascript">
 		var startTime = Date.now();		
-		<?php if ( _USER_LOCATION != "none" ) :
-			?>var site_loc = '<?php echo strtolower(str_replace(array(', ', ' '), array('-', '-'), _USER_LOCATION)); ?>';
+		<?php if ( _GOOGLE_AD_LOCATION != "none" ) :
+			?>var site_loc = '<?php echo strtolower(str_replace(array(', ', ' '), array('-', '-'), _GOOGLE_AD_LOCATION)); ?>';
 		<?php else:
 			?>var site_loc = null;<?php 
 		endif; ?>	
@@ -24,7 +24,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="profile" href="https://gmpg.org/xfn/11">	
 	
-	<?php if ( isset($GLOBALS['customer_info']['lcp']) ) : ?>
+	<?php if ( isset($GLOBALS['customer_info']['lcp']) && !is_mobile() ) : ?>
 		<link rel="preload" fetchpriority="high" as="image" href="<?php echo get_site_url() ?>/wp-content/uploads/<?php echo $GLOBALS['customer_info']['lcp'][0] ?>.<?php echo $GLOBALS['customer_info']['lcp'][1] ?>" type="image/<?php echo $GLOBALS['customer_info']['lcp'][1] ?>">	
 	<?php endif; ?>
 	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/open-sans-v17-latin-regular.woff2" crossorigin="anonymous">

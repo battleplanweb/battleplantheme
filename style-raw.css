@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 23.6
+Version: 23.7
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -272,6 +272,8 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --break-out-border-right:						none; 
   --break-out-border-left:						none;
   --break-out-padding: 							1.5em 2.5em;
+
+
 
 
 
@@ -759,6 +761,7 @@ section.section-default .flex {
 .divider-strip .flex.valign-start .col,
 .logo-strip .flex.valign-start .col,
 .site-info .flex.valign-start .col,
+
 .top-strip .flex .col.valign-start,
 .divider-strip .flex .col.valign-start,
 .logo-strip .flex .col.valign-start,
@@ -1203,6 +1206,7 @@ body.form-stacked .wpcf7 form label,
 input[type="text"],
 input[type="email"],
 input[type="url"],
+
 input[type="password"],
 input[type="search"],
 input[type="number"],
@@ -2025,35 +2029,35 @@ input.paypal-amount {
 .address,
 .phone-number {
 	font-family: 									var(--font-primary);
-	font-size:									140%;
+	font-size:										140%;
 }
 
 .logo-strip {
-	margin:										0;
+	margin:											0;
 	padding-top:									2em;
-	padding-bottom:								2em;
-	background:									var(--white);
+	padding-bottom:									2em;
+	background:										var(--white);
 	z-index:										1000;
 }
 
 .menu-strip {
-	margin:										0;
+	margin:											0;
 	padding-top:									0;
-	padding-bottom:								0;
-	background:									var(--light-grey);
+	padding-bottom:									0;
+	background:										var(--light-grey);
 	z-index:										2000;
 }
 
 .menu-clip .menu-strip {
-	overflow: 									hidden;
-	clip-path: 									polygon(0% 0%, 100% 0%, 100% calc(100% + 80vh), 0% calc(100% + 80vh));
+	overflow: 										hidden;
+	clip-path: 										polygon(0% 0%, 100% 0%, 100% calc(100% + 80vh), 0% calc(100% + 80vh));
 }	
 
 .fixed-strip {
     position: 										fixed !important;
     top: 											0;
-    left: 										0;
-    width: 										100% !important;
+    left: 											0;
+    width: 											100% !important;
     z-index: 										10000;
     pointer-events: 								none;
 }
@@ -2066,7 +2070,7 @@ input.paypal-amount {
 
 #primary,
 #secondary {
-	max-width:									100%;
+	max-width:										100%;
 }
 
 .content-box #primary,
@@ -4283,7 +4287,7 @@ img.img-404 {
 	color: 											var(--anon-icon-bg);
 	font-size: 										48px;
 	top: 											0;
-	padding-top: 									45%;
+	padding-top: 									65%;
 	font-family: 									var(--font-primary);
 }
 
@@ -4395,9 +4399,13 @@ img.img-404 {
 	background-size:								contain;
 }
 
-
 .testimonials-platform-bbb {
 	background:										url('../battleplantheme/common/logos/bbb.png');
+	background-size:								contain;
+}
+
+.testimonials-platform-fiverr {
+	background:										url('../battleplantheme/common/logos/fiverr.png');
 	background-size:								contain;
 }
 
@@ -4866,6 +4874,7 @@ section.tab-content.current {
 .menu-page .col.extra-line {
 	display: 									inline-block;
 	text-indent: 								20px;
+
 }
 
 
@@ -6082,6 +6091,7 @@ html.error503 h3 {
 	}
 	
 	#secondary .sidebar-inner::-webkit-scrollbar {
+
 	  	display: 									none;
 	}
 	

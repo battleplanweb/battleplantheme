@@ -133,7 +133,7 @@ function battleplan_visitor_trends($time, $minDays, $maxDays, $colEnd) {
 		 	echo "<tr class='coloration trends new' data-count='".$newUsers."'><td>".$termEnd."</td><td><b>".number_format($newUsers)."</b></td><td>".number_format($newUserPct,1)."%</td></tr>";
 			echo "<tr class='coloration trends engagement' data-count='".$engagedSessions."'><td>".$termEnd."</td><td><b>".$engagedSessions."</b></td><td>".$engagementPct."%</td></tr>";
 			echo "<tr class='coloration trends pageviews' data-count='".$pageViews."'><td>".$termEnd."</td><td><b>".$pageViews.'</b></td><td>'.number_format($pagesPerSession,1)."</td></tr>";
-			echo "<tr class='coloration trends duration' data-count='".$avgEngagedDuration."'><td>".$termEnd."</td><td><b>".floor($avgEngagedDuration / 60)."m ".number_format($avgEngagedDuration % 60) . "s</b></td><td><b>".floor($avgSessionDuration / 60)."m ".number_format($avgSessionDuration % 60) . "s</b></td></tr>";
+			echo "<tr class='coloration trends duration' data-count='".$avgEngagedDuration."'><td>".$termEnd."</td><td><b>".floor($avgEngagedDuration / 60)."m ".number_format((int)$avgEngagedDuration % 60) . "s</b></td><td><b>".floor($avgSessionDuration / 60)."m ".number_format((int)$avgSessionDuration % 60) . "s</b></td></tr>";
 	
 			$totalUsers = $newUsers = $sessions = $engagedSessions = $sessionDuration = $pageViews = $pagesPerSession = $engagementPct = $avgSessionDuration = $avgEngagedDuration = $newUserPct = 0;
 			$day = 1;
@@ -220,11 +220,11 @@ foreach ( $ga4_referrers_data as $referrer=>$referrerData ) :
 	foreach ( $referrerData as $referrerLocation=>$totalSessions ) :
 		if ( !in_array($referrerLocation, $excludeCities) ) :
 			if ( $referrer == $chkReferrer ) : 
-				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $referSessions[$termDays] += $totalSessions['sessions-'.$termDays];
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $referSessions[$termDays] = isset($totalSessions['sessions-'.$termDays]) ? $referSessions[$termDays] + $totalSessions['sessions-'.$termDays] : $referSessions[$termDays];
 			else:
 				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $GLOBALS['ga4_referrer'][$chkReferrer]['sessions-'.$termDays] = $referSessions[$termDays];	
 				$chkReferrer = $referrer;
-				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $referSessions[$termDays] = $totalSessions['sessions-'.$termDays];
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $referSessions[$termDays] = isset($totalSessions['sessions-'.$termDays]) ? $totalSessions['sessions-'.$termDays] : 0;
 			endif;
 		endif;
 	endforeach; 
@@ -274,8 +274,8 @@ foreach ( $ga4_locations_data as $location=>$totalSessions ) :
 		else:
 			foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $GLOBALS['ga4_location'][$chkLocation]['sessions-'.$termDays] = $locationSessions[$termDays];	
 			$chkLocation = $location;
-			foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $locationSessions[$termDays] = $totalSessions['sessions-'.$termDays];
-		endif;
+			foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $locationSessions[$termDays] = isset($totalSessions['sessions-'.$termDays]) ? $totalSessions['sessions-'.$termDays] : 0;
+endif;
 	endif;
 endforeach; 
 
@@ -318,11 +318,11 @@ foreach ( $ga4_browsers_data as $browser=>$browserData ) :
 	foreach ( $browserData as $browserLocation=>$totalSessions ) :
 		if ( !in_array($browserLocation, $excludeCities) ) :
 			if ( $browser == $chkBrowser ) : 
-				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $browserSessions[$termDays] += $totalSessions['sessions-'.$termDays];
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $browserSessions[$termDays] = isset($totalSessions['sessions-'.$termDays]) ? $browserSessions[$termDays] + $totalSessions['sessions-'.$termDays] : $browserSessions[$termDays];
 			else:
 				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $GLOBALS['ga4_browser'][$chkBrowser]['sessions-'.$termDays] = $browserSessions[$termDays];	
 				$chkBrowser = $browser;
-				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $browserSessions[$termDays] = $totalSessions['sessions-'.$termDays];
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $browserSessions[$termDays] = isset($totalSessions['sessions-'.$termDays]) ? $totalSessions['sessions-'.$termDays] : 0;
 			endif;
 		endif;
 	endforeach; 
@@ -337,11 +337,11 @@ foreach ( $ga4_devices_data as $device=>$deviceData ) :
 	foreach ( $deviceData as $deviceLocation=>$totalSessions ) :
 		if ( !in_array($deviceLocation, $excludeCities) ) :
 			if ( $device == $chkDevice ) : 
-				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $deviceSessions[$termDays] += $totalSessions['sessions-'.$termDays];
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $deviceSessions[$termDays] = isset($totalSessions['sessions-'.$termDays]) ? $deviceSessions[$termDays] + $totalSessions['sessions-'.$termDays] : $deviceSessions[$termDays];
 			else:
 				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $GLOBALS['ga4_device'][$chkDevice]['sessions-'.$termDays] = $deviceSessions[$termDays];	
 				$chkDevice = $device;
-				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $deviceSessions[$termDays] = $totalSessions['sessions-'.$termDays];
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $deviceSessions[$termDays] = isset($totalSessions['sessions-'.$termDays]) ? $totalSessions['sessions-'.$termDays] : 0;
 			endif;
 		endif;
 	endforeach; 
@@ -390,11 +390,11 @@ foreach ( $ga4_resolution_data as $resolution=>$resolutionData ) :
 
 			$resolution = substr($resolution, 0, strpos($resolution, 'x'));
 			if ( $resolution == $chkDevice ) : 
-				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $resolutionSessions[$termDays] += $totalSessions['sessions-'.$termDays];
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $resolutionSessions[$termDays] = isset($totalSessions['sessions-'.$termDays]) ? $resolutionSessions[$termDays] + $totalSessions['sessions-'.$termDays] : $resolutionSessions[$termDays];
 			else:
 				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $GLOBALS['ga4_resolution'][$chkDevice]['sessions-'.$termDays] = $resolutionSessions[$termDays];	
 				$chkDevice = $resolution;
-				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $resolutionSessions[$termDays] = $totalSessions['sessions-'.$termDays];
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $resolutionSessions[$termDays] = isset($totalSessions['sessions-'.$termDays]) ? $totalSessions['sessions-'.$termDays] : 0;
 			endif;
 		endif;
 	endforeach; 
@@ -448,9 +448,9 @@ function battleplan_admin_tech_stats() {
 		echo '<li class="sub-label" style="column-span: all">Devices</li>';	
 	
 		foreach ($deviceAndSessions as $deviceTitle =>$deviceSessions) :			
-			$total = $GLOBALS['speedTotal'][$metricKey][$deviceTitle];
-			$sessions = $GLOBALS['speedSessions'][$metricKey][$deviceTitle];			
-			$fastSessions = $GLOBALS['fastSessions'][$metricKey][$deviceTitle];	
+			$total = isset($GLOBALS['speedTotal'][$metricKey][$deviceTitle]) ? $GLOBALS['speedTotal'][$metricKey][$deviceTitle] : 0;			
+			$sessions = isset($GLOBALS['speedSessions'][$metricKey][$deviceTitle]) ? $GLOBALS['speedSessions'][$metricKey][$deviceTitle] : 0;			
+			$fastSessions = isset($GLOBALS['fastSessions'][$metricKey][$deviceTitle]) ? $GLOBALS['fastSessions'][$metricKey][$deviceTitle] : 0;
 	
 			if ( $deviceTotalSessions > 0 && $sessions > 0 ) echo "<li><div class='value'><b>".number_format(($deviceSessions / $deviceTotalSessions)*100,1)."%</b></div><div class='label-half' style='width:calc(35% - 35px)'>".ucwords($deviceTitle)."</div><div class='label-half style='width:calc(65% - 35px)'>".number_format($total / $sessions, 1)."s&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;".number_format(($fastSessions / $sessions)*100, 1)."% above target</div></li>";
 		endforeach;
@@ -496,11 +496,11 @@ foreach ( $ga4_achievementId_data as $contentVis=>$contentVisData ) :
 	foreach ( $contentVisData as $contentVisLocation=>$totalSessions ) :
 		if ( !in_array($contentVisLocation, $excludeCities) ) :
 			if ( $contentVis == $chkContentVis ) : 
-				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $contentVisSessions[$termDays] += $totalSessions['sessions-'.$termDays];
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $contentVisSessions[$termDays] = isset($totalSessions['sessions-'.$termDays]) ? $contentVisSessions[$termDays] + $totalSessions['sessions-'.$termDays] : $contentVisSessions[$termDays];
 			else:
 				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $GLOBALS['ga4_contentVis'][$chkContentVis]['sessions-'.$termDays] = $contentVisSessions[$termDays];	
 				$chkContentVis = $contentVis;
-				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $contentVisSessions[$termDays] = $totalSessions['sessions-'.$termDays];
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $contentVisSessions[$termDays] = isset($totalSessions['sessions-'.$termDays]) ? $totalSessions['sessions-'.$termDays] : 0;
 			endif;
 		endif;
 	endforeach; 
@@ -510,7 +510,7 @@ function battleplan_admin_content_stats() {
 	$ga4_contentVis = array();
 
 	foreach ($GLOBALS['ga4_contentVis'] as $contentVisTitle => $contentVisMetrics) :
-	    foreach ($contentVisMetrics as $metricKey => $sessions) $ga4_contentVis[$metricKey][$contentVisTitle] = $sessions;
+		foreach ( $contentVisMetrics as $metricKey => $sessions ) $ga4_contentVis[$metricKey][$contentVisTitle] = isset($sessions) ? $sessions : 0;
 	endforeach;
 
 	foreach ($ga4_contentVis as $metricKey => $contentVisAndSessions) :
@@ -523,13 +523,14 @@ function battleplan_admin_content_stats() {
 		$contentCalc = array();
 		foreach ($contentVisAndSessions as $key=>$value) :
 			foreach ( $pctCalc as $pct ) :
-				if (strpos($key, '-'.$pct) !== false && strpos($key, 'track-') === false ) :
-					$contentCalc[$pct] += $value;
-			    	endif;
+				if (strpos($key, '-'.$pct) !== false && strpos($key, 'track-') === false ) :	
+	            	if (!isset($contentCalc[$pct])) $contentCalc[$pct] = 0;
+            		$contentCalc[$pct] += $value;
+				endif;
 			endforeach;
 		endforeach;
 		
-		$init = $contentCalc['init'];
+		$init = isset($contentCalc['init']) ? $contentCalc['init'] : 0;
 		arsort($contentCalc);
 	
 		echo '<li class="sub-label" style="column-span: all">Last '.number_format($init).' Pageviews</li>';		
@@ -567,16 +568,22 @@ foreach ( $ga4_pages_data as $pagePath=>$pageData ) :
 	foreach ( $pageData as $pageLocation=>$totalViews ) :
 		if ( !in_array($pageLocation, $excludeCities) ) :
 			if ( $pagePath == $chkPage ) : 
-				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $pageViews[$termDays] += $totalViews['page-views-'.$termDays];
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $pageViews[$termDays] = isset($totalViews['page-views-'.$termDays]) ? $pageViews[$termDays] + $totalViews['page-views-'.$termDays] :  $pageViews[$termDays];
 			else:
 				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) :					
 					$GLOBALS['ga4_page'][$chkPage]['page-views-'.$termDays] = $pageViews[$termDays];
-					
+					$getCPT = getCPT();
 					if (strpos($chkPage, '»') === false ) :	
-						foreach ( getCPT() as $type ) :
-							$pageID = get_page_by_title($chkPage, OBJECT, $type);
+						foreach ( $getCPT as $type ) :
+
+							$query = new WP_Query( array( 'post_type' => $type, 'title' => $chkPage, 'post_status' => 'all', 'posts_per_page' => 1, ) ); 
+							if ( !empty( $query->post ) ) : 
+								$page = $query->post;	
+								$pageID = $page->ID;	
+							endif;	
+
 							if ($pageID) :
-								updateMeta($pageID->ID, 'bp_views_'.$termDays, $GLOBALS['ga4_page'][$chkPage]['page-views-'.$termDays]);
+								updateMeta($pageID, 'bp_views_'.$termDays, $GLOBALS['ga4_page'][$chkPage]['page-views-'.$termDays]);
 								break;
 							endif;
 						endforeach;
@@ -584,7 +591,7 @@ foreach ( $ga4_pages_data as $pagePath=>$pageData ) :
 
 				endforeach;
 				$chkPage = $pagePath;
-				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $pageViews[$termDays] = $totalViews['page-views-'.$termDays];
+				foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $pageViews[$termDays] = isset($totalViews['page-views-'.$termDays]) ? $totalViews['page-views-'.$termDays] :  0;
 			endif;
 		endif;
 	endforeach; 
@@ -621,7 +628,8 @@ function battleplan_admin_pages_stats() {
 // Add custom meta boxes to posts & pages
 add_action("add_meta_boxes", "battleplan_add_custom_meta_boxes");
 function battleplan_add_custom_meta_boxes() {
-	foreach ( getCPT() as $postType ) add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", $postType, "side", "default", null);
+	$getCPT = getCPT();
+	foreach ( $getCPT as $postType ) add_meta_box("page-stats-box", "Page Stats", "battleplan_page_stats", $postType, "side", "default", null);
 }
 
 // Set up Page Stats widget on posts & pages

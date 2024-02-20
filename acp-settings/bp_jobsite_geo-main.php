@@ -39,7 +39,7 @@ return array (
 			'width'=>'125',
 			'width_unit'=>'px',
 			'field'=>'job_date',
-			'date_format'=>'wp_default',
+			'date_format'=>'Y-m-d',
 			'field_type'=>'date',
 			'edit'=>'on',
 			'editable_type'=>'text',

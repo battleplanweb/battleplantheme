@@ -650,8 +650,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		window.location.href = link;
 	});
 	
-	// Move ad promo on blog pages	
-	
+	// Move ad promo on blog pages		
 	if ( $('.place-ad').length ) {
 		var numP = $('.single-post .entry-content *').length, posP = Math.ceil(numP / 2);	
 		if ( numP > 30 ) { posP = 10; }
@@ -679,9 +678,9 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	$('.anonymous-icon').css({'border-radius':iconRadius, 'border':iconBorder});	
 	
 	// Allow sub-menu to appear, even if initially set to overflow:hidden	
-	setTimeout(function() {
+	setTimeout(function() { 
 		//$('.menu-clip .menu-strip').css({'overflow':'visible', 'clip-path':'none'});
-		$('.menu-clip .menu-strip').css({'clip-path':'none'}); // changed because MAK Comfort buttons were showing in header
+		$('.menu-clip .menu-strip').css({ 'overflow':'visible' }); // 2024-02-13 - changed because MAK Comfort buttons were showing in header, revosed to also work with Blain Services
 	}, 2500);
 	
 /*--------------------------------------------------------------

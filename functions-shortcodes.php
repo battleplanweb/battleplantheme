@@ -188,35 +188,14 @@ function battleplan_getWordPressPage( $atts, $content = null ) {
 	$title = esc_attr($a['title']);
 	$display = esc_attr($a['display']);
 
-	if ( esc_attr($a['id']) != "" ) : $pageID = esc_attr($a['id']); 
-	elseif ( $slug != "" ) : 
-	 	if ( get_page_by_path( $slug, OBJECT, $type ) ) :
-			$pageID = get_page_by_path( $slug, OBJECT, $type )->ID; 
-		else:
-			$getCPT = get_post_types();  
-			foreach ($getCPT as $postType) :
-				if ( get_page_by_path($slug, OBJECT, $postType) ) : 
-					$pageID = get_page_by_path($slug, OBJECT, $postType)->ID; 
-					break; 
-				endif;
-			endforeach;		
-		endif;	
-	elseif ( $title != "" ) : 
-	 	if ( get_page_by_title( $title, OBJECT, $type ) ) :
-			$pageID = get_page_by_title( $title, OBJECT, $type )->ID; 
-		else:
-			$getCPT = get_post_types();  
-			foreach ($getCPT as $postType) :
-				if ( get_page_by_title( $title, OBJECT, $postType) ) : 
-					$pageID = get_page_by_title( $title, OBJECT, $postType)->ID; 
-					break; 
-				endif;
-			endforeach;		
-		endif;	
-	else:
-		return;
+	if ( esc_attr($a['id']) != '' ) :
+		$pageID = esc_attr($a['id']); 	
+	elseif ( $slug != '' ) :
+		$pageID = getID($slug, $type);	
+	elseif ( $title != '' ) :
+		$pageID = getID($title, $type);	
 	endif;
-
+	
 	$getPage = get_post($pageID);
 	if ( $display == "content" && get_post_status($getPage->ID) == "publish" ) return apply_filters('the_content', $getPage->post_content);
 	if ( $display == "title" && get_post_status($getPage->ID) == "publish" ) return esc_html( get_the_title($pageID));
@@ -430,7 +409,7 @@ function battleplan_getRandomText($atts, $content = null) {
 	
 	$printText = $textArray[$rand];
 	
-	if ( $rand == $num ) : 
+	if ( $rand >= $num ) : 
 		$rand = 0; 
 	else:
 		$rand++; 
@@ -1690,7 +1669,7 @@ function battleplan_getRSS( $atts, $content = null ) {
 	 $default = esc_attr($a['default']);	
 	 $before = esc_attr($a['before']);	
 	 $after = esc_attr($a['after']);	
-	 $location = _USER_LOCATION;
+	 $location = _GOOGLE_AD_LOCATION;
 	 if ( $location == 'none' && $default != 'blank' ) return $default;
 	 if ( $location == 'none' ) $location = $GLOBALS['customer_info']['default-loc'];	 
 	 if ( preg_match('/,\s*[A-Z]{2}$/', $location) === 1 && esc_attr($a['state']) != "true" ) $location = strstr($location, ',', true);
@@ -1710,6 +1689,6 @@ function battleplan_getRSS( $atts, $content = null ) {
 	 
 	 return apply_filters('the_content', $section_content);	 
 }
-
+ 
 	
 ?>

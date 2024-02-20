@@ -337,17 +337,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 // Set first page cookie		
 	if ( !getCookie('first-page') ) { 
 		$('body').addClass('first-page');
-		setCookie('first-page', 'no');
+		setCookie('first-page', 'set');
 	} else {
 		$('body').addClass('not-first-page');
 	}
 
 // Set unique ID & pages viewed cookies
-	if ( !getCookie('unique-id') ) { 	
-		var unique_id = Math.floor(Date.now()) + '' + Math.floor((Math.random() * 99)) + '' + Math.floor((Math.random() * 99));
-		unique_id = unique_id.slice(3);
-		setCookie('unique-id', unique_id);
-		setCookie('pages-viewed', 1);
+	if ( !getCookie('pages-viewed') ) { 	
+		setCookie('pages-viewed', 1, 1);
 	} else {
 		var page_views = getCookie('pages-viewed');
 		page_views++;
@@ -367,23 +364,9 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		});
 	}
 	
-// Set Google Ads landing page as site-loc cookie
+// Set Google Ads landing page as user-display-loc cookie
 	if ( typeof google_ad_location !== 'undefined' && google_ad_location != null ) {
-		setCookie('site-loc', google_ad_location);
-	}	
-
-// Augment URLs with location data, if multi-location site
-	if ( getCookie('site-location') || getUrlVar('l') != null ) { 
-		var siteLoc = getCookie('site-location');
-		if ( getUrlVar('l') != null ) { siteLoc = getUrlVar('l'); }
-
-		$('a').each(function() {
-			var origLink = String($(this).attr("href")), append = '?';
-			if ( !$(this).hasClass('loc-ignore') && !origLink.includes('#') && !origLink.includes('tel:') && origLink != 'undefined' ) {
-				if ( origLink.includes('?') ) {	append = '&'; }
-				$(this).attr("href", $(this).attr("href") + append + 'l=' + siteLoc );	
-			}
-		});
+		setCookie('user-display-loc', google_ad_location);
 	}	
 	
 // Add unique id to labels & inputs in #request-quote-modal	for ADA compliance		
@@ -419,6 +402,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	});
 
 // Fade in lazy loaded images
+
 	$('img').addClass('unloaded');	
 	$('#loader img').removeClass('unloaded');	
 	$('img').one('load', function() { 

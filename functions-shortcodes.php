@@ -247,12 +247,7 @@ add_shortcode( 'get-domain-name', 'battleplan_getDomainName' );
 function battleplan_getDomainName( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'ext'=>'false', ), $atts );
 	$parts = explode('.', parse_url(esc_url(get_site_url()), PHP_URL_HOST));	
-	return esc_attr($a['ext']) != "false" ? $parts[0].'.'.$parts[1] : $parts[0];
-	
-	
-	
-	
-	
+	return esc_attr($a['ext']) != "false" ? $parts[0].'.'.$parts[1] : $parts[0];	
 }
 
 // Returns url of page (minus domain, choose whether to include variables)
@@ -1669,9 +1664,8 @@ function battleplan_getRSS( $atts, $content = null ) {
 	 $default = esc_attr($a['default']);	
 	 $before = esc_attr($a['before']);	
 	 $after = esc_attr($a['after']);	
-	 $location = _GOOGLE_AD_LOCATION;
-	 if ( $location == 'none' && $default != 'blank' ) return $default;
-	 if ( $location == 'none' ) $location = $GLOBALS['customer_info']['default-loc'];	 
+	 $location = _USER_DISPLAY_LOC;
+	 if ( $default != 'blank' ) return $default;
 	 if ( preg_match('/,\s*[A-Z]{2}$/', $location) === 1 && esc_attr($a['state']) != "true" ) $location = strstr($location, ',', true);
 	 return $before.$location.$after;
 }

@@ -373,6 +373,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 
 
+
+
 		}
 	};
 
@@ -476,6 +478,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 		$('ul.tabs li').removeClass('current');
 		$(this).addClass('current');
+
+
 
 		$('.tab-content').fadeOut(fadeSpeed).next().removeClass('current');
 		$("#"+tab_id).delay(fadeSpeed).addClass('current').fadeIn(fadeSpeed);

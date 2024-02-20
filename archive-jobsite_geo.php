@@ -1,4 +1,4 @@
-<?php /* The template for displaying archive pages for "dogs" post type */
+<?php /* The template for displaying archive pages for "jobsite_geo" post type */
 
 get_header(); ?>
 
@@ -10,29 +10,7 @@ get_header(); ?>
 	
 		<?php bp_before_the_content(); ?>	
 	
-		<?php if ( have_posts() ) : 		
-			$term_name = get_query_var('term'); 
-		
-			if ($term_name) :
-				$term = get_term_by('slug', $term_name, 'jobsite_geo-service-areas');
-				if ( $term && !is_wp_error($term) ) :
-					$city_state = str_replace('-', ', ', $term->name);
-					$archiveHeadline = "Recent Jobs in ".$city_state;
-				else:
-					$term = get_term_by('slug', $term_name, 'jobsite_geo-services');
-					if ( $term && !is_wp_error($term) ) :
-						$archiveHeadline = "Recent ".$term->name." Jobs";
-					else:
-						$term = get_term_by('slug', $term_name, 'jobsite_geo-techs');
-						if ( $term && !is_wp_error($term) ) :
-							$archiveHeadline = "Recent Jobs by ".$term->name;
-						else:
-							$archiveHeadline = "Recent Jobs";
-						endif;
-					endif;
-				endif;
-			endif;		
-		
+		<?php if ( have_posts() ) : 			
 			$grid = "1";		
 			$valign = "start";
 			$showThumb = "false";
@@ -106,6 +84,37 @@ get_header(); ?>
 
 					wp_reset_postdata();
 				endif;
+		
+				$terms = wp_get_post_terms( get_the_ID(), 'jobsite_geo-techs', array("fields" => "all"));
+
+				if (!is_wp_error($terms) && !empty($terms)) :
+					foreach ($terms as $term) $tech = $term->name;     
+				else:
+					$rand = array('we', 'our tech', 'our technician', 'the tech', 'the technician');
+					$tech = $rand[rand(0, count($rand) - 1)];			
+        		endif;
+		
+				$rand = array('which '.$tech.' restored to full functionality', 'which '.$tech.' restored to operational status', 'which '.$tech.' returned to good condition', 'which '.$tech.' made fully operational again', 'which '.$tech.' restored to working condition', 'which '.$tech.' repaired to work as intended', 'which '.$tech.' restored to peak performance', 'which '.$tech.' successfully repaired', 'on which '.$tech.' completed the repair', 'which '.$tech.' repaired successfully', 'and '.$tech.' delivered complete customer satisfaction', 'on which '.$tech.' delivered a full repair', 'and '.$tech.' ensured absolute customer satisfaction', 'and '.$tech.' provided full restoration', 'and '.$tech.' provided complete repair', 'on which '.$tech.' fulfilled the repair request', 'and '.$tech.' provided unparalleled customer satisfaction');
+				$repair = $rand[rand(0, count($rand) - 1)];			
+		
+    			$word = strtolower($oldBrand);
+    			$vowelSounds = ['a', 'e', 'i', 'o', 'u', 'hour', 'honest'];
+    			$an = "a";
+
+    			if (in_array(substr($word, 0, 5), $vowelSounds) || in_array(substr($word, 0, 6), $vowelSounds) || in_array(substr($word, 0, 1), $vowelSounds)) $an = "an";
+    			if (preg_match('/^u(ni|se|sa|e)/', $word)) $an = "a";
+		
+				if ( $newBrand ) :
+					if ( $oldBrand ) : $jobDesc .= '</p><p>The customer had '.$an.' <b>'.$oldBrand.($oldEquip ? ' ' . $oldEquip : ''); endif;
+					if ( $oldModel ) : $jobDesc .= '<span class="jobsite-model"> [Model #'.$oldModel.']</span>'; endif;
+					if ( $oldBrand ) : $jobDesc .= '</b>, which '.$tech.' replaced with a new <b>'.$newBrand.' '.$newEquip; endif;
+					if ( $newModel ) : $jobDesc .= '<span class="jobsite-model"> [Model #'.$newModel.']</span>'; endif;
+					if ( $oldBrand ) : $jobDesc .= '</b>.'; endif;
+				else:
+					if ( $oldBrand ) : $jobDesc .= '</p><p>The customer has '.$an.' <b>'.$oldBrand.($oldEquip ? ' ' . $oldEquip : ''); endif;
+					if ( $oldModel ) : $jobDesc .= '<span class="jobsite-model"> [Model #'.$oldModel.']</span>'; endif;
+					if ( $oldBrand ) : $jobDesc .= '</b>, '.$repair.'.'; endif;
+				endif;
 
 				$buildUpdate .= '[section width="'.$sectionWidth.'" name="jobsite-'.get_the_ID().'" class="archive-content archive-'.get_post_type().$addTags.$addClass.'"][layout grid="'.$grid.'" valign="'.$valign.'"]';
 				
@@ -153,18 +162,6 @@ get_header(); ?>
 					$buildUpdate .= '<li style="flex: '.$ratio.'" class="full-top">'.wp_get_attachment_image( $imgs[$i], $imgSize, "", ["alt" => $alt[$i]] ).'</li>';	
 				endfor;
 				$buildUpdate .= '</ul>';
-		
-				if ( $newBrand ) :
-					if ( $oldBrand ) : $buildUpdate .= '<div class="jobsite-equipment">Replaced customer\'s <b>'.$oldBrand.' '.$oldEquip; endif;
-					if ( $oldModel ) : $buildUpdate .= '<span class="jobsite-model"> [Model #'.$oldModel.']</span>'; endif;
-					if ( $oldBrand ) : $buildUpdate .= '</b> with a new <b>'.$newBrand.' '.$newEquip; endif;
-					if ( $newModel ) : $buildUpdate .= '<span class="jobsite-model"> [Model #'.$newModel.']</span>'; endif;
-					if ( $oldBrand ) : $buildUpdate .= '</b></div>'; endif;
-				else:
-					if ( $oldBrand ) : $buildUpdate .= '<div class="jobsite-equipment">Repaired customer\'s <b>'.$oldBrand.' '.$oldEquip; endif;
-					if ( $oldModel ) : $buildUpdate .= '<span class="jobsite-model"> [Model #'.$oldModel.']</span>'; endif;
-					if ( $oldBrand ) : $buildUpdate .= '</b></div>'; endif;
-				endif;
 
 				if ( $review ) :
 					$meta = wp_get_attachment_metadata( get_post_thumbnail_id( $review ) );
@@ -315,21 +312,15 @@ get_header(); ?>
 
 		// Display Archive
 			$displayArchive = '<header class="archive-header header-'.get_post_type().'">';
-				$displayArchive .= '<h1 class="page-headline archive-headline '.get_post_type().'-headline">'.$archiveHeadline.'</h1>';
+				$displayArchive .= '<h1 class="page-headline archive-headline '.get_post_type().'-headline">'.$GLOBALS['jobsite_geo-headline'].'</h1>';
 				$displayArchive .= '<div class="archive-description archive-intro '.get_post_type().'-intro">'.$archiveIntro.'</div>'; 
 			$displayArchive .= '</header><!-- .archive-header-->';
 		
-			$buildIntro = "";
-			$mapGrid = "1";
+			$buildIntro = '[col][txt]'.$GLOBALS['jobsite_geo-content'].'[/txt][/col]';	
 		
-			if ( function_exists( 'jobsiteGEOpages' ) && jobsiteGEOpages( $city_state, $city ) != null ) :
-				$buildIntro .= '[col][txt]'.jobsiteGEOpages( $city_state, $city ).'[/txt][/col]';	
-				$mapGrid = "1-1";
-			endif;
-		
-			$buildIntro .= '[col name="map" class="map-'.get_post_type().'"][/col]';		
+			$buildIntro .= '[col][txt]<div id="map" class="map-'.get_post_type().'"></div><div class="map-jobsite_geo-caption">'.$GLOBALS['jobsite_geo-map-caption'].'</div>[/txt][/col]';		
 
-			$displayArchive .= do_shortcode('[section width="inline" class="'.get_post_type().'-content '.get_post_type().'-intro"][layout grid="'.$mapGrid.'"]'.$buildIntro.'[/layout][/section]');			
+			$displayArchive .= do_shortcode('[section width="inline" class="'.get_post_type().'-content '.get_post_type().'-intro"][layout grid="'.$GLOBALS['mapGrid'].'"]'.$buildIntro.'[/layout][/section]');			
 		
 			$displayArchive .= '<footer class="archive-footer">';
 				$displayArchive .= get_the_posts_pagination( array( 'mid_size' => 2, 'prev_text' => _x( '<span class="icon chevron-left" aria-hidden="true"></span>', 'Previous set of posts' ), 'next_text' => _x( '<span class="icon chevron-right" aria-hidden="true"></span>', 'Next set of posts' ), ));
@@ -356,6 +347,7 @@ get_header(); ?>
 </section><!-- #wrapper-content -->
 
 <section id="wrapper-bottom">
+	<h2><?php echo $GLOBALS['jobsite_geo-bottom-headline']; ?></h2>
 	<?php echo do_shortcode($buildUpdate); ?>
 
 	<?php get_footer();

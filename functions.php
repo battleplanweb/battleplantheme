@@ -65,21 +65,26 @@ function get_the_slug() {
 }
 
 // Get ID from page, post or custom post type by entering slug or title
-function getID($slug) { 
-	$getCPT = getCPT();
+function getID($slug, $type) { 
+	$getCPT = $type ? array($type) : getCPT();
 	$id = url_to_postid($slug);	
 	
-	if ( $id != 0 ) :
-		return $id;
-	else :
-		foreach ($getCPT as $postType) :
-			if ( get_page_by_path($slug, OBJECT, $postType) ) return get_page_by_path($slug, OBJECT, $postType)->ID;
-		endforeach;	
+	if ( $id != 0 ) return $id;
+		
+	foreach ($getCPT as $postType) :
+		$page = get_page_by_path($slug, OBJECT, $postType);
+		if ( $page ) return $page->ID;
+	endforeach;	
 
-		foreach ($getCPT as $postType) :
-			if ( get_page_by_title($slug, OBJECT, $postType) ) return get_page_by_title($slug, OBJECT, $postType)->ID;
-		endforeach;			
-	endif;
+	foreach ($getCPT as $postType) :	
+		$query = new WP_Query( array( 'post_type' => $postType, 'title' => $slug, 'post_status' => 'all', 'posts_per_page' => 1, ) ); 
+		if ( !empty( $query->post ) ) : 
+			$page = $query->post;	
+			return $page->ID;	
+		endif;	
+	endforeach;	
+
+	getID($slug);
 } 
 
 // Identify user based on id, email or slug
@@ -159,8 +164,8 @@ function updateOption($option, $value, $autoload=null) {
 
 function getCPT() {
 	$getCPT = get_post_types();  
-	$removeCPT = array('acf-field', 'acf-field-group', 'asp_coupons', 'asp-products', 'attachment', 'customize_changeset', 'custom_css', 'elements', 'nav_menu_item', 'oembed_cache', 'revision', 'stripe_order', 'user_request', 'wpcf7_contact_form', 'wp_block', 'wp_global_styles', 'wphb_minify_group', 'wp_navigation', 'wp_template', 'wp_template_part');
-	$moveCPTs = array ('landing', 'page', 'universal');
+	$removeCPT = array('acf-field', 'acf-field-group', 'asp_coupons', 'asp-products', 'attachment', 'customize_changeset', 'custom_css', 'nav_menu_item', 'oembed_cache', 'revision', 'stripe_order', 'user_request', 'wpcf7_contact_form', 'wp_block', 'wp_global_styles', 'wphb_minify_group', 'wp_navigation', 'wp_template', 'wp_template_part');
+	$moveCPTs = array ('landing', 'page', 'universal', 'elements');
 	
 	foreach ($removeCPT as $remove) unset($getCPT[$remove]);
 	
@@ -390,9 +395,7 @@ function truncateText($string, $limit="250", $break=" ", $pad="...") {
 
 // Remove sidebar from specific pages
 function battleplan_remove_sidebar( $classes ) {
-	$classes = str_replace('sidebar-line', 'sidebar-none', $classes);
-	$classes = str_replace('sidebar-right', 'sidebar-none', $classes);
-	$classes = str_replace('sidebar-left', 'sidebar-none', $classes);
+	$classes = str_replace(array('sidebar-line', 'sidebar-right', 'sidebar-left'), 'sidebar-none', $classes);
 	return $classes;
 }
 
@@ -2017,16 +2020,21 @@ function battleplan_mobile_menu_bar_phone() {
 
 // Display Mobile Menu Bar Item - Contact
 add_action('bp_mobile_menu_bar_contact', 'battleplan_mobile_menu_bar_contact', 20);
-function battleplan_mobile_menu_bar_contact() { 
-	if ( get_page_by_title( 'Quote Request Form', OBJECT, 'wpcf7_contact_form' ) ) : 
+function battleplan_mobile_menu_bar_contact() { 	
+	$query = new WP_Query( array( 'post_type' => 'wpcf7_contact_form', 'title' => 'Quote Request Form', 'post_status' => 'all', 'posts_per_page' => 1, ) ); 
+	if ( ! empty( $query->post ) ) :
 		$form = "Quote Request Form"; 
 		$title = "Request A Quote"; 
 		$type = "quote";
-	elseif ( get_page_by_title( 'Contact Us Form', OBJECT, 'wpcf7_contact_form' ) ) : 
+	endif;
+	
+	$query = new WP_Query( array( 'post_type' => 'wpcf7_contact_form', 'title' => 'Contact Us Form', 'post_status' => 'all', 'posts_per_page' => 1, ) ); 
+	if ( ! empty( $query->post ) ) :
 		$form = "Contact Us Form"; 
 		$title = "Send A Message"; 
 		$type = "contact"; 
-	endif;	
+	endif;
+	
 	if ( $form && $title ) :
 		echo '<div class="mm-bar-btn mm-bar-'.$type.' modal-btn"><div class="email-btn" aria-hidden="true"></div><div class="email2-btn" aria-hidden="true"></div><span class="sr-only">Contact Us</span></div>';	
 	else:
@@ -2036,14 +2044,19 @@ function battleplan_mobile_menu_bar_contact() {
 
 // Display Request Quote Modal
 add_action('bp_before_page', 'battleplan_request_quote_modal', 20);
-function battleplan_request_quote_modal() { 
-	if ( get_page_by_title( 'Quote Request Form', OBJECT, 'wpcf7_contact_form' ) ) :
+function battleplan_request_quote_modal() { 	
+	$query = new WP_Query( array( 'post_type' => 'wpcf7_contact_form', 'title' => 'Quote Request Form', 'post_status' => 'all', 'posts_per_page' => 1, ) ); 
+	if ( ! empty( $query->post ) ) :
 		$form = "Quote Request Form"; 
 		$title = "Request A Quote";
-	elseif ( get_page_by_title( 'Contact Us Form', OBJECT, 'wpcf7_contact_form' ) ) : 
+	endif;
+	
+	$query = new WP_Query( array( 'post_type' => 'wpcf7_contact_form', 'title' => 'Contact Us Form', 'post_status' => 'all', 'posts_per_page' => 1, ) ); 
+	if ( ! empty( $query->post ) ) :
 		$form = "Contact Us Form"; 
 		$title = "Send A Message";
 	endif;	
+	
 	if ( $form && $title ) echo do_shortcode('[lock name="request-quote-modal" style="lock" position="modal" show="always" btn-activated="yes"][layout]<h3>'.$title.'</h3>[contact-form-7 title="'.$form.'"][/layout][/lock]');
 }
 

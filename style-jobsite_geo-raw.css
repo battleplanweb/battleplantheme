@@ -10,9 +10,20 @@
 --------------------------------------------- */ 
 
 #map.map-jobsite_geo {
-	width: 										700px;
-	height: 									700px;
-	margin: 									1.5em auto 3em;
+	width: 										100%;
+	max-width: 									550px;
+	height: 									auto;
+	margin: 									1.5em auto 1em;
+}
+
+.map-jobsite_geo-caption {
+	text-align: 								center;
+	font-weight: 								bold;
+	margin-bottom: 								2em;
+}
+
+.tax-jobsite_geo-service-areas #wrapper-bottom h2 {
+	margin-bottom: 								0.5em;
 }
 
 .section.archive-content.archive-jobsite_geo .jobsite_geo-job_meta {
@@ -39,4 +50,15 @@
   	grid-template-columns: 						repeat(12,1fr);
   	gap: 										var(--measure-base) 3%;
   	height: 									100%;
+	width: 										100%;
+	max-width: 									800px;
+	margin: 									0 auto;
 } 
+
+/* 1: Phones (portrait) */
+@media (max-width: 576px) {
+	.jobsite_geo .archive-jobsite_geo .jobsite-review .block-image.image-testimonials.testimonials-generic-icon,
+	.jobsite_geo .archive-jobsite_geo .jobsite-review img.img-testimonials {
+		width: 									70%;
+	}
+}

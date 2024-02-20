@@ -108,6 +108,8 @@ function battleplan_registerPostTypes() {
 		'menu_icon'=>'dashicons-edit-page',
 		'has_archive'=>false,
 		'capability_type' => 'page',
+		
+		//'rewrite' => array('slug' => 'service-areas'), // This line changes the slug
 	));
 	register_post_type( 'elements', array (
 		'label'=>__( 'elements', 'battleplan' ),
@@ -161,7 +163,7 @@ function battleplan_add_cpt_to_main_query( $query ) {
 	if ( !$query->is_main_query() ) return;
 	if ( !isset( $query->query['page'] ) || 2 !== count( $query->query ) ) return;
 	if ( empty( $query->query['name'] ) ) return;
-	$query->set( 'post_type', array( 'post', 'page', 'landing', 'universal' ) );
+	$query->set( 'post_type', array( 'post', 'page', 'landing', 'universal', 'jobsite_geo' ) );
 }
 
 /*--------------------------------------------------------------
@@ -253,16 +255,17 @@ function battleplan_add_acf_fields() {
 				'conditional_logic' => 0,
 				'choices' => array(
 					'None' => 'None',
-					'Facebook' => 'Facebook',
 					'Google' => 'Google',
+					'Facebook' => 'Facebook',
 					'Yelp' => 'Yelp',
-					'Nextdoor' => 'Nextdoor',
 					'YP' => 'YP',
 					'Jobber' => 'Jobber',
-					'Angi' => 'Angi',
-					'Houzz' => 'Houzz',
-					'Home_advisor' => 'Home Advisor',
+					'Nextdoor' => 'Nextdoor',
 					'BBB' => 'BBB',
+					'Angi' => 'Angi',
+					'Home_advisor' => 'Home Advisor',
+					'Houzz' => 'Houzz',
+					'Fiverr' => 'Fiverr',
 				),
 				'other_choice' => 0,
 				'save_other_choice' => 0,

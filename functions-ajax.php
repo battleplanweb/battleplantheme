@@ -28,6 +28,7 @@ function battleplan_update_meta_ajax() {
 	wp_send_json( $response );	
 } 
 
+/* removed 2-13-2024 to save time and reduce ajax calls
 // Determine if user is real or bot
 add_action( 'wp_ajax_check_user', 'battleplan_check_user_ajax' );
 add_action( 'wp_ajax_nopriv_check_user', 'battleplan_check_user_ajax' );
@@ -44,4 +45,5 @@ function battleplan_check_user_ajax() {
 	endif;
 	wp_send_json( $response );
 }
+*/
 ?>

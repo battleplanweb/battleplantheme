@@ -371,6 +371,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		if ( target !== "#tab-description" ) { // 03/23/2021 --- Kin-Tec Industries
 			window.scroll({ top: newLoc, left: 0, behavior: 'smooth' }); 
 
+
+
 		}
 	};
 
@@ -676,13 +678,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 // Turn SVG into an element's background image
 	window.svgBG = function (svg, element, where) {
 		where = where || "top";
-		if ( where == "bottom" ) {
+		console.log(where);
+		if ( where == "bottom" ) {console.log(where);
 			$(svg).clone().css({"position":"absolute"}).appendTo($(element));
-		} else if ( where == "top" ) {
+		} else if ( where == "top" ) {console.log(where);
 			$(svg).clone().css({"position":"absolute"}).prependTo($(element));
-		} else if ( where == "before" || where == "start" ) {
+		} else if ( where == "before" || where == "start" ) {console.log(where);
 			$(svg).clone().css({"position":"absolute"}).insertBefore($(element));
-		} else {
+		} else {console.log(where);
 			$(svg).clone().css({"position":"absolute"}).insertAfter($(element)); 
 		} 
 	};

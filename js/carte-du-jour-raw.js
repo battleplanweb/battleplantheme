@@ -4,10 +4,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		
 		// Handle mutliple locations		
 		$('.logo').click(function() {			
-			setCookie('cdj-location', '', 30);			
+			setCookie('cdj-loc', '', 30);			
 		})
 		
-		var locations = Object.entries(locArray), cdj_location = getCookie('cdj-location');
+		var locations = Object.entries(locArray), cdj_location = getCookie('cdj-loc');
 		
 		for (var i = 0; i < locations.length; i++) { 
 			$( '.show-'+locations[i][1]['slug'] ).addClass('loc');
@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			$('.location-unknown, .loc').fadeOut(100);
 			$('.show-'+loc).fadeIn(500);			
 			
-			setCookie('cdj-location', loc, 30);		
+			setCookie('cdj-loc', loc, 30);		
 		}
 		
 		if ( cdj_location ) { displayLocation(cdj_location); }		

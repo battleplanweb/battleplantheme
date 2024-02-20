@@ -416,11 +416,11 @@ function battleplan_CheckRemoveSidebar( $classes ) {
 	endif;
 }
 
-// If post is an "landing" page, add .home to body class for CSS purposes
+// If post is a "landing" page, add .home to body class for CSS purposes
 add_filter( 'body_class', 'battleplan_addHomeBodyClassToOptimized', 70 );
 function battleplan_addHomeBodyClassToOptimized( $classes ) {
-	if ( get_post_type() == "landing" && preg_match ('/, [A-Z]{2}$/', get_the_title() ) === 1 ) array_push($classes, 'home', 'alt-home');
-	
+	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) return $classes;	
+	if ( get_post_type() == "landing" && preg_match ('/, [A-Z]{2}$/', get_the_title() ) === 1 ) array_push($classes, 'home', 'alt-home');	
 	return $classes;
 }
 
@@ -538,16 +538,6 @@ add_filter('posts_orderby', 'battleplan_random_seed');
 function battleplan_random_seed($orderby_statement) {
 	if ( strpos( $orderby_statement, 'RAND()' ) !== FALSE ) $orderby_statement = 'RAND('._RAND_SEED.')';
     return $orderby_statement;
-}
-
-// Set up for multi-location sites	
-add_action('after_setup_theme', 'battleplan_setLoc');
-function battleplan_setLoc() { 
-	$loc = do_shortcode('[get-url-var var="l"]');
-	if ( $loc && $loc != 1 ) :
-		$GLOBALS['site-loc'] = $loc;
-		$GLOBALS['customer_info'] = get_option('customer_info_'.$loc) ? get_option('customer_info_'.$loc) : array();
-	endif;
 }
 
 // Preload site-background.jpg or site-background.webp if it exists

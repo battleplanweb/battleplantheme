@@ -156,7 +156,7 @@ function processChron($forceChron) {
 		$wpSEOTitle = ' %%page%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';		
 		$getCPT = get_post_types(); 
 		foreach ($getCPT as $postType) :
-			if ( $postType == "post" || $postType == "page" || $postType == "universal" || $postType == "products" || $postType == "tribe_events" ) :
+			if ( $postType == "post" || $postType == "page" || $postType == "universal" || $postType == "products" || $postType == "landing" || $postType == "events" ) :
 				$wpSEOSettings['title-'.$postType] = '%%title%%'.$wpSEOTitle;
 				$wpSEOSettings['social-title-'.$postType] = '%%title%%'.$wpSEOTitle;
 			elseif ( $postType == "attachment" || $postType == "revision" || $postType == "nav_menu_item" || $postType == "custom_css" || $postType == "customize_changeset" || $postType == "oembed_cache" || $postType == "user_request" || $postType == "wp_block" || $postType == "elements" || $postType == "acf-field-group" || $postType == "acf-field" || $postType == "wpcf7_contact_form" ) :
@@ -309,8 +309,8 @@ function processChron($forceChron) {
 		$updatePage = get_page_by_path($page, OBJECT, 'elements' );
 		if ( !empty( $updatePage ) ) : 
 			wp_update_post(array(
-				'ID' 		  => $updatePage->ID,
-				'menu_order'     => $order,
+				'ID' 		  		=> $updatePage->ID,
+				'menu_order'    	=> $order,
 			));	
 		endif;
 	endforeach;

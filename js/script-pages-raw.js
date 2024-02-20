@@ -356,7 +356,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 // Set city-specific landing page as home-url cookie
 	if ( $('body').hasClass('alt-home') ) {
-		var get_alt_loc = location.pathname + location.search, new_home = get_alt_loc.replace(/\//g, "");		
+		var get_alt_loc = location.pathname + location.search, new_home = get_alt_loc.replace(/\//g, "");			
 		setCookie('home-url', new_home);
 	}
 	
@@ -368,8 +368,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	}
 	
 // Set Google Ads landing page as site-loc cookie
-	if ( typeof site_loc !== 'undefined' && site_loc != null ) {
-		setCookie('site-loc', site_loc);
+	if ( typeof google_ad_location !== 'undefined' && google_ad_location != null ) {
+		setCookie('site-loc', google_ad_location);
 	}	
 
 // Augment URLs with location data, if multi-location site

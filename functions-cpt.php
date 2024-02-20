@@ -158,6 +158,7 @@ function battleplan_remove_cpt_slug( $post_link, $post ) {
  	return $post_link;
 }
 
+// Add certain post types to the main query, along with pages and posts
 add_action( 'pre_get_posts', 'battleplan_add_cpt_to_main_query' );
 function battleplan_add_cpt_to_main_query( $query ) {
 	if ( !$query->is_main_query() ) return;

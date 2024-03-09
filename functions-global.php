@@ -13,14 +13,14 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '23.7.3' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '23.8' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
 
 $get_user = wp_get_current_user();
-$roles = ( array ) $user->roles;
+$roles = $get_user->roles;
 if ( !defined('_USER_LOGIN') ) define( '_USER_LOGIN', $get_user->user_login );
 if ( !defined('_USER_ID') ) define( '_USER_ID', $get_user->ID );
 if ( !defined('_USER_ROLES') && $roles ) :
@@ -29,10 +29,8 @@ else:
 	if ( !defined('_USER_ROLES') ) define( '_USER_ROLES', array() );
 endif;
 
-if ( _USER_LOGIN == 'battleplanweb' ) :
-	//if ( !defined('WP_DEBUG' )) define('WP_DEBUG', true);
-    //@ini_set('display_errors', 1);
-   	//@error_reporting(E_ALL);
+if ( _USER_LOGIN == 'battleplanweb' ) : 
+	//showMe(_USER_ROLES,true);
 endif;
 
 $googlebots = array( 'google', 'lighthouse' );

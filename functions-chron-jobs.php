@@ -434,6 +434,7 @@ function processChron($forceChron) {
 	
 	
 				// Add any new reviews to testimonials 	
+				/*
 					if (isset($res['result']['reviews']) && is_array($res['result']['reviews'])) :
 						$reviews = $res['result']['reviews'];
 						$googleInfo[$placeID]['reviews'] = array();
@@ -477,7 +478,7 @@ function processChron($forceChron) {
 							endif;
 						endif;
 					endforeach;	
-	
+				*/
 				endif;
 			endforeach;
 

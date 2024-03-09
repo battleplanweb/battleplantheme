@@ -14,7 +14,7 @@
 <head>	
 	<script nonce="<?php echo _BP_NONCE; ?>" type="text/javascript">
 		var startTime = Date.now();		
-		<?php if ( _USER_DISPLAY_LOC != "none" ) :
+		<?php if ( defined('_USER_DISPLAY_LOC') ) :
 			?>var google_ad_location = '<?php echo strtolower(str_replace(array(', ', ' '), array('-', '-'), _USER_DISPLAY_LOC)); ?>';
 		<?php else:
 			?>var google_ad_location = null;<?php 

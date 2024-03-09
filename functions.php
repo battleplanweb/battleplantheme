@@ -19,6 +19,21 @@ require_once get_template_directory().'/functions-global.php';
 # Functions to extend WordPress 
 --------------------------------------------------------------*/
 
+// Print variable or array for debugging
+function showMe($something, $die=false) {
+	if ( is_array($something) ) :
+		$display = '<br><pre>'.print_r($something,true).'</pre><br>';
+	else:
+		$display = '<br><pre>'.$something.'</pre><br>';
+	endif;
+	
+	if ( $die == true ) :
+		wp_die($display);
+	else:
+		return $display;
+	endif;
+}
+
 // Check if current page is log in screen 
 function is_wplogin() {
     $ABSPATH_MY = str_replace(array('\\','/'), DIRECTORY_SEPARATOR, ABSPATH);
@@ -65,7 +80,7 @@ function get_the_slug() {
 }
 
 // Get ID from page, post or custom post type by entering slug or title
-function getID($slug, $type) { 
+function getID($slug, $type=null) { 
 	$getCPT = $type ? array($type) : getCPT();
 	$id = url_to_postid($slug);	
 	
@@ -77,14 +92,14 @@ function getID($slug, $type) {
 	endforeach;	
 
 	foreach ($getCPT as $postType) :	
-		$query = new WP_Query( array( 'post_type' => $postType, 'title' => $slug, 'post_status' => 'all', 'posts_per_page' => 1, ) ); 
-		if ( !empty( $query->post ) ) : 
-			$page = $query->post;	
+		$query = new WP_Query( array( 'post_type' => $postType, 'name' => $slug, 'post_status' => 'all', 'posts_per_page' => 1, ) ); 
+		if ( !empty( $query->posts ) ) : 
+			$page = $query->posts[0];	
 			return $page->ID;	
 		endif;	
 	endforeach;	
 
-	getID($slug);
+	//getID($slug);
 } 
 
 // Identify user based on id, email or slug
@@ -1975,7 +1990,7 @@ function battleplan_load_tag_manager() {
 		$buildTagMgr .= '<script nonce="'._BP_NONCE.'">'.$buildEvents.'</script>';
 	endif;		
 
-	if (strpos($mainAcct, 'x') === false && _IS_GOOGLEBOT == false ) echo $buildTagMgr;
+	if (strpos($mainAcct, 'x') === false && $mainAcct != '' && _IS_GOOGLEBOT == false ) echo $buildTagMgr;
 }
 
 // Build and display desktop navigation menu

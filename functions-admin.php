@@ -227,8 +227,8 @@ function battleplan_remove_menus() {
 	add_submenu_page( 'upload.php', 'Favicon', 'Favicon', 'manage_options', 'customize.php' );	
 	
 	
-	if ( _USER_LOGIN != "battleplanweb" && !in_array('Administrator', _USER_ROLES) ) remove_menu_page( 'edit.php?post_type=elements');	
-	if ( _USER_LOGIN != "battleplanweb" && !in_array('Administrator', _USER_ROLES) ) remove_menu_page( 'edit.php?post_type=landing');	
+	if ( _USER_LOGIN != "battleplanweb" && !in_array('administrator', _USER_ROLES) ) remove_menu_page( 'edit.php?post_type=elements');	
+	if ( _USER_LOGIN != "battleplanweb" && !in_array('administrator', _USER_ROLES) ) remove_menu_page( 'edit.php?post_type=landing');	
 	
 	if ( _USER_LOGIN != "battleplanweb" ) remove_menu_page( 'edit.php?post_type=universal');		 
 	if ( _USER_LOGIN != "battleplanweb" ) remove_menu_page( 'tools.php');	
@@ -265,8 +265,12 @@ function battleplan_remove_menus() {
 	if ( _USER_LOGIN == "battleplanweb" && is_plugin_active( 'wpseo-local/local-seo.php' ) ) add_submenu_page( 'tools.php', 'Yoast Local', '&nbsp;└&nbsp;Local', 'manage_options', 'admin.php?page=wpseo_local' );
 	if ( _USER_LOGIN == "battleplanweb" && is_plugin_active( 'wordpress-seo-premium/wp-seo-premium.php' ) ) add_submenu_page( 'tools.php', 'Yoast Redirects', '&nbsp;└&nbsp;Redirects', 'manage_options', 'admin.php?page=wpseo_redirects' );
 
-	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Settings', 'GBP Settings', 'manage_options', 'admin.php?page=pgmb_settings' );
-	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Calendar', '&nbsp;└&nbsp;Calendar', 'manage_options', 'admin.php?page=post_to_google_my_business' );
+	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Settings', 'GBP Settings', 'manage_options', 'admin.php?page=pgmb_settings' );
+	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Templates', '&nbsp;└&nbsp;Templates', 'manage_options', 'edit.php?post_type=pgmb_templates' );
+	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Calendar', '&nbsp;└&nbsp;Calendar', 'manage_options', 'admin.php?page=post_to_google_my_business' );
+	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Account', '&nbsp;└&nbsp;Account', 'manage_options', 'admin.php?page=post_to_google_my_business-account' );
+	
+	
 }
 		
 // Reorder WP Admin Menu Items

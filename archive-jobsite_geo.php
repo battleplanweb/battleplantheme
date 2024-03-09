@@ -46,17 +46,17 @@ get_header(); ?>
     			else:
         			$when =  'Today';
 				endif;
-				
-				$name = get_the_title();
-				$address = esc_attr(get_field( "address" ));
-				$city = esc_attr(get_field( "city" ));
-				$state = esc_attr(get_field( "state" ));
-				$oldBrand = esc_attr(get_field( "old_brand" ));
-				$oldEquip = esc_attr(get_field( "old_equipment" ));
-				$oldModel = esc_attr(get_field( "old_model_no" ));
-				$newBrand = esc_attr(get_field( "new_brand" ));
-				$newEquip = esc_attr(get_field( "new_equipment" ));
-				$newModel = esc_attr(get_field( "new_model_no" ));
+		
+				$name = trim(get_the_title(), ' ');
+				$address = trim(esc_attr(get_field( "address" )), ' ');
+				$city = trim(esc_attr(get_field( "city" )), ' ');
+				$state = trim(esc_attr(get_field( "state" )), ' ');
+				$oldBrand = trim(esc_attr(get_field( "old_brand" )), ' ');
+				$oldEquip = trim(esc_attr(get_field( "old_equipment" )), ' ');
+				$oldModel = trim(esc_attr(get_field( "old_model_no" )), ' ');
+				$newBrand = trim(esc_attr(get_field( "new_brand" )), ' ');
+				$newEquip = trim(esc_attr(get_field( "new_equipment" )), ' ');
+				$newModel = trim(esc_attr(get_field( "new_model_no" )), ' ');
 				$imgs[0] = esc_attr(get_field( "jobsite_photo_1"));
 				$imgs[1] = esc_attr(get_field( "jobsite_photo_2"));
 				$imgs[2] = esc_attr(get_field( "jobsite_photo_3"));
@@ -107,7 +107,7 @@ get_header(); ?>
 				if ( $newBrand ) :
 					if ( $oldBrand ) : $jobDesc .= '</p><p>The customer had '.$an.' <b>'.$oldBrand.($oldEquip ? ' ' . $oldEquip : ''); endif;
 					if ( $oldModel ) : $jobDesc .= '<span class="jobsite-model"> [Model #'.$oldModel.']</span>'; endif;
-					if ( $oldBrand ) : $jobDesc .= '</b>, which '.$tech.' replaced with a new <b>'.$newBrand.' '.$newEquip; endif;
+					if ( $oldBrand ) : $jobDesc .= '</b>, which '.$tech.' replaced with a new <b>'.$newBrand.($newEquip ? ' ' . $newEquip : ''); endif;
 					if ( $newModel ) : $jobDesc .= '<span class="jobsite-model"> [Model #'.$newModel.']</span>'; endif;
 					if ( $oldBrand ) : $jobDesc .= '</b>.'; endif;
 				else:

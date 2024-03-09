@@ -345,13 +345,15 @@ address {
 }
 
 pre {
-	background: 								var(--white);
 	font-family: 								"Courier 10 Pitch", courier, monospace;
 	line-height: 								1.6;
 	margin-bottom: 								1.6em;
 	max-width: 									100%;
 	overflow: 									auto;
 	padding: 									1.6em;
+	border: 									1px solid var(--black);
+	box-shadow: 								0 0 10px var(--black-med);
+	background: 								#f8ffe0;
 }
 
 code,

@@ -28,7 +28,9 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			
 			loadTime = loadTime.toFixed(1);
 			
-			gtag("event", "join_group", { group_id: pageID + "»" + deviceTime + "«" + loadTime });
+			if ( typeof gtag === 'function' ) {
+				gtag("event", "join_group", { group_id: pageID + "»" + deviceTime + "«" + loadTime });
+			}
 		}, 4000);		
 
 	// Delay 0.3s to allow accurate contentH  
@@ -44,32 +46,32 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 					if ( scrollPct > 1 ) { scrollPct = 1; }
 				}
 				
-				if ( scrollPct < 0.2 && view0 == false ) {
+				if ( scrollPct < 0.2 && view0 == false && typeof gtag === 'function' ) {
 					gtag("event", "unlock_achievement", { achievement_id: pageID+'-init' });
 					view0 = true;					
 					
-					if ( !getCookie('track') ) {				
+					if ( !getCookie('track') && typeof gtag === 'function' ) {				
 						gtag("event", "unlock_achievement", { achievement_id: 'track-init' });
 						setCookie('track', true);
 					}				
 				}								
-				if ( scrollPct >= 0.2 && view20 == false ) {
+				if ( scrollPct >= 0.2 && view20 == false && typeof gtag === 'function' ) {
 					gtag("event", "unlock_achievement", { achievement_id: pageID+'-20' });
 					view20 = true;
 				}				
-				if ( scrollPct >= 0.4 && view40 == false ) {
+				if ( scrollPct >= 0.4 && view40 == false && typeof gtag === 'function' ) {
 					gtag("event", "unlock_achievement", { achievement_id: pageID+'-40' });
 					view40 = true;
 				}
-				if ( scrollPct >= 0.6 && view60 == false ) {
+				if ( scrollPct >= 0.6 && view60 == false && typeof gtag === 'function' ) {
 					gtag("event", "unlock_achievement", { achievement_id: pageID+'-60' });
 					view60 = true;
 				}
-				if ( scrollPct >= 0.8 && view80 == false ) {
+				if ( scrollPct >= 0.8 && view80 == false && typeof gtag === 'function' ) {
 					gtag("event", "unlock_achievement", { achievement_id: pageID+'-80' });
 					view80 = true;
 				}
-				if ( scrollPct == 1 && view100 == false ) {
+				if ( scrollPct == 1 && view100 == false && typeof gtag === 'function' ) {
 					gtag("event", "unlock_achievement", { achievement_id: pageID+'-100' });
 					view100 = true;
 				}					
@@ -79,8 +81,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		// Track how many people see sections/columns on site
 			$('#wrapper-bottom > section > .flex > .col').waypoint(function() {
 				var theCol = $(this.element), theSec = $(this.element).parent().parent(), colIndex = theSec.find('.flex > .col').index( theCol ) + 1, secIndex = $('#wrapper-bottom > section').index(theSec) + 1, completeView = secIndex+'.'+colIndex;
-								
-				gtag("event", "unlock_achievement", { achievement_id: pageID+'-'+completeView });
+						
+				if ( typeof gtag === 'function' ) {
+					gtag("event", "unlock_achievement", { achievement_id: pageID+'-'+completeView });
+				}
 				
 				this.destroy();
 			}, { offset: 'bottom-in-view' });	
@@ -89,7 +93,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 			$('.tracking').waypoint(function() {		
 				var track = $(this.element).attr('data-track');
 				
-				if ( !getCookie(track) ) {				
+				if ( !getCookie(track) && typeof gtag === 'function' ) {				
 					gtag("event", "unlock_achievement", { achievement_id: 'track-'+track });
 					setCookie(track, true);
 				}

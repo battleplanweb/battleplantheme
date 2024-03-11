@@ -1683,6 +1683,3 @@ function battleplan_getRSS( $atts, $content = null ) {
 	 
 	 return apply_filters('the_content', $section_content);	 
 }
- 
-	
-?>

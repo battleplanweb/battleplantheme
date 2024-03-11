@@ -668,7 +668,7 @@ function battleplan_jobsite_template($template) {
 			$GLOBALS['jobsite_geo-city'] = ucwords($splitApart[0]);
 			$GLOBALS['jobsite_geo-state'] = strtoupper($splitApart[1]);		
 			$GLOBALS['jobsite_geo-map-caption'] = "This map shows some of our recent jobs in the ".$GLOBALS['jobsite_geo-city']." area.";
-			$GLOBALS['jobsite_geo-bottom-headline'] = "Our HVAC Work In ".$GLOBALS['jobsite_geo-city'].", ".$GLOBALS['jobsite_geo-state'];
+			$GLOBALS['jobsite_geo-bottom-headline'] = "Take A Look At Our Work In ".$GLOBALS['jobsite_geo-city'].", ".$GLOBALS['jobsite_geo-state'];
 
 			$query = new WP_Query(array( 'post_type' => 'landing', 'posts_per_page' => 1, 'title' => $GLOBALS['jobsite_geo-city'].', '.$GLOBALS['jobsite_geo-state'], 'post_status' => 'publish', ));
 
@@ -753,7 +753,6 @@ function battleplan_handle_jobsite_geo_image_upload($file) {
 # Shortcodes
 --------------------------------------------------------------*/
 
-// Build SVG for icons
 add_shortcode( 'get-jobsite', 'battleplan_getJobsiteCityState' );
 function battleplan_getJobsiteCityState($atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', ), $atts );

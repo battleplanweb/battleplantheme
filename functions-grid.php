@@ -670,5 +670,3 @@ function battleplan_buildWidget( $atts, $content = null ) {
 
 	if ( $display == true) return $buildWidget;	
 }
-
-?>

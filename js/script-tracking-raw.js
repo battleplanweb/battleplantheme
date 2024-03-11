@@ -8,7 +8,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	
 	$(window).on( 'load', function() {
 	
-		$('.widget.widget-financing').addClass('tracking').attr('data-track',"financing");
 		$('div.coupon-inner').addClass('tracking').attr('data-track',"coupon");
 		$('.carousel.slider-testimonials').addClass('tracking').attr('data-track',"testimonials");
 		

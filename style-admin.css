@@ -961,13 +961,13 @@ a#mbp_misc-tab,
 
 .wp-admin section.section {
 	position:										relative;
-	width:										100%;
+	width:											100%;
 }
 
 .wp-admin .flex {
 	grid-column: 									default-start / default-end;
 	display: 										grid;
-	gap: 										2.5em 3%;
+	gap: 											2.5em 3%;
 }
 
 .wp-admin .flex.inputs {
@@ -975,8 +975,8 @@ a#mbp_misc-tab,
 }
 
 .wp-admin .flex.stats {
-	grid-template-columns: 							115px repeat(50, 50px); /* add new elements to 50 */
-	gap: 										0.5em 15px;
+	grid-template-columns: 							115px repeat(49, 50px); /* add new elements to 50 */
+	gap: 											0.5em 15px;
 	text-align: 									center;
 }
 
@@ -990,26 +990,26 @@ a#mbp_misc-tab,
 
 .wp-admin .flex .col label {
 	display: 										inline-block;
-	width: 										180px;
+	width: 											180px;
 }
 
 .wp-admin .flex .col input {
 	display: 										inline-block;
-	width: 										50px;
+	width: 											50px;
 	text-align: 									center;
 }
 
 .wp-admin .flex .col input[type="checkbox"] {
-	width: 										17px;
+	width: 											17px;
 }
 
 .wp-admin .flex .col input[type="submit"] {
-	width: 										auto;
+	width: 											auto;
 	padding: 										2px 13px;
 }
 
 .wp-admin .flex .col textarea {
-	width: 										900px;
+	width: 											900px;
 	height: 										400px;
 	text-align: 									left;
 }
@@ -1024,26 +1024,26 @@ a#mbp_misc-tab,
 }
 
 .wp-admin .flex.stats .col.headline {
-	width: 										200px;
-	transform: 									translate(-21px, -16px) rotate(-45deg);
+	width: 											200px;
+	transform: 										translate(-21px, -16px) rotate(-45deg);
 	text-align: 									left;
 	z-index: 										10;
 	padding: 										5px 0 5px 30px;
 	border-top: 									1px solid var(--black-lowest);
-	border-bottom: 								1px solid var(--black-med));
+	border-bottom: 									1px solid var(--black-med));
 }
 
 .wp-admin .flex.stats .col.subhead  {
 	text-align: 									center;
 	border-top: 									1px solid var(--black-lowest);
-	border-bottom: 								2px solid var(--black-low);
+	border-bottom: 									2px solid var(--black-low);
 	border-left: 									2px solid var(--black-lowest);
 	border-right: 									2px solid var(--black-low);
 	margin: 										30px 0 5px;
 	z-index: 										20;
 	padding: 										5px 0 3px;
 	font-weight: 									bold;
-	font-size: 									105%;
+	font-size: 										105%;
 }
 
 .wp-admin .span-all,
@@ -1053,25 +1053,31 @@ a#mbp_misc-tab,
 }
 
 .wp-admin .flex.stats .col.site-elements {
-	grid-column:									span 13;
+	grid-column:									span 10;
 }
 
-.wp-admin .flex.stats .col.site-hvac {
-	grid-column:									span 9;
-}
-
-.wp-admin .flex.stats .col.lighthouse {
-	grid-column:									span 7;
-}
-
-.wp-admin .flex.stats .col.citations,
+.wp-admin .flex.stats .col.lighthouse-mobile,
+.wp-admin .flex.stats .col.lighthouse-desktop,
 .wp-admin .flex.stats .col.gmb {
+	grid-column:									span 6;
+}
+
+.wp-admin .flex.stats .col.backlinks {
+	grid-column: 									span 5;
+}
+
+.wp-admin .flex.stats .col.database {
 	grid-column:									span 4;
 }
 
+.wp-admin .flex.stats .col.cite,
+.wp-admin .flex.stats .col.console {
+	grid-column: 									span 3;
+}
+
 .wp-admin .flex.stats .col.keywords,
-.wp-admin .flex.stats .col.revs,
-.wp-admin .flex.stats .col.site-speed {
+.wp-admin .flex.stats .col.google,
+.wp-admin .flex.stats .col.load_time {
 	grid-column:									span 2;
 }
 
@@ -1081,7 +1087,7 @@ a#mbp_misc-tab,
 	z-index: 										30;
 	padding: 										3px;
 	border-top: 									1px solid var(--black-lowest);
-	border-bottom: 								1px solid var(--black-low);
+	border-bottom: 									1px solid var(--black-low);
 	border-left: 									1px solid var(--black-lowest);
 	border-right: 									1px solid var(--black-low);
 }
@@ -1093,68 +1099,29 @@ a#mbp_misc-tab,
 .wp-admin .flex.stats .col.notes {
 	background: 									#dbdbdb;
 	margin-left: 									130px;
-	width: 										calc(100vw - 393px);
-	margin-bottom: 								5px;
+	width: 											calc(100vw - 393px);
+	margin-bottom: 									5px;
 	display: 										none;
 	cursor: 										pointer;
 	padding: 										3px 8px 5px;
 }
 
-.wp-admin .flex.stats .col[class*="lighthouse-mobile"],
-.wp-admin .flex.stats .col[class*="keyword"],
+.wp-admin .flex.stats .col,
+.wp-admin .flex .col.mobile {
+	background: 									var(--pale-red);
+}
+
+.wp-admin .flex.stats .col[class*="lighthouse-desktop"],
+.wp-admin .flex.stats .col[class*="database"],
+.wp-admin .flex.stats .col[class*="cite"],
 .wp-admin .flex.stats .col[class*="gmb"],
-.wp-admin .flex.stats .col[class*="load_time"],
-.wp-admin .flex.stats .col.optimized,
-.wp-admin .flex.stats .col.testimonials,
-.wp-admin .flex.stats .col.menu-testimonials,
-.wp-admin .flex.stats .col.testimonials-pct,
-.wp-admin .flex.stats .col.coupon,
-.wp-admin .flex.stats .col.coupon-pct,
-.wp-admin .flex.stats .col.blog,
-.wp-admin .flex.stats .col.galleries,
-.wp-admin .flex.stats .col.home-call-to-action,
-.wp-admin .flex.stats .col.homepage-teasers,
-.wp-admin .flex.stats .col.logo-slider,
-.wp-admin .flex.stats .col.service-map,
-.wp-admin .flex.stats .col.bbb-link,
-.wp-admin .flex.stats .col.financing-link,
-.wp-admin .flex.stats .col.menu-finance,
-.wp-admin .flex.stats .col.finance-pct,
-.wp-admin .flex.stats .col.why-choose,
-.wp-admin .flex.stats .col.emergency-service,
-.wp-admin .flex.stats .col.symptom-checker,
-.wp-admin .flex.stats .col.faq,
-.wp-admin .flex.stats .col.tip-of-the-month,
-.wp-admin .flex.stats .col.maintenance-tips,
-.wp-admin .flex .col.mobile,
-.wp-admin .flex .col.keywords,
-.wp-admin .flex .col.gmb,
-.wp-admin .flex .col.site-speed,
-.wp-admin .flex .col.site-hvac  { 
+.wp-admin .flex.stats .col[class*="load_time"] { 
 	background: 									var(--pale-blue);
 } 
 
-.wp-admin .flex.stats .col[class*="lighthouse-desktop"],
-.wp-admin .flex.stats .col[class*="cite"],
-.wp-admin .flex.stats .col[class*="google"],
-.wp-admin .flex.stats .col.optimized,
-.wp-admin .flex.stats .col.testimonials,
-.wp-admin .flex.stats .col.menu-testimonials,
-.wp-admin .flex.stats .col.testimonials-pct,
-.wp-admin .flex.stats .col.coupon,
-.wp-admin .flex.stats .col.coupon-pct,
-.wp-admin .flex.stats .col.blog,
-.wp-admin .flex.stats .col.galleries,
-.wp-admin .flex.stats .col.home-call-to-action,
-.wp-admin .flex.stats .col.homepage-teasers,
-.wp-admin .flex.stats .col.logo-slider,
-.wp-admin .flex.stats .col.service-map,
-.wp-admin .flex.stats .col.bbb-link,
-.wp-admin .flex .col.desktop,
-.wp-admin .flex .col.citations,
-.wp-admin .flex .col.revs,
-.wp-admin .flex .col.site-elements  { 
-	background: 									var(--pale-red); 
+.wp-admin .flex.stats .subhead.date,
+.wp-admin .flex.stats .when {
+	background: 									var(--lightest-grey);
 }
 
 .wp-admin .flex:not(.hvac) .col.site-hvac,

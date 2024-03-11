@@ -47,10 +47,10 @@ get_header(); ?>
         			$when =  'Today';
 				endif;
 		
-				$name = trim(get_the_title(), ' ');
+				$name = trim(get_the_title(), ' ');		
 				$address = trim(esc_attr(get_field( "address" )), ' ');
 				$city = trim(esc_attr(get_field( "city" )), ' ');
-				$state = trim(esc_attr(get_field( "state" )), ' ');
+				$state = trim(strtoupper(esc_attr(get_field( "state" ))), ' ');
 				$oldBrand = trim(esc_attr(get_field( "old_brand" )), ' ');
 				$oldEquip = trim(esc_attr(get_field( "old_equipment" )), ' ');
 				$oldModel = trim(esc_attr(get_field( "old_model_no" )), ' ');

@@ -6,7 +6,7 @@
 ----------------------------------------------------------------
 # Functions to extend WordPress
 # Basic Theme Set Up
-# User Rolesra
+# User Roles
 # Run Chron Jobs
 # Custom Hooks
 # Custom Actions
@@ -1410,7 +1410,6 @@ function battleplan_attachment_id_on_images( $attr, $attachment ) {
 	return $attr;
 }
 
-// Do not resize animated .gif 
 add_filter('intermediate_image_sizes_advanced', 'battleplan_disable_upload_sizes', 10, 2); 
 function battleplan_disable_upload_sizes( $sizes, $metadata ) {
     $filetype = wp_check_filetype($metadata['file']);
@@ -1422,6 +1421,50 @@ add_filter('big_image_size_threshold', 'battleplan_limit_non_admin_uploads', 999
 function battleplan_limit_non_admin_uploads( $threshold ) {
     if ( !current_user_can( 'manage_options' ) ) return 1000;
 }
+
+
+
+
+// Strip EXIF data from images upon upload	
+add_action('wp_handle_upload', 'battleplan_strip_EXIF_data' );
+function battleplan_strip_EXIF_data($upload) {
+    if ($upload['type'] == 'image/jpeg' || $upload['type'] == 'image/jpg') {
+        $filename = $upload['file'];
+
+        // Attempt Imagick first; fallback to gd
+        if (class_exists('Imagick')) {
+            $im = new Imagick($filename);
+
+            if (!$im->valid()) {
+                return $upload;
+            }
+
+            try {
+                $im->stripImage();
+                $im->writeImage($filename);
+                $im->clear();
+                $im->destroy();
+            } catch (Exception $e) {
+                error_log('Unable to strip EXIF data: ' . $filename);
+            }
+        } elseif (function_exists('imagecreatefromjpeg')) {
+            $image = imagecreatefromjpeg($filename);
+
+            if ($image) {
+                imagejpeg($image, $filename, '100');
+                imagedestroy($image);
+            }
+        }
+    }
+
+    return $upload;
+}
+
+
+
+
+
+
 
 // Highlights menu option based on the post type of the current page and the title attribute given to the menu button in Appearance->Menus
 add_filter('nav_menu_css_class', 'battleplan_current_type_nav_class', 10, 2 );
@@ -2130,4 +2173,3 @@ add_filter('final_output', function($content) {
 	endif;
 	return $content;
 }); 
-?>

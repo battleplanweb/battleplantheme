@@ -25,6 +25,12 @@ function battleplan_delete_prefixed_options( $prefix ) {
 	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
 }	
 
+
+
+delete_option('bp_log_spammers'); // remove once updated from 23.8.1
+
+
+
 if ( get_option('bp_setup_2023_09_15') != "completed" ) :
 
 	add_action("init", "bp_remove_cron_job"); 
@@ -1044,4 +1050,3 @@ function processChron($forceChron) {
 		endforeach;		
 	endif;
 }
-?>

@@ -54,6 +54,6 @@ if ( post_password_required() ) { return; }
         'label_submit' => __( 'Submit', 'battleplan' ),
 	);
 	comment_form( $comments_args );
-	?>
+?>
 
 </div><!-- #comments -->

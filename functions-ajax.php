@@ -46,4 +46,3 @@ function battleplan_check_user_ajax() {
 	wp_send_json( $response );
 }
 */
-?>

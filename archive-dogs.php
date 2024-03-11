@@ -92,5 +92,4 @@ get_header(); ?>
 
 </main><!-- #primary .site-main -->
 
-<?php
-get_footer();
+<?php get_footer();

@@ -188,7 +188,6 @@ foreach ( $ga4_visitors_data as $visitorLocation=>$locationData ) :
 			$GLOBALS['ga4_visitor'][$termLength] = isset($GLOBALS['ga4_visitor'][$termLength]) ? $GLOBALS['ga4_visitor'][$termLength] + $totalSessions : 0;
 		endif;
 	endforeach;
-
 endforeach;
 
 function battleplan_admin_site_stats() {
@@ -654,4 +653,3 @@ function battleplan_page_stats() {
 		if ( $last365Views != $last180Views) echo "<tr><td><b>Last 365 Days</b></td><td>".sprintf( _n( '<b>%s</b> visit', '<b>%s</b> visits', $last365Views, 'battleplan' ), number_format($last365Views) )."</td></tr>";
 	echo "</table>";	
 } 
-?>

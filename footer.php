@@ -131,6 +131,8 @@
 	if ( $icon_style != '' ) : ?>
 		<style><?php echo $icon_style; ?></style>
 	<?php endif; 
+
+	if ( _USER_LOGIN != "battleplanweb" && _IS_BOT != true ) updateOption('last_visitor_time', strtotime(date("F j, Y g:i a"))); 
 ?>
 
 </body>

@@ -27,6 +27,9 @@
 	<?php if ( isset($GLOBALS['customer_info']['lcp']) && !is_mobile() ) : ?>
 		<link rel="preload" fetchpriority="high" as="image" href="<?php echo get_site_url() ?>/wp-content/uploads/<?php echo $GLOBALS['customer_info']['lcp'][0] ?>.<?php echo $GLOBALS['customer_info']['lcp'][1] ?>" type="image/<?php echo $GLOBALS['customer_info']['lcp'][1] ?>">	
 	<?php endif; ?>
+	<?php if ( isset($GLOBALS['customer_info']['m-lcp']) && is_mobile() ) : ?>
+		<link rel="preload" fetchpriority="high" as="image" href="<?php echo get_site_url() ?>/wp-content/uploads/<?php echo $GLOBALS['customer_info']['m-lcp'][0] ?>.<?php echo $GLOBALS['customer_info']['m-lcp'][1] ?>" type="image/<?php echo $GLOBALS['customer_info']['m-lcp'][1] ?>">	
+	<?php endif; ?>
 	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/open-sans-v17-latin-regular.woff2" crossorigin="anonymous">
 	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/BP-Icons.woff2" crossorigin="anonymous">
 

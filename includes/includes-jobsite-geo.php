@@ -22,7 +22,9 @@ function battleplan_saveJobsite($post_id, $post, $update) {
     if ( ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) || ( defined('DOING_AJAX') && DOING_AJAX ) || !current_user_can('edit_post', $post_id) || get_post_type($post_id) != 'jobsite_geo') return;
 	
 	// retrieve lat & long from Google API and add as post meta	
-	$address = esc_attr(get_field( "address" )).', '.esc_attr(get_field( "city" )).', '.esc_attr(get_field( "state" )).' '.esc_attr(get_field( "zip" ));
+	$city = trim(esc_attr(get_field( "city" )));
+	$state = trim(esc_attr(get_field( "state" )));
+	$address = esc_attr(get_field( "address" )).', '.$city.', '.$state.' '.trim(esc_attr(get_field( "zip" )));
 	$googleAPI = "https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address)."&key=AIzaSyBqf0idxwuOxaG-j3eCpef1Bunv-YVdVP8";	
 	
     $response = wp_remote_get($googleAPI);
@@ -33,7 +35,7 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 	endif;	
 	
 	// add city-state as location tag
-    $locationTag = esc_attr(get_field("city")).'-'.esc_attr(get_field("state")); 
+    $locationTag = $city.'-'.$state; 
     $term = term_exists($locationTag, 'jobsite_geo-service-areas');
     if (empty($term)) $term = wp_insert_term($locationTag, 'jobsite_geo-service-areas');
     if (!is_wp_error($term)) wp_set_post_terms($post_id, $locationTag, 'jobsite_geo-service-areas');	
@@ -758,8 +760,8 @@ function battleplan_getJobsiteCityState($atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', ), $atts );
 	$type = esc_attr($a['type']);	
 
-	if ( $type == 'city' ) return $GLOBALS['jobsite_geo-city'];
-	if ( $type == 'state' ) return $GLOBALS['jobsite_geo-state'];
+	if ( $type == 'city' ) return trim($GLOBALS['jobsite_geo-city']);
+	if ( $type == 'state' ) return trim($GLOBALS['jobsite_geo-state']);
 }
 
 // Build archive page from multiple taxonomies

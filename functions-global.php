@@ -13,7 +13,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '23.9.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '23.9.2' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -66,8 +66,6 @@ if ( !defined('_RAND_SEED') ) :
 	if ( get_option('rand-seed') && (time() - get_option('rand-seed')) > 14000 ) update_option('rand-seed', time());
 	define( '_RAND_SEED', get_option('rand-seed') );
 endif;
-
-if ( _USER_LOGIN != "battleplanweb" && _IS_BOT != true ) updateOption('last_visitor_time', strtotime(date("F j, Y g:i a"))); 
 
 /*--------------------------------------------------------------
 # Customer Info Globals
@@ -129,7 +127,7 @@ if ( !is_admin() && !isset($_COOKIE['user-display-loc']) ) :
 	// Does this user come from a Google Ad?
 	foreach( $_GET as $key => $value ) :		
 		if ( $key == "loc" || $key == "int" ) :
-			if ( array_key_exists($value, $cities)) :
+			if ( is_array($cities) && array_key_exists($value, $cities)) :
 				$location = $cities[$value];
 			else:
 				$saveLocInfo = get_option('bp_loc_info') ? get_option('bp_loc_info') : array();
@@ -167,34 +165,31 @@ if ( !defined('_USER_DISPLAY_LOC') ) define( '_USER_DISPLAY_LOC', $_COOKIE['user
 if ( _PAGE_SLUG == "wp-cron.php" ) :
 	require_once get_template_directory().'/functions-admin-stats.php';
 	$siteAudit = get_option('bp_site_audit_details');
-	$recent = array_key_last($siteAudit);
-	$data = $siteAudit[$recent]; 
+	if ( is_array($siteAudit) ) :
+		$recent = array_key_last($siteAudit);
+		$data = $siteAudit[$recent]; 
 
-	$file_contents = '<?xml version = "1.0" encoding = "UTF-8" standalone = "yes" ?><audit>';
-	$file_contents .= '<detail><email>'.$GLOBALS['customer_info']['email'].'</email></detail>';	
-	$file_contents .= '<detail><version>'._BP_VERSION.'</version></detail>';	
-	$file_contents .= '<detail><viewed>'.get_option('last_visitor_time').'</viewed></detail>';	
-	$file_contents .= '<detail><week>'.$GLOBALS['ga4_visitor']['page-views-7'].'</week></detail>';	
-	$file_contents .= '<detail><month>'.$GLOBALS['ga4_visitor']['page-views-30'].'</month></detail>';	
-	$file_contents .= '<detail><quarter>'.$GLOBALS['ga4_visitor']['page-views-90'].'</quarter></detail>';	
-	$file_contents .= '<detail><semester>'.$GLOBALS['ga4_visitor']['page-views-180'].'</semester></detail>';	
-	$file_contents .= '<detail><year>'.$GLOBALS['ga4_visitor']['page-views-365'].'</year></detail>';	
-	$file_contents .= '<detail><date>'.$recent.'</date></detail>';
+		$file_contents = '<?xml version = "1.0" encoding = "UTF-8" standalone = "yes" ?><audit>';
+		$file_contents .= '<detail><email>'.$GLOBALS['customer_info']['email'].'</email></detail>';	
+		$file_contents .= '<detail><version>'._BP_VERSION.'</version></detail>';	
+		$file_contents .= '<detail><viewed>'.get_option('last_visitor_time').'</viewed></detail>';	
+		$file_contents .= '<detail><week>'.$GLOBALS['ga4_visitor']['page-views-7'].'</week></detail>';	
+		$file_contents .= '<detail><month>'.$GLOBALS['ga4_visitor']['page-views-30'].'</month></detail>';	
+		$file_contents .= '<detail><quarter>'.$GLOBALS['ga4_visitor']['page-views-90'].'</quarter></detail>';	
+		$file_contents .= '<detail><semester>'.$GLOBALS['ga4_visitor']['page-views-180'].'</semester></detail>';	
+		$file_contents .= '<detail><year>'.$GLOBALS['ga4_visitor']['page-views-365'].'</year></detail>';	
+		$file_contents .= '<detail><date>'.$recent.'</date></detail>';
 
-	foreach($data as $criteria=>$value) :
-		if ( $criteria != "notes" ) $file_contents .= '<detail><'.$criteria.'>'.$value.'</'.$criteria.'></detail>';
-	endforeach;
+		foreach($data as $criteria=>$value) :
+			if ( $criteria != "notes" ) $file_contents .= '<detail><'.$criteria.'>'.$value.'</'.$criteria.'></detail>';
+		endforeach;
 
-	$file_contents .= '</audit>';
+		$file_contents .= '</audit>';
 
-	// Open or create a file (this does it in the same dir as the script)
-	$my_file = fopen("analytics_index.xml", "w");
-
-	// Write the string's contents into that file
-	fwrite($my_file, $file_contents);
-
-	// Close 'er up
-	fclose($my_file); 
+		$my_file = fopen("analytics_index.xml", "w");
+		fwrite($my_file, $file_contents);
+		fclose($my_file); 
+	endif;
 endif;
 
 

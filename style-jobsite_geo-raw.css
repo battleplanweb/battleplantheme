@@ -14,6 +14,7 @@
 	max-width: 									550px;
 	height: 									auto;
 	margin: 									1.5em auto 1em;
+	aspect-ratio: 								1/1;
 }
 
 .map-jobsite_geo-caption {

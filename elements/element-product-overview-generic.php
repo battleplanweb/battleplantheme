@@ -1,10 +1,10 @@
 <?php
 /* Battle Plan Web Design - Generic Product Overview */
 
-	if ( $type == "nexia automation systems" ) :
+	if ( $type == "nexia automation systems" || $type == "thermostats") :
 		$title 		= "Thermostats";
 		$excerpt	= "<p>Monitor and control the temperature in your home via most web-enabled cell phones, computers and tablets. For total home automation, you can even remotely turn your lights, appliances and wireless keypad locks on and off.</p>";
-		$link 		= "/products/thermostats/";
+		$link 		= "/product-type/thermostats/";
 		$pic 		= "AS-Thermostat-01-320x320.webp";
 		$alt 		= "Thermostats";
 	endif;	

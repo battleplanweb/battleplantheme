@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 23.9.2
+Version: 23.10
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -272,12 +272,6 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --break-out-border-right:						none; 
   --break-out-border-left:						none;
   --break-out-padding: 							1.5em 2.5em;
-
-
-
-
-
-
   --break-out-margin: 							2.5em auto;
   --break-out-box-shadow: 						none;
   --break-out-border-radius: 					0;
@@ -285,8 +279,8 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --break-out-filter: 							none;
   --break-out-transition: 						all var(--main-trans-speed) var(--main-trans-easing);
   
-  --locked-color: 								var(--white);
-  --locked-background: 							var(--black-high);
+  --locked-color: 								var(--black);
+  --locked-background: 							var(--white);
   --locked-border: 								none;
   --modal-color: 								var(--locked-color);
   --modal-background: 							var(--locked-background);
@@ -1181,7 +1175,7 @@ body.form-stacked .wpcf7 form .form-input,
 }
 
 label {
-	font-family: 									var(--font-secondary);
+	font-family: 									var(--font-text);
 	font-weight: 									bold;
 	text-align: 									right;
 }
@@ -2264,9 +2258,17 @@ a#bbblink {
 
 .section.section-lock h2,
 .section.section-lock h3,
+.section.section-lock h4,
+.section.section-lock h5,
+.section.section-lock h6,
 .section.section-lock p {
 	text-align: 									center;
 	font-weight: 									bold;
+	color: 											var(--locked-color);
+}
+
+.section.section-lock label {
+	color: 											var(--locked-color);
 }
 
 /* Modal Box */
@@ -2319,6 +2321,7 @@ a#bbblink {
 	width: 											100%;
 	padding: 										0;
 }
+
 
 /* Style Lock */
 .section.style-lock {
@@ -3105,6 +3108,7 @@ a.social-btn img {
 	background-color: 								var(--white-high);
 	margin: 										5px 4px;
 
+
 	transition: 									all 0.07s ease-in;
 }
 
@@ -3216,20 +3220,24 @@ a.social-btn img {
 }
 
 @keyframes screen-up {
-    0% {transform: 								translateY(0) }    
-	25% {transform: 							translateY(-2px) } 
-
-	50% {transform: 							translateY(4px) } 
-	75% {transform: 							translateY(-4px) } 
+    0% {transform: 									translateY(0) }    
+	25% {transform: 								translateY(-2px) } 
+	
+	50% {transform: 								translateY(4px) } 
+	75% {transform: 								translateY(-4px) } 
 }
 
 #request-quote-modal > .flex {
-	gap: 										0 3%;
+	gap: 											0 3%;
 
 }
 
 #request-quote-modal #label {
-    font-size: 									100%;
+    font-size: 										100%;
+}
+
+#request-quote-modal .input-message {
+    margin-top: 									15px;
 }
 
 #mobile-navigation {
@@ -3237,7 +3245,7 @@ a.social-btn img {
 	position:										fixed; 
 	top:											42px;
 	padding-top:									var(--measure-small);
-	padding-bottom:								var(--measure-small);
+	padding-bottom:									var(--measure-small);
 	z-index: 										999999998;
 	background: 								     linear-gradient(0deg, var(--dark-grey) 0%, var(--black) 100%);
 	background-size:								cover;
@@ -3245,19 +3253,19 @@ a.social-btn img {
 }
 
 #mobile-navigation ul {
-	flex-direction:								column;
-	/*padding-left: 							10%;   ** 5/18/22 - make mobile menus a little more traditional
-	padding-right: 								10%;*/
+	flex-direction:									column;
+	/*padding-left: 								10%;   ** 5/18/22 - make mobile menus a little more traditional
+	padding-right: 									10%;*/
 	padding-left: 									0;
-	padding-right: 								0;
+	padding-right: 									0;
 }
 
 #mobile-navigation ul.sub-menu {
-	font-size: 									90%; 
+	font-size: 										90%; 
 }
 
 #mobile-navigation #mobile-menu > li:first-of-type {
-	border-top:									1px solid var(--black-med);
+	border-top:										1px solid var(--black-med);
 }
 
 #mobile-navigation #mobile-menu > li:last-of-type {
@@ -3270,19 +3278,19 @@ a.social-btn img {
 
 #mobile-navigation li a {
 	white-space: 									nowrap;
-	overflow: 									hidden;
-	text-overflow: 								ellipsis;
-	color:										var(--white-high);
+	overflow: 										hidden;
+	text-overflow: 									ellipsis;
+	color:											var(--white-high);
 	background: 									transparent;
 	border: 										none;
 	border-top: 									1px solid var(--white-low);
-	border-bottom: 								1px solid var(--black-med);
-	border-radius: 								0;
+	border-bottom: 									1px solid var(--black-med);
+	border-radius: 									0;
 	margin: 										0;
 	padding:										8px 25px;
-	font-size:									90%;
+	font-size:										90%;
 
-	transform: 									rotate(0) translate(0,0) scale(1);
+	transform: 										rotate(0) translate(0,0) scale(1);
 	line-height: 									normal;
 	transition: 									all 0.1s var(--main-trans-easing);
 }
@@ -5863,7 +5871,6 @@ html.error503 h3 {
 	.screen-mobile h4,
 	.screen-mobile h5,
 	.screen-mobile h6 {
-
 		text-align:									center;
 	}
 	

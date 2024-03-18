@@ -47,6 +47,15 @@ if ( get_option('bp_setup_2023_09_15') != "completed" ) :
 	updateOption( 'bp_setup_2023_09_15', 'completed', false );	
 endif;
 
+
+
+if ( get_option('bp_product_upload_2024_03_18') != "completed" && $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'american standard' || $GLOBALS['customer_info']['site-brand'] == 'American Standard' || (is_array($GLOBALS['customer_info']['site-brand']) && ( in_array('american standard', $GLOBALS['customer_info']['site-brand']) || in_array('American Standard', $GLOBALS['customer_info']['site-brand'])) ))) :		
+ 	require_once get_template_directory().'/includes/include-hvac-products/includes-american-standard-products.php';
+	updateOption( 'bp_product_upload_2024_03_18', 'completed', false );		
+endif; 
+
+
+
 // Determine if Chron should run
 $forceChron = get_option('bp_force_chron') !== null ? get_option('bp_force_chron') : 'false';
 $chronTime = get_option('bp_chron_time') !== null ? get_option('bp_chron_time') : 0;

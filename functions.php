@@ -206,7 +206,7 @@ function convertTime($howMany, $howMuch) {
 
 // Display time elapsed since a UNIX stamp
 function timeElapsed($time, $precision = 5, $display="all", $abbr="none") { // precision= 5, 4, 3, 2, 1, 0 (only use 0 if NOT using display=all)   // display=all, months, days, hours, minutes, seconds    // abbr=none, short (min sec hr), full (m s h)
-	$time = time() - $time;
+	$time = time() - intval($time);
 	$buildTime = '';
 	
 	if ( $abbr == "full" ) :

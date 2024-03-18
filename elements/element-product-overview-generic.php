@@ -2,11 +2,11 @@
 /* Battle Plan Web Design - Generic Product Overview */
 
 	if ( $type == "nexia automation systems" ) :
-		$title 		= "Automation Systems";
+		$title 		= "Thermostats";
 		$excerpt	= "<p>Monitor and control the temperature in your home via most web-enabled cell phones, computers and tablets. For total home automation, you can even remotely turn your lights, appliances and wireless keypad locks on and off.</p>";
-		$link 		= "/products/nexia-home-intelligence/";
-		$pic 		= "Nexia-Home-Intelligence-320x320.jpg";
-		$alt 		= "Nexia Home Intelligence";
+		$link 		= "/products/thermostats/";
+		$pic 		= "AS-Thermostat-01-320x320.webp";
+		$alt 		= "Thermostats";
 	endif;	
 	
 	if ( $type == "samsung ductless systems" ) :

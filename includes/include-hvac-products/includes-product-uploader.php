@@ -7,11 +7,41 @@
 
  	$user = get_user_by('login', 'battleplanweb');
 	$userID = $user->ID;	
+
+
+// Remove Images
+	$attachments = get_posts(
+		array(
+			'post_type'      => 'attachment',
+			'posts_per_page' => -1,
+			'post_status'    => 'any',
+		)
+	);
+
+	foreach ($attachments as $attachment) :
+		$metadata = wp_get_attachment_metadata($attachment->ID);
+
+		if (!empty($metadata) && isset($metadata['file'])) :
+			$filename = basename($metadata['file']);
+
+			if (in_array($filename, $removeImages)) :
+				wp_delete_attachment($attachment->ID, true); 
+			endif;
+		endif;
+	endforeach;
+
 		
 // Remove Products
 	foreach ( $removeProducts as $product ) :
 		$productPage = get_page_by_path( $product, OBJECT, 'products' );
-		if ( !empty( $productPage ) ) wp_delete_post( $productPage->ID, true );	
+		$productID = $productPage->ID;
+		if ( !empty( $productPage ) ) :
+			wp_delete_post( $productID, true );
+			if( has_post_thumbnail( $productID ) ) :
+				$attachment_id = get_post_thumbnail_id( $productID );
+				wp_delete_attachment($attachment_id, true);
+			endif;
+		endif;
 	endforeach;
 	
 	

@@ -15,10 +15,14 @@ function add_american_standard_products() {
 	$productImgAlt = "American Standard Heating & Cooling Product"; 
 
 
-	/*
-	$removeProducts = array('silver-15-heat-pump', 'american-standard-80-furnace', 'silver-95-furnace');
-	*/
+	
+	$removeImages = array('American-Standard-46.jpg', 'American-Standard-45.jpg', 'American-Standard-44.jpg', 'American-Standard-43.jpg', 'Nexia-Home-Intelligence.jpg', 'American-Standard-22.jpg', 'American-Standard-14.jpg', 'American-Standard-13.jpg', 'American-Standard-42.jpg', 'American-Standard-34.jpg', 'American-Standard-33.jpg', 'American-Standard-41.jpg', 'American-Standard-32.jpg', 'American-Standard-02.jpg', 'American-Standard-12.jpg', 'American-Standard-11.jpg', 'American-Standard-31.jpg', 'American-Standard-21.jpg', 'American-Standard-04.jpg', 'American-Standard-01.jpg');
 
+	
+	
+	$removeProducts = array('accucomfort-platinum-18-air-conditioner', 'gold-17-air-conditioner', 'silver-16-air-conditioner', 'silver-14-air-conditioner', 'accucomfort-platinum-20-air-conditioner', 'silver-tem6-air-handler', 'forefront-platinum-tam9-air-handler', 'silver-tem8-air-handler', 'silver-tem4-air-handler', 'forefront-gold-tam4-air-handler', 'nexia-home-intelligence', 'silver-s8x1-gas-furnace', 'american-standard-s8b1-gas-furnace', 'silver-s9x1-gas-furnace', 'american-standard-s9b1-gas-furnace', 'gold-s9v2-gas-furnace', 'platinum-80-furnace', 'gold-80v-furnace', 'platinum-95-furnace', 'accucomfort-platinum-20-heat-pump', 'accucomfort-platinum-18-heat-pump', 'gold-17-heat-pump', 'silver-14-heat-pump', 'silver-16-heat-pump', 'platinum-16-gaselectric-system', 'silver-14-air-conditioner-system', 'gold-15-gaselectric-system', 'silver-14-gaselectric-system', 'platinum-16-heat-pump-system', 'gold-15-heat-pump-system', 'silver-14-heat-pump-system', 'platinum-16-hybrid-system', 'gold-14-hybrid-system' );	
+	
+	
 
 	$addProducts = array (		
 	
@@ -166,8 +170,6 @@ array ( 'post_title'	=>	'Silver 14 Single-Stage Air Conditioner',
 array ( 'post_title'	=>	'Platinum 20 Variable Speed Heat Pump',
 	   	'post_content' 	=>	'<span class="descriptionText">Experience home comfort efficiency at a whole new level with state-of-the-art heating and cooling technology.</span>
 		
-		
-
 <ul>
 	<li><b>Comfort and quality meets efficiency:</b> Built with quality materials and innovative features, the AccuComfort™ Platinum 20 Heat Pump is one of the industry’s most efficient systems on the market, with ratings up to 20.5 SEER2 and 8.7 HSPF.</li>
 	<li><b>Multi-stage heating and cooling technology:</b> State-of-the-art, multi-stage heating and cooling system that consistently adjusts to run at a more efficient speed to maintain optimal levels of comfort.</li>
@@ -374,7 +376,7 @@ array ( 'post_title'	=>	'Platinum S8V2-C Furnace',
 
 <ul>
 	<li><b>Communication technology:</b> The Platinum S8V2-C Gas Furnace is compatible with American Standard AccuLink™ Communicating System. With this communicating technology, homeowners can remotely adjust settings and program alerts, so you know your system is working at its best.</li>
-	<li><b>Precise blower operation :</b> Exclusive Vortica™ II blower design delivers consistent, quiet heating in both the winter and summer months, giving you the temperature control you need all year long.</li>
+	<li><b>Precise blower operation:</b> Exclusive Vortica™ II blower design delivers consistent, quiet heating in both the winter and summer months, giving you the temperature control you need all year long.</li>
 	<li><b>Steady, warm air:</b> With the American Standard S8V2-C Gas Furnace, you\'ll be met with consistent, steady flows of warm air, so you don\'t need to worry about uneven indoor temperatures again.</li>
 	<li><b>Built to last:</b> You won\'t have to worry about this furnace withstanding the test of time. Its cabinet and components are durable and built to deliver comfort for years to come.</li>
 	<li><b>AFUE:</b> Up to 80%</li>
@@ -536,7 +538,7 @@ array ( 'post_title'	=>	'Gold 15 Packaged Heat Pump System',
 	<li><b>Efficient performance:</b> The two-stage Duration™ compressor provides two stages of heating and cooling for a higher level of efficiency than most single-stage compressor units. It runs at 70% capacity most of the time, but steps up to the second stage on the most extreme days to provide efficiency in temperature control.</li>
 	<li><b>Improved indoor air quality:</b> This packaged unit system is compatible with the American Standard AccuClean® Air Cleaner (horizontal applications only) which can optimize air in your home. This air cleaner helps remove allergens, bacteria, and certain viruses from the air you breathe in your home.</li>
 	<li><b>Quiet performance:</b> As one of the quietest packaged units on the market, you can count on this system to deliver the temperature control you desire with a performance so quiet, you might not even know your system is turned on. </li>
-	<li><b>Humidity control that helps:</b> With precise humidity control features, this packaged system helps remove unwanted humidity from the air in your home. Unregulated humidity levels indoors can result in problems for both your health and your home, which is why this system works to keep humidity at optimal levels..</li>
+	<li><b>Humidity control that helps:</b> With precise humidity control features, this packaged system helps remove unwanted humidity from the air in your home. Unregulated humidity levels indoors can result in problems for both your health and your home, which is why this system works to keep humidity at optimal levels.</li>
 	<li><b>SEER2:</b> Up to 15.2</li>
 	<li><b>HSPF2:</b> Up to 7.5</li>
 	<li><b>Cooling Stages:</b> Two</li>
@@ -626,7 +628,7 @@ array ( 'post_title'	=>	'AccuLink™ Platinum 850 Thermostat',
 	<li><b>Alerts you can count on:</b> Not only does this thermostat tell you the temperature in your home, it also gives you a five day forecast and alerts for the weather outside. Plus, it gives you maintenance and filter service reminder alerts as well, so you can help ensure your product stays in peak performance condition.</li>
 	<li><b>Easy installation:</b> Enjoy an easy installation after purchasing the AccuLink™ Platinum 850. This thermostat can quickly and efficiently be installed almost anywhere in your home, and once it\'s turned on, it has a one touch installation set up with six preset configurations for homeowners to choose from.</li>
 	<li><b>Communication technology:</b> The AccuLink™ Platinum 850 is compatible with American Standard AccuLink™ Communicating System and AccuComfort™ Variable Speed Systems to give you control over your home comfort system. Enjoy communication technology that allows your home systems such as lights, security, HVAC, and more to all be controlled by the touch of a button.</li>
-	<li><b>Humidity control:</b> Unregulated levels of humidity inside can lead to health problems for you and structural problems for your home. This thermostat works to keep optimal levels of humidity in your home and reduce these issues with a built-in humidity sensor that alerts the system when indoor humidity is too low or too high..</li>
+	<li><b>Humidity control:</b> Unregulated levels of humidity inside can lead to health problems for you and structural problems for your home. This thermostat works to keep optimal levels of humidity in your home and reduce these issues with a built-in humidity sensor that alerts the system when indoor humidity is too low or too high.</li>
 	<li><b>Cooling Stages:</b> 2</li>
 	<li><b>Heating Stages:</b> 5</li>
 	<li><b>Smart Thermostat:</b> Yes</li>
@@ -639,7 +641,7 @@ array ( 'post_title'	=>	'AccuLink™ Platinum 850 Thermostat',
 		'post_excerpt'	=>	'Never leave your home unprepared thanks to this thermostat that gives you a 5-day weather forecast and radar.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1500,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'thermostats', 'product-class'=>'best'),
+		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'Thermostats', 'product-class'=>'best'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-tstat-smart-brochure-01-02-23.pdf'),
 		'image_name'	=>	'AS-Thermostat-01.webp'		
 ),
@@ -664,9 +666,32 @@ array ( 'post_title'	=>	'Gold 824 Thermostat',
 		'post_excerpt'	=>	'Programing capabilities on this thermostat make temperature control a breeze.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1510,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'thermostats', 'product-class'=>'good'),
+		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'Thermostats', 'product-class'=>'better'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-tstat-smart-brochure-01-02-23.pdf'),
 		'image_name'	=>	'AS-Thermostat-01.webp'		
+),
+		
+array ( 'post_title'	=>	'Silver 724 Thermostat',
+		'post_content' 	=>	'<span class="descriptionText">Temperature control you can trust to make your home comfortable.</span>
+
+<ul>
+	<li><b>Easy installation:</b> Enjoy an easy installation after purchasing the Silver 724. This thermostat can quickly and efficiently be installed almost anywhere in your home, and once it\'s turned on, setup only takes a few clicks.</li>
+	<li><b>Scheduling capabilities:</b> Program your temperature schedule exactly how you want it with the scheduling capabilities on the Silver 724 thermostat. Capabilities include temperature scheduling for seven days a week.</li>
+	<li><b>Seamless remote controls:</b> Remote control capabilities on the Silver 724 thermostat allow you to make your home an oasis without even touching your thermostat. Simply use the remote control from anywhere in your home and enjoy the benefits of warm or cool air when you need it.</li>
+	<li><b>Digital touchscreen:</b> Experience a large touchscreen on this thermostat that makes it easy to see and easy to use all year long. Controls are simple and work efficiently to get you the temperature you desire.</li>
+	<li><b>Cooling Stages:</b> 2</li>
+	<li><b>Heating Stages:</b> 4</li>
+	<li><b>Smart Thermostat:</b> Yes</li>
+	<li><b>Screen:</b> 4.3" color touchscreen</li>
+	<li><b>Diagnostics:</b> Yes</li>
+	<li><b>Programmable:</b> Yes</li>
+</ul>', 
+		'post_excerpt'	=>	'Temperature control you can trust to make your home comfortable.',
+		'post_type'     =>	'products',
+		'menu_order'  	=>  1520,
+		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'Thermostats', 'product-class'=>'good'),
+		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-tstat-smart-brochure-01-02-23.pdf'),
+		'image_name'	=>	'AS-Thermostat-02.webp'		
 ),
 		
 		

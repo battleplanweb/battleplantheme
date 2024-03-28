@@ -1,11 +1,19 @@
 <?php
 /* Battle Plan Web Design - Generic Product Overview */
 
-	if ( $type == "nexia automation systems" || $type == "thermostats") :
+	if ( $type == "nexia automation systems" || $type == "american standard thermostats") :
 		$title 		= "Thermostats";
 		$excerpt	= "<p>Monitor and control the temperature in your home via most web-enabled cell phones, computers and tablets. For total home automation, you can even remotely turn your lights, appliances and wireless keypad locks on and off.</p>";
 		$link 		= "/product-type/thermostats/";
 		$pic 		= "AS-Thermostat-01-320x320.webp";
+		$alt 		= "Thermostats";
+	endif;	 
+
+	if ( $type == "trane thermostats") :
+		$title 		= "Thermostats";
+		$excerpt	= "<p>Monitor and control the temperature in your home via most web-enabled cell phones, computers and tablets. For total home automation, you can even remotely turn your lights, appliances and wireless keypad locks on and off.</p>";
+		$link 		= "/product-type/thermostats/";
+		$pic 		= "Trane-Thermostat-01-320x320.webp";
 		$alt 		= "Thermostats";
 	endif;	
 	

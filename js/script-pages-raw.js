@@ -403,6 +403,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 
 // Fade in lazy loaded images
 
+
+
 	$('img').addClass('unloaded');	
 	$('#loader img').removeClass('unloaded');	
 	$('img').one('load', function() { 
@@ -574,6 +576,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	$('#mobile-navigation').addClass("get-sub-heights");
 
 	$('#mobile-navigation ul.sub-menu').each(function() { 
+
 		var theSub = $(this);
 		theSub.data('getH', theSub.outerHeight(true) );			
 		closeSubMenu(theSub); 
@@ -603,9 +606,12 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 	function activateYouTubeVimeo(div) {
 		var iframe = document.createElement('iframe');
 		iframe.setAttribute('src', div.dataset.link);
+		iframe.setAttribute('modestbranding', '0');
+		iframe.setAttribute('controls', '0');
 		iframe.setAttribute('frameborder', '0');
 		iframe.setAttribute('allowfullscreen', '1');
 		iframe.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture');
+		iframe.setAttribute('class', 'video-player');
 		div.parentNode.replaceChild(iframe, div);
 	}
 
@@ -622,12 +628,21 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; (funct
 		playerElements[n].appendChild(div);
 	}
 	
+	function stopAllVideos() {
+	  	$('iframe.video-player').each((i, videoElem) => {
+			videoElem.contentWindow.postMessage('{"event":"command","func":"' + 'pauseVideo' + '","args":""}', '*');
+
+	  	});
+	};
+
+	$('.block-video.video-player').click(stopAllVideos);
+	
 	// Add 'alt' class to sections to trigger the alternate input & button styles
 	window.addAltStyle = function (sections, style) {
 		style = style || 'style-alt';
 		$(sections).addClass(style); 
 	};
-	
+		
 	// Get link from a href and attach to the li (for use with Menu BG)	
 	$('#desktop-navigation ul.main-menu > li:not(.menu-item-has-children), #desktop-navigation ul.sub-menu > li').click(function() {
 		var btn = $(this), link = btn.find('a').attr('href');	

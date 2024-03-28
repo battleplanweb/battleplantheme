@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 23.10.1
+Version: 23.10.2
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1837,18 +1837,19 @@ a.button.fancy .fancy-text,
 a.button.fancy .fancy-icon,
 a.button.fancy:hover .fancy-text,
 a.button.fancy:hover .fancy-icon,
-a.button.fancy-2 .fancy-text,
-a.button.fancy-2 .fancy-icon,
-a.button.fancy-2:hover .fancy-text,
-a.button.fancy-2:hover .fancy-icon {
+a.button[class*="item-"] .fancy-text,
+a.button[class*="item-"] .fancy-icon,
+a.button[class*="item-"]:hover .fancy-text,
+a.button[class*="item-"]:hover .fancy-icon {
+	position: 										relative;
 	display:										inline-block;
 	padding: 										0;
 	transition:										all var(--main-trans-speed) var(--main-trans-easing);
 }
 
 a.button.fancy .fancy-icon i,
-a.button.fancy-2 .fancy-icon i {
-	font-size:									85%;
+a.button[class*="item-"] .fancy-icon i {
+	font-size:										85%;
 }
 
 a.button.fancy .fancy-text {
@@ -1862,14 +1863,14 @@ a.button.fancy:hover .fancy-text {
 }
 
 a.button.fancy .fancy-icon {
-	width:										0;
-	transform:									translateX(-15px);
+	width:											0;
+	transform:										translateX(-15px);
 	opacity:										0;
 }
 
 a.button.fancy:hover .fancy-icon {
-	width:										0;
-	transform:									translateX(-9px);
+	width:											0;
+	transform:										translateX(-9px);
 	opacity:										1;
 }
 
@@ -1884,12 +1885,27 @@ a.button.fancy-2:hover .fancy-text {
 
 a.button.fancy-2 .fancy-icon,
 a.button.fancy-2:hover .fancy-icon {
-
 	padding: 										0.3em 0.5em 0.3em 0.6em;
 }
 
 a.button.fancy-2 .fancy-icon {
-	background:									var(--black-low);
+	background:										var(--black-low);
+}
+
+a.button.fancy-3 {
+	display: 										grid;
+	grid-template-columns: 							45px 1fr;
+}
+
+a.button.fancy-3 .fancy-text {
+	order: 											2;
+}
+
+a.button.fancy-3 .fancy-icon {
+	justify-self: 									center;
+  	align-self: 									center;
+ 	order: 											1;
+	margin-right: 									20px;
 }
  
 a.graphic-icon {
@@ -1907,21 +1923,22 @@ a.graphic-icon span {
 
 
 
+
 .row-of-buttons,
 ul.tabs {
 	display:										flex;
 	justify-content:								center;
-	flex-wrap:									wrap;
+	flex-wrap:										wrap;
 }
 
 .row-of-buttons .block-button,
 ul.tabs li {
-	margin:										0.25em 1%;
+	margin:											0.25em 1%;
 }
 
 .paypal-form {
-	max-width:									500px;
-	margin:										0 auto;
+	max-width:										500px;
+	margin:											0 auto;
 }
 
 .paypal-form form p {
@@ -1935,7 +1952,7 @@ ul.tabs li {
 
 .paypal-dollar {
 	display:										inline-block;
-	width:										15px;
+	width:											15px;
 }
 
 input.paypal-amount {
@@ -2523,8 +2540,7 @@ section.section.break-out {
 
 
 
-a.icon-btn,
-a.icon-btn:visited {
+a.icon-btn {
 	position: 										relative;
 	display: 										inline-block;
 	color: 											var(--button-color);
@@ -4327,7 +4343,7 @@ img.img-404 {
     display: 										inline-block;
     font-family: 									var(--font-icons);
     content: 										"\e155";
-	color:											var(--font-text-color);
+	color:											var(--text-color);
     font-size: 										130%;
     text-align: 									left;
     padding-right: 									7px;
@@ -5378,6 +5394,7 @@ chat-widget .lc_text-widget--btn,
 .carousel.effect-fade-zoom .carousel-item.carousel-item-prev.carousel-item-right,
 .carousel.effect-zoom-fade .carousel-item.active.carousel-item-left,
 .carousel.effect-zoom-fade .carousel-item.active.carousel-item-right {
+
 	transition-duration: 						0.35s;
 }
 
@@ -6351,6 +6368,7 @@ html.error503 h3 {
 	/* Row of Pics */ /* changed from .col to .col-row-of-pics 1/5/21 for Bubba's Cooks Country */
 	.grid-4e .col-row-of-pics:nth-last-child(1),
 	.grid-5e .col-row-of-pics:nth-last-child(1),
+
 	.grid-5e .col-row-of-pics:nth-last-child(2),
 	.grid-6e .col-row-of-pics:nth-last-child(2),
 	.grid-6e .col-row-of-pics:nth-last-child(3),

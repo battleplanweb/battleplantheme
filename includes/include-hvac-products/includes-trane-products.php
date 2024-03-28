@@ -22,6 +22,7 @@ function add_trane_products() {
 
 	$addProducts = array (
 	
+/*
 	// Air Conditioners
 		array ( 
 			'post_title'	=>	'XL18i Air Conditioner',
@@ -42,7 +43,7 @@ function add_trane_products() {
 			'post_excerpt'	=>	'The 18.0 SEER rating makes this air conditioner energy-efficient while providing home comfort.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1000,
-			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'air-conditioners', 'product-class'=>'best'),
+			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'air-conditioners', 'product-class'=>'Best'),
 			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1208-35_TR_AC-Brochure_SV.pdf'),
 			'image_name'	=>	'Trane-AC-01.jpg'		
 		),
@@ -64,7 +65,7 @@ function add_trane_products() {
 			'post_excerpt'	=>	'The 18.0 SEER rating makes this air conditioner energy-efficient while providing home comfort.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1010,
-			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'air-conditioners', 'product-class'=>'best'),
+			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'air-conditioners', 'product-class'=>'Best'),
 			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1208-35_TR_AC-Brochure_SV.pdf'),
 			'image_name'	=>	'Trane-AC-02.jpg'		
 		),
@@ -89,7 +90,7 @@ function add_trane_products() {
 			'post_excerpt'	=>	'The 17.0 SEER rating makes this air conditioner energy-efficient while providing home comfort.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1020,
-			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'air-conditioners', 'product-class'=>'better'),
+			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'air-conditioners', 'product-class'=>'Better'),
 			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1208-35_TR_AC-Brochure_SV.pdf'),
 			'image_name'	=>	'Trane-AC-01.jpg'		
 		),
@@ -110,7 +111,7 @@ function add_trane_products() {
 			'post_excerpt'	=>	'The 16.0 SEER rating balances energy efficiency and cooling strength to help lower your home cooling costs.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1030,
-			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'air-conditioners', 'product-class'=>'better'),
+			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'air-conditioners', 'product-class'=>'Better'),
 			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1208-35_TR_AC-Brochure_SV.pdf'),
 			'image_name'	=>	'Trane-AC-02.jpg'		
 		),
@@ -131,7 +132,7 @@ function add_trane_products() {
 			'post_excerpt'	=>	'The 14.5 SEER rating balances energy efficiency and cooling strength to help lower your home cooling costs.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1040,
-			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'air-conditioners', 'product-class'=>'good'),
+			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'air-conditioners', 'product-class'=>'Good'),
 			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1208-35_TR_AC-Brochure_SV.pdf'),
 			'image_name'	=>	'Trane-AC-02.jpg'		
 		),
@@ -157,7 +158,7 @@ function add_trane_products() {
 			'post_excerpt'	=>	'The XR18i’s 18 SEER and 9.5 HSPF ratings make this unit a great choice for saving energy and lowering your monthly energy use.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1100,
-			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'heat-pumps', 'product-class'=>'best'),
+			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'heat-pumps', 'product-class'=>'Best'),
 			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1209-31_Heat-Pump-Brochure_Trane_SV.pdf'),
 			'image_name'	=>	'Trane-HP-01.jpg'		
 		),
@@ -178,7 +179,7 @@ function add_trane_products() {
 			'post_excerpt'	=>	'The XR17’s 17.25 SEER rating makes this unit a great choice for saving energy and lowering your monthly energy use.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1110,
-			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'heat-pumps', 'product-class'=>'best'),
+			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'heat-pumps', 'product-class'=>'Best'),
 			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1209-31_Heat-Pump-Brochure_Trane_SV.pdf'),
 			'image_name'	=>	'Trane-HP-02.jpg'		
 		),
@@ -200,7 +201,7 @@ function add_trane_products() {
 			'post_excerpt'	=>	'The XL16i’s 20 SEER rating makes it a great choice for saving energy and lowering your monthly electricity use.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1120,
-			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'heat-pumps', 'product-class'=>'better'),
+			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'heat-pumps', 'product-class'=>'Better'),
 			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1209-31_Heat-Pump-Brochure_Trane_SV.pdf'),
 			'image_name'	=>	'Trane-HP-01.jpg'		
 		),
@@ -218,7 +219,7 @@ function add_trane_products() {
 			'post_excerpt'	=>	'This single-speed heat pump is a great option for keeping you comfortable all year round. The XR14 will help keep you cool in the summer and warm throughout the fall and winter months.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1130,
-			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'heat-pumps', 'product-class'=>'better'),
+			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'heat-pumps', 'product-class'=>'Better'),
 			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1209-31_Heat-Pump-Brochure_Trane_SV.pdf'),
 			'image_name'	=>	'Trane-HP-02.jpg'		
 		),
@@ -239,7 +240,7 @@ function add_trane_products() {
 			'post_excerpt'	=>	'The XR15 has a SEER rating of 16 and HSPF of 9.5, which makes it a great choice for an energy efficient home.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1140,
-			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'heat-pumps', 'product-class'=>'good'),
+			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'heat-pumps', 'product-class'=>'Good'),
 			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1209-31_Heat-Pump-Brochure_Trane_SV.pdf'),
 			'image_name'	=>	'Trane-HP-02.jpg'		
 		),
@@ -263,7 +264,7 @@ function add_trane_products() {
 			'post_excerpt'	=>	'The S8X2 carries an 80% AFUE rating — a clear sign that this furnace uses most of its fuel for heating.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1200,
-			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'furnaces', 'product-class'=>'best'),
+			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'furnaces', 'product-class'=>'Best'),
 			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1215-26_TR_80-Gas-Furnaces-Trane_SV_072021.pdf'),
 			'image_name'	=>	'Trane-F-01.jpg'		
 		),		
@@ -285,7 +286,7 @@ function add_trane_products() {
 			'post_excerpt'	=>	'With an AFUE rating of 80%, the S8X1 can help reduce monthly energy bills while supplying you with the heat you need at the coldest times of the year.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1210,
-			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'furnaces', 'product-class'=>'better'),
+			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'furnaces', 'product-class'=>'Better'),
 			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1215-26_TR_80-Gas-Furnaces-Trane_SV_072021.pdf'),
 			'image_name'	=>	'Trane-F-02.jpg'		
 		),	
@@ -304,10 +305,88 @@ function add_trane_products() {
 			'post_excerpt'	=>	'The S8B1 is rated up to 80% AFUE, meaning it’s designed to use less energy to warm your home. For you, that means more comfort and lower energy use.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1220,
-			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'furnaces', 'product-class'=>'good'),
+			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'furnaces', 'product-class'=>'Good'),
 			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1215-26_TR_80-Gas-Furnaces-Trane_SV_072021.pdf'),
 			'image_name'	=>	'Trane-F-02.jpg'		
-),		
+),	
+		
+		
+		
+	*/	
+	
+	// Thermostats
+array ( 'post_title'	=>	'ComfortLink® II XL850 Thermostat',
+		'post_content' 	=>	'<span class="descriptionText">Never leave your home unprepared thanks to this thermostat that gives you a 5-day weather forecast and radar.</span>
+
+<ul>
+	<li><b>Smart connectivity and control:</b> This exceptional thermostat combines a colorful touchscreen with a smart home hub, accessible via smartphone, tablet, or laptop, for the ultimate smart comfort experience. With the XL850’s built-in bridge for Z-wave® devices, you have the ability to monitor and control over 200 devices in your home, from virtually anywhere.</li>
+	<li><b>Real time diagnostics:</b> The ComfortLink® II XL850 comes equipped with Trane Diagnostics. When you opt-in to remote diagnostics, your dealer can access real time data about how your HVAC system is performing, and will be alerted if there’s a problem. Plus, if you grant your dealer remote access, they can even tap into your system and help troubleshoot problems remotely.</li>
+	<li><b>Impressive features:</b> The ComfortLink ® II XL850 boasts impressive features for homeowners to enjoy such as WiFi or ethernet connectivity, a color touchscreen, built-in bridge for Z-Wave ® devices and programming for 7 days a week.</li>
+	<li><b>Exceptional comfort:</b> The ComfortLink® II XL850 works with a network of controls and sensors to optimize your temperature and humidity levels. Real-time adjustments, scheduling, and remote controls ensure your changing temperature needs will be fulfilled. </li>
+	<li><b>Cooling Stages:</b> 2</li>
+	<li><b>Heating Stages:</b> 5</li>
+	<li><b>Smart Thermostat:</b> Yes</li>
+	<li><b>Communicating:</b> Yes</li>
+	<li><b>Z Wave Compatible:</b> Yes</li>
+	<li><b>Screen:</b> 4.3" color touchscreen</li>
+	<li><b>Diagnostics:</b> Yes</li>
+	<li><b>Programmable:</b> Yes</li>
+</ul>', 
+		'post_excerpt'	=>	'Never leave your home unprepared thanks to this thermostat that gives you a 5-day weather forecast and radar.',
+		'post_type'     =>	'products',
+		'menu_order'  	=>  1500,
+		'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'Thermostats', 'product-class'=>'Best'),
+		'meta_input'	=>	array('brochure'=>'https://www.trane.com/residential/en/assets/product-brochures/trane-tstat-smart-brochure-01-02-23.pdf'),
+		'image_name'	=>	'Trane-Thermostat-01.webp'		
+),
+		
+array ( 'post_title'	=>	'XL824 Thermostat',
+		'post_content' 	=>	'<span class="descriptionText">Programing capabilities on this thermostat make temperature control a breeze.</span>
+
+<ul>
+	<li><b>Real time diagnostics:</b> The XL824 comes equipped with Trane Diagnostics. When you opt-in to remote diagnostics, your dealer can access real time data about how your HVAC system is performing, and will be alerted if there\'s a problem. Plus, if you grant your dealer remote access, they can even tap into your system to help troubleshoot problems remotely.</li>
+	<li><b>Exceptional comfort:</b> The XL824 works with most traditional HVAC systems to optimize whole home comfort. Plus, it can be used to control up to two indoor air quality products, like a dehumidifier or ventilation system, to keep the air you\'re breathing at home cleaner.</li>
+	<li><b>Smart connectivity and control:</b> This exceptional thermostat combines a colorful touchscreen with a smart home hub, accessible via smartphone, tablet, or laptop, for the ultimate smart comfort experience. With the XL824’s built-in bridge for Z-wave® devices, you have the ability to monitor and control over 200 devices in your home, from virtually anywhere.</li>
+	<li><b>Impressive features:</b> The XL824 boasts impressive features for homeowners to enjoy such as WiFi or ethernet connectivity, a color touchscreen, built-in bridge for Z-Wave ® devices, and programming for 7 days a week.</li>
+	<li><b>ENERGY STAR® Qualified:</b> Yes</li>
+	<li><b>Cooling Stages:</b> 2</li>
+	<li><b>Heating Stages:</b> 5</li>
+	<li><b>Smart Thermostat:</b> Yes</li>
+	<li><b>Z Wave Compatible:</b> Yes</li>
+	<li><b>Screen:</b> 4.3" color touchscreen</li>
+	<li><b>Diagnostics:</b> Yes</li>
+	<li><b>Programmable:</b> Yes</li>
+</ul>', 
+		'post_excerpt'	=>	'Programing capabilities on this thermostat make temperature control a breeze.',
+		'post_type'     =>	'products',
+		'menu_order'  	=>  1510,
+		'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'Thermostats', 'product-class'=>'Better'),
+		'meta_input'	=>	array('brochure'=>'https://www.trane.com/residential/en/assets/product-brochures/trane-tstat-smart-brochure-01-02-23.pdf'),
+		'image_name'	=>	'Trane-Thermostat-01.webp'		
+),
+		
+array ( 'post_title'	=>	'XR724 Thermostat',
+		'post_content' 	=>	'<span class="descriptionText">Temperature control you can trust to make your home comfortable.</span>
+
+<ul>
+	<li><b>Exceptional comfort:</b> The XR724 has a humidity sensor, service maintenance alerts, and upgradable software that all work together to make managing your home comfort seamless.</li>
+	<li><b>Real time diagnostics:</b> The XR724 comes equipped with Trane Diagnostics. When you opt-in to remote diagnostics, your dealer can access real time data about how your HVAC system is performing, and will be alerted if there’s a problem. Plus, if you grant your dealer remote access, they can even tap into your system and help troubleshoot problems remotely.</li>
+	<li><b>Smart connectivity and control:</b> With the separate purchase of a bridge for Z-Wave® devices, the XR724 becomes able to give you the ability to monitor and control over 200 devices in your home, from virtually anywhere.</li>
+	<li><b>Impressive features:</b> The XR724 boasts impressive features for homeowners to enjoy such as a dehumidification setting, a touchscreen, a built-in humidity sensor, and programming for 7 days a week.</li>
+	<li><b>Cooling Stages:</b> 2</li>
+	<li><b>Heating Stages:</b> 4</li>
+	<li><b>Smart Thermostat:</b> Yes</li>
+	<li><b>Screen:</b> 4.3" color touchscreen</li>
+	<li><b>Diagnostics:</b> Yes</li>
+	<li><b>Programmable:</b> Yes</li>
+</ul>', 
+		'post_excerpt'	=>	'Temperature control you can trust to make your home comfortable.',
+		'post_type'     =>	'products',
+		'menu_order'  	=>  1520,
+		'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'Thermostats', 'product-class'=>'Good'),
+		'meta_input'	=>	array('brochure'=>'https://www.trane.com/residential/en/assets/product-brochures/trane-tstat-smart-brochure-01-02-23.pdf'),
+		'image_name'	=>	'Trane-Thermostat-02.webp'		
+),	
 			
 );
 

@@ -246,8 +246,9 @@ function battleplan_buildVid( $atts, $content = null ) {
 	
 	if ( ( strpos($link, 'youtube') !== false || strpos($link, 'vimeo') !== false ) && $preload == "false" ) :
 		if ( strpos($link, 'youtube') !== false ) :
+			$link = str_replace('/shorts/', '/embed/', $link);
 			$id = str_replace('https://www.youtube.com/embed/', '', $link);
-			$link .= "?autoplay=1";
+			$link .= "?autoplay=1&enablejsapi=1&version=3&playerapiid=ytplayer";
 			if ( $thumb == '' ) : $thumb = '//i.ytimg.com/vi/'.$id.'/hqdefault.jpg'; endif;		
 			if ( $related == "false" ) : $link .= "&rel=0";	endif;	
 			if ( $begin != "" ) : $link .= "&start=".$begin; endif;	
@@ -334,12 +335,13 @@ add_shortcode( 'btn', 'battleplan_buildButton' );
 function battleplan_buildButton( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'size'=>'100', 'align'=>'center', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'', 'class'=>'', 'track'=>'', 'fancy'=>'', 'icon'=>'false', 'top'=>0, 'left'=>0, 'graphic'=>'false', 'graphic-w'=>'40', 'ada'=>'', 'start'=>'', 'end'=>'', 'track'=>'' ), $atts );
 	$getBiz = esc_attr($a['get-biz']);
-	if ( $getBiz == "" ) :
+	if ( $getBiz == "" ) {
 		$link = esc_attr($a['link']);
-		if ( $link == "" || $link == "none" || $link == "no" ) : $link = "#"; endif;
-	else:
+		if ( $link == "" || $link == "none" || $link == "no" ) $link = "#";	
+		if ( strpos($link, 'pdf') ) $link .= "?id=".time();	
+	} else {
 		$link = do_shortcode( '[get-biz info="'.$getBiz.'"]' );
-	endif;
+	};
 	$size = esc_attr($a['size']);	
 	$size = convertSize($size);
 	$align = esc_attr($a['align']);	
@@ -361,11 +363,14 @@ function battleplan_buildButton( $atts, $content = null ) {
 	$adjust = $left != 0 || $top != 0 ? ' style="transform: translate('.$left.'px, '.$top.'px)"' : '';
 	if ( $icon == "true" ) $icon = "chevron-right";	
 	if ( $fancy != "" ) $fancy = "-".$fancy;
-	if ( $icon != "false" ) : $class .= " fancy".$fancy; $content = '<span class="fancy-text">'.$content.'</span><span class="fancy-icon"><span class="icon '.$icon.'"'.$adjust.'></span></span>'; endif;
+	if ( $icon != "false" ) : 
+		$class .= " fancy".$fancy; 
+		$content = '<span class="fancy-text">'.$content.'</span><span class="fancy-icon"><span class="icon '.$icon.'"'.$adjust.'></span></span>'; 
+		array_push($GLOBALS['icon-css'], $icon);
+	endif;
 	if ( $graphic != "false" ) : $class .= " graphic-icon"; $content = '<img src="/wp-content/uploads/'.$graphic.'" width="'.$graphicW.'" height="'.$graphicW.'" style="aspect-ratio:'.$graphicW.'/'.$graphicW.'" alt="" /><span class="unique">'.$content.'</span>'; endif;	
 
-	
-	$start = strtotime(esc_attr($a['start']));
+		$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));	
 	if ( $start || $end ) {
 		$now = time(); 

@@ -9,26 +9,33 @@
 	$userID = $user->ID;	
 
 
+
+
+
 // Remove Images
-	$attachments = get_posts(
-		array(
-			'post_type'      => 'attachment',
-			'posts_per_page' => -1,
-			'post_status'    => 'any',
-		)
-	);
 
-	foreach ($attachments as $attachment) :
-		$metadata = wp_get_attachment_metadata($attachment->ID);
+// in the includes-{brand}-products.php, you will include the list of filenames you wish to remove: $removeImages = array('American-Standard-46.jpg', 'American-Standard-45.jpg');
+	if ( is_array($removeImages) ) :
+		$attachments = get_posts(
+			array(
+				'post_type'      => 'attachment',
+				'posts_per_page' => -1,
+				'post_status'    => 'any',
+			)
+		);
 
-		if (!empty($metadata) && isset($metadata['file'])) :
-			$filename = basename($metadata['file']);
+		foreach ($attachments as $attachment) :
+			$metadata = wp_get_attachment_metadata($attachment->ID);
 
-			if (in_array($filename, $removeImages)) :
-				wp_delete_attachment($attachment->ID, true); 
+			if (!empty($metadata) && isset($metadata['file'])) :
+				$filename = basename($metadata['file']);
+
+				if (in_array($filename, $removeImages)) :
+					wp_delete_attachment($attachment->ID, true); 
+				endif;
 			endif;
-		endif;
-	endforeach;
+		endforeach;
+	endif;
 
 		
 // Remove Products

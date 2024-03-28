@@ -51,6 +51,31 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 
 	// set first uploaded pic as jobsite thumbnail
 	set_post_thumbnail($post_id, esc_attr(get_field( "jobsite_photo_1")) );	
+			
+    $created  = new DateTime( $post->post_date_gmt );
+    $modified = new DateTime( $post->post_modified_gmt );
+    $diff = $created->diff( $modified );
+    $seconds = ((($diff->y * 365.25 + $diff->m * 30 + $diff->d) * 24 + $diff->h) * 60 + $diff->i)*60 + $diff->s;
+	$action = $seconds <= 2 ? 'created' : 'updated';
+	$get_jobsite_geo = get_option('jobsite_geo');	
+	$notifyTo = $get_jobsite_geo['notify'] != 'false' ? $get_jobsite_geo['notify'] : '';
+	$notifyBc = $get_jobsite_geo['copy_me'] == 'true' ? 'info@battleplanwebdesign.com' : '';
+	
+	if ( $notifyTo == '' && $notifyBc != '' ) :
+		$notifyTo = $notifyBc;
+		$notifyBc = '';
+	endif;
+	
+	if ( $notifyTo != '' ) :	
+   		$subject = 'Jobsite '.$action.' by '.$current_user->user_firstname.' '.$current_user->user_lastname;
+    	$message = $current_user->user_firstname.' '.$current_user->user_lastname.' '.$action.' a jobsite post for this address: '.$address.'.';
+    	$headers[] = 'Content-Type: text/html; charset=UTF-8';
+    	$headers[] = 'From: Website Administrator ' . "\r\n";
+		$headers[] = "Reply-To: noreply@admin.".str_replace('https://', '', get_bloginfo('url'));
+		$headers[] = 'Bcc: <'.$notifyBc.'>';
+
+		wp_mail($notifyTo, $subject, $message, $headers);
+	endif;	
 }
 
 
@@ -169,8 +194,9 @@ function battleplan_changeJobsiteGEOCaps( $args, $post_type ) {
 /*--------------------------------------------------------------
 # Setup Advanced Custom Fields
 --------------------------------------------------------------*/
-$media_library = get_option('jobsite_geo')['media_library'] == 'limited' ? 'uploadedTo' : 'all';
-$default_state = get_option('jobsite_geo')['default_state'] != '' ? get_option('jobsite_geo')['default_state'] : '';
+$get_jobsite_geo = get_option('jobsite_geo');
+$media_library = $get_jobsite_geo['media_library'] == 'limited' ? 'uploadedTo' : 'all';
+$default_state = $get_jobsite_geo['default_state'] != '' ? $get_jobsite_geo['default_state'] : '';
 
 add_action('acf/init', 'battleplan_add_jobsite_geo_acf_fields');
 function battleplan_add_jobsite_geo_acf_fields() {

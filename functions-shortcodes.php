@@ -1383,18 +1383,21 @@ function battleplan_setUpWPGallery( $atts, $content = null ) {
 // Build a coupon
 add_shortcode( 'coupon', 'battleplan_coupon' );
 function battleplan_coupon( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'action'=>'Mention Our Website For', 'discount'=>'$20 OFF', 'service'=>'Service Call', 'disclaimer'=>'First time customers only.  Limited time offer.  Not valid with any other offer.  Must mention coupon at time of appointment.  During regular business hours only.  Limit one coupon per system.' ), $atts );
+	$a = shortcode_atts( array( 'action'=>'Mention Our Website For', 'discount'=>'$20 OFF', 'service'=>'Service Call', 'disclaimer'=>'First time customers only.  Limited time offer.  Not valid with any other offer.  Must mention coupon at time of appointment.  During regular business hours only.  Limit one coupon per system.', 'img'=>'', 'img-pos'=>'alignright', 'img-class'=>'' ), $atts );
 	
-	return do_shortcode('
-		[txt class="coupon"]
-			<div class="coupon-inner">
-				<h2 class="action">'.esc_attr($a['action']).'</h2>
-				<h2 class="discount">'.esc_attr($a['discount']).'</h2>
-				<h2 class="service">'.esc_attr($a['service']).'</h2>
-				<p class="disclaimer">'.esc_attr($a['disclaimer']).'</p>
-			</div>
-		[/txt]
-	');
+	$image = esc_attr($a['img']);
+	
+	$coupon = '[txt class="coupon"]<div class="coupon-inner">';
+	if ( $image != '' )	$coupon .= '<img src="'.wp_get_attachment_url( $image ).'" class="size-quarter-s '.esc_attr($a['img-pos']).' '.esc_attr($a['img-class']).'" />';
+	$coupon .= '<h2 class="action">'.esc_attr($a['action']).'</h2>';
+	$coupon .= '<h2 class="discount">'.esc_attr($a['discount']).'</h2>';
+	$coupon .= '<h2 class="service">'.esc_attr($a['service']).'</h2>';
+	$coupon .= '<p class="disclaimer">'.esc_attr($a['disclaimer']).'</p>';
+	$coupon .= '</div>[/txt]';
+	
+	
+	
+	return do_shortcode($coupon);
 }
 
 // Add Emergency Service widget to Sidebar

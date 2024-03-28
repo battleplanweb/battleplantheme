@@ -39,12 +39,12 @@ function battleplan_product_overview( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', ), $atts );
 	$type = esc_attr($a['type']);
 	$brands = array('amana', 'american standard', 'bryant', 'carrier', 'lennox', 'mitsubishi', 'rheem', 'ruud', 'tempstar', 'trane', 'york');
-	$file = 'generic';
 	
 	foreach( $brands as $brand ) :	
 		if (strpos($type, $brand) !== false) $file = str_replace( ' ', '-', $brand );
 	endforeach;
 
+	include('wp-content/themes/battleplantheme/elements/element-product-overview-generic.php');
 	include('wp-content/themes/battleplantheme/elements/element-product-overview-'.$file.'.php');
 	
 	return do_shortcode('

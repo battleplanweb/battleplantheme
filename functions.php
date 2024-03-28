@@ -21,17 +21,26 @@ require_once get_template_directory().'/functions-global.php';
 
 // Print variable or array for debugging
 function showMe($something, $die=false) {
-	if ( is_array($something) ) :
-		$display = '<br><pre>'.print_r($something,true).'</pre><br>';
+	if ( is_array($something) ) :	
+		$totalLines = count($something);
+		$maxLines = 500;
+		$maxLines2 = 250;
+		if (sizeof($something, 1) > 1000) :
+			$something = array_slice($something, 0, $maxLines);
+			if (sizeof($something, 1) > 500) :
+				$something = array_slice($something, 0, $maxLines2);
+			endif;
+	
+			$display = '<br><pre>Array ('.$totalLines.') too large to display in full.<br>'.print_r($something,true).'</pre><br>';
+		else:
+			$display = '<br><pre>'.print_r($something,true).'</pre><br>';
+		endif;
 	else:
 		$display = '<br><pre>'.$something.'</pre><br>';
 	endif;
 	
-	if ( $die == true ) :
-		wp_die($display);
-	else:
-		return $display;
-	endif;
+	wp_die($display);
+	exit();
 }
 
 // Check if current page is log in screen 

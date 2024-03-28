@@ -13,7 +13,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '23.10.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '23.10.2' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -225,6 +225,7 @@ $GLOBALS['icons']['finger-4'] = '\e1a4';
 $GLOBALS['icons']['finger-5'] = '\e1a5';
 $GLOBALS['icons']['flame'] = '\e203';
 $GLOBALS['icons']['handshake'] = '\e1af';
+$GLOBALS['icons']['heart'] = '\e12c';
 $GLOBALS['icons']['heartbeat'] = '\e12f';
 $GLOBALS['icons']['home'] = '\e000';
 $GLOBALS['icons']['house-magnify'] = '\e003';
@@ -234,8 +235,10 @@ $GLOBALS['icons']['lightbulb'] = '\e114';
 $GLOBALS['icons']['linkedin'] = '\e1d1';
 $GLOBALS['icons']['location'] = '\e0b9';
 $GLOBALS['icons']['money-bag'] = '\e16d';
+$GLOBALS['icons']['package'] = '\e117';
 $GLOBALS['icons']['phone'] = '\e027';
 $GLOBALS['icons']['pinterest'] = '\e1d0';
+$GLOBALS['icons']['recycle'] = '\e110';
 $GLOBALS['icons']['rocket'] = '\e115';
 $GLOBALS['icons']['search'] = '\e0ce';
 $GLOBALS['icons']['search-plus'] = '\e0cf';

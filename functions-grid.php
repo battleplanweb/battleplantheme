@@ -467,6 +467,9 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	$setUpElement = '';
 	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
 	if ( $tracking != '' ) $class .= " tracking"; 
+	
+	$attachment_id = attachment_url_to_postid(site_url().$image);
+	$alt_text = get_post_meta($attachment_id, '_wp_attachment_image_alt', true);        
 		
 	if ( $type == "col" ) :	$div = "div"; else: $div = $type; endif;
 	
@@ -495,7 +498,7 @@ function battleplan_buildParallax( $atts, $content = null ) {
 
 		return $setUpElement;
 	else:
-		return do_shortcode('<'.$div.' id="'.$name.'" class="'.$type.$style.' '.$type.'-'.$width.' '.$type.'-parallax'.$class.'"'.$tracking.' style="height:'.$height.'" data-parallax="scroll" data-id="'.$name.'" data-natural-width="'.$imgW.'" data-natural-height="'.$imgH.'" data-position-x="'.$posX.'" data-position-y="'.$posY.'" data-z-index="'.$zIndex.'" data-bleed="'.$bleed.'" data-speed="'.$speed.'" data-image-src="'.$image.'">'.$content.$buildScrollBtn.'</'.$div.'>');				
+		return do_shortcode('<'.$div.' id="'.$name.'" class="'.$type.$style.' '.$type.'-'.$width.' '.$type.'-parallax'.$class.'"'.$tracking.' style="height:'.$height.'" data-parallax="scroll" data-id="'.$name.'" data-natural-width="'.$imgW.'" data-natural-height="'.$imgH.'" data-position-x="'.$posX.'" data-position-y="'.$posY.'" data-z-index="'.$zIndex.'" data-bleed="'.$bleed.'" data-speed="'.$speed.'" data-alt-tag="'.$alt_text.'" data-image-src="'.$image.'">'.$content.$buildScrollBtn.'</'.$div.'>');				
 	endif;	
 }
 

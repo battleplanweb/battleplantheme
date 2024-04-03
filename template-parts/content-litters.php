@@ -77,9 +77,9 @@ $modDate = the_modified_date( 'F Y', '', '', FALSE);
 		
 		if ( $deposit && ( $litterStatus == "Expecting" || strtotime(date('F j, Y')) < strtotime($readyDate)) ) : $buildLitter .= '<li style="margin-top:-0.5em"><span class="label">Deposit: </span>$'.number_format($deposit, 0, ".", ",").' <span style="font-size:70%;">to hold a pup</span></li>'; endif;
 		
-		if ( $litterStatus == "Expecting" ) : 
+		if ( $litterStatus == "Expecting" && $birthDate != '' ) : 
 			$buildLitter .= '<li><span class="label">Expected: </span>'.date('F Y', strtotime($birthDate)).'</li>';	
-		else: 
+		elseif ( $birthDate != '' ): 
 			$buildLitter .= '<li><span class="label">Born: </span>'.date('F j, Y', strtotime($birthDate)).'</li>';			
 			if ( strtotime(date('F j, Y')) < strtotime($readyDate) ) : $buildLitter .= '<li style="margin-top:-0.5em"><span class="label">Ready: </span>'.$readyDate.'</li>'; 		
 			else : $buildLitter .= '<li><span class="label label-full">Ready To Go Home</li>'; 

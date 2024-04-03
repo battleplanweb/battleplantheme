@@ -50,7 +50,7 @@
     if (!this.imageSrc && this.$element.is('img')) {
       this.imageSrc = this.$element.attr('src');
     }
-
+	  
     var positions = (this.position + '').toLowerCase().match(/\S+/g) || [];
 
     if (positions.length < 1) {
@@ -140,9 +140,7 @@
     else {
       this.$slider = slider.prependTo(this.$mirror)
       sliderExisted = true;
-    }
-
-	  
+    }	  
 	  
     this.$mirror.addClass( 'parallax-mirror parallax-' + this.id ).css({
       visibility: 'hidden',
@@ -425,5 +423,15 @@
   $( function () { 
     $('[data-parallax="scroll"]').parallax(); 
   });
+	
+		
+	$('[data-alt-tag]').each(function() {
+		var theID = $(this).attr('id');
+        var altText = $(this).attr('data-alt-tag');
+		
+		setTimeout(function() { $('div.parallax-mirror.parallax-'+theID+' img.parallax-slider').each(function() {
+        	$(this).attr('alt', altText);
+		});}, 100);
+    });
 
 }(jQuery, window, document));

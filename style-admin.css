@@ -7,28 +7,28 @@
 :root {
   --font-primary: 								Arial; 
   
-  --white: 									rgba(255, 255, 255, 1);
+  --white: 										rgba(255, 255, 255, 1);
   --lightest-grey: 								rgba(225, 225, 225, 1);
   --light-grey: 								rgba(200, 200, 200, 1);
   --medium-grey: 								rgba(130, 130, 130, 1);
-  --dark-grey: 								rgba(60, 60, 60, 1);
+  --dark-grey: 									rgba(60, 60, 60, 1);
   --darkest-grey: 								rgba(30, 30, 30, 1);
-  --black: 									rgba(0, 0, 0, 1);
+  --black: 										rgba(0, 0, 0, 1);
 
   --white-lowest: 								rgba(255, 255, 255, 0.1);
-  --white-low: 								rgba(255, 255, 255, 0.25);
-  --white-med: 								rgba(255, 255, 255, 0.5);
+  --white-low: 									rgba(255, 255, 255, 0.25);
+  --white-med: 									rgba(255, 255, 255, 0.5);
   --white-high: 								rgba(255, 255, 255, 0.75);  
   --white-highest: 								rgba(255, 255, 255, 0.9);
   
   --black-lowest: 								rgba(0, 0, 0, 0.1);  
-  --black-low: 								rgba(0, 0, 0, 0.25);
-  --black-med: 								rgba(0, 0, 0, 0.5);
+  --black-low: 									rgba(0, 0, 0, 0.25);
+  --black-med: 									rgba(0, 0, 0, 0.5);
   --black-high: 								rgba(0, 0, 0, 0.75);
   --black-highest: 								rgba(0, 0, 0, 0.9);
 
-  --main-blue: 								rgba(34, 112, 175, 1);
-  --pale-blue: 								rgba(207, 218, 241, 1);
+  --main-blue: 									rgba(34, 112, 175, 1);
+  --pale-blue: 									rgba(207, 218, 241, 1);
   --pale-red: 									rgba(244, 217, 217, 1);
 
   --font-base-5: 								6.25%;
@@ -41,7 +41,7 @@
   --input-border: 								none;
   --input-border-top:							var(--input-border);
   --input-border-right:							var(--input-border);
-  --input-border-bottom:							var(--input-border);
+  --input-border-bottom:						var(--input-border);
   --input-border-left:							var(--input-border);
   --input-outline: 								none;
   --input-box-shadow: 							none;
@@ -51,31 +51,31 @@
   --input-transform: 							none;	
   
   --input-color-focus: 							var(--input-color);
-  --input-background-focus: 						var(--input-background);
+  --input-background-focus: 					var(--input-background);
   --input-font-size-focus: 						var(--input-font-size);
-  --input-font-weight-focus:						var(--input-font-weight);
-  --input-border-focus: 							var(--input-border);
+  --input-font-weight-focus:					var(--input-font-weight);
+  --input-border-focus: 						var(--input-border);
   --input-border-top-focus:						var(--input-border-top);
-  --input-border-right-focus:						var(--input-border-right);
+  --input-border-right-focus:					var(--input-border-right);
   --input-border-bottom-focus:					var(--input-border-bottom);
-  --input-border-left-focus:						var(--input-border-left);
+  --input-border-left-focus:					var(--input-border-left);
   --input-outline-focus: 						var(--input-outline);
-  --input-box-shadow-focus: 						var(--input-box-shadow);
+  --input-box-shadow-focus: 					var(--input-box-shadow);
   --input-border-radius-focus: 					var(--input-border-radius);
-  --input-filter-focus: 							var(--input-filter);
-  --input-backdrop-filter-focus:					var(--input-backdrop-filter);
+  --input-filter-focus: 						var(--input-filter);
+  --input-backdrop-filter-focus:				var(--input-backdrop-filter);
   --input-transform-focus: 						var(--input-transform);
 
   --button-color: 								var(--darkest-grey);
   --button-background: 							var(--white);
   --button-border: 								1px solid var(--white);
   --button-box-shadow: 							inset 3px 3px 6px 0 var(--black-low);
-  --button-font-weight: 							bold;
+  --button-font-weight: 						bold;
   
-  --button-color-hover: 							var(--white);
-  --button-background-hover: 						var(--main-blue);
+  --button-color-hover: 						var(--white);
+  --button-background-hover: 					var(--main-blue);
   --button-border-hover: 						1px solid var(--main-blue);
-  --button-box-shadow-hover: 						inset 3px 3px 6px 0 var(--black-low);
+  --button-box-shadow-hover: 					inset 3px 3px 6px 0 var(--black-low);
   
   --locked-color: 								var(--white);
   --locked-background: 							var(--black-high);
@@ -87,18 +87,18 @@
   --close-btn-background: 						var(--button-background);
   --close-btn-border: 							var(--button-border);
   --close-btn-color-hover:						var(--button-color-hover);
-  --close-btn-background-hover: 				 	var(--button-background-hover);
-  --close-btn-border-hover: 						var(--button-border-hover);
+  --close-btn-background-hover: 				var(--button-background-hover);
+  --close-btn-border-hover: 					var(--button-border-hover);
 }
 
 .wp-admin body {
 	background: 									var(--white);
 	font-family: 									var(--font-family);
-	font-size: 									14px;
+	font-size: 										14px;
 }
 
 .metabox-holder h2.hndle {
-	font-size: 									18px;
+	font-size: 										18px;
 }
 
 .user-admin-color-wrap {
@@ -106,13 +106,16 @@
 }
 
 .clearfix {
-	clear:										both;
+	clear:											both;
 }
 
 a {
   color: 											var(--main-blue);
 }
 
+.contextual-help-link-wrap {
+	display: 										none;
+}
 
 /* Admin bar on live pages, added when logged in */
 @media (max-width: 1024px) {
@@ -1108,7 +1111,7 @@ a#mbp_misc-tab,
 
 .wp-admin .flex.stats .col,
 .wp-admin .flex .col.mobile {
-	background: 									var(--pale-red);
+	background: 										var(--pale-red);
 }
 
 .wp-admin .flex.stats .col[class*="lighthouse-desktop"],
@@ -1116,12 +1119,12 @@ a#mbp_misc-tab,
 .wp-admin .flex.stats .col[class*="cite"],
 .wp-admin .flex.stats .col[class*="gmb"],
 .wp-admin .flex.stats .col[class*="load_time"] { 
-	background: 									var(--pale-blue);
+	background: 										var(--pale-blue);
 } 
 
 .wp-admin .flex.stats .subhead.date,
 .wp-admin .flex.stats .when {
-	background: 									var(--lightest-grey);
+	background: 										var(--lightest-grey);
 }
 
 .wp-admin .flex:not(.hvac) .col.site-hvac,
@@ -1138,62 +1141,62 @@ a#mbp_misc-tab,
 }
 
 .wp-admin .flex.stats .col.when {
-	cursor: 										pointer;
+	cursor: 											pointer;
 }
 
 /* 2: Phones (landscape) + Tablets (portrait) */
 @media (max-width: 860px) {	
 	#adminmenumain {
-		height: 									46px;
+		height: 										46px;
 	}
 	
 	#adminmenu {
-		margin: 									-1px 0 0;
+		margin: 										-1px 0 0;
 	}
 	
 	#adminmenuback {
-		top: 										46px;
+		top: 											46px;
 	}
 	
 	#wpcontent {
-		padding: 									0 7px;
+		padding: 										0 7px;
   	}
 	
 	#dashboard-widgets {
-  		grid-template-columns: 						1fr;
+  		grid-template-columns: 							1fr;
 	}
 	
 	.wp-admin .row-actions {
-  		opacity: 									1;
-		justify-content: 							end;
+  		opacity: 										1;
+		justify-content: 								end;
 	}
 	
 	.tablenav.top,
 	.wp-list-table.table-view-list.posts tfoot,
 	#postbox-container-1 #submitdiv #minor-publishing #visibility,
 	#postbox-container-1 #submitdiv #minor-publishing #yoast-seo-publishbox-section {
-		display: 									none !important;
+		display: 										none !important;
 	}
 	
 	#post-body,
 	#postbox-container-1 #side-sortables {
-		display: 									grid;
-		grid-template-columns: 						1fr;
+		display: 										grid;
+		grid-template-columns: 							1fr;
 	}
 	
 	#post-body-content,
 	#postbox-container-1 #side-sortables div {
-		order: 										1;
+		order: 											1;
 	}
 	
 	#postbox-container-1 {
-		order: 										3;
-		margin-top: 								20px;
+		order: 											3;
+		margin-top: 									20px;
 	}
 	
 	#postbox-container-2,
 	#postbox-container-1 #side-sortables #submitdiv {
-		order: 										2;
+		order: 											2;
 	}	
 }	
 
@@ -1201,6 +1204,11 @@ a#mbp_misc-tab,
 
 /* 1: Phones (portrait) */
 @media (max-width: 576px) {	
+	
+	#wpadminbar {
+		display: 										 block !important;
+	}
+	
 	.trend-buttons,
 	.last-visitors-buttons,
 	.local-visitors-buttons {

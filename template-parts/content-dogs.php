@@ -8,7 +8,7 @@ $birthdate = date_create($birth_date);
 $birthdate = date_format($birthdate,"M j, Y");
 $sex = esc_attr(get_field( "sex" )) == "Legacy" ? "Male" : esc_attr(get_field( "sex" ));
 $color = esc_attr(get_field( "color" ));
-$geno = esc_attr(get_field( "geno" )) == "Both" ? "Yellow & Chocolate" : esc_attr(get_field( "geno" ));
+$geno_values = get_field("geno");
 $studFee = esc_attr(get_field( "stud_fee" ));
 $hips = esc_attr(get_field( "hips" ));
 $cnm = esc_attr(get_field( "cnm" ));
@@ -50,7 +50,12 @@ $theContent = get_the_content();
 
 		if ( $sex != "NA" && $sex != "" ) $dogInfo .= "<li><span class='label'>Sex:</span> ".$sex."</li>";
 		if ( $color != "NA" && $color != "" ) $dogInfo .= "<li><span class='label'>Color:</span> ".$color."</li>";
-		if ( $geno != "NA" && $geno != "" ) $dogInfo .= "<li><span class='label'>Hidden:</span> ".$geno."</li>";
+		if( !empty($geno_values) ) { 
+    		$geno_list = is_array($geno_values) ? implode(" & ", array_map('esc_attr', $geno_values)) : esc_attr($geno_values);
+			if ($geno_list != "") {
+				$dogInfo .= "<li><span class='label'>Hidden:</span> ".$geno_list."</li>";
+			}
+		}		
 		if ( $birth_date != "NA" && $birth_date != "" ) $dogInfo .= "<li><span class='label'>Born:</span> ".$birthdate."</li>";
 		if ( $eic != "NA" && $eic != "" ) $dogInfo .= "<li><span class='label'>EIC:</span> ".$eic."</li>";
 		if ( $cnm != "NA" && $cnm != "" ) $dogInfo .= "<li><span class='label'>CNM:</span> ".$cnm."</li>";

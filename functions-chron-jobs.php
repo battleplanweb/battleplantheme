@@ -74,30 +74,32 @@ function processChron($forceChron) {
 	$site = str_replace('https://', '', get_bloginfo('url'));	
 	$rovin = $site == "sweetiepiesribeyes.com" || $site == "bubbascookscountry.com" || $site == "babeschicken.com" ? "true" : "false";
 	
+	if ( $site != "asairconditioning.com") :	
 // WP Mail SMTP Settings Update
-	if ( is_plugin_active('wp-mail-smtp/wp_mail_smtp.php') ) : 	
-		if ( $rovin == "true" ) :	
-			$apiKey2 = "-b916aeccb98bf3fcca73";
-			$apiKey3 = "a606526cefdf92084ce7a9048d5cf734124e09f9bb26";
-			$apiKey4 = "-YcYFamx5FrGvCxXe";
-			$wpMailSettings['mail']['from_email'] = 'customer@website.'.$site;
-			$wpMailSettings['sendinblue']['domain'] = 'website.'.$site;				
-		else :	
-			$apiKey2 = "-d08cc84fe45b37a420ef3";
-			$apiKey3 = "a9074e001fa21f640578f699994cba854489d3ef793";
-			$apiKey4 = "-bzWkS9dgt05KccIF";
-			$wpMailSettings['mail']['from_email'] = 'email@admin.'.$site;
-			$wpMailSettings['sendinblue']['domain'] = 'admin.'.$site;				
+		if ( is_plugin_active('wp-mail-smtp/wp_mail_smtp.php') ) : 	
+			if ( $rovin == "true" ) :	
+				$apiKey2 = "-b916aeccb98bf3fcca73";
+				$apiKey3 = "a606526cefdf92084ce7a9048d5cf734124e09f9bb26";
+				$apiKey4 = "-YcYFamx5FrGvCxXe";
+				$wpMailSettings['mail']['from_email'] = 'customer@website.'.$site;
+				$wpMailSettings['sendinblue']['domain'] = 'website.'.$site;				
+			else :	
+				$apiKey2 = "-d08cc84fe45b37a420ef3";
+				$apiKey3 = "a9074e001fa21f640578f699994cba854489d3ef793";
+				$apiKey4 = "-bzWkS9dgt05KccIF";
+				$wpMailSettings['mail']['from_email'] = 'email@admin.'.$site;
+				$wpMailSettings['sendinblue']['domain'] = 'admin.'.$site;				
+			endif;
+
+			$apiKey1 = "keysib";
+			$wpMailSettings = get_option( 'wp_mail_smtp' );			
+			$wpMailSettings['mail']['from_name'] = strip_tags('Website · '.str_replace(',', '', $GLOBALS['customer_info']['name']));
+			$wpMailSettings['mail']['mailer'] = 'sendinblue';
+			$wpMailSettings['mail']['from_email_force'] = '1';
+			$wpMailSettings['mail']['from_name_force'] = '1';	
+			$wpMailSettings['sendinblue']['api_key'] = 'x'.$apiKey1.$apiKey2.$apiKey3.$apiKey4;
+			update_option( 'wp_mail_smtp', $wpMailSettings );
 		endif;
-		
-		$apiKey1 = "keysib";
-		$wpMailSettings = get_option( 'wp_mail_smtp' );			
-		$wpMailSettings['mail']['from_name'] = strip_tags('Website · '.str_replace(',', '', $GLOBALS['customer_info']['name']));
-		$wpMailSettings['mail']['mailer'] = 'sendinblue';
-		$wpMailSettings['mail']['from_email_force'] = '1';
-		$wpMailSettings['mail']['from_name_force'] = '1';	
-		$wpMailSettings['sendinblue']['api_key'] = 'x'.$apiKey1.$apiKey2.$apiKey3.$apiKey4;
-		update_option( 'wp_mail_smtp', $wpMailSettings );
 	endif;
 		
 // Contact Form 7 Settings Update
@@ -110,11 +112,13 @@ function processChron($forceChron) {
 
 			if ( $formTitle == "Quote Request Form" ) $formTitle = "Quote Request";
 			if ( $formTitle == "Contact Us Form" ) $formTitle = "Customer Contact";		
-			if ( $formTitle == "Request A Catering Quote" ) $formTitle = "Catering Quote";			
+			if ( $formTitle == "Request A Catering Quote" ) $formTitle = "Catering Quote";	
+	
+			$server_email = $site != "asairconditioning.com" ? "<email@admin.".str_replace('https://', '', get_bloginfo('url')).">" : "<aswebform@asairconditioning.com>";
 
 			if ( $rovin != "true" ) :					
 				$formMail['subject'] = $formTitle." · [user-name]";	
-				$formMail['sender'] = "Website · ".str_replace(',', '', $GLOBALS['customer_info']['name'])." <email@admin.".str_replace('https://', '', get_bloginfo('url')).">";
+				$formMail['sender'] = "Website · ".str_replace(',', '', $GLOBALS['customer_info']['name'])." ".$server_email;
 				$formMail['additional_headers'] = "Reply-to: [user-name] <[user-email]>\nBcc: Website Administrator <email@battleplanwebdesign.com>";
 			endif;
 	

@@ -128,6 +128,7 @@ Re-factored 4/22/2024
 
 			const position = `calc(${width}px * ${cos}) calc(${width}px * ${sin})`;
 			if (text === 'true') {
+
 				shadow += `${position} 0 ${color}`;
 				if (i < (steps - 1)) shadow += ", ";
 			} else {

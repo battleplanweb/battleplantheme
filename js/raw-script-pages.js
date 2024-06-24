@@ -550,7 +550,8 @@ Re-factor complete 5/9/2024
 	}	
 */
 	
-// Fade in lazy loaded images
+// Fade in lazy loaded images removed 6/24/24 because of Kin-Tec product pics not loading
+														   /*
 	getObjects('img').forEach(img => img.classList.add('unloaded'));
 	getObjects('#loader img').forEach(img => img.classList.remove('unloaded'));
 	getObjects('img').forEach(img => {
@@ -561,7 +562,7 @@ Re-factor complete 5/9/2024
 			img.dispatchEvent(new Event('load'));
 		}
 	});
-
+*/
 	
 // Add star icons to reviews and ratings
 	getObjects('.testimonials-rating').forEach(function(element) {

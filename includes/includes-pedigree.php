@@ -512,18 +512,6 @@ function battleplan_add_acf_pedigree_fields() {
 				'first_day' => 0,
 			),
 			array(
-				'key' => 'field_52dd8f4f60234',
-				'label' => 'Ready Date',
-				'name' => 'ready_date',
-				'type' => 'date_picker',
-				'instructions' => 'Ready to go home 8 weeks after birthdate',		
-				'required' => 0,
-				'conditional_logic' => 0,
-				'display_format' => 'F j, Y',
-				'return_format' => 'F j, Y',
-				'first_day' => 0,
-			),
-			array(
 				'key' => 'field_52dd8f8e60235',
 				'label' => 'Price',
 				'name' => 'price',
@@ -597,7 +585,7 @@ function battleplan_override_main_query_with_pedigree( $query ) {
 add_action( 'wp_enqueue_scripts', 'battleplan_pedigree_scripts' );
 function battleplan_pedigree_scripts() {
 	wp_enqueue_style( 'battleplan-css-pedigree', get_template_directory_uri().'/style-pedigree.css', array(), _BP_VERSION );	 
-	wp_enqueue_script( 'battleplan-script-pedigree', get_template_directory_uri().'/js/pedigree.js', array(), _BP_VERSION, true );
+	wp_enqueue_script( 'battleplan-script-pedigree', get_template_directory_uri().'/js/script-pedigree.js', array(), _BP_VERSION, true );
 }
 
 // Add call name to archives and random widgets

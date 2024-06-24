@@ -1,0 +1,1 @@
+document.addEventListener("DOMContentLoaded",function(){"use strict";document.body.classList.add("holiday-theme");const a=getObject(".screen-desktop #masthead > *:first-child");if(a){const b=parseInt(window.getComputedStyle(a).paddingTop,10)+20;a.style.paddingTop=`${b}px`}});

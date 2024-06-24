@@ -15,18 +15,18 @@ function add_trane_products() {
 	$productImgAlt = "Trane Heating & Cooling Product"; 
 
 
-	/*
-	$removeProducts = array('silver-15-heat-pump', 'american-standard-80-furnace', 'silver-95-furnace');
-	*/
+	
+	$removeProducts = array('xl18i-air-conditioner', 'xr17-air-conditioner', 'xl16i-air-conditioner', 'xr14-air-conditioner', 'xl18i-heat-pump', 'xr17-heat-pump', 'xl16i-heat-pump', 'xr14-heat-pump', 'xr15-heat-pump');
+	
 
 
 	$addProducts = array (
 	
-/*
+
 	// Air Conditioners
 		array ( 
-			'post_title'	=>	'XL18i Air Conditioner',
-			'post_content' 	=>	'<span class="descriptionText">Choose between two cooling speeds with a two-stage system. For everyday cooling, the “low” setting can help beat the summer heat. On hot days where you may want an extra blast of cold air, switch you unit’s fan to “high.” Every Trane Air Conditioner is packed with high quality components. Each helps ensure that time after time, your unit will provide total comfort your family can rely on. The XL18i Air Conditioner includes:</span>
+			'post_title'	=>	'XV20i TruComfort™ Variable Speed Air Conditioner',
+			'post_content' 	=>	'<span class="descriptionText">Variable Speed units continuously communicate with each other and your Trane thermostat to provide optimal efficiency. </span>
 <ul>
 	<li>Durable Climatuff™ compressor</li>
 	<li>Full-side louvered panels</li>
@@ -40,7 +40,7 @@ function add_trane_products() {
 	<li>Quick-Sess cabinet with full coil protection</li>
 	<li>Low sound with advanced fan system and sound insulators on compressors (on select models)</li>
 </ul>', 
-			'post_excerpt'	=>	'The 18.0 SEER rating makes this air conditioner energy-efficient while providing home comfort.',
+			'post_excerpt'	=>	'Variable Speed units continuously communicate with each other and your Trane thermostat to provide optimal efficiency.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1000,
 			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'air-conditioners', 'product-class'=>'Best'),
@@ -50,8 +50,8 @@ function add_trane_products() {
 		
 		
 		array ( 
-			'post_title'	=>	'XR17 Air Conditioner',
-			'post_content' 	=>	'<span class="descriptionText">Choose between two cooling speeds with a two-stage system. For everyday cooling, the “low” setting can help beat the summer heat. On hot days where you may want an extra blast of cold air, switch you unit’s fan to “high.” Every Trane Air Conditioner is packed with high quality components. Each helps ensure that time after time, your unit will provide total comfort your family can rely on. The XR17 Air Conditioner includes:</span>
+			'post_title'	=>	'XV18 TruComfort™ Variable Speed Air Conditioner',
+			'post_content' 	=>	'<span class="descriptionText">Variable Speed units continuously communicate with each other and your Trane thermostat to provide optimal efficiency.</span>
 <ul>
 	<li>Two-Stage Climatuff™ compressor</li>
 	<li>Spine Fin™ outdoor coil</li>
@@ -72,7 +72,7 @@ function add_trane_products() {
 		
 				
 		array ( 
-			'post_title'	=>	'XL16i Air Conditioner',
+			'post_title'	=>	'XL17i Air Conditioner',
 			'post_content' 	=>	'<span class="descriptionText">Single-stage systems provides powerful cooling to your entire home. The fan in your air conditioner turns on when your home’s temperature rises a degree or two, and automatically cools your living space back down to your comfort level. Every Trane Air Conditioner is packed with high quality components. Each helps ensure that time after time, your unit will provide total comfort your family can rely on. The XL16i Air Conditioner includes:</span>
 <ul>
 	<li>Durable Climatuff™ compressor</li>
@@ -87,7 +87,7 @@ function add_trane_products() {
 	<li>Quick-Sess cabinet with full coil protection</li>
 	<li>Low sound with advanced fan system and sound insulators on compressors (on select models)</li>
 </ul>', 
-			'post_excerpt'	=>	'The 17.0 SEER rating makes this air conditioner energy-efficient while providing home comfort.',
+			'post_excerpt'	=>	'The 17.2 SEER2 rating makes this air conditioner energy-efficient while providing home comfort.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1020,
 			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'air-conditioners', 'product-class'=>'Better'),
@@ -95,53 +95,11 @@ function add_trane_products() {
 			'image_name'	=>	'Trane-AC-01.jpg'		
 		),
 		
-				
-		array ( 
-			'post_title'	=>	'XR14 Air Conditioner',
-			'post_content' 	=>	'<span class="descriptionText">Single-stage systems provides powerful cooling to your entire home. The fan in your air conditioner turns on when your home’s temperature rises a degree or two, and automatically cools your living space back down to your comfort level. Every Trane Air Conditioner is packed with high quality components. Each helps ensure that time after time, your unit will provide total comfort your family can rely on. The XR13 Air Conditioner includes:</span>
-<ul>
-	<li>Climatuff™ compressor</li>
-	<li>Spine Fin™ outdoor coil</li>
-	<li>Upgraded fan motor</li>
-	<li>Full-Side louvered panels protect your investment</li>
-	<li>Corrosion-resistant Weatherguard™ fasteners</li>
-	<li>Unique DuraTuff™ non-corrosive base pan</li>
-	<li>Quick-Sess cabinet with full coil protection</li>
-</ul>', 
-			'post_excerpt'	=>	'The 16.0 SEER rating balances energy efficiency and cooling strength to help lower your home cooling costs.',
-			'post_type'     =>	'products',
-			'menu_order'  	=>  1030,
-			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'air-conditioners', 'product-class'=>'Better'),
-			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1208-35_TR_AC-Brochure_SV.pdf'),
-			'image_name'	=>	'Trane-AC-02.jpg'		
-		),
-		
-				
-		array ( 
-			'post_title'	=>	'XR13 Air Conditioner',
-			'post_content' 	=>	'<span class="descriptionText">Single-stage systems provides powerful cooling to your entire home. The fan in your air conditioner turns on when your home’s temperature rises a degree or two, and automatically cools your living space back down to your comfort level. Every Trane Air Conditioner is packed with high quality components. Each helps ensure that time after time, your unit will provide total comfort your family can rely on. The XR13 Air Conditioner includes:</span>
-<ul>
-	<li>Climatuff™ compressor</li>
-	<li>Spine Fin™ outdoor coil</li>
-	<li>Full-Side louvered panels protect your investment</li>
-	<li>Baked-on powder paint</li>
-	<li>Unique DuraTuff™ non-corrosive base pan</li>
-	<li>Quick-Sess cabinet with full coil protection</li>
-	<li>Sound insulator (select models)</li>
-</ul>', 
-			'post_excerpt'	=>	'The 14.5 SEER rating balances energy efficiency and cooling strength to help lower your home cooling costs.',
-			'post_type'     =>	'products',
-			'menu_order'  	=>  1040,
-			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'air-conditioners', 'product-class'=>'Good'),
-			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1208-35_TR_AC-Brochure_SV.pdf'),
-			'image_name'	=>	'Trane-AC-02.jpg'		
-		),
-		
 	
 	// Heat Pumps
 		array ( 
-			'post_title'	=>	'XL18i Heat Pump',
-			'post_content' 	=>	'<span class="descriptionText">Enjoy comfort you can count with a two-speed system. Every Trane home heat pump is packed with high-quality components. Each helps ensure that time after time, your unit will provide total comfort your family can rely on. The XL18i two-stage heat pump includes:</span>
+			'post_title'	=>	'XV20i Variable Speed Heat Pump',
+			'post_content' 	=>	'<span class="descriptionText">Variable Speed units continuously communicate with each other and your Trane thermostat to provide optimal efficiency. </span>
 <ul>
 	<li>Two-Stage Climatuff™ compressor</li>
 	<li>Full-side louvered panels</li>
@@ -155,41 +113,20 @@ function add_trane_products() {
 	<li>Low-resistance airflow</li>
 	<li>Sound insulator on the compressor (select models)</li>
 </ul>', 
-			'post_excerpt'	=>	'The XR18i’s 18 SEER and 9.5 HSPF ratings make this unit a great choice for saving energy and lowering your monthly energy use.',
+			'post_excerpt'	=>	'The XV20i offers up to 20.5 SEER2 and 8.7 HSPF2 ratings make this unit a great choice for saving energy and lowering your monthly energy use.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1100,
 			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'heat-pumps', 'product-class'=>'Best'),
-			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1209-31_Heat-Pump-Brochure_Trane_SV.pdf'),
+			'meta_input'	=>	array('brochure'=>'https://www.trane.com/residential/en/assets/product-brochures/trane-brochure-heat-pumps-032624.pdf'),
 			'image_name'	=>	'Trane-HP-01.jpg'		
 		),
 		
 		
 		array ( 
-			'post_title'	=>	'XR17 Heat Pump',
-			'post_content' 	=>	'<span class="descriptionText">Enjoy comfort you can count with a two-speed system. Every Trane home heat pump is packed with high-quality components. Each helps ensure that time after time, your unit will provide total comfort your family can rely on. The XR17 includes:</span>
+			'post_title'	=>	'XV18 Variable Speed Heat Pump',
+			'post_content' 	=>	'<span class="descriptionText">Variable Speed units continuously communicate with each other and your Trane thermostat to provide optimal efficiency. </span>
 <ul>
 	<li>Two-Stage Climatuff™ compressor</li>
-	<li>Galvanized-steel louvered panels</li>
-	<li>Baked-on powder paint</li>
-	<li>Corrosion-resistant Weatherguard™ fasteners</li>
-	<li>Spine Fin™ outdoor coil</li>
-	<li>DuraTuff™ rust-proof basepan</li>
-	<li>Sound insulator on the compressor (select models)</li>
-</ul>', 
-			'post_excerpt'	=>	'The XR17’s 17.25 SEER rating makes this unit a great choice for saving energy and lowering your monthly energy use.',
-			'post_type'     =>	'products',
-			'menu_order'  	=>  1110,
-			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'heat-pumps', 'product-class'=>'Best'),
-			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1209-31_Heat-Pump-Brochure_Trane_SV.pdf'),
-			'image_name'	=>	'Trane-HP-02.jpg'		
-		),
-		
-		
-		array ( 
-			'post_title'	=>	'XL16i Heat Pump',
-			'post_content' 	=>	'<span class="descriptionText">Single-stage heat pumps provide powerful, consistent heating to your entire home. Every Trane home heat pump is packed with high-quality components. Each helps ensure that time after time, your unit will provide total comfort your family can rely on. The XL16i heat pump includes:</span>
-<ul>
-	<li>Climatuff™ compressor</li>
 	<li>Full-side louvered panels</li>
 	<li>WeatherGuard™ top protects components</li>
 	<li>Baked-on powder paint</li>
@@ -197,52 +134,41 @@ function add_trane_products() {
 	<li>Spine Fin™ outdoor coil</li>
 	<li>Unique DuraTuff™ non-corrosive basepan</li>
 	<li>Unique mounting of shaft down fan motor</li>
+	<li>Variable-speed fan motor</li>
+	<li>Low-resistance airflow</li>
+	<li>Sound insulator on the compressor (select models)</li>
 </ul>', 
-			'post_excerpt'	=>	'The XL16i’s 20 SEER rating makes it a great choice for saving energy and lowering your monthly electricity use.',
+			'post_excerpt'	=>	'The XV20i offers up to 18 SEER2 and 8.5 HSPF2 ratings make this unit a great choice for saving energy and lowering your monthly energy use.',
 			'post_type'     =>	'products',
-			'menu_order'  	=>  1120,
+			'menu_order'  	=>  1100,
 			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'heat-pumps', 'product-class'=>'Better'),
-			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1209-31_Heat-Pump-Brochure_Trane_SV.pdf'),
+			'meta_input'	=>	array('brochure'=>'https://www.trane.com/residential/en/assets/product-brochures/trane-brochure-heat-pumps-032624.pdf'),
 			'image_name'	=>	'Trane-HP-01.jpg'		
 		),
 		
-		
+				
 		array ( 
-			'post_title'	=>	'XR14 Heat Pump',
-			'post_content' 	=>	'<span class="descriptionText">Single-stage heat pumps provide powerful, consistent heating to your entire home. Every Trane home heat pump is packed with high-quality components. Each helps ensure that time after time, your unit will provide total comfort your family can rely on. The XL16i heat pump includes:</span>
+			'post_title'	=>	'XL17i Heat Pump',
+			'post_content' 	=>	'<span class="descriptionText">Enjoy comfort you can count with a two-speed system. Every Trane home heat pump is packed with high-quality components. Each helps ensure that time after time, your unit will provide total comfort your family can rely on. The XL17i two-stage heat pump includes:</span>
 <ul>
-	<li>Climatuff™ compressor</li>
-	<li>Galvanized-steel louvered panels</li>
-	<li>Baked-on powder paint</li>
-	<li>Spine Fin™ outdoor coil</li>
-</ul>', 
-			'post_excerpt'	=>	'This single-speed heat pump is a great option for keeping you comfortable all year round. The XR14 will help keep you cool in the summer and warm throughout the fall and winter months.',
-			'post_type'     =>	'products',
-			'menu_order'  	=>  1130,
-			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'heat-pumps', 'product-class'=>'Better'),
-			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1209-31_Heat-Pump-Brochure_Trane_SV.pdf'),
-			'image_name'	=>	'Trane-HP-02.jpg'		
-		),
-		
-		
-		array ( 
-			'post_title'	=>	'XR15 Heat Pump',
-			'post_content' 	=>	'<span class="descriptionText">Single-stage heat pumps provide powerful, consistent heating to your entire home. Every Trane home heat pump is packed with high-quality components. Each helps ensure that time after time, your unit will provide total comfort your family can rely on. The XL16i heat pump includes:</span>
-<ul>
-	<li>Climatuff™ compressor</li>
-	<li>Galvanized-steel louvered panels</li>
+	<li>Two-Stage Climatuff™ compressor</li>
+	<li>Full-side louvered panels</li>
+	<li>WeatherGuard™ top protects components</li>
 	<li>Baked-on powder paint</li>
 	<li>Corrosion-resistant Weatherguard™ fasteners</li>
 	<li>Spine Fin™ outdoor coil</li>
-	<li>DuraTuff™ rust-proof basepan</li>
+	<li>Unique DuraTuff™ non-corrosive basepan</li>
+	<li>Unique mounting of shaft down fan motor</li>
+	<li>Variable-speed fan motor</li>
+	<li>Low-resistance airflow</li>
 	<li>Sound insulator on the compressor (select models)</li>
 </ul>', 
-			'post_excerpt'	=>	'The XR15 has a SEER rating of 16 and HSPF of 9.5, which makes it a great choice for an energy efficient home.',
+			'post_excerpt'	=>	'The XL17i offers up to 17.2 SEER2 and 8.1 HSPF2 ratings make this unit a great choice for saving energy and lowering your monthly energy use.',
 			'post_type'     =>	'products',
-			'menu_order'  	=>  1140,
+			'menu_order'  	=>  1100,
 			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'heat-pumps', 'product-class'=>'Good'),
 			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1209-31_Heat-Pump-Brochure_Trane_SV.pdf'),
-			'image_name'	=>	'Trane-HP-02.jpg'		
+			'image_name'	=>	'Trane-HP-01.jpg'		
 		),
 		
 	
@@ -312,7 +238,7 @@ function add_trane_products() {
 		
 		
 		
-	*/	
+	
 	
 	// Thermostats
 array ( 'post_title'	=>	'ComfortLink® II XL850 Thermostat',

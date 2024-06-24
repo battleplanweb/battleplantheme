@@ -1,0 +1,302 @@
+
+/*--------------------------------------------------------------
+>>> TABLE OF CONTENTS:
+----------------------------------------------------------------
+# CSS Variables
+# Calendar
+# Event Pages
+# Event Archive
+# Mobile Styles
+*/
+
+/*--------------------------------------------------------------
+# CSS Variables
+--------------------------------------------- */
+:root {	
+  --calendar-border-width: 							1px;
+  --calendar-border-style: 							solid;
+  --calendar-border-color: 							rgba(0, 0, 0, 0.2);
+  --calendar-background: 							var(--white);
+  --calendar-background-today: 						rgba(0, 0, 0, 0.1);
+  --calendar-background-empty: 						rgba(0, 0, 0, 0.025);
+  --calendar-title-color: 							var(--darkest-grey);
+  --calendar-title-size: 							var(--font-size-h6);
+  --calendar-day-color: 							var(--darkest-grey);
+  --calendar-day-today-color:               		var(--darkest-grey);
+}
+
+
+/*--------------------------------------------------------------
+# Calendar
+--------------------------------------------- */
+.events-intro {
+  margin-top: 										var(--measure-base);
+  margin-bottom: 									2em;
+}
+
+h2.month-divider,
+#calendar .header {
+	font-family: 									var(--font-primary);
+	font-size: 										var(--font-size-h2);
+	font-weight: 									normal;
+	text-align: 									center;
+	margin-bottom: 									1.2em;
+ }
+
+h2.month-divider {
+	margin-bottom: 									0;
+}
+
+#calendar .titles .title {
+	font-size: 										var(--calendar-title-size);
+	text-align: 									center;
+	font-weight: 									bold;
+}
+
+#calendar .titles,
+#calendar .body {
+	display: 										flex;
+	flex-wrap: 										wrap;
+	justify-content: 								center;
+}
+
+#calendar .titles .title,
+#calendar .body .day {
+	position: 										relative;
+	width: 											14.28%;
+	box-sizing: 									border-box;
+	color: 											var(--calendar-title-color);
+}
+
+#calendar .body .day {
+	aspect-ratio: 									20/15;
+	border-top: 									var(--calendar-border-width) var(--calendar-border-style) var(--calendar-border-color);
+	border-left: 									var(--calendar-border-width) var(--calendar-border-style) var(--calendar-border-color);
+	background: 									var(--calendar-background);
+	color: 											var(--calendar-day-color);
+}
+
+#calendar .body .day:nth-child(7n) {
+	border-right: 									var(--calendar-border-width) var(--calendar-border-style) var(--calendar-border-color);
+}
+
+#calendar .body .day:nth-last-child(-n+7) {
+	border-bottom: 									var(--calendar-border-width) var(--calendar-border-style) var(--calendar-border-color);
+}
+
+#calendar .body .day.current-day {
+	background: 									var(--calendar-background-today);
+	color: 											var(--calendar-day-today-color);
+}    
+
+#calendar .body .day.day-empty {
+	background: 									var(--calendar-background-empty);
+}
+
+#calendar .body .day .date {
+	position: 										relative;
+	z-index: 										100;
+	display: 										inline-block;
+	width: 											auto;
+	font-size: 										calc(var(--font-size-text) * 0.8);
+	margin-left: 									7px;
+	pointer-events: 								none;
+}
+
+#calendar .body .day .event {
+	position: 										absolute;
+	top: 											0;
+	left: 											1px;
+	width: 											100%;
+	height: 										100%;
+	display: 										grid;
+  	align-content: 									center;
+	font-size: 										calc(var(--font-size-text) * 0.8);
+	line-height: 									1.1;
+	text-align: 									center;
+	padding: 										8px 5px;
+	overflow: 										hidden;
+}
+
+#calendar .body .day .event:nth-of-type(2) {
+	left: 											10px;
+}
+
+#calendar .body .day .event:nth-of-type(3) {
+	left: 											-10px;
+}
+
+#calendar .body .day .event:nth-of-type(4) {
+	left: 											20px;
+}
+
+#calendar .body .day .event:nth-of-type(5) {
+	left: 											-20px;
+}
+
+#calendar .body .day .event:last-of-type {
+	left: 											0;
+}
+
+#calendar .body .day .event span {
+	opacity: 										0;
+}
+
+#calendar .body .day .event:last-of-type span {
+	opacity: 										1;
+}
+
+#calendar .body .event a {
+	text-decoration: 								none;
+}
+
+#calendar .body .event img {
+	width: 											40%;
+	height: 										auto;
+	max-width: 										80px;
+	margin: 										0 auto 5px;
+	border: 										var(--calendar-border-width) var(--calendar-border-style) var(--calendar-border-color);
+}
+
+.calendar-buttons {
+	display:										flex;
+	flex-flow: 										row wrap;
+	justify-content:								center;
+	align-items:									center;
+	gap: 											15px 30px;
+	margin:											50px auto 30px;
+	width: 											98%;
+}
+
+.calendar-buttons .block-button {
+	margin:											0.5em;
+	order: 											1;
+}
+
+.calendar-buttons #prevButton::before, 
+.calendar-buttons #nextButton:after { 
+	font-family: 									var(--font-icons);
+	content: 										"\e216";
+	font-size:										85%;
+	margin: 										0 20px 0 0;
+}
+
+.calendar-buttons #nextButton:after  {
+	content:										"\e218";
+	margin: 										0 0 0 20px;
+}
+
+/*--------------------------------------------------------------
+# Event Pages
+--------------------------------------------- */
+.single-events .event-meta,
+.archive-meta .event-meta {
+	width: 											400px; /* 9-17-23 for Always Buying Books */
+	max-width: 										94%;
+  	margin: 										0.5em 0 1.5em;
+	text-align: 									left;
+}
+
+.event-meta .event-passed {
+	display: 										inline;
+	font-size: 										85%;
+	font-style: 									italic;
+}	
+
+.event-date .date-icon::before, 
+.event-time .time-icon::before, 
+.event-location .location-icon::before,
+.event-location .empty-icon::before {
+	content: 										"";
+	display: 										inline-block;
+	text-align: 									center;
+	width: 											34px;
+	padding-right: 									6px;
+}
+
+.event-date .date-icon::before, 
+.event-time .time-icon::before, 
+.event-location .location-icon::before {
+	font-family: 									var(--font-icons);
+	content: 										"\e077";
+	color: 											inherit;
+}
+
+.event-time .time-icon::before {
+	content: 										"\e07a";
+	font-size:										calc(var(--font-size-text) * .92);
+}
+.event-location .location-icon::before {
+	content: 										"\e0b7";
+	font-size:										calc(var(--font-size-text) * 1.13);
+
+}
+
+
+/*--------------------------------------------------------------
+# Event Archives
+--------------------------------------------- */
+.calender-btn-row .block-button {
+	display: 										inline-block;
+	width: 											50%;
+	font-size: 										calc(var(--button-font-size) * 0.7);
+	margin-bottom: 									1.5em;
+}
+
+.event-expired {
+	display: 										none;
+}
+
+
+/*--------------------------------------------------------------
+# Mobile Styles
+--------------------------------------------------------------*/
+
+/* 2: Phones (landscape) + Tablets (portrait) */
+@media (max-width: 860px) {
+	#calendar .body .day {
+	  	aspect-ratio: 									20/20;
+	}
+	
+	#calendar .body .event {
+	  	padding: 										0;
+	}	
+		
+	#calendar .body .event img {
+		border:											none !important;
+		background:										none !important;
+		box-shadow:										none !important;
+		outline:										none !important;	
+		filter:											none !important;
+  		width: 											100%;
+  		height:											auto;
+  		margin: 										0 auto;
+	}
+	
+	#calendar .body .day.event-day .date {
+		background: 									var(--calendar-background);
+		border-right: 									var(--calendar-border-width) var(--calendar-border-style) var(--calendar-border-color);
+		border-bottom: 									var(--calendar-border-width) var(--calendar-border-style) var(--calendar-border-color);
+		width: 											35%;
+		text-align: 									center;
+		margin: 										0;
+		transform: 										translateY(-3px);
+		aspect-ratio: 									1/1;
+	}
+	
+	#calendar .body .day.event-day.current-day .date {
+		background: 									var(--calendar-background-today);
+	}
+}
+
+/* 1: Phones (portrait) */
+@media (max-width: 576px) {
+	#calendar .body .day .date,
+	#calendar .body .day.event-day .date,
+	#calendar .body .day.current-day .date {
+		width: 											40%;
+		font-size: 										calc(var(--font-size-text) * 0.6);
+  		margin-left: 									0;
+	  	transform: 										translateY(-5px);
+	}
+}

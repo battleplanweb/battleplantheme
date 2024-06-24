@@ -37,7 +37,7 @@ get_header(); ?>
 					<p class="p-intro intro-all">The following list includes our own dogs, sires we use and Legacy sires.</p>
 					<p class="p-intro intro-female">The following list includes our own dogs.</p>
 					<p class="p-intro intro-male">The following list includes our own dogs and sires we use.</p>
-					<p class="p-intro intro-legacy">The following list includes Legacy sires; we have semen from these dogs in our own collection.<br><a href="/legacy-info/">Looking to purchase a breeding?</a><br><a href="/legacy-info/">Want to list your breeding on our site?</a></p>
+					<p class="p-intro intro-legacy">The following list includes Legacy sires.<br>We have semen from these dogs in our own collection.<br><a href="/legacy-info/">Looking to purchase a breeding?</a><br><a href="/legacy-info/">Want to list your breeding on our site?</a></p>
 				</div>
 			<?php 
 			$archiveIntro = ob_get_clean();

@@ -19,7 +19,7 @@
 	
 	<?php bp_before_colophon(); ?>
 
-	<footer id="colophon" role="banner" aria-label="footer">		
+	<footer id="colophon" role="region" aria-label="footer">		
 		
 		<?php echo do_shortcode('[get-element slug="site-footer"]'); ?>
 		
@@ -74,24 +74,16 @@
 					
 					$buildCopyright .= "</div><div class='site-info-battleplan'>Website developed & maintained by <a href='http://battleplanwebdesign.com' target='_blank' rel='noreferrer'>Battle Plan Web Design</a></div>";
 					
-					$buildCopyright .= "</div>";					
-					
-					if (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-icon-80x80.webp' ) ) : 
-						$iconName = "site-icon-80x80.webp";
-						$iconWH = " width='80' height='80'";
-					elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-icon.webp' ) ) :
-						$iconName = "site-icon.webp"; 
-						$iconWH = "";
-					elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-icon-80x80.png' ) ) :
-						$iconName = "site-icon-80x80.png"; 
-						$iconWH = " width='80' height='80'";
-					else:
-						$iconName = "site-icon.png";
-						$iconWH = "";
-					endif; 
+					$buildCopyright .= "</div>";				
 
-					$buildRight = do_shortcode('[img size="1/6" link = "/" class="site-icon"]<img class="site-icon noFX" src="/wp-content/uploads/'.$iconName.'" loading="lazy" alt="Return to Home Page"'.$iconWH.'/>[/img]');
-					$buildRight .= do_shortcode('[txt size="5/6"]'.$buildCopyright.'[/txt]');
+					$siteIcon = battleplan_fetch_site_icon();
+			
+					if ($siteIcon) :
+						$buildRight = do_shortcode('[img size="1/6" link = "/" class="site-icon"]<img class="site-icon noFX" src="/wp-content/uploads/'.$siteIcon['name'].'" loading="lazy" alt="Return to Home Page"'.$siteIcon['wh'].'/>[/img]');
+						$buildRight .= do_shortcode('[txt size="5/6"]'.$buildCopyright.'[/txt]');
+					else:
+						$buildRight .= do_shortcode('[txt size="100"]'.$buildCopyright.'[/txt]');
+					endif;
 				endif;
 
 				echo do_shortcode('[layout grid="1-2"][col class="site-info-left"]'.$buildLeft.'[/col][col class="site-info-right"]'.$buildRight.'[/col][/layout]');
@@ -111,9 +103,6 @@
 	?>	
 		
 </div><!-- #page -->
-
-<!-- Scroll to Top btn -->
-<!--a class ="scroll-top hide-1 hide-2 hide-3" href="#page" role="button"><?php //echo do_shortcode('[get-icon type="chevron-up"]') ?><span class="sr-only">Scroll To Top</span></a-->	
 
 <?php echo do_shortcode('[get-icon type="chevron-up" class="scroll-top hide-1 hide-2 hide-3" link="#page" sr="Scroll To Top"]'); ?>
 

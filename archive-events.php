@@ -14,7 +14,7 @@ get_header(); ?>
 			$archiveHeadline = 'Upcoming Events';
 			$archiveIntro = '<div class="calender-btn-row">[btn class="show-expired-btn"]Show Past Events[/btn][btn link="/calendar/"]Calender View[/btn]</div>';
 			$grid = "3e";		
-			$valign = "start";
+			$valign = "stretch";
 			$break = "2";
 			$showThumb = "true";
 			$picSize = "100";

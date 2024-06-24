@@ -392,7 +392,7 @@ Re-factor complete 4/26/2024
 		
 		if (phoneHolder && bannerObj) {
 			setTimeout(() => {
-				moveDiv(bannerObj, phoneHolder, 'bottom');	
+				moveDiv(bannerObj, phoneHolder, 'bottom');
 				
 				const phoneLink = getObject(".phone-link", phoneHolder),
 					  phoneLinkR = phoneLink.getBoundingClientRect().right,
@@ -400,12 +400,16 @@ Re-factor complete 4/26/2024
 					  bannerR = phoneLinkR + bannerW,
 					  offscreen = bannerR > getDeviceW() ? true : false,
 					  phoneHolderW = phoneHolder.offsetWidth,
-					  phoneLinkW = phoneLink.offsetWidth,
 					  phoneClass = phoneHolder.closest('.col').classList,
 					  phoneAlign = window.getComputedStyle(phoneHolder).textAlign,
 					  bannerT = phoneHolder.clientHeight * 0.45;
 				
-				let	bannerL;				
+				let	bannerL,
+					phoneIcon = getObject(".icon", phoneHolder);
+				
+				if ( !phoneIcon ) phoneIcon = phoneLink;
+				
+				const phoneLinkW = phoneLinkR - phoneIcon.getBoundingClientRect().left;
 				
 				if (!offscreen) {	
 					bannerL = phoneAlign === 'right' || phoneClass.contains('text-right') ? phoneHolderW : phoneAlign === 'left' || phoneClass.contains('text-left') ? phoneLinkW : (( phoneHolderW - phoneLinkW ) / 2) + phoneLinkW;					

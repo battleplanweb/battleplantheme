@@ -14,14 +14,13 @@
 add_action( 'wp_enqueue_scripts', 'battleplan_carte_du_jour_scripts' );
 function battleplan_carte_du_jour_scripts() {
 	wp_enqueue_style( 'battleplan-css-carte-du-jour', get_template_directory_uri().'/style-carte-du-jour.css', array(), _BP_VERSION );	 
-	wp_enqueue_script( 'battleplan-script-carte-du-jour', get_template_directory_uri().'/js/carte-du-jour.js', array(), _BP_VERSION, false );
+	wp_enqueue_script( 'battleplan-script-carte-du-jour', get_template_directory_uri().'/js/script-carte-du-jour.js', array(), _BP_VERSION, false );
 }
 
 //Load Titles & Descriptions (Alt Text) of images and save for javascript
 add_action('wp_head', 'battleplan_loadPicTitles');
 function battleplan_loadPicTitles() { 
-	wp_enqueue_script( 'battleplan-script-glightbox', get_template_directory_uri().'/js/glightbox.js', array('jquery'), _BP_VERSION, false ); 
-	wp_enqueue_style( 'battleplan-glightbox', get_template_directory_uri()."/style-glightbox.css", array('parent-style'), _BP_VERSION );  
+	wp_enqueue_script( 'battleplan-script-lightbox', get_template_directory_uri().'/js/script-lightbox.js', array(), _BP_VERSION, false ); 
 	
 	$image_query = new WP_Query( array ( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=> -1 ) );
 	

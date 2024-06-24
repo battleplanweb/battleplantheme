@@ -313,11 +313,11 @@ function battleplan_getTempstarEliteDealer() {
 // Add Financing widget to Sidebar
 add_shortcode( 'get-financing', 'battleplan_getFinancing' );
 function battleplan_getFinancing($atts, $content = null) {
-	$a = shortcode_atts( array( 'bank'=>'', 'link'=>'', 'text'=>'', 'loc'=>'below', 'graphic'=>'', 'class'=>'' ), $atts );
+	$a = shortcode_atts( array( 'bank'=>'', 'link'=>'biz-info', 'text'=>'', 'loc'=>'below', 'graphic'=>'', 'class'=>'' ), $atts );
 	$bank = esc_attr($a['bank']);
 	$text = esc_attr($a['text']);
 	$loc = esc_attr($a['loc']);
-	$link = esc_attr($a['link']);	
+	$link = esc_attr($a['link']) === 'biz-info' ? $GLOBALS['customer_info']['finance-link'] : esc_attr($a['link']);	
 	$class = esc_attr($a['class']) != '' ? ' '.esc_attr($a['class']) : '';	
 	$img = strtolower(str_replace(" ", "-", $bank));
 	if ( $img == "enerbank-usa" ) $img = "Enerbank-USA";
@@ -333,16 +333,16 @@ function battleplan_getFinancing($atts, $content = null) {
 	if ( $text != "" && $loc == "below" ) $buildFinancing .= '<span class="link-text">'.$text.'</span>';
 	if ( $link != "" ) $buildFinancing .= '</a>';
 	
-	return $buildFinancing;
+	return do_shortcode($buildFinancing);
 }
 
 // Add Wells Fargo widget to Sidebar
 add_shortcode( 'get-wells-fargo', 'battleplan_getWellsFargo' );
 function battleplan_getWellsFargo($atts, $content = null) {
-	$a = shortcode_atts( array( 'graphic1'=>'', 'graphic2'=>'', 'link'=>'', 'class'=>''  ), $atts );
+	$a = shortcode_atts( array( 'graphic1'=>'', 'graphic2'=>'', 'link'=>'biz-info', 'class'=>''  ), $atts );
 	$graphic1 = esc_attr($a['graphic1']);	
 	$graphic2 = esc_attr($a['graphic2']);	
-	$link = esc_attr($a['link']);	
+	$link = esc_attr($a['link']) === 'biz-info' ? $GLOBALS['customer_info']['finance-link'] : esc_attr($a['link']);	
 	$class = esc_attr($a['class']) != '' ? ' '.esc_attr($a['class']) : '';	
 	$rand = rand(1,2);
 	if ($rand == "1") : $ad = $graphic1; endif;

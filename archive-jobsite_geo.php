@@ -51,6 +51,7 @@ get_header(); ?>
 				$address = trim(esc_attr(get_field( "address" )), ' ');
 				$city = trim(esc_attr(get_field( "city" )), ' ');
 				$state = trim(strtoupper(esc_attr(get_field( "state" ))), ' ');
+				$location = format_location($city.'-'.$state);
 				$oldBrand = trim(esc_attr(get_field( "old_brand" )), ' ');
 				$oldEquip = trim(esc_attr(get_field( "old_equipment" )), ' ');
 				$oldModel = trim(esc_attr(get_field( "old_model_no" )), ' ');
@@ -121,7 +122,7 @@ get_header(); ?>
 				$buildUpdate .= '[col]';
 		
 				$buildUpdate .= '<div class="jobsite-description"><p>';
-				$buildUpdate .= '<span class="jobsite_geo-job_meta">'.$city.', '.$state.' ▪ '.$when.'</span><br>';
+				$buildUpdate .= '<span class="jobsite_geo-job_meta">'.$location.' ▪ '.$when.'</span><br>';
 				$buildUpdate .= $jobDesc.'</p></div>';
 		
 		?>		
@@ -311,22 +312,22 @@ get_header(); ?>
 
 
 		// Display Archive
-			$displayArchive = '<header class="archive-header header-'.get_post_type().'">';
-				$displayArchive .= '<h1 class="page-headline archive-headline '.get_post_type().'-headline">'.$GLOBALS['jobsite_geo-headline'].'</h1>';
-				$displayArchive .= '<div class="archive-description archive-intro '.get_post_type().'-intro">'.$archiveIntro.'</div>'; 
-			$displayArchive .= '</header><!-- .archive-header-->';
+			$displayHeader = '<header class="archive-header header-'.get_post_type().'">';
+				$displayHeader .= '<h1 class="page-headline archive-headline '.get_post_type().'-headline">'.$GLOBALS['jobsite_geo-headline'].'</h1>';
+				$displayHeader .= '<div class="archive-description archive-intro '.get_post_type().'-intro">'.$archiveIntro.'</div>'; 
+			$displayHeader .= '</header><!-- .archive-header-->';
 		
-			$buildIntro = '[col][txt]'.$GLOBALS['jobsite_geo-content'].'[/txt][/col]';	
+			$buildIntro = '[col class="jobsite_geo_content"][txt]'.$GLOBALS['jobsite_geo-content'].'[/txt][/col]';	
 		
-			$buildIntro .= '[col][txt]<div id="map" class="map-'.get_post_type().'"></div><div class="map-jobsite_geo-caption">'.$GLOBALS['jobsite_geo-map-caption'].'</div>[/txt][/col]';		
+			$buildIntro .= '[col class="jobsite_geo_map_holder"][txt class="jobsite_geo_map"]<div id="map" class="map-'.get_post_type().'"></div><div class="map-jobsite_geo-caption">'.$GLOBALS['jobsite_geo-map-caption'].'</div>[/txt][/col]';		
 
-			$displayArchive .= do_shortcode('[section width="inline" class="'.get_post_type().'-content '.get_post_type().'-intro"][layout grid="'.$GLOBALS['mapGrid'].'"]'.$buildIntro.'[/layout][/section]');			
+			$displayHeader .= do_shortcode('[section width="inline" class="'.get_post_type().'-content '.get_post_type().'-intro"][layout grid="'.$GLOBALS['mapGrid'].'"]'.$buildIntro.'[/layout][/section]');			
 		
-			$displayArchive .= '<footer class="archive-footer">';
-				$displayArchive .= get_the_posts_pagination( array( 'mid_size' => 2, 'prev_text' => _x( '<span class="icon chevron-left" aria-hidden="true"></span>', 'Previous set of posts' ), 'next_text' => _x( '<span class="icon chevron-right" aria-hidden="true"></span>', 'Next set of posts' ), ));
-			$displayArchive .= '</footer><!-- .archive-footer-->';
+			$displayFooter = '<footer class="archive-footer">';
+				$displayFooter .= get_the_posts_pagination( array( 'mid_size' => 2, 'prev_text' => _x( '<span class="icon chevron-left" aria-hidden="true"></span>', 'Previous set of posts' ), 'next_text' => _x( '<span class="icon chevron-right" aria-hidden="true"></span>', 'Next set of posts' ), ));
+			$displayFooter .= '</footer><!-- .archive-footer-->';
 		
-			echo $displayArchive;	
+			echo $displayHeader;	
 
 		else :
 
@@ -348,6 +349,9 @@ get_header(); ?>
 
 <section id="wrapper-bottom">
 	<h2><?php echo $GLOBALS['jobsite_geo-bottom-headline']; ?></h2>
+	
 	<?php echo do_shortcode($buildUpdate); ?>
+	
+	<?php echo $displayFooter; ?>
 
 	<?php get_footer();

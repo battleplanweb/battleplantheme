@@ -72,12 +72,12 @@ function processChron($forceChron) {
 	if (function_exists('battleplan_create_user_roles')) battleplan_create_user_roles();
 	
 	$site = str_replace('https://', '', get_bloginfo('url'));	
-	$rovin = $site == "sweetiepiesribeyes.com" || $site == "bubbascookscountry.com" || $site == "babeschicken.com" ? "true" : "false";
+	$exempt = $site == "sweetiepiesribeyes.com" || $site == "bubbascookscountry.com" || $site == "babeschicken.com" || $site == "airzoneexperts.com" ? "true" : "false";
 	
 	if ( $site != "asairconditioning.com") :	
 // WP Mail SMTP Settings Update
 		if ( is_plugin_active('wp-mail-smtp/wp_mail_smtp.php') ) : 	
-			if ( $rovin == "true" ) :	
+			if ( $exempt == "true" ) :	
 				$apiKey2 = "-b916aeccb98bf3fcca73";
 				$apiKey3 = "a606526cefdf92084ce7a9048d5cf734124e09f9bb26";
 				$apiKey4 = "-YcYFamx5FrGvCxXe";
@@ -116,7 +116,7 @@ function processChron($forceChron) {
 	
 			$server_email = $site != "asairconditioning.com" ? "<email@admin.".str_replace('https://', '', get_bloginfo('url')).">" : "<aswebform@asairconditioning.com>";
 
-			if ( $rovin != "true" ) :					
+			if ( $exempt != "true" ) :					
 				$formMail['subject'] = $formTitle." · [user-name]";	
 				$formMail['sender'] = "Website · ".str_replace(',', '', $GLOBALS['customer_info']['name'])." ".$server_email;
 				$formMail['additional_headers'] = "Reply-to: [user-name] <[user-email]>\nBcc: Website Administrator <email@battleplanwebdesign.com>";
@@ -356,6 +356,9 @@ function processChron($forceChron) {
 	battleplan_delete_prefixed_options( 'ac_api_request_' );	
 	battleplan_delete_prefixed_options( 'ac_sorting_' );
 	battleplan_delete_prefixed_options( 'client_' );
+	
+	battleplan_fetch_background_image(true);
+	battleplan_fetch_site_icon(true);	
 		
 // Prune weak testimonials
 	/*

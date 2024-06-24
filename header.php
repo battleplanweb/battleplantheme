@@ -7,18 +7,19 @@
 		header( "X-Frame-Options: SAMEORIGIN" );
 		header( "X-Content-Type-Options: nosniff" );
 		header( "Referrer-Policy: strict-origin-when-cross-origin" );
-	endif;
+	endif; 
 ?> 
  
 <html lang="en">
 <head>	
 	<script nonce="<?php echo _BP_NONCE; ?>" type="text/javascript">
-		var startTime = Date.now();		
+		const startTime = Date.now();
+		const site_bg = '<?php echo battleplan_fetch_background_image() ?>';
 		<?php if ( defined('_USER_DISPLAY_LOC') ) :
-			?>var google_ad_location = '<?php echo strtolower(str_replace(array(', ', ' '), array('-', '-'), _USER_DISPLAY_LOC)); ?>';
+			?>const google_ad_location = '<?php echo _USER_DISPLAY_LOC; ?>';
 		<?php else:
-			?>var google_ad_location = null;<?php 
-		endif; ?>	
+			?>const google_ad_location = null;<?php 
+		endif; ?>		
 	</script>	
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1">

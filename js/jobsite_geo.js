@@ -1,1 +1,0 @@
-document.addEventListener("DOMContentLoaded",function(){"use strict";(function(a){a(window).on("load",function(){a("#map img").addClass("noFX")})})(jQuery)});

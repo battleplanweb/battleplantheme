@@ -19,7 +19,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon-box">[get-icon type="chain-link"</div>
+				<div class="icon-box">[get-icon type="chain-link"]</div>
 				[txt]
 					<h2>Durability</h2>
 					<p>Our products are backed by exceptional warranties that are hard to surpass.  So while experiencing the comfort and safety that comes with a superior HVAC system, you also get peace of mind.</p>

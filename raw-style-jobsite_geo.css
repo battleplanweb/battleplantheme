@@ -1,0 +1,89 @@
+/*--------------------------------------------------------------
+>>> TABLE OF CONTENTS:
+----------------------------------------------------------------
+# Page Styling
+# Navigation
+	- Mobile Menu
+
+/*--------------------------------------------------------------
+# Page Styling
+--------------------------------------------- */ 
+
+#map.map-jobsite_geo {
+	width: 										100%;
+	max-width: 									550px;
+	height: 									auto;
+	margin: 									1.5em auto 1em;
+	aspect-ratio: 								1/1;
+}
+
+
+#primary #map.map-jobsite_geo img {
+	border: 									none !important;
+	border-radius: 								none !important;
+	box-shadow: 								none !important;
+	filter: 									none !important;
+}
+
+.map-jobsite_geo-caption {
+	text-align: 								center;
+	font-weight: 								bold;
+	margin-bottom: 								2em;
+}
+
+.tax-jobsite_geo-service-areas #wrapper-bottom h2 {
+	margin-bottom: 								0.5em;
+}
+
+.section.archive-content.archive-jobsite_geo .jobsite_geo-job_meta {
+	font-weight: 								bold;
+	font-size: 									110%;
+	line-height: 								1.9;
+}
+
+.section.archive-content.archive-jobsite_geo .jobsite-photos.side-by-side.aligncenter {
+	margin-top: 								0;
+	margin-bottom: 								0;
+}
+
+.section.archive-content.archive-jobsite_geo .jobsite-equipment {
+	text-align: 								center;
+}
+
+.section.archive-content.archive-jobsite_geo .jobsite-equipment .jobsite-model {
+	font-size: 									85%;
+}
+
+.section.archive-content.archive-jobsite_geo .jobsite-review {
+	display: 									grid;
+  	grid-template-columns: 						repeat(12,1fr);
+  	gap: 										var(--measure-base) 3%;
+  	height: 									100%;
+	width: 										100%;
+	max-width: 									800px;
+	margin: 									0 auto;
+} 
+
+body.jobsite_geo #wrapper-bottom .archive-footer {
+	margin: 									4em auto;
+}
+
+.section.archive-content.archive-jobsite_geo .jobsite-description {
+	order: 										1;
+}
+
+.section.archive-content.archive-jobsite_geo .jobsite-review {
+	order: 										2;
+}
+
+.section.archive-content.archive-jobsite_geo .jobsite-photos {
+	order: 										3;
+}
+
+/* 1: Phones (portrait) */
+@media (max-width: 576px) {
+	.jobsite_geo .archive-jobsite_geo .jobsite-review .block-image.image-testimonials.testimonials-generic-icon,
+	.jobsite_geo .archive-jobsite_geo .jobsite-review img.img-testimonials {
+		width: 									70%;
+	}
+}

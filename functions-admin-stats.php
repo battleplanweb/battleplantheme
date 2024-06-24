@@ -18,7 +18,7 @@
 	- Set up Most Popular Pages widget on dashboard
 
 --------------------------------------------------------------*/
-
+ 
 
 /*--------------------------------------------------------------
 # Site Stats
@@ -26,7 +26,7 @@
 // Add new dashboard widgets
 add_action( 'wp_dashboard_setup', 'battleplan_add_dashboard_widgets' );
 function battleplan_add_dashboard_widgets() {
-	if ( _USER_LOGIN == "battleplanweb" ) :	
+	if ( _USER_LOGIN == "battleplanweb" || in_array('bp_view_stats', _USER_ROLES) ) :	
 		add_meta_box( 'battleplan_site_stats', 'Site Visitors', 'battleplan_admin_site_stats', 'dashboard', 'normal', 'high' );
 		add_meta_box( 'battleplan_admin_referrer_stats', 'Referrers', 'battleplan_admin_referrer_stats', 'dashboard', 'normal', 'high' ); 
 		add_meta_box( 'battleplan_admin_location_stats', 'Locations', 'battleplan_admin_location_stats', 'dashboard', 'normal', 'high' );
@@ -249,8 +249,8 @@ function battleplan_admin_referrer_stats() {
 		echo '<li class="sub-label" style="column-span: all">Last '.number_format(array_sum($referrerAndSessions)).' Engaged Sessions</li>';		
 
 		foreach ($referrerAndSessions as $referrerTitle => $referSessions) :
-			$search = array( '(direct) / (none)' , ' / referral', ' / organic', ' / cpc', ' / display', 'google', 'GMB', 'bing', 'yahoo', 'duckduckgo' );
-			$replace = array( 'Direct' , '', ' (organic)', ' (paid)', ' (display)', 'Google', 'GBP', 'Bing', 'Yahoo', 'DuckDuckGo' );
+			$search = array( '(direct) / (none)' , ' / referral', ' / organic', ' / cpc', 'Googleads.g.doubleclick.net', ' / display', 'google', 'GMB', 'bing', 'yahoo', 'duckduckgo' );
+			$replace = array( 'Direct' , '', ' (organic)', ' (paid)', 'Google (paid)', ' (display)', 'Google', 'GBP', 'Bing', 'Yahoo', 'DuckDuckGo' );
 			$referrerTitle = str_replace( $search, $replace, $referrerTitle);
 	
 			if ( $referSessions > 0 ) echo "<li><div class='value'><b>".number_format($referSessions)."</b></div><div class='label'>".$referrerTitle."</div></li>";
@@ -518,7 +518,7 @@ function battleplan_admin_content_stats() {
 	
 		echo '<div class="handle-label handle-label-'.(int)substr($metricKey, strrpos($metricKey, '-') + 1).$active.'"><ul>';
 	
-		$pctCalc = array('init', '40', '60', '80', '100', '1.1', '1.2', '1.3', '1.4', '2.1', '2.2', '2.3', '2.4');
+		$pctCalc = array('init', '20', '30', '40', '50', '60', '70', '80', '90', '100');
 		$contentCalc = array();
 		foreach ($contentVisAndSessions as $key=>$value) :
 			foreach ( $pctCalc as $pct ) :
@@ -535,11 +535,7 @@ function battleplan_admin_content_stats() {
 		echo '<li class="sub-label" style="column-span: all">Last '.number_format($init).' Pageviews</li>';		
 		foreach ($contentCalc as $pct=>$total) :
 			if ( $pct != 'init' ) :
-				if (strpos($pct, '.') !== false) :
-					$label = "viewed position ".$pct;
-				else:
-					$label = $pct != 100 ? "viewed at least ".$pct."%  of main content" : "<b>viewed ALL of main content</b>";
-				endif;
+				$label = $pct != 100 ? "viewed at least ".$pct."%  of main content" : "<b>viewed ALL of main content</b>";
 	
 				if ( $init > 0 ) echo "<li><div class='value'><b>".number_format(($total/$init)*100,1)."%</b></div><div class='label'>".$label."</div></li>";
 			endif;

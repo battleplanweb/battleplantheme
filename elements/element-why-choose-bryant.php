@@ -11,7 +11,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon-box">[get-icon type="checkmark-seal"]"</div>
+				<div class="icon-box">[get-icon type="checkmark-seal"]</div>
 				[txt]
 					<h2>Quality</h2>
 					<p>We live and breathe our motto: <em>Whatever It Takes.</em> Our experienced and well-trained dealers work hard within your local community to deliver quality you can rely on for over a century.</p>

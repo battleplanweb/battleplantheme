@@ -46,6 +46,22 @@ add_filter( 'user_can_richedit' , '__return_false', 50 );
 // Allow separate editing of thumbnails in image editor
 add_filter( 'image_edit_thumbnails_separately', '__return_true' );
 
+// Load site-icon for admin bar
+add_action('admin_head', 'battleplan__admin_bar_icon');
+function battleplan__admin_bar_icon() {
+	$iconData = get_option('bp_site_icon');
+	$iconName = isset($iconData['name']) ? $iconData['name'] : 'site-icon.webp';
+	$iconUrl = esc_url(get_site_url() . '/wp-content/uploads/' . $iconName);
+	?>
+	<style>
+		.wp-admin #wpadminbar #wp-admin-bar-site-name > .ab-item::before,
+		.logged-in #wpadminbar #wp-admin-bar-site-name > .ab-item::before {
+			background-image: url('<?php echo $iconUrl; ?>') !important;
+		}
+	</style>
+	<?php
+}
+
 // Add, Remove and Reorder Items in Admin Bar
 add_action( 'wp_before_admin_bar_render', 'battleplan_reorderAdminBar');
 function battleplan_reorderAdminBar() {
@@ -327,9 +343,7 @@ function battleplan_custom_post_type_counts() {
 add_action('wp_dashboard_setup', 'battleplan_remove_dashboard_widgets');
 function battleplan_remove_dashboard_widgets () {
 	/*
-	remove_action('welcome_panel','wp_welcome_panel'); 							//Welcome to WordPress!
-	remove_meta_box('tribe_dashboard_widget', 'dashboard', 'normal'); 				//News From Modern Tribe	
-	remove_meta_box('tribe_dashboard_widget', 'dashboard', 'side'); 					//News From Modern Tribe
+	remove_action('welcome_panel','wp_welcome_panel'); 								//Welcome to WordPress!
 	remove_meta_box('wpe_dify_news_feed','dashboard','normal'); 					//WP Engine	
 	remove_meta_box('wpe_dify_news_feed','dashboard','side'); 						//WP Engine
 	*/	
@@ -356,7 +370,7 @@ function battleplan_remove_dashboard_widgets () {
 }
 
 // Load site stats if hooked to Google Analytics
-if ( isset(get_option('customer_info')['google-tags']['prop-id']) && get_option('customer_info')['google-tags']['prop-id'] > 1 && is_admin() && _USER_LOGIN == "battleplanweb" ) require_once get_template_directory().'/functions-admin-stats.php';
+if ( isset(get_option('customer_info')['google-tags']['prop-id']) && get_option('customer_info')['google-tags']['prop-id'] > 1 && is_admin() && (_USER_LOGIN == "battleplanweb" || in_array('bp_view_stats', _USER_ROLES) ) ) require_once get_template_directory().'/functions-admin-stats.php';
 
 
 // Adjust the number of of posts listed on admin pages
@@ -626,8 +640,19 @@ function battleplan_site_audit() {
 	$submitCheck = $_POST['submit_check'];
 	$siteType = get_option('customer_info')['site-type'];
 	
-	$criteriaOrder = array ('lighthouse-mobile-score', 'lighthouse-mobile-fcp', 'lighthouse-mobile-tbt', 'lighthouse-mobile-si', 'lighthouse-mobile-lcp', 'lighthouse-mobile-cls', 'lighthouse-desktop-score', 'lighthouse-desktop-fcp', 'lighthouse-desktop-tbt', 'lighthouse-desktop-si', 'lighthouse-desktop-lcp', 'lighthouse-desktop-cls', 'keyword-page-1', 'keyword-needs-attn', 'database-page-gen-time', 'database-peak-mem', 'database-db-queries', 'database-db-queries-time', 'back-total-links', 'back-domains', 'back-local-links', 'back-c-flow', 'back-domain-authority', 'cite-citations', 'cite-key-citations', 'cite-citation-score', 'console-indexed', 'console-clicks', 'console-position', 'gmb-overview', 'gmb-calls', 'gmb-msg', 'gmb-clicks', 'gmb-photos', 'gmb-rank');	
-
+	$criteriaOrder = array ('lighthouse-mobile-score', 'lighthouse-mobile-ttfb', 'lighthouse-mobile-fcp', 'lighthouse-mobile-lcp', 'lighthouse-mobile-tti', 'lighthouse-mobile-tbt', 'lighthouse-mobile-si', 'lighthouse-mobile-cls', 'lighthouse-desktop-score', 'lighthouse-desktop-ttfb', 'lighthouse-desktop-fcp', 'lighthouse-desktop-lcp', 'lighthouse-desktop-tti', 'lighthouse-desktop-tbt', 'lighthouse-desktop-si', 'lighthouse-desktop-cls', 'keyword-page-1', 'keyword-needs-attn', 'database-page-gen-time', 'database-peak-mem', 'database-db-queries', 'database-db-queries-time', 'back-total-links', 'back-domains', 'back-local-links', 'back-c-flow', 'back-domain-authority', 'cite-citations', 'cite-key-citations', 'cite-citation-score', 'console-indexed', 'console-clicks', 'console-position', 'gmb-overview', 'gmb-calls', 'gmb-msg', 'gmb-clicks', 'gmb-photos', 'gmb-rank');	
+	
+	
+	$siteAuditPage .= '[col class="headline lighthouse-mobile-score"]Performance Score[/col]';	
+	$siteAuditPage .= '[col class="headline lighthouse-mobile-ttfb"]Time To First Byte[/col]';
+	$siteAuditPage .= '[col class="headline lighthouse-mobile-fcp"]First Contentful Paint[/col]';
+	$siteAuditPage .= '[col class="headline lighthouse-mobile-lcp"]Largest Contentful Paint[/col]';	
+	$siteAuditPage .= '[col class="headline lighthouse-mobile-tti"]Time To Interactive[/col]';	
+	$siteAuditPage .= '[col class="headline lighthouse-mobile-tbt"]Total Blocking Time[/col]';		
+	$siteAuditPage .= '[col class="headline lighthouse-mobile-si"]Speed Index[/col]';	
+	$siteAuditPage .= '[col class="headline lighthouse-mobile-cls"]Cumulative Layout Shift[/col]';
+	
+	
 	if ( $submitCheck == "true" ) :
 		$siteAudit = get_option('bp_site_audit_details');
 		if ( !is_array($siteAudit) ) $siteAudit = array();	
@@ -640,10 +665,8 @@ function battleplan_site_audit() {
 					foreach ($get_numbers as $number) $total += $number;
 					$log_value = $total / count($get_numbers);
 					$decimals = 2;
-				elseif ( $log == "lighthouse-mobile-si" || $log == "lighthouse-desktop-si" || $log == "lighthouse-mobile-fcp" || $log == "lighthouse-desktop-fcp" || $log == "lighthouse-mobile-lcp" || $log == "lighthouse-desktop-lcp" || $log == "lighthouse-mobile-tti" || $log == "lighthouse-desktop-tti" || $log == "database-peak-mem" ) : 
-					$decimals = 1; 
-				elseif ( $log == "lighthouse-mobile-cls" || $log == "lighthouse-desktop-cls" ) : 
-					$decimals = 3; 
+				elseif ( $log == "lighthouse-mobile-cls" || $log == "lighthouse-desktop-cls" || $log == "lighthouse-mobile-ttfb" || $log == "lighthouse-desktop-ttfb" || $log == "lighthouse-mobile-si" || $log == "lighthouse-desktop-si" || $log == "lighthouse-mobile-fcp" || $log == "lighthouse-desktop-fcp" || $log == "lighthouse-mobile-lcp" || $log == "lighthouse-desktop-lcp" || $log == "lighthouse-mobile-tti" || $log == "lighthouse-desktop-tti" || $log == "database-peak-mem" ) : 
+					$decimals = 2; 
 				else:
 					$decimals = 0;
 				endif;
@@ -716,19 +739,25 @@ function battleplan_site_audit() {
 		$siteAuditPage .= '<h1>Lighthouse</h1>';
 		
 		$siteAuditPage .= '<h3>Mobile</h3>';		
-		$siteAuditPage .= '<div class="form-input"><label for="lighthouse-mobile-score">Performance Score:</label><input id="lighthouse-mobile-score" type="text" name="lighthouse-mobile-score" value=""></div>';
+		$siteAuditPage .= '<div class="form-input"><label for="lighthouse-mobile-score">Performance Score:</label><input id="lighthouse-mobile-score" type="text" name="lighthouse-mobile-score" value=""></div>';		
+		$siteAuditPage .= '<div class="form-input"><label for="lighthouse-mobile-ttfb">Time To First Byte:</label><input id="lighthouse-mobile-ttfb" type="text" name="lighthouse-mobile-ttfb" value=""></div>';
 		$siteAuditPage .= '<div class="form-input"><label for="lighthouse-mobile-fcp">First Contentful Paint:</label><input id="lighthouse-mobile-fcp" type="text" name="lighthouse-mobile-fcp" value=""></div>';
+		$siteAuditPage .= '<div class="form-input"><label for="lighthouse-mobile-lcp">Largest Contentful Paint:</label><input id="lighthouse-mobile-lcp" type="text" name="lighthouse-mobile-lcp" value=""></div>';
+		$siteAuditPage .= '<div class="form-input"><label for="lighthouse-mobile-tti">Time To Interactive:</label><input id="lighthouse-mobile-tti" type="text" name="lighthouse-mobile-tti" value=""></div>';
 		$siteAuditPage .= '<div class="form-input"><label for="lighthouse-mobile-tbt">Total Blocking Time:</label><input id="lighthouse-mobile-tbt" type="text" name="lighthouse-mobile-tbt" value=""></div>';
 		$siteAuditPage .= '<div class="form-input"><label for="lighthouse-mobile-si">Speed Index:</label><input id="lighthouse-mobile-si" type="text" name="lighthouse-mobile-si" value=""></div>';
-		$siteAuditPage .= '<div class="form-input"><label for="lighthouse-mobile-lcp">Largest Contentful Paint:</label><input id="lighthouse-mobile-lcp" type="text" name="lighthouse-mobile-lcp" value=""></div>';
 		$siteAuditPage .= '<div class="form-input"><label for="lighthouse-mobile-cls">Cumulative Layout Shift:</label><input id="lighthouse-mobile-cls" type="text" name="lighthouse-mobile-cls" value=""></div>';
 		
+		$siteAuditPage .= '<br>';
+		
 		$siteAuditPage .= '<h3>Desktop</h3>';			
-		$siteAuditPage .= '<div class="form-input"><label for="lighthouse-desktop-score">Performance Score:</label><input id="lighthouse-desktop-score" type="text" name="lighthouse-desktop-score" value=""></div>';
+		$siteAuditPage .= '<div class="form-input"><label for="lighthouse-desktop-score">Performance Score:</label><input id="lighthouse-desktop-score" type="text" name="lighthouse-desktop-score" value=""></div>';	
+		$siteAuditPage .= '<div class="form-input"><label for="lighthouse-desktop-ttfb">Time To First Byte:</label><input id="lighthouse-desktop-ttfb" type="text" name="lighthouse-desktop-ttfb" value=""></div>';
 		$siteAuditPage .= '<div class="form-input"><label for="lighthouse-desktop-fcp">First Contentful Paint:</label><input id="lighthouse-desktop-fcp" type="text" name="lighthouse-desktop-fcp" value=""></div>';
+		$siteAuditPage .= '<div class="form-input"><label for="lighthouse-desktop-lcp">Largest Contentful Paint:</label><input id="lighthouse-desktop-lcp" type="text" name="lighthouse-desktop-lcp" value=""></div>';
+		$siteAuditPage .= '<div class="form-input"><label for="lighthouse-desktop-tti">Time To Interactive:</label><input id="lighthouse-desktop-tti" type="text" name="lighthouse-desktop-tti" value=""></div>';
 		$siteAuditPage .= '<div class="form-input"><label for="lighthouse-desktop-tbt">Total Blocking Time:</label><input id="lighthouse-desktop-tbt" type="text" name="lighthouse-desktop-tbt" value=""></div>';
 		$siteAuditPage .= '<div class="form-input"><label for="lighthouse-desktop-si">Speed Index:</label><input id="lighthouse-desktop-si" type="text" name="lighthouse-desktop-si" value=""></div>';
-		$siteAuditPage .= '<div class="form-input"><label for="lighthouse-desktop-lcp">Largest Contentful Paint:</label><input id="lighthouse-desktop-lcp" type="text" name="lighthouse-desktop-lcp" value=""></div>';
 		$siteAuditPage .= '<div class="form-input"><label for="lighthouse-desktop-cls">Cumulative Layout Shift:</label><input id="lighthouse-desktop-cls" type="text" name="lighthouse-desktop-cls" value=""></div>';
 		
 		$siteAuditPage .= '<br>';
@@ -797,16 +826,20 @@ function battleplan_site_audit() {
 	$siteAuditPage .= '[section][layout class="stats '.$siteType.'"]';	
 	$siteAuditPage .= '[col class="empty"][/col]';
 	$siteAuditPage .= '[col class="headline lighthouse-mobile-score"]Performance Score[/col]';	
+	$siteAuditPage .= '[col class="headline lighthouse-mobile-ttfb"]Time To First Byte[/col]';
 	$siteAuditPage .= '[col class="headline lighthouse-mobile-fcp"]First Contentful Paint[/col]';
+	$siteAuditPage .= '[col class="headline lighthouse-mobile-lcp"]Largest Contentful Paint[/col]';	
+	$siteAuditPage .= '[col class="headline lighthouse-mobile-tti"]Time To Interactive[/col]';	
 	$siteAuditPage .= '[col class="headline lighthouse-mobile-tbt"]Total Blocking Time[/col]';		
 	$siteAuditPage .= '[col class="headline lighthouse-mobile-si"]Speed Index[/col]';	
-	$siteAuditPage .= '[col class="headline lighthouse-mobile-lcp"]Largest Contentful Paint[/col]';	
 	$siteAuditPage .= '[col class="headline lighthouse-mobile-cls"]Cumulative Layout Shift[/col]';
 	$siteAuditPage .= '[col class="headline lighthouse-desktop-score"]Performance Score[/col]';	
+	$siteAuditPage .= '[col class="headline lighthouse-desktop-ttfb"]Time To First Byte[/col]';
 	$siteAuditPage .= '[col class="headline lighthouse-desktop-fcp"]First Contentful Paint[/col]';	
+	$siteAuditPage .= '[col class="headline lighthouse-desktop-lcp"]Largest Contentful Paint[/col]';
+	$siteAuditPage .= '[col class="headline lighthouse-desktop-tti"]Time To Interactive[/col]';
 	$siteAuditPage .= '[col class="headline lighthouse-desktop-tbt"]Total Blocking Time[/col]';	
-	$siteAuditPage .= '[col class="headline lighthouse-desktop-si"]Speed Index[/col]';	
-	$siteAuditPage .= '[col class="headline lighthouse-desktop-lcp"]Largest Contentful Paint[/col]';	
+	$siteAuditPage .= '[col class="headline lighthouse-desktop-si"]Speed Index[/col]';		
 	$siteAuditPage .= '[col class="headline lighthouse-desktop-cls"]Cumulative Layout Shift[/col]';	
 	
 	$siteAuditPage .= '[col class="headline keyword-page-1"]Page One[/col]';	
@@ -894,7 +927,7 @@ function battleplan_site_audit() {
 			if ( $auditDetail == "true" ) :
 				$siteAuditPage .= '●';
 			elseif ( $auditDetail == "false" ) :
-				$siteAuditPage .= '◦';
+				$siteAuditPage .= '—';
 			elseif ( !is_numeric($auditDetail) ) :
 				$siteAuditPage .= $auditDetail;
 			else:

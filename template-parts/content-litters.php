@@ -29,7 +29,10 @@ $damElbows = esc_attr(get_post_meta( $damID, 'elbows', true ));
 $damEyes = esc_attr(get_post_meta( $damID, 'eyes', true ));
 $litterStatus = esc_attr(get_field( "litter_status" ));
 $birthDate = esc_attr(get_field( "birth_date" ));
-$readyDate = esc_attr(get_field( "ready_date" ));
+$birthDateObj = new DateTime($birthDate);
+$birthDateObj->modify('+8 weeks');
+$readyDate = $birthDateObj->format("F j, Y"); 
+//$readyDate = esc_attr(get_field( "ready_date" ));
 $price = esc_attr(get_field( "price" ));
 $deposit = esc_attr(get_field( "deposit" ));
 

@@ -38,9 +38,9 @@ return array (
 			'label_type'=>'',
 			'search'=>'on'
 		),
-		'title'=>array(
-			'type'=>'title',
-			'label'=>'Title',
+		'name'=>array(
+			'type'=>'name',
+			'label'=>'Name',
 			'width'=>'200',
 			'width_unit'=>'px',
 			'edit'=>'on',
@@ -57,6 +57,28 @@ return array (
 			'edit'=>'on',
 			'sort'=>'on',
 			'name'=>'column-slug',
+			'label_type'=>'',
+			'search'=>'on'
+		),
+		'price'=>array(
+			'type'=>'price',
+			'label'=>'Price',
+			'width'=>'15',
+			'width_unit'=>'%',
+			'edit'=>'on',
+			'sort'=>'on',
+			'name'=>'price',
+			'label_type'=>'',
+			'search'=>'on'
+		),
+		'shipping'=>array(
+			'type'=>'column-wc-shipping_class',
+			'label'=>'Shipping',
+			'width'=>'15',
+			'width_unit'=>'%',
+			'edit'=>'on',
+			'sort'=>'on',
+			'name'=>'shipping',
 			'label_type'=>'',
 			'search'=>'on'
 		),

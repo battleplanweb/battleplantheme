@@ -7,7 +7,6 @@
 # Functions to extend WordPress
 # Basic Theme Set Up
 # User Roles
-# Run Chron Jobs
 # Custom Hooks
 # Custom Actions
 
@@ -46,7 +45,7 @@ function showMe($something, $die=false) {
 // Check if current page is log in screen 
 function is_wplogin() {
     $ABSPATH_MY = str_replace(array('\\','/'), DIRECTORY_SEPARATOR, ABSPATH);
-    return ((in_array($ABSPATH_MY.'wp-login.php', get_included_files()) || in_array($ABSPATH_MY.'wp-register.php', get_included_files()) ) || (isset($_GLOBALS['pagenow']) && $GLOBALS['pagenow'] === 'wp-login.php') || $_SERVER['PHP_SELF']== '/wp-login.php');
+    return ((in_array($ABSPATH_MY.'wp-login.php', get_included_files()) || in_array($ABSPATH_MY.'wp-register.php', get_included_files()) ) || (isset($GLOBALS['pagenow']) && $GLOBALS['pagenow'] === 'wp-login.php') || $_SERVER['PHP_SELF']== '/wp-login.php');
 }
 
 // Check if user is on a mobile device
@@ -56,13 +55,16 @@ function is_mobile() {
 
 // Check if business is currently open
 function is_biz_open() {
-	if ( $GLOBALS['customer_info']['pid-sync'] != "true" ) return false;
+	if ( $GLOBALS['customer_info']['pid-sync'] !== "true" ) return false;
  	$googleInfo = get_option('bp_gbp_update') ? get_option('bp_gbp_update') : array();
 	$day = wp_date("w", null, new DateTimeZone( wp_timezone_string() )) - 1;
 	$time = wp_date("Hi", null, new DateTimeZone( wp_timezone_string() ));
 	$placeIDs = $GLOBALS['customer_info']['pid'] ? $GLOBALS['customer_info']['pid'] : 0;	
 	if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
 	$primePID = $placeIDs[0];
+	
+	if (!isset($googleInfo[$primePID]['current-hours']['periods'][$day])) return false;
+	
 	$open = $googleInfo[$primePID]['current-hours']['periods'][$day]['open']['time'] ? $googleInfo[$primePID]['current-hours']['periods'][$day]['open']['time'] : '';
 	$close = $googleInfo[$primePID]['current-hours']['periods'][$day]['close']['time'] ? $googleInfo[$primePID]['current-hours']['periods'][$day]['close']['time'] : '';
 	$open24 = $googleInfo[$primePID]['current-hours']['periods'][0]['open']['time'] && $googleInfo[$primePID]['current-hours']['periods'][0]['open']['time'] == 0000 ? true : false;	
@@ -573,10 +575,11 @@ function battleplan_preload_bg() {
 	elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-background.webp' ) ) : 
 		$file = "site-background.webp";
 	endif;
-	
+	/*
 	if ( $file != '' ) : ?>
 		<script nonce="<?php echo _BP_NONCE; ?>">var preloadBG = new Image(); preloadBG.onload = function() { animateDiv( ".parallax-mirror", "fadeIn", 0, "", 200 ); }; preloadBG.src = "<?php echo wp_upload_dir()['baseurl']; ?>/<?php echo $file ?>";</script>
 	<?php endif;
+	*/
 }
 
 // Add some defining classes to body
@@ -998,6 +1001,8 @@ add_action( 'wp_print_styles', 'battleplan_header_styles', 9998 );
 function battleplan_header_styles() {
 	wp_enqueue_style( 'normalize-style', get_template_directory_uri()."/style-normalize.css", array(), _BP_VERSION );	
 	wp_enqueue_style( 'parent-style', get_template_directory_uri()."/style.css", array('normalize-style'), _BP_VERSION );
+	wp_enqueue_style( 'battleplan-style-grid', get_template_directory_uri()."/style-grid.css", array('parent-style'), _BP_VERSION );	
+	wp_enqueue_style( 'battleplan-style-navigation', get_template_directory_uri()."/style-navigation.css", array('parent-style'), _BP_VERSION );
 	
 	if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 'true' )  wp_enqueue_style( 'battleplan-events', get_template_directory_uri()."/style-events.css", array('parent-style'), _BP_VERSION ); 
 	
@@ -1005,7 +1010,7 @@ function battleplan_header_styles() {
 
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) wp_enqueue_style( 'battleplan-woocommerce', get_template_directory_uri()."/style-woocommerce.css", array('parent-style'), _BP_VERSION ); 
 	if ( is_plugin_active( 'stripe-payments/accept-stripe-payments.php' ) ) wp_enqueue_style( 'battleplan-stripe-payments', get_template_directory_uri()."/style-stripe-payments.css", array('parent-style'), _BP_VERSION );  
-	if ( is_plugin_active( 'cue/cue.php' ) ) wp_enqueue_style( 'battleplan-cue', get_template_directory_uri()."/cue.css", array('parent-style'), _BP_VERSION );  
+	if ( is_plugin_active( 'cue/cue.php' ) ) wp_enqueue_style( 'battleplan-cue', get_template_directory_uri()."/style-cue.css", array('parent-style'), _BP_VERSION );  
 	
 	if ( $GLOBALS['customer_info']['site-type'] == 'profile' || $GLOBALS['customer_info']['site-type'] == 'profiles' ) wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array('parent-style'), _BP_VERSION );		
 	
@@ -1015,8 +1020,12 @@ function battleplan_header_styles() {
 	
 	if ( $cancel_holiday == "false" && time() > $start && time() < $end ) :
 	 	wp_enqueue_style( 'battleplan-style-holiday', get_template_directory_uri()."/style-holiday.css", array('parent-style'), _BP_VERSION );	
-		wp_enqueue_script( 'battleplan-holiday', get_template_directory_uri().'/js/holiday.js', array('jquery'), _BP_VERSION, false );		
+		wp_enqueue_script( 'battleplan-holiday', get_template_directory_uri().'/js/script-holiday.js', array('jquery'), _BP_VERSION, false );		
 	endif;
+	
+	wp_enqueue_style( 'battleplan-style-forms', get_template_directory_uri()."/style-forms.css", array('parent-style'), _BP_VERSION );
+	wp_enqueue_style( 'battleplan-style-posts', get_template_directory_uri()."/style-posts.css", array('parent-style'), _BP_VERSION );	
+	if ( $GLOBALS['customer_info']['site-type'] == 'hvac' ) wp_enqueue_style( 'battleplan-style-products-hvac', get_template_directory_uri()."/style-products-hvac.css", array('parent-style'), _BP_VERSION );
 		
 	wp_enqueue_style( 'battleplan-style', get_stylesheet_directory_uri()."/style-site.css", array('parent-style'), _BP_VERSION );	
 }
@@ -1024,7 +1033,8 @@ function battleplan_header_styles() {
 // Load and enqueue styles in footer
 add_action( 'wp_footer', 'battleplan_footer_styles' );
 function battleplan_footer_styles() {
-	wp_enqueue_style( 'battleplan-animate', get_template_directory_uri().'/animate.css', array(), _BP_VERSION );	
+
+	//wp_enqueue_style( 'battleplan-animate', get_template_directory_uri().'/animate.css', array(), _BP_VERSION );	
 	//wp_enqueue_style( 'battleplan-animate-xtra', get_template_directory_uri().'/animate-xtra.css', array(), _BP_VERSION );	
 	//wp_enqueue_style( 'battleplan-fontawesome', get_template_directory_uri()."/fontawesome.css", array(), _BP_VERSION );		
 }
@@ -1032,12 +1042,13 @@ function battleplan_footer_styles() {
 // Load and enqueue remaining scripts
 add_action( 'wp_enqueue_scripts', 'battleplan_scripts', 20 );
 function battleplan_scripts() {
-	wp_enqueue_script( 'battleplan-waypoints', get_template_directory_uri().'/js/waypoints.js', array('jquery'), _BP_VERSION, false );		
+	wp_enqueue_script( 'battleplan-script-helpers', get_template_directory_uri().'/js/script-helpers.js', array('jquery'), _BP_VERSION, false );					
 	wp_enqueue_script( 'battleplan-script-essential', get_template_directory_uri().'/js/script-essential.js', array('jquery'), _BP_VERSION, false );				
 	wp_enqueue_script( 'battleplan-script-pages', get_template_directory_uri().'/js/script-pages.js', array('jquery'), _BP_VERSION, false );				
+	//wp_enqueue_script( 'battleplan-waypoints', get_template_directory_uri().'/js/waypoints.js', array('jquery', 'battleplan-script-essential'), _BP_VERSION, false );		
 	
 	if ( !is_mobile() ) : 
-		wp_enqueue_script( 'battleplan-parallax', get_template_directory_uri().'/js/parallax.js', array('jquery'), _BP_VERSION, false ); 
+		//wp_enqueue_script( 'battleplan-parallax', get_template_directory_uri().'/js/parallax.js', array('jquery'), _BP_VERSION, false ); 
 		wp_enqueue_script( 'battleplan-script-desktop', get_template_directory_uri().'/js/script-desktop.js', array('jquery'), _BP_VERSION, false );
 
 		if ( isset($GLOBALS['customer_info']['scripts']) && is_array($GLOBALS['customer_info']['scripts']) && in_array('magic-menu', $GLOBALS['customer_info']['scripts']) ) :
@@ -1049,24 +1060,27 @@ function battleplan_scripts() {
 	wp_enqueue_script( 'battleplan-script-tracking', get_template_directory_uri().'/js/script-tracking.js', array('jquery'), _BP_VERSION, false ); 	
 	wp_enqueue_script( 'battleplan-script-cloudflare', get_template_directory_uri().'/js/script-cloudflare.js', array('jquery'), _BP_VERSION, false );
 
-	if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 'true' ) wp_enqueue_script( 'battleplan-script-events', get_template_directory_uri().'/js/events.js', array('jquery'), _BP_VERSION, false );   
+	if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 'true' ) wp_enqueue_script( 'battleplan-script-events', get_template_directory_uri().'/js/script-events.js', array('jquery'), _BP_VERSION, false );   
 	
-	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) wp_enqueue_script( 'battleplan-script-jobsite_geo', get_template_directory_uri().'/js/jobsite_geo.js', array('jquery'), _BP_VERSION, false );   
+	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) wp_enqueue_script( 'battleplan-script-jobsite_geo', get_template_directory_uri().'/js/script-jobsite_geo.js', array('jquery'), _BP_VERSION, false );   
 	
-	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) wp_enqueue_script( 'battleplan-script-woocommerce', get_template_directory_uri().'/js/woocommerce.js', array('jquery'), _BP_VERSION, false ); 
-	if ( is_plugin_active( 'cue/cue.php' ) ) wp_enqueue_script( 'battleplan-script-cue', get_template_directory_uri().'/js/cue.js', array('jquery'), _BP_VERSION, false ); 
+	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) wp_enqueue_script( 'battleplan-script-woocommerce', get_template_directory_uri().'/js/script-woocommerce.js', array('jquery'), _BP_VERSION, false ); 
+	if ( is_plugin_active( 'cue/cue.php' ) ) wp_enqueue_script( 'battleplan-script-cue', get_template_directory_uri().'/js/script-cue.js', array('jquery'), _BP_VERSION, false ); 
 	
 	if ( ($GLOBALS['customer_info']['site-type'] == 'profile' || (is_array($GLOBALS['customer_info']['site-type']) && in_array('profile', $GLOBALS['customer_info']['site-type']))) || ($GLOBALS['customer_info']['site-type'] == 'profiles' || (is_array($GLOBALS['customer_info']['site-type']) && in_array('profiles', $GLOBALS['customer_info']['site-type']))) ) wp_enqueue_script( 'battleplan-script-user-profiles', get_template_directory_uri().'/js/script-user-profiles.js', array('jquery'), _BP_VERSION, false ); 
 	
-	if ( _USER_LOGIN == "battleplanweb" ) :
+	if ( _USER_LOGIN == "battleplanweb" ) {
 		wp_enqueue_style( 'battleplan-admin-css', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION );	
-		wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array('quicktags'), _BP_VERSION, false );	
-	endif;
+		if ( is_admin() ) wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array('quicktags'), _BP_VERSION, false );	
+	};
+	 
+	wp_enqueue_script( 'battleplan-script-fire-off', get_template_directory_uri().'/js/script-fire-off.js', array('jquery'), _BP_VERSION, false );
 	
 	if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) wp_enqueue_script( 'comment-reply' ); 
 	
 	$saveDir = array( 'theme_dir_uri'=>get_stylesheet_directory_uri(), 'upload_dir_uri'=>wp_upload_dir()['baseurl'] );
 	//wp_localize_script( 'battleplan-script-essential', 'site_dir', $saveDir );	
+	wp_localize_script( 'battleplan-script-helpers', 'site_dir', $saveDir );	
 	wp_localize_script( 'battleplan-script-desktop', 'site_dir', $saveDir );	
 	
 	$saveOptions = array ( 'lat' => $GLOBALS['customer_info']['lat'], 'long' => $GLOBALS['customer_info']['long'] );
@@ -1077,6 +1091,7 @@ function battleplan_scripts() {
 add_action( 'admin_enqueue_scripts', 'battleplan_admin_scripts' );
 function battleplan_admin_scripts() {
 	wp_enqueue_style( 'battleplan-admin-css', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION );	
+	wp_enqueue_script( 'battleplan-script-helpers', get_template_directory_uri().'/js/script-helpers.js', array('jquery'), _BP_VERSION, false );					
 	wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array('jquery'), _BP_VERSION, false );	
 	if ( $GLOBALS['customer_info']['site-type'] == 'profile' || $GLOBALS['customer_info']['site-type'] == 'profiles' ) : 
 		wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array('jquery'), _BP_VERSION ); 		
@@ -1246,6 +1261,13 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 
 			$id = apply_filters( 'nav_menu_item_id', 'menu-item-'. $item->ID, $item, $args, $depth );
 			$id = $id ? ' id="'.esc_attr( $id ).'"' : '';
+		
+		    if (preg_match('/\[get-biz info=["\']([^"\']+)["\']\]/', $item->attr_title, $matches)) {
+				$info_key = $matches[1];
+				if (isset($GLOBALS['customer_info'][$info_key])) {
+					$item->url = $GLOBALS['customer_info'][$info_key];
+				}
+			}
 
 			$buildOutput = "";		
 			$restrictMax = readMeta( $item->ID, 'bp_menu_restrict_max', true );
@@ -1704,6 +1726,64 @@ add_action('template_redirect', 'battleplan_redirect_testimonials');
 function battleplan_redirect_testimonials() {
     if (is_singular('testimonials')) wp_redirect('/testimonials/', 301);
 }
+
+
+// Check & store site background image
+function battleplan_fetch_background_image($clear=false) {
+	$imgData = get_option('bp_site_bg_img');
+	
+	if ( $imgData === false || $imgData === null || $clear ) {
+		$imgData = null;
+
+		if (is_file($_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-background.webp')) {
+			$imgData = 'webp';
+		} elseif (is_file($_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-background.png')) {
+			$imgData = 'png';
+		} elseif (is_file($_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-background.jpg')) {
+			$imgData = 'jpg';
+		}
+
+		update_option('bp_site_bg_img', $imgData);
+	}
+
+	return $imgData;
+}
+
+
+// Check & store correct site-icon image
+function battleplan_fetch_site_icon($clear=false) {
+	$iconData = get_option('bp_site_icon');
+	
+	if ( $iconData === false || !isset($iconData['name']) || $clear ) {
+		$iconData = [
+			'name' => null,
+			'wh' => '',
+		];		
+
+		if (is_file($_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-icon-80x80.webp')) {
+			$iconData['name'] = 'site-icon-80x80.webp';
+			$iconData['wh'] = " width='80' height='80'";
+		} elseif (is_file($_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-icon.webp')) {
+			$iconData['name'] = 'site-icon.webp';
+		} elseif (is_file($_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-icon-80x80.png')) {
+			$iconData['name'] = 'site-icon-80x80.png';
+			$iconData['wh'] = " width='80' height='80'";
+		} elseif (is_file($_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-icon.png')) {
+			$iconData['name'] = 'site-icon.png';
+		} elseif (is_file($_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-icon-80x80.jpg')) {
+			$iconData['name'] = 'site-icon-80x80.jpg';
+			$iconData['wh'] = " width='80' height='80'";
+		} elseif (is_file($_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-icon.jpg')) {
+			$iconData['name'] = 'site-icon.jpg';
+		}
+
+		update_option('bp_site_icon', $iconData);
+	}
+
+	return $iconData;
+}
+
+
 	
 
 /*--------------------------------------------------------------
@@ -1800,6 +1880,10 @@ function battleplan_create_user_roles() {
 	);
 	
 	$caps_subscriber = array (
+		'read'							=> true,	
+	);
+		
+	$caps_view_stats = array (	
 		'read'							=> true,	
 	);
 		
@@ -1911,6 +1995,9 @@ function battleplan_create_user_roles() {
 		
 	remove_role( 'bp_jobsite_geo' );
 	add_role('bp_jobsite_geo', __('Jobsite GEO'), array_merge( $caps_subscriber, $caps_jobsite_geo) );	
+	
+	remove_role( 'bp_view_stats' );
+	add_role('bp_view_stats', __('View Stats'), $caps_view_stats );		
 	
 	remove_role( 'bp_manage_plugins' );
 	add_role('bp_manage_plugins', __('Manage Plugins'), $caps_manage_plugins );
@@ -2144,7 +2231,7 @@ function battleplan_printHeader() {
 // Display the "we're open" banner on desktop
 add_action('bp_before_masthead', 'battleplan_printOpenBanner', 30);
 function battleplan_printOpenBanner() { 
-	echo is_biz_open() && !is_mobile() ? '<div class="currently-open-banner"><p>Call Us Now... We\'re Open!</p></div>' : '';
+	echo is_biz_open() && !is_mobile() ? '<div class="currently-open-banner"><p>Call Us Now...<br>We\'re Open!</p></div>' : '';
 }
 
 // Display #wrapper-top
@@ -2154,18 +2241,6 @@ function battleplan_printWrapperTop() {
 	$textarea = get_post_meta( $current_page->ID, 'page-top_text', true );
  	if ( $textarea != "" ) echo "<section id='wrapper-top'>".apply_filters('the_content', $textarea)."</section><!-- #wrapper-top -->";
 }	
-
-
-
-
- 
-
-
-
-
-
-
-
 
 
 // Remove with Font Awesome

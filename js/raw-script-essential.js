@@ -562,7 +562,7 @@ Re-factored 4/22/2024
 	
 
 // Keep functions from causing errors if not defined in other parts of the code
-	const functions = ["parallaxBG", "parallaxDiv", "magicMenu", "splitMenu", "addMenuLogo", "desktopSidebar"];
+	const functions = ["parallaxBG", "parallaxDiv", "magicMenu", "splitMenu", "addMenuLogo", "addMenuIcon", "desktopSidebar"];
 	functions.forEach(func => {
 		if (typeof window[func] !== 'function') {
 			window[func] = function() {};

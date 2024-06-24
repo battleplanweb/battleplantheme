@@ -442,6 +442,10 @@ input[type="number"] {
     width: 										100%;
 }*/
 
+.woocommerce-product-gallery.images {
+	opacity: 									1 !important;
+}
+
 .theme-battleplantheme.woocommerce-js div.product .woocommerce-tabs,
 .theme-battleplantheme.woocommerce-js section.related.products {
     /*grid-column:								1 / -1;*/

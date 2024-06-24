@@ -150,7 +150,7 @@
 	display:										flex;
 	flex-flow: 										row wrap;
 	justify-content:								center;
-	align-items:									center;
+	align-items:									stretch;
 	margin:											0.5em 0;
 }
 
@@ -169,6 +169,7 @@
 
 .carousel .block-button a {
 	width: 											100%;
+	height: 										100%;
 }
 
 .carousel .controls.controls-center {
@@ -179,11 +180,14 @@
 	padding: 										0 3vw;
 }
 
+.carousel a.carousel-control-next, 
+.carousel a.carousel-control-prev { 
+	padding: 										0 15px;
+}
+
 .carousel a.carousel-control-next .carousel-control-next-icon, 
 .carousel a.carousel-control-prev .carousel-control-prev-icon { 
-	display: 										flex;
-	align-items: 									center;
-	justify-content: 								center;	
+	line-height: 									1.6;
 }
 
 .carousel a.carousel-control-next .carousel-control-next-icon::after, 

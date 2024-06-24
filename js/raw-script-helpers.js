@@ -89,6 +89,12 @@ Re-factored 4/22/2024
 		}
 	}
 	
+	
+// Determine if user is on a mobile device
+	window.isMobile = function () {
+		return document.body.classList.contains('screen-mobile') ? true : false;
+	}
+	
 		
 // Set styles & attributes 
 	window.setAttributes = function(elementObj, attributes) {

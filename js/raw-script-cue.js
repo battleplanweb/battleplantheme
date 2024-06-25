@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict"; 
 														   
-//Re-factor complete 5/10/2024	
+// Raw Script: Cue	
 														   
 	window.addEventListener("load", function() {
 		const playlists = getObjects('.cue-playlist-container');

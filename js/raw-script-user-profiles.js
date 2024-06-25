@@ -1,4 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict"; 
+														   
+// Raw Script: User Profiles
+														   
 	window.addEventListener("load", () => {
 
 	// Real time profile search

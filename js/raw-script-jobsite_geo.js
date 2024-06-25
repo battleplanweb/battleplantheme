@@ -1,4 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict"; 
+														   
+// Raw Script: Jobsite GEO
+														   
 	window.addEventListener("load", () => {
 		
 		getObjects('#map img').forEach(img => {

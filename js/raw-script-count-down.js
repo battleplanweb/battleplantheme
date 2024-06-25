@@ -1,4 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict";
+														   
+// Raw Script: Count Down	
+														   
 	window.addEventListener("load", () => {
 	
 		const countdownObj = getObject("#countdown");

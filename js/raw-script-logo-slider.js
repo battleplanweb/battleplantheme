@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict";
-
-// Set up Logo Slider
+														   
+// Raw Script: Logo Slider
+														   
 	getObjects('.logo-slider').forEach(logoSlider => {
 		let logoRow = getObject('.logo-row', logoSlider),
 			direction = logoSlider.getAttribute('data-direction'),

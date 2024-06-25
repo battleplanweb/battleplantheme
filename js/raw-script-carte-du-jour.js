@@ -1,4 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict";
+														   
+// Raw Script: Carte Du Jour	
+														   
 		
 // Handle mutliple locations		
 	getObjects('.logo').forEach(logo => {

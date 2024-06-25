@@ -1,10 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict"; 
-
-/*--------------------------------------------------------------
-# Admin interface
---------------------------------------------------------------*/	
-
-// Allow useage of Admin Columns
+														   
+// Raw Script: Admin
+														   
 	getObjects('.disabled').forEach(el => {
         el.classList.remove('disabled', '-disabled');
     });

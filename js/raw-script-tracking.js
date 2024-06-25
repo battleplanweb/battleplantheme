@@ -1,10 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict";
-
-/*--------------------------------------------------------------
->>> TABLE OF CONTENTS: 
-----------------------------------------------------------------
-# Tracking code
---------------------------------------------------------------*/
+														   
+// Raw Script: Tracking
+														   
 	const pageID = document.body.getAttribute('id');		
 	
 	window.addEventListener("load", () => {

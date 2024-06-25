@@ -483,6 +483,8 @@ Re-factored 4/22/2024
 	window.revealDiv = function (elementSel, delay=0, speed=1000, offset="0%") {
 		offset = parseInt(offset) / 100;	
 		const elementObj = getObject(elementSel);
+		if ( !elementObj ) return;
+		
  		const nextElemObj = elementObj.nextElementSibling;
 		nextElemObj.style.transform = `translateY(-${elementObj.offsetHeight}px)`;
     	nextElemObj.style.transitionDuration = '0ms';
@@ -632,6 +634,35 @@ Re-factored 4/22/2024
 				break;
 		}
 	};	
+														   
+														   
+// Clone div and move the copies to multiple new location											   
+	window.cloneDivs = function (wrapperSel, elementSel, anchorSel, position="after") {
+		getObjects(wrapperSel).forEach(wrapper => {
+			const elementObj = getObject(elementSel, wrapper); // Get the single element to be cloned within the wrapper
+			const anchorObjs = getObjects(anchorSel, wrapper); // Get all anchor elements within the wrapper
+			if (!elementObj || !anchorObjs.length) return;
+
+			anchorObjs.forEach(anchor => {
+				const cloneObj = elementObj.cloneNode(true);
+
+				switch (position) {
+					case "before":
+						anchor.parentNode.insertBefore(cloneObj, anchor);
+						break;
+					case "top": case "start": case "inside":
+						anchor.insertBefore(cloneObj, anchor.firstChild);
+						break;
+					case "bottom": case "end":
+						anchor.appendChild(cloneObj);
+						break;
+					case "after": default:
+						anchor.parentNode.insertBefore(cloneObj, anchor.nextSibling);
+						break;
+				}
+			});
+		});
+	};
 
 	
 // Move a single div to another location
@@ -687,35 +718,35 @@ Re-factored 4/22/2024
 	
 // Add a div within an existing div
 	window.addDiv = function (targetSel, newHTML="<div></div>", position="after") {
-		const targetObj = getObjects(targetSel);
-		if ( !targetObj.length ) return;
-		
-		targetObj.forEach(target => {
+		const targetObjs = getObjects(targetSel);
+		if (!targetObjs.length) return;
+
+		targetObjs.forEach(target => {
 			const tempElem = document.createElement('div');
 			tempElem.innerHTML = newHTML;
 			const newDiv = tempElem.firstChild;
 
 			switch (position) {
 				case "before":
-					target.parentNode.insertBefore(newDiv.cloneNode(true), target);
+					target.parentNode.insertBefore(newDiv, target);
 					break;
 				case "top": case "start":
-					target.insertBefore(newDiv.cloneNode(true), target.firstChild);
+					target.insertBefore(newDiv, target.firstChild);
 					break;
 				case "bottom": case "end":
-					target.appendChild(newDiv.cloneNode(true));
+					target.appendChild(newDiv);
 					break;
 				case "after": default:
 					if (target.nextSibling) {
-						target.parentNode.insertBefore(newDiv.cloneNode(true), target.nextSibling);
+						target.parentNode.insertBefore(newDiv, target.nextSibling);
 					} else {
-						target.parentNode.appendChild(newDiv.cloneNode(true));
+						target.parentNode.appendChild(newDiv);
 					}
 					break;
 			}
 		});
 	};
-	
+
 
 // Wrap a div inside a newly formed div
 	window.wrapDiv = function(targetSel, newHTML="<div></div>", position="outside") {

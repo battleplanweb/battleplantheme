@@ -120,7 +120,7 @@ a {
 /* Admin bar on live pages, added when logged in */
 @media (max-width: 1024px) {
 	#wpadminbar {
-		display: 										 none;
+		display: 										 none !important;
 	}
 	
 	body {
@@ -168,87 +168,23 @@ a {
 html,
 .logged-in {
 	margin-top: 									0 !important; /* compensate for the margin automatically placed on html */
-	margin-bottom: 									41px !important;
 }
 
 .logged-in #wpadminbar {
 	position: 										fixed;
-	z-index: 										9999999999;
+	z-index: 										999999999999;
+	width: 											40px;
 	height: 										40px;
-	color: 											var(--lightest-grey);
 	top: 											unset;
-	bottom: 										0;
+	bottom: 										10px;
+	left: 											3px;
+	background: 									url('https://secure.gravatar.com/avatar/5578915c21eaa269936f4e9aacb6771b') no-repeat;
+	background-size: 								contain;
+	pointer-events: 								none;
 }   
 
 .logged-in #wp-toolbar {
-	background: 									#d3d3d3;
-	filter: 										drop-shadow(0 -1px 0 var(--black-low)) drop-shadow(0 1px 0 var(--white));
-	border-bottom: 									1px solid var(--black-low);
-}
-
-.logged-in #wpadminbar a.ab-item,
-.logged-in #wpadminbar #adminbarsearch::before, 
-.logged-in #wpadminbar .ab-icon::before, 
-.logged-in #wpadminbar .ab-item::before {
-	color: 											var(--darkest-grey);
-} 
-
-#wpadminbar #wp-admin-bar-my-account.with-avatar #wp-admin-bar-user-actions > li.console {
-	margin-left: 									35px;
-	list-style: 									square;
-}
-
-.logged-in .wp-gr.wp-google-badge {
-	bottom: 										41px;
-}
-
-#wpadminbar * {
-	font-size: 										16px;
-}
-
-.wp-admin #wpadminbar #wp-admin-bar-site-name > .ab-item::before,
-.logged-in #wpadminbar #wp-admin-bar-site-name > .ab-item::before {
-	background-position: 							50% 50%;
-	background-repeat: 								no-repeat;
-	background-size: 								contain;
-	width: 											31px;
-	height: 										31px;
-	content: 										"";
-	top: 											0;
-}
-
-.logged-in #wpadminbar .ab-top-menu > li > .ab-item, 
-.logged-in #wpadminbar:not(.mobile) .ab-top-menu > li > .ab-item {
-	background: 									transparent;
-	border: 										none;
-	border-bottom: 									1px solid transparent;
-	color: 											var(--darkest-grey);
-	height: 										38px;
-	transition: 									all 0.2s ease;
-}
-
-.logged-in #wpadminbar .ab-top-menu > li.hover > .ab-item, 
-.logged-in #wpadminbar.nojq .quicklinks .ab-top-menu > li > .ab-item:focus, 
-.logged-in #wpadminbar:not(.mobile) .ab-top-menu > li:hover > .ab-item, 
-.logged-in #wpadminbar:not(.mobile) .ab-top-menu > li > .ab-item:focus {
-	background: 									var(--white);
-	border-bottom: 								1px solid var(--black-low);
-	transition: 									all 0.2s ease;
-}
-
-.logged-in #wpadminbar .menupop .ab-sub-wrapper, 
-.logged-in #wpadminbar .shortlink-input {
-	background: 									var(--white);
-	bottom: 										40px;
-	box-shadow: 									0 -3px 5px var(--black-low);
-}
-
-.logged-in #wpadminbar .ab-top-menu > li.hover > .ab-sub-wrapper  {
-	display: 										block;
-}
-
-.logged-in #wpadminbar .ab-top-menu > li.hover > .ab-sub-wrapper *  {
-	color: 										var(--darkest-grey);
+	display: 										none;
 }
 
 #wp-admin-bar-my-account > a.ab-item {

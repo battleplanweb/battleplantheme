@@ -187,6 +187,7 @@
 
 .carousel a.carousel-control-next .carousel-control-next-icon, 
 .carousel a.carousel-control-prev .carousel-control-prev-icon { 
+	display: 										inline-block;
 	line-height: 									1.6;
 }
 

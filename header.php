@@ -55,7 +55,7 @@
 
 <?php wp_body_open(); ?>
 	
-<div id="mobile-menu-bar-faux"></div>	
+<!--div id="mobile-menu-bar-faux"></div-->	
 <div id="mobile-menu-bar" class="<?php echo do_shortcode('[get-hours-open open="currently-open" closed="not-currently-open"]'); ?>"</div>
 	<?php //bp_mobile_menu_bar_items(); ?>
 	<?php bp_mobile_menu_bar_contact(); ?>	

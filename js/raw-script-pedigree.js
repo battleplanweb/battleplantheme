@@ -1,4 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict";
+														   
+// Raw Script: Pedigree
+														   
 	window.addEventListener("load", () => {	
 		
 		replaceText('.single-litters h1, .single-litters h2, .single-litters h3', ' X ', ' x ', 'html');		

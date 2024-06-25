@@ -1,14 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict";
-/*--------------------------------------------------------------
->>> TABLE OF CONTENTS:
-----------------------------------------------------------------
-# Count Up
-
---------------------------------------------------------------*/
-	
-/*--------------------------------------------------------------
-# Count Up
---------------------------------------------------------------*/
+														   
+// Raw Script: Count Up	
 														   
 	var CountUp = function(target, startVal, endVal, decimals, duration, options) {
 		var lastTime = 0;

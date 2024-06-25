@@ -1,17 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict";
-/*--------------------------------------------------------------
->>> TABLE OF CONTENTS:
-----------------------------------------------------------------
-# Scroll listener events
-
-Re-factor complete 4/24/2024
-
---------------------------------------------------------------*/
-
-/*--------------------------------------------------------------
-# Scroll listener events
---------------------------------------------------------------*/
-
+														   
+// Raw Script: Fire Off	
+														   
 	if (!window.fireOffInit) {
 		const debouncedScrollFunc = debounce(() => {
 			if (typeof lockAlign === 'function') { lockAlign(); }

@@ -1,17 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict";
-/*--------------------------------------------------------------
->>> TABLE OF CONTENTS:
-----------------------------------------------------------------
-# Lightbox
- 
-
-Re-factor complete 5/10/2024
-
---------------------------------------------------------------*/
-	
-/*--------------------------------------------------------------
-# Lightbox
---------------------------------------------------------------*/
+														   
+// Raw Script: Lightbox
+														   
 	const overlay = getObject('.lightbox-overlay');
     const lightboxImage = getObject('.lightbox-overlay img');
     const counterDisplay = getObject('.lightbox-overlay .lightbox-counter');

@@ -1,4 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict";
+														   
+// Raw Script: Woocommerce
+														   
 	window.addEventListener("load", () => {
 		
 	// Set up woocommerce pages to match rest of site

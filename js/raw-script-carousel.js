@@ -1,17 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict";
-/*--------------------------------------------------------------
->>> TABLE OF CONTENTS:
-----------------------------------------------------------------
-# Carousel / Slider 
- 
-
-Re-factor complete 5/9/2024
-
---------------------------------------------------------------*/
-	
-/*--------------------------------------------------------------
-# Carousel / Slider
---------------------------------------------------------------*/
+														   
+// Raw Script: Carousel	
+														   
 	getObjects('.carousel').forEach(carousel => {
 		const slides = getObjects('.carousel-item', carousel),
 			  slideInner = getObject('.carousel-inner', carousel),

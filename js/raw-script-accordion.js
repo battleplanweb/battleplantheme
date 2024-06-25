@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict";
-
-// Accordion section - control opening & closing of expandable text boxes									
+														   
+// Raw Script: Accordion
+														   
 	window.buildAccordion = function () {
 		window.accordions = getObjects('.block-accordion');
 		

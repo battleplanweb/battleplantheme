@@ -1,4 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict";
+														   
+// Raw Script: Holiday	
+														   
 	
 	document.body.classList.add('holiday-theme');
 

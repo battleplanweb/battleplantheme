@@ -1,13 +1,13 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict";
+														   
+// Raw Script: Essentials	
+														   
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
 # Basic site functions
 # Automated processes
 # DOM level functions
-
-
-Re-factored 4/22/2024
 --------------------------------------------------------------*/
 			
 /*--------------------------------------------------------------
@@ -188,13 +188,7 @@ Re-factored 4/22/2024
 		}
 		
 		let currentPosition = mobileMenuBarH(),
-			noDocFlowH = 0,
 			pagePadding = 0;
-		
-		const noDocFlow = getObjects('.no-doc-flow');
-		if (noDocFlow.length) {
-			pagePadding += noDocFlow.offsetHeight;
-		}
 		
 		stuckEls.forEach((stuck, index) => {
 			if (lockedDivs[index] && typeof lockedDivs[index].lockPos !== 'undefined') {
@@ -207,9 +201,12 @@ Re-factored 4/22/2024
 			
 			if (!stuck.classList.contains('no-doc-flow')) {
 				pagePadding += stuck.offsetHeight;
-				bp_page.style.paddingTop = pagePadding + "px";
+				console.log(stuck, pagePadding);
 			}
 		});
+						
+		bp_page.style.paddingTop = pagePadding + "px";
+
 	};
 
 

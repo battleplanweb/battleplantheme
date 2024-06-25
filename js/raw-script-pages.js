@@ -1,4 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict";
+														   
+// Raw Script: Pages
+														   
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
@@ -8,10 +11,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 # Screen resize
 # ADA compliance
 # Delay parsing of JavaScript
- 
-
-Re-factor complete 5/9/2024
-
 --------------------------------------------------------------*/
 
 /*--------------------------------------------------------------

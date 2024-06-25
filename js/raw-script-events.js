@@ -1,4 +1,7 @@
-document.addEventListener("DOMContentLoaded", function () {	"use strict"; 
+document.addEventListener("DOMContentLoaded", function () {	"use strict"; document.addEventListener("DOMContentLoaded", function () {	"use strict";
+														   
+// Raw Script: Events	
+																																	 
 	window.addEventListener("load", () => {
 			
 	// Build calendar

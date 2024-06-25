@@ -1,13 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict"; 
-/*--------------------------------------------------------------
->>> TABLE OF CONTENTS:
-----------------------------------------------------------------
-# Magic Menu
---------------------------------------------------------------*/
-
-/*--------------------------------------------------------------
-# Magic Menu
---------------------------------------------------------------*/
+														   
+// Raw Script: Magic Menu
+														   
 	window.magicMenu = function(menu='#desktop-navigation .menu', linkOn='active', linkOff='non-active', stateChange='false') {
 		const mainNav = getObject(menu);
 		const baseNav = mainNav.parentElement.parentElement;

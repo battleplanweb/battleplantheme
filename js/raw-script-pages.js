@@ -160,19 +160,19 @@ Re-factor complete 5/9/2024
 			mainFilter = 'blur(0)';
 		}
 		
-		if (effect.includes('roll') && effect.includes('left')) {
+		if (effect.includes('roll') || effect.includes('rotate')) {
 			offsetRotate = '-120';
 		}
 		
-		if (effect.includes('roll') && effect.includes('right')) {
+		if ((effect.includes('roll') || effect.includes('rotate')) && (effect.includes('right') || effect.includes('reverse') )) {
 			offsetRotate = '120';
 		}
 		
-		if (effect.includes('spin') && effect.includes('left')) {
+		if (effect.includes('spin')) {
 			offsetRotate = '-1080';
 		}
 		
-		if (effect.includes('spin') && effect.includes('right')) {
+		if (effect.includes('spin') && (effect.includes('right') || effect.includes('reverse') )) {
 			offsetRotate = '1080';
 		}
 		
@@ -187,8 +187,13 @@ Re-factor complete 5/9/2024
 		
 		if (effect.includes('jackinthebox')) {
 			offsetScale = '0';
-			offsetRotate = '40';
-			midEffect = `50% { transform: rotate(-${offsetRotate / 2}deg); } 70% { transform: rotate(${offsetRotate / 4}deg); }`;
+			offsetRotate = 40;
+			midEffect = `50% { transform: scale(0.75) rotate(${-offsetRotate / 2}deg); } 70% { transform: scale(0.4) rotate(${offsetRotate / 4}deg); }`;
+		}	
+		
+		if (effect.includes('jackinthebox') && effect.includes('reverse')) {
+			offsetRotate = -40;
+			midEffect = `50% { transform: scale(0.75) rotate(${-offsetRotate / 2}deg); } 70% { transform: scale(0.4) rotate(${offsetRotate / 4}deg); }`;
 		}	
 		
 		if (effect.includes('small')) {

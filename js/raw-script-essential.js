@@ -18,6 +18,7 @@ Re-factored 4/22/2024
 
 
 // Determine whether or not to leave space for mobile menu header
+														   
 	window.mobileMenuBarH = function () {
 		return getDeviceW() > mobileCutoff ? 0 : document.getElementById('mobile-menu-bar').offsetHeight;
 	};	
@@ -129,6 +130,7 @@ Re-factored 4/22/2024
 			const position = `calc(${width}px * ${cos}) calc(${width}px * ${sin})`;
 			if (text === 'true') {
 
+
 				shadow += `${position} 0 ${color}`;
 				if (i < (steps - 1)) shadow += ", ";
 			} else {
@@ -173,20 +175,27 @@ Re-factored 4/22/2024
 			triggerPos: triggerObj.offsetTop - elementObj.offsetHeight - triggerAdj,
 			lockPos: positionAdj
 		};
-
+		
 		lockedDivs.push(divData);
 	}
 
 	window.lockAlign = function() {				
 		const stuckEls = getObjects('.stuck, .fixed-at-load');
+		
 		if ( !stuckEls.length ) {
 			bp_page.style.paddingTop = "0px";			
 			return;
 		}
 		
-		let currentPosition = 0,
+		let currentPosition = mobileMenuBarH(),
+			noDocFlowH = 0,
 			pagePadding = 0;
-
+		
+		const noDocFlow = getObjects('.no-doc-flow');
+		if (noDocFlow.length) {
+			pagePadding += noDocFlow.offsetHeight;
+		}
+		
 		stuckEls.forEach((stuck, index) => {
 			if (lockedDivs[index] && typeof lockedDivs[index].lockPos !== 'undefined') {
 				currentPosition += lockedDivs[index].lockPos;
@@ -207,7 +216,7 @@ Re-factored 4/22/2024
 	window.fixedAtLoad = function(elementSel) {
 		const elementObj = getObject(elementSel);	
 		elementObj.style.position = 'fixed';
-		elementObj.classList.add("fixed-at-load");	
+		elementObj.classList.add("fixed-at-load");		
 		
 		lockAlign();
 	};	
@@ -499,7 +508,7 @@ Re-factored 4/22/2024
 		
 // Button to reveal a hidden div
 	window.btnRevealDiv = function(buttonSel, elementSel, top=0, speed=300) {
-		top += mobileMenuBarH();
+		//top += mobileMenuBarH();
 		const elementObj = getObject(elementSel);
 		const origDisplay = getComputedStyle(elementObj).display;
 		elementObj.style.display = 'none';

@@ -5,7 +5,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 2024.06.25
+Version: 2024.06.26
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -311,6 +311,7 @@ html {
   	text-size-adjust: 								none;
 	font-size:										var(--font-base-5);
 	box-sizing: 									border-box; 
+	margin-top: 									0;
 }
 
 body {
@@ -764,9 +765,19 @@ a.social-btn img {
 /* Animation
 --------------------------------------------- */
 .animation-queued {
-	opacity: 									0;
+	opacity: 										0;
 	will-change: 									transform;
-  	transform: 									translateZ(0);
+  	transform: 										translateZ(0);
+}
+
+.animation-complete:not(.animate) {
+	opacity: 										1 !important;
+	animation-name: 								unset !important;
+}
+
+.wordSplit,
+.charSplit {
+	opacity: 										0;
 }
 
 
@@ -1223,7 +1234,6 @@ img.img-404 {
 	text-align: 									right;
 }
 
-
 .screen-mobile .currently-open-banner {
 	display: 										none;
 }
@@ -1233,7 +1243,7 @@ img.img-404 {
 	transition: 									all 1s cubic-bezier(0.175, 0.885, 0.320, 1.275);
 }
 
-.currently-open-banner.alt.reveal-open {
+.currently-open-banner.small-screen.reveal-open {
 	transform: 										translate(0, 0) rotate(-10deg);
 	transition: 									all 1s cubic-bezier(0.175, 0.885, 0.320, 1.275);
 }
@@ -1248,7 +1258,7 @@ img.img-404 {
     border-right-color: 							var(--accent-background);
 }
 
-.currently-open-banner.alt::before {
+.currently-open-banner.small-screen::before {
     border-right-color: 							transparent;
     border-left-color: 								var(--accent-background);
     left: 											unset;
@@ -1613,7 +1623,7 @@ html.error503 h3 {
 @media (max-width: 1024px) {		
 	html {
 		font-size:									var(--font-base-3);
-		margin-top: 								42px !important; /* compensate for mobile menu bar */
+		margin-top: 								45px /* compensate for mobile menu bar */
 	}
 				
 	.screen-mobile h1,

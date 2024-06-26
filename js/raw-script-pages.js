@@ -93,6 +93,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		return easingMap[easing] || easing;
 	}
 		
+
 	
 // Overflow: assist in hiding overflow during animation and then making it visible again
 	window.animateOverflow = function(container, delay=2000) {
@@ -276,12 +277,12 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		const animating = () => {
 			elementObj.classList.remove('animation-delayed');	
 			elementObj.classList.add('animation-in-progress');	
+			elementObj.removeEventListener('animationstart', animating);
 		};
 
 		const animated = () => {
 			elementObj.classList.remove('animation-in-progress');	
 			elementObj.classList.add('animation-complete');	
-			elementObj.removeEventListener('animationstart', animating);
 			elementObj.removeEventListener('animationend', animated);
 		};
 

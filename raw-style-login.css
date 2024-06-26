@@ -84,18 +84,24 @@ input[type="color"],
 textarea,
 select {
   	width: 										90%;
+	font-size: 									19px;
+  	padding: 									6px 10px;
 }
 
 input[type="checkbox"], 
 input[type="radio"] {
-  	transform: 									translateY(6px);
 	border: 									1px solid var(--black-low);
-	margin-right: 								2px !important;
+	margin-right: 								3px !important;
 }
 
 input[type="checkbox"]:checked::after {
   	transform: 									translate(0);
 	content: 									"";
+}
+
+input#wp-submit {
+	font-size: 									19px;
+	padding: 									3px 15px;
 }
 
 :root {
@@ -109,7 +115,6 @@ input[type="checkbox"]:checked::after {
 	
 	--button-background-hover: 					var(--white-high);
 	--button-border-hover:						1px solid var(--black-med);
-
 }
 
 .login form {
@@ -171,6 +176,11 @@ div#login_error {
 .login form label {
 	display: 									inline-block;
 	margin-bottom: 								0.3em;
+}
+
+.login form label[for="user_login"],
+.login form label[for="user_pass"] {
+	font-weight: 								bold;
 }
 
 .login #nav,

@@ -9,7 +9,13 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	getObjects('select, input, button').forEach(el => {
         el.removeAttribute('disabled');
     });
+													
+// Map admin icon (on non-admin pages) to the admin section													   
+	getObject('.logged-in #wpadminbar button').addEventListener('click', () => {
+		window.location.href = '/wp-admin/';
+	});
 	
+														   console.log('1'); 
 		
 // Control color of Top 10 Most Visited Days box
 	getObjects('#battleplan_site_stats tr').forEach(tr => {

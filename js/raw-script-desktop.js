@@ -380,30 +380,59 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 			setTimeout(() => {
 				moveDiv(bannerObj, phoneNumObj, 'bottom');
 				const phoneLink = getObject(".phone-link", phoneNumObj),
+					  phoneLinkL = phoneLink.getBoundingClientRect().left,
 					  phoneLinkR = phoneLink.getBoundingClientRect().right,
-					  bannerW = bannerObj.offsetWidth,
-					  fitsR = (phoneLinkR + bannerW) > getDeviceW() ? false : true,
-					  phoneHolderW = phoneNumObj.offsetWidth,
 					  phoneHolderL = phoneNumObj.getBoundingClientRect().left,
+					  bannerW = bannerObj.offsetWidth,
+					  bannerT = 0.45 * phoneNumObj.clientHeight,
+					  smallScreen = (phoneLinkR + bannerW) > getDeviceW() ? true : false;
+				
+
+				
+				
+				
+				
+/*
+				const phoneHolderW = phoneNumObj.offsetWidth,
+					  phoneLinkW = phoneLinkR - icon.getBoundingClientRect().left,
 					  phoneHolderA = phoneNumObj.closest(".col").classList,
 					  phoneLinkA = window.getComputedStyle(phoneNumObj).textAlign,
-					  bannerT = 0.45 * phoneNumObj.clientHeight;
+
+				let icon = getObject(".icon", phoneNumObj);
+				if ( !icon ) icon = phoneLink;
 				
-				let bannerL,
-					icon = getObject(".icon", phoneNumObj);
+				if ( smallScreen ) {
+					bannerObj.classList.add("small-screen");
+
+					if (phoneLinkA === "right" || phoneHolderA.contains("text-right")) {
+						bannerL = phoneHolderW - phoneLinkW - bannerW;
+					} else if (phoneLinkA === "left" || phoneHolderA.contains("text-left")) {
+						bannerL = -bannerW;
+					} else {
+						bannerL = (phoneHolderW - phoneLinkW) / 2 - bannerW;
+					}
+				} else {
+					if (phoneLinkA === "right" || phoneHolderA.contains("text-right")) {
+						bannerL = phoneHolderW;
+					} else if (phoneLinkA === "left" || phoneHolderA.contains("text-left")) {
+						bannerL = phoneLinkW;
+					} else {
+						bannerL = (phoneHolderW - phoneLinkW) / 2 + phoneLinkW;
+					}
+				}
+*/
 				
-				icon||(icon = phoneLink);
+				let bannerL = phoneLinkR - phoneHolderL;
 				
-				const phoneLinkW = phoneLinkR - icon.getBoundingClientRect().left;
-				
-				
-				console.log(phoneLink, phoneLinkR, bannerW, phoneHolderW, phoneHolderA);
-				
-				fitsR?(phoneLink.classList.add("alt"), bannerL="right"===phoneLinkA||phoneHolderA.contains("text-right")?phoneHolderW-phoneLinkW-bannerW:"left"===phoneLinkA||phoneHolderA.contains("text-left")?-bannerW:(phoneHolderW-phoneLinkW)/2-bannerW):bannerL="right"===phoneLinkA||phoneHolderA.contains("text-right")?phoneHolderW:"left"===phoneLinkA||phoneHolderA.contains("text-left")?phoneLinkW:(phoneHolderW-phoneLinkW)/2+phoneLinkW;
-				
-				bannerL = phoneLinkR - phoneHolderL;
-				
-				setStyles(bannerObj,{top:`${bannerT}px`,left:`${bannerL}px`});
+				if ( smallScreen ) {
+					bannerObj.classList.add("small-screen");
+					bannerL = (phoneLinkL - phoneHolderL) - bannerW;					
+				}
+								
+				setStyles(bannerObj, {
+					top:		`${bannerT}px`,
+					left:		`${bannerL}px`
+				});
 			
 				bannerObj.classList.add('reveal-open');
 			}, delay);

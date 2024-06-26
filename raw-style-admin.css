@@ -123,15 +123,10 @@ a {
 		display: 										 none !important;
 	}
 	
-	body {
-	  	margin-top: 									0 !important;
-	}
 }
 
 @media (max-width: 860px) {
-	body {
-	  	margin-top: 									0 !important;
-	}
+	
 }
 
 @media (min-width: 1025px) {
@@ -164,15 +159,10 @@ a {
 	
 }
 
-/* Adjust for admin menu bar */
-html,
-.logged-in {
-	margin-top: 									0 !important; /* compensate for the margin automatically placed on html */
-}
-
 .logged-in #wpadminbar {
 	position: 										fixed;
 	z-index: 										999999999999;
+	min-width: 										unset;
 	width: 											40px;
 	height: 										40px;
 	top: 											unset;
@@ -180,7 +170,6 @@ html,
 	left: 											3px;
 	background: 									url('https://secure.gravatar.com/avatar/5578915c21eaa269936f4e9aacb6771b') no-repeat;
 	background-size: 								contain;
-	pointer-events: 								none;
 }   
 
 .logged-in #wp-toolbar {
@@ -188,7 +177,19 @@ html,
 }
 
 #wp-admin-bar-my-account > a.ab-item {
-	padding-right: 								10px;
+	padding-right: 									10px;
+}
+
+#wpadminbar * {
+	font-size: 										16px;
+}
+
+.wp-admin #wpadminbar #wp-admin-bar-site-name > .ab-item::before {
+	content: 										"";
+	aspect-ratio: 									1/1;
+  	height: 										40px;
+  	padding: 										0;
+  	margin-right: 									16px;
 }
 
 .wp-admin #wpfooter { 
@@ -209,13 +210,13 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 }
 
 .plugins * {
-	box-shadow:									none !important;
+	box-shadow:										none !important;
 	outline:										none;
 }
 
 .plugins tr {
 	outline: 										1px solid var(--black-lowest);
-	transform: 									translateY(-1px);
+	transform: 										translateY(-1px);
 }
 
 .plugins tr#admin-columns-pro-update {
@@ -231,22 +232,32 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 
 /* Admin dashboard */
 #adminmenu .admin-note,
-#adminmenu .admin-badge {
+#adminmenu .admin-badge,
+#adminmenu .awaiting-mod, 
+#adminmenu .menu-counter,
+#adminmenu .update-plugins{
  	display: 										block;
-	position: 									relative;
+	position: 										relative;
  	margin: 										2px 0 -1px 2px;
 	padding: 										2px 8px;
 	height: 										18px;
-	border-radius: 								9px;
+	border-radius: 									9px;
 	background-color: 								var(--white-lowest);
 	border: 										1px solid var(--white-lowest);
 	border-left: 									1px solid var(--black-med);
 	border-top: 									1px solid var(--black-med);
-	color: 										var(--white);
-	font-size: 									11px;
+	color: 											var(--white);
+	font-size: 										11px;
 	line-height: 									1.6;
 	text-align: 									center;
 	z-index: 										26; 
+}
+
+#adminmenu .awaiting-mod, 
+#adminmenu .menu-counter,
+#adminmenu .update-plugins{
+ 	display: 										inline;
+	background-color: 								#d63638;
 }
 
 #adminmenu .admin-badge {
@@ -254,11 +265,11 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 }
 
 #adminmenu .admin-badge-holder {
-	float: 										right;
+	float: 											right;
 }
 
 #menu-tools li.wp-first-item {
-	display: none;
+	display: 										none;
 }
 
 #adminmenu .wp-submenu li a[href="index.php?page=clear-all"],
@@ -1053,6 +1064,7 @@ a#mbp_misc-tab,
 .wp-admin .flex.stats .col {
 	background: 									rgb(244, 217, 217); 
 }
+
 
 .wp-admin .flex.stats .col.notes {
 	background: 									#dbdbdb;

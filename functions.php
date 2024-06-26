@@ -879,6 +879,12 @@ if ( ! function_exists( 'battleplan_setup' ) ) :
 	}
 endif;
 
+// Remove margin on html (admin bar)
+add_action('get_header', function() {
+    remove_action('wp_head', 'wp_admin_bar_header');
+    remove_action('wp_head', '_admin_bar_bump_cb');
+}, 9);
+
 // Set content width param
 add_action( 'after_setup_theme', 'battleplan_content_width', 0 );
 function battleplan_content_width() {

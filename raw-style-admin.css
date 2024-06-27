@@ -190,6 +190,7 @@ a {
   	height: 										40px;
   	padding: 										0;
   	margin-right: 									16px;
+	background-size: 								contain !important;
 }
 
 .wp-admin #wpfooter { 

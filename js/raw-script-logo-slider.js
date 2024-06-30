@@ -10,7 +10,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			pause = logoSlider.getAttribute('data-pause'),
 			spacing = (getDeviceW() * (parseInt(logoSlider.getAttribute('data-spacing')) / 100)) /2,
 			easing = "linear",
-			containerW = 0;
+			containerW = 0,
+			slider_id = Date.now();
 		
 		getObjects('div img', logoRow).forEach(img => {
 			img.classList.remove('unloaded');
@@ -32,7 +33,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		if ( containerW < getDeviceW() ) containerW = getDeviceW();
 		logoRow.style.width = containerW+"px";
 		
-        let keyframes = `@keyframes logo_slider {
+        let keyframes = `@keyframes logo_slider_${slider_id} {
             from { transform: translateX(${direction === 'reverse' ? '-100%' : '0%'}); }
             to { transform: translateX(${direction === 'reverse' ? '0%' : '-100%'}); }
         }`;
@@ -42,7 +43,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
         styleSheet.innerText = keyframes;
         document.head.appendChild(styleSheet);				
 		
-		logoRow.style.animation = `logo_slider ${speed}s ${easing} infinite`;
+		logoRow.style.animation = `logo_slider_${slider_id} ${speed}s ${easing} infinite`;
 		
 		let logoRowW = logoRow.offsetWidth,
 			logoRowH = logoRow.offsetHeight;

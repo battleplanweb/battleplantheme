@@ -135,9 +135,9 @@
 	display:										inline-block;
 	font-family: 									var(--font-icons);
 	content:   										"\e22d";
-	font-size:										22px;
+	font-size:										var(--font-size-text);
 	margin-left:									8px;
-	transform:										translate(1px, -1px);
+	transform:										translate(1px, 1px);
 }
 
 .main-navigation ul.sub-menu {

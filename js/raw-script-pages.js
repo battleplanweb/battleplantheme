@@ -94,6 +94,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	}
 		
 
+
+
 	
 // Overflow: assist in hiding overflow during animation and then making it visible again
 	window.animateOverflow = function(container, delay=2000) {
@@ -371,6 +373,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	
 
 // Animate multiple elements in a grid
+
 	window.animateGrid = function(elementSel, effect1, effect2, effect3, initDelay=0, eachDelay=100, offset="100%", mobile="false", speed=1000, easing='ease') {
 		const elementObj = getObjects(`${elementSel}:first-child`);
 		if (!elementObj.length) return;
@@ -456,31 +459,34 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 
 	
 // Split string into characters for animation
-	window.animateCharacters = function(elementSel, effect1, effect2, initDelay=0, eachDelay=100, offset="100%", words=false) {
-		let speed = 1000, easing = "easeOutQuart";
+	window.animateCharacters = function(elementSel, effect1, effect2, initDelay=0, eachDelay=100, offset="100%", words='false') {
+		let speed = 1000, easing = "easeOutQuart", delay = 0;
 		const elementObj = getObjects(elementSel);
 
 		elementObj.forEach(element => {
 			if (element.innerHTML.includes("<")) return;
 
-			let contentArray = words ? element.textContent.split(" ") : element.textContent.split("");
+			let contentArray = words === 'true' ? element.textContent.split(" ") : element.textContent.split("");
 			let newContent = contentArray.map((item, index) => {
-				if (words) {
+				if (words === 'true') {
 					return `<span class="wordSplit animate">${item}</span>`;
 				} else {
 					return `<span class="charSplit animate">${item === " " ? "&nbsp;" : item}</span>`;
 				}
-			}).join(words ? "&nbsp;" : "");
+			}).join(words === 'true' ? "&nbsp;" : "");
 
 			element.innerHTML = newContent; 
 
 			const animatedElements = getObjects(".animate", element);
-			animatedElements.forEach((element, index) => {
-				const effect = index % 2 === 0 ? effect1 : effect2;
-				const animationName = animationKeyframes(effect);	
-				applyAnimation(element, speed / 1000, eachDelay / 1000, easing, 'both');
-				observeVisibility(element, offset, animationName);				
-			});
+			setTimeout(() => {
+				animatedElements.forEach((element, index) => {
+					delay += eachDelay;
+					const effect = index % 2 === 0 ? effect1 : effect2;
+					const animationName = animationKeyframes(effect);	
+					applyAnimation(element, speed / 1000, delay / 1000, easing, 'both');
+					observeVisibility(element, offset, animationName);				
+				});
+			}, initDelay);
 		});
 	};
 	
@@ -776,11 +782,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		  	}
 
 			if (buttonActivated === "yes") {
-				getObject('.modal-btn').addEventListener('click', () => {
-					section.classList.add("on-screen");
-					document.body.classList.add('locked');
-					section.focus();
-				});
+				const modal = getObject('.modal-btn');
+				if ( modal) {
+					modal.addEventListener('click', () => {
+						section.classList.add("on-screen");
+						document.body.classList.add('locked');
+						section.focus();
+					});
+				}
 			}			
 			
             if (buttonActivated === "no" && getCookie("display-"+sectionID) !== "no") {

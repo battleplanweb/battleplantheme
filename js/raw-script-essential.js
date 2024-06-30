@@ -158,8 +158,21 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	
 	
 // Handle locking divs to top of screen on scroll	
-	let lockedDivs = [];
-		
+	let lockedDivs = [];											   
+														    
+	const checkFixedEls = [ '#page > #desktop-navigation', '#masthead > #desktop-navigation', '.top-strip', '#masthead' ];
+
+	const fixedElement = checkFixedEls.map(selector => getObject(selector))
+		.find(el => el && getComputedStyle(el).position === 'fixed');
+
+	if (fixedElement) {
+		const targetElement = fixedElement.matches('#page > #desktop-navigation') ? getObject('#masthead') : fixedElement.nextElementSibling;
+		if (targetElement) {
+			targetElement.style.marginTop = `${fixedElement.offsetHeight}px`;
+		}
+	}
+														   
+														   
 	window.lockDiv = function(elementSel, triggerSel=null, triggerAdj=0, docFlow=true, positionAdj=0) {
 		const elementObj = getObject(elementSel);		
 		let triggerObj = triggerSel ? getObject(triggerSel) : elementObj.nextElementSibling;
@@ -178,9 +191,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		
 		lockedDivs.push(divData);
 	}
-
+	
+	
 	window.lockAlign = function() {				
-		const stuckEls = getObjects('.stuck, .fixed-at-load');
+		const stuckEls = getObjects('.stuck');
 		
 		if ( !stuckEls.length ) {
 			bp_page.style.paddingTop = "0px";			
@@ -206,22 +220,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		});
 						
 		bp_page.style.paddingTop = pagePadding + "px";
-
 	};
-
-
-	window.fixedAtLoad = function(elementSel) {
-		const elementObj = getObject(elementSel);	
-		elementObj.style.position = 'fixed';
-		elementObj.classList.add("fixed-at-load");		
-		
-		lockAlign();
-	};	
-	
-	window.addFaux = function(elementSel, fixed=true) {
-		fixedAtLoad(elementSel);
-	};
-	
+														   
 	window.lockMenu = function() {	
 		lockDiv('#desktop-navigation');	
 	};	

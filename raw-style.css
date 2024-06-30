@@ -5,7 +5,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 2024.06.28
+Version: 2024.06.30
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -498,6 +498,12 @@ a[tooltip]:hover::after {
 
 /* Fancy Buttons
 --------------------------------------------- */
+a.button.fancy,
+a.button.fancy-2,
+a.button.fancy-3 {
+	position: 										relative;
+}
+
 a.button.fancy .fancy-text,
 a.button.fancy .fancy-icon,
 a.button.fancy:hover .fancy-text,
@@ -540,12 +546,12 @@ a.button.fancy:hover .fancy-icon {
 }
 
 a.button.fancy-2 {
-	padding:										0;	
+	overflow: 										hidden;
 }
 
 a.button.fancy-2 .fancy-text,
 a.button.fancy-2:hover .fancy-text {
-	padding: 										0.3em 0.6em 0.3em 0.7em;
+	padding: 										0.3em 1.4em 0.3em 0.7em;
 }
 
 a.button.fancy-2 .fancy-icon,
@@ -554,7 +560,10 @@ a.button.fancy-2:hover .fancy-icon {
 }
 
 a.button.fancy-2 .fancy-icon {
-	background:										var(--black-low);
+  	position: 										absolute;
+  	right: 											0;
+  	top: 											0;
+	background:										var(--black-lowest);
 }
 
 a.button.fancy-3 {

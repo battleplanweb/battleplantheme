@@ -795,7 +795,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	window.sizeFrame = function(targetSel, frameSel=".frame", scale="0.9") {
 		const targetObj = getObjects(targetSel);
 		if (!targetObj.length) return;
-
+		
 		targetObj.forEach(target => {			
 			if (targetSel.includes('video')) {			
 				const findSize = target.parentElement,
@@ -821,20 +821,24 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 						
 						const frameW = img.offsetWidth,
 							  frameH = img.offsetHeight;
-						if (frame) {
-							setStyles(frame, {
-								'width':			`${frameW}px`,
-								'height':			`${frameH}px`,
-								'marginBottom':		`-${frameH}px`
-							});
+						
+						if ( frameW > 0 && frameH > 0 ) {
+							if (frame) {
+								setStyles(frame, {
+									'width':			`${frameW}px`,
+									'height':			`${frameH}px`,
+									'marginBottom':		`-${frameH}px`
+								});
+							}
+							dimensionsSet = true;
+							addCSS(`${targetSel} img`, `transform: scale(${scale})`);
 						}
-						dimensionsSet = true;
-						addCSS(`${targetSel} img`, `transform: scale(${scale})`);
 					});
 					if (img.complete) img.dispatchEvent(new Event('load'));
 					if (dimensionsSet) break;
 				}										
-			}
+			}	
+
 		});
 	};
 	

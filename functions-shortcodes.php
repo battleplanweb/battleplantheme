@@ -16,7 +16,7 @@ function battleplan_getIcon($atts, $content = null ) {
 	$adjust = $left != 0 || $top != 0 ? ' style="transform: translate('.$left.'px, '.$top.'px)"' : '';
 	$class = esc_attr($a['class']) != '' ? ' '.esc_attr($a['class']) : '';
 	$sr = esc_attr($a['sr']);	
-	$target = esc_attr($a['new-tab']) != '' ? ' target="_blank"' : '';
+	$target = esc_attr($a['new-tab']) !== '' ? ' target="_blank"' : '';
 	array_push($GLOBALS['icon-css'], $type);	
 	
 	$buildIcon = '';
@@ -308,10 +308,10 @@ add_shortcode( 'social-btn', 'battleplan_socialBtn' );
 function battleplan_socialBtn( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', 'img'=>'', 'link'=>'' ), $atts );
 	$type = esc_attr($a['type']);
-	$link = esc_attr($a['link']) == '' ? do_shortcode('[get-biz info="'.$type.'"]') : esc_attr($a['link']);
+	$link = esc_attr($a['link']) === '' ? do_shortcode('[get-biz info="'.$type.'"]') : esc_attr($a['link']);
 	$prefix = $type == "email" ? "mailto:" : "";
 	$alt = $type == "email" ? "Email us" : "Visit us on ".$type;
-	if ( esc_attr($a['img']) == '' ) :
+	if ( esc_attr($a['img']) === '' ) :
 		return do_shortcode('[get-icon type="'.$type.'" class="social-btn '.$type.'-btn" link="'.$prefix.$link.'" new-tab="yes"]');
 	else:
 		return '<a class="social-btn '.$type.'-btn" href="'.$prefix.$link.'" target="_blank" rel="noopener noreferrer"><img loading="lazy" src = "'.esc_attr($a['img']).'" alt="'.$alt.'"/</a>';
@@ -922,7 +922,7 @@ function battleplan_getRandomPosts($atts, $content = null) {
 // Display posts & images in a Bootstrap slider 
 add_shortcode( 'get-post-slider', 'battleplan_getPostSlider' );
 function battleplan_getPostSlider($atts, $content = null ) {
-	wp_enqueue_script( 'battleplan-carousel', get_template_directory_uri().'/js/script-carousel.js', array(), _BP_VERSION, false );		
+	wp_enqueue_script( 'battleplan-carousel', get_template_directory_uri().'/js/script-carousel.js', array('battleplan-script-pages'), _BP_VERSION, false );		
 	wp_enqueue_style( 'battleplan-carousel', get_template_directory_uri()."/style-carousel.css", array('parent-style'), _BP_VERSION );  
 	
 	$a = shortcode_atts( array( 'type'=>'testimonials', 'auto'=>'yes', 'interval'=>'6000', 'loop'=>'true', 'num'=>'4', 'offset'=>'0', 'pics'=>'yes', 'caption'=>'no', 'controls'=>'yes', 'controls_pos'=>'below', 'indicators'=>'no', 'justify'=>'center', 'pause'=>'true', 'orderby'=>'recent', 'order'=>'asc', 'post_btn'=>'', 'show_thumb'=>'true', 'all_btn'=>'View All', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'title_pos'=>'', 'link'=>'', 'pic_size'=>'1/3', 'text_size'=>'', 'slide_type'=>'box', 'slide_effect'=>'fade', 'tax'=>'', 'terms'=>'', 'tag'=>'', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'id'=>'', 'mult'=>'1', 'class'=>'', 'truncate'=>'true', 'lazy'=>'true', 'blur'=>'false', 'rand_start'=>'', 'content_type'=>'image' ), $atts );

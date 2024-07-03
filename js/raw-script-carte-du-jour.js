@@ -60,7 +60,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		});
 	});
 
-
+/*
 	// Create galleries to display pics associated with (food) menu items
 	let menuExists = false;
 	const elements = getObjects('.menu-page #main-content h4, .menu-page .list-item');
@@ -113,4 +113,5 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			autoplayVideos: true,
 		});
 	}	
+	*/
 });

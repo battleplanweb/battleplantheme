@@ -216,12 +216,8 @@ input[type="number"] {
 	color: 										all;
 }
 
-.account-buttons a.cart-btn {
-	font-size: 									16px;
-}
-
-.account-buttons a i.fa::before {
-	font-size: 									19px;
+.account-buttons a {
+	font-size: 									21px;
 }
 
 /* Overrides

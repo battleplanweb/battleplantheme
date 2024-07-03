@@ -96,6 +96,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 
 
 
+
 	
 // Overflow: assist in hiding overflow during animation and then making it visible again
 	window.animateOverflow = function(container, delay=2000) {
@@ -1247,13 +1248,13 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 
 		if (input) {
 			updateId(input, input.id);
-			label.setAttribute('for', 'modal-' + input.id);
+			if ( label ) { label.setAttribute('for', 'modal-' + input.id); }
 		} else if (textarea) {
 			updateId(textarea, textarea.id);
-			label.setAttribute('for', 'modal-' + textarea.id);
+			if ( label ) { label.setAttribute('for', 'modal-' + textarea.id); }
 		} else if (select) {
 			updateId(select, select.id);
-			label.setAttribute('for', 'modal-' + select.id);
+			if ( label ) { label.setAttribute('for', 'modal-' + select.id); }
 		}
 	});
 			

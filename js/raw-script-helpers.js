@@ -154,37 +154,9 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		preloadImage.src = site_dir.upload_dir_uri + "/" + imgName;		
 	};
 	
-	if ( site_bg !== null ) {
+	if ( !document.body.classList.contains('wp-admin') && site_bg !== null ) {
 		preloadImg('site-background.'+site_bg, 'desktop');
 		preloadImg('site-background-phone.'+site_bg, 'mobile');		
 	}
 														   
-	
-
-/*
-// Fade Out / In an element
-	window.fadeOut = function(elementSel, speed=300, toggle_class="visible") {
-		const elementObj = getObject(elementSel);
-        elementObj.style.transition = `opacity ${speed}ms ease-in-out`;
-        elementObj.style.opacity = 0;
-        setTimeout(() => {
-        	elementObj.classList.remove(toggle_class);
-        	elementObj.style.display = 'none';
-		}, speed);
-	};
-
-	window.fadeIn = function(elementSel, speed=300, toggle_class="visible") {
-		const elementObj = getObject(elementSel);
-        setTimeout(() => {
-            if (elementObj) {
-				elementObj.style.transition = `opacity ${fadeSpeed}ms ease-in-out`;
-                elementObj.classList.add(toggle_class);
-                elementObj.style.display = 'block';
-                setTimeout(() => {
-                    elementObj.style.opacity = 1;
-                }, 10);
-            }
-        }, speed);
-	};
-*/		
-})
+});

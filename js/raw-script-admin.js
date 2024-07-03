@@ -10,13 +10,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
         el.removeAttribute('disabled');
     });
 													
-// Map admin icon (on non-admin pages) to the admin section													   
-	getObject('.logged-in #wpadminbar button').addEventListener('click', () => {
-		window.location.href = '/wp-admin/';
-	});
+// Map admin icon (on non-admin pages) to the admin section		
+	const adminBtn = getObject('.logged-in #wpadminbar button');
+	if (adminBtn) {
+		adminBtn.addEventListener('click', () => {
+			window.location.href = '/wp-admin/';
+		});
+	}
 	
-														   console.log('1'); 
-		
 // Control color of Top 10 Most Visited Days box
 	getObjects('#battleplan_site_stats tr').forEach(tr => {
         let getAge = 100 - parseInt(tr.getAttribute('data-age'), 10);

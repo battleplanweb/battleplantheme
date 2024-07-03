@@ -73,7 +73,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	
 	
 // Automatically add parallax to any div noted as a scroll element
-	getObjects('section[data-parallax="scroll"]').forEach(section => {
+	getObjects('[data-parallax="scroll"]').forEach(section => {
 		let imgSrc = section.getAttribute('data-image-src');
 		imgSrc = imgSrc.replace('/wp-content/uploads/', '');
     	const imgW = parseInt(section.getAttribute('data-img-width'), 10);

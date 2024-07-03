@@ -1026,7 +1026,7 @@ function battleplan_header_styles() {
 	
 	if ( $cancel_holiday == "false" && time() > $start && time() < $end ) :
 	 	wp_enqueue_style( 'battleplan-style-holiday', get_template_directory_uri()."/style-holiday.css", array('parent-style'), _BP_VERSION );	
-		wp_enqueue_script( 'battleplan-holiday', get_template_directory_uri().'/js/script-holiday.js', array('jquery'), _BP_VERSION, false );		
+		wp_enqueue_script( 'battleplan-holiday', get_template_directory_uri().'/js/script-holiday.js', array(), _BP_VERSION, false );		
 	endif;
 	
 	wp_enqueue_style( 'battleplan-style-forms', get_template_directory_uri()."/style-forms.css", array('parent-style'), _BP_VERSION );
@@ -1048,39 +1048,36 @@ function battleplan_footer_styles() {
 // Load and enqueue remaining scripts
 add_action( 'wp_enqueue_scripts', 'battleplan_scripts', 20 );
 function battleplan_scripts() {
-	wp_enqueue_script( 'battleplan-script-helpers', get_template_directory_uri().'/js/script-helpers.js', array('jquery'), _BP_VERSION, false );					
-	wp_enqueue_script( 'battleplan-script-essential', get_template_directory_uri().'/js/script-essential.js', array('jquery'), _BP_VERSION, false );				
-	wp_enqueue_script( 'battleplan-script-pages', get_template_directory_uri().'/js/script-pages.js', array('jquery'), _BP_VERSION, false );				
-	//wp_enqueue_script( 'battleplan-waypoints', get_template_directory_uri().'/js/waypoints.js', array('jquery', 'battleplan-script-essential'), _BP_VERSION, false );		
-	
+	wp_enqueue_script( 'battleplan-script-helpers', get_template_directory_uri().'/js/script-helpers.js', array(), _BP_VERSION, false );					
+	wp_enqueue_script( 'battleplan-script-essential', get_template_directory_uri().'/js/script-essential.js', array(), _BP_VERSION, false );				
+	wp_enqueue_script( 'battleplan-script-pages', get_template_directory_uri().'/js/script-pages.js', array(), _BP_VERSION, false );				
 	if ( !is_mobile() ) : 
-		//wp_enqueue_script( 'battleplan-parallax', get_template_directory_uri().'/js/parallax.js', array('jquery'), _BP_VERSION, false ); 
-		wp_enqueue_script( 'battleplan-script-desktop', get_template_directory_uri().'/js/script-desktop.js', array('jquery'), _BP_VERSION, false );
+		wp_enqueue_script( 'battleplan-script-desktop', get_template_directory_uri().'/js/script-desktop.js', array(), _BP_VERSION, false );
 
 		if ( isset($GLOBALS['customer_info']['scripts']) && is_array($GLOBALS['customer_info']['scripts']) && in_array('magic-menu', $GLOBALS['customer_info']['scripts']) ) :
-			wp_enqueue_script( 'battleplan-script-magic-menu', get_template_directory_uri().'/js/script-magic-menu.js', array('jquery'), _BP_VERSION, false );
+			wp_enqueue_script( 'battleplan-script-magic-menu', get_template_directory_uri().'/js/script-magic-menu.js', array(), _BP_VERSION, false );
 		endif;
 	endif;
 
-	wp_enqueue_script( 'battleplan-script-site', get_stylesheet_directory_uri().'/script-site.js', array('jquery'), _BP_VERSION, false );	
-	wp_enqueue_script( 'battleplan-script-tracking', get_template_directory_uri().'/js/script-tracking.js', array('jquery'), _BP_VERSION, false ); 	
-	wp_enqueue_script( 'battleplan-script-cloudflare', get_template_directory_uri().'/js/script-cloudflare.js', array('jquery'), _BP_VERSION, false );
+	wp_enqueue_script( 'battleplan-script-site', get_stylesheet_directory_uri().'/script-site.js', array(), _BP_VERSION, false );	
+	wp_enqueue_script( 'battleplan-script-tracking', get_template_directory_uri().'/js/script-tracking.js', array(), _BP_VERSION, false ); 	
+	wp_enqueue_script( 'battleplan-script-cloudflare', get_template_directory_uri().'/js/script-cloudflare.js', array(), _BP_VERSION, false );
 
-	if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 'true' ) wp_enqueue_script( 'battleplan-script-events', get_template_directory_uri().'/js/script-events.js', array('jquery'), _BP_VERSION, false );   
+	if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 'true' ) wp_enqueue_script( 'battleplan-script-events', get_template_directory_uri().'/js/script-events.js', array(), _BP_VERSION, false );   
 	
-	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) wp_enqueue_script( 'battleplan-script-jobsite_geo', get_template_directory_uri().'/js/script-jobsite_geo.js', array('jquery'), _BP_VERSION, false );   
+	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) wp_enqueue_script( 'battleplan-script-jobsite_geo', get_template_directory_uri().'/js/script-jobsite_geo.js', array(), _BP_VERSION, false );   
 	
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) wp_enqueue_script( 'battleplan-script-woocommerce', get_template_directory_uri().'/js/script-woocommerce.js', array('jquery'), _BP_VERSION, false ); 
 	if ( is_plugin_active( 'cue/cue.php' ) ) wp_enqueue_script( 'battleplan-script-cue', get_template_directory_uri().'/js/script-cue.js', array('jquery'), _BP_VERSION, false ); 
 	
-	if ( ($GLOBALS['customer_info']['site-type'] == 'profile' || (is_array($GLOBALS['customer_info']['site-type']) && in_array('profile', $GLOBALS['customer_info']['site-type']))) || ($GLOBALS['customer_info']['site-type'] == 'profiles' || (is_array($GLOBALS['customer_info']['site-type']) && in_array('profiles', $GLOBALS['customer_info']['site-type']))) ) wp_enqueue_script( 'battleplan-script-user-profiles', get_template_directory_uri().'/js/script-user-profiles.js', array('jquery'), _BP_VERSION, false ); 
+	if ( ($GLOBALS['customer_info']['site-type'] == 'profile' || (is_array($GLOBALS['customer_info']['site-type']) && in_array('profile', $GLOBALS['customer_info']['site-type']))) || ($GLOBALS['customer_info']['site-type'] == 'profiles' || (is_array($GLOBALS['customer_info']['site-type']) && in_array('profiles', $GLOBALS['customer_info']['site-type']))) ) wp_enqueue_script( 'battleplan-script-user-profiles', get_template_directory_uri().'/js/script-user-profiles.js', array(), _BP_VERSION, false ); 
 	
 	if ( _USER_LOGIN == "battleplanweb" ) {
 		wp_enqueue_style( 'battleplan-admin-css', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION );	
 		if ( is_admin() ) wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array('quicktags'), _BP_VERSION, false );	
 	};
 	 
-	wp_enqueue_script( 'battleplan-script-fire-off', get_template_directory_uri().'/js/script-fire-off.js', array('jquery'), _BP_VERSION, false );
+	wp_enqueue_script( 'battleplan-script-fire-off', get_template_directory_uri().'/js/script-fire-off.js', array(), _BP_VERSION, false );
 	
 	if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) wp_enqueue_script( 'comment-reply' ); 
 	
@@ -1097,11 +1094,11 @@ function battleplan_scripts() {
 if (is_admin()) { add_action( 'admin_enqueue_scripts', 'battleplan_admin_scripts' ); }
 function battleplan_admin_scripts() {
 	wp_enqueue_style( 'battleplan-admin-css', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION ); 
-	wp_enqueue_script( 'battleplan-script-helpers', get_template_directory_uri().'/js/script-helpers.js', array('jquery'), _BP_VERSION, false );					
-	wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array('jquery'), _BP_VERSION, false );	
+	wp_enqueue_script( 'battleplan-script-helpers', get_template_directory_uri().'/js/script-helpers.js', array(), _BP_VERSION, false );					
+	wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array(), _BP_VERSION, false );	
 	if ( $GLOBALS['customer_info']['site-type'] == 'profile' || $GLOBALS['customer_info']['site-type'] == 'profiles' ) : 
-		wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array('jquery'), _BP_VERSION ); 		
-		wp_enqueue_script( 'battleplan-script-user-profiles', get_template_directory_uri().'/js/script-user-profiles.js', array('jquery'), _BP_VERSION, false ); 
+		wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array(), _BP_VERSION ); 		
+		wp_enqueue_script( 'battleplan-script-user-profiles', get_template_directory_uri().'/js/script-user-profiles.js', array(), _BP_VERSION, false ); 
 	endif;
 	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' )  wp_enqueue_style( 'battleplan-admin-jobsite-geo-css', get_template_directory_uri()."/style-jobsite-geo-admin.css", array(), _BP_VERSION ); 		
 

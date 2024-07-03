@@ -11,7 +11,7 @@
 # Basic Theme Set Up
 --------------------------------------------------------------*/
 // Load and enqueue styles & scripts
-add_action( 'wp_enqueue_scripts', 'battleplan_carte_du_jour_scripts' );
+add_action( 'wp_enqueue_scripts', 'battleplan_carte_du_jour_scripts', 30 );
 function battleplan_carte_du_jour_scripts() {
 	wp_enqueue_style( 'battleplan-css-carte-du-jour', get_template_directory_uri().'/style-carte-du-jour.css', array(), _BP_VERSION );	 
 	wp_enqueue_script( 'battleplan-script-carte-du-jour', get_template_directory_uri().'/js/script-carte-du-jour.js', array(), _BP_VERSION, false );

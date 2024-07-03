@@ -13,7 +13,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2024.06.30' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2024.07.03' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -213,6 +213,7 @@ $GLOBALS['icons']['calendar'] = '\e077';
 $GLOBALS['icons']['calendar-clock'] = '\e078';
 $GLOBALS['icons']['camera'] = '\e194';
 $GLOBALS['icons']['camera-security'] = '\e195';
+$GLOBALS['icons']['cart'] = '\e0f4';
 $GLOBALS['icons']['chain-link'] = '\e116';
 $GLOBALS['icons']['checkmark-seal'] = '\e0a3';
 $GLOBALS['icons']['chevron-down'] = '\e219';

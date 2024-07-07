@@ -249,8 +249,8 @@ function battleplan_admin_referrer_stats() {
 		echo '<li class="sub-label" style="column-span: all">Last '.number_format(array_sum($referrerAndSessions)).' Engaged Sessions</li>';		
 
 		foreach ($referrerAndSessions as $referrerTitle => $referSessions) :
-			$search = array( '(direct) / (none)' , ' / referral', ' / organic', ' / cpc', 'Googleads.g.doubleclick.net', ' / display', 'google', 'GMB', 'bing', 'yahoo', 'duckduckgo' );
-			$replace = array( 'Direct' , '', ' (organic)', ' (paid)', 'Google (paid)', ' (display)', 'Google', 'GBP', 'Bing', 'Yahoo', 'DuckDuckGo' );
+			$search = array( '(direct) / (none)' , ' / referral', ' / organic', ' / cpc', 'Googleads.g.doubleclick.net', ' / display', 'google', 'GMB', 'bing', 'yahoo', 'duckduckgo', 'fb / paid' );
+			$replace = array( 'Direct' , '', ' (organic)', ' (paid)', 'Google (paid)', ' (display)', 'Google', 'GBP', 'Bing', 'Yahoo', 'DuckDuckGo', 'Facebook (paid)' );
 			$referrerTitle = str_replace( $search, $replace, $referrerTitle);
 	
 			if ( $referSessions > 0 ) echo "<li><div class='value'><b>".number_format($referSessions)."</b></div><div class='label'>".$referrerTitle."</div></li>";
@@ -451,7 +451,7 @@ function battleplan_admin_tech_stats() {
 			$sessions = isset($GLOBALS['speedSessions'][$metricKey][$deviceTitle]) ? $GLOBALS['speedSessions'][$metricKey][$deviceTitle] : 0;			
 			$fastSessions = isset($GLOBALS['fastSessions'][$metricKey][$deviceTitle]) ? $GLOBALS['fastSessions'][$metricKey][$deviceTitle] : 0;
 	
-			if ( $deviceTotalSessions > 0 && $sessions > 0 ) echo "<li><div class='value'><b>".number_format(($deviceSessions / $deviceTotalSessions)*100,1)."%</b></div><div class='label-half' style='width:calc(35% - 35px)'>".ucwords($deviceTitle)."</div><div class='label-half style='width:calc(65% - 35px)'>".number_format($total / $sessions, 1)."s&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;".number_format(($fastSessions / $sessions)*100, 1)."% above target</div></li>";
+			if ( $deviceTotalSessions > 0 && $sessions > 0 ) echo "<li><div class='value'><b>".number_format(($deviceSessions / $deviceTotalSessions)*100,1)."%</b></div><div class='label-half' style='width:calc(35% - 35px)'>".ucwords($deviceTitle)."</div><div class='label-half style='width:calc(65% - 35px)'>".number_format($total / $sessions, 1)."s&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;".number_format(($fastSessions / $sessions)*100, 1)."% target</div></li>";
 		endforeach;
 
 		echo '</ul></div>';	
@@ -534,19 +534,29 @@ function battleplan_admin_content_stats() {
 	
 		echo '<li class="sub-label" style="column-span: all">Last '.number_format($init).' Pageviews</li>';		
 		foreach ($contentCalc as $pct=>$total) :
-			if ( $pct != 'init' ) :
+			if ( $pct !== 'init' ) :
 				$label = $pct != 100 ? "viewed at least ".$pct."%  of main content" : "<b>viewed ALL of main content</b>";
 	
 				if ( $init > 0 ) echo "<li><div class='value'><b>".number_format(($total/$init)*100,1)."%</b></div><div class='label'>".$label."</div></li>";
 			endif;
-		endforeach;		
+		endforeach;
 	
 		echo '</ul><li class="sub-label" style="column-span: all">Tracked Components & Events</li><ul>';	
-		$track_init = $contentVisAndSessions['track-init'];	
+	
+		$sessionCount = str_replace('sessions', 'page-views', $metricKey);
+		$track_init = $GLOBALS['ga4_visitor'][$sessionCount];	
+
 		foreach ($contentVisAndSessions as $key=>$value) :
-		 	if (strpos($key, 'track-') === 0) :
+		 	if (strpos($key, 'track-') !== false) :
 				$trackItem = str_replace('track-', '', $key);
 				if ( $trackItem != 'init' && $track_init > 0 ) echo "<li><div class='value'><b>".number_format(($value/$track_init) * 100,1)."%</b></div><div class='label'>".ucwords($trackItem)."</div></li>";
+		    endif;
+		endforeach;
+		echo '<br>';
+		foreach ($contentVisAndSessions as $key=>$value) :	
+		 	if (strpos($key, 'conversion-') !== false) :
+				$trackItem = str_replace('conversion-', '', $key);
+				if ( $trackItem != 'init' && $track_init > 0 ) echo "<li><div class='value'><b>".$value."</b></div><div class='label'>".ucwords($trackItem)."s</div></li>";
 		    endif;
 		endforeach;
 		echo '</ul></div>';	

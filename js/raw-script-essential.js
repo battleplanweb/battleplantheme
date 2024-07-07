@@ -215,7 +215,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			
 			if (!stuck.classList.contains('no-doc-flow')) {
 				pagePadding += stuck.offsetHeight;
-				console.log(stuck, pagePadding);
 			}
 		});
 						

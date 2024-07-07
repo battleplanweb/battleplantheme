@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 				const clickType = click.getAttribute('data-action') || 'email',
 					  pageUrl = click.getAttribute('data-url');            
 
-				if (typeof gtag === 'function') gtag("event", "unlock_achievement", { achievement_id: 'conversion-'+clickType });			
+				if (typeof gtag === 'function') gtag("event", "unlock_achievement", { achievement_id: 'conversion-'+clickType });
 
 				if (pageUrl) document.location = pageUrl;
 			});
@@ -46,6 +46,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			loadTime = loadTime.toFixed(1);
 
 			if (typeof gtag === 'function') gtag("event", "join_group", { group_id: `${pageID}»${deviceType}«${loadTime}` });
+
 		}, 4000);
 		
 
@@ -90,6 +91,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 				thresholds.forEach(threshold => {
 					if (maxViewed >= threshold.value && !window[threshold.flag]) {
 						if (typeof gtag === 'function') gtag("event", "unlock_achievement", { achievement_id: `${pageID}-${threshold.value}` });
+						
 						window[threshold.flag] = true;
 					}
 				});
@@ -98,7 +100,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			
 
 		// Log what percentage of users see various trackable elements
-			const trackedObj = getObjects('.tracking');
+			const trackedObj = [...getObjects('.tracking'), ...getObjects('[data-track]')];
 
 			const observerOptions = {
 				root: null, 

@@ -237,6 +237,7 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 	window.centerSubNav = function () {
 		const subMenus = getObjects('.main-navigation ul.sub-menu');
 		subMenus.forEach(subMenu => {
+
 			const subW = subMenu.offsetWidth;
 			const parentW = subMenu.parentElement.offsetWidth; 
 			const moveL = -Math.round((subW - parentW) / 2);
@@ -249,6 +250,18 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 /*--------------------------------------------------------------
 # Sidebar widgets
 --------------------------------------------------------------*/
+	window.labelWidgets = function () {
+		const visibleWidgets = getObjects(".widget:not(.hide-widget)");
+		if (visibleWidgets.length) {
+			visibleWidgets[0].classList.add("widget-first");
+			visibleWidgets[visibleWidgets.length - 1].classList.add("widget-last");
+			visibleWidgets.forEach((widget, index) => {
+				widget.classList.remove("widget-even", "widget-odd"); // Clear previous classes
+				widget.classList.add(index % 2 === 0 ? "widget-odd" : "widget-even");
+			});
+		}
+	};
+
 	window.desktopSidebar = function (compensate, sidebarScroll) {
 		window.secondaryObj = getObject('#secondary');
 		if ( !secondaryObj ) return;
@@ -290,16 +303,6 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 							widget.classList.remove('hide-widget');
 						}
 					});
-				});
-			});
-
-			['set-a', 'set-b', 'set-c'].forEach(setClass => {
-				let handleSets = 0;
-				getObjects(`.widget.widget-set.${setClass}`).forEach(widget => {
-					if (handleSets > 0) {
-						widget.setAttribute('data-priority', 0);
-					}
-					handleSets++;
 				});
 			});
 

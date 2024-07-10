@@ -1744,7 +1744,7 @@ function battleplan_fetch_background_image($clear=false) {
 			$imgData = 'png';
 		} elseif (is_file($_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-background.jpg')) {
 			$imgData = 'jpg';
-		}
+		} 
 
 		update_option('bp_site_bg_img', $imgData);
 	}

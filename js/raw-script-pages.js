@@ -19,16 +19,75 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	window.setupSidebar = function (compensate=0, sidebarScroll=true) {
 		
 // Add classes for first, last, even and odd widgets
-		window.labelWidgets = function () {
-			const visibleWidgets = getObjects(".widget:not(.hide-widget)");
-			if (visibleWidgets.length) {
-				visibleWidgets[0].classList.add("widget-first");
-				visibleWidgets[visibleWidgets.length - 1].classList.add("widget-last");
-				visibleWidgets.forEach((widget, index) => {
-					widget.classList.remove("widget-even", "widget-odd"); // Clear previous classes
-					widget.classList.add(index % 2 === 0 ? "widget-odd" : "widget-even");
+		window.mobileWidgets = function () {
+			const uniqueId = (() => {
+				let id = 0;
+				return () => `placeholder-${id++}`;
+			})();
+
+			const createPlaceholder = () => {
+				const div = document.createElement('div');
+				div.id = uniqueId();
+				return div;
+			};
+
+			const insertPlaceholders = () => {
+				const paragraphs = getObjects('p');
+				
+				paragraphs.forEach((p) => {
+					const nextElem = p.nextElementSibling;
+					if (nextElem && (nextElem.tagName === 'H2' || nextElem.tagName === 'H3')) {
+						p.insertAdjacentElement('afterend', createPlaceholder());
+					} 
 				});
-			}
+				
+				paragraphs.forEach((p) => {
+					const nextElem = p.nextElementSibling;
+					if (nextElem && nextElem.tagName === 'P') {
+						p.insertAdjacentElement('afterend', createPlaceholder());
+					}
+				});
+			};
+
+			const integrateWidgets = () => {
+				let placeholders = Array.from(getObjects('div[id^="placeholder-"]'));
+				const widgets = Array.from(getObjects('.widget')).filter(widget => {
+					return !widget.classList.contains('widget-schedule-appointment') && !widget.classList.contains('widget-credit-cards');
+				}).sort((a, b) => {
+					const getPriority = el => +el.className.match(/priority-(\d)/)[1];
+					return getPriority(b) - getPriority(a); 
+				});
+
+				const widgetCount = widgets.length;
+				let placeholderCount = placeholders.length;
+				
+				if (placeholderCount > 2) {
+				
+					if (placeholderCount > widgetCount) {
+						placeholders.shift(); 
+						placeholderCount--;
+
+						if (placeholderCount > widgetCount) {
+							placeholders.shift(); 
+							placeholderCount--;
+						}
+					}
+
+					const step = Math.max(1, Math.floor(placeholderCount / widgetCount));
+
+					let widgetIndex = 0;
+					for (let i = 0; i < placeholderCount && widgetIndex < widgetCount; i += step) {
+						const placeholder = placeholders[i];
+						if (placeholder) {
+							placeholder.replaceWith(widgets[widgetIndex]);
+							widgetIndex++;
+						}
+					}
+				}
+			};
+
+			insertPlaceholders();
+			integrateWidgets();
 		};
 		
     // Shuffle array elements
@@ -58,11 +117,21 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		shuffleElements(eventWidgets).forEach(widget => parent.appendChild(widget));
 		shuffleElements(financingWidgets).forEach(widget => parent.appendChild(widget));
 		shuffleElements(widgets).forEach(widget => parent.appendChild(widget));
-		bottomWidgets.forEach(widget => parent.appendChild(widget));
+		bottomWidgets.forEach(widget => parent.appendChild(widget));		
+
+		['set-a', 'set-b', 'set-c'].forEach(setClass => {
+			let handleSets = 0;
+			getObjects(`.widget.widget-set.${setClass}`).forEach(widget => {
+				if (handleSets > 0) {
+					widget.remove();
+				}
+				handleSets++;
+			});
+		});
 
 		// Check screen type and apply labels
 		if (document.body.classList.contains('screen-mobile')) {
-			labelWidgets();
+			mobileWidgets();
 		} else {
 			desktopSidebar(compensate, sidebarScroll);
 		}
@@ -93,6 +162,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		return easingMap[easing] || easing;
 	}
 		
+
 
 
 
@@ -240,6 +310,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 					opacity: ${startOpacity};
 					filter: ${startFilter};
 				}
+
 				${midEffect}
 				100% {
 					transform: ${endTransform};

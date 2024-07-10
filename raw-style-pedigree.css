@@ -85,9 +85,14 @@ span.X {
     content: 									"\e09e";
 }
 
+.col-archive .image-dogs {
+	position:									relative;
+}
+
 .col-archive .image-dogs .sex-box {
 	position:									absolute;
 	z-index:									500;
+	top: 										0;
 }
 
 .col-archive .image-dogs .sex-box .icon {

@@ -1393,7 +1393,7 @@ function battleplan_coupon( $atts, $content = null ) {
 	$image = esc_attr($a['img']);
 	
 	$coupon = '[txt class="coupon"]<div class="coupon-inner">';
-	if ( $image != '' )	$coupon .= '<img src="'.wp_get_attachment_url( $image ).'" class="size-quarter-s '.esc_attr($a['img-pos']).' '.esc_attr($a['img-class']).'" />';
+	if ( $image != '' )	$coupon .= '<img src="'.wp_get_attachment_url( $image ).'" class="size-third-s '.esc_attr($a['img-pos']).' '.esc_attr($a['img-class']).'" />';
 	$coupon .= '<h2 class="action">'.esc_attr($a['action']).'</h2>';
 	$coupon .= '<h2 class="discount">'.esc_attr($a['discount']).'</h2>';
 	$coupon .= '<h2 class="service">'.esc_attr($a['service']).'</h2>';

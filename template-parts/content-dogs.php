@@ -56,14 +56,14 @@ $theContent = get_the_content();
 				$dogInfo .= "<li><span class='label'>Hidden:</span> ".$geno_list."</li>";
 			}
 		}		
-		if ( $birth_date != "NA" && $birth_date != "" ) $dogInfo .= "<li><span class='label'>Born:</span> ".$birthdate."</li>";
-		if ( $eic != "NA" && $eic != "" ) $dogInfo .= "<li><span class='label'>EIC:</span> ".$eic."</li>";
-		if ( $cnm != "NA" && $cnm != "" ) $dogInfo .= "<li><span class='label'>CNM:</span> ".$cnm."</li>";
-		if ( $hips != "NA" && $hips != "" ) $dogInfo .= "<li><span class='label'>Hips:</span> ".$hips."</li>";
-		if ( $elbows != "NA" && $elbows != "" ) $dogInfo .= "<li><span class='label'>Elbows:</span> ".$elbows."</li>";
-		if ( $eyes != "NA" && $eyes != "" ) $dogInfo .= "<li><span class='label'>Eyes:</span> ".$eyes."</li>";
-		if ( $pra != "NA" && $pra != "" ) $dogInfo .= "<li><span class='label'>PRA:</span> ".$pra."</li>";
-		if ($studFee != "0" && $studFee != "") : $studFee = number_format($studFee, 2, '.', ','); $dogInfo .= "<li><span class='label'>Stud Fee:</span> $'.$studFee.'</li>"; endif;
+		if ( $birth_date !== "NA" && $birth_date !== "" ) $dogInfo .= "<li><span class='label'>Born:</span> ".$birthdate."</li>";
+		if ( $eic !== "NA" && $eic !== "" ) $dogInfo .= "<li><span class='label'>EIC:</span> ".$eic."</li>";
+		if ( $cnm !== "NA" && $cnm !== "" ) $dogInfo .= "<li><span class='label'>CNM:</span> ".$cnm."</li>";
+		if ( $hips !== "NA" && $hips !== "" ) $dogInfo .= "<li><span class='label'>Hips:</span> ".$hips."</li>";
+		if ( $elbows !== "NA" && $elbows !== "" ) $dogInfo .= "<li><span class='label'>Elbows:</span> ".$elbows."</li>";
+		if ( $eyes !== "NA" && $eyes !== "" ) $dogInfo .= "<li><span class='label'>Eyes:</span> ".$eyes."</li>";
+		if ( $pra !== "NA" && $pra !== "" ) $dogInfo .= "<li><span class='label'>PRA:</span> ".$pra."</li>";
+		if ($studFee !== "0" && $studFee !== "") : $studFee = number_format($studFee, 2, '.', ','); $dogInfo .= "<li><span class='label'>Stud Fee:</span> $'.$studFee.'</li>"; endif;
 		$dogInfo .= '</ul>';
 		if ( $theContent ) $dogInfo .= "<h4>Other Points of Interest</h4>".do_shortcode('[p]'.$theContent.'[/p]');		
 

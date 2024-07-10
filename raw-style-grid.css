@@ -1354,22 +1354,6 @@ dl.col-gallery {
 	
 	#secondary img {
 		margin:											0;
-	}	
-
-	#secondary::before {
-		content: 										"< Swipe to view more >";
-		font-family: 									var(--font-text);
-		width: 											80vw;
-		margin: 										var(--measure-base) auto var(--measure-large);
-		position: 										relative;
-		display: 										block;
-		text-align: 									center;
-		font-style: 									italic;
-		font-size: 										16px;
-		color: 											var(--accent-color);
-		border-top: 									var(--accent-border);
-		border-bottom: 									var(--accent-border);
-		background: 									var(--accent-background);
 	}
 	
 	#secondary .sidebar-inner {
@@ -1378,43 +1362,16 @@ dl.col-gallery {
 		gap:											var(--measure-large);
 		justify-content:								flex-start;
 		align-items: 									flex-start;
-		height: 										calc(100vh - 100px);
-		max-height: 									600px;
-		overflow-x: 									scroll;		
-		overflow-y: 									hidden;
-		-ms-overflow-style: 							none;
-  		scrollbar-width: 								none;
 	}
 	
-	#secondary .sidebar-inner::-webkit-scrollbar {
-	  	display: 										none;
+	#primary .widget {
+		margin-top: 									var(--measure-small);
+  		margin-bottom: 									var(--measure-base);
 	}
 	
-	.widget {
-		margin:											0 !important;
-		max-width: 										calc(100% - 50px);
-		min-width: 										35%;
-		width: 											320px;
-		order: 											4;
+	#secondary .widget {
+		margin: 										0 !important;
 	}
-	
-	.widget.priority-5 {
-		order: 											2;
-	}
-	
-	.widget.priority-4 {
-		order: 											3;
-	}
-	
-	.widget.priority-1,
-	.widget.lock-to-bottom {
-		order: 											5;
-	}
-	
-	.widget.widget-form {
-		order: 											1;
-	}	
-	
 	.textwidget {
 		text-align: 									center;
 	}

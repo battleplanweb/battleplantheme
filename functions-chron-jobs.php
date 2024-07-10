@@ -26,34 +26,30 @@ function battleplan_delete_prefixed_options( $prefix ) {
 }	
 
 
+//if ( get_option('bp_setup_2023_09_15') != "completed" ) :
 
-delete_option('bp_log_spammers'); // remove once updated from 23.8.1
-
-
-
-if ( get_option('bp_setup_2023_09_15') != "completed" ) :
-
-	add_action("init", "bp_remove_cron_job"); 
-	function bp_remove_cron_job() {
-		wp_clear_scheduled_hook("wphb_clear_logs"); 
-		wp_clear_scheduled_hook("wphb_minify_clear_files"); 
-		wp_clear_scheduled_hook("wpmudev_scheduled_jobs"); 
-	}
+	//add_action("init", "bp_remove_cron_job"); 
+	//function bp_remove_cron_job() {
+	//	wp_clear_scheduled_hook("wphb_clear_logs"); 
+	//	wp_clear_scheduled_hook("wphb_minify_clear_files"); 
+	//	wp_clear_scheduled_hook("wpmudev_scheduled_jobs"); 
+	//}
 
 	//battleplan_delete_prefixed_options( 'bp_admin_btn' );
 	//delete_option('bp_admin_settings');
 
-	delete_option('bp_setup_2023_08_15');
-	updateOption( 'bp_setup_2023_09_15', 'completed', false );	
-endif;
+	//delete_option('bp_setup_2023_08_15');
+	//updateOption( 'bp_setup_2023_09_15', 'completed', false );	
+//endif;
 
+delete_option('bp_setup_2023_09_15');
 
-
+/*
 if ( get_option('bp_product_upload_2024_03_18') != "completed" && $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'american standard' || $GLOBALS['customer_info']['site-brand'] == 'American Standard' || (is_array($GLOBALS['customer_info']['site-brand']) && ( in_array('american standard', $GLOBALS['customer_info']['site-brand']) || in_array('American Standard', $GLOBALS['customer_info']['site-brand'])) ))) :		
  	require_once get_template_directory().'/includes/include-hvac-products/includes-american-standard-products.php';
 	updateOption( 'bp_product_upload_2024_03_18', 'completed', false );		
 endif; 
-
+*/
 
 
 // Determine if Chron should run
@@ -358,7 +354,83 @@ function processChron($forceChron) {
 	battleplan_delete_prefixed_options( 'client_' );
 	
 	battleplan_fetch_background_image(true);
-	battleplan_fetch_site_icon(true);	
+	battleplan_fetch_site_icon(true);
+	
+
+	
+	
+	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' && get_option('bp_setup_2024_07_09') != "completed" ) :
+	
+		add_action("init", "bp_add_terms_to_jobsites"); 
+		function bp_add_terms_to_jobsites() {
+	
+			$stateAbbrs = ["Alabama" => "AL", "Alaska" => "AK", "Arizona" => "AZ", "Arkansas" => "AR", "California" => "CA", "Colorado" => "CO", "Connecticut" => "CT", "Delaware" => "DE", "Florida" => "FL", "Georgia" => "GA", "Hawaii" => "HI", "Idaho" => "ID", "Illinois" => "IL", "Indiana" => "IN", "Iowa" => "IA", "Kansas" => "KS",
+			"Kentucky" => "KY", "Louisiana" => "LA", "Maine" => "ME", "Maryland" => "MD", "Massachusetts" => "MA", "Michigan" => "MI", "Minnesota" => "MN", "Mississippi" => "MS",
+			"Missouri" => "MO", "Montana" => "MT", "Nebraska" => "NE", "Nevada" => "NV", "New Hampshire" => "NH", "New Jersey" => "NJ", "New Mexico" => "NM", "New York" => "NY",
+			"North Carolina" => "NC", "North Dakota" => "ND", "Ohio" => "OH", "Oklahoma" => "OK", "Oregon" => "OR", "Pennsylvania" => "PA", "Rhode Island" => "RI", "South Carolina" => "SC", "South Dakota" => "SD", "Tennessee" => "TN", "Texas" => "TX", "Utah" => "UT", "Vermont" => "VT", "Virginia" => "VA", "Washington" => "WA", "West Virginia" => "WV",
+			"Wisconsin" => "WI", "Wyoming" => "WY", "Tex" => "TX", "Calif" => "CA", "Penn" => "PA"];
+
+			$equipment = [
+				'air-conditioner' => ['air conditioner', 'air conditioning', 'cooling', 'a/c', 'compressor', 'evaporator coil', 'condenser coil'],
+				'heating' => ['heater', 'heating', 'furnace'],
+				'thermostat' => ['thermostat', 't-stat', 'tstat']
+			];
+
+			$query = new WP_Query(['post_type' => 'jobsite_geo', 'posts_per_page' => -1]);
+
+			if ($query->have_posts()) {
+				while ($query->have_posts()) {
+					$query->the_post();
+					$post_id = get_the_ID();
+					$city = trim(esc_attr(get_field("city")));
+					$state = strtoupper(trim(esc_attr(get_field("state"))));
+					$description = get_post_field('post_content', $post_id);
+					$type = esc_attr(get_field("new_brand")) ? '-installation' : '-repair';
+					$service = '';
+
+
+					foreach ($stateAbbrs as $name => $abbreviation) {
+						if ($state === strtoupper($name)) {
+							$state = $abbreviation;
+							break;
+						}
+					}
+
+					$location = $city . '-' . $state;
+
+					foreach (['maintenance', 'tune up', 'tune-up', 'check up', 'check-up', 'inspection'] as $keyword) {
+						if (stripos($description, $keyword) !== false) {
+							$service = 'hvac-maintenance';
+							break;
+						}
+					}
+
+					if (!$service) {
+						foreach ($equipment as $tag => $keywords) {
+							foreach ($keywords as $keyword) {
+								if (stripos($description, $keyword) !== false) {
+									$service = $tag . $type;
+									break 2;
+								}
+							}
+						}
+					}
+
+					if ($service && $location) {
+						wp_set_object_terms($post_id, $service . '--' . strtolower($location), 'jobsite_geo-services', false);
+					}
+				}
+				wp_reset_postdata();
+			}	
+		}
+	
+		updateOption( 'bp_setup_2024_07_09', 'completed', false );	
+	
+	endif;
+	
+	
+	
+	
 		
 // Prune weak testimonials
 	/*

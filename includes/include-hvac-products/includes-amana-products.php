@@ -1,18 +1,18 @@
 <?php
-/* Battle Plan Web Design - Add & Remove American Standard Products */
+/* Battle Plan Web Design - Add & Remove Amana Products */
 
 /*  ADD TO FUNCTIONS-SITE
 if ( get_option('bp_product_upload_2022_08_11') != "completed" ) :
- 	require_once get_template_directory().'/includes/include-hvac-products/includes-american-standard-products.php';
+ 	require_once get_template_directory().'/includes/include-hvac-products/includes-amana-products.php';
 	updateOption( 'bp_product_upload_2022_08_11', 'completed', false );			
 endif; 
 */
  
-add_action( 'wp_loaded', 'add_american_standard_products', 10 );
-function add_american_standard_products() {
+add_action( 'wp_loaded', 'add_amana_products', 10 );
+function add_amana_products() {
 
-	$brand = "american-standard"; // lowercase
-	$productImgAlt = "American Standard Heating & Cooling Product"; 
+	$brand = "amana"; // lowercase
+	$productImgAlt = "Amana Heating & Cooling Product"; 
 
 
 	/*
@@ -23,139 +23,72 @@ function add_american_standard_products() {
 	$addProducts = array (		
 	
 	// Air Conditioners
-array ( 'post_title'	=>	'Platinum 20 Variable Speed Air Conditioner',
-	   	'post_content' 	=>	'<span class="descriptionText">Be in control of your home temperature with a smart, efficient air conditioner.</span>
-		
-		
+array ( 'post_title'	=>	'ASXV9 Air Conditioner',
+	   	'post_content' 	=>	'<span class="descriptionText">ComfortBridge™ Technology ‘bridges’ indoor comfort with smart technology, and is factory-installed into select, premium Amana® brand gas furnaces and air handlers. ComfortBridge™ Technology helps your Amana® brand air conditioner heating and cooling systems cost-effectively operate at peak performance.</span>
+
+<p>In the past, communicating technology was limited to a few expensive, proprietary thermostats. Now, ComfortBridge™ Technology technology is installed securely in Amana® brand furnace and air handler equipment, providing you consistent, energy-efficient home comfort.</p>
 
 <ul>
-	<li><b>Precise temperature control:</b> With AccuComfort™ variable speed technology, the Platinum 20 can gradually adjust its speed at a broader range to create a consistent flow of cool, comfortable air. This way, your system can continuously match the temperature you want at home.</li>
-	<li><b>Reliable durability:</b> Rely on your air conditioner for years to come. The Platinum 20 is built for durability with quality materials, innovative features, and a sturdy construction.</li>
-	<li><b>Optimize indoor air quality:</b> If you add an AccuClean® Air Cleaner, your air conditioner can filter out more dust and harmful irritants from the air so you can breathe easier at home.</li>
-	<li><b>Communication technology:</b> With Link communicating technology, your Platinum 20 controls communication between the thermostat, indoor unit and outdoor unit. This way, it can maximize efficiency and home comfort.</li>
-	<li><b>SEER2:</b> Up to 21.5</li>
-	<li><b>Sound:</b> 55-75 dBA</li>
-	<li><b>Cooling Stages:</b> Variable</li>
-	<li><b>Energy Savings:</b> Up to 55%</li>
+	<li>Variable-Speed, Inverter Driven</li>
+	<li>Up TO 22.5 SEER2</li>
+	<li>2 to 5 Tons</li>
 </ul>', 
-		'post_excerpt'	=>	'Be in control of your home temperature with a smart, efficient air conditioner.',
+		'post_excerpt'	=>	'High-Efficiency Split System Air Conditioner',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1000,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'air-conditioners', 'product-class'=>'best'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-air-conditioner-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-01.webp'		
+		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'air-conditioners', 'product-class'=>'best'),
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/pdfviewer.aspx?pdfurl=docs/default-source/default-document-library/ss-asxv9.pdf?view=true'),
+		'image_name'	=>	'Amana-01.jpg'		
 ),
 				
-array ( 'post_title'	=>	'Platinum 18 Variable Speed Air Conditioner',
-	   	'post_content' 	=>	'<span class="descriptionText">Cool your home with an air conditioner that’s both quiet and efficient.</span>
-		
-		
-
-<ul>
-	<li><b>Precise temperature control:</b> With AccuComfort™ variable speed technology, the Platinum 18 can gradually adjust its speed at a broader range to create a consistent flow of cool, comfortable air. This way, your system can continuously match the temperature you want at home. </li>
-	<li><b>Reliable durability:</b> Rely on your air conditioner for years to come. The Platinum 18 is built for durability with quality materials, innovative features, and a sturdy construction.</li>
-	<li><b>Optimize indoor air quality:</b> If you add an AccuClean® Air Cleaner, your air conditioner can filter out more dust and harmful irritants from the air so you can breathe easier at home.</li>
-	<li><b>Communication technology:</b> With Link communicating technology, your Platinum 18 controls communication between the thermostat, indoor unit and outdoor unit. This way, it can maximize efficiency and home comfort.</li>
-	<li><b>SEER2:</b> Up to 18</li>
-	<li><b>Sound:</b> 55-75 dBA</li>
-	<li><b>Cooling Stages:</b> Variable</li>
-	<li><b>Energy Savings:</b> Up to 44%</li>
+array ( 'post_title'	=>	'ASXC7 Air Conditioner',
+		'post_content' 	=>	'<ul>
+	<li>Up to 17.2 SEER2 Performance</li>
+	<li>High efficiency 2-stage scroll compressor </li>
+	<li>Enhanced air flow</li>
+	<li>Two-Stage Copeland Ultra-Tech scroll compressor</li>
+	<li>Quiet two-speed ECM outdoor fan motor</li>
+	<li>Integrated communicating ComfortBridge™ Technology</li>
+	<li>Commissioning and diagnostics via Bluetooth indoor board via CoolCloud™ App</li>
+	<li>Copeland® ComfortAlert™ built in diagnostics </li>
 </ul>', 
-		'post_excerpt'	=>	'Cool your home with an air conditioner that’s both quiet and efficient.',
+		'post_excerpt'	=>	'High-Efficiency Air Conditioner',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1010,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'air-conditioners', 'product-class'=>'best'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-air-conditioner-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-01.webp'		
-),
+		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'air-conditioners', 'product-class'=>'great'),
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/ss-asxc7.pdf'),
+		'image_name'	=>	'Amana-01.jpg'		
+),		
 				
-array ( 'post_title'	=>	'Platinum 17 Variable Speed Air Conditioner',
-	   	'post_content' 	=>	'<span class="descriptionText">Stay comfortably cool no matter how hot the weather gets.</span>
-		
-		
-
-<ul>
-	<li><b>Precise temperature control:</b> With AccuComfort™ variable speed technology, the Platinum 17 can gradually adjust its speed at a broader range to create a consistent flow of cool, comfortable air. This way, your system can continuously match the temperature you want at home.</li>
-	<li><b>Reliable durability:</b> Rely on your air conditioner for years to come. The Platinum 17 is built for durability quality materials, innovative features and a sturdy construction.</li>
-	<li><b>Optimize indoor air quality:</b> If you add an AccuClean® Air Cleaner, your air conditioner can filter out more dust and harmful irritants from the air so you can breathe easier at home.</li>
-	<li><b>Communication technology:</b> With Link communicating technology, your Platinum 17 controls communication between the thermostat, indoor unit and outdoor unit. This way, it can maximize efficiency and home comfort.</li>
-	<li><b>SEER2:</b> Up to 17</li>
-	<li><b>Sound:</b> 66-85 dBA</li>
-	<li><b>Cooling Stages:</b> Variable</li>
-	<li><b>Energy Savings:</b> Up to 44%</li>
+array ( 'post_title'	=>	'ASXH5 Air Conditioner',
+		'post_content' 	=>	'<ul>
+	<li>Split System Air Conditioner</li>
+	<li>Up to 15.2 SEER2</li>
+	<li>1½ To 5 Tons</li>
+	<li>Heavy-gauge galvanized-steel cabinet</li>
+	<li>Baked-on powder-paint finish with 500-hour salt-spray approval</li>
+	<li>Steel louver coil guard with Rust-resistant screws</li>
 </ul>', 
-		'post_excerpt'	=>	'Stay comfortably cool no matter how hot the weather gets.',
+		'post_excerpt'	=>	'High-Efficiency Air Conditioner',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1020,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'air-conditioners', 'product-class'=>'best'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-air-conditioner-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-02.webp'		
-),
+		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'air-conditioners', 'product-class'=>'great'),
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/ss-asxh5.pdf'),
+		'image_name'	=>	'Amana-01.jpg'		
+),		
 				
-array ( 'post_title'	=>	'Gold 16 Two-Stage Air Conditioner',
-	   	'post_content' 	=>	'<span class="descriptionText">Keep your home energy-efficient no matter how hot the weather gets.</span>
-
+array ( 'post_title'	=>	'ASXH4 Air Conditioner',
+		'post_content' 	=>	'<span class="descriptionText">Constantly monitoring the performance of your Amana® brand air conditioner, this advanced diagnostics system provides insight for accurate troubleshooting and quick diagnosis and repairs. Using the compressor as a sensor, CoreSense Diagnostics delivers active protection and will proactively shut the system down should it detect conditions that could damage the compressor. As a result, catastrophic failures and extensive, costly repairs are often avoided. </span>
 <ul>
-	<li><b>Efficient performance:</b> With a 16.2 SEER2 rating, this air conditioner comfortably cools your home while staying energy efficient.</li>
-	<li><b>Reliable durability:</b> Rely on your air conditioner for years to come. The Gold 16 is built for durability with quality materials, innovative features, and a sturdy construction.</li>
-	<li><b>Optimize indoor air quality:</b> If you add an AccuClean® Air Cleaner, your air conditioner can filter out more dust and harmful irritants from the air so you can breathe easier at home.</li>
-	<li><b>Environmentally friendly:</b> Take care of your environment. American Standard air conditioners cool your home with a refrigerant that’s ozone-safe.</li>
-	<li><b>SEER2:</b> Up to 16.2</li>
-	<li><b>Sound:</b> 72-74 dBA</li>
-	<li><b>Cooling Stages:</b> Two</li>
-	<li><b>ENERGY STAR® Qualified:</b> Yes</li>
-	<li><b>Energy Savings:</b> Up to 44%</li>
+	<li>UP TO 14.3 SEER2</li>
+	<li>1½ TO 5 Tons </li>
 </ul>', 
-		'post_excerpt'	=>	'Keep your home energy-efficient no matter how hot the weather gets.',
+		'post_excerpt'	=>	'Energy-Efficient Base Plus Air Conditioner',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1030,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'air-conditioners', 'product-class'=>'better'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-air-conditioner-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-01.webp'		
-),
-				
-array ( 'post_title'	=>	'Silver 15 Single-Stage Air Conditioner',
-	   	'post_content' 	=>	'<span class="descriptionText">Stay cool with a durable air conditioner for many seasons to come.</span>
-
-<ul>
-	<li><b>Efficient performance:</b> With a 15.6 SEER2 rating, this air conditioner comfortably cools your home while staying energy efficient.</li>
-	<li><b>Reliable durability:</b> Rely on your air conditioner for years to come. The Silver 15 is built for durability with quality materials, innovative features, and a sturdy construction.</li>
-	<li><b>Optimize indoor air quality:</b> If you add an AccuClean® Air Cleaner, your air conditioner can filter out more dust and harmful irritants from the air so you can breathe easier at home.</li>
-	<li><b>Environmentally friendly:</b> Take care of your environment. American Standard air conditioners cool your home with a refrigerant that’s ozone-safe.</li>
-	<li><b>SEER2:</b> Up to 16</li>
-	<li><b>Sound:</b> 71-74 dBA</li>
-	<li><b>Cooling Stages:</b> One</li>
-	<li><b>ENERGY STAR® Qualified:</b> Yes</li>
-	<li><b>Energy Savings:</b> Up to 41%</li>
-</ul>', 
-		'post_excerpt'	=>	'Stay cool with a durable air conditioner for many seasons to come.',
-		'post_type'     =>	'products',
-		'menu_order'  	=>  1040,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'air-conditioners', 'product-class'=>'good'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-air-conditioner-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-01.webp'		
-),
-				
-array ( 'post_title'	=>	'Silver 14 Single-Stage Air Conditioner',
-	   	'post_content' 	=>	'<span class="descriptionText">Enjoy a great blend of reliable cooling, energy efficiency and value.</span>
-
-<ul>
-	<li><b>Efficient at a great value:</b> Help lower your energy costs with this 14.8 SEER2 air conditioner that balances energy efficiency and cooling strength.</li>
-	<li><b>Reliable durability:</b> Rely on your air conditioner for years to come. The Silver 14 is built for durability with quality materials, innovative features, and a sturdy construction.</li>
-	<li><b>Optimize indoor air quality:</b> If you add an AccuClean® Air Cleaner, your air conditioner can filter out more dust and harmful irritants from the air so you can breathe easier.</li>
-	<li><b>Environmentally friendly:</b> Take care of your environment. American Standard air conditioners cool your home with a refrigerant that’s ozone-safe.</li>
-	<li><b>SEER2:</b> Up to 14.8</li>
-	<li><b>Sound:</b> 72-73 dBA</li>
-	<li><b>Cooling Stages:</b> One</li>
-	<li><b>ENERGY STAR® Qualified:</b> Yes</li>
-	<li><b>Energy Savings:</b> Up to 38%</li>
-</ul>', 
-		'post_excerpt'	=>	'Enjoy a great blend of reliable cooling, energy efficiency and value.',
-		'post_type'     =>	'products',
-		'menu_order'  	=>  1050,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'air-conditioners', 'product-class'=>'good'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-air-conditioner-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-01.webp'		
+		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'air-conditioners', 'product-class'=>'good'),
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/ss-asxh4.pdf'),
+		'image_name'	=>	'Amana-02.jpg'		
 ),
 		
 		
@@ -163,267 +96,180 @@ array ( 'post_title'	=>	'Silver 14 Single-Stage Air Conditioner',
 		
 	
 	// Heat Pumps
-array ( 'post_title'	=>	'Platinum 20 Variable Speed Heat Pump',
-	   	'post_content' 	=>	'<span class="descriptionText">Experience home comfort efficiency at a whole new level with state-of-the-art heating and cooling technology.</span>
-		
-		
-
+array ( 'post_title'	=>	'ASZV9 Heat Pump',
+		'post_content' 	=>	'<span class="descriptionText">SEER or Seasonal Energy Efficiency Rating is a measure designated by the U.S. Department of Energy and gives you a good idea of the performance you can expect from heat pumps.</span>
+			
+<p>When you choose an energy efficient Amana brand heat pump, year-round indoor comfort is combined with year-round savings compared to lower SEER-rated heat pumps. </p>
 <ul>
-	<li><b>Comfort and quality meets efficiency:</b> Built with quality materials and innovative features, the AccuComfort™ Platinum 20 Heat Pump is one of the industry’s most efficient systems on the market, with ratings up to 20.5 SEER2 and 8.7 HSPF.</li>
-	<li><b>Multi-stage heating and cooling technology:</b> State-of-the-art, multi-stage heating and cooling system that consistently adjusts to run at a more efficient speed to maintain optimal levels of comfort.</li>
-	<li><b>Quiet, reliable AccuComfort™ technology:</b> Enjoy calm comfort through variable speed heating and cooling, designed to meet your unique needs. Consistent with ½ degree in 1/10th of 1% increments, so you get the comfort you set and the AccuComfort™ technology does the rest.</li>
-	<li><b>Clean Air technology:</b> The lower compressor modulation and fan speeds yield amazingly low sound levels and max out the benefits of AccuClean® Air Cleaner technology, giving you the advantage of optimized air quality.</li>
-	<li><b>The hybrid system advantage:</b> Pair your heat pump with a gas furnace to enjoy the benefits of a hybrid system. Once your heat pump reaches its heating capacity, your gas furnace steps in to keep you comfortable. Together, they offer you reliable comfort that could lower your energy costs.</li>
-	<li><b>SEER2:</b> Up to 20.5</li>
-	<li><b>HSPF2:</b> Up to 8.7</li>
-	<li><b>Sound:</b> 54-76 dBA</li>
-	<li><b>Fan Stages:</b> Variable</li>
-	<li><b>Energy Savings:</b> Up to 50%</li>
+	<li>Inverter Driven</li>
+    <li>Up to 22.5 SEER2</li>
+    <li>Quiet DC outdoor fan motor</li>
 </ul>', 
-		'post_excerpt'	=>	'Experience home comfort efficiency at a whole new level with state-of-the-art heating and cooling technology.',
+		'post_excerpt'	=>	'High-Efficiency Split System Heat Pump',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1100,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'heat-pumps', 'product-class'=>'best'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-heat-pump-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-02.webp'		
+		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'heat-pumps', 'product-class'=>'best'),
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/ss-aszv9.pdf'),
+		'image_name'	=>	'Amana-01.jpg'		
 ),		
-	
-array ( 'post_title'	=>	'Platinum 18 Variable Speed Heat Pump',
-	   	'post_content' 	=>	'<span class="descriptionText">Get year-round comfort with a variety of heating and cooling speeds to meet your temperature needs.</span>
 		
-		
+array ( 'post_title'	=>	'ASZC7 Heat Pump',
+		'post_content' 	=>	'<span class="descriptionText">ComfortBridge™ Technology ‘bridges’ indoor comfort with smart technology, and is factory-installed into select, premium Amana® brand gas furnaces and air handlers. ComfortBridge™ Technology helps your Amana® brand air conditioner heating and cooling systems cost-effectively operate at peak performance.</span>			
+
+<p>In the past, communicating technology was limited to a few expensive, proprietary thermostats. Now, ComfortBridge™ Technology technology is installed securely in Amana® brand furnace and air handler equipment, providing you consistent, energy-efficient home comfort.</p>
 
 <ul>
-	<li><b>Variable speeds, maximum comfort:</b> AccuComfort™ technology allows the variable-speed system to consistently adjust to run at a more efficient speed to maintain your personal level of home comfort.</li>
-	<li><b>Top-ranked, highly efficient:</b> This heat pump is ranked one of the most efficient on the market as it has top SEER2 and HSPF2 ratings and automatically adjusts to keep you comfortable.</li>
-	<li><b>Quiet comfort:</b> Quiet system operation compared to competitors for dependable comfort that works smarter for ideal home enjoyment.</li>
-	<li><b>A system you can count on:</b> Built with quality materials, innovative features, durable construction and backed by our independent American Standard Heating & Air Conditioning Dealers to ensure you get dependable comfort for years to come.</li>
-	<li><b>The hybrid system advantage:</b> Pair your heat pump with a gas furnace to enjoy the benefits of a hybrid system. Once your system reaches its heating capacity, your gas furnace steps in to keep you comfortable. Together, they offer you reliable comfort that could lower your energy costs.</li>
-	<li><b>SEER2:</b> Up to 18</li>
-	<li><b>HSPF2:</b> Up to 8.5</li>
-	<li><b>Sound:</b> 54-76 dBA</li>
-	<li><b>Fan Stages:</b> Variable</li>
-	<li><b>Energy Savings:</b> Up to 44%</li>
+	<li>UP TO 17.2 SEER2 and 8.2 HSPF2</li>
+    <li>ComfortBridge™ Technology</li>
+    <li>Two-Stage scroll compressors</li>
 </ul>', 
-		'post_excerpt'	=>	'Get year-round comfort with a variety of heating and cooling speeds to meet your temperature needs.',
+		'post_excerpt'	=>	'High-Efficiency Heat Pump Two-Stage',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1110,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'heat-pumps', 'product-class'=>'best'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-heat-pump-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-02.webp'		
+		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'heat-pumps', 'product-class'=>'great'),
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/ss-aszc7.pdf'),
+		'image_name'	=>	'Amana-01.jpg'		
 ),		
-	
-array ( 'post_title'	=>	'Platinum 17 Variable Speed Heat Pump',
-	   	'post_content' 	=>	'<span class="descriptionText">In-home comfort and high efficiency.</span>		
-
+		
+array ( 'post_title'	=>	'ASZH5 Heat Pump',
+		'post_content' 	=>	'<span class="descriptionText">SEER or Seasonal Energy Efficiency Rating is a measure designated by the U.S. Department of Energy and gives you a good idea of the performance you can expect from heat pumps. At a 15.2-SEER2 cooling rating, the Amana® brand ASZH5 Heat Pump can deliver an up to 7.8 HSPF2 (Heating Seasonal Performance Factor). </span>
 <ul>
-	<li><b>Variable speeds, maximum comfort:</b> AccuComfort™ technology allows the variable-speed system to consistently adjust to run at a more efficient speed to maintain your personal level of home comfort.</li>
-	<li><b>A system you can count on:</b> Built with quality materials, innovative features, durable construction and backed by our independent American Standard Heating & Air Conditioning Dealers to ensure you get dependable comfort for years to come.</li>
-	<li><b>The hybrid system advantage:</b> Pair your heat pump with a gas furnace to enjoy the benefits of a hybrid system. Once your system reaches its heating capacity, your gas furnace steps in to keep you comfortable. Together, they offer you reliable comfort that could lower your energy costs.</li>
-	<li><b>SEER2:</b> Up to 17</li>
-	<li><b>HSPF2:</b> Up to 8.5</li>
-	<li><b>Sound:</b> 55-76 dBA</li>
-	<li><b>Fan Stages:</b> Variable</li>
-	<li><b>Energy Savings:</b> Up to 44%</li>
+	<li>UP TO 15.2 SEER2 & 7.8 HSPF2</li>
+	<li>1½ to 5 Tons</li>
 </ul>', 
-		'post_excerpt'	=>	'In-home comfort and high efficiency.',
+		'post_excerpt'	=>	'High-Efficiency Heat Pump',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1120,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'heat-pumps', 'product-class'=>'best'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-heat-pump-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-02.webp'		
-),		
-	
-array ( 'post_title'	=>	'Gold 16 Two-Stage Heat Pump',
-	   	'post_content' 	=>	'<span class="descriptionText">Experience incredible in-home comfort with a highly efficient heat pump that’s environmentally friendly and quiet.</span>
+		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'heat-pumps', 'product-class'=>'great'),
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/ss-aszh5.pdf'),
+		'image_name'	=>	'Amana-01.jpg'		
+),
+		
+array ( 'post_title'	=>	'ASZH4 Heat Pump',
+		'post_content' 	=>	'<span class="descriptionText">SEER or Seasonal Energy Efficiency Rating is a measure designated by the U.S. Department of Energy and gives you a good idea of the performance you can expect from heat pumps. At a 14.3 SEER2 cooling rating, the Amana® brand ASZH4 Heat Pump can deliver an 7.5 HSPF2 (Heating Seasonal Performance Factor).</span>
 
+<p>When you choose an energy efficient Amana brand heat pump, year-round indoor comfort is combined with year-round savings compared to lower SEER-rated heat pumps.</p>
 <ul>
-	<li><b>Very efficient, environmentally friendly:</b> Save on your heating and cooling energy usage while reducing greenhouse gas emissions for feel-good, responsible home comfort.</li>
-	<li><b>Year-round comfort:</b> Uses incredible two-stage heat pumps in multiple speeds to provide an excellent mix of value, contentment, and efficiency all year long.</li>
-	<li><b>Save energy at home:</b> The Gold 16 heat pump is a great choice that may help save energy and lower your your monthly energy use.</li>
-	<li><b>Quiet operation:</b> A system that’s quiet and has top-tier efficiency ratings so that you can save on energy bills and enjoy a comfortable house without the noise.</li>
-	<li><b>The hybrid system advantage:</b> Pair your heat pump with a gas furnace to enjoy the benefits of a hybrid system. Once your heat pump reaches its heating capacity, your gas furnace steps in to keep you comfortable. Together, they offer you reliable comfort that could lower your energy costs.</li>
-	<li><b>SEER2:</b> Up to 16.2</li>
-	<li><b>HSPF2:</b> Up to 8.1</li>
-	<li><b>Sound:</b> 72-74 dBA</li>
-	<li><b>Fan Stages:</b> Two</li>
-	<li><b>ENERGY STAR® Qualified:</b> Yes</li>
-	<li><b>Energy Savings:</b> Up to 44%</li>
+	<li>14.3 SEER2/ 7.5 HSPF2</li>
+    <li>High-Efficiency Copeland® scroll compressor</li>
+    <li>Advanced Copeland® CoreSense technology</li>
+    <li>SmartShift® technology</li>
 </ul>', 
-		'post_excerpt'	=>	'Experience incredible in-home comfort with a highly efficient heat pump that’s environmentally friendly and quiet.',
+		'post_excerpt'	=>	'High-Efficiency Split System Heat Pump',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1130,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'heat-pumps', 'product-class'=>'better'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-heat-pump-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-01.webp'		
-),		
-	
-array ( 'post_title'	=>	'Silver 15 Single-Stage Heat Pump',
-	   	'post_content' 	=>	'<span class="descriptionText">Enjoy efficient heating and cooling performance and premium comfort—with a value that can’t be beat.</span>
-
-<ul>
-	<li><b>Value meets efficiency:</b> Our best value, the Silver 15 Heat Pump has a 15.6 SEER2 rating and saves you up to 50 percent on your heating and cooling energy usage.</li>
-	<li><b>Reliable comfort, environmentally friendly:</b> The Silver 15 Heat Pump surpasses government efficiency standards and cools and heats with an environmentally-friendly refrigerant that is ozone safe and helps to reduce greenhouse gas emissions.</li>
-	<li><b>A system you can count on:</b> The Silver 15 Heat Pump offers affordable heating and cooling that provides efficient and reliable cooling, thanks to its Spine Fin™ coil and Duration™ compressor.</li>
-	<li><b>Quiet operation:</b> A system that’s quiet and has top-tier efficiency ratings so that you can save on energy bills and enjoy a comfortable house without the noise.</li>
-	<li><b>The hybrid system advantage:</b> Pair your heat pump with a gas furnace to enjoy the benefits of a hybrid system. Once your heat pump reaches its heating capacity, your gas furnace steps in to keep you comfortable. Together, they offer you reliable comfort that could lower your energy costs.</li>
-	<li><b>SEER2:</b> Up to 16</li>
-	<li><b>HSPF2:</b> Up to 8.1</li>
-	<li><b>Sound:</b> 70-75 dBA</li>
-	<li><b>Fan Stages:</b> One</li>
-	<li><b>ENERGY STAR® Qualified:</b> Yes</li>
-	<li><b>Energy Savings:</b> Up to 41%</li>
-</ul>', 
-		'post_excerpt'	=>	'Enjoy efficient heating and cooling performance and premium comfort—with a value that can’t be beat.',
-		'post_type'     =>	'products',
-		'menu_order'  	=>  1140,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'heat-pumps', 'product-class'=>'good'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-heat-pump-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-01.webp'		
-),		
-	
-array ( 'post_title'	=>	'Silver 14 Single-Stage Heat Pump',
-	   	'post_content' 	=>	'<span class="descriptionText">Enjoy dependable heating and cooling in your home that is energy efficient, environmentally friendly, and comfortable. </span>
-
-<ul>
-	<li><b>Efficiency that helps you save:</b> The Silver 14 Heat Pump has a SEER2 rating of up to 14.8, making it a very efficient system that can provide you comfort year after year and help you save on your energy bill.</li>
-	<li><b>Quiet, reliable comfort:</b> Quiet system operation allows for dependable and distraction-free home comfort that allows you to enjoy your surroundings.</li>
-	<li><b>Environmentally friendly, great value:</b> The Silver 14 Heat Pump helps you save up to 47 percent on your heating and cooling energy usage while helping to reduce greenhouse gas emissions.</li>
-	<li><b>A system you can count on:</b> The Silver 14 Heat Pump offers affordable heating and cooling that provides efficient and reliable cooling, thanks to its Spine Fin™ coil and Duration™ compressor.</li>
-	<li><b>The hybrid system advantage:</b> Pair your heat pump with a gas furnace to enjoy the benefits of a hybrid system. Once your heat pump reaches its heating capacity, your gas furnace steps in to keep you comfortable. Together, they offer you reliable comfort that could lower your energy costs.</li>
-	<li><b>SEER2:</b> Up to 14.8</li>
-	<li><b>HSPF2:</b> Up to 7.8</li>
-	<li><b>Sound:</b> 71-76 dBA</li>
-	<li><b>Fan Stages:</b> One</li>
-	<li><b>Energy Savings:</b> Up to 38%</li>
-</ul>', 
-		'post_excerpt'	=>	'Enjoy dependable heating and cooling in your home that is energy efficient, environmentally friendly, and comfortable. ',
-		'post_type'     =>	'products',
-		'menu_order'  	=>  1150,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'heat-pumps', 'product-class'=>'good'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-heat-pump-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-01.webp'		
-),	
+		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'heat-pumps', 'product-class'=>'good'),
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/ss-aszh4.pdf'),
+		'image_name'	=>	'Amana-02.jpg'		
+),
 		
 		
 		
 		
 	
 	// Furnaces
-array ( 'post_title'	=>	'Platinum 95 Gas Furnace',
-		'post_content' 	=>	'<span class="descriptionText">Stay warm and comfortable inside with a gas furnace featuring fully modulating heating.</span>
+array ( 'post_title'	=>	'AMVC96 - 90+% AFUE Gas Furnace',
+		'post_content' 	=>	'<span class="descriptionText">ComfortBridge™ Technology ‘bridges’ indoor comfort with smart technology, and is factory-installed into select, premium Amana® brand gas furnaces and air handlers. ComfortBridge™ Technology helps your Amana® brand air conditioner heating and cooling systems cost-effectively operate at peak performance.</span>
 
+<p>In the past, communicating technology was limited to a few expensive, proprietary thermostats. Now, ComfortBridge™ Technology technology is installed securely in Amana® brand furnace and air handler equipment, providing you consistent, energy-efficient home comfort.</p>
+
+<p>Many homeowners may think the best gas furnaces are not seen or heard. That’s why an Amana® brand AMVC96 Variable-Speed Furnace strives to operate on low capacity as often and as long as possible providing quiet and highly-efficient performance compared to units containing a single speed motor.</p>
+
+<p>Energy efficiency equates to cost savings. A gas furnace’s efficiency rating can primarily be determined by two factors: its AFUE rating (Annual Fuel Utilization Efficiency), which indicates what percentage of each dollar of natural gas purchased is actually used to heat your home; and the type of blower used in the furnace.</p>
 <ul>
-	<li><b>Communication technology:</b> The Platinum 95 Gas Furnace is compatible with American Standard AccuLink™ Communicating System. With this communicating technology, homeowners can remotely adjust settings and program alerts, so you know your system is working at its best.</li>
-	<li><b>Quiet operation</b> Thanks to a heavy steel insulated cabin, this furnace is quiet and holds more heat in the furnace to better warm your home. With operation as quiet as this, you can enjoy the benefits of warm air without any disruption to your living environment.</li>
-	<li><b>Flexible temperature control:</b> While this gas furnace does a great job heating, match it with a heat pump to enjoy energy saving benefits and a more complete temperature control experience. That means, the heat pump can act as the primary source of heat in milder temperatures, but when the weather gets cold, your system activates your furnace to deliver the heat you need.</li>
-	<li><b>Built to last:</b> You won’t have to worry about this furnace withstanding the test of time. Its cabinet and components are durable and built to deliver comfort for years to come.</li>
-	<li><b>AFUE:</b> Up to 97%</li>
-	<li><b>Heating Stages:</b> Modulating</li>
+	<li>96% AFUE</li>
+	<li>Stainless-Steel Tubular Primary Heat Exchanger</li>
+    <li>Integrated communicating ComfortBridge™ Technology</li>
+    <li>Efficient and Quiet Variable-Speed Circulator Motor</li>
+    <li>Durable silicon nitride igniter</li>
+    <li>Two-Stage Gas Valve</li>
+    <li>Quiet, Two-Stage, Induced-Draft Blower</li>
+    <li>Continuous Air Circulation</li>
+    <li>Self-Diagnostic Control Board</li>
+    <li>Heavy-Gauge Steel Cabinet with Durable Finish</li>
+    <li>Thermally Insulated Cabinet</li>
 </ul>', 
-		'post_excerpt'	=>	'Stay warm and comfortable inside with a gas furnace featuring fully modulating heating.',
+		'post_excerpt'	=>	'Two-Stage Variable-Speed Gas Furnace',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1200,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'furnaces', 'product-class'=>'best'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-fur-90-brochure-current.pdf'),
-		'image_name'	=>	'American-Standard-03.webp'		
+		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'furnaces', 'product-class'=>'best'),
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/pb-amvc9694d9450022fa6258827eff0a00754798.pdf'),
+		'image_name'	=>	'Amana-F-01.jpg'		
 ),
-		
-array ( 'post_title'	=>	'Gold S9V2 Gas Furnace',
-		'post_content' 	=>	'<span class="descriptionText">Enjoy warm air throughout your home with this two stage heating system.</span>
 
+array ( 'post_title'	=>	'AM9S96-U - 90+% AFUE Gas Furnace',
+		'post_content' 	=>	'<span class="descriptionText">Many homeowners may think the best gas furnaces are not seen or heard. That’s why an Amana® brand AM9S96-U Multi-Speed Furnace is insulated for noise reduction. With a sound-isolated blower assembly and a heavy-gauge steel cabinet, it offers quiet and efficient performance as compared to a natural draft furnace.</span>
+			
+			<p>Energy efficiency equates to cost savings. A gas furnace’s efficiency rating can primarily be determined by two factors: its AFUE rating (Annual Fuel Utilization Efficiency), which indicates what percentage of each dollar of natural gas purchased is actually used to heat your home; and the type of blower used in the furnace</p>
 <ul>
-	<li><b>Flexible temperature control:</b> While this gas furnace does a great job heating, match it with a heat pump to enjoy energy saving benefits and a more complete temperature control experience. That means, the heat pump can act as the primary source of heat in milder temperatures, but when the weather gets cold, your system activates your furnace to deliver the heat you need.</li>
-	<li><b>Built to last:</b> You won\'t have to worry about this furnace withstanding the test of time. Its cabinet and components are durable and built to deliver comfort for years to come.</li>
-	<li><b>Improved indoor air quality:</b> Combine the Gold S9V2 Gas Furnace with the American Standard AccuClean® Air Cleaner for more comfortable air in your home. This air cleaner helps remove allergens, bacteria, and viruses from the air you breathe in your home.</li>
-	<li><b>Steady, warm air:</b> With the Gold S9V2 gas furnace, you\'ll be met with consistent, steady flows of warm air, so you don\'t need to worry about uneven indoor temperatures again.</li>
-	<li><b>AFUE:</b> Up to 96%</li>
-	<li><b>Heating Stages:</b> Two</li>
-	<li><b>ENERGY STAR® Qualified:</b> Yes</li>
+	<li>Up to 96% AFUE</li>
+    <li>Super-ferritic stainless-steel secondary heat exchanger</li>
+    <li>Efficient and Quiet Multi-Speed ECM Blower Motor</li>
+    <li>Durable silicon nitride igniter</li>
+    <li>Quiet, Single-Speed, Induced-Draft Blower</li>
+    <li>Continuous Air Circulation</li>
+    <li>Self-Diagnostic Control Board</li>
+    <li>Heavy-Gauge Steel Cabinet with Durable Finish</li>
+    <li>Thermally insulated cabinet</li>
 </ul>', 
-		'post_excerpt'	=>	'Enjoy warm air throughout your home with this two stage heating system.',
+		'post_excerpt'	=>	'Single-Stage Multi-Speed Gas Furnace',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1210,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'furnaces', 'product-class'=>'better'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-fur-90-brochure-current.pdf'),
-		'image_name'	=>	'American-Standard-04.webp'		
-),
+		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'furnaces', 'product-class'=>'great'),
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/cb-am9s96-u_12-21.pdf'),
+		'image_name'	=>	'Amana-F-01.jpg'		
+),				
 		
-array ( 'post_title'	=>	'Silver S9X1 Gas Furnace',
-		'post_content' 	=>	'<span class="descriptionText">Feel warm and cozy inside all year long with this single-stage heating system.</span>
-
+array ( 'post_title'	=>	'AM9S80 - 80% AFUE Gas Furnace',
+		'post_content' 	=>	'<span class="descriptionText">A gas furnace is a piece of equipment from which you expect years of uninterrupted service. Amana® brand gas furnaces live up to expectations through intelligently designed components that benefit from decades of performance testing and refinement, like our new stainless-steel heat exchanger. And with outstanding warranties* that demonstrate our confidence, you can purchase an Amana brand furnace safe in the knowledge it will Last and Last and Last®.</span>
+			
+			<p>Many homeowners may think the best gas furnaces are not seen or heard. That’s why an Amana brand AM9S80/AC9S80 Multi-Speed ECM Furnace is insulated for noise reduction. With a sound-isolated blower assembly and a heavy-gauge steel cabinet, it offers quiet and efficient performance compared to furnaces with single-speed motors.</p>
+			
+			<p>Energy efficiency equates to cost savings. A gas furnace’s efficiency rating can primarily be determined by two factors: its AFUE rating (Annual Fuel Utilization Efficiency), which indicates what percentage of each dollar of natural gas purchased is actually used to heat your home; and the type of blower used in the furnace.</p>
 <ul>
-	<li><b>Flexible temperature control:</b> While this gas furnace does a great job heating, match it with a heat pump to enjoy energy saving benefits and a more complete temperature control experience. That means, the heat pump can act as the primary source of heat in milder temperatures, but when the weather gets cold, your system activates your furnace to deliver the heat you need.</li>
-	<li><b>Built to last:</b> You won\'t have to worry about this furnace withstanding the test of time. Its cabinet and components are durable and built to deliver comfort for years to come.</li>
-	<li><b>Improved indoor air quality:</b> Combine the Silver S9X1 Gas Furnace with the American Standard AccuClean® Air Cleaner for more comfortable air in your home. This air cleaner helps remove allergens, bacteria, and viruses from the air you breathe in your home.</li>
-	<li><b>Steady, warm air:</b> With the S9X1 Gas Furnace, you\'ll be met with consistent, steady flows of warm air, so you don\'t need to worry about uneven indoor temperatures again.</li>
-	<li><b>AFUE:</b> Up to 96%</li>
-	<li><b>Heating Stages:</b> One</li>
-	<li><b>ENERGY STAR® Qualified:</b> Yes</li>
+	<li>80% AFUE</li>
+	<li>Heavy-Duty Aluminized-Steel, Dual-diameter Tubular Heat Exchanger</li>
+    <li>Single-stage Gas Valve</li>
+    <li>Durable Hot-surface igniter</li>
+    <li>Quiet, Single-speed Draft Induced</li>
+    <li>Self-diagnostic Control Bboard</li>
+   <li>Color-coded Low-voltage Terminals</li>
+    <li>Multi-speed ECM Blower Motor</li>
+    <li>Heavy-gauge Steel Cabinet with Durable Baked-enamel Finish</li>
+    <li>Foil Faced Insulated Heat Exchanger</li>
 </ul>', 
-		'post_excerpt'	=>	'Feel warm and cozy inside all year long with this single-stage heating system.',
+		'post_excerpt'	=>	'Single-Stage Multi-Speed Gas Furnace',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1220,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'furnaces', 'product-class'=>'good'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-fur-90-brochure-current.pdf'),
-		'image_name'	=>	'American-Standard-05.webp'		
-),
+		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'furnaces', 'product-class'=>'great'),
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/cb-am9s80.pdf'),
+		'image_name'	=>	'Amana-F-02.jpg'		
+),	
 		
-array ( 'post_title'	=>	'Platinum S8V2-C Furnace',
-		'post_content' 	=>	'<span class="descriptionText">Use American Standard AccuLink™ Technology to ensure this furnace delivers you exactly the heat you need.</span>
-
+array ( 'post_title'	=>	'AMVC8 / ADVC8 - 80% AFUE Gas Furnace',
+		'post_content' 	=>	'<span class="descriptionText">A gas furnace is a piece of equipment from which you expect years of uninterrupted service. Amana® brand gas furnaces live up to expectations through intelligently designed components that benefit from decades of performance testing and refinement, like our new stainless-steel heat exchanger. And with outstanding warranties* that demonstrate our confidence, you can purchase an Amana brand furnace safe in the knowledge it will Last and Last and Last®.</span>
+			
+			<p>Many homeowners may think the best gas furnaces are not seen or heard. That’s why an Amana brand AM9S80/AC9S80 Multi-Speed ECM Furnace is insulated for noise reduction. With a sound-isolated blower assembly and a heavy-gauge steel cabinet, it offers quiet and efficient performance compared to furnaces with single-speed motors.</p>
+			
+			<p>Energy efficiency equates to cost savings. A gas furnace’s efficiency rating can primarily be determined by two factors: its AFUE rating (Annual Fuel Utilization Efficiency), which indicates what percentage of each dollar of natural gas purchased is actually used to heat your home; and the type of blower used in the furnace.</p>
 <ul>
-	<li><b>Communication technology:</b> The Platinum S8V2-C Gas Furnace is compatible with American Standard AccuLink™ Communicating System. With this communicating technology, homeowners can remotely adjust settings and program alerts, so you know your system is working at its best.</li>
-	<li><b>Precise blower operation :</b> Exclusive Vortica™ II blower design delivers consistent, quiet heating in both the winter and summer months, giving you the temperature control you need all year long.</li>
-	<li><b>Steady, warm air:</b> With the American Standard S8V2-C Gas Furnace, you\'ll be met with consistent, steady flows of warm air, so you don\'t need to worry about uneven indoor temperatures again.</li>
-	<li><b>Built to last:</b> You won\'t have to worry about this furnace withstanding the test of time. Its cabinet and components are durable and built to deliver comfort for years to come.</li>
-	<li><b>AFUE:</b> Up to 80%</li>
-	<li><b>Heating Stages:</b> Two</li>
+	<li>80% AFUE</li>
+	<li>Heavy-Duty Aluminized-Steel, Dual-diameter Tubular Heat Exchanger</li>
+    <li>Single-stage Gas Valve</li>
+    <li>Durable Hot-surface igniter</li>
+    <li>Quiet, Single-speed Draft Induced</li>
+    <li>Self-diagnostic Control Bboard</li>
+    <li>Color-coded Low-voltage Terminals</li>
+    <li>Multi-speed ECM Blower Motor</li>
+    <li>Heavy-gauge Steel Cabinet with Durable Baked-enamel Finish</li>
+    <li>Foil Faced Insulated Heat Exchanger</li>
 </ul>', 
-		'post_excerpt'	=>	'Use American Standard AccuLink™ Technology to ensure this furnace delivers you exactly the heat you need.',
+		'post_excerpt'	=>	'Two-Stage Multi-Speed Gas Furnace',
 		'post_type'     =>	'products',
-		'menu_order'  	=>  1240,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'furnaces', 'product-class'=>'best'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-fur-80-brochure-11-09-22.pdf'),
-		'image_name'	=>	'American-Standard-04.webp'		
-),
-		
-array ( 'post_title'	=>	'Silver S8X1 Gas Furnace',
-		'post_content' 	=>	'<span class="descriptionText">Heating you can trust from a furnace that’s built to a higher standard.</span>
-
-<ul>
-	<li><b>Steady, warm air:</b> With the Silver S8X1 gas furnace, you’ll be met with consistent, steady flows of warm air, so you don\'t need to worry about uneven indoor temperatures again.</li>
-	<li><b>Flexible temperature control:</b> While this gas furnace does a great job heating, match it with a heat pump to enjoy energy saving benefits and a more complete temperature control experience. That means, the heat pump can act as the primary source of heat in milder temperatures, but when the weather gets cold, your system activates your furnace to deliver the heat you need.</li>
-	<li><b>Energy efficient system:</b> This gas furnace may help you increase your overall cooling efficiency rating by two SEER points when installed as part of a complete system. Plus, save on energy while reducing greenhouse gas emissions with a system that surpasses government energy efficiency standards.</li>
-	<li><b>Built to last:</b> You won’t have to worry about this furnace withstanding the test of time. Its cabinet and components are durable and built to deliver comfort for years to come.</li>
-	<li><b>AFUE:</b> Up to 80%</li>
-	<li><b>Heating Stages:</b> One</li>
-</ul>', 
-		'post_excerpt'	=>	'Increase energy savings and home comfort with this gas furnace.',
-		'post_type'     =>	'products',
-		'menu_order'  	=>  1260,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'furnaces', 'product-class'=>'good'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-fur-80-brochure-11-09-22.pdf'),
-		'image_name'	=>	'American-Standard-07.webp'		
-),
-		
-array ( 'post_title'	=>	'Silver S8B1 Gas Furnace',
-		'post_content' 	=>	'<span class="descriptionText">Stay warm during the winter months with this energy efficient gas furnace.</span>
-
-<ul>
-	<li><b>Precise blower operation:</b> Exclusive Vortica™ II blower design delivers consistent, quiet heating in both the winter and summer months, giving you the temperature control you need all year long.</li>
-	<li><b>Flexible temperature control:</b> While this gas furnace does a great job heating, match it with a heat pump to enjoy energy saving benefits and a more complete temperature control experience. That means, the heat pump can act as the primary source of heat in milder temperatures, but when the weather gets cold, your system activates your furnace to deliver the heat you need.</li>
-	<li><b>Steady, warm air:</b> With the American Standard S8B1 gas furnace, you’ll be met with consistent, steady flows of warm air, so you don\'t need to worry about uneven indoor temperatures again.</li>
-	<li><b>Energy efficient system:</b> This gas furnace may help you save on energy usage while reducing greenhouse gas emissions because it\'s a system that surpasses government energy efficiency standards.</li>
-	<li><b>AFUE:</b> Up to 80%</li>
-	<li><b>Heating Stages:</b> One</li>
-</ul>', 
-		'post_excerpt'	=>	'Stay warm during the winter months with this energy efficient gas furnace.',
-		'post_type'     =>	'products',
-		'menu_order'  	=>  1270,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'furnaces', 'product-class'=>'good'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-fur-80-brochure-11-09-22.pdf'),
-		'image_name'	=>	'American-Standard-07.webp'		
+		'menu_order'  	=>  1230,
+		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'furnaces', 'product-class'=>'good'),
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/cb-amvc8.pdf'),
+		'image_name'	=>	'Amana-F-02.jpg'		
 ),
 		
 		
@@ -431,251 +277,82 @@ array ( 'post_title'	=>	'Silver S8B1 Gas Furnace',
 		
 	
 	// Air Handlers
-array ( 'post_title'	=>	'Platinum TAMX Air Handler',
-		'post_content' 	=>	'<span class="descriptionText">Enjoy communicating technology with this durable and efficient air handler.</span>
+array ( 'post_title'	=>	'AMVE Air Handler',
+		'post_content' 	=>	'<span class="descriptionText">ComfortBridge™ Technology ‘bridges’ indoor comfort with smart technology, and is factory-installed into select, premium Amana® brand gas furnaces and air handlers. ComfortBridge™ Technology helps your Amana® brand air conditioner heating and cooling systems cost-effectively operate at peak performance.</span>
 
+<p>In the past, communicating technology was limited to a few expensive, proprietary thermostats. Now, ComfortBridge™ Technology technology is installed securely in Amana® brand furnace and air handler equipment, providing you consistent, energy-efficient home comfort.</p>
+
+<p>Variable Speed ECM Blower Motors provide gradual startup and shutdown for quiet, unobtrusive operation with lower energy consumption compared to standard efficiency motors across a wide range of operating speeds. Constant low-speed operation for outstanding filtration and comfort level (models AVPEC and MBVC).</p>
 <ul>
-	<li><b>Communicating features:</b> This exceptional air handler is equipped with American Standard Link® communicating technology that can provide homeowners with more in-depth performance information about their HVAC system.</li>
-	<li><b>Built to last:</b> The American Standard Link® air handler is built to last for years to come. Featuring fully enclosed insulation that eliminates the possibility of loose fibers, a sweat eliminating design, and an epoxy coated coil, this is an air handler you can trust.</li>
-	<li><b>Variable speed technology:</b> Enjoy highly efficient and effective variable speed technology with this air handler. A variable speed Vortica™ blower motor works to circulate the air in exactly the way your home needs it. </li>
-	<li><b>Diagnostic compatible:</b> This air handler works with American Standard Diagnostics, which allows your dealer (with your permission) to remotely diagnose potential issues with your HVAC system, plus provides perks like alert code notifications.</li>
-	<li><b>Fan Stages:</b> Variable</li>
-	<li><b>Communicating:</b> Yes</li>
+	<li>All-Aluminum Coil</li>
+    <li>ComfortBridge™ Technology</li>
+    <li>Electronic Expansion Valve, Inverter-tuned</li>
+    <li>SmartFrame™ Sub-Structure</li>
+    <li>2 to 5 tons</li>
+    <li>Integrated communicating ComfortBridge™ Technology</li>
+    <li>Variable-speed ECM blower motor</li>
+    <li>Provides constant CFM over a wide range of static pressure conditions independent of duct system</li>
+    <li>Improved humidity and comfort control</li>
+    <li>Horizontal or vertical configuration capabilities</li>
 </ul>', 
-		'post_excerpt'	=>	'Enjoy communicating technology with this durable and efficient air handler.',
+		'post_excerpt'	=>	'Multi-Position, Variable-Speed Air Handler',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1300,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'air-handlers', 'product-class'=>'best'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-ah-standard-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-08.webp'		
+		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'air-handlers', 'product-class'=>'best'),
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/ss-amve.pdf'),
+		'image_name'	=>	'Amana-AH-01.jpg'		
 ),
 
-array ( 'post_title'	=>	'Silver TEM8 Air Handler',
-		'post_content' 	=>	'<span class="descriptionText">Find comfort with a variable-speed, communicating system at a lower price.</span>
-
-<ul>
-	<li><b>Reliably built:</b> The Silver TEM8’s unique cabinet helps it lose less energy. It also takes in less dust and moisture from the space around it, allowing it to work efficiently all year long.</li>
-	<li><b>Communication technology:</b> With AccuLink™ technology or 24V connectivity, your Platinum TAM9 can communicate with key parts of your system. This means you can enjoy enhanced comfort and efficiency at home.</li>
-	<li><b>Quiet comfort:</b> Discover the Vortica™ Fan Blower that improves airflow, runs quietly, and uses less energy.</li>
-	<li><b>Durable all-aluminum coils:</b> An all-aluminum coil is more resistant to rust and corrosion than a standard copper coil. This coil extends the life of your air handler so you can enjoy comfort for many years.</li>
-	<li><b>Fan Stages:</b> Variable</li>
-	<li><b>Communicating:</b> Yes</li>
+array ( 'post_title'	=>	'AHVE Air Handler',
+		'post_content' 	=>	'<ul>
+	<li>ECM-Based Air Handler with Internal EEV</li>
+    <li>Communicating For S-Series matchups 1½ to 5 Tons </li>
+    <li>Electronic Expansion Valve (EEV) for cooling and heat pump applications.</li>
+    <li>7mm evaporator coil tube size</li>
+    <li>Variable-speed ECM blower motor</li>
+    <li>Compatible with Amana® brand smart thermostat</li>
+    <li>Provides constant CFM over a wide range of static pressure conditions independent of duct system</li>
+    <li>CFM indicator</li>
+    <li>Thermostat provides adjustable low-CFM for efficient fan-only operation</li>
+    <li>All-aluminum evaporator coil</li>
+    <li>Fault recall of six most recent faults</li>
+    <li>Improved humidity and comfort control</li>
+    <li>AHRI certified; ETL listed</li>
+    <li>Coil mounting track for quick repositioning</li>
+    <li>Rigid SmartFrame™ cabinet</li>
 </ul>', 
-		'post_excerpt'	=>	'Find comfort with a variable-speed, communicating system at a lower price.',
+		'post_excerpt'	=>	'Variable-Speed Air Handler',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1310,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'air-handlers', 'product-class'=>'good'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-ah-standard-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-09.webp'		
+		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'air-handlers', 'product-class'=>'great'),
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/ss-ahve.pdf'),
+		'image_name'	=>	'Amana-AH-01.jpg'		
 ),
 
-array ( 'post_title'	=>	'Silver TEM6 Air Handler',
-		'post_content' 	=>	'<span class="descriptionText">Get high performance and lasting comfort at a lower price.</span>
-
+array ( 'post_title'	=>	'AMST Air Handler',
+		'post_content' 	=>	'<span class="descriptionText">The AMST Multi-Position, 9-Speed ECM air handler with internal TXV is optimized for single-stage AC and HP outdoor units up to 15.2 SEER2.</span>
 <ul>
-	<li><b>Reliably built:</b> The Silver TEM6’s unique cabinet helps it lose less energy. It also takes in less dust and moisture from the space around it allowing it to work efficiently all year long.</li>
-	<li><b>Adjustable for easy installation:</b> This air handler is a four-way convertible, perfectly fit for different installation scenarios.</li>
-	<li><b>Quiet comfort:</b> Discover the Vortica™ air blower that improves airflow, runs quietly, and uses less energy.</li>
-	<li><b>Durable all-aluminum coils:</b> An all-aluminum coil is more resistant to rust and corrosion than a standard copper coil. This coil extends the life of your air handler so you can enjoy comfort for many years.</li>
-	<li><b>Fan Stages:</b> Variable</li>
+	<li>Energy-Efficient</li>
+    <li>Multi-Position</li>
+    <li>Electronic Expansion Valve, Inverter-tuned</li>
+    <li>Internal factory-installed thermal expansion valves for cooling and heat pump applications</li>
+	<li>7mm evaporator coil tube size on 1½ - 3½ Ton models and ⅜" evaporator coil tube size on 4 to 5 Ton models</li>
+	<li>Direct-Drive, 9-speed ECM blower motor</li>
+	<li>All-aluminum evaporator coil with high performance coated fin stock</li>
+	<li>Coil mounting track for quick repositioning</li>
+	<li>Optimized for use with R-410A refrigerant</li>
+	<li>Cabinet air leakage less than 2.0%at 1.0 inch H₂O when tested in accordance with ASHRAE standard 193</li>
+	<li>Cabinet air leakage less than 1.4%at 0.5 inch H₂O when tested in accordance with ASHRAE standard 193</li>
+	<li>3 kW – 25 kW electric heater kits</li>
+	<li>AHRI certified; ETL listed</li>
 </ul>', 
-		'post_excerpt'	=>	'Get high performance and lasting comfort at a lower price.',
+		'post_excerpt'	=>	'Energy Efficient Air Handlers',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1320,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'air-handlers', 'product-class'=>'good'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-ah-standard-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-09.webp'		
-),
-
-array ( 'post_title'	=>	'Silver TEM4 Air Handler',
-		'post_content' 	=>	'<span class="descriptionText">Help reduce your energy costs with a quiet, efficient air handler.</span>
-
-<ul>
-	<li><b>Reliably built:</b> The Silver TEM4\'s unique cabinet helps it lose less energy. It also takes in less dust and moisture from the space around it allowing it to work efficiently all year long.</li>
-	<li><b>Quiet comfort:</b> Discover the Vortica™ air blower that improves airflow, runs quietly, and uses less energy.</li>
-	<li><b>Durable all-aluminum coils:</b> An all-aluminum coil is more resistant to rust and corrosion than a standard copper coil. This coil extends the life of your air handler so you can enjoy comfort for many years.</li>
-	<li><b>Fan Stages:</b> Multi-speed</li>
-</ul>', 
-		'post_excerpt'	=>	'Help reduce your energy costs with a quiet, efficient air handler.',
-		'post_type'     =>	'products',
-		'menu_order'  	=>  1330,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'air-handlers', 'product-class'=>'good'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-ah-standard-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-09.webp'		
-),
-		
-		
-		
-		
-	
-	// Packaged Units
-array ( 'post_title'	=>	'Silver 13.4 Packaged Air Conditioner System',
-		'post_content' 	=>	'<span class="descriptionText">Experience cool air just the way you want it with this packaged air conditioner.</span>
-
-<ul>
-	<li><b>Communicating features:</b> This exceptional air handler is equipped with American Standard Link® communicating technology that can provide homeowners with more in-depth performance information about their HVAC system.</li>
-	<li><b>Built to last:</b> The American Standard Link® air handler is built to last for years to come. Featuring fully enclosed insulation that eliminates the possibility of loose fibers, a sweat eliminating design, and an epoxy coated coil, this is an air handler you can trust.</li>
-	<li><b>Variable speed technology:</b> Enjoy highly efficient and effective variable speed technology with this air handler. A variable speed Vortica™ blower motor works to circulate the air in exactly the way your home needs it. </li>
-	<li><b>Diagnostic compatible:</b> This air handler works with American Standard Diagnostics, which allows your dealer (with your permission) to remotely diagnose potential issues with your HVAC system, plus provides perks like alert code notifications.</li>
-	<li><b>SEER2:</b> Up to 13.4</li>
-	<li><b>Cooling Stages:</b> One</li>
-	<li><b>Energy Savings:</b> Up to 29%</li>
-</ul>', 
-		'post_excerpt'	=>	'Experience cool air just the way you want it with this packaged air conditioner.',
-		'post_type'     =>	'products',
-		'menu_order'  	=>  1400,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'good'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-packaged-brochure-12-09-22.pdf'),
-		'image_name'	=>	'American-Standard-10.webp'		
-),
-		
-array ( 'post_title'	=>	'Gold 15 Packaged Heat Pump System',
-		'post_content' 	=>	'<span class="descriptionText">This system gives you your choice of energy sources and customized comfort.</span>
-
-<ul>
-	<li><b>Efficient performance:</b> The two-stage Duration™ compressor provides two stages of heating and cooling for a higher level of efficiency than most single-stage compressor units. It runs at 70% capacity most of the time, but steps up to the second stage on the most extreme days to provide efficiency in temperature control.</li>
-	<li><b>Improved indoor air quality:</b> This packaged unit system is compatible with the American Standard AccuClean® Air Cleaner (horizontal applications only) which can optimize air in your home. This air cleaner helps remove allergens, bacteria, and certain viruses from the air you breathe in your home.</li>
-	<li><b>Quiet performance:</b> As one of the quietest packaged units on the market, you can count on this system to deliver the temperature control you desire with a performance so quiet, you might not even know your system is turned on. </li>
-	<li><b>Humidity control that helps:</b> With precise humidity control features, this packaged system helps remove unwanted humidity from the air in your home. Unregulated humidity levels indoors can result in problems for both your health and your home, which is why this system works to keep humidity at optimal levels..</li>
-	<li><b>SEER2:</b> Up to 15.2</li>
-	<li><b>HSPF2:</b> Up to 7.5</li>
-	<li><b>Cooling Stages:</b> Two</li>
-	<li><b>Energy Savings:</b> Up to 33%</li>
-</ul>', 
-		'post_excerpt'	=>	'This system gives you your choice of energy sources and customized comfort.',
-		'post_type'     =>	'products',
-		'menu_order'  	=>  1410,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'better'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-packaged-brochure-12-09-22.pdf'),
-		'image_name'	=>	'American-Standard-11.webp'		
-),
-		
-array ( 'post_title'	=>	'Silver 13.4 Packaged Heat Pump System',
-		'post_content' 	=>	'<span class="descriptionText">Enjoy a system that works smarter, not harder, to deliver year round comfort.</span>
-
-<ul>
-	<li><b>Efficient performance:</b> The two-stage Duration™ compressor provides two stages of heating and cooling for a higher level of efficiency than most single-stage compressor units. It runs at 70% capacity most of the time, but steps up to the second stage on the most extreme days to provide efficiency in temperature control.</li>
-	<li><b>Improved indoor air quality:</b> This packaged unit system is compatible with the American Standard AccuClean® Air Cleaner (horizontal applications only) which can optimize air in your home. This air cleaner helps remove allergens, bacteria, and certain viruses from the air you breathe in your home.</li>
-	<li><b>Quiet performance:</b> As one of the quietest packaged units on the market, you can count on this system to deliver the temperature control you desire with a performance so quiet, you might not even know your system is turned on. </li>
-	<li><b>Humidity control that helps:</b> With precise humidity control features, this packaged system helps remove unwanted humidity from the air in your home. Unregulated humidity levels indoors can result in problems for both your health and your home, which is why this system works to keep humidity at optimal levels.</li>
-	<li><b>SEER2:</b> Up to 13.4</li>
-	<li><b>HSPF2:</b> Up to 7</li>
-	<li><b>Cooling Stages:</b> Two</li>
-	<li><b>Energy Savings:</b> Up to 29%</li>
-</ul>', 
-		'post_excerpt'	=>	'Enjoy a system that works smarter, not harder, to deliver year round comfort.',
-		'post_type'     =>	'products',
-		'menu_order'  	=>  1420,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'good'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-packaged-brochure-12-09-22.pdf'),
-		'image_name'	=>	'American-Standard-10.webp'		
-),
-		
-array ( 'post_title'	=>	'Gold 15 Hybrid Comfort System',
-		'post_content' 	=>	'<span class="descriptionText">Welcome higher quality heating and cooling to your home with this hybrid system.</span>
-
-<ul>
-	<li><b>Efficient performance:</b> The Duration™ compressor has been tested to provide efficient and long-lasting durability to ensure that you get the most out of your packaged heating and cooling system.</li>
-	<li><b>Improved indoor air quality:</b> This packaged unit system is compatible with the American Standard AccuClean® Air Cleaner (horizontal applications only) which can optimize air in your home. This air cleaner helps remove allergens, bacteria, and certain viruses from the air you breathe in your home.</li>
-	<li><b>Quiet performance:</b> As one of the quietest packaged units on the market, you can count on this system to deliver the temperature control you desire with a performance so quiet, you might not even know your system is turned on.</li>
-	<li><b>Humidity control that helps:</b> With precise humidity control features, this packaged system helps remove unwanted humidity from the air in your home. Unregulated humidity levels indoors can result in problems for both your health and your home, which is why this system works to keep humidity at optimal levels.</li>
-	<li><b>SEER2:</b> Up to 15.2</li>
-	<li><b>HSPF2:</b> Up to 7.45</li>
-	<li><b>AFUE:</b> Up to 81%</li>
-	<li><b>Cooling Stages:</b> Two</li>
-	<li><b>Energy Savings:</b> Up to 38%</li>
-</ul>', 
-		'post_excerpt'	=>	'Welcome higher quality heating and cooling to your home with this hybrid system.',
-		'post_type'     =>	'products',
-		'menu_order'  	=>  1430,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'better'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-packaged-brochure-12-09-22.pdf'),
-		'image_name'	=>	'American-Standard-11.webp'		
-),
-		
-array ( 'post_title'	=>	'Gold 15 Gas/Electric Packaged System',
-		'post_content' 	=>	'<span class="descriptionText">Stay warm in the winter and cool in the summer with a durable packaged system.</span>
-
-<ul>
-	<li><b>Efficient performance:</b> The two-stage Duration™ compressor provides two stages of heating and cooling for a higher level of efficiency than most single-stage compressor units. It runs at 70% capacity most of the time, but steps up to the second stage on the most extreme days to provide efficiency in temperature control.</li>
-	<li><b>Improved indoor air quality:</b> This packaged unit system is compatible with the American Standard AccuClean® Air Cleaner (horizontal applications only) which can optimize air in your home. This air cleaner helps remove allergens, bacteria, and certain viruses from the air you breathe in your home.</li>
-	<li><b>Quiet performance:</b> As one of the quietest packaged units on the market, you can count on this system to deliver the temperature control you desire with a performance so quiet, you might not even know your system is turned on.</li>
-	<li><b>Humidity control that helps:</b> With precise humidity control features, this packaged system helps remove unwanted humidity from the air in your home. Unregulated humidity levels indoors can result in problems for both your health and your home, which is why this system works to keep humidity at optimal levels.</li>
-	<li><b>SEER2:</b> Up to 15.2</li>
-	<li><b>AFUE:</b> Up to 81%</li>
-	<li><b>Cooling Stages:</b> Two</li>
-	<li><b>Energy Savings:</b> Up to 33%</li>
-</ul>', 
-		'post_excerpt'	=>	'Stay warm in the winter and cool in the summer with a durable packaged system.',
-		'post_type'     =>	'products',
-		'menu_order'  	=>  1440,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'better'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-packaged-brochure-12-09-22.pdf'),
-		'image_name'	=>	'American-Standard-11.webp'		
-),
-		
-		
-		
-		
-	
-	// Thermostats
-array ( 'post_title'	=>	'AccuLink™ Platinum 850 Thermostat',
-		'post_content' 	=>	'<span class="descriptionText">Never leave your home unprepared thanks to this thermostat that gives you a 5-day weather forecast and radar.</span>
-
-<ul>
-	<li><b>Alerts you can count on:</b> Not only does this thermostat tell you the temperature in your home, it also gives you a five day forecast and alerts for the weather outside. Plus, it gives you maintenance and filter service reminder alerts as well, so you can help ensure your product stays in peak performance condition.</li>
-	<li><b>Easy installation:</b> Enjoy an easy installation after purchasing the AccuLink™ Platinum 850. This thermostat can quickly and efficiently be installed almost anywhere in your home, and once it\'s turned on, it has a one touch installation set up with six preset configurations for homeowners to choose from.</li>
-	<li><b>Communication technology:</b> The AccuLink™ Platinum 850 is compatible with American Standard AccuLink™ Communicating System and AccuComfort™ Variable Speed Systems to give you control over your home comfort system. Enjoy communication technology that allows your home systems such as lights, security, HVAC, and more to all be controlled by the touch of a button.</li>
-	<li><b>Humidity control:</b> Unregulated levels of humidity inside can lead to health problems for you and structural problems for your home. This thermostat works to keep optimal levels of humidity in your home and reduce these issues with a built-in humidity sensor that alerts the system when indoor humidity is too low or too high..</li>
-	<li><b>Cooling Stages:</b> 2</li>
-	<li><b>Heating Stages:</b> 5</li>
-	<li><b>Smart Thermostat:</b> Yes</li>
-	<li><b>Communicating:</b> Yes</li>
-	<li><b>Z Wave Compatible:</b> Yes</li>
-	<li><b>Screen:</b> 4.3" color touchscreen</li>
-	<li><b>Diagnostics:</b> Yes</li>
-	<li><b>Programmable:</b> Yes</li>
-</ul>', 
-		'post_excerpt'	=>	'Never leave your home unprepared thanks to this thermostat that gives you a 5-day weather forecast and radar.',
-		'post_type'     =>	'products',
-		'menu_order'  	=>  1500,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'thermostats', 'product-class'=>'best'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-tstat-smart-brochure-01-02-23.pdf'),
-		'image_name'	=>	'AS-Thermostat-01.webp'		
-),
-		
-array ( 'post_title'	=>	'Gold 824 Thermostat',
-		'post_content' 	=>	'<span class="descriptionText">Programing capabilities on this thermostat make temperature control a breeze.</span>
-
-<ul>
-	<li><b>Easy installation:</b> Enjoy an easy installation after purchasing the Gold 824. This thermostat can quickly and efficiently be installed almost anywhere in your home, and once it\'s turned on, setup only takes a few clicks. Not to mention, there\'s upgradable software to enhance your temperature control experience.</li>
-	<li><b>Humidity control:</b> Unregulated levels of humidity inside can lead to health problems for you and structural problems for your home. This thermostat works to keep optimal levels of humidity in your home and reduce these issues with a built-in indoor relative humidity display that shows when indoor humidity is too low or too high. </li>
-	<li><b>Alerts you can count on:</b> Not only does this thermostat tell you the temperature in your home, it also gives you a five day forecast and alerts for the weather outside. Plus, it gives you maintenance and filter service reminder alerts as well, so you can help ensure your product stays in peak performance condition.</li>
-	<li><b>Scheduling capabilities:</b> Program your temperature schedule exactly how you want it with the scheduling capabilities on the Gold 824 thermostat. Capabilities include up to four daily heating and cooling periods.</li>
-	<li><b>ENERGY STAR® Qualified:</b> Yes</li>
-	<li><b>Cooling Stages:</b> 2</li>
-	<li><b>Heating Stages:</b> 5</li>
-	<li><b>Smart Thermostat:</b> Yes</li>
-	<li><b>Z Wave Compatible:</b> Yes</li>
-	<li><b>Screen:</b> 4.3" color touchscreen</li>
-	<li><b>Diagnostics:</b> Yes</li>
-	<li><b>Programmable:</b> Yes</li>
-</ul>', 
-		'post_excerpt'	=>	'Programing capabilities on this thermostat make temperature control a breeze.',
-		'post_type'     =>	'products',
-		'menu_order'  	=>  1510,
-		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'thermostats', 'product-class'=>'good'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-tstat-smart-brochure-01-02-23.pdf'),
-		'image_name'	=>	'AS-Thermostat-01.webp'		
-),
-		
-		
-		
-		
-		
-		
-		
-		
+		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'air-handlers', 'product-class'=>'best'),
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/ss-amve.pdf'),
+		'image_name'	=>	'Amana-AH-01.jpg'		
+),		
 			
 );
 

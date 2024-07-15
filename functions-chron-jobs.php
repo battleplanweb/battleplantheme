@@ -152,7 +152,7 @@ function processChron($forceChron) {
 		$wpSEOBase['remove_pingback_header'] = 1;
 		$wpSEOBase['clean_campaign_tracking_urls'] = 1;
 		$wpSEOBase['clean_permalinks'] = 1;
-		$wpSEOBase['clean_permalinks_extra_variables'] = 'loc,int,invite,rs';	
+		$wpSEOBase['clean_permalinks_extra_variables'] = 'loc,int,invite,rs,se_action';	
 		$wpSEOBase['search_cleanup'] = 1;
 		$wpSEOBase['search_cleanup_emoji'] = 1;
 		$wpSEOBase['search_cleanup_patterns'] = 1;

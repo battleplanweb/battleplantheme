@@ -1940,6 +1940,7 @@ function battleplan_create_user_roles() {
 		'delete_private_jobsites'		=> true,
 		'copy_jobsites'					=> true,
 		'upload_files'					=> true,
+		'edit_posts'					=> true,
 		'read'							=> true,
 	);	
 	

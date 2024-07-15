@@ -91,6 +91,10 @@
   --close-btn-border-hover: 					var(--button-border-hover);
 }
 
+#query-monitor-main {
+	display: 										block !important;
+}
+
 .wp-admin body {
 	background: 									var(--white);
 	font-family: 									var(--font-family);

@@ -274,6 +274,7 @@ function battleplan_getBrandLogo($atts, $content = null) {
 		$brand = $GLOBALS['customer_info']['site-brand'];
 		if ( is_array($brand) ) $brand = $brand[0];
 	endif;
+	$brand = trim($brand);
 	$name = ucwords($brand);
 	$brand = strtolower(str_replace(" ", "-", $brand));
 	$imagePath = get_template_directory().'/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$alt.'.png';			

@@ -931,6 +931,7 @@ function battleplan_disable_emojis_remove_dns_prefetch( $urls, $relation_type ) 
 add_filter('script_loader_tag', 'battleplan_add_data_attribute', 10, 3);
 function battleplan_add_data_attribute($tag, $handle, $src) {
     if ( is_admin() || $GLOBALS['pagenow'] === 'wp-login.php' || strpos( $src, '.js' ) === FALSE ) return $tag;
+    if ( $handle === 'jquery' || $handle === 'jquery-js' ) return null;
 	$tag = '<script nonce="'._BP_NONCE.'" id="'.$handle.'" defer src="'.esc_url( $src ).'"></script>'; 
     return $tag;
 }
@@ -990,16 +991,6 @@ function battleplan_dequeue_unwanted_stuff() {
 		wp_dequeue_style( 'widgetopts-styles' ); 
 		wp_deregister_style( 'widgetopts-styles' );
 	endif;
-	
-// scripts
-	wp_dequeue_script( 'select2'); wp_deregister_script('select2');	
-	wp_dequeue_script( 'wphb-global' ); wp_deregister_script( 'wphb-global' );
-	wp_dequeue_script( 'wp-embed' ); wp_deregister_script( 'wp-embed' );
-	wp_dequeue_script( 'modernizr' ); wp_deregister_script( 'modernizr' );		
-	if ( !is_plugin_active( 'woocommerce/woocommerce.php' ) ) :
-		wp_dequeue_script( 'underscore' );
-		wp_deregister_script( 'underscore' );
-	endif;
 }
 
 // Load and enqueue styles in header
@@ -1036,18 +1027,26 @@ function battleplan_header_styles() {
 	wp_enqueue_style( 'battleplan-style', get_stylesheet_directory_uri()."/style-site.css", array('parent-style'), _BP_VERSION );	
 }
 
-// Load and enqueue styles in footer
-add_action( 'wp_footer', 'battleplan_footer_styles' );
-function battleplan_footer_styles() {
-
-	//wp_enqueue_style( 'battleplan-animate', get_template_directory_uri().'/animate.css', array(), _BP_VERSION );	
-	//wp_enqueue_style( 'battleplan-animate-xtra', get_template_directory_uri().'/animate-xtra.css', array(), _BP_VERSION );	
-	//wp_enqueue_style( 'battleplan-fontawesome', get_template_directory_uri()."/fontawesome.css", array(), _BP_VERSION );		
+// Dequeue and deregister scripts that are not necessary
+add_action('wp_enqueue_scripts', 'battleplan_dequeue_scripts', 9998);
+add_action('wp_print_footer_scripts', 'battleplan_dequeue_scripts', 9998);
+function battleplan_dequeue_scripts() {
+	wp_dequeue_script( 'jquery'); wp_deregister_script('jquery');	
+	wp_dequeue_script( 'jquery-js'); wp_deregister_script('jquery-js');	
+	wp_dequeue_script( 'jquery-migrate'); wp_deregister_script('jquery-migrate');	
+	wp_dequeue_script( 'select2'); wp_deregister_script('select2');	
+	wp_dequeue_script( 'wphb-global' ); wp_deregister_script( 'wphb-global' );
+	wp_dequeue_script( 'wp-embed' ); wp_deregister_script( 'wp-embed' );
+	wp_dequeue_script( 'modernizr' ); wp_deregister_script( 'modernizr' );		
+	if ( !is_plugin_active( 'woocommerce/woocommerce.php' ) ) :
+		wp_dequeue_script( 'underscore' );
+		wp_deregister_script( 'underscore' );
+	endif;
 }
 
 // Load and enqueue remaining scripts
-add_action( 'wp_enqueue_scripts', 'battleplan_scripts', 20 );
-function battleplan_scripts() {
+add_action( 'wp_enqueue_scripts', 'battleplan_enqueue_scripts', 20 );
+function battleplan_enqueue_scripts() {
 	wp_enqueue_script( 'battleplan-script-helpers', get_template_directory_uri().'/js/script-helpers.js', array(), _BP_VERSION, false );					
 	wp_enqueue_script( 'battleplan-script-essential', get_template_directory_uri().'/js/script-essential.js', array(), _BP_VERSION, false );				
 	wp_enqueue_script( 'battleplan-script-pages', get_template_directory_uri().'/js/script-pages.js', array(), _BP_VERSION, false );				

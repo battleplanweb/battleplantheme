@@ -847,7 +847,8 @@ function battleplan_footer_social_box() {
 		if ( do_shortcode('[get-biz info="youtube"]') ) $buildLeft .= do_shortcode('[social-btn type="youtube"]');											
 		if ( do_shortcode('[get-biz info="tiktok"]') ) $buildLeft .= do_shortcode('[social-btn type="tiktok"]');							
 		if ( do_shortcode('[get-biz info="location"]') ) $buildLeft .= do_shortcode('[social-btn type="location"]');							
-		if ( do_shortcode('[get-biz info="email"]') ) $buildLeft .= do_shortcode('[social-btn type="email"]');
+		if ( do_shortcode('[get-biz info="email"]') ) $buildLeft .= do_shortcode('[social-btn type="email"]');							
+		if ( do_shortcode('[get-biz info="user"]') ) $buildLeft .= do_shortcode('[social-btn type="user"]');
 	$buildLeft .= "</div>";
 	return $buildLeft;
 }
@@ -931,7 +932,7 @@ function battleplan_disable_emojis_remove_dns_prefetch( $urls, $relation_type ) 
 add_filter('script_loader_tag', 'battleplan_add_data_attribute', 10, 3);
 function battleplan_add_data_attribute($tag, $handle, $src) {
     if ( is_admin() || $GLOBALS['pagenow'] === 'wp-login.php' || strpos( $src, '.js' ) === FALSE ) return $tag;
-    if ( $handle === 'jquery' || $handle === 'jquery-js' ) return null;
+   	if ( (!is_plugin_active( 'woocommerce/woocommerce.php' ) && !is_plugin_active( 'table-sorter/table-sorter.php' ) ) && ( $handle === 'jquery' || $handle === 'jquery-js' )) return null;
 	$tag = '<script nonce="'._BP_NONCE.'" id="'.$handle.'" defer src="'.esc_url( $src ).'"></script>'; 
     return $tag;
 }
@@ -1031,16 +1032,15 @@ function battleplan_header_styles() {
 add_action('wp_enqueue_scripts', 'battleplan_dequeue_scripts', 9998);
 add_action('wp_print_footer_scripts', 'battleplan_dequeue_scripts', 9998);
 function battleplan_dequeue_scripts() {
-	wp_dequeue_script( 'jquery'); wp_deregister_script('jquery');	
-	wp_dequeue_script( 'jquery-js'); wp_deregister_script('jquery-js');	
-	wp_dequeue_script( 'jquery-migrate'); wp_deregister_script('jquery-migrate');	
 	wp_dequeue_script( 'select2'); wp_deregister_script('select2');	
 	wp_dequeue_script( 'wphb-global' ); wp_deregister_script( 'wphb-global' );
 	wp_dequeue_script( 'wp-embed' ); wp_deregister_script( 'wp-embed' );
 	wp_dequeue_script( 'modernizr' ); wp_deregister_script( 'modernizr' );		
-	if ( !is_plugin_active( 'woocommerce/woocommerce.php' ) ) :
-		wp_dequeue_script( 'underscore' );
-		wp_deregister_script( 'underscore' );
+	if ( !is_plugin_active( 'woocommerce/woocommerce.php' ) && !is_plugin_active( 'table-sorter/table-sorter.php' ) ) :
+		wp_dequeue_script( 'jquery'); wp_deregister_script('jquery');	
+		wp_dequeue_script( 'jquery-js'); wp_deregister_script('jquery-js');	
+		wp_dequeue_script( 'jquery-migrate'); wp_deregister_script('jquery-migrate');	
+		wp_dequeue_script( 'underscore' ); wp_deregister_script( 'underscore' );
 	endif;
 }
 
@@ -1130,7 +1130,6 @@ require_once get_template_directory().'/functions-ajax.php';
 require_once get_template_directory().'/functions-grid.php';
 require_once get_template_directory().'/functions-public.php';
 if (file_exists(get_stylesheet_directory().'/functions-site.php')) require_once get_stylesheet_directory().'/functions-site.php';
-if ( function_exists('battleplan_updateSiteOptions') ) battleplan_updateSiteOptions();	
 
 require_once get_template_directory().'/functions-chron-jobs.php';	
 if ( is_admin() || _USER_LOGIN == "battleplanweb" ) require_once get_template_directory().'/functions-admin.php';  

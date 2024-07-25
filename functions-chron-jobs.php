@@ -66,7 +66,8 @@ endif;
 function processChron($forceChron) {
 	if (function_exists('battleplan_remove_user_roles')) battleplan_remove_user_roles();
 	if (function_exists('battleplan_create_user_roles')) battleplan_create_user_roles();
-	
+	if (function_exists('battleplan_updateSiteOptions')) battleplan_updateSiteOptions();
+
 	$site = str_replace('https://', '', get_bloginfo('url'));	
 	$exempt = $site == "sweetiepiesribeyes.com" || $site == "bubbascookscountry.com" || $site == "babeschicken.com" || $site == "airzoneexperts.com" ? "true" : "false";
 	

@@ -13,7 +13,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2024.24.0' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2024.24.1' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -215,6 +215,7 @@ $GLOBALS['icons']['camera'] = '\e194';
 $GLOBALS['icons']['camera-security'] = '\e195';
 $GLOBALS['icons']['cart'] = '\e0f4';
 $GLOBALS['icons']['chain-link'] = '\e116';
+$GLOBALS['icons']['checkmark'] = '\e13e';
 $GLOBALS['icons']['checkmark-seal'] = '\e0a3';
 $GLOBALS['icons']['chevron-down'] = '\e219';
 $GLOBALS['icons']['chevron-left'] = '\e216';
@@ -273,6 +274,7 @@ $GLOBALS['icons']['twitter'] = '\e1cb';
 $GLOBALS['icons']['twitter-classic'] = '\e1ca';
 $GLOBALS['icons']['user'] = '\e0fb';
 $GLOBALS['icons']['wind'] = '\e112';
+$GLOBALS['icons']['x-small'] = '\e139';
 $GLOBALS['icons']['x-large'] = '\e138';
 $GLOBALS['icons']['yelp'] = '\e1ce';
 $GLOBALS['icons']['youtube'] = '\e1cc';

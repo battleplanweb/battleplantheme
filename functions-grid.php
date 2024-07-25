@@ -182,10 +182,17 @@ function battleplan_buildColumn( $atts, $content = null ) {
 // Image Block
 add_shortcode( 'img', 'battleplan_buildImg' );
 function battleplan_buildImg( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'link'=>'', 'new-tab'=>'', 'ada-hidden'=>'false', 'class'=>'', 'start'=>'', 'end'=>'', 'track'=>'' ), $atts );
+	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'', 'ada-hidden'=>'false', 'class'=>'', 'start'=>'', 'end'=>'', 'track'=>'' ), $atts );
 	$order = esc_attr($a['order']);	
 	if ( $order != '' ) : $style = " style='order: ".$order." !important'"; else: $style = ""; endif;
-	$link = esc_attr($a['link']);	
+	$getBiz = esc_attr($a['get-biz']);
+	if ( $getBiz == "" ) {
+		$link = esc_attr($a['link']);
+		if ( $link == "" || $link == "none" || $link == "no" ) $link = "javascript:void(0);";	
+		if ( strpos($link, 'pdf') ) $link .= "?id=".time();	
+	} else {
+		$link = do_shortcode( '[get-biz info="'.$getBiz.'"]' );
+	};
 	$size = esc_attr($a['size']);	
 	$size = convertSize($size);
 	$class = esc_attr($a['class']);

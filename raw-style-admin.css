@@ -93,6 +93,7 @@
 
 #query-monitor-main {
 	display: 										block !important;
+	top: 											50%;
 }
 
 .wp-admin body {

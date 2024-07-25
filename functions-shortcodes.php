@@ -1497,6 +1497,23 @@ function battleplan_getCrypto( $atts, $content = null ) {
 	return $buildCrypto;
 }
 
+// Add Cash Apps widget to Sidebar
+add_shortcode( 'get-cashapps', 'battleplan_getCashApps' );
+function battleplan_getCashApps( $atts, $content = null ) {	
+	$a = shortcode_atts( array( 'include'=>'zelle venmo cashapp' ), $atts );
+	$apps = explode(" ", esc_attr($a['include']) );
+
+	$buildApps = '<div id="cashapps" class="currency">';
+	
+	foreach ( $apps as $app ) :	
+		$buildApps .= '<img class="cashapp-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-'.$app.'.png" alt="We accept '.$app.' payments" width="100" height="100" style="aspect-ratio:100/100" />';		
+	endforeach;	
+
+	$buildApps .= '</div>';  					  
+										 			  
+	return $buildApps;
+}
+
 // Create filter button for querying posts base on custom fields
 add_shortcode( 'get-filter-btn', 'battleplan_getFilterButton' );
 function battleplan_getFilterButton( $atts, $content = null ) {	

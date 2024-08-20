@@ -686,7 +686,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	
 // Ensure that Form labels have enough width & remove double asterisks
 	window.formLabelWidth = function () {
-		getObjects('.wpcf7 form, .wpcf7 form .flex').forEach(form => {
+		getObjects('.wpcf7 form .flex').forEach(form => { // removed .wpcf7 form, on 8/15/24 because it was causing labels to be wrong size when more than one .flex exists
 			let labelMaxWidth = 0;
 
 			getObjects('.form-input.width-default label', form).forEach(label => {
@@ -937,7 +937,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		
 		if (mobileMenu.offsetParent !== null && topPush) {
 			getObject(".top-push.screen-mobile #page").style.top = "0";
-			getObject(".top-push.screen-mobile .top-strip.stuck").style.top = `${mobileMenuBarH()}px`;
+			let ckStuck = getObject(".top-push.screen-mobile .top-strip.stuck");
+			if (ckStuck !== null) {
+				ckStuck.style.top = `${mobileMenuBarH()}px`;
+			}
 		}
 	};
 			
@@ -952,7 +955,11 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			const getMenuH = getObject("#mobile-navigation").offsetHeight;
 			const getTotalH = getMenuH + mobileMenuBarH();
 			getObject(".top-push.screen-mobile.mm-active #page").style.top = `${getMenuH}px`;
-			getObject(".top-push.screen-mobile.mm-active .top-strip.stuck").style.top = `${getTotalH}px`;
+			let ckStuck = getObject(".top-push.screen-mobile.mm-active .top-strip.stuck");
+			if (ckStuck !== null) {
+				ckStuck.style.top = `${getTotalH}px`;
+			}
+			
 		}
 	};
 			

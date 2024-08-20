@@ -84,6 +84,15 @@ body.form-stacked .wpcf7 form label,
 	align-self: 									end;
 }
 
+.label-pos-after label {
+	text-align: 									left !important;
+	transform: 										translateX(-50px); /* move label closer to the check box */
+}
+
+.wpcf7 form .label-pos-after span.wpcf7-form-control-wrap {
+	align-self: 									start;
+}
+
 input[type="text"],
 input[type="email"],
 input[type="url"],

@@ -652,6 +652,7 @@ div[class*="-faux"] {
 #primary,
 #secondary {
 	max-width:										100%;
+	min-width: 										0;
 }
 
 .content-box #primary,
@@ -663,7 +664,6 @@ div[class*="-faux"] {
 }
 
 .sidebar-inner {
-
 	display:										inline-block;
 	max-width:										100%;
 	width:											100%;
@@ -706,7 +706,6 @@ div[class*="restrict-"] {
 .widget-box .widget {
 	margin:											var(--measure-base) auto;
 }
-
 
 .widget.widget-first {
 	margin-top:										var(--measure-small);
@@ -809,6 +808,7 @@ a#bbblink {
  	position: 										relative;
 }
  
+
 .section.section-lock .closeBtn, 
 .closeBtn {
 	position:										absolute;
@@ -1105,6 +1105,7 @@ section.section.break-out {
 
 }
 
+
 .grid-4e,
 .gallery-column-4 {
 	grid-template-columns: 							repeat(4, 1fr);
@@ -1398,6 +1399,7 @@ dl.col-gallery {
 }
 
 /* 2: Phones (landscape) + Tablets (portrait) */
+
 @media (max-width: 860px) {	
 	.logo-strip .flex {
 		gap: 											var(--measure-base) 3%;

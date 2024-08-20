@@ -503,7 +503,7 @@ function battleplan_add_acf_pedigree_fields() {
 			),
 			array(
 				'key' => 'field_52dd8f4f60233',
-				'label' => 'Expecting / Birth Date',
+				'label' => 'Due Date / Birth Date',
 				'name' => 'birth_date',
 				'type' => 'date_picker',
 				'required' => 0,
@@ -523,8 +523,17 @@ function battleplan_add_acf_pedigree_fields() {
 			),
 			array(
 				'key' => 'field_52dd8f7a60234',
-				'label' => 'Deposit',
-				'name' => 'deposit',
+				'label' => 'Deposit (Hold)',
+				'name' => 'deposit_hold',
+				'type' => 'number',
+				'required' => 0,
+				'conditional_logic' => 0,
+				'default_value' => 0,
+			),
+			array(
+				'key' => 'field_33fd9j7s889gh3',
+				'label' => 'Deposit (Birth)',
+				'name' => 'deposit_born',
 				'type' => 'number',
 				'required' => 0,
 				'conditional_logic' => 0,

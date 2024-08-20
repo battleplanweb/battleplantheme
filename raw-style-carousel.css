@@ -318,15 +318,46 @@
 }
 
 /* Slider w/ blurred background */
-.slider-blur .img-holder {
+
+.slider-blur {
 	position: 										relative;
-	display: 										flex;
-	margin: 										0 auto;
-	overflow: 										hidden;
-	padding: 										var(--measure-small);
 	width: 											100%;
-	max-width: 										100%; 
-	height: 										50vh;
+	height: 										100%;
+	overflow: 										hidden;
+}
+
+.slider-blur .carousel-inner {
+	height: 										75vh;
+}
+
+.slider-blur .carousel-item {
+	padding: 	 									5%;
+}
+
+.slider-blur .carousel-item * {
+	min-height: 									0;
+}
+
+.slider-blur .block-image {
+	height: 										100%;
+	width: 	 										100%;
+}
+
+.slider-blur a.no-link {
+	position: 										relative;
+	width: 											100%;
+	height: 										100%;
+}
+
+
+.slider-blur .img-holder {
+	position: 										absolute;
+	width: 											110%;
+	height: 										110%;
+	overflow: 										hidden;
+	top: 											50%;
+	left: 											50%;
+	transform: 										translate(-50%, -50%);
 }
 
 .size-half-f .slider-blur .img-holder,
@@ -337,22 +368,23 @@
 .slider-blur .img-slider {
 	position: 										relative;
 	z-index: 										200;
-	box-shadow: 									0 0 var(--measure-small) var(--black-med), 0 0 4em var(--black);
-	object-fit: 									cover;
-	align-self: 									center;
-	max-height: 									100%;
+	box-shadow: 									0 0 var(--measure-small) var(--black-med), 0 0 4em var(--black);	
 }
 
 .slider-blur .img-bg {
-	position: 										absolute;
-	top: 											0;
-	left: 											0;
 	width: 											100%;
-	height: 										100%;
+	height: 										100%;											
 	background-size: 								cover !important;
 	filter: 										brightness(0.85) blur(10px);
-	z-index: 										100;	
 }	
+
+.slider-blur img {
+	width: 											auto;
+	max-height: 									90%;
+	margin: 										0 auto;
+	top: 											50%;
+	transform: 										translateY(-50%);
+}
 
 /*--------------------------------------------------------------
 # Mobile Styles

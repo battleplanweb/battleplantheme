@@ -548,11 +548,16 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 			$getID = get_the_ID();
 			$image = wp_get_attachment_image_src( $getID, $size );
 			$imgSet = wp_get_attachment_image_srcset( $getID, $size );
+	
+			$linkTo = '';
+			if ( $link === "alt" ) $linkTo = readMeta(get_the_ID(), '_wp_attachment_image_alt', true);				
+			elseif ( $link === "description" ) $linkTo = esc_html(get_post(get_the_ID())->post_content);
+			elseif ( $link !== "none" && $link !== "no" ) $linkTo = $image[0]; 	
 
 			$getImage = "";
-			if ( $link == "yes" ) $getImage .= '<a href="'.$image[0].'">';
+			if ( $linkTo !== "" ) $getImage .= '<a href="'.$linkTo.'">';
 			$getImage .= '<img class="random-img '.$tags[0].'-img" loading="'.$lazy.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta($getID, '_wp_attachment_image_alt', true).'">';
-			if ( $link == "yes" ) $getImage .= '</a>';
+			if ( $linkTo !== "" ) $getImage .= '</a>';
 
 			battleplan_countTease( $getID );	
 

@@ -63,7 +63,8 @@
 						$buildCopyright .= "</div>";
 					endforeach;
 					
-					if ( isset($GLOBALS['customer_info']['misc3']) ) $buildCopyright .= "<div class='site-info-misc3'>".$GLOBALS['customer_info']['misc3']."</div>";	
+					if ( isset($GLOBALS['customer_info']['misc3']) ) $buildCopyright .= "<div class='site-info-misc3'>".$GLOBALS['customer_info']['misc3']."</div>";
+			
 					$buildCopyright .= "<div class='site-info-links'>";
 					
 					if ( isset($GLOBALS['customer_info']['license']) ) $buildCopyright .= "License ".$GLOBALS['customer_info']['license']." • "; 
@@ -74,7 +75,7 @@
 					
 					$buildCopyright .= "</div><div class='site-info-battleplan'>Website developed & maintained by <a href='http://battleplanwebdesign.com' target='_blank' rel='noreferrer'>Battle Plan Web Design</a></div>";
 					
-					$buildCopyright .= "</div>";				
+					//$buildCopyright .= "</div>";				
 
 					$siteIcon = battleplan_fetch_site_icon();
 			

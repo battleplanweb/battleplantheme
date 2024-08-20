@@ -187,8 +187,9 @@ function battleplan_buildImg( $atts, $content = null ) {
 	if ( $order != '' ) : $style = " style='order: ".$order." !important'"; else: $style = ""; endif;
 	$getBiz = esc_attr($a['get-biz']);
 	if ( $getBiz == "" ) {
+		$linkClass = "";
 		$link = esc_attr($a['link']);
-		if ( $link == "" || $link == "none" || $link == "no" ) $link = "javascript:void(0);";	
+		if ( $link == "" || $link == "none" || $link == "no" ) $linkClass=" class='no-link'"; $link = "javascript:void(0);";	
 		if ( strpos($link, 'pdf') ) $link .= "?id=".time();	
 	} else {
 		$link = do_shortcode( '[get-biz info="'.$getBiz.'"]' );
@@ -212,7 +213,7 @@ function battleplan_buildImg( $atts, $content = null ) {
 	}
 
 	$buildImg = '<div class="block block-image span-'.$size.$class.'" '.$tracking.$style.'>';
-	if ( $link != '' ) : $buildImg .= '<a '.$target.' href="'.$link.'"'.$hidden.'>'; endif;
+	if ( $link != '' ) : $buildImg .= '<a '.$target.$linkClass.' href="'.$link.'"'.$hidden.'>'; endif;
 	$buildImg .= do_shortcode($content);
 	if ( $link != '' ) : $buildImg .= '</a>'; endif; 
 	$buildImg .= '</div>';
@@ -380,7 +381,7 @@ function battleplan_buildButton( $atts, $content = null ) {
 	endif;
 	if ( $graphic != "false" ) : $class .= " graphic-icon"; $content = '<img src="/wp-content/uploads/'.$graphic.'" width="'.$graphicW.'" height="'.$graphicW.'" style="aspect-ratio:'.$graphicW.'/'.$graphicW.'" alt="" /><span class="unique">'.$content.'</span>'; endif;	
 
-		$start = strtotime(esc_attr($a['start']));
+	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));	
 	if ( $start || $end ) {
 		$now = time(); 
@@ -576,9 +577,10 @@ function battleplan_buildLockedSection( $atts, $content = null ) {
  
 add_shortcode( 'seek', 'battleplan_formField' );
 function battleplan_formField( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'label'=>'Label', 'show'=>'true', 'id'=>'user-input', 'req'=>'false', 'width'=>'default', 'max-w'=>'', 'class'=>''), $atts );
+	$a = shortcode_atts( array( 'label'=>'Label', 'show'=>'true', 'label-pos'=>'before', 'id'=>'user-input', 'req'=>'false', 'width'=>'default', 'max-w'=>'', 'class'=>''), $atts );
 	$id = esc_attr($a['id']);
 	$label = esc_attr($a['label']);
+	$labelPos = esc_attr($a['label-pos']);
 	$req = esc_attr($a['req']);	
 	$width = 'width-'.esc_attr($a['width']);
 	$maxW = esc_attr($a['max-w']);	
@@ -593,11 +595,12 @@ function battleplan_formField( $atts, $content = null ) {
 		$buildInput .= '<div class="block block-button block-100">'.$content.'</div>';		
 	else:	
 	// removed col from classes 5/19 for animation purposes
-		$buildInput = '<div class="form-input input-'.strtolower(preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(" ","-",$label))).' input-'.$id.' '.$width.$class.'"'.$maxW.' '.$aria.'>';
+		$buildInput = '<div class="form-input input-'.strtolower(preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(" ","-",$label))).' input-'.$id.' label-pos-'.$labelPos.' '.$width.$class.'"'.$maxW.' '.$aria.'>';
+		if ( $labelPos == 'after' ) $buildInput .= $content;
 		if ( $show == 'true' ) $buildInput .= '<label for="'.$id.'" class="'.$width.' label-baseline">'.$label;
 		if ( $show == 'true' && $req != 'false' ) $buildInput .= $asterisk;
 		if ( $show == 'true' ) $buildInput .= '</label>';
-		$buildInput .= $content;
+		if ( $labelPos == 'before' ) $buildInput .= $content;
 		if ( $show != 'true' && $req != 'false' ) $buildInput .= $asterisk;
 		$buildInput .= '</div>';
 	endif;

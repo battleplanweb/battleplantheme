@@ -22,11 +22,13 @@ $printPage .= '
 
 	<p>This Site only collects the personal information you voluntarily provide to us, which may include:</p>
 
-	<p class="indent">a) Email address and contact information (name, number, company, location) in order to allow customers to request our services or ask us questions;</p>
-	<p class="indent">a) First and last names and email address in order to subscribe visitors to our newsletter;</p>
-	<p class="indent">a) As listed below in Activity we collect user data with Google Analytics in order to better understand how to improve our Service, and user experience.</p>
+	<p class="indent">a) Contact Information: Your name, email address, phone number, company name, and location. This information is necessary for customers to request our services, ask questions, and receive relevant communications from us.</p>
+	<p class="indent">b) Subscription Information: Your first and last name, along with your email address, which allows us to subscribe you to our newsletter, SMS messaging, and/or other updates.</p>
+	<p class="indent">c) User Data: We collect data through Google Analytics and similar tools to better understand user behavior, improve our services, and enhance user experience on our site. This may include information such as your IP address, browser type, pages visited, and other usage statistics.</p>
 
-	<p>The information you provide is used to process transactions, book service calls, answer questions, send periodic emails, and improve the service we provide. We do share your information with trusted third parties who assist us in operating our website, conducting our business and servicing clients and visitors. These trusted third parties agree to keep this information confidential. Your personal information will never be shared with unrelated third parties.</p>';
+	<p>The information you provide is used to process transactions, book service calls, answer questions, send periodic emails and/or text messages, and improve the service we provide. We share your personal information only with trusted third-party service providers who assist us in operating our website, conducting our business, and servicing our clients and visitors. These third parties are bound by confidentiality agreements and are required to keep your information secure. Your personal information will never be shared with unrelated third parties without your explicit consent.</p>
+	
+	<p>If you choose to opt in to receive communications from us via email or SMS, your email address and phone number will be used exclusively for that purpose. We will not share your email address or phone number with any third parties unless it is necessary to fulfill your requests or required by law.</p>';
 	
 $num++;
 $printPage .= '	

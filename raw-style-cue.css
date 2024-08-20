@@ -172,19 +172,16 @@
 .mejs-controls .mejs-time span {
 	display:									inline-block;
 	width:										50%;
-	text-align:									left;
+	text-align:									left !important;
 }
 
-.mejs-controls .mejs-time .mejs-duration {
-	text-align:									right;
-}
-
+.mejs-controls .mejs-time .mejs-duration,
 .alt-time .mejs-controls .mejs-time span {
-	text-align:									right;
+	text-align:									right !important;
 }
 
 .alt-time .mejs-controls .mejs-time .mejs-duration {
-	text-align:									left;
+	text-align:									left !important;
 }
 
 .alt-time .mejs-controls .mejs-time .mejs-duration::before {

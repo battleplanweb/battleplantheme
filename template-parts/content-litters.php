@@ -34,7 +34,9 @@ $birthDateObj->modify('+8 weeks');
 $readyDate = $birthDateObj->format("F j, Y"); 
 //$readyDate = esc_attr(get_field( "ready_date" ));
 $price = esc_attr(get_field( "price" ));
-$deposit = esc_attr(get_field( "deposit" ));
+$depositHold = esc_attr(get_field( "deposit_hold" ));
+$depositBorn = esc_attr(get_field( "deposit_born" ));
+$deposit = $depositHold + $depositBorn;
 
 $search = ['( BLK )', '( YLW )', '( CHOC )'];
 $replace = ['', '', ''];
@@ -75,10 +77,17 @@ $modDate = the_modified_date( 'F Y', '', '', FALSE);
 
 		$buildLitter .= '<ul class="litter-details"><h4>Litter Details</h4>';
 		
+		$buildLitter .= '<p style="margin-top: -10px; font-size: 70%; text-align:center"><em>(Updated: '.get_the_modified_date().')</em></p>'; 
+
+		
 		if ( $price ) : $buildLitter .= '<li><span class="label">Price: </span>$'.number_format($price, 0, ".", ",").' <span style="font-size:70%;">+ sales tax</span></li>';
 		else: $buildLitter .= "Call For Price"; endif;
 		
-		if ( $deposit && ( $litterStatus == "Expecting" || strtotime(date('F j, Y')) < strtotime($readyDate)) ) : $buildLitter .= '<li style="margin-top:-0.5em"><span class="label">Deposit: </span>$'.number_format($deposit, 0, ".", ",").' <span style="font-size:70%;">to hold a pup</span></li>'; endif;
+		//if ( $deposit && ( $litterStatus == "Expecting" || strtotime(date('F j, Y')) < strtotime($readyDate)) ) : $buildLitter .= '<li style="margin-top:-0.5em"><span class="label">Deposit: </span>$'.number_format($deposit, 0, ".", ",").'</li>'; endif;
+		
+		if ( $depositHold && ( $litterStatus == "Expecting" || strtotime(date('F j, Y')) < strtotime($readyDate)) ) : $buildLitter .= '<li style="margin-top:-0.5em"><span class="label">Deposit: </span>$'.number_format($depositHold, 0, ".", ",").' <span style="font-size:70%;">to hold a pup</span></li>'; endif;
+		
+		if ( $depositBorn && ( $litterStatus == "Expecting" || strtotime(date('F j, Y')) < strtotime($readyDate)) ) : $buildLitter .= '<li style="margin-top:-0.5em"><span class="label"></span>$'.number_format($depositBorn, 0, ".", ",").' <span style="font-size:70%;">due at birth</span></li>'; endif;
 		
 		if ( $litterStatus == "Expecting" && $birthDate != '' ) : 
 			$buildLitter .= '<li><span class="label">Expected: </span>'.date('F Y', strtotime($birthDate)).'</li>';	
@@ -90,13 +99,13 @@ $modDate = the_modified_date( 'F Y', '', '', FALSE);
 		endif;
 		
 		$singleContent = wp_kses_post(get_the_content());
-		if ( $litterStatus != "Expecting" ) $singleContent .= '<br><span style="font-size: 70%;"><em>(Updated: '.get_the_modified_date().')</em></span>'; 
 
 		if ( $singleContent ) $buildLitter .= do_shortcode('[p]'.$singleContent.'[/p]');
 		
-		 
 		$buildLitter .= "</ul>";
-		
+				
+		$buildLitter .= '<p style="font-size:90%;"><em><b>Effective Sept 1, 2024</b></em><br>Microchip registration fee will be prepaid by Mill Pond Retrievers & included in purchase price. If we do not have a puppy available, your deposit is refundable or can be applied to a different litter. Pups are sold on a first come first serve basis. The sex of pup has to be chosen when the deposit is made.</p>';		
+
 		$buildPedigree = do_shortcode('[bracket a1="'.$sireFull.'" a2="'.$damFull.'" b1="'.$b1.'" b2="'.$b2.'" b3="'.$b3.'" b4="'.$b4.'" c1="'.$c1.'" c2="'.$c2.'" c3="'.$c3.'" c4="'.$c4.'" c5="'.$c5.'" c6="'.$c6.'" c7="'.$c7.'" c8="'.$c8.'"]');
 		
 		if ( !$sireNoLink && !$damNoLink ) :

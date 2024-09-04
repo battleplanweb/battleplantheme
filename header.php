@@ -46,7 +46,7 @@
 
 	<?php wp_head(); ?>
 	
-	<?php bp_google_tag_manager(); ?>
+	<?php //bp_google_tag_manager(); // moved to footer 9/4/24 to help with render blocking for Core Web Vitals --- noticed instant savings?>
 </head>
 
 <body id="<?php echo get_the_ID(); ?>" <?php body_class( battleplan_getUserRole() ); ?>>

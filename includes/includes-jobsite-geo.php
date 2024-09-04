@@ -320,12 +320,12 @@ function battleplan_changeJobsiteGEOCaps( $args, $post_type ) {
 /*--------------------------------------------------------------
 # Setup Advanced Custom Fields
 --------------------------------------------------------------*/
-$get_jobsite_geo = get_option('jobsite_geo');
-$media_library = $get_jobsite_geo['media_library'] == 'limited' ? 'uploadedTo' : 'all';
-$default_state = $get_jobsite_geo['default_state'] != '' ? $get_jobsite_geo['default_state'] : '';
-
 add_action('acf/init', 'battleplan_add_jobsite_geo_acf_fields');
 function battleplan_add_jobsite_geo_acf_fields() {
+	$get_jobsite_geo = get_option('jobsite_geo');
+	$media_library = $get_jobsite_geo['media_library'] == 'limited' ? 'uploadedTo' : 'all';
+	$default_state = $get_jobsite_geo['default_state'] != '' ? $get_jobsite_geo['default_state'] : '';
+	
 	acf_add_local_field_group( array(
 		'key' => 'group_jobsite_details',
 		'title' => 'Jobsite Details',

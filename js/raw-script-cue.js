@@ -15,7 +15,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 				}
 			}
 
-			moveDivs(thisPlaylist, '.mejs-track-details .mejs-track-title', '.mejs-track-details .mejs-track-artist', 'before');
+			const thisTitle = thisPlaylist.querySelector('.mejs-track-details');
+			moveDiv('.mejs-track-title', thisTitle, 'top');
 		}
 	});	
 });

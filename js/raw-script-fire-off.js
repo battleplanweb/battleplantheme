@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			if (typeof screenResize === 'function') { console.log('screenResize()'); screenResize(); }	
 			if (typeof buildAccordion === 'function') { console.log('buildAccordion()'); buildAccordion(); }	
 			if (typeof areWeOpenBanner === 'function') { console.log('areWeOpenBanner()'); areWeOpenBanner(0); }				
-			if (typeof setMagicMenu === 'function') { console.log('setMagicMenu()'); setMagicMenu(); }	
+			if (typeof setMagicMenu === 'function') { console.log('setMagicMenu()'); setMagicMenu(); }				
 
 			console.log('scrollFunc()');
 			scrollFunc();	

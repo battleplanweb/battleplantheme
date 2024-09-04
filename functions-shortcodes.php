@@ -703,7 +703,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		$words = explode(' ', esc_attr( get_the_title() ) );
     	$last_word = end($words);
     	$testimonial_initial = substr($last_word, 0, 1);
-		$archiveImg = do_shortcode("[img size='".$picSize."' class='image-".$type." testimonials-generic-icon']<div class='testimonials-generic-letter'>".$testimonial_initial."</div><svg version='1.1' class='anonymous-icon' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' x='0px' y='0px' viewBox='0 0 400 400' xml:space='preserve'><g><path class='user-icon' d='M332,319c-34.9,30-80.2,48.2-129.8,48.4h-1.7c-49.7-0.2-95.2-18.5-130.1-48.7c12.6-69,51.6-123.1,100.6-139c-27.6-11.8-46.9-39.1-46.9-71c0-42.6,34.5-77.1,77-77.1s77.1,34.5,77.1,77.1c0,31.9-19.3,59.2-46.9,71C276.7,195,315.7,249,332,319z'/></g></svg>[/img]"); 		
+		$archiveImg = do_shortcode("[img size='".$picSize."' class='image-".$type." testimonials-generic-icon']<svg version='1.1' class='anonymous-icon' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' x='0px' y='0px' viewBox='0 0 400 400' xml:space='preserve'><g><path class='user-icon' d='M332,319c-34.9,30-80.2,48.2-129.8,48.4h-1.7c-49.7-0.2-95.2-18.5-130.1-48.7c12.6-69,51.6-123.1,100.6-139c-27.6-11.8-46.9-39.1-46.9-71c0-42.6,34.5-77.1,77-77.1s77.1,34.5,77.1,77.1c0,31.9-19.3,59.2-46.9,71C276.7,195,315.7,249,332,319z'/></g></svg>[/img]"); 		
 		if ( $textSize == "" ) : 
 			$textSize = getTextSize($picSize); 
 		endif;	

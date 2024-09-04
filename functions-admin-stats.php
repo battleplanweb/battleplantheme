@@ -487,7 +487,8 @@ function battleplan_admin_tech_stats() {
 	
 
 // Set up Content Visibility widget on dashboard
-$GLOBALS['ga4_contentVis'] = $contentVisSessions = array();
+$GLOBALS['ga4_contentVis'] = array();
+$contentVisSessions = array();
 $chkContentVis = '';
 foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) $contentVisSessions[$termDays] = 0;
 

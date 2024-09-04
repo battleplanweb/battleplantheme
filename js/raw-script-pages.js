@@ -664,25 +664,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 
 		element.innerHTML = replaceRating;
 	});
-	
-	
-// Ensure customer's initial (letter) for anonymous icon is positioned appropriately
-	const svgObj = getObject('svg.anonymous-icon');
-	const initialObj = getObject('.testimonials-generic-letter');
-	
-	if (svgObj && initialObj) {
-		const svgH = svgObj.clientHeight;  // Get the height of the SVG element
-		const initialH = initialObj.clientHeight;  // Get the height of the SVG element
-		
-		const paddingT = (svgH - initialH) * 0.82;
-
-		getObjects('.testimonials-generic-letter').forEach(letter => {
-			letter.style.height = `${svgH}px`;          // Set the height to match the SVG
-			letter.style.paddingTop = `${paddingT}px`;  // Apply calculated padding to vertically center
-			letter.style.boxSizing = 'border-box';      // Include padding in the height calculation
-		});
-	}
-
+														   
 	
 // Ensure that Form labels have enough width & remove double asterisks
 	window.formLabelWidth = function () {
@@ -1088,6 +1070,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	// Get link from a href and attach to the li (for use with Menu BG)	
 	getObjects('#desktop-navigation ul.main-menu > li:not(.menu-item-has-children), #desktop-navigation ul.sub-menu > li').forEach(item => {
 		item.addEventListener('click', function() {
+
 			const link = getObject('a', this).getAttribute('href');
 			if (link) { 
 				window.location.href = link;

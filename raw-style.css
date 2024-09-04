@@ -5,7 +5,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 2024.24.2
+Version: 2024.24.3
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -459,10 +459,6 @@ a.tab-focus {
 	color: 											var(--medium-grey);
 }
 
-a.no-link {
-	cursor: 										default;
-}
-
 a[tooltip] {
   	position: 										relative;
   	display: 										inline-block;
@@ -502,12 +498,6 @@ a[tooltip]:hover::after {
 
 /* Fancy Buttons
 --------------------------------------------- */
-a.button.fancy,
-a.button.fancy-2,
-a.button.fancy-3 {
-	position: 										relative;
-}
-
 a.button.fancy .fancy-text,
 a.button.fancy .fancy-icon,
 a.button.fancy:hover .fancy-text,
@@ -550,12 +540,12 @@ a.button.fancy:hover .fancy-icon {
 }
 
 a.button.fancy-2 {
-	overflow: 										hidden;
+	padding:										0;	
 }
 
 a.button.fancy-2 .fancy-text,
 a.button.fancy-2:hover .fancy-text {
-	padding: 										0.3em 1.4em 0.3em 0.7em;
+	padding: 										0.3em 0.6em 0.3em 0.7em;
 }
 
 a.button.fancy-2 .fancy-icon,
@@ -564,10 +554,7 @@ a.button.fancy-2:hover .fancy-icon {
 }
 
 a.button.fancy-2 .fancy-icon {
-  	position: 										absolute;
-  	right: 											0;
-  	top: 											0;
-	background:										var(--black-lowest);
+	background:										var(--black-low);
 }
 
 a.button.fancy-3 {
@@ -1049,11 +1036,6 @@ img.img-404 {
 	margin: 										10% auto;
 }
 
-.block-image.image-testimonials.testimonials-generic-icon a {
-	width: 											100%;
-	height: 										100%;
-}
-
 .block-image.image-testimonials.testimonials-generic-icon .testimonials-generic-letter {
 	position: 										absolute;
 	width: 											100%;
@@ -1067,10 +1049,6 @@ img.img-404 {
 
 .testimonials-generic-icon .anonymous-icon {
 	background:										var(--anon-icon-bg);
-}
-
-.testimonials-generic-icon .anonymous-icon .user-icon {
-	fill:											var(--anon-icon);
 }
 
 .testimonials-generic-icon .anonymous-icon .user-icon {
@@ -1229,13 +1207,6 @@ img.img-404 {
 
 .coupon p.disclaimer {
 	font-size: 										80%;
-}
-
-#secondary .coupon img,
-.screen-mobile #primary .coupon img {
-	max-width: 										85%;
-    float: 											none !important;
-    margin: 										var(--measure-base) auto !important;
 }
 
 /* Are We Open Banner
@@ -1652,7 +1623,7 @@ html.error503 h3 {
 @media (max-width: 1024px) {		
 	html {
 		font-size:									var(--font-base-3);
-		margin-top: 								42px /* compensate for mobile menu bar */
+		margin-top: 								45px /* compensate for mobile menu bar */
 	}
 				
 	.screen-mobile h1,

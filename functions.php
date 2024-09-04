@@ -1002,7 +1002,9 @@ function battleplan_header_styles() {
 	wp_enqueue_style( 'battleplan-style-grid', get_template_directory_uri()."/style-grid.css", array('parent-style'), _BP_VERSION );	
 	wp_enqueue_style( 'battleplan-style-navigation', get_template_directory_uri()."/style-navigation.css", array('battleplan-style-grid'), _BP_VERSION );
 	
-	if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 'true' )  wp_enqueue_style( 'battleplan-events', get_template_directory_uri()."/style-events.css", array('parent-style'), _BP_VERSION ); 
+	if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 'true' )  wp_enqueue_style( 'battleplan-events', get_template_directory_uri()."/style-events.css", array('parent-style'), _BP_VERSION ); 	
+	
+	if ( get_option('timeline') && get_option('timeline')['install'] == 'true' )  wp_enqueue_style( 'battleplan-timeline', get_template_directory_uri()."/style-timeline.css", array('parent-style'), _BP_VERSION ); 
 	
 	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) wp_enqueue_style( 'battleplan-jobsite_geo', get_template_directory_uri()."/style-jobsite_geo.css", array('parent-style'), _BP_VERSION ); 	
 
@@ -1118,6 +1120,7 @@ function battleplan_login_enqueue() {
 // Load various includes
 if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) require_once get_template_directory().'/includes/includes-woocommerce.php'; 
 if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 'true' ) require_once get_template_directory().'/includes/includes-events.php'; 
+if ( get_option('timeline') && get_option('timeline')['install'] == 'true' ) require_once get_template_directory().'/includes/includes-timeline.php'; 
 if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) require_once get_template_directory().'/includes/includes-jobsite-geo.php'; 
 
 if ( $GLOBALS['customer_info']['site-type'] == 'hvac' ) require_once get_template_directory().'/includes/includes-hvac.php'; 

@@ -238,6 +238,8 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 		const subMenus = getObjects('.main-navigation ul.sub-menu');
 		subMenus.forEach(subMenu => {
 
+
+
 			const subW = subMenu.offsetWidth;
 			const parentW = subMenu.parentElement.offsetWidth; 
 			const moveL = -Math.round((subW - parentW) / 2);

@@ -265,6 +265,7 @@ function battleplan_add_acf_fields() {
 					'BBB' => 'BBB',
 					'Angi' => 'Angi',
 					'Home_advisor' => 'Home Advisor',
+					'Housecall_pro' => 'House Call Pro',
 					'Houzz' => 'Houzz',
 					'Fiverr' => 'Fiverr',
 				),

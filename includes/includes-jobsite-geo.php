@@ -97,8 +97,9 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 		$description = get_post_field('post_content', $post_id);
 		
 		$equipment = array (
-			'air-conditioner' 	=> array( 'air conditioner', 'air conditioning', 'cooling', 'a/c', 'compressor', 'evaporator coil', 'condenser coil'),
+			'air-conditioner' 	=> array( 'air conditioner', 'air conditioning', 'cooling', 'a/c', 'ac', 'compressor', 'evaporator', 'condenser', 'drain line', 'refrigerant'),
 			'heating' 			=> array( 'heater', 'heating', 'furnace' ),
+			'hvac'				=> array( 'hvac', 'fan motor' ),
 			'thermostat'		=> array( 'thermostat', 't-stat', 'tstat' )
 		);
 		

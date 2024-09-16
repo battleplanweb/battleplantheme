@@ -1535,7 +1535,9 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	
 // Ensure that Form labels have enough width & remove double asterisks
 	window.formLabelWidth = function () {
-		getObjects('.wpcf7 form .flex').forEach(form => { // removed .wpcf7 form, on 8/15/24 because it was causing labels to be wrong size when more than one .flex exists
+		const selector = getObjects('.wpcf7 form .flex').length ? '.wpcf7 form .flex' : '.wpcf7 form';
+
+		getObjects(selector).forEach(form => {
 			let labelMaxWidth = 0;
 
 			getObjects('.form-input.width-default label', form).forEach(label => {

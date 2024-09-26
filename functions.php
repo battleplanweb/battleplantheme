@@ -1567,7 +1567,8 @@ function battleplan_getGoogleRating() {
 			$buildPanel = '<div class="wp-gr wp-google-badge">';
 
 			foreach ( $placeIDs as $placeID ) : 
-				if ( is_array($googleInfo[$placeID]) && array_key_exists('google-rating', $googleInfo[$placeID]) && $googleInfo[$placeID]['google-rating'] > 3.99 ) :			
+				if (isset($googleInfo[$placeID]) && is_array($googleInfo[$placeID]) && array_key_exists('google-rating', $googleInfo[$placeID]) && $googleInfo[$placeID]['google-rating'] > 3.99) :
+
 					$buildPanel .= '<a class="wp-google-badge-btn" href="https://search.google.com/local/reviews?placeid='.$placeID.'&hl=en&gl=US" target="_blank">';
 						
 					$buildPanel .= '<div class="wp-google-badge-score wp-google-rating">';
@@ -1712,7 +1713,7 @@ function battleplan_addSchema() {
 						if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);	
 						$primePID = $placeIDs[0];
 
-						if ( $googleInfo[$primePID]['google-rating'] > 3.99 ) : ?>							
+						if (isset($googleInfo[$primePID]['google-rating']) && $googleInfo[$primePID]['google-rating'] > 3.99) : ?>						
 							"aggregateRating": {
 								"@type": "AggregateRating",						
 								"ratingValue": "<?php echo number_format($googleInfo[$primePID]['google-rating'], 1, '.', ','); ?>",
@@ -2110,7 +2111,7 @@ function battleplan_load_tag_manager() {
 
 		foreach ( $GLOBALS['customer_info']['google-tags'] as $gtag=>$value ) :	
 			if ( $gtag == "analytics" && _USER_LOGIN != 'battleplanweb' && _IS_BOT != true ) $mainAcct = $value;
-			if ( $gtag == "analytics" || $gtag == "ads" || $gtag == "searchkings" ) $buildTags .= 'gtag("config", "'.$value.'");';				
+			if ( $gtag == "analytics" || $gtag == "ads" ) $buildTags .= 'gtag("config", "'.$value.'");';				
 			if ( strpos($gtag, 'conversions' ) !== false ) :
 				if ( $gtag == "conversions" ) : 
 					$gtagEvents[] = $value; 

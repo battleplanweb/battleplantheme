@@ -13,7 +13,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2024.25.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2024.25.2' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -130,7 +130,7 @@ function findCity($userCity) {
 					$cities = array('9027599'=>'Houston, TX', '9027649'=>'Houston, TX', '9027667'=>'Houston, TX', '9027602'=>'Houston, TX', '9027662'=>'Houston, TX', '9027677'=>'Conroe, TX', '9027792'=>'Katy, TX', '9027786'=>'Prairie View, TX', '9027730'=>'Richmond, TX');
 
 				elseif ( $GLOBALS['customer_info']['google-ad-loc'] == "OKC" ) :
-					$cities = array('9026268'=>'Oklahoma City, OK', '9026176'=>'Edmond, OK', '9026166'=>'Edmond, OK', '9026716'=>'Pontotoc, OK');
+					$cities = array('1024290'=>'Oklahoma City, OK', '9026250'=>'Oklahoma City, OK', '9026287'=>'Oklahoma City, OK', '9026254'=>'Oklahoma City, OK', '9026253'=>'Oklahoma City, OK', '9026270'=>'Oklahoma City, OK', '9026281'=>'Oklahoma City, OK', '9026259'=>'Oklahoma City, OK', '9026288'=>'Oklahoma City, OK', '9026267'=>'Oklahoma City, OK', '9026273'=>'Oklahoma City, OK', '9026274'=>'Oklahoma City, OK', '9026262'=>'Oklahoma City, OK', '9026248'=>'Oklahoma City, OK', '9026255'=>'Oklahoma City, OK', '9026278'=>'Oklahoma City, OK', '9026268'=>'Oklahoma City, OK', '9026261'=>'Oklahoma City, OK', '9026286'=>'Oklahoma City, OK', '9026276'=>'Oklahoma City, OK', '9026246'=>'Oklahoma City, OK', '9026271'=>'Oklahoma City, OK', '9026283'=>'Oklahoma City, OK', '9026284'=>'Oklahoma City, OK', '9026245'=>'Oklahoma City, OK', '9026260'=>'Oklahoma City, OK', '9026249'=>'Oklahoma City, OK', '9026170'=>'Arcadia, OK', '9059026'=>'Blaine County, OK', '9026183'=>'Choctaw, OK', '9026181'=>'Chickasha, OK', '1024115'=>'Crescent, OK', '9026189'=>'Altus, OK', '9026256'=>'Del City, OK', '9026418'=>'Dover, OK', '1024188'=>'Edmond, OK', '9026176'=>'Edmond, OK', '9026193'=>'Edmond, OK', '9026166'=>'Edmond, OK', '1024188'=>'Edmond, OK', '9026186'=>'Edmond, OK', '9026194'=>'El Reno, OK', '1024215'=>'Guthrie, OK', '9026425'=>'Hennessey, OK', '9026204'=>'Jones, OK', '9026298'=>'Kingston, OK', '1024252'=>'Langston, OK', '9026206'=>'Lexington, OK', '9026200'=>'Logan County, OK', '9026252'=>'Midwest City, OK', '9052435'=>'Midwest City, OK', '9026269'=>'Midwest City, OK', '9052474'=>'Moore, OK', '9026282'=>'Moore, OK', '9026218'=>'Mustang, OK', '9026219'=>'Newcastle, OK', '9026222'=>'Norman, OK', '9026223'=>'Norman, OK', '9026224'=>'Norman, OK', '9026514'=>'Pawnee County, OK', '9026229'=>'Piedmont, OK', '1024306'=>'Ponca City, OK', '9026716'=>'Pontotoc, OK', '1024330'=>'Shawnee, OK', '9026535'=>'Stroud, OK', '9026235'=>'Stroud, OK', '9026234'=>'Sulphur, OK', '9026564'=>'Tulsa, OK', '9026448'=>'Woodward, OK', '9026243'=>'Yukon, OK');
 				endif;
 
 				if ( is_array($cities) && array_key_exists($value, $cities)) :

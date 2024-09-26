@@ -323,31 +323,63 @@ add_shortcode( 'get-hours', 'battleplan_addBusinessHours' );
 function battleplan_addBusinessHours( $atts, $content = null ) {
 	wp_enqueue_style( 'battleplan-hours', get_template_directory_uri()."/style-hours.css", array('parent-style'), _BP_VERSION );  
 
-	$a = shortcode_atts( array( 'direction'=>'vert', 'start'=>'sun', 'abbr'=>'true' ), $atts );
+	$a = shortcode_atts( array( 'direction'=>'vert', 'start'=>'sun', 'abbr'=>'true', 'wkday1'=>'', 'wkday2'=>'', 'mon1'=>'', 'mon2'=>'', 'tue1'=>'', 'tue2'=>'', 'wed1'=>'', 'wed2'=>'', 'thu1'=>'', 'thu2'=>'', 'fri1'=>'', 'fri2'=>'', 'sat1'=>'', 'sat2'=>'', 'sun1'=>'', 'sun2'=>'',  ), $atts );
 	$direction = esc_attr($a['direction']) == "vert" ? "vert" : "horz";
-	$days = array('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday');
+	$days = esc_attr($a['wkday1']) !== "" ? array('weekdays', 'saturday') : array('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday');
 	if ( esc_attr($a['start']) == "sun" || esc_attr($a['start']) == "sunday" ) :
 		array_unshift($days, 'sunday');
 	else:
 		array_push($days, 'sunday');
-	endif;		 	
+	endif;	
 	
- 	$googleInfo = get_option('bp_gbp_update') ? get_option('bp_gbp_update') : array();
-	$placeIDs = $GLOBALS['customer_info']['pid'] ? $GLOBALS['customer_info']['pid'] : 0;	
-	if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
-	$primePID = $placeIDs[0];
-	
-	$getHours = array( 'monday'=>$googleInfo[$primePID]['hours']['weekday_text'][0], 'tuesday'=>$googleInfo[$primePID]['hours']['weekday_text'][1], 'wednesday'=>$googleInfo[$primePID]['hours']['weekday_text'][2], 'thursday'=>$googleInfo[$primePID]['hours']['weekday_text'][3], 'friday'=>$googleInfo[$primePID]['hours']['weekday_text'][4], 'saturday'=>$googleInfo[$primePID]['hours']['weekday_text'][5], 'sunday'=>$googleInfo[$primePID]['hours']['weekday_text'][6] );
+	if ( esc_attr($a['mon1']) === "" && esc_attr($a['wkday1']) === "" ) :	
+		$googleInfo = get_option('bp_gbp_update') ? get_option('bp_gbp_update') : array();
+		$placeIDs = $GLOBALS['customer_info']['pid'] ? $GLOBALS['customer_info']['pid'] : 0;	
+		if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
+		$primePID = $placeIDs[0];
+
+		$getHours = array( 'monday'=>$googleInfo[$primePID]['hours']['weekday_text'][0], 'tuesday'=>$googleInfo[$primePID]['hours']['weekday_text'][1], 'wednesday'=>$googleInfo[$primePID]['hours']['weekday_text'][2], 'thursday'=>$googleInfo[$primePID]['hours']['weekday_text'][3], 'friday'=>$googleInfo[$primePID]['hours']['weekday_text'][4], 'saturday'=>$googleInfo[$primePID]['hours']['weekday_text'][5], 'sunday'=>$googleInfo[$primePID]['hours']['weekday_text'][6] );
+	else:
+		if ( esc_attr($a['wkday1']) !== "" ) :
+			$getHours = array( 'weekdays'=>esc_attr($a['wkday1']), 'saturday'=>esc_attr($a['sat1']), 'sunday'=>esc_attr($a['sun1']) );
+			$getHours2 = array( 'weekdays'=>esc_attr($a['wkday2']), 'saturday'=>esc_attr($a['sat2']), 'sunday'=>esc_attr($a['sun2']) );
+	else:
+			$getHours = array( 'monday'=>esc_attr($a['mon1']), 'tuesday'=>esc_attr($a['tue1']), 'wednesday'=>esc_attr($a['wed1']), 'thursday'=>esc_attr($a['thu1']), 'friday'=>esc_attr($a['fri1']), 'saturday'=>esc_attr($a['sat1']), 'sunday'=>esc_attr($a['sun1']) );
+			$getHours2 = array( 'monday'=>esc_attr($a['mon2']), 'tuesday'=>esc_attr($a['tue2']), 'wednesday'=>esc_attr($a['wed2']), 'thursday'=>esc_attr($a['thu2']), 'friday'=>esc_attr($a['fri2']), 'saturday'=>esc_attr($a['sat2']), 'sunday'=>esc_attr($a['sun2']) );
+		endif;
+	endif;
 	
 	$buildHours = '<div class="office-hours '.$direction.'">';
 	
 	foreach ( $days as $day ) :
-		$removeDay = strpos($getHours[$day], ": ");
-		if ( $removeDay !== false ) $hours = substr($getHours[$day], $removeDay + 2);
-		$buildHours .= '<div class="row row-'.substr($day, 0, 3).'">';
-		$printDay = esc_attr($a['abbr']) == "true" ? substr($day, 0, 3) : $day;
-		$buildHours .= '<div class="col-day">'.$printDay.'</div>';
-		$buildHours .= '<div class="col-all">'.$hours.'</div>';
+		$removeDay = strpos($getHours[$day], ": ");		
+		$removeDay2 = strpos($getHours2[$day], ": ");
+	
+		$hours = $removeDay !== false ? substr($getHours[$day], $removeDay + 2) : $getHours[$day];
+		$hours2 = $removeDay2 !== false ? substr($getHours2[$day], $removeDay2 + 2) : $getHours2[$day];
+	
+		
+	
+		if ( esc_attr($a['wkday1']) !== "" && $day === "weekdays" ) :
+			$buildHours .= '<div class="row row-mon row-tue row-wed row-thu row-fri">';
+			$printDay = esc_attr($a['abbr']) == "true" ? "Mon-Fri" : "Monday - Friday";
+		else:
+			$buildHours .= '<div class="row row-'.substr($day, 0, 3).'">';
+			$printDay = esc_attr($a['abbr']) == "true" ? substr($day, 0, 3) : $day;
+		endif;
+	
+		$buildHours .= $hours && $hours2 ? '<div class="col-day row-2">'.$printDay.'</div>' : '<div class="col-day row-1">'.$printDay.'</div>';
+	
+		if ( $hours2 ) :
+			if ( $hours ) :
+				$buildHours .= '<div class="col-morning col-first">'.$hours.'</div>';
+				$buildHours .= '<div class="col-afternoon col-second">'.$hours2.'</div>';
+			else:
+				$buildHours .= '<div class="col-all col-second">'.$hours2.'</div>';
+			endif;
+		else:	
+			$buildHours .= '<div class="col-all col-first">'.$hours.'</div>';
+		endif;
 		$buildHours .= '</div>';
 	endforeach;
 	

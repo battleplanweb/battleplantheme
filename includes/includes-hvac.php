@@ -330,7 +330,7 @@ function battleplan_getFinancing($atts, $content = null) {
 	
 	if ( $link != "" ) $buildFinancing .= '<a href="'.$link.'" title="Click here to apply for financing for AC repair at '.$bank.'" target="_blank">';
 	if ( $text != "" && $loc == "above" ) $buildFinancing .= '<span class="link-text">'.$text.'</span>';
-	$buildFinancing .= '<img class="financing-img class="tracking'.$class.'" data-track="financing"" src="/wp-content/themes/battleplantheme/common/financing/'.$img.'.png" loading="lazy" alt="Apply for financing for your HVAC needs at '.$bank.'" width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
+	$buildFinancing .= '<img class="financing-img tracking'.$class.'" data-track="financing"" src="/wp-content/themes/battleplantheme/common/financing/'.$img.'.png" loading="lazy" alt="Apply for financing for your HVAC needs at '.$bank.'" width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
 	if ( $text != "" && $loc == "below" ) $buildFinancing .= '<span class="link-text">'.$text.'</span>';
 	if ( $link != "" ) $buildFinancing .= '</a>';
 	

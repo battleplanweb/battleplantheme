@@ -1361,13 +1361,13 @@ dl.col-gallery {
 		display:										flex;
 		flex-flow:										column wrap;
 		gap:											var(--measure-large);
-		justify-content:								flex-start;
-		align-items: 									flex-start;
+		justify-content:								center;
+		align-items: 									center;
 	}
 	
 	#primary .widget {
-		margin-top: 									var(--measure-small);
-  		margin-bottom: 									var(--measure-base);
+		margin-top: 									var(--measure-large);
+  		margin-bottom: 									var(--measure-large);
 	}
 	
 	#secondary .widget {

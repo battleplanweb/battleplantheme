@@ -918,11 +918,12 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 
 			const integrateWidgets = () => {
 				let placeholders = Array.from(getObjects('div[id^="placeholder-"]'));
-				const widgets = Array.from(getObjects('.widget')).filter(widget => {
-					return !widget.classList.contains('widget-schedule-appointment') && !widget.classList.contains('widget-credit-cards');
-				}).sort((a, b) => {
+				
+				const excludeClasses = ['widget-schedule-appointment', 'widget-request-a-quote', 'widget-hours-of-operation', 'widget-credit-cards', 'widget-symptom-checker'];
+				
+				const widgets = Array.from(getObjects('.widget')).filter(widget => !excludeClasses.some(cls => widget.classList.contains(cls))).sort((a, b) => {
 					const getPriority = el => +el.className.match(/priority-(\d)/)[1];
-					return getPriority(b) - getPriority(a); 
+					return getPriority(b) - getPriority(a);
 				});
 
 				const widgetCount = widgets.length;
@@ -1534,8 +1535,11 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 														   
 	
 // Ensure that Form labels have enough width & remove double asterisks
+														   /*   replaced with code below on 9/24/24
 	window.formLabelWidth = function () {
 		const selector = getObjects('.wpcf7 form .flex').length ? '.wpcf7 form .flex' : '.wpcf7 form';
+		
+		console.log(selector);
 
 		getObjects(selector).forEach(form => {
 			let labelMaxWidth = 0;
@@ -1554,6 +1558,27 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	
 		getObjects('abbr.required, em.required, span.required').forEach(element => element.textContent = "");
 	};
+	*/
+														   
+														   
+	window.formLabelWidth = () => {
+		getObjects('form').forEach(form => {
+			const selector = getObjects('.flex', form).length ? '.flex' : '';
+			const targetSelector = selector ? `${selector} .form-input.width-default label` : '.form-input.width-default label';
+			let labelMaxWidth = 0;
+
+			getObjects(targetSelector, form).forEach(label => {
+				labelMaxWidth = Math.max(labelMaxWidth, label.offsetWidth);
+			});
+
+			labelMaxWidth > 0 && getObjects('.form-input.width-default', form).forEach(inputContainer => {
+				inputContainer.style.gridTemplateColumns = `${labelMaxWidth}px 1fr`;
+			});
+		});
+
+		getObjects('abbr.required, em.required, span.required').forEach(el => el.textContent = "");
+	};
+
 	
 	
 // Move User Switching bar to top
@@ -1605,6 +1630,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	};
 	
 	const currents = getObjects(".main-navigation ul.main-menu > li.current-menu-item, .main-navigation ul.main-menu > li.current_page_item, .main-navigation ul.main-menu > li.current-menu-parent, .main-navigation ul.main-menu > li.current_page_parent, .main-navigation ul.main-menu > li.current-menu-ancestor, .widget-navigation ul.menu > li.current-menu-item, .widget-navigation ul.menu > li.current_page_item, .widget-navigation ul.menu > li.current-menu-parent, .widget-navigation ul.menu > li.current_page_parent, .widget-navigation ul.menu > li.current-menu-ancestor");	
+
 
 	const subCurrents = getObjects(".main-navigation ul.sub-menu > li.current-menu-item, .main-navigation ul.sub-menu > li.current_page_item, .main-navigation ul.sub-menu > li.current-menu-parent, .main-navigation ul.sub-menu > li.current_page_parent, .main-navigation ul.sub-menu > li.current-menu-ancestor, .widget-navigation ul.sub-menu > li.current-menu-item, .widget-navigation ul.sub-menu > li.current_page_item, .widget-navigation ul.sub-menu > li.current-menu-parent, .widget-navigation ul.sub-menu > li.current_page_parent, .widget-navigation ul.sub-menu > li.current-menu-ancestor");
 	
@@ -1879,11 +1905,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	const todayIs = new Date().getDay();
 	const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 	const dayClass = `row-${days[todayIs]}`;
-	const dayElement = getObject(`.office-hours .${dayClass}`);
-	if (dayElement) {
-		dayElement.classList.add("today");
-	}
-	
+
+	getObjects('.office-hours').forEach(officeHours => {
+		const dayElement = getObject(`.${dayClass}`, officeHours);
+		if (dayElement) {
+			dayElement.classList.add("today");
+		}
+	});
+
 		
 // Handle displaying YouTube or Vimeo thumbnail, and then loading video once clicked	
 	function activateYouTubeVimeo(div) {
@@ -2178,13 +2207,13 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 
 		if (input) {
 			updateId(input, input.id);
-			if ( label ) { label.setAttribute('for', 'modal-' + input.id); }
+			if ( label ) { label.setAttribute('for', input.id); }
 		} else if (textarea) {
 			updateId(textarea, textarea.id);
-			if ( label ) { label.setAttribute('for', 'modal-' + textarea.id); }
+			if ( label ) { label.setAttribute('for', textarea.id); }
 		} else if (select) {
 			updateId(select, select.id);
-			if ( label ) { label.setAttribute('for', 'modal-' + select.id); }
+			if ( label ) { label.setAttribute('for', select.id); }
 		}
 	});
 			

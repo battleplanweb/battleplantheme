@@ -989,10 +989,9 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 
 		['set-a', 'set-b', 'set-c'].forEach(setClass => {
 			let handleSets = 0;
-			getObjects(`.widget.widget-set.${setClass}`).forEach(widget => {
-				if (handleSets > 0) {
-					widget.remove();
-				}
+			const widgets = getObjects(`.widget.widget-set.${setClass}`) || [];
+			widgets.forEach(widget => {
+				if (handleSets > 0) widget.remove();
 				handleSets++;
 			});
 		});
@@ -1563,8 +1562,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 														   
 	window.formLabelWidth = () => {
 		getObjects('form').forEach(form => {
-			const selector = getObjects('.flex', form).length ? '.flex' : '';
-			const targetSelector = selector ? `${selector} .form-input.width-default label` : '.form-input.width-default label';
+			const selector = getObjects('.flex:not(.form-stacked)', form).length ? '.flex:not(.form-stacked)' : '';
+			const targetSelector = selector ? `${selector} > .form-input.width-default label` : '.form-input.width-default label';
 			let labelMaxWidth = 0;
 
 			getObjects(targetSelector, form).forEach(label => {
@@ -1575,6 +1574,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 				inputContainer.style.gridTemplateColumns = `${labelMaxWidth}px 1fr`;
 			});
 		});
+		
+		console.log('update 2');
 
 		getObjects('abbr.required, em.required, span.required').forEach(el => el.textContent = "");
 	};

@@ -30,7 +30,7 @@ return do_shortcode('
 				<div class="icon-box">[get-icon type="home"]</div>
 				[txt]
 					<h2>Home Comfort</h2>
-					<p>Our goal is to create the perfect heating and cooling system for your family. We evaluate your home and design a system that best fits your needs, as well as one the fits your budget.</p>
+					<p>Our goal is to create the perfect heating and cooling system for your family. We evaluate your home and design a system that best fits your needs, as well as one that fits your budget.</p>
 				[/txt]
 			[/col]
 

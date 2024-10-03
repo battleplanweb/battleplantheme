@@ -1363,6 +1363,7 @@ dl.col-gallery {
 		gap:											var(--measure-large);
 		justify-content:								center;
 		align-items: 									center;
+		padding: 										1.5em /* added 9/30/24 for R & S Gutters */
 	}
 	
 	#primary .widget {

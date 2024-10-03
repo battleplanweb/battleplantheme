@@ -5,7 +5,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 2024.25.2
+Version: 2024.25.3
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -288,6 +288,7 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --measure-base: 								1.5em;
   --measure-small: 								1.0em;
   --measure-large: 								2.5em;
+  --bullet-spacing: 							0.7em;
   --sidebar-width: 								356px;
   
   --google-guaranteed-green: 					rgba(0, 161, 79, 1);  
@@ -1628,7 +1629,7 @@ html.error503 h3 {
 @media (max-width: 1024px) {		
 	html {
 		font-size:									var(--font-base-3);
-		margin-top: 								45px /* compensate for mobile menu bar */
+		margin-top: 								42px /* compensate for mobile menu bar */ /* changed from 45 to 42 9/30/24 while working on R & S Gutters */
 	}
 				
 	.screen-mobile h1,

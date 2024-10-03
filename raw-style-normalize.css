@@ -190,6 +190,8 @@ ins {
 }
 
 /* Do not show the outline on the skip link target. */
+
+
 #primary[tabindex="-1"]:focus {
 	outline:									0;
 }
@@ -308,7 +310,7 @@ h3 + .block.block-text:last-child {
 }
 
 li:not(.menu-item):not(.carousel-icon):not(:last-child) {
-	margin-bottom:								0.3em;
+	margin-bottom:								var(--bullet-spacing);
 }
 
 ul.paragraphs li:not(.menu-item):not(.carousel-icon):not(:last-child),

@@ -261,7 +261,7 @@ function displayUserPic( $identifier=null, $size='thumbnail' ) {
 		$getUserPicW = $getUserPicMeta['sizes'][$size]['width'];
 		$getUserPicH = $getUserPicMeta['sizes'][$size]['height'];
 	else:
-		$getUserPicSrc = "/wp-content/themes/battleplantheme/common/logos/generic-user-img.png";
+		$getUserPicSrc = "/wp-content/themes/battleplantheme/common/logos/generic-user-img.webp";
 		$getUserPicID = "generic";
 		$getUserPicW = "320";
 		$getUserPicH = "320";

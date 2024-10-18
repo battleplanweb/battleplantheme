@@ -138,9 +138,9 @@ function battleplan_why_choose_us( $atts, $content = null ) {
 	$brand = strtolower(str_replace(" ", "-", $brand));
 	if ( $alt == '' ) $alt='We are proud to be a dealer of '.$name.', offering the top rated HVAC products on the market.';
 	
-	if ( $img == "grey" ) : $img = "/wp-content/themes/battleplantheme/common/hvac-".$brand."/why-choose-".$brand."-logo-grey.png";
-	elseif ( $img == "white" ) : $img = "/wp-content/themes/battleplantheme/common/hvac-".$brand."/why-choose-".$brand."-logo-white.png";
-	elseif ( $img == "" ) :	$img = "/wp-content/themes/battleplantheme/common/hvac-".$brand."/why-choose-".$brand."-logo.png";
+	if ( $img == "grey" ) : $img = "/wp-content/themes/battleplantheme/common/hvac-".$brand."/why-choose-".$brand."-logo-grey.webp";
+	elseif ( $img == "white" ) : $img = "/wp-content/themes/battleplantheme/common/hvac-".$brand."/why-choose-".$brand."-logo-white.webp";
+	elseif ( $img == "" ) :	$img = "/wp-content/themes/battleplantheme/common/hvac-".$brand."/why-choose-".$brand."-logo.webp";
 	else: $img = "/wp-content/uploads/".$img;
 	endif;
 	
@@ -267,20 +267,20 @@ function battleplan_add_acf_hvac_fields() {
 add_shortcode( 'get-brand-logo', 'battleplan_getBrandLogo' );
 function battleplan_getBrandLogo($atts, $content = null) {
 	$a = shortcode_atts( array( 'alt'=>'', 'brand'=>'' ), $atts );
-	$alt = esc_attr($a['alt']);
+	$altImg = $a['alt'] ? '-'.esc_attr($a['alt']) : '';
 	$brand = esc_attr($a['brand']);
-	if ( $alt != '' ) $alt="-".$alt;
-	if ( $brand == '' ) :	
+	if ( $brand === '' ) :	
 		$brand = $GLOBALS['customer_info']['site-brand'];
 		if ( is_array($brand) ) $brand = $brand[0];
 	endif;
 	$brand = trim($brand);
 	$name = ucwords($brand);
+	$alt = $name !== 'Generac' ? $name.' heating and air conditioning products.' : $name.' home generators.';
 	$brand = strtolower(str_replace(" ", "-", $brand));
-	$imagePath = get_template_directory().'/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$alt.'.png';			
+	$imagePath = get_template_directory().'/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$altImg.'.webp';			
 	list($width, $height) = getimagesize($imagePath);
 
-	return '<img class="noFX brand-logo '.$brand.'-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$alt.'.png" alt="We offer '.$name.' heating and air conditioning products." width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
+	return '<img class="noFX brand-logo '.$brand.'-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$altImg.'.webp" alt="We offer '.$alt.'" width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
 }
 
 // Add Symptom Checker widget to Sidebar
@@ -296,19 +296,19 @@ function battleplan_getSymptomChecker() {
 // Add Customer Care Dealer widget to Sidebar
 add_shortcode( 'get-customer-care', 'battleplan_getCustomerCare' );
 function battleplan_getCustomerCare() {	
-	return '<a href="/customer-care-dealer/" title="Click here to read more about the American Standard Heating & Cooling Customer Care Dealer program"><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-american-standard/customer-care-dealer-logo.png" loading="lazy" alt="We are proud to be an American Standard Customer Care Dealer" width="400" height="400" style="aspect-ratio:400/400" /></a>';
+	return '<a href="/customer-care-dealer/" title="Click here to read more about the American Standard Heating & Cooling Customer Care Dealer program"><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-american-standard/customer-care-dealer-logo.webp" loading="lazy" alt="We are proud to be an American Standard Customer Care Dealer" width="400" height="400" style="aspect-ratio:400/400" /></a>';
 }
 
 // Add Comfortmaker Elite Dealer widget to Sidebar
 add_shortcode( 'get-comfortmaker-elite-dealer', 'battleplan_getComfortmakerEliteDealer' );
 function battleplan_getComfortmakerEliteDealer() {	
-	return '<a href="/comfortmaker-elite-dealer/" title="Click here to read more about the Comfortmaker Elite Dealer program"><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-comfortmaker/comfortmaker-elite-dealer-logo.png" loading="lazy" alt="We are proud to be a Comfortmaker Elite Dealer" width="400" height="400" style="aspect-ratio:400/400" /></a>';
+	return '<a href="/comfortmaker-elite-dealer/" title="Click here to read more about the Comfortmaker Elite Dealer program"><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-comfortmaker/comfortmaker-elite-dealer-logo.webp" loading="lazy" alt="We are proud to be a Comfortmaker Elite Dealer" width="400" height="400" style="aspect-ratio:400/400" /></a>';
 }
 
 // Add Tempstar Elite Dealer widget to Sidebar
 add_shortcode( 'get-tempstar-elite-dealer', 'battleplan_getTempstarEliteDealer' );
 function battleplan_getTempstarEliteDealer() {	
-	return '<a href="/tempstar-elite-dealer/" title="Click here to read more about the Tempstar Elite Dealer program"><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-tempstar/tempstar-elite-dealer-logo.png" loading="lazy" alt="We are proud to be a Tempstar Elite Dealer" width="400" height="400" style="aspect-ratio:400/400" /></a>';
+	return '<a href="/tempstar-elite-dealer/" title="Click here to read more about the Tempstar Elite Dealer program"><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-tempstar/tempstar-elite-dealer-logo.webp" loading="lazy" alt="We are proud to be a Tempstar Elite Dealer" width="400" height="400" style="aspect-ratio:400/400" /></a>';
 }
 
 // Add Financing widget to Sidebar
@@ -325,12 +325,12 @@ function battleplan_getFinancing($atts, $content = null) {
 	$graphic = esc_attr($a['graphic']);	
 	if ( $graphic != '' ) $img = $img.'-'.$graphic;
 	$buildFinancing = "";	
-	$imagePath = get_template_directory().'/common/financing/'.$img.'.png';			
+	$imagePath = get_template_directory().'/common/financing/'.$img.'.webp';			
 	list($width, $height) = getimagesize($imagePath);
 	
 	if ( $link != "" ) $buildFinancing .= '<a href="'.$link.'" title="Click here to apply for financing for AC repair at '.$bank.'" target="_blank">';
 	if ( $text != "" && $loc == "above" ) $buildFinancing .= '<span class="link-text">'.$text.'</span>';
-	$buildFinancing .= '<img class="financing-img tracking'.$class.'" data-track="financing"" src="/wp-content/themes/battleplantheme/common/financing/'.$img.'.png" loading="lazy" alt="Apply for financing for your HVAC needs at '.$bank.'" width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
+	$buildFinancing .= '<img class="financing-img tracking'.$class.'" data-track="financing"" src="/wp-content/themes/battleplantheme/common/financing/'.$img.'.webp" loading="lazy" alt="Apply for financing for your HVAC needs at '.$bank.'" width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
 	if ( $text != "" && $loc == "below" ) $buildFinancing .= '<span class="link-text">'.$text.'</span>';
 	if ( $link != "" ) $buildFinancing .= '</a>';
 	
@@ -348,10 +348,10 @@ function battleplan_getWellsFargo($atts, $content = null) {
 	$rand = rand(1,2);
 	if ($rand == "1") : $ad = $graphic1; endif;
 	if ($rand == "2") : $ad = $graphic2; endif;
-	if ($ad=="Wells-Fargo-A.png" || $ad=="Wells-Fargo-B.png") : $alt = "Looking for financing options? Special financing available. This credit card is issued with approved credit by Wells Fargo Bank, N.A. Equal Housing Lender. Learn more."; $width="300"; $height="250"; endif;
-	if ($ad=="Wells-Fargo-C.png" || $ad=="Wells-Fargo-D.png") : $alt = "Special financing available. This credit card is issued with approved credit by Wells Fargo Bank, N.A. Equal Housing Lender. Learn more."; $width="300"; $height="250"; endif;
-	if ($ad=="Wells-Fargo-E.png") : $alt = "Financing available through Wells Fargo Bank, NA. This credit card is issued with approved credit.  Equal Housing Lender."; $width="200"; $height="152"; endif;	
-	if ($ad=="Wells-Fargo-Splash-A.png" || $ad=="Wells-Fargo-Splash-B.png" || $ad=="Wells-Fargo-Splash-C.png" || $ad=="Wells-Fargo-Splash-D.png") : $alt = "Buy today, pay over time with this Wells Fargo credit card. Learn more."; $width="600"; $height="300"; endif;		
+	if ($ad=="Wells-Fargo-A.webp" || $ad=="Wells-Fargo-B.webp") : $alt = "Looking for financing options? Special financing available. This credit card is issued with approved credit by Wells Fargo Bank, N.A. Equal Housing Lender. Learn more."; $width="300"; $height="250"; endif;
+	if ($ad=="Wells-Fargo-C.webp" || $ad=="Wells-Fargo-D.webp") : $alt = "Special financing available. This credit card is issued with approved credit by Wells Fargo Bank, N.A. Equal Housing Lender. Learn more."; $width="300"; $height="250"; endif;
+	if ($ad=="Wells-Fargo-E.webp") : $alt = "Financing available through Wells Fargo Bank, NA. This credit card is issued with approved credit.  Equal Housing Lender."; $width="200"; $height="152"; endif;	
+	if ($ad=="Wells-Fargo-Splash-A.webp" || $ad=="Wells-Fargo-Splash-B.webp" || $ad=="Wells-Fargo-Splash-C.webp" || $ad=="Wells-Fargo-Splash-D.webp") : $alt = "Buy today, pay over time with this Wells Fargo credit card. Learn more."; $width="600"; $height="300"; endif;		
 	$output = '<a href="'.$link.'" title="Click to learn more about Wells Fargo financing options." target="_blank"><img src="/wp-content/themes/battleplantheme/common/financing/'.$ad.'" loading="lazy" alt="'.$alt.'" class="tracking'.$class.'" data-track="financing" width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" /></a>';
 	return $output; 
 }

@@ -5,7 +5,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 2024.25.3
+Version: 2024.25.4
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1106,51 +1106,51 @@ img.img-404 {
 }
 
 .testimonials-platform-facebook {
-	background:										url('../battleplantheme/common/logos/facebook.png');
+	background:										url('../battleplantheme/common/logos/facebook.webp');
 }
 
 .testimonials-platform-google {
-	background:										url('../battleplantheme/common/logos/google.png');
+	background:										url('../battleplantheme/common/logos/google.webp');
 }
 
 .testimonials-platform-yelp {
-	background:										url('../battleplantheme/common/logos/yelp.png');
+	background:										url('../battleplantheme/common/logos/yelp.webp');
 }
 
 .testimonials-platform-nextdoor {
-	background:										url('../battleplantheme/common/logos/nextdoor.png');
+	background:										url('../battleplantheme/common/logos/nextdoor.webp');
 }
 
 .testimonials-platform-yp {
-	background:										url('../battleplantheme/common/logos/yp.png');
+	background:										url('../battleplantheme/common/logos/yp.webp');
 }
 
 .testimonials-platform-jobber {
-	background:										url('../battleplantheme/common/logos/jobber.png');
+	background:										url('../battleplantheme/common/logos/jobber.webp');
 }
 
 .testimonials-platform-angi {
-	background:										url('../battleplantheme/common/logos/angi.png');
+	background:										url('../battleplantheme/common/logos/angi.webp');
 }
 
 .testimonials-platform-houzz {
-	background:										url('../battleplantheme/common/logos/houzz.png');
+	background:										url('../battleplantheme/common/logos/houzz.webp');
 }
 
 .testimonials-platform-home_advisor {
-	background:										url('../battleplantheme/common/logos/home_advisor.png');
+	background:										url('../battleplantheme/common/logos/home_advisor.webp');
 }
 
 .testimonials-platform-housecall_pro {
-	background:										url('../battleplantheme/common/logos/housecallpro.png');
+	background:										url('../battleplantheme/common/logos/housecallpro.webp');
 }
 
 .testimonials-platform-bbb {
-	background:										url('../battleplantheme/common/logos/bbb.png');
+	background:										url('../battleplantheme/common/logos/bbb.webp');
 }
 
 .testimonials-platform-fiverr {
-	background:										url('../battleplantheme/common/logos/fiverr.png');
+	background:										url('../battleplantheme/common/logos/fiverr.webp');
 }
 
 .testimonials-platform {

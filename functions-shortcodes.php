@@ -758,7 +758,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		$testimonialMisc3 = esc_attr(get_field( "testimonial_misc3" ));	
 		$testimonialMisc4 = esc_attr(get_field( "testimonial_misc4" ));
 		
-		$addNewTag = get_the_date('Y-m-d') > date('Y-m-d', strtotime('-3 months')) ? '<img class="noFX new" loading="'.$lazy.'" src="/wp-content/themes/battleplantheme/common/logos/new-1.png" width="58" height="52" style="aspect-ratio:58/52" />' : '';
+		$addNewTag = get_the_date('Y-m-d') > date('Y-m-d', strtotime('-3 months')) ? '<img class="noFX new" loading="'.$lazy.'" src="/wp-content/themes/battleplantheme/common/logos/new-1.webp" width="58" height="52" style="aspect-ratio:58/52" />' : '';
 		
 		$buildCredentials = "<div class='testimonials-credential testimonials-name'>".$addNewTag.get_the_title();
 		if ( $testimonialTitle ) $buildCredentials .= "<span class='testimonials-title'>, ".$testimonialTitle."</span>";
@@ -1294,8 +1294,8 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 		$addLogos = array( "amana", "american-standard", "bosch", "bryant", "carrier", "comfortmaker", "goodman", "heil", "honeywell", "lennox", "rheem", "ruud", "samsung", "tempstar", "trane", "york" );		
 		for ( $i=0; $i < count($addLogos); $i++ ) :	
 			$alt = "We service ".ucwords(strtolower(str_replace(" ", "-", $addLogos[$i])))." air conditioners, heaters and other HVAC equipment.";
-			$imageURL = "/wp-content/themes/battleplantheme/common/hvac-".$addLogos[$i]."/".$addLogos[$i]."-sidebar-logo.png";
-			$imagePath = get_template_directory()."/common/hvac-".$addLogos[$i]."/".$addLogos[$i]."-sidebar-logo.png";			
+			$imageURL = "/wp-content/themes/battleplantheme/common/hvac-".$addLogos[$i]."/".$addLogos[$i]."-sidebar-logo.webp";
+			$imagePath = get_template_directory()."/common/hvac-".$addLogos[$i]."/".$addLogos[$i]."-sidebar-logo.webp";			
 			list($width, $height) = getimagesize($imagePath);
 			
 			$getImage = "";
@@ -1448,10 +1448,10 @@ function battleplan_getEmergencyService( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'graphic'=>'1' ), $atts );
 	$graphic = esc_attr($a['graphic']);
 	
-	$imagePath = get_template_directory().'/common/logos/24-hr-service-'.$graphic.'.png';			
+	$imagePath = get_template_directory().'/common/logos/24-hr-service-'.$graphic.'.webp';			
 	list($width, $height) = getimagesize($imagePath);
 	
-	return '<img class="noFX" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/24-hr-service-'.$graphic.'.png" alt="We provide 24/7 emergency service." width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
+	return '<img class="noFX" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/24-hr-service-'.$graphic.'.webp" alt="We provide 24/7 emergency service." width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
 }
 
 // Add Google Guaranteed widget to Sidebar
@@ -1460,10 +1460,10 @@ function battleplan_getGoogleGuaranteed( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'graphic'=>'1' ), $atts );
 	$graphic = esc_attr($a['graphic']);
 	
-	$imagePath = get_template_directory().'/common/logos/google-guaranteed.png';			
+	$imagePath = get_template_directory().'/common/logos/google-guaranteed.webp';			
 	list($width, $height) = getimagesize($imagePath);
 	
-	return '<img class="noFX" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/google-guaranteed.png" alt="We are proud to be Google Guaranteed." width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
+	return '<img class="noFX" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/google-guaranteed.webp" alt="We are proud to be Google Guaranteed." width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
 }
 
 // Add Now Hiring widget to Sidebar
@@ -1472,10 +1472,10 @@ function battleplan_getNowHiring( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'graphic'=>'1', 'link'=>'career-opportunities' ), $atts );
 	$graphic = esc_attr($a['graphic']);
 	
-	$imagePath = get_template_directory().'/common/logos/now-hiring-'.$graphic.'.png';			
+	$imagePath = get_template_directory().'/common/logos/now-hiring-'.$graphic.'.webp';			
 	list($width, $height) = getimagesize($imagePath);
 	
-	return '<a href="/'.esc_attr($a['link']).'"><img class="noFX" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/now-hiring-'.$graphic.'.png" alt="We are hiring! Join our team." width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" /></a>';
+	return '<a href="/'.esc_attr($a['link']).'"><img class="noFX" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/now-hiring-'.$graphic.'.webp" alt="We are hiring! Join our team." width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" /></a>';
 }
 
 // Add BBB widget to Sidebar
@@ -1484,10 +1484,10 @@ function battleplan_getBBB( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'link'=>'', 'graphic'=>'1' ), $atts );
 	$graphic = esc_attr($a['graphic']);
 
-	$imagePath = get_template_directory().'/common/logos/bbb-'.$graphic.'.png';			
+	$imagePath = get_template_directory().'/common/logos/bbb-'.$graphic.'.webp';			
 	list($width, $height) = getimagesize($imagePath);
 	
-	return '<a href="'.esc_attr($a['link']).'" title="Click here to view our profile page on the Better Business Bureau website."><img loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/bbb-'.$graphic.'.png" alt="We are accredited with the BBB and are proud of our A+ rating." width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
+	return '<a href="'.esc_attr($a['link']).'" title="Click here to view our profile page on the Better Business Bureau website."><img loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/bbb-'.$graphic.'.webp" alt="We are accredited with the BBB and are proud of our A+ rating." width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
 }
 
 // Add Veteran Owned widget to Sidebar
@@ -1496,10 +1496,10 @@ function battleplan_getVeteranOwned( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'link'=>'', 'graphic'=>'1' ), $atts );
 	$graphic = esc_attr($a['graphic']);
 	
-	$imagePath = get_template_directory().'/common/logos/veteran-owned-'.$graphic.'.png';			
+	$imagePath = get_template_directory().'/common/logos/veteran-owned-'.$graphic.'.webp';			
 	list($width, $height) = getimagesize($imagePath);
 	
-	return '<img loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/veteran-owned-'.$graphic.'.png" alt="We are proud to be a Veteran Owned business." width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
+	return '<img loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/veteran-owned-'.$graphic.'.webp" alt="We are proud to be a Veteran Owned business." width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
 }
 
 // Add Credit Cards widget to Sidebar
@@ -1508,10 +1508,10 @@ function battleplan_getCreditCards( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'mc'=>'yes', 'visa'=>'yes', 'discover'=>'yes', 'amex'=>'yes' ), $atts );
 
 	$buildCards = '<div id="credit-cards" class="currency">';
-	if ( esc_attr($a['mc']) == "yes" ) $buildCards .= '<img class="credit-card-logo" src="/wp-content/themes/battleplantheme/common/logos/cc-mc.png" loading="lazy" alt="We accept Mastercard" width="100" height="62" style="aspect-ratio:100/62" />';
-	if ( esc_attr($a['visa']) == "yes" ) $buildCards .= '<img class="credit-card-logo" src="/wp-content/themes/battleplantheme/common/logos/cc-visa.png" loading="lazy" alt="We accept Visa width="100" height="62" style="aspect-ratio:100/62" />';
-	if ( esc_attr($a['discover']) == "yes" ) $buildCards .= '<img class="credit-card-logo" src="/wp-content/themes/battleplantheme/common/logos/cc-discover.png" loading="lazy" alt="We accept Discover width="100" height="62" style="aspect-ratio:100/62" />';
-	if ( esc_attr($a['amex']) == "yes" ) $buildCards .= '<img class="credit-card-logo" src="/wp-content/themes/battleplantheme/common/logos/cc-amex.png" loading="lazy" alt="We accept American Express width="100" height="62" style="aspect-ratio:100x62" />';
+	if ( esc_attr($a['mc']) == "yes" ) $buildCards .= '<img class="credit-card-logo" src="/wp-content/themes/battleplantheme/common/logos/cc-mc.webp" loading="lazy" alt="We accept Mastercard" width="100" height="62" style="aspect-ratio:100/62" />';
+	if ( esc_attr($a['visa']) == "yes" ) $buildCards .= '<img class="credit-card-logo" src="/wp-content/themes/battleplantheme/common/logos/cc-visa.webp" loading="lazy" alt="We accept Visa width="100" height="62" style="aspect-ratio:100/62" />';
+	if ( esc_attr($a['discover']) == "yes" ) $buildCards .= '<img class="credit-card-logo" src="/wp-content/themes/battleplantheme/common/logos/cc-discover.webp" loading="lazy" alt="We accept Discover width="100" height="62" style="aspect-ratio:100/62" />';
+	if ( esc_attr($a['amex']) == "yes" ) $buildCards .= '<img class="credit-card-logo" src="/wp-content/themes/battleplantheme/common/logos/cc-amex.webp" loading="lazy" alt="We accept American Express width="100" height="62" style="aspect-ratio:100x62" />';
 	$buildCards .= '</div>';  					  
 													  
 	return $buildCards;
@@ -1526,7 +1526,7 @@ function battleplan_getCrypto( $atts, $content = null ) {
 	$buildCrypto = '<div id="crypto" class="currency">';
 	
 	foreach ( $cryptos as $crypto ) :	
-		$buildCrypto .= '<img class="crypto-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-'.$crypto.'.png" alt="We accept '.$crypto.' crypto currency" width="100" height="100" style="aspect-ratio:100/100" />';		
+		$buildCrypto .= '<img class="crypto-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-'.$crypto.'.webp" alt="We accept '.$crypto.' crypto currency" width="100" height="100" style="aspect-ratio:100/100" />';		
 	endforeach;	
 
 	$buildCrypto .= '</div>';  					  
@@ -1543,7 +1543,7 @@ function battleplan_getCashApps( $atts, $content = null ) {
 	$buildApps = '<div id="cashapps" class="currency">';
 	
 	foreach ( $apps as $app ) :	
-		$buildApps .= '<img class="cashapp-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-'.$app.'.png" alt="We accept '.$app.' payments" width="100" height="100" style="aspect-ratio:100/100" />';		
+		$buildApps .= '<img class="cashapp-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/cc-'.$app.'.webp" alt="We accept '.$app.' payments" width="100" height="100" style="aspect-ratio:100/100" />';		
 	endforeach;	
 
 	$buildApps .= '</div>';  					  

@@ -20,7 +20,7 @@ get_header(); ?>
 				
 				$page_content = '[section width="inline"][layout][col align="center"]';				
 				$page_content .= '<h1>'.$headlines[$rand].'</h1>';
-				$page_content .= '[/col][/layout][layout grid="2-3" valign="center"][col]<img src="/wp-content/themes/battleplantheme/common/logos/404-error-page.png" alt="404 error: This page does not exist" width="500" height="262" style="aspect-ratio:500/262" class="img-404" />[/col][col align="left"][txt]';
+				$page_content .= '[/col][/layout][layout grid="2-3" valign="center"][col]<img src="/wp-content/themes/battleplantheme/common/logos/404-error-page.webp" alt="404 error: This page does not exist" width="500" height="262" style="aspect-ratio:500/262" class="img-404" />[/col][col align="left"][txt]';
 				$page_content .= '<p>Apparently, this page has been moved or does not exist.</p>';				
    				$page_content .= '<p>You have options:</p><ul>';
 				$page_content .= '<li>Use the menu buttons to find a different page</li>';

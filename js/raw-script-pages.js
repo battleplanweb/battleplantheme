@@ -1573,9 +1573,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			labelMaxWidth > 0 && getObjects('.form-input.width-default', form).forEach(inputContainer => {
 				inputContainer.style.gridTemplateColumns = `${labelMaxWidth}px 1fr`;
 			});
-		});
-		
-		console.log('update 2');
+		});		
 
 		getObjects('abbr.required, em.required, span.required').forEach(el => el.textContent = "");
 	};

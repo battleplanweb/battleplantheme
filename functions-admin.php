@@ -121,7 +121,7 @@ function battleplan_addSitePage() {
 add_filter('admin_footer_text', 'battleplan_admin_footer_text');
 function battleplan_admin_footer_text() { 
 	$printFooter = '<section><div class="flex" style="grid-template-columns: 80px 300px 1fr; gap: 20px">';
-	$printFooter .= '<div style="grid-row: span 2; align-self: center;"><img src="https://battleplanwebdesign.com/wp-content/uploads/site-icon-80x80.png" /></div>';
+	$printFooter .= '<div style="grid-row: span 2; align-self: center;"><img src="https://battleplanwebdesign.com/wp-content/uploads/site-icon-80x80.webp" /></div>';
 	$printFooter .= '<div style="grid-row: span 2; align-self: center;">Powered by <a href="https://battleplanwebdesign.com" target="_blank">Battle Plan Web Design</a><br>';
 	$printFooter .= 'Launched '.date('F Y', strtotime(get_option('bp_launch_date'))).'<br>';
 	$printFooter .= 'Framework '._BP_VERSION.'<br>';

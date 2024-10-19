@@ -1369,6 +1369,8 @@ dl.col-gallery {
 	#primary .widget {
 		margin-top: 									var(--measure-large);
   		margin-bottom: 									var(--measure-large);
+		padding: 										1em;
+		background: 									var(--text-color);
 	}
 	
 	#secondary .widget {
@@ -1390,6 +1392,7 @@ dl.col-gallery {
 	@supports (-webkit-touch-callout: none) and (not (translate: none)) {
 		.widget {
 			margin: 										0.75em !important;
+
 		}
 	}	
 		

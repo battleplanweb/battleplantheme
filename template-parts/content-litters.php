@@ -53,8 +53,27 @@ $c5 = str_replace( $search, $replace, esc_attr(get_post_meta( $damID, 'grandpare
 $c6 = str_replace( $search, $replace, esc_attr(get_post_meta( $damID, 'grandparent_2', true )) );
 $c7 = str_replace( $search, $replace, esc_attr(get_post_meta( $damID, 'grandparent_3', true )) );
 $c8 = str_replace( $search, $replace, esc_attr(get_post_meta( $damID, 'grandparent_4', true )) );
-$postDate = the_date('F Y', '', '', FALSE); 
-$modDate = the_modified_date( 'F Y', '', '', FALSE);
+
+$post_id = get_the_ID();
+$updated = esc_attr( get_post_meta( $post_id, 'updated_date', true ) );
+$modified_date = get_the_modified_date('Y-m-d', $post_id); 
+$today = date('Y-m-d'); 
+
+if ( strtotime($modified_date) > strtotime($updated) ) {
+	$updated = $modified_date;
+}
+
+if ( strtotime($today) > strtotime($updated) ) {
+	$date_diff = ( strtotime($today) - strtotime($updated) ) / (60 * 60 * 24);
+	
+	if ( $date_diff > 2 ) {
+		if ( rand(1, 100) <= 25 ) {
+			$updated = $today;
+		}
+	}
+} 
+
+update_post_meta( $post_id, 'updated_date', esc_attr($updated) );
 ?>
 
 	<div class="entry-content">
@@ -77,7 +96,7 @@ $modDate = the_modified_date( 'F Y', '', '', FALSE);
 
 		$buildLitter .= '<ul class="litter-details"><h4>Litter Details</h4>';
 		
-		$buildLitter .= '<p style="margin-top: -10px; font-size: 70%; text-align:center"><em>(Updated: '.get_the_modified_date().')</em></p>'; 
+		$buildLitter .= '<p style="margin-top: -10px; font-size: 70%; text-align:center"><em>(Updated: '.$updated.')</em></p>'; 
 
 		
 		if ( $price ) : $buildLitter .= '<li><span class="label">Price: </span>$'.number_format($price, 0, ".", ",").' <span style="font-size:70%;">+ sales tax</span></li>';

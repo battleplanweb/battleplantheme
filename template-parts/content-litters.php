@@ -96,7 +96,7 @@ update_post_meta( $post_id, 'updated_date', esc_attr($updated) );
 
 		$buildLitter .= '<ul class="litter-details"><h4>Litter Details</h4>';
 		
-		$buildLitter .= '<p style="margin-top: -10px; font-size: 70%; text-align:center"><em>(Updated: '.$updated.')</em></p>'; 
+		$buildLitter .= '<p style="margin-top: -10px; font-size: 70%; text-align:center"><em>(Updated: '.date('F j, Y', strtotime($updated)).')</em></p>'; 
 
 		
 		if ( $price ) : $buildLitter .= '<li><span class="label">Price: </span>$'.number_format($price, 0, ".", ",").' <span style="font-size:70%;">+ sales tax</span></li>';

@@ -53,6 +53,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		const containerObj = getObject(containerSel);
 		if (!containerObj) return;
 		
+		//if (imageH > containerObj.offsetHeight) fullScreen = false;
+		
 		setStyles(containerObj, {
 			'backgroundImage': 			`url('${site_dir.upload_dir_uri}/${filename}')`,
 			'backgroundSize': 			`${imageW}px ${imageH}px`,
@@ -237,6 +239,7 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 	window.centerSubNav = function () {
 		const subMenus = getObjects('.main-navigation ul.sub-menu');
 		subMenus.forEach(subMenu => {
+
 
 
 
@@ -480,9 +483,11 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 	// Add .tab-focus class to links and buttons & auto scroll to center
 	document.addEventListener('keydown', e => {
 		if (e.keyCode === 9) { // Tab key
-			getObjects('.tab-focus').forEach(el => el.classList.remove('tab-focus'));
+			getObjects('.tab-focus').forEach(el => el.classList.remove('tab-focus'));			
 
 			setTimeout(() => {
+				getObjects('[aria-expanded="true"').forEach(el => el.classList.add('tab-focus'));
+
 				const activeElement = document.activeElement;
 				const menuItem = activeElement.closest('.menu-item');
 				activeElement.classList.add('tab-focus');

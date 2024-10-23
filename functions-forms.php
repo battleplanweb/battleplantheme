@@ -129,29 +129,30 @@ function battleplan_setupFormEmail( $contact_form, &$abort, $submission ) {
 	
 	$bad_phones = array('0', '(0', '(11)');
 
-	$spamIntercept = '';
+	$spamIntercept = '';	
 	
-	if ( $userCountry !== "United States" ) :	
-		$blockThese = 		["Greater Fort Myers Dog Club", "Air Zone Experts"];
-		$dontBlockThese = 	["Chicken Dinner House", "Sweetie Pie", "Cooks Country"];
-		$doNotBlock = false;
-		$doBlock = false;
+	if ( $userCountry != "United States" ) :	
+		$countryIgnore		= 	["Chicken Dinner House", "Sweetie Pie", "Cooks Country"];
+		$countryBlock		=	["Greater Fort Myers Dog Club", "Air Zone Experts"];
+		$blockThis = false;
 
-		foreach ( $dontBlockThese as $phrase ) {
-			if (stripos($buildEmail, $phrase) !== false) {
-				$doNotBlock = true;
+		foreach ( $countryBlock as $site ) {
+			if ( stripos($buildEmail, $site) !== false ) {
+				$blockThis = true;
 				break;
 			}
 		}
-
-		foreach ( $blockThese as $phrase ) {
-			if (stripos($buildEmail, $phrase) !== false) {
-				$doBlock = true;
+	
+		if ( $message == '' ) $blockThis = true;	
+	
+		foreach ( $countryIgnore as $site ) {
+			if ( stripos($buildEmail, $site ) !== false ) {
+				$blockThis = false;
 				break;
 			}
 		}
-
-		if ( !$dontBlockThese && ( $doBlock || $message == '' ) ) $spamIntercept .= ' Country;';
+	
+		if ( $blockThis ) $spamIntercept .= ' Country;';
 	endif;
 	
 	foreach($bad_ips as $bad_ip) :

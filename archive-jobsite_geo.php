@@ -35,12 +35,15 @@ get_header(); ?>
     			$interval = $now->diff($jobDateTimeImm);
 
     			if ($interval->y > 0) :
-        			$when = $interval->y == 1 ? 'A Year Ago' : $interval->y . ' Years Ago';
+        			//$when = $interval->y == 1 ? 'A Year Ago' : $interval->y . ' Years Ago';
+					$when = '';
 				elseif ($interval->m > 0) :
-        			$when =  $interval->m == 1 ? 'A Month Ago' : $interval->m . ' Months Ago';
+        			//$when =  $interval->m == 1 ? 'A Month Ago' : $interval->m . ' Months Ago';
+					$when = '';
     			elseif ($interval->d >= 7) :
         			$weeks = floor($interval->d / 7);
-       				$when =  $weeks == 1 ? 'A Week Ago' : $weeks . ' Weeks Ago';
+       				//$when =  $weeks == 1 ? 'A Week Ago' : $weeks . ' Weeks Ago';
+       				$when = $weeks == 1 ? 'A Week Ago' : '';
     			elseif ($interval->d > 0) :
         			$when =  $interval->d == 1 ? 'Yesterday' : $interval->d . ' Days Ago';
     			else:
@@ -122,7 +125,8 @@ get_header(); ?>
 				$buildUpdate .= '[col]';
 		
 				$buildUpdate .= '<div class="jobsite-description"><p>';
-				$buildUpdate .= '<span class="jobsite_geo-job_meta">'.$location.' ▪ '.$when.'</span><br>';
+				$buildUpdate .= '<span class="jobsite_geo-job_meta">'.$location.' ▪ ';
+				$buildUpdate .= $when != '' ? $when.'</span><br>' : '</span>';
 				$buildUpdate .= $jobDesc.'</p></div>';
 		
 		?>		

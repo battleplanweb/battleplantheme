@@ -80,10 +80,10 @@
 
 .main-navigation ul.main-menu li:hover > a, 
 .main-navigation ul.main-menu li.active > a, 
-.main-navigation ul.main-menu li > a.tab-focus,
+.main-navigation ul.main-menu li.tab-focus > a,
 .widget-navigation ul.menu li:hover > a, 
 .widget-navigation ul.menu li.active > a, 
-.widget-navigation ul.menu li > a.tab-focus {    
+.widget-navigation ul.menu li.tab-focus > a {    
 	color: 											var(--button-color-hover);
 	background: 									none;
 	border:											none;
@@ -162,6 +162,8 @@
 }	
 
 #desktop-navigation li:hover ul.sub-menu,
+#desktop-navigation li.active ul.sub-menu,
+#desktop-navigation li.tab-focus ul.sub-menu,
 .main-navigation ul.sub-menu.active,
 #desktop-navigation li.menu-item-has-children[aria-expanded="true"] ul.sub-menu {
 	visibility:										visible;

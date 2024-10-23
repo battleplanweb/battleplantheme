@@ -110,6 +110,13 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 				$service = 'hvac-maintenance';
 				break; 
 			} 
+		}		
+		
+		foreach ( array( 'allergies', 'duct cleaning', 'indoor air', 'air quality', 'clean air' ) as $keyword) {
+			if (stripos($description, $keyword) !== false) {
+				$service = 'indoor-air-quality';
+				break; 
+			} 
 		}
 		
 		if (!$service) {

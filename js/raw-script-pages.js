@@ -1625,8 +1625,72 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 					c.classList.add("active");
 				});
 			});
+			
+			menuObj.addEventListener('focusin', () => {
+				currents.forEach(c => {
+					c.classList.remove("active");
+					c.classList.add("dormant");
+				});
+				menuObj.classList.add("hover");
+			});
+
+			menuObj.addEventListener('focusout', () => {
+				menuObj.classList.remove("hover");
+				currents.forEach(c => {
+					c.classList.remove("dormant");
+					c.classList.add("active");
+				});
+			});
 		});
-	};
+	};													   
+														   
+	getObjects('h3 a[aria-hidden="true"]').forEach(a => {
+		a.parentNode.setAttribute('aria-label', a.textContent);
+	});
+
+	setTimeout(() => { getObjects('img:not([alt])').forEach(img => img.setAttribute('alt', '')); }, 50);
+	setTimeout(() => { getObjects('img:not([alt])').forEach(img => img.setAttribute('alt', '')); }, 1000);
+
+	getObjects('[role="menubar"]').forEach(menu => {
+		menu.addEventListener('focus', ev => {
+			const targetElement = ev.target.closest('[aria-haspopup="true"]');
+			if (targetElement) {
+				targetElement.classList.add('menu-item-expanded');
+				targetElement.setAttribute('aria-expanded', true);
+			}
+		}, true);		
+		
+		menu.addEventListener('mouseenter', ev => {
+			const targetElement = ev.target.closest('[aria-haspopup="true"]');
+			if (targetElement) {
+				targetElement.classList.add('menu-item-expanded');
+				targetElement.setAttribute('aria-expanded', true);
+			}
+		}, true);
+		menu.addEventListener('blur', ev => {
+			const targetElement = ev.target.closest('[aria-haspopup="true"]');
+			if (targetElement) {
+				targetElement.classList.remove('menu-item-expanded');
+				targetElement.setAttribute('aria-expanded', false);
+			}
+		}, true);
+		menu.addEventListener('mouseleave', ev => {
+			const targetElement = ev.target.closest('[aria-haspopup="true"]');
+			if (targetElement) {
+				targetElement.classList.remove('menu-item-expanded');
+				targetElement.setAttribute('aria-expanded', false);
+			}
+		}, true);
+	});
+
+	getObjects('[role="menubar"] a').forEach(a => a.setAttribute('tabindex', '0'));
+	getObjects('li[aria-haspopup="true"]').forEach(li => li.setAttribute('tabindex', '-1'));												   
+														   
+														   
+														   
+														   
+														   
+														   
 	
 	const currents = getObjects(".main-navigation ul.main-menu > li.current-menu-item, .main-navigation ul.main-menu > li.current_page_item, .main-navigation ul.main-menu > li.current-menu-parent, .main-navigation ul.main-menu > li.current_page_parent, .main-navigation ul.main-menu > li.current-menu-ancestor, .widget-navigation ul.menu > li.current-menu-item, .widget-navigation ul.menu > li.current_page_item, .widget-navigation ul.menu > li.current-menu-parent, .widget-navigation ul.menu > li.current_page_parent, .widget-navigation ul.menu > li.current-menu-ancestor");	
 
@@ -2161,28 +2225,33 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	setTimeout(() => { getObjects('img:not([alt])').forEach(img => img.setAttribute('alt', '')); }, 1000);
 
 	getObjects('[role="menubar"]').forEach(menu => {
-		menu.addEventListener('focus.aria', ev => {
-			if (ev.target.getAttribute('aria-haspopup') === "true") {
-				ev.target.classList.add('menu-item-expanded');
-				ev.target.setAttribute('aria-expanded', true);
+		menu.addEventListener('focus', ev => {
+			const targetElement = ev.target.closest('[aria-haspopup="true"]');
+			if (targetElement) {
+				targetElement.classList.add('menu-item-expanded');
+				targetElement.setAttribute('aria-expanded', true);
+			}
+		}, true);		
+		
+		menu.addEventListener('mouseenter', ev => {
+			const targetElement = ev.target.closest('[aria-haspopup="true"]');
+			if (targetElement) {
+				targetElement.classList.add('menu-item-expanded');
+				targetElement.setAttribute('aria-expanded', true);
 			}
 		}, true);
-		menu.addEventListener('mouseenter.aria', ev => {
-			if (ev.target.getAttribute('aria-haspopup') === "true") {
-				ev.target.classList.add('menu-item-expanded');
-				ev.target.setAttribute('aria-expanded', true);
+		menu.addEventListener('blur', ev => {
+			const targetElement = ev.target.closest('[aria-haspopup="true"]');
+			if (targetElement) {
+				targetElement.classList.remove('menu-item-expanded');
+				targetElement.setAttribute('aria-expanded', false);
 			}
 		}, true);
-		menu.addEventListener('blur.aria', ev => {
-			if (ev.target.getAttribute('aria-haspopup') === "true") {
-				ev.target.classList.remove('menu-item-expanded');
-				ev.target.setAttribute('aria-expanded', false);
-			}
-		}, true);
-		menu.addEventListener('mouseleave.aria', ev => {
-			if (ev.target.getAttribute('aria-haspopup') === "true") {
-				ev.target.classList.remove('menu-item-expanded');
-				ev.target.setAttribute('aria-expanded', false);
+		menu.addEventListener('mouseleave', ev => {
+			const targetElement = ev.target.closest('[aria-haspopup="true"]');
+			if (targetElement) {
+				targetElement.classList.remove('menu-item-expanded');
+				targetElement.setAttribute('aria-expanded', false);
 			}
 		}, true);
 	});

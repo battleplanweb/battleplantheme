@@ -1460,6 +1460,11 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		});
 	});
 
+// Add "img-widget" class to img if it appears in the sidebar
+	getObjects('.widget img').forEach(img => {
+		img.classList.add('img-widget');
+	});
+
 // Set "first page" cookie		
 	if (!getCookie('first-page')) {
 		document.body.classList.add('first-page');

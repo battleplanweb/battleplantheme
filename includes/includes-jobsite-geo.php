@@ -96,43 +96,62 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 		// scan for keywords for service tag
 		$description = get_post_field('post_content', $post_id);
 		
-		$equipment = array (
-			'air-conditioner' 	=> array( 'air conditioner', 'air conditioning', 'cooling', 'a/c', 'ac', 'compressor', 'evaporator', 'condenser', 'drain line', 'refrigerant'),
-			'heating' 			=> array( 'heater', 'heating', 'furnace' ),
-			'hvac'				=> array( 'hvac', 'fan motor' ),
-			'thermostat'		=> array( 'thermostat', 't-stat', 'tstat' )
-		);
+		// Customize for General Contractor website
+		if ( $GLOBALS['customer_info']['business-type'] === "GeneralContractor" ) :		
+			foreach ( array( 'gutter', 'seamless' ) as $keyword) {
+				if (stripos($description, $keyword) !== false) {
+					$service = 'gutters';
+					break; 
+				} 
+			}
+
+			foreach ( array( 'insulation', 'insulate', 'fiberglass' ) as $keyword) {
+				if (stripos($description, $keyword) !== false) {
+					$service = 'insulation';
+					break; 
+				} 
+			}	
+		endif;		
+			
+		// Customize for HVAC website
+		if ( $GLOBALS['customer_info']['site-type'] === "hvac" ) :		
+			$equipment = array (
+				'air-conditioner' 	=> array( 'air conditioner', 'air conditioning', 'cooling', 'a/c', 'ac', 'compressor', 'evaporator', 'condenser', 'drain line', 'refrigerant'),
+				'heating' 			=> array( 'heater', 'heating', 'furnace' ),
+				'hvac'				=> array( 'hvac', 'fan motor' ),
+				'thermostat'		=> array( 'thermostat', 't-stat', 'tstat' )
+			);
+
+			$type = esc_attr(get_field( "new_brand" )) ? '-installation' : '-repair';
+
+			foreach ( array( 'allergies', 'duct cleaning', 'indoor air', 'air quality', 'clean air' ) as $keyword) {
+				if (stripos($description, $keyword) !== false) {
+					$service = 'indoor-air-quality';
+					break; 
+				} 
+			}
+
+			foreach ( array( 'maintenance', 'tune up', 'tune-up', 'check up', 'check-up', 'inspection' ) as $keyword) {
+				if (stripos($description, $keyword) !== false) {
+					$service = 'hvac-maintenance';
+					break; 
+				} 
+			}		
 		
-		$type = esc_attr(get_field( "new_brand" )) ? '-installation' : '-repair';
-		
-		foreach ( array( 'maintenance', 'tune up', 'tune-up', 'check up', 'check-up', 'inspection' ) as $keyword) {
-			if (stripos($description, $keyword) !== false) {
-				$service = 'hvac-maintenance';
-				break; 
-			} 
-		}		
-		
-		foreach ( array( 'allergies', 'duct cleaning', 'indoor air', 'air quality', 'clean air' ) as $keyword) {
-			if (stripos($description, $keyword) !== false) {
-				$service = 'indoor-air-quality';
-				break; 
-			} 
-		}
-		
-		if (!$service) {
-			foreach ($equipment as $tag => $keywords) {
-				foreach ($keywords as $keyword) {
-					if (stripos($description, $keyword) !== false) {
-						$service = $tag.$type;
-						break 2;
+			if (!$service) {
+				foreach ($equipment as $tag => $keywords) {
+					foreach ($keywords as $keyword) {
+						if (stripos($description, $keyword) !== false) {
+							$service = $tag.$type;
+							break 2;
+						}
 					}
 				}
 			}
-		}
-
-		if ( $service && $location ) {
-			wp_set_object_terms($post_id, $service.'--'.strtolower($location), 'jobsite_geo-services', true);
-		}
+		endif;
+		
+		$service = $service ?: 'service-area';
+		$service && $location ? wp_set_object_terms($post_id, $service . '--' . strtolower($location), 'jobsite_geo-services', true) : null;
 				
 		// set first uploaded pic as jobsite thumbnail
 		set_post_thumbnail($post_id, esc_attr(get_field( "jobsite_photo_1")) );	
@@ -853,7 +872,7 @@ function battleplan_jobsite_template($template) {
 			if($query->have_posts()) :
 				while($query->have_posts()) :
 					$query->the_post();
-					$GLOBALS['jobsite_geo-content'] = get_the_content();
+					$GLOBALS['jobsite_geo-content'] = apply_filters('the_content', get_the_content());
 					$GLOBALS['jobsite_geo-page_title'] = str_replace('%%sep%%', $sep, get_post_meta(get_the_ID(), '_yoast_wpseo_title', true) );
 					$GLOBALS['jobsite_geo-page_desc'] = get_post_meta(get_the_ID(), '_yoast_wpseo_metadesc', true);
 					$GLOBALS['mapGrid'] = "1-1";
@@ -866,7 +885,7 @@ function battleplan_jobsite_template($template) {
 				if ($default_query->have_posts()) :
 					while($default_query->have_posts()) :
 						$default_query->the_post();
-						$GLOBALS['jobsite_geo-content'] = get_the_content();
+						$GLOBALS['jobsite_geo-content'] = apply_filters('the_content', get_the_content());
 						$GLOBALS['jobsite_geo-page_title'] = str_replace('%%sep%%', $sep, get_post_meta(get_the_ID(), '_yoast_wpseo_title', true) ).$sep.$GLOBALS['jobsite_geo-city'].", ".$GLOBALS['jobsite_geo-state'];
 						$GLOBALS['jobsite_geo-page_desc'] = get_post_meta(get_the_ID(), '_yoast_wpseo_metadesc', true);
 						$GLOBALS['mapGrid'] = "1-1";

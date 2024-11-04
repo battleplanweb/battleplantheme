@@ -587,7 +587,12 @@ add_filter( 'body_class', 'battleplan_addBodyClasses', 30 );
 function battleplan_addBodyClasses( $classes ) {	
 	$classes[] = "slug-"._PAGE_SLUG; 
 	$classes[] = is_mobile() ? "screen-mobile" : "screen-desktop";
-	$classes[] = "site-type-".$GLOBALS['customer_info']['site-type'];
+	
+	$siteType = $GLOBALS['customer_info']['site-type'] ?? null;
+	$bizType = $GLOBALS['customer_info']['business-type'] ?? null;
+
+    if ( $siteType ) $classes[] = 'site-type-'.strtolower($siteType);
+    if ( $bizType )  $classes[] = 'business-type-'.strtolower($bizType);
 	
 	return $classes;
 }	

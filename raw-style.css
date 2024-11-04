@@ -5,7 +5,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 2024.25.6
+Version: 2024.25.7
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -159,7 +159,42 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --input-text-shadow-focus-alt: 				var(--input-text-shadow-alt);
   --input-filter-focus-alt: 					var(--input-filter-alt);
   --input-backdrop-filter-focus-alt:			var(--input-backdrop-filter-alt);
-  --input-transform-focus-alt:					var(--input-transform-alt);
+  --input-transform-focus-alt:					var(--input-transform-alt);	
+  
+  --input-color-alt2:							var(--input-color);
+  --input-background-alt2: 						var(--input-background);
+  --input-padding-alt2: 						var(--input-padding);
+  --input-font-size-alt2:						var(--input-font-size);
+  --input-font-weight-alt2:						var(--input-font-weight);
+  --input-border-alt2: 							var(--input-border);
+  --input-border-top-alt2:						var(--input-border-alt2);
+  --input-border-right-alt2:					var(--input-border-alt2);
+  --input-border-bottom-alt2:					var(--input-border-alt2);
+  --input-border-left-alt2:						var(--input-border-alt2);
+  --input-outline-alt2: 						var(--input-outline);
+  --input-box-shadow-alt2: 						var(--input-box-shadow);
+  --input-border-radius-alt2: 					var(--input-border-radius);
+  --input-text-shadow-alt2: 					var(--input-text-shadow);
+  --input-filter-alt2: 							var(--input-filter);
+  --input-backdrop-filter-alt2:					var(--input-backdrop-filter);
+  --input-transform-alt2: 						var(--input-transform);
+  
+  --input-color-focus-alt2: 					var(--input-color-alt);
+  --input-background-focus-alt2: 				var(--input-background-alt);
+  --input-font-size-focus-alt2: 				var(--input-font-size-alt);
+  --input-font-weight-focus-alt2: 				var(--input-font-weight-alt);
+  --input-border-focus-alt2: 					var(--input-border-alt);
+  --input-border-top-focus-alt2:				var(--input-border-focus-alt2);
+  --input-border-right-focus-alt2:				var(--input-border-focus-alt2);
+  --input-border-bottom-focus-alt2:				var(--input-border-focus-alt2);
+  --input-border-left-focus-alt2:				var(--input-border-focus-alt2);
+  --input-outline-focus-alt2: 					var(--input-outline-alt);
+  --input-box-shadow-focus-alt2: 				var(--input-box-shadow-alt);
+  --input-border-radius-focus-alt2: 			var(--input-border-radius-alt);
+  --input-text-shadow-focus-alt2: 				var(--input-text-shadow-alt);
+  --input-filter-focus-alt2: 					var(--input-filter-alt);
+  --input-backdrop-filter-focus-alt2:			var(--input-backdrop-filter-alt);
+  --input-transform-focus-alt2:					var(--input-transform-alt);
   
   --button-color: 								var(--black-med);
   --button-background: 							var(--black-low);
@@ -248,6 +283,50 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --button-font-variant-hover-alt: 				var(--button-font-variant-alt);
   --button-letter-spacing-hover-alt: 			var(--button-letter-spacing-alt);
   --button-transition-hover-alt: 				var(--button-transition-alt);
+  
+  --button-color-alt2: 							var(--button-color);
+  --button-background-alt2:						var(--button-background);
+  --button-font-family-alt2: 					var(--button-font-family);
+  --button-font-weight-alt2: 					var(--button-font-weight);
+  --button-font-size-alt2: 						var(--button-font-size);
+  --button-border-alt2: 						var(--button-border);
+  --button-border-top-alt2:						var(--button-border-alt2); /* don't change */
+  --button-border-right-alt2:					var(--button-border-alt2);
+  --button-border-bottom-alt2:					var(--button-border-alt2);
+  --button-border-left-alt2:					var(--button-border-alt2);
+  --button-padding-alt2: 						var(--button-padding);
+  --button-box-shadow-alt2: 					var(--button-box-shadow);
+  --button-border-radius-alt2: 					var(--button-border-radius);
+  --button-transform-alt2: 						var(--button-transform);
+  --button-text-shadow-alt2: 					var(--button-text-shadow);
+  --button-outline-alt2: 						var(--button-outline);
+  --button-filter-alt2: 						var(--button-filter);
+  --button-text-transform-alt2: 				var(--button-text-transform);
+  --button-font-variant-alt2: 					var(--button-font-variant);
+  --button-letter-spacing-alt2: 				var(--button-letter-spacing);
+  --button-transition-alt2: 					var(--button-transition);
+  
+  --button-color-hover-alt2: 					var(--button-color-alt2);
+  --button-background-hover-alt2: 				var(--button-background-alt2);
+  --button-font-family-hover-alt2: 				var(--button-font-family-alt2);
+  --button-font-weight-hover-alt2: 				var(--button-font-weight-alt2);
+  --button-font-size-hover-alt2: 				var(--button-font-size-alt2);
+  --button-border-hover-alt2: 					var(--button-border-alt2);
+  --button-border-top-hover-alt2:				var(--button-border-hover-alt2); /* don't change */
+  --button-border-right-hover-alt2:				var(--button-border-hover-alt2);
+  --button-border-bottom-hover-alt2:			var(--button-border-hover-alt2);
+  --button-border-left-hover-alt2:				var(--button-border-hover-alt2);
+  --button-padding-hover-alt2: 					var(--button-padding-alt2);
+  --button-box-shadow-hover-alt2: 				var(--button-box-shadow-alt2);
+  --button-border-radius-hover-alt2: 			var(--button-border-radius-alt2);
+  --button-transform-hover-alt2: 				var(--button-transform-alt2);
+  --button-text-shadow-hover-alt2: 				var(--button-text-shadow-alt2);
+  --button-outline-hover-alt2: 					var(--button-outline-alt2);
+  --button-filter-hover-alt2: 					var(--button-filter-alt2);
+  --button-text-transform-hover-alt2: 			var(--button-text-transform-alt2);
+  --button-font-variant-hover-alt2: 			var(--button-font-variant-alt2);
+  --button-letter-spacing-hover-alt2: 			var(--button-letter-spacing-alt2);
+  --button-transition-hover-alt2: 				var(--button-transition-alt2);
 	
   --break-out-width: 							100%;
   --break-out-max-width: 						960px;
@@ -375,6 +454,8 @@ h6 {
 
 .widget-title {
 	font-size: 										var(--font-size-title);
+
+
 }
 
 h1 > a, h1 > a:hover, h1 > a.tab-focus, h1 > a:visited, h1 > span,

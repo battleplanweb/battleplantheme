@@ -239,6 +239,75 @@ select:focus,
 	backdrop-filter:								var(--input-backdrop-filter-focus-alt);
 }
 
+.style-alt2 input[type="text"],
+.style-alt2 input[type="email"],
+.style-alt2 input[type="url"],
+.style-alt2 input[type="password"],
+.style-alt2 input[type="search"],
+.style-alt2 input[type="number"],
+.style-alt2 input[type="tel"],
+.style-alt2 input[type="range"],
+.style-alt2 input[type="date"],
+.style-alt2 input[type="month"],
+.style-alt2 input[type="week"],
+.style-alt2 input[type="time"],
+.style-alt2 input[type="datetime"],
+.style-alt2 input[type="datetime-local"],
+.style-alt2 input[type="color"],
+.style-alt2 textarea,
+.style-alt2 select {
+	padding: 										var(--input-padding-alt);
+	color: 											var(--input-color-alt2);
+	font-size:										var(--input-font-size-alt2);
+	font-weight: 									var(--input-font-weight-alt2);
+	background:										var(--input-background-alt2);
+	border-top: 									var(--input-border-top-alt2);
+	border-right: 									var(--input-border-right-alt2);
+	border-bottom:									var(--input-border-bottom-alt2);
+	border-left: 									var(--input-border-left-alt2);
+	box-shadow:										var(--input-box-shadow-alt2);
+	border-radius:									var(--input-border-radius-alt2);	
+	text-shadow: 									var(--input-text-shadow-alt2);
+	transform: 										var(--input-transform-alt2);
+	filter: 										var(--input-filter-alt2);
+	backdrop-filter:								var(--input-backdrop-filter-alt2);
+}
+
+.style-alt2 input[type="text"]:focus,
+.style-alt2 input[type="email"]:focus,
+.style-alt2 input[type="url"]:focus,
+.style-alt2 input[type="password"]:focus,
+.style-alt2 input[type="search"]:focus,
+.style-alt2 input[type="number"]:focus,
+.style-alt2 input[type="tel"]:focus,
+.style-alt2 input[type="range"]:focus,
+.style-alt2 input[type="date"]:focus,
+.style-alt2 input[type="month"]:focus,
+.style-alt2 input[type="week"]:focus,
+.style-alt2 input[type="time"]:focus,
+.style-alt2 input[type="datetime"]:focus,
+.style-alt2 input[type="datetime-local"]:focus,
+.style-alt2 input[type="color"]:focus,
+.style-alt2 textarea:focus,
+.style-alt2 select:focus,
+.style-alt2 .wpcf7 form .wpcf7-response-output {
+	padding: 										var(--input-padding-alt2);
+	color: 											var(--input-color-focus-alt2);
+	font-size:										var(--input-font-size-focus-alt2);
+	font-weight: 									var(--input-font-weight-focus-alt2);
+	background:										var(--input-background-focus-alt2);
+	border-top: 									var(--input-border-top-focus-alt2);
+	border-right: 									var(--input-border-right-focus-alt2);
+	border-bottom:									var(--input-border-bottom-focus-alt2);
+	border-left: 									var(--input-border-left-focus-alt2);
+	box-shadow:										var(--input-box-shadow-focus-alt2);
+	border-radius:									var(--input-border-radius-focus-alt2);	
+	text-shadow: 									var(--input-text-shadow-focus-alt2);
+	transform: 										var(--input-transform-focus-alt2);
+	filter: 										var(--input-filter-focus-alt2);
+	backdrop-filter:								var(--input-backdrop-filter-focus-alt2);
+}
+
 select {
     width: 											100%;
 }
@@ -501,7 +570,6 @@ input[type="submit"].style-alt:active,
 .file-upload-btn.style-alt:active,
 ul.tabs li.style-alt:active,
 ul.tabs li.style-alt.current {
-
 	color: 											var(--button-color-hover-alt);
 	background: 									var(--button-background-hover-alt);
 	border:											var(--button-border-hover-alt);
@@ -520,6 +588,122 @@ ul.tabs li.style-alt.current {
 	letter-spacing: 								var(--button-letter-spacing-hover-alt);
 	transform: 										var(--button-transform-hover-alt);
 }
+
+.style-alt2 a.button,
+.style-alt2 a.page-numbers,
+.style-alt2 span.page-numbers,
+.style-alt2 button,
+.style-alt2 input[type="button"],
+.style-alt2 input[type="reset"],
+.style-alt2 input[type="submit"],
+.style-alt2 .file-upload-btn,
+.style-alt2 ul.tabs li,
+.style-alt2 a.button:visited,
+.style-alt2 a.page-numbers:visited,
+a.button.style-alt2,
+a.page-numbers.style-alt2,
+span.page-numbers.style-alt2,
+button.style-alt2,
+input[type="button"].style-alt2,
+input[type="reset"].style-alt2,
+input[type="submit"].style-alt2,
+.file-upload-btn.style-alt2,
+ul.tabs li.style-alt2,
+a.button.style-alt2:visited,
+a.page-numbers.style-alt2:visited{
+	font-family: 									var(--button-font-family-alt2);
+	font-weight: 									var(--button-font-weight-alt2);
+	font-size: 										var(--button-font-size-alt2);
+	color: 											var(--button-color-alt2);
+	background: 									var(--button-background-alt2);
+	border:											var(--button-border-alt2);
+	border-top: 									var(--button-border-top-alt2);
+	border-right: 									var(--button-border-right-alt2);
+	border-bottom:									var(--button-border-bottom-alt2);
+	border-left: 									var(--button-border-left-alt2);
+	border-radius:									var(--button-border-radius-alt2);
+	box-shadow:										var(--button-box-shadow-alt2);
+	padding: 										var(--button-padding-alt2);
+	text-shadow: 									var(--button-text-shadow-alt2);
+  	outline: 										var(--button-outline-alt2);
+  	filter: 										var(--button-filter-alt2);
+  	text-transform: 								var(--button-text-transform-alt2);
+	font-variant: 									var(--button-font-variant-alt2);
+	letter-spacing: 								var(--button-letter-spacing-alt2);
+	transform: 										var(--button-transform-alt2);
+}
+
+.style-alt2 a.button:hover,
+.style-alt2 a.page-numbers:hover,
+.style-alt2 span.page-numbers.current,
+.style-alt2 button:hover,
+.style-alt2 input[type="button"]:hover,
+.style-alt2 input[type="reset"]:hover,
+.style-alt2 input[type="submit"]:hover,
+.style-alt2 .file-upload-btn:hover,
+.style-alt2 ul.tabs li:hover,
+.style-alt2 a.button.tab-focus,
+.style-alt2 a.page-numbers.tab-focus,
+.style-alt2 button.tab-focus,
+.style-alt2 input[type="button"].tab-focus,
+.style-alt2 input[type="reset"].tab-focus,
+.style-alt2 input[type="submit"].tab-focus,
+.style-alt2 .file-upload-btn.tab-focus,
+.style-alt2 ul.tabs li.tab-focus,
+.style-alt2 a.button:active,
+.style-alt2 a.page-numbers:active,
+.style-alt2 button:active,
+.style-alt2 input[type="button"]:active,
+.style-alt2 input[type="reset"]:active,
+.style-alt2 input[type="submit"]:active,
+.style-alt2 .file-upload-btn:active,
+.style-alt2 ul.tabs li:active,
+.style-alt2 ul.tabs li.current,
+a.button.style-alt2:hover,
+a.page-numbers.style-alt2:hover,
+span.page-numbers.current.style-alt2,
+button.style-alt2:hover,
+input[type="button"].style-alt2:hover,
+input[type="reset"].style-alt2:hover,
+input[type="submit"].style-alt2:hover,
+.file-upload-btn.style-alt2:hover,
+ul.tabs li.style-alt2:hover,
+a.button.style-alt2.tab-focus,
+a.page-numbers.style-alt2.tab-focus,
+button.style-alt2.tab-focus,
+input[type="button"].style-alt2.tab-focus,
+input[type="reset"].style-alt2.tab-focus,
+input[type="submit"].style-alt2.tab-focus,
+.file-upload-btn.style-alt2.tab-focus,
+ul.tabs li.style-alt2.tab-focus,
+a.button.style-alt2:active,
+a.page-numbers.style-alt2:active,
+button.style-alt2:active,
+input[type="button"].style-alt2:active,
+input[type="reset"].style-alt2:active,
+input[type="submit"].style-alt2:active,
+.file-upload-btn.style-alt2:active,
+ul.tabs li.style-alt2:active,
+ul.tabs li.style-alt2.current {
+	color: 											var(--button-color-hover-alt2);
+	background: 									var(--button-background-hover-alt2);
+	border:											var(--button-border-hover-alt2);
+	border-top: 									var(--button-border-top-hover-alt2);
+	border-right: 									var(--button-border-right-hover-alt2);
+	border-bottom:									var(--button-border-bottom-hover-alt2);
+	border-left: 									var(--button-border-left-hover-alt2);
+	border-radius:									var(--button-border-radius-hover-alt2);
+	box-shadow:										var(--button-box-shadow-hover-alt2);
+	padding: 										var(--button-padding-hover-alt2);	
+	text-shadow: 									var(--button-text-shadow-hover-alt2);
+  	outline: 										var(--button-outline-hover-alt2);
+  	filter: 										var(--button-filter-hover-alt2);
+  	text-transform: 								var(--button-text-transform-hover-alt2);
+	font-variant: 									var(--button-font-variant-hover-alt2);
+	letter-spacing: 								var(--button-letter-spacing-hover-alt2);
+	transform: 										var(--button-transform-hover-alt2);
+}
+
 
 a.button.disabled,
 button.disabled,

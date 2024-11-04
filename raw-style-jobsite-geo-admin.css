@@ -28,6 +28,15 @@
 /*--------------------------------------------------------------
 # Biz/Site Types
 --------------------------------------------- */
+body.business-type-generalcontractor .acf-field-old-brand,
+body.business-type-generalcontractor .acf-field-old-equipment,
+body.business-type-generalcontractor .acf-field-old-model-no,
+body.business-type-generalcontractor .acf-field-new-brand,
+body.business-type-generalcontractor .acf-field-new-equipment,
+body.business-type-generalcontractor .acf-field-new-model-no,
+body.business-type-generalcontractor .acf-field-auto-make,
+body.business-type-generalcontractor .acf-field-auto-model,
+body.business-type-generalcontractor .acf-field-auto-year,
 body.business-type-automotive .acf-field-old-brand,
 body.business-type-automotive .acf-field-old-equipment,
 body.business-type-automotive .acf-field-old-model-no,

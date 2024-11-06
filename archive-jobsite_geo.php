@@ -128,6 +128,7 @@ get_header(); ?>
 				$buildUpdate .= '<span class="jobsite_geo-job_meta">'.$location.' ▪ ';
 				$buildUpdate .= $when != '' ? $when.'</span><br>' : '</span>';
 				$buildUpdate .= $jobDesc.'</p></div>';
+				$cleanedJobDesc = htmlspecialchars(strip_tags($jobDesc), ENT_QUOTES, 'UTF-8');
 		
 		?>		
 				<script nonce="<?php echo _BP_NONCE; ?>" type="application/ld+json">				
@@ -136,7 +137,7 @@ get_header(); ?>
 						"@type": "UserCheckins",
 						"name": "<?php echo $GLOBALS['customer_info']['name']; ?>",
 						"startDate": "<?php echo $jobIsoDate; ?>",
-						"description": "<?php echo $jobDesc; ?>",
+						"description": "<?php echo $cleanedJobDesc; ?>",
 						"location": {
 							"@type": "Place",
 							"address": {

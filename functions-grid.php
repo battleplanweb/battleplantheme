@@ -189,7 +189,10 @@ function battleplan_buildImg( $atts, $content = null ) {
 	if ( $getBiz == "" ) {
 		$linkClass = "";
 		$link = esc_attr($a['link']);
-		if ( $link == "" || $link == "none" || $link == "no" ) $linkClass=" class='no-link'"; $link = "javascript:void(0);";	
+		if ( $link == "" || $link == "none" || $link == "no" ) {
+			$linkClass=" class='no-link'"; 
+			$link = "javascript:void(0);";	
+		}
 		if ( strpos($link, 'pdf') ) $link .= "?id=".time();	
 	} else {
 		$link = do_shortcode( '[get-biz info="'.$getBiz.'"]' );

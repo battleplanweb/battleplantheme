@@ -11,88 +11,65 @@ get_header(); ?>
 		<?php bp_before_the_content(); ?>	
 	
 		<?php if ( have_posts() ) : 
-			
+
+			// Default Archives
 			$archiveHeadline = wp_kses_post(get_the_archive_title());
-			$archiveIntro = wp_kses_post(get_the_archive_description());	
+			$archiveIntro = wp_kses_post(get_the_archive_description());
+			$grid = "1-1-1";
+			$valign = "stretch";
+			$tags = "false"; // drop / list / button / false
+			$showThumb = "true";
+			$size = "thumbnail";
+			$picSize = "100";
+			$textSize = "100";
+			$showBtn = "true";
+			$btnText = "Read More";
+			$btnPos = "outside";
+			$titlePos = "outside";
+			$showExcerpt = "true";
+			$showContent = "false";				
+			$showDate = "true";
+			$showAuthor = "false"; // true (no link), profile (link to profile)
+			$accordion = "false";
+			$countView = "false";
+			$link = "post"; //post, cf-custom-field, specific link, false
+			$addInfo = "";				
+			$addClass = "";
 		
 		// Galleries
-			if ( get_post_type() == "galleries" ) :
+			if ( get_post_type() === "galleries" ) :
 				$archiveHeadline = "Photo Galleries";
 				$archiveIntro = "<p>Click a photo below to open up the full album.</p>";
-				$grid = "1-1-1";
 				$valign = "start";
-				$tags = "false"; // drop / list / button / false
-				$showThumb = "true";
-				$size = "thumbnail";
-				$picSize = "100";
-				$textSize = "100";
 				$showBtn = "false";
 				$btnText = "";
-				$btnPos = "outside";
 				$titlePos = "inside";
 				$showExcerpt = "false";				
-				$showContent = "false";				
 				$showDate = "false";				
-				$showAuthor = "false"; // true (no link), profile (link to profile)
-				$addClass = "";
 
 		// Testimonials
-			elseif ( get_post_type() == "testimonials" ) :
+			elseif ( get_post_type() === "testimonials" ) :
 				$archiveHeadline = "Testimonials";
 				$facebookLink = do_shortcode('[get-biz info="facebook"]')."reviews/";
 				$facebookIcon = "Facebook-Like-Us-1";
 				$grid = "1";
 				$valign = "start";
-				$tags = "false"; // drop / list / button / false
-				$showThumb = "true";
-				$size = "thumbnail";
 				$picSize = "1/4";
 				$textSize = "3/4";
 				$showBtn = "false";
-				$addClass = "";
+				$link = "false";
 		
 		// Products
-			elseif ( get_post_type() == "products" ) :
+			elseif ( get_post_type() === "products" ) :
 				$archiveHeadline = "Products";
 				$grid = "1";
 				$valign = "start";
-				$tags = "false"; // drop / list / button / false
-				$showThumb = "true";
-				$size = "thumbnail";
 				$picSize = "1/3";
 				$textSize = "2/3";
-				$showBtn = "true";
 				$btnText = "Learn More";
 				$btnPos = "inside";
-				$titlePos = "outside";
-				$showExcerpt = "true";
-				$showContent = "false";				
 				$showDate = "false";				
-				$showAuthor = "false"; // true (no link), profile (link to profile)
-				$addClass = "";
 				
-		// Default Archives
-			else: 
-				$grid = "1-1-1";
-				$valign = "stretch";
-				$tags = "false"; // drop / list / button / false
-				$showThumb = "true";
-				$size = "thumbnail";
-				$picSize = "100";
-				$textSize = "100";
-				$showBtn = "true";
-				$btnText = "Read More";
-				$btnPos = "outside";
-				$titlePos = "outside";
-				$showExcerpt = "true";
-				$showContent = "false";				
-				$showDate = "true";
-				$showAuthor = "false"; // true (no link), profile (link to profile)
-				$accordion = "false";
-				$countView = "false";
-				$link = "post"; //post, cf-custom-field, specific link, false
-				$addInfo = "";				
-				$addClass = "";
 			endif;
 		
 			if ( function_exists( 'overrideArchive' ) ) { overrideArchive( get_post_type() ); }

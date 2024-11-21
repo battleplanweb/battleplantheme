@@ -153,7 +153,7 @@ function processChron($forceChron) {
 		$wpSEOBase['remove_pingback_header'] = 1;
 		$wpSEOBase['clean_campaign_tracking_urls'] = 1;
 		$wpSEOBase['clean_permalinks'] = 1;
-		$wpSEOBase['clean_permalinks_extra_variables'] = 'loc,int,invite,rs,se_action';	
+		$wpSEOBase['clean_permalinks_extra_variables'] = 'loc,int,invite,rs,se_action,pmax';	
 		$wpSEOBase['search_cleanup'] = 1;
 		$wpSEOBase['search_cleanup_emoji'] = 1;
 		$wpSEOBase['search_cleanup_patterns'] = 1;
@@ -434,22 +434,23 @@ function processChron($forceChron) {
 	
 		
 // Prune weak testimonials
-	/*
 	$args = array ( 'post_type' => 'testimonials', 'post_status' => 'publish', 'posts_per_page' => -1, 'orderby' => 'date', 'order' => 'DESC' );
 	$getTestimonials = new WP_Query($args);
 	
-  	while ($getTestimonials->have_posts()) : $getTestimonials->the_post();
-		$quality = get_field( "testimonial_quality" );	
-        if ( $getTestimonials->found_posts > 20 && !has_post_thumbnail() && $quality[0] != 1 && strlen(wp_strip_all_tags(get_the_content(), true)) < 300 ) $draft = get_the_id();	
-		if ( has_post_thumbnail() && $quality[0] != 1 ) :
-			$quality[0] = 1;
-			update_field('testimonial_quality', $quality);
-		endif;
-    endwhile; 
+	if ( $getTestimonials->found_posts > 75 ) :	
+		while ($getTestimonials->have_posts()) : $getTestimonials->the_post();
+			$quality = get_field( "testimonial_quality" );	
+			if ( !has_post_thumbnail() && $quality[0] != 1 && strlen(wp_strip_all_tags(get_the_content(), true)) < 100 ) $draft = get_the_id();	
+			if ( has_post_thumbnail() && $quality[0] != 1 ) :
+				$quality[0] = 1;
+				update_field('testimonial_quality', $quality);
+			endif;
+		endwhile; 
 
-	wp_reset_postdata();
-    if ( $draft ) wp_update_post( array ( 'ID' => $draft, 'post_status' => 'draft' ));
-*/
+		wp_reset_postdata();
+		if ( $draft ) wp_update_post( array ( 'ID' => $draft, 'post_status' => 'draft' ));
+	endif;
+	
 	
 /*--------------------------------------------------------------
 # Update 'customer_info' with Google Business Profile info

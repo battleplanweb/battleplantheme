@@ -545,19 +545,7 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 	$id = esc_attr($a['id']) == "current" ? get_the_ID() : esc_attr($a['id']);
 	$exclude = $GLOBALS['do_not_repeat'];
 	
-	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>$num, 'offset'=>esc_attr($a['offset']), 'order'=>esc_attr($a['order']), 'tax_query'=>array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags )), 'cache_results'=>false, 'update_post_meta_cache'=>false, 'update_post_term_cache'=>false );
-
-	/*
-	$args['orderby']='meta_value_num';	
-	if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; 	
-	elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="bp_views_7"; 	
-	elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="bp_views_30";
-	elseif ( $orderBy == 'views-90day' ) : $args['meta_key']="bp_views_90"; 
-	elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="bp_views_365"; 
-	elseif ( $orderBy == 'recent' ) : $args['meta_key']="log-last-viewed";
-	else : $args['orderby']=$orderBy;
-	endif;		
-	*/
+	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>$num, 'offset'=>esc_attr($a['offset']), 'order'=>esc_attr($a['order']), 'tax_query'=>array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags )), 'cache_results'=>false, 'update_post_meta_cache'=>false, 'update_post_term_cache'=>false, 'no_found_rows'=>true, );
 	
 	$args['orderby']='meta_value_num';	
 	if ( $orderBy == 'views-today' ) : $args['orderby']="rand";	
@@ -635,8 +623,16 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 		$right = array_slice($result, count($result)/2);
 		$imageArray = array_merge($right, array_reverse($left));
 	endif;
-							   
-	return do_shortcode('[layout grid="'.$col.'e" valign="'.esc_attr($a['valign']).'"]'.printArray($imageArray).'[/layout]'); 
+	
+	return do_shortcode('[layout class="flex-row-of-pics" grid="'.$col.'e" valign="'.esc_attr($a['valign']).'"]'.printArray($imageArray).'[/layout]'); 
+}
+
+add_filter('posts_request', 'append_unique_param_to_query', 10, 2);
+function append_unique_param_to_query($sql, $query) {
+    if ($query->get('orderby') === 'rand') {
+        $sql .= ' /* ' . uniqid() . ' */'; // Add a unique comment
+    }
+    return $sql;
 }
 
 // Build an archive
@@ -733,9 +729,12 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		endif;			
 	elseif ( $type == "testimonials" ) : 
 		$words = explode(' ', esc_attr( get_the_title() ) );
-    	$last_word = end($words);
-    	$testimonial_initial = substr($last_word, 0, 1);
-		$archiveImg = do_shortcode("[img size='".$picSize."' class='image-".$type." testimonials-generic-icon']<svg version='1.1' class='anonymous-icon' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' x='0px' y='0px' viewBox='0 0 400 400' xml:space='preserve'><g><path class='user-icon' d='M332,319c-34.9,30-80.2,48.2-129.8,48.4h-1.7c-49.7-0.2-95.2-18.5-130.1-48.7c12.6-69,51.6-123.1,100.6-139c-27.6-11.8-46.9-39.1-46.9-71c0-42.6,34.5-77.1,77-77.1s77.1,34.5,77.1,77.1c0,31.9-19.3,59.2-46.9,71C276.7,195,315.7,249,332,319z'/></g></svg>[/img]"); 		
+		$initials = '';
+		foreach ($words as $word) {
+			$initials .= substr($word, 0, 1);
+		}
+		$archiveImg = do_shortcode("[img size='".$picSize."' class='image-".$type." testimonials-generic-icon']<svg version='1.1' class='anonymous-icon' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' x='0px' y='0px' viewBox='0 0 400 400' xml:space='preserve'><g><path class='user-icon' d='M332,319c-34.9,30-80.2,48.2-129.8,48.4h-1.7c-49.7-0.2-95.2-18.5-130.1-48.7c12.6-69,51.6-123.1,100.6-139c-27.6-11.8-46.9-39.1-46.9-71c0-42.6,34.5-77.1,77-77.1s77.1,34.5,77.1,77.1c0,31.9-19.3,59.2-46.9,71C276.7,195,315.7,249,332,319z'/></g></svg>
+        <div class='testimonial-initials'>".$initials."</div>[/img]"); 		
 		if ( $textSize == "" ) : 
 			$textSize = getTextSize($picSize); 
 		endif;	
@@ -1509,9 +1508,9 @@ function battleplan_getCreditCards( $atts, $content = null ) {
 
 	$buildCards = '<div id="credit-cards" class="currency">';
 	if ( esc_attr($a['mc']) == "yes" ) $buildCards .= '<img class="credit-card-logo" src="/wp-content/themes/battleplantheme/common/logos/cc-mc.webp" loading="lazy" alt="We accept Mastercard" width="100" height="62" style="aspect-ratio:100/62" />';
-	if ( esc_attr($a['visa']) == "yes" ) $buildCards .= '<img class="credit-card-logo" src="/wp-content/themes/battleplantheme/common/logos/cc-visa.webp" loading="lazy" alt="We accept Visa width="100" height="62" style="aspect-ratio:100/62" />';
-	if ( esc_attr($a['discover']) == "yes" ) $buildCards .= '<img class="credit-card-logo" src="/wp-content/themes/battleplantheme/common/logos/cc-discover.webp" loading="lazy" alt="We accept Discover width="100" height="62" style="aspect-ratio:100/62" />';
-	if ( esc_attr($a['amex']) == "yes" ) $buildCards .= '<img class="credit-card-logo" src="/wp-content/themes/battleplantheme/common/logos/cc-amex.webp" loading="lazy" alt="We accept American Express width="100" height="62" style="aspect-ratio:100x62" />';
+	if ( esc_attr($a['visa']) == "yes" ) $buildCards .= '<img class="credit-card-logo" src="/wp-content/themes/battleplantheme/common/logos/cc-visa.webp" loading="lazy" alt="We accept Visa" width="100" height="62" style="aspect-ratio:100/62" />';
+	if ( esc_attr($a['discover']) == "yes" ) $buildCards .= '<img class="credit-card-logo" src="/wp-content/themes/battleplantheme/common/logos/cc-discover.webp" loading="lazy" alt="We accept Discover" width="100" height="62" style="aspect-ratio:100/62" />';
+	if ( esc_attr($a['amex']) == "yes" ) $buildCards .= '<img class="credit-card-logo" src="/wp-content/themes/battleplantheme/common/logos/cc-amex.webp" loading="lazy" alt="We accept American Express" width="100" height="62" style="aspect-ratio:100x62" />';
 	$buildCards .= '</div>';  					  
 													  
 	return $buildCards;

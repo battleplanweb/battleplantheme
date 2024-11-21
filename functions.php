@@ -737,7 +737,7 @@ function battleplan_breadcrumbs() {
     else :
         $breadcrumb_output_link .= '<a href="'.$home_link.'" rel="v:url" property="v:title">'.$home_text.'</a>';
         $breadcrumb_output_link .= $delimiter;
-        $breadcrumb_output_link .= $breadcrumb_trail;
+        $breadcrumb_output_link .= ucwords($breadcrumb_trail);
         $breadcrumb_output_link .= $page_addon;
     endif;
     $breadcrumb_output_link .= '</div><!-- .breadcrumbs -->';

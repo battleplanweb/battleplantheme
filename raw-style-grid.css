@@ -1358,11 +1358,9 @@ dl.col-gallery {
 	}
 	
 	#secondary .sidebar-inner {
-		display:										flex;
-		flex-flow:										column wrap;
+		display:										grid;
+		grid-template-columns: 							repeat(3, 1fr);
 		gap:											var(--measure-large);
-		justify-content:								center;
-		align-items: 									center;
 		padding: 										1.5em /* added 9/30/24 for R & S Gutters */
 	}
 	
@@ -1392,6 +1390,7 @@ dl.col-gallery {
 	@supports (-webkit-touch-callout: none) and (not (translate: none)) {
 		.widget {
 			margin: 										0.75em !important;
+
 
 		}
 	}	

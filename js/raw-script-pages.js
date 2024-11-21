@@ -887,6 +887,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		
 // Add classes for first, last, even and odd widgets
 		window.mobileWidgets = function () {
+			/*
 			const uniqueId = (() => {
 				let id = 0;
 				return () => `placeholder-${id++}`;
@@ -955,7 +956,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			};
 
 			insertPlaceholders();
-			integrateWidgets();
+			integrateWidgets(); 
+			*/			
 		};
 		
     // Shuffle array elements

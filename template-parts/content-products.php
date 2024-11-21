@@ -18,9 +18,9 @@ $buildProduct = '<div class="entry-content">';
 	
 	$buildProduct .= '<div class="breadcrumbs">';	
 	$buildProduct .= '» <span typeof="v:Breadcrumb"><a rel="v:url" property="v:title" href="/product-overview/">Products</a></span> » ';	
-	$buildProduct .= '<span typeof="v:Breadcrumb"><a rel="v:url" property="v:title" href="/product-brand/'.$thisBrand[0]->slug.'/">'.$thisBrand[0]->name.'</a></span> » ';
-	$buildProduct .= '<span typeof="v:Breadcrumb"><a rel="v:url" property="v:title" href="/product-type/'.$thisType[0]->slug.'/">'.$thisType[0]->name.'</a></span> » ';
-	$buildProduct .= '<span typeof="v:Breadcrumb"><a rel="v:url" property="v:title" href="/product-class/'.$thisClass[0]->slug.'/">'.$thisClass[0]->name.' Quality</a></span>';
+	$buildProduct .= '<span typeof="v:Breadcrumb"><a rel="v:url" property="v:title" href="/product-brand/'.$thisBrand[0]->slug.'/">'.ucwords($thisBrand[0]->name).'</a></span> » ';
+	$buildProduct .= '<span typeof="v:Breadcrumb"><a rel="v:url" property="v:title" href="/product-type/'.$thisType[0]->slug.'/">'.ucwords($thisType[0]->name).'</a></span> » ';
+	$buildProduct .= '<span typeof="v:Breadcrumb"><a rel="v:url" property="v:title" href="/product-class/'.$thisClass[0]->slug.'/">'.ucwords($thisClass[0]->name).' Quality</a></span>';
 	
 	if ( $brochure != "" ) :
 		$is_link_valid = get_headers($brochure, 1);

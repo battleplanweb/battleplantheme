@@ -1,7 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict";
 														   
-// Raw Script: Carte Du Jour	
-														   
+// Raw Script: Carte Du Jour															   
 		
 // Handle mutliple locations		
 	getObjects('.logo').forEach(logo => {
@@ -10,7 +9,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		});
 	});
 
-	const locations = Object.entries(locArray),
+	const locations = Object.entries(locArray), 
 		  cdj_location = getCookie('cdj-loc');
 
 	locations.forEach(location => {
@@ -35,9 +34,17 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		});
 
 		document.body.classList.add(`location-${loc}`);
-		getObjects('.location-unknown, .loc').forEach(el => el.style.display = 'none');
+		getObjects('.location-unknown, .loc').forEach(el => {	
+			const displayValue = el.getAttribute('data-display'); 
+			if (!displayValue) {
+				const computedDisplay = window.getComputedStyle(el).display;
+				el.setAttribute('data-display', computedDisplay || 'block'); 
+			}
+			el.style.display = 'none';
+		});
 		getObjects(`.show-${loc}`).forEach(el => {
-			el.style.display = 'block';
+			const displayValue = el.getAttribute('data-display') || 'block'; 
+			el.style.display = displayValue;
 			el.style.opacity = 0;
 			setTimeout(() => el.style.opacity = 1, 0);
 		});

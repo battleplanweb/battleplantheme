@@ -807,6 +807,8 @@ function battleplan_add_jobsite_geo_acf_fields() {
 # Basic Site Setup
 --------------------------------------------------------------*/
 
+add_filter( 'gu_ignore_dot_org', '__return_true' );
+
 add_filter( 'body_class', function( $classes ) {
 	if ( is_post_type_archive('jobsite_geo') || is_tax('jobsite_geo-service-areas') || is_tax('jobsite_geo-services') || is_tax('jobsite_geo-techs') ) :
 		$classes = str_replace(array('sidebar-line', 'sidebar-right', 'sidebar-left'), 'sidebar-none', $classes);

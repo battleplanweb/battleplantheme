@@ -521,6 +521,9 @@ function battleplan_countTease( $id, $override=false ) {
 add_filter( 'auto_update_theme', '__return_true' );
 add_filter( 'auto_update_plugin', '__return_true' );
 
+// Allow Git Updater to work despite WP Engine problems
+add_filter( 'gu_ignore_dot_org', '__return_true' );
+
 // Disable update emails from WordPress
 add_filter('auto_plugin_update_send_email', '__return_false');
 add_filter('auto_theme_update_send_email', '__return_false');

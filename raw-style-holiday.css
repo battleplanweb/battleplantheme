@@ -56,7 +56,7 @@
 .holiday-theme #wrapper-bottom,
 .holiday-theme #colophon,
 .holiday-theme.content-sidebar-box #main-content,
-.holiday-theme .section[class*="style-"] {
+.holiday-theme .section[class*="style-"]:not(.section-lock) {
 	z-index: 									9400;
 	overflow: 									visible;
 }
@@ -66,6 +66,8 @@
 }
 
 .holiday-theme #main-content,
+.holiday-theme #primary,
+.holiday-theme #secondary,
 .holiday-theme .xmas-narrow-1,
 .holiday-theme .xmas-narrow-2,
 .holiday-theme .xmas-narrow-3 {
@@ -144,6 +146,7 @@
 	height: 									150px;
 	background: 								url('../battleplantheme/common/holiday/xmas-greenery-7.webp') no-repeat 50% 50%;
 	background-size: 							contain;
+
 }
 
 .xmas-wide::after {

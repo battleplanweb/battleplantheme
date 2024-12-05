@@ -14,16 +14,36 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 														   
 	const content_sidebar_box = getObject('.content-sidebar-box #wrapper-content #main-content');
 	const content_box = getObject('.content-box #wrapper-content #main-content');
-	const sidebar_box = getObject('.sidebar-box #wrapper-content #main-content');
+	const sidebar_box = getObject('.sidebar-box #wrapper-content #main-content');	
+    const widget_box = getObject('.widget-box #wrapper-content #main-content');
 
 	if (content_sidebar_box) {							   
 		content_sidebar_box.classList.add('xmas-corner');
 	} else if (content_box && sidebar_box) {							   
 		content_box.classList.add('xmas-corner');
 		sidebar_box.classList.add('xmas-corner');
+	} else if (content_box && widget_box) {							   
+		content_box.classList.add('xmas-corner');
+		widget_box.classList.add('xmas-corner');
+	} else if (content_box && !sidebar_box && !widget_box) {
+		const content_box_inner = getObject('.sidebar-box #wrapper-content #main-content #primary');
+		content_box_inner.classList.add('xmas-corner');
+	} else if (!content_box && sidebar_box) {							   
+		const sidebar_box_inner = getObject('.sidebar-box #wrapper-content #main-content #secondary');
+		sidebar_box_inner.classList.add('xmas-corner');
+	} else if (!content_box && widget_box) {							   
+		const widget_box_inner = getObject('.widget-box #wrapper-content #main-content #secondary');
+		widget_box_inner.classList.add('xmas-corner');
 	} else { 
 		const content_area = getObject('#wrapper-content #main-content');
-		content_area.classList.add('xmas-wide-alt');
+		if (content_area) {
+			content_area.classList.add('xmas-wide-alt');		
+			const primary = getObject('#wrapper-content #main-content #primary');
+			if (primary) {
+				const padding = parseInt(window.getComputedStyle(primary).paddingTop, 10) + 35;
+				primary.style.paddingTop = `${padding}px`;
+			}
+		}
 	}
 														   
 	const sections = getObjects('.section[class*="style-"]');

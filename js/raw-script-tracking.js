@@ -30,24 +30,44 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			carousel.setAttribute('data-track', 'testimonials');
 		});
 
+		
+	// Calculate LCP	
+		let lcpEntry = '',
+			lcpTime = 0;
+		
+		const observer = new PerformanceObserver((list) => {
+			const entries = list.getEntries();
+			entries.forEach((entry) => {
+				if ( entry.startTime > lcpTime ) {
+					lcpTime = entry.startTime;
+					lcpEntry = entry;
+				}
+			});
+		});			
+		
+		observer.observe({ type: 'largest-contentful-paint', buffered: true });
+		window.addEventListener('beforeunload', () => observer.disconnect());
 
 	// Calculate load time for page		
 		const endTime = Date.now();
-		let loadTime = (endTime - startTime) / 1000,
+		let loadTime = endTime - startTime,
 			deviceType = "desktop";
 
 		if ( getDeviceW() <= tabletCutoff ) deviceType = "tablet";
 		if ( getDeviceW() <= mobileCutoff ) deviceType = "mobile";
 		
+		loadTime += (deviceType === "desktop") ? 300 : 600;
 
 	// Wait 4 seconds to ensure visitor is engaged before counting event
 		setTimeout(() => {
-			loadTime += (deviceType === "desktop") ? 0.3 : 0.6;
-			loadTime = loadTime.toFixed(1);
+			let displayTime = loadTime > lcpTime ? loadTime : lcpTime;
+			displayTime = (displayTime/1000).toFixed(1);
 
-			if (typeof gtag === 'function') gtag("event", "join_group", { group_id: `${pageID}»${deviceType}«${loadTime}` });
+			console.log("LCP: " + lcpEntry.url + " ~ " + (lcpEntry.loadTime/1000).toFixed(1) + "s");
 
-		}, 4000);
+			if (typeof gtag === 'function') gtag("event", "join_group", { group_id: `${pageID}»${deviceType}«${displayTime}` });
+
+		}, 1);
 		
 
 	// Delay 0.3s to allow accurate contentH  

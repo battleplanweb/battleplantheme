@@ -1,9 +1,7 @@
 <?php /* Template part for displaying products */
 
-/*
-$comfort = esc_attr(get_field( "comfort" ));
-$efficiency = esc_attr(get_field( "efficiency" ));
-*/
+wp_enqueue_style( 'battleplan-style-products-hvac', get_template_directory_uri()."/style-products-hvac.css", array('battleplan-style-forms'), _BP_VERSION );
+
 $brochure = esc_url(get_field( "brochure" ));
 $allBrands = get_terms( array ( 'taxonomy' => 'product-brand', 'hide_empty' => true,) );
 $allTypes = get_terms( array ( 'taxonomy' => 'product-type', 'hide_empty' => true,) );

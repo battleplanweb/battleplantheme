@@ -134,10 +134,10 @@
 .main-navigation li.current_page_parent-has-children > a:not(.menu-icon)::after { 
 	display:										inline-block;
 	font-family: 									var(--font-icons);
-	content:   										"\e22d";
+	content:   										"\e22c";
 	font-size:										var(--font-size-text);
 	margin-left:									8px;
-	transform:										translate(1px, 1px);
+	transform:										translate(1px, 1px) rotate(90deg);
 }
 
 .main-navigation ul.sub-menu {
@@ -156,7 +156,6 @@
 #desktop-navigation ul.sub-menu {
 	display:										block;
 	position:										absolute;
-	background:										var(--light-grey);
 	border:											none;
 	min-width:										100%;
 }	
@@ -335,9 +334,10 @@
 #mobile-menu-bar .email2-btn::after {
 	position:										relative;
 	font-family: 									var(--font-icons);
-	content:   										"\e027";
+	content:   										"\e218";
 	font-size:										21px; 
 	top:											-1px;
+	transform: 										rotate(-90deg);
 }
 
 #mobile-menu-bar .mm-bar-btn.call-btn::before {
@@ -379,7 +379,7 @@
 
 
 #mobile-menu-bar .mm-bar-btn.scroll-to-top-btn::after {
-	content:   										"\e217";
+	content:   										"\e218";
 }
 
 #mobile-menu-bar .mm-bar-btn.activate-btn {
@@ -430,28 +430,15 @@
 }
 
 @keyframes phone-ring {
-    1% {transform: 								rotate(-10deg) scale(1) }
-    2% {transform: 								rotate(13deg)  scale(1.4) } 
-    3% {transform: 								rotate(-16deg) scale(1.4) } 
-    4% {transform: 								rotate(20deg)  scale(1.4) } 
-    5% {transform: 								rotate(-20deg) scale(1.4) } 
-    6% {transform: 								rotate(20deg)  scale(1.4) } 
-    7% {transform: 								rotate(-20deg) scale(1.4) } 
-    8% {transform: 								rotate(20deg)  scale(1.4) }    
-	9% {transform: 								rotate(-20deg) scale(1.4) } 
-    10% {transform: 							rotate(20deg)  scale(1.4) }     
-	11% {transform: 							rotate(-20deg) scale(1.4) } 
-    12% {transform: 							rotate(20deg)  scale(1.4) } 
-	13% {transform: 							rotate(-20deg) scale(1.4) } 
-    14% {transform: 							rotate(20deg)  scale(1.4) } 
-    15% {transform: 							rotate(-20deg) scale(1.4) } 
-    16% {transform: 							rotate(20deg)  scale(1.4) } 
-    17% {transform: 							rotate(-20deg) scale(1.3) } 
-    18% {transform: 							rotate(16deg)  scale(1.3) } 
-    19% {transform: 							rotate(-13deg) scale(1.2) } 
-    20% {transform: 							rotate(10deg)  scale(1.2) }
-	21% {transform: 							rotate(0deg)   scale(1) } 
-    100% {transform: 							rotate(0deg)   scale(1) } 
+    0%, 21%, 100% { 					transform: rotate(0deg) scale(1); }
+    1% { 								transform: rotate(-10deg) scale(1); }
+    2% { 								transform: rotate(13deg) scale(1.4); }
+    3%, 17% { 							transform: rotate(-20deg) scale(1.3); }
+    4%, 6%, 8%, 10%, 12%, 14%, 16% { 	transform: rotate(20deg) scale(1.4); }
+    5%, 7%, 9%, 11%, 13%, 15% { 		transform: rotate(-20deg) scale(1.4); }
+    18% { 								transform: rotate(16deg) scale(1.3); }
+    19% { 								transform: rotate(-13deg) scale(1.2); }
+    20% { 								transform: rotate(10deg) scale(1.2); }
 }
 
 #mobile-menu-bar .email-btn::after {    
@@ -464,13 +451,11 @@
 }
 
 @keyframes envelope-spin {
-    0% {transform: 								rotate(0deg); opacity: 1 } 
-	20% {transform: 							rotate(0deg); opacity: 1 } 
-	40% {transform: 							rotate(-30deg); opacity: 1 } 
-	43% {transform: 							rotate(360deg); opacity: 0.3 } 
-	45% {transform: 							rotate(740deg); opacity: 0 } 
-	96% {transform: 							rotate(750deg); opacity: 0 } 
-	99% {transform: 							rotate(1080deg); opacity: 1 } 
+    0%, 20% { 	transform: rotate(0deg); opacity: 1; }
+    40% { 		transform: rotate(-30deg); opacity: 1; }
+    43% { 		transform: rotate(360deg); opacity: 0.3; }
+    45%, 96% { 	transform: rotate(740deg); opacity: 0; }
+    99% { 		transform: rotate(1080deg); opacity: 1; }
 }
 
 #mobile-menu-bar .email2-btn::after {    
@@ -512,7 +497,6 @@
 
 #request-quote-modal > .flex {
 	gap: 											0 3%;
-
 }
 
 #request-quote-modal #label {
@@ -667,7 +651,6 @@
 	width:											100%;
 	height:											auto;
 	transition: 									all 0.6s linear;
-
 }
 
 .top-slide.mm-active #mobile-navigation, 
@@ -871,6 +854,7 @@ body.screen-desktop a.icon-btn.scroll-top {
 	color:											var(--white-high);
 	border:											none;
 	outline:										none;
+	padding: 										3px;
 	border-radius:									0;
 	transform: 										none;
 	z-index:										999999995; /* sits directly under mobile menu + modal boxes */
@@ -889,25 +873,25 @@ body.screen-desktop a.icon-btn.scroll-top .icon-bg {
 }
 
 body.screen-desktop a.icon-btn.scroll-top .icon,	
-body.screen-desktop a.icon-btn.scroll-top .icon::after {	
-	font-size:										35px; 
-	color:											inherit;
-	filter: 										none;
-	text-shadow: 									none;
-	transform: 										translateY(0) scale(0.75);
-}
-
+body.screen-desktop a.icon-btn.scroll-top .icon::after,
 body.screen-desktop a.icon-btn.scroll-top:hover .icon,	
 body.screen-desktop a.icon-btn.scroll-top:hover .icon::after,
 body.screen-desktop a.icon-btn.scroll-top:active .icon,	
 body.screen-desktop a.icon-btn.scroll-top:active .icon::after,
 body.screen-desktop a.icon-btn.scroll-top.tab-focus .icon,	
 body.screen-desktop a.icon-btn.scroll-top.tab-focus .icon::after {	
-	font-size:										35px; 
+	font-size:										35px;  
 	color:											inherit;
 	filter: 										none;
 	text-shadow: 									none;
 	transform: 										translateY(0) scale(0.75);
+}
+
+body.screen-desktop a.icon-btn.scroll-top .icon::after,
+body.screen-desktop a.icon-btn.scroll-top:hover .icon::after,
+body.screen-desktop a.icon-btn.scroll-top:active .icon::after,
+body.screen-desktop a.icon-btn.scroll-top.tab-focus .icon::after {	
+	transform: 										translateY(0) scale(0.75) rotate(-90deg);
 }
 
 /* Scroll Down Button (for full screen headers) */

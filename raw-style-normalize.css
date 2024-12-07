@@ -9,7 +9,7 @@
 /*--------------------------------------------------------------
 # Normalize
 --------------------------------------------- */
-sub,
+/*sub,
 sup {
 	font-size: 									var(--font-size-small);
 	line-height: 								0;
@@ -24,6 +24,7 @@ sub {
 sup {
 	top: 										-0.5em;
 }
+
 
 a.button,
 a.page-numbers,
@@ -148,6 +149,7 @@ ins {
 	background: 								var(--light-grey);
 	text-decoration: 							none;
 }
+*/
 
 /*--------------------------------------------------------------
 # Accessibility
@@ -188,9 +190,6 @@ ins {
 	width: 										auto;
 	z-index: 									100000;
 }
-
-/* Do not show the outline on the skip link target. */
-
 
 #primary[tabindex="-1"]:focus {
 	outline:									0;

@@ -1,5 +1,10 @@
 <?php /* The template for displaying archive pages for "jobsite_geo" post type */
 
+wp_enqueue_style( 'battleplan-style-posts', get_template_directory_uri()."/style-posts.css", array('parent-style'), _BP_VERSION ); 
+wp_enqueue_style( 'battleplan-style-posts', get_template_directory_uri()."/style-posts.css", array('parent-style'), _BP_VERSION );
+wp_enqueue_style( 'battleplan-jobsite_geo', get_template_directory_uri()."/style-jobsite_geo.css", array('parent-style'), _BP_VERSION ); 	
+wp_enqueue_script( 'battleplan-script-jobsite_geo', get_template_directory_uri().'/js/script-jobsite_geo.js', array(), _BP_VERSION,  array( 'strategy' => 'defer', 'in_footer' => 'true' ) );   
+
 get_header(); ?>
 
 <main id="primary" class="site-main" role="main" aria-label="main content">
@@ -170,6 +175,8 @@ get_header(); ?>
 				$buildUpdate .= '</ul>';
 
 				if ( $review ) :
+					wp_enqueue_style( 'battleplan-testimonials', get_template_directory_uri()."/style-testimonials.css", array('parent-style'), _BP_VERSION ); 
+
 					$meta = wp_get_attachment_metadata( get_post_thumbnail_id( $review ) );
 					$thumbW = $meta['sizes'][$size]['width'];
 					$thumbH = $meta['sizes'][$size]['height'];

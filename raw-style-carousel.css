@@ -204,7 +204,8 @@
 }
 
 .carousel a.carousel-control-prev .carousel-control-prev-icon::after {
-	content:										"\e216";
+	content:										"\e218";
+	transform: 										rotate(180deg);
 }
 
 .carousel-indicators {

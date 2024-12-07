@@ -1,5 +1,6 @@
 <?php /* The template for displaying archive pages */
 
+wp_enqueue_style( 'battleplan-style-posts', get_template_directory_uri()."/style-posts.css", array('parent-style'), _BP_VERSION ); 
 get_header(); ?>
 
 <main id="primary" class="site-main" role="main" aria-label="main content">
@@ -61,6 +62,8 @@ get_header(); ?>
 		
 		// Products
 			elseif ( get_post_type() === "products" ) :
+				wp_enqueue_style( 'battleplan-style-products-hvac', get_template_directory_uri()."/style-products-hvac.css", array('battleplan-style-forms'), _BP_VERSION );
+
 				$archiveHeadline = "Products";
 				$grid = "1";
 				$valign = "start";

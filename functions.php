@@ -514,6 +514,42 @@ function battleplan_countTease( $id, $override=false ) {
 	endif;	
 }
 
+// Dynamically add loading='lazy' to all images that are below #masthead
+add_filter('the_content', 'battleplan_lazy_load_img');
+function battleplan_lazy_load_img($content) {
+    if (is_admin()) return $content; 
+	
+    $dom = new DOMDocument();
+    libxml_use_internal_errors(true);
+    $dom->loadHTML($content, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+    libxml_clear_errors();
+
+    foreach ($dom->getElementsByTagName('img') as $img) {
+        if ($img instanceof DOMElement && $img->hasAttribute('loading')) {
+            continue;
+        }
+
+        $parent = $img->parentNode;
+        $insideMasthead = false;
+
+        while ($parent && $parent->nodeName !== 'html') { 
+            if ($parent instanceof DOMElement && $parent->hasAttribute('id') && $parent->getAttribute('id') === 'masthead') {
+                $insideMasthead = true;
+                break;
+            }
+            $parent = $parent->parentNode;
+        }
+
+        if ($insideMasthead) { continue; }
+
+        if ($img instanceof DOMElement) {
+            $img->setAttribute('loading', 'lazy');
+        }
+    }
+
+    return $dom->saveHTML();
+}
+
 /*--------------------------------------------------------------
 # Basic Theme Set Up
 --------------------------------------------------------------*/
@@ -994,12 +1030,12 @@ function battleplan_dequeue_unwanted_stuff() {
 	endif;
 	
 // re-load in footer
-	wp_dequeue_style( 'css-animate' );  wp_deregister_style( 'css-animate' );
+	//wp_dequeue_style( 'css-animate' );  wp_deregister_style( 'css-animate' );
 	//wp_dequeue_style( 'fontawesome' ); wp_deregister_style( 'fontawesome' );
-	if ( is_plugin_active( 'extended-widget-options/plugin.php' ) ) :
-		wp_dequeue_style( 'widgetopts-styles' ); 
-		wp_deregister_style( 'widgetopts-styles' );
-	endif;
+	//if ( is_plugin_active( 'extended-widget-options/plugin.php' ) ) :
+		//wp_dequeue_style( 'widgetopts-styles' ); 
+		//wp_deregister_style( 'widgetopts-styles' );
+	//endif;
 }
 
 // Load and enqueue styles in header
@@ -1014,7 +1050,7 @@ function battleplan_header_styles() {
 	
 	if ( get_option('timeline') && get_option('timeline')['install'] == 'true' )  wp_enqueue_style( 'battleplan-timeline', get_template_directory_uri()."/style-timeline.css", array('parent-style'), _BP_VERSION ); 
 	
-	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) wp_enqueue_style( 'battleplan-jobsite_geo', get_template_directory_uri()."/style-jobsite_geo.css", array('parent-style'), _BP_VERSION ); 	
+	//if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) wp_enqueue_style( 'battleplan-jobsite_geo', get_template_directory_uri()."/style-jobsite_geo.css", array('parent-style'), _BP_VERSION ); 	
 
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) wp_enqueue_style( 'battleplan-woocommerce', get_template_directory_uri()."/style-woocommerce.css", array('parent-style'), _BP_VERSION ); 
 	if ( is_plugin_active( 'stripe-payments/accept-stripe-payments.php' ) ) wp_enqueue_style( 'battleplan-stripe-payments', get_template_directory_uri()."/style-stripe-payments.css", array('parent-style'), _BP_VERSION );  
@@ -1027,13 +1063,13 @@ function battleplan_header_styles() {
 	$cancel_holiday = isset( $GLOBALS['customer_info']['cancel-holiday'] ) ? $GLOBALS['customer_info']['cancel-holiday'] : "false";
 	
 	if ( $cancel_holiday == "false" && time() > $start && time() < $end ) :
-	 	wp_enqueue_style( 'battleplan-style-holiday', get_template_directory_uri()."/style-holiday.css", array('parent-style'), _BP_VERSION );	
-		wp_enqueue_script( 'battleplan-holiday', get_template_directory_uri().'/js/script-holiday.js', array(), _BP_VERSION, false );		
+	 	wp_enqueue_style( 'battleplan-style-holiday', get_template_directory_uri()."/style-holiday.css", array('parent-style'), _BP_VERSION );
+		wp_enqueue_script( 'battleplan-holiday', get_template_directory_uri().'/js/script-holiday.js', array(), _BP_VERSION,  array( 'strategy' => 'defer', 'in_footer' => 'true' ) ); 		
 	endif;
 	
 	wp_enqueue_style( 'battleplan-style-forms', get_template_directory_uri()."/style-forms.css", array('battleplan-style-navigation'), _BP_VERSION );
-	wp_enqueue_style( 'battleplan-style-posts', get_template_directory_uri()."/style-posts.css", array('battleplan-style-forms'), _BP_VERSION );	
-	if ( $GLOBALS['customer_info']['site-type'] == 'hvac' ) wp_enqueue_style( 'battleplan-style-products-hvac', get_template_directory_uri()."/style-products-hvac.css", array('battleplan-style-forms'), _BP_VERSION );
+	//wp_enqueue_style( 'battleplan-style-posts', get_template_directory_uri()."/style-posts.css", array('battleplan-style-forms'), _BP_VERSION );	
+	//if ( $GLOBALS['customer_info']['site-type'] == 'hvac' ) wp_enqueue_style( 'battleplan-style-products-hvac', get_template_directory_uri()."/style-products-hvac.css", array('battleplan-style-forms'), _BP_VERSION );
 		
 	wp_enqueue_style( 'battleplan-style', get_stylesheet_directory_uri()."/style-site.css", array('battleplan-style-forms'), _BP_VERSION );	
 }
@@ -1046,8 +1082,8 @@ function battleplan_dequeue_scripts() {
 	wp_dequeue_script( 'wphb-global' ); wp_deregister_script( 'wphb-global' );
 	wp_dequeue_script( 'wp-embed' ); wp_deregister_script( 'wp-embed' );
 	wp_dequeue_script( 'modernizr' ); wp_deregister_script( 'modernizr' );
-	wp_deregister_script('wp-polyfill'); wp_dequeue_script('wp-polyfill');
-	
+	wp_dequeue_script('wp-polyfill'); wp_deregister_script('wp-polyfill'); 
+
 	if ( !is_plugin_active( 'woocommerce/woocommerce.php' ) && !is_plugin_active( 'table-sorter/table-sorter.php' ) && !is_plugin_active( 'cue/cue.php' ) ) :
 		wp_dequeue_script( 'jquery'); wp_deregister_script('jquery');	
 		wp_dequeue_script( 'jquery-js'); wp_deregister_script('jquery-js');	
@@ -1075,7 +1111,7 @@ function battleplan_enqueue_scripts() {
 
 	if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 'true' ) wp_enqueue_script( 'battleplan-script-events', get_template_directory_uri().'/js/script-events.js', array(), _BP_VERSION,  array( 'strategy' => 'defer', 'in_footer' => 'true' ) );   
 	
-	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) wp_enqueue_script( 'battleplan-script-jobsite_geo', get_template_directory_uri().'/js/script-jobsite_geo.js', array(), _BP_VERSION,  array( 'strategy' => 'defer', 'in_footer' => 'true' ) );   
+	//if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) wp_enqueue_script( 'battleplan-script-jobsite_geo', get_template_directory_uri().'/js/script-jobsite_geo.js', array(), _BP_VERSION,  array( 'strategy' => 'defer', 'in_footer' => 'true' ) );   
 	
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) wp_enqueue_script( 'battleplan-script-woocommerce', get_template_directory_uri().'/js/script-woocommerce.js', array('jquery'), _BP_VERSION,  array( 'strategy' => 'defer', 'in_footer' => 'true' ) ); 
 	if ( is_plugin_active( 'cue/cue.php' ) ) wp_enqueue_script( 'battleplan-script-cue', get_template_directory_uri().'/js/script-cue.js', array('jquery'), _BP_VERSION,  array( 'strategy' => 'defer', 'in_footer' => 'true' ) ); 
@@ -1088,7 +1124,7 @@ function battleplan_enqueue_scripts() {
 	};
 	 
 	wp_enqueue_script( 'battleplan-script-fire-off', get_template_directory_uri().'/js/script-fire-off.js', array(), _BP_VERSION,  array( 'strategy' => 'defer', 'in_footer' => 'true' ) );
-	
+	 
 	if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) wp_enqueue_script( 'comment-reply' ); 
 	
 	$saveDir = array( 'theme_dir_uri'=>get_stylesheet_directory_uri(), 'upload_dir_uri'=>wp_upload_dir()['baseurl'] );
@@ -1196,7 +1232,7 @@ if ( !is_admin() && strpos($_SERVER['REQUEST_URI'], 'wp-json') === false && strp
 
 	add_action( 'wp_print_footer_scripts', 'battleplan_delay_nonessential_scripts');
 	function battleplan_delay_nonessential_scripts() { 
-		if ( _IS_BOT != true ) : ?>
+		if ( _IS_BOT !== true ) : ?>
 			<script nonce="<?php echo _BP_NONCE !== null ? _BP_NONCE : null; ?>" type="text/javascript" id="delay-scripts">
 				const loadScriptsTimer=setTimeout(loadScripts,1500);
 				const userInteractionEvents=["mouseover","keydown","touchstart","touchmove","wheel"];
@@ -1325,6 +1361,8 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 }
 
 function bp_display_menu_search( $searchText, $mobile='', $reveal='click' ) { 
+	wp_enqueue_style( 'battleplan-search', get_template_directory_uri()."/style-search.css", array('parent-style'), _BP_VERSION ); 
+
 	$searchForm = '<form role="search" method="get" class="menu-search-form" action="'.home_url( '/' ).'">';
 	$searchForm .= '<label><span class="screen-reader-text">'._x( 'Search for:', 'label' ).'</span></label>';
 	$searchForm .= '<input type="hidden" value="1" name="sentence" />';
@@ -1571,6 +1609,8 @@ function battleplan_getGoogleRating() {
 
 			$singleLoc = !is_array($placeIDs) ? true : false;
 			if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
+	
+			wp_enqueue_style( 'battleplan-google-reviews', get_template_directory_uri()."/style-google-reviews.css", array('parent-style'), _BP_VERSION ); 
 
 			$buildPanel = '<div class="wp-gr wp-google-badge">';
 
@@ -1799,8 +1839,20 @@ function battleplan_fetch_site_icon($clear=false) {
 	return $iconData;
 }
 
+// Search & Replace for various html fixes
+add_filter('final_output', function($content) {
+	if ( !is_admin() ) : 
+		// Add 'name="description"' to the <meta property="og:description"> tag
+		$content = str_replace('property="og:description"', 'name="description" property="og:description"', $content);
+		// Remove align- to reduce redundant css
+		$content = str_replace (
+    		['alignleft', 'alignright', 'aligncenter', 'top-strip', 'divider-strip', 'logo-strip', 'site-info', ' sidebar-box', 'widget-box'],
+    		['align-left', 'align-right', 'align-center', 'strip-elem top-strip', 'strip-elem divider-strip', 'strip-elem logo-strip', 'strip-elem site-info', 'secondary-box sidebar-box', 'secondary-box widget-box'],
+    		$content);
+	endif;
+	return $content;
+});  
 
-	
 
 /*--------------------------------------------------------------
 # User Roles

@@ -646,7 +646,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	$btnPos = esc_attr($a['btn_pos']);		
 	$showTitle = esc_attr($a['show_title']);		 
 	$titlePos = esc_attr($a['title_pos']);		
-	$lazy = esc_attr($a['lazy']) === "true" ? "lazy" : "eager";
+	$lazy = esc_attr($a['lazy']) === "true" || esc_attr($a['lazy']) === "lazy" ? "lazy" : "eager";
 	$showDate = esc_attr($a['show_date']);		
 	$showAuthor = esc_attr($a['show_author']);		
 	$showSocial = esc_attr($a['show_social']);		
@@ -745,6 +745,8 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	$archiveImg = apply_filters( 'bp_archive_filter_img', $archiveImg );
 	
 	if ( $type === "testimonials" ) {
+		wp_enqueue_style( 'battleplan-testimonials', get_template_directory_uri()."/style-testimonials.css", array('parent-style'), _BP_VERSION ); 
+		
 		$testimonialPhone = esc_attr(get_field( "testimonial_phone" ));
 		$testimonialEmail = esc_attr(get_field( "testimonial_email" ));
 		$testimonialTitle = esc_attr(get_field( "testimonial_title" ));
@@ -992,8 +994,8 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	endif;	
 	$link = esc_attr($a['link']);		
 	$id = esc_attr($a['id']);	
-	$blur = esc_attr($a['blur']) == "true" ? " slider-blur" : "";	
-	$lazy = esc_attr($a['lazy']) == "true" && $slideEffect != "dissolve" ? "lazy" : "eager";
+	$blur = esc_attr($a['blur']) === "true" ? " slider-blur" : "";	
+	$lazy = esc_attr($a['lazy']) === "true" && $slideEffect !== "dissolve" ? "lazy" : "eager";
 	$mult = esc_attr($a['mult']);		
 	if ( $mult == 1 ) : 
 		$multSize = $imgSize = 100; 
@@ -1260,6 +1262,7 @@ add_shortcode( 'get-logo-slider', 'battleplan_getLogoSlider' );
 function battleplan_getLogoSlider($atts, $content = null ) {
 	wp_enqueue_script( 'battleplan-logo-slider', get_template_directory_uri().'/js/script-logo-slider.js', array(), _BP_VERSION, false );	
 	wp_enqueue_style( 'battleplan-carousel', get_template_directory_uri()."/style-carousel.css", array('parent-style'), _BP_VERSION );  
+	wp_enqueue_style( 'battleplan-logo-slider', get_template_directory_uri()."/style-logo-slider.css", array('parent-style'), _BP_VERSION ); 
 
 	$a = shortcode_atts( array( 'num'=>'-1', 'space'=>'15', 'size'=>'full', 'max_w'=>'33', 'tag'=>'', 'package'=>'', 'order_by'=>'rand', 'order'=>'ASC', 'shuffle'=>'false', 'speed'=>'slow', 'pause'=>'no', 'link'=>'false', 'lazy'=>'false', 'direction'=>'normal'), $atts );
 	$tags = explode( ',', esc_attr($a['tag']) );

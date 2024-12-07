@@ -87,7 +87,6 @@ section.section-default .flex {
 }
 
 .flex.grid-1-2-1 {
-
 	grid-template-columns: 							1fr 2fr 1fr;
 }
 
@@ -146,6 +145,9 @@ section.section-default .flex {
 	width: 											100%;
 }
 
+/* Attempting to reduce css by eliminating extra calls to same elements --- 12/6/24 */
+
+/*
 .top-strip .flex .col,
 .divider-strip .flex .col,
 .logo-strip .flex .col,
@@ -211,17 +213,17 @@ section.section-default .flex {
 .flex.align-center .col,
 .flex .col.align-center,
 .flex .col-inner div.align-center,
-.top-strip .flex.aligncenter .col,
-.divider-strip .flex.aligncenter .col,
-.logo-strip .flex.aligncenter .col,
-.site-info .flex.aligncenter .col,
-.top-strip .flex .col.aligncenter,
-.divider-strip .flex .col.aligncenter,
-.logo-strip .flex .col.aligncenter,
-.site-info .flex .col.aligncenter,
-.flex.aligncenter .col,
-.flex .col.aligncenter,
-.flex .col-inner div.aligncenter {
+.top-strip .flex.align-center .col,
+.divider-strip .flex.align-center .col,
+.logo-strip .flex.align-center .col,
+.site-info .flex.align-center .col,
+.top-strip .flex .col.align-center,
+.divider-strip .flex .col.align-center,
+.logo-strip .flex .col.align-center,
+.site-info .flex .col.align-center,
+.flex.align-center .col,
+.flex .col.align-center,
+.flex .col-inner div.align-center {
 	justify-self:									center;
 }
 
@@ -236,17 +238,17 @@ section.section-default .flex {
 .flex.align-left .col,
 .flex .col.align-left,
 .flex .col-inner div.align-left,
-.top-strip .flex.alignleft .col,
-.divider-strip .flex.alignleft .col,
-.logo-strip .flex.alignleft .col,
-.site-info .flex.alignleft .col,
-.top-strip .flex .col.alignleft,
-.divider-strip .flex .col.alignleft,
-.logo-strip .flex .col.alignleft,
-.site-info .flex .col.alignleft,
-.flex.alignleft .col,
-.flex .col.alignleft,
-.flex .col-inner div.alignleft{
+.top-strip .flex.align-left .col,
+.divider-strip .flex.align-left .col,
+.logo-strip .flex.align-left .col,
+.site-info .flex.align-left .col,
+.top-strip .flex .col.align-left,
+.divider-strip .flex .col.align-left,
+.logo-strip .flex .col.align-left,
+.site-info .flex .col.align-left,
+.flex.align-left .col,
+.flex .col.align-left,
+.flex .col-inner div.align-left{
 	justify-self:									start;
 }
 
@@ -261,17 +263,75 @@ section.section-default .flex {
 .flex.align-right .col,
 .flex .col.align-right,
 .flex .col-inner div.align-right,
-.top-strip .flex.alignright .col,
-.divider-strip .flex.alignright .col,
-.logo-strip .flex.alignright .col,
-.site-info .flex.alignright .col,
-.top-strip .flex .col.alignright,
-.divider-strip .flex .col.alignright,
-.logo-strip .flex .col.alignright,
-.site-info .flex .col.alignright,
-.flex.alignright .col,
-.flex .col.alignright,
-.flex .col-inner div.alignright{
+.top-strip .flex.align-right .col,
+.divider-strip .flex.align-right .col,
+.logo-strip .flex.align-right .col,
+.site-info .flex.align-right .col,
+.top-strip .flex .col.align-right,
+.divider-strip .flex .col.align-right,
+.logo-strip .flex .col.align-right,
+.site-info .flex .col.align-right,
+.flex.align-right .col,
+.flex .col.align-right,
+.flex .col-inner div.align-right{
+	justify-self:									end;
+}
+*/
+
+.strip-elem .flex .col,
+.flex.valign-center .col,
+.flex .col.valign-center,
+.flex .col-inner div.valign-center {
+	align-self:										center;
+}
+
+.strip-elem .flex.valign-start .col,
+.strip-elem .flex .col.valign-start,
+.flex .col,
+.flex.valign-start .col,
+.flex .col.valign-start,
+.flex .col-inner div.valign-start,
+.section .col.parallax {
+	align-self:										start;
+}
+
+.strip-elem .flex.valign-stretch .col,
+.strip-elem .flex .col.valign-stretch,
+.flex.valign-stretch .col,
+.flex .col.valign-stretch,
+.flex .col-inner div.valign-stretch {
+	align-self:										stretch;
+}
+
+.strip-elem .flex.valign-end .col,
+.strip-elem .flex .col.valign-end,
+.flex.valign-end .col,
+.flex .col.valign-end,
+.flex .col-inner div.valign-end {
+	align-self:										end;
+}
+
+.strip-elem .flex.align-center .col,
+.strip-elem .flex .col.align-center,
+.flex.align-center .col,
+.flex .col.align-center,
+.flex .col-inner div.align-center {
+	justify-self:									center;
+}
+
+.strip-elem .flex.align-left .col,
+.strip-elem .flex .col.align-left,
+.flex.align-left .col,
+.flex .col.align-left,
+.flex .col-inner div.align-left {
+	justify-self:									start;
+}
+
+.strip-elem .flex.align-right .col,
+.strip-elem .flex .col.align-right,
+.flex.align-right .col,
+.flex .col.align-right,
+.flex .col-inner div.align-right {
 	justify-self:									end;
 }
 
@@ -342,21 +402,15 @@ section.section-default .flex {
 	grid-template-columns: 							[column-1-start] minmax(0, 374px) [column-1-end column-2-start] 1fr [column-2-end];
 }
 
-.sidebar-box #main-content,
-.widget-box #main-content,
-.sidebar-right.sidebar-box #main-content,
-.sidebar-right.widget-box #main-content,
-.sidebar-box .flex.grid-content,
-.sidebar-right.sidebar-box .flex.grid-content,
-.widget-box .flex.grid-content,
-.sidebar-right.widget-box .flex.grid-content {
+.secondary-box #main-content,
+.sidebar-right.secondary-box #main-content,
+.secondary-box .flex.grid-content,
+.sidebar-right.secondary-box .flex.grid-content {
 	grid-template-columns: 							[column-1-start] 1fr [column-1-end column-2-start] minmax(0, var(--sidebar-width)) [column-2-end];
 }
 
-.sidebar-left.sidebar-box  #main-content,
-.sidebar-left.widget-box  #main-content,
-.sidebar-left.sidebar-box .flex.grid-content,
-.sidebar-left.widget-box .flex.grid-content {
+.sidebar-left.secondary-box  #main-content,
+.sidebar-left.secondary-box .flex.grid-content {
 	grid-template-columns: 							[column-1-start] minmax(0, var(--sidebar-width)) [column-1-end column-2-start] 1fr [column-2-end];
 }
 
@@ -372,12 +426,10 @@ section.section-default .flex {
 
 .content-box #main-content,
 .sidebar-line #main-content,
-.sidebar-box #main-content,
-.widget-box #main-content,
+.secondary-box #main-content,
 .content-box .flex.grid-content,
 .sidebar-line .flex.grid-content,
-.sidebar-box .flex.grid-content,
-.widget-box .flex.grid-content {
+.secondary-box .flex.grid-content {
 	gap:											0 3%;
 }
 
@@ -406,9 +458,7 @@ section.section-default .flex {
 	display:										none;
 }
 
-.header-stretch .top-strip .flex, 
-.header-stretch .divider-strip .flex, 
-.header-stretch .logo-strip .flex, 
+.header-stretch .strip-elem .flex, 
 .menu-stretch .menu-strip .flex,
 .content-stretch #main-content, 
 .footer-stretch .footer-strip .flex,
@@ -419,9 +469,7 @@ section.section-parallax-disabled section.section-stretch .flex{
 	grid-column: 									stretch-start / stretch-end;
 }
 
-.header-full .top-strip .flex, 
-.header-full .divider-strip .flex, 
-.header-full .logo-strip .flex, 
+.header-full .strip-elem .flex, 
 .menu-full .menu-strip .flex,
 .content-full #main-content, 
 .footer-full .footer-strip .flex,
@@ -432,9 +480,7 @@ section.section-parallax-disabled section.section-full .flex {
 	grid-column: 									full-start / full-end;
 }
 
-.header-edge .top-strip .flex,
-.header-edge .divider-strip .flex,
-.header-edge .logo-strip .flex, 
+.header-edge .strip-elem .flex, 
 .split-menu .menu-strip .flex,
 .menu-edge .menu-strip .flex,
 .content-edge #main-content, 
@@ -596,14 +642,13 @@ section.section .flex.nested .flex,
 .phone-number {
 	position: 										relative;
 	font-family: 									var(--font-primary);
-	font-size:										140%;
+	font-size:										1.4rem;
 }
 
 .logo-strip {
 	margin:											0;
 	padding-top:									2em;
 	padding-bottom:									2em;
-	background:										var(--white);
 	z-index:										1000;
 }
 
@@ -611,7 +656,6 @@ section.section .flex.nested .flex,
 	margin:											0;
 	padding-top:									0;
 	padding-bottom:									0;
-	background:										var(--light-grey);
 	z-index:										2000;
 }
 
@@ -806,8 +850,7 @@ a#bbblink {
  
 .section.section-lock.position-header .col-inner {
  	position: 										relative;
-}
- 
+} 
 
 .section.section-lock .closeBtn, 
 .closeBtn {
@@ -912,13 +955,7 @@ a#bbblink {
 	visibility: 									hidden;
 }
 
-.section.style-lock {
-	background:										var(--locked-background);
-	border:											var(--locked-border);
-	color:											var(--locked-color);
-	transition: 									all 0.6s var(--main-trans-easing);
-}
-
+.section.style-lock,
 .section.style-lock[data-pos="modal"] > .flex,
 .section.style-lock[data-pos="center"] > .flex {
 	background:										var(--modal-background);
@@ -938,8 +975,8 @@ a#bbblink {
 	border-bottom:									none;
 	border-left:									none;
 	border-right:									none;
-		transform: 									translateY(100vh);
-	}
+	transform: 										translateY(100vh);
+}
 
 .section.style-lock[data-pos="modal"],
 .section.style-lock[data-pos="center"] {
@@ -1015,7 +1052,6 @@ section.section.break-out {
 --------------------------------------------- */
 #colophon {
 	position:										relative;
-	background:										var(--light-grey);
 	border:											none;
 	z-index:										3000;
 }
@@ -1025,11 +1061,6 @@ section.section.break-out {
 	bottom: 										0;
 	z-index: 										1;
 	width: 											100%;
-}
-
-
-.colophon-faux {
-	pointer-events: 								none;
 }
 
 .footer-strip, 
@@ -1063,7 +1094,6 @@ section.section.break-out {
 }
 
 .site-info .col-inner .block-image {
-
 	order:											1;
 	text-align: 									right;
 }
@@ -1102,9 +1132,7 @@ section.section.break-out {
 .grid-3e,
 .gallery-column-3 {
 	grid-template-columns: 							repeat(3, 1fr);
-
 }
-
 
 .grid-4e,
 .gallery-column-4 {
@@ -1185,13 +1213,20 @@ dl.col-gallery {
 		max-width:										100% !important;
 	}
 	
-	/* Row of Pics */
+	/* Row of Pics 
 	.grid-7e .col:nth-last-child(1),
 	.grid-8e .col:nth-last-child(1),
 	.grid-8e .col:nth-last-child(2),
 	.grid-7e li:nth-last-child(1),
 	.grid-8e li:nth-last-child(1),
 	.grid-8e li:nth-last-child(2) {
+		display:										none !important;
+	}*/
+	
+	.grid-7e .col:nth-last-child(1),
+	.grid-8e .col:nth-last-child(-n+2),
+	.grid-7e li:nth-last-child(1),
+	.grid-8e li:nth-last-child(-n+2) {
 		display:										none !important;
 	}
 	
@@ -1331,9 +1366,8 @@ dl.col-gallery {
 		padding:										var(--measure-large) var(--measure-base);
 	}
 	
-	.sidebar-box #secondary,
-	.content-sidebar-box #secondary,
-	.widget-box #secondary { 
+	.secondary-box #secondary,
+	.content-sidebar-box #secondaryy { 
 		padding:										var(--measure-large) 0;
 	}
 	
@@ -1342,10 +1376,9 @@ dl.col-gallery {
 	}
 
 	.no-box #secondary .sidebar-inner, 
-	.sidebar-box #secondary .sidebar-inner,
+	.secondary-box #secondary .sidebar-inner,
 	.content-sidebar-box #secondary .sidebar-inner,
-	.sidebar-line #secondary .sidebar-inner,
-	.widget-box #secondary .sidebar-inner {
+	.sidebar-line #secondary .sidebar-inner {
 		padding:										0 var(--measure-base);
 	}
 	
@@ -1390,8 +1423,6 @@ dl.col-gallery {
 	@supports (-webkit-touch-callout: none) and (not (translate: none)) {
 		.widget {
 			margin: 										0.75em !important;
-
-
 		}
 	}	
 		
@@ -1458,13 +1489,9 @@ dl.col-gallery {
 	}
 	
 	.align-left.size-half-f,
-	.alignleft.size-half-f,
 	.align-right.size-half-f,
-	.alignright.size-half-f,
 	.align-left.size-half-s,
-	.alignleft.size-half-s,
-	.align-right.size-half-s,
-	.alignright.size-half-s {
+	.align-right.size-half-s {
 		max-width:										40%;
 	}
 			
@@ -1576,7 +1603,7 @@ dl.col-gallery {
 		flex-flow: 										column;
 	}
 			
-	/* Row of Pics */
+	/* Row of Pics 
 	.grid-4e .col-row-of-pics:nth-last-child(1),
 	.grid-5e .col-row-of-pics:nth-last-child(1),
 	.grid-5e .col-row-of-pics:nth-last-child(2),
@@ -1595,6 +1622,19 @@ dl.col-gallery {
 	.grid-7e li:nth-last-child(4),
 	.grid-8e li:nth-last-child(4),
 	.grid-8e li:nth-last-child(5) {
+		display:										none !important;
+	}*/
+	
+	.grid-4e .col-row-of-pics:nth-last-child(1),
+	.grid-4e li:nth-last-child(1),
+	.grid-5e .col-row-of-pics:nth-last-child(-n+2),
+	.grid-5e li:nth-last-child(-n+2),
+	.grid-6e .col-row-of-pics:nth-last-child(-n+3),
+	.grid-6e li:nth-last-child(-n+3),
+	.grid-7e .col-row-of-pics:nth-last-child(-n+4),
+	.grid-7e li:nth-last-child(-n+4),
+	.grid-8e .col-row-of-pics:nth-last-child(-n+5),
+	.grid-8e li:nth-last-child(-n+5) {
 		display:										none !important;
 	}	
 	
@@ -1649,58 +1689,38 @@ dl.col-gallery {
 	}
 
 	.align-left.size-half-f,
-	.alignleft.size-half-f,
 	.align-right.size-half-f,
-	.alignright.size-half-f,
 	.align-left.size-half-s,
-	.alignleft.size-half-s,
-	.align-right.size-half-s,
-	.alignright.size-half-s {
+	.align-right.size-half-s {
 		max-width:										100%;
 		float:											none !important;
 		margin: 										var(--measure-base) auto !important;
 	}
 	
 	.align-left.size-third-f,
-	.alignleft.size-third-f,
 	.align-right.size-third-f,
-	.alignright.size-third-f,
 	.align-left.size-third-s,
-	.alignleft.size-third-s,
-	.align-right.size-third-s,
-	.alignright.size-third-s {
+	.align-right.size-third-s {
 		max-width:										65%;
 		float:											none !important;
 		margin: 										var(--measure-base) auto !important;
 	}
 
 	.align-left.size-quarter-f,
-	.alignleft.size-quarter-f,
 	.align-right.size-quarter-f,
-	.alignright.size-quarter-f,
 	.align-left.size-quarter-s,
-	.alignleft.size-quarter-s,
-	.align-right.size-quarter-s,
-	.alignright.size-quarter-s {
+	.align-right.size-quarter-s {
 		max-width:										calc(45% - var(--measure-base));
 	}
 	
 	.inset-shadow img.align-left.size-half-f, 
-	.inset-shadow img.alignleft.size-half-f, 
 	.inset-shadow img.align-right.size-half-f, 
-	.inset-shadow img.alignright.size-half-f, 
 	.inset-shadow img.align-left.size-half-s, 
-	.inset-shadow img.alignleft.size-half-s, 
-	.inset-shadow img.align-right.size-half-s, 
-	.inset-shadow img.alignright.size-half-s,
+	.inset-shadow img.align-right.size-half-s,
 	.inset-shadow img.align-left.size-third-f,
-	.inset-shadow img.alignleft.size-third-f,
 	.inset-shadow img.align-right.size-third-f,
-	.inset-shadow img.alignright.size-third-f,
 	.inset-shadow img.align-left.size-third-s,
-	.inset-shadow img.alignleft.size-third-s,
-	.inset-shadow img.align-right.size-third-s,
-	.inset-shadow img.alignright.size-third-s {
+	.inset-shadow img.align-right.size-third-s {
 		margin:											0 auto !important;
 	}
 	
@@ -1779,7 +1799,6 @@ dl.col-gallery {
 	.grid-7e li:nth-last-child(5),
 	.grid-8e li:nth-last-child(6) {
 		display:										none !important;
-
 	}	
 	
 	.flex .col.col-row-of-pics {

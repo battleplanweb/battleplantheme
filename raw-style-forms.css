@@ -890,7 +890,6 @@ input + .wpcf7-not-valid-tip {
 	transition: 									all 0.1s var(--main-trans-easing);
 }
 
-
 .wpcf7-form.submitting .wpcf7-spinner {
 	opacity: 										1;
 	transition: 									all 0.1s var(--main-trans-easing);
@@ -899,7 +898,7 @@ input + .wpcf7-not-valid-tip {
 span.wpcf7-spinner::before {
 	display:										inline-block;
 	font-family: 									var(--font-icons);
-	content:   										"\e1ef";
+	content:   										"\e1f9";
 	font-size:										20px;
 	margin-left:									8px;
 	color: 											var(--input-background);

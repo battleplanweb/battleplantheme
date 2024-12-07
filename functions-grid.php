@@ -376,8 +376,9 @@ function battleplan_buildButton( $atts, $content = null ) {
 	$top = esc_attr($a['top']);
 	$adjust = $left != 0 || $top != 0 ? ' style="transform: translate('.$left.'px, '.$top.'px)"' : '';
 	if ( $icon == "true" ) $icon = "chevron-right";	
-	if ( $fancy != "" ) $fancy = "-".$fancy;
+	if ( $fancy !== "" ) $fancy = "-".$fancy;
 	if ( $icon != "false" ) : 
+		wp_enqueue_style( 'battleplan-fancy-btn', get_template_directory_uri()."/style-fancy-btn.css", array('parent-style'), _BP_VERSION ); 
 		$class .= " fancy".$fancy; 
 		$content = '<span class="fancy-text">'.$content.'</span><span class="fancy-icon"><span class="icon '.$icon.'"'.$adjust.'></span></span>'; 
 		array_push($GLOBALS['icon-css'], $icon);

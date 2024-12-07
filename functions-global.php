@@ -13,7 +13,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2024.25.12' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2024.26.0' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -217,10 +217,10 @@ $GLOBALS['icons']['cart'] = '\e0f4';
 $GLOBALS['icons']['chain-link'] = '\e116';
 $GLOBALS['icons']['checkmark'] = '\e13e';
 $GLOBALS['icons']['checkmark-seal'] = '\e0a3';
-$GLOBALS['icons']['chevron-down'] = '\e219';
-$GLOBALS['icons']['chevron-left'] = '\e216';
+$GLOBALS['icons']['chevron-down'] = '\e218';
+$GLOBALS['icons']['chevron-left'] = '\e218';
 $GLOBALS['icons']['chevron-right'] = '\e218';
-$GLOBALS['icons']['chevron-up'] = '\e217';
+$GLOBALS['icons']['chevron-up'] = '\e218';
 $GLOBALS['icons']['clipboard-check'] = '\e06e';
 $GLOBALS['icons']['cog'] = '\e0ea';
 $GLOBALS['icons']['construction-concrete-truck'] = '\e0ef';

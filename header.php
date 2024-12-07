@@ -11,7 +11,11 @@
 ?> 
  
 <html lang="en">
-<head>	
+<head>		
+	<meta charset="<?php bloginfo( 'charset' ); ?>">	
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="profile" href="https://gmpg.org/xfn/11">	
+
 	<script nonce="<?php echo _BP_NONCE; ?>" type="text/javascript">
 		const startTime = Date.now();
 		const site_bg = '<?php echo battleplan_fetch_background_image() ?>';
@@ -21,24 +25,29 @@
 			?>const google_ad_location = null;<?php 
 		endif; ?>		
 	</script>	
-	<meta charset="<?php bloginfo( 'charset' ); ?>">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<link rel="profile" href="https://gmpg.org/xfn/11">	
 	
-	<?php if ( isset($GLOBALS['customer_info']['lcp']) && !is_mobile() ) : ?>
-		<link rel="preload" fetchpriority="high" as="image" href="<?php echo get_site_url() ?>/wp-content/uploads/<?php echo $GLOBALS['customer_info']['lcp'][0] ?>.<?php echo $GLOBALS['customer_info']['lcp'][1] ?>" type="image/<?php echo $GLOBALS['customer_info']['lcp'][1] ?>">	
+	<?php if ( isset($GLOBALS['customer_info']['lcp']) && !is_mobile() ) : 
+		$file = $GLOBALS['customer_info']['lcp'];
+		$file_ext = pathinfo($file);	
+	?>
+		<link rel="preload" fetchpriority="high" as="image" href="<?php echo get_site_url() ?>/wp-content/uploads/<?php echo $file ?>" type="image/<?php echo $file_ext['extension'] ?>">	
 	<?php endif; ?>
-	<?php if ( isset($GLOBALS['customer_info']['m-lcp']) && is_mobile() ) : ?>
-		<link rel="preload" fetchpriority="high" as="image" href="<?php echo get_site_url() ?>/wp-content/uploads/<?php echo $GLOBALS['customer_info']['m-lcp'][0] ?>.<?php echo $GLOBALS['customer_info']['m-lcp'][1] ?>" type="image/<?php echo $GLOBALS['customer_info']['m-lcp'][1] ?>">	
+	<?php if ( isset($GLOBALS['customer_info']['m-lcp']) && is_mobile() ) :
+		$file = $GLOBALS['customer_info']['m-lcp'];
+		$file_ext = pathinfo($file);	
+	?>
+		<link rel="preload" fetchpriority="high" as="image" href="<?php echo get_site_url() ?>/wp-content/uploads/<?php echo $file ?>" type="image/<?php echo $file_ext['extension'] ?>">	
 	<?php endif; ?>
-	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/open-sans-v17-latin-regular.woff2" crossorigin="anonymous">
-	<link rel="preload" as="font" type="font/woff2" href="<?php echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/BP-Icons.woff2" crossorigin="anonymous">
+	<!--
+		<link rel="preload" as="font" type="font/woff2" href="<?php //echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/opensans-regular.woff2" crossorigin="anonymous">
+		<link rel="preload" as="font" type="font/woff2" href="<?php //echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/bp-icons.woff2" crossorigin="anonymous">
+	-->
 
-	<?php if ( isset($GLOBALS['customer_info']['site-fonts']) ) :
-		foreach ( $GLOBALS['customer_info']['site-fonts'] as $siteFont ) :
-			if ( $siteFont != "" ) echo '<link rel="preload" as="font" type="font/woff2" href="'.get_site_url().'/wp-content/themes/battleplantheme-site/fonts/'.$siteFont.'.woff2" crossorigin="anonymous">';
-		endforeach;
-	endif; ?>
+	<?php //if ( isset($GLOBALS['customer_info']['site-fonts']) ) :
+		//foreach ( $GLOBALS['customer_info']['site-fonts'] as $siteFont ) :
+			//if ( $siteFont != "" ) echo '<link rel="preload" as="font" type="font/woff2" href="'.get_site_url().'/wp-content/themes/battleplantheme-site/fonts/'.$siteFont.'.woff2" crossorigin="anonymous">';
+		//endforeach;
+	//endif; ?>
 	
 	<link rel="preconnect" href="https://googletagmanager.com/">
 
@@ -47,6 +56,11 @@
 	<?php wp_head(); ?>
 	
 	<?php //bp_google_tag_manager(); // moved to footer 9/4/24 to help with render blocking for Core Web Vitals --- noticed instant savings?>
+<!--
+<style id="no-bg-img">
+    *{background-image:none!important}
+</style>
+-->
 </head>
 
 <body id="<?php echo get_the_ID(); ?>" <?php body_class( battleplan_getUserRole() ); ?>>

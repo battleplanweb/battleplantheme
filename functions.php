@@ -517,7 +517,7 @@ function battleplan_countTease( $id, $override=false ) {
 // Dynamically add loading='lazy' to all images that are below #masthead
 add_filter('the_content', 'battleplan_lazy_load_img');
 function battleplan_lazy_load_img($content) {
-    if (is_admin()) return $content; 
+    if (is_admin() || empty($content)) return $content; 
 	
     $dom = new DOMDocument();
     libxml_use_internal_errors(true);

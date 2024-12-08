@@ -28,30 +28,18 @@
 	
 	<?php if ( isset($GLOBALS['customer_info']['lcp']) && !is_mobile() ) : 
 		$file = $GLOBALS['customer_info']['lcp'];
-		$file_ext = pathinfo($file);	
-	
 		if (is_string($file)) {
-			$file_ext = pathinfo($file);
-		} else {
-			$file = null;
-			$file_ext = null;
-		}
-	?>
-		<link rel="preload" fetchpriority="high" as="image" href="<?php echo get_site_url() ?>/wp-content/uploads/<?php echo $file ?>" type="image/<?php echo $file_ext['extension'] ?>">	
-	<?php endif; ?>
-	<?php if ( isset($GLOBALS['customer_info']['m-lcp']) && is_mobile() ) :
+			$file_ext = pathinfo($file); ?>
+			<link rel="preload" fetchpriority="high" as="image" href="<?php echo get_site_url() ?>/wp-content/uploads/<?php echo $file ?>" type="image/<?php echo $file_ext['extension'] ?>">	
+		<?php }
+	endif; 
+	if ( isset($GLOBALS['customer_info']['m-lcp']) && is_mobile() ) :
 		$file = $GLOBALS['customer_info']['m-lcp'];
-		$file_ext = pathinfo($file);	
-	
 		if (is_string($file)) {
-			$file_ext = pathinfo($file);
-		} else {
-			$file = null;
-			$file_ext = null;
-		}
-	?>
-		<link rel="preload" fetchpriority="high" as="image" href="<?php echo get_site_url() ?>/wp-content/uploads/<?php echo $file ?>" type="image/<?php echo $file_ext['extension'] ?>">	
-	<?php endif; ?>
+			$file_ext = pathinfo($file); ?>
+			<link rel="preload" fetchpriority="high" as="image" href="<?php echo get_site_url() ?>/wp-content/uploads/<?php echo $file ?>" type="image/<?php echo $file_ext['extension'] ?>">	
+		<?php }
+	endif; ?>
 	<!--
 		<link rel="preload" as="font" type="font/woff2" href="<?php //echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/opensans-regular.woff2" crossorigin="anonymous">
 		<link rel="preload" as="font" type="font/woff2" href="<?php //echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/bp-icons.woff2" crossorigin="anonymous">

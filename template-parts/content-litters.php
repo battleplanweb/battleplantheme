@@ -37,6 +37,7 @@ $price = esc_attr(get_field( "price" ));
 $depositHold = esc_attr(get_field( "deposit_hold" ));
 $depositBorn = esc_attr(get_field( "deposit_born" ));
 $deposit = ($depositHold ? $depositHold : 0) + ($depositBorn ? $depositBorn : 0);
+$dueAtPickuip = (int)$price - (int)$deposit;
 
 $search = ['( BLK )', '( YLW )', '( CHOC )'];
 $replace = ['', '', ''];
@@ -108,13 +109,13 @@ update_post_meta( $post_id, 'updated_date', esc_attr($updated) );
 		
 		//if ( $depositBorn && ( $litterStatus == "Expecting" || strtotime(date('F j, Y')) < strtotime($readyDate)) ) : $buildLitter .= '<li style="margin-top:-0.5em"><span class="label"></span>$'.number_format($depositBorn, 0, ".", ",").' <span style="font-size:70%;">due at birth</span></li>'; endif;
 
-		if ( $depositHold && $litterStatus == "Expecting" ) : $buildLitter .= '<li style="margin-top:-0.5em"><span class="label">Deposit: </span>$'.number_format($depositHold, 0, ".", ",").' <span style="font-size:70%;">to hold a pup</span></li>'; endif;
+		if ( $depositHold && $litterStatus == "Expecting" ) : $buildLitter .= '<li style="margin-top:-0.5em; font-size:75%"><span class="label">Deposit: </span>$'.number_format($depositHold, 0, ".", ",").' <span style="font-size:70%;">to hold a pup</span></li>'; endif;
 		
-		if ( $depositBorn && $litterStatus == "Expecting" ) : $buildLitter .= '<li style="margin-top:-0.5em"><span class="label"></span>$'.number_format($depositBorn, 0, ".", ",").' <span style="font-size:70%;">due at birth</span></li>'; endif;
+		if ( $depositBorn && $litterStatus == "Expecting" ) : $buildLitter .= '<li style="margin-top:-0.5em; font-size:75%"><span class="label"></span>$'.number_format($depositBorn, 0, ".", ",").' <span style="font-size:70%;">due at birth</span></li>'; endif;
 
-		if ( $litterStatus == "Available" ) : $buildLitter .= '<li style="margin-top:-0.5em"><span class="label">Deposit: </span>$'.number_format($deposit, 0, ".", ",").'</li>'; endif;
-
+		if ( $litterStatus == "Available" ) : $buildLitter .= '<li style="margin-top:-0.5em; font-size:75%"><span class="label">Deposit: </span>$'.number_format($deposit, 0, ".", ",").'</li>'; endif;
 		
+		if ( $price || $depositHold ||$depositBorn ) : $buildLitter .= '<li style="margin-top:-0.5em; font-size:75%"><span class="label">Due At Pickup: </span>$'.number_format($dueAtPickuip, 0, ".", ",").' + sales tax</li>'; endif;
 		
 		if ( $litterStatus == "Expecting" && $birthDate != '' ) : 
 			$buildLitter .= '<li><span class="label">Expected: </span>'.date('F Y', strtotime($birthDate)).'</li>';	

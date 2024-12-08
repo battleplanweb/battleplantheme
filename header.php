@@ -29,12 +29,26 @@
 	<?php if ( isset($GLOBALS['customer_info']['lcp']) && !is_mobile() ) : 
 		$file = $GLOBALS['customer_info']['lcp'];
 		$file_ext = pathinfo($file);	
+	
+		if (is_string($file)) {
+			$file_ext = pathinfo($file);
+		} else {
+			$file = null;
+			$file_ext = null;
+		}
 	?>
 		<link rel="preload" fetchpriority="high" as="image" href="<?php echo get_site_url() ?>/wp-content/uploads/<?php echo $file ?>" type="image/<?php echo $file_ext['extension'] ?>">	
 	<?php endif; ?>
 	<?php if ( isset($GLOBALS['customer_info']['m-lcp']) && is_mobile() ) :
 		$file = $GLOBALS['customer_info']['m-lcp'];
 		$file_ext = pathinfo($file);	
+	
+		if (is_string($file)) {
+			$file_ext = pathinfo($file);
+		} else {
+			$file = null;
+			$file_ext = null;
+		}
 	?>
 		<link rel="preload" fetchpriority="high" as="image" href="<?php echo get_site_url() ?>/wp-content/uploads/<?php echo $file ?>" type="image/<?php echo $file_ext['extension'] ?>">	
 	<?php endif; ?>

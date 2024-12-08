@@ -520,7 +520,10 @@ function battleplan_lazy_load_img($content) {
     if (is_admin() || empty($content)) return $content; 
 	
     $dom = new DOMDocument();
-    libxml_use_internal_errors(true);
+    libxml_use_internal_errors(true);	
+	
+    $content = '<div id="temp_wrapper">' . $content . '</div>';	
+	
     $dom->loadHTML($content, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
     libxml_clear_errors();
 
@@ -547,7 +550,10 @@ function battleplan_lazy_load_img($content) {
         }
     }
 
-    return $dom->saveHTML();
+    $processedContent = $dom->saveHTML();
+    $processedContent = preg_replace('/^<div id="temp_wrapper">|<\/div>$/', '', $processedContent);
+
+    return $processedContent;
 }
 
 /*--------------------------------------------------------------
@@ -1847,10 +1853,10 @@ add_filter('final_output', function($content) {
 		// Remove align- to reduce redundant css
 		$content = str_replace (
     		['alignleft', 'alignright', 'aligncenter', 'top-strip', 'divider-strip', 'logo-strip', 'site-info', ' sidebar-box', 'widget-box'],
-    		['align-left', 'align-right', 'align-center', 'strip-elem top-strip', 'strip-elem divider-strip', 'strip-elem logo-strip', 'strip-elem site-info', 'secondary-box sidebar-box', 'secondary-box widget-box'],
+    		['align-left', 'align-right', 'align-center', 'strip-elem top-strip', 'strip-elem divider-strip', 'strip-elem logo-strip', 'strip-elem site-info', ' secondary-box sidebar-box', 'secondary-box widget-box'],
     		$content);
 	endif;
-	return $content;
+	return $content; 
 });  
 
 

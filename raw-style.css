@@ -5,7 +5,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 2024.26.2
+Version: 2024.26.3
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -384,7 +384,7 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
 --------------------------------------------- */
 @font-face { font-family: 'Open Sans'; font-display: fallback; font-style: normal; font-weight: 400; src: url('../battleplantheme/fonts/opensans-regular.woff2') format('woff2') }
 @font-face { font-family: 'Open Sans'; font-display: fallback; font-style: normal; font-weight: 700; src: url('../battleplantheme/fonts/opensans-bold.woff2') format('woff2') }
-@font-face { font-family: 'BP Icons'; font-display: block; font-style: normal; font-weight: 400; src: url('../battleplantheme/fonts/bp-icons.woff2') format('woff2') }
+@font-face { font-family: 'BP Icons'; font-display: block; font-style: normal; font-weight: 400; src: url('../battleplantheme/fonts/BP-Icons.woff2') format('woff2') }
 
 html {
 	-webkit-text-size-adjust: 						none;

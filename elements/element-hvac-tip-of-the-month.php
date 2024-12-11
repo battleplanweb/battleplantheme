@@ -140,7 +140,7 @@ return do_shortcode('
 	[txt size="100"]
 	 <h2><span style="font-size:70%">'.$month.' Tip Of The Month</span></h2><h2>'.$headline.'</h2>
 
-	 <img src="'.$image.'" alt="'.$alt.'" class="alignright size-third-s" width="260" height="260" style="aspect-ratio:260/260" />
+	 <img src="'.$image.'" alt="'.$alt.'" class="align-right size-third-s" width="260" height="260" style="aspect-ratio:260/260" />
 
 	 '.$tip.'
 	[/txt]			

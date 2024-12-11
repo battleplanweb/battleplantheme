@@ -298,7 +298,6 @@ ol:first-child {
 }
 
 p:last-child,
-#wrapper-content img.aligncenter:last-child,
 #wrapper-content img.align-center:last-child,
 ul:last-child,
 ol:not(.carousel-indicators):last-child,

@@ -1415,7 +1415,9 @@ function battleplan_setUpWPGallery( $atts, $content = null ) {
 	$gallery .= "<div class='lightbox-overlay'>";
 	$gallery .= "<img class='lightbox-image'>";
 	$gallery .= "<div class='lightbox-counter'></div>";
-	$gallery .= "<div class='closeBtn' aria-label='close' aria-hidden='false' tabindex='0'><span class='icon x-large'></span></div>";
+	//$gallery .= "<div class='closeBtn' aria-label='close' aria-hidden='false' tabindex='0'><span class='icon x-large'></span></div>";
+	/* WP3 validation 12/11/24 */
+	$gallery .= "<button class='closeBtn' aria-label='close'><span class='icon x-large'></span></button>";
 	$gallery .= "<div class='block block-button button-prev'><button><span class='gallery-prev-icon' aria-label='Previous Photo'><span class='sr-only'>Previous Photo</span></span></button></div>";
 	$gallery .= "<div class='block block-button button-next'><button><span class='gallery-next-icon' aria-label='Next Photo'><span class='sr-only'>Next Photo</span></span></button></div>";
 	$gallery .= "</div>";	
@@ -1427,7 +1429,7 @@ function battleplan_setUpWPGallery( $atts, $content = null ) {
 // Build a coupon
 add_shortcode( 'coupon', 'battleplan_coupon' );
 function battleplan_coupon( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'action'=>'Mention Our Website For', 'discount'=>'$20 OFF', 'service'=>'Service Call', 'disclaimer'=>'First time customers only.  Limited time offer.  Not valid with any other offer.  Must mention coupon at time of appointment.  During regular business hours only.  Limit one coupon per system.', 'img'=>'', 'img-pos'=>'alignright', 'img-class'=>'' ), $atts );
+	$a = shortcode_atts( array( 'action'=>'Mention Our Website For', 'discount'=>'$20 OFF', 'service'=>'Service Call', 'disclaimer'=>'First time customers only.  Limited time offer.  Not valid with any other offer.  Must mention coupon at time of appointment.  During regular business hours only.  Limit one coupon per system.', 'img'=>'', 'img-pos'=>'align-right', 'img-class'=>'' ), $atts );
 	
 	$image = esc_attr($a['img']);
 	

@@ -3,7 +3,7 @@
 wp_enqueue_style( 'battleplan-style-posts', get_template_directory_uri()."/style-posts.css", array('parent-style'), _BP_VERSION ); 
 get_header(); ?>
 
-<main id="primary" class="site-main" role="main" aria-label="main content">
+<div id="primary" class="site-main" role="main" aria-label="main content">
 
 	<?php bp_before_site_main_inner(); ?>	
 		
@@ -79,7 +79,7 @@ get_header(); ?>
 		
 			if ( get_post_type() == "testimonials" ) :		
 				$buildIntro = "";		
-				if ( $facebookLink != "reviews/" ) $buildIntro .= '<a class="noFX alignright size-quarter-s" style="margin-top:0;" href="/review/"><img alt="Like Us on Facebook" src="/wp-content/themes/battleplantheme/common/logos/'.$facebookIcon.'.webp" class="noFX" width="190" height="190" /></a>';
+				if ( $facebookLink != "reviews/" ) $buildIntro .= '<a class="noFX align-right size-quarter-s" style="margin-top:0;" href="/review/"><img alt="Like Us on Facebook" src="/wp-content/themes/battleplantheme/common/logos/'.$facebookIcon.'.webp" class="noFX" width="190" height="190" /></a>';
 				$buildIntro .= '[txt]<p>Our customers really like us! But don’t take our word for it. Here are some actual reviews posted by our customers on the web.</p>';				
 				if ( $facebookLink != "reviews/" ) $buildIntro .= '<p>If YOU are a satisfied customer, we invite you to click the "thumbs up" icon to review your experience with our business.  Thank you!</p>';		
 				$buildIntro .= '[/txt]';				
@@ -169,6 +169,6 @@ get_header(); ?>
 	
 	<?php bp_after_site_main_inner(); ?>	
 
-</main><!-- #primary .site-main -->
+</div><!-- #primary .site-main -->
 
 <?php get_footer();

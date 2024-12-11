@@ -36,7 +36,7 @@ if ( $type == "teaser" ) :
 		 [txt size="100"]
 		 <h2>Maintenance Tips</h2>
 
-		 <img src="/wp-content/themes/battleplantheme/common/hvac-generic/maintenance-tips-teaser.jpg" loading="lazy" alt="Above view of equipment being worked on." class="alignright size-quarter-s" width="338" height="338" style="aspect-ratio:338/338" />
+		 <img src="/wp-content/themes/battleplantheme/common/hvac-generic/maintenance-tips-teaser.jpg" loading="lazy" alt="Above view of equipment being worked on." class="align-right size-quarter-s" width="338" height="338" style="aspect-ratio:338/338" />
 
 		 <p>The life of your heating & cooling system depends on the service and care you give it. Proper care assures good performance.</p>
 		 <p>We have put together a set of simple "Dos and Don\'ts" that every homeowner should follow.</p>

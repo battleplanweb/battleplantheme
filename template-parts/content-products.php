@@ -12,7 +12,7 @@ $thisClass = get_the_terms( $post->ID , 'product-class' );
 
 $buildProduct = '<div class="entry-content">';
 
-	if ( has_post_thumbnail() ) : $buildProduct .= get_the_post_thumbnail( $post->ID, 'thumbnail', array('class' => 'alignright '.get_post_type().'-img size-third-s')); endif;	
+	if ( has_post_thumbnail() ) : $buildProduct .= get_the_post_thumbnail( $post->ID, 'thumbnail', array('class' => 'align-right '.get_post_type().'-img size-third-s')); endif;	
 	
 	$buildProduct .= '<div class="breadcrumbs">';	
 	$buildProduct .= '» <span typeof="v:Breadcrumb"><a rel="v:url" property="v:title" href="/product-overview/">Products</a></span> » ';	

@@ -885,7 +885,7 @@ input + .wpcf7-not-valid-tip {
 .wpcf7-form .wpcf7-spinner {
 	display: 										inline-block;
 	width: 											0;
-	transform: 										translate(0px, -3px);
+	transform: 										translate(12px, 1px);
 	opacity: 										0;
 	transition: 									all 0.1s var(--main-trans-easing);
 }
@@ -895,12 +895,21 @@ input + .wpcf7-not-valid-tip {
 	transition: 									all 0.1s var(--main-trans-easing);
 }
 
+/* Keyframes for the spin animation */
+@keyframes spin {
+    from {
+        transform: 									rotate(0deg);
+    }
+    to {
+        transform: 									rotate(360deg);
+    }
+}
+
 span.wpcf7-spinner::before {
 	display:										inline-block;
 	font-family: 									var(--font-icons);
 	content:   										"\e1f9";
 	font-size:										20px;
-	margin-left:									8px;
 	color: 											var(--input-background);
 	animation-name: 								spin; 
     animation-duration: 							1s; 

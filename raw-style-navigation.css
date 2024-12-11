@@ -162,8 +162,8 @@
 
 #desktop-navigation li:hover ul.sub-menu,
 #desktop-navigation li.active ul.sub-menu,
-#desktop-navigation li.tab-focus ul.sub-menu,
 .main-navigation ul.sub-menu.active,
+#desktop-navigation li.tab-focus ul.sub-menu,
 #desktop-navigation li.menu-item-has-children[aria-expanded="true"] ul.sub-menu {
 	visibility:										visible;
 	opacity:										1;
@@ -332,12 +332,12 @@
 #mobile-menu-bar .mm-bar-btn.call-btn::before,
 #mobile-menu-bar .email-btn::after,
 #mobile-menu-bar .email2-btn::after {
+	display: 										block;
 	position:										relative;
 	font-family: 									var(--font-icons);
-	content:   										"\e218";
+	content:   										"\e027";
 	font-size:										21px; 
 	top:											-1px;
-	transform: 										rotate(-90deg);
 }
 
 #mobile-menu-bar .mm-bar-btn.call-btn::before {
@@ -380,6 +380,7 @@
 
 #mobile-menu-bar .mm-bar-btn.scroll-to-top-btn::after {
 	content:   										"\e218";
+	transform: 										rotate(-90deg);
 }
 
 #mobile-menu-bar .mm-bar-btn.activate-btn {
@@ -434,6 +435,7 @@
     1% { 								transform: rotate(-10deg) scale(1); }
     2% { 								transform: rotate(13deg) scale(1.4); }
     3%, 17% { 							transform: rotate(-20deg) scale(1.3); }
+
     4%, 6%, 8%, 10%, 12%, 14%, 16% { 	transform: rotate(20deg) scale(1.4); }
     5%, 7%, 9%, 11%, 13%, 15% { 		transform: rotate(-20deg) scale(1.4); }
     18% { 								transform: rotate(16deg) scale(1.3); }
@@ -599,7 +601,7 @@
 
 #mobile-navigation li.menu-item-has-children > a::after,
 #mobile-navigation li.current_page_parent-has-children > a::after { 
-	transform:										translate(2px, 0);
+	transform:										translate(2px, 0) rotate(90deg);
 }
 
 .side-slide #mobile-navigation, 

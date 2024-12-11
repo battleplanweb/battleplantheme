@@ -175,13 +175,21 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		if (targetElement) {
 			targetElement.style.marginTop = `${fixedElement.offsetHeight}px`;
 		}
-	}
+	}		   
 														   
 														   
 	window.lockDiv = function(elementSel, triggerSel=null, triggerAdj=0, docFlow=true, positionAdj=0) {
 		const elementObj = getObject(elementSel);		
+		
+		if (!elementObj) { return; }
+
 		let triggerObj = triggerSel ? getObject(triggerSel) : elementObj.nextElementSibling;
-		triggerObj = isVisible(triggerObj) ? triggerObj : elementObj.parentNode.nextElementSibling;
+
+		if (!triggerObj || !isVisible(triggerObj)) {
+			triggerObj = elementObj.parentNode ? elementObj.parentNode.nextElementSibling : null;
+		}
+
+		if (!triggerObj) { return; }
 		
 		if ( docFlow !== true ) {
 			elementObj.classList.add("no-doc-flow");	
@@ -624,6 +632,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			case "before":
 				anchorObj.parentNode.insertBefore(cloneObj, anchorObj);
 				break;
+
 			case "top": case "start": case "inside":
 				anchorObj.insertBefore(cloneObj, anchorObj.firstChild);
 				break;
@@ -1517,6 +1526,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		});
 		if (img.complete) {
 			img.dispatchEvent(new Event('load'));
+
 		}
 	});
 */

@@ -640,7 +640,7 @@ function battleplan_site_audit() {
 	$submitCheck = $_POST['submit_check'];
 	$siteType = get_option('customer_info')['site-type'];
 	
-	$criteriaOrder = array ('lighthouse-mobile-score', 'lighthouse-mobile-ttfb', 'lighthouse-mobile-fcp', 'lighthouse-mobile-lcp', 'lighthouse-mobile-tti', 'lighthouse-mobile-tbt', 'lighthouse-mobile-si', 'lighthouse-mobile-cls', 'lighthouse-desktop-score', 'lighthouse-desktop-ttfb', 'lighthouse-desktop-fcp', 'lighthouse-desktop-lcp', 'lighthouse-desktop-tti', 'lighthouse-desktop-tbt', 'lighthouse-desktop-si', 'lighthouse-desktop-cls', 'keyword-page-1', 'keyword-needs-attn', 'database-page-gen-time', 'database-peak-mem', 'database-db-queries', 'database-db-queries-time', 'back-total-links', 'back-domains', 'back-local-links', 'back-c-flow', 'back-domain-authority', 'cite-citations', 'cite-key-citations', 'cite-citation-score', 'console-indexed', 'console-clicks', 'console-position', 'gmb-overview', 'gmb-calls', 'gmb-msg', 'gmb-clicks', 'gmb-photos', 'gmb-rank');	
+	$criteriaOrder = array ('lighthouse-mobile-score', 'lighthouse-mobile-ttfb', 'lighthouse-mobile-fcp', 'lighthouse-mobile-lcp', 'lighthouse-mobile-tti', 'lighthouse-mobile-tbt', 'lighthouse-mobile-si', 'lighthouse-mobile-cls', 'lighthouse-desktop-score', 'lighthouse-desktop-ttfb', 'lighthouse-desktop-fcp', 'lighthouse-desktop-lcp', 'lighthouse-desktop-tti', 'lighthouse-desktop-tbt', 'lighthouse-desktop-si', 'lighthouse-desktop-cls', 'keyword-page-1', 'keyword-needs-attn', 'database-page-gen-time', 'database-peak-mem', 'database-db-queries', 'database-db-queries-time', 'back-total-links', 'back-domains', 'back-local-links', 'back-c-flow', 'back-domain-authority', 'cite-citations', 'cite-key-citations', 'cite-citation-score', 'console-indexed', 'console-clicks', 'console-position', 'gmb-overview', 'gmb-calls', 'gmb-msg', 'gmb-clicks');	
 	
 	
 	$siteAuditPage .= '[col class="headline lighthouse-mobile-score"]Performance Score[/col]';	
@@ -804,8 +804,6 @@ function battleplan_site_audit() {
 		$siteAuditPage .= '<div class="form-input"><label for="gmb-calls">Calls:</label><input id="gmb-calls" type="text" name="gmb-calls" value=""></div>';
 		$siteAuditPage .= '<div class="form-input"><label for="gmb-msg">Messages:</label><input id="gmb-msg" type="text" name="gmb-msg" value=""></div>';
 		$siteAuditPage .= '<div class="form-input"><label for="gmb-clicks">Clicks:</label><input id="gmb-clicks" type="text" name="gmb-clicks" value=""></div>';
-		$siteAuditPage .= '<div class="form-input"><label for="gmb-photos">Photos:</label><input id="gmb-photos" type="text" name="gmb-photos" value=""></div>';
-		$siteAuditPage .= '<div class="form-input"><label for="gmb-rank">Rank:</label><input id="gmb-rank" type="text" name="gmb-rank" value=""></div>';
 	
 		$siteAuditPage .= '[/col][col]';
 	
@@ -868,8 +866,6 @@ function battleplan_site_audit() {
 	$siteAuditPage .= '[col class="headline gmb-calls"]Calls[/col]';	
 	$siteAuditPage .= '[col class="headline gmb-msg"]Messages[/col]';	
 	$siteAuditPage .= '[col class="headline gmb-clicks"]Clicks[/col]';	
-	$siteAuditPage .= '[col class="headline gmb-photos"]Photos[/col]';	
-	$siteAuditPage .= '[col class="headline gmb-rank"]Rank[/col]';
 		
 	$siteAuditPage .= '[col class="headline google-reviews"]Number[/col]';	
 	$siteAuditPage .= '[col class="headline google-rating"]Rating[/col]';	

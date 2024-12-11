@@ -8,7 +8,7 @@
 		
 		<?php bp_after_main_content(); ?>
 				
-	</section><!-- #wrapper-content -->
+	</main><!-- #wrapper-content -->
 	
 	<?php bp_after_wrapper_content(); ?>
 
@@ -19,7 +19,7 @@
 	
 	<?php bp_before_colophon(); ?>
 
-	<footer id="colophon" role="region" aria-label="footer">		
+	<footer id="colophon">		
 		
 		<?php echo do_shortcode('[get-element slug="site-footer"]'); ?>
 		

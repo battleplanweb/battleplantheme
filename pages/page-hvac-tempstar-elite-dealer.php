@@ -5,7 +5,7 @@ $printPage = '
 	<h1>Tempstar</h1>
 	<h2>Elite Dealer</h2>
 
-	<img class="alignright size-quarter-s noFX tempstar-elite-dealer-logo" src="/wp-content/themes/battleplantheme/common/hvac-tempstar/tempstar-elite-dealer-logo.webp" loading="lazy" alt="Tempstar Elite Dealer" width="258" height="258" style="aspect-ratio:258/258" />
+	<img class="align-right size-quarter-s noFX tempstar-elite-dealer-logo" src="/wp-content/themes/battleplantheme/common/hvac-tempstar/tempstar-elite-dealer-logo.webp" loading="lazy" alt="Tempstar Elite Dealer" width="258" height="258" style="aspect-ratio:258/258" />
 
 	<p>[get-biz info="name"] is proud to be an authorized Tempstar Elite Dealer.  That means we offer best-of-the-best installation, maintenance and customer service, the perfect complement to your Tempstar® heating and cooling system.</p>
 
@@ -16,7 +16,7 @@ $printPage = '
 
     	<li><b>Product Knowledge</b> - Elite Dealers offer expertise on which products best meet your needs and are up-to-date with the latest in comfort technology and training.</li>
 
-		<img class="alignright noFX size-third-s" src="/wp-content/themes/battleplantheme/common/hvac-tempstar/tempstar-products.webp" loading="lazy" alt="American Standard Heating and Cooling Products" width="320" height="280" style="aspect-ratio:320/280" />
+		<img class="align-right noFX size-third-s" src="/wp-content/themes/battleplantheme/common/hvac-tempstar/tempstar-products.webp" loading="lazy" alt="American Standard Heating and Cooling Products" width="320" height="280" style="aspect-ratio:320/280" />
 
     	<li><b>Payment Options</b> – Elite Dealers offer financing options, upon credit approval, to pay for your system with monthly installments instead of the full price at purchase.</li>
 
@@ -30,7 +30,7 @@ if ( $type == "teaser" ) :
 		 [txt size="100"]
 		  <h2>What is a Tempstar Elite Dealer?</h2>
 
-		  <a href="/tempstar-elite-dealer/" aria-hidden="true" tabindex="-1"><img src="/wp-content/themes/battleplantheme/common/hvac-tempstar/tempstar-elite-dealer-logo.webp" loading="lazy" alt="We are a Tempstar Elite Dealer." class="alignright size-quarter-s noFX tempstar-elite-dealer-logo" width="258" height="258" style="aspect-ratio:258/258" /></a>
+		  <a href="/tempstar-elite-dealer/" aria-hidden="true" tabindex="-1"><img src="/wp-content/themes/battleplantheme/common/hvac-tempstar/tempstar-elite-dealer-logo.webp" loading="lazy" alt="We are a Tempstar Elite Dealer." class="align-right size-quarter-s noFX tempstar-elite-dealer-logo" width="258" height="258" style="aspect-ratio:258/258" /></a>
 
 		  <p>To ensure dependable, lasting comfort, you want to select a dealer that offers best-of-the-best installation, maintenance and customer service.</p>
 		  [btn link="/tempstar-elite-dealer/" ada="about the Elite Dealer program"]Learn More[/btn]

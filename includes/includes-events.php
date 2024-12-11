@@ -287,7 +287,7 @@ function battleplan_event_teasers( $atts, $content = null ) {
 			$events->the_post();
 	
 			$buildEvents .= '[col]';		
-			$buildEvents .= get_the_post_thumbnail( get_the_ID(), 'thumbnail', array( 'class' => 'aligncenter' ) ); 
+			$buildEvents .= get_the_post_thumbnail( get_the_ID(), 'thumbnail', array( 'class' => 'align-center' ) ); 
 			$buildEvents .= '[txt]<h3>'.get_the_title().'</h3>';
 			$buildEvents .= include('wp-content/themes/battleplantheme/elements/element-events-meta.php');	
 			if ( esc_attr($a['excerpt']) == "true" ) $buildEvents.= '<p>'.get_the_excerpt().'</p>';		

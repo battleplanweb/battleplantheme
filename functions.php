@@ -517,7 +517,7 @@ function battleplan_countTease( $id, $override=false ) {
 // Dynamically add loading='lazy' to all images that are below #masthead
 add_filter('the_content', 'battleplan_lazy_load_img');
 function battleplan_lazy_load_img($content) {
-    if (is_admin() || empty($content)) return $content; 
+    if (is_admin() || empty($content)) return do_shortcode($content); 
 	
     $dom = new DOMDocument();
     libxml_use_internal_errors(true);	
@@ -553,7 +553,7 @@ function battleplan_lazy_load_img($content) {
     $processedContent = $dom->saveHTML();
     $processedContent = preg_replace('/^<div id="temp_wrapper">|<\/div>$/', '', $processedContent);
 
-    return $processedContent;
+    return do_shortcode($processedContent);
 }
 
 /*--------------------------------------------------------------
@@ -978,15 +978,6 @@ function battleplan_disable_emojis_remove_dns_prefetch( $urls, $relation_type ) 
 	return $urls;
 }
 
-// Defer jquery and other js to footer & add nonce to inline scripts
-add_filter('script_loader_tag', 'battleplan_add_data_attribute', 10, 3);
-function battleplan_add_data_attribute($tag, $handle, $src) {
-    if ( is_admin() || $GLOBALS['pagenow'] === 'wp-login.php' || strpos( $src, '.js' ) === FALSE ) return $tag;
-   	if ( (!is_plugin_active( 'woocommerce/woocommerce.php' ) && !is_plugin_active( 'table-sorter/table-sorter.php' ) ) && ( $handle === 'jquery' || $handle === 'jquery-js' )) return null;
-	$tag = '<script nonce="'._BP_NONCE.'" id="'.$handle.'" defer src="'.esc_url( $src ).'"></script>'; 
-    return $tag;
-}
-
 add_filter('init', 'battleplan_filter_localized_scripts', 100);
 function battleplan_filter_localized_scripts() {
     $GLOBALS['wp_scripts'] = new WP_Filterable_Scripts;
@@ -1008,8 +999,8 @@ add_action('after_setup_theme', function() {
   	remove_filter('render_block', 'wp_render_layout_support_flag');
 });
 
-// Dequeue unneccesary styles & scripts
-add_action( 'wp_print_styles', 'battleplan_dequeue_unwanted_stuff', 9998 );
+// Dequeue and deregister styles that are not necessary or can be delayed to footer
+add_action( 'wp_print_styles', 'battleplan_dequeue_unwanted_stuff', 9997 );
 function battleplan_dequeue_unwanted_stuff() {
 	wp_dequeue_style( 'parent-style' );  wp_deregister_style( 'parent-style' );
 	wp_dequeue_style( 'battleplan-style' );  wp_deregister_style( 'battleplan-style' );	
@@ -1042,6 +1033,30 @@ function battleplan_dequeue_unwanted_stuff() {
 		//wp_dequeue_style( 'widgetopts-styles' ); 
 		//wp_deregister_style( 'widgetopts-styles' );
 	//endif;
+}
+
+// Dequeue and deregister scripts that are not necessary or can be delayed to footer
+add_action('wp_enqueue_scripts', 'battleplan_dequeue_scripts', 9997);
+add_action('wp_print_footer_scripts', 'battleplan_dequeue_scripts', 9997);
+function battleplan_dequeue_scripts() {
+	wp_dequeue_script( 'select2'); wp_deregister_script('select2');	
+	wp_dequeue_script( 'wphb-global' ); wp_deregister_script( 'wphb-global' );
+	wp_dequeue_script( 'wp-embed' ); wp_deregister_script( 'wp-embed' );
+	wp_dequeue_script( 'modernizr' ); wp_deregister_script( 'modernizr' );
+	wp_dequeue_script('wp-polyfill'); wp_deregister_script('wp-polyfill'); 
+	
+	wp_dequeue_script('customize-support');	wp_deregister_script('customize-support');
+
+	if ( !is_plugin_active( 'woocommerce/woocommerce.php' ) && !is_plugin_active( 'table-sorter/table-sorter.php' ) && !is_plugin_active( 'cue/cue.php' ) ) :
+		wp_dequeue_script( 'jquery'); wp_deregister_script('jquery');	
+		wp_dequeue_script( 'jquery-js'); wp_deregister_script('jquery-js');	
+		wp_dequeue_script( 'jquery-migrate'); wp_deregister_script('jquery-migrate');	
+		wp_dequeue_script( 'underscore' ); wp_deregister_script( 'underscore' );
+	endif;
+	
+// re-load in header
+	//wp_dequeue_script('contact-form-7-js'); wp_deregister_script('contact-form-7-js'); 
+	//wp_dequeue_script('swv-js'); wp_deregister_script('swv-js'); 
 }
 
 // Load and enqueue styles in header
@@ -1080,29 +1095,16 @@ function battleplan_header_styles() {
 	wp_enqueue_style( 'battleplan-style', get_stylesheet_directory_uri()."/style-site.css", array('battleplan-style-forms'), _BP_VERSION );	
 }
 
-// Dequeue and deregister scripts that are not necessary
-add_action('wp_enqueue_scripts', 'battleplan_dequeue_scripts', 9998);
-add_action('wp_print_footer_scripts', 'battleplan_dequeue_scripts', 9998);
-function battleplan_dequeue_scripts() {
-	wp_dequeue_script( 'select2'); wp_deregister_script('select2');	
-	wp_dequeue_script( 'wphb-global' ); wp_deregister_script( 'wphb-global' );
-	wp_dequeue_script( 'wp-embed' ); wp_deregister_script( 'wp-embed' );
-	wp_dequeue_script( 'modernizr' ); wp_deregister_script( 'modernizr' );
-	wp_dequeue_script('wp-polyfill'); wp_deregister_script('wp-polyfill'); 
+// Load scripts in header
+add_action( 'wp_enqueue_scripts', 'battleplan_enqueue_header_scripts', 1 );
+function battleplan_enqueue_header_scripts() {
+	wp_enqueue_script( 'battleplan-script-helpers', get_template_directory_uri().'/js/script-helpers.js', array(), _BP_VERSION, false );	
+	wp_enqueue_script( 'battleplan-script-essential', get_template_directory_uri().'/js/script-essential.js', array(), _BP_VERSION, false );
+};
 
-	if ( !is_plugin_active( 'woocommerce/woocommerce.php' ) && !is_plugin_active( 'table-sorter/table-sorter.php' ) && !is_plugin_active( 'cue/cue.php' ) ) :
-		wp_dequeue_script( 'jquery'); wp_deregister_script('jquery');	
-		wp_dequeue_script( 'jquery-js'); wp_deregister_script('jquery-js');	
-		wp_dequeue_script( 'jquery-migrate'); wp_deregister_script('jquery-migrate');	
-		wp_dequeue_script( 'underscore' ); wp_deregister_script( 'underscore' );
-	endif;
-}
-
-// Load and enqueue remaining scripts
-add_action( 'wp_enqueue_scripts', 'battleplan_enqueue_scripts', 20 );
-function battleplan_enqueue_scripts() {
-	wp_enqueue_script( 'battleplan-script-helpers', get_template_directory_uri().'/js/script-helpers.js', array(), _BP_VERSION, false );					
-	wp_enqueue_script( 'battleplan-script-essential', get_template_directory_uri().'/js/script-essential.js', array(), _BP_VERSION, false );				
+// Load scripts in footer
+add_action( 'wp_enqueue_scripts', 'battleplan_enqueue_footer_scripts', 9998 );
+function battleplan_enqueue_footer_scripts() {	
 	wp_enqueue_script( 'battleplan-script-pages', get_template_directory_uri().'/js/script-pages.js', array(), _BP_VERSION,  array( 'strategy' => 'defer', 'in_footer' => 'true' ) );		
 	if ( !is_mobile() ) : 
 		wp_enqueue_script( 'battleplan-script-desktop', get_template_directory_uri().'/js/script-desktop.js', array(), _BP_VERSION,  array( 'strategy' => 'defer', 'in_footer' => 'true' ) );
@@ -1144,6 +1146,30 @@ function battleplan_enqueue_scripts() {
 	wp_enqueue_script( 'battleplan-script-site', get_stylesheet_directory_uri().'/script-site.js', array('battleplan-script-fire-off'), _BP_VERSION,  array( 'strategy' => 'defer', 'in_footer' => 'true' ) );	
 }
 
+// Defer javascript to footer & add nonce to inline scripts
+add_filter('script_loader_tag', 'battleplan_add_data_attribute', 10, 3);
+function battleplan_add_data_attribute($tag, $handle, $src) {
+    if ( is_admin() || $GLOBALS['pagenow'] === 'wp-login.php' || strpos( $src, '.js' ) === FALSE ) return $tag;
+   	if ( (!is_plugin_active( 'woocommerce/woocommerce.php' ) && !is_plugin_active( 'table-sorter/table-sorter.php' ) ) && ( $handle === 'jquery' || $handle === 'jquery-js' )) return null;	
+	
+    if ( $handle === 'contact-form-7-js' || $handle === 'swv-js' ) :
+		$tag = str_replace('<script ', '<script nonce="' . _BP_NONCE . '" ', $tag);
+        return $tag;
+	else:
+		$tag = str_replace('<script ', '<script nonce="' . _BP_NONCE . '" defer ', $tag);
+		//$tag = '<script nonce="'._BP_NONCE.'" id="'.$handle.'" defer src="'.esc_url( $src ).'"></script>'; 
+	    return $tag;
+	endif;	
+}
+
+//add_filter('script_loader_tag', 'add_nonce_to_script', 10, 2);   /* Removing 12/11/24 because it should be handled by above script
+function add_nonce_to_script($tag, $handle) {
+    if ($handle == 'stripe') {
+        $tag = str_replace('src=', 'nonce="'._BP_NONCE.'" defer src=', $tag);
+    }
+    return $tag;
+}
+
 // Load and enqueue admin styles & scripts
 if (is_admin()) { add_action( 'admin_enqueue_scripts', 'battleplan_admin_scripts' ); }
 function battleplan_admin_scripts() {
@@ -1166,8 +1192,6 @@ function battleplan_login_enqueue() {
 	//wp_enqueue_style( 'battleplan-style', get_stylesheet_directory_uri()."/style-site.css", array(), _BP_VERSION );	
 	wp_enqueue_style( 'battleplan-login', get_template_directory_uri()."/style-login.css", array(), _BP_VERSION );
 }
-
- 
 
 // Load various includes
 if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) require_once get_template_directory().'/includes/includes-woocommerce.php'; 
@@ -1239,7 +1263,7 @@ if ( !is_admin() && strpos($_SERVER['REQUEST_URI'], 'wp-json') === false && strp
 	add_action( 'wp_print_footer_scripts', 'battleplan_delay_nonessential_scripts');
 	function battleplan_delay_nonessential_scripts() { 
 		if ( _IS_BOT !== true ) : ?>
-			<script nonce="<?php echo _BP_NONCE !== null ? _BP_NONCE : null; ?>" type="text/javascript" id="delay-scripts">
+			<script nonce="<?php echo _BP_NONCE !== null ? _BP_NONCE : null; ?>" id="delay-scripts">
 				const loadScriptsTimer=setTimeout(loadScripts,1500);
 				const userInteractionEvents=["mouseover","keydown","touchstart","touchmove","wheel"];
 				userInteractionEvents.forEach(function(event) {	
@@ -1286,15 +1310,7 @@ add_filter('final_output', function($content) {
 		if ($updatedContent !== null) $content = $updatedContent;
 	endif;
 	return $content;
-});  
-
-add_filter('script_loader_tag', 'add_nonce_to_script', 10, 2);
-function add_nonce_to_script($tag, $handle) {
-    if ($handle == 'stripe') {
-        $tag = str_replace('src=', 'nonce="'._BP_NONCE.'" defer src=', $tag);
-    }
-    return $tag;
-}
+}); 
 
 // Hide the Wordpress admin bar
 //show_admin_bar( false );
@@ -1512,9 +1528,6 @@ function battleplan_limit_non_admin_uploads( $threshold ) {
     if ( !current_user_can( 'manage_options' ) ) return 1000;
 }
 
-
-
-
 // Strip EXIF data from images upon upload	
 add_action('wp_handle_upload', 'battleplan_strip_EXIF_data' );
 function battleplan_strip_EXIF_data($upload) {
@@ -1549,12 +1562,6 @@ function battleplan_strip_EXIF_data($upload) {
 
     return $upload;
 }
-
-
-
-
-
-
 
 // Highlights menu option based on the post type of the current page and the title attribute given to the menu button in Appearance->Menus
 add_filter('nav_menu_css_class', 'battleplan_current_type_nav_class', 10, 2 );
@@ -1706,7 +1713,7 @@ function battleplan_addSchema() {
 		$attach = get_children( array( 'post_parent' => get_the_ID(), 'post_type' => 'attachment', 'post_mime_type' => 'image', 'order' => 'ASC', 'numberposts' => 1 ) );
 		$imageFile = is_array( $attach ) && is_object( current( $attach ) ) ? current( $attach )->guid : '';
 
-		?><script type="application/ld+json" defer nonce="<?php echo _BP_NONCE; ?>" >
+		?><script type="application/ld+json" nonce="<?php echo _BP_NONCE; ?>" >
 			{ 
 				"@context": "http://schema.org",
 				"@type": "<?php echo $schema['business_type'] ?>",
@@ -2294,7 +2301,7 @@ function battleplan_printSiteMessage() {
 // Display the site header
 add_action('bp_masthead', 'battleplan_printHeader', 20);
 function battleplan_printHeader() { 
-	$printHeader = '<header id="masthead" role="banner" aria-label="header">';		
+	$printHeader = '<header id="masthead" aria-label="header">';		
 	if ( has_nav_menu( 'top-menu', 'battleplan' ) ) $printHeader .= buildNavMenu( 'top' );		
 	$printHeader .= do_shortcode('[get-element slug="site-header"]');		
 	if ( has_nav_menu( 'header-menu', 'battleplan' ) ) $printHeader .= buildNavMenu( 'header' ); 		

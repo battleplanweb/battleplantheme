@@ -7,7 +7,7 @@ wp_enqueue_script( 'battleplan-script-jobsite_geo', get_template_directory_uri()
 
 get_header(); ?>
 
-<main id="primary" class="site-main" role="main" aria-label="main content">
+<div id="primary" class="site-main" role="main" aria-label="main content">
 
 	<?php bp_before_site_main_inner(); ?>	
 		
@@ -164,7 +164,7 @@ get_header(); ?>
 				elseif ( $imgs[3] ) $imgSize = "third-f";
 				else $imgSize = "half-f";		
 		
-				$buildUpdate .= '<ul class="jobsite-photos side-by-side aligncenter break-none">';
+				$buildUpdate .= '<ul class="jobsite-photos side-by-side align-center break-none">';
 				for ($i = 0; $i < count($imgs); $i++) :
 					$img = wp_get_attachment_image_src( $imgs[$i], $imgSize );
 
@@ -354,7 +354,7 @@ get_header(); ?>
 	
 	<?php bp_after_site_main_inner(); ?>	
 
-</main><!-- #primary .site-main -->
+</div><!-- #primary .site-main -->
 
 </div><!-- #main-content -->
 </section><!-- #wrapper-content -->

@@ -574,7 +574,9 @@ function battleplan_buildLockedSection( $atts, $content = null ) {
 		$buildSection .= '"';
 	endif;
 	
-	$buildSection .= '><div class="closeBtn" aria-label="close" aria-hidden="false" tabindex="0"><span class="icon x-large"></span></div>'.do_shortcode($content).'</section>';	
+	//$buildSection .= '><div class="closeBtn" aria-label="close" aria-hidden="false" tabindex="0"><span class="icon x-large"></span></div>'.do_shortcode($content).'</section>';	/* WP3 validation 12/11/24 */
+	
+	$buildSection .= '><button class="closeBtn" aria-label="close"><span class="icon x-large"></button></div>'.do_shortcode($content).'</section>';	
 	
 	return $buildSection;
 }

@@ -5,13 +5,13 @@ $printPage = '
 	<h1>York</h1>
 	<h2>Certified Comfort Expert</h2>
 
-	<img class="alignright size-quarter-s noFX york-cert-comfort-expert-logo" src="/wp-content/themes/battleplantheme/common/hvac-york/cert-comfort-expert-logo.webp" loading="lazy" alt="York Certified Comfort Expert" width="500" height="168" style="aspect-ratio:500/168" />
+	<img class="align-right size-quarter-s noFX york-cert-comfort-expert-logo" src="/wp-content/themes/battleplantheme/common/hvac-york/cert-comfort-expert-logo.webp" loading="lazy" alt="York Certified Comfort Expert" width="500" height="168" style="aspect-ratio:500/168" />
 
 	<p>[get-biz info="name"] is proud to be a York Certified Comfort Expert, which is a designation that assures you are working with the best in the business.</p>
 
 	<p>We have the knowledge, experience, and training to help your system achieve peak performance.  As a York CCE, we:</p>
 		
-	<img class="alignright noFX size-third-s" src="/wp-content/themes/battleplantheme/common/hvac-york/york-product-family.webp" loading="lazy" alt="York Heating and Cooling Products" width="500" height="339" style="aspect-ratio:500/339" />
+	<img class="align-right noFX size-third-s" src="/wp-content/themes/battleplantheme/common/hvac-york/york-product-family.webp" loading="lazy" alt="York Heating and Cooling Products" width="500" height="339" style="aspect-ratio:500/339" />
 	
 	<ul>
     	<li>Participate in ongoing training regarding the latest developments in product design and energy efficiency</li>
@@ -30,7 +30,7 @@ if ( $type == "teaser" ) :
 		 [txt size="100"]
 		  <h2>What is a York Certified Comfort Expert?</h2>
 
-		  <a href="/york-certified-comfort-expert/" aria-hidden="true" tabindex="-1"><img src="/wp-content/themes/battleplantheme/common/hvac-york/cert-comfort-expert-logo.webp" loading="lazy" alt="We are a York Certified Comfort Expert." class="alignright size-quarter-s noFX york-cert-comfort-expert-logo" width="500" height="168" style="aspect-ratio:500/168" /></a>
+		  <a href="/york-certified-comfort-expert/" aria-hidden="true" tabindex="-1"><img src="/wp-content/themes/battleplantheme/common/hvac-york/cert-comfort-expert-logo.webp" loading="lazy" alt="We are a York Certified Comfort Expert." class="align-right size-quarter-s noFX york-cert-comfort-expert-logo" width="500" height="168" style="aspect-ratio:500/168" /></a>
 
 		  <p>To ensure dependable, lasting comfort, you want to select a dealer that offers best-of-the-best installation, maintenance and customer service.</p>
 		  [btn link="/york-certified-comfort-expert/" ada="about the York Certified Comfort Expert program"]Learn More[/btn]

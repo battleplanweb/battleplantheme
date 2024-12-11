@@ -2,7 +2,7 @@
 
 get_header(); ?>
 
-<main id="primary" class="site-main" role="main" aria-label="main content">
+<div id="primary" class="site-main" role="main" aria-label="main content">
 
 	<?php bp_before_site_main_inner(); ?>	
 		
@@ -47,6 +47,6 @@ get_header(); ?>
 	
 	<?php bp_after_site_main_inner(); ?>	
 
-</main><!-- #primary .site-main -->
+</div><!-- #primary .site-main -->
 
 <?php get_footer();

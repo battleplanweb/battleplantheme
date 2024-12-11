@@ -8,6 +8,10 @@
 		header( "X-Content-Type-Options: nosniff" );
 		header( "Referrer-Policy: strict-origin-when-cross-origin" );
 	endif;  
+
+add_filter('the_content', function($content) {
+    return str_replace('â€™', '’', $content);
+});
 ?> 
  
 <html lang="en">
@@ -16,7 +20,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="profile" href="https://gmpg.org/xfn/11">	
 
-	<script nonce="<?php echo _BP_NONCE; ?>" type="text/javascript">
+	<script nonce="<?php echo _BP_NONCE; ?>">
 		const startTime = Date.now();
 		const site_bg = '<?php echo battleplan_fetch_background_image() ?>';
 		<?php if ( defined('_USER_DISPLAY_LOC') ) :
@@ -100,7 +104,7 @@ wp_nav_menu( array(
 	
 <?php bp_before_page(); ?>
 	
-<div id="page" class="site" aria-label="page">
+<div id="page" class="site">
 
 	<?php bp_before_masthead(); ?>
 
@@ -112,7 +116,7 @@ wp_nav_menu( array(
 	
 	<?php bp_before_wrapper_content(); ?>
 	
-	<section id="wrapper-content">
+	<main id="wrapper-content">
 	
 		<?php bp_before_main_content(); ?>
 		

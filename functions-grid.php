@@ -141,7 +141,7 @@ function battleplan_buildLayout( $atts, $content = null ) {
 // Column
 add_shortcode( 'col', 'battleplan_buildColumn' );
 function battleplan_buildColumn( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'hash'=>'', 'order'=>'', 'class'=>'', 'align'=>'', 'valign'=>'', 'h-span'=>'', 'v-span'=>'', 'css'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'start'=>'', 'end'=>'', 'track'=>'' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'hash'=>'', 'order'=>'', 'class'=>'', 'align'=>'', 'valign'=>'', 'h-span'=>'', 'v-span'=>'', 'break'=>'', 'css'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'start'=>'', 'end'=>'', 'track'=>'' ), $atts );
 	$name = preg_replace("/[\s_]/", "-", strtolower(esc_attr($a['name'])));
 	$name = $name ? " id='".$name."'" : '';
 	$hash = esc_attr($a['hash']) != '' ? 'data-hash="'.esc_attr($a['hash']).'"' : '';
@@ -159,13 +159,14 @@ function battleplan_buildColumn( $atts, $content = null ) {
 	$order = esc_attr($a['order']) != '' ? 'order: '.esc_attr($a['order']).' !important;' : '';
 	$hSpan = esc_attr($a['h-span']) != '' ? 'grid-column: span '.esc_attr($a['h-span']).' !important;' : '';
 	$vSpan = esc_attr($a['v-span']) != '' ? 'grid-row: span '.esc_attr($a['v-span']).' !important;' : '';	
+	$break = esc_attr($a['break']) !== '' ? ' break-'.esc_attr($a['break']) : '';	
 	$style = $order || $hSpan || $vSpan ? " style='".$order.$hSpan.$vSpan."'" : '';
 	if ( $start || $end ) {
 		$now = time(); 
 		if ( $start && $now < $start ) return null;
 		if ( $end && $now > $end ) return null;		
 	}
-	$buildCol = '<div'.$name.' class="col '.$class.$align.$valign.'" '.$tracking.$hash.$style.'><div class="col-inner"';
+	$buildCol = '<div'.$name.' class="col '.$class.$align.$valign.$break.'" '.$tracking.$hash.$style.'><div class="col-inner"';
 	if ( $background != "" || $css != "" ) :
 		$buildCol .= ' style="';
 		if ( $css != "" ) $buildCol .= $css;
@@ -578,15 +579,16 @@ function battleplan_buildLockedSection( $atts, $content = null ) {
 	
 	$buildSection .= '><button class="closeBtn" aria-label="close"><span class="icon x-large"></button></div>'.do_shortcode($content).'</section>';	
 	
-	return $buildSection;
+	return $buildSection; 
 }
  
 add_shortcode( 'seek', 'battleplan_formField' );
 function battleplan_formField( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'label'=>'Label', 'show'=>'true', 'label-pos'=>'before', 'id'=>'user-input', 'req'=>'false', 'width'=>'default', 'max-w'=>'', 'class'=>''), $atts );
+	$a = shortcode_atts( array( 'label'=>'Label', 'show'=>'true', 'label-pos'=>'before', 'label-valign'=>'baseline', 'id'=>'user-input', 'req'=>'false', 'width'=>'default', 'max-w'=>'', 'class'=>''), $atts );
 	$id = esc_attr($a['id']);
-	$label = esc_attr($a['label']);
+	$label = esc_attr($a['label']); 
 	$labelPos = esc_attr($a['label-pos']);
+	$labelValign = esc_attr($a['label-valign']) === 'bottom' ? 'baseline' : esc_attr($a['label-valign']);
 	$req = esc_attr($a['req']);	
 	$width = 'width-'.esc_attr($a['width']);
 	$maxW = esc_attr($a['max-w']);	
@@ -603,7 +605,7 @@ function battleplan_formField( $atts, $content = null ) {
 	// removed col from classes 5/19 for animation purposes
 		$buildInput = '<div class="form-input input-'.strtolower(preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(" ","-",$label))).' input-'.$id.' label-pos-'.$labelPos.' '.$width.$class.'"'.$maxW.' '.$aria.'>';
 		if ( $labelPos == 'after' ) $buildInput .= $content;
-		if ( $show == 'true' ) $buildInput .= '<label for="'.$id.'" class="'.$width.' label-baseline">'.$label;
+		if ( $show == 'true' ) $buildInput .= '<label for="'.$id.'" class="'.$width.' label-'.$labelValign.'">'.$label;
 		if ( $show == 'true' && $req != 'false' ) $buildInput .= $asterisk;
 		if ( $show == 'true' ) $buildInput .= '</label>';
 		if ( $labelPos == 'before' ) $buildInput .= $content;

@@ -84,6 +84,14 @@ body.form-stacked .wpcf7 form label,
 	align-self: 									end;
 }
 
+.wpcf7 form label.label-center {
+	align-self: 									center;
+}
+
+.wpcf7 form label.label-top {
+	align-self: 									start;
+}
+
 .label-pos-after {
 	grid-template-columns: 							70px 1fr !important;
 }

@@ -122,13 +122,23 @@ a {
 	display: 										none;
 }
 
+div div.theme-screenshot {
+  	background: 									transparent !important;
+}
 
-div[data-slug="battleplantheme-site"] div.theme-screenshot.blank {
-  	background: 									url('../../uploads/logo.webp') no-repeat 50% 50% !important;
+div div.theme-screenshot img {
+  	display: 										none;
+}
+
+div[data-slug="battleplantheme"] div.theme-screenshot {
+  	background: 									url('../../themes/battleplantheme/screenshot.png') no-repeat 50% 50% !important;
 	background-size: 								contain !important;
 }
 
-
+div[data-slug="battleplantheme-site"] div.theme-screenshot {
+  	background: 									url('../../uploads/logo.webp') no-repeat 50% 50% !important;
+	background-size: 								contain !important;
+}
 
 /* Admin bar on live pages, added when logged in */
 @media (max-width: 1024px) {

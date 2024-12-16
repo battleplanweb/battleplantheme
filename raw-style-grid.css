@@ -1730,14 +1730,15 @@ dl.col-gallery {
 	
 	.flex.break-1 {
 		grid-template-columns: 							1fr;
-	}
+	}	
 			
 	.flex.break-none .col {
 		grid-column: 									span 1;
 	}
 	
 	.flex.grid-custom .col,
-	.flex .col {
+	.flex .col,
+	.flex.break-none .col.break-1 {
 		grid-column: 									1/-1;
 	}
 	

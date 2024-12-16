@@ -517,13 +517,15 @@ function battleplan_countTease( $id, $override=false ) {
 // Dynamically add loading='lazy' to all images that are below #masthead
 add_filter('the_content', 'battleplan_lazy_load_img');
 function battleplan_lazy_load_img($content) {
-    if (is_admin() || empty($content)) return do_shortcode($content); 
-	
-    $dom = new DOMDocument();
+    if (is_admin() || empty($content)) return do_shortcode($content);
+
     libxml_use_internal_errors(true);	
-	
-    $content = '<div id="temp_wrapper">' . $content . '</div>';	
-	
+
+    // Ensure UTF-8 content handling
+    $dom = new DOMDocument('1.0', 'UTF-8');
+    
+    // Wrap the content and ensure UTF-8 input
+    $content = '<div id="temp_wrapper">' . mb_convert_encoding($content, 'HTML-ENTITIES', 'UTF-8') . '</div>';
     $dom->loadHTML($content, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
     libxml_clear_errors();
 
@@ -564,7 +566,7 @@ add_filter( 'auto_update_theme', '__return_true' );
 add_filter( 'auto_update_plugin', '__return_true' );
 
 // Allow Git Updater to work despite WP Engine problems
-add_filter( 'gu_ignore_dot_org', '__return_true' );
+//add_filter( 'gu_ignore_dot_org', '__return_true' );
 
 // Disable update emails from WordPress
 add_filter('auto_plugin_update_send_email', '__return_false');

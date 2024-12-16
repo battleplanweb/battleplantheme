@@ -8,10 +8,6 @@
 		header( "X-Content-Type-Options: nosniff" );
 		header( "Referrer-Policy: strict-origin-when-cross-origin" );
 	endif;  
-
-add_filter('the_content', function($content) {
-    return str_replace('â€™', '’', $content);
-});
 ?> 
  
 <html lang="en">
@@ -62,11 +58,7 @@ add_filter('the_content', function($content) {
 	<?php wp_head(); ?>
 	
 	<?php //bp_google_tag_manager(); // moved to footer 9/4/24 to help with render blocking for Core Web Vitals --- noticed instant savings?>
-<!--
-<style id="no-bg-img">
-    *{background-image:none!important}
-</style>
--->
+
 </head>
 
 <body id="<?php echo get_the_ID(); ?>" <?php body_class( battleplan_getUserRole() ); ?>>

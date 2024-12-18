@@ -886,6 +886,24 @@ function battleplan_cancel_comment_reply_link( $formatted_link, $link, $text ) {
 	return $formatted_link;
 }
 
+// Eliminate taxonomy.php template (go directly to archive.php)
+add_filter('template_include', function ($template) {
+	if ( is_tax() ) {
+		$taxonomy = get_queried_object()->taxonomy;
+		$taxonomy_object = get_taxonomy($taxonomy);
+		$post_types = $taxonomy_object->object_type;
+		$post_type = !empty($post_types) ? $post_types[0] : null;
+		
+		$tax_temp = locate_template("taxonomy-{$taxonomy}.php");
+		if ( !$tax_temp ) $tax_temp = locate_template("archive-{$taxonomy}.php");
+		if ( !$tax_temp ) $tax_temp = locate_template("archive-{$post_type}.php");
+		if ( !$tax_temp ) $tax_temp = locate_template("archive.php");
+
+		return $tax_temp ?: $template;
+	}
+	return $template;
+});
+
 // Set up footer social media box
 add_shortcode( 'get-social-box', 'battleplan_footer_social_box' );
 function battleplan_footer_social_box() {	
@@ -1128,9 +1146,9 @@ function battleplan_enqueue_footer_scripts() {
 	
 	if ( ($GLOBALS['customer_info']['site-type'] == 'profile' || (is_array($GLOBALS['customer_info']['site-type']) && in_array('profile', $GLOBALS['customer_info']['site-type']))) || ($GLOBALS['customer_info']['site-type'] == 'profiles' || (is_array($GLOBALS['customer_info']['site-type']) && in_array('profiles', $GLOBALS['customer_info']['site-type']))) ) wp_enqueue_script( 'battleplan-script-user-profiles', get_template_directory_uri().'/js/script-user-profiles.js', array(), _BP_VERSION,  array( 'strategy' => 'defer', 'in_footer' => 'true' ) ); 
 	
-	if ( _USER_LOGIN == "battleplanweb" ) {
+	if ( is_admin() && _USER_LOGIN == "battleplanweb" ) {
 		wp_enqueue_style( 'battleplan-admin-css', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION );	
-		if ( is_admin() ) wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array('quicktags'), _BP_VERSION, false );	
+		wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array('quicktags'), _BP_VERSION, false );	
 	};
 	 
 	wp_enqueue_script( 'battleplan-script-fire-off', get_template_directory_uri().'/js/script-fire-off.js', array(), _BP_VERSION,  array( 'strategy' => 'defer', 'in_footer' => 'true' ) );
@@ -2179,26 +2197,22 @@ function bp_after_colophon() { do_action('bp_after_colophon'); }
 // Install Google Global Site Tags
 add_action('bp_google_tag_manager', 'battleplan_load_tag_manager');
 function battleplan_load_tag_manager() { 
-	$buildTags = $buildTagMgr = $buildEvents = $mainAcct = '';
-	$gtagEvents = array();
+	$buildTags = $acct_id = $ads_id = '';
 	
 	if ( isset($GLOBALS['customer_info']['google-tags']) && is_array($GLOBALS['customer_info']['google-tags']) ) :
 
 		foreach ( $GLOBALS['customer_info']['google-tags'] as $gtag=>$value ) :	
-			if ( $gtag == "analytics" && _USER_LOGIN != 'battleplanweb' && _IS_BOT != true ) $mainAcct = $value;
+			if ( $gtag == "analytics" && _USER_LOGIN != 'battleplanweb' && _IS_BOT != true ) $acct_id = $value;
+			if ( $gtag == "ads" ) $ads_id = $value;	
 			if ( $gtag == "analytics" || $gtag == "ads" ) $buildTags .= 'gtag("config", "'.$value.'");';				
-			if ( strpos($gtag, 'conversions' ) !== false ) :
-				if ( $gtag == "conversions" ) : 
-					$gtagEvents[] = $value; 
-				else:
-					$convert = str_replace( 'conversions-', '', $gtag );
-					$current = str_replace( '/', '', do_shortcode('[get-url var="false"]') );
-					if ( $convert == $current ) $gtagEvents[] = $value;
-				endif;
-			endif;				
+			if ( $gtag == "conversions" ) $buildTags .= "gtag('event', 'conversion', { 'send_to': '".$ads_id."/".$value."' });";
+			if ( $gtag == "calls" ) :
+				$phone_num = $GLOBALS['customer_info']['phone-format'];
+				$buildTags .= "gtag('config', '".$ads_id."/".$value."', {'phone_conversion_number': '".$phone_num."'});";
+			endif;
 		endforeach;
 	endif;
-	$buildTagMgr .= '<script nonce="'._BP_NONCE.'" defer src="https://www.googletagmanager.com/gtag/js?id='.$mainAcct.'"></script>';
+	$buildTagMgr = '<script nonce="'._BP_NONCE.'" defer src="https://www.googletagmanager.com/gtag/js?id='.$acct_id.'"></script>';
 	$buildTagMgr .= '<script nonce="'._BP_NONCE.'" defer>
 		window.dataLayer = window.dataLayer || [];
 		function gtag(){dataLayer.push(arguments);}
@@ -2206,14 +2220,7 @@ function battleplan_load_tag_manager() {
 	$buildTagMgr .= $buildTags;
 	$buildTagMgr .= '</script>';
 
-	if ( $gtagEvents ) :
-		foreach ( $gtagEvents as $gtagEvent ) :	
-			$buildEvents .= "gtag('event', 'conversion', { 'send_to': '".$gtagEvent."' });";  
-		endforeach;		
-		$buildTagMgr .= '<script nonce="'._BP_NONCE.'">'.$buildEvents.'</script>';
-	endif;		
-
-	if (strpos($mainAcct, 'x') === false && $mainAcct != '' && _IS_GOOGLEBOT == false ) echo $buildTagMgr;
+	if (strpos($acct_id, 'x') === false && $acct_id != '' && _IS_GOOGLEBOT == false ) echo $buildTagMgr;
 }
 
 // Build and display desktop navigation menu

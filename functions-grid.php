@@ -239,7 +239,7 @@ function battleplan_buildVid( $atts, $content = null ) {
 	$thumb = esc_attr($a['thumb']);	
 	$preload = esc_attr($a['preload']);	
 	$size = convertSize(esc_attr($a['size']));	
-	$height = 56.25 * ($size/12);	
+	//$height = 56.25 * ($size/12);	
 	$mobile = esc_attr($a['mobile']);	
 	$controls = esc_attr($a['controls']);
 	$autoplay = esc_attr($a['autoplay']);
@@ -248,7 +248,7 @@ function battleplan_buildVid( $atts, $content = null ) {
 	$begin = esc_attr($a['begin']);
 	$fullscreen = esc_attr($a['fullscreen']);
 	if ( $fullscreen == 'true' ) $style .= "margin: 0; ";
-	$class = esc_attr($a['class']) == '' ? '' : ' '.esc_attr($a["class"]);
+	$class = esc_attr($a['class']) == '' ? '' : ' '.esc_attr($a["class"]); 
 	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));	
 	if ( $start || $end ) {
@@ -259,12 +259,22 @@ function battleplan_buildVid( $atts, $content = null ) {
 	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
 	if ( $tracking != '' ) $class .= " tracking";
 	
-	if ( ( strpos($link, 'youtube') !== false || strpos($link, 'vimeo') !== false ) && $preload == "false" ) :
-		if ( strpos($link, 'youtube') !== false ) :
-			$link = str_replace('/shorts/', '/embed/', $link);
-			$id = str_replace('https://www.youtube.com/embed/', '', $link);
-			$link .= "?autoplay=1&enablejsapi=1&version=3&playerapiid=ytplayer";
-			if ( $thumb == '' ) : $thumb = '//i.ytimg.com/vi/'.$id.'/hqdefault.jpg'; endif;		
+	if ( ( strpos($link, 'youtube') !== false || strpos($link, 'youtu.be') !== false || strpos($link, 'vimeo') !== false ) && $preload == "false" ) :
+		if ( strpos($link, 'youtube') !== false || strpos($link, 'youtu.be') !== false ) :
+			if ( strpos($link, 'youtu.be') !== false ) :
+				$vid_id = str_replace('https://youtu.be/', '', $link);
+			else:
+				$link = str_replace('/shorts/', '/embed/', $link);
+				$vid_id = str_replace('https://www.youtube.com/embed/', '', $link);
+				$vid_id = str_replace('https://www.youtube.com/watch?v=', '', $vid_id);
+			endif;
+	
+			preg_match('/^[^?]+/', $vid_id, $matches);
+			$vid_id = $matches[0];
+	
+			$link = 'https://www.youtube.com/embed/'.$vid_id.'?autoplay=1&enablejsapi=1&version=3&playerapiid=ytplayer';
+	
+			if ( $thumb == '' ) : $thumb = '//i.ytimg.com/vi/'.$vid_id.'/hqdefault.jpg'; endif;		
 			if ( $related == "false" ) : $link .= "&rel=0";	endif;	
 			if ( $begin != "" ) : $link .= "&start=".$begin; endif;	
 		else:
@@ -277,7 +287,7 @@ function battleplan_buildVid( $atts, $content = null ) {
 			endif;
 		endif;
 		
-		return '<div class="block block-video span-'.$size.$class.' video-player"'.$tracking.' style="'.$style.'padding-top:'.$height.'%" data-thumb="'.$thumb.'" data-link="'.$link.'" data-id="'.$id.'"></div>';
+		return '<div class="block block-video span-'.$size.$class.' video-player"'.$tracking.' style="'.$style.'" data-thumb="'.$thumb.'" data-link="'.$link.'" data-id="'.$id.'"></div>';
 
 	else:
 		//return '<div class="block block-video span-'.$size.$class.'" style="'.$style.' padding-top:'.$height.'%"><iframe src="" data-src="'.$link.'" data-loading="delay" allowfullscreen></iframe></div>';

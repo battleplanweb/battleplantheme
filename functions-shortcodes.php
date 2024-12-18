@@ -1725,15 +1725,13 @@ function battleplan_getRSS( $atts, $content = null ) {
  function battleplan_getLocation($atts, $content) {
 	 $a = shortcode_atts( array( 'state'=>'true', 'default'=>'blank', 'before'=>'', 'after'=>'' ), $atts );
 	 
-	 if ( esc_attr($a['default']) !== 'blank' && !defined('_USER_DISPLAY_LOC') ) {
-		 return esc_attr($a['default']);		
-	 }
-	 
-	 if ( !defined('_USER_DISPLAY_LOC') ) {
-		 return $GLOBALS['customer_info']['default-loc'];	
-	 }
-	 
-	 $location = _USER_DISPLAY_LOC;
+	 if ( esc_attr($a['default']) !== 'blank' && !defined('_USER_DISPLAY_LOC') ) :
+	 	$location = esc_attr($a['default']);		
+	 elseif ( !defined('_USER_DISPLAY_LOC') ) :
+	 	$location = $GLOBALS['customer_info']['default-loc'];	
+	 else:	 
+	 	$location = _USER_DISPLAY_LOC;
+	 endif;
 
 	 if ( preg_match('/,\s*[A-Z]{2}$/', $location) === 1 && esc_attr($a['state']) === "false" ) {
 		$location = strstr($location, ',', true);		 

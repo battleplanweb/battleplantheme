@@ -5,7 +5,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 2024.26.5
+Version: 2024.26.6
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -379,6 +379,25 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
 /*--------------------------------------------------------------
 # Base
 --------------------------------------------------------------*/
+
+/* Admin logged in styles
+--------------------------------------------- */
+.logged-in #wpadminbar {
+	position: 										fixed;
+	z-index: 										999999999999;
+	min-width: 										unset;
+	width: 											40px;
+	height: 										40px;
+	top: 											unset;
+	bottom: 										10px;
+	left: 											3px;
+	background: 									url('https://secure.gravatar.com/avatar/5578915c21eaa269936f4e9aacb6771b') no-repeat;
+	background-size: 								contain;
+}   
+
+.logged-in #wp-toolbar {
+	display: 										none;
+}
 
 /* Typography
 --------------------------------------------- */

@@ -13,7 +13,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2024.26.5' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2024.26.6' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -80,7 +80,7 @@ if ( !array_key_exists('copyright', $GLOBALS['customer_info'] ) ) $GLOBALS['cust
 if ( !array_key_exists('name', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['name'] = '';
 if ( !array_key_exists('area', $GLOBALS['customer_info']) ) $GLOBALS['customer_info']['area'] = '000';
 if ( !array_key_exists('phone', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['phone'] = '000-0000';
-if ( !array_key_exists('area-before', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['area-before'] = '()';
+if ( !array_key_exists('area-before', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['area-before'] = '(';
 if ( !array_key_exists('area-after', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['area-after'] = ') ';
 if ( !array_key_exists('street', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['street'] = '';
 if ( !array_key_exists('city', $GLOBALS['customer_info'] ) ) $GLOBALS['customer_info']['city'] = '';

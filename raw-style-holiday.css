@@ -74,6 +74,10 @@
 	position: 									relative;
 }
 
+.holiday-theme #main-content {
+  	padding-top: 								65px;
+}
+
 .xmas-corner::before,
 .xmas-corner::after,
 .xmas-narrow-1::before,

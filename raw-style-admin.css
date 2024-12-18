@@ -182,23 +182,6 @@ div[data-slug="battleplantheme-site"] div.theme-screenshot {
 	
 }
 
-.logged-in #wpadminbar {
-	position: 										fixed;
-	z-index: 										999999999999;
-	min-width: 										unset;
-	width: 											40px;
-	height: 										40px;
-	top: 											unset;
-	bottom: 										10px;
-	left: 											3px;
-	background: 									url('https://secure.gravatar.com/avatar/5578915c21eaa269936f4e9aacb6771b') no-repeat;
-	background-size: 								contain;
-}   
-
-.logged-in #wp-toolbar {
-	display: 										none;
-}
-
 #wp-admin-bar-my-account > a.ab-item {
 	padding-right: 									10px;
 }
@@ -433,6 +416,7 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 #dashboard-widgets #battleplan_content_stats.postbox {
 	max-height: 									860px;
 }
+
 
 #dashboard-widgets #battleplan_pages_stats.postbox {
     	max-height: 									506px;
@@ -916,6 +900,7 @@ div#submitpost div#yoast-seo-publishbox-section {
 #yoast_internal_linking,
 .yoast-premium-badge,
 select#wpseo-filter,
+
 select#wpseo-readability-filter {
 	display: 										none !important;
 }

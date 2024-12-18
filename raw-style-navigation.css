@@ -161,7 +161,6 @@
 }	
 
 #desktop-navigation li:hover ul.sub-menu,
-#desktop-navigation li.active ul.sub-menu,
 .main-navigation ul.sub-menu.active,
 #desktop-navigation li.tab-focus ul.sub-menu,
 #desktop-navigation li.menu-item-has-children[aria-expanded="true"] ul.sub-menu {

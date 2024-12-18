@@ -74,7 +74,7 @@
 	position: 									relative;
 }
 
-.holiday-theme #main-content {
+.holiday-theme #main-content:not(.xmas-corner) {
   	padding-top: 								65px;
 }
 

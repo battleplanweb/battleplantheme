@@ -1583,6 +1583,10 @@ dl.col-gallery {
 	.product-links .product-link-cats .product-link-buttons {
 		gap: 											0.5em;
 	}
+		
+	#secondary .sidebar-inner {
+		grid-template-columns: 							repeat(2, 1fr);
+	}
 
 	/* Media */
 	ul.side-by-side li.full-top {
@@ -1804,6 +1808,10 @@ dl.col-gallery {
 	.flex .col.col-row-of-pics {
 		grid-column: 									span 1;
 	}	
+				
+	#secondary .sidebar-inner {
+		grid-template-columns: 							1fr;
+	}
 	
 	/* Galleries */
 	.gallery {

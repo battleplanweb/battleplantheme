@@ -47,11 +47,11 @@ body.form-stacked .wpcf7 form .form-input,
 	grid-template-columns: 							1fr !important;
 }
 
-@media (min-width: 577px) {
+/*@media (min-width: 577px) {*/
 	.wpcf7 form .flex.grid-3-3-2 .form-input {
 		grid-template-columns: 						1fr !important;
 	}
-}
+/*}*/
 
 .wpcf7 form .form-input.width-full,
 .wpcf7 form label.width-full,
@@ -492,6 +492,8 @@ ul.tabs li.current {
 .style-alt .file-upload-btn,
 .style-alt ul.tabs li,
 .style-alt a.button:visited,
+
+
 .style-alt a.page-numbers:visited,
 a.button.style-alt,
 a.page-numbers.style-alt,

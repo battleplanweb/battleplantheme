@@ -1127,7 +1127,7 @@ add_action( 'wp_enqueue_scripts', 'battleplan_enqueue_footer_scripts', 9998 );
 function battleplan_enqueue_footer_scripts() {	
 	wp_enqueue_script( 'battleplan-script-pages', get_template_directory_uri().'/js/script-pages.js', array(), _BP_VERSION,  array( 'strategy' => 'defer', 'in_footer' => 'true' ) );		
 	if ( !is_mobile() ) : 
-		wp_enqueue_script( 'battleplan-script-desktop', get_template_directory_uri().'/js/script-desktop.js', array(), _BP_VERSION,  array( 'strategy' => 'defer', 'in_footer' => 'true' ) );
+		wp_enqueue_script( 'battleplan-script-desktop', get_template_directory_uri().'/js/script-desktop.js', array(), _BP_VERSION,  array( 'strategy' => 'defer', 'in_footer' => 'true' ) ); 
 
 		if ( isset($GLOBALS['customer_info']['scripts']) && is_array($GLOBALS['customer_info']['scripts']) && in_array('magic-menu', $GLOBALS['customer_info']['scripts']) ) :
 			wp_enqueue_script( 'battleplan-script-magic-menu', get_template_directory_uri().'/js/script-magic-menu.js', array(), _BP_VERSION,  array( 'strategy' => 'defer', 'in_footer' => 'true' ) );

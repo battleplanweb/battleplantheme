@@ -633,6 +633,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 				anchorObj.parentNode.insertBefore(cloneObj, anchorObj);
 				break;
 
+
+
 			case "top": case "start": case "inside":
 				anchorObj.insertBefore(cloneObj, anchorObj.firstChild);
 				break;
@@ -1579,7 +1581,23 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 														   
 	window.formLabelWidth = () => {
 		getObjects('form').forEach(form => {
-			const selector = getObjects('.flex:not(.form-stacked)', form).length ? '.flex:not(.form-stacked)' : '';
+			//const selector = getObjects('.flex:not(.form-stacked)', form).length ? '.flex:not(.form-stacked)' : '';			
+			
+			const selector = getObjects('.flex', form).length ? '.flex' : '';  // 2024-12-22 Pole & Aerial party form
+			
+			getObjects(selector, form).forEach(flex => {
+				const targetSelector = '.form-input.width-default label';
+				let labelMaxWidth = 0;
+
+				getObjects(targetSelector, flex).forEach(label => {
+					labelMaxWidth = Math.max(labelMaxWidth, label.offsetWidth);
+				});
+
+				labelMaxWidth > 0 && getObjects('.form-input.width-default', flex).forEach(inputContainer => {
+					inputContainer.style.gridTemplateColumns = `${labelMaxWidth}px 1fr`;
+				});
+			});
+			/*// 2024-12-22 Pole & Aerial party form
 			const targetSelector = selector ? `${selector} > .form-input.width-default label` : '.form-input.width-default label';
 			let labelMaxWidth = 0;
 
@@ -1590,6 +1608,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			labelMaxWidth > 0 && getObjects('.form-input.width-default', form).forEach(inputContainer => {
 				inputContainer.style.gridTemplateColumns = `${labelMaxWidth}px 1fr`;
 			});
+			*/
 		});		
 
 		getObjects('abbr.required, em.required, span.required').forEach(el => el.textContent = "");

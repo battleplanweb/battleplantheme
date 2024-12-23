@@ -111,5 +111,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	let c = document.body.className;
 	c = c.replace(/woocommerce-no-js/, 'woocommerce-js');
 	document.body.className = c;
+														   
+    getObjects('abbr.required, em.required, span.required').forEach(el => el.textContent = "");
+
 	
 });

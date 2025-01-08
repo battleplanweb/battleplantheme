@@ -60,7 +60,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			const beforeSection = getComputedStyle(section, '::before').content;
 			const afterSection = getComputedStyle(section, '::after').content;
 
-			if (beforeStyle === 'none' && afterStyle === 'none') {
+			if (beforeSection === '' && afterSection === '') {
 							
 				if ( (sectionBG !== 'rgba(0, 0, 0, 0)' && sectionBG !== 'transparent') || (sectionBGImage && sectionBGImage !== 'none') ) {
 					if ( alternate === 0 ) {

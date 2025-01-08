@@ -1066,12 +1066,30 @@ function battleplan_dequeue_scripts() {
 	wp_dequeue_script('wp-polyfill'); wp_deregister_script('wp-polyfill'); 
 	
 	wp_dequeue_script('customize-support');	wp_deregister_script('customize-support');
+	wp_dequeue_script('wp-i18n');	wp_deregister_script('wp-i18n');
 
-	if ( !is_plugin_active( 'woocommerce/woocommerce.php' ) && !is_plugin_active( 'table-sorter/table-sorter.php' ) && !is_plugin_active( 'cue/cue.php' ) ) :
-		wp_dequeue_script( 'jquery'); wp_deregister_script('jquery');	
-		wp_dequeue_script( 'jquery-js'); wp_deregister_script('jquery-js');	
-		wp_dequeue_script( 'jquery-migrate'); wp_deregister_script('jquery-migrate');	
-		wp_dequeue_script( 'underscore' ); wp_deregister_script( 'underscore' );
+
+	$requires_jquery = [
+		'woocommerce/woocommerce.php',
+		'table-sorter/table-sorter.php',
+		'cue/cue.php',
+		'animated-typing-effect/typingeffect.php',
+		'stripe-payments/accept-stripe-payments.php'
+	];
+
+	$active = false;
+	foreach ($requires_jquery as $plugin) {
+		if (is_plugin_active($plugin)) {
+			$active = true;
+			break;
+		}
+	}
+
+	if (!$active) :
+		wp_dequeue_script('jquery'); wp_deregister_script('jquery');
+		wp_dequeue_script('jquery-js'); wp_deregister_script('jquery-js');
+		wp_dequeue_script('jquery-migrate'); wp_deregister_script('jquery-migrate');
+		wp_dequeue_script('underscore'); wp_deregister_script('underscore');
 	endif;
 	
 // re-load in header

@@ -249,8 +249,8 @@ function battleplan_admin_referrer_stats() {
 		echo '<li class="sub-label" style="column-span: all">Last '.number_format(array_sum($referrerAndSessions)).' Engaged Sessions</li>';		
 
 		foreach ($referrerAndSessions as $referrerTitle => $referSessions) :
-			$search = array( '(direct) / (none)' , ' / referral', ' / organic', ' / cpc', 'Googleads.g.doubleclick.net', ' / display', 'google', 'GMB', 'bing', 'yahoo', 'duckduckgo', 'fb / paid' );
-			$replace = array( 'Direct' , '', ' (organic)', ' (paid)', 'Google (paid)', ' (display)', 'Google', 'GBP', 'Bing', 'Yahoo', 'DuckDuckGo', 'Facebook (paid)' );
+			$search = array( '(direct) / (none)' , ' / referral', ' / organic', ' / cpc', 'Googleads.g.doubleclick.net', 'syndicatedsearch.goog', ' / display', 'google', 'GMB', 'bing', 'yahoo', 'duckduckgo', 'fb / paid' );
+			$replace = array( 'Direct' , '', ' (organic)', ' (paid)', 'Google (paid)', 'Google Partners (paid)', ' (display)', 'Google', 'GBP', 'Bing', 'Yahoo', 'DuckDuckGo', 'Facebook (paid)' );
 			$referrerTitle = str_replace( $search, $replace, $referrerTitle);
 	
 			if ( $referSessions > 0 ) echo "<li><div class='value'><b>".number_format($referSessions)."</b></div><div class='label'>".$referrerTitle."</div></li>";

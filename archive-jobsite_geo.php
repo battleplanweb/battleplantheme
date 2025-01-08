@@ -357,13 +357,14 @@ get_header(); ?>
 </div><!-- #primary .site-main -->
 
 </div><!-- #main-content -->
-</section><!-- #wrapper-content -->
+</main><!-- #wrapper-content -->
 
-<section id="wrapper-bottom">
-	<h2><?php echo $GLOBALS['jobsite_geo-bottom-headline']; ?></h2>
-	
-	<?php echo do_shortcode($buildUpdate); ?>
-	
-	<?php echo $displayFooter; ?>
+<main id="wrapper-bottom">
+	<div>
+		<h2><?php echo $GLOBALS['jobsite_geo-bottom-headline']; ?></h2>
 
-	<?php get_footer();
+		<?php echo do_shortcode($buildUpdate); ?>
+
+		<?php echo $displayFooter; ?>
+
+		<?php get_footer();

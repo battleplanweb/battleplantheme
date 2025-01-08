@@ -19,15 +19,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		};
 		
 		const resizeFunc = () => {
-			if (typeof widgetInit === 'function') { console.log('widgetInit()'); widgetInit(); }		
-			if (typeof centerSubNav === 'function') { console.log('centerSubNav()'); centerSubNav(); }	
-			if (typeof formLabelWidth === 'function') { console.log('formLabelWidth()'); formLabelWidth(); }	
-			if (typeof screenResize === 'function') { console.log('screenResize()'); screenResize(); }	
-			if (typeof buildAccordion === 'function') { console.log('buildAccordion()'); buildAccordion(); }	
-			if (typeof areWeOpenBanner === 'function') { console.log('areWeOpenBanner()'); areWeOpenBanner(0); }				
-			if (typeof setMagicMenu === 'function') { console.log('setMagicMenu()'); setMagicMenu(); }				
+			if (typeof widgetInit === 'function') { widgetInit(); }		
+			if (typeof centerSubNav === 'function') { centerSubNav(); }	
+			if (typeof formLabelWidth === 'function') { formLabelWidth(); }	
+			if (typeof screenResize === 'function') { screenResize(); }	
+			if (typeof buildAccordion === 'function') { buildAccordion(); }	
+			if (typeof areWeOpenBanner === 'function') { areWeOpenBanner(0); }				
+			if (typeof setMagicMenu === 'function') { setMagicMenu(); }				
 
-			console.log('scrollFunc()');
 			scrollFunc();	
 		};
 		

@@ -50,27 +50,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		return getObject(selectorOrElement, context, true);
 	}
 	
-	
-/*	
-// Compare relative position of two objects in the DOM
-	window.comparePos = function (elem1, elem2) {
-		const position = elem1.compareDocumentPosition(elem2);
-
-        if (position & Node.DOCUMENT_POSITION_FOLLOWING) {
-            return 'after';
-        } else if (position & Node.DOCUMENT_POSITION_PRECEDING) {
-            return 'before';
-        } else if (position & Node.DOCUMENT_POSITION_CONTAINS) {
-            return 'inside';
-        } else if (position & Node.DOCUMENT_POSITION_CONTAINED_BY) {
-            return 'outside';
-        } else {
-            return null;
-        } 
-	}
-*/
-	
-	
+		
 // Determine if object exists, but set to display: none
 	window.isVisible = function (elementObj) {
 		if (elementObj) {

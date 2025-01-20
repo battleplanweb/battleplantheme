@@ -41,7 +41,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		let styleSheet = document.createElement("style");
         styleSheet.type = "text/css";
         styleSheet.innerText = keyframes;
-        document.head.appendChild(styleSheet);				
+        document.body.appendChild(styleSheet);				
 		
 		logoRow.style.animation = `logo_slider_${slider_id} ${speed}s ${easing} infinite`;
 		

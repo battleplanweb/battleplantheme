@@ -622,6 +622,14 @@ section.section .flex.nested .flex,
 }
 
 
+/* Keep sites from getting "too big" on large monitors (Father Son Home Watch 1/14/25) */
+#page,
+.wp-gr.wp-google-badge,
+.stuck {
+	max-width: 										1920px;
+	margin: 										0 auto;
+}
+
 /*--------------------------------------------------------------
 # Sections
 --------------------------------------------------------------*/
@@ -943,6 +951,7 @@ a#bbblink {
 
 .screen-mobile .section.section-lock[data-pos="modal"].content-image > .flex,
 .screen-mobile .section.section-lock[data-pos="center"].content-image > .flex,
+
 .screen-mobile .section.section-lock[data-pos="modal"].content-image > .flex.scrollable,
 .screen-mobile .section.section-lock[data-pos="center"].content-image > .flex.scrollable {
 	width: 											100%;
@@ -1244,6 +1253,7 @@ dl.col-gallery {
 		grid-column: 									edge-start / edge-end;
 	}
 	
+
 	.sidebar-edge #primary {
 		margin-left:									2%;
 		margin-right:									2%;

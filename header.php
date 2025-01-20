@@ -24,6 +24,7 @@
 		<?php else:
 			?>const google_ad_location = null;<?php 
 		endif; ?>		
+		const site_name = '<?php echo get_bloginfo("name") ?>';
 	</script>	
 	
 	<?php if ( isset($GLOBALS['customer_info']['lcp']) && !is_mobile() ) : 

@@ -277,7 +277,7 @@ input[type="number"] {
     border-top: 								3px solid var(--medium-grey);
 	background-color: 							var(--white-high);
 	border-radius:								0;
-    color: 									inherit;
+    color: 										inherit;
 }
 
 .theme-battleplantheme.woocommerce-js .woocommerce-checkout #payment {

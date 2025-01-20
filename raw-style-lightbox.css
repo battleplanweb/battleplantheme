@@ -50,13 +50,14 @@
 
 .lightbox-overlay .block-button.button-prev button::after, 
 .lightbox-overlay .block-button.button-next button::after { 
+	display: 										block;
 	font-family: 									var(--font-icons);
 	content: 										"\e218";
 	font-size:										30px;
 }
 
 .lightbox-overlay .block-button.button-prev button::after {
-	content:										"\e216";
+	transform: 										rotate(180deg);
 }
 
 .lightbox-overlay .lightbox-counter {

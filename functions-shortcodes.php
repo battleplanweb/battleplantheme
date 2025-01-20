@@ -1401,10 +1401,18 @@ function battleplan_setUpWPGallery( $atts, $content = null ) {
 			$imgSet = wp_get_attachment_image_srcset($getID, $size );
 			$picAlt = get_post_meta($getID , '_wp_attachment_image_alt', true);
 			$picDesc = wp_get_attachment_caption() ? wp_get_attachment_caption() : $picAlt;
-			$addCaption = $caption != "false" ? 'data-title="'.get_the_title().'" data-description="'.$picDesc.'" data-desc-position="'.$caption.'" ' : '';
+			$addCaption = $caption !== "false" ? 'data-title="'.get_the_title().'" data-description="'.$picDesc.'" data-desc-position="'.$caption.'" ' : '';
 			$count++;
 
-			$gallery .= '<dl class="col col-archive col-gallery id-'.$getID.'"><dt class="col-inner"><a class="link-archive link-gallery" data-gallery="'.$name.'" href="'.$full[0].'" '.$addCaption.'data-effect="fade" data-zoomable="true" data-draggable="true"><img class="img-gallery wp-image-'.get_the_ID().'" loading="lazy" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.$picAlt.'"></a></dt></dl>';
+			$gallery .= '<div class="col col-archive col-gallery id-'.$getID.'"><figure class="col-inner">';
+	
+			if ( $caption === "above" || $caption === "top" ) $gallery .= '<figcaption class="gallery-caption">'.$picDesc.'</figcaption>';
+	
+			$gallery .= '<a class="link-archive link-gallery" data-gallery="'.$name.'" href="'.$full[0].'" '.$addCaption.'data-effect="fade" data-zoomable="true" data-draggable="true"><img class="img-gallery wp-image-'.get_the_ID().'" loading="lazy" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.$picAlt.'"></a>';
+	
+			if ( $caption === "below" || $caption === "bottom" ) $gallery .= '<figcaption class="gallery-caption">'.$picDesc.'</figcaption>';
+	
+			$gallery .= '</figure></div>';
 			
 			array_push( $GLOBALS['do_not_repeat'], get_the_ID() );
 		endwhile; 
@@ -1413,13 +1421,13 @@ function battleplan_setUpWPGallery( $atts, $content = null ) {
 	$gallery .= "</div>";	
 	
 	$gallery .= "<div class='lightbox-overlay'>";
-	$gallery .= "<img class='lightbox-image'>";
+	$gallery .= "<img class='lightbox-image' src='' alt=''>";
 	$gallery .= "<div class='lightbox-counter'></div>";
 	//$gallery .= "<div class='closeBtn' aria-label='close' aria-hidden='false' tabindex='0'><span class='icon x-large'></span></div>";
 	/* WP3 validation 12/11/24 */
 	$gallery .= "<button class='closeBtn' aria-label='close'><span class='icon x-large'></span></button>";
-	$gallery .= "<div class='block block-button button-prev'><button><span class='gallery-prev-icon' aria-label='Previous Photo'><span class='sr-only'>Previous Photo</span></span></button></div>";
-	$gallery .= "<div class='block block-button button-next'><button><span class='gallery-next-icon' aria-label='Next Photo'><span class='sr-only'>Next Photo</span></span></button></div>";
+	$gallery .= "<div class='block block-button button-prev'><button aria-label='Previous Photo'><span class='gallery-prev-icon'><span class='sr-only'>Previous Photo</span></span></button></div>";
+	$gallery .= "<div class='block block-button button-next'><button aria-label='Next Photo'><span class='gallery-next-icon'><span class='sr-only'>Next Photo</span></span></button></div>";
 	$gallery .= "</div>";	
 	
 	update_field('image_number', $count);

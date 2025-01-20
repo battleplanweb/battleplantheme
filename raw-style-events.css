@@ -147,6 +147,8 @@ h2.month-divider {
 }
 
 #calendar .body .event a {
+
+
 	text-decoration: 								none;
 }
 
@@ -175,15 +177,16 @@ h2.month-divider {
 
 .calendar-buttons #prevButton::before, 
 .calendar-buttons #nextButton:after { 
+	display: 										block;
 	font-family: 									var(--font-icons);
-	content: 										"\e216";
+	content: 										"\e218";
 	font-size:										85%;
-	margin: 										0 20px 0 0;
+	margin: 										0 0 0 20px;
 }
 
-.calendar-buttons #nextButton:after  {
-	content:										"\e218";
-	margin: 										0 0 0 20px;
+.calendar-buttons #prevButton:after  {
+	margin: 										0 20px 0 0;
+	transform: 										rotate(180deg);
 }
 
 /*--------------------------------------------------------------

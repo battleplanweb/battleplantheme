@@ -570,7 +570,7 @@ function battleplan_random_seed($orderby_statement) {
 }
 
 // Preload site-background.jpg or site-background.webp if it exists
-add_action( 'wp_footer', 'battleplan_preload_bg' );
+//add_action( 'wp_footer', 'battleplan_preload_bg' );
 function battleplan_preload_bg() {
 	$file = '';
 	if (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-background.jpg' ) ) : 
@@ -2314,13 +2314,15 @@ function battleplan_printWrapperTop() {
 
 
 
-// Filter site HTML before rendering for search & replace
+// Filter site HTML before rendering - basic search / replace for sitewite corrections
 add_filter('final_output', function($content) {
 	if ( !is_admin() ) : 
 		$new = do_shortcode('<span class="icon phone"></span>');
 		$content = str_replace('<i class="fas fa-phone-alt" aria-hidden="true"></i>',$new, $content); 
 		$new = do_shortcode('<span class="icon phone"></span>');
 		$content = str_replace('<i class="fas fa-phone" aria-hidden="true"></i>',$new, $content); 
+	
+		$content = str_replace('sizes="auto, (max-width', 'sizes="(max-width', $content);    // 1/20/25 necessary to maintain validation  
 	endif;
 	return $content;
 }); 

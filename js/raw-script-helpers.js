@@ -134,7 +134,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		preloadImage.src = site_dir.upload_dir_uri + "/" + imgName;		
 	};
 	
-	if ( !document.body.classList.contains('wp-admin') && site_bg !== null ) {
+	if ( !document.body.classList.contains('wp-admin') && site_bg !== null && site_bg !== '' ) {
 		preloadImg('site-background.'+site_bg, 'desktop');
 		preloadImg('site-background-phone.'+site_bg, 'mobile');		
 	}

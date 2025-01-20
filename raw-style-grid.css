@@ -861,7 +861,13 @@ a#bbblink {
 } 
 
 .section.section-lock .closeBtn, 
-.closeBtn {
+.closeBtn,
+.section.section-lock .closeBtn:hover, 
+.closeBtn:hover
+.section.section-lock .closeBtn.active, 
+.closeBtn.active
+.section.section-lock .closeBtn.tab-focus, 
+.closeBtn.tab-focus {
 	position:										absolute;
 	top:											15px;
 	right:											15px;
@@ -869,18 +875,21 @@ a#bbblink {
 	background:										var(--close-btn-background);
 	color:											var(--close-btn-color);
 	border:											var(--close-btn-border);
-	padding:										0;
+	padding:										0 !important;
 	font-size:										16px;
 	z-index:										1000;
 	transition:										all var(--main-trans-speed) var(--main-trans-easing);
 }
 
 .section.section-lock .closeBtn:hover, 
-.closeBtn:hover {
+.closeBtn:hover
+.section.section-lock .closeBtn.active, 
+.closeBtn.active
+.section.section-lock .closeBtn.tab-focus, 
+.closeBtn.tab-focus {
 	background:										var(--close-btn-background-hover);
 	color:											var(--close-btn-color-hover);
 	border:											var(--close-btn-border-hover);
-	transition:										all var(--main-trans-speed) var(--main-trans-easing);
 }
 
 .section.section-lock .closeBtn .icon,
@@ -1168,12 +1177,22 @@ section.section.break-out {
 	grid-template-columns: 							repeat(8, 1fr);
 }
 
-dl.col-gallery {
+div.col-gallery {
 	margin:											0;
 }
 
-.gallery-caption {
+.gallery-caption,
+figcaption.gallery-caption {
 	display: 										block;
+	color: 											var(--text-color);
+  	font-size: 										calc(var(--font-size-text) * 0.75);
+  	line-height: 									1.5;
+  	text-underline-position: 						under;
+  	word-spacing: 									0.1em;	
+}
+
+figure.col-inner {
+	gap: 											8px;
 }
 
 /*--------------------------------------------------------------
@@ -1373,6 +1392,7 @@ dl.col-gallery {
 	.secondary-box #secondary,
 	.content-sidebar-box #secondaryy { 
 		padding:										var(--measure-large) 0;
+
 	}
 	
 	#secondary .widget-search {

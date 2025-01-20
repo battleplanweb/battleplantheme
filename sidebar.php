@@ -2,7 +2,7 @@
 
 if ( in_array('sidebar-none', get_body_class()) ) { return; } ?>
 
-<aside id="secondary" class="sidebar widget-area" role="complementary" aria-label="sidebar">
+<aside id="secondary" class="sidebar widget-area" aria-label="sidebar">
 
 	<?php bp_before_sidebar_inner(); ?>	
 

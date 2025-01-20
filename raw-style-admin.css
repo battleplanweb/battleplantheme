@@ -30,6 +30,8 @@
   --main-blue: 									rgba(34, 112, 175, 1);
   --pale-blue: 									rgba(207, 218, 241, 1);
   --pale-red: 									rgba(244, 217, 217, 1);
+  --pale-blue-75: 								rgba(207, 218, 241, 0.75);
+  --pale-red-75: 								rgba(244, 217, 217, 0.75);
 
   --font-base-5: 								6.25%;
 
@@ -416,6 +418,7 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 #dashboard-widgets #battleplan_content_stats.postbox {
 	max-height: 									860px;
 }
+
 
 
 #dashboard-widgets #battleplan_pages_stats.postbox {
@@ -896,6 +899,7 @@ div#submitpost div#yoast-seo-publishbox-section {
 }
 
 #beacon-container,
+
 #sidebar-container.wpseo_content_cell,
 #yoast_internal_linking,
 .yoast-premium-badge,
@@ -950,16 +954,6 @@ a#mbp_misc-tab,
 	grid-template-columns: 							300px 300px 1fr;
 }
 
-.wp-admin .flex.stats {
-	grid-template-columns: 							115px repeat(53, 50px); /* add new elements to 53 */
-	gap: 											0.5em 15px;
-	text-align: 									center;
-}
-
-.wp-admin .flex.stats .col {
-	grid-column:									span 1;
-}
-
 .wp-admin .flex .col .form-input {
 	margin: 										0 0 10px 0;
 }
@@ -990,106 +984,8 @@ a#mbp_misc-tab,
 	text-align: 									left;
 }
 
-.wp-admin .scroll-stats {
-	overflow-y: 									scroll;
-	padding: 										2em 0.5em;
-}
-
 .wp-admin .flex .col.empty {
 	opacity: 										0;
-}
-
-.wp-admin .flex.stats .col.headline {
-	width: 											200px;
-	transform: 										translate(-21px, -16px) rotate(-45deg);
-	text-align: 									left;
-	z-index: 										10;
-	padding: 										5px 0 5px 30px;
-	border-top: 									1px solid var(--black-lowest);
-	border-bottom: 									1px solid var(--black-med));
-}
-
-.wp-admin .flex.stats .col.subhead  {
-	text-align: 									center;
-	border-top: 									1px solid var(--black-lowest);
-	border-bottom: 									2px solid var(--black-low);
-	border-left: 									2px solid var(--black-lowest);
-	border-right: 									2px solid var(--black-low);
-	margin: 										30px 0 5px;
-	z-index: 										20;
-	padding: 										5px 0 3px;
-	font-weight: 									bold;
-	font-size: 										105%;
-}
-
-.wp-admin .span-all,
-.wp-admin .flex.stats .col.notes {
-	grid-column:									1 / -1 !important;
-	text-align: 									left;
-}
-
-.wp-admin .flex.stats .col.site-elements {
-	grid-column:									span 10;
-}
-
-.wp-admin .flex.stats .col.lighthouse-mobile,
-.wp-admin .flex.stats .col.lighthouse-desktop {
-	grid-column:									span 8;
-}
-
-.wp-admin .flex.stats .col.gmb {
-	grid-column:									span 6;
-}
-
-.wp-admin .flex.stats .col.backlinks {
-	grid-column: 									span 5;
-}
-
-.wp-admin .flex.stats .col.database {
-	grid-column:									span 4;
-}
-
-.wp-admin .flex.stats .col.cite,
-.wp-admin .flex.stats .col.console {
-	grid-column: 									span 3;
-}
-
-.wp-admin .flex.stats .col.keywords,
-.wp-admin .flex.stats .col.google,
-.wp-admin .flex.stats .col.load_time {
-	grid-column:									span 2;
-}
-
-.wp-admin .flex.stats .col.when,
-.wp-admin .flex.stats .col.stat,
-.wp-admin .flex.stats .col.notes {
-	z-index: 										30;
-	padding: 										3px;
-	border-top: 									1px solid var(--black-lowest);
-	border-bottom: 									1px solid var(--black-low);
-	border-left: 									1px solid var(--black-lowest);
-	border-right: 									1px solid var(--black-low);
-}
-
-.wp-admin .flex.stats .col {
-
-	background: 									rgb(244, 217, 217); 
-}
-
-
-.wp-admin .flex.stats .col.notes {
-	background: 									#dbdbdb;
-	margin-left: 									130px;
-	width: 											calc(100vw - 393px);
-	margin-bottom: 									5px;
-	display: 										none;
-	cursor: 										pointer;
-	padding: 										3px 8px 5px;
-}
-
-.wp-admin .flex.stats .col,
-.wp-admin .flex .col.mobile {
-	background: 										var(--pale-red);
 }
 
 .wp-admin .flex.stats .col[class*="lighthouse-desktop"],
@@ -1118,8 +1014,59 @@ a#mbp_misc-tab,
 	opacity: 										0.1;
 }
 
-.wp-admin .flex.stats .col.when {
-	cursor: 											pointer;
+.wp-admin .scroll-stats table {
+	border: 											1px solid var(--dark-grey);
+}
+
+.wp-admin .scroll-stats tr td.color-0 {
+	background: 										var(--pale-red-75);
+	border: 											1px solid var(--pale-red);
+}
+
+.wp-admin .scroll-stats tr td.color-1 {
+	background: 										var(--pale-blue-75);
+	border: 											1px solid var(--pale-blue);
+}
+
+.wp-admin .scroll-stats tr:last-of-type td {
+	background: 										var(--lightest-grey);
+	border: 											1px solid var(--light-grey);
+}
+
+.wp-admin .scroll-stats td {
+}
+
+.wp-admin .scroll-stats th {
+	font-weight: 										bold;
+	font-size: 											24px;
+	padding: 											15px 0;
+	line-height: 										1.2;
+	border: 											1px solid var(--lightest-grey);
+}
+
+.wp-admin .scroll-stats th span.month {
+	font-size: 											18px;
+}
+
+.wp-admin .scroll-stats td.headline {
+	font-weight: 										bold;
+	font-size: 											21px;
+	padding: 											17px 5px 7px;
+}
+
+.wp-admin .scroll-stats td.subheadline {
+	font-weight: 										bold;
+	font-size: 											15px;
+	padding: 											4px;
+	width: 												200px;
+}
+
+.wp-admin .scroll-stats td.stat {
+	font-weight: 										normal;
+	font-size: 											15px;
+	width: 												90px;
+	padding: 											4px;
+	text-align: 										center;
 }
 
 /* 2: Phones (landscape) + Tablets (portrait) */

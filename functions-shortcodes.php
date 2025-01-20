@@ -759,7 +759,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		$testimonialMisc3 = esc_attr(get_field( "testimonial_misc3" ));	
 		$testimonialMisc4 = esc_attr(get_field( "testimonial_misc4" ));
 		
-		$addNewTag = get_the_date('Y-m-d') > date('Y-m-d', strtotime('-3 months')) ? '<img class="noFX new" loading="'.$lazy.'" src="/wp-content/themes/battleplantheme/common/logos/new-1.webp" width="58" height="52" style="aspect-ratio:58/52" />' : '';
+		$addNewTag = get_the_date('Y-m-d') > date('Y-m-d', strtotime('-3 months')) ? '<img class="noFX new" loading="'.$lazy.'" src="/wp-content/themes/battleplantheme/common/logos/new-1.webp" width="58" height="52" alt="New customer review, posted within the last 2 months" style="aspect-ratio:58/52" />' : '';
 		
 		$buildCredentials = "<div class='testimonials-credential testimonials-name'>".$addNewTag.get_the_title();
 		if ( $testimonialTitle ) $buildCredentials .= "<span class='testimonials-title'>, ".$testimonialTitle."</span>";
@@ -1210,8 +1210,8 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	$buildIndicators .= '</ol>';
 	$buildInner .= '</div>';
 
-	$controlsPrevBtn = '<div class="block block-button button-prev"><a class="button carousel-control-prev'.$controlClass.'" href="#'.$type.'Slider'.$sliderNum.'" data-slide="prev"><span class="carousel-control-prev-icon" aria-label="Previous Slide"><span class="sr-only">Previous Slide</span></span></a></div>';
-	$controlsNextBtn = '<div class="block block-button button-next"><a class="button carousel-control-next'.$controlClass.'" href="#'.$type.'Slider'.$sliderNum.'" data-slide="next"><span class="carousel-control-next-icon" aria-label="Next Slide"><span class="sr-only">Next Slide</span></span></a></div>';
+	$controlsPrevBtn = '<div class="block block-button button-prev"><a class="button carousel-control-prev'.$controlClass.'" href="#'.$type.'Slider'.$sliderNum.'" data-slide="prev" aria-label="Previous Slide"><span class="carousel-control-prev-icon"><span class="sr-only">Previous Slide</span></span></a></div>';
+	$controlsNextBtn = '<div class="block block-button button-next"><a class="button carousel-control-next'.$controlClass.'" href="#'.$type.'Slider'.$sliderNum.'" data-slide="next" aria-label="Next Slide"><span class="carousel-control-next-icon"><span class="sr-only">Next Slide</span></span></a></div>';
 	$viewMoreBtn = do_shortcode('[btn link="'.$linkTo.'" class="button-all"]'.$allBtn.'[/btn]');	
 
 	$buildControls = "<div class='controls controls-".$controlsPos."'>";	
@@ -1515,7 +1515,7 @@ function battleplan_getCreditCards( $atts, $content = null ) {
 	if ( esc_attr($a['mc']) == "yes" ) $buildCards .= '<img class="credit-card-logo" src="/wp-content/themes/battleplantheme/common/logos/cc-mc.webp" loading="lazy" alt="We accept Mastercard" width="100" height="62" style="aspect-ratio:100/62" />';
 	if ( esc_attr($a['visa']) == "yes" ) $buildCards .= '<img class="credit-card-logo" src="/wp-content/themes/battleplantheme/common/logos/cc-visa.webp" loading="lazy" alt="We accept Visa" width="100" height="62" style="aspect-ratio:100/62" />';
 	if ( esc_attr($a['discover']) == "yes" ) $buildCards .= '<img class="credit-card-logo" src="/wp-content/themes/battleplantheme/common/logos/cc-discover.webp" loading="lazy" alt="We accept Discover" width="100" height="62" style="aspect-ratio:100/62" />';
-	if ( esc_attr($a['amex']) == "yes" ) $buildCards .= '<img class="credit-card-logo" src="/wp-content/themes/battleplantheme/common/logos/cc-amex.webp" loading="lazy" alt="We accept American Express" width="100" height="62" style="aspect-ratio:100x62" />';
+	if ( esc_attr($a['amex']) == "yes" ) $buildCards .= '<img class="credit-card-logo" src="/wp-content/themes/battleplantheme/common/logos/cc-amex.webp" loading="lazy" alt="We accept American Express" width="100" height="62" style="aspect-ratio:100/62" />';
 	$buildCards .= '</div>';  					  
 													  
 	return $buildCards;

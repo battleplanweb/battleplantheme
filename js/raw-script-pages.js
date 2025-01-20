@@ -556,6 +556,12 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	window.document.addEventListener( 'wpcf7mailsent', function( event ) { 
 		location = '/email-received/';
 	}, false ); 
+			
+														   
+// Make sure form inputs have id, so that they can be correctly linked to labels
+	getObjects('input[name]').forEach(input => {
+		input.id = input.name;
+	});
 	
 	
 // Duplicate menu button text onto the button BG
@@ -632,6 +638,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			case "before":
 				anchorObj.parentNode.insertBefore(cloneObj, anchorObj);
 				break;
+
 
 
 

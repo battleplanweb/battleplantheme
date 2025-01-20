@@ -640,18 +640,7 @@ function battleplan_site_audit() {
 	$submitCheck = $_POST['submit_check'];
 	$siteType = get_option('customer_info')['site-type'];
 	
-	$criteriaOrder = array ('lighthouse-mobile-score', 'lighthouse-mobile-ttfb', 'lighthouse-mobile-fcp', 'lighthouse-mobile-lcp', 'lighthouse-mobile-tti', 'lighthouse-mobile-tbt', 'lighthouse-mobile-si', 'lighthouse-mobile-cls', 'lighthouse-desktop-score', 'lighthouse-desktop-ttfb', 'lighthouse-desktop-fcp', 'lighthouse-desktop-lcp', 'lighthouse-desktop-tti', 'lighthouse-desktop-tbt', 'lighthouse-desktop-si', 'lighthouse-desktop-cls', 'keyword-page-1', 'keyword-needs-attn', 'database-page-gen-time', 'database-peak-mem', 'database-db-queries', 'database-db-queries-time', 'back-total-links', 'back-domains', 'back-local-links', 'back-c-flow', 'back-domain-authority', 'cite-citations', 'cite-key-citations', 'cite-citation-score', 'console-indexed', 'console-clicks', 'console-position', 'gmb-overview', 'gmb-calls', 'gmb-msg', 'gmb-clicks');	
-	
-	
-	$siteAuditPage .= '[col class="headline lighthouse-mobile-score"]Performance Score[/col]';	
-	$siteAuditPage .= '[col class="headline lighthouse-mobile-ttfb"]Time To First Byte[/col]';
-	$siteAuditPage .= '[col class="headline lighthouse-mobile-fcp"]First Contentful Paint[/col]';
-	$siteAuditPage .= '[col class="headline lighthouse-mobile-lcp"]Largest Contentful Paint[/col]';	
-	$siteAuditPage .= '[col class="headline lighthouse-mobile-tti"]Time To Interactive[/col]';	
-	$siteAuditPage .= '[col class="headline lighthouse-mobile-tbt"]Total Blocking Time[/col]';		
-	$siteAuditPage .= '[col class="headline lighthouse-mobile-si"]Speed Index[/col]';	
-	$siteAuditPage .= '[col class="headline lighthouse-mobile-cls"]Cumulative Layout Shift[/col]';
-	
+	$criteriaOrder = array ('lighthouse-mobile-score', 'lighthouse-mobile-ttfb', 'lighthouse-mobile-fcp', 'lighthouse-mobile-lcp', 'lighthouse-mobile-tti', 'lighthouse-mobile-tbt', 'lighthouse-mobile-si', 'lighthouse-mobile-cls', 'lighthouse-desktop-score', 'lighthouse-desktop-ttfb', 'lighthouse-desktop-fcp', 'lighthouse-desktop-lcp', 'lighthouse-desktop-tti', 'lighthouse-desktop-tbt', 'lighthouse-desktop-si', 'lighthouse-desktop-cls', 'keyword-page-1', 'keyword-needs-attn', 'database-page-gen-time', 'database-peak-mem', 'database-db-queries', 'database-db-queries-time', 'back-total-links', 'back-domains', 'back-local-links', 'back-c-flow', 'back-domain-authority', 'cite-citations', 'cite-key-citations', 'cite-citation-score', 'console-indexed', 'console-clicks', 'console-position', 'gmb-overview', 'gmb-calls', 'gmb-clicks');	
 	
 	if ( $submitCheck == "true" ) :
 		$siteAudit = get_option('bp_site_audit_details');
@@ -676,7 +665,7 @@ function battleplan_site_audit() {
 		endforeach;	
 	endif;
 		
-	array_push( $criteriaOrder, 'google-reviews', 'google-rating', 'load_time_mobile', 'load_time_desktop', 'testimonials', 'testimonials-pct', 'coupon', 'coupon-pct', 'financing-link', 'finance-pct', 'blog', 'galleries', 'landing', 'jobsites', 'notes');	
+	array_push( $criteriaOrder, 'google-reviews', 'google-rating', 'load_time_mobile', 'load_time_desktop', 'testimonials', 'testimonials-pct', 'coupon', 'coupon-pct', 'financing-link', 'finance-pct', 'blog', 'galleries', 'landing', 'jobsites', 'audit-ada', 'audit-schema', 'audit-html', 'audit-browserstack', 'notes');	
 				
 	if ( $submitCheck == "true" ) :
 		$note_value = $_POST['notes'];
@@ -687,7 +676,7 @@ function battleplan_site_audit() {
 				$siteAudit[$today]['notes'] .= "  ".$note_value;
 			endif;
 		endif;	
-		
+	
 		$googleInfo = get_option('bp_gbp_update');
 		$siteAudit[$today]['google-rating'] = number_format($googleInfo['google-rating'], 1, '.', ',');
 		$siteAudit[$today]['google-reviews'] = $googleInfo['google-reviews'];
@@ -720,11 +709,27 @@ function battleplan_site_audit() {
 			$header = get_posts([ 'name' => 'site-header','post_type' => 'elements' ]);
 			$footer = get_posts([ 'name' => 'site-footer','post_type' => 'elements' ]);
 			$widgets = get_posts([ 'name' => 'widgets','post_type' => 'elements' ]);
-			$checkContent = $header[0]->post_content.get_the_content().$widgets[0]->post_content.get_post_meta( get_the_ID(), 'page-bottom_text', false ).$footer[0]->post_content;	
+			$checkContent = '';
+	
+			if ( $header ) $checkContent .= $header[0]->post_content;
+			$checkContent .= get_the_content();
+			if ( $widgets ) $checkContent .= $widgets[0]->post_content;
+			$checkContent .= get_post_meta( get_the_ID(), 'page-bottom_text', false );
+			if ( $footer ) $checkContent .= $footer[0]->post_content;	
 	
 			if ( strpos($checkContent, "coupon") !== false ) $siteAudit[$today]['coupon'] = "true";	
 			if ( strpos($checkContent, "[get-financing") !== false || strpos($checkContent, "[get-wells-fargo") !== false ) $siteAudit[$today]['financing-link'] = "true";	
 		endwhile; endif; wp_reset_postdata();
+	
+	
+		if ( $submitCheck == "true" ) :
+			foreach ( $criteriaOrder as $log ) :
+				$log_value = $_POST[$log];
+				if ( $log == "audit-ada" || $log =="audit-schema" || $log =="audit-html" || $log =="audit-browserstack" ) :
+					$siteAudit[$today][$log] = $log_value;
+				endif;		
+			endforeach;	
+		endif;
 
 		updateOption('bp_site_audit_details', $siteAudit, false);
 	endif;
@@ -792,7 +797,7 @@ function battleplan_site_audit() {
 		
 		$siteAuditPage .= '<br>';
 
-		$siteAuditPage .= '<h1>Console</h1>';	
+		$siteAuditPage .= '<h1>Search Console</h1>';	
 		$siteAuditPage .= '<div class="form-input"><label for="console-indexed">Index Pages:</label><input id="console-indexed" type="text" name="console-indexed" value=""></div>';
 		$siteAuditPage .= '<div class="form-input"><label for="console-clicks">Clicks:</label><input id="console-clicks" type="text" name="console-clicks" value=""></div>';
 		$siteAuditPage .= '<div class="form-input"><label for="console-position">Avg. Position:</label><input id="console-position" type="text" name="console-position" value=""></div>';
@@ -802,8 +807,15 @@ function battleplan_site_audit() {
 		$siteAuditPage .= '<h1>Google Business Profile</h1>';
 		$siteAuditPage .= '<div class="form-input"><label for="gmb-overview">Overview:</label><input id="gmb-overview" type="text" name="gmb-overview" value=""></div>';
 		$siteAuditPage .= '<div class="form-input"><label for="gmb-calls">Calls:</label><input id="gmb-calls" type="text" name="gmb-calls" value=""></div>';
-		$siteAuditPage .= '<div class="form-input"><label for="gmb-msg">Messages:</label><input id="gmb-msg" type="text" name="gmb-msg" value=""></div>';
 		$siteAuditPage .= '<div class="form-input"><label for="gmb-clicks">Clicks:</label><input id="gmb-clicks" type="text" name="gmb-clicks" value=""></div>';
+		
+		$siteAuditPage .= '<br>';
+
+		$siteAuditPage .= '<h1>Passed Audits</h1>';
+		$siteAuditPage .= '<div class="form-input"><label for="audit-ada">ADA (Wave):</label><input id="audit-ada" type="checkbox" name="audit-ada" value="true"></div>';
+		$siteAuditPage .= '<div class="form-input"><label for="audit-schema">Schema:</label><input id="audit-schema" type="checkbox" name="audit-schema" value="true"></div>';
+		$siteAuditPage .= '<div class="form-input"><label for="audit-html">HTML:</label><input id="audit-html" type="checkbox" name="audit-html" value="true"></div>';
+		$siteAuditPage .= '<div class="form-input"><label for="audit-browserstack">Browser Stack:</label><input id="audit-browserstack" type="checkbox" name="audit-browserstack" value="true"></div>';
 	
 		$siteAuditPage .= '[/col][col]';
 	
@@ -822,80 +834,7 @@ function battleplan_site_audit() {
 	$siteAuditPage .= '[clear height="60px"]';
 		
 	$siteAuditPage .= '[section][layout class="stats '.$siteType.'"]';	
-	$siteAuditPage .= '[col class="empty"][/col]';
-	$siteAuditPage .= '[col class="headline lighthouse-mobile-score"]Performance Score[/col]';	
-	$siteAuditPage .= '[col class="headline lighthouse-mobile-ttfb"]Time To First Byte[/col]';
-	$siteAuditPage .= '[col class="headline lighthouse-mobile-fcp"]First Contentful Paint[/col]';
-	$siteAuditPage .= '[col class="headline lighthouse-mobile-lcp"]Largest Contentful Paint[/col]';	
-	$siteAuditPage .= '[col class="headline lighthouse-mobile-tti"]Time To Interactive[/col]';	
-	$siteAuditPage .= '[col class="headline lighthouse-mobile-tbt"]Total Blocking Time[/col]';		
-	$siteAuditPage .= '[col class="headline lighthouse-mobile-si"]Speed Index[/col]';	
-	$siteAuditPage .= '[col class="headline lighthouse-mobile-cls"]Cumulative Layout Shift[/col]';
-	$siteAuditPage .= '[col class="headline lighthouse-desktop-score"]Performance Score[/col]';	
-	$siteAuditPage .= '[col class="headline lighthouse-desktop-ttfb"]Time To First Byte[/col]';
-	$siteAuditPage .= '[col class="headline lighthouse-desktop-fcp"]First Contentful Paint[/col]';	
-	$siteAuditPage .= '[col class="headline lighthouse-desktop-lcp"]Largest Contentful Paint[/col]';
-	$siteAuditPage .= '[col class="headline lighthouse-desktop-tti"]Time To Interactive[/col]';
-	$siteAuditPage .= '[col class="headline lighthouse-desktop-tbt"]Total Blocking Time[/col]';	
-	$siteAuditPage .= '[col class="headline lighthouse-desktop-si"]Speed Index[/col]';		
-	$siteAuditPage .= '[col class="headline lighthouse-desktop-cls"]Cumulative Layout Shift[/col]';	
-	
-	$siteAuditPage .= '[col class="headline keyword-page-1"]Page One[/col]';	
-	$siteAuditPage .= '[col class="headline keyword-needs-attn"]Needs Attention[/col]';	
-	
-	$siteAuditPage .= '[col class="headline database-page-gen-time"]Page Gen Time[/col]';	
-	$siteAuditPage .= '[col class="headline database-peak-mem"]Peak Memory[/col]';	
-	$siteAuditPage .= '[col class="headline database-db-queries"]DB Queries[/col]';	
-	$siteAuditPage .= '[col class="headline database-db-queries-time"]DB Queries Time[/col]';	
-		
-	$siteAuditPage .= '[col class="headline back-total-links"]Total Links[/col]';
-	$siteAuditPage .= '[col class="headline back-domains"]Linking Domains[/col]';
-	$siteAuditPage .= '[col class="headline back-local-links"]Local Links[/col]';	
-	$siteAuditPage .= '[col class="headline back-c-flow"]C-Flow[/col]';	
-	$siteAuditPage .= '[col class="headline back-domain-authority"]Domain Authority[/col]';	
-	
-	$siteAuditPage .= '[col class="headline cite-citations"]Citations[/col]';	
-	$siteAuditPage .= '[col class="headline cite-key-citations"]Key Citations[/col]';	
-	$siteAuditPage .= '[col class="headline cite-citation-score"]Key Score[/col]';	
-	
-	$siteAuditPage .= '[col class="headline console-indexed"]Indexed Pages[/col]';	
-	$siteAuditPage .= '[col class="headline console-clicks"]Clicks[/col]';	
-	$siteAuditPage .= '[col class="headline console-position"]Avg. Position[/col]';	
-	
-	$siteAuditPage .= '[col class="headline gmb-overview"]Overview[/col]';	
-	$siteAuditPage .= '[col class="headline gmb-calls"]Calls[/col]';	
-	$siteAuditPage .= '[col class="headline gmb-msg"]Messages[/col]';	
-	$siteAuditPage .= '[col class="headline gmb-clicks"]Clicks[/col]';	
-		
-	$siteAuditPage .= '[col class="headline google-reviews"]Number[/col]';	
-	$siteAuditPage .= '[col class="headline google-rating"]Rating[/col]';	
-	
-	$siteAuditPage .= '[col class="headline load_time_mobile"]Mobile[/col]';		
-	$siteAuditPage .= '[col class="headline load_time_desktop"]Desktop[/col]';	
-	
-	$siteAuditPage .= '[col class="headline testimonials"]Testimonials[/col]';		
-	$siteAuditPage .= '[col class="headline testimonials-pct"]Testimonials View %[/col]';	
-	$siteAuditPage .= '[col class="headline coupon"]Coupon[/col]';				
-	$siteAuditPage .= '[col class="headline coupon-pct"]Coupon View %[/col]';
-	$siteAuditPage .= '[col class="headline financing-link"]Financing Ad[/col]';	
-	$siteAuditPage .= '[col class="headline finance-pct"]Financing View %[/col]';
-	$siteAuditPage .= '[col class="headline blog"]Blog Posts[/col]';	
-	$siteAuditPage .= '[col class="headline galleries"]Galleries[/col]';
-	$siteAuditPage .= '[col class="headline landing"]Landing Pages[/col]';	
-	$siteAuditPage .= '[col class="headline jobsites"]Jobsites[/col]';	
-	
-	$siteAuditPage .= '[col class="subhead date"]Date[/col]';	
-	$siteAuditPage .= '[col class="subhead lighthouse-mobile"]Mobile[/col]';	
-	$siteAuditPage .= '[col class="subhead lighthouse-desktop"]Desktop[/col]';	
-	$siteAuditPage .= '[col class="subhead keywords"]Keywords[/col]';		
-	$siteAuditPage .= '[col class="subhead database"]Database[/col]';	
-	$siteAuditPage .= '[col class="subhead backlinks"]Backlinks[/col]';	
-	$siteAuditPage .= '[col class="subhead cite"]Citations[/col]';	
-	$siteAuditPage .= '[col class="subhead console"]Console[/col]';	
-	$siteAuditPage .= '[col class="subhead gmb"]Google Business Profile[/col]';		
-	$siteAuditPage .= '[col class="subhead google"]Reviews[/col]';	
-	$siteAuditPage .= '[col class="subhead load_time"]Site Speed[/col]';	
-	$siteAuditPage .= '[col class="subhead site-elements"]Site Elements[/col]';
+	$siteAuditPage .= '[col]';
 	
 	$siteAudit = get_option('bp_site_audit_details');
 	
@@ -914,27 +853,52 @@ function battleplan_site_audit() {
 		$siteAudit[$date] = $sortedDetails;
 	endforeach;
 	
-    foreach ( $siteAudit as $date => $auditDetails ) :	
-		$siteAuditPage .= '[col class="when"]'.date("M j, Y", strtotime($date)).'[/col]';
-
-		foreach ( $auditDetails as $criteria=>$auditDetail ) :	
-			$siteAuditPage .= '[col class="stat '.$criteria.'"]';
-
-			if ( $auditDetail == "true" ) :
-				$siteAuditPage .= '●';
-			elseif ( $auditDetail == "false" ) :
-				$siteAuditPage .= '—';
-			elseif ( !is_numeric($auditDetail) ) :
-				$siteAuditPage .= $auditDetail;
-			else:
-				$siteAuditPage .= $auditDetail;
-			endif;
-			$siteAuditPage .= '[/col]';
-		endforeach;
+	$siteAuditPage .="<table>";
 	
+	$siteAuditPage .= "<tr><th>Criteria</th>";
+	foreach ($siteAudit as $date => $auditDetails) :
+		$siteAuditPage .= '<th><span class="month">'.date("M j", strtotime($date)).'</span><br>'.date("Y", strtotime($date)).'</th>';
 	endforeach;
+	$siteAuditPage .= "</tr>";
 
-	$siteAuditPage .= '[/layout][/section]</div></div><!--site-audit-wrap-->';
+	// Collect all criteria keys
+	$criteriaKeys = array_keys(current($siteAudit));
+	$alt = 0;
+
+	// Add rows for each criterion
+	foreach ($criteriaKeys as $criteria) :
+
+		$count = count($siteAudit) + 1;
+
+		$headlines = [
+			'lighthouse-mobile-score' => 'Mobile Lighthouse',
+			'lighthouse-desktop-score' => 'Desktop Lighthouse',
+			'keyword-page-1' => 'Keyword Rank',
+			'database-page-gen-time' => 'Query Monitor',
+			'back-total-links' => 'Backlinks',
+			'cite-citations' => 'Citations',
+			'console-indexed' => 'Search Console',
+			'gmb-overview' => 'Google Business Profile',
+			'load_time_mobile' => 'Website Details',
+			'audit-ada' => 'Passed Audits',
+		];
+
+		if (array_key_exists($criteria, $headlines)) {
+			$alt = ($alt == 0) ? 1 : 0;
+			$siteAuditPage .= '<tr><td colspan="'.$count.'" class="headline color-'.$alt.'">'.$headlines[$criteria].'</td></tr>';
+		}
+
+		$siteAuditPage .= '<tr><td class="subheadline color-'.$alt.'">'.ucwords(str_replace(['-', '_'], ' ', $criteria)).'</td>';
+		foreach ($siteAudit as $auditDetails) :
+			$auditDetail = $auditDetails[$criteria] ?? '';
+			$siteAuditPage .= '<td class="stat color-'.$alt.' '.$criteria.'">';
+			$siteAuditPage .= $auditDetail === "true" ? '●' : ($auditDetail === "false" ? '—' : $auditDetail);
+			$siteAuditPage .= '</td>';
+		endforeach;
+		$siteAuditPage .= "</tr>";
+	endforeach;
+	
+	$siteAuditPage .= '</table>[/col][/layout][/section]</div></div><!--site-audit-wrap-->';
 	echo do_shortcode($siteAuditPage);
 	
 	if ( is_array($siteAudit)) updateOption( 'site_updated', strtotime(array_key_first($siteAudit)) ); 

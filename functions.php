@@ -514,50 +514,6 @@ function battleplan_countTease( $id, $override=false ) {
 	endif;	
 }
 
-// Dynamically add loading='lazy' to all images that are below #masthead
-add_filter('the_content', 'battleplan_lazy_load_img');
-function battleplan_lazy_load_img($content) {
-    if (is_admin() || empty($content)) return do_shortcode($content);
-
-    libxml_use_internal_errors(true);	
-
-    // Ensure UTF-8 content handling
-    $dom = new DOMDocument('1.0', 'UTF-8');
-    
-    // Wrap the content and ensure UTF-8 input
-    $content = '<div id="temp_wrapper">' . mb_convert_encoding($content, 'HTML-ENTITIES', 'UTF-8') . '</div>';
-    $dom->loadHTML($content, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
-    libxml_clear_errors();
-
-    foreach ($dom->getElementsByTagName('img') as $img) {
-        if ($img instanceof DOMElement && $img->hasAttribute('loading')) {
-            continue;
-        }
-
-        $parent = $img->parentNode;
-        $insideMasthead = false;
-
-        while ($parent && $parent->nodeName !== 'html') { 
-            if ($parent instanceof DOMElement && $parent->hasAttribute('id') && $parent->getAttribute('id') === 'masthead') {
-                $insideMasthead = true;
-                break;
-            }
-            $parent = $parent->parentNode;
-        }
-
-        if ($insideMasthead) { continue; }
-
-        if ($img instanceof DOMElement) {
-            $img->setAttribute('loading', 'lazy');
-        }
-    }
-
-    $processedContent = $dom->saveHTML();
-    $processedContent = preg_replace('/^<div id="temp_wrapper">|<\/div>$/', '', $processedContent);
-
-    return do_shortcode($processedContent);
-}
-
 /*--------------------------------------------------------------
 # Basic Theme Set Up
 --------------------------------------------------------------*/
@@ -1894,7 +1850,9 @@ function battleplan_fetch_site_icon($clear=false) {
 add_filter('final_output', function($content) {
 	if ( !is_admin() ) : 
 		// Add 'name="description"' to the <meta property="og:description"> tag
-		$content = str_replace('property="og:description"', 'name="description" property="og:description"', $content);
+		if (strpos($content, 'name="description"') === false) {
+			$content = str_replace('property="og:description"', 'name="description" property="og:description"', $content);
+		}
 		// Remove align- to reduce redundant css
 		$content = str_replace (
     		['alignleft', 'alignright', 'aligncenter', 'top-strip', 'divider-strip', 'logo-strip', 'site-info', ' sidebar-box', 'widget-box'],

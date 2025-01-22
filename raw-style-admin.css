@@ -146,8 +146,7 @@ div[data-slug="battleplantheme-site"] div.theme-screenshot {
 @media (max-width: 1024px) {
 	#wpadminbar {
 		display: 										 none !important;
-	}
-	
+	}	
 }
 
 @media (max-width: 860px) {

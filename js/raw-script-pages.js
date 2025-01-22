@@ -1469,11 +1469,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		}
 	});
 	
-// Add .page-begins to the next section under masthead for purposes of locking .top-strip
-	const pageBegins = getObject('#masthead + section');
-	if (pageBegins) {
-		pageBegins.classList.add('page-begins');
-	}
+// Add .page-begins to the next section under masthead for purposes of locking .top-strip   
+	const pageBegins = ['section', 'main'].find(selector => getObject(`#masthead + ${selector}`));
+														   
+	pageBegins && getObject(`#masthead + ${pageBegins}`).classList.add('page-begins');
 
 // Add "noFX" class to img if it appears in any of the parent divs
 	getObjects('div.noFX').forEach(div => {
@@ -2209,6 +2208,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 // Handle multiple Google review locations on mobile
 		if (getDeviceW() > mobileCutoff) {
 			getObjects('.wp-google-badge .wp-google-badge-btn').forEach(btn => btn.style.display = 'block');
+
 		} else {
 			const buttons = getObjects('.wp-google-badge .wp-google-badge-btn');
 			if (buttons.length > 1) {

@@ -104,6 +104,10 @@ input#wp-submit {
 	padding: 									3px 15px;
 }
 
+.screen-reader-text {
+	display: 									none !important
+}
+
 :root {
 	--input-border: 							1px solid var(--black-low);
 	

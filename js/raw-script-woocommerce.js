@@ -4,6 +4,26 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 														   
 	window.addEventListener("load", () => {
 		
+	// Move cart button into row with other menu bar icons on mobile
+		cloneDiv('a.cart-btn', '#mobile-menu-bar', 'top');	
+		
+		
+	// fix the social icons when WooCommerce is active (unexplained glitch)
+		const hasSocialBtns = getObject('.icon-btn.social-btn');
+
+		if ( hasSocialBtns ) {
+			const social_box = hasSocialBtns.parentNode.parentNode;
+
+			getObjects('span.icon').forEach(icon => {
+				const social = icon.classList[1]; // Assumes 'icon' is always the first class
+				const target = `a.icon-btn.social-btn.${social}-btn .icon-bg`;
+				moveDiv(`span.icon.${social}`, target, 'before');
+			});
+
+			getObjects('p', social_box).forEach(p => p.remove());
+		}
+		
+		
 	// Set up woocommerce pages to match rest of site
 		const wooMain = getObject('.woocommerce-js main#main');		
 		if (wooMain) {		

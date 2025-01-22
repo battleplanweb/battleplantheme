@@ -2,6 +2,7 @@
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
 # Base
+	- Pagination
 	- Icons
 	- Forms
 	- Overrides
@@ -16,6 +17,15 @@
 /*--------------------------------------------------------------
 # Base
 --------------------------------------------------------------*/
+
+
+
+/* Pagination
+--------------------------------------------- */
+.woocommerce nav.woocommerce-pagination ul li a, 
+.woocommerce nav.woocommerce-pagination ul li span {
+  	padding: 									1px;
+}
 
 /* Icons
 --------------------------------------------- */
@@ -456,7 +466,7 @@ input[type="number"] {
     display: 									inline-block;
     float: 										none;
 	max-width: 									50px;
-    margin: 									20px 2aaaaaaaapx;
+    margin: 									20px 2px;
 }
 
 .theme-battleplantheme.woocommerce-js div.product p.price, 
@@ -464,8 +474,12 @@ input[type="number"] {
 	color:										inherit;
 }
 
+.theme-battleplantheme.woocommerce-page ul.products li.product .price, 
+.theme-battleplantheme.woocommerce-page ul.products li.product .price ins, 
+.theme-battleplantheme.woocommerce-page div.product p.price,
 .theme-battleplantheme.woocommerce-js div.product p.price ins {
 	font-weight:								inherit;
+	text-decoration: 							none;
 }
 
 .theme-battleplantheme.woocommerce-js div.product p.price del {
@@ -514,6 +528,7 @@ input[type="number"] {
 }
 
 .theme-battleplantheme.woocommerce-js .product_meta {
+
 	display:									none;
 }
 
@@ -638,8 +653,6 @@ label[for=wc-stripe-new-payment-method] {
 	margin: 									-20px 0 0 13px;
 }
 
-
-
 #ppc-button,
 .payment_method_ppcp-credit-card-gateway {
 	display: 									block !important;
@@ -691,6 +704,30 @@ label[for="payment_method_ppcp-credit-card-gateway"] {
 	margin-right:								10px;
 }
 
+.screen-desktop .col.account-buttons a:not(.cart-btn),
+.screen-mobile .col.account-buttons,
+.screen-mobile .col.account-buttons a.cart-btn,
+.screen-desktop #mobile-menu-bar a.cart-btn {
+	display: 									none;
+}
+
+.screen-desktop .col.account-buttons a.cart-btn,
+.screen-mobile #mobile-menu-bar a.cart-btn {
+	display: 									block;
+}
+
+.screen-2 #mobile-menu-bar, 
+.screen-3 #mobile-menu-bar {
+  	grid-template-columns: 						53px 38px 38px 38px;
+}
+
+.screen-1 #mobile-menu-bar {
+  	grid-template-columns: 						50px 38px 38px 1fr 38px 38px;
+}
+
+.screen-mobile .fa-shopping-cart::before {
+  	font-size: 									24px;
+}
 
 /*--------------------------------------------------------------
 # Mobile Styles

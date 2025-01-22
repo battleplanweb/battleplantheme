@@ -155,47 +155,31 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			touchEndY = 0;
 		const threshold = 30;
 
-        const handleSwipeGesture = () => {
-            const xDiff = touchEndX - touchStartX,
-				  yDiff = touchEndY - touchStartY;
+		const handleSwipeGesture = () => {
+			(Math.abs(touchEndX - touchStartX) > Math.abs(touchEndY - touchStartY) && Math.abs(touchEndX - touchStartX) > threshold) 
+				? touchEndX > touchStartX 
+					? prevSlide() 
+					: nextSlide() 
+				: null;
+			resetTimer();
+		};
 
-		// Only trigger swiping if X movement is greater than Y movement and exceeds the threshold
-			if (Math.abs(xDiff) > Math.abs(yDiff) && Math.abs(xDiff) > threshold) {
-                if (xDiff > 0) {
-                    prevSlide();
-                } else {
-                    nextSlide();
-                }
-                resetTimer();
-            }
-        };
-
-        carousel.addEventListener('touchstart', e => {
-            touchStartX = e.changedTouches[0].screenX;
-            touchStartY = e.changedTouches[0].screenY;
-        }, {passive: true});
+		carousel.addEventListener('touchstart', e => {
+			({screenX: touchStartX, screenY: touchStartY} = e.changedTouches[0]);
+		}, {passive: true});
 
 		carousel.addEventListener('touchmove', e => {
-			touchEndX = e.changedTouches[0].screenX;
-			touchEndY = e.changedTouches[0].screenY;
-
-			const xDiff = touchEndX - touchStartX,
-				  yDiff = touchEndY - touchStartY;
-
-			// Prevent scrolling when swiping horizontally
-			if (Math.abs(xDiff) > Math.abs(yDiff) && Math.abs(xDiff) > threshold) {
-				if (e.cancelable) {
-					e.preventDefault();
-				}
-			}
+			({screenX: touchEndX, screenY: touchEndY} = e.changedTouches[0]);
+			(Math.abs(touchEndX - touchStartX) > Math.abs(touchEndY - touchStartY) && Math.abs(touchEndX - touchStartX) > threshold && e.cancelable) 
+				? e.preventDefault() 
+				: null;
 		}, {passive: false});
 
-        carousel.addEventListener('touchend', e => {
-            touchEndX = e.changedTouches[0].screenX;
-            touchEndY = e.changedTouches[0].screenY;
-            handleSwipeGesture();
-        }, {passive: true});
-
+		carousel.addEventListener('touchend', e => {
+			({screenX: touchEndX, screenY: touchEndY} = e.changedTouches[0]);
+			handleSwipeGesture();
+		}, {passive: true});
+		
     // Link indicators to slides
         indicators.forEach((indicator, index) => {
             indicator.addEventListener('click', () => {

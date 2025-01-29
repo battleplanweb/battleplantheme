@@ -53,6 +53,13 @@ function battleplan_woo_labels($single, $plural){
 // Declare support for Woocommerce
 add_theme_support( 'woocommerce' );
 
+add_action( 'enqueue_block_assets', 'battleplan_disable_blocks', 1, 1 );
+function battleplan_disable_blocks() {
+  	wp_deregister_style( 'wc-block-editor' );
+  	wp_deregister_style( 'wc-block-style' );
+}
+
+
 // Add nonce to Stripe payment form
 add_filter('final_output', function($content) {
 	if ( !is_admin() && defined('_BP_NONCE') ) : 

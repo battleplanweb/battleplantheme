@@ -122,17 +122,32 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		
 	// Make Account Page menu a flex box menu	
 		const myAcct = getObject('.woocommerce-MyAccount-navigation ul');
-		if (myAcct) {
+		if (myAcct) { 
 			myAcct.classList.add('row-of-buttons');
 		}
+				
+		
+		// Ensure script for variation drop-down is loaded when AJAX completes
+		const initVariationsForm = () => {
+			getObjects('.variations_form.cart').forEach(form => {
+				typeof jQuery !== 'undefined' && jQuery(form).wc_variation_form ? jQuery(form).wc_variation_form() : null;
+			});
+		};
+
+		initVariationsForm();
+		document.addEventListener('ajaxComplete', initVariationsForm);
+		
+			
+		// Change "Quantity" to "Qty" on phones
+		getObjects('.woocommerce #page table.shop_table thead th.product-quantity').forEach(th => th.textContent = 'Qty');
+			
 	});
 	
 	// Remove "no-js" from body classes	
 	let c = document.body.className;
 	c = c.replace(/woocommerce-no-js/, 'woocommerce-js');
-	document.body.className = c;
-														   
-    getObjects('abbr.required, em.required, span.required').forEach(el => el.textContent = "");
-
+	document.body.className = c;					   
 	
+	// Add woocommerce class to all woocommerce pages
+	document.body.classList.contains('woocommerce-page') && !document.body.classList.contains('woocommerce') ? document.body.classList.add('woocommerce') : null;	
 });

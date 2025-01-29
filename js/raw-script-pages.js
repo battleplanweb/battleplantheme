@@ -21,8 +21,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 --------------------------------------------------------------*/
 														   
 	window.bp_page = getObject('#page');
-
-
+														   
 // Determine whether or not to leave space for mobile menu header														   
 	window.mobileMenuBarH = function () {
 		return getDeviceW() > mobileCutoff ? 0 : document.getElementById('mobile-menu-bar').offsetHeight;
@@ -562,6 +561,21 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	getObjects('input[name]').forEach(input => {
 		input.id = input.name;
 	});
+														   
+			/* supposed to stop multiple submit clicks -- added 1/28/25 but need to investigate further											   
+    document.querySelectorAll('.wpcf7-form').forEach(function(form) {
+        const submitButton = form.querySelector('input[type="submit"], button[type="submit"]');
+
+        if (submitButton) {
+            form.addEventListener('wpcf7beforesubmit', function() {
+                submitButton.setAttribute('disabled', 'true'); // Disable the button
+            });
+
+            form.addEventListener('wpcf7submit', function() {
+                submitButton.removeAttribute('disabled'); // Re-enable the button
+            });
+        }
+    });*/
 	
 	
 // Duplicate menu button text onto the button BG
@@ -2313,6 +2327,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			updateId(select, select.id);
 			if ( label ) { label.setAttribute('for', select.id); }
 		}
-	});
+	});		
 			
 });

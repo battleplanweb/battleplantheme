@@ -1591,14 +1591,16 @@ function battleplan_getFilterButton( $atts, $content = null ) {
 // Side by side images
 add_shortcode( 'side-by-side', 'battleplan_SideBySideImg' );
 function battleplan_SideBySideImg( $atts, $content = null ) {	
-	$a = shortcode_atts( array( 'img'=>'', 'size'=>'half-s', 'align'=>'center', 'full'=>'', 'pos'=>'bottom', 'break'=>'none', 'class'=>''), $atts );	
+	$a = shortcode_atts( array( 'img'=>'', 'size'=>'half-s', 'gap'=>'', 'align'=>'center', 'full'=>'', 'pos'=>'bottom', 'break'=>'none', 'class'=>''), $atts );	
 	$size = esc_attr($a['size']);
+	$gap = esc_attr($a['gap']);
+	$gap = $gap !== '' ? ' style="gap: '.$gap.'"' : '';
 	$class = esc_attr($a['class']) == '' ? '' : ' '.esc_attr($a['class']).' ';
 	$break = esc_attr($a['break']) == "none" ? ' break-none' : ' break-'.esc_attr($a['break']);
 	$align = "align".esc_attr($a['align']);	
 	$images = explode(',', esc_attr($a['img']));	
 	
-	$buildFlex = '<ul class="side-by-side '.$class.$align.$break.'">';
+	$buildFlex = '<ul class="side-by-side '.$class.$align.$break.'"'.$gap.'>';
 	for ($i = 0; $i < count($images); $i++) :
 		$imgID = trim($images[$i]);
 		$img = wp_get_attachment_image_src( $imgID, $size );

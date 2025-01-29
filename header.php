@@ -25,6 +25,11 @@
 			?>const google_ad_location = null;<?php 
 		endif; ?>		
 		const site_name = '<?php echo get_bloginfo("name") ?>';
+		
+		// prevents the TypeError: wp is undefined from showing in console.log
+		window.wp = window.wp || {}; 
+		wp.i18n = wp.i18n || {}; 
+		wp.i18n.setLocaleData = () => {};
 	</script>	
 	
 	<?php if ( isset($GLOBALS['customer_info']['lcp']) && !is_mobile() ) : 

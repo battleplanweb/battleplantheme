@@ -1003,54 +1003,6 @@ function battleplan_dequeue_unwanted_stuff() {
 	endif;
 	
 // re-load in footer
-	//wp_dequeue_style( 'css-animate' );  wp_deregister_style( 'css-animate' );
-	//wp_dequeue_style( 'fontawesome' ); wp_deregister_style( 'fontawesome' );
-	//if ( is_plugin_active( 'extended-widget-options/plugin.php' ) ) :
-		//wp_dequeue_style( 'widgetopts-styles' ); 
-		//wp_deregister_style( 'widgetopts-styles' );
-	//endif;
-}
-
-// Dequeue and deregister scripts that are not necessary or can be delayed to footer
-add_action('wp_enqueue_scripts', 'battleplan_dequeue_scripts', 9997);
-add_action('wp_print_footer_scripts', 'battleplan_dequeue_scripts', 9997);
-function battleplan_dequeue_scripts() {
-	wp_dequeue_script( 'select2'); wp_deregister_script('select2');	
-	wp_dequeue_script( 'wphb-global' ); wp_deregister_script( 'wphb-global' );
-	wp_dequeue_script( 'wp-embed' ); wp_deregister_script( 'wp-embed' );
-	wp_dequeue_script( 'modernizr' ); wp_deregister_script( 'modernizr' );
-	wp_dequeue_script('wp-polyfill'); wp_deregister_script('wp-polyfill'); 
-	
-	wp_dequeue_script('customize-support');	wp_deregister_script('customize-support');
-	wp_dequeue_script('wp-i18n');	wp_deregister_script('wp-i18n');
-
-
-	$requires_jquery = [
-		'woocommerce/woocommerce.php',
-		'table-sorter/table-sorter.php',
-		'cue/cue.php',
-		'animated-typing-effect/typingeffect.php',
-		'stripe-payments/accept-stripe-payments.php'
-	];
-
-	$active = false;
-	foreach ($requires_jquery as $plugin) {
-		if (is_plugin_active($plugin)) {
-			$active = true;
-			break;
-		}
-	}
-
-	if (!$active) :
-		wp_dequeue_script('jquery'); wp_deregister_script('jquery');
-		wp_dequeue_script('jquery-js'); wp_deregister_script('jquery-js');
-		wp_dequeue_script('jquery-migrate'); wp_deregister_script('jquery-migrate');
-		wp_dequeue_script('underscore'); wp_deregister_script('underscore');
-	endif;
-	
-// re-load in header
-	//wp_dequeue_script('contact-form-7-js'); wp_deregister_script('contact-form-7-js'); 
-	//wp_dequeue_script('swv-js'); wp_deregister_script('swv-js'); 
 }
 
 // Load and enqueue styles in header
@@ -1089,6 +1041,46 @@ function battleplan_header_styles() {
 	wp_enqueue_style( 'battleplan-style', get_stylesheet_directory_uri()."/style-site.css", array('battleplan-style-forms'), _BP_VERSION );	
 }
 
+// Dequeue and deregister scripts that are not necessary or can be delayed to footer
+add_action('wp_enqueue_scripts', 'battleplan_dequeue_scripts', 9997);
+add_action('wp_print_footer_scripts', 'battleplan_dequeue_scripts', 9997);
+function battleplan_dequeue_scripts() {
+	wp_dequeue_script( 'select2'); wp_deregister_script('select2');	
+	wp_dequeue_script( 'wphb-global' ); wp_deregister_script( 'wphb-global' );
+	wp_dequeue_script( 'wp-embed' ); wp_deregister_script( 'wp-embed' );
+	wp_dequeue_script( 'modernizr' ); wp_deregister_script( 'modernizr' );
+	wp_dequeue_script('customize-support');	wp_deregister_script('customize-support');
+	wp_dequeue_script('wp-polyfill'); wp_deregister_script('wp-polyfill'); 
+	//wp_dequeue_script('wp-i18n');	wp_deregister_script('wp-i18n');
+
+	$GLOBALS['requires_jquery'] = [
+		'woocommerce/woocommerce.php',
+		'table-sorter/table-sorter.php',
+		'cue/cue.php',
+		'animated-typing-effect/typingeffect.php',
+		'stripe-payments/accept-stripe-payments.php'
+	]; 
+
+	$active = false;
+	foreach ($GLOBALS['requires_jquery'] as $plugin) {
+		if (is_plugin_active($plugin)) {
+			$active = true;
+			break;
+		}
+	}
+
+	if (!$active) :
+		wp_dequeue_script('jquery'); wp_deregister_script('jquery');
+		wp_dequeue_script('jquery-js'); wp_deregister_script('jquery-js');
+		wp_dequeue_script('jquery-migrate'); wp_deregister_script('jquery-migrate');
+		wp_dequeue_script('underscore'); wp_deregister_script('underscore');
+	endif;
+	
+// re-load in header
+	//wp_dequeue_script('contact-form-7-js'); wp_deregister_script('contact-form-7-js'); 
+	//wp_dequeue_script('swv-js'); wp_deregister_script('swv-js'); 
+}
+
 // Load scripts in header
 add_action( 'wp_enqueue_scripts', 'battleplan_enqueue_header_scripts', 1 );
 function battleplan_enqueue_header_scripts() {
@@ -1108,7 +1100,8 @@ function battleplan_enqueue_footer_scripts() {
 		endif;
 	endif;
 
-	wp_enqueue_script( 'battleplan-script-tracking', get_template_directory_uri().'/js/script-tracking.js', array(), _BP_VERSION,  array( 'strategy' => 'defer', 'in_footer' => 'true' ) ); 	
+	wp_enqueue_script( 'battleplan-script-tracking', get_template_directory_uri().'/js/script-tracking.js', array(), _BP_VERSION,  array( 'strategy' => 'defer', 'in_footer' => 'true' ) ); 
+	
 	//wp_enqueue_script( 'battleplan-script-cloudflare', get_template_directory_uri().'/js/script-cloudflare.js', array(), _BP_VERSION,  array( 'strategy' => 'defer', 'in_footer' => 'true' ) );	
 
 	if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 'true' ) wp_enqueue_script( 'battleplan-script-events', get_template_directory_uri().'/js/script-events.js', array(), _BP_VERSION,  array( 'strategy' => 'defer', 'in_footer' => 'true' ) );   
@@ -1140,28 +1133,28 @@ function battleplan_enqueue_footer_scripts() {
 	wp_enqueue_script( 'battleplan-script-site', get_stylesheet_directory_uri().'/script-site.js', array('battleplan-script-fire-off'), _BP_VERSION,  array( 'strategy' => 'defer', 'in_footer' => 'true' ) );	
 }
 
-// Defer javascript to footer & add nonce to inline scripts
+// Block jquery, add nonce to inline scripts, and defer to footer when appropriate
 add_filter('script_loader_tag', 'battleplan_add_data_attribute', 10, 3);
 function battleplan_add_data_attribute($tag, $handle, $src) {
     if ( is_admin() || $GLOBALS['pagenow'] === 'wp-login.php' || strpos( $src, '.js' ) === FALSE ) return $tag;
-   	if ( (!is_plugin_active( 'woocommerce/woocommerce.php' ) && !is_plugin_active( 'table-sorter/table-sorter.php' ) ) && ( $handle === 'jquery' || $handle === 'jquery-js' )) return null;	
+	
+    $is_jquery_required = false;
+    foreach ($GLOBALS['requires_jquery'] as $plugin) {
+        if (is_plugin_active($plugin)) {
+            $is_jquery_required = true;
+            break;
+        }
+    }
+
+    if (!$is_jquery_required && ($handle === 'jquery' || $handle === 'jquery-js')) return null; 
 	
     if ( $handle === 'contact-form-7-js' || $handle === 'swv-js' ) :
 		$tag = str_replace('<script ', '<script nonce="' . _BP_NONCE . '" ', $tag);
         return $tag;
 	else:
 		$tag = str_replace('<script ', '<script nonce="' . _BP_NONCE . '" defer ', $tag);
-		//$tag = '<script nonce="'._BP_NONCE.'" id="'.$handle.'" defer src="'.esc_url( $src ).'"></script>'; 
 	    return $tag;
 	endif;	
-}
-
-//add_filter('script_loader_tag', 'add_nonce_to_script', 10, 2);   /* Removing 12/11/24 because it should be handled by above script
-function add_nonce_to_script($tag, $handle) {
-    if ($handle == 'stripe') {
-        $tag = str_replace('src=', 'nonce="'._BP_NONCE.'" defer src=', $tag);
-    }
-    return $tag;
 }
 
 // Load and enqueue admin styles & scripts

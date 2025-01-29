@@ -70,19 +70,23 @@ span.X {
 .icon.sex-male::after,
 .icon.male::after {
     content: 									"\e18a";
+	font-weight: 								bold;
 }
 
 .icon.sex-female::after,
 .icon.female::after { 
     content: 									"\e189";
+	font-weight: 								bold;
 }
 
 .icon.sex-both::after { 
     content: 									"\e18b";
+	font-weight: 								bold;
 }
 
 .icon.medal::after {
-    content: 									"\e09e";
+    content: 									"\e09d";
+	transform: 									scale(1.2);
 }
 
 .col-archive .image-dogs {

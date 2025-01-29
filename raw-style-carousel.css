@@ -204,7 +204,6 @@
 }
 
 .carousel a.carousel-control-prev .carousel-control-prev-icon::after {
-	content:										"\e218";
 	transform: 										rotate(180deg);
 }
 

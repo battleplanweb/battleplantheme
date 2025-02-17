@@ -919,7 +919,8 @@ function battleplan_clear_hvac($all=false) {
 	$pages = get_posts( array('post_type'=>'page', 'numberposts'=>-1) );
 	$landing = get_posts( array('post_type'=>'landing', 'numberposts'=>-1) );
 	$testimonials = get_posts( array('post_type'=>'testimonials', 'numberposts'=>-1) );
-	$galleries = get_posts( array('post_type'=>'galleries', 'numberposts'=>-1) );
+	$galleries = get_posts( array('post_type'=>'galleries', 'numberposts'=>-1) );	
+	$jobsites = get_posts( array('post_type'=>'jobsite_geo', 'numberposts'=>-1) );
 	$posts = get_posts( array('post_type'=>'post', 'numberposts'=>-1) );
 	$woo_products = get_posts( array('post_type'=>'product', 'numberposts'=>-1) );
 	$woo_orders = get_posts( array('post_type'=>'shop_order', 'numberposts'=>-1) );
@@ -936,7 +937,8 @@ function battleplan_clear_hvac($all=false) {
 	foreach ($pages as $post) if ( !in_array( $post->post_name, $keepPages) ) wp_delete_post( $post->ID, true );
 	foreach ($landing as $post) wp_delete_post( $post->ID, true );
 	foreach ($testimonials as $post) wp_delete_post( $post->ID, true );
-	foreach ($galleries as $post) wp_delete_post( $post->ID, true );
+	foreach ($galleries as $post) wp_delete_post( $post->ID, true );	
+	foreach ($jobsites as $post) wp_delete_post( $post->ID, true );
 	foreach ($posts as $post) wp_delete_post( $post->ID, true );
 	foreach ($woo_products as $post) wp_delete_post( $post->ID, true );	
 	foreach ($woo_orders as $post) wp_delete_post( $post->ID, true );
@@ -948,8 +950,8 @@ function battleplan_clear_hvac($all=false) {
 		endif;
 	endforeach;
 
-	$args = array( 'post_status' => 'inherit', 'posts_per_page' => -1, 'post_type' => 'attachment', 'post_mime_type' => 'image', );
-	$args['tax_query'] = array( array( 'taxonomy' => 'image-categories', 'terms' => $deleteImgs, 'field' => 'slug', ),);
+	$args = [ 'post_status' => 'inherit', 'posts_per_page' => -1, 'post_type' => 'attachment', 'post_mime_type' => 'image', 'tax_query' => [ 'relation' => 'OR', [ 'taxonomy' => 'image-categories', 'terms' => $deleteImgs, 'field' => 'slug', ], [ 'taxonomy' => 'image-categories', 'operator' => 'NOT EXISTS', ] ] ];
+	
 	$getImg = new WP_Query( $args );
 
 	if ( $getImg->have_posts() ) : 

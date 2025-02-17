@@ -745,8 +745,6 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	$archiveImg = apply_filters( 'bp_archive_filter_img', $archiveImg );
 	
 	if ( $type === "testimonials" ) {
-		wp_enqueue_style( 'battleplan-testimonials', get_template_directory_uri()."/style-testimonials.css", array('parent-style'), _BP_VERSION ); 
-		
 		$testimonialPhone = esc_attr(get_field( "testimonial_phone" ));
 		$testimonialEmail = esc_attr(get_field( "testimonial_email" ));
 		$testimonialTitle = esc_attr(get_field( "testimonial_title" ));

@@ -125,7 +125,5 @@
 	if ( _USER_LOGIN != "battleplanweb" && _IS_BOT != true ) updateOption('last_visitor_time', strtotime(date("F j, Y g:i a"))); 
 ?>
 
-<?php bp_google_tag_manager(); ?>
-
 </body>
 </html>

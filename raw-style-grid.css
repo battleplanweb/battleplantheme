@@ -1325,15 +1325,18 @@ figure.col-inner {
 		height:											auto !important;
 	}	
 	
-	/* Responsive Sections */
-	.flex.grid-1-1-1-1:not(.break-none):not(.break-2):not(.break-1),
-	.flex.grid-1-1-2:not(.break-none):not(.break-2):not(.break-1),
-	.flex.grid-1-2-1:not(.break-none):not(.break-2):not(.break-1),
-	.flex.grid-1-3-1:not(.break-none):not(.break-2):not(.break-1),
-	.flex.grid-2-1-1:not(.break-none):not(.break-2):not(.break-1) {
-		grid-template-columns: 							1fr 1fr;
-
+	/* Responsive Sections */	
+	.flex.break-3 {
+		grid-template-columns: 							1fr;
 	}
+	
+	.flex.grid-1-1-1-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1),
+	.flex.grid-1-1-2:not(.break-none):not(.break-3):not(.break-2):not(.break-1),
+	.flex.grid-1-2-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1),
+	.flex.grid-1-3-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1),
+	.flex.grid-2-1-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1) {
+		grid-template-columns: 							1fr 1fr;
+	}	
 	
 	.flex.grid-1-1-2:not(.break-none):not(.break-2):not(.break-1) .col:nth-child(3n+3),
 	.flex.grid-1-2-1:not(.break-none):not(.break-2):not(.break-1) .col,
@@ -1519,21 +1522,25 @@ figure.col-inner {
 		max-width:										40%;
 	}
 			
-	/* Responsive Sections */
-	.flex.grid-3-1:not(.break-none):not(.break-1),
-	.flex.grid-1-3:not(.break-none):not(.break-1),
-	.flex.grid-2-1:not(.break-none):not(.break-1),
-	.flex.grid-1-2:not(.break-none):not(.break-1),
-	.flex.grid-3-2:not(.break-none):not(.break-1),
-	.flex.grid-2-3:not(.break-none):not(.break-1),
-	.flex.grid-1-1-1:not(.break-none):not(.break-1),
-	.flex.grid-1-2-1:not(.break-none):not(.break-1),
-	.flex.grid-1-1-2:not(.break-none):not(.break-1),
-	.flex.grid-2-1-1:not(.break-none):not(.break-1),
-	.flex.grid-custom:not(.break-none):not(.break-1) {
-		grid-template-columns: 							1fr 1fr;
+	/* Responsive Sections */	
+	.flex.break-2 {
+		grid-template-columns: 							1fr;
 	}
 	
+	.flex.grid-3-1:not(.break-none):not(.break-1):not(.break-2):not(.break-3),
+	.flex.grid-1-3:not(.break-none):not(.break-1):not(.break-2):not(.break-3),
+	.flex.grid-2-1:not(.break-none):not(.break-1):not(.break-2):not(.break-3),
+	.flex.grid-1-2:not(.break-none):not(.break-1):not(.break-2):not(.break-3),
+	.flex.grid-3-2:not(.break-none):not(.break-1):not(.break-2):not(.break-3),
+	.flex.grid-2-3:not(.break-none):not(.break-1):not(.break-2):not(.break-3),
+	.flex.grid-1-1-1:not(.break-none):not(.break-1):not(.break-2):not(.break-3),
+	.flex.grid-1-2-1:not(.break-none):not(.break-1):not(.break-2):not(.break-3),
+	.flex.grid-1-1-2:not(.break-none):not(.break-1):not(.break-2):not(.break-3),
+	.flex.grid-2-1-1:not(.break-none):not(.break-1):not(.break-2):not(.break-3),
+	.flex.grid-custom:not(.break-none):not(.break-1):not(.break-2):not(.break-3) {
+		grid-template-columns: 							1fr 1fr;
+	}
+
 	.flex.grid-3-1:not(.break-none):not(.break-1) .col,
 	.flex.grid-1-3:not(.break-none):not(.break-1) .col,
 	.flex.grid-2-1:not(.break-none):not(.break-1) .col,

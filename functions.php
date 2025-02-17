@@ -929,7 +929,7 @@ add_action( 'init', 'battleplan_disable_emojis' );
 function battleplan_disable_emojis() {
 	remove_action( 'wp_head', 'print_emoji_detection_script', 7 );
 	remove_action( 'admin_print_scripts', 'print_emoji_detection_script' );
-	remove_action( 'wp_print_styles', 'print_emoji_styles' );
+	remove_action( 'wp_enqueue_scripts', 'print_emoji_styles' );
 	remove_action( 'admin_print_styles', 'print_emoji_styles' ); 
 	remove_filter( 'the_content_feed', 'wp_staticize_emoji' );
 	remove_filter( 'comment_text_rss', 'wp_staticize_emoji' ); 
@@ -976,7 +976,7 @@ add_action('after_setup_theme', function() {
 });
 
 // Dequeue and deregister styles that are not necessary or can be delayed to footer
-add_action( 'wp_print_styles', 'battleplan_dequeue_unwanted_stuff', 9997 );
+add_action( 'wp_enqueue_scripts', 'battleplan_dequeue_unwanted_stuff', 9997 );
 function battleplan_dequeue_unwanted_stuff() {
 	wp_dequeue_style( 'parent-style' );  wp_deregister_style( 'parent-style' );
 	wp_dequeue_style( 'battleplan-style' );  wp_deregister_style( 'battleplan-style' );	
@@ -1006,12 +1006,13 @@ function battleplan_dequeue_unwanted_stuff() {
 }
 
 // Load and enqueue styles in header
-add_action( 'wp_print_styles', 'battleplan_header_styles', 9998 );
+add_action( 'wp_enqueue_scripts', 'battleplan_header_styles', 9998 );
 function battleplan_header_styles() {
 	wp_enqueue_style( 'normalize-style', get_template_directory_uri()."/style-normalize.css", array(), _BP_VERSION );	
 	wp_enqueue_style( 'parent-style', get_template_directory_uri()."/style.css", array('normalize-style'), _BP_VERSION );
 	wp_enqueue_style( 'battleplan-style-grid', get_template_directory_uri()."/style-grid.css", array('parent-style'), _BP_VERSION );	
 	wp_enqueue_style( 'battleplan-style-navigation', get_template_directory_uri()."/style-navigation.css", array('battleplan-style-grid'), _BP_VERSION );
+	wp_enqueue_style( 'battleplan-testimonials', get_template_directory_uri()."/style-testimonials.css", array('parent-style'), _BP_VERSION ); 	
 	
 	if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 'true' )  wp_enqueue_style( 'battleplan-events', get_template_directory_uri()."/style-events.css", array('parent-style'), _BP_VERSION ); 	
 	
@@ -1606,11 +1607,11 @@ function battleplan_getGoogleRating() {
 		$placeIDs = $GLOBALS['customer_info']['pid'];
 		if ( isset($placeIDs) ) :
 			$googleInfo = get_option('bp_gbp_update') ? get_option('bp_gbp_update') : array();
+	
+			wp_enqueue_style( 'battleplan-google-reviews', get_template_directory_uri()."/style-google-reviews.css", array('parent-style'), _BP_VERSION );
 
 			$singleLoc = !is_array($placeIDs) ? true : false;
-			if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
-	
-			wp_enqueue_style( 'battleplan-google-reviews', get_template_directory_uri()."/style-google-reviews.css", array('parent-style'), _BP_VERSION ); 
+			if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs); 
 
 			$buildPanel = '<div class="wp-gr wp-google-badge">';
 
@@ -2181,8 +2182,8 @@ function battleplan_load_tag_manager() {
 			endif;
 		endforeach;
 	endif;
-	$buildTagMgr = '<script nonce="'._BP_NONCE.'" defer src="https://www.googletagmanager.com/gtag/js?id='.$acct_id.'"></script>';
-	$buildTagMgr .= '<script nonce="'._BP_NONCE.'" defer>
+	$buildTagMgr = '<script async nonce="'._BP_NONCE.'" src="https://www.googletagmanager.com/gtag/js?id='.$acct_id.'"></script>';
+	$buildTagMgr .= '<script nonce="'._BP_NONCE.'">
 		window.dataLayer = window.dataLayer || [];
 		function gtag(){dataLayer.push(arguments);}
 		gtag("js", new Date());';

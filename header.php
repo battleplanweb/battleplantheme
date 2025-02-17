@@ -11,7 +11,10 @@
 ?> 
  
 <html lang="en">
-<head>		
+<head>	
+	<link rel="preconnect" href="https://googletagmanager.com/">
+	<?php bp_google_tag_manager(); ?>
+	
 	<meta charset="<?php bloginfo( 'charset' ); ?>">	
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="profile" href="https://gmpg.org/xfn/11">	
@@ -57,8 +60,6 @@
 		//endforeach;
 	//endif; ?>
 	
-	<link rel="preconnect" href="https://googletagmanager.com/">
-
 	<?php bp_font_loader(); ?>	
 
 	<?php wp_head(); ?>

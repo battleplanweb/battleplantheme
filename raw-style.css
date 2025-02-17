@@ -5,7 +5,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 2025.28.0
+Version: 2025.28.1
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -518,12 +518,6 @@ a.skip-link.tab-focus {
 	margin-top:										-20px /* Random Post - brings <h3> sub-title a little closer to the <h2> title, overcoming the grid-gap */
 }
 
-.phone-number a.phone-link, 
-.phone-number a.phone-link:hover, 
-.phone-number a.phone-link.tab-focus {
-	text-decoration:								none;
-} 
-
 .technical-difficulties {
 	font-family: 									var(--font-text);
 	font-size:										var(--font-size-small);
@@ -581,6 +575,30 @@ a[tooltip]::after {
 a[tooltip]:hover::after {
   	visibility: 									visible;
 }
+
+.phone-number a.phone-link, 
+.phone-number a.phone-link:hover, 
+.phone-number a.phone-link.tab-focus,
+h1 a,
+h2 a,
+h3 a,
+h4 a,
+h5 a,
+h6 a,
+h1 a:hover,
+h2 a:hover,
+h3 a:hover,
+h4 a:hover,
+h5 a:hover,
+h6 a:hover,
+h1 a.tab-focus,
+h2 a.tab-focus,
+h3 a.tab-focus,
+h4 a.tab-focus,
+h5 a.tab-focus,
+h6 a.tab-focus {
+	text-decoration:								none;
+} 
 
 /* "Click Here To Finance" added above or below a financing widget */
 .link-text {
@@ -650,7 +668,8 @@ input.paypal-amount {
 
 /* Icons & Social Media
 --------------------------------------------- */
-a.icon-btn {
+a.icon-btn,
+a.icon-btn:visited {
 	position: 										relative;
 	display: 										inline-block;
 	color: 											var(--button-color);

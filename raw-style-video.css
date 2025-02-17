@@ -16,38 +16,38 @@
 	background: 										var(--black-low);
 }
 
-.block-video.span-12,
-.block-video.span-11 {
+.block-video.video-player.span-12,
+.block-video.video-player.span-11 {
 	width: 												100%;
 	padding-top: 										56.25%;
 }
 
-.block-video.span-10,
-.block-video.span-9 {
+.block-video.video-player.span-10,
+.block-video.video-player.span-9 {
 	width: 												75%;
 	padding-top: 										37.376875%;
 }
 
-.block-video.span-8,
-.block-video.span-7 {
+.block-video.video-player.span-8,
+.block-video.video-player.span-7 {
 	width: 												67%;
 	padding-top: 										42.1875%;
 }
 
-.block-video.span-6,
-.block-video.span-5 {
+.block-video.video-player.span-6,
+.block-video.video-player.span-5 {
 	width: 												50%;
 	padding-top: 										28.125%;
 }
 
-.block-video.span-4 {
+.block-video.video-player.span-4 {
 	width: 												33%;
 	padding-top: 										18.5625%;
 }
 
-.block-video.span-3,
-.block-video.span-2,
-.block-video.span-1 {
+.block-video.video-player.span-3,
+.block-video.video-player.span-2,
+.block-video.video-player.span-1 {
 	width: 												25%;
 	padding-top: 										14.0625%;
 }

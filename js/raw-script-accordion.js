@@ -44,41 +44,33 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		});		
 	}
 
-	function openAccordion(accordion, content, button) {	
-		if (button) {			
-			const btn_collapse = button.getAttribute('data-collapse');	
-			if (btn_collapse && btn_collapse !== "hide") {
-				button.innerHTML = btn_collapse;
-			} else {
-				button.style.display = "none";
-			}
-		}
-		
+	const openAccordion = (accordion, content, button) => {	
+		button && button.getAttribute('data-collapse') !== "hide" 
+			? button.innerHTML = button.getAttribute('data-collapse') 
+			: button && (button.style.display = "none");
+
 		setStyles(content, {
-			'height':			content.getAttribute('data-height') + 'px',
-			'opacity': 			1
+			'height': content.getAttribute('data-height') + 'px',
+			'opacity': 1
 		});	
+
 		accordion.setAttribute('aria-expanded', 'true');
-		accordion.classList.add('active');  
+		accordion.classList.add('active'); 
 
-		animateScroll(content);
-	}
+		!content.classList.contains('no-scroll') && animateScroll(content);
+	};
 
-	function closeAccordion(accordion, content, button) {
-		setStyles(content, {
-			'height':			'0px',
-			'opacity': 			0
-		});	
+	const closeAccordion = (accordion, content, button) => {
+		setStyles(content, { 'height': '0px', 'opacity': 0 });
 		accordion.setAttribute('aria-expanded', 'false');
-		accordion.classList.remove('active'); 
-		
-		if (button) {
-			const btn_text = button.getAttribute('data-text');
-			if (btn_text) button.innerHTML = btn_text;
-			
-			setTimeout(() => { animateScroll(accordion.previousElementSibling); }, 50);
-		}
-	}
+		accordion.classList.remove('active');
+
+		button && button.getAttribute('data-text') 
+			? button.innerHTML = button.getAttribute('data-text') 
+			: null;
+
+		!accordion.classList.contains('no-scroll') && setTimeout(() => animateScroll(accordion.previousElementSibling), 50);
+	};
 
 	getObjects('.block-accordion .accordion-button').forEach(button => {
 		button.addEventListener('click', function(e) {

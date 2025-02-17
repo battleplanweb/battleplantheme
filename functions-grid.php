@@ -439,7 +439,7 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 	$icon = esc_attr($a['icon']); 
 	$btnCollapse = esc_attr($a['btn_collapse']);
 	$btn = esc_attr($a['btn']);
-	$scroll = esc_attr($a['btn_scroll']) == "true" ? "" : " no-scroll";
+	$scroll = esc_attr($a['scroll']) == "true" ? "" : " no-scroll";
 	$addBtn = $thumb = '';
 	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
 	if ( $tracking != '' ) $class .= " tracking";
@@ -471,7 +471,7 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 		if ( $end && $now > $end ) return null;		
 	endif;
 
-	return '<div class="block block-accordion'.$class.'"'.$tracking.'>'.$thumb.$printTitle.$excerpt.'<div class="accordion-content"><div class="accordion-box">'.do_shortcode($content).'</div></div>'.$addBtn.'</div>';	
+	return '<div class="block block-accordion'.$class.$scroll.'"'.$tracking.'>'.$thumb.$printTitle.$excerpt.'<div class="accordion-content'.$scroll.'"><div class="accordion-box'.$scroll.'">'.do_shortcode($content).'</div></div>'.$addBtn.'</div>';	
 }
 
 // Parallax Section 

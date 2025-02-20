@@ -5,7 +5,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 2025.28.1
+Version: 2025.28.2
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -16,18 +16,14 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
 # CSS Variables
 # Base
 	- Typography
-	- Elements
 	- Links
 # Components
-	- Fancy Buttons
+	- Fancy Lists
 	- Icons & Social Media
 	- Media
 	- Captions
-	- Testimonials
 	- Coupon
 	- SVG
-	- Search Widgets
-	- Google Reviews
 	- Chat Modules
 # Mobile Styles
 
@@ -260,6 +256,7 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   
   --button-color-hover-alt: 					var(--button-color-alt);
   --button-background-hover-alt: 				var(--button-background-alt);
+
   --button-font-family-hover-alt: 				var(--button-font-family-alt);
   --button-font-weight-hover-alt: 				var(--button-font-weight-alt);
   --button-font-size-hover-alt: 				var(--button-font-size-alt);
@@ -665,6 +662,63 @@ input.paypal-amount {
 	width: 											100%;
 	height: 										30px;
 }
+
+
+/* Fancy Lists
+--------------------------------------------- */
+ul.bullet-list,
+ul.fancy-list {
+	list-style-type: 								none;
+	padding-left: 									0;
+}
+
+ul.bullet-list {
+	margin-left: 									40px;
+}
+
+ul.fancy-list li {
+	display: 										flex;
+	align-items: 									center;
+}
+
+ul.fancy-list b {
+	color: 											inherit;
+	font-weight: 									bold;
+	min-width: 										160px;
+	max-width: 										160px;
+	margin-right: 									15px;
+}
+
+ul.bullet-list li::before,
+ul.fancy-list li::before {
+	content: 										'●';  
+	color: 											inherit; 
+	font-weight: 									bold;
+	display: 										inline-block;
+	text-align: 									center;
+}
+
+ul.bullet-list li::before {
+  	text-indent: 									-40px;
+}
+
+ul.fancy-list li::before {
+	margin-right: 									12px;  
+	font-size: 										150%;
+}
+
+ul.bullet-check li::before {
+	content: 										'✔';  
+}
+
+ul.bullet-square li::before {
+	content: 										'■';  
+}
+
+ul.bullet-diamond li::before {
+	content: 										'♦';  
+}
+
 
 /* Icons & Social Media
 --------------------------------------------- */

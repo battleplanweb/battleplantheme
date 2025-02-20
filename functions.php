@@ -19,27 +19,21 @@ require_once get_template_directory().'/functions-global.php';
 --------------------------------------------------------------*/
 
 // Print variable or array for debugging
-function showMe($something, $die=false) {
-	if ( is_array($something) ) :	
-		$totalLines = count($something);
-		$maxLines = 500;
-		$maxLines2 = 250;
-		if (sizeof($something, 1) > 1000) :
-			$something = array_slice($something, 0, $maxLines);
-			if (sizeof($something, 1) > 500) :
-				$something = array_slice($something, 0, $maxLines2);
-			endif;
+function showMe($something, $die=true) {
+	error_reporting(E_ALL);
+	ini_set('display_errors', 1);
 	
-			$display = '<br><pre>Array ('.$totalLines.') too large to display in full.<br>'.print_r($something,true).'</pre><br>';
-		else:
-			$display = '<br><pre>'.print_r($something,true).'</pre><br>';
-		endif;
-	else:
-		$display = '<br><pre>'.$something.'</pre><br>';
+	if ( is_array($something) ) :	
+		$something = array_slice($something, 0, 250);
+		$something = print_r($something, true);
 	endif;
 	
-	wp_die($display);
-	exit();
+	if ($die) {
+		wp_die($something);
+		exit();
+	} else {
+		echo $something;
+	}
 }
 
 // Check if current page is log in screen 
@@ -1211,69 +1205,72 @@ add_action('shutdown', function() {
 	echo apply_filters('final_output', $final);
 }, 0);
 
-// Delay execution of non-essential scripts  --- && $GLOBALS['pagenow'] !== 'index.php'  had to be removed for CHR Services? WTF3
-if ( !is_admin() && strpos($_SERVER['REQUEST_URI'], 'wp-json') === false && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && strpos($GLOBALS['pagenow'], 'wp-cron.php') === false && strpos($_SERVER['REQUEST_URI'], '.xml') === false && !is_plugin_active( 'woocommerce/woocommerce.php' )) :
-	add_filter('final_output', function($html) {
-		if ( $html != '' && $html != null && $html != 'undefined') :
-			$dom = new DOMDocument();
-			libxml_use_internal_errors(true);
-			$dom->loadHTML($html);
-			$scripts = $dom->getElementsByTagName('script'); 
 
-			$targets = array('podium', 'xapp', 'chiirp', 'beacon', 'scheduleengine', 'leadconnectorhq', 'voip', 'clickcease', 'paypal', 'embed-player', 'huzzaz', 'fbcdn', 'facebook', 'klaviyo'); //, 'google'
-			$exclusions = array('recaptcha');
+if ( !in_array('slug-spotify', get_body_class(), true) ) : // keeps this from fucking up the Spotify Playlist Generator
+	// Delay execution of non-essential scripts  --- && $GLOBALS['pagenow'] !== 'index.php'  had to be removed for CHR Services? WTF3
+	if ( !is_admin() && strpos($_SERVER['REQUEST_URI'], 'wp-json') === false && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && strpos($GLOBALS['pagenow'], 'wp-cron.php') === false && strpos($_SERVER['REQUEST_URI'], '.xml') === false && !is_plugin_active( 'woocommerce/woocommerce.php' )) :
+		add_filter('final_output', function($html) {
+			if ( $html !== '' && $html !== null && $html !== 'undefined') :
+				$dom = new DOMDocument();
+				libxml_use_internal_errors(true);
+				$dom->loadHTML($html);
+				$scripts = $dom->getElementsByTagName('script'); 
 
-			foreach ($scripts as $script) :		   
-				foreach ($targets as $target) :
-					if (strpos($script->getAttribute("src"), $target) !== FALSE) : 
-						foreach ($exclusions as $exclusion) :
-							if (strpos($script->getAttribute("src"), $exclusion) === FALSE) :						
-								$script->setAttribute("data-loading", "delay");
-								if ($script->getAttribute("src")) : 
-									$script->setAttribute("data-src", $script->getAttribute("src")); $script->removeAttribute("src");
-								else: 
-									$script->setAttribute("data-src", "data:text/javascript;base64,".base64_encode($script->innertext)); $script->innertext=""; 
+				$targets = array('podium', 'xapp', 'chiirp', 'beacon', 'scheduleengine', 'leadconnectorhq', 'voip', 'clickcease', 'paypal', 'embed-player', 'huzzaz', 'fbcdn', 'facebook', 'klaviyo'); //, 'google'
+				$exclusions = array('recaptcha');
+
+				foreach ($scripts as $script) :		   
+					foreach ($targets as $target) :
+						if (strpos($script->getAttribute("src"), $target) !== FALSE) : 
+							foreach ($exclusions as $exclusion) :
+								if (strpos($script->getAttribute("src"), $exclusion) === FALSE) :						
+									$script->setAttribute("data-loading", "delay");
+									if ($script->getAttribute("src")) : 
+										$script->setAttribute("data-src", $script->getAttribute("src")); $script->removeAttribute("src");
+									else: 
+										$script->setAttribute("data-src", "data:text/javascript;base64,".base64_encode($script->innertext)); $script->innertext=""; 
+									endif;
 								endif;
-							endif;
-						endforeach;
-					endif;
+							endforeach;
+						endif;
+					endforeach;
 				endforeach;
-			endforeach;
 
-			$html = $dom->saveHTML();
-			$html = preg_replace('/<!DOCTYPE.*?<html.*?<body><p>/ims', '', $html);
-			$html = str_replace('</p></body></html>', '', $html);
-			libxml_clear_errors();
-			return $html;
-		endif;
-	}); 
+				$html = $dom->saveHTML();
+				$html = preg_replace('/<!DOCTYPE.*?<html.*?<body><p>/ims', '', $html);
+				$html = str_replace('</p></body></html>', '', $html);
+				libxml_clear_errors();
+				return $html;
+			endif;
+		}); 
 
-	add_action( 'wp_print_footer_scripts', 'battleplan_delay_nonessential_scripts');
-	function battleplan_delay_nonessential_scripts() { 
-		if ( _IS_BOT !== true ) : ?>
-			<script nonce="<?php echo _BP_NONCE !== null ? _BP_NONCE : null; ?>" id="delay-scripts">
-				const loadScriptsTimer=setTimeout(loadScripts,1500);
-				const userInteractionEvents=["mouseover","keydown","touchstart","touchmove","wheel"];
-				userInteractionEvents.forEach(function(event) {	
-					window.addEventListener(event, triggerScriptLoader, {passive:!0})});
-					function triggerScriptLoader() {
-						loadScripts();
-						clearTimeout(loadScriptsTimer);
-						userInteractionEvents.forEach(function(event) {
-							window.removeEventListener(event, triggerScriptLoader, {passive:!0})
-						})
+		add_action( 'wp_print_footer_scripts', 'battleplan_delay_nonessential_scripts');
+		function battleplan_delay_nonessential_scripts() { 
+			if ( _IS_BOT !== true ) : ?>
+				<script nonce="<?php echo _BP_NONCE !== null ? _BP_NONCE : null; ?>" id="delay-scripts">
+					const loadScriptsTimer=setTimeout(loadScripts,1500);
+					const userInteractionEvents=["mouseover","keydown","touchstart","touchmove","wheel"];
+					userInteractionEvents.forEach(function(event) {	
+						window.addEventListener(event, triggerScriptLoader, {passive:!0})});
+						function triggerScriptLoader() {
+							loadScripts();
+							clearTimeout(loadScriptsTimer);
+							userInteractionEvents.forEach(function(event) {
+								window.removeEventListener(event, triggerScriptLoader, {passive:!0})
+							})
+						}
+					function loadScripts() {
+						setTimeout(function() { 
+							document.querySelectorAll("[data-loading='delay']").forEach(function(elem) {  
+								elem.setAttribute("src", elem.getAttribute("data-src"));
+								elem.removeAttribute("data-src"); 
+							})
+						}, 1500);
 					}
-				function loadScripts() {
-					setTimeout(function() { 
-						document.querySelectorAll("[data-loading='delay']").forEach(function(elem) {  
-							elem.setAttribute("src", elem.getAttribute("data-src"));
-							elem.removeAttribute("data-src"); 
-						})
-					}, 1500);
-				}
-			</script><?php
-		endif;
-	}
+				</script><?php
+			endif;
+		}
+	endif;
 endif;
 
 // Add nonce to trusted scripts

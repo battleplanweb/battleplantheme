@@ -1,10 +1,11 @@
 @charset "utf-8";
 /* Fancy Buttons
 --------------------------------------------- */
-a.button.fancy .fancy-text,
-a.button.fancy .fancy-icon,
-a.button.fancy:hover .fancy-text,
-a.button.fancy:hover .fancy-icon,
+
+a.button[class*="fancy"] .fancy-text,
+a.button[class*="fancy"] .fancy-icon,
+a.button[class*="fancy"]:hover .fancy-text,
+a.button[class*="fancy"]:hover .fancy-icon,
 a.button[class*="item-"] .fancy-text,
 a.button[class*="item-"] .fancy-icon,
 a.button[class*="item-"]:hover .fancy-text,
@@ -42,7 +43,11 @@ a.button.fancy:hover .fancy-icon {
 	opacity:										1;
 }
 
-a.button.fancy-2 {
+a.button.fancy-2,
+a.button.fancy-2:hover,
+a.button.fancy-2.tab-focus,
+a.button.fancy-2:visited,
+a.button.fancy-2:active {
 	padding:										0;	
 }
 
@@ -66,7 +71,9 @@ a.button.fancy-3 {
 }
 
 a.button.fancy-3 .fancy-text {
-	order: 											2;
+	order: 											2;	
+	justify-self: 									left;
+  	align-self: 									center;
 }
 
 a.button.fancy-3 .fancy-icon {
@@ -74,4 +81,4 @@ a.button.fancy-3 .fancy-icon {
   	align-self: 									center;
  	order: 											1;
 	margin-right: 									20px;
-}
+}	

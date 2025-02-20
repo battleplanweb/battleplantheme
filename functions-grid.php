@@ -430,9 +430,9 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 	wp_enqueue_script( 'battleplan-accordion', get_template_directory_uri().'/js/script-accordion.js', array(), _BP_VERSION, false );
 	wp_enqueue_style( 'battleplan-accordion', get_template_directory_uri()."/style-accordion.css", array('parent-style'), _BP_VERSION );  
 	
-	$a = shortcode_atts( array( 'title'=>'', 'excerpt'=>'', 'class'=>'', 'active'=>'false', 'btn'=>'false', 'btn_collapse'=>'false', 'icon'=>'true', 'start'=>'', 'end'=>'', 'scroll'=>'true', 'track'=>'' ), $atts );
+	$a = shortcode_atts( array( 'title'=>'', 'excerpt'=>'', 'class'=>'', 'active'=>'false', 'btn'=>'false', 'btn_collapse'=>'false', 'icon'=>'true', 'start'=>'', 'end'=>'', 'scroll'=>'true', 'track'=>'', 'multiple'=>'true' ), $atts );
 	$excerpt = esc_attr($a['excerpt']);
-	if ( $excerpt != '' ) $excerpt = '<div class="accordion-excerpt"><div class="accordion-box"><p>'.$excerpt.'</p></div></div>';
+	if ( $excerpt !== '' ) $excerpt = '<div class="accordion-excerpt"><div class="accordion-box"><p>'.$excerpt.'</p></div></div>';
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
 	$title = esc_attr($a['title']);	
@@ -442,6 +442,7 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 	$scroll = esc_attr($a['scroll']) == "true" ? "" : " no-scroll";
 	$addBtn = $thumb = '';
 	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
+	$multiple = esc_attr($a['multiple']) === 'true' ? '' : ' data-multiple="false"';
 	if ( $tracking != '' ) $class .= " tracking";
 	
 	if ( $icon == 'false' ) : $icon = '';
@@ -471,7 +472,7 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 		if ( $end && $now > $end ) return null;		
 	endif;
 
-	return '<div class="block block-accordion'.$class.$scroll.'"'.$tracking.'>'.$thumb.$printTitle.$excerpt.'<div class="accordion-content'.$scroll.'"><div class="accordion-box'.$scroll.'">'.do_shortcode($content).'</div></div>'.$addBtn.'</div>';	
+	return '<div class="block block-accordion'.$class.$scroll.'"'.$multiple.$tracking.'>'.$thumb.$printTitle.$excerpt.'<div class="accordion-content'.$scroll.'"><div class="accordion-box'.$scroll.'">'.do_shortcode($content).'</div></div>'.$addBtn.'</div>';	
 }
 
 // Parallax Section 

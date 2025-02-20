@@ -1572,52 +1572,24 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 
 		element.innerHTML = replaceRating;
 	});
-														   
-	
-// Ensure that Form labels have enough width & remove double asterisks
-														   /*   replaced with code below on 9/24/24
-	window.formLabelWidth = function () {
-		const selector = getObjects('.wpcf7 form .flex').length ? '.wpcf7 form .flex' : '.wpcf7 form';
-		
-		console.log(selector);
-
-		getObjects(selector).forEach(form => {
+															   
+			
+// Ensure all form labels are same width, so that the inputs line up (chatGPT wrote this 2/19/25)
+window.formLabelWidth = () => {
+	getObjects('form').forEach(form => {
+		const flexGroups = getObjects('.flex', form);
+		(flexGroups.length ? flexGroups : [form]).forEach(group => {
 			let labelMaxWidth = 0;
-
-			getObjects('.form-input.width-default label', form).forEach(label => {
-				const labelWidth = label.offsetWidth;
-				labelMaxWidth = labelWidth > labelMaxWidth ? labelWidth : labelMaxWidth;
-			});
-
-			if (labelMaxWidth > 0) {
-				getObjects('.form-input.width-default', form).forEach(inputContainer => {
-					inputContainer.style.gridTemplateColumns = `${labelMaxWidth}px 1fr`;
-				});
-			}
-		});
-	
-		getObjects('abbr.required, em.required, span.required').forEach(element => element.textContent = "");
-	};
-	*/
-														   
-														   
-	window.formLabelWidth = () => {
-		getObjects('form').forEach(form => {
-			getObjects('.flex', form).forEach(flex => {
-				let labelMaxWidth = 0;
-
-				getObjects('.form-input.width-default label', flex).forEach(label => {
-					labelMaxWidth = Math.max(labelMaxWidth, label.offsetWidth);
-				});
-
-				labelMaxWidth > 0 && getObjects('.form-input.width-default', flex).forEach(inputContainer => {
-					inputContainer.style.gridTemplateColumns = `${labelMaxWidth}px 1fr`;
-				});
-			});
+			getObjects('.form-input.width-default label', group).forEach(label => 
+				labelMaxWidth = Math.max(labelMaxWidth, label.offsetWidth)
+			);
+			labelMaxWidth > 0 && getObjects('.form-input.width-default', group).forEach(inputContainer => 
+				inputContainer.style.gridTemplateColumns = `${labelMaxWidth}px 1fr`
+			);
 		});
 		getObjects('abbr.required, em.required, span.required').forEach(el => el.textContent = "");
-	};
-
+	});
+};
 	
 	
 // Move User Switching bar to top

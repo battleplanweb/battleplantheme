@@ -456,26 +456,37 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	});
 */
 		
-/* Deprecated 4/22/2024 - removed, as it is not in use	
+
 // Tabbed Content - control changing and animation of tabbed content
 	keyPress('ul.tabs li');
-	const ul_tabs = getObjects('ul.tabs li');
+	const ul_tabs = getObjects('ul.tabs li'),
+		  tab_contents = getObjects('.tab-content');
+														   
+	ul_tabs.forEach(tab => tab.classList.add('tab-button'));
 	
-	ul_tabs.forEach(tab => {
-		tab.addEventListener('click', () => {
-			const tab_id = tab.getAttribute('data-tab');
-			const fadeSpeed = 150;
-		
-			ul_tabs.forEach(tab => tab.classList.remove('current'));
-			tab.classList.add('current');
-
-			getObjects('.tab-content').forEach(content => {
-				fadeOut(content, fadeSpeed, 'current');
-			});
+	ul_tabs.forEach(tab_click => {
+		tab_click.addEventListener('click', () => {
+			const tab_id = tab_click.getAttribute('data-tab'),
+				  target_section = getObject(`.tab-content-holder section#${tab_id}`),
+				  fadeSpeed = 150;
 			
-			fadeIn(getObject(tab_id), fadeSpeed, 'current');
+			ul_tabs.forEach(tab_click => tab_click.classList.remove('current'));
+			tab_click.classList.add('current');
+
+			tab_contents.forEach(content => {
+				content.style.transition = `opacity ${fadeSpeed}ms`;
+				content.style.opacity = 0;
+				setTimeout(() => content.style.display = 'none', fadeSpeed);
+			});
+
+			setTimeout(() => {
+				target_section.style.opacity = 0;
+				target_section.style.transition = `opacity ${fadeSpeed}ms`;
+				target_section.style.display = 'block';
+				target_section.style.opacity = 1;
+			}, fadeSpeed);
+		});
 	});
-*/	
 		
 		
 /* Deprecated 4/22/2024 - removed, as it is not in use	

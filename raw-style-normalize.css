@@ -307,12 +307,12 @@ h3 + .block.block-text:last-child {
 	margin-bottom:								0;
 }
 
-li:not(.menu-item):not(.carousel-icon):not(:last-child) {
+li:not(.menu-item):not(.carousel-icon):not(.tab-button):not(:last-child) {
 	margin-bottom:								var(--bullet-spacing);
 }
 
-ul.paragraphs li:not(.menu-item):not(.carousel-icon):not(:last-child),
-ul.paragraph li:not(.menu-item):not(.carousel-icon):not(:last-child) {
+ul.paragraphs li:not(.menu-item):not(.carousel-icon):not(.tab-button):not(:last-child),
+ul.paragraph li:not(.menu-item):not(.carousel-icon):not(.tab-button):not(:last-child) {
     margin-bottom:   							var(--measure-small);
 }
 

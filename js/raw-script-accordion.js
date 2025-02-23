@@ -49,7 +49,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			} else {
 				setHeight();
 			}
-								console.log('new 1');
+								console.log('new 7');
 	
 			if ( accordion.classList.contains('start-active') ) {
 				openAccordion(accordion, contentObj, excerptObj, button);
@@ -61,7 +61,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 							closeAccordion(expanded, getObject('.accordion-content', expanded), button);
 						});
 					}			
-				console.log('here');
 
 					openAccordion(accordion, contentObj, excerptObj, button);
 				});
@@ -110,11 +109,12 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		
 		button && button.getAttribute('data-collapse') 
 			? button.getAttribute('data-collapse') !== "hide" 
-				? button.innerHTML = button.getAttribute('data-text') 
-				: button.style.display = "none"
+				? (button.innerHTML = button.getAttribute('data-text'),
+					!accordion.classList.contains('no-scroll') && 
+						setTimeout(() => animateScroll(accordion.previousElementSibling), 50)) 
+				: button.style.display = "none" 
 			: null;
 
-		!accordion.classList.contains('no-scroll') && setTimeout(() => animateScroll(accordion.previousElementSibling), 50);
 	};
 								
 	buildAccordion();													   

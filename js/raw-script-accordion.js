@@ -49,7 +49,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			} else {
 				setHeight();
 			}
-					
+								console.log('new 1');
+	
 			if ( accordion.classList.contains('start-active') ) {
 				openAccordion(accordion, contentObj, excerptObj, button);
 			} else {
@@ -60,6 +61,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 							closeAccordion(expanded, getObject('.accordion-content', expanded), button);
 						});
 					}			
+				console.log('here');
 
 					openAccordion(accordion, contentObj, excerptObj, button);
 				});

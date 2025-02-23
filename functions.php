@@ -1206,6 +1206,8 @@ add_action('shutdown', function() {
 }, 0);
 
 
+/* Removed 2/23/25 after this breaks Woocommerce again; the reward does not seem to outweigh the cost for this code 
+/*
 if ( !in_array('slug-spotify', get_body_class(), true) ) : // keeps this from fucking up the Spotify Playlist Generator
 	// Delay execution of non-essential scripts  --- && $GLOBALS['pagenow'] !== 'index.php'  had to be removed for CHR Services? WTF3
 	if ( !is_admin() && strpos($_SERVER['REQUEST_URI'], 'wp-json') === false && strpos($GLOBALS['pagenow'], 'wp-login.php') === false && strpos($GLOBALS['pagenow'], 'wp-cron.php') === false && strpos($_SERVER['REQUEST_URI'], '.xml') === false && !is_plugin_active( 'woocommerce/woocommerce.php' )) :
@@ -1272,6 +1274,7 @@ if ( !in_array('slug-spotify', get_body_class(), true) ) : // keeps this from fu
 		}
 	endif;
 endif;
+*/
 
 // Add nonce to trusted scripts
 add_filter('final_output', function($content) {
@@ -2172,7 +2175,7 @@ function battleplan_load_tag_manager() {
 			if ( $gtag == "analytics" && _USER_LOGIN != 'battleplanweb' && _IS_BOT != true ) $acct_id = $value;
 			if ( $gtag == "ads" ) $ads_id = $value;	
 			if ( $gtag == "analytics" || $gtag == "ads" ) $buildTags .= 'gtag("config", "'.$value.'");';				
-			if ( $gtag == "conversions" ) $buildTags .= "gtag('event', 'conversion', { 'send_to': '".$ads_id."/".$value."' });";
+			if ( $gtag == "conversions" || "event" ) $buildTags .= "gtag('event', 'conversion', { 'send_to': '".$ads_id."/".$value."' });";
 			if ( $gtag == "calls" ) :
 				$phone_num = $GLOBALS['customer_info']['phone-format'];
 				$buildTags .= "gtag('config', '".$ads_id."/".$value."', {'phone_conversion_number': '".$phone_num."'});";

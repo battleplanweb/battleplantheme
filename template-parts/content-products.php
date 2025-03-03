@@ -26,8 +26,8 @@ $buildProduct = '<div class="entry-content">';
 	endif;
 		
 	$buildProduct .= '</div>';
-
-	$buildProduct .= get_the_content( sprintf ( wp_kses( __( 'Continue reading<span class="screen-reader-text"> "%s"</span>', 'battleplan' ), array( 'span' => array( 'class' => array(), ), ) ), wp_kses_post( get_the_title() ) ) ); 
+ // added wpautop here instead of globally 2/28/2025
+	$buildProduct .= bp_wpautop(get_the_content(), true);  // added wpautop here instead of globally 2/28/2025
 	
 	$buildProduct .= '<div class="product-links">';
 

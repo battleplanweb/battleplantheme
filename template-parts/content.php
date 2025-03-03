@@ -2,6 +2,8 @@
 
 	<div class="entry-content">
 		
-		<?php the_content( sprintf ( wp_kses( __( 'Continue reading<span class="screen-reader-text"> "%s"</span>', 'battleplan' ), array( 'span' => array( 'class' => array(), ), ) ), wp_kses_post( get_the_title() ) ) ); ?>
+	<?php // added wpautop here instead of globally 2/28/2025
+		echo bp_wpautop(get_the_content());  // added wpautop here instead of globally 2/28/2025
+	?>
 		
 	</div><!-- .entry-content -->

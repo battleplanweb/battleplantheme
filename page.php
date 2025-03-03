@@ -12,7 +12,7 @@ get_header(); ?>
 	
 		<article id="post-<?php the_ID(); ?>">
 			
-			<?php the_content();?>
+			<?php echo bp_wpautop(get_the_content());  // added wpautop here instead of globally 2/28/2025 ?>
 
 		</article><!-- #post-<?php the_ID(); ?> -->
 

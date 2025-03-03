@@ -5,7 +5,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 2025.28.4
+Version: 2025.28.5
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -256,6 +256,8 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   
   --button-color-hover-alt: 					var(--button-color-alt);
   --button-background-hover-alt: 				var(--button-background-alt);
+
+
 
   --button-font-family-hover-alt: 				var(--button-font-family-alt);
   --button-font-weight-hover-alt: 				var(--button-font-weight-alt);
@@ -666,12 +668,14 @@ input.paypal-amount {
 
 /* Fancy Lists
 --------------------------------------------- */
+ul.bullet,
 ul.bullet-list,
 ul.fancy-list {
 	list-style-type: 								none;
 	padding-left: 									0;
 }
 
+ul.bullet,
 ul.bullet-list {
 	margin-left: 									40px;
 }
@@ -681,7 +685,8 @@ ul.fancy-list li {
 	align-items: 									center;
 }
 
-ul.fancy-list b {
+ul.fancy-list b,
+ul.fancy-list strong {
 	color: 											inherit;
 	font-weight: 									bold;
 	min-width: 										160px;
@@ -689,6 +694,7 @@ ul.fancy-list b {
 	margin-right: 									15px;
 }
 
+ul.bullet li::before,
 ul.bullet-list li::before,
 ul.fancy-list li::before {
 	content: 										'●';  
@@ -698,13 +704,26 @@ ul.fancy-list li::before {
 	text-align: 									center;
 }
 
-ul.bullet-list li::before {
-  	text-indent: 									-40px;
-}
-
 ul.fancy-list li::before {
 	margin-right: 									12px;  
 	font-size: 										150%;
+}
+
+ul.bullet li::before,
+ul.bullet-list li::before {
+	margin-right: 									0;  
+  	text-indent: 									-40px;
+}
+
+ul.bullet-list li b,
+ul.bullet-list li strong {
+	display: 										inline;
+}
+
+ul.bullet-list b::after,
+ul.bullet-list strong::after {
+	content: 										"\A";
+	white-space: 									pre;
 }
 
 ul.bullet-check li::before {
@@ -717,6 +736,10 @@ ul.bullet-square li::before {
 
 ul.bullet-diamond li::before {
 	content: 										'♦';  
+}
+
+ul.bullet-warning li::before {
+	content: 										'⚠️';  
 }
 
 
@@ -1351,6 +1374,37 @@ body.screen-desktop.administrator #query-monitor-main {
 	.wp-caption {
 		width:											100% !important 
 	}
+	
+/* Fancy Lists
+--------------------------------------------- */
+	ul.fancy-list {
+	  	margin-left: 									40px;
+	}
+	
+	ul.fancy-list li {
+		display: 										inline-block;
+	}
+
+	ul.fancy-list li::before {
+		margin-right: 									0;
+		font-size: 										100%;
+  		text-indent: 									-40px;
+	}
+
+	ul.fancy-list b,
+	ul.fancy-list strong {
+		display: 										inline;
+		min-width: 										unset;
+		max-width: 										unset;
+		margin-right: 									0;
+	}
+	
+	ul.fancy-list b::after,
+	ul.fancy-list strong::after {
+	  	content: 										"\A";
+	  	white-space: 									pre;
+	}
+
 }
 
 @media screen and (min-width: 1281px) {

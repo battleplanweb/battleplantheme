@@ -13,8 +13,10 @@
 	<?php bp_after_wrapper_content(); ?>
 
 	<?php	
-	$textarea = get_post_meta( $current_page->ID ?? 0, 'page-bottom_text', true );
- 	if ( $textarea != "" ) : echo "<section id='wrapper-bottom'>".apply_filters('the_content', $textarea)."</section><!-- #wrapper-bottom -->"; endif;
+	$textarea = get_post_meta($current_page->ID ?? 0, 'page-bottom_text', true);
+	if ($textarea) :
+		echo "<section id='wrapper-bottom'>" . bp_wpautop($textarea) . "</section><!-- #wrapper-bottom -->";
+	endif;
 	?>
 	
 	<?php bp_before_colophon(); ?>

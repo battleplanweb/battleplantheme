@@ -876,11 +876,43 @@ function battleplan_footer_social_box() {
 // Stop adding line breaks to content
 remove_filter( 'the_content', 'wpautop' );
 remove_filter( 'the_excerpt', 'wpautop' );
-add_filter( 'the_content', 'battleplan_wpautop_without_br' , 99);
-add_filter( 'the_excerpt', 'battleplan_wpautop_without_br' , 99);
-function battleplan_wpautop_without_br( $content ) {
-    return wpautop( $content, false );
+
+function bp_wpautop($content, $sanitize = false) {
+	$content = $sanitize ? wp_kses_post($content) : $content;
+
+	$content = do_shortcode($content);
+
+	$no_wpautop_blocks = [];
+	$content = preg_replace_callback(
+		'#<!--no-wpautop-->(.*?)<!--/no-wpautop-->#s',
+		function ($matches) use (&$no_wpautop_blocks) {
+			$placeholder = '__NOWPAUTOP_BLOCK_' . count($no_wpautop_blocks) . '__';
+			$no_wpautop_blocks[$placeholder] = $matches[1];
+			return $placeholder; 
+		},
+		$content
+	);
+
+	$content = wpautop(apply_filters('the_content', $content), false);
+
+	foreach ($no_wpautop_blocks as $placeholder => $original) {
+		$content = str_replace($placeholder, $original, $content);
+	}
+
+	return $content;
 }
+
+
+// Format with <p>
+add_shortcode( 'p', 'battleplan_add_ptags' );
+function battleplan_add_ptags( $atts, $content = null ) {
+	return wpautop(do_shortcode($content), false);
+}
+
+// Format without <p>
+add_shortcode('raw', function ($atts, $content = null) {
+	return ($content !== null) ? '<!--no-wpautop-->' . do_shortcode($content) . '<!--/no-wpautop-->' : '';
+});
 
 // Necessary housekeeping items
 add_action( 'after_setup_theme', 'battleplan_setup' );

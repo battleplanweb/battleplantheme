@@ -126,9 +126,9 @@ update_post_meta( $post_id, 'updated_date', esc_attr($updated) );
 			endif;
 		endif;
 		
-		$singleContent = wp_kses_post(get_the_content());
+		$singleContent = bp_wpautop(get_the_content(), true);  // added wpautop here instead of globally 2/28/2025
 
-		if ( $singleContent ) $buildLitter .= do_shortcode('[p]'.$singleContent.'[/p]');
+		if ( $singleContent ) $buildLitter .= $singleContent;
 		
 		$buildLitter .= "</ul>";
 				

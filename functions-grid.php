@@ -5,12 +5,6 @@
 # Grid Set Up
 --------------------------------------------------------------*/
 
-// Format with <p>
-add_shortcode( 'p', 'battleplan_add_ptags' );
-function battleplan_add_ptags( $atts, $content = null ) {
-	return wpautop( $content );
-}
-
 // Expire Content
 add_shortcode( 'expire', 'battleplan_expireContent' );
 function battleplan_expireContent( $atts, $content = null ) {
@@ -192,7 +186,7 @@ function battleplan_buildImg( $atts, $content = null ) {
 		$link = esc_attr($a['link']);
 		if ( $link == "" || $link == "none" || $link == "no" ) {
 			$linkClass=" class='no-link'"; 
-			$link = "javascript:void(0);";	
+			$link = '';	
 		}
 		if ( strpos($link, 'pdf') ) $link .= "?id=".time();	
 	} else {

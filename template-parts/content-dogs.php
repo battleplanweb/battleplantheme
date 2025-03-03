@@ -37,7 +37,7 @@ $c7 = str_replace( $search, $replace, esc_attr(get_field( "great_grandparent_7" 
 $c8 = str_replace( $search, $replace, esc_attr(get_field( "great_grandparent_8" )) );
 $postDate = the_date('F Y', '', '', FALSE); 
 $modDate = the_modified_date( 'F Y', '', '', FALSE);
-$theContent = get_the_content();
+$theContent = bp_wpautop(get_the_content(), true);  // added wpautop here instead of globally 2/28/2025
 ?> 
 
 	<div class="entry-content">
@@ -65,7 +65,7 @@ $theContent = get_the_content();
 		if ( $pra !== "NA" && $pra !== "" ) $dogInfo .= "<li><span class='label'>PRA:</span> ".$pra."</li>";
 		if ($studFee !== "0" && $studFee !== "") : $studFee = number_format($studFee, 2, '.', ','); $dogInfo .= "<li><span class='label'>Stud Fee:</span> $'.$studFee.'</li>"; endif;
 		$dogInfo .= '</ul>';
-		if ( $theContent ) $dogInfo .= "<h4>Other Points of Interest</h4>".do_shortcode('[p]'.$theContent.'[/p]');		
+		if ( $theContent ) $dogInfo .= "<h4>Other Points of Interest</h4>".$theContent;		
 
 		foreach ( get_posts( array ( 'numberposts'=>-1, 'post_type'=>'litters', ) ) as $post ) {
 			$id = $post->ID;

@@ -1242,12 +1242,12 @@ figure.col-inner {
 	}
 	
 	/* Row of Pics */
-	.grid-8e .col:nth-last-child(1),
-	.grid-8e li:nth-last-child(1),
-	.grid-8e .col:nth-child(1),
-	.grid-8e li:nth-child(1),
-	.grid-7e .col:nth-last-child(1),
-	.grid-7e li:nth-last-child(1),{
+	.grid-8e .col-row-of-pics:nth-last-child(1),
+	.grid-8e li:not(.product):nth-last-child(1),
+	.grid-8e .col-row-of-pics:nth-child(1),
+	.grid-8e li:not(.product):nth-child(1),
+	.grid-7e .col-row-of-pics:nth-last-child(1),
+	.grid-7e li:not(.product):nth-last-child(1),{
 		display:										none !important;
 	}
 	
@@ -1366,13 +1366,12 @@ figure.col-inner {
 	}	
 			
 	/* Row of Pics */
-	
-	.grid-8e .col:nth-last-child(2),
-	.grid-8e li:nth-last-child(2),
-	.grid-7e .col:nth-child(1),
-	.grid-7e li:nth-child(1),	
-	.grid-6e .col:nth-last-child(1),
-	.grid-6e li:nth-last-child(1) {
+	.grid-8e .col-row-of-pics:nth-last-child(2),
+	.grid-8e li:not(.product):nth-last-child(2),
+	.grid-7e .col-row-of-pics:nth-child(1),
+	.grid-7e li:not(.product):nth-child(1),	
+	.grid-6e .col-row-of-pics:nth-last-child(1),
+	.grid-6e li:not(.product):nth-last-child(1) {
 		display:										none !important;
 	}	
 	
@@ -1532,13 +1531,16 @@ figure.col-inner {
 	.flex.grid-2-1:not(.break-none):not(.break-1):not(.break-2):not(.break-3),
 	.flex.grid-1-2:not(.break-none):not(.break-1):not(.break-2):not(.break-3),
 	.flex.grid-3-2:not(.break-none):not(.break-1):not(.break-2):not(.break-3),
-	.flex.grid-2-3:not(.break-none):not(.break-1):not(.break-2):not(.break-3),
+	.flex.grid-2-3:not(.break-none):not(.break-1):not(.break-2):not(.break-3) {
+		grid-template-columns: 							1fr 1fr;
+	}
+
 	.flex.grid-1-1-1:not(.break-none):not(.break-1):not(.break-2):not(.break-3),
 	.flex.grid-1-2-1:not(.break-none):not(.break-1):not(.break-2):not(.break-3),
 	.flex.grid-1-1-2:not(.break-none):not(.break-1):not(.break-2):not(.break-3),
 	.flex.grid-2-1-1:not(.break-none):not(.break-1):not(.break-2):not(.break-3),
 	.flex.grid-custom:not(.break-none):not(.break-1):not(.break-2):not(.break-3) {
-		grid-template-columns: 							1fr 1fr;
+		grid-template-columns: 							1fr; /* this was grouped with the (1fr 1fr) above --- looked dumb  3/13/25 for A & Z Heating & AC */
 	}
 
 	.flex.grid-3-1:not(.break-none):not(.break-1) .col,
@@ -1641,26 +1643,27 @@ figure.col-inner {
 	ul.side-by-side.break-2 {
 		flex-flow: 										column;
 	}
-			
+	
+
 	/* Row of Pics */
 	.grid-8e .col-row-of-pics:nth-child(2),
-	.grid-8e li:nth-child(2),
+	.grid-8e li:not(.product):nth-child(2),
 	.grid-8e .col-row-of-pics:nth-last-child(3),
-	.grid-8e li:nth-last-child(3),
+	.grid-8e li:not(.product):nth-last-child(3),
 	.grid-7e .col-row-of-pics:nth-child(2),
-	.grid-7e li:nth-child(2),
+	.grid-7e li:not(.product):nth-child(2),
 	.grid-7e .col-row-of-pics:nth-last-child(2),
-	.grid-7e li:nth-last-child(2),
+	.grid-7e li:not(.product):nth-last-child(2),
 	.grid-6e .col-row-of-pics:nth-child(1),
-	.grid-6e li:nth-child(1),
+	.grid-6e li:not(.product):nth-child(1),
 	.grid-6e .col-row-of-pics:nth-last-child(2),
-	.grid-6e li:nth-last-child(2),
+	.grid-6e li:not(.product):nth-last-child(2),
 	.grid-5e .col-row-of-pics:nth-last-child(1),
-	.grid-5e li:nth-last-child(1),
+	.grid-5e li:not(.product):nth-last-child(1),
 	.grid-5e .col-row-of-pics:nth-child(1),
-	.grid-5e li:nth-child(1),
+	.grid-5e li:not(.product):nth-child(1),
 	.grid-4e .col-row-of-pics:nth-last-child(1)
-	.grid-4e li:nth-last-child(1) {
+	.grid-4e li:not(.product):nth-last-child(1) {
 		display:										none !important;
 	}
 	
@@ -1825,20 +1828,21 @@ figure.col-inner {
 	.video-player::before {
 		font-size: 										28px;
 	}
+
 	
 	/* Row of Pics */
 	.grid-8e .col-row-of-pics:nth-child(3),
-	.grid-8e li:nth-child(3),
+	.grid-8e li:not(.product):nth-child(3),
 	.grid-7e .col-row-of-pics:nth-last-child(3),
-	.grid-7e li:nth-last-child(3),
+	.grid-7e li:not(.product):nth-last-child(3),
 	.grid-6e .col-row-of-pics:nth-last-child(2),
-	.grid-6e li:nth-last-child(2),
+	.grid-6e li:not(.product):nth-last-child(2),
 	.grid-5e .col-row-of-pics:nth-child(1),
-	.grid-5e li:nth-child(1),	
+	.grid-5e li:not(.product):nth-child(1),	
 	.grid-4e .col-row-of-pics:nth-child(1),	
-	.grid-4e li:nth-child(1),
+	.grid-4e li:not(.product):nth-child(1),
 	.grid-3e .col-row-of-pics:nth-last-child(1),
-	.grid-3e li:nth-last-child(1) {
+	.grid-3e li:not(.product):nth-last-child(1) {
 		display:										none !important;
 	}	
 	

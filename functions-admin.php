@@ -272,7 +272,7 @@ function battleplan_remove_menus() {
 	
 	add_submenu_page( 'edit.php?post_type=elements', 'Comments', 'Comments', 'manage_options', 'edit-comments.php' );
 	if ( _USER_LOGIN == "battleplanweb" ) add_submenu_page( 'edit.php?post_type=elements', 'Custom Fields', 'Custom Fields', 'manage_options', 'edit.php?post_type=acf-field-group' );		
-	if ( _USER_LOGIN == "battleplanweb" ) add_submenu_page( 'edit.php?post_type=elements', 'Themes', 'Themes', 'manage_options', 'themes.php' );		
+	if ( _USER_LOGIN == "battleplanweb" ) add_submenu_page( 'edit.php?post_type=elements', 'Framework '._BP_VERSION, 'Framework '._BP_VERSION, 'manage_options', 'themes.php' );		
 	if ( _USER_LOGIN == "battleplanweb" ) add_submenu_page( 'options-general.php', 'Options', 'Options', 'manage_options', 'options.php' );
 	add_submenu_page( 'tools.php', 'WP Engine', 'WP Engine', 'manage_options', 'options-general.php?page=wpengine-common' );
 	
@@ -838,65 +838,68 @@ function battleplan_site_audit() {
 	
 	$siteAudit = get_option('bp_site_audit_details');
 	
-	if ( is_array($siteAudit) ) $siteAudit = array_reverse($siteAudit);
+	if ( is_array($siteAudit) ) {
 	
-	// rearrange order to match the $criteriaOrder array
-	foreach ($siteAudit as $date => $auditDetails) :
-		$sortedDetails = [];
-		foreach ($criteriaOrder as $criteria) :
-			if (isset($auditDetails[$criteria])) :
-				$sortedDetails[$criteria] = $auditDetails[$criteria];
-			else:
-				$sortedDetails[$criteria] = "—";
-			endif;
+		array_reverse($siteAudit);
+	 
+		// rearrange order to match the $criteriaOrder array
+		foreach ($siteAudit as $date => $auditDetails) :
+			$sortedDetails = [];
+			foreach ($criteriaOrder as $criteria) :
+				if (isset($auditDetails[$criteria])) :
+					$sortedDetails[$criteria] = $auditDetails[$criteria];
+				else:
+					$sortedDetails[$criteria] = "—";
+				endif;
+			endforeach;
+			$siteAudit[$date] = $sortedDetails;
 		endforeach;
-		$siteAudit[$date] = $sortedDetails;
-	endforeach;
-	
-	$siteAuditPage .="<table>";
-	
-	$siteAuditPage .= "<tr><th>Criteria</th>";
-	foreach ($siteAudit as $date => $auditDetails) :
-		$siteAuditPage .= '<th><span class="month">'.date("M j", strtotime($date)).'</span><br>'.date("Y", strtotime($date)).'</th>';
-	endforeach;
-	$siteAuditPage .= "</tr>";
 
-	// Collect all criteria keys
-	$criteriaKeys = array_keys(current($siteAudit));
-	$alt = 0;
+		$siteAuditPage .="<table>";
 
-	// Add rows for each criterion
-	foreach ($criteriaKeys as $criteria) :
-
-		$count = count($siteAudit) + 1;
-
-		$headlines = [
-			'lighthouse-mobile-score' => 'Mobile Lighthouse',
-			'lighthouse-desktop-score' => 'Desktop Lighthouse',
-			'keyword-page-1' => 'Keyword Rank',
-			'database-page-gen-time' => 'Query Monitor',
-			'back-total-links' => 'Backlinks',
-			'cite-citations' => 'Citations',
-			'console-indexed' => 'Search Console',
-			'gmb-overview' => 'Google Business Profile',
-			'load_time_mobile' => 'Website Details',
-			'audit-ada' => 'Passed Audits',
-		];
-
-		if (array_key_exists($criteria, $headlines)) {
-			$alt = ($alt == 0) ? 1 : 0;
-			$siteAuditPage .= '<tr><td colspan="'.$count.'" class="headline color-'.$alt.'">'.$headlines[$criteria].'</td></tr>';
-		}
-
-		$siteAuditPage .= '<tr><td class="subheadline color-'.$alt.'">'.ucwords(str_replace(['-', '_'], ' ', $criteria)).'</td>';
-		foreach ($siteAudit as $auditDetails) :
-			$auditDetail = $auditDetails[$criteria] ?? '';
-			$siteAuditPage .= '<td class="stat color-'.$alt.' '.$criteria.'">';
-			$siteAuditPage .= $auditDetail === "true" ? '●' : ($auditDetail === "false" ? '—' : $auditDetail);
-			$siteAuditPage .= '</td>';
+		$siteAuditPage .= "<tr><th>Criteria</th>";
+		foreach ($siteAudit as $date => $auditDetails) :
+			$siteAuditPage .= '<th><span class="month">'.date("M j", strtotime($date)).'</span><br>'.date("Y", strtotime($date)).'</th>';
 		endforeach;
 		$siteAuditPage .= "</tr>";
-	endforeach;
+
+		// Collect all criteria keys
+		$criteriaKeys = array_keys(current($siteAudit));
+		$alt = 0;
+
+		// Add rows for each criterion
+		foreach ($criteriaKeys as $criteria) :
+
+			$count = count($siteAudit) + 1;
+
+			$headlines = [
+				'lighthouse-mobile-score' => 'Mobile Lighthouse',
+				'lighthouse-desktop-score' => 'Desktop Lighthouse',
+				'keyword-page-1' => 'Keyword Rank',
+				'database-page-gen-time' => 'Query Monitor',
+				'back-total-links' => 'Backlinks',
+				'cite-citations' => 'Citations',
+				'console-indexed' => 'Search Console',
+				'gmb-overview' => 'Google Business Profile',
+				'load_time_mobile' => 'Website Details',
+				'audit-ada' => 'Passed Audits',
+			];
+
+			if (array_key_exists($criteria, $headlines)) {
+				$alt = ($alt == 0) ? 1 : 0;
+				$siteAuditPage .= '<tr><td colspan="'.$count.'" class="headline color-'.$alt.'">'.$headlines[$criteria].'</td></tr>';
+			}
+
+			$siteAuditPage .= '<tr><td class="subheadline color-'.$alt.'">'.ucwords(str_replace(['-', '_'], ' ', $criteria)).'</td>';
+			foreach ($siteAudit as $auditDetails) :
+				$auditDetail = $auditDetails[$criteria] ?? '';
+				$siteAuditPage .= '<td class="stat color-'.$alt.' '.$criteria.'">';
+				$siteAuditPage .= $auditDetail === "true" ? '●' : ($auditDetail === "false" ? '—' : $auditDetail);
+				$siteAuditPage .= '</td>';
+			endforeach;
+			$siteAuditPage .= "</tr>";
+		endforeach;
+	}
 	
 	$siteAuditPage .= '</table>[/col][/layout][/section]</div></div><!--site-audit-wrap-->';
 	echo do_shortcode($siteAuditPage);

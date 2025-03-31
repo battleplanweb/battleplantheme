@@ -892,6 +892,17 @@ input[type="number"] {
 	.woocommerce #page div.product span.price {
 		text-align:									center;
 	}
+	
+	.fa-shopping-bag:before,
+	.fa-shopping-basket:before,
+	.fa-shopping-cart:before {
+ 		font-size: 23px;
+	}
+	
+	.screen-2 #mobile-menu-bar, 
+	.screen-3 #mobile-menu-bar {
+	  	grid-template-columns: 						55px 38px 38px 38px;
+	}
 }
 
 /* 2: Phones (landscape) + Tablets (portrait) */
@@ -977,5 +988,9 @@ input[type="number"] {
 	
 	.woocommerce #page #ppcp-credit-card-gateway-card-number {
 		width: 										220px !important;
+	}
+		
+	.screen-1 #mobile-menu-bar {
+	  	grid-template-columns: 						53px 38px 38px 1fr 38px 38px;
 	}
 }

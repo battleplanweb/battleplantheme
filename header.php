@@ -35,6 +35,8 @@
 		wp.i18n.setLocaleData = () => {};
 	</script>	
 	
+	<?php bp_meta_tags(); ?>	
+	
 	<?php if ( isset($GLOBALS['customer_info']['lcp']) && !is_mobile() ) : 
 		$file = $GLOBALS['customer_info']['lcp'];
 		if (is_string($file)) {
@@ -60,8 +62,6 @@
 		//endforeach;
 	//endif; ?>
 	
-	<?php bp_font_loader(); ?>	
-
 	<?php wp_head(); ?>
 	
 	<?php //bp_google_tag_manager(); // moved to footer 9/4/24 to help with render blocking for Core Web Vitals --- noticed instant savings?>
@@ -75,7 +75,7 @@
 <?php wp_body_open(); ?>
 	
 <!--div id="mobile-menu-bar-faux"></div-->	
-<div id="mobile-menu-bar" class="<?php echo do_shortcode('[get-hours-open open="currently-open" closed="not-currently-open"]'); ?>"</div>
+<div id="mobile-menu-bar" class="<?php echo do_shortcode('[get-hours-open open="currently-open" closed="not-currently-open"]'); ?>">
 	<?php //bp_mobile_menu_bar_items(); ?>
 	<?php bp_mobile_menu_bar_contact(); ?>	
 	<?php bp_mobile_menu_bar_phone(); ?>

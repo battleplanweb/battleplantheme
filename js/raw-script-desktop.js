@@ -17,58 +17,63 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 --------------------------------------------------------------*/
 	window.parallaxConfigs = window.parallaxConfigs || [];
 	
-    window.updateParallaxBackgrounds = function () {
-        const scrollPos = window.pageYOffset;
+	window.updateParallaxBackgrounds = () => {
+		const scrollPos = window.pageYOffset;
 
-        window.parallaxConfigs.forEach(config => {
-            const { containerObj, imageH, topY, bottomY, fullScreen } = config;					
-            const obj = containerObj.getBoundingClientRect();
+		window.parallaxConfigs.forEach(config => {
+			const { containerObj, imageH, topY, bottomY, fullScreen, svgObj } = config;
+			const obj = containerObj.getBoundingClientRect();
 			const objTop = obj.top;
 			const objHeight = obj.height;
-			let startScroll, endScroll, adjTop=0, adjBot=0;			
-			
-			if ( fullScreen === true ) {
-				startScroll = objTop;  								// object TOP hits TOP of the viewport
-				endScroll = objTop + objHeight - getDeviceH(); 		// object BOTTOM hits BOTTOM of the viewport
+			let startScroll, endScroll, adjTop = 0, adjBot = 0;
+
+			if (fullScreen) {
+				startScroll = objTop;  
+				endScroll = objTop + objHeight - getDeviceH();
 			} else {
-				startScroll = objTop - getDeviceH();  				// object TOP hits BOTTOM of the viewport
-				endScroll = objTop + objHeight; 					// object BOTTOM hits TOP of the viewport
+				startScroll = objTop - getDeviceH();
+				endScroll = objTop + objHeight;
 				adjTop = -parseInt(topY, 10);
 				adjBot = -parseInt(bottomY, 10);
 			}
-			
+
 			let scrollRange = endScroll - startScroll;
-			let objScroll = Math.max(0, Math.min((endScroll / scrollRange), 1)); 	
+			let objScroll = Math.max(0, Math.min((endScroll / scrollRange), 1));
 			objScroll = fullScreen ? objScroll : 1 - objScroll;
-			let finalPosY = (imageH + adjTop) - ((imageH + adjTop + adjBot) * objScroll); 
-            finalPosY = (finalPosY / imageH) * 100;
-			
-            containerObj.style.backgroundPositionY = `${finalPosY}%`;
-        });
-    }
+			let finalPosY = (imageH + adjTop) - ((imageH + adjTop + adjBot) * objScroll);
+			finalPosY = (finalPosY / imageH) * 100;
+
+			// Apply different styles for images vs. SVGs
+			svgObj 
+				? svgObj.style.transform = `translateY(${finalPosY}%)`
+				: containerObj.style.backgroundPositionY = `${finalPosY}%`;
+		});
+	};
 				
 
 // Add parallax background to site or div	
 	window.parallaxBG = function (containerSel='#page', filename, imageW, imageH, posX='50%', topY=0, bottomY=0, fullScreen=true) {
 		const containerObj = getObject(containerSel);
 		if (!containerObj) return;
-		
-		//if (imageH > containerObj.offsetHeight) fullScreen = false;
-		
-		setStyles(containerObj, {
-			'backgroundImage': 			`url('${site_dir.upload_dir_uri}/${filename}')`,
-			'backgroundSize': 			`${imageW}px ${imageH}px`,
-			'backgroundPosition': 		`${posX} 50%`,
-			'backgroundAttachment': 	fullScreen ? 'fixed' : 'scroll'
-		});
 
-		window.parallaxConfigs.push({
-			containerObj: 	containerObj,
-			imageH: 		imageH,
-			topY:			topY,
-			bottomY:		bottomY,
-			fullScreen:		fullScreen
-		});
+		const isSVG = filename.startsWith('svg#');
+		const svgObj = isSVG ? document.querySelector(filename.replace('svg', '')) : null;
+
+		if (isSVG && svgObj) {
+			// Store SVG-specific config
+			window.parallaxConfigs.push({ containerObj, imageH, topY, bottomY, fullScreen, svgObj });
+		} else {
+			// Apply background image
+			setStyles(containerObj, {
+				'backgroundImage': `url('${site_dir.upload_dir_uri}/${filename}')`,
+				'backgroundSize': `${imageW}px ${imageH}px`,
+				'backgroundPosition': `${posX} 50%`,
+				'backgroundAttachment': fullScreen ? 'fixed' : 'scroll'
+			});
+
+			// Store image-specific config
+			window.parallaxConfigs.push({ containerObj, imageH, topY, bottomY, fullScreen });
+		}
 
 		updateParallaxBackgrounds();
 	};

@@ -1,15 +1,14 @@
-@charset "utf-8";
 /*
 Theme Name: Battle Plan Web Design
 Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 2025.28.5
+Version: 2025.28.6
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
-
+@charset "utf-8";
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
@@ -367,8 +366,13 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   
   --google-guaranteed-green: 					rgba(0, 161, 79, 1);  
   --paypal-yellow: 			 					rgba(255, 196, 57, 1);
-  --google-star: 			 					rgba(251, 188, 4, 1);
+	
+  --google-review-border: 						5px solid var(--light-grey);
+  --google-review-bg: 							var(--white);
+  --google-star-color: 							rgba(251, 188, 4, 1);
   --google-star-shadow: 						var(--black);
+  --google-value-text: 							var(--text-color);
+  --google-total-text: 							var(--text-color);		
 }
 
 /*--------------------------------------------------------------
@@ -446,15 +450,18 @@ h1 {
 	font-size: 										var(--font-size-h1);
 }
 
-h2 {
+h2,
+h1 > span.h1-small {
 	font-size: 										var(--font-size-h2);
 }
 
-h3 {
+h3,
+h2 > span.h2-small {
 	font-size: 										var(--font-size-h3);
 }
 
-h4 {
+h4,
+h3 > span.h3-small{
 	font-size: 										var(--font-size-h4);
 }
 
@@ -470,9 +477,9 @@ h6 {
 	font-size: 										var(--font-size-title);
 }
 
-h1 > a, h1 > a:hover, h1 > a.tab-focus, h1 > a:visited, h1 > span,
-h2 > a, h2 > a:hover, h2 > a.tab-focus, h2 > a:visited, h2 > span,
-h3 > a, h3 > a:hover, h3 > a.tab-focus, h3 > a:visited, h3 > span,
+h1 > a, h1 > a:hover, h1 > a.tab-focus, h1 > a:visited, h1 > span:not(.h1-small),
+h2 > a, h2 > a:hover, h2 > a.tab-focus, h2 > a:visited, h2 > span:not(.h2-small),
+h3 > a, h3 > a:hover, h3 > a.tab-focus, h3 > a:visited, h3 > span:not(.h3-small),
 h4 > a, h4 > a:hover, h4 > a.tab-focus, h4 > a:visited, h4 > span,
 h5 > a, h5 > a:hover, h5 > a.tab-focus, h5 > a:visited, h5 > span,
 h6 > a, h6 > a:hover, h6 > a.tab-focus, h6 > a:visited, h6 > span,
@@ -484,7 +491,7 @@ b,
 strong, 
 i:not(.fa), 
 em, 
-span:not(.page-numbers):not(.icon):not(.unique) {
+span:not(.page-numbers):not(.icon):not(.unique):not(.h1-small):not(.h2-small):not(.h3-small) {
 	font-family:									inherit; 
 	color: 											inherit !important; 
 	text-align:										inherit; 
@@ -740,6 +747,25 @@ ul.bullet-diamond li::before {
 
 ul.bullet-warning li::before {
 	content: 										'⚠️';  
+}
+
+ul.bullet-image li::before {
+	content: 										'';  
+    background-image: 								url('../../uploads/site-icon-80x80.webp'); 
+    background-size: 								contain; 
+	background-repeat: 								no-repeat;
+	width: 											30px;
+	height: 										30px;
+	margin: 										0 10px 0 -40px;
+  	transform: 										translateY(20%);
+}
+
+ul.bullet-list.bullet-image li::before {
+  	transform: 										translateY(50%);
+}
+
+ul.fancy-list.bullet-image li::before {
+  	transform: 										translateY(0%);
 }
 
 
@@ -1375,8 +1401,14 @@ body.screen-desktop.administrator #query-monitor-main {
 		width:											100% !important 
 	}
 	
-/* Fancy Lists
---------------------------------------------- */
+	/* Fancy Lists
+	--------------------------------------------- */
+	ul.bullet,
+	ul.bullet-list,
+	ul.fancy-list {
+		clear: 											both;
+	}
+	 
 	ul.fancy-list {
 	  	margin-left: 									40px;
 	}

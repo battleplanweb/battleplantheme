@@ -298,6 +298,8 @@
 	text-align:										center;
 }
 
+
+
 #mobile-menu-bar .mm-bar-btn .mm-bar-empty {
 	background: 									transparent;
 	border: 										1px solid transparent;
@@ -546,6 +548,7 @@
 	white-space: 									nowrap;
 	overflow: 										hidden;
 	text-overflow: 									ellipsis;
+	width: 											100%;
 	color:											var(--white-high);
 	background: 									transparent;
 	border: 										none;
@@ -565,6 +568,7 @@
 	border-right: 									1px solid var(--black-med);
 }
 
+.mobile-left #mobile-navigation li,
 .mobile-left #mobile-navigation li a {
 	text-align: 									left;
 }

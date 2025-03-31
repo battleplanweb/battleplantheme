@@ -1,7 +1,7 @@
 /* Google Reviews
 --------------------------------------------- */
 .wp-gr.wp-google-badge {
-	background:										var(--white);
+	background:										var(--google-review-bg);
 	position:										fixed;
 	display: 										flex;
 	flex-flow: 										row nowrap;
@@ -12,7 +12,7 @@
 	right: 											0;
 	bottom: 										0;
 	text-align:										center;
-	border-top: 									5px solid var(--light-grey);
+	border-top: 									var(--google-review-border);
 	margin-top: 									-1px;
 }
 
@@ -29,13 +29,13 @@
 }
 
 .wp-gr .wp-google-rating .wp-google-value {
-    color: 											var(--text-color);
+    color: 											var(--google-value-text);
 	margin-right:									5px;
 	font-weight:									bold;
 }
 
 .wp-gr .wp-google-rating .wp-google-stars {
-    color: 											var(--text-color);
+    color: 											var(--google-star-color);
 	width: 											122px;
 	font-size: 										18px;
 }
@@ -46,7 +46,7 @@
 	content: 										"\e01b";
 	font-size: 										18px;
   	margin: 										2px;
-	color: 											var(--google-star) !important;
+	color: 											var(--google-star-color) !important;
 	text-shadow: 									1px 0 0 var(--google-star-shadow), -1px 0 0 var(--google-star-shadow), 0 -1px 0 var(--google-star-shadow), 0 1px 0 var(--google-star-shadow), 1px 1px 1px var(--google-star-shadow);
 }
 
@@ -60,7 +60,7 @@
 
 .wp-gr .wp-google-total {
 	width: 											100%;
-    color: 											var(--text-color);
+    color: 											var(--google-total-text);
 	font-size: 										14px;
 	font-style:										italic;
 	margin-bottom:									-2px

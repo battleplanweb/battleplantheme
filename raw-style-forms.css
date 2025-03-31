@@ -339,6 +339,16 @@ optgroup {
 	color:											var(--black-med);
 }
 
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  	-webkit-appearance: 							none;
+  	margin: 										0;
+}
+
+input[type=number] {
+  	-moz-appearance: 								textfield;
+}
+
 .wpcf7 form .form-input.width-none input {
 	padding-right: 									30px;
 }
@@ -485,6 +495,8 @@ ul.tabs li.current {
 .style-alt a.button,
 .style-alt a.page-numbers,
 .style-alt span.page-numbers,
+
+
 .style-alt button,
 .style-alt input[type="button"],
 .style-alt input[type="reset"],

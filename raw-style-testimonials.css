@@ -72,7 +72,7 @@
 }
 
 .testimonials-rating {
-	color: 											var(--google-star) !important;
+	color: 											var(--google-star-color) !important;
 	margin-right:									-5px;
 }
 

@@ -2163,7 +2163,7 @@ function battleplan_plugin_hide() {
 # Custom Hooks
 --------------------------------------------------------------*/
 function bp_loader() { do_action('bp_loader'); }
-function bp_font_loader() { do_action('bp_font_loader'); }
+function bp_meta_tags() { do_action('bp_meta_tags'); }
 function bp_google_tag_manager() { do_action('bp_google_tag_manager'); }
 function bp_mobile_menu_bar_items() { do_action('bp_mobile_menu_bar_items'); }
 function bp_mobile_menu_bar_scroll() { do_action('bp_mobile_menu_bar_scroll'); }
@@ -2199,22 +2199,33 @@ function bp_after_colophon() { do_action('bp_after_colophon'); }
 // Install Google Global Site Tags
 add_action('bp_google_tag_manager', 'battleplan_load_tag_manager');
 function battleplan_load_tag_manager() { 
-	$buildTags = $acct_id = $ads_id = '';
+	$buildTags = '';
+	$analytics_id = $ads_id = null;
 	
 	if ( isset($GLOBALS['customer_info']['google-tags']) && is_array($GLOBALS['customer_info']['google-tags']) ) :
 
 		foreach ( $GLOBALS['customer_info']['google-tags'] as $gtag=>$value ) :	
-			if ( $gtag == "analytics" && _USER_LOGIN != 'battleplanweb' && _IS_BOT != true ) $acct_id = $value;
-			if ( $gtag == "ads" ) $ads_id = $value;	
-			if ( $gtag == "analytics" || $gtag == "ads" ) $buildTags .= 'gtag("config", "'.$value.'");';				
-			if ( $gtag == "conversions" || "event" ) $buildTags .= "gtag('event', 'conversion', { 'send_to': '".$ads_id."/".$value."' });";
-			if ( $gtag == "calls" ) :
-				$phone_num = $GLOBALS['customer_info']['phone-format'];
-				$buildTags .= "gtag('config', '".$ads_id."/".$value."', {'phone_conversion_number': '".$phone_num."'});";
+			if ( $gtag === "analytics" && _USER_LOGIN !== 'battleplanweb' && _IS_BOT !== true ) :
+				$analytics_id = $value;	
+				$buildTags .= "gtag('config', '$analytics_id');";	
+			elseif ( $gtag === "ads" ) : 
+				$ads_id = $value;
+				$buildTags .= "gtag('config', '$ads_id');";	
+			elseif ( $gtag === "event" ) :
+				$events[] = $value;
+			endif; 
+		endforeach;
+	
+		foreach ( $events as $event ) :
+			[ $event_label, $event_tag ] = $event;
+			if ( $event_label === 'phone_conversion_number' && $ads_id ) :
+				$phone_number = $GLOBALS['customer_info']['area-before'] . $GLOBALS['customer_info']['area'] . $GLOBALS['customer_info']['area-after'] . $GLOBALS['customer_info']['phone'];
+				$buildTags .= "gtag('config', '$ads_id/$event_tag', { phone_conversion_number: '$phone_number' });";
 			endif;
 		endforeach;
 	endif;
-	$buildTagMgr = '<script async nonce="'._BP_NONCE.'" src="https://www.googletagmanager.com/gtag/js?id='.$acct_id.'"></script>';
+	
+	$buildTagMgr = '<script async nonce="'._BP_NONCE.'" src="https://www.googletagmanager.com/gtag/js?id='.$analytics_id.'"></script>';
 	$buildTagMgr .= '<script nonce="'._BP_NONCE.'">
 		window.dataLayer = window.dataLayer || [];
 		function gtag(){dataLayer.push(arguments);}
@@ -2222,7 +2233,7 @@ function battleplan_load_tag_manager() {
 	$buildTagMgr .= $buildTags;
 	$buildTagMgr .= '</script>';
 
-	if (strpos($acct_id, 'x') === false && $acct_id != '' && _IS_GOOGLEBOT == false ) echo $buildTagMgr;
+	if (strpos($analytics_id, 'x') === false && $analytics_id != '' && _IS_GOOGLEBOT == false ) echo $buildTagMgr;
 }
 
 // Build and display desktop navigation menu

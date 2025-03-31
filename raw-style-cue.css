@@ -58,7 +58,8 @@
 }
 
 .mejs-previous button::before {
-	content:   									"\e23d";
+	content:   									"\e23f";
+	transform: 									rotate(180deg);
 }
 
 .mejs-next button::before {

@@ -290,7 +290,7 @@ function battleplan_getSymptomChecker() {
 	if ( is_array($brand) ) $brand = $brand[0];
 	$name = ucwords($brand);
 	$brand = strtolower(str_replace(" ", "-", $brand));
-	return '<a href="/symptom-checker/" title="Click here for troublshooting ideas to solve common HVAC problems."><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/symptom-checker.jpg" loading="lazy" alt="'.$name.' HVAC unit pictured on colorful background." width="300" height="250" style="aspect-ratio:300/250" /></a>';
+	return '<a href="/symptom-checker/" title="Click here for troublshooting ideas to solve common HVAC problems."><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/symptom-checker.webp" loading="lazy" alt="'.$name.' HVAC unit pictured on colorful background." width="300" height="250" style="aspect-ratio:300/250" /></a>';
 }
 
 // Add Customer Care Dealer widget to Sidebar

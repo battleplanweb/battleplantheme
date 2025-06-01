@@ -20,11 +20,26 @@ return array (
 			'name'=>'post-id',
 			'label_type'=>'',
 			'search'=>'on'
+		),	
+		'reviews'=>array(
+			'type'=>'column-meta',
+			'label'=>'Review',
+			'width'=>'60',
+			'width_unit'=>'px',
+			'field'=>'review',
+			'field_type'=>'checkmark',
+			'edit'=>'on',
+			'enable_term_creation'=>'on',
+			'sort'=>'on',
+			'bulk_edit'=>'on',
+			'filter'=>'on',
+			'editable_type'=>'text',
+			'search'=>'on'
 		),
 		'title'=>array(
 			'type'=>'title',
 			'label'=>'Customer Name',
-			'width'=>'200',
+			'width'=>'190',
 			'width_unit'=>'px',
 			'edit'=>'on',
 			'editable_type'=>'text',
@@ -36,7 +51,7 @@ return array (
 		'job_date'=>array(
 			'type'=>'column-meta',
 			'label'=>'Date',
-			'width'=>'125',
+			'width'=>'100',
 			'width_unit'=>'px',
 			'field'=>'job_date',
 			'date_format'=>'Y-m-d',
@@ -93,7 +108,7 @@ return array (
 		'zip'=>array(
 			'type'=>'column-meta',
 			'label'=>'Zip',
-			'width'=>'80',
+			'width'=>'70',
 			'width_unit'=>'px',
 			'field'=>'zip',
 			'field_type'=>'',
@@ -151,7 +166,7 @@ return array (
 			'filter'=>'on',
 			'editable_type'=>'text',
 			'search'=>'on'
-		),
+		),	
 		'attachments'=>array(
 			'type'=>'column-attachment',
 			'label'=>'Attachments',

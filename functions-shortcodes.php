@@ -634,6 +634,22 @@ function append_unique_param_to_query($sql, $query) {
     }
     return $sql;
 }
+ 
+// Insert Espanol (Spanish Translation) Button
+add_shortcode( 'get-translator', 'battleplan_translator' );
+function battleplan_translator($atts, $content = null) {
+	wp_enqueue_script( 'battleplan-translator', get_template_directory_uri().'/js/script-translator.js', array('jquery'), _BP_VERSION, false );
+	wp_enqueue_style( 'battleplan-translator', get_template_directory_uri()."/style-translator.css", array('parent-style'), _BP_VERSION );  
+	?><script async nonce="<?php echo _BP_NONCE; ?>" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script><?php
+
+	$a = shortcode_atts( array( 'language'=>'spanish', 'text'=>'Haga clic para el sitio en español', 'class'=>'', 'align'=>'center', ), $atts );
+	$language = esc_attr($a['language']);	
+	$text = esc_attr($a['text']);		
+	$class = esc_attr($a['class']);		
+	$align = esc_attr($a['align']);	
+	
+	return "<div id='hablamos-espanol' class='".$class."' style='text-align:".$align."'>".$text."</span></div>";		
+}
 
 // Build an archive
 add_shortcode( 'build-archive', 'battleplan_getBuildArchive' );
@@ -976,6 +992,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	$caption = esc_attr($a['caption']);	
 	$slideType = esc_attr($a['slide_type']) !== "fade" ? esc_attr($a['slide_type']) : "box";		
 	$slideEffect = esc_attr($a['slide_effect']);		
+	$speed = esc_attr($a['speed']);		
 	$tag = esc_attr($a['tag']);	
 	$tags = explode( ',', $tag );
 	$taxonomy = esc_attr($a['tax']);
@@ -1220,7 +1237,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	
 	$slideClass = esc_attr($a['class'])." carousel-".$slideType." effect-".$slideEffect;
 	
-	$buildSlider = '<div id="'.$type.'Slider'.$sliderNum.'" class="carousel slide slider slider-'.$type.' content-'.$contentType.' '.$slideClass.' mult-'.$mult.$blur.'" data-interval="'.esc_attr($a['interval']).'" data-pause="'.$pause.'" data-random="'.$randStart.'"';	
+	$buildSlider = '<div id="'.$type.'Slider'.$sliderNum.'" class="carousel slide slider slider-'.$type.' content-'.$contentType.' '.$slideClass.' mult-'.$mult.$blur.'" data-interval="'.esc_attr($a['interval']).'" data-pause="'.$pause.'" data-speed="'.$speed.'" data-random="'.$randStart.'"';	
 	
 	if ( $autoplay == "yes" || $autoplay == "true" ) $buildSlider .= ' data-auto="true"';
 	

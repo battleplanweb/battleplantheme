@@ -237,6 +237,10 @@ body.using-mouse .block-accordion.tab-focus {
 	overflow: 									hidden;
 }
 
+.clearfix {
+	clear: 										both;
+}
+
 /* Elements
 --------------------------------------------- */
 hr {

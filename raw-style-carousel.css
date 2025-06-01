@@ -60,8 +60,15 @@
 }
 
 .carousel-screen .carousel-item {
-	padding: 										0 3%;
+	padding: 										0;
 }
+
+
+/*
+.carousel-screen .carousel-item {
+	padding: 										0 3%; // removed for Midwest Airend & Pump slider -- if it is full screen, why the padding?
+}
+*/
 
 .carousel-item.active {
 	opacity: 										1;
@@ -178,6 +185,7 @@
  	top: 											50%;
 	justify-content: 								space-between;
 	padding: 										0 3vw;
+	z-index: 										1000;
 }
 /*
 .carousel a.carousel-control-next, 

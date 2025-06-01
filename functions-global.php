@@ -13,7 +13,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.28.6' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.28.7' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -222,6 +222,7 @@ $GLOBALS['icons']['chevron-left'] = '\e218';
 $GLOBALS['icons']['chevron-right'] = '\e218';
 $GLOBALS['icons']['chevron-up'] = '\e218';
 $GLOBALS['icons']['clipboard-check'] = '\e06e';
+$GLOBALS['icons']['clock'] = '\e07a';
 $GLOBALS['icons']['cog'] = '\e0ea';
 $GLOBALS['icons']['construction-concrete-truck'] = '\e0ef';
 $GLOBALS['icons']['construction-foreman'] = '\e0f0';

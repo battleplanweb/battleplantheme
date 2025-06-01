@@ -19,14 +19,15 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	}
 	
 // Control color of Top 10 Most Visited Days box
-	getObjects('#battleplan_site_stats tr').forEach(tr => {
-        let getAge = 100 - parseInt(tr.getAttribute('data-age'), 10);
-        getAge = getAge * 2;
-        if (getAge < 0) { getAge = 0; }
-        getObjects('td', tr).forEach(td => {
-            td.style.filter = `saturate(${getAge}%)`;
-        });
-    });
+	getObjects('#battleplan_site_stats tr').forEach(function(tr) {
+		var getAge = 100 - parseInt(tr.getAttribute('data-age'), 10);
+		getAge = getAge * 2;
+		if (getAge < 0) { getAge = 0; }
+		getObjects('td', tr).forEach(function(td) {
+			td.style.filter = 'saturate(' + getAge + '%)';
+		});
+	});
+
 	
 		
 // Allow for expansion of admin boxes on click 
@@ -45,19 +46,22 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			let getCount = [];
 
 		// Remove all months before stats began counting
-			const trendRows = Array.from(document.querySelectorAll(`#battleplan_${trend}_stats .trends-${trend} tr.${subtrend}`)).reverse();
-			for (let row of trendRows) {
+			var trendRows = Array.prototype.slice.call(document.querySelectorAll('#battleplan_' + trend + '_stats .trends-' + trend + ' tr.' + subtrend)).reverse();
+			for (var i = 0; i < trendRows.length; i++) {
+				var row = trendRows[i];
 				if (row.getAttribute("data-count") !== '0') {
 					break;
 				} else {
-					row.remove();
+					row.parentNode.removeChild(row);
 				}
 			}
 
+
 			// Collect data counts
-			getObjects(`#battleplan_${trend}_stats .trends-${trend} tr.${subtrend}`).forEach(row => {
-				getCount.push(parseInt(row.getAttribute("data-count"), 10));
-			});
+			var rows = getObjects('#battleplan_' + trend + '_stats .trends-' + trend + ' tr.' + subtrend);
+			for (var i = 0; i < rows.length; i++) {
+				getCount.push(parseInt(rows[i].getAttribute("data-count"), 10));
+			}
 
 			// Sort counts in descending order
 			getCount.sort((a, b) => b - a);
@@ -389,7 +393,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		QTags.addButton( 'bp_get-gallery', 'gallery', '   [get-gallery name="" size="thumbnail" id="" columns="5" max="-1" offset="0" caption="false, true" start="" end="" order_by="menu_order" order="asc, desc" tags="" field="" operator="any" class="" include="" exclude="" unique="true, false" value="" type="" compare=""]\n\n', '', 'gallery', 'Gallery', 1000 );
 		
 		
-		QTags.addButton( 'bp_post-slider', 'post slider', '   [get-post-slider type="" id="(for images)" auto="yes, no" interval="6000" loop="true, false" num="4" offset="0" pics="yes, no" controls="yes, no" controls_pos="below, above" indicators="no, yes" justify="space-around, space-evenly, space-between, center" pause="true, false" tax="" terms="" orderby="recent, rand, id, author, title, name, type, date, modified, parent, comment_count, relevance, menu_order, (images) views, (posts) views-today, views-7day, views-30day, views-90day, views-365day, views-all" order="asc, desc" post_btn="" all_btn="View All" link="" start="" end="" exclude="" x_current="true, false" show_excerpt="true, false" show_content="false, true" size="thumbnail, half-s" pic_size="1/3" text_size="" class="" (images) slide_type="box, screen, fade" slide_effect="fade, dissolve, cycle, boomerang, zoom, fade-cycle, cycle-fade, fade-zoom, zoom-fade" tag="" caption="no, yes" id="" mult="1" truncate="true, false, # of characters" lazy="true, false" blur="false, true", rand_start=>"", content_type="image, text"]\n\n', '', 'post slider', 'Post Slider', 1000 );
+		QTags.addButton( 'bp_post-slider', 'post slider', '   [get-post-slider type="" id="(for images)" auto="yes, no" interval="6000" loop="true, false" num="4" offset="0" pics="yes, no" controls="yes, no" controls_pos="below, above, center" indicators="no, yes" justify="space-around, space-evenly, space-between, center" pause="true, false" tax="" terms="" orderby="recent, rand, id, author, title, name, type, date, modified, parent, comment_count, relevance, menu_order, (images) views, (posts) views-today, views-7day, views-30day, views-90day, views-365day, views-all" order="asc, desc" post_btn="" all_btn="View All" link="" start="" end="" exclude="" x_current="true, false" show_excerpt="true, false" show_content="false, true" size="thumbnail, half-s" pic_size="1/3" text_size="" class="" (images) slide_type="box, screen, fade" slide_effect="fade, dissolve, cycle, boomerang, zoom, fade-cycle, cycle-fade, fade-zoom, zoom-fade" tag="" caption="no, yes" id="" mult="1" truncate="true, false, # of characters" lazy="true, false" blur="false, true", rand_start=>"", content_type="image, text"]\n\n', '', 'post slider', 'Post Slider', 1000 );
 
 		QTags.addButton( 'bp_images-slider', 'Images Slider', '<div class="align-right size-half-s">[get-post-slider type="images" num="6" size="half-s" controls="no" indicators="yes" tag="featured" all_btn="" link="none, alt, description, blank" slide_type="box, screen, fade" slide_effect="fade, dissolve, cycle, boomerang, zoom, fade-cycle, cycle-fade, fade-zoom, zoom-fade" orderby="recent" blur="false, true" lazy="true, false"]</div>\n\n', '', 'images-slider', 'Images Slider', 1000 );	
 		

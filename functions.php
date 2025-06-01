@@ -2205,7 +2205,8 @@ function battleplan_load_tag_manager() {
 	if ( isset($GLOBALS['customer_info']['google-tags']) && is_array($GLOBALS['customer_info']['google-tags']) ) :
 
 		foreach ( $GLOBALS['customer_info']['google-tags'] as $gtag=>$value ) :	
-			if ( $gtag === "analytics" && _USER_LOGIN !== 'battleplanweb' && _IS_BOT !== true ) :
+			//if ( $gtag === "analytics" && _USER_LOGIN !== 'battleplanweb' && _IS_BOT !== true ) :
+			if ( $gtag === "analytics" && _USER_LOGIN !== 'battleplanweb' ) :
 				$analytics_id = $value;	
 				$buildTags .= "gtag('config', '$analytics_id');";	
 			elseif ( $gtag === "ads" ) : 
@@ -2232,8 +2233,10 @@ function battleplan_load_tag_manager() {
 		gtag("js", new Date());';
 	$buildTagMgr .= $buildTags;
 	$buildTagMgr .= '</script>';
-
-	if (strpos($analytics_id, 'x') === false && $analytics_id != '' && _IS_GOOGLEBOT == false ) echo $buildTagMgr;
+	
+	//if (strpos($analytics_id, 'x') === false && $analytics_id != '' && _IS_GOOGLEBOT == false ) echo $buildTagMgr;
+	// Had to stop checking for Bots and Google_bots in order for Google Ads to find the tag on the website for setting up Firehouse
+	if (strpos($analytics_id, 'x') === false && $analytics_id != '' ) echo $buildTagMgr;
 }
 
 // Build and display desktop navigation menu

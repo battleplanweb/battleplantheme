@@ -1894,11 +1894,13 @@ window.formLabelWidth = () => {
 	window.closeMenu = function() {
 		document.body.classList.remove("mm-active");
 
-		if (mobileMenu.offsetParent !== null && activateBtn) {  // mobileMenu.offsetParent !== null should determine whether the menu is visible or not (i.e. mobile device)
+		//if (mobileMenu.offsetParent !== null && activateBtn) {  // mobileMenu.offsetParent !== null should determine whether the menu is visible or not (i.e. mobile device)
+		if (activateBtn) {  
 			activateBtn.classList.remove("active");
 		}
 		
-		if (mobileMenu.offsetParent !== null && topPush) {
+		//if (mobileMenu.offsetParent !== null && topPush) {
+		if (topPush) {
 			getObject(".top-push.screen-mobile #page").style.top = "0";
 			let ckStuck = getObject(".top-push.screen-mobile .top-strip.stuck");
 			if (ckStuck !== null) {

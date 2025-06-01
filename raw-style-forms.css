@@ -817,11 +817,19 @@ input[type="radio"]:checked::after {
 }
 
 input[type="checkbox"]:checked::after { 
-	content: 										"\e139";
+	content: 										"\e13e";
+	transform: 										translate(0, 0);
+	font-size: 										93%;
 	font-family: 									var(--font-icons);
 	color: 											var(--input-color);
 	text-align: 									center;
 	line-height: 									1;
+}
+
+.exes input[type="checkbox"]:checked::after { 
+	content: 										"\e139";
+	font-size: 										93%;
+	transform: 										translate(0, 0);
 }
 
 .crosses input[type="checkbox"]:checked::after { 

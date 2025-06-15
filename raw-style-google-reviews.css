@@ -35,27 +35,38 @@
 }
 
 .wp-gr .wp-google-rating .wp-google-stars {
-    color: 											var(--google-star-color);
-	width: 											122px;
-	font-size: 										18px;
+	width: 											150px;
 }
 
-.wp-google-stars .icon.star::after,
-.wp-google-stars .icon.star-o::after,
-.wp-google-stars .icon.star-half::after {
-	content: 										"\e01b";
-	font-size: 										18px;
-  	margin: 										2px;
-	color: 											var(--google-star-color) !important;
-	text-shadow: 									1px 0 0 var(--google-star-shadow), -1px 0 0 var(--google-star-shadow), 0 -1px 0 var(--google-star-shadow), 0 1px 0 var(--google-star-shadow), 1px 1px 1px var(--google-star-shadow);
+.wp-google-stars .icon.star,
+.wp-google-stars .icon.star-half,
+.wp-google-stars .icon.star-empty {
+	filter: 										drop-shadow(1px 1px 1px var(--google-star-shadow));
 }
 
-.wp-google-stars .icon.star-o::after {
-	content: 										"\e01c";
+.wp-google-stars .icon .icon-star,
+.wp-google-stars .icon .icon-star-half,
+.wp-google-stars .icon .icon-star-empty {
+	width: 											1.35em;
+	height: 										1.35em;
+	margin-top: 									5px;
+	margin-right: 									3px;
+}
+	
+.wp-google-stars .icon .icon-star .stroke,
+.wp-google-stars .icon .icon-star-half .stroke,
+.wp-google-stars .icon .icon-star-empty .stroke {
+	fill: 											var(--google-star-stroke) !important;
 }
 
-.wp-google-stars .icon.star-half::after {
-	content: 										"\e01d";
+.wp-google-stars .icon .icon-star .fill,
+.wp-google-stars .icon .icon-star-half .fill {
+	fill: 											var(--google-star-color) !important;
+}
+
+.wp-google-stars .icon .icon-star-half .fill2,
+.wp-google-stars .icon .icon-star-empty .fill {
+	fill: 											var(--google-star-stroke) !important;
 }
 
 .wp-gr .wp-google-total {
@@ -63,6 +74,7 @@
     color: 											var(--google-total-text);
 	font-size: 										14px;
 	font-style:										italic;
+	magin-top: 										-3px;
 	margin-bottom:									-2px
 }
 

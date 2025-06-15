@@ -151,10 +151,10 @@ get_header(); ?>
 			$displayArchive .= do_shortcode('[section width="inline" class="archive-content archive-'.get_post_type().'"][layout grid="'.$grid.'" valign="'.$valign.'"]'.$buildArchive.'[/layout][/section]');
 		
 			$displayArchive .= '<footer class="archive-footer">';
-				$displayArchive .= get_the_posts_pagination( array( 'mid_size' => 2, 'prev_text' => _x( '<span class="icon chevron-left" aria-hidden="true"></span><span class="sr-only">Previous set of posts</span>', 'Previous set of posts' ), 'next_text' => _x( '<span class="icon chevron-right" aria-hidden="true"></span><span class="sr-only">Next set of posts</span>', 'Next set of posts' ), ));
+				$displayArchive .= get_the_posts_pagination( array( 'mid_size' => 2, 'prev_text' => _x( '<span class="icon chevron-left" aria-hidden="true">[get-icon type="chevron-left"]</span><span class="sr-only">Previous set of posts</span>', 'Previous set of posts' ), 'next_text' => _x( '<span class="icon chevron-right" aria-hidden="true">[get-icon type="chevron-right"]</span><span class="sr-only">Next set of posts</span>', 'Next set of posts' ), ));
 			$displayArchive .= '</footer><!-- .archive-footer-->';
 		
-			echo $displayArchive;	
+			echo do_shortcode($displayArchive);	
 
 		else :
 

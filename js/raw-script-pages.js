@@ -663,12 +663,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			case "before":
 				anchorObj.parentNode.insertBefore(cloneObj, anchorObj);
 				break;
-
-
-
-
-
-
 			case "top": case "start": case "inside":
 				anchorObj.insertBefore(cloneObj, anchorObj.firstChild);
 				break;
@@ -1564,26 +1558,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 
 		}
 	});
-*/
-	
-// Add star icons to reviews and ratings
-	getObjects('.testimonials-rating').forEach(function(element) {
-		const getRating = parseInt(element.textContent.trim(), 10);
-		const stars = ['star-o', 'star-o', 'star-o', 'star-o', 'star-o'];
-
-		for (let i = 0; i < getRating; i++) {
-			stars[i] = 'star';
-		}
-
-		let replaceRating = `<span class="rating rating-${getRating}-star" aria-hidden="true"><span class="sr-only">Rated ${getRating} Stars</span>`;
-		stars.forEach(star => {
-			replaceRating += `<span class="icon ${star}"></span>`;
-		});
-		replaceRating += '</span>';
-
-		element.innerHTML = replaceRating;
-	});
-															   
+*/															   
 			
 // Ensure all form labels are same width, so that the inputs line up (chatGPT wrote this 2/19/25)
 window.formLabelWidth = () => {
@@ -1707,13 +1682,7 @@ window.formLabelWidth = () => {
 	});
 
 	getObjects('[role="menubar"] a').forEach(a => a.setAttribute('tabindex', '0'));
-	getObjects('li[aria-haspopup="true"]').forEach(li => li.setAttribute('tabindex', '-1'));												   
-														   
-														   
-														   
-														   
-														   
-														   
+	getObjects('li[aria-haspopup="true"]').forEach(li => li.setAttribute('tabindex', '-1'));		
 	
 	const currents = getObjects(".main-navigation ul.main-menu > li.current-menu-item, .main-navigation ul.main-menu > li.current_page_item, .main-navigation ul.main-menu > li.current-menu-parent, .main-navigation ul.main-menu > li.current_page_parent, .main-navigation ul.main-menu > li.current-menu-ancestor, .widget-navigation ul.menu > li.current-menu-item, .widget-navigation ul.menu > li.current_page_item, .widget-navigation ul.menu > li.current-menu-parent, .widget-navigation ul.menu > li.current_page_parent, .widget-navigation ul.menu > li.current-menu-ancestor");	
 
@@ -1853,8 +1822,8 @@ window.formLabelWidth = () => {
 		if (section.dataset.pos === "header") {
 			section.style.cssText = "max-height:0; padding-top:0; padding-bottom:0; margin-top:0; margin-bottom:0;";
 		}
-	}		
-		
+	}
+			
 		
 // Gracefully start to fade out the pre-loader
 	window.fadeOutLoader = function (targetOpacity) {
@@ -2237,7 +2206,10 @@ window.formLabelWidth = () => {
 			ul.style.padding = `${totalWidth}px`;
 			ul.style.marginLeft = `-${totalWidth / 2}px`;
 		});
-
+		
+// When using parallax in #wrapper-top, slide the .message below the image on mobile		
+		const message = getObject('#wrapper-top .message');
+		if ( thisDeviceW < mobileCutoff ) moveDiv(message, '#wrapper-top .section-parallax-disabled', 'after');
 	};
 
 /*--------------------------------------------------------------

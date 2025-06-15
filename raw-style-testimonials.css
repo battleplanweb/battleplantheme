@@ -48,18 +48,15 @@
 
 .testimonials-credentials {
 	text-align:										right;
-	color:											var(--black);
+	color:											var(--text-color);
 	grid-column:									span 11 !important;
 }
 
-.testimonials-quote p:first-of-type::before {
-    display: 										inline-block;
-    font-family: 									var(--font-icons);
-    content: 										"\e155";
-	color:											var(--text-color);
-    font-size: 										130%;
-    text-align: 									left;
-    padding-right: 									7px;
+.testimonials-quote p:first-of-type .icon-svg {
+	fill:											currentColor;
+  	margin-right: 									8px;
+	margin-top: 									3px;
+	transform: 										scale(1.5); 
 }
 
 .testimonials-name {
@@ -72,21 +69,37 @@
 }
 
 .testimonials-rating {
-	color: 											var(--google-star-color) !important;
 	margin-right:									-5px;
 }
 
-.testimonials-rating .icon.star::after,
-.testimonials-rating .icon.star-o::after {
-	content: 										"\e01b";
-	font-size: 										28px;
-  	margin: 										3px;
-	color: 											inherit;
-	text-shadow: 									1px 0 0 var(--google-star-shadow), -1px 0 0 var(--google-star-shadow), 0 -1px 0 var(--google-star-shadow), 0 1px 0 var(--google-star-shadow), 1px 1px 1px var(--google-star-shadow);
+.testimonials-rating .icon.star,
+.testimonials-rating .icon.star-half,
+.testimonials-rating .icon.star-empty {
+	filter: 										drop-shadow(1px 1px 1px var(--google-star-shadow));
 }
 
-.testimonials-rating .icon.star-o::after {
-	content: 										"\e01c";
+.testimonials-rating .icon .icon-star,
+.testimonials-rating .icon .icon-star-half,
+.testimonials-rating .icon .icon-star-empty {
+  	margin-right: 									15px;
+	margin-top: 									5px;
+	transform: 										scale(1.6); 
+}
+	
+.testimonials-rating .icon .icon-star .stroke,
+.testimonials-rating .icon .icon-star-half .stroke,
+.testimonials-rating .icon .icon-star-empty .stroke {
+	fill: 											var(--google-star-stroke) !important;
+}
+
+.testimonials-rating .icon .icon-star .fill,
+.testimonials-rating .icon .icon-star-half .fill {
+	fill: 											var(--google-star-color) !important;
+}
+
+.testimonials-rating .icon .icon-star-half .fill2,
+.testimonials-rating .icon .icon-star-empty .fill {
+	fill: 											var(--google-star-stroke) !important;
 }
 
 .testimonials-credential img.new {

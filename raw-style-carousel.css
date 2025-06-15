@@ -201,20 +201,6 @@
 	height: 										100%;
 }
 
-.carousel a.carousel-control-next .carousel-control-next-icon::after, 
-.carousel a.carousel-control-prev .carousel-control-prev-icon::after { 
-	display: 										block;
-	font-family: 									var(--font-icons);
-	content: 										"\e218";
-	font-size:										85%;
-	height: 										100%;
-	align-content: 									center;
-}
-
-.carousel a.carousel-control-prev .carousel-control-prev-icon::after {
-	transform: 										rotate(180deg);
-}
-
 .carousel-indicators {
     position: 										relative;
     z-index: 										15;

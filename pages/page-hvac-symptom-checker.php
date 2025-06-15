@@ -15,6 +15,7 @@ $printPage = '
 
 	[accordion title="No Heat / Insufficient Heat"]
 	 <ul>
+	  <li>Replace the batteries in your thermostat.</li>  
 	  <li>Check to see if your thermostat is on and set to the correct temperature. If your thermostat is turned off or set incorrectly, turn on and/or reset thermostat.</li>  
 	  <li>Check the air filters in each of your system components. Dirty filters can cause severe problems with your unit.  If any of your filters are dirty, consult your manual to clean or replace them.</li>
 	  <li>Check the doors and windows in your home. Close any open doors or windows as cool air may be escaping through them.</li>  
@@ -27,6 +28,7 @@ $printPage = '
 
 	[accordion title="No Cooling / Insufficient Cooling"]
 	 <ul>
+	  <li>Replace the batteries in your thermostat.</li>  
 	  <li>Check to see if your thermostat is on and set to the correct temperature. If your thermostat is turned off or set incorrectly, turn it on and/or reset thermostat.</li>
 	  <li>Check the air filters in each of your system components. Dirty filters can cause severe problems with your unit.  If any of your filters are dirty, consult your manual to clean or replace them.</li>
 	  <li>Check the doors and windows in your home. Close any open doors or windows as cool air may be escaping through them.</li>  
@@ -39,9 +41,9 @@ $printPage = '
 
 	[accordion title="No Air Flow"]
 	 <ul>
-	  <li>Check around your outdoor unit. If there are any leaves, hedges or property walls butting up against it, your system may have frozen up due to a dirty coil. Make sure your outdoor unit has 1 inch of clearance all around it.</li>
+	  <li>Check around your outdoor unit. If there are any leaves, hedges or property walls butting up against it, your system may have frozen up due to a dirty coil. Make sure your outdoor unit has 6 inches of clearance all around it.</li>
 	  <li>Check the air filters in each of your system components. Dirty filters can cause severe problems with your unit.  If any of your filters are dirty, consult your manual to clean or replace them.</li>
-	  <li>Check to see if there is any air coming through your vent. Your indoor blower may not be operating. If this is the case, you should contact your dealer.</li>
+	  <li>Check to see if there is any air coming through your vent. Your indoor blower may not be operating. If this is the case, you should contact [get-biz info="name"] at [get-biz info="phone-link"].</li>
 	 </ul>
 	[/accordion]
 
@@ -65,7 +67,7 @@ $printPage = '
 	[accordion title="Noisy Air Vents"]
 	 <ul>
 	  <li>A high pitched sound often, although not always, indicates a lack of return air. Make sure your return and supply vents are open and free of any blockages including furniture.</li>
-	  <li>Other noises (e.g., rattling, humming, thumping or scraping sounds) could be a sign of undersized or flimsy duct work, clogged filter or wear and tear on your system’s internal components. If you hear an unusual sound, call your local dealer for service.</li>
+	  <li>Other noises (e.g., rattling, humming, thumping or scraping sounds) could be a sign of undersized or flimsy duct work, clogged filter or wear and tear on your system’s internal components. If you hear an unusual sound, call [get-biz info="name"] at [get-biz info="phone-link"] for service.</li>
 	 </ul>
 	[/accordion]
 	';

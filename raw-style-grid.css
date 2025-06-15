@@ -601,6 +601,10 @@ section.section .flex.nested .flex,
 	text-align:										center;
 }
 
+.block-button a {
+	align-content: 									center;
+}
+
 .block-button.button-left {
 	text-align:										left;
 }
@@ -1596,7 +1600,9 @@ figure.col-inner {
 	}	
 	
 	.three-col,
-	.three-column {
+	.three-column,
+	.four-col,
+	.four-column {
 		column-count:									2;
 	}	
 	
@@ -1806,7 +1812,9 @@ figure.col-inner {
 	.two-col,
 	.two-column,
 	.three-col,
-	.three-column {
+	.three-column
+	.four-col,
+	.four-column {
 		column-count:									1;
 	}	
 	

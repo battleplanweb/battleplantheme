@@ -5,30 +5,6 @@
 # Shortcodes
 --------------------------------------------------------------*/
 
-// Build SVG for icons
-add_shortcode( 'get-icon', 'battleplan_getIcon' );
-function battleplan_getIcon($atts, $content = null ) {
-	$a = shortcode_atts( array( 'type'=>'', 'left'=>'0', 'top'=>'0', 'class'=>'', 'link'=>'', 'sr'=>'', 'new-tab'=>'' ), $atts );
-	$type = esc_attr($a['type']);	
-	$link = esc_attr($a['link']);
-	$left = esc_attr($a['left']);
-	$top = esc_attr($a['top']);
-	$adjust = $left != 0 || $top != 0 ? ' style="transform: translate('.$left.'px, '.$top.'px)"' : '';
-	$class = esc_attr($a['class']) != '' ? ' '.esc_attr($a['class']) : '';
-	$sr = esc_attr($a['sr']);	
-	$target = esc_attr($a['new-tab']) !== '' ? ' target="_blank"' : '';
-	array_push($GLOBALS['icon-css'], $type);	
-	
-	$buildIcon = '';
-	if ( $link != '' ) $buildIcon .= '<a href="'.$link.'" class="icon-btn'.$class.'" role="button"'.$target.'>';
-	$buildIcon .= '<span class="icon '.$type.'"'.$adjust.'></span>';	
-	if ( $sr != '' ) $buildIcon .= '<span class="sr-only">'.$sr.'</span>';
-	if ( $link != '' ) $buildIcon .= '<div class="icon-bg"></div>';
-	if ( $link != '' ) $buildIcon .= '</a>';
-	
-	return $buildIcon;
-}
-
 // Returns Business Information for site-wide changes
 add_shortcode( 'get-biz', 'battleplan_getBizInfo' );
 function battleplan_getBizInfo($atts, $content = null ) {
@@ -46,7 +22,7 @@ function battleplan_getBizInfo($atts, $content = null ) {
 	
 		if ( strpos($data, 'mm-bar-phone') !== false ) :
 			$openMessage = is_biz_open() ? "<span>Call Us, We're Open!</span>" : "";
-			$phoneFormat = do_shortcode('<div class="mm-bar-btn mm-bar-phone call-btn" aria-hidden="true">'.$openMessage.'</div><span class="sr-only">Call Us</span>');
+			$phoneFormat = do_shortcode('<div class="mm-bar-btn mm-bar-phone call-btn" aria-hidden="true">[get-icon type="phone"]'.$openMessage.'</div><span class="sr-only">Call Us</span>');
 		elseif ( strpos($data, 'alt') !== false ) :
 			if ( isset($GLOBALS['customer_info'][$data]) ) :
 				$phoneFormat = $GLOBALS['customer_info'][$data];
@@ -461,12 +437,11 @@ function battleplan_getRandomText($atts, $content = null) {
 // Display a random photo from tagged images 
 add_shortcode( 'get-random-image', 'battleplan_getRandomImage' );
 function battleplan_getRandomImage($atts, $content = null ) {	
-	$a = shortcode_atts( array( 'id'=>'', 'tag'=>'', 'size'=>'thumbnail', 'link'=>'no', 'number'=>'1', 'offset'=>'0', 'align'=>'left', 'class'=>'', 'order_by'=>'recent', 'order'=>'asc', 'shuffle'=>'no', 'lazy'=>'true' ), $atts );
+	$a = shortcode_atts( array( 'id'=>'', 'tag'=>'', 'size'=>'thumbnail', 'link'=>'no', 'number'=>'1', 'offset'=>'0', 'align'=>'left', 'class'=>'', 'order_by'=>'rand', 'order'=>'asc', 'shuffle'=>'no', 'lazy'=>'true' ), $atts );
 	$tag = esc_attr($a['tag']);	
 	$tags = $tag == "page-slug" ? _PAGE_SLUG : explode( ',', $tag );
 	$size = esc_attr($a['size']);	
 	$link = esc_attr($a['link']);	
-	$orderBy = esc_attr($a['order_by']);		
 	$lazy = esc_attr($a['lazy']) == "true" ? "lazy" : "eager";
 	$id = esc_attr($a['id']) == "current" ? get_the_ID() : esc_attr($a['id']);		
 	$class = esc_attr($a['class']) != '' ? " ".esc_attr($a['class']) : "";
@@ -474,28 +449,8 @@ function battleplan_getRandomImage($atts, $content = null ) {
 	$exclude = $GLOBALS['do_not_repeat'];
 	
 	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>esc_attr($a['number']), 'offset'=>esc_attr($a['offset']), 'post__not_in'=>$exclude, 'order'=>esc_attr($a['order']), 'cache_results'=>false, 'update_post_meta_cache'=>false, 'update_post_term_cache'=>false );
-
-	/*
-	$args['orderby']='meta_value_num';	
-	if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; 	
-	elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="bp_views_7"; 	
-	elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="bp_views_30";
-	elseif ( $orderBy == 'views-90day' ) : $args['meta_key']="bp_views_90"; 
-	elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="bp_views_365"; 
-	elseif ( $orderBy == 'recent' ) : $args['meta_key']="log-last-viewed";
-	else : $args['orderby']=$orderBy;
-	endif;		
-	*/
 	
-	$args['orderby']='meta_value_num';	
-	if ( $orderBy == 'views-today' ) : $args['orderby']="rand";	
-	elseif ( $orderBy == 'views-7day' ) : $args['orderby']="rand";	
-	elseif ( $orderBy == 'views-30day' ) : $args['orderby']="rand";	
-	elseif ( $orderBy == 'views-90day' ) : $args['orderby']="rand";	
-	elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['orderby']="rand";	
-	elseif ( $orderBy == 'recent' ) : $args['orderby']="rand";	
-	else : $args['orderby']=$orderBy;
-	endif;		
+	$args['orderby'] = (strpos($a['order_by'], 'recent') !== false || stripos($a['order_by'], 'view') !== false) ? 'rand' : esc_attr($a['order_by']);
 	
 	if ( $id == '' ) : 
 		$args['tax_query']=array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags ));
@@ -531,14 +486,13 @@ function battleplan_getRandomImage($atts, $content = null ) {
 // Display a row of square pics from tagged images
 add_shortcode( 'get-row-of-pics', 'battleplan_getRowOfPics' );
 function battleplan_getRowOfPics($atts, $content = null ) {	
-	$a = shortcode_atts( array( 'id'=>'', 'tag'=>'row-of-pics', 'link'=>'no', 'col'=>'4', 'row'=>'1', 'offset'=>'0', 'size'=>'half-s', 'valign'=>'center', 'class'=>'', 'order_by'=>'recent', 'order'=>'asc', 'shuffle'=>'no', 'lazy'=>'true' ), $atts );
+	$a = shortcode_atts( array( 'id'=>'', 'tag'=>'row-of-pics', 'link'=>'no', 'col'=>'4', 'row'=>'1', 'offset'=>'0', 'size'=>'half-s', 'valign'=>'center', 'class'=>'', 'order_by'=>'rand', 'order'=>'asc', 'shuffle'=>'no', 'lazy'=>'true' ), $atts );
 	$col = esc_attr($a['col']);		
 	$row = esc_attr($a['row']);		
 	$size = esc_attr($a['size']);
 	$num = $row * $col;
 	$tags = explode( ',', esc_attr($a['tag']) );
 	$link = esc_attr($a['link']);	
-	$orderBy = esc_attr($a['order_by']);		
 	$shuffle = esc_attr($a['shuffle']);	
 	$lazy = esc_attr($a['lazy']) == "true" ? "lazy" : "eager";
 	$class = esc_attr($a['class']) != '' ? " ".esc_attr($a['class']) : "";
@@ -547,15 +501,7 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 	
 	$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>$num, 'offset'=>esc_attr($a['offset']), 'order'=>esc_attr($a['order']), 'tax_query'=>array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags )), 'cache_results'=>false, 'update_post_meta_cache'=>false, 'update_post_term_cache'=>false, 'no_found_rows'=>true, );
 	
-	$args['orderby']='meta_value_num';	
-	if ( $orderBy == 'views-today' ) : $args['orderby']="rand";	
-	elseif ( $orderBy == 'views-7day' ) : $args['orderby']="rand";	
-	elseif ( $orderBy == 'views-30day' ) : $args['orderby']="rand";	
-	elseif ( $orderBy == 'views-90day' ) : $args['orderby']="rand";	
-	elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['orderby']="rand";	
-	elseif ( $orderBy == 'recent' ) : $args['orderby']="rand";	
-	else : $args['orderby']=$orderBy;
-	endif;		
+	$args['orderby'] = (strpos($a['order_by'], 'recent') !== false || stripos($a['order_by'], 'view') !== false) ? 'rand' : esc_attr($a['order_by']);
 	
 	if ( $id != '' ) $args['post_parent']=$id;
 
@@ -767,11 +713,16 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		$testimonialWeb = esc_attr(get_field( "testimonial_website" ));
 		$testimonialLoc = esc_attr(get_field( "testimonial_location" ));
 		$testimonialPlatform = strtolower(esc_attr(get_field( "testimonial_platform" )));
-		$testimonialRate = esc_attr(get_field( "testimonial_rating" ));	
 		$testimonialMisc1 = esc_attr(get_field( "testimonial_misc1" ));	
 		$testimonialMisc2 = esc_attr(get_field( "testimonial_misc2" ));	
 		$testimonialMisc3 = esc_attr(get_field( "testimonial_misc3" ));	
 		$testimonialMisc4 = esc_attr(get_field( "testimonial_misc4" ));
+		$testimonialRate = round(esc_attr(get_field( "testimonial_rating" )) * 2) / 2;	
+			
+		$testimonialStars = '';
+		for ($i = 1; $i <= 5; $i++) {
+			$testimonialStars .= $testimonialRate >= $i ? '[get-icon type="star"]' : ($testimonialRate >= $i - 0.5 ? '[get-icon type="star-half"]' : '[get-icon type="star-empty"]');
+		}
 		
 		$addNewTag = get_the_date('Y-m-d') > date('Y-m-d', strtotime('-3 months')) ? '<img class="noFX new" loading="'.$lazy.'" src="/wp-content/themes/battleplantheme/common/logos/new-1.webp" width="58" height="52" alt="New customer review, posted within the last 2 months" style="aspect-ratio:58/52" />' : '';
 		
@@ -792,14 +743,14 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		if ( $testimonialMisc2 ) $buildCredentials .= "<div class='testimonials-credential testimonials-misc2'>".$testimonialMisc2."</div>";
 		if ( $testimonialMisc3 ) $buildCredentials .= "<div class='testimonials-credential testimonials-misc3'>".$testimonialMisc3."</div>";
 		if ( $testimonialMisc4 ) $buildCredentials .= "<div class='testimonials-credential testimonials-misc4'>".$testimonialMisc4."</div>";
-		if ( $testimonialRate ) $buildCredentials .= "<div class='testimonials-credential testimonials-rating'>".$testimonialRate."</div>";
+		if ( $testimonialRate ) $buildCredentials .= "<div class='testimonials-credential testimonials-rating'>".$testimonialStars."</div>";
 		
 		$content = apply_filters('the_content', get_the_content($postID)); 
 		if ( $truncate != "false" && $truncate != "no" ) : 
 			$content = $truncate == "true" || $truncate == "yes" ? truncateText($content) : truncateText($content, $truncate);
 		endif;			
 		
-		$archiveBody = '[txt class="testimonials-quote"][p]'.$content.'[/p][/txt][txt size="11/12" class="testimonials-credentials"]'.$buildCredentials.'[/txt][txt size="1/12" class="testimonials-platform testimonials-platform-'.$testimonialPlatform.'"][/txt]';
+		$archiveBody = '[txt class="testimonials-quote"][p][get-icon type="quote"]'.$content.'[/p][/txt][txt size="11/12" class="testimonials-credentials"]'.$buildCredentials.'[/txt][txt size="1/12" class="testimonials-platform testimonials-platform-'.$testimonialPlatform.'"][/txt]';
 	} else {
 		if ( esc_attr($a['accordion']) == "true" ) :		
 			$archiveBody = '[accordion title="'.esc_html(get_the_title($postID)).'" excerpt="'.wp_kses_post(get_the_excerpt($postID)).'"]'.$content.'[/accordion]';		
@@ -889,12 +840,11 @@ function battleplan_getBuildArchive($atts, $content = null) {
 // Display randomly selected posts - start/end can be dates or -53 week / -51 week */
 add_shortcode( 'get-random-posts', 'battleplan_getRandomPosts' );
 function battleplan_getRandomPosts($atts, $content = null) {	
-	$a = shortcode_atts( array( 'num'=>'1', 'offset'=>'0', 'leeway'=>'0', 'type'=>'post', 'tax'=>'', 'terms'=>'', 'field_key'=>'', 'field_value'=>'', 'field_compare'=>'IN', 'orderby'=>'recent', 'sort'=>'asc', 'show_title'=>'true', 'title_pos'=>'outside', 'count_view'=>'false', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_social'=>'false', 'show_btn'=>'true', 'button'=>'Read More', 'btn_pos'=>'inside', 'show_content'=>'false', 'thumb_only'=>'false', 'show_thumb'=>'true', 'thumb_col'=>'1', 'thumbnail'=>'force', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'lazy'=>'true', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'link'=>'post', 'truncate'=>'true' ), $atts );
+	$a = shortcode_atts( array( 'num'=>'1', 'offset'=>'0', 'leeway'=>'0', 'type'=>'post', 'tax'=>'', 'terms'=>'', 'field_key'=>'', 'field_value'=>'', 'field_compare'=>'IN', 'orderby'=>'rand', 'sort'=>'asc', 'show_title'=>'true', 'title_pos'=>'outside', 'count_view'=>'false', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_social'=>'false', 'show_btn'=>'true', 'button'=>'Read More', 'btn_pos'=>'inside', 'show_content'=>'false', 'thumb_only'=>'false', 'show_thumb'=>'true', 'thumb_col'=>'1', 'thumbnail'=>'force', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'lazy'=>'true', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'link'=>'post', 'truncate'=>'true' ), $atts );
 	$num = esc_attr($a['num']);	
 	$offset = esc_attr($a['offset']) == '0' ? rand(0, esc_attr($a['leeway'])) :	esc_attr($a['offset']);
 	$postType = esc_attr($a['type']);	
 	$title = esc_attr($a['show_title']);	
-	$orderBy = esc_attr($a['orderby']);	
 	$titlePos = esc_attr($a['title_pos']);	
 	$showDate = esc_attr($a['show_date']);	
 	$showExcerpt = esc_attr($a['show_excerpt']);		
@@ -924,28 +874,8 @@ function battleplan_getRandomPosts($atts, $content = null) {
 	$combinePosts = '';
 
 	$args = array ( 'posts_per_page'=>$num, 'offset'=>$offset, 'date_query'=>array( array( 'after'=>esc_attr($a['start']), 'before'=>esc_attr($a['end']), 'inclusive'=>true, ), ), 'order'=>esc_attr($a['sort']), 'post_type'=>$postType, 'post__not_in'=>$exclude, 'cache_results'=>false, 'update_post_meta_cache'=>false, 'update_post_term_cache'=>false );
-
-	/*
-	$args['orderby']='meta_value_num';	
-	if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; 	
-	elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="bp_views_7"; 	
-	elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="bp_views_30";
-	elseif ( $orderBy == 'views-90day' ) : $args['meta_key']="bp_views_90"; 
-	elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="bp_views_365"; 
-	elseif ( $orderBy == 'recent' ) : $args['meta_key']="log-last-viewed";
-	else : $args['orderby']=$orderBy;
-	endif;		
-	*/
 	
-	$args['orderby']='meta_value_num';	
-	if ( $orderBy == 'views-today' ) : $args['orderby']="rand";	
-	elseif ( $orderBy == 'views-7day' ) : $args['orderby']="rand";	
-	elseif ( $orderBy == 'views-30day' ) : $args['orderby']="rand";	
-	elseif ( $orderBy == 'views-90day' ) : $args['orderby']="rand";	
-	elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['orderby']="rand";	
-	elseif ( $orderBy == 'recent' ) : $args['orderby']="rand";	
-	else : $args['orderby']=$orderBy;
-	endif;		
+	$args['orderby'] = (strpos($a['order_by'], 'recent') !== false || stripos($a['order_by'], 'view') !== false) ? 'rand' : esc_attr($a['order_by']);
 	
 	if ( $taxonomy && $term ) $args['tax_query'] = array( array('taxonomy'=>$taxonomy, 'field'=>'slug', 'terms'=>$terms ));	
 	if ( $fieldKey && $fieldValue ) $args['meta_query'] = array( array('key'=>$fieldKey, 'value'=>$fieldValues, 'compare'=>esc_attr($a['field_compare']) ));
@@ -977,7 +907,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	wp_enqueue_script( 'battleplan-carousel', get_template_directory_uri().'/js/script-carousel.js', array('battleplan-script-pages'), _BP_VERSION, false );		
 	wp_enqueue_style( 'battleplan-carousel', get_template_directory_uri()."/style-carousel.css", array('parent-style'), _BP_VERSION );  
 	
-	$a = shortcode_atts( array( 'type'=>'testimonials', 'auto'=>'yes', 'interval'=>'6000', 'loop'=>'true', 'num'=>'4', 'offset'=>'0', 'pics'=>'yes', 'caption'=>'no', 'controls'=>'yes', 'controls_pos'=>'below', 'indicators'=>'no', 'justify'=>'center', 'pause'=>'true', 'orderby'=>'recent', 'order'=>'asc', 'post_btn'=>'', 'show_thumb'=>'true', 'all_btn'=>'View All', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'title_pos'=>'', 'link'=>'', 'pic_size'=>'1/3', 'text_size'=>'', 'slide_type'=>'box', 'slide_effect'=>'fade', 'tax'=>'', 'terms'=>'', 'tag'=>'', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'id'=>'', 'mult'=>'1', 'class'=>'', 'truncate'=>'true', 'lazy'=>'true', 'blur'=>'false', 'rand_start'=>'', 'content_type'=>'image' ), $atts );
+	$a = shortcode_atts( array( 'type'=>'testimonials', 'auto'=>'yes', 'interval'=>'6000', 'loop'=>'true', 'num'=>'4', 'offset'=>'0', 'pics'=>'yes', 'caption'=>'no', 'controls'=>'yes', 'controls_pos'=>'below', 'indicators'=>'no', 'justify'=>'center', 'pause'=>'true', 'orderby'=>'rand', 'order'=>'asc', 'post_btn'=>'', 'show_thumb'=>'true', 'all_btn'=>'View All', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'title_pos'=>'', 'link'=>'', 'pic_size'=>'1/3', 'text_size'=>'', 'slide_type'=>'box', 'slide_effect'=>'fade', 'tax'=>'', 'terms'=>'', 'tag'=>'', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'id'=>'', 'mult'=>'1', 'class'=>'', 'truncate'=>'true', 'lazy'=>'true', 'blur'=>'false', 'rand_start'=>'', 'content_type'=>'image' ), $atts );
 	$num = esc_attr($a['num']);	
 	$controls = esc_attr($a['controls']);	
 	$controlsPos = esc_attr($a['controls_pos']);
@@ -987,7 +917,6 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	$postBtn = esc_attr($a['post_btn']);	
 	$allBtn = esc_attr($a['all_btn']);	
 	$allBtn = $allBtn == "false" || $allBtn == "no" || $allBtn == "" ? "false" : $allBtn;
-	$orderBy = esc_attr($a['orderby']);	
 	$order = esc_attr($a['order']);		
 	$caption = esc_attr($a['caption']);	
 	$slideType = esc_attr($a['slide_type']) !== "fade" ? esc_attr($a['slide_type']) : "box";		
@@ -1043,27 +972,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	if ( $type == "image" || $type == "images" ) :
 		$args = array( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=>$num, 'order'=>$order, 'offset'=>esc_attr($a['offset']), 'post__not_in'=>$exclude, 'cache_results'=>false, 'update_post_meta_cache'=>false, 'update_post_term_cache'=>false );
 
-		/*
-		$args['orderby']='meta_value_num';	
-		if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; 	
-		elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="bp_views_7"; 	
-		elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="bp_views_30";
-		elseif ( $orderBy == 'views-90day' ) : $args['meta_key']="bp_views_90"; 
-		elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="bp_views_365"; 
-		elseif ( $orderBy == 'recent' ) : $args['meta_key']="log-last-viewed";
-		else : $args['orderby']=$orderBy;
-		endif;		
-		*/
-
-		$args['orderby']='meta_value_num';	
-		if ( $orderBy == 'views-today' ) : $args['orderby']="rand";	
-		elseif ( $orderBy == 'views-7day' ) : $args['orderby']="rand";	
-		elseif ( $orderBy == 'views-30day' ) : $args['orderby']="rand";	
-		elseif ( $orderBy == 'views-90day' ) : $args['orderby']="rand";	
-		elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['orderby']="rand";	
-		elseif ( $orderBy == 'recent' ) : $args['orderby']="rand";	
-		else : $args['orderby']=$orderBy;
-		endif;		
+		$args['orderby'] = (strpos($a['order_by'], 'recent') !== false || stripos($a['order_by'], 'view') !== false) ? 'rand' : esc_attr($a['order_by']);
 	
 		if ( $id == '' ) : 
 			$args['tax_query']=array( array('taxonomy'=>'image-tags', 'field'=>'slug', 'terms'=>$tags ));
@@ -1121,39 +1030,17 @@ function battleplan_getPostSlider($atts, $content = null ) {
 			wp_reset_postdata();
 		endif;
 	else :
-		$args = array ( 'posts_per_page'=>-1, 'offset'=>esc_attr($a['offset']), 'date_query'=>array( array( 'after'=>esc_attr($a['start']), 'before'=>esc_attr($a['end']), 'inclusive'=>true, ), ), 'order'=>$order, 'post_type'=>$type, 'post__not_in'=>$exclude, 'cache_results'=>false, 'update_post_meta_cache'=>false, 'update_post_term_cache'=>false );
-
-		/*
-		$args['orderby']='meta_value_num';	
-		if ( $orderBy == 'views-today' ) : $args['meta_key']="log-views-today"; 	
-		elseif ( $orderBy == 'views-7day' ) : $args['meta_key']="bp_views_7"; 	
-		elseif ( $orderBy == 'views-30day' ) : $args['meta_key']="bp_views_30";
-		elseif ( $orderBy == 'views-90day' ) : $args['meta_key']="bp_views_90"; 
-		elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['meta_key']="bp_views_365"; 
-		elseif ( $orderBy == 'recent' ) : $args['meta_key']="log-last-viewed";
-		else : $args['orderby']=$orderBy;
-		endif;		
-		*/
-	
-		if ( $type == "testimonials" ) :
-			$args['orderby']='post_date';	
-			$args['order']='desc';	
-		else:
-			$args['orderby']='meta_value_num';	
-			if ( $orderBy == 'views-today' ) : $args['orderby']="rand";	
-			elseif ( $orderBy == 'views-7day' ) : $args['orderby']="rand";	
-			elseif ( $orderBy == 'views-30day' ) : $args['orderby']="rand";	
-			elseif ( $orderBy == 'views-90day' ) : $args['orderby']="rand";	
-			elseif ( $orderBy == 'views-365day' || $orderBy == 'views-all' || $orderBy == "views" ) : $args['orderby']="rand";	
-			elseif ( $orderBy == 'recent' ) : $args['orderby']="rand";	
-			else : $args['orderby']=$orderBy;
-			endif;			
-		endif;
-	
-		if ( $taxonomy && $term ) $args['tax_query']=array( array('taxonomy'=>$taxonomy, 'field'=>'slug', 'terms'=>$terms ));
-	
-		global $post; 
-		$fetchPost = new WP_Query( $args );	
+		$fetchPost = bp_WP_Query($type, [
+			'posts_per_page' => -1,
+			'offset'         => esc_attr($a['offset']),
+			'start'          => esc_attr($a['start']),
+			'end'            => esc_attr($a['end']),
+			'order'          => ($type == 'testimonials') ? 'desc' : $order,
+			'orderby'        => ($type == 'testimonials') ? 'post_date' : esc_attr($a['order_by']),
+			'post__not_in'   => $exclude,
+			'taxonomy'       => $taxonomy,
+			'terms'          => $term
+		]);
 		$thumbs = $no_thumbs = $all_posts = array();
 	
 		if ( $fetchPost->have_posts() ) :	
@@ -1225,8 +1112,8 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	$buildIndicators .= '</ol>';
 	$buildInner .= '</div>';
 
-	$controlsPrevBtn = '<div class="block block-button button-prev"><a class="button carousel-control-prev'.$controlClass.'" href="#'.$type.'Slider'.$sliderNum.'" data-slide="prev" aria-label="Previous Slide"><span class="carousel-control-prev-icon"><span class="sr-only">Previous Slide</span></span></a></div>';
-	$controlsNextBtn = '<div class="block block-button button-next"><a class="button carousel-control-next'.$controlClass.'" href="#'.$type.'Slider'.$sliderNum.'" data-slide="next" aria-label="Next Slide"><span class="carousel-control-next-icon"><span class="sr-only">Next Slide</span></span></a></div>';
+	$controlsPrevBtn = '<div class="block block-button button-prev"><a class="button carousel-control-prev'.$controlClass.'" href="#'.$type.'Slider'.$sliderNum.'" data-slide="prev" aria-label="Previous Slide"><span class="carousel-control-prev-icon">[get-icon type="chevron-left"]<span class="sr-only">Previous Slide</span></span></a></div>';
+	$controlsNextBtn = '<div class="block block-button button-next"><a class="button carousel-control-next'.$controlClass.'" href="#'.$type.'Slider'.$sliderNum.'" data-slide="next" aria-label="Next Slide"><span class="carousel-control-next-icon">[get-icon type="chevron-right"]<span class="sr-only">Next Slide</span></span></a></div>';
 	$viewMoreBtn = do_shortcode('[btn link="'.$linkTo.'" class="button-all"]'.$allBtn.'[/btn]');	
 
 	$buildControls = "<div class='controls controls-".$controlsPos."'>";	
@@ -1509,12 +1396,19 @@ function battleplan_getNowHiring( $atts, $content = null ) {
 add_shortcode( 'get-bbb', 'battleplan_getBBB' );
 function battleplan_getBBB( $atts, $content = null ) {	
 	$a = shortcode_atts( array( 'link'=>'', 'graphic'=>'1' ), $atts );
+	$link = esc_attr($a['link']);
 	$graphic = esc_attr($a['graphic']);
-
 	$imagePath = get_template_directory().'/common/logos/bbb-'.$graphic.'.webp';			
 	list($width, $height) = getimagesize($imagePath);
+	$buildBBB = '';
 	
-	return '<a href="'.esc_attr($a['link']).'" title="Click here to view our profile page on the Better Business Bureau website."><img loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/bbb-'.$graphic.'.webp" alt="We are accredited with the BBB and are proud of our A+ rating." width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
+	if ( $link !== '' ) $buildBBB = '<a href="'.$link.'" title="Click here to view our profile page on the Better Business Bureau website.">';
+	
+	$buildBBB = '<img loading="lazy" src="/wp-content/themes/battleplantheme/common/logos/bbb-'.$graphic.'.webp" alt="We are accredited with the BBB and are proud of our A+ rating." width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
+	
+	if ( $link !== '' ) $buildBBB = '</a>';
+	
+	return $buildBBB;
 }
 
 // Add Veteran Owned widget to Sidebar

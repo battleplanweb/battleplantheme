@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 2025.28.7
+Version: 2025.29.0
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -258,6 +258,8 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
 
 
 
+
+
   --button-font-family-hover-alt: 				var(--button-font-family-alt);
   --button-font-weight-hover-alt: 				var(--button-font-weight-alt);
   --button-font-size-hover-alt: 				var(--button-font-size-alt);
@@ -370,7 +372,8 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --google-review-border: 						5px solid var(--light-grey);
   --google-review-bg: 							var(--white);
   --google-star-color: 							rgba(251, 188, 4, 1);
-  --google-star-shadow: 						var(--black);
+  --google-star-stroke: 						rgba(0, 0, 0, 0.3);
+  --google-star-shadow: 						rgba(70, 70, 70, 0.6);
   --google-value-text: 							var(--text-color);
   --google-total-text: 							var(--text-color);		
 }
@@ -537,21 +540,18 @@ a.skip-link.tab-focus {
 
 /* Links
 --------------------------------------------- */
-a {
-	color: 											var(--medium-grey);
+a,
+a:visited {
+	color: 											inherit;
 	background-color: 								transparent;
 	cursor:											pointer;
 	transition:										all var(--main-trans-speed) var(--main-trans-easing);
 }
 
-a:visited {
-	color: 											var(--text-color);
-}
-
 a:hover,
 a:active,
 a.tab-focus {
-	color: 											var(--medium-grey);
+	color: 											inherit;
 }
 
 a[tooltip] {
@@ -771,8 +771,7 @@ ul.fancy-list.bullet-image li::before {
 
 /* Icons & Social Media
 --------------------------------------------- */
-a.icon-btn,
-a.icon-btn:visited {
+a.icon-btn {
 	position: 										relative;
 	display: 										inline-block;
 	color: 											var(--button-color);
@@ -791,8 +790,7 @@ a.icon-btn.tab-focus {
 	text-decoration: 								none;
 }
 
-a.icon-btn.scroll-top,
-a.icon-btn.scroll-top:visited {
+a.icon-btn.scroll-top {
 	display: 										block;
 	margin-left:									0;	
 	margin-right:									0;
@@ -882,20 +880,6 @@ a.icon-btn.tab-focus .icon-bg {
 	filter: 										var(--button-filter);	
 }
 
-.phone-number .icon.phone::after {
-	content: 										"\e027";
-	font-size: 										110%;
-}
-
-span.icon.chevron-right::after,
-span.icon.chevron-left::after {
-	content: 										"\e218";
-}
-
-span.icon.chevron-left::after {
-	transform: 										rotate(180deg);
-}
-
 span.icon.cog::after {
 	content: 										"\e0ea";
 }
@@ -911,6 +895,13 @@ a.social-btn {
 
 a.social-btn img {
 	margin: 										0 6px;
+}
+
+.icon-svg {
+	width: 											1em;
+	height: 										1em;
+	fill: 											currentColor;
+	transform: 										scale(1.15);
 }
 
 
@@ -1218,7 +1209,7 @@ img.img-404 {
 }
 
 #mobile-menu-bar.currently-open .call-btn,
-#mobile-menu-bar.currently-open .mm-bar-btn.call-btn::before {
+#mobile-menu-bar.currently-open .mm-bar-btn.call-btn .icon {
 	color: 											var(--accent-color);
 }
 
@@ -1306,6 +1297,7 @@ body.screen-desktop.administrator #query-monitor-main {
 
 
 /*--------------------------------------------------------------
+
 # Mobile Styles
 --------------------------------------------------------------*/
 /* Desktops & Tablets */

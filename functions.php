@@ -18,6 +18,61 @@ require_once get_template_directory().'/functions-global.php';
 # Functions to extend WordPress 
 --------------------------------------------------------------*/
 
+// Handle WP_Queries properly
+function bp_WP_Query($post_type, $args = []) {
+	$defaults = [
+		'post_type'      			=> $post_type,
+		'posts_per_page'			=> -1,
+		'post_status'   			=> 'publish',
+		'orderby'        			=> 'date',
+		'order'          			=> 'DESC',
+		'cache_results'				=> false, 
+		'update_post_meta_cache'	=>	false, 
+		'update_post_term_cache'	=>	false
+	];
+
+	$args = array_merge($defaults, $args);
+
+	if (isset($args['orderby']) && (stripos($args['orderby'], 'recent') !== false || stripos($args['orderby'], 'view') !== false)) {
+		$ids = get_posts([
+			'post_type'      => $post_type,
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'post_status'    => 'publish'
+		]);
+
+		shuffle($ids);
+
+		$args['post__in'] = array_slice($ids, 0, $args['posts_per_page']);
+		$args['orderby'] = 'post__in';
+	}
+
+	if (!empty($args['taxonomy']) && !empty($args['terms'])) {
+		$args['tax_query'] = [[
+			'taxonomy' => $args['taxonomy'],
+			'field'    => 'slug',
+			'terms'    => (array) $args['terms'],
+		]];
+		unset($args['taxonomy'], $args['terms']);
+	}
+
+	if (!empty($args['tags'])) {
+		$args['tag_slug__in'] = (array) $args['tags'];
+		unset($args['tags']);
+	}
+
+	if (!empty($args['start']) || !empty($args['end'])) {
+		$args['date_query'] = [[
+			'after'     => $args['start'] ?? null,
+			'before'    => $args['end'] ?? null,
+			'inclusive' => true,
+		]];
+		unset($args['start'], $args['end']);
+	}
+
+	return new WP_Query($args);
+}
+
 // Print variable or array for debugging
 function showMe($something, $die=true) {
 	error_reporting(E_ALL);
@@ -1218,6 +1273,7 @@ if ( $GLOBALS['customer_info']['site-type'] == 'pedigree' ) require_once get_tem
 if ( $GLOBALS['customer_info']['site-type'] == 'carte-du-jour' ) require_once get_template_directory().'/includes/includes-carte-du-jour.php'; 
 if ( $GLOBALS['customer_info']['site-type'] == 'profile' || $GLOBALS['customer_info']['site-type'] == 'profiles' ) require_once get_template_directory().'/includes/includes-user-profiles.php';  
 require_once get_template_directory().'/functions-shortcodes.php';
+require_once get_template_directory().'/functions-icons.php';
 require_once get_template_directory().'/functions-forms.php';
 require_once get_template_directory().'/functions-cpt.php';
 require_once get_template_directory().'/functions-ajax.php';
@@ -2260,7 +2316,9 @@ function returnNavMenu() {
 // Display Mobile Menu Bar Item - Scroll
 add_action('bp_mobile_menu_bar_scroll', 'battleplan_mobile_menu_bar_scroll', 20);
 function battleplan_mobile_menu_bar_scroll() { 
-	echo '<a class="scroll-top" href="#page"><div class="mm-bar-btn mm-bar-scroll scroll-to-top-btn" aria-hidden="true"></div><span class="sr-only">Scroll To Top</span></a>';
+	$scroll = '<a class="scroll-top" href="#page"><div class="mm-bar-btn mm-bar-scroll scroll-to-top-btn" aria-hidden="true">[get-icon type="chevron-up"]</div><span class="sr-only">Scroll To Top</span></a>';
+	
+	echo do_shortcode($scroll);
 }
 
 // Display Mobile Menu Bar Item - Phone
@@ -2286,11 +2344,15 @@ function battleplan_mobile_menu_bar_contact() {
 		$type = "contact"; 
 	endif;
 	
+	$email = '';
+	
 	if ( $form && $title ) :
-		echo '<div class="mm-bar-btn mm-bar-'.$type.' modal-btn"><div class="email-btn" aria-hidden="true"></div><div class="email2-btn" aria-hidden="true"></div><span class="sr-only">Contact Us</span></div>';	
+		$email = '<div class="mm-bar-btn mm-bar-'.$type.' modal-btn"><div class="email-btn" aria-hidden="true">[get-icon type="email"]</div><div class="email2-btn" aria-hidden="true">[get-icon type="paper-plane"]</div><span class="sr-only">Contact Us</span></div>';	
 	else:
-		echo '<div class="mm-bar-btn mm-bar-empty"></div>';	
+		$email = '<div class="mm-bar-btn mm-bar-empty"></div>';	
 	endif;
+	
+	if ($email !== '') echo do_shortcode($email);
 }
 
 // Display Request Quote Modal

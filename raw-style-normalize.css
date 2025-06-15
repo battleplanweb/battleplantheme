@@ -367,7 +367,11 @@ table {
 }
 
 .two-col,
-.two-column {
+.two-column,
+.three-col,
+.three-column,
+.four-col,
+.four-column {
 	column-count:								2;
 	column-gap: 								var(--measure-large);
 }
@@ -375,13 +379,19 @@ table {
 .three-col,
 .three-column {
 	column-count:								3;
-	column-gap: 								var(--measure-large);
+}
+
+.four-col,
+.four-column {
+	column-count:								4;
 }
 
 .two-col > *,
 .two-column > *,
 .three-col > *,
-.three-column > * {
+.three-column > *,
+.four-col > *,
+.four-column > * {
 	break-inside: 								avoid;
 }
 

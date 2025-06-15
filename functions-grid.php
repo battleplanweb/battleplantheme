@@ -135,7 +135,7 @@ function battleplan_buildLayout( $atts, $content = null ) {
 // Column
 add_shortcode( 'col', 'battleplan_buildColumn' );
 function battleplan_buildColumn( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'hash'=>'', 'order'=>'', 'class'=>'', 'align'=>'', 'valign'=>'', 'h-span'=>'', 'v-span'=>'', 'break'=>'', 'css'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'start'=>'', 'end'=>'', 'track'=>'' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'hash'=>'', 'order'=>'', 'class'=>'', 'align'=>'', 'valign'=>'', 'h-span'=>'', 'v-span'=>'', 'break'=>'', 'css'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'start'=>'', 'end'=>'', 'track'=>'', 'gap'=>'' ), $atts );
 	$name = preg_replace("/[\s_]/", "-", strtolower(esc_attr($a['name'])));
 	$name = $name ? " id='".$name."'" : '';
 	$hash = esc_attr($a['hash']) != '' ? 'data-hash="'.esc_attr($a['hash']).'"' : '';
@@ -148,6 +148,7 @@ function battleplan_buildColumn( $atts, $content = null ) {
 	$top = esc_attr($a['top']);
 	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));
+	$gap = esc_attr($a['gap']) !== '' ? ' style="gap:'.esc_attr($a['gap']).'"' : '';
 	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
 	if ( $tracking != '' ) $class .= " tracking";
 	$order = esc_attr($a['order']) != '' ? 'order: '.esc_attr($a['order']).' !important;' : '';
@@ -160,7 +161,7 @@ function battleplan_buildColumn( $atts, $content = null ) {
 		if ( $start && $now < $start ) return null;
 		if ( $end && $now > $end ) return null;		
 	}
-	$buildCol = '<div'.$name.' class="col '.$class.$align.$valign.$break.'" '.$tracking.$hash.$style.'><div class="col-inner"';
+	$buildCol = '<div'.$name.' class="col '.$class.$align.$valign.$break.'" '.$tracking.$hash.$style.'><div class="col-inner"'.$gap;
 	if ( $background != "" || $css != "" ) :
 		$buildCol .= ' style="';
 		if ( $css != "" ) $buildCol .= $css;

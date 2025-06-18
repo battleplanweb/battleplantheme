@@ -717,7 +717,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		$testimonialMisc2 = esc_attr(get_field( "testimonial_misc2" ));	
 		$testimonialMisc3 = esc_attr(get_field( "testimonial_misc3" ));	
 		$testimonialMisc4 = esc_attr(get_field( "testimonial_misc4" ));
-		$testimonialRate = round(esc_attr(get_field( "testimonial_rating" )) * 2) / 2;	
+		$testimonialRate = esc_attr(get_field( "testimonial_rating" ));	
 			
 		$testimonialStars = '';
 		for ($i = 1; $i <= 5; $i++) {

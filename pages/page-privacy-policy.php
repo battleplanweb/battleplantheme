@@ -30,7 +30,7 @@ $num++;
 $printPage .= '
 	<p><strong>'.$num.') HOW WE USE YOUR INFORMATION</strong></p>
 
-	<p>Your information is used to respond to inquiries, schedule services, send invoices, deliver updates via email or SMS, and improve our site. Data is shared only with trusted third-party providers helping us operate our business. We do <b>not</b> sell your personal information.</p>
+	<p>Your information is used to respond to inquiries, schedule services, send invoices, deliver updates via email or SMS, and improve our site. Data will not be shared with third parties for marketing purposes. We do not sell your personal information.</p>
 
 	<p>If you opt into communications, we’ll use your contact details solely for that purpose. You may opt out anytime by:</p>
 	<ul>
@@ -52,7 +52,7 @@ $num++;
 $printPage .= '
 	<p><strong>'.$num.') THIRD-PARTY LINKS</strong></p>
 
-	<p>Our site may contain links to third-party websites. This Privacy Policy only applies to our website. We are not responsible for the content or privacy practices of other websites.</p>';
+	<p>Our site may contain links to third party websites. This Privacy Policy only applies to our website. We are not responsible for the content or privacy practices of other websites.</p>';
 
 $num++;
 $printPage .= '

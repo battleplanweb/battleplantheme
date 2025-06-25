@@ -51,6 +51,11 @@ $printPage .= '
 
 $num++;
 $printPage .= '
+	<p><strong>'.$num.') MESSAGING</strong></p>
+	<p>You agree to receive informational messages (appointment reminders, account notifications, etc.) from '.$biz.'. Message frequency varies. Message and data rates may apply. For help, reply HELP or email us at '.$email.'. You can opt out at any time by replying STOP.</p>';
+
+$num++;
+$printPage .= '
 	<p><strong>'.$num.') ACCEPTABLE USE</strong></p>
 	<p>You agree not to use our Website or Services for unlawful or harmful activities. Prohibited actions include:</p>
 	<ol type="a">

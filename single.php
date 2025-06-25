@@ -153,7 +153,16 @@ get_header(); ?>
 							$next_post = get_next_post(); 
 						else:		
 							$displayed_post = get_the_ID(); 
-							$query = new WP_Query(array( 'post_type' => 'events', 'posts_per_page' => -1, 'meta_key' => 'start_date', 'orderby' => 'meta_value', 'order' => 'ASC', 'tax_query' => array( array( 'taxonomy' => 'event-tags', 'field' => 'slug', 'terms' => 'upcoming', ), ), ));
+		
+							$query = bp_WP_Query('events', [
+								'posts_per_page' => -1,
+								'meta_key'       => 'start_date',
+								'orderby'        => 'meta_value',
+								'order'          => 'ASC',
+								'taxonomy'       => 'event-tags',
+								'terms'          => 'upcoming'
+							]);
+
 							$current_post_index = -1;
 
 							while ($query->have_posts()) :
@@ -204,7 +213,10 @@ get_header(); ?>
 						$related_posts = array();
 						$post_num = 1;
 
-						$all_posts = new WP_Query(array('post_type' => get_post_type(), 'posts_per_page' => -1));
+						$all_posts = bp_WP_Query(get_post_type(), [
+							'posts_per_page' => -1
+						]);
+
 						if ($all_posts->have_posts()) :
 							while ($all_posts->have_posts()) :
 								$all_posts->the_post();
@@ -214,7 +226,7 @@ get_header(); ?>
 							   	$post_tags =  wp_get_post_tags(get_the_ID());		
 		
 							   	if ($post_tags) :
-				        				$post_tag_ids = array_map(function ($tag) { return $tag->term_id; }, $post_tags);
+				        			$post_tag_ids = array_map(function ($tag) { return $tag->term_id; }, $post_tags);
 								  	$tag_similarity = count(array_intersect($current_tag_ids, $post_tag_ids));
 								  	$related_posts[get_the_ID()] = $tag_similarity;
 							   	endif;

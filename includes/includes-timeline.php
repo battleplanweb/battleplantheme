@@ -124,14 +124,17 @@ function battleplan_getTimeline($atts, $content = null ) {
 	$storySide = 'right';
 	$buildTimeline = '';
 	
-	$args = [ 'post_type' => 'timeline', 'posts_per_page' => -1, 'orderby' => 'meta_value', 'meta_key' => 'timeline_date', 'order' => $order ];
-
-	$timeline_query = new WP_Query($args);
+	$query = bp_WP_Query('timeline', [
+		'posts_per_page' => -1,
+		'orderby'        => 'meta_value',
+		'meta_key'       => 'timeline_date',
+		'order'          => $order
+	]);
  
-	if ($timeline_query->have_posts()) : 
+	if ($query->have_posts()) : 
 		$buildTimeline .= '<div class="timeline">';
 			$buildTimeline .= '<div class="timeline-line"></div>';
-			while ($timeline_query->have_posts()) : $timeline_query->the_post(); 
+			while ($query->have_posts()) : $query->the_post(); 
 				$storyIndex++;
 				$storySide = ($storySide === 'left') ? 'right' : 'left';
 				$date = get_post_meta(get_the_ID(), 'timeline_date', true);

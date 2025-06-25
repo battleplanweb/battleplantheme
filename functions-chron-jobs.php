@@ -295,23 +295,28 @@ function processChron($forceChron) {
 		if ( isset($GLOBALS['customer_info']['service-area']) ) $wpSEOLocal['location_area_served'] = $GLOBALS['customer_info']['service-area'];
 		if ( isset($GLOBALS['customer_info']['lat']) ) $wpSEOLocal['location_coords_lat'] = $GLOBALS['customer_info']['lat'];
 		if ( isset($GLOBALS['customer_info']['long']) ) $wpSEOLocal['location_coords_long'] = $GLOBALS['customer_info']['long'];		
-		if ( isset($GLOBALS['customer_info']['hours']) && $GLOBALS['customer_info']['hours'] != "na" ) :
-			$wpSEOLocal['hide_opening_hours'] = 'off';				
-			$days = array('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday');
-			$num = 0;
-			$schema['hours'] = null;
-			foreach( $days as $day) :			
-				$wpSEOLocal['opening_hours_'.$day.'_from'] = $GLOBALS['customer_info']['hours']['periods'][$num]['open']['time'] != "" ? rtrim(chunk_split(substr($GLOBALS['customer_info']['hours']['periods'][$num]['open']['time'],-4),2,':'),':') : "Closed";				
-				$wpSEOLocal['opening_hours_'.$day.'_to'] = $GLOBALS['customer_info']['hours']['periods'][$num]['close']['time'] != "" ? rtrim(chunk_split(substr($GLOBALS['customer_info']['hours']['periods'][$num]['close']['time'],-4),2,':'),':') : "Closed";			
-				$wpSEOLocal['opening_hours_'.$day.'_second_from'] = $wpSEOLocal['opening_hours_'.$day.'_second_to'] = "";
-				
-				$schema['hours'] .= ucwords(substr($day, 0, 2)).' '.$wpSEOLocal['opening_hours_'.$day.'_from'];
-				$schema['hours'] .= $wpSEOLocal['opening_hours_'.$day.'_from'] != "Closed" ? '-'.$wpSEOLocal['opening_hours_'.$day.'_to'].' ' : ' ';
-				$num++;			
+		if (!empty($GLOBALS['customer_info']['hours']['periods'])):
+			$wpSEOLocal['hide_opening_hours'] = 'off';
+			$schema['hours'] = '';
+			$days = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+
+			foreach ($days as $i => $day):
+				$open = $GLOBALS['customer_info']['hours']['periods'][$i]['open']['hour'] ?? '';
+				$close = $GLOBALS['customer_info']['hours']['periods'][$i]['close']['hour'] ?? '';
+
+				$from = $open !== '' ? str_pad($open, 2, '0', STR_PAD_LEFT) . ':00' : 'Closed';
+				$to = $close !== '' ? str_pad($close, 2, '0', STR_PAD_LEFT) . ':00' : 'Closed';
+
+				$wpSEOLocal["opening_hours_{$day}_from"] = $from;
+				$wpSEOLocal["opening_hours_{$day}_to"] = $to;
+				$wpSEOLocal["opening_hours_{$day}_second_from"] = $wpSEOLocal["opening_hours_{$day}_second_to"] = '';
+
+				$schema['hours'] .= ucfirst(substr($day, 0, 2)) . ' ' . $from;
+				$schema['hours'] .= $from !== 'Closed' ? '-' . $to . ' ' : ' ';
 			endforeach;
 		else:
-			$wpSEOLocal['hide_opening_hours'] = 'on';		
-		endif;				
+			$wpSEOLocal['hide_opening_hours'] = 'on';
+		endif;
 		$wpSEOLocal['location_timezone'] = get_option('timezone_string');		
 		$wpSEOLocal['address_format'] = 'address-state-postal';
 		update_option( 'wpseo_local', $wpSEOLocal );
@@ -377,7 +382,10 @@ function processChron($forceChron) {
 				'thermostat' => ['thermostat', 't-stat', 'tstat']
 			];
 
-			$query = new WP_Query(['post_type' => 'jobsite_geo', 'posts_per_page' => -1]);
+			$query = bp_WP_Query('jobsite_geo', [
+				'posts_per_page' => -1
+			]);
+
 
 			if ($query->have_posts()) {
 				while ($query->have_posts()) {
@@ -434,11 +442,15 @@ function processChron($forceChron) {
 	
 		
 // Prune weak testimonials
-	$args = array ( 'post_type' => 'testimonials', 'post_status' => 'publish', 'posts_per_page' => -1, 'orderby' => 'date', 'order' => 'DESC' );
-	$getTestimonials = new WP_Query($args);
+	$query = bp_WP_Query('testimonials', [
+		'post_status'    => 'publish',
+		'posts_per_page' => -1,
+		'orderby'        => 'date',
+		'order'          => 'DESC'
+	]);
 	
-	if ( $getTestimonials->found_posts > 75 ) :	
-		while ($getTestimonials->have_posts()) : $getTestimonials->the_post();
+	if ( $query->found_posts > 75 ) :	
+		while ($query->have_posts()) : $query->the_post();
 			$quality = get_field( "testimonial_quality" );	
 			if ( !has_post_thumbnail() && $quality[0] != 1 && strlen(wp_strip_all_tags(get_the_content(), true)) < 100 ) $draft = get_the_id();	
 			if ( has_post_thumbnail() && $quality[0] != 1 ) :
@@ -474,107 +486,60 @@ function processChron($forceChron) {
 			foreach ( $placeIDs as $placeID ) :	
 				if ( strlen($placeID) > 10 ) :
 					$updateInfo = true;
-					$url = "https://maps.googleapis.com/maps/api/place/details/json?placeid=".$placeID."&key=".$apiKey;
+					$url = 'https://places.googleapis.com/v1/places/' . $placeID . '?fields=displayName,formattedAddress,addressComponents,location,regularOpeningHours,currentOpeningHours,internationalPhoneNumber,rating,userRatingCount&key=' . $apiKey;
 					$ch = curl_init();
 					curl_setopt ($ch, CURLOPT_URL, $url);
 					curl_setopt ($ch, CURLOPT_RETURNTRANSFER, 1);
 					$result = curl_exec ($ch);
 					$res = json_decode($result,true);
+	
+					if (isset($res['error'])) {							
+						mail('glendon@battleplanwebdesign.com', 'Places API Error', print_r($res['error'], true) . "\n\nFull response:\n" . $result);
+					} 
+	
+					$googleInfo[$placeID]['google-reviews'] = $res['userRatingCount'];						
+					$googleInfo[$placeID]['google-rating'] = $res['rating'];						
+					$gNumber = $gNumber + $res['userRatingCount'];
+					$gRating = $gRating + ( $res['rating'] * $res['userRatingCount'] );	
 					
-					$googleInfo[$placeID]['google-reviews'] = $res['result']['user_ratings_total'];						
-					$googleInfo[$placeID]['google-rating'] = $res['result']['rating'];						
-					$gNumber = $gNumber + $res['result']['user_ratings_total'];
-					$gRating = $gRating + ( $res['result']['rating'] * $res['result']['user_ratings_total'] );	
-					
-					$googleInfo[$placeID]['area'] = preg_replace('/(.*)\((.*)\)(.*)/s', '\2', $res['result']['formatted_phone_number']);	
-					$googleInfo[$placeID]['phone'] = substr($res['result']['formatted_phone_number'], strpos($res['result']['formatted_phone_number'], ") ") + 2);					
+					$phone = $res['internationalPhoneNumber'] ?? '';
+					preg_match('/^\+1 (\d{3})-(\d{3}-\d{4})$/', $phone, $m);
+					$googleInfo[$placeID]['area'] = $m[1] ?? '';
+					$googleInfo[$placeID]['phone'] = $m[2] ?? '';
 					if ( str_contains($customer_info['area-after'], '.') ) $googleInfo[$placeID]['phone'] = str_replace('-', '.', $googleInfo[$placeID]['phone']);			
 					$googleInfo[$placeID]['phone-format'] = $customer_info['area-before'].$googleInfo[$placeID]['area'].$customer_info['area-after'].$googleInfo[$placeID]['phone'];	
 
-					$name = strtolower($res['result']['name']);					
+					$name = strtolower($res['displayName']['text']);					
 					$name = str_replace( array('llc', 'hvac', 'a/c', 'inc', 'mcm', 'a-ale', 'hph', 'lecornu', 'ss&l'), array('LLC', 'HVAC', 'A/C', 'INC', 'MCM', 'A-Ale', 'HPH', 'LeCornu', 'SS&L'), $name);
 					$googleInfo[$placeID]['name'] = ucwords($name);
 					
 					$streetNumber = $street = $subpremise = $city = $state_abbr = $state_full = $county = $country = $zip = '';
-					$googleInfo[$placeID]['address_components'] = $res['result']['address_components'];					
-					$googleInfo[$placeID]['adr_address'] = $res['result']['adr_address'];
-					foreach ( $googleInfo[$placeID]['address_components'] as $comp ) :
-						//if ( $comp['types'][0] == "street_number" ) $streetNumber = $comp['long_name'];
-						//if ( $comp['types'][0] == "subpremise" ) $subpremise = $comp['short_name'];
-						//if ( $comp['types'][0] == "route" ) $street = $comp['short_name'];						
-						if ( $comp['types'][0] == "locality" ) $city = $comp['long_name'];
-						if ( $comp['types'][0] == "administrative_area_level_1" ) :
-						 	$state_abbr = $comp['short_name'];
-							$state_full = $comp['long_name'];
-						endif;
-						if ( $comp['types'][0] == "administrative_area_level_2" ) $county = $comp['long_name'];
-						if ( $comp['types'][0] == "country" ) $country = $comp['long_name'];
-						if ( $comp['types'][0] == "postal_code" ) $zip = $comp['short_name'];
-					endforeach;		
-					
-					//$googleInfo[$placeID]['street'] = $streetNumber.' '.$street.' '.$subpremise;					
-					$googleInfo[$placeID]['street'] = strtok( $googleInfo[$placeID]['adr_address'], ',' );					
-					$googleInfo[$placeID]['street'] = str_replace('<span class="street-address">', '', $googleInfo[$placeID]['street']);
-					$googleInfo[$placeID]['street'] = str_replace('</span>', '', $googleInfo[$placeID]['street']);					
-					if ( strlen($googleInfo[$placeID]['street']) < 5 ) $googleInfo[$placeID]['street'] = $customer_info['street'];			
-					$googleInfo[$placeID]['city'] = $city;
-					$googleInfo[$placeID]['state-abbr'] = $state_abbr;
-					$googleInfo[$placeID]['state-full'] = $state_full;
-					$googleInfo[$placeID]['county'] = $county;					
-					$googleInfo[$placeID]['country'] = $country;					
-					$googleInfo[$placeID]['zip'] = $zip;					
-					$googleInfo[$placeID]['lat'] = $res['result']['geometry']['location']['lat'];
-					$googleInfo[$placeID]['long'] = $res['result']['geometry']['location']['lng'];	
-					$googleInfo[$placeID]['hours'] = $res['result']['opening_hours'];
-					$googleInfo[$placeID]['current-hours'] = $res['result']['current_opening_hours'];
-	
-	
-				// Add any new reviews to testimonials 	
-				/*
-					if (isset($res['result']['reviews']) && is_array($res['result']['reviews'])) :
-						$reviews = $res['result']['reviews'];
-						$googleInfo[$placeID]['reviews'] = array();
+					$googleInfo[$placeID]['adr_address'] = $res['formattedAddress'];	
+					$googleInfo[$placeID]['address_components'] = $res['addressComponents'] ?? [];
+					$data = ['street'=>'','city'=>'','state'=>'','zip'=>''];
 
-						foreach ($reviews as $review) :
-							$reviewData = array(
-								'author_name' => $review['author_name'],
-								'rating' => $review['rating'],
-								'text' => $review['text'],
-								'time' => $review['time'],
-								'author_url' => $review['author_url']
-							);
-							if ( $review['rating'] > 3 ) $googleInfo[$placeID]['reviews'][] = $reviewData;
-						endforeach;
-					endif;
-	
-					$args = array( 'post_type' => 'testimonials', 'posts_per_page' => -1, 'fields' => 'ids', );
-					$existing_posts = new WP_Query($args);
-					$existing_titles = [];
+					foreach ($googleInfo[$placeID]['address_components'] as $c) {
+						$types = $c['types'] ?? [];
+						if (in_array('street_number', $types))  $data['street'] .= $c['longText'].' ';
+						if (in_array('route', $types))          $data['street'] .= $c['longText'];
+						if (in_array('locality', $types))       $data['city'] = $c['longText'];
+						if (in_array('administrative_area_level_1', $types)) {
+							$data['state_abbr'] = $c['shortText'] ?? '';
+							$data['state_full'] = $c['longText'] ?? '';
+						}
+						if (in_array('postal_code', $types))    $data['zip']   = $c['longText'];
+					}
 
-					if ($existing_posts->have_posts()) : while ($existing_posts->have_posts()) :
-							$existing_posts->the_post();
-							$existing_titles[] = strtolower(get_the_title());
-						endwhile;
-					endif;
-
-					foreach ($googleInfo[$placeID]['reviews'] as $review) :
-						if (!in_array( strtolower($review['author_name']), $existing_titles)) :
-							$new_post = array(
-								'post_title'   => wp_strip_all_tags($review['author_name']),
-								'post_content' => $review['text'],
-								'post_status'  => 'publish',
-								'post_type'    => 'testimonials',
-							);
-
-							$new_post_id = wp_insert_post($new_post);
-							if (!is_wp_error($new_post_id)) :
-								update_field('testimonial_rating', $review['rating'], $new_post_id);
-								update_field('platform', 'Google', $new_post_id);
-								update_field('testimonial_website', $review['author_url'], $new_post_id);
-							endif;
-						endif;
-					endforeach;	
-				*/
+					$googleInfo[$placeID]['street'] = trim($data['street']);
+					$googleInfo[$placeID]['city']   = $data['city'];
+					$googleInfo[$placeID]['state']  = $data['state'];
+					$googleInfo[$placeID]['zip']    = $data['zip'];					
+					$googleInfo[$placeID]['state-abbr'] = $data['state_abbr'];
+					$googleInfo[$placeID]['state-full'] = $data['state_full'];
+					$googleInfo[$placeID]['lat'] = $res['location']['latitude'];
+					$googleInfo[$placeID]['long'] = $res['location']['longitude'];	
+					$googleInfo[$placeID]['hours'] = $res['regularOpeningHours'];
+					$googleInfo[$placeID]['current-hours'] = $res['currentOpeningHours'];
 				endif;
 			endforeach;
 
@@ -605,16 +570,11 @@ function processChron($forceChron) {
 			$customer_info['state-abbr'] = $googleInfo[$primePID]['state-abbr'] != null ? $googleInfo[$primePID]['state-abbr'] : $customer_info['state-abbr'];		
 			$customer_info['state-full'] = $googleInfo[$primePID]['state-full'] != null ? $googleInfo[$primePID]['state-full'] : $customer_info['state-full'];		
 			$customer_info['zip'] = $googleInfo[$primePID]['zip'] != null ? $googleInfo[$primePID]['zip'] : $customer_info['zip'];		
-			$customer_info['lat'] = $googleInfo[$primePID]['lat'] != null ? $googleInfo[$primePID]['lat'] : $customer_info['lat'];		
+			$customer_info['lat'] = $googleInfo[$primePID]['lat'] != null ? $googleInfo[$primePID]['lat'] : $customer_info['lat'];	
 			$customer_info['long'] = $googleInfo[$primePID]['long'] != null ? $googleInfo[$primePID]['long'] : $customer_info['long'];		
-			$customer_info['hours'] = $googleInfo[$primePID]['hours'] != null ? $googleInfo[$primePID]['hours'] : "na";		
-			$customer_info['hours-sun'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][6], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][6], ": ") + 2);
-			$customer_info['hours-mon'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][0], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][0], ": ") + 2);
-			$customer_info['hours-tue'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][1], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][1], ": ") + 2);
-			$customer_info['hours-wed'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][2], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][2], ": ") + 2);
-			$customer_info['hours-thu'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][3], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][3], ": ") + 2);
-			$customer_info['hours-fri'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][4], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][4], ": ") + 2);
-			$customer_info['hours-sat'] = substr($googleInfo[$primePID]['current-hours']['weekday_text'][5], strpos($googleInfo[$primePID]['current-hours']['weekday_text'][5], ": ") + 2);
+	
+			$customer_info['hours'] = $googleInfo[$primePID]['hours'] ?? 'na';
+			$customer_info['current-hours'] = $googleInfo[$primePID]['current-hours']['weekdayDescriptions'] ?? 'na';
 
 			updateOption( 'customer_info', $customer_info );
 			$GLOBALS['customer_info'] = get_option('customer_info');			

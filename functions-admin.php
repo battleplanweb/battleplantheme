@@ -254,10 +254,15 @@ function battleplan_remove_menus() {
 	if ( _USER_LOGIN != "battleplanweb" ) remove_menu_page( 'edit.php?post_type=stripe_order');	
 		
 
-    $the_query = new WP_Query( array('post_type' => 'elements', 'posts_per_page' => -1, 'orderby' => 'menu_order', 'order' => 'asc') );
-    if ( $the_query->have_posts() ) : 
-        while ( $the_query->have_posts() ) : 
-            $the_query->the_post();
+	$query = bp_WP_Query('elements', [
+		'posts_per_page' => -1,
+		'orderby'        => 'menu_order',
+		'order'          => 'asc'
+	]);
+
+    if ( $query->have_posts() ) : 
+        while ( $query->have_posts() ) : 
+            $query->the_post();
             add_submenu_page( 'edit.php?post_type=elements', get_the_title(), get_the_title(), 'manage_options', '/post.php?post='.get_the_ID().'&action=edit' );
         endwhile;
         wp_reset_postdata();	
@@ -447,7 +452,11 @@ function battleplan_save_remove_sidebar($post_id, $post, $update) {
 	// check for duplicate before posting a new testimonial
 	if ( $post->post_type == 'testimonials') :	
 		$new_post_title = $post->post_title;
-		$query = new WP_Query( array( 'post_type' => 'testimonials', 'post_status' => 'publish', 'posts_per_page' => -1, 'post__not_in' => array($post_id) ));
+		$query = bp_WP_Query('testimonials', [
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'post__not_in'   => [$post_id]
+		]);
 
 		$found_duplicate = false;
 
@@ -703,8 +712,10 @@ function battleplan_site_audit() {
 		
 		$siteAudit[$today]['coupon'] = $siteAudit[$today]['financing-link'] = "false";
 
-		$args = array ('posts_per_page'=>-1, 'post_type'=>array('page', 'landing'));
-		$check_posts = new WP_Query($args);		
+		$check_posts = bp_WP_Query(['page', 'landing'], [
+			'posts_per_page' => -1
+		]);
+
 		if( $check_posts->have_posts() ) : while ($check_posts->have_posts() ) : $check_posts->the_post();	
 			$header = get_posts([ 'name' => 'site-header','post_type' => 'elements' ]);
 			$footer = get_posts([ 'name' => 'site-footer','post_type' => 'elements' ]);
@@ -953,13 +964,27 @@ function battleplan_clear_hvac($all=false) {
 		endif;
 	endforeach;
 
-	$args = [ 'post_status' => 'inherit', 'posts_per_page' => -1, 'post_type' => 'attachment', 'post_mime_type' => 'image', 'tax_query' => [ 'relation' => 'OR', [ 'taxonomy' => 'image-categories', 'terms' => $deleteImgs, 'field' => 'slug', ], [ 'taxonomy' => 'image-categories', 'operator' => 'NOT EXISTS', ] ] ];
-	
-	$getImg = new WP_Query( $args );
+	$query = bp_WP_Query('attachment', [
+		'post_status'     => 'inherit',
+		'posts_per_page'  => -1,
+		'mime_type'       => 'image',
+		'tax_query'       => [
+			'relation' => 'OR',
+			[
+				'taxonomy' => 'image-categories',
+				'terms'    => $deleteImgs,
+				'field'    => 'slug'
+			],
+			[
+				'taxonomy' => 'image-categories',
+				'operator' => 'NOT EXISTS'
+			]
+		]
+	]);
 
-	if ( $getImg->have_posts() ) : 
-		while ( $getImg->have_posts() ) :
-			$getImg->the_post();	
+	if ( $query->have_posts() ) : 
+		while ( $query->have_posts() ) :
+			$query->the_post();	
 			$keepImg = array( 'logo.png', 'logo.webp', 'site-icon.png', 'site-icon.webp', 'favicon.png', 'favicon.webp');			
 			if ( !in_array( basename( get_attached_file( get_the_ID() )), $keepImg) ) wp_delete_attachment( get_the_ID(), true );
 		endwhile; 

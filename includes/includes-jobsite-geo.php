@@ -867,7 +867,11 @@ function battleplan_jobsite_template($template) {
 	
 			$GLOBALS['jobsite_geo-bottom-headline'] = "Recent ".$GLOBALS['jobsite_geo-service'].$plural." In ".$GLOBALS['jobsite_geo-city'];
 
-			$query = new WP_Query(array( 'post_type' => 'landing', 'posts_per_page' => 1, 'title' => $GLOBALS['jobsite_geo-city'].', '.$GLOBALS['jobsite_geo-state'], 'post_status' => 'publish', ));
+			$query = bp_WP_Query('landing', [
+				'posts_per_page' => 1,
+				'post_status'    => 'publish',
+				'title'          => $GLOBALS['jobsite_geo-city'] . ', ' . $GLOBALS['jobsite_geo-state']
+			]);
 
 			if($query->have_posts()) :
 				while($query->have_posts()) :
@@ -880,11 +884,15 @@ function battleplan_jobsite_template($template) {
 					//if ($position !== false) $GLOBALS['jobsite_geo-headline'] = trim(substr($GLOBALS['jobsite_geo-page_title'], 0, $position));
 				endwhile; 
 			else:
-				$default_args = array( 'post_type' => 'landing', 'posts_per_page' => 1, 'name' => 'jobsite-geo-default', 'post_status' => 'publish', );
-				$default_query = new WP_Query($default_args);
-				if ($default_query->have_posts()) :
-					while($default_query->have_posts()) :
-						$default_query->the_post();
+				$query = bp_WP_Query('landing', [
+					'posts_per_page' => 1,
+					'name'           => 'jobsite-geo-default',
+					'post_status'    => 'publish'
+				]);
+
+				if ($query->have_posts()) :
+					while($query->have_posts()) :
+						$query->the_post();
 						$GLOBALS['jobsite_geo-content'] = apply_filters('the_content', get_the_content());
 						$GLOBALS['jobsite_geo-page_title'] = str_replace('%%sep%%', $sep, get_post_meta(get_the_ID(), '_yoast_wpseo_title', true) ).$sep.$GLOBALS['jobsite_geo-city'].", ".$GLOBALS['jobsite_geo-state'];
 						$GLOBALS['jobsite_geo-page_desc'] = get_post_meta(get_the_ID(), '_yoast_wpseo_metadesc', true);

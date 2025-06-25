@@ -82,7 +82,10 @@ get_header(); ?>
 				if ( $geocode ) $lat_lng[] = $geocode[0]['lat'].', '.$geocode[0]['lng'];
 
 				if ( $review == '' ) :
-					$query = new WP_Query( array( 'post_type' => 'testimonials', 'posts_per_page' => -1, 'post_status' => 'publish' ) );
+					$query = bp_WP_Query('testimonials', [
+						'posts_per_page' => -1,
+						'post_status'    => 'publish'
+					]);
 
 					if ($query->have_posts()) : while ($query->have_posts()) : $query->the_post();
 						if (get_the_title() === $name) :

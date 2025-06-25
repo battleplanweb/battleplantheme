@@ -18,11 +18,13 @@
 add_action( 'wp_head', 'battleplan_createEventLog', 0 );
 function battleplan_createEventLog() {	
 	$eventData = array();
-	$events = new WP_Query(array( 'post_type' => 'events', 'posts_per_page' => -1, ));
+	$query = bp_WP_Query('events', [
+		'posts_per_page' => -1
+	]);
 
-	if ($events->have_posts()) :
-		while ($events->have_posts()) :
-			$events->the_post();	
+	if ($query->have_posts()) :
+		while ($query->have_posts()) :
+			$query->the_post();	
 			$eventStart = strtotime(esc_attr(get_field( "start_date" )));			
 			$eventEnd = esc_attr(get_field( "end_date" )) ? strtotime(esc_attr(get_field( "end_date" ))) : $eventStart;
 			$days = (($eventEnd - $eventStart) / 86400) + 1;
@@ -277,14 +279,34 @@ function battleplan_event_teasers( $atts, $content = null ) {
 	$end = date('Y-m-d', strtotime(esc_attr($a['end'])));
 	$buildEvents = "";
 	
-	//$time = ($end - $start ) / 86400;
-	//echo 'start'.$start.' end'.$end.' time'.$time;
-	
-	$events = new WP_Query(array( 'post_type' => 'events', 'posts_per_page' => esc_attr($a['max']), 'offset' => esc_attr($a['offset']), 'tax_query' => array( array( 'taxonomy' => 'event-tags', 'field' => 'slug', 'terms' => esc_attr($a['tag']))), 'meta_key' => 'start_date', 'orderby' => 'meta_value_num', 'order' => 'ASC', 'meta_query' => array( 'relation' => 'AND', array( 'key' => 'start_date', 'value' => $start, 'compare' => '>=', 'type' => 'DATE' ), array( 'key' => 'start_date', 'value' => $end, 'compare' => '<=', 'type' => 'DATE' ) )));
+	$query = bp_WP_Query('events', [
+		'posts_per_page' => esc_attr($a['max']),
+		'offset'         => esc_attr($a['offset']),
+		'taxonomy'       => 'event-tags',
+		'terms'          => esc_attr($a['tag']),
+		'meta_key'       => 'start_date',
+		'orderby'        => 'meta_value_num',
+		'order'          => 'ASC',
+		'meta_query'     => [
+			'relation' => 'AND',
+			[
+				'key'     => 'start_date',
+				'value'   => $start,
+				'compare' => '>=',
+				'type'    => 'DATE'
+			],
+			[
+				'key'     => 'start_date',
+				'value'   => $end,
+				'compare' => '<=',
+				'type'    => 'DATE'
+			]
+		]
+	]);
 
-	if ($events->have_posts()) :
-		while ($events->have_posts()) :	
-			$events->the_post();
+	if ($query->have_posts()) :
+		while ($query->have_posts()) :	
+			$query->the_post();
 	
 			$buildEvents .= '[col]';		
 			$buildEvents .= get_the_post_thumbnail( get_the_ID(), 'thumbnail', array( 'class' => 'align-center' ) ); 

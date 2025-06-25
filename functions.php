@@ -21,24 +21,24 @@ require_once get_template_directory().'/functions-global.php';
 // Handle WP_Queries properly
 function bp_WP_Query($post_type, $args = []) {
 	$defaults = [
-		'post_type'      			=> $post_type,
-		'posts_per_page'			=> -1,
-		'post_status'   			=> 'publish',
-		'orderby'        			=> 'date',
-		'order'          			=> 'DESC',
-		'cache_results'				=> false, 
-		'update_post_meta_cache'	=>	false, 
-		'update_post_term_cache'	=>	false
+		'post_type'              => $post_type,
+		'post_status'            => 'publish',
+		'posts_per_page'         => 4,
+		'orderby'                => 'date',
+		'order'                  => 'DESC',
+		'cache_results'          => false,
+		'update_post_meta_cache' => false,
+		'update_post_term_cache' => false
 	];
 
 	$args = array_merge($defaults, $args);
 
-	if (isset($args['orderby']) && (stripos($args['orderby'], 'recent') !== false || stripos($args['orderby'], 'view') !== false)) {
+	if (!empty($args['orderby']) && ($args['orderby'] === 'recent' || stripos($args['orderby'], 'view') !== false || $args['orderby'] === 'rand')) {
 		$ids = get_posts([
 			'post_type'      => $post_type,
+			'post_status'    => $args['post_status'],
 			'posts_per_page' => -1,
-			'fields'         => 'ids',
-			'post_status'    => 'publish'
+			'fields'         => 'ids'
 		]);
 
 		shuffle($ids);
@@ -51,13 +51,37 @@ function bp_WP_Query($post_type, $args = []) {
 		$args['tax_query'] = [[
 			'taxonomy' => $args['taxonomy'],
 			'field'    => 'slug',
-			'terms'    => (array) $args['terms'],
+			'terms'    => is_array($args['terms']) ? $args['terms'] : explode(',', $args['terms'])
 		]];
 		unset($args['taxonomy'], $args['terms']);
 	}
 
+	if (!empty($args['tax']) && !empty($args['term'])) {
+		$args['tax_query'] = [[
+			'taxonomy' => $args['tax'],
+			'field'    => 'slug',
+			'terms'    => is_array($args['term']) ? $args['term'] : explode(',', $args['term'])
+		]];
+		unset($args['tax'], $args['term']);
+	}
+
+	if (!empty($args['tax_multi']) && is_array($args['tax_multi'])) {
+		$tax_query = ['relation' => $args['tax_relation'] ?? 'OR'];
+		foreach ($args['tax_multi'] as $tax => $terms) {
+			foreach ((array) $terms as $term) {
+				$tax_query[] = [
+					'taxonomy' => $tax,
+					'field'    => 'slug',
+					'terms'    => [$term]
+				];
+			}
+		}
+		$args['tax_query'] = $tax_query;
+		unset($args['tax_multi'], $args['tax_relation']);
+	}
+
 	if (!empty($args['tags'])) {
-		$args['tag_slug__in'] = (array) $args['tags'];
+		$args['tag_slug__in'] = is_array($args['tags']) ? $args['tags'] : explode(',', $args['tags']);
 		unset($args['tags']);
 	}
 
@@ -65,13 +89,19 @@ function bp_WP_Query($post_type, $args = []) {
 		$args['date_query'] = [[
 			'after'     => $args['start'] ?? null,
 			'before'    => $args['end'] ?? null,
-			'inclusive' => true,
+			'inclusive' => true
 		]];
 		unset($args['start'], $args['end']);
 	}
 
+	if (!empty($args['mime_type'])) {
+		$args['post_mime_type'] = $args['mime_type'];
+		unset($args['mime_type']);
+	}
+
 	return new WP_Query($args);
 }
+
 
 // Print variable or array for debugging
 function showMe($something, $die=true) {
@@ -152,7 +182,12 @@ function getID($slug, $type=null) {
 	endforeach;	
 
 	foreach ($getCPT as $postType) :	
-		$query = new WP_Query( array( 'post_type' => $postType, 'name' => $slug, 'post_status' => 'all', 'posts_per_page' => 1, ) ); 
+		$query = bp_WP_Query($postType, [
+			'name'           => $slug,
+			'post_status'    => 'all',
+			'posts_per_page' => 1
+		]);
+
 		if ( !empty( $query->posts ) ) : 
 			$page = $query->posts[0];	
 			return $page->ID;	
@@ -2330,14 +2365,24 @@ function battleplan_mobile_menu_bar_phone() {
 // Display Mobile Menu Bar Item - Contact
 add_action('bp_mobile_menu_bar_contact', 'battleplan_mobile_menu_bar_contact', 20);
 function battleplan_mobile_menu_bar_contact() { 	
-	$query = new WP_Query( array( 'post_type' => 'wpcf7_contact_form', 'title' => 'Quote Request Form', 'post_status' => 'all', 'posts_per_page' => 1, ) ); 
+	$query = bp_WP_Query('wpcf7_contact_form', [
+		'title'          => 'Quote Request Form',
+		'post_status'    => 'all',
+		'posts_per_page' => 1
+	]);
+
 	if ( ! empty( $query->post ) ) :
 		$form = "Quote Request Form"; 
 		$title = "Request A Quote"; 
 		$type = "quote";
 	endif;
 	
-	$query = new WP_Query( array( 'post_type' => 'wpcf7_contact_form', 'title' => 'Contact Us Form', 'post_status' => 'all', 'posts_per_page' => 1, ) ); 
+	$query = bp_WP_Query('wpcf7_contact_form', [
+		'title'          => 'Contact Us Form',
+		'post_status'    => 'all',
+		'posts_per_page' => 1
+	]);
+
 	if ( ! empty( $query->post ) ) :
 		$form = "Contact Us Form"; 
 		$title = "Send A Message"; 
@@ -2358,13 +2403,24 @@ function battleplan_mobile_menu_bar_contact() {
 // Display Request Quote Modal
 add_action('bp_before_page', 'battleplan_request_quote_modal', 20);
 function battleplan_request_quote_modal() { 	
-	$query = new WP_Query( array( 'post_type' => 'wpcf7_contact_form', 'title' => 'Quote Request Form', 'post_status' => 'all', 'posts_per_page' => 1, ) ); 
+	
+	$query = bp_WP_Query('wpcf7_contact_form', [
+		'title'          => 'Quote Request Form',
+		'post_status'    => 'all',
+		'posts_per_page' => 1
+	]);
+
 	if ( ! empty( $query->post ) ) :
 		$form = "Quote Request Form"; 
 		$title = "Request A Quote";
 	endif;
 	
-	$query = new WP_Query( array( 'post_type' => 'wpcf7_contact_form', 'title' => 'Contact Us Form', 'post_status' => 'all', 'posts_per_page' => 1, ) ); 
+	$query = bp_WP_Query('wpcf7_contact_form', [
+		'title'          => 'Contact Us Form',
+		'post_status'    => 'all',
+		'posts_per_page' => 1
+	]);
+
 	if ( ! empty( $query->post ) ) :
 		$form = "Contact Us Form"; 
 		$title = "Send A Message";

@@ -381,13 +381,19 @@ function battleplan_getProductComparison($atts, $content = null ) {
 	foreach ( $productList as $product ) :
 		$buildBox .= '[section name="'.$product.'" class="tab-content'.$class.'"][layout grid="3e"]';
 
-		$args = array( 'post_type' => 'products', 'tax_query' => array( array( 'taxonomy' => 'product-type', 'field' => 'slug', 'terms' => $product, ), ), 'posts_per_page' => -1, 'orderby' => 'menu_order', 'order' => 'DESC', );	
-		$products_query = new WP_Query( $args );	
+		$query = bp_WP_Query('products', [
+			'taxonomy'       => 'product-type',
+			'terms'          => $product,
+			'posts_per_page' => -1,
+			'orderby'        => 'menu_order',
+			'order'          => 'DESC'
+		]);
+
 		$current_product_class = '';
 
-		if ( $products_query->have_posts() ) :
-			while ( $products_query->have_posts() ) :
-				$products_query->the_post();
+		if ( $query->have_posts() ) :
+			while ( $query->have_posts() ) :
+				$query->the_post();
 				$product_class = get_the_terms( get_the_ID(), 'product-class' )[0]->name;
 				if ( $product_class !== $current_product_class ) :
 					$buildBox .= '[col]'; 

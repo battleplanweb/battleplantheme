@@ -22,13 +22,17 @@ add_action('wp_head', 'battleplan_loadPicTitles');
 function battleplan_loadPicTitles() { 
 	wp_enqueue_script( 'battleplan-script-lightbox', get_template_directory_uri().'/js/script-lightbox.js', array(), _BP_VERSION, false ); 
 	
-	$image_query = new WP_Query( array ( 'post_type'=>'attachment', 'post_status'=>'any', 'post_mime_type'=>'image/jpeg, image/gif, image/jpg, image/png, image/webp', 'posts_per_page'=> -1 ) );
+	$query = bp_WP_Query('attachment', [
+		'post_status'     => 'any',
+		'mime_type'       => 'image/jpeg,image/gif,image/jpg,image/png,image/webp',
+		'posts_per_page'  => -1
+	]);
 	
 	$links = $descs = array();
 	
-	if( $image_query->have_posts() ) :
-		while ($image_query->have_posts() ) : 
-		$image_query->the_post();
+	if( $query->have_posts() ) :
+		while ($query->have_posts() ) : 
+		$query->the_post();
 		
 		$title = get_the_title(get_the_ID());
 		$desc = get_post_meta( get_the_ID(), '_wp_attachment_image_alt', true );

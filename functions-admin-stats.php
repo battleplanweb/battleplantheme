@@ -582,7 +582,12 @@ foreach ( $ga4_pages_data as $pagePath=>$pageData ) :
 					if (strpos($chkPage, '»') === false ) :	
 						foreach ( $getCPT as $type ) :
 
-							$query = new WP_Query( array( 'post_type' => $type, 'title' => $chkPage, 'post_status' => 'all', 'posts_per_page' => 1, ) ); 
+							$query = bp_WP_Query($type, [
+								'title'          => $chkPage,
+								'post_status'    => 'all',
+								'posts_per_page' => 1
+							]);
+
 							if ( !empty( $query->post ) ) : 
 								$page = $query->post;	
 								$pageID = $page->ID;	

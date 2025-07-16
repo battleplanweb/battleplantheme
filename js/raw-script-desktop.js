@@ -284,7 +284,7 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 			labelWidgets();
 			window.primaryH = primaryObj.offsetHeight;
 			window.sidebarH = sidebarObj.offsetHeight;			
-			return primaryH - sidebarH - sidebarPad - compensate;
+			return primaryH - sidebarH - sidebarPad + compensate;
 		}
 		
 		window.widgetInit = function () {

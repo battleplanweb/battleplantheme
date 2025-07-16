@@ -8,6 +8,10 @@
 /*--------------------------------------------------------------
 # Forms
 --------------------------------------------------------------*/
+fieldset.hidden-fields-container {
+	display: 										none;
+}
+
 .wpcf7 form {	
 	position:										relative;
 	display: 										grid;

@@ -106,8 +106,9 @@ function battleplan_buildNested( $atts, $content = null ) {
 // Layout
 add_shortcode( 'layout', 'battleplan_buildLayout' );
 function battleplan_buildLayout( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'grid'=>'1', 'break'=>'', 'valign'=>'', 'class'=>'', 'track'=>'' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'grid'=>'1', 'break'=>'', 'valign'=>'', 'class'=>'', 'track'=>'', 'gap'=>'' ), $atts );
 	$grid = esc_attr($a['grid']);
+	$gap = esc_attr($a['gap']) !== '' ? ' style="gap:'.esc_attr($a['gap']).'"' : '';
 	
 	if ( strpos($grid,'px') !== false || strpos($grid,'em') !== false || strpos($grid,'fr') !== false ) :
 		$custom_grid = 'style="grid-template-columns: '.$grid.'" ';
@@ -127,7 +128,7 @@ function battleplan_buildLayout( $atts, $content = null ) {
 	if ( $valign != '' ) $valign = " valign-".$valign;
 	if ( $break != '' ) $break = " break-".$break;
 
-	$buildLayout = '<div'.$name.' class="flex grid-'.$grid.$valign.$break.$class.'" '.$tracking.$custom_grid.'>'.do_shortcode($content).'</div>';	
+	$buildLayout = '<div'.$name.' class="flex grid-'.$grid.$valign.$break.$class.'"'.$gap.$tracking.$custom_grid.'>'.do_shortcode($content).'</div>';	
 	
 	return $buildLayout;
 }
@@ -273,7 +274,7 @@ function battleplan_buildVid( $atts, $content = null ) {
 			if ( $related == "false" ) : $link .= "&rel=0";	endif;	
 			if ( $begin != "" ) : $link .= "&start=".$begin; endif;	
 		else:
-			$id = str_replace('https://player.vimeo.com/video/', '', $link);
+			$id = str_replace(['https://player.vimeo.com/video/', 'https://vimeo.com/'], '', $link);
 			$link .= "?autoplay=1&title=0&byline=0&portrait=0";
 			if ( $thumb == '' ) :			
 				$data = file_get_contents('https://vimeo.com/api/v2/video/'.$id.'.json');

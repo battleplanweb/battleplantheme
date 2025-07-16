@@ -438,7 +438,17 @@ function processChron($forceChron) {
 	endif;
 	
 	
-	
+// Clear terms, tags and categories with 0 entries
+add_action('init', fn() => array_walk(
+	get_taxonomies(['public' => true], 'names'),
+	fn($taxonomy) => array_walk(
+		get_terms([
+			'taxonomy'   => $taxonomy,
+			'hide_empty' => false,
+		]),
+		fn($term) => $term->count === 0 || $term->slug === 'service-area---' ? wp_delete_term($term->term_id, $taxonomy) : null
+	)
+));
 	
 		
 // Prune weak testimonials

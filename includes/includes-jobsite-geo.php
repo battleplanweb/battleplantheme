@@ -74,12 +74,16 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 			if ( !is_wp_error($response)) :
 				$body = wp_remote_retrieve_body($response);
 				$data = json_decode($body, true);
-				if ($data['status'] == 'OK') update_post_meta($post_id, 'geocode', $data['results'][0]['geometry']['location']);
+				if ($data['status'] == 'OK') {
+					update_post_meta($post_id, 'geocode', $data['results'][0]['geometry']['location']);
+				} else {
+					mail('glendon@battleplanwebdesign.com', 'Geocoding API Error', "\n\nFull response:\n" . $data['status']);
+				}
 			endif;	
 		endif;
 
 		// add city-state as location tag
-		$location = $city.'-'.$state; 
+		if ( $city && $state ) $location = $city.'-'.$state; 
 		$term = term_exists($location, 'jobsite_geo-service-areas');
 		if (empty($term)) $term = wp_insert_term($location, 'jobsite_geo-service-areas');
 		if (!is_wp_error($term)) wp_set_post_terms($post_id, $location, 'jobsite_geo-service-areas');	
@@ -94,7 +98,7 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 		endif;	
 
 		// scan for keywords for service tag
-		$description = get_post_field('post_content', $post_id);
+		$description = strtolower(get_post_field('post_content', $post_id));
 		
 		// Customize for General Contractor website
 		if ( $GLOBALS['customer_info']['business-type'] === "GeneralContractor" ) :		
@@ -118,11 +122,13 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 			$equipment = array (
 				'air-conditioner' 	=> array( 'air conditioner', 'air conditioning', 'cooling', 'a/c', 'ac', 'compressor', 'evaporator', 'condenser', 'drain line', 'refrigerant'),
 				'heating' 			=> array( 'heater', 'heating', 'furnace' ),
-				'hvac'				=> array( 'hvac', 'fan motor' ),
-				'thermostat'		=> array( 'thermostat', 't-stat', 'tstat' )
+				'hvac'				=> array( 'hvac', 'fan motor', 'blower', 'mini split' ),
+				'thermostat'		=> array( 'thermostat', 't-stat', 'tstat' ),
 			);
-
-			$type = esc_attr(get_field( "new_brand" )) ? '-installation' : '-repair';
+		
+			$type = str_contains($description, 'repair') || str_contains($description, 'service') ? '-repair' :
+				(str_contains($description, 'install') || str_contains($description, 'replacement') ? '-installation' :
+				(esc_attr(get_field('new_brand')) ? '-installation' : '-repair'));
 
 			foreach ( array( 'allergies', 'duct cleaning', 'indoor air', 'air quality', 'clean air' ) as $keyword) {
 				if (stripos($description, $keyword) !== false) {
@@ -134,6 +140,13 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 			foreach ( array( 'maintenance', 'tune up', 'tune-up', 'check up', 'check-up', 'inspection' ) as $keyword) {
 				if (stripos($description, $keyword) !== false) {
 					$service = 'hvac-maintenance';
+					break; 
+				} 
+			}	
+
+			foreach ( array( 'dyer vent' , 'lint', 'lent' ) as $keyword) {
+				if (stripos($description, $keyword) !== false) {
+					$service = 'dryer-vent-cleaning';
 					break; 
 				} 
 			}		

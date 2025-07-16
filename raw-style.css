@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 2025.29.2
+Version: 2025.29.4
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -47,13 +47,17 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
 
   --white-lowest: 								rgba(255, 255, 255, 0.1);
   --white-low: 									rgba(255, 255, 255, 0.25);
+  --white-med-low: 								rgba(255, 255, 255, 0.37);
   --white-med: 									rgba(255, 255, 255, 0.5);
+  --white-med-high: 							rgba(255, 255, 255, 0.62);
   --white-high: 								rgba(255, 255, 255, 0.75);  
   --white-highest: 								rgba(255, 255, 255, 0.9);
   
   --black-lowest: 								rgba(0, 0, 0, 0.1);  
   --black-low: 									rgba(0, 0, 0, 0.25);
-  --black-med: 									rgba(0, 0, 0, 0.5);
+  --black-med-low: 								rgba(0, 0, 0, 0.37);
+  --black-med: 									rgba(0, 0, 0, 0.5);  
+  --black-med-high: 							rgba(0, 0, 0, 0.62);
   --black-high: 								rgba(0, 0, 0, 0.75);
   --black-highest: 								rgba(0, 0, 0, 0.9);
   
@@ -255,6 +259,7 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   
   --button-color-hover-alt: 					var(--button-color-alt);
   --button-background-hover-alt: 				var(--button-background-alt);
+
 
 
 

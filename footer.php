@@ -61,7 +61,8 @@
 						elseif ( array_key_exists('region', $customer_info) ) : 
 							$buildCopyright .= $customer_info['region']; 
 						endif;
-						if ( isset($customer_info['phone-format']) && $customer_info['phone-format'] ) $buildCopyright .= " • ".$customer_info['phone-format'];
+						if ( array_key_exists('phone-format', $customer_info) ) $buildCopyright .= " • ".$customer_info['phone-format'];
+
 						$buildCopyright .= "</div>";
 					endforeach;
 					

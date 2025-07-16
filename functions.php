@@ -41,10 +41,11 @@ function bp_WP_Query($post_type, $args = []) {
 			'fields'         => 'ids'
 		]);
 
-		shuffle($ids);
-
-		$args['post__in'] = array_slice($ids, 0, $args['posts_per_page']);
-		$args['orderby'] = 'post__in';
+		if (!empty($ids)) {
+			shuffle($ids);
+			$args['post__in'] = $ids; // Use full list
+			$args['orderby'] = 'post__in';
+		}
 	}
 
 	if (!empty($args['taxonomy']) && !empty($args['terms'])) {

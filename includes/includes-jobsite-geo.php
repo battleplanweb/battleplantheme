@@ -39,7 +39,23 @@ function format_service($service) {
 	return $jobsite_service;
 }
 
-
+// orient uploaded photos correctly
+add_filter('wp_generate_attachment_metadata', function($metadata, $attachment_id) {
+	$filepath = get_attached_file($attachment_id);
+	$image = wp_get_image_editor($filepath);
+	if (!is_wp_error($image)) {
+		$exif = @exif_read_data($filepath);
+		if (!empty($exif['Orientation'])) {
+			switch ($exif['Orientation']) {
+				case 3: $image->rotate(180); break;
+				case 6: $image->rotate(-90); break;
+				case 8: $image->rotate(90); break;
+			}
+			$image->save($filepath);
+		}
+	}
+	return $metadata;
+}, 10, 2);
 
 
 // save important info to meta data upon publishing or updating post
@@ -69,7 +85,7 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 
 		if ( $address != '' && $city != '' && $state != '' && $zip != '' ) :	
 			$address = $address.', '.$city.', '.$state.' '.$zip;
-			$googleAPI = "https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address)."&key=AIzaSyBqf0idxwuOxaG-j3eCpef1Bunv-YVdVP8";	
+			$googleAPI = "https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address)."&key=AIzaSyC3gx2Pk4A6N_3Uxiik83Y_DTFRGRrYdSM";	
 			$response = wp_remote_get($googleAPI);
 			if ( !is_wp_error($response)) :
 				$body = wp_remote_retrieve_body($response);

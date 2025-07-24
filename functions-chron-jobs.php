@@ -439,16 +439,50 @@ function processChron($forceChron) {
 	
 	
 // Clear terms, tags and categories with 0 entries
-add_action('init', fn() => array_walk(
-	get_taxonomies(['public' => true], 'names'),
-	fn($taxonomy) => array_walk(
-		get_terms([
+add_action('init', function () {
+	// Taxonomies that only apply to media/attachments
+	$attachment_taxonomies = ['image-tags']; // Add more as needed
+
+	// Handle all other public taxonomies
+	foreach (get_taxonomies(['public' => true], 'names') as $taxonomy) {
+		if (in_array($taxonomy, $attachment_taxonomies, true)) continue;
+
+		foreach (get_terms([
 			'taxonomy'   => $taxonomy,
 			'hide_empty' => false,
-		]),
-		fn($term) => $term->count === 0 || $term->slug === 'service-area---' ? wp_delete_term($term->term_id, $taxonomy) : null
-	)
-));
+		]) as $term) {
+			if ($term->count === 0 || $term->slug === 'service-area---') {
+				wp_delete_term($term->term_id, $taxonomy);
+			}
+		}
+	}
+
+	// Now handle attachment-only taxonomies using actual post queries
+	foreach ($attachment_taxonomies as $taxonomy) {
+		$terms = get_terms([
+			'taxonomy'   => $taxonomy,
+			'hide_empty' => false,
+		]);
+
+		foreach ($terms as $term) {
+			$query = new WP_Query([
+				'post_type'      => 'attachment',
+				'post_status'    => 'inherit',
+				'posts_per_page' => 1,
+				'tax_query'      => [[
+					'taxonomy' => $taxonomy,
+					'field'    => 'term_id',
+					'terms'    => $term->term_id,
+				]]
+			]);
+
+			if ($query->found_posts === 0 || $term->slug === 'service-area---') {
+				wp_delete_term($term->term_id, $taxonomy);
+			}
+		}
+	}
+});
+
 	
 		
 // Prune weak testimonials

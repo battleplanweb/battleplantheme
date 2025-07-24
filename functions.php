@@ -48,22 +48,21 @@ function bp_WP_Query($post_type, $args = []) {
 		}
 	}
 
-	if (!empty($args['taxonomy']) && !empty($args['terms'])) {
-		$args['tax_query'] = [[
-			'taxonomy' => $args['taxonomy'],
-			'field'    => 'slug',
-			'terms'    => is_array($args['terms']) ? $args['terms'] : explode(',', $args['terms'])
-		]];
-		unset($args['taxonomy'], $args['terms']);
-	}
+	$tax = $args['taxonomy'] ?? $args['tax'] ?? null;
+	$terms = $args['terms'] ?? $args['term'] ?? null;
 
-	if (!empty($args['tax']) && !empty($args['term'])) {
-		$args['tax_query'] = [[
-			'taxonomy' => $args['tax'],
-			'field'    => 'slug',
-			'terms'    => is_array($args['term']) ? $args['term'] : explode(',', $args['term'])
-		]];
-		unset($args['tax'], $args['term']);
+	if (!empty($tax) && !empty($terms)) {
+		$terms = is_string($terms) ? array_map('trim', explode(',', $terms)) : (array) $terms;
+		$operator = strtolower($args['tax_operator'] ?? 'and') === 'or' ? 'OR' : 'AND';
+		$args['tax_query'] = ['relation' => $operator];
+		foreach ($terms as $term) {
+			$args['tax_query'][] = [
+				'taxonomy' => $tax,
+				'field'    => 'slug',
+				'terms'    => [$term]
+			];
+		}
+		unset($args['taxonomy'], $args['terms'], $args['tax'], $args['term'], $args['tax_operator']);
 	}
 
 	if (!empty($args['tax_multi']) && is_array($args['tax_multi'])) {
@@ -79,11 +78,6 @@ function bp_WP_Query($post_type, $args = []) {
 		}
 		$args['tax_query'] = $tax_query;
 		unset($args['tax_multi'], $args['tax_relation']);
-	}
-
-	if (!empty($args['tags'])) {
-		$args['tag_slug__in'] = is_array($args['tags']) ? $args['tags'] : explode(',', $args['tags']);
-		unset($args['tags']);
 	}
 
 	if (!empty($args['start']) || !empty($args['end'])) {

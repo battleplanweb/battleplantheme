@@ -1033,9 +1033,9 @@ function battleplan_getPostSlider($atts, $content = null ) {
 					if ( $numDisplay != 0 ) $buildInner .= '</div>';
 					$buildInner .= '<div class="'.$active.' carousel-item carousel-item-'.$type.'">';
 	
-					if ($mask) $buildInner .= "<div class='slider-mask'></div>";
+					if ($mask !== "false") $buildInner .= "<div class='slider-mask'></div>";
 				endif;	
-
+ 
 				$image = wp_get_attachment_image_src(get_the_ID(), $size );
 				$imgSet = wp_get_attachment_image_srcset(get_the_ID(), $size );		
 	
@@ -1413,25 +1413,28 @@ function battleplan_setUpWPGallery( $atts, $content = null ) {
 // Generate a WordPress gallery and filter
 add_shortcode( 'get-video-gallery', 'battleplan_setUpVidGallery' );
 function battleplan_setUpVidGallery( $atts, $content = null ) {	
-	$a = shortcode_atts( array( 'name'=>'', 'type'=>'videos', 'class'=>'', 'valign'=>'stretch', 'id'=>'', 'columns'=>'4', 'max'=>'-1', 'offset'=>'0', 'start'=>'', 'end'=>'', 'order_by'=>'date', 'order'=>'DESC', 'tags'=>'', 'show_title'=>'true', 'show_date'=>'true'), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'type'=>'videos', 'class'=>'', 'valign'=>'stretch', 'id'=>'', 'columns'=>'4', 'max'=>'-1', 'offset'=>'0', 'start'=>'', 'end'=>'', 'order_by'=>'date', 'order'=>'DESC', 'tax'=>'video-tags', 'terms'=>'', 'operator'=>'and', 'show_title'=>'true', 'show_date'=>'true'), $atts );
 	$id = esc_attr($a['id']);	
 	if ( $id == '' ) global $post; $id = intval( $post->ID );  
 	$name = esc_attr($a['name']) == '' ? $id : esc_attr($a['name']);
 	$postType = esc_attr($a['type']);
 	$orderBy = esc_attr($a['order_by']);
 	$showDate = esc_attr($a['show_date']);
-	$showTitle = esc_attr($a['show_title']);
+	$showTitle = esc_attr($a['show_title']);	
 	$classes = esc_attr($a['class']) !== '' ? ' '.esc_attr($a['class']) : '';
 	$buildArchive = '';
 	$num = 1;
-	
+	  
 	$query = bp_WP_Query($postType, [
-		'post_status'     => 'publish',
+		'post_status'     => 'publish', 
 		'posts_per_page'  => esc_attr($a['max']),
 		'order'           => esc_attr($a['order']),
 		'offset'          => esc_attr($a['offset']),
 		'start'           => esc_attr($a['start']),
 		'end'             => esc_attr($a['end']),
+		'tax' 			  => esc_attr($a['tax']),
+		'terms'			  => esc_attr($a['terms']),
+		'tax_operator'	  => esc_attr($a['operator']),
 		'orderby'         => $orderBy
 	]);	
 	

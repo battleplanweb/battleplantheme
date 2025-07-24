@@ -32,39 +32,16 @@ get_header(); ?>
 
 		// Build Archive
 			while ( have_posts() ) : the_post(); 		
-				$jobDate = esc_attr(get_field( "job_date" ));		
-				$jobDateTime = new DateTime($jobDate);
-				$jobIsoDate = $jobDateTime->format("Y-m-d\TH:i:s.uP");
-				$jobDateTimeImm = new DateTimeImmutable($jobDate);	
-				$now = new DateTime();
-    			$interval = $now->diff($jobDateTimeImm);
-
-    			if ($interval->y > 0) :
-        			//$when = $interval->y == 1 ? 'A Year Ago' : $interval->y . ' Years Ago';
-					$when = '';
-				elseif ($interval->m > 0) :
-        			//$when =  $interval->m == 1 ? 'A Month Ago' : $interval->m . ' Months Ago';
-					$when = '';
-    			elseif ($interval->d >= 7) :
-        			$weeks = floor($interval->d / 7);
-       				//$when =  $weeks == 1 ? 'A Week Ago' : $weeks . ' Weeks Ago';
-       				$when = $weeks == 1 ? 'A Week Ago' : '';
-    			elseif ($interval->d > 0) :
-        			$when =  $interval->d == 1 ? 'Yesterday' : $interval->d . ' Days Ago';
-    			else:
-        			$when =  'Today';
-				endif;
-		
 				$name = trim(get_the_title(), ' ');		
 				$address = trim(esc_attr(get_field( "address" )), ' ');
 				$city = trim(esc_attr(get_field( "city" )), ' ');
 				$state = trim(strtoupper(esc_attr(get_field( "state" ))), ' ');
 				$location = format_location($city.'-'.$state);
-				$oldBrand = trim(esc_attr(get_field( "old_brand" )), ' ');
-				$oldEquip = trim(esc_attr(get_field( "old_equipment" )), ' ');
+				$oldBrand = ucwords(trim(esc_attr(get_field( "old_brand" )), ' '));
+				$oldEquip = ucwords(trim(esc_attr(get_field( "old_equipment" )), ' '));
 				$oldModel = trim(esc_attr(get_field( "old_model_no" )), ' ');
-				$newBrand = trim(esc_attr(get_field( "new_brand" )), ' ');
-				$newEquip = trim(esc_attr(get_field( "new_equipment" )), ' ');
+				$newBrand = ucwords(trim(esc_attr(get_field( "new_brand" )), ' '));
+				$newEquip = ucwords(trim(esc_attr(get_field( "new_equipment" )), ' '));
 				$newModel = trim(esc_attr(get_field( "new_model_no" )), ' ');
 				$imgs[0] = esc_attr(get_field( "jobsite_photo_1"));
 				$imgs[1] = esc_attr(get_field( "jobsite_photo_2"));
@@ -133,9 +110,8 @@ get_header(); ?>
 				$buildUpdate .= '[col]';
 		
 				$buildUpdate .= '<div class="jobsite-description"><p>';
-				$buildUpdate .= '<span class="jobsite_geo-job_meta">'.$location.' ▪ ';
-				$buildUpdate .= $when != '' ? $when.'</span><br>' : '</span>';
-				$buildUpdate .= $jobDesc.'</p></div>';
+				$buildUpdate .= '<div class="jobsite_geo-job_meta">'.$location.'</div>';
+				$buildUpdate .= $jobDesc.'</div>';
 				$cleanedJobDesc = htmlspecialchars(strip_tags($jobDesc), ENT_QUOTES, 'UTF-8');
 		
 		?>		
@@ -258,14 +234,18 @@ get_header(); ?>
 				var pinY = <?php echo get_option('jobsite_geo')['pin_anchor_y']; ?>;								
 					
 				function initMap() { 
+					const bounds = new google.maps.LatLngBounds();
 					geocoder = new google.maps.Geocoder();
-					
+					/*
 					for (var i = 0; i < totalPins; i++) {
 						var coords = addresses[i].split(', ');
 						if (coords.length === 2) {
 							var thisLat = parseFloat(coords[0]), thisLng = parseFloat(coords[1]);
 							midLat += thisLat;
-							midLng += thisLng;		
+							midLng += thisLng;	
+							
+												alert(midLat);
+
 							    
 							if (thisLat > maxLat) maxLat = thisLat;
 							if (thisLat < minLat) minLat = thisLat;
@@ -277,17 +257,18 @@ get_header(); ?>
 					midLat = midLat / totalPins;
 					midLng = midLng / totalPins;
 					totalDis = maxLat - minLat;
-					if ( (maxLng - minLng) > totalDis ) totalDis = maxLng - minLng;
+					//if ( (maxLng - minLng) > totalDis ) totalDis = maxLng - minLng;
 							
 					if ( window.innerWidth <= 768) {
   						totalDis = Math.floor(totalDis / 8.5);
 					} else {
 						totalDis = Math.floor(totalDis / 8);
 					}
+					*/
 					
 					map = new google.maps.Map(document.getElementById('map'), {
-						center: { lat: midLat, lng: midLng },
-						zoom: totalDis,
+						center: { lat: 0, lng: 0 },
+						zoom: 8,
 						styles: [
 						  {
 							featureType: 'poi',
@@ -316,13 +297,21 @@ get_header(); ?>
 									position: new google.maps.LatLng(lat, lng),
         							icon: customMarkerIcon
 								});
+								
+								bounds.extend(marker.getPosition());
 							}
 						}
 					}
+					map.fitBounds(bounds);
+					
+						const listener = google.maps.event.addListenerOnce(map, 'bounds_changed', function () {
+							const maxZoom = 14;
+							if (map.getZoom() > maxZoom) map.setZoom(maxZoom);
+						});
 				}
 			</script>
 
-			<script async defer nonce="<?php echo _BP_NONCE; ?>" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqf0idxwuOxaG-j3eCpef1Bunv-YVdVP8&&callback=initMap"></script>
+			<script async defer nonce="<?php echo _BP_NONCE; ?>" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC3gx2Pk4A6N_3Uxiik83Y_DTFRGRrYdSM&&callback=initMap"></script>
 		<?php }
 
 

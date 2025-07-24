@@ -47,6 +47,13 @@ function battleplan_product_overview( $atts, $content = null ) {
 	include('wp-content/themes/battleplantheme/elements/element-product-overview-generic.php');
 	include('wp-content/themes/battleplantheme/elements/element-product-overview-'.$file.'.php');
 	
+	
+	if (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/'.$pic.'.webp' ) ) : $pic = $pic.".webp";
+	elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/'.$pic.'.jpg' ) ) : $pic = $pic.".jpg";
+	elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/'.$pic.'.png' ) ) : $pic = $pic.".png";
+	else : $pic = 'na.webp';
+	endif;	
+	
 	return do_shortcode('
 		[col class="col-archive col-products"]
 		 [img size="1/3" link="'.$link.'" ada-hidden="true"]<img class="img-archive img-products" src="/wp-content/uploads/'.$pic.'" loading="lazy" alt="'.$alt.'" style="aspect-ratio:1/1"/>[/img]

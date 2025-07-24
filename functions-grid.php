@@ -257,15 +257,14 @@ function battleplan_buildVid( $atts, $content = null ) {
 	
 	if ( ( strpos($link, 'youtube') !== false || strpos($link, 'youtu.be') !== false || strpos($link, 'vimeo') !== false ) && $preload == "false" ) :
 		if ( strpos($link, 'youtube') !== false || strpos($link, 'youtu.be') !== false ) :
-			if ( strpos($link, 'youtu.be') !== false ) :
-				$vid_id = str_replace('https://youtu.be/', '', $link);
-			else:
-				$link = str_replace('/shorts/', '/embed/', $link);
-				$vid_id = str_replace('https://www.youtube.com/embed/', '', $link);
-				$vid_id = str_replace('https://www.youtube.com/watch?v=', '', $vid_id);
-			endif;
+			$link = (strpos($link, '?si=') !== false) ? strstr($link, '?si=', true) : $link;
+			$link = str_replace('www.', '', $link);
+			$link = str_replace('https://youtu.be/', '', $link);
+			$link = str_replace('https://youtube.com/shorts/', '', $link);
+			$link = str_replace('https://youtube.com/embed/', '', $link);
+			$link = str_replace('https://youtube.com/watch?v=', '', $link);
 	
-			preg_match('/^[^?]+/', $vid_id, $matches);
+			preg_match('/^[^?]+/', $link, $matches);
 			$vid_id = $matches[0];
 	
 			$link = 'https://www.youtube.com/embed/'.$vid_id.'?autoplay=1&enablejsapi=1&version=3&playerapiid=ytplayer';

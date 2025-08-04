@@ -231,40 +231,23 @@ get_header(); ?>
 				var addresses = <?php echo $GLOBALS['mapPins']; ?>;
 				var geocoder, map, totalDis = 0, midLat = 0, midLng = 0, maxLat = 0, minLat = 0, maxLng = 0, minLng = 0, totalPins = addresses.length;
 				var pinX = <?php echo get_option('jobsite_geo')['pin_anchor_x']; ?>;
-				var pinY = <?php echo get_option('jobsite_geo')['pin_anchor_y']; ?>;								
-					
+				var pinY = <?php echo get_option('jobsite_geo')['pin_anchor_y']; ?>;		
+				var pinSize = 60;
+				var sizeFactor = 1;
+
+				if ( totalPins > 10 ) {
+					sizeFactor = 0.6;
+				} else if ( totalPins > 5) {
+					sizeFactor = 0.8;
+				}
+				
+				pinSize = pinSize * sizeFactor;
+				pinX = pinX * sizeFactor;
+				pinY = pinY * sizeFactor;
+			
 				function initMap() { 
 					const bounds = new google.maps.LatLngBounds();
 					geocoder = new google.maps.Geocoder();
-					/*
-					for (var i = 0; i < totalPins; i++) {
-						var coords = addresses[i].split(', ');
-						if (coords.length === 2) {
-							var thisLat = parseFloat(coords[0]), thisLng = parseFloat(coords[1]);
-							midLat += thisLat;
-							midLng += thisLng;	
-							
-												alert(midLat);
-
-							    
-							if (thisLat > maxLat) maxLat = thisLat;
-							if (thisLat < minLat) minLat = thisLat;
-    						if (thisLng > maxLng) maxLng = thisLng;
-    						if (thisLng < minLng) minLng = thisLng;
-						}
-					}
-					
-					midLat = midLat / totalPins;
-					midLng = midLng / totalPins;
-					totalDis = maxLat - minLat;
-					//if ( (maxLng - minLng) > totalDis ) totalDis = maxLng - minLng;
-							
-					if ( window.innerWidth <= 768) {
-  						totalDis = Math.floor(totalDis / 8.5);
-					} else {
-						totalDis = Math.floor(totalDis / 8);
-					}
-					*/
 					
 					map = new google.maps.Map(document.getElementById('map'), {
 						center: { lat: 0, lng: 0 },
@@ -282,11 +265,11 @@ get_header(); ?>
 						var coords = addresses[i].split(', ');
 						if (coords.length === 2) {
 							var lat = parseFloat(coords[0]);
-							var lng = parseFloat(coords[1]);
+							var lng = parseFloat(coords[1]);		
 							
 							var customMarkerIcon = {
 								url: '<?php echo site_url() ?>/wp-content/uploads/jobsite_geo-pin.webp', 
-								scaledSize: new google.maps.Size(60, 60),
+								scaledSize: new google.maps.Size(pinSize, pinSize),
 								origin: new google.maps.Point(0, 0), 
 								anchor: new google.maps.Point(pinX, pinY)
 							};

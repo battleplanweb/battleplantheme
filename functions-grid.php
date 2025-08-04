@@ -502,7 +502,6 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	$scrollIcon = esc_attr($a['scroll-icon']); 
 	if ( $scrollBtn != "false" ) : $buildScrollBtn = '<div class="scroll-down"><a href="'.$scrollLoc.'"><span class="icon '.$scrollIcon.'" aria-hidden="true"></span><span class="sr-only">Scroll Down</span></a></div>'; else: $buildScrollBtn = ''; endif;
 	if ( !$name ) $name = "section-".rand(10000,99999);	
-	$setUpElement = '';
 	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
 	if ( $tracking != '' ) $class .= " tracking"; 
 	
@@ -512,29 +511,15 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	if ( $type === "col" ) : $div = "div"; else: $div = $type; endif;
 	
 	if ( is_mobile() ) :		
-		$mobileSrc = explode('.', $image);			
+		$mobileSrc = explode('.', $image);	
 		if ( strpos($mobileSrc[0], "-1920x") !== false ) { $mobileSrc[0] = substr($mobileSrc[0], 0, strpos($mobileSrc[0], "-1920x")); }	
-		$ratio = $imgW / $imgH;
-		$useRatio = 2;
-		$realW = array(480, 640, 960, 1280);
-		$realH = $useH = array(round($realW[0]/$ratio), round($realW[1]/$ratio), round($realW[2]/$ratio), round($realW[3]/$ratio));
-		if ( $ratio < $useRatio ) { $useH = array(round($realW[0]/$useRatio), round($realW[1]/$useRatio), round($realW[2]/$useRatio), round($realW[3]/$useRatio)); }
+		$imgBase = $mobileSrc[0];
+		$imgExt = $mobileSrc[1];
+		$placeholder = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8Xw8AAn8B9FXC5VwAAAAASUVORK5CYII=';
+		$ratio = $imgW && $imgH ? $imgW / $imgH : 2;
+		$initialH = round(480 / $ratio);
 
-		if ( $content != null ) :		
-			if (is_file( $_SERVER['DOCUMENT_ROOT'].$mobileSrc[0].'-mobile'.'.'.$mobileSrc[1] ) ) : 
-				$setUpElement .= do_shortcode('<'.$div.' id="'.$name.'" class="'.$type.$style.' '.$type.'-'.$width.' '.$type.'-parallax-disabled'.$class.' screen-'.$realW[$i].'"'.$tracking.' style="height: auto; padding-top: '.$padding.'px; padding-bottom: '.$padding.'px; background-image: url(../../..'.$mobileSrc[0].'-mobile'.'.'.$mobileSrc[1].'); background-size: cover; background-position: '.$posY." ".$posX.'">'.$content.'</'.$div.'>');
-			else:		
-				for ($i = 0; $i < count($realW); $i++) :			
-					$setUpElement .= do_shortcode('<'.$div.' id="'.$name.'" class="'.$type.$style.' '.$type.'-'.$width.' '.$type.'-parallax-disabled'.$class.' screen-'.$realW[$i].'"'.$tracking.' style="height: auto; padding-top: '.$padding.'px; padding-bottom: '.$padding.'px; background-image: url(../../..'.$mobileSrc[0].'-'.$realW[$i].'x'.$realH[$i].'.'.$mobileSrc[1].'); background-size: cover; background-position: '.$posY." ".$posX.'">'.$content.'</'.$div.'>');		
-				endfor;	
-			endif;
-		else : 
-			for ($i = 0; $i < count($realW); $i++) :			
-				$setUpElement .= '<'.$div.' class="'.$type.$style.' '.$type.'-'.$width.' '.$type.'-parallax-disabled'.$class.' screen-'.$realW[$i].'"'.$tracking.' style="height:'.$useH[$i].'px; background-image: url(../../..'.$mobileSrc[0].'-'.$realW[$i].'x'.$realH[$i].'.'.$mobileSrc[1].'); background-size: cover; background-position: '.$posY." ".$posX.'"></'.$div.'>';		
-			endfor;						
-		endif;	
- 
-		return $setUpElement;
+		return '<'.$div.' id="'.$name.'" class="load-bg '.$type.$style.' '.$type.'-'.$width.' '.$type.'-parallax-disabled'.$class.'"'.$tracking.' style="padding-top:'.$padding.'px; padding-bottom:'.$padding.'px; height:'.$initialH.'px; background-image:url('.$placeholder.'); background-size:cover; background-position:'.$posY.' '.$posX.'" data-img-base="'.$imgBase.'" data-img-ext="'.$imgExt.'" data-img-width="'.$imgW.'" data-img-height="'.$imgH.'">'.$content.'</'.$div.'>';
 	else:
 		return do_shortcode('<'.$div.' id="'.$name.'" class="'.$type.$style.' '.$type.'-'.$width.' '.$type.'-parallax'.$class.'"'.$tracking.' style="height:'.$height.'" data-parallax="scroll" data-img-width="'.$imgW.'" data-img-height="'.$imgH.'" data-pos-x="'.$posX.'" data-top-y="'.$topY.'" data-bottom-y="'.$botY.'" data-fixed="'.$fixed.'" data-image-src="'.$image.'">'.$content.$buildScrollBtn.'</'.$div.'>');
 	endif;	 

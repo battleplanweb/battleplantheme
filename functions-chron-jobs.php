@@ -69,7 +69,7 @@ function processChron($forceChron) {
 	if (function_exists('battleplan_updateSiteOptions')) battleplan_updateSiteOptions();
 
 	$site = str_replace('https://', '', get_bloginfo('url'));	
-	$exempt = $site == "sweetiepiesribeyes.com" || $site == "bubbascookscountry.com" || $site == "babeschicken.com" || $site == "airzoneexperts.com" ? "true" : "false";
+	$exempt = $site == "sweetiepiesribeyes.com" || $site == "bubbascookscountry.com" || $site == "babeschicken.com" ? "true" : "false";
 	
 	if ( $site != "asairconditioning.com") :	
 // WP Mail SMTP Settings Update
@@ -439,11 +439,8 @@ function processChron($forceChron) {
 	
 	
 // Clear terms, tags and categories with 0 entries
-add_action('init', function () {
-	// Taxonomies that only apply to media/attachments
-	$attachment_taxonomies = ['image-tags']; // Add more as needed
+	$attachment_taxonomies = ['image-tags']; 
 
-	// Handle all other public taxonomies
 	foreach (get_taxonomies(['public' => true], 'names') as $taxonomy) {
 		if (in_array($taxonomy, $attachment_taxonomies, true)) continue;
 
@@ -457,7 +454,6 @@ add_action('init', function () {
 		}
 	}
 
-	// Now handle attachment-only taxonomies using actual post queries
 	foreach ($attachment_taxonomies as $taxonomy) {
 		$terms = get_terms([
 			'taxonomy'   => $taxonomy,
@@ -481,8 +477,6 @@ add_action('init', function () {
 			}
 		}
 	}
-});
-
 	
 		
 // Prune weak testimonials
@@ -525,7 +519,26 @@ add_action('init', function () {
 		$daysSinceCheck = $today - intval($googleInfo['date']);
 		if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
 		
-		if ( $forceChron == true || $daysSinceCheck > 5 ) :
+		if ( $daysSinceCheck > 10 ) :
+	
+	
+	
+	
+	
+			$to = 'info@battleplanwebdesign.com';
+			$subject = 'Chron - Google API Hit - '.$customer_info['name'];
+			$message = "A request was made to the Google API at " . date('Y-m-d H:i:s') . " for ".$customer_info['name'].".";
+
+			$headers = "From: no-reply@battleplanwebdesign.com\r\n";
+			$headers .= "Reply-To: no-reply@battleplanwebdesign.com\r\n";
+			$headers .= "X-Mailer: PHP/" . phpversion();
+
+			$mailSent = mail($to, $subject, $message, $headers);
+
+	
+	
+			
+	
 			$gRating = $gNumber = 0;		
 			foreach ( $placeIDs as $placeID ) :	
 				if ( strlen($placeID) > 10 ) :
@@ -537,9 +550,17 @@ add_action('init', function () {
 					$result = curl_exec ($ch);
 					$res = json_decode($result,true);
 	
+	
+	
+	
+	
 					if (isset($res['error'])) {							
-						mail('glendon@battleplanwebdesign.com', 'Places API Error', print_r($res['error'], true) . "\n\nFull response:\n" . $result);
+						mail('glendon@battleplanwebdesign.com', 'Chron - Places API Error - '.$customer_info['name'], print_r($res['error'], true) . "\n\nFull response:\n" . $result);
 					} 
+	
+	
+	
+	
 	
 					$googleInfo[$placeID]['google-reviews'] = $res['userRatingCount'];						
 					$googleInfo[$placeID]['google-rating'] = $res['rating'];						
@@ -554,7 +575,7 @@ add_action('init', function () {
 					$googleInfo[$placeID]['phone-format'] = $customer_info['area-before'].$googleInfo[$placeID]['area'].$customer_info['area-after'].$googleInfo[$placeID]['phone'];	
 
 					$name = strtolower($res['displayName']['text']);					
-					$name = str_replace( array('llc', 'hvac', 'a/c', 'inc', 'mcm', 'a-ale', 'hph', 'lecornu', 'ss&l'), array('LLC', 'HVAC', 'A/C', 'INC', 'MCM', 'A-Ale', 'HPH', 'LeCornu', 'SS&L'), $name);
+					$name = str_replace( array('llc', 'hvac', 'a/c', 'inc', 'mcm', 'a-ale', 'hph', 'gps plumbing', 'lecornu', 'ss&l', 'ag heat'), array('LLC', 'HVAC', 'A/C', 'INC', 'MCM', 'A-Ale', 'HPH', 'GPS Plumbing', 'LeCornu', 'SS&L', 'AG Heat'), $name);
 					$googleInfo[$placeID]['name'] = ucwords($name);
 					
 					$streetNumber = $street = $subpremise = $city = $state_abbr = $state_full = $county = $country = $zip = '';

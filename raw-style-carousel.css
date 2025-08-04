@@ -13,13 +13,18 @@
 	width:											100%; 
 }
 
-carousel.slider-mask::before {
-	content: 										"";
+.carousel .slider-mask {
+  --mask-dot-size: 									2px;
+  --mask-dot-color1: 								var(--black-med-high);
+  --mask-dot-color2: 								var(--black-med);
   	position: 										absolute;
-	z-index: 										5000;
+	top: 											0;
+	left: 											0;
+	z-index: 										2000;
   	width: 											100%;
   	height: 										100%;
-  	background: 									var(--black-low);
+  	background: 									repeating-linear-gradient(0deg, var(--mask-dot-color1), var(--mask-dot-color1) var(--mask-dot-size), var(--mask-dot-color2) var(--mask-dot-size), var(--mask-dot-color2) calc(var(--mask-dot-size) * 2)),
+    												repeating-linear-gradient(90deg, var(--mask-dot-color1), var(--mask-dot-color1) var(--mask-dot-size), var(--mask-dot-color2) var(--mask-dot-size), var(--mask-dot-color2) calc(var(--mask-dot-size) * 2));
 }
 
 .carousel.pointer-event {
@@ -194,7 +199,7 @@ carousel.slider-mask::before {
  	top: 											50%;
 	justify-content: 								space-between;
 	padding: 										0 3vw;
-	z-index: 										1000;
+	z-index: 										3000;
 }
 /*
 .carousel a.carousel-control-next, 
@@ -308,10 +313,22 @@ carousel.slider-mask::before {
 }
 
 .carousel .caption-holder {
-	z-index:										1000;
-	width:											100%;
+	position: 										absolute;
+	z-index:										6000;
+	width:											40%;
+	height: 										auto;
 	text-align:										center;
-	margin:											var(--measure-small) 0 0;
+	top: 											15%;
+	transform: 										translateY(50%);
+	left: 											10%;
+	background: 									var(--black-med);
+	backdrop-filter: 								blur(5px);
+	padding: 										20px;
+}
+
+.carousel .caption-holder h2,
+.carousel .caption-holder p {
+	color: 											var(--white);
 }
 
 .carousel .img-caption {

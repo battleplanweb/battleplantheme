@@ -2210,6 +2210,29 @@ window.formLabelWidth = () => {
 // When using parallax in #wrapper-top, slide the .message below the image on mobile		
 		const message = getObject('#wrapper-top .message');
 		if ( thisDeviceW < mobileCutoff ) moveDiv(message, '#wrapper-top .section-parallax-disabled', 'after');
+		
+// When using parallax in #wrapper-top, determine which background to load for desktop or mobile		
+		const el = getObjects('.load-bg').forEach(el=>{
+			const w = window.innerWidth
+			const iw = parseInt(el.dataset.imgWidth)
+			const ih = parseInt(el.dataset.imgHeight)
+			const ratio = iw && ih ? iw / ih : 2
+			const b = el.dataset.imgBase
+			const e = el.dataset.imgExt
+			const r = w<=480?480: w<=640?640: w<=960?960: w<=1280?1280:1920;
+			const h = Math.round(r / ratio)
+			const src = `${b}-${r}x${h}.${e}`
+
+			const link = document.createElement('link')
+			link.rel = 'preload'
+			link.as = 'image'
+			link.href = src
+			document.head.appendChild(link)
+
+			el.style.backgroundImage = `url(${src})`
+			el.style.height = `${h}px`
+			el.classList.add(`screen-${r}`)
+		})
 	};
 
 /*--------------------------------------------------------------

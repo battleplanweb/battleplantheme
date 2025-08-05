@@ -1775,8 +1775,14 @@ function battleplan_getGoogleRating() {
 
 // Set up URL re-directs
 $pid = is_array($GLOBALS['customer_info']['pid']) ? $GLOBALS['customer_info']['pid'][0] : $GLOBALS['customer_info']['pid'];
+$goog_rev = $GLOBALS['customer_info']['google-review'];
 if ( _PAGE_SLUG == "google" && strlen( $pid ) > 10 ) : 
-	wp_redirect( "https://search.google.com/local/reviews?placeid=".$pid."&hl=en&gl=US", 301 ); 
+	$pid = is_array($GLOBALS['customer_info']['pid']) ? $GLOBALS['customer_info']['pid'][0] : $GLOBALS['customer_info']['pid'];
+	if ( $pid != '' ) {
+		wp_redirect( "https://search.google.com/local/reviews?placeid=".$pid."&hl=en&gl=US", 301 ); 
+	} elseif ( $goog_rev != '' ) {
+		wp_redirect( $goog_rev, 301 ); 
+	}
 	exit; 
 endif;
 if ( _PAGE_SLUG == "facebook" && strlen( $GLOBALS['customer_info']['facebook'] ) > 10 ) : 

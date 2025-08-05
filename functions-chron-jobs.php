@@ -516,10 +516,11 @@ function processChron($forceChron) {
 		$apiKey .= "-YVdVP8";	
 		$googleInfo = get_option('bp_gbp_update');
 		$today = strtotime(date("F j, Y"));	
-		$daysSinceCheck = $today - intval($googleInfo['date']);
+		$daysSinceCheck = ($today - intval($googleInfo['date'])) / 86400;
+		
 		if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
 		
-		if ( $daysSinceCheck > 10 ) :
+		if ( $forceChron == true || $daysSinceCheck > 5 ) :
 	
 	
 	

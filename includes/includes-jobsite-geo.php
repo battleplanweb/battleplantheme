@@ -93,7 +93,7 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 				if ($data['status'] == 'OK') {
 					update_post_meta($post_id, 'geocode', $data['results'][0]['geometry']['location']);
 				} else {
-					mail('glendon@battleplanwebdesign.com', 'Geocoding API Error', "\n\nFull response:\n" . $data['status']);
+					mail('glendon@battleplanwebdesign.com', 'Geocoding API Error - '.$GLOBALS['customer_info']['name'], "\n\nFull response:\n" . $data['status']);
 				}
 			endif;	
 		endif;

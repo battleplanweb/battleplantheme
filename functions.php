@@ -1571,7 +1571,7 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 
 			$item_output  = $args->before;
 			$item_output .= '<a' . $attributes . '>';
-			$item_output .= $args->link_before . $title . ($has_children ? ' [get-icon type="caret-down"]' : '') . $args->link_after;
+			$item_output .= $args->link_before . $title . ($has_children ? ' [get-icon type="sub-menu-icon"]' : '') . $args->link_after;
 			$item_output .= '</a>';
 			$item_output .= $args->after;
 

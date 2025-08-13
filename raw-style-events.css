@@ -149,6 +149,8 @@ h2.month-divider {
 #calendar .body .event a {
 
 
+
+
 	text-decoration: 								none;
 }
 
@@ -175,18 +177,14 @@ h2.month-divider {
 	order: 											1;
 }
 
-.calendar-buttons #prevButton::before, 
-.calendar-buttons #nextButton:after { 
+.calendar-buttons #prevButton, 
+.calendar-buttons #nextButton { 
 	display: 										block;
-	font-family: 									var(--font-icons);
-	content: 										"\e218";
-	font-size:										85%;
 	margin: 										0 0 0 20px;
 }
 
-.calendar-buttons #prevButton:after  {
+.calendar-buttons #prevButton  {
 	margin: 										0 20px 0 0;
-	transform: 										rotate(180deg);
 }
 
 /*--------------------------------------------------------------
@@ -206,10 +204,10 @@ h2.month-divider {
 	font-style: 									italic;
 }	
 
-.event-date .date-icon::before, 
-.event-time .time-icon::before, 
-.event-location .location-icon::before,
-.event-location .empty-icon::before {
+.event-date .date-icon, 
+.event-time .time-icon, 
+.event-location .location-icon,
+.event-location .empty-icon {
 	content: 										"";
 	display: 										inline-block;
 	text-align: 									center;
@@ -217,24 +215,11 @@ h2.month-divider {
 	padding-right: 									6px;
 }
 
-.event-date .date-icon::before, 
-.event-time .time-icon::before, 
-.event-location .location-icon::before {
-	font-family: 									var(--font-icons);
-	content: 										"\e077";
+.event-date .date-icon, 
+.event-time .time-icon, 
+.event-location .location-icon {
 	color: 											inherit;
 }
-
-.event-time .time-icon::before {
-	content: 										"\e07a";
-	font-size:										calc(var(--font-size-text) * .92);
-}
-.event-location .location-icon::before {
-	content: 										"\e0b7";
-	font-size:										calc(var(--font-size-text) * 1.13);
-
-}
-
 
 /*--------------------------------------------------------------
 # Event Archives

@@ -43,39 +43,38 @@ function battleplan_restrictContent( $atts, $content = null ) {
 // Section
 add_shortcode( 'section', 'battleplan_buildSection' );
 function battleplan_buildSection( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'hash'=>'', 'style'=>'', 'theme'=>'', 'width'=>'', 'grid'=>'', 'break'=>'', 'valign'=>'', 'css'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'class'=>'', 'start'=>'', 'end'=>'', 'track'=>'' ), $atts );
-	$name = strtolower(esc_attr($a['name']));
-	$name = preg_replace("/[\s_]/", "-", $name);
-	$name = $name ? ' id="'.$name.'"' : '';
-	$hash = esc_attr($a['hash']) != '' ? 'data-hash="'.esc_attr($a['hash']).'"' : '';
-	$css = esc_attr($a['css']);
-	$background = esc_attr($a['background']);
-	$left = esc_attr($a['left']);
-	$top = esc_attr($a['top']);
-	$width = esc_attr($a['width']) != '' ? ' section-'.esc_attr($a['width']) : '';
-	$class = esc_attr($a['class']) != '' ? ' '.esc_attr($a['class']) : '';
-	$style = esc_attr($a['style']) != '' ? ' style-'.esc_attr($a['style']) : '';
+	$a = shortcode_atts( array( 'name'=>'', 'class'=>'', 'style'=>'', 'width'=>'', 'break'=>'', 'valign'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'css'=>'', 'hash'=>'', 'grid'=>'' ), $atts );
+	$name = preg_replace("/[\s_]/", "-", strtolower(esc_attr($a['name'])));
+	$name = $name !== '' ? ' id="'.$name.'"' : '';
+	$class = esc_attr($a['class']) !== '' ? ' '.esc_attr($a['class']) : '';
+	$style = esc_attr($a['style']) !== '' ? ' style-'.esc_attr($a['style']) : '';
+	$width = esc_attr($a['width']) !== '' ? ' section-'.esc_attr($a['width']) : '';
+	$break = esc_attr($a['break']) !== '' ? ' break-'.esc_attr($a['break']) : '';
+	$valign = esc_attr($a['valign']) !== '' ? ' valign-'.esc_attr($a['valign']) : '';
 	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));	
-	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
-	if ( $tracking != '' ) $class .= " tracking";
-
 	if ( $start || $end ) {
 		$now = time(); 
 		if ( $start && $now < $start ) return null;
 		if ( $end && $now > $end ) return null;		
 	}
-	$theme = esc_attr($a['theme']) != '' ? ' style-'.esc_attr($a['theme']) : '';
-	$valign = esc_attr($a['valign']) != '' ? ' valign-'.esc_attr($a['valign']) : '';
-	$break = esc_attr($a['break']) != '' ? ' break-'.esc_attr($a['break']) : '';
-	$buildLayout = esc_attr($a['grid']) != '' ? '<div class="flex grid-'.esc_attr($a['grid']).$valign.$break.$class.'">'.do_shortcode($content).'</div>' : do_shortcode($content);
-	$buildSection = '<section'.$name.' class="section'.$style.$theme.$width.$class.'" '.$hash.$tracking;
-	if ( $background != "" || $css != "" ) :
+	$tracking = esc_attr($a['track']) !== '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
+	if ( $tracking !== '' ) $class .= " tracking";
+	$background = esc_attr($a['background']);
+	$left = esc_attr($a['left']);
+	$top = esc_attr($a['top']);
+	$css = esc_attr($a['css']);	
+	$hash = esc_attr($a['hash']) !== '' ? 'data-hash="'.esc_attr($a['hash']).'"' : '';
+	
+	$buildLayout = esc_attr($a['grid']) !== '' ? '<div class="flex grid-'.esc_attr($a['grid']).$valign.$break.$class.'">'.do_shortcode($content).'</div>' : do_shortcode($content);	
+	
+	$buildSection = '<section'.$name.' class="section'.$style.$width.$class.'" '.$hash.$tracking;
+	if ( $background !== '' || $css !== '' ) {
 		$buildSection .= ' style="';
-		if ( $css != "" ) $buildSection .= $css;
-		if ( $background != "" ) $buildSection .= ' background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;';	
+		if ( $css !== '' ) $buildSection .= $css;
+		if ( $background !== '' ) $buildSection .= ' background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;';	
 		$buildSection .= '"';
-	endif;
+	}
 	$buildSection .= '>'.$buildLayout.'</section>';	
 	
 	return $buildSection;
@@ -85,8 +84,7 @@ function battleplan_buildSection( $atts, $content = null ) {
 add_shortcode( 'nested', 'battleplan_buildNested' );
 function battleplan_buildNested( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'name'=>'', 'grid'=>'1', 'break'=>'', 'valign'=>'', 'class'=>'', 'track'=>'' ), $atts );
-	$name = strtolower(esc_attr($a['name']));
-	$name = preg_replace("/[\s_]/", "-", $name);
+	$name = preg_replace("/[\s_]/", "-", strtolower(esc_attr($a['name'])));
 	$name = $name ? ' id="'.$name.'"' : '';
 	$grid = esc_attr($a['grid']);
 	$class = esc_attr($a['class']);
@@ -98,112 +96,45 @@ function battleplan_buildNested( $atts, $content = null ) {
 	if ( $valign != '' ) $valign = " valign-".$valign;
 	if ( $break != '' ) $break = " break-".$break;
 
-	$buildLayout = '<div'.$name.' class="flex nested grid-'.$grid.$valign.$break.$class.'" '.$tracking.'">'.do_shortcode($content).'</div>';	
-	
-	return $buildLayout;
+	return '<div'.$name.' class="flex nested grid-'.$grid.$valign.$break.$class.'" '.$tracking.'">'.do_shortcode($content).'</div>';
 }
 
 // Layout
 add_shortcode( 'layout', 'battleplan_buildLayout' );
 function battleplan_buildLayout( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'grid'=>'1', 'break'=>'', 'valign'=>'', 'class'=>'', 'track'=>'', 'gap'=>'' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'grid'=>'1', 'gap'=>'', 'break'=>'', 'valign'=>'', 'class'=>'', 'track'=>'' ), $atts );
+	$name = preg_replace("/[\s_]/", "-", strtolower(esc_attr($a['name'])));
+	$name = $name ? ' id="'.$name.'"' : '';	
 	$grid = esc_attr($a['grid']);
-	$gap = esc_attr($a['gap']) !== '' ? ' style="gap:'.esc_attr($a['gap']).'"' : '';
-	
-	if ( strpos($grid,'px') !== false || strpos($grid,'em') !== false || strpos($grid,'fr') !== false ) :
+	if ( strpos($grid,'px') !== false || strpos($grid,'em') !== false || strpos($grid,'fr') !== false ) {
 		$custom_grid = 'style="grid-template-columns: '.$grid.'" ';
 		$grid = 'custom';
-	else: $custom_grid = '';
-	endif;	
+	} else {
+		$custom_grid = '';
+	}	
+	$gap = esc_attr($a['gap']) !== '' ? ' style="gap:'.esc_attr($a['gap']).'"' : '';
+	$break = esc_attr($a['break']) !== '' ? ' break-'.esc_attr($a['break']) : '';
+	$valign = esc_attr($a['valign']) !== '' ? ' valign-'.esc_attr($a['valign']) : '';
+	$class = esc_attr($a['class']) !== '' ? ' '.esc_attr($a['class']) : '';
+	$tracking = esc_attr($a['track']) !== '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
+	if ( $tracking !== '' ) $class .= " tracking";
 	
-	$name = strtolower(esc_attr($a['name']));
-	$name = preg_replace("/[\s_]/", "-", $name);
-	$name = $name ? ' id="'.$name.'"' : '';	
-	$class = esc_attr($a['class']);
-	if ( $class != '' ) $class = " ".$class;
-	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
-	if ( $tracking != '' ) $class .= " tracking";
-	$break = esc_attr($a['break']);
-	$valign = esc_attr($a['valign']);
-	if ( $valign != '' ) $valign = " valign-".$valign;
-	if ( $break != '' ) $break = " break-".$break;
-
-	$buildLayout = '<div'.$name.' class="flex grid-'.$grid.$valign.$break.$class.'"'.$gap.$tracking.$custom_grid.'>'.do_shortcode($content).'</div>';	
-	
-	return $buildLayout;
+	return '<div'.$name.' class="flex grid-'.$grid.$valign.$break.$class.'"'.$gap.$tracking.$custom_grid.'>'.do_shortcode($content).'</div>';	
 }
 
 // Column
 add_shortcode( 'col', 'battleplan_buildColumn' );
 function battleplan_buildColumn( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'hash'=>'', 'order'=>'', 'class'=>'', 'align'=>'', 'valign'=>'', 'h-span'=>'', 'v-span'=>'', 'break'=>'', 'css'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'start'=>'', 'end'=>'', 'track'=>'', 'gap'=>'' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'class'=>'', 'order'=>'', 'break'=>'', 'align'=>'', 'valign'=>'', 'h-span'=>'', 'v-span'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'css'=>'', 'hash'=>'', 'gap'=>'' ), $atts );
 	$name = preg_replace("/[\s_]/", "-", strtolower(esc_attr($a['name'])));
-	$name = $name ? " id='".$name."'" : '';
-	$hash = esc_attr($a['hash']) != '' ? 'data-hash="'.esc_attr($a['hash']).'"' : '';
-	$class = esc_attr($a['class']) != '' ? " ".esc_attr($a['class']) : '';
-	$align = esc_attr($a['align']) != '' ? " text-".esc_attr($a['align']) : '';
-	$valign = esc_attr($a['valign']) != '' ? " valign-".esc_attr($a['valign']) : '';
-	$css = esc_attr($a['css']);
-	$background = esc_attr($a['background']);
-	$left = esc_attr($a['left']);
-	$top = esc_attr($a['top']);
-	$start = strtotime(esc_attr($a['start']));
-	$end = strtotime(esc_attr($a['end']));
-	$gap = esc_attr($a['gap']) !== '' ? ' style="gap:'.esc_attr($a['gap']).'"' : '';
-	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
-	if ( $tracking != '' ) $class .= " tracking";
-	$order = esc_attr($a['order']) != '' ? 'order: '.esc_attr($a['order']).' !important;' : '';
-	$hSpan = esc_attr($a['h-span']) != '' ? 'grid-column: span '.esc_attr($a['h-span']).' !important;' : '';
-	$vSpan = esc_attr($a['v-span']) != '' ? 'grid-row: span '.esc_attr($a['v-span']).' !important;' : '';	
+	$name = $name !== '' ? ' id="'.$name.'"' : '';
+	$class = esc_attr($a['class']) !== '' ? ' '.esc_attr($a['class']) : '';	
+	$order = esc_attr($a['order']) !== '' ? 'order: '.esc_attr($a['order']).' !important;' : '';
 	$break = esc_attr($a['break']) !== '' ? ' break-'.esc_attr($a['break']) : '';	
-	$style = $order || $hSpan || $vSpan ? " style='".$order.$hSpan.$vSpan."'" : '';
-	if ( $start || $end ) {
-		$now = time(); 
-		if ( $start && $now < $start ) return null;
-		if ( $end && $now > $end ) return null;		
-	}
-	$buildCol = '<div'.$name.' class="col '.$class.$align.$valign.$break.'" '.$tracking.$hash.$style.'><div class="col-inner"'.$gap;
-	if ( $background != "" || $css != "" ) :
-		$buildCol .= ' style="';
-		if ( $css != "" ) $buildCol .= $css;
-		if ( $background != "" ) $buildCol .= ' background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;';	
-		$buildCol .= '"';
-	endif;
-	$buildCol .= '>';
-	$buildCol .= do_shortcode($content);
-	$buildCol .= '</div></div>';	
-	
-	return $buildCol;
-}
-
-// Image Block
-add_shortcode( 'img', 'battleplan_buildImg' );
-function battleplan_buildImg( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'', 'ada-hidden'=>'false', 'class'=>'', 'start'=>'', 'end'=>'', 'track'=>'' ), $atts );
-	$order = esc_attr($a['order']);	
-	if ( $order != '' ) : $style = " style='order: ".$order." !important'"; else: $style = ""; endif;
-	$getBiz = esc_attr($a['get-biz']);
-	if ( $getBiz == "" ) {
-		$linkClass = "";
-		$link = esc_attr($a['link']);
-		if ( $link == "" || $link == "none" || $link == "no" ) {
-			$linkClass=" class='no-link'"; 
-			$link = '';	
-		}
-		if ( strpos($link, 'pdf') ) $link .= "?id=".time();	
-	} else {
-		$link = do_shortcode( '[get-biz info="'.$getBiz.'"]' );
-	};
-	$size = esc_attr($a['size']);	
-	$size = convertSize($size);
-	$class = esc_attr($a['class']);
-	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
-	if ( $tracking != '' ) $class .= " tracking";
-	$hidden = esc_attr($a['ada-hidden']);
-	if ( $hidden == "true" ) : $hidden = " aria-hidden='true' tabindex='-1'"; else: $hidden = ""; endif;
-	$target = esc_attr($a['new-tab']);
-	if ( $target == 'yes' || $target == "true" ) $target = 'target="_blank"';
-	if ( $class != '' ) $class = " ".$class;
+	$align = esc_attr($a['align']) !== '' ? " text-".esc_attr($a['align']) : '';
+	$valign = esc_attr($a['valign']) !== '' ? " valign-".esc_attr($a['valign']) : '';
+	$hSpan = esc_attr($a['h-span']) !== '' ? 'grid-column: span '.esc_attr($a['h-span']).' !important;' : '';
+	$vSpan = esc_attr($a['v-span']) !== '' ? 'grid-row: span '.esc_attr($a['v-span']).' !important;' : '';		
 	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));	
 	if ( $start || $end ) {
@@ -211,11 +142,87 @@ function battleplan_buildImg( $atts, $content = null ) {
 		if ( $start && $now < $start ) return null;
 		if ( $end && $now > $end ) return null;		
 	}
+	$tracking = esc_attr($a['track']) !== '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
+	if ( $tracking !== '' ) $class .= " tracking";
+	$background = esc_attr($a['background']);
+	$left = esc_attr($a['left']);
+	$top = esc_attr($a['top']);
+	$css = esc_attr($a['css']);	
+	$hash = esc_attr($a['hash']) !== '' ? 'data-hash="'.esc_attr($a['hash']).'"' : '';
+	$gap = esc_attr($a['gap']) !== '' ? ' style="gap:'.esc_attr($a['gap']).'"' : '';
+	$style = $order || $hSpan || $vSpan ? " style='".$order.$hSpan.$vSpan."'" : '';
+	
+	$buildCol = '<div'.$name.' class="col '.$class.$align.$valign.$break.'" '.$tracking.$hash.$style.'><div class="col-inner"'.$gap;
+	if ( $background !== "" || $css !== "" ) {
+		$buildCol .= ' style="';
+		if ( $css !== "" ) $buildCol .= $css;
+		if ( $background !== "" ) $buildCol .= ' background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;';	
+		$buildCol .= '"';
+	}
+	$buildCol .= '>';
+	$buildCol .= do_shortcode($content);
+	$buildCol .= '</div></div>';	
+	
+	return $buildCol;
+}
+
+// Group & Text Blocks
+add_shortcode('group', 'battleplan_buildGroup');
+add_shortcode('txt',   'battleplan_buildGroup');
+function battleplan_buildGroup($atts, $content=null, $tag=''){
+	$a = shortcode_atts(['size'=>'100', 'class'=>'', 'start'=>'', 'end'=>'', 'order'=>'', 'track'=>''], $atts);
+	$size = convertSize(esc_attr($a['size']));
+	$class = esc_attr($a['class']) !== '' ? ' '.esc_attr($a['class']) : '';	
+	$start = strtotime(esc_attr($a['start']));
+	$end = strtotime(esc_attr($a['end']));	
+	if ( $start || $end ) {
+		$now = time(); 
+		if ( $start && $now < $start ) return null;
+		if ( $end && $now > $end ) return null;		
+	}	
+	$order = esc_attr($a['order']) !== '' ? ' style="order: '.esc_attr($a['order']).' !important"' : '';
+	$tracking = esc_attr($a['track']) !== '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
+	if ( $tracking !== '' ) $class .= " tracking";
+
+	$block = ($tag==='group') ? 'group' : 'text';
+	return '<div class="block block-'.$block.' span-'.$size.$class.'"'.$tracking.$style.'>'.do_shortcode($content).'</div>';
+}
+
+// Image Block
+add_shortcode( 'img', 'battleplan_buildImg' );
+function battleplan_buildImg( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'size'=>'100', 'class'=>'', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'', 'ada-hidden'=>'false', 'start'=>'', 'end'=>'', 'track'=>'' ), $atts );
+	$size = convertSize(esc_attr($a['size']));
+	$class = esc_attr($a['class']) !== '' ? ' '.esc_attr($a['class']) : '';	
+	$style = esc_attr($a['order']) !== '' ? " style='order: ".esc_attr($a['order'])." !important'" : '';
+	$getBiz = esc_attr($a['get-biz']);
+	if ( $getBiz === "" ) {
+		$linkClass = "";
+		$link = esc_attr($a['link']);
+		if ( $link === "" || $link === "none" || $link === "no" ) {
+			$linkClass=" class='no-link'"; 
+			$link = '';	
+		}
+		if ( strpos($link, 'pdf') ) $link .= "?id=".time();	
+	} else {
+		$link = do_shortcode( '[get-biz info="'.$getBiz.'"]' );
+	};
+	$target = esc_attr($a['new-tab']) === "yes" || esc_attr($a['new-tab']) === "true" ? 'target="_blank"' : '';	
+	$hidden = esc_attr($a['ada-hidden']) === "true" ? " aria-hidden='true' tabindex='-1'" : ""; 
+	$start = strtotime(esc_attr($a['start']));
+	$end = strtotime(esc_attr($a['end']));	
+	if ( $start || $end ) {
+		$now = time(); 
+		if ( $start && $now < $start ) return null;
+		if ( $end && $now > $end ) return null;		
+	}	
+	$tracking = esc_attr($a['track']) !== '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
+	if ( $tracking !== '' ) $class .= " tracking";
 
 	$buildImg = '<div class="block block-image span-'.$size.$class.'" '.$tracking.$style.'>';
-	if ( $link != '' ) : $buildImg .= '<a '.$target.$linkClass.' href="'.$link.'"'.$hidden.'>'; endif;
+	if ( $link !== '' ) $buildImg .= '<a '.$target.$linkClass.' href="'.$link.'"'.$hidden.'>'; 
 	$buildImg .= do_shortcode($content);
-	if ( $link != '' ) : $buildImg .= '</a>'; endif; 
+	if ( $link !== '' )  $buildImg .= '</a>'; 
 	$buildImg .= '</div>';
 
 	return $buildImg;
@@ -224,27 +231,14 @@ function battleplan_buildImg( $atts, $content = null ) {
 // Video Block
 add_shortcode( 'vid', 'battleplan_buildVid' );
 function battleplan_buildVid( $atts, $content = null ) {
-	//wp_enqueue_script( 'battleplan-accordion', get_template_directory_uri().'/js/script-accordion.js', array(), _BP_VERSION, false );	
 	wp_enqueue_style( 'battleplan-video', get_template_directory_uri()."/style-video.css", array('parent-style'), _BP_VERSION );  
 	
-	$a = shortcode_atts( array( 'size'=>'100', 'mobile'=>'100', 'order'=>'', 'link'=>'', 'thumb'=>'', 'preload'=>'false', 'class'=>'', 'related'=>'false', 'start'=>'', 'end'=>'', 'fullscreen'=>'false', 'controls'=>'true', 'autoplay'=>'false', 'loop'=>'false', 'muted'=>'false', 'begin'=>'', 'track'=>'' ), $atts );
-	$related = esc_attr($a['related']);	
-	$order = esc_attr($a['order']);	
-	if ( $order != '' ) : $style = " style='order: ".$order." !important'"; else: $style = ""; endif;
-	$link = esc_attr($a['link']);	
-	$thumb = esc_attr($a['thumb']);	
-	$preload = esc_attr($a['preload']);	
+	$a = shortcode_atts( array( 'size'=>'100', 'mobile'=>'100', 'class'=>'', 'order'=>'', 'link'=>'', 'thumb'=>'', 'start'=>'', 'end'=>'', 'preload'=>'false', 'related'=>'false', 'fullscreen'=>'false', 'controls'=>'true', 'autoplay'=>'false', 'loop'=>'false', 'muted'=>'false', 'begin'=>'', 'track'=>'' ), $atts );
 	$size = convertSize(esc_attr($a['size']));	
-	//$height = 56.25 * ($size/12);	
-	$mobile = esc_attr($a['mobile']);	
-	$controls = esc_attr($a['controls']);
-	$autoplay = esc_attr($a['autoplay']);
-	$loop = esc_attr($a['loop']);
-	$muted = esc_attr($a['muted']);
-	$begin = esc_attr($a['begin']);
-	$fullscreen = esc_attr($a['fullscreen']);
-	if ( $fullscreen == 'true' ) $style .= "margin: 0; ";
-	$class = esc_attr($a['class']) == '' ? '' : ' '.esc_attr($a["class"]); 
+	$mobile = esc_attr($a['mobile']) !== '100' ? ' data-mobile-w="'.$mobile.'"' : '';
+	$class = esc_attr($a['class']) !== '' ? ' '.esc_attr($a['class']) : '';		
+	$link = esc_attr($a['link']);	
+	$thumb = esc_attr($a['thumb']);
 	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));	
 	if ( $start || $end ) {
@@ -252,8 +246,23 @@ function battleplan_buildVid( $atts, $content = null ) {
 		if ( $start && $now < $start ) return null;
 		if ( $end && $now > $end ) return null;		
 	}
-	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
-	if ( $tracking != '' ) $class .= " tracking";
+	$preload = esc_attr($a['preload']);		
+	$related = esc_attr($a['related']);	
+	$order = esc_attr($a['order']);
+	$fullscreen = esc_attr($a['fullscreen']);
+	if ( $order !== '' || $fullscreen !== "false" ) {
+		$style = ' style="';
+		if ( $order !== '' ) $style .= 'order: '.$order.'  !important; ';
+		if ( $fullscreen !== 'false' ) $style .= 'margin: 0; ';
+		$style = '"';
+	}
+	$controls = esc_attr($a['controls']);
+	$autoplay = esc_attr($a['autoplay']);
+	$loop = esc_attr($a['loop']);
+	$muted = esc_attr($a['muted']);
+	$begin = esc_attr($a['begin']);
+	$tracking = esc_attr($a['track']) !== '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
+	if ( $tracking !== '' ) $class .= " tracking";
 	
 	if ( ( strpos($link, 'youtube') !== false || strpos($link, 'youtu.be') !== false || strpos($link, 'vimeo') !== false ) && $preload == "false" ) :
 		if ( strpos($link, 'youtube') !== false || strpos($link, 'youtu.be') !== false ) :
@@ -269,13 +278,13 @@ function battleplan_buildVid( $atts, $content = null ) {
 	
 			$link = 'https://www.youtube.com/embed/'.$vid_id.'?autoplay=1&enablejsapi=1&version=3&playerapiid=ytplayer';
 	
-			if ( $thumb == '' ) : $thumb = '//i.ytimg.com/vi/'.$vid_id.'/hqdefault.jpg'; endif;		
-			if ( $related == "false" ) : $link .= "&rel=0";	endif;	
-			if ( $begin != "" ) : $link .= "&start=".$begin; endif;	
+			if ( $thumb === '' ) : $thumb = '//i.ytimg.com/vi/'.$vid_id.'/hqdefault.jpg'; endif;		
+			if ( $related === "false" ) : $link .= "&rel=0";	endif;	
+			if ( $begin !== "" ) : $link .= "&start=".$begin; endif;	
 		else:
 			$id = str_replace(['https://player.vimeo.com/video/', 'https://vimeo.com/'], '', $link);
 			$link .= "?autoplay=1&title=0&byline=0&portrait=0";
-			if ( $thumb == '' ) :			
+			if ( $thumb === '' ) :			
 				$data = file_get_contents('https://vimeo.com/api/v2/video/'.$id.'.json');
 				$data = json_decode($data);
 				$thumb = str_replace('http:', '', $data[0]->thumbnail_large.'.jpg');
@@ -285,18 +294,19 @@ function battleplan_buildVid( $atts, $content = null ) {
 		return '<div class="block block-video span-'.$size.$class.' video-player"'.$tracking.' style="'.$style.'" data-thumb="'.$thumb.'" data-link="'.$link.'" data-id="'.$id.'"></div>';
 
 	else:
-		//return '<div class="block block-video span-'.$size.$class.'" style="'.$style.' padding-top:'.$height.'%"><iframe src="" data-src="'.$link.'" data-loading="delay" allowfullscreen></iframe></div>';
-		$extension = substr($link, strpos($link, '.') + 1);
+		$dotPos = strrpos($link, '.');
+		$extension = substr($link, $dotPos + 1);
+		$file = substr($link, 0, $dotPos);
 		$buildVid = '<div class="block block-video span-'.$size.$class.'"'.$tracking.'" style="'.$style.'">';
-		$buildVid .= '<video ';
+		$buildVid .= '<video playsinline ';
 		if ( $controls == 'true' ) $buildVid .= 'controls ';
 		if ( $autoplay == 'true' ) $buildVid .= 'autoplay ';
 		if ( $loop == 'true' ) $buildVid .= 'loop ';
 		if ( $muted == 'true' ) $buildVid .= 'muted ';
-		$add_data = $mobile != '100' ? ' data-mobile-w="'.$mobile.'"' : '';
 	
-		$buildVid .= 'poster="'.$thumb.'" style="position:relative; top:0; left:0; width:100%; height:100%"'.$add_data.'>';
+		$buildVid .= 'poster="'.$thumb.'" style="position:relative; top:0; left:0; width:100%; height:100%"'.$mobile.'>';
 		$buildVid .= '<source src="'.$link.'" type="video/'.$extension.'">';
+		if ( $extension === 'webm' ) $buildVid .= '<source src="'.$file.'-ios.mp4" type="video/mp4">';	// fallback for iOS
 		$buildVid .= '<img loading="lazy" src="'.$thumb.'">';
 		$buildVid .= '</video></div>';
 		
@@ -304,93 +314,41 @@ function battleplan_buildVid( $atts, $content = null ) {
 	endif;	
 }
 
-// Group Block
-add_shortcode( 'group', 'battleplan_buildGroup' );
-function battleplan_buildGroup( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'class'=>'', 'start'=>'', 'end'=>'', 'track'=>'' ), $atts );
-	$size = esc_attr($a['size']);	
-	$size = convertSize($size);
-	$order = esc_attr($a['order']);	
-	if ( $order != '' ) : $style = " style='order: ".$order." !important'"; else: $style = ""; endif;
-	$class = esc_attr($a['class']);
-	if ( $class != '' ) $class = " ".$class;
-	$start = strtotime(esc_attr($a['start']));
-	$end = strtotime(esc_attr($a['end']));	
-	if ( $start || $end ) {
-		$now = time(); 
-		if ( $start && $now < $start ) return null;
-		if ( $end && $now > $end ) return null;		
-	}
-	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
-	if ( $tracking != '' ) $class .= " tracking";
-
-	return '<div class="block block-group span-'.$size.$class.'" '.$tracking.$style.'>'.do_shortcode($content).'</div>';
-}
-
-// Text Block
-add_shortcode( 'txt', 'battleplan_buildText' );
-function battleplan_buildText( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'order'=>'', 'class'=>'', 'start'=>'', 'end'=>'', 'track'=>'' ), $atts );
-	$size = esc_attr($a['size']);	
-	$size = convertSize($size);
-	$order = esc_attr($a['order']);	
-	if ( $order != '' ) : $style = " style='order: ".$order." !important'"; else: $style = ""; endif;
-	$class = esc_attr($a['class']);
-	if ( $class != '' ) $class = " ".$class;
-	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
-	if ( $tracking != '' ) $class .= " tracking";
-	$start = strtotime(esc_attr($a['start']));
-	$end = strtotime(esc_attr($a['end']));	
-	if ( $start || $end ) {
-		$now = time(); 
-		if ( $start && $now < $start ) return null;
-		if ( $end && $now > $end ) return null;		
-	}
-
-	return '<div class="block block-text span-'.$size.$class.'" '.$tracking.$style.'>'.do_shortcode($content).'</div>';
-}
-
 // Button Block
 add_shortcode( 'btn', 'battleplan_buildButton' );
 function battleplan_buildButton( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'align'=>'center', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'', 'class'=>'', 'track'=>'', 'fancy'=>'', 'icon'=>'false', 'top'=>0, 'left'=>0, 'graphic'=>'false', 'graphic-w'=>'40', 'ada'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'onclick'=>'' ), $atts );
+	$a = shortcode_atts( array( 'size'=>'100', 'align'=>'center', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'false', 'class'=>'', 'fancy'=>'false', 'icon'=>'false', 'top'=>0, 'left'=>0, 'graphic'=>'false', 'graphic-w'=>'40', 'ada'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'onclick'=>'' ), $atts );
+	$size = convertSize(esc_attr($a['size']));
+	$align = esc_attr($a['align']) !== 'center' ? " button-".$align : '';	
+	$style = esc_attr($a['order']) !== '' ? " style='order: ".esc_attr($a['order'])." !important'" : '';
 	$getBiz = esc_attr($a['get-biz']);
-	if ( $getBiz == "" ) {
+	if ( $getBiz === "" ) {
+		$linkClass = "";
 		$link = esc_attr($a['link']);
-		if ( $link == "" || $link == "none" || $link == "no" ) $link = "javascript:void(0);";	
+		if ( $link === "" || $link === "none" || $link === "no" ) {
+			$linkClass=" class='no-link'"; 
+			$link = '';	
+		}
 		if ( strpos($link, 'pdf') ) $link .= "?id=".time();	
 	} else {
 		$link = do_shortcode( '[get-biz info="'.$getBiz.'"]' );
 	};
-	$size = esc_attr($a['size']);	
-	$size = convertSize($size);
-	$align = esc_attr($a['align']);	
-	if ( $align != "center" ) : $align = " button-".$align; else: $align = ""; endif;
-	$order = esc_attr($a['order']);	
-	if ( $order != '' ) : $style = " style='order: ".$order." !important'"; else: $style = ""; endif;
-	$class = esc_attr($a['class']);
-	$ada = esc_attr($a['ada']);
-	if ( $ada != '' ) $ada = ' <span class="screen-reader-text">'.$ada.'</span>';
-	$target = esc_attr($a['new-tab']);
-	if ( $target == 'yes' || $target == "true" ) $target = ' target="_blank"';
-	if ( $class != '' ) $class = " ".$class;
-	$fancy = esc_attr($a['fancy']);	
-	$icon = esc_attr($a['icon']);	
-	$graphic = esc_attr($a['graphic']);	
-	$graphicW = esc_attr($a['graphic-w']);		
+	$target = esc_attr($a['new-tab']) === "yes" || esc_attr($a['new-tab']) === "true" ? 'target="_blank"' : '';	
+	$class = esc_attr($a['class']) !== '' ? ' '.esc_attr($a['class']) : '';	
 	$left = esc_attr($a['left']);
-	$top = esc_attr($a['top']);
-	$adjust = $left != 0 || $top != 0 ? ' style="transform: translate('.$left.'px, '.$top.'px)"' : '';
-	if ( $icon == "true" ) $icon = "chevron-right";	
-	if ( $fancy !== "" ) $fancy = "-".$fancy;
-	if ( $icon != "false" ) : 
+	$top = esc_attr($a['top']);	
+	$icon = esc_attr($a['icon']) === 'true' ? "chevron-right" : '';	
+	$fancy = esc_attr($a['fancy']) !== '' ? "-".$fancy : '';	
+	if ( $icon !== "false" ) : 
 		wp_enqueue_style( 'battleplan-fancy-btn', get_template_directory_uri()."/style-fancy-btn.css", array('parent-style'), _BP_VERSION ); 
 		$class .= " fancy".$fancy; 
-		$content = '<span class="fancy-text">'.$content.'</span><span class="fancy-icon"><span class="icon '.$icon.'"'.$adjust.'></span></span>'; 
-		array_push($GLOBALS['icon-css'], $icon);
+		$content = '<span class="fancy-text">'.$content.'</span><span class="fancy-icon">[get-icon type="'.$icon.'" top="'.$top.'" left="'.$left.'"]</span>'; 
 	endif;
-	if ( $graphic != "false" ) : $class .= " graphic-icon"; $content = '<img src="/wp-content/uploads/'.$graphic.'" width="'.$graphicW.'" height="'.$graphicW.'" style="aspect-ratio:'.$graphicW.'/'.$graphicW.'" alt="" /><span class="unique">'.$content.'</span>'; endif;	
-
+	$graphicW = esc_attr($a['graphic-w']);	
+	if ( esc_attr($a['graphic']) !== "false" ) {
+		$class .= " graphic-icon"; 
+		$content = '<img src="/wp-content/uploads/'.esc_attr($a['graphic']).'" width="'.$graphicW.'" height="'.$graphicW.'" style="aspect-ratio:'.$graphicW.'/'.$graphicW.'" alt="" /><span class="unique">'.$content.'</span>';
+	}
 	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));	
 	if ( $start || $end ) {
@@ -398,6 +356,7 @@ function battleplan_buildButton( $atts, $content = null ) {
 		if ( $start && $now < $start ) return null;
 		if ( $end && $now > $end ) return null;	
 	}
+	$ada = esc_attr($a['ada']) !== '' ? ' <span class="screen-reader-text">'.esc_attr($a['ada']).'</span>' : '';	
 	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
 	if ( $tracking != '' ) $class .= " tracking";	
 	$onclick = esc_attr($a['onclick']);
@@ -431,19 +390,16 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 	$class = esc_attr($a['class']);
 	if ( $class != '' ) $class = " ".$class;
 	$title = esc_attr($a['title']);	
-	$icon = esc_attr($a['icon']); 
 	$btnCollapse = esc_attr($a['btn_collapse']);
 	$btn = esc_attr($a['btn']);
 	$scroll = esc_attr($a['scroll']) == "true" ? "" : " no-scroll";
-	$addBtn = $thumb = '';
+	$addBtn = '';
 	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
 	$multiple = esc_attr($a['multiple']) === 'true' ? '' : ' data-multiple="false"';
 	if ( $tracking != '' ) $class .= " tracking";
-	
-	if ( $icon == 'false' ) : $icon = '';
-	elseif ( $icon == 'true' ) : $icon = '<span class="accordion-icon" aria-hidden="true"></span>'; 
-	else: $thumb = '<img src="'.$icon.'" alt="'.$title.'" />'; $icon=''; 
-	endif;
+	$icon = ($v = esc_attr($a['icon'])) === 'true' 
+		? '<span class="accordion-icon" aria-hidden="true">[get-icon type="chevron-right"]</span>' 
+		: ($v === 'false' ? '' : '<span class="accordion-icon" aria-hidden="true">[get-icon type="'.$v.'"]</span>');
 	
 	if ( $title ) $printTitle = '<h2 role="button" tabindex="0" class="accordion-title accordion-button'.$scroll.'">'.$icon.$title.'</h2>';
 	
@@ -467,7 +423,7 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 		if ( $end && $now > $end ) return null;		
 	endif;
 
-	return '<div class="block block-accordion'.$class.$scroll.'"'.$multiple.$tracking.'>'.$thumb.$printTitle.$excerpt.'<div class="accordion-content'.$scroll.'"><div class="accordion-box'.$scroll.'">'.do_shortcode($content).'</div></div>'.$addBtn.'</div>';	
+	return do_shortcode('<div class="block block-accordion'.$class.$scroll.'"'.$multiple.$tracking.'>'.$printTitle.$excerpt.'<div class="accordion-content'.$scroll.'"><div class="accordion-box'.$scroll.'">'.$content.'</div></div>'.$addBtn.'</div>');	
 }
 
 // Parallax Section 
@@ -572,10 +528,15 @@ function battleplan_buildLockedSection( $atts, $content = null ) {
 	
 	return $buildSection; 
 }
+
+	add_action( 'wpcf7_init', function() {
+	remove_action( 'wpcf7_swv_create_schema', 'wpcf7_swv_add_select_enum_rules', 20, 2 );
+	remove_action( 'wpcf7_swv_create_schema', 'wpcf7_swv_add_checkbox_enum_rules', 20, 2 ); // for checkboxes
+});
  
 add_shortcode( 'seek', 'battleplan_formField' );
 function battleplan_formField( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'label'=>'Label', 'show'=>'true', 'label-pos'=>'before', 'label-valign'=>'baseline', 'id'=>'user-input', 'req'=>'false', 'width'=>'default', 'max-w'=>'', 'class'=>''), $atts );
+	$a = shortcode_atts( array( 'label'=>'Label', 'show'=>'true', 'label-pos'=>'before', 'label-valign'=>'baseline', 'id'=>'user-input', 'req'=>'false', 'width'=>'default', 'max-w'=>'', 'class'=>'', 'value'=>''), $atts );
 	$id = esc_attr($a['id']);
 	$label = esc_attr($a['label']); 
 	$labelPos = esc_attr($a['label-pos']);
@@ -583,6 +544,7 @@ function battleplan_formField( $atts, $content = null ) {
 	$req = esc_attr($a['req']);	
 	$width = 'width-'.esc_attr($a['width']);
 	$maxW = esc_attr($a['max-w']);	
+	$value = esc_attr($a['value']) !== '' ? ' data-value="'.esc_attr($a['value']).'"' : '';	
 	if ( $maxW != '' ) $maxW = ' style="margin:0 auto; max-width:'.$maxW.'"';
 	$class = esc_attr($a['class']) != '' ? " ".esc_attr($a['class']) : '';
 	$show = esc_attr($a['show']);
@@ -594,7 +556,7 @@ function battleplan_formField( $atts, $content = null ) {
 		$buildInput .= '<div class="block block-button block-100">'.$content.'</div>';		
 	else:	
 	// removed col from classes 5/19 for animation purposes
-		$buildInput = '<div class="form-input input-'.strtolower(preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(" ","-",$label))).' input-'.$id.' label-pos-'.$labelPos.' '.$width.$class.'"'.$maxW.' '.$aria.'>';
+		$buildInput = '<div class="form-input input-'.strtolower(preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(" ","-",$label))).' input-'.$id.' label-pos-'.$labelPos.' '.$width.$class.'"'.$value.$maxW.' '.$aria.'>';
 		if ( $labelPos == 'after' ) $buildInput .= $content;
 		if ( $show == 'true' ) $buildInput .= '<label for="'.$id.'" class="'.$width.' label-'.$labelValign.'">'.$label;
 		if ( $show == 'true' && $req != 'false' ) $buildInput .= $asterisk;

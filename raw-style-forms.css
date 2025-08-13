@@ -394,9 +394,9 @@ input[type=number] {
 
 .required::after {
 	display: 										inline-block;
-    content: 										"\e0f6";
-	font-family: 									var(--font-icons);
-	font-size:										12px;
+    content: 										"*";
+	font-family: 									var(--font-text);
+	font-size:										14px;
 	color:											var(--warning);
 	margin-left:									5px;
 	transform:										translateY(-35%);
@@ -768,6 +768,9 @@ span.wpcf7-form-control {
 input[type="checkbox"], 
 input[type="radio"] {
 	position: 										relative;
+	inline-size: 									1.1em;
+	block-size: 									1.1em;
+	vertical-align: 								-2px; 
 	cursor: 										pointer;	
 	display:										inline-block;
 	width: 											20px !important;
@@ -800,14 +803,11 @@ input[type="checkbox"]::before,
 input[type="checkbox"]:checked::after,
 input[type="radio"]::before, 
 input[type="radio"]:checked::after {
-	content: 										" ";
+	content: 										"";
 	position: 										absolute;
+	inset: 											0;
 	display: 										block;
-	width: 											100%;
-	height: 										100%;
-	top: 											0;
-	left: 											0;
-	background-color:								transparent;
+	background: 									transparent no-repeat center / contain;
 }
 
 input[type="checkbox"]::before, 
@@ -820,37 +820,56 @@ input[type="radio"]:checked::after {
 	border-radius: 									100%;
 }
 
-input[type="checkbox"]:checked::after { 
-	content: 										"\e13e";
-	transform: 										translate(0, 0);
-	font-size: 										93%;
-	font-family: 									var(--font-icons);
-	color: 											var(--input-color);
-	text-align: 									center;
-	line-height: 									1;
-}
-
-.exes input[type="checkbox"]:checked::after { 
-	content: 										"\e139";
-	font-size: 										93%;
-	transform: 										translate(0, 0);
-}
-
-.crosses input[type="checkbox"]:checked::after { 
-	transform: 										translate(5px, -2px) rotate(45deg);
-	font-size: 										93%;
-}
-
-.checkmarks input[type="checkbox"]:checked::after { 
-	content: 										"\e13e";
-	transform: 										translate(1px, -3px);
-	font-size: 										80%;
-}
-
 input[type="radio"]:checked::after {
 	background-color: 								var(--input-color);
 	border: 										3px solid var(--white);
 }
+
+input[type="checkbox"]:checked::after,
+.checkmarks input[type="checkbox"]:checked::after,
+.checkmarks input[type="radio"]:checked::after { 
+	background-color: 								var(--input-color);
+	-webkit-mask: url('data:image/svg+xml;utf8,\
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">\
+<polyline points="3 8.5 6.5 12 13 4.5" fill="none" stroke="%23000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>\
+</svg>') center / 100% 100% no-repeat;
+	        mask: url('data:image/svg+xml;utf8,\
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">\
+<polyline points="3 8.5 6.5 12 13 4.5" fill="none" stroke="%23000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>\
+</svg>') center / 100% 100% no-repeat;
+}
+
+.exes input[type="checkbox"]:checked::after,
+.exes input[type="radio"]:checked::after { 
+	background-color: var(--input-color);
+	-webkit-mask: url('data:image/svg+xml;utf8,\
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">\
+<line x1="4" y1="4" x2="12" y2="12" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\
+<line x1="12" y1="4" x2="4" y2="12" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\
+</svg>') center / 100% 100% no-repeat;
+	        mask: url('data:image/svg+xml;utf8,\
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">\
+<line x1="4" y1="4" x2="12" y2="12" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\
+<line x1="12" y1="4" x2="4" y2="12" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\
+</svg>') center / 100% 100% no-repeat;
+}
+
+.crosses input[type="checkbox"]:checked::after,
+.crosses input[type="radio"]:checked::after { 
+	background-color: var(--input-color);
+	-webkit-mask: url('data:image/svg+xml;utf8,\
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">\
+<line x1="8" y1="3" x2="8" y2="13" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\
+<line x1="3" y1="8" x2="13" y2="8" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\
+</svg>') center / 100% 100% no-repeat;
+	        mask: url('data:image/svg+xml;utf8,\
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">\
+<line x1="8" y1="3" x2="8" y2="13" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\
+<line x1="3" y1="8" x2="13" y2="8" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\
+</svg>') center / 100% 100% no-repeat;
+}
+
+
 
 .application .flex {
 	border-bottom:									1px solid var(--black);
@@ -940,15 +959,26 @@ input + .wpcf7-not-valid-tip {
 }
 
 span.wpcf7-spinner::before {
-	display:										inline-block;
-	font-family: 									var(--font-icons);
-	content:   										"\e1f9";
-	font-size:										20px;
-	color: 											var(--input-background);
-	animation-name: 								spin; 
-    animation-duration: 							1s; 
-    animation-iteration-count: 						infinite;
-	animation-timing-function: 						linear;
+	display: inline-block;
+	content: "";
+	width: 20px;
+	height: 20px;
+	background-color: var(--input-background);
+	-webkit-mask: url('data:image/svg+xml;utf8,\
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50">\
+<circle cx="25" cy="25" r="20" fill="none" stroke="%23000" stroke-width="5" stroke-linecap="round" stroke-dasharray="31.4 31.4">\
+<animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/>\
+</circle>\
+</svg>') center / contain no-repeat;
+	        mask: url('data:image/svg+xml;utf8,\
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50">\
+<circle cx="25" cy="25" r="20" fill="none" stroke="%23000" stroke-width="5" stroke-linecap="round" stroke-dasharray="31.4 31.4">\
+<animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/>\
+</circle>\
+</svg>') center / contain no-repeat;
+
+	/* CSS animation fallback if animateTransform isn't supported */
+	animation: spin 1s linear infinite;
 }
 
 /* Review Questions & Redirect

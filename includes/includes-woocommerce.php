@@ -21,9 +21,28 @@ add_shortcode( 'get-cart', 'battleplan_getCartNum' );
 function battleplan_getCartNum($atts, $content = null ) {
 	if ( !is_admin() && !is_wplogin() ) :
 		global $woocommerce; $cartQty = $woocommerce->cart->get_cart_contents_count();
-		if ( $cartQty > 0 ) : return "&nbsp;&nbsp;".$cartQty; else: return ""; endif; 
+		$printCart = "[get-icon type='cart' link='/cart/' sr='shopping cart'" . ($cartQty > 0 ? " after='".$cartQty."']" : "]"); 
+		return do_shortcode($printCart);
 	endif;
 }
+
+add_filter('woocommerce_product_add_to_cart_text', function($text, $product){
+	return do_shortcode('[get-icon type="cart"]&nbsp;&nbsp;'. $text);
+}, 10, 2);
+
+add_filter('woocommerce_product_single_add_to_cart_text', function($text){
+	return do_shortcode('[get-icon type="cart"]&nbsp;&nbsp;'. $text);
+}, 10, 1);
+
+add_filter('woocommerce_add_to_cart_fragments', function($frags){
+	$qty = WC()->cart ? WC()->cart->get_cart_contents_count() : 0;
+	$html = '<a class="header-cart-link" href="'.esc_url(wc_get_cart_url()).'">'
+		.'[get-icon type="cart"]'.($qty>0 ? '&nbsp;&nbsp;'.$qty : '')
+		.'</a>';
+	$frags['a.header-cart-link'] = $html;
+	return do_shortcode($frags);
+});
+
 
 // Change labels on woocommerce 'product' post type
 function battleplan_woo_labels($single, $plural){

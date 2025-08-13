@@ -7,13 +7,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		replaceText('.single-litters h1, .single-litters h2, .single-litters h3', ' X ', ' x ', 'html');		
 		replaceText('.single-litters h1, .single-litters h2, .single-litters h3', ' x ', '<span class="X"> x </span>', 'html');
 		
-		moveDiv('#wrapper-bracket','#colophon','before');
-		
-		// add "sex-box" to each dog profile on archive page
-		addDiv(".col-dogs.dogs-female .image-dogs a", "<div class='sex-box'><span class='icon sex-female'></span></div>", "inside"); 
-		addDiv(".col-dogs.dogs-male .image-dogs a", "<div class='sex-box'><span class='icon sex-male'></span></div>", "inside"); 
-		addDiv(".col-dogs.dogs-legacy .image-dogs a", "<div class='sex-box'><span class='icon medal'></span></div>", "inside"); 
-		
+		moveDiv('#wrapper-bracket','#colophon','before');		
+
 		// setup filtering of dogs & litters archive pages with buttons		
 		keyPress('button.female-btn, button.male-btn, button.legacy-btn, button.all-btn, button.available-btn, button.expecting-btn');
 		

@@ -572,6 +572,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	getObjects('input[name]').forEach(input => {
 		input.id = input.name;
 	});
+				
+														   
+// Set value of checkboxes in cases where you don't want the value to show on screen (for a check to consent form)													   
+	getObjects('.form-input[data-value]').forEach(el => {
+		const cb = getObject('input[type="checkbox"]', el);
+		cb ? cb.value = el.dataset.value : null;
+	});
+																   
 														   
 			/* supposed to stop multiple submit clicks -- added 1/28/25 but need to investigate further											   
     document.querySelectorAll('.wpcf7-form').forEach(function(form) {

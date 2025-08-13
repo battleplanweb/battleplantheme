@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 2025.29.7
+Version: 2025.30.0
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -35,7 +35,6 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --font-secondary: 							var(--font-primary);
   --font-tertiary: 								var(--font-secondary);
   --font-text: 									"Open Sans", sans-serif;
-  --font-icons: 								BP Icons;
   
   --white: 										rgba(255, 255, 255, 1);
   --lightest-grey: 								rgba(225, 225, 225, 1);
@@ -260,11 +259,6 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --button-color-hover-alt: 					var(--button-color-alt);
   --button-background-hover-alt: 				var(--button-background-alt);
 
-
-
-
-
-
   --button-font-family-hover-alt: 				var(--button-font-family-alt);
   --button-font-weight-hover-alt: 				var(--button-font-weight-alt);
   --button-font-size-hover-alt: 				var(--button-font-size-alt);
@@ -410,7 +404,6 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
 --------------------------------------------- */
 @font-face { font-family: 'Open Sans'; font-display: fallback; font-style: normal; font-weight: 400; src: url('../battleplantheme/fonts/opensans-regular.woff2') format('woff2') }
 @font-face { font-family: 'Open Sans'; font-display: fallback; font-style: normal; font-weight: 700; src: url('../battleplantheme/fonts/opensans-bold.woff2') format('woff2') }
-@font-face { font-family: 'BP Icons'; font-display: block; font-style: normal; font-weight: 400; src: url('../battleplantheme/fonts/BP-Icons.woff2') format('woff2') }
 
 html {
 	-webkit-text-size-adjust: 						none;
@@ -822,16 +815,6 @@ a.icon-btn .icon {
 	transform: 										scale(0.6);
 }
 
-.icon::after {
-	display: 										inline-block;
-	font-family: 									var(--font-icons);
-	font-weight:									400;
-	font-style: 									normal;
-    font-variant: 									normal;
-    text-rendering: 								auto;
-    line-height: 									1;	
-}
-
 a.icon-btn .icon-bg {
 	position:										absolute;
 	width:											100%;
@@ -872,7 +855,8 @@ a.icon-btn.tab-focus .icon-bg {
 	display: 										flex;
  	justify-content: 								center;
  	align-items: 									center;
-	height: 										100%;
+	/*height: 										100%;*/	
+	height: 										auto /* changed to make icons on "why choose us" perfectly round */;
 	aspect-ratio: 									1/1;
 	color: 											var(--button-color);
 	background: 									var(--button-background);
@@ -883,14 +867,6 @@ a.icon-btn.tab-focus .icon-bg {
 	text-shadow: 									var(--button-text-shadow);
 	outline: 										var(--button-outline);
 	filter: 										var(--button-filter);	
-}
-
-span.icon.cog::after {
-	content: 										"\e0ea";
-}
-
-span.icon.x-large::after {
-	content: 										"\e138";
 }
 
 a.social-btn {
@@ -907,6 +883,14 @@ a.social-btn img {
 	height: 										1em;
 	fill: 											currentColor;
 	transform: 										scale(1.15);
+}
+
+.icon-txt-before {
+	margin-right: 									14px;
+}
+
+.icon-txt-after {
+	margin-left: 									14px;
 }
 
 

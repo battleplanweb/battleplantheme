@@ -28,10 +28,10 @@ get_header(); ?>
 			$addClass = "";
 			ob_start(); ?>
 				<div class="row-of-buttons">
-					<div class="block block-button"><button class="all-btn" tabindex="0"><span class='icon sex-both'></span> All</button></div>
-					<div class="block block-button"><button class="female-btn" tabindex="0"><span class='icon sex-female'></span> Females</button></div>
-					<div class="block block-button"><button class="male-btn" tabindex="0"><span class='icon sex-male'></span> Males</button></div>
-					<div class="block block-button"><button class="legacy-btn" tabindex="0"><span class='icon medal'></span> Legacy Sires</button></div>
+					<div class="block block-button"><button class="all-btn" tabindex="0">[get-icon type="sex-both"] All</button></div>
+					<div class="block block-button"><button class="female-btn" tabindex="0">[get-icon type="sex-female"] Females</button></div>
+					<div class="block block-button"><button class="male-btn" tabindex="0">[get-icon type="sex-male"] Males</button></div>
+					<div class="block block-button"><button class="legacy-btn" tabindex="0">[get-icon type="award"] Legacy Sires</button></div>
 				</div>
 				
 				<div class="dog-description"> 
@@ -59,8 +59,10 @@ get_header(); ?>
 
 				$classes = 'col-archive col-'.get_post_type().' col-'.get_the_ID().$addTags.$addClass;
 				$classes .= " dogs-".strtolower(esc_attr(get_field( "sex" )));
+				$sexBox = esc_attr(get_field( "sex" )) !== 'legacy' ? 'sex-'.strtolower(esc_attr(get_field( "sex" ))) : 'award';
+				$sexBox = '<div class="sex-box">[get-icon type="'.$sexBox.'"]</div>';
 		
-				$buildArchive .= do_shortcode('[col class="'.$classes.'"][build-archive type="'.get_post_type().'" show_thumb="'.$showThumb.'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" accordion="'.$accordion.'" add_info="" no_pic="'.$noPic.'"][/col]');
+				$buildArchive .= do_shortcode('[col class="'.$classes.'"]'.$sexBox.'[build-archive type="'.get_post_type().'" show_thumb="'.$showThumb.'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" accordion="'.$accordion.'" add_info="" no_pic="'.$noPic.'"][/col]');
 		
 			endwhile; 
 
@@ -76,7 +78,7 @@ get_header(); ?>
 				$displayArchive .= get_the_posts_pagination( array( 'mid_size' => 2, 'prev_text' => _x( '<span class="icon chevron-left" aria-hidden="true"></span>', 'Previous set of posts' ), 'next_text' => _x( '<span class="icon chevron-right" aria-hidden="true"></span>', 'Next set of posts' ), ));
 			$displayArchive .= '</footer><!-- .archive-footer-->';
 		
-			echo $displayArchive;	
+			echo do_shortcode($displayArchive);	
 
 		else :
 

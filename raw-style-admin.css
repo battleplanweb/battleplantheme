@@ -867,6 +867,39 @@ div#submitpost div#yoast-seo-publishbox-section {
 	display: 										none;
 }
 
+/* Dialog box styling */
+dialog.bp-qtag-dialog {
+	width: 70%;
+	max-width: 900px;
+	border: 1px solid #ccc;
+	border-radius: 6px;
+	padding: 1rem;
+}
+
+/* Grid layout for fields */
+dialog.bp-qtag-dialog form {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+	gap: 1rem;
+	align-items: start;
+}
+
+/* Make labels fill their grid cell */
+dialog.bp-qtag-dialog label,
+dialog.bp-qtag-dialog fieldset {
+	display: block;
+	width: 100%;
+}
+
+/* Stretch selects, inputs, and radios */
+dialog.bp-qtag-dialog select,
+dialog.bp-qtag-dialog input[type="text"],
+dialog.bp-qtag-dialog input[type="date"] {
+	width: 100%;
+	box-sizing: border-box;
+}
+
+
 /* HVAC Products Pages */
 .wp-admin .acf-field.acf-field-product-comfort,
 .wp-admin .acf-field.acf-field-product-efficiency,

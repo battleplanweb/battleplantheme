@@ -16,6 +16,101 @@
 # Admin
 --------------------------------------------------------------*/
 
+
+// housecall pro max
+
+add_action('rest_api_init', function() {
+	register_rest_route('hcpro/v1', '/job-callback', [
+		'methods' => 'POST',
+		'callback' => 'hcpro_handle_job_webhook',
+		'permission_callback' => '__return_true'
+	]);
+});
+
+function hcpro_handle_job_webhook($req) {
+	require_once ABSPATH . 'wp-admin/includes/media.php';
+	require_once ABSPATH . 'wp-admin/includes/file.php';
+	require_once ABSPATH . 'wp-admin/includes/image.php';
+
+	$token = '643e9bc0ef22460ca7c1ebbca38bc5f4';
+	$data = json_decode($req->get_body());
+
+	$jobId = $data->job->id ?? null;
+	if (!$jobId) {
+		mail('glendon@battleplanwebdesign.com', 'Jobsite - Housecall Pro - Error - '.$customer_info['name'], new WP_REST_Response(['error' => 'Missing job ID'], 400));
+	}
+
+	$res = wp_remote_get("https://api.housecallpro.com/jobs/{$jobId}", [
+		'headers' => ['Authorization' => "Token {$token}"]
+	]);
+
+	if (is_wp_error($res)) {
+		mail('glendon@battleplanwebdesign.com', 'Jobsite - Housecall Pro - Error - '.$customer_info['name'], new WP_REST_Response(['error' => 'Failed to fetch job'], 500));
+	}
+	
+	$job = json_decode(wp_remote_retrieve_body($res));
+	if (!$job || isset($job->error))  {
+		mail('glendon@battleplanwebdesign.com', 'Jobsite - Housecall Pro - Error - '.$customer_info['name'], new WP_REST_Response(['error' => $job->error ?? 'Invalid job'], 400));
+	}
+	
+	$title = $job->customer->name ?? 'Jobsite';
+	$content = $job->description ?? '';
+	$street = $job->customer->address->street ?? '';
+	$city = $job->customer->address->city ?? '';
+	$state = $job->customer->address->state ?? '';
+	$zip = $job->customer->address->zip ?? '';
+	$technician = $job->tech->name ?? '';
+	$date = $job->completed_at ?? '';
+	$equipment_notes = $job->equipment->notes ?? '';
+
+	$post_id = wp_insert_post([
+		'post_title' => $title,
+		'post_content' => $content,
+		'post_type' => 'jobsite_geo',
+		'post_status' => 'publish'
+	]);
+
+	if (!$post_id) {
+		mail('glendon@battleplanwebdesign.com', 'Jobsite - Housecall Pro - Error - '.$customer_info['name'], new WP_REST_Response(['error' => 'Failed to create post'], 500));
+	}
+
+	wp_set_object_terms($post_id, $technician, 'jobsite_geo-techs');
+	update_field('job_date', $date, $post_id);
+	update_field('address', $street, $post_id);
+	update_field('city', $city, $post_id);
+	update_field('state', $state, $post_id);
+	update_field('zip', $zip, $post_id);
+	update_field('equipment_notes', $equipment_notes, $post_id);
+
+	foreach ($job->photos ?? [] as $p) {
+		$tmp = download_url($p->url);
+		if (is_wp_error($tmp)) continue;
+		$file = [
+			'name' => basename($p->url),
+			'type' => mime_content_type($tmp),
+			'tmp_name' => $tmp,
+			'error' => 0,
+			'size' => filesize($tmp)
+		];
+		$m = wp_handle_sideload($file, ['test_form' => false]);
+		if (empty($m['file'])) continue;
+		$aid = wp_insert_attachment([
+			'post_mime_type' => $file['type'],
+			'post_title' => sanitize_file_name($file['name']),
+			'post_status' => 'inherit'
+		], $m['file'], $post_id);
+		wp_update_attachment_metadata($aid, wp_generate_attachment_metadata($aid, $m['file']));
+	}
+	
+	mail('glendon@battleplanwebdesign.com', 'Jobsite - Housecall Pro - Auto Input - '.$customer_info['name'], $title.' -> '.$content.' -> '.$street.' -> '.$city.' -> '.$state.' -> '.$zip);
+
+	return new WP_REST_Response(['success' => true, 'post_id' => $post_id], 200);
+}
+
+
+
+
+
 // format location
 function format_location($location) {
 	$splitLoc = explode('-', $location);
@@ -258,7 +353,6 @@ function battleplan_view_jobsite_geo_pages() {
 		<?php
 	}
 }
-
 
 
 /*--------------------------------------------------------------

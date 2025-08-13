@@ -50,36 +50,19 @@
 	aspect-ratio: 								1/1;
 }
 
-.mejs-button button::before {
-	display:									inline-block;
-	font-family: 								var(--font-icons);
-	font-size:									26px;
-	font-weight: 								normal;
+.mejs-previous button svg,
+.mejs-next button svg,
+.mejs-play button svg,
+.mejs-pause button svg {
+  	width: 										1em;
+  	height: 									1em;
+  	display: 									inline-block;
+  	vertical-align: 							middle;
+  	fill: 										currentColor;
 }
 
-.mejs-previous button::before {
-	content:   									"\e23f";
-	transform: 									rotate(180deg);
-}
-
-.mejs-next button::before {
-	content:   									"\e23f";
-}
-
-.mejs-play button::before {
-	content:   									"\e23e";
-}
-
-.mejs-pause button::before {
-	content:   									"\e240";
-}
-
-.mejs-mute button::before {
-	content:   									"\e244";
-}
-
-.mejs-unmute button::before {
-	content:   									"\e245";
+.mejs-volume-button .icon {
+	transform: 									translateY(1px);
 }
 
 .mejs-horizontal-volume-slider {

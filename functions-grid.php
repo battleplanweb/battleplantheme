@@ -337,11 +337,12 @@ function battleplan_buildButton( $atts, $content = null ) {
 	$class = esc_attr($a['class']) !== '' ? ' '.esc_attr($a['class']) : '';	
 	$left = esc_attr($a['left']);
 	$top = esc_attr($a['top']);	
-	$icon = esc_attr($a['icon']) === 'true' ? "chevron-right" : '';	
 	$fancy = esc_attr($a['fancy']) !== '' ? "-".$fancy : '';	
-	if ( $icon !== "false" ) : 
+	$icon = esc_attr($a['icon']) === 'false' ? '' : esc_attr($a['icon']);	
+	if ( $icon !== '' ) : 
 		wp_enqueue_style( 'battleplan-fancy-btn', get_template_directory_uri()."/style-fancy-btn.css", array('parent-style'), _BP_VERSION ); 
 		$class .= " fancy".$fancy; 
+		$icon = $icon === 'true' ? 'chevron-right' : $icon;	
 		$content = '<span class="fancy-text">'.$content.'</span><span class="fancy-icon">[get-icon type="'.$icon.'" top="'.$top.'" left="'.$left.'"]</span>'; 
 	endif;
 	$graphicW = esc_attr($a['graphic-w']);	
@@ -455,8 +456,8 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	if ( $class != '' ) $class = " ".$class; 
 	$scrollBtn = esc_attr($a['scroll-btn']); 
 	$scrollLoc = esc_attr($a['scroll-loc']); 
-	$scrollIcon = esc_attr($a['scroll-icon']); 
-	if ( $scrollBtn != "false" ) : $buildScrollBtn = '<div class="scroll-down"><a href="'.$scrollLoc.'"><span class="icon '.$scrollIcon.'" aria-hidden="true"></span><span class="sr-only">Scroll Down</span></a></div>'; else: $buildScrollBtn = ''; endif;
+	$scrollIcon = '[get-icon type="'.esc_attr($a['scroll-icon']).'" sr="Scroll Down"]'; 
+	if ( $scrollBtn != "false" ) : $buildScrollBtn = '<div class="scroll-down"><a href="'.$scrollLoc.'">'.$scrollIcon.'</a></div>'; else: $buildScrollBtn = ''; endif;
 	if ( !$name ) $name = "section-".rand(10000,99999);	
 	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
 	if ( $tracking != '' ) $class .= " tracking"; 

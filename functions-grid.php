@@ -319,7 +319,7 @@ add_shortcode( 'btn', 'battleplan_buildButton' );
 function battleplan_buildButton( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'size'=>'100', 'align'=>'center', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'false', 'class'=>'', 'fancy'=>'false', 'icon'=>'false', 'top'=>0, 'left'=>0, 'graphic'=>'false', 'graphic-w'=>'40', 'ada'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'onclick'=>'' ), $atts );
 	$size = convertSize(esc_attr($a['size']));
-	$align = esc_attr($a['align']) !== 'center' ? " button-".$align : '';	
+	$align = esc_attr($a['align']) !== 'center' ? " button-".esc_attr($a['align']) : '';	
 	$style = esc_attr($a['order']) !== '' ? " style='order: ".esc_attr($a['order'])." !important'" : '';
 	$getBiz = esc_attr($a['get-biz']);
 	if ( $getBiz === "" ) {

@@ -17,7 +17,7 @@
 }
 
 .wp-gr .wp-google-badge-btn {
-	padding:										6px 0;
+	padding:										1px 0 4px;
 	text-decoration:								none;
 }
 
@@ -30,9 +30,10 @@
 
 .wp-gr .wp-google-rating .wp-google-value {
     color: 											var(--google-value-text);
-	margin-right:									5px;
-	font-weight:									bold;
-}
+    font-family: 									var(--font-text);
+	font-weight: 									bold;
+  	font-size: 										125%;
+  	transform: 										translate(-1px, 1px);}
 
 .wp-gr .wp-google-rating .wp-google-stars {
 	width: 											150px;
@@ -74,7 +75,7 @@
     color: 											var(--google-total-text);
 	font-size: 										14px;
 	font-style:										italic;
-	magin-top: 										-3px;
+	margin-top: 									-5px;
 	margin-bottom:									-2px
 }
 

@@ -340,16 +340,24 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		});
 	}
 	
-	window.toggleScrollDown = function() {		
-		getObjects('.scroll-down').forEach(button => {
-			if ( window.pageYOffset >= window.innerHeight ) {
-				button.classList.remove('visible');
-			} else {	
-				button.classList.add('visible');
-			}		
-		});
-	}
-		 
+	;(() => {
+		const buttons = getObjects('.scroll-down');
+
+		const fadeOut = () => {
+			buttons.forEach(btn => {
+				btn.style.opacity = 0;
+				btn.addEventListener('transitionend', () => {
+					btn.style.display = 'none';
+				}, { once: true });
+			});
+		};
+
+		// Fade on click
+		buttons.forEach(btn => btn.addEventListener('click', fadeOut));
+
+		// Fade on scroll
+		window.addEventListener('scroll', fadeOut, { passive: true });
+	})();
 
 //Find screen position of element
 	window.getPosition = function (elementSel, neededPos='top', scope='window') {
@@ -577,7 +585,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 // Set value of checkboxes in cases where you don't want the value to show on screen (for a check to consent form)													   
 	getObjects('.form-input[data-value]').forEach(el => {
 		const cb = getObject('input[type="checkbox"]', el);
-		cb ? cb.value = el.dataset.value : null;
+		cb && !cb.value ? cb.value = el.dataset.value : null;
 	});
 																   
 														   
@@ -1821,6 +1829,7 @@ window.formLabelWidth = () => {
 				stopAllVideos();
 			});
 		});
+
 	});
 
 	function handleButtonClose(section, sectionID, cookieExpire) {

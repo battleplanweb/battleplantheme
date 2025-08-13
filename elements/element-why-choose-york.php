@@ -27,7 +27,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon-box">[get-icon type="award-alt"]</div>
+				<div class="icon-box">[get-icon type="award"]</div>
 				[txt]
 					<h2>Leader</h2>
 					<p>Our advanced design and manufacturing processes are leading the industry with products recognized for reliability, energy savings and ease of use. Our designs are reinventing home comfort.</p>

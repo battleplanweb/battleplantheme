@@ -267,7 +267,7 @@ function battleplan_getEventCalendar($atts, $content = null ) {
 	$buildCalendar .= '<button id="currentButton">Return To Today</button>';
 	$buildCalendar .= '<button id="nextButton" aria-label="Next Month"><span class="sr-only">Next Month</span></button>';
 	$buildCalendar .= '</div>';
-	
+	 
 	echo do_shortcode($buildCalendar);
 }
 

@@ -128,23 +128,101 @@ function is_mobile() {
 }
 
 // Check if business is currently open
-function is_biz_open() {
-	if ( $GLOBALS['customer_info']['pid-sync'] !== "true" ) return false;
- 	$googleInfo = get_option('bp_gbp_update') ? get_option('bp_gbp_update') : array();
-	$day = wp_date("w", null, new DateTimeZone( wp_timezone_string() )) - 1;
-	$time = wp_date("Hi", null, new DateTimeZone( wp_timezone_string() ));
-	$placeIDs = $GLOBALS['customer_info']['pid'] ? $GLOBALS['customer_info']['pid'] : 0;	
-	if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
-	$primePID = $placeIDs[0];
-	
-	if (!isset($googleInfo[$primePID]['current-hours']['periods'][$day])) return false;
-	
-	$open = $googleInfo[$primePID]['current-hours']['periods'][$day]['open']['time'] ? $googleInfo[$primePID]['current-hours']['periods'][$day]['open']['time'] : '';
-	$close = $googleInfo[$primePID]['current-hours']['periods'][$day]['close']['time'] ? $googleInfo[$primePID]['current-hours']['periods'][$day]['close']['time'] : '';
-	$open24 = $googleInfo[$primePID]['current-hours']['periods'][0]['open']['time'] && $googleInfo[$primePID]['current-hours']['periods'][0]['open']['time'] == 0000 ? true : false;	
-	if ( $open24 != false && ( !$open || !$close ) ) return false;
-		
-	return $open24 == true || ($time > $open && $time < $close) ? true : false;
+function bp_build_open_intervals(array $periods, string $tz, int $horizonDays=14): array {
+	$tzobj = new DateTimeZone($tz);
+	$now = new DateTimeImmutable('now', $tzobj);
+	$out = [];
+
+	$dated = []; $weekly = [];
+	foreach ($periods as $p) (!empty($p['open']['date']) || !empty($p['close']['date'])) ? $dated[]=$p : $weekly[]=$p;
+
+	// DATED
+	foreach ($dated as $p) {
+		$o=$p['open']??[]; $c=$p['close']??[];
+		if (empty($o['date'])) continue;
+		$oh = isset($o['hour']) ? (int)$o['hour'] : (isset($o['time']) ? (int)substr($o['time'],0,2) : null);
+		$om = isset($o['minute']) ? (int)$o['minute'] : (isset($o['time']) ? (int)substr($o['time'],2,2) : 0);
+		if ($oh===null) continue;
+		$od=$o['date'];
+		$start=new DateTimeImmutable(sprintf('%04d-%02d-%02d %02d:%02d:00',$od['year'],$od['month'],$od['day'],$oh,$om),$tzobj);
+
+		if ($c) {
+			if (!empty($c['date'])) { $cd=$c['date'];
+				$ch=isset($c['hour'])?(int)$c['hour']:(isset($c['time'])?(int)substr($c['time'],0,2):0);
+				$cm=isset($c['minute'])?(int)$c['minute']:(isset($c['time'])?(int)substr($c['time'],2,2):0);
+				$end=new DateTimeImmutable(sprintf('%04d-%02d-%02d %02d:%02d:00',$cd['year'],$cd['month'],$cd['day'],$ch,$cm),$tzobj);
+			} else {
+				$ch=isset($c['hour'])?(int)$c['hour']:(isset($c['time'])?(int)substr($c['time'],0,2):0);
+				$cm=isset($c['minute'])?(int)$c['minute']:(isset($c['time'])?(int)substr($c['time'],2,2):0);
+				$end=$start->setTime($ch,$cm);
+			}
+		} else $end=$start->modify('+1 day');
+
+		if ($end <= $start) $end=$end->modify('+1 day');
+		$out[]=['start'=>$start->getTimestamp(),'end'=>$end->getTimestamp()];
+	}
+
+	// WEEKLY → project next N days
+	$today0=$now->setTime(0,0);
+	for ($d=0;$d<$horizonDays;$d++) {
+		$dayDate=$today0->modify("+$d days");
+		$dow=(int)$dayDate->format('N'); // 1..7 Mon..Sun
+		foreach ($weekly as $p) {
+			$o=$p['open']??[]; $c=$p['close']??[];
+			if (!isset($o['day'])) continue;
+			$openDay=(int)$o['day']; if ($openDay===0) $openDay=7; // normalize Sun
+			if ($openDay !== $dow) continue;
+
+			$oh=isset($o['hour'])?(int)$o['hour']:(isset($o['time'])?(int)substr($o['time'],0,2):null);
+			$om=isset($o['minute'])?(int)$o['minute']:(isset($o['time'])?(int)substr($o['time'],2,2):0);
+			if ($oh===null) continue;
+			$start=$dayDate->setTime($oh,$om);
+
+			if ($c) {
+				$ch=isset($c['hour'])?(int)$c['hour']:(isset($c['time'])?(int)substr($c['time'],0,2):null);
+				$cm=isset($c['minute'])?(int)$c['minute']:(isset($c['time'])?(int)substr($c['time'],2,2):0);
+				if (isset($c['day'])) { $closeDay=(int)$c['day']; if ($closeDay===0) $closeDay=7;
+					$delta=$closeDay-$openDay; if ($delta<0) $delta+=7;
+					$end=$start->modify("+$delta days")->setTime($ch??0,$cm??0);
+				} else $end=$start->setTime($ch??0,$cm??0);
+			} else $end=$start->modify('+1 day');
+
+			if ($end <= $start) $end=$end->modify('+1 day');
+			$out[]=['start'=>$start->getTimestamp(),'end'=>$end->getTimestamp()];
+		}
+	}
+
+	usort($out,fn($a,$b)=>$a['start']<=>$b['start']);
+	return $out;
+}
+
+function bp_is_open_at(array $periods,string $tz,?int $ts=null): bool {
+	$now=$ts ?? (new DateTimeImmutable('now',new DateTimeZone($tz)))->getTimestamp();
+	foreach (bp_build_open_intervals($periods,$tz) as $iv) if ($iv['start']<=$now && $now<$iv['end']) return true;
+	return false;
+}
+
+function bp_next_change_at(array $periods,string $tz,?int $ts=null): ?array {
+	$now=$ts ?? (new DateTimeImmutable('now',new DateTimeZone($tz)))->getTimestamp();
+	foreach (bp_build_open_intervals($periods,$tz) as $iv) {
+		if ($iv['start']<=$now && $now<$iv['end']) return ['state'=>'close','at'=>$iv['end']];
+		if ($now<$iv['start']) return ['state'=>'open','at'=>$iv['start']];
+	}
+	return null;
+}
+
+function is_biz_open(string $businessTz=null): bool {
+	if (($GLOBALS['customer_info']['pid-sync'] ?? '') !== 'true') return false;
+
+	$info=get_option('bp_gbp_update') ?: [];
+	$ids=$GLOBALS['customer_info']['pid'] ?? 0; $ids=is_array($ids)?$ids:[$ids];
+	$pid=$ids[0] ?? 0; if (!$pid) return false;
+
+	$tz=$businessTz ?: wp_timezone_string(); // ← prefer per-location TZ if you have it
+	$hours=$info[$pid]['current-hours'] ?? ($info[$pid]['hours'] ?? []);
+	$periods=$hours['periods'] ?? [];
+
+	return $periods ? bp_is_open_at($periods,$tz) : false;
 }
 
 // Get slug of current page --- can also use _PAGE_SLUG (slug only) and _PAGE_SLUG_FULL (slug + preceding directories)
@@ -1221,7 +1299,16 @@ function battleplan_enqueue_footer_scripts() {
 	//if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) wp_enqueue_script( 'battleplan-script-jobsite_geo', get_template_directory_uri().'/js/script-jobsite_geo.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) );   
 	
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) wp_enqueue_script( 'battleplan-script-woocommerce', get_template_directory_uri().'/js/script-woocommerce.js', array('jquery'), _BP_VERSION,  array( 'in_footer' => 'true' ) ); 
-	if ( is_plugin_active( 'cue/cue.php' ) ) wp_enqueue_script( 'battleplan-script-cue', get_template_directory_uri().'/js/script-cue.js', array('jquery'), _BP_VERSION,  array( 'in_footer' => 'true' ) ); 
+	
+	if ( is_plugin_active( 'cue/cue.php' ) ) {
+		wp_enqueue_script( 'battleplan-script-cue', get_template_directory_uri().'/js/script-cue.js', array('jquery'), _BP_VERSION,  array( 'in_footer' => 'true' ) ); 
+		$types = ['cue-rewind', 'cue-forward', 'cue-play', 'cue-pause', 'cue-volume-off', 'cue-volume-on'];
+        $map = [];
+        foreach ($types as $t) {
+            $map[$t] = do_shortcode('[get-icon type="' . esc_attr($t) . '"]');
+        }
+        wp_localize_script('battleplan-script-cue', 'IconMap', $map);
+	}
 	
 	if ( ($GLOBALS['customer_info']['site-type'] == 'profile' || (is_array($GLOBALS['customer_info']['site-type']) && in_array('profile', $GLOBALS['customer_info']['site-type']))) || ($GLOBALS['customer_info']['site-type'] == 'profiles' || (is_array($GLOBALS['customer_info']['site-type']) && in_array('profiles', $GLOBALS['customer_info']['site-type']))) ) wp_enqueue_script( 'battleplan-script-user-profiles', get_template_directory_uri().'/js/script-user-profiles.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) ); 
 	
@@ -1453,8 +1540,16 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 			$restrictMin = readMeta( $item->ID, 'bp_menu_restrict_min', true );		
 			if ( $restrictMax || $restrictMin ) $buildOutput .= '[restrict max="'.$restrictMax.'" min="'.$restrictMin.'"]';
 
-			$buildOutput .= sprintf( '%s<li%s%s%s>', $indent, $id, $class_names, is_array($item->classes) && in_array( 'menu-item-has-children', $item->classes ) ? ' aria-haspopup="true" aria-expanded="false" tabindex="0"' : ''	);
+			$has_children = is_array($item->classes) && in_array('menu-item-has-children', $item->classes);
 
+			$buildOutput .= sprintf(
+				'%s<li%s%s%s>',
+				$indent,
+				$id,
+				$class_names,
+				$has_children ? ' aria-haspopup="true" aria-expanded="false" tabindex="0"' : ''
+			);
+		
 			$atts = array();
 			$atts['title'] = !empty( $item->attr_title ) ? $item->attr_title : '';
 			$atts['target'] = !empty( $item->target ) ? $item->target : '';
@@ -1474,9 +1569,9 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 			$title = apply_filters( 'the_title', $item->title, $item->ID );
 			$title = apply_filters( 'nav_menu_item_title', $title, $item, $args, $depth );
 
-			$item_output = $args->before;		
-			$item_output .= '<a'. $attributes .'>';
-			$item_output .= $args->link_before.$title.$args->link_after;
+			$item_output  = $args->before;
+			$item_output .= '<a' . $attributes . '>';
+			$item_output .= $args->link_before . $title . ($has_children ? ' [get-icon type="caret-down"]' : '') . $args->link_after;
 			$item_output .= '</a>';
 			$item_output .= $args->after;
 

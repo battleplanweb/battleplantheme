@@ -48,16 +48,9 @@
 	}	
 }
 
-.lightbox-overlay .block-button.button-prev button::after, 
-.lightbox-overlay .block-button.button-next button::after { 
+.lightbox-overlay .block-button.button-prev button, 
+.lightbox-overlay .block-button.button-next button { 
 	display: 										block;
-	font-family: 									var(--font-icons);
-	content: 										"\e218";
-	font-size:										30px;
-}
-
-.lightbox-overlay .block-button.button-prev button::after {
-	transform: 										rotate(180deg);
 }
 
 .lightbox-overlay .lightbox-counter {

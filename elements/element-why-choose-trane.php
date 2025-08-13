@@ -27,7 +27,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon-box">[get-icon type="lightbulb"]</div>
+				<div class="icon-box">[get-icon type="light-bulb"]</div>
 				[txt]
 					<h2>Innovative </h2>
 					<p>Our HVAC systems have come far, but we never settle. With 1,500 heating and cooling patents, our technology is engineered to be better than the rest.</p>

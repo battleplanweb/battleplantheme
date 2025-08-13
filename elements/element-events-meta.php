@@ -31,20 +31,20 @@
 		$buildMeta = '<div class="event-meta">';
 
 		if ( $startDate ) :
-			$buildMeta .= '<div class="event-date"><span class="date-icon"></span>'.$startDate;
+			$buildMeta .= '<div class="event-date"><span class="date-icon">[get-icon type="calendar"]</span>'.$startDate;
 			if ( $endDate ) $buildMeta .= ' - '.$endDate;
 			if ( $currentEvent == false ) $buildMeta .= ' <div class="event-passed">(this event has passed)</div>';
 			$buildMeta .= '</div><!-- .event-date -->';
 		endif;
 
 		if ( $startTime && $currentEvent == true ) :
-			$buildMeta .= '<div class="event-time"><span class="time-icon"></span>'.$startTime;
+			$buildMeta .= '<div class="event-time"><span class="time-icon">[get-icon type="clock"]</span>'.$startTime;
 			if ( $endTime ) $buildMeta .= ' - '.$endTime;
 			$buildMeta .= '</div><!-- .event-time -->';
 		endif;
 
 		if ( $venue || $location ) :
-			$buildMeta .= '<div class="event-location"><span class="location-icon"></span>';
+			$buildMeta .= '<div class="event-location"><span class="location-icon">[get-icon type="location-pin"]</span>';
 			if ( $venue ) :
 				if ( $venueLink && $currentEvent == true && $archivePage == false ) $buildMeta .= '<a href="'.$venueLink.'" target="_blank">';
 				$buildMeta .= $venue;
@@ -63,6 +63,6 @@
 
 		$buildMeta .= '</div><!-- .event-meta -->';
 
-		return $buildMeta;
+		return do_shortcode($buildMeta);
 	endif;
 ?>

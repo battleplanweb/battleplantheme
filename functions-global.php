@@ -13,7 +13,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.29.7' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.30.0' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -199,63 +199,3 @@ if ( _PAGE_SLUG == "wp-cron.php" ) :
 		fclose($my_file); 
 	endif;
 endif;
-
-
-/*--------------------------------------------------------------
-# Icon Globals
---------------------------------------------------------------*/
-
-$GLOBALS['icons'] = $GLOBALS['icon-css'] = array();
-
-$GLOBALS['icons']['award'] = '\e09c';
-$GLOBALS['icons']['award-alt'] = '\e09d';
-$GLOBALS['icons']['calendar'] = '\e077';
-$GLOBALS['icons']['calendar-clock'] = '\e078';
-$GLOBALS['icons']['camera'] = '\e194';
-$GLOBALS['icons']['camera-security'] = '\e195';
-$GLOBALS['icons']['chain-link'] = '\e116';
-$GLOBALS['icons']['checkmark'] = '\e13e';
-$GLOBALS['icons']['checkmark-seal'] = '\e0a3';
-$GLOBALS['icons']['clipboard-check'] = '\e06e';
-$GLOBALS['icons']['clock'] = '\e07a';
-$GLOBALS['icons']['cog'] = '\e0ea';
-$GLOBALS['icons']['construction-concrete-truck'] = '\e0ef';
-$GLOBALS['icons']['construction-foreman'] = '\e0f0';
-$GLOBALS['icons']['email'] = '\e042';
-$GLOBALS['icons']['family'] = '\e17a';
-$GLOBALS['icons']['finger-1'] = '\e1a1';
-$GLOBALS['icons']['finger-2'] = '\e1a2';
-$GLOBALS['icons']['finger-3'] = '\e1a3';
-$GLOBALS['icons']['finger-4'] = '\e1a4';
-$GLOBALS['icons']['finger-5'] = '\e1a5';
-$GLOBALS['icons']['flame'] = '\e203';
-$GLOBALS['icons']['handshake'] = '\e1af';
-$GLOBALS['icons']['heart'] = '\e12c';
-$GLOBALS['icons']['heartbeat'] = '\e12f';
-$GLOBALS['icons']['home'] = '\e000';
-$GLOBALS['icons']['house-magnify'] = '\e003';
-$GLOBALS['icons']['leaf'] = '\e111';
-$GLOBALS['icons']['lightbulb'] = '\e114';
-$GLOBALS['icons']['location'] = '\e0b9';
-$GLOBALS['icons']['money-bag'] = '\e16d';
-$GLOBALS['icons']['package'] = '\e117';
-$GLOBALS['icons']['phone-cell'] = '\e028';
-$GLOBALS['icons']['phone-antique'] = '\e029';
-$GLOBALS['icons']['recycle'] = '\e110';
-$GLOBALS['icons']['search'] = '\e0ce';
-$GLOBALS['icons']['search-plus'] = '\e0cf';
-$GLOBALS['icons']['search-dollar-sign'] = '\e0d0';
-$GLOBALS['icons']['sex-both'] = '\e18b';
-$GLOBALS['icons']['sex-female'] = '\e189';
-$GLOBALS['icons']['sex-male'] = '\e18a';
-$GLOBALS['icons']['signpost'] = '\e113';
-$GLOBALS['icons']['snowflake'] = '\e202';
-$GLOBALS['icons']['sort'] = '\e22e';
-$GLOBALS['icons']['strong-arm'] = '\e24c';
-$GLOBALS['icons']['thumbs-up'] = '\e1ad';
-$GLOBALS['icons']['thumbs-up-alt'] = '\e1a6';
-$GLOBALS['icons']['tools'] = '\e0ee';
-$GLOBALS['icons']['user'] = '\e0fb';
-$GLOBALS['icons']['wind'] = '\e112';
-$GLOBALS['icons']['x-small'] = '\e139';
-$GLOBALS['icons']['x-large'] = '\e138';

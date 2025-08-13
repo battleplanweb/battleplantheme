@@ -25,15 +25,6 @@
   	padding: 									1px;
 }
 
-/* Icons
---------------------------------------------- */
-.fa-shopping-bag:before,
-.fa-shopping-basket:before,
-.fa-shopping-cart:before {
-	font-family: 								var(--font-icons);
-    content: 									"\e0f4";
-}
-
 /* Forms
 --------------------------------------------- */
 .woocommerce #page form .form-row .required {

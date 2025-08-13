@@ -639,6 +639,234 @@ function battleplan_force_run_chron() {
 	exit();
 }  
 
+// Add dialog boxes to shortcode helpers in text editor
+add_action('admin_enqueue_scripts', 'battleplan_setupTextEditorDialogBoxes');
+function battleplan_setupTextEditorDialogBoxes($hook) {	
+	$screen_ok = ($hook === 'post.php' || $hook === 'post-new.php');
+	if(!$screen_ok) return;
+
+	// ensure your admin JS is already enqueued; adjust handle/path if needed ---- maybe can remove.
+	wp_enqueue_script('battleplan-admin-script',
+		get_template_directory_uri().'/js/script-admin.js',
+		['quicktags'], _BP_VERSION, true
+	);
+	
+	$bp_qtags_cfg = [
+		'section' => [
+			'label' => 'Section',
+			'wrap' => true,
+			'defaults' => [ 'name'=>'', 'class'=>'', 'style'=>'', 'width'=>'default', 'break'=>'', 'valign'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'background'=>'/wp-content/uploads/', 'left'=>'50', 'top'=>'50', 'css'=>'', 'hash'=>'', 'grid'=>'' ],
+			'fields' => [ 
+				[ 'name'=>'name', 'type'=>'text', 'label'=>'Name (id)' ],
+				[ 'name'=>'style', 'type'=>'select-custom', 'label'=>'Style',			 
+					'choices' => [ '' => 'none', '_1' => '1', '_2' => '2', '_3' => '3', '_4' => '4', 'lock' => 'lock', 'custom' => 'custom' ] ],			
+				[ 'name'=>'width', 'type'=>'select', 'label'=>'Width',
+					'choices'=>[ ''=>'default', 'stretch'=>'stretch', 'full'=>'full', 'edge'=>'edge', 'inline'=>'inline' ] ],
+				[ 'name'=>'class', 'type'=>'text', 'label'=>'Class' ],
+				[ 'name'=>'break', 'type'=>'select', 'label'=>'Break',			 
+					'choices' => [ '' => 'none', '_4' => '4', '_3' => '3', '_2' => '2', '_1' => '1' ] ],				
+				[ 'name'=>'valign', 'type'=>'select', 'label'=>'V-Align',
+					'choices'=>[ ''=>'none', 'center'=>'center', 'stretch'=>'stretch', 'start'=>'start', 'end'=>'end' ] ],
+				[ 'name'=>'start', 'type'=>'date', 'label'=>'Start' ],
+				[ 'name'=>'end',   'type'=>'date', 'label'=>'End' ],
+				[ 'name'=>'track', 'type'=>'select-custom', 'label'=>'Tracking',			 
+					'choices' => [ '' => 'none', 'id' => 'name (id)', 'custom' => 'custom' ] ],
+				[ 'name'=>'background', 'type'=>'text', 'label'=>'Background' ],			
+				[ 'name'=>'left', 'type'=>'text', 'label'=>'Left %' ],			
+				[ 'name'=>'top', 'type'=>'text', 'label'=>'Top %' ],			
+				[ 'name'=>'css', 'type'=>'text', 'label'=>'CSS (i.e. width="100px"; height="100px")' ],			
+				[ 'name'=>'hash', 'type'=>'text', 'label'=>'Compensation for scroll on one-page site' ],	
+				[ 'name'=>'grid', 'type'=>'text', 'label'=>'Grid (eliminates layout)' ],
+			],
+			'content_placeholder' => "\n\n"
+		],
+		'layout' => [
+			'label' => 'Layout',
+			'wrap' => true,
+			'defaults' => [ 'name'=>'', 'grid'=>'1', 'gap'=>'', 'break'=>'', 'valign'=>'', 'class'=>'', 'track'=>'' ],
+			'fields' => [ 
+				[ 'name'=>'name', 'type'=>'text', 'label'=>'Name (id)' ],	
+				[ 'name'=>'grid', 'type'=>'text', 'label'=>'Grid' ],			 
+				[ 'name'=>'gap', 'type'=>'text', 'label'=>'Gap' ],
+				[ 'name'=>'break', 'type'=>'select', 'label'=>'Break',			 
+					'choices' => [ '' => 'none', '_4' => '4', '_3' => '3', '_2' => '2', '_1' => '1' ] ],	
+				[ 'name'=>'valign', 'type'=>'select', 'label'=>'V-Align',
+					'choices'=>[ ''=>'none', 'center'=>'center', 'stretch'=>'stretch', 'start'=>'start', 'end'=>'end' ] ],	
+				[ 'name'=>'class', 'type'=>'text', 'label'=>'Class' ],		
+				[ 'name'=>'track', 'type'=>'select-custom', 'label'=>'Tracking' ],	
+			],
+			'content_placeholder' => "\n\n"
+		],
+		'column' => [
+			'label' => 'Column',
+			'wrap' => true,
+			'defaults' => [ 'name'=>'', 'class'=>'', 'order'=>'', 'break'=>'', 'align'=>'', 'valign'=>'', 'h-span'=>'', 'v-span'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'background'=>'/wp-content/uploads/', 'left'=>'50', 'top'=>'50', 'css'=>'', 'hash'=>'', 'gap'=>'' ],
+			'fields' => [ 
+				[ 'name'=>'name', 'type'=>'text', 'label'=>'Name (id)' ],			
+				[ 'name'=>'align', 'type'=>'select', 'label'=>'Align',
+					'choices'=>[ ''=>'none', 'left'=>'left', 'right'=>'right', 'center'=>'center' ] ],				
+				[ 'name'=>'valign', 'type'=>'select', 'label'=>'V-Align',
+					'choices'=>[ ''=>'none', 'center'=>'center', 'stretch'=>'stretch', 'start'=>'start', 'end'=>'end' ] ],
+				[ 'name'=>'class', 'type'=>'text', 'label'=>'Class' ],
+				[ 'name'=>'h-span', 'type'=>'text', 'label'=>'H-Span' ],
+				[ 'name'=>'v-span', 'type'=>'text', 'label'=>'V-Span' ],
+				[ 'name'=>'break', 'type'=>'select', 'label'=>'Break',			 
+					'choices' => [ '' => 'none', '_4' => '4', '_3' => '3', '_2' => '2', '_1' => '1' ] ],
+				[ 'name'=>'start', 'type'=>'date', 'label'=>'Start' ],
+				[ 'name'=>'end',   'type'=>'date', 'label'=>'End' ],
+				[ 'name'=>'order', 'type'=>'text', 'label'=>'Order' ],	
+				[ 'name'=>'track', 'type'=>'select-custom', 'label'=>'Tracking',			 
+					'choices' => [ '' => 'none', 'id' => 'name (id)', 'custom' => 'custom' ] ],				
+				[ 'name'=>'gap', 'type'=>'text', 'label'=>'Gap' ],
+				[ 'name'=>'background', 'type'=>'text', 'label'=>'Background' ],			
+				[ 'name'=>'left', 'type'=>'text', 'label'=>'Left %' ],			
+				[ 'name'=>'top', 'type'=>'text', 'label'=>'Top %' ],			
+				[ 'name'=>'css', 'type'=>'text', 'label'=>'CSS (i.e. width="100px"; height="100px")' ],			
+				[ 'name'=>'hash', 'type'=>'text', 'label'=>'Compensation for scroll on one-page site' ],
+			],
+			'content_placeholder' => "\n\n"
+		],
+		'group' => [
+			'label' => 'Group',
+			'wrap' => true,
+			'defaults' => [ 'size'=>'100', 'class'=>'', 'order'=>'', 'start'=>'', 'end'=>'','track'=>'' ],
+			'fields' => [ 
+				[ 'name'=>'size', 'type'=>'select', 'label'=>'Size',
+					'choices'=>[ '100'=>'100%', '1/2'=>'1/2', '1/3'=>'1/3', '1/4'=>'1/4', '1/6'=>'1/6', '1/12'=>'1/12'   ] ],	
+				[ 'name'=>'class', 'type'=>'text', 'label'=>'Class' ],	
+				[ 'name'=>'order', 'type'=>'text', 'label'=>'Order' ],	
+				[ 'name'=>'start', 'type'=>'date', 'label'=>'Start' ],
+				[ 'name'=>'end',   'type'=>'date', 'label'=>'End' ],
+				[ 'name'=>'track', 'type'=>'select-custom', 'label'=>'Tracking',			 
+					'choices' => [ '' => 'none', 'custom' => 'custom' ] ],	
+			],
+			'content_placeholder' => "\n\n"
+		],
+		'text' => [
+			'label' => 'Text',
+			'wrap' => true,
+			'defaults' => [ 'size'=>'100', 'class'=>'', 'order'=>'', 'start'=>'', 'end'=>'','track'=>'' ],
+			'fields' => [ 
+				[ 'name'=>'size', 'type'=>'select', 'label'=>'Size',
+					'choices'=>[ '100'=>'100%', '1/2'=>'1/2', '1/3'=>'1/3', '1/4'=>'1/4', '1/6'=>'1/6', '1/12'=>'1/12'   ] ],	
+				[ 'name'=>'class', 'type'=>'text', 'label'=>'Class' ],	
+				[ 'name'=>'order', 'type'=>'text', 'label'=>'Order' ],
+				[ 'name'=>'start', 'type'=>'date', 'label'=>'Start' ],
+				[ 'name'=>'end',   'type'=>'date', 'label'=>'End' ],	
+				[ 'name'=>'track', 'type'=>'select-custom', 'label'=>'Tracking',			 
+					'choices' => [ '' => 'none', 'custom' => 'custom' ] ],	
+			],
+			'content_placeholder' => "\n\n"
+		],
+		'image' => [
+			'label' => 'Image',
+			'wrap' => true,
+			'defaults' => [ 'size'=>'100', 'class'=>'', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'', 'ada-hidden'=>'false', 'start'=>'', 'end'=>'', 'track'=>'' ],
+			'fields' => [ 
+				[ 'name'=>'size', 'type'=>'select', 'label'=>'Size',
+					'choices'=>[ '100'=>'100%', '1/2'=>'1/2', '1/3'=>'1/3', '1/4'=>'1/4', '1/6'=>'1/6', '1/12'=>'1/12'   ] ],	
+				[ 'name'=>'class', 'type'=>'text', 'label'=>'Class' ],	
+				[ 'name'=>'order', 'type'=>'text', 'label'=>'Order' ],
+				[ 'name'=>'link', 'type'=>'text', 'label'=>'URL image links to' ],	
+				[ 'name'=>'get-biz', 'type'=>'text', 'label'=>'[get-biz info="..."]' ],	
+				[ 'name'=>'new-tab', 'type'=>'select', 'label'=>'New Tab',
+					'choices'=>[ 'false'=>'no', 'true'=>'yes'   ] ],	
+				[ 'name'=>'ada-hidden', 'type'=>'select', 'label'=>'ADA Hidden',
+					'choices'=>[ 'false'=>'no', 'true'=>'yes'   ] ],	
+				[ 'name'=>'start', 'type'=>'date', 'label'=>'Start' ],
+				[ 'name'=>'end',   'type'=>'date', 'label'=>'End' ],	
+				[ 'name'=>'track', 'type'=>'select-custom', 'label'=>'Tracking',			 
+					'choices' => [ '' => 'none', 'custom' => 'custom' ] ],	
+			],
+			'content_placeholder' => ""
+		],
+		'video' => [
+			'label' => 'Video',
+			'wrap' => false,
+			'defaults' => [ 'size'=>'100', 'mobile'=>'100', 'class'=>'', 'order'=>'', 'link'=>'', 'thumb'=>'/wp-content/uploads/', 'start'=>'', 'end'=>'', 'preload'=>'false', 'related'=>'false', 'fullscreen'=>'false', 'controls'=>'true', 'autoplay'=>'false', 'loop'=>'false', 'muted'=>'false', 'begin'=>'', 'track'=>'' ],
+			'fields' => [ 				
+				[ 'name'=>'link', 'type'=>'text', 'label'=>'URL of video' ],
+				[ 'name'=>'size', 'type'=>'select', 'label'=>'Desktop Size',
+					'choices'=>[ '100'=>'100%', '1/2'=>'1/2', '1/3'=>'1/3', '1/4'=>'1/4', '1/6'=>'1/6', '1/12'=>'1/12'   ] ],
+				[ 'name'=>'mobile', 'type'=>'select', 'label'=>'Mobile Size',
+					'choices'=>[ '100'=>'100%', '1/2'=>'1/2', '1/3'=>'1/3', '1/4'=>'1/4', '1/6'=>'1/6', '1/12'=>'1/12'   ] ],				
+				[ 'name'=>'class', 'type'=>'text', 'label'=>'Class' ],	
+				[ 'name'=>'order', 'type'=>'text', 'label'=>'Order' ],
+				[ 'name'=>'thumb', 'type'=>'text', 'label'=>'Thumbnail' ],	
+				[ 'name'=>'start', 'type'=>'date', 'label'=>'Start' ],
+				[ 'name'=>'end',   'type'=>'date', 'label'=>'End' ],	
+				[ 'name'=>'preload', 'type'=>'select', 'label'=>'Preload',
+					'choices'=>[ 'false'=>'no', 'true'=>'yes'   ] ],		
+				[ 'name'=>'related', 'type'=>'select', 'label'=>'Show Related',
+					'choices'=>[ 'false'=>'no', 'true'=>'yes'   ] ],		
+				[ 'name'=>'fullscreen', 'type'=>'select', 'label'=>'Fullscreen',
+					'choices'=>[ 'false'=>'no', 'true'=>'yes'   ] ],			
+				[ 'name'=>'controls', 'type'=>'select', 'label'=>'Show Controls',
+					'choices'=>[ 'true'=>'yes', 'false'=>'no'   ] ],		
+				[ 'name'=>'autoplay', 'type'=>'select', 'label'=>'Autoplay',
+					'choices'=>[ 'false'=>'no', 'true'=>'yes'   ] ],	
+				[ 'name'=>'loop', 'type'=>'select', 'label'=>'Loop',
+					'choices'=>[ 'false'=>'no', 'true'=>'yes'   ] ],	
+				[ 'name'=>'muted', 'type'=>'select', 'label'=>'Muted',
+					'choices'=>[ 'false'=>'no', 'true'=>'yes'   ] ],					
+				[ 'name'=>'begin', 'type'=>'text', 'label'=>'Begin at' ],	
+				[ 'name'=>'track', 'type'=>'select-custom', 'label'=>'Tracking',			 
+					'choices' => [ '' => 'none', 'custom' => 'custom' ] ],	
+			],
+			'content_placeholder' => "\n"
+		],
+		'button' => [
+			'label' => 'Button',
+			'wrap' => true,
+			'defaults' => [ 'link'=>'', 'size'=>'100', 'align'=>'center', 'class'=>'', 'order'=>'', 'get-biz'=>'', 'new-tab'=>'false', 'fancy'=>'false', 'icon'=>'false', 'top'=>0, 'left'=>0, 'graphic'=>'false', 'graphic-w'=>'40', 'start'=>'', 'end'=>'', 'ada'=>'', 'track'=>'', 'onclick'=>'' ],
+			'fields' => [ 				
+				[ 'name'=>'link', 'type'=>'text', 'label'=>'URL button links to' ],
+				[ 'name'=>'size', 'type'=>'select', 'label'=>'Desktop Size',
+					'choices'=>[ '100'=>'100%', '1/2'=>'1/2', '1/3'=>'1/3', '1/4'=>'1/4', '1/6'=>'1/6', '1/12'=>'1/12'   ] ],		
+				[ 'name'=>'align', 'type'=>'select', 'label'=>'Align',
+					'choices'=>[ ''=>'none', 'left'=>'left', 'right'=>'right', 'center'=>'center' ] ],			
+				[ 'name'=>'class', 'type'=>'text', 'label'=>'Class' ],	
+				[ 'name'=>'order', 'type'=>'text', 'label'=>'Order' ],				
+				[ 'name'=>'get-biz', 'type'=>'text', 'label'=>'[get-biz info="..."]' ],	
+				[ 'name'=>'new-tab', 'type'=>'select', 'label'=>'New Tab',
+					'choices'=>[ 'false'=>'no', 'true'=>'yes'   ] ],	
+				[ 'name'=>'fancy', 'type'=>'select', 'label'=>'Fancy Button',
+					'choices'=>[ 'false'=>'no', 'true'=>'yes'   ] ],	
+				[ 'name'=>'icon', 'type'=>'select', 'label'=>'Icon',
+					'choices'=>[ 'false'=>'no', 'true'=>'yes'   ] ],				
+				[ 'name'=>'left', 'type'=>'text', 'label'=>'Left px' ],			
+				[ 'name'=>'top', 'type'=>'text', 'label'=>'Top px' ],	
+				[ 'name'=>'graphic', 'type'=>'select', 'label'=>'Graphic',
+					'choices'=>[ 'false'=>'no', 'true'=>'yes'   ] ],			
+				[ 'name'=>'graphic-w', 'type'=>'text', 'label'=>'Graphic width' ],
+				[ 'name'=>'start', 'type'=>'date', 'label'=>'Start' ],
+				[ 'name'=>'end', 'type'=>'date', 'label'=>'End' ],	
+				[ 'name'=>'ada', 'type'=>'text', 'label'=>'ADA Text', ],	
+				[ 'name'=>'track', 'type'=>'select-custom', 'label'=>'Tracking',			 
+					'choices' => [ '' => 'none', 'custom' => 'custom' ] ],	
+			],
+			'content_placeholder' => ""
+		],
+	];
+
+	/*
+	
+	$a = shortcode_atts( array(  ), $atts );
+
+		QTags.addButton( 'bp_video', 'video', '   [vid size="100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" link="url of video" thumb="url of thumb, if not using auto" preload="false, true" class="" related="false, true" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/vid]\n', 'video', 'Video', 1000 );
+
+	
+	*/
+	
+	
+	
+	
+	
+
+	wp_localize_script('battleplan-admin-script', 'BP_QTAGS_CFG', $bp_qtags_cfg);
+}
+
+
 /*--------------------------------------------------------------
 # Site Audit Set Up
 --------------------------------------------------------------*/

@@ -53,17 +53,14 @@
 	margin-right: 									15px;
 }
 
-.block-accordion .accordion-icon::before {
+.block-accordion .accordion-icon {
 	display:										inline-block;
-	font-family: 									var(--font-icons);
-	content:										"\e218";
-	font-size:										18rem;
 	transform: 										rotate(0deg);
 	transform-origin: 								50% 50%;
 	transition: 									all var(--main-trans-speed) linear;
 }
 
-.block-accordion.active .accordion-icon::before {
+.block-accordion.active .accordion-icon {
 	transform: 										rotate(90deg);
 	transition: 									all var(--main-trans-speed) linear;
 }
@@ -152,6 +149,7 @@ section.tab-content.current {
    	content: 										"";
    	display: 										block;
   	position: 										absolute;
+
 	width: 											100%;
 	height: 										100%;
    	transform: 										translateY(200%);

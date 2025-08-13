@@ -519,11 +519,17 @@ function processChron($forceChron) {
 		$daysSinceCheck = ($today - intval($googleInfo['date'])) / 86400;
 		
 		if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
+	
+		$thresholds = [1000 => 1, 500 => 2, 250 => 3, 125 => 4, 75 => 5, 50 => 6];
+		$days = 7;
+		foreach ($thresholds as $limit => $value) $days = $googleInfo['google-reviews'] >= $limit ? $value : $days;
+			
 		
-		if ( $forceChron == true || $daysSinceCheck > 5 ) :
+		if ( $forceChron == true || $daysSinceCheck > $days ) :
 	
 	
-	
+		//$open = $googleInfo[$primePID]['current-hours']['periods'][$day]['open']['time'] ? $googleInfo[$primePID]['current-hours']['periods'][$day]['open']['time'] : '';
+
 	
 	
 			$to = 'info@battleplanwebdesign.com';

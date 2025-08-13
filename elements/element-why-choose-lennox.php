@@ -35,7 +35,7 @@ return do_shortcode('
 			[/col]
 
 			[col]
-				<div class="icon-box">[get-icon type="award-alt"]</div>
+				<div class="icon-box">[get-icon type="award"]</div>
 				[txt]
 					<h2>Superior Service</h2>
 					<p>We understand that actions speak louder than words, so instead of just talking quality, we practice it through listening and responding to your comfort needs.</p>

@@ -8,27 +8,29 @@
 // Returns Business Information for site-wide changes
 add_shortcode( 'get-biz', 'battleplan_getBizInfo' );
 function battleplan_getBizInfo($atts, $content = null ) {
+	$customer_info = customer_info();
 	$a = shortcode_atts( array( 'info' => 'name', 'icon' => '', 'left'=>'0', 'top'=>'0' ), $atts );
 	$data = esc_attr($a['info']);
 	$icon = esc_attr($a['icon']) != '' ? do_shortcode('[get-icon type="'.esc_attr($a['icon']).'" class="biz-info" top="'.esc_attr($a['top']).'" left="'.esc_attr($a['left']).'"]').' ' : '';
 	$left = esc_attr($a['left']);
 	$top = esc_attr($a['top']);
 	
-	if ( $data == "area" ) return $icon.$GLOBALS['customer_info']['area-before'].$GLOBALS['customer_info']['area'].$GLOBALS['customer_info']['area-after'];
+	if ( $data == "area" ) return $icon.$customer_info['area-before'].$customer_info['area'].$customer_info['area-after'];
 	
 	if ( strpos($data, 'phone') !== false ) :
-		$phoneBasic = strpos($data, 'replace') !== false ? $GLOBALS['customer_info'][$data] : $GLOBALS['customer_info']['area'].'-'.$GLOBALS['customer_info']['phone'];	
-		$phoneFormat = $GLOBALS['customer_info']['area-before'].$GLOBALS['customer_info']['area'].$GLOBALS['customer_info']['area-after'].$GLOBALS['customer_info']['phone'];	
+		$phoneBasic = strpos($data, 'replace') !== false ? $customer_info[$data] : $customer_info['area'].'-'.$customer_info['phone'];	
+		$phoneFormat = $customer_info['area-before'].$customer_info['area'].$customer_info['area-after'].$customer_info['phone'];	
 	
 		if ( strpos($data, 'mm-bar-phone') !== false ) :
 			$openMessage = is_biz_open() ? "<span>Call Us, We're Open!</span>" : "";
 			$phoneFormat = do_shortcode('<div class="mm-bar-btn mm-bar-phone call-btn" aria-hidden="true">[get-icon type="phone"]'.$openMessage.'</div><span class="sr-only">Call Us</span>');
 		elseif ( strpos($data, 'alt') !== false ) :
-			if ( isset($GLOBALS['customer_info'][$data]) ) :
-				$phoneFormat = $GLOBALS['customer_info'][$data];
+			if ( isset($customer_info[$data]) ) :
+				$phoneFormat = $customer_info[$data];
 				$phoneBasic = str_replace(array('(', ')', '-', '.', ' '), '', $phoneFormat);
 			endif;
 		endif;
+		if ( $customer_info['phone'] === '' ) return;
 		if ( strpos($data, '-notrack') !== false ):
 			return '<a class="phone-link" href="tel:1-'.$phoneBasic.'">'.$icon.$phoneFormat.'</a>';
 		else:
@@ -36,7 +38,7 @@ function battleplan_getBizInfo($atts, $content = null ) {
 		endif;
 	endif;
 
-	if ( isset($GLOBALS['customer_info'][$data]) ) return $icon.$GLOBALS['customer_info'][$data];
+	if ( isset($customer_info[$data]) ) return $icon.$customer_info[$data];
 }
  
 // Use Google ratings in content
@@ -320,7 +322,7 @@ function battleplan_addBusinessHours( $atts, $content = null ) {
 	endif;	
 	
 	if ( esc_attr($a['mon1']) === "" && esc_attr($a['wkday1']) === "" ) :	
-		$customer_info = get_option('customer_info');
+		$customer_info = customer_info();
 		$weekdayDescriptions = $customer_info['current-hours'] ?? [];
 		$stripLabel = fn($str) => trim(substr($str, strpos($str, ':') + 1));
 
@@ -392,12 +394,14 @@ function battleplan_isOpen($atts, $content = null) {
 // Print list of service areas (from functions-site.php)
 add_shortcode( 'get-service-areas', 'battleplan_getServiceAreas' );
 function battleplan_getServiceAreas($atts, $content = null) {
+	$customer_info = customer_info();
+	
 	$states = array('alabama'=>'AL', 'arizona'=>'AZ', 'arkansas'=>'AR', 'california'=>'CA', 'colorado'=>'CO', 'connecticut'=>'CT', 'delaware'=>'DE', 'dist of columbia'=>'DC', 'dist. of columbia'=>'DC', 'district of columbia'=>'DC', 'florida'=>'FL', 'georgia'=>'GA', 'idaho'=>'ID', 'illinois'=>'IL', 'indiana'=>'IN', 'iowa'=>'IA', 'kansas'=>'KS', 'kentucky'=>'KY', 'louisiana'=>'LA', 'maine'=>'ME', 'maryland'=>'MD', 'massachusetts'=>'MA', 'michigan'=>'MI', 'minnesota'=>'MN', 'mississippi'=>'MS', 'missouri'=>'MO', 'montana'=>'MT', 'nebraska'=>'NE', 'nevada'=>'NV', 'new hampshire'=>'NH', 'new jersey'=>'NJ', 'new mexico'=>'NM', 'new york'=>'NY', 'north carolina'=>'NC', 'north dakota'=>'ND', 'ohio'=>'OH', 'oklahoma'=>'OK', 'oregon'=>'OR', 'pennsylvania'=>'PA', 'rhode island'=>'RI', 'south carolina'=>'SC', 'south dakota'=>'SD', 'tennessee'=>'TN', 'texas'=>'TX', 'utah'=>'UT', 'vermont'=>'VT', 'virginia'=>'VA', 'washington'=>'WA', 'washington d.c.'=>'DC', 'washington dc'=>'DC', 'west virginia'=>'WV', 'wisconsin'=>'WI', 'wyoming'=>'WY');
 
-	//$cities[$GLOBALS['customer_info']['city'].', '.$GLOBALS['customer_info']['state-abbr']] = '';
+	//$cities[$customer_info['city'].', '.$customer_info['state-abbr']] = '';
 	$cities = array();
-	if ( is_array($GLOBALS['customer_info']['service-areas']) ) :
-		foreach ( $GLOBALS['customer_info']['service-areas'] as $city ) :
+	if ( is_array($customer_info['service-areas']) ) :
+		foreach ( $customer_info['service-areas'] as $city ) :
 			$buildCity = $city[0];
 			if ( array_key_exists( strtolower($city[1]), $states) ) $buildCity .= ', '.$states[strtolower($city[1])];
 			$cities[$buildCity] = '';
@@ -1733,9 +1737,19 @@ function battleplan_getRSS( $atts, $content = null ) {
 	 $id = str_replace(' ', '_', $id);	
 	 $delay = esc_attr($a['delay']) * 1000;	  
 	 $start = esc_attr($a['start']);
+	 
+	 if ( !ctype_digit($start)) {
+		$start = do_shortcode('[get-biz info="' . $start . '"]');
+	 }
+	 
 	 if (substr($start, 0, 1) === '{') $start = do_shortcode(str_replace( array("{","}","&#039;","&quot;"), array("[","]","'","'"), $start ));
 	 
 	 $end = esc_attr($a['end']);
+	 
+	 if ( !ctype_digit($end)) {
+		$end = do_shortcode('[get-biz info="' . $end . '"]');
+	 }
+	 
 	 if (substr($end, 0, 1) === '{') $end = do_shortcode(str_replace( array("{","}","&#039;","&quot;"), array("[","]","'","'"), $end ));
 
 	 $buildCountUp = '<div class="count-up" data-easing="'.esc_attr($a['easing']).'" data-grouping="'.esc_attr($a['grouping']).'" data-separator="'.esc_attr($a['separator']).'" data-decimal="'.esc_attr($a['decimal']).'" data-prefix="'.esc_attr($a['prefix']).'" data-suffix="'.esc_attr($a['suffix']).'" data-duration="'.esc_attr($a['duration']).'" data-start="'.$start.'" data-end="'.$end.'">';
@@ -1765,12 +1779,13 @@ function battleplan_getRSS( $atts, $content = null ) {
 // Insert the city / state of either company address, or the city-specific landing page
  add_shortcode("get-location", "battleplan_getLocation");
  function battleplan_getLocation($atts, $content) {
+	 $customer_info = customer_info();
 	 $a = shortcode_atts( array( 'state'=>'true', 'default'=>'blank', 'before'=>'', 'after'=>'' ), $atts );
 	 
 	 if ( esc_attr($a['default']) !== 'blank' && !defined('_USER_DISPLAY_LOC') ) :
 	 	$location = esc_attr($a['default']);		
 	 elseif ( !defined('_USER_DISPLAY_LOC') ) :
-	 	$location = $GLOBALS['customer_info']['default-loc'];	
+	 	$location = $customer_info['default-loc'];	
 	 else:	 
 	 	$location = _USER_DISPLAY_LOC;
 	 endif;

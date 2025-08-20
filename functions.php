@@ -116,6 +116,34 @@ function showMe($something, $die=true) {
 	}
 }
 
+// Send an email to myself
+function emailMe($subject, $htmlMessage, $replyTo = null) {
+    $to   = 'info@battleplanwebdesign.com';
+    $from = 'no-reply@battleplanwebdesign.com';
+
+    $subject = trim(preg_replace('/\r|\n/', '', (string) $subject));
+
+	if (function_exists('mb_encode_mimeheader')) {
+        $subject = mb_encode_mimeheader($subject, 'UTF-8', 'B', "\r\n");
+    }
+
+	$replyTo = filter_var($replyTo, FILTER_VALIDATE_EMAIL) ?: $from;
+
+    $headers = [
+        'MIME-Version: 1.0',
+        'Content-Type: text/html; charset=UTF-8',
+        'From: Battle Plan Web Design <' . $from . '>',
+        'Reply-To: ' . $replyTo,
+        'X-Mailer: PHP/' . phpversion(),
+    ];
+    $headersStr = implode("\r\n", $headers);
+
+    $additionalParams = '-f ' . escapeshellarg($from);
+
+    return mail($to, $subject, (string) $htmlMessage, $headersStr, $additionalParams);
+}		
+
+
 // Check if current page is log in screen 
 function is_wplogin() {
     $ABSPATH_MY = str_replace(array('\\','/'), DIRECTORY_SEPARATOR, ABSPATH);
@@ -197,9 +225,11 @@ function bp_build_open_intervals(array $periods, string $tz, int $horizonDays=14
 }
 
 function bp_is_open_at(array $periods,string $tz,?int $ts=null): bool {
-	$now=$ts ?? (new DateTimeImmutable('now',new DateTimeZone($tz)))->getTimestamp();
-	foreach (bp_build_open_intervals($periods,$tz) as $iv) if ($iv['start']<=$now && $now<$iv['end']) return true;
-	return false;
+    $now = $ts ?? (new DateTimeImmutable('now', new DateTimeZone($tz)))->getTimestamp();
+    foreach (bp_build_open_intervals($periods, $tz) as $iv) {
+        if ($iv['start'] <= $now && $now < $iv['end']) return true;
+    }
+    return false;
 }
 
 function bp_next_change_at(array $periods,string $tz,?int $ts=null): ?array {
@@ -212,10 +242,10 @@ function bp_next_change_at(array $periods,string $tz,?int $ts=null): ?array {
 }
 
 function is_biz_open(string $businessTz=null): bool {
-	if (($GLOBALS['customer_info']['pid-sync'] ?? '') !== 'true') return false;
+	$customer_info = customer_info();
 
 	$info=get_option('bp_gbp_update') ?: [];
-	$ids=$GLOBALS['customer_info']['pid'] ?? 0; $ids=is_array($ids)?$ids:[$ids];
+	$ids=$customer_info['pid'] ?? 0; $ids=is_array($ids)?$ids:[$ids];
 	$pid=$ids[0] ?? 0; if (!$pid) return false;
 
 	$tz=$businessTz ?: wp_timezone_string(); // ← prefer per-location TZ if you have it
@@ -745,11 +775,13 @@ function battleplan_preload_bg() {
 // Add some defining classes to body
 add_filter( 'body_class', 'battleplan_addBodyClasses', 30 );
 function battleplan_addBodyClasses( $classes ) {	
+	$customer_info = customer_info();
 	$classes[] = "slug-"._PAGE_SLUG; 
 	$classes[] = is_mobile() ? "screen-mobile" : "screen-desktop";
 	
-	$siteType = $GLOBALS['customer_info']['site-type'] ?? null;
-	$bizType = $GLOBALS['customer_info']['business-type'] ?? null;
+	$siteType = $customer_info['site-type'] ?? null;
+	$bizTypeRaw = $customer_info['business-type'] ?? null;
+	$bizType    = is_array($bizTypeRaw) ? ($bizTypeRaw[0] ?? null) : $bizTypeRaw;
 
     if ( $siteType ) $classes[] = 'site-type-'.strtolower($siteType);
     if ( $bizType )  $classes[] = 'business-type-'.strtolower($bizType);
@@ -1061,10 +1093,11 @@ function bp_wpautop($content, $sanitize = false) {
 	foreach ($no_wpautop_blocks as $placeholder => $original) {
 		$content = str_replace($placeholder, $original, $content);
 	}
+	
+	$content = preg_replace('/<p>\s*(<a .*?>)?\s*(<img .*? \/?>)\s*(<\/a>)?\s*<\/p>/iU', '\1\2\3', $content);
 
 	return $content;
 }
-
 
 // Format with <p>
 add_shortcode( 'p', 'battleplan_add_ptags' );
@@ -1197,6 +1230,8 @@ function battleplan_dequeue_unwanted_stuff() {
 // Load and enqueue styles in header
 add_action( 'wp_enqueue_scripts', 'battleplan_header_styles', 9998 );
 function battleplan_header_styles() {
+	$customer_info = customer_info();
+	
 	wp_enqueue_style( 'normalize-style', get_template_directory_uri()."/style-normalize.css", array(), _BP_VERSION );	
 	wp_enqueue_style( 'parent-style', get_template_directory_uri()."/style.css", array('normalize-style'), _BP_VERSION );
 	wp_enqueue_style( 'battleplan-style-grid', get_template_directory_uri()."/style-grid.css", array('parent-style'), _BP_VERSION );	
@@ -1213,11 +1248,11 @@ function battleplan_header_styles() {
 	if ( is_plugin_active( 'stripe-payments/accept-stripe-payments.php' ) ) wp_enqueue_style( 'battleplan-stripe-payments', get_template_directory_uri()."/style-stripe-payments.css", array('parent-style'), _BP_VERSION );  
 	if ( is_plugin_active( 'cue/cue.php' ) ) wp_enqueue_style( 'battleplan-cue', get_template_directory_uri()."/style-cue.css", array('parent-style'), _BP_VERSION );  
 	
-	if ( $GLOBALS['customer_info']['site-type'] == 'profile' || $GLOBALS['customer_info']['site-type'] == 'profiles' ) wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array('parent-style'), _BP_VERSION );		
+	if ( $customer_info['site-type'] == 'profile' || $customer_info['site-type'] == 'profiles' ) wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array('parent-style'), _BP_VERSION );		
 	
 	$start = strtotime(date("Y").'-12-01'); 
 	$end = strtotime(date("Y").'-12-30');	
-	$cancel_holiday = isset( $GLOBALS['customer_info']['cancel-holiday'] ) ? $GLOBALS['customer_info']['cancel-holiday'] : "false";
+	$cancel_holiday = isset( $customer_info['cancel-holiday'] ) ? $customer_info['cancel-holiday'] : "false";
 	
 	if ( $cancel_holiday == "false" && time() > $start && time() < $end ) :
 	 	wp_enqueue_style( 'battleplan-style-holiday', get_template_directory_uri()."/style-holiday.css", array('parent-style'), _BP_VERSION );
@@ -1226,7 +1261,7 @@ function battleplan_header_styles() {
 	
 	wp_enqueue_style( 'battleplan-style-forms', get_template_directory_uri()."/style-forms.css", array('battleplan-style-navigation'), _BP_VERSION );
 	//wp_enqueue_style( 'battleplan-style-posts', get_template_directory_uri()."/style-posts.css", array('battleplan-style-forms'), _BP_VERSION );	
-	//if ( $GLOBALS['customer_info']['site-type'] == 'hvac' ) wp_enqueue_style( 'battleplan-style-products-hvac', get_template_directory_uri()."/style-products-hvac.css", array('battleplan-style-forms'), _BP_VERSION );
+	//if ( $customer_info['site-type'] == 'hvac' ) wp_enqueue_style( 'battleplan-style-products-hvac', get_template_directory_uri()."/style-products-hvac.css", array('battleplan-style-forms'), _BP_VERSION );
 		
 	wp_enqueue_style( 'battleplan-style', get_stylesheet_directory_uri()."/style-site.css", array('battleplan-style-forms'), _BP_VERSION );	
 }
@@ -1281,11 +1316,13 @@ function battleplan_enqueue_header_scripts() {
 // Load scripts in footer
 add_action( 'wp_enqueue_scripts', 'battleplan_enqueue_footer_scripts', 9998 );
 function battleplan_enqueue_footer_scripts() {	
+	$customer_info = customer_info();
+	
 	wp_enqueue_script( 'battleplan-script-pages', get_template_directory_uri().'/js/script-pages.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) );		
 	if ( !is_mobile() ) : 
 		wp_enqueue_script( 'battleplan-script-desktop', get_template_directory_uri().'/js/script-desktop.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) ); 
 
-		if ( isset($GLOBALS['customer_info']['scripts']) && is_array($GLOBALS['customer_info']['scripts']) && in_array('magic-menu', $GLOBALS['customer_info']['scripts']) ) :
+		if ( isset($customer_info['scripts']) && is_array($customer_info['scripts']) && in_array('magic-menu', $customer_info['scripts']) ) :
 			wp_enqueue_script( 'battleplan-script-magic-menu', get_template_directory_uri().'/js/script-magic-menu.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) );
 		endif;
 	endif;
@@ -1310,7 +1347,7 @@ function battleplan_enqueue_footer_scripts() {
         wp_localize_script('battleplan-script-cue', 'IconMap', $map);
 	}
 	
-	if ( ($GLOBALS['customer_info']['site-type'] == 'profile' || (is_array($GLOBALS['customer_info']['site-type']) && in_array('profile', $GLOBALS['customer_info']['site-type']))) || ($GLOBALS['customer_info']['site-type'] == 'profiles' || (is_array($GLOBALS['customer_info']['site-type']) && in_array('profiles', $GLOBALS['customer_info']['site-type']))) ) wp_enqueue_script( 'battleplan-script-user-profiles', get_template_directory_uri().'/js/script-user-profiles.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) ); 
+	if ( ($customer_info['site-type'] == 'profile' || (is_array($customer_info['site-type']) && in_array('profile', $customer_info['site-type']))) || ($customer_info['site-type'] == 'profiles' || (is_array($customer_info['site-type']) && in_array('profiles', $customer_info['site-type']))) ) wp_enqueue_script( 'battleplan-script-user-profiles', get_template_directory_uri().'/js/script-user-profiles.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) ); 
 	
 	if ( is_admin() && _USER_LOGIN == "battleplanweb" ) {
 		wp_enqueue_style( 'battleplan-admin-css', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION );	
@@ -1326,7 +1363,7 @@ function battleplan_enqueue_footer_scripts() {
 	wp_localize_script( 'battleplan-script-helpers', 'site_dir', $saveDir );	
 	wp_localize_script( 'battleplan-script-desktop', 'site_dir', $saveDir );	
 	
-	$saveOptions = array ( 'lat' => $GLOBALS['customer_info']['lat'], 'long' => $GLOBALS['customer_info']['long'] );
+	$saveOptions = array ( 'lat' => $customer_info['lat'], 'long' => $customer_info['long'] );
     wp_localize_script('battleplan-script-tracking', 'site_options', $saveOptions);
 	
 	wp_enqueue_script( 'battleplan-script-site', get_stylesheet_directory_uri().'/script-site.js', array('battleplan-script-fire-off'), _BP_VERSION,  array( 'in_footer' => 'true' ) );	
@@ -1359,10 +1396,12 @@ function battleplan_add_data_attribute($tag, $handle, $src) {
 // Load and enqueue admin styles & scripts
 if (is_admin()) { add_action( 'admin_enqueue_scripts', 'battleplan_admin_scripts' ); }
 function battleplan_admin_scripts() {
+	$customer_info = customer_info();
+	
 	wp_enqueue_style( 'battleplan-admin-css', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION ); 
 	wp_enqueue_script( 'battleplan-script-helpers', get_template_directory_uri().'/js/script-helpers.js', array(), _BP_VERSION, false );					
 	wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array(), _BP_VERSION, false );	
-	if ( $GLOBALS['customer_info']['site-type'] == 'profile' || $GLOBALS['customer_info']['site-type'] == 'profiles' ) : 
+	if ( $customer_info['site-type'] == 'profile' || $customer_info['site-type'] == 'profiles' ) : 
 		wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array(), _BP_VERSION ); 		
 		wp_enqueue_script( 'battleplan-script-user-profiles', get_template_directory_uri().'/js/script-user-profiles.js', array(), _BP_VERSION, false ); 
 	endif;
@@ -1385,10 +1424,11 @@ if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 
 if ( get_option('timeline') && get_option('timeline')['install'] == 'true' ) require_once get_template_directory().'/includes/includes-timeline.php'; 
 if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) require_once get_template_directory().'/includes/includes-jobsite-geo.php'; 
 
-if ( $GLOBALS['customer_info']['site-type'] == 'hvac' ) require_once get_template_directory().'/includes/includes-hvac.php'; 
-if ( $GLOBALS['customer_info']['site-type'] == 'pedigree' ) require_once get_template_directory().'/includes/includes-pedigree.php'; 
-if ( $GLOBALS['customer_info']['site-type'] == 'carte-du-jour' ) require_once get_template_directory().'/includes/includes-carte-du-jour.php'; 
-if ( $GLOBALS['customer_info']['site-type'] == 'profile' || $GLOBALS['customer_info']['site-type'] == 'profiles' ) require_once get_template_directory().'/includes/includes-user-profiles.php';  
+if ( $customer_info['site-type'] == 'hvac' ) require_once get_template_directory().'/includes/includes-hvac.php'; 
+if ( $customer_info['site-type'] == 'pedigree' ) require_once get_template_directory().'/includes/includes-pedigree.php'; 
+if ( $customer_info['site-type'] == 'carte-du-jour' ) require_once get_template_directory().'/includes/includes-carte-du-jour.php'; 
+if ( $customer_info['site-type'] == 'profile' || $customer_info['site-type'] == 'profiles' ) require_once get_template_directory().'/includes/includes-user-profiles.php';  
+
 require_once get_template_directory().'/functions-shortcodes.php';
 require_once get_template_directory().'/functions-icons.php';
 require_once get_template_directory().'/functions-forms.php';
@@ -1514,6 +1554,7 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 	
 		$classes = empty( $item->classes ) ? array() : (array) $item->classes;
 		$mobile = in_array('mobile-only', $classes) ? ' mobile-only' : '';
+		$customer_info = customer_info();
 	
 		if ( $item->attr_title === "Search Form" ) : 
 			$buildOutput = bp_display_menu_search($item->title, $mobile); 
@@ -1530,8 +1571,8 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 		
 		    if (preg_match('/\[get-biz info=["\']([^"\']+)["\']\]/', $item->attr_title, $matches)) {
 				$info_key = $matches[1];
-				if (isset($GLOBALS['customer_info'][$info_key])) {
-					$item->url = $GLOBALS['customer_info'][$info_key];
+				if (isset($customer_info[$info_key])) {
+					$item->url = $customer_info[$info_key];
 				}
 			}
 
@@ -1816,8 +1857,10 @@ $landingBottomMeta->addWysiwyg(array( 'id' => 'page-bottom_text', 'label' => '' 
 // Display Google review rating
 add_action('wp_footer', 'battleplan_getGoogleRating');
 function battleplan_getGoogleRating() {
-	if ( $GLOBALS['customer_info']['pid'] ) :
-		$placeIDs = $GLOBALS['customer_info']['pid'];
+	$customer_info = customer_info();
+	
+	if ( $customer_info['pid'] ) :
+		$placeIDs = $customer_info['pid'];
 		if ( isset($placeIDs) ) :
 			$googleInfo = get_option('bp_gbp_update') ? get_option('bp_gbp_update') : array();
 	
@@ -1869,10 +1912,10 @@ function battleplan_getGoogleRating() {
 }
 
 // Set up URL re-directs
-$pid = is_array($GLOBALS['customer_info']['pid']) ? $GLOBALS['customer_info']['pid'][0] : $GLOBALS['customer_info']['pid'];
-$goog_rev = $GLOBALS['customer_info']['google-review'];
+$pid = is_array($customer_info['pid']) ? $customer_info['pid'][0] : $customer_info['pid'];
+$goog_rev = $customer_info['google-review'];
 if ( _PAGE_SLUG == "google" && strlen( $pid ) > 10 ) : 
-	$pid = is_array($GLOBALS['customer_info']['pid']) ? $GLOBALS['customer_info']['pid'][0] : $GLOBALS['customer_info']['pid'];
+	$pid = is_array($customer_info['pid']) ? $customer_info['pid'][0] : $customer_info['pid'];
 	if ( $pid != '' ) {
 		wp_redirect( "https://search.google.com/local/reviews?placeid=".$pid."&hl=en&gl=US", 301 ); 
 	} elseif ( $goog_rev != '' ) {
@@ -1880,14 +1923,14 @@ if ( _PAGE_SLUG == "google" && strlen( $pid ) > 10 ) :
 	}
 	exit; 
 endif;
-if ( _PAGE_SLUG == "facebook" && strlen( $GLOBALS['customer_info']['facebook'] ) > 10 ) : 
+if ( _PAGE_SLUG == "facebook" && strlen( $customer_info['facebook'] ) > 10 ) : 
 	$facebook = do_shortcode('[get-biz info="facebook"]');
 	if ( substr($facebook, -1) != '/') $facebook .= "/";
 	//wp_redirect( $facebook."reviews/", 301 ); 
 	wp_redirect( $facebook, 301 ); 
 	exit; 
 endif;
-if ( _PAGE_SLUG == "yelp" && strlen( $GLOBALS['customer_info']['yelp'] ) > 10 ) : 
+if ( _PAGE_SLUG == "yelp" && strlen( $customer_info['yelp'] ) > 10 ) : 
 	$yelp = str_replace('https://www.yelp.com/biz/', '', do_shortcode('[get-biz info="yelp"]'));
 	wp_redirect( "https://www.yelp.com/writeareview/biz/".$yelp, 301 ); 
 	exit; 
@@ -1905,97 +1948,100 @@ function battleplan_redirect_to_url($url, $redirect) {
 	endif;
 }
 
-// Include schema in head of each page
-add_action('wp_head', 'battleplan_addSchema');
-function battleplan_addSchema() { 
-	//if ( !isset($GLOBALS['customer_info']['schema']) || $GLOBALS['customer_info']['schema'] != 'false' ) :  // removed 7/4/2023 to fix the issue with Search Console (not even sure why this is here)
-	//if ( isset($GLOBALS['customer_info']['schema']) && is_array($GLOBALS['customer_info']['schema']) ) : // if you end up needing this, try this line instead (same as the Google Tag setup below)
 
-		$schema = get_option( 'bp_schema' ) ? get_option( 'bp_schema' ) : array();
-		if ( !array_key_exists('business_type', $schema ) ) $schema['business_type'] = '';
-		if ( !array_key_exists('additional_type', $schema ) ) $schema['additional_type'] = '';
-		if ( !array_key_exists('company_logo', $schema ) ) $schema['company_logo'] = 'logo.webp';
-		if ( !array_key_exists('hours', $schema ) ) $schema['hours'] = null;
-	
-		$attach = get_children( array( 'post_parent' => get_the_ID(), 'post_type' => 'attachment', 'post_mime_type' => 'image', 'order' => 'ASC', 'numberposts' => 1 ) );
-		$imageFile = is_array( $attach ) && is_object( current( $attach ) ) ? current( $attach )->guid : '';
 
-		?><script type="application/ld+json" nonce="<?php echo _BP_NONCE; ?>" >
-			{ 
-				"@context": "http://schema.org",
-				"@type": "<?php echo $schema['business_type'] ?>",
-				"additionalType": "http://productontology.org/id/<?php echo $schema['additional_type'] ?>", 
-				"name": "<?php echo $GLOBALS['customer_info']['name'] ?>",
-				"url": "<?php echo get_site_url(); ?>/",
-				"logo": "<?php echo get_site_url().'/wp-content/uploads/'.$schema['company_logo'] ?>",
-				"image": "<?php echo $imageFile ?>",
-				"description": "<?php echo str_replace(array('&#038;', '&#8217;', '&#8221;', '"'), array('&', "'", "'", "'"), get_the_excerpt()) ?>",			
-				"telephone": "(<?php echo $GLOBALS['customer_info']['area'] ?>) <?php echo $GLOBALS['customer_info']['phone'] ?>",
-				"email":"<?php echo $GLOBALS['customer_info']['email'] ?>",
-				"address": {
-					"@type":"PostalAddress",
-					"streetAddress": "<?php echo $GLOBALS['customer_info']['street'] ?>",
-					"addressLocality": "<?php echo $GLOBALS['customer_info']['city'] ?>",
-					"addressRegion": "<?php echo $GLOBALS['customer_info']['state-full'] ?>",
-					"postalCode": "<?php echo $GLOBALS['customer_info']['zip'] ?>"
-				},
-				"geo": {
-					"@type":"GeoCoordinates",
-					"latitude":"<?php echo $GLOBALS['customer_info']['lat'] ?>",
-					"longitude":"<?php echo $GLOBALS['customer_info']['long'] ?>"
-				},
-				"openingHours": "<?php echo $schema['hours'] ?>",
-				"areaServed": [{
-					"@type": "City",
-					"name": "<?php echo $GLOBALS['customer_info']['city'] ?>",
-					"sameAs": "https://en.wikipedia.org/wiki/<?php echo $GLOBALS['customer_info']['city'] ?>,_<?php echo $GLOBALS['customer_info']['state-full'] ?>"
-			<?php foreach ( $GLOBALS['customer_info']['service-areas'] as $city ) : ?>			  
-				},
-				{
-					"@type": "City",
-					"name": "<?php echo $city[0] ?>",
-					"sameAs": "https://en.wikipedia.org/wiki/<?php echo $city[0] ?>,_<?php echo $city[1] ?>"
-			<?php endforeach; ?>
-				}],	
-				"makesOffer": {
-					"@type":"Offer",
-					"areaServed": {
-						"@type":"GeoShape",
-						"address": {
-							"@type":"PostalAddress",
-							"addressLocality":"<?php echo $GLOBALS['customer_info']['city'] ?>",
-							"addressRegion":"<?php echo $GLOBALS['customer_info']['state-full'] ?>",
-							"postalCode":"<?php echo $GLOBALS['customer_info']['zip'] ?>",
-							"addressCountry":"United States"
-						}
-					}
-				},
-				<?php if ( strlen($GLOBALS['customer_info']['cid']) > 1 ) : ?>
-					"hasMap": "https://maps.google.com/?cid=<?php echo $GLOBALS['customer_info']['cid']; ?>",
-				<?php endif;
-				if ( $GLOBALS['customer_info']['pid'] ) :
-					$placeIDs = $GLOBALS['customer_info']['pid'];
-					if ( isset($placeIDs) ) :
-						$googleInfo = get_option('bp_gbp_update') ? get_option('bp_gbp_update') : array();
 
-						if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);	
-						$primePID = $placeIDs[0];
 
-						if (isset($googleInfo[$primePID]['google-rating']) && $googleInfo[$primePID]['google-rating'] > 3.99) : ?>						
-							"aggregateRating": {
-								"@type": "AggregateRating",						
-								"ratingValue": "<?php echo number_format($googleInfo[$primePID]['google-rating'], 1, '.', ','); ?>",
-								"bestRating": "5.0",
-								"ratingCount": "<?php echo number_format($googleInfo[$primePID]['google-reviews'], 0); ?>"
-							},							
-						<?php endif;
-					endif;
-				endif; ?>				
-				"priceRange": "$$"
-			}
-		</script>	
-<?php //endif;
+
+
+function customer_info(bool $force = false): array {
+    static $cache = null;
+    if ($force || !is_array($cache)) {
+        $ci = get_option('customer_info');
+        $cache = is_array($ci) ? $ci : [];
+    }
+    return $cache;
 }
+
+function update_customer_info(array $ci_new): bool {
+    $ci_old = customer_info();
+
+    if ($ci_old === $ci_new) {
+        return true;
+    }
+
+    $ok = update_option('customer_info', $ci_new);
+	
+    if ($ok) {
+        $customer_info = $ci_new; // legacy compat (remove once unused)
+        customer_info(true);                 // refresh static cache for this request
+    }
+
+    return $ok;
+}
+
+
+
+
+
+
+
+
+// Extend Yoast's main Organization/LocalBusiness node
+add_filter('wpseo_schema_organization', function ($data) {
+    // Only touch the main org node
+    if (($data['@id'] ?? '') !== home_url('#organization')) return $data;
+
+    $ci = customer_info();
+    $s  = $ci['schema'] ?? [];
+    if (!$s) return $data;
+
+    // Overlay simple props (hours handled below)
+    foreach ([
+        'priceRange','email','telephone','sameAs','areaServed',
+        'hasOfferCatalog','aggregateRating','geo','logo','image',
+        'additionalType','hasMap'
+    ] as $k) {
+        if (!empty($s[$k])) $data[$k] = $s[$k];
+    }
+
+    // Hours: set both spec + compact, or remove both if we don't have hours
+    if (!empty($s['openingHoursSpecification'])) {
+        $data['openingHoursSpecification'] = $s['openingHoursSpecification'];
+        if (!empty($s['openingHours'])) {
+            $data['openingHours'] = $s['openingHours']; // optional compact string
+        }
+    } else {
+        unset($data['openingHoursSpecification'], $data['openingHours']);
+    }
+
+    // Merge @type (keep Yoast’s + your canonical)
+    $data['@type'] = array_values(array_unique(
+        array_merge((array)($data['@type'] ?? []), (array)($s['@type'] ?? []))
+    ));
+
+    // Point Yoast’s address reference at the address node we control
+    $data['address'] = ['@id' => home_url('#local-main-place-address')];
+
+    return $data;
+}, 99);
+
+
+add_filter('wpseo_schema_postal_address', function($addr){
+    if (($addr['@id'] ?? '') === home_url('#local-main-place-address')) {
+        $customer_info = customer_info();
+        $abbr = trim((string)($customer_info['state-abbr'] ?? ''));
+        $full = trim((string)($customer_info['state-full'] ?? ''));
+        $addr['addressRegion']  = $abbr !== '' ? $abbr : ($full !== '' ? $full : '');
+        $addr['addressCountry'] = 'US';
+    }
+    return $addr;
+}, 99);
+
+
+
+
+
 
 // if someone is landing on an individual testimonial, redirect to /testimonials/
 add_action('template_redirect', 'battleplan_redirect_testimonials');
@@ -2386,12 +2432,14 @@ function bp_after_colophon() { do_action('bp_after_colophon'); }
 // Install Google Global Site Tags
 add_action('bp_google_tag_manager', 'battleplan_load_tag_manager');
 function battleplan_load_tag_manager() { 
+	$customer_info = customer_info();
+	
 	$buildTags = '';
 	$analytics_id = $ads_id = null;
 	
-	if ( isset($GLOBALS['customer_info']['google-tags']) && is_array($GLOBALS['customer_info']['google-tags']) ) :
+	if ( isset($customer_info['google-tags']) && is_array($customer_info['google-tags']) ) :
 
-		foreach ( $GLOBALS['customer_info']['google-tags'] as $gtag=>$value ) :	
+		foreach ( $customer_info['google-tags'] as $gtag=>$value ) :	
 			//if ( $gtag === "analytics" && _USER_LOGIN !== 'battleplanweb' && _IS_BOT !== true ) :
 			if ( $gtag === "analytics" && _USER_LOGIN !== 'battleplanweb' ) :
 				$analytics_id = $value;	
@@ -2407,7 +2455,7 @@ function battleplan_load_tag_manager() {
 		foreach ( $events as $event ) :
 			[ $event_label, $event_tag ] = $event;
 			if ( $event_label === 'phone_conversion_number' && $ads_id ) :
-				$phone_number = $GLOBALS['customer_info']['area-before'] . $GLOBALS['customer_info']['area'] . $GLOBALS['customer_info']['area-after'] . $GLOBALS['customer_info']['phone'];
+				$phone_number = $customer_info['area-before'] . $customer_info['area'] . $customer_info['area-after'] . $customer_info['phone'];
 				$buildTags .= "gtag('config', '$ads_id/$event_tag', { phone_conversion_number: '$phone_number' });";
 			endif;
 		endforeach;

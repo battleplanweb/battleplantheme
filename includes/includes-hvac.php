@@ -138,7 +138,7 @@ function battleplan_why_choose_us( $atts, $content = null ) {
 	$img = esc_attr($a['img']);
 	$alt = esc_attr($a['alt']);
 	if ( $brand == '' ) :	
-		$brand = $GLOBALS['customer_info']['site-brand'];
+		$brand = customer_info()['site-brand'];
 		if ( is_array($brand) ) $brand = $brand[0];
 	endif;
 	$name = ucwords($brand);
@@ -277,7 +277,7 @@ function battleplan_getBrandLogo($atts, $content = null) {
 	$altImg = $a['alt'] ? '-'.esc_attr($a['alt']) : '';
 	$brand = esc_attr($a['brand']);
 	if ( $brand === '' ) :	
-		$brand = $GLOBALS['customer_info']['site-brand'];
+		$brand = customer_info()['site-brand'];
 		if ( is_array($brand) ) $brand = $brand[0];
 	endif;
 	$brand = trim($brand);
@@ -293,7 +293,7 @@ function battleplan_getBrandLogo($atts, $content = null) {
 // Add Symptom Checker widget to Sidebar
 add_shortcode( 'get-symptom-checker', 'battleplan_getSymptomChecker' );
 function battleplan_getSymptomChecker() {	
-	$brand = $GLOBALS['customer_info']['site-brand'];
+	$brand = customer_info()['site-brand'];
 	if ( is_array($brand) ) $brand = $brand[0];
 	$name = ucwords($brand);
 	$brand = strtolower(str_replace(" ", "-", $brand));
@@ -325,7 +325,7 @@ function battleplan_getFinancing($atts, $content = null) {
 	$bank = esc_attr($a['bank']);
 	$text = esc_attr($a['text']);
 	$loc = esc_attr($a['loc']);
-	$link = esc_attr($a['link']) === 'biz-info' ? $GLOBALS['customer_info']['finance-link'] : esc_attr($a['link']);	
+	$link = esc_attr($a['link']) === 'biz-info' ? customer_info()['finance-link'] : esc_attr($a['link']);	
 	$class = esc_attr($a['class']) != '' ? ' '.esc_attr($a['class']) : '';	
 	$img = strtolower(str_replace(" ", "-", $bank));
 	if ( $img == "enerbank-usa" ) $img = "Enerbank-USA";
@@ -350,7 +350,7 @@ function battleplan_getWellsFargo($atts, $content = null) {
 	$a = shortcode_atts( array( 'graphic1'=>'', 'graphic2'=>'', 'link'=>'biz-info', 'class'=>''  ), $atts );
 	$graphic1 = esc_attr($a['graphic1']);	
 	$graphic2 = esc_attr($a['graphic2']);	
-	$link = esc_attr($a['link']) === 'biz-info' ? $GLOBALS['customer_info']['finance-link'] : esc_attr($a['link']);	
+	$link = esc_attr($a['link']) === 'biz-info' ? customer_info()['finance-link'] : esc_attr($a['link']);	
 	$class = esc_attr($a['class']) != '' ? ' '.esc_attr($a['class']) : '';	
 	$rand = rand(1,2);
 	if ($rand == "1") : $ad = $graphic1; endif;
@@ -484,7 +484,9 @@ function battleplan_handleEmploymentAppResponse($additional_mail, $contact_form)
 --------------------------------------------------------------*/
 //add_action( 'init', 'battleplan_mass_product_update' );
 function battleplan_mass_product_update() { 
-	if ( $GLOBALS['customer_info']['site-brand'] == 'american standard' || (is_array($GLOBALS['customer_info']['site-brand']) && in_array('american standard', $GLOBALS['customer_info']['site-brand'])) ) :
+	$customer_info = customer_info();
+	
+	if ( $customer_info['site-brand'] == 'american standard' || (is_array($customer_info['site-brand']) && in_array('american standard', $customer_info['site-brand'])) ) :
 	
 		if ( get_option( 'product-update-may-2022' ) != 'completed' ) :
 			require_once get_template_directory() . '/includes/includes-mass-site-update.php';

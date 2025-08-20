@@ -131,8 +131,6 @@ update_post_meta( $post_id, 'updated_date', esc_attr($updated) );
 		if ( $singleContent ) $buildLitter .= $singleContent;
 		
 		$buildLitter .= "</ul>";
-				
-		$buildLitter .= '<p style="font-size:90%;"><em><b>Effective Sept 1, 2024</b></em><br>Microchip registration fee will be prepaid by Mill Pond Retrievers & included in purchase price. If we do not have a puppy available, your deposit is refundable or can be applied to a different litter. Pups are sold on a first come first serve basis. The sex of pup has to be chosen when the deposit is made.</p>';		
 
 		$buildPedigree = do_shortcode('[bracket a1="'.$sireFull.'" a2="'.$damFull.'" b1="'.$b1.'" b2="'.$b2.'" b3="'.$b3.'" b4="'.$b4.'" c1="'.$c1.'" c2="'.$c2.'" c3="'.$c3.'" c4="'.$c4.'" c5="'.$c5.'" c6="'.$c6.'" c7="'.$c7.'" c8="'.$c8.'"]');
 		

@@ -156,6 +156,7 @@ add_filter('wp_generate_attachment_metadata', function($metadata, $attachment_id
 // save important info to meta data upon publishing or updating post
 add_action('save_post', 'battleplan_saveJobsite', 10, 3);
 function battleplan_saveJobsite($post_id, $post, $update) {
+	$customer_info = customer_info();
     if ( ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) || ( defined('DOING_AJAX') && DOING_AJAX ) || !current_user_can('edit_post', $post_id) ) return;	
 	if ( get_post_type($post_id) !== 'jobsite_geo' && get_post_type($post_id) !== 'testimonials' ) return;
 
@@ -188,7 +189,7 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 				if ($data['status'] == 'OK') {
 					update_post_meta($post_id, 'geocode', $data['results'][0]['geometry']['location']);
 				} else {
-					mail('glendon@battleplanwebdesign.com', 'Geocoding API Error - '.$GLOBALS['customer_info']['name'], "\n\nFull response:\n" . $data['status']);
+					mail('glendon@battleplanwebdesign.com', 'Geocoding API Error - '.customer_info()['name'], "\n\nFull response:\n" . $data['status']);
 				}
 			endif;	
 		endif;
@@ -211,8 +212,36 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 		// scan for keywords for service tag
 		$description = strtolower(get_post_field('post_content', $post_id));
 		
+		$btRaw = $customer_info['business-type'] ?? null;
+		if (is_array($btRaw)) {
+			$btVal  = $btRaw[0] ?? '';
+			$btServ = $btRaw[1] ?? '';
+		} else {
+			$btVal  = (string) $btRaw;
+			$btServ = '';
+		}
+
+		// Customize for Sprinkler & Irrigation Services website
+		/*
+		if ( $btVal === "Local Business" && $btServ === "Sprinkler & Irrigation Services" ) :		
+			foreach ( array( 'gutter', 'seamless' ) as $keyword) {
+				if (stripos($description, $keyword) !== false) {
+					$service = 'gutters';
+					break; 
+				} 
+			}
+
+			foreach ( array( 'insulation', 'insulate', 'fiberglass' ) as $keyword) {
+				if (stripos($description, $keyword) !== false) {
+					$service = 'insulation';
+					break; 
+				} 
+			}	
+		endif;		
+		*/
+		
 		// Customize for General Contractor website
-		if ( $GLOBALS['customer_info']['business-type'] === "GeneralContractor" ) :		
+		if ( $btVal === "GeneralContractor" ) :		
 			foreach ( array( 'gutter', 'seamless' ) as $keyword) {
 				if (stripos($description, $keyword) !== false) {
 					$service = 'gutters';
@@ -229,7 +258,7 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 		endif;		
 			
 		// Customize for HVAC website
-		if ( $GLOBALS['customer_info']['site-type'] === "hvac" ) :		
+		if ( $customer_info['site-type'] === "hvac" ) :		
 			$equipment = array (
 				'air-conditioner' 	=> array( 'air conditioner', 'air conditioning', 'cooling', 'a/c', 'ac', 'compressor', 'evaporator', 'condenser', 'drain line', 'refrigerant'),
 				'heating' 			=> array( 'heater', 'heating', 'furnace' ),

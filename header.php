@@ -37,15 +37,15 @@
 	
 	<?php bp_meta_tags(); ?>	
 	
-	<?php if ( isset($GLOBALS['customer_info']['lcp']) && !is_mobile() ) : 
-		$file = $GLOBALS['customer_info']['lcp'];
+	<?php if ( isset(customer_info()['lcp']) && !is_mobile() ) : 
+		$file = customer_info()['lcp'];
 		if (is_string($file)) {
 			$file_ext = pathinfo($file); ?>
 			<link rel="preload" fetchpriority="high" as="image" href="<?php echo get_site_url() ?>/wp-content/uploads/<?php echo $file ?>" type="image/<?php echo $file_ext['extension'] ?>">	
 		<?php }
 	endif; 
-	if ( isset($GLOBALS['customer_info']['m-lcp']) && is_mobile() ) :
-		$file = $GLOBALS['customer_info']['m-lcp'];
+	if ( isset(customer_info()['m-lcp']) && is_mobile() ) :
+		$file = customer_info()['m-lcp'];
 		if (is_string($file)) {
 			$file_ext = pathinfo($file); ?>
 			<link rel="preload" fetchpriority="high" as="image" href="<?php echo get_site_url() ?>/wp-content/uploads/<?php echo $file ?>" type="image/<?php echo $file_ext['extension'] ?>">	
@@ -56,8 +56,8 @@
 		<link rel="preload" as="font" type="font/woff2" href="<?php //echo get_site_url() ?>/wp-content/themes/battleplantheme/fonts/bp-icons.woff2" crossorigin="anonymous">
 	-->
 
-	<?php //if ( isset($GLOBALS['customer_info']['site-fonts']) ) :
-		//foreach ( $GLOBALS['customer_info']['site-fonts'] as $siteFont ) :
+	<?php //if ( isset(customer_info()['site-fonts']) ) :
+		//foreach ( customer_info()['site-fonts'] as $siteFont ) :
 			//if ( $siteFont != "" ) echo '<link rel="preload" as="font" type="font/woff2" href="'.get_site_url().'/wp-content/themes/battleplantheme-site/fonts/'.$siteFont.'.woff2" crossorigin="anonymous">';
 		//endforeach;
 	//endif; ?>

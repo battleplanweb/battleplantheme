@@ -113,13 +113,14 @@ get_header(); ?>
 				$buildUpdate .= '<div class="jobsite_geo-job_meta">'.$location.'</div>';
 				$buildUpdate .= $jobDesc.'</div>';
 				$cleanedJobDesc = htmlspecialchars(strip_tags($jobDesc), ENT_QUOTES, 'UTF-8');
+				$customer_info = customer_info();
 		
 		?>		
 				<script nonce="<?php echo _BP_NONCE; ?>" type="application/ld+json">				
 					{
 						"@context": "https://schema.org",
 						"@type": "UserCheckins",
-						"name": "<?php echo $GLOBALS['customer_info']['name']; ?>",
+						"name": "<?php echo $customer_info['name']; ?>",
 						"startDate": "<?php echo $jobIsoDate; ?>",
 						"description": "<?php echo $cleanedJobDesc; ?>",
 						"location": {
@@ -190,7 +191,7 @@ get_header(); ?>
 						},
 						"itemReviewed":{
 							"@type": "HomeAndConstructionBusiness",
-							"name": "<?php echo $GLOBALS['customer_info']['name']; ?>"
+							"name": "<?php echo $customer_info['name']; ?>"
 						},
 						"reviewRating":{
 							"@type": "Rating",

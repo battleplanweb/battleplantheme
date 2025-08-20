@@ -25,7 +25,7 @@ function battleplan_getCartNum($atts, $content = null ) {
 		return do_shortcode($printCart);
 	endif;
 }
-
+/*
 add_filter('woocommerce_product_add_to_cart_text', function($text, $product){
 	return do_shortcode('[get-icon type="cart"]&nbsp;&nbsp;'. $text);
 }, 10, 2);
@@ -33,6 +33,7 @@ add_filter('woocommerce_product_add_to_cart_text', function($text, $product){
 add_filter('woocommerce_product_single_add_to_cart_text', function($text){
 	return do_shortcode('[get-icon type="cart"]&nbsp;&nbsp;'. $text);
 }, 10, 1);
+*/
 
 add_filter('woocommerce_add_to_cart_fragments', function($frags){
 	$qty = WC()->cart ? WC()->cart->get_cart_contents_count() : 0;

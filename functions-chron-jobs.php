@@ -27,7 +27,6 @@ function battleplan_delete_prefixed_options( $prefix ) {
 
 
 //if ( get_option('bp_setup_2023_09_15') != "completed" ) :
-
 	//add_action("init", "bp_remove_cron_job"); 
 	//function bp_remove_cron_job() {
 	//	wp_clear_scheduled_hook("wphb_clear_logs"); 
@@ -42,93 +41,324 @@ function battleplan_delete_prefixed_options( $prefix ) {
 	//updateOption( 'bp_setup_2023_09_15', 'completed', false );	
 //endif;
 
-delete_option('bp_setup_2023_09_15');
+//delete_option('bp_setup_2023_09_15');
 
 /*
-if ( get_option('bp_product_upload_2024_03_18') != "completed" && $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'american standard' || $GLOBALS['customer_info']['site-brand'] == 'American Standard' || (is_array($GLOBALS['customer_info']['site-brand']) && ( in_array('american standard', $GLOBALS['customer_info']['site-brand']) || in_array('American Standard', $GLOBALS['customer_info']['site-brand'])) ))) :		
+if ( get_option('bp_product_upload_2024_03_18') != "completed" && $customer_info['site-type'] == 'hvac' && ($customer_info['site-brand'] == 'american standard' || $customer_info['site-brand'] == 'American Standard' || (is_array($customer_info['site-brand']) && ( in_array('american standard', $customer_info['site-brand']) || in_array('American Standard', $customer_info['site-brand'])) ))) :		
  	require_once get_template_directory().'/includes/include-hvac-products/includes-american-standard-products.php';
 	updateOption( 'bp_product_upload_2024_03_18', 'completed', false );		
 endif; 
 */
 
 
+
+
+
+
+
 // Determine if Chron should run
-$forceChron = get_option('bp_force_chron') !== null ? get_option('bp_force_chron') : 'false';
+$forceChron = get_option('bp_force_chron') !== null ? get_option('bp_force_chron') : false;
 $chronTime = get_option('bp_chron_time') !== null ? get_option('bp_chron_time') : 0;
 $chronDue = $chronTime + rand(40000,70000);
 
-if ( $forceChron == true || ( _IS_BOT && !_IS_GOOGLEBOT && ( $chronDue < time() ) )) :
+if ( $forceChron === true || ( _IS_BOT && !_IS_GOOGLEBOT && ( $chronDue < time() ) )) {
 	delete_option('bp_force_chron');
 	update_option('bp_chron_time', time());
 	processChron($forceChron);
-endif;
+}
 	
 function processChron($forceChron) {
+// 0) Site bootstrapping
 	if (function_exists('battleplan_remove_user_roles')) battleplan_remove_user_roles();
 	if (function_exists('battleplan_create_user_roles')) battleplan_create_user_roles();
 	if (function_exists('battleplan_updateSiteOptions')) battleplan_updateSiteOptions();
-
-	$site = str_replace('https://', '', get_bloginfo('url'));	
-	$exempt = $site == "sweetiepiesribeyes.com" || $site == "bubbascookscountry.com" || $site == "babeschicken.com" ? "true" : "false";
 	
-	if ( $site != "asairconditioning.com") :	
-// WP Mail SMTP Settings Update
-		if ( is_plugin_active('wp-mail-smtp/wp_mail_smtp.php') ) : 	
-			if ( $exempt == "true" ) :	
+	$google_info 	= get_option('bp_gbp_update') ?: [];
+
+	$site           	= str_replace('https://', '', get_bloginfo('url'));
+	$rovin          	= in_array($site, ["babeschicken.com", "babescatering.com", "babeschicken.tv", "sweetiepiesribeyes.com", "bubbascookscountry.com"], true);
+	$bp_handles_mail	= ($site !== "asairconditioning.com");
+	
+// 1) Load CI + normalize PIDs 
+	$customer_info	= customer_info();
+	$pid_sync		= filter_var($customer_info['pid-sync'] ?? false, FILTER_VALIDATE_BOOL);
+	$placeIDs  		= ci_normalize_pids($customer_info['pid'] ?? []); 
+	
+	if (!empty($placeIDs)) {
+// 2) Decide whether to hit the API
+		$apiKey = "AIzaSyBqf";
+		$apiKey .= "0idxwuOxaG";
+		$apiKey .= "-j3eCpef1Bunv";
+		$apiKey .= "-YVdVP8";	
+
+		$today 			= strtotime(date("F j, Y"));	
+		$daysSince     	= ($today - (int)($google_info['date'] ?? 0)) / 86400;
+		$reviewCount   	= (int)($google_info['google-reviews'] ?? 0);
+		$thresholds    	= [1000=>1, 500=>2, 250=>3, 125=>4, 75=>5, 50=>6];
+		$days          	= 7;
+		
+		foreach ($thresholds as $limit=>$val) { $days = ($reviewCount >= $limit) ? $val : $days; }		
+	
+		if ( $forceChron === true || $daysSince > $days ) {	
+// 3) Fetch GBP for each PID
+			$google_rating = 0.0;
+			$google_review_num = 0;
+			
+			foreach ( $placeIDs as $placeID ) {
+				if (strlen($placeID) <= 10) { continue; }
+				
+				$fields = 'displayName,formattedAddress,addressComponents,location,regularOpeningHours,currentOpeningHours,internationalPhoneNumber,rating,userRatingCount';
+    			$url = 'https://places.googleapis.com/v1/places/' . rawurlencode($placeID) . '?fields=' . urlencode($fields) . '&key=' . $apiKey;
+
+				$ch = curl_init();
+				 curl_setopt_array($ch, [
+    				CURLOPT_URL            => $url,  
+					CURLOPT_RETURNTRANSFER => true,
+					CURLOPT_CONNECTTIMEOUT => 5,
+					CURLOPT_TIMEOUT        => 12,
+					CURLOPT_HTTPHEADER     => ['Accept: application/json'],
+				]);
+				$result = curl_exec($ch);
+				$http   = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+				$cerr   = curl_errno($ch);
+				$cerrm  = curl_error($ch);
+				curl_close($ch);
+
+				if ($cerr && function_exists('emailMe')) {
+					emailMe('Chron - Places API cURL Error - '.$customer_info['name'], "PID: $placeID\nError: $cerr $cerrm");
+					continue;
+				}
+				
+				if (($http < 200 || $http >= 300) && function_exists('emailMe')) {
+					emailMe('Chron - Places API HTTP Error - '.$customer_info['name'], "PID: $placeID\nHTTP: $http\nBody:\n".$result);
+					continue;
+				}
+
+				$gbp = json_decode($result, true);
+				
+				if (!is_array($gbp) && function_exists('emailMe')) {
+					emailMe('Chron - Places API JSON Error - '.$customer_info['name'], "PID: $placeID\nBody:\n".$result);
+					continue;
+				}
+				
+				if (isset($gbp['error']) && function_exists('emailMe')) {
+					emailMe('Chron - Places API Error - '.$customer_info['name'], print_r($gbp['error'], true) . "\n\nFull response:\n" . $result);
+					continue;
+				}
+
+				$urc = isset($gbp['userRatingCount']) ? (int)$gbp['userRatingCount'] : 0;
+				$rat = isset($gbp['rating']) ? (float)$gbp['rating'] : 0.0;
+				$google_info[$placeID]['google-reviews'] = $urc;
+				$google_info[$placeID]['google-rating']  = $rat;
+				$google_review_num += $urc;
+				$google_rating     += ($rat * $urc);
+				
+				$phone = $gbp['internationalPhoneNumber'] ?? '';
+				if (preg_match('/^\+1[\s\-\.]?(\d{3})[\s\-\.]?(\d{3})[\s\-\.]?(\d{4})$/', $phone, $m)) {
+					$areaDigits  = $m[1];
+					$localDigits = $m[2] . '-' . $m[3];
+					$google_info[$placeID]['area']  = $areaDigits;
+					$google_info[$placeID]['phone'] = $localDigits;
+					if (str_contains((string)$customer_info['area-after'], '.')) {
+						$google_info[$placeID]['phone'] = str_replace('-', '.', $google_info[$placeID]['phone']);
+					}
+					$google_info[$placeID]['phone-format'] =
+						($customer_info['area-before'] ?? '(') . $areaDigits .
+						($customer_info['area-after'] ?? ') ') .
+						$google_info[$placeID]['phone'];
+				} else {
+					$google_info[$placeID]['area']         = '';
+					$google_info[$placeID]['phone']        = '';
+					$google_info[$placeID]['phone-format'] = '';
+				}				
+				
+				$nm = strtolower($gbp['displayName']['text'] ?? '');
+				$nm = str_replace(
+					['llc','hvac','a/c','inc','mcm','a-ale','hph','gps plumbing','lecornu','ss&l','ag heat'],
+					['LLC','HVAC','A/C','INC','MCM','A-Ale','HPH','GPS Plumbing','LeCornu','SS&L','AG Heat'],
+					$nm
+				);
+				
+				$google_info[$placeID]['name'] = ucwords($nm);				
+				
+				$google_info[$placeID]['adr_address'] = $gbp['formattedAddress'] ?? '';
+				$google_info[$placeID]['address_components'] = $gbp['addressComponents'] ?? [];
+
+				$gbp_address = ['street'=>'','city'=>'','state_abbr'=>'','state_full'=>'','zip'=>''];
+				foreach ($google_info[$placeID]['address_components'] as $c) {
+					$types = $c['types'] ?? [];
+					if (in_array('street_number', $types, true)) { $gbp_address['street'] .= ($c['longText'] ?? '').' '; }
+					if (in_array('route',         $types, true)) { $gbp_address['street'] .= ($c['longText'] ?? ''); }
+					if (in_array('locality',      $types, true)) { $gbp_address['city']   =  ($c['longText'] ?? ''); }
+					if (in_array('administrative_area_level_1', $types, true)) {
+						$gbp_address['state_abbr'] = $c['shortText'] ?? '';
+						$gbp_address['state_full'] = $c['longText']  ?? '';
+					}
+					if (in_array('postal_code',   $types, true)) { $gbp_address['zip']    =  ($c['longText'] ?? ''); }
+				}
+
+				$google_info[$placeID]['street']     	= trim($gbp_address['street']);
+				$google_info[$placeID]['city']       	= $gbp_address['city'];
+				$google_info[$placeID]['state-abbr']	= $gbp_address['state_abbr'];
+				$google_info[$placeID]['state-full'] 	= $gbp_address['state_full'];
+				$google_info[$placeID]['zip']        	= $gbp_address['zip'];
+
+				$google_info[$placeID]['lat']  			= isset($gbp['location']['latitude'])  ? (float)$gbp['location']['latitude']  : null;
+				$google_info[$placeID]['long'] 			= isset($gbp['location']['longitude']) ? (float)$gbp['location']['longitude'] : null;
+				
+				$google_info[$placeID]['hours'] 		= $gbp['regularOpeningHours'] ?? null;
+    			$google_info[$placeID]['current-hours'] = $gbp['currentOpeningHours'] ?? null;				
+			}
+
+			$google_info['google-reviews'] = $google_review_num;
+			if ($google_review_num > 0) {
+				$google_info['google-rating'] = $google_rating / $google_review_num;
+			}
+			
+			$google_info['date'] = $today;
+
+// 4) Update bp_bgp_update and notify of differences			
+			update_option('bp_gbp_update', $google_info, false);	
+			if ( function_exists('emailMe')) emailMe( "Chron - Google API Hit - ".$customer_info['name'], "A request was made to the Google API at " . date('Y-m-d H:i:s') . " for ".$customer_info['name'].".");
+			gbp_diff_vs_ci_and_notify($customer_info, $google_info, $placeIDs);
+		}
+	}	
+
+// 5) Merge GBP into CI (only if pid-sync true; also fill missing fields with GBP)
+	$primePID 					= $placeIDs[0] ?? null;
+	$gbp_primary 				= $primePID ? ($google_info[$primePID] ?? []) : [];
+	list($ci_new, $merge_diffs) = ci_merge_gbp_into_ci($customer_info, $gbp_primary, $pid_sync); 
+	
+// 6) Finalize derived fields (phone-format, default-loc) and prune trivial empties
+	ci_finalize_fields($ci_new); 
+	
+// 7) Build schema from FINAL CI
+	$schema = ci_build_schema($ci_new, $gbp_primary, $google_info, [
+		'include_aggregate_rating' => true,
+		'min_rating_value'         => 4.0,
+	]);
+	$ci_new['schema'] = $schema;
+	
+// 8) Save CI if changed
+	if ($ci_new !== $customer_info) {
+		update_customer_info($ci_new);
+	}
+		
+// 9) WP Mail SMTP Settings Update
+	if ( $bp_handles_mail === true) {		
+		if ( is_plugin_active('wp-mail-smtp/wp_mail_smtp.php') ) {
+			if ( $rovin === true ) {	
 				$apiKey2 = "-b916aeccb98bf3fcca73";
 				$apiKey3 = "a606526cefdf92084ce7a9048d5cf734124e09f9bb26";
 				$apiKey4 = "-YcYFamx5FrGvCxXe";
 				$wpMailSettings['mail']['from_email'] = 'customer@website.'.$site;
 				$wpMailSettings['sendinblue']['domain'] = 'website.'.$site;				
-			else :	
+			} else {	
 				$apiKey2 = "-d08cc84fe45b37a420ef3";
 				$apiKey3 = "a9074e001fa21f640578f699994cba854489d3ef793";
 				$apiKey4 = "-bzWkS9dgt05KccIF";
 				$wpMailSettings['mail']['from_email'] = 'email@admin.'.$site;
 				$wpMailSettings['sendinblue']['domain'] = 'admin.'.$site;				
-			endif;
+			}	
 
 			$apiKey1 = "keysib";
 			$wpMailSettings = get_option( 'wp_mail_smtp' );			
-			$wpMailSettings['mail']['from_name'] = strip_tags('Website · '.str_replace(',', '', $GLOBALS['customer_info']['name']));
+			$wpMailSettings['mail']['from_name'] = strip_tags('Website · '.str_replace(',', '', $customer_info['name']));
 			$wpMailSettings['mail']['mailer'] = 'sendinblue';
 			$wpMailSettings['mail']['from_email_force'] = '1';
 			$wpMailSettings['mail']['from_name_force'] = '1';	
 			$wpMailSettings['sendinblue']['api_key'] = 'x'.$apiKey1.$apiKey2.$apiKey3.$apiKey4;
 			update_option( 'wp_mail_smtp', $wpMailSettings );
-		endif;
-	endif;
+		}
+	}	
 		
-// Contact Form 7 Settings Update
-	if ( is_plugin_active('contact-form-7/wp-contact-form-7.php') ) : 
+// 10) Contact Form 7 Settings Update
+	if ( is_plugin_active('contact-form-7/wp-contact-form-7.php') ) {
 		$forms = get_posts( array ( 'numberposts'=>-1, 'post_type'=>'wpcf7_contact_form' ));
-		foreach ( $forms as $form ) :
+		foreach ( $forms as $form ) {
 			$formID = $form->ID;
 			$formMail = readMeta( $formID, "_mail" );
 			$formTitle = get_the_title($formID);
 
 			if ( $formTitle == "Quote Request Form" ) $formTitle = "Quote Request";
 			if ( $formTitle == "Contact Us Form" ) $formTitle = "Customer Contact";		
-			if ( $formTitle == "Request A Catering Quote" ) $formTitle = "Catering Quote";	
-	
-			$server_email = $site != "asairconditioning.com" ? "<email@admin.".str_replace('https://', '', get_bloginfo('url')).">" : "<aswebform@asairconditioning.com>";
+			if ( $formTitle == "Request A Catering Quote" ) $formTitle = "Catering Quote";				
 
-			if ( $exempt != "true" ) :					
+			if ( $rovin !== true && $bp_handles_mail === true ) {			
+				$server_email = "<email@admin.".str_replace('https://', '', get_bloginfo('url')).">";				
 				$formMail['subject'] = $formTitle." · [user-name]";	
-				$formMail['sender'] = "Website · ".str_replace(',', '', $GLOBALS['customer_info']['name'])." ".$server_email;
+				$formMail['sender'] = "Website · ".str_replace(',', '', $customer_info['name'])." ".$server_email;
 				$formMail['additional_headers'] = "Reply-to: [user-name] <[user-email]>\nBcc: Website Administrator <email@battleplanwebdesign.com>";
-			endif;
+			}
 	
 			$formMail['use_html'] = 1;
 			$formMail['exclude_blank'] = 1;
 
 			updateMeta( $formID, "_mail", $formMail );	
-		endforeach;
-	endif; 
+		}
+	} 	
 
-// Yoast SEO Settings Update
-	if ( is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') ) :	
-		$schema = get_option( 'bp_schema' );
+// 11) Yoast SEO Settings Update
+	if ( is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') ) {	
+		$customer_info = customer_info();
+		$cur = get_option('wpseo_local') ?: [];
+		
+		$mapType = function(array $customer_info): string {
+			$bt = $customer_info['business-type'] ?? '';
+			$type = is_array($bt) ? ($bt[0] ?? '') : $bt;
+			if (!empty($customer_info['site-type']) && strtolower((string)$customer_info['site-type']) === 'hvac') return 'HVACBusiness';
+			$type = trim($type) === '' ? 'LocalBusiness' : preg_replace('/\s+/', '', $type);
+			return $type;
+		};
+
+		$desired = [
+			'business_type'          => $mapType($customer_info),
+			'location_address'       => $customer_info['street'] ?? '',
+			'location_city'          => $customer_info['city'] ?? '',
+			'location_state'         => $customer_info['state-full'] ?? ($customer_info['state-abbr'] ?? ''),
+			'location_zipcode'       => $customer_info['zip'] ?? '',
+			'location_country'       => 'US',
+			'location_phone'         => (isset($customer_info['area'],$customer_info['phone']) ? $customer_info['area'].'-'.$customer_info['phone'] : ''),
+			'location_email'         => $customer_info['email'] ?? '',
+			'location_url'           => get_bloginfo('url'),
+			'location_coords_lat'    => $customer_info['lat']  ?? '',
+			'location_coords_long'   => $customer_info['long'] ?? '',
+		];
+
+		// Hours (single slot per day for Yoast’s UI)
+		$hours = ci_build_hours($customer_info['hours']['periods'] ?? null, $customer_info['current-hours'] ?? null);
+		$order = [1,2,3,4,5,6,0]; // Mon..Sun mapped to Google 0..6
+		$daysYoast = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+		$byDay = array_fill(0, 7, []);
+		// Reconstruct $byDay from the same logic used in ci_build_hours
+		// Easiest: parse the OpeningHoursSpecification you already returned:
+		if (!empty($hours['openingHoursSpecification'])) {
+			$mapName = ['Monday'=>1,'Tuesday'=>2,'Wednesday'=>3,'Thursday'=>4,'Friday'=>5,'Saturday'=>6,'Sunday'=>0];
+			foreach ($hours['openingHoursSpecification'] as $spec) {
+				$opens  = $spec['opens']  ?? null;
+				$closes = $spec['closes'] ?? null;
+				foreach ((array)($spec['dayOfWeek'] ?? []) as $dname) {
+					$g = $mapName[$dname] ?? null;
+					if ($g === null || !$opens || !$closes) continue;
+					$byDay[$g][] = [$opens,$closes];
+				}
+			}
+		}
+		foreach ($order as $i=>$g) {
+			[$from,$to] = !empty($byDay[$g]) ? $byDay[$g][0] : ['Closed','Closed'];
+			$desired["opening_hours_{$daysYoast[$i]}_from"] = $from;
+			$desired["opening_hours_{$daysYoast[$i]}_to"]   = $to;
+			$desired["opening_hours_{$daysYoast[$i]}_second_from"] = '';
+			$desired["opening_hours_{$daysYoast[$i]}_second_to"]   = '';
+		}
+		$desired['hide_opening_hours'] = empty($byDay[0]) && empty($byDay[1]) && empty($byDay[2]) && empty($byDay[3]) && empty($byDay[4]) && empty($byDay[5]) && empty($byDay[6]) ? 'on' : 'off';
+
+		// Write only if changed
+		$delta = array_diff_assoc($desired, $cur);
+		if (!empty($delta)) {
+			update_option('wpseo_local', array_replace($cur, $desired));
+		}
+		
 		$wpSEOBase = get_option( 'wpseo' );		
 		$wpSEOBase['enable_admin_bar_menu'] = 0;
 		$wpSEOBase['enable_cornerstone_content'] = 0;
@@ -171,17 +401,17 @@ function processChron($forceChron) {
 		$wpSEOSettings['title-404-wpseo'] = 'Page Not Found %%sep%% %%sitename%%';
 		$wpSEOTitle = ' %%page%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';		
 		$getCPT = get_post_types(); 
-		foreach ($getCPT as $postType) :
-			if ( $postType == "post" || $postType == "page" || $postType == "universal" || $postType == "products" || $postType == "landing" || $postType == "events" ) :
+		foreach ($getCPT as $postType) {
+			if ( $postType == "post" || $postType == "page" || $postType == "universal" || $postType == "products" || $postType == "landing" || $postType == "events" ) {
 				$wpSEOSettings['title-'.$postType] = '%%title%%'.$wpSEOTitle;
 				$wpSEOSettings['social-title-'.$postType] = '%%title%%'.$wpSEOTitle;
-			elseif ( $postType == "attachment" || $postType == "revision" || $postType == "nav_menu_item" || $postType == "custom_css" || $postType == "customize_changeset" || $postType == "oembed_cache" || $postType == "user_request" || $postType == "wp_block" || $postType == "elements" || $postType == "acf-field-group" || $postType == "acf-field" || $postType == "wpcf7_contact_form" ) :
+			} elseif ( $postType == "attachment" || $postType == "revision" || $postType == "nav_menu_item" || $postType == "custom_css" || $postType == "customize_changeset" || $postType == "oembed_cache" || $postType == "user_request" || $postType == "wp_block" || $postType == "elements" || $postType == "acf-field-group" || $postType == "acf-field" || $postType == "wpcf7_contact_form" ) {
 				// nothing //
-			else:
+			} else {
 				$wpSEOSettings['title-'.$postType] = ucfirst($postType).$wpSEOTitle;			
 				$wpSEOSettings['social-title-'.$postType] = ucfirst($postType).$wpSEOTitle;			
-			endif;		
-		endforeach;	
+			}	
+		}
 		$wpSEOSettings['social-title-author-wpseo'] = '%%name%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';
 		$wpSEOSettings['social-title-archive-wpseo'] = '%%date%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';
 		$wpSEOSettings['noindex-author-wpseo'] = '1';
@@ -196,22 +426,31 @@ function processChron($forceChron) {
 		$wpSEOSettings['breadcrumbs-enable'] = '1';
 		$wpSEOSettings['breadcrumbs-home'] = 'Home';
 		$wpSEOSettings['breadcrumbs-searchprefix'] = 'You searched for';
-		$wpSEOSettings['breadcrumbs-sep'] = '»';		
-		if (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/logo.png' ) ) : $logoFile = "logo.png";
-		elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/logo.webp' ) ) : $logoFile = "logo.webp";
-		elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/logo.jpg' ) ) : $logoFile = "logo.jpg";
-		elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-icon.png' ) ) : $logoFile = "site-icon.png";
-		elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-icon.jpg' ) ) : $logoFile = "site-icon.jpg";
-		elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-icon.webp' ) ) : $logoFile = "site-icon.webp";
-		elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/favicon.png' ) ) : $logoFile = "favicon.png";
-		elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/favicon.jpg' ) ) : $logoFile = "favicon.jpg";
-		elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/favicon.webp' ) ) : $logoFile = "favicon.webp";
-		endif;	
-		$wpSEOSettings['company_logo'] = $schema['company_logo'] = $logoFile;
-		$wpSEOSettings['company_logo_id'] = attachment_url_to_postid( $logoFile );
-		$wpSEOSettings['company_logo_meta']['url'] = $logoFile;	
-		$wpSEOSettings['company_logo_meta']['path'] = get_attached_file( attachment_url_to_postid( $logoFile ) );
-		$wpSEOSettings['company_logo_meta']['id'] = attachment_url_to_postid( $logoFile );
+		$wpSEOSettings['breadcrumbs-sep'] = '»';
+		
+		$uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/wp-content/uploads/';
+		$possibleFiles = [ 'logo.webp', 'logo.png', 'logo.jpg', 'site-icon.webp', 'site-icon.png', 'site-icon.jpg', 'favicon.webp', 'favicon.png', 'favicon.jpg' ];
+		$logoFile = null;
+
+		foreach ($possibleFiles as $file) {
+			if (is_file($uploadDir . $file)) {
+				$logoFile = $file;
+				break; 
+			}
+		}
+	
+		if ($logoFile !== null) {
+			$wpSEOSettings['company_logo'] = $logoFile;
+
+			$id = attachment_url_to_postid($logoFile);
+			if ($id) {
+				$wpSEOSettings['company_logo_id'] = $id;
+				$wpSEOSettings['company_logo_meta']['url']  = $logoFile;
+				$wpSEOSettings['company_logo_meta']['path'] = get_attached_file($id);
+				$wpSEOSettings['company_logo_meta']['id']   = $id;
+			}
+		}
+
 		$wpSEOSettings['company_name'] = get_bloginfo('name');
 		$wpSEOSettings['company_or_person'] = 'company';
 		$wpSEOSettings['stripcategorybase'] = '1';
@@ -239,108 +478,36 @@ function processChron($forceChron) {
 		update_option( 'wpseo_titles', $wpSEOSettings );
 
 		$wpSEOSocial = get_option( 'wpseo_social' );		
-		if ( isset($GLOBALS['customer_info']['facebook']) ) $wpSEOSocial['facebook_site'] = $GLOBALS['customer_info']['facebook'];
-		if ( isset($GLOBALS['customer_info']['instagram']) ) $wpSEOSocial['instagram_url'] = $GLOBALS['customer_info']['instagram'];
-		if ( isset($GLOBALS['customer_info']['linkedin']) ) $wpSEOSocial['linkedin_url'] = $GLOBALS['customer_info']['linkedin'];
-		$wpSEOSocial['og_default_image'] = $logoFile;
-		$wpSEOSocial['og_default_image_id'] = attachment_url_to_postid( $logoFile );
+		if ( isset($customer_info['facebook']) ) $wpSEOSocial['facebook_site'] = $customer_info['facebook'];
+		if ( isset($customer_info['instagram']) ) $wpSEOSocial['instagram_url'] = $customer_info['instagram'];
+		if ( isset($customer_info['linkedin']) ) $wpSEOSocial['linkedin_url'] = $customer_info['linkedin'];
+		$wpSEOSocial['og_default_image'] = $wpSEOSettings['company_logo'];
+		$wpSEOSocial['og_default_image_id'] = $wpSEOSettings['company_logo_id'];
 		$wpSEOSocial['opengraph'] = '1';
-		if ( isset($GLOBALS['customer_info']['pinterest']) ) $wpSEOSocial['pinterest_url'] = $GLOBALS['customer_info']['pinterest'];
-		if ( isset($GLOBALS['customer_info']['twitter']) ) $wpSEOSocial['twitter_site'] = $GLOBALS['customer_info']['twitter'];
-		if ( isset($GLOBALS['customer_info']['youtube']) ) $wpSEOSocial['youtube_url'] = $GLOBALS['customer_info']['youtube'];	
+		if ( isset($customer_info['pinterest']) ) $wpSEOSocial['pinterest_url'] = $customer_info['pinterest'];
+		if ( isset($customer_info['twitter']) ) $wpSEOSocial['twitter_site'] = $customer_info['twitter'];
+		if ( isset($customer_info['youtube']) ) $wpSEOSocial['youtube_url'] = $customer_info['youtube'];	
 		update_option( 'wpseo_social', $wpSEOSocial );
-
-		$wpSEOLocal = get_option( 'wpseo_local' );
-		if ( isset($GLOBALS['customer_info']['business-type']) ) :
-			if ( $GLOBALS['customer_info']['business-type'] == "organization" || $GLOBALS['customer_info']['business-type'] == "public figure" ) $wpSEOLocal['business_type'] = 'Organization';
-			if ( $GLOBALS['customer_info']['business-type'] == "" || $GLOBALS['customer_info']['business-type'] == "agriculture" || $GLOBALS['customer_info']['business-type'] == "animals" || $GLOBALS['customer_info']['business-type'] == "industrial" ) $wpSEOLocal['business_type'] = 'LocalBusiness';		
-
-			if ( $GLOBALS['customer_info']['business-type'] == "auto body" ) $wpSEOLocal['business_type'] = 'AutoBodyShop';		
-			if ( $GLOBALS['customer_info']['business-type'] == "automotive" ) $wpSEOLocal['business_type'] = 'AutomotiveBusiness';		
-			if ( $GLOBALS['customer_info']['business-type'] == "book store" ) $wpSEOLocal['business_type'] = 'BookStore';	
-			if ( $GLOBALS['customer_info']['business-type'] == "cleaning" || $GLOBALS['customer_info']['business-type'] == "landscaper" || $GLOBALS['customer_info']['business-type'] == "flooring contractor" || $GLOBALS['customer_info']['business-type'] == "stone" ) $wpSEOLocal['business_type'] = 'HomeAndConstructionBusiness';	
-			if ( $GLOBALS['customer_info']['business-type'] == "clothing store" ) $wpSEOLocal['business_type'] = 'ClothingStore';	
-			if ( $GLOBALS['customer_info']['business-type'] == "electrician" ) $wpSEOLocal['business_type'] = 'Electrician';	
-			if ( $GLOBALS['customer_info']['business-type'] == "financial" ) $wpSEOLocal['business_type'] = 'FinancialService';	
-			if ( $GLOBALS['customer_info']['business-type'] == "fire safety" || $GLOBALS['customer_info']['business-type'] == "professional" ) $wpSEOLocal['business_type'] = 'ProfessionalService';	
-			if ( $GLOBALS['customer_info']['business-type'] == "fitness" ) $wpSEOLocal['business_type'] = 'ExerciseGym';	
-			if ( $GLOBALS['customer_info']['business-type'] == "government" ) $wpSEOLocal['business_type'] = 'GovernmentOrganization';	
-			if ( $GLOBALS['customer_info']['business-type'] == "motel" ) $wpSEOLocal['business_type'] = 'Motel';	
-			if ( $GLOBALS['customer_info']['business-type'] == "musician" ) $wpSEOLocal['business_type'] = 'Store';	
-			if ( $GLOBALS['customer_info']['business-type'] == "novelty store" ) $wpSEOLocal['business_type'] = 'MusicGroup';	
-			if ( $GLOBALS['customer_info']['business-type'] == "physician" || $GLOBALS['customer_info']['business-type'] == "chiropractor" ) $wpSEOLocal['business_type'] = 'Physician';	
-			if ( $GLOBALS['customer_info']['business-type'] == "resort" ) $wpSEOLocal['business_type'] = 'Resort';		
-			if ( $GLOBALS['customer_info']['business-type'] == "restaurant" ) $wpSEOLocal['business_type'] = 'Restaurant';			
-			if ( $GLOBALS['customer_info']['business-type'] == "real estate" ) $wpSEOLocal['business_type'] = 'RealEstateAgent';		
-			if ( $GLOBALS['customer_info']['business-type'] == "tattoo shop" ) $wpSEOLocal['business_type'] = 'Tattoo parlor';	
-		endif;
-
-		if ( $GLOBALS['customer_info']['site-type'] == "hvac" ) :
-			$wpSEOLocal['business_type'] = $schema['business_type'] = 'HVACBusiness';
-		 	$schema['additional_type'] = "Heating,_ventilation,_and_air_conditioning";	
-		else:
-			$schema['business_type'] = $wpSEOLocal['business_type'];
-		endif;
-
-		if ( isset($GLOBALS['customer_info']['street']) ) $wpSEOLocal['location_address'] = $GLOBALS['customer_info']['street'];
-		if ( isset($GLOBALS['customer_info']['city']) ) $wpSEOLocal['location_city'] = $GLOBALS['customer_info']['city'];
-		if ( isset($GLOBALS['customer_info']['state-full']) ) $wpSEOLocal['location_state'] = $GLOBALS['customer_info']['state-full'];
-		if ( isset($GLOBALS['customer_info']['zip']) ) $wpSEOLocal['location_zipcode'] = $GLOBALS['customer_info']['zip'];
-		$wpSEOLocal['location_country'] = 'US';
-		if ( isset($GLOBALS['customer_info']['area']) && isset($GLOBALS['customer_info']['phone']) ) $wpSEOLocal['location_phone'] = $GLOBALS['customer_info']['area'].'-'.$GLOBALS['customer_info']['phone'];
-		if ( isset($GLOBALS['customer_info']['email']) ) $wpSEOLocal['location_email'] = $GLOBALS['customer_info']['email'];
-		$wpSEOLocal['location_url'] = get_bloginfo("url");
-		$wpSEOLocal['location_price_range'] = '$$';
-		$wpSEOLocal['location_payment_accepted'] = "Cash, Credit Cards, Paypal";
-		if ( isset($GLOBALS['customer_info']['service-area']) ) $wpSEOLocal['location_area_served'] = $GLOBALS['customer_info']['service-area'];
-		if ( isset($GLOBALS['customer_info']['lat']) ) $wpSEOLocal['location_coords_lat'] = $GLOBALS['customer_info']['lat'];
-		if ( isset($GLOBALS['customer_info']['long']) ) $wpSEOLocal['location_coords_long'] = $GLOBALS['customer_info']['long'];		
-		if (!empty($GLOBALS['customer_info']['hours']['periods'])):
-			$wpSEOLocal['hide_opening_hours'] = 'off';
-			$schema['hours'] = '';
-			$days = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
-
-			foreach ($days as $i => $day):
-				$open = $GLOBALS['customer_info']['hours']['periods'][$i]['open']['hour'] ?? '';
-				$close = $GLOBALS['customer_info']['hours']['periods'][$i]['close']['hour'] ?? '';
-
-				$from = $open !== '' ? str_pad($open, 2, '0', STR_PAD_LEFT) . ':00' : 'Closed';
-				$to = $close !== '' ? str_pad($close, 2, '0', STR_PAD_LEFT) . ':00' : 'Closed';
-
-				$wpSEOLocal["opening_hours_{$day}_from"] = $from;
-				$wpSEOLocal["opening_hours_{$day}_to"] = $to;
-				$wpSEOLocal["opening_hours_{$day}_second_from"] = $wpSEOLocal["opening_hours_{$day}_second_to"] = '';
-
-				$schema['hours'] .= ucfirst(substr($day, 0, 2)) . ' ' . $from;
-				$schema['hours'] .= $from !== 'Closed' ? '-' . $to . ' ' : ' ';
-			endforeach;
-		else:
-			$wpSEOLocal['hide_opening_hours'] = 'on';
-		endif;
-		$wpSEOLocal['location_timezone'] = get_option('timezone_string');		
-		$wpSEOLocal['address_format'] = 'address-state-postal';
-		update_option( 'wpseo_local', $wpSEOLocal );
-		update_option( 'bp_schema', $schema );
-	endif;
+	}
 	
 // Basic Settings		
 	$update_menu_order = array ('site-header'=>100, 'widgets'=>200, 'office-hours'=>700, 'hours'=>700, 'coupon'=>700, 'site-message'=>800, 'site-footer'=>900);
 
-	foreach ($update_menu_order as $page=>$order) :
+	foreach ($update_menu_order as $page=>$order) {
 		$updatePage = get_page_by_path($page, OBJECT, 'elements' );
-		if ( !empty( $updatePage ) ) : 
+		if ( !empty( $updatePage ) ) {
 			wp_update_post(array(
 				'ID' 		  		=> $updatePage->ID,
 				'menu_order'    	=> $order,
 			));	
-		endif;
-	endforeach;
+		}
+	}
 
-	update_option( 'blogname', $GLOBALS['customer_info']['name'] );
+	update_option( 'blogname', $customer_info['name'] );
 	$blogDesc = '';
-	if ( $GLOBALS['customer_info']['city'] != '' ) $blogDesc .= $GLOBALS['customer_info']['city'];
-	if ( $GLOBALS['customer_info']['city'] != '' && $GLOBALS['customer_info']['state-abbr'] != '' ) $blogDesc .= ', ';
-	if ( $GLOBALS['customer_info']['state-abbr'] != '' ) $blogDesc .= $GLOBALS['customer_info']['state-abbr'];
+	if ( $customer_info['city'] != '' ) $blogDesc .= $customer_info['city'];
+	if ( $customer_info['city'] != '' && $customer_info['state-abbr'] != '' ) $blogDesc .= ', ';
+	if ( $customer_info['state-abbr'] != '' ) $blogDesc .= $customer_info['state-abbr'];
 	update_option( 'blogdescription', $blogDesc );
 	update_option( 'admin_email', 'info@battleplanwebdesign.com' );
 	update_option( 'admin_email_lifespan', '9999999999999' );
@@ -362,10 +529,8 @@ function processChron($forceChron) {
 	battleplan_fetch_background_image(true);
 	battleplan_fetch_site_icon(true);
 	
-
 	
-	
-	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' && get_option('bp_setup_2024_07_09') != "completed" ) :
+	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' && get_option('bp_setup_2024_07_09') != "completed" ) {
 	
 		add_action("init", "bp_add_terms_to_jobsites"); 
 		function bp_add_terms_to_jobsites() {
@@ -435,7 +600,7 @@ function processChron($forceChron) {
 	
 		updateOption( 'bp_setup_2024_07_09', 'completed', false );	
 	
-	endif;
+	}
 	
 	
 // Clear terms, tags and categories with 0 entries
@@ -487,248 +652,99 @@ function processChron($forceChron) {
 		'order'          => 'DESC'
 	]);
 	
-	if ( $query->found_posts > 75 ) :	
-		while ($query->have_posts()) : $query->the_post();
+	if ( $query->found_posts > 75 ) {
+		while ($query->have_posts()) { 
+			$query->the_post(); 
 			$quality = get_field( "testimonial_quality" );	
 			if ( !has_post_thumbnail() && $quality[0] != 1 && strlen(wp_strip_all_tags(get_the_content(), true)) < 100 ) $draft = get_the_id();	
-			if ( has_post_thumbnail() && $quality[0] != 1 ) :
+			if ( has_post_thumbnail() && $quality[0] != 1 ) {
 				$quality[0] = 1;
 				update_field('testimonial_quality', $quality);
-			endif;
-		endwhile; 
+			}
+		} 
 
 		wp_reset_postdata();
 		if ( $draft ) wp_update_post( array ( 'ID' => $draft, 'post_status' => 'draft' ));
-	endif;
+	}
 	
 	
-/*--------------------------------------------------------------
-# Update 'customer_info' with Google Business Profile info
---------------------------------------------------------------*/	
-	$updateInfo = false;
-	$customer_info = get_option('customer_info');
-	$pidSync = $customer_info['pid-sync'] == "true" ? true : false;
-	$placeIDs = $customer_info['pid'];
-	if ( isset($placeIDs) ) :
-		$apiKey = "AIzaSyBqf";
-		$apiKey .= "0idxwuOxaG";
-		$apiKey .= "-j3eCpef1Bunv";
-		$apiKey .= "-YVdVP8";	
-		$googleInfo = get_option('bp_gbp_update');
-		$today = strtotime(date("F j, Y"));	
-		$daysSinceCheck = ($today - intval($googleInfo['date'])) / 86400;
-		
-		if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
-	
-		$thresholds = [1000 => 1, 500 => 2, 250 => 3, 125 => 4, 75 => 5, 50 => 6];
-		$days = 7;
-		foreach ($thresholds as $limit => $value) $days = $googleInfo['google-reviews'] >= $limit ? $value : $days;
-			
-		
-		if ( $forceChron == true || $daysSinceCheck > $days ) :
-	
-	
-		//$open = $googleInfo[$primePID]['current-hours']['periods'][$day]['open']['time'] ? $googleInfo[$primePID]['current-hours']['periods'][$day]['open']['time'] : '';
-
-	
-	
-			$to = 'info@battleplanwebdesign.com';
-			$subject = 'Chron - Google API Hit - '.$customer_info['name'];
-			$message = "A request was made to the Google API at " . date('Y-m-d H:i:s') . " for ".$customer_info['name'].".";
-
-			$headers = "From: no-reply@battleplanwebdesign.com\r\n";
-			$headers .= "Reply-To: no-reply@battleplanwebdesign.com\r\n";
-			$headers .= "X-Mailer: PHP/" . phpversion();
-
-			$mailSent = mail($to, $subject, $message, $headers);
-
-	
-	
-			
-	
-			$gRating = $gNumber = 0;		
-			foreach ( $placeIDs as $placeID ) :	
-				if ( strlen($placeID) > 10 ) :
-					$updateInfo = true;
-					$url = 'https://places.googleapis.com/v1/places/' . $placeID . '?fields=displayName,formattedAddress,addressComponents,location,regularOpeningHours,currentOpeningHours,internationalPhoneNumber,rating,userRatingCount&key=' . $apiKey;
-					$ch = curl_init();
-					curl_setopt ($ch, CURLOPT_URL, $url);
-					curl_setopt ($ch, CURLOPT_RETURNTRANSFER, 1);
-					$result = curl_exec ($ch);
-					$res = json_decode($result,true);
-	
-	
-	
-	
-	
-					if (isset($res['error'])) {							
-						mail('glendon@battleplanwebdesign.com', 'Chron - Places API Error - '.$customer_info['name'], print_r($res['error'], true) . "\n\nFull response:\n" . $result);
-					} 
-	
-	
-	
-	
-	
-					$googleInfo[$placeID]['google-reviews'] = $res['userRatingCount'];						
-					$googleInfo[$placeID]['google-rating'] = $res['rating'];						
-					$gNumber = $gNumber + $res['userRatingCount'];
-					$gRating = $gRating + ( $res['rating'] * $res['userRatingCount'] );	
-					
-					$phone = $res['internationalPhoneNumber'] ?? '';
-					preg_match('/^\+1 (\d{3})-(\d{3}-\d{4})$/', $phone, $m);
-					$googleInfo[$placeID]['area'] = $m[1] ?? '';
-					$googleInfo[$placeID]['phone'] = $m[2] ?? '';
-					if ( str_contains($customer_info['area-after'], '.') ) $googleInfo[$placeID]['phone'] = str_replace('-', '.', $googleInfo[$placeID]['phone']);			
-					$googleInfo[$placeID]['phone-format'] = $customer_info['area-before'].$googleInfo[$placeID]['area'].$customer_info['area-after'].$googleInfo[$placeID]['phone'];	
-
-					$name = strtolower($res['displayName']['text']);					
-					$name = str_replace( array('llc', 'hvac', 'a/c', 'inc', 'mcm', 'a-ale', 'hph', 'gps plumbing', 'lecornu', 'ss&l', 'ag heat'), array('LLC', 'HVAC', 'A/C', 'INC', 'MCM', 'A-Ale', 'HPH', 'GPS Plumbing', 'LeCornu', 'SS&L', 'AG Heat'), $name);
-					$googleInfo[$placeID]['name'] = ucwords($name);
-					
-					$streetNumber = $street = $subpremise = $city = $state_abbr = $state_full = $county = $country = $zip = '';
-					$googleInfo[$placeID]['adr_address'] = $res['formattedAddress'];	
-					$googleInfo[$placeID]['address_components'] = $res['addressComponents'] ?? [];
-					$data = ['street'=>'','city'=>'','state'=>'','zip'=>''];
-
-					foreach ($googleInfo[$placeID]['address_components'] as $c) {
-						$types = $c['types'] ?? [];
-						if (in_array('street_number', $types))  $data['street'] .= $c['longText'].' ';
-						if (in_array('route', $types))          $data['street'] .= $c['longText'];
-						if (in_array('locality', $types))       $data['city'] = $c['longText'];
-						if (in_array('administrative_area_level_1', $types)) {
-							$data['state_abbr'] = $c['shortText'] ?? '';
-							$data['state_full'] = $c['longText'] ?? '';
-						}
-						if (in_array('postal_code', $types))    $data['zip']   = $c['longText'];
-					}
-
-					$googleInfo[$placeID]['street'] = trim($data['street']);
-					$googleInfo[$placeID]['city']   = $data['city'];
-					$googleInfo[$placeID]['state']  = $data['state'];
-					$googleInfo[$placeID]['zip']    = $data['zip'];					
-					$googleInfo[$placeID]['state-abbr'] = $data['state_abbr'];
-					$googleInfo[$placeID]['state-full'] = $data['state_full'];
-					$googleInfo[$placeID]['lat'] = $res['location']['latitude'];
-					$googleInfo[$placeID]['long'] = $res['location']['longitude'];	
-					$googleInfo[$placeID]['hours'] = $res['regularOpeningHours'];
-					$googleInfo[$placeID]['current-hours'] = $res['currentOpeningHours'];
-				endif;
-			endforeach;
-
-			$googleInfo['google-reviews'] = $gNumber;	
-			if ( $gNumber > 0 ) $googleInfo['google-rating'] = $gRating / $gNumber;	
-			$googleInfo['date'] = $today;				
-			updateOption('bp_gbp_update', $googleInfo);	
-		endif;
-		
-		if ( $updateInfo == true && $pidSync == true ) :
-			$primePID = $placeIDs[0];		
-			
-			$changed = $customer_info['area'] != $googleInfo[$primePID]['area'] ? 'Area Code<br>' : '';
-			$changed .= $customer_info['phone'] != $googleInfo[$primePID]['phone'] ? 'Phone<br>' : '';
-			$changed .= $customer_info['name'] != $googleInfo[$primePID]['name'] ? 'Name<br>' : '';
-			$changed .= $customer_info['street'] != $googleInfo[$primePID]['street'] ? 'Street<br>' : '';
-			$changed .= $customer_info['city'] != $googleInfo[$primePID]['city'] ? 'Phone<br>' : '';
-			$changed .= $customer_info['state-abbr'] != $googleInfo[$primePID]['state-abbr'] ? 'State Abbr<br>' : '';
-			$changed .= $customer_info['state-full'] != $googleInfo[$primePID]['state-full'] ? 'State Full<br>' : '';
-			$changed .= $customer_info['zip'] != $googleInfo[$primePID]['zip'] ? 'Zip<br>' : '';
-			
-			$customer_info['area'] = $googleInfo[$primePID]['area'] != null ? $googleInfo[$primePID]['area'] : $customer_info['area'];		
-			$customer_info['phone'] = $googleInfo[$primePID]['phone'] != null ? $googleInfo[$primePID]['phone'] : $customer_info['phone'];		
-			$customer_info['phone-format'] = $customer_info['area-before'].$customer_info['area'].$customer_info['area-after'].$customer_info['phone'];	
-			$customer_info['name'] = $googleInfo[$primePID]['name'] != null ? $googleInfo[$primePID]['name'] : $customer_info['name'];		
-			$customer_info['street'] = strlen($googleInfo[$primePID]['street']) > 5 ? $googleInfo[$primePID]['street'] : $customer_info['street'];		
-			$customer_info['city'] = $googleInfo[$primePID]['city'] != null ? $googleInfo[$primePID]['city'] : $customer_info['city'];		
-			$customer_info['state-abbr'] = $googleInfo[$primePID]['state-abbr'] != null ? $googleInfo[$primePID]['state-abbr'] : $customer_info['state-abbr'];		
-			$customer_info['state-full'] = $googleInfo[$primePID]['state-full'] != null ? $googleInfo[$primePID]['state-full'] : $customer_info['state-full'];		
-			$customer_info['zip'] = $googleInfo[$primePID]['zip'] != null ? $googleInfo[$primePID]['zip'] : $customer_info['zip'];		
-			$customer_info['lat'] = $googleInfo[$primePID]['lat'] != null ? $googleInfo[$primePID]['lat'] : $customer_info['lat'];	
-			$customer_info['long'] = $googleInfo[$primePID]['long'] != null ? $googleInfo[$primePID]['long'] : $customer_info['long'];		
-	
-			$customer_info['hours'] = $googleInfo[$primePID]['hours'] ?? 'na';
-			$customer_info['current-hours'] = $googleInfo[$primePID]['current-hours']['weekdayDescriptions'] ?? 'na';
-
-			updateOption( 'customer_info', $customer_info );
-			$GLOBALS['customer_info'] = get_option('customer_info');			
-		endif;
-	endif;
 
 /*--------------------------------------------------------------
 # Universal Pages
 --------------------------------------------------------------*/
 
 /* Add appropriate pages */
-	if ( $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'american standard' || $GLOBALS['customer_info']['site-brand'] == 'American Standard' || (is_array($GLOBALS['customer_info']['site-brand']) && ( in_array('american standard', $GLOBALS['customer_info']['site-brand']) || in_array('American Standard', $GLOBALS['customer_info']['site-brand'])) ))) :		
-		if (is_null(get_page_by_path('customer-care-dealer', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'Customer Care Dealer', 'post_content' => '[get-universal-page slug="page-hvac-customer-care-dealer"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
-	else:
+	if ( $customer_info['site-type'] == 'hvac' && ($customer_info['site-brand'] == 'american standard' || $customer_info['site-brand'] == 'American Standard' || (is_array($customer_info['site-brand']) && ( in_array('american standard', $customer_info['site-brand']) || in_array('American Standard', $customer_info['site-brand'])) ))) {		
+		if (is_null(get_page_by_path('customer-care-dealer', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'Customer Care Dealer', 'post_content' => '[get-universal-page slug="page-hvac-customer-care-dealer"]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+	} else {
 		$getPage = get_page_by_path('customer-care-dealer', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
-	endif;
+	}
 
-	if ( $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'rheem' || $GLOBALS['customer_info']['site-brand'] == 'Rheem' || (is_array($GLOBALS['customer_info']['site-brand']) && ( in_array('rheem', $GLOBALS['customer_info']['site-brand']) || in_array('Rheem', $GLOBALS['customer_info']['site-brand'])) ))) :
-		if (is_null(get_page_by_path('rheem-pro-partner', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'Rheem Pro Partner', 'post_content' => '[get-universal-page slug="page-hvac-rheem-pro-partner"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
-	else:
+	if ( $customer_info['site-type'] == 'hvac' && ($customer_info['site-brand'] == 'rheem' || $customer_info['site-brand'] == 'Rheem' || (is_array($customer_info['site-brand']) && ( in_array('rheem', $customer_info['site-brand']) || in_array('Rheem', $customer_info['site-brand'])) ))) {
+		if (is_null(get_page_by_path('rheem-pro-partner', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'Rheem Pro Partner', 'post_content' => '[get-universal-page slug="page-hvac-rheem-pro-partner"]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+	} else {
 		$getPage = get_page_by_path('rheem-pro-partner', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
-	endif;
+	}
 
-	if ( $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'ruud' || $GLOBALS['customer_info']['site-brand'] == 'Ruud' || (is_array($GLOBALS['customer_info']['site-brand']) && ( in_array('ruud', $GLOBALS['customer_info']['site-brand']) || in_array('Ruud', $GLOBALS['customer_info']['site-brand'])) ))) :
-		if (is_null(get_page_by_path('ruud-pro-partner', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'Ruud Pro Partner', 'post_content' => '[get-universal-page slug="page-hvac-ruud-pro-partner"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
-	else:
+	if ( $customer_info['site-type'] == 'hvac' && ($customer_info['site-brand'] == 'ruud' || $customer_info['site-brand'] == 'Ruud' || (is_array($customer_info['site-brand']) && ( in_array('ruud', $customer_info['site-brand']) || in_array('Ruud', $customer_info['site-brand'])) ))) {
+		if (is_null(get_page_by_path('ruud-pro-partner', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'Ruud Pro Partner', 'post_content' => '[get-universal-page slug="page-hvac-ruud-pro-partner"]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+	} else {
 		$getPage = get_page_by_path('ruud-pro-partner', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
-	endif;
+	}
 
-	if ( $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'comfortmaker' || $GLOBALS['customer_info']['site-brand'] == 'Comfortmaker' || (is_array($GLOBALS['customer_info']['site-brand']) && ( in_array('comfortmaker', $GLOBALS['customer_info']['site-brand']) || in_array('Comfortmaker', $GLOBALS['customer_info']['site-brand'])) ))) :
-		if (is_null(get_page_by_path('comfortmaker-elite-dealer', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'Comfortmaker Elite Dealer', 'post_content' => '[get-universal-page slug="page-hvac-comfortmaker-elite-dealer"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
-	else:
+	if ( $customer_info['site-type'] == 'hvac' && ($customer_info['site-brand'] == 'comfortmaker' || $customer_info['site-brand'] == 'Comfortmaker' || (is_array($customer_info['site-brand']) && ( in_array('comfortmaker', $customer_info['site-brand']) || in_array('Comfortmaker', $customer_info['site-brand'])) ))) {
+		if (is_null(get_page_by_path('comfortmaker-elite-dealer', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'Comfortmaker Elite Dealer', 'post_content' => '[get-universal-page slug="page-hvac-comfortmaker-elite-dealer"]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+	} else {
 		$getPage = get_page_by_path('comfortmaker-elite-dealer', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
-	endif;
+	}
 
-	if ( $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'york' || $GLOBALS['customer_info']['site-brand'] == 'York' || (is_array($GLOBALS['customer_info']['site-brand']) && ( in_array('york', $GLOBALS['customer_info']['site-brand']) || in_array('York', $GLOBALS['customer_info']['site-brand'])) ))) :
-		if (is_null(get_page_by_path('york-certified-comfort-expert', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'York Certified Comfort Expert', 'post_content' => '[get-universal-page slug="page-hvac-york-cert-comfort-expert"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
-	else:
+	if ( $customer_info['site-type'] == 'hvac' && ($customer_info['site-brand'] == 'york' || $customer_info['site-brand'] == 'York' || (is_array($customer_info['site-brand']) && ( in_array('york', $customer_info['site-brand']) || in_array('York', $customer_info['site-brand'])) ))) {
+		if (is_null(get_page_by_path('york-certified-comfort-expert', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'York Certified Comfort Expert', 'post_content' => '[get-universal-page slug="page-hvac-york-cert-comfort-expert"]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+	} else {
 		$getPage = get_page_by_path('york-cert-comfort-expert', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
-	endif;
+	}
 
-	if ( $GLOBALS['customer_info']['site-type'] == 'hvac' && ($GLOBALS['customer_info']['site-brand'] == 'tempstar' || $GLOBALS['customer_info']['site-brand'] == 'Tempstar' || (is_array($GLOBALS['customer_info']['site-brand']) && ( in_array('tempstar', $GLOBALS['customer_info']['site-brand']) || in_array('Tempstar', $GLOBALS['customer_info']['site-brand'])) ))) :
-		if (is_null(get_page_by_path('tempstar-elite-dealer', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'Tempstar Elite Dealer', 'post_content' => '[get-universal-page slug="page-hvac-tempstar-elite-dealer"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
-	else:
+	if ( $customer_info['site-type'] == 'hvac' && ($customer_info['site-brand'] == 'tempstar' || $customer_info['site-brand'] == 'Tempstar' || (is_array($customer_info['site-brand']) && ( in_array('tempstar', $customer_info['site-brand']) || in_array('Tempstar', $customer_info['site-brand'])) ))) {
+		if (is_null(get_page_by_path('tempstar-elite-dealer', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'Tempstar Elite Dealer', 'post_content' => '[get-universal-page slug="page-hvac-tempstar-elite-dealer"]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+	} else {
 		$getPage = get_page_by_path('tempstar-elite-dealer', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
-	endif;
+	}
 
-	if ( $GLOBALS['customer_info']['site-type'] == 'hvac' ) :
-		if (is_null(get_page_by_path('maintenance-tips', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'Maintenance Tips', 'post_content' => '[get-universal-page slug="page-hvac-maintenance-tips"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
-	else:
+	if ( $customer_info['site-type'] == 'hvac' ) {
+		if (is_null(get_page_by_path('maintenance-tips', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'Maintenance Tips', 'post_content' => '[get-universal-page slug="page-hvac-maintenance-tips"]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+	} else {
 		$getPage = get_page_by_path('maintenance-tips', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
-	endif;
+	}
 
-	if ( $GLOBALS['customer_info']['site-type'] == 'hvac' ) :
-		if (is_null(get_page_by_path('symptom-checker', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'Symptom Checker', 'post_content' => '[get-universal-page slug="page-hvac-symptom-checker"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
-	else:
+	if ( $customer_info['site-type'] == 'hvac' ) {
+		if (is_null(get_page_by_path('symptom-checker', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'Symptom Checker', 'post_content' => '[get-universal-page slug="page-hvac-symptom-checker"]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+	} else {
 		$getPage = get_page_by_path('symptom-checker', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
-	endif;
+	}
 
-	if ( $GLOBALS['customer_info']['site-type'] == 'hvac' ) :
-		if (is_null(get_page_by_path('faq', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'FAQ', 'post_content' => '[get-universal-page slug="page-hvac-faq"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
-	else:
+	if ( $customer_info['site-type'] == 'hvac' ) {
+		if (is_null(get_page_by_path('faq', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'FAQ', 'post_content' => '[get-universal-page slug="page-hvac-faq"]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+	} else {
 		$getPage = get_page_by_path('faq', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
-	endif;
+	}
 
-	if ( $GLOBALS['customer_info']['site-type'] == 'profile' ) :
-		if (is_null(get_page_by_path('profile', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'Profile', 'post_content' => '[get-universal-page slug="page-profile"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
-	else:
+	if ( $customer_info['site-type'] == 'profile' ) {
+		if (is_null(get_page_by_path('profile', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'Profile', 'post_content' => '[get-universal-page slug="page-profile"]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+	} else {
 		$getPage = get_page_by_path('profile', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
-	endif;
+	}
 
-	if ( $GLOBALS['customer_info']['site-type'] == 'profile' ) :
-		if (is_null(get_page_by_path('profile-directory', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'Profile Directory', 'post_content' => '[get-universal-page slug="page-profile-directory"]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
-	else:
+	if ( $customer_info['site-type'] == 'profile' ) {
+		if (is_null(get_page_by_path('profile-directory', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'Profile Directory', 'post_content' => '[get-universal-page slug="page-profile-directory"]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+	} else {
 		$getPage = get_page_by_path('profile-directory', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
-	endif;
+	}
  
-	if ( get_option('event_calendar')['install'] == 'true' ) :
-		if (is_null(get_page_by_path('calendar', OBJECT, 'universal'))) : wp_insert_post( array( 'post_title' => 'Calendar', 'post_content' => '[get-event-calendar]', 'post_status' => 'publish', 'post_type' => 'universal', )); endif;
-	else:
+	if ( get_option('event_calendar')['install'] == 'true' ) {
+		if (is_null(get_page_by_path('calendar', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'Calendar', 'post_content' => '[get-event-calendar]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+	} else {
 		$getPage = get_page_by_path('calendar', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
-	endif;
+	}
 
 	/* Add generic pages */
 	if ( is_null(get_page_by_path('privacy-policy', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Privacy Policy', 'post_content' => '[get-universal-page slug="page-privacy-policy"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
@@ -744,9 +760,9 @@ function processChron($forceChron) {
 /*--------------------------------------------------------------
 # Sync with Google Analytics
 --------------------------------------------------------------*/
-	$GLOBALS['customer_info'] = get_option('customer_info') ? get_option('customer_info') : array();
+	$customer_info = customer_info();
 	$GLOBALS['dataTerms'] = get_option('bp_data_terms') ? get_option('bp_data_terms') : array();
-	$ga4_id = isset($GLOBALS['customer_info']['google-tags']['prop-id']) ? $GLOBALS['customer_info']['google-tags']['prop-id'] : null;
+	$ga4_id = isset($customer_info['google-tags']['prop-id']) ? $customer_info['google-tags']['prop-id'] : null;
 	$client = new BetaAnalyticsDataClient(['credentials'=>get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json']);
 	$today = date("Y-m-d", strtotime("-1 day"));
 	$rewind = date("Y-m-d", strtotime("-6 years"));
@@ -757,7 +773,7 @@ function processChron($forceChron) {
 	$removedStates = array('alaska'=>'AK', 'hawaii'=>'HI',);
 
 // Gather GA4 Stats 
-	if ( $ga4_id && substr($ga4_id, 0, 2) != '00' ) :
+	if ( $ga4_id && substr($ga4_id, 0, 2) != '00' ) {
 	
 		// Weekly Visitor Trends
 		$analyticsGA4 = array();
@@ -781,7 +797,7 @@ function processChron($forceChron) {
 			]
 		]);
 	
-		foreach ( $response->getRows() as $row ) :
+		foreach ( $response->getRows() as $row ) {
 			$date = $row->getDimensionValues()[0]->getValue();
 			$city = $row->getDimensionValues()[1]->getValue();
 			$state = strtolower($row->getDimensionValues()[2]->getValue());
@@ -794,12 +810,12 @@ function processChron($forceChron) {
 			$sessionDuration = $row->getMetricValues()[4]->getValue();	
 			$pageViews = $row->getMetricValues()[5]->getValue();	
 	
-			if ( isset($states[$state]) ) :					
+			if ( isset($states[$state]) ) {				
 				if ( $city == '(not set)' ) $location = ucwords($state);					
 
 				$analyticsGA4[] = array ('date'=>$date, 'location'=>$location, 'total-users'=>$totalUsers, 'new-users'=>$newUsers, 'sessions'=>$sessions, 'engaged-sessions'=>$engagedSessions, 'session-duration'=>$sessionDuration, 'page-views'=>$pageViews );	
-			endif;
-		endforeach;		
+			}
+		}		
 	
 		if ( is_array($analyticsGA4) ) arsort($analyticsGA4);	
 		update_option('bp_ga4_trends_01', $analyticsGA4, false);		
@@ -808,7 +824,7 @@ function processChron($forceChron) {
 		// Site Visitors	
 		$analyticsGA4 = array();
 		$dataTerms = array('day' => 1) + $GLOBALS['dataTerms'];
-		foreach ( $dataTerms as $termTitle=>$termDays ) :		
+		foreach ( $dataTerms as $termTitle=>$termDays ) {	
 			$response = $client->runReport([
 				'property' => 'properties/'.$ga4_id,
 				'dateRanges' => [
@@ -823,28 +839,28 @@ function processChron($forceChron) {
 				]
 			]);
 
-			foreach ( $response->getRows() as $row ) :
+			foreach ( $response->getRows() as $row ) {
 				$city = $row->getDimensionValues()[0]->getValue();
 				$state = strtolower($row->getDimensionValues()[1]->getValue());
 				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
 				$totalUsers = $row->getMetricValues()[0]->getValue();	
 
-				if ( isset($states[$state]) ) :					
+				if ( isset($states[$state]) ) {				
 					if ( $city == '(not set)' ) $location = ucwords($state);	
 					$analyticsGA4[$location]['page-views-'.$termDays] = $totalUsers;	
-				endif;
-			endforeach;		 
+				}
+			}		 
 
 			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
 
 			update_option('bp_ga4_visitors_01', $analyticsGA4, false);	
 	
-		endforeach;	
+		}	
 	
 	
 		// Most Popular Pages	
 		$analyticsGA4 = array();
-		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) :		
+		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) {		
 			$response = $client->runReport([
 				'property' => 'properties/'.$ga4_id,
 				'dateRanges' => [
@@ -860,7 +876,7 @@ function processChron($forceChron) {
 				]
 			]);
 
-			foreach ( $response->getRows() as $row ) :
+			foreach ( $response->getRows() as $row ) {
 				$pagePath = $row->getDimensionValues()[0]->getValue();
 				$city = $row->getDimensionValues()[1]->getValue();
 				$state = strtolower($row->getDimensionValues()[2]->getValue());
@@ -872,21 +888,21 @@ function processChron($forceChron) {
 				$pagePath = str_replace('/', ' » ', $pagePath);				
 				$pagePath = ucwords($pagePath);
 
-				if ( isset($states[$state]) ) :					
+				if ( isset($states[$state]) ) {				
 					if ( $city == '(not set)' ) $location = ucwords($state);	
 					$analyticsGA4[$pagePath][$location]['page-views-'.$termDays] = $pageViews;	
-				endif;
-			endforeach;		 
+				}
+			}		 
 
 			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
 
 			update_option('bp_ga4_pages_01', $analyticsGA4, false);	
-		endforeach;	
+		}	
 	
 			
 		// Referrers
 		$analyticsGA4 = array();
-		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) :	
+		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) {	
 	
 			$response = $client->runReport([
 				'property' => 'properties/'.$ga4_id,
@@ -904,7 +920,7 @@ function processChron($forceChron) {
 				]
 			]);
 
-			foreach ( $response->getRows() as $row ) :
+			foreach ( $response->getRows() as $row ) {
 				$pageReferrer = $row->getDimensionValues()[0]->getValue();
 				$city = $row->getDimensionValues()[1]->getValue();
 				$state = strtolower($row->getDimensionValues()[2]->getValue());
@@ -913,30 +929,30 @@ function processChron($forceChron) {
 	
 				$switchRef = array ('facebook'=>'Facebook', 'yelp'=>'Yelp', 'youtube'=>'YouTube', 'instagram'=>'Instagram');
 	
-				if (strpos($pageReferrer, $_SERVER['HTTP_HOST']) === false) :
-					foreach ( $switchRef as $find=>$replace ) :
+				if (strpos($pageReferrer, $_SERVER['HTTP_HOST']) === false) {
+					foreach ( $switchRef as $find=>$replace ) {
 						if ( strpos( $pageReferrer, $find ) !== false ) $pageReferrer = $replace;
-					endforeach;		
+					}		
 	
 					if ( $pageReferrer == '' ) $pageReferrer = "Direct";
 	
-					if ( isset($states[$state]) ) :					
+					if ( isset($states[$state]) ) {				
 						if ( $city == '(not set)' ) $location = ucwords($state);	
 						$sessions += $analyticsGA4[$pageReferrer][$location]['sessions-'.$termDays];
 						$analyticsGA4[$pageReferrer][$location]['sessions-'.$termDays] = $sessions;	
-					endif;
-				endif;
-			endforeach;		 
+					}
+				}
+			}		 
 
 			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
 	
 			update_option('bp_ga4_referrers_01', $analyticsGA4, false);		
-		endforeach;		
+		}		
 
 	
 		// Locations
 		$analyticsGA4 = array();
-		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) :	
+		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) {
 	
 			$response = $client->runReport([
 				'property' => 'properties/'.$ga4_id,
@@ -953,28 +969,28 @@ function processChron($forceChron) {
 				]
 			]);
 
-			foreach ( $response->getRows() as $row ) :
+			foreach ( $response->getRows() as $row ) {
 				$city = $row->getDimensionValues()[0]->getValue();
 				$state = strtolower($row->getDimensionValues()[1]->getValue());
 				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
 				$sessions = $row->getMetricValues()[0]->getValue();	
 	
-				if ( isset($states[$state]) ) :					
+				if ( isset($states[$state]) ) {				
 					if ( $city == '(not set)' ) $location = ucwords($state);	
 					$analyticsGA4[$location]['sessions-'.$termDays] = $sessions;	
-				endif;
+				}
 
-			endforeach;		 
+			}		 
 
 			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
 	
 			update_option('bp_ga4_locations_01', $analyticsGA4, false);	
-		endforeach;		
+		}		
 	
 			
 		// Browsers
 		$analyticsGA4 = array();
-		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) :	
+		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) {	
 	
 			$response = $client->runReport([
 				'property' => 'properties/'.$ga4_id,
@@ -992,29 +1008,29 @@ function processChron($forceChron) {
 				]
 			]);
 
-			foreach ( $response->getRows() as $row ) :
+			foreach ( $response->getRows() as $row ) {
 				$browser = $row->getDimensionValues()[0]->getValue();
 				$city = $row->getDimensionValues()[1]->getValue();
 				$state = strtolower($row->getDimensionValues()[2]->getValue());
 				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
 				$sessions = $row->getMetricValues()[0]->getValue();	
 
-				if ( isset($states[$state]) ) :					
+				if ( isset($states[$state]) ) {			
 					if ( $city == '(not set)' ) $location = ucwords($state);	
 					$sessions += $analyticsGA4[$browser][$location]['sessions-'.$termDays];
 					$analyticsGA4[$browser][$location]['sessions-'.$termDays] = $sessions;	
-				endif;
-			endforeach;		 
+				}
+			}		 
 
 			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
 	
 			update_option('bp_ga4_browsers_01', $analyticsGA4, false);		
-		endforeach;		
+		}		
 	
 			
 		// Devices
 		$analyticsGA4 = array();
-		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) :	
+		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) {
 	
 			$response = $client->runReport([
 				'property' => 'properties/'.$ga4_id,
@@ -1033,29 +1049,29 @@ function processChron($forceChron) {
 				]
 			]);
 
-			foreach ( $response->getRows() as $row ) :
+			foreach ( $response->getRows() as $row ) {
 				$deviceType = $row->getDimensionValues()[0]->getValue();
 				$city = $row->getDimensionValues()[1]->getValue();
 				$state = strtolower($row->getDimensionValues()[2]->getValue());
 				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
 				$sessions = $row->getMetricValues()[0]->getValue();	
 
-				if ( isset($states[$state]) ) :					
+				if ( isset($states[$state]) ) {				
 					if ( $city == '(not set)' ) $location = ucwords($state);	
 					$sessions += $analyticsGA4[$deviceType][$location]['sessions-'.$termDays];
 					$analyticsGA4[$deviceType][$location]['sessions-'.$termDays] = $sessions;	
-				endif;
-			endforeach;		 
+				}
+			}		 
 
 			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
 	
 			update_option('bp_ga4_devices_01', $analyticsGA4, false);		
-		endforeach;				
+		}				
 	
 			
 		// Site Load Speed
 		$analyticsGA4 = array();
-		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) :	
+		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) {
 	
 			$response = $client->runReport([
 				'property' => 'properties/'.$ga4_id,
@@ -1073,28 +1089,28 @@ function processChron($forceChron) {
 				]
 			]);
 
-			foreach ( $response->getRows() as $row ) :
+			foreach ( $response->getRows() as $row ) {
 				$groupId = $row->getDimensionValues()[0]->getValue();
 				$city = $row->getDimensionValues()[1]->getValue();
 				$state = strtolower($row->getDimensionValues()[2]->getValue());
 				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
 				//$sessions = $row->getMetricValues()[0]->getValue();	
 
-				if ( isset($states[$state]) ) :					
+				if ( isset($states[$state]) ) {			
 					if ( $city == '(not set)' ) $location = ucwords($state);	
 					$analyticsGA4[$location]['sessions-'.$termDays][] = $groupId;
-				endif;
-			endforeach;		 
+				}
+			}		 
 
 			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
 	
 			update_option('bp_ga4_speed_01', $analyticsGA4, false);		
-		endforeach;			
+		}			
 	
 			
 		// Screen Resolutions
 		$analyticsGA4 = array();
-		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) :	
+		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) {	
 	
 			$response = $client->runReport([
 				'property' => 'properties/'.$ga4_id,
@@ -1112,29 +1128,29 @@ function processChron($forceChron) {
 				]
 			]);
 
-			foreach ( $response->getRows() as $row ) :
+			foreach ( $response->getRows() as $row ) {
 				$screenResolution = $row->getDimensionValues()[0]->getValue();
 				$city = $row->getDimensionValues()[1]->getValue();
 				$state = strtolower($row->getDimensionValues()[2]->getValue());
 				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
 				$sessions = $row->getMetricValues()[0]->getValue();	
 
-				if ( isset($states[$state]) ) :					
+				if ( isset($states[$state]) ) {			
 					if ( $city == '(not set)' ) $location = ucwords($state);	
 					$sessions += $analyticsGA4[$screenResolution][$location]['sessions-'.$termDays];
 					$analyticsGA4[$screenResolution][$location]['sessions-'.$termDays] = $sessions;	
-				endif;
-			endforeach;		 
+				}
+			}		 
 
 			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
 	
 			update_option('bp_ga4_resolution_01', $analyticsGA4, false);		
-		endforeach;			
+		}			
 	
 			
 		// Content Visibility
 		$analyticsGA4 = array();
-		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) :	
+		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) {	
 	
 			$response = $client->runReport([
 				'property' => 'properties/'.$ga4_id,
@@ -1152,23 +1168,509 @@ function processChron($forceChron) {
 				]
 			]);
 
-			foreach ( $response->getRows() as $row ) :
+			foreach ( $response->getRows() as $row ) {
 				$achievementId = $row->getDimensionValues()[0]->getValue();
 				$city = $row->getDimensionValues()[1]->getValue();
 				$state = strtolower($row->getDimensionValues()[2]->getValue());
 				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
 				$sessions = $row->getMetricValues()[0]->getValue();	
 
-				if ( isset($states[$state]) ) :					
+				if ( isset($states[$state]) ) {				
 					if ( $city == '(not set)' ) $location = ucwords($state);	
 					$sessions += $analyticsGA4[$achievementId][$location]['sessions-'.$termDays];
 					$analyticsGA4[$achievementId][$location]['sessions-'.$termDays] = $sessions;	
-				endif;
-			endforeach;		 
+				}
+			}		 
 
 			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
 	
 			update_option('bp_ga4_achievementId_01', $analyticsGA4, false);		
-		endforeach;		
-	endif;
+		}		
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function ci_normalize_pids($raw): array {
+    $pid = is_array($raw) ? $raw : ( ($raw === null || $raw === false) ? [] : [$raw] );
+    $pid = array_map('strval', $pid);
+    $pid = array_map('trim', $pid);
+    $pid = array_filter($pid, fn($x) => $x !== '' && strlen($x) > 10);
+    return array_values(array_unique($pid));
+}
+
+function ci_email_diff(array $old, array $new, string $site_name): void {
+    $diffs = [];
+    $keys = array_unique(array_merge(array_keys($old), array_keys($new)));
+    foreach ($keys as $k) {
+        $ov = $old[$k] ?? null;
+        $nv = $new[$k] ?? null;
+        if ($ov === $nv) continue;
+        $toS = function($x) {
+            if (is_array($x)) {
+                $j = json_encode($x);
+                return strlen($j) > 400 ? substr($j,0,400).'…' : $j;
+            }
+            return (string)$x;
+        };
+        $diffs[$k] = ['old'=>$toS($ov), 'new'=>$toS($nv)];
+    }
+    if (!$diffs) return;
+    $msg = "customer_info changes for {$site_name}:\n\n";
+    foreach ($diffs as $k => $d) {
+        $msg .= "• {$k}\n  - old: {$d['old']}\n  - new: {$d['new']}\n\n";
+    }
+    if (function_exists('emailMe')) { emailMe('customer_info updated - '.$site_name, $msg); }
+    else { error_log($msg); }
+}
+
+// Helper: make values readable in email
+function _fmt_email_val($v): string {
+    if (is_array($v)) {
+        return rtrim(print_r($v, true));
+    }
+    $s = trim((string)$v);
+
+    // normalize fancy punctuation (thin spaces, en dash, em dash)
+    $s = strtr($s, [
+        "\xE2\x80\x89" => ' ',  // thin space
+        "\xE2\x80\x93" => '-',  // en dash
+        "\xE2\x80\x94" => '-',  // em dash
+    ]);
+
+    // If this looks like weekday hours, split at pipes to new lines
+    if (preg_match('/\b(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b/i', $s)) {
+        $s = preg_replace('/\s*\|\s*/', "\n            ", $s);
+    }
+
+    return $s;
+}
+
+
+function gbp_diff_vs_ci_and_notify(array $ci, array $google_info, array $placeIDs): void {
+    $primePID    = $placeIDs[0] ?? null;
+    $gbp_primary = $primePID ? ($google_info[$primePID] ?? []) : [];
+
+    $norm_str = fn($v) => strtolower(trim(preg_replace('/\s+/', ' ', (string)$v)));
+    $norm_phone = function($area, $phone) {
+        $a = preg_replace('/\D+/', '', (string)$area);
+        $p = preg_replace('/\D+/', '', (string)$phone);
+        return (strlen($a) === 3 && strlen($p) === 7) ? $a.$p : preg_replace('/\D+/', '', $a.$p);
+    };
+
+    $diffs = [];
+    $pairs = [
+        'name'       => ['ci'=>$ci['name']??null,       'gbp'=>$gbp_primary['name']??null,       'norm'=>'str'],
+        'street'     => ['ci'=>$ci['street']??null,     'gbp'=>$gbp_primary['street']??null,     'norm'=>'str'],
+        'city'       => ['ci'=>$ci['city']??null,       'gbp'=>$gbp_primary['city']??null,       'norm'=>'str'],
+        'state-abbr' => ['ci'=>$ci['state-abbr']??null, 'gbp'=>$gbp_primary['state-abbr']??null, 'norm'=>'upper'],
+        'state-full' => ['ci'=>$ci['state-full']??null, 'gbp'=>$gbp_primary['state-full']??null, 'norm'=>'str'],
+        'zip'        => ['ci'=>$ci['zip']??null,        'gbp'=>$gbp_primary['zip']??null,        'norm'=>'raw'],
+    ];
+    foreach ($pairs as $label=>$pair) {
+        $ciV=$pair['ci']; $gbpV=$pair['gbp'];
+        $ciN = $pair['norm']==='str'   ? $norm_str($ciV)
+             : ($pair['norm']==='upper'? strtoupper(trim((string)$ciV))
+             : trim((string)$ciV));
+        $gbpN= $pair['norm']==='str'   ? $norm_str($gbpV)
+             : ($pair['norm']==='upper'? strtoupper(trim((string)$gbpV))
+             : trim((string)$gbpV));
+        if ($gbpN !== '' && $ciN !== $gbpN) $diffs[$label]=['current'=>$ciV,'gbp'=>$gbpV];
+    }
+    $ciPhone  = $norm_phone($ci['area']??'', $ci['phone']??'');
+    $gbpPhone = $norm_phone($gbp_primary['area']??'', $gbp_primary['phone']??'');
+    if ($gbpPhone !== '' && $ciPhone !== $gbpPhone) {
+        $diffs['phone_full'] = [
+            'current' => trim(($ci['area']??'').' '.($ci['phone']??'')),
+            'gbp'     => trim(($gbp_primary['area']??'').' '.($gbp_primary['phone']??'')),
+        ];
+    }
+    $ciHoursDesc  = is_array($ci['current-hours']??null) ? implode(' | ', (array)$ci['current-hours']) : (string)($ci['current-hours']??'');
+    $gbpHoursDesc = !empty($gbp_primary['current-hours']['weekdayDescriptions'])
+                    ? implode(' | ', (array)$gbp_primary['current-hours']['weekdayDescriptions'])
+                    : '';
+    if ($gbpHoursDesc !== '' && trim($ciHoursDesc) !== trim($gbpHoursDesc)) {
+        $diffs['hours'] = ['current'=>$ciHoursDesc, 'gbp'=>$gbpHoursDesc];
+    }
+
+    if (!$diffs) return;
+    $hash = md5(json_encode($diffs));
+	if ($hash === get_option('bp_diffhash_gbp_vs_ci')) return;
+	update_option('bp_diffhash_gbp_vs_ci', $hash, false);
+
+	$NL = "\n";
+	$msg  = "GBP vs customer_info differences for ".($ci['name'] ?? '(site)').":".$NL.$NL;
+	foreach ($diffs as $k => $v) {
+		$label = strtoupper(str_replace('_',' ',$k));
+		$cur   = _fmt_email_val($v['current'] ?? '');
+		$gbp   = _fmt_email_val($v['gbp'] ?? '');
+		$msg  .= "• {$label}{$NL}"
+			  .  "  current: {$cur}{$NL}"
+			  .  "  gbp:     {$gbp}{$NL}{$NL}";
+	}
+	if (function_exists('emailMe')) emailMe('GBP/customer_info discrepancy - '.($ci['name']??''), $msg);
+}
+
+function ci_merge_gbp_into_ci(array $ci, array $gbp_primary, bool $pid_sync): array {
+    $map = ['name'=>'name', 'area'=>'area', 'phone'=>'phone', 'street'=>'street', 'city'=>'city', 'state-abbr'=>'state-abbr', 'state-full'=>'state-full', 'zip'=>'zip', 'lat'=>'lat', 'long'=>'long'];
+    $diffs = [];
+    $new   = $ci;
+
+    foreach ($map as $ck => $gk) {
+        $gv = $gbp_primary[$gk] ?? null;
+        if ($gv === null || $gv === '') continue;
+
+        $cv_exists = array_key_exists($ck, $new) && $new[$ck] !== '' && $new[$ck] !== null;
+        if (!$cv_exists) { $new[$ck] = $gv; continue; }           // fill missing, no email/diff needed
+
+        $different = ($ck === 'state-abbr')
+            ? (strtoupper(trim((string)$new[$ck])) !== strtoupper(trim((string)$gv)))
+            : (($ck === 'lat' || $ck === 'long')
+                ? (abs((float)$new[$ck] - (float)$gv) > 0.001)
+                : (strtolower(trim((string)$new[$ck])) !== strtolower(trim((string)$gv)))
+              );
+
+        if ($ck === 'area' || $ck === 'phone') { /* handled as combined phone elsewhere if you want */ }
+
+        if ($different) {
+            $diffs[$ck] = ['current'=>$new[$ck], 'gbp'=>$gv];
+            if ($pid_sync) $new[$ck] = $gv;
+        }
+    }
+
+    // Phone as a combined comparison/overlay
+    $digits = fn($v) => preg_replace('/\D+/', '', (string)$v);
+    $ci10   = (function($a,$p,$d){ $a=$d($a); $p=$d($p); return (strlen($a)===3 && strlen($p)===7)?$a.$p:$d($a.$p); })($new['area']??'', $new['phone']??'', $digits);
+    $gbp10  = (function($a,$p,$d){ $a=$d($a); $p=$d($p); return (strlen($a)===3 && strlen($p)===7)?$a.$p:$d($a.$p); })($gbp_primary['area']??'', $gbp_primary['phone']??'', $digits);
+    if ($gbp10 !== '' && $ci10 !== $gbp10) {
+        $diffs['phone_full'] = ['current'=>trim(($new['area']??'').' '.($new['phone']??'')),
+                                'gbp'    =>trim(($gbp_primary['area']??'').' '.($gbp_primary['phone']??''))];
+        if ($pid_sync) { $new['area'] = $gbp_primary['area']; $new['phone'] = $gbp_primary['phone']; }
+    }
+
+    // Hours (fill if missing; overwrite if pid_sync and different)
+    $ciHoursDesc  = is_array($new['current-hours'] ?? null) ? implode(' | ', (array)$new['current-hours']) : (string)($new['current-hours'] ?? '');
+    $gbpHoursDesc = !empty($gbp_primary['current-hours']['weekdayDescriptions'])
+                    ? implode(' | ', (array)$gbp_primary['current-hours']['weekdayDescriptions'])
+                    : '';
+    if ($gbpHoursDesc !== '' && trim($ciHoursDesc) !== trim($gbpHoursDesc)) {
+        $diffs['hours'] = ['current'=>$ciHoursDesc, 'gbp'=>$gbpHoursDesc];
+        if ($pid_sync) {
+            if (!empty($gbp_primary['hours']))         $new['hours'] = $gbp_primary['hours'];
+            if (!empty($gbp_primary['current-hours'])) $new['current-hours'] = $gbp_primary['current-hours']['weekdayDescriptions'] ?? $gbp_primary['current-hours'];
+        }
+    } else {
+        if (!isset($new['hours']) && !empty($gbp_primary['hours'])) $new['hours'] = $gbp_primary['hours'];
+        if (!isset($new['current-hours']) && !empty($gbp_primary['current-hours']['weekdayDescriptions']))
+            $new['current-hours'] = $gbp_primary['current-hours']['weekdayDescriptions'];
+    }
+
+// ---- ENSURE HOURS ALWAYS GET SEEDED INTO CI AT LEAST ONCE ----
+    if (empty($new['hours']) && !empty($gbp_primary['hours'])) {
+        // full Google regularOpeningHours payload (has periods)
+        $new['hours'] = $gbp_primary['hours'];
+    }
+
+    if (empty($new['current-hours'])) {
+        // prefer the plain weekdayDescriptions array if present
+        if (!empty($gbp_primary['current-hours']['weekdayDescriptions'])) {
+            $new['current-hours'] = $gbp_primary['current-hours']['weekdayDescriptions'];
+        } elseif (!empty($gbp_primary['current-hours']) && is_array($gbp_primary['current-hours'])) {
+            // fallback: if GBP currentOpeningHours exists but you didn't get weekdayDescriptions for some reason
+            $new['current-hours'] = $gbp_primary['current-hours'];
+        }
+    }
+
+    return [$new, $diffs];
+}
+
+function ci_finalize_fields(array &$ci): void {
+    // phone-format
+    $digits = fn($v) => preg_replace('/\D+/', '', (string)$v);
+    $a = $digits($ci['area'] ?? ''); $p = $digits($ci['phone'] ?? '');
+    if (strlen($a)===3 && strlen($p)===7) {
+        $ci['phone-format'] = ($ci['area-before'] ?? '(').$a.($ci['area-after'] ?? ') ')
+                            . substr($p,0,3).'-'.substr($p,3);
+    } else {
+        unset($ci['phone-format']);
+    }
+
+    // default-loc
+    $city = trim((string)($ci['city'] ?? ''));
+    $st   = trim((string)($ci['state-abbr'] ?? ''));
+    if ($city !== '' && $st !== '') $ci['default-loc'] = "$city, $st";
+    else unset($ci['default-loc']);
+
+    // prune trivial empties
+    foreach ($ci as $k=>$v) {
+        if ($v === null) { unset($ci[$k]); continue; }
+        if (is_string($v) && trim($v)==='') { unset($ci[$k]); continue; }
+        if (is_array($v)) {
+            $trimmed = array_filter(array_map(fn($x)=>is_string($x)?trim($x):$x, $v),
+                                    fn($x)=>$x!=='' && $x!==null && $x!==[]);
+            if ($trimmed === []) unset($ci[$k]);
+        }
+    }
+}
+
+function ci_build_hours($periods, $wkdesc): array {
+    $res   = ['compact'=>'', 'openingHoursSpecification'=>[]];
+    $byDay = array_fill(0, 7, []); // Google: 0=Sun..6=Sat
+
+    $fmtTime = function(array $node): ?string {
+        if (isset($node['time']) && preg_match('/^\d{3,4}$/', $node['time'])) {
+            $t = str_pad($node['time'], 4, '0', STR_PAD_LEFT);
+            return substr($t,0,2).':'.substr($t,2,2);
+        }
+        if (isset($node['hour'])) {
+            $h = (int)$node['hour'];
+            $m = isset($node['minute']) ? (int)$node['minute'] : 0;
+            return sprintf('%02d:%02d',$h,$m);
+        }
+        return null;
+    };
+
+    // Build daily buckets
+    if (is_array($periods)) {
+        foreach ($periods as $p) {
+            if (!isset($p['open'])) continue;
+            $od = isset($p['open']['day']) ? (int)$p['open']['day'] : null;
+            $ot = $fmtTime($p['open']); if ($od===null || $ot===null) continue;
+            if (!isset($p['close'])) { $byDay[$od][] = ['00:00','23:59']; continue; }
+            $cd = isset($p['close']['day']) ? (int)$p['close']['day'] : $od;
+            $ct = $fmtTime($p['close']); if ($ct===null) continue;
+            if ($cd === $od) $byDay[$od][] = [$ot,$ct];
+            else { $byDay[$od][] = [$ot,'23:59']; $byDay[$cd][] = ['00:00',$ct]; } // overnight
+        }
+    } elseif (is_array($wkdesc)) {
+        // (Optional) parse weekdayDescriptions if you want – safe to skip if not needed
+    }
+
+    // If we found NO intervals at all, treat as "unknown": return empty
+    $any = false;
+    foreach ($byDay as $slots) { if (!empty($slots)) { $any = true; break; } }
+    if (!$any) return $res;
+
+    // Build compact + OpeningHoursSpecification
+    $abbrs = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+    $days  = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    $order = [1,2,3,4,5,6,0]; // Mon..Sun (Google index mapping)
+
+    $schemaParts = [];
+    $groups = []; // "HH:MM-HH:MM" => days[]
+
+    foreach ($order as $i => $gDay) {
+        if (!empty($byDay[$gDay])) {
+            [$from,$to] = $byDay[$gDay][0]; // first slot only (simple)
+            $schemaParts[] = $abbrs[$i].' '.$from.'-'.$to;
+            $groups["$from-$to"][] = $days[$i];
+        }
+    }
+
+    foreach ($groups as $range => $dows) {
+        [$opens,$closes] = explode('-', $range);
+        $res['openingHoursSpecification'][] = [
+            '@type'=>'OpeningHoursSpecification',
+            'dayOfWeek'=>$dows,'opens'=>$opens,'closes'=>$closes
+        ];
+    }
+
+    $res['compact'] = implode(' ', $schemaParts);
+    return $res;
+}
+
+function ci_build_schema(array $ci, array $gbp_primary = [], array $google_info = [], array $opts = []): array {
+    $opts += [
+        'include_aggregate_rating' => true,
+        'min_rating_value'         => 4.0,   // gate AR unless rating >= this
+    ];
+
+    // -------- basics --------
+    $url  = get_bloginfo('url');
+    $name = $ci['name'] ?? get_bloginfo('name');
+    $bt   = $ci['business-type'] ?? '';
+    $type = is_array($bt) ? ($bt[0] ?? '') : $bt;
+    $type = trim($type) === '' ? 'LocalBusiness' : preg_replace('/\s+/', '', $type);
+
+    // bump to HVAC when site-type demands it
+    if (!empty($ci['site-type']) && strtolower((string)$ci['site-type']) === 'hvac') {
+        $type = 'HVACBusiness';
+    }
+
+    // email / phone (E.164-ish)
+    $email  = $ci['email'] ?? null;
+    $digits = fn($v) => preg_replace('/\D+/', '', (string)$v);
+    $a = $digits($ci['area'] ?? ''); 
+    $p = $digits($ci['phone'] ?? '');
+    if ($a === '' && strlen($p) === 10) { $a = substr($p,0,3); $p = substr($p,3); } // recover 10-digit paste
+    $telephone = (strlen($a) === 3 && strlen($p) === 7) ? ('+1'.$a.$p) : ( ($a.$p) ? '+1'.$a.$p : null );
+
+    // address
+    $addr = array_filter([
+        'streetAddress'   => $ci['street']     ?? '',
+        'addressLocality' => $ci['city']       ?? '',
+        'addressRegion'   => $ci['state-abbr'] ?? ($ci['state-full'] ?? ''),
+        'postalCode'      => $ci['zip']        ?? '',
+        'addressCountry'  => 'US',
+    ], fn($v) => $v !== '');
+    $addressNode = $addr ? (['@type'=>'PostalAddress'] + $addr) : null;
+
+    // geo
+    $geo = (isset($ci['lat'], $ci['long']) && $ci['lat'] !== '' && $ci['long'] !== '')
+        ? ['@type'=>'GeoCoordinates','latitude'=>(float)$ci['lat'],'longitude'=>(float)$ci['long']]
+        : null;
+
+    // hours (compact + OpeningHoursSpecification) — build FIRST, add to $schema AFTER we create it
+    $hours = ci_build_hours($ci['hours']['periods'] ?? null, $ci['current-hours'] ?? null);
+
+    // social -> sameAs
+    $same = [];
+    foreach (['facebook','instagram','linkedin','twitter','youtube','pinterest'] as $s) {
+        if (!empty($ci[$s])) $same[] = $ci[$s];
+    }
+
+    // areaServed from service-areas
+    $areaServed = [];
+    if (!empty($ci['service-areas']) && is_array($ci['service-areas'])) {
+        $seen = [];
+        foreach ($ci['service-areas'] as $city) {
+            if (!isset($city[0], $city[1])) continue;
+            $c = preg_replace('/\s+/', ' ', trim((string)$city[0]));
+            $st= preg_replace('/\s+/', ' ', trim((string)$city[1]));
+            if ($c === '' || $st === '') continue;
+            $label = "$c, $st";
+            if (isset($seen[$label])) continue; 
+            $seen[$label] = 1;
+            $citySlug  = rawurlencode(str_replace(' ','_',$c));
+            $stateSlug = rawurlencode(str_replace(' ','_',$st));
+            $areaServed[] = [
+                '@type'  => 'AdministrativeArea',
+                'name'   => $label,
+                'sameAs' => "https://en.wikipedia.org/wiki/{$citySlug},_{$stateSlug}",
+            ];
+        }
+    }
+
+    // hasOfferCatalog from service-names (+ a catalog name)
+    $catalogName = 'Our Services';
+    if (!empty($ci['site-type']) && strtolower((string)$ci['site-type']) === 'hvac') {
+        $catalogName = 'HVAC Services';
+    } elseif (is_array($bt) && !empty($bt[1])) {
+        $catalogName = trim((string)$bt[1]);
+    }
+    $serviceNames = array_values(array_unique(array_filter(array_map('trim', (array)($ci['service-names'] ?? [])))));
+    if (empty($serviceNames)) $serviceNames = [$catalogName];
+
+    $offers = [];
+    foreach ($serviceNames as $svc) {
+        if ($svc === '') continue;
+        $offers[] = [
+            '@type'       => 'Offer',
+            'itemOffered' => [
+                '@type'    => 'Service',
+                'name'     => $svc,
+                'provider' => ['@id' => home_url('#organization')],
+            ],
+        ];
+    }
+    $hasOfferCatalog = $offers ? [
+        '@type'           => 'OfferCatalog',
+        '@id'             => home_url('#offer-catalog'),
+        'name'            => $catalogName,
+        'itemListElement' => $offers,
+    ] : null;
+
+    // logo (optional)
+    $logo = null;
+    if (!empty($ci['logo'])) {
+        // allow either string URL or ImageObject
+        $logo = is_array($ci['logo']) ? $ci['logo'] : ['@type'=>'ImageObject','url'=>$ci['logo']];
+    }
+
+    // additionalType (optional)
+    $additionalType = '';
+    if (function_exists('ci_additional_type_url')) {
+        $friendly = is_array($bt) ? ($bt[1] ?? '') : (string)$bt;
+        $additionalType = ci_additional_type_url($type, $friendly, $ci['site-type'] ?? '');
+    }
+
+    // aggregateRating from $google_info (prime PID)
+    if (empty($google_info)) {
+        $google_info = get_option('bp_gbp_update') ?: [];
+    }
+    $aggregateRating = null;
+    if ($opts['include_aggregate_rating'] && !empty($ci['pid'])) {
+        $pids  = is_array($ci['pid']) ? $ci['pid'] : [$ci['pid']];
+        $prime = $pids[0] ?? null;
+        if ($prime && isset($google_info[$prime])) {
+            $rv = (float)($google_info[$prime]['google-rating']  ?? 0);
+            $rc = (int)  ($google_info[$prime]['google-reviews'] ?? 0);
+            if ($rc > 0 && $rv >= $opts['min_rating_value']) {
+                $aggregateRating = [
+                    '@type'       => 'AggregateRating',
+                    'ratingValue' => round($rv, 1),
+                    'bestRating'  => 5,
+                    'worstRating' => 1,
+                    'ratingCount' => $rc,
+                ];
+            }
+        }
+    }
+
+    // priceRange & hasMap
+    $priceRange = $ci['price-range'] ?? '$$';
+    $hasMap     = (!empty($ci['cid'])) ? ('https://maps.google.com/?cid=' . rawurlencode((string)$ci['cid'])) : null;
+
+    // -------- assemble --------
+    $schema = [
+        '@context'   => 'https://schema.org',
+        '@type'      => $type,
+        'name'       => $name,
+        'url'        => $url,
+        'priceRange' => $priceRange,
+    ];
+    if ($email)         $schema['email'] = $email;
+    if ($telephone)     $schema['telephone'] = $telephone;
+    if ($addressNode)   $schema['address'] = $addressNode;
+    if ($geo)           $schema['geo'] = $geo;
+
+    // ADD HOURS HERE (so we don't overwrite them later)
+    if (!empty($hours['openingHoursSpecification'])) {
+        $schema['openingHoursSpecification'] = $hours['openingHoursSpecification'];
+        if (!empty($hours['compact'])) {
+            $schema['openingHours'] = $hours['compact']; // optional helper string
+        }
+    }
+
+    if ($same)             $schema['sameAs'] = $same;
+    if ($areaServed)       $schema['areaServed'] = $areaServed;
+    if ($hasOfferCatalog)  $schema['hasOfferCatalog'] = $hasOfferCatalog;
+    if ($aggregateRating)  $schema['aggregateRating'] = $aggregateRating;
+    if ($logo)             $schema['logo'] = $logo;
+    if ($additionalType)   $schema['additionalType'] = $additionalType;
+    if ($hasMap)           $schema['hasMap'] = $hasMap;
+
+    return $schema;
 }

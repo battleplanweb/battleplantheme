@@ -123,6 +123,33 @@
 	transition:										all var(--main-trans-speed) var(--main-trans-easing);
 }
 
+.main-navigation .menu-icon {
+	display:										inline-block;
+	transform:										scale(0);
+	border: 										none;
+}
+
+.main-navigation .menu-icon img {
+	transform: 										translateY(1px);
+	margin-right: 									6px;
+}
+
+.main-navigation ul.main-menu li:hover > .menu-icon, 
+.main-navigation ul.main-menu li.active > .menu-icon, 
+.main-navigation ul.main-menu li.tab-focus > .menu-icon  {    
+	animation: 										menu-icon-anim 1.4s ease-out forwards;
+}
+
+@keyframes menu-icon-anim {
+	0% 		{ transform: 								rotate(0) scale(0) }
+	25% 	{ transform: 								rotate(0deg) scale(1.2) }
+	100% 	{ transform: 								rotate(0deg) scale(1) }
+}
+
+.main-navigation .menu-icon + a {
+	display: 											inline-block;
+}
+
 /* Sub-Menu */
 .main-navigation li.menu-item-has-children, 
 .main-navigation li.current_page_parent-has-children {

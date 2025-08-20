@@ -400,11 +400,7 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 					  bannerT = 0.45 * phoneNumObj.clientHeight,
 					  smallScreen = (phoneLinkR + bannerW) > getDeviceW() ? true : false;
 				
-
-				
-				
-				
-				
+			
 /*
 				const phoneHolderW = phoneNumObj.offsetWidth,
 					  phoneLinkW = phoneLinkR - icon.getBoundingClientRect().left,
@@ -459,6 +455,21 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 			areWeOpenBanner((Math.random() * 2000)+2000);
 		}
 	});
+		
+	// Block Apple Magic Mouse gestures from affecting the the scroll-to-top button
+	var el = getObject('body.screen-desktop a.icon-btn.scroll-top');
+  	if (!el) return;
+
+    ['wheel', 'gesturestart', 'gesturechange', 'gestureend'].forEach(function(type) {
+    	el.addEventListener(type, function(e) {
+      		e.preventDefault();
+      		e.stopPropagation();
+		}, { passive: false });
+    });
+
+  	el.addEventListener('mousemove', function(e) {
+    	e.stopPropagation();
+  	}, { passive: true });
 	
 	
 /*--------------------------------------------------------------

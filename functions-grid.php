@@ -525,9 +525,9 @@ function battleplan_buildLockedSection( $atts, $content = null ) {
 	
 	//$buildSection .= '><div class="closeBtn" aria-label="close" aria-hidden="false" tabindex="0"><span class="icon x-large"></span></div>'.do_shortcode($content).'</section>';	/* WP3 validation 12/11/24 */
 	
-	$buildSection .= '><button class="closeBtn" aria-label="close"><span class="icon x-large"></button></div>'.do_shortcode($content).'</section>';	
+	$buildSection .= '><button class="closeBtn" aria-label="close">[get-icon type="x-large"]</button></div>'.$content.'</section>';	
 	
-	return $buildSection; 
+	return do_shortcode($buildSection); 
 }
 
 	add_action( 'wpcf7_init', function() {
@@ -594,7 +594,7 @@ function battleplan_buildWidget( $atts, $content = null ) {
 	if ( $tracking != '' ) $class .= " tracking";
 
 	$display = true;
-	$brand = $GLOBALS['customer_info']['site-brand'];	
+	$brand = customer_info()['site-brand'];	
 	
 	if ( $type == "form" ) : $lock = "top"; $priority = '4'; $addHide = "404, contact, review"; endif;
 	if ( $type == "form" && $title == "hide" ) : $title = 'Service Request'; endif;

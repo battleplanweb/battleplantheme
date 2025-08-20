@@ -61,6 +61,7 @@ function battleplan_formatMail( $posted_data ) {
 // Contact Form 7 email - prepare email for sending
 add_action( 'wpcf7_before_send_mail', 'battleplan_setupFormEmail', 10, 3 ); 
 function battleplan_setupFormEmail( $contact_form, &$abort, $submission ) { 
+	$customer_info = customer_info();
 	$formMail = $contact_form->prop( 'mail' );
 	$userLoc = $_COOKIE['user-city'].', '.$_COOKIE['user-region'];
 	$userCountry = $_COOKIE['user-country'];
@@ -100,7 +101,7 @@ function battleplan_setupFormEmail( $contact_form, &$abort, $submission ) {
 		$buildEmail .= '<br>';	
 	endforeach;
 	
-	$buildEmail .= '</p></div><div style="line-height:1.5; border-top: 1px solid #8a8a8a; color: #8a8a8a; margin-top:5em;"><p>Sent from the <em>'.get_the_title(url_to_postid($_SERVER['HTTP_REFERER'])).'</em> page on the '.$GLOBALS['customer_info']['name'].' website.</p>';	
+	$buildEmail .= '</p></div><div style="line-height:1.5; border-top: 1px solid #8a8a8a; color: #8a8a8a; margin-top:5em;"><p>Sent from the <em>'.get_the_title(url_to_postid($_SERVER['HTTP_REFERER'])).'</em> page on the '.$customer_info['name'].' website.</p>';	
 	
 	$buildEmail .= '<p>Sender viewed';
 	if ( $_COOKIE['pages-viewed'] ) $buildEmail .= ' '.$userViews;

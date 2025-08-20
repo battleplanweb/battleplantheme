@@ -2,6 +2,8 @@
 
 	$current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );
 	if ( get_post_meta( $current_page->ID ?? 0, '_bp_remove_sidebar', true ) != true ) : get_sidebar(); endif;
+	$customer_info = customer_info();
+
 ?>
 
 		</div><!-- #main-content -->
@@ -40,16 +42,16 @@
 					$buildCopyright = "";
 					$buildCopyright .= wp_nav_menu( array( 'theme_location' => 'footer-menu', 'container' => 'div', 'container_id' => 'footer-navigation', 'container_class' => 'secondary-navigation', 'menu_id' => 'footer-menu', 'menu_class' => 'menu secondary-menu', 'fallback_cb' => 'false', 'echo' => false ) );
 					
-					if ( isset($GLOBALS['customer_info']['misc2']) ) $buildCopyright .= "<div class='site-info-misc2'>".$GLOBALS['customer_info']['misc2']."</div>";					
+					if ( isset($customer_info['misc2']) ) $buildCopyright .= "<div class='site-info-misc2'>".$customer_info['misc2']."</div>";					
 					
-					$buildCopyright .= "<div class='site-info-copyright'>".$GLOBALS['customer_info']['copyright']." ".$GLOBALS['customer_info']['name']." • All Rights Reserved</div>";
+					$buildCopyright .= "<div class='site-info-copyright'>".$customer_info['copyright']." ".$customer_info['name']." • All Rights Reserved</div>";
 					
-					$placeIDs = $GLOBALS['customer_info']['pid'] ?? null;
+					$placeIDs = $customer_info['pid'] ?? null;
 					if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
 					$primePID = true;
 					foreach ( $placeIDs as $placeID ) :	
 						if ( $primePID == true ) :
-							$customer_info = $GLOBALS['customer_info'];
+							$customer_info = customer_info();
 							$primePID = false;
 						else:
 							$customer_info = $googleInfo[$placeID];
@@ -66,15 +68,15 @@
 						$buildCopyright .= "</div>";
 					endforeach;
 					
-					if ( isset($GLOBALS['customer_info']['misc3']) ) $buildCopyright .= "<div class='site-info-misc3'>".$GLOBALS['customer_info']['misc3']."</div>";
+					if ( isset($customer_info['misc3']) ) $buildCopyright .= "<div class='site-info-misc3'>".$customer_info['misc3']."</div>";
 			
 					$buildCopyright .= "<div class='site-info-links'>";
 					
-					if ( isset($GLOBALS['customer_info']['license']) ) $buildCopyright .= "License ".$GLOBALS['customer_info']['license']." • "; 
+					if ( isset($customer_info['license']) ) $buildCopyright .= "License ".$customer_info['license']." • "; 
 					
 					$buildCopyright .= "<span class='privacy-policy-link'><a href='/privacy-policy/'>Privacy Policy</a></span><span class='terms-conditions-link'> • <a href='/terms-conditions/'>Terms & Conditions</a></span>";
 					
-					if ( isset($GLOBALS['customer_info']['misc1']) ) $buildCopyright .= " • ".$GLOBALS['customer_info']['misc1'];
+					if ( isset($customer_info['misc1']) ) $buildCopyright .= " • ".$customer_info['misc1'];
 					
 					$buildCopyright .= "</div><div class='site-info-battleplan'>Website developed & maintained by <a href='http://battleplanwebdesign.com' target='_blank' rel='noreferrer'>Battle Plan Web Design</a></div>";
 					

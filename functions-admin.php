@@ -152,7 +152,7 @@ function battleplan_admin_footer_text() {
 		$primePID = true;
 		foreach ( $placeIDs as $placeID ) :	
 			if ( $primePID == true ) :
-				$customer_info = $GLOBALS['customer_info'];
+				$customer_info = customer_info();
 				$primePID = false;
 			else:
 				$customer_info = $googleInfo[$placeID];
@@ -161,8 +161,10 @@ function battleplan_admin_footer_text() {
 			$printFooter .= '<div style="float:left; margin-right: 50px;">';	
 
 			if ( strlen($placeID) > 10 && $googleInfo[$placeID]['city'] ) $printFooter .= '<a class="button" style="margin: 0 0 10px -5px" href = "https://search.google.com/local/writereview?placeid='.$placeID.'" target="_blank">GBP: '.$googleInfo[$placeID]['city'].', '.$googleInfo[$placeID]['state-abbr'].'</a><br>';
+	
+			$customer_info = customer_info();
 			
-			$printFooter .= $GLOBALS['customer_info']['area-before'].$customer_info['area'].$GLOBALS['customer_info']['area-after'].$customer_info['phone'].'<br>';
+			$printFooter .= $customer_info['area-before'].$customer_info['area'].$customer_info['area-after'].$customer_info['phone'].'<br>';
 			$printFooter .= $customer_info['street'].'<br>';
 			$printFooter .= $customer_info['city'].', '.$customer_info['state-abbr'].' '.$customer_info['zip'].'<br>';
 			if ( isset($customer_info['lat']) ) $printFooter .= $customer_info['lat'].', '.$customer_info['long'].'<br>';	
@@ -411,8 +413,10 @@ function custom_posts_per_page_based_on_type_in_admin( $per_page, $post_type ) {
 // Define a function to add the option value to body class
 add_filter('admin_body_class', 'battleplan_add_body_classes');
 function battleplan_add_body_classes($classes) {
-	$siteType = $GLOBALS['customer_info']['site-type'] ?? null;
-	$bizType = $GLOBALS['customer_info']['business-type'] ?? null;
+	$customer_info = customer_info();
+	$siteType = $customer_info['site-type'] ?? null;
+	$bizTypeRaw = $customer_info['business-type'] ?? null;
+	$bizType    = is_array($bizTypeRaw) ? ($bizTypeRaw[0] ?? null) : $bizTypeRaw;
 
     if ( $siteType ) $classes .= ' site-type-'.strtolower($siteType);
     if ( $bizType ) $classes .= ' business-type-'.strtolower($bizType);

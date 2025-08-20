@@ -189,12 +189,7 @@ input[type="number"] {
 
 /* Links
 --------------------------------------------- */
-.woocommerce #page .account-buttons .col-inner {
-	display:									block;
-}
-
 .woocommerce #page .account-buttons a {
-	margin:										0 0.6em;
 	color:										var(--medium-grey); 
 	cursor:										pointer;
 	text-decoration:							none;
@@ -208,10 +203,6 @@ input[type="number"] {
 
 .woocommerce #page  .woocommerce-breadcrumb a {
 	color: 										all;
-}
-
-.woocommerce #page .account-buttons a {
-	font-size: 									21px;
 }
 
 /* Overrides

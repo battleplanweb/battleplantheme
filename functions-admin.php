@@ -659,7 +659,7 @@ function battleplan_setupTextEditorDialogBoxes($hook) {
 		'section' => [
 			'label' => 'Section',
 			'wrap' => true,
-			'defaults' => [ 'name'=>'', 'class'=>'', 'style'=>'', 'width'=>'default', 'break'=>'', 'valign'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'background'=>'/wp-content/uploads/', 'left'=>'50', 'top'=>'50', 'css'=>'', 'hash'=>'', 'grid'=>'' ],
+			'defaults' => [ 'name'=>'', 'class'=>'', 'style'=>'', 'width'=>'default', 'break'=>'', 'valign'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'background'=>'/wp-content/uploads/', 'left'=>'50', 'top'=>'50', 'css'=>'', 'hash'=>'', 'grid'=>'', 'data'=>'' ],
 			'fields' => [ 
 				[ 'name'=>'name', 'type'=>'text', 'label'=>'Name (id)' ],
 				[ 'name'=>'style', 'type'=>'select-custom', 'label'=>'Style',			 
@@ -680,14 +680,15 @@ function battleplan_setupTextEditorDialogBoxes($hook) {
 				[ 'name'=>'top', 'type'=>'text', 'label'=>'Top %' ],			
 				[ 'name'=>'css', 'type'=>'text', 'label'=>'CSS (i.e. width="100px"; height="100px")' ],			
 				[ 'name'=>'hash', 'type'=>'text', 'label'=>'Compensation for scroll on one-page site' ],	
-				[ 'name'=>'grid', 'type'=>'text', 'label'=>'Grid (eliminates layout)' ],
+				[ 'name'=>'grid', 'type'=>'text', 'label'=>'Grid (eliminates layout)' ],	
+				[ 'name'=>'data', 'type'=>'text', 'label'=>'data-field' ],
 			],
 			'content_placeholder' => "\n\n"
 		],
 		'layout' => [
 			'label' => 'Layout',
 			'wrap' => true,
-			'defaults' => [ 'name'=>'', 'grid'=>'1', 'gap'=>'', 'break'=>'', 'valign'=>'', 'class'=>'', 'track'=>'' ],
+			'defaults' => [ 'name'=>'', 'grid'=>'1', 'gap'=>'', 'break'=>'', 'valign'=>'', 'class'=>'', 'track'=>'', 'data'=>'' ],
 			'fields' => [ 
 				[ 'name'=>'name', 'type'=>'text', 'label'=>'Name (id)' ],	
 				[ 'name'=>'grid', 'type'=>'text', 'label'=>'Grid' ],			 
@@ -698,13 +699,14 @@ function battleplan_setupTextEditorDialogBoxes($hook) {
 					'choices'=>[ ''=>'none', 'center'=>'center', 'stretch'=>'stretch', 'start'=>'start', 'end'=>'end' ] ],	
 				[ 'name'=>'class', 'type'=>'text', 'label'=>'Class' ],		
 				[ 'name'=>'track', 'type'=>'select-custom', 'label'=>'Tracking' ],	
+				[ 'name'=>'data', 'type'=>'text', 'label'=>'data-field' ],
 			],
 			'content_placeholder' => "\n\n"
 		],
 		'column' => [
 			'label' => 'Column',
 			'wrap' => true,
-			'defaults' => [ 'name'=>'', 'class'=>'', 'order'=>'', 'break'=>'', 'align'=>'', 'valign'=>'', 'h-span'=>'', 'v-span'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'background'=>'/wp-content/uploads/', 'left'=>'50', 'top'=>'50', 'css'=>'', 'hash'=>'', 'gap'=>'' ],
+			'defaults' => [ 'name'=>'', 'class'=>'', 'order'=>'', 'break'=>'', 'align'=>'', 'valign'=>'', 'h-span'=>'', 'v-span'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'background'=>'/wp-content/uploads/', 'left'=>'50', 'top'=>'50', 'css'=>'', 'hash'=>'', 'gap'=>'', 'data'=>'' ],
 			'fields' => [ 
 				[ 'name'=>'name', 'type'=>'text', 'label'=>'Name (id)' ],			
 				[ 'name'=>'align', 'type'=>'select', 'label'=>'Align',
@@ -727,6 +729,7 @@ function battleplan_setupTextEditorDialogBoxes($hook) {
 				[ 'name'=>'top', 'type'=>'text', 'label'=>'Top %' ],			
 				[ 'name'=>'css', 'type'=>'text', 'label'=>'CSS (i.e. width="100px"; height="100px")' ],			
 				[ 'name'=>'hash', 'type'=>'text', 'label'=>'Compensation for scroll on one-page site' ],
+				[ 'name'=>'data', 'type'=>'text', 'label'=>'data-field' ],
 			],
 			'content_placeholder' => "\n\n"
 		],

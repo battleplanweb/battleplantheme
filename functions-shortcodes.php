@@ -298,8 +298,8 @@ function battleplan_socialBtn( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', 'img'=>'', 'link'=>'' ), $atts );
 	$type = esc_attr($a['type']);
 	$link = esc_attr($a['link']) === '' ? do_shortcode('[get-biz info="'.$type.'"]') : esc_attr($a['link']);
-	$prefix = $type == "email" ? "mailto:" : "";
-	$alt = $type == "email" ? "Email us" : "Visit us on ".$type;
+	$prefix = $type === "email" ? "mailto:" : "";
+	$alt = $type === "email" ? "Email us" : "Visit us on ".$type;
 	if ( esc_attr($a['img']) === '' ) :
 		return do_shortcode('[get-icon type="'.$type.'" class="social-btn '.$type.'-btn" link="'.$prefix.$link.'" new-tab="yes"]');
 	else:

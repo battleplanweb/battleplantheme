@@ -95,9 +95,7 @@
 }
 
 /* Menu Button BG */
-#desktop-navigation ul.main-menu li::before, 
-#desktop-navigation ul.main-menu li::after { 
-	content:										" ";
+#desktop-navigation ul.main-menu > li .menu-button-bg { 
 	position:										absolute;
 	font-family:									var(--font-secondary);
 	width:											100%;
@@ -113,12 +111,9 @@
 	pointer-events:									none;
 }
 
-#desktop-navigation ul.main-menu li:hover::before, 
-#desktop-navigation ul.main-menu li.active::before,
-#desktop-navigation ul.main-menu li.tab-focus::before,
-#desktop-navigation ul.main-menu li:hover::after, 
-#desktop-navigation ul.main-menu li.active::after,
-#desktop-navigation ul.main-menu li.tab-focus::after { 
+#desktop-navigation ul.main-menu > li:hover .menu-button-bg, 
+#desktop-navigation ul.main-menu > li.active .menu-button-bg,
+#desktop-navigation ul.main-menu > li.tab-focus .menu-button-bg { 
 	transform:										scale(1,1);
 	transition:										all var(--main-trans-speed) var(--main-trans-easing);
 }
@@ -158,22 +153,29 @@
 } 
 
 @keyframes icon-move {
-	0%   { transform: scale(0.6) translate(0, 12px); }
-	50%  { transform: scale(0.6) translate(0, 16px); }
-	100% { transform: scale(0.6) translate(0, 12px); }
+	0%   { transform: translate(0, 0px); }
+	50%  { transform: translate(0, 4px); }
+	100% { transform: translate(0, 0px); }
 }
 
-.main-navigation li.menu-item-has-children > a:not(.menu-icon) .icon,
-.main-navigation li.current_page_parent-has-children > a:not(.menu-icon) .icon { 
-	transform: 										scale(0.6) translate(0, 12px);
+.main-navigation li.menu-item-has-children > a:not(.menu-icon) .icon.sub-menu-icon,
+.main-navigation li.current_page_parent-has-children > a:not(.menu-icon) .icon.sub-menu-icon,
+.main-navigation li.menu-item-has-children > .menu-button-bg .icon.sub-menu-icon,
+.main-navigation li.current_page_parent-has-children > .menu-button-bg .icon.sub-menu-icon { 
+	font-size: 										14px;
+	transform: 										translate(0, 0);
 	height: 										0 /* necessary to keep menu button from dropping below the others without children */;	
 	transition: 									transform 0.3s ease;
 }
 
-.main-navigation li.menu-item-has-children:hover > a:not(.menu-icon) .icon,
-.main-navigation li.current_page_parent-has-children:hover > a:not(.menu-icon) .icon,
-.main-navigation li.menu-item-has-children.tab-focus > a:not(.menu-icon) .icon,
-.main-navigation li.current_page_parent-has-children.tab-focus > a:not(.menu-icon) .icon {
+.main-navigation li.menu-item-has-children:hover > a:not(.menu-icon) .icon.sub-menu-icon,
+.main-navigation li.current_page_parent-has-children:hover > a:not(.menu-icon) .icon.sub-menu-icon,
+.main-navigation li.menu-item-has-children.tab-focus > a:not(.menu-icon) .icon.sub-menu-icon,
+.main-navigation li.current_page_parent-has-children.tab-focus > a:not(.menu-icon) .icon.sub-menu-icon,
+.main-navigation li.menu-item-has-children:hover > .menu-button-bg .icon.sub-menu-icon,
+.main-navigation li.current_page_parent-has-children:hover > .menu-button-bg .icon.sub-menu-icon,
+.main-navigation li.menu-item-has-children.tab-focus > .menu-button-bg .icon.sub-menu-icon,
+.main-navigation li.current_page_parent-has-children.tab-focus > .menu-button-bg .icon.sub-menu-icon {
 	animation: 										icon-move 1s ease-in-out infinite;
 }
 

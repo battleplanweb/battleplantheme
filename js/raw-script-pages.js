@@ -606,8 +606,11 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	
 	
 // Duplicate menu button text onto the button BG
-	getObjects('.main-navigation ul.main-menu li > a').forEach(link => {
-		link.parentNode.setAttribute('data-content', link.innerHTML);
+	getObjects('.main-navigation ul.main-menu > li > a').forEach(link => {
+		const hoverSpan = document.createElement('div');
+		hoverSpan.classList.add('menu-button-bg');
+		hoverSpan.innerHTML = link.innerHTML;
+		link.parentNode.insertBefore(hoverSpan, link);
 	});
 
 	
@@ -744,6 +747,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		}
 	};
 	
+
 
 // Move multiple divs to another location
 	window.moveDivs = function (wrapperSel, elementSel, anchorSel, position="after") {

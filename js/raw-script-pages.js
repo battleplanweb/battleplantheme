@@ -607,10 +607,13 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	
 // Duplicate menu button text onto the button BG
 	getObjects('.main-navigation ul.main-menu > li > a').forEach(link => {
-		const hoverSpan = document.createElement('div');
-		hoverSpan.classList.add('menu-button-bg');
-		hoverSpan.innerHTML = link.innerHTML;
-		link.parentNode.insertBefore(hoverSpan, link);
+		const buttonOver = document.createElement('div');
+		const buttonUnder = document.createElement('div');
+		buttonOver.classList.add('menu-btn-over');		
+		buttonUnder.classList.add('menu-btn-under');
+		buttonOver.innerHTML = link.innerHTML;
+		link.parentNode.insertBefore(buttonOver, link);
+		link.parentNode.insertBefore(buttonUnder, link.nextSibling);
 	});
 
 	

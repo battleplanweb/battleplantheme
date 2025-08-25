@@ -606,7 +606,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	
 	
 // Duplicate menu button text onto the button BG
-	getObjects('.main-navigation ul.main-menu > li > a').forEach(link => {
+	getObjects('#desktop-navigation ul.main-menu > li > a').forEach(link => {
 		const buttonOver = document.createElement('div');
 		const buttonUnder = document.createElement('div');
 		buttonOver.classList.add('menu-btn-over');		

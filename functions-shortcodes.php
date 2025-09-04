@@ -872,9 +872,13 @@ function battleplan_getBuildArchive($atts, $content = null) {
 // Display randomly selected posts - start/end can be dates or -53 week / -51 week */
 add_shortcode( 'get-random-posts', 'battleplan_getRandomPosts' );
 function battleplan_getRandomPosts($atts, $content = null) {	
-	$a = shortcode_atts( array( 'num'=>'1', 'offset'=>'0', 'leeway'=>'0', 'type'=>'post', 'tax'=>'', 'terms'=>'', 'field_key'=>'', 'field_value'=>'', 'field_compare'=>'IN', 'orderby'=>'rand', 'sort'=>'asc', 'show_title'=>'true', 'title_pos'=>'outside', 'count_view'=>'false', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_social'=>'false', 'show_btn'=>'true', 'button'=>'Read More', 'btn_pos'=>'inside', 'show_content'=>'false', 'thumb_only'=>'false', 'show_thumb'=>'true', 'thumb_col'=>'1', 'thumbnail'=>'force', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'lazy'=>'true', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'link'=>'post', 'truncate'=>'true' ), $atts );
+	$a = shortcode_atts( array( 'num'=>'1', 'offset'=>'0', 'leeway'=>'0', 'type'=>'post', 'tax'=>'', 'terms'=>'', 'field_key'=>'', 'field_value'=>'', 'field_compare'=>'IN', 'orderby'=>'rand', 'sort'=>'asc', 'show_title'=>'true', 'title_pos'=>'outside', 'count_view'=>'false', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_social'=>'false', 'show_btn'=>'true', 'button'=>'Read More', 'btn_pos'=>'inside', 'show_content'=>'false', 'thumb_only'=>'false', 'show_thumb'=>'true', 'thumb_col'=>'1', 'thumbnail'=>'.carousel-screen .carousel-item {
+  padding: 0 50px;
+}carou', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'lazy'=>'true', 'size'=>'thumbnail', 'pic_size'=>'1/3', 'text_size'=>'', 'link'=>'post', 'truncate'=>'true' ), $atts );
 	$num = esc_attr($a['num']);	
-	$offset = esc_attr($a['offset']) == '0' ? rand(0, esc_attr($a['leeway'])) :	esc_attr($a['offset']);
+	$leeway = (int) esc_attr($a['leeway']);
+	$offset = (int) esc_attr($a['offset']);
+	$offset = ($offset === 0) ? ($leeway > 0 ? rand(0, $leeway) : 0) : $offset;	
 	$postType = esc_attr($a['type']);	
 	$title = esc_attr($a['show_title']);	
 	$titlePos = esc_attr($a['title_pos']);	
@@ -891,19 +895,44 @@ function battleplan_getRandomPosts($atts, $content = null) {
 	$fieldKey = esc_attr($a['field_key']);
 	$fieldValue = esc_attr($a['field_value']);
 	$fieldValues = explode( ',', $fieldValue );
-	$exclude = array_merge( explode(',', esc_attr($a['exclude'])), $GLOBALS['do_not_repeat'] );
+	$requireThumb = (esc_attr($a['thumbnail']) === 'force');
+	$thumbOnly = (esc_attr($a['thumb_only']) === 'true');
+	$meta = [];
 
-	if ( esc_attr($a['x_current']) == "true" ) :
+	if ($fieldKey && $fieldValue) {
+		$meta[] = [
+			'key'     => $fieldKey,
+			'value'   => $fieldValues,
+			'compare' => esc_attr($a['field_compare']),
+		];
+	}
+
+	if ($requireThumb || $thumbOnly) {
+		$meta[] = [
+			'key'     => '_thumbnail_id',
+			'compare' => 'EXISTS',
+		];
+	}
+
+	$exclude = array_merge( explode(',', esc_attr($a['exclude'])), $GLOBALS['do_not_repeat'] );
+	if ( esc_attr($a['x_current']) === "true" ) :
 		global $post; 
 		array_push($exclude, $post->ID);
 	endif;	
+	
 	$picSize = esc_attr($a['pic_size']);	
-	$thumbOnly = esc_attr($a['thumb_only']);
-	if ( $thumbOnly == "true" ) : 
+	if ( $thumbOnly ) : 
 		$title = $showDate = $showExcerpt = $showContent = $showAuthor = $showSocial = $showBtn = "false";
 		$picSize = "100";
 	endif;
+	
 	$combinePosts = '';
+	$meta_query = null;
+	if (count($meta) === 1) {
+		$meta_query = $meta;
+	} elseif (count($meta) > 1) {
+		$meta_query = array_merge(['relation' => 'AND'], $meta);
+	}
 
 	$query = bp_WP_Query($postType, [
 		'posts_per_page' => $num,
@@ -915,11 +944,7 @@ function battleplan_getRandomPosts($atts, $content = null) {
 		'post__not_in'   => $exclude,
 		'taxonomy'       => $taxonomy,
 		'terms'          => $terms,
-		'meta_query'     => ($fieldKey && $fieldValue) ? [[
-			'key'     => $fieldKey,
-			'value'   => $fieldValues,
-			'compare' => esc_attr($a['field_compare'])
-		]] : null
+		'meta_query'     => $meta_query,
 	]);
 	
 	if ( $query->have_posts() ) : 
@@ -929,14 +954,14 @@ function battleplan_getRandomPosts($atts, $content = null) {
 			$showPost = do_shortcode('[build-archive type="'.$postType.'" count_view="'.esc_attr($a['count_view']).'" show_thumb="'.esc_attr($a['show_thumb']).'" thumb_only="'.$thumbOnly.'" show_btn="'.$showBtn.'" btn_text="'.esc_attr($a['button']).'" btn_pos="'.esc_attr($a['btn_pos']).'" show_title="'.$title.'" title_pos="'.$titlePos.'" lazy="'.$lazy.'" show_date="'.$showDate.'" show_excerpt="'.$showExcerpt.'" show_social="'.$showSocial.'" show_content="'.$showContent.'" show_author="'.$showAuthor.'" size="'.esc_attr($a['size']).'" pic_size="'.$picSize.'" text_size="'.esc_attr($a['text_size']).'" link="'.esc_attr($a['link']).'" truncate="'.esc_attr($a['truncate']).'"]');
 
 			if ( $num > 1 ) $showPost = do_shortcode('[col]'.$showPost.'[/col]');	
-			if ( has_post_thumbnail() || esc_attr($a['thumbnail']) != "force" ) $combinePosts .= $showPost;
+			if ( has_post_thumbnail() || !$requireThumb ) $combinePosts .= $showPost;
 			
 			array_push( $GLOBALS['do_not_repeat'], get_the_ID() );
 		endwhile; 
 		wp_reset_postdata(); 
 	endif;
 	
-	if ( $thumbOnly == "true" ) $combinePosts = '<div class="random-post random-posts thumb-only thumb-col-'.esc_attr($a['thumb_col']).'">'.$combinePosts.'</div>';
+	if ( $thumbOnly === "true" ) $combinePosts = '<div class="random-post random-posts thumb-only thumb-col-'.esc_attr($a['thumb_col']).'">'.$combinePosts.'</div>';
 	
 	return do_shortcode($combinePosts);
 }
@@ -1809,4 +1834,19 @@ function battleplan_getRSS( $atts, $content = null ) {
 	 else: $section_content = get_post_field('post_content', $slug); endif;
 	 
 	 return apply_filters('the_content', $section_content);	 
+}
+
+// Add multi-step form functionality
+add_shortcode( 'cf7-steps', 'battleplan_cf7Steps' );
+function battleplan_cf7Steps($atts, $content = null) {
+	$a = shortcode_atts( array( 'title'=>'' ), $atts );
+	$title = esc_attr($a['title']);
+	
+	if ( $title !== '' ) wp_enqueue_script( 'battleplan-form-steps', get_template_directory_uri().'/js/script-forms.js', array('jquery'), _BP_VERSION, false );
+	
+	$buildForm = '<div class="cf7-steps" data-current="0">';
+	$buildForm .= '[contact-form-7 title="'.$title.'"]';
+	$buildForm .= '</div>';
+	
+	return do_shortcode($buildForm); 
 }

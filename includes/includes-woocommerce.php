@@ -158,4 +158,15 @@ function battleplan_related_products_args( $args ) {
 	return $args;
 }
 
+// Add appropriate formatting to the related products block
+add_filter( 'woocommerce_locate_template', 'bp_custom_related_template', 999, 3 );
+function bp_custom_related_template( $template, $template_name, $template_path ) {
+    if ( $template_name === 'single-product/related.php' ) {
+        $custom = trailingslashit( get_template_directory() ) . 'elements/element-woocommerce-related_products.php';
+        if ( file_exists( $custom ) && is_readable( $custom ) ) {
+            return $custom;
+        }
+    }
+    return $template;
+}
 ?>

@@ -504,52 +504,88 @@ section.section .flex.nested .flex,
 }
 
 .col-inner > *,
-.span-12 {
+.span-12,
+.flex .col.h-span-12 {
 	grid-column:									span 12;
 }
 
-.span-11 {
+.span-11,
+.flex .col.h-span-11 {
 	grid-column:									span 11;
 }
 
-.span-10 {
+.span-10,
+.flex .col.h-span-10 {
 	grid-column:									span 10;
 }
 
-.span-9 {
+.span-9,
+.flex .col.h-span-9 {
 	grid-column:									span 9;
 }
 
-.span-8 {
+.span-8,
+.flex .col.h-span-8 {
 	grid-column:									span 8;
 }
 
-.span-7 {
+.span-7,
+.flex .col.h-span-7 {
 	grid-column:									span 7;
 }
 
-.span-6 {
+.span-6,
+.flex .col.h-span-6 {
 	grid-column:									span 6;
 }
 
-.span-5 {
+.span-5,
+.flex .col.h-span-5 {
 	grid-column:									span 5;
 }
 
-.span-4 {
+.span-4,
+.flex .col.h-span-4 {
 	grid-column:									span 4;
 }
 
-.span-3 {
+.span-3,
+.flex .col.h-span-3 {
 	grid-column:									span 3;
 }
 
-.span-2 {
+.span-2,
+.flex .col.h-span-2 {
 	grid-column:									span 2;
 }
 
-.span-all {
+.span-all,
+.flex .col.h-span-all {
 	grid-column:									1 / -1 !important;
+}
+
+.flex .col.v-span-6 {
+	grid-row:										span 6;
+}
+
+.flex .col.v-span-5 {
+	grid-row:										span 5;
+}
+
+.flex .col.v-span-4 {
+	grid-row:										span 4;
+}
+
+.flex .col.v-span-3 {
+	grid-row:										span 3;
+}
+
+.flex .col.v-span-2 {
+	grid-row:										span 2;
+}
+
+.flex .col.v-span-all {
+	grid-row:										1 / -1 !important;
 }
 
 #main-content {

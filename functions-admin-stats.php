@@ -350,7 +350,7 @@ endforeach;
 // Set up Speed widget on dashboard
 $GLOBALS['fastSessions'] = $GLOBALS['speedSessions'] = $GLOBALS['speedTotal'] = array();
 $mobileTarget = 3;
-$desktopTarget = $mobileTarget / 2;
+$desktopTarget = 2;
 
 foreach ( $ga4_speed_data as $speedLocation=>$speedData ) :
 	if ( !in_array($speedLocation, $excludeCities) ) :

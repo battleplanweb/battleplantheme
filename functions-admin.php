@@ -104,7 +104,7 @@ function battleplan_admin_menu() {
 	$siteUpdated = str_replace('-', '', get_option( "site_updated" ));
 	//add_menu_page( __( 'Run Chron', 'battleplan' ), __( 'Run Chron', 'battleplan' ), 'manage_options', 'run-chron', 'battleplan_force_run_chron', 'dashicons-performance', 3 );
 	
-	if ( _USER_LOGIN == "battleplanweb" ) :
+	if ( _USER_LOGIN === "battleplanweb" ) :
 		add_submenu_page( 'index.php', 'Clear ALL', 'Clear ALL', 'manage_options', 'clear-all', 'battleplan_clear_all' );	
 		add_submenu_page( 'index.php', 'Clear HVAC', 'Clear HVAC', 'manage_options', 'clear-hvac', 'battleplan_clear_hvac' );			
 		add_submenu_page( 'index.php', 'Launch Site', 'Launch Site', 'manage_options', 'launch-site', 'battleplan_launch_site' );	
@@ -248,12 +248,12 @@ function battleplan_remove_menus() {
 	add_submenu_page( 'upload.php', 'Favicon', 'Favicon', 'manage_options', 'customize.php' );	
 	
 	
-	if ( _USER_LOGIN != "battleplanweb" && !in_array('administrator', _USER_ROLES) ) remove_menu_page( 'edit.php?post_type=elements');	
-	if ( _USER_LOGIN != "battleplanweb" && !in_array('administrator', _USER_ROLES) ) remove_menu_page( 'edit.php?post_type=landing');	
+	if ( _USER_LOGIN !== "battleplanweb" && !in_array('administrator', _USER_ROLES) ) remove_menu_page( 'edit.php?post_type=elements');	
+	if ( _USER_LOGIN !== "battleplanweb" && !in_array('administrator', _USER_ROLES) ) remove_menu_page( 'edit.php?post_type=landing');	
 	
-	if ( _USER_LOGIN != "battleplanweb" ) remove_menu_page( 'edit.php?post_type=universal');		 
-	if ( _USER_LOGIN != "battleplanweb" ) remove_menu_page( 'tools.php');	
-	if ( _USER_LOGIN != "battleplanweb" ) remove_menu_page( 'edit.php?post_type=stripe_order');	
+	if ( _USER_LOGIN !== "battleplanweb" ) remove_menu_page( 'edit.php?post_type=universal');		 
+	if ( _USER_LOGIN !== "battleplanweb" ) remove_menu_page( 'tools.php');	
+	if ( _USER_LOGIN !== "battleplanweb" ) remove_menu_page( 'edit.php?post_type=stripe_order');	
 		
 
 	$query = bp_WP_Query('elements', [
@@ -275,21 +275,21 @@ function battleplan_remove_menus() {
 	add_submenu_page( 'edit.php?post_type=elements', 'Menus', 'Menus', 'manage_options', 'nav-menus.php' );		
 	add_submenu_page( 'edit.php?post_type=elements', 'Contact Forms', 'Contact Forms', 'manage_options', 'admin.php?page=wpcf7' );	
 	
-	if ( _USER_LOGIN == "battleplanweb" ) add_submenu_page( 'edit.php?post_type=elements', 'Contact Forms Integration', '&nbsp;└&nbsp;Integration', 'manage_options', 'admin.php?page=wpcf7-integration' );		
+	if ( _USER_LOGIN === "battleplanweb" ) add_submenu_page( 'edit.php?post_type=elements', 'Contact Forms Integration', '&nbsp;└&nbsp;Integration', 'manage_options', 'admin.php?page=wpcf7-integration' );		
 	
 	add_submenu_page( 'edit.php?post_type=elements', 'Comments', 'Comments', 'manage_options', 'edit-comments.php' );
-	if ( _USER_LOGIN == "battleplanweb" ) add_submenu_page( 'edit.php?post_type=elements', 'Custom Fields', 'Custom Fields', 'manage_options', 'edit.php?post_type=acf-field-group' );		
-	if ( _USER_LOGIN == "battleplanweb" ) add_submenu_page( 'edit.php?post_type=elements', 'Framework '._BP_VERSION, 'Framework '._BP_VERSION, 'manage_options', 'themes.php' );		
-	if ( _USER_LOGIN == "battleplanweb" ) add_submenu_page( 'options-general.php', 'Options', 'Options', 'manage_options', 'options.php' );
+	if ( _USER_LOGIN === "battleplanweb" ) add_submenu_page( 'edit.php?post_type=elements', 'Custom Fields', 'Custom Fields', 'manage_options', 'edit.php?post_type=acf-field-group' );		
+	if ( _USER_LOGIN === "battleplanweb" ) add_submenu_page( 'edit.php?post_type=elements', 'Framework '._BP_VERSION, 'Framework '._BP_VERSION, 'manage_options', 'themes.php' );		
+	if ( _USER_LOGIN === "battleplanweb" ) add_submenu_page( 'options-general.php', 'Options', 'Options', 'manage_options', 'options.php' );
 	add_submenu_page( 'tools.php', 'WP Engine', 'WP Engine', 'manage_options', 'options-general.php?page=wpengine-common' );
 	
-	if ( _USER_LOGIN == "battleplanweb" && is_plugin_active( 'git-updater/git-updater.php' ) ) add_submenu_page( 'tools.php', 'Git Updater', 'Git Updater', 'manage_options', 'options-general.php?page=git-updater' );
-	if ( _USER_LOGIN == "battleplanweb" && is_plugin_active( 'admin-columns-pro/admin-columns-pro.php' ) ) add_submenu_page( 'tools.php', 'Admin Columns', 'Admin Columns', 'manage_options', 'options-general.php?page=codepress-admin-columns' );
-	if ( _USER_LOGIN == "battleplanweb" && is_plugin_active( 'wp-mail-smtp/wp_mail_smtp.php' ) ) add_submenu_page( 'tools.php', 'WP Mail SMTP', 'WP Mail SMTP', 'manage_options', 'options-general.php?page=wp-mail-smtp' );
+	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'git-updater/git-updater.php' ) ) add_submenu_page( 'tools.php', 'Git Updater', 'Git Updater', 'manage_options', 'options-general.php?page=git-updater' );
+	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'admin-columns-pro/admin-columns-pro.php' ) ) add_submenu_page( 'tools.php', 'Admin Columns', 'Admin Columns', 'manage_options', 'options-general.php?page=codepress-admin-columns' );
+	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wp-mail-smtp/wp_mail_smtp.php' ) ) add_submenu_page( 'tools.php', 'WP Mail SMTP', 'WP Mail SMTP', 'manage_options', 'options-general.php?page=wp-mail-smtp' );
 
-	if ( _USER_LOGIN == "battleplanweb" && is_plugin_active( 'wordpress-seo-premium/wp-seo-premium.php' ) ) add_submenu_page( 'tools.php', 'Yoast Settings', 'Yoast Settings', 'manage_options', 'admin.php?page=wpseo_page_settings' );
-	if ( _USER_LOGIN == "battleplanweb" && is_plugin_active( 'wpseo-local/local-seo.php' ) ) add_submenu_page( 'tools.php', 'Yoast Local', '&nbsp;└&nbsp;Local', 'manage_options', 'admin.php?page=wpseo_local' );
-	if ( _USER_LOGIN == "battleplanweb" && is_plugin_active( 'wordpress-seo-premium/wp-seo-premium.php' ) ) add_submenu_page( 'tools.php', 'Yoast Redirects', '&nbsp;└&nbsp;Redirects', 'manage_options', 'admin.php?page=wpseo_redirects' );
+	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wordpress-seo-premium/wp-seo-premium.php' ) ) add_submenu_page( 'tools.php', 'Yoast Settings', 'Yoast Settings', 'manage_options', 'admin.php?page=wpseo_page_settings' );
+	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wpseo-local/local-seo.php' ) ) add_submenu_page( 'tools.php', 'Yoast Local', '&nbsp;└&nbsp;Local', 'manage_options', 'admin.php?page=wpseo_local' );
+	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wordpress-seo-premium/wp-seo-premium.php' ) ) add_submenu_page( 'tools.php', 'Yoast Redirects', '&nbsp;└&nbsp;Redirects', 'manage_options', 'admin.php?page=wpseo_redirects' );
 
 	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Settings', 'GBP Settings', 'manage_options', 'admin.php?page=pgmb_settings' );
 	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Templates', '&nbsp;└&nbsp;Templates', 'manage_options', 'edit.php?post_type=pgmb_templates' );
@@ -380,7 +380,7 @@ function battleplan_remove_dashboard_widgets () {
 }
 
 // Load site stats if hooked to Google Analytics
-if ( isset(get_option('customer_info')['google-tags']['prop-id']) && get_option('customer_info')['google-tags']['prop-id'] > 1 && is_admin() && (_USER_LOGIN == "battleplanweb" || in_array('bp_view_stats', _USER_ROLES) ) ) require_once get_template_directory().'/functions-admin-stats.php';
+if ( isset(get_option('customer_info')['google-tags']['prop-id']) && get_option('customer_info')['google-tags']['prop-id'] > 1 && is_admin() && (_USER_LOGIN === "battleplanweb" || in_array('bp_view_stats', _USER_ROLES) ) ) require_once get_template_directory().'/functions-admin-stats.php';
 
 
 // Adjust the number of of posts listed on admin pages

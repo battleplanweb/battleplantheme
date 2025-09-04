@@ -150,8 +150,8 @@ function battleplan_buildColumn( $atts, $content = null ) {
 	$break = esc_attr($a['break']) !== '' ? ' break-'.esc_attr($a['break']) : '';	
 	$align = esc_attr($a['align']) !== '' ? " text-".esc_attr($a['align']) : '';
 	$valign = esc_attr($a['valign']) !== '' ? " valign-".esc_attr($a['valign']) : '';
-	$hSpan = esc_attr($a['h-span']) !== '' ? 'grid-column: span '.esc_attr($a['h-span']).' !important;' : '';
-	$vSpan = esc_attr($a['v-span']) !== '' ? 'grid-row: span '.esc_attr($a['v-span']).' !important;' : '';		
+	$hSpan = esc_attr($a['h-span']) !== '' ? ' h-span-'.esc_attr($a['h-span']) : '';
+	$vSpan = esc_attr($a['v-span']) !== '' ? ' v-span-'.esc_attr($a['v-span']) : '';
 	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));	
 	if ( $start || $end ) {
@@ -167,7 +167,7 @@ function battleplan_buildColumn( $atts, $content = null ) {
 	$css = esc_attr($a['css']);	
 	$hash = esc_attr($a['hash']) !== '' ? 'data-hash="'.esc_attr($a['hash']).'"' : '';
 	$gap = esc_attr($a['gap']) !== '' ? ' style="gap:'.esc_attr($a['gap']).'"' : '';
-	$style = $order || $hSpan || $vSpan ? " style='".$order.$hSpan.$vSpan."'" : '';
+	$style = $order ? " style='".$order."'" : '';
 	
 	$data_attrs = '';
 	foreach ( $atts as $k => $v ) {
@@ -177,7 +177,7 @@ function battleplan_buildColumn( $atts, $content = null ) {
 		}
 	}
 	
-	$buildCol = '<div'.$name.' '.$data_attrs.' class="col '.$class.$align.$valign.$break.'" '.$tracking.$hash.$style.'><div class="col-inner"'.$gap;
+	$buildCol = '<div'.$name.' '.$data_attrs.' class="col '.$class.$align.$valign.$break.$hSpan.$vSpan.'" '.$tracking.$hash.$style.'><div class="col-inner"'.$gap;
 	if ( $background !== "" || $css !== "" ) {
 		$buildCol .= ' style="';
 		if ( $css !== "" ) $buildCol .= $css;

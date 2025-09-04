@@ -4,7 +4,7 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 2025.31.4
+Version: 2025.31.5
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -747,15 +747,34 @@ ul.bullet-warning li::before {
 	content: 										'⚠️';  
 }
 
-ul.bullet-image li::before {
+ul.bullet-image li::before,
+ul.bullet-svg li::before {
 	content: 										'';  
     background-image: 								url('../../uploads/site-icon-80x80.webp'); 
     background-size: 								contain; 
 	background-repeat: 								no-repeat;
+	background-position: 							center;
 	width: 											30px;
 	height: 										30px;
 	margin: 										0 10px 0 -40px;
   	transform: 										translateY(20%);
+}
+
+ul.bullet-svg li::before {
+	width: 											20px;
+	height: 										20px;
+	margin: 										0 10px 0 -30px;
+    background: 									none; 
+ 	background-color: 								currentColor;
+	-webkit-mask: url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'>\
+<path d='M508 256 336 428l-28-31 117-114-3-5H4v-45h421L305 113l31-29 172 172z'/>\
+</svg>") no-repeat center;
+    mask: url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'>\
+<path d='M508 256 336 428l-28-31 117-114-3-5H4v-45h421L305 113l31-29 172 172z'/>\
+</svg>") no-repeat center;
+	 mask-size: 									contain;
 }
 
 ul.bullet-list.bullet-image li::before {
@@ -1273,6 +1292,7 @@ html.error503 {
 }
 
 html.error503 body {
+
 	background: 									var(--white) !important;
 }
 

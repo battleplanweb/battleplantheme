@@ -175,6 +175,10 @@
 	margin:											0.5em 0;
 }
 
+.carousel.slider-testimonials .controls {
+	margin-top: 									2em;
+}
+
 .carousel .block-button {
 	margin:											0.5em;
 	order: 											1;
@@ -201,12 +205,11 @@
 	padding: 										0 3vw;
 	z-index: 										3000;
 }
-/*
+
 .carousel a.carousel-control-next, 
 .carousel a.carousel-control-prev { 
-	padding: 										0 15px;
+	font-size: 										20px;
 }
-*/
 
 .carousel a.carousel-control-next .carousel-control-next-icon, 
 .carousel a.carousel-control-prev .carousel-control-prev-icon { 
@@ -307,9 +310,10 @@
 	transform: 										translateX(-50vw);
 }
 
+.carousel.carousel-screen .carousel-item,
 .carousel.screen-slider .carousel-item {
-	padding-left:									10vw;
-	padding-right:									10vw;
+	padding-left:									3vw;
+	padding-right:									3vw;
 }
 
 .carousel .caption-holder {

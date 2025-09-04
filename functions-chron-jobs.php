@@ -107,7 +107,7 @@ function processChron($forceChron) {
 			foreach ( $placeIDs as $placeID ) {
 				if (strlen($placeID) <= 10) { continue; }
 				
-				$fields = 'displayName,formattedAddress,addressComponents,location,regularOpeningHours,currentOpeningHours,internationalPhoneNumber,rating,userRatingCount';
+				$fields = 'displayName,formattedAddress,addressComponents,location,regularOpeningHours,currentOpeningHours,internationalPhoneNumber,rating,userRatingCount,utcOffsetMinutes';
     			$url = 'https://places.googleapis.com/v1/places/' . rawurlencode($placeID) . '?fields=' . urlencode($fields) . '&key=' . $apiKey;
 
 				$ch = curl_init();
@@ -146,6 +146,8 @@ function processChron($forceChron) {
 					continue;
 				}
 
+				$google_info[$placeID]['utcOffsetMinutes'] = $gbp['utcOffsetMinutes'] ?? null;
+
 				$urc = isset($gbp['userRatingCount']) ? (int)$gbp['userRatingCount'] : 0;
 				$rat = isset($gbp['rating']) ? (float)$gbp['rating'] : 0.0;
 				$google_info[$placeID]['google-reviews'] = $urc;
@@ -181,27 +183,66 @@ function processChron($forceChron) {
 				
 				$google_info[$placeID]['name'] = ucwords($nm);				
 				
-				$google_info[$placeID]['adr_address'] = $gbp['formattedAddress'] ?? '';
+				$google_info[$placeID]['adr_address']        = $gbp['formattedAddress'] ?? '';
 				$google_info[$placeID]['address_components'] = $gbp['addressComponents'] ?? [];
 
-				$gbp_address = ['street'=>'','city'=>'','state_abbr'=>'','state_full'=>'','zip'=>''];
-				foreach ($google_info[$placeID]['address_components'] as $c) {
+				$comp = [
+					'street_num'   => '',
+					'route'        => '',
+					'premise'      => '',
+					'subpremise'   => '',
+					'floor'        => '',
+					'city'         => '',
+					'state_abbr'   => '',
+					'state_full'   => '',
+					'zip'          => '',
+					'zip4'         => '',
+					'county'       => '',
+					'country_abbr' => '',
+					'country_full' => '',
+				];
+
+				foreach (($google_info[$placeID]['address_components'] ?? []) as $c) {
 					$types = $c['types'] ?? [];
-					if (in_array('street_number', $types, true)) { $gbp_address['street'] .= ($c['longText'] ?? '').' '; }
-					if (in_array('route',         $types, true)) { $gbp_address['street'] .= ($c['longText'] ?? ''); }
-					if (in_array('locality',      $types, true)) { $gbp_address['city']   =  ($c['longText'] ?? ''); }
-					if (in_array('administrative_area_level_1', $types, true)) {
-						$gbp_address['state_abbr'] = $c['shortText'] ?? '';
-						$gbp_address['state_full'] = $c['longText']  ?? '';
-					}
-					if (in_array('postal_code',   $types, true)) { $gbp_address['zip']    =  ($c['longText'] ?? ''); }
+					$long  = $c['longText']  ?? '';
+					$short = $c['shortText'] ?? '';
+
+					if (in_array('street_number', $types, true))                 $comp['street_num'] = $long ?: $short;
+					if (in_array('route', $types, true))                         $comp['route']      = $short ?: $long; // prefer abbreviated
+					if (in_array('premise', $types, true))                       $comp['premise']    = $long ?: $short; // building name
+					if (in_array('subpremise', $types, true))                    $comp['subpremise'] = $long ?: $short; // suite/unit
+					if (in_array('floor', $types, true))                         $comp['floor']      = $long ?: $short;
+
+					if (in_array('locality', $types, true))                      $comp['city']       = $long ?: $short;
+					if (in_array('administrative_area_level_1', $types, true)) { $comp['state_abbr'] = $short; $comp['state_full'] = $long; }
+					if (in_array('administrative_area_level_2', $types, true))   $comp['county']     = $long ?: $short;
+					if (in_array('country', $types, true)) { $comp['country_full'] = $long ?: $short; $comp['country_abbr'] = $short ?: $long; }
+					if (in_array('postal_code', $types, true))                   $comp['zip']        = $long ?: $short;
+					if (in_array('postal_code_suffix', $types, true))            $comp['zip4']       = $long ?: $short;
 				}
 
-				$google_info[$placeID]['street']     	= trim($gbp_address['street']);
-				$google_info[$placeID]['city']       	= $gbp_address['city'];
-				$google_info[$placeID]['state-abbr']	= $gbp_address['state_abbr'];
-				$google_info[$placeID]['state-full'] 	= $gbp_address['state_full'];
-				$google_info[$placeID]['zip']        	= $gbp_address['zip'];
+				// Compose street lines
+				$line1  = trim($comp['street_num'].' '.$comp['route']);
+				$extras = array_filter([$comp['premise'], $comp['subpremise'], $comp['floor']], fn($v) => trim((string)$v) !== '');
+				$line2  = $extras ? implode(' ', $extras) : '';
+
+				if ($line2 !== '') $line1 .= ', '.$line2;
+				$line1 = preg_replace('/\s+/', ' ', $line1);
+
+				$zip = $comp['zip'] . ($comp['zip4'] ? '-'.$comp['zip4'] : '');
+
+				$google_info[$placeID]['street']       = $line1;
+				$google_info[$placeID]['street_line1'] = preg_replace('/\s+/', ' ', trim($comp['street_num'].' '.$comp['route']));
+				$google_info[$placeID]['street_line2'] = $line2;
+				$google_info[$placeID]['city']         = $comp['city'];
+				$google_info[$placeID]['state-abbr']   = $comp['state_abbr'];
+				$google_info[$placeID]['state-full']   = $comp['state_full'];
+				$google_info[$placeID]['zip']          = $zip;
+
+				$google_info[$placeID]['suite']        = $comp['subpremise'] ?: $comp['premise'] ?: '';
+				$google_info[$placeID]['county']       = $comp['county'];
+				$google_info[$placeID]['country']      = $comp['country_abbr'] ?: $comp['country_full'];
+
 
 				$google_info[$placeID]['lat']  			= isset($gbp['location']['latitude'])  ? (float)$gbp['location']['latitude']  : null;
 				$google_info[$placeID]['long'] 			= isset($gbp['location']['longitude']) ? (float)$gbp['location']['longitude'] : null;
@@ -219,7 +260,6 @@ function processChron($forceChron) {
 
 // 4) Update bp_bgp_update and notify of differences			
 			update_option('bp_gbp_update', $google_info, false);	
-			if ( function_exists('emailMe')) emailMe( "Chron - Google API Hit - ".$customer_info['name'], "A request was made to the Google API at " . date('Y-m-d H:i:s') . " for ".$customer_info['name'].".");
 			gbp_diff_vs_ci_and_notify($customer_info, $google_info, $placeIDs);
 		}
 	}	
@@ -1307,6 +1347,7 @@ function gbp_diff_vs_ci_and_notify(array $ci, array $google_info, array $placeID
             'gbp'     => trim(($gbp_primary['area']??'').' '.($gbp_primary['phone']??'')),
         ];
     }
+	/*
     $ciHoursDesc  = is_array($ci['current-hours']??null) ? implode(' | ', (array)$ci['current-hours']) : (string)($ci['current-hours']??'');
     $gbpHoursDesc = !empty($gbp_primary['current-hours']['weekdayDescriptions'])
                     ? implode(' | ', (array)$gbp_primary['current-hours']['weekdayDescriptions'])
@@ -1314,13 +1355,13 @@ function gbp_diff_vs_ci_and_notify(array $ci, array $google_info, array $placeID
     if ($gbpHoursDesc !== '' && trim($ciHoursDesc) !== trim($gbpHoursDesc)) {
         $diffs['hours'] = ['current'=>$ciHoursDesc, 'gbp'=>$gbpHoursDesc];
     }
-
+	*/
     if (!$diffs) return;
     $hash = md5(json_encode($diffs));
 	if ($hash === get_option('bp_diffhash_gbp_vs_ci')) return;
 	update_option('bp_diffhash_gbp_vs_ci', $hash, false);
 
-	$NL = "\n";
+	$NL = "<br>\n";
 	$msg  = "GBP vs customer_info differences for ".($ci['name'] ?? '(site)').":".$NL.$NL;
 	foreach ($diffs as $k => $v) {
 		$label = strtoupper(str_replace('_',' ',$k));

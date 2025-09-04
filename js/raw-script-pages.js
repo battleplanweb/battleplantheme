@@ -572,7 +572,13 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	
 // Redirect to 'thank you' page after form submission, to avoid double submissions
 	window.document.addEventListener( 'wpcf7mailsent', function( event ) { 
-		location = '/email-received/';
+  		var redirectField = getObject('input[name="redirect-url"]', event.target);
+  
+  		if (redirectField && redirectField.value) {
+    		location = redirectField.value;
+  		} else {
+    		location = '/email-received/';
+  		}
 	}, false ); 
 			
 														   
@@ -2294,6 +2300,8 @@ window.formLabelWidth = () => {
 			}
 		}, true);
 		menu.addEventListener('mouseleave', ev => {
+
+
 			const targetElement = ev.target.closest('[aria-haspopup="true"]');
 			if (targetElement) {
 				targetElement.classList.remove('menu-item-expanded');

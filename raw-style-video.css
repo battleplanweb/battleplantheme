@@ -25,13 +25,15 @@
 .block-video.video-player.span-10,
 .block-video.video-player.span-9 {
 	width: 												75%;
-	padding-top: 										37.376875%;
+	/*padding-top: 										37.376875%; I think this is backwards ... 56.25% * .75 = 42.1875 */
+	padding-top: 										42.1875%;
 }
 
 .block-video.video-player.span-8,
 .block-video.video-player.span-7 {
 	width: 												67%;
-	padding-top: 										42.1875%;
+	/*padding-top: 										42.1875%;*/
+	padding-top: 										37.376875%;
 }
 
 .block-video.video-player.span-6,
@@ -51,6 +53,55 @@
 	width: 												25%;
 	padding-top: 										14.0625%;
 }
+
+.block-video.video-player.portrait.span-12,
+.block-video.video-player.portrait.span-11,
+.portrait .block-video.video-player.span-12,
+.portrait .block-video.video-player.span-11 {
+	width: 												100%;
+	padding-top: 										177.7778%;
+}
+
+.block-video.video-player.portrait.span-10,
+.block-video.video-player.portrait.span-9,
+.portrait .block-video.video-player.span-10,
+.portrait .block-video.video-player.span-9 {
+	width: 												75%;
+	padding-top: 										133.3335%;
+}
+
+.block-video.video-player.portrait.span-8,
+.block-video.video-player.portrait.span-7,
+.portrait .block-video.video-player.span-8,
+.portrait .block-video.video-player.span-7 {
+	width: 												67%;
+	padding-top: 										119.111126%;
+}
+
+.block-video.video-player.portrait.span-6,
+.block-video.video-player.portrait.span-5,
+.portrait .block-video.video-player.span-6,
+.portrait .block-video.video-player.span-5 {
+	width: 												50%;
+	padding-top: 										88.8889%;
+}
+
+.block-video.video-player.portrait.span-4,
+.portrait .block-video.video-player.span-4 {
+	width: 												33%;
+	padding-top: 										58.666674%;
+}
+
+.block-video.video-player.portrait.span-3,
+.block-video.video-player.portrait.span-2,
+.block-video.video-player.portrait.span-1,
+.portrait .block-video.video-player.span-3,
+.portrait .block-video.video-player.span-2,
+.portrait .block-video.video-player.span-1 {
+	width: 												25%;
+	padding-top: 										44.44445%;
+}
+
 
 .screen-mobile .parallax-mirror.mobile-hide {
 	display: 											none;

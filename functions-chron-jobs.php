@@ -196,7 +196,6 @@ function processChron($forceChron) {
 					'state_abbr'   => '',
 					'state_full'   => '',
 					'zip'          => '',
-					'zip4'         => '',
 					'county'       => '',
 					'country_abbr' => '',
 					'country_full' => '',
@@ -218,7 +217,6 @@ function processChron($forceChron) {
 					if (in_array('administrative_area_level_2', $types, true))   $comp['county']     = $long ?: $short;
 					if (in_array('country', $types, true)) { $comp['country_full'] = $long ?: $short; $comp['country_abbr'] = $short ?: $long; }
 					if (in_array('postal_code', $types, true))                   $comp['zip']        = $long ?: $short;
-					if (in_array('postal_code_suffix', $types, true))            $comp['zip4']       = $long ?: $short;
 				}
 
 				// Compose street lines
@@ -229,7 +227,7 @@ function processChron($forceChron) {
 				if ($line2 !== '') $line1 .= ', '.$line2;
 				$line1 = preg_replace('/\s+/', ' ', $line1);
 
-				$zip = $comp['zip'] . ($comp['zip4'] ? '-'.$comp['zip4'] : '');
+				$zip = $comp['zip'];
 
 				$google_info[$placeID]['street']       = $line1;
 				$google_info[$placeID]['street_line1'] = preg_replace('/\s+/', ' ', trim($comp['street_num'].' '.$comp['route']));

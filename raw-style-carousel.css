@@ -80,7 +80,14 @@
 
 /*
 .carousel-screen .carousel-item {
-	padding: 										0 3%; // removed for Midwest Airend & Pump slider -- if it is full screen, why the padding?
+	padding: 										0 3%; // removed for Midwest Airend & Pump slider (rebuild) -- if it is full screen, why the padding? 9/9/25
+}
+
+
+.carousel.carousel-screen .carousel-item,
+.carousel.screen-slider .carousel-item {
+	padding-left:									3vw; // removed for Midwest Airend & Pump slider  (rebuild)-- if it is full screen, why the padding? 9/9/25
+	padding-right:									3vw;
 }
 */
 
@@ -310,20 +317,13 @@
 	transform: 										translateX(-50vw);
 }
 
-.carousel.carousel-screen .carousel-item,
-.carousel.screen-slider .carousel-item {
-	padding-left:									3vw;
-	padding-right:									3vw;
-}
-
 .carousel .caption-holder {
 	position: 										absolute;
 	z-index:										6000;
 	width:											40%;
 	height: 										auto;
 	text-align:										center;
-	top: 											15%;
-	transform: 										translateY(50%);
+	bottom: 										15%;
 	left: 											10%;
 	background: 									var(--black-med);
 	backdrop-filter: 								blur(5px);
@@ -414,6 +414,24 @@
 # Mobile Styles
 --------------------------------------------------------------*/
 
+/* 4: Large Tablets (landscape) */
+@media (max-width: 1280px) {
+	.carousel .caption-holder {
+		font-size: 										90%;
+		width: 											50%;
+	}
+}
+
+/* 3: Small Tablets (landscape) */
+@media (max-width: 1024px) {
+	.carousel .caption-holder {
+		font-size: 										80%;
+		width: 											75%;
+
+		left: 											7%;
+	}
+}
+
 /* 2: Phones (landscape) + Tablets (portrait) */
 @media (max-width: 860px) {	
 	.carousel.slider-testimonials .block-button:nth-of-type(1) {
@@ -442,6 +460,13 @@
 	.carousel.mult-4 .carousel-inner .carousel-item .span-3:first-of-type {
 		display: 										grid;
 		grid-column: 									span 12;
+	}
+	
+	.carousel .caption-holder {
+		font-size: 										70%;
+		width: 											100%;
+		left: 											0%;
+		bottom: 										0%;
 	}
 }
 

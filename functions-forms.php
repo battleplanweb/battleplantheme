@@ -147,7 +147,7 @@ function battleplan_setupFormEmail( $contact_form, &$abort, $submission ) {
 	$spamIntercept = '';	
 	
 	if ( $userCountry !== "United States" ) :	
-		$countryIgnore		= 	["Chicken Dinner House", "Sweetie Pie", "Cooks Country"];
+		$countryIgnore		= 	["Chicken Dinner House", "Babe's Chicken Catering", "Sweetie Pie", "Cooks Country"];
 		$countryBlock		=	["Greater Fort Myers Dog Club"];
 		$blockThis = false;
 		$blockReason = " Country;";
@@ -199,8 +199,41 @@ function battleplan_setupFormEmail( $contact_form, &$abort, $submission ) {
 		if (stripos($name, $bad_name) !== false) $spamIntercept .= ' Names;';
 	endforeach;
 	
-	if ( $spamIntercept != '' ) : $formMail['recipient'] = 'email@battleplanwebdesign.com'; $formMail['subject'] = '<- SPAM: Blocked' .$spamIntercept .'-> '.$formMail['subject']; endif;
+	if ( $spamIntercept !== '' && stripos($buildEmail, "Babe's Chicken Catering" ) === false ) : 
 	
+		$formMail['recipient'] = 'email@battleplanwebdesign.com';
+		$formMail['subject']   = '<- SPAM: Blocked' . $spamIntercept . ' -> ' . $formMail['subject'];
+
+		// --- add IP to central list + central log ---
+		$central = 'https://battleplanwebdesign.com/wp-content/email-add-ip.php';
+		$secret  = 'Vn8qkM2Z4yHsR1jPwA3tLf7bE6uXpD9c';
+
+		$site = $_SERVER['HTTP_HOST']    ?? '';
+		$ua   = $_SERVER['HTTP_USER_AGENT'] ?? '';
+		$uri  = $_SERVER['REQUEST_URI']  ?? '';
+		$ref  = $_SERVER['HTTP_REFERER'] ?? '';
+		$ts   = (string) time();
+
+		$payload = $ip . '|' . $site . '|' . $uri . '|' . $ua . '|' . $ref . '|' . $ts;
+		$sig     = hash_hmac('sha256', $payload, $secret);
+
+		// non-blocking fire-and-forget
+		wp_remote_post($central, [
+			'timeout'      => 2,
+			'redirection'  => 0,
+			'blocking'     => false,
+			'body'         => [
+				'ip'   => $ip,
+				'site'=> $site,
+				'uri'  => $uri,
+				'ua'   => $ua,
+				'ref'  => $ref,
+				'ts'   => $ts,
+				'sig'  => $sig
+			]
+		]);
+	endif;
+
 	// send email
 	$contact_form->set_properties( array( 'mail' => $formMail ) );
 	

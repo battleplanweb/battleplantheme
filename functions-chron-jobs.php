@@ -220,26 +220,63 @@ function processChron($forceChron) {
 				}
 
 				// Compose street lines
-				$line1  = trim($comp['street_num'].' '.$comp['route']);
-				$extras = array_filter([$comp['premise'], $comp['subpremise'], $comp['floor']], fn($v) => trim((string)$v) !== '');
-				$line2  = $extras ? implode(' ', $extras) : '';
+$base   = trim($comp['street_num'].' '.$comp['route']);
+$sub    = trim((string)$comp['subpremise']); // suite/unit
+$prem   = trim((string)$comp['premise']);    // building name (optional)
+$floor  = trim((string)$comp['floor']);      // floor (optional)
 
-				if ($line2 !== '') $line1 .= ', '.$line2;
-				$line1 = preg_replace('/\s+/', ' ', $line1);
+// Normalize suite/unit to a consistent shape: "#101", "Suite L #642", "Ste 5", etc.
+$normalizeSubpremise = function(string $s): string {
+    $s = preg_replace('/\s+/', ' ', trim($s));
+    if ($s === '') return '';
 
-				$zip = $comp['zip'];
+    // Already "#101" (allow whitespace after #)
+    if (preg_match('/^#\s*\S+$/', $s)) {
+        return '#' . preg_replace('/^#\s*/', '', $s);
+    }
 
-				$google_info[$placeID]['street']       = $line1;
-				$google_info[$placeID]['street_line1'] = preg_replace('/\s+/', ' ', trim($comp['street_num'].' '.$comp['route']));
-				$google_info[$placeID]['street_line2'] = $line2;
-				$google_info[$placeID]['city']         = $comp['city'];
-				$google_info[$placeID]['state-abbr']   = $comp['state_abbr'];
-				$google_info[$placeID]['state-full']   = $comp['state_full'];
-				$google_info[$placeID]['zip']          = $zip;
+    // Bare unit like "101" or "12B" -> "#101"
+    if (preg_match('/^[0-9]+[A-Za-z]?$/', $s)) {
+        return '#'.$s;
+    }
 
-				$google_info[$placeID]['suite']        = $comp['subpremise'] ?: $comp['premise'] ?: '';
-				$google_info[$placeID]['county']       = $comp['county'];
-				$google_info[$placeID]['country']      = $comp['country_abbr'] ?: $comp['country_full'];
+    // Labeled variants -> keep label, normalize casing/punctuation
+    if (preg_match('/^(suite|ste|unit|apt|apartment|bldg)\b[\s\-#]*([\w\-# ]+)$/i', $s, $m)) {
+        $label = ucfirst(strtolower($m[1])); // Suite/Ste/Unit/Apt/Apartment/Bldg
+        $rest  = preg_replace('/\s+/', ' ', trim($m[2]));
+        if (preg_match('/^[0-9]+[A-Za-z]?$/', $rest)) $rest = '#'.$rest;
+        return $label.' '.$rest;
+    }
+
+    // Fallback: return as-is
+    return $s;
+};
+
+$subNorm = $normalizeSubpremise($sub);
+
+// Build final line1; **no comma before suite/unit**; commas ok for building/floor
+$line1 = $base;
+if ($subNorm !== '') $line1 .= ' '.$subNorm;
+if ($prem !== '')    $line1 .= ', '.$prem;
+if ($floor !== '')   $line1 .= ', '.$floor;
+
+// Cleanup spacing
+$line1 = preg_replace('/\s+/', ' ', trim($line1));
+
+// NOTE: per your request, we DO NOT append ZIP+4 to zip
+$zip = $comp['zip'];
+
+// Save back to google_info
+$google_info[$placeID]['street']        = $line1;
+$google_info[$placeID]['street_line1']  = $base;                 // optional
+$google_info[$placeID]['street_line2']  = trim(($prem ? $prem : '').($floor ? ($prem ? ', ' : '').$floor : '')); // optional
+$google_info[$placeID]['suite']         = $subNorm;              // optional discrete
+$google_info[$placeID]['city']          = $comp['city'];
+$google_info[$placeID]['state-abbr']    = $comp['state_abbr'];
+$google_info[$placeID]['state-full']    = $comp['state_full'];
+$google_info[$placeID]['zip']           = $zip;                  // no +4 appended
+$google_info[$placeID]['county']        = $comp['county'];
+$google_info[$placeID]['country']       = $comp['country_abbr'] ?: $comp['country_full'];
 
 
 				$google_info[$placeID]['lat']  			= isset($gbp['location']['latitude'])  ? (float)$gbp['location']['latitude']  : null;

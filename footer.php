@@ -93,7 +93,9 @@
 				endif;
 
 				echo do_shortcode('[layout grid="1-2"][col class="site-info-left"]'.$buildLeft.'[/col][col class="site-info-right"]'.$buildRight.'[/col][/layout]');
-			endif; ?>					
+			endif; ?>
+			
+			<a class="bot-trap" href="/wp-content/themes/battleplantheme/_bot/tripwire.php" rel="nofollow" aria-hidden="true">Press Kit</a>
 			
 		</section><!-- .site-info -->
 	</footer><!-- #colophon -->

@@ -157,72 +157,108 @@ function is_mobile() {
 
 // Check if business is currently open
 function bp_build_open_intervals(array $periods, string $tz, int $horizonDays=14): array {
-	$tzobj = new DateTimeZone($tz);
-	$now = new DateTimeImmutable('now', $tzobj);
-	$out = [];
+	$tzobj=new DateTimeZone($tz);
+	$parseDate=function($d) use($tzobj){
+		if ($d instanceof DateTimeInterface) return ['year'=>(int)$d->format('Y'),'month'=>(int)$d->format('n'),'day'=>(int)$d->format('j')];
+		if (is_array($d) && isset($d['year'],$d['month'],$d['day'])) return ['year'=>(int)$d['year'],'month'=>(int)$d['month'],'day'=>(int)$d['day']];
+		if (!is_string($d)) return null; $s=trim($d);
+		if (preg_match('/^\d{4}-\d{2}-\d{2}$/',$s)) { [$y,$m,$da]=array_map('intval',explode('-',$s)); return ['year'=>$y,'month'=>$m,'day'=>$da]; }
+		if (preg_match('/^\d{8}$/',$s)) { $y=(int)substr($s,0,4); $m=(int)substr($s,4,2); $da=(int)substr($s,6,2); return ['year'=>$y,'month'=>$m,'day'=>$da]; }
+		if (preg_match('/^\d{1,2}\/\d{1,2}\/\d{4}$/',$s)) { $dt=DateTimeImmutable::createFromFormat('n/j/Y',$s,$tzobj); return $dt?['year'=>(int)$dt->format('Y'),'month'=>(int)$dt->format('n'),'day'=>(int)$dt->format('j')]:null; }
+		if (ctype_digit($s)) { $dt=(new DateTimeImmutable('@'.$s))->setTimezone($tzobj); return ['year'=>(int)$dt->format('Y'),'month'=>(int)$dt->format('n'),'day'=>(int)$dt->format('j')]; }
+		$ts=strtotime($s); if ($ts!==false) { $dt=(new DateTimeImmutable('@'.$ts))->setTimezone($tzobj); return ['year'=>(int)$dt->format('Y'),'month'=>(int)$dt->format('n'),'day'=>(int)$dt->format('j')]; }
+		return null;
+	};
+	$norm=function($x) use (&$norm,$parseDate){
+		if (is_string($x)) {
+			$s=trim($x); $sl=strtolower($s);
+			if ($sl===''||$sl==='closed') return null;
+			if (in_array($sl,['24/7','24x7','247'],true)) return ['open'=>['time'=>'0000'],'close'=>['time'=>'2359']];
+			if (strpos($s,'-')!==false) { [$o,$c]=array_map('trim',explode('-',$s,2)); $o=preg_replace('/[^0-9]/','',$o); $c=preg_replace('/[^0-9]/','',$c); $o=str_pad((string)$o,4,'0',STR_PAD_LEFT); $c=str_pad((string)$c,4,'0',STR_PAD_LEFT); return ['open'=>['time'=>$o],'close'=>['time'=>$c]]; }
+			return null;
+		}
+		if (is_array($x)) {
+			if (isset($x['open'])&&is_string($x['open'])) { $o=$norm($x['open']); $x['open']=$o['open']??[]; }
+			if (isset($x['close'])&&is_string($x['close'])) { $c=$norm($x['close']); $x['close']=$c['close']??[]; }
+			if (isset($x['open']['date']))  $x['open']['date']=$parseDate($x['open']['date']);
+			if (isset($x['close']['date'])) $x['close']['date']=$parseDate($x['close']['date']);
+			return $x;
+		}
+		return null;
+	};
+	$_tmp=[]; foreach($periods as $p){ $p=$norm($p); $p&&$_tmp[]=$p; } $periods=$_tmp;
 
-	$dated = []; $weekly = [];
-	foreach ($periods as $p) (!empty($p['open']['date']) || !empty($p['close']['date'])) ? $dated[]=$p : $weekly[]=$p;
+	$now=new DateTimeImmutable('now',$tzobj);
+	$out=[];
+
+	$dated=[]; $weekly=[];
+	foreach($periods as $p) (!empty($p['open']['date'])||!empty($p['close']['date'])) ? $dated[]=$p : $weekly[]=$p;
 
 	// DATED
-	foreach ($dated as $p) {
+	foreach($dated as $p){
 		$o=$p['open']??[]; $c=$p['close']??[];
 		if (empty($o['date'])) continue;
-		$oh = isset($o['hour']) ? (int)$o['hour'] : (isset($o['time']) ? (int)substr($o['time'],0,2) : null);
-		$om = isset($o['minute']) ? (int)$o['minute'] : (isset($o['time']) ? (int)substr($o['time'],2,2) : 0);
+		$ot=$o['time']??null;
+		$oh=isset($o['hour'])?(int)$o['hour']:(isset($ot)&&strlen($ot)>=2?(int)substr($ot,0,2):null);
+		$om=isset($o['minute'])?(int)$o['minute']:(isset($ot)&&strlen($ot)>=4?(int)substr($ot,2,2):0);
 		if ($oh===null) continue;
-		$od=$o['date'];
+		$od=is_array($o['date'])?$o['date']:$parseDate($o['date']); if(!$od) continue;
 		$start=new DateTimeImmutable(sprintf('%04d-%02d-%02d %02d:%02d:00',$od['year'],$od['month'],$od['day'],$oh,$om),$tzobj);
 
 		if ($c) {
-			if (!empty($c['date'])) { $cd=$c['date'];
-				$ch=isset($c['hour'])?(int)$c['hour']:(isset($c['time'])?(int)substr($c['time'],0,2):0);
-				$cm=isset($c['minute'])?(int)$c['minute']:(isset($c['time'])?(int)substr($c['time'],2,2):0);
+			$ct=$c['time']??null;
+			if (!empty($c['date'])) { $cd=is_array($c['date'])?$c['date']:$parseDate($c['date']); if(!$cd) $cd=['year'=>(int)$start->format('Y'),'month'=>(int)$start->format('m'),'day'=>(int)$start->format('d')];
+				$ch=isset($c['hour'])?(int)$c['hour']:(isset($ct)&&strlen($ct)>=2?(int)substr($ct,0,2):0);
+				$cm=isset($c['minute'])?(int)$c['minute']:(isset($ct)&&strlen($ct)>=4?(int)substr($ct,2,2):0);
 				$end=new DateTimeImmutable(sprintf('%04d-%02d-%02d %02d:%02d:00',$cd['year'],$cd['month'],$cd['day'],$ch,$cm),$tzobj);
 			} else {
-				$ch=isset($c['hour'])?(int)$c['hour']:(isset($c['time'])?(int)substr($c['time'],0,2):0);
-				$cm=isset($c['minute'])?(int)$c['minute']:(isset($c['time'])?(int)substr($c['time'],2,2):0);
+				$ch=isset($c['hour'])?(int)$c['hour']:(isset($ct)&&strlen($ct)>=2?(int)substr($ct,0,2):0);
+				$cm=isset($c['minute'])?(int)$c['minute']:(isset($ct)&&strlen($ct)>=4?(int)substr($ct,2,2):0);
 				$end=$start->setTime($ch,$cm);
 			}
 		} else $end=$start->modify('+1 day');
 
-		if ($end <= $start) $end=$end->modify('+1 day');
+		($end <= $start) && ($end=$end->modify('+1 day'));
 		$out[]=['start'=>$start->getTimestamp(),'end'=>$end->getTimestamp()];
 	}
 
 	// WEEKLY → project next N days
 	$today0=$now->setTime(0,0);
-	for ($d=0;$d<$horizonDays;$d++) {
+	for($d=0;$d<$horizonDays;$d++){
 		$dayDate=$today0->modify("+$d days");
 		$dow=(int)$dayDate->format('N'); // 1..7 Mon..Sun
-		foreach ($weekly as $p) {
+		foreach($weekly as $p){
 			$o=$p['open']??[]; $c=$p['close']??[];
 			if (!isset($o['day'])) continue;
-			$openDay=(int)$o['day']; if ($openDay===0) $openDay=7; // normalize Sun
-			if ($openDay !== $dow) continue;
+			$openDay=(int)$o['day']; $openDay===0 && ($openDay=7);
+			if ($openDay!==$dow) continue;
 
-			$oh=isset($o['hour'])?(int)$o['hour']:(isset($o['time'])?(int)substr($o['time'],0,2):null);
-			$om=isset($o['minute'])?(int)$o['minute']:(isset($o['time'])?(int)substr($o['time'],2,2):0);
+			$ot=$o['time']??null;
+			$oh=isset($o['hour'])?(int)$o['hour']:(isset($ot)&&strlen($ot)>=2?(int)substr($ot,0,2):null);
+			$om=isset($o['minute'])?(int)$o['minute']:(isset($ot)&&strlen($ot)>=4?(int)substr($ot,2,2):0);
 			if ($oh===null) continue;
 			$start=$dayDate->setTime($oh,$om);
 
 			if ($c) {
-				$ch=isset($c['hour'])?(int)$c['hour']:(isset($c['time'])?(int)substr($c['time'],0,2):null);
-				$cm=isset($c['minute'])?(int)$c['minute']:(isset($c['time'])?(int)substr($c['time'],2,2):0);
-				if (isset($c['day'])) { $closeDay=(int)$c['day']; if ($closeDay===0) $closeDay=7;
-					$delta=$closeDay-$openDay; if ($delta<0) $delta+=7;
+				$ct=$c['time']??null;
+				$ch=isset($c['hour'])?(int)$c['hour']:(isset($ct)&&strlen($ct)>=2?(int)substr($ct,0,2):null);
+				$cm=isset($c['minute'])?(int)$c['minute']:(isset($ct)&&strlen($ct)>=4?(int)substr($ct,2,2):0);
+				if (isset($c['day'])) {
+					$closeDay=(int)$c['day']; $closeDay===0 && ($closeDay=7);
+					$delta=$closeDay-$openDay; $delta<0 && ($delta+=7);
 					$end=$start->modify("+$delta days")->setTime($ch??0,$cm??0);
 				} else $end=$start->setTime($ch??0,$cm??0);
 			} else $end=$start->modify('+1 day');
 
-			if ($end <= $start) $end=$end->modify('+1 day');
+			($end <= $start) && ($end=$end->modify('+1 day'));
 			$out[]=['start'=>$start->getTimestamp(),'end'=>$end->getTimestamp()];
 		}
 	}
 
-	usort($out,fn($a,$b)=>$a['start']<=>$b['start']);
 	return $out;
 }
+
+
 
 function bp_is_open_at(array $periods,string $tz,?int $ts=null): bool {
     $now = $ts ?? (new DateTimeImmutable('now', new DateTimeZone($tz)))->getTimestamp();

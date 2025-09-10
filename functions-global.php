@@ -13,7 +13,8 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.31.6' );
+
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.32.0' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -32,20 +33,6 @@ endif;
 if ( _USER_LOGIN == 'battleplanweb' ) : 
 	//showMe(_USER_ROLES,true);
 endif;
-
-$googlebots = array( 'google', 'lighthouse' );
-$bots = array_merge(array('adbeat', 'addthis', 'admantx', 'audit', 'barkrowler', 'bing', 'bot', 'crawler', 'dataprovider', 'daum', 'docomo', 'duckduck', 'facebook', 'fetcher', 'gigablast', 'linkedin', 'majestic', 'netcraft', 'newspaper', 'okhttp', 'panscient', 'qwantify', 'riddler', 'wayback', 'slurp', 'spider', 'wordpress', 'yahoo', 'yeti', 'zgrab'), $googlebots);
-$spamIPs = get_option('bp_bad_ips') ? get_option('bp_bad_ips') : array();
-$spamURLs = explode("\n", file_get_contents( get_template_directory().'/spammers.txt' ));
-//https://github.com/matomo-org/referrer-spam-list/blob/master/spammers.txt
-
-foreach ( $googlebots as $googlebot ) if ( isset($_SERVER["HTTP_USER_AGENT"]) && stripos( $_SERVER["HTTP_USER_AGENT"], $googlebot) !== false && !defined('_IS_GOOGLEBOT') ) define( '_IS_GOOGLEBOT', true );
-foreach ( $bots as $bot ) if ( isset($_SERVER["HTTP_USER_AGENT"]) && stripos( $_SERVER["HTTP_USER_AGENT"], $bot) !== false && !defined('_IS_BOT') ) define( '_IS_BOT', true );
-foreach ( $spamIPs as $spamIP ) if ( isset($_SERVER["REMOTE_ADDR"]) && stripos( $_SERVER["REMOTE_ADDR"], $spamIP) !== false && !defined('_IS_BOT') ) define( '_IS_BOT', true );
-foreach ( $spamURLs as $spamURL ) if ( isset($_SERVER["HTTP_REFERER"]) && $spamURL != '' && $spamURL != null && stripos( $_SERVER["HTTP_REFERER"], $spamURL) !== false && !defined('_IS_BOT') ) define( '_IS_BOT', true );
-
-if ( !defined('_IS_BOT') ) define( '_IS_BOT', false );
-if ( !defined('_IS_GOOGLEBOT') ) define( '_IS_GOOGLEBOT', false );
 
 if ( !defined('_PAGE_SLUG') ) :
 	if ( basename(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ) : 
@@ -66,6 +53,68 @@ if ( !defined('_RAND_SEED') ) :
 	if ( get_option('rand-seed') && (time() - get_option('rand-seed')) > 14000 ) update_option('rand-seed', time());
 	define( '_RAND_SEED', get_option('rand-seed') );
 endif;
+
+$UA	= $_SERVER['HTTP_USER_AGENT'] ?? '';
+$IP	= $_SERVER['REMOTE_ADDR'] ?? '';
+$REF= $_SERVER['HTTP_REFERER'] ?? '';
+
+$googlebots = ['googlebot','google-InspectionTool','googleother','adsbot-google','mediapartners-google','storebot-google'];
+$ai_crawlers = ['gptbot','claudebot','perplexitybot','mistral','mistralai','chatgpt-user']; 
+$other_good  = [
+	'bingbot','bingpreview','duckduckbot','slurp','yandexbot','baiduspider','applebot','petalbot','bytespider','seznambot',		'pinterestbot','linkedinbot','twitterbot','xbot','discordbot','telegrambot','slackbot','ahrefsbot','mj12bot','semrushbot','dotbot','facebookexternalhit','facebot'
+];
+
+$bots = array_merge($googlebots, $ai_crawlers, $other_good);
+
+$bad_ips = get_option('bp_bad_ips') ?: [];
+
+$spam_domains = get_transient('bp_matomo_spam_list');
+if ($spam_domains === false) {
+	$r = wp_remote_get('https://raw.githubusercontent.com/matomo-org/referrer-spam-list/master/spammers.txt', ['timeout'=>5]);
+	if (!is_wp_error($r) && wp_remote_retrieve_response_code($r) === 200) {
+		$body = wp_remote_retrieve_body($r);
+		$lines = array_map('trim', explode("\n", $body));
+		$spam_domains = array_values(array_filter($lines, fn($l)=>$l!=='' && $l[0]!=='#'));
+		set_transient('bp_matomo_spam_list', $spam_domains, 12 * HOUR_IN_SECONDS);
+	} else {
+		$spam_domains = [];
+	}
+}
+
+$ref_is_spam = false;
+if ($REF) {
+	$host = strtolower(parse_url($REF, PHP_URL_HOST) ?: '');
+	if ($host) {
+		foreach ($spam_domains as $d) {
+			$d = strtolower($d);
+			if ($host === $d || str_ends_with($host, '.'.$d)) { $ref_is_spam = true; break; }
+		}
+	}
+}
+
+$any = fn($hay,$arr)=>array_reduce($arr, fn($c,$s)=>$c||($hay!==''&&stripos($hay,$s)!==false), false);
+
+$isVerifiedGooglebot = function(string $ip) use ($UA): bool {
+	if ($ip==='' || stripos($UA,'google')===false) return false;
+	$ptr = gethostbyaddr($ip);
+	if (!$ptr || (!str_ends_with($ptr,'.googlebot.com') && !str_ends_with($ptr,'.google.com'))) return false;
+	$fwds = gethostbynamel($ptr) ?: [];
+	return in_array($ip,$fwds,true);
+};
+
+$looks_bot  = $any($UA,$bots);
+$verified_g = $isVerifiedGooglebot($IP);
+
+!defined('_IS_GOOGLEBOT') ? define('_IS_GOOGLEBOT', $verified_g) : null;
+!defined('_IS_BOT') ? define('_IS_BOT', $verified_g ? true : ($looks_bot || $ref_is_spam)) : null;
+
+$should_block = ($ref_is_spam && !$verified_g);
+if ($should_block) {
+	status_header(403);
+	header('Content-Type: text/plain; charset=UTF-8');
+	exit;
+}
+
 
 /*--------------------------------------------------------------
 # Customer Info Globals

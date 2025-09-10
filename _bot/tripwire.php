@@ -1,6 +1,14 @@
 <?php
-// --- bail if already blocked (uses local cache; no network) ---
+require_once __DIR__ . '/../_prewp/bot-helpers.php';
+
 $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+$ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+
+if ($ip && bp_is_verified_serp_bot($ip, $ua)) {
+	http_response_code(204);
+	exit;
+}
+
 if ($ip) {
 	$cache = __DIR__.'/../_prewp/cache/blocked_ips.txt';
 	$in_cidr = function (string $ip, string $cidr): bool {

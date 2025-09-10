@@ -61,7 +61,7 @@ $forceChron = get_option('bp_force_chron') !== null ? get_option('bp_force_chron
 $chronTime = get_option('bp_chron_time') !== null ? get_option('bp_chron_time') : 0;
 $chronDue = $chronTime + rand(40000,70000);
 
-if ( $forceChron === true || ( _IS_BOT && !_IS_GOOGLEBOT && ( $chronDue < time() ) )) {
+if ( $forceChron === true || ( _IS_BOT && !_IS_SERP_BOT && ( $chronDue < time() ) )) {
 	delete_option('bp_force_chron');
 	update_option('bp_chron_time', time());
 	processChron($forceChron);

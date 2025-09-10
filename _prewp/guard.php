@@ -11,19 +11,23 @@ $CACHE_FILE       = $CACHE_DIR . '/blocked_ips.txt';
 $CACHE_MAX_AGE    = 300;           // 5 min
 $CACHE_MAX_SIZE   = 5*1024*1024;   // 5 MB
 
-/* --- Resolve client IP --- */
+/* --- Resolve client IP (trust CF / XFF first if present) --- */
 $ip = !empty($_SERVER['HTTP_CF_CONNECTING_IP']) ? $_SERVER['HTTP_CF_CONNECTING_IP']
 	: (!empty($_SERVER['HTTP_X_FORWARDED_FOR']) ? trim(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0])
 	: ($_SERVER['REMOTE_ADDR'] ?? ''));
 $ip = filter_var($ip, FILTER_VALIDATE_IP) ?: '';
 if ($ip === '') return;
 
-/* --- Allowlist (edit as needed) --- */
-$allow = [
-	'127.0.0.1','::1',
-	'34.71.200.63', // example WPE IP
-	//'203.0.113.0/24',
-];
+$UA = $_SERVER['HTTP_USER_AGENT'] ?? '';
+
+require_once __DIR__ . '/bot-helpers.php';
+$__serp = bp_is_verified_serp_bot($ip, $UA);
+!defined('_IS_SERP_BOT') && define('_IS_SERP_BOT', $__serp);
+
+// skip all checks for verified search-engine bots
+if (_IS_SERP_BOT) return;
+
+
 $in_cidr = function(string $ip, string $cidr): bool {
 	if (strpos($cidr,'/')===false) return false;
 	[$sub,$mask]=explode('/',$cidr,2);
@@ -71,30 +75,52 @@ if ($match) {
 		http_response_code(403);
 	}			
 	
-	/* ---- CENTRAL BLOCKED NOTIFY (non-blocking, throttled) ---- */
+	/* ---- CENTRAL BLOCKED NOTIFY (5 hits → send, then 1h cooldown) ---- */
 	$notify_url = 'https://battleplanwebdesign.com/wp-content/blocked-notify.php';
 	$secret     = 'Vn8qkM2Z4yHsR1jPwA3tLf7bE6uXpD9c';
 	$site       = $_SERVER['HTTP_HOST'] ?? '';
 	$ua         = $_SERVER['HTTP_USER_AGENT'] ?? '';
 	$uri        = $_SERVER['REQUEST_URI'] ?? '';
-	$ts         = (string)time();
+	$now        = time();
 
-	// Throttle: log at most once per (site, ip, hour)
 	$nd = __DIR__ . '/notify';
 	@is_dir($nd) ?: @mkdir($nd, 0775, true);
-	$key = $nd . '/' . md5($site.'|'.$ip.'|'.gmdate('Y-m-d-H')) . '.lock';
-	if (!is_file($key)) {
-		@touch($key);
-		$payload = $ip.'|'.$site.'|'.$uri.'|'.$ua.'|'.$ts;
-		$sig     = hash_hmac('sha256', $payload, $secret);
+
+	// per (site, ip) counter state
+	$key       = $nd . '/' . md5($site.'|'.$ip) . '.json';
+	$state     = ['hits'=>0, 'last'=>0]; // last = last send timestamp
+	if (is_file($key) && is_readable($key)) {
+		$j = @json_decode((string)@file_get_contents($key), true);
+		if (is_array($j) && isset($j['hits'], $j['last'])) $state = ['hits'=>(int)$j['hits'], 'last'=>(int)$j['last']];
+	}
+
+	// if cooldown (1h) has passed since last send, reset hit counter
+	if ($now - $state['last'] >= 3600) $state['hits'] = 0;
+
+	// increment for this block event
+	$state['hits']++;
+
+	// send when 5th hit occurs (then start 1h cooldown)
+	if ($state['hits'] >= 5) {
+		$ts  = (string)$now;
+		$pl  = $ip.'|'.$site.'|'.$uri.'|'.$ua.'|'.$ts;
+		$sig = hash_hmac('sha256', $pl, $secret);
+
 		$ctx = stream_context_create(['http'=>[
 			'method'=>'POST',
 			'header'=>"Content-Type: application/x-www-form-urlencoded\r\nConnection: close\r\n",
 			'content'=>http_build_query(['ip'=>$ip,'site'=>$site,'uri'=>$uri,'ua'=>$ua,'ts'=>$ts,'sig'=>$sig]),
 			'timeout'=>0.3
 		]]);
-		@file_get_contents($notify_url, false, $ctx); // fire-and-forget
+		@file_get_contents($notify_url, false, $ctx);
+
+		// start cooldown window
+		$state['last'] = $now;
+		$state['hits'] = 0;
 	}
+
+	// persist state
+	@file_put_contents($key, json_encode($state), LOCK_EX);
 	/* ---- /CENTRAL BLOCKED NOTIFY ---- */
 	
 	exit;

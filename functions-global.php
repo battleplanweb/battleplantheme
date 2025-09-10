@@ -14,7 +14,7 @@
 --------------------------------------------------------------*/
 
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.32.0' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.32.1' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -58,16 +58,6 @@ $UA	= $_SERVER['HTTP_USER_AGENT'] ?? '';
 $IP	= $_SERVER['REMOTE_ADDR'] ?? '';
 $REF= $_SERVER['HTTP_REFERER'] ?? '';
 
-$googlebots = ['googlebot','google-InspectionTool','googleother','adsbot-google','mediapartners-google','storebot-google'];
-$ai_crawlers = ['gptbot','claudebot','perplexitybot','mistral','mistralai','chatgpt-user']; 
-$other_good  = [
-	'bingbot','bingpreview','duckduckbot','slurp','yandexbot','baiduspider','applebot','petalbot','bytespider','seznambot',		'pinterestbot','linkedinbot','twitterbot','xbot','discordbot','telegrambot','slackbot','ahrefsbot','mj12bot','semrushbot','dotbot','facebookexternalhit','facebot'
-];
-
-$bots = array_merge($googlebots, $ai_crawlers, $other_good);
-
-$bad_ips = get_option('bp_bad_ips') ?: [];
-
 $spam_domains = get_transient('bp_matomo_spam_list');
 if ($spam_domains === false) {
 	$r = wp_remote_get('https://raw.githubusercontent.com/matomo-org/referrer-spam-list/master/spammers.txt', ['timeout'=>5]);
@@ -94,27 +84,19 @@ if ($REF) {
 
 $any = fn($hay,$arr)=>array_reduce($arr, fn($c,$s)=>$c||($hay!==''&&stripos($hay,$s)!==false), false);
 
-$isVerifiedGooglebot = function(string $ip) use ($UA): bool {
-	if ($ip==='' || stripos($UA,'google')===false) return false;
-	$ptr = gethostbyaddr($ip);
-	if (!$ptr || (!str_ends_with($ptr,'.googlebot.com') && !str_ends_with($ptr,'.google.com'))) return false;
-	$fwds = gethostbynamel($ptr) ?: [];
-	return in_array($ip,$fwds,true);
-};
+require_once get_template_directory() . '/_prewp/bot-helpers.php';
 
-$looks_bot  = $any($UA,$bots);
-$verified_g = $isVerifiedGooglebot($IP);
+$__serp = bp_is_verified_serp_bot($IP, $UA);
+!defined('_IS_SERP_BOT') && define('_IS_SERP_BOT', $__serp);
+!defined('_IS_BOT') && define('_IS_BOT', _IS_SERP_BOT || $ref_is_spam);
 
-!defined('_IS_GOOGLEBOT') ? define('_IS_GOOGLEBOT', $verified_g) : null;
-!defined('_IS_BOT') ? define('_IS_BOT', $verified_g ? true : ($looks_bot || $ref_is_spam)) : null;
-
-$should_block = ($ref_is_spam && !$verified_g);
+// Block only if spam-referrer AND not a verified SERP bot
+$should_block = (!_IS_SERP_BOT && $ref_is_spam);
 if ($should_block) {
 	status_header(403);
 	header('Content-Type: text/plain; charset=UTF-8');
 	exit;
 }
-
 
 /*--------------------------------------------------------------
 # Customer Info Globals

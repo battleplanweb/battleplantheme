@@ -2505,7 +2505,7 @@ function battleplan_load_tag_manager() {
 	$buildTagMgr .= $buildTags;
 	$buildTagMgr .= '</script>';
 	
-	//if (strpos($analytics_id, 'x') === false && $analytics_id != '' && _IS_GOOGLEBOT == false ) echo $buildTagMgr;
+	//if (strpos($analytics_id, 'x') === false && $analytics_id != '' && _IS_SERP_BOT == false ) echo $buildTagMgr;
 	// Had to stop checking for Bots and Google_bots in order for Google Ads to find the tag on the website for setting up Firehouse
 	if (strpos($analytics_id, 'x') === false && $analytics_id != '' ) echo $buildTagMgr;
 }

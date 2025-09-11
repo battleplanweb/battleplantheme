@@ -25,8 +25,11 @@ if (!function_exists('bp_is_verified_serp_bot')) {
 
 		// valid rDNS suffixes for major search engines
 		$valid = preg_match('~
-			\.(googlebot\.com|google\.com
-			|search\.msn\.com|bing\.com
+			\.(googlebot\.com
+			|google\.com
+			|bc\.googleusercontent\.com
+			|search\.msn\.com
+			|bing\.com
 			|yahoo\.com
 			|duckduckgo\.com
 			|yandex\.ru

@@ -1,30 +1,52 @@
 <?php
 /**
  * BP Pre-WP Guard (central list + local cache)
+ * - Uses /wp-content/bp-guard/... so theme updates never overwrite runtime files
+ * - Sets _IS_SERP_BOT early and lets verified search engines through
  */
+
+/* ---------- storage outside the theme (survives updates) ---------- */
+$BP_STORE   = dirname(__DIR__, 3) . '/bp-guard';     // /wp-content/bp-guard
+$CACHE_DIR  = $BP_STORE . '/cache';
+$CACHE_FILE = $CACHE_DIR . '/blocked_ips.txt';
+$NOTIFY_DIR = $BP_STORE . '/notify';
+
+@is_dir($BP_STORE)  ?: @mkdir($BP_STORE, 0775, true);
+@is_dir($CACHE_DIR) ?: @mkdir($CACHE_DIR, 0775, true);
+@is_dir($NOTIFY_DIR)?: @mkdir($NOTIFY_DIR, 0775, true);
+
+/* one-time migration from old in-theme cache (if it existed) */
+$OLD_CACHE_FILE = __DIR__ . '/cache/blocked_ips.txt';
+if (!is_file($CACHE_FILE) && is_file($OLD_CACHE_FILE) && is_readable($OLD_CACHE_FILE)) {
+	$body = file_get_contents($OLD_CACHE_FILE);
+	if ($body !== '' && $body !== false) {
+		$tmp = $CACHE_FILE . '.tmp';
+		if (file_put_contents($tmp, $body, LOCK_EX) !== false) { @chmod($tmp, 0664); @rename($tmp, $CACHE_FILE); }
+	}
+}
+
+/* skip in CLI/tests */
 if (PHP_SAPI === 'cli' || (defined('WP_CLI') && WP_CLI) || getenv('WP_PHPUNIT__TESTS_CONFIG')) return;
 
-/* --- Config --- */
-$CENTRAL_READ_URL = 'https://battleplanwebdesign.com/wp-content/master_blocked_ips.txt'; // <— YOUR central read file
-$CACHE_DIR        = __DIR__ . '/cache';
-$CACHE_FILE       = $CACHE_DIR . '/blocked_ips.txt';
+/* ---------- config (do NOT reassign $CACHE_DIR/$CACHE_FILE) ---------- */
+$CENTRAL_READ_URL = 'https://battleplanwebdesign.com/wp-content/master_blocked_ips.txt';
 $CACHE_MAX_AGE    = 300;           // 5 min
 $CACHE_MAX_SIZE   = 5*1024*1024;   // 5 MB
 
-/* --- Resolve client IP (trust CF / XFF first if present) --- */
+/* ---------- resolve client IP ---------- */
 $ip = !empty($_SERVER['HTTP_CF_CONNECTING_IP']) ? $_SERVER['HTTP_CF_CONNECTING_IP']
 	: (!empty($_SERVER['HTTP_X_FORWARDED_FOR']) ? trim(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0])
 	: ($_SERVER['REMOTE_ADDR'] ?? ''));
 $ip = filter_var($ip, FILTER_VALIDATE_IP) ?: '';
 if ($ip === '') return;
 
+/* ---------- set _IS_SERP_BOT early and allow ---------- */
 $UA = $_SERVER['HTTP_USER_AGENT'] ?? '';
-
 require_once __DIR__ . '/bot-helpers.php';
 $__serp = bp_is_verified_serp_bot($ip, $UA);
+
 !defined('_IS_SERP_BOT') && define('_IS_SERP_BOT', $__serp);
 
-// skip all checks for verified search-engine bots
 if (_IS_SERP_BOT) return;
 
 
@@ -83,11 +105,10 @@ if ($match) {
 	$uri        = $_SERVER['REQUEST_URI'] ?? '';
 	$now        = time();
 
-	$nd = __DIR__ . '/notify';
-	@is_dir($nd) ?: @mkdir($nd, 0775, true);
+	@is_dir($NOTIFY_DIR) ?: @mkdir($NOTIFY_DIR, 0775, true);
 
 	// per (site, ip) counter state
-	$key       = $nd . '/' . md5($site.'|'.$ip) . '.json';
+	$key       = $NOTIFY_DIR . '/' . md5($site.'|'.$ip) . '.json';
 	$state     = ['hits'=>0, 'last'=>0]; // last = last send timestamp
 	if (is_file($key) && is_readable($key)) {
 		$j = @json_decode((string)@file_get_contents($key), true);
@@ -146,3 +167,39 @@ if ($stale && $CENTRAL_READ_URL) {
 		(@file_put_contents($tmp, implode("\n",$keep)."\n", LOCK_EX)!==false) ? @rename($tmp, $CACHE_FILE) : null;
 	}
 }
+
+
+// Determine outcome + stats for check-in
+$site   = $_SERVER['HTTP_HOST'] ?? '';
+$ok     = isset($lines) && is_array($lines) && count($lines) > 0; // wrote non-empty list
+$ips_ct = 0;
+if (is_file($CACHE_FILE) && is_readable($CACHE_FILE)) {
+	$ips_ct = count(file($CACHE_FILE, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: []);
+}
+$cache_ts = is_file($CACHE_FILE) ? (int)@filemtime($CACHE_FILE) : 0;
+
+// Only check-in when we actually tried (stale true)
+if (!empty($site) && $stale) {
+	$ts  = (string)time();
+	$msg = $ok ? 'refresh-ok' : 'refresh-fail'; // you can include HTTP code text if you capture it
+	$payload = $site.'|'.($ok?'ok':'fail').'|'.$ips_ct.'|'.$cache_ts.'|'.$ts;
+	$sig = hash_hmac('sha256', $payload, defined('BP_HONEYPOT_SECRET') ? BP_HONEYPOT_SECRET : 'Vn8qkM2Z4yHsR1jPwA3tLf7bE6uXpD9c');
+
+	$check = 'https://battleplanwebdesign.com/wp-content/checkin.php';
+	$ctx = stream_context_create(['http'=>[
+		'method'=>'POST',
+		'header'=>"Content-Type: application/x-www-form-urlencoded\r\nConnection: close\r\n",
+		'content'=>http_build_query([
+			'site'=>$site,
+			'status'=>$ok?'ok':'fail',
+			'ips'=>$ips_ct,
+			'cache_ts'=>$cache_ts,
+			'ts'=>$ts,
+			'sig'=>$sig,
+			'msg'=>$msg
+		]),
+		'timeout'=>0.5
+	]]);
+	@file_get_contents($check, false, $ctx); // fire-and-forget
+}
+

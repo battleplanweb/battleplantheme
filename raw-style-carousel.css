@@ -268,7 +268,6 @@
 }
 
 .carousel-indicators li::after {
-
 	top: 											0;
     bottom:											-15px;
 }
@@ -426,9 +425,10 @@
 @media (max-width: 1024px) {
 	.carousel .caption-holder {
 		font-size: 										80%;
-		width: 											75%;
+		width: 											74%;
 
-		left: 											7%;
+
+		left: 											13%;
 	}
 }
 
@@ -462,11 +462,27 @@
 		grid-column: 									span 12;
 	}
 	
+	
+	.carousel.content-text .block-image {
+  		display: 										grid;
+	}	
+	
+	.carousel.content-text .controls.controls-center {
+  		padding: 										0;
+	}
+	
+	.carousel.content-text img {
+  		transform: 										scale(1.2);
+	}
+	
 	.carousel .caption-holder {
+  		position: 										relative;
 		font-size: 										70%;
 		width: 											100%;
 		left: 											0%;
 		bottom: 										0%;
+		align-content: 									end;
+		background: 									var(--black);
 	}
 }
 

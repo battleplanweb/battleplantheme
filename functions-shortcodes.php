@@ -984,6 +984,8 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	$allBtn = $allBtn == "false" || $allBtn == "no" || $allBtn == "" ? "false" : $allBtn;
 	$order = esc_attr($a['order']);		
 	$caption = esc_attr($a['caption']);	
+	$contentType = esc_attr($a['content_type']);	
+	$contentType = $type === "testimonials" || $caption !== 'no' ? 'text' : $contentType;
 	$slideType = esc_attr($a['slide_type']) !== "fade" ? esc_attr($a['slide_type']) : "box";		
 	$slideEffect = esc_attr($a['slide_effect']);		
 	$speed = esc_attr($a['speed']);		
@@ -994,8 +996,6 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	$size = esc_attr($a['size']);
 	$randStart = esc_attr($a['rand_start']) != '' ? esc_attr($a['rand_start']) : ($indicators == "yes" ? "false" : "true");
 	$exclude = array_merge( explode(',', esc_attr($a['exclude'])), $GLOBALS['do_not_repeat'] );
-	$contentType = esc_attr($a['content_type']);	
-	$contentType = $type === "testimonials" ? 'text' : $contentType;
 	
 	if ( esc_attr($a['x_current']) == "true" ) :
 		global $post; 
@@ -1077,15 +1077,17 @@ function battleplan_getPostSlider($atts, $content = null ) {
 				if ( $link == "description" ) $linkTo = esc_html($description);
 				if ( $link != "none" ) $buildImg = "<a href='".$linkTo."' class='link-archive link-".$type."'>"; 	
 
-				$buildImg .= '<img class="img-slider '.$tags[0].'-img" loading="'.$lazy.'" src = "'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta(get_the_ID(), "_wp_attachment_image_alt", true).'">';
+				$buildImg .= '<img class="img-slider '.$tags[0].'-img" loading="'.$lazy.'" src = "'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta(get_the_ID(), "_wp_attachment_image_alt", true).'">';
+	
+	// 9/11/25 - removed  style="aspect-ratio:'.$image[1].'/'.$image[2].'" from $buildImg to allow for captions to drop below pic on mobile
 	
 				battleplan_countTease( get_the_ID() );				 
 		
-				if ( $caption == "yes" || $caption == "true" || $caption == "title" ) : 
+				if ( $caption === "yes" || $caption === "true" || $caption === "title" ) : 
 					$buildImg .= "<div class='caption-holder'><div class='img-caption'>".get_the_title(get_the_ID())."</div></div>";	
-				elseif ( $caption == "alt" ) : 
+				elseif ( $caption === "alt" ) : 
 					$buildImg .= "<div class='caption-holder'><div class='img-caption'>".readMeta(get_the_ID(), '_wp_attachment_image_alt', true)."</div></div>";
-				elseif ( $caption == "description" ) : 
+				elseif ( $caption === "description" ) : 
 					if ($headline || $description) {
 						$buildImg.= "<div class='caption-holder'><div class='img-caption'>";
 						if ($headline) $buildImg.= "<h2>".$headline."</h2>";
@@ -1201,7 +1203,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	
 	$slideClass = esc_attr($a['class'])." carousel-".$slideType." effect-".$slideEffect;
 	
-	$buildSlider = '<div id="'.$type.'Slider'.$sliderNum.'" class="carousel slide slider slider-'.$type.' content-'.$contentType.' '.$slideClass.' mult-'.$mult.$blur.'" data-interval="'.esc_attr($a['interval']).'" data-pause="'.$pause.'" data-speed="'.$speed.'" data-random="'.$randStart.'"';	
+	$buildSlider = '<div id="'.$type.'Slider'.$sliderNum.'" class="carousel slide slider slider-'.$type.' content-'.$contentType.$hasCaption.' '.$slideClass.' mult-'.$mult.$blur.'" data-interval="'.esc_attr($a['interval']).'" data-pause="'.$pause.'" data-speed="'.$speed.'" data-random="'.$randStart.'"';	
 	
 	if ( $autoplay == "yes" || $autoplay == "true" ) $buildSlider .= ' data-auto="true"';
 	

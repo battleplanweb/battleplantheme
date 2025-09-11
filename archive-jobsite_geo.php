@@ -163,11 +163,15 @@ get_header(); ?>
 		
 					$testimonialName = get_the_title($review);
 					$testimonialPlatform = strtolower(esc_attr(get_post_field( 'testimonial_platform', $review )));	
-					$testimonialRate = esc_attr(get_post_field( 'testimonial_rating', $review ));	
 					$testimonialContent = wp_kses_post( get_post_field('post_content', $review));
-				
+					$testimonialRate = esc_attr(get_post_field( 'testimonial_rating', $review ));			
+					$testimonialStars = '';
+					for ($i = 1; $i <= 5; $i++) {
+						$testimonialStars .= $testimonialRate >= $i ? '[get-icon type="star"]' : ($testimonialRate >= $i - 0.5 ? '[get-icon type="star-half"]' : '[get-icon type="star-empty"]');
+					}		
+		
 					$buildCredentials = "<div class='testimonials-credential testimonials-name'>".$testimonialName."</div>";
-					if ( $testimonialRate ) $buildCredentials .= "<div class='testimonials-credential testimonials-rating'>".$testimonialRate."</div>";
+					if ( $testimonialRate ) $buildCredentials .= "<div class='testimonials-credential testimonials-rating'>".$testimonialStars."</div>";
 		
 					$buildUpdate .= '<div class="jobsite-review">';
 		
@@ -305,7 +309,7 @@ get_header(); ?>
 				$displayHeader .= '<div class="archive-description archive-intro '.get_post_type().'-intro">'.$archiveIntro.'</div>'; 
 			$displayHeader .= '</header><!-- .archive-header-->';
 		
-			$buildIntro = '[col class="jobsite_geo_content"][txt]'.$GLOBALS['jobsite_geo-content'].'[/txt][/col]';	
+			$buildIntro = '[col class="jobsite_geo_content"][txt]'.bp_wpautop($GLOBALS['jobsite_geo-content']).'[/txt][/col]';	
 		
 			$buildIntro .= '[col class="jobsite_geo_map_holder"][txt class="jobsite_geo_map"]<div id="map" class="map-'.get_post_type().'"></div><div class="map-jobsite_geo-caption">'.$GLOBALS['jobsite_geo-map-caption'].'</div>[/txt][/col]';		
 
@@ -337,7 +341,7 @@ get_header(); ?>
 
 <main id="wrapper-bottom">
 	<div>
-		<h2><?php echo $GLOBALS['jobsite_geo-bottom-headline']; ?></h2>
+		<h2 style="margin:1em 0"><?php echo $GLOBALS['jobsite_geo-bottom-headline']; ?></h2>
 
 		<?php echo do_shortcode($buildUpdate); ?>
 

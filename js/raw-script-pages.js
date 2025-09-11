@@ -2242,7 +2242,7 @@ window.formLabelWidth = () => {
 		if ( thisDeviceW < mobileCutoff ) moveDiv(message, '#wrapper-top .section-parallax-disabled', 'after');
 		
 // When using parallax in #wrapper-top, determine which background to load for desktop or mobile		
-		const el = getObjects('.load-bg').forEach(el=>{
+		const el = getObjects('.load-bg-img').forEach(el=>{
 			const w = window.innerWidth
 			const iw = parseInt(el.dataset.imgWidth)
 			const ih = parseInt(el.dataset.imgHeight)
@@ -2260,8 +2260,11 @@ window.formLabelWidth = () => {
 			document.head.appendChild(link)
 
 			el.style.backgroundImage = `url(${src})`
-			el.style.height = `${h}px`
+			el.style.height = `auto`			
+			el.style.minHeight = `${h}px`
 			el.classList.add(`screen-${r}`)
+			
+			// 9/11/25 - Father Son Home Watch - changed height to auto, minHeight to height of background.  This keeps it from cutting off content if it exists, but still keeps the background visible if no content exists
 		})
 	};
 

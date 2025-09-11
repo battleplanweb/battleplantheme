@@ -30,28 +30,28 @@
 --------------------------------------------- */
 body.business-type-generalcontractor .acf-field-old-brand,
 body.business-type-generalcontractor .acf-field-old-equipment,
-body.business-type-generalcontractor .acf-field-old-model-no,
 body.business-type-generalcontractor .acf-field-new-brand,
 body.business-type-generalcontractor .acf-field-new-equipment,
-body.business-type-generalcontractor .acf-field-new-model-no,
 body.business-type-generalcontractor .acf-field-auto-make,
 body.business-type-generalcontractor .acf-field-auto-model,
-body.business-type-generalcontractor .acf-field-auto-year,
+body.business-type-generalcontractor .acf-field-auto-year, 
 body.business-type-roofingcontractor .acf-field-old-brand,
 body.business-type-roofingcontractor .acf-field-old-equipment,
-body.business-type-roofingcontractor .acf-field-old-model-no,
 body.business-type-roofingcontractor .acf-field-new-brand,
 body.business-type-roofingcontractor .acf-field-new-equipment,
-body.business-type-roofingcontractor .acf-field-new-model-no, 
 body.business-type-roofingcontractor .acf-field-auto-make,
 body.business-type-roofingcontractor .acf-field-auto-model,
 body.business-type-roofingcontractor .acf-field-auto-year,
+body.business-type-sprinkler-irrigation-services .acf-field-auto-make,
+body.business-type-sprinkler-irrigation-services .acf-field-auto-model,
+body.business-type-sprinkler-irrigation-services .acf-field-auto-year,
+body.business-type-plumber .acf-field-auto-make,
+body.business-type-plumber .acf-field-auto-model,
+body.business-type-plumber .acf-field-auto-year,
 body.business-type-automotive .acf-field-old-brand,
 body.business-type-automotive .acf-field-old-equipment,
-body.business-type-automotive .acf-field-old-model-no,
 body.business-type-automotive .acf-field-new-brand,
 body.business-type-automotive .acf-field-new-equipment,
-body.business-type-automotive .acf-field-new-model-no,
 body.site-type-hvac .acf-field-auto-make,
 body.site-type-hvac .acf-field-auto-model,
 body.site-type-hvac .acf-field-auto-year,
@@ -163,12 +163,6 @@ body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-fi
 	grid-column: 									span 3;
 }
 
-body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-old-brand,
-body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-old-equipment,
-body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-old-model-no,
-body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-new-brand,
-body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-new-equipment,
-body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-new-model-no,
 body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-auto-make,
 body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-auto-model,
 body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-auto-year {
@@ -177,6 +171,13 @@ body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-fi
 
 body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-address {
 	grid-column: 									span 5;
+}
+
+body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-old-brand,
+body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-old-equipment,
+body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-new-brand,
+body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-new-equipment {
+	grid-column: 									span 6;
 }
 
 body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-review-link {

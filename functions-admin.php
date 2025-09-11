@@ -416,10 +416,18 @@ function battleplan_add_body_classes($classes) {
 	$customer_info = customer_info();
 	$siteType = $customer_info['site-type'] ?? null;
 	$bizTypeRaw = $customer_info['business-type'] ?? null;
-	$bizType    = is_array($bizTypeRaw) ? ($bizTypeRaw[0] ?? null) : $bizTypeRaw;
 
     if ( $siteType ) $classes .= ' site-type-'.strtolower($siteType);
-    if ( $bizType ) $classes .= ' business-type-'.strtolower($bizType);
+	
+	if (is_array($bizTypeRaw)) {
+		foreach ($bizTypeRaw as $bizType) {
+			$bizType = preg_replace('/[^a-zA-Z0-9\s]/', '', $bizType);
+			$bizType = preg_replace('/\s+/', '-', trim($bizType));
+			$classes .= ' business-type-'.strtolower($bizType);
+		}
+	} else {
+		$classes .= ' business-type-'.strtolower($$bizTypeRaw);
+	}
 	
 	$user = wp_get_current_user();
 	if ( $user->exists() ) $classes .= ' user-'.$user->user_login;

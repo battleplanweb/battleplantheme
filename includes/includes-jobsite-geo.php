@@ -179,7 +179,7 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 			if ($state === strtoupper($name)) $state = $abbreviation;
 		}
 
-		if ( $address != '' && $city != '' && $state != '' && $zip != '' ) :	
+		if ( $address !== '' && $city !== '' && $state !== '' && $zip !== '' ) :	
 			$address = $address.', '.$city.', '.$state.' '.$zip;
 			$googleAPI = "https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address)."&key=AIzaSyC3gx2Pk4A6N_3Uxiik83Y_DTFRGRrYdSM";	
 			$response = wp_remote_get($googleAPI);
@@ -189,7 +189,8 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 				if ($data['status'] == 'OK') {
 					update_post_meta($post_id, 'geocode', $data['results'][0]['geometry']['location']);
 				} else {
-					mail('glendon@battleplanwebdesign.com', 'Geocoding API Error - '.customer_info()['name'], "\n\nFull response:\n" . $data['status']);
+					$htmlMessage = $address."<br><br>Full response:<br>" . $data['status'];
+					emailMe('Geocoding API Error - '.customer_info()['name'], $htmlMessage, $replyTo = null);
 				}
 			endif;	
 		endif;
@@ -220,10 +221,10 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 			$btVal  = (string) $btRaw;
 			$btServ = '';
 		}
-
-		// Customize for Sprinkler & Irrigation Services website
-		/*
-		if ( $btVal === "Local Business" && $btServ === "Sprinkler & Irrigation Services" ) :		
+		
+		
+		// Customize for General Contractor website
+		if ( strtolower($btVal) === "generalcontractor" ) :		
 			foreach ( array( 'gutter', 'seamless' ) as $keyword) {
 				if (stripos($description, $keyword) !== false) {
 					$service = 'gutters';
@@ -238,23 +239,11 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 				} 
 			}	
 		endif;		
-		*/
 		
-		// Customize for General Contractor website
-		if ( $btVal === "GeneralContractor" ) :		
-			foreach ( array( 'gutter', 'seamless' ) as $keyword) {
-				if (stripos($description, $keyword) !== false) {
-					$service = 'gutters';
-					break; 
-				} 
-			}
+		
+		// Customize for Plumber website
+		if ( strtolower($btVal) === "plumber" ) :		
 
-			foreach ( array( 'insulation', 'insulate', 'fiberglass' ) as $keyword) {
-				if (stripos($description, $keyword) !== false) {
-					$service = 'insulation';
-					break; 
-				} 
-			}	
 		endif;		
 			
 		// Customize for HVAC website
@@ -590,7 +579,7 @@ function battleplan_add_jobsite_geo_acf_fields() {
 			),
 			array(
 				'key' => 'field_old_brand',
-				'label' => 'Current / Former Brand',
+				'label' => 'What BRAND equipment does/did customer have?',
 				'name' => 'old_brand',
 				'aria-label' => '',
 				'type' => 'text',
@@ -605,7 +594,7 @@ function battleplan_add_jobsite_geo_acf_fields() {
 			),
 			array(
 				'key' => 'field_old_equipment',
-				'label' => 'Current / Former Equipment',
+				'label' => 'What TYPE of equipment does/did customer have?',
 				'name' => 'old_equipment',
 				'aria-label' => '',
 				'type' => 'text',
@@ -617,26 +606,10 @@ function battleplan_add_jobsite_geo_acf_fields() {
 					'class' => '',
 					'id' => '',
 				),
-			),
-			array(
-				'key' => 'field_old_model_no',
-				'label' => 'Current / Former Model #',
-				'name' => 'old_model_no',
-				'aria-label' => '',
-				'type' => 'text',
-				'instructions' => '',
-				'required' => 0,
-				'conditional_logic' => 0,
-				'wrapper' => array(
-					'width' => '33%',
-					'class' => '',
-					'id' => '',
-				),
 			),			
-			
 			array(
 				'key' => 'field_new_brand',
-				'label' => 'Replacement Brand',
+				'label' => 'If you replaced equipment, what BRAND did you use?',
 				'name' => 'new_brand',
 				'aria-label' => '',
 				'type' => 'text',
@@ -651,7 +624,7 @@ function battleplan_add_jobsite_geo_acf_fields() {
 			),
 			array(
 				'key' => 'field_new_equipment',
-				'label' => 'Replacement Equipment',
+				'label' => 'If you replaced equipment, what TYPE was it?',
 				'name' => 'new_equipment',
 				'aria-label' => '',
 				'type' => 'text',
@@ -663,26 +636,10 @@ function battleplan_add_jobsite_geo_acf_fields() {
 					'class' => '',
 					'id' => '',
 				),
-			),
-			array(
-				'key' => 'field_new_model_no',
-				'label' => 'Replacement Model #',
-				'name' => 'new_model_no',
-				'aria-label' => '',
-				'type' => 'text',
-				'instructions' => '',
-				'required' => 0,
-				'conditional_logic' => 0,
-				'wrapper' => array(
-					'width' => '33%',
-					'class' => '',
-					'id' => '',
-				),
-			),		
-						
+			),						
 			array(
 				'key' => 'field_auto_make',
-				'label' => 'Make',
+				'label' => 'What MAKE of vehicle does customer have?',
 				'name' => 'auto_make',
 				'aria-label' => '',
 				'type' => 'text',
@@ -697,7 +654,7 @@ function battleplan_add_jobsite_geo_acf_fields() {
 			),
 			array(
 				'key' => 'field_auto_model',
-				'label' => 'Model',
+				'label' => 'What MODEL of vehicle does customer have?',
 				'name' => 'auto_model',
 				'aria-label' => '',
 				'type' => 'text',
@@ -712,7 +669,7 @@ function battleplan_add_jobsite_geo_acf_fields() {
 			),
 			array(
 				'key' => 'field_auto_year',
-				'label' => 'Year',
+				'label' => 'What YEAR is the customer\'s vehicle?',
 				'name' => 'auto_year',
 				'aria-label' => '',
 				'type' => 'text',
@@ -732,7 +689,7 @@ function battleplan_add_jobsite_geo_acf_fields() {
 				'aria-label' => '',
 				'type' => 'image',
 				'instructions' => '',
-				'required' => 1,
+				'required' => 0,
 				'conditional_logic' => 0,
 				'wrapper' => array(
 					'width' => '',
@@ -757,7 +714,7 @@ function battleplan_add_jobsite_geo_acf_fields() {
 				'aria-label' => '',
 				'type' => 'image',
 				'instructions' => '',
-				'required' => 1,
+				'required' => 0,
 				'conditional_logic' => 0,
 				'wrapper' => array(
 					'width' => '',
@@ -832,7 +789,7 @@ function battleplan_add_jobsite_geo_acf_fields() {
 				'aria-label' => '',
 				'type' => 'text',
 				'instructions' => '',
-				'required' => 1,
+				'required' => 0,
 				'conditional_logic' => 0,
 				'wrapper' => array(
 					'width' => '',
@@ -852,7 +809,7 @@ function battleplan_add_jobsite_geo_acf_fields() {
 				'aria-label' => '',
 				'type' => 'text',
 				'instructions' => '',
-				'required' => 1,
+				'required' => 0,
 				'conditional_logic' => 0,
 				'wrapper' => array(
 					'width' => '',
@@ -954,6 +911,32 @@ function battleplan_add_jobsite_geo_acf_fields() {
 		'show_in_rest' => 0,
 	));
 }
+
+add_filter('acf/validate_value', function($valid, $value, $field, $input){
+
+	// Only run for your caption fields
+	$caption_fields = array(
+		'field_caption_1' => 'field_photo_1',
+		'field_caption_2' => 'field_photo_2',
+		'field_caption_3' => 'field_photo_3',
+		'field_caption_4' => 'field_photo_4',
+	);
+
+	if (!isset($caption_fields[$field['key']])) {
+		return $valid;
+	}
+
+	$photo_key = $caption_fields[$field['key']];
+	$photo_val = $_POST['acf'][$photo_key] ?? '';
+
+	// If photo exists but caption is empty → error
+	if ($photo_val && trim((string)$value) === '') {
+		return 'Caption is required when a photo is provided.';
+	}
+
+	return $valid;
+
+}, 10, 4);
 
 /*--------------------------------------------------------------
 # Basic Site Setup

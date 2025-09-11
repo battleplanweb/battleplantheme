@@ -27,11 +27,15 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		const setCarouselHeight = () => {
             const activeSlide = getObject('.carousel-item.active', carousel);
             const activeSlideH = activeSlide ? activeSlide.scrollHeight : 0;
+
             if (activeSlide && activeSlideH > maxH) {
-                slideInner.style.height = `${activeSlideH}px`;
-				maxH = activeSlideH;
+				maxH = activeSlideH;			
             }
+			
+            slideInner.style.height = `${maxH}px`;		
         };
+		
+		window.addEventListener('resize', () => { maxH = 0; setCarouselHeight(); });	
 
     // Set aspect ratio based on size of images inside the carousel
         const calculateAspectRatio = () => {
@@ -82,7 +86,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 				updateIndicators();
 			}
         };
-
+		
 		if ( contentType === 'image' ) calculateAspectRatio();
         if ( contentType === 'text' ) setCarouselHeight();
 		

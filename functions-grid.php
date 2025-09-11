@@ -501,7 +501,7 @@ function battleplan_buildParallax( $atts, $content = null ) {
 		$ratio = $imgW && $imgH ? $imgW / $imgH : 2;
 		$initialH = round(480 / $ratio);
 
-		return do_shortcode('<'.$div.' id="'.$name.'" class="load-bg '.$type.$style.' '.$type.'-'.$width.' '.$type.'-parallax-disabled'.$class.'"'.$tracking.' style="padding-top:'.$padding.'px; padding-bottom:'.$padding.'px; height:'.$initialH.'px; background-image:url('.$placeholder.'); background-size:cover; background-position:'.$posY.' '.$posX.'" data-img-base="'.$imgBase.'" data-img-ext="'.$imgExt.'" data-img-width="'.$imgW.'" data-img-height="'.$imgH.'">'.$content.'</'.$div.'>');
+		return do_shortcode('<'.$div.' id="'.$name.'" class="load-bg-img '.$type.$style.' '.$type.'-'.$width.' '.$type.'-parallax-disabled'.$class.'"'.$tracking.' style="padding-top:'.$padding.'px; padding-bottom:'.$padding.'px; height:'.$initialH.'px; background-image:url('.$placeholder.'); background-size:cover; background-position:'.$posY.' '.$posX.'" data-img-base="'.$imgBase.'" data-img-ext="'.$imgExt.'" data-img-width="'.$imgW.'" data-img-height="'.$imgH.'">'.$content.'</'.$div.'>');
 	else:
 		return do_shortcode('<'.$div.' id="'.$name.'" class="'.$type.$style.' '.$type.'-'.$width.' '.$type.'-parallax'.$class.'"'.$tracking.' style="height:'.$height.'" data-parallax="scroll" data-img-width="'.$imgW.'" data-img-height="'.$imgH.'" data-pos-x="'.$posX.'" data-top-y="'.$topY.'" data-bottom-y="'.$botY.'" data-fixed="'.$fixed.'" data-image-src="'.$image.'">'.$content.$buildScrollBtn.'</'.$div.'>');
 	endif;	 

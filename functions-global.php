@@ -14,7 +14,7 @@
 --------------------------------------------------------------*/
 
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.32.3' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.32.4' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -207,3 +207,45 @@ if ( _PAGE_SLUG == "wp-cron.php" ) :
 		fclose($my_file); 
 	endif;
 endif;
+
+/*--------------------------------------------------------------
+# Send data to 'Site Checkin'
+--------------------------------------------------------------*/
+if (is_admin() || (defined('WP_CLI') && WP_CLI)) return;
+if (defined('_IS_SERP_BOT') && _IS_SERP_BOT) return;
+
+// --- throttle file writes (every 5 min) ---
+$last_write = time() - (int)get_option('bp_state_last_write', 0);
+if ($last_write < 300) return;
+
+// --- gather info ---
+$info = [
+	'name'         => $customer_info['name'],
+	'framework'    => defined('_BP_VERSION') ? _BP_VERSION : '',
+	'ts'           => time(),                         // unix timestamp (UTC)
+];
+
+if ($last_write > 300) {
+	require_once get_template_directory().'/functions-admin-stats.php';
+	$info = array_merge($info, [
+		'hits_week'		=> $GLOBALS['ga4_visitor']['page-views-7'],
+		'hits_month'	=> $GLOBALS['ga4_visitor']['page-views-30'],
+		'hits_quarter'	=> $GLOBALS['ga4_visitor']['page-views-90'],
+		'hits_year'	=> $GLOBALS['ga4_visitor']['page-views-365'],
+		'mobile_speed'	=> $GLOBALS['site_check']['mobile_speed']		
+	]);
+}
+
+// --- write to /wp-content/bp-guard/state.json ---
+$base = WP_CONTENT_DIR . '/bp-guard';
+if (!is_dir($base)) wp_mkdir_p($base);
+$file = $base . '/state.json';
+$tmp  = $file . '.tmp';
+
+$enc = wp_json_encode($info);
+if ($enc !== false) {
+	@file_put_contents($tmp, $enc, LOCK_EX);
+	@chmod($tmp, 0664);
+	@rename($tmp, $file);
+	update_option('bp_state_last_write', time());
+}

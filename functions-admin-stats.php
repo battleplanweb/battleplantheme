@@ -451,6 +451,8 @@ function battleplan_admin_tech_stats() {
 			$sessions = isset($GLOBALS['speedSessions'][$metricKey][$deviceTitle]) ? $GLOBALS['speedSessions'][$metricKey][$deviceTitle] : 0;			
 			$fastSessions = isset($GLOBALS['fastSessions'][$metricKey][$deviceTitle]) ? $GLOBALS['fastSessions'][$metricKey][$deviceTitle] : 0;
 	
+			if ( $metricKey === 'sessions-30') $GLOBALS['site_check'][$deviceTitle.'_speed'] = number_format($total / $sessions, 1);
+	
 			if ( $deviceTotalSessions > 0 && $sessions > 0 ) echo "<li><div class='value'><b>".number_format(($deviceSessions / $deviceTotalSessions)*100,1)."%</b></div><div class='label-half' style='width:calc(35% - 35px)'>".ucwords($deviceTitle)."</div><div class='label-half style='width:calc(65% - 35px)'>".number_format($total / $sessions, 1)."s&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;".number_format(($fastSessions / $sessions)*100, 1)."% target</div></li>";
 		endforeach;
 

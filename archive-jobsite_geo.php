@@ -52,6 +52,7 @@ get_header(); ?>
 				$alt[2] = esc_attr(get_field( "jobsite_photo_3_alt"));
 				$alt[3] = esc_attr(get_field( "jobsite_photo_4_alt"));		
 				$imgs = array_filter($imgs);
+				$imgNum = count($imgs);
 				$alt = array_filter($alt);
 				$jobDesc = wp_kses_post( get_the_content() );
 				$review = esc_attr(get_field( "review"));	
@@ -107,8 +108,7 @@ get_header(); ?>
 
 				$buildUpdate .= '[section width="'.$sectionWidth.'" name="jobsite-'.get_the_ID().'" class="archive-content archive-'.get_post_type().$addTags.$addClass.'"][layout grid="'.$grid.'" valign="'.$valign.'"]';
 				
-				$buildUpdate .= '[col]';
-		
+				$buildUpdate .= $imgNum === 1 ? '[col class="single-img"]' : '[col]';
 				$buildUpdate .= '<div class="jobsite-description"><p>';
 				$buildUpdate .= '<div class="jobsite_geo-job_meta">'.$location.'</div>';
 				$buildUpdate .= $jobDesc.'</div>';
@@ -139,20 +139,26 @@ get_header(); ?>
 					}
 				</script>
 		<?php
-		
-				if ( $imgs[4] ) $imgSize = "quarter-f";
-				elseif ( $imgs[3] ) $imgSize = "third-f";
-				else $imgSize = "half-f";		
-		
-				$buildUpdate .= '<ul class="jobsite-photos side-by-side align-center break-none">';
-				for ($i = 0; $i < count($imgs); $i++) :
-					$img = wp_get_attachment_image_src( $imgs[$i], $imgSize );
 
-					list ($src, $width, $height ) = $img;
-					if ($height > 0) $ratio = $width / $height;	
-					$buildUpdate .= '<li style="flex: '.$ratio.'" class="full-top">'.wp_get_attachment_image( $imgs[$i], $imgSize, "", ["alt" => $alt[$i]] ).'</li>';	
-				endfor;
-				$buildUpdate .= '</ul>';
+		
+				if ( $imgNum === 1 ) {
+					$buildUpdate .= '<div class="jobsite-photos align-center break-none">'.wp_get_attachment_image( $imgs[0], $imgSize, "", ["alt" => $alt[0]] ).'</div>';					
+				} else {
+
+					if ( $numImg === 4 ) $imgSize = "quarter-f";
+					elseif ( $numImg === 3 ) $imgSize = "third-f";
+					else $imgSize = "half-f";		
+		
+					$buildUpdate .= '<ul class="jobsite-photos side-by-side align-center break-none">';
+					for ($i = 0; $i < $imgNum; $i++) :
+						$img = wp_get_attachment_image_src( $imgs[$i], $imgSize );
+
+						list ($src, $width, $height ) = $img;
+						if ($height > 0) $ratio = $width / $height;	
+						$buildUpdate .= '<li style="flex: '.$ratio.'" class="full-top">'.wp_get_attachment_image( $imgs[$i], $imgSize, "", ["alt" => $alt[$i]] ).'</li>';	
+					endfor;
+					$buildUpdate .= '</ul>';
+				}
 
 				if ( $review ) :
 					wp_enqueue_style( 'battleplan-testimonials', get_template_directory_uri()."/style-testimonials.css", array('parent-style'), _BP_VERSION ); 
@@ -299,7 +305,7 @@ get_header(); ?>
 				}
 			</script>
 
-			<script async defer nonce="<?php echo _BP_NONCE; ?>" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC3gx2Pk4A6N_3Uxiik83Y_DTFRGRrYdSM&&callback=initMap"></script>
+			<script async defer nonce="<?php echo _BP_NONCE; ?>" src="https://maps.googleapis.com/maps/api/js?key=<?php echo _JOBSITE_API; ?>&&callback=initMap"></script>
 		<?php }
 
 

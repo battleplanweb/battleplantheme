@@ -426,7 +426,7 @@ function battleplan_add_body_classes($classes) {
 			$classes .= ' business-type-'.strtolower($bizType);
 		}
 	} else {
-		$classes .= ' business-type-'.strtolower($$bizTypeRaw);
+		$classes .= ' business-type-'.strtolower($bizTypeRaw);
 	}
 	
 	$user = wp_get_current_user();

@@ -2,9 +2,6 @@
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
-# CSS Variables/*--------------------------------------------------------------
->>> TABLE OF CONTENTS:
-----------------------------------------------------------------
 # Page Styling
 # Navigation
 	- Mobile Menu
@@ -36,6 +33,13 @@
 
 .tax-jobsite_geo-service-areas #wrapper-bottom h2 {
 	margin-bottom: 								0.5em;
+}
+
+.section.archive-content.archive-jobsite_geo {
+  	margin-top: 								0;
+  	margin-bottom:								0;
+	padding-top: 								3em;
+	padding-bottom: 							3em;
 }
 
 .section.archive-content.archive-jobsite_geo .jobsite_geo-job_meta {
@@ -83,6 +87,21 @@ body.jobsite_geo #wrapper-bottom .archive-footer {
 	order: 										3;
 }
 
+section.archive-jobsite_geo .col.single-img .col-inner {
+	grid-template-columns: 						3fr 1fr;
+}
+
+section.archive-jobsite_geo .col.single-img .col-inner div {
+	grid-column: 								span 1;
+} 
+
+/* 2: Phones (landscape) + Tablets (portrait) */
+@media (max-width: 860px) {
+	section.archive-jobsite_geo .col.single-img .col-inner {
+		grid-template-columns: 						1fr;
+	}
+}
+
 /* 1: Phones (portrait) */
 @media (max-width: 576px) {
 	.jobsite_geo .archive-jobsite_geo .jobsite-review .block-image.image-testimonials.testimonials-generic-icon,
@@ -90,12 +109,6 @@ body.jobsite_geo #wrapper-bottom .archive-footer {
 		width: 									70%;
 	}
 }
-
-# Biz/Site Types
-# Styles
-# Mobile Styles
-
-*/
 
 /*--------------------------------------------------------------
 # CSS Variables
@@ -382,10 +395,4 @@ body.wp-admin.post-type-jobsite_geo #poststuff #postbox-container-2 #normal-sort
 	body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-caption-4 {
 		order: 											8;
 	}
-	
-}
-
-/* 1: Phones (portrait) */
-@media (max-width: 576px) {
-}
 }

@@ -129,7 +129,8 @@ function format_location($location) {
 // format service
 function format_service($service) {
 	$jobsite_service = ucwords(str_replace('-', ' ', $service));
-	$jobsite_service = str_replace('Hvac', 'HVAC', $jobsite_service);	
+	$jobsite_service = str_replace('Hvac', 'HVAC', $jobsite_service);
+	$jobsite_service = $jobsite_service === "Service Area" ? "Recent Jobsites" : $jobsite_service;
 
 	return $jobsite_service;
 }
@@ -179,21 +180,31 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 			if ($state === strtoupper($name)) $state = $abbreviation;
 		}
 
-		if ( $address !== '' && $city !== '' && $state !== '' && $zip !== '' ) :	
+		if ($address !== '' && $city !== '' && $state !== '' && $zip !== '') :
 			$address = $address.', '.$city.', '.$state.' '.$zip;
-			$googleAPI = "https://maps.googleapis.com/maps/api/geocode/json?address=".urlencode($address)."&key=AIzaSyC3gx2Pk4A6N_3Uxiik83Y_DTFRGRrYdSM";	
-			$response = wp_remote_get($googleAPI);
-			if ( !is_wp_error($response)) :
+			$googleAPI = 'https://maps.googleapis.com/maps/api/geocode/json?address='.urlencode($address).'&key='._PLACES_API;
+
+			$response = wp_remote_get($googleAPI, ['timeout' => 10]);
+			if (is_wp_error($response)) :
+				emailMe('Geocoding HTTP Error - '.customer_info()['name'], $response->get_error_message(), $replyTo = null);
+			else :
+				$http_code = wp_remote_retrieve_response_code($response);
 				$body = wp_remote_retrieve_body($response);
 				$data = json_decode($body, true);
-				if ($data['status'] == 'OK') {
+
+				if ($http_code !== 200 || !is_array($data)) :
+					$html = 'HTTP '.$http_code.'<br><br>Raw body:<br><pre>'.esc_html($body).'</pre>';
+					emailMe('Geocoding Bad Response - '.customer_info()['name'], $html, $replyTo = null);
+				elseif (($data['status'] ?? '') === 'OK') :
 					update_post_meta($post_id, 'geocode', $data['results'][0]['geometry']['location']);
-				} else {
-					$htmlMessage = $address."<br><br>Full response:<br>" . $data['status'];
-					emailMe('Geocoding API Error - '.customer_info()['name'], $htmlMessage, $replyTo = null);
-				}
-			endif;	
+				else :
+					$err = ($data['error_message'] ?? 'No error_message returned.');
+					$html = $address.'<br><br>Status: '.esc_html($data['status']).'<br>Error: '.esc_html($err);
+					emailMe('Geocoding API Error - '.customer_info()['name'], $html, $replyTo = null);
+				endif;
+			endif;
 		endif;
+
 
 		// add city-state as location tag
 		if ( $city && $state ) $location = $city.'-'.$state; 
@@ -242,8 +253,8 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 		
 		
 		// Customize for Plumber website
-		if ( strtolower($btVal) === "plumber" ) :		
-
+		if ( strtolower($btVal) === "plumber" ) :
+			$service = 'plumbing-services';		
 		endif;		
 			
 		// Customize for HVAC website
@@ -293,7 +304,15 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 		endif;
 		
 		$service = $service ?: 'service-area';
-		$service && $location ? wp_set_object_terms($post_id, $service . '--' . strtolower($location), 'jobsite_geo-services', true) : null;
+		$service && $location
+			? wp_set_object_terms(
+				$post_id,
+				[$service.'--'.strtolower($location)],
+				'jobsite_geo-services',
+				false // overwrite existing terms
+			)
+			: null;
+
 				
 		// set first uploaded pic as jobsite thumbnail
 		set_post_thumbnail($post_id, esc_attr(get_field( "jobsite_photo_1")) );	
@@ -955,7 +974,7 @@ function battleplan_override_jobsite_query( $query ) {
 	if (!is_admin() && $query->is_main_query()) :		
 		if ( is_post_type_archive('jobsite_geo') || is_tax('jobsite_geo-service-areas') || is_tax('jobsite_geo-services') || is_tax('jobsite_geo-techs') ) : 
 			$query->set( 'post_type','jobsite_geo');
-			$query->set( 'posts_per_page', 10);
+			$query->set( 'posts_per_page', 30);
 			$query->set( 'meta_key', 'job_date' );
         	$query->set( 'orderby', 'meta_value' );
         	$query->set( 'order', 'DESC');
@@ -972,14 +991,14 @@ function battleplan_jobsite_template($template) {
         $jobsite_term = get_queried_object();
 	
 		if ($jobsite_term) {
-			if ( is_tax('jobsite_geo-services') ):
+			if ( is_tax('jobsite_geo-services') && $jobsite_service !== "service-area") :
 				$term_parts = explode('--', $jobsite_term->name);
 				$jobsite_service = isset($term_parts[0]) ? $term_parts[0] : null;
 				$jobsite_location = isset($term_parts[1]) ? $term_parts[1] : null;			
 				$GLOBALS['jobsite_geo-service'] = format_service($jobsite_service);
 			else:
 				$jobsite_location = $jobsite_term->name;			
-				$GLOBALS['jobsite_geo-service'] = "HVAC Service";
+				$GLOBALS['jobsite_geo-service'] = "Service";
 			endif;
 			
 			$GLOBALS['jobsite_geo-city-state'] = format_location($jobsite_location);
@@ -992,13 +1011,26 @@ function battleplan_jobsite_template($template) {
 			$GLOBALS['jobsite_geo-headline'] = $GLOBALS['jobsite_geo-service'].' in '.$GLOBALS['jobsite_geo-city-state'];
             $GLOBALS['jobsite_geo-page_title'] = $GLOBALS['jobsite_geo-headline'].$sep.get_bloginfo('name');
 	
-			$service_full = ["Air Conditioner Installation", "Heating Installation", "Thermostat Installation", "Air Conditioner Repair", "Heating Repair", "Thermostat Repair", "HVAC Maintenance"];
-			$service_short = ["installed AC equipment", "installed heating equipment", "installed new thermostats", "repaired air conditioners", "repaired heaters", "repaired thermostats", "serviced HVAC systems"];	
-			$service_caption = str_replace($service_full, $service_short, $GLOBALS['jobsite_geo-service']);	
-			$service_caption = $service_caption.' in the ';	
-			$plural = ( stripos($GLOBALS['jobsite_geo-service'], 'maintenance') === false ) ? 's' : '';
-	
-			$GLOBALS['jobsite_geo-map-caption'] = 'Locations we have recently '.$service_caption.$GLOBALS['jobsite_geo-city'].' area.';
+			$service_full = [
+							"Air Conditioner Installation", 
+							"Heating Installation", 
+							"Thermostat Installation", 
+							"Air Conditioner Repair", 
+							"Heating Repair", 
+							"Thermostat Repair", 
+							"HVAC Maintenance", 
+							"Plumbing Services"];
+			$service_short = ["Recent air conditioner replacements in the ".$GLOBALS['jobsite_geo-city']." area.", 
+							  $GLOBALS['jobsite_geo-city']." customers we have recently helped with new heating equipment.", 
+							  "Recent thermostat installations for residents of ".$GLOBALS['jobsite_geo-city'].".", 
+							  "We have recently repaired air conditioners for these ".$GLOBALS['jobsite_geo-city']." customers.",
+							  "Recent heating system repairs for customers living in ".$GLOBALS['jobsite_geo-city'].".", 
+							  "We recently repaired thermostats in these ".$GLOBALS['jobsite_geo-city']." locations.", 
+							  $GLOBALS['jobsite_geo-city']." customers that recently trusted us with their HVAC service.", 
+							  "Plumbing issues we have recently solved for customers in the ".$GLOBALS['jobsite_geo-city']." area."];	
+			$GLOBALS['jobsite_geo-map-caption'] = str_replace($service_full, $service_short, $GLOBALS['jobsite_geo-service']);	
+
+			$plural = ( stripos($GLOBALS['jobsite_geo-service'], 'services') === false && stripos($GLOBALS['jobsite_geo-service'], 'maintenance') === false ) ? 's' : '';
 	
 			$GLOBALS['jobsite_geo-bottom-headline'] = "Recent ".$GLOBALS['jobsite_geo-service'].$plural." In ".$GLOBALS['jobsite_geo-city'];
 

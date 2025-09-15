@@ -152,40 +152,33 @@ if ($stale) {
 
 /* ---------- if matched: block + central notify (5 hits → send, then 1h cooldown) ---------- */
 if ($matched) {
-	// central notify with per-(site,ip) threshold
-	$site   = $_SERVER['HTTP_HOST'] ?? '';
-	$uri    = $_SERVER['REQUEST_URI'] ?? '';
-	$ua     = $_SERVER['HTTP_USER_AGENT'] ?? '';
-	$now    = time();
+	// ---- central "blocked" notify (no delay) ----
+	$CENTRAL_BLOCKED_URL = 'https://battleplanwebdesign.com/wp-content/blocked-notify.php'; // make sure this exists
+	$site = $_SERVER['HTTP_HOST'] ?? '';
+	$ua   = $_SERVER['HTTP_USER_AGENT'] ?? '';
+	$ref  = $_SERVER['HTTP_REFERER'] ?? '';
+	$ptr  = gethostbyaddr($ip) ?: '';
+	$ts   = (string)time();
 
-	// per-(site,ip) state
-	@is_dir($NOTIFY_DIR) ?: @mkdir($NOTIFY_DIR, 0775, true);
-	$key   = $NOTIFY_DIR . '/' . md5($site.'|'.$ip) . '.json';
-	$state = ['hits'=>0,'last'=>0];
-	if (is_file($key) && is_readable($key)) {
-		$j = @json_decode((string)@file_get_contents($key), true);
-		if (is_array($j) && isset($j['hits'],$j['last'])) $state = ['hits'=>(int)$j['hits'],'last'=>(int)$j['last']];
-	}
-	if ($now - $state['last'] >= 3600) $state['hits'] = 0; // cooldown expired → reset counter
-	$state['hits']++;
+	// HMAC over ip|site|ts
+	$payload = $ip.'|'.$site.'|'.$ts;
+	$sig     = hash_hmac('sha256', $payload, $BP_SECRET);
 
-	if ($state['hits'] >= 5 && $CENTRAL_BLOCKED_URL) {
-		$ts  = (string)$now;
-		$pl  = $ip.'|'.$site.'|'.$uri.'|'.$ua.'|'.$ts;
-		$sig = hash_hmac('sha256', $pl, $BP_SECRET);
-		$ctx = stream_context_create(['http'=>[
-			'method'=>'POST',
-			'header'=>"Content-Type: application/x-www-form-urlencoded\r\nConnection: close\r\n",
-			'content'=>http_build_query(['ip'=>$ip,'site'=>$site,'uri'=>$uri,'ua'=>$ua,'ts'=>$ts,'sig'=>$sig]),
-			'timeout'=>0.3
-		]]);
-		@file_get_contents($CENTRAL_BLOCKED_URL, false, $ctx);
-		$state['last'] = $now;   // start cooldown window
-		$state['hits'] = 0;      // reset counter after send
-	}
-	@file_put_contents($key, json_encode($state), LOCK_EX);
+	$ctx = stream_context_create(['http'=>[
+		'method'=>'POST',
+		'header'=>"Content-Type: application/x-www-form-urlencoded\r\nConnection: close\r\n",
+		'content'=>http_build_query([
+			'ip'=>$ip,'site'=>$site,'ts'=>$ts,'sig'=>$sig,
+			'ua'=>$ua,'ref'=>$ref,'ptr'=>$ptr,'msg'=>'blocked'
+		]),
+		'timeout'=>0.6
+	]]);
+	@file_get_contents($CENTRAL_BLOCKED_URL, false, $ctx);
 
-	// serve block
+	// optional: local diag
+	if (isset($diag) && is_callable($diag)) $diag('BLOCKED notify sent ip='.$ip);
+
+	// ---- block response ----
 	if (!headers_sent()) {
 		header('Content-Type: text/plain; charset=UTF-8');
 		header('Cache-Control: no-store');
@@ -194,6 +187,7 @@ if ($matched) {
 	}
 	exit;
 }
+
 
 /* ---------- stale-while-revalidate: try a very short central refresh if stale ---------- */
 $stale = !$cache_exists || (time() - @filemtime($CACHE_FILE) > $CACHE_MAX_AGE);

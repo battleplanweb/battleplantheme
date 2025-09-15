@@ -14,11 +14,15 @@
 --------------------------------------------------------------*/
 
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.32.4' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.32.5' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID ); 
+
+if ( !defined('_PLACES_API') ) define ( '_PLACES_API', get_option('bp_places_key') );
+if ( !defined('_JOBSITE_API') ) define ( '_JOBSITE_API', get_option('bp_jobsite_key') );
+if ( !defined('_BREVO_API') ) define ( '_BREVO_API', get_option('bp_brevo_key') );
 
 $get_user = wp_get_current_user();
 $roles = $get_user->roles;
@@ -216,23 +220,23 @@ if (defined('_IS_SERP_BOT') && _IS_SERP_BOT) return;
 
 // --- throttle file writes (every 5 min) ---
 $last_write = time() - (int)get_option('bp_state_last_write', 0);
-if ($last_write < 300) return;
+if ($last_write < 3600) return;//3600
 
 // --- gather info ---
 $info = [
 	'name'         => $customer_info['name'],
 	'framework'    => defined('_BP_VERSION') ? _BP_VERSION : '',
-	'ts'           => time(),                         // unix timestamp (UTC)
+	'ts'           => time(),                       
 ];
 
-if ($last_write > 300) {
+if ($last_write > 43200) { //43200
 	require_once get_template_directory().'/functions-admin-stats.php';
 	$info = array_merge($info, [
 		'hits_week'		=> $GLOBALS['ga4_visitor']['page-views-7'],
 		'hits_month'	=> $GLOBALS['ga4_visitor']['page-views-30'],
 		'hits_quarter'	=> $GLOBALS['ga4_visitor']['page-views-90'],
-		'hits_year'	=> $GLOBALS['ga4_visitor']['page-views-365'],
-		'mobile_speed'	=> $GLOBALS['site_check']['mobile_speed']		
+		'hits_year'		=> $GLOBALS['ga4_visitor']['page-views-365'],
+		'mobile_speed'	=> $GLOBALS['ga4_visitor']['ck_mobile_speed']		
 	]);
 }
 

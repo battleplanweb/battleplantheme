@@ -25,6 +25,52 @@ function battleplan_delete_prefixed_options( $prefix ) {
 	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
 }	
 
+if ( !get_option('bp_places_key') || get_option('bp_places_key') === null || get_option('bp_places_key') === '' ) :
+		$apiKey1 = "AIzaSyBqf";
+		$apiKey1 .= "0idxwuOxaG";
+		$apiKey1 .= "-j3eCpef1Bunv";
+		$apiKey1 .= "-YVdVP8";	
+		updateOption( 'bp_places_key', $apiKey1, false );
+endif;
+
+if ( !get_option('bp_jobsite_key') || get_option('bp_jobsite_key') === null || get_option('bp_jobsite_key') === '' ) :
+		$apiKey2 = "AIzaSy";
+		$apiKey2 .= "C3gx2Pk4A6N_";
+		$apiKey2 .= "3Uxiik83Y_";
+		$apiKey2 .= "DTFRGRrYdSM";	
+
+		updateOption( 'bp_jobsite_key', $apiKey2, false );
+endif;
+
+if ( !get_option('bp_brevo_key') || get_option('bp_brevo_key') === null || get_option('bp_brevo_key') === '' ) :
+	$site           	= str_replace('https://', '', get_bloginfo('url'));
+	$rovin          	= in_array($site, ["babeschicken.com", "babescatering.com", "babeschicken.tv", "sweetiepiesribeyes.com", "bubbascookscountry.com"], true);
+	$apiKey1 = "keysib";
+
+	if ( $rovin === true ) {	
+		$apiKey2 = "-b916aeccb98bf3fcca73";
+		$apiKey3 = "a606526cefdf92084ce7a9048d5cf734124e09f9bb26";
+		$apiKey4 = "-YcYFamx5FrGvCxXe";
+	} else {	
+		$apiKey2 = "-d08cc84fe45b37a420ef3";
+		$apiKey3 = "a9074e001fa21f640578f699994cba854489d3ef793";
+		$apiKey4 = "-bzWkS9dgt05KccIF";
+	}	
+
+		updateOption( 'bp_brevo_key', $apiKey1.$apiKey2.$apiKey3.$apiKey4, false );
+endif;
+
+	delete_option('bp_product_upload_2023_03_06');
+	delete_option('bp_product_upload_2023_11_30');
+	delete_option('bp_setup_2024_07_09');
+	delete_option('bp_bad_ips');
+	delete_option('load_time_tablet');	
+	delete_option('product-update-may-2022');
+	battleplan_delete_prefixed_options( 'widget_' );
+	
+
+
+
 
 //if ( get_option('bp_setup_2023_09_15') != "completed" ) :
 	//add_action("init", "bp_remove_cron_job"); 
@@ -86,11 +132,6 @@ function processChron($forceChron) {
 	
 	if (!empty($placeIDs)) {
 // 2) Decide whether to hit the API
-		$apiKey = "AIzaSyBqf";
-		$apiKey .= "0idxwuOxaG";
-		$apiKey .= "-j3eCpef1Bunv";
-		$apiKey .= "-YVdVP8";	
-
 		$today 			= strtotime(date("F j, Y"));	
 		$daysSince     	= ($today - (int)($google_info['date'] ?? 0)) / 86400;
 		$reviewCount   	= (int)($google_info['google-reviews'] ?? 0);
@@ -108,7 +149,7 @@ function processChron($forceChron) {
 				if (strlen($placeID) <= 10) { continue; }
 				
 				$fields = 'displayName,formattedAddress,addressComponents,location,regularOpeningHours,currentOpeningHours,internationalPhoneNumber,rating,userRatingCount,utcOffsetMinutes';
-    			$url = 'https://places.googleapis.com/v1/places/' . rawurlencode($placeID) . '?fields=' . urlencode($fields) . '&key=' . $apiKey;
+    			$url = 'https://places.googleapis.com/v1/places/' . rawurlencode($placeID) . '?fields=' . urlencode($fields) . '&key=' . _PLACES_API;
 
 				$ch = curl_init();
 				 curl_setopt_array($ch, [
@@ -220,63 +261,63 @@ function processChron($forceChron) {
 				}
 
 				// Compose street lines
-$base   = trim($comp['street_num'].' '.$comp['route']);
-$sub    = trim((string)$comp['subpremise']); // suite/unit
-$prem   = trim((string)$comp['premise']);    // building name (optional)
-$floor  = trim((string)$comp['floor']);      // floor (optional)
+				$base   = trim($comp['street_num'].' '.$comp['route']);
+				$sub    = trim((string)$comp['subpremise']); // suite/unit
+				$prem   = trim((string)$comp['premise']);    // building name (optional)
+				$floor  = trim((string)$comp['floor']);      // floor (optional)
 
-// Normalize suite/unit to a consistent shape: "#101", "Suite L #642", "Ste 5", etc.
-$normalizeSubpremise = function(string $s): string {
-    $s = preg_replace('/\s+/', ' ', trim($s));
-    if ($s === '') return '';
+				// Normalize suite/unit to a consistent shape: "#101", "Suite L #642", "Ste 5", etc.
+				$normalizeSubpremise = function(string $s): string {
+					$s = preg_replace('/\s+/', ' ', trim($s));
+					if ($s === '') return '';
 
-    // Already "#101" (allow whitespace after #)
-    if (preg_match('/^#\s*\S+$/', $s)) {
-        return '#' . preg_replace('/^#\s*/', '', $s);
-    }
+					// Already "#101" (allow whitespace after #)
+					if (preg_match('/^#\s*\S+$/', $s)) {
+						return '#' . preg_replace('/^#\s*/', '', $s);
+					}
 
-    // Bare unit like "101" or "12B" -> "#101"
-    if (preg_match('/^[0-9]+[A-Za-z]?$/', $s)) {
-        return '#'.$s;
-    }
+					// Bare unit like "101" or "12B" -> "#101"
+					if (preg_match('/^[0-9]+[A-Za-z]?$/', $s)) {
+						return '#'.$s;
+					}
 
-    // Labeled variants -> keep label, normalize casing/punctuation
-    if (preg_match('/^(suite|ste|unit|apt|apartment|bldg)\b[\s\-#]*([\w\-# ]+)$/i', $s, $m)) {
-        $label = ucfirst(strtolower($m[1])); // Suite/Ste/Unit/Apt/Apartment/Bldg
-        $rest  = preg_replace('/\s+/', ' ', trim($m[2]));
-        if (preg_match('/^[0-9]+[A-Za-z]?$/', $rest)) $rest = '#'.$rest;
-        return $label.' '.$rest;
-    }
+					// Labeled variants -> keep label, normalize casing/punctuation
+					if (preg_match('/^(suite|ste|unit|apt|apartment|bldg)\b[\s\-#]*([\w\-# ]+)$/i', $s, $m)) {
+						$label = ucfirst(strtolower($m[1])); // Suite/Ste/Unit/Apt/Apartment/Bldg
+						$rest  = preg_replace('/\s+/', ' ', trim($m[2]));
+						if (preg_match('/^[0-9]+[A-Za-z]?$/', $rest)) $rest = '#'.$rest;
+						return $label.' '.$rest;
+					}
 
-    // Fallback: return as-is
-    return $s;
-};
+					// Fallback: return as-is
+					return $s;
+				};
 
-$subNorm = $normalizeSubpremise($sub);
+				$subNorm = $normalizeSubpremise($sub);
 
-// Build final line1; **no comma before suite/unit**; commas ok for building/floor
-$line1 = $base;
-if ($subNorm !== '') $line1 .= ' '.$subNorm;
-if ($prem !== '')    $line1 .= ', '.$prem;
-if ($floor !== '')   $line1 .= ', '.$floor;
+				// Build final line1; **no comma before suite/unit**; commas ok for building/floor
+				$line1 = $base;
+				if ($subNorm !== '') $line1 .= ' '.$subNorm;
+				if ($prem !== '')    $line1 .= ', '.$prem;
+				if ($floor !== '')   $line1 .= ', '.$floor;
 
-// Cleanup spacing
-$line1 = preg_replace('/\s+/', ' ', trim($line1));
+				// Cleanup spacing
+				$line1 = preg_replace('/\s+/', ' ', trim($line1));
 
-// NOTE: per your request, we DO NOT append ZIP+4 to zip
-$zip = $comp['zip'];
+				// NOTE: per your request, we DO NOT append ZIP+4 to zip
+				$zip = $comp['zip'];
 
-// Save back to google_info
-$google_info[$placeID]['street']        = $line1;
-$google_info[$placeID]['street_line1']  = $base;                 // optional
-$google_info[$placeID]['street_line2']  = trim(($prem ? $prem : '').($floor ? ($prem ? ', ' : '').$floor : '')); // optional
-$google_info[$placeID]['suite']         = $subNorm;              // optional discrete
-$google_info[$placeID]['city']          = $comp['city'];
-$google_info[$placeID]['state-abbr']    = $comp['state_abbr'];
-$google_info[$placeID]['state-full']    = $comp['state_full'];
-$google_info[$placeID]['zip']           = $zip;                  // no +4 appended
-$google_info[$placeID]['county']        = $comp['county'];
-$google_info[$placeID]['country']       = $comp['country_abbr'] ?: $comp['country_full'];
+				// Save back to google_info
+				$google_info[$placeID]['street']        = $line1;
+				$google_info[$placeID]['street_line1']  = $base;                 // optional
+				$google_info[$placeID]['street_line2']  = trim(($prem ? $prem : '').($floor ? ($prem ? ', ' : '').$floor : '')); // optional
+				$google_info[$placeID]['suite']         = $subNorm;              // optional discrete
+				$google_info[$placeID]['city']          = $comp['city'];
+				$google_info[$placeID]['state-abbr']    = $comp['state_abbr'];
+				$google_info[$placeID]['state-full']    = $comp['state_full'];
+				$google_info[$placeID]['zip']           = $zip;                  // no +4 appended
+				$google_info[$placeID]['county']        = $comp['county'];
+				$google_info[$placeID]['country']       = $comp['country_abbr'] ?: $comp['country_full'];
 
 
 				$google_info[$placeID]['lat']  			= isset($gbp['location']['latitude'])  ? (float)$gbp['location']['latitude']  : null;
@@ -323,26 +364,19 @@ $google_info[$placeID]['country']       = $comp['country_abbr'] ?: $comp['countr
 	if ( $bp_handles_mail === true) {		
 		if ( is_plugin_active('wp-mail-smtp/wp_mail_smtp.php') ) {
 			if ( $rovin === true ) {	
-				$apiKey2 = "-b916aeccb98bf3fcca73";
-				$apiKey3 = "a606526cefdf92084ce7a9048d5cf734124e09f9bb26";
-				$apiKey4 = "-YcYFamx5FrGvCxXe";
 				$wpMailSettings['mail']['from_email'] = 'customer@website.'.$site;
 				$wpMailSettings['sendinblue']['domain'] = 'website.'.$site;				
 			} else {	
-				$apiKey2 = "-d08cc84fe45b37a420ef3";
-				$apiKey3 = "a9074e001fa21f640578f699994cba854489d3ef793";
-				$apiKey4 = "-bzWkS9dgt05KccIF";
 				$wpMailSettings['mail']['from_email'] = 'email@admin.'.$site;
 				$wpMailSettings['sendinblue']['domain'] = 'admin.'.$site;				
 			}	
 
-			$apiKey1 = "keysib";
 			$wpMailSettings = get_option( 'wp_mail_smtp' );			
 			$wpMailSettings['mail']['from_name'] = strip_tags('Website · '.str_replace(',', '', $customer_info['name']));
 			$wpMailSettings['mail']['mailer'] = 'sendinblue';
 			$wpMailSettings['mail']['from_email_force'] = '1';
 			$wpMailSettings['mail']['from_name_force'] = '1';	
-			$wpMailSettings['sendinblue']['api_key'] = 'x'.$apiKey1.$apiKey2.$apiKey3.$apiKey4;
+			$wpMailSettings['sendinblue']['api_key'] = 'x'._BREVO_API;
 			update_option( 'wp_mail_smtp', $wpMailSettings );
 		}
 	}	

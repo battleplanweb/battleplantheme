@@ -32,12 +32,39 @@ if ($ip) {
 		$ml = $mask===0 ? 0 : ((~0) << (32 - $mask)) & 0xFFFFFFFF;
 		return (($ipl & $ml) === ($sbl & $ml));
 	};
+	// If already in local cache → notify central + fast exit
 	if (is_file($CACHE_FILE) && is_readable($CACHE_FILE)) {
+		$blocked=false;
 		foreach (file($CACHE_FILE, FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES) as $line) {
-			$line = trim($line);
-			if ($line==='' || $line[0]==='#') continue;
-			$blocked = filter_var($line, FILTER_VALIDATE_IP) ? hash_equals($ip,$line) : $in_cidr($ip,$line);
-			if ($blocked) { http_response_code(204); exit; }
+			$line=trim($line); if ($line===''||$line[0]==='#') continue;
+			$hit = filter_var($line, FILTER_VALIDATE_IP) ? hash_equals($ip,$line) : $in_cidr($ip,$line);
+			if ($hit) { $blocked=true; break; }
+		}
+		if ($blocked) {
+			// notify central just like guard does
+			$CENTRAL_BLOCKED_URL = 'https://battleplanwebdesign.com/wp-content/blocked-notify.php';
+			$BP_SECRET           = 'Vn8qkM2Z4yHsR1jPwA3tLf7bE6uXpD9c'; // same secret
+			$site = $_SERVER['HTTP_HOST'] ?? '';
+			$ua   = $_SERVER['HTTP_USER_AGENT'] ?? '';
+			$ref  = $_SERVER['HTTP_REFERER'] ?? '';
+			$ptr  = gethostbyaddr($ip) ?: '';
+			$ts   = (string)time();
+			$payload = $ip.'|'.$site.'|'.$ts;                // must match central
+			$sig     = hash_hmac('sha256', $payload, $BP_SECRET);
+
+			$ctx = stream_context_create(['http'=>[
+				'method'=>'POST',
+				'header'=>"Content-Type: application/x-www-form-urlencoded\r\nConnection: close\r\n",
+				'content'=>http_build_query([
+					'ip'=>$ip,'site'=>$site,'ts'=>$ts,'sig'=>$sig,
+					'ua'=>$ua,'ref'=>$ref,'ptr'=>$ptr,'msg'=>'blocked'
+				]),
+				'timeout'=>0.6
+			]]);
+			@file_get_contents($CENTRAL_BLOCKED_URL, false, $ctx);
+
+			http_response_code(204); // honeypot can stay silent
+			exit;
 		}
 	}
 }

@@ -3,19 +3,37 @@
 $BP_STORE   = dirname(__DIR__, 3) . '/bp-guard';
 $CACHE_DIR  = $BP_STORE . '/cache';
 $CACHE_FILE = $CACHE_DIR . '/blocked_ips.txt';
-$NOTIFY_DIR = $BP_STORE . '/notify';
 
 @is_dir($BP_STORE)   ?: @mkdir($BP_STORE,  0775, true);
 @is_dir($CACHE_DIR)  ?: @mkdir($CACHE_DIR, 0775, true);
-@is_dir($NOTIFY_DIR) ?: @mkdir($NOTIFY_DIR,0775, true);
 
-/* ---------- TEMP DIAG ---------- */
-$DIAG_DIR = $BP_STORE . '/diag';
-@is_dir($DIAG_DIR) ?: @mkdir($DIAG_DIR, 0775, true);
-$diag = function(string $m) use ($DIAG_DIR,$CACHE_FILE){
-	@file_put_contents($DIAG_DIR.'/checkin_attempt.log', gmdate('c')."\t".$m."\tCACHE_FILE=".$CACHE_FILE."\n", FILE_APPEND|LOCK_EX);
+
+
+
+
+/* ---------- remove unused diag/notify (one-shot) ---------- */
+$__bp_rm = function(string $dir) use ($BP_STORE) {
+	$real = realpath($dir) ?: $dir;
+	if (!is_dir($real)) return;
+	// safety: must be inside $BP_STORE
+	$root = realpath($BP_STORE) ?: $BP_STORE;
+	if (strpos($real, $root)!==0) return;
+
+	$it = @scandir($real) ?: [];
+	foreach ($it as $f) {
+		if ($f==='.' || $f==='..') continue;
+		$p = $real . DIRECTORY_SEPARATOR . $f;
+		is_dir($p) ? $__bp_rm($p) : @unlink($p);
+	}
+	@rmdir($real);
 };
-$diag('BOOT');
+
+	$__bp_rm($BP_STORE . '/diag');
+	$__bp_rm($BP_STORE . '/notify');
+
+
+
+
 
 $STATE_FILE = $BP_STORE . '/state.json';
 $STATE = [];
@@ -29,9 +47,10 @@ $HITS_MONTH = isset($STATE['hits_month']) ? $STATE['hits_month'] : 'n/a';
 $HITS_QUARTER = isset($STATE['hits_quarter']) ? $STATE['hits_quarter'] : 'n/a';
 $HITS_YEAR = isset($STATE['hits_year']) ? $STATE['hits_year'] : 'n/a';
 $MOBILE_SPEED = isset($STATE['mobile_speed']) ? $STATE['mobile_speed'] : 'n/a';
+$DESKTOP_SPEED = isset($STATE['desktop_speed']) ? $STATE['desktop_speed'] : 'n/a';
 
 /* ---------- skip CLI/tests ---------- */
-if (PHP_SAPI === 'cli' || (defined('WP_CLI') && WP_CLI) || getenv('WP_PHPUNIT__TESTS_CONFIG')) { $diag('SKIP-CLI'); return; }
+if (PHP_SAPI === 'cli' || (defined('WP_CLI') && WP_CLI) || getenv('WP_PHPUNIT__TESTS_CONFIG')) return;
 
 /* ---------- config ---------- */
 $CENTRAL_READ_URL    = 'https://battleplanwebdesign.com/wp-content/master_blocked_ips.txt';
@@ -48,7 +67,7 @@ $ip = !empty($_SERVER['HTTP_CF_CONNECTING_IP']) ? $_SERVER['HTTP_CF_CONNECTING_I
 	: (!empty($_SERVER['HTTP_X_FORWARDED_FOR']) ? trim(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0])
 	: ($_SERVER['REMOTE_ADDR'] ?? ''));
 $ip = filter_var($ip, FILTER_VALIDATE_IP) ?: '';
-if ($ip === '') { $__bp_noip = true; $diag('NO-IP'); } else { $__bp_noip = false; }
+if ($ip === '') { $__bp_noip = true; } else { $__bp_noip = false; }
 
 $UA = $_SERVER['HTTP_USER_AGENT'] ?? '';
 require_once __DIR__ . '/bot-helpers.php';
@@ -62,7 +81,6 @@ $exists  = is_file($CACHE_FILE) && is_readable($CACHE_FILE) && filesize($CACHE_F
 $age     = $exists ? (time() - @filemtime($CACHE_FILE)) : -1;
 $stale   = !$exists || ($age > $CACHE_MAX_AGE);
 $writable_dir = is_writable($CACHE_DIR);
-$diag('CACHE state exists='.(int)$exists.' age='.$age.' stale='.(int)$stale.' dirWritable='.(int)$writable_dir);
 
 /* ---------- fast-match blocklist (only if we have a non-empty cache) ---------- */
 $matched = false;
@@ -83,168 +101,87 @@ if (!$__bp_noip && $exists) {
 		if ($matched) break;
 	}
 	if ($matched) {
-		$diag('MATCH-BLOCK');
-		// (your BLOCKED notify & 403 response here)
-		header('Content-Type: text/plain; charset=UTF-8');
-		header('Cache-Control: no-store');
-		header('X-BP-Guard: blocked');
-		http_response_code(403);
-		exit;
-	}
-}
-
-/* ---------- stale-while-revalidate: try fetch, write atomically, check-in ---------- */
-if ($stale) {
-	$ok=false; $count=0; $cache_ts=0;
-
-	// 1) fetch
-	$ctx = stream_context_create(['http'=>[
-		'method'=>'GET','timeout'=>0.8,'follow_location'=>1,'max_redirects'=>2,
-		'header'=>"Connection: close\r\nUser-Agent: BP-Guard/1.0\r\n"
-	]]);
-	$body = @file_get_contents($CENTRAL_READ_URL, false, $ctx);
-	$code = 0; if (isset($http_response_header[0]) && preg_match('~\s(\d{3})\s~',$http_response_header[0],$m)) $code=(int)$m[1];
-	$diag('FETCH code='.$code.' bytes='.(is_string($body)?strlen($body):0));
-
-	// 2) normalize & write only if non-empty AND dir writable
-	if ($writable_dir && is_string($body) && $body!=='') {
-		$lines = array_values(array_unique(array_filter(array_map('trim', explode("\n",$body)), fn($l)=>$l!=='' && $l[0]!=='#')));
-		$count = count($lines);
-		if ($count > 0) {
-			$tmp = $CACHE_FILE.'.tmp';
-			$ok  = (file_put_contents($tmp, implode("\n",$lines)."\n", LOCK_EX)!==false) && (filesize($tmp) > 0);
-			if ($ok) { @chmod($tmp, 0664); @rename($tmp, $CACHE_FILE); }
-		}
-	} else {
-		if (!$writable_dir) $diag('ERR not-writable: '.$CACHE_DIR);
-	}
-
-	$cache_ts = is_file($CACHE_FILE) ? (int)@filemtime($CACHE_FILE) : 0;
-	$diag('WRITE ok='.(int)$ok.' count='.$count.' cache_ts='.$cache_ts);
-
-	// 3) check-in (even on fail) – won’t block page
-	$site = $_SERVER['HTTP_HOST'] ?? '';
-	if ($site && $CENTRAL_CHECKIN_URL) {
+		$CENTRAL_BLOCKED_URL = 'https://battleplanwebdesign.com/wp-content/blocked-notify.php';
+		$site = $_SERVER['HTTP_HOST'] ?? '';
+		$ua   = $_SERVER['HTTP_USER_AGENT'] ?? '';
+		$ref  = $_SERVER['HTTP_REFERER'] ?? '';
+		$ptr  = gethostbyaddr($ip) ?: '';
 		$ts   = (string)time();
-		$ips_ct = 0;
-		if (is_file($CACHE_FILE) && is_readable($CACHE_FILE)) {
-			$ips_ct = count(file($CACHE_FILE, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: []);
-		}
-		$payload = $site.'|'.($ok?'ok':'fail').'|'.$ips_ct.'|'.$cache_ts.'|'.$ts;
+
+		// HMAC over ip|site|ts (must match central)
+		$payload = $ip.'|'.$site.'|'.$ts;
 		$sig     = hash_hmac('sha256', $payload, $BP_SECRET);
 
 		$ctx = stream_context_create(['http'=>[
 			'method'=>'POST',
 			'header'=>"Content-Type: application/x-www-form-urlencoded\r\nConnection: close\r\n",
+			'timeout'=>0.6,
 			'content'=>http_build_query([
-				'site'=>$site,'status'=>$ok?'ok':'fail','ips'=>$ips_ct,
-				'cache_ts'=>$cache_ts,'ts'=>$ts,'sig'=>$sig,'msg'=>$ok?'refresh-ok':'refresh-fail'
-			]),
-			'timeout'=>0.6
+				'ip'=>$ip,'site'=>$site,'ts'=>$ts,'sig'=>$sig,
+				'ua'=>$ua,'ref'=>$ref,'ptr'=>$ptr,'msg'=>'blocked'
+			])
 		]]);
-		@file_get_contents($CENTRAL_CHECKIN_URL, false, $ctx);
-		$diag('CHECKIN sent status='.($ok?'ok':'fail').' ips='.$ips_ct);
+		@file_get_contents($CENTRAL_BLOCKED_URL, false, $ctx);
+
+		if (!headers_sent()) {
+			header('Content-Type: text/plain; charset=UTF-8');
+			header('Cache-Control: no-store');
+			header('X-BP-Guard: blocked');
+			http_response_code(403);
+		}
+		exit;
 	}
 }
 
-/* continue into the rest of guard (or just return to WP) */
-
-
-/* ---------- if matched: block + central notify (5 hits → send, then 1h cooldown) ---------- */
-if ($matched) {
-	// ---- central "blocked" notify (no delay) ----
-	$CENTRAL_BLOCKED_URL = 'https://battleplanwebdesign.com/wp-content/blocked-notify.php'; // make sure this exists
-	$site = $_SERVER['HTTP_HOST'] ?? '';
-	$ua   = $_SERVER['HTTP_USER_AGENT'] ?? '';
-	$ref  = $_SERVER['HTTP_REFERER'] ?? '';
-	$ptr  = gethostbyaddr($ip) ?: '';
-	$ts   = (string)time();
-
-	// HMAC over ip|site|ts
-	$payload = $ip.'|'.$site.'|'.$ts;
-	$sig     = hash_hmac('sha256', $payload, $BP_SECRET);
-
-	$ctx = stream_context_create(['http'=>[
-		'method'=>'POST',
-		'header'=>"Content-Type: application/x-www-form-urlencoded\r\nConnection: close\r\n",
-		'content'=>http_build_query([
-			'ip'=>$ip,'site'=>$site,'ts'=>$ts,'sig'=>$sig,
-			'ua'=>$ua,'ref'=>$ref,'ptr'=>$ptr,'msg'=>'blocked'
-		]),
-		'timeout'=>0.6
-	]]);
-	@file_get_contents($CENTRAL_BLOCKED_URL, false, $ctx);
-
-	// optional: local diag
-	if (isset($diag) && is_callable($diag)) $diag('BLOCKED notify sent ip='.$ip);
-
-	// ---- block response ----
-	if (!headers_sent()) {
-		header('Content-Type: text/plain; charset=UTF-8');
-		header('Cache-Control: no-store');
-		header('X-BP-Guard: blocked');
-		http_response_code(403);
-	}
-	exit;
-}
-
-
-/* ---------- stale-while-revalidate: try a very short central refresh if stale ---------- */
-$stale = !$cache_exists || (time() - @filemtime($CACHE_FILE) > $CACHE_MAX_AGE);
-
+/* ---------- refresh + single check-in (deduped) ---------- */
+$stale = !$exists || (time() - @filemtime($CACHE_FILE) > $CACHE_MAX_AGE);
 if ($stale && $CENTRAL_READ_URL) {
-	$ctx = stream_context_create(['http'=>[
+	$ok = false; $count = 0; $cache_ts = 0;
+
+	// fetch latest list
+	$ctx  = stream_context_create(['http'=>[
 		'method'=>'GET','timeout'=>0.8,'follow_location'=>1,'max_redirects'=>2,
 		'header'=>"Connection: close\r\nUser-Agent: BP-Guard/1.0\r\n"
 	]]);
 	$body = @file_get_contents($CENTRAL_READ_URL, false, $ctx);
+	$code = 0; if (isset($http_response_header[0]) && preg_match('~\s(\d{3})\s~',$http_response_header[0],$m)) $code=(int)$m[1];
 
-	$ok = false; $lines = null;
-	if (is_string($body) && $body!=='') {
-		$raw   = array_map('trim', explode("\n", $body));
-		$lines = array_values(array_unique(array_filter($raw, fn($l)=>$l!=='' && $l[0]!=='#')));
-		// (allow exact IPs and CIDRs; do minimal sanity filtering)
-		if (count($lines) > 0) {
-			$tmp = $CACHE_FILE . '.tmp';
-			$ok  = (file_put_contents($tmp, implode("\n",$lines)."\n", LOCK_EX) !== false) && (filesize($tmp) > 0);
-			if ($ok) { @chmod($tmp, 0664); @rename($tmp, $CACHE_FILE); }
+	// normalize + atomic write
+	if ($writable_dir && is_string($body) && $body!=='') {
+		$lines = array_values(array_unique(array_filter(array_map('trim', explode("\n",$body)), fn($l)=>$l!=='' && $l[0]!=='#')));
+		$count = count($lines);
+		if ($count>0) {
+			$tmp = $CACHE_FILE.'.tmp';
+			$ok  = (@file_put_contents($tmp, implode("\n",$lines)."\n", LOCK_EX)!==false) && (filesize($tmp)>0);
+			if ($ok) { @chmod($tmp,0664); @rename($tmp,$CACHE_FILE); }
 		}
-	}
+	} 
 
-	/* ---------- central check-in (record refresh attempt/outcome) ---------- */
-	$site     = $_SERVER['HTTP_HOST'] ?? '';
-	$ips_ct   = 0;
-	if (is_file($CACHE_FILE) && is_readable($CACHE_FILE)) {
-		$ips_ct = count(file($CACHE_FILE, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: []);
-	}
 	$cache_ts = is_file($CACHE_FILE) ? (int)@filemtime($CACHE_FILE) : 0;
+
+	// single check-in
+	$site = $_SERVER['HTTP_HOST'] ?? '';
 	if ($site && $CENTRAL_CHECKIN_URL) {
-		$ts  = (string)time();
-		$payload = $site.'|'.($ok?'ok':'fail').'|'.$ips_ct.'|'.$cache_ts.'|'.$ts;
-		$sig = hash_hmac('sha256', $payload, $BP_SECRET);
+		$ips_ct = (is_file($CACHE_FILE) && is_readable($CACHE_FILE)) ? count(file($CACHE_FILE, FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES) ?: []) : 0;
+		$ts     = (string)time();
+		$payload= $site.'|'.($ok?'ok':'fail').'|'.$ips_ct.'|'.$cache_ts.'|'.$ts;
+		$sig    = hash_hmac('sha256', $payload, $BP_SECRET);
+
 		$ctx = stream_context_create(['http'=>[
 			'method'=>'POST',
 			'header'=>"Content-Type: application/x-www-form-urlencoded\r\nConnection: close\r\n",
+			'timeout'=>0.6,
 			'content'=>http_build_query([
-				'name'=>$NAME,
-				'site'=>$site,
-				'status'=>$ok?'ok':'fail',
-				'ips'=>$ips_ct,
-				'cache_ts'=>$cache_ts,
-				'ts'=>$ts,
-				'sig'=>$sig,
-				'ver'=>$BP_VER,
-				'hits_week'     => $HITS_WEEK, 
-				'hits_month'     => $HITS_MONTH, 
-				'hits_quarter'     => $HITS_QUARTER,
-				'hits_year'     => $HITS_YEAR,				
-				'mobile_speed'     => $MOBILE_SPEED
-			]),
-			'timeout'=>0.5
+				'name'=>$NAME,'site'=>$site,'status'=>$ok?'ok':'fail','ips'=>$ips_ct,
+				'cache_ts'=>$cache_ts,'ts'=>$ts,'sig'=>$sig,'ver'=>$BP_VER,
+				'hits_week'=>$HITS_WEEK,'hits_month'=>$HITS_MONTH,'hits_quarter'=>$HITS_QUARTER,
+				'hits_year'=>$HITS_YEAR,'mobile_speed'=>$MOBILE_SPEED,'desktop_speed'=>$DESKTOP_SPEED
+			])
 		]]);
-		@file_get_contents($CENTRAL_CHECKIN_URL, false, $ctx); // fire-and-forget
+		@file_get_contents($CENTRAL_CHECKIN_URL, false, $ctx);
 	}
 }
+
 
 /* -----------------------------------------------------------
  * Heartbeat check-in (keeps “Updated (UTC)” fresh even when the
@@ -267,8 +204,9 @@ if ($need_beat && $CENTRAL_CHECKIN_URL) {
 	}
 
 	$ts   = (string)time();
-	$payload = $site.'|ok|'.$ips_ct.'|'.$cache_ts.'|'.$ts;
+	$payload = $site.'|heartbeat|'.$ips_ct.'|'.$cache_ts.'|'.$ts;
 	$sig  = hash_hmac('sha256', $payload, $BP_SECRET);
+
 
 	$ctx = stream_context_create(['http'=>[
 		'method'=>'POST',
@@ -287,6 +225,7 @@ if ($need_beat && $CENTRAL_CHECKIN_URL) {
 			'hits_quarter'     => $HITS_QUARTER, 
 			'hits_year'     => $HITS_YEAR, 
 			'mobile_speed'     => $MOBILE_SPEED, 
+			'desktop_speed'     => $DESKTOP_SPEED, 
 		]),
 		'timeout'=>0.6
 	]]);

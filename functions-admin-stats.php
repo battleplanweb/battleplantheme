@@ -377,7 +377,9 @@ foreach ( $ga4_speed_data as $speedLocation=>$speedData ) :
 	endif;
 endforeach;
 
-
+$GLOBALS['ga4_visitor']['ck_mobile_speed'] = number_format($GLOBALS['speedTotal']['sessions-30']['mobile'] / $GLOBALS['speedSessions']['sessions-30']['mobile'], 1);
+$GLOBALS['ga4_visitor']['ck_desktop_speed'] = number_format($GLOBALS['speedTotal']['sessions-30']['desktop'] / $GLOBALS['speedSessions']['sessions-30']['desktop'], 1);	
+	
 // Set up Screen Resolutions widget on dashboard
 $GLOBALS['ga4_resolution'] = $resolutionSessions = array();
 $chkDevice = '';
@@ -450,7 +452,7 @@ function battleplan_admin_tech_stats() {
 			$total = isset($GLOBALS['speedTotal'][$metricKey][$deviceTitle]) ? $GLOBALS['speedTotal'][$metricKey][$deviceTitle] : 0;			
 			$sessions = isset($GLOBALS['speedSessions'][$metricKey][$deviceTitle]) ? $GLOBALS['speedSessions'][$metricKey][$deviceTitle] : 0;			
 			$fastSessions = isset($GLOBALS['fastSessions'][$metricKey][$deviceTitle]) ? $GLOBALS['fastSessions'][$metricKey][$deviceTitle] : 0;
-	
+		
 			if ( $deviceTotalSessions > 0 && $sessions > 0 && $fastSessions > 0 && $total > 0 ) echo "<li><div class='value'><b>".number_format(($deviceSessions / $deviceTotalSessions)*100,1)."%</b></div><div class='label-half' style='width:calc(35% - 35px)'>".ucwords($deviceTitle)."</div><div class='label-half style='width:calc(65% - 35px)'>".number_format($total / $sessions, 1)."s&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;".number_format(($fastSessions / $sessions)*100, 1)."% target</div></li>";
 		endforeach;
 

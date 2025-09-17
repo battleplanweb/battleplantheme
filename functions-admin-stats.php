@@ -377,8 +377,18 @@ foreach ( $ga4_speed_data as $speedLocation=>$speedData ) :
 	endif;
 endforeach;
 
-$GLOBALS['ga4_visitor']['ck_mobile_speed'] = number_format($GLOBALS['speedTotal']['sessions-30']['mobile'] / $GLOBALS['speedSessions']['sessions-30']['mobile'], 1);
-$GLOBALS['ga4_visitor']['ck_desktop_speed'] = number_format($GLOBALS['speedTotal']['sessions-30']['desktop'] / $GLOBALS['speedSessions']['sessions-30']['desktop'], 1);	
+// Send stats to Site Checkin
+$mobileSessions = (int) ($GLOBALS['speedSessions']['sessions-30']['mobile'] ?? 0);
+$desktopSessions = (int) ($GLOBALS['speedSessions']['sessions-30']['desktop'] ?? 0);
+
+$GLOBALS['ga4_visitor']['ck_mobile_speed'] = $mobileSessions > 0
+    ? number_format($GLOBALS['speedTotal']['sessions-30']['mobile'] / $mobileSessions, 1)
+    : 0;
+
+$GLOBALS['ga4_visitor']['ck_desktop_speed'] = $desktopSessions > 0
+    ? number_format($GLOBALS['speedTotal']['sessions-30']['desktop'] / $desktopSessions, 1)
+    : 0;
+
 	
 // Set up Screen Resolutions widget on dashboard
 $GLOBALS['ga4_resolution'] = $resolutionSessions = array();

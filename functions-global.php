@@ -14,7 +14,7 @@
 --------------------------------------------------------------*/
 
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.32.5' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.32.6' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -116,10 +116,6 @@ $GLOBALS['do_not_repeat'] = array();
 /*--------------------------------------------------------------
 # Set up site based on user's location (if necessary)
 --------------------------------------------------------------*/
-if ( !is_admin() ) :
-	$common = array('am', 'an', 'as', 'at', 'be', 'by', 'do', 'if', 'is', 'it', 'me', 'my', 'no', 'of', 'on', 'or', 'so', 'to', 'up', 'us', 'we');
-	$page_slug = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/'); 
-	$location = '';
 
 function findCity($userCity) {
 	foreach ($customer_info['service-areas'] as $area) :
@@ -127,6 +123,11 @@ function findCity($userCity) {
 	endforeach;
 	return false;
 }
+
+if ( !is_admin() ) :
+	$common = array('am', 'an', 'as', 'at', 'be', 'by', 'do', 'if', 'is', 'it', 'me', 'my', 'no', 'of', 'on', 'or', 'so', 'to', 'up', 'us', 'we');
+	$page_slug = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/'); 
+	$userLoc = '';
 
 // Does this user come from a Google Ad?
 	if (!empty($_GET)) :
@@ -146,7 +147,7 @@ function findCity($userCity) {
 				endif;
 
 				if ( is_array($cities) && array_key_exists($value, $cities)) :
-					$location = $cities[$value];
+					$userLoc = $cities[$value];
 				else:
 					$saveLocInfo = get_option('bp_loc_info') ? get_option('bp_loc_info') : array();
 					if ( !in_array( $value, $saveLocInfo )) :
@@ -162,20 +163,20 @@ function findCity($userCity) {
 		$pieces = explode(' ', ucwords(str_replace('-', ' ', $page_slug))); 
 		$state = array_pop($pieces);
 		$city = implode(' ', $pieces);
-		$location = $city.', '.strtoupper($state);
+		$userLoc = $city.', '.strtoupper($state);
 
 // Does this user's geo location match a service area?
 	elseif ( isset($_COOKIE['user-city']) && findCity($_COOKIE['user-city']) ) : 
-		$location = $_COOKIE['user-city'].', '.$_COOKIE['user-region'];
+		$userLoc = $_COOKIE['user-city'].', '.$_COOKIE['user-region'];
 
 // If no location is known, then set to default
 	elseif ( isset($_COOKIE['user-display-loc']) ) : 
-		$location = $_COOKIE['user-display-loc'];
+		$userLoc = $_COOKIE['user-display-loc'];
 	endif;					
 
-	if ( $location !== '' ) :
-		if ( !defined('_USER_DISPLAY_LOC') ) define( '_USER_DISPLAY_LOC', $location );
-		setcookie('user-display-loc', $location, 0, "/");
+	if ( $userLoc !== '' ) :
+		if ( !defined('_USER_DISPLAY_LOC') ) define( '_USER_DISPLAY_LOC', $userLoc );
+		setcookie('user-display-loc', $userLoc, 0, "/");
 	endif;
 endif;
 
@@ -210,37 +211,46 @@ if ( _PAGE_SLUG == "wp-cron.php" ) :
 		fwrite($my_file, $file_contents);
 		fclose($my_file); 
 	endif;
-endif;
+endif; 
 
 /*--------------------------------------------------------------
-# Send data to 'Site Checkin'
+# Send data to 'Site Checkin' (change-driven base, timed metrics)
 --------------------------------------------------------------*/
 if (is_admin() || (defined('WP_CLI') && WP_CLI)) return;
 if (defined('_IS_SERP_BOT') && _IS_SERP_BOT) return;
 
-// --- throttle file writes (every 5 min) ---
-$last_write = time() - (int)get_option('bp_state_last_write', 0);
-if ($last_write < 3600) return;//3600
-
-// --- gather info ---
-$info = [
-	'name'         => $customer_info['name'],
-	'framework'    => defined('_BP_VERSION') ? _BP_VERSION : '',
-	'ts'           => time(),                       
+$now = time();
+$base_info = [
+	'name'      => $customer_info['name'] ?? '',
+	'framework' => (defined('_BP_VERSION') ? _BP_VERSION : ''),
 ];
+$base_hash = md5(wp_json_encode($base_info));
+$prev_hash = (string)get_option('bp_state_hash', '');
+//$metrics_due = ($now - (int)get_option('bp_state_last_metrics', 0)) >= 43200;
+$metrics_due = true;
 
-if ($last_write > 43200) { //43200
+// Only proceed if something changed OR metrics are due
+//if ($base_hash === $prev_hash && !$metrics_due) return;
+
+// Start payload with base info
+$info = $base_info + ['ts' => $now];
+
+// Enrich metrics every 12h
+if ($metrics_due) {
 	require_once get_template_directory().'/functions-admin-stats.php';
-	$info = array_merge($info, [
-		'hits_week'		=> $GLOBALS['ga4_visitor']['page-views-7'],
-		'hits_month'	=> $GLOBALS['ga4_visitor']['page-views-30'],
-		'hits_quarter'	=> $GLOBALS['ga4_visitor']['page-views-90'],
-		'hits_year'		=> $GLOBALS['ga4_visitor']['page-views-365'],
-		'mobile_speed'	=> $GLOBALS['ga4_visitor']['ck_mobile_speed']		
-	]);
+	$g = $GLOBALS['ga4_visitor'] ?? [];
+	$info += [
+		'hits_week'     => $g['page-views-7']   ?? 0,
+		'hits_month'    => $g['page-views-30']  ?? 0,
+		'hits_quarter'  => $g['page-views-90']  ?? 0,
+		'hits_year'     => $g['page-views-365'] ?? 0,
+		'mobile_speed'  => $g['ck_mobile_speed'].'s',
+		'desktop_speed'  => $g['ck_desktop_speed'].'s',
+	];
+	update_option('bp_state_last_metrics', $now);
 }
 
-// --- write to /wp-content/bp-guard/state.json ---
+// Atomic write to /wp-content/bp-guard/state.json
 $base = WP_CONTENT_DIR . '/bp-guard';
 if (!is_dir($base)) wp_mkdir_p($base);
 $file = $base . '/state.json';
@@ -251,5 +261,5 @@ if ($enc !== false) {
 	@file_put_contents($tmp, $enc, LOCK_EX);
 	@chmod($tmp, 0664);
 	@rename($tmp, $file);
-	update_option('bp_state_last_write', time());
+	update_option('bp_state_hash', $base_hash);
 }

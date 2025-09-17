@@ -451,9 +451,9 @@
 	animation-iteration-count: 						infinite;
 	animation-timing-function: 						cubic-bezier(.68,-0.55,.27,1.55);
 	animation-delay: 								6s;
-	font-size: 										24px;
+	font-size: 										18px;
  	top: 											-1px;
- 	left: 											-1px;
+ 	left: 											-8px;
 }
 
 @keyframes phone-ring {

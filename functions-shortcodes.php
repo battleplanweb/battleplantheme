@@ -1806,22 +1806,22 @@ function battleplan_getRSS( $atts, $content = null ) {
 // Insert the city / state of either company address, or the city-specific landing page
  add_shortcode("get-location", "battleplan_getLocation");
  function battleplan_getLocation($atts, $content) {
-	 $customer_info = customer_info();
 	 $a = shortcode_atts( array( 'state'=>'true', 'default'=>'blank', 'before'=>'', 'after'=>'' ), $atts );
-	 
+	 $customer_info = customer_info();
+
 	 if ( esc_attr($a['default']) !== 'blank' && !defined('_USER_DISPLAY_LOC') ) :
-	 	$location = esc_attr($a['default']);		
+	 	$userLoc = esc_attr($a['default']);		
 	 elseif ( !defined('_USER_DISPLAY_LOC') ) :
-	 	$location = $customer_info['default-loc'];	
+	 	$userLoc = $customer_info['default-loc'];	
 	 else:	 
-	 	$location = _USER_DISPLAY_LOC;
+	 	$userLoc = _USER_DISPLAY_LOC;
 	 endif;
 
-	 if ( preg_match('/,\s*[A-Z]{2}$/', $location) === 1 && esc_attr($a['state']) === "false" ) {
-		$location = strstr($location, ',', true);		 
+	 if ( preg_match('/,\s*[A-Z]{2}$/', $userLoc) === 1 && esc_attr($a['state']) === "false" ) {
+		$userLoc = strstr($userLoc, ',', true);		 
 	 }
-	 
-	 return esc_attr($a['before']).$location.esc_attr($a['after']);
+	 	 
+	 return esc_attr($a['before']).$userLoc.esc_attr($a['after']);
 }
 
 // Copy the section from the home page, or any other defined page

@@ -38,6 +38,7 @@
 				else: 	
 				
 					$googleInfo = get_option('bp_gbp_update');
+					$customer_info = customer_info();
 
 					$buildCopyright = "";
 					$buildCopyright .= wp_nav_menu( array( 'theme_location' => 'footer-menu', 'container' => 'div', 'container_id' => 'footer-navigation', 'container_class' => 'secondary-navigation', 'menu_id' => 'footer-menu', 'menu_class' => 'menu secondary-menu', 'fallback_cb' => 'false', 'echo' => false ) );
@@ -50,20 +51,20 @@
 					if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
 					$primePID = true;
 					foreach ( $placeIDs as $placeID ) :	
-						if ( $primePID == true ) :
-							$customer_info = customer_info();
+						if ( $primePID === true ) :
+							$google_info = customer_info();
 							$primePID = false;
 						else:
-							$customer_info = $googleInfo[$placeID];
+							$google_info = $googleInfo[$placeID];
 						endif;
 						$buildCopyright .= "<div class='site-info-address'>";
-						if ( strlen($customer_info['street']) > 5 ) $buildCopyright .= trim($customer_info['street']).", ";							
-						if ( array_key_exists('city', $customer_info) ) :
-							$buildCopyright .= $customer_info['city'].", ".$customer_info['state-abbr']." ".$customer_info['zip'];
-						elseif ( array_key_exists('region', $customer_info) ) : 
-							$buildCopyright .= $customer_info['region']; 
+						if ( strlen($google_info['street']) > 5 ) $buildCopyright .= trim($google_info['street']).", ";							
+						if ( array_key_exists('city', $google_info) ) :
+							$buildCopyright .= $google_info['city'].", ".$google_info['state-abbr']." ".$google_info['zip'];
+						elseif ( array_key_exists('region', $google_info) ) : 
+							$buildCopyright .= $google_info['region']; 
 						endif;
-						if ( array_key_exists('phone-format', $customer_info) ) $buildCopyright .= " • ".$customer_info['phone-format'];
+						if ( array_key_exists('phone-format', $google_info) ) $buildCopyright .= " • ".$google_info['phone-format'];
 
 						$buildCopyright .= "</div>";
 					endforeach;

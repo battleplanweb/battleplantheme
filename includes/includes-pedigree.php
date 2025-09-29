@@ -92,6 +92,34 @@ function battleplan_add_acf_pedigree_fields() {
 				'type' => 'text',
 				'required' => 0,
 				'conditional_logic' => 0,
+				'wrapper' => array('width' => 50),
+			),
+			array(
+				'key' => 'field_58e4dd15724ff',
+				'label' => 'Birth Date',
+				'name' => 'birth_date',
+				'type' => 'date_picker',
+				'required' => 0,
+				'conditional_logic' => 0,
+				'display_format' => 'm/d/Y',
+				'first_day' => 0,
+				'return_format' => 'd/m/Y',
+				'save_format' => 'yy-mm-dd',
+				'wrapper' => array('width' => 50),
+			),
+			array(
+				'key' => 'field_6sg2a8759h224',
+				'label' => 'List In Archive',
+				'name' => 'list_in_archive',
+				'type' => 'radio',
+				'required' => 0,
+				'conditional_logic' => 0,
+				'choices' => array(
+					'Yes' => 'Yes',
+					'No' => 'No',
+				),
+				'return_format' => 'value',
+				'wrapper' => array('width' => 20),
 			),
 			array(
 				'key' => 'field_5ce68ee020b9a',
@@ -110,6 +138,7 @@ function battleplan_add_acf_pedigree_fields() {
 				'layout' => 'vertical',
 				'return_format' => 'value',
 				'save_other_choice' => 0,
+				'wrapper' => array('width' => 20),
 			),
 			array(
 				'key' => 'field_5ce6a9337f294',
@@ -128,6 +157,7 @@ function battleplan_add_acf_pedigree_fields() {
 				'layout' => 'vertical',
 				'return_format' => 'value',
 				'save_other_choice' => 0,
+				'wrapper' => array('width' => 20),
 			),
 			array(
 				'key' => 'field_5ce8a7649j998',
@@ -146,18 +176,7 @@ function battleplan_add_acf_pedigree_fields() {
 				'layout' => 'vertical',
 				'return_format' => 'value',
 				'save_other_choice' => 0,
-			),
-			array(
-				'key' => 'field_58e4dd15724ff',
-				'label' => 'Birth Date',
-				'name' => 'birth_date',
-				'type' => 'date_picker',
-				'required' => 0,
-				'conditional_logic' => 0,
-				'display_format' => 'm/d/Y',
-				'first_day' => 0,
-				'return_format' => 'd/m/Y',
-				'save_format' => 'yy-mm-dd',
+				'wrapper' => array('width' => 40),
 			),
 			array(
 				'key' => 'field_52dd130479865',
@@ -177,6 +196,7 @@ function battleplan_add_acf_pedigree_fields() {
 				'layout' => 'vertical',
 				'return_format' => 'value',
 				'save_other_choice' => 0,
+				'wrapper' => array('width' => 33),
 			),
 			array(
 				'key' => 'field_52dd12f079864',
@@ -197,6 +217,7 @@ function battleplan_add_acf_pedigree_fields() {
 				'layout' => 'vertical',
 				'return_format' => 'value',
 				'save_other_choice' => 0,
+				'wrapper' => array('width' => 33),
 			),
 			array(
 				'key' => 'field_52dd12bc79863',
@@ -218,6 +239,7 @@ function battleplan_add_acf_pedigree_fields() {
 				'layout' => 'vertical',
 				'return_format' => 'value',
 				'save_other_choice' => 0,
+				'wrapper' => array('width' => 33),
 			),
 			array(
 				'key' => 'field_52dd6a184e280',
@@ -237,6 +259,7 @@ function battleplan_add_acf_pedigree_fields() {
 				'layout' => 'vertical',
 				'return_format' => 'value',
 				'save_other_choice' => 0,
+				'wrapper' => array('width' => 33),
 			),
 			array(
 				'key' => 'field_58e4dc0ad9240',
@@ -258,6 +281,7 @@ function battleplan_add_acf_pedigree_fields() {
 				'layout' => 'vertical',
 				'return_format' => 'value',
 				'save_other_choice' => 0,
+				'wrapper' => array('width' => 33),
 			),
 			array(
 				'key' => 'field_74rg13k063578',
@@ -276,16 +300,7 @@ function battleplan_add_acf_pedigree_fields() {
 				'layout' => 'vertical',
 				'return_format' => 'value',
 				'save_other_choice' => 0,
-			),
-			array(
-				'key' => 'field_57c020ea9a063',
-				'label' => 'Breeding Info',
-				'name' => 'breeding_info',
-				'type' => 'text',
-				'instructions' => 'Jon Smith: (800) 111-2233',
-				'required' => 0,
-				'conditional_logic' => 0,
-				'formatting' => 'html',
+				'wrapper' => array('width' => 33),
 			),
 			array(
 				'key' => 'field_52dd106579376',
@@ -413,6 +428,16 @@ function battleplan_add_acf_pedigree_fields() {
 				'conditional_logic' => 0,
 				'formatting' => 'html',
 			),
+			array(
+				'key' => 'field_57c020ea9a063',
+				'label' => 'Breeding Info',
+				'name' => 'breeding_info',
+				'type' => 'text',
+				'instructions' => 'Jon Smith: (800) 111-2233',
+				'required' => 0,
+				'conditional_logic' => 0,
+				'formatting' => 'html',
+			),
 		),
 		'location' => array(
 			array(
@@ -451,6 +476,7 @@ function battleplan_add_acf_pedigree_fields() {
 				'multiple' => 0,
 				'return_format' => 'object',
 				'ui' => 1,
+				'wrapper' => array('width' => 60),
 			),
 			array(
 				'key' => 'field_5fbd6ea6f7cf5',
@@ -459,6 +485,7 @@ function battleplan_add_acf_pedigree_fields() {
 				'type' => 'text',
 				'required' => 0,
 				'conditional_logic' => 0,
+				'wrapper' => array('width' => 40),
 			),
 			array(
 				'key' => 'field_52dd96514ea18',
@@ -474,6 +501,7 @@ function battleplan_add_acf_pedigree_fields() {
 				'multiple' => 0,
 				'return_format' => 'object',
 				'ui' => 1,
+				'wrapper' => array('width' => 60),
 			),
 			array(
 				'key' => 'field_5fbd6ec8c5900',
@@ -482,6 +510,7 @@ function battleplan_add_acf_pedigree_fields() {
 				'type' => 'text',
 				'required' => 0,
 				'conditional_logic' => 0,
+				'wrapper' => array('width' => 40),
 			),
 			array(
 				'key' => 'field_5ce9329f30cb0',
@@ -500,6 +529,7 @@ function battleplan_add_acf_pedigree_fields() {
 				'layout' => 'vertical',
 				'return_format' => 'value',
 				'save_other_choice' => 0,
+				'wrapper' => array('width' => 50),
 			),
 			array(
 				'key' => 'field_52dd8f4f60233',
@@ -511,6 +541,7 @@ function battleplan_add_acf_pedigree_fields() {
 				'display_format' => 'F j, Y',
 				'return_format' => 'F j, Y',
 				'first_day' => 0,
+				'wrapper' => array('width' => 50),
 			),
 			array(
 				'key' => 'field_52dd8f8e60235',
@@ -520,6 +551,7 @@ function battleplan_add_acf_pedigree_fields() {
 				'required' => 0,
 				'conditional_logic' => 0,
 				'default_value' => 0,
+				'wrapper' => array('width' => 33),
 			),
 			array(
 				'key' => 'field_52dd8f7a60234',
@@ -529,6 +561,7 @@ function battleplan_add_acf_pedigree_fields() {
 				'required' => 0,
 				'conditional_logic' => 0,
 				'default_value' => 0,
+				'wrapper' => array('width' => 33),
 			),
 			array(
 				'key' => 'field_33fd9j7s889gh3',
@@ -538,6 +571,7 @@ function battleplan_add_acf_pedigree_fields() {
 				'required' => 0,
 				'conditional_logic' => 0,
 				'default_value' => 0,
+				'wrapper' => array('width' => 33),
 			),
 		),
 		'location' => array(

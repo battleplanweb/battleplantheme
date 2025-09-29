@@ -1,4 +1,8 @@
 <?php
+// Prevent indexing of honeypot in Google & others
+header("X-Robots-Tag: noindex, nofollow", true);
+header("Content-Type: text/plain; charset=UTF-8");
+
 require_once __DIR__ . '/../_prewp/bot-helpers.php';
 
 $ip   = $_SERVER['REMOTE_ADDR']      ?? '';

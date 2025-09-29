@@ -1513,7 +1513,11 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 // Remove current page from footer-menu
 	getObjects('ul#footer-menu a').forEach(a => {
 		if (a.getAttribute('href') === window.location.href) {
-			a.parentElement.style.display = 'none';
+			a.removeAttribute('href');
+			a.style.pointerEvents = 'none'; 
+			a.style.opacity = '0.8'; 
+			a.style.cursor = 'default';
+			a.setAttribute('aria-disabled', 'true');
 		}
 	});
 	

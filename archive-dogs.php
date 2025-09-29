@@ -50,6 +50,10 @@ get_header(); ?>
 			while ( have_posts() ) : the_post(); 
 				if ( $addClass != '' ) $addClass = " ".$addClass;
 		
+		 		if ( strtolower(esc_attr(get_field("list_in_archive"))) === "no" ) {
+						continue;
+				}					
+		
 				$addTags = "";
 				$taxonomies = get_object_taxonomies(get_post_type()); 
  				foreach( $taxonomies as $tax ) :

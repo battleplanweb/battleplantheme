@@ -1168,7 +1168,7 @@ function battleplan_clear_all() {
 }
 
 function battleplan_clear_hvac($all=false) {
-	$deleteImgs = array ('testimonials', 'photos', 'graphics', 'logos');
+	$deleteImgs = array ('testimonials', 'photos', 'graphics', 'logos', 'jobsite-geo');
 	$keepPages = array ('home', 'contact-us', 'product-overview');
 	$keepElements = array ('site-header', 'widgets');
 

@@ -2325,6 +2325,8 @@ function battleplan_create_user_roles() {
 		'edit_private_posts'			=> true,
 		'delete_private_posts'			=> true,
 		'copy_posts'					=> true,
+		'manage_categories' 			=> true,
+		'manage_terms' 					=> true,
 		'upload_files'					=> true,
 		'read'							=> true,
 	);	
@@ -2350,6 +2352,8 @@ function battleplan_create_user_roles() {
 		'edit_private_pages'			=> true,
 		'delete_private_pages'			=> true,
 		'copy_posts'					=> true,
+		'manage_categories' 			=> true,
+		'manage_terms' 					=> true,
 		'upload_files'					=> true,
 		'read'							=> true,
 	);

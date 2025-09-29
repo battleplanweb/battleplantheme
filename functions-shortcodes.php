@@ -1432,13 +1432,13 @@ function battleplan_setUpWPGallery( $atts, $content = null ) {
 	$gallery .= "<div class='lightbox-counter'></div>";
 	//$gallery .= "<div class='closeBtn' aria-label='close' aria-hidden='false' tabindex='0'><span class='icon x-large'></span></div>";
 	/* WP3 validation 12/11/24 */
-	$gallery .= "<button class='closeBtn' aria-label='close'><span class='icon x-large'></span></button>";
-	$gallery .= "<div class='block block-button button-prev'><button aria-label='Previous Photo'><span class='gallery-prev-icon'><span class='sr-only'>Previous Photo</span></span></button></div>";
-	$gallery .= "<div class='block block-button button-next'><button aria-label='Next Photo'><span class='gallery-next-icon'><span class='sr-only'>Next Photo</span></span></button></div>";
+	$gallery .= "<button class='closeBtn' aria-label='close'>[get-icon type='x-large']<span class='sr-only'>Close Gallery</span></button>";
+	$gallery .= "<div class='block block-button button-prev'><button aria-label='Previous Photo'>[get-icon type='chevron-left']<span class='sr-only'>Previous Photo</span></button></div>";
+	$gallery .= "<div class='block block-button button-next'><button aria-label='Next Photo'>[get-icon type='chevron-right']<span class='sr-only'>Next Photo</span></button></div>";
 	$gallery .= "</div>";	
 	
 	update_field('image_number', $count);
-	return $gallery;
+	return do_shortcode($gallery);
 }
 
 // Generate a WordPress gallery and filter

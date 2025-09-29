@@ -19,6 +19,7 @@ get_header(); ?>
 			$grid = "1-1-1";
 			$valign = "stretch";
 			$tags = "false"; // drop / list / button / false
+			$tagTax = "tags"; // change to slug of custom taxonomy if not using tags
 			$showThumb = "true";
 			$size = "thumbnail";
 			$picSize = "100";
@@ -108,37 +109,45 @@ get_header(); ?>
 			endwhile; 
 		
 		// Build Tag List
-			if ( $tags != "false" ) :	
-				$getTags = get_tags(array( 'orderby' => 'count', 'order' => 'DESC' ));
-		
-				if ( $tags == "drop" ) :
-					$tagClass = "hide-1 hide-2 hide-3 hide-4 hide-5";
-					$dropClass = "";		
-				elseif ( $tags == "list" ) :
-					$tagClass = "tag-list hide-1 hide-2";
-					$dropClass = "hide-3 hide-4 hide-5";		
-				else:
-					$tagClass = "tag-buttons hide-1 hide-2";
-					$dropClass = "hide-3 hide-4 hide-5";
-				endif;
-		
-				$buildTagList = '<span class="'.$tagClass.'">';
-				$buildTagDrop = '<select name="tag-dropdown" id="tag-dropdown" class="'.$dropClass.'">';
-				$buildTagDrop .= '<option value="">Topics</option>';
-		
-				foreach ($getTags as $tag) :		
-					$btnClass = ($tags == "button") ? " button button-".$tag->slug : "";
-					$buildTagList .= '<a href="'.get_tag_link( $tag->term_id ).'" rel="tag" class="tag-'.$tag->slug.$btnClass.'">'.$tag->name.' (' . $tag->count . ')</a>';
-					$buildTagDrop .= '<option value="'.get_tag_link( $tag->term_id ).'">'.$tag->name . ' (' . $tag->count . ')</option>';
-				endforeach;
+		if ( $tags != "false" ) :
+			$taxonomy = (isset($tagTax) && $tagTax && $tagTax !== "tag" && $tagTax !== "tags") ? $tagTax : 'post_tag';
+			$getTerms = get_terms(array(
+				'taxonomy' => $taxonomy,
+				'orderby' => 'count',
+				'order' => 'DESC',
+			));
 
-				$buildTagList .= '</span>';
-				$buildTagDrop .= '</select>';
-		
-				$buildTagMenu = '<div class="archive-tags '.get_post_type().'-tags">';
-				$buildTagMenu .= $buildTagList . $buildTagDrop;
-				$buildTagMenu .= '</div>';		
+			if ( $tags == "drop" ) :
+				$tagClass = "hide-1 hide-2 hide-3 hide-4 hide-5";
+				$dropClass = "";
+			elseif ( $tags == "list" ) :
+				$tagClass = "tag-list hide-1 hide-2";
+				$dropClass = "hide-3 hide-4 hide-5";
+			else:
+				$tagClass = "tag-buttons hide-1 hide-2";
+				$dropClass = "hide-3 hide-4 hide-5";
 			endif;
+
+			$buildTagList = '<span class="'.$tagClass.'">';
+			$buildTagDrop = '<select name="tag-dropdown" id="tag-dropdown" class="'.$dropClass.'">';
+			$buildTagDrop .= '<option value="">Topics</option>';
+
+			if ( ! is_wp_error($getTerms) && $getTerms ) :
+				foreach ( $getTerms as $term ) :
+					$link = get_term_link($term->term_id, $taxonomy);
+					$btnClass = ($tags == "button") ? " button button-".$term->slug : "";
+					$buildTagList .= '<a href="'.$link.'" rel="tag" class="tag-'.$term->slug.$btnClass.'">'.$term->name.' (' . $term->count . ')</a>';
+					$buildTagDrop .= '<option value="'.$link.'">'.$term->name . ' (' . $term->count . ')</option>';
+				endforeach;
+			endif;
+
+			$buildTagList .= '</span>';
+			$buildTagDrop .= '</select>';
+
+			$buildTagMenu = '<div class="archive-tags '.get_post_type().'-tags">';
+			$buildTagMenu .= $buildTagList . $buildTagDrop;
+			$buildTagMenu .= '</div>';
+		endif;
 		
 		// Display Archive
 			$displayArchive = '<header class="archive-header">';

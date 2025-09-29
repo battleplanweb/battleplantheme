@@ -207,7 +207,7 @@ input[type="number"] {
 
 /* Overrides
 --------------------------------------------- */
-.woocommerce #page .loader::before,
+/*.woocommerce #page .loader::before,*/
 .woocommerce #page ul.products::after, 
 .woocommerce #page ul.products::before, 
 .woocommerce #page ul.products::after, 
@@ -232,6 +232,20 @@ input[type="number"] {
 .woocommerce #page table.shop_table tr td.actions {
     padding-top:								calc(var(--measure-large) * 0.8);
 }
+
+/* Restore WooCommerce checkout spinner and center it in viewport */
+#bp-fixed-spinner {
+	position: fixed; top: 50%; left: 50%;
+	transform: translate(-50%, -50%);
+	width: 28px; height: 28px; display: none;
+	border: 2px solid rgba(0,0,0,.25);
+	border-left-color: rgba(0,0,0,.7);
+	border-radius: 50%;
+	animation: woospin .8s linear infinite;
+	z-index: 100001;
+}
+.bp-loading #bp-fixed-spinner { display: block; }
+
 
 /* Info & Error Boxes
 --------------------------------------------- */

@@ -72,6 +72,9 @@ endif;
 
 
 
+
+
+
 //if ( get_option('bp_setup_2023_09_15') != "completed" ) :
 	//add_action("init", "bp_remove_cron_job"); 
 	//function bp_remove_cron_job() {
@@ -103,14 +106,21 @@ endif;
 
 
 // Determine if Chron should run
-$forceChron = get_option('bp_force_chron') !== null ? get_option('bp_force_chron') : false;
-$chronTime = get_option('bp_chron_time') !== null ? get_option('bp_chron_time') : 0;
-$chronDue = $chronTime + rand(40000,70000);
+$forceChron = (bool) get_option('bp_force_chron', false);
+$next    	= (int)  get_option('bp_chron_next', 0);
 
-if ( $forceChron === true || ( _IS_BOT && !_IS_SERP_BOT && ( $chronDue < time() ) )) {
+if ($next <= 0) {
+	$next = time() + rand(40000, 70000);
+	update_option('bp_chron_next', $next);
+}
+
+$due = time() >= $next;
+
+if ($forceChron || (_IS_BOT && !_IS_SERP_BOT && $due)) {
 	delete_option('bp_force_chron');
 	update_option('bp_chron_time', time());
-	processChron($forceChron);
+	update_option('bp_chron_next', time() + rand(40000, 70000));
+	processChron($force);
 }
 	
 function processChron($forceChron) {
@@ -206,8 +216,8 @@ function processChron($forceChron) {
 						$google_info[$placeID]['phone'] = str_replace('-', '.', $google_info[$placeID]['phone']);
 					}
 					$google_info[$placeID]['phone-format'] =
-						($customer_info['area-before'] ?? '(') . $areaDigits .
-						($customer_info['area-after'] ?? ') ') .
+						($customer_info['area-before'] ?? '') . $areaDigits .
+						($customer_info['area-after'] ?? '') .
 						$google_info[$placeID]['phone'];
 				} else {
 					$google_info[$placeID]['area']         = '';

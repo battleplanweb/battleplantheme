@@ -110,7 +110,6 @@ function hcpro_handle_job_webhook($req) {
 
 
 
-
 // format location
 function format_location($location) {
 	$splitLoc = explode('-', $location);
@@ -133,6 +132,12 @@ function format_service($service) {
 	$jobsite_service = $jobsite_service === "Service Area" ? "Recent Jobsites" : $jobsite_service;
 
 	return $jobsite_service;
+}
+
+// matching up reviews and jobsites
+function bp_match_key_from_title($title){
+	$key = sanitize_title(trim((string)$title));
+	return $key ?: '';
 }
 
 // orient uploaded photos correctly
@@ -158,10 +163,34 @@ add_filter('wp_generate_attachment_metadata', function($metadata, $attachment_id
 add_action('save_post', 'battleplan_saveJobsite', 10, 3);
 function battleplan_saveJobsite($post_id, $post, $update) {
 	$customer_info = customer_info();
-    if ( ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) || ( defined('DOING_AJAX') && DOING_AJAX ) || !current_user_can('edit_post', $post_id) ) return;	
-	if ( get_post_type($post_id) !== 'jobsite_geo' && get_post_type($post_id) !== 'testimonials' ) return;
+	if ( (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) || (defined('DOING_AJAX') && DOING_AJAX) ) return;
+	if (!in_array(get_post_type($post_id), ['jobsite_geo','testimonials'], true)) return;
+	
+	if (get_post_type($post_id) === 'testimonials') {
+		$jobsites = get_posts([
+			'post_type'      => 'jobsite_geo',
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'meta_query'     => [[
+				'key'   => '_bp_match_key',
+				'value' => $key,
+			]],
+		]);
+		foreach ($jobsites as $j) update_post_meta($j->ID, 'review', $post_id);
+	}
 
 	if ( get_post_type($post_id) === 'jobsite_geo' ) {	
+		
+		$match = get_posts([
+			'post_type'      => 'testimonials',
+			'post_status'    => 'publish',
+			'posts_per_page' => 1,
+			'meta_query'     => [[
+				'key'   => '_bp_match_key',
+				'value' => $key,
+			]],
+		]);
+		!empty($match) ? update_post_meta($post_id, 'review', $match[0]->ID) : null;
 	
 		// retrieve lat & long from Google API and add as post meta	
 		$address = trim(esc_attr(get_field( "address" )));
@@ -181,30 +210,36 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 		}
 
 		if ($address !== '' && $city !== '' && $state !== '' && $zip !== '') :
-			$address = $address.', '.$city.', '.$state.' '.$zip;
-			$googleAPI = 'https://maps.googleapis.com/maps/api/geocode/json?address='.urlencode($address).'&key='._PLACES_API;
+			$new_address = $address.', '.$city.', '.$state.' '.$zip;
 
-			$response = wp_remote_get($googleAPI, ['timeout' => 10]);
-			if (is_wp_error($response)) :
-				emailMe('Geocoding HTTP Error - '.customer_info()['name'], $response->get_error_message(), $replyTo = null);
-			else :
-				$http_code = wp_remote_retrieve_response_code($response);
-				$body = wp_remote_retrieve_body($response);
-				$data = json_decode($body, true);
+			// check last saved full address
+			$last_address = get_post_meta($post_id, '_last_geocode_address', true);
 
-				if ($http_code !== 200 || !is_array($data)) :
-					$html = 'HTTP '.$http_code.'<br><br>Raw body:<br><pre>'.esc_html($body).'</pre>';
-					emailMe('Geocoding Bad Response - '.customer_info()['name'], $html, $replyTo = null);
-				elseif (($data['status'] ?? '') === 'OK') :
-					update_post_meta($post_id, 'geocode', $data['results'][0]['geometry']['location']);
+			if ($new_address !== $last_address) {
+				$googleAPI = 'https://maps.googleapis.com/maps/api/geocode/json?address='.urlencode($new_address).'&key='._PLACES_API;
+
+				$response = wp_remote_get($googleAPI, ['timeout' => 10]);
+				if (is_wp_error($response)) :
+					emailMe('Geocoding HTTP Error - '.customer_info()['name'], $response->get_error_message());
 				else :
-					$err = ($data['error_message'] ?? 'No error_message returned.');
-					$html = $address.'<br><br>Status: '.esc_html($data['status']).'<br>Error: '.esc_html($err);
-					emailMe('Geocoding API Error - '.customer_info()['name'], $html, $replyTo = null);
-				endif;
-			endif;
-		endif;
+					$http_code = wp_remote_retrieve_response_code($response);
+					$body = wp_remote_retrieve_body($response);
+					$data = json_decode($body, true);
 
+					if ($http_code !== 200 || !is_array($data)) :
+						$html = 'HTTP '.$http_code.'<br><br>Raw body:<br><pre>'.esc_html($body).'</pre>';
+						emailMe('Geocoding Bad Response - '.customer_info()['name'], $html);
+					elseif (($data['status'] ?? '') === 'OK') :
+						update_post_meta($post_id, 'geocode', $data['results'][0]['geometry']['location']);
+						update_post_meta($post_id, '_last_geocode_address', $new_address); // save for future comparison
+					else :
+						$err = ($data['error_message'] ?? 'No error_message returned.');
+						$html = $new_address.'<br><br>Status: '.esc_html($data['status']).'<br>Error: '.esc_html($err);
+						emailMe('Geocoding API Error - '.customer_info()['name'], $html);
+					endif;
+				endif;
+			}
+		endif;
 
 		// add city-state as location tag
 		if ( $city && $state ) $location = $city.'-'.$state; 
@@ -313,7 +348,18 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 			)
 			: null;
 
-				
+		// sync photo captions → image ALT
+		foreach ([
+			'jobsite_photo_1' => 'jobsite_photo_1_alt',
+			'jobsite_photo_2' => 'jobsite_photo_2_alt',
+			'jobsite_photo_3' => 'jobsite_photo_3_alt',
+			'jobsite_photo_4' => 'jobsite_photo_4_alt',
+		] as $img => $cap) {
+			$aid = (int) get_field($img, $post_id);
+			$alt = trim((string) get_field($cap, $post_id));
+			$aid ? update_post_meta($aid, '_wp_attachment_image_alt', $alt ?: get_the_title($post_id)) : null;
+		}
+		
 		// set first uploaded pic as jobsite thumbnail
 		set_post_thumbnail($post_id, esc_attr(get_field( "jobsite_photo_1")) );	
 
@@ -358,8 +404,56 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 					update_post_meta($jobsite->ID, 'review', $testimonial->ID);
 				}
 			}
-		}		
+		}
 	}
+	
+	
+	
+	
+	if ( get_option('bp_setup_2025_09_29') !== "completed" ) : 
+		$testimonials = get_posts(['post_type'=>'testimonials','posts_per_page'=>-1,'post_status'=>'publish']); 
+		$t_index = []; 
+		foreach ($testimonials as $t) { 
+			$key = bp_match_key_from_title($t->post_title);
+			update_post_meta($t->ID, '_bp_match_key', $key); 
+			$t_index[$key] = $t->ID; 
+		} 
+	
+		$jobsites = get_posts(['post_type'=>'jobsite_geo','posts_per_page'=>-1,'post_status'=>'publish']); 
+	
+		foreach ($jobsites as $j){
+			$key = bp_match_key_from_title($j->post_title); 
+			update_post_meta($j->ID, '_bp_match_key', $key); 
+			isset($t_index[$key]) ? update_post_meta($j->ID, 'review', $t_index[$key]) : null; 
+		}
+	
+		
+		
+		foreach ($jobsites as $jid){
+			$pairs = [
+				'jobsite_photo_1' => 'jobsite_photo_1_alt',
+				'jobsite_photo_2' => 'jobsite_photo_2_alt',
+				'jobsite_photo_3' => 'jobsite_photo_3_alt',
+				'jobsite_photo_4' => 'jobsite_photo_4_alt',
+			];
+			foreach ($pairs as $img => $cap) {
+				$aid = (int) ( function_exists('get_field') ? get_field($img, $jid) : get_post_meta($jid, $img, true) );
+				if (!$aid) continue;
+
+				$current_alt = (string) get_post_meta($aid, '_wp_attachment_image_alt', true);
+				if (stripos($current_alt, 'Jobsite Geo') === 0) {
+					$alt = trim((string) ( function_exists('get_field') ? get_field($cap, $jid) : get_post_meta($jid, $cap, true) ));
+					update_post_meta($aid, '_wp_attachment_image_alt', $alt ?: get_the_title($jid));
+				}
+			}
+		}
+		
+	
+		updateOption( 'bp_setup_2025_09_29', 'completed', false );
+	endif;
+	
+	
+	
 }
 
 // add drop-down to view specific landing pages

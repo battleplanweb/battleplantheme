@@ -14,7 +14,7 @@
 --------------------------------------------------------------*/
 
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.32.7' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.32.8' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -118,6 +118,7 @@ $GLOBALS['do_not_repeat'] = array();
 --------------------------------------------------------------*/
 
 function findCity($userCity) {
+	$customer_info = customer_info();
 	foreach ($customer_info['service-areas'] as $area) :
 		if (in_array($userCity, $area)) return true;
 	endforeach;

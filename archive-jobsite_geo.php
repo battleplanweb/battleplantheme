@@ -36,7 +36,7 @@ get_header(); ?>
 				$address = trim(esc_attr(get_field( "address" )), ' ');
 				$city = trim(esc_attr(get_field( "city" )), ' ');
 				$state = trim(strtoupper(esc_attr(get_field( "state" ))), ' ');
-				$location = format_location($city.'-'.$state);
+				$location = bp_format_location($city.'-'.$state);
 				$oldBrand = ucwords(trim(esc_attr(get_field( "old_brand" )), ' '));
 				$oldEquip = ucwords(trim(esc_attr(get_field( "old_equipment" )), ' '));
 				$oldModel = trim(esc_attr(get_field( "old_model_no" )), ' ');

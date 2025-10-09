@@ -211,8 +211,8 @@ add_filter('wp_editor_set_quality', 'av_return_100', 9999);
 //add_filter('acf/settings/remove_wp_meta_box', '__return_false');
 
 // Add & Remove WP Admin Menu items
-add_action( 'admin_init', 'battleplan_remove_menus', 999 );
-function battleplan_remove_menus() {   
+add_action('admin_menu', 'battleplan_customize_admin_menus', 999);
+function battleplan_customize_admin_menus() {   
 	remove_menu_page( 'link-manager.php' );       										// Links
 	remove_menu_page( 'edit-comments.php' );       										// Comments	
 	remove_menu_page( 'wpcf7' );       													// Contact Forms	
@@ -295,6 +295,18 @@ function battleplan_remove_menus() {
 	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Templates', '&nbsp;└&nbsp;Templates', 'manage_options', 'edit.php?post_type=pgmb_templates' );
 	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Calendar', '&nbsp;└&nbsp;Calendar', 'manage_options', 'admin.php?page=post_to_google_my_business' );
 	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Account', '&nbsp;└&nbsp;Account', 'manage_options', 'admin.php?page=post_to_google_my_business-account' );	
+	
+	if (defined('_USER_LOGIN') && _USER_LOGIN === 'battleplanweb') {
+		add_submenu_page(
+			'edit.php?post_type=jobsite_geo',
+			'Reassign Jobsite Tags',
+			'⚙️ REASSIGN',
+			'manage_options',
+			'reassign-jobsite-tags',
+			'bp_reassign_jobsite_tags_page'
+		);
+	}
+	
 }
 		
 // Reorder WP Admin Menu Items
@@ -1248,3 +1260,53 @@ function battleplan_launch_site() {
 	header("Location: /wp-admin/");
 	exit();
 }  
+
+
+
+
+function bp_reassign_jobsite_tags_page() {
+	if (!current_user_can('manage_options')) {
+		wp_die(__('You do not have permission to access this page.'));
+	}
+
+	echo '<div class="wrap"><h1>Reassign Jobsite Tags</h1>';
+
+	// 🔍 Debug output so we can tell if form submission is detected
+	if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+		echo '<p><strong>Form detected!</strong></p>';
+
+		if (isset($_POST['bp_run_reassign'])) {
+
+			echo '<p>Running reassignment process…</p>';
+
+			$jobsites = get_posts([
+				'post_type'      => 'jobsite_geo',
+				'post_status'    => ['publish', 'draft', 'pending'],
+				'posts_per_page' => -1,
+			]);
+
+			$total   = count($jobsites);
+			$success = 0;
+
+			foreach ($jobsites as $j) {
+				// If your original processing function is called battleplan_saveJobsite(),
+				// you can call it directly:
+				battleplan_saveJobsite($j->ID, get_post($j->ID), true);
+				$success++;
+			}
+
+			echo '<div class="notice notice-success"><p><strong>✅ Reassignment Complete:</strong> '
+				. esc_html($success) . ' of ' . esc_html($total) . ' jobsites processed.</p></div>';
+		} else {
+			echo '<p><strong>No form variable detected.</strong></p>';
+		}
+	}
+
+	// Render form
+	?>
+	<form method="post" onsubmit="return confirm('Are you sure you want to reassign all Jobsite tags?');">
+		<?php submit_button('Run Reassign', 'primary', 'bp_run_reassign'); ?>
+	</form>
+	</div>
+	<?php
+}

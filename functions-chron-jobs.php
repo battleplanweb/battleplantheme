@@ -44,7 +44,7 @@ endif;
 
 if ( !get_option('bp_brevo_key') || get_option('bp_brevo_key') === null || get_option('bp_brevo_key') === '' ) :
 	$site           	= str_replace('https://', '', get_bloginfo('url'));
-	$rovin          	= in_array($site, ["babeschicken.com", "babescatering.com", "babeschicken.tv", "sweetiepiesribeyes.com", "bubbascookscountry.com"], true);
+	$rovin          	= in_array($site, ["babeschicken.com", "babescatering.com", "babeschicken.tv", "sweetiepiesribeyes.com", "bubbascookscountry.com", "rovindirectory.com", "rovininc.com"], true);
 	$apiKey1 = "keysib";
 
 	if ( $rovin === true ) {	
@@ -68,6 +68,22 @@ endif;
 	delete_option('product-update-may-2022');
 	battleplan_delete_prefixed_options( 'widget_' );
 	
+
+
+/// DELETE once all sites store it
+$site           	= str_replace('https://', '', get_bloginfo('url'));
+$rovin          	= in_array($site, ["babeschicken.com", "babescatering.com", "babeschicken.tv", "sweetiepiesribeyes.com", "bubbascookscountry.com", "rovindirectory.com", "rovininc.com"], true);
+
+
+
+if ( $rovin === true ) {	
+	add_action('init', function() {
+		if (!get_option('bp_rovin_secret')) {
+			updateOption('bp_rovin_secret', 'F7xYjR3qP9aC6mVeT0nL2bGqZ8hD1rUwN5sK0fXiQ4pH7tJcE9vM3yWgS2oBzL8d');
+		}
+	});
+}
+/// END DELETE
 
 
 
@@ -120,10 +136,24 @@ if ($forceChron || (_IS_BOT && !_IS_SERP_BOT && $due)) {
 	delete_option('bp_force_chron');
 	update_option('bp_chron_time', time());
 	update_option('bp_chron_next', time() + rand(40000, 70000));
+	
+	
+	// testing if chron is running automatically - 10/7/25	
+	$message = '';
+	$message .= $forceChron == true ? 'Forced. ' : '';
+	$message .= $due == true ? 'Automatic. ' : '';
+	$message .= _IS_BOT == true ? 'Bot. ' : '';
+		
+	emailMe('Chron Execution - '.$customer_info['name'], $message);
+	// end test
+	
+	
+	
 	processChron($force);
 }
 	
-function processChron($forceChron) {
+function processChron($forceChron) {	
+	
 // 0) Site bootstrapping
 	if (function_exists('battleplan_remove_user_roles')) battleplan_remove_user_roles();
 	if (function_exists('battleplan_create_user_roles')) battleplan_create_user_roles();
@@ -132,7 +162,7 @@ function processChron($forceChron) {
 	$google_info 	= get_option('bp_gbp_update') ?: [];
 
 	$site           	= str_replace('https://', '', get_bloginfo('url'));
-	$rovin          	= in_array($site, ["babeschicken.com", "babescatering.com", "babeschicken.tv", "sweetiepiesribeyes.com", "bubbascookscountry.com"], true);
+	$rovin          	= in_array($site, ["babeschicken.com", "babescatering.com", "babeschicken.tv", "sweetiepiesribeyes.com", "bubbascookscountry.com", "rovindirectory.com", "rovininc.com"], true);
 	$bp_handles_mail	= ($site !== "asairconditioning.com");
 	
 // 1) Load CI + normalize PIDs 

@@ -1476,6 +1476,7 @@ if (file_exists(get_stylesheet_directory().'/functions-site.php')) require_once 
 
 require_once get_template_directory().'/functions-chron-jobs.php';	
 if ( is_admin() || _USER_LOGIN == "battleplanweb" ) require_once get_template_directory().'/functions-admin.php';  
+if (!empty( get_site_option('bp_rovin_secret'))) { require_once get_template_directory() . '/functions-rovin.php'; }
 
 // Add filter to search & replace final HTML output
 ob_start(); 

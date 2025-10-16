@@ -14,7 +14,7 @@
 --------------------------------------------------------------*/
 
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.32.9' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.32.10' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -58,6 +58,7 @@ if ( !defined('_RAND_SEED') ) :
 	define( '_RAND_SEED', get_option('rand-seed') );
 endif;
 
+// Detect bots and mark accordingly
 $UA	= $_SERVER['HTTP_USER_AGENT'] ?? '';
 $IP	= $_SERVER['REMOTE_ADDR'] ?? '';
 $REF= $_SERVER['HTTP_REFERER'] ?? '';
@@ -88,11 +89,28 @@ if ($REF) {
 
 $any = fn($hay,$arr)=>array_reduce($arr, fn($c,$s)=>$c||($hay!==''&&stripos($hay,$s)!==false), false);
 
+$search_bot_keywords = ['googlebot', 'bingbot', 'yahoo', 'duckduck', 'yandex', 'baidu', 'applebot', 'qwant', 'petalbot'];
+$known_bot_signatures = ['ahrefs', 'semrush', 'mj12bot', 'dotbot', 'curl', 'wget', 'python','uptimerobot', 'facebookexternalhit', 'discordbot', 'slackbot', 'telegrambot', 'spider', 'crawler', 'scraper', 'monitor'];
+
 require_once get_template_directory() . '/_prewp/bot-helpers.php';
 
 $__serp = bp_is_verified_serp_bot($IP, $UA);
-!defined('_IS_SERP_BOT') && define('_IS_SERP_BOT', $__serp);
-!defined('_IS_BOT') && define('_IS_BOT', _IS_SERP_BOT || $ref_is_spam);
+
+$pretends_serp_bot = false;
+if (!$__serp && $any(strtolower($UA), $search_bot_keywords)) {
+	$pretends_serp_bot = true;
+}
+
+$ua_bot_match = $any(strtolower($UA), $known_bot_signatures);
+
+if (!defined('_BOT_UA')) define('_BOT_UA', $UA);
+if (!defined('_IS_SERP_BOT')) define('_IS_SERP_BOT', (bool)$__serp);
+if (!defined('_IS_BOT')) define('_IS_BOT', (
+	_IS_SERP_BOT
+	|| (bool)$ref_is_spam
+	|| (bool)$ua_bot_match
+	|| (bool)$pretends_serp_bot
+));
 
 // Block only if spam-referrer AND not a verified SERP bot
 $should_block = (!_IS_SERP_BOT && $ref_is_spam);

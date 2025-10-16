@@ -29,11 +29,13 @@ add_action('rest_api_init', function() {
 
 function hcpro_handle_job_webhook($req) {
 	// 🔒 Security check
-	if (empty($_GET['token']) || $_GET['token'] !== '81ad514b801b4bb4b1cb2cac6e8a9cbd') {
+	
+	$get_jobsite_geo = get_option('jobsite_geo');	
+	
+	if ( empty($_GET['token']) || $_GET['token'] !== $get_jobsite_geo['token'] ) {
 		return new WP_REST_Response(['error' => 'Invalid token'], 403);
 	}
 
-	$get_jobsite_geo = get_option('jobsite_geo');
 	if (empty($get_jobsite_geo['fsm_brand']) || $get_jobsite_geo['fsm_brand'] !== 'Housecall Pro') {
 		return new WP_REST_Response(['error' => 'Not using Housecall Pro'], 403);
 	}

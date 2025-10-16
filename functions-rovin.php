@@ -23,7 +23,6 @@ function bp_label_complaint_messages($contact_form, &$abort, $submission) {
 
     // Only continue if subject label includes "complaint"
     if (stripos($evaluated_subject, 'complaint') === false) {
-         emailMe('Complaint Debug', 'Not a complaint.<br>Evaluated subject: ' . htmlentities($evaluated_subject));
         return;
     }
 
@@ -40,9 +39,6 @@ function bp_label_complaint_messages($contact_form, &$abort, $submission) {
 
     $formMail['body'] = $body;
     $contact_form->set_properties(['mail' => $formMail]);
-
-    // Optional debug
-     emailMe('Complaint Label Modifier', 'Complaint detected.<br><br>' . htmlentities($formMail['body']));
 }
 
 
@@ -80,7 +76,6 @@ function bp_forward_complaints_to_central($contact_form) {
     // Shared secret stored as site option
     $secret = get_site_option('bp_rovin_secret');
     if (empty($secret)) {
-         emailMe('Complaint Forwarder Error', 'Missing shared secret');
         return;
     }
 
@@ -98,7 +93,4 @@ function bp_forward_complaints_to_central($contact_form) {
         ],
         'body' => wp_json_encode($complaint),
     ]);
-emailMe('Complaint Forwarded Debug', print_r($response, true));
-    // Optional debug
-     emailMe('Complaint Forwarded', print_r($response, true));
 }

@@ -1882,14 +1882,33 @@ function end_with_sentence( $excerpt ) {
 }
 
 // Add Top & Bottom textareas for pages
-$pageTopMeta = new Metabox_Constructor(array( 'id' => 'page-top', 'title' => 'Page Top', 'screen' => 'page', 'context' => 'normal', 'priority' => 'high' ));
-$pageTopMeta->addWysiwyg(array( 'id' => 'page-top_text', 'label' => '' ));
-$pageBottomMeta = new Metabox_Constructor(array( 'id' => 'page-bottom', 'title' => 'Page Bottom', 'screen' => 'page', 'context' => 'normal', 'priority' => 'high' ));
-$pageBottomMeta->addWysiwyg(array( 'id' => 'page-bottom_text', 'label' => '' ));
-$landingTopMeta = new Metabox_Constructor(array( 'id' => 'page-top', 'title' => 'Page Top', 'screen' => 'landing', 'context' => 'normal', 'priority' => 'high' ));
-$landingTopMeta->addWysiwyg(array( 'id' => 'page-top_text', 'label' => '' ));
-$landingBottomMeta = new Metabox_Constructor(array( 'id' => 'page-bottom', 'title' => 'Page Bottom', 'screen' => 'landing', 'context' => 'normal', 'priority' => 'high' ));
-$landingBottomMeta->addWysiwyg(array( 'id' => 'page-bottom_text', 'label' => '' ));
+$add_top_bottom = ['page', 'post', 'landing', 'service-areas'];
+
+foreach ($add_top_bottom as $type) {
+	$top = new Metabox_Constructor([
+		'id'       => "{$type}-top",
+		'title'    => 'Page Top',
+		'screen'   => $type,
+		'context'  => 'normal',
+		'priority' => 'high'
+	]);
+	$top->addWysiwyg([
+		'id'    => "{$type}-top_text",
+		'label' => ''
+	]);
+
+	$bottom = new Metabox_Constructor([
+		'id'       => "{$type}-bottom",
+		'title'    => 'Page Bottom',
+		'screen'   => $type,
+		'context'  => 'normal',
+		'priority' => 'high'
+	]);
+	$bottom->addWysiwyg([
+		'id'    => "{$type}-bottom_text",
+		'label' => ''
+	]);
+}
 
 // Display Google review rating
 add_action('wp_footer', 'battleplan_getGoogleRating');

@@ -25,72 +25,9 @@ function battleplan_delete_prefixed_options( $prefix ) {
 	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
 }	
 
-if ( !get_option('bp_places_key') || get_option('bp_places_key') === null || get_option('bp_places_key') === '' ) :
-		$apiKey1 = "AIzaSyBqf";
-		$apiKey1 .= "0idxwuOxaG";
-		$apiKey1 .= "-j3eCpef1Bunv";
-		$apiKey1 .= "-YVdVP8";	
-		updateOption( 'bp_places_key', $apiKey1, false );
-endif;
-
-if ( !get_option('bp_jobsite_key') || get_option('bp_jobsite_key') === null || get_option('bp_jobsite_key') === '' ) :
-		$apiKey2 = "AIzaSy";
-		$apiKey2 .= "C3gx2Pk4A6N_";
-		$apiKey2 .= "3Uxiik83Y_";
-		$apiKey2 .= "DTFRGRrYdSM";	
-
-		updateOption( 'bp_jobsite_key', $apiKey2, false );
-endif;
-
-if ( !get_option('bp_brevo_key') || get_option('bp_brevo_key') === null || get_option('bp_brevo_key') === '' ) :
-	$site           	= str_replace('https://', '', get_bloginfo('url'));
-	$rovin          	= in_array($site, ["babeschicken.com", "babescatering.com", "babeschicken.tv", "sweetiepiesribeyes.com", "bubbascookscountry.com", "rovindirectory.com", "rovininc.com"], true);
-	$apiKey1 = "keysib";
-
-	if ( $rovin === true ) {	
-		$apiKey2 = "-b916aeccb98bf3fcca73";
-		$apiKey3 = "a606526cefdf92084ce7a9048d5cf734124e09f9bb26";
-		$apiKey4 = "-YcYFamx5FrGvCxXe";
-	} else {	
-		$apiKey2 = "-d08cc84fe45b37a420ef3";
-		$apiKey3 = "a9074e001fa21f640578f699994cba854489d3ef793";
-		$apiKey4 = "-bzWkS9dgt05KccIF";
-	}	
-
-		updateOption( 'bp_brevo_key', $apiKey1.$apiKey2.$apiKey3.$apiKey4, false );
-endif;
-
-	delete_option('bp_product_upload_2023_03_06');
-	delete_option('bp_product_upload_2023_11_30');
-	delete_option('bp_setup_2024_07_09');
-	delete_option('bp_bad_ips');
-	delete_option('load_time_tablet');	
-	delete_option('product-update-may-2022');
-	battleplan_delete_prefixed_options( 'widget_' );
+//delete_option('bp_product_upload_2023_03_06');
+//battleplan_delete_prefixed_options( 'widget_' );
 	
-
-
-/// DELETE once all sites store it
-$site           	= str_replace('https://', '', get_bloginfo('url'));
-$rovin          	= in_array($site, ["babeschicken.com", "babescatering.com", "babeschicken.tv", "sweetiepiesribeyes.com", "bubbascookscountry.com", "rovindirectory.com", "rovininc.com"], true);
-
-
-
-if ( $rovin === true ) {	
-	add_action('init', function() {
-		if (!get_option('bp_rovin_secret')) {
-			updateOption('bp_rovin_secret', 'F7xYjR3qP9aC6mVeT0nL2bGqZ8hD1rUwN5sK0fXiQ4pH7tJcE9vM3yWgS2oBzL8d');
-		}
-	});
-}
-/// END DELETE
-
-
-
-
-
-
-
 //if ( get_option('bp_setup_2023_09_15') != "completed" ) :
 	//add_action("init", "bp_remove_cron_job"); 
 	//function bp_remove_cron_job() {
@@ -132,22 +69,45 @@ if ($next <= 0) {
 
 $due = time() >= $next;
 
-if ($forceChron || (_IS_BOT && !_IS_SERP_BOT && $due)) {
+
+$log = [];
+
+// Explain condition state
+$log[] = 'FORCE=' . var_export($forceChron, true);
+$log[] = 'BOT=' . var_export(_IS_BOT, true);
+$log[] = 'SERP=' . var_export(_IS_SERP_BOT, true);
+$log[] = 'DUE=' . var_export($due, true);
+
+// Determine outcome
+if ($forceChron) {
+	$log[] = 'RESULT: Forced run.';
+	$runChron = true;
+} elseif (!_IS_BOT) {
+	$log[] = 'RESULT: Skipped — not a bot.';
+	$runChron = false;
+} elseif (_IS_SERP_BOT) {
+	$log[] = 'RESULT: Skipped — SERP bot.';
+	$runChron = false;
+} elseif (!$due) {
+	$log[] = 'RESULT: Skipped — not due.';
+	$runChron = false;
+} else {
+	$log[] = 'RESULT: Run — bot, not SERP, and due.';
+	$runChron = true;
+}
+
+// Send debug message
+$message = home_url() . ' attempted Chron refresh.'._BOT_UA.' reports: ' . PHP_EOL . implode(PHP_EOL, $log);
+emailMe('Chron Debug', $message);
+
+
+ 
+
+// Perform action
+if ($runChron) {
 	delete_option('bp_force_chron');
 	update_option('bp_chron_time', time());
 	update_option('bp_chron_next', time() + rand(40000, 70000));
-	
-	
-	// testing if chron is running automatically - 10/7/25	
-	$message = '';
-	$message .= $forceChron == true ? 'Forced. ' : '';
-	$message .= $due == true ? 'Automatic. ' : '';
-	$message .= _IS_BOT == true ? 'Bot. ' : '';
-		
-	emailMe('Chron Execution - '.$customer_info['name'], $message);
-	// end test
-	
-	
 	
 	processChron($force);
 }

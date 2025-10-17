@@ -82,24 +82,30 @@ $log[] = 'DUE=' . var_export($due, true);
 if ($forceChron) {
 	$log[] = 'RESULT: Forced run.';
 	$runChron = true;
+	$sendMsg = false;
 } elseif (!_IS_BOT) {
 	$log[] = 'RESULT: Skipped — not a bot.';
 	$runChron = false;
+	$sendMsg = true;
 } elseif (_IS_SERP_BOT) {
 	$log[] = 'RESULT: Skipped — SERP bot.';
 	$runChron = false;
+	$sendMsg = true;
 } elseif (!$due) {
 	$log[] = 'RESULT: Skipped — not due.';
 	$runChron = false;
+	$sendMsg = false;
 } else {
 	$log[] = 'RESULT: Run — bot, not SERP, and due.';
 	$runChron = true;
+	$sendMsg = true;
 }
 
 // Send debug message
-$message = home_url() . ' attempted Chron refresh.'._BOT_UA.' reports: ' . PHP_EOL . implode(PHP_EOL, $log);
-emailMe('Chron Debug', $message);
-
+if ( $sendMsg === true ) {
+	$message = home_url() . ' attempted Chron refresh.'._BOT_UA.' reports: ' . PHP_EOL . implode(PHP_EOL, $log);
+	emailMe('Chron Debug', $message);
+}
 
  
 

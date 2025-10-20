@@ -77,16 +77,15 @@ $log[] = 'FORCE=' . var_export($forceChron, true);
 $log[] = 'BOT=' . var_export(_IS_BOT, true);
 $log[] = 'SERP=' . var_export(_IS_SERP_BOT, true);
 $log[] = 'DUE=' . var_export($due, true);
+$sendMsg = false;
 
 // Determine outcome
 if ($forceChron) {
 	$log[] = 'RESULT: Forced run.';
 	$runChron = true;
-	$sendMsg = false;
 } elseif (!_IS_BOT) {
 	$log[] = 'RESULT: Skipped — not a bot.';
 	$runChron = false;
-	$sendMsg = true;
 } elseif (_IS_SERP_BOT) {
 	$log[] = 'RESULT: Skipped — SERP bot.';
 	$runChron = false;
@@ -94,7 +93,6 @@ if ($forceChron) {
 } elseif (!$due) {
 	$log[] = 'RESULT: Skipped — not due.';
 	$runChron = false;
-	$sendMsg = false;
 } else {
 	$log[] = 'RESULT: Run — bot, not SERP, and due.';
 	$runChron = true;

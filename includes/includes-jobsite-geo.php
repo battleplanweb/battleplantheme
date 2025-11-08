@@ -93,7 +93,7 @@ function hcpro_handle_job_webhook($req) {
 			}
 
 			// 🔹 If it contains "Photo" (or Pic/Image), treat as the photo captions note
-			elseif (preg_match('/\b(Photo|Pic|Image)\s*\d+/i', $content)) {
+			} elseif (preg_match('/\b(Photo|Pic|Image)\s*\d+/i', $content)) {
 				$photo_note = $content;
 			}
 		}
@@ -1401,7 +1401,7 @@ function battleplan_jobsite_template($template) {
 			}		
 			wp_reset_postdata();
 	
-		elseif (is_tax('jobsite_geo-techs')) :
+		} elseif (is_tax('jobsite_geo-techs')) {
 			$tech_name = ucwords(str_replace('-', ' ', $jobsite_term->name));
 
 			$GLOBALS['jobsite_geo-headline']   = $tech_name . '\'s Recent Jobs';

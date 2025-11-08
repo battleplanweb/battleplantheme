@@ -90,8 +90,6 @@ function hcpro_handle_job_webhook($req) {
 				$has_publishable_note = true;
 				// Remove all leading asterisks and whitespace
 				$description_note = trim(preg_replace('/^\*{3,}\s*/', '', $content));
-			}
-
 			// 🔹 If it contains "Photo" (or Pic/Image), treat as the photo captions note
 			} elseif (preg_match('/\b(Photo|Pic|Image)\s*\d+/i', $content)) {
 				$photo_note = $content;
@@ -1303,8 +1301,7 @@ function battleplan_override_jobsite_query( $query ) {
 
 add_filter('template_include', 'battleplan_jobsite_template');
 function battleplan_jobsite_template($template) {
-    if ( is_tax('jobsite_geo-service-areas') || is_tax('jobsite_geo-services') || is_tax('jobsite_geo-techs') ) :
-	
+    if ( is_tax('jobsite_geo-service-areas') || is_tax('jobsite_geo-services') || is_tax('jobsite_geo-techs') ) {
 		$template = get_template_directory().'/archive-jobsite_geo.php';
 		$sep = ' · ';
         $jobsite_term = get_queried_object();

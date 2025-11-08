@@ -28,7 +28,9 @@
 		<?php echo do_shortcode('[get-element slug="site-footer"]'); ?>
 		
 		<section class="section site-info">			
-			<?php if (function_exists('battleplan_siteInfo')) : battleplan_siteInfo();
+			<?php 
+			
+			if (function_exists('battleplan_siteInfo')) : battleplan_siteInfo();
 			else : 
 				if (function_exists('battleplan_siteInfoLeft')) : $buildLeft = battleplan_siteInfoLeft();
 				else : $buildLeft = battleplan_footer_social_box();
@@ -44,8 +46,7 @@
 					$buildCopyright .= wp_nav_menu( array( 'theme_location' => 'footer-menu', 'container' => 'div', 'container_id' => 'footer-navigation', 'container_class' => 'secondary-navigation', 'menu_id' => 'footer-menu', 'menu_class' => 'menu secondary-menu', 'fallback_cb' => 'false', 'echo' => false ) );
 					
 					if ( isset($customer_info['misc2']) ) $buildCopyright .= "<div class='site-info-misc2'>".$customer_info['misc2']."</div>";					
-					
-					$buildCopyright .= "<div class='site-info-copyright'>".$customer_info['copyright']." ".$customer_info['name']." • All Rights Reserved</div>";
+					if ( isset($customer_info['copyright']) ) $buildCopyright .= "<div class='site-info-copyright'>".$customer_info['copyright']." ".$customer_info['name']." • All Rights Reserved</div>";		
 					
 					$placeIDs = $customer_info['pid'] ?? null;
 					if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
@@ -74,8 +75,24 @@
 					$buildCopyright .= "<div class='site-info-links'>";
 					
 					if ( isset($customer_info['license']) ) $buildCopyright .= "License ".$customer_info['license']." • "; 
-					
-					$buildCopyright .= "<span class='privacy-policy-link'><a href='/privacy-policy/'>Privacy Policy</a></span><span class='terms-conditions-link'> • <a href='/terms-conditions/'>Terms & Conditions</a></span>";
+
+					$links = [];
+
+					if ($privacy = get_page_by_path('privacy-policy', OBJECT, 'universal')) {
+						$links[] = "<span class='privacy-policy-link'><a href='" . get_permalink($privacy->ID) . "'>Privacy Policy</a></span>";
+					}
+
+					if ($terms = get_page_by_path('terms-conditions', OBJECT, 'universal')) {
+						$links[] = "<span class='terms-conditions-link'><a href='" . get_permalink($terms->ID) . "'>Terms & Conditions</a></span>";
+					}
+
+					if ($areas = get_page_by_path('areas-we-serve', OBJECT, 'universal')) {
+						$links[] = "<span class='areas-we-serve-link'><a href='" . get_permalink($areas->ID) . "'>Areas We Serve</a></span>";
+					}
+
+					if (!empty($links)) {
+						$buildCopyright .= implode(' • ', $links);
+					}
 					
 					if ( isset($customer_info['misc1']) ) $buildCopyright .= " • ".$customer_info['misc1'];
 					
@@ -102,26 +119,18 @@
 	</footer><!-- #colophon -->
 	
 	<?php bp_after_colophon(); ?>
-	
-	<?php 
-		$buildLinks = '<div class="wp-google-badge-faux"></div>';		
-		$buildLinks .= '<div class="bp-service-areas">Our Service Areas:<br><ul class="three-col">';
-		$buildLinks .= do_shortcode('[get-service-areas]');
-		$buildLinks .= '</ul></div>';	
-		echo $buildLinks;	
-	?>	
 		
 </div><!-- #page -->
 
 <?php echo do_shortcode('[get-icon type="chevron-up" class="scroll-top hide-1 hide-2 hide-3" link="#page" sr="Scroll To Top"]'); ?>
 
-<?php wp_footer(); ?>
 <?php if ( shortcode_exists( 'get-svg' ) ) echo '<div id="include-svg">'.do_shortcode('[get-svg]').'</div>' ?>
 
 <?php  	
 	$icon_style = '';
-	if (is_array($GLOBALS['icon-css'])) :
-		$icon_css = array_unique($GLOBALS['icon-css']);
+
+	if (isset($GLOBALS['icon_css']) && is_array($GLOBALS['icon_css'])) :
+		$icon_css = array_unique($GLOBALS['icon_css']);
 		foreach ($icon_css as $icon) :
 			if (is_array($GLOBALS['icons']) && array_key_exists($icon, $GLOBALS['icons'])) $icon_style .= '.icon.' . $icon . '::after { content: "' . $GLOBALS['icons'][$icon] . '"; }';
 		endforeach;
@@ -132,6 +141,8 @@
 
 	if ( _USER_LOGIN != "battleplanweb" && _IS_BOT != true ) updateOption('last_visitor_time', strtotime(date("F j, Y g:i a"))); 
 ?>
+
+<?php wp_footer(); ?>
 
 </body>
 </html>

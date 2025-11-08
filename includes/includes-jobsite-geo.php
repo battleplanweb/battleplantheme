@@ -1,5 +1,5 @@
 <?php
-/* Battle Plan Web Design Jobsite GEO
+/* Battle Plan Web Design Jobsite GEO */
  
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:
@@ -15,8 +15,6 @@
 /*--------------------------------------------------------------
 # Admin
 --------------------------------------------------------------*/
-
-$get_jobsite_geo = get_option('jobsite_geo');	
 
 // Housecall Pro Webhook
 add_action('rest_api_init', function() {
@@ -46,7 +44,16 @@ function hcpro_handle_job_webhook($req) {
 
 	// 🧾 Decode JSON
 	$data = json_decode($req->get_body());
-	if (!$data) return new WP_REST_Response(['error' => 'Invalid JSON'], 400);
+
+	// Check if JSON decoded properly
+	if (!$data || !is_object($data)) {
+		return new WP_REST_Response(['error' => 'Invalid JSON'], 400);
+	}
+
+	// Check if the job object exists and is valid
+	if (!isset($data->job) || !is_object($data->job)) {
+		return new WP_REST_Response(['error' => 'Invalid job object'], 400);
+	}
 
 	// 🧩 Handle test webhook
 	if (isset($data->foo) && $data->foo === 'bar') {
@@ -58,7 +65,9 @@ function hcpro_handle_job_webhook($req) {
 	}
 
 	// Log payload (debugging only)
-	file_put_contents(WP_CONTENT_DIR . '/hcp-last-payload.txt', print_r($data, true));
+	if (defined('WP_DEBUG') && WP_DEBUG) {
+		file_put_contents(WP_CONTENT_DIR . '/hcp-last-payload.txt', print_r($data, true));
+	}
 
 	// Shortcuts
 	$job  = $data->job;
@@ -69,9 +78,8 @@ function hcpro_handle_job_webhook($req) {
 	$description_note = '';
 	$photo_note = '';
 	$captions = [];
-
-	// We’ll track whether a valid publishable note was found
 	$has_publishable_note = false;
+	$max_photos       = 0;
 
 	if (!empty($job->notes)) {
 		foreach ($job->notes as $n) {
@@ -136,6 +144,9 @@ function hcpro_handle_job_webhook($req) {
 	$total   = isset($job->total_amount) ? $job->total_amount / 100 : 0;
 	$job_id  = $job->id ?? '';
 
+	
+    $GLOBALS['bp_jobsite_setup_running'] = true;
+
 	// 🧾 Create or update post
 	$existing = get_posts([
 		'post_type'   => 'jobsite_geo',
@@ -163,6 +174,13 @@ function hcpro_handle_job_webhook($req) {
 
 	if (!$post_id) return new WP_REST_Response(['error' => 'Failed to create post'], 500);
 	
+		$address_data = [
+		'street' => $street,
+		'city'   => $city,
+		'state'  => $state,
+		'zip'    => $zip,
+	];
+	update_post_meta($post_id, '_jobsite_address_data', $address_data);
 	
 	// 🧩 Update ACF/meta fields
 	update_field('hcp_job_id', $job_id, $post_id);
@@ -206,12 +224,13 @@ function hcpro_handle_job_webhook($req) {
 			if (is_wp_error($tmp)) continue;
 
 			$file = [
-				'name'     => basename($a->file_name),
-				'type'     => $a->file_type,
+				'name'     => basename($a->file_name ?? 'photo.jpg'),
+				'type'     => $a->file_type ?? 'image/jpeg',
 				'tmp_name' => $tmp,
 				'error'    => 0,
-				'size'     => filesize($tmp)
+				'size'     => filesize($tmp),
 			];
+
 			$m = wp_handle_sideload($file, ['test_form' => false]);
 			if (empty($m['file'])) continue;
 
@@ -245,7 +264,7 @@ function hcpro_handle_job_webhook($req) {
 		$removed = array_diff($saved_hcp_ids, $current_hcp_ids);
 		if (!empty($removed)) {
 			foreach ($removed as $old_id) {
-				for ($i = 1; $i <= 20; $i++) {
+				for ($i = 1; $i <= 4; $i++) {
 					$field = "jobsite_photo_{$i}";
 					$aid = get_field($field, $post_id);
 					if ($aid && get_post_meta($aid, '_hcp_attachment_id', true) === $old_id) {
@@ -260,6 +279,8 @@ function hcpro_handle_job_webhook($req) {
 	}
 
 	bp_jobsite_setup($post_id, 'Housecall Pro');	
+
+	unset($GLOBALS['bp_jobsite_setup_running']);
 
 	return new WP_REST_Response(['success' => true, 'post_id' => $post_id], 200);
 }
@@ -286,47 +307,43 @@ function bp_format_location($location) {
 }
 
 // Format service
-function bp_format_service($service) {
-	$jobsite_service = ucwords(str_replace('-', ' ', $service));
-	$jobsite_service = str_replace('Hvac', 'HVAC', $jobsite_service);
-	$jobsite_service = $jobsite_service === "Service Area" ? "Recent Jobsites" : $jobsite_service;
-
-	return $jobsite_service;
-}
-
-// Match up reviews and jobsites
-function bp_match_key_from_title($title){
-	$key = sanitize_title(trim((string)$title));
-	return $key ?: '';
-}
-
-// Orient uploaded photos correctly
-add_filter('wp_generate_attachment_metadata', function($metadata, $attachment_id) {
-	$filepath = get_attached_file($attachment_id);
-	$image = wp_get_image_editor($filepath);
-	if (!is_wp_error($image)) {
-		$exif = @exif_read_data($filepath);
-		if (!empty($exif['Orientation'])) {
-			switch ($exif['Orientation']) {
-				case 3: $image->rotate(180); break;
-				case 6: $image->rotate(-90); break;
-				case 8: $image->rotate(90); break;
-			}
-			$image->save($filepath);
-		}
-	}
-	return $metadata;
-}, 10, 2);
-
-
-
 function bp_jobsite_setup($post_id, $user) {	
+	$current_type = get_post_type($post_id);
+	if (!in_array($current_type, ['jobsite_geo', 'testimonials'], true)) return;
+
+	static $processed = [];
+	if (isset($processed[$post_id])) {
+		return; // already processed this post in this execution
+	}
+	$processed[$post_id] = true;
+
+	static $geo_opts = null;
+	$geo_opts ??= get_option('jobsite_geo');
+
 	$customer_info = customer_info();
-	$get_jobsite_geo = get_option('jobsite_geo');	
 	$current_user = wp_get_current_user();
 
-// Sync jobs with reviews
-	if (get_post_type($post_id) === 'testimonials') {
+	$location    = '';
+	$tech_tag    = '';
+	$new_address = '';
+
+	// Ensure match key exists for this post
+	$key = get_post_meta($post_id, '_bp_match_key', true);
+
+	if (!$key) {
+		if (!function_exists('bp_match_key_from_title')) {
+			function bp_match_key_from_title($title) {
+				return sanitize_title(strtolower(preg_replace('/[^a-z0-9]/i', '', $title)));
+			}
+		}
+
+		$key = bp_match_key_from_title(get_the_title($post_id));
+		update_post_meta($post_id, '_bp_match_key', $key);
+	}
+
+
+	// Sync jobs with reviews when saving a testimonial, then exit
+	if ($current_type === 'testimonials') {
 		$jobsites = get_posts([
 			'post_type'      => 'jobsite_geo',
 			'post_status'    => 'publish',
@@ -337,284 +354,310 @@ function bp_jobsite_setup($post_id, $user) {
 			]],
 		]);
 		foreach ($jobsites as $j) update_post_meta($j->ID, 'review', $post_id);
+		return;
 	}
 
-	if ( get_post_type($post_id) === 'jobsite_geo' ) {			
-		$match = get_posts([
-			'post_type'      => 'testimonials',
-			'post_status'    => 'publish',
-			'posts_per_page' => 1,
-			'meta_query'     => [[
-				'key'   => '_bp_match_key',
-				'value' => $key,
-			]],
-		]);
-		!empty($match) ? update_post_meta($post_id, 'review', $match[0]->ID) : null;
+	// At this point we know it is jobsite_geo, so attempt to link back to a testimonial
+	$match = get_posts([
+		'post_type'      => 'testimonials',
+		'post_status'    => 'publish',
+		'posts_per_page' => 1,
+		'meta_query'     => [[
+			'key'   => '_bp_match_key',
+			'value' => $key,
+		]],
+	]);
+	!empty($match) ? update_post_meta($post_id, 'review', $match[0]->ID) : null;
+
+	// Find the longitude and latitude based on customer address
+	$address = trim((string) get_field('address', $post_id));
+	$city    = trim((string) get_field('city', $post_id));
+	$state   = strtoupper(trim((string) get_field('state', $post_id)));
+	$zip     = trim((string) get_field('zip', $post_id));
+
+	$stateAbbrs = [
+		"Alabama" => "AL", "Alaska" => "AK", "Arizona" => "AZ", "Arkansas" => "AR", "California" => "CA",
+		"Colorado" => "CO", "Connecticut" => "CT", "Delaware" => "DE", "Florida" => "FL", "Georgia" => "GA",
+		"Hawaii" => "HI", "Idaho" => "ID", "Illinois" => "IL", "Indiana" => "IN", "Iowa" => "IA", "Kansas" => "KS",
+		"Kentucky" => "KY", "Louisiana" => "LA", "Maine" => "ME", "Maryland" => "MD", "Massachusetts" => "MA",
+		"Michigan" => "MI", "Minnesota" => "MN", "Mississippi" => "MS", "Missouri" => "MO", "Montana" => "MT",
+		"Nebraska" => "NE", "Nevada" => "NV", "New Hampshire" => "NH", "New Jersey" => "NJ", "New Mexico" => "NM",
+		"New York" => "NY", "North Carolina" => "NC", "North Dakota" => "ND", "Ohio" => "OH", "Oklahoma" => "OK",
+		"Oregon" => "OR", "Pennsylvania" => "PA", "Rhode Island" => "RI", "South Carolina" => "SC",
+		"South Dakota" => "SD", "Tennessee" => "TN", "Texas" => "TX", "Utah" => "UT", "Vermont" => "VT",
+		"Virginia" => "VA", "Washington" => "WA", "West Virginia" => "WV", "Wisconsin" => "WI", "Wyoming" => "WY",
+		"Tex" => "TX", "Calif" => "CA", "Penn" => "PA"
+	];
+
+	foreach ($stateAbbrs as $name => $abbreviation) {
+		if ($state === strtoupper($name)) $state = $abbreviation;
 	}
 
-// Find the longitude and latitude based on customer address
-    $address = trim(esc_attr(get_field("address", $post_id)));
-    $city = trim(esc_attr(get_field( "city", $post_id)));
-	$state = strtoupper(trim(esc_attr(get_field( "state", $post_id))));
-    $zip = trim(esc_attr(get_field( "zip", $post_id)));	
+	if ($address !== '' && $city !== '' && $state !== '' && $zip !== '') {
+		$new_address = $address . ', ' . $city . ', ' . $state . ' ' . $zip;
 
-    $stateAbbrs = ["Alabama" => "AL", "Alaska" => "AK", "Arizona" => "AZ", "Arkansas" => "AR", "California" => "CA", "Colorado" => "CO", "Connecticut" => "CT", "Delaware" => "DE", "Florida" => "FL", "Georgia" => "GA", "Hawaii" => "HI", "Idaho" => "ID", "Illinois" => "IL", "Indiana" => "IN", "Iowa" => "IA", "Kansas" => "KS",
-    "Kentucky" => "KY", "Louisiana" => "LA", "Maine" => "ME", "Maryland" => "MD", "Massachusetts" => "MA", "Michigan" => "MI", "Minnesota" => "MN", "Mississippi" => "MS",
-    "Missouri" => "MO", "Montana" => "MT", "Nebraska" => "NE", "Nevada" => "NV", "New Hampshire" => "NH", "New Jersey" => "NJ", "New Mexico" => "NM", "New York" => "NY",
-    "North Carolina" => "NC", "North Dakota" => "ND", "Ohio" => "OH", "Oklahoma" => "OK", "Oregon" => "OR", "Pennsylvania" => "PA", "Rhode Island" => "RI", "South Carolina" => "SC", "South Dakota" => "SD", "Tennessee" => "TN", "Texas" => "TX", "Utah" => "UT", "Vermont" => "VT", "Virginia" => "VA", "Washington" => "WA", "West Virginia" => "WV",
-    "Wisconsin" => "WI", "Wyoming" => "WY", "Tex" => "TX", "Calif" => "CA", "Penn" => "PA"];
+		// check last saved full address
+		$last_address = get_post_meta($post_id, '_last_geocode_address', true);
 
-    foreach ($stateAbbrs as $name => $abbreviation) {
-        if ($state === strtoupper($name)) $state = $abbreviation;
-    };
-	
-    if ($address !== '' && $city !== '' && $state !== '' && $zip !== '') :
-        $new_address = $address.', '.$city.', '.$state.' '.$zip;
+		if ($new_address !== $last_address && defined('_PLACES_API') && _PLACES_API) {
+			$fail_key = 'geocode_fail_' . md5($new_address);
+			if (get_transient($fail_key)) {
+				// Skip geocoding temporarily if a recent failure was logged
+				return;
+			}
 
-        // check last saved full address
-        $last_address = get_post_meta($post_id, '_last_geocode_address', true);
+			$googleAPI = 'https://maps.googleapis.com/maps/api/geocode/json?address=' . urlencode($new_address) . '&key=' . _PLACES_API;
+			$response = wp_remote_get($googleAPI, ['timeout' => 10]);
 
-        if ($new_address !== $last_address) {
-            $googleAPI = 'https://maps.googleapis.com/maps/api/geocode/json?address='.urlencode($new_address).'&key='._PLACES_API;
+			if (is_wp_error($response)) {
+				$email_label = $customer_info['name'] ?? get_bloginfo('name');
+				emailMe('Geocoding HTTP Error - ' .  $email_label, $response->get_error_message());
+				set_transient($fail_key, true, HOUR_IN_SECONDS * 6);
+			} else {
+				$http_code = wp_remote_retrieve_response_code($response);
+				$body      = wp_remote_retrieve_body($response);
+				$data      = json_decode($body, true);
 
-            $response = wp_remote_get($googleAPI, ['timeout' => 10]);
-            if (is_wp_error($response)) :
-                emailMe('Geocoding HTTP Error - '.$customer_info['name'], $response->get_error_message());
-            else :
-                $http_code = wp_remote_retrieve_response_code($response);
-                $body = wp_remote_retrieve_body($response);
-                $data = json_decode($body, true);
+				if ($http_code !== 200 || !is_array($data)) {
+					$html = 'HTTP ' . $http_code . '<br><br>Raw body:<br><pre>' . esc_html($body) . '</pre>';
+					$email_label = $customer_info['name'] ?? get_bloginfo('name');
+					emailMe('Geocoding Bad Response - ' .  $email_label, $html);
+					set_transient($fail_key, true, HOUR_IN_SECONDS * 6);
+				} elseif (($data['status'] ?? '') === 'OK') {
+					update_post_meta($post_id, 'geocode', $data['results'][0]['geometry']['location']);
+					update_post_meta($post_id, '_last_geocode_address', $new_address);
+					delete_transient($fail_key);
+				} else {
+					$err  = ($data['error_message'] ?? 'No error_message returned.');
+					$html = $new_address . '<br><br>Status: ' . esc_html($data['status']) . '<br>Error: ' . esc_html($err);
+					$email_label = $customer_info['name'] ?? get_bloginfo('name');
+					emailMe('Geocoding API Error - ' . $email_label, $html);
+					set_transient($fail_key, true, HOUR_IN_SECONDS * 6);
+				}
+			}
+		}
+	}
 
-                if ($http_code !== 200 || !is_array($data)) :
-                    $html = 'HTTP '.$http_code.'<br><br>Raw body:<br><pre>'.esc_html($body).'</pre>';
-                    emailMe('Geocoding Bad Response - '.$customer_info['name'], $html);
-                elseif (($data['status'] ?? '') === 'OK') :
-                    update_post_meta($post_id, 'geocode', $data['results'][0]['geometry']['location']);
-                    update_post_meta($post_id, '_last_geocode_address', $new_address); // save for future comparison
-                else :
-                    $err = ($data['error_message'] ?? 'No error_message returned.');
-                    $html = $new_address.'<br><br>Status: '.esc_html($data['status']).'<br>Error: '.esc_html($err);
-                    emailMe('Geocoding API Error - '.$customer_info['name'], $html);
-                endif;
-            endif;
-        }
-    endif;
+	// Generate service, location and technician tags
 
-//Generate service, location and technician tags	
-    // add city-state as location tag
-    if ($city && $state) {
-        $location = sanitize_title(ucwords($city) . '-' . strtoupper($state));
+	// add city-state as location tag
+	if ($city && $state) {
+		$location = sanitize_title(ucwords($city) . '-' . strtoupper($state));
 
-        $term = term_exists($location, 'jobsite_geo-service-areas');
-        if (empty($term)) $term = wp_insert_term($location, 'jobsite_geo-service-areas');
-        if (!is_wp_error($term)) wp_set_post_terms($post_id, [$location], 'jobsite_geo-service-areas', false);
-    }
+		$term = term_exists($location, 'jobsite_geo-service-areas');
+		if (empty($term)) $term = wp_insert_term($location, 'jobsite_geo-service-areas');
+		if (!is_wp_error($term)) wp_set_post_terms($post_id, [$location], 'jobsite_geo-service-areas', false);
+	}
 
-    // add username as technician tag
-    if ( in_array('bp_jobsite_geo', $current_user->roles) ) {
-        $tech_tag = $current_user->user_firstname . '-' . $current_user->user_lastname;
-    } else {
-        $hcp_tech = get_post_meta($post_id, '_hcp_tech_name', true);
-        if ($hcp_tech) $tech_tag = sanitize_title(str_replace(' ', '-', $hcp_tech));
-    }
+	// add username as technician tag
+	if (in_array('bp_jobsite_geo', $current_user->roles, true)) {
+		$tech_tag = sanitize_title($current_user->user_firstname . '-' . $current_user->user_lastname);
+	} else {
+		$hcp_tech = get_post_meta($post_id, '_hcp_tech_name', true);
+		if ($hcp_tech) $tech_tag = sanitize_title(str_replace(' ', '-', $hcp_tech));
+	}
 
-    if ($tech_tag) {
-        $term = term_exists($tech_tag, 'jobsite_geo-techs');
-        if (empty($term)) $term = wp_insert_term($tech_tag, 'jobsite_geo-techs');
-        if (!is_wp_error($term)) wp_set_post_terms($post_id, [$tech_tag], 'jobsite_geo-techs', false);
-    }
+	if ($tech_tag) {
+		$term = term_exists($tech_tag, 'jobsite_geo-techs');
+		if (empty($term)) $term = wp_insert_term($tech_tag, 'jobsite_geo-techs');
+		if (!is_wp_error($term)) wp_set_post_terms($post_id, [$tech_tag], 'jobsite_geo-techs', false);
+	}
 
-    // scan for keywords for service tag
-    $service = '';
-    $description = strtolower(get_post_field('post_content', $post_id));
+	// scan for keywords for service tag
+	$service     = '';
+	$description = strtolower(get_post_field('post_content', $post_id));
 
-    $btRaw = $customer_info['business-type'] ?? null;
-    if (is_array($btRaw)) {
-        $btVal  = $btRaw[0] ?? '';
-        $btServ = $btRaw[1] ?? '';
-    } else {
-        $btVal  = (string) $btRaw;
-        $btServ = '';
-    }
+	$btRaw = $customer_info['business-type'] ?? null;
+	if (is_array($btRaw)) {
+		$btVal  = $btRaw[0] ?? '';
+		$btServ = $btRaw[1] ?? '';
+	} else {
+		$btVal  = (string) $btRaw;
+		$btServ = '';
+	}
 
-    // Customize for General Contractor website
-    if ( strtolower($btVal) === "generalcontractor" ) :		
-        foreach ( array( 'gutter', 'seamless' ) as $keyword) {
-            if (stripos($description, $keyword) !== false) {
-                $service = 'gutters';
-                break; 
-            } 
-        }
+	// Customize for General Contractor website
+	if (strtolower($btVal) === 'generalcontractor') {
+		foreach (['gutter', 'seamless'] as $keyword) {
+			if (stripos($description, $keyword) !== false) {
+				$service = 'gutters';
+				break;
+			}
+		}
 
-        foreach ( array( 'insulation', 'insulate', 'fiberglass' ) as $keyword) {
-            if (stripos($description, $keyword) !== false) {
-                $service = 'insulation';
-                break; 
-            } 
-        }	
-    endif;		
+		foreach (['insulation', 'insulate', 'fiberglass'] as $keyword) {
+			if (stripos($description, $keyword) !== false) {
+				$service = 'insulation';
+				break;
+			}
+		}
+	}
 
+	// Customize for Plumber website
+	if (strtolower($btVal) === 'plumber') {
+		$service = 'plumbing-services';
 
-    // Customize for Plumber website
-    if ( strtolower($btVal) === "plumber" ) :
-        $service = 'plumbing-services';	
-	
-        $type = str_contains($description, 'repair') || str_contains($description, 'service') ? '-repair' :
-            (str_contains($description, 'install') || str_contains($description, 'replace') ? '-installation' :
-            (esc_attr(get_field('new_brand')) ? '-installation' : '-repair'));	
-	
-	   foreach ( array( 'water heater', 'tank' ) as $keyword) {
-            if (stripos($description, $keyword) !== false) {
-                $service = 'water-heater'.$type;				
-                break; 
-            } 
-        }
-	
-	   foreach ( array( 'drain', 'clog', 'clogged', 'blockage' ) as $keyword) {
-            if (stripos($description, $keyword) !== false) {
-                $service = 'clogged-drains';
-                break; 
-            } 
-        }
-	
-	   foreach ( array( 'bathroom', 'toilet', 'tub', 'shower' ) as $keyword) {
-            if (stripos($description, $keyword) !== false) {
-                $service = 'bathroom-plumbing-services';
-                break; 
-            } 
-        }
-	
-	   foreach ( array( 'kitchen', 'dish washer', 'refrigerator', 'fridge', 'ice maker' ) as $keyword) {
-            if (stripos($description, $keyword) !== false) {
-                $service = 'kitchen-plumbing-services';
-                break; 
-            } 
-        }
-	
-	   foreach ( array( 'gas line', 'gas service', 'gas leak' ) as $keyword) {
-            if (stripos($description, $keyword) !== false) {
-                $service = 'gas-line'.$type;
-                break; 
-            } 
-        }
-	
-	   foreach ( array( 'water pressure', 'pressure reducing valve', 'prv' ) as $keyword) {
-            if (stripos($description, $keyword) !== false) {
-                $service = 'pressure-reducing-valves';
-                break; 
-            } 
-        }
-	
-	   foreach ( array( 'lighting', 'gas lamps', 'lantern' ) as $keyword) {
-            if (stripos($description, $keyword) !== false) {
-                $service = 'outdoor-lighting'.$type;
-                break; 
-            } 
-        }
-		
-    endif;		
-	
+		$type = str_contains($description, 'repair') || str_contains($description, 'service') ? '-repair' :
+			(str_contains($description, 'install') || str_contains($description, 'replace') ? '-installation' :
+			(esc_attr(get_field('new_brand')) ? '-installation' : '-repair'));
 
-    // Customize for HVAC website
-    if ( $customer_info['site-type'] === "hvac" ) :		
-        $equipment = array (
-            'air-conditioner' 	=> array( 'air conditioner', 'air conditioning', 'cooling', 'a/c', 'ac', 'compressor', 'evaporator', 'condenser', 'drain line', 'refrigerant'),
-            'heating' 			=> array( 'heater', 'heating', 'furnace' ),
-            'hvac'				=> array( 'hvac', 'fan motor', 'blower', 'mini split' ),
-            'thermostat'		=> array( 'thermostat', 't-stat', 'tstat' ),
-        );
+		foreach (['water heater', 'tank'] as $keyword) {
+			if (stripos($description, $keyword) !== false) {
+				$service = 'water-heater' . $type;
+				break;
+			}
+		}
 
-        $type = str_contains($description, 'repair') || str_contains($description, 'service') ? '-repair' :
-            (str_contains($description, 'install') || str_contains($description, 'replace') ? '-installation' :
-            (esc_attr(get_field('new_brand')) ? '-installation' : '-repair'));
+		foreach (['drain', 'clog', 'clogged', 'blockage'] as $keyword) {
+			if (stripos($description, $keyword) !== false) {
+				$service = 'clogged-drains';
+				break;
+			}
+		}
 
-        foreach ( array( 'allergies', 'duct cleaning', 'indoor air', 'air quality', 'clean air' ) as $keyword) {
-            if (stripos($description, $keyword) !== false) {
-                $service = 'indoor-air-quality';
-                break; 
-            } 
-        }
+		foreach (['bathroom', 'toilet', 'tub', 'shower'] as $keyword) {
+			if (stripos($description, $keyword) !== false) {
+				$service = 'bathroom-plumbing-services';
+				break;
+			}
+		}
 
-        foreach ( array( 'maintenance', 'tune up', 'tune-up', 'check up', 'check-up', 'inspection' ) as $keyword) {
-            if (stripos($description, $keyword) !== false) {
-                $service = 'hvac-maintenance';
-                break; 
-            } 
-        }	
+		foreach (['kitchen', 'dish washer', 'refrigerator', 'fridge', 'ice maker'] as $keyword) {
+			if (stripos($description, $keyword) !== false) {
+				$service = 'kitchen-plumbing-services';
+				break;
+			}
+		}
 
-        foreach ( array( 'dyer vent' , 'lint', 'lent' ) as $keyword) {
-            if (stripos($description, $keyword) !== false) {
-                $service = 'dryer-vent-cleaning';
-                break; 
-            } 
-        }		
+		foreach (['gas line', 'gas service', 'gas leak'] as $keyword) {
+			if (stripos($description, $keyword) !== false) {
+				$service = 'gas-line' . $type;
+				break;
+			}
+		}
 
-        if (!$service) {
-            foreach ($equipment as $tag => $keywords) {
-                foreach ($keywords as $keyword) {
-                    if (stripos($description, $keyword) !== false) {
-                        $service = $tag.$type;
-                        break 2;
-                    }
-                }
-            }
-        }
-    endif;
+		foreach (['water pressure', 'pressure reducing valve', 'prv'] as $keyword) {
+			if (stripos($description, $keyword) !== false) {
+				$service = 'pressure-reducing-valves';
+				break;
+			}
+		}
 
-    $service = $service ?: 'service-area';
-	$service && $location
-          ? wp_set_object_terms(
-              $post_id,
-              [$service.'--'.strtolower($location)],
-              'jobsite_geo-services',
-              false // overwrite existing terms
-          )
-          : null;
+		foreach (['lighting', 'gas lamps', 'lantern'] as $keyword) {
+			if (stripos($description, $keyword) !== false) {
+				$service = 'outdoor-lighting' . $type;
+				break;
+			}
+		}
+	}
 
+	// Customize for HVAC website
+	if (($customer_info['site-type'] ?? '') === 'hvac') {
+		$equipment = [
+			'air-conditioner' => ['air conditioner', 'air conditioning', 'cooling', 'a/c', 'ac', 'compressor', 'evaporator', 'condenser', 'drain line', 'refrigerant'],
+			'heating'         => ['heater', 'heating', 'furnace'],
+			'hvac'            => ['hvac', 'fan motor', 'blower', 'mini split'],
+			'thermostat'      => ['thermostat', 't-stat', 'tstat'],
+		];
 
-// Handle the photos uploaded to the jobsite
-    foreach ([
-        'jobsite_photo_1' => 'jobsite_photo_1_alt',
-        'jobsite_photo_2' => 'jobsite_photo_2_alt',
-        'jobsite_photo_3' => 'jobsite_photo_3_alt',
-        'jobsite_photo_4' => 'jobsite_photo_4_alt',
-    ] as $img => $cap) {
-        $aid = (int) get_field($img, $post_id);
-        $alt = trim((string) get_field($cap, $post_id));
-        $aid ? update_post_meta($aid, '_wp_attachment_image_alt', $alt ?: get_the_title($post_id)) : null;
-    }
+		$type = str_contains($description, 'repair') || str_contains($description, 'service') ? '-repair' :
+			(str_contains($description, 'install') || str_contains($description, 'replace') ? '-installation' :
+			(esc_attr(get_field('new_brand')) ? '-installation' : '-repair'));
 
-    // set first uploaded pic as jobsite thumbnail
-    set_post_thumbnail($post_id, esc_attr(get_field( "jobsite_photo_1")) );	
+		foreach (['allergies', 'duct cleaning', 'indoor air', 'air quality', 'clean air'] as $keyword) {
+			if (stripos($description, $keyword) !== false) {
+				$service = 'indoor-air-quality';
+				break;
+			}
+		}
 
-	
-// Send email when jobsite post is updated or created
-    $created  = new DateTime( $post_id->post_date_gmt );
-    $modified = new DateTime( $post_id->post_modified_gmt );
-    $diff = $created->diff( $modified );
-    $seconds = ((($diff->y * 365.25 + $diff->m * 30 + $diff->d) * 24 + $diff->h) * 60 + $diff->i)*60 + $diff->s;
-    $action = $seconds <= 2 ? 'created' : 'updated';
-    $get_jobsite_geo = get_option('jobsite_geo');	
-    $notifyTo = $get_jobsite_geo['notify'] != 'false' ? $get_jobsite_geo['notify'] : '';
-    $notifyBc = $get_jobsite_geo['copy_me'] == 'true' ? 'info@battleplanwebdesign.com' : '';
+		if (!$service) {
+			foreach (['maintenance', 'tune up', 'tune-up', 'check up', 'check-up', 'inspection'] as $keyword) {
+				if (stripos($description, $keyword) !== false) {
+					$service = 'hvac-maintenance';
+					break;
+				}
+			}
+		}
 
-    if ( $notifyTo == '' && $notifyBc != '' ) :
-        $notifyTo = $notifyBc;
-        $notifyBc = '';
-    endif;
-	
-	$display_user = $user === 'user' ? $current_user->first_name.' '.$current_user->last_name : $user;
+		if (!$service) {
+			foreach ($equipment as $tag => $keywords) {
+				foreach ($keywords as $keyword) {
+					if (stripos($description, $keyword) !== false) {
+						$service = $tag . $type;
+						break 2;
+					}
+				}
+			}
+		}
+	}
 
-    if ( $notifyTo != '' ) :	
-        $subject = 'Jobsite '.$action.' by '.$display_user;
-        $message = $display_user.' '.$action.' a jobsite post'.($new_address != '' ? ' for this address: '.$new_address.'.': '.');
-        $headers[] = 'Content-Type: text/html; charset=UTF-8';
-        $headers[] = 'From: Website Administrator ' . "\r\n";
-        $headers[] = "Reply-To: noreply@admin.".str_replace('https://', '', get_bloginfo('url'));
-        $headers[] = 'Bcc: <'.$notifyBc.'>';
+	$service = $service ?: 'service-area';
 
-        wp_mail($notifyTo, $subject, $message, $headers);
-    endif;	
+	if ($service && $location) {
+		wp_set_object_terms(
+			$post_id,
+			[$service . '--' . strtolower($location)],
+			'jobsite_geo-services',
+			false
+		);
+	}
+
+	// Handle the photos uploaded to the jobsite
+	foreach ([
+		'jobsite_photo_1' => 'jobsite_photo_1_alt',
+		'jobsite_photo_2' => 'jobsite_photo_2_alt',
+		'jobsite_photo_3' => 'jobsite_photo_3_alt',
+		'jobsite_photo_4' => 'jobsite_photo_4_alt',
+	] as $img => $cap) {
+		$aid = (int) get_field($img, $post_id);
+		$alt = trim((string) get_field($cap, $post_id));
+		$aid ? update_post_meta($aid, '_wp_attachment_image_alt', $alt ?: get_the_title($post_id)) : null;
+	}
+
+	// set first uploaded pic as jobsite thumbnail
+	$thumb_id = (int) get_field('jobsite_photo_1', $post_id);
+	$thumb_id ? set_post_thumbnail($post_id, $thumb_id) : null;
+
+	// Send email when jobsite post is updated or created
+	$post_obj = get_post($post_id);
+	if ($post_obj) {
+		$created  = new DateTime($post_obj->post_date_gmt);
+		$modified = new DateTime($post_obj->post_modified_gmt);
+		$diff     = $created->diff($modified);
+		$seconds  = ((($diff->y * 365.25 + $diff->m * 30 + $diff->d) * 24 + $diff->h) * 60 + $diff->i) * 60 + $diff->s;
+		$action   = $seconds <= 2 ? 'created' : 'updated';
+	} else {
+		$action = 'updated';
+	}
+
+	$notifyTo = !empty($geo_opts['notify']) && $geo_opts['notify'] !== 'false'
+		? $geo_opts['notify']
+		: '';
+
+	$notifyBc = !empty($geo_opts['copy_me']) && $geo_opts['copy_me'] === 'true'
+		? 'info@battleplanwebdesign.com'
+		: '';
+
+	if ($notifyTo === '' && $notifyBc !== '') {
+		$notifyTo = $notifyBc;
+		$notifyBc = '';
+	}
+
+	$display_user = $user === 'user' ? trim($current_user->first_name . ' ' . $current_user->last_name) : $user;
+
+	if ($notifyTo !== '') {
+		$subject  = 'Jobsite ' . $action . ' by ' . $display_user;
+		$message  = $display_user . ' ' . $action . ' a jobsite post' . ($new_address !== '' ? ' for this address: ' . $new_address . '.' : '.');
+		$headers  = [];
+		$headers[] = 'Content-Type: text/html; charset=UTF-8';
+		$domain = parse_url(home_url(), PHP_URL_HOST);
+		$headers[] = 'From: Website Administrator <noreply@' . $domain . '>';
+		$headers[] = 'Reply-To: noreply@' . $domain;
+		if ($notifyBc) $headers[] = 'Bcc: <' . $notifyBc . '>';
+
+		wp_mail($notifyTo, $subject, $message, $headers);
+	}
 }
 	
 
@@ -622,12 +665,16 @@ function bp_jobsite_setup($post_id, $user) {
 add_action('save_post', 'battleplan_saveJobsite', 10, 3);
 function battleplan_saveJobsite($post_id, $post, $update) {
 
-	if ( (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) || (defined('DOING_AJAX') && DOING_AJAX) ) return;
-	if (!in_array(get_post_type($post_id), ['jobsite_geo','testimonials'], true)) return;
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
+    if (defined('DOING_AJAX') && DOING_AJAX) return;
+    if (!in_array(get_post_type($post_id), ['jobsite_geo','testimonials'], true)) return;
+
+    // Skip if webhook already ran setup in this same request
+    if (!empty($GLOBALS['bp_jobsite_setup_running'])) return;
+
+    bp_jobsite_setup($post_id, 'user');	
 	
-	bp_jobsite_setup($post_id, 'user');	
-	
-	if ( get_option('bp_setup_2025_09_29') !== "completed" ) : 
+	if ( get_option('bp_setup_2025_09_29') !== "completed" ) {
 		$testimonials = get_posts(['post_type'=>'testimonials','posts_per_page'=>-1,'post_status'=>'publish']); 
 		$t_index = []; 
 		foreach ($testimonials as $t) { 
@@ -665,7 +712,7 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 		
 	
 		updateOption( 'bp_setup_2025_09_29', 'completed', false );
-	endif;
+	}
 }
 
 // add drop-down to view specific landing pages
@@ -682,7 +729,7 @@ function battleplan_view_jobsite_geo_pages() {
 		?>
 		<select name="view_jobsite_geo_pages" id="view_jobsite_geo_pages">
 			<option value=""><?php _e('View Jobsite GEO Pages', 'battleplan'); ?></option>
-			<?php foreach ($terms as $term) : 
+			<?php foreach ($terms as $term) {
 				$parts = explode('--', esc_html($term->name));
 
 				if (count($parts) === 2) {
@@ -691,7 +738,7 @@ function battleplan_view_jobsite_geo_pages() {
 					$formatted_title = $service_part . ' in ' . $location_part;
 				}?>
 				<option value="<?php echo esc_url(get_term_link($term)); ?>"><?php echo $formatted_title; ?></option>
-			<?php endforeach; ?>
+			<?php } ?>
 		</select>
 		<?php
 	}
@@ -729,60 +776,26 @@ function battleplan_registerJobsiteGEOPostType() {
         ),
 	));
 	
-	register_taxonomy( 'jobsite_geo-techs', array( 'jobsite_geo' ), array(
-		'labels'=>array(
-			'name'=>			_x( 'Technicians', 'Taxonomy General Name', 'text_domain' ),
-			'singular_name'=>	_x( 'Technician', 'Taxonomy Singular Name', 'text_domain' ),
-        	'menu_name' => 		'Technicians',
-		),
-        'public' => 			true,
-		'hierarchical'=>		false,
-        'show_ui' => 			true,
-        'show_in_menu' => 		true,
-        'show_in_nav_menus' => 	true,
-        'show_admin_column' => 	true,
-        'rewrite' => array(
-            'slug' => 			'tech',
-            'with_front' => 	false,
-        ),
-	));
-	
-	register_taxonomy( 'jobsite_geo-services', array( 'jobsite_geo' ), array(
-		'labels'=>array(
-			'name'=>			_x( 'Services', 'Taxonomy General Name', 'text_domain' ),
-			'singular_name'=>	_x( 'Service', 'Taxonomy Singular Name', 'text_domain' ),
-        	'menu_name' => 		'Services',
-		),
-        'public' => 			true,
-		'hierarchical'=>		false,
-        'show_ui' => 			true,
-        'show_in_menu' => 		true,
-        'show_in_nav_menus' => 	true,
-        'show_admin_column' => 	true,
-		'rewrite' => array(
-            'slug' => 			'service',
-            'with_front' => 	false,
-        ),
-	));
-	
-	register_taxonomy( 'jobsite_geo-service-areas', array( 'jobsite_geo' ), array(
-		'labels'=>array(
-			'name'=>			_x( 'Service Areas', 'Taxonomy General Name', 'text_domain' ),
-			'singular_name'=>	_x( 'Service Area', 'Taxonomy Singular Name', 'text_domain' ),
-        	'menu_name' => 		'Service Areas',
-		),
-        'public' => 			true,
-		'hierarchical'=>		false,
-        'show_ui' => 			true,
-        'show_in_menu' => 		true,
-        'show_in_nav_menus' => 	true,
-        'show_admin_column' => 	true,
-        'rewrite' => array(
-            'slug' => 			'service-area',
-            'with_front' => 	false,
-        ),
-	));
+	$taxonomies = [
+		'jobsite_geo-techs'         => ['Technicians', 'Technician', 'tech'],
+		'jobsite_geo-services'      => ['Services', 'Service', 'service'],
+		'jobsite_geo-service-areas' => ['Service Areas', 'Service Area', 'service-area']
+	];
 
+	foreach ($taxonomies as $slug => [$plural, $singular, $rewrite]) {
+		register_taxonomy($slug, ['jobsite_geo'], [
+			'labels' => [
+				'name' => _x($plural, 'Taxonomy General Name', 'text_domain'),
+				'singular_name' => _x($singular, 'Taxonomy Singular Name', 'text_domain'),
+				'menu_name' => $plural,
+			],
+			'public' => true,
+			'show_ui' => true,
+			'show_admin_column' => true,
+			'hierarchical' => false,
+			'rewrite' => ['slug' => $rewrite, 'with_front' => false],
+		]);
+	}
 	//wp_insert_term( 'upcoming', 'event-tags' );	
 	//wp_insert_term( 'expired', 'event-tags' );	
 	//wp_insert_term( 'featured', 'event-tags' );	
@@ -1268,24 +1281,24 @@ add_filter('acf/validate_value', function($valid, $value, $field, $input){
 --------------------------------------------------------------*/
 
 add_filter( 'body_class', function( $classes ) {
-	if ( is_post_type_archive('jobsite_geo') || is_tax('jobsite_geo-service-areas') || is_tax('jobsite_geo-services') || is_tax('jobsite_geo-techs') ) :
+	if ( is_post_type_archive('jobsite_geo') || is_tax('jobsite_geo-service-areas') || is_tax('jobsite_geo-services') || is_tax('jobsite_geo-techs') ) {
 		$classes = str_replace(array('sidebar-line', 'sidebar-right', 'sidebar-left'), 'sidebar-none', $classes);
 		return array_merge( $classes, array( 'jobsite_geo' ) );
-	endif;
+	}
 	return $classes;
 }, 30);
 
 add_action( 'pre_get_posts', 'battleplan_override_jobsite_query', 10 );
 function battleplan_override_jobsite_query( $query ) {
-	if (!is_admin() && $query->is_main_query()) :		
-		if ( is_post_type_archive('jobsite_geo') || is_tax('jobsite_geo-service-areas') || is_tax('jobsite_geo-services') || is_tax('jobsite_geo-techs') ) : 
+	if (!is_admin() && $query->is_main_query()) {
+		if ( is_post_type_archive('jobsite_geo') || is_tax('jobsite_geo-service-areas') || is_tax('jobsite_geo-services') || is_tax('jobsite_geo-techs') ) {
 			$query->set( 'post_type','jobsite_geo');
 			$query->set( 'posts_per_page', 30);
 			$query->set( 'meta_key', 'job_date' );
         	$query->set( 'orderby', 'meta_value' );
         	$query->set( 'order', 'DESC');
-		endif;
-	endif; 
+		}
+	}
 }
 
 add_filter('template_include', 'battleplan_jobsite_template');
@@ -1297,15 +1310,23 @@ function battleplan_jobsite_template($template) {
         $jobsite_term = get_queried_object();
 	
 		if ($jobsite_term) {
-			if ( is_tax('jobsite_geo-services') && $jobsite_service !== "service-area") :
+			$jobsite_service  = '';
+			$jobsite_location = $jobsite_term->name;
+
+			if (is_tax('jobsite_geo-services')) {
 				$term_parts = explode('--', $jobsite_term->name);
-				$jobsite_service = isset($term_parts[0]) ? $term_parts[0] : null;
-				$jobsite_location = isset($term_parts[1]) ? $term_parts[1] : null;			
-				$GLOBALS['jobsite_geo-service'] = bp_format_service($jobsite_service);
-			else:
-				$jobsite_location = $jobsite_term->name;			
-				$GLOBALS['jobsite_geo-service'] = "Service";
-			endif;
+				$jobsite_service  = $term_parts[0] ?? '';
+				$jobsite_location = $term_parts[1] ?? $jobsite_term->name;
+
+				if ($jobsite_service !== 'service-area') {
+					$GLOBALS['jobsite_geo-service'] = bp_format_service($jobsite_service);
+				} else {
+					$GLOBALS['jobsite_geo-service'] = 'Service';
+				}
+			} else {
+				$GLOBALS['jobsite_geo-service'] = 'Service';
+			}
+
 			
 			$GLOBALS['jobsite_geo-city-state'] = bp_format_location($jobsite_location);
 			$splitLoc = explode(', ', $GLOBALS['jobsite_geo-city-state']);
@@ -1313,7 +1334,7 @@ function battleplan_jobsite_template($template) {
 			$GLOBALS['jobsite_geo-state'] = $splitLoc[1];			
 		}
 
-		if ( is_tax('jobsite_geo-service-areas') || is_tax('jobsite_geo-services') ) :	
+		if ( is_tax('jobsite_geo-service-areas') || is_tax('jobsite_geo-services') ) {
 			$GLOBALS['jobsite_geo-headline'] = $GLOBALS['jobsite_geo-service'].' in '.$GLOBALS['jobsite_geo-city-state'];
             $GLOBALS['jobsite_geo-page_title'] = $GLOBALS['jobsite_geo-headline'].$sep.get_bloginfo('name');
 	
@@ -1346,8 +1367,8 @@ function battleplan_jobsite_template($template) {
 				'title'          => $GLOBALS['jobsite_geo-city'] . ', ' . $GLOBALS['jobsite_geo-state']
 			]);
 
-			if($query->have_posts()) :
-				while($query->have_posts()) :
+			if($query->have_posts()) {
+				while($query->have_posts()) {
 					$query->the_post();
 					$GLOBALS['jobsite_geo-content'] = apply_filters('the_content', get_the_content());
 					$GLOBALS['jobsite_geo-page_title'] = str_replace('%%sep%%', $sep, get_post_meta(get_the_ID(), '_yoast_wpseo_title', true) );
@@ -1355,16 +1376,16 @@ function battleplan_jobsite_template($template) {
 					$GLOBALS['mapGrid'] = "1-1";
 					//$position = strpos($GLOBALS['jobsite_geo-page_title'], '·');
 					//if ($position !== false) $GLOBALS['jobsite_geo-headline'] = trim(substr($GLOBALS['jobsite_geo-page_title'], 0, $position));
-				endwhile; 
-			else:
-				$query = bp_WP_Query('landing', [
+				}
+			} else {
+					$query = bp_WP_Query('landing', [
 					'posts_per_page' => 1,
 					'name'           => 'jobsite-geo-default',
 					'post_status'    => 'publish'
 				]);
 
-				if ($query->have_posts()) :
-					while($query->have_posts()) :
+				if ($query->have_posts()) {
+					while($query->have_posts()) {
 						$query->the_post();
 						$GLOBALS['jobsite_geo-content'] = apply_filters('the_content', get_the_content());
 						$GLOBALS['jobsite_geo-page_title'] = str_replace('%%sep%%', $sep, get_post_meta(get_the_ID(), '_yoast_wpseo_title', true) ).$sep.$GLOBALS['jobsite_geo-city'].", ".$GLOBALS['jobsite_geo-state'];
@@ -1372,23 +1393,23 @@ function battleplan_jobsite_template($template) {
 						$GLOBALS['mapGrid'] = "1-1";
 						//$position = strpos($GLOBALS['jobsite_geo-page_title'], '·');
 						//if ($position !== false) $GLOBALS['jobsite_geo-headline'] = trim(substr($GLOBALS['jobsite_geo-page_title'], 0, $position)).' in '.$GLOBALS['jobsite_geo-city'].", ".$GLOBALS['jobsite_geo-state'];
-					endwhile; 
-				else:
+					} 
+				} else {
 					$GLOBALS['jobsite_geo-content'] = '';
 					$GLOBALS['mapGrid'] = "1";
-				endif;
-			endif;		
+				}
+			}		
 			wp_reset_postdata();
 	
-		elseif ( is_tax('jobsite_geo-techs') ) :		
-            $jobsite_term = get_term_by('slug', $jobsite_term, 'jobsite_geo-techs');
-            $jobsite_term = ucwords(str_replace('-', ' ', $jobsite_term->name));
+		elseif (is_tax('jobsite_geo-techs')) :
+			$tech_name = ucwords(str_replace('-', ' ', $jobsite_term->name));
 
-            $GLOBALS['jobsite_geo-headline'] = $jobsite_term.'\'s Recent Jobs';
-            $GLOBALS['jobsite_geo-page_title'] = $GLOBALS['jobsite_geo-headline'].$sep.get_bloginfo('name');
-			$GLOBALS['jobsite_geo-map-caption'] = 'This map shows the location of some of '.$jobsite_term.'\'s recent work.';
-		endif;
-	endif;
+			$GLOBALS['jobsite_geo-headline']   = $tech_name . '\'s Recent Jobs';
+			$GLOBALS['jobsite_geo-page_title'] = $GLOBALS['jobsite_geo-headline'] . $sep . get_bloginfo('name');
+			$GLOBALS['jobsite_geo-page_desc']  = ''; // set something so wpseo_metadesc has a defined value
+			$GLOBALS['jobsite_geo-map-caption'] = 'This map shows the location of some of ' . $tech_name . '\'s recent work.';
+		}
+	}
 	
     add_filter( 'wpseo_title', function( $title ) {
         return $GLOBALS['jobsite_geo-page_title'];
@@ -1405,18 +1426,20 @@ function battleplan_jobsite_template($template) {
 add_filter('wp_handle_upload_prefilter', 'battleplan_handle_jobsite_geo_image_upload');
 function battleplan_handle_jobsite_geo_image_upload($file) {
 	$current_user = wp_get_current_user();
-	
-	if ( isset($_REQUEST['post_id']) ) :
-        $post_id = $_REQUEST['post_id'];
-        $post = get_post($post_id);
-	endif;
+	$post   = null;
+	$post_id = 0;
 
-    if ( ($post && $post->post_type === 'jobsite_geo') || in_array('bp_jobsite_geo_mgr', $current_user->roles) || in_array('bp_jobsite_geo', $current_user->roles) ):
-   		$file['name'] = 'jobsite_geo-'.$post_id.'--'. $file['name'];
-    endif;	
-	
-    return $file;
-};
+	if (isset($_REQUEST['post_id'])) {
+		$post_id = (int) $_REQUEST['post_id'];
+		$post    = get_post($post_id);
+	}
+
+	if (($post && $post->post_type === 'jobsite_geo') || in_array('bp_jobsite_geo_mgr', $current_user->roles, true) || in_array('bp_jobsite_geo', $current_user->roles, true)) {
+		if ($post_id) $file['name'] = 'jobsite_geo-' . $post_id . '--' . $file['name'];
+	}
+
+	return $file;
+}
 
 
 /*--------------------------------------------------------------
@@ -1438,19 +1461,19 @@ function battleplan_getJobsiteCityState($atts, $content = null ) {
 --------------------------------------------------------------*/
 add_action('template_redirect', 'battleplan_jobsite_geo_intercept');
 function battleplan_jobsite_geo_intercept() {
-	$uri = trim($_SERVER['REQUEST_URI'], '/');
-    $uri = explode('/', $uri);
-    $uri_slug = $uri[0];
-	
-	$terms = get_terms(array( 'taxonomy' => 'jobsite_geo-service-areas', 'hide_empty' => false, ));
-    if (!empty($terms) && !is_wp_error($terms)) :
-        foreach ($terms as $term) :
-            if ($term->slug === $uri_slug) :
-                wp_redirect( home_url('/service-area/'.$uri_slug.'/'), 301 ); 
-                exit;
-            endif;
-        endforeach;
-    endif;
-}
+	$uri_path = strtok($_SERVER['REQUEST_URI'], '?'); // strip query string
+	$uri_path = trim($uri_path, '/');                 // remove leading/trailing slashes
 
-?>
+	if ($uri_path === '') return;
+
+	$parts    = explode('/', $uri_path);
+	$uri_slug = $parts[0] ?? '';
+
+	if (!$uri_slug) return;
+
+	$term = get_term_by('slug', $uri_slug, 'jobsite_geo-service-areas');
+	if ($term && !is_wp_error($term)) {
+		wp_safe_redirect(home_url("/service-area/{$uri_slug}/"), 301);
+		exit;
+	}
+}

@@ -149,5 +149,90 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	document.body.className = c;					   
 	
 	// Add woocommerce class to all woocommerce pages
-	document.body.classList.contains('woocommerce-page') && !document.body.classList.contains('woocommerce') ? document.body.classList.add('woocommerce') : null;	
+	document.body.classList.contains('woocommerce-page') && !document.body.classList.contains('woocommerce') ? document.body.classList.add('woocommerce') : null;
+
+														   
+  // Fix spinner on Stripe checkout															   
+	(function(){
+		const start = () => {
+			const body = document.body;
+
+			/* 1) Inject styles (once) */
+			const cssId = 'bp-fixed-spinner-style';
+			if (!document.getElementById(cssId)) {
+				const style = document.createElement('style');
+				style.id = cssId;
+				style.textContent = [
+					'#bp-fixed-spinner{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);',
+					'width:28px;height:28px;display:none;border:2px solid rgba(0,0,0,.25);',
+					'border-left-color:rgba(0,0,0,.7);border-radius:50%;animation:bpwoospin .8s linear infinite;z-index:100001}',
+					'.bp-loading #bp-fixed-spinner{display:block}',
+					'@keyframes bpwoospin{to{transform:translate(-50%,-50%) rotate(360deg)}}'
+				].join('');
+				(document.head || document.documentElement).appendChild(style);
+			}
+
+			/* 2) Inject spinner node (once) */
+			let spinner = document.getElementById('bp-fixed-spinner');
+			if (!spinner) {
+				spinner = document.createElement('div');
+				spinner.id = 'bp-fixed-spinner';
+				spinner.setAttribute('aria-hidden','true');
+				body.appendChild(spinner);
+			}
+
+			/* Helpers */
+			const visible = el => {
+				const cs = getComputedStyle(el);
+				return cs.display !== 'none' && cs.visibility !== 'hidden' && cs.opacity !== '0' && el.offsetParent !== null;
+			};
+			const hasVisibleOverlay = () => {
+				const overlays = document.querySelectorAll('.blockUI.blockOverlay, .blockUI.blockMsg');
+				for (const el of overlays) if (visible(el)) return true;
+				return false;
+			};
+			const formProcessing = () => !!document.querySelector('form.woocommerce-checkout.processing, .woocommerce-checkout form.checkout.processing');
+
+			const show = () => body.classList.add('bp-loading');
+			const hide = () => body.classList.remove('bp-loading');
+
+			let rafId = 0;
+			const update = () => {
+				rafId && cancelAnimationFrame(rafId);
+				rafId = requestAnimationFrame(() => (hasVisibleOverlay() || formProcessing()) ? show() : hide());
+			};
+
+			/* Initial state */
+			update();
+
+			/* Observe DOM changes that could affect visibility/state */
+			const obs = new MutationObserver(ms => {
+				for (const m of ms) {
+					if (m.type === 'childList') { update(); break; }
+					if (m.type === 'attributes') { update(); break; }
+				}
+			});
+			obs.observe(document.documentElement, {
+				subtree: true,
+				childList: true,
+				attributes: true,
+				attributeFilter: ['class','style']
+			});
+
+			/* Bonus: if jQuery is present, listen to AJAX lifecycles for extra reliability */
+			if (window.jQuery) {
+				const $ = window.jQuery;
+				$(document).on('ajaxStart wc_blockui_adding_to_cart checkout_place_order updated_checkout', update);
+				$(document).on('ajaxStop', update);
+			}
+
+			/* Cleanup */
+			window.addEventListener('beforeunload', () => obs.disconnect(), { once: true });
+		};
+
+		document.readyState === 'loading'
+			? document.addEventListener('DOMContentLoaded', start, { once: true })
+			: start();
+	})();
+
 });

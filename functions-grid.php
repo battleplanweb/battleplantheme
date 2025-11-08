@@ -115,18 +115,20 @@ function battleplan_buildLayout( $atts, $content = null ) {
 	$name = $name ? ' id="'.$name.'"' : '';	
 	$grid = esc_attr($a['grid']);
 	if ( strpos($grid,'px') !== false || strpos($grid,'em') !== false || strpos($grid,'fr') !== false ) {
-		$custom_grid = 'style="grid-template-columns: '.$grid.'" ';
+		$custom_grid = 'grid-template-columns: '.$grid.';';
 		$grid = 'custom';
 	} else {
 		$custom_grid = '';
 	}	
-	$gap = esc_attr($a['gap']) !== '' ? ' style="gap:'.esc_attr($a['gap']).'"' : '';
+	$gap = esc_attr($a['gap']) !== '' ? 'gap:'.esc_attr($a['gap']).'; ' : '';
 	$break = esc_attr($a['break']) !== '' ? ' break-'.esc_attr($a['break']) : '';
 	$valign = esc_attr($a['valign']) !== '' ? ' valign-'.esc_attr($a['valign']) : '';
 	$class = esc_attr($a['class']) !== '' ? ' '.esc_attr($a['class']) : '';
-	$data = esc_attr($a['data']) !== '' ? ' data-'.esc_attr($a['data']) : '';
+	$data = esc_attr($a['data']) !== null ? ' data-'.esc_attr($a['data']) : '';
 	$tracking = esc_attr($a['track']) !== '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
 	if ( $tracking !== '' ) $class .= " tracking";
+	
+	$style = $gap !== '' || $custom_grid !== '' ? 'style="'.$gap.' '.$custom_grid.'"' : '';
 	
 	$data_attrs = '';
 	foreach ( $atts as $k => $v ) {
@@ -136,7 +138,7 @@ function battleplan_buildLayout( $atts, $content = null ) {
 		}
 	}
 	
-	return '<div'.$name.' '.$data_attrs.' class="flex grid-'.$grid.$valign.$break.$class.'"'.$gap.$tracking.$custom_grid.'>'.do_shortcode($content).'</div>';	
+	return '<div'.$name.' '.$data_attrs.' class="flex grid-'.$grid.$valign.$break.$class.'"'.$style.$tracking.'>'.do_shortcode($content).'</div>';	
 }
 
 // Column
@@ -210,7 +212,7 @@ function battleplan_buildGroup($atts, $content=null, $tag=''){
 	if ( $tracking !== '' ) $class .= " tracking";
 
 	$block = ($tag==='group') ? 'group' : 'text';
-	return '<div class="block block-'.$block.' span-'.$size.$class.'"'.$tracking.$style.'>'.do_shortcode($content).'</div>';
+	return '<div class="block block-'.$block.' span-'.$size.$class.'"'.$tracking.'>'.do_shortcode($content).'</div>';
 }
 
 // Image Block
@@ -342,7 +344,7 @@ function battleplan_buildVid( $atts, $content = null ) {
 // Button Block
 add_shortcode( 'btn', 'battleplan_buildButton' );
 function battleplan_buildButton( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'align'=>'center', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'false', 'class'=>'', 'fancy'=>'false', 'icon'=>'false', 'top'=>0, 'left'=>0, 'graphic'=>'false', 'graphic-w'=>'40', 'ada'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'onclick'=>'' ), $atts );
+	$a = shortcode_atts( array( 'size'=>'100', 'align'=>'center', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'false', 'class'=>'', 'fancy'=>'false', 'icon'=>'false', 'top'=>0, 'left'=>0, 'before'=>'false', 'graphic'=>'false', 'graphic-w'=>'40', 'ada'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'onclick'=>'' ), $atts );
 	$size = convertSize(esc_attr($a['size']));
 	$align = esc_attr($a['align']) !== 'center' ? " button-".esc_attr($a['align']) : '';	
 	$style = esc_attr($a['order']) !== '' ? " style='order: ".esc_attr($a['order'])." !important'" : '';
@@ -368,7 +370,9 @@ function battleplan_buildButton( $atts, $content = null ) {
 		wp_enqueue_style( 'battleplan-fancy-btn', get_template_directory_uri()."/style-fancy-btn.css", array('parent-style'), _BP_VERSION ); 
 		$class .= " fancy".$fancy; 
 		$icon = $icon === 'true' ? 'chevron-right' : $icon;	
-		$content = '<span class="fancy-text">'.$content.'</span><span class="fancy-icon">[get-icon type="'.$icon.'" top="'.$top.'" left="'.$left.'"]</span>'; 
+		$content = esc_attr($a['before']) === 'false' 
+			? '<span class="fancy-text">'.$content.'</span><span class="fancy-icon">[get-icon type="'.$icon.'" top="'.$top.'" left="'.$left.'"]</span>' 
+			: '<span class="fancy-icon">[get-icon type="'.$icon.'" top="'.$top.'" left="'.$left.'"]</span><span class="fancy-text">'.$content.'</span>';
 	endif;
 	$graphicW = esc_attr($a['graphic-w']);	
 	if ( esc_attr($a['graphic']) !== "false" ) {

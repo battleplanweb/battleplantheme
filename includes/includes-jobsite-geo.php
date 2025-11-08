@@ -305,6 +305,44 @@ function bp_format_location($location) {
 }
 
 // Format service
+function bp_format_service($service) { 
+	$jobsite_service = ucwords(str_replace('-', ' ', $service)); 
+	$jobsite_service = str_replace('Hvac', 'HVAC', $jobsite_service); 
+	$jobsite_service = $jobsite_service === "Service Area" ? "Recent Jobsites" : $jobsite_service; return $jobsite_service;
+ } 
+ 
+ // Match up reviews and jobsites 
+ function bp_match_key_from_title($title) { 
+	$key = sanitize_title(trim((string)$title)); 
+	return $key ?: ''; 
+} 
+
+// Orient uploaded photos correctly 
+add_filter('wp_generate_attachment_metadata', function($metadata, $attachment_id) { 
+	$filepath = get_attached_file($attachment_id); 
+	$image = wp_get_image_editor($filepath); 
+	if (!is_wp_error($image)) { 
+		$exif = @exif_read_data($filepath); 
+		if (!empty($exif['Orientation'])) { 
+			switch ($exif['Orientation']) { 
+				case 3: 
+					$image->rotate(180); 				
+					break; 
+				case 6: 
+					$image->rotate(-90); 				
+					break; 
+				case 8: 
+					$image->rotate(90); 
+					break; 
+			} 
+				
+			$image->save($filepath); 
+		} 
+	} 
+
+	return $metadata;
+}, 10, 2);
+
 function bp_jobsite_setup($post_id, $user) {	
 	$current_type = get_post_type($post_id);
 	if (!in_array($current_type, ['jobsite_geo', 'testimonials'], true)) return;

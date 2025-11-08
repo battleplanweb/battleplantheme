@@ -400,6 +400,8 @@ function battleplan_getServiceAreas($atts, $content = null) {
 
 	//$cities[$customer_info['city'].', '.$customer_info['state-abbr']] = '';
 	$cities = array();
+	$customer_info['service-areas'] = $customer_info['service-areas'] ?? [];
+
 	if ( is_array($customer_info['service-areas']) ) :
 		foreach ( $customer_info['service-areas'] as $city ) :
 			$buildCity = $city[0];
@@ -430,9 +432,22 @@ function battleplan_getServiceAreas($atts, $content = null) {
 		if ( $areaLink != '' ) $buildLinks .= '</a>';
 		$buildLinks .= '</li>';
 	endforeach;
-	$buildLinks .= '<li>Surrounding Areas</li>';			
 
-	return $buildLinks;
+	$columns = ( count($cities) < 21 ) ? 'two-col' : 'three-col';
+
+	$buildLinks .= '<li>Surrounding Areas</li>';
+
+	$serviceType = $customer_info['service-type'] ?? [];
+	$type1 = $serviceType[0] ?? 'HVAC solutions';
+	$type2 = $serviceType[1] ?? 'expert installations to routine maintenance and emergency repairs';	
+
+	$buildPage = "<h1>Areas We Serve</h1>";
+
+	$buildPage .= "<p>At <b>".$customer_info['name']."</b>, we take pride in providing dependable ".$type1." to homeowners and businesses across our service region. From ".$type2.", our experienced technicians deliver quality workmanship and trusted expertise wherever you are.</p><p>We're continually expanding to meet the needs of nearby communities, ensuring every customer receives the same level of professional care. Explore the list below to find your community and contact us to schedule fast, local service today.</p>";
+
+	$buildPage .= '<ul class="'.$columns.'">'.$buildLinks.'</ul>';
+	
+	return $buildPage;
 }		
 
 // Choose random text from given choices
@@ -783,6 +798,15 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		endif;			
 		
 		$archiveBody = '[txt class="testimonials-quote"][p][get-icon type="quote"]'.$content.'[/p][/txt][txt size="11/12" class="testimonials-credentials"]'.$buildCredentials.'[/txt][txt size="1/12" class="testimonials-platform testimonials-platform-'.$testimonialPlatform.'"][/txt]';
+	
+		// --- Inject review schema into global array for Yoast ---
+		$GLOBALS['bp_reviews'][] = [
+			'author' => get_the_title(),
+			'date'   => get_the_date('c'),
+			'text'   => wp_strip_all_tags(get_the_content()),
+			'rating' => floatval(get_field('testimonial_rating')),
+		];	
+	
 	} else {
 		if ( esc_attr($a['accordion']) == "true" ) :		
 			$archiveBody = '[accordion title="'.esc_html(get_the_title($postID)).'" excerpt="'.wp_kses_post(get_the_excerpt($postID)).'"]'.$content.'[/accordion]';		

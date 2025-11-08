@@ -52,6 +52,78 @@ if ( get_option('bp_product_upload_2024_03_18') != "completed" && $customer_info
 endif; 
 */
 
+// Fix descrepencies in Jobsite GEO 
+
+add_action("init", "bp_add_terms_to_jobsites"); 
+function bp_add_terms_to_jobsites() {
+
+    if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' && get_option('bp_setup_2024_07_09') != "completed" ) {
+		
+        $stateAbbrs = ["Alabama" => "AL", "Alaska" => "AK", "Arizona" => "AZ", "Arkansas" => "AR", "California" => "CA", "Colorado" => "CO", "Connecticut" => "CT", "Delaware" => "DE", "Florida" => "FL", "Georgia" => "GA", "Hawaii" => "HI", "Idaho" => "ID", "Illinois" => "IL", "Indiana" => "IN", "Iowa" => "IA", "Kansas" => "KS",
+        "Kentucky" => "KY", "Louisiana" => "LA", "Maine" => "ME", "Maryland" => "MD", "Massachusetts" => "MA", "Michigan" => "MI", "Minnesota" => "MN", "Mississippi" => "MS",
+        "Missouri" => "MO", "Montana" => "MT", "Nebraska" => "NE", "Nevada" => "NV", "New Hampshire" => "NH", "New Jersey" => "NJ", "New Mexico" => "NM", "New York" => "NY",
+        "North Carolina" => "NC", "North Dakota" => "ND", "Ohio" => "OH", "Oklahoma" => "OK", "Oregon" => "OR", "Pennsylvania" => "PA", "Rhode Island" => "RI", "South Carolina" => "SC", "South Dakota" => "SD", "Tennessee" => "TN", "Texas" => "TX", "Utah" => "UT", "Vermont" => "VT", "Virginia" => "VA", "Washington" => "WA", "West Virginia" => "WV",
+        "Wisconsin" => "WI", "Wyoming" => "WY", "Tex" => "TX", "Calif" => "CA", "Penn" => "PA"];
+
+        $equipment = [
+            'air-conditioner' => ['air conditioner', 'air conditioning', 'cooling', 'a/c', 'compressor', 'evaporator coil', 'condenser coil'],
+            'heating' => ['heater', 'heating', 'furnace'],
+            'thermostat' => ['thermostat', 't-stat', 'tstat']
+        ];
+
+        $query = bp_WP_Query('jobsite_geo', [
+            'posts_per_page' => -1
+        ]);
+
+
+        if ($query->have_posts()) {
+            while ($query->have_posts()) {
+                $query->the_post();
+                $post_id = get_the_ID();
+                $city = trim(esc_attr(get_field("city")));
+                $state = strtoupper(trim(esc_attr(get_field("state"))));
+                $description = get_post_field('post_content', $post_id);
+                $type = esc_attr(get_field("new_brand")) ? '-installation' : '-repair';
+                $service = '';
+
+
+                foreach ($stateAbbrs as $name => $abbreviation) {
+                    if ($state === strtoupper($name)) {
+                        $state = $abbreviation;
+                        break;
+                    }
+                }
+
+                $location = $city . '-' . $state;
+
+                foreach (['maintenance', 'tune up', 'tune-up', 'check up', 'check-up', 'inspection'] as $keyword) {
+                    if (stripos($description, $keyword) !== false) {
+                        $service = 'hvac-maintenance';
+                        break;
+                    }
+                }
+
+                if (!$service) {
+                    foreach ($equipment as $tag => $keywords) {
+                        foreach ($keywords as $keyword) {
+                            if (stripos($description, $keyword) !== false) {
+                                $service = $tag . $type;
+                                break 2;
+                            }
+                        }
+                    }
+                }
+
+                if ($service && $location) {
+                    wp_set_object_terms($post_id, $service . '--' . strtolower($location), 'jobsite_geo-services', false);
+                }
+            }
+            wp_reset_postdata();
+        }	
+    }
+
+    updateOption( 'bp_setup_2024_07_09', 'completed', false );	
+}
 
 
 
@@ -59,61 +131,25 @@ endif;
 
 
 // Determine if Chron should run
-$forceChron = (bool) get_option('bp_force_chron', false);
-$next    	= (int)  get_option('bp_chron_next', 0);
+$forceChron = filter_var(get_option('bp_force_chron', false), FILTER_VALIDATE_BOOLEAN);
+$next    	= (int) get_option('bp_chron_next', 0);
+$lastRun   	= (int) get_option('bp_chron_time', 0);
+$staleDays 	= (time() - $lastRun) > (86400 * 3); // more than 3 days idle
 
 if ($next <= 0) {
 	$next = time() + rand(40000, 70000);
 	update_option('bp_chron_next', $next);
 }
 
-$due = time() >= $next;
-
-
-$log = [];
-
-// Explain condition state
-$log[] = 'FORCE=' . var_export($forceChron, true);
-$log[] = 'BOT=' . var_export(_IS_BOT, true);
-$log[] = 'SERP=' . var_export(_IS_SERP_BOT, true);
-$log[] = 'DUE=' . var_export($due, true);
-$sendMsg = false;
-
-// Determine outcome
-if ($forceChron) {
-	$log[] = 'RESULT: Forced run.';
-	$runChron = true;
-} elseif (!_IS_BOT) {
-	$log[] = 'RESULT: Skipped — not a bot.';
-	$runChron = false;
-} elseif (_IS_SERP_BOT) {
-	$log[] = 'RESULT: Skipped — SERP bot.';
-	$runChron = false;
-	$sendMsg = true;
-} elseif (!$due) {
-	$log[] = 'RESULT: Skipped — not due.';
-	$runChron = false;
-} else {
-	$log[] = 'RESULT: Run — bot, not SERP, and due.';
-	$runChron = true;
-	$sendMsg = true;
-}
-
-// Send debug message
-if ( $sendMsg === true ) {
-	$message = home_url() . ' attempted Chron refresh.'._BOT_UA.' reports: ' . PHP_EOL . implode(PHP_EOL, $log);
-	emailMe('Chron Debug', $message);
-}
-
- 
+$due       	= time() >= $next;
 
 // Perform action
-if ($runChron) {
+if ( $forceChron || $staleDays || ( _IS_BOT && !_IS_SERP_BOT && $due )) {
 	delete_option('bp_force_chron');
 	update_option('bp_chron_time', time());
 	update_option('bp_chron_next', time() + rand(40000, 70000));
 	
-	processChron($force);
+	processChron($forceChron);
 }
 	
 function processChron($forceChron) {	
@@ -643,79 +679,6 @@ function processChron($forceChron) {
 	battleplan_fetch_site_icon(true);
 	
 	
-	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' && get_option('bp_setup_2024_07_09') != "completed" ) {
-	
-		add_action("init", "bp_add_terms_to_jobsites"); 
-		function bp_add_terms_to_jobsites() {
-	
-			$stateAbbrs = ["Alabama" => "AL", "Alaska" => "AK", "Arizona" => "AZ", "Arkansas" => "AR", "California" => "CA", "Colorado" => "CO", "Connecticut" => "CT", "Delaware" => "DE", "Florida" => "FL", "Georgia" => "GA", "Hawaii" => "HI", "Idaho" => "ID", "Illinois" => "IL", "Indiana" => "IN", "Iowa" => "IA", "Kansas" => "KS",
-			"Kentucky" => "KY", "Louisiana" => "LA", "Maine" => "ME", "Maryland" => "MD", "Massachusetts" => "MA", "Michigan" => "MI", "Minnesota" => "MN", "Mississippi" => "MS",
-			"Missouri" => "MO", "Montana" => "MT", "Nebraska" => "NE", "Nevada" => "NV", "New Hampshire" => "NH", "New Jersey" => "NJ", "New Mexico" => "NM", "New York" => "NY",
-			"North Carolina" => "NC", "North Dakota" => "ND", "Ohio" => "OH", "Oklahoma" => "OK", "Oregon" => "OR", "Pennsylvania" => "PA", "Rhode Island" => "RI", "South Carolina" => "SC", "South Dakota" => "SD", "Tennessee" => "TN", "Texas" => "TX", "Utah" => "UT", "Vermont" => "VT", "Virginia" => "VA", "Washington" => "WA", "West Virginia" => "WV",
-			"Wisconsin" => "WI", "Wyoming" => "WY", "Tex" => "TX", "Calif" => "CA", "Penn" => "PA"];
-
-			$equipment = [
-				'air-conditioner' => ['air conditioner', 'air conditioning', 'cooling', 'a/c', 'compressor', 'evaporator coil', 'condenser coil'],
-				'heating' => ['heater', 'heating', 'furnace'],
-				'thermostat' => ['thermostat', 't-stat', 'tstat']
-			];
-
-			$query = bp_WP_Query('jobsite_geo', [
-				'posts_per_page' => -1
-			]);
-
-
-			if ($query->have_posts()) {
-				while ($query->have_posts()) {
-					$query->the_post();
-					$post_id = get_the_ID();
-					$city = trim(esc_attr(get_field("city")));
-					$state = strtoupper(trim(esc_attr(get_field("state"))));
-					$description = get_post_field('post_content', $post_id);
-					$type = esc_attr(get_field("new_brand")) ? '-installation' : '-repair';
-					$service = '';
-
-
-					foreach ($stateAbbrs as $name => $abbreviation) {
-						if ($state === strtoupper($name)) {
-							$state = $abbreviation;
-							break;
-						}
-					}
-
-					$location = $city . '-' . $state;
-
-					foreach (['maintenance', 'tune up', 'tune-up', 'check up', 'check-up', 'inspection'] as $keyword) {
-						if (stripos($description, $keyword) !== false) {
-							$service = 'hvac-maintenance';
-							break;
-						}
-					}
-
-					if (!$service) {
-						foreach ($equipment as $tag => $keywords) {
-							foreach ($keywords as $keyword) {
-								if (stripos($description, $keyword) !== false) {
-									$service = $tag . $type;
-									break 2;
-								}
-							}
-						}
-					}
-
-					if ($service && $location) {
-						wp_set_object_terms($post_id, $service . '--' . strtolower($location), 'jobsite_geo-services', false);
-					}
-				}
-				wp_reset_postdata();
-			}	
-		}
-	
-		updateOption( 'bp_setup_2024_07_09', 'completed', false );	
-	
-	}
-	
-	
 // Clear terms, tags and categories with 0 entries
 	$attachment_taxonomies = ['image-tags']; 
 
@@ -787,76 +750,250 @@ function processChron($forceChron) {
 --------------------------------------------------------------*/
 
 /* Add appropriate pages */
-	if ( $customer_info['site-type'] == 'hvac' && ($customer_info['site-brand'] == 'american standard' || $customer_info['site-brand'] == 'American Standard' || (is_array($customer_info['site-brand']) && ( in_array('american standard', $customer_info['site-brand']) || in_array('American Standard', $customer_info['site-brand'])) ))) {		
-		if (is_null(get_page_by_path('customer-care-dealer', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'Customer Care Dealer', 'post_content' => '[get-universal-page slug="page-hvac-customer-care-dealer"]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+	// American Standard - Customer Care Dealer
+	if (
+		!empty($customer_info['site-type']) &&
+		strtolower(trim($customer_info['site-type'])) === 'hvac' &&
+		!empty($customer_info['site-brand']) &&
+		(
+			(is_string($customer_info['site-brand']) &&
+				strtolower(trim($customer_info['site-brand'])) === 'american standard')
+			||
+			(is_array($customer_info['site-brand']) &&
+				in_array('american standard', array_map('strtolower', array_map('trim', $customer_info['site-brand'])), true))
+		)
+	) {
+		if (is_null(get_page_by_path('customer-care-dealer', OBJECT, 'universal'))) {
+			wp_insert_post([
+				'post_title'   => 'Customer Care Dealer',
+				'post_content' => '[get-universal-page slug="page-hvac-customer-care-dealer"]',
+				'post_status'  => 'publish',
+				'post_type'    => 'universal',
+			]);
+		}
 	} else {
-		$getPage = get_page_by_path('customer-care-dealer', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
+		$getPage = get_page_by_path('customer-care-dealer', OBJECT, 'universal');
+		if ($getPage) wp_delete_post($getPage->ID, true);
 	}
 
-	if ( $customer_info['site-type'] == 'hvac' && ($customer_info['site-brand'] == 'rheem' || $customer_info['site-brand'] == 'Rheem' || (is_array($customer_info['site-brand']) && ( in_array('rheem', $customer_info['site-brand']) || in_array('Rheem', $customer_info['site-brand'])) ))) {
-		if (is_null(get_page_by_path('rheem-pro-partner', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'Rheem Pro Partner', 'post_content' => '[get-universal-page slug="page-hvac-rheem-pro-partner"]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+	// Rheem - Pro Partner
+	if (
+		!empty($customer_info['site-type']) &&
+		strtolower(trim($customer_info['site-type'])) === 'hvac' &&
+		!empty($customer_info['site-brand']) &&
+		(
+			(is_string($customer_info['site-brand']) &&
+				strtolower(trim($customer_info['site-brand'])) === 'rheem')
+			||
+			(is_array($customer_info['site-brand']) &&
+				in_array('rheem', array_map('strtolower', array_map('trim', $customer_info['site-brand'])), true))
+		)
+	) {
+		if (is_null(get_page_by_path('rheem-pro-partner', OBJECT, 'universal'))) {
+			wp_insert_post([
+				'post_title'   => 'Rheem Pro Partner',
+				'post_content' => '[get-universal-page slug="page-hvac-rheem-pro-partner"]',
+				'post_status'  => 'publish',
+				'post_type'    => 'universal',
+			]);
+		}
 	} else {
-		$getPage = get_page_by_path('rheem-pro-partner', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
+		$getPage = get_page_by_path('rheem-pro-partner', OBJECT, 'universal');
+		if ($getPage) wp_delete_post($getPage->ID, true);
 	}
 
-	if ( $customer_info['site-type'] == 'hvac' && ($customer_info['site-brand'] == 'ruud' || $customer_info['site-brand'] == 'Ruud' || (is_array($customer_info['site-brand']) && ( in_array('ruud', $customer_info['site-brand']) || in_array('Ruud', $customer_info['site-brand'])) ))) {
-		if (is_null(get_page_by_path('ruud-pro-partner', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'Ruud Pro Partner', 'post_content' => '[get-universal-page slug="page-hvac-ruud-pro-partner"]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+	// Ruud - Pro Partner
+	if (
+		!empty($customer_info['site-type']) &&
+		strtolower(trim($customer_info['site-type'])) === 'hvac' &&
+		!empty($customer_info['site-brand']) &&
+		(
+			(is_string($customer_info['site-brand']) &&
+				strtolower(trim($customer_info['site-brand'])) === 'ruud')
+			||
+			(is_array($customer_info['site-brand']) &&
+				in_array('ruud', array_map('strtolower', array_map('trim', $customer_info['site-brand'])), true))
+		)
+	) {
+		if (is_null(get_page_by_path('ruud-pro-partner', OBJECT, 'universal'))) {
+			wp_insert_post([
+				'post_title'   => 'Ruud Pro Partner',
+				'post_content' => '[get-universal-page slug="page-hvac-ruud-pro-partner"]',
+				'post_status'  => 'publish',
+				'post_type'    => 'universal',
+			]);
+		}
 	} else {
-		$getPage = get_page_by_path('ruud-pro-partner', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
+		$getPage = get_page_by_path('ruud-pro-partner', OBJECT, 'universal');
+		if ($getPage) wp_delete_post($getPage->ID, true);
 	}
 
-	if ( $customer_info['site-type'] == 'hvac' && ($customer_info['site-brand'] == 'comfortmaker' || $customer_info['site-brand'] == 'Comfortmaker' || (is_array($customer_info['site-brand']) && ( in_array('comfortmaker', $customer_info['site-brand']) || in_array('Comfortmaker', $customer_info['site-brand'])) ))) {
-		if (is_null(get_page_by_path('comfortmaker-elite-dealer', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'Comfortmaker Elite Dealer', 'post_content' => '[get-universal-page slug="page-hvac-comfortmaker-elite-dealer"]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+	// Comfortmaker - Elite Dealer
+	if (
+		!empty($customer_info['site-type']) &&
+		strtolower(trim($customer_info['site-type'])) === 'hvac' &&
+		!empty($customer_info['site-brand']) &&
+		(
+			(is_string($customer_info['site-brand']) &&
+				strtolower(trim($customer_info['site-brand'])) === 'comfortmaker')
+			||
+			(is_array($customer_info['site-brand']) &&
+				in_array('comfortmaker', array_map('strtolower', array_map('trim', $customer_info['site-brand'])), true))
+		)
+	) {
+		if (is_null(get_page_by_path('comfortmaker-elite-dealer', OBJECT, 'universal'))) {
+			wp_insert_post([
+				'post_title'   => 'Comfortmaker Elite Dealer',
+				'post_content' => '[get-universal-page slug="page-hvac-comfortmaker-elite-dealer"]',
+				'post_status'  => 'publish',
+				'post_type'    => 'universal',
+			]);
+		}
 	} else {
-		$getPage = get_page_by_path('comfortmaker-elite-dealer', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
+		$getPage = get_page_by_path('comfortmaker-elite-dealer', OBJECT, 'universal');
+		if ($getPage) wp_delete_post($getPage->ID, true);
 	}
 
-	if ( $customer_info['site-type'] == 'hvac' && ($customer_info['site-brand'] == 'york' || $customer_info['site-brand'] == 'York' || (is_array($customer_info['site-brand']) && ( in_array('york', $customer_info['site-brand']) || in_array('York', $customer_info['site-brand'])) ))) {
-		if (is_null(get_page_by_path('york-certified-comfort-expert', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'York Certified Comfort Expert', 'post_content' => '[get-universal-page slug="page-hvac-york-cert-comfort-expert"]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+	// York - Certified Comfort Expert
+	if (
+		!empty($customer_info['site-type']) &&
+		strtolower(trim($customer_info['site-type'])) === 'hvac' &&
+		!empty($customer_info['site-brand']) &&
+		(
+			(is_string($customer_info['site-brand']) &&
+				strtolower(trim($customer_info['site-brand'])) === 'york')
+			||
+			(is_array($customer_info['site-brand']) &&
+				in_array('york', array_map('strtolower', array_map('trim', $customer_info['site-brand'])), true))
+		)
+	) {
+		if (is_null(get_page_by_path('york-certified-comfort-expert', OBJECT, 'universal'))) {
+			wp_insert_post([
+				'post_title'   => 'York Certified Comfort Expert',
+				'post_content' => '[get-universal-page slug="page-hvac-york-cert-comfort-expert"]',
+				'post_status'  => 'publish',
+				'post_type'    => 'universal',
+			]);
+		}
 	} else {
-		$getPage = get_page_by_path('york-cert-comfort-expert', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
+		$getPage = get_page_by_path('york-certified-comfort-expert', OBJECT, 'universal');
+		if ($getPage) wp_delete_post($getPage->ID, true);
 	}
 
-	if ( $customer_info['site-type'] == 'hvac' && ($customer_info['site-brand'] == 'tempstar' || $customer_info['site-brand'] == 'Tempstar' || (is_array($customer_info['site-brand']) && ( in_array('tempstar', $customer_info['site-brand']) || in_array('Tempstar', $customer_info['site-brand'])) ))) {
-		if (is_null(get_page_by_path('tempstar-elite-dealer', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'Tempstar Elite Dealer', 'post_content' => '[get-universal-page slug="page-hvac-tempstar-elite-dealer"]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+	// Tempstar - Elite Dealer
+	if (
+		!empty($customer_info['site-type']) &&
+		strtolower(trim($customer_info['site-type'])) === 'hvac' &&
+		!empty($customer_info['site-brand']) &&
+		(
+			(is_string($customer_info['site-brand']) &&
+				strtolower(trim($customer_info['site-brand'])) === 'tempstar')
+			||
+			(is_array($customer_info['site-brand']) &&
+				in_array('tempstar', array_map('strtolower', array_map('trim', $customer_info['site-brand'])), true))
+		)
+	) {
+		if (is_null(get_page_by_path('tempstar-elite-dealer', OBJECT, 'universal'))) {
+			wp_insert_post([
+				'post_title'   => 'Tempstar Elite Dealer',
+				'post_content' => '[get-universal-page slug="page-hvac-tempstar-elite-dealer"]',
+				'post_status'  => 'publish',
+				'post_type'    => 'universal',
+			]);
+		}
 	} else {
-		$getPage = get_page_by_path('tempstar-elite-dealer', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
+		$getPage = get_page_by_path('tempstar-elite-dealer', OBJECT, 'universal');
+		if ($getPage) wp_delete_post($getPage->ID, true);
 	}
 
-	if ( $customer_info['site-type'] == 'hvac' ) {
-		if (is_null(get_page_by_path('maintenance-tips', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'Maintenance Tips', 'post_content' => '[get-universal-page slug="page-hvac-maintenance-tips"]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+	// Maintenance Tips
+	if (!empty($customer_info['site-type']) && strtolower(trim($customer_info['site-type'])) === 'hvac') {
+		if (is_null(get_page_by_path('maintenance-tips', OBJECT, 'universal'))) {
+			wp_insert_post([
+				'post_title'   => 'Maintenance Tips',
+				'post_content' => '[get-universal-page slug="page-hvac-maintenance-tips"]',
+				'post_status'  => 'publish',
+				'post_type'    => 'universal',
+			]);
+		}
 	} else {
-		$getPage = get_page_by_path('maintenance-tips', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
+		$getPage = get_page_by_path('maintenance-tips', OBJECT, 'universal');
+		if ($getPage) wp_delete_post($getPage->ID, true);
 	}
 
-	if ( $customer_info['site-type'] == 'hvac' ) {
-		if (is_null(get_page_by_path('symptom-checker', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'Symptom Checker', 'post_content' => '[get-universal-page slug="page-hvac-symptom-checker"]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+	// Symptom Checker
+	if (!empty($customer_info['site-type']) && strtolower(trim($customer_info['site-type'])) === 'hvac') {
+		if (is_null(get_page_by_path('symptom-checker', OBJECT, 'universal'))) {
+			wp_insert_post([
+				'post_title'   => 'Symptom Checker',
+				'post_content' => '[get-universal-page slug="page-hvac-symptom-checker"]',
+				'post_status'  => 'publish',
+				'post_type'    => 'universal',
+			]);
+		}
 	} else {
-		$getPage = get_page_by_path('symptom-checker', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
+		$getPage = get_page_by_path('symptom-checker', OBJECT, 'universal');
+		if ($getPage) wp_delete_post($getPage->ID, true);
 	}
 
-	if ( $customer_info['site-type'] == 'hvac' ) {
-		if (is_null(get_page_by_path('faq', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'FAQ', 'post_content' => '[get-universal-page slug="page-hvac-faq"]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+	// FAQ
+	if (!empty($customer_info['site-type']) && strtolower(trim($customer_info['site-type'])) === 'hvac') {
+		if (is_null(get_page_by_path('faq', OBJECT, 'universal'))) {
+			wp_insert_post([
+				'post_title'   => 'FAQ',
+				'post_content' => '[get-universal-page slug="page-hvac-faq"]',
+				'post_status'  => 'publish',
+				'post_type'    => 'universal',
+			]);
+		}
 	} else {
-		$getPage = get_page_by_path('faq', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
+		$getPage = get_page_by_path('faq', OBJECT, 'universal');
+		if ($getPage) wp_delete_post($getPage->ID, true);
 	}
 
-	if ( $customer_info['site-type'] == 'profile' ) {
-		if (is_null(get_page_by_path('profile', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'Profile', 'post_content' => '[get-universal-page slug="page-profile"]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+	// Profile Page
+	if (!empty($customer_info['site-type']) && strtolower(trim($customer_info['site-type'])) === 'profile') {
+		if (is_null(get_page_by_path('profile', OBJECT, 'universal'))) {
+			wp_insert_post([
+				'post_title'   => 'Profile',
+				'post_content' => '[get-universal-page slug="page-profile"]',
+				'post_status'  => 'publish',
+				'post_type'    => 'universal',
+			]);
+		}
 	} else {
-		$getPage = get_page_by_path('profile', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
+		$getPage = get_page_by_path('profile', OBJECT, 'universal');
+		if ($getPage) wp_delete_post($getPage->ID, true);
 	}
 
-	if ( $customer_info['site-type'] == 'profile' ) {
-		if (is_null(get_page_by_path('profile-directory', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'Profile Directory', 'post_content' => '[get-universal-page slug="page-profile-directory"]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+	// Profile Directory
+	if (!empty($customer_info['site-type']) && strtolower(trim($customer_info['site-type'])) === 'profile') {
+		if (is_null(get_page_by_path('profile-directory', OBJECT, 'universal'))) {
+			wp_insert_post([
+				'post_title'   => 'Profile Directory',
+				'post_content' => '[get-universal-page slug="page-profile-directory"]',
+				'post_status'  => 'publish',
+				'post_type'    => 'universal',
+			]);
+		}
 	} else {
-		$getPage = get_page_by_path('profile-directory', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
+		$getPage = get_page_by_path('profile-directory', OBJECT, 'universal');
+		if ($getPage) wp_delete_post($getPage->ID, true);
 	}
- 
-	if ( get_option('event_calendar')['install'] == 'true' ) {
-		if (is_null(get_page_by_path('calendar', OBJECT, 'universal'))) { wp_insert_post( array( 'post_title' => 'Calendar', 'post_content' => '[get-event-calendar]', 'post_status' => 'publish', 'post_type' => 'universal', )); }
+
+	// Areas We Serve
+	if (!empty($customer_info['service-areas']) && is_array($customer_info['service-areas'])) {
+		if (is_null(get_page_by_path('areas-we-serve', OBJECT, 'universal'))) {
+			wp_insert_post([
+				'post_title'   => 'Areas We Serve',
+				'post_content' => '[get-service-areas]',
+				'post_status'  => 'publish',
+				'post_type'    => 'universal',
+			]);
+		}
 	} else {
-		$getPage = get_page_by_path('calendar', OBJECT, 'universal'); if ( $getPage ) wp_delete_post( $getPage->ID, true );
+		$getPage = get_page_by_path('areas-we-serve', OBJECT, 'universal');
+		if ($getPage) wp_delete_post($getPage->ID, true);
 	}
 
 	/* Add generic pages */
@@ -1297,8 +1434,8 @@ function processChron($forceChron) {
 
 			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
 	
-			update_option('bp_ga4_achievementId_01', $analyticsGA4, false);		
-		}		
+			update_option('bp_ga4_achievementId_01', $analyticsGA4, false);	
+		}
 	}
 }
 

@@ -14,7 +14,7 @@
 --------------------------------------------------------------*/
 
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.32.12' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.33.0' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );

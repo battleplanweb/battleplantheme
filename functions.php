@@ -1460,10 +1460,12 @@ if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 
 if ( get_option('timeline') && get_option('timeline')['install'] == 'true' ) require_once get_template_directory().'/includes/includes-timeline.php'; 
 if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) require_once get_template_directory().'/includes/includes-jobsite-geo.php'; 
 
-if ( $customer_info['site-type'] == 'hvac' ) require_once get_template_directory().'/includes/includes-hvac.php'; 
-if ( $customer_info['site-type'] == 'pedigree' ) require_once get_template_directory().'/includes/includes-pedigree.php'; 
-if ( $customer_info['site-type'] == 'carte-du-jour' ) require_once get_template_directory().'/includes/includes-carte-du-jour.php'; 
-if ( $customer_info['site-type'] == 'profile' || $customer_info['site-type'] == 'profiles' ) require_once get_template_directory().'/includes/includes-user-profiles.php';  
+$customer_info['site-type'] = $customer_info['site-type'] ?? '';
+
+if ( $customer_info['site-type'] === 'hvac' ) require_once get_template_directory().'/includes/includes-hvac.php'; 
+if ( $customer_info['site-type'] === 'pedigree' ) require_once get_template_directory().'/includes/includes-pedigree.php'; 
+if ( $customer_info['site-type'] === 'carte-du-jour' ) require_once get_template_directory().'/includes/includes-carte-du-jour.php'; 
+if ( $customer_info['site-type'] === 'profile' || $customer_info['site-type'] == 'profiles' ) require_once get_template_directory().'/includes/includes-user-profiles.php';  
 
 require_once get_template_directory().'/functions-shortcodes.php';
 require_once get_template_directory().'/functions-icons.php';
@@ -2036,14 +2038,12 @@ function update_customer_info(array $ci_new): bool {
     return $ok;
 }
 
+// Extend Yoast's schema code
+function bp_get_base_schema(): array {
+    $ci = get_option('customer_info');
+    return $ci['schema'] ?? [];
+}
 
-
-
-
-
-
-
-// Extend Yoast's main Organization/LocalBusiness node
 add_filter('wpseo_schema_organization', function ($data) {
     // Only touch the main org node
     if (($data['@id'] ?? '') !== home_url('#organization')) return $data;
@@ -2095,9 +2095,42 @@ add_filter('wpseo_schema_postal_address', function($addr){
 }, 99);
 
 
+add_action('wp_footer', 'bp_output_test_schema', 999);
+function bp_output_test_schema() {
+    if (empty($GLOBALS['bp_reviews'])) {
+        return;
+    }
 
-
-
+    echo '<script type="application/ld+json">' .
+        wp_json_encode(
+            [
+                '@context' => 'https://schema.org',
+                '@graph' => array_map(function($r) {
+                    return [
+                        '@type' => 'Review',
+                        'author' => [
+                            '@type' => 'Person',
+                            'name'  => $r['author'] ?? 'Anonymous',
+                        ],
+                        'datePublished' => $r['date'] ?? date('c'),
+                        'reviewBody'    => $r['text'] ?? '',
+                        'reviewRating'  => [
+                            '@type' => 'Rating',
+                            'ratingValue' => $r['rating'] ?? 5,
+                            'bestRating'  => 5,
+                            'worstRating' => 1,
+                        ],
+                        'itemReviewed' => [
+                            '@type' => 'LocalBusiness',
+                            '@id'   => home_url('#organization'),
+                        ],
+                    ];
+                }, $GLOBALS['bp_reviews'])
+            ],
+            JSON_UNESCAPED_SLASHES
+        ) .
+        '</script>';
+}
 
 // if someone is landing on an individual testimonial, redirect to /testimonials/
 add_action('template_redirect', 'battleplan_redirect_testimonials');

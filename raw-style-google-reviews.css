@@ -1,5 +1,9 @@
 /* Google Reviews
 --------------------------------------------- */
+#colophon {
+    padding-bottom:                                 55px !important;
+}
+
 .wp-gr.wp-google-badge {
 	background:										var(--google-review-bg);
 	position:										fixed;

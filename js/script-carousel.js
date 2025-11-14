@@ -1,1 +1,246 @@
-document.addEventListener("DOMContentLoaded",function(){"use strict";getObjects(".carousel").forEach(a=>{const b=getObjects(".carousel-item",a),c=getObject(".carousel-inner",a),d=getObjects(".carousel-indicators li",a),e=parseInt(a.getAttribute("data-interval"))||6e3,f=a.getAttribute("data-auto")||!0,g=a.getAttribute("data-pause")||!0,h=a.classList.contains("content-image")?"image":"text",i="true"===a.getAttribute("data-random")?Math.floor(Math.random()*b.length):0;let j=null,k=0,l="right",m=c?c.scrollHeight:0;const o=()=>{d.forEach((a,b)=>{a.classList.toggle("active",b===k)})},p=()=>{const b=getObject(".carousel-item.active",a),d=b?b.scrollHeight:0;b&&d>m&&(m=d),c.style.height=`${m}px`};window.addEventListener("resize",()=>{m=0,p()});const q=(a,c)=>{l=c;let d=b[k];d&&(d.classList.add("transitioning","transitioning-"+l,"transitioning-out"),setTimeout(()=>{d.classList.remove("active","transitioning","transitioning-"+l,"transitioning-out")},500),k=(a+b.length)%b.length,b[k].classList.add("next-slide","transitioning","transitioning-"+l,"transitioning-in"),setTimeout(()=>{b[k].classList.remove("next-slide","transitioning","transitioning-"+l,"transitioning-in"),b[k].classList.add("active")},500),"text"===h&&p(),o())};"image"==h&&(()=>{let a=0,d=0;b.forEach(b=>{const c=getObjects("img",b);c.forEach(b=>{const c=b.getAttribute("width"),e=b.getAttribute("height");if(c&&e){const b=parseInt(c),f=parseInt(e);b>a&&(a=b,d=f)}})}),0<a&&0<d&&(getDeviceW()<mobileCutoff?c.style.aspectRatio=`${a}/${d}`:p())})(),"text"==h&&p();const r=()=>q(k+1,"right"),s=()=>q(k-1,"left"),t=getObject(".carousel-control-next",a),u=getObject(".carousel-control-prev",a);t&&t.addEventListener("click",a=>{a.preventDefault(),r(),x()}),u&&u.addEventListener("click",a=>{a.preventDefault(),s(),x()});const v=()=>{j||(j="right"===l?setInterval(r,e):setInterval(s,e))},w=()=>{j&&(clearInterval(j),j=null)},x=()=>{w(),v()};g&&(a.addEventListener("mouseenter",w),a.addEventListener("mouseleave",v)),document.addEventListener("keydown",a=>{37===a.keyCode?(getObjects(".carousel.slider").forEach(()=>{s()}),a.preventDefault()):39===a.keyCode&&(getObjects(".carousel.slider").forEach(()=>{r()}),a.preventDefault())});let y=0,z=0,A=0,B=0;const C=30,D=()=>{Math.abs(z-y)>Math.abs(B-A)&&Math.abs(z-y)>C?z>y?s():r():null,x()};a.addEventListener("touchstart",a=>{({screenX:y,screenY:A}=a.changedTouches[0])},{passive:!0}),a.addEventListener("touchmove",a=>{({screenX:z,screenY:B}=a.changedTouches[0]),Math.abs(z-y)>Math.abs(B-A)&&Math.abs(z-y)>C&&a.cancelable?a.preventDefault():null},{passive:!1}),a.addEventListener("touchend",a=>{({screenX:z,screenY:B}=a.changedTouches[0]),D()},{passive:!0}),d.forEach((a,b)=>{a.addEventListener("click",()=>{q(b,"next"),x()})}),getObjects(".slider-images.slider-blur .img-slider").forEach(a=>{const b=document.createElement("div");b.className="img-holder",a.parentNode.insertBefore(b,a.nextSibling);const c=document.createElement("div");c.className="img-bg",c.style.background=`url('${a.src}')`,b.appendChild(c)}),(f||"true"===f)&&v(),q(i,"next")})});
+document.addEventListener("DOMContentLoaded", function () {	"use strict";
+														   
+// Raw Script: Carousel	
+														   
+	getObjects('.carousel').forEach(carousel => {
+		const slides = getObjects('.carousel-item', carousel),
+			  slideInner = getObject('.carousel-inner', carousel),
+			  indicators = getObjects('.carousel-indicators li', carousel),
+			  interval = parseInt(carousel.getAttribute('data-interval')) || 6000,
+			  autoPlay = carousel.getAttribute('data-auto') || true,
+			  hoverPause = carousel.getAttribute('data-pause') || true,
+			  contentType = carousel.classList.contains('content-image') ? 'image' : 'text',
+			  start = carousel.getAttribute('data-random') === 'true' ? Math.floor(Math.random() * slides.length) : 0; 
+		let timer = null,
+			currentSlide = 0, 
+			direction="right",
+			maxH = 0;
+
+	// Keep the indicators lit according to active slide
+        const updateIndicators = () => {
+            indicators.forEach((indicator, index) => {
+                indicator.classList.toggle('active', index === currentSlide);
+            });
+        };
+
+	// Ensure text slides are all equal height (modified via chatGPT 11/12/25 for Lock 'N Roll)
+		const getActiveHeight = () => {	
+			const active = document.querySelector('.carousel-item.active');
+
+			if (!active) return 0;
+
+			// Image-only slide? Use image height if available
+			const img = getObject('img', active);
+			let h = 0;
+
+			if (img && (img.complete || img.naturalHeight)) {
+				h = img.naturalHeight || img.offsetHeight || 0;
+				// If width scaling applied, adjust proportionally
+				if (img.naturalWidth && img.clientWidth) {
+					h = (img.clientWidth / img.naturalWidth) * h;
+				}
+			}
+
+			// If there's text or layout below image, use full slide height instead
+			const layoutH = active.offsetHeight;
+			if (layoutH > h) h = layoutH;
+
+			return Math.ceil(h);
+		};
+
+		const setCarouselHeight = () => {
+			const h = getActiveHeight();
+			if (h > maxH) maxH = h;
+			if (maxH) slideInner.style.height = `${maxH}px`;
+		};
+
+		// Lazy-load safe: recalc on image load
+		getObjects('img', carousel).forEach(img => {
+			img.addEventListener('load', setCarouselHeight, { once: true });
+		});
+
+		// On resize, re-evaluate active slide height
+		let resizeTimer;
+		window.addEventListener('resize', () => {
+			clearTimeout(resizeTimer);
+			resizeTimer = setTimeout(setCarouselHeight, 200);
+		});
+
+		// Re-evaluate when slides change (tie to your carousel logic)
+		carousel.addEventListener('bp:slideChanged', setCarouselHeight);
+
+		// Initial run
+		setCarouselHeight();
+
+
+    // Set aspect ratio based on size of images inside the carousel
+        const calculateAspectRatio = () => {
+            let maxImageWidth = 0,
+				maxImageHeight = 0;
+
+            slides.forEach(slide => {
+                const images = getObjects('img', slide);
+                images.forEach(image => {
+                    const imgWidth = image.getAttribute('width');
+                    const imgHeight = image.getAttribute('height');
+                    if (imgWidth && imgHeight) {
+                        const imgW = parseInt(imgWidth);
+                        const imgH = parseInt(imgHeight);
+                        if (imgW > maxImageWidth) {
+                            maxImageWidth = imgW;
+                            maxImageHeight = imgH;
+                        }
+                    }
+                });
+            });
+
+            if (maxImageWidth > 0 && maxImageHeight > 0) {
+				if ( getDeviceW() < mobileCutoff ) {
+					slideInner.style.aspectRatio = `${maxImageWidth}/${maxImageHeight}`;
+				} else {
+					setCarouselHeight();
+				}
+            }
+        };
+
+	// Go to the next slide	
+		const goToSlide = (n, dir) => {
+			direction = dir;
+			let formerSlide = slides[currentSlide];	
+			if ( formerSlide ) {
+				formerSlide.classList.add('transitioning', 'transitioning-'+direction, 'transitioning-out');
+				setTimeout(() => { formerSlide.classList.remove('active', 'transitioning', 'transitioning-'+direction, 'transitioning-out'); }, 500);
+
+				currentSlide = (n + slides.length) % slides.length;
+				slides[currentSlide].classList.add('next-slide', 'transitioning', 'transitioning-'+direction, 'transitioning-in');
+				setTimeout(() => {
+					slides[currentSlide].classList.remove('next-slide', 'transitioning', 'transitioning-'+direction, 'transitioning-in');
+					slides[currentSlide].classList.add('active');
+				}, 500);
+
+				if ( contentType === 'text' ) setCarouselHeight();
+				updateIndicators();
+			}
+        };
+		
+		if ( contentType === 'image' ) calculateAspectRatio();
+        if ( contentType === 'text' ) setCarouselHeight();
+		
+		const nextSlide = () => goToSlide(currentSlide + 1, 'right');
+		const prevSlide = () => goToSlide(currentSlide - 1, 'left');
+		
+		const nextBtn = getObject('.carousel-control-next', carousel);
+		const prevBtn = getObject('.carousel-control-prev', carousel);
+		
+		if (nextBtn) {
+			nextBtn.addEventListener('click', e => {
+				e.preventDefault();
+				nextSlide();
+				resetTimer();
+			});
+		}
+		
+		if (prevBtn) {
+			prevBtn.addEventListener('click', e => {
+				e.preventDefault();
+				prevSlide();
+				resetTimer();
+			});
+		}
+
+// Auto-play functionality
+		const startAutoPlay = () => {
+            if (!timer) {
+                timer = direction === "right" ? setInterval(nextSlide, interval) : setInterval(prevSlide, interval);
+            }
+        };
+		
+		const stopAutoPlay = () => {
+            if (timer) {
+                clearInterval(timer);
+                timer = null;
+            }
+        };
+		
+		const resetTimer = () => {
+			stopAutoPlay();
+			startAutoPlay();
+		};
+		
+// Hover events to pause and resume autoplay
+		if (hoverPause) {
+        	carousel.addEventListener('mouseenter', stopAutoPlay);
+        	carousel.addEventListener('mouseleave', startAutoPlay);
+		}		
+		
+// Respond to keyboard controls
+		document.addEventListener('keydown', e => {
+			if (e.keyCode === 37) { // Left arrow key
+				getObjects(".carousel.slider").forEach(carousel => {
+					prevSlide();
+				});
+				e.preventDefault();
+			} else if (e.keyCode === 39) { // Right arrow key
+				getObjects(".carousel.slider").forEach(carousel => {
+					nextSlide(); 
+				});
+				e.preventDefault();
+			}
+		});
+
+// Touch Swipe functionality
+		let touchStartX = 0,
+			touchEndX = 0,
+			touchStartY = 0,
+			touchEndY = 0;
+		const threshold = 30;
+
+		const handleSwipeGesture = () => {
+			(Math.abs(touchEndX - touchStartX) > Math.abs(touchEndY - touchStartY) && Math.abs(touchEndX - touchStartX) > threshold) 
+				? touchEndX > touchStartX 
+					? prevSlide() 
+					: nextSlide() 
+				: null;
+			resetTimer();
+		};
+
+		carousel.addEventListener('touchstart', e => {
+			({screenX: touchStartX, screenY: touchStartY} = e.changedTouches[0]);
+		}, {passive: true});
+
+		carousel.addEventListener('touchmove', e => {
+			({screenX: touchEndX, screenY: touchEndY} = e.changedTouches[0]);
+			(Math.abs(touchEndX - touchStartX) > Math.abs(touchEndY - touchStartY) && Math.abs(touchEndX - touchStartX) > threshold && e.cancelable) 
+				? e.preventDefault() 
+				: null;
+		}, {passive: false});
+
+		carousel.addEventListener('touchend', e => {
+			({screenX: touchEndX, screenY: touchEndY} = e.changedTouches[0]);
+			handleSwipeGesture();
+		}, {passive: true});
+		
+    // Link indicators to slides
+        indicators.forEach((indicator, index) => {
+            indicator.addEventListener('click', () => {
+                goToSlide(index, 'next');
+                resetTimer();
+            });
+        });
+					
+	// Blur background of unevenly sized images	(untested)
+		getObjects('.slider-images.slider-blur .img-slider').forEach(imgSlider => {
+			const imgHolder = document.createElement('div');
+			imgHolder.className = 'img-holder';
+			imgSlider.parentNode.insertBefore(imgHolder, imgSlider.nextSibling);
+			const imgBg = document.createElement('div');
+			imgBg.className = 'img-bg';
+			imgBg.style.background = `url('${imgSlider.src}')`;
+			imgHolder.appendChild(imgBg);
+		});
+		
+// Initialize carousel
+		if ( autoPlay || autoPlay === "true" ) { startAutoPlay(); }
+		goToSlide(start, "next");		
+	});	
+})

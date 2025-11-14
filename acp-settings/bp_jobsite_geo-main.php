@@ -151,22 +151,20 @@ return array (
 			'editable_type'=>'text',
 			'search'=>'on'
 		),
-		'technicians'=>array(
-			'type'=>'column-taxonomy',
-			'label'=>'Technicians',
-			'width'=>'',
-			'width_unit'=>'%',
-			'taxonomy'=>'jobsite_geo-tech',
-			'term_link_to'=>'filter',
-			'number_of_items'=>'10',
+		'score'=>array(
+			'type'=>'column-meta',
+			'label'=>'Score',
+			'width'=>'40', 
+			'width_unit'=>'px',
+			'field'=>'_bp_base_score',
+			'field_type'=>'',
 			'edit'=>'on',
-			'enable_term_creation'=>'on',
+			'editable_type'=>'text',
 			'sort'=>'on',
 			'bulk_edit'=>'on',
-			'filter'=>'on',
-			'editable_type'=>'text',
-			'search'=>'on'
-		),	
+			'search'=>'on',
+			'filter'=>'on'
+		),
 		'attachments'=>array(
 			'type'=>'column-attachment',
 			'label'=>'Attachments',

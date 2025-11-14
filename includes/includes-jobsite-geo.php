@@ -221,8 +221,17 @@ function hcpro_handle_job_webhook($req) {
 			$tmp = download_url($a->url);
 			if (is_wp_error($tmp)) continue;
 
+			// Build desired filename
+			$customer_name = get_field('customer_name', $post_id) ?: 'Customer';
+			$clean_customer = sanitize_title($customer_name);
+			$new_filename = "jobsite-geo-{$post_id}-{$clean_customer}-{$photo_index}";
+
+			// Keep proper extension from original file_name
+			$ext = pathinfo($a->file_name, PATHINFO_EXTENSION);
+			if (!$ext) $ext = 'jpg';
+
 			$file = [
-				'name'     => basename($a->file_name ?? 'photo.jpg'),
+				'name'     => "{$new_filename}.{$ext}",
 				'type'     => $a->file_type ?? 'image/jpeg',
 				'tmp_name' => $tmp,
 				'error'    => 0,
@@ -318,30 +327,29 @@ function bp_format_service($service) {
 } 
 
 // Orient uploaded photos correctly 
-add_filter('wp_generate_attachment_metadata', function($metadata, $attachment_id) { 
-	$filepath = get_attached_file($attachment_id); 
-	$image = wp_get_image_editor($filepath); 
-	if (!is_wp_error($image)) { 
-		$exif = @exif_read_data($filepath); 
-		if (!empty($exif['Orientation'])) { 
-			switch ($exif['Orientation']) { 
-				case 3: 
-					$image->rotate(180); 				
-					break; 
-				case 6: 
-					$image->rotate(-90); 				
-					break; 
-				case 8: 
-					$image->rotate(90); 
-					break; 
-			} 
-				
-			$image->save($filepath); 
-		} 
-	} 
+add_filter('wp_generate_attachment_metadata', function($metadata, $attachment_id) {
 
-	return $metadata;
+    if (!empty($GLOBALS['bp_skip_exif_rotation'])) {
+        return $metadata; // skip EXIF rotation entirely
+    }
+
+    $filepath = get_attached_file($attachment_id); 
+    $image = wp_get_image_editor($filepath); 
+    if (is_wp_error($image)) return $metadata;
+
+    $exif = @exif_read_data($filepath); 
+    if (!empty($exif['Orientation'])) { 
+        switch ($exif['Orientation']) { 
+            case 3: $image->rotate(180); break;
+            case 6: $image->rotate(-90); break;
+            case 8: $image->rotate(90); break;
+        }
+        $image->save($filepath); 
+    }
+
+    return $metadata;
 }, 10, 2);
+
 
 function bp_jobsite_setup($post_id, $user) {	
 	$current_type = get_post_type($post_id);
@@ -529,6 +537,33 @@ function bp_jobsite_setup($post_id, $user) {
 		}
 	}
 
+	// Customize for Roofing Contractor website
+	if (strtolower($btVal) === 'roofingcontractor') {
+		foreach (['gutter', 'seamless'] as $keyword) {
+			if (stripos($description, $keyword) !== false) {
+				$service = 'gutters';
+				break;
+			}
+		}
+
+		foreach (['insulation', 'insulate', 'fiberglass'] as $keyword) {
+			if (stripos($description, $keyword) !== false) {
+				$service = 'insulation';
+				break;
+			}
+		}
+	}
+
+
+
+
+
+	
+
+
+
+
+
 	// Customize for Plumber website
 	if (strtolower($btVal) === 'plumber') {
 		$service = 'plumbing-services';
@@ -680,7 +715,19 @@ function bp_jobsite_setup($post_id, $user) {
 		$notifyBc = '';
 	}
 
-	$display_user = $user === 'user' ? trim($current_user->first_name . ' ' . $current_user->last_name) : $user;
+	$display_user = '';
+
+	if ($user === 'user') {
+		$current_user = wp_get_current_user();
+		if ($current_user && $current_user->ID) {
+			$display_user = trim($current_user->first_name . ' ' . $current_user->last_name);
+			if ($display_user === '') $display_user = $current_user->user_login;
+		} else {
+			$display_user = 'System';
+		}
+	} else {
+		$display_user = $user;
+	}
 
 	if ($notifyTo !== '') {
 		$subject  = 'Jobsite ' . $action . ' by ' . $display_user;
@@ -952,111 +999,6 @@ function battleplan_add_jobsite_geo_acf_fields() {
 				),
 			),
 			array(
-				'key' => 'field_old_brand',
-				'label' => 'What BRAND equipment does/did customer have?',
-				'name' => 'old_brand',
-				'aria-label' => '',
-				'type' => 'text',
-				'instructions' => '',
-				'required' => 0,
-				'conditional_logic' => 0,
-				'wrapper' => array(
-					'width' => '33%',
-					'class' => '',
-					'id' => '',
-				),
-			),
-			array(
-				'key' => 'field_old_equipment',
-				'label' => 'What TYPE of equipment does/did customer have?',
-				'name' => 'old_equipment',
-				'aria-label' => '',
-				'type' => 'text',
-				'instructions' => '',
-				'required' => 0,
-				'conditional_logic' => 0,
-				'wrapper' => array(
-					'width' => '33%',
-					'class' => '',
-					'id' => '',
-				),
-			),			
-			array(
-				'key' => 'field_new_brand',
-				'label' => 'If you replaced equipment, what BRAND did you use?',
-				'name' => 'new_brand',
-				'aria-label' => '',
-				'type' => 'text',
-				'instructions' => '',
-				'required' => 0,
-				'conditional_logic' => 0,
-				'wrapper' => array(
-					'width' => '33%',
-					'class' => '',
-					'id' => '',
-				),
-			),
-			array(
-				'key' => 'field_new_equipment',
-				'label' => 'If you replaced equipment, what TYPE was it?',
-				'name' => 'new_equipment',
-				'aria-label' => '',
-				'type' => 'text',
-				'instructions' => '',
-				'required' => 0,
-				'conditional_logic' => 0,
-				'wrapper' => array(
-					'width' => '33%',
-					'class' => '',
-					'id' => '',
-				),
-			),						
-			array(
-				'key' => 'field_auto_make',
-				'label' => 'What MAKE of vehicle does customer have?',
-				'name' => 'auto_make',
-				'aria-label' => '',
-				'type' => 'text',
-				'instructions' => '',
-				'required' => 0,
-				'conditional_logic' => 0,
-				'wrapper' => array(
-					'width' => '33%',
-					'class' => '',
-					'id' => '',
-				),
-			),
-			array(
-				'key' => 'field_auto_model',
-				'label' => 'What MODEL of vehicle does customer have?',
-				'name' => 'auto_model',
-				'aria-label' => '',
-				'type' => 'text',
-				'instructions' => '',
-				'required' => 0,
-				'conditional_logic' => 0,
-				'wrapper' => array(
-					'width' => '33%',
-					'class' => '',
-					'id' => '',
-				),
-			),
-			array(
-				'key' => 'field_auto_year',
-				'label' => 'What YEAR is the customer\'s vehicle?',
-				'name' => 'auto_year',
-				'aria-label' => '',
-				'type' => 'text',
-				'instructions' => '',
-				'required' => 0,
-				'conditional_logic' => 0,
-				'wrapper' => array(
-					'width' => '33%',
-					'class' => '',
-					'id' => '',
-				),
-			),		
-			array(
 				'key' => 'field_photo_1',
 				'label' => 'Photo #1',
 				'name' => 'jobsite_photo_1',
@@ -1237,6 +1179,27 @@ function battleplan_add_jobsite_geo_acf_fields() {
 				'append' => '',
 			),
 			array(
+				'key' => 'field_priority_job',
+				'label' => 'Prioritize this job in listings.',
+				'name' => 'is_priority_job',
+				'type' => 'checkbox',
+				'instructions' => '',
+				'required' => 0,
+				'choices' => array(
+					'1' => 'High Priority Job',
+				),
+				'default_value' => array(),
+				'allow_custom' => 0,
+				'save_custom' => 0,
+				'toggle' => 0,
+				'return_format' => 'value',
+				'wrapper' => array(
+					'width' => '',
+					'class' => '',
+					'id' => '',
+				),
+			),
+			array(
 				'key' => 'field_review_link',
 				'label' => 'Link To Review',
 				'name' => 'review',
@@ -1264,6 +1227,7 @@ function battleplan_add_jobsite_geo_acf_fields() {
 				'ui' => 1,
 				'bidirectional_target' => array(),
 			),
+
 		),
 		'location' => array(
 			array(
@@ -1286,8 +1250,7 @@ function battleplan_add_jobsite_geo_acf_fields() {
 	));
 }
 
-add_filter('acf/validate_value', function($valid, $value, $field, $input){
-
+add_filter('acf/validate_value', function($valid, $value, $field, $input) {
 	// Only run for your caption fields
 	$caption_fields = array(
 		'field_caption_1' => 'field_photo_1',
@@ -1311,6 +1274,61 @@ add_filter('acf/validate_value', function($valid, $value, $field, $input){
 	return $valid;
 
 }, 10, 4);
+
+add_action('admin_enqueue_scripts', function($hook) {
+
+	// Only load in post editor or ACF screen
+	if ($hook !== 'post.php' && $hook !== 'post-new.php') return;
+
+	// Only load for jobsite_geo post type
+	$screen = get_current_screen();
+	if ($screen && $screen->post_type !== 'jobsite_geo') return;
+
+	wp_enqueue_script(
+		'bp-jobsite-geo-admin',
+		get_template_directory_uri() . '/js/script-jobsite_geo-admin.js',
+		[],
+		null,
+		true
+	);
+
+	wp_localize_script('bp-jobsite-geo-admin', 'bpRotate', [
+		'ajaxurl' => admin_url('admin-ajax.php'),
+		'nonce'   => wp_create_nonce('bp_rotate_image') 
+	]);
+});
+
+
+add_action('wp_ajax_bp_rotate_image', function() {
+    check_ajax_referer('bp_rotate_image', 'nonce');
+
+    $attachment_id = (int) ($_POST['attachment_id'] ?? 0);
+    if (!$attachment_id) wp_send_json_error('Missing attachment ID');
+
+    $file = get_attached_file($attachment_id);
+    if (!file_exists($file)) wp_send_json_error('File missing');
+
+   $image = wp_get_image_editor($file);
+	if (is_wp_error($image)) wp_send_json_error('Image editor error');
+
+	$GLOBALS['bp_skip_exif_rotation'] = true;
+
+	// Rotate 90 degrees clockwise
+	$image->rotate(-90);
+
+	// Save back to original file
+	$saved = $image->save($file);
+    if (is_wp_error($saved)) wp_send_json_error('Save failed');
+
+    // Regenerate all media sizes
+    wp_update_attachment_metadata($attachment_id, wp_generate_attachment_metadata($attachment_id, $file));
+
+    wp_send_json_success([
+        'filename' => basename($file)
+    ]);
+});
+
+
 
 /*--------------------------------------------------------------
 # Basic Site Setup
@@ -1476,6 +1494,40 @@ function battleplan_handle_jobsite_geo_image_upload($file) {
 	return $file;
 }
 
+// remove empty service tags
+add_action('save_post_jobsite_geo', 'bp_cleanup_empty_service_tags');
+add_action('deleted_post', 'bp_cleanup_empty_service_tags');
+function bp_cleanup_empty_service_tags() {
+
+	$taxonomy = 'jobsite_geo-services';
+
+	$terms = get_terms([
+		'taxonomy'   => $taxonomy,
+		'hide_empty' => false,
+	]);
+
+	if (is_wp_error($terms) || empty($terms)) return;
+
+	foreach ($terms as $term) {
+
+		$count = get_posts([
+			'post_type'      => 'jobsite_geo',
+			'post_status'    => ['publish','draft','pending'],
+			'tax_query'      => [[
+				'taxonomy' => $taxonomy,
+				'field'    => 'term_id',
+				'terms'    => $term->term_id,
+			]],
+			'fields'         => 'ids',
+			'posts_per_page' => 1,
+		]);
+
+		if (empty($count)) {
+			wp_delete_term($term->term_id, $taxonomy);
+		}
+	}
+}
+
 
 /*--------------------------------------------------------------
 # Shortcodes
@@ -1512,3 +1564,125 @@ function battleplan_jobsite_geo_intercept() {
 		exit;
 	}
 }
+
+/* --------------------------------------------------------------
+   JOBSITE GEO SCORING SYSTEM (RUNTIME WITH BREAKDOWN NOTES)
+-------------------------------------------------------------- */
+
+function bp_jobsite_runtime_score($post_id, &$notes = []) {
+
+	$points = 0;
+
+	// Review attached
+	if (get_field('review', $post_id)) {
+		$points += 25;
+		$notes[] = '25-review';
+	}
+
+	// Priority job
+	if (get_field('is_priority_job', $post_id)) {
+		$points += 25;
+		$notes[] = '25-priority';
+	}
+
+	// Description quality
+	$desc = trim(strip_tags(get_post_field('post_content', $post_id)));
+	$len  = strlen($desc);
+
+	if ($len >= 300) { $points += 15; $notes[] = '15-desc300+'; }
+	elseif ($len >= 150) { $points += 10; $notes[] = '10-desc150+'; }
+	elseif ($len >= 75) { $points += 5; $notes[] = '5-desc75+'; }
+	else { $points -= 10; $notes[] = '-10-descTooShort'; }
+
+	// Keyword weighting
+	$keywords = ['repair','replace','install','service','inspection','maintenance'];
+	$kw_score = 0;
+	foreach ($keywords as $kw) {
+		if (stripos($desc, $kw) !== false) $kw_score += 2;
+	}
+	$kw_score = min($kw_score, 10);
+	if ($kw_score > 0) $notes[] = "{$kw_score}-keywords";
+	$points += $kw_score;
+
+	// Photos
+	$photo_points = 0;
+	foreach (['jobsite_photo_1','jobsite_photo_2','jobsite_photo_3','jobsite_photo_4'] as $ph) {
+		if (get_field($ph, $post_id)) $photo_points += 10;
+	}
+	if ($photo_points > 0) $notes[] = "{$photo_points}-photos";
+	$points += $photo_points;
+
+	// Age bonus
+	$days = floor((time() - get_post_time('U', true, $post_id)) / DAY_IN_SECONDS);
+	$age_bonus =
+		($days <= 3 ? 50 :
+		($days <= 7 ? 25 :
+		($days <= 30 ? 10 : 0)));
+
+	if ($age_bonus > 0) $notes[] = "{$age_bonus}-age({$days}days)";
+	$points += $age_bonus;
+
+	return $points;
+}
+
+
+/**
+ * Score jobsites on archive queries and attach comment strings.
+ */
+add_filter('the_posts', function($posts, $query) {
+
+	if (is_admin() || !$query->is_main_query()) return $posts;
+
+	if (
+		is_post_type_archive('jobsite_geo') ||
+		is_tax('jobsite_geo-service-areas') ||
+		is_tax('jobsite_geo-services') ||
+		is_tax('jobsite_geo-techs')
+	) {
+		foreach ($posts as $p) {
+
+			$notes = [];
+			$score = bp_jobsite_runtime_score($p->ID, $notes);
+
+			$p->bp_score = $score;
+
+			// Nicely formatted versions
+			$p->bp_score_notes   = implode('; ', $notes);
+			$p->bp_score_comment = '// ' . implode('; ', $notes);
+		}
+
+		usort($posts, function($a, $b) {
+			return ($b->bp_score ?? 0) <=> ($a->bp_score ?? 0);
+		});
+	}
+
+	return $posts;
+
+}, 10, 2);
+
+/* --------------------------------------------------------------
+   FORCE SCORE COMMENTS INTO HTML ON JOBSITE ARCHIVES
+-------------------------------------------------------------- */
+
+/* --------------------------------------------------------------
+   LOG JOBSITE SCORE DETAILS TO PHP ERROR LOG
+-------------------------------------------------------------- */
+
+add_action('the_post', function($post) {
+
+	if (!is_post_type_archive('jobsite_geo') &&
+	    !is_tax('jobsite_geo-service-areas') &&
+	    !is_tax('jobsite_geo-services') &&
+	    !is_tax('jobsite_geo-techs')) {
+		return;
+	}
+
+	if (!isset($post->bp_score) || !isset($post->bp_score_notes)) {
+		return; // Score wasn't attached yet
+	}
+
+	$log = "Jobsite {$post->ID} score={$post->bp_score} breakdown={$post->bp_score_notes}";
+	error_log($log);
+
+});
+

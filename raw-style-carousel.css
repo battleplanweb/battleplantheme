@@ -54,6 +54,10 @@
 
 .carousel-item.active {
     display: 										grid;
+	align-items: start;
+	justify-items: center;
+	height: auto;
+	min-height: auto;
 }
 
 .next-slide {
@@ -375,8 +379,8 @@
 
 .slider-blur .img-holder {
 	position: 										absolute;
-	width: 											110%;
-	height: 										110%;
+	width: 											100%;
+	height: 										100%;
 	overflow: 										hidden;
 	top: 											50%;
 	left: 											50%;
@@ -510,6 +514,5 @@
 	
 	.testimonials-generic-icon .anonymous-icon {
 		max-width: 										60vw;
-	}
-	
+	}	
 }

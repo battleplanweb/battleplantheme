@@ -159,7 +159,8 @@ body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-fi
 body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-caption-1,
 body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-caption-2,
 body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-caption-3,
-body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-caption-4 {
+body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-caption-4,
+body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-priority-job {
 	grid-column: 									span 3;
 }
 
@@ -181,9 +182,14 @@ body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-fi
 }
 
 body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-review-link {
-	grid-column: 									span 12;
-	order: 											100;
+	grid-column: 									span 9;
 }
+
+/*
+body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-review-link {
+	grid-column: 									span 12;
+}
+*/
 
 body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-photo-1 {
 	order: 											1;
@@ -217,6 +223,18 @@ body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-fi
 	order: 											18;
 }
 
+body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-priority-job {
+	order: 											98;
+}
+
+body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-priority-job ul.acf-checkbox-list {
+	column-count:                                   1;
+}
+
+body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-review-link {
+    order:                                          100;
+}
+
 body.wp-admin.post-type-jobsite_geo #poststuff #postbox-container-2 #normal-sortables .acf-field-photo-1,
 body.wp-admin.post-type-jobsite_geo #poststuff #postbox-container-2 #normal-sortables .acf-field-photo-2,
 body.wp-admin.post-type-jobsite_geo #poststuff #postbox-container-2 #normal-sortables .acf-field-photo-3,
@@ -234,7 +252,7 @@ body.wp-admin.post-type-jobsite_geo #poststuff #postbox-container-2 #normal-sort
 	float: 											left;
 	clear: 											none;
 	width: 											25%;
-	border-top: 									none;
+	border-top: 									none; 
 }
 
 body.wp-admin.post-type-jobsite_geo #poststuff #postbox-container-2 #normal-sortables .acf-field-image img {
@@ -245,7 +263,32 @@ body.wp-admin.post-type-jobsite_geo #poststuff #postbox-container-2 #normal-sort
 	display: 										none !important;
 }
 
+button.bp-rotate-image {
+    background:                                     none !important;
+    border:                                         none !important;            
+    cursor:                                         pointer; 
+    padding:                                        0;
+    margin:                                         0; 
+    width:                                          45px;
+    height:                                         45px;            
+}
 
+button.bp-rotate-image.spinning {
+    animation:                                      spin 1s linear infinite;
+    pointer-events:                                 none;
+    cursor:                                         none;
+}
+
+.acf-field:has(.bp-rotate-image) input[type="text"] {
+    width:                                          calc(100% - 60px);
+    margin-left:                                    5px;
+    transform:                                      translateY(-20px);
+}
+
+@keyframes spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
 
 
 /*--------------------------------------------------------------

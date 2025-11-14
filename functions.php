@@ -658,11 +658,12 @@ function removeSidebar($classes, $addClasses, $pages) {
 // If post has "remove sidebar" checked, set necessary classes on <body> 
 add_filter( 'body_class', 'battleplan_CheckRemoveSidebar', 50 );
 function battleplan_CheckRemoveSidebar( $classes ) {
-	if ( readMeta( get_the_ID(), '_bp_remove_sidebar', true ) ) :
+	// Always remove sidebar on /debug page
+	if ( is_page('debug') || trim($_SERVER['REQUEST_URI'], '/') === 'debug' || readMeta( get_the_ID(), '_bp_remove_sidebar', true ) ) {
 		return battleplan_remove_sidebar( $classes );
-	else:
-		return $classes;
-	endif;
+	}
+
+	return $classes;
 }
 
 // If post is a "landing" page, add .home to body class for CSS purposes
@@ -842,7 +843,7 @@ function battleplan_breadcrumbs() {
 
     if ( is_singular() ) :
         $post_object = sanitize_post( $queried_object );
-        $title = apply_filters( 'the_title', $post_object->post_title, $post->ID);
+        $title = apply_filters('the_title', $post_object->post_title, $post_object->ID ?? 0);
         $parent = $post_object->post_parent;
         $post_type = $post_object->post_type;
         $post_id = $post_object->ID;
@@ -1971,7 +1972,8 @@ function battleplan_getGoogleRating() {
 
 // Set up URL re-directs
 $pid = is_array($customer_info['pid']) ? $customer_info['pid'][0] : $customer_info['pid'];
-$goog_rev = $customer_info['google-review'];
+$goog_rev = $customer_info['google-review'] ?? '';
+
 if ( _PAGE_SLUG == "google" && strlen( $pid ) > 10 ) : 
 	$pid = is_array($customer_info['pid']) ? $customer_info['pid'][0] : $customer_info['pid'];
 	if ( $pid != '' ) {

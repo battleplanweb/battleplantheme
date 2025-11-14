@@ -996,6 +996,17 @@ function processChron($forceChron) {
 		if ($getPage) wp_delete_post($getPage->ID, true);
 	}
 
+	// BP Debug Log
+	if (is_null(get_page_by_path('debug', OBJECT, 'universal'))) {
+		wp_insert_post([
+			'post_title'   => 'BP Debug Log',
+			'post_name'    => 'debug',
+			'post_content' => '[show_debug_log]',
+			'post_status'  => 'publish',
+			'post_type'    => 'universal',
+		]);
+	}
+
 	/* Add generic pages */
 	if ( is_null(get_page_by_path('privacy-policy', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Privacy Policy', 'post_content' => '[get-universal-page slug="page-privacy-policy"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
 

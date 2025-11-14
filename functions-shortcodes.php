@@ -415,14 +415,50 @@ function battleplan_getServiceAreas($atts, $content = null) {
 		if ( preg_match ('/, [A-Z]{2}$/', $post->post_title) === 1 ) $cities[$post->post_title] = get_permalink( $post->ID );
 	endforeach;
 	
-	// check if there are jobsites that match cities	
-	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) :	
-		$terms = get_terms(['taxonomy' => 'jobsite_geo-service-areas', 'hide_empty' => false]);
-		foreach ($terms as $term) {
-			$convertDash = preg_replace('/-(\w+)$/', ', $1', $term->name);			
-			if ( preg_match ('/, [A-Z]{2}$/', $convertDash) === 1 ) $cities[$convertDash] = get_site_url().'/'.$term->slug;
+// Build dynamic service-area links from jobsite_geo-services
+if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) :
+
+	$service_terms = get_terms([
+		'taxonomy'   => 'jobsite_geo-services',
+		'hide_empty' => false,
+	]);
+
+	if ( ! is_wp_error( $service_terms ) ) {
+
+		foreach ( $service_terms as $term ) {
+
+			$name = $term->name;  // always the raw "service--city-state" form
+
+			// Must be exactly service--location (two hyphens)
+			if ( ! str_contains( $name, '--' ) ) {
+				continue;
+			}
+
+			// Split at the double-dash in the NAME (not slug!)
+			list( $service_part, $loc_part ) = explode( '--', $name, 2 );
+
+			// Expect something like: frisco-tx OR santa-fe-tx OR new-braunfels-tx
+			if ( ! preg_match( '/^(.*)-([a-z]{2})$/i', $loc_part, $m ) ) {
+				continue;
+			}
+
+			$city_raw   = $m[1];               // frisco, santa-fe, new-braunfels
+			$state_code = strtoupper($m[2]);   // tx → TX
+
+			$city_name = ucwords(str_replace('-', ' ', $city_raw));
+			$label     = $city_name . ', ' . $state_code;
+
+			$url = get_term_link($term); // Always correct, regardless of slug format
+
+			if ( ! is_wp_error( $url ) ) {
+				$cities[$label] = $url;
+			}
 		}
-	endif;	
+	}
+
+endif;
+
+
 	
 	$buildLinks = '';
 	foreach ( $cities as $serviceArea=>$areaLink ) :
@@ -1876,3 +1912,32 @@ function battleplan_cf7Steps($atts, $content = null) {
 	
 	return do_shortcode($buildForm); 
 }
+
+// Add debug logging and display
+add_shortcode('show_debug_log', function() {
+    $logfile = WP_CONTENT_DIR . '/debug.log';
+    if (!file_exists($logfile)) {
+        return '<p>No debug.log found.</p>';
+    }
+
+    // Read lines (ignore blanks)
+    $contents = file($logfile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    if (!$contents) {
+        return '<p>Debug log is empty.</p>';
+    }
+
+    // Keep only last 100 lines for performance
+    $recent = array_slice($contents, -100);
+
+    // Reverse order (newest first)
+    $recent = array_reverse($recent);
+
+    // Add blank line spacing
+    $output = implode("\n\n", array_map('htmlspecialchars', $recent));
+    $output = nl2br($output, false);
+
+    // Display nicely formatted
+    return '<div style="font-family:monospace;font-size:13px;line-height:1.5;background:#fafafa;border:1px solid #ccc;padding:10px;white-space:normal;">'
+         . $output
+         . '</div>';
+});

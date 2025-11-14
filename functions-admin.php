@@ -28,6 +28,8 @@ function battleplan_delete_quicktags( $qtInit, $editor_id = 'content' ) {
 /*--------------------------------------------------------------
 # Admin Columns Set Up
 --------------------------------------------------------------*/
+add_filter( 'acp/storage_model/use_database', '__return_false' );
+
 add_filter( 'acp/storage/file/directory', function() {
     return get_template_directory() . '/acp-settings';
 } );

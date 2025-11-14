@@ -24,18 +24,45 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
         };
 
 	// Ensure text slides are all equal height
-		const setCarouselHeight = () => {
-            const activeSlide = getObject('.carousel-item.active', carousel);
-            const activeSlideH = activeSlide ? activeSlide.scrollHeight : 0;
 
-            if (activeSlide && activeSlideH > maxH) {
-				maxH = activeSlideH;			
-            }
-			
-            slideInner.style.height = `${maxH}px`;		
-        };
-		
-		window.addEventListener('resize', () => { maxH = 0; setCarouselHeight(); });	
+		const setCarouselHeight = () => {
+			const activeSlide = getObject('.carousel-item.active', carousel);
+			if (!activeSlide) return;
+
+			const activeSlideH = activeSlide.scrollHeight;
+			if (activeSlideH > maxH) {
+				maxH = activeSlideH;
+				slideInner.style.height = `${maxH}px`;
+			}
+		};
+
+		// Reset on resize — but debounce to avoid thrash
+		let resizeTimer;
+		window.addEventListener('resize', () => {
+			clearTimeout(resizeTimer);
+			resizeTimer = setTimeout(() => {
+				maxH = 0;
+				setCarouselHeight();
+			}, 200);
+		});
+
+		// Watch for lazy-loaded images and adjust dynamically
+		const watchLazyImages = () => {
+			slides.forEach(slide => {
+				const imgs = getObjects('img', slide);
+				imgs.forEach(img => {
+					// Recalculate only if this image changes layout height
+					img.addEventListener('load', () => {
+						const parentH = slide.scrollHeight;
+						if (parentH > maxH) {
+							maxH = parentH;
+							slideInner.style.height = `${maxH}px`;
+						}
+					});
+				});
+			});
+		};
+		watchLazyImages();
 
     // Set aspect ratio based on size of images inside the carousel
         const calculateAspectRatio = () => {

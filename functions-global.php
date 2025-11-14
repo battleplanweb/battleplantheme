@@ -14,7 +14,7 @@
 --------------------------------------------------------------*/
 
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.33.4' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.33.5' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -119,6 +119,30 @@ if ($should_block) {
 	header('Content-Type: text/plain; charset=UTF-8');
 	exit;
 }
+
+// Enable front-end debug logging only
+$request_path = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
+$is_debug_page = ($request_path === 'debug');
+
+if ( !is_admin() && !( defined('DOING_AJAX') && DOING_AJAX ) && !$is_debug_page ) {
+    if ( !defined('WP_DEBUG') ) define('WP_DEBUG', true);
+    if ( !defined('WP_DEBUG_LOG') ) define('WP_DEBUG_LOG', true);
+    if ( !defined('WP_DEBUG_DISPLAY') ) define('WP_DEBUG_DISPLAY', false);
+    @ini_set('display_errors', 0);
+    @ini_set('log_errors', 1);
+    @ini_set('error_log', WP_CONTENT_DIR . '/debug.log');
+} else {
+    if ( !defined('WP_DEBUG') ) define('WP_DEBUG', false);
+    if ( !defined('WP_DEBUG_LOG') ) define('WP_DEBUG_LOG', false);
+    if ( !defined('WP_DEBUG_DISPLAY') ) define('WP_DEBUG_DISPLAY', false);
+    @ini_set('display_errors', 0);
+    @ini_set('log_errors', 1);
+    @ini_set('error_log', WP_CONTENT_DIR . '/debug-admin.log');
+}
+	
+error_log('—-----------------------------------— post_id=' . get_the_ID() . ' query=' . current_filter());
+
+
 
 /*--------------------------------------------------------------
 # Customer Info Globals

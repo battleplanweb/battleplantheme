@@ -54,10 +54,10 @@
 
 .carousel-item.active {
     display: 										grid;
-	align-items: start;
-	justify-items: center;
-	height: auto;
-	min-height: auto;
+	align-items: 									start;
+	justify-items: 									center;
+	height: 										auto;
+	min-height: 									auto;
 }
 
 .next-slide {
@@ -78,7 +78,7 @@
 }
 
 .carousel-screen .carousel-item {
-	padding: 										0;
+	padding: 										0 3%; /* was 0, changed for ALways Buying Books 11/18/2025 */
 }
 
 
@@ -476,7 +476,7 @@
 	}
 	
 	.carousel.content-text img {
-  		transform: 										scale(1.2);
+  		transform: 										scale(1); /* down to 1.0 from 1.2 - Dobbs AC 11/18/2025 */
 	}
 	
 	.carousel .caption-holder {

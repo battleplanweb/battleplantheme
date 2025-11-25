@@ -1297,6 +1297,8 @@ function bp_reassign_jobsite_tags_page() {
 				$success++;
 			}
 
+			bp_cleanup_empty_service_tags();
+
 			echo '<div class="notice notice-success"><p><strong>✅ Reassignment Complete:</strong> '
 				. esc_html($success) . ' of ' . esc_html($total) . ' jobsites processed.</p></div>';
 		} else {

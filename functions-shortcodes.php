@@ -385,121 +385,167 @@ function battleplan_addBusinessHours( $atts, $content = null ) {
 }	
 
 // Print text based on whether business is open or not
-add_shortcode( 'get-hours-open', 'battleplan_isOpen' );
-function battleplan_isOpen($atts, $content = null) {
-	$a = shortcode_atts( array( 'open'=>'', 'closed'=>'' ), $atts );
-	return is_biz_open() ? esc_attr($a['open']) : esc_attr($a['closed']);
-}	
+add_shortcode('get-service-areas', 'battleplan_get_service_areas');
+function battleplan_get_service_areas() {
 
-// Print list of service areas (from functions-site.php)
-add_shortcode( 'get-service-areas', 'battleplan_getServiceAreas' );
-function battleplan_getServiceAreas($atts, $content = null) {
 	$customer_info = customer_info();
-	
-	$states = array('alabama'=>'AL', 'arizona'=>'AZ', 'arkansas'=>'AR', 'california'=>'CA', 'colorado'=>'CO', 'connecticut'=>'CT', 'delaware'=>'DE', 'dist of columbia'=>'DC', 'dist. of columbia'=>'DC', 'district of columbia'=>'DC', 'florida'=>'FL', 'georgia'=>'GA', 'idaho'=>'ID', 'illinois'=>'IL', 'indiana'=>'IN', 'iowa'=>'IA', 'kansas'=>'KS', 'kentucky'=>'KY', 'louisiana'=>'LA', 'maine'=>'ME', 'maryland'=>'MD', 'massachusetts'=>'MA', 'michigan'=>'MI', 'minnesota'=>'MN', 'mississippi'=>'MS', 'missouri'=>'MO', 'montana'=>'MT', 'nebraska'=>'NE', 'nevada'=>'NV', 'new hampshire'=>'NH', 'new jersey'=>'NJ', 'new mexico'=>'NM', 'new york'=>'NY', 'north carolina'=>'NC', 'north dakota'=>'ND', 'ohio'=>'OH', 'oklahoma'=>'OK', 'oregon'=>'OR', 'pennsylvania'=>'PA', 'rhode island'=>'RI', 'south carolina'=>'SC', 'south dakota'=>'SD', 'tennessee'=>'TN', 'texas'=>'TX', 'utah'=>'UT', 'vermont'=>'VT', 'virginia'=>'VA', 'washington'=>'WA', 'washington d.c.'=>'DC', 'washington dc'=>'DC', 'west virginia'=>'WV', 'wisconsin'=>'WI', 'wyoming'=>'WY');
 
-	//$cities[$customer_info['city'].', '.$customer_info['state-abbr']] = '';
-	$cities = array();
-	$customer_info['service-areas'] = $customer_info['service-areas'] ?? [];
-
-	if ( is_array($customer_info['service-areas']) ) :
-		foreach ( $customer_info['service-areas'] as $city ) :
-			$buildCity = $city[0];
-			if ( array_key_exists( strtolower($city[1]), $states) ) $buildCity .= ', '.$states[strtolower($city[1])];
-			$cities[$buildCity] = '';
-		endforeach;
-	endif;
-	
-	// check if there are landing pages that match cities
-	foreach ( get_posts( array ( 'numberposts'=>-1, 'post_type'=>'landing' ) ) as $post ) :
-		if ( preg_match ('/, [A-Z]{2}$/', $post->post_title) === 1 ) $cities[$post->post_title] = get_permalink( $post->ID );
-	endforeach;
-	
-// Build dynamic service-area links from jobsite_geo-services
-if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) :
-
-	$service_terms = get_terms([
-		'taxonomy'   => 'jobsite_geo-services',
-		'hide_empty' => false,
+	  // ----------------------------------------
+	  // 1. Load all taxonomy cities
+	  // ----------------------------------------
+	$city_terms = get_terms([
+		'taxonomy'   => 'jobsite_geo-service-areas',
+		'hide_empty' => false
 	]);
 
-	if ( ! is_wp_error( $service_terms ) ) {
+	if (is_wp_error($city_terms)) return '';
 
-		foreach ( $service_terms as $term ) {
+	$cities = [];  // city-slug => [display, slug]
 
-			$name = $term->name;  // always the raw "service--city-state" form
+	foreach ($city_terms as $city_term) {
 
-			// Must be exactly service--location (two hyphens)
-			if ( ! str_contains( $name, '--' ) ) {
-				continue;
-			}
+		$citySlug = $city_term->slug;  // friendswood-tx
 
-			// Split at the double-dash in the NAME (not slug!)
-			list( $service_part, $loc_part ) = explode( '--', $name, 2 );
+		  // Convert city slug to readable format
+		$parts = explode('-', $citySlug);
+		$state = strtoupper(array_pop($parts));               // TX
+		$city  = implode(' ', array_map('ucwords', $parts));  // Friendswood
 
-			// Expect something like: frisco-tx OR santa-fe-tx OR new-braunfels-tx
-			if ( ! preg_match( '/^(.*)-([a-z]{2})$/i', $loc_part, $m ) ) {
-				continue;
-			}
+		$displayCity = "$city, $state";
 
-			$city_raw   = $m[1];               // frisco, santa-fe, new-braunfels
-			$state_code = strtoupper($m[2]);   // tx → TX
+		$cities[$citySlug] = [
+			'display'      => $displayCity,
+			'has_services' => true
+		];
+	}
 
-			$city_name = ucwords(str_replace('-', ' ', $city_raw));
-			$label     = $city_name . ', ' . $state_code;
+	  // ----------------------------------------
+	  // 2. Insert customer_info service-areas
+	  // ----------------------------------------
+	$customer_info['service-areas'] = $customer_info['service-areas'] ?? [];
 
-			$url = get_term_link($term); // Always correct, regardless of slug format
+	foreach ($customer_info['service-areas'] as $cityArray) {
 
-			if ( ! is_wp_error( $url ) ) {
-				$cities[$label] = $url;
-			}
+		$cityName  = $cityArray[0] ?? '';
+		$stateName = strtolower($cityArray[1] ?? '');
+
+		if (!$cityName || !$stateName) continue;
+
+		  // Convert state name to abbreviation
+		$states = [
+			'alabama'              => 'AL', 'arizona'     => 'AZ', 'arkansas'     => 'AR', 'california'     => 'CA', 'colorado'       => 'CO', 'connecticut'   => 'CT', 'delaware'      => 'DE',
+			'district of columbia' => 'DC', 'florida'     => 'FL', 'georgia'      => 'GA', 'idaho'          => 'ID', 'illinois'       => 'IL', 'indiana'       => 'IN', 'iowa'          => 'IA',
+			'kansas'               => 'KS', 'kentucky'    => 'KY', 'louisiana'    => 'LA', 'maine'          => 'ME', 'maryland'       => 'MD', 'massachusetts' => 'MA', 'michigan'      => 'MI',
+			'minnesota'            => 'MN', 'mississippi' => 'MS', 'missouri'     => 'MO', 'montana'        => 'MT', 'nebraska'       => 'NE', 'nevada'        => 'NV', 'new hampshire' => 'NH',
+			'new jersey'           => 'NJ', 'new mexico'  => 'NM', 'new york'     => 'NY', 'north carolina' => 'NC', 'north dakota'   => 'ND', 'ohio'          => 'OH',
+			'oklahoma'             => 'OK', 'oregon'      => 'OR', 'pennsylvania' => 'PA', 'rhode island'   => 'RI', 'south carolina' => 'SC', 'south dakota'  => 'SD',
+			'tennessee'            => 'TN', 'texas'       => 'TX', 'utah'         => 'UT', 'vermont'        => 'VT', 'virginia'       => 'VA', 'washington'    => 'WA', 'west virginia' => 'WV',
+			'wisconsin'            => 'WI', 'wyoming'     => 'WY'
+		];
+
+		if (!isset($states[$stateName])) continue;
+
+		$abbr = $states[$stateName];
+
+		$citySlug    = sanitize_title("$cityName $abbr");              // e.g. allen-tx
+		$displayCity = ucwords($cityName) . ", " . strtoupper($abbr);
+
+		  // Add ONLY if not already in taxonomy
+		if (!isset($cities[$citySlug])) {
+			$cities[$citySlug] = [
+				'display'      => $displayCity,
+				'has_services' => false
+			];
 		}
 	}
 
-endif;
+	  // ----------------------------------------
+	  // 3. Sort alphabetically by display
+	  // ----------------------------------------
+	uasort($cities, function($a, $b) {
+		return strcmp($a['display'], $b['display']);
+	});
 
+	// ----------------------------------------
+	// 4. Build services list from taxonomy jobsite_geo-services
+	// ----------------------------------------
+	$service_terms = get_terms([
+		'taxonomy'   => 'jobsite_geo-services',
+		'hide_empty' => false
+	]);
 
-	
+	// ----------------------------------------
+	// 5. Build final HTML
+	// ----------------------------------------
 	$buildLinks = '';
-	foreach ( $cities as $serviceArea=>$areaLink ) :
-		$buildLinks .= '<li>';
-		if ( $areaLink != '' ) $buildLinks .= '<a href="'.$areaLink.'">';
-		$buildLinks .= $serviceArea;
-		if ( $areaLink != '' ) $buildLinks .= '</a>';
-		$buildLinks .= '</li>';
-	endforeach;
 
+	foreach ($cities as $citySlug => $cityData) {
+
+		$buildLinks .= "<li>{$cityData['display']}";
+
+		if ($cityData['has_services']) {
+
+			$buildLinks .= "<ul>";
+
+			foreach ($service_terms as $service_term) {
+
+				$slug = $service_term->slug;
+
+				// Match ending with this city slug
+				if (!str_ends_with($slug, $citySlug)) continue;
+
+				// Extract service part
+				$service_part = substr($slug, 0, strlen($slug) - strlen($citySlug) - 1);
+				$service_label = ucwords(str_replace('-', ' ', $service_part));
+				$url = "/service/$slug";
+
+				$buildLinks .= '<li><a href="' . esc_url($url) . '">' .
+				                esc_html($service_label) .
+				                '</a></li>';
+			}
+
+			$buildLinks .= "</ul>";
+		}
+
+		$buildLinks .= "</li>";
+	}
+
+	// ----------------------------------------
+	// Keep rest of your output the same
+	// ----------------------------------------
 	$columns = ( count($cities) < 21 ) ? 'two-col' : 'three-col';
-
+	
 	$buildLinks .= '<li>Surrounding Areas</li>';
-
+	
 	$serviceType = $customer_info['service-type'] ?? [];
-	$type1 = $serviceType[0] ?? 'HVAC solutions';
-	$type2 = $serviceType[1] ?? 'expert installations to routine maintenance and emergency repairs';	
-
-	$buildPage = "<h1>Areas We Serve</h1>";
-
+	$type1       = $serviceType[0] ?? 'HVAC solutions';
+	$type2       = $serviceType[1] ?? 'expert installations to routine maintenance and emergency repairs';
+	
+	$buildPage  = "<h1>Areas We Serve</h1>";
+	
 	$buildPage .= "<p>At <b>".$customer_info['name']."</b>, we take pride in providing dependable ".$type1." to homeowners and businesses across our service region. From ".$type2.", our experienced technicians deliver quality workmanship and trusted expertise wherever you are.</p><p>We're continually expanding to meet the needs of nearby communities, ensuring every customer receives the same level of professional care. Explore the list below to find your community and contact us to schedule fast, local service today.</p>";
-
-	$buildPage .= '<ul class="'.$columns.'">'.$buildLinks.'</ul>';
+	
+	$buildPage  .= '<ul class="'.$columns.' areas-we-serve">'.$buildLinks.'</ul>';
 	
 	return $buildPage;
-}		
+}
 
-// Choose random text from given choices
+
+
+  // Choose random text from given choices
 add_shortcode( 'get-random-text', 'battleplan_getRandomText' );
 function battleplan_getRandomText($atts, $content = null) {
-	$a = shortcode_atts( array( 'cookie'=>'true', 'text1'=>'', 'text2'=>'', 'text3'=>'', 'text4'=>'', 'text5'=>'', 'text6'=>'', 'text7'=>'',  ), $atts );
-	$textArray = array( wp_kses_post($a['text1']), wp_kses_post($a['text2']), wp_kses_post($a['text3']), wp_kses_post($a['text4']), wp_kses_post($a['text5']), wp_kses_post($a['text6']), wp_kses_post($a['text7']) );	
+	$a         = shortcode_atts( array( 'cookie'=>'true', 'text1'=>'', 'text2'=>'', 'text3'=>'', 'text4'=>'', 'text5'=>'', 'text6'=>'', 'text7'=>'',  ), $atts );
+	$textArray = array( wp_kses_post($a['text1']), wp_kses_post($a['text2']), wp_kses_post($a['text3']), wp_kses_post($a['text4']), wp_kses_post($a['text5']), wp_kses_post($a['text6']), wp_kses_post($a['text7']) );
 	$textArray = array_filter($textArray);
-	$num = count($textArray) - 1;	
-	$rand = esc_attr($a['cookie']) != "false" && $_COOKIE['random-text'] != '' ? $_COOKIE['random-text']: rand(0,$num);
+	$num       = count($textArray) - 1;
+	$rand      = esc_attr($a['cookie']) != "false" && $_COOKIE['random-text'] != '' ? $_COOKIE['random-text']: rand(0,$num);
 	
 	$printText = $textArray[$rand];
 	
-	if ( $rand >= $num ) : 
-		$rand = 0; 
-	else:
+	if ( $rand >= $num ):                    
+		$rand = 0;
+	else:                    
 		$rand++; 
 	endif;	
 	if ( $cookie != "false" ) setcookie('random-text', $rand, time() + (86400 * 7), '/', '', true, false);
@@ -507,28 +553,28 @@ function battleplan_getRandomText($atts, $content = null) {
 	return $printText;
 }
 
-// Display a random photo from tagged images 
+  // Display a random photo from tagged images 
 add_shortcode( 'get-random-image', 'battleplan_getRandomImage' );
 function battleplan_getRandomImage($atts, $content = null ) {	
-	$a = shortcode_atts( array( 'id'=>'', 'tag'=>'', 'size'=>'thumbnail', 'link'=>'no', 'number'=>'1', 'offset'=>'0', 'align'=>'left', 'class'=>'', 'order_by'=>'rand', 'order'=>'asc', 'shuffle'=>'no', 'lazy'=>'true' ), $atts );
-	$tag = esc_attr($a['tag']);	
-	$tags = $tag == "page-slug" ? _PAGE_SLUG : explode( ',', $tag );
-	$size = esc_attr($a['size']);	
-	$link = esc_attr($a['link']);	
-	$lazy = esc_attr($a['lazy']) == "true" ? "lazy" : "eager";
-	$id = esc_attr($a['id']) == "current" ? get_the_ID() : esc_attr($a['id']);		
-	$class = esc_attr($a['class']) != '' ? " ".esc_attr($a['class']) : "";
-	$align = esc_attr($a['align']) != '' ? "align".esc_attr($a['align']) : "";
+	$a       = shortcode_atts( array( 'id'=>'', 'tag'=>'', 'size'=>'thumbnail', 'link'=>'no', 'number'=>'1', 'offset'=>'0', 'align'=>'left', 'class'=>'', 'order_by'=>'rand', 'order'=>'asc', 'shuffle'=>'no', 'lazy'=>'true' ), $atts );
+	$tag     = esc_attr($a['tag']);
+	$tags    = $tag                  == "page-slug" ? _PAGE_SLUG : explode( ',', $tag );
+	$size    = esc_attr($a['size']);
+	$link    = esc_attr($a['link']);
+	$lazy    = esc_attr($a['lazy'])  == "true" ? "lazy" : "eager";
+	$id      = esc_attr($a['id'])    == "current" ? get_the_ID() : esc_attr($a['id']);
+	$class   = esc_attr($a['class']) != '' ? " ".esc_attr($a['class']) : "";
+	$align   = esc_attr($a['align']) != '' ? "align".esc_attr($a['align']) : "";
 	$exclude = $GLOBALS['do_not_repeat'];
 	
 	$query = bp_WP_Query('attachment', [
-		'post_status'     => 'any',
-		'mime_type'       => 'image/jpeg,image/gif,image/jpg,image/png,image/webp',
-		'posts_per_page'  => esc_attr($a['number']),
-		'offset'          => esc_attr($a['offset']),
-		'post__not_in'    => $exclude,
-		'order'           => esc_attr($a['order']),
-		'orderby'         => esc_attr($a['order_by']),
+		'post_status'    => 'any',
+		'mime_type'      => 'image/jpeg,image/gif,image/jpg,image/png,image/webp',
+		'posts_per_page' => esc_attr($a['number']),
+		'offset'         => esc_attr($a['offset']),
+		'post__not_in'   => $exclude,
+		'order'          => esc_attr($a['order']),
+		'orderby'        => esc_attr($a['order_by']),
 		'post_parent'     => ($id != '') ? $id : null,
 		'taxonomy'        => ($id == '' || $tag != '') ? 'image-tags' : null,
 		'terms'           => ($id == '' || $tag != '') ? $tags : null

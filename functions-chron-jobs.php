@@ -53,7 +53,7 @@ endif;
 */
 
 // Fix descrepencies in Jobsite GEO 
-
+/*
 add_action("init", "bp_add_terms_to_jobsites"); 
 function bp_add_terms_to_jobsites() {
 
@@ -124,7 +124,7 @@ function bp_add_terms_to_jobsites() {
 
     updateOption( 'bp_setup_2024_07_09', 'completed', false );	
 }
-
+*/
 
 
 
@@ -276,7 +276,7 @@ function processChron($forceChron) {
 					'city'         => '',
 					'state_abbr'   => '',
 					'state_full'   => '',
-					'zip'          => '',
+					'zip'          => '', 
 					'county'       => '',
 					'country_abbr' => '',
 					'country_full' => '',

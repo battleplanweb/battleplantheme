@@ -1,16 +1,17 @@
-/*
-Theme Name: Battle Plan Web Design
-Theme URI: https://battleplanwebdesign.com/
-Author: Glendon Guttenfelder
-Author URI: https://battleplanwebdesign.com
-Description: The Battle Plan Web Design Theme
-Version: 2025.33.5
-Text Domain: battleplan
-Github Theme URI: https://github.com/battleplanweb/battleplantheme
+  /*
+Theme  Name       	:                    Battle Plan Web Design
+Theme  URI        	:                    https:                    //battleplanwebdesign.com/
+Author     			:                    Glendon Guttenfelder
+Author URI        	:                    https:                    //battleplanwebdesign.com
+Description:                    		The Battle Plan Web Design Theme
+Version    			:                    2025.33.6
+Text   Domain     	:                    battleplan
+Github Theme URI  	:                    https:                    //github.com/battleplanweb/battleplantheme
 */
+
 @charset "utf-8";
-/*--------------------------------------------------------------
->>> TABLE OF CONTENTS:
+  /*--------------------------------------------------------------
+>>> TABLE OF CONTENTS:                    
 ----------------------------------------------------------------
 # CSS Variables
 # Base
@@ -792,6 +793,35 @@ ul.bullet-list.bullet-image li::before {
 
 ul.fancy-list.bullet-image li::before {
   	transform: 										translateY(0%);
+}
+
+.areas-we-serve > li {
+     list-style-type:                    none;
+     font-weight    :                    bold;
+    }
+
+.areas-we-serve li ul {
+    font-size      :                    85%;
+    padding-left   :                    0;
+    margin-left    :                    10px;
+    list-style-type:                    none;
+    font-weight    :                    normal;
+    height         :                    0;
+    display        :                    none;
+}
+
+.areas-we-serve li.open > ul {
+    display:                    block;
+    height :                    auto;
+}
+
+.areas-we-serve li ul li::before {
+    content     :                    "»";
+    margin-right:                    5px;
+    }
+
+.areas-we-serve > li:has(> ul) {
+    cursor: pointer;
 }
 
 

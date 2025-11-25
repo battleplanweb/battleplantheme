@@ -1,4 +1,4 @@
-/* Testimonials
+  /* Testimonials
 --------------------------------------------- */
 .block-image.image-testimonials {
 	width: 											100%;
@@ -46,6 +46,10 @@
 	text-shadow: 									1px 0 0 var(--anon-icon), -1px 0 0 var(--anon-icon), 0 1px 0 var(--anon-icon), 0 -1px 0 var(--anon-icon);
 }
 
+.carousel-item-testimonials .group-testimonials {
+	width: 											100%;								
+}
+
 .testimonials-credentials {
 	text-align:										right;
 	color:											var(--text-color);
@@ -54,7 +58,7 @@
 
 .testimonials-quote p:first-of-type .icon-svg {
 	fill:											currentColor;
-  	margin-right: 									8px;
+  	margin-right: 									14px;
 	margin-top: 									3px;
 	transform: 										scale(1.5); 
 }

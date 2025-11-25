@@ -1626,9 +1626,7 @@ function bp_jobsite_runtime_score($post_id, &$notes = []) {
 }
 
 
-/**
- * Score jobsites on archive queries and attach comment strings.
- */
+/* Score jobsites on archive queries and attach comment strings. */
 add_filter('the_posts', function($posts, $query) {
 
 	if (is_admin() || !$query->is_main_query()) return $posts;
@@ -1659,30 +1657,3 @@ add_filter('the_posts', function($posts, $query) {
 	return $posts;
 
 }, 10, 2);
-
-/* --------------------------------------------------------------
-   FORCE SCORE COMMENTS INTO HTML ON JOBSITE ARCHIVES
--------------------------------------------------------------- */
-
-/* --------------------------------------------------------------
-   LOG JOBSITE SCORE DETAILS TO PHP ERROR LOG
--------------------------------------------------------------- */
-
-add_action('the_post', function($post) {
-
-	if (!is_post_type_archive('jobsite_geo') &&
-	    !is_tax('jobsite_geo-service-areas') &&
-	    !is_tax('jobsite_geo-services') &&
-	    !is_tax('jobsite_geo-techs')) {
-		return;
-	}
-
-	if (!isset($post->bp_score) || !isset($post->bp_score_notes)) {
-		return; // Score wasn't attached yet
-	}
-
-	$log = "Jobsite {$post->ID} score={$post->bp_score} breakdown={$post->bp_score_notes}";
-	error_log($log);
-
-});
-

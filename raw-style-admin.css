@@ -3,7 +3,7 @@
 /*--------------------------------------------------------------
 # CSS Variables
 --------------------------------------------- */
-
+ 
 :root {
   --font-primary: 								Arial; 
   
@@ -877,7 +877,7 @@ dialog.bp-qtag-dialog {
 }
 
 /* Grid layout for fields */
-dialog.bp-qtag-dialog form {
+dialog.bp-qtag-dialog form div {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
 	gap: 1rem;

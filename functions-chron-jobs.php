@@ -1817,6 +1817,7 @@ function ci_build_schema(array $ci, array $gbp_primary = [], array $google_info 
     $areaServed = [];
     if (!empty($ci['service-areas']) && is_array($ci['service-areas'])) {
         $seen = [];
+		$ci['service-areas'][] = array($ci['city'],$ci['state-full']);
         foreach ($ci['service-areas'] as $city) {
             if (!isset($city[0], $city[1])) continue;
             $c = preg_replace('/\s+/', ' ', trim((string)$city[0]));

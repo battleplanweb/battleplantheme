@@ -1,6 +1,6 @@
-<?php 
+<?php
 /* Battle Plan Web Design Functions: Main
- 
+
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
@@ -15,7 +15,7 @@
 require_once get_template_directory().'/functions-global.php';
 
 /*--------------------------------------------------------------
-# Functions to extend WordPress 
+# Functions to extend WordPress
 --------------------------------------------------------------*/
 
 // Handle WP_Queries properly
@@ -102,12 +102,12 @@ function bp_WP_Query($post_type, $args = []) {
 function showMe($something, $die=true) {
 	error_reporting(E_ALL);
 	ini_set('display_errors', 1);
-	
-	if ( is_array($something) ) :	
+
+	if ( is_array($something) ) :
 		$something = array_slice($something, 0, 250);
 		$something = print_r($something, true);
 	endif;
-	
+
 	if ($die) {
 		wp_die($something);
 		exit();
@@ -141,10 +141,10 @@ function emailMe($subject, $htmlMessage, $replyTo = null) {
     $additionalParams = '-f ' . escapeshellarg($from);
 
     return mail($to, $subject, (string) $htmlMessage, $headersStr, $additionalParams);
-}		
+}
 
 
-// Check if current page is log in screen 
+// Check if current page is log in screen
 function is_wplogin() {
     $ABSPATH_MY = str_replace(array('\\','/'), DIRECTORY_SEPARATOR, ABSPATH);
     return ((in_array($ABSPATH_MY.'wp-login.php', get_included_files()) || in_array($ABSPATH_MY.'wp-register.php', get_included_files()) ) || (isset($GLOBALS['pagenow']) && $GLOBALS['pagenow'] === 'wp-login.php') || $_SERVER['PHP_SELF']== '/wp-login.php');
@@ -309,36 +309,36 @@ function get_the_slug() {
 }
 
 // Get ID from page, post or custom post type by entering slug or title
-function getID($slug, $type=null) { 
+function getID($slug, $type=null) {
 	$getCPT = $type ? array($type) : getCPT();
-	$id = url_to_postid($slug);	
-	
+	$id = url_to_postid($slug);
+
 	if ( $id != 0 ) return $id;
-		
+
 	foreach ($getCPT as $postType) :
 		$page = get_page_by_path($slug, OBJECT, $postType);
 		if ( $page ) return $page->ID;
-	endforeach;	
+	endforeach;
 
-	foreach ($getCPT as $postType) :	
+	foreach ($getCPT as $postType) :
 		$query = bp_WP_Query($postType, [
 			'name'           => $slug,
 			'post_status'    => 'all',
 			'posts_per_page' => 1
 		]);
 
-		if ( !empty( $query->posts ) ) : 
-			$page = $query->posts[0];	
-			return $page->ID;	
-		endif;	
-	endforeach;	
+		if ( !empty( $query->posts ) ) :
+			$page = $query->posts[0];
+			return $page->ID;
+		endif;
+	endforeach;
 
 	//getID($slug);
-} 
+}
 
 // Identify user based on id, email or slug
 function battleplan_identifyUser( $identifier='' ) {
-	if ( $identifier == null || $identifier == "" ) : return wp_get_current_user(); 
+	if ( $identifier == null || $identifier == "" ) : return wp_get_current_user();
 	elseif ( is_numeric($identifier) ) : return get_user_by('id', $identifier);
 	elseif ( strpos($identifier, '@') !== false ) : return get_user_by('email', $identifier);
 	else: return get_user_by('slug', $identifier);
@@ -346,22 +346,22 @@ function battleplan_identifyUser( $identifier='' ) {
 }
 
 function battleplan_getUserRole( $identifier='', $info='' ) {
-	$user = battleplan_identifyUser( $identifier );		
+	$user = battleplan_identifyUser( $identifier );
 	$userMeta = get_userdata($user->ID);
 	if ( $userMeta ) :
 		$userRoles = $userMeta->roles;
 		global $wp_roles;
 		$userRoleName = $userRoleDisplay = $userRoleCaps = "";
 		if ( is_array($userRoles) ) :
-			foreach ($userRoles as $userRole) :	
+			foreach ($userRoles as $userRole) :
 				$userRoleName .= $userRole;
 				$userRoleDisplay .= $wp_roles->roles[$userRole]['name'];
-				$userRoleCaps .= print_r($user->get_role_caps(), true);		
+				$userRoleCaps .= print_r($user->get_role_caps(), true);
 			endforeach;
 		else:
 				$userRoleName = $userRoles;
 				$userRoleDisplay = $wp_roles->roles[$userRoles]['name'];
-				$userRoleCaps = $user->get_role_caps();		
+				$userRoleCaps = $user->get_role_caps();
 		endif;
 
 		if ( $info == "" || $info == "name" ) return $userRoleName;
@@ -370,22 +370,22 @@ function battleplan_getUserRole( $identifier='', $info='' ) {
 	endif;
 }
 
-// Add data-{key}="{value}" to an image based on its custom fields 
-function getImgMeta($id) {	
+// Add data-{key}="{value}" to an image based on its custom fields
+function getImgMeta($id) {
 	$custom = get_post_custom( $id );
 	if ( ! is_array( $custom ) ) return;
-	if ( $keys = array_keys( $custom ) ) :		
+	if ( $keys = array_keys( $custom ) ) :
 		$addMeta = "";
 		foreach ($keys as $key) :
 			if ( $key != "log-views" ) :
-				$value = esc_attr(get_field( $key, $id));			
-				if ( substr($value, 0, 5) != "field" && !is_array($value) && $value != "" && $value != null && $value != "Array" ) :				
+				$value = esc_attr(get_field( $key, $id));
+				if ( substr($value, 0, 5) != "field" && !is_array($value) && $value != "" && $value != null && $value != "Array" ) :
 					$key = ltrim($key, '_');
 					$key = ltrim($key, '-');
-					$addMeta .= ' data-'.$key.' = "'.$value.'"';	
+					$addMeta .= ' data-'.$key.' = "'.$value.'"';
 				endif;
 			endif;
-		endforeach; 		
+		endforeach;
 		return $addMeta;
 	endif;
 }
@@ -412,12 +412,12 @@ function updateOption($option, $value, $autoload=null) {
 }
 
 function getCPT() {
-	$getCPT = get_post_types();  
+	$getCPT = get_post_types();
 	$removeCPT = array('acf-field', 'acf-field-group', 'asp_coupons', 'asp-products', 'attachment', 'customize_changeset', 'custom_css', 'nav_menu_item', 'oembed_cache', 'revision', 'stripe_order', 'user_request', 'wpcf7_contact_form', 'wp_block', 'wp_global_styles', 'wphb_minify_group', 'wp_navigation', 'wp_template', 'wp_template_part');
 	$moveCPTs = array ('landing', 'page', 'universal', 'elements');
-	
+
 	foreach ($removeCPT as $remove) unset($getCPT[$remove]);
-	
+
 	foreach ( $moveCPTs as $moveCPT ) :
 		unset($getCPT[$moveCPT]);
 		array_unshift($getCPT, $moveCPT);
@@ -433,7 +433,7 @@ function convertTime($howMany, $howMuch) {
 	if ( $howMuch == "hours" || $howMuch == "hour" ) $seconds = $howMany * 3600;
 	if ( $howMuch == "days" || $howMuch == "day" ) $seconds = $howMany * 86400;
 	if ( $howMuch == "weeks" || $howMuch == "week" ) $seconds = $howMany * 604800;
-	if ( $howMuch == "months" || $howMuch == "month" ) $seconds = $howMany * 2618784;	
+	if ( $howMuch == "months" || $howMuch == "month" ) $seconds = $howMany * 2618784;
 	if ( $howMuch == "years" || $howMuch == "year" ) $seconds = $howMany * 31449600;
 	return $seconds;
 }
@@ -442,7 +442,7 @@ function convertTime($howMany, $howMuch) {
 function timeElapsed($time, $precision = 5, $display="all", $abbr="none") { // precision= 5, 4, 3, 2, 1, 0 (only use 0 if NOT using display=all)   // display=all, months, days, hours, minutes, seconds    // abbr=none, short (min sec hr), full (m s h)
 	$time = time() - intval($time);
 	$buildTime = '';
-	
+
 	if ( $abbr == "full" ) :
 		$month = $months = 'M';
 		$day = $days = 'd';
@@ -455,14 +455,14 @@ function timeElapsed($time, $precision = 5, $display="all", $abbr="none") { // p
 		$hour = $hours = 'hr';
 		$minute = $minutes = 'min';
 		$second = $seconds = 'sec';
-	else: 
+	else:
 		$month = 'month'; $months = 'months';
 		$day = 'day'; $days = 'days';
 		$hour = 'hour'; $hours = 'hours';
 		$minute = 'minute'; $minutes = 'minutes';
-		$second = 'second'; $seconds = 'seconds';		
+		$second = 'second'; $seconds = 'seconds';
 	endif;
-	
+
 	if ( $display == "month" || $display == "months" ) :
 		return number_format($time/2592000, $precision).' '.(number_format($time/2592000, $precision) == 1 ? $month : $months);
 	elseif ( $display == "day" || $display == "days" ) :
@@ -494,14 +494,14 @@ function timeElapsed($time, $precision = 5, $display="all", $abbr="none") { // p
 		if ( $m > 1 ) $timeElapsed['minute'] = $m.' '.$minutes;
 		if ( $s > 1 ) $timeElapsed['second'] = $s.' '.$seconds;
 
-		$timeElapsed = array_filter($timeElapsed);	
+		$timeElapsed = array_filter($timeElapsed);
 		return implode(', ', array_slice($timeElapsed, 0, $precision));
 	endif;
 }
 
 // Convert Sizes
 function convertSize($size) {
-	if ( $size == "100" || $size == "12" || $size == "12/12" || $size == "1/1" ) return 12;	
+	if ( $size == "100" || $size == "12" || $size == "12/12" || $size == "1/1" ) return 12;
 	if ( $size == "92" || $size == "11" || $size == "11/12" ) return 11;
 	if ( $size == "83" || $size == "10" || $size == "10/12" || $size == "5/6" ) return 10;
 	if ( $size == "75" || $size == "9" || $size == "9/12" || $size == "3/4" ) return 9;
@@ -519,7 +519,7 @@ function convertSize($size) {
 	if ( $size == "4/5" ) return 10;
 }
 
-// Find text width based on picture width 
+// Find text width based on picture width
 function getTextSize( $picSize ) {
 	if ( $picSize == "11" || $picSize == "11/12" ) : return "1/12";
 	elseif ( $picSize == "10" || $picSize == "10/12" || $picSize == "5/6" ) : return "1/6";
@@ -536,7 +536,7 @@ function getTextSize( $picSize ) {
 	elseif ( $picSize == "2/5" ) : return "3/5";
 	elseif ( $picSize == "3/5" ) : return "2/5";
 	elseif ( $picSize == "4/5" ) : return "1/5";
-	else : return "100"; 
+	else : return "100";
 	endif;
 }
 
@@ -561,7 +561,7 @@ function adjustTerms( $post_id, $term, $taxonomy, $add_or_remove ) {
 	foreach ( $today_terms as $today_term ) :
 		if ( $today_term != $term_id ) $new_terms[] = intval( $today_term );
 	endforeach;
-	if ( $add_or_remove == "add" ) $new_terms[] = intval( $term_id );	
+	if ( $add_or_remove == "add" ) $new_terms[] = intval( $term_id );
 	return wp_set_object_terms( $post_id, $new_terms, $taxonomy );
 }
 
@@ -600,14 +600,14 @@ function battleplan_saveMenuVisibility( $menu_id, $item_id ) {
 }
 
 // Populate a secondary menu or sub-menu with posts/pages from any custom post type
-function fillMenu($cpt, $max = "-1", $orderby = "title", $seq = "asc") { 
-	global $cpt, $max, $orderby, $seq;	
-	$types = explode(",", $cpt);	
+function fillMenu($cpt, $max = "-1", $orderby = "title", $seq = "asc") {
+	global $cpt, $max, $orderby, $seq;
+	$types = explode(",", $cpt);
 	foreach ( $types as $type ) :
 		add_filter( 'wp_get_nav_menu_items', function ($items, $menu, $args) use ($type) {
 			global $max, $orderby, $seq;
-			$child_items = array(); 
-			$menu_order = count($items); 
+			$child_items = array();
+			$menu_order = count($items);
 			$parent_item_id = NULL;
 
 			foreach ( $items as $item ) :
@@ -651,11 +651,11 @@ function battleplan_remove_sidebar( $classes ) {
 function removeSidebar($classes, $addClasses, $pages) {
 	foreach ($pages as $page) :
 		if ( _PAGE_SLUG == $page || in_array($page, $classes) ) return battleplan_remove_sidebar( $addClasses );
-	endforeach;		
+	endforeach;
 	return $addClasses;
 }
 
-// If post has "remove sidebar" checked, set necessary classes on <body> 
+// If post has "remove sidebar" checked, set necessary classes on <body>
 add_filter( 'body_class', 'battleplan_CheckRemoveSidebar', 50 );
 function battleplan_CheckRemoveSidebar( $classes ) {
 	// Always remove sidebar on /debug page
@@ -669,8 +669,8 @@ function battleplan_CheckRemoveSidebar( $classes ) {
 // If post is a "landing" page, add .home to body class for CSS purposes
 add_filter( 'body_class', 'battleplan_addHomeBodyClassToOptimized', 70 );
 function battleplan_addHomeBodyClassToOptimized( $classes ) {
-	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) return $classes;	
-	if ( get_post_type() == "landing" && preg_match ('/, [A-Z]{2}$/', get_the_title() ) === 1 ) array_push($classes, 'home', 'alt-home');	
+	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) return $classes;
+	if ( get_post_type() == "landing" && preg_match ('/, [A-Z]{2}$/', get_the_title() ) === 1 ) array_push($classes, 'home', 'alt-home');
 	return $classes;
 }
 
@@ -679,10 +679,10 @@ add_filter( 'body_class', 'battleplan_removeHomeBodyClassOnSearch', 80 );
 function battleplan_removeHomeBodyClassOnSearch( $classes ) {
 	if ( get_post_type() == "search" ) :
 		$home = array_search('home', $classes);
-		if( $home !== FALSE ) unset($classes[$home]);		
+		if( $home !== FALSE ) unset($classes[$home]);
 	endif;
-	return $classes;	
-} 
+	return $classes;
+}
 
 // Ensure all classes that have been added to <body> exist as an array
 add_filter( 'body_class', 'battleplan_bodyClassArray', 100 );
@@ -690,7 +690,7 @@ function battleplan_bodyClassArray( $classes ) {
 	$newClasses = array();
 	foreach ($classes as $class) :
 		$class = explode(" ", $class);
-		$newClasses = array_merge( $newClasses, $class );	
+		$newClasses = array_merge( $newClasses, $class );
 	endforeach;
 	return $newClasses;
 }
@@ -700,42 +700,42 @@ function battleplan_countTease( $id, $override=false ) {
 	if ( $override==true || ( _USER_LOGIN != "battleplanweb" && _IS_BOT != true ) ) :
 		$getViews = readMeta($id, 'log-views');
 		if ( !is_array($getViews) ) $getViews = array();
-		$viewsToday = $views7Day = $views30Day = $views90Day = $views180Day = $views365Day = intval(0); 	
+		$viewsToday = $views7Day = $views30Day = $views90Day = $views180Day = $views365Day = intval(0);
 
-		//$rightNow = strtotime(date("F j, Y g:i a")) - 14450;	
-		$rightNow = strtotime(date("F j, Y g:i a"));	
+		//$rightNow = strtotime(date("F j, Y g:i a")) - 14450;
+		$rightNow = strtotime(date("F j, Y g:i a"));
 		$today = strtotime(date("F j, Y"));
-		$lastViewed = strtotime($getViews[0]['date']);	
-		$dateDiff = (int)(($today - $lastViewed) / 60 / 60 / 24);	
+		$lastViewed = strtotime($getViews[0]['date']);
+		$dateDiff = (int)(($today - $lastViewed) / 60 / 60 / 24);
 
-		if ( $dateDiff != 0 ) : // day has passed, move 29 to 30, and so on	
-			for ($i = 1; $i <= $dateDiff; $i++) {	
-				$figureTime = $today - ( ($dateDiff - $i) * 86400);	
+		if ( $dateDiff != 0 ) : // day has passed, move 29 to 30, and so on
+			for ($i = 1; $i <= $dateDiff; $i++) {
+				$figureTime = $today - ( ($dateDiff - $i) * 86400);
 				array_unshift($getViews, array ('date'=>date("F j, Y", $figureTime), 'views'=>$viewsToday));
-			}	
+			}
 		else:
-			$viewsToday = (int)$getViews[0]['views']; 
+			$viewsToday = (int)$getViews[0]['views'];
 		endif;
 
-		updateMeta($id, 'log-last-viewed', $rightNow);	
+		updateMeta($id, 'log-last-viewed', $rightNow);
 
 		$viewsToday++;
-		array_shift($getViews);	
-		array_unshift($getViews, array ('date'=>date('F j, Y', $today), 'views'=>$viewsToday));	
+		array_shift($getViews);
+		array_unshift($getViews, array ('date'=>date('F j, Y', $today), 'views'=>$viewsToday));
 		updateMeta($id, 'log-views', $getViews);
 
-		for ($x = 0; $x < 7; $x++) { if ( isset($getViews[$x]['views'])) $views7Day = $views7Day + (int)$getViews[$x]['views']; } 					
-		for ($x = 0; $x < 30; $x++) { if ( isset($getViews[$x]['views'])) $views30Day = $views30Day + (int)$getViews[$x]['views']; } 						
-		for ($x = 0; $x < 90; $x++) { if ( isset($getViews[$x]['views'])) $views90Day = $views90Day + (int)$getViews[$x]['views']; } 		
-		for ($x = 0; $x < 180; $x++) { if ( isset($getViews[$x]['views'])) $views180Day = $views180Day + (int)$getViews[$x]['views']; } 		
-		for ($x = 0; $x < 365; $x++) { if ( isset($getViews[$x]['views'])) $views365Day = $views365Day + (int)$getViews[$x]['views']; } 		
-		updateMeta($id, 'log-views-today', $viewsToday);					
-		updateMeta($id, 'log-views-total-7day', $views7Day);			
-		updateMeta($id, 'log-views-total-30day', $views30Day);			 
-		updateMeta($id, 'log-views-total-90day', $views90Day);	
-		updateMeta($id, 'log-views-total-180day', $views180Day);	
+		for ($x = 0; $x < 7; $x++) { if ( isset($getViews[$x]['views'])) $views7Day = $views7Day + (int)$getViews[$x]['views']; }
+		for ($x = 0; $x < 30; $x++) { if ( isset($getViews[$x]['views'])) $views30Day = $views30Day + (int)$getViews[$x]['views']; }
+		for ($x = 0; $x < 90; $x++) { if ( isset($getViews[$x]['views'])) $views90Day = $views90Day + (int)$getViews[$x]['views']; }
+		for ($x = 0; $x < 180; $x++) { if ( isset($getViews[$x]['views'])) $views180Day = $views180Day + (int)$getViews[$x]['views']; }
+		for ($x = 0; $x < 365; $x++) { if ( isset($getViews[$x]['views'])) $views365Day = $views365Day + (int)$getViews[$x]['views']; }
+		updateMeta($id, 'log-views-today', $viewsToday);
+		updateMeta($id, 'log-views-total-7day', $views7Day);
+		updateMeta($id, 'log-views-total-30day', $views30Day);
+		updateMeta($id, 'log-views-total-90day', $views90Day);
+		updateMeta($id, 'log-views-total-180day', $views180Day);
 		updateMeta($id, 'log-views-total-365day', $views365Day);
-	endif;	
+	endif;
 }
 
 /*--------------------------------------------------------------
@@ -753,14 +753,14 @@ add_filter('auto_plugin_update_send_email', '__return_false');
 add_filter('auto_theme_update_send_email', '__return_false');
 add_filter('auto_core_update_send_email', 'battleplan_disable_core_update_emails', 10, 4 );
 function battleplan_disable_core_update_emails( $send, $type, $core_update, $result ) {
-	if ( !empty($type) && $type == 'success' ) return false;  
+	if ( !empty($type) && $type == 'success' ) return false;
   	return true;
 }
 
 // Determine how to sort custom post types
 add_action( 'pre_get_posts', 'battleplan_handle_main_query', 1 );
 function battleplan_handle_main_query( $query ) {
-	if (!is_admin() && $query->is_main_query()) :		
+	if (!is_admin() && $query->is_main_query()) :
 		if ( is_post_type_archive('testimonials') ) :
 			$query->set( 'post_type','testimonials');
 			$query->set( 'posts_per_page',10);
@@ -769,7 +769,7 @@ function battleplan_handle_main_query( $query ) {
 			$query->set( 'meta_key', 'log-views-total-30day' );
         	$query->set( 'orderby', 'meta_value_num' );
         	$query->set( 'order', 'ASC');
-			*/			
+			*/
 		endif;
 		if ( is_post_type_archive('galleries') ) :
 			$query->set( 'post_type','galleries');
@@ -783,7 +783,7 @@ function battleplan_handle_main_query( $query ) {
         		$query->set( 'orderby', 'meta_value_num' );
         		$query->set( 'order', 'ASC');
 		endif;
-	endif; 
+	endif;
 }
 
 // Determine RAND() with the seed from site option
@@ -797,9 +797,9 @@ function battleplan_random_seed($orderby_statement) {
 //add_action( 'wp_footer', 'battleplan_preload_bg' );
 function battleplan_preload_bg() {
 	$file = '';
-	if (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-background.jpg' ) ) : 
+	if (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-background.jpg' ) ) :
 		$file = "site-background.jpg";
-	elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-background.webp' ) ) : 
+	elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-background.webp' ) ) :
 		$file = "site-background.webp";
 	endif;
 	/*
@@ -811,20 +811,20 @@ function battleplan_preload_bg() {
 
 // Add some defining classes to body
 add_filter( 'body_class', 'battleplan_addBodyClasses', 30 );
-function battleplan_addBodyClasses( $classes ) {	
+function battleplan_addBodyClasses( $classes ) {
 	$customer_info = customer_info();
-	$classes[] = "slug-"._PAGE_SLUG; 
+	$classes[] = "slug-"._PAGE_SLUG;
 	$classes[] = is_mobile() ? "screen-mobile" : "screen-desktop";
-	
+
 	$siteType = $customer_info['site-type'] ?? null;
 	$bizTypeRaw = $customer_info['business-type'] ?? null;
 	$bizType    = is_array($bizTypeRaw) ? ($bizTypeRaw[0] ?? null) : $bizTypeRaw;
 
     if ( $siteType ) $classes[] = 'site-type-'.strtolower($siteType);
     if ( $bizType )  $classes[] = 'business-type-'.strtolower($bizType);
-	
+
 	return $classes;
-}	
+}
 
 // Add Breadcrumbs
 function battleplan_breadcrumbs() {
@@ -834,9 +834,9 @@ function battleplan_breadcrumbs() {
     $link_after = '</span>';
     $link_attr = ' rel="v:url" property="v:title"';
     $link = $link_before.'<a'.$link_attr.' href="%1$s">%2$s</a>'.$link_after;
-    $delimiter = ' &raquo; ';              
+    $delimiter = ' &raquo; ';
     $before = '<span class="current">';
-    $after = '</span>';               
+    $after = '</span>';
     $page_addon = $breadcrumb_trail = $category_links = '';
     $wp_the_query   = $GLOBALS['wp_the_query'];
     $queried_object = $wp_the_query->get_queried_object();
@@ -883,7 +883,7 @@ function battleplan_breadcrumbs() {
             $breadcrumb_trail = $post_link;
         endif;
 
-        if ( $post_type_link ) $breadcrumb_trail = $post_type_link.$delimiter.$breadcrumb_trail; 
+        if ( $post_type_link ) $breadcrumb_trail = $post_type_link.$delimiter.$breadcrumb_trail;
 
         if ( $category_links ) $breadcrumb_trail = $category_links.$breadcrumb_trail;
     endif;
@@ -929,7 +929,7 @@ function battleplan_breadcrumbs() {
                 $month_name = $date_time->format( 'F' );
             endif;
 
-            if ( is_year() ) : $breadcrumb_trail = $before.$year.$after; 
+            if ( is_year() ) : $breadcrumb_trail = $before.$year.$after;
 
             elseif ( is_month() ) :
                 $year_link = sprintf( $link, esc_url( get_year_link( $year ) ), $year );
@@ -946,11 +946,11 @@ function battleplan_breadcrumbs() {
             $post_type_object = get_post_type_object( $post_type );
             $breadcrumb_trail = $before.$post_type_object->labels->name.$after;
         endif;
-    endif;   
+    endif;
 
-    if ( is_search() ) $breadcrumb_trail = __( 'Search query for: ' ).$before.get_search_query().$after; 
+    if ( is_search() ) $breadcrumb_trail = __( 'Search query for: ' ).$before.get_search_query().$after;
 
-    if ( is_404() ) $breadcrumb_trail = $before.__( 'Error 404' ).$after; 
+    if ( is_404() ) $breadcrumb_trail = $before.__( 'Error 404' ).$after;
 
     if ( is_paged() ) :
         $today_page = get_query_var( 'paged' ) ? get_query_var( 'paged' ) : get_query_var( 'page' );
@@ -993,7 +993,7 @@ function battleplan_promo() {
 	if ( is_single() && get_post_type() == "post" ) :
 		$current_ad = do_shortcode('[get-element slug="coupon"]');
 		if ( $current_ad ) echo '<div class="place-ad">'.$current_ad.'</div>';
-	endif;	
+	endif;
 }
 
 add_shortcode( 'insert-promo', 'battleplan_GetPromo' );
@@ -1013,18 +1013,18 @@ function battleplan_meta_date() {
 
 // Set up post meta author
 function battleplan_meta_author($link='false') {
-	$byline = sprintf ( esc_html_x( '%s', 'post author', 'battleplan' ), '<span class="author vcard">'.esc_html( get_the_author() ).'</span>' );	
+	$byline = sprintf ( esc_html_x( '%s', 'post author', 'battleplan' ), '<span class="author vcard">'.esc_html( get_the_author() ).'</span>' );
 	$printByline = '<span class="meta-author">';
-	if ( $link == 'profile' ) $printByline .= '<a class="author-link" href="/profile/?user='.esc_html( get_the_author() ).'">';	
+	if ( $link == 'profile' ) $printByline .= '<a class="author-link" href="/profile/?user='.esc_html( get_the_author() ).'">';
 	$printByline .= '[get-icon type="user"]'.$byline;
-	if ( $link == 'profile' ) $printByline .= '</a>';	
+	if ( $link == 'profile' ) $printByline .= '</a>';
 	$printByline .= '</span>';
-	
+
 	return $printByline;
 }
 
 // Set up post meta comments
-function battleplan_meta_comments() {		
+function battleplan_meta_comments() {
 	return '<span class="meta-comments">[get-icon type="comments"]'.get_comments_number().'</span>';
 }
 
@@ -1048,7 +1048,7 @@ function battleplan_comment_structure($comment, $args, $depth) {
 			</div>
 
       		<?php comment_text() ?>
-			
+
       		<div class="reply">
          		<?php comment_reply_link(array_merge( $args, array('depth' => $depth, 'max_depth' => $args['max_depth']))) ?>
       		</div>
@@ -1075,7 +1075,7 @@ add_filter('template_include', function ($template) {
 		$taxonomy_object = get_taxonomy($taxonomy);
 		$post_types = $taxonomy_object->object_type;
 		$post_type = !empty($post_types) ? $post_types[0] : null;
-		
+
 		$tax_temp = locate_template("taxonomy-{$taxonomy}.php");
 		if ( !$tax_temp ) $tax_temp = locate_template("archive-{$taxonomy}.php");
 		if ( !$tax_temp ) $tax_temp = locate_template("archive-{$post_type}.php");
@@ -1088,18 +1088,18 @@ add_filter('template_include', function ($template) {
 
 // Set up footer social media box
 add_shortcode( 'get-social-box', 'battleplan_footer_social_box' );
-function battleplan_footer_social_box() {	
+function battleplan_footer_social_box() {
 	$buildLeft = "<div class='social-box'>";
-		if ( do_shortcode('[get-biz info="facebook"]') ) $buildLeft .= do_shortcode('[social-btn type="facebook"]'); 							
-		if ( do_shortcode('[get-biz info="twitter"]') ) $buildLeft .= do_shortcode('[social-btn type="twitter"]');						
-		if ( do_shortcode('[get-biz info="instagram"]') ) $buildLeft .= do_shortcode('[social-btn type="instagram"]');							
-		if ( do_shortcode('[get-biz info="linkedin"]') ) $buildLeft .= do_shortcode('[social-btn type="linkedin"]');							
-		if ( do_shortcode('[get-biz info="yelp"]') ) $buildLeft .= do_shortcode('[social-btn type="yelp"]');							
-		if ( do_shortcode('[get-biz info="pinterest"]') ) $buildLeft .= do_shortcode('[social-btn type="pinterest"]');								
-		if ( do_shortcode('[get-biz info="youtube"]') ) $buildLeft .= do_shortcode('[social-btn type="youtube"]');											
-		if ( do_shortcode('[get-biz info="tiktok"]') ) $buildLeft .= do_shortcode('[social-btn type="tiktok"]');							
-		if ( do_shortcode('[get-biz info="location"]') ) $buildLeft .= do_shortcode('[social-btn type="location"]');							
-		if ( do_shortcode('[get-biz info="email"]') ) $buildLeft .= do_shortcode('[social-btn type="email"]');							
+		if ( do_shortcode('[get-biz info="facebook"]') ) $buildLeft .= do_shortcode('[social-btn type="facebook"]');
+		if ( do_shortcode('[get-biz info="twitter"]') ) $buildLeft .= do_shortcode('[social-btn type="twitter"]');
+		if ( do_shortcode('[get-biz info="instagram"]') ) $buildLeft .= do_shortcode('[social-btn type="instagram"]');
+		if ( do_shortcode('[get-biz info="linkedin"]') ) $buildLeft .= do_shortcode('[social-btn type="linkedin"]');
+		if ( do_shortcode('[get-biz info="yelp"]') ) $buildLeft .= do_shortcode('[social-btn type="yelp"]');
+		if ( do_shortcode('[get-biz info="pinterest"]') ) $buildLeft .= do_shortcode('[social-btn type="pinterest"]');
+		if ( do_shortcode('[get-biz info="youtube"]') ) $buildLeft .= do_shortcode('[social-btn type="youtube"]');
+		if ( do_shortcode('[get-biz info="tiktok"]') ) $buildLeft .= do_shortcode('[social-btn type="tiktok"]');
+		if ( do_shortcode('[get-biz info="location"]') ) $buildLeft .= do_shortcode('[social-btn type="location"]');
+		if ( do_shortcode('[get-biz info="email"]') ) $buildLeft .= do_shortcode('[social-btn type="email"]');
 		if ( do_shortcode('[get-biz info="user"]') ) $buildLeft .= do_shortcode('[social-btn type="user"]');
 	$buildLeft .= "</div>";
 	return $buildLeft;
@@ -1120,7 +1120,7 @@ function bp_wpautop($content, $sanitize = false) {
 		function ($matches) use (&$no_wpautop_blocks) {
 			$placeholder = '__NOWPAUTOP_BLOCK_' . count($no_wpautop_blocks) . '__';
 			$no_wpautop_blocks[$placeholder] = $matches[1];
-			return $placeholder; 
+			return $placeholder;
 		},
 		$content
 	);
@@ -1130,7 +1130,7 @@ function bp_wpautop($content, $sanitize = false) {
 	foreach ($no_wpautop_blocks as $placeholder => $original) {
 		$content = str_replace($placeholder, $original, $content);
 	}
-	
+
 	$content = preg_replace('/<p>\s*(<a .*?>)?\s*(<img .*? \/?>)\s*(<\/a>)?\s*<\/p>/iU', '\1\2\3', $content);
 
 	return $content;
@@ -1156,9 +1156,9 @@ if ( ! function_exists( 'battleplan_setup' ) ) :
 		add_theme_support( 'title-tag' );
 		add_theme_support( 'post-thumbnails' );
 		register_nav_menus( array( 'top-menu' => esc_html__( 'Top Menu', 'battleplan' ), ) );
-		register_nav_menus( array( 'header-menu' => esc_html__( 'Header Menu', 'battleplan' ), ) );				
-		register_nav_menus( array( 'widget-menu' => esc_html__( 'Widget Menu', 'battleplan' ), ) );		
-		register_nav_menus( array( 'footer-menu' => esc_html__( 'Footer Menu', 'battleplan' ), ) );	
+		register_nav_menus( array( 'header-menu' => esc_html__( 'Header Menu', 'battleplan' ), ) );
+		register_nav_menus( array( 'widget-menu' => esc_html__( 'Widget Menu', 'battleplan' ), ) );
+		register_nav_menus( array( 'footer-menu' => esc_html__( 'Footer Menu', 'battleplan' ), ) );
 		register_nav_menus( array( 'manual-menu' => esc_html__( 'Manual Menu', 'battleplan' ), ) );
 		add_theme_support( 'html5', array( 'search-form', 'comment-form', 'comment-list', 'gallery', 'caption', 'style', 'script', ) );
 		add_theme_support( 'customize-selective-refresh-widgets' );
@@ -1182,16 +1182,16 @@ add_action( 'widgets_init', 'battleplan_widgets_init' );
 function battleplan_widgets_init() {
 	register_sidebar ( array ( 'name' => esc_html__( 'Sidebar', 'battleplan' ), 'id' => 'sidebar-1', 'description' => esc_html__( 'Add widgets here.', 'battleplan' ), 'before_widget' => '<div id="%1$s" class="widget %2$s">', 'after_widget' => '</div>', 'before_title' => '<h3 class="widget-title">', 'after_title' => '</h3>', ) );
 }
-  
+
 // Disable emojis
 add_action( 'init', 'battleplan_disable_emojis' );
 function battleplan_disable_emojis() {
 	remove_action( 'wp_head', 'print_emoji_detection_script', 7 );
 	remove_action( 'admin_print_scripts', 'print_emoji_detection_script' );
 	remove_action( 'wp_enqueue_scripts', 'print_emoji_styles' );
-	remove_action( 'admin_print_styles', 'print_emoji_styles' ); 
+	remove_action( 'admin_print_styles', 'print_emoji_styles' );
 	remove_filter( 'the_content_feed', 'wp_staticize_emoji' );
-	remove_filter( 'comment_text_rss', 'wp_staticize_emoji' ); 
+	remove_filter( 'comment_text_rss', 'wp_staticize_emoji' );
 	remove_filter( 'wp_mail', 'wp_staticize_emoji_for_email' );
 	add_filter( 'tiny_mce_plugins', 'battleplan_disable_emojis_tinymce' );
 	add_filter( 'wp_resource_hints', 'battleplan_disable_emojis_remove_dns_prefetch', 10, 2 );
@@ -1199,9 +1199,9 @@ function battleplan_disable_emojis() {
 
 function battleplan_disable_emojis_tinymce( $plugins ) {
 	if ( is_array( $plugins ) ) :
-		return array_diff( $plugins, array( 'wpemoji' ) ); 
+		return array_diff( $plugins, array( 'wpemoji' ) );
 	else:
-		return array(); 
+		return array();
 	endif;
 }
 
@@ -1238,29 +1238,29 @@ add_action('after_setup_theme', function() {
 add_action( 'wp_enqueue_scripts', 'battleplan_dequeue_unwanted_stuff', 9997 );
 function battleplan_dequeue_unwanted_stuff() {
 	wp_dequeue_style( 'parent-style' );  wp_deregister_style( 'parent-style' );
-	wp_dequeue_style( 'battleplan-style' );  wp_deregister_style( 'battleplan-style' );	
-	
+	wp_dequeue_style( 'battleplan-style' );  wp_deregister_style( 'battleplan-style' );
+
 	wp_dequeue_style( 'classic-theme-styles' );
 	wp_dequeue_style( 'wp-block-library' );  wp_deregister_style( 'wp-block-library' );
-	wp_dequeue_style( 'wp-block-library-theme' );  wp_deregister_style( 'wp-block-library-theme' );	
+	wp_dequeue_style( 'wp-block-library-theme' );  wp_deregister_style( 'wp-block-library-theme' );
 	wp_dequeue_style( 'select2' );  wp_deregister_style( 'select2' );
-	wp_dequeue_style( 'asp-default-style' ); wp_deregister_style( 'asp-default-style' );		
-	wp_dequeue_style( 'contact-form-7' ); wp_deregister_style( 'contact-form-7' );	
+	wp_dequeue_style( 'asp-default-style' ); wp_deregister_style( 'asp-default-style' );
+	wp_dequeue_style( 'contact-form-7' ); wp_deregister_style( 'contact-form-7' );
 	if ( is_plugin_active( 'animated-typing-effect/typingeffect.php' ) ) :
-		wp_dequeue_style( 'typed-cursor' ); 
+		wp_dequeue_style( 'typed-cursor' );
 		wp_deregister_style( 'typed-cursor' );
 	endif;
 
 // re-load in header
 	if ( is_plugin_active( 'stripe-payments/accept-stripe-payments.php' ) ) :
-		wp_dequeue_style( 'stripe-handler-ng-style' ); 
+		wp_dequeue_style( 'stripe-handler-ng-style' );
 		wp_deregister_style( 'stripe-handler-ng-style' );
 	endif;
 	if ( is_plugin_active( 'cue/cue.php' ) ) :
 		wp_dequeue_style( 'cue' );
 		wp_deregister_style( 'cue' );
 	endif;
-	
+
 // re-load in footer
 }
 
@@ -1268,51 +1268,51 @@ function battleplan_dequeue_unwanted_stuff() {
 add_action( 'wp_enqueue_scripts', 'battleplan_header_styles', 9998 );
 function battleplan_header_styles() {
 	$customer_info = customer_info();
-	
-	wp_enqueue_style( 'normalize-style', get_template_directory_uri()."/style-normalize.css", array(), _BP_VERSION );	
-	wp_enqueue_style( 'parent-style', get_template_directory_uri()."/style.css", array('normalize-style'), _BP_VERSION );
-	wp_enqueue_style( 'battleplan-style-grid', get_template_directory_uri()."/style-grid.css", array('parent-style'), _BP_VERSION );	
-	wp_enqueue_style( 'battleplan-style-navigation', get_template_directory_uri()."/style-navigation.css", array('battleplan-style-grid'), _BP_VERSION );
-	wp_enqueue_style( 'battleplan-testimonials', get_template_directory_uri()."/style-testimonials.css", array('parent-style'), _BP_VERSION ); 	
-	
-	if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 'true' )  wp_enqueue_style( 'battleplan-events', get_template_directory_uri()."/style-events.css", array('parent-style'), _BP_VERSION ); 	
-	
-	if ( get_option('timeline') && get_option('timeline')['install'] == 'true' )  wp_enqueue_style( 'battleplan-timeline', get_template_directory_uri()."/style-timeline.css", array('parent-style'), _BP_VERSION ); 
-	
-	//if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) wp_enqueue_style( 'battleplan-jobsite_geo', get_template_directory_uri()."/style-jobsite_geo.css", array('parent-style'), _BP_VERSION ); 	
 
-	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) wp_enqueue_style( 'battleplan-woocommerce', get_template_directory_uri()."/style-woocommerce.css", array('parent-style'), _BP_VERSION ); 
-	if ( is_plugin_active( 'stripe-payments/accept-stripe-payments.php' ) ) wp_enqueue_style( 'battleplan-stripe-payments', get_template_directory_uri()."/style-stripe-payments.css", array('parent-style'), _BP_VERSION );  
-	if ( is_plugin_active( 'cue/cue.php' ) ) wp_enqueue_style( 'battleplan-cue', get_template_directory_uri()."/style-cue.css", array('parent-style'), _BP_VERSION );  
-	
-	if ( $customer_info['site-type'] == 'profile' || $customer_info['site-type'] == 'profiles' ) wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array('parent-style'), _BP_VERSION );		
-	
-	$start = strtotime(date("Y").'-12-01'); 
-	$end = strtotime(date("Y").'-12-30');	
+	wp_enqueue_style( 'normalize-style', get_template_directory_uri()."/style-normalize.css", array(), _BP_VERSION );
+	wp_enqueue_style( 'parent-style', get_template_directory_uri()."/style.css", array('normalize-style'), _BP_VERSION );
+	wp_enqueue_style( 'battleplan-style-grid', get_template_directory_uri()."/style-grid.css", array('parent-style'), _BP_VERSION );
+	wp_enqueue_style( 'battleplan-style-navigation', get_template_directory_uri()."/style-navigation.css", array('battleplan-style-grid'), _BP_VERSION );
+	wp_enqueue_style( 'battleplan-testimonials', get_template_directory_uri()."/style-testimonials.css", array('parent-style'), _BP_VERSION );
+
+	if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 'true' )  wp_enqueue_style( 'battleplan-events', get_template_directory_uri()."/style-events.css", array('parent-style'), _BP_VERSION );
+
+	if ( get_option('timeline') && get_option('timeline')['install'] == 'true' )  wp_enqueue_style( 'battleplan-timeline', get_template_directory_uri()."/style-timeline.css", array('parent-style'), _BP_VERSION );
+
+	//if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) wp_enqueue_style( 'battleplan-jobsite_geo', get_template_directory_uri()."/style-jobsite_geo.css", array('parent-style'), _BP_VERSION );
+
+	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) wp_enqueue_style( 'battleplan-woocommerce', get_template_directory_uri()."/style-woocommerce.css", array('parent-style'), _BP_VERSION );
+	if ( is_plugin_active( 'stripe-payments/accept-stripe-payments.php' ) ) wp_enqueue_style( 'battleplan-stripe-payments', get_template_directory_uri()."/style-stripe-payments.css", array('parent-style'), _BP_VERSION );
+	if ( is_plugin_active( 'cue/cue.php' ) ) wp_enqueue_style( 'battleplan-cue', get_template_directory_uri()."/style-cue.css", array('parent-style'), _BP_VERSION );
+
+	if ( $customer_info['site-type'] == 'profile' || $customer_info['site-type'] == 'profiles' ) wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array('parent-style'), _BP_VERSION );
+
+	$start = strtotime(date("Y").'-12-01');
+	$end = strtotime(date("Y").'-12-30');
 	$cancel_holiday = isset( $customer_info['cancel-holiday'] ) ? $customer_info['cancel-holiday'] : "false";
-	
+
 	if ( $cancel_holiday == "false" && time() > $start && time() < $end ) :
 	 	wp_enqueue_style( 'battleplan-style-holiday', get_template_directory_uri()."/style-holiday.css", array('parent-style'), _BP_VERSION );
-		wp_enqueue_script( 'battleplan-holiday', get_template_directory_uri().'/js/script-holiday.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) ); 		
+		wp_enqueue_script( 'battleplan-holiday', get_template_directory_uri().'/js/script-holiday.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) );
 	endif;
-	
+
 	wp_enqueue_style( 'battleplan-style-forms', get_template_directory_uri()."/style-forms.css", array('battleplan-style-navigation'), _BP_VERSION );
-	//wp_enqueue_style( 'battleplan-style-posts', get_template_directory_uri()."/style-posts.css", array('battleplan-style-forms'), _BP_VERSION );	
+	//wp_enqueue_style( 'battleplan-style-posts', get_template_directory_uri()."/style-posts.css", array('battleplan-style-forms'), _BP_VERSION );
 	//if ( $customer_info['site-type'] == 'hvac' ) wp_enqueue_style( 'battleplan-style-products-hvac', get_template_directory_uri()."/style-products-hvac.css", array('battleplan-style-forms'), _BP_VERSION );
-		
-	wp_enqueue_style( 'battleplan-style', get_stylesheet_directory_uri()."/style-site.css", array('battleplan-style-forms'), _BP_VERSION );	
+
+	wp_enqueue_style( 'battleplan-style', get_stylesheet_directory_uri()."/style-site.css", array('battleplan-style-forms'), _BP_VERSION );
 }
 
 // Dequeue and deregister scripts that are not necessary or can be delayed to footer
 add_action('wp_enqueue_scripts', 'battleplan_dequeue_scripts', 9997);
 add_action('wp_print_footer_scripts', 'battleplan_dequeue_scripts', 9997);
 function battleplan_dequeue_scripts() {
-	wp_dequeue_script( 'select2'); wp_deregister_script('select2');	
+	wp_dequeue_script( 'select2'); wp_deregister_script('select2');
 	wp_dequeue_script( 'wphb-global' ); wp_deregister_script( 'wphb-global' );
 	wp_dequeue_script( 'wp-embed' ); wp_deregister_script( 'wp-embed' );
 	wp_dequeue_script( 'modernizr' ); wp_deregister_script( 'modernizr' );
 	wp_dequeue_script('customize-support');	wp_deregister_script('customize-support');
-	wp_dequeue_script('wp-polyfill'); wp_deregister_script('wp-polyfill'); 
+	wp_dequeue_script('wp-polyfill'); wp_deregister_script('wp-polyfill');
 	//wp_dequeue_script('wp-i18n');	wp_deregister_script('wp-i18n');
 
 	$GLOBALS['requires_jquery'] = [
@@ -1321,7 +1321,7 @@ function battleplan_dequeue_scripts() {
 		'cue/cue.php',
 		'animated-typing-effect/typingeffect.php',
 		'stripe-payments/accept-stripe-payments.php'
-	]; 
+	];
 
 	$active = false;
 	foreach ($GLOBALS['requires_jquery'] as $plugin) {
@@ -1337,45 +1337,45 @@ function battleplan_dequeue_scripts() {
 		wp_dequeue_script('jquery-migrate'); wp_deregister_script('jquery-migrate');
 		wp_dequeue_script('underscore'); wp_deregister_script('underscore');
 	endif;
-	
+
 // re-load in header
-	//wp_dequeue_script('contact-form-7-js'); wp_deregister_script('contact-form-7-js'); 
-	//wp_dequeue_script('swv-js'); wp_deregister_script('swv-js'); 
+	//wp_dequeue_script('contact-form-7-js'); wp_deregister_script('contact-form-7-js');
+	//wp_dequeue_script('swv-js'); wp_deregister_script('swv-js');
 }
 
 // Load scripts in header
 add_action( 'wp_enqueue_scripts', 'battleplan_enqueue_header_scripts', 1 );
 function battleplan_enqueue_header_scripts() {
-	wp_enqueue_script( 'battleplan-script-helpers', get_template_directory_uri().'/js/script-helpers.js', array(), _BP_VERSION, false );	
+	wp_enqueue_script( 'battleplan-script-helpers', get_template_directory_uri().'/js/script-helpers.js', array(), _BP_VERSION, false );
 	wp_enqueue_script( 'battleplan-script-essential', get_template_directory_uri().'/js/script-essential.js', array(), _BP_VERSION, false );
 };
 
 // Load scripts in footer
 add_action( 'wp_enqueue_scripts', 'battleplan_enqueue_footer_scripts', 9998 );
-function battleplan_enqueue_footer_scripts() {	
+function battleplan_enqueue_footer_scripts() {
 	$customer_info = customer_info();
-	
-	wp_enqueue_script( 'battleplan-script-pages', get_template_directory_uri().'/js/script-pages.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) );		
-	if ( !is_mobile() ) : 
-		wp_enqueue_script( 'battleplan-script-desktop', get_template_directory_uri().'/js/script-desktop.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) ); 
+
+	wp_enqueue_script( 'battleplan-script-pages', get_template_directory_uri().'/js/script-pages.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) );
+	if ( !is_mobile() ) :
+		wp_enqueue_script( 'battleplan-script-desktop', get_template_directory_uri().'/js/script-desktop.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) );
 
 		if ( isset($customer_info['scripts']) && is_array($customer_info['scripts']) && in_array('magic-menu', $customer_info['scripts']) ) :
 			wp_enqueue_script( 'battleplan-script-magic-menu', get_template_directory_uri().'/js/script-magic-menu.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) );
 		endif;
 	endif;
 
-	wp_enqueue_script( 'battleplan-script-tracking', get_template_directory_uri().'/js/script-tracking.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) ); 
-	
-	//wp_enqueue_script( 'battleplan-script-cloudflare', get_template_directory_uri().'/js/script-cloudflare.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) );	
+	wp_enqueue_script( 'battleplan-script-tracking', get_template_directory_uri().'/js/script-tracking.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) );
 
-	if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 'true' ) wp_enqueue_script( 'battleplan-script-events', get_template_directory_uri().'/js/script-events.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) );   
-	
-	//if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) wp_enqueue_script( 'battleplan-script-jobsite_geo', get_template_directory_uri().'/js/script-jobsite_geo.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) );   
-	
-	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) wp_enqueue_script( 'battleplan-script-woocommerce', get_template_directory_uri().'/js/script-woocommerce.js', array('jquery'), _BP_VERSION,  array( 'in_footer' => 'true' ) ); 
-	
+	//wp_enqueue_script( 'battleplan-script-cloudflare', get_template_directory_uri().'/js/script-cloudflare.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) );
+
+	if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 'true' ) wp_enqueue_script( 'battleplan-script-events', get_template_directory_uri().'/js/script-events.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) );
+
+	//if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) wp_enqueue_script( 'battleplan-script-jobsite_geo', get_template_directory_uri().'/js/script-jobsite_geo.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) );
+
+	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) wp_enqueue_script( 'battleplan-script-woocommerce', get_template_directory_uri().'/js/script-woocommerce.js', array('jquery'), _BP_VERSION,  array( 'in_footer' => 'true' ) );
+
 	if ( is_plugin_active( 'cue/cue.php' ) ) {
-		wp_enqueue_script( 'battleplan-script-cue', get_template_directory_uri().'/js/script-cue.js', array('jquery'), _BP_VERSION,  array( 'in_footer' => 'true' ) ); 
+		wp_enqueue_script( 'battleplan-script-cue', get_template_directory_uri().'/js/script-cue.js', array('jquery'), _BP_VERSION,  array( 'in_footer' => 'true' ) );
 		$types = ['cue-rewind', 'cue-forward', 'cue-play', 'cue-pause', 'cue-volume-off', 'cue-volume-on'];
         $map = [];
         foreach ($types as $t) {
@@ -1383,34 +1383,34 @@ function battleplan_enqueue_footer_scripts() {
         }
         wp_localize_script('battleplan-script-cue', 'IconMap', $map);
 	}
-	
-	if ( ($customer_info['site-type'] == 'profile' || (is_array($customer_info['site-type']) && in_array('profile', $customer_info['site-type']))) || ($customer_info['site-type'] == 'profiles' || (is_array($customer_info['site-type']) && in_array('profiles', $customer_info['site-type']))) ) wp_enqueue_script( 'battleplan-script-user-profiles', get_template_directory_uri().'/js/script-user-profiles.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) ); 
-	
+
+	if ( ($customer_info['site-type'] == 'profile' || (is_array($customer_info['site-type']) && in_array('profile', $customer_info['site-type']))) || ($customer_info['site-type'] == 'profiles' || (is_array($customer_info['site-type']) && in_array('profiles', $customer_info['site-type']))) ) wp_enqueue_script( 'battleplan-script-user-profiles', get_template_directory_uri().'/js/script-user-profiles.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) );
+
 	if ( is_admin() && _USER_LOGIN == "battleplanweb" ) {
-		wp_enqueue_style( 'battleplan-admin-css', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION );	
-		wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array('quicktags'), _BP_VERSION, false );	
+		wp_enqueue_style( 'battleplan-admin-css', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION );
+		wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array('quicktags'), _BP_VERSION, false );
 	};
-	 
+
 	wp_enqueue_script( 'battleplan-script-fire-off', get_template_directory_uri().'/js/script-fire-off.js', array(), _BP_VERSION,  array( 'in_footer' => 'true' ) );
-	 
-	if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) wp_enqueue_script( 'comment-reply' ); 
-	
+
+	if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) wp_enqueue_script( 'comment-reply' );
+
 	$saveDir = array( 'theme_dir_uri'=>get_stylesheet_directory_uri(), 'upload_dir_uri'=>wp_upload_dir()['baseurl'] );
-	//wp_localize_script( 'battleplan-script-essential', 'site_dir', $saveDir );	
-	wp_localize_script( 'battleplan-script-helpers', 'site_dir', $saveDir );	
-	wp_localize_script( 'battleplan-script-desktop', 'site_dir', $saveDir );	
-	
+	//wp_localize_script( 'battleplan-script-essential', 'site_dir', $saveDir );
+	wp_localize_script( 'battleplan-script-helpers', 'site_dir', $saveDir );
+	wp_localize_script( 'battleplan-script-desktop', 'site_dir', $saveDir );
+
 	$saveOptions = array ( 'lat' => $customer_info['lat'], 'long' => $customer_info['long'] );
     wp_localize_script('battleplan-script-tracking', 'site_options', $saveOptions);
-	
-	wp_enqueue_script( 'battleplan-script-site', get_stylesheet_directory_uri().'/script-site.js', array('battleplan-script-fire-off'), _BP_VERSION,  array( 'in_footer' => 'true' ) );	
+
+	wp_enqueue_script( 'battleplan-script-site', get_stylesheet_directory_uri().'/script-site.js', array('battleplan-script-fire-off'), _BP_VERSION,  array( 'in_footer' => 'true' ) );
 }
 
 // Block jquery, add nonce to inline scripts, and defer to footer when appropriate
 add_filter('script_loader_tag', 'battleplan_add_data_attribute', 10, 3);
 function battleplan_add_data_attribute($tag, $handle, $src) {
     if ( is_admin() || $GLOBALS['pagenow'] === 'wp-login.php' || strpos( $src, '.js' ) === FALSE ) return $tag;
-	
+
     $is_jquery_required = false;
     foreach ($GLOBALS['requires_jquery'] as $plugin) {
         if (is_plugin_active($plugin)) {
@@ -1419,30 +1419,30 @@ function battleplan_add_data_attribute($tag, $handle, $src) {
         }
     }
 
-    if (!$is_jquery_required && ($handle === 'jquery' || $handle === 'jquery-js')) return null; 
-	
+    if (!$is_jquery_required && ($handle === 'jquery' || $handle === 'jquery-js')) return null;
+
     if ( $handle === 'contact-form-7-js' || $handle === 'swv-js' ) :
 		$tag = str_replace('<script ', '<script nonce="' . _BP_NONCE . '" ', $tag);
         return $tag;
 	else:
 		$tag = str_replace('<script ', '<script nonce="' . _BP_NONCE . '" defer ', $tag);
 	    return $tag;
-	endif;	
+	endif;
 }
 
 // Load and enqueue admin styles & scripts
 if (is_admin()) { add_action( 'admin_enqueue_scripts', 'battleplan_admin_scripts' ); }
 function battleplan_admin_scripts() {
 	$customer_info = customer_info();
-	
-	wp_enqueue_style( 'battleplan-admin-css', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION ); 
-	wp_enqueue_script( 'battleplan-script-helpers', get_template_directory_uri().'/js/script-helpers.js', array(), _BP_VERSION, false );					
-	wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array(), _BP_VERSION, false );	
-	if ( $customer_info['site-type'] == 'profile' || $customer_info['site-type'] == 'profiles' ) : 
-		wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array(), _BP_VERSION ); 		
-		wp_enqueue_script( 'battleplan-script-user-profiles', get_template_directory_uri().'/js/script-user-profiles.js', array(), _BP_VERSION, false ); 
+
+	wp_enqueue_style( 'battleplan-admin-css', get_template_directory_uri().'/style-admin.css', array(), _BP_VERSION );
+	wp_enqueue_script( 'battleplan-script-helpers', get_template_directory_uri().'/js/script-helpers.js', array(), _BP_VERSION, false );
+	wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array(), _BP_VERSION, false );
+	if ( $customer_info['site-type'] == 'profile' || $customer_info['site-type'] == 'profiles' ) :
+		wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', array(), _BP_VERSION );
+		wp_enqueue_script( 'battleplan-script-user-profiles', get_template_directory_uri().'/js/script-user-profiles.js', array(), _BP_VERSION, false );
 	endif;
-	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' )  wp_enqueue_style( 'battleplan-admin-jobsite-geo-css', get_template_directory_uri()."/style-jobsite-geo-admin.css", array(), _BP_VERSION ); 		
+	if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' )  wp_enqueue_style( 'battleplan-admin-jobsite-geo-css', get_template_directory_uri()."/style-jobsite-geo-admin.css", array(), _BP_VERSION );
 
 }
 
@@ -1451,22 +1451,22 @@ add_action( 'login_enqueue_scripts', 'battleplan_login_enqueue' );
 function battleplan_login_enqueue() {
 	wp_dequeue_style( 'login' );  wp_deregister_style( 'login' );
 	wp_enqueue_style( 'parent-style', get_template_directory_uri()."/style.css", array(), _BP_VERSION );
-	//wp_enqueue_style( 'battleplan-style', get_stylesheet_directory_uri()."/style-site.css", array(), _BP_VERSION );	
+	//wp_enqueue_style( 'battleplan-style', get_stylesheet_directory_uri()."/style-site.css", array(), _BP_VERSION );
 	wp_enqueue_style( 'battleplan-login', get_template_directory_uri()."/style-login.css", array(), _BP_VERSION );
 }
 
 // Load various includes
-if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) require_once get_template_directory().'/includes/includes-woocommerce.php'; 
-if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 'true' ) require_once get_template_directory().'/includes/includes-events.php'; 
-if ( get_option('timeline') && get_option('timeline')['install'] == 'true' ) require_once get_template_directory().'/includes/includes-timeline.php'; 
-if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) require_once get_template_directory().'/includes/includes-jobsite-geo.php'; 
+if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) require_once get_template_directory().'/includes/includes-woocommerce.php';
+if ( get_option('event_calendar') && get_option('event_calendar')['install'] == 'true' ) require_once get_template_directory().'/includes/includes-events.php';
+if ( get_option('timeline') && get_option('timeline')['install'] == 'true' ) require_once get_template_directory().'/includes/includes-timeline.php';
+if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' ) require_once get_template_directory().'/includes/includes-jobsite-geo.php';
 
 $customer_info['site-type'] = $customer_info['site-type'] ?? '';
 
-if ( $customer_info['site-type'] === 'hvac' ) require_once get_template_directory().'/includes/includes-hvac.php'; 
-if ( $customer_info['site-type'] === 'pedigree' ) require_once get_template_directory().'/includes/includes-pedigree.php'; 
-if ( $customer_info['site-type'] === 'carte-du-jour' ) require_once get_template_directory().'/includes/includes-carte-du-jour.php'; 
-if ( $customer_info['site-type'] === 'profile' || $customer_info['site-type'] == 'profiles' ) require_once get_template_directory().'/includes/includes-user-profiles.php';  
+if ( $customer_info['site-type'] === 'hvac' ) require_once get_template_directory().'/includes/includes-hvac.php';
+if ( $customer_info['site-type'] === 'pedigree' ) require_once get_template_directory().'/includes/includes-pedigree.php';
+if ( $customer_info['site-type'] === 'carte-du-jour' ) require_once get_template_directory().'/includes/includes-carte-du-jour.php';
+if ( $customer_info['site-type'] === 'profile' || $customer_info['site-type'] == 'profiles' ) require_once get_template_directory().'/includes/includes-user-profiles.php';
 
 require_once get_template_directory().'/functions-shortcodes.php';
 require_once get_template_directory().'/functions-icons.php';
@@ -1477,21 +1477,21 @@ require_once get_template_directory().'/functions-grid.php';
 require_once get_template_directory().'/functions-public.php';
 if (file_exists(get_stylesheet_directory().'/functions-site.php')) require_once get_stylesheet_directory().'/functions-site.php';
 
-require_once get_template_directory().'/functions-chron-jobs.php';	
-if ( is_admin() || _USER_LOGIN == "battleplanweb" ) require_once get_template_directory().'/functions-admin.php';  
+require_once get_template_directory().'/functions-chron-jobs.php';
+if ( is_admin() || _USER_LOGIN == "battleplanweb" ) require_once get_template_directory().'/functions-admin.php';
 if (!empty( get_site_option('bp_rovin_secret'))) { require_once get_template_directory() . '/functions-rovin.php'; }
 
 // Add filter to search & replace final HTML output
-ob_start(); 
-add_action('shutdown', function() { 
-	$final = ''; 
+ob_start();
+add_action('shutdown', function() {
+	$final = '';
 	$levels = ob_get_level();
 	for ($i = 0; $i < $levels; $i++) $final .= ob_get_clean();
 	echo apply_filters('final_output', $final);
 }, 0);
 
 
-/* Removed 2/23/25 after this breaks Woocommerce again; the reward does not seem to outweigh the cost for this code 
+/* Removed 2/23/25 after this breaks Woocommerce again; the reward does not seem to outweigh the cost for this code
 /*
 if ( !in_array('slug-spotify', get_body_class(), true) ) : // keeps this from fucking up the Spotify Playlist Generator
 	// Delay execution of non-essential scripts  --- && $GLOBALS['pagenow'] !== 'index.php'  had to be removed for CHR Services? WTF3
@@ -1501,21 +1501,21 @@ if ( !in_array('slug-spotify', get_body_class(), true) ) : // keeps this from fu
 				$dom = new DOMDocument();
 				libxml_use_internal_errors(true);
 				$dom->loadHTML($html);
-				$scripts = $dom->getElementsByTagName('script'); 
+				$scripts = $dom->getElementsByTagName('script');
 
 				$targets = array('podium', 'xapp', 'chiirp', 'beacon', 'scheduleengine', 'leadconnectorhq', 'voip', 'clickcease', 'paypal', 'embed-player', 'huzzaz', 'fbcdn', 'facebook', 'klaviyo'); //, 'google'
 				$exclusions = array('recaptcha');
 
-				foreach ($scripts as $script) :		   
+				foreach ($scripts as $script) :
 					foreach ($targets as $target) :
-						if (strpos($script->getAttribute("src"), $target) !== FALSE) : 
+						if (strpos($script->getAttribute("src"), $target) !== FALSE) :
 							foreach ($exclusions as $exclusion) :
-								if (strpos($script->getAttribute("src"), $exclusion) === FALSE) :						
+								if (strpos($script->getAttribute("src"), $exclusion) === FALSE) :
 									$script->setAttribute("data-loading", "delay");
-									if ($script->getAttribute("src")) : 
+									if ($script->getAttribute("src")) :
 										$script->setAttribute("data-src", $script->getAttribute("src")); $script->removeAttribute("src");
-									else: 
-										$script->setAttribute("data-src", "data:text/javascript;base64,".base64_encode($script->innertext)); $script->innertext=""; 
+									else:
+										$script->setAttribute("data-src", "data:text/javascript;base64,".base64_encode($script->innertext)); $script->innertext="";
 									endif;
 								endif;
 							endforeach;
@@ -1529,15 +1529,15 @@ if ( !in_array('slug-spotify', get_body_class(), true) ) : // keeps this from fu
 				libxml_clear_errors();
 				return $html;
 			endif;
-		}); 
+		});
 
 		add_action( 'wp_print_footer_scripts', 'battleplan_delay_nonessential_scripts');
-		function battleplan_delay_nonessential_scripts() { 
+		function battleplan_delay_nonessential_scripts() {
 			if ( _IS_BOT !== true ) : ?>
 				<script nonce="<?php echo _BP_NONCE !== null ? _BP_NONCE : null; ?>" id="delay-scripts">
 					const loadScriptsTimer=setTimeout(loadScripts,1500);
 					const userInteractionEvents=["mouseover","keydown","touchstart","touchmove","wheel"];
-					userInteractionEvents.forEach(function(event) {	
+					userInteractionEvents.forEach(function(event) {
 						window.addEventListener(event, triggerScriptLoader, {passive:!0})});
 						function triggerScriptLoader() {
 							loadScripts();
@@ -1547,10 +1547,10 @@ if ( !in_array('slug-spotify', get_body_class(), true) ) : // keeps this from fu
 							})
 						}
 					function loadScripts() {
-						setTimeout(function() { 
-							document.querySelectorAll("[data-loading='delay']").forEach(function(elem) {  
+						setTimeout(function() {
+							document.querySelectorAll("[data-loading='delay']").forEach(function(elem) {
 								elem.setAttribute("src", elem.getAttribute("data-src"));
-								elem.removeAttribute("data-src"); 
+								elem.removeAttribute("data-src");
 							})
 						}, 1500);
 					}
@@ -1563,7 +1563,7 @@ endif;
 
 // Add nonce to trusted scripts
 add_filter('final_output', function($content) {
-	if ( !is_admin() ) : 
+	if ( !is_admin() ) :
 		// customize support code by WP
 		$pattern = "/<script>\s*\(\s*function\(\)\s*\{\s*var\s+request,\s+b\s*=\s*document\.body,\s+c\s*=\s*'className',\s+cs\s*=\s*'customize-support',\s+rcs\s*=\s*new\s+RegExp/";
 		$replace = '<script nonce="'._BP_NONCE.'">(function() {var request, b = document.body, c = "className", cs = "customize-support", rcs = new RegExp';
@@ -1574,7 +1574,7 @@ add_filter('final_output', function($content) {
 		$pattern = '/<script>document\.getElementById\(\s*"ak_js_1"\s*\)\.setAttribute\(\s*"value",\s*\(\s*new\s+Date\(\s*\)\s*\)\.getTime\(\s*\)\s*\);\s*<\/script>/';
 		$replace = '<script nonce="'._BP_NONCE.'">document.getElementById( "ak_js_1" ).setAttribute( "value", ( new Date() ).getTime() );</script>';
 		$updatedContent = preg_replace($pattern, $replace, $content);
-		if ($updatedContent !== null) $content = $updatedContent;	
+		if ($updatedContent !== null) $content = $updatedContent;
 
 		// Contact Form 7
 		$pattern = '/<script>document\.getElementById\(\s*"ak_js_2"\s*\)\.setAttribute\(\s*"value",\s*\(\s*new\s+Date\(\s*\)\s*\)\.getTime\(\s*\)\s*\);\s*<\/script>/';
@@ -1583,7 +1583,7 @@ add_filter('final_output', function($content) {
 		if ($updatedContent !== null) $content = $updatedContent;
 	endif;
 	return $content;
-}); 
+});
 
 // Hide the Wordpress admin bar
 //show_admin_bar( false );
@@ -1591,14 +1591,14 @@ add_filter('final_output', function($content) {
 // Set up Main Menu
 class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 	public function start_el( &$output, $item, $depth = 0, $args = array(), $id = 0 ) {
-	
+
 		$classes = empty( $item->classes ) ? array() : (array) $item->classes;
 		$mobile = in_array('mobile-only', $classes) ? ' mobile-only' : '';
 		$customer_info = customer_info();
-	
-		if ( $item->attr_title === "Search Form" ) : 
-			$buildOutput = bp_display_menu_search($item->title, $mobile); 
-		else:	
+
+		if ( $item->attr_title === "Search Form" ) :
+			$buildOutput = bp_display_menu_search($item->title, $mobile);
+		else:
 			$indent = ( $depth ) ? str_repeat( "\t", $depth ) : '';
 			$classes[] = 'menu-item-'.$item->ID.' menu-item-'.strtolower(str_replace(" ", "-", $item->title));
 			$args = apply_filters( 'nav_menu_item_args', $args, $item, $depth );
@@ -1608,7 +1608,7 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 
 			$id = apply_filters( 'nav_menu_item_id', 'menu-item-'. $item->ID, $item, $args, $depth );
 			$id = $id ? ' id="'.esc_attr( $id ).'"' : '';
-		
+
 		    if (preg_match('/\[get-biz info=["\']([^"\']+)["\']\]/', $item->attr_title, $matches)) {
 				$info_key = $matches[1];
 				if (isset($customer_info[$info_key])) {
@@ -1616,9 +1616,9 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 				}
 			}
 
-			$buildOutput = "";		
+			$buildOutput = "";
 			$restrictMax = readMeta( $item->ID, 'bp_menu_restrict_max', true );
-			$restrictMin = readMeta( $item->ID, 'bp_menu_restrict_min', true );		
+			$restrictMin = readMeta( $item->ID, 'bp_menu_restrict_min', true );
 			if ( $restrictMax || $restrictMin ) $buildOutput .= '[restrict max="'.$restrictMax.'" min="'.$restrictMin.'"]';
 
 			$has_children = is_array($item->classes) && in_array('menu-item-has-children', $item->classes);
@@ -1630,7 +1630,7 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 				$class_names,
 				$has_children ? ' aria-haspopup="true" aria-expanded="false" tabindex="0"' : ''
 			);
-		
+
 			$atts = array();
 			$atts['title'] = !empty( $item->attr_title ) ? $item->attr_title : '';
 			$atts['target'] = !empty( $item->target ) ? $item->target : '';
@@ -1657,22 +1657,22 @@ class Aria_Walker_Nav_Menu extends Walker_Nav_Menu {
 			$item_output .= $args->after;
 
 			$buildOutput .= apply_filters( 'walker_nav_menu_start_el', $item_output, $item, $depth, $args );
-			if ( $restrictMax || $restrictMin ) $buildOutput .= '[/restrict]';	
+			if ( $restrictMax || $restrictMin ) $buildOutput .= '[/restrict]';
 		endif;
-		
+
 		$output .= do_shortcode($buildOutput);
 	}
 }
 
-function bp_display_menu_search( $searchText, $mobile='', $reveal='click' ) { 
-	wp_enqueue_style( 'battleplan-search', get_template_directory_uri()."/style-search.css", array('parent-style'), _BP_VERSION ); 
+function bp_display_menu_search( $searchText, $mobile='', $reveal='click' ) {
+	wp_enqueue_style( 'battleplan-search', get_template_directory_uri()."/style-search.css", array('parent-style'), _BP_VERSION );
 
 	$searchForm = '<form role="search" method="get" class="menu-search-form" action="'.home_url( '/' ).'">';
 	$searchForm .= '<label><span class="screen-reader-text">'._x( 'Search for:', 'label' ).'</span></label>';
 	$searchForm .= '<input type="hidden" value="1" name="sentence" />';
 	$searchForm .= '<a class="menu-search-bar reveal-'.$reveal.'"><span class="icon search" aria-hidden="true"></span><input type="search" class="search-field" placeholder="'.esc_attr_x( $searchText, 'placeholder' ).'" value="'.get_search_query().'" name="s" title="'.esc_attr_x( 'Search for:', 'label' ).'" /></a>';
 	$searchForm .= '</form>';
-		  
+
 	return '<div class="menu-search-box'.$mobile.'" role="none">'.$searchForm.'</div>';
 }
 
@@ -1681,36 +1681,36 @@ function bp_display_menu_search( $searchText, $mobile='', $reveal='click' ) {
 add_filter('the_content', 'battleplan_remove_ptags_on_images', 9999);
 function battleplan_remove_ptags_on_images($content){
    $content = preg_replace('/<p>\s*(<a .*>)?\s*(<img .* \/>)\s*(<\/a>)?\s*<\/p>/iU', '\1\2\3', $content);
-   $content = preg_replace('/<p>\s*(<svg .*>)?\s*(<\/svg>)?\s*<\/p>/iU', '\1\2\3', $content);   
+   $content = preg_replace('/<p>\s*(<svg .*>)?\s*(<\/svg>)?\s*<\/p>/iU', '\1\2\3', $content);
    $content = preg_replace('/<p>\s*(<label .*>)?\s*(<\/span>)?\s*<\/p>/iU', '\1\2\3', $content);
-   return $content;   
+   return $content;
 }
 
-// Remove auto <p> from inside widgets 
-remove_filter('widget_text_content', 'wpautop'); 
+// Remove auto <p> from inside widgets
+remove_filter('widget_text_content', 'wpautop');
 
 // Set up sizes for srcset
-function get_srcset( $size ) {	
-	$ratio1280 = ($size / 1280) * 100; 
+function get_srcset( $size ) {
+	$ratio1280 = ($size / 1280) * 100;
 	if ( $ratio1280 <= 40 ) : $ratio1280 = 40;
 	elseif ( $ratio1280 <= 75 ) : $ratio1280 = 60;
-	else: $ratio1280 = 100; 
+	else: $ratio1280 = 100;
 	endif;
-	
-	$ratio1024 = ($size / 1024) * 100; 
+
+	$ratio1024 = ($size / 1024) * 100;
 	if ( $ratio1024 <= 40 ) : $ratio1024 = 33;
 	elseif ( $ratio1024 <= 75 ) : $ratio1024 = 50;
-	else: $ratio1024 = 100; 
+	else: $ratio1024 = 100;
 	endif;
-	
-	$ratio860 = ($size / 860) * 100; 
+
+	$ratio860 = ($size / 860) * 100;
 	if ( $ratio860 <= 33 ) : $ratio860 = 50;
 	else: $ratio860 = 100;
 	endif;
-	
-	$ratio575 = ($size / 575) * 100; 
+
+	$ratio575 = ($size / 575) * 100;
 	if ( $ratio575 <= 25 ) : $ratio575 = 50;
-	else: $ratio575 = 100; 
+	else: $ratio575 = 100;
 	endif;
 
 	return '(max-width: 575px) '.$ratio575.'vw, (max-width: 860px) '.$ratio860.'vw, (max-width: 1024px) '.$ratio1024.'vw, (max-width: 1280px) '.$ratio1280.'vw, '.$size.'px';
@@ -1723,35 +1723,35 @@ update_option( 'thumbnail_crop', 1 );
 
 // Establish default image sizes
 if ( function_exists( 'add_image_size' ) ) {
-	add_image_size( 'thumbnail-small', 80, 80, true ); 
-	add_image_size( 'icon', 80, 80, false ); 
-	add_image_size( 'icon-2x', 160, 160, false ); 
-	add_image_size( 'quarter-s', 240, 99999, false ); 
-	add_image_size( 'third-s', 320, 99999, false ); 	
-	add_image_size( 'half-s', 480, 99999, false ); 
-	add_image_size( 'full-s', 960, 99999, false ); 
-	add_image_size( 'quarter-f', 320, 99999, false ); 
-	add_image_size( 'third-f', 430, 99999, false ); 
-	add_image_size( 'half-f', 640, 99999, false ); 
-	add_image_size( 'full-f', 1280, 99999, false ); 
-	add_image_size( 'max', 1920, 99999, false ); 
-	add_image_size( 'third-f-2x', 800, 99999, false ); 
+	add_image_size( 'thumbnail-small', 80, 80, true );
+	add_image_size( 'icon', 80, 80, false );
+	add_image_size( 'icon-2x', 160, 160, false );
+	add_image_size( 'quarter-s', 240, 99999, false );
+	add_image_size( 'third-s', 320, 99999, false );
+	add_image_size( 'half-s', 480, 99999, false );
+	add_image_size( 'full-s', 960, 99999, false );
+	add_image_size( 'quarter-f', 320, 99999, false );
+	add_image_size( 'third-f', 430, 99999, false );
+	add_image_size( 'half-f', 640, 99999, false );
+	add_image_size( 'full-f', 1280, 99999, false );
+	add_image_size( 'max', 1920, 99999, false );
+	add_image_size( 'third-f-2x', 800, 99999, false );
 }
 
 add_filter('image_size_names_choose', 'battleplan_image_sizes');
 function battleplan_image_sizes($sizes) {
 	$new_sizes = array(
-		"quarter-s"=>__( "Sidebar 25%"), 
-		"third-s"=>__( "Sidebar 33%"),		
-		"half-s"=>__( "Sidebar 50%"), 				
-		"full-s"=>__( "Sidebar 100%"), 				
-		"quarter-f"=>__( "Full 25%"), 		
-		"third-f"=>__( "Full 33%"), 		
-		"half-f"=>__( "Full 50%"), 		
-		"full-f"=>__( "Full 100%"), 		
-		"third-f-2x"=>__( "Extra"), 		
-		"max"=>__( "Max"), 				
-		"full"=>__( "Original"), 		
+		"quarter-s"=>__( "Sidebar 25%"),
+		"third-s"=>__( "Sidebar 33%"),
+		"half-s"=>__( "Sidebar 50%"),
+		"full-s"=>__( "Sidebar 100%"),
+		"quarter-f"=>__( "Full 25%"),
+		"third-f"=>__( "Full 33%"),
+		"half-f"=>__( "Full 50%"),
+		"full-f"=>__( "Full 100%"),
+		"third-f-2x"=>__( "Extra"),
+		"max"=>__( "Max"),
+		"full"=>__( "Original"),
 	);
 	return $new_sizes;
 }
@@ -1772,7 +1772,7 @@ function battleplan_set_max_width_for_img() {
 	$GLOBALS['content_width'] = 1920;
 }
 
-// Set new max srcset image 
+// Set new max srcset image
 add_filter( 'max_srcset_image_width', 'battleplan_remove_max_srcset_image_width' );
 function battleplan_remove_max_srcset_image_width( $max_width ) {
 	return 1920;
@@ -1798,19 +1798,19 @@ function battleplan_attachment_id_on_images( $attr, $attachment ) {
 	return $attr;
 }
 
-add_filter('intermediate_image_sizes_advanced', 'battleplan_disable_upload_sizes', 10, 2); 
+add_filter('intermediate_image_sizes_advanced', 'battleplan_disable_upload_sizes', 10, 2);
 function battleplan_disable_upload_sizes( $sizes, $metadata ) {
     $filetype = wp_check_filetype($metadata['file']);
     if ( $filetype['type'] == 'image/gif' ) $sizes = array();
     return $sizes;
-}   
+}
 
 add_filter('big_image_size_threshold', 'battleplan_limit_non_admin_uploads', 999, 1);
 function battleplan_limit_non_admin_uploads( $threshold ) {
     if ( !current_user_can( 'manage_options' ) ) return 1000;
 }
 
-// Strip EXIF data from images upon upload	
+// Strip EXIF data from images upon upload
 add_action('wp_handle_upload', 'battleplan_strip_EXIF_data' );
 function battleplan_strip_EXIF_data($upload) {
     if ($upload['type'] == 'image/jpeg' || $upload['type'] == 'image/jpg') {
@@ -1853,12 +1853,12 @@ function battleplan_current_type_nav_class($classes, $item) {
 		$classes = str_replace( 'current_page_parent', '', $classes );
 		if ( $item->url == '/'.$post_type ) $classes = str_replace( 'menu-item', 'menu-item current_page_parent', $classes );
 	endif;
-	
+
 	if ($item->attr_title != '' && $item->attr_title == $post_type) array_push($classes, 'current-menu-item');
-	
+
 	// Highlight HOME button if any of the Landing pages are viewed
-	if ( $post_type == 'landing' && preg_match ('/, [A-Z]{2}$/', get_the_title() ) === 1 && ( $item->url == get_home_url() || $item->url == get_home_url().'/' )) array_push($classes, 'current-menu-item');	
-	
+	if ( $post_type == 'landing' && preg_match ('/, [A-Z]{2}$/', get_the_title() ) === 1 && ( $item->url == get_home_url() || $item->url == get_home_url().'/' )) array_push($classes, 'current-menu-item');
+
 	return $classes;
 }
 
@@ -1867,19 +1867,19 @@ wp_update_term(1, 'category', array( 'name'=>'Blog', 'slug'=>'blog' ));
 
 // Cap auto generated excerpts at 1 or 2 sentences, based on length
 add_filter( 'excerpt_length', 'battleplan_excerpt_length', 999 );
-function battleplan_excerpt_length( $length ) { 
-	return 300; 
-} 
+function battleplan_excerpt_length( $length ) {
+	return 300;
+}
 
 add_filter('get_the_excerpt', 'end_with_sentence');
-function end_with_sentence( $excerpt ) {	
-	if ( !has_excerpt() ) :		
+function end_with_sentence( $excerpt ) {
+	if ( !has_excerpt() ) :
 		$sentences = preg_split( "/(\.|\!|\?)/", $excerpt, -1, PREG_SPLIT_DELIM_CAPTURE);
-		$newExcerpt = implode('', array_slice($sentences, 0, 4));	
+		$newExcerpt = implode('', array_slice($sentences, 0, 4));
 		if ( strlen($newExcerpt) > 200 ) $newExcerpt = implode('', array_slice($sentences, 0, 2));
 
 		return $newExcerpt;
-	else: 
+	else:
 		return $excerpt;
 	endif;
 }
@@ -1917,24 +1917,24 @@ foreach ($add_top_bottom as $type) {
 add_action('wp_footer', 'battleplan_getGoogleRating');
 function battleplan_getGoogleRating() {
 	$customer_info = customer_info();
-	
+
 	if ( $customer_info['pid'] ) :
 		$placeIDs = $customer_info['pid'];
 		if ( isset($placeIDs) ) :
 			$googleInfo = get_option('bp_gbp_update') ? get_option('bp_gbp_update') : array();
-	
+
 			wp_enqueue_style( 'battleplan-google-reviews', get_template_directory_uri()."/style-google-reviews.css", array('parent-style'), _BP_VERSION );
 
 			$singleLoc = !is_array($placeIDs) ? true : false;
-			if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs); 
+			if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
 
 			$buildPanel = '<div class="wp-gr wp-google-badge">';
 
-			foreach ( $placeIDs as $placeID ) : 
+			foreach ( $placeIDs as $placeID ) :
 				if (isset($googleInfo[$placeID]) && is_array($googleInfo[$placeID]) && array_key_exists('google-rating', $googleInfo[$placeID]) && $googleInfo[$placeID]['google-rating'] > 3.99) :
 
 					$buildPanel .= '<a class="wp-google-badge-btn" href="https://search.google.com/local/reviews?placeid='.$placeID.'&hl=en&gl=US" target="_blank">';
-						
+
 					$buildPanel .= '<div class="wp-google-badge-score wp-google-rating">';
 					$buildPanel .= '<div class="wp-google-review"><svg role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" height="25" width="25"><title>Google Logo</title><g fill="none" fill-rule="evenodd">';
 					$buildPanel .= '<path d="M482.56 261.36c0-16.73-1.5-32.83-4.29-48.27H256v91.29h127.01c-5.47 29.5-22.1 54.49-47.09 71.23v59.21h76.27c44.63-41.09 70.37-101.59 70.37-173.46z" fill="#4285f4"></path>';
@@ -1948,18 +1948,18 @@ function battleplan_getGoogleRating() {
 
 					if ( $googleInfo[$placeID]['google-rating'] >= 4.7) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo[$placeID]['google-rating'], 1, '.', ',').' Stars</span>[get-icon type="star"][get-icon type="star"][get-icon type="star"][get-icon type="star"][get-icon type="star"]</span>';
 					if ( $googleInfo[$placeID]['google-rating'] >= 4.2 && $googleInfo[$placeID]['google-rating'] <= 4.6 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo[$placeID]['google-rating'], 1, '.', ',').' Stars</span>[get-icon type="star"][get-icon type="star"][get-icon type="star"][get-icon type="star"][get-icon type="star-half"]</span>';
-					if ( $googleInfo[$placeID]['google-rating'] >= 3.7 && $googleInfo[$placeID]['google-rating'] <= 4.1 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo[$placeID]['google-rating'], 1, '.', ',').' Stars</span>[get-icon type="star"][get-icon type="star"][get-icon type="star"][get-icon type="star"][get-icon type="star-o"]</i></span>';		
+					if ( $googleInfo[$placeID]['google-rating'] >= 3.7 && $googleInfo[$placeID]['google-rating'] <= 4.1 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo[$placeID]['google-rating'], 1, '.', ',').' Stars</span>[get-icon type="star"][get-icon type="star"][get-icon type="star"][get-icon type="star"][get-icon type="star-o"]</i></span>';
 					if ( $googleInfo[$placeID]['google-rating'] >= 3.2 && $googleInfo[$placeID]['google-rating'] <= 3.6 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo[$placeID]['google-rating'], 1, '.', ',').' Stars</span>[get-icon type="star"][get-icon type="star"][get-icon type="star"][get-icon type="star-half"][get-icon type="star-o"]</span>';
 
-					$buildPanel .= '</div>';	
-					$buildPanel .= '<div class="wp-google-total">Click to view our ';			
+					$buildPanel .= '</div>';
+					$buildPanel .= '<div class="wp-google-total">Click to view our ';
 					if ( $googleInfo[$placeID]['google-reviews'] > 4 ) :
-						$buildPanel .= '<span>'.number_format($googleInfo[$placeID]['google-reviews']).'</span> ';	
+						$buildPanel .= '<span>'.number_format($googleInfo[$placeID]['google-reviews']).'</span> ';
 					endif;
 					if ( $singleLoc == true ) :
-						$buildPanel .= 'Google reviews</div>';	
-					else:				
-						$buildPanel .= 'reviews in '.$googleInfo[$placeID]['city'].'</div>';	
+						$buildPanel .= 'Google reviews</div>';
+					else:
+						$buildPanel .= 'reviews in '.$googleInfo[$placeID]['city'].'</div>';
 					endif;
 					$buildPanel .= '</div></div></a>';
 				endif;
@@ -1974,36 +1974,36 @@ function battleplan_getGoogleRating() {
 $pid = is_array($customer_info['pid']) ? $customer_info['pid'][0] : $customer_info['pid'];
 $goog_rev = $customer_info['google-review'] ?? '';
 
-if ( _PAGE_SLUG == "google" && strlen( $pid ) > 10 ) : 
+if ( _PAGE_SLUG == "google" && strlen( $pid ) > 10 ) :
 	$pid = is_array($customer_info['pid']) ? $customer_info['pid'][0] : $customer_info['pid'];
 	if ( $pid != '' ) {
-		wp_redirect( "https://search.google.com/local/reviews?placeid=".$pid."&hl=en&gl=US", 301 ); 
+		wp_redirect( "https://search.google.com/local/reviews?placeid=".$pid."&hl=en&gl=US", 301 );
 	} elseif ( $goog_rev != '' ) {
-		wp_redirect( $goog_rev, 301 ); 
+		wp_redirect( $goog_rev, 301 );
 	}
-	exit; 
+	exit;
 endif;
-if ( _PAGE_SLUG == "facebook" && strlen( $customer_info['facebook'] ) > 10 ) : 
+if ( _PAGE_SLUG == "facebook" && strlen( $customer_info['facebook'] ) > 10 ) :
 	$facebook = do_shortcode('[get-biz info="facebook"]');
 	if ( substr($facebook, -1) != '/') $facebook .= "/";
-	//wp_redirect( $facebook."reviews/", 301 ); 
-	wp_redirect( $facebook, 301 ); 
-	exit; 
+	//wp_redirect( $facebook."reviews/", 301 );
+	wp_redirect( $facebook, 301 );
+	exit;
 endif;
-if ( _PAGE_SLUG == "yelp" && strlen( $customer_info['yelp'] ) > 10 ) : 
+if ( _PAGE_SLUG == "yelp" && strlen( $customer_info['yelp'] ) > 10 ) :
 	$yelp = str_replace('https://www.yelp.com/biz/', '', do_shortcode('[get-biz info="yelp"]'));
-	wp_redirect( "https://www.yelp.com/writeareview/biz/".$yelp, 301 ); 
-	exit; 
+	wp_redirect( "https://www.yelp.com/writeareview/biz/".$yelp, 301 );
+	exit;
 endif;
-if ( _PAGE_SLUG == "reviews" ) : 
-	wp_redirect( "/review/", 301 ); 
-	exit; 
+if ( _PAGE_SLUG == "reviews" ) :
+	wp_redirect( "/review/", 301 );
+	exit;
 endif;
 
 function battleplan_redirect_to_url($url, $redirect) {
 	$currPage = str_replace('/', '', $_SERVER['REQUEST_URI']);
 	if ( $currPage == $url ) :
-		wp_redirect( $redirect, 301 ); 
+		wp_redirect( $redirect, 301 );
 		exit;
 	endif;
 }
@@ -2031,7 +2031,7 @@ function update_customer_info(array $ci_new): bool {
     }
 
     $ok = update_option('customer_info', $ci_new);
-	
+
     if ($ok) {
         $customer_info = $ci_new; // legacy compat (remove once unused)
         customer_info(true);                 // refresh static cache for this request
@@ -2052,7 +2052,46 @@ add_filter('wpseo_schema_organization', function ($data) {
 
     $ci = customer_info();
     $s  = $ci['schema'] ?? [];
-    if (!$s) return $data;
+	if (!$s) return $data;
+
+	// Restrict areaServed on service pages: /service/{service}-{city}-{state}/ 
+	$uri = $_SERVER['REQUEST_URI'] ?? '';
+	if (strpos($uri, '/service/') === 0 && !empty($s['areaServed'])) {
+		$slug = trim(str_replace('/service/', '', $uri), '/');           // e.g. air-conditioner-installation-brashear-tx
+		$parts = explode('-', strtolower($slug));
+		$cnt   = count($parts);
+
+		if ($cnt >= 2) {
+			// Drop the last token (state) and work with the rest
+			$stateSlug   = array_pop($parts);                             // tx
+			$noStateSlug = implode('-', $parts);                          // air-conditioner-installation-brashear
+
+			$filtered = array_values(array_filter(
+				(array)$s['areaServed'],
+				fn($a) => isset($a['name'])
+					? (function($name, $noStateSlug) {
+							// name like "Brashear, Texas" -> city slug "brashear"
+							$city = trim(explode(',', strtolower($name), 2)[0] ?? '');
+							if ($city === '') return false;
+							$citySlug = str_replace(' ', '-', $city);      // brashear, lone oak -> lone-oak
+
+							$lenCity = strlen($citySlug);
+							$lenSlug = strlen($noStateSlug);
+							if ($lenCity === 0 || $lenSlug < $lenCity) return false;
+
+							// does noStateSlug end with citySlug?
+							return substr($noStateSlug, $lenSlug - $lenCity) === $citySlug;
+					   })(
+						strtolower($a['name']),
+						$noStateSlug
+					)
+					: false
+			));
+
+			// Only replace if we actually found a match; otherwise leave original list alone
+			if (!empty($filtered)) $s['areaServed'] = $filtered;
+		}
+	}
 
     // Overlay simple props (hours handled below)
     foreach ([
@@ -2144,7 +2183,7 @@ function battleplan_redirect_testimonials() {
 // Check & store site background image
 function battleplan_fetch_background_image($clear=false) {
 	$imgData = get_option('bp_site_bg_img');
-	
+
 	if ( $imgData === false || $imgData === null || $clear ) {
 		$imgData = null;
 
@@ -2154,7 +2193,7 @@ function battleplan_fetch_background_image($clear=false) {
 			$imgData = 'png';
 		} elseif (is_file($_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-background.jpg')) {
 			$imgData = 'jpg';
-		} 
+		}
 
 		update_option('bp_site_bg_img', $imgData);
 	}
@@ -2166,12 +2205,12 @@ function battleplan_fetch_background_image($clear=false) {
 // Check & store correct site-icon image
 function battleplan_fetch_site_icon($clear=false) {
 	$iconData = get_option('bp_site_icon');
-	
+
 	if ( $iconData === false || !isset($iconData['name']) || $clear ) {
 		$iconData = [
 			'name' => null,
 			'wh' => '',
-		];		
+		];
 
 		if (is_file($_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-icon-80x80.webp')) {
 			$iconData['name'] = 'site-icon-80x80.webp';
@@ -2198,7 +2237,7 @@ function battleplan_fetch_site_icon($clear=false) {
 
 // Search & Replace for various html fixes
 add_filter('final_output', function($content) {
-	if ( !is_admin() ) : 
+	if ( !is_admin() ) :
 		// Add 'name="description"' to the <meta property="og:description"> tag
 		if (strpos($content, 'name="description"') === false) {
 			$content = str_replace('property="og:description"', 'name="description" property="og:description"', $content);
@@ -2209,8 +2248,8 @@ add_filter('final_output', function($content) {
     		['align-left', 'align-right', 'align-center', 'strip-elem top-strip', 'strip-elem divider-strip', 'strip-elem logo-strip', 'strip-elem site-info', ' secondary-box sidebar-box', 'secondary-box widget-box'],
     		$content);
 	endif;
-	return $content; 
-});  
+	return $content;
+});
 
 
 /*--------------------------------------------------------------
@@ -2222,17 +2261,17 @@ function battleplan_remove_user_roles() {
 	if ( wp_roles()->is_role( 'author' ) ) remove_role( 'author' );
 	if ( wp_roles()->is_role( 'subscriber' ) ) remove_role( 'subscriber' );
 	if ( wp_roles()->is_role( 'wpseo_manager' ) ) remove_role( 'wpseo_manager' );
-	if ( wp_roles()->is_role( 'wpseo_editor' ) ) remove_role( 'wpseo_editor' );	
-	if ( wp_roles()->is_role( 'bp_moderator' ) ) remove_role( 'bp_moderator' );	
-	if ( wp_roles()->is_role( 'bp_contributor' ) ) remove_role( 'bp_moderator' );	
-	if ( wp_roles()->is_role( 'bp_author' ) ) remove_role( 'bp_author' );	
-	if ( wp_roles()->is_role( 'bp_super_author' ) ) remove_role( 'bp_super_author' );	
-	if ( wp_roles()->is_role( 'bp_manager' ) ) remove_role( 'bp_manager' );	
-	if ( wp_roles()->is_role( 'bp_super_manager' ) ) remove_role( 'bp_super_manager' );	
+	if ( wp_roles()->is_role( 'wpseo_editor' ) ) remove_role( 'wpseo_editor' );
+	if ( wp_roles()->is_role( 'bp_moderator' ) ) remove_role( 'bp_moderator' );
+	if ( wp_roles()->is_role( 'bp_contributor' ) ) remove_role( 'bp_moderator' );
+	if ( wp_roles()->is_role( 'bp_author' ) ) remove_role( 'bp_author' );
+	if ( wp_roles()->is_role( 'bp_super_author' ) ) remove_role( 'bp_super_author' );
+	if ( wp_roles()->is_role( 'bp_manager' ) ) remove_role( 'bp_manager' );
+	if ( wp_roles()->is_role( 'bp_super_manager' ) ) remove_role( 'bp_super_manager' );
 }
 
-function battleplan_create_user_roles() {	
-	$role = get_role('administrator');               
+function battleplan_create_user_roles() {
+	$role = get_role('administrator');
     $role->add_cap( 'publish_jobsites');
     $role->add_cap( 'edit_jobsites' );
     $role->add_cap( 'delete_jobsites' );
@@ -2243,8 +2282,8 @@ function battleplan_create_user_roles() {
     $role->add_cap( 'read_private_jobsites' );
     $role->add_cap( 'edit_private_jobsites' );
     $role->add_cap( 'delete_private_jobsites' );
-    $role->add_cap( 'copy_jobsites' );	
-	
+    $role->add_cap( 'copy_jobsites' );
+
 	$caps_admin = array (
 		'update_core'					=> true,
 		'install_themes'				=> true,
@@ -2269,7 +2308,7 @@ function battleplan_create_user_roles() {
 		'manage_snapshots_settings'		=> true,
 		'manage_snapshots_import'		=> true,
 		'wpseo_manage_options'			=> true,
-		'wpseo_manage_redirects'		=> true,	
+		'wpseo_manage_redirects'		=> true,
 		'edit_files'					=> true,
 		'moderate_comments' 			=> true,
 		'manage_categories' 			=> true,
@@ -2305,16 +2344,16 @@ function battleplan_create_user_roles() {
 		'upload_files'					=> true,
 		'read'							=> true,
 	);
-	
+
 	$caps_subscriber = array (
-		'read'							=> true,	
+		'read'							=> true,
 	);
-		
-	$caps_view_stats = array (	
-		'read'							=> true,	
+
+	$caps_view_stats = array (
+		'read'							=> true,
 	);
-		
-	$caps_manage_plugins = array (		
+
+	$caps_manage_plugins = array (
 		'install_plugins'				=> true,
 		'activate_plugins' 				=> true,
 		'update_plugins'				=> true,
@@ -2323,7 +2362,7 @@ function battleplan_create_user_roles() {
 		'upload_files'					=> true,
 		'read'							=> true,
 	);
-		
+
 	$caps_manage_users = array (
 		'list_users'					=> true,
 		'create_users'					=> true,
@@ -2333,8 +2372,8 @@ function battleplan_create_user_roles() {
 		'delete_users'					=> true,
 		'upload_files'					=> true,
 		'read'							=> true,
-	);	
-		
+	);
+
 	$caps_jobsite_geo = array (
 		//'publish_jobsites'				=> true,
 		'edit_jobsites'					=> true,
@@ -2349,8 +2388,8 @@ function battleplan_create_user_roles() {
 		'copy_jobsites'					=> true,
 		'upload_files'					=> true,
 		'read'							=> true,
-	);	
-		
+	);
+
 	$caps_jobsite_geo_mgr = array (
 		'publish_jobsites'				=> true,
 		'edit_jobsites'					=> true,
@@ -2366,8 +2405,8 @@ function battleplan_create_user_roles() {
 		'upload_files'					=> true,
 		'edit_posts'					=> true,
 		'read'							=> true,
-	);	
-	
+	);
+
 	$caps_post_editor = array (
 		'publish_posts'					=> true,
 		'edit_posts'					=> true,
@@ -2384,17 +2423,17 @@ function battleplan_create_user_roles() {
 		'manage_terms' 					=> true,
 		'upload_files'					=> true,
 		'read'							=> true,
-	);	
-	
+	);
+
 	$caps_post_author = array (
 		'publish_posts'					=> true,
 		'edit_posts'					=> true,
 		'delete_posts'					=> true,
 		'copy_posts'					=> true,
 		'upload_files'					=> true,
-		'read'							=> true,	
+		'read'							=> true,
 	);
-	
+
 	$caps_page_editor = array (
 		'publish_pages'					=> true,
 		'edit_pages'					=> true,
@@ -2412,7 +2451,7 @@ function battleplan_create_user_roles() {
 		'upload_files'					=> true,
 		'read'							=> true,
 	);
-	
+
 	$caps_page_author = array (
 		'publish_pages'					=> true,
 		'edit_pages'					=> true,
@@ -2423,42 +2462,42 @@ function battleplan_create_user_roles() {
 	);
 
 	remove_role( 'bp_jobsite_geo_mgr' );
-	add_role('bp_jobsite_geo_mgr', __('Jobsite GEO Manager'), array_merge( $caps_subscriber, $caps_jobsite_geo_mgr) );	
-		
+	add_role('bp_jobsite_geo_mgr', __('Jobsite GEO Manager'), array_merge( $caps_subscriber, $caps_jobsite_geo_mgr) );
+
 	remove_role( 'bp_jobsite_geo' );
-	add_role('bp_jobsite_geo', __('Jobsite GEO'), array_merge( $caps_subscriber, $caps_jobsite_geo) );	
-	
+	add_role('bp_jobsite_geo', __('Jobsite GEO'), array_merge( $caps_subscriber, $caps_jobsite_geo) );
+
 	remove_role( 'bp_view_stats' );
-	add_role('bp_view_stats', __('View Stats'), $caps_view_stats );		
-	
+	add_role('bp_view_stats', __('View Stats'), $caps_view_stats );
+
 	remove_role( 'bp_manage_plugins' );
 	add_role('bp_manage_plugins', __('Manage Plugins'), $caps_manage_plugins );
-	
+
 	remove_role( 'bp_manage_users' );
-	add_role('bp_manage_users', __('Manage Users'), $caps_manage_users );		
-	
+	add_role('bp_manage_users', __('Manage Users'), $caps_manage_users );
+
 	remove_role( 'bp_page_editor' );
-	add_role('bp_page_editor', __('Page Editor'), $caps_page_editor );		
-	
+	add_role('bp_page_editor', __('Page Editor'), $caps_page_editor );
+
 	remove_role( 'bp_page_author' );
-	add_role('bp_page_author', __('Page Author'), $caps_page_author );		
-	
+	add_role('bp_page_author', __('Page Author'), $caps_page_author );
+
 	remove_role( 'bp_post_editor' );
-	add_role('bp_post_editor', __('Post Editor'), $caps_post_editor );		
-	
+	add_role('bp_post_editor', __('Post Editor'), $caps_post_editor );
+
 	remove_role( 'bp_post_author' );
-	add_role('bp_post_author', __('Post Author'), $caps_post_author );		
-	
+	add_role('bp_post_author', __('Post Author'), $caps_post_author );
+
 	remove_role( 'bp_subscriber' );
-	add_role('bp_subscriber', __('Subscriber'), $caps_subscriber );	
+	add_role('bp_subscriber', __('Subscriber'), $caps_subscriber );
 }
 
 
-//add_action('init', 'battleplan_create_user_roles');	
-	
+//add_action('init', 'battleplan_create_user_roles');
+
 //add_action('init', 'battleplan_getAndDisplayUserRoles');
-function battleplan_getAndDisplayUserRoles() {	
-	$caps = get_option('wp_user_roles') ? get_option('wp_user_roles') : array();	
+function battleplan_getAndDisplayUserRoles() {
+	$caps = get_option('wp_user_roles') ? get_option('wp_user_roles') : array();
 	print_r( $caps );
 }
 
@@ -2474,9 +2513,9 @@ function battleplan_pre_user_query($user_search) {
 // Hide certain plug-ins from other admin users
 add_action('pre_current_active_plugins', 'battleplan_plugin_hide');
 function battleplan_plugin_hide() {
-  	if (_USER_LOGIN != 'battleplanweb') : 
+  	if (_USER_LOGIN != 'battleplanweb') :
 		global $wp_list_table;
-		$hidearr = array('admin-column-pro/admin-columns-pro.php', 'enable-media-replace/enable-media-replace.php', 'git-updater/git-updater.php', 'git-updater/github-updater.php', 'git-updater-pro/git-updater-pro.php');  
+		$hidearr = array('admin-column-pro/admin-columns-pro.php', 'enable-media-replace/enable-media-replace.php', 'git-updater/git-updater.php', 'git-updater/github-updater.php', 'git-updater-pro/git-updater-pro.php');
 
 		$myplugins = $wp_list_table->items;
 		foreach ($myplugins as $key => $val) :
@@ -2518,6 +2557,8 @@ function bp_after_sidebar_inner() { do_action('bp_after_sidebar_inner'); }
 function bp_before_sidebar_widgets() { do_action('bp_before_sidebar_widgets'); }
 function bp_after_sidebar_widgets() { do_action('bp_after_sidebar_widgets'); }
 function bp_before_colophon() { do_action('bp_before_colophon'); }
+function bp_footer_left() { return apply_filters('bp_footer_left', ''); }
+function bp_footer_right() { return apply_filters('bp_footer_right', ''); }
 function bp_after_colophon() { do_action('bp_after_colophon'); }
 
 /*--------------------------------------------------------------
@@ -2526,27 +2567,27 @@ function bp_after_colophon() { do_action('bp_after_colophon'); }
 
 // Install Google Global Site Tags
 add_action('bp_google_tag_manager', 'battleplan_load_tag_manager');
-function battleplan_load_tag_manager() { 
+function battleplan_load_tag_manager() {
 	$customer_info = customer_info();
-	
+
 	$buildTags = '';
 	$analytics_id = $ads_id = null;
-	
+
 	if ( isset($customer_info['google-tags']) && is_array($customer_info['google-tags']) ) :
 
-		foreach ( $customer_info['google-tags'] as $gtag=>$value ) :	
+		foreach ( $customer_info['google-tags'] as $gtag=>$value ) :
 			//if ( $gtag === "analytics" && _USER_LOGIN !== 'battleplanweb' && _IS_BOT !== true ) :
 			if ( $gtag === "analytics" && _USER_LOGIN !== 'battleplanweb' ) :
-				$analytics_id = $value;	
-				$buildTags .= "gtag('config', '$analytics_id');";	
-			elseif ( $gtag === "ads" ) : 
+				$analytics_id = $value;
+				$buildTags .= "gtag('config', '$analytics_id');";
+			elseif ( $gtag === "ads" ) :
 				$ads_id = $value;
-				$buildTags .= "gtag('config', '$ads_id');";	
+				$buildTags .= "gtag('config', '$ads_id');";
 			elseif ( $gtag === "event" ) :
 				$events[] = $value;
-			endif; 
+			endif;
 		endforeach;
-	
+
 		foreach ( $events as $event ) :
 			[ $event_label, $event_tag ] = $event;
 			if ( $event_label === 'phone_conversion_number' && $ads_id ) :
@@ -2555,7 +2596,7 @@ function battleplan_load_tag_manager() {
 			endif;
 		endforeach;
 	endif;
-	
+
 	$buildTagMgr = '<script async nonce="'._BP_NONCE.'" src="https://www.googletagmanager.com/gtag/js?id='.$analytics_id.'"></script>';
 	$buildTagMgr .= '<script nonce="'._BP_NONCE.'">
 		window.dataLayer = window.dataLayer || [];
@@ -2563,7 +2604,7 @@ function battleplan_load_tag_manager() {
 		gtag("js", new Date());';
 	$buildTagMgr .= $buildTags;
 	$buildTagMgr .= '</script>';
-	
+
 	//if (strpos($analytics_id, 'x') === false && $analytics_id != '' && _IS_SERP_BOT == false ) echo $buildTagMgr;
 	// Had to stop checking for Bots and Google_bots in order for Google Ads to find the tag on the website for setting up Firehouse
 	if (strpos($analytics_id, 'x') === false && $analytics_id != '' ) echo $buildTagMgr;
@@ -2572,9 +2613,9 @@ function battleplan_load_tag_manager() {
 // Build and display desktop navigation menu
 function buildNavMenu( $pos ) {
 	$printMenu = '<nav id="desktop-navigation" class="main-navigation menu-strip" aria-label="Main Menu">';
-	$printMenu .= wp_nav_menu ( array ( 'echo' => false, 'container' => 'div', 'container_class' => 'flex', 'menu_id' => $pos.'-menu', 'menu_class' => 'menu main-menu', 'theme_location' => $pos.'-menu', 'walker' => new Aria_Walker_Nav_Menu(), ) ); 
+	$printMenu .= wp_nav_menu ( array ( 'echo' => false, 'container' => 'div', 'container_class' => 'flex', 'menu_id' => $pos.'-menu', 'menu_class' => 'menu main-menu', 'theme_location' => $pos.'-menu', 'walker' => new Aria_Walker_Nav_Menu(), ) );
 	$printMenu .= '</nav>';
-	
+
 	return $printMenu;
 }
 
@@ -2585,25 +2626,25 @@ function placeNavMenu() {
 add_shortcode( 'get-menu', 'returnNavMenu' );
 function returnNavMenu() {
 	return buildNavMenu( 'manual' );
-}		
+}
 
 // Display Mobile Menu Bar Item - Scroll
 add_action('bp_mobile_menu_bar_scroll', 'battleplan_mobile_menu_bar_scroll', 20);
-function battleplan_mobile_menu_bar_scroll() { 
+function battleplan_mobile_menu_bar_scroll() {
 	$scroll = '<a class="scroll-top" href="#page"><div class="mm-bar-btn mm-bar-scroll scroll-to-top-btn" aria-hidden="true">[get-icon type="chevron-up"]</div><span class="sr-only">Scroll To Top</span></a>';
-	
+
 	echo do_shortcode($scroll);
 }
 
 // Display Mobile Menu Bar Item - Phone
 add_action('bp_mobile_menu_bar_phone', 'battleplan_mobile_menu_bar_phone', 20);
-function battleplan_mobile_menu_bar_phone() { 
-	echo do_shortcode('[get-biz info="mm-bar-phone"]');	
-} 
+function battleplan_mobile_menu_bar_phone() {
+	echo do_shortcode('[get-biz info="mm-bar-phone"]');
+}
 
 // Display Mobile Menu Bar Item - Contact
 add_action('bp_mobile_menu_bar_contact', 'battleplan_mobile_menu_bar_contact', 20);
-function battleplan_mobile_menu_bar_contact() { 	
+function battleplan_mobile_menu_bar_contact() {
 	$query = bp_WP_Query('wpcf7_contact_form', [
 		'title'          => 'Quote Request Form',
 		'post_status'    => 'all',
@@ -2611,11 +2652,11 @@ function battleplan_mobile_menu_bar_contact() {
 	]);
 
 	if ( ! empty( $query->post ) ) :
-		$form = "Quote Request Form"; 
-		$title = "Request A Quote"; 
+		$form = "Quote Request Form";
+		$title = "Request A Quote";
 		$type = "quote";
 	endif;
-	
+
 	$query = bp_WP_Query('wpcf7_contact_form', [
 		'title'          => 'Contact Us Form',
 		'post_status'    => 'all',
@@ -2623,26 +2664,26 @@ function battleplan_mobile_menu_bar_contact() {
 	]);
 
 	if ( ! empty( $query->post ) ) :
-		$form = "Contact Us Form"; 
-		$title = "Send A Message"; 
-		$type = "contact"; 
+		$form = "Contact Us Form";
+		$title = "Send A Message";
+		$type = "contact";
 	endif;
-	
+
 	$email = '';
-	
+
 	if ( $form && $title ) :
-		$email = '<div class="mm-bar-btn mm-bar-'.$type.' modal-btn"><div class="email-btn" aria-hidden="true">[get-icon type="email"]</div><div class="email2-btn" aria-hidden="true">[get-icon type="paper-plane"]</div><span class="sr-only">Contact Us</span></div>';	
+		$email = '<div class="mm-bar-btn mm-bar-'.$type.' modal-btn"><div class="email-btn" aria-hidden="true">[get-icon type="email"]</div><div class="email2-btn" aria-hidden="true">[get-icon type="paper-plane"]</div><span class="sr-only">Contact Us</span></div>';
 	else:
-		$email = '<div class="mm-bar-btn mm-bar-empty"></div>';	
+		$email = '<div class="mm-bar-btn mm-bar-empty"></div>';
 	endif;
-	
+
 	if ($email !== '') echo do_shortcode($email);
 }
 
 // Display Request Quote Modal
 add_action('bp_before_page', 'battleplan_request_quote_modal', 20);
-function battleplan_request_quote_modal() { 	
-	
+function battleplan_request_quote_modal() {
+
 	$query = bp_WP_Query('wpcf7_contact_form', [
 		'title'          => 'Quote Request Form',
 		'post_status'    => 'all',
@@ -2650,10 +2691,10 @@ function battleplan_request_quote_modal() {
 	]);
 
 	if ( ! empty( $query->post ) ) :
-		$form = "Quote Request Form"; 
+		$form = "Quote Request Form";
 		$title = "Request A Quote";
 	endif;
-	
+
 	$query = bp_WP_Query('wpcf7_contact_form', [
 		'title'          => 'Contact Us Form',
 		'post_status'    => 'all',
@@ -2661,65 +2702,197 @@ function battleplan_request_quote_modal() {
 	]);
 
 	if ( ! empty( $query->post ) ) :
-		$form = "Contact Us Form"; 
+		$form = "Contact Us Form";
 		$title = "Send A Message";
-	endif;	
-	
+	endif;
+
 	if ( $form && $title ) echo do_shortcode('[lock name="request-quote-modal" style="lock" position="modal" show="always" btn-activated="yes"][layout]<h3>'.$title.'</h3>[contact-form-7 title="'.$form.'"][/layout][/lock]');
 }
 
 // Display Mobile Menu Bar Item - Activate
 add_action('bp_mobile_menu_bar_activate', 'battleplan_mobile_menu_bar_activate');
-function battleplan_mobile_menu_bar_activate() { 
-	echo '<div class="mm-bar-btn mm-bar-activate activate-btn"><div></div><div></div><div></div></div> ';	
+function battleplan_mobile_menu_bar_activate() {
+	echo '<div class="mm-bar-btn mm-bar-activate activate-btn"><div></div><div></div><div></div></div> ';
 }
 
 // Display locked site-message
 add_action('bp_before_page', 'battleplan_printSiteMessage', 20);
-function battleplan_printSiteMessage() { 
+function battleplan_printSiteMessage() {
 	echo do_shortcode('[get-element slug="site-message"]');
-}	
-	
+}
+
 // Display the site header
 add_action('bp_masthead', 'battleplan_printHeader', 20);
-function battleplan_printHeader() { 
-	$printHeader = '<header id="masthead" aria-label="header">';		
-	if ( has_nav_menu( 'top-menu', 'battleplan' ) ) $printHeader .= buildNavMenu( 'top' );		
-	$printHeader .= do_shortcode('[get-element slug="site-header"]');		
-	if ( has_nav_menu( 'header-menu', 'battleplan' ) ) $printHeader .= buildNavMenu( 'header' ); 		
+function battleplan_printHeader() {
+	$printHeader = '<header id="masthead" aria-label="header">';
+	if ( has_nav_menu( 'top-menu', 'battleplan' ) ) $printHeader .= buildNavMenu( 'top' );
+	$printHeader .= do_shortcode('[get-element slug="site-header"]');
+	if ( has_nav_menu( 'header-menu', 'battleplan' ) ) $printHeader .= buildNavMenu( 'header' );
 	$printHeader .= '</header><!-- #masthead -->';
-	
+
 	echo $printHeader;
 }
 
 // Display the "we're open" banner on desktop
 add_action('bp_before_masthead', 'battleplan_printOpenBanner', 30);
-function battleplan_printOpenBanner() { 
+function battleplan_printOpenBanner() {
 	echo is_biz_open() && !is_mobile() ? '<div class="currently-open-banner"><p>Call Us Now...<br>We\'re Open!</p></div>' : '';
 }
 
 // Display #wrapper-top
 add_action('bp_wrapper_top', 'battleplan_printWrapperTop', 20);
-function battleplan_printWrapperTop() { 
+function battleplan_printWrapperTop() {
 	$current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );
 	$textarea = get_post_meta( $current_page->ID, 'page-top_text', true );
  	if ( $textarea != "" ) echo "<section id='wrapper-top'>".apply_filters('the_content', $textarea)."</section><!-- #wrapper-top -->";
-}	
+}
+
+// Display bp_footer_left
+add_filter('bp_footer_left', 'battleplan_printFooterLeft', 20, 1);
+function battleplan_printFooterLeft($out) {
+	return $out.battleplan_footer_social_box();
+}
+
+// Display bp_footer_right
+add_filter('bp_footer_right', 'battleplan_printFooterRight', 20, 1);
+function battleplan_printFooterRight($out) {
+	$customer_info = customer_info();
+	$printRight = '<div class="block block-text span-10">';
+
+	$printRight .= apply_filters('bp_footer_nav', '', $customer_info);
+	$printRight .= apply_filters('bp_footer_misc2', '', $customer_info);
+
+	$printRight .= '<div class="site-info-copyright">';
+	$printRight .= apply_filters('bp_footer_copyright', '', $customer_info);
+	$printRight .= apply_filters('bp_footer_name', '', $customer_info);
+	$printRight .= apply_filters('bp_footer_rights_reserved', '', $customer_info);
+	$printRight .= '</div>';
+
+	$printRight .= apply_filters('bp_footer_address', '', $customer_info);
+
+	$printRight .= '<div class="site-info-links">';
+	$printRight .= apply_filters('bp_footer_license', '', $customer_info);
+	$printRight .= apply_filters('bp_footer_privacy', '', $customer_info);
+	$printRight .= apply_filters('bp_footer_terms', '', $customer_info);
+	$printRight .= apply_filters('bp_footer_areas', '', $customer_info);
+	$printRight .= '</div>';
+
+	$printRight .= apply_filters('bp_footer_battleplan', '', $customer_info);
+
+	$printRight .= '</div>';
+
+	return $out.$printRight;
+}
+
+add_filter('bp_footer_nav', function($out, $customer_info) {
+	return wp_nav_menu( array( 'theme_location' => 'footer-menu', 'container' => 'div', 'container_id' => 'footer-navigation', 'container_class' => 'secondary-navigation', 'menu_id' => 'footer-menu', 'menu_class' => 'menu secondary-menu', 'fallback_cb' => 'false', 'echo' => false ) );
+}, 10, 2);
+
+add_filter('bp_footer_misc2', function($out, $customer_info) {
+	if ( isset($customer_info['misc2']) )
+		return "<div class='site-info-misc2'>".esc_html($customer_info['misc2'])."</div>";
+}, 10, 2);
+
+add_filter('bp_footer_copyright', function($out, $customer_info) {
+	if ( isset($customer_info['year']) )
+		$c = date('Y');
+		$y = $customer_info['year'];
+		$printDate = ($y == $c) ? $c : "$y–$c";
+
+		return "© ".$printDate.' ';
+}, 10, 2);
+
+add_filter('bp_footer_name', function($out, $customer_info) {
+	if (!empty($customer_info['name']))
+		return esc_html($customer_info['name']);
+}, 10, 2);
+
+add_filter('bp_footer_rights_reserved', function($out, $customer_info) {
+	return ' • All Rights Reserved';
+}, 10, 2);
+
+add_filter('bp_footer_address', function($out, $customer_info) {
+	$placeIDs = $customer_info['pid'] ?? null;
+	$googleInfo = get_option('bp_gbp_update') ? get_option('bp_gbp_update') : array();
+	$buildAddress = '<div class="site-info-address">';
+
+	if ( !is_array($placeIDs) )
+		$placeIDs = array($placeIDs);
+
+	$primePID = true;
+	foreach ( $placeIDs as $placeID ) {
+		if ( $primePID === true ) {
+			$google_info = customer_info();
+			$primePID = false;
+		} else {
+			$google_info = $googleInfo[$placeID];
+		}
+
+		$buildAddress .= apply_filters('bp_footer_street', '', $google_info);
+		$buildAddress .= apply_filters('bp_footer_city_state_zip', '', $google_info);
+		$buildAddress .= apply_filters('bp_footer_phone', '', $google_info);
+	};
+
+	$buildAddress .= "</div>";
+
+	return $buildAddress;
+}, 10, 2);
+
+add_filter('bp_footer_street', function($out, $google_info) {
+	if ( strlen($google_info['street']) > 5 )
+		return trim($google_info['street']).", ";
+}, 10, 2);
+
+add_filter('bp_footer_city_state_zip', function($out, $google_info) {
+	if ( array_key_exists('city', $google_info) ) :
+		return $google_info['city'].", ".$google_info['state-abbr']." ".$google_info['zip'];
+	elseif ( array_key_exists('region', $google_info) ) :
+		return $google_info['region'];
+	endif;
+}, 10, 2);
+
+add_filter('bp_footer_phone', function($out, $google_info) {
+	if (!empty($google_info['phone-format']))
+		return " • <a href = 'tel:".esc_html($google_info['area'])."-".esc_html($google_info['phone'])."'>".esc_html($google_info['phone-format'])."</a>";
+}, 10, 2);
+
+add_filter('bp_footer_license', function($out, $customer_info) {
+	if (!empty($customer_info['license']))
+		return "License {$customer_info['license']} • ";
+}, 10, 2);
+
+add_filter('bp_footer_privacy', function($out, $customer_info) {
+	if ($pg = get_page_by_path('privacy-policy', OBJECT, 'universal'))
+		return '<a href="'.get_permalink($pg->ID).'">Privacy Policy</a> • ';
+}, 10, 2);
+
+add_filter('bp_footer_terms', function($out, $customer_info) {
+	if ($pg = get_page_by_path('terms-conditions', OBJECT, 'universal'))
+		return '<a href="'.get_permalink($pg->ID).'">Terms & Conditions</a> • ';
+}, 10, 2);
+
+add_filter('bp_footer_areas', function($out, $customer_info) {
+	if ($pg = get_page_by_path('areas-we-serve', OBJECT, 'universal'))
+		return '<a href="'.get_permalink($pg->ID).'">Areas We Serve</a>';
+}, 10, 2);
+
+add_filter('bp_footer_battleplan', function($out, $customer_info) {
+	return '<div class="site-info-battleplan">Website developed & maintained by <a href="https://battleplanwebdesign.com" target="_blank" rel="noreferrer">Battle Plan Web Design</a></div>';
+}, 10, 2);
 
 
-// Remove with Font Awesome
 
 
 
 // Filter site HTML before rendering - basic search / replace for sitewite corrections
 add_filter('final_output', function($content) {
-	if ( !is_admin() ) : 
+	if ( !is_admin() ) :
 		$new = do_shortcode('<span class="icon phone"></span>');
-		$content = str_replace('<i class="fas fa-phone-alt" aria-hidden="true"></i>',$new, $content); 
+		$content = str_replace('<i class="fas fa-phone-alt" aria-hidden="true"></i>',$new, $content);
 		$new = do_shortcode('<span class="icon phone"></span>');
-		$content = str_replace('<i class="fas fa-phone" aria-hidden="true"></i>',$new, $content); 
-	
-		$content = str_replace('sizes="auto, (max-width', 'sizes="(max-width', $content);    // 1/20/25 necessary to maintain validation  
+		$content = str_replace('<i class="fas fa-phone" aria-hidden="true"></i>',$new, $content);
+
+		$content = str_replace('sizes="auto, (max-width', 'sizes="(max-width', $content);    // 1/20/25 necessary to maintain validation
 	endif;
 	return $content;
-}); 
+});

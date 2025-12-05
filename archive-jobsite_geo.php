@@ -37,12 +37,6 @@ get_header(); ?>
 				$city = trim(esc_attr(get_field( "city" )), ' ');
 				$state = trim(strtoupper(esc_attr(get_field( "state" ))), ' ');
 				$location = bp_format_location($city.'-'.$state);
-				$oldBrand = ucwords(trim(esc_attr(get_field( "old_brand" )), ' '));
-				$oldEquip = ucwords(trim(esc_attr(get_field( "old_equipment" )), ' '));
-				$oldModel = trim(esc_attr(get_field( "old_model_no" )), ' ');
-				$newBrand = ucwords(trim(esc_attr(get_field( "new_brand" )), ' '));
-				$newEquip = ucwords(trim(esc_attr(get_field( "new_equipment" )), ' '));
-				$newModel = trim(esc_attr(get_field( "new_model_no" )), ' ');
 				$imgs[0] = esc_attr(get_field( "jobsite_photo_1"));
 				$imgs[1] = esc_attr(get_field( "jobsite_photo_2"));
 				$imgs[2] = esc_attr(get_field( "jobsite_photo_3"));
@@ -75,43 +69,12 @@ get_header(); ?>
 					wp_reset_postdata();
 				endif;
 		
-				$terms = wp_get_post_terms( get_the_ID(), 'jobsite_geo-techs', array("fields" => "all"));
-
-				if (!is_wp_error($terms) && !empty($terms)) :
-					foreach ($terms as $term) $tech = $term->name;     
-				else:
-					$rand = array('we', 'our tech', 'our technician', 'the tech', 'the technician');
-					$tech = $rand[rand(0, count($rand) - 1)];			
-        		endif;
-		
-				$rand = array('which '.$tech.' restored to full functionality', 'which '.$tech.' restored to operational status', 'which '.$tech.' returned to good condition', 'which '.$tech.' made fully operational again', 'which '.$tech.' restored to working condition', 'which '.$tech.' repaired to work as intended', 'which '.$tech.' restored to peak performance', 'which '.$tech.' successfully repaired', 'on which '.$tech.' completed the repair', 'which '.$tech.' repaired successfully', 'and '.$tech.' delivered complete customer satisfaction', 'on which '.$tech.' delivered a full repair', 'and '.$tech.' ensured absolute customer satisfaction', 'and '.$tech.' provided full restoration', 'and '.$tech.' provided complete repair', 'on which '.$tech.' fulfilled the repair request', 'and '.$tech.' provided unparalleled customer satisfaction');
-				$repair = $rand[rand(0, count($rand) - 1)];			
-		
-    			$word = strtolower($oldBrand);
-    			$vowelSounds = ['a', 'e', 'i', 'o', 'u', 'hour', 'honest'];
-    			$an = "a";
-
-    			if (in_array(substr($word, 0, 5), $vowelSounds) || in_array(substr($word, 0, 6), $vowelSounds) || in_array(substr($word, 0, 1), $vowelSounds)) $an = "an";
-    			if (preg_match('/^u(ni|se|sa|e)/', $word)) $an = "a";
-		
-				if ( $newBrand ) :
-					if ( $oldBrand ) : $jobDesc .= '</p><p>The customer had '.$an.' <b>'.$oldBrand.($oldEquip ? ' ' . $oldEquip : ''); endif;
-					if ( $oldModel ) : $jobDesc .= '<span class="jobsite-model"> [Model #'.$oldModel.']</span>'; endif;
-					if ( $oldBrand ) : $jobDesc .= '</b>, which '.$tech.' replaced with a new <b>'.$newBrand.($newEquip ? ' ' . $newEquip : ''); endif;
-					if ( $newModel ) : $jobDesc .= '<span class="jobsite-model"> [Model #'.$newModel.']</span>'; endif;
-					if ( $oldBrand ) : $jobDesc .= '</b>.'; endif;
-				else:
-					if ( $oldBrand ) : $jobDesc .= '</p><p>The customer has '.$an.' <b>'.$oldBrand.($oldEquip ? ' ' . $oldEquip : ''); endif;
-					if ( $oldModel ) : $jobDesc .= '<span class="jobsite-model"> [Model #'.$oldModel.']</span>'; endif;
-					if ( $oldBrand ) : $jobDesc .= '</b>, '.$repair.'.'; endif;
-				endif;
-
 				$buildUpdate .= '[section width="'.$sectionWidth.'" name="jobsite-'.get_the_ID().'" class="archive-content archive-'.get_post_type().$addTags.$addClass.'"][layout grid="'.$grid.'" valign="'.$valign.'"]';
 				
 				$buildUpdate .= $imgNum === 1 ? '[col class="single-img"]' : '[col]';
-				$buildUpdate .= '<div class="jobsite-description"><p>';
-				$buildUpdate .= '<div class="jobsite_geo-job_meta">'.$location.'</div>';
-				$buildUpdate .= $jobDesc.'</div>';
+				$buildUpdate .= '<div class="jobsite-description">';
+				$buildUpdate .= '<div class="jobsite_geo-job_meta"><p>'.$location.'</p></div>';
+				$buildUpdate .= '<p>'.$jobDesc.'</p></div>';
 				$cleanedJobDesc = htmlspecialchars(strip_tags($jobDesc), ENT_QUOTES, 'UTF-8');
 				$customer_info = customer_info();
 		
@@ -347,7 +310,7 @@ get_header(); ?>
 
 <main id="wrapper-bottom">
 	<div>
-		<h2 style="margin:1em 0"><?php echo $GLOBALS['jobsite_geo-bottom-headline']; ?></h2>
+		<section id="<?php echo $GLOBALS['jobsite_geo-bottom-headline']; ?>" class="section section-default archive-content archive-jobsite_geo"><div class="flex grid-1 valign-start"><div class="col"><div class="col-inner"><h2 style="margin:0"><?php echo $GLOBALS['jobsite_geo-bottom-headline']; ?></h2></div></div></div></section>
 
 		<?php echo do_shortcode($buildUpdate); ?>
 

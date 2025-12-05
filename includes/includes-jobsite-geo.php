@@ -1,6 +1,6 @@
 <?php
 /* Battle Plan Web Design Jobsite GEO */
- 
+
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
@@ -27,9 +27,9 @@ add_action('rest_api_init', function() {
 
 function hcpro_handle_job_webhook($req) {
 	// 🔒 Security check
-	
-	$get_jobsite_geo = get_option('jobsite_geo');	
-	
+
+	$get_jobsite_geo = get_option('jobsite_geo');
+
 	if ( empty($_GET['token']) || $_GET['token'] !== $get_jobsite_geo['token'] ) {
 		return new WP_REST_Response(['error' => 'Invalid token'], 403);
 	}
@@ -123,7 +123,7 @@ function hcpro_handle_job_webhook($req) {
 				if ($cap !== '') $captions[$idx] = $cap;
 			}
 		}
-		
+
 		$max_photos = count($captions);
 	}
 
@@ -142,7 +142,7 @@ function hcpro_handle_job_webhook($req) {
 	$total   = isset($job->total_amount) ? $job->total_amount / 100 : 0;
 	$job_id  = $job->id ?? '';
 
-	
+
     $GLOBALS['bp_jobsite_setup_running'] = true;
 
 	// 🧾 Create or update post
@@ -171,7 +171,7 @@ function hcpro_handle_job_webhook($req) {
 	}
 
 	if (!$post_id) return new WP_REST_Response(['error' => 'Failed to create post'], 500);
-	
+
 		$address_data = [
 		'street' => $street,
 		'city'   => $city,
@@ -179,7 +179,7 @@ function hcpro_handle_job_webhook($req) {
 		'zip'    => $zip,
 	];
 	update_post_meta($post_id, '_jobsite_address_data', $address_data);
-	
+
 	// 🧩 Update ACF/meta fields
 	update_field('hcp_job_id', $job_id, $post_id);
 	update_field('invoice_number', $invoice, $post_id);
@@ -200,15 +200,15 @@ function hcpro_handle_job_webhook($req) {
 	$saved_hcp_ids = get_post_meta($post_id, '_hcp_attachment_ids', true);
 	if (!is_array($saved_hcp_ids)) $saved_hcp_ids = [];
 	$current_hcp_ids = !empty($job->attachments) ? array_map(fn($a) => $a->id, $job->attachments) : [];
-	
+
 	$photo_index = 1;
 
 	if (!empty($job->attachments)) {
 		$attachments = array_reverse($job->attachments ?? []);
-		
+
 		foreach ($attachments as $a) {
 			if ($photo_index > $max_photos && $max_photos > 0) break;
-			
+
 			// Skip existing ones
 			if (in_array($a->id, $saved_hcp_ids, true)) {
 				$caption_text = $captions[$photo_index] ?? '';
@@ -285,73 +285,68 @@ function hcpro_handle_job_webhook($req) {
 		update_post_meta($post_id, '_hcp_attachment_ids', $current_hcp_ids);
 	}
 
-	bp_jobsite_setup($post_id, 'Housecall Pro');	
+	bp_jobsite_setup($post_id, 'Housecall Pro');
 
 	unset($GLOBALS['bp_jobsite_setup_running']);
 
 	return new WP_REST_Response(['success' => true, 'post_id' => $post_id], 200);
 }
 
-	
-
-	
-	
-
 
 // Format location
 function bp_format_location($location) {
 	$splitLoc = explode('-', $location);
 	$townParts = array_slice($splitLoc, 0, -1);
-    $jobsite_town = ucwords(implode(' ', $townParts));	
+    $jobsite_town = ucwords(implode(' ', $townParts));
 
     $jobsite_town = preg_replace_callback('/\bMc[a-z]/i', function($matches) {
         return 'Mc' . strtoupper($matches[0][2]);
-    }, $jobsite_town);	
+    }, $jobsite_town);
 
-	$jobsite_state = strtoupper(end($splitLoc));	
+	$jobsite_state = strtoupper(end($splitLoc));
 
 	return $jobsite_town . ', ' . $jobsite_state;
 }
 
 // Format service
-function bp_format_service($service) { 
-	$jobsite_service = ucwords(str_replace('-', ' ', $service)); 
-	$jobsite_service = str_replace('Hvac', 'HVAC', $jobsite_service); 
+function bp_format_service($service) {
+	$jobsite_service = ucwords(str_replace('-', ' ', $service));
+	$jobsite_service = str_replace('Hvac', 'HVAC', $jobsite_service);
 	$jobsite_service = $jobsite_service === "Service Area" ? "Recent Jobsites" : $jobsite_service; return $jobsite_service;
- } 
- 
- // Match up reviews and jobsites 
- function bp_match_key_from_title($title) { 
-	$key = sanitize_title(trim((string)$title)); 
-	return $key ?: ''; 
-} 
+ }
 
-// Orient uploaded photos correctly 
+ // Match up reviews and jobsites
+ function bp_match_key_from_title($title) {
+	$key = sanitize_title(trim((string)$title));
+	return $key ?: '';
+}
+
+// Orient uploaded photos correctly
 add_filter('wp_generate_attachment_metadata', function($metadata, $attachment_id) {
 
     if (!empty($GLOBALS['bp_skip_exif_rotation'])) {
         return $metadata; // skip EXIF rotation entirely
     }
 
-    $filepath = get_attached_file($attachment_id); 
-    $image = wp_get_image_editor($filepath); 
+    $filepath = get_attached_file($attachment_id);
+    $image = wp_get_image_editor($filepath);
     if (is_wp_error($image)) return $metadata;
 
-    $exif = @exif_read_data($filepath); 
-    if (!empty($exif['Orientation'])) { 
-        switch ($exif['Orientation']) { 
+    $exif = @exif_read_data($filepath);
+    if (!empty($exif['Orientation'])) {
+        switch ($exif['Orientation']) {
             case 3: $image->rotate(180); break;
             case 6: $image->rotate(-90); break;
             case 8: $image->rotate(90); break;
         }
-        $image->save($filepath); 
+        $image->save($filepath);
     }
 
     return $metadata;
 }, 10, 2);
 
 
-function bp_jobsite_setup($post_id, $user) {	
+function bp_jobsite_setup($post_id, $user) {
 	$current_type = get_post_type($post_id);
 	if (!in_array($current_type, ['jobsite_geo', 'testimonials'], true)) return;
 
@@ -384,7 +379,6 @@ function bp_jobsite_setup($post_id, $user) {
 		$key = bp_match_key_from_title(get_the_title($post_id));
 		update_post_meta($post_id, '_bp_match_key', $key);
 	}
-
 
 	// Sync jobs with reviews when saving a testimonial, then exit
 	if ($current_type === 'testimonials') {
@@ -554,16 +548,6 @@ function bp_jobsite_setup($post_id, $user) {
 		}
 	}
 
-
-
-
-
-	
-
-
-
-
-
 	// Customize for Plumber website
 	if (strtolower($btVal) === 'plumber') {
 		$service = 'plumbing-services';
@@ -625,17 +609,30 @@ function bp_jobsite_setup($post_id, $user) {
 	// Customize for HVAC website
 	if (($customer_info['site-type'] ?? '') === 'hvac') {
 		$equipment = [
-			'air-conditioner' => ['air conditioner', 'air conditioning', 'cooling', 'a/c', 'ac', 'compressor', 'evaporator', 'condenser', 'drain line', 'refrigerant'],
-			'heating'         => ['heater', 'heating', 'furnace'],
-			'hvac'            => ['hvac', 'fan motor', 'blower', 'mini split'],
-			'thermostat'      => ['thermostat', 't-stat', 'tstat'],
+			'air-conditioner' 		=> ['air conditioner', 'air conditioning', 'cooling', 'a/c', 'ac', 'compressor', 'evaporator', 'condenser', 'drain line', 'refrigerant'],
+			'heating'         		=> ['heater', 'heating', 'furnace'],
+			'hvac'            		=> ['hvac', 'fan motor', 'blower', 'mini split'],
 		];
 
 		$type = str_contains($description, 'repair') || str_contains($description, 'service') ? '-repair' :
 			(str_contains($description, 'install') || str_contains($description, 'replace') ? '-installation' :
 			(esc_attr(get_field('new_brand')) ? '-installation' : '-repair'));
 
-		foreach (['allergies', 'duct cleaning', 'indoor air', 'air quality', 'clean air'] as $keyword) {
+		foreach (['duct cleaning', 'airflow', 'air flow'] as $keyword) {
+			if (stripos($description, $keyword) !== false) {
+				$service = 'air-duct-cleaning';
+				break;
+			}
+		}
+		
+		foreach (['dryer vent'] as $keyword) {
+			if (stripos($description, $keyword) !== false) {
+				$service = 'dryer-vent-cleaning';
+				break;
+			}
+		}
+
+		foreach (['allergies', 'indoor air', 'air quality', 'clean air'] as $keyword) {
 			if (stripos($description, $keyword) !== false) {
 				$service = 'indoor-air-quality';
 				break;
@@ -742,7 +739,6 @@ function bp_jobsite_setup($post_id, $user) {
 		wp_mail($notifyTo, $subject, $message, $headers);
 	}
 }
-	
 
 // Save important info to meta data upon publishing or updating post
 add_action('save_post', 'battleplan_saveJobsite', 10, 3);
@@ -755,25 +751,25 @@ function battleplan_saveJobsite($post_id, $post, $update) {
     // Skip if webhook already ran setup in this same request
     if (!empty($GLOBALS['bp_jobsite_setup_running'])) return;
 
-    bp_jobsite_setup($post_id, 'user');	
-	
+    bp_jobsite_setup($post_id, 'user');
+
 	if ( get_option('bp_setup_2025_09_29') !== "completed" ) {
-		$testimonials = get_posts(['post_type'=>'testimonials','posts_per_page'=>-1,'post_status'=>'publish']); 
-		$t_index = []; 
-		foreach ($testimonials as $t) { 
+		$testimonials = get_posts(['post_type'=>'testimonials','posts_per_page'=>-1,'post_status'=>'publish']);
+		$t_index = [];
+		foreach ($testimonials as $t) {
 			$key = bp_match_key_from_title($t->post_title);
-			update_post_meta($t->ID, '_bp_match_key', $key); 
-			$t_index[$key] = $t->ID; 
-		} 
-	
-		$jobsites = get_posts(['post_type'=>'jobsite_geo','posts_per_page'=>-1,'post_status'=>'publish']); 
-	
-		foreach ($jobsites as $j){
-			$key = bp_match_key_from_title($j->post_title); 
-			update_post_meta($j->ID, '_bp_match_key', $key); 
-			isset($t_index[$key]) ? update_post_meta($j->ID, 'review', $t_index[$key]) : null; 
+			update_post_meta($t->ID, '_bp_match_key', $key);
+			$t_index[$key] = $t->ID;
 		}
-			
+
+		$jobsites = get_posts(['post_type'=>'jobsite_geo','posts_per_page'=>-1,'post_status'=>'publish']);
+
+		foreach ($jobsites as $j){
+			$key = bp_match_key_from_title($j->post_title);
+			update_post_meta($j->ID, '_bp_match_key', $key);
+			isset($t_index[$key]) ? update_post_meta($j->ID, 'review', $t_index[$key]) : null;
+		}
+
 		foreach ($jobsites as $jid){
 			$pairs = [
 				'jobsite_photo_1' => 'jobsite_photo_1_alt',
@@ -792,8 +788,8 @@ function battleplan_saveJobsite($post_id, $post, $update) {
 				}
 			}
 		}
-		
-	
+
+
 		updateOption( 'bp_setup_2025_09_29', 'completed', false );
 	}
 }
@@ -852,13 +848,13 @@ function battleplan_registerJobsiteGEOPostType() {
 		'capabilities' => array(
 			'create_posts' => 	false,
 		),
-		'map_meta_cap' => true,        
+		'map_meta_cap' => true,
 		'rewrite' => array(
             'slug' => 			'jobsites',
             'with_front' => 	false,
         ),
 	));
-	
+
 	$taxonomies = [
 		'jobsite_geo-techs'         => ['Technicians', 'Technician', 'tech'],
 		'jobsite_geo-services'      => ['Services', 'Service', 'service'],
@@ -879,11 +875,11 @@ function battleplan_registerJobsiteGEOPostType() {
 			'rewrite' => ['slug' => $rewrite, 'with_front' => false],
 		]);
 	}
-	//wp_insert_term( 'upcoming', 'event-tags' );	
-	//wp_insert_term( 'expired', 'event-tags' );	
-	//wp_insert_term( 'featured', 'event-tags' );	
+	//wp_insert_term( 'upcoming', 'event-tags' );
+	//wp_insert_term( 'expired', 'event-tags' );
+	//wp_insert_term( 'featured', 'event-tags' );
 }
-	
+
 add_filter( 'register_post_type_args', 'battleplan_changeJobsiteGEOCaps' , 10, 2 );
 function battleplan_changeJobsiteGEOCaps( $args, $post_type ) {
     if ( $post_type !== 'jobsite_geo'  ) return $args;
@@ -914,11 +910,11 @@ function battleplan_add_jobsite_geo_acf_fields() {
 	$get_jobsite_geo = get_option('jobsite_geo');
 	$media_library = $get_jobsite_geo['media_library'] == 'limited' ? 'uploadedTo' : 'all';
 	$default_state = $get_jobsite_geo['default_state'] != '' ? $get_jobsite_geo['default_state'] : '';
-	
+
 	acf_add_local_field_group( array(
 		'key' => 'group_jobsite_details',
 		'title' => 'Jobsite Details',
-		'fields' => array(				
+		'fields' => array(
 			array(
 				'key' => 'field_date',
 				'label' => 'Date',
@@ -936,7 +932,7 @@ function battleplan_add_jobsite_geo_acf_fields() {
 				'display_format' => 'Y-m-d',
 				'return_format' => 'Y-m-d',
 				'first_day' => 0,
-			),	
+			),
 			array(
 				'key' => 'field_address',
 				'label' => 'Address',
@@ -966,7 +962,7 @@ function battleplan_add_jobsite_geo_acf_fields() {
 					'class' => '',
 					'id' => '',
 				),
-			),	
+			),
 			array(
 				'key' => 'field_state',
 				'label' => 'State',
@@ -975,14 +971,14 @@ function battleplan_add_jobsite_geo_acf_fields() {
 				'type' => 'text',
 				'instructions' => '',
 				'required' => 1,
-				'conditional_logic' => 0,				
+				'conditional_logic' => 0,
 				'default_value' => $default_state,
 				'wrapper' => array(
 					'width' => '7%',
 					'class' => '',
 					'id' => '',
 				),
-			),		
+			),
 			array(
 				'key' => 'field_zip',
 				'label' => 'Zip Code',
@@ -1294,7 +1290,7 @@ add_action('admin_enqueue_scripts', function($hook) {
 
 	wp_localize_script('bp-jobsite-geo-admin', 'bpRotate', [
 		'ajaxurl' => admin_url('admin-ajax.php'),
-		'nonce'   => wp_create_nonce('bp_rotate_image') 
+		'nonce'   => wp_create_nonce('bp_rotate_image')
 	]);
 });
 
@@ -1361,7 +1357,8 @@ function battleplan_jobsite_template($template) {
 		$template = get_template_directory().'/archive-jobsite_geo.php';
 		$sep = ' · ';
         $jobsite_term = get_queried_object();
-	
+		$GLOBALS['jobsite_geo-service'] = get_option('jobsite_geo')['default_service'];
+
 		if ($jobsite_term) {
 			$jobsite_service  = '';
 			$jobsite_location = $jobsite_term->name;
@@ -1371,47 +1368,48 @@ function battleplan_jobsite_template($template) {
 				$jobsite_service  = $term_parts[0] ?? '';
 				$jobsite_location = $term_parts[1] ?? $jobsite_term->name;
 
-				if ($jobsite_service !== 'service-area') {
-					$GLOBALS['jobsite_geo-service'] = bp_format_service($jobsite_service);
-				} else {
-					$GLOBALS['jobsite_geo-service'] = 'Service';
-				}
-			} else {
-				$GLOBALS['jobsite_geo-service'] = 'Service';
+				$GLOBALS['jobsite_geo-service'] = bp_format_service($jobsite_service);
 			}
 
-			
 			$GLOBALS['jobsite_geo-city-state'] = bp_format_location($jobsite_location);
 			$splitLoc = explode(', ', $GLOBALS['jobsite_geo-city-state']);
 			$GLOBALS['jobsite_geo-city'] = $splitLoc[0];
-			$GLOBALS['jobsite_geo-state'] = $splitLoc[1];			
+			$GLOBALS['jobsite_geo-state'] = $splitLoc[1];
 		}
 
 		if ( is_tax('jobsite_geo-service-areas') || is_tax('jobsite_geo-services') ) {
 			$GLOBALS['jobsite_geo-headline'] = $GLOBALS['jobsite_geo-service'].' in '.$GLOBALS['jobsite_geo-city-state'];
             $GLOBALS['jobsite_geo-page_title'] = $GLOBALS['jobsite_geo-headline'].$sep.get_bloginfo('name');
-	
+
+		  // [get-service default="" air-conditioner-repair="" heating-repair="" air-conditioner-installation="" hvac-maintenance="" indoor-air-quality=""]
+
 			$service_full = [
-							"Air Conditioner Installation", 
-							"Heating Installation", 
-							"Thermostat Installation", 
-							"Air Conditioner Repair", 
-							"Heating Repair", 
-							"Thermostat Repair", 
-							"HVAC Maintenance", 
+							"Air Conditioner Installation",
+							"Heating Installation",
+							"Air Conditioner Repair",
+							"Heating Repair",
+							"HVAC Maintenance",
+							"Air Duct Cleaning",
+							"Indoor Air Quality",
 							"Plumbing Services"];
-			$service_short = ["Recent air conditioner replacements in the ".$GLOBALS['jobsite_geo-city']." area.", 
-							  $GLOBALS['jobsite_geo-city']." customers we have recently helped with new heating equipment.", 
-							  "Recent thermostat installations for residents of ".$GLOBALS['jobsite_geo-city'].".", 
+			$service_short = ["Recent air conditioner replacements in the ".$GLOBALS['jobsite_geo-city']." area.",
+							  $GLOBALS['jobsite_geo-city']." homes where we recently installed new heating equipment.",
 							  "We have recently repaired air conditioners for these ".$GLOBALS['jobsite_geo-city']." customers.",
-							  "Recent heating system repairs for customers living in ".$GLOBALS['jobsite_geo-city'].".", 
-							  "We recently repaired thermostats in these ".$GLOBALS['jobsite_geo-city']." locations.", 
-							  $GLOBALS['jobsite_geo-city']." customers that recently trusted us with their HVAC service.", 
-							  "Plumbing issues we have recently solved for customers in the ".$GLOBALS['jobsite_geo-city']." area."];	
-			$GLOBALS['jobsite_geo-map-caption'] = str_replace($service_full, $service_short, $GLOBALS['jobsite_geo-service']);	
+							  "Recent heating system repairs for customers living in ".$GLOBALS['jobsite_geo-city'].".",
+							  $GLOBALS['jobsite_geo-city']." customers that recently trusted us with their HVAC service.",
+							  "Homes in ".$GLOBALS['jobsite_geo-city']." where we recently cleaned and/or repaired air ducts.",
+							  "We've improved the indoor air quality for these ".$GLOBALS['jobsite_geo-city']." customers.",
+							  "Plumbing issues we have recently solved for ".$GLOBALS['jobsite_geo-city']." homes."];
+
+			if (in_array($GLOBALS['jobsite_geo-service'], $service_full)) {
+				$index = array_search($GLOBALS['jobsite_geo-service'], $service_full);
+				$GLOBALS['jobsite_geo-map-caption'] = $service_short[$index];
+			} else {
+				$GLOBALS['jobsite_geo-map-caption'] = "Recent ".$GLOBALS['jobsite_geo-service']." in ".$GLOBALS['jobsite_geo-city'].", ".$GLOBALS['jobsite_geo-state'];
+			}
 
 			$plural = ( stripos($GLOBALS['jobsite_geo-service'], 'services') === false && stripos($GLOBALS['jobsite_geo-service'], 'maintenance') === false ) ? 's' : '';
-	
+
 			$GLOBALS['jobsite_geo-bottom-headline'] = "Recent ".$GLOBALS['jobsite_geo-service'].$plural." In ".$GLOBALS['jobsite_geo-city'];
 
 			$query = bp_WP_Query('landing', [
@@ -1424,11 +1422,9 @@ function battleplan_jobsite_template($template) {
 				while($query->have_posts()) {
 					$query->the_post();
 					$GLOBALS['jobsite_geo-content'] = apply_filters('the_content', get_the_content());
-					$GLOBALS['jobsite_geo-page_title'] = str_replace('%%sep%%', $sep, get_post_meta(get_the_ID(), '_yoast_wpseo_title', true) );
+					$GLOBALS['jobsite_geo-page_title'] = str_replace('%%sep%%', $sep, $GLOBALS['jobsite_geo-service'] ).' in '.$GLOBALS['jobsite_geo-city'].", ".$GLOBALS['jobsite_geo-state'].$sep.get_bloginfo('name');
 					$GLOBALS['jobsite_geo-page_desc'] = get_post_meta(get_the_ID(), '_yoast_wpseo_metadesc', true);
-					$GLOBALS['mapGrid'] = "1-1";
-					//$position = strpos($GLOBALS['jobsite_geo-page_title'], '·');
-					//if ($position !== false) $GLOBALS['jobsite_geo-headline'] = trim(substr($GLOBALS['jobsite_geo-page_title'], 0, $position));
+					$GLOBALS['mapGrid'] = "3-2";
 				}
 			} else {
 					$query = bp_WP_Query('landing', [
@@ -1441,19 +1437,17 @@ function battleplan_jobsite_template($template) {
 					while($query->have_posts()) {
 						$query->the_post();
 						$GLOBALS['jobsite_geo-content'] = apply_filters('the_content', get_the_content());
-						$GLOBALS['jobsite_geo-page_title'] = str_replace('%%sep%%', $sep, get_post_meta(get_the_ID(), '_yoast_wpseo_title', true) ).$sep.$GLOBALS['jobsite_geo-city'].", ".$GLOBALS['jobsite_geo-state'];
+						$GLOBALS['jobsite_geo-page_title'] = str_replace('%%sep%%', $sep, $GLOBALS['jobsite_geo-service'] ).' in '.$GLOBALS['jobsite_geo-city'].", ".$GLOBALS['jobsite_geo-state'].$sep.get_bloginfo('name');
 						$GLOBALS['jobsite_geo-page_desc'] = get_post_meta(get_the_ID(), '_yoast_wpseo_metadesc', true);
-						$GLOBALS['mapGrid'] = "1-1";
-						//$position = strpos($GLOBALS['jobsite_geo-page_title'], '·');
-						//if ($position !== false) $GLOBALS['jobsite_geo-headline'] = trim(substr($GLOBALS['jobsite_geo-page_title'], 0, $position)).' in '.$GLOBALS['jobsite_geo-city'].", ".$GLOBALS['jobsite_geo-state'];
-					} 
-				} else {
+						$GLOBALS['mapGrid'] = "3-2";
+					}
+				} else { 
 					$GLOBALS['jobsite_geo-content'] = '';
 					$GLOBALS['mapGrid'] = "1";
 				}
-			}		
+			}
 			wp_reset_postdata();
-	
+
 		} elseif (is_tax('jobsite_geo-techs')) {
 			$tech_name = ucwords(str_replace('-', ' ', $jobsite_term->name));
 
@@ -1463,15 +1457,15 @@ function battleplan_jobsite_template($template) {
 			$GLOBALS['jobsite_geo-map-caption'] = 'This map shows the location of some of ' . $tech_name . '\'s recent work.';
 		}
 	}
-	
+
     add_filter( 'wpseo_title', function( $title ) {
         return $GLOBALS['jobsite_geo-page_title'];
     });
-	
+
     add_filter( 'wpseo_metadesc', function( $description ) {
         return $GLOBALS['jobsite_geo-page_desc'];
     });
-	
+
     return $template;
 }
 
@@ -1529,6 +1523,21 @@ function bp_cleanup_empty_service_tags() {
 }
 
 
+
+add_filter('wpseo_schema_organization', function ($data) {
+	$city = $GLOBALS['jobsite_geo-city'];
+	if (!empty($data['areaServed']) && is_array($data['areaServed'])) {
+		$data['areaServed'] = array_values(array_filter($data['areaServed'], function ($area) use ($city) {
+			if (empty($area['name'])) return false;
+			$nameSlug = strtolower(str_replace([',', ' '], ['','-'], $area['name']));
+			return strpos($nameSlug, $parts[0]) !== false; // match first part ("alba")
+		}));
+	}
+
+	return $data;
+});
+
+
 /*--------------------------------------------------------------
 # Shortcodes
 --------------------------------------------------------------*/
@@ -1536,12 +1545,21 @@ function bp_cleanup_empty_service_tags() {
 add_shortcode( 'get-jobsite', 'battleplan_getJobsiteCityState' );
 function battleplan_getJobsiteCityState($atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', ), $atts );
-	$type = esc_attr($a['type']);	
+	$type = esc_attr($a['type']);
 
 	if ( $type == 'city' ) return trim($GLOBALS['jobsite_geo-city']);
 	if ( $type == 'state' ) return trim($GLOBALS['jobsite_geo-state']);
 }
 
+// Determine which verbiage to use based on service
+add_shortcode( 'get-service', 'battleplan_getService' );
+function battleplan_getService($atts, $content = null) {
+	foreach ($atts as $key => $value) {
+		if (sanitize_key($key) === sanitize_title($GLOBALS['jobsite_geo-service'])) return wp_kses_post($value);
+	}
+
+	return isset($atts['default']) ? wp_kses_post($atts['default']) : $GLOBALS['jobsite_geo-service'];
+}
 
 /*--------------------------------------------------------------
 # Setup Re-directs

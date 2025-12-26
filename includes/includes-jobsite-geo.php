@@ -16,6 +16,44 @@
 # Admin
 --------------------------------------------------------------*/
 
+
+
+function bp_cleanup_duplicate_attachments() {
+
+	$attachments = get_posts([
+	    'post_type'      => 'attachment',
+	    'posts_per_page' => -1,
+	    'post_status'    => 'inherit',
+	    'fields'         => 'ids',
+	]);
+
+	$hashes = [];
+
+	foreach ($attachments as $aid) {
+
+	    $file = get_attached_file($aid);
+	    if (!$file || !file_exists($file)) continue;
+
+	    $hash = md5_file($file);
+
+	    if (!isset($hashes[$hash])) {
+		   $hashes[$hash] = $aid;
+		   continue;
+	    }
+
+	    $original = $hashes[$hash];
+
+	    // If this attachment is not used anywhere, delete it
+	    if ((int) get_post_field('post_parent', $aid) === 0) {
+		   wp_delete_attachment($aid, true);
+	    }
+	}
+ }
+
+ //bp_cleanup_duplicate_attachments();
+
+
+
 // Housecall Pro Webhook
 add_action('rest_api_init', function() {
 	register_rest_route('hcpro/v1', '/job-callback', [
@@ -26,8 +64,6 @@ add_action('rest_api_init', function() {
 });
 
 function hcpro_handle_job_webhook($req) {
-	// 🔒 Security check
-
 	$get_jobsite_geo = get_option('jobsite_geo');
 
 	if ( empty($_GET['token']) || $_GET['token'] !== $get_jobsite_geo['token'] ) {
@@ -42,20 +78,16 @@ function hcpro_handle_job_webhook($req) {
 	require_once ABSPATH . 'wp-admin/includes/file.php';
 	require_once ABSPATH . 'wp-admin/includes/image.php';
 
-	// 🧾 Decode JSON
 	$data = json_decode($req->get_body());
 
-	// Check if JSON decoded properly
 	if (!$data || !is_object($data)) {
 		return new WP_REST_Response(['error' => 'Invalid JSON'], 400);
 	}
 
-	// Check if the job object exists and is valid
 	if (!isset($data->job) || !is_object($data->job)) {
 		return new WP_REST_Response(['error' => 'Invalid job object'], 400);
 	}
 
-	// 🧩 Handle test webhook
 	if (isset($data->foo) && $data->foo === 'bar') {
 		return new WP_REST_Response(['test' => 'Webhook verified OK'], 200);
 	}
@@ -64,94 +96,60 @@ function hcpro_handle_job_webhook($req) {
 		return new WP_REST_Response(['error' => 'Missing job info'], 400);
 	}
 
-	// Log payload (debugging only)
 	if (defined('WP_DEBUG') && WP_DEBUG) {
 		file_put_contents(WP_CONTENT_DIR . '/hcp-last-payload.txt', print_r($data, true));
 	}
 
-	// Shortcuts
 	$job  = $data->job;
 	$cust = $job->customer ?? new stdClass();
 	$addr = $job->address ?? new stdClass();
 
-	// 🧩 Parse notes for description and photo captions
 	$description_note = '';
 	$photo_note = '';
 	$captions = [];
 	$has_publishable_note = false;
-	$max_photos       = 0;
 
 	if (!empty($job->notes)) {
 		foreach ($job->notes as $n) {
 			$content = trim($n->content);
 
-			// 🔹 If it starts with *** (3+ asterisks), treat as the publishable description
 			if (preg_match('/^\*{3,}/', $content)) {
 				$has_publishable_note = true;
-				// Remove all leading asterisks and whitespace
 				$description_note = trim(preg_replace('/^\*{3,}\s*/', '', $content));
-			// 🔹 If it contains "Photo" (or Pic/Image), treat as the photo captions note
 			} elseif (preg_match('/\b(Photo|Pic|Image)\s*\d+/i', $content)) {
 				$photo_note = $content;
 			}
 		}
 	}
 
-	// 🚫 If no valid description note found, stop — we don’t want to publish this job
 	if (!$has_publishable_note) {
-		return new WP_REST_Response(['skipped' => 'No publishable note found (missing ***)'], 200);
+		return new WP_REST_Response(['skipped' => 'No publishable note found'], 200);
 	}
 
-	// 🧩 Parse photo captions if a "Photo" note exists
 	if ($photo_note) {
-		// Normalize whitespace
-		$text = str_replace(["\r", "\n"], ' ', $photo_note);
-		$text = preg_replace('/\s+/', ' ', $text);
-
-		// 🧩 Match "Photo"/"Pic"/"Image" <num> followed by optional bullet/punctuation, then caption
-		// Capture until next "Photo <num>" or end
-		$pattern = '/\b(?:Photo|Pic|Image)\s*(\d+)\s*[\-\–—\*\:\.\=\)\s]*([^\b]*?)(?=\b(?:Photo|Pic|Image)\s*\d+|$)/i';
+		$text = preg_replace('/\s+/', ' ', str_replace(["\r", "\n"], ' ', $photo_note));
+		$pattern = '/\b(?:Photo|Pic|Image)\s*(\d+)\s*[\-\*\:\.\=\)\s]*([^\b]*?)(?=\b(?:Photo|Pic|Image)\s*\d+|$)/i';
 
 		if (preg_match_all($pattern, $text, $matches, PREG_SET_ORDER)) {
 			foreach ($matches as $m) {
-				$idx = (int)$m[1];
+				$idx = (int) $m[1];
 				$cap = trim($m[2]);
-
-				// Clean up leftover leading symbols
-				$cap = preg_replace('/^[\s\-\–—\*\:\.\=\)\(]+/', '', $cap);
-				$cap = trim($cap, " \t\n\r\0\x0B-–—*:=.");
 				if ($cap !== '') $captions[$idx] = $cap;
 			}
 		}
-
-		$max_photos = count($captions);
 	}
 
-
-	if (!$description_note && isset($job->description)) $description_note = $job->description;
-
-	// 🧱 Build job info
 	$title   = trim(($cust->first_name ?? '') . ' ' . ($cust->last_name ?? ''));
 	$content = $description_note;
-	$street  = $addr->street ?? '';
-	$city    = $addr->city ?? '';
-	$state   = $addr->state ?? '';
-	$zip     = isset($addr->zip) ? preg_replace('/^(\d{5}).*/', '$1', $addr->zip) : '';
-	$date    = $job->work_timestamps->completed_at ?? '';
-	$invoice = $job->invoice_number ?? '';
-	$total   = isset($job->total_amount) ? $job->total_amount / 100 : 0;
 	$job_id  = $job->id ?? '';
 
+	$GLOBALS['bp_jobsite_setup_running'] = true;
 
-    $GLOBALS['bp_jobsite_setup_running'] = true;
-
-	// 🧾 Create or update post
 	$existing = get_posts([
 		'post_type'   => 'jobsite_geo',
 		'meta_key'    => 'hcp_job_id',
 		'meta_value'  => $job_id,
 		'numberposts' => 1,
-		'post_status' => ['publish', 'draft', 'pending']
 	]);
 
 	if ($existing) {
@@ -166,127 +164,138 @@ function hcpro_handle_job_webhook($req) {
 			'post_title'   => $title,
 			'post_content' => $content,
 			'post_type'    => 'jobsite_geo',
-			'post_status'  => 'publish'
+			'post_status'  => 'publish',
 		]);
 	}
 
-	if (!$post_id) return new WP_REST_Response(['error' => 'Failed to create post'], 500);
+	if (!$post_id) {
+		return new WP_REST_Response(['error' => 'Failed to create post'], 500);
+	}
 
-		$address_data = [
-		'street' => $street,
-		'city'   => $city,
-		'state'  => $state,
-		'zip'    => $zip,
-	];
-	update_post_meta($post_id, '_jobsite_address_data', $address_data);
 
-	// 🧩 Update ACF/meta fields
-	update_field('hcp_job_id', $job_id, $post_id);
-	update_field('invoice_number', $invoice, $post_id);
-	update_field('customer_name', $title, $post_id);
+	$street = $addr->street ?? '';
+	$city   = $addr->city ?? '';
+	$state  = $addr->state ?? '';
+	$zip    = isset($addr->zip) ? preg_replace('/^(\d{5}).*/', '$1', $addr->zip) : '';
+	$date   = $job->work_timestamps->completed_at ?? '';
+
 	update_field('address', $street, $post_id);
 	update_field('city', $city, $post_id);
 	update_field('state', $state, $post_id);
 	update_field('zip', $zip, $post_id);
 	update_field('job_date', $date, $post_id);
-	update_field('notes', $description_note, $post_id);
-	update_field('total_amount', $total, $post_id);
-	update_post_meta($post_id, '_hcp_raw', $req->get_body());
-	if (!empty($job->assigned_employees[0]->name)) {
-		update_post_meta($post_id, '_hcp_tech_name', $job->assigned_employees[0]->name);
-	}
+	update_field('hcp_job_id', $job_id, $post_id);
+	update_field('customer_name', $title, $post_id);
 
-	// 📷 Handle attachments
-	$saved_hcp_ids = get_post_meta($post_id, '_hcp_attachment_ids', true);
-	if (!is_array($saved_hcp_ids)) $saved_hcp_ids = [];
-	$current_hcp_ids = !empty($job->attachments) ? array_map(fn($a) => $a->id, $job->attachments) : [];
+	$attachments = array_reverse($job->attachments ?? []);
+	$saved_ids   = get_post_meta($post_id, '_hcp_attachment_ids', true);
+	if (!is_array($saved_ids)) $saved_ids = [];
 
-	$photo_index = 1;
+	$acf_slot = 1;
 
-	if (!empty($job->attachments)) {
-		$attachments = array_reverse($job->attachments ?? []);
+	// Sort captions by photo number so Photo 1, Photo 3 behaves predictably
+	ksort($captions);
 
-		foreach ($attachments as $a) {
-			if ($photo_index > $max_photos && $max_photos > 0) break;
+	foreach ($captions as $photo_num => $caption) {
 
-			// Skip existing ones
-			if (in_array($a->id, $saved_hcp_ids, true)) {
-				$caption_text = $captions[$photo_index] ?? '';
-				update_field("jobsite_photo_{$photo_index}_alt", $caption_text, $post_id);
-				$photo_index++;
-				continue;
-			}
+	    if ($acf_slot > 4) break;
 
-			// Download new image
-			$tmp = download_url($a->url);
-			if (is_wp_error($tmp)) continue;
+	    // Photo numbers are 1-based, HCP attachments are 0-based
+	    $attachment_index = $photo_num - 1;
 
-			// Build desired filename
-			$customer_name = get_field('customer_name', $post_id) ?: 'Customer';
-			$clean_customer = sanitize_title($customer_name);
-			$new_filename = "jobsite-geo-{$post_id}-{$clean_customer}-{$photo_index}";
+	    if (!isset($attachments[$attachment_index])) {
+		   continue;
+	    }
 
-			// Keep proper extension from original file_name
-			$ext = pathinfo($a->file_name, PATHINFO_EXTENSION);
-			if (!$ext) $ext = 'jpg';
+	    $a = $attachments[$attachment_index];
 
-			$file = [
-				'name'     => "{$new_filename}.{$ext}",
-				'type'     => $a->file_type ?? 'image/jpeg',
-				'tmp_name' => $tmp,
-				'error'    => 0,
-				'size'     => filesize($tmp),
-			];
+	    $attachment_title = sprintf(
+		   'Jobsite GEO [%d] %s - %s',
+		   $post_id,
+		   wp_strip_all_tags(get_the_title($post_id)),
+		   $a->id
+	    );
 
-			$m = wp_handle_sideload($file, ['test_form' => false]);
-			if (empty($m['file'])) continue;
+	    // Check for existing attachment by HCP ID
+	    $existing_attachment = get_posts([
+		   'post_type'   => 'attachment',
+		   'meta_key'    => '_hcp_attachment_id',
+		   'meta_value'  => $a->id,
+		   'fields'      => 'ids',
+		   'numberposts' => 1,
+	    ]);
 
-			$aid = wp_insert_attachment([
-				'post_mime_type' => $file['type'],
-				'post_title'     => sanitize_file_name($file['name']),
-				'post_status'    => 'inherit'
-			], $m['file'], $post_id);
+	    if ($existing_attachment) {
 
-			wp_update_attachment_metadata($aid, wp_generate_attachment_metadata($aid, $m['file']));
+		$aid = (int) $existing_attachment[0];
 
-			// Store the HCP attachment ID on this image
-			update_post_meta($aid, '_hcp_attachment_id', $a->id);
-
-			// ACF
-			$caption_text = $captions[$photo_index] ?? '';
-			update_field("jobsite_photo_{$photo_index}", $aid, $post_id);
-			update_field("jobsite_photo_{$photo_index}_alt", $caption_text, $post_id);
-
-			// Media Library caption/alt
-			if ($caption_text) {
-				wp_update_post(['ID' => $aid, 'post_excerpt' => $caption_text]);
-				update_post_meta($aid, '_wp_attachment_image_alt', $caption_text);
-			}
-
-			$saved_hcp_ids[] = $a->id;
-			$photo_index++;
+		// Ensure attachment is attached to this post
+		if ((int) get_post_field('post_parent', $aid) !== (int) $post_id) {
+		    wp_update_post([
+			   'ID'          => $aid,
+			   'post_parent' => $post_id,
+		    ]);
 		}
 
-		// 🧹 Remove old photos no longer in payload
-		$removed = array_diff($saved_hcp_ids, $current_hcp_ids);
-		if (!empty($removed)) {
-			foreach ($removed as $old_id) {
-				for ($i = 1; $i <= 4; $i++) {
-					$field = "jobsite_photo_{$i}";
-					$aid = get_field($field, $post_id);
-					if ($aid && get_post_meta($aid, '_hcp_attachment_id', true) === $old_id) {
-						update_field($field, null, $post_id);
-						update_field("{$field}_alt", '', $post_id);
-						wp_delete_attachment($aid, true); // full delete
-					}
-				}
-			}
+		// Keep title in sync
+		wp_update_post([
+		    'ID'         => $aid,
+		    'post_title' => $attachment_title,
+		]);
+
+	 } else {
+
+		$tmp = download_url($a->url);
+		if (is_wp_error($tmp)) {
+		    continue;
 		}
-		update_post_meta($post_id, '_hcp_attachment_ids', $current_hcp_ids);
+
+		// Force deterministic filename to prevent -1, -2, -3 suffixes
+		$ext = pathinfo($a->file_name ?? '', PATHINFO_EXTENSION) ?: 'jpg';
+
+		$file = [
+		    'name'     => "jobsite-geo-{$post_id}-{$a->id}.{$ext}",
+		    'type'     => $a->file_type ?? 'image/jpeg',
+		    'tmp_name' => $tmp,
+		    'error'    => 0,
+		    'size'     => filesize($tmp),
+		];
+
+		$m = wp_handle_sideload($file, ['test_form' => false]);
+		if (empty($m['file'])) {
+		    continue;
+		}
+
+		$aid = wp_insert_attachment([
+		    'post_mime_type' => $file['type'],
+		    'post_title'     => $attachment_title,
+		    'post_status'    => 'inherit',
+		], $m['file'], $post_id);
+
+		wp_update_attachment_metadata(
+		    $aid,
+		    wp_generate_attachment_metadata($aid, $m['file'])
+		);
+
+		update_post_meta($aid, '_hcp_attachment_id', $a->id);
+		$saved_ids[] = $a->id;
+	 }
+
+	    // Assign sequential ACF slot
+	    update_field("jobsite_photo_{$acf_slot}", $aid, $post_id);
+	    update_field("jobsite_photo_{$acf_slot}_alt", $caption, $post_id);
+
+	    if ($caption !== '') {
+		   update_post_meta($aid, '_wp_attachment_image_alt', $caption);
+		   wp_update_post(['ID' => $aid, 'post_excerpt' => $caption]);
+	    }
+
+	    $acf_slot++;
 	}
+
+	update_post_meta($post_id, '_hcp_attachment_ids', array_unique($saved_ids));
 
 	bp_jobsite_setup($post_id, 'Housecall Pro');
-
 	unset($GLOBALS['bp_jobsite_setup_running']);
 
 	return new WP_REST_Response(['success' => true, 'post_id' => $post_id], 200);
@@ -322,28 +331,55 @@ function bp_format_service($service) {
 }
 
 // Orient uploaded photos correctly
-add_filter('wp_generate_attachment_metadata', function($metadata, $attachment_id) {
+add_filter('wp_handle_upload_prefilter', function($file) {
 
-    if (!empty($GLOBALS['bp_skip_exif_rotation'])) {
-        return $metadata; // skip EXIF rotation entirely
-    }
+	if (!empty($GLOBALS['bp_skip_exif_rotation'])) {
+	    return $file;
+	}
 
-    $filepath = get_attached_file($attachment_id);
-    $image = wp_get_image_editor($filepath);
-    if (is_wp_error($image)) return $metadata;
+	if (!isset($file['tmp_name']) || !file_exists($file['tmp_name'])) {
+	    return $file;
+	}
 
-    $exif = @exif_read_data($filepath);
-    if (!empty($exif['Orientation'])) {
-        switch ($exif['Orientation']) {
-            case 3: $image->rotate(180); break;
-            case 6: $image->rotate(-90); break;
-            case 8: $image->rotate(90); break;
-        }
-        $image->save($filepath);
-    }
+	$mime = $file['type'] ?? '';
+	if (!str_starts_with($mime, 'image/')) {
+	    return $file;
+	}
 
-    return $metadata;
-}, 10, 2);
+	// Read EXIF safely
+	$exif = @exif_read_data($file['tmp_name']);
+	if (empty($exif['Orientation']) || (int)$exif['Orientation'] === 1) {
+	    return $file;
+	}
+
+	$image = wp_get_image_editor($file['tmp_name']);
+	if (is_wp_error($image)) {
+	    return $file;
+	}
+
+	switch ((int)$exif['Orientation']) {
+	    case 3:
+		   $image->rotate(180);
+		   break;
+	    case 6:
+		   $image->rotate(-90);
+		   break;
+	    case 8:
+		   $image->rotate(90);
+		   break;
+	    default:
+		   return $file;
+	}
+
+	// Save rotated image back to same temp file
+	$saved = $image->save($file['tmp_name']);
+	if (is_wp_error($saved)) {
+	    return $file;
+	}
+
+	return $file;
+
+ });
 
 
 function bp_jobsite_setup($post_id, $user) {
@@ -614,9 +650,7 @@ function bp_jobsite_setup($post_id, $user) {
 			'hvac'            		=> ['hvac', 'fan motor', 'blower', 'mini split'],
 		];
 
-		$type = str_contains($description, 'repair') || str_contains($description, 'service') ? '-repair' :
-			(str_contains($description, 'install') || str_contains($description, 'replace') ? '-installation' :
-			(esc_attr(get_field('new_brand')) ? '-installation' : '-repair'));
+		$type = str_contains($description, 'repair') || str_contains($description, 'service') || str_contains($description, 'replace') ? '-repair' :  '-installation';
 
 		foreach (['duct cleaning', 'airflow', 'air flow'] as $keyword) {
 			if (stripos($description, $keyword) !== false) {
@@ -624,7 +658,7 @@ function bp_jobsite_setup($post_id, $user) {
 				break;
 			}
 		}
-		
+
 		foreach (['dryer vent'] as $keyword) {
 			if (stripos($description, $keyword) !== false) {
 				$service = 'dryer-vent-cleaning';
@@ -632,7 +666,7 @@ function bp_jobsite_setup($post_id, $user) {
 			}
 		}
 
-		foreach (['allergies', 'indoor air', 'air quality', 'clean air'] as $keyword) {
+		foreach (['allergies', 'indoor air', 'air quality', 'clean air', 'air purifi'] as $keyword) {
 			if (stripos($description, $keyword) !== false) {
 				$service = 'indoor-air-quality';
 				break;
@@ -1219,11 +1253,10 @@ function battleplan_add_jobsite_geo_acf_fields() {
 				'return_format' => 'id',
 				'multiple' => 0,
 				'allow_null' => 1,
+				'ui' => 0,
 				'bidirectional' => 0,
-				'ui' => 1,
 				'bidirectional_target' => array(),
 			),
-
 		),
 		'location' => array(
 			array(
@@ -1408,7 +1441,7 @@ function battleplan_jobsite_template($template) {
 				$GLOBALS['jobsite_geo-map-caption'] = "Recent ".$GLOBALS['jobsite_geo-service']." in ".$GLOBALS['jobsite_geo-city'].", ".$GLOBALS['jobsite_geo-state'];
 			}
 
-			$plural = ( stripos($GLOBALS['jobsite_geo-service'], 'services') === false && stripos($GLOBALS['jobsite_geo-service'], 'maintenance') === false ) ? 's' : '';
+			$plural = ( stripos($GLOBALS['jobsite_geo-service'], 'services') === false && stripos($GLOBALS['jobsite_geo-service'], 'maintenance') === false && stripos($GLOBALS['jobsite_geo-service'], 'air quality') === false ) ? 's' : '';
 
 			$GLOBALS['jobsite_geo-bottom-headline'] = "Recent ".$GLOBALS['jobsite_geo-service'].$plural." In ".$GLOBALS['jobsite_geo-city'];
 
@@ -1441,7 +1474,7 @@ function battleplan_jobsite_template($template) {
 						$GLOBALS['jobsite_geo-page_desc'] = get_post_meta(get_the_ID(), '_yoast_wpseo_metadesc', true);
 						$GLOBALS['mapGrid'] = "3-2";
 					}
-				} else { 
+				} else {
 					$GLOBALS['jobsite_geo-content'] = '';
 					$GLOBALS['mapGrid'] = "1";
 				}

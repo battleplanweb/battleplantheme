@@ -22,7 +22,7 @@
 /* Main Menu */
 .widget-navigation {
      position:                                              relative;
-	/* anchors the position:absolute of #magic-line, added 11-5-2020 for Clay Lewis */
+     /* anchors the position:absolute of #magic-line, added 11-5-2020 for Clay Lewis */
 }
 
 .main-navigation ul,
@@ -99,7 +99,7 @@
 #desktop-navigation ul.main-menu > li .menu-btn-over,
 #desktop-navigation ul.main-menu > li .menu-btn-under {
      position:                                              absolute;
-	/*display: 										none; 9/29/2025 - Knights -- no idea why I would have made this display: none but this is making button invisible*/
+     /*display: 										none; 9/29/2025 - Knights -- no idea why I would have made this display: none but this is making button invisible*/
      font-family:                                           var(--font-secondary);
      width:                                                 100%;
      height:                                                100%;
@@ -139,17 +139,17 @@
 }
 
 @keyframes menu-icon-anim {
-	0% {
-		transform: rotate(0) scale(0)
-	}
+     0% {
+          transform: rotate(0) scale(0)
+     }
 
-	25% {
-		transform: rotate(0deg) scale(1.2)
-	}
+     25% {
+          transform: rotate(0deg) scale(1.2)
+     }
 
-	100% {
-		transform: rotate(0deg) scale(1)
-	}
+     100% {
+          transform: rotate(0deg) scale(1)
+     }
 }
 
 .main-navigation .menu-icon + a {
@@ -164,17 +164,17 @@
 }
 
 @keyframes icon-move {
-	0% {
+     0% {
           transform:                                        translate(0, 0px);
-	}
+     }
 
-	50% {
+     50% {
           transform:                                        translate(0, 4px);
-	}
+     }
 
-	100% {
+     100% {
           transform:                                        translate(0, 0px);
-	}
+     }
 }
 
 .main-navigation li.menu-item-has-children > a:not(.menu-icon) .icon.sub-menu-icon,
@@ -183,9 +183,9 @@
 .main-navigation li.current_page_parent-has-children > .menu-btn-over .icon.sub-menu-icon {
      font-size:                                             14px;
      transform:                                             translate(0, 0);
-	height: 0
-		/* necessary to keep menu button from dropping below the others without children */
-	;
+     height: 0
+          /* necessary to keep menu button from dropping below the others without children */
+     ;
      transition:                                            transform 0.3s ease;
 }
 
@@ -455,37 +455,37 @@
 }
 
 @keyframes hamburger {
-	0% {
+     0% {
           width:                                            24px;
           margin-left:                                      4px;
-	}
+     }
 
-	5% {
+     5% {
           width:                                            22px;
           margin-left:                                      5px;
-	}
+     }
 
-	10% {
+     10% {
           width:                                            20px;
           margin-left:                                      6px;
-	}
+     }
 
-	20% {
+     20% {
           width:                                            24px;
           margin-left:                                      4px;
-	}
+     }
 }
 
 #mobile-menu-bar .mm-bar-btn.activate-btn.active div:nth-of-type(1) {
-	transform: rotate(-45deg) translate(-6px, 6px) scaleX(1)
+     transform: rotate(-45deg) translate(-6px, 6px) scaleX(1)
 }
 
 #mobile-menu-bar .mm-bar-btn.activate-btn.active div:nth-of-type(2) {
-	transform: scaleX(0)
+     transform: scaleX(0)
 }
 
 #mobile-menu-bar .mm-bar-btn.activate-btn.active div:nth-of-type(3) {
-	transform: rotate(45deg) translate(-5px, -6px) scaleX(1)
+     transform: rotate(45deg) translate(-5px, -6px) scaleX(1)
 }
 
 #mobile-menu-bar .mm-bar-btn.call-btn .icon {
@@ -497,6 +497,9 @@
      animation-delay:                                       6s;
      font-size:                                             18px;
      top:                                                   -1px;
+}
+
+currently-open #mobile-menu-bar .mm-bar-btn.call-btn .icon {
      left:                                                  -11px;
 }
 
@@ -506,55 +509,55 @@
 
 @keyframes phone-ring {
 
-	0%,
-	21%,
-	100% {
+     0%,
+     21%,
+     100% {
           transform:                                        rotate(0deg) scale(1);
-	}
+     }
 
-	1% {
+     1% {
           transform:                                        rotate(-10deg) scale(1);
-	}
+     }
 
-	2% {
+     2% {
           transform:                                        rotate(13deg) scale(1.4);
-	}
+     }
 
-	3%,
-	17% {
+     3%,
+     17% {
           transform:                                        rotate(-20deg) scale(1.3);
-	}
+     }
 
-	4%,
-	6%,
-	8%,
-	10%,
-	12%,
-	14%,
-	16% {
+     4%,
+     6%,
+     8%,
+     10%,
+     12%,
+     14%,
+     16% {
           transform:                                        rotate(20deg) scale(1.4);
-	}
+     }
 
-	5%,
-	7%,
-	9%,
-	11%,
-	13%,
-	15% {
+     5%,
+     7%,
+     9%,
+     11%,
+     13%,
+     15% {
           transform:                                        rotate(-20deg) scale(1.4);
-	}
+     }
 
-	18% {
+     18% {
           transform:                                        rotate(16deg) scale(1.3);
-	}
+     }
 
-	19% {
+     19% {
           transform:                                        rotate(-13deg) scale(1.2);
-	}
+     }
 
-	20% {
+     20% {
           transform:                                        rotate(10deg) scale(1.2);
-	}
+     }
 }
 
 #mobile-menu-bar .email-btn .icon {
@@ -568,32 +571,32 @@
 
 @keyframes envelope-spin {
 
-	0%,
-	20% {
+     0%,
+     20% {
           transform:                                        rotate(0deg);
           opacity:                                          1;
-	}
+     }
 
-	40% {
+     40% {
           transform:                                        rotate(-30deg);
           opacity:                                          1;
-	}
+     }
 
-	43% {
+     43% {
           transform:                                        rotate(360deg);
           opacity:                                          0.3;
-	}
+     }
 
-	45%,
-	96% {
+     45%,
+     96% {
           transform:                                        rotate(740deg);
           opacity:                                          0;
-	}
+     }
 
-	99% {
+     99% {
           transform:                                        rotate(1080deg);
           opacity:                                          1;
-	}
+     }
 }
 
 #mobile-menu-bar .email2-btn .icon {
@@ -606,35 +609,35 @@
 }
 
 @keyframes email2-spin {
-	0% {
+     0% {
           transform:                                        rotate(0deg);
-		opacity: 0
-	}
+          opacity: 0
+     }
 
-	40% {
+     40% {
           transform:                                        rotate(-30deg);
-		opacity: 0
-	}
+          opacity: 0
+     }
 
-	43% {
+     43% {
           transform:                                        rotate(360deg);
-		opacity: 0.7
-	}
+          opacity: 0.7
+     }
 
-	45% {
+     45% {
           transform:                                        rotate(720deg);
-		opacity: 1
-	}
+          opacity: 1
+     }
 
-	96% {
+     96% {
           transform:                                        rotate(750deg);
-		opacity: 1
-	}
+          opacity: 1
+     }
 
-	99% {
+     99% {
           transform:                                        rotate(1080deg);
-		opacity: 0
-	}
+          opacity: 0
+     }
 }
 
 #mobile-menu-bar a.scroll-top {
@@ -650,21 +653,21 @@
 }
 
 @keyframes screen-up {
-	0% {
-		transform: translateY(0)
-	}
+     0% {
+          transform: translateY(0)
+     }
 
-	25% {
-		transform: translateY(-2px)
-	}
+     25% {
+          transform: translateY(-2px)
+     }
 
-	50% {
-		transform: translateY(4px)
-	}
+     50% {
+          transform: translateY(4px)
+     }
 
-	75% {
-		transform: translateY(-4px)
-	}
+     75% {
+          transform: translateY(-4px)
+     }
 }
 
 #request-quote-modal > .flex {
@@ -1032,7 +1035,7 @@ body.screen-desktop a.icon-btn.scroll-top {
      border-radius:                                         0;
      transform:                                             none;
      z-index:                                               999999995;
-	/* sits directly under mobile menu + modal boxes */
+     /* sits directly under mobile menu + modal boxes */
 }
 
 body.screen-desktop a.icon-btn.scroll-top:hover,
@@ -1088,17 +1091,17 @@ body.screen-desktop a.icon-btn.scroll-top.tab-focus .icon {
 }
 
 @keyframes scroll-down {
-	0% {
-		transform: translate(0, 0)
-	}
+     0% {
+          transform: translate(0, 0)
+     }
 
-	50% {
-		transform: translate(0, 12px)
-	}
+     50% {
+          transform: translate(0, 12px)
+     }
 
-	100% {
-		transform: translate(0, 0)
-	}
+     100% {
+          transform: translate(0, 0)
+     }
 }
 
 a.visible {
@@ -1111,36 +1114,36 @@ a.visible {
 
 @media only screen and (min-width: 1025px) {
 
-	#mobile-menu-bar-faux,
-	#mobile-menu-bar,
-	#mobile-navigation {
+     #mobile-menu-bar-faux,
+     #mobile-menu-bar,
+     #mobile-navigation {
           display:                                          none;
-	}
+     }
 
-	#mobile-navigation.get-sub-heights {
+     #mobile-navigation.get-sub-heights {
           display:                                          block;
-	}
+     }
 }
 
 /* 3: Small Tablets (landscape) */
 @media (max-width: 1024px) {
-	#desktop-navigation {
+     #desktop-navigation {
           display:                                          none;
-	}
+     }
 
-	div.menu-search-box {
+     div.menu-search-box {
           padding-left:                                     0;
           margin-top:                                       25px;
-	}
+     }
 }
 
 /* 1: Phones (portrait) */
 @media (max-width: 576px) {
-	#mobile-menu-bar a.phone-link {
+     #mobile-menu-bar a.phone-link {
           display:                                          block;
-	}
+     }
 
-	#mobile-navigation li a {
+     #mobile-navigation li a {
           font-size:                                        80%;
-	}
+     }
 }

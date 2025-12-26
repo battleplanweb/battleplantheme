@@ -19,8 +19,7 @@ if ( post_password_required() ) { return; }
 				printf( 
 					/* translators: 1: comment count number, 2: title. */
 					esc_html( _nx( '%1$s comment on &ldquo;%2$s&rdquo;', '%1$s comments on &ldquo;%2$s&rdquo;', $battleplan_comment_count, 'comments title', 'battleplan' ) ),
-					number_format_i18n( $battleplan_comment_count ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-					'<span>' . wp_kses_post( get_the_title() ) . '</span>'
+					number_format_i18n( $battleplan_comment_count ?? 0.0 ) , '<span>' . wp_kses_post( get_the_title() ) . '</span>'
 				);
 			}
 			?>

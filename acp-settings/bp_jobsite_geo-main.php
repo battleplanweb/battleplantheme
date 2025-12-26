@@ -5,7 +5,7 @@ return array (
   	'title' => 'Jobsite GEO - Main View',
   	'type' => 'jobsite_geo',
   	'id' => 'bp_jobsite_geo-main',
-  	'updated' => 1684240270, 
+  	'updated' => 1684240270,
 	'columns'=>array(
 		'post-id'=>array(
 			'type'=>'column-postid',
@@ -20,7 +20,7 @@ return array (
 			'name'=>'post-id',
 			'label_type'=>'',
 			'search'=>'on'
-		),	
+		),
 		'reviews'=>array(
 			'type'=>'column-meta',
 			'label'=>'Review',
@@ -62,6 +62,21 @@ return array (
 			'bulk_edit'=>'on',
 			'search'=>'on',
 			'filter'=>'on'
+		),
+		'last-modified'=>array(
+			'type'=>'column-modified',
+			'label'=>'Modified',
+			'width'=>'130',
+			'width_unit'=>'px',
+			'date_format'=>'diff',
+			'edit'=>'on',
+			'sort'=>'on',
+			'filter'=>'on',
+			'filter_label'=>'',
+			'filter_format'=>'monthly',
+			'name'=>'last-modified',
+			'label_type'=>'',
+			'search'=>'on'
 		),
 		'address'=>array(
 			'type'=>'column-meta',
@@ -150,20 +165,6 @@ return array (
 			'filter'=>'on',
 			'editable_type'=>'text',
 			'search'=>'on'
-		),
-		'score'=>array(
-			'type'=>'column-meta',
-			'label'=>'Score',
-			'width'=>'40', 
-			'width_unit'=>'px',
-			'field'=>'_bp_base_score',
-			'field_type'=>'',
-			'edit'=>'on',
-			'editable_type'=>'text',
-			'sort'=>'on',
-			'bulk_edit'=>'on',
-			'search'=>'on',
-			'filter'=>'on'
 		),
 		'attachments'=>array(
 			'type'=>'column-attachment',

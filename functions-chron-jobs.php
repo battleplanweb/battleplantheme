@@ -1,4 +1,4 @@
-<?php 
+<?php
 /* Battle Plan Web Design Functions: Chron Jobs
 
 /*--------------------------------------------------------------
@@ -13,6 +13,14 @@
 # Chron Jobs
 --------------------------------------------------------------*/
 
+if (
+	!is_admin() &&
+	isset($_SERVER['REQUEST_URI']) &&
+	preg_match('#sitemap(_index)?\.xml|/wp-sitemap\.xml|/feed/#i', $_SERVER['REQUEST_URI'])
+) {
+	return;
+}
+
 require_once get_template_directory().'/vendor/autoload.php';
 use Google\Analytics\Data\V1beta\BetaAnalyticsDataClient;
 use Google\Analytics\Data\V1beta\DateRange;
@@ -23,42 +31,42 @@ use Google\Analytics\Data\V1beta\Metric;
 function battleplan_delete_prefixed_options( $prefix ) {
 	global $wpdb;
 	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
-}	
+}
 
 //delete_option('bp_product_upload_2023_03_06');
 //battleplan_delete_prefixed_options( 'widget_' );
-	
+
 //if ( get_option('bp_setup_2023_09_15') != "completed" ) :
-	//add_action("init", "bp_remove_cron_job"); 
+	//add_action("init", "bp_remove_cron_job");
 	//function bp_remove_cron_job() {
-	//	wp_clear_scheduled_hook("wphb_clear_logs"); 
-	//	wp_clear_scheduled_hook("wphb_minify_clear_files"); 
-	//	wp_clear_scheduled_hook("wpmudev_scheduled_jobs"); 
+	//	wp_clear_scheduled_hook("wphb_clear_logs");
+	//	wp_clear_scheduled_hook("wphb_minify_clear_files");
+	//	wp_clear_scheduled_hook("wpmudev_scheduled_jobs");
 	//}
 
 	//battleplan_delete_prefixed_options( 'bp_admin_btn' );
 	//delete_option('bp_admin_settings');
 
 	//delete_option('bp_setup_2023_08_15');
-	//updateOption( 'bp_setup_2023_09_15', 'completed', false );	
+	//updateOption( 'bp_setup_2023_09_15', 'completed', false );
 //endif;
 
 //delete_option('bp_setup_2023_09_15');
 
 /*
-if ( get_option('bp_product_upload_2024_03_18') != "completed" && $customer_info['site-type'] == 'hvac' && ($customer_info['site-brand'] == 'american standard' || $customer_info['site-brand'] == 'American Standard' || (is_array($customer_info['site-brand']) && ( in_array('american standard', $customer_info['site-brand']) || in_array('American Standard', $customer_info['site-brand'])) ))) :		
+if ( get_option('bp_product_upload_2024_03_18') != "completed" && $customer_info['site-type'] == 'hvac' && ($customer_info['site-brand'] == 'american standard' || $customer_info['site-brand'] == 'American Standard' || (is_array($customer_info['site-brand']) && ( in_array('american standard', $customer_info['site-brand']) || in_array('American Standard', $customer_info['site-brand'])) ))) :
  	require_once get_template_directory().'/includes/include-hvac-products/includes-american-standard-products.php';
-	updateOption( 'bp_product_upload_2024_03_18', 'completed', false );		
-endif; 
+	updateOption( 'bp_product_upload_2024_03_18', 'completed', false );
+endif;
 */
 
-// Fix descrepencies in Jobsite GEO 
+// Fix descrepencies in Jobsite GEO
 /*
-add_action("init", "bp_add_terms_to_jobsites"); 
+add_action("init", "bp_add_terms_to_jobsites");
 function bp_add_terms_to_jobsites() {
 
     if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' && get_option('bp_setup_2024_07_09') != "completed" ) {
-		
+
         $stateAbbrs = ["Alabama" => "AL", "Alaska" => "AK", "Arizona" => "AZ", "Arkansas" => "AR", "California" => "CA", "Colorado" => "CO", "Connecticut" => "CT", "Delaware" => "DE", "Florida" => "FL", "Georgia" => "GA", "Hawaii" => "HI", "Idaho" => "ID", "Illinois" => "IL", "Indiana" => "IN", "Iowa" => "IA", "Kansas" => "KS",
         "Kentucky" => "KY", "Louisiana" => "LA", "Maine" => "ME", "Maryland" => "MD", "Massachusetts" => "MA", "Michigan" => "MI", "Minnesota" => "MN", "Mississippi" => "MS",
         "Missouri" => "MO", "Montana" => "MT", "Nebraska" => "NE", "Nevada" => "NV", "New Hampshire" => "NH", "New Jersey" => "NJ", "New Mexico" => "NM", "New York" => "NY",
@@ -119,10 +127,10 @@ function bp_add_terms_to_jobsites() {
                 }
             }
             wp_reset_postdata();
-        }	
+        }
     }
 
-    updateOption( 'bp_setup_2024_07_09', 'completed', false );	
+    updateOption( 'bp_setup_2024_07_09', 'completed', false );
 }
 */
 
@@ -148,52 +156,52 @@ if ( $forceChron || $staleDays || ( _IS_BOT && !_IS_SERP_BOT && $due )) {
 	delete_option('bp_force_chron');
 	update_option('bp_chron_time', time());
 	update_option('bp_chron_next', time() + rand(40000, 70000));
-	
+
 	processChron($forceChron);
 }
-	
-function processChron($forceChron) {	
-	
+
+function processChron($forceChron) {
+
 // 0) Site bootstrapping
 	if (function_exists('battleplan_remove_user_roles')) battleplan_remove_user_roles();
 	if (function_exists('battleplan_create_user_roles')) battleplan_create_user_roles();
 	if (function_exists('battleplan_updateSiteOptions')) battleplan_updateSiteOptions();
-	
+
 	$google_info 	= get_option('bp_gbp_update') ?: [];
 
 	$site           	= str_replace('https://', '', get_bloginfo('url'));
 	$rovin          	= in_array($site, ["babeschicken.com", "babescatering.com", "babeschicken.tv", "sweetiepiesribeyes.com", "bubbascookscountry.com", "rovindirectory.com", "rovininc.com"], true);
 	$bp_handles_mail	= ($site !== "asairconditioning.com");
-	
-// 1) Load CI + normalize PIDs 
+
+// 1) Load CI + normalize PIDs
 	$customer_info	= customer_info();
 	$pid_sync		= filter_var($customer_info['pid-sync'] ?? false, FILTER_VALIDATE_BOOL);
-	$placeIDs  		= ci_normalize_pids($customer_info['pid'] ?? []); 
-	
+	$placeIDs  		= ci_normalize_pids($customer_info['pid'] ?? []);
+
 	if (!empty($placeIDs)) {
 // 2) Decide whether to hit the API
-		$today 			= strtotime(date("F j, Y"));	
+		$today 			= strtotime(date("F j, Y"));
 		$daysSince     	= ($today - (int)($google_info['date'] ?? 0)) / 86400;
 		$reviewCount   	= (int)($google_info['google-reviews'] ?? 0);
 		$thresholds    	= [1000=>1, 500=>2, 250=>3, 125=>4, 75=>5, 50=>6];
 		$days          	= 7;
-		
-		foreach ($thresholds as $limit=>$val) { $days = ($reviewCount >= $limit) ? $val : $days; }		
-	
-		if ( $forceChron === true || $daysSince > $days ) {	
+
+		foreach ($thresholds as $limit=>$val) { $days = ($reviewCount >= $limit) ? $val : $days; }
+
+		if ( $forceChron === true || $daysSince > $days ) {
 // 3) Fetch GBP for each PID
 			$google_rating = 0.0;
 			$google_review_num = 0;
-			
+
 			foreach ( $placeIDs as $placeID ) {
 				if (strlen($placeID) <= 10) { continue; }
-				
+
 				$fields = 'displayName,formattedAddress,addressComponents,location,regularOpeningHours,currentOpeningHours,internationalPhoneNumber,rating,userRatingCount,utcOffsetMinutes';
     			$url = 'https://places.googleapis.com/v1/places/' . rawurlencode($placeID) . '?fields=' . urlencode($fields) . '&key=' . _PLACES_API;
 
 				$ch = curl_init();
 				 curl_setopt_array($ch, [
-    				CURLOPT_URL            => $url,  
+    				CURLOPT_URL            => $url,
 					CURLOPT_RETURNTRANSFER => true,
 					CURLOPT_CONNECTTIMEOUT => 5,
 					CURLOPT_TIMEOUT        => 12,
@@ -209,19 +217,19 @@ function processChron($forceChron) {
 					emailMe('Chron - Places API cURL Error - '.$customer_info['name'], "PID: $placeID\nError: $cerr $cerrm");
 					continue;
 				}
-				
+
 				if (($http < 200 || $http >= 300) && function_exists('emailMe')) {
 					emailMe('Chron - Places API HTTP Error - '.$customer_info['name'], "PID: $placeID\nHTTP: $http\nBody:\n".$result);
 					continue;
 				}
 
 				$gbp = json_decode($result, true);
-				
+
 				if (!is_array($gbp) && function_exists('emailMe')) {
 					emailMe('Chron - Places API JSON Error - '.$customer_info['name'], "PID: $placeID\nBody:\n".$result);
 					continue;
 				}
-				
+
 				if (isset($gbp['error']) && function_exists('emailMe')) {
 					emailMe('Chron - Places API Error - '.$customer_info['name'], print_r($gbp['error'], true) . "\n\nFull response:\n" . $result);
 					continue;
@@ -235,7 +243,7 @@ function processChron($forceChron) {
 				$google_info[$placeID]['google-rating']  = $rat;
 				$google_review_num += $urc;
 				$google_rating     += ($rat * $urc);
-				
+
 				$phone = $gbp['internationalPhoneNumber'] ?? '';
 				if (preg_match('/^\+1[\s\-\.]?(\d{3})[\s\-\.]?(\d{3})[\s\-\.]?(\d{4})$/', $phone, $m)) {
 					$areaDigits  = $m[1];
@@ -253,17 +261,17 @@ function processChron($forceChron) {
 					$google_info[$placeID]['area']         = '';
 					$google_info[$placeID]['phone']        = '';
 					$google_info[$placeID]['phone-format'] = '';
-				}				
-				
+				}
+
 				$nm = strtolower($gbp['displayName']['text'] ?? '');
 				$nm = str_replace(
 					['llc','hvac','a/c','inc','mcm','a-ale','hph','gps plumbing','lecornu','ss&l','ag heat'],
 					['LLC','HVAC','A/C','INC','MCM','A-Ale','HPH','GPS Plumbing','LeCornu','SS&L','AG Heat'],
 					$nm
 				);
-				
-				$google_info[$placeID]['name'] = ucwords($nm);				
-				
+
+				$google_info[$placeID]['name'] = ucwords($nm);
+
 				$google_info[$placeID]['adr_address']        = $gbp['formattedAddress'] ?? '';
 				$google_info[$placeID]['address_components'] = $gbp['addressComponents'] ?? [];
 
@@ -276,7 +284,7 @@ function processChron($forceChron) {
 					'city'         => '',
 					'state_abbr'   => '',
 					'state_full'   => '',
-					'zip'          => '', 
+					'zip'          => '',
 					'county'       => '',
 					'country_abbr' => '',
 					'country_full' => '',
@@ -362,65 +370,65 @@ function processChron($forceChron) {
 
 				$google_info[$placeID]['lat']  			= isset($gbp['location']['latitude'])  ? (float)$gbp['location']['latitude']  : null;
 				$google_info[$placeID]['long'] 			= isset($gbp['location']['longitude']) ? (float)$gbp['location']['longitude'] : null;
-				
+
 				$google_info[$placeID]['hours'] 		= $gbp['regularOpeningHours'] ?? null;
-    			$google_info[$placeID]['current-hours'] = $gbp['currentOpeningHours'] ?? null;				
+    			$google_info[$placeID]['current-hours'] = $gbp['currentOpeningHours'] ?? null;
 			}
 
 			$google_info['google-reviews'] = $google_review_num;
 			if ($google_review_num > 0) {
 				$google_info['google-rating'] = $google_rating / $google_review_num;
 			}
-			
+
 			$google_info['date'] = $today;
 
-// 4) Update bp_bgp_update and notify of differences			
-			update_option('bp_gbp_update', $google_info, false);	
+// 4) Update bp_bgp_update and notify of differences
+			update_option('bp_gbp_update', $google_info, false);
 			gbp_diff_vs_ci_and_notify($customer_info, $google_info, $placeIDs);
 		}
-	}	
+	}
 
 // 5) Merge GBP into CI (only if pid-sync true; also fill missing fields with GBP)
 	$primePID 					= $placeIDs[0] ?? null;
 	$gbp_primary 				= $primePID ? ($google_info[$primePID] ?? []) : [];
-	list($ci_new, $merge_diffs) = ci_merge_gbp_into_ci($customer_info, $gbp_primary, $pid_sync); 
-	
+	list($ci_new, $merge_diffs) = ci_merge_gbp_into_ci($customer_info, $gbp_primary, $pid_sync);
+
 // 6) Finalize derived fields (phone-format, default-loc) and prune trivial empties
-	ci_finalize_fields($ci_new); 
-	
+	ci_finalize_fields($ci_new);
+
 // 7) Build schema from FINAL CI
 	$schema = ci_build_schema($ci_new, $gbp_primary, $google_info, [
 		'include_aggregate_rating' => true,
 		'min_rating_value'         => 4.0,
 	]);
 	$ci_new['schema'] = $schema;
-	
+
 // 8) Save CI if changed
 	if ($ci_new !== $customer_info) {
 		update_customer_info($ci_new);
 	}
-		
-// 9) WP Mail SMTP Settings Update
-	if ( $bp_handles_mail === true) {		
-		if ( is_plugin_active('wp-mail-smtp/wp_mail_smtp.php') ) {
-			if ( $rovin === true ) {	
-				$wpMailSettings['mail']['from_email'] = 'customer@website.'.$site;
-				$wpMailSettings['sendinblue']['domain'] = 'website.'.$site;				
-			} else {	
-				$wpMailSettings['mail']['from_email'] = 'email@admin.'.$site;
-				$wpMailSettings['sendinblue']['domain'] = 'admin.'.$site;				
-			}	
 
-			$wpMailSettings = get_option( 'wp_mail_smtp' );			
+// 9) WP Mail SMTP Settings Update
+	if ( $bp_handles_mail === true) {
+		if ( is_plugin_active('wp-mail-smtp/wp_mail_smtp.php') ) {
+			if ( $rovin === true ) {
+				$wpMailSettings['mail']['from_email'] = 'customer@website.'.$site;
+				$wpMailSettings['sendinblue']['domain'] = 'website.'.$site;
+			} else {
+				$wpMailSettings['mail']['from_email'] = 'email@admin.'.$site;
+				$wpMailSettings['sendinblue']['domain'] = 'admin.'.$site;
+			}
+
+			$wpMailSettings = get_option( 'wp_mail_smtp' );
 			$wpMailSettings['mail']['from_name'] = strip_tags('Website · '.str_replace(',', '', $customer_info['name']));
 			$wpMailSettings['mail']['mailer'] = 'sendinblue';
 			$wpMailSettings['mail']['from_email_force'] = '1';
-			$wpMailSettings['mail']['from_name_force'] = '1';	
+			$wpMailSettings['mail']['from_name_force'] = '1';
 			$wpMailSettings['sendinblue']['api_key'] = 'x'._BREVO_API;
 			update_option( 'wp_mail_smtp', $wpMailSettings );
 		}
-	}	
-		
+	}
+
 // 10) Contact Form 7 Settings Update
 	if ( is_plugin_active('contact-form-7/wp-contact-form-7.php') ) {
 		$forms = get_posts( array ( 'numberposts'=>-1, 'post_type'=>'wpcf7_contact_form' ));
@@ -430,28 +438,28 @@ function processChron($forceChron) {
 			$formTitle = get_the_title($formID);
 
 			if ( $formTitle == "Quote Request Form" ) $formTitle = "Quote Request";
-			if ( $formTitle == "Contact Us Form" ) $formTitle = "Customer Contact";		
-			if ( $formTitle == "Request A Catering Quote" ) $formTitle = "Catering Quote";				
+			if ( $formTitle == "Contact Us Form" ) $formTitle = "Customer Contact";
+			if ( $formTitle == "Request A Catering Quote" ) $formTitle = "Catering Quote";
 
-			if ( $rovin !== true && $bp_handles_mail === true ) {			
-				$server_email = "<email@admin.".str_replace('https://', '', get_bloginfo('url')).">";				
-				$formMail['subject'] = $formTitle." · [user-name]";	
+			if ( $rovin !== true && $bp_handles_mail === true ) {
+				$server_email = "<email@admin.".str_replace('https://', '', get_bloginfo('url')).">";
+				$formMail['subject'] = $formTitle." · [user-name]";
 				$formMail['sender'] = "Website · ".str_replace(',', '', $customer_info['name'])." ".$server_email;
 				$formMail['additional_headers'] = "Reply-to: [user-name] <[user-email]>\nBcc: Website Administrator <email@battleplanwebdesign.com>";
 			}
-	
+
 			$formMail['use_html'] = 1;
 			$formMail['exclude_blank'] = 1;
 
-			updateMeta( $formID, "_mail", $formMail );	
+			updateMeta( $formID, "_mail", $formMail );
 		}
-	} 	
+	}
 
 // 11) Yoast SEO Settings Update
-	if ( is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') ) {	
+	if ( is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') ) {
 		$customer_info = customer_info();
 		$cur = get_option('wpseo_local') ?: [];
-		
+
 		$mapType = function(array $customer_info): string {
 			$bt = $customer_info['business-type'] ?? '';
 			$type = is_array($bt) ? ($bt[0] ?? '') : $bt;
@@ -507,11 +515,11 @@ function processChron($forceChron) {
 		if (!empty($delta)) {
 			update_option('wpseo_local', array_replace($cur, $desired));
 		}
-		
-		$wpSEOBase = get_option( 'wpseo' );		
+
+		$wpSEOBase = get_option( 'wpseo' );
 		$wpSEOBase['enable_admin_bar_menu'] = 0;
 		$wpSEOBase['enable_cornerstone_content'] = 0;
-		$wpSEOBase['enable_xml_sitemap'] = 1;		
+		$wpSEOBase['enable_xml_sitemap'] = 1;
 		$wpSEOBase['remove_feed_global'] = 1;
 		$wpSEOBase['remove_feed_global_comments'] = 1;
 		$wpSEOBase['remove_feed_post_comments'] = 1;
@@ -532,24 +540,24 @@ function processChron($forceChron) {
 		$wpSEOBase['remove_pingback_header'] = 1;
 		$wpSEOBase['clean_campaign_tracking_urls'] = 1;
 		$wpSEOBase['clean_permalinks'] = 1;
-		$wpSEOBase['clean_permalinks_extra_variables'] = 'loc,int,invite,rs,se_action,pmax';	
+		$wpSEOBase['clean_permalinks_extra_variables'] = 'loc,int,invite,rs,se_action,pmax';
 		$wpSEOBase['search_cleanup'] = 1;
 		$wpSEOBase['search_cleanup_emoji'] = 1;
 		$wpSEOBase['search_cleanup_patterns'] = 1;
 		$wpSEOBase['deny_search_crawling'] = 1;
 		$wpSEOBase['deny_wp_json_crawling'] = 1;
 		$wpSEOBase['redirect_search_pretty_urls'] = 1;
-		update_option( 'wpseo', $wpSEOBase );	
-	
-		$wpSEOSettings = get_option( 'wpseo_titles' );		
+		update_option( 'wpseo', $wpSEOBase );
+
+		$wpSEOSettings = get_option( 'wpseo_titles' );
 		$wpSEOSettings['separator'] = 'sc-bull';
 		$wpSEOSettings['title-home-wpseo'] = '%%page%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';
 		$wpSEOSettings['title-author-wpseo'] = '%%name%%, Author at %%sitename%% %%page%%';
 		$wpSEOSettings['title-archive-wpseo'] = 'Archive %%sep%% %%sitename%% %%sep%% %%date%% ';
 		$wpSEOSettings['title-search-wpseo'] = 'You searched for %%searchphrase%% %%sep%% %%sitename%%';
 		$wpSEOSettings['title-404-wpseo'] = 'Page Not Found %%sep%% %%sitename%%';
-		$wpSEOTitle = ' %%page%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';		
-		$getCPT = get_post_types(); 
+		$wpSEOTitle = ' %%page%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';
+		$getCPT = get_post_types();
 		foreach ($getCPT as $postType) {
 			if ( $postType == "post" || $postType == "page" || $postType == "universal" || $postType == "products" || $postType == "landing" || $postType == "events" ) {
 				$wpSEOSettings['title-'.$postType] = '%%title%%'.$wpSEOTitle;
@@ -557,14 +565,14 @@ function processChron($forceChron) {
 			} elseif ( $postType == "attachment" || $postType == "revision" || $postType == "nav_menu_item" || $postType == "custom_css" || $postType == "customize_changeset" || $postType == "oembed_cache" || $postType == "user_request" || $postType == "wp_block" || $postType == "elements" || $postType == "acf-field-group" || $postType == "acf-field" || $postType == "wpcf7_contact_form" ) {
 				// nothing //
 			} else {
-				$wpSEOSettings['title-'.$postType] = ucfirst($postType).$wpSEOTitle;			
-				$wpSEOSettings['social-title-'.$postType] = ucfirst($postType).$wpSEOTitle;			
-			}	
+				$wpSEOSettings['title-'.$postType] = ucfirst($postType).$wpSEOTitle;
+				$wpSEOSettings['social-title-'.$postType] = ucfirst($postType).$wpSEOTitle;
+			}
 		}
 		$wpSEOSettings['social-title-author-wpseo'] = '%%name%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';
 		$wpSEOSettings['social-title-archive-wpseo'] = '%%date%% %%sep%% %%sitename%% %%sep%% %%sitedesc%%';
 		$wpSEOSettings['noindex-author-wpseo'] = '1';
-		$wpSEOSettings['noindex-author-noposts-wpseo'] = '1';		
+		$wpSEOSettings['noindex-author-noposts-wpseo'] = '1';
 		$wpSEOSettings['noindex-archive-wpseo'] = '1';
 		$wpSEOSettings['disable-author'] = '1';
 		$wpSEOSettings['disable-date'] = '1';
@@ -576,7 +584,7 @@ function processChron($forceChron) {
 		$wpSEOSettings['breadcrumbs-home'] = 'Home';
 		$wpSEOSettings['breadcrumbs-searchprefix'] = 'You searched for';
 		$wpSEOSettings['breadcrumbs-sep'] = '»';
-		
+
 		$uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/wp-content/uploads/';
 		$possibleFiles = [ 'logo.webp', 'logo.png', 'logo.jpg', 'site-icon.webp', 'site-icon.png', 'site-icon.jpg', 'favicon.webp', 'favicon.png', 'favicon.jpg' ];
 		$logoFile = null;
@@ -584,10 +592,10 @@ function processChron($forceChron) {
 		foreach ($possibleFiles as $file) {
 			if (is_file($uploadDir . $file)) {
 				$logoFile = $file;
-				break; 
+				break;
 			}
 		}
-	
+
 		if ($logoFile !== null) {
 			$wpSEOSettings['company_logo'] = $logoFile;
 
@@ -603,30 +611,30 @@ function processChron($forceChron) {
 		$wpSEOSettings['company_name'] = get_bloginfo('name');
 		$wpSEOSettings['company_or_person'] = 'company';
 		$wpSEOSettings['stripcategorybase'] = '1';
-		$wpSEOSettings['breadcrumbs-enable'] = '1';				
-		$wpSEOSettings['noindex-ptarchive-optimized'] = '1';			
-		$wpSEOSettings['noindex-testimonials'] = '1';					
-		$wpSEOSettings['noindex-ptarchive-testimonials'] = '1';	
+		$wpSEOSettings['breadcrumbs-enable'] = '1';
+		$wpSEOSettings['noindex-ptarchive-optimized'] = '1';
+		$wpSEOSettings['noindex-testimonials'] = '1';
+		$wpSEOSettings['noindex-ptarchive-testimonials'] = '1';
 		$wpSEOSettings['display-metabox-pt-testimonials'] = '0';
 		$wpSEOSettings['noindex-elements'] = '1';
-		$wpSEOSettings['display-metabox-pt-elements'] = '0';	
-		$wpSEOSettings['noindex-products'] = '1';						
-		$wpSEOSettings['noindex-ptarchive-products'] = '1';	
-		$wpSEOSettings['display-metabox-pt-products'] = '0';	
+		$wpSEOSettings['display-metabox-pt-elements'] = '0';
+		$wpSEOSettings['noindex-products'] = '1';
+		$wpSEOSettings['noindex-ptarchive-products'] = '1';
+		$wpSEOSettings['display-metabox-pt-products'] = '0';
 		$wpSEOSettings['noindex-universal'] = '1';
-		$wpSEOSettings['display-metabox-pt-universal'] = '0';				
-		$wpSEOSettings['noindex-tax-gallery-type'] = '1';	
-		$wpSEOSettings['display-metabox-tax-gallery-type'] = '0';				
-		$wpSEOSettings['noindex-tax-gallery-tags'] = '1';	
-		$wpSEOSettings['display-metabox-tax-gallery-tags'] = '0';			
-		$wpSEOSettings['noindex-ptarchive-galleries'] = '1';				
+		$wpSEOSettings['display-metabox-pt-universal'] = '0';
+		$wpSEOSettings['noindex-tax-gallery-type'] = '1';
+		$wpSEOSettings['display-metabox-tax-gallery-type'] = '0';
+		$wpSEOSettings['noindex-tax-gallery-tags'] = '1';
+		$wpSEOSettings['display-metabox-tax-gallery-tags'] = '0';
+		$wpSEOSettings['noindex-ptarchive-galleries'] = '1';
 		$wpSEOSettings['noindex-tax-image-categories'] = '1';
-		$wpSEOSettings['display-metabox-tax-image-categories'] = '0';	
-		$wpSEOSettings['noindex-tax-image-tags'] = '1';	
-		$wpSEOSettings['display-metabox-tax-image-tags'] = '0';	
+		$wpSEOSettings['display-metabox-tax-image-categories'] = '0';
+		$wpSEOSettings['noindex-tax-image-tags'] = '1';
+		$wpSEOSettings['display-metabox-tax-image-tags'] = '0';
 		update_option( 'wpseo_titles', $wpSEOSettings );
 
-		$wpSEOSocial = get_option( 'wpseo_social' );		
+		$wpSEOSocial = get_option( 'wpseo_social' );
 		if ( isset($customer_info['facebook']) ) $wpSEOSocial['facebook_site'] = $customer_info['facebook'];
 		if ( isset($customer_info['instagram']) ) $wpSEOSocial['instagram_url'] = $customer_info['instagram'];
 		if ( isset($customer_info['linkedin']) ) $wpSEOSocial['linkedin_url'] = $customer_info['linkedin'];
@@ -635,11 +643,11 @@ function processChron($forceChron) {
 		$wpSEOSocial['opengraph'] = '1';
 		if ( isset($customer_info['pinterest']) ) $wpSEOSocial['pinterest_url'] = $customer_info['pinterest'];
 		if ( isset($customer_info['twitter']) ) $wpSEOSocial['twitter_site'] = $customer_info['twitter'];
-		if ( isset($customer_info['youtube']) ) $wpSEOSocial['youtube_url'] = $customer_info['youtube'];	
+		if ( isset($customer_info['youtube']) ) $wpSEOSocial['youtube_url'] = $customer_info['youtube'];
 		update_option( 'wpseo_social', $wpSEOSocial );
 	}
-	
-// Basic Settings		
+
+// Basic Settings
 	$update_menu_order = array ('site-header'=>100, 'widgets'=>200, 'office-hours'=>700, 'hours'=>700, 'coupon'=>700, 'site-message'=>800, 'site-footer'=>900);
 
 	foreach ($update_menu_order as $page=>$order) {
@@ -648,7 +656,7 @@ function processChron($forceChron) {
 			wp_update_post(array(
 				'ID' 		  		=> $updatePage->ID,
 				'menu_order'    	=> $order,
-			));	
+			));
 		}
 	}
 
@@ -664,23 +672,23 @@ function processChron($forceChron) {
 	update_option( 'default_ping_status', 'closed' );
 	update_option( 'permalink_structure', '/%postname%/' );
 	update_option( 'wpe-rand-enabled', '1' );
-	update_option( 'users_can_register', '0' );	
+	update_option( 'users_can_register', '0' );
 	update_option( 'auto_update_core_dev', 'enabled' );
 	update_option( 'auto_update_core_minor', 'enabled' );
-	update_option( 'auto_update_core_major', 'enabled' );			
+	update_option( 'auto_update_core_major', 'enabled' );
 
 	battleplan_delete_prefixed_options( 'ac_cache_data_' );
 	battleplan_delete_prefixed_options( 'ac_cache_expires_' );
-	battleplan_delete_prefixed_options( 'ac_api_request_' );	
+	battleplan_delete_prefixed_options( 'ac_api_request_' );
 	battleplan_delete_prefixed_options( 'ac_sorting_' );
 	battleplan_delete_prefixed_options( 'client_' );
-	
+
 	battleplan_fetch_background_image(true);
 	battleplan_fetch_site_icon(true);
-	
-	
+
+
 // Clear terms, tags and categories with 0 entries
-	$attachment_taxonomies = ['image-tags']; 
+	$attachment_taxonomies = ['image-tags'];
 
 	foreach (get_taxonomies(['public' => true], 'names') as $taxonomy) {
 		if (in_array($taxonomy, $attachment_taxonomies, true)) continue;
@@ -718,8 +726,8 @@ function processChron($forceChron) {
 			}
 		}
 	}
-	
-		
+
+
 // Prune weak testimonials
 	$query = bp_WP_Query('testimonials', [
 		'post_status'    => 'publish',
@@ -727,23 +735,23 @@ function processChron($forceChron) {
 		'orderby'        => 'date',
 		'order'          => 'DESC'
 	]);
-	
+
 	if ( $query->found_posts > 75 ) {
-		while ($query->have_posts()) { 
-			$query->the_post(); 
-			$quality = get_field( "testimonial_quality" );	
-			if ( !has_post_thumbnail() && $quality[0] != 1 && strlen(wp_strip_all_tags(get_the_content(), true)) < 100 ) $draft = get_the_id();	
+		while ($query->have_posts()) {
+			$query->the_post();
+			$quality = get_field( "testimonial_quality" );
+			if ( !has_post_thumbnail() && $quality[0] != 1 && strlen(wp_strip_all_tags(get_the_content(), true)) < 100 ) $draft = get_the_id();
 			if ( has_post_thumbnail() && $quality[0] != 1 ) {
 				$quality[0] = 1;
 				update_field('testimonial_quality', $quality);
 			}
-		} 
+		}
 
 		wp_reset_postdata();
 		if ( $draft ) wp_update_post( array ( 'ID' => $draft, 'post_status' => 'draft' ));
 	}
-	
-	
+
+
 
 /*--------------------------------------------------------------
 # Universal Pages
@@ -1010,11 +1018,11 @@ function processChron($forceChron) {
 	/* Add generic pages */
 	if ( is_null(get_page_by_path('privacy-policy', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Privacy Policy', 'post_content' => '[get-universal-page slug="page-privacy-policy"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
 
-	if ( is_null(get_page_by_path('accessibility-policy', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Accessibility Policy', 'post_content' => '[get-universal-page slug="page-accessibility-policy"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
+	if ( is_null(get_page_by_path('accessibility-policy', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Accessibility Policy', 'post_content' => '[get-universal-page slug="page-accessibility-policy"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
 
 	if ( is_null(get_page_by_path('terms-conditions', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Terms & Conditions', 'post_content' => '[get-universal-page slug="page-terms-conditions"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
 
-	if ( is_null(get_page_by_path('review', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Review', 'post_content' => '[get-universal-page slug="page-review"]', 'post_status' => 'publish', 'post_type' => 'universal', ));	
+	if ( is_null(get_page_by_path('review', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Review', 'post_content' => '[get-universal-page slug="page-review"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
 
 	if ( is_null(get_page_by_path('email-received', OBJECT, 'universal')) ) wp_insert_post( array( 'post_title' => 'Email Received', 'post_content' => '[get-universal-page slug="page-email-received"]', 'post_status' => 'publish', 'post_type' => 'universal', ));
 
@@ -1024,428 +1032,762 @@ function processChron($forceChron) {
 	$customer_info = customer_info();
 	$GLOBALS['dataTerms'] = get_option('bp_data_terms') ? get_option('bp_data_terms') : array();
 	$ga4_id = isset($customer_info['google-tags']['prop-id']) ? $customer_info['google-tags']['prop-id'] : null;
-	$client = new BetaAnalyticsDataClient(['credentials'=>get_template_directory().'/vendor/atomic-box-306317-0b19b6a3a6c1.json']);
+
+	try {
+		if (!defined('GA4_SERVICE_ACCOUNT_JSON')) {throw new \Exception('GA4 credentials missing');}
+
+		$credentials = json_decode(base64_decode(GA4_SERVICE_ACCOUNT_JSON), true);
+
+		if (!is_array($credentials)) {throw new \Exception('GA4 credentials invalid');}
+
+		$client = new BetaAnalyticsDataClient(['credentials' => $credentials,]);
+
+	 } catch (\Throwable $e) {
+		error_log('GA4 client init failed: ' . $e->getMessage());
+		return;
+	 }
+
 	$today = date("Y-m-d", strtotime("-1 day"));
 	$rewind = date("Y-m-d", strtotime("-6 years"));
-	
-	$siteHitsGA4 = is_array(get_option('bp_site_hits_ga4')) ? get_option('bp_site_hits_ga4') : array();		
+
+	$siteHitsGA4 = is_array(get_option('bp_site_hits_ga4')) ? get_option('bp_site_hits_ga4') : array();
 
 	$states = array('alabama'=>'AL', 'arizona'=>'AZ', 'arkansas'=>'AR', 'california'=>'CA', 'colorado'=>'CO', 'connecticut'=>'CT', 'delaware'=>'DE', 'dist of columbia'=>'DC', 'dist. of columbia'=>'DC', 'district of columbia'=>'DC', 'florida'=>'FL', 'georgia'=>'GA', 'idaho'=>'ID', 'illinois'=>'IL', 'indiana'=>'IN', 'iowa'=>'IA', 'kansas'=>'KS', 'kentucky'=>'KY', 'louisiana'=>'LA', 'maine'=>'ME', 'maryland'=>'MD', 'massachusetts'=>'MA', 'michigan'=>'MI', 'minnesota'=>'MN', 'mississippi'=>'MS', 'missouri'=>'MO', 'montana'=>'MT', 'nebraska'=>'NE', 'nevada'=>'NV', 'new hampshire'=>'NH', 'new jersey'=>'NJ', 'new mexico'=>'NM', 'new york'=>'NY', 'north carolina'=>'NC', 'north dakota'=>'ND', 'ohio'=>'OH', 'oklahoma'=>'OK', 'oregon'=>'OR', 'pennsylvania'=>'PA', 'rhode island'=>'RI', 'south carolina'=>'SC', 'south dakota'=>'SD', 'tennessee'=>'TN', 'texas'=>'TX', 'utah'=>'UT', 'vermont'=>'VT', 'virginia'=>'VA', 'washington'=>'WA', 'washington d.c.'=>'DC', 'washington dc'=>'DC', 'west virginia'=>'WV', 'wisconsin'=>'WI', 'wyoming'=>'WY');
 	$removedStates = array('alaska'=>'AK', 'hawaii'=>'HI',);
 
-// Gather GA4 Stats 
+// Gather GA4 Stats
 	if ( $ga4_id && substr($ga4_id, 0, 2) != '00' ) {
-	
+
 		// Weekly Visitor Trends
 		$analyticsGA4 = array();
-		$response = $client->runReport([
-			'property' => 'properties/'.$ga4_id,
-			'dateRanges' => [
-				new DateRange([ 'start_date' => $rewind, 'end_date' => $today ]),
-			],
-			'dimensions' => [
-				new Dimension([ 'name' => 'date' ]),
-				new Dimension([ 'name' => 'city' ]),
-				new Dimension([ 'name' => 'region' ]),	
-			],
-			'metrics' => [
-				new Metric([ 'name' => 'totalUsers' ]),
-				new Metric([ 'name' => 'newUsers' ]),
-				new Metric([ 'name' => 'sessions' ]),
-				new Metric([ 'name' => 'engagedSessions' ]),
-				new Metric([ 'name' => 'userEngagementDuration' ]),
-				new Metric([ 'name' => 'screenPageViews' ]),
-			]
-		]);
-	
-		foreach ( $response->getRows() as $row ) {
-			$date = $row->getDimensionValues()[0]->getValue();
-			$city = $row->getDimensionValues()[1]->getValue();
-			$state = strtolower($row->getDimensionValues()[2]->getValue());
-			if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
 
-			$totalUsers = $row->getMetricValues()[0]->getValue();	
-			$newUsers = $row->getMetricValues()[1]->getValue();				
-			$sessions = $row->getMetricValues()[2]->getValue();				
-			$engagedSessions = $row->getMetricValues()[3]->getValue();				
-			$sessionDuration = $row->getMetricValues()[4]->getValue();	
-			$pageViews = $row->getMetricValues()[5]->getValue();	
-	
-			if ( isset($states[$state]) ) {				
-				if ( $city == '(not set)' ) $location = ucwords($state);					
+		$response = null;
 
-				$analyticsGA4[] = array ('date'=>$date, 'location'=>$location, 'total-users'=>$totalUsers, 'new-users'=>$newUsers, 'sessions'=>$sessions, 'engaged-sessions'=>$engagedSessions, 'session-duration'=>$sessionDuration, 'page-views'=>$pageViews );	
-			}
-		}		
-	
-		if ( is_array($analyticsGA4) ) arsort($analyticsGA4);	
-		update_option('bp_ga4_trends_01', $analyticsGA4, false);		
-
-		
-		// Site Visitors	
-		$analyticsGA4 = array();
-		$dataTerms = array('day' => 1) + $GLOBALS['dataTerms'];
-		foreach ( $dataTerms as $termTitle=>$termDays ) {	
+		try {
 			$response = $client->runReport([
-				'property' => 'properties/'.$ga4_id,
+				'property' => 'properties/' . $ga4_id,
 				'dateRanges' => [
-					new DateRange([ 'start_date' => date("Y-m-d", strtotime("-".$termDays." days")), 'end_date' => $today ]),
+					new DateRange([
+						'start_date' => $rewind,
+						'end_date'   => $today
+					]),
 				],
 				'dimensions' => [
+					new Dimension([ 'name' => 'date' ]),
 					new Dimension([ 'name' => 'city' ]),
-					new Dimension([ 'name' => 'region' ]),	
+					new Dimension([ 'name' => 'region' ]),
 				],
 				'metrics' => [
 					new Metric([ 'name' => 'totalUsers' ]),
-				]
-			]);
-
-			foreach ( $response->getRows() as $row ) {
-				$city = $row->getDimensionValues()[0]->getValue();
-				$state = strtolower($row->getDimensionValues()[1]->getValue());
-				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
-				$totalUsers = $row->getMetricValues()[0]->getValue();	
-
-				if ( isset($states[$state]) ) {				
-					if ( $city == '(not set)' ) $location = ucwords($state);	
-					$analyticsGA4[$location]['page-views-'.$termDays] = $totalUsers;	
-				}
-			}		 
-
-			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
-
-			update_option('bp_ga4_visitors_01', $analyticsGA4, false);	
-	
-		}	
-	
-	
-		// Most Popular Pages	
-		$analyticsGA4 = array();
-		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) {		
-			$response = $client->runReport([
-				'property' => 'properties/'.$ga4_id,
-				'dateRanges' => [
-					new DateRange([ 'start_date' => date("Y-m-d", strtotime("-".$termDays." days")), 'end_date' => $today ]),
-				],
-				'dimensions' => [
-					new Dimension([ 'name' => 'pagePath' ]),				
-					new Dimension([ 'name' => 'city' ]),
-					new Dimension([ 'name' => 'region' ]),	
-				],
-				'metrics' => [
+					new Metric([ 'name' => 'newUsers' ]),
+					new Metric([ 'name' => 'sessions' ]),
+					new Metric([ 'name' => 'engagedSessions' ]),
+					new Metric([ 'name' => 'userEngagementDuration' ]),
 					new Metric([ 'name' => 'screenPageViews' ]),
 				]
 			]);
+		} catch (\Google\ApiCore\ApiException $e) {
+			error_log('GA4 API error: ' . $e->getMessage());
+			$response = null;
+		}
+
+		if ( $response ) {
+			foreach ( $response->getRows() as $row ) {
+
+				$date  = $row->getDimensionValues()[0]->getValue();
+				$city  = $row->getDimensionValues()[1]->getValue();
+				$state = strtolower($row->getDimensionValues()[2]->getValue());
+
+				if ( isset($states[$state]) ) {
+
+					$location = $city === '(not set)'
+						? ucwords($state)
+						: $city . ', ' . $states[$state];
+
+					$analyticsGA4[] = [
+						'date'              => $date,
+						'location'          => $location,
+						'total-users'       => $row->getMetricValues()[0]->getValue(),
+						'new-users'         => $row->getMetricValues()[1]->getValue(),
+						'sessions'          => $row->getMetricValues()[2]->getValue(),
+						'engaged-sessions'  => $row->getMetricValues()[3]->getValue(),
+						'session-duration'  => $row->getMetricValues()[4]->getValue(),
+						'page-views'        => $row->getMetricValues()[5]->getValue(),
+					];
+				}
+			}
+		}
+
+		if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
+		update_option('bp_ga4_trends_01', $analyticsGA4, false);
+
+
+		// Site Visitors
+		$analyticsGA4 = array();
+		$dataTerms = array('day' => 1) + $GLOBALS['dataTerms'];
+foreach ( $dataTerms as $termTitle => $termDays ) {
+
+    $response = null;
+
+    try {
+        $response = $client->runReport([
+            'property' => 'properties/' . $ga4_id,
+            'dateRanges' => [
+                new DateRange([
+                    'start_date' => date('Y-m-d', strtotime("-{$termDays} days")),
+                    'end_date'   => $today,
+                ]),
+            ],
+            'dimensions' => [
+                new Dimension([ 'name' => 'city' ]),
+                new Dimension([ 'name' => 'region' ]),
+            ],
+            'metrics' => [
+                new Metric([ 'name' => 'totalUsers' ]),
+            ],
+        ]);
+    } catch (\Google\ApiCore\ApiException $e) {
+        error_log('GA4 visitors runReport failed: ' . $e->getMessage());
+        continue; // skip THIS term only
+    }
+
+    if ( !$response ) {
+        continue;
+    }
+
+    foreach ( $response->getRows() as $row ) {
+
+        $city  = $row->getDimensionValues()[0]->getValue() ?? '';
+        $state = strtolower($row->getDimensionValues()[1]->getValue() ?? '');
+
+        if ( !isset($states[$state]) ) {
+            continue;
+        }
+
+        $location = ($city === '(not set)')
+            ? ucwords($state)
+            : $city . ', ' . $states[$state];
+
+        $totalUsers = (int) ($row->getMetricValues()[0]->getValue() ?? 0);
+
+        if ( !isset($analyticsGA4[$location]) ) {
+            $analyticsGA4[$location] = [];
+        }
+
+        $analyticsGA4[$location]['page-views-' . $termDays] = $totalUsers;
+    }
+}
+
+if ( !empty($analyticsGA4) ) {
+    arsort($analyticsGA4);
+    update_option('bp_ga4_visitors_01', $analyticsGA4, false);
+}
+
+		// Most Popular Pages
+		$analyticsGA4 = array();
+		foreach ( $GLOBALS['dataTerms'] as $termTitle => $termDays ) {
+
+			$response = null;
+
+			try {
+				$response = $client->runReport([
+					'property' => 'properties/' . $ga4_id,
+					'dateRanges' => [
+						new DateRange([
+							'start_date' => date('Y-m-d', strtotime("-{$termDays} days")),
+							'end_date'   => $today,
+						]),
+					],
+					'dimensions' => [
+						new Dimension([ 'name' => 'pagePath' ]),
+						new Dimension([ 'name' => 'city' ]),
+						new Dimension([ 'name' => 'region' ]),
+					],
+					'metrics' => [
+						new Metric([ 'name' => 'screenPageViews' ]),
+					],
+				]);
+			} catch ( \Google\ApiCore\ApiException $e ) {
+				error_log('GA4 pages runReport failed: ' . $e->getMessage());
+				continue; // skip this term only
+			}
+
+			if ( !$response ) {
+				continue;
+			}
 
 			foreach ( $response->getRows() as $row ) {
-				$pagePath = $row->getDimensionValues()[0]->getValue();
-				$city = $row->getDimensionValues()[1]->getValue();
-				$state = strtolower($row->getDimensionValues()[2]->getValue());
-				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
-				$pageViews = $row->getMetricValues()[0]->getValue();	
 
-				if ( $pagePath == "/" ) $pagePath = "Home";
-				$pagePath = str_replace('-', ' ', trim($pagePath, '/'));				
-				$pagePath = str_replace('/', ' » ', $pagePath);				
-				$pagePath = ucwords($pagePath);
+				$pagePath = $row->getDimensionValues()[0]->getValue() ?? '';
+				$city     = $row->getDimensionValues()[1]->getValue() ?? '';
+				$state    = strtolower($row->getDimensionValues()[2]->getValue() ?? '');
 
-				if ( isset($states[$state]) ) {				
-					if ( $city == '(not set)' ) $location = ucwords($state);	
-					$analyticsGA4[$pagePath][$location]['page-views-'.$termDays] = $pageViews;	
+				if ( !isset($states[$state]) ) {
+					continue;
 				}
-			}		 
 
-			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
+				$location = ($city === '(not set)')
+					? ucwords($state)
+					: $city . ', ' . $states[$state];
 
-			update_option('bp_ga4_pages_01', $analyticsGA4, false);	
-		}	
-	
-			
+				$pageViews = (int) ($row->getMetricValues()[0]->getValue() ?? 0);
+
+				// Normalize page name
+				if ( $pagePath === '/' || $pagePath === '' ) {
+					$pageName = 'Home';
+				} else {
+					$pageName = trim($pagePath, '/');
+					$pageName = str_replace('-', ' ', $pageName);
+					$pageName = str_replace('/', ' » ', $pageName);
+					$pageName = ucwords($pageName);
+				}
+
+				// Ensure array depth exists
+				if ( !isset($analyticsGA4[$pageName]) ) {
+					$analyticsGA4[$pageName] = [];
+				}
+				if ( !isset($analyticsGA4[$pageName][$location]) ) {
+					$analyticsGA4[$pageName][$location] = [];
+				}
+
+				$analyticsGA4[$pageName][$location]['page-views-' . $termDays] = $pageViews;
+			}
+		}
+
+		if ( !empty($analyticsGA4) ) {
+			arsort($analyticsGA4);
+			update_option('bp_ga4_pages_01', $analyticsGA4, false);
+		}
+
+
 		// Referrers
 		$analyticsGA4 = array();
-		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) {	
-	
-			$response = $client->runReport([
-				'property' => 'properties/'.$ga4_id,
-				'dateRanges' => [
-					new DateRange([ 'start_date' => date("Y-m-d", strtotime("-".$termDays." days")), 'end_date' => $today ]),
-				],
-				'dimensions' => [
-					new Dimension([ 'name' => 'firstUserSourceMedium' ]),				
-					new Dimension([ 'name' => 'city' ]),
-					new Dimension([ 'name' => 'region' ]),	
-				],
-				'metrics' => [
-					//new Metric([ 'name' => 'sessions' ]),					
-					new Metric([ 'name' => 'engagedSessions' ]),
-				]
-			]);
 
-			foreach ( $response->getRows() as $row ) {
-				$pageReferrer = $row->getDimensionValues()[0]->getValue();
-				$city = $row->getDimensionValues()[1]->getValue();
-				$state = strtolower($row->getDimensionValues()[2]->getValue());
-				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
-				$sessions = $row->getMetricValues()[0]->getValue();	
-	
-				$switchRef = array ('facebook'=>'Facebook', 'yelp'=>'Yelp', 'youtube'=>'YouTube', 'instagram'=>'Instagram');
-	
-				if (strpos($pageReferrer, $_SERVER['HTTP_HOST']) === false) {
-					foreach ( $switchRef as $find=>$replace ) {
-						if ( strpos( $pageReferrer, $find ) !== false ) $pageReferrer = $replace;
-					}		
-	
-					if ( $pageReferrer == '' ) $pageReferrer = "Direct";
-	
-					if ( isset($states[$state]) ) {				
-						if ( $city == '(not set)' ) $location = ucwords($state);	
-						$sessions += $analyticsGA4[$pageReferrer][$location]['sessions-'.$termDays];
-						$analyticsGA4[$pageReferrer][$location]['sessions-'.$termDays] = $sessions;	
+		foreach ( $GLOBALS['dataTerms'] as $termTitle => $termDays ) {
+
+			$response = null;
+
+			try {
+				$response = $client->runReport([
+					'property' => 'properties/' . $ga4_id,
+					'dateRanges' => [
+						new DateRange([
+							'start_date' => date('Y-m-d', strtotime("-{$termDays} days")),
+							'end_date'   => $today,
+						]),
+					],
+					'dimensions' => [
+						new Dimension([ 'name' => 'firstUserSourceMedium' ]),
+						new Dimension([ 'name' => 'city' ]),
+						new Dimension([ 'name' => 'region' ]),
+					],
+					'metrics' => [
+						new Metric([ 'name' => 'engagedSessions' ]),
+					],
+				]);
+			} catch ( \Google\ApiCore\ApiException $e ) {
+				error_log('GA4 referrers runReport failed: ' . $e->getMessage());
+			}
+
+			if ( $response ) {
+
+				foreach ( $response->getRows() as $row ) {
+
+					$pageReferrer = $row->getDimensionValues()[0]->getValue() ?? '';
+					$city         = $row->getDimensionValues()[1]->getValue() ?? '';
+					$state        = strtolower($row->getDimensionValues()[2]->getValue() ?? '');
+
+					if ( !isset($states[$state]) ) {
+						continue;
 					}
+
+					// Ignore self-referrals
+					if ( $pageReferrer && strpos($pageReferrer, $_SERVER['HTTP_HOST']) !== false ) {
+						continue;
+					}
+
+					// Normalize referrer labels
+					$switchRef = [
+						'facebook'  => 'Facebook',
+						'yelp'      => 'Yelp',
+						'youtube'   => 'YouTube',
+						'instagram' => 'Instagram',
+					];
+
+					foreach ( $switchRef as $find => $replace ) {
+						if ( stripos($pageReferrer, $find) !== false ) {
+							$pageReferrer = $replace;
+							break;
+						}
+					}
+
+					if ( $pageReferrer === '' ) {
+						$pageReferrer = 'Direct';
+					}
+
+					$location = ($city === '(not set)')
+						? ucwords($state)
+						: $city . ', ' . $states[$state];
+
+					$sessions = (int) ($row->getMetricValues()[0]->getValue() ?? 0);
+
+					// Safe initialization
+					if ( !isset($analyticsGA4[$pageReferrer]) ) {
+						$analyticsGA4[$pageReferrer] = [];
+					}
+					if ( !isset($analyticsGA4[$pageReferrer][$location]) ) {
+						$analyticsGA4[$pageReferrer][$location] = [];
+					}
+					if ( !isset($analyticsGA4[$pageReferrer][$location]['sessions-' . $termDays]) ) {
+						$analyticsGA4[$pageReferrer][$location]['sessions-' . $termDays] = 0;
+					}
+
+					$analyticsGA4[$pageReferrer][$location]['sessions-' . $termDays] += $sessions;
 				}
-			}		 
+			}
+		}
 
-			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
-	
-			update_option('bp_ga4_referrers_01', $analyticsGA4, false);		
-		}		
+		if ( !empty($analyticsGA4) ) {
+			update_option('bp_ga4_referrers_01', $analyticsGA4, false);
+		}
 
-	
+
 		// Locations
 		$analyticsGA4 = array();
-		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) {
-	
-			$response = $client->runReport([
-				'property' => 'properties/'.$ga4_id,
-				'dateRanges' => [
-					new DateRange([ 'start_date' => date("Y-m-d", strtotime("-".$termDays." days")), 'end_date' => $today ]),
-				],
-				'dimensions' => [
-					new Dimension([ 'name' => 'city' ]),
-					new Dimension([ 'name' => 'region' ]),	
-				],
-				'metrics' => [
-					//new Metric([ 'name' => 'sessions' ]),					
-					new Metric([ 'name' => 'engagedSessions' ]),
-				]
-			]);
+		foreach ( $GLOBALS['dataTerms'] as $termTitle => $termDays ) {
+
+			$response = null;
+
+			try {
+				$response = $client->runReport([
+					'property' => 'properties/' . $ga4_id,
+					'dateRanges' => [
+						new DateRange([
+							'start_date' => date('Y-m-d', strtotime("-{$termDays} days")),
+							'end_date'   => $today,
+						]),
+					],
+					'dimensions' => [
+						new Dimension([ 'name' => 'firstUserSourceMedium' ]),
+						new Dimension([ 'name' => 'city' ]),
+						new Dimension([ 'name' => 'region' ]),
+					],
+					'metrics' => [
+						new Metric([ 'name' => 'engagedSessions' ]),
+					],
+				]);
+			} catch ( \Google\ApiCore\ApiException $e ) {
+				error_log('GA4 referrers runReport failed: ' . $e->getMessage());
+				continue; // skip this term only
+			}
+
+			if ( !$response ) {
+				continue;
+			}
 
 			foreach ( $response->getRows() as $row ) {
-				$city = $row->getDimensionValues()[0]->getValue();
-				$state = strtolower($row->getDimensionValues()[1]->getValue());
-				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
-				$sessions = $row->getMetricValues()[0]->getValue();	
-	
-				if ( isset($states[$state]) ) {				
-					if ( $city == '(not set)' ) $location = ucwords($state);	
-					$analyticsGA4[$location]['sessions-'.$termDays] = $sessions;	
+
+				$pageReferrer = $row->getDimensionValues()[0]->getValue() ?? '';
+				$city         = $row->getDimensionValues()[1]->getValue() ?? '';
+				$state        = strtolower($row->getDimensionValues()[2]->getValue() ?? '');
+
+				if ( !isset($states[$state]) ) {
+					continue;
 				}
 
-			}		 
+				$location = ($city === '(not set)')
+					? ucwords($state)
+					: $city . ', ' . $states[$state];
 
-			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
-	
-			update_option('bp_ga4_locations_01', $analyticsGA4, false);	
-		}		
-	
-			
+				$sessions = (int) ($row->getMetricValues()[0]->getValue() ?? 0);
+
+				// Normalize referrer labels
+				$switchRef = [
+					'facebook'  => 'Facebook',
+					'yelp'      => 'Yelp',
+					'youtube'   => 'YouTube',
+					'instagram' => 'Instagram',
+				];
+
+				// Ignore self-referrals
+				if ( strpos($pageReferrer, $_SERVER['HTTP_HOST']) !== false ) {
+					continue;
+				}
+
+				foreach ( $switchRef as $find => $replace ) {
+					if ( stripos($pageReferrer, $find) !== false ) {
+						$pageReferrer = $replace;
+						break;
+					}
+				}
+
+				if ( $pageReferrer === '' ) {
+					$pageReferrer = 'Direct';
+				}
+
+				// Ensure array depth exists
+				if ( !isset($analyticsGA4[$pageReferrer]) ) {
+					$analyticsGA4[$pageReferrer] = [];
+				}
+				if ( !isset($analyticsGA4[$pageReferrer][$location]) ) {
+					$analyticsGA4[$pageReferrer][$location] = [];
+				}
+				if ( !isset($analyticsGA4[$pageReferrer][$location]['sessions-' . $termDays]) ) {
+					$analyticsGA4[$pageReferrer][$location]['sessions-' . $termDays] = 0;
+				}
+
+				// Accumulate sessions
+				$analyticsGA4[$pageReferrer][$location]['sessions-' . $termDays] += $sessions;
+			}
+		}
+
+		if ( !empty($analyticsGA4) ) {
+			arsort($analyticsGA4);
+			update_option('bp_ga4_referrers_01', $analyticsGA4, false);
+		}
+
+
 		// Browsers
 		$analyticsGA4 = array();
-		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) {	
-	
-			$response = $client->runReport([
-				'property' => 'properties/'.$ga4_id,
-				'dateRanges' => [
-					new DateRange([ 'start_date' => date("Y-m-d", strtotime("-".$termDays." days")), 'end_date' => $today ]),
-				],
-				'dimensions' => [
-					new Dimension([ 'name' => 'browser' ]),				
-					new Dimension([ 'name' => 'city' ]),
-					new Dimension([ 'name' => 'region' ]),	
-				],
-				'metrics' => [
-					//new Metric([ 'name' => 'sessions' ]),					
-					new Metric([ 'name' => 'engagedSessions' ]),
-				]
-			]);
+		foreach ( $GLOBALS['dataTerms'] as $termTitle => $termDays ) {
+
+			$response = null;
+
+			try {
+				$response = $client->runReport([
+					'property' => 'properties/' . $ga4_id,
+					'dateRanges' => [
+						new DateRange([
+							'start_date' => date('Y-m-d', strtotime("-{$termDays} days")),
+							'end_date'   => $today,
+						]),
+					],
+					'dimensions' => [
+						new Dimension([ 'name' => 'browser' ]),
+						new Dimension([ 'name' => 'city' ]),
+						new Dimension([ 'name' => 'region' ]),
+					],
+					'metrics' => [
+						new Metric([ 'name' => 'engagedSessions' ]),
+					],
+				]);
+			} catch ( \Google\ApiCore\ApiException $e ) {
+				error_log('GA4 browsers runReport failed: ' . $e->getMessage());
+				continue; // skip this term only
+			}
+
+			if ( !$response ) {
+				continue;
+			}
 
 			foreach ( $response->getRows() as $row ) {
-				$browser = $row->getDimensionValues()[0]->getValue();
-				$city = $row->getDimensionValues()[1]->getValue();
-				$state = strtolower($row->getDimensionValues()[2]->getValue());
-				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
-				$sessions = $row->getMetricValues()[0]->getValue();	
 
-				if ( isset($states[$state]) ) {			
-					if ( $city == '(not set)' ) $location = ucwords($state);	
-					$sessions += $analyticsGA4[$browser][$location]['sessions-'.$termDays];
-					$analyticsGA4[$browser][$location]['sessions-'.$termDays] = $sessions;	
+				$browser = $row->getDimensionValues()[0]->getValue() ?? '';
+				$city    = $row->getDimensionValues()[1]->getValue() ?? '';
+				$state   = strtolower($row->getDimensionValues()[2]->getValue() ?? '');
+
+				if ( !isset($states[$state]) || $browser === '' ) {
+					continue;
 				}
-			}		 
 
-			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
-	
-			update_option('bp_ga4_browsers_01', $analyticsGA4, false);		
-		}		
-	
-			
+				$location = ($city === '(not set)')
+					? ucwords($state)
+					: $city . ', ' . $states[$state];
+
+				$sessions = (int) ($row->getMetricValues()[0]->getValue() ?? 0);
+
+				// Ensure array depth exists
+				if ( !isset($analyticsGA4[$browser]) ) {
+					$analyticsGA4[$browser] = [];
+				}
+				if ( !isset($analyticsGA4[$browser][$location]) ) {
+					$analyticsGA4[$browser][$location] = [];
+				}
+				if ( !isset($analyticsGA4[$browser][$location]['sessions-' . $termDays]) ) {
+					$analyticsGA4[$browser][$location]['sessions-' . $termDays] = 0;
+				}
+
+				// Accumulate
+				$analyticsGA4[$browser][$location]['sessions-' . $termDays] += $sessions;
+			}
+		}
+
+		if ( !empty($analyticsGA4) ) {
+			arsort($analyticsGA4);
+			update_option('bp_ga4_browsers_01', $analyticsGA4, false);
+		}
+
+
 		// Devices
 		$analyticsGA4 = array();
-		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) {
-	
-			$response = $client->runReport([
-				'property' => 'properties/'.$ga4_id,
-				'dateRanges' => [
-					new DateRange([ 'start_date' => date("Y-m-d", strtotime("-".$termDays." days")), 'end_date' => $today ]),
-				],
-				'dimensions' => [
-					//new Dimension([ 'name' => 'mobileDeviceBranding' ]),				
-					new Dimension([ 'name' => 'deviceCategory' ]),				
-					new Dimension([ 'name' => 'city' ]),
-					new Dimension([ 'name' => 'region' ]),	
-				],
-				'metrics' => [
-					//new Metric([ 'name' => 'sessions' ]),					
-					new Metric([ 'name' => 'engagedSessions' ]),
-				]
-			]);
+		foreach ( $GLOBALS['dataTerms'] as $termTitle => $termDays ) {
+
+			$response = null;
+
+			try {
+				$response = $client->runReport([
+					'property' => 'properties/' . $ga4_id,
+					'dateRanges' => [
+						new DateRange([
+							'start_date' => date('Y-m-d', strtotime("-{$termDays} days")),
+							'end_date'   => $today,
+						]),
+					],
+					'dimensions' => [
+						new Dimension([ 'name' => 'deviceCategory' ]),
+						new Dimension([ 'name' => 'city' ]),
+						new Dimension([ 'name' => 'region' ]),
+					],
+					'metrics' => [
+						new Metric([ 'name' => 'engagedSessions' ]),
+					],
+				]);
+			} catch ( \Google\ApiCore\ApiException $e ) {
+				error_log('GA4 devices runReport failed: ' . $e->getMessage());
+				continue; // skip this term only
+			}
+
+			if ( !$response ) {
+				continue;
+			}
 
 			foreach ( $response->getRows() as $row ) {
-				$deviceType = $row->getDimensionValues()[0]->getValue();
-				$city = $row->getDimensionValues()[1]->getValue();
-				$state = strtolower($row->getDimensionValues()[2]->getValue());
-				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
-				$sessions = $row->getMetricValues()[0]->getValue();	
 
-				if ( isset($states[$state]) ) {				
-					if ( $city == '(not set)' ) $location = ucwords($state);	
-					$sessions += $analyticsGA4[$deviceType][$location]['sessions-'.$termDays];
-					$analyticsGA4[$deviceType][$location]['sessions-'.$termDays] = $sessions;	
+				$deviceType = $row->getDimensionValues()[0]->getValue() ?? '';
+				$city       = $row->getDimensionValues()[1]->getValue() ?? '';
+				$state      = strtolower($row->getDimensionValues()[2]->getValue() ?? '');
+
+				if ( $deviceType === '' || !isset($states[$state]) ) {
+					continue;
 				}
-			}		 
 
-			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
-	
-			update_option('bp_ga4_devices_01', $analyticsGA4, false);		
-		}				
-	
-			
+				$location = ($city === '(not set)')
+					? ucwords($state)
+					: $city . ', ' . $states[$state];
+
+				$sessions = (int) ($row->getMetricValues()[0]->getValue() ?? 0);
+
+				// Ensure array structure exists before +=
+				if ( !isset($analyticsGA4[$deviceType]) ) {
+					$analyticsGA4[$deviceType] = [];
+				}
+				if ( !isset($analyticsGA4[$deviceType][$location]) ) {
+					$analyticsGA4[$deviceType][$location] = [];
+				}
+				if ( !isset($analyticsGA4[$deviceType][$location]['sessions-' . $termDays]) ) {
+					$analyticsGA4[$deviceType][$location]['sessions-' . $termDays] = 0;
+				}
+
+				$analyticsGA4[$deviceType][$location]['sessions-' . $termDays] += $sessions;
+			}
+		}
+
+		if ( !empty($analyticsGA4) ) {
+			arsort($analyticsGA4);
+			update_option('bp_ga4_devices_01', $analyticsGA4, false);
+		}
+
+
 		// Site Load Speed
 		$analyticsGA4 = array();
-		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) {
-	
-			$response = $client->runReport([
-				'property' => 'properties/'.$ga4_id,
-				'dateRanges' => [
-					new DateRange([ 'start_date' => date("Y-m-d", strtotime("-".$termDays." days")), 'end_date' => $today ]),
-				],
-				'dimensions' => [
-					new Dimension([ 'name' => 'groupId' ]),				
-					new Dimension([ 'name' => 'city' ]),
-					new Dimension([ 'name' => 'region' ]),	
-				],
-				'metrics' => [
-					//new Metric([ 'name' => 'sessions' ]),					
-					//new Metric([ 'name' => 'engagedSessions' ]),
-				]
-			]);
+		foreach ( $GLOBALS['dataTerms'] as $termTitle => $termDays ) {
+
+			$response = null;
+
+			try {
+				$response = $client->runReport([
+					'property' => 'properties/' . $ga4_id,
+					'dateRanges' => [
+						new DateRange([
+							'start_date' => date('Y-m-d', strtotime("-{$termDays} days")),
+							'end_date'   => $today,
+						]),
+					],
+					'dimensions' => [
+						new Dimension([ 'name' => 'groupId' ]),
+						new Dimension([ 'name' => 'city' ]),
+						new Dimension([ 'name' => 'region' ]),
+					],
+					// NOTE: no metrics returned for this report
+				]);
+			} catch ( \Google\ApiCore\ApiException $e ) {
+				error_log('GA4 speed runReport failed: ' . $e->getMessage());
+				continue; // skip this term only
+			}
+
+			if ( !$response ) {
+				continue;
+			}
 
 			foreach ( $response->getRows() as $row ) {
-				$groupId = $row->getDimensionValues()[0]->getValue();
-				$city = $row->getDimensionValues()[1]->getValue();
-				$state = strtolower($row->getDimensionValues()[2]->getValue());
-				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
-				//$sessions = $row->getMetricValues()[0]->getValue();	
 
-				if ( isset($states[$state]) ) {			
-					if ( $city == '(not set)' ) $location = ucwords($state);	
-					$analyticsGA4[$location]['sessions-'.$termDays][] = $groupId;
+				$groupId = $row->getDimensionValues()[0]->getValue() ?? '';
+				$city    = $row->getDimensionValues()[1]->getValue() ?? '';
+				$state   = strtolower($row->getDimensionValues()[2]->getValue() ?? '');
+
+				if ( $groupId === '' || !isset($states[$state]) ) {
+					continue;
 				}
-			}		 
 
-			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
-	
-			update_option('bp_ga4_speed_01', $analyticsGA4, false);		
-		}			
-	
-			
+				$location = ($city === '(not set)')
+					? ucwords($state)
+					: $city . ', ' . $states[$state];
+
+				// Ensure array structure exists
+				if ( !isset($analyticsGA4[$location]) ) {
+					$analyticsGA4[$location] = [];
+				}
+				if ( !isset($analyticsGA4[$location]['sessions-' . $termDays]) ) {
+					$analyticsGA4[$location]['sessions-' . $termDays] = [];
+				}
+
+				$analyticsGA4[$location]['sessions-' . $termDays][] = $groupId;
+			}
+		}
+
+		if ( !empty($analyticsGA4) ) {
+			arsort($analyticsGA4);
+			update_option('bp_ga4_speed_01', $analyticsGA4, false);
+		}
+
+
 		// Screen Resolutions
 		$analyticsGA4 = array();
-		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) {	
-	
-			$response = $client->runReport([
-				'property' => 'properties/'.$ga4_id,
-				'dateRanges' => [
-					new DateRange([ 'start_date' => date("Y-m-d", strtotime("-".$termDays." days")), 'end_date' => $today ]),
-				],
-				'dimensions' => [
-					new Dimension([ 'name' => 'screenResolution' ]),				
-					new Dimension([ 'name' => 'city' ]),
-					new Dimension([ 'name' => 'region' ]),	
-				],
-				'metrics' => [
-					//new Metric([ 'name' => 'sessions' ]),					
-					new Metric([ 'name' => 'engagedSessions' ]),
-				]
-			]);
+		foreach ( $GLOBALS['dataTerms'] as $termTitle => $termDays ) {
+
+			$response = null;
+
+			try {
+				$response = $client->runReport([
+					'property' => 'properties/' . $ga4_id,
+					'dateRanges' => [
+						new DateRange([
+							'start_date' => date('Y-m-d', strtotime("-{$termDays} days")),
+							'end_date'   => $today,
+						]),
+					],
+					'dimensions' => [
+						new Dimension([ 'name' => 'screenResolution' ]),
+						new Dimension([ 'name' => 'city' ]),
+						new Dimension([ 'name' => 'region' ]),
+					],
+					'metrics' => [
+						new Metric([ 'name' => 'engagedSessions' ]),
+					]
+				]);
+			} catch ( \Google\ApiCore\ApiException $e ) {
+				error_log('GA4 resolution runReport failed: ' . $e->getMessage());
+				continue; // skip this term only
+			}
+
+			if ( !$response ) {
+				continue;
+			}
 
 			foreach ( $response->getRows() as $row ) {
-				$screenResolution = $row->getDimensionValues()[0]->getValue();
-				$city = $row->getDimensionValues()[1]->getValue();
-				$state = strtolower($row->getDimensionValues()[2]->getValue());
-				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
-				$sessions = $row->getMetricValues()[0]->getValue();	
 
-				if ( isset($states[$state]) ) {			
-					if ( $city == '(not set)' ) $location = ucwords($state);	
-					$sessions += $analyticsGA4[$screenResolution][$location]['sessions-'.$termDays];
-					$analyticsGA4[$screenResolution][$location]['sessions-'.$termDays] = $sessions;	
+				$screenResolution = $row->getDimensionValues()[0]->getValue() ?? '';
+				$city             = $row->getDimensionValues()[1]->getValue() ?? '';
+				$state            = strtolower($row->getDimensionValues()[2]->getValue() ?? '');
+
+				if ( $screenResolution === '' || !isset($states[$state]) ) {
+					continue;
 				}
-			}		 
 
-			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
-	
-			update_option('bp_ga4_resolution_01', $analyticsGA4, false);		
-		}			
-	
-			
+				$location = ($city === '(not set)')
+					? ucwords($state)
+					: $city . ', ' . $states[$state];
+
+				$sessions = (int) ($row->getMetricValues()[0]->getValue() ?? 0);
+
+				// Initialize array structure safely
+				if ( !isset($analyticsGA4[$screenResolution]) ) {
+					$analyticsGA4[$screenResolution] = [];
+				}
+				if ( !isset($analyticsGA4[$screenResolution][$location]) ) {
+					$analyticsGA4[$screenResolution][$location] = [];
+				}
+				if ( !isset($analyticsGA4[$screenResolution][$location]['sessions-' . $termDays]) ) {
+					$analyticsGA4[$screenResolution][$location]['sessions-' . $termDays] = 0;
+				}
+
+				$analyticsGA4[$screenResolution][$location]['sessions-' . $termDays] += $sessions;
+			}
+		}
+
+		if ( !empty($analyticsGA4) ) {
+			arsort($analyticsGA4);
+			update_option('bp_ga4_resolution_01', $analyticsGA4, false);
+		}
+
+
 		// Content Visibility
 		$analyticsGA4 = array();
-		foreach ( $GLOBALS['dataTerms'] as $termTitle=>$termDays ) {	
-	
-			$response = $client->runReport([
-				'property' => 'properties/'.$ga4_id,
-				'dateRanges' => [
-					new DateRange([ 'start_date' => date("Y-m-d", strtotime("-".$termDays." days")), 'end_date' => $today ]),
-				],
-				'dimensions' => [
-					new Dimension([ 'name' => 'achievementId' ]),				
-					new Dimension([ 'name' => 'city' ]),
-					new Dimension([ 'name' => 'region' ]),	
-				],
-				'metrics' => [
-					new Metric([ 'name' => 'sessions' ]),					
-					//new Metric([ 'name' => 'engagedSessions' ]),
-				]
-			]);
+		foreach ( $GLOBALS['dataTerms'] as $termTitle => $termDays ) {
+
+			$response = null;
+
+			try {
+				$response = $client->runReport([
+					'property' => 'properties/' . $ga4_id,
+					'dateRanges' => [
+						new DateRange([
+							'start_date' => date('Y-m-d', strtotime("-{$termDays} days")),
+							'end_date'   => $today,
+						]),
+					],
+					'dimensions' => [
+						new Dimension([ 'name' => 'achievementId' ]),
+						new Dimension([ 'name' => 'city' ]),
+						new Dimension([ 'name' => 'region' ]),
+					],
+					'metrics' => [
+						new Metric([ 'name' => 'sessions' ]),
+					]
+				]);
+			} catch ( \Google\ApiCore\ApiException $e ) {
+				error_log('GA4 achievementId runReport failed: ' . $e->getMessage());
+				continue; // skip this term only
+			}
+
+			if ( !$response ) {
+				continue;
+			}
 
 			foreach ( $response->getRows() as $row ) {
-				$achievementId = $row->getDimensionValues()[0]->getValue();
-				$city = $row->getDimensionValues()[1]->getValue();
-				$state = strtolower($row->getDimensionValues()[2]->getValue());
-				if ( array_key_exists($state, $states) ) $location = $city.', '.$states[$state];
-				$sessions = $row->getMetricValues()[0]->getValue();	
 
-				if ( isset($states[$state]) ) {				
-					if ( $city == '(not set)' ) $location = ucwords($state);	
-					$sessions += $analyticsGA4[$achievementId][$location]['sessions-'.$termDays];
-					$analyticsGA4[$achievementId][$location]['sessions-'.$termDays] = $sessions;	
+				$achievementId = $row->getDimensionValues()[0]->getValue() ?? '';
+				$city          = $row->getDimensionValues()[1]->getValue() ?? '';
+				$state         = strtolower($row->getDimensionValues()[2]->getValue() ?? '');
+
+				if ( $achievementId === '' || !isset($states[$state]) ) {
+					continue;
 				}
-			}		 
 
-			if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
-	
-			update_option('bp_ga4_achievementId_01', $analyticsGA4, false);	
+				$location = ($city === '(not set)')
+					? ucwords($state)
+					: $city . ', ' . $states[$state];
+
+				$sessions = (int) ($row->getMetricValues()[0]->getValue() ?? 0);
+
+				// Initialize array structure safely
+				if ( !isset($analyticsGA4[$achievementId]) ) {
+					$analyticsGA4[$achievementId] = [];
+				}
+				if ( !isset($analyticsGA4[$achievementId][$location]) ) {
+					$analyticsGA4[$achievementId][$location] = [];
+				}
+				if ( !isset($analyticsGA4[$achievementId][$location]['sessions-' . $termDays]) ) {
+					$analyticsGA4[$achievementId][$location]['sessions-' . $termDays] = 0;
+				}
+
+				$analyticsGA4[$achievementId][$location]['sessions-' . $termDays] += $sessions;
+			}
+		}
+
+		if ( !empty($analyticsGA4) ) {
+			arsort($analyticsGA4);
+			update_option('bp_ga4_achievementId_01', $analyticsGA4, false);
 		}
 	}
 }
@@ -1784,7 +2126,7 @@ function ci_build_schema(array $ci, array $gbp_primary = [], array $google_info 
     // email / phone (E.164-ish)
     $email  = $ci['email'] ?? null;
     $digits = fn($v) => preg_replace('/\D+/', '', (string)$v);
-    $a = $digits($ci['area'] ?? ''); 
+    $a = $digits($ci['area'] ?? '');
     $p = $digits($ci['phone'] ?? '');
     if ($a === '' && strlen($p) === 10) { $a = substr($p,0,3); $p = substr($p,3); } // recover 10-digit paste
     $telephone = (strlen($a) === 3 && strlen($p) === 7) ? ('+1'.$a.$p) : ( ($a.$p) ? '+1'.$a.$p : null );
@@ -1824,7 +2166,7 @@ function ci_build_schema(array $ci, array $gbp_primary = [], array $google_info 
             $st= preg_replace('/\s+/', ' ', trim((string)$city[1]));
             if ($c === '' || $st === '') continue;
             $label = "$c, $st";
-            if (isset($seen[$label])) continue; 
+            if (isset($seen[$label])) continue;
             $seen[$label] = 1;
             $citySlug  = rawurlencode(str_replace(' ','_',$c));
             $stateSlug = rawurlencode(str_replace(' ','_',$st));

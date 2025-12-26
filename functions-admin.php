@@ -1,5 +1,5 @@
 <?php
-/* Battle Plan Web Design Functions: Admin
+/* Battle Plan Web Design Functions: Admin */
 
 
 /*--------------------------------------------------------------
@@ -122,58 +122,88 @@ function battleplan_addSitePage() {
 // Replace WordPress copyright message at bottom of admin page
 add_filter('admin_footer_text', 'battleplan_admin_footer_text');
 function battleplan_admin_footer_text() {
-	$printFooter = '<section><div class="flex" style="grid-template-columns: 80px 300px 1fr; gap: 20px">';
-	$printFooter .= '<div style="grid-row: span 2; align-self: center;"><img src="https://battleplanwebdesign.com/wp-content/uploads/site-icon-80x80.webp" /></div>';
-	$printFooter .= '<div style="grid-row: span 2; align-self: center;">Powered by <a href="https://battleplanwebdesign.com" target="_blank">Battle Plan Web Design</a><br>';
-	$printFooter .= 'Launched '.date('F Y', strtotime(get_option('bp_launch_date'))).'<br>';
-	$printFooter .= 'Framework '._BP_VERSION.'<br>';
-	$printFooter .= 'WP '.get_bloginfo('version').'<br>';
-	$printFooter .=  'Local Time: '.wp_date("g:i a", null, new DateTimeZone( wp_timezone_string() ) ).'<br></div>';
 
-	$printFooter .= '<div style="justify-self: end; margin-right: 50px;"><a class="button" href = "mailto:'.get_option('customer_info')['email'].'">Contact Email</a>';
+	$printFooter  = '<section><div class="flex" style="grid-template-columns:80px 300px 1fr; gap:20px">';
+	$printFooter .= '<div style="grid-row:span 2; align-self:center;">';
+	$printFooter .= '<img src="' . esc_url('https://battleplanwebdesign.com/wp-content/uploads/site-icon-80x80.webp') . '" />';
+	$printFooter .= '</div>';
 
-	if ( isset(get_option('customer_info')['owner-email']) ) $printFooter .= '<a class="button" href = "mailto:'.get_option('customer_info')['owner-email'].'">Owner Email</a>';
-	if ( isset(get_option('customer_info')['facebook']) ) $printFooter .= '<a class="button" href = "'.get_option('customer_info')['facebook'].'" target="_blank">Facebook</a>';
-	if ( isset(get_option('customer_info')['twitter']) ) $printFooter .= '<a class="button" href = "'.get_option('customer_info')['twitter'].'" target="_blank">Twitter</a>';
-	if ( isset(get_option('customer_info')['instagram']) ) $printFooter .= '<a class="button" href = "'.get_option('customer_info')['instagram'].'" target="_blank">Instagram</a>';
-	if ( isset(get_option('customer_info')['pinterest']) ) $printFooter .= '<a class="button" href = "'.get_option('customer_info')['pinterest'].'" target="_blank">Pinterest</a>';
-	if ( isset(get_option('customer_info')['yelp']) ) $printFooter .= '<a class="button" href = "'.get_option('customer_info')['yelp'].'" target="_blank">Yelp</a>';
-	if ( isset(get_option('customer_info')['tiktok']) ) $printFooter .= '<a class="button" href = "'.get_option('customer_info')['tiktok'].'" target="_blank">TikTok</a>';
-	if ( isset(get_option('customer_info')['youtube']) ) $printFooter .= '<a class="button" href = "'.get_option('customer_info')['youtube'].'" target="_blank">You Tube</a>';
+	$printFooter .= '<div style="grid-row:span 2; align-self:center;">';
+	$printFooter .= 'Powered by <a href="' . esc_url('https://battleplanwebdesign.com') . '" target="_blank" rel="noopener">Battle Plan Web Design</a><br>';
+	$printFooter .= 'Launched ' . esc_html( date('F Y', strtotime(get_option('bp_launch_date'))) ) . '<br>';
+	$printFooter .= 'Framework ' . esc_html(_BP_VERSION) . '<br>';
+	$printFooter .= 'WP ' . esc_html( get_bloginfo('version') ) . '<br>';
+	$printFooter .= 'Local Time: ' . esc_html( wp_date('g:i a', null, new DateTimeZone( wp_timezone_string() )) ) . '<br>';
+	$printFooter .= '</div>';
 
-	if ( isset(get_option('customer_info')['google-tags']['prop-id']) ) $printFooter .= '<a class="button" href = "https://analytics.google.com/analytics/web/#/p'.get_option('customer_info')['google-tags']['prop-id'].'/reports/explorer?params=_u..nav%3Dmaui%26_u..pageSize%3D25%26_r.explorerCard..selmet%3D%5B%22sessions%22%5D%26_r.explorerCard..seldim%3D%5B%22sessionDefaultChannelGrouping%22%5D&r=lifecycle-traffic-acquisition-v2&collectionId=life-cycle" target="_blank">Analytics</a>';
+	$customer_info = get_option('customer_info');
+	if ( ! is_array($customer_info) ) {
+		$customer_info = [];
+	}
 
-	if ( isset(get_option('customer_info')['serpfox']) ) $printFooter .= '<a class="button" href = "//app.serpfox.com/shared/'.get_option('customer_info')['serpfox'].'" target="_blank">Keywords</a>';
+	$printFooter .= '<div style="justify-self:end; margin-right:50px;">';
 
-	$printFooter .= '</div><div style="justify-self: end; margin-bottom:15px;">';
+	$email = $customer_info['email'] ?? '';
+	if ($email) {
+		$printFooter .= '<a class="button" href="mailto:' . esc_attr($email) . '">Contact Email</a>';
+	}
 
-	$placeIDs = get_option('customer_info')['pid'];
+	$owner_email = $customer_info['owner-email'] ?? '';
+	if ($owner_email) {
+		$printFooter .= '<a class="button" href="mailto:' . esc_attr($owner_email) . '">Owner Email</a>';
+	}
+
+	$socials = ['facebook','twitter','instagram','pinterest','yelp','tiktok','youtube'];
+	foreach ($socials as $key) {
+		if (!empty($customer_info[$key])) {
+			$printFooter .= '<a class="button" href="' . esc_url($customer_info[$key]) . '" target="_blank" rel="noopener">' . esc_html(ucfirst($key)) . '</a>';
+		}
+	}
+
+	if (!empty($customer_info['google-tags']['prop-id'])) {
+		$prop_id = (int)$customer_info['google-tags']['prop-id'];
+		$printFooter .= '<a class="button" href="' . esc_url('https://analytics.google.com/analytics/web/#/p'.$prop_id) . '" target="_blank" rel="noopener">Analytics</a>';
+	}
+
+	if (!empty($customer_info['serpfox'])) {
+		$printFooter .= '<a class="button" href="' . esc_url('//app.serpfox.com/shared/'.$customer_info['serpfox']) . '" target="_blank" rel="noopener">Keywords</a>';
+	}
+
+	$printFooter .= '</div><div style="justify-self:end; margin-bottom:15px;">';
+
+	$placeIDs   = $customer_info['pid'] ?? null;
 	$googleInfo = get_option('bp_gbp_update');
-	if ( isset($placeIDs) ) :
-		if ( !is_array($placeIDs) ) $placeIDs = array($placeIDs);
-		$primePID = true;
-		foreach ( $placeIDs as $placeID ) :
-			if ( $primePID == true ) :
-				$customer_info = customer_info();
-				$primePID = false;
-			else:
-				$customer_info = $googleInfo[$placeID];
-			endif;
 
-			$printFooter .= '<div style="float:left; margin-right: 50px;">';
+	if ($placeIDs) {
+		if (!is_array($placeIDs)) $placeIDs = [$placeIDs];
 
-			if ( strlen($placeID) > 10 && $googleInfo[$placeID]['city'] ) $printFooter .= '<a class="button" style="margin: 0 0 10px -5px" href = "https://search.google.com/local/writereview?placeid='.$placeID.'" target="_blank">GBP: '.$googleInfo[$placeID]['city'].', '.$googleInfo[$placeID]['state-abbr'].'</a><br>';
+		foreach ($placeIDs as $placeID) {
+			$placeID = esc_attr($placeID);
+			$info = $googleInfo[$placeID] ?? [];
+
+			$printFooter .= '<div style="float:left; margin-right:50px;">';
+
+			if (strlen($placeID) > 10 && !empty($info['city'])) {
+				$printFooter .= '<a class="button" style="margin:0 0 10px -5px" href="' .
+					esc_url('https://search.google.com/local/writereview?placeid='.$placeID) .
+					'" target="_blank" rel="noopener">GBP: ' .
+					esc_html($info['city'] . ', ' . ($info['state-abbr'] ?? '')) .
+					'</a><br>';
+			}
 
 			$customer_info = customer_info();
 
-			$printFooter .= $customer_info['area-before'].$customer_info['area'].$customer_info['area-after'].$customer_info['phone'].'<br>';
-			$printFooter .= $customer_info['street'].'<br>';
-			$printFooter .= $customer_info['city'].', '.$customer_info['state-abbr'].' '.$customer_info['zip'].'<br>';
-			if ( isset($customer_info['lat']) ) $printFooter .= $customer_info['lat'].', '.$customer_info['long'].'<br>';
-			$printFooter .= '</div>';
+			$printFooter .= esc_html(($customer_info['area-before'] ?? '') . ($customer_info['area'] ?? '') . ($customer_info['area-after'] ?? '') . ($customer_info['phone'] ?? '')) . '<br>';
+			$printFooter .= esc_html($customer_info['street'] ?? '') . '<br>';
+			$printFooter .= esc_html(($customer_info['city'] ?? '') . ', ' . ($customer_info['state-abbr'] ?? '') . ' ' . ($customer_info['zip'] ?? '')) . '<br>';
 
-		endforeach;
-	endif;
+			if (!empty($customer_info['lat']) && !empty($customer_info['long'])) {
+				$printFooter .= esc_html($customer_info['lat'] . ', ' . $customer_info['long']) . '<br>';
+			}
+
+			$printFooter .= '</div>';
+		}
+	}
 
 	$printFooter .= '</div></div></section>';
 
@@ -194,15 +224,54 @@ function battleplan_replace_howdy( $wp_admin_bar ) {
 // Re-build <img> tag in WordPress editor
 add_filter( 'image_send_to_editor', 'battleplan_remove_junk_from_image', 10, 8 );
 function battleplan_remove_junk_from_image( $html, $id, $caption, $title, $align, $url, $size, $alt ) {
-	$size_full = wp_get_attachment_image_src($id, 'full');
-	$size_requested = wp_get_attachment_image_src($id, $size);
-	$size = $size == 'full' ? 'orig' : $size;
-	$data_orig = $size == 'orig' ? '' : ' data-orig="'.$size_full[1].'x'.$size_full[2].'"';
-	$url = str_replace( get_site_url(), "", $size_requested[0] );
-	$alt = $alt == get_the_title($id) ? '' : $alt;
 
-	return '<img src="'.$url.'"'.$data_orig.' width="'.$size_requested[1].'" height="'.$size_requested[2].'" style="aspect-ratio:'.$size_requested[1].'/'.$size_requested[2].'" class="align'.$align.' size-'.$size.' wp-image-'.$id.'" alt="'.$alt.'" />';
+	$size_full      = wp_get_attachment_image_src( $id, 'full' );
+	$size_requested = wp_get_attachment_image_src( $id, $size );
+
+	if ( ! $size_requested ) {
+		return $html;
+	}
+
+	$size_slug = ( $size === 'full' ) ? 'orig' : $size;
+
+	$data_orig = '';
+	if ( $size_slug !== 'orig' && $size_full ) {
+		$data_orig = ' data-orig="' . esc_attr( $size_full[1] . 'x' . $size_full[2] ) . '"';
+	}
+
+	$src = str_replace( get_site_url(), '', $size_requested[0] );
+	$src = esc_url( $src );
+
+	$alt = ( $alt === get_the_title( $id ) ) ? '' : $alt;
+
+	$width  = (int) $size_requested[1];
+	$height = (int) $size_requested[2];
+
+	$class = sprintf(
+		'align%s size-%s wp-image-%d',
+		sanitize_html_class( $align ),
+		sanitize_html_class( $size_slug ),
+		(int) $id
+	);
+
+	$style = sprintf(
+		'aspect-ratio:%d/%d',
+		$width,
+		$height
+	);
+
+	return sprintf(
+		'<img src="%s"%s width="%d" height="%d" style="%s" class="%s" alt="%s" />',
+		$src,
+		$data_orig,
+		$width,
+		$height,
+		esc_attr( $style ),
+		esc_attr( $class ),
+		esc_attr( $alt )
+	);
 }
+
 
 // Set the quality of compression on various WordPress generated image sizes
 function av_return_100(){ return 67; }
@@ -325,23 +394,31 @@ function battleplan_custom_menu_order( $menu_ord ) {
 
 // Reorder WP Admin Sub-Menu Items
 add_filter( 'custom_menu_order', 'battleplan_submenu_order' );
-function battleplan_submenu_order( $menu_ord ) {
-    global $submenu;
-    $arr = array();
-    $arr[] = $submenu['options-general.php'][10];
-    $arr[] = $submenu['options-general.php'][15];
-    $arr[] = $submenu['options-general.php'][20];
-    $arr[] = $submenu['options-general.php'][25];
-    $arr[] = $submenu['options-general.php'][30];
-    $arr[] = $submenu['options-general.php'][40];
-    $arr[] = $submenu['options-general.php'][45];
-    $arr[] = $submenu['options-general.php'][49];
-    $arr[] = $submenu['options-general.php'][46];
-    $arr[] = $submenu['options-general.php'][48];
-    $arr[] = $submenu['options-general.php'][47];
-    $submenu['options-general.php'] = $arr;
+function battleplan_submenu_order($menu_ord) {
+	global $submenu;
 
-    return $menu_ord;
+	if (empty($submenu['options-general.php']) || !is_array($submenu['options-general.php'])) {
+		return $menu_ord;
+	}
+
+	$wanted = [10,15,20,25,30,40,45,49,46,48,47];
+	$arr = [];
+
+	foreach ($wanted as $idx) {
+		if (isset($submenu['options-general.php'][$idx])) {
+			$arr[] = $submenu['options-general.php'][$idx];
+		}
+	}
+
+	// append anything not captured so you don't lose entries
+	foreach ($submenu['options-general.php'] as $idx => $item) {
+		if (!in_array($item, $arr, true)) {
+			$arr[] = $item;
+		}
+	}
+
+	$submenu['options-general.php'] = $arr;
+	return $menu_ord;
 }
 
 // Count number of each post type and add an admin note to the menu button
@@ -394,8 +471,12 @@ function battleplan_remove_dashboard_widgets () {
 }
 
 // Load site stats if hooked to Google Analytics
-if ( isset(get_option('customer_info')['google-tags']['prop-id']) && get_option('customer_info')['google-tags']['prop-id'] > 1 && is_admin() && (_USER_LOGIN === "battleplanweb" || in_array('bp_view_stats', _USER_ROLES) ) ) require_once get_template_directory().'/functions-admin-stats.php';
+$customer_info = get_option('customer_info');
+$prop_id = (is_array($customer_info) && isset($customer_info['google-tags']['prop-id'])) ? (int)$customer_info['google-tags']['prop-id'] : 0;
 
+if ( $prop_id > 1 && is_admin() && (_USER_LOGIN === "battleplanweb" || in_array('bp_view_stats', _USER_ROLES)) ) {
+	require_once get_template_directory() . '/functions-admin-stats.php';
+}
 
 // Adjust the number of of posts listed on admin pages
 add_filter( 'edit_posts_per_page', 'custom_posts_per_page_based_on_type_in_admin', 10, 2 );
@@ -437,10 +518,14 @@ function battleplan_add_body_classes($classes) {
 		foreach ($bizTypeRaw as $bizType) {
 			$bizType = preg_replace('/[^a-zA-Z0-9\s]/', '', $bizType);
 			$bizType = preg_replace('/\s+/', '-', trim($bizType));
-			$classes .= ' business-type-'.strtolower($bizType);
+			if ($bizType) {
+				$classes .= ' business-type-' . strtolower($bizType);
+			}
 		}
-	} else {
-		$classes .= ' business-type-'.strtolower($bizTypeRaw);
+	} elseif ($bizTypeRaw) {
+		$bizType = preg_replace('/[^a-zA-Z0-9\s]/', '', $bizTypeRaw);
+		$bizType = preg_replace('/\s+/', '-', trim($bizType));
+		$classes .= ' business-type-' . strtolower($bizType);
 	}
 
 	$user = wp_get_current_user();
@@ -573,44 +658,78 @@ function battleplan_duplicate_post_as_draft(){
 add_filter( 'post_row_actions', 'battleplan_post_row_actions', 90, 2 );
 add_filter( 'page_row_actions', 'battleplan_post_row_actions', 90, 2 );
 function battleplan_post_row_actions( $actions, $post ) {
-	$edit = str_replace( "Edit", "<i class='dashicons-edit'></i>", $actions['edit'] );
-	$view = str_replace( "View", "<i class='dashicons-view'></i>", $actions['view'] );
-	$view = str_replace( "Preview", "<i class='dashicons-view'></i>", $view );
-	$delete = str_replace( "Trash", "<i class='dashicons-trash'></i>", $actions['trash'] );
+	$out = [];
 
-	$edit = str_replace( "<a href", "<a title='Edit' target='_blank' href", $edit );
-	$clone = '<a target="_blank" href="' . wp_nonce_url('admin.php?action=battleplan_duplicate_post_as_draft&post=' . $post->ID, basename(__FILE__), 'duplicate_nonce' ) . '" title="Clone" rel="permalink"><i class="dashicons-clone"></i></a>';
-	$view = str_replace( "<a href", "<a title='View' target='_blank' href", $view );
-	$delete = str_replace( "<a href", "<a title='Delete' href", $delete );
-	$quickEdit = '<button type="button" class="button-link editinline" aria-label="Quick edit" aria-expanded="false"><i class="dashicons-quick-edit"></i></button>';
+	if (isset($actions['edit'])) {
+		$edit = str_replace("Edit", "<i class='dashicons-edit'></i>", $actions['edit']);
+		$out['edit'] = str_replace("<a href", "<a title='Edit' target='_blank' rel='noopener' href", $edit);
+	}
 
-	return array( 'edit' => $edit, 'inline hide-if-no-js' => $quickEdit, 'duplicate' => $clone, 'view' => $view, 'delete' => $delete );
+	$out['inline hide-if-no-js'] = '<button type="button" class="button-link editinline" aria-label="Quick edit" aria-expanded="false"><i class="dashicons-quick-edit"></i></button>';
+
+	$out['duplicate'] = '<a target="_blank" rel="noopener" href="' .
+		wp_nonce_url('admin.php?action=battleplan_duplicate_post_as_draft&post=' . $post->ID, basename(__FILE__), 'duplicate_nonce') .
+		'" title="Clone" rel="permalink"><i class="dashicons-clone"></i></a>';
+
+	if (isset($actions['view'])) {
+		$view = str_replace(["View","Preview"], "<i class='dashicons-view'></i>", $actions['view']);
+		$out['view'] = str_replace("<a href", "<a title='View' target='_blank' rel='noopener' href", $view);
+	}
+
+	if (isset($actions['trash'])) {
+		$delete = str_replace("Trash", "<i class='dashicons-trash'></i>", $actions['trash']);
+		$out['delete'] = str_replace("<a href", "<a title='Delete' href", $delete);
+	}
+
+	return $out;
 }
+
 
 // Replace Media Library image links with icons
 add_filter('media_row_actions', 'battleplan_media_row_actions', 90, 2);
 function battleplan_media_row_actions( $actions, $post ) {
-	$edit = str_replace( "Edit", "<i class='dashicons-edit'></i>", $actions['edit'] );
-	$view = str_replace( "View", "<i class='dashicons-view'></i>", $actions['view'] );
-	$media_replace = str_replace( "Replace media", "<i class='dashicons-replace'></i>", $actions['media_replace'] );
-	$delete = str_replace( "Delete Permanently", "<i class='dashicons-trash'></i>", $actions['delete'] );
+	$out = [];
 
-	$edit = str_replace( "<a href", "<a title='Edit Media' target='_blank' href", $edit );
-	$view = str_replace( "<a href", "<a title='View Media' target='_blank' href", $view );
-	$media_replace = str_replace( "<a href", "<a title='Replace Media' target='_blank' href", $media_replace );
-	$delete = str_replace( "<a href", "<a title='Delete Media' href", $delete );
+	if (isset($actions['edit'])) {
+		$edit = str_replace("Edit", "<i class='dashicons-edit'></i>", $actions['edit']);
+		$out['edit'] = str_replace("<a href", "<a title='Edit Media' target='_blank' rel='noopener' href", $edit);
+	}
 
-	return array( 'edit' => $edit, 'view' => $view, 'media_replace' => $media_replace, 'delete' => $delete );
+	if (isset($actions['view'])) {
+		$view = str_replace("View", "<i class='dashicons-view'></i>", $actions['view']);
+		$out['view'] = str_replace("<a href", "<a title='View Media' target='_blank' rel='noopener' href", $view);
+	}
+
+	if (isset($actions['media_replace'])) {
+		$rep = str_replace("Replace media", "<i class='dashicons-replace'></i>", $actions['media_replace']);
+		$out['media_replace'] = str_replace("<a href", "<a title='Replace Media' target='_blank' rel='noopener' href", $rep);
+	}
+
+	if (isset($actions['delete'])) {
+		$del = str_replace("Delete Permanently", "<i class='dashicons-trash'></i>", $actions['delete']);
+		$out['delete'] = str_replace("<a href", "<a title='Delete Media' href", $del);
+	}
+
+	return $out;
 }
+
 
 // Replace Users links with icons
 add_filter( 'user_row_actions', 'battleplan_user_row_actions', 90, 2 );
-function battleplan_user_row_actions( $actions, $post ) {
-	if ( isset($actions['edit']) ) $edit = str_replace( "Edit", "<i class='dashicons-edit'></i>", $actions['edit'] );
-	if ( isset($actions['delete']) ) $delete = str_replace( "Delete", "<i class='dashicons-trash'></i>", $actions['delete'] );
-	if ( isset($actions['switch_to_user']) ) $switch = str_replace( "Switch&nbsp;To", "<i class='dashicons-randomize'></i>", $actions['switch_to_user'] );
+function battleplan_user_row_actions($actions, $user_object) {
+	$out = [];
 
-	return array( 'edit' => $edit, 'delete' => $delete, 'switch_to_user' => $switch );
+	if (isset($actions['edit'])) {
+		$out['edit'] = str_replace("Edit", "<i class='dashicons-edit'></i>", $actions['edit']);
+	}
+	if (isset($actions['delete'])) {
+		$out['delete'] = str_replace("Delete", "<i class='dashicons-trash'></i>", $actions['delete']);
+	}
+	if (isset($actions['switch_to_user'])) {
+		$out['switch_to_user'] = str_replace("Switch&nbsp;To", "<i class='dashicons-randomize'></i>", $actions['switch_to_user']);
+	}
+
+	return $out;
 }
 
 // Automatically set the image Title, Alt-Text, Caption & Description upon upload
@@ -661,8 +780,8 @@ function battleplan_auto_add_image_category($attachment_id) {
 // Force clear all views for posts/pages
 function battleplan_force_run_chron() {
 	updateOption('bp_force_chron', true);
-	header("Location: /wp-admin/");
-	exit();
+	wp_safe_redirect( admin_url() );
+	exit;
 }
 
 // Add dialog boxes to shortcode helpers in text editor
@@ -903,8 +1022,9 @@ function battleplan_setupTextEditorDialogBoxes($hook) {
 // Keep logs of site audits
 function battleplan_site_audit() {
 	$today = date( "Y-m-d" );
-	$submitCheck = $_POST['submit_check'];
-	$siteType = get_option('customer_info')['site-type'];
+	$submitCheck = $_POST['submit_check'] ?? '';
+	$customer_info = get_option('customer_info');
+	$siteType = is_array($customer_info) ? ($customer_info['site-type'] ?? '') : '';
 
 	$criteriaOrder = array ('lighthouse-mobile-score', 'lighthouse-mobile-ttfb', 'lighthouse-mobile-fcp', 'lighthouse-mobile-lcp', 'lighthouse-mobile-tti', 'lighthouse-mobile-tbt', 'lighthouse-mobile-si', 'lighthouse-mobile-cls', 'lighthouse-desktop-score', 'lighthouse-desktop-ttfb', 'lighthouse-desktop-fcp', 'lighthouse-desktop-lcp', 'lighthouse-desktop-tti', 'lighthouse-desktop-tbt', 'lighthouse-desktop-si', 'lighthouse-desktop-cls', 'keyword-page-1', 'keyword-needs-attn', 'database-page-gen-time', 'database-peak-mem', 'database-db-queries', 'database-db-queries-time', 'back-total-links', 'back-domains', 'back-local-links', 'back-c-flow', 'back-domain-authority', 'cite-citations', 'cite-key-citations', 'cite-citation-score', 'console-indexed', 'console-clicks', 'console-position', 'gmb-overview', 'gmb-calls', 'gmb-clicks');
 
@@ -925,7 +1045,12 @@ function battleplan_site_audit() {
 				else:
 					$decimals = 0;
 				endif;
-				$updateNum = number_format((string)$log_value, $decimals);
+
+				$raw = $_POST[$log] ?? null;
+				$raw = is_string($raw) ? str_replace([',',' '], '', $raw) : $raw;
+				$num = is_numeric($raw) ? (float)$raw : 0.0;
+				$updateNum = number_format($num, $decimals, '.', ',');
+
 				$siteAudit[$today][$log] = $updateNum;
 			endif;
 		endforeach;
@@ -934,29 +1059,28 @@ function battleplan_site_audit() {
 	array_push( $criteriaOrder, 'google-reviews', 'google-rating', 'load_time_mobile', 'load_time_desktop', 'testimonials', 'testimonials-pct', 'coupon', 'coupon-pct', 'financing-link', 'finance-pct', 'blog', 'galleries', 'landing', 'jobsites', 'audit-ada', 'audit-schema', 'audit-html', 'audit-browserstack', 'notes');
 
 	if ( $submitCheck == "true" ) :
-		$note_value = $_POST['notes'];
+		$note_value = $_POST['notes'] ?? '';
 		if ( isset($note_value) ) :
 			if ( isset( $_POST['erase-note'] ) ) :
-				$siteAudit[$today]['notes'] = $note_value;
+				$siteAudit[$today]['notes'] = ($siteAudit[$today]['notes'] ?? '') . '  ' . $note_value;
 			else:
-				$siteAudit[$today]['notes'] .= "  ".$note_value;
+				$siteAudit[$today]['notes'] .= ($siteAudit[$today]['notes'] ?? '') . '  ' . $note_value;
 			endif;
 		endif;
 
 		$googleInfo = get_option('bp_gbp_update');
-		$siteAudit[$today]['google-rating'] = number_format($googleInfo['google-rating'], 1, '.', ',');
-		$siteAudit[$today]['google-reviews'] = $googleInfo['google-reviews'];
+		$siteAudit[$today]['google-rating'] = number_format($googleInfo['google-rating']?? 0.0, 1, '.', ',');
+		$siteAudit[$today]['google-reviews'] = $googleInfo['google-reviews']?? 0;
 
-		$siteAudit[$today]['load_time_mobile'] = $GLOBALS['speedSessions']['sessions-30']['mobile'] > 0 ? number_format($GLOBALS['speedTotal']['sessions-30']['mobile'] / $GLOBALS['speedSessions']['sessions-30']['mobile'], 1) : 0;
+		$siteAudit[$today]['load_time_mobile'] = $GLOBALS['speedSessions']['sessions-30']['mobile'] > 0 ? number_format(($GLOBALS['speedTotal']['sessions-30']['mobile'] / $GLOBALS['speedSessions']['sessions-30']['mobile'])?? 0.0, 1) : 0;
 
-		$siteAudit[$today]['load_time_desktop'] = $GLOBALS['speedSessions']['sessions-30']['desktop'] > 0 ? number_format($GLOBALS['speedTotal']['sessions-30']['desktop'] / $GLOBALS['speedSessions']['sessions-30']['desktop'], 1) : 0;
+		$siteAudit[$today]['load_time_desktop'] = $GLOBALS['speedSessions']['sessions-30']['desktop'] > 0 ? number_format(($GLOBALS['speedTotal']['sessions-30']['desktop'] / $GLOBALS['speedSessions']['sessions-30']['desktop'])?? 0.0, 1) : 0;
 
-		$siteAudit[$today]['testimonials-pct'] = $GLOBALS['ga4_contentVis']['track-init']['sessions-30'] > 0 ? number_format(($GLOBALS['ga4_contentVis']['track-testimonials']['sessions-30'] / $GLOBALS['ga4_contentVis']['track-init']['sessions-30']*100), 1).'%' : '';
+		$siteAudit[$today]['testimonials-pct'] = $GLOBALS['ga4_contentVis']['track-init']['sessions-30'] > 0 ? number_format((($GLOBALS['ga4_contentVis']['track-testimonials']['sessions-30'] / $GLOBALS['ga4_contentVis']['track-init']['sessions-30'])*100)?? 0.0, 1).'%' : '';
 
-		$siteAudit[$today]['coupon-pct'] = $GLOBALS['ga4_contentVis']['track-init']['sessions-30'] > 0 ? number_format(($GLOBALS['ga4_contentVis']['track-coupon']['sessions-30'] / $GLOBALS['ga4_contentVis']['track-init']['sessions-30'])*100, 1).'%' : '';
+		$siteAudit[$today]['coupon-pct'] = $GLOBALS['ga4_contentVis']['track-init']['sessions-30'] > 0 ? number_format((($GLOBALS['ga4_contentVis']['track-coupon']['sessions-30'] / $GLOBALS['ga4_contentVis']['track-init']['sessions-30'])*100)?? 0.0, 1).'%' : '';
 
-		$siteAudit[$today]['finance-pct'] = $GLOBALS['ga4_contentVis']['track-init']['sessions-30'] > 0 ? number_format(($GLOBALS['ga4_contentVis']['track-finance']['sessions-30'] / $GLOBALS['ga4_contentVis']['track-init']['sessions-30'])*100, 1).'%' : '';
-
+		$siteAudit[$today]['finance-pct'] = $GLOBALS['ga4_contentVis']['track-init']['sessions-30'] > 0 ? number_format((($GLOBALS['ga4_contentVis']['track-finance']['sessions-30'] / $GLOBALS['ga4_contentVis']['track-init']['sessions-30'])*100)?? 0.0, 1).'%' : '';
 		if ( wp_count_posts( 'post' )->publish > 0 ) : $siteAudit[$today]['blog'] = wp_count_posts( 'post' )->publish; else: $siteAudit[$today]['blog'] = "false"; endif;
 
 		if ( wp_count_posts( 'landing' )->publish > 0 ) : $siteAudit[$today]['landing'] = wp_count_posts( 'landing' )->publish; else: $siteAudit[$today]['landing'] = "false"; endif;
@@ -992,7 +1116,7 @@ function battleplan_site_audit() {
 
 		if ( $submitCheck == "true" ) :
 			foreach ( $criteriaOrder as $log ) :
-				$log_value = $_POST[$log];
+				$log_value = $_POST[$log] ?? null;
 				if ( $log == "audit-ada" || $log =="audit-schema" || $log =="audit-html" || $log =="audit-browserstack" ) :
 					$siteAudit[$today][$log] = $log_value;
 				endif;
@@ -1108,7 +1232,7 @@ function battleplan_site_audit() {
 
 	if ( is_array($siteAudit) ) {
 
-		array_reverse($siteAudit);
+		$siteAudit = array_reverse($siteAudit, true);
 
 		// rearrange order to match the $criteriaOrder array
 		foreach ($siteAudit as $date => $auditDetails) :
@@ -1172,7 +1296,7 @@ function battleplan_site_audit() {
 	$siteAuditPage .= '</table>[/col][/layout][/section]</div></div><!--site-audit-wrap-->';
 	echo do_shortcode($siteAuditPage);
 
-	if ( is_array($siteAudit)) updateOption( 'site_updated', strtotime(array_key_first($siteAudit)) );
+	if ( is_array($siteAudit)) updateOption( 'site_updated', strtotime($today) );
 	exit();
 }
 
@@ -1275,11 +1399,7 @@ function bp_refresh_jobsite_tags_page() {
 
 	// 🔍 Debug output so we can tell if form submission is detected
 	if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-		echo '<p><strong>Form detected!</strong></p>';
-
 		if (isset($_POST['bp_run_refresh'])) {
-
-			echo '<p>Running refresh process…</p>';
 
 			$jobsites = get_posts([
 				'post_type'      => 'jobsite_geo',

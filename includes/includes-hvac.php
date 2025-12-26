@@ -1,6 +1,6 @@
 <?php
 /* Battle Plan Web Design - HVAC Includes
- 
+
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
@@ -38,22 +38,22 @@ add_shortcode( 'product-overview', 'battleplan_product_overview' );
 function battleplan_product_overview( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', ), $atts );
 	$type = esc_attr($a['type']);
-	$brands = array('amana', 'american standard', 'bryant', 'carrier', 'lennox', 'lg', 'mitsubishi', 'rheem', 'ruud', 'tempstar', 'trane', 'york');
-	
-	foreach( $brands as $brand ) :	
+	$brands = array('amana', 'american standard', 'bryant', 'carrier', 'comfortmaker', 'lennox', 'lg', 'mitsubishi', 'rheem', 'ruud', 'tempstar', 'trane', 'york');
+
+	foreach( $brands as $brand ) :
 		if (strpos($type, $brand) !== false) $file = str_replace( ' ', '-', $brand );
 	endforeach;
 
 	include('wp-content/themes/battleplantheme/elements/element-product-overview-generic.php');
 	include('wp-content/themes/battleplantheme/elements/element-product-overview-'.$file.'.php');
-	
-	
+
+
 	if (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/'.$pic.'.webp' ) ) : $pic = $pic.".webp";
 	elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/'.$pic.'.jpg' ) ) : $pic = $pic.".jpg";
 	elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/'.$pic.'.png' ) ) : $pic = $pic.".png";
 	else : $pic = 'na.webp';
-	endif;	
-	
+	endif;
+
 	return do_shortcode('
 		[col class="col-archive col-products"]
 		 [img size="1/3" link="'.$link.'" ada-hidden="true"]<img class="img-archive img-products" src="/wp-content/uploads/'.$pic.'" loading="lazy" alt="'.$alt.'" style="aspect-ratio:1/1"/>[/img]
@@ -62,7 +62,7 @@ function battleplan_product_overview( $atts, $content = null ) {
 		  [btn size="100" class="button-products" link="'.$link.'"]View '.$title.'[/btn]
 		 [/group]
 		[/col]
-	');	
+	');
 }
 
 /*--------------------------------------------------------------
@@ -73,7 +73,7 @@ function battleplan_american_standard_customer_care( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', ), $atts );
 	$type = esc_attr($a['type']);
 	return include "wp-content/themes/battleplantheme/pages/page-hvac-customer-care-dealer.php";
-}	
+}
 
 /*--------------------------------------------------------------
 # Rheem Pro Partner
@@ -83,7 +83,7 @@ function battleplan_rheem_pro_partner( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', ), $atts );
 	$type = esc_attr($a['type']);
 	return include "wp-content/themes/battleplantheme/pages/page-hvac-rheem-pro-partner.php";
-}	
+}
 
 /*--------------------------------------------------------------
 # Ruud Pro Partner
@@ -93,7 +93,7 @@ function battleplan_ruud_pro_partner( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', ), $atts );
 	$type = esc_attr($a['type']);
 	return include "wp-content/themes/battleplantheme/pages/page-hvac-ruud-pro-partner.php";
-}	
+}
 
 /*--------------------------------------------------------------
 # Comfortmaker Elite Dealer
@@ -103,7 +103,7 @@ function battleplan_comfortmaker_elite_dealer( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', ), $atts );
 	$type = esc_attr($a['type']);
 	return include "wp-content/themes/battleplantheme/pages/page-hvac-comfortmaker-elite-dealer.php";
-}	
+}
 
 /*--------------------------------------------------------------
 # York Certified Comfort Expert
@@ -113,7 +113,7 @@ function battleplan_york_cert_comfort_expert( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', ), $atts );
 	$type = esc_attr($a['type']);
 	return include "wp-content/themes/battleplantheme/pages/page-hvac-york-cert-comfort-expert.php";
-}	
+}
 
 /*--------------------------------------------------------------
 # Tempstar Elite Dealer
@@ -123,7 +123,7 @@ function battleplan_tempstar_elite_dealer( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', ), $atts );
 	$type = esc_attr($a['type']);
 	return include "wp-content/themes/battleplantheme/pages/page-hvac-tempstar-elite-dealer.php";
-}	
+}
 
 /*--------------------------------------------------------------
 # Why Choose Us?
@@ -131,40 +131,40 @@ function battleplan_tempstar_elite_dealer( $atts, $content = null ) {
 add_shortcode( 'why-choose-as', 'battleplan_why_choose_us' );
 add_shortcode( 'why-choose-us', 'battleplan_why_choose_us' );
 function battleplan_why_choose_us( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'brand'=>'', 'style'=>'1', 'width'=>'stretch', 'img'=>'', 'alt'=>'' ), $atts );	
+	$a = shortcode_atts( array( 'brand'=>'', 'style'=>'1', 'width'=>'stretch', 'img'=>'', 'alt'=>'' ), $atts );
 	$brand = esc_attr($a['brand']);
 	$style = esc_attr($a['style']);
-	$width = esc_attr($a['width']);	
+	$width = esc_attr($a['width']);
 	$img = esc_attr($a['img']);
 	$alt = esc_attr($a['alt']);
-	if ( $brand == '' ) :	
+	if ( $brand == '' ) :
 		$brand = customer_info()['site-brand'];
 		if ( is_array($brand) ) $brand = $brand[0];
 	endif;
 	$name = ucwords($brand);
 	$brand = strtolower(str_replace(" ", "-", $brand));
 	if ( $alt == '' ) $alt='We are proud to be a dealer of '.$name.', offering the top rated HVAC products on the market.';
-	
+
 	if ( $img == "grey" ) : $img = "/wp-content/themes/battleplantheme/common/hvac-".$brand."/why-choose-".$brand."-logo-grey.webp";
 	elseif ( $img == "white" ) : $img = "/wp-content/themes/battleplantheme/common/hvac-".$brand."/why-choose-".$brand."-logo-white.webp";
 	elseif ( $img == "" ) :	$img = "/wp-content/themes/battleplantheme/common/hvac-".$brand."/why-choose-".$brand."-logo.webp";
 	else: $img = "/wp-content/uploads/".$img;
 	endif;
-	
+
 	return include "wp-content/themes/battleplantheme/elements/element-why-choose-".$brand.".php";
-}		
-	
+}
+
 /*--------------------------------------------------------------
-# HVAC Maintenance Tips 
+# HVAC Maintenance Tips
 --------------------------------------------------------------*/
 add_shortcode( 'hvac-maintenance-tips', 'battleplan_hvac_maintenance_tips' );
 function battleplan_hvac_maintenance_tips( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'', ), $atts );
 	$type = esc_attr($a['type']);
-	
+
 	return include "wp-content/themes/battleplantheme/pages/page-hvac-maintenance-tips.php";
-}		
-	
+}
+
 /*--------------------------------------------------------------
 # HVAC Tip Of The Month
 --------------------------------------------------------------*/
@@ -254,7 +254,7 @@ function battleplan_add_acf_hvac_fields() {
 				),
 			),
 		),
-		'menu_order' => 0, 
+		'menu_order' => 0,
 		'position' => 'normal',
 		'style' => 'seamless',
 		'label_placement' => 'top',
@@ -276,7 +276,7 @@ function battleplan_getBrandLogo($atts, $content = null) {
 	$a = shortcode_atts( array( 'alt'=>'', 'brand'=>'' ), $atts );
 	$altImg = $a['alt'] ? '-'.esc_attr($a['alt']) : '';
 	$brand = esc_attr($a['brand']);
-	if ( $brand === '' ) :	
+	if ( $brand === '' ) :
 		$brand = customer_info()['site-brand'];
 		if ( is_array($brand) ) $brand = $brand[0];
 	endif;
@@ -284,7 +284,7 @@ function battleplan_getBrandLogo($atts, $content = null) {
 	$name = ucwords($brand);
 	$alt = $name !== 'Generac' ? $name.' heating and air conditioning products.' : $name.' home generators.';
 	$brand = strtolower(str_replace(" ", "-", $brand));
-	$imagePath = get_template_directory().'/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$altImg.'.webp';			
+	$imagePath = get_template_directory().'/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$altImg.'.webp';
 	list($width, $height) = getimagesize($imagePath);
 
 	return '<img class="noFX brand-logo '.$brand.'-logo" loading="lazy" src="/wp-content/themes/battleplantheme/common/hvac-'.$brand.'/'.$brand.'-sidebar-logo'.$altImg.'.webp" alt="We offer '.$alt.'" width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
@@ -292,7 +292,7 @@ function battleplan_getBrandLogo($atts, $content = null) {
 
 // Add Symptom Checker widget to Sidebar
 add_shortcode( 'get-symptom-checker', 'battleplan_getSymptomChecker' );
-function battleplan_getSymptomChecker() {	
+function battleplan_getSymptomChecker() {
 	$brand = customer_info()['site-brand'];
 	if ( is_array($brand) ) $brand = $brand[0];
 	$name = ucwords($brand);
@@ -302,19 +302,19 @@ function battleplan_getSymptomChecker() {
 
 // Add Customer Care Dealer widget to Sidebar
 add_shortcode( 'get-customer-care', 'battleplan_getCustomerCare' );
-function battleplan_getCustomerCare() {	
+function battleplan_getCustomerCare() {
 	return '<a href="/customer-care-dealer/" title="Click here to read more about the American Standard Heating & Cooling Customer Care Dealer program"><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-american-standard/customer-care-dealer-logo.webp" loading="lazy" alt="We are proud to be an American Standard Customer Care Dealer" width="400" height="400" style="aspect-ratio:400/400" /></a>';
 }
 
 // Add Comfortmaker Elite Dealer widget to Sidebar
 add_shortcode( 'get-comfortmaker-elite-dealer', 'battleplan_getComfortmakerEliteDealer' );
-function battleplan_getComfortmakerEliteDealer() {	
+function battleplan_getComfortmakerEliteDealer() {
 	return '<a href="/comfortmaker-elite-dealer/" title="Click here to read more about the Comfortmaker Elite Dealer program"><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-comfortmaker/comfortmaker-elite-dealer-logo.webp" loading="lazy" alt="We are proud to be a Comfortmaker Elite Dealer" width="400" height="400" style="aspect-ratio:400/400" /></a>';
 }
 
 // Add Tempstar Elite Dealer widget to Sidebar
 add_shortcode( 'get-tempstar-elite-dealer', 'battleplan_getTempstarEliteDealer' );
-function battleplan_getTempstarEliteDealer() {	
+function battleplan_getTempstarEliteDealer() {
 	return '<a href="/tempstar-elite-dealer/" title="Click here to read more about the Tempstar Elite Dealer program"><img class="noFX" src="/wp-content/themes/battleplantheme/common/hvac-tempstar/tempstar-elite-dealer-logo.webp" loading="lazy" alt="We are proud to be a Tempstar Elite Dealer" width="400" height="400" style="aspect-ratio:400/400" /></a>';
 }
 
@@ -325,22 +325,22 @@ function battleplan_getFinancing($atts, $content = null) {
 	$bank = esc_attr($a['bank']);
 	$text = esc_attr($a['text']);
 	$loc = esc_attr($a['loc']);
-	$link = esc_attr($a['link']) === 'biz-info' ? customer_info()['finance-link'] : esc_attr($a['link']);	
-	$class = esc_attr($a['class']) != '' ? ' '.esc_attr($a['class']) : '';	
+	$link = esc_attr($a['link']) === 'biz-info' ? customer_info()['finance-link'] : esc_attr($a['link']);
+	$class = esc_attr($a['class']) != '' ? ' '.esc_attr($a['class']) : '';
 	$img = strtolower(str_replace(" ", "-", $bank));
 	if ( $img == "enerbank-usa" ) $img = "Enerbank-USA";
-	$graphic = esc_attr($a['graphic']);	
+	$graphic = esc_attr($a['graphic']);
 	if ( $graphic != '' ) $img = $img.'-'.$graphic;
-	$buildFinancing = "";	
-	$imagePath = get_template_directory().'/common/financing/'.$img.'.webp';			
+	$buildFinancing = "";
+	$imagePath = get_template_directory().'/common/financing/'.$img.'.webp';
 	list($width, $height) = getimagesize($imagePath);
-	
+
 	if ( $link != "" ) $buildFinancing .= '<a href="'.$link.'" title="Click here to apply for financing for AC repair at '.$bank.'" target="_blank">';
 	if ( $text != "" && $loc == "above" ) $buildFinancing .= '<span class="link-text">'.$text.'</span>';
 	$buildFinancing .= '<img class="financing-img tracking'.$class.'" data-track="financing"" src="/wp-content/themes/battleplantheme/common/financing/'.$img.'.webp" loading="lazy" alt="Apply for financing for your HVAC needs at '.$bank.'" width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" />';
 	if ( $text != "" && $loc == "below" ) $buildFinancing .= '<span class="link-text">'.$text.'</span>';
 	if ( $link != "" ) $buildFinancing .= '</a>';
-	
+
 	return do_shortcode($buildFinancing);
 }
 
@@ -348,19 +348,19 @@ function battleplan_getFinancing($atts, $content = null) {
 add_shortcode( 'get-wells-fargo', 'battleplan_getWellsFargo' );
 function battleplan_getWellsFargo($atts, $content = null) {
 	$a = shortcode_atts( array( 'graphic1'=>'', 'graphic2'=>'', 'link'=>'biz-info', 'class'=>''  ), $atts );
-	$graphic1 = esc_attr($a['graphic1']);	
-	$graphic2 = esc_attr($a['graphic2']);	
-	$link = esc_attr($a['link']) === 'biz-info' ? customer_info()['finance-link'] : esc_attr($a['link']);	
-	$class = esc_attr($a['class']) != '' ? ' '.esc_attr($a['class']) : '';	
+	$graphic1 = esc_attr($a['graphic1']);
+	$graphic2 = esc_attr($a['graphic2']);
+	$link = esc_attr($a['link']) === 'biz-info' ? customer_info()['finance-link'] : esc_attr($a['link']);
+	$class = esc_attr($a['class']) != '' ? ' '.esc_attr($a['class']) : '';
 	$rand = rand(1,2);
 	if ($rand == "1") : $ad = $graphic1; endif;
 	if ($rand == "2") : $ad = $graphic2; endif;
 	if ($ad=="Wells-Fargo-A.webp" || $ad=="Wells-Fargo-B.webp") : $alt = "Looking for financing options? Special financing available. This credit card is issued with approved credit by Wells Fargo Bank, N.A. Equal Housing Lender. Learn more."; $width="300"; $height="250"; endif;
 	if ($ad=="Wells-Fargo-C.webp" || $ad=="Wells-Fargo-D.webp") : $alt = "Special financing available. This credit card is issued with approved credit by Wells Fargo Bank, N.A. Equal Housing Lender. Learn more."; $width="300"; $height="250"; endif;
-	if ($ad=="Wells-Fargo-E.webp") : $alt = "Financing available through Wells Fargo Bank, NA. This credit card is issued with approved credit.  Equal Housing Lender."; $width="200"; $height="152"; endif;	
-	if ($ad=="Wells-Fargo-Splash-A.webp" || $ad=="Wells-Fargo-Splash-B.webp" || $ad=="Wells-Fargo-Splash-C.webp" || $ad=="Wells-Fargo-Splash-D.webp") : $alt = "Buy today, pay over time with this Wells Fargo credit card. Learn more."; $width="600"; $height="300"; endif;		
+	if ($ad=="Wells-Fargo-E.webp") : $alt = "Financing available through Wells Fargo Bank, NA. This credit card is issued with approved credit.  Equal Housing Lender."; $width="200"; $height="152"; endif;
+	if ($ad=="Wells-Fargo-Splash-A.webp" || $ad=="Wells-Fargo-Splash-B.webp" || $ad=="Wells-Fargo-Splash-C.webp" || $ad=="Wells-Fargo-Splash-D.webp") : $alt = "Buy today, pay over time with this Wells Fargo credit card. Learn more."; $width="600"; $height="300"; endif;
 	$output = '<a href="'.$link.'" title="Click to learn more about Wells Fargo financing options." target="_blank"><img src="/wp-content/themes/battleplantheme/common/financing/'.$ad.'" loading="lazy" alt="'.$alt.'" class="tracking'.$class.'" data-track="financing" width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" /></a>';
-	return $output; 
+	return $output;
 }
 
 /*--------------------------------------------------------------
@@ -375,11 +375,11 @@ function battleplan_getProductComparison($atts, $content = null ) {
 	$products = esc_attr($a['products']) != '' ? esc_attr($a['products']) : 'air-conditioners,heat-pumps,furnaces';
 	$productList = explode(",", $products);
 	$class = 'current';
-	
+
 	$buildBox = '<ul class="tabs">';
 	foreach ( $productList as $product ) :
 		$buildBox .= '<li data-tab="'.$product.'" tabindex="0" class="'.$class.'">'.ucwords(str_replace("-", " ", $product)).'</li>';
-		$class = '';	
+		$class = '';
 	endforeach;
 	$buildBox .= '</ul>';
 	$buildBox .= '<div class="tab-content-holder">';
@@ -403,7 +403,7 @@ function battleplan_getProductComparison($atts, $content = null ) {
 				$query->the_post();
 				$product_class = get_the_terms( get_the_ID(), 'product-class' )[0]->name;
 				if ( $product_class !== $current_product_class ) :
-					$buildBox .= '[col]'; 
+					$buildBox .= '[col]';
 					$buildBox .=  '<h2>'.$product_class.'</h2>';
 					$buildBox .= do_shortcode('[build-archive type="products" show_thumb="true" size="'.$size.'" show_btn="true" btn_text="Learn More" title_pos="inside" show_excerpt="true" show_date="false" show_author="false" pic_size="'.$picSize.'"]');
 					$buildBox .= '[/col]';
@@ -413,13 +413,13 @@ function battleplan_getProductComparison($atts, $content = null ) {
 		endif;
 
 		wp_reset_postdata();
-		$class = '';	
+		$class = '';
 		$buildBox .= '[/layout][/section]';
-	endforeach;	
-	
-	$buildBox .= '</div>';	
-	
-	return do_shortcode($buildBox);	
+	endforeach;
+
+	$buildBox .= '</div>';
+
+	return do_shortcode($buildBox);
 }
 
 /*--------------------------------------------------------------
@@ -427,23 +427,23 @@ function battleplan_getProductComparison($atts, $content = null ) {
 --------------------------------------------------------------*/
 add_action( 'pre_get_posts', 'battleplan_override_main_query_with_hvac', 10 );
 function battleplan_override_main_query_with_hvac( $query ) {
-	if (!is_admin() && $query->is_main_query()) :		
+	if (!is_admin() && $query->is_main_query()) :
 		if ( is_post_type_archive('products') || is_tax('product-type') || is_tax('product-class') ) :
 			$query->set( 'posts_per_page',10);
-			$query->set( 'orderby','menu_order'); 
+			$query->set( 'orderby','menu_order');
 			$query->set( 'order','asc');
 		endif;
-	endif; 
-}	
+	endif;
+}
 
 /*--------------------------------------------------------------
 # Employment Application
 --------------------------------------------------------------*/
-add_action( 'wpcf7_before_send_mail', 'battleplan_handleEmploymentApp', 10, 1 ); 
-function battleplan_handleEmploymentApp( $contact_form ) { 
-	$formMail = $contact_form->prop( 'mail' );	
+add_action( 'wpcf7_before_send_mail', 'battleplan_handleEmploymentApp', 10, 1 );
+function battleplan_handleEmploymentApp( $contact_form ) {
+	$formMail = $contact_form->prop( 'mail' );
 	$formSubject = $formMail['subject'];
-	
+
 	if ( str_contains( $formMail['subject'], "Employment Application" ) ) :
 		$submission = WPCF7_Submission::get_instance();
 		$submitted['posted_data'] = $submission->get_posted_data();
@@ -457,11 +457,11 @@ function battleplan_handleEmploymentApp( $contact_form ) {
 		else:
 			$preSub = "< unqualified >";
 		endif;
-		
+
 		$formMail['subject'] = $preSub." ".$formSubject;
 		$contact_form->set_properties( array( 'mail' => $formMail ) );
 	endif;
-}; 	
+};
 
 add_filter('wpcf7_additional_mail', 'battleplan_handleEmploymentAppResponse', 10, 2);
 function battleplan_handleEmploymentAppResponse($additional_mail, $contact_form) {
@@ -483,16 +483,16 @@ function battleplan_handleEmploymentAppResponse($additional_mail, $contact_form)
 # Mass Product Update
 --------------------------------------------------------------*/
 //add_action( 'init', 'battleplan_mass_product_update' );
-function battleplan_mass_product_update() { 
+function battleplan_mass_product_update() {
 	$customer_info = customer_info();
-	
+
 	if ( $customer_info['site-brand'] == 'american standard' || (is_array($customer_info['site-brand']) && in_array('american standard', $customer_info['site-brand'])) ) :
-	
+
 		if ( get_option( 'product-update-may-2022' ) != 'completed' ) :
 			require_once get_template_directory() . '/includes/includes-mass-site-update.php';
 			update_option( 'product-update-may-2022', 'completed' );
-		endif;	
-	
+		endif;
+
 	endif;
 }
 ?>

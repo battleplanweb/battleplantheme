@@ -14,7 +14,7 @@
 --------------------------------------------------------------*/
 
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.33.10' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2025.34.0' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -140,8 +140,28 @@ if ( !is_admin() && !( defined('DOING_AJAX') && DOING_AJAX ) && !$is_debug_page 
     @ini_set('error_log', WP_CONTENT_DIR . '/debug-admin.log');
 }
 
-error_log('—-----------------------------------— post_id=' . get_the_ID() . ' query=' . current_filter());
 
+// Block Google APIs on sitemap requests
+function bp_block_google_apis_on_sitemap() {
+	if (
+		!is_admin() &&
+		isset($_SERVER['REQUEST_URI']) &&
+		preg_match('#sitemap(_index)?\.xml#i', $_SERVER['REQUEST_URI'])
+	) {
+		define('BP_DISABLE_GOOGLE_APIS', true);
+	}
+}
+add_action('muplugins_loaded', 'bp_block_google_apis_on_sitemap', 0);
+
+
+
+$GLOBALS['___page_timer'] ??= microtime(true);
+error_log('<<<<<<<< ------------------------------------------ START PAGE '._PAGE_SLUG_FULL.' @ ' . date('H:i:s') . ' on ' . date('Y-m-d') . ' ------------------------------------------ >>>>>>>>');
+
+add_action('shutdown', function () {
+	$pageLoadTime = microtime(true) - $GLOBALS['___page_timer'];
+	error_log('<<<<<<<< ------------------------------------------ END PAGE '._PAGE_SLUG_FULL.' : LOAD TIME: ' . number_format($pageLoadTime, 3) . ' sec ------------------------------------------ >>>>>>>>');
+});
 
 
 /*--------------------------------------------------------------
@@ -161,6 +181,8 @@ $GLOBALS['do_not_repeat'] = array();
 
 function findCity($userCity) {
 	$customer_info = customer_info();
+	if ( empty($customer_info['service-areas']) || !is_array($customer_info['service-areas']) )return false;
+
 	foreach ($customer_info['service-areas'] as $area) :
 		if (in_array($userCity, $area)) return true;
 	endforeach;

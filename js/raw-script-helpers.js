@@ -1,142 +1,154 @@
-document.addEventListener("DOMContentLoaded", function () {	"use strict";
-														   
-// Raw Script: Helpers														   
+// Raw Script: Helpers
 
-	window.mobileCutoff = 1024;
-	window.tabletCutoff = 576;								  		
-	
-	
-// Is user on an Apple device?
-	window.isApple = function () {
-		return /iPad|iPhone|iPod/.test(navigator.platform);
-	};	
-														   
+window.mobileCutoff = 1024;
+window.tabletCutoff = 576;
 
 // Find width & height of user's screen
-	window.getDeviceW = function() {
-		return isApple() && (window.orientation === 90 || window.orientation === -90) ? window.screen.height : window.innerWidth;
-	};
-
-	window.getDeviceH = function() {
-		return isApple() && (window.orientation === 90 || window.orientation === -90) ? window.screen.width : window.innerHeight;
-	};
-
-	
-// Make mobile and tablet cut off variables available in script-site.js
-	window.getMobileCutoff = function () {
-		return mobileCutoff;
-	};	
-
-	window.getTabletCutoff = function () {
-		return tabletCutoff;
-	};	
-	
+window.getDeviceW = () => window.innerWidth;
+window.getDeviceH = () => window.innerHeight;
+window.getMobileCutoff = () => window.mobileCutoff;
+window.getTabletCutoff = () => window.tabletCutoff;
 
 // Shortcut to select an object from a selector or jQuery element
-	window.getObject = function (selectorOrElement, context=document, all=false) {
-		all = (all === true || all === 'true');
-		if (typeof selectorOrElement === 'string' && selectorOrElement !== "#") { 
-			return all ? context.querySelectorAll(selectorOrElement) : context.querySelector(selectorOrElement);
-		} else if (selectorOrElement instanceof HTMLElement) { 
-			return all ? [selectorOrElement] : selectorOrElement;
-		} else if (window.jQuery && selectorOrElement instanceof jQuery) { 
-			return all ? selectorOrElement.get() : selectorOrElement[0]; 
-		} else {
-			return null;
-		}
+window.getObject = function (selectorOrElement, context = document) {
+	if (!selectorOrElement) return null;
+
+	if (selectorOrElement?.nodeType === 1) {
+		return selectorOrElement;
 	}
-	
-	window.getObjects = function (selectorOrElement, context=document) {
-		return getObject(selectorOrElement, context, true);
+
+	return typeof selectorOrElement === 'string'
+		? context.querySelector(selectorOrElement)
+		: null;
+};
+
+window.getObjects = function (selectorOrElement, context = document) {
+	if (!selectorOrElement) return [];
+
+	if (selectorOrElement?.nodeType === 1) {
+		return [selectorOrElement];
 	}
-	
-		
+
+	return typeof selectorOrElement === 'string'
+		? Array.from(context.querySelectorAll(selectorOrElement))
+		: [];
+};
+
+
 // Determine if object exists, but set to display: none
-	window.isVisible = function (elementObj) {
-		if (elementObj) {
-			const style = window.getComputedStyle(elementObj);
-			return style.display !== 'none';
-		}
-	}
-	
-	
+window.isDisplayed = function (el) {
+	if (!el) return false;
+	const style = getComputedStyle(el);
+	return (
+		style.display !== 'none' &&
+		style.visibility !== 'hidden'
+	);
+};
+
 // Determine if user is on a mobile device
-	window.isMobile = function () {
-		return document.body.classList.contains('screen-mobile') ? true : false;
+window.isMobile = function () {
+	return !!document.body?.classList.contains('screen-mobile');
+}
+
+
+// Set styles & attributes
+window.setAttributes = function (el, attrs) {
+	if (!el || !attrs) return;
+	for (const key in attrs) {
+		el.setAttribute(key, attrs[key]);
 	}
-	
-		
-// Set styles & attributes 
-	window.setAttributes = function(elementObj, attributes) {
-		for (const key in attributes) {
-			elementObj.setAttribute(key, attributes[key]);
-		}
-	}	
-	
-	window.setStyles = function(elementObj, styles) {
-    	Object.assign(elementObj.style, styles);
+};
+
+window.setStyles = function (el, styles) {
+	if (!el || !styles) return;
+	Object.assign(el.style, styles);
+};
+
+window.__BP_STYLE_SHEET__ = null;
+const RULE_PREFIX = '/*bp*/';
+
+window.addCSS = function (rule) {
+	if (!rule) return;
+
+	if (!window.__BP_STYLE_SHEET__) {
+		window.__BP_STYLE_SHEET__ = document.createElement('style');
+		document.head.appendChild(window.__BP_STYLE_SHEET__);
 	}
 
-	window.addCSS = function(elementSel, rule) {
-		const styleSheet = [...document.styleSheets].find(sheet => sheet.href && sheet.href.includes('style-site'));
-		if (styleSheet) {
-			const ruleExists = [...styleSheet.cssRules].some(cssRule => cssRule.cssText.includes(`${elementSel} { ${rule}`));
-			if (!ruleExists) {
-				styleSheet.insertRule ? styleSheet.insertRule(`${elementSel} { ${rule} }`, styleSheet.cssRules.length) : styleSheet.addRule(elementSel, rule);
-			}
-		}
-	};
-	
-	
+	const sheet = window.__BP_STYLE_SHEET__.sheet;
+	const taggedRule = RULE_PREFIX + rule;
+
+	const normalized = taggedRule.replace(/\s+/g, ' ').trim();
+
+	for (const r of sheet.cssRules) {
+		if (r.cssText.replace(/\s+/g, ' ').trim() === normalized) return;
+	}
+
+	try {
+		sheet.insertRule(taggedRule, sheet.cssRules.length);
+	} catch (_) { }
+};
+
+
 // Set, read & delete cookies
-	window.setCookie = function(cname, cvalue, exdays) {
-		let d = new Date();
-		d.setTime(d.getTime() + (exdays * 24 * 60 * 60 * 1000));
-		const expires = exdays ? "expires=" + d.toUTCString() + "; " : "";
-		//const domain = "domain=" + document.domain.split('.').slice(-2).join('.') + "; ";
-		//document.cookie = cname + "=" + encodeURIComponent(cvalue) + "; " + expires + "path=/; domain=" + domain + "; SameSite=Strict; Secure";
-		document.cookie = cname + "=" + encodeURIComponent(cvalue) + "; " + expires + "path=/; SameSite=Strict; Secure";
-	};
-	
-	window.getCookie = function(cname) {
-		const name = cname + "=";
-		const decodedCookie = decodeURIComponent(document.cookie);
-		const ca = decodedCookie.split(';');
-		for (let i = 0; i < ca.length; i++) {
-			const c = ca[i].trim();
-			if (c.indexOf(name) == 0) return c.substring(name.length);
-		}
-		return "";
-	};
-	
-	window.deleteCookie = function(cname) {
-		setCookie(cname, "", -1);
-	};
+window.setCookie = function (name, value, days = 365) {
+	const expires = new Date(Date.now() + days * 864e5).toUTCString();
+	const secure = location.protocol === 'https:' ? '; Secure' : '';
 
-	
-// Create a debounce function to improve performance on scrolling, etc.	
-	window.debounce = function(func, wait) {
-		let timeout;
-		return function() {
-			const context = this, args = arguments;
-			clearTimeout(timeout);
-			timeout = setTimeout(() => func.apply(context, args), wait);
-		};
-	};
+	document.cookie =
+		name + '=' + encodeURIComponent(value) +
+		'; expires=' + expires +
+		'; path=/' +
+		'; SameSite=Strict' +
+		secure;
+};
 
-	
-// Preload images on-demand ... also preload site-background if necessary
-	window.preloadImg = function(imgName, device='both') {
-		if ( device === 'mobile' && getDeviceW() > mobileCutoff ) return;
-		if ( device === 'desktop' && getDeviceW() < mobileCutoff ) return;
-				
-		const preloadImage = new Image();
-		preloadImage.src = site_dir.upload_dir_uri + "/" + imgName;		
-	};
-	
-	if ( !document.body.classList.contains('wp-admin') && site_bg !== null && site_bg !== '' ) {
-		preloadImg('site-background.'+site_bg, 'desktop');
-		preloadImg('site-background-phone.'+site_bg, 'mobile');		
+window.getCookie = function (cname) {
+	const name = cname + "=";
+	const decodedCookie = decodeURIComponent(document.cookie);
+	const ca = decodedCookie.split(';');
+	for (let i = 0; i < ca.length; i++) {
+		const c = ca[i].trim();
+		if (c.indexOf(name) == 0) return c.substring(name.length);
 	}
-														   
-});
+	return "";
+};
+
+window.deleteCookie = function (name) {
+	document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+};
+
+
+// Create a debounce function to improve performance on scrolling, etc.
+window.debounce = function (func, wait) {
+	let timeout;
+
+	function debounced(...args) {
+		clearTimeout(timeout);
+		timeout = setTimeout(() => func.apply(this, args), wait);
+	}
+
+	debounced.cancel = () => clearTimeout(timeout);
+
+	return debounced;
+};
+
+
+// Preload images on-demand ... also preload site-background if necessary
+window.preloadImg = function (imgName, device = 'both') {
+	if (!imgName) return;
+
+	if (device === 'mobile' && getDeviceW() > window.mobileCutoff) return;
+	if (device === 'desktop' && getDeviceW() < window.mobileCutoff) return;
+
+	const img = new Image();
+	img.fetchPriority = 'low';
+	img.decoding = 'async';
+	img.src = imgName;
+};
+
+
+if (!document.body.classList.contains('wp-admin') && typeof site_bg === 'string' && site_bg) {
+	preloadImg('site-background.' + site_bg, 'desktop');
+	preloadImg('site-background-phone.' + site_bg, 'mobile');
+}

@@ -4,12 +4,14 @@ Theme URI: https://battleplanwebdesign.com/
 Author: Glendon Guttenfelder
 Author URI: https://battleplanwebdesign.com
 Description: The Battle Plan Web Design Theme
-Version: 2025.34.0
+Version: 2026.35.0
 Text Domain: battleplan
 Github Theme URI: https://github.com/battleplanweb/battleplantheme
 */
 
 @charset "utf-8";
+@layer parent {
+
   /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
@@ -71,6 +73,10 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
   --anon-icon-bg:                                           var(--accent-background);
 
   --text-color:                                             var(--dark-grey);
+  --link-color:                                             var(--text-color);
+  --link-hover-color:                                       var(--text-color);
+  --link-bg:                                                transparent;
+  --link-hover-bg:                                          transparent;
 
   --font-base-5:                                            6.25%;
   --font-base-4:                                            calc(var(--font-base-5) * 0.80);
@@ -385,16 +391,16 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
 /* Admin logged in styles
 --------------------------------------------- */
 .logged-in #wpadminbar {
-	position:                                                  fixed;
-	z-index:                                                   999999999999;
-	min-width:                                                 unset;
-	width:                                                     40px;
-	height:                                                    40px;
-	top:                                                       unset;
-	bottom:                                                    10px;
-	left:                                                      3px;
-	background:                                                url('https://secure.gravatar.com/avatar/5578915c21eaa269936f4e9aacb6771b') no-repeat;
-	background-size:                                           contain;
+	position:                                                  fixed !important;
+	z-index:                                                   999999999999!important;
+	min-width:                                                 unset!important;
+	width:                                                     40px!important;
+	height:                                                    40px!important;
+	top:                                                       unset!important;
+	bottom:                                                    10px!important;
+	left:                                                      3px!important;
+	background:                                                url('https://secure.gravatar.com/avatar/5578915c21eaa269936f4e9aacb6771b') no-repeat!important;
+	background-size:                                           contain!important;
 }
 
 .logged-in #wp-toolbar {
@@ -412,9 +418,6 @@ Github Theme URI: https://github.com/battleplanweb/battleplantheme
 
 /* Typography
 --------------------------------------------- */
-@font-face { font-family: 'Open Sans'; font-display: fallback; font-style: normal; font-weight: 400; src: url('../battleplantheme/fonts/opensans-regular.woff2') format('woff2') }
-@font-face { font-family: 'Open Sans'; font-display: fallback; font-style: normal; font-weight: 700; src: url('../battleplantheme/fonts/opensans-bold.woff2') format('woff2') }
-
 html {
 	-webkit-text-size-adjust:                                  none;
   	text-size-adjust:                                        none;
@@ -550,8 +553,8 @@ a.skip-link.tab-focus {
 --------------------------------------------- */
 a,
 a:visited {
-	color:                                                     inherit;
-	background-color:                                          transparent;
+	color:                                                     var(--link-color);
+	background-color:                                          var(--link-bg);
 	cursor:                                                    pointer;
 	transition:                                                all var(--main-trans-speed) var(--main-trans-easing);
 }
@@ -559,7 +562,8 @@ a:visited {
 a:hover,
 a:active,
 a.tab-focus {
-	color:                                                     inherit;
+	color:                                                     var(--link-hover-color);
+	background-color:                                          var(--link-hover-bg);
 }
 
 a[tooltip] {
@@ -774,16 +778,10 @@ ul.bullet-svg li::before {
 	width:                                                     20px;
 	height:                                                    20px;
 	margin:                                                    0 10px 0 -30px;
-    background:                                             none;
+     background:                                            none;
  	background-color:                                         currentColor;
-	-webkit-mask: url("data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'>\
-<path d='M508 256 336 428l-28-31 117-114-3-5H4v-45h421L305 113l31-29 172 172z'/>\
-</svg>") no-repeat center;
-    mask: url("data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'>\
-<path d='M508 256 336 428l-28-31 117-114-3-5H4v-45h421L305 113l31-29 172 172z'/>\
-</svg>") no-repeat center;
+	-webkit-mask:                                              url("data:image/svg+xml;utf8,\<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'>\<path d='M508 256 336 428l-28-31 117-114-3-5H4v-45h421L305 113l31-29 172 172z'/>\</svg>") no-repeat center;
+     mask:                                                  url("data:image/svg+xml;utf8,\<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'>\<path d='M508 256 336 428l-28-31 117-114-3-5H4v-45h421L305 113l31-29 172 172z'/>\</svg>") no-repeat center;
 	 mask-size:                                                contain;
 }
 
@@ -972,8 +970,6 @@ a.social-btn img {
 --------------------------------------------- */
 .animation-queued {
 	opacity:                                                   0;
-	will-change:                                               transform;
-  	transform:                                               translateZ(0);
 }
 
 .animation-complete:not(.animate) {
@@ -1567,4 +1563,6 @@ body.screen-desktop.administrator #query-monitor-main {
 	.screen-1280 {
 		display:                                                  none !important;
 	}
+}
+
 }

@@ -1,3 +1,6 @@
+@charset "utf-8";
+@layer jobsite_geo {
+
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
@@ -354,4 +357,6 @@ body.wp-admin.post-type-jobsite_geo #poststuff #postbox-container-2 #normal-sort
 	body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-caption-4 {
 		order:                                                    8;
 	}
+}
+
 }

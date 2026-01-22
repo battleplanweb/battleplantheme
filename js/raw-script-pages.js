@@ -25,9 +25,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	// Determine whether or not to leave space for mobile menu header
 	window.mobileMenuBarH = function () {
-		return getDeviceW() > mobileCutoff ? 0 : document.getElementById('mobile-menu-bar').offsetHeight;
+		const bar = document.getElementById('mobile-menu-bar');
+		return getDeviceW() > mobileCutoff || !bar ? 0 : bar.offsetHeight;
 	};
-
 
 	// Get "slug" of current webpage
 	window.getSlug = function () {
@@ -143,7 +143,17 @@ document.addEventListener("DOMContentLoaded", function () {
 			}
 		}
 
-		const styleSheet = document.styleSheets[0];
+		function getFxStyleSheet() {
+			let style = document.getElementById('js-text-fx-style');
+			if (!style) {
+				style = document.createElement('style');
+				style.id = 'js-text-fx-style';
+				document.head.appendChild(style);
+			}
+			return style.sheet;
+		}
+
+		const styleSheet = getFxStyleSheet();
 		document.documentElement.style.setProperty('--js-text-fx-width', width);
 
 
@@ -151,11 +161,15 @@ document.addEventListener("DOMContentLoaded", function () {
 		getObjects(elementSel).forEach(element => {
 			if (text === 'true') {
 				const rule = `.js-text-fx-shadow { text-shadow: ${shadow}; }`;
-				styleSheet.insertRule(rule, styleSheet.cssRules.length);
+				if (![...styleSheet.cssRules].some(r => r.cssText === rule)) {
+					styleSheet.insertRule(rule, styleSheet.cssRules.length);
+				}
 				element.classList.add('js-text-fx-shadow');
 			} else {
 				const rule = `.js-text-fx-filter { filter: ${shadow}; }`;
-				styleSheet.insertRule(rule, styleSheet.cssRules.length);
+				if (![...styleSheet.cssRules].some(r => r.cssText === rule)) {
+					styleSheet.insertRule(rule, styleSheet.cssRules.length);
+				}
 				element.classList.add('js-text-fx-filter');
 			}
 		});
@@ -185,7 +199,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 		let triggerObj = triggerSel ? getObject(triggerSel) : elementObj.nextElementSibling;
 
-		if (!triggerObj || !isVisible(triggerObj)) {
+		if (!triggerObj || !isDisplayed(triggerObj)) {
 			triggerObj = elementObj.parentNode ? elementObj.parentNode.nextElementSibling : null;
 		}
 
@@ -196,13 +210,15 @@ document.addEventListener("DOMContentLoaded", function () {
 		}
 
 		const divData = {
-			elementSel,
 			elementObj,
-			triggerPos: triggerObj.offsetTop - elementObj.offsetHeight - triggerAdj,
+			triggerObj,
+			triggerAdj,
 			lockPos: positionAdj
 		};
 
-		lockedDivs.push(divData);
+		if (!lockedDivs.some(d => d.elementObj === elementObj)) {
+			lockedDivs.push(divData);
+		}
 	}
 
 
@@ -210,28 +226,28 @@ document.addEventListener("DOMContentLoaded", function () {
 		const stuckEls = getObjects('.stuck');
 
 		if (!stuckEls.length) {
-			bp_page.style.paddingTop = "0px";
+			if (bp_page) bp_page.style.paddingTop = "0px";
 			return;
 		}
 
 		let currentPosition = mobileMenuBarH(),
 			pagePadding = 0;
 
-		stuckEls.forEach((stuck, index) => {
-			if (lockedDivs[index] && typeof lockedDivs[index].lockPos !== 'undefined') {
-				currentPosition += lockedDivs[index].lockPos;
-			}
+		stuckEls.forEach(stuck => {
+			const data = lockedDivs.find(d => d.elementObj === stuck);
+			if (!data) return;
 
+			currentPosition += data.lockPos || 0;
 			stuck.style.top = `${currentPosition}px`;
-			const rect = stuck.getBoundingClientRect();
-			currentPosition = rect.bottom;
+
+			currentPosition += stuck.offsetHeight;
 
 			if (!stuck.classList.contains('no-doc-flow')) {
 				pagePadding += stuck.offsetHeight;
 			}
 		});
 
-		bp_page.style.paddingTop = pagePadding + "px";
+		if (bp_page) bp_page.style.paddingTop = pagePadding + "px";
 	};
 
 	window.lockMenu = function () {
@@ -245,8 +261,12 @@ document.addEventListener("DOMContentLoaded", function () {
 			lockedH += divData.lockPos;
 			divData.pageY = window.pageYOffset + lockedH;
 
+			const triggerPos =
+				divData.triggerObj.offsetTop -
+				divData.elementObj.offsetHeight -
+				divData.triggerAdj;
 
-			if (divData.pageY >= divData.triggerPos) {
+			if (divData.pageY >= triggerPos) {
 				if (!divData.elementObj.classList.contains('stuck')) {
 					divData.elementObj.classList.add("stuck");
 					divData.elementObj.style.top = lockedH + "px";
@@ -277,23 +297,27 @@ document.addEventListener("DOMContentLoaded", function () {
 	window.addEventListener('scroll', () => {
 		if (typeof controlLockedDivs === 'function') { controlLockedDivs(); }
 		if (typeof debouncedScrollFunc === 'function') { debouncedScrollFunc(); }
-	});
+	}, { passive: true });
 
 
 	// Lock #colophon under rest of content
 	window.lockColophon = function () {
 		const colophonObj = getObject('#colophon');
+		if (!colophonObj) return;
 		let colophonH = colophonObj.offsetHeight;
 
 		if (colophonH < getDeviceH() && !getObject('body').classList.contains('background-image')) {
 			const pageObj = colophonObj.previousElementSibling;
 			pageObj.style.marginBottom = colophonH + "px";
 
+			const badge = getObject('.wp-gr.wp-google-badge');
+			const badgeH = badge ? badge.offsetHeight : 0;
+
 			setStyles(colophonObj, {
-				'position': 'fixed',
-				'bottom': getObject('.wp-gr.wp-google-badge').offsetHeight + 'px',
-				'width': '100%',
-				'zIndex': 1
+				position: 'fixed',
+				bottom: `${badgeH}px`,
+				width: '100%',
+				zIndex: 1
 			});
 		}
 	};
@@ -362,7 +386,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	//Find screen position of element
 	window.getPosition = function (elementSel, neededPos = 'top', scope = 'window') {
-		const elementObj = getObject(elementSel);
+		const elementObj = elementSel?.nodeType === 1
+			? elementSel
+			: getObject(elementSel);
 		if (!elementObj) return;
 		const rect = elementObj.getBoundingClientRect();
 		const conW = rect.width;
@@ -411,7 +437,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 		let matrixValues = transform.match(/matrix3d\((.+)\)/) || transform.match(/matrix\((.+)\)/);
 		if (matrixValues) {
-			matrixValues = matrixValues[1].split(', ');
+			matrixValues = matrixValues[1].split(',').map(s => s.trim());
 			if (XorY.toUpperCase() === 'X') {
 				return parseFloat(matrixValues.length === 16 ? matrixValues[12] : matrixValues[4]);
 			} else if (XorY.toUpperCase() === 'Y') {
@@ -514,6 +540,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		if (!elementObj) return;
 
 		const nextElemObj = elementObj.nextElementSibling;
+		if (!nextElemObj) return;
 		nextElemObj.style.transform = `translateY(-${elementObj.offsetHeight}px)`;
 		nextElemObj.style.transitionDuration = '0ms';
 
@@ -521,8 +548,9 @@ document.addEventListener("DOMContentLoaded", function () {
 			const observer = new IntersectionObserver((entries) => {
 				entries.forEach(entry => {
 					if (entry.isIntersecting) {
-						nextElemObj.style.transitionDuration = `${speed}ms`;
-						nextElemObj.style.transform = 'translateY(0)';
+						beginAnimation(entry.target, animationKeyframes('reveal'));
+						observer.unobserve(entry.target);
+						observer.disconnect();
 					}
 				});
 			}, {
@@ -537,17 +565,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 	// Button to reveal a hidden div
-	window.btnRevealDiv = function (buttonSel, elementSel, top = 0, speed = 300) {
+	window.btnRevealDiv = function (buttonSel, elementSel, top = 0) {
 		//top += mobileMenuBarH();
 		const elementObj = getObject(elementSel);
 		const origDisplay = getComputedStyle(elementObj).display;
 		elementObj.style.display = 'none';
 
 		const button = getObject(buttonSel);
+		if (!button || !elementObj) return;
 
 		button.addEventListener('click', () => {
 			elementObj.style.display = origDisplay;
-			animateScroll(elementSel, top, speed);
+			animateScroll(elementSel, top);
 		});
 	};
 
@@ -762,30 +791,30 @@ form.addEventListener('wpcf7submit', function() {
 	// Move multiple divs to another location
 	window.moveDivs = function (wrapperSel, elementSel, anchorSel, position = "after") {
 		getObjects(wrapperSel).forEach(wrapper => {
-			const elementObj = getObjects(elementSel, wrapperSel);
-			const anchorObj = getObjects(anchorSel, wrapperSel);
-			if (!elementObj || !anchorObj) return;
+			const elements = getObjects(elementSel, wrapper);
+			const anchors = getObjects(anchorSel, wrapper);
+			if (!elements.length || !anchors.length) return;
 
-			anchorObj.forEach(anchor => {
-				elementObj.forEach(element => {
+			anchors.forEach(anchor => {
+				elements.forEach(element => {
 					switch (position) {
 						case "before":
-							anchorObj.parentNode.insertBefore(element, anchorObj);
+							anchor.parentNode.insertBefore(element, anchor);
 							break;
 						case "top": case "start": case "inside":
-							anchorObj.insertBefore(element, anchorObj.firstChild);
+							anchor.insertBefore(element, anchor.firstChild);
 							break;
 						case "bottom": case "end":
-							anchorObj.appendChild(element);
+							anchor.appendChild(element);
+							break;
 						case "after": default:
-							anchorObj.parentNode.insertBefore(element, anchorObj.nextSibling);
+							anchor.parentNode.insertBefore(element, anchor.nextSibling);
 							break;
 					}
 				});
 			});
 		});
 	};
-
 
 	// Add a div within an existing div
 	window.addDiv = function (targetSel, newHTML = "<div></div>", position = "after") {
@@ -905,7 +934,7 @@ form.addEventListener('wpcf7submit', function() {
 								});
 							}
 							dimensionsSet = true;
-							addCSS(`${targetSel} img`, `transform: scale(${scale})`);
+							addCSS(`${targetSel} img { transform: scale(${scale}); }`);
 						}
 					});
 					if (img.complete) img.dispatchEvent(new Event('load'));
@@ -1120,50 +1149,55 @@ form.addEventListener('wpcf7submit', function() {
 
 	// Convert waypoint offset to intersection observer offset
 	window.convertOffset = function (offset) {
-		return offset.includes('%') ? getDeviceH() * (1 - (parseInt(offset.replace('%', ''), 10) / 100)) : offset;
-	};
+		if (typeof offset === 'number') return offset;
 
+		if (typeof offset === 'string' && offset.includes('%')) {
+			return Math.round(getDeviceH() * (1 - (parseInt(offset, 10) / 100)));
+		}
+
+		return parseInt(offset, 10) || 0;
+	};
 
 	// Function to create keyframes for animation
 	function animationKeyframes(effect) {
 		effect = effect.toLowerCase();
 
-		let offsetTransformX = '0';
-		let offsetTransformY = '0';
-		let offsetScale = '1';
-		let offsetRotate = '0';
-		let offsetOpacity = '1';
-		let offsetSkewX = '0';
+		let offsetTransformX = 0;
+		let offsetTransformY = 0;
+		let offsetScale = 1;
+		let offsetRotate = 0;
+		let offsetOpacity = 1;
+		let offsetSkewX = 0;
 		let offsetFilter = 'none', mainFilter = 'none';
 		let midEffect = '';
 
 		if (effect.includes('left')) {
-			offsetTransformX = '-100';
+			offsetTransformX = -120;
 		}
 
 		if (effect.includes('right')) {
-			offsetTransformX = '100';
+			offsetTransformX = 120;
 		}
 
 		if (effect.includes('up')) {
-			offsetTransformY = '100';
+			offsetTransformY = 120;
 		}
 
 		if (effect.includes('down')) {
-			offsetTransformY = '-100';
+			offsetTransformY = -120;
 		}
 
 		if (effect.includes('fade')) {
-			offsetOpacity = '0';
+			offsetOpacity = 0;
 		}
 
 		if (effect.includes('zoom')) {
-			offsetScale = '0';
+			offsetScale = 0;
 		}
 
 		if (effect.includes('drop')) {
-			offsetScale = '1.4';
-			offsetOpacity = '0';
+			offsetScale = 1.4;
+			offsetOpacity = 0;
 		}
 
 		if (effect.includes('blur')) {
@@ -1172,32 +1206,32 @@ form.addEventListener('wpcf7submit', function() {
 		}
 
 		if (effect.includes('roll') || effect.includes('rotate')) {
-			offsetRotate = '-120';
+			offsetRotate = -120;
 		}
 
 		if ((effect.includes('roll') || effect.includes('rotate')) && (effect.includes('right') || effect.includes('reverse'))) {
-			offsetRotate = '120';
+			offsetRotate = 120;
 		}
 
 		if (effect.includes('spin')) {
-			offsetRotate = '-1080';
+			offsetRotate = -1080;
 		}
 
 		if (effect.includes('spin') && (effect.includes('right') || effect.includes('reverse'))) {
-			offsetRotate = '1080';
+			offsetRotate = 1080;
 		}
 
 		if (effect.includes('back')) {
-			offsetScale = '0.7';
+			offsetScale = 0.7;
 			midEffect = '80% { transform: scale(0.7) translate(0, 0); }'
 		}
 
 		if (effect.includes('lightspeed')) {
-			offsetSkewX = '30';
+			offsetSkewX = 30;
 		}
 
 		if (effect.includes('jackinthebox')) {
-			offsetScale = '0';
+			offsetScale = 0;
 			offsetRotate = 40;
 			midEffect = `50% { transform: scale(0.75) rotate(${-offsetRotate / 2}deg); } 70% { transform: scale(0.4) rotate(${offsetRotate / 4}deg); }`;
 		}
@@ -1225,19 +1259,16 @@ form.addEventListener('wpcf7submit', function() {
 		let startFilter = offsetFilter;
 		let endFilter = mainFilter;
 		let startOpacity = offsetOpacity;
-		let endOpacity = '1';
+		let endOpacity = 1;
 
 		if (effect.includes('out')) {
 			startTransform = mainTransform;
 			endTransform = offsetTransform;
 			startFilter = mainFilter;
 			endFilter = offsetFilter;
-			startOpacity = '1';
+			startOpacity = 1;
 			endOpacity = offsetOpacity;
 		}
-
-		const style = document.createElement('style');
-		document.head.appendChild(style);
 
 		const animationName = effect;
 
@@ -1257,7 +1288,25 @@ form.addEventListener('wpcf7submit', function() {
 				 }
 			 }
 		 `;
-		style.sheet.insertRule(keyframes, 0);
+
+		const __BP_ANIMATIONS__ = window.__BP_ANIMATIONS__ || new Set();
+		window.__BP_ANIMATIONS__ = __BP_ANIMATIONS__;
+
+		if (__BP_ANIMATIONS__.has(animationName)) {
+			return animationName;
+		}
+
+		__BP_ANIMATIONS__.add(animationName);
+
+		window.__BP_ANIM_STYLE__ ??= (() => {
+			const s = document.createElement('style');
+			s.id = 'bp-animations';
+			document.head.appendChild(s);
+			return s.sheet;
+		})();
+
+		window.__BP_ANIM_STYLE__.insertRule(keyframes, window.__BP_ANIM_STYLE__.cssRules.length);
+
 		return animationName;
 	}
 
@@ -1283,16 +1332,24 @@ form.addEventListener('wpcf7submit', function() {
 
 	// Handles changing classes of object during animation
 	function beginAnimation(elementObj, animationName) {
-		elementObj.classList.remove('animation-queued');
+
+		if (elementObj.classList.contains('animation-in-progress') ||
+			elementObj.classList.contains('animation-complete')) {
+			return;
+		}
+
 		elementObj.classList.add('animation-delayed');
 
 		const animating = () => {
+			elementObj.style.willChange = 'transform, opacity';
+			elementObj.classList.remove('animation-queued');
 			elementObj.classList.remove('animation-delayed');
 			elementObj.classList.add('animation-in-progress');
 			elementObj.removeEventListener('animationstart', animating);
 		};
 
 		const animated = () => {
+			elementObj.style.willChange = '';
 			elementObj.classList.remove('animation-in-progress');
 			elementObj.classList.add('animation-complete');
 			elementObj.removeEventListener('animationend', animated);
@@ -1302,34 +1359,62 @@ form.addEventListener('wpcf7submit', function() {
 		elementObj.addEventListener('animationstart', animating);
 		elementObj.addEventListener('animationend', animated);
 
-		setStyles(elementObj, {
-			'animationName': animationName,
+		elementObj.style.animationName = 'none';
+
+		requestAnimationFrame(() => {
+			elementObj.style.animationName = animationName;
 		});
+
+		// re-apply everything explicitly
+		elementObj.style.animationName = animationName;
+		elementObj.style.animationDuration = elementObj.style.animationDuration || '1s';
+		elementObj.style.animationTimingFunction = elementObj.style.animationTimingFunction || 'ease';
+		elementObj.style.animationFillMode = 'both';
+
 	}
 
 
 	// Setting up an observer for animated objects
-	function observeVisibility(elementObj, offset, animationName) {
+	function observeVisibility(elementObj, offset, animationName, initDelay = 0) {
+		const pxOffset =
+			(typeof offset === 'string' && offset.includes('%'))
+				? convertOffset(offset)
+				: offset;
+
 		const observer = new IntersectionObserver((entries) => {
 			entries.forEach(entry => {
 				if (entry.isIntersecting) {
 					if (animationName !== false) {
-						beginAnimation(entry.target, animationName);
+						setTimeout(() => {
+							beginAnimation(entry.target, animationName);
+						}, initDelay);
 					} else {
 						entry.target.classList.remove('animation-queued');
-						entry.target.classList.add('animate');
-						entry.target.classList.add('animation-complete');
+						entry.target.classList.add('animate', 'animation-complete');
 					}
 					observer.unobserve(entry.target);
+					//observer.disconnect();
 				}
 			});
 		}, {
-			rootMargin: `0px 0px -${convertOffset(offset)}px 0px`
+			root: null,
+			rootMargin: `0px 0px -${pxOffset}px 0px`,
+			threshold: 0
 		});
 
 		observer.observe(elementObj);
-	}
 
+		// Immediate visibility check
+		requestAnimationFrame(() => {
+			const rect = elementObj.getBoundingClientRect();
+			if (rect.top < window.innerHeight && rect.bottom > 0) {
+				setTimeout(() => {
+					beginAnimation(elementObj, animationName);
+				}, initDelay);
+				observer.unobserve(elementObj);
+			}
+		});
+	}
 
 	// Animate single element
 	window.animateDiv = function (elementSel, effect, delay = 0, offset = "100%", speed = 1000, easing = 'ease') {
@@ -1348,42 +1433,39 @@ form.addEventListener('wpcf7submit', function() {
 
 	// Animate multiple elements in a container
 	window.animateDivs = function (elementSel, effect1, effect2, initDelay = 0, eachDelay = 100, offset = "100%", speed = 1000, easing = 'ease') {
-		const elementObj = getObjects(elementSel);
-		if (!elementObj.length) return;
+		const elements = getObjects(elementSel);
+		if (!elements.length) return;
 
-		const parents = new Map();
-		elementObj.forEach(element => {
-			const containerObj = element.parentElement;
-			if (!containerObj || parents.has(containerObj)) return;
-			parents.set(containerObj, element);
-		});
+		const parents = new Set();
+		elements.forEach(el => el.parentElement && parents.add(el.parentElement));
 
-		parents.forEach((elem, parent) => {
-			let children = Array.from(getObjects(elementSel, parent));
+		parents.forEach(parent => {
+			const children = Array.from(getObjects(elementSel, parent));
 			if (!children.length) return;
 
-			let elementY, delay = 0;
+			let elementY = null;
+			let delay = 0;
 
-			children.forEach((child, index) => {
-				child.classList.add('animation-queued');
+			setTimeout(() => {
+				children.forEach((child, index) => {
+					child.classList.add('animation-queued');
 
-				setTimeout(() => {
-					const effect = index % 2 === 0 ? effect1 : effect2;
-					const animationName = animationKeyframes(effect);
+					const effect = (index % 2 === 0) ? effect1 : effect2;
+
+					// Only increase delay when items are on the same row/line
 					const childT = getPosition(child, 'top', parent);
-					delay = (childT - elementY) > 50 ? delay : delay += eachDelay;
+					delay = (elementY === null || (childT - elementY) > 50) ? delay : (delay + eachDelay);
 					elementY = childT;
 
+					const animationName = animationKeyframes(effect);
 					applyAnimation(child, speed / 1000, delay / 1000, easing, 'both');
-					observeVisibility(child, offset, animationName);
-				}, initDelay);
-			});
+					observeVisibility(child, offset, animationName, initDelay);
+				});
+			}, initDelay);
 		});
 	};
 
-
 	// Animate multiple elements in a grid
-
 	window.animateGrid = function (elementSel, effect1, effect2, effect3, initDelay = 0, eachDelay = 100, offset = "100%", mobile = "false", speed = 1000, easing = 'ease') {
 		const elementObj = getObjects(`${elementSel}:first-child`);
 		if (!elementObj.length) return;
@@ -1403,13 +1485,14 @@ form.addEventListener('wpcf7submit', function() {
 				3: [effect2, effect1, effect3],
 				4: [effect2, effect1, effect1, effect3]
 			};
-			let elementY, delay = 0;
+			let elementY = null, delay = 0;
 
 			setTimeout(() => {
 				spanAllChildren.forEach(child => {
+					child.classList.add('animation-queued');
 					const animationName = animationKeyframes(effect1);
 					applyAnimation(child, speed / 1000, eachDelay / 1000, easing, 'both');
-					observeVisibility(child, offset, animationName);
+					observeVisibility(child, offset, animationName, initDelay);
 				});
 
 				const num = otherChildren.length;
@@ -1418,11 +1501,14 @@ form.addEventListener('wpcf7submit', function() {
 					let effect = num > 4 ? effect1 : assignFX[num][index];
 					const animationName = animationKeyframes(effect);
 					const childT = getPosition(child, 'top', containerObj);
-					delay = (childT - elementY) > 50 ? delay : delay += eachDelay;
+					delay = elementY === null || (childT - elementY) > 50
+						? delay
+						: delay + eachDelay;
+
 					elementY = childT;
 
 					applyAnimation(child, speed / 1000, delay / 1000, easing, 'both');
-					observeVisibility(child, offset, animationName);
+					observeVisibility(child, offset, animationName, initDelay);
 				});
 			}, initDelay);
 		});
@@ -1470,11 +1556,12 @@ form.addEventListener('wpcf7submit', function() {
 
 	// Split string into characters for animation
 	window.animateCharacters = function (elementSel, effect1, effect2, initDelay = 0, eachDelay = 100, offset = "100%", words = 'false') {
-		let speed = 1000, easing = "easeOutQuart", delay = 0;
+		let speed = 1000, easing = "easeOutQuart";
 		const elementObj = getObjects(elementSel);
 
 		elementObj.forEach(element => {
 			if (element.innerHTML.includes("<")) return;
+			let delay = 0;
 
 			let contentArray = words === 'true' ? element.textContent.split(" ") : element.textContent.split("");
 			let newContent = contentArray.map((item, index) => {
@@ -1859,7 +1946,6 @@ form.addEventListener('wpcf7submit', function() {
 		}
 	}
 
-
 	// Gracefully start to fade out the pre-loader
 	window.fadeOutLoader = function (targetOpacity) {
 		const loader = getObject("#loader");
@@ -1868,6 +1954,7 @@ form.addEventListener('wpcf7submit', function() {
 		let opacity = parseFloat(getComputedStyle(loader).opacity);
 		const stepReduce = targetOpacity === 0 ? 0.05 : 0.01;
 		const color = getComputedStyle(loader).backgroundColor;
+		if (!color || !color.includes('rgb')) return;
 		const [r, g, b] = color.match(/\d+/g).map(Number);
 
 		const fadeInterval = setInterval(() => {
@@ -1881,6 +1968,8 @@ form.addEventListener('wpcf7submit', function() {
 				}
 			}
 		}, 10);
+
+		getObjects('#mobile-menu-bar .mm-bar-btn').forEach(el => el.style.opacity = '1');
 	};
 
 
@@ -1905,7 +1994,8 @@ form.addEventListener('wpcf7submit', function() {
 
 		//if (mobileMenu.offsetParent !== null && topPush) {
 		if (topPush) {
-			getObject(".top-push.screen-mobile #page").style.top = "0";
+			const tpPage = getObject(".top-push.screen-mobile #page");
+			if (tpPage) tpPage.style.top = "0";
 			let ckStuck = getObject(".top-push.screen-mobile .top-strip.stuck");
 			if (ckStuck !== null) {
 				ckStuck.style.top = `${mobileMenuBarH()}px`;
@@ -2139,17 +2229,20 @@ form.addEventListener('wpcf7submit', function() {
 
 
 	// Areas We Serve - Expandable List Items
-	getObjects(".areas-we-serve > li").forEach(li => {
-		const items = getObjects(".areas-we-serve > li");
+	const list = getObject(".areas-we-serve");
 
-		items.forEach(li => {
-			li.addEventListener("click", e => {
-				if (e.target.tagName.toLowerCase() === "a") return;
-				items.forEach(item => item.classList.remove("open"));
-				li.classList.add("open");
-			});
+	if (list) {
+		list.addEventListener("click", e => {
+			const li = e.target.closest("li");
+			if (!li || e.target.tagName.toLowerCase() === "a") return;
+
+			getObjects(".areas-we-serve > li").forEach(item =>
+				item.classList.remove("open")
+			);
+
+			li.classList.add("open");
 		});
-	});
+	}
 
 	/*--------------------------------------------------------------
  # Screen resize
@@ -2169,7 +2262,7 @@ form.addEventListener('wpcf7submit', function() {
 		if (thisDeviceW <= 860) {
 			getObjects('.block-video video[data-mobile-w]').forEach(video => {
 				video.style.width = `${video.getAttribute('data-mobile-w')}%`;
-				video.style.left = `${-(mobileW - 100) / 2}%`;
+				video.style.left = `${-(getDeviceW() - 100) / 2}%`;
 			});
 		} else {
 			getObjects('.block-video video[data-mobile-w]').forEach(video => {
@@ -2221,13 +2314,16 @@ form.addEventListener('wpcf7submit', function() {
 
 
 		// If total height of page is less than screen height, add min-height to #wrapper-content
-		if (getDeviceH() > getObject('#page').offsetHeight) {
-			getObject('#wrapper-content').classList.add("extended");
-		} else {
-			getObject('#wrapper-content').classList.remove("extended");
+		const page = getObject('#page');
+		const wrap = getObject('#wrapper-content');
+
+		if (page && wrap) {
+			if (getDeviceH() > page.offsetHeight) {
+				wrap.classList.add("extended");
+			} else {
+				wrap.classList.remove("extended");
+			}
 		}
-
-
 
 		// Handle multiple Google review locations on mobile
 		if (getDeviceW() > mobileCutoff) {
@@ -2267,10 +2363,12 @@ form.addEventListener('wpcf7submit', function() {
 
 		// When using parallax in #wrapper-top, slide the .message below the image on mobile
 		const message = getObject('#wrapper-top .message');
-		if (thisDeviceW < mobileCutoff) moveDiv(message, '#wrapper-top .section-parallax-disabled', 'after');
+		if (message && thisDeviceW < mobileCutoff) {
+			moveDiv(message, '#wrapper-top .section-parallax-disabled', 'after');
+		}
 
 		// When using parallax in #wrapper-top, determine which background to load for desktop or mobile
-		const el = getObjects('.load-bg-img').forEach(el => {
+		getObjects('.load-bg-img').forEach(el => {
 			const w = window.innerWidth
 			const iw = parseInt(el.dataset.imgWidth)
 			const ih = parseInt(el.dataset.imgHeight)

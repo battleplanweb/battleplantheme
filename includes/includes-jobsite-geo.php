@@ -64,6 +64,17 @@ add_action('rest_api_init', function() {
 });
 
 function hcpro_handle_job_webhook($req) {
+
+
+
+	$raw = $req->get_body();
+	error_log('[HCP WEBHOOK] Raw payload received');
+	error_log('[HCP WEBHOOK] Body: ' . substr($raw, 0, 5000));
+
+
+
+
+
 	$get_jobsite_geo = get_option('jobsite_geo');
 
 	if ( empty($_GET['token']) || $_GET['token'] !== $get_jobsite_geo['token'] ) {
@@ -105,20 +116,21 @@ function hcpro_handle_job_webhook($req) {
 	$addr = $job->address ?? new stdClass();
 
 	$description_note = '';
-	$photo_note = '';
+	$photo_notes = [];
 	$captions = [];
 	$has_publishable_note = false;
 
 	if (!empty($job->notes)) {
 		foreach ($job->notes as $n) {
-			$content = trim($n->content);
+			$note_text = trim($n->content);
 
-			if (preg_match('/^\*{3,}/', $content)) {
+			if (preg_match('/^\*{3,}/', $note_text)) {
 				$has_publishable_note = true;
-				$description_note = trim(preg_replace('/^\*{3,}\s*/', '', $content));
-			} elseif (preg_match('/\b(Photo|Pic|Image)\s*\d+/i', $content)) {
-				$photo_note = $content;
+				$description_note = trim(preg_replace('/^\*{3,}\s*/', '', $note_text));
+			} elseif (preg_match('/\b(Photo|Pic|Image)\s*\d+/i', $note_text)) {
+				$photo_notes[] = $note_text;
 			}
+
 		}
 	}
 
@@ -126,9 +138,11 @@ function hcpro_handle_job_webhook($req) {
 		return new WP_REST_Response(['skipped' => 'No publishable note found'], 200);
 	}
 
-	if ($photo_note) {
-		$text = preg_replace('/\s+/', ' ', str_replace(["\r", "\n"], ' ', $photo_note));
-		$pattern = '/\b(?:Photo|Pic|Image)\s*(\d+)\s*[\-\*\:\.\=\)\s]*([^\b]*?)(?=\b(?:Photo|Pic|Image)\s*\d+|$)/i';
+	if ($photo_notes) {
+		$text = implode(' ', array_map(function($n) {
+			return preg_replace('/\s+/', ' ', str_replace(["\r", "\n"], ' ', $n));
+		}, $photo_notes));
+		$pattern = '/(?:Photo|Pic|Image)\s*(\d+)\s*[\-\:\=\)\.]*\s*(.*?)(?=(?:Photo|Pic|Image)\s*\d+|$)/is';
 
 		if (preg_match_all($pattern, $text, $matches, PREG_SET_ORDER)) {
 			foreach ($matches as $m) {
@@ -196,8 +210,12 @@ function hcpro_handle_job_webhook($req) {
 	// Sort captions by photo number so Photo 1, Photo 3 behaves predictably
 	ksort($captions);
 
-	foreach ($captions as $photo_num => $caption) {
+	$max = min(4, count($attachments));
 
+	for ($i = 0; $i < $max; $i++) {
+
+		$photo_num = $i + 1;
+		$caption   = $captions[$photo_num] ?? '';
 	    if ($acf_slot > 4) break;
 
 	    // Photo numbers are 1-based, HCP attachments are 0-based
@@ -210,7 +228,7 @@ function hcpro_handle_job_webhook($req) {
 	    $a = $attachments[$attachment_index];
 
 	    $attachment_title = sprintf(
-		   'Jobsite GEO [%d] %s - %s',
+		   'Jobsite GEO [%d] %s -- %s',
 		   $post_id,
 		   wp_strip_all_tags(get_the_title($post_id)),
 		   $a->id
@@ -569,16 +587,14 @@ function bp_jobsite_setup($post_id, $user) {
 
 	// Customize for Roofing Contractor website
 	if (strtolower($btVal) === 'roofingcontractor') {
-		foreach (['gutter', 'seamless'] as $keyword) {
+		$service = 'roofing';
+
+		$type = str_contains($description, 'repair') ? '-repair' :  '-installation';
+		$service .= $type;
+
+		foreach (['gutter'] as $keyword) {
 			if (stripos($description, $keyword) !== false) {
 				$service = 'gutters';
-				break;
-			}
-		}
-
-		foreach (['insulation', 'insulate', 'fiberglass'] as $keyword) {
-			if (stripos($description, $keyword) !== false) {
-				$service = 'insulation';
 				break;
 			}
 		}
@@ -1489,15 +1505,20 @@ function battleplan_jobsite_template($template) {
 			$GLOBALS['jobsite_geo-page_desc']  = ''; // set something so wpseo_metadesc has a defined value
 			$GLOBALS['jobsite_geo-map-caption'] = 'This map shows the location of some of ' . $tech_name . '\'s recent work.';
 		}
-	}
 
-    add_filter( 'wpseo_title', function( $title ) {
-        return $GLOBALS['jobsite_geo-page_title'];
-    });
+		add_filter('wpseo_title', function($title) {
+			return !empty($GLOBALS['jobsite_geo-page_title'])
+				? $GLOBALS['jobsite_geo-page_title']
+				: $title;
+		}, 20);
 
-    add_filter( 'wpseo_metadesc', function( $description ) {
-        return $GLOBALS['jobsite_geo-page_desc'];
-    });
+		add_filter('wpseo_metadesc', function($description) {
+			return isset($GLOBALS['jobsite_geo-page_desc']) && $GLOBALS['jobsite_geo-page_desc'] !== ''
+				? $GLOBALS['jobsite_geo-page_desc']
+				: $description;
+		}, 20);
+
+    }
 
     return $template;
 }
@@ -1558,17 +1579,28 @@ function bp_cleanup_empty_service_tags() {
 
 
 add_filter('wpseo_schema_organization', function ($data) {
-	$city = $GLOBALS['jobsite_geo-city'];
+	$city  = $GLOBALS['jobsite_geo-city'] ?? '';
+	if (!$city) return $data;
+
+	$parts = explode('-', sanitize_title($city));
+
 	if (!empty($data['areaServed']) && is_array($data['areaServed'])) {
-		$data['areaServed'] = array_values(array_filter($data['areaServed'], function ($area) use ($city) {
-			if (empty($area['name'])) return false;
-			$nameSlug = strtolower(str_replace([',', ' '], ['','-'], $area['name']));
-			return strpos($nameSlug, $parts[0]) !== false; // match first part ("alba")
-		}));
+		$data['areaServed'] = array_values(array_filter(
+			$data['areaServed'],
+			function ($area) use ($parts) {
+
+				if (empty($area['name'])) return false;
+
+				$nameSlug = sanitize_title($area['name']);
+
+				return isset($parts[0]) && strpos($nameSlug, $parts[0]) !== false;
+			}
+		));
 	}
 
 	return $data;
 });
+
 
 
 /*--------------------------------------------------------------

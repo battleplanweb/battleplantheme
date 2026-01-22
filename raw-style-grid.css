@@ -1,4 +1,5 @@
 @charset "utf-8";
+@layer grid {
 
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:
@@ -1927,4 +1928,6 @@ figure.col-inner {
 	.gallery-column-8 {
 		grid-template-columns:                                    repeat(2, 1fr);
 	}
+}
+
 }

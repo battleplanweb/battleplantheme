@@ -1,4 +1,7 @@
 @charset "utf-8";
+@layer products_hvac {
+
+
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
@@ -10,69 +13,71 @@
 --------------------------------------------------------------*/
 .archive-headline,
 .archive-subheadline {
-	text-align:										center;
+	text-align:                                                center;
 }
 
 span.descriptionText {
-	font-weight:									bold;
+	font-weight:                                               bold;
 }
 
 .product-meta {
-	margin-top:										var(--measure-base);
-	margin-bottom:									var(--measure-base);
+	margin-top:                                                var(--measure-base);
+	margin-bottom:                                             var(--measure-base);
 }
 
 .product-meta .rating-label {
-	display:										inline-block;
-	width:											105px;
-	font-weight:									bold;
+	display:                                                   inline-block;
+	width:                                                     105px;
+	font-weight:                                               bold;
 }
 
 .product-meta .brochure-btn {
-	text-align: 									center;
+	text-align:                                                center;
 }
 
 .product-links .product-link-cats {
-	margin-bottom:									0.75em;
+	margin-bottom:                                             0.75em;
 }
 
 .product-links .product-link-cats .product-link-buttons {
-	display:										flex;
-	justify-content:								center;
-	flex-flow: 								 		row wrap;
-	align-items:									center;
-	gap: 											0.7em;
+	display:                                                   flex;
+	justify-content:                                           center;
+	flex-flow:                                                 row wrap;
+	align-items:                                               center;
+	gap:                                                       0.7em;
 }
 
 .product-links .product-link-cats .product-link-label {
-	display:										block;
-	margin: 										var(--measure-large) 0 0.5em;
-	width: 											100%;
-	text-align: 									center;
-	font-weight: 									bold;
-}	
+	display:                                                   block;
+	margin:                                                    var(--measure-large) 0 0.5em;
+	width:                                                     100%;
+	text-align:                                                center;
+	font-weight:                                               bold;
+}
 
 .product-links .product-link-cats a {
-	flex: 											1 1 auto;
-	text-align: 									center;
-	align-self: 									center;
-	font-size: 										90%;
+	flex:                                                      1 1 auto;
+	text-align:                                                center;
+	align-self:                                                center;
+	font-size:                                                 90%;
 }
 
 .disclaimerText {
-	font-size:										var(--font-size-small);
+	font-size:                                                 var(--font-size-small);
 }
 
 .why-choose-us .col h3 {
-	text-align:										center;
+	text-align:                                                center;
 }
 
 /* American Standard iframe */
 #product-site {
-    overflow-y: 									auto !important;
+    overflow-y:                                             auto !important;
 }
 
-#product-site, 
+#product-site,
 #product-site iframe {
-    height: 										800px !important;
+    height:                                                 800px !important;
+}
+
 }

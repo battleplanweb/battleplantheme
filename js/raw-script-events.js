@@ -1,9 +1,9 @@
-document.addEventListener("DOMContentLoaded", function () {	"use strict"; document.addEventListener("DOMContentLoaded", function () {	"use strict";
-														   
-// Raw Script: Events	
-																																	 
+document.addEventListener("DOMContentLoaded", function () {	"use strict";
+
+// Raw Script: Events
+
 	window.addEventListener("load", () => {
-			
+
 	// Build calendar
 		if (document.body.classList.contains('slug-calendar')) {
 			const calendar = getObject("#calendar");
@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; docume
 				const firstDayOfMonth = new Date(year, month, 1).getDay();
 				const lastDayOfMonth = new Date(year, month, daysInMonth).getDay();
 				const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-				    
+
 				const header = document.createElement("div");
 				header.classList.add("header");
 				header.textContent = new Date(year, month).toLocaleDateString("en-US", { month: "long", year: "numeric" });
@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; docume
 				daysOfWeek.forEach(function(day) {
 					const weekday = document.createElement("div");
 					weekday.setAttribute("id", "title-"+day);
-					if ( abbr_days === true ) {						
+					if ( abbr_days === true ) {
 						weekday.classList.add("title", "title-abbr");
 						weekday.textContent = day.substring(0, 3);
 					} else {
@@ -50,7 +50,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; docume
 				}
 
 				for (let i = 1; i <= daysInMonth; i++) {
-					let event = ''; 
+					let event = '';
 					const day = document.createElement("div");
 					day.classList.add("day");
 					day.setAttribute("id", "day-" + i);
@@ -65,8 +65,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; docume
 						}
 					}
 
-					day.innerHTML = '<div class="date">'+i+'</div>' + event;				
-					days.appendChild(day);				
+					day.innerHTML = '<div class="date">'+i+'</div>' + event;
+					days.appendChild(day);
 				}
 
 				for (let i = lastDayOfMonth + 1; i <= 6; i++) {
@@ -83,7 +83,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; docume
 				prevButton.textContent = new Date(year, month-1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
 				nextButton.textContent = new Date(year, month+1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
-				if ( today.getMonth() !== currentMonth || today.getFullYear() !== currentYear ) {	
+				if ( today.getMonth() !== currentMonth || today.getFullYear() !== currentYear ) {
 					//currentButton.textContent = new Date(today.getFullYear(), today.getMonth()).toLocaleDateString("en-US", { month: "long", year: "numeric" });
 					currentButton.textContent = "Today";
             		currentButton.style.opacity = `1`;
@@ -119,12 +119,12 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; docume
 				generateCalendar(currentYear, currentMonth);
 			});
 		}
-		
+
 		if (document.body.classList.contains('slug-event') || document.body.classList.contains('slug-calendar')) {
-		
-	// Handle the "expired events" toggle checkbox	
+
+	// Handle the "expired events" toggle checkbox
 			const expiredButton = getObject('a.show-expired-btn');
-			const expiredEvents = getObjects('.event-expired'); 
+			const expiredEvents = getObjects('.event-expired');
 
 			if (getCookie('ecal-show-exp') === 'true') {
 				if (expiredButton) {
@@ -153,5 +153,5 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict"; docume
 				}
 			});
 		}
-	});	
-}); 
+	});
+});

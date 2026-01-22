@@ -19,6 +19,16 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="profile" href="https://gmpg.org/xfn/11">
 
+
+
+<link
+rel="preload"
+href="<?php echo get_stylesheet_directory_uri(); ?>/fonts/aldivaro_rounded.woff2"
+as="font"
+type="font/woff2"
+crossorigin
+>
+
 	<script nonce="<?php echo _BP_NONCE; ?>">
 		const startTime = Date.now();
 		const site_bg = '<?php echo battleplan_fetch_background_image() ?>';
@@ -35,22 +45,42 @@
 		wp.i18n.setLocaleData = () => {};
 	</script>
 
+	<style>
+		#mobile-menu-bar .mm-bar-btn {
+          	opacity:                                       0;
+    	 	}
+	</style>
+
 	<?php bp_meta_tags(); ?>
 
-	<?php if ( isset(customer_info()['lcp']) && !is_mobile() ) :
-		$file = customer_info()['lcp'];
-		if (is_string($file)) {
-			$file_ext = pathinfo($file); ?>
-			<link rel="preload" fetchpriority="high" as="image" href="<?php echo get_site_url() ?>/wp-content/uploads/<?php echo $file ?>" type="image/<?php echo $file_ext['extension'] ?>">
-		<?php }
-	endif;
-	if ( isset(customer_info()['m-lcp']) && is_mobile() ) :
-		$file = customer_info()['m-lcp'];
-		if (is_string($file)) {
-			$file_ext = pathinfo($file); ?>
-			<link rel="preload" fetchpriority="high" as="image" href="<?php echo get_site_url() ?>/wp-content/uploads/<?php echo $file ?>" type="image/<?php echo $file_ext['extension'] ?>">
-		<?php }
-	endif; ?>
+	<?php
+		$lcp_key = is_mobile() ? 'm-lcp' : 'lcp';
+
+		if ( isset( customer_info()[ $lcp_key ] ) ) :
+			$file = customer_info()[ $lcp_key ];
+
+			if ( is_string( $file ) ) :
+				$base_url = get_site_url() . '/wp-content/uploads/';
+				$url = $base_url . ltrim( $file, '/' );
+
+				$attachment_id = attachment_url_to_postid( $url );
+
+				if ( $attachment_id ) :
+					$srcset = wp_get_attachment_image_srcset( $attachment_id, 'full' );
+					$sizes  = wp_get_attachment_image_sizes( $attachment_id, 'full' );
+					?>
+					<link
+						rel="preload"
+						as="image"
+						href="<?php echo esc_url( $url ); ?>"
+						<?php echo $srcset ? 'imagesrcset="' . esc_attr( $srcset ) . '"' : ''; ?>
+						<?php echo $sizes  ? 'imagesizes="'  . esc_attr( $sizes )  . '"' : ''; ?>
+						fetchpriority="high">
+					<?php
+				endif;
+			endif;
+		endif;
+	?>
 
 	<?php wp_head(); ?>
 

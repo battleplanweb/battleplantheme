@@ -1125,63 +1125,63 @@ function processChron($forceChron) {
 		// Site Visitors
 		$analyticsGA4 = array();
 		$dataTerms = array('day' => 1) + $GLOBALS['dataTerms'];
-foreach ( $dataTerms as $termTitle => $termDays ) {
+		foreach ( $dataTerms as $termTitle => $termDays ) {
 
-    $response = null;
+		$response = null;
 
-    try {
-        $response = $client->runReport([
-            'property' => 'properties/' . $ga4_id,
-            'dateRanges' => [
-                new DateRange([
-                    'start_date' => date('Y-m-d', strtotime("-{$termDays} days")),
-                    'end_date'   => $today,
-                ]),
-            ],
-            'dimensions' => [
-                new Dimension([ 'name' => 'city' ]),
-                new Dimension([ 'name' => 'region' ]),
-            ],
-            'metrics' => [
-                new Metric([ 'name' => 'totalUsers' ]),
-            ],
-        ]);
-    } catch (\Google\ApiCore\ApiException $e) {
-        error_log('GA4 visitors runReport failed: ' . $e->getMessage());
-        continue; // skip THIS term only
-    }
+		try {
+			$response = $client->runReport([
+				'property' => 'properties/' . $ga4_id,
+				'dateRanges' => [
+					new DateRange([
+						'start_date' => date('Y-m-d', strtotime("-{$termDays} days")),
+						'end_date'   => $today,
+					]),
+				],
+				'dimensions' => [
+					new Dimension([ 'name' => 'city' ]),
+					new Dimension([ 'name' => 'region' ]),
+				],
+				'metrics' => [
+					new Metric([ 'name' => 'totalUsers' ]),
+				],
+			]);
+		} catch (\Google\ApiCore\ApiException $e) {
+			error_log('GA4 visitors runReport failed: ' . $e->getMessage());
+			continue; // skip THIS term only
+		}
 
-    if ( !$response ) {
-        continue;
-    }
+		if ( !$response ) {
+			continue;
+		}
 
-    foreach ( $response->getRows() as $row ) {
+		foreach ( $response->getRows() as $row ) {
 
-        $city  = $row->getDimensionValues()[0]->getValue() ?? '';
-        $state = strtolower($row->getDimensionValues()[1]->getValue() ?? '');
+			$city  = $row->getDimensionValues()[0]->getValue() ?? '';
+			$state = strtolower($row->getDimensionValues()[1]->getValue() ?? '');
 
-        if ( !isset($states[$state]) ) {
-            continue;
-        }
+			if ( !isset($states[$state]) ) {
+				continue;
+			}
 
-        $location = ($city === '(not set)')
-            ? ucwords($state)
-            : $city . ', ' . $states[$state];
+			$location = ($city === '(not set)')
+				? ucwords($state)
+				: $city . ', ' . $states[$state];
 
-        $totalUsers = (int) ($row->getMetricValues()[0]->getValue() ?? 0);
+			$totalUsers = (int) ($row->getMetricValues()[0]->getValue() ?? 0);
 
-        if ( !isset($analyticsGA4[$location]) ) {
-            $analyticsGA4[$location] = [];
-        }
+			if ( !isset($analyticsGA4[$location]) ) {
+				$analyticsGA4[$location] = [];
+			}
 
-        $analyticsGA4[$location]['page-views-' . $termDays] = $totalUsers;
-    }
-}
+			$analyticsGA4[$location]['page-views-' . $termDays] = $totalUsers;
+		}
+		}
 
-if ( !empty($analyticsGA4) ) {
-    arsort($analyticsGA4);
-    update_option('bp_ga4_visitors_01', $analyticsGA4, false);
-}
+		if ( !empty($analyticsGA4) ) {
+		arsort($analyticsGA4);
+		update_option('bp_ga4_visitors_01', $analyticsGA4, false);
+		}
 
 		// Most Popular Pages
 		$analyticsGA4 = array();
@@ -1790,6 +1790,9 @@ if ( !empty($analyticsGA4) ) {
 			update_option('bp_ga4_achievementId_01', $analyticsGA4, false);
 		}
 	}
+
+	wp_cache_delete('customer_info', 'options');
+	wp_cache_flush();
 }
 
 

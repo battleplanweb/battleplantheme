@@ -120,8 +120,12 @@ function battleplan_addSitePage() {
 }
 
 // Replace WordPress copyright message at bottom of admin page
-add_filter('admin_footer_text', 'battleplan_admin_footer_text');
+add_action('in_admin_footer', 'battleplan_admin_footer_text');
 function battleplan_admin_footer_text() {
+	wp_cache_delete('customer_info', 'options');
+	wp_cache_flush();
+
+	$customer_info = customer_info();
 
 	$printFooter  = '<section><div class="flex" style="grid-template-columns:80px 300px 1fr; gap:20px">';
 	$printFooter .= '<div style="grid-row:span 2; align-self:center;">';
@@ -135,11 +139,6 @@ function battleplan_admin_footer_text() {
 	$printFooter .= 'WP ' . esc_html( get_bloginfo('version') ) . '<br>';
 	$printFooter .= 'Local Time: ' . esc_html( wp_date('g:i a', null, new DateTimeZone( wp_timezone_string() )) ) . '<br>';
 	$printFooter .= '</div>';
-
-	$customer_info = get_option('customer_info');
-	if ( ! is_array($customer_info) ) {
-		$customer_info = [];
-	}
 
 	$printFooter .= '<div style="justify-self:end; margin-right:50px;">';
 
@@ -191,8 +190,6 @@ function battleplan_admin_footer_text() {
 					'</a><br>';
 			}
 
-			$customer_info = customer_info();
-
 			$printFooter .= esc_html(($customer_info['area-before'] ?? '') . ($customer_info['area'] ?? '') . ($customer_info['area-after'] ?? '') . ($customer_info['phone'] ?? '')) . '<br>';
 			$printFooter .= esc_html($customer_info['street'] ?? '') . '<br>';
 			$printFooter .= esc_html(($customer_info['city'] ?? '') . ', ' . ($customer_info['state-abbr'] ?? '') . ' ' . ($customer_info['zip'] ?? '')) . '<br>';
@@ -204,6 +201,15 @@ function battleplan_admin_footer_text() {
 			$printFooter .= '</div>';
 		}
 	}
+
+	$printFooter .= "<div style='margin-top: 140px'>";
+	if ( ! is_array($customer_info) ) {
+		$customer_info = [];
+		$printFooter .= "No customer info detected.";
+	} else {
+		$printFooter .= showMe($customer_info, false, false);
+	}
+	$printFooter .= "</div>";
 
 	$printFooter .= '</div></div></section>';
 
@@ -1062,9 +1068,9 @@ function battleplan_site_audit() {
 		$note_value = $_POST['notes'] ?? '';
 		if ( isset($note_value) ) :
 			if ( isset( $_POST['erase-note'] ) ) :
-				$siteAudit[$today]['notes'] = ($siteAudit[$today]['notes'] ?? '') . '  ' . $note_value;
+				$siteAudit[$today]['notes'] = $note_value;
 			else:
-				$siteAudit[$today]['notes'] .= ($siteAudit[$today]['notes'] ?? '') . '  ' . $note_value;
+				$siteAudit[$today]['notes'] = ($siteAudit[$today]['notes'] ?? '') . '  ' . $note_value;
 			endif;
 		endif;
 

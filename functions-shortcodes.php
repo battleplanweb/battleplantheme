@@ -329,7 +329,7 @@ function battleplan_socialBtn( $atts, $content = null ) {
 // Display Business Hours
 add_shortcode( 'get-hours', 'battleplan_addBusinessHours' );
 function battleplan_addBusinessHours( $atts, $content = null ) {
-	wp_enqueue_style( 'battleplan-hours', get_template_directory_uri()."/style-hours.css", array('parent-style'), _BP_VERSION );
+	wp_enqueue_style( 'battleplan-hours', get_template_directory_uri()."/style-hours.css", [], _BP_VERSION, 'print' );
 
 	$a = shortcode_atts( array( 'direction'=>'vert', 'start'=>'sun', 'abbr'=>'true', 'wkday1'=>'', 'wkday2'=>'', 'mon1'=>'', 'mon2'=>'', 'tue1'=>'', 'tue2'=>'', 'wed1'=>'', 'wed2'=>'', 'thu1'=>'', 'thu2'=>'', 'fri1'=>'', 'fri2'=>'', 'sat1'=>'', 'sat2'=>'', 'sun1'=>'', 'sun2'=>'',  ), $atts );
 	$direction = esc_attr($a['direction']) == "vert" ? "vert" : "horz";
@@ -559,7 +559,16 @@ function battleplan_get_service_areas() {
 add_shortcode( 'get-random-text', 'battleplan_getRandomText' );
 function battleplan_getRandomText($atts, $content = null) {
 	$a         = shortcode_atts( array( 'cookie'=>'true', 'text1'=>'', 'text2'=>'', 'text3'=>'', 'text4'=>'', 'text5'=>'', 'text6'=>'', 'text7'=>'',  ), $atts );
-	$textArray = array_filter( wp_kses_post($a['text1']), wp_kses_post($a['text2']), wp_kses_post($a['text3']), wp_kses_post($a['text4']), wp_kses_post($a['text5']), wp_kses_post($a['text6']), wp_kses_post($a['text7']) );
+	$textArray = array_filter( array(
+		wp_kses_post($a['text1']),
+		wp_kses_post($a['text2']),
+		wp_kses_post($a['text3']),
+		wp_kses_post($a['text4']),
+		wp_kses_post($a['text5']),
+		wp_kses_post($a['text6']),
+		wp_kses_post($a['text7'])
+	) );
+
 	if ( empty($textArray) ) return '';
 	$textArray = array_values($textArray);
 	$num       = count($textArray) - 1;
@@ -738,7 +747,7 @@ function append_unique_param_to_query($sql, $query) {
 add_shortcode( 'get-translator', 'battleplan_translator' );
 function battleplan_translator($atts, $content = null) {
 	wp_enqueue_script( 'battleplan-translator', get_template_directory_uri().'/js/script-translator.js', array('jquery'), _BP_VERSION, false );
-	wp_enqueue_style( 'battleplan-translator', get_template_directory_uri()."/style-translator.css", array('parent-style'), _BP_VERSION );
+	wp_enqueue_style( 'battleplan-translator', get_template_directory_uri()."/style-translator.css", [], _BP_VERSION, 'print' );
 	?><script async nonce="<?php echo _BP_NONCE; ?>" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script><?php
 
 	$a = shortcode_atts( array( 'language'=>'spanish', 'text'=>'Haga clic para el sitio en español', 'class'=>'', 'align'=>'center', ), $atts );
@@ -798,7 +807,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	else:
 		$linkLoc = $link;
 	endif;
-	$noPic = esc_attr($a['no_pic']) == "" ? "false" : esc_attr($a['no_pic']);
+	$noPic = trim($a['no_pic'] ?? '') === '' ? false : (int) $a['no_pic'];
 	$picADA = $titleADA = "";
 	if ( $showBtn == "true" ) :
 		$picADA = " ada-hidden='true'";
@@ -845,7 +854,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 			$textSize = getTextSize($picSize);
 		endif;
 	elseif ( $noPic != "false" ) :
-		$archiveImg = do_shortcode("[img size='".$picSize."' class='image-".$type." block-placeholder placeholder-".$type."' link='".$linkLoc."' ".$picADA."]".wp_get_attachment_image( $noPic, $size, array( 'class'=>'img-archive img-'.$type ))."[/img]");
+		$archiveImg = do_shortcode("[img size='".$picSize."' class='image-".$type." block-placeholder placeholder-".$type."' link='".$linkLoc."' ".$picADA."]".wp_get_attachment_image( $noPic, $size, false, ['class' => 'img-archive img-' . $type])."[/img]");
 		if ( $textSize == "" ) :
 			$textSize = getTextSize($picSize);
 		endif;
@@ -1111,9 +1120,9 @@ function battleplan_getRandomPosts($atts, $content = null) {
 add_shortcode( 'get-post-slider', 'battleplan_getPostSlider' );
 function battleplan_getPostSlider($atts, $content = null ) {
 	wp_enqueue_script( 'battleplan-carousel', get_template_directory_uri().'/js/script-carousel.js', array('battleplan-script-pages'), _BP_VERSION, false );
-	wp_enqueue_style( 'battleplan-carousel', get_template_directory_uri()."/style-carousel.css", array('parent-style'), _BP_VERSION );
+	wp_enqueue_style( 'battleplan-carousel', get_template_directory_uri()."/style-carousel.css", [], _BP_VERSION, 'print' );
 
-	$a = shortcode_atts( array( 'type'=>'testimonials', 'auto'=>'yes', 'interval'=>'6000', 'loop'=>'true', 'num'=>'4', 'offset'=>'0', 'pics'=>'yes', 'caption'=>'no', 'controls'=>'yes', 'controls_pos'=>'below', 'indicators'=>'no', 'justify'=>'center', 'pause'=>'true', 'orderby'=>'rand', 'order'=>'asc', 'post_btn'=>'', 'show_thumb'=>'true', 'all_btn'=>'View All', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'title_pos'=>'', 'link'=>'', 'pic_size'=>'1/3', 'text_size'=>'', 'slide_type'=>'box', 'slide_effect'=>'fade', 'tax'=>'', 'terms'=>'', 'tag'=>'', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'id'=>'', 'mult'=>'1', 'class'=>'', 'truncate'=>'true', 'lazy'=>'true', 'blur'=>'false', 'mask'=>'false', 'rand_start'=>'', 'content_type'=>'image' ), $atts );
+	$a = shortcode_atts( array( 'type'=>'testimonials', 'auto'=>'yes', 'interval'=>'6000', 'loop'=>'true', 'num'=>'4', 'offset'=>'0', 'pics'=>'yes', 'caption'=>'no', 'controls'=>'yes', 'controls_pos'=>'below', 'indicators'=>'no', 'justify'=>'center', 'pause'=>'true', 'speed'=>'fast', 'orderby'=>'rand', 'order'=>'asc', 'post_btn'=>'', 'show_thumb'=>'true', 'all_btn'=>'View All', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'title_pos'=>'', 'link'=>'', 'pic_size'=>'1/3', 'text_size'=>'', 'slide_type'=>'box', 'slide_effect'=>'fade', 'tax'=>'', 'terms'=>'', 'tag'=>'', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'id'=>'', 'mult'=>'1', 'class'=>'', 'truncate'=>'true', 'lazy'=>'true', 'blur'=>'false', 'mask'=>'false', 'rand_start'=>'', 'content_type'=>'image' ), $atts );
 	$num = esc_attr($a['num']);
 	$controls = esc_attr($a['controls']);
 	$controlsPos = esc_attr($a['controls_pos']);
@@ -1344,7 +1353,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 
 	$slideClass = esc_attr($a['class'])." carousel-".$slideType." effect-".$slideEffect;
 
-	$buildSlider = '<div id="'.$type.'Slider'.$sliderNum.'" class="carousel slide slider slider-'.$type.' content-'.$contentType.$hasCaption.' '.$slideClass.' mult-'.$mult.$blur.'" data-interval="'.esc_attr($a['interval']).'" data-pause="'.$pause.'" data-speed="'.$speed.'" data-random="'.$randStart.'"';
+	$buildSlider = '<div id="'.$type.'Slider'.$sliderNum.'" class="carousel slide slider slider-'.$type.' content-'.$contentType.' '.$slideClass.' mult-'.$mult.$blur.'" data-interval="'.esc_attr($a['interval']).'" data-pause="'.$pause.'" data-speed="'.$speed.'" data-random="'.$randStart.'"';
 
 	if ( $autoplay == "yes" || $autoplay == "true" ) $buildSlider .= ' data-auto="true"';
 
@@ -1383,8 +1392,8 @@ function battleplan_getPostSlider($atts, $content = null ) {
 add_shortcode( 'get-logo-slider', 'battleplan_getLogoSlider' );
 function battleplan_getLogoSlider($atts, $content = null ) {
 	wp_enqueue_script( 'battleplan-logo-slider', get_template_directory_uri().'/js/script-logo-slider.js', array(), _BP_VERSION, false );
-	wp_enqueue_style( 'battleplan-carousel', get_template_directory_uri()."/style-carousel.css", array('parent-style'), _BP_VERSION );
-	wp_enqueue_style( 'battleplan-logo-slider', get_template_directory_uri()."/style-logo-slider.css", array('parent-style'), _BP_VERSION );
+	wp_enqueue_style( 'battleplan-carousel', get_template_directory_uri()."/style-carousel.css", [], _BP_VERSION, 'print' );
+	wp_enqueue_style( 'battleplan-logo-slider', get_template_directory_uri()."/style-logo-slider.css", [], _BP_VERSION, 'print' );
 
 	$a = shortcode_atts( array( 'num'=>'-1', 'space'=>'15', 'size'=>'full', 'max_w'=>'33', 'tag'=>'', 'package'=>'', 'order_by'=>'rand', 'order'=>'ASC', 'shuffle'=>'false', 'speed'=>'slow', 'pause'=>'no', 'link'=>'false', 'lazy'=>'false', 'direction'=>'normal'), $atts );
 	$tags = explode( ',', esc_attr($a['tag']) );
@@ -1508,7 +1517,7 @@ function battleplan_loadImagesByTag( $atts, $content = null ) {
 add_shortcode( 'get-gallery', 'battleplan_setUpWPGallery' );
 function battleplan_setUpWPGallery( $atts, $content = null ) {
 	wp_enqueue_script( 'battleplan-script-lightbox', get_template_directory_uri().'/js/script-lightbox.js', array(), _BP_VERSION, false );
-	wp_enqueue_style( 'battleplan-lightbox', get_template_directory_uri()."/style-lightbox.css", array('parent-style'), _BP_VERSION );
+	wp_enqueue_style( 'battleplan-lightbox', get_template_directory_uri()."/style-lightbox.css", [], _BP_VERSION, 'print' );
 
 	$a = shortcode_atts( array( 'name'=>'', 'size'=>'thumbnail', 'id'=>'', 'columns'=>'5', 'max'=>'-1', 'offset'=>'0', 'caption'=>'false', 'start'=>'', 'end'=>'', 'order_by'=>'menu_order', 'order'=>'ASC', 'tags'=>'', 'field'=>'', 'operator'=>'any', 'class'=>'', 'include'=>'', 'exclude'=>'', 'unique'=>'true', 'value'=>'', 'type'=>'', 'compare'=>'' ), $atts );
 	$id = esc_attr($a['id']);
@@ -1814,7 +1823,7 @@ function battleplan_SideBySideImg( $atts, $content = null ) {
 		list ($src, $width, $height ) = $img;
 		$liClass = $imgID === esc_attr($a['full']) ? ' class="full-'.esc_attr($a['pos']).'" ' : '';
 		if ($height > 0) $ratio = $width / $height;
-		$buildFlex .= '<li style="flex: '.$ratio.'"'.$liClass.'>'.wp_get_attachment_image( $imgID, $size, "", ["class" => 'wp-image-'.$imgID.$class] ).'</li>';
+		$buildFlex .= '<li style="flex: '.$ratio.'"'.$liClass.'>'.wp_get_attachment_image( $imgID, $size, false, ["class" => 'wp-image-'.$imgID.$class] ).'</li>';
 	endfor;
 	$buildFlex .= '</ul>';
 
@@ -1828,22 +1837,11 @@ function battleplan_get_nonce() {
 }
 
 // Display a universal page
-function battleplan_getUniversalPage( $atts ) {
-	$a = shortcode_atts([ 'slug' => '' ], $atts);
-
-	if ( empty($a['slug']) ) return '';
-
-	$file = get_template_directory() . '/pages/' . sanitize_file_name($a['slug']) . '.php';
-
-	if ( ! file_exists($file) ) return '';
-
-	ob_start();
-	include $file;
-	return do_shortcode( ob_get_clean() );
+add_shortcode( 'get-universal-page', 'battleplan_getUniversalPage' );
+function battleplan_getUniversalPage( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'slug'=>'' ), $atts );
+	return do_shortcode(include get_template_directory().'/pages/'.esc_attr($a['slug']).'.php');
 }
-
-
-
 
 // Use page template for landing & universal pages
 add_filter('single_template', 'battleplan_usePageTemplate', 10, 1 );
@@ -1958,25 +1956,34 @@ function battleplan_getRSS( $atts, $content = null ) {
 }
 
 // Insert the city / state of either company address, or the city-specific landing page
- add_shortcode("get-location", "battleplan_getLocation");
- function battleplan_getLocation($atts, $content) {
-	 $a = shortcode_atts( array( 'state'=>'true', 'default'=>'blank', 'before'=>'', 'after'=>'' ), $atts );
-	 $customer_info = customer_info();
+add_shortcode("get-location", "battleplan_getLocation");
+function battleplan_getLocation($atts) {
+	$a = shortcode_atts(
+		array(
+			'state'   => 'true',
+			'default' => 'blank',
+			'before'  => '',
+			'after'   => ''
+		),
+		$atts
+	);
 
-	 if ( esc_attr($a['default']) !== 'blank' && !defined('_USER_DISPLAY_LOC') ) :
-	 	$userLoc = esc_attr($a['default']);
-	 elseif ( !defined('_USER_DISPLAY_LOC') ) :
-	 	$userLoc = $customer_info['default-loc'];
-	 else:
-	 	$userLoc = _USER_DISPLAY_LOC;
-	 endif;
+	$customer_info = customer_info();
+	$userLoc = bp_get_user_display_loc();
 
-	 if ( preg_match('/,\s*[A-Z]{2}$/', $userLoc) === 1 && esc_attr($a['state']) === "false" ) {
-		$userLoc = strstr($userLoc, ',', true);
-	 }
+	if ( !$userLoc ) {
+		$userLoc = ($a['default'] !== 'blank')
+			? esc_attr($a['default'])
+			: $customer_info['default-loc'];
+	}
 
-	 return esc_attr($a['before']).$userLoc.esc_attr($a['after']);
+	if ( $a['state'] === "false" ) {
+		$userLoc = preg_replace('/,\s*[A-Z]{2}$/', '', $userLoc);
+	}
+
+	return esc_attr($a['before']).esc_html($userLoc).esc_attr($a['after']);
 }
+
 
 // Copy the section from the home page, or any other defined page
  add_shortcode("copy-content", "battleplan_copyContent");

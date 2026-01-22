@@ -1,3 +1,6 @@
+@charset "utf-8";
+@layer carte_du_jour {
+
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
@@ -11,7 +14,7 @@
 
 /* Showing correct items based on location */
 .location-unknown .hide-unknown {
-	display: 									none;
+	display:                                                   none;
 }
 
 .location-unknown #section-gallery[class*="show-"],
@@ -19,7 +22,7 @@
 .location-dallas #section-gallery[class*="show-"],
 .location-frisco #section-gallery .location-unknown,
 .location-frisco #section-gallery[class*="show-"] {
-	display: 									none;
+	display:                                                   none;
 }
 
 
@@ -30,5 +33,7 @@
 /* Mobile Menu */
 
 .location-unknown.screen-1 #mobile-menu-bar {
-  	grid-template-columns: 						38px 1fr 38px 38px;; 
+  	grid-template-columns:                                   38px 1fr 38px 38px;;
+}
+
 }

@@ -258,7 +258,7 @@ function battleplan_buildImg( $atts, $content = null ) {
 // Video Block
 add_shortcode( 'vid', 'battleplan_buildVid' );
 function battleplan_buildVid( $atts, $content = null ) {
-	wp_enqueue_style( 'battleplan-video', get_template_directory_uri()."/style-video.css", array('parent-style'), _BP_VERSION );
+	wp_enqueue_style( 'battleplan-video', get_template_directory_uri()."/style-video.css", [], _BP_VERSION, 'print' );
 
 	$a = shortcode_atts( array( 'size'=>'100', 'mobile'=>'100', 'class'=>'', 'order'=>'', 'link'=>'', 'thumb'=>'', 'start'=>'', 'end'=>'', 'preload'=>'false', 'related'=>'false', 'fullscreen'=>'false', 'controls'=>'true', 'autoplay'=>'false', 'loop'=>'false', 'muted'=>'false', 'begin'=>'', 'track'=>'' ), $atts );
 	$size = convertSize(esc_attr($a['size']));
@@ -364,10 +364,13 @@ function battleplan_buildButton( $atts, $content = null ) {
 	$class = esc_attr($a['class']) !== '' ? ' '.esc_attr($a['class']) : '';
 	$left = esc_attr($a['left']);
 	$top = esc_attr($a['top']);
-	$fancy = esc_attr($a['fancy']) !== '' ? "-".$fancy : '';
+
+	$fancy_val = isset($a['fancy']) ? trim($a['fancy']) : '';
+	$fancy = $fancy_val !== '' ? '-' . esc_attr($fancy_val) : '';
+
 	$icon = esc_attr($a['icon']) === 'false' ? '' : esc_attr($a['icon']);
 	if ( $icon !== '' ) :
-		wp_enqueue_style( 'battleplan-fancy-btn', get_template_directory_uri()."/style-fancy-btn.css", array('parent-style'), _BP_VERSION );
+		wp_enqueue_style( 'battleplan-fancy-btn', get_template_directory_uri()."/style-fancy-btn.css", [], _BP_VERSION, 'print' );
 		$class .= " fancy".$fancy;
 		$icon = $icon === 'true' ? 'chevron-right' : $icon;
 		$content = esc_attr($a['before']) === 'false'
@@ -412,7 +415,7 @@ function battleplan_buildButton( $atts, $content = null ) {
 add_shortcode( 'accordion', 'battleplan_buildAccordion' );
 function battleplan_buildAccordion( $atts, $content = null ) {
 	wp_enqueue_script( 'battleplan-accordion', get_template_directory_uri().'/js/script-accordion.js', array(), _BP_VERSION, false );
-	wp_enqueue_style( 'battleplan-accordion', get_template_directory_uri()."/style-accordion.css", array('parent-style'), _BP_VERSION );
+	wp_enqueue_style( 'battleplan-accordion', get_template_directory_uri()."/style-accordion.css", [], _BP_VERSION, 'print' );
 
 	$a = shortcode_atts( array( 'title'=>'', 'excerpt'=>'', 'class'=>'', 'active'=>'false', 'btn'=>'false', 'btn_collapse'=>'false', 'icon'=>'true', 'start'=>'', 'end'=>'', 'scroll'=>'true', 'track'=>'', 'multiple'=>'true' ), $atts );
 	$excerpt = esc_attr($a['excerpt']);
@@ -480,6 +483,7 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	$padding = esc_attr($a['padding']);
 	$fixed = esc_attr($a['fixed']);
 	$image = esc_attr($a['image']);
+	$hasImage = !empty($image);
 	$class = esc_attr($a['class']);
 	$zIndex = esc_attr($a['z-index']);
 	if ( $class != '' ) $class = " ".$class;
@@ -491,24 +495,49 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
 	if ( $tracking != '' ) $class .= " tracking";
 
-	$attachment_id = attachment_url_to_postid(site_url().$image);
-	$alt_text = get_post_meta($attachment_id, '_wp_attachment_image_alt', true);
+	$attachment_id = $hasImage ? attachment_url_to_postid(site_url().$image) : 0;
+	$alt_text = $attachment_id ? get_post_meta($attachment_id, '_wp_attachment_image_alt', true) : '';
 
 	if ( $type === "col" ) : $div = "div"; else: $div = $type; endif;
 
-	if ( is_mobile() ) :
-		$mobileSrc = explode('.', $image);
-		if ( strpos($mobileSrc[0], "-1920x") !== false ) { $mobileSrc[0] = substr($mobileSrc[0], 0, strpos($mobileSrc[0], "-1920x")); }
-		$imgBase = $mobileSrc[0];
-		$imgExt = $mobileSrc[1];
-		$placeholder = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8Xw8AAn8B9FXC5VwAAAAASUVORK5CYII=';
-		$ratio = $imgW && $imgH ? $imgW / $imgH : 2;
-		$initialH = round(480 / $ratio);
+	if ( is_mobile() ) {
 
-		return do_shortcode('<'.$div.' id="'.$name.'" class="load-bg-img '.$type.$style.' '.$type.'-'.$width.' '.$type.'-parallax-disabled'.$class.'"'.$tracking.' style="padding-top:'.$padding.'px; padding-bottom:'.$padding.'px; height:'.$initialH.'px; background-image:url('.$placeholder.'); background-size:cover; background-position:'.$posY.' '.$posX.'" data-img-base="'.$imgBase.'" data-img-ext="'.$imgExt.'" data-img-width="'.$imgW.'" data-img-height="'.$imgH.'">'.$content.'</'.$div.'>');
-	else:
-		return do_shortcode('<'.$div.' id="'.$name.'" class="'.$type.$style.' '.$type.'-'.$width.' '.$type.'-parallax'.$class.'"'.$tracking.' style="height:'.$height.'" data-parallax="scroll" data-img-width="'.$imgW.'" data-img-height="'.$imgH.'" data-pos-x="'.$posX.'" data-top-y="'.$topY.'" data-bottom-y="'.$botY.'" data-fixed="'.$fixed.'" data-image-src="'.$image.'">'.$content.$buildScrollBtn.'</'.$div.'>');
-	endif;
+		if ( $hasImage ) {
+			$mobileSrc = explode('.', $image);
+			if ( strpos($mobileSrc[0], "-1920x") !== false ) {
+				$mobileSrc[0] = substr($mobileSrc[0], 0, strpos($mobileSrc[0], "-1920x"));
+			}
+			$imgBase = $mobileSrc[0];
+			$imgExt  = $mobileSrc[1];
+			$placeholder = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8Xw8AAn8B9FXC5VwAAAAASUVORK5CYII=';
+			$ratio = $imgW && $imgH ? $imgW / $imgH : 2;
+			$initialH = round(480 / $ratio);
+
+			$styleAttr = 'padding-top:'.$padding.'px; padding-bottom:'.$padding.'px; height:'.$initialH.'px; background-image:url('.$placeholder.'); background-size:cover; background-position:'.$posY.' '.$posX;
+
+			$dataAttrs = ' data-img-base="'.$imgBase.'" data-img-ext="'.$imgExt.'" data-img-width="'.$imgW.'" data-img-height="'.$imgH.'"';
+
+		} else {
+			$styleAttr = 'padding-top:'.$padding.'px; padding-bottom:'.$padding.'px';
+			$dataAttrs = '';
+		}
+
+		return do_shortcode('<'.$div.' id="'.$name.'" class="load-bg-img '.$type.$style.' '.$type.'-'.$width.($hasImage ? ' '.$type.'-parallax-disabled' : '').$class.'"'.$tracking.' style="'.$styleAttr.'"'.$dataAttrs.'>'.$content.'</'.$div.'>');
+
+	} else {
+		if ( $hasImage ) :
+			$dataAttrs = ' data-parallax="scroll" data-img-width="'.$imgW.'" data-img-height="'.$imgH.'" data-pos-x="'.$posX.'" data-top-y="'.$topY.'" data-bottom-y="'.$botY.'" data-fixed="'.$fixed.'" data-image-src="'.$image.'"';
+
+			$parallaxClass = ' '.$type.'-parallax';
+		else :
+			$dataAttrs = '';
+			$parallaxClass = '';
+		endif;
+
+		return do_shortcode(
+			'<'.$div.' id="'.$name.'" class="'.$type.$style.' '.$type.'-'.$width.$parallaxClass.$class.'"'.$tracking.' style="height:'.$height.'"'.$dataAttrs.'>'.$content.($hasImage ? $buildScrollBtn : '').'</'.$div.'>'
+		);
+	}
 }
 
 // Locked Section

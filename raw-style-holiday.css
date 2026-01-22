@@ -1,68 +1,71 @@
-#page::before,
-#page::after,
-.wp-gr.wp-google-badge::before,
-.wp-gr.wp-google-badge::after {
-	content: 									"";
-	position: 									absolute;
-	top: 										-74px;
-	width: 										100%;
-	height: 									134px;
-	background: 								url('../battleplantheme/common/holiday/lights-1.webp') repeat-x;
-	background-position: 						100% 50%;
-	pointer-events: 							none;
-}  
+@charset "utf-8";
+@layer holiday {
 
 #page::before,
 #page::after,
 .wp-gr.wp-google-badge::before,
 .wp-gr.wp-google-badge::after {
-	animation-name: 							blinking-lights-1; 
-    animation-duration: 						0.6s; 
-    animation-iteration-count: 					infinite;
-    animation-timing-function: 					linear;
-}  
+	content:                                                   "";
+	position:                                                  absolute;
+	top:                                                       -74px;
+	width:                                                     100%;
+	height:                                                    134px;
+	background:                                                url('../battleplantheme/common/holiday/lights-1.webp') repeat-x;
+	background-position:                                       100% 50%;
+	pointer-events:                                            none;
+}
+
+#page::before,
+#page::after,
+.wp-gr.wp-google-badge::before,
+.wp-gr.wp-google-badge::after {
+	animation-name:                                            blinking-lights-1;
+    animation-duration:                                     0.6s;
+    animation-iteration-count:                              infinite;
+    animation-timing-function:                              linear;
+}
 
 #page::before,
 #page::after {
-	position: 									fixed;
-	top: 										-75px;
-	transform: 									scaleY(-1);
-	background: 								url('../battleplantheme/common/holiday/lights-3.webp') repeat-x 0% 50%;
-	background-size: 							contain;
-	z-index: 									1000000;
-}  
+	position:                                                  fixed;
+	top:                                                       -75px;
+	transform:                                                 scaleY(-1);
+	background:                                                url('../battleplantheme/common/holiday/lights-3.webp') repeat-x 0% 50%;
+	background-size:                                           contain;
+	z-index:                                                   1000000;
+}
 
 #page::before,
 .wp-gr.wp-google-badge::before {
-	background: 								url('../battleplantheme/common/holiday/lights-2.webp') repeat-x;
-	background-size: 							contain;
-	animation-name: 							blinking-lights-2; 
+	background:                                                url('../battleplantheme/common/holiday/lights-2.webp') repeat-x;
+	background-size:                                           contain;
+	animation-name:                                            blinking-lights-2;
 }
 
 #page::before {
-	background: 								url('../battleplantheme/common/holiday/lights-4.webp') repeat-x;
-	background-size: 							contain;
+	background:                                                url('../battleplantheme/common/holiday/lights-4.webp') repeat-x;
+	background-size:                                           contain;
 }
 
 .wp-gr.wp-google-badge::before {
-	background-position: 						100% 50%;
-} 
+	background-position:                                       100% 50%;
+}
 
 
 .holiday-theme #masthead {
-	z-index: 									9500;
+	z-index:                                                   9500;
 }
 
 .holiday-theme #wrapper-bottom,
 .holiday-theme #colophon,
 .holiday-theme.content-sidebar-box #main-content,
 .holiday-theme .section[class*="style-"]:not(.section-lock) {
-	z-index: 									9400;
-	overflow: 									visible;
+	z-index:                                                   9400;
+	overflow:                                                  visible;
 }
 
 .holiday-theme #colophon {
-	z-index: 									9401;
+	z-index:                                                   9401;
 }
 
 .holiday-theme #main-content,
@@ -71,11 +74,11 @@
 .holiday-theme .xmas-narrow-1,
 .holiday-theme .xmas-narrow-2,
 .holiday-theme .xmas-narrow-3 {
-	position: 									relative;
+	position:                                                  relative;
 }
 
 .holiday-theme #main-content:not(.xmas-corner) {
-  	padding-top: 								65px;
+  	padding-top:                                             65px;
 }
 
 .xmas-corner::before,
@@ -88,298 +91,298 @@
 .xmas-wide-alt::before,
 .xmas-colophon::before,
 .xmas-colophon::after {
-	content: 									"";
-	position: 									absolute;
-	pointer-events: 							none;
-	top: 										-60px;
-	left: 										-50px;
-	width: 										200px;
-	height: 									221px;
-	background: 								url('../battleplantheme/common/holiday/xmas-greenery-1.webp') no-repeat 50% 50%;
-	background-size: 							contain;
-	filter: 									drop-shadow(0 4px 2px var(--black-low));
-	z-index: 									1;
+	content:                                                   "";
+	position:                                                  absolute;
+	pointer-events:                                            none;
+	top:                                                       -60px;
+	left:                                                      -50px;
+	width:                                                     200px;
+	height:                                                    221px;
+	background:                                                url('../battleplantheme/common/holiday/xmas-greenery-1.webp') no-repeat 50% 50%;
+	background-size:                                           contain;
+	filter:                                                    drop-shadow(0 4px 2px var(--black-low));
+	z-index:                                                   1;
 }
 
 .xmas-corner::after {
-	left: 										unset;
-	right: 										-50px;
-	transform: 									scaleX(-1);
+	left:                                                      unset;
+	right:                                                     -50px;
+	transform:                                                 scaleX(-1);
 }
 
 
 .xmas-narrow-1::before,
 .xmas-narrow-3::before {
-	top: 										-60px;
-	width: 										100%;
-	height: 									156px;
-	left: 										0;
-	background: 								url('../battleplantheme/common/holiday/xmas-greenery-2.webp') no-repeat 50% 50%;
-	background-size: 							contain;
+	top:                                                       -60px;
+	width:                                                     100%;
+	height:                                                    156px;
+	left:                                                      0;
+	background:                                                url('../battleplantheme/common/holiday/xmas-greenery-2.webp') no-repeat 50% 50%;
+	background-size:                                           contain;
 }
 
 .col:nth-of-type(1) .xmas-narrow-3::before,
 .col:nth-of-type(3) .xmas-narrow-3::before {
-  	top: 										-70px;
-	width: 										175px;
-  	left: 										-90px;
-  	background: 								url('../battleplantheme/common/holiday/xmas-greenery-3.webp') no-repeat 50% 50%;
-	background-size: 							contain;
-  	transform: 									rotate(210deg);
+  	top:                                                     -70px;
+	width:                                                     175px;
+  	left:                                                    -90px;
+  	background:                                              url('../battleplantheme/common/holiday/xmas-greenery-3.webp') no-repeat 50% 50%;
+	background-size:                                           contain;
+  	transform:                                               rotate(210deg);
 }
 
 .col:nth-of-type(2) .xmas-narrow-3::before {
-	height: 									127px;
-	background: 								url('../battleplantheme/common/holiday/xmas-greenery-4.webp') no-repeat 50% 50%;
-	background-size: 							contain;
+	height:                                                    127px;
+	background:                                                url('../battleplantheme/common/holiday/xmas-greenery-4.webp') no-repeat 50% 50%;
+	background-size:                                           contain;
 }
 
 .col:nth-of-type(3) .xmas-narrow-3::before {
-  	top: 										-50px;
-	left: 										unset;
-  	right: 										-80px;
- 	background: 								url('../battleplantheme/common/holiday/xmas-greenery-5.webp') no-repeat 50% 50%;
-	background-size: 							contain;
-  	transform: 									scale(-1);
+  	top:                                                     -50px;
+	left:                                                      unset;
+  	right:                                                   -80px;
+ 	background:                                               url('../battleplantheme/common/holiday/xmas-greenery-5.webp') no-repeat 50% 50%;
+	background-size:                                           contain;
+  	transform:                                               scale(-1);
 }
 
 .xmas-wide::before,
 .xmas-wide::after {
-	top: 										-85px;
-	left: 										5%;
-	height: 									150px;
-	background: 								url('../battleplantheme/common/holiday/xmas-greenery-7.webp') no-repeat 50% 50%;
-	background-size: 							contain;
+	top:                                                       -85px;
+	left:                                                      5%;
+	height:                                                    150px;
+	background:                                                url('../battleplantheme/common/holiday/xmas-greenery-7.webp') no-repeat 50% 50%;
+	background-size:                                           contain;
 
 }
 
 .xmas-wide::after {
-	left: 										unset;
-	right: 										5%;
+	left:                                                      unset;
+	right:                                                     5%;
 }
 
 .xmas-wide-10::before {
-	left: 										10%;
+	left:                                                      10%;
 }
 
 .xmas-wide-10::after {
-	right: 										10%;
+	right:                                                     10%;
 }
 
 .xmas-wide-15::before {
-	left: 										15%;
+	left:                                                      15%;
 }
 
 .xmas-wide-15::after {
-	right: 										15%;
+	right:                                                     15%;
 }
 
 .xmas-wide-alt::before {
-	top: 										-55px;
-	left: 										0;
-	width: 										100%;
-	height: 									146px;
-	background: 								url('../battleplantheme/common/holiday/xmas-greenery-8.webp') no-repeat 50% 50%;
-	background-size: 							contain;
+	top:                                                       -55px;
+	left:                                                      0;
+	width:                                                     100%;
+	height:                                                    146px;
+	background:                                                url('../battleplantheme/common/holiday/xmas-greenery-8.webp') no-repeat 50% 50%;
+	background-size:                                           contain;
 }
 
 .xmas-colophon::before,
 .xmas-colophon::after {
-	top: 										-110px;
-	left: 										20%;
-	width: 										100%;
-	height: 									168px;
-	background: 								url('../battleplantheme/common/holiday/xmas-greenery-6.webp') no-repeat 50% 50%;
-	background-size: 							contain;
+	top:                                                       -110px;
+	left:                                                      20%;
+	width:                                                     100%;
+	height:                                                    168px;
+	background:                                                url('../battleplantheme/common/holiday/xmas-greenery-6.webp') no-repeat 50% 50%;
+	background-size:                                           contain;
 }
 
 .xmas-colophon::after {
-	left: 										unset;
-	right: 										20%;
+	left:                                                      unset;
+	right:                                                     20%;
 }
 
 
 /* 3: Small Tablets (landscape) */
 @media (max-width: 1024px) {
 	.xmas-wide::before {
-		left: 										0%;
+		left:                                                     0%;
 	}
 
 	.xmas-wide::after {
-		right: 										0%;
+		right:                                                    0%;
 	}
 
 	.xmas-wide-10::before {
-		left: 										6%;
+		left:                                                     6%;
 	}
 
 	.xmas-wide-10::after {
-		right: 										6%;
+		right:                                                    6%;
 	}
 
 	.xmas-wide-15::before {
-		left: 										12%;
+		left:                                                     12%;
 	}
 
 	.xmas-wide-15::after {
-		right: 										12%;
+		right:                                                    12%;
 	}
 
 	.xmas-colophon::before {
-		left: 										8%;
+		left:                                                     8%;
 	}
 
 	.xmas-colophon::after {
-		right: 										8%;
-	}   
+		right:                                                    8%;
+	}
 }
 
 /* 2: Phones (landscape) + Tablets (portrait) */
 @media (max-width: 860px) {
-	.xmas-corner::before, 
+	.xmas-corner::before,
 	.xmas-corner::after {
-		top: 										-50px;
-		left: 										-60px;
-		height: 									175px;
+		top:                                                      -50px;
+		left:                                                     -60px;
+		height:                                                   175px;
 	}
-	
+
 	.xmas-corner::after {
-		left: 										unset;
-		right: 										-60px;
+		left:                                                     unset;
+		right:                                                    -60px;
 	}
-		
+
 	.col:nth-of-type(1) .xmas-narrow-3::after,
 	.col:nth-of-type(3) .xmas-narrow-3::after {
-		content: 									"";
-		position: 									absolute;
-		pointer-events: 							none;
-		background-size: 							contain;
-		filter: 									drop-shadow(0 4px 2px var(--black-low));
-		z-index: 									1;	
-		width: 										175px;
-		height: 									156px;
+		content:                                                  "";
+		position:                                                 absolute;
+		pointer-events:                                           none;
+		background-size:                                          contain;
+		filter:                                                   drop-shadow(0 4px 2px var(--black-low));
+		z-index:                                                  1;
+		width:                                                    175px;
+		height:                                                   156px;
 	}
-	
-	.col:nth-of-type(1) .xmas-narrow-3::after {		
-		top: 										-50px;
-  		right: 										-80px;
-  		background: 								url('../battleplantheme/common/holiday/xmas-greenery-5.webp') no-repeat 50% 50%;
-		background-size: 							contain;
-  		transform: 									scale(-1);	
+
+	.col:nth-of-type(1) .xmas-narrow-3::after {
+		top:                                                      -50px;
+  		right:                                                  -80px;
+  		background:                                             url('../battleplantheme/common/holiday/xmas-greenery-5.webp') no-repeat 50% 50%;
+		background-size:                                          contain;
+  		transform:                                              scale(-1);
 	}
-	
-	.col:nth-of-type(3) .xmas-narrow-3::after {		
-		top: 										-70px;
-		width: 										175px;
-		left: 										-90px;
-		background: 								url('../battleplantheme/common/holiday/xmas-greenery-3.webp') no-repeat 50% 50%;
-		background-size: 							contain;
-		transform: 									rotate(210deg);
+
+	.col:nth-of-type(3) .xmas-narrow-3::after {
+		top:                                                      -70px;
+		width:                                                    175px;
+		left:                                                     -90px;
+		background:                                               url('../battleplantheme/common/holiday/xmas-greenery-3.webp') no-repeat 50% 50%;
+		background-size:                                          contain;
+		transform:                                                rotate(210deg);
 	}
-	
+
 	.xmas-wide::before {
-		left: 										5%;
+		left:                                                     5%;
 	}
 
 	.xmas-wide::after {
-		right: 										5%;
+		right:                                                    5%;
 	}
 
 	.xmas-wide-10::before {
-		left: 										12%;
+		left:                                                     12%;
 	}
 
 	.xmas-wide-10::after {
-		right: 										12%;
+		right:                                                    12%;
 	}
 
 	.xmas-wide-15::before {
-		left: 										18%;
+		left:                                                     18%;
 	}
 
 	.xmas-wide-15::after {
-		right: 										18%;
+		right:                                                    18%;
 	}
 
 	.xmas-colophon::before {
-		width: 										60%;
-		top: 										-100px;
-		left: 										-6%;
+		width:                                                    60%;
+		top:                                                      -100px;
+		left:                                                     -6%;
 	}
 
 	.xmas-colophon::after {
-		width: 										60%;
-		top: 										-100px;
-		right: 										-6%;
-	}   
+		width:                                                    60%;
+		top:                                                      -100px;
+		right:                                                    -6%;
+	}
 }
-	
+
 
 /* 1: Phones (portrait) */
 @media (max-width: 576px) {
-	.xmas-corner::before, 
+	.xmas-corner::before,
 	.xmas-corner::after {
-		left: 										-70px;
-		height: 									150px;
-	}
-	
-	.xmas-corner::after {
-		left: 										unset;
-		right: 										-70px;
-	}
-	
-	.xmas-narrow-1::before {
-  		top: 										-50px;
-  		height: 									126px;
-	}
-	
-	.col:nth-of-type(2) .xmas-narrow-3::before {
-		top: 										-50px;
-		height: 									107px;
+		left:                                                     -70px;
+		height:                                                   150px;
 	}
 
-	.col:nth-of-type(1) .xmas-narrow-3::before, 
-	.col:nth-of-type(3) .xmas-narrow-3::after {
-		top: 										-49px;
-    	height: 									120px;
+	.xmas-corner::after {
+		left:                                                     unset;
+		right:                                                    -70px;
 	}
-	
-	.col:nth-of-type(1) .xmas-narrow-3::after, 
+
+	.xmas-narrow-1::before {
+  		top:                                                    -50px;
+  		height:                                                 126px;
+	}
+
+	.col:nth-of-type(2) .xmas-narrow-3::before {
+		top:                                                      -50px;
+		height:                                                   107px;
+	}
+
+	.col:nth-of-type(1) .xmas-narrow-3::before,
+	.col:nth-of-type(3) .xmas-narrow-3::after {
+		top:                                                      -49px;
+    	height:                                                120px;
+	}
+
+	.col:nth-of-type(1) .xmas-narrow-3::after,
 	.col:nth-of-type(3) .xmas-narrow-3::before {
-		top: 										-45px;
-		height: 									130px;
-	}	
-		
+		top:                                                      -45px;
+		height:                                                   130px;
+	}
+
 	.xmas-wide::before {
-		height: 									100px;
-		top: 										-60px;
-		left: 										-5%;
+		height:                                                   100px;
+		top:                                                      -60px;
+		left:                                                     -5%;
 	}
 
 	.xmas-wide::after {
-		height: 									100px;
-		top: 										-60px;
-		right: 										-5%;
+		height:                                                   100px;
+		top:                                                      -60px;
+		right:                                                    -5%;
 	}
 
 	.xmas-wide-10::before {
-		left: 										0%;
+		left:                                                     0%;
 	}
 
 	.xmas-wide-10::after {
-		right: 										0%;
+		right:                                                    0%;
 	}
 
 	.xmas-wide-15::before {
-		left: 										5%;
+		left:                                                     5%;
 	}
 
 	.xmas-wide-15::after {
-		right: 										5%;
-	}	
-	
+		right:                                                    5%;
+	}
+
 	.xmas-wide-alt::before {
-	  	top: 										-62px;
+	  	top:                                                    -62px;
 	}
 }
 
@@ -398,5 +401,7 @@
 }
 
 a.wp-google-badge-btn {
-	z-index: 									1;
+	z-index:                                                   1;
+}
+
 }

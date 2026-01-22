@@ -442,6 +442,8 @@ a.page-numbers:visited {
 	cursor:                                                    pointer;
 	text-decoration:                                           none;
 	padding:                                                   var(--button-padding);
+	text-align:                                                center;
+	align-content:                                             center;
 	text-shadow:                                               var(--button-text-shadow);
   	outline:                                                 var(--button-outline);
   	filter:                                                  var(--button-filter);

@@ -1,5 +1,5 @@
 @charset "utf-8";
-@layer normalize, parent, login, grid, navigation, testimonials, carousel, events, timeline, lightbox, video, posts, woocommerce, jobsite_geo, pedigree, accordion, reviews, slider, stripe, cue, profiles, products_hvac, holiday, forms, hours, fancy, ribbons, search, translator, carte_du_jour;
+@layer plugins, normalize, parent, login, grid, navigation, testimonials, carousel, events, timeline, lightbox, video, posts, woocommerce, jobsite_geo, pedigree, accordion, reviews, slider, stripe, cue, profiles, products_hvac, holiday, forms, hours, fancy, ribbons, search, translator, carte_du_jour;
 
 @layer normalize {
 

@@ -21,7 +21,7 @@ add_shortcode( 'get-cart', 'battleplan_getCartNum' );
 function battleplan_getCartNum($atts, $content = null ) {
 	if ( !is_admin() && !is_wplogin() ) :
 		global $woocommerce; $cartQty = $woocommerce->cart->get_cart_contents_count();
-		$printCart = "[get-icon type='cart' link='/cart/' sr='shopping cart'" . ($cartQty > 0 ? " after='".$cartQty."']" : "]"); 
+		$printCart = "[get-icon type='cart' link='/cart/' sr='shopping cart'" . ($cartQty > 0 ? " after='".$cartQty."']" : "]");
 		return do_shortcode($printCart);
 	endif;
 }
@@ -37,11 +37,14 @@ add_filter('woocommerce_product_single_add_to_cart_text', function($text){
 
 add_filter('woocommerce_add_to_cart_fragments', function($frags){
 	$qty = WC()->cart ? WC()->cart->get_cart_contents_count() : 0;
+
 	$html = '<a class="header-cart-link" href="'.esc_url(wc_get_cart_url()).'">'
-		.'[get-icon type="cart"]'.($qty>0 ? '&nbsp;&nbsp;'.$qty : '')
-		.'</a>';
+		. do_shortcode('[get-icon type="cart"]')
+		. ($qty > 0 ? '&nbsp;&nbsp;'.(int)$qty : '')
+		. '</a>';
+
 	$frags['a.header-cart-link'] = $html;
-	return do_shortcode($frags);
+	return $frags; // MUST return array
 });
 
 
@@ -82,11 +85,11 @@ function battleplan_disable_blocks() {
 
 // Add nonce to Stripe payment form
 add_filter('final_output', function($content) {
-	if ( !is_admin() && defined('_BP_NONCE') ) : 
-		$content = str_replace("src='https://js.stripe.com","nonce='"._BP_NONCE."' src='https://js.stripe.com", $content); 
+	if ( !is_admin() && defined('_BP_NONCE') ) :
+		$content = str_replace("src='https://js.stripe.com","nonce='"._BP_NONCE."' src='https://js.stripe.com", $content);
 	endif;
 	return $content;
-}); 
+});
 
 // Add theme support for Woocommerce photo gallery
 add_action( 'after_setup_theme', 'battleplan_woo_gallery_support' );
@@ -115,14 +118,14 @@ function battleplan_set_alt_text_on_images() {
 		if ( get_post_meta( $attachment_id, '_wp_attachment_image_alt', true ) == "" ) :
 			update_post_meta( $attachment_id, '_wp_attachment_image_alt', get_the_title() );
 		endif;
-	endif;		
+	endif;
 }
 
 // Fix issue with products containing more than 20 variations
 add_filter( 'woocommerce_ajax_variation_threshold', 'battleplan_ajax_variation_threshold', 100, 2 );
 function battleplan_ajax_variation_threshold( $qty, $product ) { return 100; }
 
-// Hide other shipping methods if Free Shipping is available 
+// Hide other shipping methods if Free Shipping is available
 add_filter( 'woocommerce_package_rates', 'battleplan_hide_shipping_when_free_is_available', 100 );
 function battleplan_hide_shipping_when_free_is_available( $rates ) {
 	$free = array();
@@ -144,15 +147,15 @@ function battleplan_change_breadcrumb_separator( $defaults ) {
 
 // Change number of products per row to 5
 add_filter('loop_shop_columns', 'loop_columns', 990);
-if (!function_exists('loop_columns')) { function loop_columns() { return 5; }} 
+if (!function_exists('loop_columns')) { function loop_columns() { return 5; }}
 
-// Change number of products per page to 25 
+// Change number of products per page to 25
 add_filter('loop_shop_per_page', 'battleplan_loop_shop_per_page', 990, 0);
 function battleplan_loop_shop_per_page() { return 25; };
 
 // Change number of related products to 6
 add_filter( 'woocommerce_output_related_products_args', 'battleplan_related_products_args', 990 );
-function battleplan_related_products_args( $args ) { 
+function battleplan_related_products_args( $args ) {
 	$args['posts_per_page'] = 6; // 6 total related products
 	$args['columns'] = 6; // arranged in 6 columns
 	return $args;

@@ -19,16 +19,6 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="profile" href="https://gmpg.org/xfn/11">
 
-
-
-<link
-rel="preload"
-href="<?php echo get_stylesheet_directory_uri(); ?>/fonts/aldivaro_rounded.woff2"
-as="font"
-type="font/woff2"
-crossorigin
->
-
 	<script nonce="<?php echo _BP_NONCE; ?>">
 		const startTime = Date.now();
 		const site_bg = '<?php echo battleplan_fetch_background_image() ?>';

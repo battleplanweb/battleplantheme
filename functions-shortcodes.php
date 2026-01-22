@@ -1421,7 +1421,7 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 			$imgLink = $link == 'desc' || $link == 'description' ? get_the_content(get_the_ID()) : $image[0];
 			$getImage = "";
 			if ( $link != "false" && $imgLink != '' ) $getImage .= '<a href="'.esc_url($imgLink).'">';
-			$getImage .= '<img class="logo-img '.$tags[0].'-img" loading="'.$lazy.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" alt="'.readMeta(get_the_ID(), '_wp_attachment_image_alt', true).'">';
+			$getImage .= '<img class="logo-img '.$tags[0].'-img" loading="'.$lazy.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" alt="'.readMeta(get_the_ID(), '_wp_attachment_image_alt', true).'">';
 			if ( $link != "false" && $imgLink != '' ) $getImage .= '</a>';
 			$imageArray[] = '<div>'.$getImage.'</div>';
 		endwhile;
@@ -1437,7 +1437,7 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 			list($width, $height) = getimagesize($imagePath);
 
 			$getImage = "";
-			$getImage .= '<img class="logo-img '.$package.'-logo-img" loading="'.$lazy.'" src="'.$imageURL.'" width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" alt="'.$alt.'">';
+			$getImage .= '<img class="logo-img '.$tags[0].'-img" loading="'.$lazy.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" alt="'.readMeta(get_the_ID(), '_wp_attachment_image_alt', true).'">';
 			$imageArray[] = '<div>'.$getImage.'</div>';
 		endfor;
 	endif;
@@ -1517,7 +1517,7 @@ function battleplan_loadImagesByTag( $atts, $content = null ) {
 add_shortcode( 'get-gallery', 'battleplan_setUpWPGallery' );
 function battleplan_setUpWPGallery( $atts, $content = null ) {
 	wp_enqueue_script( 'battleplan-script-lightbox', get_template_directory_uri().'/js/script-lightbox.js', array(), _BP_VERSION, false );
-	wp_enqueue_style( 'battleplan-lightbox', get_template_directory_uri()."/style-lightbox.css", [], _BP_VERSION, 'print' );
+	wp_enqueue_style( 'battleplan-lightbox', get_template_directory_uri()."/style-lightbox.css", [], _BP_VERSION );
 
 	$a = shortcode_atts( array( 'name'=>'', 'size'=>'thumbnail', 'id'=>'', 'columns'=>'5', 'max'=>'-1', 'offset'=>'0', 'caption'=>'false', 'start'=>'', 'end'=>'', 'order_by'=>'menu_order', 'order'=>'ASC', 'tags'=>'', 'field'=>'', 'operator'=>'any', 'class'=>'', 'include'=>'', 'exclude'=>'', 'unique'=>'true', 'value'=>'', 'type'=>'', 'compare'=>'' ), $atts );
 	$id = esc_attr($a['id']);

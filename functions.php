@@ -1277,6 +1277,11 @@ add_action( 'wp_enqueue_scripts', 'battleplan_header_styles', 9998 );
 function battleplan_header_styles() {
 	$customer_info = customer_info();
 
+
+	//wp_dequeue_style('woocommerce-layout');
+	//wp_dequeue_style('woocommerce-smallscreen');
+	//wp_dequeue_style('woocommerce-general');
+
 	wp_enqueue_style( 'battleplan-normalize-style', get_template_directory_uri()."/style-normalize.css", [], _BP_VERSION, 'print' );
 	wp_enqueue_style( 'battleplan-parent-style', get_template_directory_uri()."/style.css", [], _BP_VERSION, 'all' );
 	wp_enqueue_style( 'battleplan-style-grid', get_template_directory_uri()."/style-grid.css", [], _BP_VERSION, 'print' );
@@ -1305,20 +1310,35 @@ function battleplan_header_styles() {
 	wp_enqueue_style( 'battleplan-forms', get_template_directory_uri()."/style-forms.css", [], _BP_VERSION, 'print' );
 	wp_enqueue_style( 'battleplan-style', get_stylesheet_directory_uri()."/style-site.css", [], _BP_VERSION, 'print' );
 }
+
+// Delay loading and sequencing of non-critical stylesheets
 add_filter('style_loader_tag', function ($html, $handle) {
-	$deferred = [
+
+	$plugin_styles = [
+			'woocommerce-layout',
+			'woocommerce-general',
+			'woocommerce-smallscreen'
+		];
+
+	$core_styles = [
 		'battleplan-normalize-style',
 		//'battleplan-parent-style',
 		'battleplan-testimonials',
 		'battleplan-style-navigation',
 		'battleplan-style-grid',
+		'battleplan-woocommerce',
 		'battleplan-forms',
 		'battleplan-carousel',
+		'battleplan-logo-slider',
 		'battleplan-google-reviews',
 		'battleplan-style'
 	];
 
-	if ( in_array($handle, $deferred, true) ) {
+	if (in_array($handle, $plugin_styles, true)) {
+		$html = str_replace( '<link ', '<link data-layer="plugins" ', $html );
+	}
+
+	if ( in_array($handle, $core_styles, true) ) {
 		$html = str_replace('<link ', '<link data-bp-defer="1" ', $html);
 	}
 
@@ -1357,6 +1377,23 @@ add_action('wp_head', function () { ?>
 })();
 </script>
 <?php }, 1);
+
+add_action('wp_footer', function () {
+	?>
+	<script>
+	document.querySelectorAll('link[data-layer="plugins"]').forEach(link => {
+		fetch(link.href)
+			.then(r => r.text())
+			.then(css => {
+				const style = document.createElement('style');
+				style.textContent = `@layer plugins { ${css} }`;
+				document.head.appendChild(style);
+				link.remove();
+			});
+	});
+	</script>
+	<?php
+});
 
 
 
@@ -2037,8 +2074,8 @@ function battleplan_getGoogleRating() {
 
 					if ( $googleInfo[$placeID]['google-rating'] >= 4.7) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo[$placeID]['google-rating']?? 0.0, 1, '.', ',').' Stars</span>[get-icon type="star"][get-icon type="star"][get-icon type="star"][get-icon type="star"][get-icon type="star"]</span>';
 					if ( $googleInfo[$placeID]['google-rating'] >= 4.2 && $googleInfo[$placeID]['google-rating'] <= 4.6 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo[$placeID]['google-rating']?? 0.0, 1, '.', ',').' Stars</span>[get-icon type="star"][get-icon type="star"][get-icon type="star"][get-icon type="star"][get-icon type="star-half"]</span>';
-					if ( $googleInfo[$placeID]['google-rating'] >= 3.7 && $googleInfo[$placeID]['google-rating'] <= 4.1 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo[$placeID]['google-rating']?? 0.0, 1, '.', ',').' Stars</span>[get-icon type="star"][get-icon type="star"][get-icon type="star"][get-icon type="star"][get-icon type="star-o"]</i></span>';
-					if ( $googleInfo[$placeID]['google-rating'] >= 3.2 && $googleInfo[$placeID]['google-rating'] <= 3.6 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo[$placeID]['google-rating']?? 0.0, 1, '.', ',').' Stars</span>[get-icon type="star"][get-icon type="star"][get-icon type="star"][get-icon type="star-half"][get-icon type="star-o"]</span>';
+					if ( $googleInfo[$placeID]['google-rating'] >= 3.7 && $googleInfo[$placeID]['google-rating'] <= 4.1 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo[$placeID]['google-rating']?? 0.0, 1, '.', ',').' Stars</span>[get-icon type="star"][get-icon type="star"][get-icon type="star"][get-icon type="star"][get-icon type="star-empty"]</i></span>';
+					if ( $googleInfo[$placeID]['google-rating'] >= 3.2 && $googleInfo[$placeID]['google-rating'] <= 3.6 ) $buildPanel .= '<span class="rating" aria-hidden="true"><span class="sr-only">Rated '.number_format($googleInfo[$placeID]['google-rating']?? 0.0, 1, '.', ',').' Stars</span>[get-icon type="star"][get-icon type="star"][get-icon type="star"][get-icon type="star-half"][get-icon type="star-empty"]</span>';
 
 					$buildPanel .= '</div>';
 					$buildPanel .= '<div class="wp-google-total">Click to view our ';

@@ -1518,6 +1518,7 @@ form.addEventListener('wpcf7submit', function() {
 	// Animate single element (using CSS in site-style.css)
 	window.animateCSS = function (elementSel, delay = 0, offset = "100%", speed = 1000, easing = 'ease') {
 		const elementObj = getObjects(elementSel);
+		console.log('animateCSS found:', elementObj.length);
 		if (!elementObj.length) return;
 
 		elementObj.forEach(element => {

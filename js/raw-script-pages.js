@@ -1408,9 +1408,12 @@ form.addEventListener('wpcf7submit', function() {
 		requestAnimationFrame(() => {
 			const rect = elementObj.getBoundingClientRect();
 			if (rect.top < window.innerHeight && rect.bottom > 0) {
-				setTimeout(() => {
-					beginAnimation(elementObj, animationName);
-				}, initDelay);
+				if (animationName !== false) {
+					setTimeout(() => beginAnimation(elementObj, animationName), initDelay);
+				} else {
+					elementObj.classList.remove('animation-queued');
+					elementObj.classList.add('animate', 'animation-complete');
+				}
 				observer.unobserve(elementObj);
 			}
 		});

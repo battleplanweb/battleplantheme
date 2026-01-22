@@ -1430,16 +1430,23 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 
 	if ( $package == "hvac" ) :
 		$addLogos = array( "amana", "american-standard", "bosch", "bryant", "carrier", "comfortmaker", "goodman", "heil", "honeywell", "lennox", "rheem", "ruud", "samsung", "tempstar", "trane", "york" );
-		for ( $i=0; $i < count($addLogos); $i++ ) :
-			$alt = "We service ".ucwords(strtolower(str_replace(" ", "-", $addLogos[$i])))." air conditioners, heaters and other HVAC equipment.";
-			$imageURL = "/wp-content/themes/battleplantheme/common/hvac-".$addLogos[$i]."/".$addLogos[$i]."-sidebar-logo.webp";
-			$imagePath = get_template_directory()."/common/hvac-".$addLogos[$i]."/".$addLogos[$i]."-sidebar-logo.webp";
+		for ( $i = 0; $i < count($addLogos); $i++ ) :
+
+			$alt = "We service ".ucwords(str_replace('-', ' ', $addLogos[$i]))." air conditioners, heaters and other HVAC equipment.";
+
+			$imageURL  = get_template_directory_uri()."/common/hvac-{$addLogos[$i]}/{$addLogos[$i]}-sidebar-logo.webp";
+			$imagePath = get_template_directory()."/common/hvac-{$addLogos[$i]}/{$addLogos[$i]}-sidebar-logo.webp";
+
+			if ( ! file_exists($imagePath) ) continue;
+
 			list($width, $height) = getimagesize($imagePath);
 
-			$getImage = "";
-			$getImage .= '<img class="logo-img '.$tags[0].'-img" loading="'.$lazy.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" alt="'.readMeta(get_the_ID(), '_wp_attachment_image_alt', true).'">';
+			$getImage  = '<img class="logo-img hvac-logo-img" loading="'.$lazy.'" src="'.esc_url($imageURL).'" width="'.$width.'" height="'.$height.'" alt="'.esc_attr($alt).'">';
+
 			$imageArray[] = '<div>'.$getImage.'</div>';
+
 		endfor;
+
 	endif;
 
 	if ( esc_attr($a['shuffle']) != "false" ) shuffle($imageArray);

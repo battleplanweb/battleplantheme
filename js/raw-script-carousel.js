@@ -246,8 +246,12 @@ document.addEventListener("DOMContentLoaded", function () {
 		   Init
 		-------------------------------------------------- */
 
+		if (!slides.length) return;
+
 		slides.forEach(slide => slide.classList.remove('active'));
-		currentSlide = start;
+
+		currentSlide = start >= 0 && start < slides.length ? start : 0;
+
 		slides[currentSlide].classList.add('active');
 		updateIndicators();
 		startAutoPlay();

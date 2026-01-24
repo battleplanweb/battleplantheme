@@ -728,6 +728,10 @@ section.section .flex.nested .flex,
 	position:                                                  fixed !important;
 	width:                                                     100%;
 	top:                                                       0;
+	z-index:                                                   99998 !important;
+}
+
+.top-strip.stuck {
 	z-index:                                                   99999 !important;
 }
 
@@ -1291,8 +1295,7 @@ figure.col-inner {
 	.grid-8e .col-row-of-pics:nth-child(1),
 	.grid-8e li:not(.product):nth-child(1),
 	.grid-7e .col-row-of-pics:nth-last-child(1),
-	.grid-7e li:not(.product):nth-last-child(1),
-	{
+	.grid-7e li:not(.product):nth-last-child(1) {
 	display:                                                   none !important;
 }
 

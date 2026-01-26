@@ -92,16 +92,20 @@ window.addCSS = function (rule) {
 
 // Set, read & delete cookies
 window.setCookie = function (name, value, days = 365) {
-	const expires = new Date(Date.now() + days * 864e5).toUTCString();
-	const secure = location.protocol === 'https:' ? '; Secure' : '';
+	let cookie = name + '=' + encodeURIComponent(value) + '; path=/; SameSite=Strict';
 
-	document.cookie =
-		name + '=' + encodeURIComponent(value) +
-		'; expires=' + expires +
-		'; path=/' +
-		'; SameSite=Strict' +
-		secure;
+	if (days !== null && days !== undefined && days !== '') {
+		const expires = new Date(Date.now() + days * 864e5).toUTCString();
+		cookie += '; expires=' + expires;
+	}
+
+	if (location.protocol === 'https:') {
+		cookie += '; Secure';
+	}
+
+	document.cookie = cookie;
 };
+
 
 window.getCookie = function (cname) {
 	const name = cname + "=";

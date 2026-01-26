@@ -120,6 +120,10 @@ body.using-mouse .block-accordion.tab-focus {
 	clear:                                                     both;
 }
 
+.icon.email + .icon.email {
+	display: none !important; /* strange double email icon problem */
+}
+
 /* Elements
 --------------------------------------------- */
 hr {

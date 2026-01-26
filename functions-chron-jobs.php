@@ -153,11 +153,20 @@ $due       	= time() >= $next;
 
 // Perform action
 if ( $forceChron || $staleDays || ( _IS_BOT && !_IS_SERP_BOT && $due )) {
+
+	if (get_transient('bp_chron_running')) {
+		return;
+	}
+
+	set_transient('bp_chron_running', 1, 2 * HOUR_IN_SECONDS);
+
 	delete_option('bp_force_chron');
 	update_option('bp_chron_time', time());
 	update_option('bp_chron_next', time() + rand(40000, 70000));
 
 	processChron($forceChron);
+
+	delete_transient('bp_chron_running');
 }
 
 function processChron($forceChron) {
@@ -647,6 +656,13 @@ function processChron($forceChron) {
 		update_option( 'wpseo_social', $wpSEOSocial );
 	}
 
+// 12) Jobsite GEO - polling jobs
+	$jobsite = get_site_option('jobsite_geo');	
+	if ($jobsite && ($jobsite['fsm_brand'] ?? '') == 'Company Cam' && function_exists('bp_run_companycam_sync')) {
+			bp_run_companycam_sync();
+	}
+
+	
 // Basic Settings
 	$update_menu_order = array ('site-header'=>100, 'widgets'=>200, 'office-hours'=>700, 'hours'=>700, 'coupon'=>700, 'site-message'=>800, 'site-footer'=>900);
 

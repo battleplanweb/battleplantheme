@@ -66,7 +66,7 @@ get_header(); ?>
 				$sexBox = esc_attr(get_field( "sex" )) !== 'legacy' ? 'sex-'.strtolower(esc_attr(get_field( "sex" ))) : 'award';
 				$sexBox = '<div class="sex-box">[get-icon type="'.$sexBox.'"]</div>';
 
-				$buildArchive .= do_shortcode('[col class="'.$classes.'"]'.$sexBox.'[build-archive type="'.get_post_type().'" show_thumb="'.$showThumb.'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" accordion="'.$accordion.'" add_info="" no_pic="'.$noPic.'"][/col]');
+				$buildArchive .= do_shortcode('[col name="'.sanitize_title(get_the_title()).'" class="'.$classes.'"]'.$sexBox.'[build-archive type="'.get_post_type().'" show_thumb="'.$showThumb.'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" accordion="'.$accordion.'" add_info="" no_pic="'.$noPic.'"][/col]');
 
 			endwhile;
 

@@ -1,13 +1,41 @@
 <!doctype html>
 <?php
-	$nonce = _BP_NONCE;
-	if ( get_option('disable-content-security-policy') !== 'true' ) :
-		header( "Content-Security-Policy: script-src 'nonce-{$nonce}' 'strict-dynamic' 'unsafe-eval'; object-src 'none'; base-uri 'none'; block-all-mixed-content" );
-		header( "Strict-Transport-Security: max-age=63072000; includeSubDomains; preload" );
-		header( "X-Frame-Options: SAMEORIGIN" );
-		header( "X-Content-Type-Options: nosniff" );
-		header( "Referrer-Policy: strict-origin-when-cross-origin" );
-	endif;
+	add_action('send_headers', function () {
+		$nonce = _BP_NONCE;
+
+		header(
+			"Content-Security-Policy: " . "default-src 'self'; " .
+
+			// Scripts: nonce + strict-dynamic + fallback for WP/CF
+			"script-src " .
+			"'self' " .
+			"'nonce-$nonce' " .
+			"'strict-dynamic' " .
+			"https://cdn.jsdelivr.net " .
+			"https://cdnjs.cloudflare.com " .
+			"https://*.cloudflare.com " .
+			"https://*.google.com " .
+			"https://*.gstatic.com " .
+			"'unsafe-eval'; " .
+
+			// Styles (WP still needs inline styles)
+			"style-src " .
+			"'self' " .
+			"'unsafe-inline' " .
+			"https://fonts.googleapis.com " .
+			"https://*.cloudflare.com; " .
+
+			// Fonts
+			"font-src " .
+			"'self' " .
+			"https://fonts.gstatic.com " .
+			"https://*.cloudflare.com; " .
+
+			// Everything else
+			"img-src " . "'self' data: blob: https:; " . "connect-src " . "'self' https:; " . "frame-src " . "'self' https:; " . "worker-src blob:; " . "media-src 'self' https:; " . "form-action 'self' https:; " . "base-uri 'self'; " . "frame-ancestors 'self';"
+		);
+	});
+
 ?>
 
 <html lang="en">

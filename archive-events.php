@@ -52,7 +52,7 @@ get_header(); ?>
 
 				$classes = 'col-archive col-'.get_post_type().' col-'.get_the_ID().' '.$addClass;
 
-				$buildArchive .= do_shortcode('[col class="'.$classes.'"][build-archive type="'.get_post_type().'" show_thumb="'.$showThumb.'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" accordion="'.$accordion.'" add_info="'.$buildMeta.'" no_pic="'.$noPic.'"][group]'.$buildMeta.'[/group][/col]');
+				$buildArchive .= do_shortcode('[col name="'.sanitize_title(get_the_title()).'" class="'.$classes.'"][build-archive type="'.get_post_type().'" show_thumb="'.$showThumb.'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" accordion="'.$accordion.'" add_info="'.$buildMeta.'" no_pic="'.$noPic.'"][group]'.$buildMeta.'[/group][/col]');
 			endwhile;
 
 		// Display Archive

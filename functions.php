@@ -1414,8 +1414,6 @@ add_action('wp_footer', function () {
 	<?php
 });
 
-
-
 add_filter('style_loader_tag', function ($html, $handle) {
 
 	if ( strpos($html, "onload=\"this.media='all'\"") !== false ) {
@@ -1424,8 +1422,6 @@ add_filter('style_loader_tag', function ($html, $handle) {
 
 	return $html;
 }, 11, 2);
-
-
 
 // Dequeue and deregister scripts that are not necessary or can be delayed to footer
 add_action('wp_enqueue_scripts', 'battleplan_dequeue_scripts', 9997);
@@ -1461,10 +1457,6 @@ function battleplan_dequeue_scripts() {
 		wp_dequeue_script('jquery-migrate'); wp_deregister_script('jquery-migrate');
 		wp_dequeue_script('underscore'); wp_deregister_script('underscore');
 	endif;
-
-// re-load in header
-	//wp_dequeue_script('contact-form-7-js'); wp_deregister_script('contact-form-7-js');
-	//wp_dequeue_script('swv-js'); wp_deregister_script('swv-js');
 }
 
 // Load scripts in header
@@ -1574,6 +1566,111 @@ function battleplan_add_data_attribute($tag, $handle, $src) {
 	    return $tag;
 	endif;
 }
+
+// Replace Cloudflare email obfuscation
+add_action('wp_footer', function () {
+?>
+<script nonce="<?php echo esc_attr(_BP_NONCE); ?>">
+	(function(){
+		function decodeCfEmail(hex){
+			if (!hex || hex.length < 4) return '';
+			var key = parseInt(hex.substr(0,2), 16);
+			var out = '';
+			for (var i = 2; i < hex.length; i += 2) {
+			out += String.fromCharCode(parseInt(hex.substr(i,2), 16) ^ key);
+			}
+			return out;
+		}
+
+		function fixNode(node){
+			if (!node || node.nodeType !== 1) return;
+
+			// Variant A/B: any element with data-cfemail (span OR a)
+			var el = node.matches && node.matches('[data-cfemail]') ? node : null;
+			if (!el && node.querySelectorAll) {
+			var list = node.querySelectorAll('[data-cfemail]');
+			for (var i=0;i<list.length;i++) fixNode(list[i]);
+			}
+
+			if (el) {
+			var hex = el.getAttribute('data-cfemail') || '';
+			var email = decodeCfEmail(hex);
+			if (!email) return;
+
+			// Replace visible text if it's a placeholder
+			if (el.classList && el.classList.contains('__cf_email__')) {
+				el.textContent = email;
+			}
+
+			// If it's inside a link, force mailto
+			var a1 = el.closest ? el.closest('a') : null;
+			if (a1) a1.setAttribute('href', 'mailto:' + email);
+
+			// If the element itself is the link
+			if (el.tagName === 'A') el.setAttribute('href', 'mailto:' + email);
+			}
+
+			// Variant C: link-protection href with #hash (even without data-cfemail)
+			if (node.tagName === 'A') {
+			var href = node.getAttribute('href') || '';
+			if (href.indexOf('/cdn-cgi/l/email-protection') === 0) {
+				var idx = href.indexOf('#');
+				if (idx !== -1) {
+				var email2 = decodeCfEmail(href.slice(idx+1));
+				if (email2) node.setAttribute('href', 'mailto:' + email2);
+				}
+			}
+			}
+		}
+
+		function scan(){
+			fixNode(document.documentElement);
+		}
+
+		// Run ASAP, and again when DOM is ready (covers defer/async edge cases)
+		scan();
+		if (document.readyState === 'loading') {
+			document.addEventListener('DOMContentLoaded', scan, { once:true });
+		}
+
+		// Intercept clicks as a failsafe (prevents CF protection page)
+		document.addEventListener('click', function(e){
+			var a = e.target && e.target.closest ? e.target.closest('a') : null;
+			if (!a) return;
+
+			var href = a.getAttribute('href') || '';
+			if (href.indexOf('/cdn-cgi/l/email-protection') !== 0) return;
+
+			// Try decode from hash first
+			var idx = href.indexOf('#');
+			var email = (idx !== -1) ? decodeCfEmail(href.slice(idx+1)) : '';
+
+			// Or decode from a nested/own data-cfemail
+			if (!email) {
+			var holder = a.matches('[data-cfemail]') ? a : a.querySelector('[data-cfemail]');
+			if (holder) email = decodeCfEmail(holder.getAttribute('data-cfemail') || '');
+			}
+
+			if (email) {
+			e.preventDefault();
+			window.location.href = 'mailto:' + email;
+			}
+		}, true);
+
+		// Optional: if something inserts/replaces nodes later (rare), keep fixing
+		if ('MutationObserver' in window) {
+			new MutationObserver(function(muts){
+			for (var i=0;i<muts.length;i++){
+				var m = muts[i];
+				if (m.addedNodes) for (var j=0;j<m.addedNodes.length;j++) fixNode(m.addedNodes[j]);
+			}
+			}).observe(document.documentElement, { childList:true, subtree:true });
+		}
+	})();
+</script>
+<?php
+}, 999);
+
 
 // Load and enqueue admin styles & scripts
 add_action( 'admin_enqueue_scripts', 'battleplan_admin_scripts' );

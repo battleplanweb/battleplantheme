@@ -79,7 +79,7 @@ get_header(); ?>
 				endif;
 
 				$setupCenter = '<div class="litter-x span-2"><h2>x</h2>'.do_shortcode('[btn link="'.esc_url(get_permalink($id)).'" ada="'.$name.'"]View[/btn]</div>');
-				$buildArchive .= do_shortcode('[col class="'.$classes.'"]'.$setupSire.$setupCenter.$setupDam.'[/col]');
+				$buildArchive .= do_shortcode('[col name="'.sanitize_title(get_the_title()).'" class="'.$classes.'"]'.$setupSire.$setupCenter.$setupDam.'[/col]');
 
 			endwhile;
 

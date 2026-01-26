@@ -112,7 +112,7 @@ get_header(); ?>
 
 				$classes = 'col-archive col-'.get_post_type().' col-'.get_the_ID().$addTags.$addClass;
 
-				$buildArchive .= do_shortcode('[col class="'.$classes.'"][build-archive type="'.get_post_type().'" show_thumb="'.$showThumb.'" size="'.$size.'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" meta_pos="'.$metaPos.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" accordion="'.$accordion.'" count_view="'.$countView.'" add_info="'.$addInfo.'" link="'.$link.'"][/col]');
+				$buildArchive .= do_shortcode('[col name="'.sanitize_title(get_the_title()).'" class="'.$classes.'"][build-archive type="'.get_post_type().'" show_thumb="'.$showThumb.'" size="'.$size.'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" meta_pos="'.$metaPos.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" accordion="'.$accordion.'" count_view="'.$countView.'" add_info="'.$addInfo.'" link="'.$link.'"][/col]');
 			endwhile;
 
 		// Build Tag List

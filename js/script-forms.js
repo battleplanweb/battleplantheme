@@ -1,1 +1,119 @@
-document.addEventListener("DOMContentLoaded",function(){"use strict";const a=getObject(".cf7-steps"),b=a?getObject("form",a):null;b&&function(a,b){const c=b.closest("article")||b.parentElement||document,d=getObject("#cf7LogoClip rect",c)||null,e=getObject(".cf7-progress__bar > span",c)||getObject(".cf7-progress__bar",c)||null,f=[...a.querySelectorAll(".cf7-step")],g=a=>a&&a.classList&&a.classList.contains("cf7-step-included"),h=a=>g(a.nextElementSibling)?a.nextElementSibling:null,j=(a,b)=>b?(a.removeAttribute("hidden"),a.style.display=""):(a.setAttribute("hidden",""),a.style.display="none"),k=(()=>{const a=f.map(a=>{const b=h(a),c=a.hasAttribute("data-progress")?a:b&&b.hasAttribute("data-progress")?b:null;if(!c)return null;const d=(c.getAttribute("data-progress")||"").trim(),e=d?parseFloat(d.replace("%","")):NaN;return Number.isFinite(e)&&0<=e?e:null}),b=a.filter(a=>null!=a),c=a.length-b.length;if(!b.length)return a.map(()=>100/a.length);const d=b.reduce((c,a)=>c+a,0),e=c?(100-d)/c:0;let g=a.map(a=>null==a?e:a);const i=g.reduce((c,a)=>c+a,0);return Number.isFinite(i)&&0!==i?g.map(a=>100*(a/i)):a.map(()=>100/a.length)})();let l=0,m=!1;const n=a=>{let b=0;for(let c=0;c<a;c++)b+=k[c]||0;return Math.max(0,Math.min(100,+b.toFixed(4)))};d&&(d.style.transformOrigin="left center",d.style.transition="transform 2s ease",d.style.transform="scaleX(1)",setTimeout(()=>d.style.transform="scaleX(0)",2e3));const o=(a=!1)=>{const b=a?100:m?n(l):0;d?d.style.transform=`scaleX(${b/100})`:null,e?e.style.width=b+"%":null},p=a=>{f.forEach((b,c)=>{const d=c===a;j(b,d);const e=h(b);e?j(e,d):null}),b.dataset.current=a;const c=f[a],d=h(c),e=d&&d.querySelector(".cf7-prev")||c.querySelector(".cf7-prev");e?e.disabled=0===a:null,o()},q=a=>{const b=f[a],c=h(b),d=[...b.querySelectorAll("input,select,textarea"),...(c?[...c.querySelectorAll("input,select,textarea")]:[])];let e=!0,g=null;return d.forEach(a=>{const b=!a.offsetParent;b||a.disabled?null:a.checkValidity()?null:(e=!1,g=g||a)}),!e&&g?g.reportValidity():null,e};a.addEventListener("click",a=>{a.target.classList.contains("cf7-next")&&(a.preventDefault(),q(l)&&(m=!0,l=Math.min(l+1,f.length-1),p(l)),animateScroll(".cf7-progress")),a.target.classList.contains("cf7-prev")&&(a.preventDefault(),l=Math.max(l-1,0),p(l),animateScroll(".cf7-progress"))}),a.addEventListener("submit",a=>{const b=f.length-1;if(l===b){if(!q(l))return void a.preventDefault();o(!0)}else a.preventDefault(),m=!0,l=Math.min(l+1,b),p(l)}),a.addEventListener("wpcf7mailsent",()=>{l=0,m=!1,p(l)}),p(0)}(b,a)});
+document.addEventListener("DOMContentLoaded", function () {	"use strict";
+														   
+// Raw Script: Forms (Multi-Step)														   
+										
+	const wrap = getObject('.cf7-steps');
+	const form = wrap ? getObject('form', wrap) : null;
+	if(!form) return;
+
+	initMultiStep(form, wrap);
+
+	function initMultiStep(form, wrap) {
+		const scope = wrap.closest('article') || wrap.parentElement || document;
+		const clipRect = getObject('#cf7LogoClip rect', scope) || null;
+		const barEl = getObject('.cf7-progress__bar > span', scope) || getObject('.cf7-progress__bar', scope) || null;
+
+		const steps = [...form.querySelectorAll('.cf7-step')];
+		const isIncluded = el => el && el.classList && el.classList.contains('cf7-step-included');
+		const nextInc = el => isIncluded(el.nextElementSibling) ? el.nextElementSibling : null;
+		const toggle = (el,on)=> on ? (el.removeAttribute('hidden'), el.style.display='') : (el.setAttribute('hidden',''), el.style.display='none');
+
+		// --- weights: read from step OR its included sibling; else equal split
+		const weights = (() => {
+			const raw = steps.map(s => {
+				const inc = nextInc(s);
+				const wEl = s.hasAttribute('data-progress') ? s : (inc && inc.hasAttribute('data-progress') ? inc : null);
+				if(!wEl) return null;
+				const str = (wEl.getAttribute('data-progress') || '').trim();
+				const n = str ? parseFloat(str.replace('%','')) : NaN;
+				return Number.isFinite(n) && n >= 0 ? n : null;
+			});
+
+			const specified = raw.filter(v=>v!=null), unspecifiedCount = raw.length - specified.length;
+			if(!specified.length) return raw.map(()=> 100/raw.length);
+
+			const sumSpecified = specified.reduce((a,b)=>a+b,0);
+			const fillEach = unspecifiedCount ? (100 - sumSpecified) / unspecifiedCount : 0;
+			let w = raw.map(v => v==null ? fillEach : v);
+
+			const total = w.reduce((a,b)=>a+b,0);
+			return (!Number.isFinite(total) || total===0) ? raw.map(()=>100/raw.length) : w.map(v=> (v/total)*100);
+		})();
+		
+		let i = 0, started = false;
+
+		const completedPct = idx => {
+			let s = 0; for(let n=0;n<idx;n++) s += weights[n] || 0;
+			return Math.max(0, Math.min(100, +s.toFixed(4)));
+		};
+
+		if (clipRect) {
+			clipRect.style.transformOrigin='left center';
+			clipRect.style.transition='transform 2s ease';
+			clipRect.style.transform='scaleX(1)';
+			setTimeout(()=> clipRect.style.transform='scaleX(0)', 2000);
+		}
+
+		const paint = (final=false) => {
+			const pct = final ? 100 : (started ? completedPct(i) : 0);
+			clipRect ? (clipRect.style.transform = `scaleX(${pct/100})`) : null;
+			barEl ? (barEl.style.width = pct + '%') : null;
+		};
+
+		const show = idx => {
+			steps.forEach((s,n)=> {
+				const on = n===idx;
+				toggle(s,on);
+				const inc = nextInc(s); inc ? toggle(inc,on) : null;
+			});
+			wrap.dataset.current = idx;
+
+			const base = steps[idx], inc = nextInc(base);
+			const prevBtn = (inc && inc.querySelector('.cf7-prev')) || base.querySelector('.cf7-prev');
+			prevBtn ? prevBtn.disabled = idx===0 : null;
+
+			paint();
+		};
+
+		const validateStep = idx => {
+			const base = steps[idx], inc = nextInc(base);
+			const fields = [...base.querySelectorAll('input,select,textarea'), ...(inc ? [...inc.querySelectorAll('input,select,textarea')] : [])];
+			let ok = true, firstBad = null;
+			fields.forEach(el=>{
+				const hidden = el.offsetParent ? false : true;
+				(hidden || el.disabled) ? null : (!el.checkValidity() ? (ok=false, firstBad = firstBad || el) : null);
+			});
+			!ok && firstBad ? firstBad.reportValidity() : null;
+			return ok;
+		};
+	
+		form.addEventListener('click', e => {
+			if(e.target.classList.contains('cf7-next')){
+				e.preventDefault();
+				if (validateStep(i)) { started = true; i = Math.min(i+1, steps.length-1); show(i); }
+				animateScroll('.cf7-progress');
+			}
+			if(e.target.classList.contains('cf7-prev')){
+				e.preventDefault();
+				i = Math.max(i-1, 0); show(i);
+				animateScroll('.cf7-progress');
+			}
+		});
+
+		form.addEventListener('submit', e=>{
+			const last = steps.length-1;
+			if (i===last){
+				if (!validateStep(i)){ e.preventDefault(); return; }
+				paint(true); 
+			} else {
+				e.preventDefault();
+				started = true;
+				i = Math.min(i+1,last); show(i);
+			}			
+		});
+
+		form.addEventListener('wpcf7mailsent', ()=> { i=0; started=false; show(i); });
+
+		show(0);
+	}
+});	

@@ -1,1 +1,286 @@
-@charset "utf-8";@layer posts{h3.archive-subheadline{font-size:40rem}.archive-intro{margin-top:var(--measure-base);margin-bottom:2em}.testimonials-intro{margin-bottom:4em}.link-archive{text-decoration:none}.sticky{display:block}.breadcrumbs{font-size:85%;margin-bottom:var(--measure-small);line-height:2}.single-products .entry-header .breadcrumbs{display:none}.archive-meta{font-size:90%;text-align:center;margin-top:-var(--measure-small)}.col-archive .archive-meta{margin-top:var(--measure-small)}.single-meta{font-size:85%;text-align:center;margin-top:var(--measure-small);margin-bottom:var(--measure-small)}.archive-meta span,.single-meta span{margin-left:10px;margin-right:10px}.archive-meta i.fa-calendar-alt,.single-meta i.fa-calendar-alt{margin-right:8px;transform:translateY(0)}.archive-meta i.fa-user,.single-meta i.fa-user{margin-left:8px;margin-right:-3px;transform:translateY(0)}.archive-meta i.fa-user{margin-right:4px}.archive-meta i.fa-comments,.single-meta i.fa-comments{margin-right:4px;transform:translateY(0)}.updated:not(.published){display:none}.entry-content{margin-top:var(--measure-base);margin-bottom:var(--measure-base)}.entry-footer .single-tags{margin-bottom:var(--measure-base)}.single-post h2.related{margin-top:1em;padding-top:1em;border-top:var(--accent-border)}.archive-header + .archive-tags{margin-top:var(--measure-base)}.tag-list a{display:inline-block;margin-left:10px;margin-right:10px}.tag-buttons{display:flex;flex-flow:row wrap}.tag-buttons a{flex:1 1 1;margin:8px;text-align:center}.tag-buttons a.button-blog{display:none}.archive-tags #tag-dropdown{display:block;width:400px;max-width:96%;margin:0 auto}.single.related h3{font-family:var(--font-text);font-size:calc(var(--font-size-text) * 1.1);font-weight:bold;text-transform:none}.social-share-buttons{text-align:center}.social-share-buttons .share-button{margin-left:8px;margin-right:8px}.place-ad{margin:1.5em auto 2em}#comments{margin-top:2em;padding-top:2em;border-top:1px solid var(--black-highest)}h2.comments-title,h3#reply-title{font-size:28rem}ul.comment-list,ul.comment-list ul.children{list-style:none;padding:0;margin:0}ul.comment-list > .comment{margin:4em 2%;border-bottom:1px solid var(--black-highest)}ul.comment-list ul.children .comment{margin:2em 0 2em 4%}ul.comment-list ul.children .comment:last-child{margin-bottom:4em}ul.comment-list .avatar{float:left;margin:0 10px 10px 0}ul.comment-list h3.comment-author{text-align:left !important;font-size:28rem}ul.comment-list .comment-meta{font-size:70%}ul.comment-list .comment-meta .comment-time{display:none}ul.comment-list p{margin-bottom:var(--measure-small)}ul.comment-list p a{word-wrap:break-word}ul.comment-list .comment-meta .comment-edit-link{float:right}ul.comment-list .reply a{font-size:80%}form#commentform{margin:var(--measure-base) auto;width:100%;max-width:500px}form#commentform p{text-align:center}form#commentform p.form-submit{margin-top:var(--measure-base)}h3#reply-title p.reply{margin-top:0.5em}#cancel-comment-reply-link{display:none}ul.comment-list #cancel-comment-reply-link{display:inline-block}@media (max-width:576px){.single-meta{display:inline-block;width:100%}.meta-date,.meta-author,.meta-comments{display:block;text-align:left}.meta-author i.fa{margin-left:0}.product-links .product-link-cats{text-align:center}.product-links .product-link-cats a{display:block}}}
+@charset "utf-8";
+
+/*--------------------------------------------------------------
+>>> TABLE OF CONTENTS:
+----------------------------------------------------------------
+# Posts and Pages
+# Mobile Styles
+
+/*--------------------------------------------------------------
+# Posts and Pages
+--------------------------------------------------------------*/
+h3.archive-subheadline {
+	font-size:                                                 40rem;
+}
+
+.archive-intro {
+	margin-top:                                                var(--measure-base);
+	margin-bottom:                                             2em;
+}
+
+.testimonials-intro {
+	margin-bottom:                                             4em;
+}
+
+.link-archive {
+	text-decoration:                                           none;
+}
+
+.sticky {
+	display:                                                   block;
+}
+
+.breadcrumbs {
+	font-size:                                                 85%;
+	margin-bottom:                                             var(--measure-small);
+	line-height:                                               2;
+}
+
+.single-products .entry-header .breadcrumbs {
+	display:                                                   none;
+}
+
+.archive-meta {
+	font-size:                                                 90%;
+	text-align:                                                center;
+	margin-top:                                                -var(--measure-small);
+}
+
+.col-archive .archive-meta {
+	margin-top:                                                var(--measure-small);
+}
+
+.single-meta {
+	font-size:                                                 85%;
+	text-align:                                                center;
+	margin-top:                                                var(--measure-small);
+	margin-bottom:                                             var(--measure-small);
+}
+
+.archive-meta span,
+.single-meta span {
+	margin-left:                                               10px;
+	margin-right:                                              10px;
+}
+
+.archive-meta i.fa-calendar-alt,
+.single-meta i.fa-calendar-alt {
+	margin-right:                                              8px;
+	transform:                                                 translateY(0);
+}
+
+.archive-meta i.fa-user,
+.single-meta i.fa-user {
+	margin-left:                                               8px;
+	margin-right:                                              -3px;
+	transform:                                                 translateY(0);
+}
+
+.archive-meta i.fa-user {
+	margin-right:                                              4px;
+}
+
+.archive-meta i.fa-comments,
+.single-meta i.fa-comments {
+	margin-right:                                              4px;
+	transform:                                                 translateY(0);
+}
+
+.updated:not(.published) {
+	display:                                                   none;
+}
+
+.entry-content {
+	margin-top:                                                var(--measure-base);
+	margin-bottom:                                             var(--measure-base);
+}
+
+.entry-footer .single-tags {
+	margin-bottom:                                             var(--measure-base);
+}
+
+.single-post h2.related {
+	margin-top:                                                1em;
+	padding-top:                                               1em;
+	border-top:                                                var(--accent-border);
+}
+
+.archive-header + .archive-tags {
+	margin-top:                                                var(--measure-base);
+}
+
+.tag-list a {
+	display:                                                   inline-block;
+	margin-left:                                               10px;
+	margin-right:                                              10px;
+}
+
+.tag-buttons {
+	display:                                                   flex;
+	flex-flow:                                                 row wrap;
+}
+
+.tag-buttons a {
+	flex:                                                      1 1 1;
+	margin:                                                    8px;
+	text-align:                                                center;
+}
+
+.tag-buttons a.button-blog {
+	display:                                                   none;
+}
+
+.archive-tags #tag-dropdown {
+	display:                                                   block;
+	width:                                                     400px;
+	max-width:                                                 96%;
+	margin:                                                    0 auto;
+}
+
+.single.related h3 {
+	font-family:                                               var(--font-text);
+	font-size:                                                 calc(var(--font-size-text) * 1.1);
+	font-weight:                                               bold;
+	text-transform:                                            none;
+}
+
+.social-share-buttons {
+	text-align:                                                center;
+}
+
+.social-share-buttons .share-button {
+	margin-left:                                               8px;
+	margin-right:                                              8px;
+}
+
+.place-ad {
+	margin:                                                    1.5em auto 2em;
+}
+
+/* Comments
+--------------------------------------------- */
+#comments {
+	margin-top:                                                2em;
+	padding-top:                                               2em;
+	border-top:                                                1px solid var(--black-highest);
+}
+
+h2.comments-title,
+h3#reply-title {
+	font-size:                                                 28rem;
+}
+
+ul.comment-list,
+ul.comment-list ul.children {
+	list-style:                                                none;
+	padding:                                                   0;
+	margin:                                                    0;
+}
+
+ul.comment-list > .comment {
+	margin:                                                    4em 2%;
+	border-bottom:                                             1px solid var(--black-highest);
+}
+
+
+ul.comment-list ul.children .comment {
+
+	margin:                                                    2em 0 2em 4%;
+
+}
+
+ul.comment-list ul.children .comment:last-child {
+	margin-bottom:                                             4em;
+}
+
+ul.comment-list .avatar {
+	float:                                                     left;
+	margin:                                                    0 10px 10px 0;
+}
+
+ul.comment-list h3.comment-author {
+	text-align:                                                left !important;
+	font-size:                                                 28rem;
+}
+
+ul.comment-list .comment-meta {
+	font-size:                                                 70%;
+}
+
+ul.comment-list .comment-meta .comment-time {
+	display:                                                   none;
+}
+
+ul.comment-list p {
+	margin-bottom:                                             var(--measure-small);
+}
+
+ul.comment-list p a {
+	word-wrap:                                                 break-word;
+}
+
+ul.comment-list .comment-meta .comment-edit-link {
+	float:                                                     right;
+}
+
+ul.comment-list .reply a {
+	font-size:                                                 80%;
+}
+
+form#commentform {
+	margin:                                                    var(--measure-base) auto;
+	width:                                                     100%;
+	max-width:                                                 500px;
+}
+
+form#commentform p {
+	text-align:                                                center;
+}
+
+form#commentform p.form-submit {
+	margin-top:                                                var(--measure-base);
+}
+
+h3#reply-title p.reply {
+	margin-top:                                                0.5em;
+}
+
+#cancel-comment-reply-link {
+	display:                                                   none;
+}
+
+ul.comment-list #cancel-comment-reply-link {
+	display:                                                   inline-block;
+}
+
+
+/*--------------------------------------------------------------
+# Mobile Styles
+--------------------------------------------------------------*/
+
+/* 1: Phones (portrait) */
+@media (max-width: 576px) {
+	.single-meta {
+		display:                                                  inline-block;
+		width:                                                    100%;
+	}
+
+	.meta-date,
+	.meta-author,
+	.meta-comments {
+		display:                                                  block;
+		text-align:                                               left;
+	}
+
+	.meta-author i.fa {
+		margin-left:                                              0;
+	}
+
+	.product-links .product-link-cats {
+		text-align:                                               center;
+	}
+
+	.product-links .product-link-cats a {
+		display:                                                  block;
+	}
+}

@@ -1,6 +1,6 @@
 <?php
 /* Battle Plan Web Design Functions: Public (plug-ins)
- 
+
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
@@ -25,7 +25,7 @@
 			private $_nonce_name;
 			private $_fields;
 
-			public function __construct($meta_box_config) {				
+			public function __construct($meta_box_config) {
 				$defaults = array(
 					'context' => 'advanced',
 					'priority' => 'default'
@@ -48,8 +48,8 @@
 					(is_array($this->_meta_box['screen']) && in_array($typenow, $this->_meta_box['screen'])) ||
 					(is_string($this->_meta_box['screen']) && $typenow == $this->_meta_box['screen'])
 				) {
-					wp_enqueue_style(sprintf('%s-styles', self::BLOCK_NAMESPACE), $this->_path . '/style.css', array());
-			        wp_enqueue_script(sprintf('%s-scripts', self::BLOCK_NAMESPACE), $this->_path . '/script.js', array('jquery'));
+					wp_enqueue_style	(sprintf('%s-styles', self::BLOCK_NAMESPACE), $this->_path . '/style.css', array());
+			       	wp_enqueue_script(sprintf('%s-scripts', self::BLOCK_NAMESPACE), $this->_path . '/script.js', array('jquery'));
 				}
 			}
 
@@ -79,11 +79,11 @@
 				global $post_id, $post;
 
 				if (
-			        (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) || 
-			        (!current_user_can('edit_post', $post_id)) || 
-			        ((!isset($_POST[$this->_nonce_name]))) || 
+			        (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) ||
+			        (!current_user_can('edit_post', $post_id)) ||
+			        ((!isset($_POST[$this->_nonce_name]))) ||
 			        (!wp_verify_nonce($_POST[$this->_nonce_name], basename(__FILE__)))
-			    ) 
+			    )
 			    { return; }
 
 			    foreach($this->_fields as $field) {
@@ -117,9 +117,9 @@
 			public function get_block_element_class_with_namespace($element, $isField = true) {
 				if(isset($element)) {
 					return trim(sprintf(
-						'%s %s%s',  
-						($isField 
-							? (sprintf('%s__%s', self::BLOCK_NAMESPACE, 'field')) 
+						'%s %s%s',
+						($isField
+							? (sprintf('%s__%s', self::BLOCK_NAMESPACE, 'field'))
 							: ''
 						),
 						sprintf('%s__%s', self::BLOCK_NAMESPACE, ($isField ? 'field-' : '')),
@@ -153,7 +153,7 @@
 						esc_html( $field['label'] )
 					);
 				}
-				
+
 				if(isset($field['desc']) && $field['type'] != 'checkbox') $this->get_field_description($field['desc']);
 				if($field['type'] == 'image') $this->get_image_preview($field, $meta);
 			}
@@ -168,7 +168,7 @@
 					'<p class="%s">%s</p>',
 					esc_attr( $this->get_block_element_class_with_namespace('description', false) ),
 					esc_html( $desc )
-				);	
+				);
 			}
 
 			public function get_image_preview($field, $meta) {
@@ -179,7 +179,7 @@
 					esc_attr( sprintf('js-%s-image-preview', $field['id']) ),
 					esc_attr( sprintf('%s %s', $this->get_block_element_class_with_namespace('image-preview', false), empty($meta) ? 'is-hidden' : '') ),
 					esc_attr( $meta ),
-					esc_attr( '' )	
+					esc_attr( '' )
 				);
 			}
 
@@ -187,7 +187,7 @@
 				$field = array_merge(array('type' => 'text'), $args);
 				if(false == $repeater) {
 					$this->_fields[] = $field;
-				} else { return $field; }			
+				} else { return $field; }
 			}
 
 			public function addTextArea($args, $repeater = false) {
@@ -228,14 +228,14 @@
 
 			public function addRepeaterBlock($args) {
 				$field = array_merge(array(
-					'type' => 'repeater', 
+					'type' => 'repeater',
 					'single_label' => 'Item',
 					'is_sortable' => true
 				), $args);
 				$this->_fields[] = $field;
 			}
 
-			public function show_field_text($field, $meta) {				
+			public function show_field_text($field, $meta) {
 				$this->before_field($field);
 				echo sprintf(
 					'<input type="text" class="%1$s" id="%2$s" name="%2$s" value="%3$s">',
@@ -255,7 +255,7 @@
 					esc_html( $meta )
 				);
 				$this->after_field();
-			}	
+			}
 
 			public function show_field_checkbox($field, $meta) {
 				$this->before_field($field);
@@ -345,7 +345,7 @@
 			    $js_code = str_replace("\r", "", $js_code);
 			    $js_code = str_replace("'", "\"", $js_code);
 
-				echo '<script> 
+				echo '<script>
 						jQuery(document).ready(function($) {
 							var count = '.max(1, $count).'; // we use max() because we want count to be at least 1
 
@@ -365,7 +365,7 @@
 
 				echo sprintf(
 					'<div class="%s">',
-					esc_attr( $this->get_block_element_class_with_namespace('repeated', false) )	
+					esc_attr( $this->get_block_element_class_with_namespace('repeated', false) )
 				);
 
 				echo sprintf(
@@ -383,11 +383,11 @@
 								</a>
 							</li>
 						</ul>
-					</div>', 
+					</div>',
 					esc_attr( $this->get_element_class_with_namespace('repeated-header', false)  ),
 					esc_attr( $this->get_element_class_with_namespace('clearfix') ),
 					esc_attr( sprintf('%s %s %s', $this->get_block_element_class('repeated-header', 'title'), $this->get_element_class_with_namespace('col'), $this->get_element_class_with_namespace('col-6')) ),
-					esc_html( sprintf('%s '.($isTemplate ? '%s' : '%d'), $field['single_label'], ($isTemplate ? self::REPEATER_ITEM_NUMBER_PLACEHOLDER : $index + 1)) ), 
+					esc_html( sprintf('%s '.($isTemplate ? '%s' : '%d'), $field['single_label'], ($isTemplate ? self::REPEATER_ITEM_NUMBER_PLACEHOLDER : $index + 1)) ),
 					esc_attr( sprintf('%s %s %s', $this->get_block_element_class('repeated-header', 'nav'), $this->get_element_class_with_namespace('col'), $this->get_element_class_with_namespace('col-6')) ),
 					esc_attr( $this->get_block_element_class_with_namespace('repeater-button', false)  ),
 					esc_attr( $this->get_block_element_class_with_namespace('remove', false)  ),
@@ -401,9 +401,9 @@
 						$old_id = $child_field['id'];
 
 						$child_field['id'] = sprintf(
-							'%s[%s][%s]', 
-							$field['id'], 
-							($isTemplate ? self::REPEATER_INDEX_PLACEHOLDER : $index), 
+							'%s[%s][%s]',
+							$field['id'],
+							($isTemplate ? self::REPEATER_INDEX_PLACEHOLDER : $index),
 							$child_field['id']
 						);
 
@@ -415,7 +415,7 @@
 			}
  		}
 	endif;
-	
+
 /*--------------------------------------------------------------
 # User Switching
 --------------------------------------------------------------*/
@@ -431,7 +431,7 @@
 				if ( ! defined( 'USER_SWITCHING_OLDUSER_COOKIE' ) ) {
 					define( 'USER_SWITCHING_OLDUSER_COOKIE', 'wordpress_user_sw_olduser_' . COOKIEHASH );
 				}
-				
+
 
 	if ( !class_exists('user_switching') ) :
 
@@ -462,7 +462,7 @@
 				add_action( 'switch_back_user',                	array( $this, 'forget_woocommerce_session' ) );
 			}
 
-			public function action_plugins_loaded() {	 
+			public function action_plugins_loaded() {
 				if ( ! defined( 'USER_SWITCHING_COOKIE' ) ) {
 					define( 'USER_SWITCHING_COOKIE', 'wordpress_user_sw_' . COOKIEHASH );
 				}

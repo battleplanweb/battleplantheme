@@ -14,7 +14,7 @@
 --------------------------------------------------------------*/
 
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2026.35.4' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2026.36.0' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -24,15 +24,11 @@ if ( !defined('_PLACES_API') ) define ( '_PLACES_API', get_option('bp_places_key
 if ( !defined('_JOBSITE_API') ) define ( '_JOBSITE_API', get_option('bp_jobsite_key') );
 if ( !defined('_BREVO_API') ) define ( '_BREVO_API', get_option('bp_brevo_key') );
 
-$get_user = wp_get_current_user();
-$roles = $get_user->roles;
-if ( !defined('_USER_LOGIN') ) define( '_USER_LOGIN', $get_user->user_login );
-if ( !defined('_USER_ID') ) define( '_USER_ID', $get_user->ID );
-if ( !defined('_USER_ROLES') && $roles ) :
-	define( '_USER_ROLES', $roles );
-else:
-	if ( !defined('_USER_ROLES') ) define( '_USER_ROLES', array() );
-endif;
+$user = is_user_logged_in() ? wp_get_current_user() : null;
+
+define( '_USER_LOGIN', $user ? $user->user_login : 'anonymous' );
+define( '_USER_ID',    $user ? (int) $user->ID : 0 );
+define( '_USER_ROLES', $user ? (array) $user->roles : [] );
 
 if ( _USER_LOGIN == 'battleplanweb' ) :
 	//showMe(_USER_ROLES,true);
@@ -173,16 +169,6 @@ $currYear=date("Y");
 $startYear = $customer_info['year'] ? $customer_info['year'] : 0;
 $customer_info['copyright'] = $startYear == $currYear ? "© ".$currYear : "© ".$startYear."-".$currYear;
 $GLOBALS['do_not_repeat'] = array();
-
-
-
-
-	add_action('init', function () {
-		error_log('PHP sees user-display-loc: '.($_COOKIE['user-display-loc'] ?? 'NONE'));
-		error_log('PHP sees user-city: '.($_COOKIE['user-city'] ?? 'NONE'));
-		error_log('customer_info default-loc: '.($customer_info['default-loc'] ?? 'NONE'));
-
-	}, 1);
 
 /*--------------------------------------------------------------
 # Set up site based on user's location (if necessary)

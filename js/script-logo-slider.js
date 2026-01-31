@@ -1,8 +1,72 @@
 document.addEventListener("DOMContentLoaded", function () {
-    "use strict"; getObjects(".logo-slider").forEach(a => {
-        let b = getObject(".logo-row", a), c = a.getAttribute("data-direction"), d = a.getAttribute("data-speed"), e = getDeviceW() * (parseInt(a.getAttribute("data-maxw")) / 100), f = a.getAttribute("data-pause"), g = getDeviceW() * (parseInt(a.getAttribute("data-spacing")) / 100) / 2, h = 0, i = Date.now(), j = b.height; getObjects("div img", b).forEach(a => { a.classList.remove("unloaded"); let b = +a.getAttribute("width"); b > e && (b = e), a.style.maxWidth = e + "px", a.style.margin = "0 " + g + "px", h += b + 2 * g }), d = "fast" === d ? h / 250 : "slow" === d ? h / 100 : h / 10 / +d, h < getDeviceW() && (h = getDeviceW()), b.style.width = h + "px"; let k = `@keyframes logo_slider_${i} {
-    from { transform: translateX(${"reverse" === c ? "-100%" : "0%"}); }
-    to { transform: translateX(${"reverse" === c ? "0%" : "-100%"}); }
-}`, l = document.createElement("style"); l.type = "text/css", l.innerText = k, document.body.appendChild(l), b.style.animation = `logo_slider_${i} ${d}s ${"linear"} infinite`; let m = b.offsetWidth; const n = "normal" === c ? "after" : "before"; cloneDiv(b, b, n); let o = getObject(".logo-row:nth-of-type(2)", a); setStyles(o, { position: "absolute", top: "0", left: m + "px", height: j + "px" }), ("yes" === f || "true" === f) && (a.addEventListener("mouseover", () => { getObjects(".logo-row", a).forEach(a => { a.style.animationPlayState = "paused" }) }), a.addEventListener("mouseout", () => { getObjects(".logo-row", a).forEach(a => { a.style.animationPlayState = "running" }) }))
-    })
+	"use strict";
+
+	// Raw Script: Logo Slider
+
+	getObjects('.logo-slider').forEach(logoSlider => {
+		let logoRow = getObject('.logo-row', logoSlider),
+			direction = logoSlider.getAttribute('data-direction'),
+			speed = logoSlider.getAttribute('data-speed'),
+			maxW = getDeviceW() * (parseInt(logoSlider.getAttribute('data-maxw')) / 100),
+			pause = logoSlider.getAttribute('data-pause'),
+			spacing = (getDeviceW() * (parseInt(logoSlider.getAttribute('data-spacing')) / 100)) / 2,
+			easing = "linear",
+			containerW = 0,
+			slider_id = Date.now(),
+			logoRowH = logoRow.height;
+
+		getObjects('div img', logoRow).forEach(img => {
+			img.classList.remove('unloaded');
+			let imgW = Number(img.getAttribute('width'));
+			if (imgW > maxW) imgW = maxW;
+			img.style.maxWidth = maxW + "px";
+			img.style.margin = "0 " + spacing + "px";
+			containerW += imgW + (spacing * 2);
+		});
+
+		if (speed === "fast") {
+			speed = containerW / 250;
+		} else if (speed === "slow") {
+			speed = containerW / 100;
+		} else {
+			speed = (containerW / 10) / Number(speed);
+		}
+
+		if (containerW < getDeviceW()) containerW = getDeviceW();
+		logoRow.style.width = containerW + "px";
+
+		let keyframes = `@keyframes logo_slider_${slider_id} {
+			  from { transform: translateX(${direction === 'reverse' ? '-100%' : '0%'}); }
+			  to { transform: translateX(${direction === 'reverse' ? '0%' : '-100%'}); }
+		   }`;
+
+		let styleSheet = document.createElement("style");
+		styleSheet.type = "text/css";
+		styleSheet.innerText = keyframes;
+		document.body.appendChild(styleSheet);
+
+		logoRow.style.animation = `logo_slider_${slider_id} ${speed}s ${easing} infinite`;
+
+		let logoRowW = logoRow.offsetWidth;
+
+		const pos2nd = direction === "normal" ? 'after' : 'before';
+		cloneDiv(logoRow, logoRow, pos2nd);
+
+		let logo2ndRow = getObject('.logo-row:nth-of-type(2)', logoSlider);
+
+		setStyles(logo2ndRow, { position: 'absolute', top: '0', left: logoRowW + 'px', height: logoRowH + 'px' });
+
+		if (pause === "yes" || pause === "true") {
+			logoSlider.addEventListener('mouseover', () => {
+				getObjects('.logo-row', logoSlider).forEach(row => {
+					row.style.animationPlayState = 'paused';
+				});
+			});
+			logoSlider.addEventListener('mouseout', () => {
+				getObjects('.logo-row', logoSlider).forEach(row => {
+					row.style.animationPlayState = 'running';
+				});
+			});
+		}
+	});
 });

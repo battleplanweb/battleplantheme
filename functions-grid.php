@@ -258,7 +258,7 @@ function battleplan_buildImg( $atts, $content = null ) {
 // Video Block
 add_shortcode( 'vid', 'battleplan_buildVid' );
 function battleplan_buildVid( $atts, $content = null ) {
-	wp_enqueue_style( 'battleplan-video', get_template_directory_uri()."/style-video.css", [], _BP_VERSION, 'print' );
+	bp_inline_minified_css( get_template_directory() . '/style-video.css' );
 
 	$a = shortcode_atts( array( 'size'=>'100', 'mobile'=>'100', 'class'=>'', 'order'=>'', 'link'=>'', 'thumb'=>'', 'start'=>'', 'end'=>'', 'preload'=>'false', 'related'=>'false', 'fullscreen'=>'false', 'controls'=>'true', 'autoplay'=>'false', 'loop'=>'false', 'muted'=>'false', 'begin'=>'', 'track'=>'' ), $atts );
 	$size = convertSize(esc_attr($a['size']));
@@ -370,7 +370,8 @@ function battleplan_buildButton( $atts, $content = null ) {
 
 	$icon = esc_attr($a['icon']) === 'false' ? '' : esc_attr($a['icon']);
 	if ( $icon !== '' ) :
-		wp_enqueue_style( 'battleplan-fancy-btn', get_template_directory_uri()."/style-fancy-btn.css", [], _BP_VERSION, 'print' );
+		bp_inline_minified_css( get_template_directory() . '/style-fancy-btn.css' );
+
 		$class .= " fancy".$fancy;
 		$icon = $icon === 'true' ? 'chevron-right' : $icon;
 		$content = esc_attr($a['before']) === 'false'
@@ -414,8 +415,8 @@ function battleplan_buildButton( $atts, $content = null ) {
 // Accordion Block
 add_shortcode( 'accordion', 'battleplan_buildAccordion' );
 function battleplan_buildAccordion( $atts, $content = null ) {
-	wp_enqueue_script( 'battleplan-accordion', get_template_directory_uri().'/js/script-accordion.js', array(), _BP_VERSION, false );
-	wp_enqueue_style( 'battleplan-accordion', get_template_directory_uri()."/style-accordion.css", [], _BP_VERSION, 'print' );
+	bp_enqueue_script( 'battleplan-accordion', 'script-accordion' );
+	bp_inline_minified_css( get_template_directory() . '/style-accordion.css' );
 
 	$a = shortcode_atts( array( 'title'=>'', 'excerpt'=>'', 'class'=>'', 'active'=>'false', 'btn'=>'false', 'btn_collapse'=>'false', 'icon'=>'true', 'start'=>'', 'end'=>'', 'scroll'=>'true', 'track'=>'', 'multiple'=>'true' ), $atts );
 	$excerpt = esc_attr($a['excerpt']);

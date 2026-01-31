@@ -1,4 +1,4 @@
-<?php 
+<?php
 /* Battle Plan Web Design Functions: Custom Post Types
 
 /*--------------------------------------------------------------
@@ -55,7 +55,7 @@ function battleplan_registerPostTypes() {
 		'show_ui'=>true,
         'show_admin_column'=>true,
 	));
-	wp_insert_term( 'Auto Generated', 'gallery-type' );	
+	wp_insert_term( 'Auto Generated', 'gallery-type' );
 	wp_insert_term( 'Shortcode', 'gallery-type' );
 	register_taxonomy( 'gallery-tags', array( 'galleries' ), array(
 		'labels'=>array(
@@ -72,7 +72,7 @@ function battleplan_registerPostTypes() {
 			'singular_name'=>_x( 'Image Category', 'Taxonomy Singular Name', 'text_domain' ),
 		),
 		'hierarchical'=>true,
-		'show_ui'=>true,        
+		'show_ui'=>true,
 		'query_var'=>true,
         'rewrite'=>true,
         'show_admin_column'=>true,
@@ -85,7 +85,7 @@ function battleplan_registerPostTypes() {
 			'singular_name'=>_x( 'Image Tag', 'Taxonomy Singular Name', 'text_domain' ),
 		),
 		'hierarchical'=>false,
-		'show_ui'=>true,        
+		'show_ui'=>true,
 		'query_var'=>true,
         'rewrite'=>true,
         'show_admin_column'=>true,
@@ -108,7 +108,7 @@ function battleplan_registerPostTypes() {
 		'menu_icon'=>'dashicons-edit-page',
 		'has_archive'=>false,
 		'capability_type' => 'page',
-		
+
 		//'rewrite' => array('slug' => 'service-areas'), // This line changes the slug
 	));
 	register_post_type( 'elements', array (
@@ -124,7 +124,7 @@ function battleplan_registerPostTypes() {
 		'supports'=>array( 'title', 'editor' ),
 		'hierarchical'=>false,
 		'menu_position'=>20,
-		'menu_icon'=>'dashicons-block-default', 
+		'menu_icon'=>'dashicons-block-default',
 		'has_archive'=>false,
 		'capability_type'=>'page',
 	));
@@ -141,7 +141,7 @@ function battleplan_registerPostTypes() {
 		'supports'=>array( 'title', 'editor', 'thumbnail' ),
 		'hierarchical'=>false,
 		'menu_position'=>20,
-		'menu_icon'=>'dashicons-admin-site-alt3', 
+		'menu_icon'=>'dashicons-admin-site-alt3',
 		'has_archive'=>false,
 		'capability_type' => 'page',
 		'capabilities' => array(
@@ -171,7 +171,7 @@ function battleplan_add_cpt_to_main_query( $query ) {
 # Import Advanced Custom Fields
 --------------------------------------------------------------*/
 add_action('acf/init', 'battleplan_add_acf_fields');
-function battleplan_add_acf_fields() {	
+function battleplan_add_acf_fields() {
 	acf_add_local_field_group(array(
 		'key' => 'group_7df6f4843vdfg',
 		'title' => 'Reference',
@@ -197,7 +197,7 @@ function battleplan_add_acf_fields() {
 		'menu_order' => 1,
 		'position' => 'acf_after_title',
 		'style' => 'seamless',
-		'label_placement' => 'top', 
+		'label_placement' => 'top',
 		'active' => true,
 		'description' => '',
 	));

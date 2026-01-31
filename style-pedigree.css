@@ -1,1 +1,285 @@
-@charset "utf-8";@layer pedigree{.text-dogs h2{font-size:110%;font-style:italic;margin:-17px 0 5px}.widget-content .text-dogs h2{margin-top:0}.col-litters .text-dogs h2{margin-top:17px}.litter-x h2{font-size:24px;margin-top:280px;margin-bottom:30px}.text-dogs h3{font-size:85%}.text-dogs .block-button{margin-top:1em}span.X{font-size:75%;margin-left:13px;margin-right:13px}.widget-most-viewed-dogs .col{margin:20px 0}.widget-most-viewed-dogs .text-dogs h2{font-size:88%;margin:-2px 0 2px}.widget-most-viewed-dogs .text-dogs h3{font-size:75%}.col-archive .image-dogs{position:relative}.col-archive .image-dogs .sex-box{position:absolute;z-index:500;top:0}.col-archive .image-dogs .sex-box .icon{display:grid;justify-content:center;align-items:center;font-size:22px}div.dog-description{margin:30px 0 0}p.p-intro{display:none;text-align:center}p.p-intro.active{display:block}.dog-info h3,.dog-info h4{text-align:left}ul.dog-info,.dog-info ul{margin-left:0;padding:0}.dog-info li{list-style:none}span.label{display:inline-block;width:33%;max-width:120px;font-weight:bold;font-size:90%}span.label-full{width:100%;max-width:100%}.archive-litters .col-inner{gap:2em 0}.litter-details{width:60%;margin:3em auto;padding:16px 25px;text-align:left}.litter-details li{list-style:none}.litter-details h4{margin-top:0;margin-bottom:10px}.section-bracket .flex{gap:1em 0}.section-bracket{text-align:left;cursor:default}table.bracket-table{width:100%;border-spacing:0;border-collapse:separate;padding:0;font-size:18px}table.bracket-table,table.bracket-table tr,table.bracket-table td{border-style:none;border-width:1px;font-weight:bold}table.bracket-table td{text-align:left;padding:0 30px 0 10px}table.bracket-table td.bracket-fill,table.bracket-table td.bracket-bottom{border-left-style:solid}table.bracket-table td.bracket-top,table.bracket-table td.bracket-bottom{border-bottom-style:solid}table.bracket-table td.bracket-top:nth-of-type(3){padding-top:40px}button.active{color:var(--button-color-hover);background:var(--button-background-hover);border:var(--button-border-hover);border-top:var(--button-border-top-hover);border-right:var(--button-border-right-hover);border-bottom:var(--button-border-bottom-hover);border-left:var(--button-border-left-hover);border-radius:var(--button-border-radius-hover);box-shadow:var(--button-box-shadow-hover);text-decoration:none;padding:var(--button-padding-hover);text-shadow:var(--button-text-shadow-hover);outline:var(--button-outline-hover);filter:var(--button-filter-hover);text-transform:var(--button-text-transform-hover);font-variant:var(--button-font-variant-hover);letter-spacing:var(--button-letter-spacing-hover);transform:var(--button-transform-hover);transition:all var(--main-trans-speed) var(--main-trans-easing)}@media (max-width:1024px){.bracket-scroller{overflow-x:scroll}.bracket-scroller .bracket-table{width:150vw}}@media (max-width:860px){.text-dogs h3{font-size:95%}.litter-details{width:75%}}@media (max-width:576px){.archive-dogs .flex{gap:4em 4%}.archive-dogs .flex .col{grid-column:span 1}.col-archive .image-dogs .sex-box .icon{font-size:21px}.dog-info h3,.dog-info h4{text-align:center}.col-litters .col-inner{gap:1em 3%}.col-litters .text-dogs{grid-column:span 6}.col-litters .litter-x{grid-column:span 12;order:3}.col-litters .litter-x h2{display:none}.litter-details{width:100%}.bracket-scroller .bracket-table{width:300vw}}}
+@charset "utf-8";
+
+/*--------------------------------------------------------------
+>>> TABLE OF CONTENTS:
+----------------------------------------------------------------
+# Base
+	- Typography
+# Components
+	- Widgets
+	- Dogs & Litters
+# Mobile Styles
+
+
+/*--------------------------------------------------------------
+# Base
+--------------------------------------------------------------*/
+
+/* Typography
+--------------------------------------------- */
+.text-dogs h2 {
+	font-size:                                                 110%;
+	font-style:                                                italic;
+	margin:                                                    -17px 0 5px;
+}
+
+.widget-content .text-dogs h2 {
+	margin-top:                                                0;
+}
+
+.col-litters .text-dogs h2 {
+	margin-top:                                                17px;
+}
+
+.litter-x h2 {
+	font-size:                                                 24px;
+	margin-top:                                                280px;
+	margin-bottom:                                             30px;
+}
+
+.text-dogs h3 {
+	font-size:                                                 85%;
+}
+
+.text-dogs .block-button {
+	margin-top:                                                1em;
+}
+
+span.X {
+	font-size:                                                 75%;
+	margin-left:                                               13px;
+	margin-right:                                              13px;
+}
+
+/* Widgets
+--------------------------------------------- */
+
+.widget-most-viewed-dogs .col {
+	margin:                                                    20px 0;
+}
+
+.widget-most-viewed-dogs .text-dogs h2 {
+	font-size:                                                 88%;
+	margin:                                                    -2px 0 2px;
+}
+
+.widget-most-viewed-dogs .text-dogs h3 {
+	font-size:                                                 75%;
+}
+
+/* Dogs & Litters
+--------------------------------------------- */
+.col-archive .image-dogs {
+	position:                                                  relative;
+}
+
+.col-archive .image-dogs .sex-box {
+	position:                                                  absolute;
+	z-index:                                                   500;
+	top:                                                       0;
+}
+
+.col-archive .image-dogs .sex-box .icon {
+	display:                                                   grid;
+  	justify-content:                                         center;
+  	align-items:                                             center;
+	font-size:                                                 22px;
+}
+
+div.dog-description {
+	margin:                                                    30px 0 0;
+}
+
+p.p-intro {
+	display:                                                   none;
+	text-align:                                                center;
+}
+
+p.p-intro.active {
+	display:                                                   block;
+}
+
+.dog-info h3,
+.dog-info h4 {
+	text-align:                                                left;
+}
+
+ul.dog-info,
+.dog-info ul {
+	margin-left:                                               0;
+	padding:                                                   0;
+}
+
+.dog-info li {
+	list-style:                                                none;
+}
+
+span.label {
+	display:                                                   inline-block;
+	width:                                                     33%;
+	max-width:                                                 120px;
+	font-weight:                                               bold;
+	font-size:                                                 90%;
+}
+
+span.label-full {
+	width:                                                     100%;
+	max-width:                                                 100%;
+}
+
+.archive-litters .col-inner {
+	gap:                                                       2em 0;
+}
+
+.litter-details {
+	width:                                                     60%;
+	margin:                                                    3em auto;
+	padding:                                                   16px 25px;
+	text-align:                                                left;
+}
+
+.litter-details li {
+	list-style:                                                none;
+}
+
+.litter-details h4 {
+	margin-top:                                                0;
+	margin-bottom:                                             10px;
+}
+
+/* Bracket */
+.section-bracket .flex {
+	gap:                                                       1em 0;
+}
+
+.section-bracket {
+	text-align:                                                left;
+	cursor:                                                    default;
+}
+
+table.bracket-table {
+	width:                                                     100%;
+	border-spacing:                                            0;
+	border-collapse:                                           separate;
+	padding:                                                   0;
+	font-size:                                                 18px;
+}
+
+table.bracket-table, table.bracket-table tr, table.bracket-table td {
+	border-style:                                              none;
+	border-width:                                              1px;
+	font-weight:                                               bold;
+}
+
+table.bracket-table td {
+	text-align:                                                left;
+	padding:                                                   0 30px 0 10px;
+}
+
+table.bracket-table td.bracket-fill, table.bracket-table td.bracket-bottom{
+	border-left-style:                                         solid;
+}
+
+table.bracket-table td.bracket-top, table.bracket-table td.bracket-bottom {
+	border-bottom-style:                                       solid;
+}
+
+table.bracket-table td.bracket-top:nth-of-type(3) {
+	padding-top:                                               40px;
+}
+
+/* Buttons
+--------------------------------------------- */
+button.active {
+	color:                                                     var(--button-color-hover);
+	background:                                                var(--button-background-hover);
+	border:                                                    var(--button-border-hover);
+	border-top:                                                var(--button-border-top-hover);
+	border-right:                                              var(--button-border-right-hover);
+	border-bottom:                                             var(--button-border-bottom-hover);
+	border-left:                                               var(--button-border-left-hover);
+	border-radius:                                             var(--button-border-radius-hover);
+	box-shadow:                                                var(--button-box-shadow-hover);
+	text-decoration:                                           none;
+	padding:                                                   var(--button-padding-hover);
+	text-shadow:                                               var(--button-text-shadow-hover);
+  	outline:                                                 var(--button-outline-hover);
+  	filter:                                                  var(--button-filter-hover);
+  	text-transform:                                          var(--button-text-transform-hover);
+	font-variant:                                              var(--button-font-variant-hover);
+	letter-spacing:                                            var(--button-letter-spacing-hover);
+	transform:                                                 var(--button-transform-hover);
+	transition:                                                all var(--main-trans-speed) var(--main-trans-easing);
+}
+
+/*--------------------------------------------------------------
+# Mobile Styles
+--------------------------------------------------------------*/
+/* 3: Small Tablets (landscape) */
+@media (max-width: 1024px) {
+	/* Bracket */
+	.bracket-scroller {
+		overflow-x:                                               scroll;
+	}
+
+	.bracket-scroller .bracket-table {
+		width:                                                    150vw;
+	}
+}
+
+/* 2: Phones (landscape) + Tablets (portrait) */
+@media (max-width: 860px) {
+	.text-dogs h3 {
+		font-size:                                                95%;
+	}
+
+	.litter-details {
+		width:                                                    75%;
+	}
+}
+
+/* 1: Phones (portrait) */
+@media (max-width: 576px) {
+	.archive-dogs .flex {
+		gap:                                                      4em 4%;
+	}
+
+	.archive-dogs .flex .col {
+		grid-column:                                              span 1;
+	}
+
+	.col-archive .image-dogs .sex-box .icon {
+		font-size:                                                21px;
+	}
+
+	.dog-info h3,
+	.dog-info h4 {
+		text-align:                                               center;
+	}
+
+	.col-litters .col-inner {
+		gap:                                                      1em 3%;
+	}
+
+	.col-litters .text-dogs {
+		grid-column:                                              span 6;
+	}
+
+	.col-litters .litter-x {
+		grid-column:                                              span 12;
+		order:                                                    3;
+
+	}
+	.col-litters .litter-x h2 {
+		display:                                                  none;
+	}
+
+	.litter-details {
+		width:                                                    100%;
+	}
+
+	/* Bracket */
+	.bracket-scroller .bracket-table {
+		width:                                                    300vw;
+	}
+}

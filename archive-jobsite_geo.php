@@ -1,9 +1,8 @@
 <?php /* The template for displaying archive pages for "jobsite_geo" post type */
 
-wp_enqueue_style( 'battleplan-style-posts', get_template_directory_uri()."/style-posts.css", [], _BP_VERSION, 'print' );
-wp_enqueue_style( 'battleplan-style-posts', get_template_directory_uri()."/style-posts.css", [], _BP_VERSION, 'print' );
-wp_enqueue_style( 'battleplan-jobsite_geo', get_template_directory_uri()."/style-jobsite_geo.css", [], _BP_VERSION, 'print' );
-wp_enqueue_script( 'battleplan-script-jobsite_geo', get_template_directory_uri().'/js/script-jobsite_geo.js', array(), _BP_VERSION,  array( 'strategy' => 'defer', 'in_footer' => 'true' ) );
+bp_inline_minified_css( get_template_directory() . '/style-posts.css' );
+bp_inline_minified_css( get_template_directory() . '/style-jobsite_geo.css' );
+bp_enqueue_script( 'battleplan-script-jobsite_geo', 'script-jobsite_geo', [], ['strategy' => 'defer'] );
 
 get_header(); ?>
 
@@ -124,7 +123,7 @@ get_header(); ?>
 				}
 
 				if ( $review ) :
-					wp_enqueue_style( 'battleplan-testimonials', get_template_directory_uri()."/style-testimonials.css", [], _BP_VERSION, 'print' );
+					bp_inline_minified_css( get_template_directory() . '/style-testimonials.css' );
 
 					$meta = wp_get_attachment_metadata( get_post_thumbnail_id( $review ) );
 					$thumbW = $meta['sizes'][$size]['width'];

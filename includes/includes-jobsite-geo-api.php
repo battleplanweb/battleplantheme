@@ -16,6 +16,13 @@
 
 function bp_ingest_jobsite(array $job) {
 
+	static $photo_runs = [];
+	$key = ($job['external_id'] ?? '') . ':' . ($job['photo_driver'] ?? '');
+	if (isset($photo_runs[$key])) {
+		return bp_upsert_jobsite_post_exact($job);
+	}
+	$photo_runs[$key] = true;
+
 	$GLOBALS['bp_jobsite_setup_running'] = true;
 
 	$post_id = bp_upsert_jobsite_post_exact($job);
@@ -112,6 +119,48 @@ function bp_upsert_jobsite_post_exact(array $job) {
 	return $post_id ?: false;
 }
 
+function bp_find_existing_attachment_by_hash($tmp_file) {
+	if (!file_exists($tmp_file)) return 0;
+
+	$hash = md5_file($tmp_file);
+
+	/* --------------------------------------------
+	 * FAST PATH — indexed meta lookup
+	 * -------------------------------------------- */
+	$existing = get_posts([
+		'post_type'   => 'attachment',
+		'post_status' => 'inherit',
+		'meta_key'    => '_bp_file_hash',
+		'meta_value'  => $hash,
+		'fields'      => 'ids',
+		'numberposts' => 1,
+	]);
+
+	if ($existing) {
+		return (int) $existing[0];
+	}
+
+	/* --------------------------------------------
+	 * SLOW FALLBACK — legacy scan (one-time cost)
+	 * -------------------------------------------- */
+	$attachments = get_posts([
+		'post_type'      => 'attachment',
+		'post_status'    => 'inherit',
+		'posts_per_page' => -1,
+		'fields'         => 'ids',
+	]);
+
+	foreach ($attachments as $aid) {
+		$file = get_attached_file($aid);
+		if ($file && file_exists($file) && md5_file($file) === $hash) {
+			return (int) $aid;
+		}
+	}
+
+	return 0;
+}
+
+
 /*--------------------------------------------------------------
 # Housecall Pro
 --------------------------------------------------------------*/
@@ -127,17 +176,44 @@ add_action('rest_api_init', function() {
 function bp_handle_hcp_webhook_exact(WP_REST_Request $req) {
 
 	$raw = $req->get_body();
-	error_log('[HCP WEBHOOK] Raw payload received');
-	error_log('[HCP WEBHOOK] Body: ' . substr($raw, 0, 5000));
+
+					// --------------------------------------------
+					// DEBUG: log full raw HCP payload
+					// --------------------------------------------
+					error_log('================ HCP WEBHOOK START ================');
+					error_log('[HCP RAW BODY]');
+					error_log($raw ?: '[EMPTY BODY]');
+
+					// Also log decoded structure when possible
+					$decoded = json_decode($raw);
+					if (json_last_error() === JSON_ERROR_NONE) {
+						error_log('[HCP DECODED PAYLOAD]');
+						error_log(print_r($decoded, true));
+					} else {
+						error_log('[HCP JSON ERROR] ' . json_last_error_msg());
+					}
+
+					error_log('================ HCP WEBHOOK END ==================');
+
+
+	// HCP webhook verification payload (required)
+	if (trim($raw) === '{"foo":"bar"}') {
+		return new WP_REST_Response(['ok' => true], 200);
+	}
+
+	if (defined('WP_DEBUG') && WP_DEBUG) {
+		error_log('[HCP WEBHOOK] Payload received');
+		error_log('[HCP WEBHOOK] Body: ' . substr($raw, 0, 2000));
+	}
 
 	$get_jobsite_geo = get_option('jobsite_geo');
 
-	// EXACT token + brand gating (uses get_option, not get_site_option)
+	// Token + brand gating (required)
 	if (empty($_GET['token']) || $_GET['token'] !== ($get_jobsite_geo['token'] ?? '')) {
 		return new WP_REST_Response(['error' => 'Invalid token'], 403);
 	}
 
-	if (empty($get_jobsite_geo['fsm_brand']) || $get_jobsite_geo['fsm_brand'] !== 'Housecall Pro') {
+	if (($get_jobsite_geo['fsm_brand'] ?? '') !== 'Housecall Pro') {
 		return new WP_REST_Response(['error' => 'Not using Housecall Pro'], 403);
 	}
 
@@ -147,21 +223,8 @@ function bp_handle_hcp_webhook_exact(WP_REST_Request $req) {
 
 	$data = json_decode($raw);
 
-	if (!$data || !is_object($data)) {
-		return new WP_REST_Response(['error' => 'Invalid JSON'], 400);
-	}
-
-	if (!isset($data->job) || !is_object($data->job)) {
+	if (!$data || !is_object($data) || !isset($data->job)) {
 		return new WP_REST_Response(['error' => 'Invalid job object'], 400);
-	}
-
-	// EXACT webhook verification behavior
-	if (isset($data->foo) && $data->foo === 'bar') {
-		return new WP_REST_Response(['test' => 'Webhook verified OK'], 200);
-	}
-
-	if (empty($data->event) || empty($data->job->id)) {
-		return new WP_REST_Response(['error' => 'Missing job info'], 400);
 	}
 
 	if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -222,25 +285,27 @@ function bp_handle_hcp_webhook_exact(WP_REST_Request $req) {
 	$zip    = isset($addr->zip) ? preg_replace('/^(\d{5}).*/', '$1', $addr->zip) : '';
 	$date   = $job->work_timestamps->completed_at ?? '';
 
-	// EXACT attachment selection semantics:
-	// reverse attachments, caption numbers 1..n map to attachment indices 0..n-1
-	$attachments = array_reverse($job->attachments ?? []);
+	// Captions keyed by photo number (1-based)
 	ksort($captions);
 
+	// HCP sends attachments newest → oldest
+	// Display order is the reverse of API order
+	$attachments = array_values(array_reverse($job->attachments ?? []));
+
+	// Select ONLY captioned photos, mapped by display number
 	$photos = [];
-	$max = min(4, count($attachments));
 
-	for ($i = 0; $i < $max; $i++) {
-		$photo_num = $i + 1;
-		$attachment_index = $photo_num - 1;
+	foreach ($captions as $photo_num => $caption) {
 
-		if (!isset($attachments[$attachment_index])) continue;
+		if (count($photos) >= 4) break;
 
-		$caption = $captions[$photo_num] ?? '';
-		// Note: HCP original still processed photo even if caption '', but alt/meta only when caption exists.
-		// HOWEVER: your original code *still assigns ACF slot even if caption is empty* (it doesn’t skip).
-		// We preserve that by passing caption as-is; the photo sync driver will apply the same rules.
-		$a = $attachments[$attachment_index];
+		$idx = (int) $photo_num - 1;
+
+		if ($idx < 0 || !isset($attachments[$idx])) {
+			continue;
+		}
+
+		$a = $attachments[$idx];
 
 		$photos[] = [
 			'id'        => $a->id,
@@ -250,6 +315,7 @@ function bp_handle_hcp_webhook_exact(WP_REST_Request $req) {
 			'file_type' => $a->file_type ?? 'image/jpeg',
 		];
 	}
+
 
 	$post_id = bp_ingest_jobsite([
 		'source'            => 'Housecall Pro',
@@ -303,6 +369,13 @@ function bp_sync_jobsite_photos_hcp($post_id, array $photos) {
 		if (!$photo_id) continue;
 		if ($acf_slot > 4) break;
 
+		/* --------------------------------------------
+		 * 🔒 HARD LOCK (prevents race-condition dupes)
+		 * -------------------------------------------- */
+		$lock_key = 'hcp_photo_lock_' . $photo_id;
+		if (get_transient($lock_key)) continue;
+		set_transient($lock_key, time(), 5 * MINUTE_IN_SECONDS);
+
 		$attachment_title = sprintf(
 			'Jobsite GEO [%d] %s -- %s',
 			$post_id,
@@ -337,47 +410,83 @@ function bp_sync_jobsite_photos_hcp($post_id, array $photos) {
 		} else {
 
 			$tmp = download_url($p['url']);
-			if (is_wp_error($tmp)) continue;
+			if (is_wp_error($tmp)) {
+				delete_transient($lock_key);
+				continue;
+			}
 
-			$ext = pathinfo($p['file_name'] ?? '', PATHINFO_EXTENSION) ?: 'jpg';
+			/* --------------------------------------------
+			 * 🧠 HASH DEDUPE (reuse existing file)
+			 * -------------------------------------------- */
+			$existing_aid = bp_find_existing_attachment_by_hash($tmp);
 
-			$file = [
-				'name'     => "jobsite-geo-{$post_id}-{$photo_id}.{$ext}",
-				'type'     => $p['file_type'] ?? 'image/jpeg',
-				'tmp_name' => $tmp,
-				'error'    => 0,
-				'size'     => filesize($tmp),
-			];
+			if ($existing_aid) {
 
-			$m = wp_handle_sideload($file, ['test_form' => false]);
-			if (empty($m['file'])) continue;
+				@unlink($tmp);
+				$aid = $existing_aid;
+				update_post_meta($aid, '_bp_file_hash', md5_file(get_attached_file($aid)));
 
-			$aid = wp_insert_attachment([
-				'post_mime_type' => $file['type'],
-				'post_title'     => $attachment_title,
-				'post_status'    => 'inherit',
-			], $m['file'], $post_id);
+				if ((int) get_post_field('post_parent', $aid) !== (int) $post_id) {
+					wp_update_post([
+						'ID'          => $aid,
+						'post_parent' => $post_id,
+					]);
+				}
 
-			wp_update_attachment_metadata(
-				$aid,
-				wp_generate_attachment_metadata($aid, $m['file'])
-			);
+			} else {
 
-			update_post_meta($aid, '_hcp_attachment_id', $photo_id);
-			$saved_ids[] = $photo_id;
+				$ext = pathinfo($p['file_name'] ?? '', PATHINFO_EXTENSION) ?: 'jpg';
+
+				$file = [
+					'name'     => "jobsite-geo-{$post_id}-{$photo_id}.{$ext}",
+					'type'     => $p['file_type'] ?? 'image/jpeg',
+					'tmp_name' => $tmp,
+					'error'    => 0,
+					'size'     => filesize($tmp),
+				];
+
+				$m = wp_handle_sideload($file, ['test_form' => false]);
+				if (empty($m['file'])) {
+					delete_transient($lock_key);
+					continue;
+				}
+
+				$aid = wp_insert_attachment([
+					'post_mime_type' => $file['type'],
+					'post_title'     => $attachment_title,
+					'post_status'    => 'inherit',
+				], $m['file'], $post_id);
+
+				wp_update_attachment_metadata(
+					$aid,
+					wp_generate_attachment_metadata($aid, $m['file'])
+				);
+
+				update_post_meta($aid, '_bp_file_hash', md5_file(get_attached_file($aid)));
+				update_post_meta($aid, '_hcp_attachment_id', $photo_id);
+				$saved_ids[] = $photo_id;
+			}
 		}
 
-		// EXACT: always assign ACF slot; only sync alt/excerpt when caption not empty
+		/* --------------------------------------------
+		 * 📌 ACF + META (unchanged behavior)
+		 * -------------------------------------------- */
 		update_field("jobsite_photo_{$acf_slot}", $aid, $post_id);
 
 		$caption = trim((string)($p['caption'] ?? ''));
-		update_field("jobsite_photo_{$acf_slot}_alt", $caption, $post_id);
+
+		// HARD RULE: HCP photos without captions NEVER consume a slot
+		if ($caption === '') {
+			delete_transient($lock_key);
+			continue;
+		}
 
 		if ($caption !== '') {
 			update_post_meta($aid, '_wp_attachment_image_alt', $caption);
 			wp_update_post(['ID' => $aid, 'post_excerpt' => $caption]);
 		}
 
+		delete_transient($lock_key);
 		$acf_slot++;
 	}
 
@@ -385,7 +494,7 @@ function bp_sync_jobsite_photos_hcp($post_id, array $photos) {
 }
 
 /*--------------------------------------------------------------
-# Company Cam 
+# Company Cam
 --------------------------------------------------------------*/
 
 function bp_run_companycam_sync_exact() {
@@ -406,6 +515,17 @@ function bp_run_companycam_sync_exact() {
 	$projects = is_array($data) ? $data : ($data->projects ?? []);
 
 	foreach ($projects as $p) {
+
+		$existing = get_posts([
+			'post_type'   => 'jobsite_geo',
+			'meta_key'    => '_companycam_project_id',
+			'meta_value'  => $p->id,
+			'numberposts' => 1,
+		]);
+
+		if ($existing && get_post_meta($existing[0]->ID, '_companycam_photos_synced', true)) {
+			continue;
+		}
 
 		if (($p->status ?? '') === 'deleted') continue;
 
@@ -482,13 +602,15 @@ function bp_run_companycam_sync_exact() {
 
 		// Original returns a WP_REST_Response at end of template_redirect, but for nightly sync we do not.
 		// No return needed here.
+
+		update_post_meta($post_id, '_companycam_photos_synced', time());
 	}
+
 }
 
 function bp_sync_jobsite_photos_companycam($post_id, array $photos) {
 
 	$saved_ids = [];
-
 	$acf_slot  = 1;
 
 	foreach ($photos as $photo) {
@@ -503,6 +625,13 @@ function bp_sync_jobsite_photos_companycam($post_id, array $photos) {
 
 		$cc_photo_id = $photo['id'] ?? null;
 		if (!$cc_photo_id) continue;
+
+		/* --------------------------------------------
+		 * 🔒 HARD LOCK (prevents duplicate downloads)
+		 * -------------------------------------------- */
+		$lock_key = 'cc_photo_lock_' . $cc_photo_id;
+		if (get_transient($lock_key)) continue;
+		set_transient($lock_key, time(), 5 * MINUTE_IN_SECONDS);
 
 		$attachment_title = sprintf(
 			'Jobsite GEO [%d] %s -- %s',
@@ -538,47 +667,76 @@ function bp_sync_jobsite_photos_companycam($post_id, array $photos) {
 		} else {
 
 			$tmp = download_url($web_uri);
-			if (is_wp_error($tmp)) continue;
+			if (is_wp_error($tmp)) {
+				delete_transient($lock_key);
+				continue;
+			}
 
-			$ext = pathinfo(parse_url($web_uri, PHP_URL_PATH), PATHINFO_EXTENSION) ?: 'jpg';
+			/* --------------------------------------------
+			 * 🧠 HASH DEDUPE (reuse existing file)
+			 * -------------------------------------------- */
+			$existing_aid = bp_find_existing_attachment_by_hash($tmp);
 
-			// EXACT: Company Cam did NOT set 'type'
-			$file = [
-				'name'     => "jobsite-geo-{$post_id}-{$cc_photo_id}.{$ext}",
-				'tmp_name' => $tmp,
-				'error'    => 0,
-				'size'     => filesize($tmp),
-			];
+			if ($existing_aid) {
 
-			$m = wp_handle_sideload($file, ['test_form' => false]);
-			if (empty($m['file'])) continue;
+				@unlink($tmp);
+				$aid = $existing_aid;
+				update_post_meta($aid, '_bp_file_hash', md5_file(get_attached_file($aid)));
 
-			// EXACT: Company Cam used mime_content_type on the saved file
-			$aid = wp_insert_attachment([
-				'post_mime_type' => mime_content_type($m['file']),
-				'post_title'     => $attachment_title,
-				'post_status'    => 'inherit',
-			], $m['file'], $post_id);
+				if ((int) get_post_field('post_parent', $aid) !== (int) $post_id) {
+					wp_update_post([
+						'ID'          => $aid,
+						'post_parent' => $post_id,
+					]);
+				}
 
-			wp_update_attachment_metadata(
-				$aid,
-				wp_generate_attachment_metadata($aid, $m['file'])
-			);
+			} else {
 
-			update_post_meta($aid, '_companycam_photo_id', $cc_photo_id);
-			$saved_ids[] = $cc_photo_id;
+				$ext = pathinfo(parse_url($web_uri, PHP_URL_PATH), PATHINFO_EXTENSION) ?: 'jpg';
+
+				$file = [
+					'name'     => "jobsite-geo-{$post_id}-{$cc_photo_id}.{$ext}",
+					'tmp_name' => $tmp,
+					'error'    => 0,
+					'size'     => filesize($tmp),
+				];
+
+				$m = wp_handle_sideload($file, ['test_form' => false]);
+				if (empty($m['file'])) {
+					delete_transient($lock_key);
+					continue;
+				}
+
+				$aid = wp_insert_attachment([
+					'post_mime_type' => mime_content_type($m['file']),
+					'post_title'     => $attachment_title,
+					'post_status'    => 'inherit',
+				], $m['file'], $post_id);
+
+				wp_update_attachment_metadata(
+					$aid,
+					wp_generate_attachment_metadata($aid, $m['file'])
+				);
+
+				update_post_meta($aid, '_bp_file_hash', md5_file(get_attached_file($aid)));
+				update_post_meta($aid, '_companycam_photo_id', $cc_photo_id);
+				$saved_ids[] = $cc_photo_id;
+			}
 		}
 
+		/* --------------------------------------------
+		 * 📌 ACF + META (unchanged behavior)
+		 * -------------------------------------------- */
 		update_field("jobsite_photo_{$acf_slot}", $aid, $post_id);
 		update_field("jobsite_photo_{$acf_slot}_alt", $caption, $post_id);
 
-		// EXACT: always sync alt + excerpt (even if existing)
 		update_post_meta($aid, '_wp_attachment_image_alt', $caption);
 		wp_update_post([
 			'ID'           => $aid,
 			'post_excerpt' => $caption,
 		]);
 
+		delete_transient($lock_key);
 		$acf_slot++;
 	}
 

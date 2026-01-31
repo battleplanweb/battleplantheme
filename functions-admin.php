@@ -123,7 +123,6 @@ function battleplan_addSitePage() {
 add_action('in_admin_footer', 'battleplan_admin_footer_text');
 function battleplan_admin_footer_text() {
 	wp_cache_delete('customer_info', 'options');
-	wp_cache_flush();
 
 	$customer_info = customer_info();
 
@@ -797,10 +796,8 @@ function battleplan_setupTextEditorDialogBoxes($hook) {
 	if(!$screen_ok) return;
 
 	// ensure your admin JS is already enqueued; adjust handle/path if needed ---- maybe can remove.
-	wp_enqueue_script('battleplan-admin-script',
-		get_template_directory_uri().'/js/script-admin.js',
-		['quicktags'], _BP_VERSION, true
-	);
+	bp_enqueue_script( 'battleplan-admin-script', 'script-admin', ['quicktags'] );
+
 
 	$bp_qtags_cfg = [
 		'section' => [

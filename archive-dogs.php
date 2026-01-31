@@ -1,6 +1,7 @@
 <?php /* The template for displaying archive pages for "dogs" post type */
 
-wp_enqueue_style( 'battleplan-style-posts', get_template_directory_uri()."/style-posts.css",  );
+bp_inline_minified_css( get_template_directory() . '/style-posts.css' );
+
 get_header(); ?>
 
 <div id="primary" class="site-main" role="main" aria-label="main content">

@@ -1,6 +1,6 @@
 <?php /* Template part for displaying products */
 
-wp_enqueue_style( 'battleplan-style-products-hvac', get_template_directory_uri()."/style-products-hvac.css", [], _BP_VERSION, 'print' );
+bp_inline_minified_css( get_template_directory() . '/style-products-hvac.css' );
 
 $brochure = esc_url(get_field( "brochure" ));
 $allBrands = get_terms( array ( 'taxonomy' => 'product-brand', 'hide_empty' => true,) );

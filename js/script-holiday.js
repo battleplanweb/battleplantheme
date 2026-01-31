@@ -1,1 +1,113 @@
-document.addEventListener("DOMContentLoaded",function(){"use strict";document.body.classList.add("holiday-theme");const a=getObject(".screen-desktop #masthead > *:first-child");if(a){const b=parseInt(window.getComputedStyle(a).paddingTop,10)+20;a.style.paddingTop=`${b}px`}const b=getObject(".content-sidebar-box #wrapper-content #main-content"),c=getObject(".content-box #wrapper-content #main-content"),d=getObject(".sidebar-box #wrapper-content #main-content"),e=getObject(".widget-box #wrapper-content #main-content");if(b)b.classList.add("xmas-corner");else if(c&&d)c.classList.add("xmas-corner"),d.classList.add("xmas-corner");else if(c&&e)c.classList.add("xmas-corner"),e.classList.add("xmas-corner");else if(c&&!d&&!e){const a=getObject(".sidebar-box #wrapper-content #main-content #primary");a&&a.classList.add("xmas-corner")}else if(!c&&d){const a=getObject(".sidebar-box #wrapper-content #main-content #secondary");a&&a.classList.add("xmas-corner")}else if(!c&&e){const a=getObject(".widget-box #wrapper-content #main-content #secondary");a&&a.classList.add("xmas-corner")}else{const a=getObject("#wrapper-content #main-content");if(a){a.classList.add("xmas-wide-alt");const b=getObject("#wrapper-content #main-content #primary");if(b){const a=parseInt(window.getComputedStyle(b).paddingTop,10)+35;b.style.paddingTop=`${a}px`}}}const f=getObjects(".section[class*=\"style-\"]");if(f){let a=1;f.forEach(b=>{const c=window.getComputedStyle(b).backgroundColor,d=window.getComputedStyle(b).backgroundImage,e=getComputedStyle(b,"::before").content,f=getComputedStyle(b,"::after").content;if(""===e&&""===f)if(!("rgba(0, 0, 0, 0)"!==c&&"transparent"!==c||d&&"none"!==d)){const a=getObject(".flex",b);let d=0;a&&(a.classList.contains("grid-1")?d=1:a.classList.contains("grid-1-1")||a.classList.contains("grid-3-2")||a.classList.contains("grid-2-3")?d=2:a.classList.contains("grid-1-1-1")&&(d=3));const e=getObjects(".col-inner",b);e&&e.forEach(a=>{const b=window.getComputedStyle(a).backgroundColor;"rgba(0, 0, 0, 0)"!==b&&"transparent"!==c&&a.classList.add(`xmas-narrow-${d}`)})}else if(0===a){const c=["xmas-wide-5","xmas-wide-10","xmas-wide-15"],d=c[Math.floor(Math.random()*c.length)];b.classList.add("xmas-wide",d),a=1}else b.classList.add("xmas-wide-alt"),a=0})}const g=getObject("#colophon"),h=window.getComputedStyle(g).backgroundColor,i=window.getComputedStyle(g).backgroundImage;("rgba(0, 0, 0, 0)"!==h&&"transparent"!==h||i&&"none"!==i)&&g.classList.add("xmas-colophon")});
+document.addEventListener("DOMContentLoaded", function () {	"use strict";
+														   
+// Raw Script: Holiday	
+	document.body.classList.add('holiday-theme');
+
+	const masthead = getObject('.screen-desktop #masthead > *:first-child');
+
+	if (masthead) {
+		const padding = parseInt(window.getComputedStyle(masthead).paddingTop, 10) + 20;
+		masthead.style.paddingTop = `${padding}px`;
+	}									   	   
+														   
+	const content_sidebar_box = getObject('.content-sidebar-box #wrapper-content #main-content');
+	const content_box = getObject('.content-box #wrapper-content #main-content');
+	const sidebar_box = getObject('.sidebar-box #wrapper-content #main-content');	
+    const widget_box = getObject('.widget-box #wrapper-content #main-content');
+
+	if (content_sidebar_box) {							   
+		content_sidebar_box.classList.add('xmas-corner');
+	} else if (content_box && sidebar_box) {							   
+		content_box.classList.add('xmas-corner');
+		sidebar_box.classList.add('xmas-corner');
+	} else if (content_box && widget_box) {							   
+		content_box.classList.add('xmas-corner');
+		widget_box.classList.add('xmas-corner');
+	} else if (content_box && !sidebar_box && !widget_box) {
+		const content_box_inner = getObject('.sidebar-box #wrapper-content #main-content #primary');
+		if ( content_box_inner) {
+			content_box_inner.classList.add('xmas-corner');
+		}
+	} else if (!content_box && sidebar_box) {							   
+		const sidebar_box_inner = getObject('.sidebar-box #wrapper-content #main-content #secondary');
+		if ( sidebar_box_inner) {
+			sidebar_box_inner.classList.add('xmas-corner');
+		}
+	} else if (!content_box && widget_box) {							   
+		const widget_box_inner = getObject('.widget-box #wrapper-content #main-content #secondary');
+		if ( widget_box_inner) {
+			widget_box_inner.classList.add('xmas-corner');
+		}
+	} else { 
+		const content_area = getObject('#wrapper-content #main-content');
+		if (content_area) {
+			content_area.classList.add('xmas-wide-alt');		
+			const primary = getObject('#wrapper-content #main-content #primary');
+			if (primary) {
+				const padding = parseInt(window.getComputedStyle(primary).paddingTop, 10) + 35;
+				primary.style.paddingTop = `${padding}px`;
+			}
+		}
+	}
+														   
+	const sections = getObjects('.section[class*="style-"]');
+	if (sections) {
+		let alternate = 1;
+
+		sections.forEach(section => {							   
+			const sectionBG = window.getComputedStyle(section).backgroundColor;			
+			const sectionBGImage = window.getComputedStyle(section).backgroundImage;
+			const beforeSection = getComputedStyle(section, '::before').content;
+			const afterSection = getComputedStyle(section, '::after').content;
+
+			if (beforeSection === '' && afterSection === '') {
+							
+				if ( (sectionBG !== 'rgba(0, 0, 0, 0)' && sectionBG !== 'transparent') || (sectionBGImage && sectionBGImage !== 'none') ) {
+					if ( alternate === 0 ) {
+						const classes = ['xmas-wide-5', 'xmas-wide-10', 'xmas-wide-15'];
+						const randomize = classes[Math.floor(Math.random() * classes.length)];
+						section.classList.add('xmas-wide', randomize);
+						alternate = 1;
+					} else {
+						section.classList.add('xmas-wide-alt');
+						alternate = 0;
+					}
+				} else {
+					const grid = getObject('.flex', section);
+					let numDivs = 0;
+
+					if (grid) {
+						if ( grid.classList.contains('grid-1') ) {
+							numDivs = 1;
+						} else if ( grid.classList.contains('grid-1-1') || grid.classList.contains('grid-3-2') || grid.classList.contains('grid-2-3') ) {
+							numDivs = 2;					
+						} else if ( grid.classList.contains('grid-1-1-1') ) {
+							numDivs = 3;
+						}
+					} 				
+
+					const elements = getObjects('.col-inner', section);
+
+					if (elements) {
+						elements.forEach(element => {	  
+							const elementBG = window.getComputedStyle(element).backgroundColor;
+
+							if (elementBG !== 'rgba(0, 0, 0, 0)' && sectionBG !== 'transparent') {
+								element.classList.add(`xmas-narrow-${numDivs}`);
+							} 	
+						});
+					}
+				}
+			}
+		});
+	}
+														   
+	const colophon = getObject('#colophon');													   
+	const colophonBG = window.getComputedStyle(colophon).backgroundColor;			
+	const colophonBGImage = window.getComputedStyle(colophon).backgroundImage;
+			
+	if ( (colophonBG !== 'rgba(0, 0, 0, 0)' && colophonBG !== 'transparent') || (colophonBGImage && colophonBGImage !== 'none') ) {
+		colophon.classList.add('xmas-colophon');
+	}
+														   
+});

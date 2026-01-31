@@ -190,7 +190,7 @@ function battleplan_add_acf_pedigree_fields() {
 					'Carrier' => 'Carrier',
 					'NA' => 'NA',
 				),
-				'default_value' => 'NA',				
+				'default_value' => 'NA',
 				'allow_null' => 0,
 				'other_choice' => 0,
 				'layout' => 'vertical',
@@ -211,7 +211,7 @@ function battleplan_add_acf_pedigree_fields() {
 					'White List' => 'White List',
 					'NA' => 'NA',
 				),
-				'default_value' => 'NA',				
+				'default_value' => 'NA',
 				'allow_null' => 0,
 				'other_choice' => 0,
 				'layout' => 'vertical',
@@ -233,7 +233,7 @@ function battleplan_add_acf_pedigree_fields() {
 					'Pending' => 'Pending',
 					'NA' => 'NA',
 				),
-				'default_value' => 'NA',				
+				'default_value' => 'NA',
 				'allow_null' => 0,
 				'other_choice' => 0,
 				'layout' => 'vertical',
@@ -253,7 +253,7 @@ function battleplan_add_acf_pedigree_fields() {
 					'Pending' => 'Pending',
 					'NA' => 'NA',
 				),
-				'default_value' => 'NA',				
+				'default_value' => 'NA',
 				'allow_null' => 0,
 				'other_choice' => 0,
 				'layout' => 'vertical',
@@ -275,7 +275,7 @@ function battleplan_add_acf_pedigree_fields() {
 					'Pending' => 'Pending',
 					'NA' => 'NA',
 				),
-				'default_value' => 'NA',				
+				'default_value' => 'NA',
 				'allow_null' => 0,
 				'other_choice' => 0,
 				'layout' => 'vertical',
@@ -294,7 +294,7 @@ function battleplan_add_acf_pedigree_fields() {
 					'Clear' => 'Clear',
 					'NA' => 'NA',
 				),
-				'default_value' => 'NA',				
+				'default_value' => 'NA',
 				'allow_null' => 0,
 				'other_choice' => 0,
 				'layout' => 'vertical',
@@ -599,7 +599,7 @@ function battleplan_add_acf_pedigree_fields() {
 --------------------------------------------------------------*/
 add_action( 'pre_get_posts', 'battleplan_override_main_query_with_pedigree', 10 );
 function battleplan_override_main_query_with_pedigree( $query ) {
-	if (!is_admin() && $query->is_main_query()) :		
+	if (!is_admin() && $query->is_main_query()) :
 		if ( is_post_type_archive('dogs') ) :
 			$query->set( 'post_type','dogs');
 			$query->set( 'posts_per_page',-1);
@@ -608,7 +608,7 @@ function battleplan_override_main_query_with_pedigree( $query ) {
 		endif;
 		if ( is_post_type_archive('litters')) :
 			$query->set( 'post_type','litters');
-			$query->set( 'posts_per_page', -1);	
+			$query->set( 'posts_per_page', -1);
 			$meta_query = array( array(
     			'status_clause' => array(
       				'key' => 'litter_status',
@@ -622,14 +622,14 @@ function battleplan_override_main_query_with_pedigree( $query ) {
 			$query->set('meta_query', $meta_query);
 			$query->set('orderby', array('status_clause' => 'ASC', 'birth_date_clause' => 'ASC'));
 		endif;
-	endif; 
+	endif;
 }
 
 // Load and enqueue styles & scripts
 add_action( 'wp_enqueue_scripts', 'battleplan_pedigree_scripts' );
 function battleplan_pedigree_scripts() {
-	wp_enqueue_style( 'battleplan-css-pedigree', get_template_directory_uri().'/style-pedigree.css', array(), _BP_VERSION );	 
-	wp_enqueue_script( 'battleplan-script-pedigree', get_template_directory_uri().'/js/script-pedigree.js', array(), _BP_VERSION, true );
+	bp_inline_minified_css( get_template_directory() . '/style-pedigree.css' );
+	bp_enqueue_script( 'battleplan-script-pedigree', 'script-pedigree');
 }
 
 // Add call name to archives and random widgets
@@ -665,8 +665,8 @@ function battleplan_buildBracket( $atts, $content = null ) {
 	$buildBracket .= '<tr><td class="bracket-blank">&nbsp;</td><td class="bracket-blank">&nbsp;</td><td class="bracket-bottom">&nbsp;'. $c8.'</td></tr>';
 	$buildBracket .= '</table></section>';
 
-	return $buildBracket;	
-}	
+	return $buildBracket;
+}
 
 //Establish default thumbnail size
 update_option( 'thumbnail_size_w', 280 );

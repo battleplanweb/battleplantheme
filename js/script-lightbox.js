@@ -1,1 +1,133 @@
-document.addEventListener("DOMContentLoaded",function(){"use strict";const a=getObject(".lightbox-overlay"),b=getObject(".lightbox-overlay img"),c=getObject(".lightbox-overlay .lightbox-counter"),d=getObject(".lightbox-overlay .button-prev"),e=getObject(".lightbox-overlay .button-next"),f=getObject(".lightbox-overlay .closeBtn"),g=getObjects(".lightbox a"),h=30;if(a){function i(){a.style.opacity="0",setTimeout(()=>{a.style.visibility="hidden",document.body.style.overflow="visible"},500)}function j(a){b.classList.add("transition-out","direction-"+m);const c=new Image;c.src=g[a].href;let d=!1,e=!1;const f=()=>{d&&e&&(b.src=c.src,b.alt=getObject("img",g[a]).alt,b.classList.remove("transition-out"),b.classList.add("transition-in"),setTimeout(()=>{b.classList.remove("transition-in","direction-"+m)},300),k(a,g.length))};c.onload=()=>{d=!0,f()},setTimeout(()=>{e=!0,f()},300)}function k(a,b){c.textContent=`${a+1} of ${b}`}moveDiv(a,"#loader","after");let l=-1,m="next",n=0,o=0,p=0,q=0;const r=()=>{n=o=p=q=0},s=()=>{Math.abs(o-n)>Math.abs(q-p)&&Math.abs(o-n)>h?o>n?d.click():e.click():null,r()};a.addEventListener("touchstart",a=>{({screenX:n,screenY:p}=a.changedTouches[0])},{passive:!0}),a.addEventListener("touchmove",a=>{({screenX:o,screenY:q}=a.changedTouches[0]),Math.abs(o-n)>Math.abs(q-p)&&Math.abs(o-n)>h&&a.cancelable?a.preventDefault():null},{passive:!1}),a.addEventListener("touchend",()=>s(),{passive:!0}),g.forEach((c,d)=>{c.addEventListener("click",e=>{e.preventDefault(),b.src=c.href,b.alt=getObject("img",c).alt,a.style.opacity="1",a.style.visibility="visible",document.body.style.overflow="hidden",a.style.opacity=1,l=d,k(l,g.length)})}),d.addEventListener("click",()=>{0<l?l--:l=g.length-1,m="prev",j(l)}),e.addEventListener("click",()=>{l<g.length-1?l++:l=0,m="next",j(l)}),a.addEventListener("click",b=>{b.target===a&&i()}),f.addEventListener("click",i)}});
+document.addEventListener("DOMContentLoaded", function () {	"use strict";
+														   
+// Raw Script: Lightbox
+														   
+	const overlay = getObject('.lightbox-overlay'),
+		  lightboxImage = getObject('.lightbox-overlay img'),
+		  counterDisplay = getObject('.lightbox-overlay .lightbox-counter'),
+		  prevButton = getObject('.lightbox-overlay .button-prev'),
+		  nextButton = getObject('.lightbox-overlay .button-next'),
+		  closeButton = getObject('.lightbox-overlay .closeBtn'),
+		  images = getObjects('.lightbox a'),
+		  threshold = 30;
+														   
+	if ( overlay ) {
+														   
+		moveDiv(overlay, '#loader', 'after');													
+
+		let currentImageIndex = -1, 
+			direction = 'next',
+			touchStartX = 0, 
+			touchEndX = 0, 
+			touchStartY = 0, 
+			touchEndY = 0;
+
+		const resetTouch = () => { touchStartX = touchEndX = touchStartY = touchEndY = 0; };
+
+		const handleSwipeGesture = () => {
+			(Math.abs(touchEndX - touchStartX) > Math.abs(touchEndY - touchStartY) && Math.abs(touchEndX - touchStartX) > threshold) 
+				? touchEndX > touchStartX 
+					? prevButton.click() 
+					: nextButton.click() 
+				: null;
+			resetTouch();
+		};
+
+		overlay.addEventListener('touchstart', e => {
+			({screenX: touchStartX, screenY: touchStartY} = e.changedTouches[0]);
+		}, {passive: true});
+
+		overlay.addEventListener('touchmove', e => {
+			({screenX: touchEndX, screenY: touchEndY} = e.changedTouches[0]);
+			(Math.abs(touchEndX - touchStartX) > Math.abs(touchEndY - touchStartY) && Math.abs(touchEndX - touchStartX) > threshold && e.cancelable) 
+				? e.preventDefault() 
+				: null;
+		}, {passive: false});
+
+		overlay.addEventListener('touchend', () => handleSwipeGesture(), {passive: true});
+
+		function closeLightbox() {
+			overlay.style.opacity = '0';    
+			setTimeout(() => {
+				overlay.style.visibility = 'hidden';  
+				document.body.style.overflow = 'visible';
+			}, 500);
+		}
+
+		function changePhoto(currentImageIndex) {
+			lightboxImage.classList.add('transition-out', 'direction-'+direction);
+			const newImage = new Image();
+			newImage.src = images[currentImageIndex].href;		
+
+			let imageLoaded = false; 
+			let timeoutCompleted = false;
+
+			const tryTransitionIn = () => {
+				if (imageLoaded && timeoutCompleted) {		
+					lightboxImage.src = newImage.src;
+					lightboxImage.alt = getObject('img', images[currentImageIndex]).alt;     
+					lightboxImage.classList.remove('transition-out');
+					lightboxImage.classList.add('transition-in');
+					 setTimeout(() => {
+						lightboxImage.classList.remove('transition-in', 'direction-'+direction);
+					}, 300);
+					updateCounterDisplay(currentImageIndex, images.length);
+				}
+			};
+
+			newImage.onload = () => {
+				imageLoaded = true;
+				tryTransitionIn();
+			};
+
+			setTimeout(() => {
+				timeoutCompleted = true;
+				tryTransitionIn(); 
+			}, 300);		
+		}
+
+		function updateCounterDisplay(index, total) {
+			counterDisplay.textContent = `${index + 1} of ${total}`; 
+		}
+
+		images.forEach((imageLink, index) => {
+			imageLink.addEventListener('click', (event) => {
+				event.preventDefault(); 
+				lightboxImage.src = imageLink.href; 
+				lightboxImage.alt = getObject('img', imageLink).alt;
+				overlay.style.opacity = '1';      
+				overlay.style.visibility = 'visible';
+				document.body.style.overflow = 'hidden';
+				overlay.style.opacity = 1; 
+				currentImageIndex = index; 
+				updateCounterDisplay(currentImageIndex, images.length);
+			});
+		});
+
+		prevButton.addEventListener('click', () => {
+			if (currentImageIndex > 0) {
+				currentImageIndex--;
+			} else {
+				currentImageIndex = images.length - 1;
+			}
+			direction = 'prev';
+			changePhoto(currentImageIndex);
+		});
+
+		nextButton.addEventListener('click', () => {
+			if (currentImageIndex < images.length - 1) {
+				currentImageIndex++;
+			} else {
+				currentImageIndex = 0;
+			}
+			direction = 'next';
+			changePhoto(currentImageIndex);
+		});
+
+		overlay.addEventListener('click', (event) => {
+			if (event.target === overlay) { closeLightbox(); }
+		});
+
+		closeButton.addEventListener('click', closeLightbox);	
+	}
+})

@@ -1,1 +1,201 @@
-@charset "utf-8";@layer video{.block-video{position:relative;overflow:hidden;margin:var(--measure-small) auto var(--measure-base)}.block-video > iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:1px solid var(--black-highest);background:var(--black-low)}.block-video.video-player.span-12,.block-video.video-player.span-11{width:100%;padding-top:56.25%}.block-video.video-player.span-10,.block-video.video-player.span-9{width:75%;padding-top:42.1875%}.block-video.video-player.span-8,.block-video.video-player.span-7{width:67%;padding-top:37.376875%}.block-video.video-player.span-6,.block-video.video-player.span-5{width:50%;padding-top:28.125%}.block-video.video-player.span-4{width:33%;padding-top:18.5625%}.block-video.video-player.span-3,.block-video.video-player.span-2,.block-video.video-player.span-1{width:25%;padding-top:14.0625%}.block-video.video-player.portrait.span-12,.block-video.video-player.portrait.span-11,.portrait .block-video.video-player.span-12,.portrait .block-video.video-player.span-11{width:100%;padding-top:177.7778%}.block-video.video-player.portrait.span-10,.block-video.video-player.portrait.span-9,.portrait .block-video.video-player.span-10,.portrait .block-video.video-player.span-9{width:75%;padding-top:133.3335%}.block-video.video-player.portrait.span-8,.block-video.video-player.portrait.span-7,.portrait .block-video.video-player.span-8,.portrait .block-video.video-player.span-7{width:67%;padding-top:119.111126%}.block-video.video-player.portrait.span-6,.block-video.video-player.portrait.span-5,.portrait .block-video.video-player.span-6,.portrait .block-video.video-player.span-5{width:50%;padding-top:88.8889%}.block-video.video-player.portrait.span-4,.portrait .block-video.video-player.span-4{width:33%;padding-top:58.666674%}.block-video.video-player.portrait.span-3,.block-video.video-player.portrait.span-2,.block-video.video-player.portrait.span-1,.portrait .block-video.video-player.span-3,.portrait .block-video.video-player.span-2,.portrait .block-video.video-player.span-1{width:25%;padding-top:44.44445%}.screen-mobile .parallax-mirror.mobile-hide{display:none}.video-player{background-size:30px 30px;background-image:linear-gradient(45deg,var(--white-lowest) 25%,var(--black-lowest) 25%,var(--black-lowest) 50%,var(--white-lowest) 50%,var(--white-lowest) 75%,var(--black-lowest) 75%,var(--black-lowest));animation:2s linear infinite animate-loader}@keyframes animate-loader{0%{background-position:0 0}100%{background-position:60px 0}}.video-player::before{content:"Loading...";left:0;top:20%;position:absolute;font-weight:700;text-align:center;width:100%;font-size:34px;filter:drop-shadow(1px 1px 0 var(--black-med)) drop-shadow(-1px -1px 0 var(--white-med)) drop-shadow(6px 6px 2px var(--black-lowest))}.video-player .play,.video-player img:hover{filter:brightness(75%)}.video-player img{position:absolute;left:0;bottom:0;right:0;top:0;object-fit:cover;display:block;margin:auto;max-width:100%;width:100%;border:none;height:auto;cursor:pointer;transition:all .4s var(--main-trans-easing)}.video-player .play{position:absolute;background:url('../battleplantheme/common/logos/video-play-btn.webp') no-repeat;width:80px;height:56px;left:50%;top:50%;margin-left:-40px;margin-top:-27px;pointer-events:none;transition:0.3s}.video-player img:hover + .play{filter:brightness(100%);transition:0.3s}@media (max-width:860px){.block-video.span-4,.block-video.span-3,.block-video.span-2,.block-video.span-1{width:50%;padding-top:28.125%}}@media (max-width:576px){.block-video.span-10,.block-video.span-9,.block-video.span-8,.block-video.span-7,.block-video.span-6{width:100%;padding-top:56.25%}.block-video.span-5,.block-video.span-4,.block-video.span-3,.block-video.span-2,.block-video.span-1{width:75%;padding-top:37.376875%}}}
+@charset "utf-8";
+
+.block-video {
+	position:                                                  relative;
+	overflow:                                                  hidden;
+	margin:                                                    var(--measure-small) auto var(--measure-base);
+}
+
+.block-video>iframe {
+	position:                                                  absolute;
+	top:                                                       0;
+	left:                                                      0;
+	width:                                                     100%;
+	height:                                                    100%;
+	border:                                                    1px solid var(--black-highest);
+	background:                                                var(--black-low);
+}
+
+.block-video.video-player.span-12,
+.block-video.video-player.span-11 {
+	width:                                                     100%;
+	padding-top:                                               56.25%;
+}
+
+.block-video.video-player.span-10,
+.block-video.video-player.span-9 {
+	width:                                                     75%;
+	/*padding-top: 										37.376875%; I think this is backwards ... 56.25% * .75 = 42.1875 */
+	padding-top:                                               42.1875%;
+}
+
+.block-video.video-player.span-8,
+.block-video.video-player.span-7 {
+	width:                                                     67%;
+	/*padding-top: 										42.1875%;*/
+	padding-top:                                               37.376875%;
+}
+
+.block-video.video-player.span-6,
+.block-video.video-player.span-5 {
+	width:                                                     50%;
+	padding-top:                                               28.125%;
+}
+
+.block-video.video-player.span-4 {
+	width:                                                     33%;
+	padding-top:                                               18.5625%;
+}
+
+.block-video.video-player.span-3,
+.block-video.video-player.span-2,
+.block-video.video-player.span-1 {
+	width:                                                     25%;
+	padding-top:                                               14.0625%;
+}
+
+.block-video.video-player.portrait.span-12,
+.block-video.video-player.portrait.span-11,
+.portrait .block-video.video-player.span-12,
+.portrait .block-video.video-player.span-11 {
+	width:                                                     100%;
+	padding-top:                                               177.7778%;
+}
+
+.block-video.video-player.portrait.span-10,
+.block-video.video-player.portrait.span-9,
+.portrait .block-video.video-player.span-10,
+.portrait .block-video.video-player.span-9 {
+	width:                                                     75%;
+	padding-top:                                               133.3335%;
+}
+
+.block-video.video-player.portrait.span-8,
+.block-video.video-player.portrait.span-7,
+.portrait .block-video.video-player.span-8,
+.portrait .block-video.video-player.span-7 {
+	width:                                                     67%;
+	padding-top:                                               119.111126%;
+}
+
+.block-video.video-player.portrait.span-6,
+.block-video.video-player.portrait.span-5,
+.portrait .block-video.video-player.span-6,
+.portrait .block-video.video-player.span-5 {
+	width:                                                     50%;
+	padding-top:                                               88.8889%;
+}
+
+.block-video.video-player.portrait.span-4,
+.portrait .block-video.video-player.span-4 {
+	width:                                                     33%;
+	padding-top:                                               58.666674%;
+}
+
+.block-video.video-player.portrait.span-3,
+.block-video.video-player.portrait.span-2,
+.block-video.video-player.portrait.span-1,
+.portrait .block-video.video-player.span-3,
+.portrait .block-video.video-player.span-2,
+.portrait .block-video.video-player.span-1 {
+	width:                                                     25%;
+	padding-top:                                               44.44445%;
+}
+
+
+.screen-mobile .parallax-mirror.mobile-hide {
+	display:                                                   none;
+}
+
+.video-player {
+	background-size:                                           30px 30px;
+	background-image:                                          linear-gradient(45deg,var(--white-lowest) 25%,var(--black-lowest) 25%,var(--black-lowest) 50%,var(--white-lowest) 50%,var(--white-lowest) 75%,var(--black-lowest) 75%,var(--black-lowest));
+	animation:                                                 2s linear infinite animate-loader;
+}
+
+@keyframes animate-loader {
+	0% { background-position: 0 0 }
+	100% { background-position:60px 0 }
+}
+
+.video-player::before {
+	content:                                                   "Loading...";
+	left:                                                      0;
+	top:                                                       20%;
+	position:                                                  absolute;
+	font-weight:                                               700;
+	text-align:                                                center;
+	width:                                                     100%;
+	font-size:                                                 34px;
+	filter:                                                    drop-shadow(1px 1px 0 var(--black-med)) drop-shadow(-1px -1px 0 var(--white-med)) drop-shadow(6px 6px 2px var(--black-lowest));
+}
+
+.video-player .play,
+.video-player img:hover{
+	filter:                                                    brightness(75%);
+}
+
+.video-player img {
+	position:                                                  absolute;
+	left:                                                      0;
+	bottom:                                                    0;
+	right:                                                     0;
+	top:                                                       0;
+	object-fit:                                                cover;
+	display:                                                   block;
+	margin:                                                    auto;
+	max-width:                                                 100%;
+	width:                                                     100%;
+	border:                                                    none;
+	height:                                                    auto;
+	cursor:                                                    pointer;
+	transition:                                                all .4s var(--main-trans-easing);
+}
+
+.video-player .play {
+	position:                                                  absolute;
+	background:                                                url('../battleplantheme/common/logos/video-play-btn.webp') no-repeat;
+	width:                                                     80px;
+	height:                                                    56px;
+	left:                                                      50%;
+	top:                                                       50%;
+	margin-left:                                               -40px;
+	margin-top:                                                -27px;
+	pointer-events:                                            none;
+	transition:                                                0.3s;
+}
+
+.video-player img:hover + .play {
+	filter:                                                    brightness(100%);
+	transition:                                                0.3s;
+}
+
+@media (max-width:860px){
+	.block-video.span-4,
+	.block-video.span-3,
+	.block-video.span-2,
+	.block-video.span-1 {
+		width:                                                    50%;
+		padding-top:                                              28.125%;
+	}
+}
+
+@media (max-width:576px) {
+	.block-video.span-10,
+	.block-video.span-9,
+	.block-video.span-8,
+	.block-video.span-7,
+	.block-video.span-6 {
+		width:                                                    100%;
+		padding-top:                                              56.25%;
+	}
+
+	.block-video.span-5,
+	.block-video.span-4,
+	.block-video.span-3,
+	.block-video.span-2,
+	.block-video.span-1 {
+		width:                                                    75%;
+		padding-top:                                              37.376875%;
+	}
+}

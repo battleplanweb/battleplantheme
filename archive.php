@@ -1,6 +1,6 @@
 <?php /* The template for displaying archive pages */
 
-wp_enqueue_style( 'battleplan-style-posts', get_template_directory_uri()."/style-posts.css", [], _BP_VERSION, 'print' );
+bp_inline_minified_css( get_template_directory() . '/style-posts.css' );
 get_header(); ?>
 
 <div id="primary" class="site-main" role="main" aria-label="main content">
@@ -66,7 +66,7 @@ get_header(); ?>
 
 		// Products
 			elseif ( get_post_type() === "products" ) :
-				wp_enqueue_style( 'battleplan-style-products-hvac', get_template_directory_uri()."/style-products-hvac.css", [], _BP_VERSION, 'print' );
+				bp_inline_minified_css( get_template_directory() . '/style-products-hvac.css' );
 
 				$archiveHeadline = "Products";
 				$grid = "1";

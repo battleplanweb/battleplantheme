@@ -657,12 +657,12 @@ function processChron($forceChron) {
 	}
 
 // 12) Jobsite GEO - polling jobs
-	$jobsite = get_site_option('jobsite_geo');	
+	$jobsite = get_site_option('jobsite_geo');
 	if ($jobsite && ($jobsite['fsm_brand'] ?? '') == 'Company Cam' && function_exists('bp_run_companycam_sync')) {
 			bp_run_companycam_sync();
 	}
 
-	
+
 // Basic Settings
 	$update_menu_order = array ('site-header'=>100, 'widgets'=>200, 'office-hours'=>700, 'hours'=>700, 'coupon'=>700, 'site-message'=>800, 'site-footer'=>900);
 
@@ -1808,7 +1808,7 @@ function processChron($forceChron) {
 	}
 
 	wp_cache_delete('customer_info', 'options');
-	wp_cache_flush();
+	//wp_cache_flush();
 }
 
 

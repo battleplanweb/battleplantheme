@@ -16,43 +16,63 @@
 # Admin
 --------------------------------------------------------------*/
 
-function bp_cleanup_duplicate_attachments() {
+function bp_cleanup_duplicate_attachments($delete = false) {
 
-	$attachments = get_posts([
-	    'post_type'      => 'attachment',
-	    'posts_per_page' => -1,
-	    'post_status'    => 'inherit',
-	    'fields'         => 'ids',
+	// 1️⃣ Get all jobsite_geo post IDs
+	$jobsite_ids = get_posts([
+		'post_type'      => 'jobsite_geo',
+		'post_status'    => 'any',
+		'posts_per_page' => -1,
+		'fields'         => 'ids',
 	]);
 
-	$hashes = [];
+	if (!$jobsite_ids) {
+		error_log('No jobsite_geo posts found');
+		return;
+	}
+
+	// 2️⃣ Get only attachments attached to jobsite_geo posts
+	$attachments = get_posts([
+		'post_type'      => 'attachment',
+		'post_status'    => 'inherit',
+		'post_parent__in'=> $jobsite_ids,
+		'posts_per_page' => -1,
+		'fields'         => 'ids',
+	]);
+
+	$hash_map = [];
 
 	foreach ($attachments as $aid) {
 
-	    $file = get_attached_file($aid);
-	    if (!$file || !file_exists($file)) continue;
+		$file = get_attached_file($aid);
+		if (!$file || !file_exists($file)) continue;
 
-	    $hash = md5_file($file);
+		$hash = md5_file($file);
 
-	    if (!isset($hashes[$hash])) {
-		   $hashes[$hash] = $aid;
-		   continue;
-	    }
+		if (!isset($hash_map[$hash])) {
+			$hash_map[$hash] = $aid;
+			continue;
+		}
 
-	    $original = $hashes[$hash];
+		$keep = $hash_map[$hash];
+		$kill = $aid;
 
-	    // If this attachment is not used anywhere, delete it
-	    if ((int) get_post_field('post_parent', $aid) === 0) {
-		   wp_delete_attachment($aid, true);
-	    }
+		error_log("DUPLICATE JOBSITE IMAGE FOUND");
+		error_log("KEEP: " . get_attached_file($keep) . " (ID {$keep})");
+		error_log("KILL: " . get_attached_file($kill) . " (ID {$kill})");
+
+		if ($delete) {
+			wp_delete_attachment($kill, true);
+			error_log("DELETED attachment {$kill}");
+		}
 	}
- }
+}
 
- //bp_cleanup_duplicate_attachments();
-
-
-require_once get_template_directory() . '/includes/includes-jobsite-geo-api.php';
-
+if ( get_option('bp_jobsite_photos_housekeeping_2026_01_30') !=="completed" ) :
+	//bp_cleanup_duplicate_attachments(false);
+	bp_cleanup_duplicate_attachments(true);
+	updateOption( 'bp_jobsite_photos_housekeeping_2026_01_30', 'completed', false );
+endif;
 
 // Format location
 function bp_format_location($location) {
@@ -1074,7 +1094,6 @@ add_action('add_attachment', function($attachment_id) {
 });
 
 add_action('admin_enqueue_scripts', function($hook) {
-
 	// Only load in post editor or ACF screen
 	if ($hook !== 'post.php' && $hook !== 'post-new.php') return;
 
@@ -1082,15 +1101,9 @@ add_action('admin_enqueue_scripts', function($hook) {
 	$screen = get_current_screen();
 	if ($screen && $screen->post_type !== 'jobsite_geo') return;
 
-	wp_enqueue_script(
-		'bp-jobsite-geo-admin',
-		get_template_directory_uri() . '/js/script-jobsite_geo-admin.js',
-		[],
-		null,
-		true
-	);
+	bp_enqueue_script( 'battleplan-jobsite-geo-admin', 'script-jobsite_geo-admin' );
 
-	wp_localize_script('bp-jobsite-geo-admin', 'bpRotate', [
+	wp_localize_script('battleplan-jobsite-geo-admin', 'bpRotate', [
 		'ajaxurl' => admin_url('admin-ajax.php'),
 		'nonce'   => wp_create_nonce('bp_rotate_image')
 	]);

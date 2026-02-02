@@ -2982,7 +2982,7 @@ add_filter('bp_footer_phone', function($out, $google_info) {
 	if (!empty($google_info['phone-format'])) {
 		return " • <a href = 'tel:".esc_html($google_info['area'])."-".esc_html($google_info['phone'])."'>".esc_html($google_info['phone-format'])."</a>";
 	} else {
-		return " • <a href = 'tel:".esc_html($google_info['area'])."-".esc_html($google_info['phone'])."'>".esc_html($google_info['area-before']).esc_html($google_info['area']).esc_html($google_info['area-after']).esc_html($google_info['phone'])."</a>";
+		return " • <a href = 'tel:".esc_html($google_info['area'])."-".esc_html($google_info['phone'])."'>(".esc_html($google_info['area']).') '.esc_html($google_info['phone'])."</a>";
 	}
 }, 10, 2);
 

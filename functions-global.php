@@ -14,7 +14,7 @@
 --------------------------------------------------------------*/
 
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2026.36.0' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2026.36.1' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -220,8 +220,14 @@ if ( !is_admin() ) :
 // Does this user come from a Google Ad?
 	if (!empty($_GET)) :
 		foreach( $_GET as $key => $value ) :
-			$value = trim($value);
-			if ($value === '') continue;
+			if (is_array($value)) {
+				$value = array_map('trim', $value);
+				$value = array_filter($value, static fn($v) => $v !== '');
+				if (!$value) continue;
+			} else {
+				$value = trim($value);
+				if ($value === '') continue;
+			}
 
 			if ( $key === "loc" || $key === "int" ) :
 				$cities = array();

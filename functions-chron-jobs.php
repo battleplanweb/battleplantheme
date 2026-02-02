@@ -2031,14 +2031,15 @@ function ci_merge_gbp_into_ci(array $ci, array $gbp_primary, bool $pid_sync): ar
 
 function ci_finalize_fields(array &$ci): void {
     // phone-format
-    $digits = fn($v) => preg_replace('/\D+/', '', (string)$v);
-    $a = $digits($ci['area'] ?? ''); $p = $digits($ci['phone'] ?? '');
     if (strlen($a)===3 && strlen($p)===7) {
-        $ci['phone-format'] = ($ci['area-before'] ?? '(').$a.($ci['area-after'] ?? ') ')
-                            . substr($p,0,3).'-'.substr($p,3);
-    } else {
-        unset($ci['phone-format']);
-    }
+		$ci['phone-format'] = sprintf('(%s) %s-%s',
+		$a,
+		substr($p,0,3),
+		substr($p,3)
+		);
+	} else {
+		unset($ci['phone-format']);
+	}
 
     // default-loc
     $city = trim((string)($ci['city'] ?? ''));

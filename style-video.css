@@ -154,7 +154,7 @@
 
 .video-player .play {
 	position:                                                  absolute;
-	background:                                                url('../battleplantheme/common/logos/video-play-btn.webp') no-repeat;
+	background:                                                url('/wp-content/themes/battleplantheme/common/logos/video-play-btn.webp') no-repeat;
 	width:                                                     80px;
 	height:                                                    56px;
 	left:                                                      50%;

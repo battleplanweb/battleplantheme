@@ -135,12 +135,12 @@ div div.theme-screenshot img {
 }
 
 div[data-slug="battleplantheme"] div.theme-screenshot {
-  	background:                                              url('../../themes/battleplantheme/screenshot.png') no-repeat 50% 50% !important;
+  	background:                                              url('/wp-content/themes/battleplantheme/screenshot.png') no-repeat 50% 50% !important;
 	background-size:                                           contain !important;
 }
 
 div[data-slug="battleplantheme-site"] div.theme-screenshot {
-  	background:                                              url('../../uploads/logo.webp') no-repeat 50% 50% !important;
+  	background:                                              url('/wp-content/uploads/logo.webp') no-repeat 50% 50% !important;
 	background-size:                                           contain !important;
 }
 

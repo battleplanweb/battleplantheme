@@ -76,9 +76,9 @@
 }
 
 .carousel-screen {
-	width:                                                     calc(100vw - 17px);
+	width:                                                     calc(100% + 20px);
 	left:                                                      50%;
-	transform:                                                 translateX(calc(-50vw + 8px));
+	transform:                                                 translateX(calc(-50% - 20px));
 }
 
 .carousel-screen .carousel-item {
@@ -88,20 +88,6 @@
 .carousel-screen.no-padding .carousel-item {
 	padding:                                                   0 !important;
 }
-
-
-/*
-.carousel-screen .carousel-item {
-	padding: 										0 3%; // removed for Midwest Airend & Pump slider (rebuild) -- if it is full screen, why the padding? 9/9/25
-}
-
-
-.carousel.carousel-screen .carousel-item,
-.carousel.screen-slider .carousel-item {
-	padding-left:									3vw; // removed for Midwest Airend & Pump slider  (rebuild)-- if it is full screen, why the padding? 9/9/25
-	padding-right:                                             3vw;
-}
-*/
 
 .carousel-item.active {
 	opacity:                                                   1;

@@ -160,30 +160,36 @@ function bp_build_css_core() {
 }
 
 function bp_build_site_css() {
-	$src = get_stylesheet_directory() . '/style-site.css';
+
+	$src  = get_stylesheet_directory() . '/style-site.css';
+	if (!file_exists($src)) return;
+
 	$dist = get_stylesheet_directory() . '/dist';
 	$site     = $dist . '/site.css';
 	$site_min = $dist . '/site.min.css';
 
-	if (!file_exists($src)) return;
+	if (!is_dir($dist)) {
+		wp_mkdir_p($dist);
+	}
 
 	$missing = !file_exists($site) || !file_exists($site_min);
-	if ( !$missing && ( (is_admin() && !wp_doing_ajax()) || (defined('REST_REQUEST') && REST_REQUEST) || (defined('WP_CLI') && WP_CLI))	) return;
 
-	if (!is_dir($dist)) wp_mkdir_p($dist);
-
-	$src_mtime  = filemtime($src);
-	$site_mtime = max(
+	$src_mtime = filemtime($src);
+	$out_mtime = max(
 		file_exists($site)     ? filemtime($site)     : 0,
 		file_exists($site_min) ? filemtime($site_min) : 0
 	);
-	if (!$missing && $src_mtime <= $site_mtime) return;
+
+	if (!$missing && $src_mtime <= $out_mtime) {
+		return;
+	}
 
 	$css = file_get_contents($src);
 
 	file_put_contents($site, $css);
 	file_put_contents($site_min, bp_minify_css($css));
 }
+
 
 add_action('after_setup_theme', 'bp_build_css_core');
 add_action('after_setup_theme', 'bp_build_site_css');
@@ -197,7 +203,7 @@ add_action('wp_enqueue_scripts', function () {
 
 	if (!file_exists($path)) return;
 
-	wp_enqueue_style( 'battleplan-core', $url, [], filemtime($path) );
+	wp_enqueue_style( 'battleplan-core', $url, [], _BP_VERSION );
 }, 1);
 
 add_action('wp_enqueue_scripts', function () {
@@ -209,7 +215,7 @@ add_action('wp_enqueue_scripts', function () {
 
 	if (!file_exists($path)) return;
 
-	wp_enqueue_style( 'battleplan-site', $url, ['battleplan-core'], filemtime($path) );
+	wp_enqueue_style( 'battleplan-site', $url, ['battleplan-core'], _BP_VERSION );
 
 }, 20);
 
@@ -299,7 +305,7 @@ function bp_enqueue_script( $handle, $base, $deps = [], $args = [] ) {
     foreach ($files as $file) {
         $path = $dir . $file;
         if (file_exists($path)) {
-            wp_enqueue_script( $handle, $uri . $file, $deps, filemtime($path), $args );
+            wp_enqueue_script( $handle, $uri . $file, $deps, _BP_VERSION, $args );
             return;
         }
     }

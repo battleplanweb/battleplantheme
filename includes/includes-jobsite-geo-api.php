@@ -35,7 +35,6 @@ function bp_ingest_jobsite(array $job) {
 	// ACF + extra fields (exact per driver)
 	if (!empty($job['acf_fields']) && is_array($job['acf_fields'])) {
 		foreach ($job['acf_fields'] as $acf_field => $val) {
-			if ($val === null || $val === '') continue;
 			update_field($acf_field, $val, $post_id);
 		}
 	}
@@ -217,6 +216,12 @@ function bp_handle_hcp_webhook_exact(WP_REST_Request $req) {
 		return new WP_REST_Response(['error' => 'Not using Housecall Pro'], 403);
 	}
 
+	$lock_key = 'hcp_job_lock_' . ($job_id ?? '');
+	if (get_transient($lock_key)) {
+		return new WP_REST_Response(['skipped' => 'Job sync already running'], 200);
+	}
+	set_transient($lock_key, time(), 5 * MINUTE_IN_SECONDS);
+
 	require_once ABSPATH . 'wp-admin/includes/media.php';
 	require_once ABSPATH . 'wp-admin/includes/file.php';
 	require_once ABSPATH . 'wp-admin/includes/image.php';
@@ -237,7 +242,7 @@ function bp_handle_hcp_webhook_exact(WP_REST_Request $req) {
 
 	$description_note = '';
 	$photo_notes = [];
-	$captions = [];
+	$captioned_photos = [];
 	$has_publishable_note = false;
 
 	// EXACT sloppy-note parsing (same as original)
@@ -258,22 +263,24 @@ function bp_handle_hcp_webhook_exact(WP_REST_Request $req) {
 		return new WP_REST_Response(['skipped' => 'No publishable note found'], 200);
 	}
 
-	// EXACT caption extraction (multi-photo, multi-line tolerant)
 	if ($photo_notes) {
-		$text = implode(' ', array_map(function($n) {
-			return preg_replace('/\s+/', ' ', str_replace(["\r", "\n"], ' ', $n));
-		}, $photo_notes));
+		foreach ($photo_notes as $note) {
 
-		$pattern = '/(?:Photo|Pic|Image)\s*(\d+)\s*[\-\:\=\)\.]*\s*(.*?)(?=(?:Photo|Pic|Image)\s*\d+|$)/is';
+			$note = preg_replace('/\s+/', ' ', trim($note));
 
-		if (preg_match_all($pattern, $text, $matches, PREG_SET_ORDER)) {
-			foreach ($matches as $m) {
-				$idx = (int) $m[1];
-				$cap = trim($m[2]);
-				if ($cap !== '') $captions[$idx] = $cap;
+			if (preg_match(
+				'/(?:Photo|Pic|Image)\s*(\d+)\s*[\-\:\=\)\.]*\s*(.+)/i',
+				$note,
+				$m
+			)) {
+				$captioned_photos[] = [
+					'photo_num' => (int) $m[1],
+					'caption'   => trim($m[2]),
+				];
 			}
 		}
 	}
+
 
 	$title   = trim(($cust->first_name ?? '') . ' ' . ($cust->last_name ?? ''));
 	$content = $description_note;
@@ -285,37 +292,37 @@ function bp_handle_hcp_webhook_exact(WP_REST_Request $req) {
 	$zip    = isset($addr->zip) ? preg_replace('/^(\d{5}).*/', '$1', $addr->zip) : '';
 	$date   = $job->work_timestamps->completed_at ?? '';
 
-	// Captions keyed by photo number (1-based)
-	ksort($captions);
 
 	// HCP sends attachments newest → oldest
 	// Display order is the reverse of API order
-	$attachments = array_values(array_reverse($job->attachments ?? []));
+	$attachments = array_values($job->attachments ?? []);
+
+	$display = array_reverse($attachments);
 
 	// Select ONLY captioned photos, mapped by display number
 	$photos = [];
+	$slot = 1;
 
-	foreach ($captions as $photo_num => $caption) {
+	foreach ($captioned_photos as $entry) {
 
-		if (count($photos) >= 4) break;
+		if ($slot > 4) break;
 
-		$idx = (int) $photo_num - 1;
+		$idx = $entry['photo_num'] - 1;
+		if (!isset($display[$idx])) continue;
 
-		if ($idx < 0 || !isset($attachments[$idx])) {
-			continue;
-		}
-
-		$a = $attachments[$idx];
+		$a = $display[$idx];
 
 		$photos[] = [
 			'id'        => $a->id,
 			'url'       => $a->url,
-			'caption'   => $caption,
+			'caption'   => $entry['caption'],
+			'slot'      => $slot,
 			'file_name' => $a->file_name ?? '',
 			'file_type' => $a->file_type ?? 'image/jpeg',
 		];
-	}
 
+		$slot++;
+	}
 
 	$post_id = bp_ingest_jobsite([
 		'source'            => 'Housecall Pro',
@@ -351,91 +358,105 @@ function bp_handle_hcp_webhook_exact(WP_REST_Request $req) {
 		return new WP_REST_Response(['error' => 'Failed to create post'], 500);
 	}
 
+	delete_transient($lock_key);
+
 	return new WP_REST_Response(['success' => true, 'post_id' => $post_id], 200);
 }
 
 function bp_sync_jobsite_photos_hcp($post_id, array $photos) {
 
-	// EXACT HCP meta key behavior
-	$saved_ids = get_post_meta($post_id, '_hcp_attachment_ids', true);
-	if (!is_array($saved_ids)) $saved_ids = [];
+	// --------------------------------------------
+	// 1️⃣ Capture existing slot state
+	// --------------------------------------------
+	$existing_slots = [];
+	for ($i = 1; $i <= 4; $i++) {
+		$aid = get_field("jobsite_photo_{$i}", $post_id);
+		if ($aid) $existing_slots[$i] = (int) $aid;
+	}
+	$deleted_attachments = [];
+	$used_slots = [];
 
-	$acf_slot = 1;
 
-	// Photos in $photos are already in Photo 1..4 order.
+	require_once ABSPATH . 'wp-admin/includes/media.php';
+	require_once ABSPATH . 'wp-admin/includes/file.php';
+	require_once ABSPATH . 'wp-admin/includes/image.php';
+
+	// --------------------------------------------
+	// 2️⃣ Process incoming photos (authoritative)
+	// --------------------------------------------
 	foreach ($photos as $p) {
 
 		$photo_id = $p['id'] ?? '';
-		if (!$photo_id) continue;
-		if ($acf_slot > 4) break;
+		$caption  = trim((string) ($p['caption'] ?? ''));
+		$acf_slot = (int) ($p['slot'] ?? 0);
 
-		/* --------------------------------------------
-		 * 🔒 HARD LOCK (prevents race-condition dupes)
-		 * -------------------------------------------- */
-		$lock_key = 'hcp_photo_lock_' . $photo_id;
-		if (get_transient($lock_key)) continue;
-		set_transient($lock_key, time(), 5 * MINUTE_IN_SECONDS);
+		if (
+			!$photo_id ||
+			$caption === '' ||
+			$acf_slot < 1 ||
+			$acf_slot > 4
+		) {
+			continue;
+		}
 
-		$attachment_title = sprintf(
-			'Jobsite GEO [%d] %s -- %s',
-			$post_id,
-			wp_strip_all_tags(get_the_title($post_id)),
-			$photo_id
-		);
+		$used_slots[] = $acf_slot;
 
-		$existing_attachment = get_posts([
-			'post_type'   => 'attachment',
-			'meta_key'    => '_hcp_attachment_id',
-			'meta_value'  => $photo_id,
-			'fields'      => 'ids',
-			'numberposts' => 1,
-		]);
+		$expected_filename = basename(parse_url($p['url'], PHP_URL_PATH));
+		$aid = 0;
 
-		if ($existing_attachment) {
+		// --------------------------------------------
+		// 2a️⃣ SLOT CHECK — filename match?
+		// --------------------------------------------
+		if (isset($existing_slots[$acf_slot])) {
 
-			$aid = (int) $existing_attachment[0];
+			$current_aid  = $existing_slots[$acf_slot];
+			$current_file = get_attached_file($current_aid);
 
-			if ((int) get_post_field('post_parent', $aid) !== (int) $post_id) {
-				wp_update_post([
-					'ID'          => $aid,
-					'post_parent' => $post_id,
-				]);
+			if ($current_file && basename($current_file) === $expected_filename) {
+				$aid = $current_aid; // keep
+			} else {
+				if ( (int) get_post_field('post_parent', $current_aid) === (int) $post_id && !in_array($current_aid, $deleted_attachments, true) ) {
+					wp_delete_attachment($current_aid, true);
+					$deleted_attachments[] = $current_aid;
+				}
+				$aid = 0;
 			}
+		}
 
-			wp_update_post([
-				'ID'         => $aid,
-				'post_title' => $attachment_title,
+		// --------------------------------------------
+		// 2b️⃣ Reuse existing attachment by HCP ID
+		// --------------------------------------------
+		if (!$aid) {
+			$found = get_posts([
+				'post_type'   => 'attachment',
+				'meta_key'    => '_hcp_attachment_id',
+				'meta_value'  => $photo_id,
+				'fields'      => 'ids',
+				'numberposts' => 1,
 			]);
+			if ($found) $aid = (int) $found[0];
+		}
 
-		} else {
+		// --------------------------------------------
+		// 2c️⃣ Download if still missing
+		// --------------------------------------------
+		if (!$aid) {
 
-			$tmp = download_url($p['url']);
-			if (is_wp_error($tmp)) {
-				delete_transient($lock_key);
+			if (empty($p['url']) || !filter_var($p['url'], FILTER_VALIDATE_URL)) {
 				continue;
 			}
 
-			/* --------------------------------------------
-			 * 🧠 HASH DEDUPE (reuse existing file)
-			 * -------------------------------------------- */
+			$tmp = download_url($p['url']);
+			if (is_wp_error($tmp)) continue;
+
 			$existing_aid = bp_find_existing_attachment_by_hash($tmp);
 
 			if ($existing_aid) {
-
 				@unlink($tmp);
 				$aid = $existing_aid;
-				update_post_meta($aid, '_bp_file_hash', md5_file(get_attached_file($aid)));
-
-				if ((int) get_post_field('post_parent', $aid) !== (int) $post_id) {
-					wp_update_post([
-						'ID'          => $aid,
-						'post_parent' => $post_id,
-					]);
-				}
-
 			} else {
 
-				$ext = pathinfo($p['file_name'] ?? '', PATHINFO_EXTENSION) ?: 'jpg';
+				$ext = pathinfo($expected_filename, PATHINFO_EXTENSION) ?: 'jpg';
 
 				$file = [
 					'name'     => "jobsite-geo-{$post_id}-{$photo_id}.{$ext}",
@@ -446,14 +467,11 @@ function bp_sync_jobsite_photos_hcp($post_id, array $photos) {
 				];
 
 				$m = wp_handle_sideload($file, ['test_form' => false]);
-				if (empty($m['file'])) {
-					delete_transient($lock_key);
-					continue;
-				}
+				if (empty($m['file'])) continue;
 
 				$aid = wp_insert_attachment([
 					'post_mime_type' => $file['type'],
-					'post_title'     => $attachment_title,
+					'post_title'     => "Jobsite GEO [{$post_id}] {$photo_id}",
 					'post_status'    => 'inherit',
 				], $m['file'], $post_id);
 
@@ -463,34 +481,39 @@ function bp_sync_jobsite_photos_hcp($post_id, array $photos) {
 				);
 
 				update_post_meta($aid, '_bp_file_hash', md5_file(get_attached_file($aid)));
-				update_post_meta($aid, '_hcp_attachment_id', $photo_id);
-				$saved_ids[] = $photo_id;
 			}
+
+			update_post_meta($aid, '_hcp_attachment_id', $photo_id);
 		}
 
-		/* --------------------------------------------
-		 * 📌 ACF + META (unchanged behavior)
-		 * -------------------------------------------- */
+		// --------------------------------------------
+		// 2d️⃣ Attach + caption (authoritative)
+		// --------------------------------------------
 		update_field("jobsite_photo_{$acf_slot}", $aid, $post_id);
+		update_field("jobsite_photo_{$acf_slot}_alt", $caption, $post_id);
 
-		$caption = trim((string)($p['caption'] ?? ''));
-
-		// HARD RULE: HCP photos without captions NEVER consume a slot
-		if ($caption === '') {
-			delete_transient($lock_key);
-			continue;
-		}
-
-		if ($caption !== '') {
-			update_post_meta($aid, '_wp_attachment_image_alt', $caption);
-			wp_update_post(['ID' => $aid, 'post_excerpt' => $caption]);
-		}
-
-		delete_transient($lock_key);
-		$acf_slot++;
+		update_post_meta($aid, '_wp_attachment_image_alt', $caption);
+		wp_update_post([
+			'ID'           => $aid,
+			'post_parent'  => $post_id,
+			'post_excerpt' => $caption,
+		]);
 	}
 
-	update_post_meta($post_id, '_hcp_attachment_ids', array_unique($saved_ids));
+	// --------------------------------------------
+	// 3️⃣ Remove orphaned slots (CRITICAL)
+	// --------------------------------------------
+	for ($i = 1; $i <= 4; $i++) {
+		if (isset($existing_slots[$i]) && !in_array($i, $used_slots, true)) {
+
+			$aid = $existing_slots[$i];
+
+			delete_field("jobsite_photo_{$i}", $post_id);
+			delete_field("jobsite_photo_{$i}_alt", $post_id);
+
+			wp_delete_attachment($aid, true);
+		}
+	}
 }
 
 /*--------------------------------------------------------------
@@ -677,12 +700,30 @@ function bp_sync_jobsite_photos_companycam($post_id, array $photos) {
 			 * -------------------------------------------- */
 			$existing_aid = bp_find_existing_attachment_by_hash($tmp);
 
+			/* --------------------------------------------
+			 * 🔑 HCP ATTACHMENT ID IS AUTHORITATIVE
+			 * -------------------------------------------- */
+			if ($existing_aid) {
+				$existing_hcp_id = get_post_meta($existing_aid, '_hcp_attachment_id', true);
+
+				// Different HCP photo → DO NOT reuse by hash
+				if ($existing_hcp_id && (string) $existing_hcp_id !== (string) $photo_id) {
+					$existing_aid = 0;
+				}
+			}
+
 			if ($existing_aid) {
 
 				@unlink($tmp);
 				$aid = $existing_aid;
-				update_post_meta($aid, '_bp_file_hash', md5_file(get_attached_file($aid)));
 
+				update_post_meta(
+					$aid,
+					'_bp_file_hash',
+					md5_file(get_attached_file($aid))
+				);
+
+				// Ensure correct parent
 				if ((int) get_post_field('post_parent', $aid) !== (int) $post_id) {
 					wp_update_post([
 						'ID'          => $aid,
@@ -691,6 +732,7 @@ function bp_sync_jobsite_photos_companycam($post_id, array $photos) {
 				}
 
 			} else {
+
 
 				$ext = pathinfo(parse_url($web_uri, PHP_URL_PATH), PATHINFO_EXTENSION) ?: 'jpg';
 

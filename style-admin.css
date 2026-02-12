@@ -95,6 +95,10 @@
   --close-btn-border-hover:                                 var(--button-border-hover);
 }
 
+#EMR001 {
+	display:                                                   none;
+}
+
 #query-monitor-main {
 	display:                                                   block !important;
 	top:                                                       50%;
@@ -337,6 +341,138 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	width:                                                     100%;
 	left:                                                      unset;
 	z-index:                                                   100;
+}
+
+/* Admin columns */
+.wp-admin select {
+	text-transform:                                            capitalize;
+}
+
+.wp-list-table .column-bp-post-id,
+.wp-list-table .column-bp-top-exists,
+.wp-list-table .column-bp-bottom-exists,
+.wp-list-table .column-bp-image-id {
+	width:                                                     5%;
+}
+
+.wp-list-table .column-bp-size,
+.upload-php .fixed .column-bp-media_parent {
+	width:                                                     7%;
+}
+
+.wp-list-table .column-bp-featured-image,
+.wp-list-table .column-bp-image,
+.wp-list-table .column-bp-modified,
+.wp-list-table .column-bp-last-modified,
+.wp-list-table .column-bp-modified-published,
+.wp-list-table .column-bp-start_date,
+.wp-list-table .column-bp-end_date,
+.wp-list-table .column-bp-start_time,
+.wp-list-table .column-bp-end_time {
+	width:                                                     9%;
+}
+
+.wp-list-table.media .column-bp-title,
+.wp-list-table.media .column-bp-image-categories,
+.wp-list-table.media .column-bp-image-tags {
+	width:                                                     11%;
+}
+
+.wp-list-table .column-bp-title,
+.wp-list-table .column-bp-slug {
+	width:                                                     16%;
+}
+
+.wp-list-table .column-bp-alt-text {
+	width:                                                     30%;
+}
+
+.wp-list-table th.column-bp-attachments {
+	width:                                                     40%;
+}
+
+.wp-list-table .column-bp-featured-image {
+	padding-left:                                              0;
+	padding-right:                                             0;
+}
+
+th.sortable a,
+th.sorted a {
+	padding:                                                   0 0 8px;
+}
+
+.wp-list-table th {
+	font-weight:                                               bold;
+	font-size:                                                 130%;
+}
+
+
+.wp-list-table th,
+.wp-list-table td {
+	text-align:                                                center;
+}
+
+.wp-list-table th span.sorting-indicators {
+	float:                                                     none;
+	display:                                                   inline-block;
+	transform:                                                 translate(1px, 16px);
+}
+
+.wp-list-table td.plugin-title,
+.wp-list-table .column-bp-user_login,
+.wp-list-table .column-bp-user_login,
+.wp-list-table .column-bp-user_login a,
+.wp-list-table .column-bp-name,
+.wp-list-table .column-bp-description,
+.wp-list-table .column-bp-slug,
+.wp-list-table .column-bp-alt-text,
+.wp-list-table .column-bp-title,
+.wp-list-table .column-bp-attachments,
+.wp-list-table .column-bp-first_name,
+.wp-list-table .column-bp-last_name,
+.wp-list-table .column-bp-display_name {
+	text-align:                                                left;
+	padding-left:                                              6px !important;
+}
+
+.wp-list-table .column-bp-attachments {
+	padding-left:                                              35px !important;
+	padding-right:                                             5px !important;
+
+}
+
+.wp-list-table .column-bp-user_login {
+	font-weight:                                               bold;
+}
+
+.has-media-icon span.media-icon.image-icon,
+.wp-mail-smtp-pro,
+tr[data-slug=wordpress-seo-premium] span:first-of-type,
+tr[data-slug=wordpress-seo] span:first-of-type {
+	display:                                                   none;
+}
+
+.wp-list-table td.column-bp-attachments {
+	display:                                                   grid;
+	grid-template-columns:                                     repeat(auto-fill, 80px);
+	gap:                                                       5px;
+}
+
+.wp-list-table td.column-bp-attachments a {
+	line-height:                                               0;
+}
+
+:root {
+  --inline-edit:                                            2px dotted var(--main-blue);
+}
+
+th.sortable a span,
+th.sorted a span {
+	float:                                                     none;
+}
+
+.plugin-title.column-bp-primary .row-actions {
+	font-size:                                                 17px;
 }
 
 /* Expand to the full screen when you have more than 3 years worth of stats */
@@ -593,89 +729,6 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	width:                                                     120px;
 }
 
-/* Pages, Posts, etc. */
-.wp-list-table th a {
-	text-align:                                                center;
-}
-
-.wp-list-table th {
-	text-align:                                                center;
-	padding:                                                   2px 0 6px;
-}
-
-.wp-list-table th:not(#title).sortable {
-	padding:                                                   8px 0 0;
-}
-
-.wp-list-table td {
-	text-align:                                                center;
-}
-
-.wp-list-table th#title a,
-.wp-list-table th.column-title a,
-.wp-list-table th#name a,
-.wp-list-table th.column-name a,
-.wp-list-table th#slug a,
-.wp-list-table th#column-slug a,
-.wp-list-table th.column-slug a,
-.wp-list-table th.column-column-slug a,
-.wp-list-table th#categories a,
-.wp-list-table th.column-categories a,
-.wp-list-table th#tags a,
-.wp-list-table th#gallery-tags a,
-.wp-list-table th.column-tags a,
-.wp-list-table th.column-gallery-tags a,
-.wp-list-table th#author a,
-.wp-list-table th.column-author a,
-.wp-list-table th#attachments a,
-.wp-list-table th.column-attachments a,
-.wp-list-table th#filename a,
-.wp-list-table th#alt-text a,
-.wp-list-table th#username a,
-.wp-list-table th.column-username a,
-.wp-list-table th#first_name a,
-.wp-list-table th.column-first_name a,
-.wp-list-table th#last_name a,
-.wp-list-table th.column-last_name a,
-.wp-list-table th#order_number a,
-.wp-list-table td.order_number,
-.wp-list-table th.check-column,
-.wp-list-table td.title,
-.wp-list-table td.name,
-.wp-list-table td.slug,
-.wp-list-table td.column-slug,
-.wp-list-table td.attachments,
-.wp-list-table td.column-source,
-.wp-list-table td.plugin-title,
-.wp-list-table td.column-description,
-.wp-list-table td.plugin-update,
-.wp-list-table td.column-filename,
-.wp-list-table td.column-categories,
-.wp-list-table td.column-tags,
-.wp-list-table td.column-gallery-tags,
-.wp-list-table td.column-author,
-.wp-list-table td.alt-text,
-.wp-list-table td.username,
-.wp-list-table td.first_name,
-.wp-list-table td.last_name {
-	position:                                                  relative;
-	text-align:                                                left;
-}
-
-.post-type-shop_order .wp-list-table .column-order_total {
-  	text-align:                                              center;
-}
-
-.wp-list-table th#order_number.sortable {
-	padding-left:                                              1em;
-}
-
-.wp-list-table th:not(#title) a span {
-	display:                                                   block;
-	margin:                                                    0 auto 4px;
-	float:                                                     none;
-}
-
 .wp-admin td.title {
 	cursor:                                                    pointer;
 }
@@ -721,6 +774,10 @@ body.ac-wp-media .row-actions {
 .wp-admin tr:hover .row-actions {
 	opacity:                                                   1;
 	transition:                                                all 0.3s ease 0.1s;
+}
+
+table.media .column-bp-title .has-media-icon ~ .row-actions {
+	margin-left:                                               0;
 }
 
 .dashicons-trash::before,
@@ -785,22 +842,22 @@ body.ac-wp-media .row-actions {
 
 .wp-admin a[data-wp-action="disable"],
 .wp-admin .auto-update-time,
-.wp-admin .column-auto-updates * {
+.wp-admin .column-bp-auto-updates * {
 	opacity:                                                   0.35;
 }
 
-table.media .column-title .media-icon,
-table.media .column-title .media-icon img,
-table.media .column-name .media-icon,
-table.media .column-name .media-icon img {
+table.media .column-bp-title .media-icon,
+table.media .column-bp-title .media-icon img,
+table.media .column-bp-name .media-icon,
+table.media .column-bp-name .media-icon img {
 	width:                                                     80px;
 	max-width:                                                 unset;
 	height:                                                    80px;
 	min-height:                                                unset;
 }
 
-table.acp-ie-table .title.column-title .acp-ie-controls,
-table.acp-ie-table .title.column-name .acp-ie-controls {
+table.acp-ie-table .title.column-bp-title .acp-ie-controls,
+table.acp-ie-table .title.column-bp-name .acp-ie-controls {
 	display:                                                   none !important;
 }
 
@@ -859,9 +916,9 @@ table.acp-ie-table .title.column-name .acp-ie-controls {
 	column-gap:                                                2.5em;
 }
 
-.wp-admin .column-author img,
-.wp-admin .column-comment .comment-author img,
-.wp-admin .column-username img {
+.wp-admin .column-bp-author img,
+.wp-admin .column-bp-comment .comment-author img,
+.wp-admin .column-bp-username img {
 	display:                                                   none;
 }
 

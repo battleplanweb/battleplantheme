@@ -2,6 +2,18 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 
 // Raw Script: Admin
 
+	getObjects('#the-list tr').forEach(function (row) {
+
+		var actions = row.querySelector('.column-primary .row-actions');
+		var titleTd = row.querySelector('.column-bp-title');
+
+		if (!actions || !titleTd) return;
+
+		// Move row-actions into the title column
+		titleTd.appendChild(actions);
+
+	});
+
 	getObjects('.disabled').forEach(el => {
         el.classList.remove('disabled', '-disabled');
     });
@@ -344,7 +356,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 
 		QTags.addButton( 'bp_expire-content', 'expire', '[expire start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/expire]\n\n', 'expire', 'Expire', 1000 );
 
-		QTags.addButton('bp_parallax', 'parallax', '[parallax section name="becomes id attribute" style="corresponds to css" width="default, stretch, full, edge, inline" img-w="1920" img-h="1024" height="800" padding="50" pos-x="50%" top-y="0" bottom-y="0" z-index="2" image="/wp-content/uploads/image.webp"]\n', '[/parallax]\n\n', 'parallax', 'Parallax', 1000 );
+		QTags.addButton('bp_parallax', 'parallax', '[parallax section name="becomes id attribute" style="corresponds to css" width="default, stretch, full, edge, inline" img-w="1920" img-h="1024" height="800" padding="50 / applies to mobile" pos-x="50%" top-y="0" bottom-y="0" z-index="2" image="/wp-content/uploads/image.webp"]\n', '[/parallax]\n\n', 'parallax', 'Parallax', 1000 );
 
 		QTags.addButton( 'bp_section', 'section', '[section name="becomes id attribute" hash="compensation for scroll on one-page sites" style="corresponds to css" width="default, stretch, full, edge, inline" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '[/section]\n\n', 'section', 'Section', 1000 );
 

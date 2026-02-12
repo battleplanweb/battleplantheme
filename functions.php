@@ -287,6 +287,10 @@ function bp_next_change_at(array $periods,string $tz,?int $ts=null): ?array {
 function is_biz_open(string $businessTz=null): bool {
 	$customer_info = customer_info();
 
+	if (empty($customer_info['pid-sync']) || $customer_info['pid-sync'] === false || $customer_info['pid-sync'] === "false") {
+		return false;
+	}
+
 	$info=get_option('bp_gbp_update') ?: [];
 	$ids=$customer_info['pid'] ?? 0; $ids=is_array($ids)?$ids:[$ids];
 	$pid=$ids[0] ?? 0; if (!$pid) return false;

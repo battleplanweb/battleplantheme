@@ -15,7 +15,7 @@
 		font-display:                                             swap;
 		font-style:                                               normal;
 		font-weight:                                              400;
-		src: url('../battleplantheme/fonts/opensans-regular.woff2') format('woff2')
+		src: url('/wp-content/themes/battleplantheme/fonts/opensans-regular.woff2') format('woff2')
 	}
 
 	@font-face {
@@ -23,7 +23,7 @@
 		font-display:                                             swap;
 		font-style:                                               normal;
 		font-weight:                                              700;
-		src: url('../battleplantheme/fonts/opensans-bold.woff2') format('woff2')
+		src: url('/wp-content/themes/battleplantheme/fonts/opensans-bold.woff2') format('woff2')
 	}
 		*/
 

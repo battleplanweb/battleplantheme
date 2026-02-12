@@ -535,23 +535,34 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	// Cover container with direct sibling, then slide sibling out of the way to reveal container
 	window.revealDiv = function (elementSel, delay = 0, speed = 1000, offset = "0%") {
+
 		offset = parseInt(offset) / 100;
 		const elementObj = getObject(elementSel);
 		if (!elementObj) return;
 
 		const nextElemObj = elementObj.nextElementSibling;
 		if (!nextElemObj) return;
-		nextElemObj.style.transform = `translateY(-${elementObj.offsetHeight}px)`;
+
+		// 1. Set initial hidden state with no transition
+		const h = elementObj.offsetHeight;
+		nextElemObj.style.transitionProperty = 'transform';
 		nextElemObj.style.transitionDuration = '0ms';
+		nextElemObj.style.transform = `translateY(-${h}px)`;
 
 		setTimeout(() => {
+
+			// 2. Re-enable transition BEFORE observing
+			nextElemObj.style.transitionDuration = `${speed}ms`;
+
 			const observer = new IntersectionObserver((entries) => {
 				entries.forEach(entry => {
-					if (entry.isIntersecting) {
-						beginAnimation(entry.target, animationKeyframes('reveal'));
-						observer.unobserve(entry.target);
-						observer.disconnect();
-					}
+					if (!entry.isIntersecting) return;
+
+					// 3. Reveal by returning to zero
+					nextElemObj.style.transform = 'translateY(0)';
+
+					observer.unobserve(entry.target);
+					observer.disconnect();
 				});
 			}, {
 				root: null,
@@ -560,8 +571,10 @@ document.addEventListener("DOMContentLoaded", function () {
 			});
 
 			observer.observe(elementObj);
+
 		}, delay);
 	};
+
 
 
 	// Button to reveal a hidden div

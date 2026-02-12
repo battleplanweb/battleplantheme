@@ -17,9 +17,9 @@ a.button[class*="item-"]:hover .fancy-icon {
 	transition:                                                all var(--main-trans-speed) var(--main-trans-easing);
 }
 
-a.button.fancy .fancy-icon .icon::after,
-a.button[class*="item-"] .fancy-icon .icon::after {
-	font-size:                                                 80%;
+a.button span.fancy-icon {
+	font-size:                                                 75% !important;
+	margin-left:                                               10px;
 }
 
 a.button.fancy .fancy-text {

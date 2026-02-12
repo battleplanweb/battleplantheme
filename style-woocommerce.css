@@ -868,8 +868,10 @@ input[type="number"] {
 }
 
 .woocommerce.screen-1 #page #mobile-menu-bar {
-  	grid-template-columns:                                   50px 38px 38px 1fr 38px 38px;
+	/*grid-template-columns: 50px 38px 38px 1fr 38px 38px;*/
+	grid-template-columns:                                     38px 38px 1fr 38px 38px;
 }
+
 
 .woocommerce.screen-mobile #page .fa-shopping-cart::before {
   	font-size:                                               24px;
@@ -989,6 +991,7 @@ input[type="number"] {
 	}
 
 	.screen-1 #mobile-menu-bar {
-	  	grid-template-columns:                                  53px 38px 38px 1fr 38px 38px;
+		/*grid-template-columns: 53px 38px 38px 1fr 38px 38px;*/
+		grid-template-columns:                                    38px 38px 1fr 38px 38px;
 	}
 }

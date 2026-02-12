@@ -540,6 +540,8 @@ function bp_jobsite_setup($post_id, $user) {
 		$headers[] = 'Reply-To: noreply@' . $domain;
 		if ($notifyBc) $headers[] = 'Bcc: <' . $notifyBc . '>';
 
+		$message .= $GLOBALS['email_body'];
+
 		wp_mail($notifyTo, $subject, $message, $headers);
 	}
 }

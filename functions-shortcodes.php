@@ -867,7 +867,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		if ( $textSize == "" ) :
 			$textSize = getTextSize($picSize);
 		endif;
-	elseif ( $noPic != "false" ) :
+	elseif ( $noPic != false ) :
 		$archiveImg = do_shortcode("[img size='".$picSize."' class='image-".$type." block-placeholder placeholder-".$type."' link='".$linkLoc."' ".$picADA."]".wp_get_attachment_image( $noPic, $size, false, ['class' => 'img-archive img-' . $type])."[/img]");
 		if ( $textSize == "" ) :
 			$textSize = getTextSize($picSize);
@@ -2060,7 +2060,7 @@ add_shortcode('show_debug_log', function() {
 
 
     // Keep only last 100 lines for performance
-    $recent = array_slice($contents, -100);
+    $recent = array_slice($contents, -200);
 
     // Reverse order (newest first)
     $recent = array_reverse($recent);
@@ -2068,6 +2068,8 @@ add_shortcode('show_debug_log', function() {
     // Add blank line spacing
     $output = implode("\n\n", array_map('esc_html', $recent));
     $output = nl2br($output, false);
+
+    str_replace('PHP Fatal Error', '<style="color:red">PHP Fatal Error</span>', $output);
 
     // Display nicely formatted
     return '<div style="font-family:monospace;font-size:13px;line-height:1.5;background:#fafafa;border:1px solid #ccc;padding:10px;white-space:normal;">'

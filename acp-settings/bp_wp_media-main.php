@@ -5,9 +5,9 @@ return array (
   	'title' => 'Media - Main View',
   	'type' => 'wp-media',
   	'id' => 'bp_wp_media-main',
-  	'updated' => 1684240270, 
+  	'updated' => 1684240270,
 	'columns'=>array(
-		/*'image'=>array(
+		'image'=>array(
 			'type'=>'column-image',
 			'label'=>'Image',
 			'width'=>'140',
@@ -21,31 +21,14 @@ return array (
 		'filename'=>array(
 			'type'=>'column-file_name',
 			'label'=>'Filename',
-			'width'=>'200',
-			'width_unit'=>'px',
+			'width'=>'',
+			'width_unit'=>'',
 			'sort'=>'on',
 			'name'=>'filename',
 			'label_type'=>''
-		),*/
-
-
-		'title'=>array(
-			'type'=>'column-title_raw',
-			'label'=>'Title',
-			'post_link_to'=>'edit_post',
-			'width'=>'400',
-			'width_unit'=>'px',
-			'sort'=>'on',
-			'name'=>'filename',
-			'label_type'=>'',
-			'export'=>'on',
-			'sort'=>'on',
-			'edit'=>'on',
-			'bulk_edit'=>'on',
-			'search'=>'on',
-		),					
+		),
 		'image-id'=>array(
-			'type'=>'column-mediaid',
+			'type'=>'column-postid',
 			'label'=>'ID',
 			'width'=>'100',
 			'width_unit'=>'px',
@@ -57,8 +40,8 @@ return array (
 		'alt-text' => array(
 			'type' => 'column-alternate_text',
 			'label' => 'Alt Text',
-			'width' => '500',
-			'width_unit' => 'px',
+			'width' => '25',
+			'width_unit' => '%',
 			'use_icons' => '',
 			'name' => 'column-alternate_text',
 			'label_type' => '',
@@ -69,7 +52,7 @@ return array (
 			'bulk-editing' =>'',
 			'export' => '',
 			'search' => ''
-		),			
+		),
 		'date'=>array(
 			'type'=>'column-modified',
 			'label'=>'Date',
@@ -78,23 +61,23 @@ return array (
 			'edit'=>'off',
 			'sort'=>'on',
 			'filter'=>'on',
-			'filter_label'=>'',						
+			'filter_label'=>'',
 			'date_format'=>'F j, Y g:i a',
 			'filter_format'=>'monthly',
 			'name'=>'date',
 			'label_type'=>'',
 			'search'=>'on',
-		),				
+		),
 		'taxonomy-image-categories'=>array(
 			'type'=>'taxonomy-image-categories',
 			'label'=>'Categories',
-			'width'=>'',
+			'width'=>'13',
 			'width_unit'=>'%',
 			'edit'=>'on',
 			'enable_term_creation'=>'on',
 			'sort'=>'on',
 			'filter'=>'on',
-			'filter_label'=>'',
+			'filter_label'=>'Categories',
 			'name'=>'taxonomy-image-categories',
 			'label_type'=>'',
 			'search'=>'on'
@@ -102,7 +85,7 @@ return array (
 		'taxonomy-image-tags'=>array(
 			'type'=>'taxonomy-image-tags',
 			'label'=>'Tags',
-			'width'=>'',
+			'width'=>'13',
 			'width_unit'=>'%',
 			'edit'=>'on',
 			'enable_term_creation'=>'on',
@@ -112,7 +95,22 @@ return array (
 			'name'=>'taxonomy-image-tags',
 			'label_type'=>'',
 			'search'=>'on'
-		),			
+		),
+		'parent'=>array(
+			'type'=>'parent',
+			'label'=>'Attached',
+			'width'=>'20',
+			'width_unit'=>'%',
+			'edit'=>'on',
+			'enable_term_creation'=>'',
+			'sort'=>'',
+			'filter'=>'on',
+			'filter_label'=>'',
+			'name'=>'parent',
+			'label_type'=>'',
+			'search'=>'on',
+			'bulk-editing' =>'',
+		),
 		'size'=>array(
 			'type'=>'column-dimensions',
 			'label'=>'Size',

@@ -356,7 +356,11 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 }
 
 .wp-list-table .column-bp-size,
-.upload-php .fixed .column-bp-media_parent {
+.upload-php .fixed .column-bp-media_parent,
+.site-type-pedigree.post-type-litters .wp-list-table .column-price,
+.site-type-pedigree.post-type-litters .wp-list-table .column-deposit_hold,
+.site-type-pedigree.post-type-litters .wp-list-table .column-deposit_born,
+.site-type-pedigree.post-type-litters .wp-list-table .column-litter_status {
 	width:                                                     7%;
 }
 
@@ -368,19 +372,26 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 .wp-list-table .column-bp-start_date,
 .wp-list-table .column-bp-end_date,
 .wp-list-table .column-bp-start_time,
-.wp-list-table .column-bp-end_time {
+.wp-list-table .column-bp-end_time,
+.site-type-pedigree.post-type-litters .wp-list-table .column-birth_date {
 	width:                                                     9%;
 }
 
 .wp-list-table.media .column-bp-title,
 .wp-list-table.media .column-bp-image-categories,
-.wp-list-table.media .column-bp-image-tags {
+.wp-list-table.media .column-bp-image-tags,
+.site-type-pedigree.post-type-litters .wp-list-table .column-bp-title {
 	width:                                                     11%;
 }
 
 .wp-list-table .column-bp-title,
 .wp-list-table .column-bp-slug {
 	width:                                                     16%;
+}
+
+.site-type-pedigree.post-type-litters .wp-list-table .column-sire,
+.site-type-pedigree.post-type-litters .wp-list-table .column-dam {
+	width:                                                     19%;
 }
 
 .wp-list-table .column-bp-alt-text {
@@ -430,7 +441,9 @@ th.sorted a {
 .wp-list-table .column-bp-attachments,
 .wp-list-table .column-bp-first_name,
 .wp-list-table .column-bp-last_name,
-.wp-list-table .column-bp-display_name {
+.wp-list-table .column-bp-display_name,
+.site-type-pedigree.post-type-litters .wp-list-table .column-sire,
+.site-type-pedigree.post-type-litters .wp-list-table .column-dam {
 	text-align:                                                left;
 	padding-left:                                              6px !important;
 }

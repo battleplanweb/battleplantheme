@@ -26,6 +26,37 @@ add_filter('manage_page_posts_columns', function($columns){
 
 
 /*--------------------------------------------------------------
+# Handle Sorting By URL Var
+--------------------------------------------------------------*/
+add_filter('request', function($vars){
+	if (!is_admin()) return $vars;
+
+	if (!empty($vars['orderby'])) {
+
+		switch ($vars['orderby']) {
+
+			case 'bp-title':
+				$vars['orderby'] = 'title';
+				break;
+
+			case 'bp-modified':
+				$vars['orderby'] = 'modified';
+				break;
+
+			case 'bp-post-id':
+				$vars['orderby'] = 'ID';
+				break;
+
+			case 'bp-menu_order':
+				$vars['orderby'] = 'menu_order';
+				break;
+		}
+	}
+
+	return $vars;
+});
+
+/*--------------------------------------------------------------
 # Admin Columns Engine
 --------------------------------------------------------------*/
 function bp_admin_columns($config){
@@ -92,7 +123,7 @@ function bp_admin_columns($config){
 					wp_get_attachment_image($id, [130,130]),
 
 				'bp-title' => (function() use ($id) {
-					return '<a href="'.get_edit_post_link($id).'" target="_blank"><b style="color: var(--main-blue); font-size:115%">'.get_the_title($id).'</b></a><br>/'.basename(get_attached_file($id));
+					return '<a href="'.get_edit_post_link($id).'" target="_blank"><b style="color: var(--main-blue); font-size:115%">'.get_the_title($id).'</b></a><br />/'.basename(get_attached_file($id));
 				})(),
 
 				'bp-modified' => get_the_modified_date('', $id),
@@ -106,10 +137,10 @@ function bp_admin_columns($config){
 							data-post-id="'.esc_attr($id).'"
 							data-meta-key="'.esc_attr($cols[$col]['meta_key']).'"
 							style="cursor:pointer; border-bottom:var(--inline-edit);"
-							title="Click to edit">'.esc_html($value ?: '—').'</span>';
+							title="Click to edit">'.wp_kses_post($value ?: '—').'</span>';
 					}
 
-					return esc_html($value);
+					return wp_kses_post($value);
 				})(),
 
 				'bp-media_dimensions' => (function() use ($id){
@@ -132,7 +163,7 @@ function bp_admin_columns($config){
 							$filter_url = add_query_arg([
 								$col => $term->term_id,
 							], admin_url('upload.php'));
-							$links[] = '<a href="'.esc_url($filter_url).'">'.esc_html($term->name).'</a>';
+							$links[] = '<a href="'.esc_url($filter_url).'">'.wp_kses_post($term->name).'</a>';
 						}
 						$output = implode(', ', $links);
 					} else {
@@ -170,8 +201,27 @@ function bp_admin_columns($config){
 				'bp-post-id' => $id,
 
 				'bp-title' => (function() use ($id) {
-					return '<a href="'.get_edit_post_link($id).'" target="_blank"><b style="color: var(--main-blue); font-size:115%">'.get_the_title($id).'</b></a><br>/'.get_post_field('post_name', $id);
-				})(),
+					$status = get_post_status($id);
+					$status_label = '';
+					$title_color = 'var(--main-blue)';
+
+					// Add status badge for non-published posts
+					if ($status === 'draft') {
+						$background_color = '#fcf3cf';
+						$title_color = '#856404';
+					    	$status_label = '<div style="background:'.$background_color.'; color:'.$title_color.'; padding:2px 8px; border-radius:3px; font-size:15px; font-weight:600; margin: 0 0 5px -8px;">DRAFT</div>';
+					} elseif ($status === 'pending') {
+						$background_color = '#f0f0f1';
+						$title_color = '#646970';
+					    	$status_label = '<div style="background:'.$background_color.'; color:'.$title_color.'; padding:2px 8px; border-radius:3px; font-size:15px; font-weight:600; margin: 0 0 5px -8px;">PENDING</div>';
+					} elseif ($status === 'future') {
+						$background_color = '#cce5ff';
+						$title_color = '#004085';
+					    	$status_label = '<div style="background:'.$background_color.'; color:'.$title_color.'; padding:2px 8px; border-radius:3px; font-size:15px; font-weight:600; margin: 0 0 5px -8px;">SCHEDULED</div>';
+					}
+
+					return $status_label.'<a href="'.get_edit_post_link($id).'" target="_blank"><b style="color: '.$title_color.'; font-size:115%">'.get_the_title($id).'</b></a><br>/'.get_post_field('post_name', $id);
+				 })(),
 
 				'meta_exists' =>
 					get_post_meta($id, $cols[$col]['meta_key'], true)
@@ -194,57 +244,98 @@ function bp_admin_columns($config){
 				'bp-featured-image' =>
 					get_the_post_thumbnail($id, [130,130]),
 
-				'bp-meta_value' => (function() use ($id, $cols, $col, $pt){
+				'value', 'date', 'number' => (function() use ($id, $cols, $col, $pt){
 
 					$meta_key = $cols[$col]['meta_key'];
 					$value    = get_post_meta($id, $meta_key, true);
 
-					// ===== EVENTS SPECIAL HANDLING =====
-					if($pt === 'events'){
+					// ===== AUTO-DETECTION (must come BEFORE special handling) =====
+					$display_value = $value;
 
-						$start_date = get_post_meta($id, 'start_date', true);
-						$start_time = get_post_meta($id, 'start_time', true);
-						$end_date   = get_post_meta($id, 'end_date', true);
-						$end_time   = get_post_meta($id, 'end_time', true);
+					// Check if value is a post ID
+					if ($value && is_numeric($value) && get_post($value)) {
+					    $display_value = get_the_title($value);
+					}
 
-						// START DATE COLUMN
-						if($meta_key === 'start_date'){
-							$dt = new DateTime(trim($start_date.' '.$start_time));
-							return $dt->format('F j, Y').($start_time ? '<br>'.$dt->format('g:ia') : '');
+					// Format date
+					$type = $cols[$col]['type'] ?? 'value';
+
+					if ($type === 'date' && $value) {
+
+						// Format: YYYY-MM-DD
+						if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+							$date = DateTime::createFromFormat('Y-m-d', $value);
 						}
 
-						// END DATE COLUMN
-						if($meta_key === 'end_date'){
-							$display_date = $end_date ?: $start_date;
-							$dt = new DateTime(trim($display_date.' '.$end_time));
-							return $dt->format('F j, Y').($end_time ? '<br>'.$dt->format('g:ia') : '');
+						// Format: YYYYMMDD
+						elseif (preg_match('/^\d{8}$/', $value)) {
+							$date = DateTime::createFromFormat('Ymd', $value);
+						}
+
+						if (!empty($date)) {
+							$display_value = $date->format('F j, Y');
 						}
 					}
 
-					if($cols[$col]['meta_key'] === 'testimonial_platform'){
 
-						$logos = [
-							'Google'   => get_template_directory_uri().'/common/logos/google.webp',
-							'Facebook' => get_template_directory_uri().'/common/logos/facebook.webp',
-						];
+					// Check for currency fields
+					if ($value && is_numeric($value) && (
+					    strpos($meta_key, 'price') !== false ||
+					    strpos($meta_key, 'deposit') !== false ||
+					    strpos($meta_key, 'cost') !== false ||
+					    strpos($meta_key, 'amount') !== false
+					)) {
+					    $display_value = '$' . number_format($value, 0);
+					}
 
-						return isset($logos[$value])
-							? '<img src="'.$logos[$value].'" style="height:20px;width:auto;" alt="'.$value.'">'
-							: esc_html($value);
+					// ===== EVENTS SPECIAL HANDLING =====
+					if($pt === 'events'){
+
+					    $start_date = get_post_meta($id, 'start_date', true);
+					    $start_time = get_post_meta($id, 'start_time', true);
+					    $end_date   = get_post_meta($id, 'end_date', true);
+					    $end_time   = get_post_meta($id, 'end_time', true);
+
+					    // START DATE COLUMN
+					    if($meta_key === 'start_date'){
+						   $dt = new DateTime(trim($start_date.' '.$start_time));
+						   $display_value = $dt->format('F j, Y').($start_time ? '<br />'.$dt->format('g:ia') : '');
+					    }
+
+					    // END DATE COLUMN
+					    if($meta_key === 'end_date'){
+						   $display_date = $end_date ?: $start_date;
+						   $dt = new DateTime(trim($display_date.' '.$end_time));
+						   $display_value = $dt->format('F j, Y').($end_time ? '<br />'.$dt->format('g:ia') : '');
+					    }
+					}
+
+					if($meta_key === 'testimonial_platform'){
+
+					    $logos = [
+						   'Google'   => get_template_directory_uri().'/common/logos/google.webp',
+						   'Facebook' => get_template_directory_uri().'/common/logos/facebook.webp',
+					    ];
+
+					    if(isset($logos[$value])) {
+						   $display_value = '<img src="'.$logos[$value].'" style="height:20px;width:auto;" alt="'.$value.'">';
+					    }
 					}
 
 					// Check if this field is inline editable
 					if (!empty($cols[$col]['inline_edit'])) {
-						return '<span class="bp-inline-edit"
-							data-post-id="'.esc_attr($id).'"
-							data-meta-key="'.esc_attr($cols[$col]['meta_key']).'"
-							style="cursor:pointer; border-bottom:var(--inline-edit);"
-							title="Click to edit">'.esc_html($value ?: '—').'</span>';
+					    return '<span class="bp-inline-edit"
+						   data-post-id="'.esc_attr($id).'"
+						   data-meta-key="'.esc_attr($meta_key).'"
+						   data-raw-value="'.esc_attr($value).'"
+						   data-field-type="'.esc_attr($type).'"
+						   style="cursor:pointer; border-bottom:var(--inline-edit);"
+						   title="Click to edit">'.wp_kses_post($display_value ?: '—').'</span>';
 					}
 
-					return esc_html($value);
+					return wp_kses_post($display_value);
 
-				})(),
+				 })(),
 
 				'bp-categories' => (function() use ($id, $pt){
 					$terms = get_the_terms($id, 'category');
@@ -255,7 +346,7 @@ function bp_admin_columns($config){
 						$filter_url = add_query_arg([
 							'bp-categories' => $term->term_id,
 						], admin_url('edit.php?post_type='.$pt));
-						$links[] = '<a href="'.esc_url($filter_url).'">'.esc_html($term->name).'</a>';
+						$links[] = '<a href="'.esc_url($filter_url).'">'.wp_kses_post($term->name).'</a>';
 					}
 					return implode(', ', $links);
 				})(),
@@ -269,7 +360,7 @@ function bp_admin_columns($config){
 						$filter_url = add_query_arg([
 							'bp-tags' => $term->term_id,
 						], admin_url('edit.php?post_type='.$pt));
-						$links[] = '<a href="'.esc_url($filter_url).'">'.esc_html($term->name).'</a>';
+						$links[] = '<a href="'.esc_url($filter_url).'">'.wp_kses_post($term->name).'</a>';
 					}
 					return implode(', ', $links);
 				})(),
@@ -297,7 +388,7 @@ function bp_admin_columns($config){
 							$filter_url = add_query_arg([
 								$col => $term->term_id,
 							], admin_url('edit.php?post_type='.$pt));
-							$links[] = '<a href="'.esc_url($filter_url).'">'.esc_html($term->name).'</a>';
+							$links[] = '<a href="'.esc_url($filter_url).'">'.wp_kses_post($term->name).'</a>';
 						}
 						$output = implode(', ', $links);
 					} else {
@@ -325,30 +416,116 @@ function bp_admin_columns($config){
 	}
 
 	/* Sortable */
+	// Add this to your bp_admin_columns function, in the sortable section
+	// This handles sorting meta values that contain post IDs by the post title instead of ID
+
+	/* Sortable - Enhanced for Post ID Meta Values */
 	if($pt === 'attachment'){
 
-		add_filter('manage_upload_sortable_columns', function($sortable) use ($cols){
+	    add_filter('manage_upload_sortable_columns', function($sortable) use ($cols){
 
-			foreach($cols as $k=>$c)
-				if(!empty($c['sortable']))
-					$sortable[$k] = $k;
+		   foreach($cols as $k=>$c)
+			  if(!empty($c['sortable']))
+				 $sortable[$k] = $k;
 
-			return $sortable;
+		   return $sortable;
 
-		});
+	    });
 
 	} else {
 
-		add_filter("manage_edit-{$pt}_sortable_columns", function($sortable) use ($cols){
+	    add_filter("manage_edit-{$pt}_sortable_columns", function($sortable) use ($cols){
 
-			foreach($cols as $k=>$c)
-				if(!empty($c['sortable']))
-					$sortable[$k] = $k;
+		   foreach($cols as $k=>$c)
+			  if(!empty($c['sortable']))
+				 $sortable[$k] = $k;
 
-			return $sortable;
+		   return $sortable;
 
-		});
+	    });
+
+	    // Handle orderby for meta values that are post IDs
+	    add_filter('posts_clauses', function($clauses, $query) use ($pt, $cols) {
+			global $wpdb;
+
+			if (!is_admin() || !$query->is_main_query()) {
+				return $clauses;
+			}
+
+			if ($query->get('post_type') !== $pt) {
+				return $clauses;
+			}
+
+			$orderby = $query->get('orderby');
+
+			if (!$orderby || !isset($cols[$orderby])) {
+				return $clauses;
+			}
+
+			$col_type = $cols[$orderby]['type'] ?? '';
+
+			// Only handle bp-meta_value columns
+			if ($col_type === 'exists') {
+				return $clauses;
+			}
+
+			$meta_key = $cols[$orderby]['meta_key'] ?? '';
+
+			if (!$meta_key) {
+				return $clauses;
+			}
+
+			$order = $query->get('order') ?: 'ASC';
+
+			// Join the posts table for the related post
+			$clauses['join'] .= " LEFT JOIN {$wpdb->postmeta} AS mt1 ON {$wpdb->posts}.ID = mt1.post_id AND mt1.meta_key = '{$meta_key}'";
+			$clauses['join'] .= " LEFT JOIN {$wpdb->posts} AS p2 ON mt1.meta_value = p2.ID";
+
+			// Order by the related post's title (or the meta value if it's not a valid post ID)
+			$clauses['orderby'] = "COALESCE(p2.post_title, mt1.meta_value) {$order}";
+
+			// Make sure we're grouping correctly to avoid duplicates
+			$clauses['groupby'] = "{$wpdb->posts}.ID";
+
+			return $clauses;
+
+		}, 10, 2);
 	}
+
+	add_filter('posts_clauses', function($clauses, $query) use ($pt) {
+		global $wpdb;
+
+		if (!is_admin() || !$query->is_main_query() || $query->get('post_type') !== $pt) return $clauses;
+
+		$status_order = "
+			CASE {$wpdb->posts}.post_status
+				WHEN 'publish' THEN 0
+				WHEN 'draft' THEN 1
+				WHEN 'pending' THEN 2
+				WHEN 'future' THEN 3
+				ELSE 4
+			END
+		";
+
+
+		// If user did NOT manually click a column
+		if (!isset($_GET['orderby'])) {
+
+			$clauses['orderby'] = "
+				{$status_order},
+				{$wpdb->posts}.post_modified DESC
+			";
+
+			return $clauses;
+		}
+
+
+		// Prepend to existing ORDER BY
+		$clauses['orderby'] = "{$status_order}, " . $clauses['orderby'];
+
+		return $clauses;
+
+	}, 20, 2);
 
 	/* Filterable Dropdowns */
 	add_action('restrict_manage_posts', function() use ($pt, $cols){
@@ -368,9 +545,9 @@ function bp_admin_columns($config){
 			// META EXISTS
 			if ($type === 'meta_exists') {
 				echo '<select name="'.esc_attr($key).'">';
-				echo '<option value="">All '.esc_html($c['label']).'</option>';
-				echo '<option value="yes" '.selected($value,'yes',false).'>Has '.esc_html($c['label']).'</option>';
-				echo '<option value="no"  '.selected($value,'no',false).'>No '.esc_html($c['label']).'</option>';
+				echo '<option value="">All '.wp_kses_post($c['label']).'</option>';
+				echo '<option value="yes" '.selected($value,'yes',false).'>Has '.wp_kses_post($c['label']).'</option>';
+				echo '<option value="no"  '.selected($value,'no',false).'>No '.wp_kses_post($c['label']).'</option>';
 				echo '</select>';
 			}
 
@@ -383,10 +560,10 @@ function bp_admin_columns($config){
 				]);
 
 				echo '<select name="'.esc_attr($key).'">';
-				echo '<option value="">All '.esc_html($c['label']).'</option>';
+				echo '<option value="">All '.wp_kses_post($c['label']).'</option>';
 
 				foreach ($terms as $term) {
-					echo '<option value="'.esc_attr($term->term_id).'" '.selected($value,$term->term_id,false).'>'.esc_html($term->name).'</option>';
+					echo '<option value="'.esc_attr($term->term_id).'" '.selected($value,$term->term_id,false).'>'.wp_kses_post($term->name).'</option>';
 				}
 
 				echo '</select>';
@@ -549,7 +726,7 @@ add_action('admin_enqueue_scripts', function($hook){
 		}
 
 
-		// ===== POST META INLINE EDITING =====
+		// ===== POST META INLINE EDITING (ENHANCED WITH POST SEARCH) =====
 
 		document.addEventListener('click', function(e){
 
@@ -558,6 +735,7 @@ add_action('admin_enqueue_scripts', function($hook){
 
 			var postId = span.getAttribute('data-post-id');
 			var metaKey = span.getAttribute('data-meta-key');
+			var rawValue = span.getAttribute('data-raw-value'); // Store the actual ID/value
 			var currentValue = span.textContent.trim();
 
 			// Prevent double-click creating multiple inputs
@@ -565,13 +743,23 @@ add_action('admin_enqueue_scripts', function($hook){
 			span.classList.add('editing');
 
 			// Replace with input field
+			var fieldType = span.getAttribute('data-field-type') || 'value';
+
 			var input = createEl('input', {
-				type: 'text',
+				type: fieldType === 'date' ? 'date' : 'text',
 				className: 'bp-inline-input'
 			});
 			input.style.width = '100%';
 			input.style.padding = '3px';
-			input.value = (currentValue === '—') ? '' : currentValue;
+			var rawValue = span.getAttribute('data-raw-value') || '';
+
+			if (fieldType === 'date') {
+				input.value = rawValue || '';
+			} else {
+				input.value = (currentValue === '—') ? '' : currentValue;
+			}
+
+			input.setAttribute('data-raw-value', rawValue);
 			span.replaceWith(input);
 			input.focus();
 			input.select();
@@ -586,20 +774,42 @@ add_action('admin_enqueue_scripts', function($hook){
 				input.removeEventListener('keypress', saveField);
 
 				var newValue = input.value;
-				var loading = makeEditableSpan('bp-inline-edit', { 'bp-post-id': postId, 'meta-key': metaKey }, 'Saving...');
+
+				var loading = makeEditableSpan('bp-inline-edit', { 'post-id': postId, 'meta-key': metaKey }, 'Saving...');
 				input.replaceWith(loading);
 
-				ajaxPost('bp_inline_edit_save', {
-					post_id: postId,
+				// Check if we need to resolve a post name to ID
+				ajaxPost('bp_resolve_meta_value', {
 					meta_key: metaKey,
-					meta_value: newValue,
+					value: newValue,
 					nonce: '".wp_create_nonce("bp_inline_edit")."'
-				}).then(function(response){
-					if (response.success) {
-						var newSpan = makeEditableSpan('bp-inline-edit', { 'bp-post-id': postId, 'meta-key': metaKey }, newValue || '—');
-						loading.replaceWith(newSpan);
+				}).then(function(resolveResponse){
+					if (resolveResponse.success) {
+
+						var valueToSave = resolveResponse.data.resolved_value;
+						var displayValue = resolveResponse.data.display_value;
+
+						// Now save the resolved value
+						return ajaxPost('bp_inline_edit_save', {
+							post_id: postId,
+							meta_key: metaKey,
+							meta_value: valueToSave,
+							nonce: '".wp_create_nonce("bp_inline_edit")."'
+						}).then(function(response){
+							if (response.success) {
+								var newSpan = makeEditableSpan('bp-inline-edit', {
+									'post-id': postId,
+									'meta-key': metaKey,
+									'raw-value': valueToSave
+								}, displayValue || '—');
+								loading.replaceWith(newSpan);
+							} else {
+								alert('Error: ' + (response.data || 'Failed to save'));
+								loading.replaceWith(span);
+							}
+						});
 					} else {
-						alert('Error: ' + (response.data || 'Failed to save'));
+						alert('Error: ' + (resolveResponse.data || 'Failed to resolve value'));
 						loading.replaceWith(span);
 					}
 				}).catch(function(){
@@ -614,7 +824,11 @@ add_action('admin_enqueue_scripts', function($hook){
 			// Cancel on Escape
 			input.addEventListener('keydown', function(e){
 				if (e.which === 27) {
-					var cancelSpan = makeEditableSpan('bp-inline-edit', { 'bp-post-id': postId, 'meta-key': metaKey }, currentValue);
+					var cancelSpan = makeEditableSpan('bp-inline-edit', {
+						'post-id': postId,
+						'meta-key': metaKey,
+						'raw-value': rawValue
+					}, currentValue);
 					input.replaceWith(cancelSpan);
 				}
 			});
@@ -727,13 +941,22 @@ add_action('admin_enqueue_scripts', function($hook){
 			if (span.classList.contains('editing')) return;
 			span.classList.add('editing');
 
+			var fieldType = span.getAttribute('data-field-type') || 'value';
+
 			var input = createEl('input', {
-				type: 'text',
-				className: 'bp-inline-input-user'
+				type: fieldType === 'date' ? 'date' : 'text',
+				className: 'bp-inline-input'
 			});
 			input.style.width = '100%';
 			input.style.padding = '3px';
-			input.value = (currentValue === '—') ? '' : currentValue;
+			var rawValue = span.getAttribute('data-raw-value') || '';
+
+			if (fieldType === 'date') {
+				input.value = rawValue || '';
+			} else {
+				input.value = (currentValue === '—') ? '' : currentValue;
+			}
+
 			span.replaceWith(input);
 			input.focus();
 			input.select();
@@ -746,6 +969,7 @@ add_action('admin_enqueue_scripts', function($hook){
 				input.removeEventListener('keypress', saveUserField);
 
 				var newValue = input.value;
+
 				var loading = makeEditableSpan('bp-inline-edit-user', { 'user-id': userId, 'field': field }, 'Saving...');
 				input.replaceWith(loading);
 
@@ -887,18 +1111,91 @@ add_action('wp_ajax_bp_inline_edit_save', function(){
 		wp_send_json_error('Permission denied');
 	}
 
-	// Update the meta
-	$result = update_post_meta($post_id, $meta_key, $meta_value);
+	// Update or add the meta (WP handles both)
+	update_post_meta($post_id, $meta_key, $meta_value);
 
-	if ($result !== false) {
-		wp_send_json_success([
-			'post_id' => $post_id,
-			'meta_key' => $meta_key,
-			'meta_value' => $meta_value
-		]);
-	} else {
-		wp_send_json_error('Failed to update');
+	// Always return success unless permission failed earlier
+	wp_send_json_success([
+		'post_id'   => $post_id,
+		'meta_key'  => $meta_key,
+		'meta_value'=> $meta_value
+	]);
+});
+
+// AJAX handler to resolve meta values (convert post names to IDs, format dates/currency, etc.)
+add_action('wp_ajax_bp_resolve_meta_value', function(){
+
+	// Verify nonce
+	if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'bp_inline_edit')) {
+		wp_send_json_error('Invalid nonce');
 	}
+
+	$meta_key = sanitize_text_field($_POST['meta_key']);
+	$value = sanitize_text_field($_POST['value']);
+
+	// Empty value - return as-is
+	if (empty($value)) {
+		wp_send_json_success([
+			'resolved_value' => '',
+			'display_value' => '—'
+		]);
+	}
+
+	// Try to find a post by this name (for sire, dam, etc.)
+	$post_types = get_post_types(['public' => true], 'names');
+	$post = get_page_by_title($value, OBJECT, $post_types);
+
+	if ($post) {
+		// Found a post - return its ID and title
+		wp_send_json_success([
+			'resolved_value' => $post->ID,
+			'display_value' => $post->post_title
+		]);
+	}
+
+	// Normalize date formats to YYYY-MM-DD
+	$date = null;
+
+	// Format: YYYY-MM-DD
+	if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+		$date = DateTime::createFromFormat('Y-m-d', $value);
+	}
+
+	// Format: YYYYMMDD
+	elseif (preg_match('/^\d{8}$/', $value)) {
+		$date = DateTime::createFromFormat('Ymd', $value);
+	}
+
+	if ($date) {
+		$normalized = $date->format('Y-m-d');
+
+		wp_send_json_success([
+			'resolved_value' => $normalized,          // Always save dashed
+			'display_value'  => $date->format('F j, Y')
+		]);
+	}
+
+
+	// Check if it's currency (starts with $ or is numeric for price/deposit fields)
+	if (strpos($meta_key, 'price') !== false ||
+	    strpos($meta_key, 'deposit') !== false ||
+	    strpos($meta_key, 'cost') !== false ||
+	    strpos($meta_key, 'amount') !== false) {
+		// Remove $ and commas, keep just numbers
+		$numeric = preg_replace('/[^0-9.]/', '', $value);
+		if (is_numeric($numeric)) {
+			wp_send_json_success([
+				'resolved_value' => $numeric,
+				'display_value' => '$' . number_format($numeric, 0)
+			]);
+		}
+	}
+
+	// Default - return as-is
+	wp_send_json_success([
+		'resolved_value' => $value,
+		'display_value' => $value
+	]);
 });
 
 // AJAX handler to get taxonomy terms for editing
@@ -1001,7 +1298,7 @@ add_action('wp_ajax_bp_inline_edit_user_save', function(){
 	if ($field === 'display_name') {
 		// Update display_name
 		$result = wp_update_user([
-			'bp-post-id' => $user_id,
+			'ID' => $user_id,
 			'display_name' => $value
 		]);
 
@@ -1133,10 +1430,10 @@ add_action('restrict_manage_media', function(){
 		]);
 
 		echo '<select name="'.esc_attr($key).'">';
-		echo '<option value="">All '.esc_html($c['label']).'</option>';
+		echo '<option value="">All '.wp_kses_post($c['label']).'</option>';
 
 		foreach ($terms as $term) {
-			echo '<option value="'.esc_attr($term->term_id).'" '.selected($value,$term->term_id,false).'>'.esc_html($term->name).'</option>';
+			echo '<option value="'.esc_attr($term->term_id).'" '.selected($value,$term->term_id,false).'>'.wp_kses_post($term->name).'</option>';
 		}
 
 		echo '</select>';
@@ -1281,7 +1578,7 @@ function bp_user_columns($config){
 
 			'user_login' => (function() use ($user_id){
 				$user = get_userdata($user_id);
-				return '<a href="'.esc_url(get_edit_user_link($user_id)).'" style="font-size: 115%">'.esc_html($user->user_login).'</a>';
+				return '<a href="'.esc_url(get_edit_user_link($user_id)).'" style="font-size: 115%">'.wp_kses_post($user->user_login).'</a>';
 			})(),
 
 			'user_email' => get_userdata($user_id)->user_email,
@@ -1295,10 +1592,10 @@ function bp_user_columns($config){
 						data-user-id="'.esc_attr($user_id).'"
 						data-field="display_name"
 						style="cursor:pointer; border-bottom:var(--inline-edit);"
-						title="Click to edit">'.esc_html($value ?: '—').'</span>';
+						title="Click to edit">'.wp_kses_post($value ?: '—').'</span>';
 				}
 
-				return esc_html($value);
+				return wp_kses_post($value);
 			})(),
 
 			'user_meta' => (function() use ($user_id, $cols, $col){
@@ -1310,16 +1607,16 @@ function bp_user_columns($config){
 						data-user-id="'.esc_attr($user_id).'"
 						data-field="'.esc_attr($cols[$col]['meta_key']).'"
 						style="cursor:pointer; border-bottom:var(--inline-edit);"
-						title="Click to edit">'.esc_html($value ?: '—').'</span>';
+						title="Click to edit">'.wp_kses_post($value ?: '—').'</span>';
 				}
 
-				return esc_html($value);
+				return wp_kses_post($value);
 			})(),
 
 			'user_registered' => (function() use ($user_id) {
 				$user = get_userdata($user_id);
 
-				return date_i18n('F j, Y', strtotime($user->user_registered)).'<br>'.date_i18n('g:i a', strtotime($user->user_registered));
+				return date_i18n('F j, Y', strtotime($user->user_registered)).'<br />'.date_i18n('g:i a', strtotime($user->user_registered));
 			})(),
 
 			'user_role' => (function() use ($user_id, $cols, $col){
@@ -1546,23 +1843,12 @@ function bp_taxonomy($key, $taxonomy, $label, $args = []) {
 function bp_meta($key, $meta_key, $label, $args = []) {
 	return [
 		$key => array_merge([
-			'meta_key' => $meta_key,
-			'label'    => $label,
-			'sortable' => true,
-			'filterable' => true,
-			'inline_edit' => true,
-		], $args)
-	];
-}
-
-function bp_meta_exists($key, $meta_key, $label, $args = []) {
-	return [
-		$key => array_merge([
-			'type'       => 'meta_exists',
+			'type'       => 'value', // value | exists | date | number | currency etc
 			'meta_key'   => $meta_key,
 			'label'      => $label,
 			'sortable'   => true,
 			'filterable' => true,
+			'inline_edit'=> true,
 		], $args)
 	];
 }
@@ -1587,7 +1873,7 @@ bp_admin_columns([
 		$bp_featured_image,
 		$bp_id,
 		$bp_title,
-		bp_meta('bp-reference', 'reference', 'Ref #', ['type'=>'bp-meta_value']),
+		bp_meta('bp-reference', 'reference', 'Ref #', []),
 		$bp_modified,
 		bp_taxonomy('bp-categories', 'category', 'Categories', []),
 		bp_taxonomy('bp-tags', 'post_tag', 'Tags', []),
@@ -1647,11 +1933,11 @@ bp_admin_columns([
 		$bp_id,
 		$bp_title,
 		$bp_modified,
-		bp_meta('bp-platform', 'testimonial_platform', 'Platform', ['type'=>'bp-meta_value']),
+		bp_meta('bp-platform', 'testimonial_platform', 'Platform', []),
 		bp_meta('bp-testimonial_rating', 'testimonial_rating', 'Rating', ['type'=>'bp-meta_number']),
-		bp_meta_exists('bp-testimonial_location', 'testimonial_location', 'Location', []),
-		bp_meta_exists('bp-testimonial_biz', 'testimonial_biz', 'Business', []),
-		bp_meta_exists('bp-testimonial_website', 'testimonial_website', 'Website', []),
+		bp_meta('bp-testimonial_location', 'testimonial_location', 'Location', ['type' => 'exists']),
+		bp_meta('bp-testimonial_biz', 'testimonial_biz', 'Business', ['type' => 'exists']),
+		bp_meta('bp-testimonial_website', 'testimonial_website', 'Website', ['type' => 'exists']),
 	)
 ]);
 
@@ -1675,10 +1961,40 @@ bp_admin_columns([
 		$bp_id,
 		$bp_title,
 		$bp_modified,
-		bp_meta('bp-start_date', 'start_date', 'Starts', ['type'=>'bp-meta_value']),
-		bp_meta('bp-end_date', 'end_date', 'Ends', ['type'=>'bp-meta_value']),
+		bp_meta('bp-start_date', 'start_date', 'Starts', ['type' => 'date']),
+		bp_meta('bp-end_date', 'end_date', 'Ends', ['type' => 'date']),
 		bp_taxonomy('bp-event-cats', 'event-cats', 'Categories', ['inline_edit' => true]),
 		bp_taxonomy('bp-event-tags', 'event-tags', 'Tags', ['inline_edit' => true]),
+	)
+]);
+
+bp_admin_columns([
+	'post_type' => 'dogs',
+	'columns' =>  array_merge(
+		$bp_featured_image,
+		$bp_id,
+		$bp_title,
+		bp_meta('call_name', 'call_name', 'Call Name', []),
+		bp_meta('sex', 'sex', 'Sex', []),
+		bp_meta('color', 'color', 'Color', []),
+		bp_meta('birth_date', 'birth_date', 'Birth Date', ['type' => 'date']),
+		bp_taxonomy('dog-tags', 'dog-tags', 'Dog Tags', []),
+		$bp_modified,
+	)
+]);
+
+bp_admin_columns([
+	'post_type' => 'litters',
+	'columns' =>  array_merge(
+		$bp_title,
+		bp_meta('sire', 'sire', 'Sire', []),
+		bp_meta('dam', 'dam', 'Dam', []),
+		bp_meta('litter_status', 'litter_status', 'Status', []),
+		bp_meta('birth_date', 'birth_date', 'Due / Birth Date', ['type' => 'date']),
+		bp_meta('price', 'price', 'Price', []),
+		bp_meta('deposit_hold', 'deposit_hold', 'Hold', []),
+		bp_meta('deposit_born', 'deposit_born', 'Upon Birth', []),
+		$bp_modified,
 	)
 ]);
 
@@ -1700,7 +2016,7 @@ bp_admin_columns([
 			$bp_featured_image,
 			$bp_title,
 			$bp_id,
-			bp_meta('bp-alt-text', '_wp_attachment_image_alt', 'Alt Text', ['type'=>'bp-meta_value']),
+			bp_meta('bp-alt-text', '_wp_attachment_image_alt', 'Alt Text', []),
 			$bp_modified,
 			bp_taxonomy('bp-image-categories', 'image-categories', 'Categories', []),
 			bp_taxonomy('bp-image-tags', 'image-tags', 'Tags', []),

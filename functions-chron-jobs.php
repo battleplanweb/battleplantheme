@@ -36,107 +36,47 @@ function battleplan_delete_prefixed_options( $prefix ) {
 //delete_option('bp_product_upload_2023_03_06');
 //battleplan_delete_prefixed_options( 'widget_' );
 
-//if ( get_option('bp_setup_2023_09_15') != "completed" ) :
-	//add_action("init", "bp_remove_cron_job");
-	//function bp_remove_cron_job() {
-	//	wp_clear_scheduled_hook("wphb_clear_logs");
-	//	wp_clear_scheduled_hook("wphb_minify_clear_files");
-	//	wp_clear_scheduled_hook("wpmudev_scheduled_jobs");
-	//}
+add_action('plugins_loaded', function(){
+	if ( get_option('bp_setup_2026_02_13b') === "completed" ) return;
 
-	//battleplan_delete_prefixed_options( 'bp_admin_btn' );
-	//delete_option('bp_admin_settings');
+	require_once ABSPATH . 'wp-admin/includes/file.php';
+	require_once ABSPATH . 'wp-admin/includes/plugin.php';
+	require_once ABSPATH . 'wp-admin/includes/theme.php';
 
-	//delete_option('bp_setup_2023_08_15');
-	//updateOption( 'bp_setup_2023_09_15', 'completed', false );
-//endif;
+	// Plugins to remove
+	$plugins_remove = [
+		'huzzaz-video-gallery/huzzaz.php',
+		'admin-columns-pro/admin-columns-pro.php',
+		'wp-crontrol/wp-crontrol.php',
+		'blackhole-bad-bots/blackhole.php',
+	];
+	$plugins_deactivate = [
+		'better-search-replace/better-search-replace.php',
+		'query-monitor/query-monitor.php',
+	];
 
-//delete_option('bp_setup_2023_09_15');
+	deactivate_plugins($plugins_deactivate);
+	deactivate_plugins($plugins_remove);
+	delete_plugins($plugins_remove);
 
-/*
-if ( get_option('bp_product_upload_2024_03_18') != "completed" && $customer_info['site-type'] == 'hvac' && ($customer_info['site-brand'] == 'american standard' || $customer_info['site-brand'] == 'American Standard' || (is_array($customer_info['site-brand']) && ( in_array('american standard', $customer_info['site-brand']) || in_array('American Standard', $customer_info['site-brand'])) ))) :
- 	require_once get_template_directory().'/includes/include-hvac-products/includes-american-standard-products.php';
-	updateOption( 'bp_product_upload_2024_03_18', 'completed', false );
-endif;
-*/
+	// Themes to remove
+	$themes = [
+		'twentytwentyone',
+		'twentytwentytwo',
+		'twentytwentythree',
+		'twentytwentyfour',
+		'twentytwentyfive',
+	];
 
-// Fix descrepencies in Jobsite GEO
-/*
-add_action("init", "bp_add_terms_to_jobsites");
-function bp_add_terms_to_jobsites() {
+	foreach ($themes as $theme) {
+		if ($theme === get_stylesheet() || $theme === get_template()) continue;
+		if (wp_get_theme($theme)->exists()) delete_theme($theme);
+	}
+});
 
-    if ( get_option('jobsite_geo') && get_option('jobsite_geo')['install'] == 'true' && get_option('bp_setup_2024_07_09') != "completed" ) {
-
-        $stateAbbrs = ["Alabama" => "AL", "Alaska" => "AK", "Arizona" => "AZ", "Arkansas" => "AR", "California" => "CA", "Colorado" => "CO", "Connecticut" => "CT", "Delaware" => "DE", "Florida" => "FL", "Georgia" => "GA", "Hawaii" => "HI", "Idaho" => "ID", "Illinois" => "IL", "Indiana" => "IN", "Iowa" => "IA", "Kansas" => "KS",
-        "Kentucky" => "KY", "Louisiana" => "LA", "Maine" => "ME", "Maryland" => "MD", "Massachusetts" => "MA", "Michigan" => "MI", "Minnesota" => "MN", "Mississippi" => "MS",
-        "Missouri" => "MO", "Montana" => "MT", "Nebraska" => "NE", "Nevada" => "NV", "New Hampshire" => "NH", "New Jersey" => "NJ", "New Mexico" => "NM", "New York" => "NY",
-        "North Carolina" => "NC", "North Dakota" => "ND", "Ohio" => "OH", "Oklahoma" => "OK", "Oregon" => "OR", "Pennsylvania" => "PA", "Rhode Island" => "RI", "South Carolina" => "SC", "South Dakota" => "SD", "Tennessee" => "TN", "Texas" => "TX", "Utah" => "UT", "Vermont" => "VT", "Virginia" => "VA", "Washington" => "WA", "West Virginia" => "WV",
-        "Wisconsin" => "WI", "Wyoming" => "WY", "Tex" => "TX", "Calif" => "CA", "Penn" => "PA"];
-
-        $equipment = [
-            'air-conditioner' => ['air conditioner', 'air conditioning', 'cooling', 'a/c', 'compressor', 'evaporator coil', 'condenser coil'],
-            'heating' => ['heater', 'heating', 'furnace'],
-            'thermostat' => ['thermostat', 't-stat', 'tstat']
-        ];
-
-        $query = bp_WP_Query('jobsite_geo', [
-            'posts_per_page' => -1
-        ]);
-
-
-        if ($query->have_posts()) {
-            while ($query->have_posts()) {
-                $query->the_post();
-                $post_id = get_the_ID();
-                $city = trim(esc_attr(get_field("city")));
-                $state = strtoupper(trim(esc_attr(get_field("state"))));
-                $description = get_post_field('post_content', $post_id);
-                $type = esc_attr(get_field("new_brand")) ? '-installation' : '-repair';
-                $service = '';
-
-
-                foreach ($stateAbbrs as $name => $abbreviation) {
-                    if ($state === strtoupper($name)) {
-                        $state = $abbreviation;
-                        break;
-                    }
-                }
-
-                $location = $city . '-' . $state;
-
-                foreach (['maintenance', 'tune up', 'tune-up', 'check up', 'check-up', 'inspection'] as $keyword) {
-                    if (stripos($description, $keyword) !== false) {
-                        $service = 'hvac-maintenance';
-                        break;
-                    }
-                }
-
-                if (!$service) {
-                    foreach ($equipment as $tag => $keywords) {
-                        foreach ($keywords as $keyword) {
-                            if (stripos($description, $keyword) !== false) {
-                                $service = $tag . $type;
-                                break 2;
-                            }
-                        }
-                    }
-                }
-
-                if ($service && $location) {
-                    wp_set_object_terms($post_id, $service . '--' . strtolower($location), 'jobsite_geo-services', false);
-                }
-            }
-            wp_reset_postdata();
-        }
-    }
-
-    updateOption( 'bp_setup_2024_07_09', 'completed', false );
-}
-*/
-
-
-
-
+update_option('bp_setup_2026_02_13b', 'completed', false);
+delete_option('bp_setup_2024_07_09');
+delete_option('bp_setup_2026_02_13');
 
 // Determine if Chron should run
 $forceChron = filter_var(get_option('bp_force_chron', false), FILTER_VALIDATE_BOOLEAN);
@@ -154,11 +94,11 @@ $due       	= time() >= $next;
 // Perform action
 if ( $forceChron || $staleDays || ( _IS_BOT && !_IS_SERP_BOT && $due )) {
 
-	if (get_transient('bp_chron_running')) {
-		return;
-	}
+	//if (get_transient('bp_chron_running')) {
+		//return;
+	//}
 
-	set_transient('bp_chron_running', 1, 2 * HOUR_IN_SECONDS);
+	//set_transient('bp_chron_running', 1, 2 * HOUR_IN_SECONDS);
 
 	delete_option('bp_force_chron');
 	update_option('bp_chron_time', time());

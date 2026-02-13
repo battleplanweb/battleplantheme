@@ -681,7 +681,7 @@ function battleplan_CheckRemoveSidebar( $classes ) {
 add_filter( 'body_class', 'battleplan_addHomeBodyClassToOptimized', 70 );
 function battleplan_addHomeBodyClassToOptimized( $classes ) {
 	$jobsite_geo = get_option('jobsite_geo');
-	if ( is_array($jobsite_geo) && ($jobsite_geo['install'] ?? null) === 'true' )  return $classes;
+	if ( !empty($jobsite_geo['install']) ) return $classes;
 	if ( get_post_type() == "landing" && preg_match ('/, [A-Z]{2}$/', get_the_title() ) === 1 ) array_push($classes, 'home', 'alt-home');
 	return $classes;
 }
@@ -1322,18 +1322,18 @@ function battleplan_enqueue_footer_scripts() {
 
 	bp_enqueue_script( 'battleplan-script-pages', 'script-pages' );
 
-	if ( !is_mobile() ) :
+	if ( !is_mobile() ) {
 		bp_enqueue_script( 'battleplan-script-desktop', 'script-desktop' );
 
-		if ( isset($customer_info['scripts']) && is_array($customer_info['scripts']) && in_array('magic-menu', $customer_info['scripts']) ) :
+		if ( isset($customer_info['scripts']) && is_array($customer_info['scripts']) && in_array('magic-menu', $customer_info['scripts']) ) {
 			bp_enqueue_script( 'battleplan-script-magic-menu', 'script-magic-menu' );
-		endif;
-	endif;
+		}
+	}
 
 	bp_enqueue_script( 'battleplan-script-tracking', 'script-tracking' );
 
-	$event_calendar = get_option('event-calendar');
-	if ( is_array($event_calendar) && ($event_calendar['install'] ?? null) === 'true' ) bp_enqueue_script( 'battleplan-script-events', 'script-events' );
+	$event_calendar = get_option('event_calendar');
+	if ( !empty($event_calendar['install']) ) { bp_enqueue_script( 'battleplan-script-events', 'script-events' ); }
 
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) bp_enqueue_script( 'battleplan-script-woocommerce', 'script-woocommerce', ['jquery'] );
 
@@ -1527,7 +1527,7 @@ function battleplan_admin_scripts() {
 		bp_enqueue_script( 'battleplan-script-user-profiles', 'script-user-profiles', ['jquery'] );
 	}
 	$jobsite_geo = get_option('jobsite_geo');
-	if ( is_array($jobsite_geo) && ($jobsite_geo['install'] ?? null) === 'true' ) wp_enqueue_style( 'battleplan-admin-jobsite-geo-css', get_template_directory_uri()."/style-jobsite-geo-admin.css", [], _BP_VERSION );
+	if ( !empty($jobsite_geo['install']) ) { wp_enqueue_style( 'battleplan-admin-jobsite-geo-css', get_template_directory_uri()."/style-jobsite-geo-admin.css", [], _BP_VERSION ); }
 
 }
 
@@ -1542,11 +1542,11 @@ function battleplan_login_enqueue() {
 // Load various includes
 if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) require_once get_template_directory().'/includes/includes-woocommerce.php';
 $event_calendar = get_option('event_calendar');
-if ( is_array($event_calendar) && ($event_calendar['install'] ?? null) === 'true' ) require_once get_template_directory().'/includes/includes-events.php';
+if ( !empty($event_calendar['install']) )  require_once get_template_directory().'/includes/includes-events.php';
 $timeline = get_option('timeline');
-if ( is_array($timeline) && ($timeline['install'] ?? null) === 'true' ) require_once get_template_directory().'/includes/includes-timeline.php';
+if ( !empty($timeline['install']) )  require_once get_template_directory().'/includes/includes-timeline.php';
 $jobsite_geo = get_option('jobsite_geo');
-if ( is_array($jobsite_geo) && ($jobsite_geo['install'] ?? null) === 'true' ) {
+if ( !empty($jobsite_geo['install']) ) {
 	require_once get_template_directory().'/includes/includes-jobsite-geo.php';
 	require_once get_template_directory() . '/includes/includes-jobsite-geo-api.php';
 }

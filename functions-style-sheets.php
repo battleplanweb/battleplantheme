@@ -268,7 +268,6 @@ add_action('wp_footer', function () {
 	echo "<style id='bp-shortcode-css'>\n";
 
 	foreach ($GLOBALS['bp_inline_css_buffer'] as $css) {
-		error_log(_USER_LOGIN);
 		echo _USER_LOGIN === 'battleplanweb' ? $css['raw'] : $css['min'];
 		echo "\n";
 	}

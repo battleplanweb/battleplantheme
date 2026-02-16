@@ -2035,44 +2035,166 @@ function battleplan_cf7Steps($atts, $content = null) {
 	return do_shortcode($buildForm);
 }
 
-// Add debug logging and display
-add_shortcode('show_debug_log', function() {
-    $logfile = WP_CONTENT_DIR . '/debug.log';
-    if (!file_exists($logfile)) {
-        return '<p>No debug.log found.</p>';
-    }
+// Debug log viewer shortcode with clear + reload buttons
+add_shortcode('show_debug_log', function($atts) {
 
-    // Read lines (ignore blanks)
-    $contents = file($logfile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    if (!$contents) {
-        return '<p>Debug log is empty.</p>';
-    }
+	// optional: restrict to admins only
+	// if (!current_user_can('manage_options')) return '';
+
+	// allow ?admin=true OR shortcode attribute
+	$is_admin_log = (
+		(isset($_GET['admin']) && $_GET['admin'] === 'true') ||
+		(isset($atts['admin']) && $atts['admin'] === 'true')
+	);
+
+	$logfile = WP_CONTENT_DIR . '/' . ($is_admin_log ? 'debug-admin.log' : 'debug.log');
 
 
+	/*--------------------------------------------------------------
+	# Handle clear request
+	--------------------------------------------------------------*/
 
-	$exclude = ['wpseo-local', 'wordpress-seo-premium', '_load_textdomain_just_in_time', 'auditor:scan=fingerprint', 'wp-cron.php', 'wp-json/', 'wp-includes/'];
+	$message = '';
+
+	if (
+		isset($_POST['bp_clear_debug_log']) &&
+		isset($_POST['bp_debug_nonce']) &&
+		wp_verify_nonce($_POST['bp_debug_nonce'], 'bp_clear_debug_log_action')
+	) {
+
+		if (file_exists($logfile)) {
+			file_put_contents($logfile, '');
+		}
+
+		$message = '<div style="color:green;font-weight:bold;margin-bottom:10px;">Log cleared.</div>';
+
+	}
+
+ 
+	/*--------------------------------------------------------------
+	# Build reload URLs
+	--------------------------------------------------------------*/
+
+	$current_url =
+		(is_ssl() ? 'https://' : 'http://') .
+		$_SERVER['HTTP_HOST'] .
+		wp_unslash($_SERVER['REQUEST_URI']);
+
+	$base_url  = remove_query_arg('admin', $current_url);
+	$admin_url = add_query_arg('admin', 'true', $base_url);
+
+
+	/*--------------------------------------------------------------
+	# Buttons
+	--------------------------------------------------------------*/
+
+	$buttons = $message . '
+	<div style="margin-bottom:10px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+
+		<form method="post" style="margin:0;">
+			<input type="hidden"
+				name="bp_debug_nonce"
+				value="' . esc_attr(wp_create_nonce('bp_clear_debug_log_action')) . '">
+			<button type="submit"
+				name="bp_clear_debug_log"
+				value="1"
+				style="padding:6px 12px;font-size:13px;cursor:pointer;">
+				Clear Log
+			</button>
+		</form>
+
+		<button type="button"
+			onclick="window.location.href=\'' . esc_url($base_url) . '\';"
+			style="padding:6px 12px;font-size:13px;cursor:pointer;">
+			Reload Debug
+		</button>
+
+		<button type="button"
+			onclick="window.location.href=\'' . esc_url($admin_url) . '\';"
+			style="padding:6px 12px;font-size:13px;cursor:pointer;">
+			Reload Debug Admin
+		</button>
+
+	</div>
+	';
+
+
+	/*--------------------------------------------------------------
+	# Load file
+	--------------------------------------------------------------*/
+
+	if (!file_exists($logfile)) {
+		return $buttons . '<p>No log file found.</p>';
+	}
+
+	$contents = file($logfile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+
+	if (!$contents) {
+		return $buttons . '<p>Log is empty.</p>';
+	}
+
+
+	/*--------------------------------------------------------------
+	# Filter lines
+	--------------------------------------------------------------*/
+
+	$exclude = [
+		'wpseo-local',
+		'wordpress-seo-premium',
+		'_load_textdomain_just_in_time',
+		'auditor:scan=fingerprint',
+		'wp-cron.php',
+		'wp-json/',
+		'wp-includes/'
+	];
+
 	$contents = array_filter($contents, function($line) use ($exclude) {
-		foreach ($exclude as $word)
-			if (stripos($line, $word) !== false)
-				return false;
+		foreach ($exclude as $word) {
+			if (stripos($line, $word) !== false) return false;
+		}
 		return true;
 	});
 
 
-    // Keep only last 100 lines for performance
-    $recent = array_slice($contents, -200);
+	/*--------------------------------------------------------------
+	# Format output
+	--------------------------------------------------------------*/
 
-    // Reverse order (newest first)
-    $recent = array_reverse($recent);
+	$recent = array_slice($contents, -200);
+	$recent = array_reverse($recent);
 
-    // Add blank line spacing
-    $output = implode("\n\n", array_map('esc_html', $recent));
-    $output = nl2br($output, false);
+	$recent = array_map(function($line) {
 
-    str_replace('PHP Fatal Error', '<style="color:red">PHP Fatal Error</span>', $output);
+		$line = esc_html($line);
 
-    // Display nicely formatted
-    return '<div style="font-family:monospace;font-size:13px;line-height:1.5;background:#fafafa;border:1px solid #ccc;padding:10px;white-space:normal;">'
-         . $output
-         . '</div>';
+		$line = str_ireplace(
+			'PHP Fatal error',
+			'<span style="color:red;font-weight:bold;">PHP Fatal error</span>',
+			$line
+		);
+
+		return $line;
+
+	}, $recent);
+
+	$output = nl2br(implode("\n\n", $recent), false);
+
+
+	/*--------------------------------------------------------------
+	# Return final output
+	--------------------------------------------------------------*/
+
+	return $buttons . '
+	<div style="
+		font-family:monospace;
+		font-size:13px;
+		line-height:1.5;
+		background:#fafafa;
+		border:1px solid #ccc;
+		padding:10px;
+		white-space:normal;
+	">'
+	. $output .
+	'</div>';
+
 });

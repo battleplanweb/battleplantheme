@@ -1,5 +1,8 @@
 <?php
-/* Battle Plan Web Design Functions: Chron Jobs
+/* Battle Plan Web Design Functions: Chron Jobs */
+
+if (get_transient('bp_chron_jobs_lock')) return;
+set_transient('bp_chron_jobs_lock', 1, 3);
 
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:
@@ -8,75 +11,116 @@
 # Universal Pages
 # Convert States to Abbr
 # Sync with Google Analytics
+# Helpers
 
 /*--------------------------------------------------------------
 # Chron Jobs
 --------------------------------------------------------------*/
 
-if (
-	!is_admin() &&
-	isset($_SERVER['REQUEST_URI']) &&
-	preg_match('#sitemap(_index)?\.xml|/wp-sitemap\.xml|/feed/#i', $_SERVER['REQUEST_URI'])
-) {
-	return;
-}
-
+if ( !is_admin() && isset($_SERVER['REQUEST_URI']) && preg_match('#sitemap(_index)?\.xml|/wp-sitemap\.xml|/feed/#i', $_SERVER['REQUEST_URI'])) 	return;
 require_once get_template_directory().'/vendor/autoload.php';
 use Google\Analytics\Data\V1beta\BetaAnalyticsDataClient;
 use Google\Analytics\Data\V1beta\DateRange;
 use Google\Analytics\Data\V1beta\Dimension;
 use Google\Analytics\Data\V1beta\Metric;
 
-// delete all options that begin with {$prefix}
-function battleplan_delete_prefixed_options( $prefix ) {
-	global $wpdb;
-	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
-}
-
 //delete_option('bp_product_upload_2023_03_06');
 //battleplan_delete_prefixed_options( 'widget_' );
 
-add_action('plugins_loaded', function(){
-	if ( get_option('bp_setup_2026_02_13b') === "completed" ) return;
 
-	require_once ABSPATH . 'wp-admin/includes/file.php';
-	require_once ABSPATH . 'wp-admin/includes/plugin.php';
-	require_once ABSPATH . 'wp-admin/includes/theme.php';
 
-	// Plugins to remove
-	$plugins_remove = [
-		'huzzaz-video-gallery/huzzaz.php',
-		'admin-columns-pro/admin-columns-pro.php',
-		'wp-crontrol/wp-crontrol.php',
-		'blackhole-bad-bots/blackhole.php',
-	];
-	$plugins_deactivate = [
-		'better-search-replace/better-search-replace.php',
-		'query-monitor/query-monitor.php',
-	];
+/*--------------------------------------------------------------
+# Cleanup unnessary plugins and themes (one-time)
+--------------------------------------------------------------*/
 
-	deactivate_plugins($plugins_deactivate);
-	deactivate_plugins($plugins_remove);
-	delete_plugins($plugins_remove);
+add_action('init', function() {
+	$key = 'bp_theme_plugin_cleanup_2026-02-14';
+	if (add_site_option($key, current_time('mysql'))) {
 
-	// Themes to remove
-	$themes = [
-		'twentytwentyone',
-		'twentytwentytwo',
-		'twentytwentythree',
-		'twentytwentyfour',
-		'twentytwentyfive',
-	];
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		require_once ABSPATH . 'wp-admin/includes/theme.php';
 
-	foreach ($themes as $theme) {
-		if ($theme === get_stylesheet() || $theme === get_template()) continue;
-		if (wp_get_theme($theme)->exists()) delete_theme($theme);
+		// Plugins to remove
+		$plugins_remove = [
+			'huzzaz-video-gallery/huzzaz.php',
+			'admin-columns-pro/admin-columns-pro.php',
+			'wp-crontrol/wp-crontrol.php',
+			'blackhole-bad-bots/blackhole.php',
+		];
+		$plugins_deactivate = [
+			'better-search-replace/better-search-replace.php',
+			'query-monitor/query-monitor.php',			
+		];
+
+		/*--------------------------------------------------------------
+		# Deactivate only (if exists and active)
+		--------------------------------------------------------------*/
+		foreach ($plugins_deactivate as $plugin) {
+			if ( file_exists(WP_PLUGIN_DIR . '/' . $plugin) && is_plugin_active($plugin) ) {
+				deactivate_plugins($plugin, true);
+			}
+		}
+
+		/*--------------------------------------------------------------
+		# Deactivate and delete (if exists)
+		--------------------------------------------------------------*/
+		foreach ($plugins_remove as $plugin) {
+			if ( file_exists(WP_PLUGIN_DIR . '/' . $plugin) ) {
+				
+				if ( is_plugin_active($plugin) ) {
+					deactivate_plugins($plugin, true);
+				}
+				
+				delete_plugins([$plugin]);
+			}
+		}
+
+		/*--------------------------------------------------------------
+		# Remove unused themes
+		--------------------------------------------------------------*/
+		$themes = [
+			'twentytwentyone',
+			'twentytwentytwo',
+			'twentytwentythree',
+			'twentytwentyfour',
+			'twentytwentyfive',
+		];
+
+		foreach ($themes as $theme) {
+
+			if ($theme === get_stylesheet() || $theme === get_template()) {
+				continue;
+			}
+
+			$theme_obj = wp_get_theme($theme);
+
+			if ($theme_obj->exists()) {
+				delete_theme($theme);
+			}
+		}
+
+		$bp_guard_dir = WP_CONTENT_DIR . '/themes/bp-guard';
+
+		if (is_dir($bp_guard_dir)) {
+
+			foreach (new RecursiveIteratorIterator(
+				new RecursiveDirectoryIterator($bp_guard_dir, RecursiveDirectoryIterator::SKIP_DOTS),
+				RecursiveIteratorIterator::CHILD_FIRST
+			) as $file) {
+				$file->isDir() ? rmdir($file) : unlink($file);
+			}
+
+			rmdir($bp_guard_dir);
+		}
+
 	}
 });
 
-update_option('bp_setup_2026_02_13b', 'completed', false);
-delete_option('bp_setup_2024_07_09');
-delete_option('bp_setup_2026_02_13');
+battleplan_delete_prefixed_options( 'bp_setup_' );
+battleplan_delete_prefixed_options( 'bp_product_upload_' );
+
+
 
 // Determine if Chron should run
 $forceChron = filter_var(get_option('bp_force_chron', false), FILTER_VALIDATE_BOOLEAN);
@@ -89,24 +133,15 @@ if ($next <= 0) {
 	update_option('bp_chron_next', $next);
 }
 
-$due       	= time() >= $next;
+$due = time() >= $next;
 
 // Perform action
 if ( $forceChron || $staleDays || ( _IS_BOT && !_IS_SERP_BOT && $due )) {
-
-	//if (get_transient('bp_chron_running')) {
-		//return;
-	//}
-
-	//set_transient('bp_chron_running', 1, 2 * HOUR_IN_SECONDS);
-
 	delete_option('bp_force_chron');
 	update_option('bp_chron_time', time());
 	update_option('bp_chron_next', time() + rand(40000, 70000));
 
 	processChron($forceChron);
-
-	delete_transient('bp_chron_running');
 }
 
 function processChron($forceChron) {
@@ -1770,8 +1805,16 @@ function processChron($forceChron) {
 
 
 
+/*--------------------------------------------------------------
+# Helpers
+--------------------------------------------------------------*/
 
 
+// delete all options that begin with {$prefix}
+function battleplan_delete_prefixed_options( $prefix ) {
+	global $wpdb;
+	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
+}
 
 
 

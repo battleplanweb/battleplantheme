@@ -14,7 +14,7 @@
 --------------------------------------------------------------*/
 
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2026.37.1' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2026.37.2' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -152,11 +152,11 @@ add_action('muplugins_loaded', 'bp_block_google_apis_on_sitemap', 0);
 
 
 $GLOBALS['___page_timer'] ??= microtime(true);
-error_log('<<<<<<<< ------------------------------------------ START PAGE '._PAGE_SLUG_FULL.' @ ' . date('H:i:s') . ' on ' . date('Y-m-d') . ' ------------------------------------------ >>>>>>>>');
+error_log('<<< ----- START PAGE '._PAGE_SLUG_FULL.' @ ' . date('H:i:s') . ' on ' . date('Y-m-d') . ' ------ >>>');
 
 add_action('shutdown', function () {
 	$pageLoadTime = microtime(true) - $GLOBALS['___page_timer'];
-	error_log('<<<<<<<< ------------------------------------------ END PAGE '._PAGE_SLUG_FULL.' : LOAD TIME: ' . number_format($pageLoadTime, 3) . ' sec ------------------------------------------ >>>>>>>>');
+	error_log('<<< ----- END PAGE '._PAGE_SLUG_FULL.' : LOAD TIME: ' . number_format($pageLoadTime, 3) . ' sec  ------ >>>');
 });
 
 

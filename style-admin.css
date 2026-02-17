@@ -138,16 +138,6 @@ div div.theme-screenshot img {
   	display:                                                 none;
 }
 
-div[data-slug="battleplantheme"] div.theme-screenshot {
-  	background:                                              url('/wp-content/themes/battleplantheme/screenshot.png') no-repeat 50% 50% !important;
-	background-size:                                           contain !important;
-}
-
-div[data-slug="battleplantheme-site"] div.theme-screenshot {
-  	background:                                              url('/wp-content/uploads/logo.webp') no-repeat 50% 50% !important;
-	background-size:                                           contain !important;
-}
-
 /* Admin bar on live pages, added when logged in */
 @media (max-width: 1024px) {
 	#wpadminbar {
@@ -443,7 +433,9 @@ th.sorted a {
 .wp-list-table .column-bp-last_name,
 .wp-list-table .column-bp-display_name,
 .site-type-pedigree.post-type-litters .wp-list-table .column-sire,
-.site-type-pedigree.post-type-litters .wp-list-table .column-dam {
+.site-type-pedigree.post-type-litters .wp-list-table .column-dam,
+.plugins-php .wp-list-table .column-description,
+.post-type-jobsite_geo .wp-list-table .column-pgmb_post_type {
 	text-align:                                                left;
 	padding-left:                                              6px !important;
 }
@@ -484,7 +476,8 @@ th.sorted a span {
 	float:                                                     none;
 }
 
-.plugin-title.column-bp-primary .row-actions {
+.plugins-php .plugin-title .row-actions,
+.post-type-jobsite_geo .wp-list-table .row-actions {
 	font-size:                                                 17px;
 }
 

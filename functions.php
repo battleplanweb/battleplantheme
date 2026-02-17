@@ -2294,6 +2294,28 @@ function battleplan_fetch_background_image($clear=false) {
 }
 
 
+// Check & store correct site logo image
+function battleplan_fetch_site_logo($clear=false) {
+	$logoData = get_option('bp_site_logo');
+
+	if ( $logoData === false || !isset($logoData['name']) || $clear ) {
+		$logoData = null;
+
+		if (is_file($_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/logo.webp')) {
+			$logoData = 'logo.webp';
+		} elseif (is_file($_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/logo.png')) {
+			$logoData = 'logo.png';
+		} elseif (is_file($_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/logo.jpg')) {
+			$logoData = 'logo.jpg';
+		}
+
+		update_option('bp_site_logo', $logoData);
+	}
+
+	return $logoData;
+}
+
+
 // Check & store correct site-icon image
 function battleplan_fetch_site_icon($clear=false) {
 	$iconData = get_option('bp_site_icon');

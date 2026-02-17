@@ -50,7 +50,7 @@ add_action('init', function() {
 		];
 		$plugins_deactivate = [
 			'better-search-replace/better-search-replace.php',
-			'query-monitor/query-monitor.php',			
+			'query-monitor/query-monitor.php',
 		];
 
 		/*--------------------------------------------------------------
@@ -67,11 +67,11 @@ add_action('init', function() {
 		--------------------------------------------------------------*/
 		foreach ($plugins_remove as $plugin) {
 			if ( file_exists(WP_PLUGIN_DIR . '/' . $plugin) ) {
-				
+
 				if ( is_plugin_active($plugin) ) {
 					deactivate_plugins($plugin, true);
 				}
-				
+
 				delete_plugins([$plugin]);
 			}
 		}
@@ -676,7 +676,7 @@ function processChron($forceChron) {
 
 	battleplan_fetch_background_image(true);
 	battleplan_fetch_site_icon(true);
-
+	battleplan_fetch_site_logo(true);
 
 // Clear terms, tags and categories with 0 entries
 	$attachment_taxonomies = ['image-tags'];

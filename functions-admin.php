@@ -1435,3 +1435,18 @@ function bp_refresh_jobsite_tags_page() {
 	</div>
 	<?php
 }
+
+add_action('admin_head', function(){
+	$logo = get_option('bp_site_logo');
+	echo '<style>
+		div[data-slug="battleplantheme"] div.theme-screenshot {
+			background: url("/wp-content/themes/battleplantheme/screenshot.png") no-repeat 50% 50% !important;
+			background-size: contain !important;
+		}
+		.theme-browser .theme .theme-screenshot.blank,
+		div[data-slug="battleplantheme-site"] div.theme-screenshot {
+			background: url("/wp-content/uploads/'.$logo.'") no-repeat 50% 50% !important;
+			background-size: contain !important;
+		}
+	</style>';
+});

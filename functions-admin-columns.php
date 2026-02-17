@@ -56,6 +56,115 @@ add_filter('request', function($vars){
 	return $vars;
 });
 
+
+/*--------------------------------------------------------------
+# Admin Columns Engine
+--------------------------------------------------------------*/
+function bp_match($value, $map, $default = '') {
+
+	if (array_key_exists($value, $map)) {
+
+		$result = $map[$value];
+
+		return is_callable($result)
+			? $result()
+			: $result;
+	}
+
+	return is_callable($default)
+		? $default()
+		: $default;
+}
+
+function bp_render_meta($id, $cols, $col, $pt) {
+
+	$meta_key = $cols[$col]['meta_key'];
+	$value    = get_post_meta($id, $meta_key, true);
+
+	$display_value = $value;
+
+	if ($value && is_numeric($value) && get_post($value)) {
+		$display_value = get_the_title($value);
+	}
+
+	$type = $cols[$col]['type'] ?? 'value';
+
+	if ($type === 'date' && $value) {
+
+		$date = null;
+
+		if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+			$date = DateTime::createFromFormat('Y-m-d', $value);
+		}
+		elseif (preg_match('/^\d{8}$/', $value)) {
+			$date = DateTime::createFromFormat('Ymd', $value);
+		}
+
+		if ($date) {
+			$display_value = $date->format('F j, Y');
+		}
+	}
+
+	if ($value && is_numeric($value) && (
+		strpos($meta_key,'price')!==false ||
+		strpos($meta_key,'deposit')!==false ||
+		strpos($meta_key,'cost')!==false ||
+		strpos($meta_key,'amount')!==false
+	)) {
+		$display_value = '$'.number_format($value,0);
+	}
+
+	if($pt === 'events'){
+
+		$start_date = get_post_meta($id,'start_date',true);
+		$start_time = get_post_meta($id,'start_time',true);
+		$end_date   = get_post_meta($id,'end_date',true);
+		$end_time   = get_post_meta($id,'end_time',true);
+
+		if($meta_key === 'start_date'){
+			$dt = new DateTime(trim($start_date.' '.$start_time));
+			$display_value =
+				$dt->format('F j, Y').
+				($start_time ? '<br>'.$dt->format('g:ia') : '');
+		}
+
+		if($meta_key === 'end_date'){
+			$display_date = $end_date ?: $start_date;
+			$dt = new DateTime(trim($display_date.' '.$end_time));
+			$display_value =
+				$dt->format('F j, Y').
+				($end_time ? '<br>'.$dt->format('g:ia') : '');
+		}
+	}
+
+	if($meta_key === 'testimonial_platform'){
+
+		$logos = [
+			'Google'   => get_template_directory_uri().'/common/logos/google.webp',
+			'Facebook' => get_template_directory_uri().'/common/logos/facebook.webp',
+		];
+
+		if(isset($logos[$value])){
+			$display_value =
+				'<img src="'.$logos[$value].'" style="height:20px;width:auto;" alt="'.$value.'">';
+		}
+	}
+
+	if (!empty($cols[$col]['inline_edit'])) {
+
+		return '<span class="bp-inline-edit"
+			data-post-id="'.esc_attr($id).'"
+			data-meta-key="'.esc_attr($meta_key).'"
+			data-raw-value="'.esc_attr($value).'"
+			data-field-type="'.esc_attr($type).'"
+			style="cursor:pointer; border-bottom:var(--inline-edit);"
+			title="Click to edit">'.wp_kses_post($display_value ?: '—').'</span>';
+	}
+
+	return wp_kses_post($display_value);
+}
+
+
 /*--------------------------------------------------------------
 # Admin Columns Engine
 --------------------------------------------------------------*/
@@ -115,16 +224,16 @@ function bp_admin_columns($config){
 
 			$type = $cols[$col]['type'];
 
-			echo match($type){
+			echo bp_match($type, [
 
 				'bp-post-id' => $id,
 
-				'bp-featured-image' =>
+				'bp-featured-image' => fn() =>
 					wp_get_attachment_image($id, [130,130]),
 
 				'bp-title' => (function() use ($id) {
 					return '<a href="'.get_edit_post_link($id).'" target="_blank"><b style="color: var(--main-blue); font-size:115%">'.get_the_title($id).'</b></a><br />/'.basename(get_attached_file($id));
-				})(),
+				}),
 
 				'bp-modified' => get_the_modified_date('', $id),
 
@@ -141,14 +250,14 @@ function bp_admin_columns($config){
 					}
 
 					return wp_kses_post($value);
-				})(),
+				}),
 
 				'bp-media_dimensions' => (function() use ($id){
 					$meta = wp_get_attachment_metadata($id);
 					return isset($meta['width'])
 						? $meta['width'].'×'.$meta['height']
 						: '';
-				})(),
+				}),
 
 				'bp-taxonomy' => (function() use ($id, $cols, $col){
 					$terms = get_the_terms($id, $cols[$col]['taxonomy']);
@@ -181,10 +290,9 @@ function bp_admin_columns($config){
 					}
 
 					return $output;
-				})(),
+				}),
 
-				default => ''
-			};
+			], '');
 
 		}, 10, 2);
 
@@ -196,7 +304,7 @@ function bp_admin_columns($config){
 
 			$type = $cols[$col]['type'];
 
-			echo match($type){
+			echo bp_match($type, [
 
 				'bp-post-id' => $id,
 
@@ -221,16 +329,16 @@ function bp_admin_columns($config){
 					}
 
 					return $status_label.'<a href="'.get_edit_post_link($id).'" target="_blank"><b style="color: '.$title_color.'; font-size:115%">'.get_the_title($id).'</b></a><br>/'.get_post_field('post_name', $id);
-				 })(),
+				 }),
 
-				'meta_exists' =>
+				'meta_exists' => fn() =>
 					get_post_meta($id, $cols[$col]['meta_key'], true)
 						? '<span class="dashicons dashicons-yes-alt" style="color:#2ecc71;"></span>'
 						: '<span class="dashicons dashicons-dismiss" style="color:#e74c3c;"></span>',
 
 				'bp-modified' => get_the_modified_date('', $id),
 
-				'bp-attachments' =>
+				'bp-attachments' => fn() =>
 					implode('', array_map(fn($a)=>
 						'<a href="'.esc_url(get_edit_post_link($a->ID)).'" target="_blank">'.
 							wp_get_attachment_image($a->ID, [80,80]).
@@ -241,101 +349,11 @@ function bp_admin_columns($config){
 						])
 					)),
 
-				'bp-featured-image' =>
-					get_the_post_thumbnail($id, [130,130]),
+				'bp-featured-image' => fn() => get_the_post_thumbnail($id, [130,130]),
 
-				'value', 'date', 'number' => (function() use ($id, $cols, $col, $pt){
-
-					$meta_key = $cols[$col]['meta_key'];
-					$value    = get_post_meta($id, $meta_key, true);
-
-					// ===== AUTO-DETECTION (must come BEFORE special handling) =====
-					$display_value = $value;
-
-					// Check if value is a post ID
-					if ($value && is_numeric($value) && get_post($value)) {
-					    $display_value = get_the_title($value);
-					}
-
-					// Format date
-					$type = $cols[$col]['type'] ?? 'value';
-
-					if ($type === 'date' && $value) {
-
-						// Format: YYYY-MM-DD
-						if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
-							$date = DateTime::createFromFormat('Y-m-d', $value);
-						}
-
-						// Format: YYYYMMDD
-						elseif (preg_match('/^\d{8}$/', $value)) {
-							$date = DateTime::createFromFormat('Ymd', $value);
-						}
-
-						if (!empty($date)) {
-							$display_value = $date->format('F j, Y');
-						}
-					}
-
-
-					// Check for currency fields
-					if ($value && is_numeric($value) && (
-					    strpos($meta_key, 'price') !== false ||
-					    strpos($meta_key, 'deposit') !== false ||
-					    strpos($meta_key, 'cost') !== false ||
-					    strpos($meta_key, 'amount') !== false
-					)) {
-					    $display_value = '$' . number_format($value, 0);
-					}
-
-					// ===== EVENTS SPECIAL HANDLING =====
-					if($pt === 'events'){
-
-					    $start_date = get_post_meta($id, 'start_date', true);
-					    $start_time = get_post_meta($id, 'start_time', true);
-					    $end_date   = get_post_meta($id, 'end_date', true);
-					    $end_time   = get_post_meta($id, 'end_time', true);
-
-					    // START DATE COLUMN
-					    if($meta_key === 'start_date'){
-						   $dt = new DateTime(trim($start_date.' '.$start_time));
-						   $display_value = $dt->format('F j, Y').($start_time ? '<br />'.$dt->format('g:ia') : '');
-					    }
-
-					    // END DATE COLUMN
-					    if($meta_key === 'end_date'){
-						   $display_date = $end_date ?: $start_date;
-						   $dt = new DateTime(trim($display_date.' '.$end_time));
-						   $display_value = $dt->format('F j, Y').($end_time ? '<br />'.$dt->format('g:ia') : '');
-					    }
-					}
-
-					if($meta_key === 'testimonial_platform'){
-
-					    $logos = [
-						   'Google'   => get_template_directory_uri().'/common/logos/google.webp',
-						   'Facebook' => get_template_directory_uri().'/common/logos/facebook.webp',
-					    ];
-
-					    if(isset($logos[$value])) {
-						   $display_value = '<img src="'.$logos[$value].'" style="height:20px;width:auto;" alt="'.$value.'">';
-					    }
-					}
-
-					// Check if this field is inline editable
-					if (!empty($cols[$col]['inline_edit'])) {
-					    return '<span class="bp-inline-edit"
-						   data-post-id="'.esc_attr($id).'"
-						   data-meta-key="'.esc_attr($meta_key).'"
-						   data-raw-value="'.esc_attr($value).'"
-						   data-field-type="'.esc_attr($type).'"
-						   style="cursor:pointer; border-bottom:var(--inline-edit);"
-						   title="Click to edit">'.wp_kses_post($display_value ?: '—').'</span>';
-					}
-
-					return wp_kses_post($display_value);
-
-				 })(),
+				'value'  => fn() => bp_render_meta($id,$cols,$col,$pt),
+				'date'   => fn() => bp_render_meta($id,$cols,$col,$pt),
+				'number' => fn() => bp_render_meta($id,$cols,$col,$pt),
 
 				'bp-categories' => (function() use ($id, $pt){
 					$terms = get_the_terms($id, 'category');
@@ -349,7 +367,7 @@ function bp_admin_columns($config){
 						$links[] = '<a href="'.esc_url($filter_url).'">'.wp_kses_post($term->name).'</a>';
 					}
 					return implode(', ', $links);
-				})(),
+				}),
 
 				'bp-tags' => (function() use ($id, $pt){
 					$terms = get_the_terms($id, 'post_tag');
@@ -363,12 +381,12 @@ function bp_admin_columns($config){
 						$links[] = '<a href="'.esc_url($filter_url).'">'.wp_kses_post($term->name).'</a>';
 					}
 					return implode(', ', $links);
-				})(),
+				}),
 
-				'bp-author' =>
+				'bp-author' => fn() =>
 					get_the_author_meta('display_name', get_post_field('post_author', $id)),
 
-				'bp-menu_order' =>
+				'bp-menu_order' => fn() =>
 					(int) get_post_field('menu_order', $id),
 
 				'bp-meta_number' => ($v = (int) get_post_meta($id, $cols[$col]['meta_key'], true))
@@ -404,13 +422,9 @@ function bp_admin_columns($config){
 							style="color:#2271b1; cursor:pointer; text-decoration:none; border:none; background:none; padding:0; margin-left:5px;"
 							title="Edit terms">✎</button>';
 					}
-
 					return $output;
-				})(),
-
-
-				default => ''
-			};
+				}),
+			], '');
 
 		}, 10, 2);
 	}
@@ -1574,14 +1588,14 @@ function bp_user_columns($config){
 
 		$type = $cols[$col]['type'];
 
-		return match($type){
+		return bp_match($type, [
 
 			'user_login' => (function() use ($user_id){
 				$user = get_userdata($user_id);
 				return '<a href="'.esc_url(get_edit_user_link($user_id)).'" style="font-size: 115%">'.wp_kses_post($user->user_login).'</a>';
-			})(),
+			}),
 
-			'user_email' => get_userdata($user_id)->user_email,
+			'user_email' => fn() => get_userdata($user_id)->user_email,
 
 			'display_name' => (function() use ($user_id, $cols, $col){
 				$value = get_userdata($user_id)->display_name;
@@ -1596,7 +1610,7 @@ function bp_user_columns($config){
 				}
 
 				return wp_kses_post($value);
-			})(),
+			}),
 
 			'user_meta' => (function() use ($user_id, $cols, $col){
 				$value = get_user_meta($user_id, $cols[$col]['meta_key'], true);
@@ -1611,13 +1625,13 @@ function bp_user_columns($config){
 				}
 
 				return wp_kses_post($value);
-			})(),
+			}),
 
 			'user_registered' => (function() use ($user_id) {
 				$user = get_userdata($user_id);
 
 				return date_i18n('F j, Y', strtotime($user->user_registered)).'<br />'.date_i18n('g:i a', strtotime($user->user_registered));
-			})(),
+			}),
 
 			'user_role' => (function() use ($user_id, $cols, $col){
 				$user = get_userdata($user_id);
@@ -1640,12 +1654,11 @@ function bp_user_columns($config){
 				}
 
 				return $display_role;
-			})(),
+			}),
 
-			'post_count' => count_user_posts($user_id),
+			'post_count' => fn() =>count_user_posts($user_id),
 
-			default => ''
-		};
+		], '');
 
 	}, 10, 3);
 

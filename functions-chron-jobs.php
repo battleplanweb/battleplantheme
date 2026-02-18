@@ -1,7 +1,14 @@
 <?php
 /* Battle Plan Web Design Functions: Chron Jobs */
 
-if (get_transient('bp_chron_jobs_lock')) return;
+$current_user = wp_get_current_user();
+$is_override  = ($current_user && $current_user->user_login === 'battleplanweb');
+
+if (get_transient('bp_chron_jobs_lock') && !$is_override) {
+	error_log('BP Chron Jobs locked');
+	return;
+}
+
 set_transient('bp_chron_jobs_lock', 1, 3);
 
 /*--------------------------------------------------------------
@@ -123,8 +130,8 @@ battleplan_delete_prefixed_options( 'bp_product_upload_' );
 
 
 // Determine if Chron should run
-$forceChron = filter_var(get_option('bp_force_chron', false), FILTER_VALIDATE_BOOLEAN);
-$next    	= (int) get_option('bp_chron_next', 0);
+$forceChron 	= filter_var(get_option('bp_force_chron', false), FILTER_VALIDATE_BOOLEAN);
+$next    		= (int) get_option('bp_chron_next', 0);
 $lastRun   	= (int) get_option('bp_chron_time', 0);
 $staleDays 	= (time() - $lastRun) > (86400 * 3); // more than 3 days idle
 
@@ -150,6 +157,8 @@ function processChron($forceChron) {
 	if (function_exists('battleplan_remove_user_roles')) battleplan_remove_user_roles();
 	if (function_exists('battleplan_create_user_roles')) battleplan_create_user_roles();
 	if (function_exists('battleplan_updateSiteOptions')) battleplan_updateSiteOptions();
+	bp_check_for_post_updates();
+
 
 	$google_info 	= get_option('bp_gbp_update') ?: [];
 
@@ -698,9 +707,16 @@ function processChron($forceChron) {
 		$terms = get_terms([
 			'taxonomy'   => $taxonomy,
 			'hide_empty' => false,
+			'fields'     => 'all',
 		]);
 
+		if (is_wp_error($terms) || empty($terms)) continue;
+
 		foreach ($terms as $term) {
+
+			$term_id = (int) $term->term_id;
+			$slug    = (string) $term->slug;
+
 			$query = new WP_Query([
 				'post_type'      => 'attachment',
 				'post_status'    => 'inherit',
@@ -708,13 +724,15 @@ function processChron($forceChron) {
 				'tax_query'      => [[
 					'taxonomy' => $taxonomy,
 					'field'    => 'term_id',
-					'terms'    => $term->term_id,
+					'terms'    => $term_id,
 				]]
 			]);
 
-			if ($query->found_posts === 0 || $term->slug === 'service-area---') {
-				wp_delete_term($term->term_id, $taxonomy);
+			if ($query->found_posts === 0 || $slug === 'service-area---') {
+				wp_delete_term($term_id, $taxonomy);
 			}
+
+			wp_reset_postdata();
 		}
 	}
 
@@ -727,12 +745,18 @@ function processChron($forceChron) {
 		'order'          => 'DESC'
 	]);
 
+	$draft = null;
+
 	if ( $query->found_posts > 75 ) {
 		while ($query->have_posts()) {
 			$query->the_post();
-			$quality = get_field( "testimonial_quality" );
-			if ( !has_post_thumbnail() && $quality[0] != 1 && strlen(wp_strip_all_tags(get_the_content(), true)) < 100 ) $draft = get_the_id();
-			if ( has_post_thumbnail() && $quality[0] != 1 ) {
+
+			$quality = (array) get_field('testimonial_quality');
+			$q = (int)($quality[0] ?? 0);
+
+			if ( !isset($draft) && !has_post_thumbnail() && $q !== 1 && strlen(wp_strip_all_tags(get_the_content(), true)) < 100 ) $draft = get_the_id();
+
+			if ( has_post_thumbnail() && $q !== 1 ) {
 				$quality[0] = 1;
 				update_field('testimonial_quality', $quality);
 			}
@@ -1784,6 +1808,7 @@ function processChron($forceChron) {
 
 	wp_cache_delete('customer_info', 'options');
 	//wp_cache_flush();
+
 }
 
 
@@ -1816,6 +1841,43 @@ function battleplan_delete_prefixed_options( $prefix ) {
 	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'" );
 }
 
+//Email me if any pages have been added or updated
+function bp_check_for_post_updates() {
+	error_log('bp_check_for_post_updates() initiated');
+	$excluded_user = get_user_by('login','battleplanweb');
+	$excluded_id 	= $excluded_user ? $excluded_user->ID : 0;
+	$lastRun   	= (int) get_option('bp_chron_time', 0);
+
+	$args = [
+		'post_type'		=> get_post_types(['public'=>true],'names'),
+		'post_status'	=> ['publish','future','draft','pending','private'],
+		'posts_per_page'=> -1,
+		'date_query'	=> [['column'=>'post_modified_gmt','after'=>gmdate('Y-m-d H:i:s',$lastRun)]]
+	];
+	$posts = get_posts($args);
+	if(!$posts) return;
+
+	$other = '';
+	$mine = '';
+
+	foreach($posts as $p){
+		$url = get_permalink($p->ID);
+		if(!$url) continue;
+
+		$author_id = (int)$p->post_author;
+		$author = get_the_author_meta('display_name',$author_id);
+		$item = '<li><a href="'.$url.'">'.$p->post_title.'</a> <em>(by '.$author.')</em></li>';
+
+		$is_other = $excluded_id ? $author_id !== $excluded_id : true;
+		$is_other ? $other .= $item : $mine .= $item;
+	}
+
+	$body = '';
+	$other ? $body .= '<h3>Updated by Other Users</h3><ul>'.$other.'</ul>' : '';
+	$mine ? $body .= '<h3>Updated by battleplanweb</h3><ul>'.$mine.'</ul>' : '';
+
+	if ($body) emailMe('Content Updates Detected'.get_bloginfo('name'), $body);
+}
 
 
 function ci_normalize_pids($raw): array {

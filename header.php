@@ -100,6 +100,9 @@
 		endif;
 	?>
 
+	<link rel="preload" href="<?php echo get_template_directory_uri(); ?>/fonts/opensans-regular.woff2" as="font" type="font/woff2" crossorigin>
+	<link rel="preload" href="<?php echo get_template_directory_uri(); ?>/fonts/opensans-bold.woff2" as="font" type="font/woff2" crossorigin>
+
 	<?php wp_head(); ?>
 
 	<?php bp_loader(); ?>

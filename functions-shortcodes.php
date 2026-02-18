@@ -6,40 +6,84 @@
 --------------------------------------------------------------*/
 
 // Returns Business Information for site-wide changes
-add_shortcode( 'get-biz', 'battleplan_getBizInfo' );
-function battleplan_getBizInfo($atts, $content = null ) {
-	$customer_info = customer_info();
-	$a = shortcode_atts( array( 'info' => 'name', 'icon' => '', 'left'=>'0', 'top'=>'0' ), $atts );
-	$data = esc_attr($a['info']);
-	$icon = esc_attr($a['icon']) != '' ? do_shortcode('[get-icon type="'.esc_attr($a['icon']).'" class="biz-info" top="'.esc_attr($a['top']).'" left="'.esc_attr($a['left']).'"]').' ' : '';
-	$left = esc_attr($a['left']);
-	$top = esc_attr($a['top']);
+add_shortcode('get-biz', 'battleplan_getBizInfo');
+function battleplan_getBizInfo($atts, $content = null) {
 
-	if ( $data == "area" ) return $icon.$customer_info['area-before'].esc_html($customer_info['area']).esc_html($customer_info['area-after']);
+	$customer_info = array_merge([
+		'area-before' => '',
+		'area-after'  => '',
+		'area'        => '',
+		'phone'       => ''
+	], (array) customer_info());
 
-	if ( strpos($data, 'phone') !== false ) :
-		$phoneBasic = strpos($data, 'replace') !== false ? $customer_info[$data] : $customer_info['area'].'-'.$customer_info['phone'];
-		$phoneFormat = $customer_info['area-before'].esc_html($customer_info['area']).esc_html($customer_info['area-after']).esc_html($customer_info['phone'])	;
+	$a = shortcode_atts([
+		'info' => 'name',
+		'icon' => '',
+		'left' => '0',
+		'top'  => '0'
+	], $atts);
 
-		if ( strpos($data, 'mm-bar-phone') !== false ) :
+	$data = $a['info'];
+	$icon = $a['icon'] !== ''
+		? do_shortcode('[get-icon type="'.esc_attr($a['icon']).'" class="biz-info" top="'.esc_attr($a['top']).'" left="'.esc_attr($a['left']).'"]').' '
+		: '';
+
+	/*--------------------------------------------------------------
+	# AREA
+	--------------------------------------------------------------*/
+
+	if ($data === 'area')
+		return $icon
+			.$customer_info['area-before']
+			.esc_html($customer_info['area'])
+			.$customer_info['area-after'];
+
+	/*--------------------------------------------------------------
+	# PHONE
+	--------------------------------------------------------------*/
+
+	if (strpos($data, 'phone') !== false) {
+
+		if ($customer_info['phone'] === '') return;
+
+		$phoneBasic = strpos($data, 'replace') !== false
+			? ($customer_info[$data] ?? '')
+			: $customer_info['area'].'-'.$customer_info['phone'];
+
+		$phoneFormat =
+			$customer_info['area-before']
+			.esc_html($customer_info['area'])
+			.$customer_info['area-after']
+			.esc_html($customer_info['phone']);
+
+		if (strpos($data, 'mm-bar-phone') !== false) {
+
 			$openMessage = is_biz_open() ? "<span>Call Us, We're Open!</span>" : "";
-			$phoneFormat = do_shortcode('<div class="mm-bar-btn mm-bar-phone call-btn" aria-hidden="true">[get-icon type="phone"]'.$openMessage.'</div><span class="sr-only">Call Us</span>');
-		elseif ( strpos($data, 'alt') !== false ) :
-			if ( isset($customer_info[$data]) ) :
-				$phoneFormat = $customer_info[$data];
-				$phoneBasic = str_replace(array('(', ')', '-', '.', ' '), '', $phoneFormat);
-			endif;
-		endif;
-		if ( $customer_info['phone'] === '' ) return;
-		if ( strpos($data, '-notrack') !== false ):
-			return '<a class="phone-link" href="tel:1-'.$phoneBasic.'">'.$icon.$phoneFormat.'</a>';
-		else:
-			return '<a href="#" class="phone-link track-clicks" data-action="phone call" data-url="tel:1-'.$phoneBasic.'">'.$icon.$phoneFormat.'</a>';
-		endif;
-	endif;
 
-	if ( isset($customer_info[$data]) ) return $icon.esc_html($customer_info[$data]);
+			$phoneFormat = do_shortcode(
+				'<div class="mm-bar-btn mm-bar-phone call-btn" aria-hidden="true">[get-icon type="phone"]'.$openMessage.'</div><span class="sr-only">Call Us</span>'
+			);
+
+		} elseif (strpos($data, 'alt') !== false && isset($customer_info[$data])) {
+
+			$phoneFormat = $customer_info[$data];
+			$phoneBasic  = preg_replace('/[^0-9]/', '', $phoneFormat);
+		}
+
+		return strpos($data, '-notrack') !== false
+			? '<a class="phone-link" href="tel:1-'.$phoneBasic.'">'.$icon.$phoneFormat.'</a>'
+			: '<a href="#" class="phone-link track-clicks" data-action="phone call" data-url="tel:1-'.$phoneBasic.'">'.$icon.$phoneFormat.'</a>';
+	}
+
+	/*--------------------------------------------------------------
+	# GENERIC FIELD
+	--------------------------------------------------------------*/
+
+	return isset($customer_info[$data])
+		? $icon.esc_html($customer_info[$data])
+		: '';
 }
+
 
 // Use Google ratings in content
 add_shortcode( 'get-google-rating', 'battleplan_displayGoogleRating' );
@@ -1104,7 +1148,7 @@ function battleplan_getRandomPosts($atts, $content = null) {
 		'start'          => esc_attr($a['start']),
 		'end'            => esc_attr($a['end']),
 		'order'          => esc_attr($a['sort']),
-		'orderby'        => esc_attr($a['order_by']),
+		'orderby'        => esc_attr($a['orderby']),
 		'post__not_in'   => $exclude,
 		'taxonomy'       => $taxonomy,
 		'terms'          => $terms,
@@ -2155,6 +2199,36 @@ add_shortcode('show_debug_log', function($atts) {
 		return true;
 	});
 
+	usort($contents, function($a, $b) {
+
+	$pattern = '/^\[(\d{1,2}-[A-Za-z]{3}-\d{4}) @ (\d{1,2}:\d{2}:\d{2})\]/';
+
+	if (
+		preg_match($pattern, $a, $ma) &&
+		preg_match($pattern, $b, $mb)
+	) {
+		$ta = strtotime($ma[1] . ' ' . $ma[2]);
+		$tb = strtotime($mb[1] . ' ' . $mb[2]);
+
+		// Primary: newest first
+		if ($ta !== $tb) return $tb <=> $ta;
+
+		// Secondary: END PAGE goes last (even in reversed sort)
+		$aIsEnd = stripos($a, 'END PAGE') !== false;
+		$bIsEnd = stripos($b, 'END PAGE') !== false;
+
+		if ($aIsEnd && !$bIsEnd) return 1;   // push A down
+		if (!$aIsEnd && $bIsEnd) return -1;  // push B down
+
+		return 0;
+	}
+
+	return 0;
+
+});
+
+
+
 
 	/*--------------------------------------------------------------
 	# Format output
@@ -2162,16 +2236,50 @@ add_shortcode('show_debug_log', function($atts) {
 
 	$recent = array_slice($contents, -200);
 	$recent = array_reverse($recent);
-
 	$recent = array_map(function($line) {
 
 		$line = esc_html($line);
 
-		$line = str_ireplace(
-			'PHP Fatal error',
-			'<span style="color:red;font-weight:bold;">PHP Fatal error</span>',
-			$line
-		);
+		// Convert PHP UTC log prefix to Eastern
+		if (preg_match('/^\[(.*?) UTC\]/', $line, $matches)) {
+
+			$utc = DateTime::createFromFormat(
+				'd-M-Y H:i:s',
+				$matches[1],
+				new DateTimeZone('UTC')
+			);
+
+			if ($utc) {
+				$utc->setTimezone(new DateTimeZone('America/New_York'));
+
+				$converted = $utc->format('d-M-Y @ G:i:s');
+
+				$line = preg_replace(
+					'/^\[.*? UTC\]/',
+					'['.$converted.']',
+					$line
+				);
+			}
+		}
+
+		if (stripos($line, 'START PAGE') !== false) {
+			$line = '<div style="margin-top:60px"><span style="color:#008d32 !important;font-weight:normal;">' . $line . '</span></div>';
+		}
+
+		if (stripos($line, 'END PAGE') !== false) {
+			$line = '<div style="margin-top:10px;"><span style="color:#008d32 !important;font-weight:normal;">' . $line . '</span></div>';
+		}
+
+		if (stripos($line, 'START PAGE') === false && stripos($line, 'END PAGE') === false) {
+			if (stripos($line, 'error') !== false) {
+				$line = '<span style="color:#cb0a20 !important; font-weight:bold;">' . $line . '</span>';
+			}
+			if (stripos($line, 'wp-content/plugins') !== false) {
+				$line = '<span style="opacity:0.3;">' . $line . '</span>';
+			}
+
+			$line = '<div style="margin: 10px 0 0 20px;">'.$line.'</div>';
+		}
 
 		return $line;
 
@@ -2196,5 +2304,4 @@ add_shortcode('show_debug_log', function($atts) {
 	">'
 	. $output .
 	'</div>';
-
 });

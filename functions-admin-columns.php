@@ -57,6 +57,7 @@ add_filter('request', function($vars){
 });
 
 
+
 /*--------------------------------------------------------------
 # Admin Columns Engine
 --------------------------------------------------------------*/
@@ -98,6 +99,14 @@ function bp_render_meta($id, $cols, $col, $pt) {
 		}
 		elseif (preg_match('/^\d{8}$/', $value)) {
 			$date = DateTime::createFromFormat('Ymd', $value);
+		}
+
+		elseif (preg_match('/^\d{4}-\d{2}-\d{2}T/', $value)) {
+		    try {
+			   $date = new DateTime($value);
+		    } catch (Exception $e) {
+			   $date = null;
+		    }
 		}
 
 		if ($date) {
@@ -237,20 +246,9 @@ function bp_admin_columns($config){
 
 				'bp-modified' => get_the_modified_date('', $id),
 
-				'bp-meta_value' => (function() use ($id, $cols, $col){
-					$value = get_post_meta($id, $cols[$col]['meta_key'], true);
-
-					// Check if this field is inline editable
-					if (!empty($cols[$col]['inline_edit'])) {
-						return '<span class="bp-inline-edit"
-							data-post-id="'.esc_attr($id).'"
-							data-meta-key="'.esc_attr($cols[$col]['meta_key']).'"
-							style="cursor:pointer; border-bottom:var(--inline-edit);"
-							title="Click to edit">'.wp_kses_post($value ?: '—').'</span>';
-					}
-
-					return wp_kses_post($value);
-				}),
+				'value' => fn() => bp_render_meta($id, $cols, $col, 'attachment'),
+				'date'  => fn() => bp_render_meta($id, $cols, $col, 'attachment'),
+				'number'=> fn() => bp_render_meta($id, $cols, $col, 'attachment'),
 
 				'bp-media_dimensions' => (function() use ($id){
 					$meta = wp_get_attachment_metadata($id);
@@ -575,6 +573,9 @@ function bp_admin_columns($config){
 
 				echo '<select name="'.esc_attr($key).'">';
 				echo '<option value="">All '.wp_kses_post($c['label']).'</option>';
+				echo '<option value="__has__" '.selected($value,'__has__',false).'>Has '.wp_kses_post($c['label']).'</option>';
+				echo '<option value="__none__" '.selected($value,'__none__',false).'>No '.wp_kses_post($c['label']).'</option>';
+				echo '<option disabled>──────────</option>';
 
 				foreach ($terms as $term) {
 					echo '<option value="'.esc_attr($term->term_id).'" '.selected($value,$term->term_id,false).'>'.wp_kses_post($term->name).'</option>';
@@ -589,10 +590,16 @@ function bp_admin_columns($config){
 	add_action('pre_get_posts', function($q) use ($pt, $cols){
 
 		if (!is_admin()) return;
-		if (!$q->is_main_query()) return;
 
-		// ALL OTHER POST TYPES
-		if ($q->get('post_type') !== $pt) return;
+		global $pagenow;
+		if ($pagenow !== 'edit.php') return;
+
+		$post_type = $q->get('post_type');
+
+		if (
+			(is_array($post_type) && !in_array($pt, $post_type, true)) ||
+			(!is_array($post_type) && $post_type !== $pt)
+		) return;
 
 		$meta_query = (array) ($q->get('meta_query') ?: []);
 		$tax_query = [];
@@ -640,6 +647,32 @@ function bp_admin_columns($config){
 			// TAXONOMY
 			if ($type === 'bp-taxonomy') {
 
+				unset($q->query_vars[$key]);
+
+
+				// Has any term
+				if ($value === '__has__') {
+
+					$tax_query[] = [
+						'taxonomy' => $c['taxonomy'],
+						'operator' => 'EXISTS',
+					];
+
+					continue;
+				}
+
+				// Has no terms
+				if ($value === '__none__') {
+
+					$tax_query[] = [
+						'taxonomy' => $c['taxonomy'],
+						'operator' => 'NOT EXISTS',
+					];
+
+					continue;
+				}
+
+				// Specific term
 				$term_id = (int) $value;
 				if ($term_id <= 0) continue;
 
@@ -666,6 +699,17 @@ function bp_admin_columns($config){
 	}, 999);
 }
 
+add_filter('posts_request', function($sql, $query){
+
+	if (!is_admin()) return $sql;
+	if (!$query->is_main_query()) return $sql;
+
+	error_log("MAIN QUERY:");
+	error_log($sql);
+
+	return $sql;
+
+}, 10, 2);
 
 /*--------------------------------------------------------------
 # Inline Editing System
@@ -1460,11 +1504,8 @@ add_action('parse_query', 'bp_media_taxonomy_filter_listview', 999);
 function bp_media_taxonomy_filter_listview($q) {
 
 	if (!is_admin()) return;
-	if (!$q->is_main_query()) return;
 
 	global $pagenow;
-
-	// Only run on media library page
 	if ($pagenow !== 'upload.php') return;
 
 	$tax_query = [];
@@ -1856,7 +1897,7 @@ function bp_taxonomy($key, $taxonomy, $label, $args = []) {
 function bp_meta($key, $meta_key, $label, $args = []) {
 	return [
 		$key => array_merge([
-			'type'       => 'value', // value | exists | date | number | currency etc
+			'type'       => 'value', // value | meta_exists | date | number | currency etc
 			'meta_key'   => $meta_key,
 			'label'      => $label,
 			'sortable'   => true,
@@ -1865,9 +1906,6 @@ function bp_meta($key, $meta_key, $label, $args = []) {
 		], $args)
 	];
 }
-
-
-
 
 bp_admin_columns([
 	'post_type' => 'page',
@@ -1948,9 +1986,9 @@ bp_admin_columns([
 		$bp_modified,
 		bp_meta('bp-platform', 'testimonial_platform', 'Platform', []),
 		bp_meta('bp-testimonial_rating', 'testimonial_rating', 'Rating', ['type'=>'bp-meta_number']),
-		bp_meta('bp-testimonial_location', 'testimonial_location', 'Location', ['type' => 'exists']),
-		bp_meta('bp-testimonial_biz', 'testimonial_biz', 'Business', ['type' => 'exists']),
-		bp_meta('bp-testimonial_website', 'testimonial_website', 'Website', ['type' => 'exists']),
+		bp_meta('bp-testimonial_location', 'testimonial_location', 'Location', ['type' => 'meta_exists']),
+		bp_meta('bp-testimonial_biz', 'testimonial_biz', 'Business', ['type' => 'meta_exists']),
+		bp_meta('bp-testimonial_website', 'testimonial_website', 'Website', ['type' => 'meta_exists']),
 	)
 ]);
 
@@ -1964,6 +2002,22 @@ bp_admin_columns([
 		bp_taxonomy('bp-gallery-type', 'gallery-type', 'Type', []),
 		bp_taxonomy('bp-gallery-tags', 'gallery-tags', 'Tags', []),
 		$bp_order,
+	)
+]);
+
+bp_admin_columns([
+	'post_type' => 'jobsite_geo',
+	'columns' =>  array_merge(
+		$bp_id,
+		$bp_title,
+		bp_meta('job_date', 'job_date', 'Job Date', ['type' => 'date']),
+		bp_meta('address', 'address', 'Address', []),
+		bp_taxonomy('jobsite_geo-service-areas', 'jobsite_geo-service-areas', 'City', []),
+		bp_meta('review', 'review', 'Review', ['type' => 'meta_exists']),
+		bp_meta('is_priority_job', 'is_priority_job', 'Priority', ['type' => 'meta_exists']),
+		$bp_modified,
+		bp_taxonomy('jobsite_geo-services', 'jobsite_geo-services', 'Service', []),
+		$bp_attachments
 	)
 ]);
 
@@ -2008,6 +2062,18 @@ bp_admin_columns([
 		bp_meta('deposit_hold', 'deposit_hold', 'Hold', []),
 		bp_meta('deposit_born', 'deposit_born', 'Upon Birth', []),
 		$bp_modified,
+	)
+]);
+
+bp_admin_columns([
+	'post_type' => 'pro-tips',
+	'columns' => array_merge(
+		$bp_featured_image,
+		$bp_id,
+		$bp_title,
+		$bp_modified,
+		bp_taxonomy('pro-tips-category', 'pro-tips-category', 'Topics', []),
+		$bp_author,
 	)
 ]);
 

@@ -341,7 +341,9 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 .wp-list-table .column-bp-post-id,
 .wp-list-table .column-bp-top-exists,
 .wp-list-table .column-bp-bottom-exists,
-.wp-list-table .column-bp-image-id {
+.wp-list-table .column-bp-image-id,
+.post-type-jobsite_geo .wp-list-table .column-review,
+.post-type-jobsite_geo .wp-list-table .column-is_priority_job {
 	width:                                                     5%;
 }
 
@@ -363,7 +365,8 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 .wp-list-table .column-bp-end_date,
 .wp-list-table .column-bp-start_time,
 .wp-list-table .column-bp-end_time,
-.site-type-pedigree.post-type-litters .wp-list-table .column-birth_date {
+.site-type-pedigree.post-type-litters .wp-list-table .column-birth_date,
+.post-type-jobsite_geo .wp-list-table .column-bp-title {
 	width:                                                     9%;
 }
 
@@ -382,6 +385,11 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 .site-type-pedigree.post-type-litters .wp-list-table .column-sire,
 .site-type-pedigree.post-type-litters .wp-list-table .column-dam {
 	width:                                                     19%;
+}
+
+.post-type-jobsite_geo .wp-list-table .column-jobsite_geo-services,
+.post-type-jobsite_geo .wp-list-table th.column-bp-attachments {
+	width:                                                     20%;
 }
 
 .wp-list-table .column-bp-alt-text {
@@ -479,6 +487,15 @@ th.sorted a span {
 .plugins-php .plugin-title .row-actions,
 .post-type-jobsite_geo .wp-list-table .row-actions {
 	font-size:                                                 17px;
+}
+
+
+.bp-title.column-bp-title {
+	font-size:                                                 95%;
+}
+
+.bp-title.column-bp-title a {
+	font-size:                                                 130%;
 }
 
 /* Expand to the full screen when you have more than 3 years worth of stats */
@@ -743,11 +760,17 @@ th.sorted a span {
 	display:                                                   none;
 }
 
-.wp-admin .row-actions {
-	font-size:                                                 28px;
+.wp-admin tr .row-actions {
+	font-size:                                                 22px;
 	color:                                                     transparent !important;
-	margin-top:                                                5px;
+	margin-top:                                                15px;
+	margin-left:                                               -6px;
 	opacity:                                                   0;
+	transition:                                                all 0.3s ease 0.1s;
+}
+
+.wp-admin tr:hover .row-actions {
+	opacity:                                                   1;
 	transition:                                                all 0.3s ease 0.1s;
 }
 
@@ -762,24 +785,20 @@ body.ac-wp-media .row-actions {
 }
 
 .wp-admin .row-actions span {
-	margin-right:                                              -13px;
+	margin-right:                                              -8px;
 }
 
 .wp-admin .row-actions span.view {
-	margin-right:                                              -9px;
+	margin-right:                                              -4px;
 }
 
+.wp-admin .row-actions span.inline,
 .wp-admin .row-actions .id {
 	display:                                                   none;
 }
 
 .wp-admin .plugins .row-actions span {
 	margin-right:                                              0;
-}
-
-.wp-admin tr:hover .row-actions {
-	opacity:                                                   1;
-	transition:                                                all 0.3s ease 0.1s;
 }
 
 table.media .column-bp-title .has-media-icon ~ .row-actions {
@@ -830,14 +849,20 @@ table.media .column-bp-title .has-media-icon ~ .row-actions {
     content:                                                "\f503";
 }
 
-.wp-admin .row-actions span i::before {
-	display:                                                   inline-block;
-	transform:                                                 scale(0.7);
-	transition:                                                transform 0.1s ease;
+.button-link.bp-taxonomy-edit {
+	font-size:                                                 18px;
 }
 
-.wp-admin .row-actions span:hover i::before {
-	transform:                                                 scale(1.2);
+.wp-admin .row-actions span i::before,
+.button-link.bp-taxonomy-edit {
+	display:                                                   inline-block;
+	transform:                                                 scale(1);
+	transition:                                                transform 0.3s ease;
+}
+
+.wp-admin .row-actions span:hover i::before,
+.button-link.bp-taxonomy-edit:hover {
+	transform:                                                 scale(1.4);
 	transition:                                                transform 0.1s ease;
 }
 

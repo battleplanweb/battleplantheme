@@ -265,7 +265,17 @@ function bp_build_open_intervals(array $periods, string $tz, int $horizonDays=14
 	return $out;
 }
 
+// use Eastern Time Zone for all dates
+function bp_date($format = 'Y-m-d H:i:s', $timestamp = null) {
+	$tz  = new DateTimeZone('America/New_York');
+	$now = new DateTime(
+		$timestamp ? '@'.$timestamp : 'now',
+		new DateTimeZone('UTC')
+	);
 
+	$now->setTimezone($tz);
+	return $now->format($format);
+}
 
 function bp_is_open_at(array $periods,string $tz,?int $ts=null): bool {
     $now = $ts ?? (new DateTimeImmutable('now', new DateTimeZone($tz)))->getTimestamp();

@@ -262,7 +262,7 @@ function battleplan_buildVid( $atts, $content = null ) {
 
 	$a = shortcode_atts( array( 'size'=>'100', 'mobile'=>'100', 'class'=>'', 'order'=>'', 'link'=>'', 'thumb'=>'', 'start'=>'', 'end'=>'', 'preload'=>'false', 'related'=>'false', 'fullscreen'=>'false', 'controls'=>'true', 'autoplay'=>'false', 'loop'=>'false', 'muted'=>'false', 'begin'=>'', 'track'=>'' ), $atts );
 	$size = convertSize(esc_attr($a['size']));
-	$mobile = esc_attr($a['mobile']) !== '100' ? ' data-mobile-w="'.$mobile.'"' : '';
+	$mobile = esc_attr($a['mobile']) !== '100' ? ' data-mobile-w="'.esc_attr($a['mobile']).'"' : '';
 	$class = esc_attr($a['class']) !== '' ? ' '.esc_attr($a['class']) : '';
 	$link = esc_attr($a['link']);
 	$thumb = esc_attr($a['thumb']);
@@ -282,7 +282,7 @@ function battleplan_buildVid( $atts, $content = null ) {
 		if ( $order !== '' ) $style .= 'order: '.$order.'  !important; ';
 		if ( $fullscreen !== 'false' ) $style .= 'margin: 0; ';
 		$style = '"';
-	}
+	} else { $style = ''; }
 	$controls = esc_attr($a['controls']);
 	$autoplay = esc_attr($a['autoplay']);
 	$loop = esc_attr($a['loop']);
@@ -318,13 +318,13 @@ function battleplan_buildVid( $atts, $content = null ) {
 			endif;
 		endif;
 
-		return '<div class="block block-video span-'.$size.$class.' video-player"'.$tracking.' style="'.$style.'" data-thumb="'.$thumb.'" data-link="'.$link.'" data-id="'.$id.'"></div>';
+		return '<div class="block block-video span-'.$size.$class.' video-player"'.$tracking.$style.' data-thumb="'.$thumb.'" data-link="'.$link.'" data-id="'.$id.'"></div>';
 
 	else:
 		$dotPos = strrpos($link, '.');
 		$extension = substr($link, $dotPos + 1);
 		$file = substr($link, 0, $dotPos);
-		$buildVid = '<div class="block block-video span-'.$size.$class.'"'.$tracking.'" style="'.$style.'">';
+		$buildVid = '<div class="block block-video span-'.$size.$class.'"'.$tracking.$style.'>';
 		$buildVid .= '<video playsinline ';
 		if ( $controls == 'true' ) $buildVid .= 'controls ';
 		if ( $autoplay == 'true' ) $buildVid .= 'autoplay ';

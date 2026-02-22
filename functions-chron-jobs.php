@@ -30,6 +30,15 @@ use Google\Analytics\Data\V1beta\BetaAnalyticsDataClient;
 use Google\Analytics\Data\V1beta\DateRange;
 use Google\Analytics\Data\V1beta\Dimension;
 use Google\Analytics\Data\V1beta\Metric;
+use Google\Analytics\Data\V1beta\OrderBy;
+use Google\Analytics\Data\V1beta\OrderBy\MetricOrderBy;
+use Google\Analytics\Data\V1beta\Filter;
+use Google\Analytics\Data\V1beta\FilterExpression;
+use Google\Analytics\Data\V1beta\FilterExpressionList;
+use Google\Analytics\Data\V1beta\Filter\StringFilter;
+use Google\Analytics\Data\V1beta\Filter\InListFilter;
+use Google\Analytics\Data\V1beta\Filter\StringFilter\MatchType;
+
 
 //delete_option('bp_product_upload_2023_03_06');
 //battleplan_delete_prefixed_options( 'widget_' );
@@ -360,12 +369,11 @@ function processChron($forceChron) {
 				$google_info[$placeID]['county']        = $comp['county'];
 				$google_info[$placeID]['country']       = $comp['country_abbr'] ?: $comp['country_full'];
 
-
 				$google_info[$placeID]['lat']  			= isset($gbp['location']['latitude'])  ? (float)$gbp['location']['latitude']  : null;
 				$google_info[$placeID]['long'] 			= isset($gbp['location']['longitude']) ? (float)$gbp['location']['longitude'] : null;
 
 				$google_info[$placeID]['hours'] 		= $gbp['regularOpeningHours'] ?? null;
-    			$google_info[$placeID]['current-hours'] = $gbp['currentOpeningHours'] ?? null;
+    				$google_info[$placeID]['current-hours'] = $gbp['currentOpeningHours'] ?? null;
 			}
 
 			$google_info['google-reviews'] = $google_review_num;
@@ -531,9 +539,9 @@ function processChron($forceChron) {
 		$wpSEOBase['remove_emoji_scripts'] = 1;
 		$wpSEOBase['remove_powered_by_header'] = 1;
 		$wpSEOBase['remove_pingback_header'] = 1;
-		$wpSEOBase['clean_campaign_tracking_urls'] = 1;
+		$wpSEOBase['clean_campaign_tracking_urls'] = 0; // turned off 2026-02-19 at request of Claude AI
 		$wpSEOBase['clean_permalinks'] = 1;
-		$wpSEOBase['clean_permalinks_extra_variables'] = 'loc,int,invite,rs,se_action,pmax';
+		$wpSEOBase['clean_permalinks_extra_variables'] = 'loc,int,invite,rs,se_action,pmax,gclid,gbraid,wbraid,fbclid,msclkid';
 		$wpSEOBase['search_cleanup'] = 1;
 		$wpSEOBase['search_cleanup_emoji'] = 1;
 		$wpSEOBase['search_cleanup_patterns'] = 1;
@@ -1045,7 +1053,6 @@ function processChron($forceChron) {
 # Sync with Google Analytics
 --------------------------------------------------------------*/
 	$customer_info = customer_info();
-	$GLOBALS['dataTerms'] = get_option('bp_data_terms') ? get_option('bp_data_terms') : array();
 	$ga4_id = isset($customer_info['google-tags']['prop-id']) ? $customer_info['google-tags']['prop-id'] : null;
 
 	try {
@@ -1070,746 +1077,48 @@ function processChron($forceChron) {
 	$states = array('alabama'=>'AL', 'arizona'=>'AZ', 'arkansas'=>'AR', 'california'=>'CA', 'colorado'=>'CO', 'connecticut'=>'CT', 'delaware'=>'DE', 'dist of columbia'=>'DC', 'dist. of columbia'=>'DC', 'district of columbia'=>'DC', 'florida'=>'FL', 'georgia'=>'GA', 'idaho'=>'ID', 'illinois'=>'IL', 'indiana'=>'IN', 'iowa'=>'IA', 'kansas'=>'KS', 'kentucky'=>'KY', 'louisiana'=>'LA', 'maine'=>'ME', 'maryland'=>'MD', 'massachusetts'=>'MA', 'michigan'=>'MI', 'minnesota'=>'MN', 'mississippi'=>'MS', 'missouri'=>'MO', 'montana'=>'MT', 'nebraska'=>'NE', 'nevada'=>'NV', 'new hampshire'=>'NH', 'new jersey'=>'NJ', 'new mexico'=>'NM', 'new york'=>'NY', 'north carolina'=>'NC', 'north dakota'=>'ND', 'ohio'=>'OH', 'oklahoma'=>'OK', 'oregon'=>'OR', 'pennsylvania'=>'PA', 'rhode island'=>'RI', 'south carolina'=>'SC', 'south dakota'=>'SD', 'tennessee'=>'TN', 'texas'=>'TX', 'utah'=>'UT', 'vermont'=>'VT', 'virginia'=>'VA', 'washington'=>'WA', 'washington d.c.'=>'DC', 'washington dc'=>'DC', 'west virginia'=>'WV', 'wisconsin'=>'WI', 'wyoming'=>'WY');
 	$removedStates = array('alaska'=>'AK', 'hawaii'=>'HI',);
 
-// Gather GA4 Stats
-	if ( $ga4_id && substr($ga4_id, 0, 2) != '00' ) {
 
-		// Weekly Visitor Trends
-		$analyticsGA4 = array();
+	bp_ga4_collect_all_clean($client, $ga4_id);
 
-		$response = null;
+	// Automatic periodic customer check in emails
+	require_once get_template_directory() . '/functions-customer-checkins.php';
+	bp_run_customer_checkins();
 
-		try {
-			$response = $client->runReport([
-				'property' => 'properties/' . $ga4_id,
-				'dateRanges' => [
-					new DateRange([
-						'start_date' => $rewind,
-						'end_date'   => $today
-					]),
-				],
-				'dimensions' => [
-					new Dimension([ 'name' => 'date' ]),
-					new Dimension([ 'name' => 'city' ]),
-					new Dimension([ 'name' => 'region' ]),
-				],
-				'metrics' => [
-					new Metric([ 'name' => 'totalUsers' ]),
-					new Metric([ 'name' => 'newUsers' ]),
-					new Metric([ 'name' => 'sessions' ]),
-					new Metric([ 'name' => 'engagedSessions' ]),
-					new Metric([ 'name' => 'userEngagementDuration' ]),
-					new Metric([ 'name' => 'screenPageViews' ]),
-				]
-			]);
-		} catch (\Google\ApiCore\ApiException $e) {
-			error_log('GA4 API error: ' . $e->getMessage());
-			$response = null;
-		}
-
-		if ( $response ) {
-			foreach ( $response->getRows() as $row ) {
-
-				$date  = $row->getDimensionValues()[0]->getValue();
-				$city  = $row->getDimensionValues()[1]->getValue();
-				$state = strtolower($row->getDimensionValues()[2]->getValue());
-
-				if ( isset($states[$state]) ) {
-
-					$location = $city === '(not set)'
-						? ucwords($state)
-						: $city . ', ' . $states[$state];
-
-					$analyticsGA4[] = [
-						'date'              => $date,
-						'location'          => $location,
-						'total-users'       => $row->getMetricValues()[0]->getValue(),
-						'new-users'         => $row->getMetricValues()[1]->getValue(),
-						'sessions'          => $row->getMetricValues()[2]->getValue(),
-						'engaged-sessions'  => $row->getMetricValues()[3]->getValue(),
-						'session-duration'  => $row->getMetricValues()[4]->getValue(),
-						'page-views'        => $row->getMetricValues()[5]->getValue(),
-					];
-				}
-			}
-		}
-
-		if ( is_array($analyticsGA4) ) arsort($analyticsGA4);
-		update_option('bp_ga4_trends_01', $analyticsGA4, false);
-
-
-		// Site Visitors
-		$analyticsGA4 = array();
-		$dataTerms = array('day' => 1) + $GLOBALS['dataTerms'];
-		foreach ( $dataTerms as $termTitle => $termDays ) {
-
-		$response = null;
-
-		try {
-			$response = $client->runReport([
-				'property' => 'properties/' . $ga4_id,
-				'dateRanges' => [
-					new DateRange([
-						'start_date' => date('Y-m-d', strtotime("-{$termDays} days")),
-						'end_date'   => $today,
-					]),
-				],
-				'dimensions' => [
-					new Dimension([ 'name' => 'city' ]),
-					new Dimension([ 'name' => 'region' ]),
-				],
-				'metrics' => [
-					new Metric([ 'name' => 'totalUsers' ]),
-				],
-			]);
-		} catch (\Google\ApiCore\ApiException $e) {
-			error_log('GA4 visitors runReport failed: ' . $e->getMessage());
-			continue; // skip THIS term only
-		}
-
-		if ( !$response ) {
-			continue;
-		}
-
-		foreach ( $response->getRows() as $row ) {
-
-			$city  = $row->getDimensionValues()[0]->getValue() ?? '';
-			$state = strtolower($row->getDimensionValues()[1]->getValue() ?? '');
-
-			if ( !isset($states[$state]) ) {
-				continue;
-			}
-
-			$location = ($city === '(not set)')
-				? ucwords($state)
-				: $city . ', ' . $states[$state];
-
-			$totalUsers = (int) ($row->getMetricValues()[0]->getValue() ?? 0);
-
-			if ( !isset($analyticsGA4[$location]) ) {
-				$analyticsGA4[$location] = [];
-			}
-
-			$analyticsGA4[$location]['page-views-' . $termDays] = $totalUsers;
-		}
-		}
-
-		if ( !empty($analyticsGA4) ) {
-		arsort($analyticsGA4);
-		update_option('bp_ga4_visitors_01', $analyticsGA4, false);
-		}
-
-		// Most Popular Pages
-		$analyticsGA4 = array();
-		foreach ( $GLOBALS['dataTerms'] as $termTitle => $termDays ) {
-
-			$response = null;
-
-			try {
-				$response = $client->runReport([
-					'property' => 'properties/' . $ga4_id,
-					'dateRanges' => [
-						new DateRange([
-							'start_date' => date('Y-m-d', strtotime("-{$termDays} days")),
-							'end_date'   => $today,
-						]),
-					],
-					'dimensions' => [
-						new Dimension([ 'name' => 'pagePath' ]),
-						new Dimension([ 'name' => 'city' ]),
-						new Dimension([ 'name' => 'region' ]),
-					],
-					'metrics' => [
-						new Metric([ 'name' => 'screenPageViews' ]),
-					],
-				]);
-			} catch ( \Google\ApiCore\ApiException $e ) {
-				error_log('GA4 pages runReport failed: ' . $e->getMessage());
-				continue; // skip this term only
-			}
-
-			if ( !$response ) {
-				continue;
-			}
-
-			foreach ( $response->getRows() as $row ) {
-
-				$pagePath = $row->getDimensionValues()[0]->getValue() ?? '';
-				$city     = $row->getDimensionValues()[1]->getValue() ?? '';
-				$state    = strtolower($row->getDimensionValues()[2]->getValue() ?? '');
-
-				if ( !isset($states[$state]) ) {
-					continue;
-				}
-
-				$location = ($city === '(not set)')
-					? ucwords($state)
-					: $city . ', ' . $states[$state];
-
-				$pageViews = (int) ($row->getMetricValues()[0]->getValue() ?? 0);
-
-				// Normalize page name
-				if ( $pagePath === '/' || $pagePath === '' ) {
-					$pageName = 'Home';
-				} else {
-					$pageName = trim($pagePath, '/');
-					$pageName = str_replace('-', ' ', $pageName);
-					$pageName = str_replace('/', ' » ', $pageName);
-					$pageName = ucwords($pageName);
-				}
-
-				// Ensure array depth exists
-				if ( !isset($analyticsGA4[$pageName]) ) {
-					$analyticsGA4[$pageName] = [];
-				}
-				if ( !isset($analyticsGA4[$pageName][$location]) ) {
-					$analyticsGA4[$pageName][$location] = [];
-				}
-
-				$analyticsGA4[$pageName][$location]['page-views-' . $termDays] = $pageViews;
-			}
-		}
-
-		if ( !empty($analyticsGA4) ) {
-			arsort($analyticsGA4);
-			update_option('bp_ga4_pages_01', $analyticsGA4, false);
-		}
-
-
-		// Referrers
-		$analyticsGA4 = array();
-
-		foreach ( $GLOBALS['dataTerms'] as $termTitle => $termDays ) {
-
-			$response = null;
-
-			try {
-				$response = $client->runReport([
-					'property' => 'properties/' . $ga4_id,
-					'dateRanges' => [
-						new DateRange([
-							'start_date' => date('Y-m-d', strtotime("-{$termDays} days")),
-							'end_date'   => $today,
-						]),
-					],
-					'dimensions' => [
-						new Dimension([ 'name' => 'firstUserSourceMedium' ]),
-						new Dimension([ 'name' => 'city' ]),
-						new Dimension([ 'name' => 'region' ]),
-					],
-					'metrics' => [
-						new Metric([ 'name' => 'engagedSessions' ]),
-					],
-				]);
-			} catch ( \Google\ApiCore\ApiException $e ) {
-				error_log('GA4 referrers runReport failed: ' . $e->getMessage());
-			}
-
-			if ( $response ) {
-
-				foreach ( $response->getRows() as $row ) {
-
-					$pageReferrer = $row->getDimensionValues()[0]->getValue() ?? '';
-					$city         = $row->getDimensionValues()[1]->getValue() ?? '';
-					$state        = strtolower($row->getDimensionValues()[2]->getValue() ?? '');
-
-					if ( !isset($states[$state]) ) {
-						continue;
-					}
-
-					// Ignore self-referrals
-					if ( $pageReferrer && strpos($pageReferrer, $_SERVER['HTTP_HOST']) !== false ) {
-						continue;
-					}
-
-					// Normalize referrer labels
-					$switchRef = [
-						'facebook'  => 'Facebook',
-						'yelp'      => 'Yelp',
-						'youtube'   => 'YouTube',
-						'instagram' => 'Instagram',
-					];
-
-					foreach ( $switchRef as $find => $replace ) {
-						if ( stripos($pageReferrer, $find) !== false ) {
-							$pageReferrer = $replace;
-							break;
-						}
-					}
-
-					if ( $pageReferrer === '' ) {
-						$pageReferrer = 'Direct';
-					}
-
-					$location = ($city === '(not set)')
-						? ucwords($state)
-						: $city . ', ' . $states[$state];
-
-					$sessions = (int) ($row->getMetricValues()[0]->getValue() ?? 0);
-
-					// Safe initialization
-					if ( !isset($analyticsGA4[$pageReferrer]) ) {
-						$analyticsGA4[$pageReferrer] = [];
-					}
-					if ( !isset($analyticsGA4[$pageReferrer][$location]) ) {
-						$analyticsGA4[$pageReferrer][$location] = [];
-					}
-					if ( !isset($analyticsGA4[$pageReferrer][$location]['sessions-' . $termDays]) ) {
-						$analyticsGA4[$pageReferrer][$location]['sessions-' . $termDays] = 0;
-					}
-
-					$analyticsGA4[$pageReferrer][$location]['sessions-' . $termDays] += $sessions;
-				}
-			}
-		}
-
-		if ( !empty($analyticsGA4) ) {
-			update_option('bp_ga4_referrers_01', $analyticsGA4, false);
-		}
-
-
-		// Locations
-		$analyticsGA4 = array();
-		foreach ( $GLOBALS['dataTerms'] as $termTitle => $termDays ) {
-
-			$response = null;
-
-			try {
-				$response = $client->runReport([
-					'property' => 'properties/' . $ga4_id,
-					'dateRanges' => [
-						new DateRange([
-							'start_date' => date('Y-m-d', strtotime("-{$termDays} days")),
-							'end_date'   => $today,
-						]),
-					],
-					'dimensions' => [
-						new Dimension([ 'name' => 'firstUserSourceMedium' ]),
-						new Dimension([ 'name' => 'city' ]),
-						new Dimension([ 'name' => 'region' ]),
-					],
-					'metrics' => [
-						new Metric([ 'name' => 'engagedSessions' ]),
-					],
-				]);
-			} catch ( \Google\ApiCore\ApiException $e ) {
-				error_log('GA4 referrers runReport failed: ' . $e->getMessage());
-				continue; // skip this term only
-			}
-
-			if ( !$response ) {
-				continue;
-			}
-
-			foreach ( $response->getRows() as $row ) {
-
-				$pageReferrer = $row->getDimensionValues()[0]->getValue() ?? '';
-				$city         = $row->getDimensionValues()[1]->getValue() ?? '';
-				$state        = strtolower($row->getDimensionValues()[2]->getValue() ?? '');
-
-				if ( !isset($states[$state]) ) {
-					continue;
-				}
-
-				$location = ($city === '(not set)')
-					? ucwords($state)
-					: $city . ', ' . $states[$state];
-
-				$sessions = (int) ($row->getMetricValues()[0]->getValue() ?? 0);
-
-				// Normalize referrer labels
-				$switchRef = [
-					'facebook'  => 'Facebook',
-					'yelp'      => 'Yelp',
-					'youtube'   => 'YouTube',
-					'instagram' => 'Instagram',
-				];
-
-				// Ignore self-referrals
-				if ( strpos($pageReferrer, $_SERVER['HTTP_HOST']) !== false ) {
-					continue;
-				}
-
-				foreach ( $switchRef as $find => $replace ) {
-					if ( stripos($pageReferrer, $find) !== false ) {
-						$pageReferrer = $replace;
-						break;
-					}
-				}
-
-				if ( $pageReferrer === '' ) {
-					$pageReferrer = 'Direct';
-				}
-
-				// Ensure array depth exists
-				if ( !isset($analyticsGA4[$pageReferrer]) ) {
-					$analyticsGA4[$pageReferrer] = [];
-				}
-				if ( !isset($analyticsGA4[$pageReferrer][$location]) ) {
-					$analyticsGA4[$pageReferrer][$location] = [];
-				}
-				if ( !isset($analyticsGA4[$pageReferrer][$location]['sessions-' . $termDays]) ) {
-					$analyticsGA4[$pageReferrer][$location]['sessions-' . $termDays] = 0;
-				}
-
-				// Accumulate sessions
-				$analyticsGA4[$pageReferrer][$location]['sessions-' . $termDays] += $sessions;
-			}
-		}
-
-		if ( !empty($analyticsGA4) ) {
-			arsort($analyticsGA4);
-			update_option('bp_ga4_referrers_01', $analyticsGA4, false);
-		}
-
-
-		// Browsers
-		$analyticsGA4 = array();
-		foreach ( $GLOBALS['dataTerms'] as $termTitle => $termDays ) {
-
-			$response = null;
-
-			try {
-				$response = $client->runReport([
-					'property' => 'properties/' . $ga4_id,
-					'dateRanges' => [
-						new DateRange([
-							'start_date' => date('Y-m-d', strtotime("-{$termDays} days")),
-							'end_date'   => $today,
-						]),
-					],
-					'dimensions' => [
-						new Dimension([ 'name' => 'browser' ]),
-						new Dimension([ 'name' => 'city' ]),
-						new Dimension([ 'name' => 'region' ]),
-					],
-					'metrics' => [
-						new Metric([ 'name' => 'engagedSessions' ]),
-					],
-				]);
-			} catch ( \Google\ApiCore\ApiException $e ) {
-				error_log('GA4 browsers runReport failed: ' . $e->getMessage());
-				continue; // skip this term only
-			}
-
-			if ( !$response ) {
-				continue;
-			}
-
-			foreach ( $response->getRows() as $row ) {
-
-				$browser = $row->getDimensionValues()[0]->getValue() ?? '';
-				$city    = $row->getDimensionValues()[1]->getValue() ?? '';
-				$state   = strtolower($row->getDimensionValues()[2]->getValue() ?? '');
-
-				if ( !isset($states[$state]) || $browser === '' ) {
-					continue;
-				}
-
-				$location = ($city === '(not set)')
-					? ucwords($state)
-					: $city . ', ' . $states[$state];
-
-				$sessions = (int) ($row->getMetricValues()[0]->getValue() ?? 0);
-
-				// Ensure array depth exists
-				if ( !isset($analyticsGA4[$browser]) ) {
-					$analyticsGA4[$browser] = [];
-				}
-				if ( !isset($analyticsGA4[$browser][$location]) ) {
-					$analyticsGA4[$browser][$location] = [];
-				}
-				if ( !isset($analyticsGA4[$browser][$location]['sessions-' . $termDays]) ) {
-					$analyticsGA4[$browser][$location]['sessions-' . $termDays] = 0;
-				}
-
-				// Accumulate
-				$analyticsGA4[$browser][$location]['sessions-' . $termDays] += $sessions;
-			}
-		}
-
-		if ( !empty($analyticsGA4) ) {
-			arsort($analyticsGA4);
-			update_option('bp_ga4_browsers_01', $analyticsGA4, false);
-		}
-
-
-		// Devices
-		$analyticsGA4 = array();
-		foreach ( $GLOBALS['dataTerms'] as $termTitle => $termDays ) {
-
-			$response = null;
-
-			try {
-				$response = $client->runReport([
-					'property' => 'properties/' . $ga4_id,
-					'dateRanges' => [
-						new DateRange([
-							'start_date' => date('Y-m-d', strtotime("-{$termDays} days")),
-							'end_date'   => $today,
-						]),
-					],
-					'dimensions' => [
-						new Dimension([ 'name' => 'deviceCategory' ]),
-						new Dimension([ 'name' => 'city' ]),
-						new Dimension([ 'name' => 'region' ]),
-					],
-					'metrics' => [
-						new Metric([ 'name' => 'engagedSessions' ]),
-					],
-				]);
-			} catch ( \Google\ApiCore\ApiException $e ) {
-				error_log('GA4 devices runReport failed: ' . $e->getMessage());
-				continue; // skip this term only
-			}
-
-			if ( !$response ) {
-				continue;
-			}
-
-			foreach ( $response->getRows() as $row ) {
-
-				$deviceType = $row->getDimensionValues()[0]->getValue() ?? '';
-				$city       = $row->getDimensionValues()[1]->getValue() ?? '';
-				$state      = strtolower($row->getDimensionValues()[2]->getValue() ?? '');
-
-				if ( $deviceType === '' || !isset($states[$state]) ) {
-					continue;
-				}
-
-				$location = ($city === '(not set)')
-					? ucwords($state)
-					: $city . ', ' . $states[$state];
-
-				$sessions = (int) ($row->getMetricValues()[0]->getValue() ?? 0);
-
-				// Ensure array structure exists before +=
-				if ( !isset($analyticsGA4[$deviceType]) ) {
-					$analyticsGA4[$deviceType] = [];
-				}
-				if ( !isset($analyticsGA4[$deviceType][$location]) ) {
-					$analyticsGA4[$deviceType][$location] = [];
-				}
-				if ( !isset($analyticsGA4[$deviceType][$location]['sessions-' . $termDays]) ) {
-					$analyticsGA4[$deviceType][$location]['sessions-' . $termDays] = 0;
-				}
-
-				$analyticsGA4[$deviceType][$location]['sessions-' . $termDays] += $sessions;
-			}
-		}
-
-		if ( !empty($analyticsGA4) ) {
-			arsort($analyticsGA4);
-			update_option('bp_ga4_devices_01', $analyticsGA4, false);
-		}
-
-
-		// Site Load Speed
-		$analyticsGA4 = array();
-		foreach ( $GLOBALS['dataTerms'] as $termTitle => $termDays ) {
-
-			$response = null;
-
-			try {
-				$response = $client->runReport([
-					'property' => 'properties/' . $ga4_id,
-					'dateRanges' => [
-						new DateRange([
-							'start_date' => date('Y-m-d', strtotime("-{$termDays} days")),
-							'end_date'   => $today,
-						]),
-					],
-					'dimensions' => [
-						new Dimension([ 'name' => 'groupId' ]),
-						new Dimension([ 'name' => 'city' ]),
-						new Dimension([ 'name' => 'region' ]),
-					],
-					// NOTE: no metrics returned for this report
-				]);
-			} catch ( \Google\ApiCore\ApiException $e ) {
-				error_log('GA4 speed runReport failed: ' . $e->getMessage());
-				continue; // skip this term only
-			}
-
-			if ( !$response ) {
-				continue;
-			}
-
-			foreach ( $response->getRows() as $row ) {
-
-				$groupId = $row->getDimensionValues()[0]->getValue() ?? '';
-				$city    = $row->getDimensionValues()[1]->getValue() ?? '';
-				$state   = strtolower($row->getDimensionValues()[2]->getValue() ?? '');
-
-				if ( $groupId === '' || !isset($states[$state]) ) {
-					continue;
-				}
-
-				$location = ($city === '(not set)')
-					? ucwords($state)
-					: $city . ', ' . $states[$state];
-
-				// Ensure array structure exists
-				if ( !isset($analyticsGA4[$location]) ) {
-					$analyticsGA4[$location] = [];
-				}
-				if ( !isset($analyticsGA4[$location]['sessions-' . $termDays]) ) {
-					$analyticsGA4[$location]['sessions-' . $termDays] = [];
-				}
-
-				$analyticsGA4[$location]['sessions-' . $termDays][] = $groupId;
-			}
-		}
-
-		if ( !empty($analyticsGA4) ) {
-			arsort($analyticsGA4);
-			update_option('bp_ga4_speed_01', $analyticsGA4, false);
-		}
-
-
-		// Screen Resolutions
-		$analyticsGA4 = array();
-		foreach ( $GLOBALS['dataTerms'] as $termTitle => $termDays ) {
-
-			$response = null;
-
-			try {
-				$response = $client->runReport([
-					'property' => 'properties/' . $ga4_id,
-					'dateRanges' => [
-						new DateRange([
-							'start_date' => date('Y-m-d', strtotime("-{$termDays} days")),
-							'end_date'   => $today,
-						]),
-					],
-					'dimensions' => [
-						new Dimension([ 'name' => 'screenResolution' ]),
-						new Dimension([ 'name' => 'city' ]),
-						new Dimension([ 'name' => 'region' ]),
-					],
-					'metrics' => [
-						new Metric([ 'name' => 'engagedSessions' ]),
-					]
-				]);
-			} catch ( \Google\ApiCore\ApiException $e ) {
-				error_log('GA4 resolution runReport failed: ' . $e->getMessage());
-				continue; // skip this term only
-			}
-
-			if ( !$response ) {
-				continue;
-			}
-
-			foreach ( $response->getRows() as $row ) {
-
-				$screenResolution = $row->getDimensionValues()[0]->getValue() ?? '';
-				$city             = $row->getDimensionValues()[1]->getValue() ?? '';
-				$state            = strtolower($row->getDimensionValues()[2]->getValue() ?? '');
-
-				if ( $screenResolution === '' || !isset($states[$state]) ) {
-					continue;
-				}
-
-				$location = ($city === '(not set)')
-					? ucwords($state)
-					: $city . ', ' . $states[$state];
-
-				$sessions = (int) ($row->getMetricValues()[0]->getValue() ?? 0);
-
-				// Initialize array structure safely
-				if ( !isset($analyticsGA4[$screenResolution]) ) {
-					$analyticsGA4[$screenResolution] = [];
-				}
-				if ( !isset($analyticsGA4[$screenResolution][$location]) ) {
-					$analyticsGA4[$screenResolution][$location] = [];
-				}
-				if ( !isset($analyticsGA4[$screenResolution][$location]['sessions-' . $termDays]) ) {
-					$analyticsGA4[$screenResolution][$location]['sessions-' . $termDays] = 0;
-				}
-
-				$analyticsGA4[$screenResolution][$location]['sessions-' . $termDays] += $sessions;
-			}
-		}
-
-		if ( !empty($analyticsGA4) ) {
-			arsort($analyticsGA4);
-			update_option('bp_ga4_resolution_01', $analyticsGA4, false);
-		}
-
-
-		// Content Visibility
-		$analyticsGA4 = array();
-		foreach ( $GLOBALS['dataTerms'] as $termTitle => $termDays ) {
-
-			$response = null;
-
-			try {
-				$response = $client->runReport([
-					'property' => 'properties/' . $ga4_id,
-					'dateRanges' => [
-						new DateRange([
-							'start_date' => date('Y-m-d', strtotime("-{$termDays} days")),
-							'end_date'   => $today,
-						]),
-					],
-					'dimensions' => [
-						new Dimension([ 'name' => 'achievementId' ]),
-						new Dimension([ 'name' => 'city' ]),
-						new Dimension([ 'name' => 'region' ]),
-					],
-					'metrics' => [
-						new Metric([ 'name' => 'sessions' ]),
-					]
-				]);
-			} catch ( \Google\ApiCore\ApiException $e ) {
-				error_log('GA4 achievementId runReport failed: ' . $e->getMessage());
-				continue; // skip this term only
-			}
-
-			if ( !$response ) {
-				continue;
-			}
-
-			foreach ( $response->getRows() as $row ) {
-
-				$achievementId = $row->getDimensionValues()[0]->getValue() ?? '';
-				$city          = $row->getDimensionValues()[1]->getValue() ?? '';
-				$state         = strtolower($row->getDimensionValues()[2]->getValue() ?? '');
-
-				if ( $achievementId === '' || !isset($states[$state]) ) {
-					continue;
-				}
-
-				$location = ($city === '(not set)')
-					? ucwords($state)
-					: $city . ', ' . $states[$state];
-
-				$sessions = (int) ($row->getMetricValues()[0]->getValue() ?? 0);
-
-				// Initialize array structure safely
-				if ( !isset($analyticsGA4[$achievementId]) ) {
-					$analyticsGA4[$achievementId] = [];
-				}
-				if ( !isset($analyticsGA4[$achievementId][$location]) ) {
-					$analyticsGA4[$achievementId][$location] = [];
-				}
-				if ( !isset($analyticsGA4[$achievementId][$location]['sessions-' . $termDays]) ) {
-					$analyticsGA4[$achievementId][$location]['sessions-' . $termDays] = 0;
-				}
-
-				$analyticsGA4[$achievementId][$location]['sessions-' . $termDays] += $sessions;
-			}
-		}
-
-		if ( !empty($analyticsGA4) ) {
-			arsort($analyticsGA4);
-			update_option('bp_ga4_achievementId_01', $analyticsGA4, false);
-		}
-	}
-
-	wp_cache_delete('customer_info', 'options');
-	//wp_cache_flush();
 
 }
+
+
+// Determine if Audit should run — automatic scheduling only
+$auditNext    = (int) get_option('bp_audit_next', 0);
+$auditLastRun = (int) get_option('bp_audit_time', 0);
+$auditStale   = (time() - $auditLastRun) > (86400 * 7);
+
+if ($auditNext <= 0) {
+    $auditNext = time() + rand(80000, 120000);
+    update_option('bp_audit_next', $auditNext);
+}
+
+$auditDue = time() >= $auditNext;
+
+if ($auditStale || (_IS_BOT && !_IS_SERP_BOT && $auditDue)) {
+    update_option('bp_audit_time', time());
+    update_option('bp_audit_next', time() + rand(2500000, 2700000));
+    require_once get_template_directory() . '/functions-site-audit.php';
+    bp_run_site_audit();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1843,7 +1152,6 @@ function battleplan_delete_prefixed_options( $prefix ) {
 
 //Email me if any pages have been added or updated
 function bp_check_for_post_updates() {
-	error_log('bp_check_for_post_updates() initiated');
 	$excluded_user = get_user_by('login','battleplanweb');
 	$excluded_id 	= $excluded_user ? $excluded_user->ID : 0;
 	$lastRun   	= (int) get_option('bp_chron_time', 0);
@@ -1878,7 +1186,6 @@ function bp_check_for_post_updates() {
 
 	if ($body) emailMe('Content Updates Detected'.get_bloginfo('name'), $body);
 }
-
 
 function ci_normalize_pids($raw): array {
     $pid = is_array($raw) ? $raw : ( ($raw === null || $raw === false) ? [] : [$raw] );
@@ -2076,15 +1383,14 @@ function ci_merge_gbp_into_ci(array $ci, array $gbp_primary, bool $pid_sync): ar
 
 function ci_finalize_fields(array &$ci): void {
     // phone-format
-    if (strlen($a)===3 && strlen($p)===7) {
-		$ci['phone-format'] = sprintf('(%s) %s-%s',
-		$a,
-		substr($p,0,3),
-		substr($p,3)
-		);
-	} else {
-		unset($ci['phone-format']);
-	}
+    $a = preg_replace('/\D+/', '', (string)($ci['area'] ?? ''));
+    $p = preg_replace('/\D+/', '', (string)($ci['phone'] ?? ''));
+
+    if (strlen($a) === 3 && strlen($p) === 7) {
+        $ci['phone-format'] = sprintf('(%s) %s-%s', $a, substr($p,0,3), substr($p,3));
+    } else {
+        unset($ci['phone-format']);
+    }
 
     // default-loc
     $city = trim((string)($ci['city'] ?? ''));
@@ -2343,4 +1649,618 @@ function ci_build_schema(array $ci, array $gbp_primary = [], array $google_info 
     if ($hasMap)           $schema['hasMap'] = $hasMap;
 
     return $schema;
+}
+
+
+/**
+ * ========================================
+ * GA4 UI - Complete refactor 2026-02-19
+ * ========================================
+ */
+
+/**
+ * Years of history to maintain in options.
+ * 3 years is ~1096 days. 6 years is ~2192 days.
+ */
+function bp_ga4_years_to_pull() {
+    return 6; // change to 3 if you want smaller
+}
+
+/**
+ * ============================
+ * LOW-LEVEL HELPERS
+ * ============================
+ */
+
+function bp_ga4_excluded_cities() {
+    return [
+        'Orangetree',
+        'Ashburn',
+        'Boardman',
+        'Irvine',
+        'Prineville',
+        'Forest City',
+        'Altoona',
+        'Moses Lake',
+        'The Dalles',
+        'Council Bluffs',
+        'Hillsboro',
+        'Quincy',
+        'Reston',
+    ];
+}
+
+/**
+ * GA4 date string "YYYYMMDD" -> timestamp.
+ */
+function bp_ymd_to_ts($ymd) {
+    $dt = DateTime::createFromFormat('Ymd', (string)$ymd);
+    return $dt ? $dt->getTimestamp() : 0;
+}
+
+/**
+ * Normalize a GA4 "city" dimension value to match your exclusion list.
+ */
+function bp_norm_city($city) {
+    $city = trim((string)$city);
+    // GA4 sometimes returns "(not set)"
+    if ($city === '' || $city === '(not set)') return '';
+    return $city;
+}
+
+
+/**
+ * Generic GA4 runReport paginator.
+ * Returns array of rows.
+ */
+function bp_ga4_run_report_all_rows(BetaAnalyticsDataClient $client, array $request, $pageSize = 5000) {
+
+    $allRows = [];
+    $offset = 0;
+
+    while (true) {
+        $request['limit']  = $pageSize;
+        $request['offset'] = $offset;
+
+        $response = $client->runReport($request);
+        $rows = $response->getRows();
+
+        if (empty($rows)) break;
+
+        foreach ($rows as $r) $allRows[] = $r;
+
+        // if fewer than requested, we're done
+        if (count($rows) < $pageSize) break;
+
+        $offset += $pageSize;
+
+        // hard safety cap (avoid infinite loops)
+        if ($offset > 2000000) break;
+    }
+
+    return $allRows;
+}
+
+/**
+ * Date ranges: pull in 1-year chunks to avoid API weirdness and row-limit issues.
+ */
+function bp_ga4_year_ranges($years) {
+
+    $todayMinus1 = strtotime('-1 day');
+
+    $ranges = [];
+
+    for ($i = 0; $i < $years; $i++) {
+        $end   = date('Y-m-d', strtotime("-{$i} years",        $todayMinus1));
+        $start = date('Y-m-d', strtotime('-' . ($i + 1) . ' years', $todayMinus1));
+
+        $ranges[] = [
+            'start' => $start,
+            'end'   => $end,
+        ];
+    }
+
+    return $ranges;
+}
+
+/**
+ * ============================
+ * DAILY COLLECTORS (normalized)
+ * ============================
+ */
+
+/**
+ * Collector 1: DAILY TOTALS (what your trends use)
+ * Dimensions: date, city, country
+ */
+function bp_ga4_collect_simple_dimension(
+    BetaAnalyticsDataClient $client,
+    $propertyId,
+    $dimensionName,
+    $days,
+    $optionKey,
+    $limit = 50
+) {
+
+    $startDate = date('Y-m-d', strtotime("-{$days} days"));
+    $endDate   = date('Y-m-d', strtotime('-1 day'));
+
+    $rows = bp_ga4_run_report_all_rows($client, [
+        'property'   => 'properties/' . $propertyId,
+        'dateRanges' => [
+            new DateRange([
+                'start_date' => $startDate,
+                'end_date'   => $endDate,
+            ])
+        ],
+        'dimensions' => [
+            new Dimension(['name' => $dimensionName]),
+        ],
+        'metrics' => [
+            new Metric(['name' => 'engagedSessions']),
+        ],
+        'orderBys' => [
+            new OrderBy([
+                'metric' => new MetricOrderBy([
+                    'metric_name' => 'engagedSessions'
+                ]),
+                'desc' => true,
+            ])
+        ],
+        'dimensionFilter' => new FilterExpression([
+            'and_group' => new FilterExpressionList([
+                'expressions' => [
+
+                    // Only United States
+                    new FilterExpression([
+                        'filter' => new Filter([
+                            'field_name'    => 'country',
+                            'string_filter' => new StringFilter([
+                                'match_type' => MatchType::EXACT,
+                                'value'      => 'United States',
+                            ]),
+                        ]),
+                    ]),
+
+                    // NOT IN excluded cities
+                    new FilterExpression([
+                        'not_expression' => new FilterExpression([
+                            'filter' => new Filter([
+                                'field_name'     => 'city',
+                                'in_list_filter' => new InListFilter([
+                                    'values'         => bp_ga4_excluded_cities(),
+                                    'case_sensitive' => false,
+                                ]),
+                            ]),
+                        ]),
+                    ]),
+
+                ],
+            ]),
+        ]),
+    ]);
+
+    if (!$rows) return false;
+
+    $existing = get_option($optionKey);
+
+    if (!is_array($existing)) {
+        $existing = [];
+    }
+
+    $metricPrefix = ($optionKey === 'bp_ga4_pages_clean') ? 'page-views' : 'sessions';
+
+    $periodData = [];
+
+    foreach ($rows as $row) {
+
+        $dimVal = trim($row->getDimensionValues()[0]->getValue());
+
+        if (!$dimVal || $dimVal === '(not set)') continue;
+
+	   // For page titles, strip the SEO suffix after " • " or " | " or " - "
+	   if ($optionKey === 'bp_ga4_pages_clean') {
+		  // Strip everything from the LAST " • " or " | " separator onward
+		  $dimVal = preg_replace('/\s+[•|]\s+[^•|]+$/', '', $dimVal);
+		  $dimVal = trim($dimVal);
+	   }
+
+	   if (!$dimVal) continue;
+
+        $periodData[$dimVal] = (int)$row->getMetricValues()[0]->getValue();
+    }
+
+    foreach ($periodData as $dimVal => $value) {
+
+        if (!isset($existing[$dimVal])) {
+            $existing[$dimVal] = [];
+        }
+
+        $existing[$dimVal]["{$metricPrefix}-{$days}"] = $value;
+    }
+
+    update_option($optionKey, $existing, false);
+
+    return true;
+}
+
+/**
+ * Build rolling period rollups from daily totals (bp_ga4_daily_clean).
+ * Produces same “this_week / last_week / this_month / last_month / this_quarter / last_quarter”.
+ */
+function bp_rollup_totals_from_daily(array $daily) {
+
+    $dates = array_keys($daily);
+    $anchorTs = bp_ymd_to_ts($dates[0]); // newest date in daily
+
+    $periods = [
+        'this_week'     => [1, 7],
+        'last_week'     => [8, 14],
+        'this_month'    => [1, 30],
+        'last_month'    => [31, 60],
+        'this_quarter'  => [1, 90],
+        'last_quarter'  => [91, 180],
+    ];
+
+    $rollups = [];
+
+    foreach ($periods as $label => [$startOffset, $endOffset]) {
+
+        $acc = [
+            'sessions'           => 0,
+            'users'              => 0,
+            'newUsers'           => 0,
+            'engagedSessions'    => 0,
+            'pageviews'          => 0,
+            'engagementDuration' => 0.0,
+        ];
+
+        for ($i = $startOffset; $i <= $endOffset; $i++) {
+            $key = date('Ymd', strtotime("-{$i} days", $anchorTs));
+            if (!isset($daily[$key])) continue;
+
+            $acc['sessions']           += (int)$daily[$key]['sessions'];
+            $acc['users']              += (int)$daily[$key]['users'];
+            $acc['newUsers']           += (int)$daily[$key]['newUsers'];
+            $acc['engagedSessions']    += (int)$daily[$key]['engagedSessions'];
+            $acc['pageviews']          += (int)$daily[$key]['pageviews'];
+            $acc['engagementDuration'] += (float)$daily[$key]['engagementDuration'];
+        }
+
+        $sessions = $acc['sessions'];
+        $users    = $acc['users'];
+        $engaged  = $acc['engagedSessions'];
+
+        $rollups[$label] = $acc + [
+            'engagementRate'     => $sessions > 0 ? round(($engaged / $sessions) * 100, 2) : 0,
+            'pagesPerSession'    => $sessions > 0 ? round($acc['pageviews'] / $sessions, 2) : 0,
+            'avgSessionDuration' => $sessions > 0 ? round($acc['engagementDuration'] / $sessions, 2) : 0,
+            'newUserPct'         => $users > 0 ? round(($acc['newUsers'] / $users) * 100, 2) : 0,
+        ];
+    }
+
+    update_option('bp_ga4_rollups_clean', $rollups, false);
+    return $rollups;
+}
+
+function bp_ga4_collect_daily_totals(BetaAnalyticsDataClient $client, $propertyId, $years) {
+
+    $allDaily = [];
+
+    foreach (bp_ga4_year_ranges($years) as $range) {
+
+        $rows = bp_ga4_run_report_all_rows($client, [
+            'property'   => 'properties/' . $propertyId,
+            'dateRanges' => [ new DateRange(['start_date' => $range['start'], 'end_date' => $range['end']]) ],
+            'dimensions' => [
+                new Dimension(['name' => 'date']),
+                new Dimension(['name' => 'city']),
+                new Dimension(['name' => 'country']),
+            ],
+            'metrics' => [
+                new Metric(['name' => 'sessions']),
+                new Metric(['name' => 'totalUsers']),
+                new Metric(['name' => 'newUsers']),
+                new Metric(['name' => 'engagedSessions']),
+                new Metric(['name' => 'screenPageViews']),
+                new Metric(['name' => 'userEngagementDuration']),
+            ],
+            'dimensionFilter' => new FilterExpression([
+                'and_group' => new FilterExpressionList([
+                    'expressions' => [
+
+                        // Only United States
+                        new FilterExpression([
+                            'filter' => new Filter([
+                                'field_name'    => 'country',
+                                'string_filter' => new StringFilter([
+                                    'match_type' => MatchType::EXACT,
+                                    'value'      => 'United States',
+                                ]),
+                            ]),
+                        ]),
+
+                        // NOT IN excluded cities
+                        new FilterExpression([
+                            'not_expression' => new FilterExpression([
+                                'filter' => new Filter([
+                                    'field_name'     => 'city',
+                                    'in_list_filter' => new InListFilter([
+                                        'values'         => bp_ga4_excluded_cities(),
+                                        'case_sensitive' => false,
+                                    ]),
+                                ]),
+                            ]),
+                        ]),
+
+                    ],
+                ]),
+            ]),
+        ]);
+
+        foreach ($rows as $row) {
+            $date = $row->getDimensionValues()[0]->getValue();
+
+            if (!isset($allDaily[$date])) {
+                $allDaily[$date] = [
+                    'sessions'           => 0,
+                    'users'              => 0,
+                    'newUsers'           => 0,
+                    'engagedSessions'    => 0,
+                    'pageviews'          => 0,
+                    'engagementDuration' => 0.0,
+                ];
+            }
+
+            $allDaily[$date]['sessions']           += (int)$row->getMetricValues()[0]->getValue();
+            $allDaily[$date]['users']              += (int)$row->getMetricValues()[1]->getValue();
+            $allDaily[$date]['newUsers']           += (int)$row->getMetricValues()[2]->getValue();
+            $allDaily[$date]['engagedSessions']    += (int)$row->getMetricValues()[3]->getValue();
+            $allDaily[$date]['pageviews']          += (int)$row->getMetricValues()[4]->getValue();
+            $allDaily[$date]['engagementDuration'] += (float)$row->getMetricValues()[5]->getValue();
+        }
+
+    }
+
+    if (empty($allDaily)) return false;
+
+    krsort($allDaily);
+    update_option('bp_ga4_daily_clean', $allDaily, false);
+
+    return $allDaily;
+}
+
+
+function bp_ga4_collect_speed_data(BetaAnalyticsDataClient $client, $propertyId) {
+
+    $endDate   = date('Y-m-d', strtotime('-1 day'));
+    $startDate = date('Y-m-d', strtotime('-365 days'));
+
+    $rows = bp_ga4_run_report_all_rows($client, [
+        'property'   => 'properties/' . $propertyId,
+        'dateRanges' => [
+            new DateRange([
+                'start_date' => $startDate,
+                'end_date'   => $endDate,
+            ])
+        ],
+        'dimensions' => [
+            new Dimension(['name' => 'groupId']),
+            new Dimension(['name' => 'date']),
+        ],
+        'metrics' => [
+            new Metric(['name' => 'eventCount']),
+        ],
+        'dimensionFilter' => new FilterExpression([
+            'and_group' => new FilterExpressionList([
+                'expressions' => [
+                    new FilterExpression([
+                        'filter' => new Filter([
+                            'field_name'    => 'country',
+                            'string_filter' => new StringFilter([
+                                'match_type' => MatchType::EXACT,
+                                'value'      => 'United States',
+                            ]),
+                        ]),
+                    ]),
+                    new FilterExpression([
+                        'not_expression' => new FilterExpression([
+                            'filter' => new Filter([
+                                'field_name'     => 'city',
+                                'in_list_filter' => new InListFilter([
+                                    'values'         => bp_ga4_excluded_cities(),
+                                    'case_sensitive' => false,
+                                ]),
+                            ]),
+                        ]),
+                    ]),
+                ],
+            ]),
+        ]),
+    ]);
+
+    $targets  = ['desktop' => 2.0, 'mobile' => 3.0, 'tablet' => 3.0];
+    $periods  = [7, 30, 90, 180, 365];
+    $cutoffs  = [];
+
+    foreach ($periods as $p) {
+        $cutoffs[$p] = date('Ymd', strtotime("-{$p} days"));
+    }
+
+    // byPeriod[period][device] = [total, count, fast]
+    $byPeriod = [];
+    foreach ($periods as $p) {
+        $byPeriod[$p] = [
+            'desktop' => ['total' => 0.0, 'count' => 0, 'fast' => 0],
+            'mobile'  => ['total' => 0.0, 'count' => 0, 'fast' => 0],
+            'tablet'  => ['total' => 0.0, 'count' => 0, 'fast' => 0],
+        ];
+    }
+
+    foreach ($rows as $row) {
+
+        $groupId    = trim($row->getDimensionValues()[0]->getValue());
+        $date       = $row->getDimensionValues()[1]->getValue(); // YYYYMMDD
+        $eventCount = (int)$row->getMetricValues()[0]->getValue();
+
+        if (!$groupId || $groupId === '(not set)') continue;
+        if (!preg_match('/»(desktop|mobile|tablet)«([\d.]+)$/i', $groupId, $m)) continue;
+
+        $device = strtolower($m[1]);
+        $speed  = (float)$m[2];
+
+        if ($speed <= 0 || $speed > 30) continue;
+
+        foreach ($periods as $p) {
+            if ($date >= $cutoffs[$p]) {
+                $byPeriod[$p][$device]['total'] += $speed * $eventCount;
+                $byPeriod[$p][$device]['count'] += $eventCount;
+                if ($speed <= ($targets[$device] ?? 3.0)) {
+                    $byPeriod[$p][$device]['fast'] += $eventCount;
+                }
+            }
+        }
+    }
+
+    $existing = get_option('bp_ga4_speed_clean');
+    if (!is_array($existing)) $existing = [];
+
+    foreach ($periods as $p) {
+        foreach ($byPeriod[$p] as $device => $data) {
+            if ($data['count'] === 0) continue;
+            if (!isset($existing[$device])) $existing[$device] = [];
+            $existing[$device]["avg-{$p}"]    = round($data['total'] / $data['count'], 2);
+            $existing[$device]["target-{$p}"] = round(($data['fast'] / $data['count']) * 100, 1);
+            $existing[$device]["count-{$p}"]  = $data['count'];
+            $existing[$device]['target']      = $targets[$device];
+        }
+    }
+
+    update_option('bp_ga4_speed_clean', $existing, false);
+    return $existing;
+}
+
+function bp_ga4_collect_all_clean(BetaAnalyticsDataClient $client, $propertyId) {
+
+    /*
+    =====================================================
+    1) DAILY TOTALS — 6 YEARS (TRENDS ONLY)
+    =====================================================
+    */
+
+    $trendYears = 6;
+
+    $dailyTotals = bp_ga4_collect_daily_totals($client, $propertyId, $trendYears);
+
+    if (!$dailyTotals) {
+        return false;
+    }
+
+    bp_rollup_totals_from_daily($dailyTotals);
+
+
+    /*
+    =====================================================
+    2) SIMPLE DIMENSION WIDGETS — 1 YEAR ONLY
+    =====================================================
+    */
+
+    $dimensionPeriods = [7, 30, 90, 180, 365];
+
+    foreach ($dimensionPeriods as $dimensionDays) {
+
+	   bp_ga4_collect_simple_dimension(
+		  $client,
+		  $propertyId,
+		  'sessionSourceMedium',
+		  $dimensionDays,
+		  'bp_ga4_referrers_clean',
+		  40
+	   );
+
+	   bp_ga4_collect_simple_dimension(
+		  $client,
+		  $propertyId,
+		  'city',
+		  $dimensionDays,
+		  'bp_ga4_locations_clean',
+		  75
+	   );
+
+	   bp_ga4_collect_simple_dimension(
+		  $client,
+		  $propertyId,
+		  'browser',
+		  $dimensionDays,
+		  'bp_ga4_browsers_clean',
+		  20
+	   );
+
+	   bp_ga4_collect_simple_dimension(
+		  $client,
+		  $propertyId,
+		  'deviceCategory',
+		  $dimensionDays,
+		  'bp_ga4_devices_clean',
+		  10
+	   );
+
+	   bp_ga4_collect_simple_dimension(
+		  $client,
+		  $propertyId,
+		  'screenResolution',
+		  $dimensionDays,
+		  'bp_ga4_resolution_clean',
+		  40
+	   );
+
+	   bp_ga4_collect_simple_dimension(
+		  $client,
+		  $propertyId,
+		  'pagePath',
+		  $dimensionDays,
+		  'bp_ga4_pages_clean',
+		  50
+	   );
+
+	   bp_ga4_collect_simple_dimension(
+		  $client,
+		  $propertyId,
+		  'achievementId',
+		  $dimensionDays,
+		  'bp_ga4_content_clean',
+		  50
+	   );
+    }
+
+
+    // speed calls should be HERE
+    bp_ga4_collect_speed_data($client, $propertyId);
+
+
+
+    bp_ga4_prune_clean_option('bp_ga4_referrers_clean');
+    bp_ga4_prune_clean_option('bp_ga4_locations_clean');
+    bp_ga4_prune_clean_option('bp_ga4_browsers_clean');
+    bp_ga4_prune_clean_option('bp_ga4_devices_clean');
+    bp_ga4_prune_clean_option('bp_ga4_resolution_clean');
+    bp_ga4_prune_clean_option('bp_ga4_pages_clean');
+    bp_ga4_prune_clean_option('bp_ga4_content_clean');
+
+    update_option('bp_ga4_last_collect_ts', time(), false);
+
+    return true;
+}
+
+function bp_ga4_prune_clean_option($optionKey) {
+    $data = get_option($optionKey);
+    if (!is_array($data)) return;
+
+    foreach ($data as $dimVal => $metrics) {
+        if (!is_array($metrics)) { unset($data[$dimVal]); continue; }
+        $total = array_sum($metrics);
+        if ($total === 0) unset($data[$dimVal]);
+    }
+
+    update_option($optionKey, $data, false);
 }

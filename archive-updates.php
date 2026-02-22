@@ -52,8 +52,8 @@ get_header(); ?>
 
 				$buildUpdate .= '[col id="update-'.get_the_ID().'" class="'.$classes.'"][txt]';
 				$buildUpdate .= '<p><a href="/profile?user='.$profileID.'" class="link-archive link-'.get_post_type().'" ada-hidden="true"  tabindex="-1">[get-user user="'.$profileID.'" info="avatar" size="thumbnail-small"]</a>';
-				if ( current_user_can('delete_post', get_the_ID()) ) $buildUpdate .= '<a class="delete-post" href="'.get_delete_post_link( get_the_ID() ).'"><span><span class="icon x-large"></span>Delete Post</span></a><br/>';
-				$buildUpdate .= '<span class="archive-author '.get_post_type().'-author author"><a href="/profile?user='.$profileID.'" class="link-archive link-'.get_post_type().'"><span class="icon user"></span>[get-user user="'.$profileID.'" info="display"]</a></span><br/>';
+				if ( current_user_can('delete_post', get_the_ID()) ) $buildUpdate .= '<a class="delete-post" href="'.get_delete_post_link( get_the_ID() ).'"><span><span class="icon x-large"></span>Delete Post</span></a><br>';
+				$buildUpdate .= '<span class="archive-author '.get_post_type().'-author author"><a href="/profile?user='.$profileID.'" class="link-archive link-'.get_post_type().'"><span class="icon user"></span>[get-user user="'.$profileID.'" info="display"]</a></span><br>';
 				$buildUpdate .= '<span class="archive-date '.get_post_type().'-date date"><span class="icon calendar"></span>'.get_the_date().'</span></p>';
 				$buildUpdate .= "<h3 data-count-view=".$countView." data-id=".get_the_ID().">";
 				$buildUpdate .= esc_html(get_the_title());

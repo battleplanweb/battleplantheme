@@ -61,7 +61,7 @@ function battleplan_carte_du_jour_phone() {
 
 	$buildPhone = '<div class="hide-unknown hide-2 hide-3 hide-4 hide-5">';
 	foreach ( get_option('cdj_locations') as $loc ) :
-		$buildPhone .= '<a href="#" class="show-'.$loc['slug'].' phone-link track-clicks" data-action="phone call" data-url="tel:1-'.$loc['phone'].'"><div class="mm-bar-btn mm-bar-phone call-btn" aria-hidden="true"></div><span class="sr-only">Call Us</span></a>';
+		$buildPhone .= '<a href="#" class="show-'.$loc['slug'].' phone-link track-clicks" data-action="phone-call" data-url="tel:1-'.$loc['phone'].'"><div class="mm-bar-btn mm-bar-phone call-btn" aria-hidden="true"></div><span class="sr-only">Call Us</span></a>';
 	endforeach;
 	$buildPhone .= '</div>';
 

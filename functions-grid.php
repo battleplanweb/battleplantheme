@@ -128,7 +128,7 @@ function battleplan_buildLayout( $atts, $content = null ) {
 	$tracking = !empty($a['track']) ? ' data-track="' . esc_attr($a['track']) . '"'	: '';
 	if ( $tracking !== '' ) $class .= " tracking";
 
-	$style = $gap !== '' || $custom_grid !== '' ? 'style="'.$gap.' '.$custom_grid.'"' : '';
+	$style = $gap !== '' || $custom_grid !== '' ? ' style="'.$gap.' '.$custom_grid.'"' : '';
 
 	$data_attrs = '';
 	foreach ( $atts as $k => $v ) {
@@ -281,7 +281,7 @@ function battleplan_buildVid( $atts, $content = null ) {
 		$style = ' style="';
 		if ( $order !== '' ) $style .= 'order: '.$order.'  !important; ';
 		if ( $fullscreen !== 'false' ) $style .= 'margin: 0; ';
-		$style = '"';
+		$style .= '"';
 	} else { $style = ''; }
 	$controls = esc_attr($a['controls']);
 	$autoplay = esc_attr($a['autoplay']);
@@ -318,8 +318,19 @@ function battleplan_buildVid( $atts, $content = null ) {
 			endif;
 		endif;
 
-		return '<div class="block block-video span-'.$size.$class.' video-player"'.$tracking.$style.' data-thumb="'.$thumb.'" data-link="'.$link.'" data-id="'.$id.'"></div>';
+		$schema = [
+			'@context'     => 'https://schema.org',
+			'@type'        => 'VideoObject',
+			'name'         => get_the_title(),
+			'description'  => get_the_excerpt() ?: get_the_title(),
+			'thumbnailUrl' => 'https://img.youtube.com/vi/' . $vid_id . '/maxresdefault.jpg',
+			'uploadDate'   => get_the_date('Y-m-d'),
+			'embedUrl'     => 'https://www.youtube.com/embed/' . $vid_id,
+		];
 
+		$schemaBlock = '<script type="application/ld+json">' . wp_json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>';
+
+		return $schemaBlock . '<div class="block block-video span-'.$size.$class.' video-player"'.$tracking.$style.' data-thumb="'.$thumb.'" data-link="'.$link.'" data-id="'.$id.'"></div>';
 	else:
 		$dotPos = strrpos($link, '.');
 		$extension = substr($link, $dotPos + 1);
@@ -381,7 +392,7 @@ function battleplan_buildButton( $atts, $content = null ) {
 	$graphicW = esc_attr($a['graphic-w']);
 	if ( esc_attr($a['graphic']) !== "false" ) {
 		$class .= " graphic-icon";
-		$content = '<img src="/wp-content/uploads/'.esc_attr($a['graphic']).'" width="'.$graphicW.'" height="'.$graphicW.'" style="aspect-ratio:'.$graphicW.'/'.$graphicW.'" alt="" /><span class="unique">'.$content.'</span>';
+		$content = '<img src="/wp-content/uploads/'.esc_attr($a['graphic']).'" width="'.$graphicW.'" height="'.$graphicW.'" style="aspect-ratio:'.$graphicW.'/'.$graphicW.'" alt="" ><span class="unique">'.$content.'</span>';
 	}
 	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));
@@ -584,7 +595,7 @@ function battleplan_buildLockedSection( $atts, $content = null ) {
 
 	//$buildSection .= '><div class="closeBtn" aria-label="close" aria-hidden="false" tabindex="0"><span class="icon x-large"></span></div>'.do_shortcode($content).'</section>';	/* WP3 validation 12/11/24 */
 
-	$buildSection .= '><button class="closeBtn" aria-label="close">[get-icon type="x-large"]</button></div>'.$content.'</section>';
+	$buildSection .= '><button class="closeBtn" aria-label="close">[get-icon type="x-large"]</button>'.$content.'</section>';
 
 	return do_shortcode($buildSection);
 }

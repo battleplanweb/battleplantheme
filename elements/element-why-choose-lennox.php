@@ -3,10 +3,10 @@
 
 return do_shortcode('
 	[section name="Why Choose Lennox" class="why-choose-us" style="'.$style.'" width="'.$width.'"]
-		[layout grid="1-1-1-1" valign="stretch"] 
+		[layout grid="1-1-1-1" valign="stretch"]
 			[col class="span-all"]
 				[txt]
-					<img src="'.$img.'" loading="lazy" alt="'.$alt.'" class="noFX" width="640" height="120" style="aspect-ratio:640/120" />
+					<img src="'.$img.'" loading="lazy" alt="'.$alt.'" class="noFX" width="640" height="120" style="aspect-ratio:640/120" >
 				[/txt]
 			[/col]
 
@@ -42,6 +42,6 @@ return do_shortcode('
 				[/txt]
 			[/col]
 		[/layout]
-	[/section]		
-'); 
+	[/section]
+');
 ?>

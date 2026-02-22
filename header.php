@@ -105,11 +105,11 @@
 
 	<?php wp_head(); ?>
 
-	<?php bp_loader(); ?>
-
 </head>
 
 <body id="<?php echo get_the_ID(); ?>" <?php body_class( battleplan_getUserRole() ); ?>>
+
+<?php bp_loader(); ?>
 
 <?php wp_body_open(); ?>
 

@@ -6,7 +6,7 @@ Guzzle Upgrade Guide
 
 In order to take advantage of the new features of PHP, Guzzle dropped the support
 of PHP 5. The minimum supported PHP version is now PHP 7.2. Type hints and return
-types for functions and methods have been added wherever possible. 
+types for functions and methods have been added wherever possible.
 
 Please make sure:
 - You are calling a function or a method with the correct type.
@@ -16,7 +16,7 @@ Please make sure:
 
 - Class `GuzzleHttp\UriTemplate` is removed.
 - Class `GuzzleHttp\Exception\SeekException` is removed.
-- Classes `GuzzleHttp\Exception\BadResponseException`, `GuzzleHttp\Exception\ClientException`, 
+- Classes `GuzzleHttp\Exception\BadResponseException`, `GuzzleHttp\Exception\ClientException`,
   `GuzzleHttp\Exception\ServerException` can no longer be initialized with an empty
   Response as argument.
 - Class `GuzzleHttp\Exception\ConnectException` now extends `GuzzleHttp\Exception\TransferException`
@@ -32,7 +32,7 @@ Please make sure:
 - Pool option `pool_size` is removed. Please use `concurrency`.
 - We now look for environment variables in the `$_SERVER` super global, due to thread safety issues with `getenv`. We continue to fallback to `getenv` in CLI environments, for maximum compatibility.
 - The `get`, `head`, `put`, `post`, `patch`, `delete`, `getAsync`, `headAsync`, `putAsync`, `postAsync`, `patchAsync`, and `deleteAsync` methods are now implemented as genuine methods on `GuzzleHttp\Client`, with strong typing. The original `__call` implementation remains unchanged for now, for maximum backwards compatibility, but won't be invoked under normal operation.
-- The `log` middleware will log the errors with level `error` instead of `notice` 
+- The `log` middleware will log the errors with level `error` instead of `notice`
 - Support for international domain names (IDN) is now disabled by default, and enabling it requires installing ext-intl, linked against a modern version of the C library (ICU 4.6 or higher).
 
 #### Native functions calls
@@ -1018,25 +1018,25 @@ class YourClient extends \Guzzle\Service\Client
         </command>
         <command name="search_groups" method="GET" uri='search.json?query="{{query}} type:group"'>
             <doc>Uses a search query to get a list of groups</doc>
-            <param name="query" type="string" required="true" />
+            <param name="query" type="string" required="true" >
         </command>
         <command name="create_group" method="POST" uri="groups.json">
             <doc>Create a group</doc>
-            <param name="data" type="array" location="body" filters="json_encode" doc="Group JSON"/>
-            <param name="Content-Type" location="header" static="application/json"/>
+            <param name="data" type="array" location="body" filters="json_encode" doc="Group JSON">
+            <param name="Content-Type" location="header" static="application/json">
         </command>
         <command name="delete_group" method="DELETE" uri="groups/{{id}}.json">
             <doc>Delete a group by ID</doc>
-            <param name="id" type="integer" required="true"/>
+            <param name="id" type="integer" required="true">
         </command>
         <command name="get_group" method="GET" uri="groups/{{id}}.json">
-            <param name="id" type="integer" required="true"/>
+            <param name="id" type="integer" required="true">
         </command>
         <command name="update_group" method="PUT" uri="groups/{{id}}.json">
             <doc>Update a group</doc>
-            <param name="id" type="integer" required="true"/>
-            <param name="data" type="array" location="body" filters="json_encode" doc="Group JSON"/>
-            <param name="Content-Type" location="header" static="application/json"/>
+            <param name="id" type="integer" required="true">
+            <param name="data" type="array" location="body" filters="json_encode" doc="Group JSON">
+            <param name="Content-Type" location="header" static="application/json">
         </command>
     </commands>
 </client>

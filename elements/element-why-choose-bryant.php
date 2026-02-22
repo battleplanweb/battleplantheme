@@ -3,10 +3,10 @@
 
 return do_shortcode('
 	[section name="Why Choose Bryant" class="why-choose-us" style="'.$style.'" width="'.$width.'"]
-		[layout grid="1-1-1-1" valign="stretch"] 
+		[layout grid="1-1-1-1" valign="stretch"]
 			[col class="span-all"]
 				[txt]
-					<img src="'.$img.'" loading="lazy" alt="'.$alt.'" class="noFX" width="400" height="164" style="aspect-ratio:400/164" />
+					<img src="'.$img.'" loading="lazy" alt="'.$alt.'" class="noFX" width="400" height="164" style="aspect-ratio:400/164" >
 				[/txt]
 			[/col]
 
@@ -42,6 +42,6 @@ return do_shortcode('
 				[/txt]
 			[/col]
 		[/layout]
-	[/section]		
-'); 
+	[/section]
+');
 ?>

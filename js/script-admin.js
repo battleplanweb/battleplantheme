@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict";
-
 // Raw Script: Admin
 
 	getObjects('#the-list tr').forEach(function (row) {
@@ -300,6 +299,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
         viewPostAnchor.setAttribute('target', '_blank');
     }
 
+
+
     // Site Audit
     const colWhen = getObjects('.col.when'),
 		  colNotes = getObjects('.col.notes');
@@ -315,6 +316,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
             colNotes.forEach(note => note.style.display = 'none');
         });
     });
+
 
     // Contact Form icons
     const editSpans = getObjects('span.edit a'),
@@ -340,6 +342,68 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			}
 		});
 	}
+
+
+
+
+		const btn = document.getElementById('bp-ga4-rebuild');
+		if (!btn) return;
+
+		const status = document.getElementById('bp-ga4-status');
+
+		btn.onclick = function () {
+
+			btn.disabled = true;
+			status.innerHTML = "Starting…";
+
+			runStage();
+		};
+
+		function runStage() {
+
+			fetch(ajaxurl, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/x-www-form-urlencoded'
+				},
+				body: 'action=bp_ga4_collect_stage'
+			})
+				.then(r => r.json())
+				.then(data => {
+
+					if (!data.success) {
+
+						status.innerHTML = "Error";
+						btn.disabled = false;
+						return;
+					}
+
+					const s = data.data;
+
+					status.innerHTML =
+						"Stage " + s.stage_before + " complete";
+
+					if (!s.complete) {
+
+						setTimeout(runStage, 500);
+
+					} else {
+
+						status.innerHTML = "Complete";
+						btn.disabled = false;
+					}
+
+				})
+				.catch(() => {
+
+					status.innerHTML = "Request failed";
+					btn.disabled = false;
+
+				});
+		}
+
+
+
 
 // Set up custom QTags
 	if (typeof QTags !== 'undefined') {
@@ -374,7 +438,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 
 		QTags.addButton( 'bp_video', 'video', '   [vid size="100 1/2 1/3 1/4 1/6 1/12" order="1, 2, 3" link="url of video" thumb="url of thumb, if not using auto" preload="false, true" class="" related="false, true" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/vid]\n', 'video', 'Video', 1000 );
 
-		QTags.addButton( 'bp_caption', 'caption', '[caption align="align-center, align-left, align-right | size-full-s" width="800"]<img src="/filename.jpg" alt="" class="size-full-s" />Type caption here.[/caption]\n', '', 'caption', 'Caption', 1000 );
+		QTags.addButton( 'bp_caption', 'caption', '[caption align="align-center, align-left, align-right | size-full-s" width="800"]<img src="/filename.jpg" alt="" class="size-full-s" >Type caption here.[/caption]\n', '', 'caption', 'Caption', 1000 );
 
 		QTags.addButton( 'bp_button', 'button', '   [btn size="100 1/2 1/3 1/4 1/6 1/12" order="3, 1, 2" align="center, left, right" link="url to link to" get-biz="link in functions.php" new-tab="false, true" class="" icon="chevron-right" fancy="(blank), 2" ada="text for ada button" start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/btn]\n', 'button', 'Button', 1000 );
 
@@ -420,3 +484,4 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		QTags.addButton( 'bp_phone-link', 'Phone Link', '<b>[get-biz info="phone-link"]</b>', '', 'phone-link', 'Phone Link', 1000 );
 	}
 });
+

@@ -96,21 +96,17 @@ function bp_minify_css($css) {
 }
 
 function bp_inline_minified_css($css_file) {
+    if (!$css_file || !is_string($css_file) || !file_exists($css_file)) return;
 
-	if (!$css_file || !is_string($css_file) || !file_exists($css_file)) return;
+    $key = realpath($css_file);
+    if (isset($GLOBALS['bp_inline_css_buffer'][$key])) return;
 
-	$css_raw = file_get_contents($css_file);
-
-	// Use file identity, not contents
-	$key = realpath($css_file);
-
-	$GLOBALS['bp_inline_css_buffer'][$key] = [
-		'raw' => $css_raw,
-		'min' => bp_minify_css($css_raw),
-	];
+    $raw = file_get_contents($css_file);
+    $GLOBALS['bp_inline_css_buffer'][$key] = [
+        'raw' => $raw,
+        'min' => bp_minify_css($raw),
+    ];
 }
-
-
 
 function bp_build_css_core() {
 	$dist = get_stylesheet_directory() . '/dist';
@@ -215,54 +211,27 @@ add_action('wp_enqueue_scripts', function () {
 
 	if (!file_exists($path)) return;
 
-	wp_enqueue_style( 'battleplan-site', $url, ['battleplan-core'], _BP_VERSION );
+	wp_enqueue_style( 'battleplan-site', $url, ['battleplan-core'], _BP_VERSION);
 
 }, 20);
 
-add_filter('style_loader_tag', function ($html, $handle) {
+add_filter('style_loader_tag', function($tag, $handle, $src) {
+    if ($handle !== 'battleplan-site') return $tag;
 
-	if ($handle !== 'battleplan-site') {
-		return $html;
-	}
+    // Build async version with media='print' and onload
+    $html = str_replace(' />', '>', $tag);
+    $html = str_replace("media='all'", "media='print' onload=\"this.media='all'\"", $html);
+    $html = str_replace('media="all"', "media='print' onload=\"this.media='all'\"", $html);
 
-	// Already deferred? leave it
-	if (strpos($html, "onload=\"this.media='all'\"") !== false) {
-		return $html;
-	}
+    // Noscript fallback — plain tag, no id, no onload
+    $noscript = preg_replace('/\smedia=(["\'])print\1/', '', $html, 1);
+    $noscript = preg_replace('/\sid=(["\'])[^"\']*\1/', '', $noscript, 1);
+    $noscript = preg_replace('/ onload=(["\'])[^"\']*\1/', '', $noscript, 1);
 
-	// Replace ANY existing media attr with print + onload
-	if (preg_match('/\smedia=/', $html)) {
-		$html = preg_replace(
-			'/\smedia=(["\']).*?\1/',
-			" media='print' onload=\"this.media='all'\"",
-			$html,
-			1
-		);
-	} else {
-		// No media attribute at all
-		$html = str_replace(
-			'<link ',
-			"<link media='print' onload=\"this.media='all'\" ",
-			$html
-		);
-	}
-
-	// Noscript fallback
-	$html .= "<noscript>" . preg_replace(
-		'/\smedia=(["\'])print\1/',
-		'',
-		$html,
-		1
-	) . "</noscript>";
-
-	return $html;
-
-}, 10, 2);
-
-
+    return $html . "<noscript>" . $noscript . "</noscript>\n";
+}, 10, 3);
 
 add_action('wp_footer', function () {
-
 	if (is_admin() || empty($GLOBALS['bp_inline_css_buffer'])) return;
 
 	echo "<style id='bp-shortcode-css'>\n";
@@ -273,7 +242,6 @@ add_action('wp_footer', function () {
 	}
 
 	echo "</style>\n";
-
 }, 20);
 
 

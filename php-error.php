@@ -20,7 +20,7 @@ if (!headers_sent()) {
 <?php $wpSEOSettings = get_option( 'wpseo_titles' ); ?>
 
 <div style="text-align:center; margin: 2em auto; max-width:800px;">
-	<img style="max-width:100%" src="/wp-content/uploads/<?php echo $wpSEOSettings['company_logo_meta']['url'] ?>"/>
+	<img style="max-width:100%" src="/wp-content/uploads/<?php echo $wpSEOSettings['company_logo_meta']['url'] ?>">
 
 	<h1 style='font-family: Arial; line-height:1.4; margin-bottom: 2em;'>Our Site Is Experiencing Technical Difficulties…<br>We apologize for the inconvenience.</h1>
 

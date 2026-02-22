@@ -134,15 +134,15 @@ if ( $month == "December" ) :
 		<p>When your fireplace is not in use, make sure the damper is set to the closed position. An open damper is like leaving a window open.</p>
 		<p>For a full evaluation of the efficiency of your home's heating system, call us at <strong>[get-biz info='phone-link']</strong>.</p>
 	");
-endif;	
+endif;
 
 return do_shortcode('
 	[txt size="100"]
 	 <h2><span style="font-size:70%">'.$month.' Tip Of The Month</span></h2><h2>'.$headline.'</h2>
 
-	 <img src="'.$image.'" alt="'.$alt.'" class="align-right size-third-s" width="260" height="260" style="aspect-ratio:260/260" />
+	 <img src="'.$image.'" alt="'.$alt.'" class="align-right size-third-s" width="260" height="260" style="aspect-ratio:260/260" >
 
 	 '.$tip.'
-	[/txt]			
-'); 
+	[/txt]
+');
 ?>

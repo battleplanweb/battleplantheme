@@ -82,7 +82,7 @@ $theContent = bp_wpautop(get_the_content(), true);  // added wpautop here instea
 		}
 		if ( $buildLitters ) : $buildLitters .= "</ul>"; $dogInfo .= $buildLitters; endif;
 
-		if ( $info ) $dogInfo .= 'For breeding information, please call:<br/>'.$info;
+		if ( $info ) $dogInfo .= 'For breeding information, please call:<br>'.$info;
 
 		$buildDog = do_shortcode('[col class="dog-pic"]'.$dogPic.'[/col]');
 		$buildDog .= do_shortcode('[col class="dog-info"][txt]'.$dogInfo.'[/txt][/col]');

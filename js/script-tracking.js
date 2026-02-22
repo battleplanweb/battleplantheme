@@ -5,6 +5,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	const pageID = document.body.getAttribute('id');
 
+	const originalGtag = window.gtag;
+	window.gtag = function (...args) {
+		console.log("📊 gtag fired:", JSON.stringify(args));
+		if (typeof originalGtag === 'function') originalGtag.apply(this, args);
+	};
+
 	window.addEventListener("load", () => {
 
 		// Track phone & email clicks
@@ -54,8 +60,8 @@ document.addEventListener("DOMContentLoaded", function () {
 		let loadTime = endTime - startTime,
 			deviceType = "desktop";
 
-		if (getDeviceW() <= tabletCutoff) deviceType = "tablet";
 		if (getDeviceW() <= mobileCutoff) deviceType = "mobile";
+		if (getDeviceW() <= tabletCutoff) deviceType = "tablet";
 
 		loadTime += (deviceType === "desktop") ? 300 : 600;
 
@@ -64,12 +70,11 @@ document.addEventListener("DOMContentLoaded", function () {
 			let displayTime = loadTime > lcpTime ? loadTime : lcpTime;
 			displayTime = (displayTime / 1000).toFixed(1);
 
-			console.log("LCP: " + lcpEntry.url + " ~ " + (lcpEntry.loadTime / 1000).toFixed(1) + "s");
-			console.log("Load: " + displayTime + "s");
+			console.log("⏱ Load event:", { pageID, deviceType, displayTime, loadTime, lcpTime });
 
 			if (typeof gtag === 'function') gtag("event", "join_group", { group_id: `${pageID}»${deviceType}«${displayTime}` });
 
-		}, 1);
+		}, 4000);
 
 
 		// Delay 0.3s to allow accurate contentH
@@ -95,10 +100,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
 			if (typeof gtag === 'function') gtag("event", "unlock_achievement", { achievement_id: `${pageID}-init` });
 
-			const wrapperContent = getObject('#wrapper-content').getBoundingClientRect(),
-				contentT = wrapperContent.top,
-				contentH = wrapperContent.height,
-				contentB = contentT + contentH,
+			const colophon = getObject('#colophon'),
+				colophonH = colophon ? colophon.getBoundingClientRect().height : 0,
+				contentT = 0,
+				contentH = document.documentElement.scrollHeight - colophonH,
 				googleBadge = getObject('.wp-google-badge'),
 				googleH = googleBadge ? googleBadge.getBoundingClientRect().height : 0,
 				viewportH = window.innerHeight - googleH;
@@ -113,12 +118,15 @@ document.addEventListener("DOMContentLoaded", function () {
 				thresholds.forEach(threshold => {
 					if (maxViewed >= threshold.value && !window[threshold.flag]) {
 						if (typeof gtag === 'function') gtag("event", "unlock_achievement", { achievement_id: `${pageID}-${threshold.value}` });
+						console.log("🎯 Threshold hit:", threshold.value + "%", "| gtag event would fire:", `${pageID}-${threshold.value}`);
 
 						window[threshold.flag] = true;
 					}
 				});
 
 			}
+
+			window.addEventListener('scroll', window.scrollTracking, { passive: true });
 
 
 			// Log what percentage of users see various trackable elements
@@ -127,7 +135,7 @@ document.addEventListener("DOMContentLoaded", function () {
 			const observerOptions = {
 				root: null,
 				rootMargin: '0px',
-				threshold: 1
+				threshold: 0.25
 			};
 
 			const observerCallback = (entries, observer) => {
@@ -147,7 +155,9 @@ document.addEventListener("DOMContentLoaded", function () {
 			};
 
 			const observer = new IntersectionObserver(observerCallback, observerOptions);
-			trackedObj.forEach(element => observer.observe(element));
+			trackedObj.forEach(element => {
+				observer.observe(element);
+			});
 
 		}, 300);
 

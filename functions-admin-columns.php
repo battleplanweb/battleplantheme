@@ -241,7 +241,7 @@ function bp_admin_columns($config){
 					wp_get_attachment_image($id, [130,130]),
 
 				'bp-title' => (function() use ($id) {
-					return '<a href="'.get_edit_post_link($id).'" target="_blank"><b style="color: var(--main-blue); font-size:115%">'.get_the_title($id).'</b></a><br />/'.basename(get_attached_file($id));
+					return '<a href="'.get_edit_post_link($id).'" target="_blank"><b style="color: var(--main-blue); font-size:115%">'.get_the_title($id).'</b></a><br>/'.basename(get_attached_file($id));
 				}),
 
 				'bp-modified' => get_the_modified_date('', $id),
@@ -1671,7 +1671,7 @@ function bp_user_columns($config){
 			'user_registered' => (function() use ($user_id) {
 				$user = get_userdata($user_id);
 
-				return date_i18n('F j, Y', strtotime($user->user_registered)).'<br />'.date_i18n('g:i a', strtotime($user->user_registered));
+				return date_i18n('F j, Y', strtotime($user->user_registered)).'<br>'.date_i18n('g:i a', strtotime($user->user_registered));
 			}),
 
 			'user_role' => (function() use ($user_id, $cols, $col){

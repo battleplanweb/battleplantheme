@@ -122,6 +122,19 @@ function showMe($something, $die = false, $echo = true) {
 	return $print;
 }
 
+// Format Page Titles from slugs for stats and audit
+if (!function_exists('bp_ga4_path_to_label')) {
+    function bp_ga4_path_to_label(string $path): string {
+        $path = strtok($path, '?');
+        $path = trim($path, '/');
+        if ($path === '') return 'Home';
+        $segments = explode('/', $path);
+        $labels = array_map(function($segment) {
+            return ucwords(str_replace('-', ' ', $segment));
+        }, $segments);
+        return implode(' > ', $labels);
+    }
+}
 
 // Send an email to myself
 function emailMe($subject, $htmlMessage, $replyTo = null) {
@@ -593,13 +606,13 @@ function battleplan_addMenuVisibility( $item_id, $item ) {
 	$restrictMin = readMeta( $item_id, 'bp_menu_restrict_min', true );
 	?>
 	<div class="clearfix"></div>
-	<p class="description description-thin"><?php _e( "Restrict Max", 'menu-restrict-max' ); ?><br />
-	    <input type="hidden" class="nav-menu-id" value="<?php echo $item_id ;?>" />
-	    <input type="text" name="menu_restrict_max[<?php echo $item_id ;?>]" id="menu-restrict-max-<?php echo $item_id ;?>" value="<?php echo esc_attr( $restrictMax ); ?>" />
+	<p class="description description-thin"><?php _e( "Restrict Max", 'menu-restrict-max' ); ?><br>
+	    <input type="hidden" class="nav-menu-id" value="<?php echo $item_id ;?>" >
+	    <input type="text" name="menu_restrict_max[<?php echo $item_id ;?>]" id="menu-restrict-max-<?php echo $item_id ;?>" value="<?php echo esc_attr( $restrictMax ); ?>" >
 	</p>
-	<p class="description description-thin"><?php _e( "Restrict Min", 'menu-restrict-min' ); ?><br />
-	    <input type="hidden" class="nav-menu-id" value="<?php echo $item_id ;?>" />
-	    <input type="text" name="menu_restrict_min[<?php echo $item_id ;?>]" id="menu-restrict-min-<?php echo $item_id ;?>" value="<?php echo esc_attr( $restrictMin ); ?>" />
+	<p class="description description-thin"><?php _e( "Restrict Min", 'menu-restrict-min' ); ?><br>
+	    <input type="hidden" class="nav-menu-id" value="<?php echo $item_id ;?>" >
+	    <input type="text" name="menu_restrict_min[<?php echo $item_id ;?>]" id="menu-restrict-min-<?php echo $item_id ;?>" value="<?php echo esc_attr( $restrictMin ); ?>" >
 	</p>
 	<?php
 }
@@ -1061,7 +1074,7 @@ function battleplan_comment_structure($comment, $args, $depth) {
       		</div>
 			<?php if ($comment->comment_approved == '0') : ?>
          		<em><?php _e('Your comment is awaiting moderation.') ?></em>
-         		<br />
+         		<br>
 			<?php endif; ?>
 
       		<div class="comment-meta">
@@ -1132,42 +1145,42 @@ remove_filter( 'the_content', 'wpautop' );
 remove_filter( 'the_excerpt', 'wpautop' );
 
 function bp_wpautop($content, $sanitize = false) {
-	$content = $sanitize ? wp_kses_post($content) : $content;
-
-	$content = do_shortcode($content);
-
-	$no_wpautop_blocks = [];
-	$content = preg_replace_callback(
-		'#<!--no-wpautop-->(.*?)<!--/no-wpautop-->#s',
-		function ($matches) use (&$no_wpautop_blocks) {
-			$placeholder = '__NOWPAUTOP_BLOCK_' . count($no_wpautop_blocks) . '__';
-			$no_wpautop_blocks[$placeholder] = $matches[1];
-			return $placeholder;
-		},
-		$content
-	);
-
-	$content = wpautop(apply_filters('the_content', $content), false);
-
-	foreach ($no_wpautop_blocks as $placeholder => $original) {
-		$content = str_replace($placeholder, $original, $content);
-	}
-
-	$content = preg_replace('/<p>\s*(<a .*?>)?\s*(<img .*? \/?>)\s*(<\/a>)?\s*<\/p>/iU', '\1\2\3', $content);
-
-	return $content;
+    $content = $sanitize ? wp_kses_post($content) : $content;
+    $content = do_shortcode($content);
+    $no_wpautop_blocks = [];
+    $content = preg_replace_callback(
+        '#<!--no-wpautop-->(.*?)<!--/no-wpautop-->#s',
+        function ($matches) use (&$no_wpautop_blocks) {
+            $placeholder = '__NOWPAUTOP_BLOCK_' . count($no_wpautop_blocks) . '__';
+            $no_wpautop_blocks[$placeholder] = $matches[1];
+            return $placeholder;
+        },
+        $content
+    );
+    $content = wpautop($content, false);
+    foreach ($no_wpautop_blocks as $placeholder => $original) {
+        $content = str_replace($placeholder, $original, $content);
+    }
+    // Remove <p> tags wrapping images
+    $content = preg_replace('/<p>\s*(<a .*?>)?\s*(<img .*?\/?>)\s*(<\/a>)?\s*<\/p>/iU', '\1\2\3', $content);
+    // Remove orphaned </p> before closing block elements
+    $content = preg_replace('/<\/p>(\s*<\/(div|section|article|aside|header|footer|nav|figure)>)/i', '$1', $content);
+    // Remove orphaned </p> after opening block elements
+    $content = preg_replace('/(<(div|section|article|aside|header|footer|nav|figure)[^>]*>)\s*<\/p>/i', '$1', $content);
+    return $content;
 }
 
 // Format with <p>
 add_shortcode( 'p', 'battleplan_add_ptags' );
 function battleplan_add_ptags( $atts, $content = null ) {
-	return wpautop(do_shortcode($content), false);
+    return wpautop(do_shortcode($content), false);
 }
 
 // Format without <p>
 add_shortcode('raw', function ($atts, $content = null) {
-	return ($content !== null) ? '<!--no-wpautop-->' . do_shortcode($content) . '<!--/no-wpautop-->' : '';
+    return ($content !== null) ? '<!--no-wpautop-->' . do_shortcode($content) . '<!--/no-wpautop-->' : '';
 });
+
 
 // Necessary housekeeping items
 add_action( 'after_setup_theme', 'battleplan_setup' );
@@ -1368,11 +1381,6 @@ function battleplan_enqueue_footer_scripts() {
 
 	if ($isProfile) bp_enqueue_script( 'battleplan-script-user-profiles', 'script-user-profiles' );
 
-	if ( is_admin() && _USER_LOGIN == "battleplanweb" ) {
-		wp_enqueue_style( 'battleplan-admin-css', get_template_directory_uri().'/style-admin.css', [], _BP_VERSION );
-		wp_enqueue_script( 'battleplan-admin-script', get_template_directory_uri().'/js/script-admin.js', array('quicktags'), _BP_VERSION, false );
-	};
-
 	bp_enqueue_script( 'battleplan-script-fire-off', 'script-fire-off' );
 
 	if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) wp_enqueue_script( 'comment-reply' );
@@ -1523,8 +1531,7 @@ add_action('wp_footer', function () {
 
 
 // Load and enqueue admin styles & scripts
-add_action( 'admin_enqueue_scripts', 'battleplan_admin_scripts' );
-
+add_action('admin_enqueue_scripts', 'battleplan_admin_scripts');
 function battleplan_admin_scripts() {
 	$customer_info = customer_info();
 
@@ -1768,8 +1775,8 @@ function bp_display_menu_search( $searchText, $mobile='', $reveal='click' ) {
 
 	$searchForm = '<form role="search" method="get" class="menu-search-form" action="'.home_url( '/' ).'">';
 	$searchForm .= '<label><span class="screen-reader-text">'._x( 'Search for:', 'label' ).'</span></label>';
-	$searchForm .= '<input type="hidden" value="1" name="sentence" />';
-	$searchForm .= '<a class="menu-search-bar reveal-'.$reveal.'"><span class="icon search" aria-hidden="true"></span><input type="search" class="search-field" placeholder="'.esc_attr_x( $searchText, 'placeholder' ).'" value="'.get_search_query().'" name="s" title="'.esc_attr_x( 'Search for:', 'label' ).'" /></a>';
+	$searchForm .= '<input type="hidden" value="1" name="sentence" >';
+	$searchForm .= '<a class="menu-search-bar reveal-'.$reveal.'"><span class="icon search" aria-hidden="true"></span><input type="search" class="search-field" placeholder="'.esc_attr_x( $searchText, 'placeholder' ).'" value="'.get_search_query().'" name="s" title="'.esc_attr_x( 'Search for:', 'label' ).'" ></a>';
 	$searchForm .= '</form>';
 
 	return '<div class="menu-search-box'.$mobile.'" role="none">'.$searchForm.'</div>';

@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict";
-														   
+
 // Raw Script: Desktop
-														   
+
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
@@ -11,12 +11,12 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 # Enhancements
 # ADA compliance
 --------------------------------------------------------------*/
-	
+
 /*--------------------------------------------------------------
 # Parallax
 --------------------------------------------------------------*/
 	window.parallaxConfigs = window.parallaxConfigs || [];
-	
+
 	window.updateParallaxBackgrounds = () => {
 		const scrollPos = window.pageYOffset;
 
@@ -28,7 +28,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			let startScroll, endScroll, adjTop = 0, adjBot = 0;
 
 			if (fullScreen) {
-				startScroll = objTop;  
+				startScroll = objTop;
 				endScroll = objTop + objHeight - getDeviceH();
 			} else {
 				startScroll = objTop - getDeviceH();
@@ -44,14 +44,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			finalPosY = (finalPosY / imageH) * 100;
 
 			// Apply different styles for images vs. SVGs
-			svgObj 
+			svgObj
 				? svgObj.style.transform = `translateY(${finalPosY}%)`
 				: containerObj.style.backgroundPositionY = `${finalPosY}%`;
 		});
 	};
-				
 
-// Add parallax background to site or div	
+
+// Add parallax background to site or div
 	window.parallaxBG = function (containerSel='#page', filename, imageW, imageH, posX='50%', topY=0, bottomY=0, fullScreen=true) {
 		const containerObj = getObject(containerSel);
 		if (!containerObj) return;
@@ -77,8 +77,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 
 		updateParallaxBackgrounds();
 	};
-	
-	
+
+
 // Automatically add parallax to any div noted as a scroll element
 	getObjects('[data-parallax="scroll"]').forEach(section => {
 		let imgSrc = section.getAttribute('data-image-src');
@@ -88,14 +88,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
     	const posX = section.getAttribute('data-pos-x');
     	const topY = section.getAttribute('data-top-y');
     	const bottomY = section.getAttribute('data-bottom-y');
-		
-		parallaxBG(section, imgSrc, imgW, imgH, posX, topY, bottomY, false);        
-  });  
-	
+
+		parallaxBG(section, imgSrc, imgW, imgH, posX, topY, bottomY, false);
+  });
+
 
 //Control parallax movement of divs within a container
 	window.parallaxDivs = window.parallaxDivs || [];
-	
+
 	window.updateParallaxElements = function() {
 		const scrollPos = window.pageYOffset;
 
@@ -122,24 +122,24 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		});
 	};
 
-	
-// Add parallax scrolling to element within a div		
+
+// Add parallax scrolling to element within a div
 	window.parallaxDiv = function (containerSel, elementSel=".parallax", adjustment=0) {
 		window.parallaxDivs.push({
 			containerSel: 		containerSel,
 			elementSel: 		elementSel,
 			adjustment: 		adjustment
 		});
-		
+
     	updateParallaxElements();
 	};
-		
-	
+
+
 /*--------------------------------------------------------------
 # Menus
---------------------------------------------------------------*/		
-		
-// Set up Split Menu	
+--------------------------------------------------------------*/
+
+// Set up Split Menu
 window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", compensate = 0, override = false) => {
 	const menuObj = getObject(menuSel);
 	const logoWidth = getObject(logoSel).offsetWidth + compensate;
@@ -199,8 +199,8 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 
 	menuFlex.style.gridColumnGap = `${logoWidth}px`;
 };
-	
-	
+
+
 // Add a logo into an <li> on the menu strip
 	window.addMenuLogo = function(filename, menuSel='#desktop-navigation') {
 		const menuObj = getObject(menuSel);
@@ -223,24 +223,24 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 
 		linkHome('.menu-logo');
 	};
-														   
-						
+
+
 // Add an icon to each menu item
 	window.addMenuIcon = function(filename, iconW=0, iconH=0, position='before', menuSel='#desktop-navigation') {
 		const menuObj = getObject(menuSel);
-		if (!menuObj) return;				   
-									
+		if (!menuObj) return;
+
 		getObjects('ul.main-menu > li', menuObj).forEach(li => {
 			const anchor = getObject('a', li);
 			if (!anchor) return;
-			
-			addDiv(anchor,`<div class="menu-icon"><img src="${filename}" width="${iconW}" height="${iconH}" style="aspect-ratio:${iconW}/${iconH}"/></div>`, position);
-			
+
+			addDiv(anchor,`<div class="menu-icon"><img src="${filename}" width="${iconW}" height="${iconH}" style="aspect-ratio:${iconW}/${iconH}"></div>`, position);
+
 		});
 	}
-		
-			
-// Calculate & center sub navigation under <li>	
+
+
+// Calculate & center sub navigation under <li>
 	window.centerSubNav = function () {
 		const subMenus = getObjects('.main-navigation ul.sub-menu');
 		subMenus.forEach(subMenu => {
@@ -249,14 +249,14 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 
 
 			const subW = subMenu.offsetWidth;
-			const parentW = subMenu.parentElement.offsetWidth; 
+			const parentW = subMenu.parentElement.offsetWidth;
 			const moveL = -Math.round((subW - parentW) / 2);
 
-			subMenu.style.left = `${moveL}px`; 
+			subMenu.style.left = `${moveL}px`;
 		});
 	};
-	
-	
+
+
 /*--------------------------------------------------------------
 # Sidebar widgets
 --------------------------------------------------------------*/
@@ -275,18 +275,18 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 	window.desktopSidebar = function (compensate, sidebarScroll) {
 		window.secondaryObj = getObject('#secondary');
 		if ( !secondaryObj ) return;
-		
+
 		window.primaryObj = getObject('#primary');
 		window.sidebarObj = getObject('.sidebar-inner', secondaryObj);
 		window.sidebarPad = parseInt(window.getComputedStyle(secondaryObj).paddingTop) + parseInt(window.getComputedStyle(secondaryObj).paddingBottom);
-		
+
 		window.checkHeights = function() {
 			labelWidgets();
 			window.primaryH = primaryObj.offsetHeight;
-			window.sidebarH = sidebarObj.offsetHeight;			
+			window.sidebarH = sidebarObj.offsetHeight;
 			return primaryH - sidebarH - sidebarPad + compensate;
 		}
-		
+
 		window.widgetInit = function () {
 			if (compensate !== 0) {
 				secondaryObj.style.height = `calc(100% + ${compensate}px)`;
@@ -304,7 +304,7 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 				{ priority: 3, selectors: ['.widget.widget-priority-3', '.widget.widget-event', '.widget.widget-financing'] },
 				{ priority: 1, selectors: ['.widget.widget-priority-1', '.widget.remove-first'] }
 			];
-			
+
 			priorities.forEach(group => {
 				group.selectors.forEach(selector => {
 					getObjects(selector).forEach(widget => {
@@ -318,10 +318,10 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 
 			addWidgets();
 		};
-		
+
 		window.addWidgets = function () {
 			for (let i = 4; i >= 0; i--) {
-				getObjects('.hide-widget').forEach(widget => {					
+				getObjects('.hide-widget').forEach(widget => {
 					if (widget.getAttribute('data-priority') == i && widget.getAttribute('data-height') <= checkHeights()) {
 						widget.classList.remove('hide-widget');
 					}
@@ -334,20 +334,20 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 					firstWidget.classList.remove('hide-widget');
 				}
 			}
-		}; 
+		};
 
 	 // Move sidebar in conjunction with mouse scroll to keep it even with content
 		window.moveWidgets = function () {
-			if (sidebarScroll === true) {   
+			if (sidebarScroll === true) {
 				const remain = checkHeights(),
 					  scrollPos = window.pageYOffset,
 					  primaryRect = primaryObj.getBoundingClientRect(),
 					  primaryOffset = primaryRect.top + scrollPos,
-					  adjScrollPos = scrollPos - primaryOffset;     
+					  adjScrollPos = scrollPos - primaryOffset;
 				let viewportH = getDeviceH(),
-					scrollPct = 0, 
+					scrollPct = 0,
 					findPos = 0;
-				
+
 				getObjects('.stuck').forEach(stuck => {
 					viewportH -= stuck.offsetHeight;
 				});
@@ -367,23 +367,23 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 				if (sidebarH < viewportH) {
 					findPos = adjScrollPos + parseInt(getComputedStyle(secondaryObj).paddingTop);
 				}
-				
-				findPos = Math.min(Math.max(findPos, 0), remain); 
+
+				findPos = Math.min(Math.max(findPos, 0), remain);
 
 				if (findPos > 0 && findPos < remain) {
-					sidebarObj.style.marginTop = `${findPos}px`; 
+					sidebarObj.style.marginTop = `${findPos}px`;
 					checkHeights();
 				}
 
 			}
 		};
-	};				   
-														   
-		
+	};
+
+
 /*--------------------------------------------------------------
 # Enhancements
 --------------------------------------------------------------*/
-	
+
 // Reveal "Are We Open" banner
 	function areWeOpenBanner(delay) {
 		const phoneNumObj = getObject('#masthead .phone-number');
@@ -399,8 +399,8 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 					  bannerW = bannerObj.offsetWidth,
 					  bannerT = 0.45 * phoneNumObj.clientHeight,
 					  smallScreen = (phoneLinkR + bannerW) > getDeviceW() ? true : false;
-				
-			
+
+
 /*
 				const phoneHolderW = phoneNumObj.offsetWidth,
 					  phoneLinkW = phoneLinkR - icon.getBoundingClientRect().left,
@@ -409,7 +409,7 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 
 				let icon = getObject(".icon", phoneNumObj);
 				if ( !icon ) icon = phoneLink;
-				
+
 				if ( smallScreen ) {
 					bannerObj.classList.add("small-screen");
 
@@ -430,32 +430,32 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 					}
 				}
 */
-				
+
 				let bannerL = phoneLinkR - phoneHolderL;
-				
+
 				if ( smallScreen ) {
 					bannerObj.classList.add("small-screen");
-					bannerL = (phoneLinkL - phoneHolderL) - bannerW;					
+					bannerL = (phoneLinkL - phoneHolderL) - bannerW;
 				}
-								
+
 				setStyles(bannerObj, {
 					top:		`${bannerT}px`,
 					left:		`${bannerL}px`
 				});
-			
+
 				bannerObj.classList.add('reveal-open');
 			}, delay);
 		}
-	}								   
-														   
+	}
 
-	// Execute the banner positioning if phone link exists  
+
+	// Execute the banner positioning if phone link exists
 	window.addEventListener('load', () => {
 		if (getObject("#masthead .phone-link")) {
 			areWeOpenBanner((Math.random() * 2000)+2000);
 		}
 	});
-		
+
 	// Block Apple Magic Mouse gestures from affecting the the scroll-to-top button
 	var el = getObject('body.screen-desktop a.icon-btn.scroll-top');
   	if (!el) return;
@@ -470,36 +470,36 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
   	el.addEventListener('mousemove', function(e) {
     	e.stopPropagation();
   	}, { passive: true });
-	
-	
+
+
 /*--------------------------------------------------------------
 # ADA compliance
---------------------------------------------------------------*/	
+--------------------------------------------------------------*/
 	// Add special focus outline when someone is using tab to navigate site
 	document.addEventListener('mousemove', () => {
 		document.body.classList.add('using-mouse');
 		document.body.classList.remove('using-keyboard');
 	});
-	
+
 	document.addEventListener('keydown', e => {
 		if (e.keyCode === 9) { // Tab key
 			document.body.classList.add('using-keyboard');
 			document.body.classList.remove('using-mouse');
 		}
 	});
-	
+
 
 	// Remove iframe from tab order
 	getObjects('iframe').forEach(iframe => {
 		iframe.setAttribute('aria-hidden', 'true');
 		iframe.setAttribute('tabindex', '-1');
 	});
-	
+
 
 	// Add .tab-focus class to links and buttons & auto scroll to center
 	document.addEventListener('keydown', e => {
 		if (e.keyCode === 9) { // Tab key
-			getObjects('.tab-focus').forEach(el => el.classList.remove('tab-focus'));			
+			getObjects('.tab-focus').forEach(el => el.classList.remove('tab-focus'));
 
 			setTimeout(() => {
 				getObjects('[aria-expanded="true"').forEach(el => el.classList.add('tab-focus'));
@@ -517,10 +517,10 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 			}, 10);
 		}
 	});
-	
-	
+
+
 	document.addEventListener('mousedown', () => {
 		getObjects('.tab-focus').forEach(el => el.classList.remove('tab-focus'));
 	});
-	
+
 })

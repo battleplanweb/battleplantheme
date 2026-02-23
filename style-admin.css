@@ -234,7 +234,7 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 .upsell-wrapper {
 	display:                                                   none;
 }
- 
+
 /* Admin dashboard */
 #adminmenu .admin-note,
 #adminmenu .admin-badge,
@@ -254,7 +254,7 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	font-size:                                                 11px;
 	line-height:                                               1.0;
 	text-align:                                                center;
-	z-index:                                                   26; 
+	z-index:                                                   26;
 	float:                                                     right;
 }
 
@@ -562,21 +562,21 @@ th.sorted a span {
     border:                                                 1px solid var(--lightest-grey);
     box-shadow:                                             2px 2px 0 0 var(--lightest-grey);
     max-height:                                             500px;
-	min-width: unset !important;
+	min-width:                                                 unset !important;
     overflow:                                               hidden;
 }
 
 
 #dashboard-widgets #battleplan_monthly_stats {
-	max-height: 370px;
+	max-height:                                                370px;
 }
 
 #dashboard-widgets #battleplan_quarterly_stats {
-	max-height: 157px;
+	max-height:                                                157px;
 }
 
 #dashboard-widgets #battleplan_daily_stats {
-	max-height: 562px;
+	max-height:                                                562px;
 }
 
 #dashboard-widgets #battleplan_tech_stats.postbox,
@@ -662,30 +662,32 @@ th.sorted a span {
 #dashboard-widgets #battleplan_content_stats li:not(.sub-label),
 #dashboard-widgets #battleplan_tech_stats li:not(.sub-label),
 #dashboard-widgets #battleplan_admin_location_stats li:not(.sub-label),
-#dashboard-widgets #battleplan_admin_referrer_stats li:not(.sub-label) {
-	display: grid;
-grid-template-columns: 30px 1fr;
-  gap: 0 20px;
-  align-items: center;
+#dashboard-widgets #battleplan_admin_referrer_stats li:not(.sub-label),
+#dashboard-widgets #battleplan_queries_stats li:not(.sub-label) {
+	display:                                                   grid;
+grid-template-columns:                                      30px 1fr;
+  gap:                                                      0 20px;
+  align-items:                                              center;
 }
 
 #dashboard-widgets #battleplan_content_stats li:not(.sub-label),
 #dashboard-widgets #battleplan_tech_stats li:not(.sub-label) {
 
-	grid-template-columns: 60px 1fr;
+	grid-template-columns:                                     60px 1fr;
 }
 
 #dashboard-widgets #battleplan_tech_stats li.device {
-	grid-template-columns: 60px 2fr 1fr 4fr;
+	grid-template-columns:                                     60px 2fr 1fr 4fr;
 }
 
 #dashboard-widgets #battleplan_pages_stats div.value,
 #dashboard-widgets #battleplan_content_stats div.value,
 #dashboard-widgets #battleplan_tech_stats div.value,
 #dashboard-widgets #battleplan_admin_location_stats div.value,
-#dashboard-widgets #battleplan_admin_referrer_stats div.value {
+#dashboard-widgets #battleplan_admin_referrer_stats div.value,
+#dashboard-widgets #battleplan_queries_stats div.value {
 	width:                                                     auto !important;
-	margin-right: 0 !important;
+	margin-right:                                              0 !important;
 }
 
 

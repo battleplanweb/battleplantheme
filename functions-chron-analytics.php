@@ -32,6 +32,89 @@ function bp_run_chron_analytics(bool $force = false): void {
     bp_ga4_collect_all_clean($client, $ga4_id);
 }
 
+/*--------------------------------------------------------------
+# Search Console Helpers
+--------------------------------------------------------------*/
+function bp_gsc_collect_top_queries(): void {
+
+    if (!defined('GA4_SERVICE_ACCOUNT_JSON')) return;
+
+    $credentials = json_decode(base64_decode(GA4_SERVICE_ACCOUNT_JSON), true);
+    $token       = bp_get_google_access_token($credentials, [
+        'https://www.googleapis.com/auth/webmasters.readonly'
+    ]);
+
+    if (!$token) {
+        error_log('bp_gsc_collect_top_queries: failed to get token');
+        return;
+    }
+
+    $siteUrl = 'sc-domain:' . str_replace(['https://', 'http://'], '', get_bloginfo('url'));
+    $result  = [];
+
+    $periods = [
+        'week'     => 7,
+        'month'    => 30,
+        'quarter'  => 90,
+        'semester' => 180,
+        'year'     => 365,
+    ];
+
+    foreach ($periods as $label => $days) {
+
+        $body = json_encode([
+            'startDate'             => date('Y-m-d', strtotime("-{$days} days")),
+            'endDate'               => date('Y-m-d', strtotime('-1 day')),
+            'dimensions'            => ['query'],
+            'rowLimit'              => 10,
+            'orderBy'               => [['fieldName' => 'clicks', 'sortOrder' => 'DESCENDING']],
+            'dimensionFilterGroups' => [[
+                'filters' => [[
+                    'dimension'  => 'country',
+                    'operator'   => 'equals',
+                    'expression' => 'usa',
+                ]]
+            ]],
+        ]);
+
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL            => 'https://www.googleapis.com/webmasters/v3/sites/'
+                                    . rawurlencode($siteUrl) . '/searchAnalytics/query',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $body,
+            CURLOPT_TIMEOUT        => 15,
+            CURLOPT_HTTPHEADER     => [
+                'Authorization: Bearer ' . $token,
+                'Content-Type: application/json',
+            ],
+        ]);
+        $response = curl_exec($ch);
+        $http     = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+        curl_close($ch);
+
+        if ($http !== 200) {
+            error_log("bp_gsc_collect_top_queries: API error {$http} for {$label}: {$response}");
+            continue;
+        }
+
+        $data = json_decode($response, true);
+
+        foreach ($data['rows'] ?? [] as $row) {
+            $query = $row['keys'][0] ?? '';
+            if (!$query) continue;
+            $result[$query][$label] = [
+                'clicks'      => (int)$row['clicks'],
+                'impressions' => (int)$row['impressions'],
+                'ctr'         => round($row['ctr'] * 100, 2),
+                'position'    => round($row['position'], 1),
+            ];
+        }
+    }
+
+    update_option('bp_gsc_top_queries', $result, false);
+}
 
 /*--------------------------------------------------------------
 # GA4 Helpers
@@ -325,12 +408,15 @@ function bp_ga4_collect_all_clean(BetaAnalyticsDataClient $client, $propertyId):
     }
 
     bp_ga4_build_tracked_elements();
-    
+
     update_option('bp_ga4_last_collect_ts', time(), false);
 
     // 5) Customer Check-In Emails
     require_once get_template_directory() . '/functions-customer-checkins.php';
     bp_run_customer_checkins();
+
+    // 6) GSC Top Queries
+    bp_gsc_collect_top_queries();
 
     return true;
 }

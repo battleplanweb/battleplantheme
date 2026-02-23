@@ -16,10 +16,14 @@
 	- Set up Tech widget on dashboard
 	- Set up Content Visibility widget on dashboard
 	- Set up Most Popular Pages widget on dashboard
+	- Set up Top Queries widget on dashboard
+
 
 --------------------------------------------------------------*/
 
 $daily = get_option('bp_ga4_daily_clean');
+
+error_log('GSC queries: ' . print_r(get_option('bp_gsc_top_queries'), true));
 
 /*--------------------------------------------------------------
 # Site Stats
@@ -33,10 +37,11 @@ function battleplan_add_dashboard_widgets() {
 		add_meta_box( 'battleplan_admin_location_stats', 'Locations', 'battleplan_admin_location_stats', 'dashboard', 'normal', 'high' );
 		add_meta_box( 'battleplan_tech_stats', 'Tech Info', 'battleplan_admin_tech_stats', 'dashboard', 'normal', 'high' );
 
-		add_meta_box( 'battleplan_pages_stats', 'Most Popular Pages', 'battleplan_admin_pages_stats', 'dashboard', 'side', 'high' );
 		add_meta_box( 'battleplan_content_stats', 'Content Visibility', 'battleplan_admin_content_stats', 'dashboard', 'side', 'high' );
+		add_meta_box( 'battleplan_pages_stats', 'Most Popular Pages', 'battleplan_admin_pages_stats', 'dashboard', 'side', 'high' );
+        add_meta_box( 'battleplan_queries_stats', 'Top Google Queries', 'battleplan_admin_queries_stats', 'dashboard', 'side', 'high' );
 
-		add_meta_box( 'battleplan_weekly_stats', 'Weekly Visitor Trends', 'battleplan_admin_weekly_stats', 'dashboard', 'column3', 'high' );
+        add_meta_box( 'battleplan_weekly_stats', 'Weekly Visitor Trends', 'battleplan_admin_weekly_stats', 'dashboard', 'column3', 'high' );
 		add_meta_box( 'battleplan_monthly_stats', 'Monthly Visitor Trends', 'battleplan_admin_monthly_stats', 'dashboard', 'column3', 'high' );
 		add_meta_box( 'battleplan_quarterly_stats', 'Quarterly Visitor Trends', 'battleplan_admin_quarterly_stats', 'dashboard', 'column3', 'high' );
 		add_meta_box( 'battleplan_daily_stats', 'Daily Visitors', 'battleplan_admin_daily_stats', 'dashboard', 'column3', 'high' );
@@ -219,11 +224,6 @@ function battleplan_admin_monthly_stats() {
 function battleplan_admin_quarterly_stats() {
     battleplan_visitor_trends('quarterly', 90, 4);
 }
-
-$tracked = get_site_option('bp_ga4_tracked_elements') ?: [];
-
-error_log(print_r($tracked['testimonials'], true));
-
 
 
 // Set up Site Visitors widget on dashboard
@@ -795,6 +795,24 @@ function battleplan_admin_content_stats() {
     endforeach;
 }
 
+// Set up Content Visibility widget on dashboard
+$GLOBALS['ga4_contentVis'] = [];
+
+if (!empty($ga4_achievementId_data) && is_array($ga4_achievementId_data)) {
+
+    foreach ($ga4_achievementId_data as $event => $metrics) {
+
+        if (!is_array($metrics)) continue;
+
+        foreach ($metrics as $metricKey => $value) {
+
+            if (!is_numeric($value)) continue;
+
+            $GLOBALS['ga4_contentVis'][$event][$metricKey] = (int)$value;
+        }
+    }
+}
+
 
 // Set up Most Popular Pages widget on dashboard
 $GLOBALS['ga4_page'] = [];
@@ -814,21 +832,20 @@ if (!empty($ga4_pages_data) && is_array($ga4_pages_data)) {
     }
 }
 
-// Set up Content Visibility widget on dashboard
-$GLOBALS['ga4_contentVis'] = [];
 
-if (!empty($ga4_achievementId_data) && is_array($ga4_achievementId_data)) {
-
-    foreach ($ga4_achievementId_data as $event => $metrics) {
-
-        if (!is_array($metrics)) continue;
-
-        foreach ($metrics as $metricKey => $value) {
-
-            if (!is_numeric($value)) continue;
-
-            $GLOBALS['ga4_contentVis'][$event][$metricKey] = (int)$value;
-        }
+// Set up Top Queries widget on dashboard
+$GLOBALS['gsc_top_queries'] = get_option('bp_gsc_top_queries') ?: [];
+$gsc_queries_data = get_option('bp_gsc_top_queries') ?: [];
+if (!empty($gsc_queries_data) && is_array($gsc_queries_data)) {
+    foreach ($gsc_queries_data as $row) {
+        if (!is_array($row)) continue;
+        $GLOBALS['gsc_top_queries'][] = [
+            'query'       => $row['query']       ?? '',
+            'clicks'      => (int)($row['clicks']      ?? 0),
+            'impressions' => (int)($row['impressions'] ?? 0),
+            'ctr'         => (float)($row['ctr']       ?? 0),
+            'position'    => (float)($row['position']  ?? 0),
+        ];
     }
 }
 
@@ -922,6 +939,106 @@ function battleplan_admin_pages_stats() {
 			<div class='value'><b>" . number_format((int)$pageViews) . "</b></div>
 			<div class='label'>" . esc_html(bp_ga4_path_to_label($pageTitle)) . "</div>
 			</li>";
+        }
+
+        echo '</ul></div>';
+    }
+}
+
+function battleplan_admin_queries_stats() {
+
+    $queries = $GLOBALS['gsc_top_queries'] ?? [];
+
+    if (empty($queries)) {
+        echo '<p>No query data available.</p>';
+        return;
+    }
+
+    foreach ($GLOBALS['dataTerms'] as $termTitle => $termDays) {
+
+        $active = ($termTitle === 'month') ? ' active' : '';
+
+        // Collect rows that have data for this period
+        $rows = [];
+        foreach ($queries as $query => $periods) {
+            if (!empty($periods[$termTitle])) {
+                $rows[$query] = $periods[$termTitle];
+            }
+        }
+
+        if (empty($rows)) continue;
+
+        // Sort by clicks descending
+        uasort($rows, fn($a, $b) => $b['clicks'] <=> $a['clicks']);
+
+        $totalClicks = array_sum(array_column($rows, 'clicks'));
+
+        echo '<div class="handle-label handle-label-' . $termDays . $active . '"><ul>';
+        echo '<li class="sub-label" style="column-span: all">Last ' . number_format($totalClicks) . ' Clicks</li>';
+
+        foreach ($rows as $query => $metrics) {
+            $imp = number_format($metrics['impressions']);
+            $ctr = $metrics['ctr'];
+            $rank = $metrics['position'];
+
+            $rank_color =   $rank   <= 4  ? 'color:rgb(0,152,9)' : ( $rank  > 10 ? 'color:rgb(255,0,0)' : 'color:inherit');
+            $ctr_color = 'color:inherit';
+
+            // Position 1
+            if ($rank <= 1.0) {
+                if ($ctr < 20) {
+                    $ctr_color = 'color:rgb(255,0,0)';      // below respectable
+                } elseif ($ctr >= 35) {
+                    $ctr_color = 'color:rgb(0,152,9)';      // strong
+                }
+
+            // Position >1 to 2
+            } elseif ($rank <= 2.0) {
+                if ($ctr < 12) {
+                    $ctr_color = 'color:rgb(255,0,0)';
+                } elseif ($ctr >= 25) {
+                    $ctr_color = 'color:rgb(0,152,9)';
+                }
+
+            // Position >2 to 3
+            } elseif ($rank <= 3.0) {
+                if ($ctr < 8) {
+                    $ctr_color = 'color:rgb(255,0,0)';
+                } elseif ($ctr >= 18) {
+                    $ctr_color = 'color:rgb(0,152,9)';
+                }
+
+            // Position >3 to 5
+            } elseif ($rank <= 5.0) {
+                if ($ctr < 5) {
+                    $ctr_color = 'color:rgb(255,0,0)';
+                } elseif ($ctr >= 12) {
+                    $ctr_color = 'color:rgb(0,152,9)';
+                }
+
+            // Position >5 to 10
+            } elseif ($rank <= 10.0) {
+                if ($ctr < 2) {
+                    $ctr_color = 'color:rgb(255,0,0)';
+                } elseif ($ctr >= 6) {
+                    $ctr_color = 'color:rgb(0,152,9)';
+                }
+
+            // Position >10
+            } else {
+                if ($ctr < 0.5) {
+                    $ctr_color = 'color:rgb(255,0,0)';
+                } elseif ($ctr >= 3) {
+                    $ctr_color = 'color:rgb(0,152,9)';
+                }
+            }
+
+            echo '<li>
+                    <div class="value"><b>' . number_format($metrics['clicks']) . '</b></div>
+                    <div class="label"><b>' . esc_html($query) . '</b></div>
+                    <div>&nbsp;</div>
+                    <div class="sub-label"><em><span style="'.$ctr_color.'">'. $ctr . '%</span> (' . $imp . ' impressions)<span style="float:right; '.$rank_color.'">Rank: <b>' . $rank . '</b></em></div>
+                  </li>';
         }
 
         echo '</ul></div>';

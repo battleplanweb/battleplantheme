@@ -837,6 +837,10 @@ function battleplan_chron_analytics_status() {
 }
 
 
+function bp_format_metric_label(string $label): string {
+    return preg_replace('/(\(\w+\))/', '<span class="disclaimer">$1</span>', $label);
+}
+
 // Add dialog boxes to shortcode helpers in text editor
 add_action('admin_enqueue_scripts', 'battleplan_setupTextEditorDialogBoxes');
 function battleplan_setupTextEditorDialogBoxes($hook) {
@@ -1323,38 +1327,38 @@ function battleplan_site_audit() {
         ],
 
 		'GA4 Traffic' => [
-			'ga4-sessions-7'    => 'Sessions (7d)',
-			'ga4-pageviews-7'   => 'Pageviews (7d)',
-			'ga4-engagement-7'  => 'Engagement Rate (7d)',
-			'ga4-sessions-30'   => 'Sessions (1m)',
-			'ga4-pageviews-30'  => 'Pageviews (1m)',
-			'ga4-engagement-30' => 'Engagement Rate (1m)',
-			'ga4-sessions-90'   => 'Sessions (3m)',
-			'ga4-pageviews-90'  => 'Pageviews (3m)',
-			'ga4-engagement-90' => 'Engagement Rate (3m)',
-			'ga4-sessions-180'    => 'Sessions (6m)',
-			'ga4-pageviews-180'   => 'Pageviews (6m)',
-			'ga4-engagement-180'  => 'Engagement Rate (6m)',
+			'ga4-sessions-7'    => 'Sessions (1wk)',
+			'ga4-pageviews-7'   => 'Pageviews (1wk)',
+			'ga4-engagement-7'  => 'Engagement Rate (1wk)',
+			'ga4-sessions-30'   => 'Sessions (1mo)',
+			'ga4-pageviews-30'  => 'Pageviews (1mo)',
+			'ga4-engagement-30' => 'Engagement Rate (1mo)',
+			'ga4-sessions-90'   => 'Sessions (3mo)',
+			'ga4-pageviews-90'  => 'Pageviews (3mo)',
+			'ga4-engagement-90' => 'Engagement Rate (3mo)',
+			'ga4-sessions-180'    => 'Sessions (6mo)',
+			'ga4-pageviews-180'   => 'Pageviews (6mo)',
+			'ga4-engagement-180'  => 'Engagement Rate (6mo)',
 			'ga4-sessions-365'    => 'Sessions (1yr)',
 			'ga4-pageviews-365'   => 'Pageviews (1yr)',
 			'ga4-engagement-365'  => 'Engagement Rate (1yr)',
-			'ga4-phone-30'      => 'Phone Clicks (1m)',
-			'ga4-email-30'      => 'Email Clicks (1m)',
+			'ga4-phone-30'      => 'Phone Clicks (1mo)',
+			'ga4-email-30'      => 'Email Clicks (1mo)',
 		],
 
         'Search Console' => [
-			'console-impressions-30'  => 'Impressions (1m)',
-			'console-clicks-30'       => 'Clicks (1m)',
-			'console-ctr-30'          => 'CTR (1m)',
-			'console-position-30'     => 'Avg Position (1m)',
-			'console-impressions-90'  => 'Impressions (3m)',
-			'console-clicks-90'       => 'Clicks (3m)',
-			'console-ctr-90'          => 'CTR (3m)',
-			'console-position-90'     => 'Avg Position (3m)',
-			'console-impressions-180' => 'Impressions (6m)',
-			'console-clicks-180'      => 'Clicks (6m)',
-			'console-ctr-180'         => 'CTR (6m)',
-			'console-position-180'    => 'Avg Position (6m)',
+			'console-impressions-30'  => 'Impressions (1mo)',
+			'console-clicks-30'       => 'Clicks (1mo)',
+			'console-ctr-30'          => 'CTR (1mo)',
+			'console-position-30'     => 'Avg Position (1mo)',
+			'console-impressions-90'  => 'Impressions (3mo)',
+			'console-clicks-90'       => 'Clicks (3mo)',
+			'console-ctr-90'          => 'CTR (3mo)',
+			'console-position-90'     => 'Avg Position (3mo)',
+			'console-impressions-180' => 'Impressions (6mo)',
+			'console-clicks-180'      => 'Clicks (6mo)',
+			'console-ctr-180'         => 'CTR (6mo)',
+			'console-position-180'    => 'Avg Position (6mo)',
 			'console-impressions-365' => 'Impressions (12m)',
 			'console-clicks-365'      => 'Clicks (12m)',
 			'console-ctr-365'         => 'CTR (12m)',
@@ -1384,19 +1388,19 @@ function battleplan_site_audit() {
         'Google Business Profile' 	=> [
             'google-reviews'       	=> 'Reviews',
             'google-rating'        	=> 'Rating',
-            'gmb-impressions-90'      	=> 'Impressions (3m)',
-            'gmb-calls-90'            	=> 'Call Clicks (3m)',
-            'gmb-website-clicks-90'   	=> 'Website Clicks (3m)',
-            'gmb-impressions-180'      	=> 'Impressions (6m)',
-            'gmb-calls-180'            	=> 'Call Clicks (6m)',
-            'gmb-website-clicks-180'   	=> 'Website Clicks (6m)',
+            'gmb-impressions-90'      	=> 'Impressions (3mo)',
+            'gmb-calls-90'            	=> 'Call Clicks (3mo)',
+            'gmb-website-clicks-90'   	=> 'Website Clicks (3mo)',
+            'gmb-impressions-180'      	=> 'Impressions (6mo)',
+            'gmb-calls-180'            	=> 'Call Clicks (6mo)',
+            'gmb-website-clicks-180'   	=> 'Website Clicks (6mo)',
             'gbp-profile-strength' => 'Profile Strength',
         ],
 
         'Google Ads' => [
-            'ads-spend-30'       => 'Ad Spend (1m)',
-            'ads-clicks-30'      => 'Ad Clicks (1m)',
-            'ads-conversions-30' => 'Conversions (1m)',
+            'ads-spend-30'       => 'Ad Spend (1mo)',
+            'ads-clicks-30'      => 'Ad Clicks (1mo)',
+            'ads-conversions-30' => 'Conversions (1mo)',
             'ads-cpa-30'         => 'Cost Per Conversion',
         ],
 
@@ -1407,12 +1411,12 @@ function battleplan_site_audit() {
             'landing'           => 'Landing Pages',
             'galleries'         => 'Galleries',
             'testimonials'      => 'Testimonials',
-            'testimonials-pct-30'  => 'Testimonials Seen (1m)',
-            'coupon-pct-30'        => 'Coupon Seen (1m)',
-            'finance-pct-30'       => 'Financing Seen (1m)',
-            'testimonials-pct-90'  => 'Testimonials Seen (3m)',
-            'coupon-pct-90'        => 'Coupon Seen (3m)',
-            'finance-pct-90'       => 'Financing Seen (3m)',
+            'testimonials-pct-30'  => 'Testimonials Seen (1mo)',
+            'coupon-pct-30'        => 'Coupon Seen (1mo)',
+            'finance-pct-30'       => 'Financing Seen (1mo)',
+            'testimonials-pct-90'  => 'Testimonials Seen (3mo)',
+            'coupon-pct-90'        => 'Coupon Seen (3mo)',
+            'finance-pct-90'       => 'Financing Seen (3mo)',
         ],
 
         'Miscellaneous' => [
@@ -1420,6 +1424,7 @@ function battleplan_site_audit() {
             'html'			=> 'HTML Verified',
             'schema' 		=> 'Schema Verified',
             'browserstack'	=> 'Browser Stack',
+            'checkin'		=> 'Check-In Email',
         ],
 
 
@@ -1453,7 +1458,7 @@ function battleplan_site_audit() {
 		'gmb-calls-180',
 		'gmb-website-clicks-180',
 		'gbp-profile-strength',
-        'ads-spend-30',
+        	'ads-spend-30',
 		'ads-clicks-30',
 		'ads-conversions-30',
 		'ads-cpa-30',
@@ -1461,6 +1466,7 @@ function battleplan_site_audit() {
 		'html',
 		'schema',
 		'browserstack',
+		'checkin',
 	];
 
 	$lastDate       = !empty($siteAudit) ? max(array_keys($siteAudit)) : null;
@@ -1508,7 +1514,7 @@ function battleplan_site_audit() {
 
 			foreach ($fields as $key => $label) {
 
-				$page .= '<tr><td class="subheadline color-' . $alt . '">' . $label . '</td>';
+				$page .= '<tr><td class="subheadline color-' . $alt . '">' . bp_format_metric_label($label) . '</td>';
 
 				foreach ($dates as $date) {
 					$val = $siteAudit[$date][$key] ?? '—';
@@ -1529,50 +1535,56 @@ function battleplan_site_audit() {
 		}
 
 		// Notes row
-		$notes = $siteAudit[$latestDate]['notes'] ?? '';
-		$page .= '<tr><td class="subheadline color-0">Notes</td>';
-		$page .= '<td colspan="' . (count($dates)) . '" class="stat color-0">';
-		$page .= '<textarea id="bp-audit-notes" data-key="notes" data-date="' . esc_attr($latestDate) . '" '
-			. 'style="width:100%;min-height:80px;font-size:inherit;padding:4px;">'
-			. esc_html($notes) . '</textarea>';
+		$notes = get_option('bp_audit_notes') ?: '';
+		if (is_array($notes)) $notes = implode("\n", array_column($notes, 'text'));
+		if (!$notes) $notes = '♦ ' . date('Y-m-d') . ' » Add your first note.';
+		$page .= '<tr><td class="subheadline color-0" style="vertical-align:top">Notes</td>';
+		$cols = count($dates) <= 10 ? count($dates) : 10;
+		$page .= '<td colspan="' . $cols . '" class="stat color-0">';
+		$page .= '<textarea id="bp-audit-notes" rows="6" '
+			  . 'style="width:100%;font-size:inherit;padding:4px;">'
+			  . esc_html($notes) . '</textarea>';
 		$page .= '</td></tr>';
-        $page .= '</tbody></table>';
+		$page .= '</tbody></table>';
 
-    } else {
+		$page .= '<style>span.disclaimer{font-size:85%; font-weight:normal; opacity:0.6; float:right;}</style>';
+
+	} else {
         $page .= '<p>No audit data yet. The table will populate automatically after the first chron run.</p>';
     }
 
     $page .= '[/col][/layout][/section]</div></div>';
 
-	$page = str_ireplace(['>false</td>', '>N/A</td>', '>n/a</td>', '>N/A%</td>', '> </td>', '></td>'], '>—</td>', $page);
+    $page = str_ireplace(['>false</td>', '>N/A</td>', '>n/a</td>', '>N/A%</td>', '> </td>', '></td>'], '>—</td>', $page);
+    $page = str_replace(')</span>—</td>', ')</span></td>', $page);
 
     echo do_shortcode($page);
 
 	echo '<script>
-		const bpAudit = {
-			ajaxUrl: "' . admin_url('admin-ajax.php') . '",
-			nonce:   "' . wp_create_nonce('bp_audit_nonce') . '"
-		};
-		document.addEventListener("DOMContentLoaded", function() {
-			document.querySelectorAll(".bp-audit-table td.editable").forEach(td => {
-				td.style.cursor = "pointer";
-				td.title = "Click to edit";
-				td.addEventListener("click", function() {
-					if (this.querySelector("input")) return;
-					const current = this.textContent.trim() === "—" ? "" : this.textContent.trim();
-					const key     = this.dataset.key;
-					const date    = this.dataset.date;
-					this.innerHTML = "<input type=\'text\' value=\'" + current + "\' style=\'width:80px;font-size:inherit;padding:2px 4px;\' data-key=\'" + key + "\' data-date=\'" + date + "\'>";
-					const input = this.querySelector("input");
-					input.focus();
-					input.select();
-					input.addEventListener("blur", function() {
-						saveAuditField(this.dataset.key, this.dataset.date, this.value, td);
-					});
-					input.addEventListener("keydown", function(e) {
-						if (e.key === "Enter") this.blur();
-						if (e.key === "Escape") td.textContent = current || "—";
-					});
+	const bpAudit = {
+		ajaxUrl: "' . admin_url('admin-ajax.php') . '",
+		nonce:   "' . wp_create_nonce('bp_audit_nonce') . '"
+	};
+	document.addEventListener("DOMContentLoaded", function() {
+
+		document.querySelectorAll(".bp-audit-table td.editable").forEach(td => {
+			td.style.cursor = "pointer";
+			td.title = "Click to edit";
+			td.addEventListener("click", function() {
+				if (this.querySelector("input")) return;
+				const current = this.textContent.trim() === "—" ? "" : this.textContent.trim();
+				const key     = this.dataset.key;
+				const date    = this.dataset.date;
+				this.innerHTML = "<input type=\'text\' value=\'" + current + "\' style=\'width:80px;font-size:inherit;padding:2px 4px;\' data-key=\'" + key + "\' data-date=\'" + date + "\'>";
+				const input = this.querySelector("input");
+				input.focus();
+				input.select();
+				input.addEventListener("blur", function() {
+					saveAuditField(this.dataset.key, this.dataset.date, this.value, td);
+				});
+				input.addEventListener("keydown", function(e) {
+					if (e.key === "Enter") this.blur();
+					if (e.key === "Escape") td.textContent = current || "—";
 				});
 			});
 		});
@@ -1590,43 +1602,39 @@ function battleplan_site_audit() {
 			});
 		});
 
-		function saveAuditField(key, date, value, td) {
-			const data = new FormData();
-			data.append("action", "bp_save_audit_field");
-			data.append("nonce",  bpAudit.nonce);
-			data.append("key",    key);
-			data.append("date",   date);
-			data.append("value",  value);
-			fetch(bpAudit.ajaxUrl, { method: "POST", body: data })
-				.then(r => r.json())
-				.then(r => { td.textContent = r.success ? (value || "—") : "⚠ Error"; })
-				.catch(() => { td.textContent = "⚠ Error"; });
-		}
-
-		// Notes autosave on blur
 		const notesArea = document.getElementById("bp-audit-notes");
 		if (notesArea) {
-		notesArea.addEventListener("blur", function() {
-			const data = new FormData();
-			data.append("action", "bp_save_audit_field");
-			data.append("nonce",  bpAudit.nonce);
-			data.append("key",    this.dataset.key);
-			data.append("date",   this.dataset.date);
-			data.append("value",  this.value);
-			fetch(bpAudit.ajaxUrl, { method: "POST", body: data })
-				.then(r => r.json())
-				.then(r => {
-					notesArea.style.borderColor = r.success ? "green" : "red";
-					setTimeout(() => notesArea.style.borderColor = "", 2000);
-				});
-		});
+		    notesArea.addEventListener("blur", function() {
+			   const data = new FormData();
+			   data.append("action", "bp_save_audit_note");
+			   data.append("nonce",  bpAudit.nonce);
+			   data.append("note",   this.value);
+			   fetch(bpAudit.ajaxUrl, { method: "POST", body: data })
+				  .then(r => r.json())
+				  .then(r => {
+					 notesArea.style.borderColor = r.success ? "green" : "red";
+					 setTimeout(() => notesArea.style.borderColor = "", 2000);
+				  });
+		    });
 		}
+	});
+
+	function saveAuditField(key, date, value, td) {
+		const data = new FormData();
+		data.append("action", "bp_save_audit_field");
+		data.append("nonce",  bpAudit.nonce);
+		data.append("key",    key);
+		data.append("date",   date);
+		data.append("value",  value);
+		fetch(bpAudit.ajaxUrl, { method: "POST", body: data })
+			.then(r => r.json())
+			.then(r => { td.textContent = r.success ? (value || "—") : "⚠ Error"; })
+			.catch(() => { td.textContent = "⚠ Error"; });
+	}
 	</script>';
 	exit();
-
-
-
 }
+
 
 add_action('wp_ajax_bp_save_audit_field', 'bp_ajax_save_audit_field');
 function bp_ajax_save_audit_field() {
@@ -1661,5 +1669,16 @@ function bp_ajax_delete_audit_date() {
     $history = get_option('bp_site_audit_details') ?: [];
     unset($history[$date]);
     update_option('bp_site_audit_details', $history, false);
+    wp_send_json_success();
+}
+
+add_action('wp_ajax_bp_save_audit_note', 'bp_ajax_save_audit_note');
+function bp_ajax_save_audit_note() {
+    check_ajax_referer('bp_audit_nonce', 'nonce');
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error('Unauthorized');
+    }
+    $text = sanitize_textarea_field($_POST['note'] ?? '');
+    update_option('bp_audit_notes', $text, false);
     wp_send_json_success();
 }

@@ -50,6 +50,7 @@ get_site_option('bp_site_audit')
 // 7776000    = quarterly (90 days)
 define('BP_SITE_AUDIT_INTERVAL', 0);
 
+require_once get_template_directory() . '/functions-chron-helpers.php';
 
 
 /*--------------------------------------------------------------
@@ -93,7 +94,6 @@ function bp_run_site_audit() {
     $backlinks = $audit['backlinks']  ?? [];
     $gbp       = $audit['gbp']        ?? [];
     $gbpComplete = $audit['gbp_completeness'] ?? [];
-    $schema    = $audit['schema']     ?? [];
     $googleAds = $audit['google_ads'] ?? [];
     $freshness = $audit['freshness']  ?? [];
     $speed     = get_option('bp_ga4_speed_clean') ?: [];
@@ -894,48 +894,6 @@ function bp_audit_reviews() {
     return $result;
 }
 
-
-/*--------------------------------------------------------------
-# Helpers
---------------------------------------------------------------*/
-
-function bp_get_google_access_token(array $credentials, array $scopes): ?string {
-
-    $now    = time();
-    $expiry = $now + 3600;
-
-    $header  = base64_encode(json_encode(['alg' => 'RS256', 'typ' => 'JWT']));
-    $payload = base64_encode(json_encode([
-        'iss'   => $credentials['client_email'],
-        'scope' => implode(' ', $scopes),
-        'aud'   => 'https://oauth2.googleapis.com/token',
-        'exp'   => $expiry,
-        'iat'   => $now,
-    ]));
-
-    $toSign = $header . '.' . $payload;
-    $key    = $credentials['private_key'];
-
-    openssl_sign($toSign, $signature, $key, 'SHA256');
-    $jwt = $toSign . '.' . base64_encode($signature);
-
-    $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL            => 'https://oauth2.googleapis.com/token',
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => http_build_query([
-            'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-            'assertion'  => $jwt,
-        ]),
-        CURLOPT_TIMEOUT        => 10,
-    ]);
-    $response = curl_exec($ch);
-    curl_close($ch);
-
-    $data = json_decode($response, true);
-    return $data['access_token'] ?? null;
-}
 
 /*--------------------------------------------------------------
 # Google Ads

@@ -234,18 +234,17 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 .upsell-wrapper {
 	display:                                                   none;
 }
-
+ 
 /* Admin dashboard */
 #adminmenu .admin-note,
 #adminmenu .admin-badge,
 #adminmenu .awaiting-mod,
 #adminmenu .menu-counter,
 #adminmenu .update-plugins{
- 	display:                                                  block;
 	position:                                                  relative;
- 	margin:                                                   2px 0 -1px 2px;
-	padding:                                                   2px 8px;
-	height:                                                    18px;
+ 	margin:                                                   0;
+	padding:                                                   5px 10px;
+	height:                                                    auto;
 	border-radius:                                             9px;
 	background-color:                                          var(--white-lowest);
 	border:                                                    1px solid var(--white-lowest);
@@ -253,24 +252,16 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	border-top:                                                1px solid var(--black-med);
 	color:                                                     var(--white);
 	font-size:                                                 11px;
-	line-height:                                               1.6;
+	line-height:                                               1.0;
 	text-align:                                                center;
-	z-index:                                                   26;
+	z-index:                                                   26; 
+	float:                                                     right;
 }
 
 #adminmenu .awaiting-mod,
 #adminmenu .menu-counter,
 #adminmenu .update-plugins{
- 	display:                                                  inline;
 	background-color:                                          #d63638;
-}
-
-#adminmenu .admin-badge {
- 	display:                                                  inline;
-}
-
-#adminmenu .admin-badge-holder {
-	float:                                                     right;
 }
 
 #menu-tools li.wp-first-item {
@@ -301,7 +292,7 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 
 #dashboard-widgets {
 	display:                                                   grid;
-	grid-template-columns:                                     1fr 1fr 840px;
+	grid-template-columns:                                     9fr 8fr 900px;
 }
 
 #dashboard-widgets #postbox-container-1,
@@ -509,7 +500,7 @@ th.sorted a span {
 #dashboard-widgets #postbox-container-3 .postbox .inside {
 	display:                                                   grid;
 	grid-template-columns:                                     repeat(3, 1fr);
-	gap:                                                       0 10px;
+	gap:                                                       0 30px;
 }
 
 #dashboard-widgets #postbox-container-3 .postbox.active .inside {
@@ -570,8 +561,22 @@ th.sorted a span {
     background:                                             var(--white);
     border:                                                 1px solid var(--lightest-grey);
     box-shadow:                                             2px 2px 0 0 var(--lightest-grey);
-    max-height:                                             250px;
+    max-height:                                             500px;
+	min-width: unset !important;
     overflow:                                               hidden;
+}
+
+
+#dashboard-widgets #battleplan_monthly_stats {
+	max-height: 370px;
+}
+
+#dashboard-widgets #battleplan_quarterly_stats {
+	max-height: 157px;
+}
+
+#dashboard-widgets #battleplan_daily_stats {
+	max-height: 562px;
 }
 
 #dashboard-widgets #battleplan_tech_stats.postbox,
@@ -582,13 +587,10 @@ th.sorted a span {
 
 
 #dashboard-widgets #battleplan_pages_stats.postbox {
-    	max-height:                                            506px;
+    	max-height:                                            650px;
 }
 
-#dashboard-widgets .postbox.active,
-#dashboard-widgets #battleplan_tech_stats.postbox.active,
-#dashboard-widgets #battleplan_pages_stats.postbox.active,
-#dashboard-widgets #battleplan_content_stats.postbox.active {
+#dashboard-widgets .postbox.active {
     	background:                                            var(--white);
 	border:                                                    1px solid var(--light-grey);
     	box-shadow:                                            2px 2px 0 0 var(--light-grey);
@@ -602,7 +604,6 @@ th.sorted a span {
 
 .wp-admin ul div.label {
 	display:                                                   inline-block;
-	width:                                                     210px;
 	overflow:                                                  clip;
 }
 
@@ -615,12 +616,10 @@ th.sorted a span {
 #dashboard-widgets #postbox-container-1 div.label-half,
 #dashboard-widgets #postbox-container-2 div.label-half {
 	display:                                                   inline-block;
-	width:                                                     calc(100% - 70px);
 }
 
 #dashboard-widgets #postbox-container-1 div.label-half,
 #dashboard-widgets #postbox-container-2 div.label-half {
-	width:                                                     calc(50% - 35px);
 }
 
 #dashboard-widgets #postbox-container-1 li.sub-label,
@@ -653,9 +652,42 @@ th.sorted a span {
 	text-align:                                                right;
 }
 
-#dashboard-widgets #postbox-container-2 div.value {
-	margin-right:                                              15px;
+
+#dashboard-widgets #battleplan_tech_stats li.device div{
+	text-align:                                                left;
 }
+
+
+#dashboard-widgets #battleplan_pages_stats li:not(.sub-label),
+#dashboard-widgets #battleplan_content_stats li:not(.sub-label),
+#dashboard-widgets #battleplan_tech_stats li:not(.sub-label),
+#dashboard-widgets #battleplan_admin_location_stats li:not(.sub-label),
+#dashboard-widgets #battleplan_admin_referrer_stats li:not(.sub-label) {
+	display: grid;
+grid-template-columns: 30px 1fr;
+  gap: 0 20px;
+  align-items: center;
+}
+
+#dashboard-widgets #battleplan_content_stats li:not(.sub-label),
+#dashboard-widgets #battleplan_tech_stats li:not(.sub-label) {
+
+	grid-template-columns: 60px 1fr;
+}
+
+#dashboard-widgets #battleplan_tech_stats li.device {
+	grid-template-columns: 60px 2fr 1fr 4fr;
+}
+
+#dashboard-widgets #battleplan_pages_stats div.value,
+#dashboard-widgets #battleplan_content_stats div.value,
+#dashboard-widgets #battleplan_tech_stats div.value,
+#dashboard-widgets #battleplan_admin_location_stats div.value,
+#dashboard-widgets #battleplan_admin_referrer_stats div.value {
+	width:                                                     auto !important;
+	margin-right: 0 !important;
+}
+
 
 
 #battleplan_site_stats tr.coloration td,

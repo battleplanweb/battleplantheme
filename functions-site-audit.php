@@ -71,7 +71,6 @@ function bp_run_site_audit() {
 
     $audit['ga4']              = bp_audit_ga4_stats();
     $audit['gbp']              = bp_audit_gbp_performance();
-    $audit['gbp_completeness'] = bp_audit_gbp_completeness();
     $audit['pagespeed']        = bp_audit_pagespeed();
     $audit['pagespeed_trend']  = bp_audit_pagespeed_trend();
     $audit['gsc']              = bp_audit_search_console();
@@ -186,12 +185,6 @@ function bp_run_site_audit() {
         $entry['google-rating']  = $gbp['avg_rating'] ?? '';
     }
 
-    // GBP Completeness
-    if (!empty($gbpComplete)) {
-        $scores = array_map(fn($loc) => $loc['score'], $gbpComplete);
-        $entry['gbp-completeness'] = round(array_sum($scores) / count($scores)) . '%';
-    }
-
     // Speed
     if (!empty($speed)) {
         $entry['load_time_mobile']     = $speed['mobile']['avg-30']   ?? '';
@@ -227,12 +220,6 @@ function bp_run_site_audit() {
         }
     }
 
-    // Schema
-    if (!empty($schema)) {
-        $entry['audit-schema']     = $schema['score'] . '%';
-        $entry['schema-local-biz'] = $schema['has_local_business'] ? '●' : '—';
-    }
-
     // Google Ads
     if (!empty($googleAds[30])) {
         $entry['ads-spend-30']       = '$' . number_format($googleAds[30]['cost'], 2);
@@ -257,6 +244,16 @@ function bp_run_site_audit() {
         $count = wp_count_posts($type)->publish ?? 0;
         $entry[$key] = $count > 0 ? $count : '—';
     }
+
+    $tracked = get_site_option('bp_ga4_tracked_elements') ?: [];
+
+    if (!empty($tracked['testimonials']['sessions_30'])) $entry['testimonials-pct-30'] = $tracked['testimonials']['pct_30'] . '%';
+    if (!empty($tracked['coupon']['sessions_30']))        $entry['coupon-pct-30']       = $tracked['coupon']['pct_30'] . '%';
+    if (!empty($tracked['financing']['sessions_30']))     $entry['finance-pct-30']      = $tracked['financing']['pct_30'] . '%';
+    if (!empty($tracked['testimonials']['sessions_90'])) $entry['testimonials-pct-90'] = $tracked['testimonials']['pct_90'] . '%';
+    if (!empty($tracked['coupon']['sessions_90']))        $entry['coupon-pct-90']       = $tracked['coupon']['pct_90'] . '%';
+    if (!empty($tracked['financing']['sessions_90']))     $entry['finance-pct-90']      = $tracked['financing']['pct_90'] . '%';
+
 
     // Write to history — overwrite if same date, otherwise append
     $existing = $history[$today] ?? [];
@@ -1241,81 +1238,6 @@ function bp_audit_backlinks() {
                 'count' => (int)($page['total'] ?? 0),
             ];
         }
-    }
-
-    return $result;
-}
-
-
-/*--------------------------------------------------------------
-# GBP Completeness Score
---------------------------------------------------------------*/
-
-function bp_audit_gbp_completeness() {
-
-    $customer_info = customer_info();
-    $placeIDs      = ci_normalize_pids($customer_info['pid'] ?? []);
-    $google_info   = get_option('bp_gbp_update') ?: [];
-
-    if (empty($placeIDs)) return [];
-
-    $result = [];
-
-    // Fields that contribute to completeness and their weights
-    $fields = [
-        'name'              => ['label' => 'Business Name',       'weight' => 10, 'required' => true],
-        'address'           => ['label' => 'Address',             'weight' => 10, 'required' => true],
-        'phone'             => ['label' => 'Phone Number',        'weight' => 10, 'required' => true],
-        'website'           => ['label' => 'Website',             'weight' => 8,  'required' => true],
-        'hours'             => ['label' => 'Business Hours',      'weight' => 8,  'required' => true],
-        'category'          => ['label' => 'Primary Category',    'weight' => 8,  'required' => true],
-        'description'       => ['label' => 'Business Description','weight' => 7,  'required' => false],
-        'photos'            => ['label' => 'Photos',              'weight' => 7,  'required' => false],
-        'services'          => ['label' => 'Services Listed',     'weight' => 6,  'required' => false],
-        'attributes'        => ['label' => 'Attributes',          'weight' => 5,  'required' => false],
-        'opening_date'      => ['label' => 'Opening Date',        'weight' => 3,  'required' => false],
-        'service_area'      => ['label' => 'Service Area',        'weight' => 5,  'required' => false],
-        'secondary_category'=> ['label' => 'Secondary Category',  'weight' => 4,  'required' => false],
-        'menu_url'          => ['label' => 'Menu/Services URL',   'weight' => 3,  'required' => false],
-        'appointment_url'   => ['label' => 'Appointment URL',     'weight' => 3,  'required' => false],
-        'logo'              => ['label' => 'Logo Photo',          'weight' => 3,  'required' => false],
-    ];
-
-    $totalWeight = array_sum(array_column($fields, 'weight'));
-
-    foreach ($placeIDs as $placeID) {
-
-        $info       = $google_info[$placeID] ?? [];
-        $score      = 0;
-        $present    = [];
-        $missing    = [];
-
-        foreach ($fields as $key => $field) {
-
-            $hasValue = !empty($info[$key]);
-
-            if ($hasValue) {
-                $score += $field['weight'];
-                $present[] = $field['label'];
-            } else {
-                $missing[] = [
-                    'label'    => $field['label'],
-                    'weight'   => $field['weight'],
-                    'required' => $field['required'],
-                ];
-            }
-        }
-
-        // Sort missing by weight descending so highest impact shows first
-        usort($missing, fn($a, $b) => $b['weight'] <=> $a['weight']);
-
-        $result[$placeID] = [
-            'name'       => $info['name']  ?? $placeID,
-            'score'      => round(($score / $totalWeight) * 100),
-            'present'    => $present,
-            'missing'    => $missing,
-            'required_missing' => array_filter($missing, fn($m) => $m['required']),
-        ];
     }
 
     return $result;

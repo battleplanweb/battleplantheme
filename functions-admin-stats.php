@@ -220,6 +220,11 @@ function battleplan_admin_quarterly_stats() {
     battleplan_visitor_trends('quarterly', 90, 4);
 }
 
+$tracked = get_site_option('bp_ga4_tracked_elements') ?: [];
+
+error_log(print_r($tracked['testimonials'], true));
+
+
 
 // Set up Site Visitors widget on dashboard
 $GLOBALS['ga4_visitor'] = [];
@@ -667,15 +672,14 @@ function battleplan_admin_tech_stats() {
 
             $speedStr = '';
             if ($avgSpeed !== null && $targetPct !== null) {
-                $speedStr = '&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;'
-                          . number_format($avgSpeed, 1) . 's'
-                          . '&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;'
-                          . number_format($targetPct, 1) . '% on target';
+                $speedStr = '<span>'.number_format($avgSpeed, 1).'s</span>';
             }
 
-            echo "<li>
+            echo "<li class='device'>
                     <div class='value'><b>" . number_format($pct, 1) . "%</b></div>
-                    <div class='label'>" . esc_html(ucwords($deviceTitle)) . $speedStr . "</div>
+                    <div class='label'>" . esc_html(ucwords($deviceTitle)) . "</div>
+                    <div>" . $speedStr . "</div>
+                    <div>" . number_format($targetPct, 1) . "% on target</div>
                   </li>";
         }
 
@@ -729,10 +733,6 @@ function battleplan_admin_tech_stats() {
 }
 
 
-
-
-
-
 function battleplan_admin_content_stats() {
 	$ga4_contentVis = array();
 
@@ -776,7 +776,9 @@ function battleplan_admin_content_stats() {
         foreach ($contentVisAndSessions as $key=>$value) :
             if (strpos($key, 'track-') !== false) :
                 $trackItem = str_replace('track-', '', $key);
-                if ($track_init > 0) echo "<li><div class='value'><b>".number_format(($value / $track_init) * 100, 1)."%</b></div><div class='label'>".ucwords($trackItem)."</div></li>";
+
+                if ($track_init > 0) echo "<li><div class='value'><b>".number_format(($value / $track_init) * 100, 1).'%'."</b></div><div class='label'>".ucwords($trackItem)."</div></li>";
+
             endif;
         endforeach;
 

@@ -105,24 +105,30 @@ function battleplan_reorderAdminBar() {
 // Create additional admin pages
 add_action( 'admin_menu', 'battleplan_admin_menu' );
 function battleplan_admin_menu() {
-	$chronTime = timeElapsed( get_option('bp_chron_time'), 2, 'all', 'short');
-	$auditTime = timeElapsed( get_option('bp_audit_time'), 2, 'all', 'short');
+	$auditTime          = get_option('bp_audit_time')        ? timeElapsed(get_option('bp_audit_time'),        1, 'all', 'full') . ' ago' : 'Never';
+	$chronGbpTime       = get_option('bp_chron_a_time')      ? timeElapsed(get_option('bp_chron_a_time'),      1, 'all', 'full') . ' ago' : 'Never';
+	$chronGbpApiTime    = get_option('bp_chron_a_api_time')  ? timeElapsed(get_option('bp_chron_a_api_time'),  1, 'all', 'full') . ' ago' : 'Never';
+	$chronHouseTime     = get_option('bp_chron_b_time')      ? timeElapsed(get_option('bp_chron_b_time'),      1, 'all', 'full') . ' ago' : 'Never';
+	$chronAnalyticsTime = get_option('bp_chron_c_time')      ? timeElapsed(get_option('bp_chron_c_time'),      1, 'all', 'full') . ' ago' : 'Never';
 
 	$siteUpdated = str_replace('-', '', get_option( "site_updated" ));
 	//add_menu_page( __( 'Run Chron', 'battleplan' ), __( 'Run Chron', 'battleplan' ), 'manage_options', 'run-chron', 'battleplan_force_run_chron', 'dashicons-performance', 3 );
 
+// Menu registration — no separate Run buttons needed
 	if ( _USER_LOGIN === "battleplanweb" ) :
-		add_submenu_page( 'index.php', '⚙️ Clear ALL', '⚙️ Clear ALL', 'manage_options', 'clear-all', 'battleplan_clear_all' );
-		add_submenu_page( 'index.php', '⚙️ Clear HVAC', '⚙️ Clear HVAC', 'manage_options', 'clear-hvac', 'battleplan_clear_hvac' );
-		add_submenu_page( 'index.php', '⚙️ Launch Site', '⚙️ Launch Site', 'manage_options', 'launch-site', 'battleplan_launch_site' );
-		add_submenu_page( 'index.php', '⚙️ Run Audit', '⚙️ Run Audit', 'manage_options', 'run-audit', 'battleplan_force_run_audit');
-
-		add_submenu_page( 'index.php', 'Site Audit', 'Site Audit <div class="admin-note">'.$auditTime.'</div>', 'manage_options', 'site-audit', 'battleplan_site_audit');
-		add_submenu_page( 'index.php', 'Run Chron', 'Run Chron <div class="admin-note">'.$chronTime.'</div>', 'manage_options', 'run-chron', 'battleplan_force_run_chron' );
+		add_submenu_page( 'index.php', 	'Framework '._BP_VERSION, 	'Framework '._BP_VERSION, 											'manage_options', 	 'themes.php' );
+		add_submenu_page( 'index.php',	'⚙️ Run Audit',       		'⚙️ Run Audit',        												'manage_options', 	'run-audit',         		'battleplan_force_run_audit' );
+		add_submenu_page( 'index.php',	'Site Audit',          		'Audit <div class="admin-note">'.$auditTime.'</div>',        	'manage_options', 	 'site-audit',      		 'battleplan_site_audit' );
+		add_submenu_page( 'index.php',	'Housekeeping', 			'Settings <div class="admin-note">'.$chronHouseTime.'</div>',	'manage_options', 	 'chron-house',     		 'battleplan_chron_housekeeping_status' );
+		add_submenu_page( 'index.php',	'GBP Sync',          		'GBP Sync <div class="admin-note">'.$chronGbpApiTime.'</div>',    	'manage_options', 	 'chron-gbp',       		 'battleplan_chron_gbp_status' );
+		add_submenu_page( 'index.php',	'Analytics',   				'Stats <div class="admin-note">'.$chronAnalyticsTime.'</div>',	'manage_options', 	 'chron-analytics', 		 'battleplan_chron_analytics_status' );
+		add_submenu_page( 'index.php', 	'⚙️ Clear ALL',        		'⚙️ Clear ALL',        												'manage_options', 	'clear-all',         		'battleplan_clear_all' );
+		add_submenu_page( 'index.php',	'⚙️ Clear HVAC',       		'⚙️ Clear HVAC',       												'manage_options', 	'clear-hvac',        		'battleplan_clear_hvac' );
+		add_submenu_page( 'index.php',	'⚙️ Launch Site',      		'⚙️ Launch Site',       												'manage_options', 	'launch-site',       		'battleplan_launch_site' );
 	endif;
 }
 
-
+// Menu registration
 function battleplan_addSitePage() {
 	echo '<h1>Admin Page</h1>';
 }
@@ -364,7 +370,6 @@ function battleplan_customize_admin_menus() {
 
 	add_submenu_page( 'edit.php?post_type=elements', 'Comments', 'Comments', 'manage_options', 'edit-comments.php' );
 	if ( _USER_LOGIN === "battleplanweb" ) add_submenu_page( 'edit.php?post_type=elements', 'Custom Fields', 'Custom Fields', 'manage_options', 'edit.php?post_type=acf-field-group' );
-	if ( _USER_LOGIN === "battleplanweb" ) add_submenu_page( 'edit.php?post_type=elements', 'Framework '._BP_VERSION, 'Framework '._BP_VERSION, 'manage_options', 'themes.php' );
 	if ( _USER_LOGIN === "battleplanweb" ) add_submenu_page( 'options-general.php', 'Options', 'Options', 'manage_options', 'options.php' );
 	add_submenu_page( 'tools.php', 'WP Engine', 'WP Engine', 'manage_options', 'options-general.php?page=wpengine-common' );
 
@@ -790,25 +795,46 @@ function battleplan_auto_add_image_category($attachment_id) {
     }
 }
 
-// Force clear all views for posts/pages
-function battleplan_force_run_chron() {
-	updateOption('bp_force_chron', true);
-	wp_safe_redirect( admin_url() );
-	exit;
-}
-
 function battleplan_force_run_audit() {
+    $customerInfo  = customer_info();
+    $auditInterval = isset($customerInfo['audit_delay'])
+        ? (int) $customerInfo['audit_delay']
+        : (86400 * 90);
+
     update_option('bp_audit_time', time());
-    update_option('bp_audit_next', time() + rand(2500000, 2700000));
+    update_option('bp_audit_next', time() + $auditInterval + rand(0, 3600));
     require_once get_template_directory() . '/functions-site-audit.php';
     bp_run_site_audit();
     wp_safe_redirect(admin_url('index.php?page=site-audit'));
     exit;
 }
 
+function battleplan_chron_gbp_status() {
+    update_option('bp_chron_a_time', time());
+    update_option('bp_chron_a_next', bp_next_nightly_window());
+    require_once get_template_directory() . '/functions-chron-gbp.php';
+    bp_run_chron_gbp(true);
+    wp_safe_redirect(admin_url());
+    exit;
+}
 
+function battleplan_chron_housekeeping_status() {
+    update_option('bp_chron_b_time', time());
+    update_option('bp_chron_b_next', bp_next_nightly_window());
+    require_once get_template_directory() . '/functions-chron-housekeeping.php';
+    bp_run_chron_housekeeping(true);
+    wp_safe_redirect(admin_url());
+    exit;
+}
 
-
+function battleplan_chron_analytics_status() {
+    update_option('bp_chron_c_time', time());
+    update_option('bp_chron_c_next', bp_next_nightly_window());
+    require_once get_template_directory() . '/functions-chron-analytics.php';
+    bp_run_chron_analytics(true);
+    wp_safe_redirect(admin_url());
+    exit;
+}
 
 
 // Add dialog boxes to shortcode helpers in text editor
@@ -1300,9 +1326,9 @@ function battleplan_site_audit() {
 			'ga4-sessions-7'    => 'Sessions (7d)',
 			'ga4-pageviews-7'   => 'Pageviews (7d)',
 			'ga4-engagement-7'  => 'Engagement Rate (7d)',
-			'ga4-sessions-30'   => 'Sessions (30d)',
-			'ga4-pageviews-30'  => 'Pageviews (30d)',
-			'ga4-engagement-30' => 'Engagement Rate (30d)',
+			'ga4-sessions-30'   => 'Sessions (1m)',
+			'ga4-pageviews-30'  => 'Pageviews (1m)',
+			'ga4-engagement-30' => 'Engagement Rate (1m)',
 			'ga4-sessions-90'   => 'Sessions (3m)',
 			'ga4-pageviews-90'  => 'Pageviews (3m)',
 			'ga4-engagement-90' => 'Engagement Rate (3m)',
@@ -1312,15 +1338,15 @@ function battleplan_site_audit() {
 			'ga4-sessions-365'    => 'Sessions (1yr)',
 			'ga4-pageviews-365'   => 'Pageviews (1yr)',
 			'ga4-engagement-365'  => 'Engagement Rate (1yr)',
-			'ga4-phone-30'      => 'Phone Clicks (30d)',
-			'ga4-email-30'      => 'Email Clicks (30d)',
+			'ga4-phone-30'      => 'Phone Clicks (1m)',
+			'ga4-email-30'      => 'Email Clicks (1m)',
 		],
 
         'Search Console' => [
-			'console-impressions-30'  => 'Impressions (30d)',
-			'console-clicks-30'       => 'Clicks (30d)',
-			'console-ctr-30'          => 'CTR (30d)',
-			'console-position-30'     => 'Avg Position (30d)',
+			'console-impressions-30'  => 'Impressions (1m)',
+			'console-clicks-30'       => 'Clicks (1m)',
+			'console-ctr-30'          => 'CTR (1m)',
+			'console-position-30'     => 'Avg Position (1m)',
 			'console-impressions-90'  => 'Impressions (3m)',
 			'console-clicks-90'       => 'Clicks (3m)',
 			'console-ctr-90'          => 'CTR (3m)',
@@ -1364,13 +1390,13 @@ function battleplan_site_audit() {
             'gmb-impressions-180'      	=> 'Impressions (6m)',
             'gmb-calls-180'            	=> 'Call Clicks (6m)',
             'gmb-website-clicks-180'   	=> 'Website Clicks (6m)',
-            'gbp-completeness'     	=> 'Profile Completeness',
+            'gbp-profile-strength' => 'Profile Strength',
         ],
 
         'Google Ads' => [
-            'ads-spend-30'       => 'Ad Spend (30d)',
-            'ads-clicks-30'      => 'Ad Clicks (30d)',
-            'ads-conversions-30' => 'Conversions (30d)',
+            'ads-spend-30'       => 'Ad Spend (1m)',
+            'ads-clicks-30'      => 'Ad Clicks (1m)',
+            'ads-conversions-30' => 'Conversions (1m)',
             'ads-cpa-30'         => 'Cost Per Conversion',
         ],
 
@@ -1381,9 +1407,12 @@ function battleplan_site_audit() {
             'landing'           => 'Landing Pages',
             'galleries'         => 'Galleries',
             'testimonials'      => 'Testimonials',
-            'testimonials-pct'  => 'Testimonials Seen %',
-            'coupon-pct'        => 'Coupon Seen %',
-            'finance-pct'       => 'Financing Seen %',
+            'testimonials-pct-30'  => 'Testimonials Seen (1m)',
+            'coupon-pct-30'        => 'Coupon Seen (1m)',
+            'finance-pct-30'       => 'Financing Seen (1m)',
+            'testimonials-pct-90'  => 'Testimonials Seen (3m)',
+            'coupon-pct-90'        => 'Coupon Seen (3m)',
+            'finance-pct-90'       => 'Financing Seen (3m)',
         ],
 
         'Miscellaneous' => [
@@ -1423,7 +1452,8 @@ function battleplan_site_audit() {
 		'gmb-impressions-180',
 		'gmb-calls-180',
 		'gmb-website-clicks-180',
-          'ads-spend-30',
+		'gbp-profile-strength',
+        'ads-spend-30',
 		'ads-clicks-30',
 		'ads-conversions-30',
 		'ads-cpa-30',
@@ -1433,14 +1463,16 @@ function battleplan_site_audit() {
 		'browserstack',
 	];
 
-    $lastDate = !empty($siteAudit) ? max(array_keys($siteAudit)) : null;
-    $auditGenerated = $lastDate
-	   ? 'Last audit: ' . date('M j, Y', strtotime($lastDate))
-	   : 'No audit data yet — run chron to populate';
+	$lastDate       = !empty($siteAudit) ? max(array_keys($siteAudit)) : null;
+	$nextAudit      = get_option('bp_audit_next');
+
+	$auditGenerated = $nextAudit
+		? 'Next audit due: ' . date('M j, Y', $nextAudit)
+		: '';
 
 	$page  = '<div class="wrap">';   // <-- = not .=
-	$page .= '<h1>Site Audit</h1>';
-    $page .= '<p class="description" style="color:#888">' . esc_html($auditGenerated) . '</p>';
+	$page .= '<h1 style="font-size: 28px; font-weight: bold;">Site Audit</h1>';
+    $page .= '<p style="font-size: 18px; margin-top:-5px; color:#888">' . esc_html($auditGenerated) . '</p>';
 
     $page .= '[clear height="20px"]';
     $page .= '<div class="scroll-stats">';
@@ -1459,7 +1491,8 @@ function battleplan_site_audit() {
 		$page .= '<thead><tr><th class="row-label">Metric</th>';
 		foreach ($dates as $date) {
 			$page .= '<th><span class="month">' . date('M j', strtotime($date)) . '</span><br>'
-				. date('Y', strtotime($date)) . '</th>';
+				. date('Y', strtotime($date))
+				. '<br><a class="bp-delete-audit-date" data-date="' . esc_attr($date) . '" style="color:#cc0000;cursor:pointer;font-size:11px;">✕ delete</a></th>';
 		}
 		$page .= '</tr></thead><tbody>';
 
@@ -1511,7 +1544,7 @@ function battleplan_site_audit() {
 
     $page .= '[/col][/layout][/section]</div></div>';
 
-	$page = str_ireplace(['>N/A</td>', '>n/a</td>', '>N/A%</td>', '> </td>', '></td>'], '>—</td>', $page);
+	$page = str_ireplace(['>false</td>', '>N/A</td>', '>n/a</td>', '>N/A%</td>', '> </td>', '></td>'], '>—</td>', $page);
 
     echo do_shortcode($page);
 
@@ -1541,6 +1574,19 @@ function battleplan_site_audit() {
 						if (e.key === "Escape") td.textContent = current || "—";
 					});
 				});
+			});
+		});
+
+		document.querySelectorAll(".bp-delete-audit-date").forEach(link => {
+			link.addEventListener("click", function() {
+				if (!confirm("Delete audit data for " + this.dataset.date + "?")) return;
+				const data = new FormData();
+				data.append("action", "bp_delete_audit_date");
+				data.append("nonce",  bpAudit.nonce);
+				data.append("date",   this.dataset.date);
+				fetch(bpAudit.ajaxUrl, { method: "POST", body: data })
+					.then(r => r.json())
+					.then(r => { if (r.success) location.reload(); });
 			});
 		});
 
@@ -1603,5 +1649,17 @@ function bp_ajax_save_audit_field() {
     $history[$date][$key] = $value;
     update_option('bp_site_audit_details', $history, false);
 
+    wp_send_json_success();
+}
+
+add_action('wp_ajax_bp_delete_audit_date', 'bp_ajax_delete_audit_date');
+function bp_ajax_delete_audit_date() {
+    check_ajax_referer('bp_audit_nonce', 'nonce');
+    if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+    $date = sanitize_text_field($_POST['date'] ?? '');
+    if (!$date) wp_send_json_error('Missing date');
+    $history = get_option('bp_site_audit_details') ?: [];
+    unset($history[$date]);
+    update_option('bp_site_audit_details', $history, false);
     wp_send_json_success();
 }

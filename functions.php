@@ -473,64 +473,48 @@ function convertTime($howMany, $howMuch) {
 }
 
 // Display time elapsed since a UNIX stamp
-function timeElapsed($time, $precision = 5, $display="all", $abbr="none") { // precision= 5, 4, 3, 2, 1, 0 (only use 0 if NOT using display=all)   // display=all, months, days, hours, minutes, seconds    // abbr=none, short (min sec hr), full (m s h)
-	$time = time() - intval($time);
-	$buildTime = '';
+function timeElapsed(int $time, int $precision = 5, string $display = 'all', string $abbr = 'none'): string {
+    $time = time() - $time;
 
-	if ( $abbr == "full" ) :
-		$month = $months = 'M';
-		$day = $days = 'd';
-		$hour = $hours = 'h';
-		$minute = $minutes = 'm';
-		$second = $seconds = 's';
-	elseif ( $abbr == "short" ) :
-		$month = $months = 'mo';
-		$day = $days = 'day';
-		$hour = $hours = 'hr';
-		$minute = $minutes = 'min';
-		$second = $seconds = 'sec';
-	else:
-		$month = 'month'; $months = 'months';
-		$day = 'day'; $days = 'days';
-		$hour = 'hour'; $hours = 'hours';
-		$minute = 'minute'; $minutes = 'minutes';
-		$second = 'second'; $seconds = 'seconds';
-	endif;
+    if ($abbr === 'full') {
+        [$month, $months, $day, $days, $hour, $hours, $minute, $minutes, $second, $seconds]
+            = ['M','M','d','d','h','h','m','m','s','s'];
+    } elseif ($abbr === 'short') {
+        [$month, $months, $day, $days, $hour, $hours, $minute, $minutes, $second, $seconds]
+            = ['mo','mo','day','day','hr','hr','min','min','sec','sec'];
+    } else {
+        [$month, $months, $day, $days, $hour, $hours, $minute, $minutes, $second, $seconds]
+            = ['month','months','day','days','hour','hours','minute','minutes','second','seconds'];
+    }
 
-	if ( $display == "month" || $display == "months" ) :
-		return number_format(($time/2592000)?? 0.0, $precision).' '.(number_format(($time/2592000)?? 0.0, $precision) == 1 ? $month : $months);
-	elseif ( $display == "day" || $display == "days" ) :
-		return number_format(($time/86400)?? 0.0, $precision).' '.(number_format(($time/86400)?? 0.0, $precision) == 1 ? $day : $days);
-	elseif ( $display == "hour" || $display == "hours" ) :
-		return number_format(($time/3600)?? 0.0, $precision).' '.(number_format(($time/3600)?? 0.0, $precision) == 1 ? $hour : $hours);
-	elseif ( $display == "minute" || $display == "minutes" ) :
-		return number_format(($time/60)?? 0.0, $precision).' '.(number_format(($time/60)?? 0.0, $precision) == 1 ? $minute : $minutes);
-	elseif ( $display == "second" || $display == "seconds" ) :
-		return number_format($time?? 0.0, $precision).' '.(number_format($time?? 0.0, $precision) == 1 ? $second : $seconds);
-	else:
-		$s = $time%60;
-		$m = floor(($time%3600)/60);
-		$h = floor(($time%86400)/3600);
-		$d = floor(($time%2592000)/86400);
-		$M = floor($time/2592000);
+    $singular = compact('month','day','hour','minute','second');
+    $plural   = ['month'=>$months,'day'=>$days,'hour'=>$hours,'minute'=>$minutes,'second'=>$seconds];
 
-		$timeElapsed = array( 'month'=>'', 'day'=>'', 'hour'=>'', 'minute'=>'', 'second'=>'' );
+    $divisors = ['month'=>2592000,'day'=>86400,'hour'=>3600,'minute'=>60,'second'=>1];
 
-		if ( $M > 0 ) $timeElapsed['month'] = $M.' '.$month;
-		if ( $d > 0 ) $timeElapsed['day'] = $d.' '.$day;
-		if ( $h > 0 ) $timeElapsed['hour'] = $h.' '.$hour;
-		if ( $m > 0 ) $timeElapsed['minute'] = $m.' '.$minute;
-		if ( $s > 0 ) $timeElapsed['second'] = $s.' '.$second;
+    // Single-unit display modes
+    if ($display !== 'all') {
+        $key = rtrim($display, 's'); // normalize 'days' -> 'day' etc
+        if (isset($divisors[$key])) {
+            $val   = number_format($time / $divisors[$key], $precision);
+            $label = ($val == 1) ? $singular[$key] : $plural[$key];
+            return "$val $label";
+        }
+    }
 
-		if ( $M > 1 ) $timeElapsed['month'] = $M.' '.$months;
-		if ( $d > 1 ) $timeElapsed['day'] = $d.' '.$days;
-		if ( $h > 1 ) $timeElapsed['hour'] = $h.' '.$hours;
-		if ( $m > 1 ) $timeElapsed['minute'] = $m.' '.$minutes;
-		if ( $s > 1 ) $timeElapsed['second'] = $s.' '.$seconds;
+    // Full breakdown
+    $remaining = $time;
+    $parts     = [];
 
-		$timeElapsed = array_filter($timeElapsed);
-		return implode(', ', array_slice($timeElapsed, 0, $precision));
-	endif;
+    foreach ($divisors as $key => $divisor) {
+        $val = ($key === 'second') ? $remaining : floor($remaining / $divisor);
+        $remaining -= $val * $divisor;
+        if ($val > 0) {
+            $parts[$key] = $val . ' ' . ($val == 1 ? $singular[$key] : $plural[$key]);
+        }
+    }
+
+    return implode(', ', array_slice($parts, 0, $precision));
 }
 
 // Convert Sizes
@@ -1583,7 +1567,8 @@ require_once get_template_directory().'/functions-grid.php';
 require_once get_template_directory().'/functions-public.php';
 if (file_exists(get_stylesheet_directory().'/functions-site.php')) require_once get_stylesheet_directory().'/functions-site.php';
 
-require_once get_template_directory().'/functions-chron-jobs.php';
+require_once get_template_directory() . '/functions-chron.php';
+
 if ( is_admin() || _USER_LOGIN == "battleplanweb" ) require_once get_template_directory().'/functions-admin.php';
 if (!empty( get_site_option('bp_rovin_secret'))) { require_once get_template_directory() . '/functions-rovin.php'; }
 

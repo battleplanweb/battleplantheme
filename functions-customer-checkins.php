@@ -189,10 +189,7 @@ function bp_check_jobsite_geo_freshness() {
 function bp_analyze_stats_highlights() {
 
     $highlights = [];
-
     $daily   = get_option('bp_ga4_daily_clean');
-    $rollups = get_option('bp_ga4_rollups_clean');
-    $freshness_min = 90;
 
     if (!$daily || !is_array($daily)) return $highlights;
 
@@ -215,6 +212,8 @@ function bp_analyze_stats_highlights() {
     };
 
     // ---- This month vs last month ----
+    $thisMonthSessions    = $sumMetric(0, 29, 'sessions');
+    $sameMonthLastYear    = $sumMetric(365, 394, 'sessions');
     $lastMonthSessions = $sumMetric(30, 59, 'sessions');
 
     if ($lastMonthSessions > 0) {
@@ -232,9 +231,6 @@ function bp_analyze_stats_highlights() {
     }
 
     // ---- This month vs same month last year (seasonal comparison) ----
-    $thisMonthSessions    = $sumMetric(0, 29, 'sessions');
-    $sameMonthLastYear    = $sumMetric(365, 394, 'sessions');
-
     if ($sameMonthLastYear > 0) {
         $smlyChange = (($thisMonthSessions - $sameMonthLastYear) / $sameMonthLastYear) * 100;
         if ($smlyChange >= 10) {
@@ -635,10 +631,7 @@ function bp_analyze_review_highlights() {
 
     // Aggregate across all locations
     $totalReviews     = 0;
-    $totalRating      = 0.0;
     $weightedRating   = 0.0;
-    $weekReviews      = 0;
-    $monthReviews     = 0;
 
     foreach ($placeIDs as $placeID) {
         $info    = $google_info[$placeID] ?? [];
@@ -791,7 +784,7 @@ function bp_send_freshness_email($email, $name, $freshness) {
     ];
 
     $seo_options = [
-        "Google likes to see websites that evolve and change, because it signals you're business is healthy.",
+        "Google likes to see websites that evolve and change, because it signals your business is healthy.",
         "Search engines like Google favour websites that show signs of life. Fresh content signals that your site is active and relevant, which can help you rank higher and get found by more potential customers.",
         "Google pays attention to how often your site is updated. Sites that stay fresh tend to rank better ... meaning more people find you instead of your competitors.",
         "One of the quieter ranking factors search engines use is how regularly a site is updated. Keeping your content current sends a signal that your site is alive, active, and worth showing to people.",
@@ -859,7 +852,7 @@ function bp_send_freshness_email($email, $name, $freshness) {
         "If time is the issue, that's what we're here for. Send us a message and we'll handle the updates so you don't have to think about it.",
     ];
 
-    $sign_off_options = [
+    $signoff_options = [
         "Thanks,\nGlendon",
         "Talk soon,\nGlendon",
         "Have a great week,\nGlendon",
@@ -869,13 +862,13 @@ function bp_send_freshness_email($email, $name, $freshness) {
     ];
 
     $body = "Hi {$name},\n\n"
-        . $opening_options_1[array_rand($opening_options)] . " "
-        . $opening_options_2[array_rand($opening_options)] . "\n\n"
+        . $opening_options_1[array_rand($opening_options_1)] . " "
+        . $opening_options_2[array_rand($opening_options_2)] . "\n\n"
         . $seo_options[array_rand($seo_options)] . "\n\n"
         . $trust_options[array_rand($trust_options)] . "\n\n"
         . $effort_options[array_rand($effort_options)] . "\n\n"
         . $cta_options[array_rand($cta_options)] . "\n\n"
-        . $sign_off_options[array_rand($sign_off_options)];
+        . $signoff_options[array_rand($signoff_options)];
     wp_mail($email, $subject, $body);
     update_option('bp_freshness_email_last_sent', time());
 }
@@ -994,7 +987,7 @@ function bp_send_jobsite_geo_email($email, $name, $freshness) {
     ];
 
     // --- Sign off ---
-    $sign_off_options = [
+    $signoff_options = [
         "Thanks,\nGlendon",
         "As always, reach out if you need anything!\nGlendon",
         "Have a great week,\nGlendon",

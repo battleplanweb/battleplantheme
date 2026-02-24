@@ -1254,14 +1254,13 @@ function battleplan_site_audit() {
 		'lighthouse-desktop-cls'   => 'lighthouse-desktop-cls',
 		'back-total-links'         => 'back-total-links',
 		'back-domains'             => 'back-domains',
-		'back-local-links'         => 'cite-key-citations',
-		'cite-citations'           => 'cite-citations',
-		'cite-key-citations'       => 'cite-key-citations',
-		'cite-citation-score'      => 'cite-citation-score',
-		'console-clicks'      => 'console-clicks-28',
-		'console-position'    => 'console-position-28',
-		'console-impressions' => 'console-impressions-28',
-		'console-ctr'         => 'console-ctr-28',
+		'cite-key-citations'   	  => 'cite-key-citations',
+		'cite-citation-score'   	  => 'cite-citation-score',
+		'cite-total-citations'     => 'cite-total-citations',
+		'console-clicks'           => 'console-clicks-28',
+		'console-position'         => 'console-position-28',
+		'console-impressions'      => 'console-impressions-28',
+		'console-ctr'              => 'console-ctr-28',
 		'gmb-overview'             => 'gmb-impressions',
 		'gmb-calls'                => 'gmb-calls',
 		'gmb-clicks'               => 'gmb-website-clicks',
@@ -1365,15 +1364,20 @@ function battleplan_site_audit() {
 			'console-position-365'    => 'Avg Position (12m)',
 		],
 
-        'Backlinks' => [
-            'back-total-links' 		=> 'Total Links',
-            'back-domains'     		=> 'Linking Domains',
-		  'cite-citations'         	=> 'Total Citations',
-		  'cite-biz-directories'    	=> 'Business Directories',
-		  'cite-service-directories'	=> 'Service Directories',
-		  'cite-lead-gen'           	=> 'Lead Gen Platforms',
-		  'cite-social'             	=> 'Social Media',
-		  'cite-industry'           	=> 'Industry Sites',
+		'Backlinks' => [
+		    'back-total-links' 		=> 'Total Links',
+		    'back-domains'     		=> 'Linking Domains',
+		    'links-local-links'    	=> 'Local Links',
+		    'links-industry-links'	=> 'Industry Links',
+		    'links-social-links'     	=> 'Social Media',
+		    'links-directory-links'  	=> 'Directories',
+		    'links-press-links'      	=> 'Media / Press',
+		],
+
+		'Citations' => [
+			'cite-total-citations' 	=> 'Total Citations',
+			'cite-key-citations'	=> 'Key Citations',
+			'cite-citation-score'	=> 'Citation Score',
 	   ],
 
 	   'Page Indexing' => [
@@ -1424,7 +1428,6 @@ function battleplan_site_audit() {
             'html'			=> 'HTML Verified',
             'schema' 		=> 'Schema Verified',
             'browserstack'	=> 'Browser Stack',
-            'checkin'		=> 'Check-In Email',
         ],
 
 
@@ -1436,15 +1439,16 @@ function battleplan_site_audit() {
     $manualFields = [
 		'back-total-links',
 		'back-domains',
-		'cite-citations',
+		'links-links',
+		'links-local-links',
+		'links-industry-links',
+		'links-social-links',
+		'links-directory-links',
+		'links-press-links',
+		'index-pages-indexed',
+		'cite-total-citations',
 		'cite-key-citations',
 		'cite-citation-score',
-		'cite-biz-directories',
-		'cite-service-directories',
-		'cite-lead-gen',
-		'cite-social',
-		'cite-industry',
-		'index-pages-indexed',
 		'index-404-errors',
 		'index-redirect-errors',
 		'index-crawled-not',
@@ -1466,7 +1470,6 @@ function battleplan_site_audit() {
 		'html',
 		'schema',
 		'browserstack',
-		'checkin',
 	];
 
 	$lastDate       = !empty($siteAudit) ? max(array_keys($siteAudit)) : null;

@@ -745,7 +745,7 @@ function bp_send_freshness_email($email, $name, $freshness) {
     $subject_options = [
         "It's been {$timePhrase} ... time to freshen up your site",
         "Your website could use a refresh ... it's been {$timePhrase}",
-        "We haven't updated your site in {$timePhrase}",,
+        "We haven't updated your site in {$timePhrase}",
         "Checking in... we haven't added to your site in {$timePhrase}",
         "Website update?",
     ];

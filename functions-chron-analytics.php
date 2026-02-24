@@ -66,7 +66,7 @@ function bp_gsc_collect_top_queries(): void {
             'startDate'             => date('Y-m-d', strtotime("-{$days} days")),
             'endDate'               => date('Y-m-d', strtotime('-1 day')),
             'dimensions'            => ['query'],
-            'rowLimit'              => 10,
+            'rowLimit'              => 50,
             'orderBy'               => [['fieldName' => 'clicks', 'sortOrder' => 'DESCENDING']],
             'dimensionFilterGroups' => [[
                 'filters' => [[

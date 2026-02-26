@@ -211,10 +211,10 @@ function bp_analyze_stats_highlights() {
         return $total;
     };
 
-    // ---- This month vs last month ----
-    $thisMonthSessions    = $sumMetric(0, 29, 'sessions');
-    $sameMonthLastYear    = $sumMetric(365, 394, 'sessions');
-    $lastMonthSessions = $sumMetric(30, 59, 'sessions');
+    // ---- Rolling 30 days vs prior 30 days ----
+    $thisMonthSessions    = $sumMetric(0, 29, 'engagedSessions');
+    $sameMonthLastYear    = $sumMetric(365, 394, 'engagedSessions');
+    $lastMonthSessions    = $sumMetric(30, 59, 'engagedSessions');
 
     if ($lastMonthSessions > 0) {
         $momChange = (($thisMonthSessions - $lastMonthSessions) / $lastMonthSessions) * 100;
@@ -225,28 +225,30 @@ function bp_analyze_stats_highlights() {
                 'change'  => round($momChange, 1),
                 'current' => $thisMonthSessions,
                 'prior'   => $lastMonthSessions,
-                'label'   => "Traffic is up " . round($momChange, 1) . "% from last month",
+                'label'   => "Traffic is up " . round($momChange, 1) . "% over the past 30 days vs. the prior 30 days",
             ];
         }
     }
 
-    // ---- This month vs same month last year (seasonal comparison) ----
+    // ---- Rolling 30 days vs same 30-day window last year ----
     if ($sameMonthLastYear > 0) {
         $smlyChange = (($thisMonthSessions - $sameMonthLastYear) / $sameMonthLastYear) * 100;
         if ($smlyChange >= 10) {
+            $periodEnd   = date('M j', $anchorTs);
+            $periodStart = date('M j', strtotime('-29 days', $anchorTs));
             $highlights[] = [
                 'type'    => 'smly_sessions_up',
                 'change'  => round($smlyChange, 1),
                 'current' => $thisMonthSessions,
                 'prior'   => $sameMonthLastYear,
-                'label'   => "Traffic this " . date('F') . " is up " . round($smlyChange, 1) . "% compared to " . date('F', strtotime('-1 year')) . " last year",
+                'label'   => "Traffic for {$periodStart}–{$periodEnd} is up " . round($smlyChange, 1) . "% vs. the same period last year",
             ];
         }
     }
 
-     // ---- This quarter vs last quarter ----
-     $thisQuarterSessions = $sumMetric(0, 89, 'sessions');
-     $lastQuarterSessions = $sumMetric(90, 179, 'sessions');
+     // ---- Rolling 90 days vs prior 90 days ----
+     $thisQuarterSessions = $sumMetric(0, 89, 'engagedSessions');
+     $lastQuarterSessions = $sumMetric(90, 179, 'engagedSessions');
 
      if ($lastQuarterSessions > 0) {
           $qoqChange = (($thisQuarterSessions - $lastQuarterSessions) / $lastQuarterSessions) * 100;
@@ -256,14 +258,14 @@ function bp_analyze_stats_highlights() {
                     'change'  => round($qoqChange, 1),
                     'current' => $thisQuarterSessions,
                     'prior'   => $lastQuarterSessions,
-                    'label'   => "Traffic is up " . round($qoqChange, 1) . "% compared to last quarter",
+                    'label'   => "Traffic is up " . round($qoqChange, 1) . "% over the past 90 days vs. the prior 90 days",
                ];
           }
      }
 
-     // ---- This quarter vs same quarter last year ----
-     $thisQuarterSessions  = $sumMetric(0, 89, 'sessions');
-     $sameQuarterLastYear  = $sumMetric(365, 454, 'sessions');
+     // ---- Rolling 90 days vs same 90-day window last year ----
+     $thisQuarterSessions  = $sumMetric(0, 89, 'engagedSessions');
+     $sameQuarterLastYear  = $sumMetric(365, 454, 'engagedSessions');
 
      if ($sameQuarterLastYear > 0) {
           $sqlyChange = (($thisQuarterSessions - $sameQuarterLastYear) / $sameQuarterLastYear) * 100;
@@ -273,14 +275,14 @@ function bp_analyze_stats_highlights() {
                     'change'  => round($sqlyChange, 1),
                     'current' => $thisQuarterSessions,
                     'prior'   => $sameQuarterLastYear,
-                    'label'   => "Traffic this quarter is up " . round($sqlyChange, 1) . "% compared to the same quarter last year",
+                    'label'   => "Traffic over the past 90 days is up " . round($sqlyChange, 1) . "% vs. the same 90-day period last year",
                ];
           }
      }
 
-     // ---- This year vs last year ----
-     $thisYearSessions = $sumMetric(0, 364, 'sessions');
-     $lastYearSessions = $sumMetric(365, 729, 'sessions');
+     // ---- Rolling 12 months vs prior 12 months ----
+     $thisYearSessions = $sumMetric(0, 364, 'engagedSessions');
+     $lastYearSessions = $sumMetric(365, 729, 'engagedSessions');
 
      if ($lastYearSessions > 0) {
           $yoyChange = (($thisYearSessions - $lastYearSessions) / $lastYearSessions) * 100;
@@ -290,12 +292,12 @@ function bp_analyze_stats_highlights() {
                     'change'  => round($yoyChange, 1),
                     'current' => $thisYearSessions,
                     'prior'   => $lastYearSessions,
-                    'label'   => "Traffic is up " . round($yoyChange, 1) . "% compared to last year",
+                    'label'   => "Traffic is up " . round($yoyChange, 1) . "% over the past 12 months vs. the prior 12 months",
                ];
           }
      }
 
-     // ---- This month compared to same month in prior years ----
+     // ---- Same 30-day window compared across prior years ----
      $currentMonth     = (int)date('n'); // 1-12
      $currentMonthName = date('F');
      $monthHistogram   = [];
@@ -315,36 +317,39 @@ function bp_analyze_stats_highlights() {
           // Skip if offsets are negative (future) or beyond our data
           if ($startOffset < 0) continue;
 
-          $total = $sumMetric($startOffset, $endOffset, 'sessions');
+          $total = $sumMetric($startOffset, $endOffset, 'engagedSessions');
 
           if ($total > 0) {
                $monthHistogram[] = [
                     'year'     => date('Y', $monthStart),
-                    'sessions' => $total,
+                    'engagedSessions' => $total,
                ];
           }
      }
 
-     // Need at least 3 years of same-month data
+     // Need at least 3 years of same-window data
      if (count($monthHistogram) >= 3) {
 
           // Sort oldest to newest
           usort($monthHistogram, fn($a, $b) => $a['year'] <=> $b['year']);
 
-          // Check for consistent growth in this month across years
+          // Check for consistent growth in this window across years
           $monthGrowthRates  = [];
           $monthGrowthCount  = 0;
           $monthTrendLines   = [];
 
+          // Build a label describing the rolling window, e.g. "Jan 26–Feb 25"
+          $windowLabel = date('M j', strtotime('-29 days', $anchorTs)) . '–' . date('M j', $anchorTs);
+
           for ($i = 0; $i < count($monthHistogram); $i++) {
 
                $entry = $monthHistogram[$i];
-               $line  = $entry['year'] . ': ' . number_format($entry['sessions']) . ' sessions';
+               $line  = $entry['year'] . ': ' . number_format($entry['engagedSessions']) . ' engaged sessions';
 
                if ($i > 0) {
-                    $prior  = $monthHistogram[$i - 1]['sessions'];
+                    $prior  = $monthHistogram[$i - 1]['engagedSessions'];
                     $change = $prior > 0
-                         ? round((($entry['sessions'] - $prior) / $prior) * 100, 1)
+                         ? round((($entry['engagedSessions'] - $prior) / $prior) * 100, 1)
                          : 0;
 
                     $monthGrowthRates[] = $change;
@@ -366,8 +371,8 @@ function bp_analyze_stats_highlights() {
           if ($monthGrowthCount >= 2) {
 
                $label = $monthGrowthCount === $totalComparisons
-                    ? "{$currentMonthName} has grown every year on record, averaging {$avgMonthGrowth}% growth"
-                    : "{$currentMonthName} has grown in {$monthGrowthCount} of the last {$totalComparisons} years";
+                    ? "Traffic for the {$windowLabel} window has grown year-over-year every year on record, averaging {$avgMonthGrowth}% growth"
+                    : "Traffic for the {$windowLabel} window has grown year-over-year in {$monthGrowthCount} of the last {$totalComparisons} years";
 
                $highlights[] = [
                     'type'        => 'month_historical',
@@ -380,18 +385,18 @@ function bp_analyze_stats_highlights() {
           }
      }
 
-     // ---- Multi-year trend analysis ----
+     // ---- Multi-year trend analysis (rolling 12-month windows) ----
      $yearTotals = [];
 
      for ($y = 0; $y < 6; $y++) {
           $startOffset = $y * 365;
           $endOffset   = ($y + 1) * 365 - 1;
-          $total       = $sumMetric($startOffset, $endOffset, 'sessions');
+          $total       = $sumMetric($startOffset, $endOffset, 'engagedSessions');
 
           if ($total > 0) {
                $yearTotals[$y] = [
                     'year'     => date('Y', strtotime("-{$y} years")),
-                    'sessions' => $total,
+                    'engagedSessions' => $total,
                ];
           }
      }
@@ -399,15 +404,15 @@ function bp_analyze_stats_highlights() {
      // Need at least 3 years to identify a trend
      if (count($yearTotals) >= 3) {
 
-          // Check for consistent year-over-year growth
-          // $yearTotals[0] = most recent year, $yearTotals[1] = year before, etc.
+          // Check for consistent year-over-year growth across rolling 12-month windows
+          // $yearTotals[0] = most recent 12 months, $yearTotals[1] = prior 12 months, etc.
           $growthRates    = [];
           $consistentGrow = true;
           $yearsOfGrowth  = 0;
 
           for ($i = 0; $i < count($yearTotals) - 1; $i++) {
-               $current = $yearTotals[$i]['sessions'];
-               $prior   = $yearTotals[$i + 1]['sessions'];
+               $current = $yearTotals[$i]['engagedSessions'];
+               $prior   = $yearTotals[$i + 1]['engagedSessions'];
 
                if ($prior <= 0) break;
 
@@ -425,17 +430,17 @@ function bp_analyze_stats_highlights() {
           $trendLines = [];
           for ($i = count($yearTotals) - 1; $i >= 0; $i--) {
                $entry = $yearTotals[$i];
-               $line  = $entry['year'] . ': ' . number_format($entry['sessions']) . ' sessions';
+               $line  = $entry['year'] . ': ' . number_format($entry['engagedSessions']) . ' engaged sessions';
 
                if (isset($growthRates[$i])) {
                     $arrow = $growthRates[$i] >= 0 ? '↑' : '↓';
-                    $line .= ' (' . $arrow . ' ' . abs($growthRates[$i]) . '% vs prior year)';
+                    $line .= ' (' . $arrow . ' ' . abs($growthRates[$i]) . '% vs prior 12-month period)';
                }
 
                $trendLines[] = $line;
           }
 
-          // Only highlight if we have consistent growth across at least 3 years
+          // Only highlight if we have consistent growth across at least 3 rolling 12-month periods
           if ($consistentGrow && $yearsOfGrowth >= 3) {
 
                $avgGrowth = round(array_sum($growthRates) / count($growthRates), 1);
@@ -445,37 +450,38 @@ function bp_analyze_stats_highlights() {
                     'years'       => $yearsOfGrowth,
                     'avg_growth'  => $avgGrowth,
                     'trend_lines' => $trendLines,
-                    'label'       => "Your website has grown consistently for {$yearsOfGrowth} years in a row, averaging {$avgGrowth}% growth per year",
+                    'label'       => "Your website has grown for {$yearsOfGrowth} consecutive 12-month periods, averaging {$avgGrowth}% growth per period",
                ];
 
           } elseif ($yearsOfGrowth >= 2) {
 
-               // Partial trend ... still worth mentioning
+               // Partial trend — still worth mentioning
                $highlights[] = [
                     'type'        => 'multi_year_trend',
                     'years'       => $yearsOfGrowth,
                     'avg_growth'  => round(array_sum(array_slice($growthRates, 0, $yearsOfGrowth)) / $yearsOfGrowth, 1),
                     'trend_lines' => $trendLines,
-                    'label'       => "Your website has grown in {$yearsOfGrowth} of the last " . count($growthRates) . " years",
+                    'label'       => "Your website has grown in {$yearsOfGrowth} of the last " . count($growthRates) . " rolling 12-month periods",
                ];
           }
      }
 
-    // ---- Engagement rate this month ----
-    $thisMonthEngaged  = $sumMetric(0, 29, 'engagedSessions');
-    $engagementRate    = $thisMonthSessions > 0
-        ? round(($thisMonthEngaged / $thisMonthSessions) * 100, 1)
+    // ---- Engagement rate — past 30 days ----
+    // $thisMonthSessions already holds engaged sessions; we need total sessions to compute the rate
+    $totalSessions30 = $sumMetric(0, 29, 'sessions');
+    $engagementRate  = $totalSessions30 > 0
+        ? round(($thisMonthSessions / $totalSessions30) * 100, 1)
         : 0;
 
     if ($engagementRate >= 60) {
         $highlights[] = [
             'type'  => 'high_engagement',
             'value' => $engagementRate,
-            'label' => "Engagement rate is strong at {$engagementRate}% this month",
+            'label' => "Engagement rate over the past 30 days is strong at {$engagementRate}%",
         ];
     }
 
-    // ---- Phone/email conversions ----
+    // ---- Phone/email conversions — past 30 days ----
     $content_data = get_option('bp_ga4_content_clean');
     if ($content_data && is_array($content_data)) {
 
@@ -494,12 +500,12 @@ function bp_analyze_stats_highlights() {
                            _n('click', 'clicks', $phoneCalls) .
                            ($emails > 0 ? " and " . number_format($emails) . " email " .
                            _n('click', 'clicks', $emails) : '') .
-                           " tracked this month",
+                           " tracked over the past 30 days",
             ];
         }
     }
 
-    // ---- Top referring source ----
+    // ---- Top referring source — past 30 days ----
     $referrers = get_option('bp_ga4_referrers_clean');
     if ($referrers && is_array($referrers)) {
 
@@ -522,13 +528,13 @@ function bp_analyze_stats_highlights() {
                 'type'  => 'top_referrer',
                 'ref'   => $topLabel,
                 'count' => $period[$topRef],
-                'label' => "Top traffic source this month: {$topLabel} with " .
+                'label' => "Top traffic source over the past 30 days: {$topLabel} with " .
                            number_format($period[$topRef]) . " engaged sessions",
             ];
         }
     }
 
-    // ---- Top 3 pages (excluding home & contact) ----
+    // ---- Top 3 pages — past 30 days (excluding home & contact) ----
      $pages_data = get_option('bp_ga4_pages_clean');
      if ($pages_data && is_array($pages_data)) {
 
@@ -558,12 +564,12 @@ function bp_analyze_stats_highlights() {
                $highlights[] = [
                     'type'  => 'top_pages',
                     'pages' => $topPages,
-                    'label' => 'Most visited pages this month: ' . implode(', ', $pageLines),
+                    'label' => 'Most visited pages over the past 30 days: ' . implode(', ', $pageLines),
                ];
           }
      }
 
-     // ---- Top service area towns by traffic ----
+     // ---- Top service area towns — past 30 days ----
      $customer_info = customer_info();
      $serviceAreas  = $customer_info['service-areas'] ?? [];
      $locations     = get_option('bp_ga4_locations_clean');
@@ -601,7 +607,7 @@ function bp_analyze_stats_highlights() {
                $highlights[] = [
                     'type'   => 'top_towns',
                     'towns'  => $matchedTowns,
-                    'label'  => 'Top service area towns this month: ' . implode(', ', array_map(
+                    'label'  => 'Top service area towns over the past 30 days: ' . implode(', ', array_map(
                          fn($city, $visits) => "{$city} (" . number_format($visits) . " visits)",
                          array_keys($matchedTowns),
                          $matchedTowns
@@ -612,7 +618,6 @@ function bp_analyze_stats_highlights() {
 
     return $highlights;
 }
-
 
 /*--------------------------------------------------------------
 # Google Reviews Analysis (separate from stats highlights

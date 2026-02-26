@@ -233,19 +233,20 @@ document.addEventListener("DOMContentLoaded", function () {
 		let currentPosition = mobileMenuBarH(),
 			pagePadding = 0;
 
-		stuckEls.forEach(stuck => {
+		// Read all heights first
+		const stuckHeights = stuckEls.map(stuck => stuck.offsetHeight);
+
+		// Then write
+		stuckEls.forEach((stuck, i) => {
 			const data = lockedDivs.find(d => d.elementObj === stuck);
 			if (!data) return;
-
 			currentPosition += data.lockPos || 0;
 			stuck.style.top = `${currentPosition}px`;
-
-			currentPosition += stuck.offsetHeight;
-
+			currentPosition += stuckHeights[i];
 			if (!stuck.classList.contains('no-doc-flow')) {
-				pagePadding += stuck.offsetHeight;
+				pagePadding += stuckHeights[i];
 			}
-		});
+			});
 
 		if (bp_page) bp_page.style.paddingTop = pagePadding + "px";
 	};
@@ -257,35 +258,39 @@ document.addEventListener("DOMContentLoaded", function () {
 	window.controlLockedDivs = function () {
 		let lockedH = 0;
 
-		lockedDivs.forEach(divData => {
+		// Batch reads first
+		const snapshots = lockedDivs.map(divData => ({
+			divData,
+			triggerTop: divData.triggerObj.offsetTop,
+			elementH: divData.elementObj.offsetHeight,
+			isStuck: divData.elementObj.classList.contains('stuck'),
+		}));
+
+		// Then writes
+		snapshots.forEach(({ divData, triggerTop, elementH, isStuck }) => {
 			lockedH += divData.lockPos;
 			divData.pageY = window.pageYOffset + lockedH;
 
-			const triggerPos =
-				divData.triggerObj.offsetTop -
-				divData.elementObj.offsetHeight -
-				divData.triggerAdj;
+			const triggerPos = triggerTop - elementH - divData.triggerAdj;
 
 			if (divData.pageY >= triggerPos) {
-				if (!divData.elementObj.classList.contains('stuck')) {
+				if (!isStuck) {
 					divData.elementObj.classList.add("stuck");
 					divData.elementObj.style.top = lockedH + "px";
 					lockAlign();
 				}
 			} else {
-				if (divData.elementObj.classList.contains('stuck')) {
+				if (isStuck) {
 					divData.elementObj.classList.remove("stuck");
-
 					if (!divData.elementObj.classList.contains('fixed-at-load')) {
 						divData.elementObj.style.top = "unset";
 					}
 					lockAlign();
 				}
 			}
-
-			lockedH += divData.elementObj.offsetHeight;
+			lockedH += elementH;
 		});
-	}
+	 };
 
 
 	// Set up scroll listener to handle various events
@@ -304,15 +309,16 @@ document.addEventListener("DOMContentLoaded", function () {
 	window.lockColophon = function () {
 		const colophonObj = getObject('#colophon');
 		if (!colophonObj) return;
-		let colophonH = colophonObj.offsetHeight;
 
+		// Batch reads first
+		const colophonH = colophonObj.offsetHeight;
+		const badge = getObject('.wp-gr.wp-google-badge');
+		const badgeH = badge ? badge.offsetHeight : 0;
+
+		// Then writes
 		if (colophonH < getDeviceH() && !getObject('body').classList.contains('background-image')) {
 			const pageObj = colophonObj.previousElementSibling;
 			pageObj.style.marginBottom = colophonH + "px";
-
-			const badge = getObject('.wp-gr.wp-google-badge');
-			const badgeH = badge ? badge.offsetHeight : 0;
-
 			setStyles(colophonObj, {
 				position: 'fixed',
 				bottom: `${badgeH}px`,
@@ -320,7 +326,7 @@ document.addEventListener("DOMContentLoaded", function () {
 				zIndex: 1
 			});
 		}
-	};
+	 };
 
 
 	// Animate the automated scrolling to section of content
@@ -1083,10 +1089,15 @@ form.addEventListener('wpcf7submit', function() {
 
 		// Get elements and shuffle non-locked widgets
 		const widgets = getObjects('.widget:not(.lock-to-top):not(.lock-to-bottom):not(.widget-financing):not(.widget-event)');
-		const parent = widgets[0] ? widgets[0].parentNode : null;
 		const bottomWidgets = getObjects(".widget.lock-to-bottom");
 		const financingWidgets = getObjects('.widget.widget-financing');
 		const eventWidgets = getObjects('.widget.widget-event');
+
+		// Get parent from whichever group has elements
+		const allWidgets = [...eventWidgets, ...financingWidgets, ...widgets, ...bottomWidgets];
+		const parent = allWidgets[0] ? allWidgets[0].parentNode : null;
+
+		if (!parent) return; // Nothing to do
 
 		// Remove elements from DOM to reinsert in new order
 		widgets.forEach(widget => widget.remove());
@@ -1534,7 +1545,6 @@ form.addEventListener('wpcf7submit', function() {
 	// Animate single element (using CSS in site-style.css)
 	window.animateCSS = function (elementSel, delay = 0, offset = "100%", speed = 1000, easing = 'ease') {
 		const elementObj = getObjects(elementSel);
-		console.log('animateCSS found:', elementObj.length);
 		if (!elementObj.length) return;
 
 		elementObj.forEach(element => {
@@ -2080,12 +2090,12 @@ form.addEventListener('wpcf7submit', function() {
 	}
 
 	if (subMenu) {
-		subMenu.forEach(sub => {
-			const subH = sub.offsetHeight;
-			closeSubMenu(sub);
+		const subHeights = subMenu.map(sub => sub.offsetHeight); // all reads first
+		subMenu.forEach((sub, i) => {
+			closeSubMenu(sub); // writes
 			sub.parentElement.addEventListener('click', () => {
 				if (!sub.classList.contains("active")) {
-					openSubMenu(sub, subH);
+					openSubMenu(sub, subHeights[i]);
 				} else {
 					closeSubMenu(sub);
 				}
@@ -2266,6 +2276,11 @@ form.addEventListener('wpcf7submit', function() {
  --------------------------------------------------------------*/
 	window.screenResize = function () {
 		const thisDeviceW = getDeviceW();
+		// Batch reads before any writes
+		const page = getObject('#page');
+		const wrap = getObject('#wrapper-content');
+		const pageH = page ? page.offsetHeight : 0;
+
 		document.body.classList.remove('screen-5', 'screen-4', 'screen-3', 'screen-2', 'screen-1', 'screen-mobile', 'screen-desktop');
 
 		thisDeviceW > 1280 ? document.body.classList.add("screen-5", "screen-desktop") :
@@ -2308,34 +2323,41 @@ form.addEventListener('wpcf7submit', function() {
 
 
 		// Ensure "-faux" elements remain correct size
+		// Batch reads first
+		const fauxUpdates = [];
 		getObjects('div[class*="-faux"]').forEach(fauxDiv => {
 			let fauxClass = `.${fauxDiv.className.replace(/\s+/g, '.')}`;
 			let mainClass = fauxClass.replace("-faux", "");
-			const mainElement = getObject(mainClass);
+			let mainElement = getObject(mainClass);
 
 			if (!mainElement) {
 				let mainID = `#${fauxDiv.className.replace(/\s+/g, '#')}`;
 				mainClass = mainID.replace("-faux", "");
+				mainElement = getObject(mainClass);
 			}
 
 			if (mainElement && window.getComputedStyle(mainElement).display !== 'none') {
-				getObjects(fauxClass).forEach(el => el.style.height = `${mainElement.offsetHeight}px`);
-				getObjects('.wp-google-badge-faux').forEach(el => {
-					const badge = getObject('.wp-google-badge');
-					if (badge) el.style.height = `${badge.offsetHeight}px`;
-				});
+				const h = mainElement.offsetHeight; // read
+				fauxUpdates.push({ selector: fauxClass, height: h });
 			} else {
-				getObjects(fauxClass).forEach(el => el.style.height = '0px');
+				fauxUpdates.push({ selector: fauxClass, height: 0 });
 			}
 		});
 
+		const badge = getObject('.wp-google-badge');
+		const badgeH = badge && window.getComputedStyle(badge).display !== 'none'
+			? badge.offsetHeight
+			: 0;
 
-		// If total height of page is less than screen height, add min-height to #wrapper-content
-		const page = getObject('#page');
-		const wrap = getObject('#wrapper-content');
+		// Then batch writes
+		fauxUpdates.forEach(({ selector, height }) => {
+			getObjects(selector).forEach(el => el.style.height = `${height}px`);
+		});
+		getObjects('.wp-google-badge-faux').forEach(el => el.style.height = `${badgeH}px`);
+
 
 		if (page && wrap) {
-			if (getDeviceH() > page.offsetHeight) {
+			if (getDeviceH() > pageH) {
 				wrap.classList.add("extended");
 			} else {
 				wrap.classList.remove("extended");
@@ -2386,30 +2408,30 @@ form.addEventListener('wpcf7submit', function() {
 
 		// When using parallax in #wrapper-top, determine which background to load for desktop or mobile
 		getObjects('.load-bg-img').forEach(el => {
-			const w = window.innerWidth
-			const iw = parseInt(el.dataset.imgWidth)
-			const ih = parseInt(el.dataset.imgHeight)
-			const ratio = iw && ih ? iw / ih : 2
-			const b = el.dataset.imgBase
-			const e = el.dataset.imgExt
-			const r = w <= 480 ? 480 : w <= 640 ? 640 : w <= 960 ? 960 : w <= 1280 ? 1280 : 1920;
-			const h = Math.round(r / ratio)
-			const src = `${b}-${r}x${h}.${e}`
+			const w = window.innerWidth;
+			const iw = parseInt(el.dataset.imgWidth);
+			const ih = parseInt(el.dataset.imgHeight);
+			const hh = parseInt(el.dataset.holderHeight);
+			const ratio = iw && ih ? iw / ih : 2;
+			const b = el.dataset.imgBase;
+			const e = el.dataset.imgExt;
+			const dpr = window.devicePixelRatio || 1;
+			const effective = w * dpr;
+			const r = effective <= 480 ? 480 : effective <= 640 ? 640 : effective <= 960 ? 960 : effective <= 1280 ? 1280 : effective <= 1536 ? 1536 : 1920;
+			const h = Math.round(r / ratio);
+			const src = r >= iw ? `${b}.${e}` : `${b}-${r}x${h}.${e}`;
 
-			const link = document.createElement('link')
-			link.rel = 'preload'
-			link.as = 'image'
-			link.href = src
-			document.head.appendChild(link)
+			const minH = hh > h * 0.8 ? Math.round(h * 0.8) : hh;
 
-			el.style.backgroundImage = `url(${src})`
-			el.style.height = `auto`
-			el.style.minHeight = `${h}px`
-			el.classList.add(`screen-${r}`)
-
-			// 9/11/25 - Father Son Home Watch - changed height to auto, minHeight to height of background.  This keeps it from cutting off content if it exists, but still keeps the background visible if no content exists
-		})
+			el.style.backgroundImage = `url(${src})`;
+			el.style.backgroundSize = 'cover';
+			el.style.height = `auto`;
+			el.style.minHeight = `${minH}px`;
+			el.classList.add(`screen-${r}`);
+		 });
 	};
+
+	// 9/11/25 - Father Son Home Watch - changed height to auto, minHeight to height of background.  This keeps it from cutting off content if it exists, but still keeps the background visible if no content exists
 
 	/*--------------------------------------------------------------
    # ADA compliance

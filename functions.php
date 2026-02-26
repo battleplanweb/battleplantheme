@@ -812,22 +812,6 @@ function battleplan_random_seed($orderby_statement) {
     return $orderby_statement;
 }
 
-// Preload site-background.jpg or site-background.webp if it exists
-//add_action( 'wp_footer', 'battleplan_preload_bg' );
-function battleplan_preload_bg() {
-	$file = '';
-	if (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-background.jpg' ) ) :
-		$file = "site-background.jpg";
-	elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-background.webp' ) ) :
-		$file = "site-background.webp";
-	endif;
-	/*
-	if ( $file != '' ) : ?>
-		<script nonce="<?php echo _BP_NONCE; ?>">var preloadBG = new Image(); preloadBG.onload = function() { animateDiv( ".parallax-mirror", "fadeIn", 0, "", 200 ); }; preloadBG.src = "<?php echo wp_upload_dir()['baseurl']; ?>/<?php echo $file ?>";</script>
-	<?php endif;
-	*/
-}
-
 // Add some defining classes to body
 add_filter( 'body_class', 'battleplan_addBodyClasses', 30 );
 function battleplan_addBodyClasses( $classes ) {
@@ -1388,26 +1372,31 @@ function battleplan_enqueue_footer_scripts() {
 // Block jquery, add nonce to inline scripts, and defer to footer when appropriate
 add_filter('script_loader_tag', 'battleplan_add_data_attribute', 10, 3);
 function battleplan_add_data_attribute($tag, $handle, $src) {
-    if ( is_admin() || $GLOBALS['pagenow'] === 'wp-login.php' || strpos( $src, '.js' ) === FALSE ) return $tag;
+    if ( is_admin() || $GLOBALS['pagenow'] === 'wp-login.php' || strpos($src, '.js') === false ) return $tag;
 
+    // Remove jQuery if not required by any active plugin
     $is_jquery_required = false;
     foreach ($GLOBALS['requires_jquery'] as $plugin) {
-        if (is_plugin_active($plugin)) {
+        if ( is_plugin_active($plugin) ) {
             $is_jquery_required = true;
             break;
         }
     }
+    if ( !$is_jquery_required && ($handle === 'jquery' || $handle === 'jquery-js') ) return null;
 
-    if (!$is_jquery_required && ($handle === 'jquery' || $handle === 'jquery-js')) return null;
+    $is_cf7 = ( strpos($handle, 'wpcf7') !== false || strpos($handle, 'swv') !== false );
 
-    if ( $handle === 'contact-form-7-js' || $handle === 'swv-js' ) :
-		$tag = str_replace('<script ', '<script nonce="' . _BP_NONCE . '" ', $tag);
-        return $tag;
-	else:
-		$tag = str_replace('<script ', '<script nonce="' . _BP_NONCE . '" defer ', $tag);
-	    return $tag;
-	endif;
+    // Add nonce to all scripts
+    $tag = str_replace('<script ', '<script nonce="' . _BP_NONCE . '" ', $tag);
+
+    // Defer everything except CF7
+    if ( !$is_cf7 ) :
+        $tag = str_replace(' src=', ' defer src=', $tag);
+    endif;
+
+    return $tag;
 }
+
 
 // Replace Cloudflare email obfuscation
 add_action('wp_footer', function () {
@@ -2276,25 +2265,34 @@ function battleplan_redirect_testimonials() {
 
 // Check & store site background image
 function battleplan_fetch_background_image($clear=false) {
-	$imgData = get_option('bp_site_bg_img');
+    $imgData = get_option('bp_site_bg_img');
+    if ( $imgData === false || $imgData === null || $clear ) :
+        $imgData = null;
+        if ( is_file($_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-background.webp') ) :
+            $imgData = 'webp';
+        elseif ( is_file($_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-background.png') ) :
+            $imgData = 'png';
+        elseif ( is_file($_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-background.jpg') ) :
+            $imgData = 'jpg';
+        endif;
+        update_option('bp_site_bg_img', $imgData);
 
-	if ( $imgData === false || $imgData === null || $clear ) {
-		$imgData = null;
-
-		if (is_file($_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-background.webp')) {
-			$imgData = 'webp';
-		} elseif (is_file($_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-background.png')) {
-			$imgData = 'png';
-		} elseif (is_file($_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/site-background.jpg')) {
-			$imgData = 'jpg';
-		}
-
-		update_option('bp_site_bg_img', $imgData);
-	}
-
-	return $imgData;
+        // Register into preload system
+        if ( $imgData ) :
+            $preload_images = get_option('bp_preload_images', []);
+            $preload_images['desktop']['site-bg'] = [
+                'file'          => 'site-background.' . $imgData,
+                'attachment_id' => 0,
+            ];
+            $preload_images['mobile']['site-bg'] = [
+                'file'          => 'site-background-phone.' . $imgData,
+                'attachment_id' => 0,
+            ];
+            update_option('bp_preload_images', $preload_images, true);
+        endif;
+    endif;
+    return $imgData;
 }
-
 
 // Check & store correct site logo image
 function battleplan_fetch_site_logo($clear=false) {

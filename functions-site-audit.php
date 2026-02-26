@@ -247,13 +247,12 @@ function bp_run_site_audit() {
 
     $tracked = get_site_option('bp_ga4_tracked_elements') ?: [];
 
-    if (!empty($tracked['testimonials']['sessions_30'])) $entry['testimonials-pct-30'] = $tracked['testimonials']['pct_30'] . '%';
-    if (!empty($tracked['coupon']['sessions_30']))        $entry['coupon-pct-30']       = $tracked['coupon']['pct_30'] . '%';
-    if (!empty($tracked['financing']['sessions_30']))     $entry['finance-pct-30']      = $tracked['financing']['pct_30'] . '%';
-    if (!empty($tracked['testimonials']['sessions_90'])) $entry['testimonials-pct-90'] = $tracked['testimonials']['pct_90'] . '%';
-    if (!empty($tracked['coupon']['sessions_90']))        $entry['coupon-pct-90']       = $tracked['coupon']['pct_90'] . '%';
-    if (!empty($tracked['financing']['sessions_90']))     $entry['finance-pct-90']      = $tracked['financing']['pct_90'] . '%';
-
+    if (!empty($tracked['testimonials']['sessions-30']))  $entry['testimonials-pct-30'] = $tracked['testimonials']['sessions-30'];
+    if (!empty($tracked['coupon']['sessions-30']))         $entry['coupon-pct-30']       = $tracked['coupon']['sessions-30'];
+    if (!empty($tracked['financing']['sessions-30']))      $entry['finance-pct-30']      = $tracked['financing']['sessions-30'];
+    if (!empty($tracked['testimonials']['sessions-90']))  $entry['testimonials-pct-90'] = $tracked['testimonials']['sessions-90'];
+    if (!empty($tracked['coupon']['sessions-90']))         $entry['coupon-pct-90']       = $tracked['coupon']['sessions-90'];
+    if (!empty($tracked['financing']['sessions-90']))      $entry['finance-pct-90']      = $tracked['financing']['sessions-90'];
 
     // Write to history — overwrite if same date, otherwise append
     $existing = $history[$today] ?? [];

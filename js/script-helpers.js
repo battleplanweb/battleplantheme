@@ -66,9 +66,10 @@ window.setStyles = function (el, styles) {
 
 window.__BP_STYLE_SHEET__ = null;
 const RULE_PREFIX = '/*bp*/';
+window.__BP_STYLE_RULES__ = new Set();
 
 window.addCSS = function (rule) {
-	if (!rule) return;
+	if (!rule || window.__BP_STYLE_RULES__.has(rule)) return;
 
 	if (!window.__BP_STYLE_SHEET__) {
 		window.__BP_STYLE_SHEET__ = document.createElement('style');
@@ -78,16 +79,12 @@ window.addCSS = function (rule) {
 	const sheet = window.__BP_STYLE_SHEET__.sheet;
 	const taggedRule = RULE_PREFIX + rule;
 
-	const normalized = taggedRule.replace(/\s+/g, ' ').trim();
-
-	for (const r of sheet.cssRules) {
-		if (r.cssText.replace(/\s+/g, ' ').trim() === normalized) return;
-	}
-
 	try {
 		sheet.insertRule(taggedRule, sheet.cssRules.length);
+		window.__BP_STYLE_RULES__.add(rule);
 	} catch (_) { }
 };
+
 
 
 // Set, read & delete cookies
@@ -108,14 +105,11 @@ window.setCookie = function (name, value, days = 365) {
 
 
 window.getCookie = function (cname) {
-	const name = cname + "=";
-	const decodedCookie = decodeURIComponent(document.cookie);
-	const ca = decodedCookie.split(';');
-	for (let i = 0; i < ca.length; i++) {
-		const c = ca[i].trim();
-		if (c.indexOf(name) == 0) return c.substring(name.length);
-	}
-	return "";
+	const match = document.cookie
+		.split(';')
+		.map(c => c.trim())
+		.find(c => c.startsWith(cname + '='));
+	return match ? decodeURIComponent(match.substring(cname.length + 1)) : "";
 };
 
 window.deleteCookie = function (name) {
@@ -146,13 +140,16 @@ window.preloadImg = function (imgName, device = 'both') {
 	if (device === 'desktop' && getDeviceW() < window.mobileCutoff) return;
 
 	const img = new Image();
-	img.fetchPriority = 'low';
+	img.fetchpriority = 'low';
 	img.decoding = 'async';
 	img.src = imgName;
 };
 
 
-if (!document.body.classList.contains('wp-admin') && typeof site_bg === 'string' && site_bg) {
-	preloadImg('site-background.' + site_bg, 'desktop');
-	preloadImg('site-background-phone.' + site_bg, 'mobile');
-}
+const _initPreload = () => {
+	if (!document.body?.classList.contains('wp-admin') && typeof site_bg === 'string' && site_bg) {
+		preloadImg('site-background.' + site_bg, 'desktop');
+		preloadImg('site-background-phone.' + site_bg, 'mobile');
+	}
+};
+document.body ? _initPreload() : document.addEventListener('DOMContentLoaded', _initPreload);

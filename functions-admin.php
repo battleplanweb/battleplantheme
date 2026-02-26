@@ -14,9 +14,8 @@
 --------------------------------------------------------------*/
 
 
-
 //See all data points collected via Google Analytics
-//error_log('Rollups: ' . print_r(get_option('bp_ga4_rollups_clean'), true));
+//bp_preload_images('Rollups: ' . print_r(get_option('bp_ga4_rollups_clean'), true));
 
 
 /*--------------------------------------------------------------
@@ -1558,7 +1557,7 @@ function battleplan_site_audit() {
 
     $page .= '[/col][/layout][/section]</div></div>';
 
-    $page = str_ireplace(['>false</td>', '>N/A</td>', '>n/a</td>', '>N/A%</td>', '> </td>', '></td>'], '>—</td>', $page);
+    $page = str_ireplace(['>false</td>', '>Array</td>', '>N/A</td>', '>n/a</td>', '>N/A%</td>', '> </td>', '></td>'], '>—</td>', $page);
     $page = str_replace(')</span>—</td>', ')</span></td>', $page);
 
     echo do_shortcode($page);

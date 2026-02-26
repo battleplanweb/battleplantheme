@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", function () {
 				: 0;
 
 		let timer = null,
-			currentSlide = 0,
+			currentSlide = start >= 0 && start < slides.length ? start : 0,
 			direction = "right",
 			maxH = 0,
 			controlsHeight = 0;
@@ -178,15 +178,10 @@ document.addEventListener("DOMContentLoaded", function () {
 		-------------------------------------------------- */
 
 		document.addEventListener('keydown', e => {
-			if (e.keyCode === 37) {
-				prevSlide();
-				e.preventDefault();
-			}
-			if (e.keyCode === 39) {
-				nextSlide();
-				e.preventDefault();
-			}
-		});
+			if (!carousel.contains(document.activeElement) && document.activeElement !== document.body) return;
+			if (e.key === 'ArrowLeft') { prevSlide(); e.preventDefault(); }
+			if (e.key === 'ArrowRight') { nextSlide(); e.preventDefault(); }
+		 });
 
 		/* --------------------------------------------------
 		   Touch swipe
@@ -249,9 +244,6 @@ document.addEventListener("DOMContentLoaded", function () {
 		if (!slides.length) return;
 
 		slides.forEach(slide => slide.classList.remove('active'));
-
-		currentSlide = start >= 0 && start < slides.length ? start : 0;
-
 		slides[currentSlide].classList.add('active');
 		updateIndicators();
 		startAutoPlay();

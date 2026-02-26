@@ -21,59 +21,58 @@ if (!isset($GLOBALS['bp_inline_css_buffer'])) {
 }
 
 function bp_get_css_sources() {
+    $customer_info = customer_info();
 
-	$customer_info = customer_info();
-	$sources = [];
+    $critical = [
+        '/style-normalize.css',
+        '/style.css',
+        '/style-grid.css',
+        '/style-navigation.css',
+    ];
 
-	$sources[] = "/style-normalize.css";
-	$sources[] = '/style.css';
+    $deferred = [];
 
-	$sources[] = '/style-grid.css';
-	$sources[] = '/style-navigation.css';
-	$sources[] = '/style-testimonials.css';
+    $deferred[] = '/style-testimonials.css';
+    $deferred[] = '/style-forms.css';
 
-	$event_calendar = get_option('event_calendar');
-	if (is_array($event_calendar) && ($event_calendar['install'] ?? null) === 'true') {
-		$sources[] = '/style-events.css';
-	}
+    $event_calendar = get_option('event_calendar');
+    if (is_array($event_calendar) && ($event_calendar['install'] ?? null) === 'true') {
+        $deferred[] = '/style-events.css';
+    }
 
-	$timeline = get_option('timeline');
-	if (is_array($timeline) && ($timeline['install'] ?? null) === 'true') {
-		$sources[] = '/style-timeline.css';
-	}
+    $timeline = get_option('timeline');
+    if (is_array($timeline) && ($timeline['install'] ?? null) === 'true') {
+        $deferred[] = '/style-timeline.css';
+    }
 
-	if ( is_plugin_active('woocommerce/woocommerce.php') ) {
-		$sources[] = '/style-woocommerce.css';
-	}
+    if ( is_plugin_active('woocommerce/woocommerce.php') ) {
+        $deferred[] = '/style-woocommerce.css';
+    }
 
-	if ( is_plugin_active('stripe-payments/accept-stripe-payments.php') ) {
-		//$sources[] = '/style-stripe-payments.css';
-	}
+    if ( is_plugin_active('cue/cue.php') ) {
+        $deferred[] = '/style-cue.css';
+    }
 
-	if ( is_plugin_active('cue/cue.php') ) {
-		$sources[] = '/style-cue.css';
-	}
+    if (
+        isset($customer_info['site-type']) &&
+        in_array($customer_info['site-type'], ['profile','profiles'], true)
+    ) {
+        $deferred[] = '/style-user-profiles.css';
+    }
 
-	if (
-		isset($customer_info['site-type']) &&
-		in_array($customer_info['site-type'], ['profile','profiles'], true)
-	) {
-		$sources[] = '/style-user-profiles.css';
-	}
+    $start = strtotime(date("Y").'-12-01');
+    $end   = strtotime(date("Y").'-12-30');
+    if (
+        ($customer_info['cancel-holiday'] ?? 'false') === 'false' &&
+        time() > $start && time() < $end
+    ) {
+        $deferred[] = '/style-holiday.css';
+    }
 
-	$start = strtotime(date("Y").'-12-01');
-	$end   = strtotime(date("Y").'-12-30');
-
-	if (
-		($customer_info['cancel-holiday'] ?? 'false') === 'false' &&
-		time() > $start && time() < $end
-	) {
-		$sources[] = '/style-holiday.css';
-	}
-
-	$sources[] = '/style-forms.css';
-
-	return $sources;
+    return [
+        'critical' => $critical,
+        'deferred' => $deferred,
+    ];
 }
 
 
@@ -109,50 +108,63 @@ function bp_inline_minified_css($css_file) {
 }
 
 function bp_build_css_core() {
-	$dist = get_stylesheet_directory() . '/dist';
-	$core     = $dist . '/core.css';
-	$core_min = $dist . '/core.min.css';
+    $dist     = get_stylesheet_directory() . '/dist';
+    $sources  = bp_get_css_sources();
 
-	$missing = !file_exists($core) || !file_exists($core_min);
-	if ( !$missing && ( (is_admin() && !wp_doing_ajax()) || (defined('REST_REQUEST') && REST_REQUEST) || (defined('WP_CLI') && WP_CLI))	) return;
+    $files = [
+        'critical' => [
+            'css'     => $dist . '/core-critical.css',
+            'min'     => $dist . '/core-critical.min.css',
+            'sources' => $sources['critical'],
+        ],
+        'deferred' => [
+            'css'     => $dist . '/core-deferred.css',
+            'min'     => $dist . '/core-deferred.min.css',
+            'sources' => $sources['deferred'],
+        ],
+    ];
 
-	$sources = bp_get_css_sources();
+    if (!is_dir($dist)) wp_mkdir_p($dist);
 
-	if (!is_dir($dist)) wp_mkdir_p($dist);
+    foreach ( $files as $type => $config ) :
+        $missing = !file_exists($config['css']) || !file_exists($config['min']);
 
-	$core_mtime = max(
-		file_exists($core)     ? filemtime($core)     : 0,
-		file_exists($core_min) ? filemtime($core_min) : 0
-	);
+        if ( !$missing && ( (is_admin() && !wp_doing_ajax()) || (defined('REST_REQUEST') && REST_REQUEST) || (defined('WP_CLI') && WP_CLI) ) ) continue;
 
-	$latest_src = 0;
-	foreach ($sources as $rel) {
-		$path = get_template_directory() . $rel;
-		if (file_exists($path)) {
-			$latest_src = max($latest_src, filemtime($path));
-		}
-	}
+        $core_mtime = max(
+            file_exists($config['css']) ? filemtime($config['css']) : 0,
+            file_exists($config['min']) ? filemtime($config['min']) : 0
+        );
 
-	if (!$missing && $latest_src <= $core_mtime) {
-		return;
-	}
+        $latest_src = 0;
+        foreach ($config['sources'] as $rel) :
+            $path = get_template_directory() . $rel;
+            if (file_exists($path)) :
+                $latest_src = max($latest_src, filemtime($path));
+            endif;
+        endforeach;
 
-	$out  = "/* Battle Plan Core CSS */\n";
-	$out .= "/* Built: " . date('c') . " */\n\n";
+        if (!$missing && $latest_src <= $core_mtime) continue;
 
-	foreach ($sources as $rel) {
-		$path = get_template_directory() . $rel;
-		if (!file_exists($path)) {
-			$out .= "/* MISSING: {$path} */\n\n";
-			continue;
-		}
+        $out  = "@charset \"UTF-8\";\n";
+        $out .= "/* Battle Plan Core CSS - " . ucfirst($type) . " */\n";
+        $out .= "/* Built: " . date('c') . " */\n\n";
 
-		$out .= "/* ===== " . basename($path) . " ===== */\n";
-		$out .= file_get_contents($path) . "\n\n";
-	}
+        foreach ($config['sources'] as $rel) :
+            $path = get_template_directory() . $rel;
+            if (!file_exists($path)) :
+                $out .= "/* MISSING: {$path} */\n\n";
+                continue;
+            endif;
+            $contents = file_get_contents($path);
+            $contents = preg_replace('/@charset\s+["\'][^"\']*["\']\s*;/i', '', $contents);
+            $out .= "/* ===== " . basename($path) . " ===== */\n";
+            $out .= $contents . "\n\n";
+        endforeach;
 
-	file_put_contents($core, $out);
-	file_put_contents($core_min, bp_minify_css($out));
+        file_put_contents($config['css'], $out);
+        file_put_contents($config['min'], bp_minify_css($out));
+    endforeach;
 }
 
 function bp_build_site_css() {
@@ -190,46 +202,66 @@ function bp_build_site_css() {
 add_action('after_setup_theme', 'bp_build_css_core');
 add_action('after_setup_theme', 'bp_build_site_css');
 
+
+
+
+/*
 add_action('wp_enqueue_scripts', function () {
+    $file = _USER_LOGIN === 'battleplanweb' ? 'core-critical.css' : 'core-critical.min.css';
+    $path = get_stylesheet_directory() . '/dist/' . $file;
+    $url  = get_stylesheet_directory_uri() . '/dist/' . $file;
+    if (!file_exists($path)) return;
+    wp_enqueue_style('battleplan-core', $url, [], _BP_VERSION);
+}, 1);
+*/
 
-	$file = _USER_LOGIN === 'battleplanweb' ? 'core.css' : 'core.min.css';
+add_action('wp_head', function() {
+    if (is_admin()) return;
 
-	$path = get_stylesheet_directory() . '/dist/' . $file;
-	$url  = get_stylesheet_directory_uri() . '/dist/' . $file;
+    $file = _USER_LOGIN === 'battleplanweb' ? 'core-critical.css' : 'core-critical.min.css';
+    $path = get_stylesheet_directory() . '/dist/' . $file;
 
-	if (!file_exists($path)) return;
+    if (!file_exists($path)) return;
 
-	wp_enqueue_style( 'battleplan-core', $url, [], _BP_VERSION );
+    $critical_css = file_get_contents($path);
+    echo '<style id="battleplan-core-inline">' . $critical_css . '</style>';
 }, 1);
 
 add_action('wp_enqueue_scripts', function () {
+    $file = _USER_LOGIN === 'battleplanweb' ? 'core-deferred.css' : 'core-deferred.min.css';
+    $path = get_stylesheet_directory() . '/dist/' . $file;
+    $url  = get_stylesheet_directory_uri() . '/dist/' . $file;
+    if (!file_exists($path)) return;
+    //wp_enqueue_style('battleplan-deferred', $url, ['battleplan-core'], _BP_VERSION);
+    wp_enqueue_style('battleplan-deferred', $url, [], _BP_VERSION);
+}, 10);
 
-	$file = _USER_LOGIN === 'battleplanweb' ? 'site.css' : 'site.min.css';
-
-	$path = get_stylesheet_directory() . '/dist/' . $file;
-	$url  = get_stylesheet_directory_uri() . '/dist/' . $file;
-
-	if (!file_exists($path)) return;
-
-	wp_enqueue_style( 'battleplan-site', $url, ['battleplan-core'], _BP_VERSION);
-
+add_action('wp_enqueue_scripts', function () {
+    $file = _USER_LOGIN === 'battleplanweb' ? 'site.css' : 'site.min.css';
+    $path = get_stylesheet_directory() . '/dist/' . $file;
+    $url  = get_stylesheet_directory_uri() . '/dist/' . $file;
+    if (!file_exists($path)) return;
+    //wp_enqueue_style('battleplan-site', $url, ['battleplan-core'], _BP_VERSION);
+    wp_enqueue_style('battleplan-site', $url, [], _BP_VERSION);
 }, 20);
 
 add_filter('style_loader_tag', function($tag, $handle, $src) {
-    if ($handle !== 'battleplan-site') return $tag;
+    if ( is_admin() ) return $tag;
+    if ( $handle !== 'battleplan-deferred' && $handle !== 'battleplan-site' ) return $tag;
 
-    // Build async version with media='print' and onload
     $html = str_replace(' />', '>', $tag);
-    $html = str_replace("media='all'", "media='print' onload=\"this.media='all'\"", $html);
-    $html = str_replace('media="all"', "media='print' onload=\"this.media='all'\"", $html);
+    $html = str_replace("media='all'", "media='print' onload=\"this.onload=null;this.media='all'\"", $html);
+    $html = str_replace('media="all"', "media='print' onload=\"this.onload=null;this.media='all'\"", $html);
 
-    // Noscript fallback — plain tag, no id, no onload
     $noscript = preg_replace('/\smedia=(["\'])print\1/', '', $html, 1);
     $noscript = preg_replace('/\sid=(["\'])[^"\']*\1/', '', $noscript, 1);
     $noscript = preg_replace('/ onload=(["\'])[^"\']*\1/', '', $noscript, 1);
 
     return $html . "<noscript>" . $noscript . "</noscript>\n";
 }, 10, 3);
+
+
+
 
 add_action('wp_footer', function () {
 	if (is_admin() || empty($GLOBALS['bp_inline_css_buffer'])) return;

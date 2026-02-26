@@ -324,7 +324,7 @@ function battleplan_buildVid( $atts, $content = null ) {
 			'name'         => get_the_title(),
 			'description'  => get_the_excerpt() ?: get_the_title(),
 			'thumbnailUrl' => 'https://img.youtube.com/vi/' . $vid_id . '/maxresdefault.jpg',
-			'uploadDate'   => get_the_date('Y-m-d'),
+			'uploadDate' 	=> get_the_date('c'),
 			'embedUrl'     => 'https://www.youtube.com/embed/' . $vid_id,
 		];
 
@@ -509,46 +509,69 @@ function battleplan_buildParallax( $atts, $content = null ) {
 
 	$attachment_id = $hasImage ? attachment_url_to_postid(site_url().$image) : 0;
 	$alt_text = $attachment_id ? get_post_meta($attachment_id, '_wp_attachment_image_alt', true) : '';
+	$preload_images = get_option('bp_preload_images', []);
 
 	if ( $type === "col" ) : $div = "div"; else: $div = $type; endif;
 
 	if ( is_mobile() ) {
-
 		if ( $hasImage ) {
 			$mobileSrc = explode('.', $image);
-			if ( strpos($mobileSrc[0], "-1920x") !== false ) {
-				$mobileSrc[0] = substr($mobileSrc[0], 0, strpos($mobileSrc[0], "-1920x"));
-			}
-			$imgBase = $mobileSrc[0];
-			$imgExt  = $mobileSrc[1];
-			$placeholder = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8Xw8AAn8B9FXC5VwAAAAASUVORK5CYII=';
-			$ratio = $imgW && $imgH ? $imgW / $imgH : 2;
-			$initialH = round(480 / $ratio);
+			$imgExt    = array_pop($mobileSrc);
+			$imgBase   = implode('.', $mobileSrc);
+			$imgBase   = preg_replace('/-\d+x\d+$/', '', $imgBase);
+			$imgBase   = ltrim(basename($imgBase), '/');
+			$mobileW   = 640;
 
-			$styleAttr = 'padding-top:'.$padding.'px; padding-bottom:'.$padding.'px; height:'.$initialH.'px; background-image:url('.$placeholder.'); background-size:cover; background-position:'.$posY.' '.$posX;
+			if ( true || !isset($preload_images['mobile'][$image]) ) :
+				$upload_dir = wp_upload_dir();
+				$globPattern = $upload_dir['basedir'] . '/' . $imgBase . '-' . $mobileW . 'x*.' . $imgExt;
+				error_log('glob pattern: ' . $globPattern);
+				error_log('imgBase: ' . $imgBase);
+				error_log('imgExt: ' . $imgExt);
+				error_log('image: ' . $image);
+				$matches = glob($globPattern);
+				error_log('matches: ' . print_r($matches, true));
+				$preload_images['mobile'][$image] = !empty($matches) ? basename($matches[0]) : '';
+				update_option('bp_preload_images', $preload_images, true);
+			 endif;
 
-			$dataAttrs = ' data-img-base="'.$imgBase.'" data-img-ext="'.$imgExt.'" data-img-width="'.$imgW.'" data-img-height="'.$imgH.'"';
+			$mobileImgUrl = '/wp-content/uploads/' . $preload_images['mobile'][$image];
+			preg_match('/-640x(\d+)\./', $mobileImgUrl, $dim);
+			$initialH = !empty($dim[1]) ? (int)$dim[1] : 0;
 
+			$styleAttr = 'padding-top:' . $padding . 'px; padding-bottom:' . $padding . 'px;' . ( $initialH ? ' height:' . $initialH . 'px;' : '' ) . ( $mobileImgUrl ? ' background-image:url(' . $mobileImgUrl . '); background-size:cover; background-position:center ' . $posX . ';' : '' );
 		} else {
-			$styleAttr = 'padding-top:'.$padding.'px; padding-bottom:'.$padding.'px';
-			$dataAttrs = '';
+			$styleAttr = 'padding-top:' . $padding . 'px; padding-bottom:' . $padding . 'px;';
 		}
-
-		return do_shortcode('<'.$div.' id="'.$name.'" class="load-bg-img '.$type.$style.' '.$type.'-'.$width.($hasImage ? ' '.$type.'-parallax-disabled' : '').$class.'"'.$tracking.' style="'.$styleAttr.'"'.$dataAttrs.'>'.$content.'</'.$div.'>');
+		return do_shortcode(
+			'<' . $div . ' id="' . $name . '" class="' . $type . $style . ' ' . $type . '-' . $width . ( $hasImage ? ' ' . $type . '-parallax-disabled' : '' ) . $class . '"' . $tracking . ' style="' . $styleAttr . '">'
+			. $content .
+			'</' . $div . '>'
+		);
 
 	} else {
-		if ( $hasImage ) :
-			$dataAttrs = ' data-parallax="scroll" data-img-width="'.$imgW.'" data-img-height="'.$imgH.'" data-pos-x="'.$posX.'" data-top-y="'.$topY.'" data-bottom-y="'.$botY.'" data-fixed="'.$fixed.'" data-image-src="'.$image.'"';
+		if ( $hasImage ) {
+			$desktopSrc = explode('.', $image);
+			$desktopExt = array_pop($desktopSrc);
+			$desktopBase = preg_replace('/-\d+x\d+$/', '', implode('.', $desktopSrc));
 
-			$parallaxClass = ' '.$type.'-parallax';
-		else :
-			$dataAttrs = '';
+			if ( !isset($preload_images['desktop'][$image]) ) :
+				$preload_images['desktop'][$image] = [
+					'file'          => ltrim(basename($image), '/'),
+					'attachment_id' => $attachment_id,
+				];
+				update_option('bp_preload_images', $preload_images, true);
+			endif;
+
+			$dataAttrs     = ' data-parallax="scroll" data-img-width="' . $imgW . '" data-img-height="' . $imgH . '" data-holder-height="'.$height.'" data-pos-x="' . $posX . '" data-top-y="' . $topY . '" data-bottom-y="' . $botY . '" data-fixed="' . $fixed . '" data-image-src="' . $image . '" data-img-base="' . $desktopBase . '" data-img-ext="' . $desktopExt . '"';
+			$parallaxClass = ' ' . $type . '-parallax';
+		} else {
+			$dataAttrs     = '';
 			$parallaxClass = '';
-		endif;
+		}
 
-		return do_shortcode(
-			'<'.$div.' id="'.$name.'" class="'.$type.$style.' '.$type.'-'.$width.$parallaxClass.$class.'"'.$tracking.' style="height:'.$height.'"'.$dataAttrs.'>'.$content.($hasImage ? $buildScrollBtn : '').'</'.$div.'>'
-		);
+		return do_shortcode( '<' . $div . ' id="' . $name . '" class="' . $type . $style . ' ' . $type . '-' . $width . $parallaxClass . ( $hasImage ? ' load-bg-img' : '' ) . $class . '"' . $tracking . ' style="height:' . $height . '"' . $dataAttrs . '>' . $content . ( $hasImage ? $buildScrollBtn : '' ) . '</' . $div . '>'  );
+
 	}
 }
 

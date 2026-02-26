@@ -23,8 +23,6 @@
 
 $daily = get_option('bp_ga4_daily_clean');
 
-error_log('GSC queries: ' . print_r(get_option('bp_gsc_top_queries'), true));
-
 /*--------------------------------------------------------------
 # Site Stats
 --------------------------------------------------------------*/

@@ -83,14 +83,14 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	getObjects('[data-parallax="scroll"]').forEach(section => {
 		let imgSrc = section.getAttribute('data-image-src');
 		imgSrc = imgSrc.replace('/wp-content/uploads/', '');
-    	const imgW = parseInt(section.getAttribute('data-img-width'), 10);
-    	const imgH = parseInt(section.getAttribute('data-img-height'), 10);
-    	const posX = section.getAttribute('data-pos-x');
-    	const topY = section.getAttribute('data-top-y');
-    	const bottomY = section.getAttribute('data-bottom-y');
+		const imgW = parseInt(section.getAttribute('data-img-width'), 10);
+		const imgH = parseInt(section.getAttribute('data-img-height'), 10);
+		const posX = section.getAttribute('data-pos-x');
+		const topY = section.getAttribute('data-top-y');
+		const bottomY = section.getAttribute('data-bottom-y');
 
 		parallaxBG(section, imgSrc, imgW, imgH, posX, topY, bottomY, false);
-  });
+	});
 
 
 //Control parallax movement of divs within a container
@@ -161,8 +161,9 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 	const splitMenuL = createSplitMenu('l');
 
 	if (!override) {
-		menuItems.forEach(item => {
-			currOpt += item.offsetWidth;
+		const itemWidths = menuItems.map(item => item.offsetWidth); // all reads first
+		menuItems.forEach((item, index) => {
+			currOpt += itemWidths[index];
 			if (currOpt < menuWidth) {
 				item.classList.add('left-menu');
 			} else {
@@ -244,10 +245,6 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 	window.centerSubNav = function () {
 		const subMenus = getObjects('.main-navigation ul.sub-menu');
 		subMenus.forEach(subMenu => {
-
-
-
-
 			const subW = subMenu.offsetWidth;
 			const parentW = subMenu.parentElement.offsetWidth;
 			const moveL = -Math.round((subW - parentW) / 2);
@@ -348,9 +345,8 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 					scrollPct = 0,
 					findPos = 0;
 
-				getObjects('.stuck').forEach(stuck => {
-					viewportH -= stuck.offsetHeight;
-				});
+				const stuckH = getObjects('.stuck').reduce((sum, el) => sum + el.offsetHeight, 0);
+				viewportH -= stuckH;
 
 				const googleBadge = getObject('.wp-google-badge');
 				if (googleBadge) {

@@ -40,7 +40,6 @@
 
 <html lang="en">
 <head>
-	<link rel="preconnect" href="https://googletagmanager.com/">
 	<?php bp_google_tag_manager(); ?>
 
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
@@ -72,32 +71,41 @@
 	<?php bp_meta_tags(); ?>
 
 	<?php
-		$lcp_key = is_mobile() ? 'm-lcp' : 'lcp';
+		$preload_images = get_option('bp_preload_images', []);
+		$preload_key    = is_mobile() ? 'mobile' : 'desktop';
+		$base_url       = get_site_url() . '/wp-content/uploads/';
 
-		if ( isset( customer_info()[ $lcp_key ] ) ) :
-			$file = customer_info()[ $lcp_key ];
+		if ( !empty($preload_images[$preload_key]) ) :
+			$has_parallax = false;
+			foreach ( $preload_images[$preload_key] as $key => $entry ) :
+				if ( $key !== 'site-bg' ) $has_parallax = true;
+			endforeach;
 
-			if ( is_string( $file ) ) :
-				$base_url = get_site_url() . '/wp-content/uploads/';
-				$url = $base_url . ltrim( $file, '/' );
+			$first = true;
+			foreach ( $preload_images[$preload_key] as $key => $entry ) :
+				$file          = is_array($entry) ? $entry['file'] : $entry;
+				$attachment_id = is_array($entry) ? $entry['attachment_id'] : 0;
+				$url           = $base_url . ltrim($file, '/');
+				$srcset        = ( !is_mobile() && $attachment_id ) ? wp_get_attachment_image_srcset($attachment_id, 'full') : '';
 
-				$attachment_id = attachment_url_to_postid( $url );
-
-				if ( $attachment_id ) :
-					$srcset = wp_get_attachment_image_srcset( $attachment_id, 'full' );
-					$sizes  = wp_get_attachment_image_sizes( $attachment_id, 'full' );
-					?>
-					<link
-						rel="preload"
-						as="image"
-						href="<?php echo esc_url( $url ); ?>"
-						<?php echo $srcset ? 'imagesrcset="' . esc_attr( $srcset ) . '"' : ''; ?>
-						<?php echo $sizes  ? 'imagesizes="'  . esc_attr( $sizes )  . '"' : ''; ?>
-						fetchpriority="high">
-					<?php
+				if ( $key === 'site-bg' ) :
+					$priority = $has_parallax ? 'low' : 'high';
+				else :
+					$priority = $first ? 'high' : 'low';
+					$first    = false;
 				endif;
-			endif;
+				?>
+				<link
+					rel="preload"
+					as="image"
+					href="<?php echo esc_url($url); ?>"
+					<?php echo $srcset ? 'imagesrcset="' . esc_attr($srcset) . '"' : ''; ?>
+					<?php echo $srcset ? 'imagesizes="100vw"' : ''; ?>
+					fetchpriority="<?php echo $priority; ?>">
+				<?php
+			endforeach;
 		endif;
+
 	?>
 
 	<link rel="preload" href="<?php echo get_template_directory_uri(); ?>/fonts/opensans-regular.woff2" as="font" type="font/woff2" crossorigin>

@@ -2334,6 +2334,16 @@ $chron_list = '';
 	'</div>';
 });
 
+
+
+/*
+wp_clear_scheduled_hook('wp_version_check');
+if ( ! wp_next_scheduled('wp_version_check') ) {
+	wp_schedule_event( time(), 'hourly', 'wp_version_check' );
+}
+*/
+
+
 add_filter('set_site_transient_update_themes', function($transient) {
     if (!is_object($transient)) $transient = new stdClass();
     if (empty($transient->checked['battleplantheme'])) {

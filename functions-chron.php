@@ -56,61 +56,68 @@ function bp_next_nightly_window(int $startHour = 22): int {
 # One-time cleanup (plugin/theme)
 --------------------------------------------------------------*/
 
-add_action('init', function () {
+
+add_action('upgrader_process_complete', function($upgrader, $options) {
+    if (
+        ($options['type'] ?? '') !== 'theme' ||
+        ($options['action'] ?? '') !== 'update'
+    ) return;
+
+    $themes_updated = $options['themes'] ?? [];
+    if (!in_array('battleplantheme', $themes_updated)) return;
+
     $key = 'bp_theme_plugin_cleanup_2026-02-14';
-    if (add_site_option($key, current_time('mysql'))) {
+    if (!add_site_option($key, current_time('mysql'))) return;
 
-        require_once ABSPATH . 'wp-admin/includes/file.php';
-        require_once ABSPATH . 'wp-admin/includes/plugin.php';
-        require_once ABSPATH . 'wp-admin/includes/theme.php';
+    require_once ABSPATH . 'wp-admin/includes/file.php';
+    require_once ABSPATH . 'wp-admin/includes/plugin.php';
+    require_once ABSPATH . 'wp-admin/includes/theme.php';
 
-        $plugins_remove = [
-            'huzzaz-video-gallery/huzzaz.php',
-            'admin-columns-pro/admin-columns-pro.php',
-            'wp-crontrol/wp-crontrol.php',
-            'blackhole-bad-bots/blackhole.php',
-        ];
-        $plugins_deactivate = [
-            'better-search-replace/better-search-replace.php',
-            'query-monitor/query-monitor.php',
-        ];
+    $plugins_remove = [
+        'huzzaz-video-gallery/huzzaz.php',
+        'admin-columns-pro/admin-columns-pro.php',
+        'wp-crontrol/wp-crontrol.php',
+        'blackhole-bad-bots/blackhole.php',
+    ];
+    $plugins_deactivate = [
+        'better-search-replace/better-search-replace.php',
+        'query-monitor/query-monitor.php',
+    ];
 
-        foreach ($plugins_deactivate as $plugin) {
-            if (file_exists(WP_PLUGIN_DIR . '/' . $plugin) && is_plugin_active($plugin)) {
-                deactivate_plugins($plugin, true);
-            }
-        }
-
-        foreach ($plugins_remove as $plugin) {
-            if (file_exists(WP_PLUGIN_DIR . '/' . $plugin)) {
-                if (is_plugin_active($plugin)) deactivate_plugins($plugin, true);
-                delete_plugins([$plugin]);
-            }
-        }
-
-        $themes = [
-            'twentytwentyone', 'twentytwentytwo', 'twentytwentythree',
-            'twentytwentyfour', 'twentytwentyfive',
-        ];
-
-        foreach ($themes as $theme) {
-            if ($theme === get_stylesheet() || $theme === get_template()) continue;
-            $theme_obj = wp_get_theme($theme);
-            if ($theme_obj->exists()) delete_theme($theme);
-        }
-
-        $bp_guard_dir = WP_CONTENT_DIR . '/themes/bp-guard';
-        if (is_dir($bp_guard_dir)) {
-            foreach (new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($bp_guard_dir, RecursiveDirectoryIterator::SKIP_DOTS),
-                RecursiveIteratorIterator::CHILD_FIRST
-            ) as $file) {
-                $file->isDir() ? rmdir($file) : unlink($file);
-            }
-            rmdir($bp_guard_dir);
+    foreach ($plugins_deactivate as $plugin) {
+        if (file_exists(WP_PLUGIN_DIR . '/' . $plugin) && is_plugin_active($plugin)) {
+            deactivate_plugins($plugin, true);
         }
     }
-});
+    foreach ($plugins_remove as $plugin) {
+        if (file_exists(WP_PLUGIN_DIR . '/' . $plugin)) {
+            if (is_plugin_active($plugin)) deactivate_plugins($plugin, true);
+            delete_plugins([$plugin]);
+        }
+    }
+
+    $themes = [
+        'twentytwentyone', 'twentytwentytwo', 'twentytwentythree',
+        'twentytwentyfour', 'twentytwentyfive',
+    ];
+    foreach ($themes as $theme) {
+        if ($theme === get_stylesheet() || $theme === get_template()) continue;
+        $theme_obj = wp_get_theme($theme);
+        if ($theme_obj->exists()) delete_theme($theme);
+    }
+
+    $bp_guard_dir = WP_CONTENT_DIR . '/themes/bp-guard';
+    if (is_dir($bp_guard_dir)) {
+        foreach (new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($bp_guard_dir, RecursiveDirectoryIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST
+        ) as $file) {
+            $file->isDir() ? rmdir($file) : unlink($file);
+        }
+        rmdir($bp_guard_dir);
+    }
+
+}, 10, 2);
 
 require_once get_template_directory() . '/functions-chron-helpers.php';
 

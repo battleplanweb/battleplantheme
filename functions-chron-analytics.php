@@ -25,7 +25,7 @@ function bp_run_chron_analytics(bool $force = false): void {
         if (!is_array($credentials)) throw new \Exception('GA4 credentials invalid');
         $client = new BetaAnalyticsDataClient(['credentials' => $credentials]);
     } catch (\Throwable $e) {
-        error_log('GA4 client init failed: ' . $e->getMessage());
+        ('GA4 client init failed: ' . $e->getMessage());
         return;
     }
 
@@ -45,7 +45,7 @@ function bp_gsc_collect_top_queries(): void {
     ]);
 
     if (!$token) {
-        error_log('bp_gsc_collect_top_queries: failed to get token');
+        //error_log('bp_gsc_collect_top_queries: failed to get token');
         return;
     }
 
@@ -95,7 +95,7 @@ function bp_gsc_collect_top_queries(): void {
         curl_close($ch);
 
         if ($http !== 200) {
-            error_log("bp_gsc_collect_top_queries: API error {$http} for {$label}: {$response}");
+            //error_log("bp_gsc_collect_top_queries: API error {$http} for {$label}: {$response}");
             continue;
         }
 

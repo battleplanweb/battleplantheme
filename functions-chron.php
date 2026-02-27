@@ -8,7 +8,7 @@ $current_user = wp_get_current_user();
 $is_override  = ($current_user && $current_user->user_login === 'battleplanweb');
 
 if (get_transient('bp_chron_jobs_lock') && !$is_override) {
-    error_log('BP Chron Jobs locked');
+    //error_log('BP Chron Jobs locked');
     return;
 }
 

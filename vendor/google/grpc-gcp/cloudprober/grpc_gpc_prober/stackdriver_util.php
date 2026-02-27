@@ -40,7 +40,7 @@ class StackdriverUtil{
 	}
 
 	function reportError($err){
-		error_log($err);
+		//error_log($err);
 		$projectId = '434076015357';
 		$project_name = $this->err_client->projectName($projectId);
 

@@ -704,8 +704,8 @@ add_filter('posts_request', function($sql, $query){
 	if (!is_admin()) return $sql;
 	if (!$query->is_main_query()) return $sql;
 
-	error_log("MAIN QUERY:");
-	error_log($sql);
+	//error_log("MAIN QUERY:");
+	//error_log($sql);
 
 	return $sql;
 

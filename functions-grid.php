@@ -525,12 +525,12 @@ function battleplan_buildParallax( $atts, $content = null ) {
 			if ( true || !isset($preload_images['mobile'][$image]) ) :
 				$upload_dir = wp_upload_dir();
 				$globPattern = $upload_dir['basedir'] . '/' . $imgBase . '-' . $mobileW . 'x*.' . $imgExt;
-				error_log('glob pattern: ' . $globPattern);
-				error_log('imgBase: ' . $imgBase);
-				error_log('imgExt: ' . $imgExt);
-				error_log('image: ' . $image);
+				//error_log('glob pattern: ' . $globPattern);
+				//error_log('imgBase: ' . $imgBase);
+				//error_log('imgExt: ' . $imgExt);
+				//error_log('image: ' . $image);
 				$matches = glob($globPattern);
-				error_log('matches: ' . print_r($matches, true));
+				//error_log('matches: ' . print_r($matches, true));
 				$preload_images['mobile'][$image] = !empty($matches) ? basename($matches[0]) : '';
 				update_option('bp_preload_images', $preload_images, true);
 			 endif;

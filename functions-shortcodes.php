@@ -2228,8 +2228,6 @@ add_shortcode('show_debug_log', function($atts) {
 });
 
 
-
-
 	/*--------------------------------------------------------------
 	# Format output
 	--------------------------------------------------------------*/
@@ -2291,6 +2289,23 @@ add_shortcode('show_debug_log', function($atts) {
 	/*--------------------------------------------------------------
 	# Return final output
 	--------------------------------------------------------------*/
+$chron_list = '';
+
+	$crons = _get_cron_array();
+	foreach ( $crons as $timestamp => $hooks ) {
+	    foreach ( $hooks as $hook => $events ) {
+		   foreach ( $events as $event ) {
+			  $recurrence = isset( $event['schedule'] ) ? $event['schedule'] : 'one-time';
+			  $dt = new DateTime('@' . $timestamp);
+				$dt->setTimezone(new DateTimeZone('America/New_York'));
+				$formatted = $dt->format('Y-m-d H:i:s');
+
+			  $chron_list .= $formatted . ' | ' . $hook . ' | ' . $recurrence . "\n\n";
+		   }
+	    }
+	}
+
+
 
 	return $buttons . '
 	<div style="
@@ -2301,7 +2316,53 @@ add_shortcode('show_debug_log', function($atts) {
 		border:1px solid #ccc;
 		padding:10px;
 		white-space:normal;
+		color: var(--black);
 	">'
 	. $output .
+	'</div><div style="
+		font-family:monospace;
+		font-size:13px;
+		line-height:1.5;
+		background:#fafafa;
+		border:1px solid #ccc;
+		padding:10px;
+		white-space:normal;
+		color: var(--black);
+
+	">'
+	. $chron_list .
 	'</div>';
 });
+
+add_filter('set_site_transient_update_themes', function($transient) {
+    if (!is_object($transient)) $transient = new stdClass();
+    if (empty($transient->checked['battleplantheme'])) {
+        error_log('checked wiped by: ' . wp_json_encode(array_map(fn($t) => $t['function'] ?? '', array_slice(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS), 0, 8))));
+    }
+    $transient->checked['battleplantheme'] = wp_get_theme('battleplantheme')->get('Version');
+    return $transient;
+}, 999);
+
+
+//delete_site_transient('git_updater_stats');
+
+/*if ( ! get_option('cron_schedules_fixed') ) {
+	//delete_option('cron');
+	//delete_site_transient('git_updater_stats');
+
+	//error_log ('delete github transient');
+
+    //wp_clear_scheduled_hook('wp_version_check');
+    if ( ! wp_next_scheduled('wp_version_check') ) {
+        wp_schedule_event( time(), 'every_minute', 'wp_version_check' );
+    }
+    wp_clear_scheduled_hook('wp_update_themes');
+    if ( ! wp_next_scheduled('wp_update_themes') ) {
+        wp_schedule_event( time(), 'hourly', 'wp_update_themes' );
+    }
+
+    error_log('crons updated');
+
+    update_option('cron_schedules_fixed', true);
+}
+*/

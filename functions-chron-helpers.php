@@ -51,7 +51,8 @@ function ci_email_diff(array $old, array $new, string $site_name): void {
 	}
 
 	if (function_exists('emailMe')) { emailMe('customer_info updated - ' . $site_name, $msg); }
-	else { error_log($msg); }
+	else { //error_log($msg); 
+	}
 }
 
 /**

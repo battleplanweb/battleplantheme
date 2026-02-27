@@ -1101,7 +1101,7 @@ function bp_send_stats_email(string $toEmail, ?string $name, array $highlights) 
     );
 
     update_option('bp_stats_email_last_sent', time());
-    error_log("bp_send_stats_email sent to {$toEmail} with " . count($highlights) . " highlights");
+    //error_log("bp_send_stats_email sent to {$toEmail} with " . count($highlights) . " highlights");
 }
 
 function bp_send_reviews_email(string $toEmail, string $name, array $highlights) {

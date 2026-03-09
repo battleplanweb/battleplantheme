@@ -216,6 +216,34 @@ if ($forceC || $autoTriggerC) {
 
 
 /*--------------------------------------------------------------
+# Chron D — Keyword Rankings
+--------------------------------------------------------------*/
+
+$forceD   = filter_var(get_option('bp_force_chron_d', false), FILTER_VALIDATE_BOOLEAN);
+$lastRunD = (int) get_option('bp_chron_d_time', 0);
+$nextD    = (int) get_option('bp_chron_d_next', 0);
+$neverD   = $lastRunD === 0;
+
+$staleD = !$neverD && (time() - $lastRunD) > (86400 * 2);
+
+if ($nextD <= 0) {
+    $nextD = bp_next_nightly_window();
+    update_option('bp_chron_d_next', $nextD);
+}
+
+$dueD         = time() >= $nextD;
+$autoTriggerD = _IS_BOT && !_IS_SERP_BOT && ($neverD || $staleD || $dueD);
+
+if ($forceD || $autoTriggerD) {
+    delete_option('bp_force_chron_d');
+    update_option('bp_chron_d_time', time());
+    update_option('bp_chron_d_next', bp_next_nightly_window());
+    require_once get_template_directory() . '/functions-keyword-rankings.php';
+    bp_kw_run_chron($forceD);
+}
+
+
+/*--------------------------------------------------------------
 # Shared helpers (used across multiple chron files)
 --------------------------------------------------------------*/
 

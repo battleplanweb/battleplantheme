@@ -13,7 +13,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2026.38.10' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2026.39.0' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -220,7 +220,7 @@ if ( !is_admin() ) :
 	if (!empty($_GET)) :
 		foreach( $_GET as $key => $value ) :
 			if (is_array($value)) {
-				$value = array_map('trim', $value);
+				$value = array_map(fn($v) => is_string($v) ? trim($v) : '', $value);
 				$value = array_filter($value, static fn($v) => $v !== '');
 				if (!$value) continue;
 			} else {

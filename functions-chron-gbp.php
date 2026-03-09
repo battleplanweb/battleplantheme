@@ -7,7 +7,7 @@ function bp_run_chron_gbp(bool $force = false): void {
 
 	$google_info  = get_option('bp_gbp_update') ?: [];
 	$customer_info = customer_info();
-	$pid_sync      = filter_var($customer_info['pid-sync'] ?? false, FILTER_VALIDATE_BOOL);
+	$pid_sync      = (bool) filter_var($customer_info['pid-sync'] ?? false, FILTER_VALIDATE_BOOLEAN);
 	$placeIDs      = ci_normalize_pids($customer_info['pid'] ?? []);
 
 	if (!empty($placeIDs)) {

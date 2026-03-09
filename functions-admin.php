@@ -495,6 +495,11 @@ if ( $prop_id > 1 && is_admin() && (_USER_LOGIN === "battleplanweb" || in_array(
 	require_once get_template_directory() . '/functions-admin-stats.php';
 }
 
+// Keyword rankings dashboard widget + admin page
+if ( is_admin() && (_USER_LOGIN === "battleplanweb" || in_array('bp_view_stats', _USER_ROLES)) ) {
+    require_once get_template_directory() . '/functions-keyword-rankings.php';
+}
+
 // Adjust the number of of posts listed on admin pages
 add_filter( 'edit_posts_per_page', 'custom_posts_per_page_based_on_type_in_admin', 10, 2 );
 function custom_posts_per_page_based_on_type_in_admin( $per_page, $post_type ) {

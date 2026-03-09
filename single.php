@@ -121,29 +121,28 @@ get_header(); ?>
 						$getTerms = '';
 						$displayFooter .= '<div class="single-tags '.get_post_type().'-tags">';
 
-							$taxonomies = get_post_taxonomies();
-							if ( is_array($taxonomies) ) :
-								foreach ( $taxonomies as $tax) :
-									$terms = get_the_terms( get_the_ID(), $tax );
-									//if ( $terms && $tags == "list" ) :
-										//if ( $getTerms ) $getTerms;
-									//endif;
-									if ( is_array($terms) ) :
-										foreach($terms as $term):
-											if ( $term !== "blog" && $term !== "Blog" ) :
-												$btnClass = ($tags == "list") ? "" : " button button-".$term->slug;
+						$taxonomies = get_post_taxonomies();
+						if ( is_array($taxonomies) ) :
+						    foreach ( $taxonomies as $tax) :
+							   $terms = get_the_terms( get_the_ID(), $tax );
+							   if ( is_array($terms) ) :
+								  foreach($terms as $term):
+									 if ( $term !== "blog" && $term !== "Blog" ) :
+										$btnClass = ($tags == "list") ? "" : " button button-".$term->slug;
+										$term_link = get_term_link( $term->slug, $tax );
+										if ( ! is_wp_error( $term_link ) ) :
+										    $getTerms .= '<a href="'.$term_link.'" rel="tag" class="tax-'.$tax.$btnClass.'">'.$term->name.'</a>';
+										endif;
+									 endif;
+								  endforeach;
+							   endif;
+						    endforeach;
+						endif;
 
-												$getTerms .= '<a href="'.get_term_link( $term->slug, $tax).'" rel="tag" class="tax-'.$tax.$btnClass.'">'.$term->name.'</a>';
-											endif;
-										endforeach;
-									endif;
-								endforeach;
-							endif;
+						$termClass = ($tags == "list") ? "tag-list" : "tag-buttons";
+						$displayTerms = '<span class="'.$termClass.'">'.$getTerms.'</span>';
 
-							$termClass = ($tags == "list") ? "tag-list" : "tag-buttons";
-							$displayTerms = '<span class="'.$termClass.'">'.$getTerms.'</span>';
-
-							$displayFooter .= '<div class="entry-tags"><span class="tag-label">Tags: </span>'.$displayTerms.'</div>';
+						$displayFooter .= '<div class="entry-tags"><span class="tag-label">Tags: </span>'.$displayTerms.'</div>';
 						$displayFooter .= '</div>';
 					endif;
 

@@ -1,6 +1,8 @@
 <?php
 /* Battle Plan Web Design: Chron C — Analytics */
 
+use Google\ApiCore\ApiException;
+
 use Google\Analytics\Data\V1beta\BetaAnalyticsDataClient;
 use Google\Analytics\Data\V1beta\DateRange;
 use Google\Analytics\Data\V1beta\Dimension;
@@ -19,6 +21,8 @@ function bp_run_chron_analytics(bool $force = false): void {
     $customer_info = customer_info();
     $ga4_id        = $customer_info['google-tags']['prop-id'] ?? null;
 
+    if (empty($ga4_id)) return;
+
     try {
         if (!defined('GA4_SERVICE_ACCOUNT_JSON')) throw new \Exception('GA4 credentials missing');
         $credentials = json_decode(base64_decode(GA4_SERVICE_ACCOUNT_JSON), true);
@@ -29,7 +33,11 @@ function bp_run_chron_analytics(bool $force = false): void {
         return;
     }
 
-    bp_ga4_collect_all_clean($client, $ga4_id);
+    try {
+        bp_ga4_collect_all_clean($client, $ga4_id);
+    } catch (\Throwable $e) {
+        error_log('GA4 collect failed: ' . $e->getMessage());
+    }
 }
 
 /*--------------------------------------------------------------
@@ -158,17 +166,68 @@ function bp_ga4_dimension_filter(): FilterExpression {
 function bp_ga4_run_report_all_rows(BetaAnalyticsDataClient $client, array $request, int $pageSize = 5000): array {
     $allRows = [];
     $offset  = 0;
+    $maxOffset   = 2000000;
+    $maxRetries  = 3;
+
     while (true) {
         $request['limit']  = $pageSize;
         $request['offset'] = $offset;
-        $response = $client->runReport($request);
-        $rows     = $response->getRows();
+        $attempt  = 0;
+        $response = null;
+
+        while ($attempt <= $maxRetries) {
+            try {
+                $response = $client->runReport($request);
+                break; // success
+            }
+
+            catch (ApiException $e) {
+                $code = $e->getCode();
+
+                if (in_array($code, [13, 14, 4])) { // INTERNAL, UNAVAILABLE, DEADLINE_EXCEEDED
+                    $attempt++;
+
+                    if ($attempt > $maxRetries) {
+                        error_log('GA4 API failed after retries: ' . $e->getMessage());
+                        return $allRows; // graceful partial return
+                    }
+
+                    // exponential backoff
+                    sleep(pow(2, $attempt));
+                    continue;
+                }
+
+                // Non-retryable error
+                error_log('GA4 API non-retryable error: ' . $e->getMessage());
+                return $allRows;
+            }
+        }
+
+        if (!$response) return $allRows;
+
+        $rows = $response->getRows();
+        $rowCount = count($rows);
+
         if (empty($rows)) break;
-        foreach ($rows as $r) $allRows[] = $r;
-        if (count($rows) < $pageSize) break;
+
+        foreach ($rows as $r) {
+            $dims = [];
+            foreach ($r->getDimensionValues() as $dv) $dims[] = $dv->getValue();
+            $mets = [];
+            foreach ($r->getMetricValues() as $mv) $mets[] = $mv->getValue();
+            $allRows[] = ['d' => $dims, 'm' => $mets];
+        }
+        unset($response, $rows);
+
+        if ($rowCount < $pageSize) break;
+
         $offset += $pageSize;
-        if ($offset > 2000000) break;
+
+        if ($offset > $maxOffset) break;
+
+        usleep(250000);
     }
+
     return $allRows;
 }
 
@@ -184,7 +243,7 @@ function bp_ga4_year_ranges(int $years): array {
     return $ranges;
 }
 
-function bp_ga4_collect_daily_totals(BetaAnalyticsDataClient $client, $propertyId, int $years): array|false {
+function bp_ga4_collect_daily_totals(BetaAnalyticsDataClient $client, $propertyId, int $years) {
     $allDaily = [];
     foreach (bp_ga4_year_ranges($years) as $range) {
         $rows = bp_ga4_run_report_all_rows($client, [
@@ -202,16 +261,16 @@ function bp_ga4_collect_daily_totals(BetaAnalyticsDataClient $client, $propertyI
             'dimensionFilter' => bp_ga4_dimension_filter(),
         ]);
         foreach ($rows as $row) {
-            $date = $row->getDimensionValues()[0]->getValue();
+            $date = $row['d'][0];
             if (!isset($allDaily[$date])) {
                 $allDaily[$date] = ['sessions'=>0,'users'=>0,'newUsers'=>0,'engagedSessions'=>0,'pageviews'=>0,'engagementDuration'=>0.0];
             }
-            $allDaily[$date]['sessions']           += (int)$row->getMetricValues()[0]->getValue();
-            $allDaily[$date]['users']              += (int)$row->getMetricValues()[1]->getValue();
-            $allDaily[$date]['newUsers']           += (int)$row->getMetricValues()[2]->getValue();
-            $allDaily[$date]['engagedSessions']    += (int)$row->getMetricValues()[3]->getValue();
-            $allDaily[$date]['pageviews']          += (int)$row->getMetricValues()[4]->getValue();
-            $allDaily[$date]['engagementDuration'] += (float)$row->getMetricValues()[5]->getValue();
+            $allDaily[$date]['sessions']           += (int)$row['m'][0];
+            $allDaily[$date]['users']              += (int)$row['m'][1];
+            $allDaily[$date]['newUsers']           += (int)$row['m'][2];
+            $allDaily[$date]['engagedSessions']    += (int)$row['m'][3];
+            $allDaily[$date]['pageviews']          += (int)$row['m'][4];
+            $allDaily[$date]['engagementDuration'] += (float)$row['m'][5];
         }
     }
     if (empty($allDaily)) return false;
@@ -264,21 +323,21 @@ function bp_ga4_collect_simple_dimension(BetaAnalyticsDataClient $client, $prope
     $metricPrefix = ($optionKey === 'bp_ga4_pages_clean') ? 'page-views' : 'sessions';
 
     foreach ($rows as $row) {
-        $dimVal = trim($row->getDimensionValues()[0]->getValue());
+        $dimVal = trim($row['d'][0]);
         if (!$dimVal || $dimVal === '(not set)') continue;
         if ($optionKey === 'bp_ga4_pages_clean') {
             $dimVal = trim(preg_replace('/\s+[•|]\s+[^•|]+$/', '', $dimVal));
         }
         if (!$dimVal) continue;
         if (!isset($existing[$dimVal])) $existing[$dimVal] = [];
-        $existing[$dimVal]["{$metricPrefix}-{$days}"] = (int)$row->getMetricValues()[0]->getValue();
+        $existing[$dimVal]["{$metricPrefix}-{$days}"] = (int)$row['m'][0];
     }
 
     update_option($optionKey, $existing, false);
     return true;
 }
 
-function bp_ga4_collect_speed_data(BetaAnalyticsDataClient $client, $propertyId): array|false {
+function bp_ga4_collect_speed_data(BetaAnalyticsDataClient $client, $propertyId) {
     $rows = bp_ga4_run_report_all_rows($client, [
         'property'        => 'properties/' . $propertyId,
         'dateRanges'      => [new DateRange(['start_date' => date('Y-m-d', strtotime('-365 days')), 'end_date' => date('Y-m-d', strtotime('-1 day'))])],
@@ -298,9 +357,9 @@ function bp_ga4_collect_speed_data(BetaAnalyticsDataClient $client, $propertyId)
     }
 
     foreach ($rows as $row) {
-        $groupId    = trim($row->getDimensionValues()[0]->getValue());
-        $date       = $row->getDimensionValues()[1]->getValue();
-        $eventCount = (int)$row->getMetricValues()[0]->getValue();
+        $groupId    = trim($row['d'][0]);
+        $date       = $row['d'][1];
+        $eventCount = (int)$row['m'][0];
         if (!$groupId || $groupId === '(not set)') continue;
         if (!preg_match('/»(desktop|mobile|tablet)«([\d.]+)$/i', $groupId, $m)) continue;
         $device = strtolower($m[1]);

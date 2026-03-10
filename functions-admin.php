@@ -116,14 +116,11 @@ function battleplan_admin_menu() {
 // Menu registration — no separate Run buttons needed
 	if ( _USER_LOGIN === "battleplanweb" ) :
 		add_submenu_page( 'index.php', 	'Framework '._BP_VERSION, 	'Framework '._BP_VERSION, 											'manage_options', 	 'themes.php' );
-		add_submenu_page( 'index.php',	'⚙️ Run Audit',       		'⚙️ Run Audit',        												'manage_options', 	'run-audit',         		'battleplan_force_run_audit' );
-		add_submenu_page( 'index.php',	'Site Audit',          		'Audit <div class="admin-note">'.$auditTime.'</div>',        	'manage_options', 	 'site-audit',      		 'battleplan_site_audit' );
 		add_submenu_page( 'index.php',	'Housekeeping', 			'Settings <div class="admin-note">'.$chronHouseTime.'</div>',	'manage_options', 	 'chron-house',     		 'battleplan_chron_housekeeping_status' );
 		add_submenu_page( 'index.php',	'GBP Sync',          		'GBP Sync <div class="admin-note">'.$chronGbpApiTime.'</div>',    	'manage_options', 	 'chron-gbp',       		 'battleplan_chron_gbp_status' );
 		add_submenu_page( 'index.php',	'Analytics',   				'Stats <div class="admin-note">'.$chronAnalyticsTime.'</div>',	'manage_options', 	 'chron-analytics', 		 'battleplan_chron_analytics_status' );
-		add_submenu_page( 'index.php', 	'⚙️ Clear ALL',        		'⚙️ Clear ALL',        												'manage_options', 	'clear-all',         		'battleplan_clear_all' );
-		add_submenu_page( 'index.php',	'⚙️ Clear HVAC',       		'⚙️ Clear HVAC',       												'manage_options', 	'clear-hvac',        		'battleplan_clear_hvac' );
-		add_submenu_page( 'index.php',	'⚙️ Launch Site',      		'⚙️ Launch Site',       												'manage_options', 	'launch-site',       		'battleplan_launch_site' );
+		add_submenu_page( 'index.php',	'Site Audit',          		'Audit <div class="admin-note">'.$auditTime.'</div>',        	'manage_options', 	 'site-audit',      		 'battleplan_site_audit' );
+		add_submenu_page( 'index.php',	'⚙️ Run Audit',       		'&nbsp;└&nbsp;Run Audit',      										'manage_options', 	'run-audit',         		'battleplan_force_run_audit' );
 	endif;
 }
 
@@ -300,7 +297,7 @@ add_filter('wp_editor_set_quality', 'av_return_100', 9999);
 //add_filter('acf/settings/remove_wp_meta_box', '__return_false');
 
 // Add & Remove WP Admin Menu items
-add_action('admin_menu', 'battleplan_customize_admin_menus', 999);
+add_action('admin_menu', 'battleplan_customize_admin_menus', PHP_INT_MAX);
 function battleplan_customize_admin_menus() {
 	remove_menu_page( 'link-manager.php' );       							// Links
 	remove_menu_page( 'edit-comments.php' );       							// Comments
@@ -321,6 +318,7 @@ function battleplan_customize_admin_menus() {
 	remove_submenu_page( 'options-general.php', 'akismet-key-config' );   		// Settings => Akismet
 	remove_submenu_page( 'options-general.php', 'git-updater' );   				// Settings => Git Updater
 	remove_submenu_page( 'options-general.php', 'git-updater-account' );   		// Settings => Git Updater Account
+	remove_submenu_page( 'options-general.php', 'git-updater-contact' );   		// Settings => Git Updater Contact Us
 	remove_submenu_page( 'options-general.php', 'codepress-admin-columns' );   	// Settings => Admin Columns
 	remove_submenu_page( 'tools.php', 'export-personal-data.php' );   			// Tools => Export Personal Data
 	remove_submenu_page( 'tools.php', 'erase-personal-data.php' );   			// Tools => Erase Personal Data
@@ -376,14 +374,20 @@ function battleplan_customize_admin_menus() {
 	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'admin-columns-pro/admin-columns-pro.php' ) ) add_submenu_page( 'tools.php', 'Admin Columns', 'Admin Columns', 'manage_options', 'options-general.php?page=codepress-admin-columns' );
 	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wp-mail-smtp/wp_mail_smtp.php' ) ) add_submenu_page( 'tools.php', 'WP Mail SMTP', 'WP Mail SMTP', 'manage_options', 'options-general.php?page=wp-mail-smtp' );
 
+	if ( _USER_LOGIN === "battleplanweb" ) :
+		add_submenu_page( 'tools.php', '⚙️ Clear ALL',   '⚙️ Clear ALL',   'manage_options', 'clear-all',   'battleplan_clear_all' );
+		add_submenu_page( 'tools.php', '⚙️ Clear HVAC',  '⚙️ Clear HVAC',  'manage_options', 'clear-hvac',  'battleplan_clear_hvac' );
+		add_submenu_page( 'tools.php', '⚙️ Launch Site', '⚙️ Launch Site', 'manage_options', 'launch-site', 'battleplan_launch_site' );
+	endif;
+
 	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wordpress-seo-premium/wp-seo-premium.php' ) ) add_submenu_page( 'options-general.php', 'Yoast Settings', 'Yoast Settings', 'manage_options', 'admin.php?page=wpseo_page_settings' );
 	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wpseo-local/local-seo.php' ) ) add_submenu_page( 'options-general.php', 'Yoast Local', '&nbsp;└&nbsp;Local', 'manage_options', 'admin.php?page=wpseo_local' );
 	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wordpress-seo-premium/wp-seo-premium.php' ) ) add_submenu_page( 'options-general.php', 'Yoast Redirects', '&nbsp;└&nbsp;Redirects', 'manage_options', 'admin.php?page=wpseo_redirects' );
 
 	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'options-general.php', 'GBP Settings', 'GBP Settings', 'manage_options', 'admin.php?page=pgmb_settings' );
-	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Templates', '&nbsp;└&nbsp;Templates', 'manage_options', 'edit.php?post_type=pgmb_templates' );
-	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Calendar', '&nbsp;└&nbsp;Calendar', 'manage_options', 'admin.php?page=post_to_google_my_business' );
-	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Account', '&nbsp;└&nbsp;Account', 'manage_options', 'admin.php?page=post_to_google_my_business-account' );
+	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'options-general.php', 'GBP Templates', '&nbsp;└&nbsp;Templates', 'manage_options', 'edit.php?post_type=pgmb_templates' );
+	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'options-general.php', 'GBP Calendar', '&nbsp;└&nbsp;Calendar', 'manage_options', 'admin.php?page=post_to_google_my_business' );
+	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'options-general.php', 'GBP Account', '&nbsp;└&nbsp;Account', 'manage_options', 'admin.php?page=post_to_google_my_business-account' );
 
 	if (defined('_USER_LOGIN') && _USER_LOGIN === 'battleplanweb') {
 		add_submenu_page(

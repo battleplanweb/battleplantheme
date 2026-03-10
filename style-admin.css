@@ -271,7 +271,9 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 #adminmenu .wp-submenu li a[href="index.php?page=clear-all"],
 #adminmenu .wp-submenu li a[href="nav-menus.php"],
 #adminmenu .wp-submenu li a[href="edit.php?post_type=acf-field-group"],
-#adminmenu .wp-submenu li a[href="options-general.php?page=git-updater"] {
+#adminmenu .wp-submenu li a[href="options-general.php?page=git-updater"],
+#adminmenu .wp-submenu li a[href="index.php?page=chron-house"],
+#adminmenu .wp-submenu li a[href="admin.php?page=wpseo_page_settings"] {
 	padding-top:                                               10px;
 	margin-top:                                                10px;
 	border-top:                                                1px solid var(--white-lowest);

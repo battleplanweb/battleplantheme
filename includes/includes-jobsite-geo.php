@@ -160,7 +160,6 @@ function bp_jobsite_setup($post_id, $user) {
 	$current_user  = wp_get_current_user();
 
 	$location    = '';
-	$tech_tag    = '';
 	$new_address = '';
 
 	// Ensure match key exists for this post
@@ -268,20 +267,6 @@ function bp_jobsite_setup($post_id, $user) {
 		$term = term_exists($location, 'jobsite_geo-service-areas');
 		if (empty($term)) $term = wp_insert_term($location, 'jobsite_geo-service-areas');
 		if (!is_wp_error($term)) wp_set_post_terms($post_id, [$location], 'jobsite_geo-service-areas', false);
-	}
-
-	// Add username as technician tag
-	if (in_array('bp_jobsite_geo', $current_user->roles, true)) {
-		$tech_tag = sanitize_title($current_user->user_firstname . '-' . $current_user->user_lastname);
-	} else {
-		$hcp_tech = get_post_meta($post_id, '_hcp_tech_name', true);
-		if ($hcp_tech) $tech_tag = sanitize_title(str_replace(' ', '-', $hcp_tech));
-	}
-
-	if ($tech_tag) {
-		$term = term_exists($tech_tag, 'jobsite_geo-techs');
-		if (empty($term)) $term = wp_insert_term($tech_tag, 'jobsite_geo-techs');
-		if (!is_wp_error($term)) wp_set_post_terms($post_id, [$tech_tag], 'jobsite_geo-techs', false);
 	}
 
 	// NOTE: jobsite_geo-services taxonomy is now handled exclusively by the AI
@@ -469,9 +454,9 @@ function battleplan_registerJobsiteGEOPostType() {
 	]);
 
 	$taxonomies = [
-		'jobsite_geo-techs'         => ['Technicians', 'Technician', 'tech'],
-		'jobsite_geo-services'      => ['Services', 'Service', 'service'],
-		'jobsite_geo-service-areas' => ['Service Areas', 'Service Area', 'service-area'],
+		'jobsite_geo-service-types'  => ['Service Types',  'Service Type',  'service-type'],
+		'jobsite_geo-service-areas'  => ['Service Areas',  'Service Area',  'service-area'],
+		'jobsite_geo-services'       => ['Services',       'Service',       'service'],
 	];
 
 	foreach ($taxonomies as $slug => [$plural, $singular, $rewrite]) {
@@ -727,14 +712,101 @@ add_action('admin_enqueue_scripts', function($hook) {
 		'nonce'   => wp_create_nonce('bp_rotate_image'),
 	]);
 
-	// Move AI Rewriter meta box to just below the Publish box
 	wp_add_inline_script('battleplan-jobsite-geo-admin', '
 		document.addEventListener("DOMContentLoaded", function() {
+
+			// Move AI Description meta box to just below the Publish box
 			var aiBox      = document.getElementById("bp_geo_ai_rewrite");
 			var publishBox = document.getElementById("submitdiv");
 			if (aiBox && publishBox && publishBox.parentNode) {
 				publishBox.parentNode.insertBefore(aiBox, publishBox.nextSibling);
 			}
+
+			// Insert Customer First & Last Name label inside #titlewrap
+			var titleWrap = document.getElementById("titlewrap");
+			if (titleWrap) {
+				var label = document.createElement("div");
+				label.className = "jobsite_geo-title";
+				label.textContent = "Jobsite Customer (First & Last Name)";
+				titleWrap.insertBefore(label, titleWrap.firstChild);
+			}
+
+			// Insert prompts above the editor
+			var contentWrap = document.getElementById("wp-content-wrap");
+			if (contentWrap) {
+				var prompts = document.createElement("div");
+				prompts.className = "jobsite_geo-prompts";
+				prompts.innerHTML =
+					"<span>Why did the customer call?</span>" +
+					"<span>What was the problem?</span>" +
+					"<span>How did you fix it?</span>";
+				contentWrap.parentNode.insertBefore(prompts, contentWrap);
+
+				// Voice to text button — inserted at top of #wp-content-wrap (sits in padding-top space)
+				var voiceBtn = document.createElement("button");
+				voiceBtn.type      = "button";
+				voiceBtn.id        = "bp-geo-voice-btn";
+				voiceBtn.className = "button";
+				voiceBtn.textContent = "Voice to Text";
+				contentWrap.insertBefore(voiceBtn, contentWrap.firstChild);
+
+				var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+				if (SpeechRec) {
+					var recognition = new SpeechRec();
+					recognition.continuous      = true;
+					recognition.interimResults  = false;
+					recognition.lang            = "en-US";
+					var listening = false;
+
+					recognition.onresult = function(event) {
+						var transcript = "";
+						for (var i = event.resultIndex; i < event.results.length; i++) {
+							if (event.results[i].isFinal) {
+								transcript += event.results[i][0].transcript + " ";
+							}
+						}
+						var editor = typeof tinymce !== "undefined" && tinymce.get("content");
+						if (editor && !editor.isHidden()) {
+							editor.insertContent(transcript);
+						} else {
+							var ta = document.getElementById("content");
+							if (ta) {
+								var pos = ta.selectionStart;
+								ta.value = ta.value.slice(0, pos) + transcript + ta.value.slice(pos);
+								ta.selectionStart = ta.selectionEnd = pos + transcript.length;
+							}
+						}
+					};
+
+					recognition.onerror = function() {
+						voiceBtn.textContent = "Voice to Text";
+						voiceBtn.classList.remove("bp-geo-voice-active");
+						listening = false;
+					};
+
+					recognition.onend = function() {
+						if (listening) recognition.start();
+					};
+
+					voiceBtn.addEventListener("click", function() {
+						if (!listening) {
+							recognition.start();
+							listening = true;
+							voiceBtn.textContent = "Stop Listening";
+							voiceBtn.classList.add("bp-geo-voice-active");
+						} else {
+							recognition.stop();
+							listening = false;
+							voiceBtn.textContent = "Voice to Text";
+							voiceBtn.classList.remove("bp-geo-voice-active");
+						}
+					});
+				} else {
+					voiceBtn.disabled = true;
+					voiceBtn.title    = "Speech recognition not supported in this browser";
+				}
+			}
+
 		});
 	');
 });
@@ -768,7 +840,7 @@ add_action('wp_ajax_bp_rotate_image', function() {
 --------------------------------------------------------------*/
 
 add_filter( 'body_class', function( $classes ) {
-	if ( is_post_type_archive('jobsite_geo') || is_tax('jobsite_geo-service-areas') || is_tax('jobsite_geo-services') || is_tax('jobsite_geo-techs') ) {
+	if ( is_post_type_archive('jobsite_geo') || is_tax('jobsite_geo-service-areas') || is_tax('jobsite_geo-services') ) {
 		$classes = str_replace(['sidebar-line', 'sidebar-right', 'sidebar-left'], 'sidebar-none', $classes);
 		return array_merge( $classes, ['jobsite_geo'] );
 	}
@@ -778,7 +850,7 @@ add_filter( 'body_class', function( $classes ) {
 add_action( 'pre_get_posts', 'battleplan_override_jobsite_query', 10 );
 function battleplan_override_jobsite_query( $query ) {
 	if (!is_admin() && $query->is_main_query()) {
-		if ( is_post_type_archive('jobsite_geo') || is_tax('jobsite_geo-service-areas') || is_tax('jobsite_geo-services') || is_tax('jobsite_geo-techs') ) {
+		if ( is_post_type_archive('jobsite_geo') || is_tax('jobsite_geo-service-areas') || is_tax('jobsite_geo-services') ) {
 			$query->set( 'post_type', 'jobsite_geo' );
 			$query->set( 'posts_per_page', 30 );
 			$query->set( 'meta_key', 'job_date' );
@@ -790,7 +862,7 @@ function battleplan_override_jobsite_query( $query ) {
 
 add_filter('template_include', 'battleplan_jobsite_template');
 function battleplan_jobsite_template($template) {
-	if ( is_tax('jobsite_geo-service-areas') || is_tax('jobsite_geo-services') || is_tax('jobsite_geo-techs') ) {
+	if ( is_tax('jobsite_geo-service-areas') || is_tax('jobsite_geo-services') ) {
 		$template = get_template_directory() . '/archive-jobsite_geo.php';
 		$sep = ' · ';
 		$jobsite_term = get_queried_object();
@@ -801,11 +873,24 @@ function battleplan_jobsite_template($template) {
 			$jobsite_location = $jobsite_term->slug;
 
 			if (is_tax('jobsite_geo-services')) {
-				$term_parts = explode('--', $jobsite_term->slug);
-				$jobsite_service  = $term_parts[0] ?? '';
-				$jobsite_location = $term_parts[1] ?? $jobsite_term->slug;
+				// Look up service-type and service-area directly from a tagged post —
+				// avoids parsing the slug, which WordPress sanitizes and may alter.
+				$sample = get_posts([
+					'post_type'      => 'jobsite_geo',
+					'posts_per_page' => 1,
+					'fields'         => 'ids',
+					'tax_query'      => [['taxonomy' => 'jobsite_geo-services', 'terms' => $jobsite_term->term_id]],
+				]);
+				if ($sample) {
+					$type_terms = wp_get_post_terms($sample[0], 'jobsite_geo-service-types', ['fields' => 'slugs']);
+					$area_terms = wp_get_post_terms($sample[0], 'jobsite_geo-service-areas', ['fields' => 'slugs']);
+					if (!empty($type_terms)) $jobsite_service  = $type_terms[0];
+					if (!empty($area_terms))  $jobsite_location = $area_terms[0];
+				}
 
-				$GLOBALS['jobsite_geo-service'] = bp_format_service($jobsite_service);
+				if ($jobsite_service) {
+					$GLOBALS['jobsite_geo-service'] = bp_format_service($jobsite_service);
+				}
 			}
 
 			$GLOBALS['jobsite_geo-city-state'] = bp_format_location($jobsite_location);
@@ -886,13 +971,6 @@ function battleplan_jobsite_template($template) {
 			}
 			wp_reset_postdata();
 
-		} elseif (is_tax('jobsite_geo-techs')) {
-			$tech_name = ucwords(str_replace('-', ' ', $jobsite_term->name));
-
-			$GLOBALS['jobsite_geo-headline']    = $tech_name . '\'s Recent Jobs';
-			$GLOBALS['jobsite_geo-page_title']  = $GLOBALS['jobsite_geo-headline'] . $sep . get_bloginfo('name');
-			$GLOBALS['jobsite_geo-page_desc']   = '';
-			$GLOBALS['jobsite_geo-map-caption'] = 'This map shows the location of some of ' . $tech_name . '\'s recent work.';
 		}
 
 		add_filter('wpseo_title', function($title) {
@@ -926,35 +1004,56 @@ function battleplan_handle_jobsite_geo_image_upload($file) {
 	return $file;
 }
 
-// Remove empty service tags
+// Remove empty service tags (both services and service-types)
 add_action('save_post_jobsite_geo', 'bp_cleanup_empty_service_tags');
 add_action('deleted_post', 'bp_cleanup_empty_service_tags');
 function bp_cleanup_empty_service_tags() {
-	$taxonomy = 'jobsite_geo-services';
-
-	$terms = get_terms([
-		'taxonomy'   => $taxonomy,
-		'hide_empty' => false,
-	]);
-
-	if (is_wp_error($terms) || empty($terms)) return;
-
-	foreach ($terms as $term) {
-		$count = get_posts([
-			'post_type'      => 'jobsite_geo',
-			'post_status'    => ['publish', 'draft', 'pending'],
-			'tax_query'      => [[
-				'taxonomy' => $taxonomy,
-				'field'    => 'term_id',
-				'terms'    => $term->term_id,
-			]],
-			'fields'         => 'ids',
-			'posts_per_page' => 1,
-		]);
-
-		if (empty($count)) wp_delete_term($term->term_id, $taxonomy);
+	foreach (['jobsite_geo-services', 'jobsite_geo-service-types'] as $taxonomy) {
+		$terms = get_terms(['taxonomy' => $taxonomy, 'hide_empty' => false]);
+		if (is_wp_error($terms) || empty($terms)) continue;
+		foreach ($terms as $term) {
+			$count = get_posts([
+				'post_type'      => 'jobsite_geo',
+				'post_status'    => ['publish', 'draft', 'pending'],
+				'tax_query'      => [['taxonomy' => $taxonomy, 'field' => 'term_id', 'terms' => $term->term_id]],
+				'fields'         => 'ids',
+				'posts_per_page' => 1,
+			]);
+			if (empty($count)) wp_delete_term($term->term_id, $taxonomy);
+		}
 	}
 }
+
+/**
+ * Rebuild jobsite_geo-services (combined terms) from jobsite_geo-service-types × jobsite_geo-service-areas.
+ * Called on save and can be called manually for bulk migration.
+ */
+function bp_geo_sync_services_from_types( $post_id ) {
+	$type_slugs = wp_get_post_terms( $post_id, 'jobsite_geo-service-types', ['fields' => 'slugs'] );
+	$area_slugs = wp_get_post_terms( $post_id, 'jobsite_geo-service-areas', ['fields' => 'slugs'] );
+
+	if ( is_wp_error($type_slugs) || is_wp_error($area_slugs) || empty($type_slugs) || empty($area_slugs) ) return;
+
+	$service_slugs = [];
+	foreach ( $type_slugs as $type ) {
+		foreach ( $area_slugs as $area ) {
+			$slug = $type . '-' . $area;
+			if ( ! term_exists( $slug, 'jobsite_geo-services' ) ) {
+				wp_insert_term( $slug, 'jobsite_geo-services' );
+			}
+			$service_slugs[] = $slug;
+		}
+	}
+
+	wp_set_post_terms( $post_id, $service_slugs, 'jobsite_geo-services', false );
+}
+
+// Rebuild services when service-types or service-areas are changed on a manual save
+add_action('save_post_jobsite_geo', function($post_id, $post, $update) {
+	if ( wp_is_post_revision($post_id) || wp_is_post_autosave($post_id) ) return;
+	if ( ! empty($GLOBALS['bp_jobsite_setup_running']) ) return; // AI flow handles its own assignment
+	bp_geo_sync_services_from_types($post_id);
+}, 25, 3);
 
 add_filter('wpseo_schema_organization', function ($data) {
 	$city = $GLOBALS['jobsite_geo-city'] ?? '';
@@ -1081,8 +1180,7 @@ add_filter('the_posts', function($posts, $query) {
 	if (
 		is_post_type_archive('jobsite_geo') ||
 		is_tax('jobsite_geo-service-areas') ||
-		is_tax('jobsite_geo-services') ||
-		is_tax('jobsite_geo-techs')
+		is_tax('jobsite_geo-services')
 	) {
 		foreach ($posts as $p) {
 			$notes = [];
@@ -1290,7 +1388,7 @@ add_action( 'add_meta_boxes', 'bp_geo_ai_meta_box' );
 function bp_geo_ai_meta_box() {
 	add_meta_box(
 		'bp_geo_ai_rewrite',
-		'AI Description Rewriter',
+		'AI Description',
 		'bp_geo_ai_meta_box_html',
 		BP_GEO_CPT,
 		'side',
@@ -1324,7 +1422,7 @@ function bp_geo_ai_meta_box_html( $post ) {
 	        data-post-id="<?php echo esc_attr( $post->ID ); ?>"
 	        data-nonce="<?php echo esc_attr( $nonce ); ?>"
 	        style="width:100%;">
-		<?php echo $ai_ran ? 'Re-run AI Rewrite' : 'Run AI Rewrite'; ?>
+		AI Rewrite
 	</button>
 	<p style="font-size:11px;color:#888;margin-top:5px;">
 		<?php if ( $ai_ran ) : ?>
@@ -1363,7 +1461,7 @@ function bp_geo_ai_meta_box_html( $post ) {
 				} else {
 					status.style.color  = '#c62828';
 					status.textContent  = '✗ ' + (data.data || 'Unknown error');
-					btn.textContent     = 'Re-run AI Rewrite';
+					btn.textContent     = 'AI Rewrite';
 					btn.disabled        = false;
 				}
 			})
@@ -1371,13 +1469,191 @@ function bp_geo_ai_meta_box_html( $post ) {
 				status.style.color = '#c62828';
 				status.textContent = '✗ Request failed.';
 				btn.disabled       = false;
-				btn.textContent    = 'Re-run AI Rewrite';
+				btn.textContent    = 'AI Rewrite';
 			});
 		});
 	})();
 	</script>
 	<?php
 }
+
+// Remove taxonomy meta boxes from sidebar (AI assigns these automatically)
+add_action('add_meta_boxes_jobsite_geo', function() {
+	remove_meta_box('tagsdiv-jobsite_geo-service-types', 'jobsite_geo', 'side');
+	remove_meta_box('tagsdiv-jobsite_geo-service-areas', 'jobsite_geo', 'side');
+	remove_meta_box('tagsdiv-jobsite_geo-services',      'jobsite_geo', 'side');
+});
+
+// Display taxonomy terms below the permalink, with inline edit for Service Type and Service Area
+add_action('edit_form_after_title', function($post) {
+	if ($post->post_type !== 'jobsite_geo') return;
+
+	$type_terms = wp_get_post_terms($post->ID, 'jobsite_geo-service-types', ['fields' => 'slugs']);
+	$area_terms = wp_get_post_terms($post->ID, 'jobsite_geo-service-areas', ['fields' => 'slugs']);
+	$svc_terms  = wp_get_post_terms($post->ID, 'jobsite_geo-services',      ['fields' => 'slugs']);
+
+	$type         = (!is_wp_error($type_terms) && !empty($type_terms)) ? implode(', ', $type_terms) : '—';
+	$area         = (!is_wp_error($area_terms) && !empty($area_terms)) ? implode(', ', $area_terms) : '—';
+	$svc          = (!is_wp_error($svc_terms)  && !empty($svc_terms))  ? implode(', ', $svc_terms)  : '—';
+	$all_types    = get_terms(['taxonomy' => 'jobsite_geo-service-types', 'hide_empty' => false]);
+	$all_areas    = get_terms(['taxonomy' => 'jobsite_geo-service-areas', 'hide_empty' => false]);
+	$type_nonce   = wp_create_nonce('bp_geo_update_service_type');
+	$area_nonce   = wp_create_nonce('bp_geo_update_service_area');
+	$current_type = (!is_wp_error($type_terms) && !empty($type_terms)) ? $type_terms[0] : '';
+	$current_area = (!is_wp_error($area_terms) && !empty($area_terms)) ? $area_terms[0] : '';
+	$btn_style    = 'font-size:11px;padding:0 6px;line-height:1.8;';
+	$btn_ok_style = 'font-size:11px;padding:0 8px;line-height:1.8;';
+	$sel_style    = 'font-size:13px;';
+	?>
+	<div id="bp-geo-taxonomy-info">
+
+		<div><strong style="display:inline-block;width:100px;">Service Page:</strong> <span id="bp-geo-svc-display"><?php echo esc_html($svc); ?></span></div>
+
+		<div>
+			<strong style="display:inline-block;width:100px;">Service Type:</strong>
+			<span id="bp-geo-type-display"><?php echo esc_html($type); ?></span>
+			&nbsp;
+			<button type="button" class="button button-small" id="bp-geo-edit-type-btn" style="<?php echo $btn_style; ?>">Edit</button>
+			<span id="bp-geo-edit-type-wrap" style="display:none;">
+				<select id="bp-geo-type-select" style="<?php echo $sel_style; ?>">
+					<?php if (!is_wp_error($all_types)) foreach ($all_types as $t) : ?>
+						<option value="<?php echo esc_attr($t->slug); ?>" <?php selected($t->slug, $current_type); ?>><?php echo esc_html($t->slug); ?></option>
+					<?php endforeach; ?>
+				</select>
+				&nbsp;
+				<button type="button" class="button button-primary button-small" id="bp-geo-type-ok" style="<?php echo $btn_ok_style; ?>">OK</button>
+				<button type="button" class="button button-small" id="bp-geo-type-cancel" style="<?php echo $btn_style; ?>">Cancel</button>
+				<span id="bp-geo-type-status" style="margin-left:8px;font-size:12px;"></span>
+			</span>
+		</div>
+
+		<div>
+			<strong style="display:inline-block;width:100px;">Service Area:</strong>
+			<span id="bp-geo-area-display"><?php echo esc_html($area); ?></span>
+			&nbsp;
+			<button type="button" class="button button-small" id="bp-geo-edit-area-btn" style="<?php echo $btn_style; ?>">Edit</button>
+			<span id="bp-geo-edit-area-wrap" style="display:none;">
+				<select id="bp-geo-area-select" style="<?php echo $sel_style; ?>">
+					<?php if (!is_wp_error($all_areas)) foreach ($all_areas as $a) : ?>
+						<option value="<?php echo esc_attr($a->slug); ?>" <?php selected($a->slug, $current_area); ?>><?php echo esc_html($a->slug); ?></option>
+					<?php endforeach; ?>
+				</select>
+				&nbsp;
+				<button type="button" class="button button-primary button-small" id="bp-geo-area-ok" style="<?php echo $btn_ok_style; ?>">OK</button>
+				<button type="button" class="button button-small" id="bp-geo-area-cancel" style="<?php echo $btn_style; ?>">Cancel</button>
+				<span id="bp-geo-area-status" style="margin-left:8px;font-size:12px;"></span>
+			</span>
+		</div>
+
+	</div>
+	<script>
+	(function(){
+		var svcDisp = document.getElementById('bp-geo-svc-display');
+
+		function makeInlineEdit(editBtnId, wrapId, cancelBtnId, okBtnId, selectId, displayId, statusId, ajaxAction, postId, nonce) {
+			var editBtn   = document.getElementById(editBtnId);
+			var wrap      = document.getElementById(wrapId);
+			var cancelBtn = document.getElementById(cancelBtnId);
+			var okBtn     = document.getElementById(okBtnId);
+			var select    = document.getElementById(selectId);
+			var display   = document.getElementById(displayId);
+			var status    = document.getElementById(statusId);
+
+			editBtn.addEventListener('click', function() {
+				wrap.style.display    = 'inline';
+				editBtn.style.display = 'none';
+			});
+
+			cancelBtn.addEventListener('click', function() {
+				wrap.style.display    = 'none';
+				editBtn.style.display = 'inline';
+				status.textContent    = '';
+			});
+
+			okBtn.addEventListener('click', function() {
+				okBtn.disabled     = true;
+				status.style.color = '#555';
+				status.textContent = 'Saving…';
+
+				fetch(ajaxurl, {
+					method: 'POST',
+					headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+					body: new URLSearchParams({
+						action:    ajaxAction,
+						post_id:   postId,
+						term_slug: select.value,
+						nonce:     nonce
+					})
+				})
+				.then(function(r){ return r.json(); })
+				.then(function(data) {
+					if (data.success) {
+						display.textContent   = select.value;
+						svcDisp.textContent   = data.data.service || '—';
+						wrap.style.display    = 'none';
+						editBtn.style.display = 'inline';
+						status.textContent    = '';
+					} else {
+						status.style.color = '#c62828';
+						status.textContent = '✗ ' + (data.data || 'Error');
+						okBtn.disabled     = false;
+					}
+				})
+				.catch(function() {
+					status.style.color = '#c62828';
+					status.textContent = '✗ Request failed.';
+					okBtn.disabled     = false;
+				});
+			});
+		}
+
+		makeInlineEdit(
+			'bp-geo-edit-type-btn', 'bp-geo-edit-type-wrap', 'bp-geo-type-cancel', 'bp-geo-type-ok',
+			'bp-geo-type-select', 'bp-geo-type-display', 'bp-geo-type-status',
+			'bp_geo_update_service_type', <?php echo (int) $post->ID; ?>, '<?php echo esc_js($type_nonce); ?>'
+		);
+
+		makeInlineEdit(
+			'bp-geo-edit-area-btn', 'bp-geo-edit-area-wrap', 'bp-geo-area-cancel', 'bp-geo-area-ok',
+			'bp-geo-area-select', 'bp-geo-area-display', 'bp-geo-area-status',
+			'bp_geo_update_service_area', <?php echo (int) $post->ID; ?>, '<?php echo esc_js($area_nonce); ?>'
+		);
+	})();
+	</script>
+	<?php
+});
+
+add_action('wp_ajax_bp_geo_update_service_type', function() {
+	if (!check_ajax_referer('bp_geo_update_service_type', 'nonce', false)) wp_send_json_error('Invalid nonce.');
+	if (!current_user_can('edit_posts')) wp_send_json_error('Insufficient permissions.');
+
+	$post_id   = intval($_POST['post_id']   ?? 0);
+	$type_slug = sanitize_title($_POST['term_slug'] ?? '');
+	if (!$post_id || !$type_slug) wp_send_json_error('Invalid data.');
+
+	if (!term_exists($type_slug, 'jobsite_geo-service-types')) wp_insert_term($type_slug, 'jobsite_geo-service-types');
+	wp_set_post_terms($post_id, [$type_slug], 'jobsite_geo-service-types', false);
+	bp_geo_sync_services_from_types($post_id);
+
+	$svc_terms = wp_get_post_terms($post_id, 'jobsite_geo-services', ['fields' => 'slugs']);
+	wp_send_json_success(['service' => (!is_wp_error($svc_terms) && !empty($svc_terms)) ? implode(', ', $svc_terms) : '']);
+});
+
+add_action('wp_ajax_bp_geo_update_service_area', function() {
+	if (!check_ajax_referer('bp_geo_update_service_area', 'nonce', false)) wp_send_json_error('Invalid nonce.');
+	if (!current_user_can('edit_posts')) wp_send_json_error('Insufficient permissions.');
+
+	$post_id   = intval($_POST['post_id']   ?? 0);
+	$area_slug = sanitize_title($_POST['term_slug'] ?? '');
+	if (!$post_id || !$area_slug) wp_send_json_error('Invalid data.');
+
+	if (!term_exists($area_slug, 'jobsite_geo-service-areas')) wp_insert_term($area_slug, 'jobsite_geo-service-areas');
+	wp_set_post_terms($post_id, [$area_slug], 'jobsite_geo-service-areas', false);
+	bp_geo_sync_services_from_types($post_id);
+
+	$svc_terms = wp_get_post_terms($post_id, 'jobsite_geo-services', ['fields' => 'slugs']);
+	wp_send_json_success(['service' => (!is_wp_error($svc_terms) && !empty($svc_terms)) ? implode(', ', $svc_terms) : '']);
+});
 
 add_action( 'wp_ajax_bp_geo_run_ai_rewrite', 'bp_geo_ajax_handler' );
 
@@ -1661,130 +1937,37 @@ function bp_geo_normalize_state( $state ) {
 // ---------------------------------------------------------
 
 function bp_geo_assign_taxonomy_term( $post_id, $base_service, $city, $state, $existing_slugs ) {
-	global $wpdb;
 
-	// Normalize base service slug
+	// Normalize service slug
 	$base_service = sanitize_title( strtolower( $base_service ) );
 
-	// Expand common abbreviations that should never appear in slugs
 	$abbreviations = [
 		'/\bac\b/'  => 'air-conditioner',
 		'/\ba-c\b/' => 'air-conditioner',
 	];
 	$base_service = preg_replace( array_keys( $abbreviations ), array_values( $abbreviations ), $base_service );
 
-	// Normalize city and state
 	$city_slug  = sanitize_title( strtolower( $city ) );
 	$state_abbr = bp_geo_normalize_state( $state );
 
-	// Format: {service}--{city}-{state}  e.g. air-conditioner-repair--frisco-tx
-	$target_slug = "{$base_service}--{$city_slug}-{$state_abbr}";
+	// Combined services slug: {service}-{city}-{state}  e.g. air-conditioner-repair-frisco-tx
+	// Single-dash is fine — archive pages now look up service-type/service-area from post terms
+	// rather than parsing the slug, so slug format no longer matters.
+	$target_slug = "{$base_service}-{$city_slug}-{$state_abbr}";
 
-	error_log( "bp_geo_assign_taxonomy_term: post={$post_id} target_slug={$target_slug}" );
-
-	// Get the taxonomy term_taxonomy_id for jobsite_geo-services
-	// Then hard-delete all term relationships for this post in this taxonomy directly in the DB
-	$tt_ids = $wpdb->get_col( $wpdb->prepare(
-		"SELECT tt.term_taxonomy_id
-		 FROM {$wpdb->term_taxonomy} tt
-		 JOIN {$wpdb->term_relationships} tr ON tr.term_taxonomy_id = tt.term_taxonomy_id
-		 WHERE tt.taxonomy = %s AND tr.object_id = %d",
-		BP_GEO_TAXONOMY,
-		$post_id
-	));
-
-	if ( $tt_ids ) {
-		$placeholders = implode( ',', array_fill( 0, count( $tt_ids ), '%d' ) );
-		$wpdb->query( $wpdb->prepare(
-			"DELETE FROM {$wpdb->term_relationships} WHERE object_id = %d AND term_taxonomy_id IN ($placeholders)",
-			array_merge( [ $post_id ], $tt_ids )
-		));
-
-		// Update term counts
-		foreach ( $tt_ids as $tt_id ) {
-			$wpdb->query( $wpdb->prepare(
-				"UPDATE {$wpdb->term_taxonomy} SET count = count - 1 WHERE term_taxonomy_id = %d AND count > 0",
-				$tt_id
-			));
-		}
-
-		error_log( "bp_geo_assign_taxonomy_term: hard-deleted " . count($tt_ids) . " old term relationship(s)" );
+	// Assign service-type term (service only, no location)
+	if ( ! term_exists( $base_service, 'jobsite_geo-service-types' ) ) {
+		wp_insert_term( $base_service, 'jobsite_geo-service-types' );
 	}
+	wp_set_post_terms( $post_id, [ $base_service ], 'jobsite_geo-service-types', false );
 
-	clean_object_term_cache( $post_id, BP_GEO_TAXONOMY );
-
-	// Match or create the correct term
-	// We query the DB directly for slug matching because get_term_by() runs sanitize_title()
-	// which would strip our double-dash and match the wrong term
-	$existing_term = $wpdb->get_row( $wpdb->prepare(
-		"SELECT t.term_id FROM {$wpdb->terms} t
-		 JOIN {$wpdb->term_taxonomy} tt ON tt.term_id = t.term_id
-		 WHERE t.slug = %s AND tt.taxonomy = %s",
-		$target_slug,
-		BP_GEO_TAXONOMY
-	));
-
-	if ( $existing_term ) {
-		$term_id = $existing_term->term_id;
-		error_log( "bp_geo_assign_taxonomy_term: matched existing term_id={$term_id}" );
-	} else {
-		$service_label = ucwords( str_replace( '-', ' ', $base_service ) );
-		$state_upper   = strtoupper( $state_abbr );
-		$city_label    = ucwords( $city );
-		$term_name     = "{$service_label} — {$city_label}, {$state_upper}";
-
-		error_log( "bp_geo_assign_taxonomy_term: creating new term '{$term_name}' slug='{$target_slug}'" );
-
-		// Insert term directly into DB so WordPress never sanitizes our double-dash slug
-		$wpdb->insert( $wpdb->terms, [
-			'name'       => $term_name,
-			'slug'       => $target_slug,
-			'term_group' => 0,
-		]);
-		$term_id = $wpdb->insert_id;
-
-		if ( ! $term_id ) {
-			error_log( 'bp_geo_assign_taxonomy_term: FAILED to insert term into wp_terms' );
-			return '';
-		}
-
-		// Insert term_taxonomy row
-		$wpdb->insert( $wpdb->term_taxonomy, [
-			'term_id'     => $term_id,
-			'taxonomy'    => BP_GEO_TAXONOMY,
-			'description' => '',
-			'parent'      => 0,
-			'count'       => 0,
-		]);
-
-		error_log( "bp_geo_assign_taxonomy_term: created term_id={$term_id}" );
+	// Assign combined services term
+	if ( ! term_exists( $target_slug, BP_GEO_TAXONOMY ) ) {
+		wp_insert_term( $target_slug, BP_GEO_TAXONOMY );
 	}
+	wp_set_post_terms( $post_id, [ $target_slug ], BP_GEO_TAXONOMY, false );
 
-	// Insert the single correct relationship directly into the DB
-	$tt_row = $wpdb->get_row( $wpdb->prepare(
-		"SELECT term_taxonomy_id FROM {$wpdb->term_taxonomy} WHERE term_id = %d AND taxonomy = %s",
-		$term_id,
-		BP_GEO_TAXONOMY
-	));
-
-	if ( $tt_row ) {
-		$wpdb->replace( $wpdb->term_relationships, [
-			'object_id'        => $post_id,
-			'term_taxonomy_id' => $tt_row->term_taxonomy_id,
-			'term_order'       => 0,
-		]);
-
-		$wpdb->query( $wpdb->prepare(
-			"UPDATE {$wpdb->term_taxonomy} SET count = (
-				SELECT COUNT(*) FROM {$wpdb->term_relationships} WHERE term_taxonomy_id = %d
-			) WHERE term_taxonomy_id = %d",
-			$tt_row->term_taxonomy_id,
-			$tt_row->term_taxonomy_id
-		));
-
-		clean_object_term_cache( $post_id, BP_GEO_TAXONOMY );
-		error_log( "bp_geo_assign_taxonomy_term: inserted term_taxonomy_id={$tt_row->term_taxonomy_id} for post={$post_id}" );
-	}
+	error_log( "bp_geo_assign_taxonomy_term: post={$post_id} slug={$target_slug}" );
 
 	return $target_slug;
 }

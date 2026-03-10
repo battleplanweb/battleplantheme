@@ -224,7 +224,7 @@ $lastRunD = (int) get_option('bp_chron_d_time', 0);
 $nextD    = (int) get_option('bp_chron_d_next', 0);
 $neverD   = $lastRunD === 0;
 
-$staleD = !$neverD && (time() - $lastRunD) > (86400 * 2);
+$staleD = !$neverD && (time() - $lastRunD) > (86400 * 7);
 
 if ($nextD <= 0) {
     $nextD = bp_next_nightly_window();

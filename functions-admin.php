@@ -376,11 +376,11 @@ function battleplan_customize_admin_menus() {
 	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'admin-columns-pro/admin-columns-pro.php' ) ) add_submenu_page( 'tools.php', 'Admin Columns', 'Admin Columns', 'manage_options', 'options-general.php?page=codepress-admin-columns' );
 	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wp-mail-smtp/wp_mail_smtp.php' ) ) add_submenu_page( 'tools.php', 'WP Mail SMTP', 'WP Mail SMTP', 'manage_options', 'options-general.php?page=wp-mail-smtp' );
 
-	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wordpress-seo-premium/wp-seo-premium.php' ) ) add_submenu_page( 'tools.php', 'Yoast Settings', 'Yoast Settings', 'manage_options', 'admin.php?page=wpseo_page_settings' );
-	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wpseo-local/local-seo.php' ) ) add_submenu_page( 'tools.php', 'Yoast Local', '&nbsp;└&nbsp;Local', 'manage_options', 'admin.php?page=wpseo_local' );
-	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wordpress-seo-premium/wp-seo-premium.php' ) ) add_submenu_page( 'tools.php', 'Yoast Redirects', '&nbsp;└&nbsp;Redirects', 'manage_options', 'admin.php?page=wpseo_redirects' );
+	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wordpress-seo-premium/wp-seo-premium.php' ) ) add_submenu_page( 'options-general.php', 'Yoast Settings', 'Yoast Settings', 'manage_options', 'admin.php?page=wpseo_page_settings' );
+	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wpseo-local/local-seo.php' ) ) add_submenu_page( 'options-general.php', 'Yoast Local', '&nbsp;└&nbsp;Local', 'manage_options', 'admin.php?page=wpseo_local' );
+	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wordpress-seo-premium/wp-seo-premium.php' ) ) add_submenu_page( 'options-general.php', 'Yoast Redirects', '&nbsp;└&nbsp;Redirects', 'manage_options', 'admin.php?page=wpseo_redirects' );
 
-	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Settings', 'GBP Settings', 'manage_options', 'admin.php?page=pgmb_settings' );
+	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'options-general.php', 'GBP Settings', 'GBP Settings', 'manage_options', 'admin.php?page=pgmb_settings' );
 	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Templates', '&nbsp;└&nbsp;Templates', 'manage_options', 'edit.php?post_type=pgmb_templates' );
 	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Calendar', '&nbsp;└&nbsp;Calendar', 'manage_options', 'admin.php?page=post_to_google_my_business' );
 	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'tools.php', 'GBP Account', '&nbsp;└&nbsp;Account', 'manage_options', 'admin.php?page=post_to_google_my_business-account' );
@@ -393,6 +393,14 @@ function battleplan_customize_admin_menus() {
 			'manage_options',
 			'refresh-jobsite-tags',
 			'bp_refresh_jobsite_tags_page'
+		);
+		add_submenu_page(
+			'edit.php?post_type=jobsite_geo',
+			'Normalize Service Slugs',
+			'⚙️ Normalize Slugs',
+			'manage_options',
+			'normalize-service-slugs',
+			'bp_normalize_service_slugs_page'
 		);
 	}
 }
@@ -486,6 +494,62 @@ function battleplan_remove_dashboard_widgets () {
 	remove_meta_box('wpseo-wincher-dashboard-overview','dashboard','normal');		// Yoast SEO / Wincher Top Keyphrases
 	remove_meta_box('wpseo-wincher-dashboard-overview','dashboard','side');			// Yoast SEO / Wincher Top Keyphrases
 }
+
+// Disable dashboard widget drag-and-drop (positions are controlled server-side)
+// Force 3-column layout so column3 is always visible (default is 2, which hides column3 via CSS)
+add_filter('get_user_option_screen_layout_dashboard', function() { return 3; });
+
+// Reposition widgets after wp_dashboard_setup() has finished applying saved order.
+// admin_head fires after wp_dashboard_setup() but before do_meta_boxes() renders the page.
+add_action('admin_head', function() {
+	$screen = get_current_screen();
+	if ( ! $screen || $screen->id !== 'dashboard' ) return;
+	global $wp_meta_boxes;
+	if ( empty( $wp_meta_boxes['dashboard'] ) ) return;
+
+	foreach ( [
+		'bp_keyword_rankings'      => [ 'column3', 'default' ],
+		'battleplan_queries_stats' => [ 'side',    'low'     ],
+	] as $id => [ $target_ctx, $target_pri ] ) {
+		foreach ( $wp_meta_boxes['dashboard'] as $ctx => $priorities ) {
+			foreach ( $priorities as $pri => $boxes ) {
+				if ( isset( $boxes[ $id ] ) ) {
+					$box = $wp_meta_boxes['dashboard'][ $ctx ][ $pri ][ $id ];
+					unset( $wp_meta_boxes['dashboard'][ $ctx ][ $pri ][ $id ] );
+					$wp_meta_boxes['dashboard'][ $target_ctx ][ $target_pri ][ $id ] = $box;
+					break 2;
+				}
+			}
+		}
+	}
+});
+
+// admin_print_footer_scripts fires AFTER wp_print_footer_scripts so our JS runs
+// after WordPress's postboxes/dashboard scripts have initialized sortable.
+add_action('admin_print_footer_scripts', function() {
+	$screen = get_current_screen();
+	if ( ! $screen || $screen->id !== 'dashboard' ) return;
+	?>
+	<script>
+	jQuery(function($) {
+		// Reposition widgets into correct columns
+		$('#postbox-container-3 .meta-box-sortables').append($('#bp_keyword_rankings'));
+		$('#postbox-container-2 .meta-box-sortables').append($('#battleplan_queries_stats'));
+
+		// Disable sortable now that WordPress has initialized it
+		$('.meta-box-sortables').sortable('disable');
+
+		// Prevent any drag from saving positions to the DB
+		if ( window.postboxes ) postboxes.save_order = function() {};
+	});
+	</script>
+	<style>
+	#dashboard-widgets .postbox .hndle { cursor: default !important; pointer-events: none !important; }
+	#dashboard-widgets .postbox .handle-actions .handle-order-higher,
+	#dashboard-widgets .postbox .handle-actions .handle-order-lower { display: none !important; }
+	</style>
+	<?php
+});
 
 // Load site stats if hooked to Google Analytics
 $customer_info = get_option('customer_info');
@@ -1180,17 +1244,44 @@ function bp_refresh_jobsite_tags_page() {
 			$total   = count($jobsites);
 			$success = 0;
 
+			$migrated = 0;
+
 			foreach ($jobsites as $j) {
-				// If your original processing function is called battleplan_saveJobsite(),
-				// you can call it directly:
 				battleplan_saveJobsite($j->ID, get_post($j->ID), true);
+
+				// Migration: seed service-types from existing services terms
+				// for posts that haven't been through the new AI flow yet
+				$existing_types = wp_get_post_terms($j->ID, 'jobsite_geo-service-types', ['fields' => 'slugs']);
+				if (empty($existing_types) || is_wp_error($existing_types)) {
+					$services = wp_get_post_terms($j->ID, 'jobsite_geo-services', ['fields' => 'slugs']);
+					if (!is_wp_error($services) && $services) {
+						$type_slugs = [];
+						foreach ($services as $svc_slug) {
+							$parts = explode('--', $svc_slug, 2);
+							if (!empty($parts[0])) $type_slugs[] = $parts[0];
+						}
+						$type_slugs = array_unique($type_slugs);
+						foreach ($type_slugs as $type_slug) {
+							if (!term_exists($type_slug, 'jobsite_geo-service-types')) {
+								wp_insert_term($type_slug, 'jobsite_geo-service-types');
+							}
+						}
+						if ($type_slugs) {
+							wp_set_post_terms($j->ID, $type_slugs, 'jobsite_geo-service-types', false);
+							$migrated++;
+						}
+					}
+				}
+
 				$success++;
 			}
 
 			bp_cleanup_empty_service_tags();
 
 			echo '<div class="notice notice-success"><p><strong>✅ Refresh Complete:</strong> '
-				. esc_html($success) . ' of ' . esc_html($total) . ' jobsites processed.</p></div>';
+				. esc_html($success) . ' of ' . esc_html($total) . ' jobsites processed'
+				. ($migrated ? ', ' . $migrated . ' migrated to service-types' : '')
+				. '.</p></div>';
 		} else {
 			echo '<p><strong>No form variable detected.</strong></p>';
 		}
@@ -1200,6 +1291,155 @@ function bp_refresh_jobsite_tags_page() {
 	?>
 	<form method="post" onsubmit="return confirm('Are you sure you want to refresh all Jobsite tags?');">
 		<?php submit_button('Run Refresh', 'primary', 'bp_run_refresh'); ?>
+	</form>
+	</div>
+	<?php
+}
+
+function bp_normalize_service_slugs_page() {
+	if (!current_user_can('manage_options')) {
+		wp_die(__('You do not have permission to access this page.'));
+	}
+
+	echo '<div class="wrap"><h1>Normalize Service Slugs</h1>';
+	echo '<p>Converts embedded-location slugs to the canonical <code>service--city-st</code> format and merges duplicates.<br>
+	      Examples: <code>air-conditioner-repair-allen</code> and <code>air-conditioner-repair--allen</code> both become <code>air-conditioner-repair--allen-tx</code>.</p>';
+
+	$log     = [];
+	$renamed = 0;
+	$merged  = 0;
+	$dry_run = true;
+
+	if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bp_normalize_slugs'])) {
+		check_admin_referer('bp_normalize_slugs_nonce');
+		$dry_run = isset($_POST['dry_run']);
+
+		$service_terms = get_terms(['taxonomy' => 'jobsite_geo-services',     'hide_empty' => false]);
+		$area_terms    = get_terms(['taxonomy' => 'jobsite_geo-service-areas', 'hide_empty' => false]);
+
+		if (is_wp_error($service_terms) || is_wp_error($area_terms) || !$service_terms) {
+			echo '<div class="notice notice-error"><p>Could not fetch taxonomy terms.</p></div>';
+		} else {
+
+			// Build city → canonical area slug lookup, longest-first
+			// Includes both "allen-tx" (exact) and "allen" (city-only) as keys
+			$city_to_area = [];
+			foreach ($area_terms as $at) {
+				$city_to_area[$at->slug] = $at->slug;
+				$city_only = preg_replace('/-[a-z]{2}$/', '', $at->slug);
+				if ($city_only !== $at->slug && !isset($city_to_area[$city_only])) {
+					$city_to_area[$city_only] = $at->slug;
+				}
+			}
+			// Sort longest-first so "fort-worth-tx" matches before "worth-tx" or "worth"
+			uksort($city_to_area, function($a, $b) { return strlen($b) - strlen($a); });
+
+			// Derive canonical slug — PHP 7.4-safe (no str_contains / str_ends_with)
+			$canonical_fn = function($slug) use ($city_to_area) {
+				// Already double-hyphen: normalize the location part only
+				if (strpos($slug, '--') !== false) {
+					$parts = explode('--', $slug, 2);
+					$loc   = isset($city_to_area[$parts[1]]) ? $city_to_area[$parts[1]] : $parts[1];
+					return $parts[0] . '--' . $loc;
+				}
+				// Single-hyphen: scan for a known area suffix (longest match first)
+				foreach ($city_to_area as $city => $full) {
+					$suffix = '-' . $city;
+					if (substr($slug, -strlen($suffix)) === $suffix) {
+						return substr($slug, 0, strlen($slug) - strlen($suffix)) . '--' . $full;
+					}
+				}
+				return $slug; // service-only term, no location detected
+			};
+
+			// Group all terms by their canonical slug
+			$groups = [];
+			foreach ($service_terms as $term) {
+				$groups[$canonical_fn($term->slug)][] = $term;
+			}
+
+			$retitled = 0;
+
+			foreach ($groups as $canonical => $terms) {
+				// Prefer to keep the term whose slug already matches canonical
+				$keep = null;
+				foreach ($terms as $t) {
+					if ($t->slug === $canonical) { $keep = $t; break; }
+				}
+				if (!$keep) $keep = $terms[0];
+
+				// Update slug and/or name if either differs from canonical
+				if ($keep->slug !== $canonical || $keep->name !== $canonical) {
+					$log[] = '<strong>RENAME</strong> [' . $keep->term_id . '] <code>' . esc_html($keep->slug) . '</code>'
+						. ($keep->name !== $canonical ? ' &nbsp;<em style="color:#888">was: ' . esc_html($keep->name) . '</em>' : '')
+						. ' → <code>' . esc_html($canonical) . '</code>';
+					if (!$dry_run) {
+						wp_update_term($keep->term_id, 'jobsite_geo-services', [
+							'slug' => $canonical,
+							'name' => $canonical,
+						]);
+					}
+					if ($keep->slug !== $canonical) $renamed++;
+					if ($keep->name !== $canonical) $retitled++;
+				}
+
+				// Merge any duplicate terms into the keeper
+				foreach ($terms as $t) {
+					if ($t->term_id === $keep->term_id) continue;
+					$log[] = '<strong>MERGE</strong> [' . $t->term_id . '] <code>' . esc_html($t->slug) . '</code> → [' . $keep->term_id . '] <code>' . esc_html($canonical) . '</code>';
+					if (!$dry_run) {
+						$post_ids = get_posts([
+							'post_type' => 'any', 'posts_per_page' => -1, 'fields' => 'ids',
+							'tax_query' => [['taxonomy' => 'jobsite_geo-services', 'field' => 'term_id', 'terms' => $t->term_id]],
+						]);
+						foreach ($post_ids as $pid) {
+							wp_set_post_terms($pid, [$keep->term_id], 'jobsite_geo-services', true);
+						}
+						wp_delete_term($t->term_id, 'jobsite_geo-services');
+					}
+					$merged++;
+				}
+			}
+
+			// Second pass: fix names on terms whose slug is already canonical but name still differs
+			// (catches terms that were already correctly slugged but have a formatted title)
+			foreach ($service_terms as $term) {
+				$canonical = $canonical_fn($term->slug);
+				if ($term->slug === $canonical && $term->name !== $canonical) {
+					$log[] = '<strong>RETITLE</strong> [' . $term->term_id . '] <code>' . esc_html($term->slug) . '</code>'
+						. ' &nbsp;<em style="color:#888">was: ' . esc_html($term->name) . '</em>'
+						. ' → <code>' . esc_html($canonical) . '</code>';
+					if (!$dry_run) {
+						wp_update_term($term->term_id, 'jobsite_geo-services', ['name' => $canonical]);
+					}
+					$retitled++;
+				}
+			}
+
+			if ($log) {
+				$label = $dry_run ? ' (preview — no changes made)' : '';
+				echo '<div class="notice notice-' . ($dry_run ? 'info' : 'success') . '"><p><strong>Results' . $label . ':</strong> '
+					. $renamed . ' slugs renamed, ' . $retitled . ' titles updated, ' . $merged . ' merged/deleted.</p></div>';
+				echo '<ul style="font-family:monospace;font-size:13px;margin-top:8px;">';
+				foreach ($log as $line) echo '<li>' . $line . '</li>';
+				echo '</ul>';
+			} else {
+				echo '<div class="notice notice-success"><p>All service slugs are already normalized — nothing to do.</p></div>';
+			}
+		}
+	}
+
+	?>
+	<hr>
+	<form method="post" onsubmit="return this.dry_run.checked || confirm('Apply all renames and merges? This cannot be undone.');">
+		<?php wp_nonce_field('bp_normalize_slugs_nonce'); ?>
+		<p>
+			<label>
+				<input type="checkbox" name="dry_run" value="1" checked>
+				&nbsp;Preview only (dry run) — uncheck to apply changes
+			</label>
+		</p>
+		<?php submit_button('Run Normalize', 'primary', 'bp_normalize_slugs'); ?>
 	</form>
 	</div>
 	<?php

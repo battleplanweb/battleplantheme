@@ -198,7 +198,7 @@ div div.theme-screenshot img {
 }
 
 .wp-admin #wpfooter {
-	bottom:                                                    -200px;
+	bottom:                                                    -300px;
 	border-top:                                                1px solid var(--black-lowest);
 	padding-top:                                               2em;
 }
@@ -324,6 +324,7 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	z-index:                                                   100;
 }
 
+
 /* Admin columns */
 .wp-admin select {
 	text-transform:                                            capitalize;
@@ -410,6 +411,11 @@ th.sorted a {
 .wp-list-table th,
 .wp-list-table td {
 	text-align:                                                center;
+}
+
+.wp-list-table#kw-table th:nth-of-type(1),
+.wp-list-table#kw-table td:nth-of-type(1) {
+	text-align:                                                left;
 }
 
 .wp-list-table th span.sorting-indicators {
@@ -507,6 +513,16 @@ th.sorted a span {
 	grid-template-columns:                                     repeat(6, 1fr);
 }
 
+#dashboard-widgets #postbox-container-3 .postbox#bp_keyword_rankings .inside {
+	grid-template-columns:                                     1fr;
+}
+
+#bp_keyword_rankings .kw-groups span {
+	flex:                                                      1;
+	padding:                                                   10px;
+	text-align:                                                center;
+}
+
 #dashboard-widgets #postbox-container-3 tr {
 	display:                                                   grid;
 	grid-template-columns:                                     90px 1fr 1fr;
@@ -568,7 +584,7 @@ th.sorted a span {
 
 
 #dashboard-widgets #battleplan_monthly_stats {
-	max-height:                                                370px;
+	max-height:                                                318px;
 }
 
 #dashboard-widgets #battleplan_quarterly_stats {
@@ -576,7 +592,7 @@ th.sorted a span {
 }
 
 #dashboard-widgets #battleplan_daily_stats {
-	max-height:                                                562px;
+	max-height:                                                220px;
 }
 
 #dashboard-widgets #battleplan_tech_stats.postbox,
@@ -594,7 +610,7 @@ th.sorted a span {
     	background:                                            var(--white);
 	border:                                                    1px solid var(--light-grey);
     	box-shadow:                                            2px 2px 0 0 var(--light-grey);
-	max-height:                                                unset;
+	max-height:                                                unset !important;
 }
 
 #battleplan_referrer_stats ul,

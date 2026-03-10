@@ -160,12 +160,12 @@ function battleplan_setupFormEmail( $contact_form, &$abort, $submission ) {
 
 	if ($spamIntercept) goto spam_done;
 
-	$search_words = [‘fuck’, ‘shit’, ‘cunt’, ‘bitch’];
-	$replace_words = [‘####’, ‘####’, ‘####’, ‘#####’];
+	$search_words = ['fuck', 'shit', 'cunt', 'bitch'];
+	$replace_words = ['####', '####', '####', '#####'];
 
 	$message = str_replace($search_words, $replace_words, $message);
 
-	$bad_phones = array(‘0’, ‘(0’, ‘(11)’);
+	$bad_phones = array('0', '(0', '(11)');
 
 	if ( $userCountry !== "United States" ) :
 		$countryIgnore		= 	["Chicken Dinner House", "Babe's Chicken Catering", "Sweetie Pie", "Cooks Country", "Rovin Inc"];

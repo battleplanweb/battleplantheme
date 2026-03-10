@@ -328,9 +328,25 @@ function bp_ga4_collect_simple_dimension(BetaAnalyticsDataClient $client, $prope
         if ($optionKey === 'bp_ga4_pages_clean') {
             $dimVal = trim(preg_replace('/\s+[•|]\s+[^•|]+$/', '', $dimVal));
         }
+        if ($optionKey === 'bp_ga4_content_clean') {
+            $dimVal = str_replace(' ', '-', $dimVal);
+        }
         if (!$dimVal) continue;
         if (!isset($existing[$dimVal])) $existing[$dimVal] = [];
         $existing[$dimVal]["{$metricPrefix}-{$days}"] = (int)$row['m'][0];
+    }
+
+    // Merge any legacy space-keyed entries into their hyphenated equivalents
+    if ($optionKey === 'bp_ga4_content_clean') {
+        foreach ($existing as $key => $metrics) {
+            $normalized = str_replace(' ', '-', $key);
+            if ($normalized !== $key) {
+                foreach ($metrics as $mk => $mv) {
+                    $existing[$normalized][$mk] = ($existing[$normalized][$mk] ?? 0) + (int)$mv;
+                }
+                unset($existing[$key]);
+            }
+        }
     }
 
     update_option($optionKey, $existing, false);

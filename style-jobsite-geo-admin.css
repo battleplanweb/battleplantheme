@@ -52,11 +52,14 @@ body.post-type-jobsite_geo.user-battleplanweb div#postimagediv {
 
 body.wp-admin.post-type-jobsite_geo #acf_after_title-sortables::after {
 	content:                                                   "Jobsite Description";
+}
+
+body.wp-admin.post-type-jobsite_geo #acf_after_title-sortables::after,
+body.wp-admin.post-type-jobsite_geo .jobsite_geo-title {
 	font-family:                                               -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
 	font-size:                                                 23px;
 	font-weight:                                               400;
-	margin:                                                    0;
-	margin-right:                                              0px;
+	margin:                                                    0 0 10px 0;
 	padding:                                                   9px 0 4px 3px;
 	line-height:                                               1.3;
 }
@@ -66,8 +69,47 @@ body.wp-admin.post-type-jobsite_geo #wp-content-editor-container #content {
 	height:                                                    150px !important;
 }
 
+body.wp-admin.post-type-jobsite_geo #postdivrich {
+	padding-top:                                               30px !important;
+}
+
 body.wp-admin.post-type-jobsite_geo #wp-content-wrap {
-	padding-top:                                               35px !important;
+	position:                                                  relative;
+	padding-top:                                               5px !important;
+}
+
+body.wp-admin.post-type-jobsite_geo .jobsite_geo-prompts {
+	display:                                                   block;
+	margin:                                                    0 0 8px;
+	padding:                                                   0;
+}
+
+body.wp-admin.post-type-jobsite_geo .jobsite_geo-prompts span {
+	display:                                                   block;
+	font-size:                                                 14px;
+	line-height:                                               1.4;
+	padding-left:                                              10px;
+	color:                                                     #787c82;
+	font-style:                                                italic;
+}
+
+body.wp-admin.post-type-jobsite_geo .jobsite_geo-prompts span::before {
+	content:                                                   "• ";
+}
+
+body.wp-admin.post-type-jobsite_geo #bp-geo-voice-btn {
+	position:                                                  absolute;
+	top:                                                       -25px;
+	right:                                                     0;
+	font-size:                                                 12px;
+	padding:                                                   2px 10px;
+	line-height:                                               1.8;
+}
+
+body.wp-admin.post-type-jobsite_geo #bp-geo-voice-btn.bp-geo-voice-active {
+	background:                                                #d63638;
+	border-color:                                              #d63638;
+	color:                                                     #fff;
 }
 
 
@@ -251,6 +293,16 @@ button.bp-rotate-image.spinning {
 	}
 }
 
+body.wp-admin.post-type-jobsite_geo #poststuff #titlewrap {
+	border-top:                                                1px solid #c3c4c7;
+	padding-top:                                               10px;
+	margin-top:                                                10px;
+}
+
+body.wp-admin.post-type-jobsite_geo #titlediv .inside {
+	display: none; /* hide permalink on jobsite geo */
+}
+
 
 /*--------------------------------------------------------------
 # Mobile Styles
@@ -296,8 +348,27 @@ button.bp-rotate-image.spinning {
 	body.wp-admin.post-type-jobsite_geo #acf-group_jobsite_details .acf-field.acf-field-caption-4 {
 		order:                                                    8;
 	}
+}
 
+#comment-link-box,
+#edit-slug-box,
+#bp-geo-taxonomy-info {
+	line-height:                                               1.84615384;
+	min-height:                                                25px;
+	margin-top:                                                5px;
+	padding:                                                   0 10px;
+	color:                                                     #646970;
 }
 
 /* 1: Phones (portrait) */
-@media (max-width: 576px) {}
+@media (max-width: 576px) {
+
+	.wp-core-ui .button,
+	.wp-core-ui .button.button-large,
+	.wp-core-ui .button.button-small,
+	a.preview,
+	input#publish,
+	input#save-post {
+		min-height:                                               unset;
+	}
+}

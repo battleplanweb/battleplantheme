@@ -37,7 +37,7 @@ function battleplan_add_dashboard_widgets() {
 
 		add_meta_box( 'battleplan_content_stats', 'Content Visibility', 'battleplan_admin_content_stats', 'dashboard', 'side', 'high' );
 		add_meta_box( 'battleplan_pages_stats', 'Most Popular Pages', 'battleplan_admin_pages_stats', 'dashboard', 'side', 'high' );
-        add_meta_box( 'battleplan_queries_stats', 'Top Google Queries', 'battleplan_admin_queries_stats', 'dashboard', 'side', 'high' );
+        add_meta_box( 'battleplan_queries_stats', 'Top Google Queries', 'battleplan_admin_queries_stats', 'dashboard', 'side', 'low' );
 
         add_meta_box( 'battleplan_weekly_stats', 'Weekly Visitor Trends', 'battleplan_admin_weekly_stats', 'dashboard', 'column3', 'high' );
 		add_meta_box( 'battleplan_monthly_stats', 'Monthly Visitor Trends', 'battleplan_admin_monthly_stats', 'dashboard', 'column3', 'high' );
@@ -56,6 +56,18 @@ $ga4_browsers_data     = get_option('bp_ga4_browsers_clean');
 $ga4_devices_data      = get_option('bp_ga4_devices_clean');
 $ga4_resolution_data   = get_option('bp_ga4_resolution_clean');
 $ga4_achievementId_data= get_option('bp_ga4_content_clean');
+// Merge legacy space-keyed entries (e.g. 'conversion-phone call') into hyphenated equivalents
+if (is_array($ga4_achievementId_data)) {
+    foreach ($ga4_achievementId_data as $key => $metrics) {
+        $normalized = str_replace(' ', '-', $key);
+        if ($normalized !== $key) {
+            foreach ((array)$metrics as $mk => $mv) {
+                $ga4_achievementId_data[$normalized][$mk] = ($ga4_achievementId_data[$normalized][$mk] ?? 0) + (int)$mv;
+            }
+            unset($ga4_achievementId_data[$key]);
+        }
+    }
+}
 //https://fullpath.zendesk.com/hc/en-us/articles/360039889971-Facebook-Google-Bot-Traffic
 
 // Set up Visitor Trends widget on dashboard
@@ -67,13 +79,11 @@ function battleplan_visitor_trends($time, $daysPerPeriod, $colEnd) {
         return;
     }
 
-    krsort($daily); // newest first
-
+    krsort($daily);
     $dates = array_keys($daily);
     $today = strtotime($dates[0]);
 
     $col = $row = 1;
-    $periodSize = $daysPerPeriod;
 
     echo "<table class='trends trends-{$time} trends-col-{$col}'>
             <tr>
@@ -81,28 +91,64 @@ function battleplan_visitor_trends($time, $daysPerPeriod, $colEnd) {
                 <td class='span page sessions'></td>
             </tr>";
 
+    // Helper to output the metric rows for a period
+    $outputRows = function($label, $sessions, $users, $newUsers, $engaged, $pageviews, $duration) {
+        $engagementPct      = $sessions > 0 ? round(($engaged  / $sessions) * 100, 1) : 0;
+        $pagesPerSession    = $sessions > 0 ? round($pageviews  / $sessions, 1)        : 0;
+        $avgSessionDuration = $sessions > 0 ? round($duration   / $sessions)           : 0;
+        $avgEngagedDuration = $engaged  > 0 ? round($duration   / $engaged)            : 0;
+        $newUserPct         = $users    > 0 ? round(($newUsers  / $users)    * 100, 1) : 0;
+
+        echo "<tr class='coloration trends sessions active' data-count='{$sessions}'>
+                <td>{$label}</td><td><b>" . number_format($sessions) . "</b></td><td><b>" . number_format($users) . "</b></td>
+              </tr>
+              <tr class='coloration trends new' data-count='{$newUsers}'>
+                <td>{$label}</td><td><b>" . number_format($newUsers) . "</b></td><td>{$newUserPct}%</td>
+              </tr>
+              <tr class='coloration trends engagement' data-count='{$engaged}'>
+                <td>{$label}</td><td><b>" . number_format($engaged) . "</b></td><td>{$engagementPct}%</td>
+              </tr>
+              <tr class='coloration trends pageviews' data-count='{$pageviews}'>
+                <td>{$label}</td><td><b>" . number_format($pageviews) . "</b></td><td>{$pagesPerSession}</td>
+              </tr>
+              <tr class='coloration trends duration' data-count='{$avgEngagedDuration}'>
+                <td>{$label}</td>
+                <td><b>" . floor($avgEngagedDuration / 60) . "m " . ($avgEngagedDuration % 60) . "s</b></td>
+                <td><b>" . floor($avgSessionDuration / 60) . "m " . ($avgSessionDuration % 60) . "s</b></td>
+              </tr>";
+    };
+
+    $breakCol = function() use (&$col, &$row, $time) {
+        $col++; $row = 1;
+        echo "</table>
+              <table class='trends trends-{$time} trends-col-{$col}'>
+              <tr><td class='header'>" . ucfirst($time) . "</td><td class='span page sessions'></td></tr>";
+    };
+
     $periodIndex = 0;
+    $offset      = 0;
 
     while (true) {
+        // Period sizes for year-over-year alignment per column:
+        //   monthly:   alternate 30/31 → 12 periods = 366 days
+        //   quarterly: alternate 91/92 →  4 periods = 366 days
+        //   weekly/daily: fixed (7 × 52 = 364 days; 1 × 365 = 365 days)
+        $periodSize = match($time) {
+            'monthly'   => ($periodIndex % 2 === 0) ? 30 : 31,
+            'quarterly' => ($periodIndex % 2 === 0) ? 91 : 92,
+            default     => $daysPerPeriod,
+        };
 
-	$startOffset = $periodIndex * $periodSize;
-	$endOffset   = ($periodIndex + 1) * $periodSize - 1;
+        $startOffset = $offset;
+        $endOffset   = $offset + $periodSize - 1;
 
         if ($startOffset > count($daily)) break;
 
-        $sessions = 0;
-        $users = 0;
-        $newUsers = 0;
-        $engaged = 0;
-        $pageviews = 0;
-        $duration = 0;
+        $sessions = $users = $newUsers = $engaged = $pageviews = $duration = 0;
 
         for ($i = $startOffset; $i <= $endOffset; $i++) {
-
             $dateKey = date('Ymd', strtotime("-$i days", $today));
-
             if (!isset($daily[$dateKey])) continue;
-
             $sessions  += $daily[$dateKey]['sessions'];
             $users     += $daily[$dateKey]['users'];
             $newUsers  += $daily[$dateKey]['newUsers'];
@@ -111,63 +157,24 @@ function battleplan_visitor_trends($time, $daysPerPeriod, $colEnd) {
             $duration  += $daily[$dateKey]['engagementDuration'];
         }
 
+        $offset += $periodSize;
+        $periodIndex++;
+
         if ($sessions == 0) {
-            $periodIndex++;
+            // Count empty period for column alignment without outputting a row.
+            // The break fires here so the NEXT period opens in the new column.
+            $row++;
+            if ($row > $colEnd) { ($breakCol)(); }
             continue;
         }
 
-        $engagementPct = $sessions > 0 ? round(($engaged / $sessions) * 100, 1) : 0;
-        $pagesPerSession = $sessions > 0 ? round($pageviews / $sessions, 1) : 0;
-        $avgSessionDuration = $sessions > 0 ? round($duration / $sessions) : 0;
-        $avgEngagedDuration = $engaged > 0 ? round($duration / $engaged) : 0;
-        $newUserPct = $users > 0 ? round(($newUsers / $users) * 100, 1) : 0;
+        $label = date("M j, Y", strtotime("-$startOffset days", $today));
+        ($outputRows)($label, $sessions, $users, $newUsers, $engaged, $pageviews, $duration);
 
-        $labelEnd = date("M j, Y", strtotime("-$startOffset days", $today));
-
-        echo "<tr class='coloration trends sessions active' data-count='{$sessions}'>
-                <td>{$labelEnd}</td>
-                <td><b>" . number_format($sessions) . "</b></td>
-                <td><b>" . number_format($users) . "</b></td>
-              </tr>";
-
-        echo "<tr class='coloration trends new' data-count='{$newUsers}'>
-                <td>{$labelEnd}</td>
-                <td><b>" . number_format($newUsers) . "</b></td>
-                <td>{$newUserPct}%</td>
-              </tr>";
-
-        echo "<tr class='coloration trends engagement' data-count='{$engaged}'>
-                <td>{$labelEnd}</td>
-                <td><b>" . number_format($engaged) . "</b></td>
-                <td>{$engagementPct}%</td>
-              </tr>";
-
-        echo "<tr class='coloration trends pageviews' data-count='{$pageviews}'>
-                <td>{$labelEnd}</td>
-                <td><b>" . number_format($pageviews) . "</b></td>
-                <td>{$pagesPerSession}</td>
-              </tr>";
-
-        echo "<tr class='coloration trends duration' data-count='{$avgEngagedDuration}'>
-                <td>{$labelEnd}</td>
-                <td><b>" . floor($avgEngagedDuration / 60) . "m " . ($avgEngagedDuration % 60) . "s</b></td>
-                <td><b>" . floor($avgSessionDuration / 60) . "m " . ($avgSessionDuration % 60) . "s</b></td>
-              </tr>";
-
+        // Increment AFTER output so the period that fills the column stays in it,
+        // and the break opens a fresh column for the next period.
         $row++;
-        $periodIndex++;
-
-        if ($row > $colEnd) {
-            $col++;
-            $row = 1;
-
-            echo "</table>
-                  <table class='trends trends-{$time} trends-col-{$col}'>
-                  <tr>
-                      <td class='header'>" . ucfirst($time) . "</td>
-                      <td class='span page sessions'></td>
-                  </tr>";
-        }
+        if ($row > $colEnd) { ($breakCol)(); }
     }
 
     echo "</table>";
@@ -229,7 +236,14 @@ $GLOBALS['ga4_visitor'] = [];
 $daily = get_option('bp_ga4_daily_clean');
 
 if ($daily && is_array($daily)) {
-    foreach ([1, 7, 30, 90, 180, 365] as $days) {
+    // Yesterday — specific single-day lookup
+    $ydKey = date('Ymd', strtotime('-1 day'));
+    $GLOBALS['ga4_visitor']['sessions-yesterday']       = (int)($daily[$ydKey]['sessions']        ?? 0);
+    $GLOBALS['ga4_visitor']['page-views-yesterday']     = (int)($daily[$ydKey]['pageviews']       ?? 0);
+    $GLOBALS['ga4_visitor']['users-yesterday']          = (int)($daily[$ydKey]['users']           ?? 0);
+    $GLOBALS['ga4_visitor']['engaged-sessions-yesterday'] = (int)($daily[$ydKey]['engagedSessions'] ?? 0);
+
+    foreach ([7, 30, 90, 180, 365] as $days) {
         $sumSessions  = 0;
         $sumPageviews = 0;
         $sumUsers     = 0;
@@ -244,9 +258,9 @@ if ($daily && is_array($daily)) {
             $sumEngaged   += $daily[$key]['engagedSessions'];
         }
 
-        $GLOBALS['ga4_visitor']["sessions-$days"]   = $sumSessions;
-        $GLOBALS['ga4_visitor']["page-views-$days"] = $sumPageviews;
-        $GLOBALS['ga4_visitor']["users-$days"]      = $sumUsers;
+        $GLOBALS['ga4_visitor']["sessions-$days"]          = $sumSessions;
+        $GLOBALS['ga4_visitor']["page-views-$days"]        = $sumPageviews;
+        $GLOBALS['ga4_visitor']["users-$days"]             = $sumUsers;
         $GLOBALS['ga4_visitor']["engaged-sessions-$days"]  = $sumEngaged;
     }
 }
@@ -260,7 +274,7 @@ function battleplan_admin_site_stats() {
 	echo "<tr><td>&nbsp;</td></tr>";
 
 	// Yesterday
-	$yesterday = (int)($GLOBALS['ga4_visitor']['sessions-1']   ?? 0);
+	$yesterday = (int)($GLOBALS['ga4_visitor']['sessions-yesterday'] ?? 0);
 	echo "<tr><td class='label'>Yesterday</td><td>".
 		sprintf(
 			_n('<b>%s</b> visit', '<b>%s</b> visits', $yesterday, 'battleplan'),
@@ -784,8 +798,8 @@ function battleplan_admin_content_stats() {
 
         foreach ($contentVisAndSessions as $key=>$value) :
             if (strpos($key, 'conversion-') !== false) :
-                $trackItem = str_replace('conversion-', '', $key);
-                if ($track_init > 0) echo "<li><div class='value'><b>".$value."</b></div><div class='label'>".ucwords($trackItem)."s</div></li>";
+                $trackItem = ucwords(str_replace('-', ' ', str_replace('conversion-', '', $key)));
+                if ($track_init > 0) echo "<li><div class='value'><b>".$value."</b></div><div class='label'>{$trackItem}s</div></li>";
             endif;
         endforeach;
 

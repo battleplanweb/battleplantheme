@@ -2116,3 +2116,173 @@ bp_admin_columns([
 	)
 ]);
 
+
+/*--------------------------------------------------------------
+# jobsite_geo-services Taxonomy — Custom Columns & Layout
+--------------------------------------------------------------*/
+
+// Replace default columns with Name, Intro, Map Caption, Count
+add_filter( 'manage_edit-jobsite_geo-services_columns', function( $columns ) {
+	return [
+		'cb'               => $columns['cb'] ?? '<input type="checkbox" />',
+		'name'             => __( 'Name' ),
+		'bp_service_intro' => __( 'Intro' ),
+		'bp_map_caption'   => __( 'Map Caption' ),
+		'posts'            => __( 'Count' ),
+	];
+}, 20 );
+
+// Populate custom columns with inline edit UI
+add_filter( 'manage_jobsite_geo-services_custom_column', function( $content, $column, $term_id ) {
+
+	if ( $column === 'bp_service_intro' ) {
+		$intro = get_term_meta( $term_id, 'bp_geo_service_intro', true );
+		$nonce = wp_create_nonce( 'bp_geo_edit_term_meta_' . $term_id );
+		$display = $intro
+			? '<div class="bp-geo-display" style="color:#444;font-size:12px;line-height:1.5;">' . wp_kses_post( $intro ) . '</div>'
+			: '<div class="bp-geo-display" style="color:#bbb;">—</div>';
+		return $display
+			. '<textarea class="bp-geo-editor" data-meta="bp_geo_service_intro" data-term="' . $term_id . '" data-nonce="' . esc_attr( $nonce ) . '" style="display:none;width:100%;min-height:220px;font-size:12px;font-family:monospace;" rows="12">' . esc_textarea( $intro ) . '</textarea>'
+			. '<div class="bp-geo-actions" style="margin-top:5px;">'
+			. '<button type="button" class="button button-small bp-geo-edit-btn">Edit</button>'
+			. '<button type="button" class="button button-primary button-small bp-geo-save-btn" style="display:none;margin-right:4px;">Save</button>'
+			. '<button type="button" class="button button-small bp-geo-cancel-btn" style="display:none;">Cancel</button>'
+			. '<span class="bp-geo-status" style="font-size:11px;margin-left:8px;color:#555;"></span>'
+			. '</div>';
+	}
+
+	if ( $column === 'bp_map_caption' ) {
+		$caption = get_term_meta( $term_id, 'bp_geo_map_caption', true );
+		$nonce   = wp_create_nonce( 'bp_geo_edit_term_meta_' . $term_id );
+		$display = $caption
+			? '<div class="bp-geo-display" style="font-size:12px;">' . esc_html( $caption ) . '</div>'
+			: '<div class="bp-geo-display" style="color:#bbb;">—</div>';
+		return $display
+			. '<input type="text" class="bp-geo-editor" data-meta="bp_geo_map_caption" data-term="' . $term_id . '" data-nonce="' . esc_attr( $nonce ) . '" value="' . esc_attr( $caption ) . '" style="display:none;width:100%;font-size:12px;">'
+			. '<div class="bp-geo-actions" style="margin-top:5px;">'
+			. '<button type="button" class="button button-small bp-geo-edit-btn">Edit</button>'
+			. '<button type="button" class="button button-primary button-small bp-geo-save-btn" style="display:none;margin-right:4px;">Save</button>'
+			. '<button type="button" class="button button-small bp-geo-cancel-btn" style="display:none;">Cancel</button>'
+			. '<span class="bp-geo-status" style="font-size:11px;margin-left:8px;color:#555;"></span>'
+			. '</div>';
+	}
+
+	return $content;
+}, 10, 3 );
+
+// AJAX handler — save either meta field
+add_action( 'wp_ajax_bp_geo_save_term_meta', function() {
+	$term_id  = intval( $_POST['term_id'] ?? 0 );
+	$meta_key = sanitize_key( $_POST['meta_key'] ?? '' );
+
+	if ( ! check_ajax_referer( 'bp_geo_edit_term_meta_' . $term_id, 'nonce', false ) ) {
+		wp_send_json_error( 'Invalid nonce.' );
+	}
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( 'Insufficient permissions.' );
+	}
+	if ( ! in_array( $meta_key, [ 'bp_geo_service_intro', 'bp_geo_map_caption' ], true ) ) {
+		wp_send_json_error( 'Invalid meta key.' );
+	}
+
+	$value = $_POST['value'] ?? '';
+	$value = ( $meta_key === 'bp_geo_service_intro' ) ? wp_kses_post( $value ) : sanitize_text_field( $value );
+
+	update_term_meta( $term_id, $meta_key, $value );
+	wp_send_json_success( [ 'value' => $value ] );
+} );
+
+// Layout CSS + inline-edit JS — only on this taxonomy screen
+add_action( 'admin_head', function() {
+	$screen = get_current_screen();
+	if ( ! $screen || $screen->id !== 'edit-jobsite_geo-services' ) return;
+	?>
+	<style>
+		.col-wrap { display: flex; flex-direction: column; }
+		.col-wrap .col-left  { width: 100%; float: none; margin-bottom: 24px; }
+		.col-wrap .col-right { width: 100%; float: none; }
+		.column-bp_service_intro { width: 40%; }
+		.column-bp_map_caption   { width: 28%; }
+		.column-posts            { width: 60px; text-align: center; }
+	</style>
+	<script>
+	document.addEventListener('DOMContentLoaded', function () {
+		document.querySelectorAll('.bp-geo-actions').forEach(function (actions) {
+			var cell     = actions.closest('td');
+			var display  = cell.querySelector('.bp-geo-display');
+			var editor   = cell.querySelector('.bp-geo-editor');
+			var editBtn  = actions.querySelector('.bp-geo-edit-btn');
+			var saveBtn  = actions.querySelector('.bp-geo-save-btn');
+			var cancelBtn= actions.querySelector('.bp-geo-cancel-btn');
+			var status   = actions.querySelector('.bp-geo-status');
+
+			editBtn.addEventListener('click', function () {
+				display.style.display  = 'none';
+				editor.style.display   = '';
+				editBtn.style.display  = 'none';
+				saveBtn.style.display  = '';
+				cancelBtn.style.display= '';
+				editor.focus();
+			});
+
+			cancelBtn.addEventListener('click', function () {
+				editor.style.display   = 'none';
+				display.style.display  = '';
+				editBtn.style.display  = '';
+				saveBtn.style.display  = 'none';
+				cancelBtn.style.display= 'none';
+				status.textContent     = '';
+			});
+
+			saveBtn.addEventListener('click', function () {
+				saveBtn.disabled   = true;
+				status.style.color = '#555';
+				status.textContent = 'Saving…';
+
+				fetch(ajaxurl, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body: new URLSearchParams({
+						action:   'bp_geo_save_term_meta',
+						term_id:  editor.dataset.term,
+						meta_key: editor.dataset.meta,
+						nonce:    editor.dataset.nonce,
+						value:    editor.value
+					})
+				})
+				.then(function (r) { return r.json(); })
+				.then(function (data) {
+					if (data.success) {
+						if (editor.dataset.meta === 'bp_geo_service_intro') {
+							display.innerHTML = data.data.value || '<span style="color:#bbb;">—</span>';
+						} else {
+							display.textContent = data.data.value || '—';
+							display.style.color = data.data.value ? '' : '#bbb';
+						}
+						editor.value           = data.data.value;
+						editor.style.display   = 'none';
+						display.style.display  = '';
+						editBtn.style.display  = '';
+						saveBtn.style.display  = 'none';
+						cancelBtn.style.display= 'none';
+						status.style.color     = '#2e7d32';
+						status.textContent     = '✓ Saved';
+						setTimeout(function () { status.textContent = ''; }, 3000);
+					} else {
+						status.style.color = '#c62828';
+						status.textContent = '✗ ' + (data.data || 'Error');
+					}
+					saveBtn.disabled = false;
+				})
+				.catch(function () {
+					status.style.color = '#c62828';
+					status.textContent = '✗ Request failed.';
+					saveBtn.disabled   = false;
+				});
+			});
+		});
+	});
+	</script>
+	<?php
+} );
+

@@ -597,6 +597,10 @@ th.sorted a span {
 	max-height:                                                220px;
 }
 
+#dashboard-widgets #bp_keyword_rankings {
+	max-height:                                                646px;
+}
+
 #dashboard-widgets #battleplan_tech_stats.postbox,
 #dashboard-widgets #battleplan_content_stats.postbox {
 	max-height:                                                860px;

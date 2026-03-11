@@ -924,7 +924,10 @@ function battleplan_jobsite_template($template) {
 				"Plumbing issues we have recently solved for " . $GLOBALS['jobsite_geo-city'] . " homes.",
 			];
 
-			if (in_array($GLOBALS['jobsite_geo-service'], $service_full)) {
+			$_meta_caption = $jobsite_term ? get_term_meta( $jobsite_term->term_id, 'bp_geo_map_caption', true ) : '';
+			if ( $_meta_caption ) {
+				$GLOBALS['jobsite_geo-map-caption'] = esc_html( $_meta_caption );
+			} elseif (in_array($GLOBALS['jobsite_geo-service'], $service_full)) {
 				$index = array_search($GLOBALS['jobsite_geo-service'], $service_full);
 				$GLOBALS['jobsite_geo-map-caption'] = $service_short[$index];
 			} else {
@@ -935,41 +938,16 @@ function battleplan_jobsite_template($template) {
 
 			$GLOBALS['jobsite_geo-bottom-headline'] = "Recent " . $GLOBALS['jobsite_geo-service'] . $plural . " In " . $GLOBALS['jobsite_geo-city'];
 
-			$query = bp_WP_Query('landing', [
-				'posts_per_page' => 1,
-				'post_status'    => 'publish',
-				'title'          => $GLOBALS['jobsite_geo-city'] . ', ' . $GLOBALS['jobsite_geo-state'],
-			]);
-
-			if ($query->have_posts()) {
-				while ($query->have_posts()) {
-					$query->the_post();
-					$GLOBALS['jobsite_geo-content']    = apply_filters('the_content', get_the_content());
-					$GLOBALS['jobsite_geo-page_title'] = str_replace('%%sep%%', $sep, $GLOBALS['jobsite_geo-service']) . ' in ' . $GLOBALS['jobsite_geo-city'] . ", " . $GLOBALS['jobsite_geo-state'] . $sep . get_bloginfo('name');
-					$GLOBALS['jobsite_geo-page_desc']  = get_post_meta(get_the_ID(), '_yoast_wpseo_metadesc', true);
-					$GLOBALS['mapGrid'] = "3-2";
-				}
+			$term_desc = get_term_meta( $jobsite_term->term_id, 'bp_geo_service_intro', true );
+			if ( $term_desc ) {
+				$GLOBALS['jobsite_geo-content']   = do_shortcode( wp_kses_post( $term_desc ) );
+				$GLOBALS['jobsite_geo-page_desc'] = wp_trim_words( strip_tags( $term_desc ), 30, '...' );
+				$GLOBALS['mapGrid']               = '3-2';
 			} else {
-				$query = bp_WP_Query('landing', [
-					'posts_per_page' => 1,
-					'name'           => 'jobsite-geo-default',
-					'post_status'    => 'publish',
-				]);
-
-				if ($query->have_posts()) {
-					while ($query->have_posts()) {
-						$query->the_post();
-						$GLOBALS['jobsite_geo-content']    = apply_filters('the_content', get_the_content());
-						$GLOBALS['jobsite_geo-page_title'] = str_replace('%%sep%%', $sep, $GLOBALS['jobsite_geo-service']) . ' in ' . $GLOBALS['jobsite_geo-city'] . ", " . $GLOBALS['jobsite_geo-state'] . $sep . get_bloginfo('name');
-						$GLOBALS['jobsite_geo-page_desc']  = get_post_meta(get_the_ID(), '_yoast_wpseo_metadesc', true);
-						$GLOBALS['mapGrid'] = "3-2";
-					}
-				} else {
-					$GLOBALS['jobsite_geo-content'] = '';
-					$GLOBALS['mapGrid'] = "1";
-				}
+				$GLOBALS['jobsite_geo-content'] = '';
+				$GLOBALS['mapGrid']             = '1';
 			}
-			wp_reset_postdata();
+			$GLOBALS['jobsite_geo-page_title'] = $GLOBALS['jobsite_geo-service'] . ' in ' . $GLOBALS['jobsite_geo-city'] . ', ' . $GLOBALS['jobsite_geo-state'] . $sep . get_bloginfo( 'name' );
 
 		}
 
@@ -1893,6 +1871,176 @@ PROMPT;
 
 	return $parsed;
 }
+
+
+function bp_geo_generate_term_intro( int $term_id ) {
+	if ( ! defined( 'BP_ANTHROPIC_API_KEY' ) || empty( BP_ANTHROPIC_API_KEY ) ) {
+		return new WP_Error( 'no_api_key', 'BP_ANTHROPIC_API_KEY is not defined.' );
+	}
+
+	$term = get_term( $term_id, 'jobsite_geo-services' );
+	if ( ! $term || is_wp_error( $term ) ) {
+		return new WP_Error( 'invalid_term', 'Term not found.' );
+	}
+
+	// Get service + location from a tagged post (avoids slug-parsing issues)
+	$sample = get_posts( [
+		'post_type'      => 'jobsite_geo',
+		'posts_per_page' => 1,
+		'fields'         => 'ids',
+		'tax_query'      => [ [ 'taxonomy' => 'jobsite_geo-services', 'terms' => $term_id ] ],
+	] );
+
+	$service = '';
+	$city    = '';
+	$state   = '';
+
+	if ( $sample ) {
+		$type_terms = wp_get_post_terms( $sample[0], 'jobsite_geo-service-types', [ 'fields' => 'slugs' ] );
+		$area_terms = wp_get_post_terms( $sample[0], 'jobsite_geo-service-areas', [ 'fields' => 'slugs' ] );
+		if ( ! empty( $type_terms ) ) $service = bp_format_service( $type_terms[0] );
+		if ( ! empty( $area_terms ) ) {
+			$loc   = bp_format_location( $area_terms[0] );
+			$parts = explode( ', ', $loc );
+			$city  = $parts[0] ?? '';
+			$state = $parts[1] ?? '';
+		}
+	}
+
+	if ( ! $service || ! $city ) {
+		return new WP_Error( 'missing_data', "Could not determine service/location for term #{$term_id} ({$term->slug})." );
+	}
+
+	$company = preg_replace( '/\s*,?\s*(LLC|Inc\.?|Corp\.?|Ltd\.?|Co\.?)\.?\s*$/i', '', get_bloginfo( 'name' ) );
+	$company = trim( $company );
+
+	$prompt = "You are an SEO copywriter for an HVAC home services company called \"{$company}\".
+
+Write a unique, locally-grounded service page intro for:
+- Company: {$company}
+- Service: {$service}
+- City, State: {$city}, {$state}
+
+REFERENCE EXAMPLE — match this tone and feel, do NOT copy it:
+
+<p><strong>MAK Comfort</strong> proudly serves the homeowners of Kingwood, TX with dependable heating and cooling services.</p>
+
+<p>Whether your AC is falling behind or you're planning a full system upgrade, we arrive prepared, professional, and ready to get the job done right without any runaround.</p>
+
+<h2>Year-Round Comfort For {$city} Homeowners</h2>
+
+<p>Life in Kingwood comes with heavy humidity, thick tree cover, and winter fronts that creep in fast. Homes in villages like Bear Branch, Greentree, and Fosters Mill all face their own HVAC challenges, from aging systems to moisture concerns. Your setup needs to perform through every season.</p>
+
+<p>We handle repairs, installations, seasonal maintenance, duct cleaning, and indoor air quality improvements with straightforward communication and honest service. No pressure. No gimmicks. Just real solutions from a team that respects your home.</p>
+
+<p>If your system is showing signs of wear, contact us today at <strong>[get-biz info=\"phone-link\"]</strong>!</p>
+
+GUIDELINES:
+
+Opening paragraph: Introduce {$company} and {$service} in {$city}. Vary the sentence opening every time — do NOT default to \"{$company} provides [service] for homeowners throughout {$city}.\" Instead, try leading with a homeowner problem, a seasonal reference, what makes the service worth doing right, or a direct statement about the city. Use <strong> tags around the company name on first use only.
+
+Second paragraph: Speak directly to the homeowner. Why does {$service} matter for their specific home? What does getting it right protect them from? Keep it concrete.
+
+H2 heading: Write something that pairs the service and city naturally, keeping SEO in mind.  Short, engaging sub-title that makes the passage more personal.
+
+Local paragraph: Describe the actual climate, humidity, seasonal patterns, or home character in {$city}. Name 2-3 real neighborhoods, developments, lakes, or parks ONLY if you genuinely know them. If you are not confident about specific local places, describe the regional climate and housing character instead. Never invent or guess at place names.
+
+Wrap-up paragraph: What {$company} does, stated simply. Short sentences. Honest tone. No filler.
+
+Final sentence: End naturally leading into: contact us today at <strong>[get-biz info=\"phone-link\"]</strong>!
+
+RULES:
+- Every paragraph wrapped in <p> tags. H2 is standalone, not inside <p>.
+- First-person plural (\"we\", \"our\") throughout except the opening sentence
+- 6th grade reading level. Mix short punchy sentences with longer ones.
+- Total: 200-260 words
+- Do NOT use: \"seamless\", \"cutting-edge\", \"state-of-the-art\", \"peace of mind\", \"look no further\", \"dedicated team\", \"expert\", \"trust us\"
+- Do NOT use the em-dash at all.  Structure sentences to flow without it.
+- Output ONLY the HTML — no markdown, no preamble
+
+Also write a map_caption: a short plain-text sentence (~8-12 words) that includes {$service} and {$city}.  These are real-life customer jobsites where {$company} has performed work. Vary the wording naturally — do not always write \"Recent {$service} in {$city}.\" Do NOT use \"service locations\". do NOT use HTML tags in the caption.
+
+Respond ONLY with valid JSON: {\"intro\": \"...html content...\", \"map_caption\": \"...plain text...\"}";
+
+	$response = wp_remote_post( 'https://api.anthropic.com/v1/messages', [
+		'timeout' => 45,
+		'headers' => [
+			'Content-Type'      => 'application/json',
+			'x-api-key'         => BP_ANTHROPIC_API_KEY,
+			'anthropic-version' => '2023-06-01',
+		],
+		'body' => wp_json_encode( [
+			'model'      => BP_GEO_AI_MODEL,
+			'max_tokens' => 1024,
+			'messages'   => [ [ 'role' => 'user', 'content' => $prompt ] ],
+		] ),
+	] );
+
+	if ( is_wp_error( $response ) ) return $response;
+
+	$status  = wp_remote_retrieve_response_code( $response );
+	$body    = wp_remote_retrieve_body( $response );
+	$decoded = json_decode( $body, true );
+
+	if ( $status !== 200 ) {
+		$error_msg = $decoded['error']['message'] ?? 'Unknown API error.';
+		return new WP_Error( 'api_error', "Anthropic API error ({$status}): {$error_msg}" );
+	}
+
+	$text = $decoded['content'][0]['text'] ?? '';
+	$text = preg_replace( '/^```(?:json)?\s*/i', '', trim( $text ) );
+	$text = preg_replace( '/\s*```$/', '', $text );
+	$parsed = json_decode( $text, true );
+
+	if ( json_last_error() !== JSON_ERROR_NONE || empty( $parsed['intro'] ) ) {
+		return new WP_Error( 'parse_error', 'Could not parse JSON from API: ' . substr( $text, 0, 200 ) );
+	}
+
+	// Store in term meta (bypasses WordPress kses stripping on term description)
+	update_term_meta( $term_id, 'bp_geo_service_intro', $parsed['intro'] );
+	if ( ! empty( $parsed['map_caption'] ) ) {
+		update_term_meta( $term_id, 'bp_geo_map_caption', sanitize_text_field( $parsed['map_caption'] ) );
+	}
+
+	// Email notification
+	if ( function_exists( 'emailMe' ) ) {
+		$caption  = sanitize_text_field( $parsed['map_caption'] ?? '' );
+		$edit_url = get_edit_term_link( $term_id, 'jobsite_geo-services' );
+		$list_url = admin_url( 'edit-tags.php?taxonomy=jobsite_geo-services' );
+		$subject  = get_bloginfo( 'name' ) . ': New Service Intro — ' . $service . ' in ' . $city . ', ' . $state;
+		$body     = '
+<div style="font-family:sans-serif;max-width:680px;">
+<h2 style="margin:0 0 4px;">' . esc_html( $service ) . ' in ' . esc_html( $city ) . ', ' . esc_html( $state ) . '</h2>
+<p style="margin:0 0 20px;color:#666;font-size:13px;"><strong>Company:</strong> ' . esc_html( get_bloginfo( 'name' ) ) . ' &nbsp;|&nbsp; <strong>Term:</strong> ' . esc_html( $term->slug ) . '</p>
+
+<h3 style="margin:0 0 6px;font-size:14px;color:#333;">Map Caption</h3>
+<p style="margin:0 0 24px;padding:10px 14px;background:#f5f5f5;border-left:3px solid #ccc;font-size:14px;">' . esc_html( $caption ) . '</p>
+
+<h3 style="margin:0 0 6px;font-size:14px;color:#333;">Page Intro</h3>
+<div style="padding:16px;background:#fafafa;border:1px solid #e0e0e0;border-radius:4px;font-size:14px;line-height:1.6;">' . $parsed['intro'] . '</div>
+
+<p style="margin:24px 0 0;">
+  <a href="' . esc_url( $edit_url ) . '" style="display:inline-block;padding:8px 16px;background:#2271b1;color:#fff;text-decoration:none;border-radius:4px;font-size:13px;margin-right:8px;">Edit This Term</a>
+  <a href="' . esc_url( $list_url ) . '" style="display:inline-block;padding:8px 16px;background:#f0f0f1;color:#2c3338;text-decoration:none;border-radius:4px;font-size:13px;">View All Service Terms</a>
+</p>
+</div>';
+		emailMe( $subject, $body );
+	}
+
+	return $parsed['intro'];
+}
+
+// Auto-generate intro for any new jobsite_geo-services term when a post is saved
+add_action( 'wp_after_insert_post', function( $post_id, $post, $update ) {
+	if ( $post->post_type !== 'jobsite_geo' || $post->post_status !== 'publish' ) return;
+	$terms = wp_get_post_terms( $post_id, 'jobsite_geo-services' );
+	if ( is_wp_error( $terms ) ) return;
+	foreach ( $terms as $term ) {
+		if ( empty( $term->description ) ) {
+			bp_geo_generate_term_intro( $term->term_id );
+		}
+	}
+}, 10, 3 );
 
 
 function bp_geo_normalize_state( $state ) {

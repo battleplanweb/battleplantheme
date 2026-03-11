@@ -20,7 +20,8 @@
 }
 
 
-#primary #map.map-jobsite_geo img {
+#primary #map.map-jobsite_geo img,
+#primary #map.map-jobsite_geo button {
 	border:                                                    none !important;
 	border-radius:                                             none !important;
 	box-shadow:                                                none !important;

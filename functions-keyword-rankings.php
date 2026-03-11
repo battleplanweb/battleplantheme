@@ -47,7 +47,7 @@ bp_kw_tracked — keywords seen in the most recent Labs snapshot:
 		'keyword'    => 'ac repair allen tx',
 		'url'        => 'https://...',
 		'search_vol' => 170,
-		'group'      => 'geo' | 'brand' | 'generic',
+		'group'      => 'geo' | 'jobsite' | 'blog' | 'main',
 		'first_seen' => 'YYYY-MM-DD',
 		'last_seen'  => 'YYYY-MM-DD',
 	], ... ]
@@ -110,23 +110,40 @@ function bp_kw_sparkline(string $kw_key, array $history, int $weeks = 8): array 
 # Keyword Classification
 --------------------------------------------------------------*/
 
-// Cache service area slugs converted to readable strings (e.g. 'frisco-tx' → 'frisco tx')
+// Extract city (and city+state) patterns from service-area slugs.
+// Slugs may be bare cities ('frisco-tx') or prefixed ('air-conditioner-repair-humble-tx').
+// In all cases the last word is the 2-letter state and the word before it is the city.
 function bp_kw_get_area_patterns(): array {
 	static $patterns = null;
 	if ($patterns !== null) return $patterns;
-	$terms    = get_terms(['taxonomy' => 'jobsite_geo-service-areas', 'hide_empty' => false, 'fields' => 'slugs']);
-	$patterns = is_wp_error($terms) ? [] : array_map(function($s) { return str_replace('-', ' ', $s); }, (array) $terms);
+	$terms = get_terms(['taxonomy' => 'jobsite_geo-service-areas', 'hide_empty' => false, 'fields' => 'slugs']);
+	$patterns = [];
+	foreach (is_wp_error($terms) ? [] : (array) $terms as $slug) {
+		$words = explode(' ', str_replace('-', ' ', $slug));
+		// Must have at least state + city (2 words)
+		if (count($words) < 2) continue;
+		$state = end($words);
+		if (strlen($state) !== 2) continue; // last word isn't a state code, skip
+		$city = $words[count($words) - 2];
+		if (!$city) continue;
+		$patterns[] = $city . ' ' . $state; // e.g. 'humble tx'
+		$patterns[] = $city;                // e.g. 'humble'
+	}
+	$patterns = array_unique($patterns);
 	return $patterns;
 }
 
-// Returns 'geo' | 'brand' | 'generic'
-function bp_kw_classify_keyword(string $keyword): string {
+// Returns 'geo' | 'jobsite' | 'blog' | 'main'
+function bp_kw_classify_keyword(string $keyword, string $url = ''): string {
 	foreach (bp_kw_get_area_patterns() as $area) {
 		if ($area && strpos($keyword, $area) !== false) return 'geo';
 	}
-	$brand = bp_kw_site_brand();
-	if ($brand && strpos($keyword, $brand) !== false) return 'brand';
-	return 'generic';
+	$path = parse_url($url, PHP_URL_PATH) ?: '';
+	if (strpos($path, '/service/') !== false) return 'jobsite';
+	// Blog posts have long descriptive slugs; main service pages are short
+	$slug = trim(basename(rtrim($path, '/')));
+	if (strlen($slug) > 30) return 'blog';
+	return 'main';
 }
 
 
@@ -229,7 +246,7 @@ function bp_kw_run_chron(bool $force = false): void {
 		$rank  = (int)($item['ranked_serp_element']['serp_item']['rank_absolute'] ?? 0);
 		$url   = $item['ranked_serp_element']['serp_item']['url'] ?? '';
 		$vol   = (int)($item['keyword_data']['keyword_info']['search_volume'] ?? 0);
-		$group = bp_kw_classify_keyword($keyword);
+		$group = bp_kw_classify_keyword($keyword, $url);
 
 		$tracked[$kw_key] = [
 			'keyword'    => $keyword,
@@ -326,7 +343,7 @@ function bp_kw_render_dashboard_widget(): void {
 	});
 
 	$buckets = ['1-3' => 0, '4-10' => 0, '11-20' => 0, '21+' => 0];
-	$groups  = ['geo' => 0, 'brand' => 0, 'generic' => 0];
+	$groups  = ['geo' => 0, 'jobsite' => 0, 'blog' => 0, 'main' => 0];
 	foreach ($rows as $r) {
 		$rk = $r['rank'];
 		if ($rk) {
@@ -335,7 +352,7 @@ function bp_kw_render_dashboard_widget(): void {
 			elseif  ($rk <= 20) $buckets['11-20']++;
 			else                $buckets['21+']++;
 		}
-		$g = $r['item']['group'] ?? 'generic';
+		$g = $r['item']['group'] ?? 'main';
 		if (isset($groups[$g])) $groups[$g]++;
 	}
 
@@ -375,7 +392,8 @@ function bp_kw_render_dashboard_widget(): void {
 	#bp_keyword_rankings .cd{color:#dc3545;font-size:11px}
 	#bp_keyword_rankings .kwfoot{margin-top:10px;font-size:11px;color:#888;display:flex;justify-content:space-between}
 	#bp_keyword_rankings .tag-geo{background:#e8f4fd;color:#1a73e8;font-size:10px;padding:1px 5px;border-radius:8px}
-	#bp_keyword_rankings .tag-brand{background:#fef9e7;color:#b06000;font-size:10px;padding:1px 5px;border-radius:8px}
+	#bp_keyword_rankings .tag-jobsite{background:#e8f5e9;color:#2e7d32;font-size:10px;padding:1px 5px;border-radius:8px}
+	#bp_keyword_rankings .tag-blog{background:#fef9e7;color:#b06000;font-size:10px;padding:1px 5px;border-radius:8px}
 	</style>
 
 	<div class="kw-buckets">
@@ -387,8 +405,9 @@ function bp_kw_render_dashboard_widget(): void {
 
 	<div class="kw-groups">
 		<span class="gg">&#127759; <?php echo (int)$groups['geo']; ?> geo</span>
-		<span class="gb">&#127981; <?php echo (int)$groups['brand']; ?> brand</span>
-		<span><?php echo (int)$groups['generic']; ?> generic</span>
+		<span class="gj">&#127963; <?php echo (int)$groups['jobsite']; ?> jobsites</span>
+		<span class="gl">&#128196; <?php echo (int)$groups['blog']; ?> blogs</span>
+		<span><?php echo (int)$groups['main']; ?> main</span>
 	</div>
 
 	<ul class="kwt">
@@ -402,14 +421,14 @@ function bp_kw_render_dashboard_widget(): void {
 		<?php foreach ($top10 as $i => $row) :
 			$rk    = $row['rank'];
 			$ch    = $row['change'];
-			$group = $row['item']['group'] ?? 'generic';
+			$group = $row['item']['group'] ?? 'main';
 			if ($rk <= 3)       $color = 'color:#28a745';
 			elseif ($rk <= 10)  $color = 'color:#856404';
 			elseif ($rk <= 20)  $color = 'color:#cc7000';
 			else                $color = 'color:#dc3545';
 		?>
 		<li>
-			<div class="kw-keyword"><?php echo esc_html($row['item']['keyword']); ?><?php if ($group === 'geo') : ?> <span class="tag-geo">geo</span><?php elseif ($group === 'brand') : ?> <span class="tag-brand">brand</span><?php endif; ?></div>
+			<div class="kw-keyword"><?php echo esc_html($row['item']['keyword']); ?><?php if ($group === 'geo') : ?> <span class="tag-geo">geo</span><?php elseif ($group === 'jobsite') : ?> <span class="tag-jobsite">jobsite</span><?php elseif ($group === 'blog') : ?> <span class="tag-blog">blog</span><?php endif; ?></div>
 			<div class="kw-rank"><span class="rn" style="<?php echo esc_attr($color); ?>"><?php echo $rk ? '#' . $rk : '—'; ?></span></div>
 			<div class="kw-change"><?php if ($ch > 0) : ?><span class="cu">&#9650;<?php echo (int)$ch; ?></span><?php elseif ($ch < 0) : ?><span class="cd">&#9660;<?php echo abs((int)$ch); ?></span><?php else : ?><span style="color:#aaa">—</span><?php endif; ?></div>
 			<div class="kw-trend"><canvas id="kws-<?php echo $i; ?>" width="80" height="24"></canvas></div>
@@ -546,7 +565,7 @@ function bp_kw_render_admin_page(): void {
 		$dates  = array_keys($kh);
 		$rank   = !empty($dates) ? ($kh[$dates[0]] ?? null) : null;
 		$change = bp_kw_rank_change($kw_key, $history);
-		$group  = $item['group'] ?? 'generic';
+		$group  = $item['group'] ?? 'main';
 		$rows[] = compact('kw_key', 'item', 'rank', 'change', 'group');
 	}
 	usort($rows, function($a, $b) {
@@ -557,7 +576,7 @@ function bp_kw_render_admin_page(): void {
 	});
 
 	// Group counts
-	$gcounts = ['geo' => 0, 'brand' => 0, 'generic' => 0];
+	$gcounts = ['geo' => 0, 'jobsite' => 0, 'blog' => 0, 'main' => 0];
 	foreach ($rows as $r) {
 		$g = $r['group'];
 		if (isset($gcounts[$g])) $gcounts[$g]++;
@@ -606,9 +625,10 @@ function bp_kw_render_admin_page(): void {
 		</div>
 		<div id="kw-group-filters" style="display:flex;gap:4px;">
 			<button type="button" class="button button-small kw-grp-btn active" data-grp="all">All types</button>
-			<button type="button" class="button button-small kw-grp-btn" data-grp="geo" style="background:#e8f4fd;">Geo (<?php echo (int)$gcounts['geo']; ?>)</button>
-			<button type="button" class="button button-small kw-grp-btn" data-grp="brand" style="background:#fef9e7;">Brand (<?php echo (int)$gcounts['brand']; ?>)</button>
-			<button type="button" class="button button-small kw-grp-btn" data-grp="generic">Generic (<?php echo (int)$gcounts['generic']; ?>)</button>
+			<button type="button" class="button button-small kw-grp-btn" data-grp="geo"     style="background:#e8f4fd;">Geo (<?php echo (int)$gcounts['geo']; ?>)</button>
+			<button type="button" class="button button-small kw-grp-btn" data-grp="jobsite" style="background:#e8f5e9;">Jobsites (<?php echo (int)$gcounts['jobsite']; ?>)</button>
+			<button type="button" class="button button-small kw-grp-btn" data-grp="blog"    style="background:#fef9e7;">Blogs (<?php echo (int)$gcounts['blog']; ?>)</button>
+			<button type="button" class="button button-small kw-grp-btn" data-grp="main">Main (<?php echo (int)$gcounts['main']; ?>)</button>
 		</div>
 		<span id="kw-visible-count" style="font-size:12px;color:#888;"><?php echo count($rows); ?> keywords</span>
 	</div>
@@ -670,10 +690,12 @@ function bp_kw_render_admin_page(): void {
 				<td>
 					<?php if ($group === 'geo') : ?>
 						<span style="background:#e8f4fd;color:#1a73e8;font-size:11px;padding:2px 6px;border-radius:8px;">geo</span>
-					<?php elseif ($group === 'brand') : ?>
-						<span style="background:#fef9e7;color:#b06000;font-size:11px;padding:2px 6px;border-radius:8px;">brand</span>
+					<?php elseif ($group === 'jobsite') : ?>
+						<span style="background:#e8f5e9;color:#2e7d32;font-size:11px;padding:2px 6px;border-radius:8px;">jobsite</span>
+					<?php elseif ($group === 'blog') : ?>
+						<span style="background:#fef9e7;color:#b06000;font-size:11px;padding:2px 6px;border-radius:8px;">blog</span>
 					<?php else : ?>
-						<span style="color:#999;font-size:11px;">—</span>
+						<span style="color:#999;font-size:11px;">main</span>
 					<?php endif; ?>
 				</td>
 				<td style="font-size:11px;">

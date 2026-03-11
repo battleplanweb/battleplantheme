@@ -1445,6 +1445,226 @@ function bp_normalize_service_slugs_page() {
 		</p>
 		<?php submit_button('Run Normalize', 'primary', 'bp_normalize_slugs'); ?>
 	</form>
+
+	<hr>
+	<h2>Normalize Service Types</h2>
+	<p>Strips embedded city/state suffixes from <code>jobsite_geo-service-types</code> terms and merges duplicates into a single canonical term.<br>
+	   Example: <code>air-conditioner-repair-frisco-tx</code> and <code>air-conditioner-repair-humble-tx</code> → <code>air-conditioner-repair</code>.</p>
+
+	<?php
+	$st_log    = [];
+	$st_merged = 0;
+	$st_dry    = true;
+
+	if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bp_normalize_service_types'])) {
+		check_admin_referer('bp_normalize_service_types_nonce');
+		$st_dry = isset($_POST['st_dry_run']);
+
+		$area_terms  = get_terms(['taxonomy' => 'jobsite_geo-service-areas', 'hide_empty' => false]);
+		$type_terms  = get_terms(['taxonomy' => 'jobsite_geo-service-types', 'hide_empty' => false]);
+
+		if (is_wp_error($area_terms) || is_wp_error($type_terms)) {
+			echo '<div class="notice notice-error"><p>Could not fetch taxonomy terms.</p></div>';
+		} else {
+			// Build area slug list sorted longest-first so 'fort-worth-tx' matches before 'worth-tx'
+			$area_slugs = wp_list_pluck($area_terms, 'slug');
+			usort($area_slugs, function($a, $b) { return strlen($b) - strlen($a); });
+
+			$strip_area = function($slug) use ($area_slugs) {
+				foreach ($area_slugs as $area) {
+					$suffix = '-' . $area;
+					if (substr($slug, -strlen($suffix)) === $suffix) {
+						return substr($slug, 0, -strlen($suffix));
+					}
+				}
+				return $slug;
+			};
+
+			// Group terms by canonical (area-stripped) slug
+			$groups = [];
+			foreach ($type_terms as $term) {
+				$groups[$strip_area($term->slug)][] = $term;
+			}
+
+			foreach ($groups as $canonical => $terms) {
+				// Find any terms that differ from canonical (the geo-suffixed ones)
+				$geo_terms = array_filter($terms, function($t) use ($canonical) { return $t->slug !== $canonical; });
+				if (empty($geo_terms)) continue;
+
+				// Ensure canonical term exists
+				$keep = get_term_by('slug', $canonical, 'jobsite_geo-service-types');
+				if (!$keep) {
+					$st_log[] = '<strong>CREATE</strong> <code>' . esc_html($canonical) . '</code>';
+					if (!$st_dry) {
+						$ins = wp_insert_term($canonical, 'jobsite_geo-service-types', ['slug' => $canonical, 'name' => $canonical]);
+						if (!is_wp_error($ins)) {
+							$keep = get_term($ins['term_id'], 'jobsite_geo-service-types');
+						}
+					}
+				}
+
+				foreach ($geo_terms as $geo_t) {
+					$st_log[] = '<strong>MERGE</strong> <code>' . esc_html($geo_t->slug) . '</code> → <code>' . esc_html($canonical) . '</code>';
+					if (!$st_dry && $keep) {
+						$post_ids = get_posts([
+							'post_type'      => 'any',
+							'posts_per_page' => -1,
+							'fields'         => 'ids',
+							'tax_query'      => [['taxonomy' => 'jobsite_geo-service-types', 'field' => 'term_id', 'terms' => $geo_t->term_id]],
+						]);
+						foreach ($post_ids as $pid) {
+							wp_set_post_terms($pid, [$keep->term_id], 'jobsite_geo-service-types', true);
+						}
+						wp_delete_term($geo_t->term_id, 'jobsite_geo-service-types');
+					}
+					$st_merged++;
+				}
+			}
+
+			if ($st_log) {
+				$label = $st_dry ? ' (preview — no changes made)' : '';
+				echo '<div class="notice notice-' . ($st_dry ? 'info' : 'success') . '"><p><strong>Service Types Results' . $label . ':</strong> '
+					. $st_merged . ' terms merged/deleted.</p></div>';
+				echo '<ul style="font-family:monospace;font-size:13px;margin-top:8px;">';
+				foreach ($st_log as $line) echo '<li>' . $line . '</li>';
+				echo '</ul>';
+			} else {
+				echo '<div class="notice notice-success"><p>All service-type slugs are already clean — nothing to do.</p></div>';
+			}
+		}
+	}
+	?>
+	<form method="post" onsubmit="return this.st_dry_run.checked || confirm('Strip and merge all geo-suffixed service types? This cannot be undone.');">
+		<?php wp_nonce_field('bp_normalize_service_types_nonce'); ?>
+		<p>
+			<label>
+				<input type="checkbox" name="st_dry_run" value="1" checked>
+				&nbsp;Preview only (dry run) — uncheck to apply changes
+			</label>
+		</p>
+		<?php submit_button('Normalize Service Types', 'secondary', 'bp_normalize_service_types'); ?>
+	</form>
+
+	<hr>
+	<h2>Normalize Service Area Names</h2>
+	<p>Sets each <code>jobsite_geo-service-areas</code> term's <strong>name</strong> to match its slug exactly.<br>
+	   Example: <code>Frisco, TX</code> or <code>Frisco-TX</code> → <code>frisco-tx</code>.</p>
+
+	<?php
+	$sa_log     = [];
+	$sa_updated = 0;
+	$sa_dry     = true;
+
+	if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bp_normalize_area_names'])) {
+		check_admin_referer('bp_normalize_area_names_nonce');
+		$sa_dry = isset($_POST['sa_dry_run']);
+
+		$area_terms = get_terms(['taxonomy' => 'jobsite_geo-service-areas', 'hide_empty' => false]);
+
+		if (is_wp_error($area_terms)) {
+			echo '<div class="notice notice-error"><p>Could not fetch service-area terms.</p></div>';
+		} else {
+			foreach ($area_terms as $term) {
+				if ($term->name === $term->slug) continue;
+				$sa_log[] = '<code>' . esc_html($term->name) . '</code> → <code>' . esc_html($term->slug) . '</code>';
+				if (!$sa_dry) {
+					wp_update_term($term->term_id, 'jobsite_geo-service-areas', ['name' => $term->slug]);
+				}
+				$sa_updated++;
+			}
+
+			if ($sa_log) {
+				$label = $sa_dry ? ' (preview — no changes made)' : '';
+				echo '<div class="notice notice-' . ($sa_dry ? 'info' : 'success') . '"><p><strong>Service Area Results' . $label . ':</strong> '
+					. $sa_updated . ' names updated.</p></div>';
+				echo '<ul style="font-family:monospace;font-size:13px;margin-top:8px;">';
+				foreach ($sa_log as $line) echo '<li>' . $line . '</li>';
+				echo '</ul>';
+			} else {
+				echo '<div class="notice notice-success"><p>All service-area names already match their slugs — nothing to do.</p></div>';
+			}
+		}
+	}
+	?>
+	<form method="post" onsubmit="return this.sa_dry_run.checked || confirm('Update all service-area names to match slugs?');">
+		<?php wp_nonce_field('bp_normalize_area_names_nonce'); ?>
+		<p>
+			<label>
+				<input type="checkbox" name="sa_dry_run" value="1" checked>
+				&nbsp;Preview only (dry run) — uncheck to apply changes
+			</label>
+		</p>
+		<?php submit_button('Normalize Area Names', 'secondary', 'bp_normalize_area_names'); ?>
+	</form>
+	</div>
+
+	<div class="card" style="margin-top:20px;padding:20px;">
+	<h2 style="margin-top:0">Generate Service Intros</h2>
+	<p>Uses AI to write a unique, locally-targeted intro for each <code>jobsite_geo-services</code> term and saves it to the term description. Each intro is then used automatically as the page intro on the archive page for that term. Terms that already have a description are skipped unless &ldquo;Force regenerate&rdquo; is checked.</p>
+	<?php
+	if ( isset( $_POST['bp_generate_service_intros'] ) && check_admin_referer( 'bp_generate_intros_nonce' ) ) {
+		$gi_force   = ! empty( $_POST['gi_force'] );
+		$gi_batch   = 7;
+		$gi_results = [];
+		$gi_errors  = [];
+		$gi_skipped = 0;
+
+		$all_terms = get_terms( [ 'taxonomy' => 'jobsite_geo-services', 'hide_empty' => false ] );
+		if ( is_wp_error( $all_terms ) || empty( $all_terms ) ) {
+			echo '<div class="notice notice-warning"><p>No <code>jobsite_geo-services</code> terms found.</p></div>';
+		} else {
+			$to_process = [];
+			foreach ( $all_terms as $t ) {
+				if ( ! $gi_force && get_term_meta( $t->term_id, 'bp_geo_service_intro', true ) && get_term_meta( $t->term_id, 'bp_geo_map_caption', true ) ) {
+					$gi_skipped++;
+					continue;
+				}
+				$to_process[] = $t;
+			}
+
+			$batch     = array_slice( $to_process, 0, $gi_batch );
+			$remaining = max( 0, count( $to_process ) - count( $batch ) );
+
+			@set_time_limit( count( $batch ) * 40 );
+
+			foreach ( $batch as $t ) {
+				$result = bp_geo_generate_term_intro( $t->term_id );
+				if ( is_wp_error( $result ) ) {
+					$gi_errors[] = '<strong>' . esc_html( $t->slug ) . ':</strong> ' . esc_html( $result->get_error_message() );
+				} else {
+					$gi_results[] = 'Generated: ' . esc_html( $t->slug );
+				}
+			}
+
+			if ( $gi_results ) {
+				echo '<div class="notice notice-success"><p>' . implode( '<br>', $gi_results ) . '</p></div>';
+			}
+			if ( $gi_errors ) {
+				echo '<div class="notice notice-error"><p>' . implode( '<br>', $gi_errors ) . '</p></div>';
+			}
+			if ( $gi_skipped ) {
+				echo '<div class="notice notice-info"><p>Skipped ' . $gi_skipped . ' terms that already have descriptions.</p></div>';
+			}
+			if ( $remaining > 0 ) {
+				echo '<div class="notice notice-warning"><p>' . $remaining . ' terms remaining — submit again to continue.</p></div>';
+			} elseif ( empty( $gi_errors ) && count( $batch ) > 0 ) {
+				echo '<div class="notice notice-success"><p>All terms processed.</p></div>';
+			} elseif ( count( $batch ) === 0 ) {
+				echo '<div class="notice notice-info"><p>Nothing to process — all terms already have descriptions. Use &ldquo;Force regenerate&rdquo; to overwrite.</p></div>';
+			}
+		}
+	}
+	?>
+	<form method="post" onsubmit="return confirm('Generate AI intros for up to 7 service terms? This may take a minute.');">
+		<?php wp_nonce_field( 'bp_generate_intros_nonce' ); ?>
+		<p>
+			<label>
+				<input type="checkbox" name="gi_force" value="1">
+				&nbsp;Force regenerate &mdash; overwrite existing descriptions
+			</label>
+		</p>
+		<?php submit_button( 'Generate Service Intros', 'secondary', 'bp_generate_service_intros' ); ?>
+	</form>
 	</div>
 	<?php
 }

@@ -303,6 +303,26 @@ body.wp-admin.post-type-jobsite_geo #titlediv .inside {
 	display: none; /* hide permalink on jobsite geo */
 }
 
+body.edit-tags-php.taxonomy-jobsite_geo-services #col-left,
+body.edit-tags-php.taxonomy-jobsite_geo-services #col-right {
+	float:                                                     left;
+	width:                                                     100%;
+}
+
+body.edit-tags-php.taxonomy-jobsite_geo-services #col-left .form-field {
+	width:                                                     30%;
+	float:                                                     left;
+}
+
+body.edit-tags-php.taxonomy-jobsite_geo-services .bp_service_intro {
+	text-align:                                                left;
+}
+
+body.edit-tags-php.taxonomy-jobsite_geo-services .term-description-wrap {
+	display:                                                   none;
+}
+
+
 
 /*--------------------------------------------------------------
 # Mobile Styles

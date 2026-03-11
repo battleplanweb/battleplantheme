@@ -19,6 +19,7 @@ require_once get_template_directory().'/functions-global.php';
 --------------------------------------------------------------*/
 
 // Handle WP_Queries properly
+if (!function_exists('bp_WP_Query')) :
 function bp_WP_Query($post_type, $args = []) {
 	$defaults = [
 		'post_type'              => $post_type,
@@ -96,6 +97,7 @@ function bp_WP_Query($post_type, $args = []) {
 
 	return new WP_Query($args);
 }
+endif;
 
 
 // Print variable or array for debugging

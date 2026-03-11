@@ -1599,6 +1599,74 @@ function bp_normalize_service_slugs_page() {
 	</div>
 
 	<div class="card" style="margin-top:20px;padding:20px;">
+	<h2 style="margin-top:0">Audit Review Links</h2>
+	<p>Scans all published <code>jobsite_geo</code> posts and checks whether the linked testimonial title matches the jobsite title (using the same key used during matching). Mismatched or broken links are unlinked. Use the dry-run checkbox to preview before applying.</p>
+	<?php
+	if ( isset( $_POST['bp_audit_review_links'] ) && check_admin_referer( 'bp_audit_review_links_nonce' ) ) {
+		$arl_dry = ! empty( $_POST['arl_dry_run'] );
+		$arl_log = [];
+		$unlinked = 0;
+		$checked  = 0;
+
+		$jobsites = get_posts( [
+			'post_type'      => 'jobsite_geo',
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+		] );
+
+		foreach ( $jobsites as $jid ) {
+			$review_id = get_post_meta( $jid, 'review', true );
+			if ( ! $review_id ) continue;
+			$checked++;
+
+			$jobsite_title = get_the_title( $jid );
+			$testimonial   = get_post( (int) $review_id );
+
+			// Unlink if testimonial no longer exists or isn't published
+			if ( ! $testimonial || $testimonial->post_status !== 'publish' ) {
+				$arl_log[] = '<span style="color:#c62828;">Broken link:</span> &ldquo;' . esc_html( $jobsite_title ) . '&rdquo; (ID: ' . $jid . ') — review ID ' . $review_id . ' not found or unpublished';
+				if ( ! $arl_dry ) delete_post_meta( $jid, 'review' );
+				$unlinked++;
+				continue;
+			}
+
+			// Unlink if sanitized titles don't match
+			$j_key = function_exists( 'bp_match_key_from_title' ) ? bp_match_key_from_title( $jobsite_title ) : sanitize_title( $jobsite_title );
+			$t_key = function_exists( 'bp_match_key_from_title' ) ? bp_match_key_from_title( $testimonial->post_title ) : sanitize_title( $testimonial->post_title );
+
+			if ( $j_key !== $t_key ) {
+				$arl_log[] = '<span style="color:#c62828;">Mismatch:</span> &ldquo;' . esc_html( $jobsite_title ) . '&rdquo; (ID: ' . $jid . ') was linked to &ldquo;' . esc_html( $testimonial->post_title ) . '&rdquo; (ID: ' . $review_id . ')';
+				if ( ! $arl_dry ) delete_post_meta( $jid, 'review' );
+				$unlinked++;
+			}
+		}
+
+		if ( $arl_log ) {
+			$label = $arl_dry ? 'Would unlink' : 'Unlinked';
+			echo '<div class="notice notice-' . ( $arl_dry ? 'warning' : 'success' ) . '"><p><strong>' . $label . ' ' . $unlinked . ' of ' . $checked . ' linked posts:</strong></p><ul style="font-family:monospace;font-size:12px;margin-top:6px;">';
+			foreach ( $arl_log as $line ) echo '<li style="margin-bottom:4px;">' . $line . '</li>';
+			echo '</ul></div>';
+		} elseif ( $checked > 0 ) {
+			echo '<div class="notice notice-success"><p>All ' . $checked . ' linked posts have matching titles — nothing to unlink.</p></div>';
+		} else {
+			echo '<div class="notice notice-info"><p>No jobsite posts with linked reviews found.</p></div>';
+		}
+	}
+	?>
+	<form method="post" onsubmit="return this.arl_dry_run.checked || confirm('Unlink all mismatched review connections? This cannot be undone.');">
+		<?php wp_nonce_field( 'bp_audit_review_links_nonce' ); ?>
+		<p>
+			<label>
+				<input type="checkbox" name="arl_dry_run" value="1" checked>
+				&nbsp;Preview only (dry run) — uncheck to apply changes
+			</label>
+		</p>
+		<?php submit_button( 'Audit Review Links', 'secondary', 'bp_audit_review_links' ); ?>
+	</form>
+	</div>
+
+	<div class="card" style="margin-top:20px;padding:20px;">
 	<h2 style="margin-top:0">Generate Service Intros</h2>
 	<p>Uses AI to write a unique, locally-targeted intro for each <code>jobsite_geo-services</code> term and saves it to the term description. Each intro is then used automatically as the page intro on the archive page for that term. Terms that already have a description are skipped unless &ldquo;Force regenerate&rdquo; is checked.</p>
 	<?php

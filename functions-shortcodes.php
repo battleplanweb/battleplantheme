@@ -2344,16 +2344,6 @@ if ( ! wp_next_scheduled('wp_version_check') ) {
 */
 
 
-add_filter('set_site_transient_update_themes', function($transient) {
-    if (!is_object($transient)) $transient = new stdClass();
-    if (empty($transient->checked['battleplantheme'])) {
-        error_log('checked wiped by: ' . wp_json_encode(array_map(fn($t) => $t['function'] ?? '', array_slice(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS), 0, 8))));
-    }
-    $transient->checked['battleplantheme'] = wp_get_theme('battleplantheme')->get('Version');
-    return $transient;
-}, 999);
-
-
 //delete_site_transient('git_updater_stats');
 
 /*if ( ! get_option('cron_schedules_fixed') ) {

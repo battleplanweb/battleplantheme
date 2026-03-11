@@ -61,7 +61,7 @@ get_header(); ?>
 					if ($query->have_posts()) : while ($query->have_posts()) : $query->the_post();
 						if (get_the_title() === $name) :
 							$review = get_the_ID();
-							wp_reset_postdata();
+							break;
 						endif;
 					endwhile; endif;
 

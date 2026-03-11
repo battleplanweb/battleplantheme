@@ -166,6 +166,7 @@ function bp_jobsite_setup($post_id, $user) {
 	$key = get_post_meta($post_id, '_bp_match_key', true);
 	if (!$key) {
 		$key = bp_match_key_from_title(get_the_title($post_id));
+		if (!$key) return; // bail if title produces no usable match key — prevents empty-value meta_query matching all posts
 		update_post_meta($post_id, '_bp_match_key', $key);
 	}
 
@@ -1958,7 +1959,7 @@ RULES:
 - Do NOT use the em-dash at all.  Structure sentences to flow without it.
 - Output ONLY the HTML — no markdown, no preamble
 
-Also write a map_caption: a short plain-text sentence (~8-12 words) that includes {$service} and {$city}.  These are real-life customer jobsites where {$company} has performed work. Vary the wording naturally — do not always write \"Recent {$service} in {$city}.\" Do NOT use \"service locations\". do NOT use HTML tags in the caption.
+Also write a map_caption: a short plain-text sentence (~8-12 words) that includes {$service} and {$city}, and tells reader that the map shows real-life jobsites where {$company} has performed work. Vary the wording naturally. Vary useage of city and state (eg. frisco / frisco, tx / frisco, texas). Do NOT use \"service locations\", \"throughout\". Do NOT use HTML tags in the caption.
 
 Respond ONLY with valid JSON: {\"intro\": \"...html content...\", \"map_caption\": \"...plain text...\"}";
 

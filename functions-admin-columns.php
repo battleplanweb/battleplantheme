@@ -237,8 +237,13 @@ function bp_admin_columns($config){
 
 				'bp-post-id' => $id,
 
-				'bp-featured-image' => fn() =>
-					wp_get_attachment_image($id, [130,130]),
+				'bp-featured-image' => (function() use ($id) {
+					$url = wp_nonce_url(
+						admin_url('upload.php?page=enable-media-replace/enable-media-replace.php&action=media_replace&attachment_id=' . $id),
+						'enable-media-replace-upload_' . $id
+					);
+					return '<a href="' . esc_url($url) . '" title="Replace media">' . wp_get_attachment_image($id, [130,130]) . '</a>';
+				}),
 
 				'bp-title' => (function() use ($id) {
 					return '<a href="'.get_edit_post_link($id).'" target="_blank"><b style="color: var(--main-blue); font-size:115%">'.get_the_title($id).'</b></a><br>/'.basename(get_attached_file($id));

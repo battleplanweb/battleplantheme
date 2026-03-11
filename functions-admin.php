@@ -766,6 +766,15 @@ function battleplan_post_row_actions( $actions, $post ) {
 		$out['view'] = str_replace("<a href", "<a title='View' target='_blank' rel='noopener' href", $view);
 	}
 
+	$is_published   = $post->post_status === 'publish';
+	$toggle_icon    = $is_published ? 'dashicons-hidden' : 'dashicons-visibility';
+	$toggle_title   = $is_published ? 'Send to Draft' : 'Publish';
+	$toggle_url     = wp_nonce_url(
+		admin_url('admin.php?action=battleplan_toggle_post_status&post=' . $post->ID),
+		'battleplan_toggle_status_' . $post->ID
+	);
+	$out['toggle_status'] = '<a href="' . esc_url($toggle_url) . '" title="' . $toggle_title . '"><i class="' . $toggle_icon . '"></i></a>';
+
 	if (isset($actions['trash'])) {
 		$delete = str_replace("Trash", "<i class='dashicons-trash'></i>", $actions['trash']);
 		$out['delete'] = str_replace("<a href", "<a title='Delete' href", $delete);
@@ -821,6 +830,26 @@ function battleplan_user_row_actions($actions, $user_object) {
 
 	return $out;
 }
+
+// Toggle post status between publish and draft
+add_action('admin_action_battleplan_toggle_post_status', function() {
+	$post_id = isset($_GET['post']) ? (int) $_GET['post'] : 0;
+	if (!$post_id) wp_die('Invalid post.');
+
+	check_admin_referer('battleplan_toggle_status_' . $post_id);
+
+	if (!current_user_can('edit_post', $post_id)) wp_die('Insufficient permissions.');
+
+	$post = get_post($post_id);
+	if (!$post) wp_die('Post not found.');
+
+	$new_status = $post->post_status === 'publish' ? 'draft' : 'publish';
+	wp_update_post(['ID' => $post_id, 'post_status' => $new_status]);
+
+	$redirect = wp_get_referer() ?: admin_url('edit.php?post_type=' . $post->post_type);
+	wp_safe_redirect($redirect);
+	exit;
+});
 
 // Automatically set the image Title, Alt-Text, Caption & Description upon upload
 add_action( 'add_attachment', 'battleplan_setImageMetaUponUpload' );

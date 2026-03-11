@@ -66,7 +66,7 @@ add_action('upgrader_process_complete', function($upgrader, $options) {
     $themes_updated = $options['themes'] ?? [];
     if (!in_array('battleplantheme', $themes_updated)) return;
 
-    $key = 'bp_theme_plugin_cleanup_2026-02-14';
+    $key = 'bp_theme_plugin_cleanup_2026-03-11';
     if (!add_site_option($key, current_time('mysql'))) return;
 
     require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -106,15 +106,14 @@ add_action('upgrader_process_complete', function($upgrader, $options) {
         if ($theme_obj->exists()) delete_theme($theme);
     }
 
-    $bp_guard_dir = WP_CONTENT_DIR . '/themes/bp-guard';
-    if (is_dir($bp_guard_dir)) {
-        foreach (new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($bp_guard_dir, RecursiveDirectoryIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::CHILD_FIRST
-        ) as $file) {
-            $file->isDir() ? rmdir($file) : unlink($file);
+    $has_posts    = (int) wp_count_posts('post')->publish > 0;
+    $has_jobsites = (int) wp_count_posts('jobsite_geo')->publish > 0;
+    if (!$has_posts && !$has_jobsites) {
+        $ptgmb = 'post-to-google-my-business-premium/post-to-google-my-business.php';
+        if (file_exists(WP_PLUGIN_DIR . '/' . $ptgmb)) {
+            if (is_plugin_active($ptgmb)) deactivate_plugins($ptgmb, true);
+            delete_plugins([$ptgmb]);
         }
-        rmdir($bp_guard_dir);
     }
 
 }, 10, 2);

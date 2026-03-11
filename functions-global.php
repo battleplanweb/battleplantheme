@@ -13,7 +13,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2026.39.5' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', '2026.39.6' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -324,8 +324,7 @@ $base_info = [
 ];
 $base_hash = md5(wp_json_encode($base_info));
 $prev_hash = (string)get_option('bp_state_hash', '');
-//$metrics_due = ($now - (int)get_option('bp_state_last_metrics', 0)) >= 43200;
-$metrics_due = true;
+$metrics_due = ($now - (int)get_option('bp_state_last_metrics', 0)) >= 43200;
 
 // Only proceed if something changed OR metrics are due
 //if ($base_hash === $prev_hash && !$metrics_due) return;

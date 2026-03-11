@@ -19,7 +19,6 @@ require_once get_template_directory().'/functions-global.php';
 --------------------------------------------------------------*/
 
 // Handle WP_Queries properly
-if (!function_exists('bp_WP_Query')) :
 function bp_WP_Query($post_type, $args = []) {
 	$defaults = [
 		'post_type'              => $post_type,
@@ -97,7 +96,6 @@ function bp_WP_Query($post_type, $args = []) {
 
 	return new WP_Query($args);
 }
-endif;
 
 
 // Print variable or array for debugging
@@ -987,7 +985,7 @@ function battleplan_sitemap_exclude_post_type( $excluded, $post_type ) {
 
 add_filter( 'wpseo_sitemap_exclude_taxonomy', 'battleplan_sitemap_exclude_taxonomy', 10, 2 );
 function battleplan_sitemap_exclude_taxonomy( $excluded, $taxonomy ) {
-    return $taxonomy === 'image-categories' || $taxonomy === 'image-tags';
+    return in_array($taxonomy, ['image-categories', 'image-tags', 'jobsite_geo-service-types', 'jobsite_geo-service-areas']);
 }
 
 // https://developer.yoast.com/features/xml-sitemaps/api/#exclude-specific-posts

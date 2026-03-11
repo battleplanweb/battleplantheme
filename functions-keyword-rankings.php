@@ -140,10 +140,14 @@ function bp_kw_classify_keyword(string $keyword, string $url = ''): string {
 	}
 	$path = parse_url($url, PHP_URL_PATH) ?: '';
 	if (strpos($path, '/service/') !== false) return 'jobsite';
-	// Blog posts have long descriptive slugs; main service pages are short
+	// Blog: long descriptive slugs OR pro-tips subdirectory
 	$slug = trim(basename(rtrim($path, '/')));
 	if (strlen($slug) > 30) return 'blog';
-	return 'main';
+	if (strpos($path, '/pro-tips/') !== false) return 'blog';
+	// Main: root-level only (e.g. /about-us), not /service-area/frisco-tx
+	$segments = array_filter(explode('/', trim($path, '/')));
+	if (count($segments) <= 1) return 'main';
+	return 'geo';
 }
 
 

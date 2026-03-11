@@ -867,7 +867,9 @@ table.media .column-bp-title .has-media-icon ~ .row-actions {
 .dashicons-view::before,
 .dashicons-quick-edit::before,
 .dashicons-clone::before,
-.dashicons-randomize::before {
+.dashicons-randomize::before,
+.dashicons-visibility::before,
+.dashicons-hidden::before {
 	font-family:                                               "dashicons";
     content:                                                "\f182";
 	font-style:                                                normal;
@@ -882,7 +884,7 @@ table.media .column-bp-title .has-media-icon ~ .row-actions {
 }
 
 .dashicons-view::before {
-    content:                                                "\f115";
+    content:                                                "\f472";
 }
 
 .dashicons-no-alt::before {
@@ -903,6 +905,14 @@ table.media .column-bp-title .has-media-icon ~ .row-actions {
 
 .dashicons-randomize::before {
     content:                                                "\f503";
+}
+
+.dashicons-visibility::before {
+    content:                                                "\f177";
+}
+
+.dashicons-hidden::before {
+    content:                                                "\f530";
 }
 
 .button-link.bp-taxonomy-edit {

@@ -16,7 +16,8 @@
       "Bash(node -e \"const fs = require\\(''fs''\\); const filePath = ''g:/Battle Plan Web/00 - Battle Plan Assets/theme/GitHub/battleplantheme/functions-admin.php''; const content = fs.readFileSync\\(filePath, ''utf8''\\); const idx = content.indexOf\\(''up to 20 service terms''\\); console.log\\(''Found at index:'', idx\\); if \\(idx !== -1\\) { const snippet = content.slice\\(idx - 80, idx + 80\\); console.log\\(''Context:'', JSON.stringify\\(snippet\\)\\); }\")",
       "Bash(node \"g:/Battle Plan Web/00 - Battle Plan Assets/theme/GitHub/battleplantheme/_fix_form_count.js\")",
       "Bash(node -e \"const fs=require\\(''fs''\\); const c=fs.readFileSync\\(''g:/Battle Plan Web/00 - Battle Plan Assets/theme/GitHub/battleplantheme/functions-admin.php'',''utf8''\\); const i=c.indexOf\\(''service terms''\\); console.log\\(JSON.stringify\\(c.slice\\(i-60,i+30\\)\\)\\);\")",
-      "Bash(node \"g:/Battle Plan Web/00 - Battle Plan Assets/theme/GitHub/battleplantheme/_patch.js\")"
+      "Bash(node \"g:/Battle Plan Web/00 - Battle Plan Assets/theme/GitHub/battleplantheme/_patch.js\")",
+      "Bash(grep -rn \"wp_sitemaps\\\\|sitemap\\\\|robots\\\\|noindex\\\\|yoast\\\\|rankmath\" 'g:\\\\Battle Plan Web\\\\00 - Battle Plan Assets\\\\theme\\\\GitHub\\\\battleplantheme' --include=*.php)"
     ]
   }
 }

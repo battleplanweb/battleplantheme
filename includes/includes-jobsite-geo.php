@@ -1337,6 +1337,66 @@ define( 'BP_GEO_FIELD_JOB_DATE', 'job_date' );
 
 
 // ---------------------------------------------------------
+// # Required-field validation — block publish if fields are missing
+// ---------------------------------------------------------
+
+// Fires at priority 5, after ACF has saved fields (priority 1), before any other processing
+add_action( 'save_post_jobsite_geo', 'bp_geo_validate_required_fields', 5, 3 );
+
+function bp_geo_validate_required_fields( $post_id, $post, $update ) {
+	if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return;
+	if ( wp_is_post_revision( $post_id ) ) return;
+	if ( $post->post_status !== 'publish' ) return;
+	if ( ! empty( $GLOBALS['bp_geo_validation_running'] ) ) return;
+
+	$required = [
+		'City'  => trim( (string) get_post_meta( $post_id, BP_GEO_FIELD_CITY,  true ) ),
+		'State' => trim( (string) get_post_meta( $post_id, BP_GEO_FIELD_STATE, true ) ),
+	];
+
+	$missing = array_keys( array_filter( $required, fn( $v ) => $v === '' ) );
+
+	if ( empty( $missing ) ) return;
+
+	// Revert to draft directly in DB — avoids triggering save_post recursion
+	global $wpdb;
+	$GLOBALS['bp_geo_validation_running'] = true;
+	$wpdb->update( $wpdb->posts, [ 'post_status' => 'draft' ], [ 'ID' => $post_id ] );
+	clean_post_cache( $post_id );
+	unset( $GLOBALS['bp_geo_validation_running'] );
+
+	set_transient(
+		'bp_geo_required_' . get_current_user_id(),
+		implode( ', ', $missing ),
+		60
+	);
+
+	wp_safe_redirect( add_query_arg(
+		[ 'post' => $post_id, 'action' => 'edit' ],
+		admin_url( 'post.php' )
+	) );
+	exit;
+}
+
+add_action( 'admin_notices', 'bp_geo_show_required_notice' );
+
+function bp_geo_show_required_notice() {
+	$screen = get_current_screen();
+	if ( ! $screen || $screen->base !== 'post' ) return;
+
+	$uid = get_current_user_id();
+	$msg = get_transient( 'bp_geo_required_' . $uid );
+	if ( ! $msg ) return;
+
+	delete_transient( 'bp_geo_required_' . $uid );
+	echo '<div class="notice notice-error is-dismissible"><p>'
+		. '<strong>Jobsite GEO:</strong> The following required fields must be filled in before publishing: <strong>'
+		. esc_html( $msg )
+		. '</strong>. The post has been saved as a draft.</p></div>';
+}
+
+
+// ---------------------------------------------------------
 // # Auto-trigger on first publish
 // ---------------------------------------------------------
 
@@ -1959,7 +2019,7 @@ RULES:
 - Do NOT use the em-dash at all.  Structure sentences to flow without it.
 - Output ONLY the HTML — no markdown, no preamble
 
-Also write a map_caption: a short plain-text sentence (~8-12 words) that includes {$service} and {$city}, and tells reader that the map shows real-life jobsites where {$company} has performed work. Vary the wording naturally. Vary useage of city and state (eg. frisco / frisco, tx / frisco, texas). Do NOT use \"service locations\", \"throughout\". Do NOT use HTML tags in the caption.
+Also write a map_caption: a short plain-text sentence (~8-12 words) that includes {$service} and {$city}, and tells reader that the map shows real-life jobs where {$company} has performed work. Vary the wording naturally. Vary useage of city and state (eg. frisco / frisco, tx / frisco, texas). Do NOT use \"service locations\", \"throughout\", \"jobsites\".  You can use terms like \"solutions\", \"jobs\", \"work completed\", \"services provided\", etc. Do NOT use HTML tags in the caption.
 
 Respond ONLY with valid JSON: {\"intro\": \"...html content...\", \"map_caption\": \"...plain text...\"}";
 

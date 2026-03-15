@@ -133,11 +133,13 @@ function battleplan_visitor_trends($time, $daysPerPeriod, $colEnd) {
         //   monthly:   alternate 30/31 → 12 periods = 366 days
         //   quarterly: alternate 91/92 →  4 periods = 366 days
         //   weekly/daily: fixed (7 × 52 = 364 days; 1 × 365 = 365 days)
-        $periodSize = match($time) {
-            'monthly'   => ($periodIndex % 2 === 0) ? 30 : 31,
-            'quarterly' => ($periodIndex % 2 === 0) ? 91 : 92,
-            default     => $daysPerPeriod,
-        };
+        if ($time === 'monthly') {
+            $periodSize = ($periodIndex % 2 === 0) ? 30 : 31;
+        } elseif ($time === 'quarterly') {
+            $periodSize = ($periodIndex % 2 === 0) ? 91 : 92;
+        } else {
+            $periodSize = $daysPerPeriod;
+        }
 
         $startOffset = $offset;
         $endOffset   = $offset + $periodSize - 1;

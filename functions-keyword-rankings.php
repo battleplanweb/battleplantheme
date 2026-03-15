@@ -38,6 +38,17 @@ function bp_kw_site_brand(): string {
 	return strtolower(explode('.', $domain)[0]);
 }
 
+// Returns the brand exclude terms from customer_info as a lowercase array
+function bp_kw_brand_terms(): array {
+	static $terms = null;
+	if ($terms !== null) return $terms;
+	$ci  = customer_info();
+	$raw = $ci['keyword-exclude'] ?? '';
+	if (!$raw) { $terms = []; return $terms; }
+	$terms = array_values(array_filter(array_map('trim', explode(',', strtolower($raw)))));
+	return $terms;
+}
+
 
 /*--------------------------------------------------------------
 # Storage Helpers
@@ -133,8 +144,12 @@ function bp_kw_get_area_patterns(): array {
 	return $patterns;
 }
 
-// Returns 'geo' | 'jobsite' | 'blog' | 'main'
+// Returns 'brand' | 'geo' | 'jobsite' | 'blog' | 'main'
 function bp_kw_classify_keyword(string $keyword, string $url = ''): string {
+	$lower = strtolower($keyword);
+	foreach (bp_kw_brand_terms() as $term) {
+		if ($term && strpos($lower, $term) !== false) return 'brand';
+	}
 	foreach (bp_kw_get_area_patterns() as $area) {
 		if ($area && strpos($keyword, $area) !== false) return 'geo';
 	}
@@ -347,7 +362,7 @@ function bp_kw_render_dashboard_widget(): void {
 	});
 
 	$buckets = ['1-3' => 0, '4-10' => 0, '11-20' => 0, '21+' => 0];
-	$groups  = ['geo' => 0, 'jobsite' => 0, 'blog' => 0, 'main' => 0];
+	$groups  = ['geo' => 0, 'jobsite' => 0, 'blog' => 0, 'main' => 0, 'brand' => 0];
 	foreach ($rows as $r) {
 		$rk = $r['rank'];
 		if ($rk) {
@@ -356,8 +371,10 @@ function bp_kw_render_dashboard_widget(): void {
 			elseif  ($rk <= 20) $buckets['11-20']++;
 			else                $buckets['21+']++;
 		}
-		$g = $r['item']['group'] ?? 'main';
+		// Re-classify on the fly so brand terms added after last snapshot take effect
+		$g = bp_kw_classify_keyword($r['item']['keyword'], $r['item']['url']);
 		if (isset($groups[$g])) $groups[$g]++;
+		else $groups['main']++;
 	}
 
 	$total         = count($rows);
@@ -398,6 +415,7 @@ function bp_kw_render_dashboard_widget(): void {
 	#bp_keyword_rankings .tag-geo{background:#e8f4fd;color:#1a73e8;font-size:10px;padding:1px 5px;border-radius:8px}
 	#bp_keyword_rankings .tag-jobsite{background:#e8f5e9;color:#2e7d32;font-size:10px;padding:1px 5px;border-radius:8px}
 	#bp_keyword_rankings .tag-blog{background:#fef9e7;color:#b06000;font-size:10px;padding:1px 5px;border-radius:8px}
+	#bp_keyword_rankings .tag-brand{background:#f3e8fd;color:#6f42c1;font-size:10px;padding:1px 5px;border-radius:8px}
 	</style>
 
 	<div class="kw-buckets">
@@ -412,6 +430,7 @@ function bp_kw_render_dashboard_widget(): void {
 		<span class="gj">&#127963; <?php echo (int)$groups['jobsite']; ?> jobsites</span>
 		<span class="gl">&#128196; <?php echo (int)$groups['blog']; ?> blogs</span>
 		<span><?php echo (int)$groups['main']; ?> main</span>
+		<?php if ($groups['brand']) : ?><span style="background:#f3e8fd;color:#6f42c1">&#127775; <?php echo (int)$groups['brand']; ?> brand</span><?php endif; ?>
 	</div>
 
 	<ul class="kwt">
@@ -425,14 +444,14 @@ function bp_kw_render_dashboard_widget(): void {
 		<?php foreach ($top10 as $i => $row) :
 			$rk    = $row['rank'];
 			$ch    = $row['change'];
-			$group = $row['item']['group'] ?? 'main';
+			$group = bp_kw_classify_keyword($row['item']['keyword'], $row['item']['url']);
 			if ($rk <= 3)       $color = 'color:#28a745';
 			elseif ($rk <= 10)  $color = 'color:#856404';
 			elseif ($rk <= 20)  $color = 'color:#cc7000';
 			else                $color = 'color:#dc3545';
 		?>
 		<li>
-			<div class="kw-keyword"><?php echo esc_html($row['item']['keyword']); ?><?php if ($group === 'geo') : ?> <span class="tag-geo">geo</span><?php elseif ($group === 'jobsite') : ?> <span class="tag-jobsite">jobsite</span><?php elseif ($group === 'blog') : ?> <span class="tag-blog">blog</span><?php endif; ?></div>
+			<div class="kw-keyword"><?php echo esc_html($row['item']['keyword']); ?><?php if ($group === 'geo') : ?> <span class="tag-geo">geo</span><?php elseif ($group === 'jobsite') : ?> <span class="tag-jobsite">jobsite</span><?php elseif ($group === 'blog') : ?> <span class="tag-blog">blog</span><?php elseif ($group === 'brand') : ?> <span class="tag-brand">brand</span><?php endif; ?></div>
 			<div class="kw-rank"><span class="rn" style="<?php echo esc_attr($color); ?>"><?php echo $rk ? '#' . $rk : '—'; ?></span></div>
 			<div class="kw-change"><?php if ($ch > 0) : ?><span class="cu">&#9650;<?php echo (int)$ch; ?></span><?php elseif ($ch < 0) : ?><span class="cd">&#9660;<?php echo abs((int)$ch); ?></span><?php else : ?><span style="color:#aaa">—</span><?php endif; ?></div>
 			<div class="kw-trend"><canvas id="kws-<?php echo $i; ?>" width="80" height="24"></canvas></div>
@@ -579,12 +598,22 @@ function bp_kw_render_admin_page(): void {
 		return strcmp($a['item']['keyword'], $b['item']['keyword']);
 	});
 
+	// Re-classify on the fly so brand terms added after last snapshot take effect
+	foreach ($rows as &$row) {
+		$row['group']         = bp_kw_classify_keyword($row['item']['keyword'], $row['item']['url']);
+		$row['item']['group'] = $row['group'];
+	}
+	unset($row);
+
 	// Group counts
-	$gcounts = ['geo' => 0, 'jobsite' => 0, 'blog' => 0, 'main' => 0];
+	$gcounts = ['geo' => 0, 'jobsite' => 0, 'blog' => 0, 'main' => 0, 'brand' => 0];
 	foreach ($rows as $r) {
 		$g = $r['group'];
 		if (isset($gcounts[$g])) $gcounts[$g]++;
+		else $gcounts['main']++;
 	}
+
+	$brand_terms_js = json_encode(bp_kw_brand_terms());
 
 	?>
 	<div class="wrap">
@@ -618,8 +647,15 @@ function bp_kw_render_admin_page(): void {
 	<?php else : ?>
 
 	<!-- Filter bar -->
+	<div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;flex-wrap:wrap;">
+		<input type="search" id="kw-search" placeholder="Filter keywords…" style="width:200px;padding:4px 8px;font-size:13px;">
+		<label style="font-size:12px;color:#555;display:flex;align-items:center;gap:6px;">
+			Exclude:
+			<input type="text" id="kw-exclude" placeholder="jackson, jackson's" style="width:200px;padding:4px 8px;font-size:13px;" title="Comma-separated terms — any keyword containing these will be hidden">
+		</label>
+		<span id="kw-visible-count" style="font-size:12px;color:#888;"><?php echo count($rows); ?> keywords</span>
+	</div>
 	<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
-		<input type="search" id="kw-search" placeholder="Filter keywords…" style="width:240px;padding:4px 8px;font-size:13px;">
 		<div id="kw-pos-filters" style="display:flex;gap:4px;">
 			<button type="button" class="button button-small kw-pos-btn active" data-pos="all">All positions</button>
 			<button type="button" class="button button-small kw-pos-btn" data-pos="1-3" style="background:#d4edda;">1–3</button>
@@ -633,8 +669,8 @@ function bp_kw_render_admin_page(): void {
 			<button type="button" class="button button-small kw-grp-btn" data-grp="jobsite" style="background:#e8f5e9;">Jobsites (<?php echo (int)$gcounts['jobsite']; ?>)</button>
 			<button type="button" class="button button-small kw-grp-btn" data-grp="blog"    style="background:#fef9e7;">Blogs (<?php echo (int)$gcounts['blog']; ?>)</button>
 			<button type="button" class="button button-small kw-grp-btn" data-grp="main">Main (<?php echo (int)$gcounts['main']; ?>)</button>
+			<button type="button" class="button button-small kw-grp-btn" data-grp="brand"   style="background:#f3e8fd;color:#6f42c1;">Brand (<?php echo (int)$gcounts['brand']; ?>)</button>
 		</div>
-		<span id="kw-visible-count" style="font-size:12px;color:#888;"><?php echo count($rows); ?> keywords</span>
 	</div>
 
 	<table class="wp-list-table widefat fixed striped" id="kw-table" style="font-size:13px;">
@@ -698,6 +734,8 @@ function bp_kw_render_admin_page(): void {
 						<span style="background:#e8f5e9;color:#2e7d32;font-size:11px;padding:2px 6px;border-radius:8px;">jobsite</span>
 					<?php elseif ($group === 'blog') : ?>
 						<span style="background:#fef9e7;color:#b06000;font-size:11px;padding:2px 6px;border-radius:8px;">blog</span>
+					<?php elseif ($group === 'brand') : ?>
+						<span style="background:#f3e8fd;color:#6f42c1;font-size:11px;padding:2px 6px;border-radius:8px;">brand</span>
 					<?php else : ?>
 						<span style="color:#999;font-size:11px;">main</span>
 					<?php endif; ?>
@@ -729,11 +767,23 @@ function bp_kw_render_admin_page(): void {
 
 	<script>
 	(function(){
-		var search    = document.getElementById('kw-search');
-		var table     = document.getElementById('kw-table');
-		var countEl   = document.getElementById('kw-visible-count');
-		var activePos = 'all';
-		var activeGrp = 'all';
+		var search       = document.getElementById('kw-search');
+		var excludeInput = document.getElementById('kw-exclude');
+		var table        = document.getElementById('kw-table');
+		var countEl      = document.getElementById('kw-visible-count');
+		var activePos    = 'all';
+		var activeGrp    = 'all';
+		var excludeTerms = [];
+
+		// Pre-populate exclude box with brand terms from customer_info
+		var brandTerms = <?php echo $brand_terms_js; ?>;
+		if (brandTerms.length) excludeInput.value = brandTerms.join(', ');
+		excludeTerms = brandTerms.slice();
+
+		function parseExclude() {
+			var val = excludeInput.value.toLowerCase().trim();
+			excludeTerms = val ? val.split(',').map(function(t){ return t.trim(); }).filter(Boolean) : [];
+		}
 
 		function applyFilters() {
 			var term = search.value.toLowerCase().trim();
@@ -743,7 +793,10 @@ function bp_kw_render_admin_page(): void {
 				var kw  = tr.dataset.keyword || '';
 				var pos = tr.dataset.pos     || '';
 				var grp = tr.dataset.grp     || '';
+				// Exclude filter hides rows unless we're specifically browsing the Brand group
+				var excluded = activeGrp !== 'brand' && excludeTerms.some(function(t){ return t && kw.indexOf(t) !== -1; });
 				var show = (
+					!excluded &&
 					(!term          || kw.indexOf(term) !== -1) &&
 					(activePos === 'all' || pos === activePos) &&
 					(activeGrp === 'all' || grp === activeGrp)
@@ -755,6 +808,7 @@ function bp_kw_render_admin_page(): void {
 		}
 
 		search.addEventListener('input', applyFilters);
+		excludeInput.addEventListener('input', function(){ parseExclude(); applyFilters(); });
 
 		document.getElementById('kw-pos-filters').addEventListener('click', function(e) {
 			var btn = e.target.closest('.kw-pos-btn');
@@ -773,6 +827,9 @@ function bp_kw_render_admin_page(): void {
 			activeGrp = btn.dataset.grp;
 			applyFilters();
 		});
+
+		// Apply on load so brand terms are pre-filtered from default "All types" view
+		applyFilters();
 	})();
 	</script>
 

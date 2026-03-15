@@ -249,7 +249,7 @@ function bp_ga4_collect_daily_totals(BetaAnalyticsDataClient $client, $propertyI
         $rows = bp_ga4_run_report_all_rows($client, [
             'property'        => 'properties/' . $propertyId,
             'dateRanges'      => [new DateRange(['start_date' => $range['start'], 'end_date' => $range['end']])],
-            'dimensions'      => [new Dimension(['name'=>'date']), new Dimension(['name'=>'city']), new Dimension(['name'=>'country'])],
+            'dimensions'      => [new Dimension(['name'=>'date'])],
             'metrics'         => [
                 new Metric(['name'=>'sessions']),
                 new Metric(['name'=>'totalUsers']),

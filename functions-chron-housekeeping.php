@@ -3,6 +3,8 @@
 
 function bp_run_chron_housekeeping(bool $force = false): void {
 
+	bp_typeface_refresh();
+
 	if (function_exists('battleplan_remove_user_roles')) battleplan_remove_user_roles();
 	if (function_exists('battleplan_create_user_roles')) battleplan_create_user_roles();
 	if (function_exists('battleplan_updateSiteOptions')) battleplan_updateSiteOptions();

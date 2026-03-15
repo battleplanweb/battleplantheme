@@ -4,33 +4,33 @@
 /*  ADD TO FUNCTIONS-SITE
 if ( get_option('bp_product_upload_2022_08_11') != "completed" ) :
  	require_once get_template_directory().'/includes/include-hvac-products/includes-american-standard-products.php';
-	updateOption( 'bp_product_upload_2022_08_11', 'completed', false );			
-endif; 
+	updateOption( 'bp_product_upload_2022_08_11', 'completed', false );
+endif;
 */
- 
+
 add_action( 'wp_loaded', 'add_american_standard_products', 10 );
 function add_american_standard_products() {
 
 	$brand = "american-standard"; // lowercase
-	$productImgAlt = "American Standard Heating & Cooling Product"; 
+	$productImgAlt = "American Standard Heating & Cooling Product";
 
 
-	
+
 	$removeImages = array('American-Standard-46.jpg', 'American-Standard-45.jpg', 'American-Standard-44.jpg', 'American-Standard-43.jpg', 'Nexia-Home-Intelligence.jpg', 'American-Standard-22.jpg', 'American-Standard-14.jpg', 'American-Standard-13.jpg', 'American-Standard-42.jpg', 'American-Standard-34.jpg', 'American-Standard-33.jpg', 'American-Standard-41.jpg', 'American-Standard-32.jpg', 'American-Standard-02.jpg', 'American-Standard-12.jpg', 'American-Standard-11.jpg', 'American-Standard-31.jpg', 'American-Standard-21.jpg', 'American-Standard-04.jpg', 'American-Standard-01.jpg');
 
-	
-	
-	$removeProducts = array('accucomfort-platinum-18-air-conditioner', 'gold-17-air-conditioner', 'silver-16-air-conditioner', 'silver-14-air-conditioner', 'accucomfort-platinum-20-air-conditioner', 'silver-tem6-air-handler', 'forefront-platinum-tam9-air-handler', 'silver-tem8-air-handler', 'silver-tem4-air-handler', 'forefront-gold-tam4-air-handler', 'nexia-home-intelligence', 'silver-s8x1-gas-furnace', 'american-standard-s8b1-gas-furnace', 'silver-s9x1-gas-furnace', 'american-standard-s9b1-gas-furnace', 'gold-s9v2-gas-furnace', 'platinum-80-furnace', 'gold-80v-furnace', 'platinum-95-furnace', 'accucomfort-platinum-20-heat-pump', 'accucomfort-platinum-18-heat-pump', 'gold-17-heat-pump', 'silver-14-heat-pump', 'silver-16-heat-pump', 'platinum-16-gaselectric-system', 'silver-14-air-conditioner-system', 'gold-15-gaselectric-system', 'silver-14-gaselectric-system', 'platinum-16-heat-pump-system', 'gold-15-heat-pump-system', 'silver-14-heat-pump-system', 'platinum-16-hybrid-system', 'gold-14-hybrid-system' );	
-	
-	
 
-	$addProducts = array (		
-	
+
+	$removeProducts = array('accucomfort-platinum-18-air-conditioner', 'gold-17-air-conditioner', 'silver-16-air-conditioner', 'silver-14-air-conditioner', 'accucomfort-platinum-20-air-conditioner', 'silver-tem6-air-handler', 'forefront-platinum-tam9-air-handler', 'silver-tem8-air-handler', 'silver-tem4-air-handler', 'forefront-gold-tam4-air-handler', 'nexia-home-intelligence', 'silver-s8x1-gas-furnace', 'american-standard-s8b1-gas-furnace', 'silver-s9x1-gas-furnace', 'american-standard-s9b1-gas-furnace', 'gold-s9v2-gas-furnace', 'platinum-80-furnace', 'gold-80v-furnace', 'platinum-95-furnace', 'accucomfort-platinum-20-heat-pump', 'accucomfort-platinum-18-heat-pump', 'gold-17-heat-pump', 'silver-14-heat-pump', 'silver-16-heat-pump', 'platinum-16-gaselectric-system', 'silver-14-air-conditioner-system', 'gold-15-gaselectric-system', 'silver-14-gaselectric-system', 'platinum-16-heat-pump-system', 'gold-15-heat-pump-system', 'silver-14-heat-pump-system', 'platinum-16-hybrid-system', 'gold-14-hybrid-system', 'gold-16-two-stage-air-conditioner', 'gold-16-two-stage-heat-pump' );
+
+
+
+	$addProducts = array (
+
 	// Air Conditioners
 array ( 'post_title'	=>	'Platinum 20 Variable Speed Air Conditioner',
 	   	'post_content' 	=>	'<span class="descriptionText">Be in control of your home temperature with a smart, efficient air conditioner.</span>
-		
-		
+
+
 
 <ul>
 	<li><b>Precise temperature control:</b> With AccuComfort™ variable speed technology, the Platinum 20 can gradually adjust its speed at a broader range to create a consistent flow of cool, comfortable air. This way, your system can continuously match the temperature you want at home.</li>
@@ -41,19 +41,19 @@ array ( 'post_title'	=>	'Platinum 20 Variable Speed Air Conditioner',
 	<li><b>Sound:</b> 55-75 dBA</li>
 	<li><b>Cooling Stages:</b> Variable</li>
 	<li><b>Energy Savings:</b> Up to 55%</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Be in control of your home temperature with a smart, efficient air conditioner.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1000,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'air-conditioners', 'product-class'=>'best'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-air-conditioner-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-01.webp'		
+		'image_name'	=>	'American-Standard-01.webp'
 ),
-				
+
 array ( 'post_title'	=>	'Platinum 18 Variable Speed Air Conditioner',
 	   	'post_content' 	=>	'<span class="descriptionText">Cool your home with an air conditioner that’s both quiet and efficient.</span>
-		
-		
+
+
 
 <ul>
 	<li><b>Precise temperature control:</b> With AccuComfort™ variable speed technology, the Platinum 18 can gradually adjust its speed at a broader range to create a consistent flow of cool, comfortable air. This way, your system can continuously match the temperature you want at home. </li>
@@ -64,19 +64,19 @@ array ( 'post_title'	=>	'Platinum 18 Variable Speed Air Conditioner',
 	<li><b>Sound:</b> 55-75 dBA</li>
 	<li><b>Cooling Stages:</b> Variable</li>
 	<li><b>Energy Savings:</b> Up to 44%</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Cool your home with an air conditioner that’s both quiet and efficient.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1010,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'air-conditioners', 'product-class'=>'best'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-air-conditioner-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-01.webp'		
+		'image_name'	=>	'American-Standard-01.webp'
 ),
-				
+
 array ( 'post_title'	=>	'Platinum 17 Variable Speed Air Conditioner',
 	   	'post_content' 	=>	'<span class="descriptionText">Stay comfortably cool no matter how hot the weather gets.</span>
-		
-		
+
+
 
 <ul>
 	<li><b>Precise temperature control:</b> With AccuComfort™ variable speed technology, the Platinum 17 can gradually adjust its speed at a broader range to create a consistent flow of cool, comfortable air. This way, your system can continuously match the temperature you want at home.</li>
@@ -87,37 +87,38 @@ array ( 'post_title'	=>	'Platinum 17 Variable Speed Air Conditioner',
 	<li><b>Sound:</b> 66-85 dBA</li>
 	<li><b>Cooling Stages:</b> Variable</li>
 	<li><b>Energy Savings:</b> Up to 44%</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Stay comfortably cool no matter how hot the weather gets.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1020,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'air-conditioners', 'product-class'=>'best'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-air-conditioner-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-02.webp'		
+		'image_name'	=>	'American-Standard-02.webp'
 ),
-				
-array ( 'post_title'	=>	'Gold 16 Two-Stage Air Conditioner',
+
+array ( 'post_title'	=>	'Gold 17 Multi-Stage Air Conditioner',
 	   	'post_content' 	=>	'<span class="descriptionText">Keep your home energy-efficient no matter how hot the weather gets.</span>
 
 <ul>
-	<li><b>Efficient performance:</b> With a 16.2 SEER2 rating, this air conditioner comfortably cools your home while staying energy efficient.</li>
-	<li><b>Reliable durability:</b> Rely on your air conditioner for years to come. The Gold 16 is built for durability with quality materials, innovative features, and a sturdy construction.</li>
-	<li><b>Optimize indoor air quality:</b> If you add an AccuClean® Air Cleaner, your air conditioner can filter out more dust and harmful irritants from the air so you can breathe easier at home.</li>
-	<li><b>Environmentally friendly:</b> Take care of your environment. American Standard air conditioners cool your home with a refrigerant that’s ozone-safe.</li>
-	<li><b>SEER2:</b> Up to 16.2</li>
+	<li><b>Engineered with ComfortSeek™ technology:</b> adjusts compressor speed in response to outdoor temperature changes, working harder when you need it and conserving energy when you don\'t.</li>
+	<li><b>Higher performance at a lower cost:</b> the numbers add up to long-term energy savings. With a SEER2 cooling rating of up to 17.1, EER2 of up to 12.5 for performance in extreme heat, and a high HSPF2 heating rating of up to 11, this heat pump is an energy-efficient bridge between a two-stage system and a premium variable-speed system. </li>
+	<li><b>Multi-speed technology delivers increased comfort and reliability:</b> This inverter-driven AC adjusts compressor speed for maximum energy efficiency and comfort while providing enhanced humidity control. Its sophisticated design, free of failure-prone components, ensures built-in reliability.</li>
+	<li><b>Universal 24V compatibility to save you money:</b>24V system compatibility means you don\'t have to replace your existing furnace with a higher-cost communicating unit, and you can keep any brand two-stage thermostat. </li>
+	<li><b>SEER2:</b> Up to 17.1</li>
+	<li><b>HSPF2:</b> Up to 11</li>
 	<li><b>Sound:</b> 72-74 dBA</li>
-	<li><b>Cooling Stages:</b> Two</li>
+	<li><b>Fan Stages:</b> Multiple</li>
 	<li><b>ENERGY STAR® Qualified:</b> Yes</li>
 	<li><b>Energy Savings:</b> Up to 44%</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Keep your home energy-efficient no matter how hot the weather gets.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1030,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'air-conditioners', 'product-class'=>'better'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-air-conditioner-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-01.webp'		
+		'meta_input'	=>	array('brochure'=>'https://www.americanstandardair.com/assets/product-brochures/air-conditioners/TT_10-1112-R-48_AMST_AC_ConsumerBrochure_SV.pdf'),
+		'image_name'	=>	'American-Standard-01.webp'
 ),
-				
+
 array ( 'post_title'	=>	'Silver 15 Single-Stage Air Conditioner',
 	   	'post_content' 	=>	'<span class="descriptionText">Stay cool with a durable air conditioner for many seasons to come.</span>
 
@@ -131,15 +132,15 @@ array ( 'post_title'	=>	'Silver 15 Single-Stage Air Conditioner',
 	<li><b>Cooling Stages:</b> One</li>
 	<li><b>ENERGY STAR® Qualified:</b> Yes</li>
 	<li><b>Energy Savings:</b> Up to 41%</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Stay cool with a durable air conditioner for many seasons to come.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1040,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'air-conditioners', 'product-class'=>'good'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-air-conditioner-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-01.webp'		
+		'image_name'	=>	'American-Standard-01.webp'
 ),
-				
+
 array ( 'post_title'	=>	'Silver 14 Single-Stage Air Conditioner',
 	   	'post_content' 	=>	'<span class="descriptionText">Enjoy a great blend of reliable cooling, energy efficiency and value.</span>
 
@@ -153,23 +154,23 @@ array ( 'post_title'	=>	'Silver 14 Single-Stage Air Conditioner',
 	<li><b>Cooling Stages:</b> One</li>
 	<li><b>ENERGY STAR® Qualified:</b> Yes</li>
 	<li><b>Energy Savings:</b> Up to 38%</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Enjoy a great blend of reliable cooling, energy efficiency and value.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1050,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'air-conditioners', 'product-class'=>'good'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-air-conditioner-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-01.webp'		
+		'image_name'	=>	'American-Standard-01.webp'
 ),
-		
-		
-		
-		
-	
+
+
+
+
+
 	// Heat Pumps
 array ( 'post_title'	=>	'Platinum 20 Variable Speed Heat Pump',
 	   	'post_content' 	=>	'<span class="descriptionText">Experience home comfort efficiency at a whole new level with state-of-the-art heating and cooling technology.</span>
-		
+
 <ul>
 	<li><b>Comfort and quality meets efficiency:</b> Built with quality materials and innovative features, the AccuComfort™ Platinum 20 Heat Pump is one of the industry’s most efficient systems on the market, with ratings up to 20.5 SEER2 and 8.7 HSPF.</li>
 	<li><b>Multi-stage heating and cooling technology:</b> State-of-the-art, multi-stage heating and cooling system that consistently adjusts to run at a more efficient speed to maintain optimal levels of comfort.</li>
@@ -181,19 +182,19 @@ array ( 'post_title'	=>	'Platinum 20 Variable Speed Heat Pump',
 	<li><b>Sound:</b> 54-76 dBA</li>
 	<li><b>Fan Stages:</b> Variable</li>
 	<li><b>Energy Savings:</b> Up to 50%</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Experience home comfort efficiency at a whole new level with state-of-the-art heating and cooling technology.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1100,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'heat-pumps', 'product-class'=>'best'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-heat-pump-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-02.webp'		
-),		
-	
+		'image_name'	=>	'American-Standard-02.webp'
+),
+
 array ( 'post_title'	=>	'Platinum 18 Variable Speed Heat Pump',
 	   	'post_content' 	=>	'<span class="descriptionText">Get year-round comfort with a variety of heating and cooling speeds to meet your temperature needs.</span>
-		
-		
+
+
 
 <ul>
 	<li><b>Variable speeds, maximum comfort:</b> AccuComfort™ technology allows the variable-speed system to consistently adjust to run at a more efficient speed to maintain your personal level of home comfort.</li>
@@ -206,17 +207,17 @@ array ( 'post_title'	=>	'Platinum 18 Variable Speed Heat Pump',
 	<li><b>Sound:</b> 54-76 dBA</li>
 	<li><b>Fan Stages:</b> Variable</li>
 	<li><b>Energy Savings:</b> Up to 44%</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Get year-round comfort with a variety of heating and cooling speeds to meet your temperature needs.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1110,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'heat-pumps', 'product-class'=>'best'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-heat-pump-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-02.webp'		
-),		
-	
+		'image_name'	=>	'American-Standard-02.webp'
+),
+
 array ( 'post_title'	=>	'Platinum 17 Variable Speed Heat Pump',
-	   	'post_content' 	=>	'<span class="descriptionText">In-home comfort and high efficiency.</span>		
+	   	'post_content' 	=>	'<span class="descriptionText">In-home comfort and high efficiency.</span>
 
 <ul>
 	<li><b>Variable speeds, maximum comfort:</b> AccuComfort™ technology allows the variable-speed system to consistently adjust to run at a more efficient speed to maintain your personal level of home comfort.</li>
@@ -227,39 +228,38 @@ array ( 'post_title'	=>	'Platinum 17 Variable Speed Heat Pump',
 	<li><b>Sound:</b> 55-76 dBA</li>
 	<li><b>Fan Stages:</b> Variable</li>
 	<li><b>Energy Savings:</b> Up to 44%</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'In-home comfort and high efficiency.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1120,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'heat-pumps', 'product-class'=>'best'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-heat-pump-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-02.webp'		
-),		
-	
-array ( 'post_title'	=>	'Gold 16 Two-Stage Heat Pump',
+		'image_name'	=>	'American-Standard-02.webp'
+),
+
+array ( 'post_title'	=>	'Gold 17 Multi-Speed Heat Pump',
 	   	'post_content' 	=>	'<span class="descriptionText">Experience incredible in-home comfort with a highly efficient heat pump that’s environmentally friendly and quiet.</span>
 
 <ul>
-	<li><b>Very efficient, environmentally friendly:</b> Save on your heating and cooling energy usage while reducing greenhouse gas emissions for feel-good, responsible home comfort.</li>
-	<li><b>Year-round comfort:</b> Uses incredible two-stage heat pumps in multiple speeds to provide an excellent mix of value, contentment, and efficiency all year long.</li>
-	<li><b>Save energy at home:</b> The Gold 16 heat pump is a great choice that may help save energy and lower your your monthly energy use.</li>
-	<li><b>Quiet operation:</b> A system that’s quiet and has top-tier efficiency ratings so that you can save on energy bills and enjoy a comfortable house without the noise.</li>
-	<li><b>The hybrid system advantage:</b> Pair your heat pump with a gas furnace to enjoy the benefits of a hybrid system. Once your heat pump reaches its heating capacity, your gas furnace steps in to keep you comfortable. Together, they offer you reliable comfort that could lower your energy costs.</li>
-	<li><b>SEER2:</b> Up to 16.2</li>
-	<li><b>HSPF2:</b> Up to 8.1</li>
+	<li><b>Engineered with ComfortSeek™ technology:</b> adjusts compressor speed in response to outdoor temperature changes, working harder when you need it and conserving energy when you don\'t.</li>
+	<li><b>Higher performance at a lower cost:</b> the numbers add up to long-term energy savings. With a SEER2 cooling rating of up to 17.1, EER2 of up to 12.5 for performance in extreme heat, and a high HSPF2 heating rating of up to 11, this heat pump is an energy-efficient bridge between a two-stage system and a premium variable-speed system. </li>
+	<li><b>Multi-speed technology delivers increased comfort and reliability:</b> The inverter-driven Gold 17 Multi-Speed Heat Pump adjusts compressor speed for maximum energy efficiency and comfort while providing enhanced humidity control. Its sophisticated design, free of failure-prone components, ensures built-in reliability.</li>
+	<li><b>Efficient heat pump for cold climates:</b> tested to provide a 70% heating capacity ratio at 5° F and deliver 100% heating capacity down to 27° F.</li>
+	<li><b>SEER2:</b> Up to 17.1</li>
+	<li><b>HSPF2:</b> Up to 11</li>
 	<li><b>Sound:</b> 72-74 dBA</li>
-	<li><b>Fan Stages:</b> Two</li>
+	<li><b>Fan Stages:</b> Multiple</li>
 	<li><b>ENERGY STAR® Qualified:</b> Yes</li>
 	<li><b>Energy Savings:</b> Up to 44%</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Experience incredible in-home comfort with a highly efficient heat pump that’s environmentally friendly and quiet.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1130,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'heat-pumps', 'product-class'=>'better'),
-		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-heat-pump-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-01.webp'		
-),		
-	
+		'meta_input'	=>	array('brochure'=>'https://www.americanstandardair.com/assets/product-brochures/heat-pumps/TT_10-1113-R-42_AMSD_Heat_Pump-Brochure_SV.pdf'),
+		'image_name'	=>	'American-Standard-01.webp'
+),
+
 array ( 'post_title'	=>	'Silver 15 Single-Stage Heat Pump',
 	   	'post_content' 	=>	'<span class="descriptionText">Enjoy efficient heating and cooling performance and premium comfort—with a value that can’t be beat.</span>
 
@@ -275,15 +275,15 @@ array ( 'post_title'	=>	'Silver 15 Single-Stage Heat Pump',
 	<li><b>Fan Stages:</b> One</li>
 	<li><b>ENERGY STAR® Qualified:</b> Yes</li>
 	<li><b>Energy Savings:</b> Up to 41%</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Enjoy efficient heating and cooling performance and premium comfort—with a value that can’t be beat.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1140,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'heat-pumps', 'product-class'=>'good'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-heat-pump-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-01.webp'		
-),		
-	
+		'image_name'	=>	'American-Standard-01.webp'
+),
+
 array ( 'post_title'	=>	'Silver 14 Single-Stage Heat Pump',
 	   	'post_content' 	=>	'<span class="descriptionText">Enjoy dependable heating and cooling in your home that is energy efficient, environmentally friendly, and comfortable. </span>
 
@@ -298,19 +298,19 @@ array ( 'post_title'	=>	'Silver 14 Single-Stage Heat Pump',
 	<li><b>Sound:</b> 71-76 dBA</li>
 	<li><b>Fan Stages:</b> One</li>
 	<li><b>Energy Savings:</b> Up to 38%</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Enjoy dependable heating and cooling in your home that is energy efficient, environmentally friendly, and comfortable. ',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1150,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'heat-pumps', 'product-class'=>'good'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-heat-pump-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-01.webp'		
-),	
-		
-		
-		
-		
-	
+		'image_name'	=>	'American-Standard-01.webp'
+),
+
+
+
+
+
 	// Furnaces
 array ( 'post_title'	=>	'Platinum 95 Gas Furnace',
 		'post_content' 	=>	'<span class="descriptionText">Stay warm and comfortable inside with a gas furnace featuring fully modulating heating.</span>
@@ -322,15 +322,15 @@ array ( 'post_title'	=>	'Platinum 95 Gas Furnace',
 	<li><b>Built to last:</b> You won’t have to worry about this furnace withstanding the test of time. Its cabinet and components are durable and built to deliver comfort for years to come.</li>
 	<li><b>AFUE:</b> Up to 97%</li>
 	<li><b>Heating Stages:</b> Modulating</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Stay warm and comfortable inside with a gas furnace featuring fully modulating heating.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1200,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'furnaces', 'product-class'=>'best'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-fur-90-brochure-current.pdf'),
-		'image_name'	=>	'American-Standard-03.webp'		
+		'image_name'	=>	'American-Standard-03.webp'
 ),
-		
+
 array ( 'post_title'	=>	'Gold S9V2 Gas Furnace',
 		'post_content' 	=>	'<span class="descriptionText">Enjoy warm air throughout your home with this two stage heating system.</span>
 
@@ -342,15 +342,15 @@ array ( 'post_title'	=>	'Gold S9V2 Gas Furnace',
 	<li><b>AFUE:</b> Up to 96%</li>
 	<li><b>Heating Stages:</b> Two</li>
 	<li><b>ENERGY STAR® Qualified:</b> Yes</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Enjoy warm air throughout your home with this two stage heating system.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1210,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'furnaces', 'product-class'=>'better'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-fur-90-brochure-current.pdf'),
-		'image_name'	=>	'American-Standard-04.webp'		
+		'image_name'	=>	'American-Standard-04.webp'
 ),
-		
+
 array ( 'post_title'	=>	'Silver S9X1 Gas Furnace',
 		'post_content' 	=>	'<span class="descriptionText">Feel warm and cozy inside all year long with this single-stage heating system.</span>
 
@@ -362,15 +362,15 @@ array ( 'post_title'	=>	'Silver S9X1 Gas Furnace',
 	<li><b>AFUE:</b> Up to 96%</li>
 	<li><b>Heating Stages:</b> One</li>
 	<li><b>ENERGY STAR® Qualified:</b> Yes</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Feel warm and cozy inside all year long with this single-stage heating system.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1220,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'furnaces', 'product-class'=>'good'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-fur-90-brochure-current.pdf'),
-		'image_name'	=>	'American-Standard-05.webp'		
+		'image_name'	=>	'American-Standard-05.webp'
 ),
-		
+
 array ( 'post_title'	=>	'Platinum S8V2-C Furnace',
 		'post_content' 	=>	'<span class="descriptionText">Use American Standard AccuLink™ Technology to ensure this furnace delivers you exactly the heat you need.</span>
 
@@ -381,15 +381,15 @@ array ( 'post_title'	=>	'Platinum S8V2-C Furnace',
 	<li><b>Built to last:</b> You won\'t have to worry about this furnace withstanding the test of time. Its cabinet and components are durable and built to deliver comfort for years to come.</li>
 	<li><b>AFUE:</b> Up to 80%</li>
 	<li><b>Heating Stages:</b> Two</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Use American Standard AccuLink™ Technology to ensure this furnace delivers you exactly the heat you need.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1240,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'furnaces', 'product-class'=>'best'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-fur-80-brochure-11-09-22.pdf'),
-		'image_name'	=>	'American-Standard-04.webp'		
+		'image_name'	=>	'American-Standard-04.webp'
 ),
-		
+
 array ( 'post_title'	=>	'Silver S8X1 Gas Furnace',
 		'post_content' 	=>	'<span class="descriptionText">Heating you can trust from a furnace that’s built to a higher standard.</span>
 
@@ -400,15 +400,15 @@ array ( 'post_title'	=>	'Silver S8X1 Gas Furnace',
 	<li><b>Built to last:</b> You won’t have to worry about this furnace withstanding the test of time. Its cabinet and components are durable and built to deliver comfort for years to come.</li>
 	<li><b>AFUE:</b> Up to 80%</li>
 	<li><b>Heating Stages:</b> One</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Increase energy savings and home comfort with this gas furnace.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1260,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'furnaces', 'product-class'=>'good'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-fur-80-brochure-11-09-22.pdf'),
-		'image_name'	=>	'American-Standard-07.webp'		
+		'image_name'	=>	'American-Standard-07.webp'
 ),
-		
+
 array ( 'post_title'	=>	'Silver S8B1 Gas Furnace',
 		'post_content' 	=>	'<span class="descriptionText">Stay warm during the winter months with this energy efficient gas furnace.</span>
 
@@ -419,19 +419,19 @@ array ( 'post_title'	=>	'Silver S8B1 Gas Furnace',
 	<li><b>Energy efficient system:</b> This gas furnace may help you save on energy usage while reducing greenhouse gas emissions because it\'s a system that surpasses government energy efficiency standards.</li>
 	<li><b>AFUE:</b> Up to 80%</li>
 	<li><b>Heating Stages:</b> One</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Stay warm during the winter months with this energy efficient gas furnace.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1270,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'furnaces', 'product-class'=>'good'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-fur-80-brochure-11-09-22.pdf'),
-		'image_name'	=>	'American-Standard-07.webp'		
+		'image_name'	=>	'American-Standard-07.webp'
 ),
-		
-		
-		
-		
-	
+
+
+
+
+
 	// Air Handlers
 array ( 'post_title'	=>	'Platinum TAMX Air Handler',
 		'post_content' 	=>	'<span class="descriptionText">Enjoy communicating technology with this durable and efficient air handler.</span>
@@ -443,13 +443,13 @@ array ( 'post_title'	=>	'Platinum TAMX Air Handler',
 	<li><b>Diagnostic compatible:</b> This air handler works with American Standard Diagnostics, which allows your dealer (with your permission) to remotely diagnose potential issues with your HVAC system, plus provides perks like alert code notifications.</li>
 	<li><b>Fan Stages:</b> Variable</li>
 	<li><b>Communicating:</b> Yes</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Enjoy communicating technology with this durable and efficient air handler.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1300,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'air-handlers', 'product-class'=>'best'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-ah-standard-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-08.webp'		
+		'image_name'	=>	'American-Standard-08.webp'
 ),
 
 array ( 'post_title'	=>	'Silver TEM8 Air Handler',
@@ -462,13 +462,13 @@ array ( 'post_title'	=>	'Silver TEM8 Air Handler',
 	<li><b>Durable all-aluminum coils:</b> An all-aluminum coil is more resistant to rust and corrosion than a standard copper coil. This coil extends the life of your air handler so you can enjoy comfort for many years.</li>
 	<li><b>Fan Stages:</b> Variable</li>
 	<li><b>Communicating:</b> Yes</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Find comfort with a variable-speed, communicating system at a lower price.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1310,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'air-handlers', 'product-class'=>'good'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-ah-standard-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-09.webp'		
+		'image_name'	=>	'American-Standard-09.webp'
 ),
 
 array ( 'post_title'	=>	'Silver TEM6 Air Handler',
@@ -480,13 +480,13 @@ array ( 'post_title'	=>	'Silver TEM6 Air Handler',
 	<li><b>Quiet comfort:</b> Discover the Vortica™ air blower that improves airflow, runs quietly, and uses less energy.</li>
 	<li><b>Durable all-aluminum coils:</b> An all-aluminum coil is more resistant to rust and corrosion than a standard copper coil. This coil extends the life of your air handler so you can enjoy comfort for many years.</li>
 	<li><b>Fan Stages:</b> Variable</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Get high performance and lasting comfort at a lower price.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1320,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'air-handlers', 'product-class'=>'good'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-ah-standard-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-09.webp'		
+		'image_name'	=>	'American-Standard-09.webp'
 ),
 
 array ( 'post_title'	=>	'Silver TEM4 Air Handler',
@@ -497,19 +497,19 @@ array ( 'post_title'	=>	'Silver TEM4 Air Handler',
 	<li><b>Quiet comfort:</b> Discover the Vortica™ air blower that improves airflow, runs quietly, and uses less energy.</li>
 	<li><b>Durable all-aluminum coils:</b> An all-aluminum coil is more resistant to rust and corrosion than a standard copper coil. This coil extends the life of your air handler so you can enjoy comfort for many years.</li>
 	<li><b>Fan Stages:</b> Multi-speed</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Help reduce your energy costs with a quiet, efficient air handler.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1330,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'air-handlers', 'product-class'=>'good'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-ah-standard-brochure-06-02-23.pdf'),
-		'image_name'	=>	'American-Standard-09.webp'		
+		'image_name'	=>	'American-Standard-09.webp'
 ),
-		
-		
-		
-		
-	
+
+
+
+
+
 	// Packaged Units
 array ( 'post_title'	=>	'Silver 13.4 Packaged Air Conditioner System',
 		'post_content' 	=>	'<span class="descriptionText">Experience cool air just the way you want it with this packaged air conditioner.</span>
@@ -522,15 +522,15 @@ array ( 'post_title'	=>	'Silver 13.4 Packaged Air Conditioner System',
 	<li><b>SEER2:</b> Up to 13.4</li>
 	<li><b>Cooling Stages:</b> One</li>
 	<li><b>Energy Savings:</b> Up to 29%</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Experience cool air just the way you want it with this packaged air conditioner.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1400,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'good'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-packaged-brochure-12-09-22.pdf'),
-		'image_name'	=>	'American-Standard-10.webp'		
+		'image_name'	=>	'American-Standard-10.webp'
 ),
-		
+
 array ( 'post_title'	=>	'Gold 15 Packaged Heat Pump System',
 		'post_content' 	=>	'<span class="descriptionText">This system gives you your choice of energy sources and customized comfort.</span>
 
@@ -543,15 +543,15 @@ array ( 'post_title'	=>	'Gold 15 Packaged Heat Pump System',
 	<li><b>HSPF2:</b> Up to 7.5</li>
 	<li><b>Cooling Stages:</b> Two</li>
 	<li><b>Energy Savings:</b> Up to 33%</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'This system gives you your choice of energy sources and customized comfort.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1410,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'better'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-packaged-brochure-12-09-22.pdf'),
-		'image_name'	=>	'American-Standard-11.webp'		
+		'image_name'	=>	'American-Standard-11.webp'
 ),
-		
+
 array ( 'post_title'	=>	'Silver 13.4 Packaged Heat Pump System',
 		'post_content' 	=>	'<span class="descriptionText">Enjoy a system that works smarter, not harder, to deliver year round comfort.</span>
 
@@ -564,15 +564,15 @@ array ( 'post_title'	=>	'Silver 13.4 Packaged Heat Pump System',
 	<li><b>HSPF2:</b> Up to 7</li>
 	<li><b>Cooling Stages:</b> Two</li>
 	<li><b>Energy Savings:</b> Up to 29%</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Enjoy a system that works smarter, not harder, to deliver year round comfort.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1420,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'good'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-packaged-brochure-12-09-22.pdf'),
-		'image_name'	=>	'American-Standard-10.webp'		
+		'image_name'	=>	'American-Standard-10.webp'
 ),
-		
+
 array ( 'post_title'	=>	'Gold 15 Hybrid Comfort System',
 		'post_content' 	=>	'<span class="descriptionText">Welcome higher quality heating and cooling to your home with this hybrid system.</span>
 
@@ -586,15 +586,15 @@ array ( 'post_title'	=>	'Gold 15 Hybrid Comfort System',
 	<li><b>AFUE:</b> Up to 81%</li>
 	<li><b>Cooling Stages:</b> Two</li>
 	<li><b>Energy Savings:</b> Up to 38%</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Welcome higher quality heating and cooling to your home with this hybrid system.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1430,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'better'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-packaged-brochure-12-09-22.pdf'),
-		'image_name'	=>	'American-Standard-11.webp'		
+		'image_name'	=>	'American-Standard-11.webp'
 ),
-		
+
 array ( 'post_title'	=>	'Gold 15 Gas/Electric Packaged System',
 		'post_content' 	=>	'<span class="descriptionText">Stay warm in the winter and cool in the summer with a durable packaged system.</span>
 
@@ -607,19 +607,19 @@ array ( 'post_title'	=>	'Gold 15 Gas/Electric Packaged System',
 	<li><b>AFUE:</b> Up to 81%</li>
 	<li><b>Cooling Stages:</b> Two</li>
 	<li><b>Energy Savings:</b> Up to 33%</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Stay warm in the winter and cool in the summer with a durable packaged system.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1440,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'better'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-packaged-brochure-12-09-22.pdf'),
-		'image_name'	=>	'American-Standard-11.webp'		
+		'image_name'	=>	'American-Standard-11.webp'
 ),
-		
-		
-		
-		
-	
+
+
+
+
+
 	// Thermostats
 array ( 'post_title'	=>	'AccuLink™ Platinum 850 Thermostat',
 		'post_content' 	=>	'<span class="descriptionText">Never leave your home unprepared thanks to this thermostat that gives you a 5-day weather forecast and radar.</span>
@@ -637,15 +637,15 @@ array ( 'post_title'	=>	'AccuLink™ Platinum 850 Thermostat',
 	<li><b>Screen:</b> 4.3" color touchscreen</li>
 	<li><b>Diagnostics:</b> Yes</li>
 	<li><b>Programmable:</b> Yes</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Never leave your home unprepared thanks to this thermostat that gives you a 5-day weather forecast and radar.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1500,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'Thermostats', 'product-class'=>'best'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-tstat-smart-brochure-01-02-23.pdf'),
-		'image_name'	=>	'AS-Thermostat-01.webp'		
+		'image_name'	=>	'AS-Thermostat-01.webp'
 ),
-		
+
 array ( 'post_title'	=>	'Gold 824 Thermostat',
 		'post_content' 	=>	'<span class="descriptionText">Programing capabilities on this thermostat make temperature control a breeze.</span>
 
@@ -662,15 +662,15 @@ array ( 'post_title'	=>	'Gold 824 Thermostat',
 	<li><b>Screen:</b> 4.3" color touchscreen</li>
 	<li><b>Diagnostics:</b> Yes</li>
 	<li><b>Programmable:</b> Yes</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Programing capabilities on this thermostat make temperature control a breeze.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1510,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'Thermostats', 'product-class'=>'better'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-tstat-smart-brochure-01-02-23.pdf'),
-		'image_name'	=>	'AS-Thermostat-01.webp'		
+		'image_name'	=>	'AS-Thermostat-01.webp'
 ),
-		
+
 array ( 'post_title'	=>	'Silver 724 Thermostat',
 		'post_content' 	=>	'<span class="descriptionText">Temperature control you can trust to make your home comfortable.</span>
 
@@ -685,23 +685,23 @@ array ( 'post_title'	=>	'Silver 724 Thermostat',
 	<li><b>Screen:</b> 4.3" color touchscreen</li>
 	<li><b>Diagnostics:</b> Yes</li>
 	<li><b>Programmable:</b> Yes</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Temperature control you can trust to make your home comfortable.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1520,
 		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'Thermostats', 'product-class'=>'good'),
 		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-tstat-smart-brochure-01-02-23.pdf'),
-		'image_name'	=>	'AS-Thermostat-02.webp'		
+		'image_name'	=>	'AS-Thermostat-02.webp'
 ),
-		
-		
-		
-		
-		
-		
-		
-		
-			
+
+
+
+
+
+
+
+
+
 );
 
 	require_once get_template_directory().'/includes/include-hvac-products/includes-product-uploader.php';

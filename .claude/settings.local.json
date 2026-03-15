@@ -17,7 +17,13 @@
       "Bash(node \"g:/Battle Plan Web/00 - Battle Plan Assets/theme/GitHub/battleplantheme/_fix_form_count.js\")",
       "Bash(node -e \"const fs=require\\(''fs''\\); const c=fs.readFileSync\\(''g:/Battle Plan Web/00 - Battle Plan Assets/theme/GitHub/battleplantheme/functions-admin.php'',''utf8''\\); const i=c.indexOf\\(''service terms''\\); console.log\\(JSON.stringify\\(c.slice\\(i-60,i+30\\)\\)\\);\")",
       "Bash(node \"g:/Battle Plan Web/00 - Battle Plan Assets/theme/GitHub/battleplantheme/_patch.js\")",
-      "Bash(grep -rn \"wp_sitemaps\\\\|sitemap\\\\|robots\\\\|noindex\\\\|yoast\\\\|rankmath\" 'g:\\\\Battle Plan Web\\\\00 - Battle Plan Assets\\\\theme\\\\GitHub\\\\battleplantheme' --include=*.php)"
+      "Bash(grep -rn \"wp_sitemaps\\\\|sitemap\\\\|robots\\\\|noindex\\\\|yoast\\\\|rankmath\" 'g:\\\\Battle Plan Web\\\\00 - Battle Plan Assets\\\\theme\\\\GitHub\\\\battleplantheme' --include=*.php)",
+      "Bash(python3 -c \":*)",
+      "Bash(node -e \"var fs=require\\(''fs''\\);var c=fs.readFileSync\\(''g:/Battle Plan Web/G/GPS Plumbing/battleplantheme-site/style-site.css'',''utf8''\\);var lines=c.split\\(''\\\\n''\\);var depth=0;var lastOpen=-1;var lastOpenLine=-1;for\\(var i=0;i<c.length;i++\\){if\\(c[i]===''/''&&c[i+1]===''*''\\){depth++;lastOpen=i;lastOpenLine=c.slice\\(0,i\\).split\\(''\\\\n''\\).length;}else if\\(c[i]===''*''&&c[i+1]===''/''\\){depth--;}}console.log\\(''Final depth:'',depth\\);if\\(depth>0\\){console.log\\(''Unclosed comment starts near line:'',lastOpenLine\\);console.log\\(''Context:'',c.slice\\(lastOpen,lastOpen+100\\)\\);}\")",
+      "Bash(node -e \"var fs=require\\(''fs''\\);var c=fs.readFileSync\\(''g:/Battle Plan Web/G/GPS Plumbing/battleplantheme-site/style-site.css'',''utf8''\\);var inComment=false;var openPos=-1;var openLine=-1;var i=0;while\\(i<c.length\\){if\\(!inComment&&c[i]===''/''&&c[i+1]===''*''\\){inComment=true;openPos=i;openLine=c.slice\\(0,i\\).split\\(''\\\\n''\\).length;i+=2;}else if\\(inComment&&c[i]===''*''&&c[i+1]===''/''\\){inComment=false;i+=2;}else{i++;}}if\\(inComment\\){console.log\\(''Unclosed comment at line:'',openLine\\);console.log\\(''Text:'',c.slice\\(openPos,openPos+80\\)\\);}\")",
+      "Bash(wc -l \"/g/Battle Plan Web/00 - Battle Plan Assets/theme/GitHub/battleplantheme\"/functions*.php)",
+      "Bash(wc -l functions*.php)",
+      "Bash(wc -l includes/*.php)"
     ]
   }
 }

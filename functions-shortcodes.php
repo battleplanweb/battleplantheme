@@ -2147,17 +2147,17 @@ add_shortcode('show_debug_log', function($atts) {
 			</button>
 		</form>
 
-		<button type="button"
+		<p style="margin:0"><button type="button"
 			onclick="window.location.href=\'' . esc_url($base_url) . '\';"
 			style="padding:6px 12px;font-size:13px;cursor:pointer;">
 			Reload Debug
-		</button>
+		</button></p>
 
-		<button type="button"
+		<p style="margin:0"><button type="button"
 			onclick="window.location.href=\'' . esc_url($admin_url) . '\';"
 			style="padding:6px 12px;font-size:13px;cursor:pointer;">
 			Reload Debug Admin
-		</button>
+		</button></p>
 
 	</div>
 	';

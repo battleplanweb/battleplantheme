@@ -680,6 +680,7 @@ section.section .flex.nested .flex,
 --------------------------------------------- */
 .top-strip,
 .divider-strip {
+	position:                                                  relative;
 	margin:                                                    0;
 	padding-top:                                               8px;
 	padding-bottom:                                            8px;
@@ -696,6 +697,7 @@ section.section .flex.nested .flex,
 }
 
 .logo-strip {
+	position:                                                  relative;
 	margin:                                                    0;
 	padding-top:                                               2em;
 	padding-bottom:                                            2em;
@@ -703,6 +705,7 @@ section.section .flex.nested .flex,
 }
 
 .menu-strip {
+	position:                                                  relative;
 	margin:                                                    0;
 	padding-top:                                               0;
 	padding-bottom:                                            0;

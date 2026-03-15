@@ -167,7 +167,7 @@ $lastRunB = (int) get_option('bp_chron_b_time', 0);
 $nextB    = (int) get_option('bp_chron_b_next', 0);
 $neverB   = $lastRunB === 0;
 
-$staleB = !$neverB && (time() - $lastRunB) > (86400 * 3);
+$staleB = !$neverB && (time() - $lastRunB) > (86400 * 1);
 
 if ($nextB <= 0) {
     $nextB = bp_next_nightly_window();

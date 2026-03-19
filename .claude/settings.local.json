@@ -23,7 +23,9 @@
       "Bash(node -e \"var fs=require\\(''fs''\\);var c=fs.readFileSync\\(''g:/Battle Plan Web/G/GPS Plumbing/battleplantheme-site/style-site.css'',''utf8''\\);var inComment=false;var openPos=-1;var openLine=-1;var i=0;while\\(i<c.length\\){if\\(!inComment&&c[i]===''/''&&c[i+1]===''*''\\){inComment=true;openPos=i;openLine=c.slice\\(0,i\\).split\\(''\\\\n''\\).length;i+=2;}else if\\(inComment&&c[i]===''*''&&c[i+1]===''/''\\){inComment=false;i+=2;}else{i++;}}if\\(inComment\\){console.log\\(''Unclosed comment at line:'',openLine\\);console.log\\(''Text:'',c.slice\\(openPos,openPos+80\\)\\);}\")",
       "Bash(wc -l \"/g/Battle Plan Web/00 - Battle Plan Assets/theme/GitHub/battleplantheme\"/functions*.php)",
       "Bash(wc -l functions*.php)",
-      "Bash(wc -l includes/*.php)"
+      "Bash(wc -l includes/*.php)",
+      "Bash(where pandoc:*)",
+      "Bash(where wkhtmltopdf:*)"
     ]
   }
 }

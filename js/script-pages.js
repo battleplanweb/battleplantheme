@@ -756,7 +756,7 @@ form.addEventListener('wpcf7submit', function() {
 	// Clone div and move the copies to multiple new location
 	window.cloneDivs = function (wrapperSel, elementSel, anchorSel, position = "after") {
 		getObjects(wrapperSel).forEach(wrapper => {
-			const elementObj = getObject(elementSel, wrapper);  // Get the single element to be cloned within the wrapper
+			const elementObj = getObject(elementSel, wrapper) || getObject(elementSel);  // Search within wrapper first, fall back to document
 
 			const anchorObjs = getObjects(anchorSel, wrapper);  // Get all anchor elements within the wrapper
 			if (!elementObj || !anchorObjs.length) return;

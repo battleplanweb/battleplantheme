@@ -767,14 +767,15 @@ add_filter( 'auto_update_plugin', '__return_true' );
 // Allow Git Updater to work despite WP Engine problems
 add_filter( 'gu_ignore_dot_org', '__return_true' );
 
-// If the update_themes transient has battleplantheme listed but with no package URL
-// (a stale Redis entry from when gu_ignore_dot_org was inactive), delete it so
-// WordPress runs a fresh update check and Git Updater can populate the correct URL.
+// One-time fix: clear any stale Redis entry from when gu_ignore_dot_org was inactive.
+// Runs once per site and never again.
 add_action('admin_init', function() {
+	if ( get_site_option('bp_gu_stale_transient_fixed') ) return;
 	$transient = get_site_transient('update_themes');
 	if ( !empty($transient->response['battleplantheme']) && empty($transient->response['battleplantheme']['package']) ) {
 		delete_site_transient('update_themes');
 	}
+	update_site_option('bp_gu_stale_transient_fixed', true);
 }, 1);
 
 // Disable update emails from WordPress
@@ -1325,7 +1326,10 @@ function battleplan_dequeue_scripts() {
 	wp_dequeue_script( 'wp-embed' ); wp_deregister_script( 'wp-embed' );
 	wp_dequeue_script( 'modernizr' ); wp_deregister_script( 'modernizr' );
 	wp_dequeue_script('customize-support');	wp_deregister_script('customize-support');
-	wp_dequeue_script('wp-polyfill'); wp_deregister_script('wp-polyfill');
+	// Keep wp-polyfill on checkout — Stripe WooCommerce Blocks requires it
+	if ( !( function_exists('is_checkout') && is_checkout() ) ) {
+		wp_dequeue_script('wp-polyfill'); wp_deregister_script('wp-polyfill');
+	}
 	//wp_dequeue_script('wp-i18n');	wp_deregister_script('wp-i18n');
 
 	$GLOBALS['requires_jquery'] = [
@@ -1442,8 +1446,12 @@ function battleplan_add_data_attribute($tag, $handle, $src) {
     // Add nonce to all scripts
     $tag = str_replace('<script ', '<script nonce="' . _BP_NONCE . '" ', $tag);
 
-    // Defer everything except CF7
-    if ( !$is_cf7 ) :
+    // Don't defer anything on checkout/cart — WP/WooCommerce inline scripts (wp-data-js-after, etc.)
+    // run synchronously and break when their parent scripts are deferred
+    $is_woo_checkout = function_exists('is_checkout') && ( is_checkout() || is_cart() );
+
+    // Defer everything except CF7 and all scripts on WooCommerce checkout/cart
+    if ( !$is_cf7 && !$is_woo_checkout ) :
         $tag = str_replace(' src=', ' defer src=', $tag);
     endif;
 
@@ -1593,6 +1601,10 @@ if ( !empty($jobsite_geo['install']) ) {
 	require_once get_template_directory().'/includes/includes-jobsite-geo.php';
 	require_once get_template_directory() . '/includes/includes-jobsite-geo-api.php';
 }
+$schedules = get_option('schedules');
+if ( !empty($schedules['install']) ) {
+	require_once get_template_directory().'/includes/includes-schedules.php';
+}
 $customer_info['site-type'] = $customer_info['site-type'] ?? '';
 
 if ( $customer_info['site-type'] === 'hvac' ) require_once get_template_directory().'/includes/includes-hvac.php';
@@ -1605,6 +1617,7 @@ require_once get_template_directory().'/functions-icons.php';
 require_once get_template_directory().'/functions-forms.php';
 require_once get_template_directory().'/functions-cpt.php';
 require_once get_template_directory().'/functions-ajax.php';
+require_once get_template_directory().'/includes/includes-time-tracker.php';
 require_once get_template_directory().'/functions-grid.php';
 require_once get_template_directory().'/functions-public.php';
 if (file_exists(get_stylesheet_directory().'/functions-site.php')) require_once get_stylesheet_directory().'/functions-site.php';
@@ -2410,9 +2423,14 @@ add_filter('final_output', function($content) {
 			$content = str_replace('property="og:description"', 'name="description" property="og:description"', $content);
 		}
 		// Remove align- to reduce redundant css
+		//['alignleft', 'alignright', 'aligncenter', 'top-strip', 'divider-strip', 'logo-strip', 'site-info', ' sidebar-box', 'widget-box'],
+		//['align-left', 'align-right', 'align-center', 'strip-elem.top-strip', 'strip-elem.divider-strip', 'strip-elem.logo-strip', 'strip-elem.site-info', ' secondary-box.sidebar-box', 'secondary-box.widget-box'],
+
+		//2026-3-18....removed the strip-elem because it was breaking the css, not sure what it's there for but it either replaces css with .strip-elem top-strip .... or, replaces class="top-strip" with class="strip-elem.top-strip".  either way, it breaks
+
 		$content = str_replace (
-    		['alignleft', 'alignright', 'aligncenter', 'top-strip', 'divider-strip', 'logo-strip', 'site-info', ' sidebar-box', 'widget-box'],
-    		['align-left', 'align-right', 'align-center', 'strip-elem top-strip', 'strip-elem divider-strip', 'strip-elem logo-strip', 'strip-elem site-info', ' secondary-box sidebar-box', 'secondary-box widget-box'],
+    		['alignleft', 'alignright', 'aligncenter'],
+    		['align-left', 'align-right', 'align-center'],
     		$content);
 	endif;
 	return $content;

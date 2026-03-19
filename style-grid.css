@@ -462,6 +462,7 @@ section.section-default .flex {
 
 .header-stretch .strip-elem .flex,
 .menu-stretch .menu-strip .flex,
+.split-menu.menu-stretch .menu-strip .flex,
 .content-stretch #main-content,
 .footer-stretch .footer-strip .flex,
 .info-stretch .site-info .flex,
@@ -473,6 +474,7 @@ section.section-parallax-disabled section.section-stretch .flex {
 
 .header-full .strip-elem .flex,
 .menu-full .menu-strip .flex,
+.split-menu.menu-full .menu-strip .flex,
 .content-full #main-content,
 .footer-full .footer-strip .flex,
 .info-full .site-info .flex,
@@ -483,7 +485,8 @@ section.section-parallax-disabled section.section-full .flex {
 }
 
 .header-edge .strip-elem .flex,
-.split-menu .menu-strip .flex,
+.split-menu:not(.menu-full):not(.menu-stretch) .menu-strip .flex,
+.split-menu.menu-edge .menu-strip .flex,
 .menu-edge .menu-strip .flex,
 .content-edge #main-content,
 .footer-edge .footer-strip .flex,
@@ -685,7 +688,7 @@ section.section .flex.nested .flex,
 	padding-top:                                               8px;
 	padding-bottom:                                            8px;
 	background:                                                var(--light-grey);
-	z-index:                                                   3000;
+	z-index:                                                   4000;
 }
 
 .tag-line,

@@ -1,0 +1,55 @@
+name: ⚠️ Deploy — Sensitive Sites
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Version tag to deploy (e.g. v40.1)'
+        required: true
+        default: ''
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 3
+      fail-fast: false
+      matrix:
+        wpe_env:
+          - rovindirec1stg
+          - babes2022
+          - babescatering
+          - babeschickentv
+          - bubbas2022
+          - rovindir
+          - rovininc
+          - spribeyes
+          - sweetiepie2stg
+          - forthefield
+          - kintec
+          - familyairhvac
+          - firehousehvac
+          - gpsplumbing
+          - poleaerial
+          - piercesonac
+          - aerialspiral
+          - ccsoschedule
+          - midwestair
+          - paradisetat
+          - genemcguire
+          - giftcardsmerch
+
+    steps:
+      - name: Checkout tag ${{ github.event.inputs.tag }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag }}
+
+      - name: Deploy to ${{ matrix.wpe_env }}
+        uses: wpengine/github-action-wpe-site-deploy@v3
+        with:
+          WPE_SSHG_KEY_PRIVATE: ${{ secrets.WPE_SSHG_KEY_PRIVATE }}
+          WPE_ENV: ${{ matrix.wpe_env }}
+          REMOTE_PATH: "wp-content/themes/battleplantheme/"
+          PHP_LINT: TRUE
+          CACHE_CLEAR: TRUE

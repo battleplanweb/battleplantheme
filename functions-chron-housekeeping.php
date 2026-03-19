@@ -3,6 +3,37 @@
 
 function bp_run_chron_housekeeping(bool $force = false): void {
 
+/*--------------------------------------------------------------
+# One-time cleanup 2026-03-19
+--------------------------------------------------------------*/
+
+	$cleanup_key = 'bp_theme_plugin_cleanup_2026-03-19';
+	if (add_site_option($cleanup_key, current_time('mysql'))) {
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		require_once ABSPATH . 'wp-admin/includes/theme.php';
+
+		$plugins_remove = [
+			'git-updater/git-updater.php',
+			'admin-columns-pro/admin-columns-pro.php',
+			'blackhole-bad-bots/blackhole.php',
+		];
+
+		foreach ($plugins_remove as $plugin) {
+			if (file_exists(WP_PLUGIN_DIR . '/' . $plugin)) {
+				if (is_plugin_active($plugin)) deactivate_plugins($plugin, true);
+				delete_plugins([$plugin]);
+			}
+		}
+
+		$keep = ['battleplantheme', 'battleplantheme-site'];
+		foreach (wp_get_themes() as $stylesheet => $theme_obj) {
+			if (in_array($stylesheet, $keep, true)) continue;
+			if ($stylesheet === get_stylesheet() || $stylesheet === get_template()) continue;
+			delete_theme($stylesheet);
+		}
+	}
+
 	bp_typeface_refresh();
 
 	if (function_exists('battleplan_remove_user_roles')) battleplan_remove_user_roles();

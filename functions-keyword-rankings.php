@@ -451,7 +451,7 @@ function bp_kw_render_dashboard_widget(): void {
 			else                $color = 'color:#dc3545';
 		?>
 		<li>
-			<div class="kw-keyword"><?php echo esc_html($row['item']['keyword']); ?><?php if ($group === 'geo') : ?> <span class="tag-geo">geo</span><?php elseif ($group === 'jobsite') : ?> <span class="tag-jobsite">jobsite</span><?php elseif ($group === 'blog') : ?> <span class="tag-blog">blog</span><?php elseif ($group === 'brand') : ?> <span class="tag-brand">brand</span><?php endif; ?></div>
+			<div class="kw-keyword"><a href="https://www.google.com/search?q=<?php echo urlencode($row['item']['keyword']); ?>" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;"><?php echo esc_html($row['item']['keyword']); ?></a><?php if ($group === 'geo') : ?> <span class="tag-geo">geo</span><?php elseif ($group === 'jobsite') : ?> <span class="tag-jobsite">jobsite</span><?php elseif ($group === 'blog') : ?> <span class="tag-blog">blog</span><?php elseif ($group === 'brand') : ?> <span class="tag-brand">brand</span><?php endif; ?></div>
 			<div class="kw-rank"><span class="rn" style="<?php echo esc_attr($color); ?>"><?php echo $rk ? '#' . $rk : '—'; ?></span></div>
 			<div class="kw-change"><?php if ($ch > 0) : ?><span class="cu">&#9650;<?php echo (int)$ch; ?></span><?php elseif ($ch < 0) : ?><span class="cd">&#9660;<?php echo abs((int)$ch); ?></span><?php else : ?><span style="color:#aaa">—</span><?php endif; ?></div>
 			<div class="kw-trend"><canvas id="kws-<?php echo $i; ?>" width="80" height="24"></canvas></div>
@@ -709,7 +709,7 @@ function bp_kw_render_admin_page(): void {
 			<tr data-keyword="<?php echo esc_attr(strtolower($item['keyword'])); ?>"
 			    data-pos="<?php echo esc_attr($pos_bucket); ?>"
 			    data-grp="<?php echo esc_attr($group); ?>">
-				<td><?php echo esc_html($item['keyword']); ?></td>
+				<td><a href="https://www.google.com/search?q=<?php echo urlencode($item['keyword']); ?>" target="_blank" rel="noopener"><?php echo esc_html($item['keyword']); ?></a></td>
 				<td>
 					<?php if ($rank) : ?>
 						<strong style="color:<?php echo $rank_color; ?>">#<?php echo (int)$rank; ?></strong>

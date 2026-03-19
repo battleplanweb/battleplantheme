@@ -2422,12 +2422,6 @@ add_filter('final_output', function($content) {
 		if (strpos($content, 'name="description"') === false) {
 			$content = str_replace('property="og:description"', 'name="description" property="og:description"', $content);
 		}
-		// Remove align- to reduce redundant css
-		//['alignleft', 'alignright', 'aligncenter', 'top-strip', 'divider-strip', 'logo-strip', 'site-info', ' sidebar-box', 'widget-box'],
-		//['align-left', 'align-right', 'align-center', 'strip-elem.top-strip', 'strip-elem.divider-strip', 'strip-elem.logo-strip', 'strip-elem.site-info', ' secondary-box.sidebar-box', 'secondary-box.widget-box'],
-
-		//2026-3-18....removed the strip-elem because it was breaking the css, not sure what it's there for but it either replaces css with .strip-elem top-strip .... or, replaces class="top-strip" with class="strip-elem.top-strip".  either way, it breaks
-
 		$content = str_replace (
     		['alignleft', 'alignright', 'aligncenter'],
     		['align-left', 'align-right', 'align-center'],

@@ -25,7 +25,28 @@
       "Bash(wc -l functions*.php)",
       "Bash(wc -l includes/*.php)",
       "Bash(where pandoc:*)",
-      "Bash(where wkhtmltopdf:*)"
+      "Bash(where wkhtmltopdf:*)",
+      "Bash(ls -la --time-style=\"+%Y-%m-%d %H:%M:%S\" *.js)",
+      "Bash(sort -k6,7)",
+      "Bash(npx terser:*)",
+      "Bash(cmd.exe /c \"where node 2>&1\")",
+      "Bash(powershell.exe -Command \"Get-Command node -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source; node --version\")",
+      "Bash(powershell.exe -Command \"Get-ChildItem -Path ''C:\\\\Program Files\\\\nodejs'', ''C:\\\\Program Files \\(x86\\)\\\\nodejs'' -ErrorAction SilentlyContinue | Select Name, FullName\")",
+      "Bash(\"C:\\\\Program Files\\\\Adobe\\\\Adobe Dreamweaver 2021\\\\node\\\\node.exe\" --version)",
+      "Bash(NODE=\"C:\\\\Program Files\\\\Adobe\\\\Adobe Dreamweaver 2021\\\\node\\\\node.exe\")",
+      "Bash(\"$NODE\" -e \":*)",
+      "Bash(NODE=\"C:/Program Files/Adobe/Adobe Dreamweaver 2021/node/node.exe\")",
+      "Bash(TMPDIR=\"C:/Users/info/AppData/Local/Temp/terser_install\")",
+      "Bash(mkdir -p \"$TMPDIR\")",
+      "Bash(mkdir -p \"$TMPDIR/node_modules/@jridgewell\")",
+      "Bash(powershell -Command \":*)",
+      "Bash(\"$NODE\" --require module -e \":*)",
+      "Bash(\"$NODE\" \"C:/Users/info/AppData/Local/Temp/terser_install/test_terser.js\")",
+      "Bash(\"$NODE\" \"C:/Users/info/AppData/Local/Temp/terser_install/get_uglify.js\")",
+      "Bash(mkdir -p \"$TMPDIR/uglify_pkg\")",
+      "Bash(\"$NODE\" \"C:/Users/info/AppData/Local/Temp/terser_install/test_uglify.js\")",
+      "Bash(\"$NODE\" \"C:/Users/info/AppData/Local/Temp/terser_install/minify_files.js\")",
+      "Bash(grep -E \"^[^/]*\\\\.\\(json|xml|yml|yaml|config|conf|toml|lock\\)$|^\\(package|composer|webpack|gulp|Makefile|Dockerfile\\).*$\")"
     ]
   }
 }

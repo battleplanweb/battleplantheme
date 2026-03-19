@@ -147,6 +147,9 @@ function battleplan_admin_footer_text() {
 	$printFooter .= 'Framework ' . esc_html(_BP_VERSION) . '<br>';
 	$printFooter .= 'WP ' . esc_html( get_bloginfo('version') ) . '<br>';
 	$printFooter .= 'Local Time: ' . esc_html( wp_date('g:i a', null, new DateTimeZone( wp_timezone_string() )) ) . '<br>';
+	if ( defined('_USER_LOGIN') && _USER_LOGIN === 'battleplanweb' ) {
+		$printFooter .= '<button id="bp-time-toggle" title="Click to pause/resume timer" style="background:none;border:none;padding:0;cursor:pointer;font-size:inherit;vertical-align:middle;">⏱</button> <span id="bp-time-display" style="font-weight:600;color:#2563eb;">--</span> this session<br>';
+	}
 	$printFooter .= '</div>';
 
 	$printFooter .= '<div style="justify-self:end; margin-right:50px;">';

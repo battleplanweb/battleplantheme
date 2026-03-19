@@ -603,6 +603,16 @@ document.addEventListener("DOMContentLoaded", function () {
    # Automated processes
    --------------------------------------------------------------*/
 
+	// Add strip-elem class to strip elements
+	document.querySelectorAll('.top-strip, .divider-strip, .logo-strip, .site-info').forEach(el => {
+		el.classList.add('strip-elem');
+	});
+
+	// Add secondary-box class to sidebar/widget boxes
+	document.querySelectorAll('.sidebar-box, .widget-box').forEach(el => {
+		el.classList.add('secondary-box');
+	});
+
 	// Set up American Standard logo to link to American Standard website
 	getObjects('img').forEach(img => {
 		if (img.src.includes('hvac-american-standard/american-standard')) {

@@ -118,6 +118,7 @@ add_action('upgrader_process_complete', function($upgrader, $options) {
 
 }, 10, 2);
 
+
 require_once get_template_directory() . '/functions-chron-helpers.php';
 
 //battleplan_delete_prefixed_options('bp_setup_');

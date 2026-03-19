@@ -16,9 +16,10 @@
 	var CHECK_MS          =      30 * 1000; // coordination check every 30s
 	var DISPLAY_MS        =      10 * 1000; // refresh display every 10s
 
-	var KEY_SESSION     = 'bp_time_session';
-	var KEY_LAST_PING   = 'bp_time_last_ping';
-	var KEY_LAST_ACTIVE = 'bp_time_last_active';
+	var KEY_SESSION      = 'bp_time_session';
+	var KEY_LAST_PING    = 'bp_time_last_ping';
+	var KEY_LAST_ACTIVE  = 'bp_time_last_active';
+	var KEY_MANUAL_PAUSE = 'bp_time_manual_pause';
 
 	var ajaxUrl = bpTimeTracker.ajaxUrl;
 	var nonce   = bpTimeTracker.nonce;
@@ -100,11 +101,26 @@
 		}
 	}
 
+	/* ---- manual pause ---- */
+
+	function isManuallyPaused() { return lsGet(KEY_MANUAL_PAUSE) === '1'; }
+	function setManualPause(v)  { if (v) lsSet(KEY_MANUAL_PAUSE, '1'); else lsDel(KEY_MANUAL_PAUSE); }
+
 	/* ---- display ---- */
 
 	function updateDisplay(session) {
-		var el = document.getElementById('bp-time-display');
+		var el   = document.getElementById('bp-time-display');
+		var icon = document.getElementById('bp-time-toggle');
 		if (!el) return;
+
+		if (isManuallyPaused()) {
+			el.textContent = 'paused';
+			el.style.color = '#999';
+			if (icon) icon.textContent = '▶';
+			return;
+		}
+
+		if (icon) icon.textContent = '⏱';
 
 		if (!session || !isActive()) {
 			el.textContent = 'paused';
@@ -127,16 +143,41 @@
 	var activeOnLoad = isActive();
 
 	var session = getSession();
-	if (!activeOnLoad || !session) {
-		session = newSession();
+	if (!isManuallyPaused()) {
+		if (!activeOnLoad || !session) {
+			session = newSession();
+		}
+		// Record page load as activity
+		lsSet(KEY_LAST_ACTIVE, String(Date.now()));
+		_throttleTs = Date.now();
+		sendPing(session); // always ping on load to register/update the session
 	}
 
-	// Record page load as activity
-	lsSet(KEY_LAST_ACTIVE, String(Date.now()));
-	_throttleTs = Date.now();
-
 	updateDisplay(session);
-	sendPing(session); // always ping on load to register/update the session
+
+	/* ---- toggle click handler ---- */
+
+	document.addEventListener('click', function (e) {
+		if (!e.target || e.target.id !== 'bp-time-toggle') return;
+
+		if (isManuallyPaused()) {
+			// Resume: clear pause flag, start a fresh session (gap not billed)
+			setManualPause(false);
+			lsDel(KEY_SESSION);
+			session = newSession();
+			lsSet(KEY_LAST_ACTIVE, String(Date.now()));
+			_throttleTs = Date.now();
+			sendPing(session);
+			updateDisplay(session);
+		} else {
+			// Pause: send final ping, then freeze
+			if (session && isActive()) {
+				sendPing(session);
+			}
+			setManualPause(true);
+			updateDisplay(session);
+		}
+	});
 
 	/* ---- coordination loop (every 30s) ---- */
 
@@ -144,16 +185,16 @@
 		// Re-read from localStorage — another tab may have updated the session
 		var current = getSession();
 		if (!current) {
-			if (isActive()) {
+			if (isActive() && !isManuallyPaused()) {
 				current = newSession();
 			} else {
 				updateDisplay(null);
-				return; // inactive, no session — wait for user to return
+				return; // inactive or paused — wait for user to return
 			}
 		}
 		session = current;
 
-		if (!isActive()) {
+		if (!isActive() || isManuallyPaused()) {
 			updateDisplay(session);
 			return; // paused — show display but don't ping
 		}

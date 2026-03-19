@@ -98,16 +98,6 @@ function bp_time_ping_ajax() {
 }
 
 /* ---------------------------------------------------------------
-# Admin footer display — shows live session duration
---------------------------------------------------------------- */
-
-add_filter( 'admin_footer_text', 'bp_time_tracker_footer' );
-function bp_time_tracker_footer( $text ) {
-	if ( _USER_LOGIN !== 'battleplanweb' ) return $text;
-	return $text . ' &nbsp;|&nbsp; ⏱ <span id="bp-time-display" style="font-weight:600;color:#2563eb;">--</span> this session';
-}
-
-/* ---------------------------------------------------------------
 # Report session to central hub (non-blocking)
 --------------------------------------------------------------- */
 

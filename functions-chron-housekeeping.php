@@ -88,7 +88,7 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 				$server_email            = "<email@admin." . str_replace('https://', '', get_bloginfo('url')) . ">";
 				$formMail['subject']     = $formTitle . " · [user-name]";
 				$formMail['sender']      = "Website · " . str_replace(',', '', $customer_info['name']) . " " . $server_email;
-				$formMail['additional_headers'] = "Reply-to: [user-name] <[user-email]>\nBcc: Website Administrator <email@battleplanwebdesign.com>";
+				$formMail['additional_headers'] = "Reply-to: [user-name] <[user-email]>\nBcc: Website Administrator <email@bp-webdev.com>";
 			}
 
 			$formMail['use_html']      = 1;
@@ -320,7 +320,7 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 	if ($customer_info['city'] != '' && $customer_info['state-abbr'] != '') $blogDesc .= ', ';
 	if ($customer_info['state-abbr'] != '') $blogDesc .= $customer_info['state-abbr'];
 	update_option('blogdescription', $blogDesc);
-	update_option('admin_email', 'info@battleplanwebdesign.com');
+	update_option('admin_email', 'info@bp-webdev.com');
 	update_option('admin_email_lifespan', '9999999999999');
 	update_option('default_comment_status', 'closed');
 	update_option('default_ping_status', 'closed');

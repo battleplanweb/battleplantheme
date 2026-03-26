@@ -144,6 +144,72 @@ add_filter('wp_handle_upload_prefilter', function($file) {
 	return $file;
 });
 
+// Convert uploaded images to WebP at 80%, resize to 1000px max side.
+// Uses wp_handle_upload (post-filter) — fires after WP has moved the file to the
+// uploads directory, where it has a real filename/extension and can be freely modified.
+add_filter('wp_handle_upload', function($upload, $context) {
+
+	if (empty($upload['file']) || !file_exists($upload['file'])) {
+		return $upload;
+	}
+
+	if (!str_starts_with($upload['type'] ?? '', 'image/')) {
+		return $upload; // not an image
+	}
+
+	$image = wp_get_image_editor($upload['file']);
+	if (is_wp_error($image)) {
+		return $upload;
+	}
+
+	// Resize so the longest side is ≤ 1000px (no upscaling).
+	$size = $image->get_size();
+	$needs_resize = !is_wp_error($size) && !empty($size['width']) && !empty($size['height'])
+	                && max($size['width'], $size['height']) > 1000;
+
+	if ($needs_resize) {
+		$w = (int) $size['width'];
+		$h = (int) $size['height'];
+		$scale = 1000 / max($w, $h);
+		$image->resize((int) round($w * $scale), (int) round($h * $scale), false);
+	}
+
+	$image->set_quality(80);
+
+	if ($upload['type'] === 'image/webp') {
+		// Already WebP — only re-save if we resized
+		if ($needs_resize) {
+			$image->save($upload['file'], 'image/webp');
+		}
+		return $upload;
+	}
+
+	// Convert non-WebP to WebP
+	if (!$image->supports_mime_type('image/webp')) {
+		return $upload; // server doesn't support WebP output — leave as-is
+	}
+
+	$webp_file = preg_replace('/\.[^.\/]+$/', '.webp', $upload['file']);
+	$webp_url  = preg_replace('/\.[^.\/]+$/', '.webp', $upload['url']);
+
+	$saved = $image->save($webp_file, 'image/webp');
+	if (is_wp_error($saved)) {
+		return $upload;
+	}
+
+	// Remove the original (jpg/png/etc) now that WebP is saved
+	if ($webp_file !== $upload['file']) {
+		@unlink($upload['file']);
+	}
+
+	$upload['file'] = $webp_file;
+	$upload['url']  = $webp_url;
+	$upload['type'] = 'image/webp';
+
+	return $upload;
+
+}, 10, 2);
+
 
 function bp_jobsite_setup($post_id, $user) {
 	$current_type = get_post_type($post_id);
@@ -198,68 +264,82 @@ function bp_jobsite_setup($post_id, $user) {
 	!empty($match) ? update_post_meta($post_id, 'review', $match[0]->ID) : null;
 
 	// Find lat/lng based on customer address
-	$address = trim((string) get_field('address', $post_id));
-	$city    = trim((string) get_field('city', $post_id));
-	$state   = strtoupper(trim((string) get_field('state', $post_id)));
-	$zip     = trim((string) get_field('zip', $post_id));
+     // ── Geocoding: use GPS coords from app if available, else Google API ──
+     $address = trim((string) get_field('address', $post_id));
+     $city    = trim((string) get_field('city', $post_id));
+     $state   = strtoupper(trim((string) get_field('state', $post_id)));
+     $zip     = trim((string) get_field('zip', $post_id));
 
-	$stateAbbrs = [
-		"Alabama" => "AL", "Alaska" => "AK", "Arizona" => "AZ", "Arkansas" => "AR", "California" => "CA",
-		"Colorado" => "CO", "Connecticut" => "CT", "Delaware" => "DE", "Florida" => "FL", "Georgia" => "GA",
-		"Hawaii" => "HI", "Idaho" => "ID", "Illinois" => "IL", "Indiana" => "IN", "Iowa" => "IA", "Kansas" => "KS",
-		"Kentucky" => "KY", "Louisiana" => "LA", "Maine" => "ME", "Maryland" => "MD", "Massachusetts" => "MA",
-		"Michigan" => "MI", "Minnesota" => "MN", "Mississippi" => "MS", "Missouri" => "MO", "Montana" => "MT",
-		"Nebraska" => "NE", "Nevada" => "NV", "New Hampshire" => "NH", "New Jersey" => "NJ", "New Mexico" => "NM",
-		"New York" => "NY", "North Carolina" => "NC", "North Dakota" => "ND", "Ohio" => "OH", "Oklahoma" => "OK",
-		"Oregon" => "OR", "Pennsylvania" => "PA", "Rhode Island" => "RI", "South Carolina" => "SC",
-		"South Dakota" => "SD", "Tennessee" => "TN", "Texas" => "TX", "Utah" => "UT", "Vermont" => "VT",
-		"Virginia" => "VA", "Washington" => "WA", "West Virginia" => "WV", "Wisconsin" => "WI", "Wyoming" => "WY",
-		"Tex" => "TX", "Calif" => "CA", "Penn" => "PA"
-	];
+     $stateAbbrs = [
+          "Alabama" => "AL", "Alaska" => "AK", "Arizona" => "AZ", "Arkansas" => "AR", "California" => "CA",
+          "Colorado" => "CO", "Connecticut" => "CT", "Delaware" => "DE", "Florida" => "FL", "Georgia" => "GA",
+          "Hawaii" => "HI", "Idaho" => "ID", "Illinois" => "IL", "Indiana" => "IN", "Iowa" => "IA", "Kansas" => "KS",
+          "Kentucky" => "KY", "Louisiana" => "LA", "Maine" => "ME", "Maryland" => "MD", "Massachusetts" => "MA",
+          "Michigan" => "MI", "Minnesota" => "MN", "Mississippi" => "MS", "Missouri" => "MO", "Montana" => "MT",
+          "Nebraska" => "NE", "Nevada" => "NV", "New Hampshire" => "NH", "New Jersey" => "NJ", "New Mexico" => "NM",
+          "New York" => "NY", "North Carolina" => "NC", "North Dakota" => "ND", "Ohio" => "OH", "Oklahoma" => "OK",
+          "Oregon" => "OR", "Pennsylvania" => "PA", "Rhode Island" => "RI", "South Carolina" => "SC",
+          "South Dakota" => "SD", "Tennessee" => "TN", "Texas" => "TX", "Utah" => "UT", "Vermont" => "VT",
+          "Virginia" => "VA", "Washington" => "WA", "West Virginia" => "WV", "Wisconsin" => "WI", "Wyoming" => "WY",
+          "Tex" => "TX", "Calif" => "CA", "Penn" => "PA"
+     ];
+     foreach ($stateAbbrs as $name => $abbreviation) {
+          if ($state === strtoupper($name)) $state = $abbreviation;
+     }
 
-	foreach ($stateAbbrs as $name => $abbreviation) {
-		if ($state === strtoupper($name)) $state = $abbreviation;
-	}
+     // Check if GPS coordinates came from the Battle Plan app
+     $bp_lat = get_post_meta($post_id, 'bp_geo_lat', true);
+     $bp_lon = get_post_meta($post_id, 'bp_geo_lon', true);
 
-	if ($address !== '' && $city !== '' && $state !== '' && $zip !== '') {
-		$new_address = $address . ', ' . $city . ', ' . $state . ' ' . $zip;
-		$last_address = get_post_meta($post_id, '_last_geocode_address', true);
+     if ($bp_lat && $bp_lon) {
+          // ── GPS coords from app — skip Google API entirely ────────
+          update_post_meta($post_id, 'geocode', [
+               'lat' => (float) $bp_lat,
+               'lng' => (float) $bp_lon,
+          ]);
+          $new_address = $address . ', ' . $city . ', ' . $state . ' ' . $zip;
+          update_post_meta($post_id, '_last_geocode_address', $new_address);
 
-		if ($new_address !== $last_address && defined('_PLACES_API') && _PLACES_API) {
-			$fail_key = 'geocode_fail_' . md5($new_address);
-			if (get_transient($fail_key)) return;
+     } elseif ($address !== '' && $city !== '' && $state !== '' && $zip !== '') {
+          // ── No GPS — fall back to Google API as before ────────────
+          $new_address  = $address . ', ' . $city . ', ' . $state . ' ' . $zip;
+          $last_address = get_post_meta($post_id, '_last_geocode_address', true);
 
-			$googleAPI = 'https://maps.googleapis.com/maps/api/geocode/json?address=' . urlencode($new_address) . '&key=' . _PLACES_API;
-			$response  = wp_remote_get($googleAPI, ['timeout' => 10]);
+          if ($new_address !== $last_address && defined('_PLACES_API') && _PLACES_API) {
+               $fail_key = 'geocode_fail_' . md5($new_address);
+               if (get_transient($fail_key)) return;
 
-			if (is_wp_error($response)) {
-				$email_label = $customer_info['name'] ?? get_bloginfo('name');
-				emailMe('Geocoding HTTP Error - ' . $email_label, $response->get_error_message());
-				set_transient($fail_key, true, HOUR_IN_SECONDS * 6);
-			} else {
-				$http_code = wp_remote_retrieve_response_code($response);
-				$body      = wp_remote_retrieve_body($response);
-				$data      = json_decode($body, true);
+               $googleAPI = 'https://maps.googleapis.com/maps/api/geocode/json?address=' . urlencode($new_address) . '&key=' . _PLACES_API;
+               $response  = wp_remote_get($googleAPI, ['timeout' => 10]);
 
-				if ($http_code !== 200 || !is_array($data)) {
-					$html = 'HTTP ' . $http_code . '<br><br>Raw body:<br><pre>' . esc_html($body) . '</pre>';
-					$email_label = $customer_info['name'] ?? get_bloginfo('name');
-					emailMe('Geocoding Bad Response - ' . $email_label, $html);
-					set_transient($fail_key, true, HOUR_IN_SECONDS * 6);
-				} elseif (($data['status'] ?? '') === 'OK') {
-					update_post_meta($post_id, 'geocode', $data['results'][0]['geometry']['location']);
-					update_post_meta($post_id, '_last_geocode_address', $new_address);
-					delete_transient($fail_key);
-				} else {
-					$err  = ($data['error_message'] ?? 'No error_message returned.');
-					$html = $new_address . '<br><br>Status: ' . esc_html($data['status']) . '<br>Error: ' . esc_html($err);
-					$email_label = $customer_info['name'] ?? get_bloginfo('name');
-					emailMe('Geocoding API Error - ' . $email_label, $html);
-					set_transient($fail_key, true, HOUR_IN_SECONDS * 6);
-				}
-			}
-		}
-	}
+               if (is_wp_error($response)) {
+                    $email_label = $customer_info['name'] ?? get_bloginfo('name');
+                    emailMe('Geocoding HTTP Error - ' . $email_label, $response->get_error_message());
+                    set_transient($fail_key, true, HOUR_IN_SECONDS * 6);
+               } else {
+                    $http_code = wp_remote_retrieve_response_code($response);
+                    $body      = wp_remote_retrieve_body($response);
+                    $data      = json_decode($body, true);
+
+                    if ($http_code !== 200 || !is_array($data)) {
+                         $html = 'HTTP ' . $http_code . '<br><br>Raw body:<br><pre>' . esc_html($body) . '</pre>';
+                         $email_label = $customer_info['name'] ?? get_bloginfo('name');
+                         emailMe('Geocoding Bad Response - ' . $email_label, $html);
+                         set_transient($fail_key, true, HOUR_IN_SECONDS * 6);
+                    } elseif (($data['status'] ?? '') === 'OK') {
+                         update_post_meta($post_id, 'geocode', $data['results'][0]['geometry']['location']);
+                         update_post_meta($post_id, '_last_geocode_address', $new_address);
+                         delete_transient($fail_key);
+                    } else {
+                         $err  = ($data['error_message'] ?? 'No error_message returned.');
+                         $html = $new_address . '<br><br>Status: ' . esc_html($data['status']) . '<br>Error: ' . esc_html($err);
+                         $email_label = $customer_info['name'] ?? get_bloginfo('name');
+                         emailMe('Geocoding API Error - ' . $email_label, $html);
+                         set_transient($fail_key, true, HOUR_IN_SECONDS * 6);
+                    }
+               }
+          }
+     }
 
 	// Add city-state as location tag (jobsite_geo-service-areas)
 	if ($city && $state) {
@@ -307,7 +387,7 @@ function bp_jobsite_setup($post_id, $user) {
 		: '';
 
 	$notifyBc = !empty($geo_opts['copy_me']) && $geo_opts['copy_me'] === 'true'
-		? 'info@battleplanwebdesign.com'
+		? 'info@bp-webdev.com'
 		: '';
 
 	if ($notifyTo === '' && $notifyBc !== '') {
@@ -449,9 +529,11 @@ function battleplan_registerJobsiteGEOPostType() {
 		'menu_icon'          => 'dashicons-location',
 		'has_archive'        => true,
 		'capability_type'    => 'post',
-		'capabilities'       => [ 'create_posts' => false ],
+		'capabilities'       => [ 'create_posts' => 'publish_jobsites' ],
 		'map_meta_cap'       => true,
 		'rewrite'            => [ 'slug' => 'jobsites', 'with_front' => false ],
+		'show_in_rest' 	 => true,
+		'rest_base'    	 => 'jobsite_geo',
 	]);
 
 	$taxonomies = [
@@ -1340,14 +1422,19 @@ define( 'BP_GEO_FIELD_JOB_DATE', 'job_date' );
 // # Required-field validation — block publish if fields are missing
 // ---------------------------------------------------------
 
-// Fires at priority 5, after ACF has saved fields (priority 1), before any other processing
-add_action( 'save_post_jobsite_geo', 'bp_geo_validate_required_fields', 5, 3 );
+// Fires at priority 20, after ACF has saved fields (priority 10 on save_post).
+// Must hook save_post (not save_post_jobsite_geo) because save_post_{type} fires
+// BEFORE save_post, meaning ACF hasn't written anything yet when save_post_{type} runs.
+add_action( 'save_post', 'bp_geo_validate_required_fields', 20, 3 );
 
 function bp_geo_validate_required_fields( $post_id, $post, $update ) {
+	if ( $post->post_type !== 'jobsite_geo' ) return;
 	if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return;
 	if ( wp_is_post_revision( $post_id ) ) return;
 	if ( $post->post_status !== 'publish' ) return;
 	if ( ! empty( $GLOBALS['bp_geo_validation_running'] ) ) return;
+	// Never redirect+exit during a REST API request — would kill the response mid-send
+	if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) return;
 
 	$required = [
 		'City'  => trim( (string) get_post_meta( $post_id, BP_GEO_FIELD_CITY,  true ) ),
@@ -1934,6 +2021,19 @@ PROMPT;
 }
 
 
+function bp_geo_fetch_wiki_summary( string $city, string $state ): string {
+	$search = urlencode( "{$city}, {$state}" );
+	$url    = "https://en.wikipedia.org/api/rest_v1/page/summary/{$search}";
+	$res    = wp_remote_get( $url, [ 'timeout' => 8 ] );
+
+	if ( is_wp_error( $res ) || wp_remote_retrieve_response_code( $res ) !== 200 ) {
+		return '';
+	}
+
+	$data = json_decode( wp_remote_retrieve_body( $res ), true );
+	return $data['extract'] ?? '';
+}
+
 function bp_geo_generate_term_intro( int $term_id ) {
 	if ( ! defined( 'BP_ANTHROPIC_API_KEY' ) || empty( BP_ANTHROPIC_API_KEY ) ) {
 		return new WP_Error( 'no_api_key', 'BP_ANTHROPIC_API_KEY is not defined.' );
@@ -1975,51 +2075,125 @@ function bp_geo_generate_term_intro( int $term_id ) {
 	$company = preg_replace( '/\s*,?\s*(LLC|Inc\.?|Corp\.?|Ltd\.?|Co\.?)\.?\s*$/i', '', get_bloginfo( 'name' ) );
 	$company = trim( $company );
 
+	$opening_para = rand( 1, 7 );
+	$second_para = rand( 1, 5 );
+	$choose_h2 = rand( 1, 5 );
+	$local_para  = rand( 1, 7 );
+	$wrap_up_para  = rand( 1, 5 );
+	$map_caption  = rand( 1, 5 );
+
 	$prompt = "You are an SEO copywriter for an HVAC home services company called \"{$company}\".
 
-Write a unique, locally-grounded service page intro for:
+Write a service page intro for:
 - Company: {$company}
 - Service: {$service}
 - City, State: {$city}, {$state}
 
-REFERENCE EXAMPLE — match this tone and feel, do NOT copy it:
+OPENING PARAGRAPH - ";
+if ( $opening_para === 1 ) {
+	$prompt .= "Start with something that goes wrong for a homeowner before they call; a symptom, a breakdown moment, a frustration.";
+} elseif ( $opening_para === 2 ) {
+	$prompt .= "Start with a weather or seasonal observation told from the homeowner's daily experience, not a weather report.";
+} elseif ( $opening_para === 3 ) {
+	$prompt .= "Start with what makes {$service} worth doing right; what's at stake if it's skipped or done poorly.";
+} elseif ( $opening_para === 4 ) {
+	$prompt .= "Start with a direct, confident statement about {$company} and what they do for {$city} homeowners.";
+} elseif ( $opening_para === 5 ) {
+	$prompt .= "Start with the financial angle; what ignoring this costs over time, in bills or repairs.";
+} elseif ( $opening_para === 6 ) {
+	$prompt .= "Start with a counterintuitive or surprising fact about {$service} that most homeowners don't know.";
+} else {
+	$prompt .= "Start with a question the homeowner is asking themselves right now about their system.";
+}
+$prompt .= "Introduce {$company} and {$service} naturally. Use <strong> tags around the company name on first use only. First-person plural (\"we\", \"our\") for the rest of the paragraph.
 
-<p><strong>MAK Comfort</strong> proudly serves the homeowners of Kingwood, TX with dependable heating and cooling services.</p>
+SECOND PARAGRAPH - ";
+if ( $second_para === 1 ) {
+	$prompt .= "Speak to the homeowner directly. What does getting {$service} right protect them from? What happens if it's ignored?";
+} elseif ( $second_para === 2 ) {
+	$prompt .= "Build trust by showing empathy for the homeowner's situation and confidence in the solution. Use a reassuring, conversational tone.";
+} elseif ( $second_para === 3 ) {
+	$prompt .= "Address a common misconception homeowners have about {$service} — what they assume vs. what's actually true.";
+} elseif ( $second_para === 4 ) {
+	$prompt .= "Focus on the long-term payoff; what a properly handled {$service} means over the next several years.";
+} else {
+	$prompt .= "Explain {$company}'s approach to {$service} in a way that makes the homeowner feel like they understand what to expect and are in good hands.";
+}
+$prompt .= "Two to four concrete sentences. Do not open with \"We handle\" or list service types. Make it feel like a helpful conversation, not a sales pitch. Avoid jargon and fluff.
 
-<p>Whether your AC is falling behind or you're planning a full system upgrade, we arrive prepared, professional, and ready to get the job done right without any runaround.</p>
+H2 HEADING — (SEO-friendly. No filler. Standalone tag, not inside a paragraph.)";
+if ( $choose_h2 === 1 ) {
+	$prompt .= "Make a short declarative statement pairing {$service} and {$city}";
+} elseif ( $choose_h2 === 2 ) {
+	$prompt .= "Pose a question the homeowner would actually ask.";
+} elseif ( $choose_h2 === 3 ) {
+	$prompt .= "State the outcome the homeowner gets, not just the service or city.";
+} elseif ( $choose_h2 === 4 ) {
+	$prompt .= "Imply timing matters without being pushy (\"Before the Heat Hits\" type angle).";
+} else {
+	$prompt .= "Place-focused — names {$city} or the region in a natural, specific way.";
+}
 
-<h2>Year-Round Comfort For {$city} Homeowners</h2>
+$wiki = bp_geo_fetch_wiki_summary( $city, $state );
 
-<p>Life in Kingwood comes with heavy humidity, thick tree cover, and winter fronts that creep in fast. Homes in villages like Bear Branch, Greentree, and Fosters Mill all face their own HVAC challenges, from aging systems to moisture concerns. Your setup needs to perform through every season.</p>
+$prompt .= "\n\nLOCAL PARAGRAPH — ";
+if ( $wiki ) {
+	$prompt .="Use the following information about the neighborhoods, geography, climate, and character of {$city} to infuse this paragraph with local SEO value. Do not copy any sentences verbatim:\n\n\"{$wiki}\"\n\n";
+} else {
+	$prompt .= "Use your training knowledge about {$city}, {$state}, to describe the regional climate and housing character. ";
+}
 
-<p>We handle repairs, installations, seasonal maintenance, duct cleaning, and indoor air quality improvements with straightforward communication and honest service. No pressure. No gimmicks. Just real solutions from a team that respects your home.</p>
+if ( $local_para === 1 ) {
+	$prompt .= "Then focus on timing: when does {$service} become urgent in {$city}? What months push systems hardest in this climate?";
+} elseif ( $local_para === 2 ) {
+	$prompt .= "Then focus on the homes specifically: what is the housing stock like in {$city}? Age, size, construction type, or neighborhood character.";
+} elseif ( $local_para === 3 ) {
+	$prompt .= "Then focus on the climate: how does the weather and climate in this region affect {$service} specifically?";
+} elseif ( $local_para === 4 ) {
+	$prompt .= "Focus on the growth of {$city}; new construction vs. older neighborhoods, rapid development, how that creates mixed HVAC needs across the city.";
+} elseif ( $local_para === 5 ) {
+	$prompt .= "Focus on a weather extreme specific to the region — ice storms, drought summers, humidity spikes — told as something that happened, not a forecast.";
+} elseif ( $local_para === 6 ) {
+	$prompt .= "Focus on what makes {$city} feel like home — the character of the community, how long people tend to stay, and how that investment in their home connects to keeping their HVAC system in good shape.";
+} else {
+	$prompt .= "Then focus on energy demands: how does the local climate drive up bills, and what that means practically for homeowners.";
+}
 
-<p>If your system is showing signs of wear, contact us today at <strong>[get-biz info=\"phone-link\"]</strong>!</p>
-
-GUIDELINES:
-
-Opening paragraph: Introduce {$company} and {$service} in {$city}. Vary the sentence opening every time — do NOT default to \"{$company} provides [service] for homeowners throughout {$city}.\" Instead, try leading with a homeowner problem, a seasonal reference, what makes the service worth doing right, or a direct statement about the city. Use <strong> tags around the company name on first use only.
-
-Second paragraph: Speak directly to the homeowner. Why does {$service} matter for their specific home? What does getting it right protect them from? Keep it concrete.
-
-H2 heading: Write something that pairs the service and city naturally, keeping SEO in mind.  Short, engaging sub-title that makes the passage more personal.
-
-Local paragraph: Describe the actual climate, humidity, seasonal patterns, or home character in {$city}. Name 2-3 real neighborhoods, developments, lakes, or parks ONLY if you genuinely know them. If you are not confident about specific local places, describe the regional climate and housing character instead. Never invent or guess at place names.
-
-Wrap-up paragraph: What {$company} does, stated simply. Short sentences. Honest tone. No filler.
-
-Final sentence: End naturally leading into: contact us today at <strong>[get-biz info=\"phone-link\"]</strong>!
+$prompt .= "\n\nWRAP-UP PARAGRAPH — ";
+if ( $wrap_up_para === 1 ) {
+	$prompt .= "Describe what the homeowner experiences during a visit; what gets done, how it's handled, what they walk away with.";
+} elseif ( $wrap_up_para === 2 ) {
+	$prompt .= "Keep it simple: what {$company} shows up to do, stated plainly. Short sentences. No jargon.";
+} elseif ( $wrap_up_para === 3 ) {
+	$prompt .= "Describe the before and after; what the problem was, what's different when the job is done.";
+} elseif ( $wrap_up_para === 4 ) {
+	$prompt .= "Focus on communication; how the homeowner stays informed during the visit, no surprises on scope or price.";
+} else {
+	$prompt .= "Talk about follow-through: what the homeowner knows after the job is finished and why it was worth the call.";
+}
+$prompt .= "End with a sentence that leads naturally into: contact us today at <strong>[get-biz info=\"phone-link\"]</strong>!
 
 RULES:
-- Every paragraph wrapped in <p> tags. H2 is standalone, not inside <p>.
-- First-person plural (\"we\", \"our\") throughout except the opening sentence
-- 6th grade reading level. Mix short punchy sentences with longer ones.
-- Total: 200-260 words
-- Do NOT use: \"seamless\", \"cutting-edge\", \"state-of-the-art\", \"peace of mind\", \"look no further\", \"dedicated team\", \"expert\", \"trust us\"
-- Do NOT use the em-dash at all.  Structure sentences to flow without it.
-- Output ONLY the HTML — no markdown, no preamble
+- Every paragraph in <p> tags. H2 is standalone, not inside <p>.
+- First-person plural (\"we\", \"our\") throughout except the first sentence of the opening paragraph.
+- 6th grade reading level. Mix short and longer sentences.
+- 200-260 words total.
+- No em-dashes. No: seamless, cutting-edge, state-of-the-art, peace of mind, look no further, dedicated team, expert, trust us.
+- Output ONLY the HTML.
 
-Also write a map_caption: a short plain-text sentence (~8-12 words) that includes {$service} and {$city}, and tells reader that the map shows real-life jobs where {$company} has performed work. Vary the wording naturally. Vary useage of city and state (eg. frisco / frisco, tx / frisco, texas). Do NOT use \"service locations\", \"throughout\", \"jobsites\".  You can use terms like \"solutions\", \"jobs\", \"work completed\", \"services provided\", etc. Do NOT use HTML tags in the caption.
+Also write a map_caption (~8-12 words, plain text): Should be a concise, natural-sounding sentence. If necessary, use the plural version of {$service}. Example: ";
+if ( $map_caption === 1 ) {
+	$prompt .= "{$service} completed by {$company} in {$city}";
+} elseif ( $map_caption === 2 ) {
+	$prompt .= "Recent {$service} we completed in {$city}";
+} elseif ( $map_caption === 3 ) {
+	$prompt .= "{$company} {$service} projects completed in {$city} area";
+} elseif ( $map_caption === 4 ) {
+	$prompt .= "{$service} in {$city} and surrounding areas";
+} else {
+	$prompt .= "{$city} homes where {$company} provided {$service} solutions.";
+}
+$prompt .= "No HTML tags.
 
 Respond ONLY with valid JSON: {\"intro\": \"...html content...\", \"map_caption\": \"...plain text...\"}";
 
@@ -2097,11 +2271,64 @@ add_action( 'wp_after_insert_post', function( $post_id, $post, $update ) {
 	$terms = wp_get_post_terms( $post_id, 'jobsite_geo-services' );
 	if ( is_wp_error( $terms ) ) return;
 	foreach ( $terms as $term ) {
-		if ( empty( $term->description ) ) {
+		if ( ! get_term_meta( $term->term_id, 'bp_geo_service_intro', true ) ) {
 			bp_geo_generate_term_intro( $term->term_id );
 		}
 	}
 }, 10, 3 );
+
+// Add "Regenerate Intro" row action on the jobsite_geo-services taxonomy list
+add_filter( 'jobsite_geo-services_row_actions', function( $actions, $term ) {
+	$url = wp_nonce_url(
+		add_query_arg( [
+			'action'  => 'bp_geo_regen_intro',
+			'term_id' => $term->term_id,
+		], admin_url( 'edit-tags.php?taxonomy=jobsite_geo-services' ) ),
+		'bp_geo_regen_intro_' . $term->term_id
+	);
+	$actions['regen_intro'] = '<a href="' . esc_url( $url ) . '">Regenerate Intro</a>';
+	return $actions;
+}, 10, 2 );
+
+// Handle the regenerate action
+add_action( 'admin_init', function() {
+	if (
+		! is_admin() ||
+		empty( $_GET['action'] ) || $_GET['action'] !== 'bp_geo_regen_intro' ||
+		empty( $_GET['term_id'] )
+	) return;
+
+	$term_id = (int) $_GET['term_id'];
+
+	check_admin_referer( 'bp_geo_regen_intro_' . $term_id );
+
+	if ( ! current_user_can( 'manage_categories' ) ) {
+		wp_die( 'You do not have permission to do this.' );
+	}
+
+	$result = bp_geo_generate_term_intro( $term_id );
+
+	$redirect = add_query_arg(
+		[
+			'taxonomy'        => 'jobsite_geo-services',
+			'bp_regen_status' => is_wp_error( $result ) ? 'error' : 'success',
+		],
+		admin_url( 'edit-tags.php' )
+	);
+
+	wp_safe_redirect( $redirect );
+	exit;
+} );
+
+// Show admin notice after regenerate
+add_action( 'admin_notices', function() {
+	if ( empty( $_GET['bp_regen_status'] ) ) return;
+	if ( $_GET['bp_regen_status'] === 'success' ) {
+		echo '<div class="notice notice-success is-dismissible"><p>Service intro regenerated.</p></div>';
+	} elseif ( $_GET['bp_regen_status'] === 'error' ) {
+		echo '<div class="notice notice-error is-dismissible"><p>Intro regeneration failed. Check error logs.</p></div>';
+	}
+} );
 
 
 function bp_geo_normalize_state( $state ) {
@@ -2180,3 +2407,330 @@ function bp_geo_assign_taxonomy_term( $post_id, $base_service, $city, $state, $e
 
 	return $target_slug;
 }
+
+
+/* BP JOBSITE GEO APP */
+
+define('BP_GEO_SECRET', 'bp-geo-' . hash('sha256', DB_PASSWORD . DB_NAME));
+
+add_action('rest_api_init', function() {
+	register_rest_route('bp-geo/v1', '/login',   ['methods' => ['POST','OPTIONS'], 'callback' => 'bp_geo_login',   'permission_callback' => '__return_true']);
+	register_rest_route('bp-geo/v1', '/submit',  ['methods' => ['POST','OPTIONS'], 'callback' => 'bp_geo_submit',  'permission_callback' => '__return_true']);
+	register_rest_route('bp-geo/v1', '/verify',  ['methods' => ['GET','OPTIONS'],  'callback' => 'bp_geo_verify',  'permission_callback' => '__return_true']);
+	register_rest_route('bp-geo/v1', '/geocode', ['methods' => ['GET','OPTIONS'],  'callback' => 'bp_geo_geocode', 'permission_callback' => '__return_true']);
+	register_rest_route('bp-geo/v1', '/upload',  ['methods' => ['POST','OPTIONS'], 'callback' => 'bp_geo_upload',  'permission_callback' => '__return_true']);
+});
+
+// ── CORS ──────────────────────────────────────────────────────
+add_action('init', function() {
+	if (isset($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']) &&
+		$_SERVER['REQUEST_METHOD'] === 'OPTIONS' &&
+		strpos($_SERVER['REQUEST_URI'], '/bp-geo/') !== false) {
+		header('Access-Control-Allow-Origin: *');
+		header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
+		header('Access-Control-Allow-Headers: Content-Type, X-BP-Token');
+		http_response_code(200);
+		exit();
+	}
+});
+
+add_filter('rest_pre_serve_request', function($served, $result, $request) {
+	if (strpos($request->get_route(), '/bp-geo/') !== false) {
+		header('Access-Control-Allow-Origin: *');
+		header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
+		header('Access-Control-Allow-Headers: Content-Type, X-BP-Token');
+	}
+	return $served;
+}, 10, 3);
+
+// ── Token auth for ALL REST requests (media uploads, geocode, etc.) ──
+// Uses determine_current_user so WP permission checks see the authenticated
+// user before the capability check on /wp/v2/media fires.
+add_filter('determine_current_user', function($user_id) {
+	if (!defined('REST_REQUEST') || !REST_REQUEST) return $user_id;
+	if ($user_id) return $user_id; // already authenticated
+	$token = $_SERVER['HTTP_X_BP_TOKEN'] ?? '';
+	if (empty($token)) return $user_id;
+	$user = bp_geo_verify_token($token);
+	return $user ? $user->ID : $user_id;
+}, 20);
+
+// ── Token helpers ─────────────────────────────────────────────
+function bp_geo_generate_token($user_id) {
+	$expires = time() + (30 * 24 * 60 * 60);
+	$data    = $user_id . '|' . $expires;
+	$sig     = hash_hmac('sha256', $data, BP_GEO_SECRET);
+	return base64_encode($data . '|' . $sig);
+}
+
+function bp_geo_verify_token($token) {
+	if (empty($token)) return false;
+	try {
+		$decoded = base64_decode($token);
+		$parts   = explode('|', $decoded);
+		if (count($parts) !== 3) return false;
+		[$user_id, $expires, $sig] = $parts;
+		if (time() > (int)$expires) return false;
+		$expected = hash_hmac('sha256', $user_id . '|' . $expires, BP_GEO_SECRET);
+		if (!hash_equals($expected, $sig)) return false;
+		return get_user_by('id', (int)$user_id) ?: false;
+	} catch(Exception $e) { return false; }
+}
+
+// ── LOGIN ─────────────────────────────────────────────────────
+function bp_geo_login(WP_REST_Request $request) {
+	$body     = json_decode($request->get_body(), true);
+	$username = sanitize_text_field($body['username'] ?? '');
+	$password = $body['password'] ?? '';
+
+	if (empty($username) || empty($password))
+		return new WP_Error('missing_fields', 'Username and password required.', ['status' => 400]);
+
+	$user = wp_authenticate($username, $password);
+	if (is_wp_error($user))
+		return new WP_Error('invalid_credentials', 'Invalid username or password.', ['status' => 401]);
+
+	return rest_ensure_response([
+		'token'        => bp_geo_generate_token($user->ID),
+		'display_name' => $user->display_name,
+		'site_name'    => get_bloginfo('name'),
+		'site_url'     => get_site_url(),
+	]);
+}
+
+// ── VERIFY ────────────────────────────────────────────────────
+function bp_geo_verify(WP_REST_Request $request) {
+	$user = bp_geo_verify_token($request->get_header('X-BP-Token'));
+	if (!$user)
+		return new WP_Error('invalid_token', 'Token invalid or expired.', ['status' => 401]);
+	return rest_ensure_response(['valid' => true, 'display_name' => $user->display_name]);
+}
+
+// ── GEOCODE ───────────────────────────────────────────────────
+// Proxy to Google Maps Geocoding API using the site's _PLACES_API key.
+// Fixes house number retrieval and guarantees a clean 2-letter state abbreviation.
+function bp_geo_geocode(WP_REST_Request $request) {
+	$user = bp_geo_verify_token($request->get_header('X-BP-Token'));
+	if (!$user)
+		return new WP_Error('invalid_token', 'Token invalid or expired.', ['status' => 401]);
+
+	$lat = (float)($request->get_param('lat') ?? 0);
+	$lon = (float)($request->get_param('lon') ?? 0);
+
+	if (!$lat || !$lon)
+		return new WP_Error('missing_coords', 'lat and lon parameters are required.', ['status' => 400]);
+
+	if (!defined('_PLACES_API') || !_PLACES_API)
+		return new WP_Error('no_api_key', 'Google Maps API key not configured on this site.', ['status' => 503]);
+
+	$url = add_query_arg([
+		'latlng' => $lat . ',' . $lon,
+		'key'    => _PLACES_API,
+	], 'https://maps.googleapis.com/maps/api/geocode/json');
+
+	$response = wp_remote_get($url, ['timeout' => 10]);
+	if (is_wp_error($response))
+		return new WP_Error('geocode_error', $response->get_error_message(), ['status' => 503]);
+
+	$body = json_decode(wp_remote_retrieve_body($response), true);
+
+	if (($body['status'] ?? '') !== 'OK' || empty($body['results']))
+		return new WP_Error('no_results', 'No geocode results from Google Maps.', ['status' => 503]);
+
+	$components   = $body['results'][0]['address_components'] ?? [];
+	$house_number = '';
+	$road         = '';
+	$city         = '';
+	$state        = '';
+	$zip          = '';
+	$county       = '';
+
+	foreach ($components as $c) {
+		$types = $c['types'] ?? [];
+		if (in_array('street_number',              $types)) $house_number = $c['long_name'];
+		if (in_array('route',                       $types)) $road         = $c['long_name'];
+		if (in_array('locality',                    $types)) $city         = $c['long_name'];
+		if (in_array('administrative_area_level_1', $types)) $state        = $c['short_name']; // always 2-letter
+		if (in_array('postal_code',                 $types)) $zip          = $c['long_name'];
+		if (in_array('administrative_area_level_2', $types)) $county       = $c['long_name'];
+	}
+
+	// Fallback for city — some rural areas return no locality component
+	if (!$city) {
+		foreach ($components as $c) {
+			$types = $c['types'] ?? [];
+			if (in_array('neighborhood', $types) || in_array('sublocality', $types) || in_array('administrative_area_level_3', $types)) {
+				$city = $c['long_name'];
+				break;
+			}
+		}
+	}
+
+	return rest_ensure_response([
+		'house_number' => $house_number,
+		'road'         => $road,
+		'city'         => $city,
+		'state'        => $state,
+		'zip'          => $zip,
+		'county'       => $county,
+		'lat'          => $lat,
+		'lon'          => $lon,
+	]);
+}
+
+// ── UPLOAD ────────────────────────────────────────────────────
+// Custom photo upload endpoint — bypasses /wp/v2/media capability check
+// (upload_files) which field tech accounts may not have.
+function bp_geo_upload(WP_REST_Request $request) {
+	$user = bp_geo_verify_token($request->get_header('X-BP-Token'));
+	if (!$user)
+		return new WP_Error('invalid_token', 'Token invalid or expired.', ['status' => 401]);
+
+	if (empty($_FILES['file']))
+		return new WP_Error('no_file', 'No file received.', ['status' => 400]);
+
+	require_once ABSPATH . 'wp-admin/includes/file.php';
+	require_once ABSPATH . 'wp-admin/includes/image.php';
+	require_once ABSPATH . 'wp-admin/includes/media.php';
+
+	wp_set_current_user($user->ID);
+
+	$file = wp_handle_upload($_FILES['file'], ['test_form' => false]);
+
+	if (!empty($file['error']))
+		return new WP_Error('upload_failed', $file['error'], ['status' => 500]);
+
+	$title = sanitize_text_field($_POST['title'] ?? basename($file['file']));
+
+	$attach_id = wp_insert_attachment([
+		'post_mime_type' => $file['type'],
+		'post_title'     => $title,
+		'post_content'   => '',
+		'post_status'    => 'inherit',
+		'post_author'    => $user->ID,
+	], $file['file']);
+
+	if (is_wp_error($attach_id))
+		return new WP_Error('attach_failed', $attach_id->get_error_message(), ['status' => 500]);
+
+	wp_update_attachment_metadata($attach_id, wp_generate_attachment_metadata($attach_id, $file['file']));
+
+	return rest_ensure_response(['id' => $attach_id, 'url' => $file['url']]);
+}
+
+// ── SUBMIT ────────────────────────────────────────────────────
+function bp_geo_submit(WP_REST_Request $request) {
+	$user = bp_geo_verify_token($request->get_header('X-BP-Token'));
+	if (!$user)
+		return new WP_Error('invalid_token', 'Token invalid or expired. Please log in again.', ['status' => 401]);
+
+	$body = json_decode($request->get_body(), true);
+	$meta = $body['meta'] ?? [];
+
+	$customer = sanitize_text_field($meta['bp_technician_name'] ?? '');
+	$address  = sanitize_text_field($meta['address'] ?? '');
+	$city     = sanitize_text_field($meta['city'] ?? '');
+	$state    = sanitize_text_field($meta['state'] ?? '');
+	$zip      = sanitize_text_field($meta['zip'] ?? '');
+	$desc     = sanitize_textarea_field($body['content'] ?? '');
+	$date     = sanitize_text_field($meta['job_date'] ?? date('Y-m-d'));
+	$title    = sanitize_text_field($body['title'] ?? $customer);
+
+	if (empty($customer) || empty($address) || empty($city) || empty($desc))
+		return new WP_Error('missing_fields', 'Customer name, address, city, and description are required.', ['status' => 400]);
+
+	// Normalize state — server-side safeguard in case a full name slips through
+	if (strlen($state) > 2) {
+		$stateMap = [
+			'Alabama'=>'AL','Alaska'=>'AK','Arizona'=>'AZ','Arkansas'=>'AR','California'=>'CA',
+			'Colorado'=>'CO','Connecticut'=>'CT','Delaware'=>'DE','Florida'=>'FL','Georgia'=>'GA',
+			'Hawaii'=>'HI','Idaho'=>'ID','Illinois'=>'IL','Indiana'=>'IN','Iowa'=>'IA','Kansas'=>'KS',
+			'Kentucky'=>'KY','Louisiana'=>'LA','Maine'=>'ME','Maryland'=>'MD','Massachusetts'=>'MA',
+			'Michigan'=>'MI','Minnesota'=>'MN','Mississippi'=>'MS','Missouri'=>'MO','Montana'=>'MT',
+			'Nebraska'=>'NE','Nevada'=>'NV','New Hampshire'=>'NH','New Jersey'=>'NJ','New Mexico'=>'NM',
+			'New York'=>'NY','North Carolina'=>'NC','North Dakota'=>'ND','Ohio'=>'OH','Oklahoma'=>'OK',
+			'Oregon'=>'OR','Pennsylvania'=>'PA','Rhode Island'=>'RI','South Carolina'=>'SC',
+			'South Dakota'=>'SD','Tennessee'=>'TN','Texas'=>'TX','Utah'=>'UT','Vermont'=>'VT',
+			'Virginia'=>'VA','Washington'=>'WA','West Virginia'=>'WV','Wisconsin'=>'WI','Wyoming'=>'WY',
+		];
+		$state = $stateMap[trim($state)] ?? strtoupper(substr(trim($state), 0, 2));
+	} else {
+		$state = strtoupper(trim($state));
+	}
+
+	wp_set_current_user($user->ID);
+
+	// Guard: prevent bp_jobsite_setup() from running during wp_insert_post()
+	// with empty ACF fields. We'll set taxonomy inline after fields are saved.
+	$GLOBALS['bp_jobsite_setup_running'] = true;
+
+	$post_id = wp_insert_post([
+		'post_title'   => $title,
+		'post_content' => $desc,
+		'post_status'  => 'draft',
+		'post_type'    => 'jobsite_geo',
+		'post_author'  => $user->ID,
+	], true);
+
+	if (is_wp_error($post_id)) {
+		unset($GLOBALS['bp_jobsite_setup_running']);
+		return new WP_Error('insert_failed', $post_id->get_error_message(), ['status' => 500]);
+	}
+
+	// ── ACF fields ────────────────────────────────────────────
+	update_field('job_date', $date,    $post_id);
+	update_field('address',  $address, $post_id);
+	update_field('city',     $city,    $post_id);
+	update_field('state',    $state,   $post_id);
+	update_field('zip',      $zip,     $post_id);
+
+	// Photos — ACF image fields with return_format='id' expect a plain integer
+	$photo_fields = ['jobsite_photo_1','jobsite_photo_2','jobsite_photo_3','jobsite_photo_4'];
+	$first_photo  = 0;
+	foreach ($photo_fields as $field_name) {
+		$photo_id = intval($meta[$field_name] ?? 0);
+		if ($photo_id > 0) {
+			update_field($field_name, $photo_id, $post_id);
+			if (!$first_photo) $first_photo = $photo_id;
+		}
+	}
+	if ($first_photo) set_post_thumbnail($post_id, $first_photo);
+
+	// ── Service-area taxonomy ─────────────────────────────────
+	// bp_jobsite_setup() is guarded above so it won't run with empty fields.
+	// Set the taxonomy here so drafts are filterable in the admin right away.
+	if ($city && $state) {
+		$location = sanitize_title(ucwords($city) . '-' . strtoupper($state));
+		if (!term_exists($location, 'jobsite_geo-service-areas'))
+			wp_insert_term($location, 'jobsite_geo-service-areas');
+		wp_set_post_terms($post_id, [$location], 'jobsite_geo-service-areas', false);
+	}
+
+	// ── Post meta ─────────────────────────────────────────────
+	update_post_meta($post_id, 'bp_raw_description',   $desc);
+	update_post_meta($post_id, 'bp_submission_source', 'Battle Plan GEO App');
+	update_post_meta($post_id, 'bp_customer_name',     $customer);
+	if (!empty($meta['bp_geo_lat'])) {
+		update_post_meta($post_id, 'bp_geo_lat',    sanitize_text_field($meta['bp_geo_lat']));
+		update_post_meta($post_id, 'bp_geo_lon',    sanitize_text_field($meta['bp_geo_lon']));
+		update_post_meta($post_id, 'bp_geo_county', sanitize_text_field($meta['bp_geo_county'] ?? ''));
+	}
+
+	unset($GLOBALS['bp_jobsite_setup_running']);
+
+	// Publish the post now that all fields are saved.
+	// (Created as draft above so the required-field validation hook doesn't
+	// fire before ACF fields exist. Publish here after everything is in place.)
+	wp_update_post(['ID' => $post_id, 'post_status' => 'publish']);
+
+	return rest_ensure_response([
+		'id'      => $post_id,
+		'link'    => get_permalink($post_id),
+		'status'  => 'publish',
+		'message' => 'Jobsite submitted successfully.',
+	]);
+}
+
+// ============================================================
+// END BATTLE PLAN GEO APP
+// ============================================================

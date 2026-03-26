@@ -138,11 +138,11 @@ function battleplan_admin_footer_text() {
 
 	$printFooter  = '<section><div class="flex" style="grid-template-columns:80px 300px 1fr; gap:20px">';
 	$printFooter .= '<div style="grid-row:span 2; align-self:center;">';
-	$printFooter .= '<img src="' . esc_url('https://battleplanwebdesign.com/wp-content/uploads/site-icon-80x80.webp') . '" />';
+	$printFooter .= '<img src="' . esc_url('https://bp-webdev.com/wp-content/uploads/site-icon-80x80.webp') . '" />';
 	$printFooter .= '</div>';
 
 	$printFooter .= '<div style="grid-row:span 2; align-self:center;">';
-	$printFooter .= 'Powered by <a href="' . esc_url('https://battleplanwebdesign.com') . '" target="_blank" rel="noopener">Battle Plan Web Design</a><br>';
+	$printFooter .= 'Powered by <a href="' . esc_url('https://bp-webdev.com') . '" target="_blank" rel="noopener">Battle Plan Web Design</a><br>';
 	$printFooter .= 'Launched ' . esc_html( date('F Y', strtotime(get_option('bp_launch_date'))) ) . '<br>';
 	$printFooter .= 'Framework ' . esc_html(_BP_VERSION) . '<br>';
 	$printFooter .= 'WP ' . esc_html( get_bloginfo('version') ) . '<br>';

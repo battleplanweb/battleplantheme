@@ -2141,15 +2141,17 @@ add_filter( 'manage_edit-jobsite_geo-services_columns', function( $columns ) {
 add_filter( 'manage_jobsite_geo-services_custom_column', function( $content, $column, $term_id ) {
 
 	if ( $column === 'bp_service_intro' ) {
-		$intro = get_term_meta( $term_id, 'bp_geo_service_intro', true );
-		$nonce = wp_create_nonce( 'bp_geo_edit_term_meta_' . $term_id );
+		$intro       = get_term_meta( $term_id, 'bp_geo_service_intro', true );
+		$edit_nonce  = wp_create_nonce( 'bp_geo_edit_term_meta_' . $term_id );
+		$regen_nonce = wp_create_nonce( 'bp_geo_regen_term_intro_' . $term_id );
 		$display = $intro
 			? '<div class="bp-geo-display" style="color:#444;font-size:12px;line-height:1.5;">' . wp_kses_post( $intro ) . '</div>'
 			: '<div class="bp-geo-display" style="color:#bbb;">—</div>';
 		return $display
-			. '<textarea class="bp-geo-editor" data-meta="bp_geo_service_intro" data-term="' . $term_id . '" data-nonce="' . esc_attr( $nonce ) . '" style="display:none;width:100%;min-height:220px;font-size:12px;font-family:monospace;" rows="12">' . esc_textarea( $intro ) . '</textarea>'
+			. '<textarea class="bp-geo-editor" data-meta="bp_geo_service_intro" data-term="' . $term_id . '" data-nonce="' . esc_attr( $edit_nonce ) . '" style="display:none;width:100%;min-height:220px;font-size:12px;font-family:monospace;" rows="12">' . esc_textarea( $intro ) . '</textarea>'
 			. '<div class="bp-geo-actions" style="margin-top:5px;">'
 			. '<button type="button" class="button button-small bp-geo-edit-btn">Edit</button>'
+			. '<button type="button" class="button button-small bp-geo-regen-btn" data-term="' . $term_id . '" data-nonce="' . esc_attr( $regen_nonce ) . '" style="margin-left:4px;">Regenerate</button>'
 			. '<button type="button" class="button button-primary button-small bp-geo-save-btn" style="display:none;margin-right:4px;">Save</button>'
 			. '<button type="button" class="button button-small bp-geo-cancel-btn" style="display:none;">Cancel</button>'
 			. '<span class="bp-geo-status" style="font-size:11px;margin-left:8px;color:#555;"></span>'
@@ -2157,15 +2159,17 @@ add_filter( 'manage_jobsite_geo-services_custom_column', function( $content, $co
 	}
 
 	if ( $column === 'bp_map_caption' ) {
-		$caption = get_term_meta( $term_id, 'bp_geo_map_caption', true );
-		$nonce   = wp_create_nonce( 'bp_geo_edit_term_meta_' . $term_id );
+		$caption     = get_term_meta( $term_id, 'bp_geo_map_caption', true );
+		$edit_nonce  = wp_create_nonce( 'bp_geo_edit_term_meta_' . $term_id );
+		$regen_nonce = wp_create_nonce( 'bp_geo_regen_term_intro_' . $term_id );
 		$display = $caption
 			? '<div class="bp-geo-display" style="font-size:12px;">' . esc_html( $caption ) . '</div>'
 			: '<div class="bp-geo-display" style="color:#bbb;">—</div>';
 		return $display
-			. '<input type="text" class="bp-geo-editor" data-meta="bp_geo_map_caption" data-term="' . $term_id . '" data-nonce="' . esc_attr( $nonce ) . '" value="' . esc_attr( $caption ) . '" style="display:none;width:100%;font-size:12px;">'
+			. '<input type="text" class="bp-geo-editor" data-meta="bp_geo_map_caption" data-term="' . $term_id . '" data-nonce="' . esc_attr( $edit_nonce ) . '" value="' . esc_attr( $caption ) . '" style="display:none;width:100%;font-size:12px;">'
 			. '<div class="bp-geo-actions" style="margin-top:5px;">'
 			. '<button type="button" class="button button-small bp-geo-edit-btn">Edit</button>'
+			. '<button type="button" class="button button-small bp-geo-regen-btn" data-term="' . $term_id . '" data-nonce="' . esc_attr( $regen_nonce ) . '" style="margin-left:4px;">Regenerate</button>'
 			. '<button type="button" class="button button-primary button-small bp-geo-save-btn" style="display:none;margin-right:4px;">Save</button>'
 			. '<button type="button" class="button button-small bp-geo-cancel-btn" style="display:none;">Cancel</button>'
 			. '<span class="bp-geo-status" style="font-size:11px;margin-left:8px;color:#555;"></span>'
@@ -2197,6 +2201,29 @@ add_action( 'wp_ajax_bp_geo_save_term_meta', function() {
 	wp_send_json_success( [ 'value' => $value ] );
 } );
 
+// AJAX handler — regenerate intro + map caption via AI
+add_action( 'wp_ajax_bp_geo_regen_term_intro', function() {
+	$term_id = intval( $_POST['term_id'] ?? 0 );
+
+	if ( ! check_ajax_referer( 'bp_geo_regen_term_intro_' . $term_id, 'nonce', false ) ) {
+		wp_send_json_error( 'Invalid nonce.' );
+	}
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( 'Insufficient permissions.' );
+	}
+
+	$result = bp_geo_generate_term_intro( $term_id );
+
+	if ( is_wp_error( $result ) ) {
+		wp_send_json_error( $result->get_error_message() );
+	}
+
+	wp_send_json_success( [
+		'intro'   => $result,
+		'caption' => get_term_meta( $term_id, 'bp_geo_map_caption', true ),
+	] );
+} );
+
 // Layout CSS + inline-edit JS — only on this taxonomy screen
 add_action( 'admin_head', function() {
 	$screen = get_current_screen();
@@ -2212,6 +2239,61 @@ add_action( 'admin_head', function() {
 	</style>
 	<script>
 	document.addEventListener('DOMContentLoaded', function () {
+
+		// Regenerate button — updates both intro and caption cells
+		document.querySelectorAll('.bp-geo-regen-btn').forEach(function (btn) {
+			btn.addEventListener('click', function () {
+				var row         = btn.closest('tr');
+				var introCell   = row.querySelector('.column-bp_service_intro');
+				var captionCell = row.querySelector('.column-bp_map_caption');
+				var status      = btn.closest('.bp-geo-actions').querySelector('.bp-geo-status');
+
+				btn.disabled       = true;
+				status.style.color = '#555';
+				status.textContent = 'Regenerating…';
+
+				fetch(ajaxurl, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body: new URLSearchParams({
+						action:  'bp_geo_regen_term_intro',
+						term_id: btn.dataset.term,
+						nonce:   btn.dataset.nonce
+					})
+				})
+				.then(function (r) { return r.json(); })
+				.then(function (data) {
+					if (data.success) {
+						// Update intro cell
+						var introDisplay = introCell.querySelector('.bp-geo-display');
+						var introEditor  = introCell.querySelector('.bp-geo-editor');
+						introDisplay.innerHTML = data.data.intro || '<span style="color:#bbb;">—</span>';
+						if (introEditor) introEditor.value = data.data.intro || '';
+
+						// Update caption cell
+						var captionDisplay = captionCell.querySelector('.bp-geo-display');
+						var captionEditor  = captionCell.querySelector('.bp-geo-editor');
+						captionDisplay.textContent = data.data.caption || '—';
+						captionDisplay.style.color = data.data.caption ? '' : '#bbb';
+						if (captionEditor) captionEditor.value = data.data.caption || '';
+
+						status.style.color = '#2e7d32';
+						status.textContent = '✓ Done';
+						setTimeout(function () { status.textContent = ''; }, 4000);
+					} else {
+						status.style.color = '#c62828';
+						status.textContent = '✗ ' + (data.data || 'Error');
+					}
+					btn.disabled = false;
+				})
+				.catch(function () {
+					status.style.color = '#c62828';
+					status.textContent = '✗ Request failed.';
+					btn.disabled       = false;
+				});
+			});
+		});
+
 		document.querySelectorAll('.bp-geo-actions').forEach(function (actions) {
 			var cell     = actions.closest('td');
 			var display  = cell.querySelector('.bp-geo-display');

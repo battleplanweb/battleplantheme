@@ -46,7 +46,7 @@ if ($ip) {
 		}
 		if ($blocked) {
 			// notify central just like guard does
-			$CENTRAL_BLOCKED_URL = 'https://battleplanwebdesign.com/wp-content/blocked-notify.php';
+			$CENTRAL_BLOCKED_URL = 'https://bp-webdev.com/wp-content/blocked-notify.php';
 			$BP_SECRET           = 'Vn8qkM2Z4yHsR1jPwA3tLf7bE6uXpD9c'; // same secret
 			$site = $_SERVER['HTTP_HOST'] ?? '';
 			$ua   = $_SERVER['HTTP_USER_AGENT'] ?? '';
@@ -75,7 +75,7 @@ if ($ip) {
 
 // 4) report to central (fire-and-forget)
 if ($ip && filter_var($ip, FILTER_VALIDATE_IP)) {
-	$central = 'https://battleplanwebdesign.com/wp-content/add-ip.php';
+	$central = 'https://bp-webdev.com/wp-content/add-ip.php';
 	$secret  = defined('BP_HONEYPOT_SECRET') ? BP_HONEYPOT_SECRET : 'Vn8qkM2Z4yHsR1jPwA3tLf7bE6uXpD9c';
 	$payload = $ip.'|'.$host.'|'.$uri.'|'.$ua.'|'.$ref.'|'.$ts;
 	$sig     = hash_hmac('sha256', $payload, $secret);

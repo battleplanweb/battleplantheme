@@ -90,6 +90,9 @@
   box-sizing:                                               border-box;
 }
 
+.schedules-page #wrapper-content {
+  z-index:                                                  8000;
+}
 /*--------------------------------------------------------------
 # Login Page
 --------------------------------------------------------------*/
@@ -1167,7 +1170,7 @@ input[type="checkbox"]:checked::after {
   letter-spacing:                                           .05em;
 }
 
-.priority-pill.priority-floor  { background: #1e3a6e; color: var(--color-accent); }
+.priority-pill.priority-floor  { background: var(--color-accent); color: var(--color-accent-inverse) !important; }
 .priority-pill.priority-green  { background: var(--s-green-light); color: var(--s-green); }
 .priority-pill.priority-yellow { background: #fef9c3; color: #854d0e; }
 .priority-pill.priority-red    { background: var(--s-red-light); color: var(--s-red); }
@@ -1236,7 +1239,7 @@ input[type="checkbox"]:checked::after {
   max-height:                                               90vh;
   overflow-y:                                               auto;
   padding:                                                  28px 28px 24px;
-  top:                                                      255px;
+  top:                                                      0;
 }
 
 .schedules-modal-box h2 {

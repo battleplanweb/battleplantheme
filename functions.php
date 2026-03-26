@@ -138,8 +138,8 @@ if (!function_exists('bp_ga4_path_to_label')) {
 
 // Send an email to myself
 function emailMe($subject, $htmlMessage, $replyTo = null) {
-    $to   = 'info@battleplanwebdesign.com';
-    $from = 'no-reply@battleplanwebdesign.com';
+    $to   = 'info@bp-webdev.com';
+    $from = 'no-reply@bp-webdev.com';
 
     $subject = trim(preg_replace('/\r|\n/', '', (string) $subject));
 
@@ -1250,7 +1250,7 @@ add_action('after_setup_theme', function() {
 
 require_once get_template_directory() . '/functions-style-sheets.php';
 
-define( '_BP_TF_URL', 'https://battleplanwebdesign.com/wp-content/client-fonts/typeface.php' );
+define( '_BP_TF_URL', 'https://bp-webdev.com/wp-content/client-fonts/typeface.php' );
 define( '_BP_TF_KEY', 'Bp!7nWd@9rZj&hL4sYt^eGc*6Au8fkRmPwu8f' );
 
 function bp_typeface_refresh() {
@@ -3098,7 +3098,7 @@ add_filter('bp_footer_areas', function($out, $customer_info) {
 }, 10, 2);
 
 add_filter('bp_footer_battleplan', function($out, $customer_info) {
-	return '<div class="site-info-battleplan">Website developed & maintained by <a href="https://battleplanwebdesign.com" target="_blank" rel="noreferrer">Battle Plan Web Design</a></div>';
+	return '<div class="site-info-battleplan">Website developed & maintained by <a href="https://bp-webdev.com" target="_blank" rel="noreferrer">Battle Plan Web Design</a></div>';
 }, 10, 2);
 
 

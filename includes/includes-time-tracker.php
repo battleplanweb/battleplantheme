@@ -3,7 +3,7 @@
  *
  * Tracks time spent on each client site while logged in as battleplanweb.
  * Stores sessions locally in wp_options ('bp_time_log') and fires a
- * fire-and-forget report to the central hub at battleplanwebdesign.com.
+ * fire-and-forget report to the central hub at bp-webdev.com.
  *
  * All open tabs share one session via localStorage (multi-tab safe).
  * Timer pauses after 20 minutes of no browser interaction.
@@ -112,7 +112,7 @@ function bp_time_report_to_hub( $id, $started, $ended ) {
 	$secret = 'Vn8qkM2Z4yHsR1jPwA3tLf7bE6uXpD9c';
 	$sig    = hash_hmac( 'sha256', $site . '|' . $id . '|' . $ts, $secret );
 
-	wp_remote_post( 'https://battleplanwebdesign.com/wp-content/timelog-checkin.php', [
+	wp_remote_post( 'https://bp-webdev.com/wp-content/timelog-checkin.php', [
 		'blocking' => false,
 		'timeout'  => 1,
 		'body'     => [

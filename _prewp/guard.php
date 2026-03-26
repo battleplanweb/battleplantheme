@@ -53,9 +53,9 @@ $DESKTOP_SPEED = isset($STATE['desktop_speed']) ? $STATE['desktop_speed'] : 'n/a
 if (PHP_SAPI === 'cli' || (defined('WP_CLI') && WP_CLI) || getenv('WP_PHPUNIT__TESTS_CONFIG')) return;
 
 /* ---------- config ---------- */
-$CENTRAL_READ_URL    = 'https://battleplanwebdesign.com/wp-content/master_blocked_ips.txt';
-$CENTRAL_CHECKIN_URL = 'https://battleplanwebdesign.com/wp-content/checkin.php';
-$CENTRAL_BLOCKED_URL = 'https://battleplanwebdesign.com/wp-content/blocked-notify.php';
+$CENTRAL_READ_URL    = 'https://bp-webdev.com/wp-content/master_blocked_ips.txt';
+$CENTRAL_CHECKIN_URL = 'https://bp-webdev.com/wp-content/checkin.php';
+$CENTRAL_BLOCKED_URL = 'https://bp-webdev.com/wp-content/blocked-notify.php';
 $BP_SECRET           = 'Vn8qkM2Z4yHsR1jPwA3tLf7bE6uXpD9c';
 
 $CACHE_MAX_AGE  = 300;           // seconds
@@ -101,7 +101,7 @@ if (!$__bp_noip && $exists) {
 		if ($matched) break;
 	}
 	if ($matched) {
-		$CENTRAL_BLOCKED_URL = 'https://battleplanwebdesign.com/wp-content/blocked-notify.php';
+		$CENTRAL_BLOCKED_URL = 'https://bp-webdev.com/wp-content/blocked-notify.php';
 		$site = $_SERVER['HTTP_HOST'] ?? '';
 		$ua   = $_SERVER['HTTP_USER_AGENT'] ?? '';
 		$ref  = $_SERVER['HTTP_REFERER'] ?? '';
@@ -155,7 +155,7 @@ if ($stale && $CENTRAL_READ_URL) {
 			$ok  = (@file_put_contents($tmp, implode("\n",$lines)."\n", LOCK_EX)!==false) && (filesize($tmp)>0);
 			if ($ok) { @chmod($tmp,0664); @rename($tmp,$CACHE_FILE); }
 		}
-	} 
+	}
 
 	$cache_ts = is_file($CACHE_FILE) ? (int)@filemtime($CACHE_FILE) : 0;
 
@@ -220,12 +220,12 @@ if ($need_beat && $CENTRAL_CHECKIN_URL) {
 			'ts'=>$ts,
 			'sig'=>$sig,
 			'ver'=>$BP_VER,
-			'hits_week'     => $HITS_WEEK, 
-			'hits_month'     => $HITS_MONTH, 
-			'hits_quarter'     => $HITS_QUARTER, 
-			'hits_year'     => $HITS_YEAR, 
-			'mobile_speed'     => $MOBILE_SPEED, 
-			'desktop_speed'     => $DESKTOP_SPEED, 
+			'hits_week'     => $HITS_WEEK,
+			'hits_month'     => $HITS_MONTH,
+			'hits_quarter'     => $HITS_QUARTER,
+			'hits_year'     => $HITS_YEAR,
+			'mobile_speed'     => $MOBILE_SPEED,
+			'desktop_speed'     => $DESKTOP_SPEED,
 		]),
 		'timeout'=>0.6
 	]]);

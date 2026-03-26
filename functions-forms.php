@@ -210,16 +210,66 @@ function battleplan_setupFormEmail( $contact_form, &$abort, $submission ) {
 	}
 	if ($spamIntercept) goto spam_done;
 
+	// URL check on message — belt-and-suspenders in case the CF7 field isn't named "message"
+	$url_spam_words = ['http://', 'https://', 'www.', 'bit.ly', 'ow.ly', 't.co/', 'goo.gl'];
+	foreach ($url_spam_words as $w) {
+		if (stripos($message, $w) !== false) {
+			$spamIntercept = 'URL';
+			break;
+		}
+	}
+	if ($spamIntercept) goto spam_done;
+
+	// Sales / marketing outreach phrase check
+	$sales_phrases = [
+		// Pricing patterns — nobody pitching a product is a real customer
+		'/mo ', '/mo.', '/mo,', '/month flat', '/month (', 'per month', 'per-minute fee',
+		// SaaS / free trial CTAs
+		'free trial', 'free for 14', '14-day free', 'no credit card',
+		// Lead gen / AI sales tool language
+		'missed leads', 'missed calls', 'qualify leads', 'qualified leads',
+		'book appointments', 'books appointments', 'ai receptionist',
+		// SEO / traffic sales language
+		'targeted visitors', 'outperforming paid ads', 'ai search first',
+		'didn\'t show up', 'didn\'t appear', 'emergency hvac', 'searches homeowners use',
+		// Cold email openers
+		'i came across your business', 'i came across your website',
+		'i was researching', 'ran the searches',
+		// Exclusivity / territory sales tactics
+		'we only take on one', 'one partner per', 'dominant local', 'own their entire territory',
+		// CTAs that appear in cold sales emails, not customer inquiries
+		'reply here and we', 'happy to show you what i found', 'no cost, just useful',
+		'recover $', 'open to a brief chat', 'see if we align',
+	];
+	foreach ($sales_phrases as $phrase) {
+		if (stripos($full_email, $phrase) !== false) {
+			$spamIntercept = 'Sales';
+			break;
+		}
+	}
+	if ($spamIntercept) goto spam_done;
+
 	// AI spam filter
 	if (defined('ANTHROPIC_API_KEY') && ANTHROPIC_API_KEY) {
 		$site_name    = $customer_info['name'] ?? get_bloginfo('name');
 		$site_type    = $customer_info['type'] ?? 'local service business';
-		$ai_prompt    = "You are a spam filter for a contact form on \"{$site_name}\", a {$site_type}.\n\n"
-			. "Analyze this form submission and reply with only one word: SPAM or OK.\n\n"
+		$ai_prompt    = "You are a spam filter for contact forms on local service business websites.\n\n"
+			. "Reply with ONLY one word: SPAM or OK.\n\n"
+			. "Business: {$site_name} ({$site_type})\n"
+			. "Sender country: {$userCountry}\n"
 			. "Name: {$name}\nEmail: {$email}\nPhone: {$phone}\nMessage: {$message}\n\n"
-			. "Mark SPAM if: unsolicited sales/marketing pitch, SEO/web design offer, foreign-language text, "
-			. "bulk procurement inquiry, suspicious or fake email domain, no real message, or clearly not a customer inquiry. "
-			. "Mark OK if: genuine question about services, appointment/quote request, or real customer contact.";
+			. "Mark SPAM if the submission is any of these:\n"
+			. "- A cold sales pitch or marketing solicitation (SEO, ads, AI tools, software, lead gen, call answering services)\n"
+			. "- Business-to-business outreach where the sender is trying to SELL something to the business\n"
+			. "- A generic cold-email opener (\"I came across your business\", \"I was researching [city] companies\", \"I noticed you're not showing up\")\n"
+			. "- Contains pricing for something being sold (\$X/mo, free trial, no credit card needed)\n"
+			. "- Reputation management, web design, SEO, or digital marketing solicitation\n"
+			. "- From outside the US contacting a local US trade business with no clear service need\n\n"
+			. "Mark OK if the submission is:\n"
+			. "- A homeowner or customer asking about {$site_type} services\n"
+			. "- An appointment, estimate, or quote request\n"
+			. "- Someone describing a problem they need fixed\n"
+			. "- An existing customer following up";
 
 		$ai_response = wp_remote_post('https://api.anthropic.com/v1/messages', [
 			'timeout' => 8,
@@ -245,11 +295,11 @@ function battleplan_setupFormEmail( $contact_form, &$abort, $submission ) {
 	spam_done:
 	if ( $spamIntercept !== '' && stripos($buildEmail, "Babe's Chicken Catering" ) === false ) :
 
-		$formMail['recipient'] = 'email@battleplanwebdesign.com';
+		$formMail['recipient'] = 'email@bp-webdev.com';
 		$formMail['subject']   = '<- SPAM: Blocked ' . $spamIntercept . ' -> ' . $formMail['subject'];
 
 		// --- add IP to central list + central log ---
-		$central = 'https://battleplanwebdesign.com/wp-content/email-add-ip.php';
+		$central = 'https://bp-webdev.com/wp-content/email-add-ip.php';
 		$secret  = 'Vn8qkM2Z4yHsR1jPwA3tLf7bE6uXpD9c';
 
 		$site = $_SERVER['HTTP_HOST']    ?? '';

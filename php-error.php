@@ -77,7 +77,7 @@ if (!headers_sent()) {
 	}
 
 	// SEND EMAIL NOTICE
-	$to = "glendon@battleplanwebdesign.com";
+	$to = "glendon@bp-webdev.com";
 	$subject = "PHP Fatal Error: " . ($_SERVER['SERVER_NAME'] ?? '');
 	$message = "Site: " . ($_SERVER['SERVER_NAME'] ?? '') . "<br>";
 

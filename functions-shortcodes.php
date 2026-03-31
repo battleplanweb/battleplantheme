@@ -1905,7 +1905,7 @@ function battleplan_get_nonce() {
 add_shortcode( 'get-universal-page', 'battleplan_getUniversalPage' );
 function battleplan_getUniversalPage( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'slug'=>'' ), $atts );
-	return do_shortcode(include get_template_directory().'/pages/'.esc_attr($a['slug']).'.php');
+	return '<!--no-wpautop-->' . do_shortcode(include get_template_directory().'/pages/'.esc_attr($a['slug']).'.php') . '<!--/no-wpautop-->';
 }
 
 // Use page template for landing & universal pages

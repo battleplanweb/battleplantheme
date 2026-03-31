@@ -237,7 +237,7 @@ $autoTriggerD = _IS_BOT && !_IS_SERP_BOT && ($neverD || $staleD || $dueD);
 if ($forceD || $autoTriggerD) {
     delete_option('bp_force_chron_d');
     update_option('bp_chron_d_time', time());
-    update_option('bp_chron_d_next', bp_next_nightly_window());
+    update_option('bp_chron_d_next', bp_next_nightly_window() + (86400 * 6));
     require_once get_template_directory() . '/functions-keyword-rankings.php';
     bp_kw_run_chron($forceD);
 }

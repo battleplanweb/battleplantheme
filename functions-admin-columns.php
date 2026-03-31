@@ -702,6 +702,44 @@ function bp_admin_columns($config){
 		}
 
 	}, 999);
+
+	/* Persistent Sort Preference */
+	add_action('admin_init', function() use ($pt) {
+
+		global $pagenow;
+
+		if ($pt === 'attachment') {
+			if ($pagenow !== 'upload.php') return;
+		} else {
+			if ($pagenow !== 'edit.php') return;
+			$current_pt = $_GET['post_type'] ?? 'post';
+			if ($current_pt !== $pt) return;
+		}
+
+		$user_id = get_current_user_id();
+		if (!$user_id) return;
+
+		$meta_key = 'bp_admin_sort_' . $pt;
+
+		if (isset($_GET['orderby'])) {
+			update_user_meta($user_id, $meta_key, [
+				'orderby' => sanitize_key($_GET['orderby']),
+				'order'   => in_array(strtoupper($_GET['order'] ?? ''), ['ASC', 'DESC'])
+					? strtoupper($_GET['order'])
+					: 'ASC',
+			]);
+		} else {
+			$saved = get_user_meta($user_id, $meta_key, true);
+			if ($saved && !empty($saved['orderby'])) {
+				wp_redirect(add_query_arg([
+					'orderby' => $saved['orderby'],
+					'order'   => strtolower($saved['order']),
+				]));
+				exit;
+			}
+		}
+
+	});
 }
 
 add_filter('posts_request', function($sql, $query){

@@ -34,7 +34,7 @@ function battleplan_contact_form_spam_blocker( $result, $tag ) {
     if ( stripos($tag->name,"message") !== false ) :
 		$check = !is_array( $_POST["user-message"] ) && isset( $_POST["user-message"] ) ? trim( $_POST["user-message"] ) : '';
 		$name = !is_array( $_POST["user-name"] ) && isset( $_POST["user-name"] ) ? trim( $_POST["user-name"] ) : '';
-		$web_words = array('.com','http://','https://','.net','.org','www.','.buzz', 'bit.ly');
+		$web_words = array('.com','http://','https://','.net','.org','www.','.buzz', 'bit.ly', 'ow.ly', 't.co/', 'goo.gl');
 		if ( strtolower($check) == strtolower($name) ) $result->invalidate( $tag, 'Message cannot be sent.' );
 		foreach($web_words as $web_word) :
 			if (stripos($check,$web_word) !== false) $result->invalidate( $tag, 'In order to reduce spam, website addresses are not allowed.' );
@@ -165,6 +165,12 @@ function battleplan_setupFormEmail( $contact_form, &$abort, $submission ) {
 
 	$message = str_replace($search_words, $replace_words, $message);
 
+	$bad_emails= array($_SERVER['HTTP_HOST'], 'testing.com', 'test@', 'b2blistbuilding', 'amy.wilsonmkt@gmail', 'agency.leads.fish', 'landrygeorge8@gmail', 'digitalconciergeservice', 'themerchantlendr', 'fluidbusinessresources', 'focal-pointcoaching.net', 'zionps', 'rddesignsllc', 'domainworld', 'marketing.ynsw@gmail', 'seoagetechnology@gmail', 'excitepreneur.net', 'bullmarket.biz', 'tworld', 'garywhi777@gmail', 'ronyisthebest16@gmail', 'ronythomas611@gmail', 'ronythomasrecruiter@gmail', 'ideonagency.net', 'axiarobbie20@gmail', 'hyper-tidy', 'readyjob.org', 'thefranchisecreatornetwork', 'franchisecreatormarketing', 'legendarygfx', 'hitachi-metal-jp', 'expresscommerce.co', 'zaphyrpro', 'erjconsult', 'christymkts@gmail', 'theheritageseo', 'freedomwebdesigns', 'wesavesmallbusinesses@gmail', 'bimservicesllc.net', 'spamhunter.co', 'myspamburner.co', 'spamshield.co', 'excelestimation.net', 'dmccreativesolutions', 'mdhmx', 'digitalmarketingvas', 'rushmoreblueprint.co', 'answeraide', 'servicesuite.io', 'webtechxpress', 'medicopostura', 'anna.cramer@outlook', 'stephania.sander@yahoo', 'yourmarketingagencyfuture@gmail', '.pawsafer.sale', 'wexinc', 'erjsolutions', 'frequentlyonline', 'thawkingo', 'podiatristusa', 'besocialworldwide', 'taylah.jordan@gmail', 'garzagaragedoors', 'westholtmed.net', 'agape1life', 'bayougraphics', 'betterfinancialsolution', 'betterbusinessedge', 'econnectlocal', 'sbiestimationll', 'zentrades.pro', 'appfactoryhub', 'caredogbest', 'w-bmason', 'vibrantestimation', 'tylersupplycompany', 'steinerseo', 'foxmail', 'posicionamientoparapymes', 'testeurpascher', 'sbi-estimation', 'est.sbiestimation', 'jebcapitalpartners', 'bestcontractorsites', 'secondestimationllc', 'ipayperlead', 'difusionagencia', 'seedranchflavor', 'grupoiasa', 'hedgestone', '6pmarketing', 'sowsustainability', 'xruma', 'businesscoachvas', 'costestimating', 'theubique-group', 'earnmillions', 'logodesignsteam', 'gracegroupsllc', 'rushmoreblueprintpartners', 'wiseins1', 'cleaning-dallas', 'financingmycustomers', 'innovenservices.com', 'ismael57morenozvm@outlook.com', 'vasdirect.com', 'webmai.co', 'hdsupply.com', 'automisly', 'flinnrgs32', '.co.uk', 'OYOapp.com', 'getoffyourhighhorse', 'advancedbodyscan.com', 'clientcaf.info', 'brucesilverman.outsourcing', 'clientcaf.info', 'chemtreat.com', 'astoundz.com', 'xinyisolar.online', 'BISHOPKNIGHTLLC.COM', 'rezult.org', 'casey.swiftt@aol.com', 'aecom-usa.com', 'academicproductions.com','houseflippers.biz', 'virtualhandsupport.com', 'pursuitind.com', 'magwitch.com', 'toptalentvas', 'mzfederal', 'moneysquad', 'dadknowsdiy.com', 'cahillestimating', 'bestaitools', 'dynamicvirtualmanager', 'expertcellent', 'dctechnolabs', 'ip-advocaat.com', 'bizbuydave', 'trustedvirtualteam', 'thevirtualsalesgroup', 'servicecallsaver', 'tile-stonecraetions', 'catehvac', 'bovafoodsco', 'usestateboilerinspector', 'kunal-kakkar', 'globalpartfinder', 'vladislavdev', 'frontierenergy', 'insuretuckertn', 'doanything', 'trustedvirtualteam', 'virtualeaseservice');
+
+	$bad_words = array('и', 'д', 'б', 'й', 'л', 'ы', 'З', 'у', 'Я', 'à', 'ô', 'ố', 'ế', 'á', 'ủ', 'ạ', '湖', '結', '衣', '市', '翼', '清', '水', 'http://', 'https://', 'www.', 'Dear Customer', 'Dear Sales', 'Sir/Madam', 'Sir/Madame', 'Hello Business Owner', 'HELLO SALES', 'bitcoin', 'mаlwаre', 'antivirus', 'marketing', 'SEO', 'Wordpress', 'Cost Estimation', 'Guarantee Estimation', 'World Wide Estimating', 'Get more reviews, Get more customers', 'We write the reviews', 'write an article', 'a free article', 'keyword targeted traffic', 'rank your google', 'boost your leads', 'write you an article', 'write a short article', 'website home page design', 'updated version of your website', 'free sample Home Page', 'lead generation', 'completely Free', 'Dear Receptionist', 'Franchise Creator', 'rebrand your business', 'what I would suggest for your website', 'improving your website', 'organic traffic', 'more business leads', 'We do Estimation', 'get your site published', 'high quality appointments and leads', 'new website', 'Google’s 1st Page', 'Does this sound interesting?', 'I notice that your website is very basic', 'appeal to more clients', 'improve your sales', 'free estimate from our company', 'blocks spam leads', 'block spam messages', 'In order to get a better idea of our work', 'Would you be interested in an article', 'cost estimates and take-off', 'If you\'ve made it this far', 'home services advertising', 'Do you need help with graphic design', 'I have an Audit of your website', 'Can we talk about your Website?', 'cooperate with your company', 'influencers on Instagram', 'procuring below items', 'Optimizing your website', 'your website could be', 'blog posts they write', 'mobile app development', 'Your website could benefit', 'available for download', 'at no cost', 'boost your business', 'targeted Customers', 'We help you get', 'designing and development', 'create your Website', 'fix a few things on your website', 'warnings found on your website', 'contact form blasting', 'make money online', 'not an AI haha', 'send over the set of plans', 'audit on your website', 'audit on your site', 'Are you in need of', 'kingcontacts', 'suggestions for your site', 'Using Google Adsense', 'a few issues with your website', 'very profitable business matter', 'needs of business owners', 'offer some suggestions for your website', 'analyzed your website', 'He querido escribirte porque veo una excelente', 'enhance your online reputation', 'According to the documents', 'Can you ship to Barbados', 'Freelance Web Designer', 'Our estimating services can help you', 'We have FREE opportunity', 'MyEListing', 'food packaging company', 'sexy pictures', 'Publicamos en periódicos', '1st page of Google', 'Need Accurate Estimate', 'Take-off Packages', 'data harvesting services', 'Accurate Quantity Take-offs', 'collaborate with your company', 'partner with you', 'business brokers that represent buyers', 'an official quotation', 'a company based in the Philippines', 'prefer not to hear from me again', 'short term investment', 'review provider', 'Myspace group', 'penning this article', 'abide by your requests', 'premium databases', 'Getting Reviews', 'estimating services', 'Supercharge your GMB listing', 'top pages of google', 'based in India', 'UncoverHiddenProfits', 'helping your business make money', 'find higher quality leads', 'estimating/architectural', 'opportunity to provide you', 'build business credit', 'eliminate personal guarantees', 'untangle my tax situation', 'exclusive sales training event', 'your website is in a great design', 'Are Your Hiring A Full Time HVAC Tech', 'less than perfect credit customers', 'Can you take on more clients', 'excellent option for prospective entrepreneurs', 'I noticed a few things that could use some fixing', 'I apologize for my cold outreach', 'Our answering service frees you up', 'no-strings-attached call', 'Kegel Devices', 'N/A', 'web development company', 'Mary Kay Sales Director', 'Odena', 'Kouvach', 'audit of your website', 'Ozempic', 'Wegovy', 'enhance your website', 'no-obligation proposal', 'summary of the audit results', 'XRumer 23 StrongAI', 'WhatsApp: +', 'Most Demanded AI Apps', 'possible acquire some Hose Pipes', 'Good Day, I am inquiring on', 'Good discount pricing will be appreciated', 'fix your forwarding system', 'Please advise on how soon order can be shipped out', 'fastest and most efficient way to destroy your wealth', 'do you have surcharges when making payment', 'Whatsapp', 'AUDIT ME, AMMAR', 'competitors are attracting clients online', 'handle more clients', 'I can miss a lot of emails from spam', 'Confidential – Please Forward to Owner', 'website placements', 'homepage that seems out of place', 'simple chatbot', 'guaranteed form submission', 'Good day and would like to know', 'gesture of goodwill', 'local customers from your website', 'few opportunities to increase engagement', 'specialize in ad creatives', 'Reply YES', 'your site is absolutely outdated', 'This is not a sales pitch', 'better website', 'increasing your organic leads', 'online visibility', 'saw a bug on your website', 'optimized website conversions', ' I can support your business', 'reduce their operating costs', 'help you hit the Top 3', 'qualified local leads', 'affecting your search rankings', 'unable to complete the checkout process', 'keyword-driven traffic', 'Buy exclusive repair leads', 'I help local businesses', 'top 3 map results', 'both need the right partner' );
+
+	$bad_names = array('loraine68', 'theron.bode46', 'brenden.lebsack');
+
 	$bad_phones = array('0', '(0', '(11)');
 
 	if ( $userCountry !== "United States" ) :
@@ -182,14 +188,6 @@ function battleplan_setupFormEmail( $contact_form, &$abort, $submission ) {
 
 		if ( $message == '' ) $blockThis = true;
 
-		if ( ($_COOKIE['user-city'] === '' || $_COOKIE['user-city'] === null)
-			&& ($_COOKIE['user-region'] === '' || $_COOKIE['user-region'] === null)
-			&& $userDevice === "a desktop"
-			&& $userSystem === " running Windows" ) :
-				$blockThis = true;
-				$blockReason = "Suspicious";
-		endif;
-
 		foreach ( $countryIgnore as $site ) {
 			if ( stripos($buildEmail, $site ) !== false ) {
 				$blockThis = false;
@@ -202,6 +200,14 @@ function battleplan_setupFormEmail( $contact_form, &$abort, $submission ) {
 
 	if ($spamIntercept) goto spam_done;
 
+	foreach ($bad_emails as $bad_email) {
+		if (stripos($email, $bad_email) !== false) {
+			$spamIntercept = 'Email';
+			break;
+		}
+	}
+	if ($spamIntercept) goto spam_done;
+
 	foreach ($bad_phones as $bad_phone) {
 		if (strpos($phone, $bad_phone) === 0) {
 			$spamIntercept = 'Phone';
@@ -210,44 +216,20 @@ function battleplan_setupFormEmail( $contact_form, &$abort, $submission ) {
 	}
 	if ($spamIntercept) goto spam_done;
 
-	// URL check on message — belt-and-suspenders in case the CF7 field isn't named "message"
-	$url_spam_words = ['http://', 'https://', 'www.', 'bit.ly', 'ow.ly', 't.co/', 'goo.gl'];
-	foreach ($url_spam_words as $w) {
-		if (stripos($message, $w) !== false) {
-			$spamIntercept = 'URL';
+	foreach ($bad_words as $bad_word) {
+		if (stripos($full_email, $bad_word) !== false) {
+			$spamIntercept = 'Word';
 			break;
 		}
 	}
 	if ($spamIntercept) goto spam_done;
 
-	// Sales / marketing outreach phrase check
-	$sales_phrases = [
-		// Pricing patterns — nobody pitching a product is a real customer
-		'/mo ', '/mo.', '/mo,', '/month flat', '/month (', 'per month', 'per-minute fee',
-		// SaaS / free trial CTAs
-		'free trial', 'free for 14', '14-day free', 'no credit card',
-		// Lead gen / AI sales tool language
-		'missed leads', 'missed calls', 'qualify leads', 'qualified leads',
-		'book appointments', 'books appointments', 'ai receptionist',
-		// SEO / traffic sales language
-		'targeted visitors', 'outperforming paid ads', 'ai search first',
-		'didn\'t show up', 'didn\'t appear', 'emergency hvac', 'searches homeowners use',
-		// Cold email openers
-		'i came across your business', 'i came across your website',
-		'i was researching', 'ran the searches',
-		// Exclusivity / territory sales tactics
-		'we only take on one', 'one partner per', 'dominant local', 'own their entire territory',
-		// CTAs that appear in cold sales emails, not customer inquiries
-		'reply here and we', 'happy to show you what i found', 'no cost, just useful',
-		'recover $', 'open to a brief chat', 'see if we align',
-	];
-	foreach ($sales_phrases as $phrase) {
-		if (stripos($full_email, $phrase) !== false) {
-			$spamIntercept = 'Sales';
+	foreach ($bad_names as $bad_name) {
+		if (stripos($name, $bad_name) !== false) {
+			$spamIntercept = 'Name';
 			break;
 		}
 	}
-	if ($spamIntercept) goto spam_done;
 
 	// AI spam filter
 	if (defined('ANTHROPIC_API_KEY') && ANTHROPIC_API_KEY) {
@@ -259,11 +241,15 @@ function battleplan_setupFormEmail( $contact_form, &$abort, $submission ) {
 			. "Sender country: {$userCountry}\n"
 			. "Name: {$name}\nEmail: {$email}\nPhone: {$phone}\nMessage: {$message}\n\n"
 			. "Mark SPAM if the submission is any of these:\n"
-			. "- A cold sales pitch or marketing solicitation (SEO, ads, AI tools, software, lead gen, call answering services)\n"
-			. "- Business-to-business outreach where the sender is trying to SELL something to the business\n"
-			. "- A generic cold-email opener (\"I came across your business\", \"I was researching [city] companies\", \"I noticed you're not showing up\")\n"
-			. "- Contains pricing for something being sold (\$X/mo, free trial, no credit card needed)\n"
+			. "- A cold sales pitch or marketing solicitation (SEO, ads, AI tools, software, lead gen, call answering services, virtual assistants, staffing)\n"
+			. "- Business-to-business outreach where the sender is trying to SELL something to the business — even if framed as a partnership, collaboration, or revenue share\n"
+			. "- A lead broker or lead generation company offering to sell leads, referrals, or homeowner bookings to this business\n"
+			. "- A partnership or revenue-split proposal where the sender is not a customer but another business\n"
+			. "- A generic cold-email opener (\"I came across your business\", \"I was researching [city] companies\", \"I noticed you're not showing up\", \"I have a few suggestions for your website\")\n"
+			. "- Contains pricing for something being sold (\$X/mo, per lead pricing, free trial, no credit card needed, no contracts no commitments)\n"
 			. "- Reputation management, web design, SEO, or digital marketing solicitation\n"
+			. "- Bulk SMS / mass text campaigns (includes opt-out language like \"reply YES\", \"text STOP\", \"reply STOP to opt out\")\n"
+			. "- Vague outreach with no specific service need — \"I have some suggestions\", \"I can help improve your...\", \"I'd love to connect\"\n"
 			. "- From outside the US contacting a local US trade business with no clear service need\n\n"
 			. "Mark OK if the submission is:\n"
 			. "- A homeowner or customer asking about {$site_type} services\n"

@@ -1138,7 +1138,8 @@ function bp_wpautop($content, $sanitize = false) {
     );
     $content = wpautop($content, false);
     foreach ($no_wpautop_blocks as $placeholder => $original) {
-        $content = str_replace($placeholder, $original, $content);
+        $content = preg_replace( '/<p[^>]*>\s*' . preg_quote($placeholder, '/') . '\s*<\/p>/s', $original, $content );
+        $content = str_replace( $placeholder, $original, $content );
     }
     // Remove <p> tags wrapping images
     $content = preg_replace('/<p>\s*(<a .*?>)?\s*(<img .*?\/?>)\s*(<\/a>)?\s*<\/p>/iU', '\1\2\3', $content);
@@ -1601,6 +1602,8 @@ if ( !empty($jobsite_geo['install']) ) {
 	require_once get_template_directory().'/includes/includes-jobsite-geo.php';
 	require_once get_template_directory() . '/includes/includes-jobsite-geo-api.php';
 }
+if (file_exists(get_stylesheet_directory().'/functions-site.php')) require_once get_stylesheet_directory().'/functions-site.php';
+
 $schedules = get_option('schedules');
 if ( !empty($schedules['install']) ) {
 	require_once get_template_directory().'/includes/includes-schedules.php';
@@ -1620,7 +1623,6 @@ require_once get_template_directory().'/functions-ajax.php';
 require_once get_template_directory().'/includes/includes-time-tracker.php';
 require_once get_template_directory().'/functions-grid.php';
 require_once get_template_directory().'/functions-public.php';
-if (file_exists(get_stylesheet_directory().'/functions-site.php')) require_once get_stylesheet_directory().'/functions-site.php';
 
 require_once get_template_directory() . '/functions-chron.php';
 

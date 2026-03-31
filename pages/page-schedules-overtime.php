@@ -74,22 +74,64 @@ $printPage .=     '<span class="schedules-app-title">CCSO Overtime</span>';
 $printPage .=     '<span class="schedules-app-subtitle">Member Dashboard</span>';
 $printPage .=   '</div>';
 
+$_notif_count = function_exists('schedules_unread_count') ? schedules_unread_count( $user_id ) : 0;
 $printPage .=   '<div class="schedules-user-info">';
+$printPage .=     '<button class="notif-bell" id="notif-bell" type="button" aria-label="Notifications">';
+$printPage .=       '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
+if ( $_notif_count > 0 ) {
+	$printPage .=   '<span class="notif-count">' . $_notif_count . '</span>';
+}
+$printPage .=     '</button>';
 $printPage .=     '<span class="user-name">' . esc_html($full_name) . '</span>';
 $printPage .=     '<span class="user-badge">Badge #' . esc_html($badge) . '</span>';
 if ( $user_shift ) {
 	$printPage .= '<span class="user-shift-badge shift-' . esc_attr(strtolower($user_shift)) . '">Shift ' . esc_html($user_shift) . '</span>';
 }
 if ( $priority ) {
-	$printPage .= '<span class="user-priority priority-' . esc_attr($priority) . '">' . esc_html(ucfirst($priority)) . '</span>';
+	$printPage .= '<span class="user-priority priority-' . esc_attr($priority) . '">OT</span>';
 }
 $printPage .=   '</div>';
 
 $printPage .=   '<div class="schedules-app-actions">';
-$printPage .=     '<button id="schedules-change-pw-btn" class="schedules-btn schedules-btn-ghost" type="button">Change Password</button>';
-$printPage .=     '<button id="schedules-logout-btn" class="schedules-btn schedules-btn-ghost" type="button">Sign Out</button>';
+$printPage .=     '<button id="schedules-settings-btn" class="schedules-btn schedules-btn-secondary" type="button">Settings</button>';
+$printPage .=     '<button id="schedules-change-pw-btn" class="schedules-btn schedules-btn-secondary" type="button">Change Password</button>';
+$printPage .=     '<button id="schedules-logout-btn" class="schedules-btn schedules-btn-secondary" type="button">Sign Out</button>';
 $printPage .=   '</div>';
 $printPage .= '</header>';
+
+// ---- Notifications Panel ----
+$printPage .= '<div id="notif-panel" class="notif-panel" hidden>';
+$printPage .=   '<div class="notif-panel-header">';
+$printPage .=     '<h3>Notifications</h3>';
+$printPage .=     '<button type="button" class="notif-panel-close" aria-label="Close">&times;</button>';
+$printPage .=   '</div>';
+$printPage .=   '<div class="notif-panel-body" id="notif-panel-body">';
+$printPage .=     '<p class="notif-loading">Loading&hellip;</p>';
+$printPage .=   '</div>';
+$printPage .= '</div>';
+
+// ---- Settings Panel ----
+$_ot_name_format = get_user_meta( $user_id, 'schedules_name_format', true ) ?: 'first_last';
+$printPage .= '<div id="schedules-settings-panel" class="schedules-panel" hidden>';
+$printPage .=   '<div class="schedules-panel-inner">';
+$printPage .=     '<h2>Display Preferences</h2>';
+$printPage .=     '<form id="user-settings-form" novalidate>';
+$printPage .=       '<div class="form-group">';
+$printPage .=         '<label for="user-name-format">Member Name Format</label>';
+$printPage .=         '<select id="user-name-format" name="name_format">';
+$printPage .=           '<option value="first_last"' . selected( $_ot_name_format, 'first_last', false ) . '>First Last</option>';
+$printPage .=           '<option value="last_first"' . selected( $_ot_name_format, 'last_first', false ) . '>Last, First</option>';
+$printPage .=         '</select>';
+$printPage .=       '</div>';
+$printPage .=       '<div class="form-error" id="user-settings-error" role="alert" aria-live="polite"></div>';
+$printPage .=       '<div class="form-success" id="user-settings-success" role="status" aria-live="polite"></div>';
+$printPage .=       '<div class="panel-actions">';
+$printPage .=         '<button type="submit" class="schedules-btn schedules-btn-primary" id="user-settings-submit">Save Preferences</button>';
+$printPage .=         '<button type="button" id="schedules-settings-cancel" class="schedules-btn">Cancel</button>';
+$printPage .=       '</div>';
+$printPage .=     '</form>';
+$printPage .=   '</div>';
+$printPage .= '</div>';
 
 // ---- Change Password Panel ----
 $printPage .= '<div id="schedules-change-pw-panel" class="schedules-panel" hidden>';
@@ -112,24 +154,24 @@ $printPage .=       '<div class="form-error" id="change-pw-error" role="alert" a
 $printPage .=       '<div class="form-success" id="change-pw-success" role="status" aria-live="polite"></div>';
 $printPage .=       '<div class="panel-actions">';
 $printPage .=         '<button type="submit" class="schedules-btn schedules-btn-primary">Update Password</button>';
-$printPage .=         '<button type="button" id="schedules-change-pw-cancel" class="schedules-btn schedules-btn-ghost">Cancel</button>';
+$printPage .=         '<button type="button" id="schedules-change-pw-cancel" class="schedules-btn">Cancel</button>';
 $printPage .=       '</div>';
 $printPage .=     '</form>';
 $printPage .=   '</div>';
 $printPage .= '</div>';
 
-// ---- Week Tabs ----
+// ---- Month Filter ----
 if ( $max_week > 0 ) {
-	$printPage .= '<div class="schedules-week-tabs" role="tablist" aria-label="Schedule weeks">';
-	for ( $w = 1; $w <= $max_week; $w++ ) {
-		$active    = $w === 1 ? ' active' : '';
-		$selected  = $w === 1 ? 'true' : 'false';
-		$start_day = ( ($w - 1) * 7 ) + 1;
-		$end_day   = min( $w * 7, $max_days );
-		$printPage .= '<button class="week-tab' . $active . '" data-week="' . $w . '" role="tab" aria-selected="' . $selected . '" aria-controls="week-panel-' . $w . '">';
-		$printPage .=   'Week ' . $w . ' <span class="week-range unique">Days ' . $start_day . '–' . $end_day . '</span>';
-		$printPage .= '</button>';
+	$printPage .= '<div class="schedules-month-nav">';
+	$printPage .= '<select id="schedules-month-filter" class="schedules-month-select" aria-label="Select month">';
+	for ( $m = 0; $m < 12; $m++ ) {
+		$ts    = strtotime( "+{$m} months", strtotime( date('Y-m-01') ) );
+		$val   = date( 'Y-m', $ts );
+		$label = date( 'F Y', $ts );
+		$sel   = $m === 0 ? ' selected' : '';
+		$printPage .= '<option value="' . $val . '"' . $sel . '>' . $label . '</option>';
 	}
+	$printPage .= '</select>';
 	$printPage .= '</div>';
 }
 
@@ -142,7 +184,7 @@ if ( empty($weeks) ) {
 	$printPage .= '</div>';
 } else {
 	foreach ( $weeks as $week_num => $week_days ) {
-		$hidden = $week_num === 1 ? '' : ' hidden';
+		$hidden = '';
 		$printPage .= '<div class="schedules-week" id="week-panel-' . $week_num . '" data-week="' . $week_num . '" role="tabpanel"' . $hidden . '>';
 
 		ksort($week_days);
@@ -153,7 +195,8 @@ if ( empty($weeks) ) {
 			$dow_name = $dow_labels[$dow];
 			$date_fmt = date('M j', $ts);
 
-			$printPage .= '<div class="schedule-day" data-date="' . esc_attr($date) . '">';
+			$month     = date( 'Y-m', $ts );
+		$printPage .= '<div class="schedule-day" data-date="' . esc_attr($date) . '" data-month="' . esc_attr($month) . '">';
 			$printPage .=   '<div class="day-header">';
 			$printPage .=     '<span class="day-name">' . esc_html($dow_name) . '</span>';
 			$printPage .=     '<span class="day-date">' . esc_html($date_fmt) . '</span>';
@@ -165,8 +208,10 @@ if ( empty($weeks) ) {
 				$day_id       = (int) $shift_data['id'];
 
 				$printPage .= '<div class="shift-group shift-' . strtolower($shift_letter) . '" data-shift="' . $shift_letter . '" data-day-id="' . $day_id . '">';
-				$printPage .=   '<div class="shift-label">Shift ' . esc_html($shift_data['shift_letter']) . ' &middot; ' . esc_html($shift_type_l) . '</div>';
+				$printPage .=   '<div class="shift-label"><span class="shift-pill shift-' . strtolower($shift_letter) . '">Shift ' . esc_html($shift_data['shift_letter']) . '</span><span class="shift-type-label">' . esc_html($shift_type_l) . '</span></div>';
 				$printPage .=   '<div class="shift-blocks">';
+
+				$_grace_minutes = (int) apply_filters( 'schedules_unclaim_grace_minutes', 5 );
 
 				foreach ( $shift_data['blocks'] as $block ) {
 					$block_id    = (int) $block['id'];
@@ -176,8 +221,17 @@ if ( empty($weeks) ) {
 						? schedules_format_block_time($block['start_hour'], $block['end_hour'])
 						: $block['start_hour'] . '–' . $block['end_hour'];
 
+					// Check if within undo grace period
+					$_undo_remaining = 0;
+					if ( $user_claimed && ! empty($block['user_claimed_at']) ) {
+						$_claimed_ts     = strtotime( $block['user_claimed_at'] );
+						$_deadline       = $_claimed_ts + ( $_grace_minutes * 60 );
+						$_undo_remaining = max( 0, $_deadline - current_time('timestamp') );
+					}
+
 					if ( $user_claimed ) {
 						$state_class  = 'claimed';
+						if ( $_undo_remaining > 0 ) $state_class .= ' claim-undoable';
 						$status_label = 'Claimed';
 					} elseif ( $available <= 0 ) {
 						$state_class  = 'full';
@@ -191,6 +245,9 @@ if ( empty($weeks) ) {
 					$printPage .= '<div class="time-block ' . $state_class . '" data-block-id="' . $block_id . '" data-available="' . $available . '" data-time="' . esc_attr($time_str) . '" data-shift="' . $shift_letter . '" data-date="' . esc_attr($date) . '">';
 					$printPage .=   '<span class="time-range">' . esc_html($time_str) . '</span>';
 					$printPage .=   '<span class="block-status">' . esc_html($status_label) . '</span>';
+					if ( $_undo_remaining > 0 ) {
+						$printPage .= '<button class="claim-undo-btn" type="button" data-block-id="' . $block_id . '" data-remaining="' . $_undo_remaining . '" title="Undo claim">&times;</button>';
+					}
 					$printPage .= '</div>';
 				}
 
@@ -234,12 +291,26 @@ if ( empty($my_claims) ) {
 
 $printPage .= '</section>';
 
+// ---- Seating View (read-only) ----
+if ( $user_shift ) :
+$printPage .= '<section class="schedules-duty-section" id="schedules-duty-section">';
+$printPage .=   '<div class="duty-section-header">';
+$printPage .=     '<h2>Duty Assignments</h2>';
+$printPage .=     '<div class="duty-date-nav">';
+$printPage .=       '<input type="date" id="member-duty-date" value="' . esc_attr(date('Y-m-d')) . '">';
+$printPage .=     '</div>';
+$printPage .=   '</div>';
+$printPage .=   '<div id="member-duty-content"><p class="duty-loading">Loading\u2026</p></div>';
+$printPage .= '</section>';
+endif;
+
 // ---- Block confirmation popup (hidden, cloned by JS) ----
 $printPage .= '<div id="block-confirm-popup" class="block-confirm-popup" hidden role="dialog" aria-modal="true" aria-label="Confirm claim">';
-$printPage .=   '<p class="popup-message"></p>';
+$printPage .=   '<div class="popup-message"></div>';
+$printPage .=   '<div class="popup-note"></div>';
 $printPage .=   '<div class="popup-actions">';
 $printPage .=     '<button class="schedules-btn schedules-btn-primary popup-confirm" type="button">Confirm</button>';
-$printPage .=     '<button class="schedules-btn schedules-btn-ghost popup-cancel" type="button">Cancel</button>';
+$printPage .=     '<button class="schedules-btn popup-cancel" type="button">Cancel</button>';
 $printPage .=   '</div>';
 $printPage .= '</div>';
 

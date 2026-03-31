@@ -87,7 +87,10 @@ function bp_kw_save_tracked(array $data): void {
 }
 
 function bp_kw_save_history(array $data): void {
-	update_option('bp_kw_history', $data, false);
+	$ok = update_option('bp_kw_history', $data, false);
+	if (!$ok) {
+		error_log('bp_kw_save_history: update_option returned false — history may not have saved. Serialized size: ' . strlen(serialize($data)) . ' bytes.');
+	}
 }
 
 function bp_kw_save_rejected(array $data): void {
@@ -406,7 +409,7 @@ function bp_kw_render_dashboard_widget(): void {
 	#bp_keyword_rankings ul.kwt .kw-keyword{flex:1;text-align:left}
 	#bp_keyword_rankings ul.kwt .kw-rank{width:40px;text-align:center;flex-shrink:0}
 	#bp_keyword_rankings ul.kwt .kw-change{width:44px;text-align:center;flex-shrink:0}
-	#bp_keyword_rankings ul.kwt .kw-trend{width:88px;text-align:center;flex-shrink:0}
+	#bp_keyword_rankings ul.kwt .kw-trend{width:250px;text-align:center;flex-shrink:0}
 	#bp_keyword_rankings ul.kwt .kw-vol{width:36px;text-align:right;flex-shrink:0}
 	#bp_keyword_rankings .rn{font-weight:600;font-size:14px}
 	#bp_keyword_rankings .cu{color:#28a745;font-size:11px}
@@ -453,8 +456,8 @@ function bp_kw_render_dashboard_widget(): void {
 		<li>
 			<div class="kw-keyword"><a href="https://www.google.com/search?q=<?php echo urlencode($row['item']['keyword']); ?>" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;"><?php echo esc_html($row['item']['keyword']); ?></a><?php if ($group === 'geo') : ?> <span class="tag-geo">geo</span><?php elseif ($group === 'jobsite') : ?> <span class="tag-jobsite">jobsite</span><?php elseif ($group === 'blog') : ?> <span class="tag-blog">blog</span><?php elseif ($group === 'brand') : ?> <span class="tag-brand">brand</span><?php endif; ?></div>
 			<div class="kw-rank"><span class="rn" style="<?php echo esc_attr($color); ?>"><?php echo $rk ? '#' . $rk : '—'; ?></span></div>
-			<div class="kw-change"><?php if ($ch > 0) : ?><span class="cu">&#9650;<?php echo (int)$ch; ?></span><?php elseif ($ch < 0) : ?><span class="cd">&#9660;<?php echo abs((int)$ch); ?></span><?php else : ?><span style="color:#aaa">—</span><?php endif; ?></div>
-			<div class="kw-trend"><canvas id="kws-<?php echo $i; ?>" width="80" height="24"></canvas></div>
+			<div class="kw-change"><?php if ($ch === null) : ?><span style="color:#aaa">—</span><?php elseif ($ch > 0) : ?><span class="cu">&#9650;<?php echo (int)$ch; ?></span><?php elseif ($ch < 0) : ?><span class="cd">&#9660;<?php echo abs((int)$ch); ?></span><?php else : ?><span style="color:#aaa">—</span><?php endif; ?></div>
+			<div class="kw-trend"><canvas id="kws-<?php echo $i; ?>" width="238" height="24"></canvas></div>
 			<div class="kw-vol" style="color:#888;font-size:11px;"><?php echo $row['item']['search_vol'] ? number_format((int)$row['item']['search_vol']) : '—'; ?></div>
 		</li>
 		<?php endforeach; ?>
@@ -591,6 +594,11 @@ function bp_kw_render_admin_page(): void {
 		$group  = $item['group'] ?? 'main';
 		$rows[] = compact('kw_key', 'item', 'rank', 'change', 'group');
 	}
+	// Only show keywords with history and a rank in the top 100
+	$rows = array_values(array_filter($rows, function($r) use ($history) {
+		return !empty($history[$r['kw_key']]) && $r['rank'] !== null && $r['rank'] <= 100;
+	}));
+
 	usort($rows, function($a, $b) {
 		if ($a['rank'] && $b['rank']) return $a['rank'] <=> $b['rank'];
 		if ($a['rank']) return -1;
@@ -629,7 +637,7 @@ function bp_kw_render_admin_page(): void {
 		<input type="hidden" name="bp_kw_action" value="clear_all">
 		<input type="submit" class="button button-link-delete" value="&#10005; Clear All">
 	</form>
-	<p class="description" style="margin-top:8px;">
+<p class="description" style="margin-top:8px;">
 		Last fetched: <strong><?php echo esc_html($last_label); ?></strong> &nbsp;·&nbsp;
 		Snapshot: <strong><?php echo esc_html($snapshot_date ?: 'None'); ?></strong> &nbsp;·&nbsp;
 		Keywords: <strong><?php echo count($tracked); ?></strong>
@@ -705,10 +713,19 @@ function bp_kw_render_admin_page(): void {
 			elseif ($rank && $rank <= 10)  $rank_color = '#856404';
 			elseif ($rank && $rank <= 20)  $rank_color = '#cc7000';
 			else                           $rank_color = '#dc3545';
+
+			// Spark data for expandable row — all available history
+			$kh_spark = $history[$kw_key] ?? [];
+			ksort($kh_spark);
+			$spark_dates = array_keys($kh_spark);
+			$spark_ranks = array_values($kh_spark);
 			?>
-			<tr data-keyword="<?php echo esc_attr(strtolower($item['keyword'])); ?>"
+			<tr class="kw-data-row"
+			    data-keyword="<?php echo esc_attr(strtolower($item['keyword'])); ?>"
 			    data-pos="<?php echo esc_attr($pos_bucket); ?>"
-			    data-grp="<?php echo esc_attr($group); ?>">
+			    data-grp="<?php echo esc_attr($group); ?>"
+			    data-spark-dates="<?php echo esc_attr(json_encode($spark_dates)); ?>"
+			    data-spark-ranks="<?php echo esc_attr(json_encode($spark_ranks)); ?>">
 				<td><a href="https://www.google.com/search?q=<?php echo urlencode($item['keyword']); ?>" target="_blank" rel="noopener"><?php echo esc_html($item['keyword']); ?></a></td>
 				<td>
 					<?php if ($rank) : ?>
@@ -718,7 +735,9 @@ function bp_kw_render_admin_page(): void {
 					<?php endif; ?>
 				</td>
 				<td>
-					<?php if ($change > 0) : ?>
+					<?php if ($change === null) : ?>
+						<span style="color:#aaa">—</span>
+					<?php elseif ($change > 0) : ?>
 						<span style="color:#28a745">&#9650;<?php echo (int)$change; ?></span>
 					<?php elseif ($change < 0) : ?>
 						<span style="color:#dc3545">&#9660;<?php echo abs((int)$change); ?></span>
@@ -761,9 +780,21 @@ function bp_kw_render_admin_page(): void {
 					</form>
 				</td>
 			</tr>
+			<tr class="kw-spark-row">
+				<td colspan="8" style="padding:10px 16px 12px;background:#f6f7f7;border-top:none;">
+					<canvas class="kw-spark-canvas" height="60" style="display:block;width:100%;"></canvas>
+				</td>
+			</tr>
 		<?php endforeach; ?>
 		</tbody>
 	</table>
+
+	<style>
+	#kw-table tbody tr.kw-data-row { cursor: pointer; }
+	#kw-table tbody tr.kw-data-row:hover td { background: #f0f6ff !important; }
+	#kw-table tbody .kw-spark-row { display: none; }
+	#kw-table tbody .kw-spark-row.open { display: table-row; }
+	</style>
 
 	<script>
 	(function(){
@@ -830,6 +861,86 @@ function bp_kw_render_admin_page(): void {
 
 		// Apply on load so brand terms are pre-filtered from default "All types" view
 		applyFilters();
+
+		// Sparkline expand/collapse on row click
+		document.querySelectorAll('#kw-table tbody tr.kw-data-row').forEach(function(tr) {
+			tr.addEventListener('click', function(e) {
+				if (e.target.closest('button, a, form, input')) return;
+				var sparkRow = tr.nextElementSibling;
+				if (!sparkRow || !sparkRow.classList.contains('kw-spark-row')) return;
+				var isOpen = sparkRow.classList.toggle('open');
+				if (isOpen) {
+					var canvas = sparkRow.querySelector('.kw-spark-canvas');
+					var dates  = JSON.parse(tr.dataset.sparkDates || '[]');
+					var ranks  = JSON.parse(tr.dataset.sparkRanks || '[]');
+					drawAdminSparkline(canvas, dates, ranks);
+				}
+			});
+		});
+
+		function drawAdminSparkline(canvas, dates, ranks) {
+			canvas.width = canvas.offsetWidth;
+			var ctx  = canvas.getContext('2d');
+			var w    = canvas.width, h = canvas.height;
+			var padT = 16, padB = 18, padL = 8, padR = 8;
+			var drawW = w - padL - padR;
+			var drawH = h - padT - padB;
+
+			ctx.clearRect(0, 0, w, h);
+
+			var valid = ranks.filter(function(v) { return v > 0; });
+			if (!valid.length) {
+				ctx.fillStyle = '#aaa';
+				ctx.font = '12px sans-serif';
+				ctx.textAlign = 'center';
+				ctx.fillText('No history data', w / 2, h / 2);
+				return;
+			}
+
+			var mn = Math.min.apply(null, valid);
+			var mx = Math.max.apply(null, valid);
+			if (mn === mx) { mn = Math.max(1, mn - 1); mx = mn + 2; }
+
+			var n = ranks.length;
+			function xPos(j) { return padL + (n > 1 ? (j / (n - 1)) * drawW : drawW / 2); }
+			function yPos(v) { return padT + ((mx - v) / (mx - mn)) * drawH; }
+
+			// Draw line
+			ctx.beginPath();
+			ranks.forEach(function(v, j) {
+				var x = xPos(j), y = v > 0 ? yPos(v) : padT + drawH;
+				j === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+			});
+			ctx.strokeStyle = '#4a90d9';
+			ctx.lineWidth = 2;
+			ctx.stroke();
+
+			// Draw dots, rank labels, date labels
+			ranks.forEach(function(v, j) {
+				if (v <= 0) return;
+				var x = xPos(j), y = yPos(v);
+
+				ctx.beginPath();
+				ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+				ctx.fillStyle = '#4a90d9';
+				ctx.fill();
+
+				// Rank label above dot
+				ctx.font = 'bold 10px sans-serif';
+				ctx.textAlign = 'center';
+				ctx.fillStyle = '#333';
+				ctx.fillText('#' + v, x, Math.max(y - 6, padT - 2));
+
+				// Date label below canvas
+				if (dates[j]) {
+					var d = new Date(dates[j] + 'T12:00:00');
+					var label = (d.getMonth() + 1) + '/' + d.getDate();
+					ctx.font = '10px sans-serif';
+					ctx.fillStyle = '#999';
+					ctx.fillText(label, x, h - 3);
+				}
+			});
+		}
 	})();
 	</script>
 

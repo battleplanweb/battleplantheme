@@ -13,15 +13,16 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', 'v41.4' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', 'v41.5' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID );
 
-if ( !defined('_PLACES_API') ) define ( '_PLACES_API', get_option('bp_places_key') );
-if ( !defined('_JOBSITE_API') ) define ( '_JOBSITE_API', get_option('bp_jobsite_key') );
-if ( !defined('_BREVO_API') ) define ( '_BREVO_API', get_option('bp_brevo_key') );
+if ( !defined('_PLACES_API') ) define ( '_PLACES_API',  defined('BP_PLACES_KEY')     ? BP_PLACES_KEY     : '' );
+if ( !defined('_JOBSITE_API') ) define ( '_JOBSITE_API', defined('BP_JOBSITE_KEY')    ? BP_JOBSITE_KEY    : '' );
+if ( !defined('_BREVO_API') ) define ( '_BREVO_API',     defined('BP_BREVO_KEY')      ? BP_BREVO_KEY      : '' );
+if ( !defined('_CF_CACHE_KEY') ) define ( '_CF_CACHE_KEY', defined('BP_CLOUDFLARE_KEY') ? BP_CLOUDFLARE_KEY : '' );
 
 $user = is_user_logged_in() ? wp_get_current_user() : null;
 

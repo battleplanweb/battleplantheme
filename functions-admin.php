@@ -180,6 +180,8 @@ function battleplan_admin_footer_text() {
 		$printFooter .= '<a class="button" href="' . esc_url('//app.serpfox.com/shared/'.$customer_info['serpfox']) . '" target="_blank" rel="noopener">Keywords</a>';
 	}
 
+	$printFooter .= '<button type="button" id="bp-clear-cache-btn" class="button" data-nonce="' . esc_attr( wp_create_nonce('bp_clear_wpe_cache') ) . '">Clear Cache</button>';
+
 	$printFooter .= '</div><div style="justify-self:end; margin-bottom:15px;">';
 
 	$placeIDs   = $customer_info['pid'] ?? null;
@@ -543,8 +545,10 @@ add_action('admin_print_footer_scripts', function() {
 		$('#postbox-container-3 .meta-box-sortables').append($('#bp_keyword_rankings'));
 		$('#postbox-container-2 .meta-box-sortables').append($('#battleplan_queries_stats'));
 
-		// Disable sortable now that WordPress has initialized it
-		$('.meta-box-sortables').sortable('disable');
+		// Disable sortable — only on containers where WP has already initialized it
+		$('.meta-box-sortables').filter(function() {
+			return $(this).data('ui-sortable');
+		}).sortable('disable');
 
 		// Prevent any drag from saving positions to the DB
 		if ( window.postboxes ) postboxes.save_order = function() {};

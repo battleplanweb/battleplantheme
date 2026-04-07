@@ -483,5 +483,37 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 
 		QTags.addButton( 'bp_phone-link', 'Phone Link', '<b>[get-biz info="phone-link"]</b>', '', 'phone-link', 'Phone Link', 1000 );
 	}
+
+
+
+});
+
+// Clear WP Engine + Cloudflare cache — isolated listener so errors above can't block it
+document.addEventListener('DOMContentLoaded', function() {
+	var clearCacheBtn = document.getElementById('bp-clear-cache-btn');
+	if (!clearCacheBtn) return;
+	clearCacheBtn.addEventListener('click', function(e) {
+		e.preventDefault();
+		e.stopPropagation();
+		var btn = this;
+		var original = btn.textContent;
+		btn.disabled = true;
+		btn.textContent = 'Clearing...';
+		fetch(ajaxurl, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+			body: 'action=bp_clear_wpe_cache&_ajax_nonce=' + encodeURIComponent(btn.dataset.nonce)
+		})
+		.then(function(r) { return r.json(); })
+		.then(function(data) {
+			btn.textContent = data.success ? 'Cleared!' : 'Error';
+			if (data.data && data.data.message) btn.title = data.data.message;
+			setTimeout(function() { btn.textContent = original; btn.title = ''; btn.disabled = false; }, 4000);
+		})
+		.catch(function() {
+			btn.textContent = 'Failed';
+			setTimeout(function() { btn.textContent = original; btn.disabled = false; }, 3000);
+		});
+	});
 });
 

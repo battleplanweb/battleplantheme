@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Version tag to deploy (e.g. v40.1)'
+        description: 'Version tag to deploy (e.g. v41.4)'
         required: true
         default: ''
 
@@ -16,29 +16,28 @@ jobs:
       fail-fast: false
       matrix:
         wpe_env:
-          - rovindirec1stg
+          - aerialspiral
           - babes2022
           - babescatering
           - babeschickentv
           - bubbas2022
+          - ccsoschedule
+          - familyairhvac
+          - firehousehvac
+          - forthefield
+          - genemcguire
+          - giftcardsmerch
+          - gpsplumbing
+          - kintec
+          - midwestair
+          - paradisetat
+          - poleaerial
+          - piercesonac
+          - rovindirec1stg
           - rovindir
           - rovininc
           - spribeyes
           - sweetiepie2stg
-          - forthefield
-          - kintec
-          - familyairhvac
-          - firehousehvac
-          - gpsplumbing
-          - poleaerial
-          - piercesonac
-          - aerialspiral
-          - ccsoschedule
-          - midwestair
-          - paradisetat
-          - genemcguire
-          - giftcardsmerch
-
     steps:
       - name: Checkout tag ${{ github.event.inputs.tag }}
         uses: actions/checkout@v4

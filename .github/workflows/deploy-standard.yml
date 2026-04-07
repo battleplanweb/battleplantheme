@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Version tag to deploy (e.g. v40.1)'
+        description: 'Version tag to deploy (e.g. v41.4)'
         required: true
         default: ''
 
@@ -16,148 +16,144 @@ jobs:
       fail-fast: false
       matrix:
         wpe_env:
-          - bertoac
-          - acservice
-          - advairservice
-          - advancedelectr
-          - okairpro
-          - airrighttx
-          - alfordac
-          - enidairpro
-          - cartershvac
-          - chrservices
-          - commercialair
-          - crouchs
-          - duttonhvac
-          - emberofelaren1
-          - gozaconstruct
-          - guttenboy
-          - innovativeac
-          - jaycollc
-          - jeffaugustine
-          - jerryberry
-          - knightsservice
-          - mathisair
-          - mcmhvac
-          - michaelscomfor
-          - mikelecornu
-          - nicholsandsons
-          - nwastone
-          - prosperair
-          - reyeshvac
-          - selectmech
-          - siscoheatair
-          - sslheat
-          - stevesframe
-          - trailsidemotel
-          - urtfc
-          - wrroofing
-          - waxahachieheat
           - accessibleheat
-          - adjustedlife
-          - admirableair
-          - alisairservice
-          - aquafirst
-          - bigdmechanical
-          - bradshvac
-          - castheatingair
-          - cherylrealtor
-          - conoverair
-          - consumerair
-          - coolcohvac
-          - deerhollowcab
-          - empireservice
-          - faircomfort
-          - fivestarheatac
-          - gnhmechanical
-          - gfmdogc
-          - greersferryac
-          - hendrylabelle
-          - hphservices
-          - gojaric
-          - jlimech
-          - jrdinspections
-          - lakeviewalarms
-          - locknrollself
-          - lovejoyhvac
-          - makcomfort
-          - matthewshvac
-          - millpondr
-          - mnmair
-          - norrismech
-          - onecallheatac
-          - patriothvac
-          - retrieverrun
-          - tritechmech
           - acrescue
+          - acservice
           - acsolutionswac
           - actionairc
+          - adjustedlife
+          - admirableair
+          - advairservice
+          - advancedelectr
           - advancedfire
           - advantagehvacp
           - agheatingacsol
-          - airmax1
-          - allamericanac
-          - azheatair
-          - blainservices
-          - blankenshiphv
-          - cherokeeserv
-          - claylewis
-          - cleanairsys
-          - dobbsac
-          - ejsheatandair
-          - executivemob
-          - fathersonshome
-          - garlandsindoor
-          - greenstarhvac
-          - haywardair
-          - hillenburgelec
-          - hillenburghvac
-          - hometowncomf
-          - infinityair25
-          - jacksonsair
-          - jimmycarver
-          - jimsoldfashion
-          - loflinhvac
-          - magnoliaplumb
-          - markrogers
-          - mcclainhvac
-          - millerservice
-          - nationalhvacpl
-          - otterholder
-          - rsgutters
-          - sernaservice
-          - subzeromech
-          - superdave
-          - visionair
-          - wrightsair
-          - alignk9
-          - alwaysbb
           - aheritageair
+          - airmax1
+          - airrighttx
+          - alfordac
+          - alignk9
+          - alisairservice
+          - allamericanac
+          - alwaysbb
+          - aquafirst
           - arkansastmj
           - articair
           - asaircond
-          - bcimotion1
-          - coworkersmin
-          - daloremhvac
-          - deltapools
-          - eagletteserv25
-          - elevatemytech
-          - fiaisland
-          - gwbaclub
-          - humphreyac
-          - mainestone
-          - primeheatingai
-          - searkhvac
-          - texoma
-          - wrightspaving
+          - azheatair
           - battleplanwebd
-          - battleplansrv2
-          - battleplanweb3
+          - bcimotion1
+          - bertoac
+          - bigdmechanical
+          - blainservices
+          - blankenshiphv
+          - bradshvac
+          - cartershvac
+          - castheatingair
+          - cherokeeserv
+          - cherylrealtor
+          - chrservices
+          - claylewis
+          - cleanairsys
+          - commercialair
+          - conoverair
+          - consumerair
+          - coolcohvac
           - courterhall
           - courterhallstg
+          - coworkersmin
+          - crouchs
+          - daloremhvac
+          - deerhollowcab
+          - deltapools
+          - dobbsac
+          - duttonhvac
+          - eagletteserv25
+          - ejsheatandair
+          - elevatemytech
+          - emberofelaren1
+          - empireservice
+          - enidairpro
+          - executivemob
+          - faircomfort
+          - fathersonshome
+          - fiaisland
+          - fivestarheatac
+          - garlandsindoor
+          - gfmdogc
+          - gnhmechanical
+          - gojaric
+          - gozaconstruct
+          - greenstarhvac
+          - greersferryac
+          - guttenboy
+          - gwbaclub
+          - haywardair
+          - hendrylabelle
+          - hillenburgelec
+          - hillenburghvac
+          - hometowncomf
+          - hphservices
+          - humphreyac
+          - infinityair25
+          - innovativeac
+          - jacksonsair
+          - jaycollc
+          - jeffaugustine
+          - jerryberry
+          - jimmycarver
+          - jimsoldfashion
+          - jlimech
+          - jrdinspections
+          - knightsservice
+          - lakeviewalarms
+          - locknrollself
+          - loflinhvac
+          - lovejoyhvac
+          - magnoliaplumb
+          - mainestone
+          - makcomfort
+          - markrogers
+          - mathisair
+          - matthewshvac
+          - mcclainhvac
+          - mcmhvac
+          - michaelscomfor
+          - mikelecornu
+          - millerservice
+          - millpondr
+          - mnmair
+          - nicholsandsons
+          - norrismech
+          - nwastone
+          - okairpro
+          - onecallheatac
+          - otterholder
+          - patriothvac
           - polereboot
+          - primeheatingai
+          - prosperair
+          - retrieverrun
+          - reyeshvac
+          - rsgutters
+          - searkhvac
+          - selectmech
+          - sernaservice
+          - siscoheatair
+          - sslheat
+          - stevesframe
+          - subzeromech
+          - superdave
           - tempsac
-
+          - texoma
+          - trailsidemotel
+          - tritechmech
+          - urtfc
+          - visionair
+          - waxahachieheat
+          - wrightsair
+          - wrightspaving
+          - wrroofing
     steps:
       - name: Checkout tag ${{ github.event.inputs.tag }}
         uses: actions/checkout@v4

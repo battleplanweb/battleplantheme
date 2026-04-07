@@ -49,6 +49,8 @@ function bp_get_css_sources() {
         $deferred[] = '/style-woocommerce.css';
     }
 
+    $deferred[] = '/style-site-pulse.css';
+
     if ( is_plugin_active('cue/cue.php') ) {
         $deferred[] = '/style-cue.css';
     }

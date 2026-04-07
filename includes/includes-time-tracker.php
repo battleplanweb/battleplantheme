@@ -105,10 +105,7 @@ function bp_time_report_to_hub( $id, $started, $ended ) {
 	$host = $_SERVER['HTTP_HOST'] ?? parse_url( get_bloginfo('url'), PHP_URL_HOST );
 	$site = preg_replace( '/^www\./', '', strtolower( preg_replace( '/:\d+$/', '', $host ) ) );
 
-	// Skip WP Engine staging environments
-	if ( strpos( $site, 'wpengine' ) !== false ) return;
-
-	$ts     = (string) time();
+$ts     = (string) time();
 	$secret = 'Vn8qkM2Z4yHsR1jPwA3tLf7bE6uXpD9c';
 	$sig    = hash_hmac( 'sha256', $site . '|' . $id . '|' . $ts, $secret );
 

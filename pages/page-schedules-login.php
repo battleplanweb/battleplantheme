@@ -12,7 +12,7 @@ if ( is_user_logged_in() ) {
 	}
 
 	if ( in_array('schedules_member', $roles, true) ) {
-		$printPage = '<script>window.location.href="' . esc_js( home_url('/schedules-overtime/') ) . '";</script>';
+		$printPage = '<script>window.location.href="' . esc_js( home_url('/schedules-member/') ) . '";</script>';
 		return $printPage;
 	}
 }

@@ -1,4 +1,6 @@
 <?php
+require_once get_template_directory() . '/prompts/prompts-jobsite-geo.php';
+
 /* Battle Plan Web Design Jobsite GEO */
 
 /*--------------------------------------------------------------
@@ -148,6 +150,10 @@ add_filter('wp_handle_upload_prefilter', function($file) {
 // Uses wp_handle_upload (post-filter) — fires after WP has moved the file to the
 // uploads directory, where it has a real filename/extension and can be freely modified.
 add_filter('wp_handle_upload', function($upload, $context) {
+
+	if (defined('_USER_LOGIN') && _USER_LOGIN === 'battleplanweb') {
+		return $upload;
+	}
 
 	if (empty($upload['file']) || !file_exists($upload['file'])) {
 		return $upload;
@@ -1934,43 +1940,7 @@ function bp_geo_call_anthropic( $data ) {
 		? "Use the company name '{}' naturally once in this post. Do not use it more than once."
 		: "Do NOT use the company name in this post. Write entirely in first-person team voice: 'Our technician...', 'We diagnosed...', 'The team found...'";
 
-	$prompt = <<<PROMPT
-You are an SEO copywriter for a home services company called "{$company_clean}".
-
-A technician has written a rough job description after completing a service call. Your job is to:
-
-1. Rewrite the description into polished, professional, SEO-friendly content.
-   - Fix grammar, spelling, and punctuation.
-   - Write in a helpful, trustworthy tone — not salesy.
-   - Use natural length appropriate to the content (don't pad thin notes, don't truncate rich ones).
-   - Naturally incorporate the city and state into the writing where it makes sense for local SEO.
-   - NEVER include the street address or zip code in the output.
-   - Target an 8th grade reading level. Keep sentences short and clear. Avoid run-on sentences.
-     A compound sentence here and there is fine, but prefer simple, direct sentences overall.
-   - COMPANY NAME INSTRUCTION: {$company_name_instruction}
-       * Never repeat the company name more than once in a single post.
-       * Never use formal legal names like "LLC", "Inc", or "Corp" — use only the clean business name.
-
-2. Classify the job into exactly one service category from the list below.
-   - Return ONLY the base service slug (no city/state appended) — e.g. "air-conditioner-repair", "heating-installation".
-   - Use full words in slugs — never abbreviations. "ac" should always be "air-conditioner". "a/c" should be "air-conditioner".
-   - Choose the best match based on what the job actually was, not just keywords. Use context and nuance.
-   - If no existing term fits well, invent a clean, lowercase, hyphenated slug using full words.
-
-{$location_note}
-
-EXISTING SERVICE TERMS (slugs):
-{$existing_terms_str}
-
-RAW TECHNICIAN DESCRIPTION:
-{$data['raw_description']}
-
-Respond ONLY with a valid JSON object. No preamble, no markdown, no explanation. Format:
-{
-  "rewritten_description": "...",
-  "service_category": "..."
-}
-PROMPT;
+	$prompt = bp_geo_prompt_rewrite_description( $company_clean, $company_name_instruction, $location_note, $existing_terms_str, $data['raw_description'] );
 
 	$response = wp_remote_post( 'https://api.anthropic.com/v1/messages', [
 		'timeout' => 30,
@@ -2075,6 +2045,10 @@ function bp_geo_generate_term_intro( int $term_id ) {
 	$company = preg_replace( '/\s*,?\s*(LLC|Inc\.?|Corp\.?|Ltd\.?|Co\.?)\.?\s*$/i', '', get_bloginfo( 'name' ) );
 	$company = trim( $company );
 
+	$wiki = bp_geo_fetch_wiki_summary( $city, $state );
+	$prompt = bp_geo_prompt_service_intro( $company, $service, $city, $state, $wiki );
+
+	/* REPLACED — prompts moved to /prompts/prompts-jobsite-geo.php
 	$opening_para = rand( 1, 7 );
 	$second_para = rand( 1, 5 );
 	$choose_h2 = rand( 1, 5 );
@@ -2196,6 +2170,7 @@ if ( $map_caption === 1 ) {
 $prompt .= "No HTML tags.
 
 Respond ONLY with valid JSON: {\"intro\": \"...html content...\", \"map_caption\": \"...plain text...\"}";
+	REPLACED */
 
 	$response = wp_remote_post( 'https://api.anthropic.com/v1/messages', [
 		'timeout' => 45,

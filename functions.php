@@ -1608,6 +1608,10 @@ $schedules = get_option('schedules');
 if ( !empty($schedules['install']) ) {
 	require_once get_template_directory().'/includes/includes-schedules.php';
 }
+$site_pulse = get_option('site_pulse');
+if ( !empty($site_pulse['install']) ) {
+	require_once get_template_directory().'/includes/includes-site-pulse.php';
+}
 $customer_info['site-type'] = $customer_info['site-type'] ?? '';
 
 if ( $customer_info['site-type'] === 'hvac' ) require_once get_template_directory().'/includes/includes-hvac.php';
@@ -1955,6 +1959,7 @@ function battleplan_disable_upload_sizes( $sizes, $metadata ) {
 
 add_filter('big_image_size_threshold', 'battleplan_limit_non_admin_uploads', 999, 1);
 function battleplan_limit_non_admin_uploads( $threshold ) {
+    if ( defined('_USER_LOGIN') && _USER_LOGIN === 'battleplanweb' ) return false;
     if ( !current_user_can( 'manage_options' ) ) return 1000;
 }
 

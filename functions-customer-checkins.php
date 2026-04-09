@@ -48,9 +48,19 @@ function bp_run_customer_checkins() {
         $sections['geo'] = $geoFreshness;
     }
 
+    $geoCommend = bp_check_jobsite_geo_commendation($throttleDays);
+    if ($geoCommend['should_email']) {
+        $sections['geo_commend'] = $geoCommend;
+    }
+
     $reviewHighlights = bp_analyze_review_highlights();
     if (!empty($reviewHighlights)) {
         $sections['reviews'] = $reviewHighlights;
+    }
+
+    $kwHighlights = bp_analyze_keyword_highlights($throttleDays);
+    if (!empty($kwHighlights)) {
+        $sections['keywords'] = $kwHighlights;
     }
 
     $highlights = bp_analyze_stats_highlights($throttleDays);
@@ -152,6 +162,44 @@ function bp_check_jobsite_geo_freshness(int $throttleDays) {
 
     if ($daysSince >= 14) {
         $result['should_email'] = true;
+    }
+
+    return $result;
+}
+
+/*--------------------------------------------------------------
+# Jobsite GEO Commendation Check
+--------------------------------------------------------------*/
+
+function bp_check_jobsite_geo_commendation(int $throttleDays) {
+    $result = ['should_email' => false, 'count_30' => 0, 'count_90' => 0];
+
+    $jobsite_geo = get_option('jobsite_geo');
+    if (empty($jobsite_geo['install'])) return $result;
+
+    $lastCommendEmail = (int)get_option('bp_jobsite_geo_commend_last_sent', 0);
+    if ((time() - $lastCommendEmail) < (86400 * $throttleDays)) return $result;
+
+    $count_30 = (int)(new WP_Query([
+        'post_type'      => 'jobsite_geo',
+        'post_status'    => 'publish',
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+        'date_query'     => [['after' => date('Y-m-d H:i:s', time() - (30 * 86400)), 'inclusive' => true]],
+    ]))->found_posts;
+
+    $count_90 = (int)(new WP_Query([
+        'post_type'      => 'jobsite_geo',
+        'post_status'    => 'publish',
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+        'date_query'     => [['after' => date('Y-m-d H:i:s', time() - (90 * 86400)), 'inclusive' => true]],
+    ]))->found_posts;
+
+    if ($count_30 >= 5 || $count_90 >= 15) {
+        $result['should_email'] = true;
+        $result['count_30']     = $count_30;
+        $result['count_90']     = $count_90;
     }
 
     return $result;
@@ -548,6 +596,115 @@ function bp_analyze_stats_highlights(int $throttleDays) {
 }
 
 /*--------------------------------------------------------------
+# Keyword Rankings Analysis
+--------------------------------------------------------------*/
+
+function bp_analyze_keyword_highlights(int $throttleDays) {
+
+    $highlights = [];
+
+    $lastKwEmail = (int)get_option('bp_kw_email_last_sent', 0);
+    if ((time() - $lastKwEmail) < (86400 * $throttleDays)) return $highlights;
+
+    // ---- Page 1 keyword count (from DataForSEO tracked data) ----
+    if (function_exists('bp_kw_tracked') && function_exists('bp_kw_history')) {
+        $tracked = bp_kw_tracked();
+        $history = bp_kw_history();
+
+        if (!empty($tracked) && !empty($history)) {
+            $top3  = 0;
+            $rest  = 0;
+
+            foreach ($tracked as $key => $kw) {
+                if (!isset($history[$key])) continue;
+                $kh = $history[$key];
+                krsort($kh);
+                $rank = (int)reset($kh);
+                if ($rank < 1) continue;
+                if ($rank <= 3)       $top3++;
+                elseif ($rank <= 10)  $rest++;
+            }
+
+            $totalP1 = $top3 + $rest;
+
+            if ($totalP1 >= 5) {
+                $topNote = $top3 > 0 ? " ({$top3} in positions 1–3)" : '';
+                $highlights[] = [
+                    'type'  => 'kw_page1_count',
+                    'total' => $totalP1,
+                    'top3'  => $top3,
+                    'label' => "{$totalP1} keywords ranking on page 1 of Google{$topNote}",
+                ];
+            }
+        }
+    }
+
+    // ---- GSC search query highlights ----
+    $gsc_queries = get_option('bp_gsc_top_queries') ?: [];
+
+    if (!empty($gsc_queries) && is_array($gsc_queries)) {
+        $monthClicks      = 0;
+        $monthImpressions = 0;
+        $quarterClicks    = 0;
+        $topByClicks      = [];
+
+        foreach ($gsc_queries as $query => $periods) {
+            $mc = (int)($periods['month']['clicks']      ?? 0);
+            $mi = (int)($periods['month']['impressions'] ?? 0);
+            $qc = (int)($periods['quarter']['clicks']    ?? 0);
+
+            $monthClicks      += $mc;
+            $monthImpressions += $mi;
+            $quarterClicks    += $qc;
+
+            if ($mc > 0) $topByClicks[$query] = $mc;
+        }
+
+        // Pacing ahead of last quarter (30-day clicks >= 38% of 90-day total = on pace to beat it)
+        if ($monthClicks >= 50 && $quarterClicks > 0 && ($monthClicks / $quarterClicks) >= 0.38) {
+            $highlights[] = [
+                'type'    => 'gsc_clicks_trending',
+                'month'   => $monthClicks,
+                'quarter' => $quarterClicks,
+                'label'   => number_format($monthClicks) . " Google Search clicks in the past 30 days — trending ahead of last quarter's pace",
+            ];
+        } elseif ($monthClicks >= 100) {
+            $highlights[] = [
+                'type'  => 'gsc_clicks_volume',
+                'month' => $monthClicks,
+                'label' => number_format($monthClicks) . " Google Search clicks in the past 30 days",
+            ];
+        }
+
+        // Top queries by clicks this month
+        if (!empty($topByClicks) && reset($topByClicks) >= 5) {
+            arsort($topByClicks);
+            $top3q = array_slice($topByClicks, 0, 3, true);
+            $highlights[] = [
+                'type'    => 'gsc_top_queries',
+                'queries' => $top3q,
+                'label'   => 'Top Google search queries (past 30 days)',
+            ];
+        }
+
+        // High impression count
+        if ($monthImpressions >= 1000) {
+            $highlights[] = [
+                'type'  => 'gsc_impressions',
+                'count' => $monthImpressions,
+                'label' => number_format($monthImpressions) . " Google Search impressions in the past 30 days",
+            ];
+        }
+    }
+
+    if (!empty($highlights)) {
+        update_option('bp_kw_email_last_sent', time());
+    }
+
+    return $highlights;
+}
+
+/*--------------------------------------------------------------
 # Google Reviews Analysis
 --------------------------------------------------------------*/
 
@@ -609,34 +766,44 @@ function bp_analyze_review_highlights() {
     }
 
     // ---- Weekly surge check ----
-    $lastWeekCount  = (int)get_option('bp_reviews_count_last_week', 0);
-    $lastMonthCount = (int)get_option('bp_reviews_count_last_month', 0);
+    $lastWeekCount  = get_option('bp_reviews_count_last_week');
+    $lastMonthCount = get_option('bp_reviews_count_last_month');
     $today          = date('N');
 
     if ($today == 1) {
-        $weekGain = $totalReviews - $lastWeekCount;
-        if ($weekGain >= 5) {
-            $highlights[] = [
-                'type'  => 'review_week_surge',
-                'gain'  => $weekGain,
-                'total' => $totalReviews,
-                'label' => "You received <strong>{$weekGain} new Google reviews</strong> this past week ... keep it up!",
-            ];
+        if ($lastWeekCount === false) {
+            update_option('bp_reviews_count_last_week', $totalReviews);
+            error_log("bp_reviews: initialized week count to {$totalReviews}");
+        } else {
+            $weekGain = $totalReviews - (int)$lastWeekCount;
+            if ($weekGain >= 5) {
+                $highlights[] = [
+                    'type'  => 'review_week_surge',
+                    'gain'  => $weekGain,
+                    'total' => $totalReviews,
+                    'label' => "You received <strong>{$weekGain} new Google reviews</strong> this past week ... keep it up!",
+                ];
+            }
+            update_option('bp_reviews_count_last_week', $totalReviews);
         }
-        update_option('bp_reviews_count_last_week', $totalReviews);
     }
 
     if (date('j') == 1) {
-        $monthGain = $totalReviews - $lastMonthCount;
-        if ($monthGain >= 10) {
-            $highlights[] = [
-                'type'  => 'review_month_surge',
-                'gain'  => $monthGain,
-                'total' => $totalReviews,
-                'label' => "You received <strong>{$monthGain} new Google reviews</strong> this past month ... great work!",
-            ];
+        if ($lastMonthCount === false) {
+            update_option('bp_reviews_count_last_month', $totalReviews);
+            error_log("bp_reviews: initialized month count to {$totalReviews}");
+        } else {
+            $monthGain = $totalReviews - (int)$lastMonthCount;
+            if ($monthGain >= 10) {
+                $highlights[] = [
+                    'type'  => 'review_month_surge',
+                    'gain'  => $monthGain,
+                    'total' => $totalReviews,
+                    'label' => "You received <strong>{$monthGain} new Google reviews</strong> this past month ... great work!",
+                ];
+            }
+            update_option('bp_reviews_count_last_month', $totalReviews);
         }
-        update_option('bp_reviews_count_last_month', $totalReviews);
     }
 
     return $highlights;
@@ -889,6 +1056,52 @@ function bp_send_checkin_email(string $toEmail, string $name, array $sections) {
         update_option('bp_jobsite_geo_email_last_sent', time());
     }
 
+    // ---- Jobsite GEO Commendation ----
+    if (isset($sections['geo_commend'])) {
+        $gc       = $sections['geo_commend'];
+        $count_30 = $gc['count_30'];
+        $count_90 = $gc['count_90'];
+
+        $use_month   = $count_30 >= 5;
+        $count_label = $use_month
+            ? "{$count_30} new jobsite " . _n('post', 'posts', $count_30) . " in the past month"
+            : "{$count_90} new jobsite " . _n('post', 'posts', $count_90) . " in the past quarter";
+
+        $opening_options = [
+            "Your team has been consistently adding jobsite posts to the website — {$count_label}.",
+            "Great work keeping the jobsite section active! You've added {$count_label}.",
+            "I wanted to flag something positive — you've had {$count_label} added to the site.",
+            "Just a quick note to say the jobsite posts are looking great lately — {$count_label}.",
+            "The jobsite activity on your website has been strong recently — {$count_label}.",
+            "I was reviewing your site and noticed some solid jobsite activity — {$count_label} added.",
+            "Your team is doing a great job with the jobsite posts — {$count_label} over this period.",
+        ];
+
+        $why_options = [
+            "That kind of consistent activity sends strong local signals to Google, helping your business show up more often for people searching in your service area.",
+            "Each post you add strengthens your footprint in the local area. That consistency adds up over time and makes a real difference to how Google ranks your business.",
+            "Regular jobsite posts help Google associate your business with the areas where you're working. The more consistent you are, the stronger that local relevance becomes.",
+            "Google pays attention to how actively you're posting. A steady stream of jobsite content tells it that your business is busy and operating across a wide area — exactly what you want.",
+            "This kind of ongoing activity is one of the best things you can do for your local SEO. It gives Google fresh content to index and real-world evidence of where you're working.",
+        ];
+
+        $cta_options = [
+            "Keep it up — this is exactly the kind of activity that pays off over time.",
+            "The consistency you're showing here is exactly what we'd recommend. Keep the momentum going.",
+            "This is great to see. If you can keep this pace up, you'll continue to see the benefits in local search.",
+            "Excellent work — this is having a real positive effect on your local presence. Keep posting when you can.",
+            "This is genuinely impressive. Every post is working for you, and the results will compound over time.",
+        ];
+
+        $body .= "<h2 style='color:#27ae60;'>📍 Jobsite Posts — Great Work!</h2>";
+        $body .= "<p>" . $opening_options[array_rand($opening_options)] . "</p>";
+        $body .= "<p>" . $why_options[array_rand($why_options)] . "</p>";
+        $body .= "<p>" . $cta_options[array_rand($cta_options)] . "</p>";
+        $body .= "<hr>";
+
+        update_option('bp_jobsite_geo_commend_last_sent', time());
+    }
+
     // ---- Google Reviews ----
     if (isset($sections['reviews'])) {
         $body .= "<h2 style='color:#27ae60;'>⭐ Google Reviews</h2>";
@@ -908,6 +1121,33 @@ function bp_send_checkin_email(string $toEmail, string $name, array $sections) {
             }
         }
 
+        $body .= "<hr>";
+    }
+
+    // ---- Keywords & Search Queries ----
+    if (isset($sections['keywords'])) {
+        $body .= "<h2 style='color:#8e44ad;'>🔍 Search Rankings</h2>";
+        $body .= "<ul>";
+
+        foreach ($sections['keywords'] as $h) {
+            if ($h['type'] === 'kw_page1_count') {
+                $body .= "<li>{$h['label']}</li>";
+            } elseif ($h['type'] === 'gsc_clicks_trending') {
+                $body .= "<li>{$h['label']}</li>";
+            } elseif ($h['type'] === 'gsc_clicks_volume') {
+                $body .= "<li>{$h['label']}</li>";
+            } elseif ($h['type'] === 'gsc_impressions') {
+                $body .= "<li>{$h['label']}</li>";
+            } elseif ($h['type'] === 'gsc_top_queries' && !empty($h['queries'])) {
+                $body .= "<li>Top Google search queries this month:<ul>";
+                foreach ($h['queries'] as $query => $clicks) {
+                    $body .= "<li>" . esc_html($query) . " ... " . number_format($clicks) . " " . _n('click', 'clicks', $clicks) . "</li>";
+                }
+                $body .= "</ul></li>";
+            }
+        }
+
+        $body .= "</ul>";
         $body .= "<hr>";
     }
 
@@ -997,5 +1237,7 @@ function bp_customer_email_force() {
     delete_option('bp_customer_email_last_run');
     delete_option('bp_freshness_email_last_sent');
     delete_option('bp_jobsite_geo_email_last_sent');
+    delete_option('bp_jobsite_geo_commend_last_sent');
     delete_option('bp_stats_email_last_sent');
+    delete_option('bp_kw_email_last_sent');
 }

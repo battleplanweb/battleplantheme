@@ -347,59 +347,43 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 
 
 		const btn = document.getElementById('bp-ga4-rebuild');
-		if (!btn) return;
+		if (btn) {
 
-		const status = document.getElementById('bp-ga4-status');
+			const status = document.getElementById('bp-ga4-status');
 
-		btn.onclick = function () {
+			btn.onclick = function () {
+				btn.disabled = true;
+				status.innerHTML = "Starting…";
+				runStage();
+			};
 
-			btn.disabled = true;
-			status.innerHTML = "Starting…";
-
-			runStage();
-		};
-
-		function runStage() {
-
-			fetch(ajaxurl, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/x-www-form-urlencoded'
-				},
-				body: 'action=bp_ga4_collect_stage'
-			})
+			function runStage() {
+				fetch(ajaxurl, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body: 'action=bp_ga4_collect_stage'
+				})
 				.then(r => r.json())
 				.then(data => {
-
 					if (!data.success) {
-
 						status.innerHTML = "Error";
 						btn.disabled = false;
 						return;
 					}
-
 					const s = data.data;
-
-					status.innerHTML =
-						"Stage " + s.stage_before + " complete";
-
+					status.innerHTML = "Stage " + s.stage_before + " complete";
 					if (!s.complete) {
-
 						setTimeout(runStage, 500);
-
 					} else {
-
 						status.innerHTML = "Complete";
 						btn.disabled = false;
 					}
-
 				})
 				.catch(() => {
-
 					status.innerHTML = "Request failed";
 					btn.disabled = false;
-
 				});
+			}
 		}
 
 

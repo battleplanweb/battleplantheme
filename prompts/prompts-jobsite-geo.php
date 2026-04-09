@@ -64,7 +64,8 @@ function bp_geo_prompt_service_intro( string $company, string $service, string $
 	$opening_para = rand( 1, 7 );
 	$second_para = rand( 1, 5 );
 	$choose_h2 = rand( 1, 5 );
-	$local_para  = rand( 1, 7 );
+	$local_para1  = rand( 1, 7 );
+	$local_para2  = rand( 1, 7 );
 	$wrap_up_para  = rand( 1, 5 );
 	$map_caption  = rand( 1, 5 );
 
@@ -122,22 +123,50 @@ H2 HEADING — (SEO-friendly. No filler. Standalone tag, not inside a paragraph.
 
 	$prompt .= "\n\nLOCAL PARAGRAPH — ";
 	if ( $wiki ) {
-		$prompt .="Use the following information about the neighborhoods, geography, climate, and character of {$city} to infuse this paragraph with local SEO value. Do not copy any sentences verbatim:\n\n\"{$wiki}\"\n\n";
+		if ( $local_para1 === 1 ) {
+			$prompt .="Use the following information to talk about the neighborhoods of {$city} to infuse this paragraph with local SEO value. Do not copy any sentences verbatim:\n\n\"{$wiki}\"\n\n";
+		} elseif ( $local_para1 === 2 ) {
+			$prompt .="Use the following information about the geography of {$city} to infuse this paragraph with local SEO value. Do not copy any sentences verbatim:\n\n\"{$wiki}\"\n\n";
+		} elseif ( $local_para1 === 3 ) {
+			$prompt .="Use the following information about the climate of {$city} to infuse this paragraph with local SEO value. Do not copy any sentences verbatim:\n\n\"{$wiki}\"\n\n";
+		} elseif ( $local_para1 === 4 ) {
+			$prompt .="Use the following information about {$city} to reference its schools, colleges, musuems, and/or other educational places to infuse this paragraph with local SEO value. Do not copy any sentences verbatim:\n\n\"{$wiki}\"\n\n";
+		} elseif ( $local_para1 === 5 ) {
+			$prompt .="Use the following information about {$city} to reference nearby sports teams, cultural venues, theaters, and/or stadiums to infuse this paragraph with local SEO value. Do not copy any sentences verbatim:\n\n\"{$wiki}\"\n\n";
+		} elseif ( $local_para1 === 6 ) {
+			$prompt .="Use the following information about {$city} to reference its wildlife, zoos, natural preserves, and/or parks to infuse this paragraph with local SEO value. Do not copy any sentences verbatim:\n\n\"{$wiki}\"\n\n";
+		} else {
+			$prompt .="Use the following information about {$city} to reference its landmarks, history, and/or other notable features to infuse this paragraph with local SEO value. Do not copy any sentences verbatim:\n\n\"{$wiki}\"\n\n";
+		}
+	} elseif ( $local_para1 === 1 || $local_para1 === 2 ) {
+		$prompt .= "Use your training knowledge about {$city}, {$state}, to describe its regional geography and climate. ";
+	} elseif ( $local_para1 === 3 || $local_para1 === 4 ) {
+		$prompt .= "Use your training knowledge about {$city}, {$state}, to reference any landmarks, history or cultural venues like sports teams, theaters, parks, etc. ";
 	} else {
-		$prompt .= "Use your training knowledge about {$city}, {$state}, to describe the regional climate and housing character. ";
+		$prompt .= "Use your training knowledge about {$city}, {$state}, to describe something notable about the region, something the people that live there would recognize. ";
 	}
 
-	if ( $local_para === 1 ) {
+	$prompt .= "If {$city}, {$state} has a population of less than 100,000 people, only reference things that are less than 5 miles away. If you have limited information, do NOT make things up... just skip this part. ";
+
+	if ( $local_para2 === 1 || $local_para2 === 4 ) {
+		$prompt .= "Do not use the phrases \'in the heart of\' or \'sits in\'. Do not start the paragraph with the word {$city}. ";
+	} elseif ( $local_para2 === 2 || $local_para2 === 5 ) {
+		$prompt .= "Do not use the phrases \'in the heart of\' or \'sits in\'.";
+	} elseif ( $local_para2 === 3 || $local_para2 === 6 ) {
+		$prompt .= "Do not start the paragraph with the word {$city}. ";
+	}
+
+	if ( $local_para2 === 1 ) {
 		$prompt .= "Then focus on timing: when does {$service} become urgent in {$city}? What months push systems hardest in this climate?";
-	} elseif ( $local_para === 2 ) {
+	} elseif ( $local_para2 === 2 ) {
 		$prompt .= "Then focus on the homes specifically: what is the housing stock like in {$city}? Age, size, construction type, or neighborhood character.";
-	} elseif ( $local_para === 3 ) {
+	} elseif ( $local_para2 === 3 ) {
 		$prompt .= "Then focus on the climate: how does the weather and climate in this region affect {$service} specifically?";
-	} elseif ( $local_para === 4 ) {
+	} elseif ( $local_para2 === 4 ) {
 		$prompt .= "Focus on the growth of {$city}; new construction vs. older neighborhoods, rapid development, how that creates mixed HVAC needs across the city.";
-	} elseif ( $local_para === 5 ) {
+	} elseif ( $local_para2 === 5 ) {
 		$prompt .= "Focus on a weather extreme specific to the region — ice storms, drought summers, humidity spikes — told as something that happened, not a forecast.";
-	} elseif ( $local_para === 6 ) {
+	} elseif ( $local_para2 === 6 ) {
 		$prompt .= "Focus on what makes {$city} feel like home — the character of the community, how long people tend to stay, and how that investment in their home connects to keeping their HVAC system in good shape.";
 	} else {
 		$prompt .= "Then focus on energy demands: how does the local climate drive up bills, and what that means practically for homeowners.";

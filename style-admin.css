@@ -1328,3 +1328,6 @@ a#mbp_misc-tab,
 		display:                                                  none !important;
 	}
 }
+
+/* Hide Visual tab — Text/QTags only */
+#wp-content-editor-tools .wp-editor-tabs #content-tmce { display: none !important; }

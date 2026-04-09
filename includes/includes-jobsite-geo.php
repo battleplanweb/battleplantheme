@@ -376,59 +376,8 @@ function bp_jobsite_setup($post_id, $user) {
 	$thumb_id = (int) get_field('jobsite_photo_1', $post_id);
 	$thumb_id ? set_post_thumbnail($post_id, $thumb_id) : null;
 
-	// Send notification email when jobsite post is created or updated
-	$post_obj = get_post($post_id);
-	if ($post_obj) {
-		$created  = new DateTime($post_obj->post_date_gmt);
-		$modified = new DateTime($post_obj->post_modified_gmt);
-		$diff     = $created->diff($modified);
-		$seconds  = ((($diff->y * 365.25 + $diff->m * 30 + $diff->d) * 24 + $diff->h) * 60 + $diff->i) * 60 + $diff->s;
-		$action   = $seconds <= 2 ? 'created' : 'updated';
-	} else {
-		$action = 'updated';
-	}
-
-	$notifyTo = !empty($geo_opts['notify']) && $geo_opts['notify'] !== 'false'
-		? $geo_opts['notify']
-		: '';
-
-	$notifyBc = !empty($geo_opts['copy_me']) && $geo_opts['copy_me'] === 'true'
-		? 'info@bp-webdev.com'
-		: '';
-
-	if ($notifyTo === '' && $notifyBc !== '') {
-		$notifyTo = $notifyBc;
-		$notifyBc = '';
-	}
-
-	$display_user = '';
-
-	if ($user === 'user') {
-		$current_user = wp_get_current_user();
-		if ($current_user && $current_user->ID) {
-			$display_user = trim($current_user->first_name . ' ' . $current_user->last_name);
-			if ($display_user === '') $display_user = $current_user->user_login;
-		} else {
-			$display_user = 'System';
-		}
-	} else {
-		$display_user = $user;
-	}
-
-	if ($notifyTo !== '') {
-		$subject   = 'Jobsite ' . $action . ' by ' . $display_user;
-		$message   = $display_user . ' ' . $action . ' a jobsite post' . ($new_address !== '' ? ' for this address: ' . $new_address . '.' : '.');
-		$headers   = [];
-		$headers[] = 'Content-Type: text/html; charset=UTF-8';
-		$domain    = parse_url(home_url(), PHP_URL_HOST);
-		$headers[] = 'From: Website Administrator <noreply@' . $domain . '>';
-		$headers[] = 'Reply-To: noreply@' . $domain;
-		if ($notifyBc) $headers[] = 'Bcc: <' . $notifyBc . '>';
-
-		$message .= $GLOBALS['email_body'];
-
-		wp_mail($notifyTo, $subject, $message, $headers);
-	}
+	// Notification email is now sent from bp_geo_run_ai_rewrite() after the AI
+	// finishes — not here — so that only fully-completed posts trigger a notification.
 }
 
 // Save important info to meta data upon publishing or updating post
@@ -1901,10 +1850,65 @@ function bp_geo_run_ai_rewrite( $post_id ) {
 		$term_slug = bp_geo_assign_taxonomy_term( $post_id, $base_service, $city, $state, $terms_list );
 	}
 
+	// Send completion notification — only fires once AI rewrite is done
+	bp_jobsite_send_completion_email( $post_id, $street, $city, $state, $rewritten, $term_slug );
+
 	return [
 		'rewritten' => $rewritten,
 		'term_slug' => $term_slug,
 	];
+}
+
+// Send a "jobsite completed" notification email after AI rewrite finishes.
+// Replaces the old per-save notification in bp_jobsite_setup().
+function bp_jobsite_send_completion_email( int $post_id, string $street, string $city, string $state, string $rewritten, string $term_slug ): void {
+
+	$geo_opts = get_option('jobsite_geo');
+
+	$notifyTo = !empty($geo_opts['notify']) && $geo_opts['notify'] !== 'false'
+		? $geo_opts['notify']
+		: '';
+
+	$notifyBc = !empty($geo_opts['copy_me']) && $geo_opts['copy_me'] === 'true'
+		? 'info@bp-webdev.com'
+		: '';
+
+	if ($notifyTo === '' && $notifyBc === '') return;
+
+	if ($notifyTo === '') {
+		$notifyTo = $notifyBc;
+		$notifyBc = '';
+	}
+
+	$post    = get_post($post_id);
+	$title   = $post ? get_the_title($post_id) : 'Untitled';
+	$url     = get_permalink($post_id);
+	$address = trim("{$street}, {$city}, {$state}");
+
+	$photo_count = 0;
+	foreach (['jobsite_photo_1', 'jobsite_photo_2', 'jobsite_photo_3', 'jobsite_photo_4'] as $field) {
+		if ((int)get_post_meta($post_id, $field, true)) $photo_count++;
+	}
+
+	$domain    = parse_url(home_url(), PHP_URL_HOST);
+	$site_name = get_bloginfo('name');
+	$subject   = "New Jobsite Post Ready: {$title}";
+
+	$message  = "<p>A new jobsite post has been published and the AI description is ready.</p>";
+	$message .= "<p><strong>Site:</strong> {$site_name}</p>";
+	if ($address !== ', , ') $message .= "<p><strong>Address:</strong> " . esc_html($address) . "</p>";
+	if ($term_slug)          $message .= "<p><strong>Category:</strong> " . esc_html($term_slug) . "</p>";
+	$message .= "<p><strong>Photos:</strong> " . ($photo_count > 0 ? $photo_count . ' ' . _n('photo', 'photos', $photo_count) : 'none') . "</p>";
+	$message .= "<p><strong>Description:</strong></p><p>" . nl2br(esc_html($rewritten)) . "</p>";
+	if ($url)                $message .= "<p><a href='" . esc_url($url) . "'>View Post</a> &nbsp;|&nbsp; <a href='" . esc_url(admin_url('post.php?post=' . $post_id . '&action=edit')) . "'>Edit Post</a></p>";
+
+	$headers   = [];
+	$headers[] = 'Content-Type: text/html; charset=UTF-8';
+	$headers[] = 'From: Website Administrator <noreply@' . $domain . '>';
+	$headers[] = 'Reply-To: noreply@' . $domain;
+	if ($notifyBc) $headers[] = 'Bcc: <' . $notifyBc . '>';
+
+	wp_mail($notifyTo, $subject, $message, $headers);
 }
 
 

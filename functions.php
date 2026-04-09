@@ -1572,7 +1572,6 @@ function battleplan_admin_scripts() {
 
 	wp_enqueue_style( 'battleplan-admin-css', get_template_directory_uri().'/style-admin.css', [], _BP_VERSION );
 	bp_enqueue_script( 'battleplan-script-helpers', 'script-helpers', ['jquery'] );
-	bp_enqueue_script( 'battleplan-admin-script', 'script-admin', ['jquery'] );
 
 	if ( isset($customer_info['site-type']) && in_array($customer_info['site-type'], ['profile', 'profiles'], true) ) {
 		wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', [], _BP_VERSION );

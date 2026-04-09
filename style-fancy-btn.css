@@ -34,13 +34,13 @@ a.button.fancy:hover .fancy-text {
 
 a.button.fancy .fancy-icon {
 	width:                                                     0;
-	transform:                                                 translateX(-15px);
+	transform:                                                 translate(-18px, 4px);
 	opacity:                                                   0;
 }
 
 a.button.fancy:hover .fancy-icon {
 	width:                                                     0;
-	transform:                                                 translateX(-9px);
+	transform:                                                 translate(-8px, 4px);
 	opacity:                                                   1;
 }
 

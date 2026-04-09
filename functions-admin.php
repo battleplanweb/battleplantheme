@@ -44,8 +44,8 @@ add_filter( 'use_block_editor_for_post', '__return_false' );
 add_filter( 'gutenberg_use_widgets_block_editor', '__return_false' );
 add_filter( 'wp_use_widgets_block_editor', '__return_false' );
 
-// Disable Visual Editor
-add_filter( 'user_can_richedit' , '__return_false', 50 );
+// Force Text tab (disable Visual editor without killing the QuickTags toolbar)
+add_filter( 'wp_default_editor', function() { return 'html'; } );
 
 // Allow separate editing of thumbnails in image editor
 add_filter( 'image_edit_thumbnails_separately', '__return_true' );
@@ -955,8 +955,7 @@ function battleplan_setupTextEditorDialogBoxes($hook) {
 	$screen_ok = ($hook === 'post.php' || $hook === 'post-new.php');
 	if(!$screen_ok) return;
 
-	// ensure your admin JS is already enqueued; adjust handle/path if needed ---- maybe can remove.
-	bp_enqueue_script( 'battleplan-admin-script', 'script-admin', ['quicktags'] );
+	bp_enqueue_script( 'battleplan-admin-script', 'script-admin', ['battleplan-script-helpers', 'quicktags'] );
 
 
 	$bp_qtags_cfg = [

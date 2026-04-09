@@ -483,7 +483,7 @@ function bp_kw_render_dashboard_widget(): void {
 			ctx.beginPath();
 			data.forEach(function(v, j) {
 				var x = (j / (data.length - 1)) * w;
-				var y = v > 0 ? h - 2 - ((mx - v) / (mx - mn)) * (h - 6) : h - 2;
+				var y = v > 0 ? 2 + ((v - mn) / (mx - mn)) * (h - 6) : h - 2;
 				j === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
 			});
 			ctx.strokeStyle = '#4a90d9';
@@ -903,7 +903,7 @@ function bp_kw_render_admin_page(): void {
 
 			var n = ranks.length;
 			function xPos(j) { return padL + (n > 1 ? (j / (n - 1)) * drawW : drawW / 2); }
-			function yPos(v) { return padT + ((mx - v) / (mx - mn)) * drawH; }
+			function yPos(v) { return padT + drawH - ((v - mn) / (mx - mn)) * drawH; }
 
 			// Draw line
 			ctx.beginPath();

@@ -1330,4 +1330,8 @@ a#mbp_misc-tab,
 }
 
 /* Hide Visual tab — Text/QTags only */
-#wp-content-editor-tools .wp-editor-tabs #content-tmce { display: none !important; }
+.wp-editor-tabs,
+#wpseo_add_map_button,
+#wpseo_add_address_button,
+#wpseo_add_opening_hours_button
+ { display: none !important; }

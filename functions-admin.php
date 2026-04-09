@@ -955,9 +955,7 @@ function battleplan_setupTextEditorDialogBoxes($hook) {
 	$screen_ok = ($hook === 'post.php' || $hook === 'post-new.php');
 	if(!$screen_ok) return;
 
-	bp_enqueue_script( 'battleplan-admin-script', 'script-admin', ['battleplan-script-helpers', 'quicktags'] );
-
-
+	// script-admin is enqueued globally via battleplan_admin_scripts — just add the QTags config here
 	$bp_qtags_cfg = [
 		'section' => [
 			'label' => 'Section',

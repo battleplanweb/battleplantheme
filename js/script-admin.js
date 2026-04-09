@@ -208,7 +208,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 
 	changeHeaders();
 
-	const trendButtons = getObjects('.trend-buttons .sessions, .trend-buttons .new, .trend-buttons .engagement, .trend-buttons .search, .trend-buttons .pageviews, .trend-buttons .duration');
+	const trendButtons = getObjects('.trend-buttons > .sessions, .trend-buttons > .new, .trend-buttons > .engagement, .trend-buttons > .search, .trend-buttons > .pageviews, .trend-buttons > .duration');
 
     trendButtons.forEach(button => {
         button.addEventListener('click', event => {

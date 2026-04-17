@@ -90,7 +90,25 @@ add_shortcode( 'get-google-rating', 'battleplan_displayGoogleRating' );
 function battleplan_displayGoogleRating($atts, $content = null) {
 	$a = shortcode_atts( array( 'detail'=>'rating', ), $atts );
  	$googleInfo = get_option('bp_gbp_update');
-	return esc_attr($a['detail']) == 'rating' ? number_format($googleInfo['google-rating']?? 0.0, 1, '.', ',') : $googleInfo['google-reviews'];
+	$detail = esc_attr($a['detail']);
+
+	if ($detail === 'badge') {
+		for ($i = 1; $i <= 5; $i++) {
+			$reviewStars .= $googleInfo["google-rating"] >= $i ? '[get-icon type="star"]' : ($googleInfo["google-rating"] >= $i - 0.5 ? '[get-icon type="star-half"]' : '[get-icon type="star-empty"]');
+		}
+
+		$badge = '<div class="google-review-box">';
+		$badge .= '<img src="/wp-content/themes/battleplantheme/common/logos/google.webp" width="40" height="40" style="aspect-ratio:40/40" class="google-icon wp-image-7155" alt="">';
+		$badge .= '<div class="google-rating-stars">'.$reviewStars.'</div>';
+		$badge .= '<div class="google-rating-number">Rated '.number_format($googleInfo["google-rating"]?? 0.0, 1, ".", ",").' Stars</div>';
+		$badge .= '</div>';
+
+		return do_shortcode($badge);
+	}
+
+	if ($detail === 'number') return $googleInfo['google-reviews'];
+
+	return number_format($googleInfo['google-rating']?? 0.0, 1, '.', ',');
 }
 
 // Returns current year

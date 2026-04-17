@@ -539,7 +539,8 @@ function battleplan_buildParallax( $atts, $content = null ) {
 			preg_match('/-640x(\d+)\./', $mobileImgUrl, $dim);
 			$initialH = !empty($dim[1]) ? (int)$dim[1] : 0;
 
-			$styleAttr = 'padding-top:' . $padding . 'px; padding-bottom:' . $padding . 'px;' . ( $initialH ? ' height:' . $initialH . 'px;' : '' ) . ( $mobileImgUrl ? ' background-image:url(' . $mobileImgUrl . '); background-size:cover; background-position:center ' . $posX . ';' : '' );
+			$hasContent = trim($content) !== '';
+			$styleAttr = 'padding-top:' . $padding . 'px; padding-bottom:' . $padding . 'px;' . ( $hasContent ? ' height:auto;' : ( $initialH ? ' height:' . $initialH . 'px;' : '' ) ) . ( $mobileImgUrl ? ' background-image:url(' . $mobileImgUrl . '); background-size:cover; background-position:center ' . $posX . ';' : '' );
 		} else {
 			$styleAttr = 'padding-top:' . $padding . 'px; padding-bottom:' . $padding . 'px;';
 		}

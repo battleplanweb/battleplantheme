@@ -23,6 +23,8 @@ document.addEventListener("DOMContentLoaded", function () {
 			maxH = 0,
 			controlsHeight = 0;
 
+		const isImageSlider = carousel.classList.contains('content-image');
+
 		if (controls) {
 			const styles = window.getComputedStyle(controls);
 			const marginTop = parseFloat(styles.marginTop) || 0;
@@ -36,27 +38,80 @@ document.addEventListener("DOMContentLoaded", function () {
 		-------------------------------------------------- */
 
 		if (slideInner && window.ResizeObserver) {
-			const resizeObserver = new ResizeObserver(entries => {
-				let tallest = maxH;
-				let h = 0;
 
-				entries.forEach(entry => {
-					h = entry.contentRect.height;
-					if (h > tallest) tallest = h;
-				});
+			/* --- Image slider: size to smallest image --- */
+			if (isImageSlider) {
+				const imgs = Array.from(slideInner.querySelectorAll('img'));
 
-				let active = getObject('.active', carousel);
-				let activeH = active.offsetHeight;
-				slideInner.style.height = `${activeH}px`;
+				/* Remove lazy loading so hidden-slide images still load */
+				imgs.forEach(img => img.removeAttribute('loading'));
 
-				if (tallest !== maxH && tallest > 0) {
-					maxH = tallest;
-					carousel.style.height = `${maxH + controlsHeight}px`;
+				const calcImageHeight = () => {
+					const containerWidth = slideInner.offsetWidth;
+					let minH = Infinity;
+
+					imgs.forEach(img => {
+						if (!img.naturalWidth || !img.naturalHeight) return;
+						const scale = Math.min(1, containerWidth / img.naturalWidth);
+						const fittedH = img.naturalHeight * scale;
+						if (fittedH < minH) minH = fittedH;
+					});
+
+					if (minH === Infinity || minH < 200) minH = 200;
+
+					slideInner.style.height = `${minH}px`;
+					carousel.style.height = `${minH + controlsHeight}px`;
+
+					imgs.forEach(img => {
+						img.style.maxHeight = `${minH}px`;
+					});
+				};
+
+				let loaded = 0;
+				const total = imgs.length;
+
+				if (total > 0) {
+					const onLoad = () => {
+						loaded++;
+						if (loaded === total) calcImageHeight();
+					};
+
+					imgs.forEach(img => {
+						if (img.complete && img.naturalWidth) {
+							onLoad();
+						} else {
+							img.addEventListener('load', onLoad);
+							img.addEventListener('error', onLoad);
+						}
+					});
 				}
 
-			});
+				window.addEventListener('resize', calcImageHeight);
 
-			slides.forEach(slide => resizeObserver.observe(slide));
+			/* --- Text slider: tallest slide wins --- */
+			} else {
+				const resizeObserver = new ResizeObserver(entries => {
+					let tallest = maxH;
+					let h = 0;
+
+					entries.forEach(entry => {
+						h = entry.contentRect.height;
+						if (h > tallest) tallest = h;
+					});
+
+					let active = getObject('.active', carousel);
+					let activeH = active.offsetHeight;
+					slideInner.style.height = `${activeH}px`;
+
+					if (tallest !== maxH && tallest > 0) {
+						maxH = tallest;
+						carousel.style.height = `${maxH + controlsHeight}px`;
+					}
+
+				});
+
+				slides.forEach(slide => resizeObserver.observe(slide));
+			}
 		}
 
 		/* --------------------------------------------------

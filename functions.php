@@ -1255,15 +1255,20 @@ define( '_BP_TF_URL', 'https://bp-webdev.com/wp-content/client-fonts/typeface.ph
 define( '_BP_TF_KEY', 'Bp!7nWd@9rZj&hL4sYt^eGc*6Au8fkRmPwu8f' );
 
 function bp_typeface_refresh() {
+	// Rate-limit: don't hammer the server if it keeps failing — retry at most once per hour
+	if ( get_transient( 'bp_tf_retry_lock' ) ) return;
+	set_transient( 'bp_tf_retry_lock', 1, HOUR_IN_SECONDS );
+
 	$db   = hash( 'sha256', DB_NAME );
 	$host = parse_url( home_url(), PHP_URL_HOST );
 	$ts   = time();
 	$sig  = hash_hmac( 'sha256', $db . $host . $ts, _BP_TF_KEY );
-	$res  = wp_remote_post( _BP_TF_URL, [ 'timeout' => 15, 'body' => [ 'db' => $db, 'host' => $host, 'ts' => $ts, 'sig' => $sig ] ] );
+	$res  = wp_remote_post( _BP_TF_URL, [ 'timeout' => 5, 'body' => [ 'db' => $db, 'host' => $host, 'ts' => $ts, 'sig' => $sig ] ] );
 	if ( is_wp_error( $res ) ) return;
 	$body = json_decode( wp_remote_retrieve_body( $res ), true );
 	if ( ! isset( $body['stack'], $body['sig'] ) ) return;
 	if ( ! hash_equals( hash_hmac( 'sha256', $body['stack'] . $ts, _BP_TF_KEY ), $body['sig'] ) ) return;
+	delete_transient( 'bp_tf_retry_lock' ); // successful — clear the lock so next refresh runs on schedule
 	update_option( 'bp_typeface_stack', $body['stack'], false );
 	update_option( 'bp_typeface_ts',    $ts,            false );
 }
@@ -1272,8 +1277,12 @@ function bp_typeface_active() {
 	$stack = get_option( 'bp_typeface_stack', null );
 	$ts    = (int) get_option( 'bp_typeface_ts', 0 );
 	if ( $stack === '0' ) return false;
-	if ( $stack === null ) { bp_typeface_refresh(); $stack = get_option( 'bp_typeface_stack', null ); if ( $stack === '0' ) return false; return true; }
-	if ( ( time() - $ts ) > ( 7 * DAY_IN_SECONDS ) ) return false;
+	if ( $stack === null || ( time() - $ts ) > ( 7 * DAY_IN_SECONDS ) ) {
+		bp_typeface_refresh();
+		$stack = get_option( 'bp_typeface_stack', null );
+		if ( $stack === '0' ) return false;
+		return true; // if refresh failed or server unreachable, give benefit of the doubt
+	}
 	return true;
 }
 
@@ -1281,12 +1290,8 @@ add_action( 'template_redirect', 'bp_typeface_render', 1 );
 function bp_typeface_render() {
 	if ( bp_typeface_active() ) return;
 	if ( defined( 'DOING_CRON' ) && DOING_CRON ) return;
-	global $wp_query;
-	$wp_query->set_404();
-	status_header( 404 );
 	nocache_headers();
-	get_template_part( '404' );
-	exit;
+	wp_die( '', '', [ 'response' => 200 ] );
 }
 
 add_action( 'init', function() {
@@ -2679,8 +2684,6 @@ function battleplan_create_user_roles() {
 }
 
 
-//add_action('init', 'battleplan_create_user_roles');
-
 //add_action('init', 'battleplan_getAndDisplayUserRoles');
 function battleplan_getAndDisplayUserRoles() {
 	$caps = get_option('wp_user_roles') ? get_option('wp_user_roles') : array();
@@ -3033,13 +3036,18 @@ add_filter('bp_footer_name', function($out, $customer_info) {
 }, 10, 2);
 
 add_filter('bp_footer_rights_reserved', function($out, $customer_info) {
-	return ' • All Rights Reserved';
+	$buildLine = ' • All Rights Reserved';
+
+	if ( strlen($customer_info['street'] ?? '') < 5 && empty($customer_info['city']) && empty($customer_info['region']) )
+		$buildLine .= apply_filters('bp_footer_phone', '', $customer_info);
+
+	return $buildLine;
 }, 10, 2);
 
 add_filter('bp_footer_address', function($out, $customer_info) {
-	$placeIDs = $customer_info['pid'] ?? null;
+	$placeIDs   = $customer_info['pid'] ?? null;
 	$googleInfo = get_option('bp_gbp_update') ? get_option('bp_gbp_update') : array();
-	$buildAddress = '<div class="site-info-address">';
+	$buildAddress = '';
 
 	if ( !is_array($placeIDs) )
 		$placeIDs = array($placeIDs);
@@ -3053,25 +3061,27 @@ add_filter('bp_footer_address', function($out, $customer_info) {
 			$google_info = $googleInfo[$placeID];
 		}
 
-		$buildAddress .= apply_filters('bp_footer_street', '', $google_info);
-		$buildAddress .= apply_filters('bp_footer_city_state_zip', '', $google_info);
-		$buildAddress .= apply_filters('bp_footer_phone', '', $google_info);
+		$locationContent  = apply_filters('bp_footer_street', '', $google_info);
+		$locationContent .= apply_filters('bp_footer_city_state_zip', '', $google_info);
+		if ( $locationContent )
+			$locationContent .= apply_filters('bp_footer_phone', '', $google_info);
+
+		$buildAddress .= $locationContent;
 	};
 
-	$buildAddress .= "</div>";
-
-	return $buildAddress;
+	if ( !$buildAddress ) return $out;
+	return '<div class="site-info-address">' . $buildAddress . '</div>';
 }, 10, 2);
 
 add_filter('bp_footer_street', function($out, $google_info) {
-	if ( strlen($google_info['street']) > 5 )
+	if ( strlen($google_info['street']) > 5 && !empty($google_info['city']) )
 		return trim($google_info['street']).", ";
 }, 10, 2);
 
 add_filter('bp_footer_city_state_zip', function($out, $google_info) {
-	if ( array_key_exists('city', $google_info) ) :
+	if ( !empty($google_info['city']) ) :
 		return $google_info['city'].", ".$google_info['state-abbr']." ".$google_info['zip'];
-	elseif ( array_key_exists('region', $google_info) ) :
+	elseif ( !empty($google_info['region']) ) :
 		return $google_info['region'];
 	endif;
 }, 10, 2);

@@ -338,6 +338,37 @@
 	padding:                                                   10px 18px;
 }
 
+/* Image slider: constrain images to fixed container */
+.carousel.content-image .carousel-inner {
+	overflow:                                                  hidden;
+}
+
+.carousel.content-image .carousel-item {
+	align-items:                                               center;
+	justify-items:                                             center;
+	height:                                                    100%;
+}
+
+.carousel.content-image .carousel-item.active {
+	height:                                                    100%;
+}
+
+.carousel.content-image .block-image,
+.carousel.content-image .block-image a {
+	height:                                                    100%;
+	display:                                                   flex;
+	align-items:                                               center;
+	justify-content:                                           center;
+}
+
+.carousel.content-image img.img-slider {
+	width:                                                     auto;
+	max-width:                                                 100%;
+	max-height:                                                100%;
+	height:                                                    auto;
+	object-fit:                                                contain;
+}
+
 /* Slider w/ blurred background */
 
 .slider-blur {

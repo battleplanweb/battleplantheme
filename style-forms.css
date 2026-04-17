@@ -6,712 +6,636 @@
 # Mobile Styles
 --------------------------------------------------------------*/
 
-	/*--------------------------------------------------------------
+/*--------------------------------------------------------------
 # Forms
 --------------------------------------------------------------*/
-	fieldset.hidden-fields-container {
-		display:                                                  none;
-	}
+fieldset.hidden-fields-container {
+	display:                                                   none;
+}
 
-	.wpcf7 form,
-	.wpcf7 form .cf7-step {
-		position:                                                 relative;
-		display:                                                  grid;
-		grid-template-columns:                                    1fr;
-		gap:                                                      var(--measure-small) 0;
-		text-align:                                               left;
-		width:                                                    100%;
-		max-width:                                                850px;
-		margin:                                                   var(--measure-base) auto;
-	}
+.wpcf7 form,
+.wpcf7 form .cf7-step {
+	position:                                                  relative;
+	display:                                                   grid;
+	grid-template-columns:                                     1fr;
+	gap:                                                       var(--measure-small) 0;
+	text-align:                                                left;
+	width:                                                     100%;
+	max-width:                                                 850px;
+	margin:                                                    var(--measure-base) auto;
+}
 
-	.wpcf7 form ul li:not(.menu-item):not(:last-child) {
-		margin-bottom:                                            var(--measure-small);
-	}
+.wpcf7 form ul li:not(.menu-item):not(:last-child) {
+	margin-bottom:                                             var(--measure-small);
+}
 
-	#primary .wpcf7 form {
-		margin:                                                   var(--measure-large) auto;
-	}
+#primary .wpcf7 form {
+	margin:                                                    var(--measure-large) auto;
+}
 
-	.wpcf7 form .flex,
-	.wpcf7 form > .form-input {
-		grid-column:                                              1 / -1;
-		gap:                                                      var(--measure-base);
-	}
+.wpcf7 form .flex,
+.wpcf7 form > .form-input {
+	grid-column:                                               1 / -1;
+	gap:                                                       var(--measure-base);
+}
 
-	.wpcf7 form .form-input {
-		position:                                                 relative;
-		display:                                                  grid;
-		grid-template-columns:                                    max-content 1fr;
-		gap:                                                      0.15em var(--measure-base);
-	}
+.wpcf7 form .form-input {
+	position:                                                  relative;
+	display:                                                   grid;
+	grid-template-columns:                                     max-content 1fr;
+	gap:                                                       0.15em var(--measure-base);
+}
 
-	body.form-stacked .wpcf7 form .form-input,
-	.wpcf7 form.form-stacked .form-input,
-	.wpcf7 form .form-stacked .form-input,
-	.wpcf7 form .form-input.width-none {
-		grid-template-columns:                                    1fr !important;
-	}
+body.form-stacked .wpcf7 form .form-input,
+.wpcf7 form.form-stacked .form-input,
+.wpcf7 form .form-stacked .form-input,
+.wpcf7 form .form-input.width-none {
+	grid-template-columns:                                     1fr !important;
+}
 
-	/*@media (min-width: 577px) {*/
-	.wpcf7 form .flex.grid-3-3-2 .form-input {
-		grid-template-columns:                                    1fr !important;
-	}
+.wpcf7 form .flex.grid-3-3-2 .form-input {
+	grid-template-columns:                                     1fr !important;
+}
 
-	/*}*/
+.wpcf7 form .form-input.width-full,
+.wpcf7 form label.width-full,
+.wpcf7 form label.width-full + span {
+	grid-column:                                               1 / -1;
+}
 
-	.wpcf7 form .form-input.width-full,
-	.wpcf7 form label.width-full,
-	.wpcf7 form label.width-full + span {
-		grid-column:                                              1 / -1;
-	}
+label {
+	font-family:                                               var(--font-text);
+	font-weight:                                               bold;
+	text-align:                                                right;
+}
 
-	label {
-		font-family:                                              var(--font-text);
-		font-weight:                                              bold;
-		text-align:                                               right;
-	}
+#secondary .wpcf7 form.width-full {
+	margin-top:                                                0.3em;
+}
 
-	#secondary .wpcf7 form.width-full {
-		margin-top:                                               0.3em;
-	}
+#secondary .wpcf7 form label.width-full,
+.wpcf7 form label.width-full,
+body.form-stacked .wpcf7 form label,
+.wpcf7 form.form-stacked label,
+.wpcf7 form .flex.grid-3-3-2 label,
+.wpcf7 form .form-stacked label,
+.wpcf7 form span.wpcf7-form-control-wrap {
+	text-align:                                                left;
+	align-self:                                                end;
+}
 
-	#secondary .wpcf7 form label.width-full,
-	.wpcf7 form label.width-full,
-	body.form-stacked .wpcf7 form label,
-	.wpcf7 form.form-stacked label,
-	.wpcf7 form .flex.grid-3-3-2 label,
-	.wpcf7 form .form-stacked label,
-	.wpcf7 form span.wpcf7-form-control-wrap {
-		text-align:                                               left;
-		align-self:                                               end;
-	}
+.wpcf7 form label.label-baseline {
+	align-self:                                                end;
+}
 
-	.wpcf7 form label.label-baseline {
-		align-self:                                               end;
-	}
+.wpcf7 form label.label-center {
+	align-self:                                                center;
+}
 
-	.wpcf7 form label.label-center {
-		align-self:                                               center;
-	}
+.wpcf7 form label.label-top {
+	align-self:                                                start;
+}
 
-	.wpcf7 form label.label-top {
-		align-self:                                               start;
-	}
+.label-pos-after {
+	grid-template-columns:                                     70px 1fr !important;
+}
 
-	.label-pos-after {
-		grid-template-columns:                                    70px 1fr !important;
-	}
+.label-pos-after label {
+	text-align:                                                left !important;
+	transform:                                                 translateX(-50px);
+	/* move label closer to the check box */
+}
 
-	.label-pos-after label {
-		text-align:                                               left !important;
-		transform:                                                translateX(-50px);
-		/* move label closer to the check box */
-	}
-
-	.wpcf7 form .label-pos-after span.wpcf7-form-control-wrap {
-		align-self:                                               start;
-	}
+.wpcf7 form .label-pos-after span.wpcf7-form-control-wrap {
+	align-self:                                                start;
+}
 
 
 /*--------------------------------------------------------------
 # Inputs — Private Custom Properties
 --------------------------------------------------------------*/
 
-	input[type="text"],
-	input[type="email"],
-	input[type="url"],
-	input[type="password"],
-	input[type="search"],
-	input[type="number"],
-	input[type="tel"],
-	input[type="range"],
-	input[type="date"],
-	input[type="month"],
-	input[type="week"],
-	input[type="time"],
-	input[type="datetime"],
-	input[type="datetime-local"],
-	input[type="color"],
-	textarea,
-	select {
-		--_inp-padding:    var(--input-padding);
-		--_inp-size:       var(--input-font-size);
-		--_inp-weight:     var(--input-font-weight);
-		--_inp-color:      var(--input-color);
-		--_inp-bg:         var(--input-background);
-		--_inp-border:     var(--input-border);
-		--_inp-border-t:   var(--_inp-border);
-		--_inp-border-r:   var(--_inp-border);
-		--_inp-border-b:   var(--_inp-border);
-		--_inp-border-l:   var(--_inp-border);
-		--_inp-shadow:     var(--input-box-shadow);
-		--_inp-radius:     var(--input-border-radius);
-		--_inp-tshadow:    var(--input-text-shadow);
-		--_inp-xform:      var(--input-transform);
-		--_inp-filter:     var(--input-filter);
-		--_inp-backdrop:   var(--input-filter);
+input[type="text"],
+input[type="email"],
+input[type="url"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+input[type="tel"],
+input[type="range"],
+input[type="date"],
+input[type="month"],
+input[type="week"],
+input[type="time"],
+input[type="datetime"],
+input[type="datetime-local"],
+input[type="color"],
+textarea,
+select {
+	width:                                                     100%;
+	padding:                                                   var(--input-padding);
+	font-size:                                                 var(--input-font-size);
+	font-weight:                                               var(--input-font-weight);
+	color:                                                     var(--input-color);
+	background:                                                var(--input-background);
+	border:                                                    var(--input-border);
+	border-top:                                                var(--input-border-top);
+	border-right:                                              var(--input-border-right);
+	border-bottom:                                             var(--input-border-bottom);
+	border-left:                                               var(--input-border-left);
+	box-shadow:                                                var(--input-box-shadow);
+	border-radius:                                             var(--input-border-radius);
+	text-shadow:                                               var(--input-text-shadow);
+	transform:                                                 var(--input-transform);
+	filter:                                                    var(--input-filter);
+	backdrop-filter:                                           var(--input-backdrop-filter);
+	min-height:                                                32px;
+	/* date picker form field on iPad 10-22-2020 */
+	transition:                                                all var(--main-trans-speed) var(--main-trans-easing);
+}
 
-		--_inp-padding-f:  var(--input-padding);
-		--_inp-size-f:     var(--input-font-size-focus);
-		--_inp-weight-f:   var(--input-font-weight-focus);
-		--_inp-color-f:    var(--input-color-focus);
-		--_inp-bg-f:       var(--input-background-focus);
-		--_inp-border-f:   var(--input-border-focus);
-		--_inp-border-t-f: var(--_inp-border-f);
-		--_inp-border-r-f: var(--_inp-border-f);
-		--_inp-border-b-f: var(--_inp-border-f);
-		--_inp-border-l-f: var(--_inp-border-f);
-		--_inp-shadow-f:   var(--input-box-shadow-focus);
-		--_inp-radius-f:   var(--input-border-radius-focus);
-		--_inp-tshadow-f:  var(--input-text-shadow-focus);
-		--_inp-xform-f:    var(--input-transform-focus);
-		--_inp-filter-f:   var(--input-filter-focus);
-		--_inp-backdrop-f: var(--input-backdrop-filter-focus);
-
-		width:                                                    100%;
-		padding:                                                  var(--_inp-padding);
-		font-size:                                                var(--_inp-size);
-		font-weight:                                              var(--_inp-weight);
-		color:                                                    var(--_inp-color);
-		background:                                               var(--_inp-bg);
-		border:                                                   var(--_inp-border);
-		border-top:                                               var(--_inp-border-t);
-		border-right:                                             var(--_inp-border-r);
-		border-bottom:                                            var(--_inp-border-b);
-		border-left:                                              var(--_inp-border-l);
-		box-shadow:                                               var(--_inp-shadow);
-		border-radius:                                            var(--_inp-radius);
-		text-shadow:                                              var(--_inp-tshadow);
-		transform:                                                var(--_inp-xform);
-		filter:                                                   var(--_inp-filter);
-		backdrop-filter:                                          var(--_inp-backdrop);
-		min-height:                                               32px;
-		/* date picker form field on iPad 10-22-2020 */
-		transition:                                               all var(--main-trans-speed) var(--main-trans-easing);
-	}
-
-	input[type="text"]:focus,
-	input[type="email"]:focus,
-	input[type="url"]:focus,
-	input[type="password"]:focus,
-	input[type="search"]:focus,
-	input[type="number"]:focus,
-	input[type="tel"]:focus,
-	input[type="range"]:focus,
-	input[type="date"]:focus,
-	input[type="month"]:focus,
-	input[type="week"]:focus,
-	input[type="time"]:focus,
-	input[type="datetime"]:focus,
-	input[type="datetime-local"]:focus,
-	input[type="color"]:focus,
-	textarea:focus,
-	select:focus,
-	.wpcf7 form .wpcf7-response-output {
-		padding:                                                  var(--_inp-padding-f);
-		color:                                                    var(--_inp-color-f);
-		font-size:                                                var(--_inp-size-f);
-		font-weight:                                              var(--_inp-weight-f);
-		background:                                               var(--_inp-bg-f);
-		border:                                                   var(--_inp-border-f);
-		border-top:                                               var(--_inp-border-t-f);
-		border-right:                                             var(--_inp-border-r-f);
-		border-bottom:                                            var(--_inp-border-b-f);
-		border-left:                                              var(--_inp-border-l-f);
-		box-shadow:                                               var(--_inp-shadow-f);
-		border-radius:                                            var(--_inp-radius-f);
-		text-shadow:                                              var(--_inp-tshadow-f);
-		transform:                                                var(--_inp-xform-f);
-		filter:                                                   var(--_inp-filter-f);
-		backdrop-filter:                                          var(--_inp-backdrop-f);
-		transition:                                               all var(--main-trans-speed) var(--main-trans-easing);
-	}
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="url"]:focus,
+input[type="password"]:focus,
+input[type="search"]:focus,
+input[type="number"]:focus,
+input[type="tel"]:focus,
+input[type="range"]:focus,
+input[type="date"]:focus,
+input[type="month"]:focus,
+input[type="week"]:focus,
+input[type="time"]:focus,
+input[type="datetime"]:focus,
+input[type="datetime-local"]:focus,
+input[type="color"]:focus,
+textarea:focus,
+select:focus,
+.wpcf7 form .wpcf7-response-output {
+	padding:                                                   var(--input-padding-focus);
+	color:                                                     var(--input-color-focus);
+	font-size:                                                 var(--input-font-size-focus);
+	font-weight:                                               var(--input-font-weight-focus);
+	background:                                                var(--input-background-focus);
+	border:                                                    var(--input-border-focus);
+	border-top:                                                var(--input-border-top-focus);
+	border-right:                                              var(--input-border-right-focus);
+	border-bottom:                                             var(--input-border-bottom-focus);
+	border-left:                                               var(--input-border-left-focus);
+	box-shadow:                                                var(--input-box-shadow-focus);
+	border-radius:                                             var(--input-border-radius-focus);
+	text-shadow:                                               var(--input-text-shadow-focus);
+	transform:                                                 var(--input-transform-focus);
+	filter:                                                    var(--input-filter-focus);
+	backdrop-filter:                                           var(--input-backdrop-filter-focus);
+	transition:                                                all var(--main-trans-speed) var(--main-trans-easing);
+}
 
 
 /*--------------------------------------------------------------
 # Buttons — Private Custom Properties
 --------------------------------------------------------------*/
 
-	a.button,
-	a.page-numbers,
-	span.page-numbers,
-	button:not(.unique),
-	input[type="button"],
-	input[type="reset"],
-	input[type="submit"],
-	.file-upload-btn,
-	ul.tabs li,
-	a.button:visited,
-	a.page-numbers:visited {
-		--_btn-font:       var(--button-font-family);
-		--_btn-weight:     var(--button-font-weight);
-		--_btn-size:       var(--button-font-size);
-		--_btn-color:      var(--button-color);
-		--_btn-bg:         var(--button-background);
-		--_btn-border:     var(--button-border);
-		--_btn-border-t:   var(--_btn-border);
-		--_btn-border-r:   var(--_btn-border);
-		--_btn-border-b:   var(--_btn-border);
-		--_btn-border-l:   var(--_btn-border);
-		--_btn-radius:     var(--button-border-radius);
-		--_btn-shadow:     var(--button-box-shadow);
-		--_btn-padding:    var(--button-padding);
-		--_btn-tshadow:    var(--button-text-shadow);
-		--_btn-outline:    var(--button-outline);
-		--_btn-filter:     var(--button-filter);
-		--_btn-txtxform:   var(--button-text-transform);
-		--_btn-variant:    var(--button-font-variant);
-		--_btn-spacing:    var(--button-letter-spacing);
-		--_btn-xform:      var(--button-transform);
+a.button,
+a.page-numbers,
+span.page-numbers,
+button:not(.unique),
+input[type="button"],
+input[type="reset"],
+input[type="submit"],
+.file-upload-btn,
+ul.tabs li,
+a.button:visited,
+a.page-numbers:visited {
+	display:                                                   inline-block;
+	font-family:                                               var(--button-font-family);
+	font-weight:                                               var(--button-font-weight);
+	font-size:                                                 var(--button-font-size);
+	line-height:                                               1;
+	color:                                                     var(--button-color);
+	background:                                                var(--button-background);
+	border:                                                    var(--button-border);
+	border-top:                                                var(--button-border-top);
+	border-right:                                              var(--button-border-right);
+	border-bottom:                                             var(--button-border-bottom);
+	border-left:                                               var(--button-border-left);
+	border-radius:                                             var(--button-border-radius);
+	box-shadow:                                                var(--button-box-shadow);
+	cursor:                                                    pointer;
+	text-decoration:                                           none;
+	padding:                                                   var(--button-padding);
+	text-align:                                                center;
+	align-content:                                             center;
+	text-shadow:                                               var(--button-text-shadow);
+	outline:                                                   var(--button-outline);
+	filter:                                                    var(--button-filter);
+	text-transform:                                            var(--button-text-transform);
+	font-variant:                                              var(--button-font-variant);
+	letter-spacing:                                            var(--button-letter-spacing);
+	transform:                                                 var(--button-transform);
+	transition:                                                all var(--main-trans-speed) var(--main-trans-easing);
+}
 
-		--_btn-color-h:    var(--button-color-hover);
-		--_btn-bg-h:       var(--button-background-hover);
-		--_btn-border-h:   var(--button-border-hover);
-		--_btn-border-t-h: var(--_btn-border-h);
-		--_btn-border-r-h: var(--_btn-border-h);
-		--_btn-border-b-h: var(--_btn-border-h);
-		--_btn-border-l-h: var(--_btn-border-h);
-		--_btn-radius-h:   var(--button-border-radius-hover);
-		--_btn-shadow-h:   var(--button-box-shadow-hover);
-		--_btn-padding-h:  var(--button-padding-hover);
-		--_btn-tshadow-h:  var(--button-text-shadow-hover);
-		--_btn-outline-h:  var(--button-outline-hover);
-		--_btn-filter-h:   var(--button-filter-hover);
-		--_btn-txtxform-h: var(--button-text-transform-hover);
-		--_btn-variant-h:  var(--button-font-variant-hover);
-		--_btn-spacing-h:  var(--button-letter-spacing-hover);
-		--_btn-xform-h:    var(--button-transform-hover);
-
-		display:                                                  inline-block;
-		font-family:                                              var(--_btn-font);
-		font-weight:                                              var(--_btn-weight);
-		font-size:                                                var(--_btn-size);
-		line-height:                                              1;
-		color:                                                    var(--_btn-color);
-		background:                                               var(--_btn-bg);
-		border:                                                   var(--_btn-border);
-		border-top:                                               var(--_btn-border-t);
-		border-right:                                             var(--_btn-border-r);
-		border-bottom:                                            var(--_btn-border-b);
-		border-left:                                              var(--_btn-border-l);
-		border-radius:                                            var(--_btn-radius);
-		box-shadow:                                               var(--_btn-shadow);
-		cursor:                                                   pointer;
-		text-decoration:                                          none;
-		padding:                                                  var(--_btn-padding);
-		text-align:                                               center;
-		align-content:                                            center;
-		text-shadow:                                              var(--_btn-tshadow);
-		outline:                                                  var(--_btn-outline);
-		filter:                                                   var(--_btn-filter);
-		text-transform:                                           var(--_btn-txtxform);
-		font-variant:                                             var(--_btn-variant);
-		letter-spacing:                                           var(--_btn-spacing);
-		transform:                                                var(--_btn-xform);
-		transition:                                               all var(--main-trans-speed) var(--main-trans-easing);
-	}
-
-	a.button:hover,
-	a.page-numbers:hover,
-	span.page-numbers.current,
-	button:not(.unique):hover,
-	input[type="button"]:hover,
-	input[type="reset"]:hover,
-	input[type="submit"]:hover,
-	.file-upload-btn:hover,
-	ul.tabs li:hover,
-	a.button.tab-focus,
-	a.page-numbers.tab-focus,
-	button:not(.unique).tab-focus,
-	input[type="button"].tab-focus,
-	input[type="reset"].tab-focus,
-	input[type="submit"].tab-focus,
-	.file-upload-btn.tab-focus,
-	ul.tabs li.tab-focus,
-	a.button:active,
-	a.page-numbers:active,
-	button:not(.unique):active,
-	input[type="button"]:active,
-	input[type="reset"]:active,
-	input[type="submit"]:active,
-	.file-upload-btn:active,
-	ul.tabs li:active,
-	ul.tabs li.current {
-		color:                                                    var(--_btn-color-h);
-		background:                                               var(--_btn-bg-h);
-		border:                                                   var(--_btn-border-h);
-		border-top:                                               var(--_btn-border-t-h);
-		border-right:                                             var(--_btn-border-r-h);
-		border-bottom:                                            var(--_btn-border-b-h);
-		border-left:                                              var(--_btn-border-l-h);
-		border-radius:                                            var(--_btn-radius-h);
-		box-shadow:                                               var(--_btn-shadow-h);
-		text-decoration:                                          none;
-		padding:                                                  var(--_btn-padding-h);
-		text-shadow:                                              var(--_btn-tshadow-h);
-		outline:                                                  var(--_btn-outline-h);
-		filter:                                                   var(--_btn-filter-h);
-		text-transform:                                           var(--_btn-txtxform-h);
-		font-variant:                                             var(--_btn-variant-h);
-		letter-spacing:                                           var(--_btn-spacing-h);
-		transform:                                                var(--_btn-xform-h);
-		transition:                                               all var(--main-trans-speed) var(--main-trans-easing);
-	}
+a.button:hover,
+a.page-numbers:hover,
+span.page-numbers.current,
+button:not(.unique):hover,
+input[type="button"]:hover,
+input[type="reset"]:hover,
+input[type="submit"]:hover,
+.file-upload-btn:hover,
+ul.tabs li:hover,
+a.button.tab-focus,
+a.page-numbers.tab-focus,
+button:not(.unique).tab-focus,
+input[type="button"].tab-focus,
+input[type="reset"].tab-focus,
+input[type="submit"].tab-focus,
+.file-upload-btn.tab-focus,
+ul.tabs li.tab-focus,
+a.button:active,
+a.page-numbers:active,
+button:not(.unique):active,
+input[type="button"]:active,
+input[type="reset"]:active,
+input[type="submit"]:active,
+.file-upload-btn:active,
+ul.tabs li:active,
+ul.tabs li.current {
+	color:                                                     var(--button-color-hover);
+	background:                                                var(--button-background-hover);
+	border:                                                    var(--button-border-hover);
+	border-top:                                                var(--button-border-top-hover);
+	border-right:                                              var(--button-border-right-hover);
+	border-bottom:                                             var(--button-border-bottom-hover);
+	border-left:                                               var(--button-border-left-hover);
+	border-radius:                                             var(--button-border-radius-hover);
+	box-shadow:                                                var(--button-box-shadow-hover);
+	text-decoration:                                           none;
+	padding:                                                   var(--button-padding-hover);
+	text-shadow:                                               var(--button-text-shadow-hover);
+	outline:                                                   var(--button-outline-hover);
+	filter:                                                    var(--button-filter-hover);
+	text-transform:                                            var(--button-text-transform-hover);
+	font-variant:                                              var(--button-font-variant-hover);
+	letter-spacing:                                            var(--button-letter-spacing-hover);
+	transform:                                                 var(--button-transform-hover);
+	transition:                                                all var(--main-trans-speed) var(--main-trans-easing);
+}
 
 
 /*--------------------------------------------------------------
 # Misc Form Elements
 --------------------------------------------------------------*/
 
-	a.button.disabled,
-	button.disabled,
-	input[type="button"].disabled,
-	input[type="reset"].disabled,
-	input[type="submit"].disabled,
-	ul.tabs li.disabled {
-		opacity:                                                  0.5;
-		pointer-events:                                           none;
-	}
+a.button.disabled,
+button.disabled,
+input[type="button"].disabled,
+input[type="reset"].disabled,
+input[type="submit"].disabled,
+ul.tabs li.disabled {
+	opacity:                                                   0.5;
+	pointer-events:                                            none;
+}
 
-	select {
-		width:                                                    100%;
-	}
+select {
+	width:                                                     100%;
+}
 
-	textarea {
-		width:                                                    100%;
-		height:                                                   30vh;
-		resize:                                                   none;
-		border-radius:                                            calc(var(--input-border-radius) * 2);
-	}
+textarea {
+	width:                                                     100%;
+	height:                                                    30vh;
+	resize:                                                    none;
+	border-radius:                                             calc(var(--input-border-radius) * 2);
+}
 
-	textarea:focus {
-		border-radius:                                            calc(var(--input-border-radius-focus) * 2);
-	}
+textarea:focus {
+	border-radius:                                             calc(var(--input-border-radius-focus) * 2);
+}
 
-	optgroup {
-		width:                                                    100%;
-	}
+optgroup {
+	width:                                                     100%;
+}
 
-	::placeholder {
-		color:                                                    var(--black-med);
-	}
+::placeholder {
+	color:                                                     var(--black-med);
+}
 
-	input::-webkit-outer-spin-button,
-	input::-webkit-inner-spin-button {
-		-webkit-appearance:                                       none;
-		margin:                                                   0;
-	}
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+	-webkit-appearance:                                        none;
+	margin:                                                    0;
+}
 
-	input[type=number] {
-		-moz-appearance:                                          textfield;
-	}
+input[type=number] {
+	-moz-appearance:                                           textfield;
+}
 
-	.wpcf7 form .form-input.width-none input {
-		padding-right:                                            30px;
-	}
+.wpcf7 form .form-input.width-none input {
+	padding-right:                                             30px;
+}
 
-	.wpcf7 form .wpcf7-list-item {
-		display:                                                  inline-block;
-		/* added 6/12/23 to keep checkboxes and labels from splitting at end of line */
-		margin-left:                                              0;
-		margin-right:                                             20px;
-	}
+.wpcf7 form .wpcf7-list-item {
+	display:                                                   inline-block;
+	/* added 6/12/23 to keep checkboxes and labels from splitting at end of line */
+	margin-left:                                               0;
+	margin-right:                                              20px;
+}
 
-	.wpcf7 form .wpcf7-checkbox > .wpcf7-list-item > label,
-	.wpcf7 form .wpcf7-list-item label,
-	.wpcf7 form .wpcf7-list-item span {
-		display:                                                  inline-block;
-	}
+.wpcf7 form .wpcf7-checkbox > .wpcf7-list-item > label,
+.wpcf7 form .wpcf7-list-item label,
+.wpcf7 form .wpcf7-list-item span {
+	display:                                                   inline-block;
+}
 
-	.wpcf7 form .accept-this {
-		width:                                                    auto;
-		position:                                                 relative;
-		display:                                                  inline-block;
-	}
+.wpcf7 form .accept-this {
+	width:                                                     auto;
+	position:                                                  relative;
+	display:                                                   inline-block;
+}
 
-	.wpcf7 form .wpcf7-acceptance .wpcf7-list-item {
-		margin-left:                                              0;
-		margin-right:                                             0;
-	}
+.wpcf7 form .wpcf7-acceptance .wpcf7-list-item {
+	margin-left:                                               0;
+	margin-right:                                              0;
+}
 
-	.required {
-		display:                                                  inline-block;
-		width:                                                    0;
-		color:                                                    var(--warning);
-	}
+.required {
+	display:                                                   inline-block;
+	width:                                                     0;
+	color:                                                     var(--warning);
+}
 
-	.width-none .required {
-		position:                                                 absolute;
-		right:                                                    0;
-		margin-right:                                             28px;
-	}
+.width-none .required {
+	position:                                                  absolute;
+	right:                                                     0;
+	margin-right:                                              28px;
+}
 
-	.required::after {
-		display:                                                  inline-block;
-		content:                                                  "*";
-		font-family:                                              var(--font-text);
-		font-size:                                                14px;
-		color:                                                    var(--warning);
-		margin-left:                                              5px;
-		transform:                                                translateY(-35%);
-	}
+.required::after {
+	display:                                                   inline-block;
+	content:                                                   "*";
+	font-family:                                               var(--font-text);
+	font-size:                                                 14px;
+	color:                                                     var(--warning);
+	margin-left:                                               5px;
+	transform:                                                 translateY(-35%);
+}
 
-	.width-none .required::after {
-		transform:                                                translateY(-2px);
-	}
+.width-none .required::after {
+	transform:                                                 translateY(-2px);
+}
 
-	form.hide-labels ::placeholder {
-		color:                                                    var(--black);
-		font-weight:                                              bold;
-	}
+form.hide-labels ::placeholder {
+	color:                                                     var(--black);
+	font-weight:                                               bold;
+}
 
-	.wpcf7 input[type="file"] {
-		cursor:                                                   pointer;
-		width:                                                    100%;
-		overflow:                                                 hidden;
-	}
+.wpcf7 input[type="file"] {
+	cursor:                                                    pointer;
+	width:                                                     100%;
+	overflow:                                                  hidden;
+}
 
-	.wpcf7 input[type="file"]:disabled {
-		cursor:                                                   default;
-	}
+.wpcf7 input[type="file"]:disabled {
+	cursor:                                                    default;
+}
 
-	.wpcf7 .wpcf7-submit:disabled {
-		cursor:                                                   not-allowed;
-	}
+.wpcf7 .wpcf7-submit:disabled {
+	cursor:                                                    not-allowed;
+}
 
-	.wpcf7 input[type="url"],
-	.wpcf7 input[type="email"],
-	.wpcf7 input[type="tel"] {
-		direction:                                                ltr;
-	}
+.wpcf7 input[type="url"],
+.wpcf7 input[type="email"],
+.wpcf7 input[type="tel"] {
+	direction:                                                 ltr;
+}
 
-	span.wpcf7-form-control {
-		line-height:                                              1.7em;
-	}
+span.wpcf7-form-control {
+	line-height:                                               1.7em;
+}
 
 
 /*--------------------------------------------------------------
 # Checkboxes & Radios
 --------------------------------------------------------------*/
 
-	input[type="checkbox"],
-	input[type="radio"] {
-		position:                                                 relative;
-		inline-size:                                              1.1em;
-		block-size:                                               1.1em;
-		vertical-align:                                           -2px;
-		cursor:                                                   pointer;
-		display:                                                  inline-block;
-		width:                                                    20px !important;
-		height:                                                   20px !important;
-		transform:                                                translateY(3px);
-		appearance:                                               none;
-		-webkit-appearance:                                       none;
-		background-color:                                         var(--input-background);
-		border-top:                                               var(--input-border-top);
-		border-right:                                             var(--input-border-right);
-		border-bottom:                                            var(--input-border-bottom);
-		border-left:                                              var(--input-border-left);
-		box-shadow:                                               var(--input-box-shadow);
-		border-radius:                                            0;
-		font-size:                                                var(--font-size-text);
-		margin-right:                                             10px !important;
-	}
+input[type="checkbox"],
+input[type="radio"] {
+	position:                                                  relative;
+	inline-size:                                               1.1em;
+	block-size:                                                1.1em;
+	vertical-align:                                            -2px;
+	cursor:                                                    pointer;
+	display:                                                   inline-block;
+	width:                                                     20px !important;
+	height:                                                    20px !important;
+	transform:                                                 translateY(3px);
+	appearance:                                                none;
+	-webkit-appearance:                                        none;
+	background-color:                                          var(--input-background);
+	border-top:                                                var(--input-border-top);
+	border-right:                                              var(--input-border-right);
+	border-bottom:                                             var(--input-border-bottom);
+	border-left:                                               var(--input-border-left);
+	box-shadow:                                                var(--input-box-shadow);
+	border-radius:                                             0;
+	font-size:                                                 var(--font-size-text);
+	margin-right:                                              10px !important;
+}
 
-	input[type="radio"] {
-		border-radius:                                            100%;
-	}
+input[type="radio"] {
+	border-radius:                                             100%;
+}
 
-	span.wpcf7-list-item-label + input[type="checkbox"],
-	span.wpcf7-list-item-label + input[type="radio"] {
-		margin-left:                                              10px !important;
-		margin-right:                                             0 !important;
-	}
+span.wpcf7-list-item-label + input[type="checkbox"],
+span.wpcf7-list-item-label + input[type="radio"] {
+	margin-left:                                               10px !important;
+	margin-right:                                              0 !important;
+}
 
-	input[type="checkbox"]::before,
-	input[type="checkbox"]:checked::after,
-	input[type="radio"]::before,
-	input[type="radio"]:checked::after {
-		content:                                                  "";
-		position:                                                 absolute;
-		inset:                                                    0;
-		display:                                                  block;
-		background:                                               transparent no-repeat center / contain;
-	}
+input[type="checkbox"]::before,
+input[type="checkbox"]:checked::after,
+input[type="radio"]::before,
+input[type="radio"]:checked::after {
+	content:                                                   "";
+	position:                                                  absolute;
+	inset:                                                     0;
+	display:                                                   block;
+	background:                                                transparent no-repeat center / contain;
+}
 
-	input[type="checkbox"]::before,
-	input[type="checkbox"]:checked::after {
-		border:                                                   none;
-	}
+input[type="checkbox"]::before,
+input[type="checkbox"]:checked::after {
+	border:                                                    none;
+}
 
-	input[type="radio"]::before,
-	input[type="radio"]:checked::after {
-		border-radius:                                            100%;
-	}
+input[type="radio"]::before,
+input[type="radio"]:checked::after {
+	border-radius:                                             100%;
+}
 
-	input[type="radio"]:checked::after {
-		background-color:                                         var(--input-color);
-		border:                                                   3px solid var(--white);
-	}
+input[type="radio"]:checked::after {
+	background-color:                                          var(--input-color);
+	border:                                                    3px solid var(--white);
+}
 
-	input[type="checkbox"]:checked::after,
-	.checkmarks input[type="checkbox"]:checked::after,
-	.checkmarks input[type="radio"]:checked::after {
-		background-color:                                         var(--input-color);
-		-webkit-mask:                                             url('data:image/svg+xml;utf8,\<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">\<polyline points="3 8.5 6.5 12 13 4.5" fill="none" stroke="%23000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>\</svg>') center / 100% 100% no-repeat;
-		mask:                                                     url('data:image/svg+xml;utf8,\<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">\<polyline points="3 8.5 6.5 12 13 4.5" fill="none" stroke="%23000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>\</svg>') center / 100% 100% no-repeat;
-	}
+input[type="checkbox"]:checked::after,
+.checkmarks input[type="checkbox"]:checked::after,
+.checkmarks input[type="radio"]:checked::after {
+	background-color:                                          var(--input-color);
+	-webkit-mask:                                              url('data:image/svg+xml;utf8,\<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">\<polyline points="3 8.5 6.5 12 13 4.5" fill="none" stroke="%23000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>\</svg>') center / 100% 100% no-repeat;
+	mask:                                                      url('data:image/svg+xml;utf8,\<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">\<polyline points="3 8.5 6.5 12 13 4.5" fill="none" stroke="%23000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>\</svg>') center / 100% 100% no-repeat;
+}
 
-	.exes input[type="checkbox"]:checked::after,
-	.exes input[type="radio"]:checked::after {
-		background-color:                                         var(--input-color);
-		-webkit-mask:                                             url('data:image/svg+xml;utf8,\<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">\<line x1="4" y1="4" x2="12" y2="12" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\<line x1="12" y1="4" x2="4" y2="12" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\</svg>') center / 100% 100% no-repeat;
-		mask:                                                     url('data:image/svg+xml;utf8,\<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">\<line x1="4" y1="4" x2="12" y2="12" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\<line x1="12" y1="4" x2="4" y2="12" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\</svg>') center / 100% 100% no-repeat;
-	}
+.exes input[type="checkbox"]:checked::after,
+.exes input[type="radio"]:checked::after {
+	background-color:                                          var(--input-color);
+	-webkit-mask:                                              url('data:image/svg+xml;utf8,\<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">\<line x1="4" y1="4" x2="12" y2="12" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\<line x1="12" y1="4" x2="4" y2="12" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\</svg>') center / 100% 100% no-repeat;
+	mask:                                                      url('data:image/svg+xml;utf8,\<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">\<line x1="4" y1="4" x2="12" y2="12" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\<line x1="12" y1="4" x2="4" y2="12" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\</svg>') center / 100% 100% no-repeat;
+}
 
-	.crosses input[type="checkbox"]:checked::after,
-	.crosses input[type="radio"]:checked::after {
-		background-color:                                         var(--input-color);
-		-webkit-mask:                                             url('data:image/svg+xml;utf8,\<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">\<line x1="8" y1="3" x2="8" y2="13" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\<line x1="3" y1="8" x2="13" y2="8" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\</svg>') center / 100% 100% no-repeat;
-		mask:                                                     url('data:image/svg+xml;utf8,\<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">\<line x1="8" y1="3" x2="8" y2="13" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\<line x1="3" y1="8" x2="13" y2="8" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\</svg>') center / 100% 100% no-repeat;
-	}
+.crosses input[type="checkbox"]:checked::after,
+.crosses input[type="radio"]:checked::after {
+	background-color:                                          var(--input-color);
+	-webkit-mask:                                              url('data:image/svg+xml;utf8,\<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">\<line x1="8" y1="3" x2="8" y2="13" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\<line x1="3" y1="8" x2="13" y2="8" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\</svg>') center / 100% 100% no-repeat;
+	mask:                                                      url('data:image/svg+xml;utf8,\<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">\<line x1="8" y1="3" x2="8" y2="13" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\<line x1="3" y1="8" x2="13" y2="8" stroke="%23000" stroke-width="2.5" stroke-linecap="round"/>\</svg>') center / 100% 100% no-repeat;
+}
 
 
 /*--------------------------------------------------------------
 # Application Forms
 --------------------------------------------------------------*/
 
-	.application .flex {
-		border-bottom:                                            1px solid var(--black);
-		padding:                                                  0 0 var(--measure-small);
+.application .flex {
+	border-bottom:                                             1px solid var(--black);
+	padding:                                                   0 0 var(--measure-small);
+}
+
+.application .form-input:not(.input-user-message) {
+	padding:                                                   0.7em 0 0.9em;
+}
+
+@media (min-width: 861px) {
+	.application .form-input:not(:last-of-type):not(.input-user-message) {
+		border-right:                                             1px solid var(--black);
+		padding-right:                                            var(--measure-base);
+	}
+}
+
+form .block-button,
+.wpcf7-response-output {
+	grid-column:                                               1 / -1;
+	margin-top:                                                0.5em;
+}
+
+.wpcf7 form .wpcf7-response-output {
+	margin:                                                    0.6em 10% 0;
+	padding:                                                   0.5em var(--measure-small);
+	font-size:                                                 90%;
+}
+
+.wpcf7 form.init .wpcf7-response-output,
+.wpcf7 form.resetting .wpcf7-response-output,
+.wpcf7 form.validating .wpcf7-response-output,
+.wpcf7 form.submitting .wpcf7-response-output {
+	display:                                                   none;
+	border-color:                                              unset;
+}
+
+.wpcf7 form.invalid .wpcf7-response-output,
+.wpcf7 form.unaccepted .wpcf7-response-output {
+	border-color:                                              var(--warning);
+}
+
+.wpcf7-not-valid-tip {
+	display:                                                   block;
+	font-size:                                                 90%;
+	font-weight:                                               normal;
+	padding:                                                   0.5em var(--measure-small);
+	background:                                                var(--input-background) !important;
+	border:                                                    var(--input-border) !important;
+	color:                                                     red !important;
+}
+
+input + .wpcf7-not-valid-tip {
+	display:                                                   none !important;
+}
+
+.wpcf7-not-valid {
+	box-shadow:                                                inset 0 0 20px var(--warning);
+	animation-name:                                            headShake;
+	animation-duration:                                        2s;
+	animation-delay:                                           0.5s;
+	animation-iteration-count:                                 1;
+	animation-timing-function:                                 var(--main-trans-easing);
+}
+
+.wpcf7-form .wpcf7-spinner {
+	display:                                                   inline-block;
+	width:                                                     0;
+	transform:                                                 translate(12px, 1px);
+	opacity:                                                   0;
+	transition:                                                all 0.1s var(--main-trans-easing);
+}
+
+.wpcf7-form.submitting .wpcf7-spinner,
+.wpcf7-form.wpcf7-mail-sent-ok .wpcf7-spinner {
+	opacity:                                                   1;
+	transition:                                                all 0.1s var(--main-trans-easing);
+}
+
+/* Keyframes for the spin animation */
+@keyframes spin {
+	from {
+		transform:                                                rotate(0deg);
 	}
 
-	.application .form-input:not(.input-user-message) {
-		padding:                                                  0.7em 0 0.9em;
+	to {
+		transform:                                                rotate(360deg);
 	}
+}
 
-	@media (min-width: 861px) {
-		.application .form-input:not(:last-of-type):not(.input-user-message) {
-			border-right:                                            1px solid var(--black);
-			padding-right:                                           var(--measure-base);
-		}
-	}
+span.wpcf7-spinner::before {
+	display:                                                   inline-block;
+	content:                                                   "";
+	width:                                                     20px;
+	height:                                                    20px;
+	background-color:                                          var(--contact-spinner-color);
+	-webkit-mask:                                              url('data:image/svg+xml;utf8,\<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50">\<circle cx="25" cy="25" r="20" fill="none" stroke="%23000" stroke-width="5" stroke-linecap="round" stroke-dasharray="31.4 31.4">\<animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/>\</circle>\</svg>') center / contain no-repeat;
+	mask:                                                      url('data:image/svg+xml;utf8,\<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50">\<circle cx="25" cy="25" r="20" fill="none" stroke="%23000" stroke-width="5" stroke-linecap="round" stroke-dasharray="31.4 31.4">\<animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/>\</circle>\</svg>') center / contain no-repeat;
 
-	form .block-button,
-	.wpcf7-response-output {
-		grid-column:                                              1 / -1;
-		margin-top:                                               0.5em;
-	}
+	animation:                                                 spin 1s linear infinite;
+}
 
-	.wpcf7 form .wpcf7-response-output {
-		margin:                                                   0.6em 10% 0;
-		padding:                                                  0.5em var(--measure-small);
-		font-size:                                                90%;
-	}
+.wpcf7-form.wpcf7-mail-sent-ok span.wpcf7-spinner::before {
+	animation:                                                 spin 2s linear infinite;
+}
 
-	.wpcf7 form.init .wpcf7-response-output,
-	.wpcf7 form.resetting .wpcf7-response-output,
-	.wpcf7 form.validating .wpcf7-response-output,
-	.wpcf7 form.submitting .wpcf7-response-output {
-		display:                                                  none;
-		border-color:                                             unset;
-	}
-
-	.wpcf7 form.invalid .wpcf7-response-output,
-	.wpcf7 form.unaccepted .wpcf7-response-output {
-		border-color:                                             var(--warning);
-	}
-
-	.wpcf7-not-valid-tip {
-		display:                                                  block;
-		font-size:                                                90%;
-		font-weight:                                              normal;
-		padding:                                                  0.5em var(--measure-small);
-		background:                                               var(--input-background) !important;
-		border:                                                   var(--input-border) !important;
-		color:                                                    red !important;
-	}
-
-	input + .wpcf7-not-valid-tip {
-		display:                                                  none !important;
-	}
-
-	.wpcf7-not-valid {
-		box-shadow:                                               inset 0 0 20px var(--warning);
-		animation-name:                                           headShake;
-		animation-duration:                                       2s;
-		animation-delay:                                          0.5s;
-		animation-iteration-count:                                1;
-		animation-timing-function:                                var(--main-trans-easing);
-	}
-
-	.wpcf7-form .wpcf7-spinner {
-		display:                                                  inline-block;
-		width:                                                    0;
-		transform:                                                translate(12px, 1px);
-		opacity:                                                  0;
-		transition:                                               all 0.1s var(--main-trans-easing);
-	}
-
-	.wpcf7-form.submitting .wpcf7-spinner,
-	.wpcf7-form.wpcf7-mail-sent-ok .wpcf7-spinner {
-		opacity:                                                  1;
-		transition:                                               all 0.1s var(--main-trans-easing);
-	}
-
-	/* Keyframes for the spin animation */
-	@keyframes spin {
-		from {
-			transform:                                               rotate(0deg);
-		}
-
-		to {
-			transform:                                               rotate(360deg);
-		}
-	}
-
-	span.wpcf7-spinner::before {
-		display:                                                  inline-block;
-		content:                                                  "";
-		width:                                                    20px;
-		height:                                                   20px;
-		background-color:                                         var(--contact-spinner-color);
-		-webkit-mask:                                             url('data:image/svg+xml;utf8,\<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50">\<circle cx="25" cy="25" r="20" fill="none" stroke="%23000" stroke-width="5" stroke-linecap="round" stroke-dasharray="31.4 31.4">\<animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/>\</circle>\</svg>') center / contain no-repeat;
-		mask:                                                     url('data:image/svg+xml;utf8,\<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50">\<circle cx="25" cy="25" r="20" fill="none" stroke="%23000" stroke-width="5" stroke-linecap="round" stroke-dasharray="31.4 31.4">\<animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/>\</circle>\</svg>') center / contain no-repeat;
-
-		animation:                                                spin 1s linear infinite;
-	}
-
-	.wpcf7-form.wpcf7-mail-sent-ok span.wpcf7-spinner::before {
-		animation:                                                spin 2s linear infinite;
-	}
-
-	/* Review Questions & Redirect
+/* Review Questions & Redirect
 --------------------------------------------- */
-	.review-form {
+.review-form {
 		text-align:                                               center;
 		opacity:                                                  0;
 		transition:                                               all var(--main-trans-speed) var(--main-trans-easing);
-	}
+}
 
-	.review-form.active {
+.review-form.active {
 		opacity:                                                  1;
 		transition:                                               all var(--main-trans-speed) var(--main-trans-easing);
-	}
+}
 
-	.review-form .question {
+.review-form .question {
 		font-weight:                                              bold;
 		font-size:                                                150%;
 		margin-bottom:                                            10px;
-	}
+}
 
-	.review-form button {
+.review-form button {
 		margin:                                                   0 5px;
-	}
+}
 
 
-	/*--------------------------------------------------------------
+/*--------------------------------------------------------------
 # Mobile Styles
 --------------------------------------------------------------*/
 

@@ -90,3 +90,49 @@
 	max-height:                                                25px;
 	margin-right:                                              10px;
 }
+
+/* Google Rating Shortcode */
+.google-review-box {
+	display:                                                   grid;
+	grid-template-columns:                                     40px 1fr;
+	gap:                                                       0 10px;
+}
+
+.google-review-box img {
+	display:                                                   inline-block;
+	width:                                                     40px;
+	height:                                                    40px;
+	grid-row:                                                  span 2;
+	align-self:                                                center;
+}
+
+.google-review-box .icon.star,
+.google-review-box .icon.star-half,
+.google-review-box .icon.star-empty {
+	font-size:                                                 20px;
+	margin-right:                                              3px;
+}
+
+.google-review-box .google-rating-stars .icon-svg.icon-star .stroke,
+.google-review-box .google-rating-stars .icon-svg.icon-star-half .stroke,
+.google-review-box .google-rating-stars .icon-svg.icon-star-empty .stroke {
+	fill:                                                      var(--google-star-stroke) !important;
+}
+
+.google-review-box .google-rating-stars .icon-svg.icon-star .icon-svg .fill,
+.google-review-box .google-rating-stars .icon-svg.icon-star-half .icon-svg .fill {
+	fill:                                                      var(--google-star-color) !important;
+}
+
+.google-review-box .google-rating-stars .icon-svg.icon-star-half .fill2,
+.google-review-box .google-rating-stars .icon-svg.icon-star-empty .fill {
+	fill:                                                      var(--google-star-stroke) !important;
+}
+
+
+.google-review-box .google-rating-number {
+	font-size:                                                 17px;
+	font-weight:                                               bold;
+	font-family:                                               var(--font-text);
+	margin-top:                                                -5px;
+}

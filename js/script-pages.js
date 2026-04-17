@@ -2043,7 +2043,7 @@ form.addEventListener('wpcf7submit', function() {
 	window.openMenu = function () {
 		document.body.classList.add("mm-active");
 
-		if (mobileMenu.offsetParent !== null && activateBtn) {
+		if (activateBtn) {
 			activateBtn.classList.add("active");
 		}
 

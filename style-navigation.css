@@ -386,7 +386,7 @@
      #mobile-menu-bar .mm-bar-btn.call-btn .icon,
      #mobile-menu-bar .email-btn .icon,
      #mobile-menu-bar .email2-btn .icon {
-          color:                                            var(--white-high);
+          color:                                            var(--mobile-menu-icons);
      }
 
      #mobile-menu-bar .mm-bar-btn.scroll-to-top-btn .icon,
@@ -429,7 +429,7 @@
      #mobile-menu-bar .mm-bar-btn.activate-btn div {
           width:                                            24px;
           height:                                           3px;
-          background-color:                                 var(--white-high);
+          background-color:                                 var(--mobile-menu-icons);
           margin:                                           5px 4px;
           transition:                                       all 0.07s ease-in;
      }

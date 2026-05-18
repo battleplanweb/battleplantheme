@@ -455,17 +455,47 @@ add_shortcode('contact-form-7', function($atts) {
 	if ($mapped) return do_shortcode($mapped);
 
 	// 2) Title-based defaults
-	$title = strtolower(trim((string)$atts['title']));
-	if ($title === 'quote request form' || $title === 'request a catering quote') {
-		return do_shortcode('[bp-quote-form]');
-	}
-	if ($title === 'contact us form' || $title === 'contact us') {
-		return do_shortcode('[bp-contact-form]');
-	}
+	$by_title = bp_cf7_title_to_shortcode($atts['title']);
+	if ($by_title) return do_shortcode($by_title);
 
 	// 3) Fallback: contact form
 	return do_shortcode('[bp-contact-form]');
 });
+
+// Returns the framework shortcode that corresponds to a CF7 form title, or
+// null if the title isn't a known standard. Centralized here so the runtime
+// intercept and the version-migration auto-rewrite stay in sync.
+function bp_cf7_title_to_shortcode($title) {
+	$t = strtolower(trim((string)$title));
+	if ($t === '') return null;
+
+	$quote_titles = [
+		'quote request form',
+		'request a catering quote',
+		'request a quote',
+		'request quote',
+		'get a quote',
+		'get quote',
+		'request service',
+		'request a service',
+		'service request',
+		'service request form',
+		'request service form',
+		'get a quote form',
+	];
+	if (in_array($t, $quote_titles, true)) return '[bp-quote-form]';
+
+	$contact_titles = [
+		'contact us form',
+		'contact us',
+		'contact form',
+		'contact',
+		'email us',
+	];
+	if (in_array($t, $contact_titles, true)) return '[bp-contact-form]';
+
+	return null;
+}
 
 // Multi-step wrapper (drop-in replacement for old [cf7-steps])
 add_shortcode('bp-form-steps', 'bp_form_steps');
@@ -1251,6 +1281,21 @@ function bp_render_email_template($template, $ctx) {
 }
 
 function bp_resolve_template_tokens($str, $fields) {
+	// CF7-compat format token: [_format_field "format"] — runs the field value
+	// through strtotime() + date($format). Lets templates write the date row as
+	// `Date: [_format_user-date "D, M j, Y"]` so the renderer still treats the
+	// line as a label/value pair (rather than baking the formatted date in as
+	// literal text, which would turn it into a label-only line).
+	$str = preg_replace_callback('/\[_format_([a-zA-Z0-9_\-]+)\s+"([^"]+)"\]/', function($m) use ($fields) {
+		$key    = $m[1];
+		$format = $m[2];
+		if (!isset($fields[$key])) return '';
+		$v = $fields[$key];
+		if (is_array($v) || $v === '') return '';
+		$ts = strtotime((string)$v);
+		return $ts ? esc_html(date($format, $ts)) : esc_html((string)$v);
+	}, $str);
+
 	return preg_replace_callback('/\[([a-zA-Z0-9_\-]+)\]/', function($m) use ($fields) {
 		$key = $m[1];
 		// Allow [_raw_user-foo] → user-foo (CF7 raw-tag compat)

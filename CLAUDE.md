@@ -835,6 +835,7 @@ Template syntax (mirrors the old CF7 mail body):
 - `[field-name]` alone on a line → value-only line, full-width
 - Blank line → vertical spacing
 - `[_raw_user-foo]` is supported as a CF7-compat alias for `[user-foo]`
+- `[_format_user-foo "D, M j, Y"]` is a CF7-compat format token. The field value is run through `strtotime() + date($format)` so a stored ISO date like `2026-05-17` renders as `Sun, May 17, 2026`. Use this for date fields so the line stays a `Label: [token]` row instead of pre-formatting in PHP (which would bake the date in as literal text and turn the row full-width-bold)
 - Empty fields are dropped entirely (no dangling label)
 - **Orphaned label-only lines are auto-dropped**: if a bare label line (`Additional Info:`) is immediately followed by a value-only token line (`[user-message]`) that resolves to empty, *both* lines are dropped together — so the email never shows a header with nothing underneath it
 
@@ -933,10 +934,10 @@ Wrap a form body in `[bp-form-steps]…[/bp-form-steps]` and structure the body 
 
 ### Per-site primary form CTA
 
-The mobile menu bar contact button and the "request quote" modal default to the quote form. To change site-wide:
+The mobile menu bar contact button and the "request quote" modal default to the **contact form** — universal across business types. HVAC and other quote-driven sites should opt in to the quote form:
 
 ```php
-add_filter('bp_primary_form', fn() => 'contact');  // or 'quote' (default), or 'none' to hide
+add_filter('bp_primary_form', fn() => 'quote');    // or 'contact' (default), or 'none' to hide
 ```
 
 To use a **custom form** (e.g. a site-specific shortcode like `[paradise-tattoo-form]`) override the modal title and shortcode independently — these win over whatever `bp_primary_form` resolved to:
@@ -1042,8 +1043,10 @@ Node.js is **not** in the system PATH. Use Adobe Dreamweaver's bundled Node:
 
 **Node:** `C:/Program Files/Adobe/Adobe Dreamweaver 2021/node/node.exe`
 
-**UglifyJS** (self-contained, no npm needed) is stored at:
-`C:/Users/info/AppData/Local/Temp/terser_install/uglify_pkg/package/tools/node`
+**UglifyJS** (self-contained, no npm needed) is stored under the current Windows user's AppData. On this machine:
+`C:/Users/Glendon Guttenfelder/AppData/Local/Temp/terser_install/uglify_pkg/package/tools/node.js`
+
+If your Windows username differs, swap in `%USERPROFILE%/AppData/Local/Temp/terser_install/uglify_pkg/package/tools/node.js`.
 
 If that temp folder is gone, re-download:
 ```

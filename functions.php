@@ -1631,6 +1631,7 @@ require_once get_template_directory().'/functions-grid.php';
 require_once get_template_directory().'/functions-public.php';
 
 require_once get_template_directory() . '/functions-chron.php';
+require_once get_template_directory() . '/functions-migrations.php';
 
 if ( is_admin() || _USER_LOGIN == "battleplanweb" ) require_once get_template_directory().'/functions-admin.php';
 if (!empty( get_site_option('bp_rovin_secret'))) { require_once get_template_directory() . '/functions-rovin.php'; }
@@ -2866,7 +2867,7 @@ function battleplan_mobile_menu_bar_phone() {
 // Display Mobile Menu Bar Item - Contact
 add_action('bp_mobile_menu_bar_contact', 'battleplan_mobile_menu_bar_contact', 20);
 function battleplan_mobile_menu_bar_contact() {
-	$primary = apply_filters('bp_primary_form', 'quote');
+	$primary = apply_filters('bp_primary_form', 'contact');
 	if ($primary === 'none') {
 		echo '<div class="mm-bar-btn mm-bar-empty"></div>';
 		return;
@@ -2879,7 +2880,7 @@ function battleplan_mobile_menu_bar_contact() {
 // Display Request Quote Modal
 add_action('bp_before_page', 'battleplan_request_quote_modal', 20);
 function battleplan_request_quote_modal() {
-	$primary = apply_filters('bp_primary_form', 'quote');
+	$primary = apply_filters('bp_primary_form', 'contact');
 	if ($primary === 'none') return;
 
 	if ($primary === 'contact') {

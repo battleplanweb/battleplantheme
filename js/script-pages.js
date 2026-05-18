@@ -181,15 +181,28 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	const checkFixedEls = ['#page > #desktop-navigation', '#masthead > #desktop-navigation', '.top-strip', '#masthead'];
 
-	const fixedElement = checkFixedEls.map(selector => getObject(selector))
-		.find(el => el && getComputedStyle(el).position === 'fixed');
+	// Push the next non-fixed sibling down by the height of any always-fixed
+	// header element so content isn't hidden behind it. Re-runs on `load` (after
+	// images settle the masthead's real height) and on `resize` (responsive
+	// breakpoints may change which element is fixed or how tall it is).
+	function applyFixedHeaderOffset() {
+		const fixedElement = checkFixedEls.map(selector => getObject(selector))
+			.find(el => el && getComputedStyle(el).position === 'fixed');
 
-	if (fixedElement) {
-		const targetElement = fixedElement.matches('#page > #desktop-navigation') ? getObject('#masthead') : fixedElement.nextElementSibling;
+		if (!fixedElement) return;
+
+		const targetElement = fixedElement.matches('#page > #desktop-navigation')
+			? getObject('#masthead')
+			: fixedElement.nextElementSibling;
+
 		if (targetElement) {
 			targetElement.style.marginTop = `${fixedElement.offsetHeight}px`;
 		}
 	}
+
+	applyFixedHeaderOffset();
+	window.addEventListener('load',   applyFixedHeaderOffset);
+	window.addEventListener('resize', applyFixedHeaderOffset);
 
 
 	window.lockDiv = function (elementSel, triggerSel = null, triggerAdj = 0, docFlow = true, positionAdj = 0) {

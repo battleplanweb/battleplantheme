@@ -20,7 +20,7 @@ if ( $is_god && ! $impersonating ) {
 	$caps = [ 'view_all_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'view_ai_insights', 'submit_reports', 'view_own_reports', 'view_team_reports', 'review_reports', 'god_mode' ];
 	$role_label = 'God';
 } elseif ( $is_wp_admin && ! $role ) {
-	$caps = [ 'view_all_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'view_ai_insights', 'submit_reports', 'view_own_reports' ];
+	$caps = [ 'view_all_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'view_ai_insights', 'submit_reports', 'view_own_reports', 'manage_mileage', 'submit_mileage' ];
 	$role_label = 'Administrator';
 } else {
 	$caps = $role ? ( json_decode( $role['capabilities'], true ) ?: [] ) : [];
@@ -56,6 +56,7 @@ $icons = [
 	'x'         => '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
 	'pulse'     => '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
 	'checklist' => '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+	'car'       => '<path d="M5 17h14M3 13l2-6h14l2 6M5 17a2 2 0 0 0 4 0M15 17a2 2 0 0 0 4 0M3 13v4h18v-4"/>',
 ];
 
 // Build nav structure with sub-items
@@ -76,17 +77,20 @@ $nav[] = [
 
 $nav[] = [ 'slug' => 'action-items', 'label' => 'Action Items', 'icon' => 'checklist', 'show' => in_array( 'submit_reports', $caps ) || in_array( 'view_own_reports', $caps ) || in_array( 'view_team_reports', $caps ) || in_array( 'view_all_reports', $caps ) ];
 
+$nav[] = [ 'slug' => 'mileage', 'label' => 'Mileage', 'icon' => 'car', 'show' => in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ];
+
 $nav[] = [ 'slug' => 'analytics', 'label' => 'Analytics', 'icon' => 'chart', 'show' => in_array( 'view_analytics', $caps ) ];
 
 $nav[] = [
 	'slug'  => 'admin',
 	'label' => 'Admin',
 	'icon'  => 'settings',
-	'show'  => in_array( 'manage_locations', $caps ) || in_array( 'manage_users', $caps ) || in_array( 'manage_settings', $caps ),
+	'show'  => in_array( 'manage_locations', $caps ) || in_array( 'manage_users', $caps ) || in_array( 'manage_settings', $caps ) || in_array( 'manage_mileage', $caps ),
 	'children' => [
 		[ 'slug' => 'admin-users',     'label' => 'Users',            'icon' => 'users',   'show' => in_array( 'manage_users', $caps ) ],
 		[ 'slug' => 'admin-locations', 'label' => 'Locations',        'icon' => 'mappin',  'show' => in_array( 'manage_locations', $caps ) ],
 		[ 'slug' => 'admin-templates', 'label' => 'Report Templates', 'icon' => 'file',    'show' => in_array( 'manage_templates', $caps ) ],
+		[ 'slug' => 'admin-mileage',   'label' => 'Mileage Locations','icon' => 'car',     'show' => in_array( 'manage_mileage', $caps ) ],
 		[ 'slug' => 'admin-settings',  'label' => 'Settings',         'icon' => 'sliders', 'show' => in_array( 'manage_settings', $caps ) ],
 	],
 ];
@@ -363,6 +367,28 @@ if ( in_array( 'view_analytics', $caps ) ) {
 	$printPage .= '</section>';
 }
 
+// Mileage Panel
+if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-mileage">';
+	$printPage .=   '<div class="sp-panel-header">';
+	$printPage .=     '<h2>Mileage</h2>';
+	$printPage .=     '<div class="sp-mileage-actions">';
+	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-print-btn">Print</button>';
+	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-email-btn">Email</button>';
+	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-mileage-add-btn">+ Add a Day</button>';
+	$printPage .=     '</div>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-mileage-summary" id="sp-mileage-summary"></div>';
+	$printPage .=   '<div class="sp-report-filters">';
+	$printPage .=     '<input type="date" id="sp-mileage-filter-start" class="sp-input" placeholder="From">';
+	$printPage .=     '<input type="date" id="sp-mileage-filter-end" class="sp-input" placeholder="To">';
+	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-filter-clear">Clear</button>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-mileage-list" id="sp-mileage-list"></div>';
+	$printPage .=   '<div class="sp-mileage-form-wrap" id="sp-mileage-form-wrap" hidden></div>';
+	$printPage .= '</section>';
+}
+
 // Admin Panels
 if ( in_array( 'manage_users', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-users">';
@@ -386,6 +412,12 @@ if ( in_array( 'manage_settings', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-settings">';
 	$printPage .=   '<div class="sp-panel-header"><h2>Settings</h2></div>';
 	$printPage .=   '<div class="sp-admin-content" id="sp-admin-settings-content"></div>';
+	$printPage .= '</section>';
+}
+if ( in_array( 'manage_mileage', $caps ) ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-admin-mileage">';
+	$printPage .=   '<div class="sp-panel-header"><h2>Mileage Locations</h2></div>';
+	$printPage .=   '<div class="sp-admin-content" id="sp-admin-mileage-content"></div>';
 	$printPage .= '</section>';
 }
 

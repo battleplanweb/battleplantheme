@@ -39,6 +39,8 @@ function init() {
 	initReports();
 	initReview();
 	initAdmin();
+	initMileage();
+	initAdminMileage();
 	restoreViewState();
 }
 
@@ -323,8 +325,12 @@ function initNotifications() {
 		} catch (err) {}
 	});
 
-	loadNotificationCount();
-	setInterval(loadNotificationCount, 60000);
+	const tick = () => {
+		loadNotificationCount();
+		loadPendingMileageCount();
+	};
+	tick();
+	setInterval(tick, 60000);
 }
 
 async function loadNotificationCount() {
@@ -621,19 +627,22 @@ async function showReportForm(existingReport = null) {
 		const template = templates[0];
 		let fields = [];
 		let answers = {};
+		let previousReport = null;
 
 		if (existingReport) {
 			const detail = await spAjax('site_pulse_get_report_detail', { report_id: existingReport.id });
 			if (detail.success) {
 				fields = detail.data.fields || [];
 				(detail.data.answers || []).forEach(a => { answers[a.field_key] = a.answer_text || ''; });
+				previousReport = detail.data.previous_report || null;
 			}
 		} else {
-			const tplFields = await loadTemplateFields(template.id);
-			fields = tplFields;
+			const tplData = await loadTemplateFields(template.id);
+			fields = tplData.fields;
+			previousReport = tplData.previousReport;
 		}
 
-		renderReportForm(wrap, template, fields, answers, existingReport);
+		renderReportForm(wrap, template, fields, answers, existingReport, previousReport);
 	} catch (err) {
 		wrap.innerHTML = '<p>Error loading form.</p>';
 	}
@@ -642,13 +651,19 @@ async function showReportForm(existingReport = null) {
 async function loadTemplateFields(templateId) {
 	try {
 		const res = await spAjax('site_pulse_get_template_fields', { template_id: templateId });
-		return res.success ? (res.data.fields || []) : [];
+		if (!res.success) return { fields: [], previousReport: null };
+		return {
+			fields: res.data.fields || [],
+			previousReport: res.data.previous_report || null,
+		};
 	} catch (e) {
-		return [];
+		return { fields: [], previousReport: null };
 	}
 }
 
-function renderReportForm(wrap, template, fields, answers, existingReport) {
+function renderReportForm(wrap, template, fields, answers, existingReport, previousReport = null) {
+	const previousAnswers = previousReport?.answers || {};
+	const previousDate = previousReport ? formatDate(previousReport.date) : '';
 	const today = new Date();
 	const reportDate = existingReport?.report_period_start || toDateStr(today);
 
@@ -687,8 +702,12 @@ function renderReportForm(wrap, template, fields, answers, existingReport) {
 		}
 
 		const val = answers[f.field_key] || '';
+		const prior = previousAnswers[f.field_key] || '';
 		html += '<div class="sp-form-group">';
 		html += `<label for="sp-field-${f.field_key}">${esc(f.label)}${f.is_required == 1 ? ' <span class="sp-text-danger">*</span>' : ''}</label>`;
+		if (prior) {
+			html += `<div class="sp-prior-answer"><span class="sp-prior-answer-date">${esc(previousDate)}:</span> ${esc(prior)}</div>`;
+		}
 
 		switch (f.field_type) {
 			case 'textarea':
@@ -794,6 +813,9 @@ async function saveReport(actionType) {
 		if (res.success) {
 			hideReportForm();
 			loadReports();
+			if (actionType === 'submit' && (res.data?.pending_count || 0) > 0) {
+				activatePanel('action-items');
+			}
 		} else {
 			alert(res.data?.message || 'Error saving report.');
 		}
@@ -862,9 +884,16 @@ function renderReportDetail(wrap, report, answers, fields, location, author, pan
 	const hasPrev = currentReportIndex > 0;
 	const hasNext = currentReportIndex < currentReportList.length - 1 && currentReportIndex >= 0;
 
+	const showNewBtn = !panelPrefix && D.userCaps?.includes('submit_reports');
+
 	// Navigation bar
 	let html = '<div class="sp-detail-nav">';
+	html += '<div class="sp-detail-nav-left">';
 	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-detail-back-btn">&larr; Back to Reports</button>';
+	if (showNewBtn) {
+		html += '<button type="button" class="unique sp-btn sp-btn-primary sp-detail-new-btn">+ New Report</button>';
+	}
+	html += '</div>';
 	html += '<div class="sp-detail-nav-arrows">';
 	html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-detail-prev"${hasPrev ? '' : ' disabled'}>&lsaquo; Previous</button>`;
 	html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-detail-next"${hasNext ? '' : ' disabled'}>Next &rsaquo;</button>`;
@@ -909,6 +938,7 @@ function renderReportDetail(wrap, report, answers, fields, location, author, pan
 
 	// Event listeners
 	$('.sp-detail-back-btn', wrap)?.addEventListener('click', () => closeReportDetail(panelPrefix));
+	$('.sp-detail-new-btn', wrap)?.addEventListener('click', () => showReportForm());
 
 	$('.sp-detail-prev', wrap)?.addEventListener('click', () => {
 		if (currentReportIndex > 0) {
@@ -1581,14 +1611,14 @@ async function loadActionItems() {
 	try {
 		const res = await spAjax('site_pulse_get_action_items', filters);
 		if (!res.success) { list.innerHTML = '<div class="sp-empty-state"><p>Error loading action items.</p></div>'; return; }
-		renderActionItems(list, res.data.items);
+		renderActionItems(list, res.data.items, res.data.pending || []);
 	} catch (err) {
 		list.innerHTML = '<div class="sp-empty-state"><p>Error loading action items.</p></div>';
 	}
 }
 
-function renderActionItems(container, items) {
-	if (!items || items.length === 0) {
+function renderActionItems(container, items, pending = []) {
+	if ((!items || items.length === 0) && (!pending || pending.length === 0)) {
 		container.innerHTML = '<div class="sp-empty-state"><p>No action items.</p></div>';
 		return;
 	}
@@ -1596,56 +1626,35 @@ function renderActionItems(container, items) {
 	const sortMode = $('#sp-action-sort')?.value || 'importance';
 	const priorityOrder = { high: 0, medium: 1, low: 2 };
 
-	if (sortMode === 'importance') {
+	if (sortMode === 'importance' && items) {
 		items.sort((a, b) => (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1));
 	}
 	// 'custom' uses the display_order from the DB, which is how items arrive by default
 
 	let html = '';
-	items.forEach(item => {
-		const isOpen = item.status === 'open';
-		const priorityClass = item.priority === 'high' ? 'sp-priority-high' : item.priority === 'medium' ? 'sp-priority-medium' : 'sp-priority-low';
-		const resolvedInfo = !isOpen && item.resolved_at ? `<div class="sp-action-resolved">Resolved ${timeAgo(item.resolved_at)}${item.resolution_note ? ' — ' + esc(item.resolution_note) : ''}</div>` : '';
 
-		html += `<div class="sp-action-item ${isOpen ? '' : 'sp-action-resolved-item'} ${priorityClass}" data-item-id="${item.id}"${isOpen ? ' draggable="true"' : ''}>`;
-		if (isOpen) html += '<span class="sp-action-drag">&#9776;</span>';
-		html += '<div class="sp-action-item-content">';
+	if (pending.length > 0) {
+		pending.sort((a, b) => (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1));
+		html += '<div class="sp-pending-section">';
+		html += `<h3 class="sp-pending-heading">Pending Approval <span class="sp-pending-count">${pending.length}</span></h3>`;
+		html += '<p class="sp-pending-intro">Approve to add to your action items list. Reject to discard.</p>';
+		pending.forEach(item => { html += renderActionItemCard(item, 'pending'); });
+		html += '</div>';
+	}
 
-		// Show history if this is a follow-up item
-		const history = item.meta ? (typeof item.meta === 'string' ? JSON.parse(item.meta || '[]') : item.meta) : [];
-		if (Array.isArray(history) && history.length > 0) {
-			html += '<div class="sp-action-history">';
-			history.forEach(h => {
-				html += '<div class="sp-action-history-entry">';
-				html += `<div class="sp-action-history-label">Original Item:</div>`;
-				html += `<div class="sp-action-history-text">${esc(h.original)}</div>`;
-				html += `<div class="sp-action-history-label">Response:</div>`;
-				html += `<div class="sp-action-history-text">${esc(h.response)}</div>`;
-				if (h.ai_reason) {
-					html += `<div class="sp-action-history-label">Assessment:</div>`;
-					html += `<div class="sp-action-history-ai">${esc(h.ai_reason)}</div>`;
-				}
-				html += '</div>';
-			});
-			html += '</div>';
-		}
-
-		html += `<div class="sp-action-item-category"><span class="unique">${esc(item.category)}</span></div>`;
-		html += `<div class="sp-action-item-desc">${esc(item.description)}</div>`;
-		html += `<div class="sp-action-item-meta"><span class="unique">${esc(item.location_name || '')}</span>`;
-		if (item.user_name) html += ` <span class="unique">&middot; ${esc(item.user_name)}</span>`;
-		if (item.due_date) html += ` <span class="unique">&middot; Due ${formatDate(item.due_date)}</span>`;
-		html += '</div>';
-		html += resolvedInfo;
-		html += '</div>';
-		if (isOpen) {
-			html += `<button type="button" class="unique sp-btn sp-btn-secondary sp-resolve-item-btn" data-item-id="${item.id}">Resolve</button>`;
-		}
-		html += '</div>';
-	});
+	if (items && items.length > 0) {
+		items.forEach(item => { html += renderActionItemCard(item, item.status === 'open' ? 'open' : 'resolved'); });
+	}
 
 	container.innerHTML = html;
 	markUniqueSpans(container);
+
+	$$('.sp-review-approve-btn', container).forEach(btn => {
+		btn.addEventListener('click', () => reviewActionItem(btn.dataset.itemId, 'approve', btn));
+	});
+	$$('.sp-review-reject-btn', container).forEach(btn => {
+		btn.addEventListener('click', () => reviewActionItem(btn.dataset.itemId, 'reject', btn));
+	});
 
 	$$('.sp-resolve-item-btn', container).forEach(btn => {
 		btn.addEventListener('click', () => {
@@ -1711,6 +1720,86 @@ function renderActionItems(container, items) {
 	});
 
 	initActionItemDragDrop(container);
+}
+
+function renderActionItemCard(item, mode) {
+	const priorityClass = item.priority === 'high' ? 'sp-priority-high' : item.priority === 'medium' ? 'sp-priority-medium' : 'sp-priority-low';
+	const isOpen = mode === 'open';
+	const isPending = mode === 'pending';
+	const isResolved = mode === 'resolved';
+
+	const resolvedInfo = isResolved && item.resolved_at
+		? `<div class="sp-action-resolved">Resolved ${timeAgo(item.resolved_at)}${item.resolution_note ? ' — ' + esc(item.resolution_note) : ''}</div>`
+		: '';
+
+	const classes = [ 'sp-action-item', priorityClass ];
+	if (isResolved) classes.push('sp-action-resolved-item');
+	if (isPending) classes.push('sp-action-pending');
+
+	let html = `<div class="${classes.join(' ')}" data-item-id="${item.id}"${isOpen ? ' draggable="true"' : ''}>`;
+	if (isOpen) html += '<span class="sp-action-drag">&#9776;</span>';
+	html += '<div class="sp-action-item-content">';
+
+	const history = item.meta ? (typeof item.meta === 'string' ? JSON.parse(item.meta || '[]') : item.meta) : [];
+	if (Array.isArray(history) && history.length > 0) {
+		html += '<div class="sp-action-history">';
+		history.forEach(h => {
+			html += '<div class="sp-action-history-entry">';
+			html += `<div class="sp-action-history-label">Original Item:</div>`;
+			html += `<div class="sp-action-history-text">${esc(h.original)}</div>`;
+			html += `<div class="sp-action-history-label">Response:</div>`;
+			html += `<div class="sp-action-history-text">${esc(h.response)}</div>`;
+			if (h.ai_reason) {
+				html += `<div class="sp-action-history-label">Assessment:</div>`;
+				html += `<div class="sp-action-history-ai">${esc(h.ai_reason)}</div>`;
+			}
+			html += '</div>';
+		});
+		html += '</div>';
+	}
+
+	html += `<div class="sp-action-item-category"><span class="unique">${esc(item.category)}</span></div>`;
+	html += `<div class="sp-action-item-desc">${esc(item.description)}</div>`;
+	html += `<div class="sp-action-item-meta"><span class="unique">${esc(item.location_name || '')}</span>`;
+	if (item.user_name) html += ` <span class="unique">&middot; ${esc(item.user_name)}</span>`;
+	if (item.due_date) html += ` <span class="unique">&middot; Due ${formatDate(item.due_date)}</span>`;
+	html += '</div>';
+	html += resolvedInfo;
+	html += '</div>';
+
+	if (isPending) {
+		html += '<div class="sp-action-review-actions">';
+		html += `<button type="button" class="unique sp-btn sp-btn-primary sp-review-approve-btn" data-item-id="${item.id}">Approve</button>`;
+		html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-review-reject-btn" data-item-id="${item.id}">Reject</button>`;
+		html += '</div>';
+	} else if (isOpen) {
+		html += `<button type="button" class="unique sp-btn sp-btn-secondary sp-resolve-item-btn" data-item-id="${item.id}">Resolve</button>`;
+	}
+
+	html += '</div>';
+	return html;
+}
+
+async function reviewActionItem(itemId, decision, btn) {
+	if (decision === 'reject' && !confirm('Reject this action item? It will be removed permanently.')) return;
+
+	const itemEl = btn?.closest('.sp-action-item');
+	const buttons = itemEl ? $$('.sp-btn', itemEl) : [];
+	buttons.forEach(b => b.disabled = true);
+
+	try {
+		const res = await spAjax('site_pulse_review_action_item', { item_id: itemId, decision: decision });
+		if (res.success) {
+			loadActionItems();
+			loadNotificationCount();
+		} else {
+			alert(res.data?.message || 'Error reviewing item.');
+			buttons.forEach(b => b.disabled = false);
+		}
+	} catch (err) {
+		alert('Error reviewing item.');
+		buttons.forEach(b => b.disabled = false);
+	}
 }
 
 function initActionItemDragDrop(wrap) {
@@ -2212,6 +2301,559 @@ function calcHeaderValue(calc, dateStr) {
 			return String(now.getFullYear());
 		default:
 			return calc || '';
+	}
+}
+
+
+/*--------------------------------------------------------------
+# Mileage — Manager
+--------------------------------------------------------------*/
+
+let mileageLocations = [];
+let mileageRate = 0.67;
+
+function initMileage() {
+	const panel = $('#sp-panel-mileage');
+	if (!panel) return;
+
+	$('#sp-mileage-add-btn')?.addEventListener('click', () => showMileageForm());
+	$('#sp-mileage-print-btn')?.addEventListener('click', () => printMileageLog());
+	$('#sp-mileage-email-btn')?.addEventListener('click', () => emailMileageLog());
+	$('#sp-mileage-filter-clear')?.addEventListener('click', () => {
+		$('#sp-mileage-filter-start').value = '';
+		$('#sp-mileage-filter-end').value = '';
+		loadMileageEntries();
+	});
+	$('#sp-mileage-filter-start')?.addEventListener('change', loadMileageEntries);
+	$('#sp-mileage-filter-end')?.addEventListener('change', loadMileageEntries);
+
+	loadMileageLocations().then(() => loadMileageEntries());
+}
+
+async function loadMileageLocations() {
+	try {
+		const res = await spAjax('site_pulse_get_mileage_locations', {});
+		if (res.success) {
+			mileageLocations = res.data.locations || [];
+			mileageRate = parseFloat(res.data.rate) || 0.67;
+		}
+	} catch (e) { mileageLocations = []; }
+}
+
+async function loadMileageEntries() {
+	const list = $('#sp-mileage-list');
+	const summary = $('#sp-mileage-summary');
+	if (!list) return;
+	list.innerHTML = '<div class="sp-loading"></div>';
+
+	const start = $('#sp-mileage-filter-start')?.value || '';
+	const end = $('#sp-mileage-filter-end')?.value || '';
+
+	try {
+		const res = await spAjax('site_pulse_get_mileage_entries', { start, end });
+		if (!res.success) { list.innerHTML = '<div class="sp-empty-state"><p>Error loading entries.</p></div>'; return; }
+
+		const entries = res.data.entries || [];
+		mileageRate = parseFloat(res.data.rate) || mileageRate;
+
+		if (entries.length === 0) {
+			summary.innerHTML = '';
+			list.innerHTML = '<div class="sp-empty-state"><p>No mileage entries yet. Click "+ Add a Day" to get started.</p></div>';
+			return;
+		}
+
+		const totalMiles = entries.reduce((s, e) => s + parseFloat(e.total_miles || 0), 0);
+		const totalAmt = entries.reduce((s, e) => s + parseFloat(e.reimbursement_amount || 0), 0);
+		const pendingCount = entries.reduce((s, e) => s + (parseInt(e.pending_legs) > 0 ? 1 : 0), 0);
+
+		summary.innerHTML = `
+			<div class="sp-mileage-summary-grid">
+				<div><div class="sp-card-label">Entries</div><div class="sp-card-value">${entries.length}</div></div>
+				<div><div class="sp-card-label">Total Miles</div><div class="sp-card-value">${totalMiles.toFixed(2)}</div></div>
+				<div><div class="sp-card-label">Reimbursement</div><div class="sp-card-value">$${totalAmt.toFixed(2)}</div></div>
+				<div><div class="sp-card-label">Rate</div><div class="sp-card-value">$${mileageRate.toFixed(2)}/mi</div></div>
+				${pendingCount > 0 ? `<div><div class="sp-card-label">Pending</div><div class="sp-card-value sp-text-warning">${pendingCount}</div></div>` : ''}
+			</div>
+		`;
+
+		let html = '<table class="sp-mileage-table"><thead><tr><th>Date</th><th>Stops</th><th>Miles</th><th>$</th><th>Status</th><th></th></tr></thead><tbody>';
+		entries.forEach(e => {
+			const isPending = parseInt(e.pending_legs) > 0;
+			html += `<tr data-entry-id="${e.id}">`;
+			html += `<td>${formatDate(e.entry_date)}</td>`;
+			html += `<td class="sp-mileage-path-cell"><span class="unique sp-mileage-path-loading">Loading…</span></td>`;
+			html += `<td>${parseFloat(e.total_miles).toFixed(2)}</td>`;
+			html += `<td>$${parseFloat(e.reimbursement_amount).toFixed(2)}</td>`;
+			html += `<td>${isPending ? '<span class="unique sp-status-badge sp-status-pending">Pending</span>' : '<span class="unique sp-status-badge sp-status-submitted">Final</span>'}</td>`;
+			html += `<td class="sp-mileage-row-actions">`;
+			html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-edit-btn" data-id="${e.id}">Edit</button>`;
+			html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-delete-btn" data-id="${e.id}">Delete</button>`;
+			html += `</td></tr>`;
+		});
+		html += '</tbody></table>';
+		list.innerHTML = html;
+		markUniqueSpans(list);
+
+		// Lazy-load each entry's path inline
+		entries.forEach(async (e) => {
+			try {
+				const r = await spAjax('site_pulse_get_mileage_entry', { entry_id: e.id });
+				if (!r.success) return;
+				const legs = r.data.legs || [];
+				const cell = list.querySelector(`tr[data-entry-id="${e.id}"] .sp-mileage-path-cell`);
+				if (!cell) return;
+				if (legs.length === 0) { cell.textContent = '—'; return; }
+				let path = esc(legs[0].from_name || '?');
+				legs.forEach(leg => { path += ' → ' + esc(leg.to_name || '?'); });
+				cell.innerHTML = path;
+			} catch (err) {}
+		});
+
+		$$('.sp-mileage-edit-btn', list).forEach(b => b.addEventListener('click', () => showMileageForm(parseInt(b.dataset.id))));
+		$$('.sp-mileage-delete-btn', list).forEach(b => b.addEventListener('click', async () => {
+			if (!confirm('Delete this mileage entry?')) return;
+			const r = await spAjax('site_pulse_delete_mileage_entry', { entry_id: b.dataset.id });
+			if (r.success) loadMileageEntries();
+			else alert(r.data?.message || 'Error.');
+		}));
+	} catch (err) {
+		list.innerHTML = '<div class="sp-empty-state"><p>Error loading entries.</p></div>';
+	}
+}
+
+async function showMileageForm(entryId = 0) {
+	const wrap = $('#sp-mileage-form-wrap');
+	const list = $('#sp-mileage-list');
+	const summary = $('#sp-mileage-summary');
+	if (!wrap) return;
+
+	await loadMileageLocations();
+
+	let entry = null;
+	let stops = [];
+	if (entryId) {
+		const res = await spAjax('site_pulse_get_mileage_entry', { entry_id: entryId });
+		if (res.success) {
+			entry = res.data.entry;
+			const legs = res.data.legs || [];
+			if (legs.length > 0) {
+				stops.push(parseInt(legs[0].from_location_id));
+				legs.forEach(l => stops.push(parseInt(l.to_location_id)));
+			}
+		}
+	}
+	if (stops.length < 2) stops = [0, 0];
+
+	list.classList.add('sp-hidden');
+	if (summary) summary.classList.add('sp-hidden');
+	wrap.hidden = false;
+
+	const today = new Date().toISOString().split('T')[0];
+	const date = entry?.entry_date || today;
+
+	let html = '<div class="sp-report-form-header">';
+	html += `<h3>${entryId ? 'Edit' : 'New'} Mileage Day</h3>`;
+	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-back-btn">Back</button>';
+	html += '</div>';
+	html += '<form id="sp-mileage-form">';
+	html += `<input type="hidden" name="entry_id" value="${entryId || ''}">`;
+	html += '<div class="sp-form-group">';
+	html += `<label>Date</label><input type="date" name="entry_date" class="sp-input" value="${date}" required>`;
+	html += '</div>';
+	html += '<div class="sp-form-group">';
+	html += '<label>Route</label>';
+	html += '<div class="sp-mileage-stops" id="sp-mileage-stops"></div>';
+	html += '<div class="sp-mileage-stop-actions">';
+	html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-add-stop">+ Add Stop</button>';
+	html += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-add-loc">+ Add New Location</button>';
+	html += '</div>';
+	html += '<div class="sp-mileage-totals" id="sp-mileage-totals"></div>';
+	html += '</div>';
+	html += '<div class="sp-form-group">';
+	html += `<label>Notes (optional)</label><textarea name="notes" class="sp-textarea" rows="2">${esc(entry?.notes || '')}</textarea>`;
+	html += '</div>';
+	html += '<div class="sp-report-form-actions">';
+	html += '<button type="submit" class="unique sp-btn sp-btn-primary">Save</button>';
+	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-back-btn">Cancel</button>';
+	html += '</div>';
+	html += '</form>';
+
+	wrap.innerHTML = html;
+	markUniqueSpans(wrap);
+
+	renderMileageStops(stops);
+
+	$$('.sp-mileage-back-btn', wrap).forEach(b => b.addEventListener('click', () => hideMileageForm()));
+	$('#sp-mileage-add-stop', wrap)?.addEventListener('click', () => {
+		const current = readMileageStops();
+		current.push(0);
+		renderMileageStops(current);
+	});
+	$('#sp-mileage-add-loc', wrap)?.addEventListener('click', () => showAddLocationModal());
+
+	$('#sp-mileage-form', wrap)?.addEventListener('submit', async (e) => {
+		e.preventDefault();
+		const stopsArr = readMileageStops().filter(v => v > 0);
+		if (stopsArr.length < 2) { alert('Please pick at least two stops.'); return; }
+		const data = {
+			entry_id: entryId || '',
+			entry_date: e.target.entry_date.value,
+			notes: e.target.notes.value,
+			stops: stopsArr,
+		};
+		const r = await spAjax('site_pulse_save_mileage_entry', data);
+		if (r.success) { hideMileageForm(); loadMileageEntries(); }
+		else alert(r.data?.message || 'Error saving.');
+	});
+}
+
+function hideMileageForm() {
+	const wrap = $('#sp-mileage-form-wrap');
+	const list = $('#sp-mileage-list');
+	const summary = $('#sp-mileage-summary');
+	if (wrap) { wrap.hidden = true; wrap.innerHTML = ''; }
+	list?.classList.remove('sp-hidden');
+	summary?.classList.remove('sp-hidden');
+}
+
+function renderMileageStops(stops) {
+	const wrap = $('#sp-mileage-stops');
+	if (!wrap) return;
+	let html = '';
+	stops.forEach((stopId, idx) => {
+		html += '<div class="sp-mileage-stop">';
+		html += `<span class="unique sp-mileage-stop-num">${idx + 1}.</span>`;
+		html += `<select class="sp-select sp-mileage-stop-select">`;
+		html += '<option value="0">Choose a location…</option>';
+		mileageLocations.forEach(l => {
+			const sel = parseInt(l.id) === stopId ? ' selected' : '';
+			const label = l.status === 'pending' ? `${l.name} (pending)` : l.name;
+			html += `<option value="${l.id}"${sel}>${esc(label)}</option>`;
+		});
+		html += '</select>';
+		if (stops.length > 2) {
+			html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-stop-remove" data-idx="${idx}" aria-label="Remove stop">&times;</button>`;
+		}
+		html += '</div>';
+	});
+	wrap.innerHTML = html;
+	markUniqueSpans(wrap);
+
+	$$('.sp-mileage-stop-select', wrap).forEach(s => s.addEventListener('change', () => updateMileageTotals()));
+	$$('.sp-mileage-stop-remove', wrap).forEach(b => b.addEventListener('click', () => {
+		const current = readMileageStops();
+		current.splice(parseInt(b.dataset.idx), 1);
+		if (current.length < 2) current.push(0);
+		renderMileageStops(current);
+		updateMileageTotals();
+	}));
+
+	updateMileageTotals();
+}
+
+function readMileageStops() {
+	return $$('.sp-mileage-stop-select').map(s => parseInt(s.value) || 0);
+}
+
+function findMileageDistance(a, b) {
+	if (!a || !b || a === b) return null;
+	// Optimistic local lookup is fine for instant feedback only;
+	// the server is the authority on miles.
+	return null;
+}
+
+function updateMileageTotals() {
+	const totals = $('#sp-mileage-totals');
+	if (!totals) return;
+	const stops = readMileageStops();
+	const valid = stops.filter(v => v > 0);
+	if (valid.length < 2) { totals.innerHTML = ''; return; }
+
+	let pendingLocs = 0;
+	stops.forEach(id => {
+		const loc = mileageLocations.find(l => parseInt(l.id) === id);
+		if (loc && loc.status === 'pending') pendingLocs++;
+	});
+
+	const note = pendingLocs > 0
+		? `<span class="unique sp-text-warning">${pendingLocs} location${pendingLocs > 1 ? 's' : ''} awaiting admin approval — totals will calculate once approved.</span>`
+		: `<span class="unique sp-text-secondary">Distances calculated server-side after save.</span>`;
+	totals.innerHTML = note;
+}
+
+function showAddLocationModal() {
+	const existing = $('#sp-mileage-loc-modal');
+	if (existing) existing.remove();
+
+	const modal = document.createElement('div');
+	modal.id = 'sp-mileage-loc-modal';
+	modal.className = 'sp-modal-backdrop';
+	modal.innerHTML = `
+		<div class="sp-modal">
+			<h3>Add a New Location</h3>
+			<p class="sp-text-secondary">It'll be sent for admin approval. Once approved, the distance will be calculated automatically.</p>
+			<div class="sp-form-group"><label>Name</label><input type="text" id="sp-loc-name" class="sp-input" placeholder="Big D Mechanical"></div>
+			<div class="sp-form-group"><label>Address</label><input type="text" id="sp-loc-address" class="sp-input" placeholder="123 Main St, City, TX 75001"></div>
+			<div class="sp-form-group"><label>Type</label><select id="sp-loc-type" class="sp-select"><option value="vendor">Vendor</option><option value="other">Other</option></select></div>
+			<div class="sp-modal-actions">
+				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-loc-submit">Submit for Approval</button>
+				<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-loc-cancel">Cancel</button>
+			</div>
+		</div>
+	`;
+	document.body.appendChild(modal);
+	markUniqueSpans(modal);
+
+	const close = () => modal.remove();
+	modal.querySelector('#sp-loc-cancel').addEventListener('click', close);
+	modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+	modal.querySelector('#sp-loc-submit').addEventListener('click', async () => {
+		const name = modal.querySelector('#sp-loc-name').value.trim();
+		const address = modal.querySelector('#sp-loc-address').value.trim();
+		const type = modal.querySelector('#sp-loc-type').value;
+		if (!name || !address) { alert('Name and address required.'); return; }
+		const r = await spAjax('site_pulse_add_mileage_location', { name, address, location_type: type });
+		if (r.success) {
+			await loadMileageLocations();
+			const stops = readMileageStops();
+			// Auto-fill the first empty stop with the new location
+			const emptyIdx = stops.findIndex(v => !v);
+			if (emptyIdx >= 0) stops[emptyIdx] = parseInt(r.data.id);
+			else stops.push(parseInt(r.data.id));
+			renderMileageStops(stops);
+			close();
+		} else {
+			alert(r.data?.message || 'Error.');
+		}
+	});
+}
+
+function printMileageLog() {
+	document.body.classList.add('sp-printing-mileage');
+	window.print();
+	setTimeout(() => document.body.classList.remove('sp-printing-mileage'), 500);
+}
+
+async function emailMileageLog() {
+	const start = $('#sp-mileage-filter-start')?.value || '';
+	const end = $('#sp-mileage-filter-end')?.value || '';
+	const to = prompt('Email log to:', '');
+	if (!to) return;
+	const r = await spAjax('site_pulse_email_mileage_log', { to, start, end });
+	if (r.success) alert('Sent to ' + r.data.to);
+	else alert(r.data?.message || 'Error sending.');
+}
+
+
+/*--------------------------------------------------------------
+# Mileage — Admin
+--------------------------------------------------------------*/
+
+function renderApiTestResult(out, data) {
+	const row = (label, ok, body) => {
+		const dot = ok === true ? '✓' : ok === false ? '✗' : '•';
+		const cls = ok === true ? 'sp-api-ok' : ok === false ? 'sp-api-fail' : '';
+		return `<div class="sp-api-row ${cls}"><strong>${dot} ${esc(label)}</strong><div>${body}</div></div>`;
+	};
+
+	let html = '';
+	html += row('API key', data.key_source !== 'NOT SET', `Source: <code>${esc(data.key_source)}</code><br>Preview: <code>${esc(data.key_preview)}</code>`);
+
+	if (data.error) {
+		html += `<div class="sp-api-row sp-api-fail"><strong>✗ Setup error</strong><div>${esc(data.error)}</div></div>`;
+	}
+
+	if (data.geocode) {
+		const g = data.geocode;
+		const body = g.ok
+			? `Status: <code>${esc(g.status)}</code><br>Geocoded "Arlington, TX" to <code>${esc(g.result)}</code>`
+			: `Status: <code>${esc(g.status || 'N/A')}</code><br>${esc(g.error || '')}`;
+		html += row('Geocoding API', g.ok, body);
+	}
+
+	if (data.distance_matrix) {
+		const d = data.distance_matrix;
+		let body;
+		if (d.ok) {
+			body = `Status: <code>${esc(d.status)}</code> / condition: <code>${esc(d.element_status)}</code><br>HTTP <code>${esc(String(d.http_code || ''))}</code><br>Arlington → Burleson: <strong>${d.miles} mi</strong>`;
+		} else {
+			body = `Status: <code>${esc(d.status || 'N/A')}</code> / condition: <code>${esc(d.element_status || 'N/A')}</code> / HTTP <code>${esc(String(d.http_code || ''))}</code><br>${esc(d.error || '')}`;
+			if (d.raw) body += `<details style="margin-top:8px;"><summary>Raw response</summary><pre style="white-space:pre-wrap;word-break:break-word;font-size:11px;margin:4px 0 0;">${esc(d.raw)}</pre></details>`;
+		}
+		html += row('Routes API (Compute Route Matrix)', d.ok, body);
+	}
+
+	if (data.geocode && !data.geocode.ok) {
+		const status = data.geocode.status || '';
+		html += '<div class="sp-api-hint">';
+		if (status === 'REQUEST_DENIED') html += 'Likely cause: <strong>Geocoding API not enabled</strong> on the project, or the key has API restrictions excluding it. Enable it in Google Cloud Console → APIs & Services → Library.';
+		else if (status === 'OVER_QUERY_LIMIT') html += 'Daily quota exceeded or billing not enabled. Enable billing in Google Cloud Console → Billing.';
+		else if (status === 'INVALID_REQUEST') html += 'Address parameter rejected. Unusual — verify the key has no IP restrictions blocking the WP Engine outbound IP.';
+		else html += 'Check the activity log entry for the raw response.';
+		html += '</div>';
+	} else if (data.distance_matrix && !data.distance_matrix.ok) {
+		const err = (data.distance_matrix.error || '').toLowerCase();
+		const raw = (data.distance_matrix.raw || '').toLowerCase();
+		html += '<div class="sp-api-hint">';
+		if (err.includes('has not been used') || err.includes('is disabled') || raw.includes('service_disabled')) {
+			html += 'Likely cause: <strong>Routes API service is not enabled on the project.</strong> Click the link in the raw response above (or Cloud Console → APIs &amp; Services → Library → Routes API → Enable). Wait ~60 seconds, then re-test.';
+		} else if (raw.includes('api_key_service_blocked') || raw.includes('api key not valid')) {
+			html += 'Likely cause: <strong>API key restrictions exclude Routes API.</strong> Cloud Console → Credentials → your key → API restrictions → check "Routes API". Wait ~60 seconds, then re-test.';
+		} else if (err.includes('legacy') || err.includes('not activated')) {
+			html += 'Likely cause: <strong>Trying to use legacy Distance Matrix API on a new project.</strong> Routes API is the replacement; make sure it\'s enabled and selected in the key restrictions.';
+		} else if (data.distance_matrix.status === 'PERMISSION_DENIED' || err.includes('permission') || err.includes('denied')) {
+			html += 'Likely cause: <strong>Permission denied.</strong> Either the API isn\'t enabled on the project, or the key restrictions exclude it. Check both: APIs &amp; Services → Library (enable Routes API) and Credentials → your key → API restrictions (check Routes API).';
+		} else {
+			html += 'Geocoding worked but Routes API call failed. Check the activity log <code>mileage_error</code> entry for the raw response.';
+		}
+		html += '</div>';
+	}
+
+	out.innerHTML = html;
+}
+
+function initAdminMileage() {
+	const navItems = $$('.sp-nav-item[data-nav="admin-mileage"], .sp-nav-child[data-nav="admin-mileage"]');
+	if (navItems.length === 0) return;
+	navItems.forEach(b => b.addEventListener('click', () => loadAdminMileage()));
+}
+
+async function loadPendingMileageCount() {
+	if (!D.userCaps?.includes('manage_mileage') && !D.isGod) return;
+	try {
+		const res = await spAjax('site_pulse_get_pending_mileage_count', {});
+		if (res.success) updateMileageBadges(res.data.count || 0);
+	} catch (e) {}
+}
+
+function updateMileageBadges(count) {
+	const targets = [
+		document.querySelector('.sp-nav-child[data-nav="admin-mileage"] > span'),
+		document.querySelector('.sp-nav-item[data-nav="admin"] .sp-nav-label'),
+	].filter(Boolean);
+
+	targets.forEach(host => {
+		host.classList.add('sp-nav-label-with-badge');
+		let badge = host.querySelector('.sp-nav-badge');
+		if (count <= 0) {
+			badge?.remove();
+			host.classList.remove('sp-nav-label-with-badge');
+			return;
+		}
+		if (!badge) {
+			badge = document.createElement('span');
+			badge.className = 'unique sp-nav-badge';
+			host.appendChild(badge);
+		}
+		badge.textContent = String(count);
+	});
+}
+
+async function loadAdminMileage() {
+	const wrap = $('#sp-admin-mileage-content');
+	if (!wrap) return;
+	wrap.innerHTML = '<div class="sp-loading"></div>';
+
+	try {
+		const res = await spAjax('site_pulse_admin_get_mileage_locations', {});
+		if (!res.success) { wrap.innerHTML = '<p>Error loading.</p>'; return; }
+
+		const locs = res.data.locations || [];
+		const rate = parseFloat(res.data.rate) || 0.67;
+		const pending = locs.filter(l => l.status === 'pending');
+		const approved = locs.filter(l => l.status === 'approved');
+
+		let html = '<div class="sp-admin-mileage-rate">';
+		html += '<label>Reimbursement rate ($/mile)</label>';
+		html += `<input type="number" step="0.01" min="0" max="5" id="sp-mileage-rate-input" class="sp-input" value="${rate.toFixed(2)}">`;
+		html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-rate-save">Save Rate</button>';
+		html += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-recompute">Recompute All Distances</button>';
+		if (D.isGod) {
+			html += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-test-api">Test Google API</button>';
+		}
+		html += '</div>';
+		if (D.isGod) {
+			html += '<div id="sp-mileage-api-test-result" class="sp-mileage-api-test" hidden></div>';
+		}
+
+		html += `<h3>Pending (${pending.length})</h3>`;
+		if (pending.length === 0) {
+			html += '<p class="sp-text-secondary">No pending locations.</p>';
+		} else {
+			html += '<table class="sp-mileage-table"><thead><tr><th>Name</th><th>Address</th><th>Type</th><th>Added by</th><th></th></tr></thead><tbody>';
+			pending.forEach(l => {
+				html += '<tr>';
+				html += `<td>${esc(l.name)}</td>`;
+				html += `<td>${esc(l.address || '')}</td>`;
+				html += `<td>${esc(l.location_type)}</td>`;
+				html += `<td>${esc(l.created_by_name || '')}</td>`;
+				html += `<td class="sp-mileage-row-actions">`;
+				html += `<button type="button" class="unique sp-btn sp-btn-primary sp-mileage-approve-btn" data-id="${l.id}">Approve</button>`;
+				html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-reject-btn" data-id="${l.id}">Reject</button>`;
+				html += `</td></tr>`;
+			});
+			html += '</tbody></table>';
+		}
+
+		html += `<h3>Approved (${approved.length})</h3>`;
+		html += '<table class="sp-mileage-table"><thead><tr><th>Name</th><th>Address</th><th>Type</th></tr></thead><tbody>';
+		approved.forEach(l => {
+			html += '<tr>';
+			html += `<td>${esc(l.name)}</td>`;
+			html += `<td>${esc(l.address || '')}</td>`;
+			html += `<td>${esc(l.location_type)}</td>`;
+			html += '</tr>';
+		});
+		html += '</tbody></table>';
+
+		wrap.innerHTML = html;
+		markUniqueSpans(wrap);
+
+		$('#sp-mileage-rate-save', wrap)?.addEventListener('click', async () => {
+			const rate = parseFloat($('#sp-mileage-rate-input').value);
+			const r = await spAjax('site_pulse_admin_save_mileage_rate', { rate });
+			if (r.success) alert('Rate saved.');
+			else alert(r.data?.message || 'Error.');
+		});
+
+		$('#sp-mileage-recompute', wrap)?.addEventListener('click', async (e) => {
+			e.target.disabled = true;
+			e.target.textContent = 'Computing…';
+			const r = await spAjax('site_pulse_admin_recompute_mileage_distances', {});
+			e.target.disabled = false;
+			e.target.textContent = 'Recompute All Distances';
+			if (r.success) alert(`${r.data.distances_added} distances stored across ${r.data.locations_processed} locations.`);
+			else alert(r.data?.message || 'Error.');
+		});
+
+		$('#sp-mileage-test-api', wrap)?.addEventListener('click', async (e) => {
+			const out = $('#sp-mileage-api-test-result');
+			e.target.disabled = true;
+			e.target.textContent = 'Testing…';
+			out.hidden = false;
+			out.innerHTML = '<div class="sp-loading"></div>';
+			const r = await spAjax('site_pulse_admin_test_mileage_api', {});
+			e.target.disabled = false;
+			e.target.textContent = 'Test Google API';
+			if (!r.success) { out.innerHTML = `<p class="sp-text-warning">Request failed.</p>`; return; }
+			renderApiTestResult(out, r.data);
+		});
+
+		$$('.sp-mileage-approve-btn', wrap).forEach(b => b.addEventListener('click', async () => {
+			b.disabled = true;
+			b.textContent = 'Approving…';
+			const r = await spAjax('site_pulse_admin_approve_mileage_location', { id: b.dataset.id });
+			if (r.success) { loadAdminMileage(); loadPendingMileageCount(); }
+			else { alert(r.data?.message || 'Error.'); b.disabled = false; b.textContent = 'Approve'; }
+		}));
+		$$('.sp-mileage-reject-btn', wrap).forEach(b => b.addEventListener('click', async () => {
+			if (!confirm('Reject this location? Any legs referencing it will be removed.')) return;
+			const r = await spAjax('site_pulse_admin_reject_mileage_location', { id: b.dataset.id });
+			if (r.success) { loadAdminMileage(); loadPendingMileageCount(); }
+			else alert(r.data?.message || 'Error.');
+		}));
+	} catch (err) {
+		wrap.innerHTML = '<p>Error loading.</p>';
 	}
 }
 

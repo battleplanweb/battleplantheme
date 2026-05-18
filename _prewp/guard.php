@@ -48,6 +48,7 @@ $HITS_QUARTER = isset($STATE['hits_quarter']) ? $STATE['hits_quarter'] : 'n/a';
 $HITS_YEAR = isset($STATE['hits_year']) ? $STATE['hits_year'] : 'n/a';
 $MOBILE_SPEED = isset($STATE['mobile_speed']) ? $STATE['mobile_speed'] : 'n/a';
 $DESKTOP_SPEED = isset($STATE['desktop_speed']) ? $STATE['desktop_speed'] : 'n/a';
+$JOBSITES = isset($STATE['jobsites']) ? $STATE['jobsites'] : 0;
 
 /* ---------- skip CLI/tests ---------- */
 if (PHP_SAPI === 'cli' || (defined('WP_CLI') && WP_CLI) || getenv('WP_PHPUNIT__TESTS_CONFIG')) return;
@@ -175,7 +176,8 @@ if ($stale && $CENTRAL_READ_URL) {
 				'name'=>$NAME,'site'=>$site,'status'=>$ok?'ok':'fail','ips'=>$ips_ct,
 				'cache_ts'=>$cache_ts,'ts'=>$ts,'sig'=>$sig,'ver'=>$BP_VER,
 				'hits_week'=>$HITS_WEEK,'hits_month'=>$HITS_MONTH,'hits_quarter'=>$HITS_QUARTER,
-				'hits_year'=>$HITS_YEAR,'mobile_speed'=>$MOBILE_SPEED,'desktop_speed'=>$DESKTOP_SPEED
+				'hits_year'=>$HITS_YEAR,'mobile_speed'=>$MOBILE_SPEED,'desktop_speed'=>$DESKTOP_SPEED,
+				'jobsites'=>$JOBSITES
 			])
 		]]);
 		@file_get_contents($CENTRAL_CHECKIN_URL, false, $ctx);
@@ -226,6 +228,7 @@ if ($need_beat && $CENTRAL_CHECKIN_URL) {
 			'hits_year'     => $HITS_YEAR,
 			'mobile_speed'     => $MOBILE_SPEED,
 			'desktop_speed'     => $DESKTOP_SPEED,
+			'jobsites'         => $JOBSITES,
 		]),
 		'timeout'=>0.6
 	]]);

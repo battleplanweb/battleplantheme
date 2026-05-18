@@ -46,7 +46,9 @@
       "Bash(mkdir -p \"$TMPDIR/uglify_pkg\")",
       "Bash(\"$NODE\" \"C:/Users/info/AppData/Local/Temp/terser_install/test_uglify.js\")",
       "Bash(\"$NODE\" \"C:/Users/info/AppData/Local/Temp/terser_install/minify_files.js\")",
-      "Bash(grep -E \"^[^/]*\\\\.\\(json|xml|yml|yaml|config|conf|toml|lock\\)$|^\\(package|composer|webpack|gulp|Makefile|Dockerfile\\).*$\")"
+      "Bash(grep -E \"^[^/]*\\\\.\\(json|xml|yml|yaml|config|conf|toml|lock\\)$|^\\(package|composer|webpack|gulp|Makefile|Dockerfile\\).*$\")",
+      "Bash(php -l \"g:/Battle Plan Web/00 - Battle Plan Assets/theme/GitHub/battleplantheme/functions-keyword-rankings.php\")",
+      "PowerShell(Get-Command php -ErrorAction SilentlyContinue)"
     ]
   }
 }

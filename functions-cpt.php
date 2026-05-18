@@ -93,7 +93,7 @@ function battleplan_registerPostTypes() {
 		'public'       		=> true,
 		'show_ui'      		=> true,
 		'show_in_rest' 		=> true,
-		'hierarchical' 		=> true,
+		'hierarchical' 		=> false,
 		'query_var'    		=> true,
 	));
 	register_post_type( 'landing', array (

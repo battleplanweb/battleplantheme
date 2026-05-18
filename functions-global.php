@@ -13,7 +13,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', 'v41.8' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', 'v42.0' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -312,6 +312,12 @@ if ( _PAGE_SLUG == "wp-cron.php" ) :
 	endif;
 endif;
 
+// Force the next front-end page hit to refresh the metric fields in state.json
+function bp_state_force_metrics() {
+	delete_option('bp_state_last_metrics');
+	delete_option('bp_state_hash');
+}
+
 /*--------------------------------------------------------------
 # Send data to 'Site Checkin' (change-driven base, timed metrics)
 --------------------------------------------------------------*/
@@ -322,13 +328,14 @@ $now = time();
 $base_info = [
 	'name'      => $customer_info['name'] ?? '',
 	'framework' => (defined('_BP_VERSION') ? _BP_VERSION : ''),
+	'jobsites'  => (int)(wp_count_posts('jobsite_geo')->publish ?? 0),
 ];
 $base_hash = md5(wp_json_encode($base_info));
 $prev_hash = (string)get_option('bp_state_hash', '');
 $metrics_due = ($now - (int)get_option('bp_state_last_metrics', 0)) >= 43200;
 
 // Only proceed if something changed OR metrics are due
-//if ($base_hash === $prev_hash && !$metrics_due) return;
+if ($base_hash === $prev_hash && !$metrics_due) return;
 
 // Start payload with base info
 $info = $base_info + ['ts' => $now];
@@ -353,6 +360,12 @@ $base = WP_CONTENT_DIR . '/bp-guard';
 if (!is_dir($base)) wp_mkdir_p($base);
 $file = $base . '/state.json';
 $tmp  = $file . '.tmp';
+
+// Merge new info onto whatever's already there so we don't lose metric fields
+// between 12h refreshes (e.g. when a framework version bump triggers a write
+// while metrics aren't due).
+$existing = is_file($file) ? (json_decode((string)@file_get_contents($file), true) ?: []) : [];
+$info     = array_merge($existing, $info);
 
 $enc = wp_json_encode($info);
 if ($enc !== false) {

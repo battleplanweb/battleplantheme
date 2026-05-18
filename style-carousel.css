@@ -52,8 +52,7 @@
 	backface-visibility:                                       hidden;
 	-webkit-perspective:                                       1000px;
 	perspective:                                               1000px;
-	padding:                                                   8px;
-	/* helps to not cut off shadows on images */
+	/*padding:                                                   8px;  helps to not cut off shadows on images, but cuts off bottom of pic (border-bottom) */
 }
 
 .carousel-item.active {

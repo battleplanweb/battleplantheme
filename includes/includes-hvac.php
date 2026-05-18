@@ -437,46 +437,205 @@ function battleplan_override_main_query_with_hvac( $query ) {
 }
 
 /*--------------------------------------------------------------
-# Employment Application
+# Employment Application Form
+#
+# Drop [bp-employment-form] on a page to render the standard HVAC
+# employment application. Per-site customization via filters below.
 --------------------------------------------------------------*/
-add_action( 'wpcf7_before_send_mail', 'battleplan_handleEmploymentApp', 10, 1 );
-function battleplan_handleEmploymentApp( $contact_form ) {
-	$formMail = $contact_form->prop( 'mail' );
-	$formSubject = $formMail['subject'];
 
-	if ( str_contains( $formMail['subject'], "Employment Application" ) ) :
-		$submission = WPCF7_Submission::get_instance();
-		$submitted['posted_data'] = $submission->get_posted_data();
-		$age = $submitted['posted_data']['user-age'][0] . $submitted['posted_data']['user-age'][1] ;
-		$criminal = $submitted['posted_data']['criminal-history'][0] !== null ? $submitted['posted_data']['criminal-history'][0] : null;
-		$license = $submitted['posted_data']['driver-license'][0] !== null ? $submitted['posted_data']['driver-license'][0] : null;
-		$background = $submitted['posted_data']['background-chk'][0] !== null ? $submitted['posted_data']['background-chk'][0] : null;
+// Default screening Yes/No questions (criminal history, driver's license, manual labor)
+function bp_employment_default_screening() {
+	return [
+		'criminal-history' => ['label' => 'Criminal History',                    'options' => 'Yes|No'],
+		'driver-license'   => ['label' => "Driver's License",                    'options' => 'Yes|No'],
+		'manual-labor'     => ['label' => 'Have You Done Manual Labor Before?', 'options' => 'Yes|No'],
+	];
+}
 
-		if ( ($criminal == null || str_contains($criminal, "No")) && ($license == null || str_contains($license, "Yes")) && ($background == null || str_contains($background, "Yes")) ):
-			$preSub = "< QUALIFIED >";
-		else:
-			$preSub = "< unqualified >";
-		endif;
+// The form shortcode
+add_shortcode('bp-employment-form', function($atts) {
+	$a = shortcode_atts(['submit' => 'Submit'], $atts);
 
-		$formMail['subject'] = $preSub." ".$formSubject;
-		$contact_form->set_properties( array( 'mail' => $formMail ) );
-	endif;
-};
+	$screening = apply_filters('bp_employment_screening_questions', bp_employment_default_screening());
+	$positions = apply_filters('bp_employment_position_options', 'Installation Technician|Service Technician|Duct Team|Office|Management|Internship');
+	$types     = apply_filters('bp_employment_type_options',     'HVAC|Plumbing|Electrical|Other');
 
-add_filter('wpcf7_additional_mail', 'battleplan_handleEmploymentAppResponse', 10, 2);
-function battleplan_handleEmploymentAppResponse($additional_mail, $contact_form) {
-	$submission = WPCF7_Submission::get_instance();
-	$submitted['posted_data'] = $submission->get_posted_data();
-	$age = $submitted['posted_data']['user-age'][0] . $submitted['posted_data']['user-age'][1] ;
-	$criminal = $submitted['posted_data']['criminal-history'][0] !== null ? $submitted['posted_data']['criminal-history'][0] : null;
-	$license = $submitted['posted_data']['driver-license'][0] !== null ? $submitted['posted_data']['driver-license'][0] : null;
-	$background = $submitted['posted_data']['background-chk'][0] !== null ? $submitted['posted_data']['background-chk'][0] : null;
+	// Build the screening row — one [col] per question
+	$screening_cols = '';
+	foreach ($screening as $name => $cfg) {
+		$label = $cfg['label']   ?? ucwords(str_replace(['-', '_'], ' ', $name));
+		$opts  = $cfg['options'] ?? 'Yes|No';
+		$screening_cols .= '[col][seek label="' . esc_attr($label) . '" id="' . esc_attr($name) . '" req="true"][bp-radio name="' . esc_attr($name) . '" options="' . esc_attr($opts) . '" required="true"][/seek][/col]';
+	}
 
-	if ( ($criminal == null || str_contains($criminal, "No")) && ($license == null || str_contains($license, "Yes")) && ($background == null || str_contains($background, "Yes")) ):
-		return $additional_mail;
-	else:
-		return;
-	endif;
+	// Pick a sensible grid for the screening row based on how many questions there are
+	$count = count($screening);
+	$grid  = match (true) {
+		$count <= 1 => '1',
+		$count === 2 => '1-1',
+		$count === 3 => '1-1-2',
+		$count === 4 => '1-1-1-1',
+		default      => '1',
+	};
+
+	return do_shortcode('[bp-form id="employment" subject="Employment Application" class="application"]
+		[layout grid="3-3-2"]
+			[col][seek label="Name" id="user-name" req="true"][bp-text name="user-name" required="true" autocomplete="name"][/seek][/col]
+			[col][seek label="Email" id="user-email" req="true"][bp-email name="user-email" required="true"][/seek][/col]
+			[col][seek label="Phone" id="user-phone" req="true"][bp-tel name="user-phone" required="true"][/seek][/col]
+		[/layout]
+
+		[layout grid="200px 1fr" class="form-stacked"]
+			[col][seek label="Years of Exp." id="years-exp" req="true" max-w="180px"][bp-text name="years-exp" required="true" pattern="\d+"][/seek][/col]
+			[col][seek label="Type(s) of Experience" id="type-exp" req="true"][bp-checkboxes name="type-exp" options="' . esc_attr($types) . '"][/seek][/col]
+		[/layout]
+
+		[layout grid="' . $grid . '" class="form-stacked break-2"]
+			' . $screening_cols . '
+		[/layout]
+
+		[layout grid="1" class="form-stacked"]
+			[col][seek label="Position(s) Interested In" id="pos-interest" req="true"][bp-checkboxes name="pos-interest" options="' . esc_attr($positions) . '"][/seek][/col]
+		[/layout]
+
+		[seek label="Tell us a little about yourself." id="user-message" width="full"][bp-textarea name="user-message"][/seek]
+
+		[seek label="button"][bp-submit]' . esc_html($a['submit']) . '[/bp-submit][/seek]
+	[/bp-form]');
+});
+
+// Default field labels — matches the email body template below
+add_filter('bp_field_labels', function($labels, $form_id) {
+	if ($form_id !== 'employment') return $labels;
+
+	$screening = apply_filters('bp_employment_screening_questions', bp_employment_default_screening());
+	foreach ($screening as $name => $cfg) {
+		$labels[$name] = $cfg['label'] ?? ucwords(str_replace(['-', '_'], ' ', $name));
+	}
+
+	return array_merge($labels, [
+		'years-exp'    => 'Years Exp',
+		'type-exp'     => 'Type Exp',
+		'pos-interest' => 'Positions',
+		'user-message' => 'Additional Info',
+	]);
+}, 10, 2);
+
+// Default email body template (matches the legacy CF7 layout exactly)
+add_filter('bp_form_email_template', function($template, $form_id, $ctx) {
+	if ($form_id !== 'employment') return $template;
+
+	$screening = apply_filters('bp_employment_screening_questions', bp_employment_default_screening());
+	$screening_lines = '';
+	foreach ($screening as $name => $cfg) {
+		$label = $cfg['label'] ?? ucwords(str_replace(['-', '_'], ' ', $name));
+		$screening_lines .= "$label: [$name]\n";
+	}
+
+	return "Name: [user-name]\nEmail: [user-email]\nPhone: [user-phone]\n\n"
+		 . "Years Exp: [years-exp]\nType Exp: [type-exp]\n\n"
+		 . trim($screening_lines) . "\n\n"
+		 . "Positions: [pos-interest]\n\n"
+		 . "Additional Info:\n[user-message]";
+}, 10, 3);
+
+// Set recipient(s). Default: customer_info['email']. Sites add via bp_employment_recipients.
+add_filter('bp_form_before_send', function($email, $ctx) {
+	if (($ctx['form_id'] ?? '') !== 'employment') return $email;
+
+	$default_emails = [];
+	$business_email = $ctx['customer']['email'] ?? '';
+	if ($business_email) $default_emails[] = $business_email;
+
+	$emails = apply_filters('bp_employment_recipients', $default_emails, $ctx);
+	$emails = array_filter(array_map('sanitize_email', (array)$emails));
+	if (!empty($emails)) $email['to'] = implode(', ', $emails);
+
+	return $email;
+}, 11, 2);
+
+// Qualification check + subject prefix. Sites can override the qualification logic
+// via bp_employment_qualified if their screening questions differ.
+add_filter('bp_form_before_send', 'battleplan_handleEmploymentApp', 10, 2);
+function battleplan_handleEmploymentApp($email, $ctx) {
+	if (($ctx['form_id'] ?? '') !== 'employment') return $email;
+
+	$qualified = apply_filters('bp_employment_qualified', bp_employment_default_qualified_check($ctx), $ctx);
+
+	$email['subject'] = ($qualified ? '< QUALIFIED >' : '< unqualified >') . ' ' . $email['subject'];
+
+	$GLOBALS['bp_employment_qualified'] = $qualified;
+	return $email;
+}
+
+// Default qualification: criminal=No, license=Yes, background-chk-or-manual-labor=Yes.
+// Missing fields are treated as "pass" so removing a screening question doesn't auto-fail anyone.
+function bp_employment_default_qualified_check($ctx) {
+	$fields = $ctx['fields'] ?? [];
+	$norm   = fn($v) => is_array($v) ? ($v[0] ?? null) : $v;
+
+	$criminal   = $norm($fields['criminal-history'] ?? null);
+	$license    = $norm($fields['driver-license']   ?? null);
+	$background = $norm($fields['background-chk'] ?? $fields['manual-labor'] ?? null);
+
+	return ($criminal == null   || str_contains((string)$criminal,   'No'))
+		&& ($license == null    || str_contains((string)$license,    'Yes'))
+		&& ($background == null || str_contains((string)$background, 'Yes'));
+}
+
+// Auto-reply with PDF — fires only when a PDF path is configured AND candidate qualified.
+// Test-mode aware: messages starting with "test" reroute the auto-reply to the dev mailbox too.
+add_action('bp_form_after_send', function($email, $ctx, $sent) {
+	if (!$sent) return;
+	if (($ctx['form_id'] ?? '') !== 'employment') return;
+	if (empty($GLOBALS['bp_employment_qualified'])) return;
+
+	$pdf_path = apply_filters('bp_employment_autoreply_pdf', '', $ctx);
+	if (empty($pdf_path)) return;
+
+	$applicant_email = $ctx['fields']['user-email'] ?? '';
+	if (!is_email($applicant_email)) return;
+
+	// Reroute auto-reply during test submissions so we don't email real people
+	if (function_exists('bp_is_test_submission') && bp_is_test_submission($ctx['fields'])) {
+		$applicant_email = apply_filters('bp_form_test_recipient', 'glendon@bp-webdev.com');
+	}
+
+	$autoreply = apply_filters('bp_employment_autoreply', bp_employment_default_autoreply($ctx), $ctx);
+
+	$pdf_full = (strpos($pdf_path, ABSPATH) === 0) ? $pdf_path : ABSPATH . ltrim($pdf_path, '/');
+	$attachments = file_exists($pdf_full) ? [$pdf_full] : [];
+
+	$business_name = $ctx['customer']['name'] ?? get_bloginfo('name');
+	$from_email    = 'email@admin.' . preg_replace('#https?://#', '', get_bloginfo('url'));
+	$headers = [
+		'Content-Type: text/html; charset=UTF-8',
+		'From: ' . $business_name . ' <' . $from_email . '>',
+	];
+
+	wp_mail(
+		$applicant_email,
+		$autoreply['subject'] ?? 'Thank you for your employment application.',
+		$autoreply['body']    ?? '',
+		$headers,
+		$attachments
+	);
+}, 10, 3);
+
+function bp_employment_default_autoreply($ctx) {
+	$business_name = $ctx['customer']['name']   ?? get_bloginfo('name');
+	$applicant     = $ctx['fields']['user-name'] ?? '';
+
+	$body  = '<p>' . esc_html($applicant) . ', thank you for your interest in employment with ' . esc_html($business_name) . '.</p>';
+	$body .= '<p>Based on your initial responses on our website, we feel you may be a qualified candidate for employment.</p>';
+	$body .= '<p>Attached is a PDF of our full employment application. Please fill out this application and return it to us in person or by email.</p>';
+	$body .= '<p>Once we receive your application, a member of our management team will review it and be in contact as soon as possible.</p>';
+	$body .= '<p>Thank you!<br>' . esc_html($business_name) . ' Management</p>';
+
+	return [
+		'subject' => 'Thank you for your employment application.',
+		'body'    => $body,
+	];
 }
 
 /*--------------------------------------------------------------

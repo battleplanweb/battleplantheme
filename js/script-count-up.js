@@ -185,7 +185,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 				self.rAF = requestAnimationFrame(self.count);
 			} else {
 				console.log('countUp error: startVal or endVal is not a number');
-				self.printValue(endVal);
+				self.printValue(self.endVal);
 			}
 			return false;
 		};

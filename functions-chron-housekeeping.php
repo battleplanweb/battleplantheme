@@ -34,6 +34,124 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 		}
 	}
 
+/*--------------------------------------------------------------
+# Form attachment temp folder — sweep orphans
+#
+# bp_handle_form_submission registers a shutdown function to delete
+# uploaded attachments after wp_mail. If a request fatals before that
+# fires, files are left behind. Sweep anything older than 24h.
+--------------------------------------------------------------*/
+
+	$tmpdir = trailingslashit(wp_upload_dir()['basedir'] ?? '') . 'bp-form-tmp';
+	if (is_dir($tmpdir)) {
+		$cutoff = time() - DAY_IN_SECONDS;
+		foreach ((array) glob($tmpdir . '/*') as $file) {
+			if (is_file($file) && filemtime($file) < $cutoff) @unlink($file);
+		}
+	}
+
+/*--------------------------------------------------------------
+# CF7 Migration Audit (TEMPORARY — delete this block once all sites are migrated)
+#
+# 1) Audits CF7 forms on this site
+# 2) If all forms are covered by framework defaults → auto-deactivates and
+#    deletes Contact Form 7 + Akismet, sends a confirmation email
+# 3) If non-standard forms are present → emails Glendon a list, leaves
+#    plugins alone for manual handling
+#
+# Re-trigger by changing the audit_key date below. Sites that were clean
+# the first pass will silently no-op (CF7 already gone). Sites that needed
+# attention will re-audit and auto-clean themselves once the custom forms
+# are added to their functions-site.php.
+--------------------------------------------------------------*/
+
+	$audit_key = 'bp_cf7_audit_2026-05-10';
+	if (add_site_option($audit_key, current_time('mysql'))) {
+		require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+
+		$cf7_path  = 'contact-form-7/wp-contact-form-7.php';
+		$cf7_file  = WP_PLUGIN_DIR . '/' . $cf7_path;
+		$cf7_here  = file_exists($cf7_file);
+
+		// Only do anything if CF7 is currently installed on this site
+		if ($cf7_here) {
+			$customer_info = customer_info();
+			$site_type     = strtolower($customer_info['site-type'] ?? '');
+			$site_name     = $customer_info['name'] ?? get_bloginfo('name');
+			$site_url      = get_bloginfo('url');
+
+			// Form titles already covered by the framework intercept (functions-forms.php)
+			$covered = [
+				'contact us form',
+				'contact us',
+				'quote request form',
+				'request a catering quote',
+			];
+			if ($site_type === 'hvac') $covered[] = 'employment application';
+
+			// Audit existing CF7 form posts
+			$forms = get_posts(['numberposts' => -1, 'post_type' => 'wpcf7_contact_form']);
+			$non_standard = [];
+			foreach ($forms as $form) {
+				$title = trim(get_the_title($form->ID));
+				if (in_array(strtolower($title), $covered, true)) continue;
+				$non_standard[] = ['id' => $form->ID, 'title' => $title];
+			}
+
+			if (!empty($non_standard)) {
+				// --- Site needs manual migration before CF7 can be removed ---
+				$body  = '<p>Site: <strong>' . esc_html($site_name) . '</strong> &nbsp; ' . esc_url($site_url) . '</p>';
+				$body .= '<p>The following CF7 forms are <strong>not covered</strong> by framework defaults. They need custom shortcodes added to <code>functions-site.php</code> before CF7 can be removed on this site:</p>';
+				$body .= '<ul>';
+				foreach ($non_standard as $f) {
+					$edit = admin_url('post.php?post=' . $f['id'] . '&action=edit');
+					$body .= '<li><strong>' . esc_html($f['title']) . '</strong> &nbsp; (ID ' . $f['id'] . ') &nbsp; <a href="' . esc_url($edit) . '">edit</a></li>';
+				}
+				$body .= '</ul>';
+				$body .= '<p>Once migrated, bump the audit_key date in <code>functions-chron-housekeeping.php</code> and CF7 will auto-remove on the next chron run.</p>';
+
+				wp_mail(
+					'glendon@bp-webdev.com',
+					'CF7 Migration NEEDS ATTENTION: ' . $site_name . ' (' . count($non_standard) . ' form' . (count($non_standard) === 1 ? '' : 's') . ')',
+					$body,
+					['Content-Type: text/html; charset=UTF-8']
+				);
+			} else {
+				// --- Site is clean: deactivate + delete CF7 and Akismet ---
+				$plugins_remove = [
+					$cf7_path,
+					'akismet/akismet.php',
+				];
+				$removed = [];
+				foreach ($plugins_remove as $plugin) {
+					$path = WP_PLUGIN_DIR . '/' . $plugin;
+					if (!file_exists($path)) continue;
+					if (is_plugin_active($plugin)) deactivate_plugins($plugin, true);
+					$result = delete_plugins([$plugin]);
+					if ($result === true) {
+						$removed[] = $plugin;
+					}
+				}
+
+				if (!empty($removed)) {
+					$body  = '<p>Site: <strong>' . esc_html($site_name) . '</strong> &nbsp; ' . esc_url($site_url) . '</p>';
+					$body .= '<p>All forms on this site are covered by framework defaults. The following plugins were automatically deactivated and removed:</p>';
+					$body .= '<ul>';
+					foreach ($removed as $p) $body .= '<li>' . esc_html($p) . '</li>';
+					$body .= '</ul>';
+
+					wp_mail(
+						'glendon@bp-webdev.com',
+						'CF7 Migration COMPLETE: ' . $site_name,
+						$body,
+						['Content-Type: text/html; charset=UTF-8']
+					);
+				}
+			}
+		}
+	}
+
 	bp_typeface_refresh();
 
 	if (function_exists('battleplan_remove_user_roles')) battleplan_remove_user_roles();
@@ -182,8 +300,7 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 		$wpSEOBase['remove_powered_by_header']           = 1;
 		$wpSEOBase['remove_pingback_header']             = 1;
 		$wpSEOBase['clean_campaign_tracking_urls']       = 0;
-		$wpSEOBase['clean_permalinks']                   = 1;
-		$wpSEOBase['clean_permalinks_extra_variables']   = 'loc,int,invite,rs,se_action,pmax,gclid,gbraid,wbraid,fbclid,msclkid';
+		$wpSEOBase['clean_permalinks']                   = 0;
 		$wpSEOBase['search_cleanup']                     = 1;
 		$wpSEOBase['search_cleanup_emoji']               = 1;
 		$wpSEOBase['search_cleanup_patterns']            = 1;
@@ -402,8 +519,25 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 			$q       = (int)($quality[0] ?? 0);
 
 			$id = get_the_id();
-			if ($id && !isset($draft) && !has_post_thumbnail() && $q !== 1 && strlen(wp_strip_all_tags(get_the_content(), true)) < 100) {
-				$draft = $id;
+			if ($id && !has_post_thumbnail() && $q !== 1 && strlen(wp_strip_all_tags(get_the_content(), true)) < 100) {
+				// If linked to a jobsite, mark as quality instead of drafting
+				$linked_jobsite = get_posts([
+					'post_type'      => 'jobsite_geo',
+					'post_status'    => 'any',
+					'posts_per_page' => 1,
+					'fields'         => 'ids',
+					'meta_query'     => [[
+						'key'   => 'review',
+						'value' => $id,
+					]],
+				]);
+
+				if (!empty($linked_jobsite)) {
+					$quality[0] = 1;
+					update_field('testimonial_quality', $quality);
+				} elseif (!isset($draft)) {
+					$draft = $id;
+				}
 			}
 
 			if (has_post_thumbnail() && $q !== 1) {

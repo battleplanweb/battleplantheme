@@ -8,7 +8,7 @@ Theme URI: https://bp-webdev.com/
 Author: Glendon Guttenfelder
 Author URI: https://bp-webdev.com
 Description: The Battle Plan Web Design Theme
-Version: v41.8
+Version: v42.0
 Text Domain: battleplan
 GitHub Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -119,6 +119,7 @@ GitHub Theme URI: https://github.com/battleplanweb/battleplantheme
 
   --input-color-focus:                                      var(--input-color);
   --input-background-focus:                                 var(--input-background);
+  --input-padding-focus:                                    var(--input-padding);
   --input-font-size-focus:                                  var(--input-font-size);
   --input-font-weight-focus:                                var(--input-font-weight);
   --input-border-focus:                                     var(--input-border);
@@ -141,7 +142,7 @@ GitHub Theme URI: https://github.com/battleplanweb/battleplantheme
   --button-font-size:                                       1.2em;
   --button-border:                                          none;
   --button-border-top:                                      var(--button-border);
-  --button-border-right:								var(--button-border); /* don't change */
+  --button-border-right:									var(--button-border); /* don't change */
   --button-border-bottom:                                   var(--button-border);
   --button-border-left:                                     var(--button-border);
   --button-padding:                                         0.3em 1em;
@@ -162,7 +163,7 @@ GitHub Theme URI: https://github.com/battleplanweb/battleplantheme
   --button-font-weight-hover:                               var(--button-font-weight);
   --button-font-size-hover:                                 var(--button-font-size);
   --button-border-hover:                                    var(--button-border);
-  --button-border-top-hover:							var(--button-border-hover); /* don't change */
+  --button-border-top-hover:								var(--button-border-hover); /* don't change */
   --button-border-right-hover:                              var(--button-border-hover);
   --button-border-bottom-hover:                             var(--button-border-hover);
   --button-border-left-hover:                               var(--button-border-hover);
@@ -816,6 +817,27 @@ a.social-btn img {
 	margin-left:                                               14px;
 }
 
+.icon-cards,
+.icon-card {
+	display:                                                   grid;
+	grid-template-columns:                                     1fr 1fr 1fr;
+	gap:                                                       var(--measure-small);
+}
+
+.icon-card {
+	grid-template-columns:                                     40px 1fr;
+	padding:                                                   12px 25px;
+}
+
+.icon-card .icon {
+	font-size:                                                 40px;
+}
+
+.icon-card p {
+	margin:                                                    0;
+	line-height:                                               1.4;
+	overflow:                                                  hidden;
+}
 
 /* Animation
 --------------------------------------------- */

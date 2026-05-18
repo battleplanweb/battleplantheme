@@ -24,7 +24,7 @@ require_once get_template_directory() . '/prompts/prompts-site-pulse.php';
 # Constants & Setup
 --------------------------------------------------------------*/
 
-define( 'SITE_PULSE_DB_VERSION', '1.5' );
+define( 'SITE_PULSE_DB_VERSION', '1.7' );
 
 function site_pulse_table( string $name ): string {
 	return $GLOBALS['wpdb']->prefix . 'site_pulse_' . $name;
@@ -267,6 +267,64 @@ function site_pulse_install_db(): void {
 		KEY content_hash (content_hash)
 	) $charset;";
 
+	$sql .= "CREATE TABLE " . site_pulse_table('mileage_locations') . " (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		name varchar(255) NOT NULL,
+		address varchar(500) DEFAULT NULL,
+		lat decimal(10,7) DEFAULT NULL,
+		lng decimal(10,7) DEFAULT NULL,
+		location_type varchar(50) NOT NULL DEFAULT 'vendor',
+		site_pulse_location_id int(11) DEFAULT NULL,
+		status varchar(20) NOT NULL DEFAULT 'pending',
+		created_by int(11) NOT NULL DEFAULT 0,
+		approved_by int(11) DEFAULT NULL,
+		approved_at datetime DEFAULT NULL,
+		created_at datetime NOT NULL,
+		updated_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		KEY status (status),
+		KEY created_by (created_by)
+	) $charset;";
+
+	$sql .= "CREATE TABLE " . site_pulse_table('mileage_distances') . " (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		from_id int(11) NOT NULL,
+		to_id int(11) NOT NULL,
+		miles decimal(8,2) NOT NULL,
+		source varchar(20) NOT NULL DEFAULT 'api',
+		created_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		UNIQUE KEY pair (from_id, to_id)
+	) $charset;";
+
+	$sql .= "CREATE TABLE " . site_pulse_table('mileage_entries') . " (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		user_id int(11) NOT NULL,
+		entry_date date NOT NULL,
+		total_miles decimal(10,2) NOT NULL DEFAULT 0,
+		reimbursement_amount decimal(10,2) NOT NULL DEFAULT 0,
+		rate_used decimal(6,4) DEFAULT NULL,
+		notes text DEFAULT NULL,
+		created_at datetime NOT NULL,
+		updated_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		KEY user_date (user_id, entry_date)
+	) $charset;";
+
+	$sql .= "CREATE TABLE " . site_pulse_table('mileage_legs') . " (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		entry_id int(11) NOT NULL,
+		leg_order tinyint(3) NOT NULL DEFAULT 0,
+		from_location_id int(11) NOT NULL,
+		to_location_id int(11) NOT NULL,
+		miles decimal(8,2) DEFAULT NULL,
+		created_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		KEY entry_id (entry_id),
+		KEY from_loc (from_location_id),
+		KEY to_loc (to_location_id)
+	) $charset;";
+
 	dbDelta( $sql );
 	update_option( 'site_pulse_db_version', SITE_PULSE_DB_VERSION );
 }
@@ -282,7 +340,39 @@ add_action( 'init', function() {
 		site_pulse_seed_initial_data();
 		update_option( 'site_pulse_seeded', '1' );
 	}
+
+	if ( ! get_option( 'site_pulse_mileage_seeded' ) ) {
+		site_pulse_seed_mileage_locations();
+		update_option( 'site_pulse_mileage_seeded', '1' );
+	}
 } );
+
+function site_pulse_seed_mileage_locations(): void {
+	global $wpdb;
+	$existing = (int) $wpdb->get_var( "SELECT COUNT(*) FROM " . site_pulse_table('mileage_locations') );
+	if ( $existing ) return;
+
+	$restaurants = $wpdb->get_results(
+		"SELECT id, name, city, state, address FROM " . site_pulse_table('locations') . " WHERE status = 'active' ORDER BY display_order, name",
+		ARRAY_A
+	) ?: [];
+
+	$now = current_time( 'mysql' );
+	foreach ( $restaurants as $r ) {
+		$address_parts = array_filter( [ $r['address'], $r['city'], $r['state'] ] );
+		$wpdb->insert( site_pulse_table('mileage_locations'), [
+			'name'                   => $r['name'],
+			'address'                => implode( ', ', $address_parts ),
+			'location_type'          => 'restaurant',
+			'site_pulse_location_id' => (int) $r['id'],
+			'status'                 => 'approved',
+			'created_by'             => 0,
+			'approved_at'            => $now,
+			'created_at'             => $now,
+			'updated_at'             => $now,
+		] );
+	}
+}
 
 function site_pulse_seed_initial_data(): void {
 	$config = get_option( 'site_pulse', [] );
@@ -385,31 +475,31 @@ function site_pulse_seed_roles(): void {
 		[
 			'slug'            => 'god',
 			'label'           => 'God',
-			'capabilities'    => wp_json_encode( [ 'view_all_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'view_ai_insights', 'submit_reports', 'view_own_reports', 'view_team_reports', 'review_reports', 'god_mode' ] ),
+			'capabilities'    => wp_json_encode( [ 'view_all_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'view_ai_insights', 'submit_reports', 'view_own_reports', 'view_team_reports', 'review_reports', 'god_mode', 'manage_mileage', 'submit_mileage' ] ),
 			'hierarchy_level' => 255,
 		],
 		[
 			'slug'            => 'owner',
 			'label'           => 'Owner',
-			'capabilities'    => wp_json_encode( [ 'view_all_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'view_ai_insights' ] ),
+			'capabilities'    => wp_json_encode( [ 'view_all_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'view_ai_insights', 'manage_mileage', 'submit_mileage' ] ),
 			'hierarchy_level' => 100,
 		],
 		[
 			'slug'            => 'admin',
 			'label'           => 'Administrator',
-			'capabilities'    => wp_json_encode( [ 'view_all_reports', 'manage_locations', 'manage_users', 'manage_templates', 'view_analytics', 'manage_settings', 'view_ai_insights' ] ),
+			'capabilities'    => wp_json_encode( [ 'view_all_reports', 'manage_locations', 'manage_users', 'manage_templates', 'view_analytics', 'manage_settings', 'view_ai_insights', 'manage_mileage', 'submit_mileage' ] ),
 			'hierarchy_level' => 90,
 		],
 		[
 			'slug'            => 'supervisor',
 			'label'           => 'Supervisor',
-			'capabilities'    => wp_json_encode( [ 'view_team_reports', 'review_reports', 'view_analytics' ] ),
+			'capabilities'    => wp_json_encode( [ 'view_team_reports', 'review_reports', 'view_analytics', 'submit_mileage' ] ),
 			'hierarchy_level' => 50,
 		],
 		[
 			'slug'            => 'manager',
 			'label'           => 'Manager',
-			'capabilities'    => wp_json_encode( [ 'submit_reports', 'view_own_reports', 'view_analytics' ] ),
+			'capabilities'    => wp_json_encode( [ 'submit_reports', 'view_own_reports', 'view_analytics', 'submit_mileage' ] ),
 			'hierarchy_level' => 20,
 		],
 	];
@@ -797,6 +887,45 @@ function site_pulse_get_report_answers( int $report_id ): array {
 	), ARRAY_A ) ?: [];
 }
 
+function site_pulse_get_previous_report( int $template_id, int $location_id, int $exclude_report_id = 0 ): ?array {
+	if ( ! $template_id || ! $location_id ) return null;
+
+	global $wpdb;
+	$where  = "template_id = %d AND location_id = %d AND status = 'submitted'";
+	$values = [ $template_id, $location_id ];
+
+	if ( $exclude_report_id ) {
+		$where    .= " AND id != %d";
+		$values[]  = $exclude_report_id;
+	}
+
+	$prev = $wpdb->get_row( $wpdb->prepare(
+		"SELECT id, report_period_start, report_period_end FROM " . site_pulse_table('reports') . "
+		 WHERE $where
+		 ORDER BY report_period_end DESC, submitted_at DESC
+		 LIMIT 1",
+		...$values
+	), ARRAY_A );
+	if ( ! $prev ) return null;
+
+	$rows = $wpdb->get_results( $wpdb->prepare(
+		"SELECT field_key, answer_text FROM " . site_pulse_table('report_answers') . " WHERE report_id = %d",
+		(int) $prev['id']
+	), ARRAY_A ) ?: [];
+
+	$map = [];
+	foreach ( $rows as $row ) {
+		if ( ! empty( $row['field_key'] ) && trim( (string) $row['answer_text'] ) !== '' ) {
+			$map[ $row['field_key'] ] = $row['answer_text'];
+		}
+	}
+
+	return [
+		'date'    => $prev['report_period_start'],
+		'answers' => $map,
+	];
+}
+
 function site_pulse_get_reports( array $args = [] ): array {
 	global $wpdb;
 	$where  = [ "1=1" ];
@@ -1014,9 +1143,10 @@ function site_pulse_ajax_save_report(): void {
 		}
 	}
 
+	$pending_count = 0;
 	if ( $action_type === 'submit' ) {
 		site_pulse_submit_report( $report_id );
-		site_pulse_create_action_items_from_report( $report_id );
+		$pending_count = site_pulse_create_action_items_from_report( $report_id );
 	}
 
 	global $wpdb;
@@ -1027,9 +1157,10 @@ function site_pulse_ajax_save_report(): void {
 	);
 
 	wp_send_json_success( [
-		'report_id' => $report_id,
-		'status'    => $action_type === 'submit' ? 'submitted' : 'draft',
-		'message'   => $action_type === 'submit' ? 'Report submitted successfully.' : 'Report saved as draft.',
+		'report_id'     => $report_id,
+		'status'        => $action_type === 'submit' ? 'submitted' : 'draft',
+		'message'       => $action_type === 'submit' ? 'Report submitted successfully.' : 'Report saved as draft.',
+		'pending_count' => $pending_count,
 	] );
 }
 
@@ -1090,13 +1221,20 @@ function site_pulse_ajax_get_report_detail(): void {
 	$location = site_pulse_get_location( (int) $report['location_id'] );
 	$author   = get_userdata( (int) $report['user_id'] );
 
+	$previous_report = site_pulse_get_previous_report(
+		(int) $report['template_id'],
+		(int) $report['location_id'],
+		(int) $report['id']
+	);
+
 	wp_send_json_success( [
-		'report'   => $report,
-		'answers'  => $answers,
-		'template' => $template,
-		'fields'   => $fields,
-		'location' => $location,
-		'author'   => $author ? [ 'id' => $author->ID, 'name' => $author->display_name ] : null,
+		'report'          => $report,
+		'answers'         => $answers,
+		'template'        => $template,
+		'fields'          => $fields,
+		'location'        => $location,
+		'author'          => $author ? [ 'id' => $author->ID, 'name' => $author->display_name ] : null,
+		'previous_report' => $previous_report,
 	] );
 }
 
@@ -1475,8 +1613,14 @@ function site_pulse_ajax_get_template_fields(): void {
 		wp_send_json_error( [ 'message' => 'Template ID required.' ] );
 	}
 
-	$fields = site_pulse_get_template_fields( $template_id );
-	wp_send_json_success( [ 'fields' => $fields ] );
+	$user_id     = site_pulse_effective_user_id();
+	$profile     = site_pulse_get_user_profile( $user_id );
+	$location_id = $profile ? (int) $profile['location_id'] : 0;
+
+	$fields          = site_pulse_get_template_fields( $template_id );
+	$previous_report = site_pulse_get_previous_report( $template_id, $location_id );
+
+	wp_send_json_success( [ 'fields' => $fields, 'previous_report' => $previous_report ] );
 }
 
 
@@ -1721,55 +1865,24 @@ function site_pulse_create_action_items_from_report( int $report_id ): int {
 			'category'    => sanitize_text_field( $item['category'] ?? '' ),
 			'description' => sanitize_text_field( $item['description'] ),
 			'priority'    => $priority,
-			'status'      => 'open',
+			'status'      => 'pending',
 			'due_date'    => $due_date,
 			'created_at'  => $now,
 			'updated_at'  => $now,
 		] );
 		$count++;
-
-		if ( $priority === 'high' ) {
-			$high_items[] = $item['description'];
-		}
 	}
 
 	if ( $count ) {
-		$profile = site_pulse_get_user_profile( $report['user_id'] );
-		$user    = get_userdata( $report['user_id'] );
-		$loc     = site_pulse_get_location( $report['location_id'] );
-
-		// Summary notification
-		$msg = sprintf( '%d action item%s generated from %s\'s report for %s',
+		$loc = site_pulse_get_location( $report['location_id'] );
+		$msg = sprintf( '%d action item%s need your review (%s)',
 			$count,
 			$count > 1 ? 's' : '',
-			$user ? $user->display_name : 'Unknown',
 			$loc ? $loc['name'] : 'Unknown'
 		);
 
-		site_pulse_notify( (int) $report['user_id'], 'action_items', $msg, $report_id, 'action_item' );
-
-		if ( $profile && $profile['supervisor_id'] ) {
-			site_pulse_notify( (int) $profile['supervisor_id'], 'action_items', $msg, $report_id, 'action_item' );
-		}
-
-		// Separate urgent notification for high-priority items only
-		if ( ! empty( $high_items ) ) {
-			$urgent_msg = sprintf( 'URGENT — %d high-priority item%s from %s (%s): %s',
-				count( $high_items ),
-				count( $high_items ) > 1 ? 's' : '',
-				$user ? $user->display_name : 'Unknown',
-				$loc ? $loc['name'] : 'Unknown',
-				implode( '; ', $high_items )
-			);
-
-			site_pulse_notify( (int) $report['user_id'], 'action_urgent', $urgent_msg, $report_id, 'action_item' );
-
-			if ( $profile && $profile['supervisor_id'] ) {
-				site_pulse_notify( (int) $profile['supervisor_id'], 'action_urgent', $urgent_msg, $report_id, 'action_item' );
-			}
-		}
-
-		site_pulse_log( 'action_items_generated', $msg, [ 'report_id' => $report_id, 'count' => $count, 'high' => count( $high_items ) ] );
+		site_pulse_notify( (int) $report['user_id'], 'action_pending', $msg, $report_id, 'action_item' );
+		site_pulse_log( 'action_items_pending', $msg, [ 'report_id' => $report_id, 'count' => $count ] );
 	}
 
 	return $count;
@@ -1800,6 +1913,8 @@ function site_pulse_get_action_items( array $args = [] ): array {
 	if ( ! empty( $args['status'] ) ) {
 		$where[]  = "ai.status = %s";
 		$values[] = $args['status'];
+	} else {
+		$where[] = "ai.status != 'pending'";
 	}
 
 	$sql = "SELECT ai.*, l.name AS location_name, u.display_name AS user_name
@@ -1838,7 +1953,12 @@ function site_pulse_ajax_get_action_items(): void {
 	if ( ! empty( $_POST['location_id'] ) ) $args['location_id'] = (int) $_POST['location_id'];
 	if ( ! empty( $_POST['status'] ) )      $args['status']      = sanitize_text_field( $_POST['status'] );
 
-	wp_send_json_success( [ 'items' => site_pulse_get_action_items( $args ) ] );
+	$pending = site_pulse_get_action_items( [ 'user_id' => $user_id, 'status' => 'pending' ] );
+
+	wp_send_json_success( [
+		'items'   => site_pulse_get_action_items( $args ),
+		'pending' => $pending,
+	] );
 }
 
 add_action( 'wp_ajax_site_pulse_resolve_action_item', 'site_pulse_ajax_resolve_action_item' );
@@ -1989,6 +2109,76 @@ function site_pulse_evaluate_resolution( array $item, string $note ): ?array {
 	}
 
 	return $data;
+}
+
+add_action( 'wp_ajax_site_pulse_review_action_item', 'site_pulse_ajax_review_action_item' );
+function site_pulse_ajax_review_action_item(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+
+	$user_id  = site_pulse_effective_user_id();
+	$item_id  = (int) ( $_POST['item_id'] ?? 0 );
+	$decision = sanitize_text_field( $_POST['decision'] ?? '' );
+
+	if ( ! $item_id || ! in_array( $decision, [ 'approve', 'reject' ], true ) ) {
+		wp_send_json_error( [ 'message' => 'Invalid request.' ] );
+	}
+
+	global $wpdb;
+	$item = $wpdb->get_row( $wpdb->prepare(
+		"SELECT * FROM " . site_pulse_table('action_items') . " WHERE id = %d", $item_id
+	), ARRAY_A );
+
+	if ( ! $item ) {
+		wp_send_json_error( [ 'message' => 'Item not found.' ] );
+	}
+
+	if ( (int) $item['user_id'] !== $user_id && ! site_pulse_is_god( get_current_user_id() ) ) {
+		wp_send_json_error( [ 'message' => 'You can only review your own action items.' ] );
+	}
+
+	if ( $item['status'] !== 'pending' ) {
+		wp_send_json_error( [ 'message' => 'This item has already been reviewed.' ] );
+	}
+
+	if ( $decision === 'reject' ) {
+		$wpdb->delete( site_pulse_table('action_items'), [ 'id' => $item_id ] );
+		site_pulse_log( 'action_item_rejected',
+			sprintf( 'Rejected action item: %s', $item['description'] ),
+			[ 'item_id' => $item_id, 'priority' => $item['priority'] ]
+		);
+		wp_send_json_success( [ 'decision' => 'reject' ] );
+	}
+
+	// approve
+	$now = current_time( 'mysql' );
+	$wpdb->update(
+		site_pulse_table('action_items'),
+		[ 'status' => 'open', 'updated_at' => $now ],
+		[ 'id' => $item_id ]
+	);
+
+	site_pulse_log( 'action_item_approved',
+		sprintf( 'Approved action item: %s', $item['description'] ),
+		[ 'item_id' => $item_id, 'priority' => $item['priority'] ]
+	);
+
+	if ( $item['priority'] === 'high' ) {
+		$profile = site_pulse_get_user_profile( (int) $item['user_id'] );
+		$user    = get_userdata( (int) $item['user_id'] );
+		$loc     = site_pulse_get_location( (int) $item['location_id'] );
+
+		$urgent_msg = sprintf( 'URGENT — high-priority item from %s (%s): %s',
+			$user ? $user->display_name : 'Unknown',
+			$loc ? $loc['name'] : 'Unknown',
+			$item['description']
+		);
+
+		if ( $profile && $profile['supervisor_id'] ) {
+			site_pulse_notify( (int) $profile['supervisor_id'], 'action_urgent', $urgent_msg, $item_id, 'action_item' );
+		}
+	}
+
+	wp_send_json_success( [ 'decision' => 'approve' ] );
 }
 
 add_action( 'wp_ajax_site_pulse_reorder_action_items', 'site_pulse_ajax_reorder_action_items' );
@@ -2168,6 +2358,896 @@ function site_pulse_ajax_impersonate(): void {
 	}
 
 	wp_send_json_success( [ 'redirect' => home_url( '/site-pulse-dashboard/' ) ] );
+}
+
+
+/*--------------------------------------------------------------
+# Mileage — Helpers
+--------------------------------------------------------------*/
+
+function site_pulse_mileage_rate(): float {
+	$rate = (float) site_pulse_get_setting( 'mileage_rate', '0.67' );
+	return $rate > 0 ? $rate : 0.67;
+}
+
+function site_pulse_mileage_normalize_pair( int $a, int $b ): array {
+	return $a <= $b ? [ $a, $b ] : [ $b, $a ];
+}
+
+function site_pulse_mileage_get_distance( int $a, int $b ): ?float {
+	if ( $a === $b ) return 0.0;
+	[ $lo, $hi ] = site_pulse_mileage_normalize_pair( $a, $b );
+	global $wpdb;
+	$miles = $wpdb->get_var( $wpdb->prepare(
+		"SELECT miles FROM " . site_pulse_table('mileage_distances') . " WHERE from_id = %d AND to_id = %d",
+		$lo, $hi
+	) );
+	return $miles === null ? null : (float) $miles;
+}
+
+/**
+ * Returns miles for a pair, computing on the fly via API if both endpoints
+ * are approved but the cache miss. Returns null if either endpoint is pending,
+ * the pair has same id, or the API call fails.
+ */
+function site_pulse_mileage_ensure_distance( int $from, int $to ): ?float {
+	if ( $from === $to ) return 0.0;
+
+	$cached = site_pulse_mileage_get_distance( $from, $to );
+	if ( $cached !== null ) return $cached;
+
+	global $wpdb;
+	$statuses = $wpdb->get_col( $wpdb->prepare(
+		"SELECT status FROM " . site_pulse_table('mileage_locations') . " WHERE id IN (%d, %d)",
+		$from, $to
+	) );
+	if ( count( $statuses ) !== 2 ) return null;
+	foreach ( $statuses as $s ) {
+		if ( $s !== 'approved' ) return null;
+	}
+
+	// JIT — compute distances from $from to every other approved location
+	// (that's one Distance Matrix call out, one back, and caches them all).
+	site_pulse_mileage_compute_distances_for( $from );
+	return site_pulse_mileage_get_distance( $from, $to );
+}
+
+function site_pulse_mileage_save_distance( int $a, int $b, float $miles, string $source = 'api' ): void {
+	if ( $a === $b ) return;
+	[ $lo, $hi ] = site_pulse_mileage_normalize_pair( $a, $b );
+	global $wpdb;
+	$existing = $wpdb->get_var( $wpdb->prepare(
+		"SELECT miles FROM " . site_pulse_table('mileage_distances') . " WHERE from_id = %d AND to_id = %d",
+		$lo, $hi
+	) );
+	if ( $existing === null ) {
+		$wpdb->insert( site_pulse_table('mileage_distances'), [
+			'from_id'    => $lo,
+			'to_id'      => $hi,
+			'miles'      => round( $miles, 2 ),
+			'source'     => $source,
+			'created_at' => current_time( 'mysql' ),
+		] );
+	} elseif ( (float) $existing < $miles ) {
+		// Keep the larger distance per agreement
+		$wpdb->update( site_pulse_table('mileage_distances'),
+			[ 'miles' => round( $miles, 2 ), 'source' => $source ],
+			[ 'from_id' => $lo, 'to_id' => $hi ]
+		);
+	}
+}
+
+function site_pulse_mileage_google_key(): string {
+	if ( defined( '_PLACES_API' ) && _PLACES_API ) return (string) _PLACES_API;
+	return (string) get_option( 'bp_places_api', '' );
+}
+
+function site_pulse_mileage_geocode( string $address ): ?array {
+	$key = site_pulse_mileage_google_key();
+	if ( ! $key || ! $address ) return null;
+
+	$url = add_query_arg( [
+		'address' => $address,
+		'key'     => $key,
+	], 'https://maps.googleapis.com/maps/api/geocode/json' );
+
+	$response = wp_remote_get( $url, [ 'timeout' => 15 ] );
+	if ( is_wp_error( $response ) ) {
+		site_pulse_log( 'mileage_error', 'Geocode failed: ' . $response->get_error_message() );
+		return null;
+	}
+	$data = json_decode( wp_remote_retrieve_body( $response ), true );
+	if ( empty( $data['results'][0]['geometry']['location'] ) ) {
+		site_pulse_log( 'mileage_error', 'Geocode no results', [ 'address' => $address, 'status' => $data['status'] ?? '' ] );
+		return null;
+	}
+	return [
+		'lat' => (float) $data['results'][0]['geometry']['location']['lat'],
+		'lng' => (float) $data['results'][0]['geometry']['location']['lng'],
+	];
+}
+
+/**
+ * Calls Distance Matrix once per direction. Returns map of [other_id => miles_max_of_both_directions].
+ */
+function site_pulse_mileage_compute_distances_for( int $location_id ): array {
+	$key = site_pulse_mileage_google_key();
+	if ( ! $key ) {
+		site_pulse_log( 'mileage_error', 'Distance Matrix skipped — no Google API key', [ 'location_id' => $location_id ] );
+		return [];
+	}
+
+	global $wpdb;
+	$loc = $wpdb->get_row( $wpdb->prepare(
+		"SELECT id, name, address, lat, lng FROM " . site_pulse_table('mileage_locations') . " WHERE id = %d",
+		$location_id
+	), ARRAY_A );
+	if ( ! $loc ) return [];
+
+	$others = $wpdb->get_results( $wpdb->prepare(
+		"SELECT id, name, address, lat, lng FROM " . site_pulse_table('mileage_locations') . " WHERE status = 'approved' AND id != %d",
+		$location_id
+	), ARRAY_A ) ?: [];
+
+	if ( empty( $others ) ) return [];
+
+	$loc_point = ( $loc['lat'] !== null && $loc['lng'] !== null )
+		? $loc['lat'] . ',' . $loc['lng']
+		: $loc['address'];
+
+	$other_points = [];
+	$other_ids    = [];
+	foreach ( $others as $o ) {
+		$other_ids[]    = (int) $o['id'];
+		$other_points[] = ( $o['lat'] !== null && $o['lng'] !== null )
+			? $o['lat'] . ',' . $o['lng']
+			: $o['address'];
+	}
+
+	$miles_outbound = site_pulse_mileage_distance_matrix_call( [ $loc_point ], $other_points, $key );
+	$miles_inbound  = site_pulse_mileage_distance_matrix_call( $other_points, [ $loc_point ], $key );
+	if ( $miles_outbound === null && $miles_inbound === null ) return [];
+
+	$result = [];
+	foreach ( $other_ids as $idx => $oid ) {
+		$out = $miles_outbound[0][ $idx ] ?? null;
+		$in  = $miles_inbound[ $idx ][0] ?? null;
+		$candidates = array_filter( [ $out, $in ], fn( $v ) => $v !== null );
+		if ( empty( $candidates ) ) continue;
+		$miles = max( $candidates );
+		site_pulse_mileage_save_distance( $location_id, $oid, $miles, 'api' );
+		$result[ $oid ] = $miles;
+	}
+	return $result;
+}
+
+function site_pulse_mileage_routes_waypoint( string $point ): array {
+	if ( preg_match( '/^-?\d+\.\d+,-?\d+\.\d+$/', $point ) ) {
+		[ $lat, $lng ] = array_map( 'floatval', explode( ',', $point ) );
+		return [ 'waypoint' => [ 'location' => [ 'latLng' => [ 'latitude' => $lat, 'longitude' => $lng ] ] ] ];
+	}
+	return [ 'waypoint' => [ 'address' => $point ] ];
+}
+
+function site_pulse_mileage_distance_matrix_call( array $origins, array $destinations, string $key ): ?array {
+	$body = [
+		'origins'           => array_map( 'site_pulse_mileage_routes_waypoint', $origins ),
+		'destinations'      => array_map( 'site_pulse_mileage_routes_waypoint', $destinations ),
+		'travelMode'        => 'DRIVE',
+		'routingPreference' => 'TRAFFIC_UNAWARE',
+	];
+
+	$response = wp_remote_post( 'https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix', [
+		'timeout' => 25,
+		'headers' => [
+			'Content-Type'     => 'application/json',
+			'X-Goog-Api-Key'   => $key,
+			'X-Goog-FieldMask' => 'originIndex,destinationIndex,distanceMeters,condition',
+		],
+		'body'    => wp_json_encode( $body ),
+	] );
+
+	if ( is_wp_error( $response ) ) {
+		site_pulse_log( 'mileage_error', 'Routes API failed: ' . $response->get_error_message() );
+		return null;
+	}
+
+	$raw  = wp_remote_retrieve_body( $response );
+	$data = json_decode( $raw, true );
+	if ( ! is_array( $data ) ) {
+		site_pulse_log( 'mileage_error', 'Routes API: invalid response', [ 'body' => substr( $raw, 0, 500 ) ] );
+		return null;
+	}
+
+	// Routes API can wrap an error either at the top level or in the first array element
+	$err_obj = $data['error'] ?? ( isset( $data[0]['error'] ) ? $data[0]['error'] : null );
+	if ( $err_obj ) {
+		site_pulse_log( 'mileage_error', 'Routes API error: ' . ( $err_obj['message'] ?? 'unknown' ), [ 'status' => $err_obj['status'] ?? '' ] );
+		return null;
+	}
+
+	// Initialize matrix with nulls so missing pairs stay null
+	$matrix = [];
+	foreach ( $origins as $i => $_ ) {
+		$matrix[ $i ] = [];
+		foreach ( $destinations as $j => $__ ) {
+			$matrix[ $i ][ $j ] = null;
+		}
+	}
+
+	foreach ( $data as $element ) {
+		$i = $element['originIndex']      ?? null;
+		$j = $element['destinationIndex'] ?? null;
+		if ( $i === null || $j === null ) continue;
+		if ( ( $element['condition'] ?? '' ) === 'ROUTE_EXISTS' && isset( $element['distanceMeters'] ) ) {
+			$matrix[ $i ][ $j ] = (float) $element['distanceMeters'] / 1609.344;
+		}
+	}
+	return $matrix;
+}
+
+function site_pulse_mileage_recalc_entry( int $entry_id ): void {
+	global $wpdb;
+	$legs = $wpdb->get_results( $wpdb->prepare(
+		"SELECT miles FROM " . site_pulse_table('mileage_legs') . " WHERE entry_id = %d",
+		$entry_id
+	), ARRAY_A ) ?: [];
+
+	$total   = 0.0;
+	$pending = false;
+	foreach ( $legs as $leg ) {
+		if ( $leg['miles'] === null ) {
+			$pending = true;
+		} else {
+			$total += (float) $leg['miles'];
+		}
+	}
+
+	$rate = site_pulse_mileage_rate();
+	$wpdb->update( site_pulse_table('mileage_entries'),
+		[
+			'total_miles'          => round( $total, 2 ),
+			'reimbursement_amount' => round( $total * $rate, 2 ),
+			'rate_used'            => $rate,
+			'updated_at'           => current_time( 'mysql' ),
+		],
+		[ 'id' => $entry_id ]
+	);
+}
+
+function site_pulse_mileage_finalize_legs_for_location( int $location_id ): array {
+	global $wpdb;
+	$legs = $wpdb->get_results( $wpdb->prepare(
+		"SELECT l.id, l.entry_id, l.from_location_id, l.to_location_id
+		 FROM " . site_pulse_table('mileage_legs') . " l
+		 INNER JOIN " . site_pulse_table('mileage_locations') . " lf ON lf.id = l.from_location_id
+		 INNER JOIN " . site_pulse_table('mileage_locations') . " lt ON lt.id = l.to_location_id
+		 WHERE l.miles IS NULL
+		   AND ( l.from_location_id = %d OR l.to_location_id = %d )
+		   AND lf.status = 'approved' AND lt.status = 'approved'",
+		$location_id, $location_id
+	), ARRAY_A ) ?: [];
+
+	$entries_touched = [];
+	foreach ( $legs as $leg ) {
+		$miles = site_pulse_mileage_get_distance( (int) $leg['from_location_id'], (int) $leg['to_location_id'] );
+		if ( $miles === null ) continue;
+		$wpdb->update( site_pulse_table('mileage_legs'),
+			[ 'miles' => $miles ],
+			[ 'id' => (int) $leg['id'] ]
+		);
+		$entries_touched[ (int) $leg['entry_id'] ] = true;
+	}
+
+	foreach ( array_keys( $entries_touched ) as $eid ) {
+		site_pulse_mileage_recalc_entry( $eid );
+	}
+	return array_keys( $entries_touched );
+}
+
+
+/*--------------------------------------------------------------
+# Mileage — Manager AJAX
+--------------------------------------------------------------*/
+
+add_action( 'wp_ajax_site_pulse_get_mileage_locations', 'site_pulse_ajax_get_mileage_locations' );
+function site_pulse_ajax_get_mileage_locations(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id = site_pulse_effective_user_id();
+
+	global $wpdb;
+	$rows = $wpdb->get_results( $wpdb->prepare(
+		"SELECT id, name, address, location_type, status, created_by
+		 FROM " . site_pulse_table('mileage_locations') . "
+		 WHERE status = 'approved' OR ( status = 'pending' AND created_by = %d )
+		 ORDER BY status DESC, location_type, name",
+		$user_id
+	), ARRAY_A ) ?: [];
+
+	wp_send_json_success( [ 'locations' => $rows, 'rate' => site_pulse_mileage_rate() ] );
+}
+
+add_action( 'wp_ajax_site_pulse_add_mileage_location', 'site_pulse_ajax_add_mileage_location' );
+function site_pulse_ajax_add_mileage_location(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+
+	$user_id = site_pulse_effective_user_id();
+	$name    = sanitize_text_field( $_POST['name'] ?? '' );
+	$address = sanitize_text_field( $_POST['address'] ?? '' );
+	$type    = sanitize_text_field( $_POST['location_type'] ?? 'vendor' );
+
+	if ( ! $name || ! $address ) {
+		wp_send_json_error( [ 'message' => 'Name and address are required.' ] );
+	}
+
+	global $wpdb;
+	$now = current_time( 'mysql' );
+	$wpdb->insert( site_pulse_table('mileage_locations'), [
+		'name'          => $name,
+		'address'       => $address,
+		'location_type' => in_array( $type, [ 'restaurant', 'vendor', 'other' ], true ) ? $type : 'vendor',
+		'status'        => 'pending',
+		'created_by'    => $user_id,
+		'created_at'    => $now,
+		'updated_at'    => $now,
+	] );
+	$id = (int) $wpdb->insert_id;
+
+	site_pulse_log( 'mileage_location_proposed', sprintf( 'Proposed location: %s', $name ), [ 'location_id' => $id ] );
+
+	// Notify all admin/owner/god users
+	$admins = $wpdb->get_col(
+		"SELECT up.user_id FROM " . site_pulse_table('user_profiles') . " up
+		 INNER JOIN " . site_pulse_table('roles') . " r ON r.id = up.role_id
+		 WHERE up.status = 'active' AND r.slug IN ('god','owner','admin')"
+	) ?: [];
+	$msg = sprintf( 'New mileage location pending approval: %s', $name );
+	foreach ( $admins as $aid ) {
+		site_pulse_notify( (int) $aid, 'mileage_pending', $msg, $id, 'mileage_location' );
+	}
+
+	wp_send_json_success( [ 'id' => $id, 'name' => $name, 'address' => $address, 'status' => 'pending' ] );
+}
+
+add_action( 'wp_ajax_site_pulse_get_mileage_entries', 'site_pulse_ajax_get_mileage_entries' );
+function site_pulse_ajax_get_mileage_entries(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id = site_pulse_effective_user_id();
+
+	$start = sanitize_text_field( $_POST['start'] ?? '' );
+	$end   = sanitize_text_field( $_POST['end']   ?? '' );
+
+	global $wpdb;
+	$where  = "WHERE e.user_id = %d";
+	$values = [ $user_id ];
+	if ( $start ) { $where .= " AND e.entry_date >= %s"; $values[] = $start; }
+	if ( $end )   { $where .= " AND e.entry_date <= %s"; $values[] = $end; }
+
+	$rows = $wpdb->get_results( $wpdb->prepare(
+		"SELECT e.*, ( SELECT COUNT(*) FROM " . site_pulse_table('mileage_legs') . " l WHERE l.entry_id = e.id AND l.miles IS NULL ) AS pending_legs
+		 FROM " . site_pulse_table('mileage_entries') . " e
+		 $where
+		 ORDER BY e.entry_date DESC, e.id DESC
+		 LIMIT 100",
+		...$values
+	), ARRAY_A ) ?: [];
+
+	wp_send_json_success( [ 'entries' => $rows, 'rate' => site_pulse_mileage_rate() ] );
+}
+
+add_action( 'wp_ajax_site_pulse_get_mileage_entry', 'site_pulse_ajax_get_mileage_entry' );
+function site_pulse_ajax_get_mileage_entry(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id  = site_pulse_effective_user_id();
+	$entry_id = (int) ( $_POST['entry_id'] ?? 0 );
+
+	global $wpdb;
+	$entry = $wpdb->get_row( $wpdb->prepare(
+		"SELECT * FROM " . site_pulse_table('mileage_entries') . " WHERE id = %d", $entry_id
+	), ARRAY_A );
+	if ( ! $entry ) wp_send_json_error( [ 'message' => 'Entry not found.' ] );
+
+	$is_admin = site_pulse_user_can( $user_id, 'manage_mileage' ) || site_pulse_is_god( get_current_user_id() );
+	if ( (int) $entry['user_id'] !== $user_id && ! $is_admin ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+
+	$legs = $wpdb->get_results( $wpdb->prepare(
+		"SELECT l.*, lf.name AS from_name, lf.status AS from_status, lt.name AS to_name, lt.status AS to_status
+		 FROM " . site_pulse_table('mileage_legs') . " l
+		 LEFT JOIN " . site_pulse_table('mileage_locations') . " lf ON lf.id = l.from_location_id
+		 LEFT JOIN " . site_pulse_table('mileage_locations') . " lt ON lt.id = l.to_location_id
+		 WHERE l.entry_id = %d
+		 ORDER BY l.leg_order, l.id",
+		$entry_id
+	), ARRAY_A ) ?: [];
+
+	$user = get_userdata( (int) $entry['user_id'] );
+	wp_send_json_success( [
+		'entry'      => $entry,
+		'legs'       => $legs,
+		'user_name'  => $user ? $user->display_name : '',
+		'user_email' => $user ? $user->user_email : '',
+	] );
+}
+
+add_action( 'wp_ajax_site_pulse_save_mileage_entry', 'site_pulse_ajax_save_mileage_entry' );
+function site_pulse_ajax_save_mileage_entry(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id = site_pulse_effective_user_id();
+
+	if ( ! site_pulse_user_can( $user_id, 'submit_mileage' ) && ! site_pulse_is_god( get_current_user_id() ) ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+
+	$entry_id   = (int) ( $_POST['entry_id'] ?? 0 );
+	$entry_date = sanitize_text_field( $_POST['entry_date'] ?? '' );
+	$notes      = sanitize_textarea_field( $_POST['notes'] ?? '' );
+	$stops_raw  = $_POST['stops'] ?? [];
+	if ( ! is_array( $stops_raw ) ) $stops_raw = [];
+	$stops = array_values( array_filter( array_map( 'intval', $stops_raw ) ) );
+
+	if ( ! $entry_date ) wp_send_json_error( [ 'message' => 'Date is required.' ] );
+	if ( count( $stops ) < 2 ) wp_send_json_error( [ 'message' => 'At least two stops are required.' ] );
+
+	global $wpdb;
+	$now = current_time( 'mysql' );
+
+	if ( $entry_id ) {
+		$existing = $wpdb->get_row( $wpdb->prepare(
+			"SELECT * FROM " . site_pulse_table('mileage_entries') . " WHERE id = %d", $entry_id
+		), ARRAY_A );
+		if ( ! $existing || (int) $existing['user_id'] !== $user_id ) {
+			wp_send_json_error( [ 'message' => 'Entry not found or not yours.' ] );
+		}
+		$wpdb->update( site_pulse_table('mileage_entries'), [
+			'entry_date' => $entry_date,
+			'notes'      => $notes,
+			'updated_at' => $now,
+		], [ 'id' => $entry_id ] );
+		$wpdb->delete( site_pulse_table('mileage_legs'), [ 'entry_id' => $entry_id ] );
+	} else {
+		$wpdb->insert( site_pulse_table('mileage_entries'), [
+			'user_id'    => $user_id,
+			'entry_date' => $entry_date,
+			'notes'      => $notes,
+			'created_at' => $now,
+			'updated_at' => $now,
+		] );
+		$entry_id = (int) $wpdb->insert_id;
+	}
+
+	for ( $i = 0; $i < count( $stops ) - 1; $i++ ) {
+		$from = (int) $stops[ $i ];
+		$to   = (int) $stops[ $i + 1 ];
+		// JIT computes via Distance Matrix if both endpoints are approved
+		// but the cache is empty. Returns null if either endpoint is pending.
+		$miles = site_pulse_mileage_ensure_distance( $from, $to );
+
+		$wpdb->insert( site_pulse_table('mileage_legs'), [
+			'entry_id'         => $entry_id,
+			'leg_order'        => $i,
+			'from_location_id' => $from,
+			'to_location_id'   => $to,
+			'miles'            => $miles,
+			'created_at'       => $now,
+		] );
+	}
+
+	site_pulse_mileage_recalc_entry( $entry_id );
+	wp_send_json_success( [ 'entry_id' => $entry_id ] );
+}
+
+add_action( 'wp_ajax_site_pulse_delete_mileage_entry', 'site_pulse_ajax_delete_mileage_entry' );
+function site_pulse_ajax_delete_mileage_entry(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id  = site_pulse_effective_user_id();
+	$entry_id = (int) ( $_POST['entry_id'] ?? 0 );
+
+	global $wpdb;
+	$entry = $wpdb->get_row( $wpdb->prepare(
+		"SELECT user_id FROM " . site_pulse_table('mileage_entries') . " WHERE id = %d", $entry_id
+	), ARRAY_A );
+	if ( ! $entry ) wp_send_json_error( [ 'message' => 'Entry not found.' ] );
+	if ( (int) $entry['user_id'] !== $user_id && ! site_pulse_is_god( get_current_user_id() ) ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+
+	$wpdb->delete( site_pulse_table('mileage_legs'),    [ 'entry_id' => $entry_id ] );
+	$wpdb->delete( site_pulse_table('mileage_entries'), [ 'id'       => $entry_id ] );
+	wp_send_json_success();
+}
+
+add_action( 'wp_ajax_site_pulse_email_mileage_log', 'site_pulse_ajax_email_mileage_log' );
+function site_pulse_ajax_email_mileage_log(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id = site_pulse_effective_user_id();
+	$user    = get_userdata( $user_id );
+
+	$to      = sanitize_email( $_POST['to'] ?? ( $user ? $user->user_email : '' ) );
+	$start   = sanitize_text_field( $_POST['start'] ?? '' );
+	$end     = sanitize_text_field( $_POST['end']   ?? '' );
+
+	if ( ! is_email( $to ) ) wp_send_json_error( [ 'message' => 'Valid email required.' ] );
+
+	global $wpdb;
+	$where  = "WHERE e.user_id = %d";
+	$values = [ $user_id ];
+	if ( $start ) { $where .= " AND e.entry_date >= %s"; $values[] = $start; }
+	if ( $end )   { $where .= " AND e.entry_date <= %s"; $values[] = $end; }
+
+	$entries = $wpdb->get_results( $wpdb->prepare(
+		"SELECT * FROM " . site_pulse_table('mileage_entries') . " e $where ORDER BY e.entry_date ASC",
+		...$values
+	), ARRAY_A ) ?: [];
+
+	if ( empty( $entries ) ) wp_send_json_error( [ 'message' => 'No entries to email.' ] );
+
+	$total_miles = 0.0;
+	$total_amt   = 0.0;
+	$rows_html   = '';
+	foreach ( $entries as $e ) {
+		$legs = $wpdb->get_results( $wpdb->prepare(
+			"SELECT l.miles, lf.name AS from_name, lt.name AS to_name
+			 FROM " . site_pulse_table('mileage_legs') . " l
+			 LEFT JOIN " . site_pulse_table('mileage_locations') . " lf ON lf.id = l.from_location_id
+			 LEFT JOIN " . site_pulse_table('mileage_locations') . " lt ON lt.id = l.to_location_id
+			 WHERE l.entry_id = %d ORDER BY l.leg_order, l.id",
+			(int) $e['id']
+		), ARRAY_A ) ?: [];
+
+		$path = '';
+		if ( $legs ) {
+			$path .= esc_html( $legs[0]['from_name'] ?? '?' );
+			foreach ( $legs as $leg ) $path .= ' &rarr; ' . esc_html( $leg['to_name'] ?? '?' );
+		}
+
+		$total_miles += (float) $e['total_miles'];
+		$total_amt   += (float) $e['reimbursement_amount'];
+
+		$rows_html .= '<tr>';
+		$rows_html .= '<td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;">' . esc_html( $e['entry_date'] ) . '</td>';
+		$rows_html .= '<td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;">' . $path . '</td>';
+		$rows_html .= '<td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;text-align:right;">' . number_format( (float) $e['total_miles'], 2 ) . '</td>';
+		$rows_html .= '<td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;text-align:right;">$' . number_format( (float) $e['reimbursement_amount'], 2 ) . '</td>';
+		$rows_html .= '</tr>';
+	}
+
+	$range_label = ( $start || $end )
+		? trim( ( $start ?: '...' ) . ' to ' . ( $end ?: '...' ) )
+		: 'All entries';
+
+	$body  = '<h2 style="font-family:sans-serif;">Mileage Log — ' . esc_html( $user ? $user->display_name : '' ) . '</h2>';
+	$body .= '<p style="font-family:sans-serif;color:#475569;">' . esc_html( $range_label ) . '</p>';
+	$body .= '<table style="border-collapse:collapse;font-family:sans-serif;font-size:14px;width:100%;">';
+	$body .= '<thead><tr style="background:#f1f5f9;text-align:left;"><th style="padding:8px 10px;">Date</th><th style="padding:8px 10px;">Path</th><th style="padding:8px 10px;text-align:right;">Miles</th><th style="padding:8px 10px;text-align:right;">$</th></tr></thead><tbody>';
+	$body .= $rows_html;
+	$body .= '<tr style="font-weight:bold;background:#f8fafc;"><td style="padding:8px 10px;" colspan="2">Total</td>';
+	$body .= '<td style="padding:8px 10px;text-align:right;">' . number_format( $total_miles, 2 ) . '</td>';
+	$body .= '<td style="padding:8px 10px;text-align:right;">$' . number_format( $total_amt, 2 ) . '</td></tr>';
+	$body .= '</tbody></table>';
+
+	$subject = 'Mileage Log — ' . ( $user ? $user->display_name : '' ) . ' — ' . $range_label;
+	$headers = [ 'Content-Type: text/html; charset=UTF-8' ];
+
+	$sent = wp_mail( $to, $subject, $body, $headers );
+	if ( ! $sent ) wp_send_json_error( [ 'message' => 'Email failed to send.' ] );
+
+	wp_send_json_success( [ 'sent' => true, 'to' => $to ] );
+}
+
+
+/*--------------------------------------------------------------
+# Mileage — Admin AJAX
+--------------------------------------------------------------*/
+
+function site_pulse_mileage_admin_check(): bool {
+	$uid = get_current_user_id();
+	if ( in_array( 'administrator', (array) wp_get_current_user()->roles, true ) ) return true;
+	if ( site_pulse_user_can( $uid, 'manage_mileage' ) ) return true;
+	if ( site_pulse_is_god( $uid ) ) return true;
+	wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	return false;
+}
+
+add_action( 'wp_ajax_site_pulse_admin_get_mileage_locations', 'site_pulse_ajax_admin_get_mileage_locations' );
+function site_pulse_ajax_admin_get_mileage_locations(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+
+	global $wpdb;
+	$rows = $wpdb->get_results(
+		"SELECT ml.*, u.display_name AS created_by_name
+		 FROM " . site_pulse_table('mileage_locations') . " ml
+		 LEFT JOIN {$wpdb->users} u ON u.ID = ml.created_by
+		 ORDER BY FIELD(ml.status,'pending','approved'), ml.location_type, ml.name",
+		ARRAY_A
+	) ?: [];
+
+	wp_send_json_success( [
+		'locations' => $rows,
+		'rate'      => site_pulse_mileage_rate(),
+	] );
+}
+
+add_action( 'wp_ajax_site_pulse_admin_approve_mileage_location', 'site_pulse_ajax_admin_approve_mileage_location' );
+function site_pulse_ajax_admin_approve_mileage_location(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+
+	$id = (int) ( $_POST['id'] ?? 0 );
+	if ( ! $id ) wp_send_json_error( [ 'message' => 'Invalid id.' ] );
+
+	global $wpdb;
+	$loc = $wpdb->get_row( $wpdb->prepare(
+		"SELECT * FROM " . site_pulse_table('mileage_locations') . " WHERE id = %d", $id
+	), ARRAY_A );
+	if ( ! $loc ) wp_send_json_error( [ 'message' => 'Not found.' ] );
+
+	if ( $loc['lat'] === null || $loc['lng'] === null ) {
+		$geo = site_pulse_mileage_geocode( (string) $loc['address'] );
+		if ( $geo ) {
+			$wpdb->update( site_pulse_table('mileage_locations'),
+				[ 'lat' => $geo['lat'], 'lng' => $geo['lng'] ],
+				[ 'id' => $id ]
+			);
+		}
+	}
+
+	$now = current_time( 'mysql' );
+	$wpdb->update( site_pulse_table('mileage_locations'),
+		[
+			'status'      => 'approved',
+			'approved_by' => get_current_user_id(),
+			'approved_at' => $now,
+			'updated_at'  => $now,
+		],
+		[ 'id' => $id ]
+	);
+
+	$distances_added = site_pulse_mileage_compute_distances_for( $id );
+	$entries_updated = site_pulse_mileage_finalize_legs_for_location( $id );
+
+	if ( (int) $loc['created_by'] ) {
+		site_pulse_notify( (int) $loc['created_by'], 'mileage_approved',
+			sprintf( 'Your mileage location was approved: %s', $loc['name'] ),
+			$id, 'mileage_location'
+		);
+	}
+	site_pulse_log( 'mileage_location_approved',
+		sprintf( 'Approved location: %s', $loc['name'] ),
+		[ 'location_id' => $id, 'distances_added' => count( $distances_added ), 'entries_updated' => count( $entries_updated ) ]
+	);
+
+	wp_send_json_success( [
+		'distances_added' => count( $distances_added ),
+		'entries_updated' => count( $entries_updated ),
+	] );
+}
+
+add_action( 'wp_ajax_site_pulse_admin_reject_mileage_location', 'site_pulse_ajax_admin_reject_mileage_location' );
+function site_pulse_ajax_admin_reject_mileage_location(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+
+	$id = (int) ( $_POST['id'] ?? 0 );
+	if ( ! $id ) wp_send_json_error( [ 'message' => 'Invalid id.' ] );
+
+	global $wpdb;
+	$loc = $wpdb->get_row( $wpdb->prepare(
+		"SELECT * FROM " . site_pulse_table('mileage_locations') . " WHERE id = %d AND status = 'pending'", $id
+	), ARRAY_A );
+	if ( ! $loc ) wp_send_json_error( [ 'message' => 'Not found or already approved.' ] );
+
+	$affected_entries = $wpdb->get_col( $wpdb->prepare(
+		"SELECT DISTINCT entry_id FROM " . site_pulse_table('mileage_legs') . " WHERE from_location_id = %d OR to_location_id = %d",
+		$id, $id
+	) ) ?: [];
+
+	$wpdb->delete( site_pulse_table('mileage_legs'), [ 'from_location_id' => $id ] );
+	$wpdb->delete( site_pulse_table('mileage_legs'), [ 'to_location_id'   => $id ] );
+	$wpdb->delete( site_pulse_table('mileage_locations'), [ 'id' => $id ] );
+
+	foreach ( $affected_entries as $eid ) {
+		site_pulse_mileage_recalc_entry( (int) $eid );
+	}
+
+	if ( (int) $loc['created_by'] ) {
+		site_pulse_notify( (int) $loc['created_by'], 'mileage_rejected',
+			sprintf( 'Your mileage location was rejected: %s — affected legs were removed from your entries.', $loc['name'] ),
+			0, 'mileage_location'
+		);
+	}
+	site_pulse_log( 'mileage_location_rejected',
+		sprintf( 'Rejected location: %s', $loc['name'] ),
+		[ 'name' => $loc['name'], 'address' => $loc['address'], 'entries_affected' => count( $affected_entries ) ]
+	);
+
+	wp_send_json_success( [ 'entries_affected' => count( $affected_entries ) ] );
+}
+
+add_action( 'wp_ajax_site_pulse_admin_save_mileage_rate', 'site_pulse_ajax_admin_save_mileage_rate' );
+function site_pulse_ajax_admin_save_mileage_rate(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+
+	$rate = (float) ( $_POST['rate'] ?? 0 );
+	if ( $rate <= 0 || $rate > 5 ) wp_send_json_error( [ 'message' => 'Rate must be between 0 and $5/mi.' ] );
+
+	site_pulse_set_setting( 'mileage_rate', (string) $rate );
+	wp_send_json_success( [ 'rate' => $rate ] );
+}
+
+add_action( 'wp_ajax_site_pulse_admin_test_mileage_api', 'site_pulse_ajax_admin_test_mileage_api' );
+function site_pulse_ajax_admin_test_mileage_api(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_is_god( get_current_user_id() ) ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+
+	$key = site_pulse_mileage_google_key();
+
+	$key_source = 'NOT SET';
+	if ( defined( '_PLACES_API' ) && _PLACES_API ) {
+		$key_source = '_PLACES_API constant (wp-config: BP_PLACES_KEY)';
+	} elseif ( get_option( 'bp_places_api', '' ) ) {
+		$key_source = 'wp option: bp_places_api';
+	}
+
+	$result = [
+		'key_source'      => $key_source,
+		'key_preview'     => $key ? substr( $key, 0, 6 ) . '...' . substr( $key, -4 ) : '(empty)',
+		'geocode'         => null,
+		'distance_matrix' => null,
+	];
+
+	if ( ! $key ) {
+		$result['error'] = "No API key found. Add define('BP_PLACES_KEY', 'AIza...') to wp-config.php, or set the wp option 'bp_places_api'.";
+		wp_send_json_success( $result );
+	}
+
+	// Geocode test
+	$geo_url = add_query_arg( [
+		'address' => 'Arlington, TX',
+		'key'     => $key,
+	], 'https://maps.googleapis.com/maps/api/geocode/json' );
+
+	$resp = wp_remote_get( $geo_url, [ 'timeout' => 15 ] );
+	if ( is_wp_error( $resp ) ) {
+		$result['geocode'] = [ 'ok' => false, 'error' => 'wp_remote_get: ' . $resp->get_error_message() ];
+	} else {
+		$body = wp_remote_retrieve_body( $resp );
+		$data = json_decode( $body, true );
+		$status = $data['status'] ?? 'UNKNOWN';
+		$err    = $data['error_message'] ?? '';
+		if ( $status === 'OK' && ! empty( $data['results'][0]['geometry']['location'] ) ) {
+			$loc = $data['results'][0]['geometry']['location'];
+			$result['geocode'] = [
+				'ok'     => true,
+				'status' => $status,
+				'result' => round( $loc['lat'], 4 ) . ',' . round( $loc['lng'], 4 ),
+			];
+		} else {
+			$result['geocode'] = [
+				'ok'     => false,
+				'status' => $status,
+				'error'  => $err ?: 'No geometry in response',
+			];
+		}
+	}
+
+	// Routes API test (Compute Route Matrix — replaces legacy Distance Matrix)
+	$routes_body = [
+		'origins'           => [ [ 'waypoint' => [ 'address' => 'Arlington, TX' ] ] ],
+		'destinations'      => [ [ 'waypoint' => [ 'address' => 'Burleson, TX' ] ] ],
+		'travelMode'        => 'DRIVE',
+		'routingPreference' => 'TRAFFIC_UNAWARE',
+	];
+
+	$resp = wp_remote_post( 'https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix', [
+		'timeout' => 25,
+		'headers' => [
+			'Content-Type'     => 'application/json',
+			'X-Goog-Api-Key'   => $key,
+			'X-Goog-FieldMask' => 'originIndex,destinationIndex,distanceMeters,condition',
+		],
+		'body'    => wp_json_encode( $routes_body ),
+	] );
+
+	if ( is_wp_error( $resp ) ) {
+		$result['distance_matrix'] = [ 'ok' => false, 'error' => 'wp_remote_post: ' . $resp->get_error_message() ];
+	} else {
+		$raw     = wp_remote_retrieve_body( $resp );
+		$code    = wp_remote_retrieve_response_code( $resp );
+		$data    = json_decode( $raw, true );
+		$preview = substr( $raw, 0, 600 );
+
+		// Routes API can wrap an error either at the top level or in the first array element
+		$err_obj = $data['error'] ?? ( isset( $data[0]['error'] ) ? $data[0]['error'] : null );
+
+		if ( $err_obj ) {
+			$result['distance_matrix'] = [
+				'ok'             => false,
+				'status'         => $err_obj['status'] ?? 'ERROR',
+				'element_status' => 'N/A',
+				'http_code'      => $code,
+				'error'          => $err_obj['message'] ?? 'Unknown error',
+				'raw'            => $preview,
+			];
+		} elseif ( is_array( $data ) && ! empty( $data ) ) {
+			// Element may live at $data[0] (array form) or $data itself (single-object form)
+			$el = isset( $data[0] ) && is_array( $data[0] ) ? $data[0] : $data;
+			$cond  = $el['condition'] ?? '';
+			$dist  = $el['distanceMeters'] ?? null;
+
+			if ( $dist !== null ) {
+				// Distance present → treat as successful even if condition was omitted
+				$miles = (float) $dist / 1609.344;
+				$result['distance_matrix'] = [
+					'ok'             => true,
+					'status'         => 'OK',
+					'element_status' => $cond ?: 'ROUTE_EXISTS (assumed)',
+					'http_code'      => $code,
+					'miles'          => round( $miles, 2 ),
+				];
+			} else {
+				$result['distance_matrix'] = [
+					'ok'             => false,
+					'status'         => 'OK',
+					'element_status' => $cond ?: 'NO_DISTANCE',
+					'http_code'      => $code,
+					'error'          => 'Response had no distanceMeters. Raw: ' . $preview,
+					'raw'            => $preview,
+				];
+			}
+		} else {
+			$result['distance_matrix'] = [
+				'ok'             => false,
+				'status'         => 'EMPTY',
+				'element_status' => 'N/A',
+				'http_code'      => $code,
+				'error'          => 'Empty/non-JSON response',
+				'raw'            => $preview,
+			];
+		}
+	}
+
+	wp_send_json_success( $result );
+}
+
+add_action( 'wp_ajax_site_pulse_get_pending_mileage_count', 'site_pulse_ajax_get_pending_mileage_count' );
+function site_pulse_ajax_get_pending_mileage_count(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$uid = get_current_user_id();
+	if ( ! site_pulse_user_can( $uid, 'manage_mileage' ) && ! site_pulse_is_god( $uid ) ) {
+		wp_send_json_success( [ 'count' => 0 ] );
+		return;
+	}
+	global $wpdb;
+	$count = (int) $wpdb->get_var(
+		"SELECT COUNT(*) FROM " . site_pulse_table('mileage_locations') . " WHERE status = 'pending'"
+	);
+	wp_send_json_success( [ 'count' => $count ] );
+}
+
+add_action( 'wp_ajax_site_pulse_admin_recompute_mileage_distances', 'site_pulse_ajax_admin_recompute_mileage_distances' );
+function site_pulse_ajax_admin_recompute_mileage_distances(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+
+	global $wpdb;
+	$ids = $wpdb->get_col(
+		"SELECT id FROM " . site_pulse_table('mileage_locations') . " WHERE status = 'approved' ORDER BY id"
+	) ?: [];
+
+	$added = 0;
+	foreach ( $ids as $id ) {
+		$result = site_pulse_mileage_compute_distances_for( (int) $id );
+		$added += count( $result );
+		site_pulse_mileage_finalize_legs_for_location( (int) $id );
+	}
+
+	wp_send_json_success( [ 'distances_added' => $added, 'locations_processed' => count( $ids ) ] );
 }
 
 

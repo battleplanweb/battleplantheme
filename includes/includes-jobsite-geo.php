@@ -234,11 +234,11 @@ function bp_jobsite_setup($post_id, $user) {
 	$location    = '';
 	$new_address = '';
 
-	// Ensure match key exists for this post
-	$key = get_post_meta($post_id, '_bp_match_key', true);
-	if (!$key) {
-		$key = bp_match_key_from_title(get_the_title($post_id));
-		if (!$key) return; // bail if title produces no usable match key — prevents empty-value meta_query matching all posts
+	// Always recompute match key from current title — prevents stale meta from
+	// matching the wrong post after a title change, and keeps the index in sync.
+	$key = bp_match_key_from_title(get_the_title($post_id));
+	if (!$key) return; // bail if title produces no usable match key
+	if (get_post_meta($post_id, '_bp_match_key', true) !== $key) {
 		update_post_meta($post_id, '_bp_match_key', $key);
 	}
 
@@ -253,21 +253,32 @@ function bp_jobsite_setup($post_id, $user) {
 				'value' => $key,
 			]],
 		]);
-		foreach ($jobsites as $j) update_post_meta($j->ID, 'review', $post_id);
+		foreach ($jobsites as $j) {
+			// Verify the live title still produces the same key — guards against stale meta
+			if (bp_match_key_from_title($j->post_title) === $key) {
+				update_post_meta($j->ID, 'review', $post_id);
+			}
+		}
 		return;
 	}
 
-	// Link jobsite back to matching testimonial
+	// Link jobsite back to matching testimonial (publish drafts on match)
 	$match = get_posts([
 		'post_type'      => 'testimonials',
-		'post_status'    => 'publish',
+		'post_status'    => ['publish', 'draft'],
 		'posts_per_page' => 1,
 		'meta_query'     => [[
 			'key'   => '_bp_match_key',
 			'value' => $key,
 		]],
 	]);
-	!empty($match) ? update_post_meta($post_id, 'review', $match[0]->ID) : null;
+	// Verify the live testimonial title still produces the same key — guards against stale meta
+	if (!empty($match) && bp_match_key_from_title($match[0]->post_title) === $key) {
+		update_post_meta($post_id, 'review', $match[0]->ID);
+		if ($match[0]->post_status === 'draft') {
+			wp_update_post(['ID' => $match[0]->ID, 'post_status' => 'publish']);
+		}
+	}
 
 	// Find lat/lng based on customer address
      // ── Geocoding: use GPS coords from app if available, else Google API ──
@@ -680,7 +691,7 @@ function battleplan_add_jobsite_geo_acf_fields() {
 				'type'         => 'post_object',
 				'required'     => 0,
 				'post_type'    => ['testimonials'],
-				'post_status'  => ['publish'],
+				'post_status'  => ['publish', 'draft'],
 				'return_format'=> 'id',
 				'multiple'     => 0,
 				'allow_null'   => 1,
@@ -2021,6 +2032,7 @@ function bp_geo_generate_term_intro( int $term_id ) {
 	// Get service + location from a tagged post (avoids slug-parsing issues)
 	$sample = get_posts( [
 		'post_type'      => 'jobsite_geo',
+		'post_status'    => 'any',
 		'posts_per_page' => 1,
 		'fields'         => 'ids',
 		'tax_query'      => [ [ 'taxonomy' => 'jobsite_geo-services', 'terms' => $term_id ] ],
@@ -2039,6 +2051,34 @@ function bp_geo_generate_term_intro( int $term_id ) {
 			$parts = explode( ', ', $loc );
 			$city  = $parts[0] ?? '';
 			$state = $parts[1] ?? '';
+		}
+	}
+
+	// Fallback: parse the term slug against existing service-areas slugs.
+	// Slug format is `{service-slug}-{area-slug}`; longest area-slug suffix wins
+	// so multi-word cities (e.g. `fort-worth-tx`) parse correctly.
+	if ( ! $service || ! $city ) {
+		$area_slugs = get_terms( [
+			'taxonomy'   => 'jobsite_geo-service-areas',
+			'hide_empty' => false,
+			'fields'     => 'slugs',
+		] );
+		if ( ! is_wp_error( $area_slugs ) && ! empty( $area_slugs ) ) {
+			usort( $area_slugs, function( $a, $b ) { return strlen( $b ) - strlen( $a ); } );
+			foreach ( $area_slugs as $area_slug ) {
+				$suffix = '-' . $area_slug;
+				if ( substr( $term->slug, -strlen( $suffix ) ) === $suffix ) {
+					$service_slug = substr( $term->slug, 0, -strlen( $suffix ) );
+					if ( ! $service ) $service = bp_format_service( $service_slug );
+					if ( ! $city ) {
+						$loc   = bp_format_location( $area_slug );
+						$parts = explode( ', ', $loc );
+						$city  = $parts[0] ?? '';
+						$state = $parts[1] ?? '';
+					}
+					break;
+				}
+			}
 		}
 	}
 

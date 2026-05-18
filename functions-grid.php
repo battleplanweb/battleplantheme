@@ -624,11 +624,6 @@ function battleplan_buildLockedSection( $atts, $content = null ) {
 	return do_shortcode($buildSection);
 }
 
-	add_action( 'wpcf7_init', function() {
-	remove_action( 'wpcf7_swv_create_schema', 'wpcf7_swv_add_select_enum_rules', 20, 2 );
-	remove_action( 'wpcf7_swv_create_schema', 'wpcf7_swv_add_checkbox_enum_rules', 20, 2 ); // for checkboxes
-});
-
 add_shortcode( 'seek', 'battleplan_formField' );
 function battleplan_formField( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'label'=>'Label', 'show'=>'true', 'label-pos'=>'before', 'label-valign'=>'baseline', 'id'=>'user-input', 'req'=>'false', 'width'=>'default', 'max-w'=>'', 'class'=>'', 'value'=>''), $atts );
@@ -647,6 +642,8 @@ function battleplan_formField( $atts, $content = null ) {
 	if ( $show != 'true' ) : $width = 'width-none'; $aria = 'aria-label="'.$label.'"'; endif;
 	$asterisk = '<span class="required"></span><span class="sr-only">Required Field</span>';
 
+	$content = do_shortcode((string)$content);
+
 	if ( $label == "button" ) :
 		$buildInput .= '<div class="block block-button block-100">'.$content.'</div>';
 	else:
@@ -656,7 +653,7 @@ function battleplan_formField( $atts, $content = null ) {
 		if ( $show == 'true' ) $buildInput .= '<label for="'.$id.'" class="'.$width.' label-'.$labelValign.'">'.$label;
 		if ( $show == 'true' && $req != 'false' ) $buildInput .= $asterisk;
 		if ( $show == 'true' ) $buildInput .= '</label>';
-		if ( $labelPos == 'before' ) $buildInput .= $content;
+		if ( $labelPos != 'after' ) $buildInput .= $content;
 		if ( $show != 'true' && $req != 'false' ) $buildInput .= $asterisk;
 		$buildInput .= '</div>';
 	endif;

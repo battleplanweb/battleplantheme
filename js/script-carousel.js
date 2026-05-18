@@ -24,13 +24,16 @@ document.addEventListener("DOMContentLoaded", function () {
 			controlsHeight = 0;
 
 		const isImageSlider = carousel.classList.contains('content-image');
+		const indicatorWrap = getObject('.carousel-indicators', carousel);
 
 		if (controls) {
 			const styles = window.getComputedStyle(controls);
-			const marginTop = parseFloat(styles.marginTop) || 0;
-			const marginBottom = parseFloat(styles.marginBottom) || 0;
+			controlsHeight += controls.offsetHeight + (parseFloat(styles.marginTop) || 0) + (parseFloat(styles.marginBottom) || 0);
+		}
 
-			controlsHeight = controls.offsetHeight + marginTop + marginBottom;
+		if (indicatorWrap) {
+			const styles = window.getComputedStyle(indicatorWrap);
+			controlsHeight += indicatorWrap.offsetHeight + (parseFloat(styles.marginTop) || 0) + (parseFloat(styles.marginBottom) || 0);
 		}
 
 		/* --------------------------------------------------
@@ -45,6 +48,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
 				/* Remove lazy loading so hidden-slide images still load */
 				imgs.forEach(img => img.removeAttribute('loading'));
+
+				const itemPadding = slides[0] ? parseFloat(window.getComputedStyle(slides[0]).paddingTop) + parseFloat(window.getComputedStyle(slides[0]).paddingBottom) : 0;
 
 				const calcImageHeight = () => {
 					const containerWidth = slideInner.offsetWidth;
@@ -63,7 +68,7 @@ document.addEventListener("DOMContentLoaded", function () {
 					carousel.style.height = `${minH + controlsHeight}px`;
 
 					imgs.forEach(img => {
-						img.style.maxHeight = `${minH}px`;
+						img.style.maxHeight = `${minH - itemPadding}px`;
 					});
 				};
 

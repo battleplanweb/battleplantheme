@@ -1447,8 +1447,6 @@ function battleplan_add_data_attribute($tag, $handle, $src) {
     }
     if ( !$is_jquery_required && ($handle === 'jquery' || $handle === 'jquery-js') ) return null;
 
-    $is_cf7 = ( strpos($handle, 'wpcf7') !== false || strpos($handle, 'swv') !== false );
-
     // Add nonce to all scripts
     $tag = str_replace('<script ', '<script nonce="' . _BP_NONCE . '" ', $tag);
 
@@ -1456,8 +1454,7 @@ function battleplan_add_data_attribute($tag, $handle, $src) {
     // run synchronously and break when their parent scripts are deferred
     $is_woo_checkout = function_exists('is_checkout') && ( is_checkout() || is_cart() );
 
-    // Defer everything except CF7 and all scripts on WooCommerce checkout/cart
-    if ( !$is_cf7 && !$is_woo_checkout ) :
+    if ( !$is_woo_checkout ) :
         $tag = str_replace(' src=', ' defer src=', $tag);
     endif;
 
@@ -2869,68 +2866,34 @@ function battleplan_mobile_menu_bar_phone() {
 // Display Mobile Menu Bar Item - Contact
 add_action('bp_mobile_menu_bar_contact', 'battleplan_mobile_menu_bar_contact', 20);
 function battleplan_mobile_menu_bar_contact() {
-	$query = bp_WP_Query('wpcf7_contact_form', [
-		'title'          => 'Quote Request Form',
-		'post_status'    => 'all',
-		'posts_per_page' => 1
-	]);
-
-	if ( ! empty( $query->post ) ) :
-		$form = "Quote Request Form";
-		$title = "Request A Quote";
-		$type = "quote";
-	endif;
-
-	$query = bp_WP_Query('wpcf7_contact_form', [
-		'title'          => 'Contact Us Form',
-		'post_status'    => 'all',
-		'posts_per_page' => 1
-	]);
-
-	if ( ! empty( $query->post ) ) :
-		$form = "Contact Us Form";
-		$title = "Send A Message";
-		$type = "contact";
-	endif;
-
-	$email = '';
-
-	if ( $form && $title ) :
-		$email = '<div class="mm-bar-btn mm-bar-'.$type.' modal-btn"><div class="email-btn" aria-hidden="true">[get-icon type="email"]</div><div class="email2-btn" aria-hidden="true">[get-icon type="paper-plane"]</div><span class="sr-only">Contact Us</span></div>';
-	else:
-		$email = '<div class="mm-bar-btn mm-bar-empty"></div>';
-	endif;
-
-	if ($email !== '') echo do_shortcode($email);
+	$primary = apply_filters('bp_primary_form', 'quote');
+	if ($primary === 'none') {
+		echo '<div class="mm-bar-btn mm-bar-empty"></div>';
+		return;
+	}
+	$type = ($primary === 'contact') ? 'contact' : 'quote';
+	$email = '<div class="mm-bar-btn mm-bar-'.$type.' modal-btn"><div class="email-btn" aria-hidden="true">[get-icon type="email"]</div><div class="email2-btn" aria-hidden="true">[get-icon type="paper-plane"]</div><span class="sr-only">Contact Us</span></div>';
+	echo do_shortcode($email);
 }
 
 // Display Request Quote Modal
 add_action('bp_before_page', 'battleplan_request_quote_modal', 20);
 function battleplan_request_quote_modal() {
+	$primary = apply_filters('bp_primary_form', 'quote');
+	if ($primary === 'none') return;
 
-	$query = bp_WP_Query('wpcf7_contact_form', [
-		'title'          => 'Quote Request Form',
-		'post_status'    => 'all',
-		'posts_per_page' => 1
-	]);
+	if ($primary === 'contact') {
+		$title    = 'Send A Message';
+		$shortcode = '[bp-contact-form]';
+	} else {
+		$title    = 'Request A Quote';
+		$shortcode = '[bp-quote-form]';
+	}
 
-	if ( ! empty( $query->post ) ) :
-		$form = "Quote Request Form";
-		$title = "Request A Quote";
-	endif;
+	$title     = apply_filters('bp_primary_form_title', $title, $primary);
+	$shortcode = apply_filters('bp_primary_form_shortcode', $shortcode, $primary);
 
-	$query = bp_WP_Query('wpcf7_contact_form', [
-		'title'          => 'Contact Us Form',
-		'post_status'    => 'all',
-		'posts_per_page' => 1
-	]);
-
-	if ( ! empty( $query->post ) ) :
-		$form = "Contact Us Form";
-		$title = "Send A Message";
-	endif;
-
-	if ( $form && $title ) echo do_shortcode('[lock name="request-quote-modal" style="lock" position="modal" show="always" btn-activated="yes"][layout]<h3>'.$title.'</h3>[contact-form-7 title="'.$form.'"][/layout][/lock]');
+	echo do_shortcode('[lock name="request-quote-modal" style="lock" position="modal" show="always" btn-activated="yes"][layout]<h3>'.$title.'</h3>'.$shortcode.'[/layout][/lock]');
 }
 
 // Display Mobile Menu Bar Item - Activate
@@ -2966,7 +2929,8 @@ function battleplan_printOpenBanner() {
 // Display #wrapper-top
 add_action('bp_wrapper_top', 'battleplan_printWrapperTop', 20);
 function battleplan_printWrapperTop() {
-	$current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );
+	$current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );	
+	if ( ! $current_page ) return;
 	$textarea = get_post_meta( $current_page->ID, 'page-top_text', true );
  	if ( $textarea != "" ) echo "<section id='wrapper-top'>".apply_filters('the_content', $textarea)."</section><!-- #wrapper-top -->";
 }

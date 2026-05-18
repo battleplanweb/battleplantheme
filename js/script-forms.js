@@ -1,20 +1,105 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict";
-														   
-// Raw Script: Forms (Multi-Step)														   
-										
-	const wrap = getObject('.cf7-steps');
-	const form = wrap ? getObject('form', wrap) : null;
-	if(!form) return;
 
-	initMultiStep(form, wrap);
+// Raw Script: Forms (Multi-Step + Fetch Submission)
+
+	// Submission handler — applies to ALL .bp-form-el forms (steps optional)
+	document.querySelectorAll('form.bp-form-el').forEach(form => {
+		// Skip if this form is inside a multi-step wrapper — that path is handled below
+		const inSteps = form.closest('.bp-form-steps');
+		if (!inSteps) bindFetchSubmit(form);
+	});
+
+	// Multi-step wrapper
+	const wrap = getObject('.bp-form-steps');
+	const form = wrap ? getObject('form', wrap) : null;
+	if (form) {
+		bindFetchSubmit(form);
+		initMultiStep(form, wrap);
+	}
+
+	function bindFetchSubmit(form) {
+		form.addEventListener('submit', e => {
+			// In multi-step forms the submit handler may already have prevented default
+			// when not yet on the last step. Only intercept when it would otherwise post.
+			if (e.defaultPrevented) return;
+			e.preventDefault();
+			submitViaFetch(form);
+		});
+	}
+
+	function submitViaFetch(form) {
+		setFormState(form, 'submitting');
+		clearResponse(form);
+
+		const fd = new FormData(form);
+		const url = '/wp-json/bp/v1/contact';
+
+		fetch(url, {
+			method: 'POST',
+			body: fd,
+			credentials: 'same-origin',
+			headers: { 'Accept': 'application/json' }
+		})
+		.then(r => r.json().then(d => ({ ok: r.ok, data: d })))
+		.then(({ ok, data }) => {
+			if (!ok || !data || !data.status) {
+				setFormState(form, 'failed');
+				showResponse(form, 'Sorry, something went wrong. Please try again or call us.');
+				return;
+			}
+			if (data.status === 'mail_sent') {
+				form.dispatchEvent(new CustomEvent('bp:form:sent', { bubbles: true, detail: data }));
+				if (data.redirect) {
+					// Keep .submitting state so the spinner stays visible until the new page loads
+					window.location.href = data.redirect;
+				} else {
+					setFormState(form, 'mail-sent-ok');
+					showResponse(form, data.message || 'Thank you. Your message has been sent.');
+					form.reset();
+				}
+			} else if (data.status === 'validation_failed') {
+				setFormState(form, 'invalid');
+				showResponse(form, data.message || 'Please correct the highlighted fields.');
+				if (Array.isArray(data.invalid)) {
+					data.invalid.forEach(name => {
+						const el = form.querySelector('[name="' + name + '"]');
+						if (el) el.classList.add('bp-not-valid');
+					});
+				}
+			} else {
+				setFormState(form, 'failed');
+				showResponse(form, data.message || 'Sorry, your message could not be sent.');
+			}
+		})
+		.catch(() => {
+			setFormState(form, 'failed');
+			showResponse(form, 'Network error. Please check your connection and try again.');
+		});
+	}
+
+	function setFormState(form, state) {
+		form.classList.remove('init', 'submitting', 'invalid', 'mail-sent-ok', 'failed', 'validating');
+		form.classList.add(state);
+	}
+
+	function showResponse(form, msg) {
+		const out = form.querySelector('.bp-response');
+		if (out) out.textContent = msg;
+	}
+
+	function clearResponse(form) {
+		const out = form.querySelector('.bp-response');
+		if (out) out.textContent = '';
+		form.querySelectorAll('.bp-not-valid').forEach(el => el.classList.remove('bp-not-valid'));
+	}
 
 	function initMultiStep(form, wrap) {
 		const scope = wrap.closest('article') || wrap.parentElement || document;
-		const clipRect = getObject('#cf7LogoClip rect', scope) || null;
-		const barEl = getObject('.cf7-progress__bar > span', scope) || getObject('.cf7-progress__bar', scope) || null;
+		const clipRect = getObject('#bpLogoClip rect', scope) || null;
+		const barEl = getObject('.bp-progress__bar > span', scope) || getObject('.bp-progress__bar', scope) || null;
 
-		const steps = [...form.querySelectorAll('.cf7-step')];
-		const isIncluded = el => el && el.classList && el.classList.contains('cf7-step-included');
+		const steps = [...form.querySelectorAll('.bp-step')];
+		const isIncluded = el => el && el.classList && el.classList.contains('bp-step-included');
 		const nextInc = el => isIncluded(el.nextElementSibling) ? el.nextElementSibling : null;
 		const toggle = (el,on)=> on ? (el.removeAttribute('hidden'), el.style.display='') : (el.setAttribute('hidden',''), el.style.display='none');
 
@@ -39,7 +124,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			const total = w.reduce((a,b)=>a+b,0);
 			return (!Number.isFinite(total) || total===0) ? raw.map(()=>100/raw.length) : w.map(v=> (v/total)*100);
 		})();
-		
+
 		let i = 0, started = false;
 
 		const completedPct = idx => {
@@ -69,7 +154,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			wrap.dataset.current = idx;
 
 			const base = steps[idx], inc = nextInc(base);
-			const prevBtn = (inc && inc.querySelector('.cf7-prev')) || base.querySelector('.cf7-prev');
+			const prevBtn = (inc && inc.querySelector('.bp-prev')) || base.querySelector('.bp-prev');
 			prevBtn ? prevBtn.disabled = idx===0 : null;
 
 			paint();
@@ -86,17 +171,17 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			!ok && firstBad ? firstBad.reportValidity() : null;
 			return ok;
 		};
-	
+
 		form.addEventListener('click', e => {
-			if(e.target.classList.contains('cf7-next')){
+			if(e.target.classList.contains('bp-next')){
 				e.preventDefault();
 				if (validateStep(i)) { started = true; i = Math.min(i+1, steps.length-1); show(i); }
-				animateScroll('.cf7-progress');
+				animateScroll('.bp-progress');
 			}
-			if(e.target.classList.contains('cf7-prev')){
+			if(e.target.classList.contains('bp-prev')){
 				e.preventDefault();
 				i = Math.max(i-1, 0); show(i);
-				animateScroll('.cf7-progress');
+				animateScroll('.bp-progress');
 			}
 		});
 
@@ -104,16 +189,17 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			const last = steps.length-1;
 			if (i===last){
 				if (!validateStep(i)){ e.preventDefault(); return; }
-				paint(true); 
+				paint(true);
+				// fall through — bindFetchSubmit will handle the actual POST
 			} else {
 				e.preventDefault();
 				started = true;
 				i = Math.min(i+1,last); show(i);
-			}			
+			}
 		});
 
-		form.addEventListener('wpcf7mailsent', ()=> { i=0; started=false; show(i); });
+		form.addEventListener('bp:form:sent', ()=> { i=0; started=false; show(i); });
 
 		show(0);
 	}
-});	
+});

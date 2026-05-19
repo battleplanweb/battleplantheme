@@ -33,8 +33,14 @@ function bp_run_framework_migrations() {
 // Deactivate + delete the now-redundant CF7 and Akismet plugins. The framework's
 // `[contact-form-7]` shortcode interceptor still handles legacy CF7 references in
 // post content after the plugin files are gone, so existing pages keep rendering.
+//
+// Loads both wp-admin includes explicitly — this function can run from any
+// request type including wp-cron, where the admin includes are not auto-loaded.
+// `plugin.php` provides deactivate_plugins/delete_plugins; `file.php` provides
+// request_filesystem_credentials() which delete_plugins calls internally.
 function bp_migrate_remove_legacy_plugins() {
-	if (!function_exists('deactivate_plugins')) require_once ABSPATH . 'wp-admin/includes/plugin.php';
+	if (!function_exists('deactivate_plugins'))            require_once ABSPATH . 'wp-admin/includes/plugin.php';
+	if (!function_exists('request_filesystem_credentials')) require_once ABSPATH . 'wp-admin/includes/file.php';
 
 	$targets = [
 		'contact-form-7/wp-contact-form-7.php',
@@ -44,15 +50,20 @@ function bp_migrate_remove_legacy_plugins() {
 	$report = [];
 	foreach ($targets as $plugin) {
 		$status = [];
-		if (is_plugin_active($plugin) || is_plugin_active_for_network($plugin)) {
-			deactivate_plugins($plugin, true);
-			$status[] = 'deactivated';
-		}
-		if (file_exists(WP_PLUGIN_DIR . '/' . $plugin)) {
-			$result = delete_plugins([$plugin]);
-			$status[] = (is_wp_error($result) || $result === false)
-				? 'delete failed (' . (is_wp_error($result) ? $result->get_error_message() : 'unknown') . ')'
-				: 'deleted';
+		try {
+			if (is_plugin_active($plugin) || is_plugin_active_for_network($plugin)) {
+				deactivate_plugins($plugin, true);
+				$status[] = 'deactivated';
+			}
+			if (file_exists(WP_PLUGIN_DIR . '/' . $plugin)) {
+				$result = delete_plugins([$plugin]);
+				$status[] = (is_wp_error($result) || $result === false)
+					? 'delete failed (' . (is_wp_error($result) ? $result->get_error_message() : 'unknown') . ')'
+					: 'deleted';
+			}
+		} catch (Throwable $e) {
+			$status[] = 'error: ' . $e->getMessage();
+			error_log('[bp-migrate] removing ' . $plugin . ': ' . $e->getMessage());
 		}
 		if (!empty($status)) {
 			$report[$plugin] = implode(', ', $status);

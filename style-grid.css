@@ -58,7 +58,7 @@ section.section {
 }
 
 div[class*="grid-"] {
-	display: grid;
+	display:                                                   grid;
 }
 
 .flex {
@@ -585,7 +585,7 @@ section.section .flex.nested .flex,
 	z-index:                                                   2000;
 }
 
-.menu-clip .menu-strip {
+.menu-clip #masthead {
 	overflow:                                                  hidden;
 	clip-path:                                                 polygon(0% 0%, 100% 0%, 100% calc(100% + 80vh), 0% calc(100% + 80vh));
 }

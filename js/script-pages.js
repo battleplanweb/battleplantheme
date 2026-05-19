@@ -2272,7 +2272,7 @@ form.addEventListener('wpcf7submit', function() {
 
 
 	// Allow sub-menu to appear, even if initially set to overflow:hidden
-	const menuClip = getObject('.menu-clip .menu-strip');
+	const menuClip = getObject('.menu-clip #masthead');
 	if (menuClip) {
 		setTimeout(() => menuClip.style.overflow = 'visible', 2500);
 	}

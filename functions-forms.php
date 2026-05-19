@@ -7,7 +7,7 @@
 # Form Renderer ([bp-form])
 # Field Shortcodes ([bp-text], [bp-email], etc.)
 # Standard Forms ([bp-contact-form], [bp-quote-form])
-# CF7 Intercept ([contact-form-7] backwards compat)
+# Multi-step wrapper ([bp-form-steps])
 # REST Submission Endpoint
 # Spam Pipeline
 # Email Builder
@@ -412,105 +412,44 @@ add_shortcode('bp-quote-form', function($atts) {
 
 function bp_default_contact_body($submit_label = 'Send Message') {
 	return '
-		[layout grid="1-1"]
+		[layout grid="3-3-2"]
 			[col][seek label="Name" id="user-name" req="true"][bp-text name="user-name" required="true" autocomplete="name"][/seek][/col]
 			[col][seek label="Email" id="user-email" req="true"][bp-email name="user-email" required="true"][/seek][/col]
+			[col][seek label="Phone" id="user-phone" req="true"][bp-tel name="user-phone" required="true"][/seek][/col]
 		[/layout]
-		[seek label="Phone" id="user-phone" req="true"][bp-tel name="user-phone" required="true"][/seek]
-		[layout grid="1" class="form-stacked"]
+		[layout]
 			[col][seek label="Message" id="user-message" req="true" width="full"][bp-textarea name="user-message" required="true" rows="6"][/seek][/col]
 		[/layout]
-		[seek label="button"][bp-submit]' . esc_html($submit_label) . '[/bp-submit][/seek]
+		[layout]
+			[col][seek label="button"][bp-submit]' . esc_html($submit_label) . '[/bp-submit][/seek][/col]
+		[/layout]
 	';
 }
 
 function bp_default_quote_body($submit_label = 'Request Quote') {
 	return '
-		[layout grid="1-1"]
+		[layout]
 			[col][seek label="Name" id="user-name" req="true"][bp-text name="user-name" required="true" autocomplete="name"][/seek][/col]
-			[col][seek label="Email" id="user-email" req="true"][bp-email name="user-email" required="true"][/seek][/col]
-		[/layout]
-		[layout grid="1-1"]
-			[col][seek label="Phone" id="user-phone" req="true"][bp-tel name="user-phone" required="true"][/seek][/col]
 			[col][seek label="City" id="user-city"][bp-text name="user-city" autocomplete="address-level2"][/seek][/col]
+			[col][seek label="Email" id="user-email" req="true"][bp-email name="user-email" required="true"][/seek][/col]
+			[col][seek label="Phone" id="user-phone" req="true"][bp-tel name="user-phone" required="true"][/seek][/col]
 		[/layout]
-		[seek label="How can we help?" id="user-message" req="true"][bp-text name="user-message" required="true"][/seek]
-		[seek label="button"][bp-submit]' . esc_html($submit_label) . '[/bp-submit][/seek]
+		[layout]
+			[col class="form-stacked"][seek label="How can we help?" id="user-message" req="true"][bp-text name="user-message" required="true"][/seek][/col]
+			[col][seek label="button"][bp-submit]' . esc_html($submit_label) . '[/bp-submit][/seek][/col]
+		[/layout]
 	';
 }
 
 
 /*--------------------------------------------------------------
-# CF7 Intercept ([contact-form-7] backwards compat)
+# Multi-step wrapper ([bp-form-steps])
 --------------------------------------------------------------*/
 
-// Take over the [contact-form-7] shortcode so existing pages keep working
-// without editing 200+ pages across 130+ sites.
-remove_shortcode('contact-form-7');
-add_shortcode('contact-form-7', function($atts) {
-	$atts = shortcode_atts(['id'=>'', 'title'=>''], $atts);
-
-	// 1) Per-site mapping filter
-	$mapped = apply_filters('bp_form_mapping', null, $atts['id'], $atts['title']);
-	if ($mapped) return do_shortcode($mapped);
-
-	// 2) Title-based defaults
-	$by_title = bp_cf7_title_to_shortcode($atts['title']);
-	if ($by_title) return do_shortcode($by_title);
-
-	// 3) Fallback: contact form
-	return do_shortcode('[bp-contact-form]');
-});
-
-// Returns the framework shortcode that corresponds to a CF7 form title, or
-// null if the title isn't a known standard. Centralized here so the runtime
-// intercept and the version-migration auto-rewrite stay in sync.
-function bp_cf7_title_to_shortcode($title) {
-	$t = strtolower(trim((string)$title));
-	if ($t === '') return null;
-
-	$quote_titles = [
-		'quote request form',
-		'request a catering quote',
-		'request a quote',
-		'request quote',
-		'get a quote',
-		'get quote',
-		'request service',
-		'request a service',
-		'service request',
-		'service request form',
-		'request service form',
-		'get a quote form',
-	];
-	if (in_array($t, $quote_titles, true)) return '[bp-quote-form]';
-
-	$contact_titles = [
-		'contact us form',
-		'contact us',
-		'contact form',
-		'contact',
-		'email us',
-	];
-	if (in_array($t, $contact_titles, true)) return '[bp-contact-form]';
-
-	return null;
-}
-
-// Multi-step wrapper (drop-in replacement for old [cf7-steps])
 add_shortcode('bp-form-steps', 'bp_form_steps');
-add_shortcode('cf7-steps',     'bp_form_steps'); // legacy alias
 function bp_form_steps($atts, $content = null) {
-	$a = shortcode_atts(['title'=>'', 'id'=>''], $atts);
 	bp_enqueue_script('battleplan-form', 'script-forms', []);
-	$inner = '';
-	if ($content !== null && $content !== '') {
-		$inner = $content;
-	} elseif ($a['title'] !== '') {
-		$inner = '[contact-form-7 title="' . esc_attr($a['title']) . '"]';
-	} elseif ($a['id'] !== '') {
-		$inner = '[contact-form-7 id="' . esc_attr($a['id']) . '"]';
-	}
+	$inner = ($content !== null && $content !== '') ? $content : '';
 	return '<div class="bp-form-steps" data-current="0">' . do_shortcode($inner) . '</div>';
 }
 
@@ -1447,5 +1386,5 @@ function bp_blocklist_emails() {
 }
 
 function bp_blocklist_words() {
-	return ['и', 'д', 'б', 'й', 'л', 'ы', 'З', 'у', 'Я', 'à', 'ô', 'ố', 'ế', 'á', 'ủ', 'ạ', '湖', '結', '衣', '市', '翼', '清', '水', 'http://', 'https://', 'www.', 'Dear Customer', 'Dear Sales', 'Sir/Madam', 'Sir/Madame', 'Hello Business Owner', 'HELLO SALES', 'bitcoin', 'mаlwаre', 'antivirus', 'marketing', 'SEO', 'Wordpress', 'Cost Estimation', 'Guarantee Estimation', 'World Wide Estimating', 'Get more reviews, Get more customers', 'We write the reviews', 'write an article', 'a free article', 'keyword targeted traffic', 'rank your google', 'boost your leads', 'write you an article', 'write a short article', 'website home page design', 'updated version of your website', 'free sample Home Page', 'lead generation', 'completely Free', 'Dear Receptionist', 'Franchise Creator', 'rebrand your business', 'what I would suggest for your website', 'improving your website', 'organic traffic', 'more business leads', 'We do Estimation', 'get your site published', 'high quality appointments and leads', 'new website', 'Google’s 1st Page', 'Does this sound interesting?', 'I notice that your website is very basic', 'appeal to more clients', 'improve your sales', 'free estimate from our company', 'blocks spam leads', 'block spam messages', 'In order to get a better idea of our work', 'Would you be interested in an article', 'cost estimates and take-off', 'If you\'ve made it this far', 'home services advertising', 'Do you need help with graphic design', 'I have an Audit of your website', 'Can we talk about your Website?', 'cooperate with your company', 'influencers on Instagram', 'procuring below items', 'Optimizing your website', 'your website could be', 'blog posts they write', 'mobile app development', 'Your website could benefit', 'available for download', 'at no cost', 'boost your business', 'targeted Customers', 'We help you get', 'designing and development', 'create your Website', 'fix a few things on your website', 'warnings found on your website', 'contact form blasting', 'make money online', 'not an AI haha', 'send over the set of plans', 'audit on your website', 'audit on your site', 'Are you in need of', 'kingcontacts', 'suggestions for your site', 'Using Google Adsense', 'a few issues with your website', 'very profitable business matter', 'needs of business owners', 'offer some suggestions for your website', 'analyzed your website', 'He querido escribirte porque veo una excelente', 'enhance your online reputation', 'According to the documents', 'Can you ship to Barbados', 'Freelance Web Designer', 'Our estimating services can help you', 'We have FREE opportunity', 'MyEListing', 'food packaging company', 'sexy pictures', 'Publicamos en periódicos', '1st page of Google', 'Need Accurate Estimate', 'Take-off Packages', 'data harvesting services', 'Accurate Quantity Take-offs', 'collaborate with your company', 'partner with you', 'business brokers that represent buyers', 'an official quotation', 'a company based in the Philippines', 'prefer not to hear from me again', 'short term investment', 'review provider', 'Myspace group', 'penning this article', 'abide by your requests', 'premium databases', 'Getting Reviews', 'estimating services', 'Supercharge your GMB listing', 'top pages of google', 'based in India', 'UncoverHiddenProfits', 'helping your business make money', 'find higher quality leads', 'estimating/architectural', 'opportunity to provide you', 'build business credit', 'eliminate personal guarantees', 'untangle my tax situation', 'exclusive sales training event', 'your website is in a great design', 'Are Your Hiring A Full Time HVAC Tech', 'less than perfect credit customers', 'Can you take on more clients', 'excellent option for prospective entrepreneurs', 'I noticed a few things that could use some fixing', 'I apologize for my cold outreach', 'Our answering service frees you up', 'no-strings-attached call', 'Kegel Devices', 'N/A', 'web development company', 'Mary Kay Sales Director', 'Odena', 'Kouvach', 'audit of your website', 'Ozempic', 'Wegovy', 'enhance your website', 'no-obligation proposal', 'summary of the audit results', 'XRumer 23 StrongAI', 'WhatsApp: +', 'Most Demanded AI Apps', 'possible acquire some Hose Pipes', 'Good Day, I am inquiring on', 'Good discount pricing will be appreciated', 'fix your forwarding system', 'Please advise on how soon order can be shipped out', 'fastest and most efficient way to destroy your wealth', 'do you have surcharges when making payment', 'Whatsapp', 'AUDIT ME, AMMAR', 'competitors are attracting clients online', 'handle more clients', 'I can miss a lot of emails from spam', 'Confidential – Please Forward to Owner', 'website placements', 'homepage that seems out of place', 'simple chatbot', 'guaranteed form submission', 'Good day and would like to know', 'gesture of goodwill', 'local customers from your website', 'few opportunities to increase engagement', 'specialize in ad creatives', 'Reply YES', 'your site is absolutely outdated', 'This is not a sales pitch', 'better website', 'increasing your organic leads', 'online visibility', 'saw a bug on your website', 'optimized website conversions', ' I can support your business', 'reduce their operating costs', 'help you hit the Top 3', 'qualified local leads', 'affecting your search rankings', 'unable to complete the checkout process', 'keyword-driven traffic', 'Buy exclusive repair leads', 'I help local businesses', 'top 3 map results', 'both need the right partner', 'Acquitrust Advisors', 'your clients', 'improve follow-up on missed calls', 'Want me to send over', 'targeted traffic', 'sourcing service quotations', 'top keywords', 'quantity takeoffs', 'cost planning' ];
+	return ['и', 'д', 'б', 'й', 'л', 'ы', 'З', 'у', 'Я', 'à', 'ô', 'ố', 'ế', 'á', 'ủ', 'ạ', '湖', '結', '衣', '市', '翼', '清', '水', 'http://', 'https://', 'www.', 'Dear Customer', 'Dear Sales', 'Sir/Madam', 'Sir/Madame', 'Hello Business Owner', 'HELLO SALES', 'bitcoin', 'mаlwаre', 'antivirus', 'marketing', 'SEO', 'Wordpress', 'Cost Estimation', 'Guarantee Estimation', 'World Wide Estimating', 'Get more reviews, Get more customers', 'We write the reviews', 'write an article', 'a free article', 'keyword targeted traffic', 'rank your google', 'boost your leads', 'write you an article', 'write a short article', 'website home page design', 'updated version of your website', 'free sample Home Page', 'lead generation', 'completely Free', 'Dear Receptionist', 'Franchise Creator', 'rebrand your business', 'what I would suggest for your website', 'improving your website', 'organic traffic', 'more business leads', 'We do Estimation', 'get your site published', 'high quality appointments and leads', 'new website', 'Google’s 1st Page', 'Does this sound interesting?', 'I notice that your website is very basic', 'appeal to more clients', 'improve your sales', 'free estimate from our company', 'blocks spam leads', 'block spam messages', 'In order to get a better idea of our work', 'Would you be interested in an article', 'cost estimates and take-off', 'If you\'ve made it this far', 'home services advertising', 'Do you need help with graphic design', 'I have an Audit of your website', 'Can we talk about your Website?', 'cooperate with your company', 'influencers on Instagram', 'procuring below items', 'Optimizing your website', 'your website could be', 'blog posts they write', 'mobile app development', 'Your website could benefit', 'available for download', 'at no cost', 'boost your business', 'targeted Customers', 'We help you get', 'designing and development', 'create your Website', 'fix a few things on your website', 'warnings found on your website', 'contact form blasting', 'make money online', 'not an AI haha', 'send over the set of plans', 'audit on your website', 'audit on your site', 'Are you in need of', 'kingcontacts', 'suggestions for your site', 'Using Google Adsense', 'a few issues with your website', 'very profitable business matter', 'needs of business owners', 'offer some suggestions for your website', 'analyzed your website', 'He querido escribirte porque veo una excelente', 'enhance your online reputation', 'According to the documents', 'Can you ship to Barbados', 'Freelance Web Designer', 'Our estimating services can help you', 'We have FREE opportunity', 'MyEListing', 'food packaging company', 'sexy pictures', 'Publicamos en periódicos', '1st page of Google', 'Need Accurate Estimate', 'Take-off Packages', 'data harvesting services', 'Accurate Quantity Take-offs', 'collaborate with your company', 'partner with you', 'business brokers that represent buyers', 'an official quotation', 'a company based in the Philippines', 'prefer not to hear from me again', 'short term investment', 'review provider', 'Myspace group', 'penning this article', 'abide by your requests', 'premium databases', 'Getting Reviews', 'estimating services', 'Supercharge your GMB listing', 'top pages of google', 'based in India', 'UncoverHiddenProfits', 'helping your business make money', 'find higher quality leads', 'estimating/architectural', 'opportunity to provide you', 'build business credit', 'eliminate personal guarantees', 'untangle my tax situation', 'exclusive sales training event', 'your website is in a great design', 'Are Your Hiring A Full Time HVAC Tech', 'less than perfect credit customers', 'Can you take on more clients', 'excellent option for prospective entrepreneurs', 'I noticed a few things that could use some fixing', 'I apologize for my cold outreach', 'Our answering service frees you up', 'no-strings-attached call', 'Kegel Devices', 'N/A', 'web development company', 'Mary Kay Sales Director', 'Odena', 'Kouvach', 'audit of your website', 'Ozempic', 'Wegovy', 'enhance your website', 'no-obligation proposal', 'summary of the audit results', 'XRumer 23 StrongAI', 'WhatsApp: +', 'Most Demanded AI Apps', 'possible acquire some Hose Pipes', 'Good Day, I am inquiring on', 'Good discount pricing will be appreciated', 'fix your forwarding system', 'Please advise on how soon order can be shipped out', 'fastest and most efficient way to destroy your wealth', 'do you have surcharges when making payment', 'Whatsapp', 'AUDIT ME, AMMAR', 'competitors are attracting clients online', 'handle more clients', 'I can miss a lot of emails from spam', 'Confidential – Please Forward to Owner', 'website placements', 'homepage that seems out of place', 'simple chatbot', 'guaranteed form submission', 'Good day and would like to know', 'gesture of goodwill', 'local customers from your website', 'few opportunities to increase engagement', 'specialize in ad creatives', 'Reply YES', 'your site is absolutely outdated', 'This is not a sales pitch', 'better website', 'increasing your organic leads', 'online visibility', 'saw a bug on your website', 'optimized website conversions', ' I can support your business', 'reduce their operating costs', 'help you hit the Top 3', 'qualified local leads', 'affecting your search rankings', 'unable to complete the checkout process', 'keyword-driven traffic', 'Buy exclusive repair leads', 'I help local businesses', 'top 3 map results', 'both need the right partner', 'Acquitrust Advisors', 'your clients', 'improve follow-up on missed calls', 'Want me to send over', 'targeted traffic', 'sourcing service quotations', 'top keywords', 'quantity takeoffs', 'cost planning', 'should show up first', 'Can I show you' ];
 }

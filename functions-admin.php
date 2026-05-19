@@ -306,7 +306,6 @@ add_action('admin_menu', 'battleplan_customize_admin_menus', PHP_INT_MAX);
 function battleplan_customize_admin_menus() {
 	remove_menu_page( 'link-manager.php' );       							// Links
 	remove_menu_page( 'edit-comments.php' );       							// Comments
-	remove_menu_page( 'wpcf7' );       									// Contact Forms
 	remove_menu_page( 'edit.php?post_type=acf-field-group' );       				// Custom Fields
 	remove_menu_page( 'themes.php' );       								// Appearance
 	remove_menu_page( 'wpengine-common' );   								// WP Engine
@@ -366,9 +365,6 @@ function battleplan_customize_admin_menus() {
 	if ( is_null(get_page_by_path('widgets', OBJECT, 'elements')) ) add_submenu_page( 'edit.php?post_type=elements', 'Widgets', 'Widgets', 'manage_options', 'widgets.php' );
 
 	add_submenu_page( 'edit.php?post_type=elements', 'Menus', 'Menus', 'manage_options', 'nav-menus.php' );
-	add_submenu_page( 'edit.php?post_type=elements', 'Contact Forms', 'Contact Forms', 'manage_options', 'admin.php?page=wpcf7' );
-
-	if ( _USER_LOGIN === "battleplanweb" ) add_submenu_page( 'edit.php?post_type=elements', 'Contact Forms Integration', '&nbsp;└&nbsp;Integration', 'manage_options', 'admin.php?page=wpcf7-integration' );
 
 	add_submenu_page( 'edit.php?post_type=elements', 'Comments', 'Comments', 'manage_options', 'edit-comments.php' );
 	if ( _USER_LOGIN === "battleplanweb" ) add_submenu_page( 'edit.php?post_type=elements', 'Custom Fields', 'Custom Fields', 'manage_options', 'edit.php?post_type=acf-field-group' );
@@ -458,7 +454,7 @@ function battleplan_submenu_order($menu_ord) {
 // Count number of each post type and add an admin note to the menu button
 add_action('admin_menu', 'battleplan_custom_post_type_counts');
 function battleplan_custom_post_type_counts() {
-	$getCPT = array_diff( get_post_types(), array('elements', 'attachment', 'revision', 'nav_menu_item', 'custom_css', 'customize_changeset', 'oembed_cache', 'user_request', 'wp_block', 'acf-field-group', 'acf-field', 'wpcf7_contact_form', 'user_request' ) );
+	$getCPT = array_diff( get_post_types(), array('elements', 'attachment', 'revision', 'nav_menu_item', 'custom_css', 'customize_changeset', 'oembed_cache', 'user_request', 'wp_block', 'acf-field-group', 'acf-field', 'user_request' ) );
 
 	foreach ($getCPT as $postType) :
 		$count_posts = wp_count_posts($postType);

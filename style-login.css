@@ -215,3 +215,29 @@ input[type="checkbox"]:checked::after, input[type="radio"]:checked::after {
 :focus {
 	outline:                                                   3px dotted red !important;
 }
+
+/* Caps Lock warning — restore styling lost when WP's default 'login' stylesheet is dequeued.
+   WP core's inline JS toggles style.display directly on keydown; without display:none here,
+   the element shows persistently on load and the dashicon arrow renders at an inherited huge size. */
+.capslock-warning,
+#user_pass-capslock-warning {
+	display:                                                   none;
+	background:                                                #fcf0f1;
+	color:                                                     #b32d2e;
+	border-left:                                               4px solid #b32d2e;
+	margin:                                                    5px 0 16px;
+	padding:                                                   4px 8px;
+	font-size:                                                 14px;
+}
+
+.capslock-warning .dashicons,
+.capslock-warning svg,
+#user_pass-capslock-warning .dashicons,
+#user_pass-capslock-warning svg {
+	width:                                                     1.2em;
+	height:                                                    1.2em;
+	font-size:                                                 1.2em;
+	color:                                                     #b32d2e;
+	vertical-align:                                            middle;
+	margin-right:                                              4px;
+}

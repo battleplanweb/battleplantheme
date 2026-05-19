@@ -2082,9 +2082,6 @@ function battleplan_getLocation($atts) {
 	 return apply_filters('the_content', $section_content);
 }
 
-// Multi-step form functionality is now registered in functions-forms.php as [bp-form-steps],
-// with a legacy [cf7-steps] alias for backwards compatibility.
-
 // Debug log viewer shortcode with clear + reload buttons
 add_shortcode('show_debug_log', function($atts) {
 

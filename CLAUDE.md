@@ -608,7 +608,7 @@ Beyond the basics, these are commonly used:
 
 ## Forms (`functions-forms.php`)
 
-Custom form system that **replaced Contact Form 7 + Akismet**. Lives entirely in PHP, no admin UI. Submissions go to a REST endpoint at `/wp-json/bp/v1/contact`. Existing pages with `[contact-form-7 id="X"]` keep working — that shortcode is intercepted and routed to the new system.
+Custom form system that **replaced Contact Form 7 + Akismet**. Lives entirely in PHP, no admin UI. Submissions go to a REST endpoint at `/wp-json/bp/v1/contact`.
 
 ### The two standard forms
 
@@ -714,9 +714,23 @@ add_filter('bp_form_allowed_filetypes', function($types, $form_id) {
 add_filter('bp_form_max_attachment_mb', fn($mb, $form_id) => $form_id === 'huge-uploads' ? 100 : $mb, 10, 2);
 ```
 
+### Standard field row patterns
+
+**Name + Email + Phone in one row** — always use `grid="3-3-2"` (Name and Email get equal width, Phone gets a narrower column):
+
+```
+[layout grid="3-3-2"]
+    [col][seek label="Name"  id="user-name"  req="true"][bp-text  name="user-name"  required="true" autocomplete="name"][/seek][/col]
+    [col][seek label="Email" id="user-email" req="true"][bp-email name="user-email" required="true"][/seek][/col]
+    [col][seek label="Phone" id="user-phone" req="true"][bp-tel   name="user-phone" required="true"][/seek][/col]
+[/layout]
+```
+
+Use this exact pattern whenever a form opens with Name/Email/Phone — don't reach for `1-1-1` or stack them.
+
 ### Building a custom form
 
-Three patterns, in order from simplest to most powerful:
+Two patterns, in order from simplest to most powerful:
 
 **Pattern 1: Add fields to a standard form** — `bp_form_extra_fields` filter
 
@@ -757,20 +771,6 @@ add_shortcode('site-application-form', function() {
 ```
 
 Then on the page that needs it: `[site-application-form]`. The form `id="application"` is what shows up in `bp_form_extra_fields($fields, $form_id)` filters and as the form_id in `bp_form_before_send` / `bp_form_after_send` hooks.
-
-**Pattern 3: Route an old `[contact-form-7 id="X"]` reference to your new form** — `bp_form_mapping` filter
-
-```php
-add_filter('bp_form_mapping', function($form, $id, $title) {
-    $map = [
-        '67' => '[site-application-form]',     // CF7 form ID 67 → custom form
-        '89' => '[bp-quote-form]',             // CF7 form ID 89 → standard quote
-    ];
-    return $map[$id] ?? $form;
-}, 10, 3);
-```
-
-Use this when existing pages have `[contact-form-7 id="..."]` shortcodes baked in and you don't want to edit page content.
 
 ### Email rendering — automatic, no template
 
@@ -930,7 +930,7 @@ Spam submissions still receive a "thanks" response (so bots don't learn what tri
 
 ### Multi-step forms
 
-Wrap a form body in `[bp-form-steps]…[/bp-form-steps]` and structure the body with `<div class="bp-step">` and `<div class="bp-step-included">` markers, plus `[bp-next]` / `[bp-prev]` buttons. The progress bar wires up automatically. (Legacy `[cf7-steps]` alias still works.)
+Wrap a form body in `[bp-form-steps]…[/bp-form-steps]` and structure the body with `<div class="bp-step">` and `<div class="bp-step-included">` markers, plus `[bp-next]` / `[bp-prev]` buttons. The progress bar wires up automatically.
 
 ### Per-site primary form CTA
 

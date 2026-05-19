@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", function () {
 	window.addEventListener("load", () => {
 
 		// Track phone & email clicks
-		const trackClicks = getObjects('.track-clicks, .wpcf7-submit');
+		const trackClicks = getObjects('.track-clicks');
 		trackClicks.forEach(click => {
 			click.addEventListener('click', function () {
 				const clickType = click.getAttribute('data-action') || 'email',

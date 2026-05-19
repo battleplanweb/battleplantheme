@@ -642,18 +642,6 @@ document.addEventListener("DOMContentLoaded", function () {
 	});
 
 
-	// Redirect to 'thank you' page after form submission, to avoid double submissions
-	window.document.addEventListener('wpcf7mailsent', function (event) {
-		var redirectField = getObject('input[name="redirect-url"]', event.target);
-
-		if (redirectField && redirectField.value) {
-			location = redirectField.value;
-		} else {
-			location = '/email-received/';
-		}
-	}, false);
-
-
 	// Make sure form inputs have id, so that they can be correctly linked to labels
 	getObjects('input[name]').forEach(input => {
 		input.id = input.name;
@@ -665,22 +653,6 @@ document.addEventListener("DOMContentLoaded", function () {
 		const cb = getObject('input[type="checkbox"]', el);
 		cb && !cb.value ? cb.value = el.dataset.value : null;
 	});
-
-
-	/* supposed to stop multiple submit clicks -- added 1/28/25 but need to investigate further
-document.querySelectorAll('.wpcf7-form').forEach(function(form) {
-const submitButton = form.querySelector('input[type="submit"], button[type="submit"]');
-
-if (submitButton) {
-form.addEventListener('wpcf7beforesubmit', function() {
-    submitButton.setAttribute('disabled', 'true');  // Disable the button
-});
-
-form.addEventListener('wpcf7submit', function() {
-    submitButton.removeAttribute('disabled');  // Re-enable the button
-});
-}
-});*/
 
 
 	// Duplicate menu button text onto the button BG
@@ -1731,18 +1703,24 @@ form.addEventListener('wpcf7submit', function() {
 	   });
    */
 
-	// Ensure all form labels are same width, so that the inputs line up (chatGPT wrote this 2/19/25)
+	// Ensure all form labels are same width per .flex group, so that the inputs line up.
+	// Form structure since 2026-05-19: .flex > .col > .col-inner > .form-input.width-default > label + .bp-control-wrap
 	window.formLabelWidth = () => {
 		getObjects('form').forEach(form => {
 			const flexGroups = getObjects('.flex', form);
 			(flexGroups.length ? flexGroups : [form]).forEach(group => {
+				const inputs = getObjects('.form-input.width-default', group);
+				if (!inputs.length) return;
+				// Reset prior inline widths so label.offsetWidth reads natural text width, not a previously-pinned column width
+				inputs.forEach(el => el.style.gridTemplateColumns = '');
 				let labelMaxWidth = 0;
-				getObjects('.form-input.width-default label', group).forEach(label =>
-					labelMaxWidth = Math.max(labelMaxWidth, label.offsetWidth)
-				);
-				labelMaxWidth > 0 && getObjects('.form-input.width-default', group).forEach(inputContainer =>
-					inputContainer.style.gridTemplateColumns = `${labelMaxWidth}px 1fr`
-				);
+				inputs.forEach(el => {
+					const lbl = el.querySelector(':scope > label');
+					if (lbl) labelMaxWidth = Math.max(labelMaxWidth, lbl.offsetWidth);
+				});
+				if (labelMaxWidth > 0) {
+					inputs.forEach(el => el.style.gridTemplateColumns = `${labelMaxWidth}px 1fr`);
+				}
 			});
 			getObjects('abbr.required, em.required, span.required').forEach(el => el.textContent = "");
 		});

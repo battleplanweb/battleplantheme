@@ -447,7 +447,7 @@ function updateOption($option, $value, $autoload=null) {
 
 function getCPT() {
 	$getCPT = get_post_types();
-	$removeCPT = array('acf-field', 'acf-field-group', 'asp_coupons', 'asp-products', 'attachment', 'customize_changeset', 'custom_css', 'nav_menu_item', 'oembed_cache', 'revision', 'stripe_order', 'user_request', 'wpcf7_contact_form', 'wp_block', 'wp_global_styles', 'wphb_minify_group', 'wp_navigation', 'wp_template', 'wp_template_part');
+	$removeCPT = array('acf-field', 'acf-field-group', 'asp_coupons', 'asp-products', 'attachment', 'customize_changeset', 'custom_css', 'nav_menu_item', 'oembed_cache', 'revision', 'stripe_order', 'user_request', 'wp_block', 'wp_global_styles', 'wphb_minify_group', 'wp_navigation', 'wp_template', 'wp_template_part');
 	$moveCPTs = array ('landing', 'page', 'universal', 'elements');
 
 	foreach ($removeCPT as $remove) unset($getCPT[$remove]);
@@ -1307,7 +1307,6 @@ function battleplan_dequeue_unwanted_stuff() {
 	wp_dequeue_style( 'wp-block-library-theme' );  wp_deregister_style( 'wp-block-library-theme' );
 	wp_dequeue_style( 'select2' );  wp_deregister_style( 'select2' );
 	wp_dequeue_style( 'asp-default-style' ); wp_deregister_style( 'asp-default-style' );
-	wp_dequeue_style( 'contact-form-7' ); wp_deregister_style( 'contact-form-7' );
 	if ( is_plugin_active( 'animated-typing-effect/typingeffect.php' ) ) :
 		wp_dequeue_style( 'typed-cursor' );
 		wp_deregister_style( 'typed-cursor' );
@@ -1631,7 +1630,6 @@ require_once get_template_directory().'/functions-grid.php';
 require_once get_template_directory().'/functions-public.php';
 
 require_once get_template_directory() . '/functions-chron.php';
-require_once get_template_directory() . '/functions-migrations.php';
 
 if ( is_admin() || _USER_LOGIN == "battleplanweb" ) require_once get_template_directory().'/functions-admin.php';
 if (!empty( get_site_option('bp_rovin_secret'))) { require_once get_template_directory() . '/functions-rovin.php'; }

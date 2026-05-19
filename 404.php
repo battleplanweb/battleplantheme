@@ -28,7 +28,7 @@ get_header(); ?>
 				$page_content .= '<li>Email us for help: <a href="mailto:[get-biz info="email"]">[get-biz info="email"]</a>';
 				$page_content .= '<li>Use the form below to send us a message</li>';
 				$page_content .= '</ul><p>Thank you for your patience.  We appreciate your business!</p>';
-  				$page_content .= '[/txt][/col][/layout][layout][col][contact-form-7 title="Contact Us Form"][/col][/layout][/section]';
+  				$page_content .= '[/txt][/col][/layout][layout][col][bp-contact-form][/col][/layout][/section]';
 
 				echo do_shortcode($page_content);
 			?>

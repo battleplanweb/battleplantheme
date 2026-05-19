@@ -4,37 +4,6 @@
 function bp_run_chron_housekeeping(bool $force = false): void {
 
 /*--------------------------------------------------------------
-# One-time cleanup 2026-03-19
---------------------------------------------------------------*/
-
-	$cleanup_key = 'bp_theme_plugin_cleanup_2026-03-19';
-	if (add_site_option($cleanup_key, current_time('mysql'))) {
-		require_once ABSPATH . 'wp-admin/includes/file.php';
-		require_once ABSPATH . 'wp-admin/includes/plugin.php';
-		require_once ABSPATH . 'wp-admin/includes/theme.php';
-
-		$plugins_remove = [
-			'git-updater/git-updater.php',
-			'admin-columns-pro/admin-columns-pro.php',
-			'blackhole-bad-bots/blackhole.php',
-		];
-
-		foreach ($plugins_remove as $plugin) {
-			if (file_exists(WP_PLUGIN_DIR . '/' . $plugin)) {
-				if (is_plugin_active($plugin)) deactivate_plugins($plugin, true);
-				delete_plugins([$plugin]);
-			}
-		}
-
-		$keep = ['battleplantheme', 'battleplantheme-site'];
-		foreach (wp_get_themes() as $stylesheet => $theme_obj) {
-			if (in_array($stylesheet, $keep, true)) continue;
-			if ($stylesheet === get_stylesheet() || $stylesheet === get_template()) continue;
-			delete_theme($stylesheet);
-		}
-	}
-
-/*--------------------------------------------------------------
 # Form attachment temp folder — sweep orphans
 #
 # bp_handle_form_submission registers a shutdown function to delete
@@ -47,108 +16,6 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 		$cutoff = time() - DAY_IN_SECONDS;
 		foreach ((array) glob($tmpdir . '/*') as $file) {
 			if (is_file($file) && filemtime($file) < $cutoff) @unlink($file);
-		}
-	}
-
-/*--------------------------------------------------------------
-# CF7 Migration Audit (TEMPORARY — delete this block once all sites are migrated)
-#
-# 1) Audits CF7 forms on this site
-# 2) If all forms are covered by framework defaults → auto-deactivates and
-#    deletes Contact Form 7 + Akismet, sends a confirmation email
-# 3) If non-standard forms are present → emails Glendon a list, leaves
-#    plugins alone for manual handling
-#
-# Re-trigger by changing the audit_key date below. Sites that were clean
-# the first pass will silently no-op (CF7 already gone). Sites that needed
-# attention will re-audit and auto-clean themselves once the custom forms
-# are added to their functions-site.php.
---------------------------------------------------------------*/
-
-	$audit_key = 'bp_cf7_audit_2026-05-10';
-	if (add_site_option($audit_key, current_time('mysql'))) {
-		require_once ABSPATH . 'wp-admin/includes/plugin.php';
-		require_once ABSPATH . 'wp-admin/includes/file.php';
-
-		$cf7_path  = 'contact-form-7/wp-contact-form-7.php';
-		$cf7_file  = WP_PLUGIN_DIR . '/' . $cf7_path;
-		$cf7_here  = file_exists($cf7_file);
-
-		// Only do anything if CF7 is currently installed on this site
-		if ($cf7_here) {
-			$customer_info = customer_info();
-			$site_type     = strtolower($customer_info['site-type'] ?? '');
-			$site_name     = $customer_info['name'] ?? get_bloginfo('name');
-			$site_url      = get_bloginfo('url');
-
-			// Form titles already covered by the framework intercept (functions-forms.php)
-			$covered = [
-				'contact us form',
-				'contact us',
-				'quote request form',
-				'request a catering quote',
-			];
-			if ($site_type === 'hvac') $covered[] = 'employment application';
-
-			// Audit existing CF7 form posts
-			$forms = get_posts(['numberposts' => -1, 'post_type' => 'wpcf7_contact_form']);
-			$non_standard = [];
-			foreach ($forms as $form) {
-				$title = trim(get_the_title($form->ID));
-				if (in_array(strtolower($title), $covered, true)) continue;
-				$non_standard[] = ['id' => $form->ID, 'title' => $title];
-			}
-
-			if (!empty($non_standard)) {
-				// --- Site needs manual migration before CF7 can be removed ---
-				$body  = '<p>Site: <strong>' . esc_html($site_name) . '</strong> &nbsp; ' . esc_url($site_url) . '</p>';
-				$body .= '<p>The following CF7 forms are <strong>not covered</strong> by framework defaults. They need custom shortcodes added to <code>functions-site.php</code> before CF7 can be removed on this site:</p>';
-				$body .= '<ul>';
-				foreach ($non_standard as $f) {
-					$edit = admin_url('post.php?post=' . $f['id'] . '&action=edit');
-					$body .= '<li><strong>' . esc_html($f['title']) . '</strong> &nbsp; (ID ' . $f['id'] . ') &nbsp; <a href="' . esc_url($edit) . '">edit</a></li>';
-				}
-				$body .= '</ul>';
-				$body .= '<p>Once migrated, bump the audit_key date in <code>functions-chron-housekeeping.php</code> and CF7 will auto-remove on the next chron run.</p>';
-
-				wp_mail(
-					'glendon@bp-webdev.com',
-					'CF7 Migration NEEDS ATTENTION: ' . $site_name . ' (' . count($non_standard) . ' form' . (count($non_standard) === 1 ? '' : 's') . ')',
-					$body,
-					['Content-Type: text/html; charset=UTF-8']
-				);
-			} else {
-				// --- Site is clean: deactivate + delete CF7 and Akismet ---
-				$plugins_remove = [
-					$cf7_path,
-					'akismet/akismet.php',
-				];
-				$removed = [];
-				foreach ($plugins_remove as $plugin) {
-					$path = WP_PLUGIN_DIR . '/' . $plugin;
-					if (!file_exists($path)) continue;
-					if (is_plugin_active($plugin)) deactivate_plugins($plugin, true);
-					$result = delete_plugins([$plugin]);
-					if ($result === true) {
-						$removed[] = $plugin;
-					}
-				}
-
-				if (!empty($removed)) {
-					$body  = '<p>Site: <strong>' . esc_html($site_name) . '</strong> &nbsp; ' . esc_url($site_url) . '</p>';
-					$body .= '<p>All forms on this site are covered by framework defaults. The following plugins were automatically deactivated and removed:</p>';
-					$body .= '<ul>';
-					foreach ($removed as $p) $body .= '<li>' . esc_html($p) . '</li>';
-					$body .= '</ul>';
-
-					wp_mail(
-						'glendon@bp-webdev.com',
-						'CF7 Migration COMPLETE: ' . $site_name,
-						$body,
-						['Content-Type: text/html; charset=UTF-8']
-					);
-				}
-			}
 		}
 	}
 
@@ -184,34 +51,6 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 			$wpMailSettings['mail']['from_name_force']   = '1';
 			$wpMailSettings['sendinblue']['api_key']     = 'x' . _BREVO_API;
 			update_option('wp_mail_smtp', $wpMailSettings);
-		}
-	}
-
-/*--------------------------------------------------------------
-# Contact Form 7 Settings
---------------------------------------------------------------*/
-
-	if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
-		$forms = get_posts(['numberposts' => -1, 'post_type' => 'wpcf7_contact_form']);
-		foreach ($forms as $form) {
-			$formID    = $form->ID;
-			$formMail  = readMeta($formID, "_mail");
-			$formTitle = get_the_title($formID);
-
-			if ($formTitle == "Quote Request Form")       $formTitle = "Quote Request";
-			if ($formTitle == "Contact Us Form")          $formTitle = "Customer Contact";
-			if ($formTitle == "Request A Catering Quote") $formTitle = "Catering Quote";
-
-			if ($rovin !== true && $bp_handles_mail === true) {
-				$server_email            = "<email@admin." . str_replace('https://', '', get_bloginfo('url')) . ">";
-				$formMail['subject']     = $formTitle . " · [user-name]";
-				$formMail['sender']      = "Website · " . str_replace(',', '', $customer_info['name']) . " " . $server_email;
-				$formMail['additional_headers'] = "Reply-to: [user-name] <[user-email]>\nBcc: Website Administrator <email@bp-webdev.com>";
-			}
-
-			$formMail['use_html']      = 1;
-			$formMail['exclude_blank'] = 1;
-			updateMeta($formID, "_mail", $formMail);
 		}
 	}
 
@@ -323,7 +162,7 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 			if (in_array($postType, ["post","page","universal","products","landing","events"], true)) {
 				$wpSEOSettings['title-' . $postType]        = '%%title%%' . $wpSEOTitle;
 				$wpSEOSettings['social-title-' . $postType] = '%%title%%' . $wpSEOTitle;
-			} elseif (in_array($postType, ["attachment","revision","nav_menu_item","custom_css","customize_changeset","oembed_cache","user_request","wp_block","elements","acf-field-group","acf-field","wpcf7_contact_form"], true)) {
+			} elseif (in_array($postType, ["attachment","revision","nav_menu_item","custom_css","customize_changeset","oembed_cache","user_request","wp_block","elements","acf-field-group","acf-field"], true)) {
 				// skip
 			} else {
 				$wpSEOSettings['title-' . $postType]        = ucfirst($postType) . $wpSEOTitle;

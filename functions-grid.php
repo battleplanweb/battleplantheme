@@ -689,7 +689,7 @@ function battleplan_buildWidget( $atts, $content = null ) {
 
 	if ( $type == "form" ) : $lock = "top"; $priority = '4'; $addHide = "404, contact, review"; endif;
 	if ( $type == "form" && $title == "hide" ) : $title = 'Service Request'; endif;
-	if ( $type == "form" && $content == null ) : $content = '[contact-form-7 title="Quote Request Form"]'; endif;
+	if ( $type == "form" && $content == null ) : $content = '[bp-quote-form]'; endif;
 
 	if ( $type == "brand-logo" ) : $lock = 'top'; $priority = '4'; endif;
 	if ( $type == "brand-logo" && $content == null ) : $content = '[get-brand-logo]'; endif;

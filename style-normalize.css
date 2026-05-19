@@ -30,8 +30,7 @@
 --------------------------------------------- */
 /* Text meant only for screen readers. */
 .screen-reader-text,
-.sr-only,
-.wpcf7 .screen-reader-response {
+.sr-only {
 	position:                                                  absolute !important;
 	width:                                                     1px;
 	height:                                                    1px;

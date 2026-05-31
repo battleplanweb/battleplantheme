@@ -436,13 +436,15 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 
 		QTags.addButton( 'bp_getLocation', 'get-location', '[get-location state="true/false" default="blank" before="" after=""]\n\n', '', 'get-location', 'get-location', 1000 );
 
-		QTags.addButton( 'bp_images_side-by-side', 'side by side images', '[side-by-side img="ids" size="half-s, third-s, full" gap="2em" align="center, left, right" full="id" pos="bottom, top" break="none, 3, 2, 1"]\n\n', '', 'side by side images', 'Side By Side Images', 1000 );
-
 		QTags.addButton( 'bp_get-countup', 'get countup', '[get-countup name="becomes the id" start="0" end="1000" decimals="0" duration="5" delay="0" waypoint="85%" easing="false, easeInSine, EaseOutSine, EaseInOutSine, Quad, Cubic, Expo, Circ" grouping="true, false" separator="," decimal="." prefix="..." suffix="..."]\n\n', '', 'get countup', 'Get Count Up', 1000 );
 
 		QTags.addButton( 'bp_get-wp-page', 'get wp page', '[get-wp-page type="page, post, cpt" id="" slug="" title="" display="content, excerpt, title, thumbnail, link"]\n\n', '', 'get wp page', 'Get WP Page', 1000 );
 
-		QTags.addButton( 'bp_copy-content', 'copy content', '[copy-content slug="home" section="page top, page bottom" ]\n\n', '', 'copy content', 'Copy Content', 1000 );
+		QTags.addButton('bp_copy-content', 'copy content', '[copy-content slug="home" section="page top, page bottom" ]\n\n', '', 'copy content', 'Copy Content', 1000);
+
+		QTags.addButton('bp_images_side-by-side', 'side by side images', '[side-by-side img="ids" size="half-s, third-s, full" gap="2em" align="center, left, right" full="id" pos="bottom, top" break="none, 3, 2, 1"]\n\n', '', 'side by side images', 'Side By Side Images', 1000);
+
+		QTags.addButton('bp_desktop_mobile_img', 'desktop mobile image', '[get-image desktop="/wp-content/uploads/XXXXX.webp" desktop_width="960" desktop_height="720" desktop_id="5876" mobile="/wp-content/uploads/XXXXX-mobile.webp" mobile_width="576" mobile_height="1023" mobile_id="5876" alt="" align="center, left, right" size="half-s, third-s, full" ]\n\n', '', 'desktop mobile image', 'Desktop / Mobile Images', 1000);
 
 		QTags.addButton( 'bp_random-image', 'random image', '   [get-random-image id="" tag="random" size="thumbnail, third-s" link="no, yes" number="1" offset="" align="left, right, center" order_by="rand, menu_order, title, id, post_date, modified" order="asc, desc" shuffle="no, yes, peak, valley, alternate" lazy="true, false"]\n\n', '', 'random image', 'Random Image', 1000 );
 

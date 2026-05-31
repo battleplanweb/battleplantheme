@@ -157,6 +157,10 @@ input#wp-submit {
 	font-size:                                                 95%;
 }
 
+#caps-warning {
+	display:                                                   none !important;
+}
+
 .submit.reset-pass-submit {
 	display:                                                   flex;
 	gap:                                                       0.5em 3%;

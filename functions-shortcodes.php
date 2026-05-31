@@ -579,8 +579,8 @@ function battleplan_get_service_areas() {
 				// Match ending with this city slug
 				if (!str_ends_with($slug, $citySlug)) continue;
 
-				// Extract service part
-				$service_part = substr($slug, 0, strlen($slug) - strlen($citySlug) - 1);
+				// Extract service part (everything before the -- location separator)
+				$service_part = explode('--', $slug)[0];
 				$service_label = ucwords(str_replace('-', ' ', $service_part));
 				$url = "/service/$slug";
 
@@ -1595,6 +1595,55 @@ function battleplan_loadImagesByTag( $atts, $content = null ) {
 	update_field('image_number', count($imageIDs));
 	return wp_json_encode($imageIDs);
 }
+
+
+
+// Include a desktop & mobile photo
+add_shortcode( 'get-image', 'bp_desktop_mobile_img' );
+function bp_desktop_mobile_img( $atts ) {
+    $atts = shortcode_atts([
+        'desktop'        => '',
+        'desktop_width'  => '',
+        'desktop_height' => '',
+        'desktop_id'     => '', // wp-image-XXXX
+        'mobile'         => '',
+        'mobile_width'   => '',
+        'mobile_height'  => '',
+        'mobile_id'      => '', // wp-image-XXXX
+        'alt'            => '',
+        'align'          => 'center',
+        'size'           => 'size-full-f',
+        'class'          => '',
+        'breakpoint'     => '576',
+    ], $atts, 'get_image' );
+
+    if ( empty( $atts['desktop'] ) || empty( $atts['mobile'] ) ) return '';
+
+    // Build class string (mirrors your existing img class pattern)
+    $classes = [];
+    if ( $atts['align'] )      $classes[] = 'align-' . sanitize_html_class( $atts['align'] );
+    if ( $atts['size'] )       $classes[] = 'size-' . esc_attr( $atts['size'] );
+    if ( $atts['desktop_id'] ) $classes[] = 'wp-image-' . absint( $atts['desktop_id'] );
+    if ( $atts['class'] )      $classes[] = esc_attr( $atts['class'] );
+    $class_str = implode( ' ', array_filter( $classes ) );
+
+    // Desktop img attributes (no inline aspect-ratio — it would override the matched <source>'s ratio)
+    $d_dims  = $atts['desktop_width']  ? ' width="'  . absint( $atts['desktop_width'] )  . '"' : '';
+    $d_dims .= $atts['desktop_height'] ? ' height="' . absint( $atts['desktop_height'] ) . '"' : '';
+
+    // Mobile source attributes
+    $m_dims  = $atts['mobile_width']  ? ' width="'  . absint( $atts['mobile_width'] )  . '"' : '';
+    $m_dims .= $atts['mobile_height'] ? ' height="' . absint( $atts['mobile_height'] ) . '"' : '';
+    $m_class = $atts['mobile_id'] ? ' class="wp-image-' . absint( $atts['mobile_id'] ) . '"' : '';
+
+    $html  = '<picture>';
+    $html .= '<source media="(max-width: ' . esc_attr( $atts['breakpoint'] ) . 'px)" srcset="' . esc_url( $atts['mobile'] ) . '"' . $m_dims . $m_class . '>';
+    $html .= '<img src="' . esc_url( $atts['desktop'] ) . '"' . $d_dims . ' class="' . $class_str . '" alt="' . esc_attr( $atts['alt'] ) . '">';
+    $html .= '</picture>';
+
+    return $html;
+}
+
 
 // Generate a WordPress gallery and filter
 add_shortcode( 'get-gallery', 'battleplan_setUpWPGallery' );

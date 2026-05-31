@@ -121,6 +121,13 @@ add_filter('wp_handle_upload_prefilter', function($file) {
 		return $file;
 	}
 
+	// HEIC/HEIF store orientation in container metadata, not standard EXIF.
+	// Re-saving them through wp_get_image_editor here corrupts the source
+	// before the WebP step can read it. Skip — WebP conversion handles them.
+	if ($mime === 'image/heic' || $mime === 'image/heif') {
+		return $file;
+	}
+
 	$exif = @exif_read_data($file['tmp_name']);
 	if (empty($exif['Orientation']) || (int)$exif['Orientation'] === 1) {
 		return $file;
@@ -146,13 +153,43 @@ add_filter('wp_handle_upload_prefilter', function($file) {
 	return $file;
 });
 
+
+
+
+add_filter('wp_handle_upload',   function($u, $c) { error_log('BP-WHU FIRED:   ' . ($u['file'] ?? 'none')); return $u; }, 1, 2);
+add_filter('wp_handle_sideload', function($u, $c) { error_log('BP-WHSL FIRED: ' . ($u['file'] ?? 'none')); return $u; }, 1, 2);
+
+
+
+
+
 // Convert uploaded images to WebP at 80%, resize to 1000px max side.
 // Uses wp_handle_upload (post-filter) — fires after WP has moved the file to the
 // uploads directory, where it has a real filename/extension and can be freely modified.
 add_filter('wp_handle_upload', function($upload, $context) {
 
+	// Skip conversion for battleplanweb's own admin uploads — but NOT when the
+	// upload is targeted at a jobsite_geo post. Jobsite photos should always
+	// go through the WebP/resize pipeline regardless of who's uploading.
 	if (defined('_USER_LOGIN') && _USER_LOGIN === 'battleplanweb') {
-		return $upload;
+		$target_post_id = 0;
+
+		// Try $_REQUEST first (standard WP media uploader passes post_id here)
+		if (!empty($_REQUEST['post_id'])) {
+			$target_post_id = (int) $_REQUEST['post_id'];
+		}
+
+		// Fallback to HTTP_REFERER (some upload flows don't pass post_id)
+		if (!$target_post_id && !empty($_SERVER['HTTP_REFERER'])) {
+			if (preg_match('/[?&]post=(\d+)/', $_SERVER['HTTP_REFERER'], $m)) {
+				$target_post_id = (int) $m[1];
+			}
+		}
+
+		$is_jobsite_target = $target_post_id && get_post_type($target_post_id) === 'jobsite_geo';
+		if (!$is_jobsite_target) {
+			return $upload;
+		}
 	}
 
 	if (empty($upload['file']) || !file_exists($upload['file'])) {
@@ -161,6 +198,49 @@ add_filter('wp_handle_upload', function($upload, $context) {
 
 	if (!str_starts_with($upload['type'] ?? '', 'image/')) {
 		return $upload; // not an image
+	}
+
+	// HEIC/HEIF arrive from iPhones with the orientation stored as a flag, not
+	// baked into the pixels — and the prefilter skips them. wp_get_image_editor
+	// can't auto-orient, so transcode HEIC with raw Imagick: autoOrient() bakes
+	// the rotation into the pixels, then stripImage() drops the leftover flag so
+	// every browser shows it upright. Falls through to the editor on any failure.
+	if (in_array($upload['type'], ['image/heic', 'image/heif'], true) && class_exists('Imagick')) {
+		try {
+			$im = new Imagick($upload['file']);
+			if ($im->valid()) {
+				$im->autoOrient();
+
+				$w = $im->getImageWidth();
+				$h = $im->getImageHeight();
+				if (max($w, $h) > 1000) {
+					$scale = 1000 / max($w, $h);
+					$im->resizeImage((int) round($w * $scale), (int) round($h * $scale), Imagick::FILTER_LANCZOS, 1);
+				}
+
+				$im->setImageFormat('webp');
+				$im->setImageCompressionQuality(80);
+				$im->stripImage();
+
+				$heic_webp_file = preg_replace('/\.[^.\/]+$/', '.webp', $upload['file']);
+				$heic_webp_url  = preg_replace('/\.[^.\/]+$/', '.webp', $upload['url']);
+				$im->writeImage($heic_webp_file);
+				$im->clear();
+				$im->destroy();
+
+				if (file_exists($heic_webp_file) && filesize($heic_webp_file) > 100) {
+					if ($heic_webp_file !== $upload['file']) @unlink($upload['file']);
+					$upload['file'] = $heic_webp_file;
+					$upload['url']  = $heic_webp_url;
+					$upload['type'] = 'image/webp';
+					return $upload;
+				}
+				@unlink($heic_webp_file);
+			}
+		} catch (Exception $e) {
+			error_log('HEIC autoOrient transcode failed: ' . $e->getMessage());
+		}
+		// fall through to the editor path below if the Imagick path failed
 	}
 
 	$image = wp_get_image_editor($upload['file']);
@@ -203,7 +283,19 @@ add_filter('wp_handle_upload', function($upload, $context) {
 		return $upload;
 	}
 
-	// Remove the original (jpg/png/etc) now that WebP is saved
+	// Verify the saved WebP is a real image — some inputs produce a 0-byte /
+	// unreadable file without raising a WP_Error. If output is bad, keep the original.
+	$webp_ok = file_exists($webp_file) && filesize($webp_file) > 100;
+	if ($webp_ok) {
+		$dims = @getimagesize($webp_file);
+		$webp_ok = is_array($dims) && !empty($dims[0]) && !empty($dims[1]);
+	}
+	if (!$webp_ok) {
+		if ($webp_file !== $upload['file']) @unlink($webp_file);
+		return $upload;
+	}
+
+	// Remove the original (jpg/png/heic/etc) now that WebP is saved
 	if ($webp_file !== $upload['file']) {
 		@unlink($upload['file']);
 	}
@@ -371,7 +463,10 @@ function bp_jobsite_setup($post_id, $user) {
 	// integration (bp_geo_assign_taxonomy_term). The legacy keyword-based
 	// classifier has been removed to prevent conflicts.
 
-	// Handle photos uploaded to the jobsite
+	// Handle photos uploaded to the jobsite.
+	// Alt-text priority: manual ACF alt field > AI-generated > post title fallback.
+	// AI runs async via WP-Cron so it doesn't block the save handler. Cron
+	// dedups by hook+args so re-saves of the same post don't re-queue work.
 	foreach ([
 		'jobsite_photo_1' => 'jobsite_photo_1_alt',
 		'jobsite_photo_2' => 'jobsite_photo_2_alt',
@@ -379,8 +474,25 @@ function bp_jobsite_setup($post_id, $user) {
 		'jobsite_photo_4' => 'jobsite_photo_4_alt',
 	] as $img => $cap) {
 		$aid = (int) get_field($img, $post_id);
-		$alt = trim((string) get_field($cap, $post_id));
-		$aid ? update_post_meta($aid, '_wp_attachment_image_alt', $alt ?: get_the_title($post_id)) : null;
+		if (!$aid) continue;
+
+		$manual_alt = trim((string) get_field($cap, $post_id));
+		if ($manual_alt !== '') {
+			update_post_meta($aid, '_wp_attachment_image_alt', $manual_alt);
+			continue;
+		}
+
+		$current_alt = trim((string) get_post_meta($aid, '_wp_attachment_image_alt', true));
+		$title       = get_the_title($post_id);
+
+		// Empty or just the title fallback → set title now, queue AI to enhance.
+		// Anything else means a user (or a previous AI pass) already wrote it, so leave alone.
+		if ($current_alt === '' || $current_alt === $title) {
+			if ($current_alt === '') update_post_meta($aid, '_wp_attachment_image_alt', $title);
+			if (function_exists('bp_ai_alt_available') && bp_ai_alt_available()) {
+				wp_schedule_single_event(time() + 5, 'bp_ai_alt_generate_cron', [$aid]);
+			}
+		}
 	}
 
 	// Set first uploaded pic as jobsite thumbnail
@@ -1064,7 +1176,7 @@ function bp_geo_sync_services_from_types( $post_id ) {
 	$service_slugs = [];
 	foreach ( $type_slugs as $type ) {
 		foreach ( $area_slugs as $area ) {
-			$slug = $type . '-' . $area;
+			$slug = $type . '--' . $area;
 			if ( ! term_exists( $slug, 'jobsite_geo-services' ) ) {
 				wp_insert_term( $slug, 'jobsite_geo-services' );
 			}
@@ -1128,6 +1240,38 @@ function battleplan_getService($atts, $content = null) {
 /*--------------------------------------------------------------
 # Setup Re-directs
 --------------------------------------------------------------*/
+
+// Resolve the most-populated /service/{service--city-st}/ term for a given
+// service-area slug. The '-'.$area suffix matches both the canonical
+// double-dash slug and any legacy single-dash slug.
+function bp_geo_best_service_for_area( $area_slug ) {
+	$services = get_terms( [
+		'taxonomy'   => 'jobsite_geo-services',
+		'hide_empty' => true,
+		'orderby'    => 'count',
+		'order'      => 'DESC',
+	] );
+	if ( is_wp_error( $services ) ) return null;
+
+	$suffix = '-' . $area_slug;
+	foreach ( $services as $t ) {
+		if ( substr( $t->slug, -strlen( $suffix ) ) === $suffix ) return $t;
+	}
+	return null;
+}
+
+// URL a city/area request should land on: its best service page, falling back
+// to the jobsites archive.
+function bp_geo_area_redirect_url( $area_slug ) {
+	$service = bp_geo_best_service_for_area( $area_slug );
+	if ( $service ) {
+		$link = get_term_link( $service );
+		if ( ! is_wp_error( $link ) ) return $link;
+	}
+	return get_post_type_archive_link( 'jobsite_geo' ) ?: home_url( '/' );
+}
+
+// Legacy bare-city URLs (/plano-tx/) → straight to the best service page.
 add_action('template_redirect', 'battleplan_jobsite_geo_intercept');
 function battleplan_jobsite_geo_intercept() {
 	$uri_path = strtok($_SERVER['REQUEST_URI'], '?');
@@ -1142,10 +1286,58 @@ function battleplan_jobsite_geo_intercept() {
 
 	$term = get_term_by('slug', $uri_slug, 'jobsite_geo-service-areas');
 	if ($term && !is_wp_error($term)) {
-		wp_safe_redirect(home_url("/service-area/{$uri_slug}/"), 301);
+		wp_safe_redirect(bp_geo_area_redirect_url($uri_slug), 301);
 		exit;
 	}
 }
+
+// /service-area/{city-st}/ archives don't target a specific service, so they
+// shouldn't rank. 301 them to the best matching service page. (Sitemap
+// exclusion + noindex for this taxonomy are already handled in functions.php
+// and the housekeeping Yoast settings.)
+add_action('template_redirect', function () {
+	if ( ! is_tax( 'jobsite_geo-service-areas' ) ) return;
+
+	$term = get_queried_object();
+	if ( ! $term || is_wp_error( $term ) ) return;
+
+	wp_safe_redirect( bp_geo_area_redirect_url( $term->slug ), 301 );
+	exit;
+}, 5);
+
+// Most-populated /service/ term for a given service-type slug (matches the
+// service half of the canonical service--city-st slug exactly).
+function bp_geo_best_service_for_type( $type_slug ) {
+	$services = get_terms( [
+		'taxonomy'   => 'jobsite_geo-services',
+		'hide_empty' => true,
+		'orderby'    => 'count',
+		'order'      => 'DESC',
+	] );
+	if ( is_wp_error( $services ) ) return null;
+
+	foreach ( $services as $t ) {
+		if ( explode( '--', $t->slug )[0] === $type_slug ) return $t;
+	}
+	return null;
+}
+
+// /service-type/{service}/ archives are a service with no location — too vague
+// to rank. 301 them to the best matching /service/{service--city-st}/ page.
+add_action('template_redirect', function () {
+	if ( ! is_tax( 'jobsite_geo-service-types' ) ) return;
+
+	$term = get_queried_object();
+	if ( ! $term || is_wp_error( $term ) ) return;
+
+	$service = bp_geo_best_service_for_type( $term->slug );
+	$url = ( $service && ! is_wp_error( get_term_link( $service ) ) )
+		? get_term_link( $service )
+		: ( get_post_type_archive_link( 'jobsite_geo' ) ?: home_url( '/' ) );
+
+	wp_safe_redirect( $url, 301 );
+	exit;
+}, 5);
 
 
 /*--------------------------------------------------------------
@@ -1228,119 +1420,217 @@ add_filter('the_posts', function($posts, $query) {
 
 
 /*--------------------------------------------------------------
-# One-time Legacy Term Migration
+# Consolidated Jobsite Taxonomy Cleanup
+# One sweep to bring a site up to date: refresh jobsite tags, then
+# canonicalize + merge the three jobsite_geo taxonomies. Idempotent;
+# honors $dry_run (no writes when true). New posts are generated in
+# canonical form, so this is normally a one-time migration per site.
 --------------------------------------------------------------*/
 
-add_action( 'init', 'bp_geo_migrate_legacy_term_slugs' );
+// Location-slug lookup (longest-first) built from all service-area terms.
+// Maps both 'allen-tx' and city-only 'allen' → the canonical area slug 'allen-tx'.
+function bp_geo_area_slug_map() {
+	$areas = get_terms( [ 'taxonomy' => 'jobsite_geo-service-areas', 'hide_empty' => false ] );
+	$map = [];
+	if ( ! is_wp_error( $areas ) ) {
+		foreach ( $areas as $at ) {
+			$map[ $at->slug ] = $at->slug;
+			$city_only = preg_replace( '/-[a-z]{2}$/', '', $at->slug );
+			if ( $city_only !== $at->slug && ! isset( $map[ $city_only ] ) ) {
+				$map[ $city_only ] = $at->slug;
+			}
+		}
+	}
+	uksort( $map, function ( $a, $b ) { return strlen( $b ) - strlen( $a ); } );
+	return $map;
+}
 
-function bp_geo_migrate_legacy_term_slugs() {
-	if ( get_option( 'bp_geo_slug_migration_v1' ) === 'yes' ) return;
+// Run the full taxonomy cleanup. Returns an array of result sections:
+// [ ['title'=>, 'summary'=>, 'lines'=>[]], ... ]
+function bp_geo_run_taxonomy_cleanup( $dry_run = true ) {
 
-	global $wpdb;
+	$sections = [];
 
-	$state_abbrs = [
-		'al','ak','az','ar','ca','co','ct','de','fl','ga','hi','id','il','in','ia','ks',
-		'ky','la','me','md','ma','mi','mn','ms','mo','mt','ne','nv','nh','nj','nm','ny',
-		'nc','nd','oh','ok','or','pa','ri','sc','sd','tn','tx','ut','vt','va','wa','wv',
-		'wi','wy',
+	/* ---- STEP 1: Refresh jobsite tags ---- */
+	$jobsites = get_posts( [
+		'post_type'      => 'jobsite_geo',
+		'post_status'    => [ 'publish', 'draft', 'pending' ],
+		'posts_per_page' => -1,
+	] );
+	@set_time_limit( max( 60, count( $jobsites ) * 2 ) );
+
+	$refreshed = 0;
+	$seeded    = 0;
+	foreach ( $jobsites as $j ) {
+		if ( ! $dry_run ) battleplan_saveJobsite( $j->ID, get_post( $j->ID ), true );
+
+		// Seed service-types from existing services terms for un-migrated posts
+		$existing_types = wp_get_post_terms( $j->ID, 'jobsite_geo-service-types', [ 'fields' => 'slugs' ] );
+		if ( empty( $existing_types ) || is_wp_error( $existing_types ) ) {
+			$services = wp_get_post_terms( $j->ID, 'jobsite_geo-services', [ 'fields' => 'slugs' ] );
+			if ( ! is_wp_error( $services ) && $services ) {
+				$type_slugs = [];
+				foreach ( $services as $svc ) {
+					$base = explode( '--', $svc, 2 )[0];
+					if ( $base ) $type_slugs[] = $base;
+				}
+				$type_slugs = array_values( array_unique( $type_slugs ) );
+				if ( $type_slugs ) {
+					if ( ! $dry_run ) {
+						foreach ( $type_slugs as $ts ) {
+							if ( ! term_exists( $ts, 'jobsite_geo-service-types' ) ) wp_insert_term( $ts, 'jobsite_geo-service-types' );
+						}
+						wp_set_post_terms( $j->ID, $type_slugs, 'jobsite_geo-service-types', false );
+					}
+					$seeded++;
+				}
+			}
+		}
+		$refreshed++;
+	}
+	if ( ! $dry_run ) bp_cleanup_empty_service_tags();
+
+	$sections[] = [
+		'title'   => 'Refresh Jobsite Tags',
+		'summary' => "{$refreshed} jobsites processed" . ( $seeded ? ", {$seeded} seeded with service-types" : '' ) . '.',
+		'lines'   => [],
 	];
 
-	$terms = get_terms([
-		'taxonomy'   => BP_GEO_TAXONOMY,
-		'hide_empty' => false,
-	]);
+	$area_map = bp_geo_area_slug_map();
 
-	if ( is_wp_error( $terms ) || empty( $terms ) ) {
-		update_option( 'bp_geo_slug_migration_v1', 'yes' );
-		return;
-	}
+	/* ---- STEP 2: Canonicalize jobsite_geo-services → service--city-st + merge ---- */
+	$service_terms = get_terms( [ 'taxonomy' => 'jobsite_geo-services', 'hide_empty' => false ] );
 
-	foreach ( $terms as $term ) {
-		$slug = $term->slug;
-
-		// Skip terms already in correct double-dash format
-		if ( strpos( $slug, '--' ) !== false ) continue;
-
-		$parts = explode( '-', $slug );
-		if ( count( $parts ) < 3 ) continue;
-
-		// State must be the last segment and a known 2-letter abbreviation
-		$state = end( $parts );
-		if ( ! in_array( $state, $state_abbrs, true ) ) continue;
-
-		// Try city lengths 1-3 words, pick the split that gives the longest service slug
-		$found_service = '';
-		$found_city    = '';
-		$max_city_words = count( $parts ) - 2;
-
-		for ( $city_len = 1; $city_len <= min( $max_city_words, 3 ); $city_len++ ) {
-			$city_parts    = array_slice( $parts, -1 - $city_len, $city_len );
-			$service_parts = array_slice( $parts, 0, count( $parts ) - 1 - $city_len );
-
-			if ( empty( $service_parts ) ) continue;
-
-			if ( strlen( implode( '-', $service_parts ) ) > strlen( $found_service ) ) {
-				$found_service = implode( '-', $service_parts );
-				$found_city    = implode( '-', $city_parts );
+	$canonical_service = function ( $slug ) use ( $area_map ) {
+		// Already double-dash: normalize only the location half
+		if ( strpos( $slug, '--' ) !== false ) {
+			$parts = explode( '--', $slug, 2 );
+			$loc   = isset( $area_map[ $parts[1] ] ) ? $area_map[ $parts[1] ] : $parts[1];
+			return $parts[0] . '--' . $loc;
+		}
+		// Single-dash legacy: find the area suffix (longest match first)
+		foreach ( $area_map as $needle => $full ) {
+			$suffix = '-' . $needle;
+			if ( substr( $slug, -strlen( $suffix ) ) === $suffix ) {
+				return substr( $slug, 0, -strlen( $suffix ) ) . '--' . $full;
 			}
 		}
+		return $slug; // service-only term, no location detected
+	};
 
-		if ( empty( $found_service ) || empty( $found_city ) ) continue;
+	$lines   = [];
+	$renamed = 0;
+	$merged  = 0;
+	if ( ! is_wp_error( $service_terms ) && $service_terms ) {
 
-		$new_slug = $found_service . '--' . $found_city . '-' . $state;
-		$new_name = ucwords( str_replace( '-', ' ', $found_service ) )
-		            . ' — '
-		            . ucwords( str_replace( '-', ' ', $found_city ) )
-		            . ', '
-		            . strtoupper( $state );
+		$groups = [];
+		foreach ( $service_terms as $t ) $groups[ $canonical_service( $t->slug ) ][] = $t;
 
-		$new_name = str_replace( 'Hvac', 'HVAC', $new_name );
+		foreach ( $groups as $canonical => $terms ) {
 
-		// Check for slug collision
-		$existing = $wpdb->get_var( $wpdb->prepare(
-			"SELECT term_id FROM {$wpdb->terms} WHERE slug = %s",
-			$new_slug
-		));
+			// Prefer the term already matching canonical as the keeper
+			$keep = null;
+			foreach ( $terms as $t ) if ( $t->slug === $canonical ) { $keep = $t; break; }
+			if ( ! $keep ) $keep = $terms[0];
 
-		if ( $existing && (int) $existing !== (int) $term->term_id ) {
-			// Merge: reassign all posts from old term to existing term
-			$old_tt = $wpdb->get_var( $wpdb->prepare(
-				"SELECT term_taxonomy_id FROM {$wpdb->term_taxonomy} WHERE term_id = %d AND taxonomy = %s",
-				$term->term_id, BP_GEO_TAXONOMY
-			));
-			$new_tt = $wpdb->get_var( $wpdb->prepare(
-				"SELECT term_taxonomy_id FROM {$wpdb->term_taxonomy} WHERE term_id = %d AND taxonomy = %s",
-				(int) $existing, BP_GEO_TAXONOMY
-			));
-
-			if ( $old_tt && $new_tt ) {
-				$wpdb->query( $wpdb->prepare(
-					"UPDATE IGNORE {$wpdb->term_relationships} SET term_taxonomy_id = %d WHERE term_taxonomy_id = %d",
-					$new_tt, $old_tt
-				));
-				$wpdb->query( $wpdb->prepare(
-					"DELETE FROM {$wpdb->term_relationships} WHERE term_taxonomy_id = %d",
-					$old_tt
-				));
+			if ( $keep->slug !== $canonical || $keep->name !== $canonical ) {
+				$lines[] = '<strong>RENAME</strong> [' . $keep->term_id . '] <code>' . esc_html( $keep->slug ) . '</code> → <code>' . esc_html( $canonical ) . '</code>';
+				if ( ! $dry_run ) wp_update_term( $keep->term_id, 'jobsite_geo-services', [ 'slug' => $canonical, 'name' => $canonical ] );
+				$renamed++;
 			}
 
-			wp_delete_term( $term->term_id, BP_GEO_TAXONOMY );
-			error_log( "bp_geo_migrate: merged term id={$term->term_id} slug='{$slug}' into existing id={$existing} new_slug='{$new_slug}'" );
-			continue;
+			foreach ( $terms as $t ) {
+				if ( $t->term_id === $keep->term_id ) continue;
+				$lines[] = '<strong>MERGE</strong> [' . $t->term_id . '] <code>' . esc_html( $t->slug ) . '</code> → <code>' . esc_html( $canonical ) . '</code>';
+				if ( ! $dry_run ) {
+					$pids = get_posts( [
+						'post_type' => 'any', 'posts_per_page' => -1, 'fields' => 'ids',
+						'tax_query' => [ [ 'taxonomy' => 'jobsite_geo-services', 'field' => 'term_id', 'terms' => $t->term_id ] ],
+					] );
+					foreach ( $pids as $pid ) wp_set_post_terms( $pid, [ $keep->term_id ], 'jobsite_geo-services', true );
+					wp_delete_term( $t->term_id, 'jobsite_geo-services' );
+				}
+				$merged++;
+			}
 		}
-
-		// Update term directly in DB to preserve the double-dash slug
-		$wpdb->update( $wpdb->terms,
-			[ 'name' => $new_name, 'slug' => $new_slug ],
-			[ 'term_id' => $term->term_id ]
-		);
-
-		error_log( "bp_geo_migrate: updated term id={$term->term_id} '{$slug}' => '{$new_slug}' name='{$new_name}'" );
-		clean_term_cache( $term->term_id, BP_GEO_TAXONOMY );
 	}
+	$sections[] = [
+		'title'   => 'Service Slugs (canonical service--city-st + merge)',
+		'summary' => "{$renamed} renamed, {$merged} merged.",
+		'lines'   => $lines,
+	];
 
-	update_option( 'bp_geo_slug_migration_v1', 'yes' );
-	error_log( 'bp_geo_migrate_legacy_term_slugs: completed' );
+	/* ---- STEP 3: Strip embedded location from jobsite_geo-service-types + merge ---- */
+	$type_terms = get_terms( [ 'taxonomy' => 'jobsite_geo-service-types', 'hide_empty' => false ] );
+
+	$strip_area = function ( $slug ) use ( $area_map ) {
+		foreach ( $area_map as $needle => $full ) {
+			$suffix = '-' . $needle;
+			if ( substr( $slug, -strlen( $suffix ) ) === $suffix ) return substr( $slug, 0, -strlen( $suffix ) );
+		}
+		return $slug;
+	};
+
+	$lines     = [];
+	$st_merged = 0;
+	if ( ! is_wp_error( $type_terms ) && $type_terms ) {
+
+		$groups = [];
+		foreach ( $type_terms as $t ) $groups[ $strip_area( $t->slug ) ][] = $t;
+
+		foreach ( $groups as $canonical => $terms ) {
+
+			$geo_terms = array_filter( $terms, function ( $t ) use ( $canonical ) { return $t->slug !== $canonical; } );
+			if ( empty( $geo_terms ) ) continue;
+
+			$keep = get_term_by( 'slug', $canonical, 'jobsite_geo-service-types' );
+			if ( ! $keep ) {
+				$lines[] = '<strong>CREATE</strong> <code>' . esc_html( $canonical ) . '</code>';
+				if ( ! $dry_run ) {
+					$ins = wp_insert_term( $canonical, 'jobsite_geo-service-types', [ 'slug' => $canonical, 'name' => $canonical ] );
+					if ( ! is_wp_error( $ins ) ) $keep = get_term( $ins['term_id'], 'jobsite_geo-service-types' );
+				}
+			}
+
+			foreach ( $geo_terms as $g ) {
+				$lines[] = '<strong>MERGE</strong> <code>' . esc_html( $g->slug ) . '</code> → <code>' . esc_html( $canonical ) . '</code>';
+				if ( ! $dry_run && $keep ) {
+					$pids = get_posts( [
+						'post_type' => 'any', 'posts_per_page' => -1, 'fields' => 'ids',
+						'tax_query' => [ [ 'taxonomy' => 'jobsite_geo-service-types', 'field' => 'term_id', 'terms' => $g->term_id ] ],
+					] );
+					foreach ( $pids as $pid ) wp_set_post_terms( $pid, [ $keep->term_id ], 'jobsite_geo-service-types', true );
+					wp_delete_term( $g->term_id, 'jobsite_geo-service-types' );
+				}
+				$st_merged++;
+			}
+		}
+	}
+	$sections[] = [
+		'title'   => 'Service Types (strip location + merge)',
+		'summary' => "{$st_merged} merged.",
+		'lines'   => $lines,
+	];
+
+	/* ---- STEP 4: Service-area term names = slug ---- */
+	$area_terms = get_terms( [ 'taxonomy' => 'jobsite_geo-service-areas', 'hide_empty' => false ] );
+	$lines      = [];
+	$sa_updated = 0;
+	if ( ! is_wp_error( $area_terms ) ) {
+		foreach ( $area_terms as $t ) {
+			if ( $t->name === $t->slug ) continue;
+			$lines[] = '<code>' . esc_html( $t->name ) . '</code> → <code>' . esc_html( $t->slug ) . '</code>';
+			if ( ! $dry_run ) wp_update_term( $t->term_id, 'jobsite_geo-service-areas', [ 'name' => $t->slug ] );
+			$sa_updated++;
+		}
+	}
+	$sections[] = [
+		'title'   => 'Service Area Names (name = slug)',
+		'summary' => "{$sa_updated} updated.",
+		'lines'   => $lines,
+	];
+
+	return $sections;
 }
 
 
@@ -2405,10 +2695,10 @@ function bp_geo_assign_taxonomy_term( $post_id, $base_service, $city, $state, $e
 	$city_slug  = sanitize_title( strtolower( $city ) );
 	$state_abbr = bp_geo_normalize_state( $state );
 
-	// Combined services slug: {service}-{city}-{state}  e.g. air-conditioner-repair-frisco-tx
-	// Single-dash is fine — archive pages now look up service-type/service-area from post terms
-	// rather than parsing the slug, so slug format no longer matters.
-	$target_slug = "{$base_service}-{$city_slug}-{$state_abbr}";
+	// Combined services slug: {service}--{city}-{state}  e.g. air-conditioner-repair--frisco-tx
+	// Double-dash separates the service from the location so multi-word cities can be parsed
+	// back out (used by keyword rankings); archive pages read the terms directly.
+	$target_slug = "{$base_service}--{$city_slug}-{$state_abbr}";
 
 	// Assign service-type term (service only, no location)
 	if ( ! term_exists( $base_service, 'jobsite_geo-service-types' ) ) {

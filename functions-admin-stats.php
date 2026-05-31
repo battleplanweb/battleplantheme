@@ -509,70 +509,10 @@ if ($ga4_devices_data && is_array($ga4_devices_data)) {
 
 
 
-// Set up Speed widget on dashboard
-$GLOBALS['fastSessions'] = $GLOBALS['speedSessions'] = $GLOBALS['speedTotal'] = array();
-$mobileTarget = 3;
-$desktopTarget = 2;
-
-
-if (!empty($ga4_speed_data) && is_array($ga4_speed_data)) :
-	foreach ( $ga4_speed_data as $speedLocation=>$speedData ) :
-		if ( !in_array($speedLocation, $excludeCities) ) :
-			foreach ( $speedData as $term=>$speeds ) :
-				foreach ( $speeds as $speed ):
-					if (strpos($speed, 'desktop') !== false ) :
-						$speed = (float)substr(substr($speed, strpos($speed, "«") + 1), 1);
-						if ( $speed < ($desktopTarget * 10) ) :
-							$GLOBALS['speedSessions'][$term]['desktop'] = isset($GLOBALS['speedSessions'][$term]['desktop'])
-							? $GLOBALS['speedSessions'][$term]['desktop'] + 1
-							: 1;
-
-						if ($speed <= $desktopTarget) {
-							$GLOBALS['fastSessions'][$term]['desktop'] = isset($GLOBALS['fastSessions'][$term]['desktop'])
-							? $GLOBALS['fastSessions'][$term]['desktop'] + 1
-							: 1;
-						}
-
-						$GLOBALS['speedTotal'][$term]['desktop'] = isset($GLOBALS['speedTotal'][$term]['desktop'])
-							? $GLOBALS['speedTotal'][$term]['desktop'] + $speed
-							: $speed;
-											endif;
-					endif;
-					if (strpos($speed, 'mobile') !== false ) :
-						$speed = (float)substr(substr($speed, strpos($speed, "«") + 1), 1);
-						if ( $speed < ($mobileTarget * 10) ) :
-							$GLOBALS['speedSessions'][$term]['mobile'] = isset($GLOBALS['speedSessions'][$term]['mobile'])
-							? $GLOBALS['speedSessions'][$term]['mobile'] + 1
-							: 1;
-
-						if ($speed <= $mobileTarget) {
-							$GLOBALS['fastSessions'][$term]['mobile'] = isset($GLOBALS['fastSessions'][$term]['mobile'])
-							? $GLOBALS['fastSessions'][$term]['mobile'] + 1
-							: 1;
-						}
-
-						$GLOBALS['speedTotal'][$term]['mobile'] = isset($GLOBALS['speedTotal'][$term]['mobile'])
-							? $GLOBALS['speedTotal'][$term]['mobile'] + $speed
-							: $speed;
-											endif;
-					endif;
-				endforeach;
-			endforeach;
-		endif;
-	endforeach;
-endif;
-
 // Send stats to Site Checkin
-$mobileSessions = (int) ($GLOBALS['speedSessions']['sessions-30']['mobile'] ?? 0);
-$desktopSessions = (int) ($GLOBALS['speedSessions']['sessions-30']['desktop'] ?? 0);
-
-$GLOBALS['ga4_visitor']['ck_mobile_speed'] = $mobileSessions > 0
-    ? number_format(($GLOBALS['speedTotal']['sessions-30']['mobile'] / $mobileSessions)?? 0.0, 1)
-    : 0;
-
-$GLOBALS['ga4_visitor']['ck_desktop_speed'] = $desktopSessions > 0
-    ? number_format(($GLOBALS['speedTotal']['sessions-30']['desktop'] / $desktopSessions)?? 0.0, 1)
-    : 0;
+$speed_data = get_option('bp_ga4_speed_clean') ?: [];
+$GLOBALS['ga4_visitor']['ck_mobile_speed']  = (float)($speed_data['mobile']['avg-30']  ?? 0);
+$GLOBALS['ga4_visitor']['ck_desktop_speed'] = (float)($speed_data['desktop']['avg-30'] ?? 0);
 
 
 // Set up Screen Resolutions widget on dashboard

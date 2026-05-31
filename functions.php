@@ -1632,6 +1632,7 @@ require_once get_template_directory().'/functions-public.php';
 require_once get_template_directory() . '/functions-chron.php';
 
 if ( is_admin() || _USER_LOGIN == "battleplanweb" ) require_once get_template_directory().'/functions-admin.php';
+require_once get_template_directory().'/functions-ai-alt.php';
 if (!empty( get_site_option('bp_rovin_secret'))) { require_once get_template_directory() . '/functions-rovin.php'; }
 
 // Add filter to search & replace final HTML output

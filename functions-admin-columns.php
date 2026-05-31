@@ -174,6 +174,60 @@ function bp_render_meta($id, $cols, $col, $pt) {
 }
 
 
+function bp_render_taxonomy_cell($id, $taxonomy, $col, $pt, $inline_edit = false) {
+
+	$base_url = ($pt === 'attachment')
+		? admin_url('upload.php')
+		: admin_url('edit.php?post_type='.$pt);
+
+	$terms = get_the_terms($id, $taxonomy);
+
+	if ($terms && !is_wp_error($terms)) {
+
+		$chips = [];
+
+		foreach ($terms as $term) {
+
+			$filter_url = add_query_arg([$col => $term->term_id], $base_url);
+
+			$chip = '<span class="bp-term-chip"><a href="'.esc_url($filter_url).'">'.wp_kses_post($term->name).'</a>';
+
+			if ($inline_edit) {
+				$chip .= '<button type="button" class="bp-term-remove"
+					data-post-id="'.esc_attr($id).'"
+					data-taxonomy="'.esc_attr($taxonomy).'"
+					data-term-id="'.esc_attr($term->term_id).'"
+					data-column="'.esc_attr($col).'"
+					data-pt="'.esc_attr($pt).'"
+					style="color:#b32d2e; cursor:pointer; border:none; background:none; padding:0 0 0 3px; font-size:14px; line-height:1; vertical-align:baseline;"
+					title="Remove">×</button>';
+			}
+
+			$chip .= '</span>';
+
+			$chips[] = $chip;
+		}
+
+		$output = implode(' ', $chips);
+
+	} else {
+		$output = '<span style="color:#999;">None</span>';
+	}
+
+	if ($inline_edit) {
+		$output .= ' <button type="button" class="button-link bp-taxonomy-edit"
+			data-post-id="'.esc_attr($id).'"
+			data-taxonomy="'.esc_attr($taxonomy).'"
+			data-column="'.esc_attr($col).'"
+			data-pt="'.esc_attr($pt).'"
+			style="color:#2271b1; cursor:pointer; text-decoration:none; border:none; background:none; padding:0; margin-left:5px;"
+			title="Edit terms">✎</button>';
+	}
+
+	return $output;
+}
+
+
 /*--------------------------------------------------------------
 # Admin Columns Engine
 --------------------------------------------------------------*/
@@ -262,38 +316,9 @@ function bp_admin_columns($config){
 						: '';
 				}),
 
-				'bp-taxonomy' => (function() use ($id, $cols, $col){
-					$terms = get_the_terms($id, $cols[$col]['taxonomy']);
-					$taxonomy = $cols[$col]['taxonomy'];
-
-					$output = '';
-
-					// Display current terms as links
-					if ($terms && !is_wp_error($terms)) {
-						$links = [];
-						foreach ($terms as $term) {
-							$filter_url = add_query_arg([
-								$col => $term->term_id,
-							], admin_url('upload.php'));
-							$links[] = '<a href="'.esc_url($filter_url).'">'.wp_kses_post($term->name).'</a>';
-						}
-						$output = implode(', ', $links);
-					} else {
-						$output = '<span style="color:#999;">None</span>';
-					}
-
-					// Add edit button if inline_edit is enabled
-					if (!empty($cols[$col]['inline_edit'])) {
-						$output .= ' <button type="button" class="button-link bp-taxonomy-edit"
-							data-post-id="'.esc_attr($id).'"
-							data-taxonomy="'.esc_attr($taxonomy).'"
-							data-column="'.esc_attr($col).'"
-							style="color:#2271b1; cursor:pointer; text-decoration:none; border:none; background:none; padding:0; margin-left:5px;"
-							title="Edit terms">✎</button>';
-					}
-
-					return $output;
-				}),
+				'bp-taxonomy' => fn() => bp_render_taxonomy_cell(
+					$id, $cols[$col]['taxonomy'], $col, 'attachment', !empty($cols[$col]['inline_edit'])
+				),
 
 			], '');
 
@@ -396,37 +421,9 @@ function bp_admin_columns($config){
 					? str_repeat('⭐', $v)
 					: '',
 
-				'bp-taxonomy' => (function() use ($id, $cols, $col, $pt){
-					$terms = get_the_terms($id, $cols[$col]['taxonomy']);
-					$taxonomy = $cols[$col]['taxonomy'];
-
-					$output = '';
-
-					// Display current terms as links
-					if ($terms && !is_wp_error($terms)) {
-						$links = [];
-						foreach ($terms as $term) {
-							$filter_url = add_query_arg([
-								$col => $term->term_id,
-							], admin_url('edit.php?post_type='.$pt));
-							$links[] = '<a href="'.esc_url($filter_url).'">'.wp_kses_post($term->name).'</a>';
-						}
-						$output = implode(', ', $links);
-					} else {
-						$output = '<span style="color:#999;">None</span>';
-					}
-
-					// Add edit button if inline_edit is enabled
-					if (!empty($cols[$col]['inline_edit'])) {
-						$output .= ' <button type="button" class="button-link bp-taxonomy-edit"
-							data-post-id="'.esc_attr($id).'"
-							data-taxonomy="'.esc_attr($taxonomy).'"
-							data-column="'.esc_attr($col).'"
-							style="color:#2271b1; cursor:pointer; text-decoration:none; border:none; background:none; padding:0; margin-left:5px;"
-							title="Edit terms">✎</button>';
-					}
-					return $output;
-				}),
+				'bp-taxonomy' => fn() => bp_render_taxonomy_cell(
+					$id, $cols[$col]['taxonomy'], $col, $pt, !empty($cols[$col]['inline_edit'])
+				),
 			], '');
 
 		}, 10, 2);
@@ -597,7 +594,8 @@ function bp_admin_columns($config){
 		if (!is_admin()) return;
 
 		global $pagenow;
-		if ($pagenow !== 'edit.php') return;
+		$expected_page = ($pt === 'attachment') ? 'upload.php' : 'edit.php';
+		if ($pagenow !== $expected_page) return;
 
 		$post_type = $q->get('post_type');
 
@@ -826,6 +824,32 @@ add_action('admin_enqueue_scripts', function($hook){
 			return span;
 		}
 
+		// Collect IDs of all checked rows. If the edited row is itself checked
+		// (and 2+ rows are selected), return the whole set for bulk editing;
+		// otherwise just the edited row.
+		function bpBulkTargets(editedId) {
+			var ids = [];
+			document.querySelectorAll('.check-column input[type=\"checkbox\"]:checked').forEach(function(box){
+				if (/^[0-9]+$/.test(box.value)) ids.push(box.value);
+			});
+			if (ids.length > 1 && ids.indexOf(String(editedId)) !== -1) return ids;
+			return [String(editedId)];
+		}
+
+		// Apply server-rendered cell HTML to affected rows (optionally skipping the
+		// edited row, whose cell may be mid-edit).
+		function bpApplyResults(results, skipId, column) {
+			for (var pid in results) {
+				if (skipId !== null && pid === String(skipId)) continue;
+				var box = document.querySelector('.check-column input[value=\"' + pid + '\"]');
+				if (!box) continue;
+				var row = box.closest('tr');
+				if (!row) continue;
+				var cell = row.querySelector('.column-' + column);
+				if (cell) cell.innerHTML = results[pid];
+			}
+		}
+
 
 		// ===== POST META INLINE EDITING (ENHANCED WITH POST SEARCH) =====
 
@@ -936,7 +960,7 @@ add_action('admin_enqueue_scripts', function($hook){
 		});
 
 
-		// ===== TAXONOMY INLINE EDITING =====
+		// ===== TAXONOMY INLINE EDITING (instant toggle, no save button) =====
 
 		document.addEventListener('click', function(e){
 
@@ -946,11 +970,14 @@ add_action('admin_enqueue_scripts', function($hook){
 			var postId = btn.getAttribute('data-post-id');
 			var taxonomy = btn.getAttribute('data-taxonomy');
 			var column = btn.getAttribute('data-column');
+			var pt = btn.getAttribute('data-pt');
 			var cell = btn.closest('td');
 
-			// Prevent double-click
 			if (btn.classList.contains('editing')) return;
 			btn.classList.add('editing');
+
+			// Remember the display so we can restore it when the editor closes
+			var savedDisplay = cell.innerHTML;
 
 			cell.innerHTML = '<span>Loading...</span>';
 
@@ -964,67 +991,117 @@ add_action('admin_enqueue_scripts', function($hook){
 					var allTerms = response.data.all_terms;
 					var currentTerms = response.data.current_terms;
 
-					var html = '<div class=\"bp-taxonomy-editor\" data-post-id=\"'+postId+'\" data-taxonomy=\"'+taxonomy+'\" style=\"background:#fff; border:1px solid #ddd; padding:10px; max-height:200px; overflow-y:auto;\">';
+					var html = '<div class=\"bp-taxonomy-editor\" data-post-id=\"'+postId+'\" data-taxonomy=\"'+taxonomy+'\" data-column=\"'+column+'\" data-pt=\"'+pt+'\" style=\"background:#fff; border:1px solid #ddd; padding:10px; max-height:220px; overflow-y:auto;\">';
 
 					allTerms.forEach(function(term){
 						var checked = currentTerms.indexOf(term.term_id) !== -1 ? 'checked' : '';
-						html += '<label style=\"display:block; margin:3px 0;\"><input type=\"checkbox\" value=\"'+term.term_id+'\" '+checked+'> '+term.name+'</label>';
+						html += '<label style=\"display:block; margin:3px 0; cursor:pointer;\"><input type=\"checkbox\" value=\"'+term.term_id+'\" '+checked+'> '+term.name+'</label>';
 					});
 
-					html += '<div style=\"margin-top:10px;\"><button type=\"button\" class=\"button button-primary bp-taxonomy-save\">Save</button> <button type=\"button\" class=\"button bp-taxonomy-cancel\">Cancel</button></div>';
 					html += '</div>';
 
 					cell.innerHTML = html;
 
+					var editor = cell.querySelector('.bp-taxonomy-editor');
+					editor._bpDisplay = savedDisplay;
+
+					// Close when the user clicks outside the editor
+					setTimeout(function(){
+						function onDocClick(ev){
+							if (ev.target.closest('.bp-taxonomy-editor') === editor) return;
+							document.removeEventListener('click', onDocClick);
+							cell.innerHTML = editor._bpDisplay;
+						}
+						document.addEventListener('click', onDocClick);
+					}, 0);
+
 				} else {
 					alert('Error loading terms');
-					location.reload();
+					cell.innerHTML = savedDisplay;
 				}
 			}).catch(function(){
 				alert('Error loading terms');
-				location.reload();
+				cell.innerHTML = savedDisplay;
 			});
 		});
 
-		// Taxonomy save
-		document.addEventListener('click', function(e){
+		// Toggle a term the instant its checkbox changes
+		document.addEventListener('change', function(e){
 
-			var btn = e.target.closest('.bp-taxonomy-save');
-			if (!btn) return;
+			var cb = e.target;
+			if (!cb.matches || !cb.matches('.bp-taxonomy-editor input[type=\"checkbox\"]')) return;
 
-			var editor = btn.closest('.bp-taxonomy-editor');
-			var cell = btn.closest('td');
+			var editor = cb.closest('.bp-taxonomy-editor');
 			var postId = editor.getAttribute('data-post-id');
 			var taxonomy = editor.getAttribute('data-taxonomy');
+			var column = editor.getAttribute('data-column');
+			var pt = editor.getAttribute('data-pt');
 
-			var termIds = [];
-			editor.querySelectorAll('input[type=\"checkbox\"]:checked').forEach(function(cb){
-				termIds.push(parseInt(cb.value));
-			});
+			cb.disabled = true;
 
-			cell.innerHTML = '<span>Saving...</span>';
-
-			ajaxPost('bp_save_taxonomy_terms', {
-				post_id: postId,
+			ajaxPost('bp_toggle_taxonomy_term', {
+				post_ids: bpBulkTargets(postId),
 				taxonomy: taxonomy,
-				term_ids: termIds,
+				term_id: cb.value,
+				state: cb.checked ? 'add' : 'remove',
+				column: column,
+				pt: pt,
 				nonce: '".wp_create_nonce("bp_taxonomy_edit")."'
 			}).then(function(response){
 				if (response.success) {
-					location.reload();
+					var results = response.data.results || {};
+					if (results[postId] !== undefined) editor._bpDisplay = results[postId];
+					bpApplyResults(results, postId, column);
 				} else {
-					alert('Error: ' + (response.data || 'Failed to save'));
-					location.reload();
+					cb.checked = !cb.checked;
+					alert('Error: ' + (response.data || 'Failed to update'));
 				}
+				cb.disabled = false;
 			}).catch(function(){
-				alert('Error saving terms');
-				location.reload();
+				cb.checked = !cb.checked;
+				alert('Error updating term');
+				cb.disabled = false;
 			});
 		});
 
-		// Taxonomy cancel
+		// Remove a term via its remove button on the display
 		document.addEventListener('click', function(e){
-			if (e.target.closest('.bp-taxonomy-cancel')) location.reload();
+
+			var btn = e.target.closest('.bp-term-remove');
+			if (!btn) return;
+
+			e.preventDefault();
+
+			var cell = btn.closest('td');
+			var postId = btn.getAttribute('data-post-id');
+			var taxonomy = btn.getAttribute('data-taxonomy');
+			var termId = btn.getAttribute('data-term-id');
+			var column = btn.getAttribute('data-column');
+			var pt = btn.getAttribute('data-pt');
+
+			btn.disabled = true;
+
+			ajaxPost('bp_toggle_taxonomy_term', {
+				post_ids: bpBulkTargets(postId),
+				taxonomy: taxonomy,
+				term_id: termId,
+				state: 'remove',
+				column: column,
+				pt: pt,
+				nonce: '".wp_create_nonce("bp_taxonomy_edit")."'
+			}).then(function(response){
+				if (response.success) {
+					var results = response.data.results || {};
+					if (results[postId] !== undefined) cell.innerHTML = results[postId];
+					bpApplyResults(results, postId, column);
+				} else {
+					alert('Error: ' + (response.data || 'Failed to remove'));
+					btn.disabled = false;
+				}
+			}).catch(function(){
+				alert('Error removing term');
+				btn.disabled = false;
+			});
 		});
 
 
@@ -1346,34 +1423,60 @@ add_action('wp_ajax_bp_get_taxonomy_terms', function(){
 	]);
 });
 
-// AJAX handler to save taxonomy terms
-add_action('wp_ajax_bp_save_taxonomy_terms', function(){
+// AJAX handler to add/remove a taxonomy term on one or more posts, returns refreshed cells
+add_action('wp_ajax_bp_toggle_taxonomy_term', function(){
 
 	// Verify nonce
 	if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'bp_taxonomy_edit')) {
 		wp_send_json_error('Invalid nonce');
 	}
 
-	$post_id = (int) $_POST['post_id'];
 	$taxonomy = sanitize_text_field($_POST['taxonomy']);
-	$term_ids = isset($_POST['term_ids']) ? array_map('intval', $_POST['term_ids']) : [];
+	$term_id  = (int) $_POST['term_id'];
+	$state    = sanitize_text_field($_POST['state'] ?? '');
+	$column   = sanitize_text_field($_POST['column'] ?? '');
+	$pt       = sanitize_text_field($_POST['pt'] ?? '');
 
-	// Verify user can edit this post
-	if (!current_user_can('edit_post', $post_id)) {
-		wp_send_json_error('Permission denied');
+	// Accept a single post_id or a post_ids[] array (bulk editing)
+	if (isset($_POST['post_ids']) && is_array($_POST['post_ids'])) {
+		$post_ids = array_map('intval', $_POST['post_ids']);
+	} else {
+		$post_ids = [(int) ($_POST['post_id'] ?? 0)];
+	}
+	$post_ids = array_values(array_unique(array_filter($post_ids)));
+
+	if (empty($post_ids)) {
+		wp_send_json_error('No posts specified');
 	}
 
-	// Update the terms
-	$result = wp_set_object_terms($post_id, $term_ids, $taxonomy);
+	if (!taxonomy_exists($taxonomy)) {
+		wp_send_json_error('Invalid taxonomy');
+	}
 
-	if (is_wp_error($result)) {
+	$results = [];
+
+	foreach ($post_ids as $pid) {
+
+		// Skip any post the current user can't edit
+		if (!current_user_can('edit_post', $pid)) continue;
+
+		if ($state === 'add') {
+			$result = wp_set_object_terms($pid, [$term_id], $taxonomy, true);
+		} else {
+			$result = wp_remove_object_terms($pid, [$term_id], $taxonomy);
+		}
+
+		if (is_wp_error($result)) continue;
+
+		$results[$pid] = bp_render_taxonomy_cell($pid, $taxonomy, $column, $pt, true);
+	}
+
+	if (empty($results)) {
 		wp_send_json_error('Failed to update terms');
 	}
 
 	wp_send_json_success([
-		'post_id' => $post_id,
-		'taxonomy' => $taxonomy,
-		'term_ids' => $term_ids,
+		'results' => $results,
 	]);
 });
 
@@ -1497,144 +1600,6 @@ add_action('wp_ajax_bp_save_user_roles', function(){
 		'roles' => $new_roles
 	]);
 });
-
-
-/*--------------------------------------------------------------
-# Media Library Taxonomy Filters
---------------------------------------------------------------*/
-
-// Special handler for media library filter dropdowns
-add_action('restrict_manage_media', function(){
-
-	$cols = [
-		'image-categories' => [
-			'type'       => 'bp-taxonomy',
-			'taxonomy'   => 'image-categories',
-			'label'      => 'bp-categories',
-			'filterable' => true
-		],
-		'image-tags' => [
-			'type'       => 'bp-taxonomy',
-			'taxonomy'   => 'image-tags',
-			'label'      => 'bp-tags',
-			'filterable' => true
-		],
-	];
-
-	foreach ($cols as $key => $c) {
-
-		$value = $_GET[$key] ?? '';
-
-		$terms = get_terms([
-			'taxonomy'   => $c['taxonomy'],
-			'hide_empty' => false,
-		]);
-
-		echo '<select name="'.esc_attr($key).'">';
-		echo '<option value="">All '.wp_kses_post($c['label']).'</option>';
-
-		foreach ($terms as $term) {
-			echo '<option value="'.esc_attr($term->term_id).'" '.selected($value,$term->term_id,false).'>'.wp_kses_post($term->name).'</option>';
-		}
-
-		echo '</select>';
-	}
-});
-
-// LIST VIEW FIX (Traditional Media Library)
-add_action('parse_query', 'bp_media_taxonomy_filter_listview', 999);
-
-function bp_media_taxonomy_filter_listview($q) {
-
-	if (!is_admin()) return;
-
-	global $pagenow;
-	if ($pagenow !== 'upload.php') return;
-
-	$tax_query = [];
-
-	// Handle image-categories filter
-	if (!empty($_GET['image-categories']) && (int)$_GET['image-categories'] > 0) {
-		$tax_query[] = [
-			'taxonomy' => 'image-categories',
-			'field'    => 'term_id',
-			'terms'    => (int)$_GET['image-categories'],
-		];
-	}
-
-	// Handle image-tags filter
-	if (!empty($_GET['image-tags']) && (int)$_GET['image-tags'] > 0) {
-		$tax_query[] = [
-			'taxonomy' => 'image-tags',
-			'field'    => 'term_id',
-			'terms'    => (int)$_GET['image-tags'],
-		];
-	}
-
-	// If we have taxonomy filters, apply them
-	if (!empty($tax_query)) {
-
-		// Set relation if multiple taxonomies
-		if (count($tax_query) > 1) {
-			$tax_query['relation'] = 'AND';
-		}
-
-		// Apply the tax query
-		$q->set('tax_query', $tax_query);
-
-		// **CRITICAL FIX**: Remove the taxonomy params from query_vars
-		// This prevents WordPress from trying to process them as regular query vars
-		unset($q->query_vars['image-categories']);
-		unset($q->query_vars['image-tags']);
-
-		// Ensure proper attachment post statuses
-		if ($q->get('post_type') === 'attachment') {
-			$q->set('post_status', 'inherit,private');
-		}
-	}
-}
-
-// GRID VIEW FIX (AJAX-based Media Library)
-add_filter('ajax_query_attachments_args', 'bp_media_taxonomy_filter_gridview', 10, 1);
-
-function bp_media_taxonomy_filter_gridview($query) {
-
-	$tax_query = isset($query['tax_query']) ? $query['tax_query'] : [];
-
-	// Handle image-categories filter from AJAX request
-	if (!empty($_REQUEST['query']['image-categories'])) {
-		$tax_query[] = [
-			'taxonomy' => 'image-categories',
-			'field'    => 'term_id',
-			'terms'    => (int)$_REQUEST['query']['image-categories'],
-		];
-	}
-
-	// Handle image-tags filter from AJAX request
-	if (!empty($_REQUEST['query']['image-tags'])) {
-		$tax_query[] = [
-			'taxonomy' => 'image-tags',
-			'field'    => 'term_id',
-			'terms'    => (int)$_REQUEST['query']['image-tags'],
-		];
-	}
-
-	// If we have taxonomy filters, apply them
-	if (!empty($tax_query)) {
-
-		// Set relation if multiple taxonomies
-		if (count($tax_query) > 1) {
-			$tax_query['relation'] = 'AND';
-		}
-
-		$query['tax_query'] = $tax_query;
-
-		// Ensure proper post status for attachments
-		$query['post_status'] = 'inherit,private';
-	}
-
-	return $query;
-}
 
 
 /*--------------------------------------------------------------

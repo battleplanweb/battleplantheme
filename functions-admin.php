@@ -393,19 +393,11 @@ function battleplan_customize_admin_menus() {
 	if (defined('_USER_LOGIN') && _USER_LOGIN === 'battleplanweb') {
 		add_submenu_page(
 			'edit.php?post_type=jobsite_geo',
-			'Refresh Jobsite Tags',
-			'⚙️ Refresh Tags',
+			'Jobsite Tools',
+			'⚙️ Jobsite Tools',
 			'manage_options',
-			'refresh-jobsite-tags',
-			'bp_refresh_jobsite_tags_page'
-		);
-		add_submenu_page(
-			'edit.php?post_type=jobsite_geo',
-			'Normalize Service Slugs',
-			'⚙️ Normalize Slugs',
-			'manage_options',
-			'normalize-service-slugs',
-			'bp_normalize_service_slugs_page'
+			'jobsite-taxonomy-cleanup',
+			'bp_geo_taxonomy_cleanup_page'
 		);
 	}
 }
@@ -1255,375 +1247,117 @@ function battleplan_launch_site() {
 }
 
 
+// Read an image's EXIF orientation (1–8; 1 = normal). Handles JPEG via the PHP
+// exif extension and WebP by parsing its embedded EXIF chunk directly — Imagick's
+// getImageOrientation() does NOT surface WebP orientation.
+function bp_image_orientation( $file ) {
+	$ext = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
 
-
-function bp_refresh_jobsite_tags_page() {
-	if (!current_user_can('manage_options')) {
-		wp_die(__('You do not have permission to access this page.'));
+	if ( in_array( $ext, [ 'jpg', 'jpeg', 'tif', 'tiff' ], true ) && function_exists( 'exif_read_data' ) ) {
+		$exif = @exif_read_data( $file );
+		return ( ! empty( $exif['Orientation'] ) ) ? (int) $exif['Orientation'] : 1;
 	}
 
-	echo '<div class="wrap"><h1>refresh Jobsite Tags</h1>';
-
-	// 🔍 Debug output so we can tell if form submission is detected
-	if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-		if (isset($_POST['bp_run_refresh'])) {
-
-			$jobsites = get_posts([
-				'post_type'      => 'jobsite_geo',
-				'post_status'    => ['publish', 'draft', 'pending'],
-				'posts_per_page' => -1,
-			]);
-
-			$total   = count($jobsites);
-			$success = 0;
-
-			$migrated = 0;
-
-			foreach ($jobsites as $j) {
-				battleplan_saveJobsite($j->ID, get_post($j->ID), true);
-
-				// Migration: seed service-types from existing services terms
-				// for posts that haven't been through the new AI flow yet
-				$existing_types = wp_get_post_terms($j->ID, 'jobsite_geo-service-types', ['fields' => 'slugs']);
-				if (empty($existing_types) || is_wp_error($existing_types)) {
-					$services = wp_get_post_terms($j->ID, 'jobsite_geo-services', ['fields' => 'slugs']);
-					if (!is_wp_error($services) && $services) {
-						$type_slugs = [];
-						foreach ($services as $svc_slug) {
-							$parts = explode('--', $svc_slug, 2);
-							if (!empty($parts[0])) $type_slugs[] = $parts[0];
-						}
-						$type_slugs = array_unique($type_slugs);
-						foreach ($type_slugs as $type_slug) {
-							if (!term_exists($type_slug, 'jobsite_geo-service-types')) {
-								wp_insert_term($type_slug, 'jobsite_geo-service-types');
-							}
-						}
-						if ($type_slugs) {
-							wp_set_post_terms($j->ID, $type_slugs, 'jobsite_geo-service-types', false);
-							$migrated++;
-						}
-					}
-				}
-
-				$success++;
-			}
-
-			bp_cleanup_empty_service_tags();
-
-			echo '<div class="notice notice-success"><p><strong>✅ Refresh Complete:</strong> '
-				. esc_html($success) . ' of ' . esc_html($total) . ' jobsites processed'
-				. ($migrated ? ', ' . $migrated . ' migrated to service-types' : '')
-				. '.</p></div>';
-		} else {
-			echo '<p><strong>No form variable detected.</strong></p>';
-		}
+	if ( $ext === 'webp' ) {
+		return bp_webp_orientation( $file );
 	}
 
-	// Render form
-	?>
-	<form method="post" onsubmit="return confirm('Are you sure you want to refresh all Jobsite tags?');">
-		<?php submit_button('Run Refresh', 'primary', 'bp_run_refresh'); ?>
-	</form>
-	</div>
-	<?php
+	return 1;
 }
 
-function bp_normalize_service_slugs_page() {
+// Walk a WebP file's RIFF chunks, find the EXIF chunk, return its Orientation.
+function bp_webp_orientation( $file ) {
+	$data = @file_get_contents( $file );
+	if ( $data === false || strlen( $data ) < 16 ) return 1;
+	if ( substr( $data, 0, 4 ) !== 'RIFF' || substr( $data, 8, 4 ) !== 'WEBP' ) return 1;
+
+	$len = strlen( $data );
+	$pos = 12;
+	while ( $pos + 8 <= $len ) {
+		$fourcc = substr( $data, $pos, 4 );
+		$size   = unpack( 'V', substr( $data, $pos + 4, 4 ) )[1];
+		$start  = $pos + 8;
+		if ( $fourcc === 'EXIF' ) {
+			$exif = substr( $data, $start, $size );
+			if ( substr( $exif, 0, 6 ) === "Exif\0\0" ) $exif = substr( $exif, 6 );
+			return bp_tiff_orientation( $exif );
+		}
+		$pos = $start + $size + ( $size & 1 ); // chunks are padded to an even length
+	}
+	return 1;
+}
+
+// Parse a TIFF/EXIF block for the Orientation tag (0x0112).
+function bp_tiff_orientation( $tiff ) {
+	if ( strlen( $tiff ) < 8 ) return 1;
+	$bo = substr( $tiff, 0, 2 );
+	if ( $bo === 'II' )     $le = true;
+	elseif ( $bo === 'MM' ) $le = false;
+	else return 1;
+
+	$u16 = function( $off ) use ( $tiff, $le ) {
+		if ( $off + 2 > strlen( $tiff ) ) return 0;
+		return $le ? unpack( 'v', substr( $tiff, $off, 2 ) )[1] : unpack( 'n', substr( $tiff, $off, 2 ) )[1];
+	};
+	$u32 = function( $off ) use ( $tiff, $le ) {
+		if ( $off + 4 > strlen( $tiff ) ) return 0;
+		return $le ? unpack( 'V', substr( $tiff, $off, 4 ) )[1] : unpack( 'N', substr( $tiff, $off, 4 ) )[1];
+	};
+
+	$ifd = $u32( 4 );
+	if ( $ifd < 8 || $ifd + 2 > strlen( $tiff ) ) return 1;
+	$count = $u16( $ifd );
+	for ( $i = 0; $i < $count; $i++ ) {
+		$entry = $ifd + 2 + $i * 12;
+		if ( $entry + 12 > strlen( $tiff ) ) break;
+		if ( $u16( $entry ) === 0x0112 ) {
+			$val = $u16( $entry + 8 );
+			return ( $val >= 1 && $val <= 8 ) ? $val : 1;
+		}
+	}
+	return 1;
+}
+
+function bp_geo_taxonomy_cleanup_page() {
 	if (!current_user_can('manage_options')) {
 		wp_die(__('You do not have permission to access this page.'));
 	}
 
-	echo '<div class="wrap"><h1>Normalize Service Slugs</h1>';
-	echo '<p>Converts embedded-location slugs to the canonical <code>service--city-st</code> format and merges duplicates.<br>
-	      Examples: <code>air-conditioner-repair-allen</code> and <code>air-conditioner-repair--allen</code> both become <code>air-conditioner-repair--allen-tx</code>.</p>';
+	echo '<div class="wrap"><h1>Jobsite Tools</h1>';
 
-	$log     = [];
-	$renamed = 0;
-	$merged  = 0;
-	$dry_run = true;
+	echo '<div class="card" style="margin-top:20px;padding:20px;">';
+	echo '<h2 style="margin-top:0">Taxonomy Cleanup</h2>';
+	echo '<p>One sweep to bring a site up to date: refreshes all jobsite tags, rewrites <code>jobsite_geo-services</code> slugs to the canonical <code>service--city-st</code> format (merging duplicates), strips embedded city/state from <code>jobsite_geo-service-types</code> (merging duplicates), and sets each <code>jobsite_geo-service-areas</code> term name to match its slug.<br>New jobsites are created in canonical form automatically, so this is normally a one-time migration.</p>';
 
-	if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bp_normalize_slugs'])) {
-		check_admin_referer('bp_normalize_slugs_nonce');
-		$dry_run = isset($_POST['dry_run']);
+	if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bp_run_taxonomy_cleanup'])) {
+		check_admin_referer('bp_taxonomy_cleanup_nonce');
+		$dry = isset($_POST['cleanup_dry_run']);
 
-		$service_terms = get_terms(['taxonomy' => 'jobsite_geo-services',     'hide_empty' => false]);
-		$area_terms    = get_terms(['taxonomy' => 'jobsite_geo-service-areas', 'hide_empty' => false]);
+		$sections = bp_geo_run_taxonomy_cleanup($dry);
 
-		if (is_wp_error($service_terms) || is_wp_error($area_terms) || !$service_terms) {
-			echo '<div class="notice notice-error"><p>Could not fetch taxonomy terms.</p></div>';
-		} else {
+		$label = $dry ? ' (preview — no changes made)' : '';
+		echo '<div class="notice notice-' . ($dry ? 'info' : 'success') . '"><p><strong>Taxonomy cleanup complete' . $label . '.</strong></p></div>';
 
-			// Build city → canonical area slug lookup, longest-first
-			// Includes both "allen-tx" (exact) and "allen" (city-only) as keys
-			$city_to_area = [];
-			foreach ($area_terms as $at) {
-				$city_to_area[$at->slug] = $at->slug;
-				$city_only = preg_replace('/-[a-z]{2}$/', '', $at->slug);
-				if ($city_only !== $at->slug && !isset($city_to_area[$city_only])) {
-					$city_to_area[$city_only] = $at->slug;
-				}
-			}
-			// Sort longest-first so "fort-worth-tx" matches before "worth-tx" or "worth"
-			uksort($city_to_area, function($a, $b) { return strlen($b) - strlen($a); });
-
-			// Derive canonical slug — PHP 7.4-safe (no str_contains / str_ends_with)
-			$canonical_fn = function($slug) use ($city_to_area) {
-				// Already double-hyphen: normalize the location part only
-				if (strpos($slug, '--') !== false) {
-					$parts = explode('--', $slug, 2);
-					$loc   = isset($city_to_area[$parts[1]]) ? $city_to_area[$parts[1]] : $parts[1];
-					return $parts[0] . '--' . $loc;
-				}
-				// Single-hyphen: scan for a known area suffix (longest match first)
-				foreach ($city_to_area as $city => $full) {
-					$suffix = '-' . $city;
-					if (substr($slug, -strlen($suffix)) === $suffix) {
-						return substr($slug, 0, strlen($slug) - strlen($suffix)) . '--' . $full;
-					}
-				}
-				return $slug; // service-only term, no location detected
-			};
-
-			// Group all terms by their canonical slug
-			$groups = [];
-			foreach ($service_terms as $term) {
-				$groups[$canonical_fn($term->slug)][] = $term;
-			}
-
-			$retitled = 0;
-
-			foreach ($groups as $canonical => $terms) {
-				// Prefer to keep the term whose slug already matches canonical
-				$keep = null;
-				foreach ($terms as $t) {
-					if ($t->slug === $canonical) { $keep = $t; break; }
-				}
-				if (!$keep) $keep = $terms[0];
-
-				// Update slug and/or name if either differs from canonical
-				if ($keep->slug !== $canonical || $keep->name !== $canonical) {
-					$log[] = '<strong>RENAME</strong> [' . $keep->term_id . '] <code>' . esc_html($keep->slug) . '</code>'
-						. ($keep->name !== $canonical ? ' &nbsp;<em style="color:#888">was: ' . esc_html($keep->name) . '</em>' : '')
-						. ' → <code>' . esc_html($canonical) . '</code>';
-					if (!$dry_run) {
-						wp_update_term($keep->term_id, 'jobsite_geo-services', [
-							'slug' => $canonical,
-							'name' => $canonical,
-						]);
-					}
-					if ($keep->slug !== $canonical) $renamed++;
-					if ($keep->name !== $canonical) $retitled++;
-				}
-
-				// Merge any duplicate terms into the keeper
-				foreach ($terms as $t) {
-					if ($t->term_id === $keep->term_id) continue;
-					$log[] = '<strong>MERGE</strong> [' . $t->term_id . '] <code>' . esc_html($t->slug) . '</code> → [' . $keep->term_id . '] <code>' . esc_html($canonical) . '</code>';
-					if (!$dry_run) {
-						$post_ids = get_posts([
-							'post_type' => 'any', 'posts_per_page' => -1, 'fields' => 'ids',
-							'tax_query' => [['taxonomy' => 'jobsite_geo-services', 'field' => 'term_id', 'terms' => $t->term_id]],
-						]);
-						foreach ($post_ids as $pid) {
-							wp_set_post_terms($pid, [$keep->term_id], 'jobsite_geo-services', true);
-						}
-						wp_delete_term($t->term_id, 'jobsite_geo-services');
-					}
-					$merged++;
-				}
-			}
-
-			// Second pass: fix names on terms whose slug is already canonical but name still differs
-			// (catches terms that were already correctly slugged but have a formatted title)
-			foreach ($service_terms as $term) {
-				$canonical = $canonical_fn($term->slug);
-				if ($term->slug === $canonical && $term->name !== $canonical) {
-					$log[] = '<strong>RETITLE</strong> [' . $term->term_id . '] <code>' . esc_html($term->slug) . '</code>'
-						. ' &nbsp;<em style="color:#888">was: ' . esc_html($term->name) . '</em>'
-						. ' → <code>' . esc_html($canonical) . '</code>';
-					if (!$dry_run) {
-						wp_update_term($term->term_id, 'jobsite_geo-services', ['name' => $canonical]);
-					}
-					$retitled++;
-				}
-			}
-
-			if ($log) {
-				$label = $dry_run ? ' (preview — no changes made)' : '';
-				echo '<div class="notice notice-' . ($dry_run ? 'info' : 'success') . '"><p><strong>Results' . $label . ':</strong> '
-					. $renamed . ' slugs renamed, ' . $retitled . ' titles updated, ' . $merged . ' merged/deleted.</p></div>';
-				echo '<ul style="font-family:monospace;font-size:13px;margin-top:8px;">';
-				foreach ($log as $line) echo '<li>' . $line . '</li>';
+		foreach ($sections as $sec) {
+			echo '<h3 style="margin:18px 0 2px;">' . esc_html($sec['title']) . '</h3>';
+			echo '<p style="margin:0 0 6px;color:#555;">' . esc_html($sec['summary']) . '</p>';
+			if (!empty($sec['lines'])) {
+				echo '<ul style="font-family:monospace;font-size:12px;margin:0;">';
+				foreach ($sec['lines'] as $line) echo '<li>' . $line . '</li>';
 				echo '</ul>';
-			} else {
-				echo '<div class="notice notice-success"><p>All service slugs are already normalized — nothing to do.</p></div>';
-			}
-		}
-	}
-
-	?>
-	<hr>
-	<form method="post" onsubmit="return this.dry_run.checked || confirm('Apply all renames and merges? This cannot be undone.');">
-		<?php wp_nonce_field('bp_normalize_slugs_nonce'); ?>
-		<p>
-			<label>
-				<input type="checkbox" name="dry_run" value="1" checked>
-				&nbsp;Preview only (dry run) — uncheck to apply changes
-			</label>
-		</p>
-		<?php submit_button('Run Normalize', 'primary', 'bp_normalize_slugs'); ?>
-	</form>
-
-	<hr>
-	<h2>Normalize Service Types</h2>
-	<p>Strips embedded city/state suffixes from <code>jobsite_geo-service-types</code> terms and merges duplicates into a single canonical term.<br>
-	   Example: <code>air-conditioner-repair-frisco-tx</code> and <code>air-conditioner-repair-humble-tx</code> → <code>air-conditioner-repair</code>.</p>
-
-	<?php
-	$st_log    = [];
-	$st_merged = 0;
-	$st_dry    = true;
-
-	if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bp_normalize_service_types'])) {
-		check_admin_referer('bp_normalize_service_types_nonce');
-		$st_dry = isset($_POST['st_dry_run']);
-
-		$area_terms  = get_terms(['taxonomy' => 'jobsite_geo-service-areas', 'hide_empty' => false]);
-		$type_terms  = get_terms(['taxonomy' => 'jobsite_geo-service-types', 'hide_empty' => false]);
-
-		if (is_wp_error($area_terms) || is_wp_error($type_terms)) {
-			echo '<div class="notice notice-error"><p>Could not fetch taxonomy terms.</p></div>';
-		} else {
-			// Build area slug list sorted longest-first so 'fort-worth-tx' matches before 'worth-tx'
-			$area_slugs = wp_list_pluck($area_terms, 'slug');
-			usort($area_slugs, function($a, $b) { return strlen($b) - strlen($a); });
-
-			$strip_area = function($slug) use ($area_slugs) {
-				foreach ($area_slugs as $area) {
-					$suffix = '-' . $area;
-					if (substr($slug, -strlen($suffix)) === $suffix) {
-						return substr($slug, 0, -strlen($suffix));
-					}
-				}
-				return $slug;
-			};
-
-			// Group terms by canonical (area-stripped) slug
-			$groups = [];
-			foreach ($type_terms as $term) {
-				$groups[$strip_area($term->slug)][] = $term;
-			}
-
-			foreach ($groups as $canonical => $terms) {
-				// Find any terms that differ from canonical (the geo-suffixed ones)
-				$geo_terms = array_filter($terms, function($t) use ($canonical) { return $t->slug !== $canonical; });
-				if (empty($geo_terms)) continue;
-
-				// Ensure canonical term exists
-				$keep = get_term_by('slug', $canonical, 'jobsite_geo-service-types');
-				if (!$keep) {
-					$st_log[] = '<strong>CREATE</strong> <code>' . esc_html($canonical) . '</code>';
-					if (!$st_dry) {
-						$ins = wp_insert_term($canonical, 'jobsite_geo-service-types', ['slug' => $canonical, 'name' => $canonical]);
-						if (!is_wp_error($ins)) {
-							$keep = get_term($ins['term_id'], 'jobsite_geo-service-types');
-						}
-					}
-				}
-
-				foreach ($geo_terms as $geo_t) {
-					$st_log[] = '<strong>MERGE</strong> <code>' . esc_html($geo_t->slug) . '</code> → <code>' . esc_html($canonical) . '</code>';
-					if (!$st_dry && $keep) {
-						$post_ids = get_posts([
-							'post_type'      => 'any',
-							'posts_per_page' => -1,
-							'fields'         => 'ids',
-							'tax_query'      => [['taxonomy' => 'jobsite_geo-service-types', 'field' => 'term_id', 'terms' => $geo_t->term_id]],
-						]);
-						foreach ($post_ids as $pid) {
-							wp_set_post_terms($pid, [$keep->term_id], 'jobsite_geo-service-types', true);
-						}
-						wp_delete_term($geo_t->term_id, 'jobsite_geo-service-types');
-					}
-					$st_merged++;
-				}
-			}
-
-			if ($st_log) {
-				$label = $st_dry ? ' (preview — no changes made)' : '';
-				echo '<div class="notice notice-' . ($st_dry ? 'info' : 'success') . '"><p><strong>Service Types Results' . $label . ':</strong> '
-					. $st_merged . ' terms merged/deleted.</p></div>';
-				echo '<ul style="font-family:monospace;font-size:13px;margin-top:8px;">';
-				foreach ($st_log as $line) echo '<li>' . $line . '</li>';
-				echo '</ul>';
-			} else {
-				echo '<div class="notice notice-success"><p>All service-type slugs are already clean — nothing to do.</p></div>';
 			}
 		}
 	}
 	?>
-	<form method="post" onsubmit="return this.st_dry_run.checked || confirm('Strip and merge all geo-suffixed service types? This cannot be undone.');">
-		<?php wp_nonce_field('bp_normalize_service_types_nonce'); ?>
+	<form method="post" onsubmit="return this.cleanup_dry_run.checked || confirm('Run the full taxonomy cleanup? Slug rewrites and merges cannot be undone.');">
+		<?php wp_nonce_field('bp_taxonomy_cleanup_nonce'); ?>
 		<p>
 			<label>
-				<input type="checkbox" name="st_dry_run" value="1" checked>
+				<input type="checkbox" name="cleanup_dry_run" value="1" checked>
 				&nbsp;Preview only (dry run) — uncheck to apply changes
 			</label>
 		</p>
-		<?php submit_button('Normalize Service Types', 'secondary', 'bp_normalize_service_types'); ?>
-	</form>
-
-	<hr>
-	<h2>Normalize Service Area Names</h2>
-	<p>Sets each <code>jobsite_geo-service-areas</code> term's <strong>name</strong> to match its slug exactly.<br>
-	   Example: <code>Frisco, TX</code> or <code>Frisco-TX</code> → <code>frisco-tx</code>.</p>
-
-	<?php
-	$sa_log     = [];
-	$sa_updated = 0;
-	$sa_dry     = true;
-
-	if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bp_normalize_area_names'])) {
-		check_admin_referer('bp_normalize_area_names_nonce');
-		$sa_dry = isset($_POST['sa_dry_run']);
-
-		$area_terms = get_terms(['taxonomy' => 'jobsite_geo-service-areas', 'hide_empty' => false]);
-
-		if (is_wp_error($area_terms)) {
-			echo '<div class="notice notice-error"><p>Could not fetch service-area terms.</p></div>';
-		} else {
-			foreach ($area_terms as $term) {
-				if ($term->name === $term->slug) continue;
-				$sa_log[] = '<code>' . esc_html($term->name) . '</code> → <code>' . esc_html($term->slug) . '</code>';
-				if (!$sa_dry) {
-					wp_update_term($term->term_id, 'jobsite_geo-service-areas', ['name' => $term->slug]);
-				}
-				$sa_updated++;
-			}
-
-			if ($sa_log) {
-				$label = $sa_dry ? ' (preview — no changes made)' : '';
-				echo '<div class="notice notice-' . ($sa_dry ? 'info' : 'success') . '"><p><strong>Service Area Results' . $label . ':</strong> '
-					. $sa_updated . ' names updated.</p></div>';
-				echo '<ul style="font-family:monospace;font-size:13px;margin-top:8px;">';
-				foreach ($sa_log as $line) echo '<li>' . $line . '</li>';
-				echo '</ul>';
-			} else {
-				echo '<div class="notice notice-success"><p>All service-area names already match their slugs — nothing to do.</p></div>';
-			}
-		}
-	}
-	?>
-	<form method="post" onsubmit="return this.sa_dry_run.checked || confirm('Update all service-area names to match slugs?');">
-		<?php wp_nonce_field('bp_normalize_area_names_nonce'); ?>
-		<p>
-			<label>
-				<input type="checkbox" name="sa_dry_run" value="1" checked>
-				&nbsp;Preview only (dry run) — uncheck to apply changes
-			</label>
-		</p>
-		<?php submit_button('Normalize Area Names', 'secondary', 'bp_normalize_area_names'); ?>
+		<?php submit_button('Run Taxonomy Cleanup', 'primary', 'bp_run_taxonomy_cleanup'); ?>
 	</form>
 	</div>
 
@@ -1762,6 +1496,109 @@ function bp_normalize_service_slugs_page() {
 		</p>
 		<?php submit_button( 'Generate Service Intros', 'secondary', 'bp_generate_service_intros' ); ?>
 	</form>
+	</div>
+
+	<div class="card" style="margin-top:20px;padding:20px;">
+	<h2 style="margin-top:0">Fix Photo Orientation</h2>
+	<p>Scans image attachments for a leftover EXIF/container orientation flag — the cause of iPhone/HEIC photos showing sideways on some devices — and bakes the rotation into the pixels, strips the flag, and regenerates thumbnails. <strong>Only images that still carry an active rotation flag are touched</strong>; already-correct images are skipped, so this is safe to re-run. Processes up to 25 fixes per click (submit again to continue). Requires Imagick.</p>
+	<?php
+	if ( isset( $_POST['bp_fix_orientation'] ) && check_admin_referer( 'bp_fix_orientation_nonce' ) ) {
+
+		if ( ! class_exists( 'Imagick' ) ) {
+			echo '<div class="notice notice-error"><p>Imagick is not available on this server — cannot fix orientation.</p></div>';
+		} else {
+			require_once ABSPATH . 'wp-admin/includes/image.php';
+
+			$fo_dry     = ! empty( $_POST['fo_dry_run'] );
+			$fo_batch   = 25;
+			$fo_fixed   = 0;
+			$fo_flagged = 0;
+			$fo_log     = [];
+
+			$ids = get_posts( [
+				'post_type'      => 'attachment',
+				'post_mime_type' => 'image',
+				'post_status'    => 'inherit',
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+			] );
+
+			@set_time_limit( 0 );
+
+			foreach ( $ids as $id ) {
+				$file = get_attached_file( $id );
+				if ( ! $file || ! file_exists( $file ) ) continue;
+
+				// Read the real orientation from the file bytes (works for WebP, whose
+				// EXIF chunk Imagick's getImageOrientation() does not surface).
+				$o = bp_image_orientation( $file );
+				if ( $o < 2 ) continue;
+
+				$fo_flagged++;
+				if ( $fo_fixed >= $fo_batch ) continue;
+
+				$fo_log[] = esc_html( basename( $file ) ) . ' <span style="color:#888;">(orientation ' . (int) $o . ')</span>';
+
+				if ( ! $fo_dry ) {
+					try {
+						$im = new Imagick( $file );
+						// Imagick doesn't auto-rotate on load, so the buffer holds the raw
+						// stored pixels — rotate explicitly to match the EXIF orientation.
+						switch ( $o ) {
+							case 2: $im->flopImage(); break;
+							case 3: $im->rotateImage( 'none', 180 ); break;
+							case 4: $im->flipImage(); break;
+							case 5: $im->flopImage(); $im->rotateImage( 'none', 270 ); break;
+							case 6: $im->rotateImage( 'none', 90 ); break;
+							case 7: $im->flopImage(); $im->rotateImage( 'none', 90 ); break;
+							case 8: $im->rotateImage( 'none', 270 ); break;
+						}
+						$im->setImageOrientation( Imagick::ORIENTATION_TOPLEFT );
+						$im->stripImage();   // drop the now-stale flag + other metadata
+						$im->writeImage( $file );
+						$im->clear();
+						$im->destroy();
+
+						// Rebuild all subsizes from the corrected full-size file
+						$meta = wp_generate_attachment_metadata( $id, $file );
+						if ( ! is_wp_error( $meta ) ) wp_update_attachment_metadata( $id, $meta );
+					} catch ( Exception $e ) {
+						continue;
+					}
+				}
+				$fo_fixed++;
+			}
+
+			$remaining = max( 0, $fo_flagged - $fo_fixed );
+			$count     = $fo_dry ? $fo_flagged : $fo_fixed;
+			$verb      = $fo_dry ? 'Found' : 'Fixed';
+			$label     = $fo_dry ? ' (preview — no changes made)' : '';
+
+			if ( $fo_flagged ) {
+				echo '<div class="notice notice-' . ( $fo_dry ? 'info' : 'success' ) . '"><p><strong>' . $verb . ' ' . $count . ' image(s) with a rotation flag' . $label . '.</strong>'
+					. ( $remaining ? ' ' . $remaining . ' more remaining — submit again to continue.' : '' ) . '</p></div>';
+				if ( $fo_log ) {
+					echo '<ul style="font-family:monospace;font-size:12px;margin-top:8px;">';
+					foreach ( $fo_log as $line ) echo '<li>' . $line . '</li>';
+					echo '</ul>';
+				}
+			} else {
+				echo '<div class="notice notice-success"><p>No images carry a rotation flag — nothing to fix.</p></div>';
+			}
+		}
+	}
+	?>
+	<form method="post" onsubmit="return this.fo_dry_run.checked || confirm('Bake orientation into flagged images and regenerate their thumbnails? This rewrites image files.');">
+		<?php wp_nonce_field( 'bp_fix_orientation_nonce' ); ?>
+		<p>
+			<label>
+				<input type="checkbox" name="fo_dry_run" value="1" checked>
+				&nbsp;Preview only (dry run) — uncheck to apply changes
+			</label>
+		</p>
+		<?php submit_button( 'Fix Photo Orientation', 'secondary', 'bp_fix_orientation' ); ?>
+	</form>
+	</div>
 	</div>
 	<?php
 }

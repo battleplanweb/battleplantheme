@@ -1167,7 +1167,15 @@ update_option('jobsite_geo', array(
 | `jobsite_geo-services` | `service` | `/service/{service--city-state}/` | Service + location landing pages |
 | `jobsite_geo-techs` | `tech` | `/tech/{name}/` | Per-technician job listing |
 
-**Services taxonomy slug format:** `{service-slug}--{city-slug}-{state}` (double dash separates service from location)
+**Services taxonomy slug format:** `{service-slug}--{city-slug}-{state}` (double dash separates service from location). New terms are generated in this canonical form by `bp_geo_assign_taxonomy_term()` and `bp_geo_sync_services_from_types()`. To bring an older site up to date, run **Jobsites → ⚙️ Taxonomy Cleanup** (`bp_geo_run_taxonomy_cleanup()`), which refreshes tags and canonicalizes/merges all three taxonomies in one sweep.
+
+### SEO: only `/service/` is indexable
+Only the combined **`/service/{service--city-st}/`** pages target a specific service-in-town and are meant to rank. The other two jobsite taxonomies are too vague, so they are **301-redirected** (in `includes-jobsite-geo.php`, on `template_redirect`) to the most-populated `/service/` page for that context, falling back to the `/jobsites/` archive:
+- `/service-area/{city-st}/` → best service page in that city (`bp_geo_best_service_for_area()`)
+- `/service-type/{service}/` → best city page for that service (`bp_geo_best_service_for_type()`)
+- Legacy bare-city URLs (`/{city-st}/`) redirect straight to the service page too (no chain).
+
+Both taxonomies are also excluded from the Yoast sitemap (`battleplan_sitemap_exclude_taxonomy` in `functions.php`) and set to `noindex` (housekeeping Yoast settings) — but the 301 is what actively de-indexes them and passes link equity to the service page.
 
 ### SEO Landing Page Content System
 The archive template (`archive-jobsite_geo.php`) displays a content snippet above the map and job cards. This snippet is stored as **term meta on the `jobsite_geo-services` taxonomy term**.

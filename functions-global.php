@@ -13,7 +13,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', 'v42.4' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', 'v42.5' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
@@ -324,11 +324,12 @@ function bp_state_force_metrics() {
 if (is_admin() || (defined('WP_CLI') && WP_CLI)) return;
 if (defined('_IS_SERP_BOT') && _IS_SERP_BOT) return;
 
+global $wpdb;
 $now = time();
 $base_info = [
 	'name'      => $customer_info['name'] ?? '',
 	'framework' => (defined('_BP_VERSION') ? _BP_VERSION : ''),
-	'jobsites'  => (int)(wp_count_posts('jobsite_geo')->publish ?? 0),
+	'jobsites'  => (int)$wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = 'jobsite_geo' AND post_status = 'publish'"),
 ];
 $base_hash = md5(wp_json_encode($base_info));
 $prev_hash = (string)get_option('bp_state_hash', '');

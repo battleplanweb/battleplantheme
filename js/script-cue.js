@@ -98,7 +98,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		for (const thisPlaylist of playlists) {
 			const container = getObject('.mejs-container', thisPlaylist);
 			if (container) {
-				const cueH = container.offsetHeight * 2;
+				const cueH = container.offsetHeight;
 				const tracks = getObject('.cue-playlist .cue-tracks', thisPlaylist);
 				if (tracks) {
 					tracks.style.maxHeight = cueH + "px";

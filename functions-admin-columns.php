@@ -229,6 +229,185 @@ function bp_render_taxonomy_cell($id, $taxonomy, $col, $pt, $inline_edit = false
 
 
 /*--------------------------------------------------------------
+# Attachment Details modal — taxonomy checkboxes, ID, tidy-ups
+----------------------------------------------------------------
+Reworks the "Attachment details" modal (media library grid view +
+the editor inserter):
+  - Image Categories / Image Tags render as a checkbox list (check
+    to add, uncheck to remove) instead of WP's comma-separated text
+    box. Saves natively via the modal's compat-field auto-save.
+  - Adds an "ID:" line to the file-info block.
+  - Hides core's "Required fields are marked *" notice.
+Only the modal is affected; the full edit-attachment screen keeps
+its standard taxonomy metaboxes.
+--------------------------------------------------------------*/
+
+// Swap the auto comma-text taxonomy inputs for a checkbox list.
+add_filter('attachment_fields_to_edit', 'bp_modal_taxonomy_fields', 11, 2);
+function bp_modal_taxonomy_fields($fields, $post) {
+
+	// Skip the full edit-attachment screen — it uses standard metaboxes.
+	if (function_exists('get_current_screen')) {
+		$screen = get_current_screen();
+		if ($screen && $screen->id === 'attachment') return $fields;
+	}
+
+	foreach (['image-categories', 'image-tags'] as $taxonomy) {
+		if (!isset($fields[$taxonomy])) continue;
+
+		$tax_obj = get_taxonomy($taxonomy);
+		if (!$tax_obj) { unset($fields[$taxonomy]); continue; }
+
+		$all      = get_terms(['taxonomy' => $taxonomy, 'hide_empty' => false]);
+		$assigned = wp_get_object_terms($post->ID, $taxonomy, ['fields' => 'ids']);
+		if (is_wp_error($assigned)) $assigned = [];
+
+		$key  = 'bp_tax_' . $taxonomy;                 // custom name so core's text-save ignores it
+		$base = 'attachments[' . (int) $post->ID . ']';
+
+		$html  = '<div class="bp-modal-tax" data-tax="' . esc_attr($taxonomy) . '" data-post="' . (int) $post->ID . '" data-key="' . esc_attr($key) . '">';
+		// Presence flag — lets an all-unchecked save still clear every term.
+		$html .= '<input type="hidden" name="' . esc_attr($base . '[' . $key . '_present]') . '" value="1">';
+
+		if (!is_wp_error($all) && $all) {
+			foreach ($all as $term) {
+				$checked = in_array($term->term_id, $assigned, true) ? ' checked' : '';
+				$html .= '<label><input type="checkbox" name="' . esc_attr($base . '[' . $key . '][]') . '" value="' . esc_attr($term->term_id) . '"' . $checked . '> ' . esc_html($term->name) . '</label>';
+			}
+		} else {
+			$html .= '<span class="bp-modal-tax-empty">' . esc_html__('No terms yet — add one below.', 'battleplan') . '</span>';
+		}
+		// Add-a-new-term row.
+		$html .= '<div class="bp-modal-tax-add">'
+			. '<input type="text" class="bp-modal-tax-new" placeholder="' . esc_attr__('Add new&hellip;', 'battleplan') . '">'
+			. '<button type="button" class="button button-small bp-modal-tax-addbtn">' . esc_html__('Add', 'battleplan') . '</button>'
+			. '</div>';
+		$html .= '</div>';
+
+		$fields[$taxonomy] = [
+			'label' => $tax_obj->labels->name ?? ucfirst($taxonomy),
+			'input' => 'html',
+			'html'  => $html,
+		];
+	}
+
+	return $fields;
+}
+
+// Save the checkbox selections back onto the attachment.
+add_filter('attachment_fields_to_save', 'bp_modal_taxonomy_save', 10, 2);
+function bp_modal_taxonomy_save($post, $attachment) {
+	foreach (['image-categories', 'image-tags'] as $taxonomy) {
+		$key = 'bp_tax_' . $taxonomy;
+		if (!isset($attachment[$key . '_present'])) continue; // our field wasn't in this form
+		$ids = isset($attachment[$key]) ? array_map('intval', (array) $attachment[$key]) : [];
+		wp_set_object_terms((int) $post['ID'], $ids, $taxonomy, false);
+	}
+	return $post;
+}
+
+// Inject the ID line into the modal's file-info block, and hide the
+// "Required fields are marked *" notice. Attaches to the media UI assets
+// so it loads wherever the modal can appear (library, editor inserter).
+add_action('admin_enqueue_scripts', function() {
+	if (wp_script_is('media-views', 'registered')) {
+		$js = <<<JS
+(function(){
+	if (typeof wp==='undefined' || !wp.media || !wp.media.view || !wp.media.view.Attachment || !wp.media.view.Attachment.Details) return;
+	function inject(view){
+		try{
+			if(!view||!view.model) return;
+			var id=view.model.get('id');
+			if(!id) return;
+			var d=view.\$el.find('.details').first();
+			if(!d.length||d.find('.bp-attach-id').length) return;
+			d.append('<div class="bp-attach-id"><strong>ID:</strong> '+id+'</div>');
+		}catch(e){}
+	}
+	function wrap(ctor){
+		if(!ctor||!ctor.prototype) return;
+		var orig=ctor.prototype.render;
+		ctor.prototype.render=function(){ orig.apply(this,arguments); inject(this); return this; };
+	}
+	wrap(wp.media.view.Attachment.Details);
+	if(wp.media.view.Attachment.Details.TwoColumn) wrap(wp.media.view.Attachment.Details.TwoColumn);
+})();
+JS;
+		wp_add_inline_script('media-views', $js);
+
+		// "Add new term" support for the modal checkbox lists.
+		$tax_nonce = wp_create_nonce('bp_taxonomy_edit');
+		$taxjs = <<<JS
+(function(){
+	var NONCE='{$tax_nonce}';
+	function addTerm(box){
+		var input=box.querySelector('.bp-modal-tax-new');
+		if(!input) return;
+		var name=(input.value||'').trim();
+		if(!name) return;
+		var tax=box.getAttribute('data-tax'), post=box.getAttribute('data-post'), key=box.getAttribute('data-key');
+		input.disabled=true;
+		var body=new URLSearchParams();
+		body.append('action','bp_add_taxonomy_term');
+		body.append('nonce',NONCE);
+		body.append('post_id',post);
+		body.append('taxonomy',tax);
+		body.append('name',name);
+		fetch(ajaxurl,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},body:body.toString(),credentials:'same-origin'})
+		.then(function(r){return r.json();}).then(function(res){
+			input.disabled=false;
+			if(!res||!res.success){ alert('Could not add term: '+((res&&res.data)||'error')); return; }
+			var d=res.data;
+			var ex=box.querySelector('input[type=checkbox][value="'+d.term_id+'"]');
+			if(ex){ ex.checked=true; }
+			else{
+				var label=document.createElement('label');
+				var cb=document.createElement('input');
+				cb.type='checkbox'; cb.checked=true; cb.value=d.term_id; cb.name='attachments['+post+']['+key+'][]';
+				label.appendChild(cb); label.appendChild(document.createTextNode(' '+d.name));
+				var addRow=box.querySelector('.bp-modal-tax-add');
+				box.insertBefore(label,addRow);
+			}
+			input.value=''; input.focus();
+		}).catch(function(){ input.disabled=false; alert('Could not add term.'); });
+	}
+	document.addEventListener('click',function(e){
+		var btn=e.target.closest('.bp-modal-tax-addbtn');
+		if(!btn) return;
+		e.preventDefault();
+		var box=btn.closest('.bp-modal-tax'); if(box) addTerm(box);
+	});
+	document.addEventListener('keydown',function(e){
+		if(e.key!=='Enter') return;
+		var t=e.target;
+		if(!t.classList||!t.classList.contains('bp-modal-tax-new')) return;
+		e.preventDefault();
+		var box=t.closest('.bp-modal-tax'); if(box) addTerm(box);
+	});
+	// Keep the "add new" text box from triggering WP's compat auto-save + re-render
+	// (which would otherwise race the add and drop the just-created term).
+	document.addEventListener('change',function(e){
+		if(e.target&&e.target.classList&&e.target.classList.contains('bp-modal-tax-new')) e.stopPropagation();
+	},true);
+})();
+JS;
+		wp_add_inline_script('media-views', $taxjs);
+	}
+
+	if (wp_style_is('media-views', 'registered')) {
+		$css = '.media-modal .required-field-message,.media-frame .required-field-message{display:none!important;}'
+			. '.media-modal .bp-modal-tax{max-height:170px;overflow:auto;border:1px solid #dcdcde;border-radius:3px;padding:6px 8px;background:#fff;}'
+			. '.media-modal .bp-modal-tax label{display:flex;align-items:center;gap:6px;margin:2px 0;cursor:pointer;}'
+			. '.media-modal .bp-modal-tax label input[type=checkbox]{margin:0;flex:0 0 auto;}'
+			. '.media-modal .bp-modal-tax-add{display:flex;gap:4px;margin:6px 0 0;}'
+			. '.media-modal .bp-modal-tax-new{flex:1;min-width:0;margin:0;}'
+			. '.media-modal .bp-attach-id{margin-top:4px;}';
+		wp_add_inline_style('media-views', $css);
+	}
+});
+
+
+/*--------------------------------------------------------------
 # Admin Columns Engine
 --------------------------------------------------------------*/
 function bp_admin_columns($config){
@@ -292,10 +471,11 @@ function bp_admin_columns($config){
 				'bp-post-id' => $id,
 
 				'bp-featured-image' => (function() use ($id) {
-					$url = wp_nonce_url(
-						admin_url('upload.php?page=enable-media-replace/enable-media-replace.php&action=media_replace&attachment_id=' . $id),
-						'enable-media-replace-upload_' . $id
-					);
+					// Framework media-replace screen (functions-media-replace.php). Falls
+					// back to the edit screen if that module isn't loaded for some reason.
+					$url = function_exists('bp_mr_url')
+						? bp_mr_url($id)
+						: admin_url('post.php?post=' . $id . '&action=edit');
 					return '<a href="' . esc_url($url) . '" title="Replace media">' . wp_get_attachment_image($id, [130,130]) . '</a>';
 				}),
 
@@ -998,6 +1178,8 @@ add_action('admin_enqueue_scripts', function($hook){
 						html += '<label style=\"display:block; margin:3px 0; cursor:pointer;\"><input type=\"checkbox\" value=\"'+term.term_id+'\" '+checked+'> '+term.name+'</label>';
 					});
 
+					html += '<div class=\"bp-tax-addrow\" style=\"margin-top:8px; padding-top:8px; border-top:1px solid #eee; display:flex; gap:4px;\"><input type=\"text\" class=\"bp-tax-new\" placeholder=\"Add new&hellip;\" style=\"flex:1; min-width:0;\"><button type=\"button\" class=\"button button-small bp-tax-add\">Add</button></div>';
+
 					html += '</div>';
 
 					cell.innerHTML = html;
@@ -1062,6 +1244,58 @@ add_action('admin_enqueue_scripts', function($hook){
 				alert('Error updating term');
 				cb.disabled = false;
 			});
+		});
+
+		// Create a brand-new term from the editor's text box, then check it on.
+		function bpAddNewTerm(editor) {
+			var input = editor.querySelector('.bp-tax-new');
+			if (!input) return;
+			var name = (input.value || '').trim();
+			if (!name) return;
+			var postId = editor.getAttribute('data-post-id');
+			var taxonomy = editor.getAttribute('data-taxonomy');
+			var column = editor.getAttribute('data-column');
+			var pt = editor.getAttribute('data-pt');
+			input.disabled = true;
+			ajaxPost('bp_add_taxonomy_term', {
+				post_id: postId, taxonomy: taxonomy, name: name, column: column, pt: pt,
+				nonce: '".wp_create_nonce("bp_taxonomy_edit")."'
+			}).then(function(response){
+				input.disabled = false;
+				if (!response.success) { alert('Could not add term: ' + (response.data || 'error')); return; }
+				var d = response.data;
+				var ex = editor.querySelector('input[type=checkbox][value=\"' + d.term_id + '\"]');
+				if (ex) { ex.checked = true; }
+				else {
+					var label = document.createElement('label');
+					label.style.cssText = 'display:block; margin:3px 0; cursor:pointer;';
+					var cb = document.createElement('input');
+					cb.type = 'checkbox'; cb.checked = true; cb.value = d.term_id;
+					label.appendChild(cb);
+					label.appendChild(document.createTextNode(' ' + d.name));
+					var addRow = editor.querySelector('.bp-tax-addrow');
+					editor.insertBefore(label, addRow);
+				}
+				if (d.cell) editor._bpDisplay = d.cell;
+				input.value = ''; input.focus();
+			}).catch(function(){ input.disabled = false; alert('Could not add term.'); });
+		}
+
+		document.addEventListener('click', function(e){
+			var btn = e.target.closest('.bp-tax-add');
+			if (!btn) return;
+			e.preventDefault();
+			var editor = btn.closest('.bp-taxonomy-editor');
+			if (editor) bpAddNewTerm(editor);
+		});
+
+		document.addEventListener('keydown', function(e){
+			if (e.key !== 'Enter') return;
+			var t = e.target;
+			if (!t.classList || !t.classList.contains('bp-tax-new')) return;
+			e.preventDefault();
+			var editor = t.closest('.bp-taxonomy-editor');
+			if (editor) bpAddNewTerm(editor);
 		});
 
 		// Remove a term via its remove button on the display
@@ -1477,6 +1711,57 @@ add_action('wp_ajax_bp_toggle_taxonomy_term', function(){
 
 	wp_send_json_success([
 		'results' => $results,
+	]);
+});
+
+// AJAX: create a new taxonomy term (if it doesn't exist) and assign it to the post.
+add_action('wp_ajax_bp_add_taxonomy_term', function(){
+
+	if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'bp_taxonomy_edit')) {
+		wp_send_json_error('Invalid nonce');
+	}
+
+	$post_id  = (int) ($_POST['post_id'] ?? 0);
+	$taxonomy = sanitize_text_field($_POST['taxonomy'] ?? '');
+	$name     = trim(wp_unslash($_POST['name'] ?? ''));
+	$column   = sanitize_text_field($_POST['column'] ?? '');
+	$pt       = sanitize_text_field($_POST['pt'] ?? '');
+
+	if (!taxonomy_exists($taxonomy))              wp_send_json_error('Invalid taxonomy');
+	if ($name === '')                             wp_send_json_error('Empty term name');
+	if (!current_user_can('edit_post', $post_id)) wp_send_json_error('Permission denied');
+
+	$tax_obj = get_taxonomy($taxonomy);
+	if (!$tax_obj || !current_user_can($tax_obj->cap->edit_terms)) {
+		wp_send_json_error('You are not allowed to create terms');
+	}
+
+	// Reuse an existing term of the same name, otherwise create it.
+	$existing = get_term_by('name', $name, $taxonomy);
+	if ($existing && !is_wp_error($existing)) {
+		$term_id = (int) $existing->term_id;
+	} else {
+		$res = wp_insert_term($name, $taxonomy);
+		if (is_wp_error($res)) {
+			$maybe = term_exists($name, $taxonomy);             // slug/race collision
+			if ($maybe) {
+				$term_id = (int) (is_array($maybe) ? $maybe['term_id'] : $maybe);
+			} else {
+				wp_send_json_error($res->get_error_message());
+			}
+		} else {
+			$term_id = (int) $res['term_id'];
+		}
+	}
+
+	if ($post_id) wp_set_object_terms($post_id, [$term_id], $taxonomy, true); // append
+
+	$term = get_term($term_id, $taxonomy);
+
+	wp_send_json_success([
+		'term_id' => $term_id,
+		'name'    => ($term && !is_wp_error($term)) ? $term->name : $name,
+		'cell'    => ($post_id && $column && $pt) ? bp_render_taxonomy_cell($post_id, $taxonomy, $column, $pt, true) : '',
 	]);
 });
 

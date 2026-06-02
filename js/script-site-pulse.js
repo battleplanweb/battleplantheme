@@ -129,6 +129,10 @@ function initSidebar() {
 			if (!nav) return;
 			activatePanel(nav);
 			closeMobileSidebar();
+			// Action children open a form straight away (after their panel is active).
+			const action = btn.dataset.action;
+			if (action === 'new-report') showReportForm();
+			else if (action === 'mileage-add') showMileageForm();
 		});
 	});
 }
@@ -157,6 +161,13 @@ function activatePanel(panelId) {
 		populateAnalyticsFilters();
 		loadAnalytics(true);
 	}
+	if (panelId === 'mileage-map') {
+		loadMileageMap();
+	}
+	// Returning to a list view closes any open form/detail in that section, so the nav
+	// item always lands on the main list (e.g. My Mileage while on Add-a-Day).
+	if (panelId === 'mileage' && typeof hideMileageForm === 'function') hideMileageForm();
+	if (panelId === 'reports-my' && typeof hideReportForm === 'function') hideReportForm();
 
 	saveViewState({ panel: panelId });
 }
@@ -170,6 +181,10 @@ function saveViewState(state) {
 
 function restoreViewState() {
 	try {
+		// A deep link (e.g. the mileage reminder email: ?sp_panel=mileage) wins over saved state.
+		const urlPanel = new URLSearchParams(location.search).get('sp_panel');
+		if (urlPanel && $(`#sp-panel-${urlPanel}`)) { activatePanel(urlPanel); return; }
+
 		const state = JSON.parse(localStorage.getItem('sp_view_state') || '{}');
 		if (state.userId != D.userId) return;
 		if (state.panel) {
@@ -431,10 +446,32 @@ function timeAgo(dateStr) {
 function initDashboardWidgets() {
 	if ($('#sp-widget-reports-body')) loadWidgetReports();
 	if ($('#sp-widget-actions-body')) loadWidgetActions();
+	if ($('#sp-widget-mileage-body')) loadWidgetMileage();
 
 	$$('.sp-widget-link').forEach(btn => {
 		btn.addEventListener('click', () => activatePanel(btn.dataset.nav));
 	});
+}
+
+// Dashboard widget: the logged-in user's own mileage for the current month.
+async function loadWidgetMileage() {
+	const body = $('#sp-widget-mileage-body');
+	if (!body) return;
+	const now = new Date();
+	const start = `${now.getFullYear()}-${mPad2(now.getMonth() + 1)}-01`;
+	const end = mIso(now);
+	try {
+		const res = await spAjax('site_pulse_get_mileage_entries', { start, end });
+		const entries = (res.success && res.data.entries) ? res.data.entries : [];
+		if (!entries.length) { body.innerHTML = '<div class="sp-widget-empty">No trips logged this month yet.</div>'; return; }
+		const miles = entries.reduce((s, e) => s + parseFloat(e.total_miles || 0), 0);
+		const reimb = entries.reduce((s, e) => s + parseFloat(e.reimbursement_amount || 0), 0);
+		body.innerHTML = `<div class="sp-mileage-widget-stats">
+			<div><div class="sp-card-value">${miles.toFixed(1)}</div><div class="sp-card-label">Miles</div></div>
+			<div><div class="sp-card-value">$${reimb.toFixed(2)}</div><div class="sp-card-label">Reimbursement</div></div>
+			<div><div class="sp-card-value">${entries.length}</div><div class="sp-card-label">Days logged</div></div>
+		</div>`;
+	} catch (e) { body.innerHTML = '<div class="sp-widget-empty">—</div>'; }
 }
 
 async function loadWidgetReports() {
@@ -902,17 +939,18 @@ function renderReportDetail(wrap, report, answers, fields, location, author, pan
 	// Header info bar
 	const headerFields = D.reportHeaderFields || [];
 	const headerCount = headerFields.length + 3;
-	html += `<div class="sp-report-header-grid" style="display:grid;grid-template-columns:repeat(${headerCount}, 1fr);gap:12px;margin-bottom:20px;padding:16px 20px;background:var(--sp-bg);border-radius:var(--sp-radius);border:1px solid var(--sp-border);">`;
+	// Shared .sp-meta-bar; only the explicit column count is report-specific.
+	html += `<div class="sp-meta-bar" style="grid-template-columns:repeat(${headerCount}, 1fr);">`;
 
 	headerFields.forEach(hf => {
 		const val = calcHeaderValue(hf.calc, report.report_period_start);
-		html += `<div><div class="sp-card-label">${esc(hf.label)}</div><div class="sp-card-value" style="font-size:16px;">${esc(val)}</div></div>`;
+		html += `<div><div class="sp-card-label">${esc(hf.label)}</div><div class="sp-card-value">${esc(val)}</div></div>`;
 	});
 
-	html += `<div><div class="sp-card-label">Date</div><div class="sp-card-value" style="font-size:16px;">${formatDate(report.report_period_start)}</div></div>`;
-	html += `<div><div class="sp-card-label">Location</div><div class="sp-card-value" style="font-size:16px;">${esc(location?.name || '—')}</div></div>`;
+	html += `<div><div class="sp-card-label">Date</div><div class="sp-card-value">${formatDate(report.report_period_start)}</div></div>`;
+	html += `<div><div class="sp-card-label">Location</div><div class="sp-card-value">${esc(location?.name || '—')}</div></div>`;
 	if (author) {
-		html += `<div><div class="sp-card-label">Submitted By</div><div class="sp-card-value" style="font-size:16px;">${esc(author.name)}</div></div>`;
+		html += `<div><div class="sp-card-label">Submitted By</div><div class="sp-card-value">${esc(author.name)}</div></div>`;
 	}
 	html += '</div>';
 
@@ -1110,7 +1148,37 @@ async function loadAnalytics(force = false) {
 		renderCategoryChart(d.categories);
 		renderLocationsChart(d.locations);
 		renderResolutionCard(d.resolution);
+		renderMileageAnalytics(d.mileage);
 	} catch (err) {}
+}
+
+// Analytics cards: Business Mileage (MTD/YTD) + Top Destinations. No-op if the cards
+// aren't on the page (user without mileage caps).
+function renderMileageAnalytics(m) {
+	const stat = $('#sp-analytics-mileage .sp-analytics-card-body');
+	if (stat) {
+		const mo = (m && m.month) || {}, yt = (m && m.ytd) || {};
+		stat.innerHTML = `<div class="sp-mileage-widget-stats">
+			<div><div class="sp-card-value">${parseFloat(mo.miles || 0).toFixed(1)}</div><div class="sp-card-label">Miles (MTD)</div></div>
+			<div><div class="sp-card-value">$${parseFloat(mo.reimb || 0).toFixed(2)}</div><div class="sp-card-label">Reimb (MTD)</div></div>
+			<div><div class="sp-card-value">${parseFloat(yt.miles || 0).toFixed(0)}</div><div class="sp-card-label">Miles (YTD)</div></div>
+			<div><div class="sp-card-value">$${parseFloat(yt.reimb || 0).toFixed(2)}</div><div class="sp-card-label">Reimb (YTD)</div></div>
+		</div>`;
+	}
+	const dest = $('#sp-analytics-mileage-dest .sp-analytics-card-body');
+	if (dest) {
+		const top = (m && m.top_destinations) || [];
+		if (!top.length) { dest.innerHTML = '<div class="sp-widget-empty">No trips logged yet.</div>'; return; }
+		const max = Math.max(...top.map(t => parseInt(t.count)));
+		let html = '<div class="sp-chart-bars">';
+		top.forEach(t => {
+			const pct = max > 0 ? Math.round((parseInt(t.count) / max) * 100) : 0;
+			html += `<div class="sp-chart-bar-row"><span class="unique sp-chart-label">${esc(t.name)}</span><div class="sp-chart-bar-track"><div class="sp-chart-bar-fill" style="width:${pct}%;background:#15243a"></div></div><span class="unique sp-chart-value">${t.count}</span></div>`;
+		});
+		html += '</div>';
+		dest.innerHTML = html;
+		markUniqueSpans(dest);
+	}
 }
 
 function renderPriorityChart(data) {
@@ -1263,6 +1331,7 @@ async function loadAdminUsers() {
 
 function renderAdminUsers(wrap, data) {
 	const { users, roles, locations } = data;
+	const mileageLocations = data.mileage_locations || [];
 
 	let html = '<div class="sp-admin-toolbar">';
 	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-add-user-btn">+ Add User</button>';
@@ -1293,17 +1362,17 @@ function renderAdminUsers(wrap, data) {
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
 
-	$('#sp-add-user-btn')?.addEventListener('click', () => showUserForm(null, roles, locations, users));
+	$('#sp-add-user-btn')?.addEventListener('click', () => showUserForm(null, roles, locations, users, mileageLocations));
 	$$('.sp-edit-user-btn', wrap).forEach(btn => {
 		btn.addEventListener('click', () => {
 			const uid = btn.dataset.userId;
 			const user = users.find(u => String(u.user_id) === uid);
-			showUserForm(user, roles, locations, users);
+			showUserForm(user, roles, locations, users, mileageLocations);
 		});
 	});
 }
 
-function showUserForm(user, roles, locations, allUsers) {
+function showUserForm(user, roles, locations, allUsers, mileageLocations = []) {
 	const wrap = $('#sp-user-form-wrap');
 	if (!wrap) return;
 	wrap.hidden = false;
@@ -1356,10 +1425,16 @@ function showUserForm(user, roles, locations, allUsers) {
 
 	html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">';
 	html += `<div class="sp-form-group"><label>Role</label><select name="role_id" class="sp-select" required>${roleOptions}</select></div>`;
-	html += `<div class="sp-form-group"><label>Location</label><select name="location_id" class="sp-select">${locOptions}</select></div>`;
+	html += `<div class="sp-form-group"><label>Location <span class="unique sp-text-secondary" style="font-weight:400;">(also the mileage home base)</span></label><select name="location_id" class="sp-select">${locOptions}</select></div>`;
 	html += '</div>';
 
 	html += `<div class="sp-form-group"><label>Supervisor</label><select name="supervisor_id" class="sp-select">${supervisorOptions}</select></div>`;
+
+	// Work-from-home only: shown when there's no store Location. Becomes the mileage home base.
+	const privHome = (user && parseInt(user.home_is_private)) ? (user.home_address || '') : '';
+	const hasLocation = user && parseInt(user.location_id) > 0;
+	html += `<div class="sp-form-group" id="sp-user-privhome-group"${hasLocation ? ' style="display:none;"' : ''}><label>Home address <span class="unique sp-text-secondary" style="font-weight:400;">(work-from-home — used as the mileage start/end, hidden from other drivers)</span></label>`;
+	html += `<input type="text" name="home_private_address" class="sp-input" placeholder="e.g. 123 Maple St, Frisco, TX 75034" value="${esc(privHome)}"></div>`;
 
 	if (isEdit) {
 		html += '<div class="sp-form-group"><label>New Password</label>';
@@ -1381,6 +1456,13 @@ function showUserForm(user, roles, locations, allUsers) {
 
 	$$('.sp-user-form-cancel', wrap).forEach(btn => {
 		btn.addEventListener('click', () => { wrap.hidden = true; wrap.innerHTML = ''; });
+	});
+
+	// Show the private home-address field only when there's no store Location.
+	const locSel = wrap.querySelector('select[name="location_id"]');
+	const privGroup = wrap.querySelector('#sp-user-privhome-group');
+	locSel?.addEventListener('change', () => {
+		if (privGroup) privGroup.style.display = (parseInt(locSel.value) > 0) ? 'none' : '';
 	});
 
 	$('#sp-user-form')?.addEventListener('submit', async (e) => {
@@ -2311,6 +2393,22 @@ function calcHeaderValue(calc, dateStr) {
 
 let mileageLocations = [];
 let mileageRate = 0.67;
+let mileageHomeId = 0; // this driver's home-base location id (start/end bookend), 0 if unset
+let mileagePurposes = []; // editable library of common business purposes (datalist source)
+const MILEAGE_CATEGORIES = ['Restaurant', 'Office', 'Vendor', 'Supplier', 'Bank', 'Client', 'Other'];
+
+// Parse a location's pinned_purposes (stored as a JSON string) into an array.
+function locationPinnedPurposes(loc) {
+	if (!loc || !loc.pinned_purposes) return [];
+	try { const a = JSON.parse(loc.pinned_purposes); return Array.isArray(a) ? a : []; }
+	catch (e) { return []; }
+}
+
+// Current state of the "Return home" toggle; defaults on, matching the prototype.
+function getReturnHome() {
+	const cb = $('#sp-mileage-return-home');
+	return cb ? cb.checked : true;
+}
 
 function initMileage() {
 	const panel = $('#sp-panel-mileage');
@@ -2319,6 +2417,8 @@ function initMileage() {
 	$('#sp-mileage-add-btn')?.addEventListener('click', () => showMileageForm());
 	$('#sp-mileage-print-btn')?.addEventListener('click', () => printMileageLog());
 	$('#sp-mileage-email-btn')?.addEventListener('click', () => emailMileageLog());
+	$('#sp-mileage-pdf-btn')?.addEventListener('click', () => exportMileagePDF());
+	$('#sp-mileage-csv-btn')?.addEventListener('click', () => exportMileageCSV());
 	$('#sp-mileage-filter-clear')?.addEventListener('click', () => {
 		$('#sp-mileage-filter-start').value = '';
 		$('#sp-mileage-filter-end').value = '';
@@ -2327,7 +2427,157 @@ function initMileage() {
 	$('#sp-mileage-filter-start')?.addEventListener('change', loadMileageEntries);
 	$('#sp-mileage-filter-end')?.addEventListener('change', loadMileageEntries);
 
+	$$('.sp-mileage-range', panel).forEach(b => b.addEventListener('click', () => setMileageRange(b.dataset.range)));
+	populateMileageMonths();
+	$('#sp-mileage-month-picker')?.addEventListener('change', (e) => {
+		const v = e.target.value;
+		if (!v) return;
+		const [y, m] = v.split('-').map(Number);
+		setMileageFilter(`${y}-${mPad2(m)}-01`, mMonthEnd(y, m));
+	});
+
 	loadMileageLocations().then(() => loadMileageEntries());
+}
+
+/* ---- Reusable Google Maps loader (shared by the mileage map and, later, toll maps) ----
+   Loads the Maps JS API exactly once with the geometry library (needed for decoding toll
+   route polylines down the line). Resolves with google.maps; rejects if no key/load fails. */
+let _spGmapsPromise = null;
+function ensureGoogleMaps() {
+	if (window.google && window.google.maps) return Promise.resolve(window.google.maps);
+	if (_spGmapsPromise) return _spGmapsPromise;
+	const key = (typeof D !== 'undefined' && D.mapsKey) ? D.mapsKey : '';
+	if (!key) return Promise.reject(new Error('no-maps-key'));
+	_spGmapsPromise = new Promise((resolve, reject) => {
+		window.__spGmapsReady = () => resolve(window.google.maps);
+		const s = document.createElement('script');
+		s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=geometry&callback=__spGmapsReady`;
+		s.async = true; s.defer = true;
+		s.onerror = () => reject(new Error('maps-load-failed'));
+		document.head.appendChild(s);
+	});
+	return _spGmapsPromise;
+}
+
+let _spMileageMap = null, _spMileageMarkers = [], _spMileageInfo = null, _spMileageLocs = [], _spMileageHomeId = 0;
+
+// Marker color by role: home (navy), restaurant/office (blue), vendor (amber), else grey.
+function mileageMapColor(loc) {
+	if (parseInt(loc.id) === _spMileageHomeId) return '#15243a';
+	const t = (loc.location_type || '').toLowerCase();
+	const c = (loc.category || '').toLowerCase();
+	if (t === 'restaurant' || c === 'restaurant' || c === 'office') return '#3b82f6';
+	if (t === 'vendor' || c === 'vendor' || c === 'supplier') return '#f59e0b';
+	return '#94a3b8';
+}
+
+async function loadMileageMap() {
+	const canvas = $('#sp-mileage-map-canvas');
+	const notice = $('#sp-mileage-map-notice');
+	if (!canvas) return;
+
+	// Pull locations (reuses the picker endpoint — already privacy-filtered, now incl. lat/lng).
+	try {
+		const res = await spAjax('site_pulse_get_mileage_locations', {});
+		if (res.success) {
+			_spMileageLocs = (res.data.locations || []).filter(l => l.lat && l.lng);
+			_spMileageHomeId = parseInt(res.data.home_location_id) || 0;
+		}
+	} catch (e) {}
+
+	let maps;
+	try { maps = await ensureGoogleMaps(); }
+	catch (e) { if (notice) notice.hidden = false; canvas.style.display = 'none'; return; }
+	if (notice) notice.hidden = true;
+	canvas.style.display = '';
+
+	if (!_spMileageMap) {
+		_spMileageMap = new maps.Map(canvas, {
+			center: { lat: 33.15, lng: -96.82 }, zoom: 10,
+			mapTypeControl: false, streetViewControl: false, fullscreenControl: false,
+		});
+		_spMileageInfo = new maps.InfoWindow();
+	} else {
+		maps.event.trigger(_spMileageMap, 'resize'); // re-entering the panel
+	}
+
+	populateMileageMapCategories();
+	renderMileageMapMarkers(maps, $('#sp-mileage-map-category')?.value || '');
+
+	// Wire toolbar once (loadMileageMap re-runs on every panel re-entry).
+	if (!canvas.dataset.wired) {
+		canvas.dataset.wired = '1';
+		$('#sp-mileage-map-category')?.addEventListener('change', (e) => renderMileageMapMarkers(maps, e.target.value));
+		$('#sp-mileage-map-fit')?.addEventListener('click', () => renderMileageMapMarkers(maps, $('#sp-mileage-map-category')?.value || ''));
+	}
+}
+
+function populateMileageMapCategories() {
+	const sel = $('#sp-mileage-map-category');
+	if (!sel || sel.dataset.filled) return;
+	const cats = [...new Set(_spMileageLocs.map(l => l.category).filter(Boolean))].sort();
+	sel.innerHTML = '<option value="">All categories</option>' + cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+	sel.dataset.filled = '1';
+}
+
+function renderMileageMapMarkers(maps, filterCat = '') {
+	_spMileageMarkers.forEach(m => m.setMap(null));
+	_spMileageMarkers = [];
+	const bounds = new maps.LatLngBounds();
+	_spMileageLocs.forEach(l => {
+		if (filterCat && (l.category || '') !== filterCat) return;
+		const pos = { lat: parseFloat(l.lat), lng: parseFloat(l.lng) };
+		const marker = new maps.Marker({
+			position: pos, map: _spMileageMap, title: l.name,
+			icon: { path: maps.SymbolPath.CIRCLE, scale: 7, fillColor: mileageMapColor(l), fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
+		});
+		marker.addListener('click', () => {
+			const cat = l.category ? `<div class="sp-map-info-cat">${esc(l.category)}</div>` : '';
+			_spMileageInfo.setContent(`<div class="sp-map-info"><strong>${esc(l.name)}</strong>${cat}<div>${esc(l.address || '')}</div></div>`);
+			_spMileageInfo.open(_spMileageMap, marker);
+		});
+		_spMileageMarkers.push(marker);
+		bounds.extend(pos);
+	});
+	if (_spMileageMarkers.length) _spMileageMap.fitBounds(bounds);
+}
+
+function mPad2(n) { return String(n).padStart(2, '0'); }
+function mIso(d) { return `${d.getFullYear()}-${mPad2(d.getMonth() + 1)}-${mPad2(d.getDate())}`; }
+function mMonthEnd(y, m) { return `${y}-${mPad2(m)}-${mPad2(new Date(y, m, 0).getDate())}`; }
+
+function setMileageFilter(start, end) {
+	const s = $('#sp-mileage-filter-start'), e = $('#sp-mileage-filter-end');
+	if (s) s.value = start || '';
+	if (e) e.value = end || '';
+	loadMileageEntries();
+}
+
+// Quick date ranges for the report (period selector + presets, mirroring the prototype).
+function setMileageRange(range) {
+	const now = new Date(), y = now.getFullYear(), m = now.getMonth() + 1;
+	let start = '', end = mIso(now);
+	if (range === 'month') { start = `${y}-${mPad2(m)}-01`; end = mMonthEnd(y, m); }
+	else if (range === 'quarter') { const qs = Math.floor((m - 1) / 3) * 3 + 1; start = `${y}-${mPad2(qs)}-01`; end = mMonthEnd(y, qs + 2); }
+	else if (range === 'ytd') { start = `${y}-01-01`; }
+	else if (range === 'last30') { const d = new Date(now); d.setDate(d.getDate() - 30); start = mIso(d); }
+	else if (range === 'last90') { const d = new Date(now); d.setDate(d.getDate() - 90); start = mIso(d); }
+	const mp = $('#sp-mileage-month-picker'); if (mp) mp.value = '';
+	setMileageFilter(start, end);
+}
+
+function populateMileageMonths() {
+	const sel = $('#sp-mileage-month-picker');
+	if (!sel) return;
+	const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+	const now = new Date();
+	let opts = '<option value="">Jump to month…</option>';
+	for (let i = 0; i < 24; i++) {
+		const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+		const y = d.getFullYear(), m = d.getMonth() + 1;
+		opts += `<option value="${y}-${mPad2(m)}">${MONTHS[m - 1]} ${y}</option>`;
+	}
+	sel.innerHTML = opts;
 }
 
 async function loadMileageLocations() {
@@ -2336,6 +2586,8 @@ async function loadMileageLocations() {
 		if (res.success) {
 			mileageLocations = res.data.locations || [];
 			mileageRate = parseFloat(res.data.rate) || 0.67;
+			mileageHomeId = parseInt(res.data.home_location_id) || 0;
+			mileagePurposes = res.data.purposes || [];
 		}
 	} catch (e) { mileageLocations = []; }
 }
@@ -2367,7 +2619,7 @@ async function loadMileageEntries() {
 		const pendingCount = entries.reduce((s, e) => s + (parseInt(e.pending_legs) > 0 ? 1 : 0), 0);
 
 		summary.innerHTML = `
-			<div class="sp-mileage-summary-grid">
+			<div class="sp-meta-bar">
 				<div><div class="sp-card-label">Entries</div><div class="sp-card-value">${entries.length}</div></div>
 				<div><div class="sp-card-label">Total Miles</div><div class="sp-card-value">${totalMiles.toFixed(2)}</div></div>
 				<div><div class="sp-card-label">Reimbursement</div><div class="sp-card-value">$${totalAmt.toFixed(2)}</div></div>
@@ -2376,21 +2628,25 @@ async function loadMileageEntries() {
 			</div>
 		`;
 
-		let html = '<table class="sp-mileage-table"><thead><tr><th>Date</th><th>Stops</th><th>Miles</th><th>$</th><th>Status</th><th></th></tr></thead><tbody>';
+		const ICON_EDIT = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+		const ICON_DELETE = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
+
+		let html = '<div class="sp-table-card"><table class="sp-mileage-table"><thead><tr><th>Date</th><th>Route</th><th>Miles</th><th>$</th><th>Status</th></tr></thead><tbody>';
 		entries.forEach(e => {
 			const isPending = parseInt(e.pending_legs) > 0;
 			html += `<tr data-entry-id="${e.id}">`;
-			html += `<td>${formatDate(e.entry_date)}</td>`;
+			html += `<td><div class="sp-mileage-date">${formatDate(e.entry_date)}</div>`;
+			html += `<div class="sp-mileage-row-actions">`;
+			html += `<button type="button" class="unique sp-icon-btn sp-mileage-edit-btn" data-id="${e.id}" title="Edit" aria-label="Edit">${ICON_EDIT}</button>`;
+			html += `<button type="button" class="unique sp-icon-btn sp-mileage-delete-btn" data-id="${e.id}" title="Delete" aria-label="Delete">${ICON_DELETE}</button>`;
+			html += `</div></td>`;
 			html += `<td class="sp-mileage-path-cell"><span class="unique sp-mileage-path-loading">Loading…</span></td>`;
 			html += `<td>${parseFloat(e.total_miles).toFixed(2)}</td>`;
 			html += `<td>$${parseFloat(e.reimbursement_amount).toFixed(2)}</td>`;
 			html += `<td>${isPending ? '<span class="unique sp-status-badge sp-status-pending">Pending</span>' : '<span class="unique sp-status-badge sp-status-submitted">Final</span>'}</td>`;
-			html += `<td class="sp-mileage-row-actions">`;
-			html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-edit-btn" data-id="${e.id}">Edit</button>`;
-			html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-delete-btn" data-id="${e.id}">Delete</button>`;
-			html += `</td></tr>`;
+			html += `</tr>`;
 		});
-		html += '</tbody></table>';
+		html += '</tbody></table></div>';
 		list.innerHTML = html;
 		markUniqueSpans(list);
 
@@ -2403,9 +2659,13 @@ async function loadMileageEntries() {
 				const cell = list.querySelector(`tr[data-entry-id="${e.id}"] .sp-mileage-path-cell`);
 				if (!cell) return;
 				if (legs.length === 0) { cell.textContent = '—'; return; }
-				let path = esc(legs[0].from_name || '?');
-				legs.forEach(leg => { path += ' → ' + esc(leg.to_name || '?'); });
-				cell.innerHTML = path;
+				// One stop per line; per-stop purpose inline in italic (matches the PDF).
+				const nodes = [{ name: legs[0].from_name || '?', purpose: '' }];
+				legs.forEach(leg => nodes.push({ name: leg.to_name || '?', purpose: (leg.purpose || '').trim() }));
+				cell.innerHTML = nodes.map(n => {
+					const p = n.purpose ? ` <em class="sp-route-purpose">— ${esc(n.purpose)}</em>` : '';
+					return `<div class="sp-mileage-route-line">${esc(n.name)}${p}</div>`;
+				}).join('');
 			} catch (err) {}
 		});
 
@@ -2430,22 +2690,34 @@ async function showMileageForm(entryId = 0) {
 	await loadMileageLocations();
 
 	let entry = null;
-	let stops = [];
+	let stops = [];               // editable MIDDLE stops only
+	let purposes = [];            // per-stop business purpose, parallel to stops
+	let autoReturn = true;
 	if (entryId) {
 		const res = await spAjax('site_pulse_get_mileage_entry', { entry_id: entryId });
 		if (res.success) {
 			entry = res.data.entry;
+			autoReturn = entry ? !!parseInt(entry.auto_return_home) : true;
 			const legs = res.data.legs || [];
+			// Rebuild the full sequence + per-node purpose (purpose = arriving at that node).
+			let seq = [], seqP = [];
 			if (legs.length > 0) {
-				stops.push(parseInt(legs[0].from_location_id));
-				legs.forEach(l => stops.push(parseInt(l.to_location_id)));
+				seq.push(parseInt(legs[0].from_location_id)); seqP.push('');
+				legs.forEach(l => { seq.push(parseInt(l.to_location_id)); seqP.push(l.purpose || ''); });
 			}
+			// Stored legs are [home, ...middle, home?]. Strip the home bookends so the
+			// form shows only the editable middle; the home start/end are re-applied by render.
+			if (mileageHomeId) {
+				if (seq.length && seq[0] === mileageHomeId) { seq = seq.slice(1); seqP = seqP.slice(1); }
+				if (seq.length && seq[seq.length - 1] === mileageHomeId) { seq = seq.slice(0, -1); seqP = seqP.slice(0, -1); }
+			}
+			stops = seq; purposes = seqP;
 		}
 	}
-	if (stops.length < 2) stops = [0, 0];
+	const minMiddle = mileageHomeId ? 1 : 2;
+	while (stops.length < minMiddle) { stops.push(0); purposes.push(''); }
 
-	list.classList.add('sp-hidden');
-	if (summary) summary.classList.add('sp-hidden');
+	setMileageListChrome(true); // hide list + report controls while the form is open
 	wrap.hidden = false;
 
 	const today = new Date().toISOString().split('T')[0];
@@ -2457,49 +2729,68 @@ async function showMileageForm(entryId = 0) {
 	html += '</div>';
 	html += '<form id="sp-mileage-form">';
 	html += `<input type="hidden" name="entry_id" value="${entryId || ''}">`;
+	html += '<div class="sp-mileage-form-top">';
 	html += '<div class="sp-form-group">';
 	html += `<label>Date</label><input type="date" name="entry_date" class="sp-input" value="${date}" required>`;
 	html += '</div>';
 	html += '<div class="sp-form-group">';
 	html += '<label>Route</label>';
+	html += '<div class="sp-quickentry">';
+	html += '<input type="text" id="sp-mileage-quick" class="sp-input" placeholder="Quick add — type or speak stops, e.g. Carrollton, Garland, Burleson">';
+	html += '<button type="button" class="unique sp-icon-btn sp-quickentry-mic" id="sp-mileage-mic" title="Speak stops" aria-label="Speak stops"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v4M8 23h8"/></svg></button>';
+	html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-quick-fill">Fill</button>';
+	html += '</div>';
+	html += '<div class="sp-quickentry-note" id="sp-mileage-quick-note" hidden></div>';
+	html += '</div>';
+	html += '</div>';
 	html += '<div class="sp-mileage-stops" id="sp-mileage-stops"></div>';
-	html += '<div class="sp-mileage-stop-actions">';
-	html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-add-stop">+ Add Stop</button>';
-	html += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-add-loc">+ Add New Location</button>';
-	html += '</div>';
 	html += '<div class="sp-mileage-totals" id="sp-mileage-totals"></div>';
-	html += '</div>';
 	html += '<div class="sp-form-group">';
-	html += `<label>Notes (optional)</label><textarea name="notes" class="sp-textarea" rows="2">${esc(entry?.notes || '')}</textarea>`;
+	html += '<label>Notes / summary <button type="button" class="unique sp-btn sp-btn-ghost sp-btn-tiny" id="sp-mileage-autosummary">✨ Auto-write</button></label>';
+	html += `<textarea name="notes" class="sp-textarea" rows="2">${esc(entry?.notes || '')}</textarea>`;
 	html += '</div>';
 	html += '<div class="sp-report-form-actions">';
-	html += '<button type="submit" class="unique sp-btn sp-btn-primary">Save</button>';
-	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-back-btn">Cancel</button>';
+	html += '<button type="submit" class="unique sp-btn sp-btn-primary">Save Day</button>';
+	html += '<button type="button" class="unique sp-btn sp-btn-secondary sp-mileage-back-btn">Cancel</button>';
 	html += '</div>';
 	html += '</form>';
 
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
 
-	renderMileageStops(stops);
+	renderMileageStops(stops, autoReturn, purposes);
 
 	$$('.sp-mileage-back-btn', wrap).forEach(b => b.addEventListener('click', () => hideMileageForm()));
-	$('#sp-mileage-add-stop', wrap)?.addEventListener('click', () => {
-		const current = readMileageStops();
-		current.push(0);
-		renderMileageStops(current);
+	// Add Stop / Add Location buttons live inside the route list (above END) and are
+	// wired in renderMileageStops, so they survive re-renders.
+	$('#sp-mileage-quick-fill', wrap)?.addEventListener('click', () => applyMileageQuickEntry());
+	$('#sp-mileage-quick', wrap)?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); applyMileageQuickEntry(); } });
+	$('#sp-mileage-mic', wrap)?.addEventListener('click', () => startMileageVoice());
+	$('#sp-mileage-autosummary', wrap)?.addEventListener('click', () => {
+		const summary = buildMileageSummary();
+		if (!summary) { alert('Pick at least one stop first.'); return; }
+		const ta = wrap.querySelector('textarea[name="notes"]');
+		if (ta) ta.value = summary;
 	});
-	$('#sp-mileage-add-loc', wrap)?.addEventListener('click', () => showAddLocationModal());
 
 	$('#sp-mileage-form', wrap)?.addEventListener('submit', async (e) => {
 		e.preventDefault();
-		const stopsArr = readMileageStops().filter(v => v > 0);
-		if (stopsArr.length < 2) { alert('Please pick at least two stops.'); return; }
+		// Read stops + purposes together so they stay aligned after empty picks are dropped.
+		const allStops = readMileageStops(), allPurposes = readMileageStopPurposes();
+		const stopsArr = [], purposesArr = [];
+		allStops.forEach((sid, i) => { if (sid > 0) { stopsArr.push(sid); purposesArr.push(allPurposes[i] || ''); } });
+		const min = mileageHomeId ? 1 : 2;
+		if (stopsArr.length < min) {
+			alert(mileageHomeId ? 'Please add at least one stop.' : 'Please pick at least two stops.');
+			return;
+		}
 		const data = {
 			entry_id: entryId || '',
 			entry_date: e.target.entry_date.value,
 			notes: e.target.notes.value,
 			stops: stopsArr,
+			purposes: purposesArr,
+			auto_return_home: mileageHomeId ? 1 : 0, // always a round trip when a home base exists
 		};
 		const r = await spAjax('site_pulse_save_mileage_entry', data);
 		if (r.success) { hideMileageForm(); loadMileageEntries(); }
@@ -2509,50 +2800,205 @@ async function showMileageForm(entryId = 0) {
 
 function hideMileageForm() {
 	const wrap = $('#sp-mileage-form-wrap');
-	const list = $('#sp-mileage-list');
-	const summary = $('#sp-mileage-summary');
 	if (wrap) { wrap.hidden = true; wrap.innerHTML = ''; }
-	list?.classList.remove('sp-hidden');
-	summary?.classList.remove('sp-hidden');
+	setMileageListChrome(false); // restore the list + report controls
 }
 
-function renderMileageStops(stops) {
+// Toggle the list-view chrome (summary, quick-ranges, date filters, action buttons, list)
+// so the Add/Edit-a-Day form shows on its own, without the report controls bleeding in.
+function setMileageListChrome(hidden) {
+	const panel = $('#sp-panel-mileage');
+	if (!panel) return;
+	['.sp-mileage-actions', '#sp-mileage-toolbar', '#sp-mileage-summary', '#sp-mileage-list']
+		.forEach(sel => panel.querySelector(sel)?.classList.toggle('sp-hidden', hidden));
+}
+
+function renderMileageStops(stops, autoReturn = true, purposes = []) {
 	const wrap = $('#sp-mileage-stops');
 	if (!wrap) return;
+	const minMiddle = mileageHomeId ? 1 : 2;
+	const homeLoc = mileageHomeId ? mileageLocations.find(l => parseInt(l.id) === mileageHomeId) : null;
+	const homeName = homeLoc ? homeLoc.name : 'Home';
 	let html = '';
+
+	// Shared datalist of common business purposes (free text still allowed).
+	html += '<datalist id="sp-mileage-purpose-list">';
+	mileagePurposes.forEach(p => { html += `<option value="${esc(p)}">`; });
+	html += '</datalist>';
+
+	// Locked round-trip START bookend — Home, when a home base is configured.
+	if (mileageHomeId) {
+		html += '<div class="sp-mileage-stop sp-mileage-stop-fixed">';
+		html += '<span class="unique sp-mileage-bookend-label">START</span>';
+		html += `<div class="sp-mileage-stop-home">${esc(homeName)}</div>`;
+		html += '</div>';
+	} else {
+		html += '<div class="sp-mileage-home-hint unique">No home base set for this driver, so the day isn\'t auto-bookended with Home. Set one in <strong>Users → Home Base</strong> to start &amp; end each day at home automatically.</div>';
+	}
+
+	// Editable middle stops: location select + business purpose.
 	stops.forEach((stopId, idx) => {
-		html += '<div class="sp-mileage-stop">';
+		const purpose = purposes[idx] || '';
+		html += '<div class="sp-mileage-stop sp-mileage-stop-row">';
 		html += `<span class="unique sp-mileage-stop-num">${idx + 1}.</span>`;
 		html += `<select class="sp-select sp-mileage-stop-select">`;
 		html += '<option value="0">Choose a location…</option>';
 		mileageLocations.forEach(l => {
+			if (parseInt(l.id) === mileageHomeId) return; // home is a bookend, never a mid-stop
 			const sel = parseInt(l.id) === stopId ? ' selected' : '';
 			const label = l.status === 'pending' ? `${l.name} (pending)` : l.name;
 			html += `<option value="${l.id}"${sel}>${esc(label)}</option>`;
 		});
 		html += '</select>';
-		if (stops.length > 2) {
-			html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-stop-remove" data-idx="${idx}" aria-label="Remove stop">&times;</button>`;
+		html += `<input type="text" class="sp-input sp-mileage-stop-purpose" list="sp-mileage-purpose-list" placeholder="Business purpose" value="${esc(purpose)}">`;
+		if (stops.length > minMiddle) {
+			html += `<button type="button" class="unique sp-mileage-stop-remove" data-idx="${idx}" aria-label="Remove stop" title="Remove stop">&times;</button>`;
 		}
 		html += '</div>';
 	});
+
+	// Add buttons sit just above END, so the next-stop controls stay next to the active stop.
+	html += '<div class="sp-mileage-stop-actions">';
+	html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-add-stop">+ Add Stop</button>';
+	html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-add-loc">+ Add Destination</button>';
+	html += '</div>';
+
+	// Locked round-trip END bookend — always returns to Home.
+	if (mileageHomeId) {
+		html += '<div class="sp-mileage-stop sp-mileage-stop-fixed">';
+		html += '<span class="unique sp-mileage-bookend-label">END</span>';
+		html += `<div class="sp-mileage-stop-home">${esc(homeName)}</div>`;
+		html += '</div>';
+	}
+
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
 
-	$$('.sp-mileage-stop-select', wrap).forEach(s => s.addEventListener('change', () => updateMileageTotals()));
-	$$('.sp-mileage-stop-remove', wrap).forEach(b => b.addEventListener('click', () => {
-		const current = readMileageStops();
-		current.splice(parseInt(b.dataset.idx), 1);
-		if (current.length < 2) current.push(0);
-		renderMileageStops(current);
+	$$('.sp-mileage-stop-select', wrap).forEach(s => s.addEventListener('change', () => {
+		// When a destination with pinned purposes is picked, pre-fill the (empty) purpose.
+		const row = s.closest('.sp-mileage-stop-row');
+		const purposeInput = row?.querySelector('.sp-mileage-stop-purpose');
+		if (purposeInput && !purposeInput.value.trim()) {
+			const loc = mileageLocations.find(l => parseInt(l.id) === parseInt(s.value));
+			const pinned = locationPinnedPurposes(loc);
+			if (pinned.length) purposeInput.value = pinned[0];
+		}
 		updateMileageTotals();
 	}));
+	$$('.sp-mileage-stop-remove', wrap).forEach(b => b.addEventListener('click', () => {
+		const s = readMileageStops(), p = readMileageStopPurposes();
+		const i = parseInt(b.dataset.idx);
+		s.splice(i, 1); p.splice(i, 1);
+		while (s.length < minMiddle) { s.push(0); p.push(''); }
+		renderMileageStops(s, getReturnHome(), p);
+		updateMileageTotals();
+	}));
+	$('#sp-mileage-add-stop', wrap)?.addEventListener('click', () => {
+		const s = readMileageStops(), p = readMileageStopPurposes();
+		s.push(0); p.push('');
+		renderMileageStops(s, getReturnHome(), p);
+	});
+	$('#sp-mileage-add-loc', wrap)?.addEventListener('click', () => showAddLocationModal());
 
 	updateMileageTotals();
 }
 
 function readMileageStops() {
 	return $$('.sp-mileage-stop-select').map(s => parseInt(s.value) || 0);
+}
+
+function readMileageStopPurposes() {
+	return $$('.sp-mileage-stop-purpose').map(i => i.value.trim());
+}
+
+// ---- Quick entry (typed/spoken shorthand → fills the route, then user reviews & saves) ----
+
+function mileageNorm(s) {
+	return (s || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// Best matching approved location id for a shorthand token (e.g. "carrollton"), or 0.
+function quickMatchLocation(token) {
+	const words = mileageNorm(token).split(' ').filter(Boolean);
+	if (!words.length) return 0;
+	const cands = mileageLocations.filter(l => {
+		if (parseInt(l.id) === mileageHomeId) return false; // home is a bookend, not a stop
+		const n = mileageNorm(l.name);
+		return words.every(w => n.includes(w));
+	});
+	if (!cands.length) return 0;
+	cands.sort((a, b) => (a.name || '').length - (b.name || '').length); // most specific match
+	return parseInt(cands[0].id);
+}
+
+// Parse the quick-entry text into stops and render them into the form for review.
+function applyMileageQuickEntry() {
+	const inp = $('#sp-mileage-quick');
+	const note = $('#sp-mileage-quick-note');
+	if (!inp) return;
+	const raw = inp.value.trim();
+	if (!raw) return;
+	const tokens = raw.split(/[,\n;]+/).map(s => s.trim()).filter(Boolean);
+	const ids = [], purposes = [], unmatched = [];
+	tokens.forEach(t => {
+		const id = quickMatchLocation(t);
+		if (id) {
+			ids.push(id);
+			const pp = locationPinnedPurposes(mileageLocations.find(l => parseInt(l.id) === id));
+			purposes.push(pp.length ? pp[0] : '');
+		} else {
+			unmatched.push(t);
+		}
+	});
+	if (!ids.length) {
+		if (note) { note.hidden = false; note.textContent = `Couldn't match any stops. Try names like "Carrollton" or "Garland".`; }
+		return;
+	}
+	const minMiddle = mileageHomeId ? 1 : 2;
+	while (ids.length < minMiddle) { ids.push(0); purposes.push(''); }
+	renderMileageStops(ids, getReturnHome(), purposes);
+	if (note) {
+		if (unmatched.length) { note.hidden = false; note.textContent = `Added ${ids.filter(Boolean).length}. Couldn't match: ${unmatched.join(', ')} — add those manually below.`; }
+		else { note.hidden = false; note.textContent = `Added ${ids.length} stop${ids.length !== 1 ? 's' : ''}. Review and Save.`; }
+	}
+}
+
+// Speech-to-text into the quick-entry box (Web Speech API; Chrome/Edge/Safari).
+function startMileageVoice() {
+	const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+	if (!SR) { alert('Voice input isn\'t supported in this browser — try Chrome, or type the stops.'); return; }
+	const mic = $('#sp-mileage-mic');
+	const inp = $('#sp-mileage-quick');
+	const rec = new SR();
+	rec.lang = 'en-US';
+	rec.interimResults = false;
+	rec.maxAlternatives = 1;
+	rec.onresult = (e) => {
+		const text = Array.from(e.results).map(r => r[0].transcript).join(' ').trim();
+		if (inp && text) inp.value = inp.value ? `${inp.value}, ${text}` : text;
+	};
+	rec.onerror = () => {};
+	rec.onend = () => mic?.classList.remove('sp-mic-active');
+	mic?.classList.add('sp-mic-active');
+	try { rec.start(); } catch (e) { mic?.classList.remove('sp-mic-active'); }
+}
+
+// Auto-writes a defensible trip summary from the current stops + their purposes,
+// e.g. "Babe's Arlington (Manager meeting), Babe's Garland (Store visit)". ~200 char cap.
+function buildMileageSummary() {
+	const stops = readMileageStops(), purposes = readMileageStopPurposes();
+	const parts = [];
+	stops.forEach((id, i) => {
+		if (!id) return;
+		const loc = mileageLocations.find(l => parseInt(l.id) === parseInt(id));
+		if (!loc) return;
+		const p = (purposes[i] || '').trim();
+		parts.push(p ? `${loc.name} (${p})` : loc.name);
+	});
+	if (!parts.length) return '';
+	let s = parts.join(', ');
+	if (s.length > 200) s = s.slice(0, 197) + '…';
+	return s;
 }
 
 function findMileageDistance(a, b) {
@@ -2567,7 +3013,7 @@ function updateMileageTotals() {
 	if (!totals) return;
 	const stops = readMileageStops();
 	const valid = stops.filter(v => v > 0);
-	if (valid.length < 2) { totals.innerHTML = ''; return; }
+	if (valid.length < (mileageHomeId ? 1 : 2)) { totals.innerHTML = ''; return; }
 
 	let pendingLocs = 0;
 	stops.forEach(id => {
@@ -2594,7 +3040,12 @@ function showAddLocationModal() {
 			<p class="sp-text-secondary">It'll be sent for admin approval. Once approved, the distance will be calculated automatically.</p>
 			<div class="sp-form-group"><label>Name</label><input type="text" id="sp-loc-name" class="sp-input" placeholder="Big D Mechanical"></div>
 			<div class="sp-form-group"><label>Address</label><input type="text" id="sp-loc-address" class="sp-input" placeholder="123 Main St, City, TX 75001"></div>
-			<div class="sp-form-group"><label>Type</label><select id="sp-loc-type" class="sp-select"><option value="vendor">Vendor</option><option value="other">Other</option></select></div>
+			<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+				<div class="sp-form-group"><label>Type</label><select id="sp-loc-type" class="sp-select"><option value="vendor">Vendor</option><option value="other">Other</option></select></div>
+				<div class="sp-form-group"><label>Category</label><select id="sp-loc-category" class="sp-select">${MILEAGE_CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('')}</select></div>
+			</div>
+			<div class="sp-form-group"><label>Business or personal</label><select id="sp-loc-business" class="sp-select"><option value="1">Business</option><option value="0">Personal</option></select></div>
+			<div class="sp-form-group"><label>Notes (optional)</label><textarea id="sp-loc-notes" class="sp-textarea" rows="2"></textarea></div>
 			<div class="sp-modal-actions">
 				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-loc-submit">Submit for Approval</button>
 				<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-loc-cancel">Cancel</button>
@@ -2611,20 +3062,79 @@ function showAddLocationModal() {
 		const name = modal.querySelector('#sp-loc-name').value.trim();
 		const address = modal.querySelector('#sp-loc-address').value.trim();
 		const type = modal.querySelector('#sp-loc-type').value;
+		const category = modal.querySelector('#sp-loc-category').value;
+		const is_business = modal.querySelector('#sp-loc-business').value;
+		const notes = modal.querySelector('#sp-loc-notes').value.trim();
 		if (!name || !address) { alert('Name and address required.'); return; }
-		const r = await spAjax('site_pulse_add_mileage_location', { name, address, location_type: type });
+		const r = await spAjax('site_pulse_add_mileage_location', { name, address, location_type: type, category, is_business, notes });
 		if (r.success) {
 			await loadMileageLocations();
-			const stops = readMileageStops();
+			const stops = readMileageStops(), purposes = readMileageStopPurposes();
 			// Auto-fill the first empty stop with the new location
 			const emptyIdx = stops.findIndex(v => !v);
 			if (emptyIdx >= 0) stops[emptyIdx] = parseInt(r.data.id);
-			else stops.push(parseInt(r.data.id));
-			renderMileageStops(stops);
+			else { stops.push(parseInt(r.data.id)); purposes.push(''); }
+			renderMileageStops(stops, getReturnHome(), purposes);
 			close();
 		} else {
 			alert(r.data?.message || 'Error.');
 		}
+	});
+}
+
+// Admin: edit an approved location's metadata (category, business/personal, active,
+// notes, and the pinned purposes that pre-fill a stop's purpose when this place is chosen).
+function showEditLocationModal(loc, onSaved) {
+	const existing = $('#sp-mileage-editloc-modal');
+	if (existing) existing.remove();
+
+	const catOptions = MILEAGE_CATEGORIES.map(c => `<option value="${c}"${(loc.category === c) ? ' selected' : ''}>${c}</option>`).join('');
+	const typeOptions = ['restaurant', 'vendor', 'other', 'home'].map(t => `<option value="${t}"${(loc.location_type === t) ? ' selected' : ''}>${t.charAt(0).toUpperCase() + t.slice(1)}</option>`).join('');
+	const pinned = locationPinnedPurposes(loc).join('\n');
+
+	const modal = document.createElement('div');
+	modal.id = 'sp-mileage-editloc-modal';
+	modal.className = 'sp-modal-backdrop';
+	modal.innerHTML = `
+		<div class="sp-modal">
+			<h3>Edit Location</h3>
+			<div class="sp-form-group"><label>Name</label><input type="text" id="sp-editloc-name" class="sp-input" value="${esc(loc.name || '')}"></div>
+			<div class="sp-form-group"><label>Address</label><input type="text" id="sp-editloc-address" class="sp-input" value="${esc(loc.address || '')}"></div>
+			<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+				<div class="sp-form-group"><label>Type</label><select id="sp-editloc-type" class="sp-select">${typeOptions}</select></div>
+				<div class="sp-form-group"><label>Category</label><select id="sp-editloc-category" class="sp-select">${catOptions}</select></div>
+				<div class="sp-form-group"><label>Business or personal</label><select id="sp-editloc-business" class="sp-select"><option value="1"${parseInt(loc.is_business) ? ' selected' : ''}>Business</option><option value="0"${!parseInt(loc.is_business) ? ' selected' : ''}>Personal</option></select></div>
+				<div class="sp-form-group"><label>Active</label><select id="sp-editloc-active" class="sp-select"><option value="1"${parseInt(loc.is_active) ? ' selected' : ''}>Active</option><option value="0"${!parseInt(loc.is_active) ? ' selected' : ''}>Inactive</option></select></div>
+			</div>
+			<div class="sp-form-group"><label>Notes</label><textarea id="sp-editloc-notes" class="sp-textarea" rows="2">${esc(loc.notes || '')}</textarea></div>
+			<div class="sp-form-group"><label>Pinned purposes <span class="unique sp-text-secondary" style="font-weight:400;">(one per line — first one pre-fills the purpose when this place is chosen)</span></label><textarea id="sp-editloc-pinned" class="sp-textarea" rows="3" placeholder="Store visit&#10;Manager meeting">${esc(pinned)}</textarea></div>
+			<div class="sp-modal-actions">
+				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-editloc-save">Save</button>
+				<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-editloc-cancel">Cancel</button>
+			</div>
+		</div>
+	`;
+	document.body.appendChild(modal);
+	markUniqueSpans(modal);
+
+	const close = () => modal.remove();
+	modal.querySelector('#sp-editloc-cancel').addEventListener('click', close);
+	modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+	modal.querySelector('#sp-editloc-save').addEventListener('click', async () => {
+		const pinnedArr = modal.querySelector('#sp-editloc-pinned').value.split('\n').map(s => s.trim()).filter(Boolean);
+		const r = await spAjax('site_pulse_admin_update_mileage_location', {
+			id: loc.id,
+			name: modal.querySelector('#sp-editloc-name').value.trim(),
+			address: modal.querySelector('#sp-editloc-address').value.trim(),
+			location_type: modal.querySelector('#sp-editloc-type').value,
+			category: modal.querySelector('#sp-editloc-category').value,
+			is_business: modal.querySelector('#sp-editloc-business').value,
+			is_active: modal.querySelector('#sp-editloc-active').value,
+			notes: modal.querySelector('#sp-editloc-notes').value.trim(),
+			pinned_purposes: pinnedArr,
+		});
+		if (r.success) { close(); if (onSaved) onSaved(); }
+		else alert(r.data?.message || 'Error saving.');
 	});
 }
 
@@ -2642,6 +3152,186 @@ async function emailMileageLog() {
 	const r = await spAjax('site_pulse_email_mileage_log', { to, start, end });
 	if (r.success) alert('Sent to ' + r.data.to);
 	else alert(r.data?.message || 'Error sending.');
+}
+
+// Pulls the report dataset for the current date filter (or all entries if unfiltered).
+const MILEAGE_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// Format a YYYY-MM-DD string (or Date) as "Jan 1, 2026" without timezone drift.
+function fmtReportDate(val) {
+	if (!val) return '';
+	if (val instanceof Date) return `${MILEAGE_MONTHS[val.getMonth()]} ${val.getDate()}, ${val.getFullYear()}`;
+	const m = String(val).match(/^(\d{4})-(\d{2})-(\d{2})/);
+	if (!m) return String(val);
+	return `${MILEAGE_MONTHS[parseInt(m[2], 10) - 1]} ${parseInt(m[3], 10)}, ${m[1]}`;
+}
+
+async function fetchMileageReport() {
+	const start = $('#sp-mileage-filter-start')?.value || '';
+	const end = $('#sp-mileage-filter-end')?.value || '';
+	const res = await spAjax('site_pulse_get_mileage_report', { start, end });
+	if (!res.success) { alert(res.data?.message || 'Could not build the report.'); return null; }
+	const label = (start || end) ? `${fmtReportDate(start) || '…'} to ${fmtReportDate(end) || '…'}` : 'All entries';
+	return { ...res.data, start, end, label };
+}
+
+function downloadBlob(filename, content, type) {
+	const blob = content instanceof Blob ? content : new Blob([content], { type });
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement('a');
+	a.href = url; a.download = filename;
+	document.body.appendChild(a); a.click();
+	document.body.removeChild(a);
+	setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Polished PDF report — adopts the layout from the original mileage prototype
+// (header, stat boxes, IRS-rate note, trip table with footer totals), driven by
+// server data and the Site Pulse navy palette.
+async function exportMileagePDF() {
+	if (typeof window.jspdf === 'undefined' || !window.jspdf.jsPDF) {
+		alert('PDF library is still loading — please try again in a moment.');
+		return;
+	}
+	const data = await fetchMileageReport();
+	if (!data) return;
+	const entries = data.entries || [];
+	if (!entries.length) { alert('No entries for this period.'); return; }
+
+	const rate = parseFloat(data.rate) || 0;
+	const totalMiles = entries.reduce((s, e) => s + parseFloat(e.total_miles || 0), 0);
+	const totalReimb = rate > 0 ? entries.reduce((s, e) => s + parseFloat(e.reimbursement_amount || 0), 0) : 0;
+
+	const { jsPDF } = window.jspdf;
+	const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
+	const NAVY = [21, 36, 58], SOFT = [230, 234, 241], GREY = [90, 90, 85], FAINT = [154, 154, 149];
+
+	// Header
+	doc.setFontSize(18); doc.setTextColor(...NAVY);
+	doc.text('Business Mileage Report', 40, 48);
+	doc.setFontSize(11); doc.setTextColor(...GREY);
+	let y = 66;
+	if (data.company_name || data.app_name) { doc.text(String(data.company_name || data.app_name), 40, y); y += 14; }
+	if (data.user_name) { doc.text(`Employee: ${data.user_name}`, 40, y); y += 14; }
+	doc.text(`Period: ${data.label}`, 40, y); y += 14;
+	doc.text(`Generated: ${fmtReportDate(new Date())}`, 40, y);
+
+	// Stat boxes
+	const boxY = y + 16, boxH = 52;
+	doc.setFillColor(...SOFT); doc.setDrawColor(216, 213, 204);
+	doc.roundedRect(40, boxY, 155, boxH, 4, 4, 'FD');
+	doc.roundedRect(208, boxY, 155, boxH, 4, 4, 'FD');
+	if (rate > 0) doc.roundedRect(376, boxY, 155, boxH, 4, 4, 'FD');
+	doc.setFontSize(8); doc.setTextColor(...GREY);
+	doc.text('TOTAL MILES', 48, boxY + 14); doc.text('LOG ENTRIES', 216, boxY + 14);
+	doc.setFontSize(22); doc.setTextColor(...NAVY);
+	doc.text(totalMiles.toFixed(1), 48, boxY + 39); doc.text(String(entries.length), 216, boxY + 39);
+	if (rate > 0) {
+		doc.setFontSize(8); doc.setTextColor(...GREY); doc.text('REIMBURSEMENT', 384, boxY + 14);
+		doc.setFontSize(22); doc.setTextColor(...NAVY); doc.text(`$${totalReimb.toFixed(2)}`, 384, boxY + 39);
+	}
+	doc.setFontSize(8); doc.setTextColor(...FAINT);
+	doc.text(`Mileage rate applied: $${rate > 0 ? rate.toFixed(3) : 'N/A'}/mile`, 40, boxY + boxH + 12);
+
+	// Per-entry route lines: [{name, purpose}]. Prefer the structured route_stops; if absent
+	// (e.g. older server), split the route string and drop the arrow so jsPDF never sees it.
+	const routeData = entries.map(e => {
+		if (e.route_stops && e.route_stops.length && typeof e.route_stops[0] === 'object') {
+			return e.route_stops.map(s => ({ name: String(s.name || '').trim(), purpose: String(s.purpose || '').trim() }));
+		}
+		const names = (e.route_stops && e.route_stops.length)
+			? e.route_stops
+			: String(e.route || '').split(/\s*(?:→|->|!')\s*/);
+		return names.map(n => ({ name: String(n).trim(), purpose: '' })).filter(l => l.name);
+	});
+
+	const ROUTE_FS = 7.5;
+	const lineFactor = (typeof doc.getLineHeightFactor === 'function') ? doc.getLineHeightFactor() : 1.15;
+
+	// Trip table — no Purpose column; purposes are drawn inline (italic) in the Route cell.
+	const cols = ['Date', 'Route', 'Miles', ...(rate > 0 ? ['Reimb.'] : [])];
+	const rows = entries.map((e, i) => {
+		// Layout text (for autoTable's row-height calc); actual draw is custom in didDrawCell.
+		const layout = routeData[i].map(l => l.purpose ? `${l.name} — ${l.purpose}` : l.name).join('\n') || '—';
+		return [
+			formatDate(e.entry_date),
+			layout,
+			parseFloat(e.total_miles || 0).toFixed(1),
+			...(rate > 0 ? [`$${parseFloat(e.reimbursement_amount || 0).toFixed(2)}`] : []),
+		];
+	});
+
+	const ROUTE_COL = 1;
+	doc.autoTable({
+		startY: boxY + boxH + 24,
+		head: [cols],
+		body: rows,
+		foot: [['', { content: 'Total', styles: { halign: 'right' } }, totalMiles.toFixed(1), ...(rate > 0 ? [`$${totalReimb.toFixed(2)}`] : [])]],
+		headStyles: { fillColor: NAVY, textColor: 255, fontSize: 9, fontStyle: 'bold' },
+		footStyles: { fillColor: SOFT, textColor: NAVY, fontStyle: 'bold', fontSize: 9 },
+		bodyStyles: { fontSize: 9, textColor: [26, 26, 24] },
+		alternateRowStyles: { fillColor: [248, 248, 245] },
+		columnStyles: {
+			0: { cellWidth: 65 },
+			1: { cellWidth: rate > 0 ? 361 : 419, fontSize: ROUTE_FS, overflow: 'visible' },
+			2: { cellWidth: 48, halign: 'right' },
+			...(rate > 0 ? { 3: { cellWidth: 58, halign: 'right' } } : {}),
+		},
+		margin: { left: 40, right: 40 },
+		// Suppress autoTable's own text for the Route cells so we can draw mixed normal/italic.
+		willDrawCell: (d) => {
+			if (d.section === 'body' && d.column.index === ROUTE_COL) d.cell.text = [];
+		},
+		// Custom-draw the Route: store name (normal) + purpose (italic, grey) per line.
+		didDrawCell: (d) => {
+			if (d.section !== 'body' || d.column.index !== ROUTE_COL) return;
+			const lines = routeData[d.row.index] || [];
+			if (!lines.length) return;
+			const x = d.cell.x + d.cell.padding('left');
+			const step = ROUTE_FS * lineFactor;
+			let ty = d.cell.y + d.cell.padding('top') + ROUTE_FS;
+			doc.setFontSize(ROUTE_FS);
+			lines.forEach(l => {
+				doc.setFont('helvetica', 'normal'); doc.setTextColor(26, 26, 24);
+				doc.text(l.name, x, ty);
+				if (l.purpose) {
+					const w = doc.getTextWidth(l.name + '  ');
+					doc.setFont('helvetica', 'italic'); doc.setTextColor(110, 110, 105);
+					doc.text(`— ${l.purpose}`, x + w, ty);
+				}
+				ty += step;
+			});
+			doc.setFont('helvetica', 'normal'); doc.setTextColor(26, 26, 24);
+		},
+	});
+
+	const now = new Date();
+	const genISO = `${now.getFullYear()}-${mPad2(now.getMonth() + 1)}-${mPad2(now.getDate())}`;
+	const periodSlug = (data.label || '').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'all';
+	doc.save(`${genISO}_Mileage_Report_${periodSlug}.pdf`);
+}
+
+async function exportMileageCSV() {
+	const data = await fetchMileageReport();
+	if (!data) return;
+	const entries = data.entries || [];
+	if (!entries.length) { alert('No entries for this period.'); return; }
+	const rate = parseFloat(data.rate) || 0;
+
+	const rows = [['Date', 'Purpose', 'Route', 'Total Miles', 'Rate', 'Reimbursement']];
+	entries.forEach(e => rows.push([
+		e.entry_date,
+		e.purpose || '',
+		e.route || '',
+		parseFloat(e.total_miles || 0).toFixed(2),
+		rate > 0 ? rate : '',
+		rate > 0 ? parseFloat(e.reimbursement_amount || 0).toFixed(2) : '',
+	]));
+	const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+	const now = new Date();
+	const genISO = `${now.getFullYear()}-${mPad2(now.getMonth() + 1)}-${mPad2(now.getDate())}`;
+	const periodSlug = (data.label || '').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'all';
+	downloadBlob(`${genISO}_Mileage_Report_${periodSlug}.csv`, csv, 'text/csv');
 }
 
 
@@ -2760,6 +3450,8 @@ async function loadAdminMileage() {
 
 		const locs = res.data.locations || [];
 		const rate = parseFloat(res.data.rate) || 0.67;
+		const adminPurposes = res.data.purposes || [];
+		const reminders = res.data.reminders || { enabled: false, hour: 7 };
 		const pending = locs.filter(l => l.status === 'pending');
 		const approved = locs.filter(l => l.status === 'approved');
 
@@ -2768,6 +3460,7 @@ async function loadAdminMileage() {
 		html += `<input type="number" step="0.01" min="0" max="5" id="sp-mileage-rate-input" class="sp-input" value="${rate.toFixed(2)}">`;
 		html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-rate-save">Save Rate</button>';
 		html += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-recompute">Recompute All Distances</button>';
+		html += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-import-btn">Import Destinations</button>';
 		if (D.isGod) {
 			html += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-test-api">Test Google API</button>';
 		}
@@ -2796,18 +3489,108 @@ async function loadAdminMileage() {
 		}
 
 		html += `<h3>Approved (${approved.length})</h3>`;
-		html += '<table class="sp-mileage-table"><thead><tr><th>Name</th><th>Address</th><th>Type</th></tr></thead><tbody>';
+		html += '<table class="sp-mileage-table"><thead><tr><th>Name</th><th>Address</th><th>Category</th><th>Business</th><th>Active</th><th></th></tr></thead><tbody>';
 		approved.forEach(l => {
+			const priv = parseInt(l.is_private) ? ' <span class="unique sp-status-badge sp-status-draft">private</span>' : '';
 			html += '<tr>';
-			html += `<td>${esc(l.name)}</td>`;
+			html += `<td>${esc(l.name)}${priv}</td>`;
 			html += `<td>${esc(l.address || '')}</td>`;
-			html += `<td>${esc(l.location_type)}</td>`;
+			html += `<td>${esc(l.category || l.location_type || '')}</td>`;
+			html += `<td>${parseInt(l.is_business) ? 'Business' : 'Personal'}</td>`;
+			html += `<td>${parseInt(l.is_active) ? 'Yes' : '<span class="unique sp-text-secondary">No</span>'}</td>`;
+			html += `<td class="sp-mileage-row-actions"><button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-edit-loc-btn" data-id="${l.id}">Edit</button></td>`;
 			html += '</tr>';
 		});
 		html += '</tbody></table>';
 
+		// Daily reminder email (opt-in)
+		const hourOpts = Array.from({ length: 24 }, (_, h) => {
+			const label = h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`;
+			return `<option value="${h}"${reminders.hour === h ? ' selected' : ''}>${label}</option>`;
+		}).join('');
+		html += '<h3>Daily Reminder Email</h3>';
+		html += '<p class="sp-text-secondary">Emails active drivers each morning to log the previous day\'s miles (skips anyone who already logged it). Links straight to quick entry.</p>';
+		html += '<div class="sp-toolbar">';
+		html += `<label class="sp-reminder-toggle"><input type="checkbox" id="sp-mileage-reminder-enabled"${reminders.enabled ? ' checked' : ''}> Send daily reminders</label>`;
+		html += `<div class="sp-toolbar-group"><span class="sp-toolbar-label">Send at</span><select id="sp-mileage-reminder-hour" class="sp-select">${hourOpts}</select></div>`;
+		html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-mileage-reminder-save">Save Reminders</button>';
+		html += '</div>';
+
+		// Distance matrix (lazy-rendered on demand — can be a large grid).
+		html += '<h3>Distance Matrix</h3>';
+		html += '<p class="sp-text-secondary">Cached miles between approved locations. Click a cell to set a manual value; blue = from Google, green = manual, grey = not computed yet.</p>';
+		html += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-matrix-toggle">Show matrix</button>';
+		html += '<div class="sp-mileage-matrix-wrap" id="sp-mileage-matrix" hidden></div>';
+
+		// Purpose library editor
+		html += '<h3>Trip Purpose Library</h3>';
+		html += '<p class="sp-text-secondary">Suggestions shown to drivers when they pick a stop\'s business purpose.</p>';
+		html += '<div class="sp-mileage-purposes" id="sp-mileage-purposes-list"></div>';
+		html += '<div class="sp-mileage-purpose-add"><input type="text" id="sp-mileage-purpose-new" class="sp-input" placeholder="Add a purpose…"><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-purpose-add-btn">Add</button></div>';
+		html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-mileage-purposes-save">Save Purposes</button>';
+
 		wrap.innerHTML = html;
 		markUniqueSpans(wrap);
+
+		// Purpose library: render chips + wire add/remove/save.
+		let purposeList = adminPurposes.slice();
+		const renderPurposeChips = () => {
+			const box = $('#sp-mileage-purposes-list', wrap);
+			if (!box) return;
+			box.innerHTML = purposeList.map((p, i) =>
+				`<span class="unique sp-purpose-chip">${esc(p)} <button type="button" class="sp-purpose-chip-x" data-i="${i}" aria-label="Remove">&times;</button></span>`
+			).join('') || '<span class="unique sp-text-secondary">No purposes yet.</span>';
+			markUniqueSpans(box);
+			$$('.sp-purpose-chip-x', box).forEach(b => b.addEventListener('click', () => {
+				purposeList.splice(parseInt(b.dataset.i), 1);
+				renderPurposeChips();
+			}));
+		};
+		renderPurposeChips();
+		const addPurpose = () => {
+			const inp = $('#sp-mileage-purpose-new', wrap);
+			const v = (inp.value || '').trim();
+			if (v && !purposeList.includes(v)) purposeList.push(v);
+			inp.value = '';
+			renderPurposeChips();
+		};
+		$('#sp-mileage-purpose-add-btn', wrap)?.addEventListener('click', addPurpose);
+		$('#sp-mileage-purpose-new', wrap)?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addPurpose(); } });
+		$('#sp-mileage-purposes-save', wrap)?.addEventListener('click', async () => {
+			const r = await spAjax('site_pulse_admin_save_mileage_purposes', { purposes: purposeList });
+			if (r.success) alert('Purpose library saved.');
+			else alert(r.data?.message || 'Error.');
+		});
+
+		// Edit an approved location's metadata.
+		$$('.sp-mileage-edit-loc-btn', wrap).forEach(b => b.addEventListener('click', () => {
+			const loc = locs.find(l => String(l.id) === String(b.dataset.id));
+			if (loc) showEditLocationModal(loc, () => { loadAdminMileage(); });
+		}));
+
+		$('#sp-mileage-import-btn', wrap)?.addEventListener('click', () => showImportDestinationsModal(locs, () => loadAdminMileage()));
+
+		$('#sp-mileage-reminder-save', wrap)?.addEventListener('click', async () => {
+			const enabled = $('#sp-mileage-reminder-enabled')?.checked ? 1 : 0;
+			const hour = parseInt($('#sp-mileage-reminder-hour')?.value || '7');
+			const r = await spAjax('site_pulse_admin_save_mileage_reminders', { enabled, hour });
+			if (r.success) alert(r.data.enabled ? 'Daily reminders ON.' : 'Daily reminders off.');
+			else alert(r.data?.message || 'Error.');
+		});
+
+		// Distance matrix: render on first show, then toggle.
+		$('#sp-mileage-matrix-toggle', wrap)?.addEventListener('click', async (e) => {
+			const box = $('#sp-mileage-matrix', wrap);
+			if (!box) return;
+			if (box.hidden) {
+				e.target.textContent = 'Hide matrix';
+				box.hidden = false;
+				await renderMileageMatrix(box);
+			} else {
+				e.target.textContent = 'Show matrix';
+				box.hidden = true;
+			}
+		});
 
 		$('#sp-mileage-rate-save', wrap)?.addEventListener('click', async () => {
 			const rate = parseFloat($('#sp-mileage-rate-input').value);
@@ -2855,6 +3638,227 @@ async function loadAdminMileage() {
 	} catch (err) {
 		wrap.innerHTML = '<p>Error loading.</p>';
 	}
+}
+
+/* ---- Destination discovery: import candidates from Google Timeline JSON or MileIQ CSV ----
+   Ports the prototype's timeline-reviewer: best-effort client-side parse → review/edit →
+   bulk add as approved locations. Parsing is heuristic; the admin reviews before adding. */
+
+function parseCsvLine(line) {
+	const out = []; let cur = '', q = false;
+	for (let i = 0; i < line.length; i++) {
+		const c = line[i];
+		if (q) {
+			if (c === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+			else if (c === '"') q = false;
+			else cur += c;
+		} else if (c === '"') q = true;
+		else if (c === ',') { out.push(cur); cur = ''; }
+		else cur += c;
+	}
+	out.push(cur);
+	return out.map(s => s.trim());
+}
+
+function parseMileIQCsv(text) {
+	const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+	if (lines.length < 2) return [];
+	// Header cells often wrapped in Excel ="..." — strip to bare names.
+	const header = parseCsvLine(lines[0]).map(h => h.replace(/^="?|"?$/g, '').replace(/\*/g, '').trim().toUpperCase());
+	const find = (...names) => header.findIndex(h => names.includes(h));
+	const cols = [find('START', 'FROM', 'START LOCATION'), find('STOP', 'TO', 'END', 'END LOCATION')].filter(i => i >= 0);
+	if (!cols.length) return [];
+	const seen = new Set(), out = [];
+	for (let i = 1; i < lines.length; i++) {
+		const cells = parseCsvLine(lines[i]).map(c => c.replace(/^="?|"?$/g, '').trim());
+		cols.forEach(ci => {
+			const v = cells[ci] || '';
+			if (!v || /^total/i.test(v)) return;
+			const k = v.toLowerCase();
+			if (seen.has(k)) return;
+			seen.add(k);
+			out.push({ name: v, address: v, lat: '', lng: '' });
+		});
+	}
+	return out;
+}
+
+function parseTimelineJson(obj) {
+	const out = [], seen = new Set();
+	const push = (name, address, lat, lng, placeId) => {
+		const k = placeId || `${name}|${lat},${lng}`;
+		if (!k || seen.has(k)) return;
+		seen.add(k);
+		out.push({ name: name || '', address: address || '', lat: lat ?? '', lng: lng ?? '' });
+	};
+	const geo = (s) => { // "geo:lat,lng" or "lat,lng"
+		if (typeof s !== 'string') return [null, null];
+		const m = s.replace(/^geo:/, '').split(',').map(parseFloat);
+		return (m.length === 2 && !isNaN(m[0])) ? m : [null, null];
+	};
+	// Newer export: semanticSegments[].visit.topCandidate
+	(obj.semanticSegments || []).forEach(seg => {
+		const tc = seg.visit?.topCandidate;
+		if (!tc) return;
+		const [lat, lng] = geo(tc.placeLocation?.latLng || tc.placeLocation);
+		push(tc.placeName || tc.semanticType || '', tc.address || '', lat, lng, tc.placeId);
+	});
+	// Legacy export: timelineObjects[].placeVisit.location
+	(obj.timelineObjects || []).forEach(o => {
+		const loc = o.placeVisit?.location;
+		if (!loc) return;
+		const lat = loc.latitudeE7 != null ? loc.latitudeE7 / 1e7 : null;
+		const lng = loc.longitudeE7 != null ? loc.longitudeE7 / 1e7 : null;
+		push(loc.name || '', loc.address || '', lat, lng, loc.placeId);
+	});
+	return out;
+}
+
+function showImportDestinationsModal(existingLocs, onSaved) {
+	const existing = $('#sp-mileage-import-modal');
+	if (existing) existing.remove();
+	const have = new Set((existingLocs || []).map(l => (l.name || '').toLowerCase()));
+
+	const modal = document.createElement('div');
+	modal.id = 'sp-mileage-import-modal';
+	modal.className = 'sp-modal-backdrop';
+	modal.innerHTML = `
+		<div class="sp-modal sp-modal-wide">
+			<h3>Import Destinations</h3>
+			<p class="sp-text-secondary">Upload a Google Timeline <code>.json</code> or a MileIQ <code>.csv</code>. Candidates are parsed for review — edit names, untick any you don't want, then add. New ones are geocoded automatically.</p>
+			<input type="file" id="sp-import-file" accept=".json,.csv" class="sp-input">
+			<div id="sp-import-candidates" class="sp-import-candidates"></div>
+			<div class="sp-modal-actions">
+				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-import-add" disabled>Add Selected</button>
+				<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-import-cancel">Cancel</button>
+			</div>
+		</div>
+	`;
+	document.body.appendChild(modal);
+	markUniqueSpans(modal);
+	const close = () => modal.remove();
+	modal.querySelector('#sp-import-cancel').addEventListener('click', close);
+	modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+
+	let candidates = [];
+	const box = modal.querySelector('#sp-import-candidates');
+	const addBtn = modal.querySelector('#sp-import-add');
+
+	const renderCandidates = () => {
+		if (!candidates.length) { box.innerHTML = '<p class="sp-text-secondary">No candidates found in that file.</p>'; addBtn.disabled = true; return; }
+		let h = `<p class="sp-text-secondary">${candidates.length} candidate${candidates.length !== 1 ? 's' : ''} — already-known names are unticked by default.</p>`;
+		h += '<table class="sp-mileage-table"><thead><tr><th></th><th>Name</th><th>Address</th></tr></thead><tbody>';
+		candidates.forEach((c, i) => {
+			const dup = have.has((c.name || '').toLowerCase());
+			h += '<tr>';
+			h += `<td><input type="checkbox" class="sp-import-pick" data-i="${i}" ${dup ? '' : 'checked'}></td>`;
+			h += `<td><input type="text" class="sp-input sp-import-name" data-i="${i}" value="${esc(c.name)}">${dup ? ' <span class="unique sp-text-secondary">(exists)</span>' : ''}</td>`;
+			h += `<td><input type="text" class="sp-input sp-import-addr" data-i="${i}" value="${esc(c.address)}"></td>`;
+			h += '</tr>';
+		});
+		h += '</tbody></table>';
+		box.innerHTML = h;
+		markUniqueSpans(box);
+		addBtn.disabled = false;
+	};
+
+	modal.querySelector('#sp-import-file').addEventListener('change', (e) => {
+		const file = e.target.files[0];
+		if (!file) return;
+		const reader = new FileReader();
+		reader.onload = () => {
+			try {
+				if (/\.json$/i.test(file.name)) candidates = parseTimelineJson(JSON.parse(reader.result));
+				else candidates = parseMileIQCsv(String(reader.result));
+			} catch (err) { candidates = []; alert('Could not parse that file.'); }
+			renderCandidates();
+		};
+		reader.readAsText(file);
+	});
+
+	addBtn.addEventListener('click', async () => {
+		// Read back edited values + selection.
+		const picks = $$('.sp-import-pick', box);
+		const items = [];
+		picks.forEach(cb => {
+			if (!cb.checked) return;
+			const i = cb.dataset.i;
+			const name = box.querySelector(`.sp-import-name[data-i="${i}"]`)?.value.trim() || '';
+			const addr = box.querySelector(`.sp-import-addr[data-i="${i}"]`)?.value.trim() || '';
+			if (name) items.push({ name, address: addr, lat: candidates[i].lat, lng: candidates[i].lng });
+		});
+		if (!items.length) { alert('Nothing selected.'); return; }
+		addBtn.disabled = true; addBtn.textContent = 'Adding…';
+		const r = await spAjax('site_pulse_admin_bulk_add_mileage_locations', { items: JSON.stringify(items) });
+		if (r.success) { alert(`Added ${r.data.added} location(s).`); close(); if (onSaved) onSaved(); }
+		else { alert(r.data?.message || 'Error.'); addBtn.disabled = false; addBtn.textContent = 'Add Selected'; }
+	});
+}
+
+// Renders the editable distance-matrix grid into `box`.
+async function renderMileageMatrix(box) {
+	box.innerHTML = '<div class="sp-loading"></div>';
+	const res = await spAjax('site_pulse_admin_get_mileage_matrix', {});
+	if (!res.success) { box.innerHTML = '<p class="sp-text-warning">Could not load the matrix.</p>'; return; }
+
+	const locs = res.data.locations || [];
+	const dist = res.data.distances || {};
+	if (locs.length < 2) { box.innerHTML = '<p class="sp-text-secondary">Need at least two approved locations.</p>'; return; }
+
+	const key = (a, b) => (a <= b ? `${a}-${b}` : `${b}-${a}`);
+
+	let html = '<table class="sp-matrix-table"><thead><tr><th></th>';
+	locs.forEach(c => { html += `<th title="${esc(c.name)}">${esc(c.name)}</th>`; });
+	html += '</tr></thead><tbody>';
+	locs.forEach(rLoc => {
+		html += `<tr><th title="${esc(rLoc.name)}">${esc(rLoc.name)}</th>`;
+		locs.forEach(cLoc => {
+			if (rLoc.id === cLoc.id) { html += '<td class="sp-matrix-self">—</td>'; return; }
+			const d = dist[key(parseInt(rLoc.id), parseInt(cLoc.id))];
+			const cls = !d ? 'sp-matrix-missing' : (d.source === 'manual' ? 'sp-matrix-manual' : 'sp-matrix-api');
+			const val = d ? d.miles.toFixed(1) : '+';
+			html += `<td class="sp-matrix-cell ${cls}" data-from="${rLoc.id}" data-to="${cLoc.id}" data-from-name="${esc(rLoc.name)}" data-to-name="${esc(cLoc.name)}" data-miles="${d ? d.miles : ''}">${val}</td>`;
+		});
+		html += '</tr>';
+	});
+	html += '</tbody></table>';
+	box.innerHTML = html;
+
+	$$('.sp-matrix-cell', box).forEach(td => td.addEventListener('click', () => {
+		showMatrixCellModal(td.dataset, () => renderMileageMatrix(box));
+	}));
+}
+
+// Small editor for one matrix cell — manual override of a pair's miles (symmetric).
+function showMatrixCellModal(d, onSaved) {
+	const existing = $('#sp-matrix-cell-modal');
+	if (existing) existing.remove();
+	const modal = document.createElement('div');
+	modal.id = 'sp-matrix-cell-modal';
+	modal.className = 'sp-modal-backdrop';
+	modal.innerHTML = `
+		<div class="sp-modal">
+			<h3>Set distance</h3>
+			<p class="sp-text-secondary">${esc(d.fromName)} ↔ ${esc(d.toName)}</p>
+			<div class="sp-form-group"><label>Miles</label><input type="number" step="0.1" min="0" id="sp-matrix-miles" class="sp-input" value="${d.miles || ''}"></div>
+			<div class="sp-modal-actions">
+				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-matrix-save">Save</button>
+				<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-matrix-cancel">Cancel</button>
+			</div>
+		</div>
+	`;
+	document.body.appendChild(modal);
+	markUniqueSpans(modal);
+	const close = () => modal.remove();
+	modal.querySelector('#sp-matrix-cancel').addEventListener('click', close);
+	modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+	modal.querySelector('#sp-matrix-save').addEventListener('click', async () => {
+		const miles = parseFloat(modal.querySelector('#sp-matrix-miles').value);
+		if (isNaN(miles) || miles < 0) { alert('Enter a valid mileage.'); return; }
+		const r = await spAjax('site_pulse_admin_save_mileage_distance', { from_id: d.from, to_id: d.to, miles });
+		if (r.success) { close(); if (onSaved) onSaved(); }
+		else alert(r.data?.message || 'Error saving.');
+	});
 }
 
 })();

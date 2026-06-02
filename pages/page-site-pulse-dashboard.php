@@ -71,13 +71,24 @@ $nav[] = [
 	'show'  => in_array( 'submit_reports', $caps ) || in_array( 'view_own_reports', $caps ) || in_array( 'view_all_reports', $caps ) || in_array( 'view_team_reports', $caps ),
 	'children' => [
 		[ 'slug' => 'reports-my',     'label' => 'My Reports',      'show' => in_array( 'submit_reports', $caps ) || in_array( 'view_own_reports', $caps ) ],
+		[ 'slug' => 'reports-my',     'label' => 'New Report',      'action' => 'new-report', 'show' => in_array( 'submit_reports', $caps ) ],
 		[ 'slug' => 'reports-review', 'label' => 'Review Reports',  'show' => in_array( 'view_team_reports', $caps ) || in_array( 'view_all_reports', $caps ) ],
 	],
 ];
 
 $nav[] = [ 'slug' => 'action-items', 'label' => 'Action Items', 'icon' => 'checklist', 'show' => in_array( 'submit_reports', $caps ) || in_array( 'view_own_reports', $caps ) || in_array( 'view_team_reports', $caps ) || in_array( 'view_all_reports', $caps ) ];
 
-$nav[] = [ 'slug' => 'mileage', 'label' => 'Mileage', 'icon' => 'car', 'show' => in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ];
+$nav[] = [
+	'slug'  => 'mileage',
+	'label' => 'Mileage',
+	'icon'  => 'car',
+	'show'  => in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ),
+	'children' => [
+		[ 'slug' => 'mileage',     'label' => 'My Mileage',  'show' => in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ],
+		[ 'slug' => 'mileage',     'label' => 'Add a Day',   'action' => 'mileage-add', 'show' => in_array( 'submit_mileage', $caps ) ],
+		[ 'slug' => 'mileage-map', 'label' => 'Mileage Map', 'show' => in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ],
+	],
+];
 
 $nav[] = [ 'slug' => 'analytics', 'label' => 'Analytics', 'icon' => 'chart', 'show' => in_array( 'view_analytics', $caps ) ];
 
@@ -154,7 +165,8 @@ foreach ( $nav as $item ) {
 		$printPage .= '<div class="sp-nav-children">';
 		foreach ( $item['children'] as $child ) {
 			if ( empty( $child['show'] ) ) continue;
-			$printPage .= '<button type="button" class="unique sp-nav-child" data-nav="' . esc_attr( $child['slug'] ) . '">';
+			$child_action = ! empty( $child['action'] ) ? ' data-action="' . esc_attr( $child['action'] ) . '"' : '';
+			$printPage .= '<button type="button" class="unique sp-nav-child" data-nav="' . esc_attr( $child['slug'] ) . '"' . $child_action . '>';
 			$printPage .=   '<span>' . esc_html( $child['label'] ) . '</span>';
 			$printPage .= '</button>';
 		}
@@ -239,6 +251,17 @@ if ( in_array( 'submit_reports', $caps ) || in_array( 'view_own_reports', $caps 
 	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-ghost sp-widget-link" data-nav="action-items">View All &rarr;</button>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-widget-body" id="sp-widget-actions-body"><div class="sp-loading"></div></div>';
+	$printPage .= '</div>';
+}
+
+// Mileage Widget (this month, for the logged-in user)
+if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ) {
+	$printPage .= '<div class="sp-widget" id="sp-widget-mileage">';
+	$printPage .=   '<div class="sp-widget-header">';
+	$printPage .=     '<h3>My Mileage This Month</h3>';
+	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-ghost sp-widget-link" data-nav="mileage">View All &rarr;</button>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-widget-body" id="sp-widget-mileage-body"><div class="sp-loading"></div></div>';
 	$printPage .= '</div>';
 }
 
@@ -363,6 +386,18 @@ if ( in_array( 'view_analytics', $caps ) ) {
 	$printPage .=       '<div class="sp-analytics-card-body"><div class="sp-loading"></div></div>';
 	$printPage .=     '</div>';
 
+	// Mileage analytics (shown to mileage users)
+	if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ) {
+		$printPage .=   '<div class="sp-analytics-card" id="sp-analytics-mileage">';
+		$printPage .=     '<h4>Business Mileage</h4>';
+		$printPage .=     '<div class="sp-analytics-card-body"><div class="sp-loading"></div></div>';
+		$printPage .=   '</div>';
+		$printPage .=   '<div class="sp-analytics-card" id="sp-analytics-mileage-dest">';
+		$printPage .=     '<h4>Top Destinations (YTD)</h4>';
+		$printPage .=     '<div class="sp-analytics-card-body"><div class="sp-loading"></div></div>';
+		$printPage .=   '</div>';
+	}
+
 	$printPage .=   '</div>';
 	$printPage .= '</section>';
 }
@@ -373,19 +408,50 @@ if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) 
 	$printPage .=   '<div class="sp-panel-header">';
 	$printPage .=     '<h2>Mileage</h2>';
 	$printPage .=     '<div class="sp-mileage-actions">';
+	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-pdf-btn">PDF</button>';
+	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-csv-btn">CSV</button>';
 	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-print-btn">Print</button>';
 	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-email-btn">Email</button>';
 	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-mileage-add-btn">+ Add a Day</button>';
 	$printPage .=     '</div>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-mileage-summary" id="sp-mileage-summary"></div>';
-	$printPage .=   '<div class="sp-report-filters">';
-	$printPage .=     '<input type="date" id="sp-mileage-filter-start" class="sp-input" placeholder="From">';
-	$printPage .=     '<input type="date" id="sp-mileage-filter-end" class="sp-input" placeholder="To">';
-	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-filter-clear">Clear</button>';
+	$printPage .=   '<div class="sp-toolbar" id="sp-mileage-toolbar">';
+	$printPage .=     '<span class="sp-toolbar-label">Period</span>';
+	$printPage .=     '<div class="sp-mileage-period-controls">';
+	$printPage .=       '<div class="sp-toolbar-group sp-mileage-quickranges">';
+	$printPage .=         '<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-range" data-range="month">This Month</button>';
+	$printPage .=         '<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-range" data-range="quarter">This Quarter</button>';
+	$printPage .=         '<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-range" data-range="ytd">Year to Date</button>';
+	$printPage .=         '<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-range" data-range="last30">Last 30 Days</button>';
+	$printPage .=         '<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-range" data-range="last90">Last 90 Days</button>';
+	$printPage .=       '</div>';
+	$printPage .=       '<div class="sp-toolbar-group">';
+	$printPage .=         '<select id="sp-mileage-month-picker" class="sp-select sp-mileage-month-picker"></select>';
+	$printPage .=         '<input type="date" id="sp-mileage-filter-start" class="sp-input" placeholder="From">';
+	$printPage .=         '<input type="date" id="sp-mileage-filter-end" class="sp-input" placeholder="To">';
+	$printPage .=         '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-filter-clear">Clear</button>';
+	$printPage .=       '</div>';
+	$printPage .=     '</div>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-mileage-list" id="sp-mileage-list"></div>';
 	$printPage .=   '<div class="sp-mileage-form-wrap" id="sp-mileage-form-wrap" hidden></div>';
+	$printPage .= '</section>';
+}
+
+// Mileage Map Panel
+if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-mileage-map">';
+	$printPage .=   '<div class="sp-panel-header"><h2>Mileage Map</h2></div>';
+	$printPage .=   '<div class="sp-toolbar" id="sp-mileage-map-toolbar">';
+	$printPage .=     '<span class="sp-toolbar-label">Filter</span>';
+	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=       '<select id="sp-mileage-map-category" class="sp-select"><option value="">All categories</option></select>';
+	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-map-fit">Fit All</button>';
+	$printPage .=     '</div>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-mileage-map-notice" id="sp-mileage-map-notice" hidden>Add a Google Maps API key to enable the map. The mileage location key is reused; make sure it has the <strong>Maps JavaScript API</strong> enabled and is restricted to this site.</div>';
+	$printPage .=   '<div class="sp-table-card"><div id="sp-mileage-map-canvas" class="sp-mileage-map-canvas"></div></div>';
 	$printPage .= '</section>';
 }
 

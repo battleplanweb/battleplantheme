@@ -236,6 +236,10 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 }
 
 /* Admin dashboard */
+.wrap h1.wp-heading-inline {
+	transform:                                                 translateY(6px) !important;
+}
+
 #adminmenu .admin-note,
 #adminmenu .admin-badge,
 #adminmenu .awaiting-mod,

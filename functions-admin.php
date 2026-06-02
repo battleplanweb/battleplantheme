@@ -550,6 +550,46 @@ add_action('admin_print_footer_scripts', function() {
 	<?php
 });
 
+// Microsoft Clarity logo-link beside the Dashboard heading. Shown to the same users
+// who see the GA4 stats panel (battleplanweb / bp_view_stats) and only when a Clarity
+// project ID is set in customer_info['google-tags']['clarity']. Just the logo (no button
+// or label); clicking it opens the in-admin Clarity page (admin.php?page=microsoft-clarity).
+add_action('admin_print_footer_scripts', function() {
+	$screen = get_current_screen();
+	if ( ! $screen || $screen->id !== 'dashboard' ) return;
+
+	$customer_info = get_option('customer_info');
+	$clarity = ( is_array($customer_info) && ! empty($customer_info['google-tags']['clarity']) )
+		? $customer_info['google-tags']['clarity'] : '';
+	if ( ! $clarity ) return;
+
+	if ( _USER_LOGIN !== 'battleplanweb' && ! in_array('bp_view_stats', _USER_ROLES) ) return;
+
+	$url  = esc_url_raw( admin_url( 'admin.php?page=microsoft-clarity' ) );
+	$logo = esc_url_raw( get_template_directory_uri() . '/common/logos/microsoft-clarity.webp' );
+	?>
+	<script>
+	jQuery(function($) {
+		var $h1 = $('.wrap > h1').first();
+		if ( ! $h1.length || $h1.next('.bp-clarity-link').length ) return;
+		$h1.addClass('wp-heading-inline');
+		var $a = $('<a/>', {
+			'class': 'bp-clarity-link',
+			href:  <?php echo json_encode($url); ?>,
+			title: 'Open Microsoft Clarity'
+		});
+		$('<img/>', { src: <?php echo json_encode($logo); ?>, alt: 'Microsoft Clarity' }).appendTo($a);
+		$h1.after($a);
+	});
+	</script>
+	<style>
+	.wrap > h1.wp-heading-inline + .bp-clarity-link { margin-left: 10px; }
+	.bp-clarity-link { display: inline-flex; align-items: center; vertical-align: middle; line-height: 0; }
+	.bp-clarity-link img { height: 28px; width: auto; display: block; }
+	</style>
+	<?php
+});
+
 // Load site stats if hooked to Google Analytics
 $customer_info = get_option('customer_info');
 $prop_id = (is_array($customer_info) && isset($customer_info['google-tags']['prop-id'])) ? (int)$customer_info['google-tags']['prop-id'] : 0;

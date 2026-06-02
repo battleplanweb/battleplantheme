@@ -360,3 +360,118 @@ add_action('admin_enqueue_scripts', function($hook) {
 JS;
 	wp_add_inline_script('bp-inline-edit', $js);
 });
+
+/*--------------------------------------------------------------
+# Sync alt text into existing <img> tags across the site
+----------------------------------------------------------------
+WordPress freezes an image's alt text into post content at insert
+time and never updates it again, so the Media Library alt and the
+on-page alt drift apart. This keeps them in sync: whenever an
+attachment's _wp_attachment_image_alt changes — manually (media
+modal, edit screen, the inline-edit column), via the sparkle icon,
+or the cron generator — push the new value into every
+<img class="wp-image-{ID}"> already baked into content.
+
+Lives here (not in functions-media-replace.php) because that file
+is admin-only, but alt can change during cron (bp_ai_alt_generate_cron),
+and this file is loaded unconditionally.
+
+Default: force-overwrite every matching tag. Filter
+bp_alt_sync_force_overwrite to false to only fill empty/missing alts.
+--------------------------------------------------------------*/
+
+add_action('updated_post_meta', 'bp_alt_sync_meta_changed', 10, 4);
+add_action('added_post_meta',   'bp_alt_sync_meta_changed', 10, 4);
+function bp_alt_sync_meta_changed($meta_id, $object_id, $meta_key, $meta_value) {
+	// update_post_meta only fires this when the value actually changed, so no
+	// extra "did it change?" guard is needed.
+	if ($meta_key !== '_wp_attachment_image_alt') return;
+	if (get_post_type($object_id) !== 'attachment') return;
+
+	bp_alt_sync_to_content((int) $object_id, (string) $meta_value);
+}
+
+/**
+ * Push an attachment's alt text into matching <img> tags in post content.
+ *
+ * @param int    $attachment_id
+ * @param string $new_alt
+ * @return int   Number of posts updated.
+ */
+function bp_alt_sync_to_content($attachment_id, $new_alt) {
+	global $wpdb;
+
+	$marker = 'wp-image-' . (int) $attachment_id;
+	$force  = (bool) apply_filters('bp_alt_sync_force_overwrite', true, $attachment_id);
+	$like   = '%' . $wpdb->esc_like($marker) . '%';
+	$count  = 0;
+
+	// Pass 1 — post_content: main editor body + Elements CPT (site-header, widgets, etc.).
+	$rows = $wpdb->get_results($wpdb->prepare(
+		"SELECT ID, post_content FROM {$wpdb->posts}
+		 WHERE post_status IN ('publish','future','draft','pending','private')
+		 AND post_content LIKE %s",
+		$like
+	), ARRAY_A);
+	foreach ((array) $rows as $row) {
+		if (is_serialized($row['post_content'])) continue; // never edit serialized blobs
+		$new = bp_alt_update_img_alts($row['post_content'], $attachment_id, $new_alt, $force);
+		if ($new !== $row['post_content']) {
+			$wpdb->query($wpdb->prepare("UPDATE {$wpdb->posts} SET post_content = %s WHERE ID = %d", $new, $row['ID']));
+			clean_post_cache($row['ID']);
+			$count++;
+		}
+	}
+
+	// Pass 2 — postmeta: the Page Top / Page Bottom sections and any other meta-stored
+	//    HTML live here, NOT in post_content. Plain-string meta only; serialized
+	//    values like arrays or page-builder blobs are skipped to avoid corruption.
+	$rows = $wpdb->get_results($wpdb->prepare(
+		"SELECT pm.meta_id, pm.post_id, pm.meta_value
+		 FROM {$wpdb->postmeta} pm INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
+		 WHERE p.post_status IN ('publish','future','draft','pending','private')
+		 AND pm.meta_value LIKE %s",
+		$like
+	), ARRAY_A);
+	foreach ((array) $rows as $row) {
+		if (is_serialized($row['meta_value'])) continue;
+		$new = bp_alt_update_img_alts($row['meta_value'], $attachment_id, $new_alt, $force);
+		if ($new !== $row['meta_value']) {
+			$wpdb->query($wpdb->prepare("UPDATE {$wpdb->postmeta} SET meta_value = %s WHERE meta_id = %d", $new, $row['meta_id']));
+			clean_post_cache($row['post_id']);
+			$count++;
+		}
+	}
+
+	return $count;
+}
+
+/**
+ * Rewrite the alt="" on every <img> in $html that carries the wp-image-{ID}
+ * marker. Adds an alt attribute if one is missing. srcset/sizes left alone.
+ *
+ * @param bool $force  true = overwrite any alt; false = only fill empty/missing.
+ */
+function bp_alt_update_img_alts($html, $attachment_id, $new_alt, $force) {
+	// Match the exact wp-image-{ID} token, not a prefix (so 12 doesn't match 123).
+	$class_re = '/wp-image-' . (int) $attachment_id . '(?![0-9])/';
+	if (!preg_match($class_re, $html)) return $html;
+
+	$new_attr = 'alt="' . esc_attr($new_alt) . '"';
+
+	return preg_replace_callback('/<img\b[^>]*>/i', function ($m) use ($class_re, $new_attr, $force) {
+		$tag = $m[0];
+		if (!preg_match($class_re, $tag)) return $tag; // not this attachment
+
+		if (preg_match('/\balt\s*=\s*("|\')(.*?)\1/i', $tag, $a)) {
+			if (!$force) {
+				$current = html_entity_decode($a[2], ENT_QUOTES);
+				if (trim($current) !== '') return $tag; // already has alt — leave it
+			}
+			return preg_replace('/\balt\s*=\s*("|\')(.*?)\1/i', $new_attr, $tag, 1);
+		}
+
+		// No alt attribute at all — insert one right after <img.
+		return preg_replace('/<img\b/i', '<img ' . $new_attr, $tag, 1);
+	}, $html);
+}

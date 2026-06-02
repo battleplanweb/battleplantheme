@@ -162,19 +162,9 @@ document.addEventListener("DOMContentLoaded", function () {
 		}, 300);
 
 
-		//Test for real user or bot
-		if (!getCookie('user-city')) {
-			setTimeout(() => {
-				fetch('https://ipapi.co/json/')
-					.then(response => response.json())
-					.then(data => {
-						setCookie("user-city", data.city, '');
-						setCookie("user-region", data.region_code, '');
-						setCookie("user-country", data.country_name, '');
-					})
-					.catch(error => console.error('Error fetching location data:', error));
-			}, 4000);
-		}
+		// Visitor geo (user-city / user-region / user-country) is now set by the
+		// tracking bootstrapper in <head> from /wp-json/bp/v1/geo (Cloudflare
+		// location headers), replacing the old client-side ipapi.co lookup.
 
 	});
 });

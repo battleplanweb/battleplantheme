@@ -28,7 +28,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
 		if (controls) {
 			const styles = window.getComputedStyle(controls);
-			controlsHeight += controls.offsetHeight + (parseFloat(styles.marginTop) || 0) + (parseFloat(styles.marginBottom) || 0);
+			if (styles.position !== 'absolute' && styles.position !== 'fixed') {
+				controlsHeight += controls.offsetHeight + (parseFloat(styles.marginTop) || 0) + (parseFloat(styles.marginBottom) || 0);
+			}
 		}
 
 		if (indicatorWrap) {

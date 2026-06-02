@@ -24,7 +24,7 @@ require_once get_template_directory() . '/prompts/prompts-site-pulse.php';
 # Constants & Setup
 --------------------------------------------------------------*/
 
-define( 'SITE_PULSE_DB_VERSION', '1.7' );
+define( 'SITE_PULSE_DB_VERSION', '1.9' );
 
 function site_pulse_table( string $name ): string {
 	return $GLOBALS['wpdb']->prefix . 'site_pulse_' . $name;
@@ -113,6 +113,7 @@ function site_pulse_install_db(): void {
 		role_id int(11) NOT NULL DEFAULT 0,
 		location_id int(11) NOT NULL DEFAULT 0,
 		supervisor_id int(11) NOT NULL DEFAULT 0,
+		mileage_home_location_id int(11) NOT NULL DEFAULT 0,
 		employee_id varchar(50) DEFAULT NULL,
 		status varchar(20) NOT NULL DEFAULT 'active',
 		meta text DEFAULT NULL,
@@ -274,6 +275,12 @@ function site_pulse_install_db(): void {
 		lat decimal(10,7) DEFAULT NULL,
 		lng decimal(10,7) DEFAULT NULL,
 		location_type varchar(50) NOT NULL DEFAULT 'vendor',
+		is_private tinyint(1) NOT NULL DEFAULT 0,
+		category varchar(50) DEFAULT NULL,
+		is_business tinyint(1) NOT NULL DEFAULT 1,
+		is_active tinyint(1) NOT NULL DEFAULT 1,
+		notes text DEFAULT NULL,
+		pinned_purposes text DEFAULT NULL,
 		site_pulse_location_id int(11) DEFAULT NULL,
 		status varchar(20) NOT NULL DEFAULT 'pending',
 		created_by int(11) NOT NULL DEFAULT 0,
@@ -304,6 +311,7 @@ function site_pulse_install_db(): void {
 		total_miles decimal(10,2) NOT NULL DEFAULT 0,
 		reimbursement_amount decimal(10,2) NOT NULL DEFAULT 0,
 		rate_used decimal(6,4) DEFAULT NULL,
+		auto_return_home tinyint(1) NOT NULL DEFAULT 1,
 		notes text DEFAULT NULL,
 		created_at datetime NOT NULL,
 		updated_at datetime NOT NULL,
@@ -318,11 +326,77 @@ function site_pulse_install_db(): void {
 		from_location_id int(11) NOT NULL,
 		to_location_id int(11) NOT NULL,
 		miles decimal(8,2) DEFAULT NULL,
+		purpose varchar(255) DEFAULT NULL,
 		created_at datetime NOT NULL,
 		PRIMARY KEY  (id),
 		KEY entry_id (entry_id),
 		KEY from_loc (from_location_id),
 		KEY to_loc (to_location_id)
+	) $charset;";
+
+	// Toll reconciliation — directional route/plaza matrix (lazy TollGuru/Routes cache).
+	// One row per (from → to) direction. Distances live in mileage_distances (symmetric);
+	// polylines/plaza sequences are directional, so they live here instead.
+	$sql .= "CREATE TABLE " . site_pulse_table('mileage_toll_routes') . " (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		from_location_id int(11) NOT NULL,
+		to_location_id int(11) NOT NULL,
+		variant_index tinyint(3) NOT NULL DEFAULT 1,
+		variant_label varchar(255) DEFAULT NULL,
+		is_primary tinyint(1) NOT NULL DEFAULT 1,
+		polyline longtext DEFAULT NULL,
+		plaza_sequence longtext DEFAULT NULL,
+		total_typical_cost decimal(8,2) DEFAULT NULL,
+		plaza_count tinyint(3) NOT NULL DEFAULT 0,
+		source varchar(20) NOT NULL DEFAULT 'google',
+		use_count int(11) NOT NULL DEFAULT 0,
+		last_used_date date DEFAULT NULL,
+		created_at datetime NOT NULL,
+		updated_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		KEY direction (from_location_id, to_location_id)
+	) $charset;";
+
+	// Toll reconciliation — one imported NTTA bill per user per billing period.
+	$sql .= "CREATE TABLE " . site_pulse_table('mileage_toll_bills') . " (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		user_id int(11) NOT NULL,
+		period_start date DEFAULT NULL,
+		period_end date DEFAULT NULL,
+		plate varchar(50) DEFAULT NULL,
+		toll_tag_id varchar(50) DEFAULT NULL,
+		file_name varchar(255) DEFAULT NULL,
+		txn_count int(11) NOT NULL DEFAULT 0,
+		status varchar(20) NOT NULL DEFAULT 'pending_review',
+		created_at datetime NOT NULL,
+		updated_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		KEY user_period (user_id, period_start)
+	) $charset;";
+
+	// Toll reconciliation — one row per NTTA transaction line, with its allocation decision.
+	$sql .= "CREATE TABLE " . site_pulse_table('mileage_toll_transactions') . " (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		bill_id int(11) NOT NULL,
+		user_id int(11) NOT NULL,
+		txn_external_id varchar(50) DEFAULT NULL,
+		txn_datetime datetime DEFAULT NULL,
+		road varchar(255) DEFAULT NULL,
+		gantry varchar(255) DEFAULT NULL,
+		internal_code_prefix varchar(100) DEFAULT NULL,
+		amount decimal(8,2) NOT NULL DEFAULT 0,
+		plaza_lat decimal(10,7) DEFAULT NULL,
+		plaza_lng decimal(10,7) DEFAULT NULL,
+		allocation_status varchar(20) NOT NULL DEFAULT 'unprocessed',
+		allocation_entry_id int(11) DEFAULT NULL,
+		allocation_confidence decimal(4,3) DEFAULT NULL,
+		allocation_note varchar(255) DEFAULT NULL,
+		created_at datetime NOT NULL,
+		updated_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		KEY bill_id (bill_id),
+		KEY user_id (user_id),
+		KEY allocation_status (allocation_status)
 	) $charset;";
 
 	dbDelta( $sql );
@@ -344,6 +418,11 @@ add_action( 'init', function() {
 	if ( ! get_option( 'site_pulse_mileage_seeded' ) ) {
 		site_pulse_seed_mileage_locations();
 		update_option( 'site_pulse_mileage_seeded', '1' );
+	}
+
+	// Make sure the daily mileage-reminder cron exists when enabled (survives restarts).
+	if ( site_pulse_get_setting( 'mileage_reminders_enabled', '0' ) === '1' && ! wp_next_scheduled( 'site_pulse_mileage_reminder' ) ) {
+		site_pulse_reschedule_mileage_reminder();
 	}
 } );
 
@@ -565,10 +644,19 @@ function site_pulse_enqueue_assets(): void {
 		? '/js/script-site-pulse.min.js'
 		: '/js/script-site-pulse.js';
 
+	$script_deps = [];
+
+	// jsPDF + autoTable power the polished PDF/CSV mileage report (dashboard only).
+	if ( $post->post_name === 'site-pulse-dashboard' ) {
+		wp_enqueue_script( 'jspdf', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', [], '2.5.1', true );
+		wp_enqueue_script( 'jspdf-autotable', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js', [ 'jspdf' ], '3.5.28', true );
+		$script_deps = [ 'jspdf', 'jspdf-autotable' ];
+	}
+
 	wp_enqueue_script(
 		'site-pulse-script',
 		get_template_directory_uri() . $script_file,
-		[],
+		$script_deps,
 		filemtime( get_template_directory() . $script_file ),
 		true
 	);
@@ -600,6 +688,12 @@ function site_pulse_enqueue_assets(): void {
 		'reportHeaderFields' => $header_fields,
 		'isGod'              => $is_god,
 		'impersonating'      => site_pulse_is_impersonating(),
+		// Google Maps JS key for the (client-side) mileage/toll maps. Prefers a dedicated
+		// browser key if set, else the main key. NOTE: this key is exposed to the browser,
+		// so it MUST be HTTP-referrer restricted in the Google Cloud Console.
+		'mapsKey'            => $post->post_name === 'site-pulse-dashboard'
+			? ( site_pulse_get_setting( 'maps_js_api_key', '' ) ?: site_pulse_mileage_google_key() )
+			: '',
 	] );
 }
 
@@ -1012,16 +1106,17 @@ function site_pulse_create_user( array $data ): array {
 	$wpdb->insert(
 		site_pulse_table('user_profiles'),
 		[
-			'user_id'       => $wp_user_id,
-			'role_id'       => (int) ( $data['role_id'] ?? 0 ),
-			'location_id'   => (int) ( $data['location_id'] ?? 0 ),
-			'supervisor_id' => (int) ( $data['supervisor_id'] ?? 0 ),
-			'employee_id'   => sanitize_text_field( $data['employee_id'] ?? '' ),
-			'status'        => 'active',
-			'created_at'    => $now,
-			'updated_at'    => $now,
+			'user_id'                  => $wp_user_id,
+			'role_id'                  => (int) ( $data['role_id'] ?? 0 ),
+			'location_id'              => (int) ( $data['location_id'] ?? 0 ),
+			'supervisor_id'            => (int) ( $data['supervisor_id'] ?? 0 ),
+			'mileage_home_location_id' => (int) ( $data['mileage_home_location_id'] ?? 0 ),
+			'employee_id'              => sanitize_text_field( $data['employee_id'] ?? '' ),
+			'status'                   => 'active',
+			'created_at'               => $now,
+			'updated_at'               => $now,
 		],
-		[ '%d', '%d', '%d', '%d', '%s', '%s', '%s', '%s' ]
+		[ '%d', '%d', '%d', '%d', '%d', '%s', '%s', '%s', '%s' ]
 	);
 
 	site_pulse_log( 'user_created', sprintf( 'Created user %s', $username ), [ 'wp_user_id' => $wp_user_id ] );
@@ -1036,11 +1131,13 @@ function site_pulse_get_all_users( bool $active_only = true, bool $include_god =
 	if ( ! $include_god ) $conditions[] = "r.slug != 'god'";
 	$where = $conditions ? "WHERE " . implode( ' AND ', $conditions ) : "";
 	return $wpdb->get_results(
-		"SELECT up.*, u.user_login, u.user_email, u.display_name, r.slug AS role_slug, r.label AS role_label, l.name AS location_name
+		"SELECT up.*, u.user_login, u.user_email, u.display_name, r.slug AS role_slug, r.label AS role_label, l.name AS location_name,
+		        hb.address AS home_address, hb.is_private AS home_is_private
 		 FROM " . site_pulse_table('user_profiles') . " up
 		 LEFT JOIN {$wpdb->users} u ON u.ID = up.user_id
 		 LEFT JOIN " . site_pulse_table('roles') . " r ON r.id = up.role_id
 		 LEFT JOIN " . site_pulse_table('locations') . " l ON l.id = up.location_id
+		 LEFT JOIN " . site_pulse_table('mileage_locations') . " hb ON hb.id = up.mileage_home_location_id
 		 $where
 		 ORDER BY u.display_name",
 		ARRAY_A
@@ -1282,7 +1379,16 @@ function site_pulse_ajax_admin_get_users(): void {
 	$roles     = site_pulse_get_all_roles( false );
 	$locations = site_pulse_get_all_locations();
 
-	wp_send_json_success( [ 'users' => $users, 'roles' => $roles, 'locations' => $locations ] );
+	global $wpdb;
+	// Shared (non-private) approved locations for the Home Base picker. Private
+	// work-from-home residences are set via the separate address field, not this list.
+	$mileage_locations = $wpdb->get_results(
+		"SELECT id, name, location_type FROM " . site_pulse_table('mileage_locations') . "
+		 WHERE status = 'approved' AND is_private = 0 ORDER BY location_type, name",
+		ARRAY_A
+	) ?: [];
+
+	wp_send_json_success( [ 'users' => $users, 'roles' => $roles, 'locations' => $locations, 'mileage_locations' => $mileage_locations ] );
 }
 
 add_action( 'wp_ajax_site_pulse_admin_create_user', 'site_pulse_ajax_admin_create_user' );
@@ -1291,18 +1397,25 @@ function site_pulse_ajax_admin_create_user(): void {
 	if ( ! site_pulse_admin_check( 'manage_users' ) ) return;
 
 	$result = site_pulse_create_user( [
-		'username'      => $_POST['username'] ?? '',
-		'email'         => $_POST['email'] ?? '',
-		'password'      => $_POST['password'] ?? '',
-		'first_name'    => $_POST['first_name'] ?? '',
-		'last_name'     => $_POST['last_name'] ?? '',
-		'role_id'       => (int) ( $_POST['role_id'] ?? 0 ),
-		'location_id'   => (int) ( $_POST['location_id'] ?? 0 ),
-		'supervisor_id' => (int) ( $_POST['supervisor_id'] ?? 0 ),
-		'employee_id'   => $_POST['employee_id'] ?? '',
+		'username'                 => $_POST['username'] ?? '',
+		'email'                    => $_POST['email'] ?? '',
+		'password'                 => $_POST['password'] ?? '',
+		'first_name'               => $_POST['first_name'] ?? '',
+		'last_name'                => $_POST['last_name'] ?? '',
+		'role_id'                  => (int) ( $_POST['role_id'] ?? 0 ),
+		'location_id'              => (int) ( $_POST['location_id'] ?? 0 ),
+		'supervisor_id'            => (int) ( $_POST['supervisor_id'] ?? 0 ),
+		'mileage_home_location_id' => (int) ( $_POST['mileage_home_location_id'] ?? 0 ),
+		'employee_id'              => $_POST['employee_id'] ?? '',
 	] );
 
 	if ( $result['success'] ) {
+		// Work-from-home (no store location): set a private home as the mileage home base.
+		if ( (int) ( $_POST['location_id'] ?? 0 ) === 0 && isset( $_POST['home_private_address'] ) && trim( $_POST['home_private_address'] ) !== '' ) {
+			global $wpdb;
+			$hid = site_pulse_mileage_set_private_home( (int) $result['user_id'], sanitize_text_field( $_POST['home_private_address'] ) );
+			$wpdb->update( site_pulse_table('user_profiles'), [ 'mileage_home_location_id' => $hid ], [ 'user_id' => (int) $result['user_id'] ] );
+		}
 		wp_send_json_success( $result );
 	} else {
 		wp_send_json_error( [ 'message' => $result['error'] ] );
@@ -1329,6 +1442,12 @@ function site_pulse_ajax_admin_update_user(): void {
 	if ( isset( $_POST['role_id'] ) )       $updates['role_id']       = (int) $_POST['role_id'];
 	if ( isset( $_POST['location_id'] ) )   $updates['location_id']   = (int) $_POST['location_id'];
 	if ( isset( $_POST['supervisor_id'] ) ) $updates['supervisor_id'] = (int) $_POST['supervisor_id'];
+	// Home base is derived from the store Location when one is set. Only a work-from-home
+	// user (no location) needs an explicit private home address.
+	$posted_loc = isset( $_POST['location_id'] ) ? (int) $_POST['location_id'] : (int) $profile['location_id'];
+	if ( $posted_loc === 0 && isset( $_POST['home_private_address'] ) && trim( $_POST['home_private_address'] ) !== '' ) {
+		$updates['mileage_home_location_id'] = site_pulse_mileage_set_private_home( $user_id, sanitize_text_field( $_POST['home_private_address'] ) );
+	}
 	if ( isset( $_POST['employee_id'] ) )   $updates['employee_id']   = sanitize_text_field( $_POST['employee_id'] );
 	if ( isset( $_POST['status'] ) )        $updates['status']        = sanitize_text_field( $_POST['status'] );
 	$updates['updated_at'] = current_time( 'mysql' );
@@ -2285,6 +2404,38 @@ function site_pulse_ajax_get_analytics(): void {
 		"SELECT AVG(DATEDIFF(resolved_at, created_at)) FROM " . site_pulse_table('action_items') . " WHERE status = 'resolved' AND resolved_at IS NOT NULL" . $loc_where
 	);
 
+	// --- Mileage analytics (MTD + YTD totals, top destinations) ---
+	$today       = current_time( 'Y-m-d' );
+	$month_start = substr( $today, 0, 7 ) . '-01';
+	$year_start  = substr( $today, 0, 4 ) . '-01-01';
+	$me  = site_pulse_table('mileage_entries');
+	$ml  = site_pulse_table('mileage_locations');
+	$mlg = site_pulse_table('mileage_legs');
+	// When a location filter is set, scope to drivers based at that location.
+	$m_where = $loc_id
+		? $wpdb->prepare( " AND e.user_id IN (SELECT user_id FROM " . site_pulse_table('user_profiles') . " WHERE location_id = %d)", $loc_id )
+		: '';
+
+	$mtd = $wpdb->get_row( $wpdb->prepare(
+		"SELECT COALESCE(SUM(total_miles),0) miles, COALESCE(SUM(reimbursement_amount),0) reimb, COUNT(*) entries, COUNT(DISTINCT user_id) drivers
+		 FROM $me e WHERE entry_date >= %s AND entry_date <= %s" . $m_where,
+		$month_start, $today
+	), ARRAY_A );
+	$ytd = $wpdb->get_row( $wpdb->prepare(
+		"SELECT COALESCE(SUM(total_miles),0) miles, COALESCE(SUM(reimbursement_amount),0) reimb
+		 FROM $me e WHERE entry_date >= %s AND entry_date <= %s" . $m_where,
+		$year_start, $today
+	), ARRAY_A );
+	$top_dest = $wpdb->get_results( $wpdb->prepare(
+		"SELECT ml.name, COUNT(*) count
+		 FROM $mlg l
+		 INNER JOIN $me e ON e.id = l.entry_id
+		 INNER JOIN $ml ml ON ml.id = l.to_location_id
+		 WHERE e.entry_date >= %s AND e.entry_date <= %s AND ml.is_private = 0" . $m_where . "
+		 GROUP BY l.to_location_id ORDER BY count DESC LIMIT 6",
+		$year_start, $today
+	), ARRAY_A ) ?: [];
+
 	wp_send_json_success( [
 		'priority'    => $priority_counts,
 		'categories'  => $category_counts,
@@ -2295,6 +2446,12 @@ function site_pulse_ajax_get_analytics(): void {
 			'open'           => $open_items,
 			'rate'           => $total_items > 0 ? round( ( $resolved_items / $total_items ) * 100 ) : 0,
 			'avg_days'       => $avg_resolution !== null ? round( (float) $avg_resolution, 1 ) : null,
+		],
+		'mileage'     => [
+			'month'            => $mtd ?: [ 'miles' => 0, 'reimb' => 0, 'entries' => 0, 'drivers' => 0 ],
+			'ytd'              => $ytd ?: [ 'miles' => 0, 'reimb' => 0 ],
+			'top_destinations' => $top_dest,
+			'rate'             => site_pulse_mileage_rate(),
 		],
 	] );
 }
@@ -2368,6 +2525,164 @@ function site_pulse_ajax_impersonate(): void {
 function site_pulse_mileage_rate(): float {
 	$rate = (float) site_pulse_get_setting( 'mileage_rate', '0.67' );
 	return $rate > 0 ? $rate : 0.67;
+}
+
+/**
+ * The editable library of common business purposes (mirrors the prototype's PurposeLib).
+ * Stored as a JSON array in config; falls back to a sensible default set.
+ */
+function site_pulse_mileage_purposes(): array {
+	$raw  = site_pulse_get_setting( 'mileage_purposes', '' );
+	$list = $raw ? json_decode( $raw, true ) : null;
+	if ( ! is_array( $list ) || empty( $list ) ) {
+		$list = [
+			'Store visit', 'Manager meeting', 'Inspection', 'Deliver supplies',
+			'Pick up supplies', 'Cash deposit / bank', 'Vendor visit', 'Training',
+			'Maintenance / repair', 'Catering / event',
+		];
+	}
+	return array_values( array_filter( array_map( 'strval', $list ) ) );
+}
+
+/**
+ * Create or update a PRIVATE home-base location for a work-from-home driver, geocode it,
+ * and return its id. Reuses the user's existing private home row if they already have one,
+ * so editing the address doesn't spawn duplicates. Private homes are hidden from other
+ * drivers' location pickers (PII); store-based home bases don't need this.
+ */
+function site_pulse_mileage_set_private_home( int $user_id, string $address ): int {
+	global $wpdb;
+	$now  = current_time( 'mysql' );
+	$user = get_userdata( $user_id );
+	$name = ( $user ? $user->display_name : 'Driver' ) . ' (home)';
+
+	$geo = site_pulse_mileage_geocode( $address );
+	$lat = $geo['lat'] ?? null;
+	$lng = $geo['lng'] ?? null;
+
+	// Reuse an existing private home already assigned to this user.
+	$current = site_pulse_user_home_location_id( $user_id );
+	if ( $current ) {
+		$is_priv = (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT is_private FROM " . site_pulse_table('mileage_locations') . " WHERE id = %d", $current
+		) );
+		if ( $is_priv ) {
+			$wpdb->update( site_pulse_table('mileage_locations'),
+				[ 'name' => $name, 'address' => $address, 'lat' => $lat, 'lng' => $lng, 'updated_at' => $now ],
+				[ 'id' => $current ]
+			);
+			return $current;
+		}
+	}
+
+	$wpdb->insert( site_pulse_table('mileage_locations'), [
+		'name'          => $name,
+		'address'       => $address,
+		'lat'           => $lat,
+		'lng'           => $lng,
+		'location_type' => 'home',
+		'is_private'    => 1,
+		'is_business'   => 0,
+		'is_active'     => 1,
+		'status'        => 'approved',
+		'created_by'    => get_current_user_id(),
+		'approved_by'   => get_current_user_id(),
+		'approved_at'   => $now,
+		'created_at'    => $now,
+		'updated_at'    => $now,
+	] );
+	return (int) $wpdb->insert_id;
+}
+
+/**
+ * (Re)schedule the daily reminder WP-Cron event to match the current settings.
+ * Called on settings save and ensured on init. Clears the event when disabled.
+ */
+function site_pulse_reschedule_mileage_reminder(): void {
+	$existing = wp_next_scheduled( 'site_pulse_mileage_reminder' );
+	if ( $existing ) wp_unschedule_event( $existing, 'site_pulse_mileage_reminder' );
+
+	if ( site_pulse_get_setting( 'mileage_reminders_enabled', '0' ) !== '1' ) return;
+
+	$hour       = max( 0, min( 23, (int) site_pulse_get_setting( 'mileage_reminder_hour', '7' ) ) );
+	$now_local  = current_time( 'timestamp' );
+	$target     = strtotime( date( 'Y-m-d', $now_local ) . sprintf( ' %02d:00:00', $hour ) );
+	if ( $target <= $now_local ) $target = strtotime( '+1 day', $target );
+	$gmt_offset = current_time( 'timestamp' ) - time(); // local − UTC, in seconds
+	wp_schedule_event( $target - $gmt_offset, 'daily', 'site_pulse_mileage_reminder' );
+}
+
+add_action( 'site_pulse_mileage_reminder', 'site_pulse_send_mileage_reminders' );
+function site_pulse_send_mileage_reminders(): void {
+	if ( site_pulse_get_setting( 'mileage_reminders_enabled', '0' ) !== '1' ) return;
+
+	global $wpdb;
+	$target     = date( 'Y-m-d', strtotime( '-1 day', current_time( 'timestamp' ) ) ); // yesterday (local)
+	$date_label = date( 'F j, Y', strtotime( $target ) );
+	$dash       = home_url( '/site-pulse-dashboard/?sp_panel=mileage' );
+	$app_name   = site_pulse_get_setting( 'app_name', 'Site Pulse' );
+
+	// Active drivers (submit_mileage capability).
+	$drivers = $wpdb->get_results(
+		"SELECT up.user_id, u.user_email, u.display_name
+		 FROM " . site_pulse_table('user_profiles') . " up
+		 INNER JOIN " . site_pulse_table('roles') . " r ON r.id = up.role_id
+		 INNER JOIN {$wpdb->users} u ON u.ID = up.user_id
+		 WHERE up.status = 'active' AND r.capabilities LIKE '%submit_mileage%'",
+		ARRAY_A
+	) ?: [];
+
+	$sent = 0;
+	foreach ( $drivers as $d ) {
+		if ( ! is_email( $d['user_email'] ) ) continue;
+		// Skip anyone who already logged that day.
+		$logged = (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM " . site_pulse_table('mileage_entries') . " WHERE user_id = %d AND entry_date = %s",
+			(int) $d['user_id'], $target
+		) );
+		if ( $logged ) continue;
+
+		$first   = $d['display_name'] ? ' ' . esc_html( explode( ' ', $d['display_name'] )[0] ) : '';
+		$subject = 'Mileage reminder — ' . $date_label;
+		$body  = '<div style="font-family:sans-serif;color:#1e293b;max-width:520px;">';
+		$body .= '<h2 style="margin:0 0 12px;">Don\'t forget your mileage</h2>';
+		$body .= '<p style="color:#475569;line-height:1.5;">Hi' . $first . ', this is a quick reminder to log any business miles for <strong>' . esc_html( $date_label ) . '</strong>.</p>';
+		$body .= '<p style="margin:20px 0;"><a href="' . esc_url( $dash ) . '" style="background:#15243a;color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;display:inline-block;font-weight:600;">Log my mileage</a></p>';
+		$body .= '<p style="color:#94a3b8;font-size:13px;line-height:1.5;">Tip: you can type or speak your stops (e.g. "Carrollton, Garland") and we\'ll fill in the rest. Nothing to log that day? You can ignore this email.</p>';
+		$body .= '<p style="color:#94a3b8;font-size:12px;margin-top:18px;">' . esc_html( $app_name ) . '</p>';
+		$body .= '</div>';
+		$headers = [ 'Content-Type: text/html; charset=UTF-8' ];
+		if ( wp_mail( $d['user_email'], $subject, $body, $headers ) ) $sent++;
+	}
+
+	site_pulse_log( 'mileage_reminder', sprintf( 'Sent %d mileage reminder(s) for %s', $sent, $target ) );
+}
+
+/**
+ * This user's mileage home base (start/end bookend), or 0 if none.
+ *
+ * A user assigned to a store (profile location_id) uses that store as their home base —
+ * resolved to the mileage_location seeded from that store. Work-from-home users (no
+ * location) fall back to an explicitly-set private home (mileage_home_location_id).
+ */
+function site_pulse_user_home_location_id( int $user_id ): int {
+	global $wpdb;
+	$profile = $wpdb->get_row( $wpdb->prepare(
+		"SELECT location_id, mileage_home_location_id FROM " . site_pulse_table('user_profiles') . " WHERE user_id = %d",
+		$user_id
+	), ARRAY_A );
+	if ( ! $profile ) return 0;
+
+	$loc_id = (int) $profile['location_id'];
+	if ( $loc_id ) {
+		$home = (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT id FROM " . site_pulse_table('mileage_locations') . "
+			 WHERE site_pulse_location_id = %d AND status = 'approved' ORDER BY id LIMIT 1",
+			$loc_id
+		) );
+		if ( $home ) return $home;
+	}
+	return (int) $profile['mileage_home_location_id'];
 }
 
 function site_pulse_mileage_normalize_pair( int $a, int $b ): array {
@@ -2647,6 +2962,131 @@ function site_pulse_mileage_finalize_legs_for_location( int $location_id ): arra
 
 
 /*--------------------------------------------------------------
+# Toll Reconciliation — Helpers
+--------------------------------------------------------------*/
+
+function site_pulse_toll_vehicle_type(): string {
+	$type = site_pulse_get_setting( 'toll_vehicle_type', '2AxlesAuto' );
+	return $type ?: '2AxlesAuto';
+}
+
+function site_pulse_tollguru_key(): string {
+	return (string) site_pulse_get_setting( 'tollguru_api_key', '' );
+}
+
+/**
+ * Returns the cached directional toll route for a (from → to) pair, fetching the
+ * encoded polyline from Google's Routes API on a cache miss. Unlike mileage_distances
+ * (symmetric), routes are directional — outbound and return have different geometry.
+ *
+ * Lazy by design: only called during toll-bill reconciliation, never at entry-save time.
+ * Returns the route row (assoc array) or null if it can't be built.
+ */
+function site_pulse_mileage_ensure_route( int $from, int $to ): ?array {
+	if ( $from === $to || ! $from || ! $to ) return null;
+
+	global $wpdb;
+	$existing = $wpdb->get_row( $wpdb->prepare(
+		"SELECT * FROM " . site_pulse_table('mileage_toll_routes') . "
+		 WHERE from_location_id = %d AND to_location_id = %d
+		 ORDER BY is_primary DESC, use_count DESC, id ASC LIMIT 1",
+		$from, $to
+	), ARRAY_A );
+	if ( $existing && ! empty( $existing['polyline'] ) ) return $existing;
+
+	$polyline = site_pulse_mileage_compute_route( $from, $to );
+	if ( $polyline === null ) return $existing ?: null;
+
+	$now = current_time( 'mysql' );
+	if ( $existing ) {
+		$wpdb->update( site_pulse_table('mileage_toll_routes'),
+			[ 'polyline' => $polyline, 'source' => 'google', 'updated_at' => $now ],
+			[ 'id' => (int) $existing['id'] ]
+		);
+		$existing['polyline'] = $polyline;
+		return $existing;
+	}
+
+	$wpdb->insert( site_pulse_table('mileage_toll_routes'), [
+		'from_location_id' => $from,
+		'to_location_id'   => $to,
+		'variant_index'    => 1,
+		'is_primary'       => 1,
+		'polyline'         => $polyline,
+		'source'           => 'google',
+		'created_at'       => $now,
+		'updated_at'       => $now,
+	] );
+	$id = (int) $wpdb->insert_id;
+	return $wpdb->get_row( $wpdb->prepare(
+		"SELECT * FROM " . site_pulse_table('mileage_toll_routes') . " WHERE id = %d", $id
+	), ARRAY_A );
+}
+
+/**
+ * Calls Google Routes API v2:computeRoutes for a single directional leg and returns
+ * the encoded overview polyline (string) or null. This is the polyline that TollGuru
+ * needs — note computeRouteMatrix (used for distances) does NOT return geometry, so
+ * this is a separate, lazily-made call.
+ */
+function site_pulse_mileage_compute_route( int $from, int $to ): ?string {
+	$key = site_pulse_mileage_google_key();
+	if ( ! $key ) {
+		site_pulse_log( 'mileage_error', 'computeRoutes skipped — no Google API key', [ 'from' => $from, 'to' => $to ] );
+		return null;
+	}
+
+	global $wpdb;
+	$rows = $wpdb->get_results( $wpdb->prepare(
+		"SELECT id, address, lat, lng FROM " . site_pulse_table('mileage_locations') . " WHERE id IN (%d, %d)",
+		$from, $to
+	), ARRAY_A ) ?: [];
+	$by_id = [];
+	foreach ( $rows as $r ) $by_id[ (int) $r['id'] ] = $r;
+	if ( ! isset( $by_id[ $from ], $by_id[ $to ] ) ) return null;
+
+	$point = function( array $loc ): string {
+		return ( $loc['lat'] !== null && $loc['lng'] !== null ) ? $loc['lat'] . ',' . $loc['lng'] : (string) $loc['address'];
+	};
+
+	// computeRouteMatrix wraps each endpoint as { waypoint: {...} }; computeRoutes wants the
+	// Waypoint object directly on origin/destination, so unwrap the shared helper's result.
+	$origin_wp = site_pulse_mileage_routes_waypoint( $point( $by_id[ $from ] ) )['waypoint'];
+	$dest_wp   = site_pulse_mileage_routes_waypoint( $point( $by_id[ $to ] ) )['waypoint'];
+
+	$body = [
+		'origin'            => $origin_wp,
+		'destination'       => $dest_wp,
+		'travelMode'        => 'DRIVE',
+		'routingPreference' => 'TRAFFIC_UNAWARE',
+		'polylineEncoding'  => 'ENCODED_POLYLINE',
+	];
+
+	$response = wp_remote_post( 'https://routes.googleapis.com/directions/v2:computeRoutes', [
+		'timeout' => 25,
+		'headers' => [
+			'Content-Type'     => 'application/json',
+			'X-Goog-Api-Key'   => $key,
+			'X-Goog-FieldMask' => 'routes.polyline.encodedPolyline,routes.distanceMeters',
+		],
+		'body'    => wp_json_encode( $body ),
+	] );
+
+	if ( is_wp_error( $response ) ) {
+		site_pulse_log( 'mileage_error', 'computeRoutes failed: ' . $response->get_error_message() );
+		return null;
+	}
+	$data = json_decode( wp_remote_retrieve_body( $response ), true );
+	if ( ! is_array( $data ) || empty( $data['routes'][0]['polyline']['encodedPolyline'] ) ) {
+		$err = $data['error']['message'] ?? 'no polyline in response';
+		site_pulse_log( 'mileage_error', 'computeRoutes error: ' . $err );
+		return null;
+	}
+	return (string) $data['routes'][0]['polyline']['encodedPolyline'];
+}
+
+
+/*--------------------------------------------------------------
 # Mileage — Manager AJAX
 --------------------------------------------------------------*/
 
@@ -2654,27 +3094,41 @@ add_action( 'wp_ajax_site_pulse_get_mileage_locations', 'site_pulse_ajax_get_mil
 function site_pulse_ajax_get_mileage_locations(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	$user_id = site_pulse_effective_user_id();
+	$home_id = site_pulse_user_home_location_id( $user_id );
 
 	global $wpdb;
+	// Most home bases are shared stores (no privacy concern). Only locations explicitly
+	// flagged is_private (a work-from-home driver's residence) are PII — show those to
+	// their owner only (the driver they're the home base for), never to other drivers.
 	$rows = $wpdb->get_results( $wpdb->prepare(
-		"SELECT id, name, address, location_type, status, created_by
+		"SELECT id, name, address, lat, lng, location_type, is_private, category, is_business, is_active, pinned_purposes, status, created_by
 		 FROM " . site_pulse_table('mileage_locations') . "
-		 WHERE status = 'approved' OR ( status = 'pending' AND created_by = %d )
+		 WHERE ( status = 'approved' OR ( status = 'pending' AND created_by = %d ) )
+		   AND is_active = 1
+		   AND ( is_private = 0 OR id = %d )
 		 ORDER BY status DESC, location_type, name",
-		$user_id
+		$user_id, $home_id
 	), ARRAY_A ) ?: [];
 
-	wp_send_json_success( [ 'locations' => $rows, 'rate' => site_pulse_mileage_rate() ] );
+	wp_send_json_success( [
+		'locations'        => $rows,
+		'rate'             => site_pulse_mileage_rate(),
+		'home_location_id' => $home_id,
+		'purposes'         => site_pulse_mileage_purposes(),
+	] );
 }
 
 add_action( 'wp_ajax_site_pulse_add_mileage_location', 'site_pulse_ajax_add_mileage_location' );
 function site_pulse_ajax_add_mileage_location(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 
-	$user_id = site_pulse_effective_user_id();
-	$name    = sanitize_text_field( $_POST['name'] ?? '' );
-	$address = sanitize_text_field( $_POST['address'] ?? '' );
-	$type    = sanitize_text_field( $_POST['location_type'] ?? 'vendor' );
+	$user_id     = site_pulse_effective_user_id();
+	$name        = sanitize_text_field( $_POST['name'] ?? '' );
+	$address     = sanitize_text_field( $_POST['address'] ?? '' );
+	$type        = sanitize_text_field( $_POST['location_type'] ?? 'vendor' );
+	$category    = sanitize_text_field( $_POST['category'] ?? '' );
+	$is_business = isset( $_POST['is_business'] ) ? ( (int) $_POST['is_business'] ? 1 : 0 ) : 1;
+	$notes       = sanitize_textarea_field( $_POST['notes'] ?? '' );
 
 	if ( ! $name || ! $address ) {
 		wp_send_json_error( [ 'message' => 'Name and address are required.' ] );
@@ -2686,6 +3140,9 @@ function site_pulse_ajax_add_mileage_location(): void {
 		'name'          => $name,
 		'address'       => $address,
 		'location_type' => in_array( $type, [ 'restaurant', 'vendor', 'other' ], true ) ? $type : 'vendor',
+		'category'      => $category,
+		'is_business'   => $is_business,
+		'notes'         => $notes,
 		'status'        => 'pending',
 		'created_by'    => $user_id,
 		'created_at'    => $now,
@@ -2735,6 +3192,72 @@ function site_pulse_ajax_get_mileage_entries(): void {
 	wp_send_json_success( [ 'entries' => $rows, 'rate' => site_pulse_mileage_rate() ] );
 }
 
+// Consolidated dataset for the PDF/CSV report: entries in a date range, each with a
+// pre-built route string from its legs. One call feeds the client-side report builder.
+add_action( 'wp_ajax_site_pulse_get_mileage_report', 'site_pulse_ajax_get_mileage_report' );
+function site_pulse_ajax_get_mileage_report(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id = site_pulse_effective_user_id();
+
+	$start = sanitize_text_field( $_POST['start'] ?? '' );
+	$end   = sanitize_text_field( $_POST['end']   ?? '' );
+
+	global $wpdb;
+	$where  = "WHERE e.user_id = %d";
+	$values = [ $user_id ];
+	if ( $start ) { $where .= " AND e.entry_date >= %s"; $values[] = $start; }
+	if ( $end )   { $where .= " AND e.entry_date <= %s"; $values[] = $end; }
+
+	$entries = $wpdb->get_results( $wpdb->prepare(
+		"SELECT id, entry_date, total_miles, reimbursement_amount, rate_used, notes
+		 FROM " . site_pulse_table('mileage_entries') . " e
+		 $where
+		 ORDER BY e.entry_date ASC, e.id ASC
+		 LIMIT 500",
+		...$values
+	), ARRAY_A ) ?: [];
+
+	// Build a "Home → A → B → Home" route string and a distinct-purpose summary per entry.
+	foreach ( $entries as &$e ) {
+		$legs = $wpdb->get_results( $wpdb->prepare(
+			"SELECT l.purpose, lf.name AS from_name, lt.name AS to_name
+			 FROM " . site_pulse_table('mileage_legs') . " l
+			 LEFT JOIN " . site_pulse_table('mileage_locations') . " lf ON lf.id = l.from_location_id
+			 LEFT JOIN " . site_pulse_table('mileage_locations') . " lt ON lt.id = l.to_location_id
+			 WHERE l.entry_id = %d
+			 ORDER BY l.leg_order, l.id",
+			(int) $e['id']
+		), ARRAY_A ) ?: [];
+		$route       = '';
+		$route_stops = [];   // [{ name, purpose }] — purpose = business reason for arriving there
+		$purposes    = [];
+		if ( $legs ) {
+			$route         = $legs[0]['from_name'] ?? '?';
+			$route_stops[] = [ 'name' => $legs[0]['from_name'] ?? '?', 'purpose' => '' ];
+			foreach ( $legs as $lg ) {
+				$route        .= ' → ' . ( $lg['to_name'] ?? '?' );
+				$p = trim( (string) ( $lg['purpose'] ?? '' ) );
+				$route_stops[] = [ 'name' => $lg['to_name'] ?? '?', 'purpose' => $p ];
+				if ( $p !== '' && ! in_array( $p, $purposes, true ) ) $purposes[] = $p;
+			}
+		}
+		$e['route']       = $route;
+		$e['route_stops'] = $route_stops;
+		// Prefer the per-stop purposes; fall back to the entry notes if none were set.
+		$e['purpose'] = $purposes ? implode( ', ', $purposes ) : (string) ( $e['notes'] ?? '' );
+	}
+	unset( $e );
+
+	$user = get_userdata( $user_id );
+	wp_send_json_success( [
+		'entries'      => $entries,
+		'rate'         => site_pulse_mileage_rate(),
+		'user_name'    => $user ? $user->display_name : '',
+		'app_name'     => site_pulse_get_setting( 'app_name', 'Site Pulse' ),
+		'company_name' => site_pulse_get_setting( 'company_name', '' ),
+	] );
+}
+
 add_action( 'wp_ajax_site_pulse_get_mileage_entry', 'site_pulse_ajax_get_mileage_entry' );
 function site_pulse_ajax_get_mileage_entry(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
@@ -2780,15 +3303,46 @@ function site_pulse_ajax_save_mileage_entry(): void {
 		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 	}
 
-	$entry_id   = (int) ( $_POST['entry_id'] ?? 0 );
-	$entry_date = sanitize_text_field( $_POST['entry_date'] ?? '' );
-	$notes      = sanitize_textarea_field( $_POST['notes'] ?? '' );
-	$stops_raw  = $_POST['stops'] ?? [];
-	if ( ! is_array( $stops_raw ) ) $stops_raw = [];
-	$stops = array_values( array_filter( array_map( 'intval', $stops_raw ) ) );
+	$entry_id    = (int) ( $_POST['entry_id'] ?? 0 );
+	$entry_date  = sanitize_text_field( $_POST['entry_date'] ?? '' );
+	$notes       = sanitize_textarea_field( $_POST['notes'] ?? '' );
+	$auto_return  = isset( $_POST['auto_return_home'] ) ? ( (int) $_POST['auto_return_home'] ? 1 : 0 ) : 1;
+	$stops_raw    = $_POST['stops'] ?? [];
+	$purposes_raw = $_POST['purposes'] ?? [];
+	if ( ! is_array( $stops_raw ) )    $stops_raw = [];
+	if ( ! is_array( $purposes_raw ) ) $purposes_raw = [];
+
+	// Keep stops and their per-stop purposes aligned while dropping empty picks.
+	$stops          = [];
+	$stop_purposes  = [];
+	foreach ( array_values( $stops_raw ) as $idx => $sid ) {
+		$sid = (int) $sid;
+		if ( $sid <= 0 ) continue;
+		$stops[]         = $sid;
+		$stop_purposes[] = sanitize_text_field( $purposes_raw[ $idx ] ?? '' );
+	}
 
 	if ( ! $entry_date ) wp_send_json_error( [ 'message' => 'Date is required.' ] );
-	if ( count( $stops ) < 2 ) wp_send_json_error( [ 'message' => 'At least two stops are required.' ] );
+
+	// Build the full stop sequence. When the driver has a home base configured, the
+	// client posts only the MIDDLE stops; the server authoritatively bookends with the
+	// home location — locked start, optional return — matching the prototype's
+	// ['home', ...stops, 'home'] chain and preventing the client from spoofing the start.
+	// $seq_purposes[i] = business purpose for ARRIVING at $seq[i]. The origin and any
+	// home bookend carry no purpose; each middle stop carries its own.
+	$home_id = site_pulse_user_home_location_id( $user_id );
+	if ( $home_id ) {
+		if ( count( $stops ) < 1 ) wp_send_json_error( [ 'message' => 'Add at least one stop.' ] );
+		$seq          = array_merge( [ $home_id ], $stops );
+		$seq_purposes = array_merge( [ '' ], $stop_purposes );
+		if ( $auto_return ) { $seq[] = $home_id; $seq_purposes[] = ''; }
+	} else {
+		if ( count( $stops ) < 2 ) wp_send_json_error( [ 'message' => 'At least two stops are required.' ] );
+		$seq          = $stops;
+		$seq_purposes = $stop_purposes;
+		$auto_return  = 0;
+	}
+	if ( count( $seq ) < 2 ) wp_send_json_error( [ 'message' => 'At least two stops are required.' ] );
 
 	global $wpdb;
 	$now = current_time( 'mysql' );
@@ -2801,25 +3355,27 @@ function site_pulse_ajax_save_mileage_entry(): void {
 			wp_send_json_error( [ 'message' => 'Entry not found or not yours.' ] );
 		}
 		$wpdb->update( site_pulse_table('mileage_entries'), [
-			'entry_date' => $entry_date,
-			'notes'      => $notes,
-			'updated_at' => $now,
+			'entry_date'       => $entry_date,
+			'auto_return_home' => $auto_return,
+			'notes'            => $notes,
+			'updated_at'       => $now,
 		], [ 'id' => $entry_id ] );
 		$wpdb->delete( site_pulse_table('mileage_legs'), [ 'entry_id' => $entry_id ] );
 	} else {
 		$wpdb->insert( site_pulse_table('mileage_entries'), [
-			'user_id'    => $user_id,
-			'entry_date' => $entry_date,
-			'notes'      => $notes,
-			'created_at' => $now,
-			'updated_at' => $now,
+			'user_id'          => $user_id,
+			'entry_date'       => $entry_date,
+			'auto_return_home' => $auto_return,
+			'notes'            => $notes,
+			'created_at'       => $now,
+			'updated_at'       => $now,
 		] );
 		$entry_id = (int) $wpdb->insert_id;
 	}
 
-	for ( $i = 0; $i < count( $stops ) - 1; $i++ ) {
-		$from = (int) $stops[ $i ];
-		$to   = (int) $stops[ $i + 1 ];
+	for ( $i = 0; $i < count( $seq ) - 1; $i++ ) {
+		$from = (int) $seq[ $i ];
+		$to   = (int) $seq[ $i + 1 ];
 		// JIT computes via Distance Matrix if both endpoints are approved
 		// but the cache is empty. Returns null if either endpoint is pending.
 		$miles = site_pulse_mileage_ensure_distance( $from, $to );
@@ -2830,6 +3386,7 @@ function site_pulse_ajax_save_mileage_entry(): void {
 			'from_location_id' => $from,
 			'to_location_id'   => $to,
 			'miles'            => $miles,
+			'purpose'          => $seq_purposes[ $i + 1 ] ?? '',
 			'created_at'       => $now,
 		] );
 	}
@@ -2967,7 +3524,62 @@ function site_pulse_ajax_admin_get_mileage_locations(): void {
 	wp_send_json_success( [
 		'locations' => $rows,
 		'rate'      => site_pulse_mileage_rate(),
+		'purposes'  => site_pulse_mileage_purposes(),
+		'reminders' => [
+			'enabled' => site_pulse_get_setting( 'mileage_reminders_enabled', '0' ) === '1',
+			'hour'    => (int) site_pulse_get_setting( 'mileage_reminder_hour', '7' ),
+		],
 	] );
+}
+
+add_action( 'wp_ajax_site_pulse_admin_save_mileage_reminders', 'site_pulse_ajax_admin_save_mileage_reminders' );
+function site_pulse_ajax_admin_save_mileage_reminders(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+
+	$enabled = ! empty( $_POST['enabled'] ) ? '1' : '0';
+	$hour    = max( 0, min( 23, (int) ( $_POST['hour'] ?? 7 ) ) );
+	site_pulse_set_setting( 'mileage_reminders_enabled', $enabled );
+	site_pulse_set_setting( 'mileage_reminder_hour', (string) $hour );
+	site_pulse_reschedule_mileage_reminder();
+
+	wp_send_json_success( [ 'enabled' => $enabled === '1', 'hour' => $hour, 'next' => wp_next_scheduled( 'site_pulse_mileage_reminder' ) ] );
+}
+
+add_action( 'wp_ajax_site_pulse_admin_update_mileage_location', 'site_pulse_ajax_admin_update_mileage_location' );
+function site_pulse_ajax_admin_update_mileage_location(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+
+	$id = (int) ( $_POST['id'] ?? 0 );
+	if ( ! $id ) wp_send_json_error( [ 'message' => 'Invalid id.' ] );
+
+	global $wpdb;
+	$fields = [ 'updated_at' => current_time( 'mysql' ) ];
+	if ( isset( $_POST['name'] ) )          $fields['name']          = sanitize_text_field( $_POST['name'] );
+	if ( isset( $_POST['location_type'] ) ) $fields['location_type'] = sanitize_text_field( $_POST['location_type'] );
+	if ( isset( $_POST['category'] ) )      $fields['category']      = sanitize_text_field( $_POST['category'] );
+	if ( isset( $_POST['is_business'] ) )   $fields['is_business']   = (int) $_POST['is_business'] ? 1 : 0;
+	if ( isset( $_POST['is_active'] ) )     $fields['is_active']     = (int) $_POST['is_active'] ? 1 : 0;
+	if ( isset( $_POST['notes'] ) )         $fields['notes']         = sanitize_textarea_field( $_POST['notes'] );
+
+	if ( isset( $_POST['pinned_purposes'] ) ) {
+		$pp = $_POST['pinned_purposes'];
+		if ( ! is_array( $pp ) ) $pp = [];
+		$pp = array_values( array_unique( array_filter( array_map( 'sanitize_text_field', $pp ) ) ) );
+		$fields['pinned_purposes'] = wp_json_encode( $pp );
+	}
+
+	// Address change → re-geocode so cached distances and the map stay correct.
+	if ( isset( $_POST['address'] ) ) {
+		$address = sanitize_text_field( $_POST['address'] );
+		$fields['address'] = $address;
+		$geo = site_pulse_mileage_geocode( $address );
+		if ( $geo ) { $fields['lat'] = $geo['lat']; $fields['lng'] = $geo['lng']; }
+	}
+
+	$wpdb->update( site_pulse_table('mileage_locations'), $fields, [ 'id' => $id ] );
+	wp_send_json_success();
 }
 
 add_action( 'wp_ajax_site_pulse_admin_approve_mileage_location', 'site_pulse_ajax_admin_approve_mileage_location' );
@@ -3076,6 +3688,169 @@ function site_pulse_ajax_admin_save_mileage_rate(): void {
 
 	site_pulse_set_setting( 'mileage_rate', (string) $rate );
 	wp_send_json_success( [ 'rate' => $rate ] );
+}
+
+add_action( 'wp_ajax_site_pulse_admin_get_mileage_purposes', 'site_pulse_ajax_admin_get_mileage_purposes' );
+function site_pulse_ajax_admin_get_mileage_purposes(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+	wp_send_json_success( [ 'purposes' => site_pulse_mileage_purposes() ] );
+}
+
+add_action( 'wp_ajax_site_pulse_admin_save_mileage_purposes', 'site_pulse_ajax_admin_save_mileage_purposes' );
+function site_pulse_ajax_admin_save_mileage_purposes(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+
+	$raw = $_POST['purposes'] ?? [];
+	if ( ! is_array( $raw ) ) $raw = [];
+	$clean = array_values( array_unique( array_filter( array_map( function( $p ) {
+		return sanitize_text_field( $p );
+	}, $raw ) ) ) );
+	site_pulse_set_setting( 'mileage_purposes', wp_json_encode( $clean ) );
+	wp_send_json_success( [ 'purposes' => $clean ] );
+}
+
+// Bulk-add reviewed destination candidates (from a Timeline/MileIQ import) as approved
+// locations. `items` is a JSON string of {name, address, lat, lng} objects.
+add_action( 'wp_ajax_site_pulse_admin_bulk_add_mileage_locations', 'site_pulse_ajax_admin_bulk_add_mileage_locations' );
+function site_pulse_ajax_admin_bulk_add_mileage_locations(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+
+	$items = json_decode( wp_unslash( $_POST['items'] ?? '[]' ), true );
+	if ( ! is_array( $items ) || ! $items ) wp_send_json_error( [ 'message' => 'Nothing to import.' ] );
+
+	global $wpdb;
+	$now = current_time( 'mysql' );
+	$uid = get_current_user_id();
+	$added = 0;
+	foreach ( $items as $it ) {
+		$name = sanitize_text_field( $it['name'] ?? '' );
+		if ( $name === '' ) continue;
+		$address = sanitize_text_field( $it['address'] ?? '' );
+		$lat = ( isset( $it['lat'] ) && $it['lat'] !== '' ) ? (float) $it['lat'] : null;
+		$lng = ( isset( $it['lng'] ) && $it['lng'] !== '' ) ? (float) $it['lng'] : null;
+		if ( ( $lat === null || $lng === null ) && $address ) {
+			$geo = site_pulse_mileage_geocode( $address );
+			if ( $geo ) { $lat = $geo['lat']; $lng = $geo['lng']; }
+		}
+		$wpdb->insert( site_pulse_table('mileage_locations'), [
+			'name'          => $name,
+			'address'       => $address,
+			'lat'           => $lat,
+			'lng'           => $lng,
+			'location_type' => 'vendor',
+			'is_business'   => 1,
+			'is_active'     => 1,
+			'status'        => 'approved',
+			'created_by'    => $uid,
+			'approved_by'   => $uid,
+			'approved_at'   => $now,
+			'created_at'    => $now,
+			'updated_at'    => $now,
+		] );
+		$added++;
+	}
+	wp_send_json_success( [ 'added' => $added ] );
+}
+
+// Full distance matrix for the admin grid: every approved location + every stored pair.
+add_action( 'wp_ajax_site_pulse_admin_get_mileage_matrix', 'site_pulse_ajax_admin_get_mileage_matrix' );
+function site_pulse_ajax_admin_get_mileage_matrix(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+
+	global $wpdb;
+	$locs = $wpdb->get_results(
+		"SELECT id, name FROM " . site_pulse_table('mileage_locations') . "
+		 WHERE status = 'approved' ORDER BY name",
+		ARRAY_A
+	) ?: [];
+
+	$rows = $wpdb->get_results(
+		"SELECT from_id, to_id, miles, source FROM " . site_pulse_table('mileage_distances'),
+		ARRAY_A
+	) ?: [];
+
+	// Key each pair as "lo-hi" (distances are symmetric / normalized).
+	$dist = [];
+	foreach ( $rows as $r ) {
+		$dist[ (int) $r['from_id'] . '-' . (int) $r['to_id'] ] = [
+			'miles'  => (float) $r['miles'],
+			'source' => $r['source'],
+		];
+	}
+
+	wp_send_json_success( [ 'locations' => $locs, 'distances' => $dist ] );
+}
+
+// Manual override of a single pair (forces the value, bypassing the keep-larger rule).
+add_action( 'wp_ajax_site_pulse_admin_save_mileage_distance', 'site_pulse_ajax_admin_save_mileage_distance' );
+function site_pulse_ajax_admin_save_mileage_distance(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+
+	$a     = (int) ( $_POST['from_id'] ?? 0 );
+	$b     = (int) ( $_POST['to_id'] ?? 0 );
+	$miles = round( (float) ( $_POST['miles'] ?? 0 ), 2 );
+	if ( ! $a || ! $b || $a === $b ) wp_send_json_error( [ 'message' => 'Invalid pair.' ] );
+	if ( $miles < 0 ) wp_send_json_error( [ 'message' => 'Miles must be 0 or more.' ] );
+
+	[ $lo, $hi ] = site_pulse_mileage_normalize_pair( $a, $b );
+	global $wpdb;
+	$exists = $wpdb->get_var( $wpdb->prepare(
+		"SELECT id FROM " . site_pulse_table('mileage_distances') . " WHERE from_id = %d AND to_id = %d",
+		$lo, $hi
+	) );
+	if ( $exists ) {
+		$wpdb->update( site_pulse_table('mileage_distances'),
+			[ 'miles' => $miles, 'source' => 'manual' ],
+			[ 'from_id' => $lo, 'to_id' => $hi ]
+		);
+	} else {
+		$wpdb->insert( site_pulse_table('mileage_distances'), [
+			'from_id'    => $lo,
+			'to_id'      => $hi,
+			'miles'      => $miles,
+			'source'     => 'manual',
+			'created_at' => current_time( 'mysql' ),
+		] );
+	}
+
+	// Fill any pending (uncomputed) legs that were waiting on this pair. Already-finalized
+	// legs keep their logged miles — we don't silently rewrite history.
+	site_pulse_mileage_finalize_legs_for_location( $lo );
+	wp_send_json_success( [ 'miles' => $miles ] );
+}
+
+add_action( 'wp_ajax_site_pulse_admin_get_toll_settings', 'site_pulse_ajax_admin_get_toll_settings' );
+function site_pulse_ajax_admin_get_toll_settings(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+
+	$key = site_pulse_tollguru_key();
+	wp_send_json_success( [
+		'key_set'      => $key !== '',
+		'key_preview'  => $key ? substr( $key, 0, 4 ) . '…' . substr( $key, -4 ) : '',
+		'vehicle_type' => site_pulse_toll_vehicle_type(),
+	] );
+}
+
+add_action( 'wp_ajax_site_pulse_admin_save_toll_settings', 'site_pulse_ajax_admin_save_toll_settings' );
+function site_pulse_ajax_admin_save_toll_settings(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+
+	// Only overwrite the key when a non-empty value is posted, so re-saving the
+	// settings panel without re-typing the key doesn't wipe it.
+	if ( isset( $_POST['tollguru_api_key'] ) && $_POST['tollguru_api_key'] !== '' ) {
+		site_pulse_set_setting( 'tollguru_api_key', sanitize_text_field( $_POST['tollguru_api_key'] ) );
+	}
+	if ( isset( $_POST['vehicle_type'] ) && $_POST['vehicle_type'] !== '' ) {
+		site_pulse_set_setting( 'toll_vehicle_type', sanitize_text_field( $_POST['vehicle_type'] ) );
+	}
+	wp_send_json_success( [ 'vehicle_type' => site_pulse_toll_vehicle_type() ] );
 }
 
 add_action( 'wp_ajax_site_pulse_admin_test_mileage_api', 'site_pulse_ajax_admin_test_mileage_api' );

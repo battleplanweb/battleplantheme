@@ -1632,6 +1632,7 @@ require_once get_template_directory().'/functions-public.php';
 require_once get_template_directory() . '/functions-chron.php';
 
 if ( is_admin() || _USER_LOGIN == "battleplanweb" ) require_once get_template_directory().'/functions-admin.php';
+if ( is_admin() ) require_once get_template_directory().'/functions-media-replace.php';
 require_once get_template_directory().'/functions-ai-alt.php';
 if (!empty( get_site_option('bp_rovin_secret'))) { require_once get_template_directory() . '/functions-rovin.php'; }
 
@@ -2701,7 +2702,7 @@ add_action('pre_current_active_plugins', 'battleplan_plugin_hide');
 function battleplan_plugin_hide() {
   	if (_USER_LOGIN != 'battleplanweb') :
 		global $wp_list_table;
-		$hidearr = array('admin-column-pro/admin-columns-pro.php', 'enable-media-replace/enable-media-replace.php', 'git-updater/git-updater.php', 'git-updater/github-updater.php', 'git-updater-pro/git-updater-pro.php');
+		$hidearr = array('admin-column-pro/admin-columns-pro.php', 'git-updater/git-updater.php', 'git-updater/github-updater.php', 'git-updater-pro/git-updater-pro.php');
 
 		$myplugins = $wp_list_table->items;
 		foreach ($myplugins as $key => $val) :
@@ -2775,16 +2776,23 @@ function battleplan_load_tag_manager() {
 		return;
 	}
 
+	$is_dev = ( defined('_USER_LOGIN') && _USER_LOGIN === 'battleplanweb' );
+
 	$buildTags   = '';
 	$events      = [];
 	$analytics_id = '';
 	$ads_id       = '';
+	$clarity_id   = '';
 
 	foreach ( $customer_info['google-tags'] as $gtag => $value ) {
 
-		if ( $gtag === 'analytics' && _USER_LOGIN !== 'battleplanweb' ) {
+		if ( $gtag === 'analytics' && !$is_dev ) {
 			$analytics_id = esc_js($value);
 			$buildTags  .= "gtag('config','{$analytics_id}');";
+		}
+
+		elseif ( $gtag === 'clarity' && !$is_dev ) {
+			$clarity_id = esc_js($value);
 		}
 
 		elseif ( $gtag === 'ads' ) {
@@ -2797,7 +2805,7 @@ function battleplan_load_tag_manager() {
 		}
 	}
 
-	if ( empty($analytics_id) ) return;
+	if ( empty($analytics_id) && empty($clarity_id) ) return;
 
 	foreach ( $events as $event ) {
 
@@ -2822,13 +2830,159 @@ function battleplan_load_tag_manager() {
 		}
 	}
 
-	echo '<script async nonce="' . esc_attr(_BP_NONCE) . '" src="https://www.googletagmanager.com/gtag/js?id=' . esc_attr($analytics_id) . '"></script>';
-	echo '<script nonce="' . esc_attr(_BP_NONCE) . '">
-		window.dataLayer = window.dataLayer || [];
-		function gtag(){dataLayer.push(arguments);}
-		gtag("js", new Date());
-		' . $buildTags . '
-	</script>';
+	$nonce = esc_attr(_BP_NONCE);
+	$rest  = esc_url( rest_url('bp/v1/geo') );
+
+	// Tracking is injected by a cache-safe JS bootstrapper rather than printed
+	// directly. The HTML below is identical for every anonymous visitor (so it
+	// EverCaches cleanly); a per-request call to /wp-json/bp/v1/geo (Cloudflare
+	// location headers, uncached) then decides whether to actually load GA4 +
+	// Clarity. US — or unknown, fail-open — loads tracking; non-US never does.
+	// The gtag config queue is built up front so event ordering stays correct;
+	// only the senders (gtag.js + Clarity) are gated. The same call sets the
+	// user-country / user-city / user-region cookies for the form country-block
+	// and "serving your city" personalization, replacing the old ipapi.co fetch.
+	echo <<<HTML
+<script nonce="{$nonce}">
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag("js", new Date());
+{$buildTags}
+(function(){
+	var GA_ID = "{$analytics_id}", CLARITY_ID = "{$clarity_id}";
+
+	function setGeo(n, v){
+		if (!v) return;
+		var c = n + "=" + encodeURIComponent(v) + "; path=/; SameSite=Strict";
+		if (location.protocol === "https:") c += "; Secure";
+		document.cookie = c;
+	}
+	function readGeo(n){
+		var m = document.cookie.split("; ").find(function(x){ return x.indexOf(n + "=") === 0; });
+		return m ? decodeURIComponent(m.substring(n.length + 1)) : "";
+	}
+	function loadGtag(){
+		if (!GA_ID) return;
+		var s = document.createElement("script");
+		s.async = true;
+		s.src = "https://www.googletagmanager.com/gtag/js?id=" + GA_ID;
+		document.head.appendChild(s);
+	}
+	function loadClarity(){
+		if (!CLARITY_ID) return;
+		(function(c,l,a,r,i,t,y){
+			c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+			t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+			y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+		})(window, document, "clarity", "script", CLARITY_ID);
+	}
+	function boot(){ loadGtag(); loadClarity(); }
+
+	// Returning visitor this session — geo already decided, skip the fetch
+	var known = readGeo("user-country");
+	if (known) { if (known === "United States") boot(); return; }
+
+	// First visit — ask the framework geo endpoint (Cloudflare headers, uncached)
+	fetch("{$rest}", { credentials: "omit" })
+		.then(function(r){ return r.json(); })
+		.then(function(d){
+			d = d || {};
+			var cc = d.country || "";
+			setGeo("user-country", cc === "US" ? "United States" : cc);
+			setGeo("user-city", d.city || "");
+			setGeo("user-region", d.region || "");
+			if (!cc || cc === "US") boot();   // fail OPEN on unknown
+		})
+		.catch(function(){ boot(); });        // network failure → fail OPEN
+})();
+</script>
+HTML;
+}
+
+/*--------------------------------------------------------------
+# Microsoft Clarity plugin -- suppress its front-end tag (Option B)
+--------------------------------------------------------------*/
+// When OUR bootstrapper is handling Clarity (a 'clarity' id is set in google-tags), stop the
+// Microsoft Clarity plugin from ALSO printing its own tag on the front end. The plugin injects
+// inline on wp_head only when get_option('clarity_project_id') is non-empty, so we blank that
+// value on front-end requests -- which avoids a DOUBLE Clarity tag AND stops the plugin's
+// ungated tag from bypassing our US gate. It is blanked for EVERY front-end visitor (not just
+// non-US): the page must never contain the plugin tag, and the bootstrapper does the per-visitor
+// US gating client-side -- doing it "only for non-US" in PHP would get baked into the EverCache.
+// is_admin() requests keep the real value, so the plugin's in-admin dashboard
+// (admin.php?page=microsoft-clarity) still loads normally.
+add_filter('option_clarity_project_id', function($value) {
+	if ( is_admin() ) return $value;
+	$info = function_exists('customer_info') ? customer_info() : [];
+	$ours = $info['google-tags']['clarity'] ?? '';
+	return $ours ? '' : $value;   // suppress plugin tag only where the bootstrapper injects Clarity
+});
+
+/*--------------------------------------------------------------
+# Visitor Geo Endpoint (Cloudflare location headers)
+--------------------------------------------------------------*/
+// Returns the current visitor's country/city/region/zip from Cloudflare's
+// request headers as UNCACHED JSON, so the tracking bootstrapper (and, via the
+// cookies it sets, the form country-block) get per-request geo even though the
+// page HTML itself is EverCached. CF-IPCountry is always present on Cloudflare;
+// city/region/zip require Managed Transforms -> "Add visitor location headers"
+// to be enabled on the zone (run the bulk-enable script across all zones).
+add_action('rest_api_init', function() {
+	register_rest_route('bp/v1', '/geo', [
+		'methods'             => 'GET',
+		'callback'            => 'bp_rest_geo',
+		'permission_callback' => '__return_true',
+	]);
+});
+
+function bp_rest_geo( WP_REST_Request $request ) {
+	nocache_headers();
+
+	$grab = function($key) {
+		return isset($_SERVER[$key]) ? sanitize_text_field( wp_unslash($_SERVER[$key]) ) : '';
+	};
+
+	$country = strtoupper( $grab('HTTP_CF_IPCOUNTRY') );
+	// CF sends XX (unknown) and T1/T2 (Tor) — blank these so the client fails open
+	if ( in_array($country, ['XX', 'T1', 'T2'], true) ) $country = '';
+
+	$city   = $grab('HTTP_CF_IPCITY');
+	$region = strtoupper( $grab('HTTP_CF_REGION_CODE') );
+	$zip    = $grab('HTTP_CF_POSTAL_CODE');
+
+	// Non-Cloudflare sites (~1%) have no CF headers, so $country is blank. Fall
+	// back to a single server-side ipapi.co lookup so the form country-block and
+	// "serving your city" personalization keep working there. Cloudflare sites
+	// always have CF-IPCountry and never reach this branch.
+	if ( $country === '' ) {
+		$ip = $grab('HTTP_CF_CONNECTING_IP');
+		if ( $ip === '' && ( $fwd = $grab('HTTP_X_FORWARDED_FOR') ) !== '' ) {
+			$ip = trim( explode(',', $fwd)[0] );
+		}
+		if ( $ip === '' ) $ip = $grab('REMOTE_ADDR');
+
+		if ( $ip !== '' && filter_var($ip, FILTER_VALIDATE_IP) ) {
+			$r = wp_remote_get( 'https://ipapi.co/' . rawurlencode($ip) . '/json/', ['timeout' => 3] );
+			if ( ! is_wp_error($r) && wp_remote_retrieve_response_code($r) === 200 ) {
+				$d = json_decode( wp_remote_retrieve_body($r), true );
+				if ( is_array($d) ) {
+					$country = strtoupper( sanitize_text_field( $d['country'] ?? '' ) ); // ipapi 'country' = ISO code
+					if ( $city   === '' ) $city   = sanitize_text_field( $d['city'] ?? '' );
+					if ( $region === '' ) $region = strtoupper( sanitize_text_field( $d['region_code'] ?? '' ) );
+					if ( $zip    === '' ) $zip    = sanitize_text_field( $d['postal'] ?? '' );
+				}
+			}
+		}
+	}
+
+	$resp = new WP_REST_Response([
+		'country' => $country,
+		'city'    => $city,
+		'region'  => $region,
+		'zip'     => $zip,
+	]);
+	$resp->header('Cache-Control', 'private, no-store, max-age=0');
+	return $resp;
 }
 
 // Build and display desktop navigation menu

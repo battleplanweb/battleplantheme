@@ -32,43 +32,45 @@
 --------------------------------------------------------------*/
 
 :root {
-	--sp-sidebar-bg:                                           #1a1f2e;
-	--sp-sidebar-bg-hover:                                     #252b3d;
-	--sp-sidebar-bg-active:                                    #2a3148;
-	--sp-sidebar-text:                                         #8b92a5;
-	--sp-sidebar-text-hover:                                   #c4c9d6;
+	/* ---- AutoDrive theme: cream canvas, orange accent, slate nav ---- */
+	--sp-sidebar-bg:                                           #474c54;
+	--sp-sidebar-bg-hover:                                     #545a64;
+	--sp-sidebar-bg-active:                                    #ec9a3c;
+	--sp-sidebar-text:                                         #c8ccd3;
+	--sp-sidebar-text-hover:                                   #ffffff;
 	--sp-sidebar-text-active:                                  #ffffff;
-	--sp-sidebar-accent:                                       #6366f1;
-	--sp-sidebar-accent-glow:                                  rgba(99, 102, 241, 0.15);
+	--sp-sidebar-accent:                                       #ec9a3c;
+	--sp-sidebar-accent-glow:                                  rgba(236, 154, 60, 0.18);
 	--sp-sidebar-width:                                        260px;
-	--sp-sidebar-border:                                       rgba(255,255,255,0.06);
+	--sp-sidebar-border:                                       rgba(255,255,255,0.08);
 
-	--sp-primary:                                              #6366f1;
-	--sp-primary-hover:                                        #5558e6;
-	--sp-primary-light:                                        #eef2ff;
-	--sp-success:                                              #16a34a;
-	--sp-success-light:                                        #f0fdf4;
-	--sp-warning:                                              #d97706;
-	--sp-warning-light:                                        #fffbeb;
-	--sp-danger:                                               #dc2626;
-	--sp-danger-light:                                         #fef2f2;
+	--sp-primary:                                              #ec9a3c;
+	--sp-primary-hover:                                        #db8927;
+	--sp-primary-light:                                        #fcf2e3;
+	--sp-success:                                              #2f8f57;
+	--sp-success-light:                                        #eef7f1;
+	--sp-warning:                                              #c77d18;
+	--sp-warning-light:                                        #fbf1de;
+	--sp-danger:                                               #d0432f;
+	--sp-danger-light:                                         #fbeae6;
 
-	--sp-text:                                                 #1e293b;
-	--sp-text-secondary:                                       #64748b;
-	--sp-text-light:                                           #94a3b8;
-	--sp-bg:                                                   #f1f5f9;
+	--sp-text:                                                 #2c2a27;
+	--sp-text-secondary:                                       #6e6a63;
+	--sp-text-light:                                           #a39c90;
+	--sp-bg:                                                   #f4eee3;
 	--sp-bg-white:                                             #ffffff;
-	--sp-border:                                               #e2e8f0;
-	--sp-border-focus:                                         #a5b4fc;
+	--sp-border:                                               #e7ded0;
+	--sp-border-focus:                                         #eebb78;
 
 	--sp-shadow-sm:                                            0 1px 2px rgba(0,0,0,0.05);
 	--sp-shadow:                                               0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
 	--sp-shadow-md:                                            0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
 	--sp-shadow-lg:                                            0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
 
-	--sp-radius:                                               8px;
-	--sp-radius-sm:                                            6px;
-	--sp-radius-lg:                                            12px;
+	--sp-radius:                                               10px;
+	--sp-radius-sm:                                            8px;
+	--sp-radius-lg:                                            16px;
+	--sp-radius-pill:                                          999px;
 	--sp-font:                                                 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 	--sp-transition:                                           0.2s ease;
 
@@ -437,12 +439,11 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 
 .sp-nav-child.active {
 	color:                                                     var(--sp-sidebar-text-active);
-	background:                                                var(--sp-sidebar-bg-active);
+	background:                                                var(--sp-sidebar-bg-hover); /* subtle slate, not orange */
 }
 
 .sp-nav-child.active::before {
-	background:                                                var(--sp-sidebar-accent);
-	opacity:                                                   1;
+	opacity:                                                   0; /* keep the orange accent off sub-items */
 }
 
 
@@ -926,6 +927,66 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 
 
 /*--------------------------------------------------------------
+# Shared Layout Primitives
+# Reusable page-hierarchy building blocks so every app (Reports,
+# Mileage, …) is laid out the same way:
+#   Area 1  .sp-panel-header     — title + actions
+#   Area 2  .sp-meta-bar         — at-a-glance label/value strip
+#   Area 3  .sp-toolbar          — filter / control row
+#   Area 4  .sp-table-card       — the data area
+--------------------------------------------------------------*/
+
+/* Area 2 — label/value strip (report header + mileage summary share this). */
+.sp-meta-bar {
+	display:                                                   grid;
+	grid-template-columns:                                     repeat(auto-fit, minmax(140px, 1fr));
+	gap:                                                       12px 24px;
+	padding:                                                   18px 22px;
+	background:                                                var(--sp-bg-white);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-lg);
+	box-shadow:                                                var(--sp-shadow-sm);
+	margin-bottom:                                             20px;
+}
+
+.sp-meta-bar .sp-card-value {
+	font-size:                                                 18px;
+}
+
+/* Area 3 — horizontal control/filter row. */
+.sp-toolbar {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	align-items:                                               center;
+	gap:                                                       10px 18px;
+	margin-bottom:                                             18px;
+}
+
+.sp-toolbar-group {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	align-items:                                               center;
+	gap:                                                       6px;
+}
+
+.sp-toolbar-label {
+	font-size:                                                 12px;
+	font-weight:                                               600;
+	text-transform:                                            uppercase;
+	letter-spacing:                                            0.05em;
+	color:                                                     var(--sp-text-light);
+}
+
+/* Area 4 — card wrapper for tables / data. */
+.sp-table-card {
+	background:                                                var(--sp-bg-white);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-lg);
+	overflow:                                                  hidden;
+}
+
+
+/*--------------------------------------------------------------
 # Forms & Inputs
 --------------------------------------------------------------*/
 
@@ -950,7 +1011,8 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 #sp-login-form input[type="text"],
 #sp-login-form input[type="password"] {
 	width:                                                     100%;
-	padding:                                                   10px 14px;
+	min-height:                                                40px;
+	padding:                                                   9px 14px;
 	font-size:                                                 14px;
 	font-family:                                               var(--sp-font);
 	color:                                                     var(--sp-text);
@@ -966,7 +1028,7 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 .sp-textarea:focus,
 #sp-login-form input:focus {
 	border-color:                                              var(--sp-border-focus);
-	box-shadow:                                                0 0 0 3px rgba(99, 102, 241, 0.1);
+	box-shadow:                                                0 0 0 3px rgba(236, 154, 60, 0.15);
 }
 
 .sp-textarea {
@@ -1067,9 +1129,11 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	--_btn-bg-h:                                               none;
 	--_btn-border:                                             1px solid transparent;
 	--_btn-border-h:                                           1px solid transparent;
-	--_btn-padding:                                            10px 20px;
+	--_btn-padding:                                            0 18px;
 
 	display:                                                   inline-grid;
+	min-height:                                                40px;
+	box-sizing:                                                border-box;
 	grid-auto-flow:                                            column;
 	align-items:                                               center;
 	justify-content:                                           center;
@@ -1080,7 +1144,7 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	line-height:                                               1;
 	cursor:                                                    pointer;
 	transition:                                                all var(--sp-transition);
-	border-radius:                                             var(--sp-radius-sm);
+	border-radius:                                             var(--sp-radius-pill);
 	text-decoration:                                           none;
 	color:                                                     var(--_btn-color);
 	background:                                                var(--_btn-bg);
@@ -1107,18 +1171,17 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 .sp-btn-secondary {
 	--_btn-color:                                              var(--sp-text);
 	--_btn-color-h:                                            var(--sp-text);
-	--_btn-bg:                                                 var(--sp-bg);
-	--_btn-bg-h:                                               var(--sp-border);
+	--_btn-bg:                                                 var(--sp-bg-white);
+	--_btn-bg-h:                                               var(--sp-bg);
 	--_btn-border:                                             1px solid var(--sp-border);
-	--_btn-border-h:                                           1px solid var(--sp-border);
+	--_btn-border-h:                                           1px solid var(--sp-border-focus);
 }
 
 .sp-btn-ghost {
 	--_btn-color:                                              var(--sp-text-secondary);
 	--_btn-color-h:                                            var(--sp-text);
-	--_btn-bg:                                                 transparent;
-	--_btn-bg-h:                                               var(--sp-bg);
-	--_btn-padding:                                            8px 12px;
+	--_btn-bg:                                                 rgba(44, 42, 39, 0.05);
+	--_btn-bg-h:                                               rgba(44, 42, 39, 0.10);
 }
 
 .sp-btn-danger {
@@ -2084,15 +2147,8 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	margin-bottom:                                             16px;
 }
 
-.sp-mileage-summary-grid {
-	display:                                                   grid;
-	grid-template-columns:                                     repeat(auto-fit, minmax(140px, 1fr));
-	gap:                                                       12px;
-	padding:                                                   16px 20px;
-	background:                                                var(--sp-bg);
-	border:                                                    1px solid var(--sp-border);
-	border-radius:                                             var(--sp-radius);
-}
+/* Mileage summary reuses the shared .sp-meta-bar (see Shared Layout Primitives). */
+.sp-mileage-summary-grid { /* legacy alias */ }
 
 .sp-mileage-table {
 	width:                                                     100%;
@@ -2138,46 +2194,350 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	font-style:                                                italic;
 }
 
+.sp-mileage-map-canvas {
+	width:                                                     100%;
+	height:                                                    540px;
+}
+
+.sp-mileage-map-notice {
+	padding:                                                   16px 20px;
+	margin-bottom:                                             16px;
+	background:                                                var(--sp-bg);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius);
+	color:                                                     var(--sp-text-secondary);
+	font-size:                                                 14px;
+}
+
+.sp-map-info {
+	font-size:                                                 13px;
+	line-height:                                               1.45;
+	min-width:                                                 140px;
+}
+
+.sp-map-info-cat {
+	font-style:                                                italic;
+	color:                                                     var(--sp-text-secondary);
+}
+
+.sp-reminder-toggle {
+	display:                                                   inline-flex;
+	align-items:                                               center;
+	gap:                                                       8px;
+	font-size:                                                 14px;
+	cursor:                                                    pointer;
+	user-select:                                               none;
+}
+
+.sp-quickentry {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       8px;
+	margin-bottom:                                             8px;
+}
+
+.sp-quickentry .sp-input {
+	flex:                                                      1;
+}
+
+.sp-quickentry-mic {
+	flex:                                                      0 0 auto;
+	width:                                                     40px;
+	height:                                                    40px;
+	border:                                                    1px solid var(--sp-border);
+	background:                                                var(--sp-bg-white);
+	color:                                                     var(--sp-text-secondary);
+}
+
+@media (max-width: 640px) {
+	.sp-mileage-form-top { grid-template-columns: 1fr; gap: 12px; }
+}
+
+.sp-quickentry-mic.sp-mic-active {
+	color:                                                     #dc2626;
+	border-color:                                              #dc2626;
+	animation:                                                 sp-mic-pulse 1s ease-in-out infinite;
+}
+
+@keyframes sp-mic-pulse {
+	0%, 100% { opacity: 1; }
+	50%      { opacity: 0.45; }
+}
+
+.sp-quickentry-note {
+	font-size:                                                 12.5px;
+	color:                                                     var(--sp-text-secondary);
+	margin-bottom:                                             10px;
+}
+
+.sp-mileage-date {
+	font-weight:                                               500;
+}
+
 .sp-mileage-row-actions {
 	display:                                                   flex;
-	gap:                                                       6px;
-	white-space:                                               nowrap;
+	gap:                                                       4px;
+	margin-top:                                                8px;
+}
+
+.sp-icon-btn {
+	display:                                                   inline-flex;
+	align-items:                                               center;
+	justify-content:                                          center;
+	padding:                                                   5px;
+	border:                                                    none;
+	background:                                                transparent;
+	color:                                                     var(--sp-text-light);
+	border-radius:                                             var(--sp-radius-sm);
+	cursor:                                                    pointer;
+	line-height:                                               0;
+	transition:                                                background 0.12s, color 0.12s;
+}
+
+.sp-icon-btn:hover {
+	background:                                                var(--sp-bg);
+	color:                                                     var(--sp-text);
+}
+
+.sp-mileage-delete-btn:hover {
+	color:                                                     #dc2626;
 }
 
 .sp-mileage-stops {
 	display:                                                   grid;
-	gap:                                                       8px;
+	gap:                                                       10px;
 	margin-bottom:                                             10px;
+	padding:                                                   18px 20px;
+	background:                                                rgba(255, 255, 255, 0.55); /* lighter than the cream page, groups the route */
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-lg);
 }
 
+/* DATE + ROUTE share the top row. */
+.sp-mileage-form-top {
+	display:                                                   grid;
+	grid-template-columns:                                     minmax(150px, 210px) 1fr;
+	gap:                                                       20px;
+	align-items:                                               start;
+	margin-bottom:                                             18px;
+}
+
+/* Every route row uses the SAME column template so the gutter, location, purpose
+   and remove controls line up vertically across START / 1·2·3 / END. */
 .sp-mileage-stop {
 	display:                                                   grid;
-	grid-template-columns:                                     auto 1fr auto;
-	gap:                                                       8px;
+	grid-template-columns:                                     52px minmax(0, 1.3fr) minmax(0, 1.3fr) 24px;
+	gap:                                                       12px;
 	align-items:                                               center;
 }
 
-.sp-mileage-stop-num {
+.sp-mileage-stop-num,
+.sp-mileage-bookend-label {
+	font-size:                                                 12px;
+	font-weight:                                               700;
+	letter-spacing:                                            0.04em;
+	color:                                                     var(--sp-text-light);
+	text-align:                                                left;
+}
+
+/* Locked START/END read-only field, spanning the location + purpose columns. */
+.sp-mileage-stop-fixed .sp-mileage-stop-home {
+	grid-column:                                               2 / -1;
+	min-height:                                                40px;
+	display:                                                   flex;
+	align-items:                                               center;
+	padding:                                                   0 14px;
+	background:                                                rgba(44, 42, 39, 0.04);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-sm);
 	font-weight:                                               600;
-	color:                                                     var(--sp-text-secondary);
-	min-width:                                                 24px;
 }
 
 .sp-mileage-stop-remove {
+	justify-self:                                              center;
+	width:                                                     26px;
+	height:                                                    26px;
+	padding:                                                   0;
+	border:                                                    none;
+	background:                                                transparent;
+	color:                                                     var(--sp-text-light);
 	font-size:                                                 18px;
 	line-height:                                               1;
-	padding:                                                   4px 10px;
+	border-radius:                                             50%;
+	cursor:                                                    pointer;
+}
+
+.sp-mileage-stop-remove:hover {
+	background:                                                var(--sp-danger-light);
+	color:                                                     var(--sp-danger);
+}
+
+.sp-mileage-purposes {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       6px;
+	margin:                                                    8px 0;
+}
+
+.sp-purpose-chip {
+	display:                                                   inline-flex;
+	align-items:                                               center;
+	gap:                                                       6px;
+	padding:                                                   3px 6px 3px 10px;
+	border-radius:                                             999px;
+	background:                                                var(--sp-bg-subtle, #f4f6f8);
+	border:                                                    1px solid var(--sp-border, #d7dde3);
+	font-size:                                                 12.5px;
+}
+
+.sp-purpose-chip-x {
+	border:                                                    none;
+	background:                                                transparent;
+	cursor:                                                    pointer;
+	font-size:                                                 15px;
+	line-height:                                               1;
+	color:                                                     var(--sp-text-secondary, #6b7280);
+}
+
+.sp-mileage-purpose-add {
+	display:                                                   flex;
+	gap:                                                       8px;
+	margin-bottom:                                             10px;
+	max-width:                                                 420px;
+}
+
+.sp-mileage-quickranges {
+	/* now a .sp-toolbar-group; layout handled there */
+	gap:                                                       6px;
+}
+
+/* Two stacked rows beside the PERIOD label: presets on top, date pickers below. */
+.sp-mileage-period-controls {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	gap:                                                       10px;
+}
+
+/* Keep the date row inline — base .sp-input is width:100%, which would stack them. */
+#sp-mileage-toolbar .sp-input,
+#sp-mileage-toolbar .sp-select {
+	width:                                                     auto;
+}
+
+#sp-mileage-toolbar .sp-input {
+	min-width:                                                 150px;
+}
+
+.sp-mileage-month-picker {
+	max-width:                                                 170px;
+}
+
+.sp-btn-tiny {
+	--_btn-padding:                                            0 10px;
+	min-height:                                                26px;
+	font-size:                                                 11px;
+	margin-left:                                                8px;
+}
+
+.sp-mileage-matrix-wrap {
+	overflow:                                                  auto;
+	max-height:                                                520px;
+	margin:                                                    8px 0 16px;
+	border:                                                    1px solid var(--sp-border, #d7dde3);
+	border-radius:                                             8px;
+}
+
+.sp-matrix-table {
+	border-collapse:                                           collapse;
+	font-size:                                                 12px;
+}
+
+.sp-matrix-table th,
+.sp-matrix-table td {
+	border:                                                    1px solid var(--sp-border, #e4e2da);
+	padding:                                                   5px 8px;
+	text-align:                                                center;
+	white-space:                                               nowrap;
+}
+
+.sp-matrix-table thead th,
+.sp-matrix-table tbody th {
+	position:                                                  sticky;
+	background:                                                var(--sp-bg-subtle, #f4f6f8);
+	font-weight:                                               600;
+	max-width:                                                 140px;
+	overflow:                                                  hidden;
+	text-overflow:                                             ellipsis;
+}
+
+.sp-matrix-table thead th { top: 0; z-index: 2; }
+.sp-matrix-table tbody th { left: 0; text-align: left; z-index: 1; }
+
+.sp-matrix-cell { cursor: pointer; }
+.sp-matrix-self { color: var(--sp-text-secondary, #9aa0aa); background: #fafafa; }
+.sp-matrix-api { background: #e6eaf1; }
+.sp-matrix-manual { background: #e8f2eb; }
+.sp-matrix-missing { background: #fbe7e4; color: #b23b2e; font-weight: 600; }
+.sp-matrix-cell:hover { outline: 2px solid var(--sp-accent, #15243a); outline-offset: -2px; }
+
+.sp-modal-wide { max-width: 720px; width: 92vw; }
+.sp-import-candidates {
+	max-height:                                                360px;
+	overflow:                                                  auto;
+	margin:                                                    10px 0;
+}
+.sp-import-candidates input.sp-input { padding: 4px 8px; font-size: 12.5px; }
+
+.sp-mileage-widget-stats {
+	display:                                                   grid;
+	grid-template-columns:                                     repeat(auto-fit, minmax(86px, 1fr));
+	gap:                                                       14px;
+}
+
+.sp-mileage-widget-stats .sp-card-value {
+	font-size:                                                 22px;
+	font-weight:                                               700;
+	line-height:                                               1.1;
+}
+
+.sp-mileage-widget-stats .sp-card-label {
+	font-size:                                                 10.5px;
+	text-transform:                                            uppercase;
+	letter-spacing:                                            0.05em;
+	color:                                                     var(--sp-text-secondary, #6b7280);
+	margin-top:                                                2px;
+}
+
+.sp-mileage-route-line {
+	line-height:                                               1.5;
+}
+
+.sp-route-purpose {
+	color:                                                     var(--sp-text-secondary, #6b7280);
+	font-style:                                                italic;
+}
+
+.sp-mileage-home-hint {
+	font-size:                                                 12.5px;
+	color:                                                     var(--sp-text-secondary, #6b7280);
+	background:                                                var(--sp-bg-subtle, #f4f6f8);
+	border:                                                    1px dashed var(--sp-border, #d7dde3);
+	border-radius:                                             8px;
+	padding:                                                   8px 10px;
+	margin-bottom:                                             8px;
 }
 
 .sp-mileage-stop-actions {
 	display:                                                   flex;
-	gap:                                                       8px;
-	margin-bottom:                                             10px;
+	gap:                                                       10px;
+	padding-left:                                              64px; /* align under the location column */
+	margin:                                                    2px 0 4px;
 }
 
 .sp-mileage-totals {
 	font-size:                                                 13px;
 	margin-top:                                                4px;
+	margin-bottom:                                             4em; /* breathing room before Notes */
 }
 
 .sp-text-warning {

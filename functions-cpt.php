@@ -349,3 +349,131 @@ function battleplan_add_acf_fields() {
 		'description' => '',
 	));
 }
+
+
+// ---------------------------------------------------------
+// # Daily "new reviews" digest to the client
+// ---------------------------------------------------------
+// Companion to the jobsite digest (includes-jobsite-geo.php): each morning (~9am)
+// email the client any testimonials added in the last 24h, so collecting reviews
+// has a visible payoff. Lives here (always-loaded) because testimonials exist on
+// every site, not just jobsite_geo ones.
+//
+// Opt-OUT per site, controlled by the bp_reviews_digest option:
+//   'false'            -> off (don't send)
+//   'email@domain.com' -> send to that specific address
+//   'true' or absent   -> send to customer_info['email'] (default)
+
+add_action( 'init', 'bp_reviews_schedule_daily_digest' );
+function bp_reviews_schedule_daily_digest() {
+	$setting = get_option('bp_reviews_digest');
+
+	if ( $setting === 'false' ) {
+		$ts = wp_next_scheduled('bp_reviews_daily_digest');
+		if ( $ts ) wp_unschedule_event($ts, 'bp_reviews_daily_digest');
+		return;
+	}
+
+	if ( ! wp_next_scheduled('bp_reviews_daily_digest') ) {
+		$tz   = wp_timezone();
+		$next = new DateTime('today 09:00', $tz);   // ~9am site-local (jobsite digest is 7am)
+		if ( $next <= new DateTime('now', $tz) ) $next->modify('+1 day');
+		wp_schedule_event( $next->getTimestamp(), 'daily', 'bp_reviews_daily_digest' );
+	}
+}
+
+add_action( 'bp_reviews_daily_digest', 'bp_reviews_send_daily_digest' );
+function bp_reviews_send_daily_digest() {
+	$setting = get_option('bp_reviews_digest');
+	if ( $setting === 'false' ) return;
+
+	// Recipient: a specific address if set, else the client's own email.
+	$customer = get_option('customer_info');
+	$to = ( is_string($setting) && $setting !== '' && $setting !== 'true' && is_email($setting) )
+		? $setting
+		: ( ! empty($customer['email']) && is_email($customer['email']) ? $customer['email'] : '' );
+	if ( ! $to ) return;
+
+	// Testimonials published in the last 24h.
+	$since   = date( 'Y-m-d H:i:s', current_time('timestamp') - DAY_IN_SECONDS );
+	$reviews = get_posts([
+		'post_type'      => 'testimonials',
+		'post_status'    => 'publish',
+		'posts_per_page' => 50,
+		'orderby'        => 'date',
+		'order'          => 'DESC',
+		'date_query'     => [[ 'column' => 'post_date', 'after' => $since ]],
+	]);
+	if ( empty($reviews) ) return; // nothing new — no empty digests
+
+	$site_name = get_bloginfo('name');
+	$domain    = parse_url( home_url(), PHP_URL_HOST );
+	$logos     = get_template_directory_uri() . '/common/logos/';
+	$count     = count($reviews);
+
+	$cards = '';
+	foreach ($reviews as $r) {
+		$name = get_the_title($r);
+		$body = trim( wp_strip_all_tags( $r->post_content ) );
+		if ( mb_strlen($body) > 500 ) $body = mb_substr($body, 0, 500) . '…';
+
+		$thumb = get_the_post_thumbnail_url($r->ID, 'thumbnail');
+
+		// Rating -> gold unicode stars (supports halves).
+		$rate  = (float) get_post_meta($r->ID, 'testimonial_rating', true);
+		$stars = '';
+		if ( $rate > 0 ) {
+			$full  = (int) floor($rate);
+			$half  = ( $rate - $full ) >= 0.5;
+			$stars = str_repeat('★', $full) . ( $half ? '½' : '' ) . str_repeat('☆', max(0, 5 - $full - ( $half ? 1 : 0 )));
+		}
+
+		// Platform -> hosted logo file (lowercased value; housecall_pro is the one exception).
+		$platform = strtolower( trim( (string) get_post_meta($r->ID, 'testimonial_platform', true) ) );
+		$pfile    = ( $platform === '' || $platform === 'none' )
+			? ''
+			: ( $platform === 'housecall_pro' ? 'housecallpro' : $platform );
+
+		$cards .= '<div style="border:1px solid #e2e2e2;border-radius:8px;padding:16px 18px;margin:0 0 16px;">';
+		$cards .= '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 10px;"><tr>';
+		if ( $thumb ) {
+			$cards .= '<td style="width:64px;vertical-align:middle;"><img src="' . esc_url($thumb) . '" width="52" height="52" alt="" style="border-radius:50%;display:block;object-fit:cover;"></td>';
+		}
+		$cards .= '<td style="vertical-align:middle;">';
+		$cards .= '<p style="margin:0;font-size:15px;font-weight:bold;">' . esc_html($name) . '</p>';
+		$meta = '';
+		if ( $stars ) $meta .= '<span style="color:#e7a400;font-size:16px;letter-spacing:1px;">' . $stars . '</span>';
+		if ( $pfile ) $meta .= ' <img src="' . esc_url($logos . $pfile . '.webp') . '" alt="' . esc_attr($platform) . '" height="16" style="height:16px;width:auto;vertical-align:middle;margin-left:4px;">';
+		if ( $meta ) $cards .= '<p style="margin:4px 0 0;">' . $meta . '</p>';
+		$cards .= '</td></tr></table>';
+		$cards .= '<p style="margin:0;line-height:1.5;color:#333;">' . esc_html($body) . '</p>';
+		$cards .= '</div>';
+	}
+
+	// Closing encouragement — randomized so every email reads a little differently.
+	$notes = [
+		'Happy customers are your best marketing — keep asking for reviews!',
+		'Every review builds trust with the next customer searching for you. Keep them coming!',
+		'Fresh reviews help you stand out in local search — keep requesting them!',
+		'Nothing sells like a happy customer\'s words. Keep gathering those reviews!',
+		'More reviews mean more confidence for future customers. Keep it up!',
+	];
+	$note = $notes[ array_rand($notes) ];
+
+	$subject = sprintf( 'You got %d new %s on your website!', $count, _n('review','reviews',$count) );
+
+	$message  = '<div style="max-width:600px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#222;">';
+	$message .= '<p style="font-size:16px;">We\'ve added the following ' . _n('review','reviews',$count) . ' to your website!</p>';
+	$message .= $cards;
+	$message .= '<p style="font-size:15px;font-weight:bold;color:#1a7f37;margin-top:22px;">' . $note . '</p>';
+	$message .= '</div>';
+
+	$headers   = [];
+	$headers[] = 'Content-Type: text/html; charset=UTF-8';
+	$headers[] = 'From: ' . $site_name . ' <noreply@' . $domain . '>';
+	$headers[] = 'Reply-To: noreply@' . $domain;
+	// Copy battleplanweb so we see exactly what the client sees (matches the jobsite digest).
+	$headers[] = 'Bcc: email@bp-webdev.com';
+
+	wp_mail($to, $subject, $message, $headers);
+}

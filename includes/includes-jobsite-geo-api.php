@@ -57,6 +57,30 @@ function bp_ingest_jobsite(array $job) {
 	bp_jobsite_setup($post_id, $job['source'] ?? '');
 	unset($GLOBALS['bp_jobsite_setup_running']);
 
+	// On a re-sync where the description text actually changed, force a fresh AI
+	// rewrite so the page copy + service terms reflect the new text. The scheduler
+	// below only fires when AI hasn't run, so clear the flag first.
+	if ( ! empty($job['desc_changed']) && defined('BP_GEO_FIELD_AI_RAN')
+		&& get_post_meta($post_id, BP_GEO_FIELD_AI_RAN, true) ) {
+		delete_post_meta($post_id, BP_GEO_FIELD_AI_RAN);
+	}
+
+	// Ingested posts skip bp_geo_ai_on_first_publish (suppressed by the guard above
+	// for the whole ingest), so schedule the AI rewrite here. It rewrites the raw
+	// description AND assigns the service-type/service terms that seed the /service/
+	// page — without it the import is a dead-end. Deferred via WP-Cron (like AI
+	// alt-text) so the slow API call doesn't block the importer, and staggered so a
+	// bulk Company Cam sync doesn't fire them all in one cron spawn.
+	if (
+		get_post_status($post_id) === 'publish'
+		&& defined('BP_GEO_FIELD_AI_RAN')
+		&& ! get_post_meta($post_id, BP_GEO_FIELD_AI_RAN, true)
+		&& ! wp_next_scheduled('bp_geo_ai_rewrite_cron', [$post_id])
+	) {
+		static $ai_stagger = 0;
+		wp_schedule_single_event(time() + 30 + ($ai_stagger++ * 90), 'bp_geo_ai_rewrite_cron', [$post_id]);
+	}
+
 	return $post_id;
 }
 
@@ -88,10 +112,17 @@ function bp_upsert_jobsite_post_exact(array $job) {
 	if ($existing) {
 
 		$args = [
-			'ID'           => $existing->ID,
-			'post_title'   => $title,
-			'post_content' => $content,
+			'ID'         => $existing->ID,
+			'post_title' => $title,
 		];
+
+		// Only overwrite the body on a fresh import or when the source text changed.
+		// On a photo-only re-sync (update_content === false) we leave post_content
+		// alone so the AI-rewritten description isn't clobbered with the raw notepad.
+		// Default (key absent, e.g. HCP) keeps the original always-update behavior.
+		if (!array_key_exists('update_content', $job) || $job['update_content']) {
+			$args['post_content'] = $content;
+		}
 
 		// Company Cam explicitly sets publish on update; HCP does not
 		if (!empty($job['force_publish'])) {
@@ -520,34 +551,70 @@ function bp_sync_jobsite_photos_hcp($post_id, array $photos) {
 # Company Cam
 --------------------------------------------------------------*/
 
-function bp_run_companycam_sync_exact() {
+// Named to match the cron caller in functions-chron-housekeeping.php. The
+// earlier "_exact" suffix broke the function_exists() guard, so the nightly
+// sync silently never ran.
+function bp_run_companycam_sync() {
 
 	require_once ABSPATH . 'wp-admin/includes/media.php';
 	require_once ABSPATH . 'wp-admin/includes/file.php';
 	require_once ABSPATH . 'wp-admin/includes/image.php';
 
-	$token = 'YOUR_TOKEN_HERE';
+	// Per-site Company Cam API token, stored in the jobsite_geo option (same
+	// place HCP keeps its token). Was hardcoded to a placeholder, which 401'd.
+	$token = get_option('jobsite_geo')['token'] ?? '';
+	if (empty($token)) {
+		error_log('bp_run_companycam_sync: no Company Cam API token in the jobsite_geo option; aborting sync.');
+		return;
+	}
 
-	$res = wp_remote_get('https://api.companycam.com/v2/projects', [
-		'headers' => ['Authorization' => 'Bearer ' . $token]
-	]);
+	// Company Cam returns only the first page (default 25) for an unparameterized
+	// request, AND it CAPS per_page at 50 (larger values are ignored — 100 still
+	// returns 50). So we must page until a page comes back EMPTY, NOT until a page
+	// is "short": every page is 50 even when hundreds of projects remain. Older /
+	// less-recently-touched projects (including ones with publishable ***notes***)
+	// live on later pages — accounts can have hundreds (this one has 200+).
+	$projects = [];
+	$page     = 1;
+	do {
+		$res = wp_remote_get( add_query_arg(
+			[ 'per_page' => 50, 'page' => $page ],   // 50 = Company Cam's max page size
+			'https://api.companycam.com/v2/projects'
+		), [ 'headers' => [ 'Authorization' => 'Bearer ' . $token ] ] );
 
-	if (is_wp_error($res)) return;
+		if ( is_wp_error( $res ) ) break;
 
-	$data = json_decode(wp_remote_retrieve_body($res));
-	$projects = is_array($data) ? $data : ($data->projects ?? []);
+		$data  = json_decode( wp_remote_retrieve_body( $res ) );
+		$batch = is_array( $data ) ? $data : ( $data->projects ?? [] );
+		if ( empty( $batch ) ) break;   // an empty page is the only reliable end-of-list signal
+
+		$projects = array_merge( $projects, $batch );
+		$page++;
+	} while ( $page <= 200 ); // safety cap: 200 pages × 50 = 10,000 projects
 
 	foreach ($projects as $p) {
 
-		$existing = get_posts([
+		$found    = get_posts([
 			'post_type'   => 'jobsite_geo',
 			'meta_key'    => '_companycam_project_id',
 			'meta_value'  => $p->id,
 			'numberposts' => 1,
 		]);
+		$existing = $found[0] ?? null;
 
-		if ($existing && get_post_meta($existing[0]->ID, '_companycam_photos_synced', true)) {
-			continue;
+		$project_updated = (int) ($p->updated_at ?? 0);
+
+		// Skip only if we've already synced this project AND it hasn't changed in
+		// Company Cam since — compare CC's updated_at to the watermark we stored last
+		// time. This is what lets later edits / added photos flow through instead of
+		// being ignored forever by a plain "already exists" guard. Falls back to the
+		// legacy _companycam_photos_synced timestamp for posts synced before this.
+		if ($existing) {
+			$last_synced = (int) get_post_meta($existing->ID, '_companycam_synced_updated_at', true);
+			if (!$last_synced) $last_synced = (int) get_post_meta($existing->ID, '_companycam_photos_synced', true);
+			if ($last_synced && $project_updated && $project_updated <= $last_synced) {
+				continue;
+			}
 		}
 
 		if (($p->status ?? '') === 'deleted') continue;
@@ -559,40 +626,51 @@ function bp_run_companycam_sync_exact() {
 
 		$jobsite_desc = trim($m[1]);
 
+		// Did the publishable description text itself change? If not (e.g. only photos
+		// were added), we keep the AI-written page copy and just refresh the photos.
+		$desc_hash    = md5($jobsite_desc);
+		$desc_changed = !$existing
+			|| ((string) get_post_meta($existing->ID, '_companycam_notepad_hash', true) !== $desc_hash);
+
 		$a = $p->address ?? null;
 
-		// Fetch photos EXACTLY like original
-		$photos_res = wp_remote_get("https://api.companycam.com/v2/projects/{$p->id}/photos", [
-			'headers' => ['Authorization' => 'Bearer ' . $token]
-		]);
+		// Photos are also paginated (default 25). Page through until we've collected
+		// the 4 captioned photos we actually use (or run out) — otherwise captioned
+		// photos deeper than the first page get missed on photo-heavy projects.
+		$photos   = [];
+		$photo_pg = 1;
+		do {
+			$photos_res = wp_remote_get( add_query_arg(
+				[ 'per_page' => 50, 'page' => $photo_pg ],   // 50 = Company Cam's max page size
+				"https://api.companycam.com/v2/projects/{$p->id}/photos"
+			), [ 'headers' => [ 'Authorization' => 'Bearer ' . $token ] ] );
 
-		$photo_data = json_decode(wp_remote_retrieve_body($photos_res));
-		$photo_list = is_array($photo_data) ? $photo_data : ($photo_data->photos ?? []);
+			if ( is_wp_error( $photos_res ) ) break;
 
-		$photos = [];
-		foreach ($photo_list as $photo) {
+			$photo_data = json_decode( wp_remote_retrieve_body( $photos_res ) );
+			$photo_list = is_array( $photo_data ) ? $photo_data : ( $photo_data->photos ?? [] );
+			if ( empty( $photo_list ) ) break;   // empty page = end; don't rely on page size
 
-			$caption = wp_strip_all_tags($photo->description->plain_text_content ?? '');
-			if ($caption === '') continue;
+			foreach ( $photo_list as $photo ) {
 
-			$web_uri_obj = array_filter($photo->uris ?? [], fn($u) => $u->type === 'original');
-			$web_uri = array_values($web_uri_obj)[0]->uri ?? null;
-			if (!$web_uri) continue;
+				$caption = wp_strip_all_tags( $photo->description->plain_text_content ?? '' );
+				if ( $caption === '' ) continue;
 
-			$photos[] = [
-				'id'      => $photo->id,
-				'url'     => $web_uri,
-				'caption' => $caption,
-			];
+				$web_uri_obj = array_filter( $photo->uris ?? [], fn($u) => $u->type === 'original' );
+				$web_uri     = array_values( $web_uri_obj )[0]->uri ?? null;
+				if ( ! $web_uri ) continue;
 
-			// EXACT: stop by ACF slots later (driver stops at 4),
-			// but we can also early stop here to reduce load
-			if (count($photos) >= 4) {
-				// Do NOT break here in original if later photos have captions and earlier didn’t.
-				// Original breaks only on $acf_slot > 4 inside processing loop, not while collecting.
-				// So we intentionally do NOT break here.
+				$photos[] = [
+					'id'      => $photo->id,
+					'url'     => $web_uri,
+					'caption' => $caption,
+				];
+
+				if ( count( $photos ) >= 4 ) break; // only 4 ACF slots are used downstream
 			}
-		}
+
+			$photo_pg++;
+		} while ( count( $photos ) < 4 && $photo_pg <= 50 ); // empty-page break above ends the loop; keep paging until we have 4
 
 		$post_id = bp_ingest_jobsite([
 			'source'            => 'Company Cam',
@@ -606,6 +684,11 @@ function bp_run_companycam_sync_exact() {
 			'title'       => $p->name,
 			'description' => $jobsite_desc,
 
+			// Only rewrite the body when the text changed (photo-only re-syncs keep
+			// the AI copy); desc_changed also re-triggers the AI rewrite downstream.
+			'update_content' => $desc_changed,
+			'desc_changed'   => $desc_changed,
+
 			// EXACT ACF field names used in original Company Cam
 			'acf_fields' => [
 				'field_address' => $a?->street_address_1 ?? null,
@@ -616,7 +699,11 @@ function bp_run_companycam_sync_exact() {
 			],
 
 			'post_meta' => [
-				'_companycam_project_id' => $p->id,
+				'_companycam_project_id'        => $p->id,
+				'_companycam_notepad_hash'      => $desc_hash,
+				// Watermark: the CC updated_at we just synced. Next run skips this
+				// project unless its updated_at climbs above this value.
+				'_companycam_synced_updated_at' => $project_updated ?: time(),
 			],
 
 			'photo_driver' => 'cc',
@@ -706,8 +793,9 @@ function bp_sync_jobsite_photos_companycam($post_id, array $photos) {
 			if ($existing_aid) {
 				$existing_hcp_id = get_post_meta($existing_aid, '_hcp_attachment_id', true);
 
-				// Different HCP photo → DO NOT reuse by hash
-				if ($existing_hcp_id && (string) $existing_hcp_id !== (string) $photo_id) {
+				// Different source photo → DO NOT reuse by hash.
+				// (Was comparing against an undefined $photo_id; the CC id is $cc_photo_id.)
+				if ($existing_hcp_id && (string) $existing_hcp_id !== (string) $cc_photo_id) {
 					$existing_aid = 0;
 				}
 			}

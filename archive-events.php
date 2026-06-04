@@ -14,7 +14,7 @@ get_header(); ?>
 
 		<?php if ( have_posts() ) :
 			$archiveHeadline = 'Upcoming Events';
-			$archiveIntro = '<div class="calender-btn-row">[btn class="show-expired-btn"]Show Past Events[/btn][btn link="/calendar/"]Calender View[/btn]</div>';
+			$archiveIntro = '<div class="calender-btn-row">[btn link="/calendar/"]Calender View[/btn]</div>';
 			$grid = "3e";
 			$valign = "stretch";
 			$break = "2";
@@ -41,10 +41,10 @@ get_header(); ?>
 				$venue = esc_attr(get_field( "venue" ));
 				$location = esc_attr(get_field( "location" ));
 				$venueLink = esc_url(get_field( "venue_link" ));
-				$startTime = esc_attr(get_field( "start_time" ));
-				$endTime = esc_attr(get_field( "end_time" ));
-				$startDate = esc_attr(get_field( "start_date" ));
-				$endDate = esc_attr(get_field( "end_date" ));
+				$startTime = esc_attr(get_post_meta( get_the_ID(), 'start_time', true ));
+				$endTime = esc_attr(get_post_meta( get_the_ID(), 'end_time', true ));
+				$startDate = esc_attr(get_post_meta( get_the_ID(), 'start_date', true ));
+				$endDate = esc_attr(get_post_meta( get_the_ID(), 'end_date', true ));
 
 				if ( date('F Y', strtotime($startDate)) != $currentMonth ) :
 					$currentMonth = date('F Y', strtotime($startDate));

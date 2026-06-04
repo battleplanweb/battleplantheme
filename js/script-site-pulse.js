@@ -2692,6 +2692,7 @@ async function showMileageForm(entryId = 0) {
 	let entry = null;
 	let stops = [];               // editable MIDDLE stops only
 	let purposes = [];            // per-stop business purpose, parallel to stops
+	let tolls = [];               // per-stop toll flag (arriving leg has tolls), parallel to stops
 	let autoReturn = true;
 	if (entryId) {
 		const res = await spAjax('site_pulse_get_mileage_entry', { entry_id: entryId });
@@ -2699,23 +2700,23 @@ async function showMileageForm(entryId = 0) {
 			entry = res.data.entry;
 			autoReturn = entry ? !!parseInt(entry.auto_return_home) : true;
 			const legs = res.data.legs || [];
-			// Rebuild the full sequence + per-node purpose (purpose = arriving at that node).
-			let seq = [], seqP = [];
+			// Rebuild the full sequence + per-node purpose/toll (both = arriving at that node).
+			let seq = [], seqP = [], seqT = [];
 			if (legs.length > 0) {
-				seq.push(parseInt(legs[0].from_location_id)); seqP.push('');
-				legs.forEach(l => { seq.push(parseInt(l.to_location_id)); seqP.push(l.purpose || ''); });
+				seq.push(parseInt(legs[0].from_location_id)); seqP.push(''); seqT.push(0);
+				legs.forEach(l => { seq.push(parseInt(l.to_location_id)); seqP.push(l.purpose || ''); seqT.push(parseInt(l.has_toll) ? 1 : 0); });
 			}
 			// Stored legs are [home, ...middle, home?]. Strip the home bookends so the
 			// form shows only the editable middle; the home start/end are re-applied by render.
 			if (mileageHomeId) {
-				if (seq.length && seq[0] === mileageHomeId) { seq = seq.slice(1); seqP = seqP.slice(1); }
-				if (seq.length && seq[seq.length - 1] === mileageHomeId) { seq = seq.slice(0, -1); seqP = seqP.slice(0, -1); }
+				if (seq.length && seq[0] === mileageHomeId) { seq = seq.slice(1); seqP = seqP.slice(1); seqT = seqT.slice(1); }
+				if (seq.length && seq[seq.length - 1] === mileageHomeId) { seq = seq.slice(0, -1); seqP = seqP.slice(0, -1); seqT = seqT.slice(0, -1); }
 			}
-			stops = seq; purposes = seqP;
+			stops = seq; purposes = seqP; tolls = seqT;
 		}
 	}
 	const minMiddle = mileageHomeId ? 1 : 2;
-	while (stops.length < minMiddle) { stops.push(0); purposes.push(''); }
+	while (stops.length < minMiddle) { stops.push(0); purposes.push(''); tolls.push(0); }
 
 	setMileageListChrome(true); // hide list + report controls while the form is open
 	wrap.hidden = false;
@@ -2758,7 +2759,7 @@ async function showMileageForm(entryId = 0) {
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
 
-	renderMileageStops(stops, autoReturn, purposes);
+	renderMileageStops(stops, autoReturn, purposes, tolls);
 
 	$$('.sp-mileage-back-btn', wrap).forEach(b => b.addEventListener('click', () => hideMileageForm()));
 	// Add Stop / Add Location buttons live inside the route list (above END) and are
@@ -2775,10 +2776,10 @@ async function showMileageForm(entryId = 0) {
 
 	$('#sp-mileage-form', wrap)?.addEventListener('submit', async (e) => {
 		e.preventDefault();
-		// Read stops + purposes together so they stay aligned after empty picks are dropped.
-		const allStops = readMileageStops(), allPurposes = readMileageStopPurposes();
-		const stopsArr = [], purposesArr = [];
-		allStops.forEach((sid, i) => { if (sid > 0) { stopsArr.push(sid); purposesArr.push(allPurposes[i] || ''); } });
+		// Read stops + purposes + toll flags together so they stay aligned after empty picks are dropped.
+		const allStops = readMileageStops(), allPurposes = readMileageStopPurposes(), allTolls = readMileageStopTolls();
+		const stopsArr = [], purposesArr = [], tollsArr = [];
+		allStops.forEach((sid, i) => { if (sid > 0) { stopsArr.push(sid); purposesArr.push(allPurposes[i] || ''); tollsArr.push(allTolls[i] || 0); } });
 		const min = mileageHomeId ? 1 : 2;
 		if (stopsArr.length < min) {
 			alert(mileageHomeId ? 'Please add at least one stop.' : 'Please pick at least two stops.');
@@ -2790,6 +2791,7 @@ async function showMileageForm(entryId = 0) {
 			notes: e.target.notes.value,
 			stops: stopsArr,
 			purposes: purposesArr,
+			tolls: tollsArr,
 			auto_return_home: mileageHomeId ? 1 : 0, // always a round trip when a home base exists
 		};
 		const r = await spAjax('site_pulse_save_mileage_entry', data);
@@ -2813,7 +2815,7 @@ function setMileageListChrome(hidden) {
 		.forEach(sel => panel.querySelector(sel)?.classList.toggle('sp-hidden', hidden));
 }
 
-function renderMileageStops(stops, autoReturn = true, purposes = []) {
+function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = []) {
 	const wrap = $('#sp-mileage-stops');
 	if (!wrap) return;
 	const minMiddle = mileageHomeId ? 1 : 2;
@@ -2839,6 +2841,7 @@ function renderMileageStops(stops, autoReturn = true, purposes = []) {
 	// Editable middle stops: location select + business purpose.
 	stops.forEach((stopId, idx) => {
 		const purpose = purposes[idx] || '';
+		const toll = tolls[idx] ? 1 : 0;
 		html += '<div class="sp-mileage-stop sp-mileage-stop-row">';
 		html += `<span class="unique sp-mileage-stop-num">${idx + 1}.</span>`;
 		html += `<select class="sp-select sp-mileage-stop-select">`;
@@ -2850,7 +2853,12 @@ function renderMileageStops(stops, autoReturn = true, purposes = []) {
 			html += `<option value="${l.id}"${sel}>${esc(label)}</option>`;
 		});
 		html += '</select>';
+		// Purpose + toll flag share the purpose column. Toll = "this drive had tolls"; the
+		// amounts get filled in later once toll data is imported (TollGuru).
+		html += '<div class="sp-mileage-stop-purpose-cell">';
 		html += `<input type="text" class="sp-input sp-mileage-stop-purpose" list="sp-mileage-purpose-list" placeholder="Business purpose" value="${esc(purpose)}">`;
+		html += `<label class="sp-mileage-toll-toggle unique" title="Check if this drive had tolls — the amounts get added later once toll data is imported."><input type="checkbox" class="sp-mileage-stop-toll"${toll ? ' checked' : ''}> Toll</label>`;
+		html += '</div>';
 		if (stops.length > minMiddle) {
 			html += `<button type="button" class="unique sp-mileage-stop-remove" data-idx="${idx}" aria-label="Remove stop" title="Remove stop">&times;</button>`;
 		}
@@ -2886,17 +2894,17 @@ function renderMileageStops(stops, autoReturn = true, purposes = []) {
 		updateMileageTotals();
 	}));
 	$$('.sp-mileage-stop-remove', wrap).forEach(b => b.addEventListener('click', () => {
-		const s = readMileageStops(), p = readMileageStopPurposes();
+		const s = readMileageStops(), p = readMileageStopPurposes(), t = readMileageStopTolls();
 		const i = parseInt(b.dataset.idx);
-		s.splice(i, 1); p.splice(i, 1);
-		while (s.length < minMiddle) { s.push(0); p.push(''); }
-		renderMileageStops(s, getReturnHome(), p);
+		s.splice(i, 1); p.splice(i, 1); t.splice(i, 1);
+		while (s.length < minMiddle) { s.push(0); p.push(''); t.push(0); }
+		renderMileageStops(s, getReturnHome(), p, t);
 		updateMileageTotals();
 	}));
 	$('#sp-mileage-add-stop', wrap)?.addEventListener('click', () => {
-		const s = readMileageStops(), p = readMileageStopPurposes();
-		s.push(0); p.push('');
-		renderMileageStops(s, getReturnHome(), p);
+		const s = readMileageStops(), p = readMileageStopPurposes(), t = readMileageStopTolls();
+		s.push(0); p.push(''); t.push(0);
+		renderMileageStops(s, getReturnHome(), p, t);
 	});
 	$('#sp-mileage-add-loc', wrap)?.addEventListener('click', () => showAddLocationModal());
 
@@ -2909,6 +2917,10 @@ function readMileageStops() {
 
 function readMileageStopPurposes() {
 	return $$('.sp-mileage-stop-purpose').map(i => i.value.trim());
+}
+
+function readMileageStopTolls() {
+	return $$('.sp-mileage-stop-toll').map(i => i.checked ? 1 : 0);
 }
 
 // ---- Quick entry (typed/spoken shorthand → fills the route, then user reviews & saves) ----
@@ -2956,7 +2968,7 @@ function applyMileageQuickEntry() {
 	}
 	const minMiddle = mileageHomeId ? 1 : 2;
 	while (ids.length < minMiddle) { ids.push(0); purposes.push(''); }
-	renderMileageStops(ids, getReturnHome(), purposes);
+	renderMileageStops(ids, getReturnHome(), purposes, ids.map(() => 0));
 	if (note) {
 		if (unmatched.length) { note.hidden = false; note.textContent = `Added ${ids.filter(Boolean).length}. Couldn't match: ${unmatched.join(', ')} — add those manually below.`; }
 		else { note.hidden = false; note.textContent = `Added ${ids.length} stop${ids.length !== 1 ? 's' : ''}. Review and Save.`; }
@@ -3069,12 +3081,12 @@ function showAddLocationModal() {
 		const r = await spAjax('site_pulse_add_mileage_location', { name, address, location_type: type, category, is_business, notes });
 		if (r.success) {
 			await loadMileageLocations();
-			const stops = readMileageStops(), purposes = readMileageStopPurposes();
+			const stops = readMileageStops(), purposes = readMileageStopPurposes(), tolls = readMileageStopTolls();
 			// Auto-fill the first empty stop with the new location
 			const emptyIdx = stops.findIndex(v => !v);
 			if (emptyIdx >= 0) stops[emptyIdx] = parseInt(r.data.id);
-			else { stops.push(parseInt(r.data.id)); purposes.push(''); }
-			renderMileageStops(stops, getReturnHome(), purposes);
+			else { stops.push(parseInt(r.data.id)); purposes.push(''); tolls.push(0); }
+			renderMileageStops(stops, getReturnHome(), purposes, tolls);
 			close();
 		} else {
 			alert(r.data?.message || 'Error.');

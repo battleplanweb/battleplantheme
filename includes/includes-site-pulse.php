@@ -24,7 +24,7 @@ require_once get_template_directory() . '/prompts/prompts-site-pulse.php';
 # Constants & Setup
 --------------------------------------------------------------*/
 
-define( 'SITE_PULSE_DB_VERSION', '1.9' );
+define( 'SITE_PULSE_DB_VERSION', '1.10' );
 
 function site_pulse_table( string $name ): string {
 	return $GLOBALS['wpdb']->prefix . 'site_pulse_' . $name;
@@ -327,6 +327,7 @@ function site_pulse_install_db(): void {
 		to_location_id int(11) NOT NULL,
 		miles decimal(8,2) DEFAULT NULL,
 		purpose varchar(255) DEFAULT NULL,
+		has_toll tinyint(1) NOT NULL DEFAULT 0,
 		created_at datetime NOT NULL,
 		PRIMARY KEY  (id),
 		KEY entry_id (entry_id),
@@ -3309,17 +3310,21 @@ function site_pulse_ajax_save_mileage_entry(): void {
 	$auto_return  = isset( $_POST['auto_return_home'] ) ? ( (int) $_POST['auto_return_home'] ? 1 : 0 ) : 1;
 	$stops_raw    = $_POST['stops'] ?? [];
 	$purposes_raw = $_POST['purposes'] ?? [];
+	$tolls_raw    = $_POST['tolls'] ?? [];
 	if ( ! is_array( $stops_raw ) )    $stops_raw = [];
 	if ( ! is_array( $purposes_raw ) ) $purposes_raw = [];
+	if ( ! is_array( $tolls_raw ) )    $tolls_raw = [];
 
-	// Keep stops and their per-stop purposes aligned while dropping empty picks.
+	// Keep stops with their per-stop purposes and toll flags aligned while dropping empty picks.
 	$stops          = [];
 	$stop_purposes  = [];
+	$stop_tolls     = [];
 	foreach ( array_values( $stops_raw ) as $idx => $sid ) {
 		$sid = (int) $sid;
 		if ( $sid <= 0 ) continue;
 		$stops[]         = $sid;
 		$stop_purposes[] = sanitize_text_field( $purposes_raw[ $idx ] ?? '' );
+		$stop_tolls[]    = ! empty( $tolls_raw[ $idx ] ) ? 1 : 0;
 	}
 
 	if ( ! $entry_date ) wp_send_json_error( [ 'message' => 'Date is required.' ] );
@@ -3335,11 +3340,13 @@ function site_pulse_ajax_save_mileage_entry(): void {
 		if ( count( $stops ) < 1 ) wp_send_json_error( [ 'message' => 'Add at least one stop.' ] );
 		$seq          = array_merge( [ $home_id ], $stops );
 		$seq_purposes = array_merge( [ '' ], $stop_purposes );
-		if ( $auto_return ) { $seq[] = $home_id; $seq_purposes[] = ''; }
+		$seq_tolls    = array_merge( [ 0 ], $stop_tolls );
+		if ( $auto_return ) { $seq[] = $home_id; $seq_purposes[] = ''; $seq_tolls[] = 0; }
 	} else {
 		if ( count( $stops ) < 2 ) wp_send_json_error( [ 'message' => 'At least two stops are required.' ] );
 		$seq          = $stops;
 		$seq_purposes = $stop_purposes;
+		$seq_tolls    = $stop_tolls;
 		$auto_return  = 0;
 	}
 	if ( count( $seq ) < 2 ) wp_send_json_error( [ 'message' => 'At least two stops are required.' ] );
@@ -3387,6 +3394,7 @@ function site_pulse_ajax_save_mileage_entry(): void {
 			'to_location_id'   => $to,
 			'miles'            => $miles,
 			'purpose'          => $seq_purposes[ $i + 1 ] ?? '',
+			'has_toll'         => ! empty( $seq_tolls[ $i + 1 ] ) ? 1 : 0,
 			'created_at'       => $now,
 		] );
 	}

@@ -43,7 +43,7 @@ h3.archive-subheadline {
 .archive-meta {
 	font-size:                                                 90%;
 	text-align:                                                center;
-	margin-top:                                                -var(--measure-small);
+	margin-top:                                                var(--measure-small);
 }
 
 .col-archive .archive-meta {

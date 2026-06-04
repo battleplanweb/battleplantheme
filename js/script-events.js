@@ -119,39 +119,5 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 				generateCalendar(currentYear, currentMonth);
 			});
 		}
-
-		if (document.body.classList.contains('slug-event') || document.body.classList.contains('slug-calendar')) {
-
-	// Handle the "expired events" toggle checkbox
-			const expiredButton = getObject('a.show-expired-btn');
-			const expiredEvents = getObjects('.event-expired');
-
-			if (getCookie('ecal-show-exp') === 'true') {
-				if (expiredButton) {
-					expiredButton.textContent = 'Hide Past Events';
-				}
-
-				if (expiredEvents) {
-					animateDiv(expiredEvents, 'fadeIn');
-				}
-			}
-
-			if ( expiredEvents.length < 1 ) {
-				expiredButton.classList.add('disabled');
-			}
-
-			expiredButton.addEventListener('click', function() {
-				var showExpired = getCookie('ecal-show-exp');
-				if (showExpired === 'false') {
-					this.textContent = 'Hide Past Events';
-					animateDiv(expiredEvents, 'fadeIn');
-					setCookie('ecal-show-exp', 'true', 365);
-				} else {
-					animateDiv(expiredEvents, 'fadeOut');
-					this.textContent = 'Show Past Events';
-					setCookie('ecal-show-exp', 'false', 365);
-				}
-			});
-		}
 	});
 });

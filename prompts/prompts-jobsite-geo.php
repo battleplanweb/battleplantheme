@@ -37,6 +37,7 @@ A technician has written a rough job description after completing a service call
    - Use full words in slugs — never abbreviations. "ac" should always be "air-conditioner". "a/c" should be "air-conditioner".
    - Choose the best match based on what the job actually was, not just keywords. Use context and nuance.
    - If no existing term fits well, invent a clean, lowercase, hyphenated slug using full words.
+   - service_category must NEVER be empty or null. If the notes are vague, pick the closest general category for this trade.
 
 {$location_note}
 
@@ -46,10 +47,11 @@ EXISTING SERVICE TERMS (slugs):
 RAW TECHNICIAN DESCRIPTION:
 {$raw_description}
 
-Respond ONLY with a valid JSON object. No preamble, no markdown, no explanation. Format:
+Respond ONLY with a valid JSON object. No preamble, no markdown, no explanation.
+Put service_category FIRST so the classification is never lost to truncation. Format:
 {
-  "rewritten_description": "...",
-  "service_category": "..."
+  "service_category": "...",
+  "rewritten_description": "..."
 }
 PROMPT;
 }

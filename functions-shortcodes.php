@@ -656,7 +656,7 @@ function battleplan_getRandomText($atts, $content = null) {
   // Display a random photo from tagged images
 add_shortcode( 'get-random-image', 'battleplan_getRandomImage' );
 function battleplan_getRandomImage($atts, $content = null ) {
-	$a       = shortcode_atts( array( 'id'=>'', 'tag'=>'', 'size'=>'thumbnail', 'col'=>'1', 'row'=>'1', 'gap'=>'10', 'number'=>'', 'link'=>'no', 'offset'=>'0', 'align'=>'left', 'class'=>'', 'order_by'=>'rand', 'order'=>'asc', 'shuffle'=>'no', 'lazy'=>'true' ), $atts );
+	$a       = shortcode_atts( array( 'id'=>'', 'tag'=>'', 'size'=>'thumbnail', 'col'=>'1', 'row'=>'1', 'gap'=>'10', 'number'=>'', 'link'=>'no', 'offset'=>'0', 'align'=>'left', 'class'=>'', 'order_by'=>'rand', 'order'=>'asc', 'shuffle'=>'no', 'lazy'=>'true', 'caption'=>'false' ), $atts );
 	$tag     = esc_attr($a['tag']);
 	$tags    = $tag                  == "page-slug" ? _PAGE_SLUG : explode( ',', $tag );
 	$size    = esc_attr($a['size']);
@@ -680,6 +680,7 @@ function battleplan_getRandomImage($atts, $content = null ) {
 	$id      = esc_attr($a['id'])    == "current" ? get_the_ID() : esc_attr($a['id']);
 	$class   = esc_attr($a['class']) != '' ? " ".esc_attr($a['class']) : "";
 	$align   = esc_attr($a['align']) != '' ? "align".esc_attr($a['align']) : "";
+	$caption = esc_attr($a['caption']); // false = none (default), alt = use alt text, desc = use attachment description
 	$exclude = $GLOBALS['do_not_repeat'];
 
 	$query = bp_WP_Query('attachment', [
@@ -702,10 +703,21 @@ function battleplan_getRandomImage($atts, $content = null ) {
 		$image = wp_get_attachment_image_src($getID, $size);
 		$imgSet = wp_get_attachment_image_srcset($getID, $size );
 
+		$alt = readMeta($getID, '_wp_attachment_image_alt', true);
+
 		$buildImage = "";
 		if ( $link == "yes" ) $buildImage .= '<a href="'.esc_url($full[0]).'">';
-		$buildImage .= '<img class="wp-image-'.$getID.' random-img '.$tags[0].'-img '.$align.' size-'.$size.$class.'" loading="'.$lazy.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.readMeta($getID, '_wp_attachment_image_alt', true).'">';
+		$buildImage .= '<img class="wp-image-'.$getID.' random-img '.$tags[0].'-img '.$align.' size-'.$size.$class.'" loading="'.$lazy.'" src="'.$image[0].'" width="'.$image[1].'" height="'.$image[2].'" style="aspect-ratio:'.$image[1].'/'.$image[2].'" srcset="'.$imgSet.'" sizes="'.get_srcset($image[1]).'" alt="'.$alt.'">';
 		if ( $link == "yes" ) $buildImage .= '</a>';
+
+		// Optional caption: alt = alt text, desc = attachment description (post_content)
+		if ( $caption == "alt" || $caption == "desc" ) {
+			$capText = $caption == "alt" ? $alt : get_post_field('post_content', $getID);
+			if ( trim($capText) !== '' ) {
+				$buildImage = '<figure class="random-img-fig '.$align.'">'.$buildImage.'<figcaption>'.esc_html($capText).'</figcaption></figure>';
+			}
+		}
+
 		$imageArray[] = $buildImage;
 
 		battleplan_countTease( $getID );
@@ -1294,7 +1306,8 @@ function battleplan_getPostSlider($atts, $content = null ) {
 				$image = wp_get_attachment_image_src(get_the_ID(), $size );
 				$imgSet = wp_get_attachment_image_srcset(get_the_ID(), $size );
 
-				$linkTo = $buildImg = '';
+				$buildImg = '';
+				$linkTo = $link;
 				$attachment = get_post(get_the_ID());
 				$headline = esc_html($attachment->post_excerpt);
 				$description = esc_html($attachment->post_content);

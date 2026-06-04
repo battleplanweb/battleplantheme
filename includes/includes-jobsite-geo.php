@@ -1660,7 +1660,7 @@ function bp_geo_run_taxonomy_cleanup( $dry_run = true ) {
 // define( 'BP_ANTHROPIC_API_KEY', 'sk-ant-...' );
 
 define( 'BP_GEO_AI_MODEL',       'claude-sonnet-4-20250514' );
-define( 'BP_GEO_AI_MAX_TOKENS',  1024 );
+define( 'BP_GEO_AI_MAX_TOKENS',  4096 ); // 1024 was too low: long rewrites truncated before service_category, orphaning the post
 define( 'BP_GEO_FIELD_ORIGINAL', 'bp_geo_original_description' ); // client's raw text, saved once on first publish
 define( 'BP_GEO_FIELD_AI_RAN',   'bp_geo_ai_ran' );               // timestamp of last AI run
 define( 'BP_GEO_TAXONOMY',       'jobsite_geo-services' );
@@ -1689,6 +1689,12 @@ function bp_geo_validate_required_fields( $post_id, $post, $update ) {
 	if ( wp_is_post_revision( $post_id ) ) return;
 	if ( $post->post_status !== 'publish' ) return;
 	if ( ! empty( $GLOBALS['bp_geo_validation_running'] ) ) return;
+	// Skip during a programmatic ingest (Company Cam cron, etc.): the importer
+	// inserts the post as publish and writes the ACF fields immediately AFTER, so a
+	// publish-time check here false-trips on empty city/state — and its exit would
+	// abort the importer mid-loop, killing the whole cron run. (Matches the guard
+	// already used by battleplan_saveJobsite and bp_geo_ai_on_first_publish.)
+	if ( ! empty( $GLOBALS['bp_jobsite_setup_running'] ) ) return;
 	// Never redirect+exit during a REST API request — would kill the response mid-send
 	if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) return;
 
@@ -1757,6 +1763,23 @@ function bp_geo_ai_on_first_publish( $post_id, $post, $update ) {
 	if ( ! empty( $GLOBALS['bp_jobsite_setup_running'] ) ) return;
 
 	error_log( 'bp_geo_ai_on_first_publish: firing for post ' . $post_id );
+	bp_geo_run_ai_rewrite( $post_id );
+}
+
+
+// Deferred AI rewrite for INGESTED posts (Housecall Pro / Company Cam). Those
+// publish with bp_jobsite_setup_running held high through the whole ingest, so
+// bp_geo_ai_on_first_publish is skipped and they'd otherwise sit with the raw
+// description and no service-type/service term (= no /service/ page). The
+// importer + the nightly reconciliation sweep schedule this single event; it
+// runs the same rewrite, which also assigns the taxonomy terms that seed the page.
+add_action( 'bp_geo_ai_rewrite_cron', 'bp_geo_ai_rewrite_cron_handler' );
+
+function bp_geo_ai_rewrite_cron_handler( $post_id ) {
+	$post_id = (int) $post_id;
+	if ( get_post_type( $post_id ) !== BP_GEO_CPT ) return;
+	if ( get_post_status( $post_id ) !== 'publish' ) return;
+	if ( get_post_meta( $post_id, BP_GEO_FIELD_AI_RAN, true ) ) return; // already rewritten
 	bp_geo_run_ai_rewrite( $post_id );
 }
 
@@ -2128,6 +2151,14 @@ function bp_geo_run_ai_rewrite( $post_id ) {
 		return new WP_Error( 'empty_rewrite', 'API returned empty rewritten description.' );
 	}
 
+	// Safety net: if the AI omitted a category, fall back to the site's default
+	// service so the post still gets a service-type + combined /service/ page
+	// instead of being orphaned with only its (deterministic) service-area tag.
+	if ( empty( $base_service ) ) {
+		$base_service = get_option( 'jobsite_geo' )['default_service'] ?? '';
+		error_log( "bp_geo_run_ai_rewrite: post={$post_id} returned no service_category; falling back to default_service '{$base_service}'." );
+	}
+
 	// Write AI output directly to post_content
 	// Set the global guard flag so bp_jobsite_setup() skips when save_post fires
 	// from wp_update_post — otherwise it would re-attach old taxonomy terms
@@ -2151,8 +2182,8 @@ function bp_geo_run_ai_rewrite( $post_id ) {
 		$term_slug = bp_geo_assign_taxonomy_term( $post_id, $base_service, $city, $state, $terms_list );
 	}
 
-	// Send completion notification — only fires once AI rewrite is done
-	bp_jobsite_send_completion_email( $post_id, $street, $city, $state, $rewritten, $term_slug );
+	// Per-publish notification removed — replaced by the daily client digest
+	// (bp_geo_send_daily_digest), which also copies battleplanweb.
 
 	return [
 		'rewritten' => $rewritten,
@@ -2160,56 +2191,138 @@ function bp_geo_run_ai_rewrite( $post_id ) {
 	];
 }
 
-// Send a "jobsite completed" notification email after AI rewrite finishes.
-// Replaces the old per-save notification in bp_jobsite_setup().
-function bp_jobsite_send_completion_email( int $post_id, string $street, string $city, string $state, string $rewritten, string $term_slug ): void {
+// ---------------------------------------------------------
+// # Daily "what went live" digest to the client
+// ---------------------------------------------------------
+// The payoff loop: techs/contractors do the data entry but never see SEO results,
+// so the behavior never gets reinforced. Each morning, email the CLIENT the jobs
+// that became live /service/ pages in the last 24h — address, AI description, photo
+// count, and a link to the page (with its map, intro, and nearby jobs) so they can
+// see the fruits of the work.
+//
+// Opt-OUT per site, controlled by jobsite_geo['digest']:
+//   'false'            -> off (don't send)
+//   'email@domain.com' -> send to that specific address
+//   'true' or absent   -> send to customer_info['email'] (default)
 
+add_action( 'init', 'bp_geo_schedule_daily_digest' );
+function bp_geo_schedule_daily_digest() {
+	$opts   = get_option('jobsite_geo');
+	$digest = is_array($opts) ? ($opts['digest'] ?? '') : '';
+	$on     = is_array($opts) && ($opts['install'] ?? '') === 'true' && $digest !== 'false';
+
+	if ( ! $on ) {
+		$ts = wp_next_scheduled('bp_geo_daily_digest');
+		if ( $ts ) wp_unschedule_event($ts, 'bp_geo_daily_digest');
+		return;
+	}
+
+	if ( ! wp_next_scheduled('bp_geo_daily_digest') ) {
+		$tz   = wp_timezone();
+		$next = new DateTime('today 07:00', $tz);   // ~7am site-local
+		if ( $next <= new DateTime('now', $tz) ) $next->modify('+1 day');
+		wp_schedule_event( $next->getTimestamp(), 'daily', 'bp_geo_daily_digest' );
+	}
+}
+
+add_action( 'bp_geo_daily_digest', 'bp_geo_send_daily_digest' );
+function bp_geo_send_daily_digest() {
 	$geo_opts = get_option('jobsite_geo');
+	if ( ! is_array($geo_opts) || ($geo_opts['install'] ?? '') !== 'true' ) return;
 
-	$notifyTo = !empty($geo_opts['notify']) && $geo_opts['notify'] !== 'false'
-		? $geo_opts['notify']
-		: '';
+	$digest = $geo_opts['digest'] ?? '';
+	if ( $digest === 'false' ) return;   // explicit opt-out
 
-	$notifyBc = !empty($geo_opts['copy_me']) && $geo_opts['copy_me'] === 'true'
-		? 'info@bp-webdev.com'
-		: '';
+	// Recipient: a specific address if one is set, else the client's own email
+	// ('true' or absent both fall through to customer_info['email']).
+	$customer = get_option('customer_info');
+	$to = ( $digest !== '' && $digest !== 'true' && is_email($digest) )
+		? $digest
+		: ( ! empty($customer['email']) && is_email($customer['email']) ? $customer['email'] : '' );
+	if ( ! $to ) return;
 
-	if ($notifyTo === '' && $notifyBc === '') return;
+	// Jobs whose AI rewrite finished in the last 24h — i.e. became real /service/ pages.
+	$since = date( 'Y-m-d H:i:s', current_time('timestamp') - DAY_IN_SECONDS );
+	$jobs  = get_posts([
+		'post_type'      => BP_GEO_CPT,
+		'post_status'    => 'publish',
+		'posts_per_page' => 50,
+		'orderby'        => 'date',
+		'order'          => 'DESC',
+		'meta_query'     => [[
+			'key'     => BP_GEO_FIELD_AI_RAN,
+			'value'   => $since,
+			'compare' => '>=',
+			'type'    => 'DATETIME',
+		]],
+	]);
+	if ( empty($jobs) ) return; // nothing new today — no empty digests
 
-	if ($notifyTo === '') {
-		$notifyTo = $notifyBc;
-		$notifyBc = '';
-	}
-
-	$post    = get_post($post_id);
-	$title   = $post ? get_the_title($post_id) : 'Untitled';
-	$url     = get_permalink($post_id);
-	$address = trim("{$street}, {$city}, {$state}");
-
-	$photo_count = 0;
-	foreach (['jobsite_photo_1', 'jobsite_photo_2', 'jobsite_photo_3', 'jobsite_photo_4'] as $field) {
-		if ((int)get_post_meta($post_id, $field, true)) $photo_count++;
-	}
-
-	$domain    = parse_url(home_url(), PHP_URL_HOST);
 	$site_name = get_bloginfo('name');
-	$subject   = "New Jobsite Post Ready: {$title}";
+	$domain    = parse_url( home_url(), PHP_URL_HOST );
+	$count     = count($jobs);
 
-	$message  = "<p>A new jobsite post has been published and the AI description is ready.</p>";
-	$message .= "<p><strong>Site:</strong> {$site_name}</p>";
-	if ($address !== ', , ') $message .= "<p><strong>Address:</strong> " . esc_html($address) . "</p>";
-	if ($term_slug)          $message .= "<p><strong>Category:</strong> " . esc_html($term_slug) . "</p>";
-	$message .= "<p><strong>Photos:</strong> " . ($photo_count > 0 ? $photo_count . ' ' . _n('photo', 'photos', $photo_count) : 'none') . "</p>";
-	$message .= "<p><strong>Description:</strong></p><p>" . nl2br(esc_html($rewritten)) . "</p>";
-	if ($url)                $message .= "<p><a href='" . esc_url($url) . "'>View Post</a> &nbsp;|&nbsp; <a href='" . esc_url(admin_url('post.php?post=' . $post_id . '&action=edit')) . "'>Edit Post</a></p>";
+	$cards = '';
+	foreach ($jobs as $job) {
+		$street = trim( (string) get_post_meta($job->ID, BP_GEO_FIELD_ADDRESS, true) );
+		$city   = trim( (string) get_post_meta($job->ID, BP_GEO_FIELD_CITY,    true) );
+		$state  = trim( (string) get_post_meta($job->ID, BP_GEO_FIELD_STATE,   true) );
+		$addr   = trim( trim("{$street}, {$city}, {$state}"), ', ' );
+
+		$photos = 0;
+		foreach (['jobsite_photo_1','jobsite_photo_2','jobsite_photo_3','jobsite_photo_4'] as $f) {
+			if ( (int) get_post_meta($job->ID, $f, true) ) $photos++;
+		}
+
+		$desc = trim( wp_strip_all_tags( $job->post_content ) );
+		if ( mb_strlen($desc) > 450 ) $desc = mb_substr($desc, 0, 450) . '…';
+
+		// Link to the /service/ page this job lives on (map + intro + nearby jobs).
+		$service_url = '';
+		$svc = wp_get_post_terms($job->ID, 'jobsite_geo-services');
+		if ( ! is_wp_error($svc) && $svc ) {
+			$link = get_term_link($svc[0]);
+			if ( ! is_wp_error($link) ) $service_url = $link;
+		}
+		if ( ! $service_url ) $service_url = get_permalink($job->ID);
+
+		$cards .= '<div style="border:1px solid #e2e2e2;border-radius:8px;padding:16px 18px;margin:0 0 16px;">';
+		$cards .= '<p style="margin:0 0 4px;font-size:15px;font-weight:bold;">' . esc_html( $addr ?: get_the_title($job) ) . '</p>';
+		$cards .= '<p style="margin:0 0 10px;color:#666;font-size:13px;">' . ( $photos > 0 ? $photos . ' ' . _n('photo','photos',$photos) : 'No photos' ) . '</p>';
+		$cards .= '<p style="margin:0 0 14px;line-height:1.5;">' . esc_html($desc) . '</p>';
+		$cards .= '<a href="' . esc_url($service_url) . '" style="display:inline-block;background:#1a7f37;color:#fff;text-decoration:none;padding:9px 16px;border-radius:6px;font-weight:bold;">View the live page &rarr;</a>';
+		$cards .= '</div>';
+	}
+
+	$subject = sprintf( '%d new job %s live on your website', $count, _n('page is','pages are',$count) );
+
+	// Closing encouragement — randomized so every email reads a little differently.
+	$notes = [
+		'Keep posting your photos &amp; notes — every one strengthens your local SEO!',
+		'Every job you log becomes another page working for you in local search. Keep them coming!',
+		'More photos &amp; notes mean more pages ranking for your business. Keep posting!',
+		'Each job you post makes your company easier to find locally. Keep it up!',
+		'Your photos &amp; notes are doing real SEO work behind the scenes — keep feeding it!',
+		'Every photo and note you add is one more way customers find you online. Keep going!',
+	];
+	$note = $notes[ array_rand($notes) ];
+
+	$message  = '<div style="max-width:600px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#222;">';
+	$message .= '<p style="font-size:16px;">Here\'s what your team put online in the last 24 hours.</p>';
+	$message .= '<p style="color:#555;">Each job below is now a live page on ' . esc_html($site_name) . ', complete with a map and your other nearby jobs — out there working for you in local search. Tap to see it.</p>';
+	$message .= $cards;
+	$message .= '<p style="font-size:15px;font-weight:bold;color:#1a7f37;margin-top:22px;">' . $note . '</p>';
+	$message .= '</div>';
 
 	$headers   = [];
 	$headers[] = 'Content-Type: text/html; charset=UTF-8';
-	$headers[] = 'From: Website Administrator <noreply@' . $domain . '>';
+	$headers[] = 'From: ' . $site_name . ' <noreply@' . $domain . '>';
 	$headers[] = 'Reply-To: noreply@' . $domain;
-	if ($notifyBc) $headers[] = 'Bcc: <' . $notifyBc . '>';
+	// Always copy battleplanweb so we see exactly what the client sees (this digest
+	// replaces the old per-publish notification that used to come to us).
+	$headers[] = 'Bcc: email@bp-webdev.com';
 
-	wp_mail($notifyTo, $subject, $message, $headers);
+	wp_mail($to, $subject, $message, $headers);
 }
 
 
@@ -2280,6 +2393,13 @@ function bp_geo_call_anthropic( $data ) {
 
 	if ( empty( $text ) ) {
 		return new WP_Error( 'empty_response', 'Anthropic returned an empty response.' );
+	}
+
+	// Truncation kills the trailing JSON (and historically dropped service_category,
+	// orphaning the post). max_tokens was raised to 4096, but if we ever hit the
+	// ceiling again, log it loudly rather than failing silently.
+	if ( ( $decoded['stop_reason'] ?? '' ) === 'max_tokens' ) {
+		error_log( 'bp_geo_call_anthropic: response hit max_tokens (' . BP_GEO_AI_MAX_TOKENS . ') — output likely truncated. Consider raising BP_GEO_AI_MAX_TOKENS.' );
 	}
 
 	// Strip any accidental markdown code fences

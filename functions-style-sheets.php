@@ -146,7 +146,14 @@ function bp_build_css_core() {
             endif;
         endforeach;
 
-        if (!$missing && $latest_src <= $core_mtime) continue;
+        // Invalidate when the *set* of source files changes (e.g. a feature like the
+        // event calendar gets toggled on, adding a stylesheet to the list), not just
+        // when an existing source file's mtime changes.
+        $sig         = md5(implode('|', $config['sources']));
+        $sig_file    = $config['css'] . '.sig';
+        $sig_changed = !file_exists($sig_file) || file_get_contents($sig_file) !== $sig;
+
+        if (!$missing && !$sig_changed && $latest_src <= $core_mtime) continue;
 
         $out  = "@charset \"UTF-8\";\n";
         $out .= "/* Battle Plan Core CSS - " . ucfirst($type) . " */\n";
@@ -166,6 +173,7 @@ function bp_build_css_core() {
 
         file_put_contents($config['css'], $out);
         file_put_contents($config['min'], bp_minify_css($out));
+        file_put_contents($sig_file, $sig);
     endforeach;
 }
 

@@ -252,9 +252,35 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 # Jobsite GEO — CompanyCam Sync
 --------------------------------------------------------------*/
 
-	$jobsite = get_site_option('jobsite_geo');
+	$jobsite = get_option('jobsite_geo');
 	if ($jobsite && ($jobsite['fsm_brand'] ?? '') == 'Company Cam' && function_exists('bp_run_companycam_sync')) {
 		bp_run_companycam_sync();
+	}
+
+	// Reconciliation: ingested jobs (Housecall Pro / Company Cam) publish without an
+	// AI rewrite, so they have no service-type/service term and never become a
+	// /service/ page. Seed any published jobsite_geo posts still missing a rewrite —
+	// bounded per run, and handed to the deferred bp_geo_ai_rewrite_cron event
+	// (staggered) so we never run a pile of API calls inside this pass. This also
+	// drains the pre-existing backlog and recovers any one-off API failures.
+	if ($jobsite && ($jobsite['install'] ?? '') === 'true'
+		&& defined('BP_GEO_CPT') && defined('BP_GEO_FIELD_AI_RAN')
+		&& function_exists('bp_geo_run_ai_rewrite')) {
+		$bp_geo_pending = get_posts([
+			'post_type'      => BP_GEO_CPT,
+			'post_status'    => 'publish',
+			'posts_per_page' => 5,
+			'orderby'        => 'date',
+			'order'          => 'DESC',
+			'fields'         => 'ids',
+			'meta_query'     => [[ 'key' => BP_GEO_FIELD_AI_RAN, 'compare' => 'NOT EXISTS' ]],
+		]);
+		$bp_geo_stagger = 0;
+		foreach ($bp_geo_pending as $bp_geo_pid) {
+			if (!wp_next_scheduled('bp_geo_ai_rewrite_cron', [$bp_geo_pid])) {
+				wp_schedule_single_event(time() + 60 + ($bp_geo_stagger++ * 90), 'bp_geo_ai_rewrite_cron', [$bp_geo_pid]);
+			}
+		}
 	}
 
 /*--------------------------------------------------------------
@@ -458,6 +484,18 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 		}
 	} else {
 		$getPage = get_page_by_path('areas-we-serve', OBJECT, 'universal');
+		if ($getPage) wp_delete_post($getPage->ID, true);
+	}
+
+	$eventCalendar = get_option('event_calendar');
+	if (!empty($eventCalendar['install'])) {
+		if (is_null(get_page_by_path('calendar', OBJECT, 'universal'))) {
+			wp_insert_post(['post_title' => 'Calendar', 'post_content' => '[get-event-calendar]', 'post_status' => 'publish', 'post_type' => 'universal']);
+		}
+		// Roll recurring events' generated dates forward (rolling horizon) + prune past.
+		if (function_exists('bp_event_topup_recurrences')) bp_event_topup_recurrences();
+	} else {
+		$getPage = get_page_by_path('calendar', OBJECT, 'universal');
 		if ($getPage) wp_delete_post($getPage->ID, true);
 	}
 

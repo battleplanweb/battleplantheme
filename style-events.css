@@ -45,7 +45,7 @@ h2.month-divider,
  }
 
 h2.month-divider {
-	margin-bottom:                                             0;
+	margin:                                                    1em 0 -1.5em;
 }
 
 #calendar .titles .title {
@@ -148,10 +148,6 @@ h2.month-divider {
 }
 
 #calendar .body .event a {
-
-
-
-
 	text-decoration:                                           none;
 }
 
@@ -192,11 +188,20 @@ h2.month-divider {
 # Event Pages
 --------------------------------------------- */
 .single-events .event-meta,
-.archive-meta .event-meta {
-	width: 											400px; /* 9-17-23 for Always Buying Books */
+.post-type-archive-events .col-archive .archive-meta {
+	width: 										400px; /* 9-17-23 for Always Buying Books */
 	max-width:                                                 94%;
   	margin:                                                  0.5em 0 1.5em;
 	text-align:                                                left;
+}
+
+.single-events .event-meta {
+	margin:                                                    -25px 0 50px;
+}
+
+.post-type-archive-events .archive-meta span,
+.post-type-archive-events .single-meta span {
+	margin:                                                    0;
 }
 
 .event-meta .event-passed {
@@ -213,7 +218,8 @@ h2.month-divider {
 	display:                                                   inline-block;
 	text-align:                                                center;
 	width:                                                     34px;
-	padding-right:                                             6px;
+	padding-right:                                             5px;
+	transform:                                                 translateY(4px);
 }
 
 .event-date .date-icon,
@@ -222,18 +228,50 @@ h2.month-divider {
 	color:                                                     inherit;
 }
 
+/* One calendar icon in a fixed column; all date ranges align in the next column
+   (so a multi-date event's stacked ranges line up with the first date, no per-line
+   icons). Flex is deterministic where a text-indent hanging indent was not. */
+.event-date {
+	display:                                                   flex;
+	align-items:                                               baseline;
+}
+
+.event-date .date-icon {
+	flex:                                                      0 0 auto;
+}
+
+/* Per-line time (shown only when blocks have different times). */
+.event-date .event-time-inline::before {
+	content:                                                   "·";
+	margin:                                                    0 0.4em;
+}
+
 /*--------------------------------------------------------------
 # Event Archives
 --------------------------------------------- */
-.calender-btn-row .block-button {
+.entry-footer .calender-btn-row .block-button {
+	font-size:                                                 calc(var(--button-font-size) * 0.7);
+}
+
+.entry-footer .calender-btn-row .block-button {
 	display:                                                   inline-block;
 	width:                                                     50%;
-	font-size:                                                 calc(var(--button-font-size) * 0.7);
 	margin-bottom:                                             1.5em;
 }
 
 .event-expired {
 	display:                                                   none;
+}
+
+/*--------------------------------------------------------------
+# Widgets
+--------------------------------------------- */
+.widget.widget-event .widget-content .col-inner {
+	gap:                                                       1em 0;
+}
+
+.widget.widget-event .event-meta {
+	text-align:                                                left;
 }
 
 

@@ -57,7 +57,7 @@ get_header(); ?>
 					$comments = "false";
 					$social = "false";
 					$tags = "false"; // list / button
-					$navigation = "true";
+					$navigation = "false"; // events show Calendar/List View buttons in the footer instead of prev/next
 					$relatedPosts = "0";
 
 			// Default Single
@@ -91,8 +91,6 @@ get_header(); ?>
 
 					if ( $headerImage == "true" && $headerImgPos == "above" && has_post_thumbnail() ) $displayHeader .= get_the_post_thumbnail();
 
-					if ( get_post_type() == "events" ) $displayHeader .= '<div class="calender-btn-row">[btn link="/calendar/"]Calender View[/btn][btn link="/events/"]List View[/btn]</div>';
-
 					if ( $breadcrumbs == "true" ) $displayHeader .= battleplan_breadcrumbs();
 
 					$displayHeader .= '<h1 class="page-headline single-headline '.get_post_type().'-headline">'.$singleHeadline.'</h1>';
@@ -114,6 +112,8 @@ get_header(); ?>
 				$displayHeader .= '</header><!-- .entry-header-->';
 
 				$displayFooter = '<footer class="entry-footer">';
+
+					if ( get_post_type() == "events" ) $displayFooter .= '<div class="calender-btn-row">[btn link="/calendar/"]Calender View[/btn][btn link="/events/"]List View[/btn]</div>';
 
 					if ( $facebookBtn == "true" && ( $facebookBtnPos == "below" || $facebookBtnPos == "both") ) $displayFooter .= $facebookBtnCode;
 

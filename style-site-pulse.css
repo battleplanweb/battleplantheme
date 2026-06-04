@@ -2372,6 +2372,41 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	color:                                                     var(--sp-danger);
 }
 
+/* Purpose column = the business-purpose input + a small "Toll" flag beside it.
+   The flag marks a drive that incurred tolls; amounts are reconciled later. */
+.sp-mileage-stop-purpose-cell {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       8px;
+	min-width:                                                 0;
+}
+
+.sp-mileage-stop-purpose-cell .sp-mileage-stop-purpose {
+	flex:                                                      1 1 auto;
+	min-width:                                                 0;
+}
+
+.sp-mileage-toll-toggle {
+	display:                                                   inline-flex;
+	align-items:                                               center;
+	gap:                                                       5px;
+	flex:                                                      0 0 auto;
+	font-size:                                                 13px;
+	font-weight:                                               600;
+	color:                                                     var(--sp-text-light);
+	white-space:                                               nowrap;
+	cursor:                                                    pointer;
+	user-select:                                               none;
+}
+
+.sp-mileage-toll-toggle input {
+	width:                                                     auto;
+	min-height:                                                0;
+	margin:                                                    0;
+	accent-color:                                              var(--sp-primary);
+	cursor:                                                    pointer;
+}
+
 .sp-mileage-purposes {
 	display:                                                   flex;
 	flex-wrap:                                                 wrap;

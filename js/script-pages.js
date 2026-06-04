@@ -642,6 +642,23 @@ document.addEventListener("DOMContentLoaded", function () {
 	});
 
 
+	// Move an image's alignment class up to its <figure> wrapper, so the figure
+	// becomes the aligned/floated element and its 2em margin isn't trapped inside
+	// the figure. Classes are already align-* here (final_output rewrites
+	// aligncenter -> align-center). Removing it from the image drops it back to the
+	// base "img { display:block; margin:0 auto }" rule, so centering is preserved;
+	// the existing ".align-left img / .align-right img { float:none }" rule keeps
+	// the inner image from double-floating in the left/right cases.
+	getObjects('figure > img').forEach(img => {
+		['align-left', 'align-right', 'align-center'].forEach(cls => {
+			if (img.classList.contains(cls)) {
+				img.parentElement.classList.add(cls);
+				img.classList.remove(cls);
+			}
+		});
+	});
+
+
 	// Make sure form inputs have id, so that they can be correctly linked to labels
 	getObjects('input[name]').forEach(input => {
 		input.id = input.name;

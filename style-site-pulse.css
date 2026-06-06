@@ -1045,6 +1045,32 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	padding-right:                                             36px;
 }
 
+/* Datalist-backed combobox inputs (location + purpose). Wear the SAME thin chevron as
+   .sp-select and hide the browser's native datalist arrow so the two fields match. */
+.sp-combo {
+	position:                                                  relative;
+}
+
+.sp-combo-input {
+	appearance:                                                none;
+	background-image:                                          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+	background-repeat:                                         no-repeat;
+	background-position:                                       right 12px center;
+	padding-right:                                             36px;
+}
+
+/* Hide the native datalist indicator (kept invisible-but-clickable so the chevron still opens
+   the list in Chrome); other browsers never show it. */
+.sp-combo-input::-webkit-calendar-picker-indicator {
+	opacity:                                                   0;
+	cursor:                                                    pointer;
+}
+
+/* Google Places autocomplete dropdown must float above the add-destination modal. */
+.pac-container {
+	z-index:                                                   100001 !important;
+}
+
 .sp-form-error {
 	color:                                                     var(--sp-danger);
 	font-size:                                                 13px;
@@ -1413,7 +1439,8 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	margin-bottom:                                             20px;
 }
 
-.sp-role-manager .sp-report-filters {
+.sp-role-manager .sp-report-filters,
+.sp-role-non-store-manager .sp-report-filters {
 	grid-template-columns:                                     repeat(auto-fill, minmax(220px, 1fr));
 }
 
@@ -1479,6 +1506,99 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	border-radius:                                             var(--sp-radius);
 	padding:                                                   20px;
 	margin-bottom:                                             16px;
+}
+
+/* ---- Tiers (Roles) ---- */
+
+.sp-tier-card {
+	background:                                                var(--sp-bg-white);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius);
+	padding:                                                   18px 20px;
+	margin-bottom:                                             14px;
+}
+
+.sp-tier-card-head {
+	display:                                                   grid;
+	grid-template-columns:                                     auto 1fr auto auto;
+	align-items:                                               center;
+	gap:                                                       12px;
+	margin-bottom:                                             14px;
+}
+
+.sp-tier-badge {
+	display:                                                   inline-block;
+	padding:                                                   4px 10px;
+	border-radius:                                             var(--sp-radius-pill);
+	background:                                                var(--sp-primary-light);
+	color:                                                     var(--sp-primary-hover);
+	font-size:                                                 12px;
+	font-weight:                                               700;
+	white-space:                                               nowrap;
+}
+
+.sp-tier-name {
+	font-weight:                                               600;
+}
+
+.sp-tier-count {
+	font-size:                                                 13px;
+	color:                                                     var(--sp-text-light);
+	white-space:                                               nowrap;
+}
+
+.sp-tier-move {
+	display:                                                   inline-flex;
+	gap:                                                       4px;
+}
+
+.sp-tier-caps {
+	display:                                                   grid;
+	grid-template-columns:                                     repeat(auto-fill, minmax(200px, 1fr));
+	gap:                                                       8px 16px;
+	margin-bottom:                                             16px;
+}
+
+.sp-tier-cap {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       8px;
+	font-size:                                                 14px;
+	color:                                                     var(--sp-text);
+	cursor:                                                    pointer;
+}
+
+.sp-tier-cap input {
+	width:                                                     16px;
+	height:                                                    16px;
+	flex:                                                      0 0 auto;
+	accent-color:                                              var(--sp-primary);
+}
+
+.sp-tier-card-foot {
+	display:                                                   flex;
+	gap:                                                       8px;
+	padding-top:                                               14px;
+	border-top:                                                1px solid var(--sp-border);
+}
+
+.sp-tier-form {
+	background:                                                var(--sp-bg-white);
+	border:                                                    1px solid var(--sp-border-focus);
+	border-radius:                                             var(--sp-radius);
+	padding:                                                   20px;
+	margin-bottom:                                             16px;
+}
+
+@media (max-width: 640px) {
+	.sp-tier-card-head {
+		grid-template-columns:                                     1fr auto;
+		gap:                                                       8px;
+	}
+	.sp-tier-badge { grid-column: 1; }
+	.sp-tier-move  { grid-column: 2; grid-row: 1; }
+	.sp-tier-name  { grid-column: 1 / -1; grid-row: 2; }
+	.sp-tier-count { grid-column: 1 / -1; grid-row: 3; }
 }
 
 .sp-template-card-header {
@@ -1988,6 +2108,32 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	font-size:                                                 14px;
 }
 
+.sp-coming-soon-panel {
+	display:                                                   grid;
+	place-items:                                               center;
+	gap:                                                       12px;
+	padding:                                                   80px 20px;
+	color:                                                     var(--sp-text-light);
+	text-align:                                                center;
+}
+
+.sp-coming-soon-panel .sp-icon {
+	width:                                                     48px;
+	height:                                                    48px;
+	opacity:                                                   0.5;
+}
+
+.sp-coming-soon-panel h3 {
+	margin:                                                    0;
+	font-size:                                                 20px;
+	color:                                                     var(--sp-text);
+}
+
+.sp-coming-soon-panel p {
+	margin:                                                    0;
+	font-size:                                                 14px;
+}
+
 .sp-loading {
 	display:                                                   grid;
 	place-items:                                               center;
@@ -2284,19 +2430,44 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	display:                                                   inline-flex;
 	align-items:                                               center;
 	justify-content:                                          center;
-	padding:                                                   5px;
-	border:                                                    none;
-	background:                                                transparent;
+	width:                                                     32px;
+	height:                                                    32px;
+	padding:                                                   0;
+	border:                                                    1px solid var(--sp-border);
+	background:                                                var(--sp-bg-white);
 	color:                                                     var(--sp-text-light);
 	border-radius:                                             var(--sp-radius-sm);
 	cursor:                                                    pointer;
 	line-height:                                               0;
-	transition:                                                background 0.12s, color 0.12s;
+	transition:                                                background 0.12s, color 0.12s, border-color 0.12s;
 }
 
 .sp-icon-btn:hover {
-	background:                                                var(--sp-bg);
+	border-color:                                              var(--sp-border-focus);
 	color:                                                     var(--sp-text);
+}
+
+/* Edit turns primary, Delete turns danger — outline by default, color on hover. */
+.sp-icon-btn.sp-icon-edit:hover {
+	color:                                                     var(--sp-primary);
+	border-color:                                              var(--sp-primary);
+}
+
+.sp-icon-btn.sp-icon-delete:hover {
+	color:                                                     var(--sp-danger);
+	border-color:                                              var(--sp-danger);
+	background:                                                var(--sp-danger-light);
+}
+
+.sp-icon-btn:disabled {
+	opacity:                                                   0.4;
+	cursor:                                                    not-allowed;
+}
+
+.sp-icon-btn:disabled:hover {
+	border-color:                                              var(--sp-border);
+	color:                                                     var(--sp-text-light);
+	background:                                                var(--sp-bg-white);
 }
 
 .sp-mileage-delete-btn:hover {
@@ -2418,20 +2589,63 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	display:                                                   inline-flex;
 	align-items:                                               center;
 	gap:                                                       6px;
-	padding:                                                   3px 6px 3px 10px;
+	padding:                                                   5px 8px 5px 14px;
 	border-radius:                                             999px;
-	background:                                                var(--sp-bg-subtle, #f4f6f8);
-	border:                                                    1px solid var(--sp-border, #d7dde3);
-	font-size:                                                 12.5px;
+	background:                                                var(--sp-bg-white);
+	border:                                                    1px solid var(--sp-border);
+	font-size:                                                 13px;
+	color:                                                     var(--sp-text);
 }
 
-.sp-purpose-chip-x {
-	border:                                                    none;
-	background:                                                transparent;
+.sp-purpose-text {
+	padding-right:                                             2px;
+}
+
+.sp-purpose-icon {
+	display:                                                   inline-flex;
+	align-items:                                               center;
+	justify-content:                                           center;
+	width:                                                     28px;
+	height:                                                    28px;
+	padding:                                                   0;
+	border:                                                    1px solid var(--sp-border);
+	background:                                                var(--sp-bg-white);
+	color:                                                     var(--sp-text-light);
+	border-radius:                                             var(--sp-radius-sm);
 	cursor:                                                    pointer;
-	font-size:                                                 15px;
-	line-height:                                               1;
-	color:                                                     var(--sp-text-secondary, #6b7280);
+	line-height:                                               0;
+	transition:                                                background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.sp-purpose-icon svg {
+	width:                                                     14px;
+	height:                                                    14px;
+}
+
+.sp-purpose-edit:hover {
+	color:                                                     var(--sp-primary);
+	border-color:                                              var(--sp-primary);
+}
+
+.sp-purpose-del:hover {
+	color:                                                     var(--sp-danger);
+	border-color:                                              var(--sp-danger);
+	background:                                                var(--sp-danger-light);
+}
+
+.sp-purpose-editing {
+	padding:                                                   2px;
+}
+
+.sp-purpose-edit-input {
+	width:                                                     150px;
+	padding:                                                   4px 12px;
+	border:                                                    1px solid var(--sp-border-focus);
+	border-radius:                                             999px;
+	font-size:                                                 13px;
+	font-family:                                               inherit;
+	color:                                                     var(--sp-text);
+	outline:                                                   none;
 }
 
 .sp-mileage-purpose-add {
@@ -2595,6 +2809,49 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	flex-wrap:                                                 wrap;
 }
 
+.sp-flash {
+	position:                                                  fixed;
+	bottom:                                                    24px;
+	right:                                                     24px;
+	background:                                                var(--sp-text);
+	color:                                                     #fff;
+	padding:                                                   10px 18px;
+	border-radius:                                             var(--sp-radius-pill);
+	font-size:                                                 14px;
+	font-weight:                                               600;
+	box-shadow:                                                0 4px 16px rgba(0, 0, 0, 0.18);
+	opacity:                                                   0;
+	transform:                                                 translateY(8px);
+	transition:                                                opacity 0.2s ease, transform 0.2s ease;
+	pointer-events:                                            none;
+	z-index:                                                   100000;
+}
+
+.sp-flash.show {
+	opacity:                                                   1;
+	transform:                                                 translateY(0);
+}
+
+.sp-autosave-hint {
+	align-self:                                                center;
+	font-size:                                                 13px;
+	color:                                                     var(--sp-text-light);
+	font-style:                                                italic;
+}
+
+.sp-mileage-destinations-head {
+	display:                                                   flex;
+	align-items:                                               center;
+	justify-content:                                           space-between;
+	gap:                                                       12px;
+	flex-wrap:                                                 wrap;
+	margin:                                                    24px 0 4px;
+}
+
+.sp-mileage-destinations-head h3 {
+	margin:                                                    0;
+}
+
 .sp-admin-mileage-rate label {
 	font-weight:                                               600;
 	font-size:                                                 14px;
@@ -2705,7 +2962,7 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 
 .sp-modal {
 	position:                                                  relative;
-	width:                                                     min(520px, 100%);
+	width:                                                     min(600px, 100%);
 	max-height:                                                90vh;
 	overflow-y:                                                auto;
 	padding:                                                   28px;
@@ -2743,6 +3000,16 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	margin-top:                                                20px;
 	padding-top:                                               16px;
 	border-top:                                                1px solid var(--sp-border);
+}
+
+/* The admin add/edit forms render their existing card straight into the backdrop; cap it
+   to the same ~600px width and let tall forms scroll inside the popup. */
+.sp-form-modal-backdrop > * {
+	width:                                                     100%;
+	max-width:                                                 600px;
+	max-height:                                                90vh;
+	overflow-y:                                                auto;
+	margin:                                                    0 !important;
 }
 
 

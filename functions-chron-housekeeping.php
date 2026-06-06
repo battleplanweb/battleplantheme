@@ -499,6 +499,24 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 		if ($getPage) wp_delete_post($getPage->ID, true);
 	}
 
+	$sitePulse = get_option('site_pulse');
+	if (!empty($sitePulse['install'])) {
+		$sitePulsePages = [
+			['slug' => 'site-pulse-login',     'title' => 'Site Pulse Login',     'shortcode' => 'page-site-pulse-login'],
+			['slug' => 'site-pulse-dashboard', 'title' => 'Site Pulse Dashboard', 'shortcode' => 'page-site-pulse-dashboard'],
+		];
+		foreach ($sitePulsePages as $page) {
+			if (is_null(get_page_by_path($page['slug'], OBJECT, 'universal'))) {
+				wp_insert_post(['post_title' => $page['title'], 'post_name' => $page['slug'], 'post_content' => '[get-universal-page slug="' . $page['shortcode'] . '"]', 'post_status' => 'publish', 'post_type' => 'universal']);
+			}
+		}
+	} else {
+		foreach (['site-pulse-login', 'site-pulse-dashboard'] as $slug) {
+			$getPage = get_page_by_path($slug, OBJECT, 'universal');
+			if ($getPage) wp_delete_post($getPage->ID, true);
+		}
+	}
+
 	if (is_null(get_page_by_path('debug', OBJECT, 'universal'))) {
 		wp_insert_post(['post_title' => 'BP Debug Log', 'post_name' => 'debug', 'post_content' => '[show_debug_log]', 'post_status' => 'publish', 'post_type' => 'universal']);
 	}

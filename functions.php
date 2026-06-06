@@ -1613,6 +1613,10 @@ $site_pulse = get_option('site_pulse');
 if ( !empty($site_pulse['install']) ) {
 	require_once get_template_directory().'/includes/includes-site-pulse.php';
 }
+$site_private = get_option('site_private');
+if ( !empty($site_private['install']) ) {
+	require_once get_template_directory().'/includes/includes-site-private.php';
+}
 $customer_info['site-type'] = $customer_info['site-type'] ?? '';
 
 if ( $customer_info['site-type'] === 'hvac' ) require_once get_template_directory().'/includes/includes-hvac.php';

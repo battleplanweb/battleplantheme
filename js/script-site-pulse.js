@@ -21,6 +21,30 @@ const D = (typeof sitePulseData !== 'undefined') ? sitePulseData : {};
 const $ = (sel, ctx) => (ctx || document).querySelector(sel);
 const $$ = (sel, ctx) => [...(ctx || document).querySelectorAll(sel)];
 
+// Shared edit/delete icons + a builder for the outlined icon-buttons used app-wide.
+const ICON_EDIT = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+const ICON_DELETE = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
+
+// kind: 'edit' | 'delete'. cls = extra functional class(es); attrs = raw attribute string (data-*, disabled…).
+function iconBtn(kind, cls = '', attrs = '') {
+	const del = kind === 'delete';
+	return `<button type="button" class="unique sp-icon-btn ${del ? 'sp-icon-delete' : 'sp-icon-edit'} ${cls}" title="${del ? 'Delete' : 'Edit'}" aria-label="${del ? 'Delete' : 'Edit'}" ${attrs}>${del ? ICON_DELETE : ICON_EDIT}</button>`;
+}
+
+// Shared popup shell for the admin add/edit forms, so every "Add" opens a centered modal
+// instead of an inline panel that can land below the fold. Returns the backdrop element to
+// render into; the form's own card (.sp-report-form-wrap / .sp-tier-form) becomes the box.
+function spFormModal() {
+	closeFormModal();
+	const backdrop = document.createElement('div');
+	backdrop.id = 'sp-form-modal';
+	backdrop.className = 'sp-modal-backdrop sp-form-modal-backdrop';
+	document.body.appendChild(backdrop);
+	backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeFormModal(); });
+	return backdrop;
+}
+function closeFormModal() { document.getElementById('sp-form-modal')?.remove(); }
+
 
 /*--------------------------------------------------------------
 # Initialization
@@ -98,6 +122,24 @@ function markUniqueSpans(root) {
 	(root || document.getElementById('sp-app') || document.getElementById('sp-login-wrap') || document).querySelectorAll('span').forEach(function(el) {
 		el.classList.add('unique');
 	});
+}
+
+// Brief, unobtrusive "Saved" confirmation for auto-save fields (replaces explicit Save buttons).
+let spFlashTimer = null;
+function spFlash(msg = 'Saved') {
+	let el = document.getElementById('sp-flash');
+	if (!el) {
+		el = document.createElement('div');
+		el.id = 'sp-flash';
+		el.className = 'sp-flash';
+		document.body.appendChild(el);
+	}
+	el.textContent = msg;
+	// Force reflow so re-triggering the animation works on rapid successive saves.
+	void el.offsetWidth;
+	el.classList.add('show');
+	clearTimeout(spFlashTimer);
+	spFlashTimer = setTimeout(() => el.classList.remove('show'), 1600);
 }
 
 
@@ -239,15 +281,29 @@ function initLogin() {
 	const form = $('#sp-login-form');
 	if (!form) return;
 
+	// Resolve the inputs by id, falling back to name and scoped to the form — resilient to
+	// older login markup that renders the inputs without ids (which made #sp-username/#sp-password
+	// null and threw before the request ever fired).
+	const userInput = $('#sp-username', form) || $('[name="username"]', form);
+	const passInput = $('#sp-password', form) || $('[name="password"]', form);
+
 	const toggleBtn = $('.sp-toggle-password', form);
-	if (toggleBtn) {
+	if (toggleBtn && passInput) {
+		const eyeOpen = $('.sp-eye-open', toggleBtn);
+		const eyeClosed = $('.sp-eye-closed', toggleBtn);
+		// Drive visibility with inline display (overrides any framework svg rule that defeats
+		// the [hidden] attribute, which was leaving both eyes showing). Open eye = "click to
+		// reveal" (password hidden); slashed eye = "click to hide" (password visible).
+		const syncEyes = () => {
+			const visible = passInput.type === 'text';
+			if (eyeOpen)   eyeOpen.style.display   = visible ? 'none' : '';
+			if (eyeClosed) eyeClosed.style.display = visible ? '' : 'none';
+		};
+		syncEyes();
 		toggleBtn.addEventListener('click', () => {
-			const input = $('#sp-password');
-			const isPass = input.type === 'password';
-			input.type = isPass ? 'text' : 'password';
-			$('.sp-eye-open', toggleBtn).hidden = !isPass;
-			$('.sp-eye-closed', toggleBtn).hidden = isPass;
-			toggleBtn.setAttribute('aria-label', isPass ? 'Hide password' : 'Show password');
+			passInput.type = passInput.type === 'password' ? 'text' : 'password';
+			toggleBtn.setAttribute('aria-label', passInput.type === 'text' ? 'Hide password' : 'Show password');
+			syncEyes();
 		});
 	}
 
@@ -258,15 +314,22 @@ function initLogin() {
 		const btnText = $('.btn-text', submitBtn);
 		const btnLoad = $('.btn-loading', submitBtn);
 
-		errEl.textContent = '';
-		submitBtn.disabled = true;
+		if (!userInput || !passInput) {
+			if (errEl) errEl.textContent = 'Login form failed to load. Please refresh and try again.';
+			return;
+		}
+
+		if (errEl) errEl.textContent = '';
+		if (submitBtn) submitBtn.disabled = true;
 		if (btnText) btnText.hidden = true;
 		if (btnLoad) btnLoad.hidden = false;
 
 		try {
 			const res = await spAjax('site_pulse_login', {
-				username: $('#sp-username').value.trim(),
-				password: $('#sp-password').value,
+				username: userInput.value.trim(),
+				// NOT "password": WP Engine's WAF strips/blocks a POST field named `password`
+				// on non-login endpoints (admin-ajax.php), which kills every login attempt.
+				sp_pass: passInput.value,
 			});
 
 			if (res.success && res.data.redirect) {
@@ -930,6 +993,10 @@ function renderReportDetail(wrap, report, answers, fields, location, author, pan
 	if (showNewBtn) {
 		html += '<button type="button" class="unique sp-btn sp-btn-primary sp-detail-new-btn">+ New Report</button>';
 	}
+	// GOD only: permanently delete this report (and its answers + action items).
+	if (D.isGod) {
+		html += iconBtn('delete', 'sp-detail-god-delete', `data-report-id="${report.id}" title="Delete report (God only)"`);
+	}
 	html += '</div>';
 	html += '<div class="sp-detail-nav-arrows">';
 	html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-detail-prev"${hasPrev ? '' : ' disabled'}>&lsaquo; Previous</button>`;
@@ -977,6 +1044,19 @@ function renderReportDetail(wrap, report, answers, fields, location, author, pan
 	// Event listeners
 	$('.sp-detail-back-btn', wrap)?.addEventListener('click', () => closeReportDetail(panelPrefix));
 	$('.sp-detail-new-btn', wrap)?.addEventListener('click', () => showReportForm());
+
+	$('.sp-detail-god-delete', wrap)?.addEventListener('click', async (e) => {
+		const btn = e.currentTarget;
+		if (!confirm('Permanently delete this report, along with its answers and any action items it created? This cannot be undone.')) return;
+		btn.disabled = true;
+		try {
+			const res = await spAjax('site_pulse_god_delete_report', { report_id: btn.dataset.reportId });
+			if (res.success) {
+				closeReportDetail(panelPrefix);
+				if (panelPrefix === 'review') loadReviewReports(); else loadReports();
+			} else { alert(res.data?.message || 'Error.'); btn.disabled = false; }
+		} catch (err) { alert('Error deleting report.'); btn.disabled = false; }
+	});
 
 	$('.sp-detail-prev', wrap)?.addEventListener('click', () => {
 		if (currentReportIndex > 0) {
@@ -1300,11 +1380,13 @@ function renderResolutionCard(data) {
 
 function initAdmin() {
 	const usersContent = $('#sp-admin-users-content');
+	const tiersContent = $('#sp-admin-tiers-content');
 	const locsContent = $('#sp-admin-locations-content');
 	const tplsContent = $('#sp-admin-templates-content');
 	const settingsContent = $('#sp-admin-settings-content');
 
 	if (usersContent) loadAdminUsers();
+	if (tiersContent) loadAdminTiers();
 	if (locsContent) loadAdminLocations();
 	if (tplsContent) loadAdminTemplates();
 	if (settingsContent) loadAdminSettings();
@@ -1335,6 +1417,11 @@ function renderAdminUsers(wrap, data) {
 
 	let html = '<div class="sp-admin-toolbar">';
 	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-add-user-btn">+ Add User</button>';
+	// GOD only: one-click cleanup of orphaned profiles (rows whose WP login is already gone —
+	// they show with blank name/username/email).
+	if (D.isGod) {
+		html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-god-purge-orphans">Purge Orphaned Profiles</button>';
+	}
 	html += '</div>';
 
 	if (!users || users.length === 0) {
@@ -1352,7 +1439,17 @@ function renderAdminUsers(wrap, data) {
 			html += `<td>${esc(u.role_label || '—')}</td>`;
 			html += `<td>${esc(u.location_name || '—')}</td>`;
 			html += `<td><span class="unique sp-status-badge ${statusClass}">${u.status}</span></td>`;
-			html += `<td><button type="button" class="unique sp-btn sp-btn-ghost sp-edit-user-btn" data-user-id="${u.user_id}">Edit</button></td>`;
+			let userActions = iconBtn('edit', 'sp-edit-user-btn', `data-user-id="${u.user_id}"`);
+			// Hard-delete a user (test/mistake cleanup). Regular Gods can delete normal users; only
+			// the super-admin can delete a God. Never your own row or battleplanweb. Server enforces
+			// the same, plus a WP-admin block.
+			const isSelfRow = String(u.user_id) === String(D.userId);
+			const isBpRow = u.user_login === 'battleplanweb';
+			const canDelete = D.isGod && !isSelfRow && !isBpRow && (u.role_slug !== 'god' || D.isSuperadmin);
+			if (canDelete) {
+				userActions += ' ' + iconBtn('delete', 'sp-god-delete-user', `data-user-id="${u.user_id}" data-user-name="${esc(u.display_name)}" title="Delete user"`);
+			}
+			html += `<td>${userActions}</td>`;
 			html += '</tr>';
 		});
 		html += '</tbody></table></div>';
@@ -1363,6 +1460,17 @@ function renderAdminUsers(wrap, data) {
 	markUniqueSpans(wrap);
 
 	$('#sp-add-user-btn')?.addEventListener('click', () => showUserForm(null, roles, locations, users, mileageLocations));
+
+	$('#sp-god-purge-orphans')?.addEventListener('click', async (e) => {
+		const btn = e.currentTarget;
+		if (!confirm('Purge ALL orphaned profiles (users whose login no longer exists) and their leftover data? This cannot be undone.')) return;
+		btn.disabled = true;
+		try {
+			const res = await spAjax('site_pulse_god_purge_orphans', {});
+			if (res.success) { alert(res.data.message); loadAdminUsers(); }
+			else { alert(res.data?.message || 'Error.'); btn.disabled = false; }
+		} catch (err) { alert('Error purging orphaned profiles.'); btn.disabled = false; }
+	});
 	$$('.sp-edit-user-btn', wrap).forEach(btn => {
 		btn.addEventListener('click', () => {
 			const uid = btn.dataset.userId;
@@ -1370,12 +1478,23 @@ function renderAdminUsers(wrap, data) {
 			showUserForm(user, roles, locations, users, mileageLocations);
 		});
 	});
+
+	$$('.sp-god-delete-user', wrap).forEach(btn => {
+		btn.addEventListener('click', async () => {
+			const name = btn.dataset.userName || 'this user';
+			if (!confirm(`Permanently delete ${name} and ALL their reports, action items, and mileage, plus their login? Real users should be set Inactive instead. This cannot be undone.`)) return;
+			btn.disabled = true;
+			try {
+				const res = await spAjax('site_pulse_god_delete_user', { user_id: btn.dataset.userId });
+				if (res.success) loadAdminUsers();
+				else { alert(res.data?.message || 'Error.'); btn.disabled = false; }
+			} catch (err) { alert('Error deleting user.'); btn.disabled = false; }
+		});
+	});
 }
 
 function showUserForm(user, roles, locations, allUsers, mileageLocations = []) {
-	const wrap = $('#sp-user-form-wrap');
-	if (!wrap) return;
-	wrap.hidden = false;
+	const wrap = spFormModal();
 
 	const isEdit = !!user;
 	const title = isEdit ? 'Edit User' : 'Add New User';
@@ -1420,11 +1539,19 @@ function showUserForm(user, roles, locations, allUsers, mileageLocations = []) {
 		html += '<div class="sp-form-group"><label>Email</label>';
 		html += '<input type="email" name="email" class="sp-input" required placeholder="email@example.com"></div>';
 		html += '<div class="sp-form-group"><label>Password</label>';
-		html += '<input type="text" name="password" class="sp-input" placeholder="Leave blank to auto-generate"></div>';
+		// name="user_pass", not "password" — WP Engine's WAF strips a `password` POST field.
+		html += '<input type="text" name="user_pass" class="sp-input" placeholder="Leave blank to auto-generate"></div>';
 	}
 
+	// A God's role isn't in the dropdown (by design), so show it as a locked field; God membership
+	// is changed only via the super-admin's Grant/Revoke buttons.
+	const isGodUser = isEdit && user && user.role_slug === 'god';
 	html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">';
-	html += `<div class="sp-form-group"><label>Role</label><select name="role_id" class="sp-select" required>${roleOptions}</select></div>`;
+	if (isGodUser) {
+		html += '<div class="sp-form-group"><label>Role</label><input type="text" class="sp-input" value="God" disabled></div>';
+	} else {
+		html += `<div class="sp-form-group"><label>Role</label><select name="role_id" class="sp-select" required>${roleOptions}</select></div>`;
+	}
 	html += `<div class="sp-form-group"><label>Location <span class="unique sp-text-secondary" style="font-weight:400;">(also the mileage home base)</span></label><select name="location_id" class="sp-select">${locOptions}</select></div>`;
 	html += '</div>';
 
@@ -1438,7 +1565,7 @@ function showUserForm(user, roles, locations, allUsers, mileageLocations = []) {
 
 	if (isEdit) {
 		html += '<div class="sp-form-group"><label>New Password</label>';
-		html += '<input type="text" name="new_password" class="sp-input" placeholder="Leave blank to keep current"></div>';
+		html += '<input type="text" name="new_user_pass" class="sp-input" placeholder="Leave blank to keep current"></div>';
 
 		html += `<div class="sp-form-group"><label>Status</label><select name="status" class="sp-select">`;
 		html += `<option value="active"${user.status === 'active' ? ' selected' : ''}>Active</option>`;
@@ -1449,13 +1576,40 @@ function showUserForm(user, roles, locations, allUsers, mileageLocations = []) {
 	html += '<div class="sp-report-form-actions">';
 	html += `<button type="submit" class="unique sp-btn sp-btn-primary">${isEdit ? 'Save Changes' : 'Create User'}</button>`;
 	html += '<button type="button" class="unique sp-btn sp-btn-secondary sp-user-form-cancel">Cancel</button>';
+	// Super-admin (battleplanweb) only: manage God membership. The role dropdown has no God option
+	// by design, so this is the sole path. Other Gods never see these.
+	if (isEdit && D.isSuperadmin && user && String(user.user_id) !== String(D.userId)) {
+		if (user.role_slug === 'god') {
+			html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-user-revoke-god" style="margin-left:auto;">Revoke God Access</button>';
+		} else {
+			html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-user-grant-god" style="margin-left:auto;">Grant God Access</button>';
+		}
+	}
 	html += '</div></form></div>';
 
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
 
 	$$('.sp-user-form-cancel', wrap).forEach(btn => {
-		btn.addEventListener('click', () => { wrap.hidden = true; wrap.innerHTML = ''; });
+		btn.addEventListener('click', () => closeFormModal());
+	});
+
+	$('.sp-user-grant-god', wrap)?.addEventListener('click', async () => {
+		if (!confirm(`Give ${user.display_name} full GOD access? Gods can delete users, wipe data, and impersonate anyone.`)) return;
+		try {
+			const res = await spAjax('site_pulse_god_grant', { user_id: user.user_id });
+			if (res.success) { alert(res.data.message); closeFormModal(); loadAdminUsers(); }
+			else alert(res.data?.message || 'Error granting access.');
+		} catch (err) { alert('Error granting access.'); }
+	});
+
+	$('.sp-user-revoke-god', wrap)?.addEventListener('click', async () => {
+		if (!confirm(`Remove GOD access from ${user.display_name}? Their account stays, but they're demoted to the lowest role — edit them afterward to set the right one.`)) return;
+		try {
+			const res = await spAjax('site_pulse_god_revoke', { user_id: user.user_id });
+			if (res.success) { alert(res.data.message); closeFormModal(); loadAdminUsers(); }
+			else alert(res.data?.message || 'Error revoking access.');
+		} catch (err) { alert('Error revoking access.'); }
 	});
 
 	// Show the private home-address field only when there's no store Location.
@@ -1478,8 +1632,7 @@ function showUserForm(user, roles, locations, allUsers, mileageLocations = []) {
 				if (!isEdit && res.data.password) {
 					alert('User created. Password: ' + res.data.password);
 				}
-				wrap.hidden = true;
-				wrap.innerHTML = '';
+				closeFormModal();
 				loadAdminUsers();
 			} else {
 				alert(res.data?.message || 'Error saving user.');
@@ -1538,7 +1691,7 @@ function renderAdminLocations(wrap, locations) {
 			html += `<td>${esc(l.city || '')}</td>`;
 			html += `<td>${esc(l.state || '')}</td>`;
 			html += `<td><span class="unique sp-status-badge ${statusClass}">${l.status}</span></td>`;
-			html += `<td><button type="button" class="unique sp-btn sp-btn-ghost sp-edit-loc-btn" data-loc-id="${l.id}">Edit</button></td>`;
+			html += `<td>${iconBtn('edit', 'sp-edit-loc-btn', `data-loc-id="${l.id}"`)}</td>`;
 			html += '</tr>';
 		});
 		html += '</tbody></table></div>';
@@ -1559,14 +1712,12 @@ function renderAdminLocations(wrap, locations) {
 }
 
 function showLocationForm(loc) {
-	const wrap = $('#sp-location-form-wrap');
-	if (!wrap) return;
-	wrap.hidden = false;
+	const wrap = spFormModal();
 
 	const isEdit = !!loc;
 	const title = isEdit ? 'Edit Location' : 'Add Location';
 
-	let html = '<div class="sp-report-form-wrap" style="margin-top:20px;">';
+	let html = '<div class="sp-report-form-wrap">';
 	html += `<div class="sp-report-form-header"><h3>${title}</h3>`;
 	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-loc-form-cancel">Cancel</button></div>';
 	html += '<form id="sp-location-form">';
@@ -1611,7 +1762,7 @@ function showLocationForm(loc) {
 	markUniqueSpans(wrap);
 
 	$$('.sp-loc-form-cancel', wrap).forEach(btn => {
-		btn.addEventListener('click', () => { wrap.hidden = true; wrap.innerHTML = ''; });
+		btn.addEventListener('click', () => closeFormModal());
 	});
 
 	$('#sp-location-form')?.addEventListener('submit', async (e) => {
@@ -1623,8 +1774,7 @@ function showLocationForm(loc) {
 		try {
 			const res = await spAjax('site_pulse_admin_save_location', data);
 			if (res.success) {
-				wrap.hidden = true;
-				wrap.innerHTML = '';
+				closeFormModal();
 				loadAdminLocations();
 			} else {
 				alert(res.data?.message || 'Error saving location.');
@@ -1736,6 +1886,18 @@ function renderActionItems(container, items, pending = []) {
 	});
 	$$('.sp-review-reject-btn', container).forEach(btn => {
 		btn.addEventListener('click', () => reviewActionItem(btn.dataset.itemId, 'reject', btn));
+	});
+
+	$$('.sp-god-delete-action', container).forEach(btn => {
+		btn.addEventListener('click', async () => {
+			if (!confirm('Permanently delete this action item? This cannot be undone.')) return;
+			btn.disabled = true;
+			try {
+				const res = await spAjax('site_pulse_god_delete_action_item', { item_id: btn.dataset.itemId });
+				if (res.success) loadActionItems();
+				else { alert(res.data?.message || 'Error.'); btn.disabled = false; }
+			} catch (err) { alert('Error deleting item.'); btn.disabled = false; }
+		});
 	});
 
 	$$('.sp-resolve-item-btn', container).forEach(btn => {
@@ -1858,6 +2020,11 @@ function renderActionItemCard(item, mode) {
 		html += `<button type="button" class="unique sp-btn sp-btn-secondary sp-resolve-item-btn" data-item-id="${item.id}">Resolve</button>`;
 	}
 
+	// GOD only: permanently delete this action item, in any state.
+	if (D.isGod) {
+		html += iconBtn('delete', 'sp-god-delete-action', `data-item-id="${item.id}" title="Delete item (God only)"`);
+	}
+
 	html += '</div>';
 	return html;
 }
@@ -1958,41 +2125,243 @@ async function loadAdminSettings() {
 }
 
 function renderAdminSettings(wrap, data) {
-	let html = '<h3 style="margin:0 0 20px;">AI Configuration</h3>';
+	// One key field: optional "Active + masked" line, an input, a Save button (the setting key
+	// + input id ride on the button as data-attrs so a single handler covers all of them).
+	const keyRow = (o) => {
+		let h = '<div class="sp-form-group">';
+		h += `<label>${esc(o.label)}</label>`;
+		if (o.set) {
+			h += `<div style="margin-bottom:8px;"><span class="unique sp-status-badge sp-status-submitted">Active</span> <span class="unique" style="color:var(--sp-text-light);font-size:13px;">${esc(o.masked || '')}</span></div>`;
+		}
+		h += '<div style="display:grid;grid-template-columns:1fr auto;gap:8px;">';
+		h += `<input type="text" id="${o.inputId}" class="sp-input" placeholder="${esc(o.placeholder)}">`;
+		h += `<button type="button" class="unique sp-btn sp-btn-primary sp-save-setting-key" data-key="${o.settingKey}" data-input="${o.inputId}">Save Key</button>`;
+		h += '</div>';
+		if (o.help) h += `<div class="sp-help-text">${o.help}</div>`;
+		h += '</div>';
+		return h;
+	};
 
-	html += '<div class="sp-form-group">';
-	html += '<label>Claude API Key</label>';
-	if (data.claude_api_key_set) {
-		html += `<div style="margin-bottom:8px;"><span class="unique sp-status-badge sp-status-submitted">Active</span> <span class="unique" style="color:var(--sp-text-light);font-size:13px;">${esc(data.claude_api_key_masked)}</span></div>`;
-	}
-	html += '<div style="display:grid;grid-template-columns:1fr auto;gap:8px;">';
-	html += '<input type="text" id="sp-setting-api-key" class="sp-input" placeholder="Enter Claude API key (sk-ant-...)">';
-	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-save-api-key">Save Key</button>';
-	html += '</div>';
-	html += '<div class="sp-help-text">Get your API key from <a href="https://console.anthropic.com/" target="_blank" rel="noopener">console.anthropic.com</a>. Required for AI-powered action items and insights.</div>';
-	html += '</div>';
+	let html = '<h3 style="margin:0 0 20px;">API Keys</h3>';
+
+	html += keyRow({
+		label: 'Claude API Key', set: data.claude_api_key_set, masked: data.claude_api_key_masked,
+		inputId: 'sp-setting-claude-key', settingKey: 'claude_api_key',
+		placeholder: 'Enter Claude API key (sk-ant-...)',
+		help: 'Get your API key from <a href="https://console.anthropic.com/" target="_blank" rel="noopener">console.anthropic.com</a>. Required for AI-powered action items and insights.',
+	});
+
+	html += keyRow({
+		label: 'Google API Key — Website-Restricted (browser)', set: data.maps_js_api_key_set, masked: data.maps_js_api_key_masked,
+		inputId: 'sp-setting-maps-key', settingKey: 'maps_js_api_key',
+		placeholder: 'Enter the website-restricted key (AIza...)',
+		help: 'Runs in visitors\' browsers — the route map and place search. Restrict by <strong>Website (HTTP referrer)</strong> to <code>rovin.work</code>, and enable <strong>Maps JavaScript API</strong> + <strong>Places API (New)</strong>.',
+	});
+
+	html += keyRow({
+		label: 'Google API Key — IP-Restricted (server)', set: data.google_api_key_set, masked: data.google_api_key_masked,
+		inputId: 'sp-setting-google-key', settingKey: 'google_api_key',
+		placeholder: 'Enter the IP-restricted key (AIza...)',
+		help: 'Runs server-side — mileage distance calculations + geocoding. Restrict by <strong>IP address</strong> (your WP Engine outbound IP), and enable <strong>Geocoding API</strong> + <strong>Routes API</strong>.',
+	});
+
+	html += keyRow({
+		label: 'TollGuru API Key', set: data.tollguru_api_key_set, masked: data.tollguru_api_key_masked,
+		inputId: 'sp-setting-tollguru-key', settingKey: 'tollguru_api_key',
+		placeholder: 'Enter TollGuru API key',
+		help: 'Used for automatic toll reconciliation. (Not active yet — stored for later.)',
+	});
 
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
 
-	$('#sp-save-api-key')?.addEventListener('click', async () => {
-		const key = $('#sp-setting-api-key')?.value?.trim();
-		if (!key) { alert('Please enter an API key.'); return; }
-
-		try {
-			const res = await spAjax('site_pulse_admin_save_setting', { key: 'claude_api_key', value: key });
-			if (res.success) {
-				$('#sp-setting-api-key').value = '';
-				loadAdminSettings();
-			} else {
-				alert(res.data?.message || 'Error saving.');
-			}
-		} catch (err) { alert('Error saving API key.'); }
+	$$('.sp-save-setting-key', wrap).forEach(btn => {
+		btn.addEventListener('click', async () => {
+			const settingKey = btn.dataset.key;
+			const inp = $('#' + btn.dataset.input, wrap);
+			const key = inp?.value?.trim();
+			if (!key) { alert('Please enter a key.'); return; }
+			btn.disabled = true;
+			try {
+				const res = await spAjax('site_pulse_admin_save_setting', { key: settingKey, value: key });
+				if (res.success) { if (inp) inp.value = ''; loadAdminSettings(); }
+				else { alert(res.data?.message || 'Error saving.'); btn.disabled = false; }
+			} catch (err) { alert('Error saving key.'); btn.disabled = false; }
+		});
 	});
 }
 
 
+/* ---- Tiers (Roles) ---- */
+
+let spTierData = { roles: [], catalog: {}, counts: {} };
+
+async function loadAdminTiers() {
+	const wrap = $('#sp-admin-tiers-content');
+	if (!wrap) return;
+	wrap.innerHTML = '<div class="sp-loading"></div>';
+
+	try {
+		const res = await spAjax('site_pulse_admin_get_roles', {});
+		if (!res.success) { wrap.innerHTML = '<p>Error loading tiers.</p>'; return; }
+		spTierData = { roles: res.data.roles || [], catalog: res.data.catalog || {}, counts: res.data.user_counts || {} };
+		renderAdminTiers(wrap);
+	} catch (err) {
+		wrap.innerHTML = '<p>Error loading tiers.</p>';
+	}
+}
+
+// Tier 1..N by distinct hierarchy_level, highest = Tier 1. Roles arrive sorted by rank desc,
+// so lateral roles (same level) share a number.
+function tierNumbers(roles) {
+	const map = {};
+	let tier = 0, lastLevel = null;
+	roles.forEach(r => {
+		const lvl = parseInt(r.hierarchy_level, 10);
+		if (lvl !== lastLevel) { tier++; lastLevel = lvl; }
+		map[r.id] = tier;
+	});
+	return map;
+}
+
+function renderAdminTiers(wrap) {
+	const { roles, catalog, counts } = spTierData;
+	const tiers = tierNumbers(roles);
+
+	let html = '<div class="sp-admin-toolbar">';
+	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-add-tier-btn">+ Add Tier</button>';
+	html += '</div>';
+	html += '<p class="sp-help-text" style="margin:0 0 16px;">Rename a tier and the new name shows everywhere it appears. The internal identity, members, and reports are unaffected.</p>';
+	html += '<div id="sp-tier-form-wrap" hidden></div>';
+
+	if (!roles.length) {
+		html += '<div class="sp-empty-state"><p>No tiers yet.</p></div>';
+	} else {
+		html += '<div class="sp-tier-list">';
+		roles.forEach((r, idx) => {
+			const n = counts[r.id] || 0;
+			let caps = [];
+			try { caps = JSON.parse(r.capabilities || '[]') || []; } catch (e) {}
+
+			html += `<div class="sp-tier-card" data-id="${r.id}">`;
+			html += '<div class="sp-tier-card-head">';
+			html += `<span class="unique sp-tier-badge">Tier ${tiers[r.id]}</span>`;
+			html += `<input type="text" class="sp-input sp-tier-name" value="${esc(r.label)}" aria-label="Tier name">`;
+			html += `<span class="sp-tier-count">${n} member${n === 1 ? '' : 's'}</span>`;
+			html += '<div class="sp-tier-move">';
+			html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-tier-up" title="Move up"${idx === 0 ? ' disabled' : ''}>&uarr;</button>`;
+			html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-tier-down" title="Move down"${idx === roles.length - 1 ? ' disabled' : ''}>&darr;</button>`;
+			html += '</div></div>';
+
+			html += '<div class="sp-tier-caps">';
+			Object.entries(catalog).forEach(([cap, label]) => {
+				const checked = caps.includes(cap) ? ' checked' : '';
+				html += `<label class="sp-tier-cap"><input type="checkbox" value="${cap}"${checked}> ${esc(label)}</label>`;
+			});
+			html += '</div>';
+
+			html += '<div class="sp-tier-card-foot">';
+			html += `<button type="button" class="unique sp-icon-btn sp-icon-delete sp-tier-delete"${n ? ' disabled title="Reassign members first"' : ' title="Delete" aria-label="Delete"'}>${ICON_DELETE}</button>`;
+			html += '</div>';
+			html += '</div>';
+		});
+		html += '</div>';
+	}
+
+	wrap.innerHTML = html;
+	markUniqueSpans(wrap);
+
+	$('#sp-add-tier-btn')?.addEventListener('click', () => showTierForm());
+
+	$$('.sp-tier-card', wrap).forEach(card => {
+		const id = card.dataset.id;
+		// Auto-save: name on commit (blur/Enter), capabilities the moment a box is ticked.
+		$('.sp-tier-name', card)?.addEventListener('change', () => saveTier(id, card));
+		$$('.sp-tier-caps input', card).forEach(cb => cb.addEventListener('change', () => saveTier(id, card)));
+		$('.sp-tier-delete', card)?.addEventListener('click', () => deleteTier(id, card));
+		$('.sp-tier-up', card)?.addEventListener('click', () => moveTier(id, -1));
+		$('.sp-tier-down', card)?.addEventListener('click', () => moveTier(id, 1));
+	});
+}
+
+function showTierForm() {
+	const wrap = spFormModal();
+	const { catalog } = spTierData;
+
+	let html = '<div class="sp-tier-form">';
+	html += '<h3 style="margin:0 0 12px;">New Tier</h3>';
+	html += '<div class="sp-form-group"><label>Tier Name</label>';
+	html += '<input type="text" id="sp-new-tier-name" class="sp-input" placeholder="e.g. Shift Lead"></div>';
+	html += '<div class="sp-form-group"><label>Capabilities</label>';
+	html += '<div class="sp-tier-caps">';
+	Object.entries(catalog).forEach(([cap, label]) => {
+		html += `<label class="sp-tier-cap"><input type="checkbox" value="${cap}"> ${esc(label)}</label>`;
+	});
+	html += '</div></div>';
+	html += '<div class="sp-report-form-actions">';
+	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-create-tier-btn">Create Tier</button>';
+	html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-cancel-tier-btn">Cancel</button>';
+	html += '</div></div>';
+
+	wrap.innerHTML = html;
+	markUniqueSpans(wrap);
+
+	$('#sp-cancel-tier-btn')?.addEventListener('click', () => closeFormModal());
+	$('#sp-create-tier-btn')?.addEventListener('click', async () => {
+		const label = $('#sp-new-tier-name')?.value?.trim();
+		if (!label) { alert('Please enter a tier name.'); return; }
+		const caps = $$('.sp-tier-caps input:checked', wrap).map(c => c.value);
+		try {
+			const res = await spAjax('site_pulse_admin_save_role', { id: 0, label, capabilities: caps });
+			if (res.success) { closeFormModal(); loadAdminTiers(); }
+			else alert(res.data?.message || 'Error creating tier.');
+		} catch (e) { alert('Error creating tier.'); }
+	});
+}
+
+async function saveTier(id, card) {
+	const label = $('.sp-tier-name', card)?.value?.trim();
+	if (!label) { spFlash('Tier name required'); return; }
+	const caps = $$('.sp-tier-caps input:checked', card).map(c => c.value);
+	try {
+		const res = await spAjax('site_pulse_admin_save_role', { id, label, capabilities: caps });
+		if (res.success) {
+			spFlash('Saved');
+			// Keep in-memory state current so reorder/delete use the latest name + caps (no full re-render).
+			const role = spTierData.roles.find(x => String(x.id) === String(id));
+			if (role) { role.label = label; role.capabilities = JSON.stringify(caps); }
+		} else alert(res.data?.message || 'Error saving tier.');
+	} catch (e) { alert('Error saving tier.'); }
+}
+
+async function deleteTier(id, card) {
+	const name = $('.sp-tier-name', card)?.value || 'this tier';
+	if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+	try {
+		const res = await spAjax('site_pulse_admin_delete_role', { id });
+		if (res.success) loadAdminTiers();
+		else alert(res.data?.message || 'Error deleting tier.');
+	} catch (e) { alert('Error deleting tier.'); }
+}
+
+async function moveTier(id, dir) {
+	const roles = spTierData.roles.slice();
+	const idx = roles.findIndex(r => String(r.id) === String(id));
+	const swap = idx + dir;
+	if (idx < 0 || swap < 0 || swap >= roles.length) return;
+	[roles[idx], roles[swap]] = [roles[swap], roles[idx]];
+	try {
+		const res = await spAjax('site_pulse_admin_reorder_roles', { order: roles.map(r => r.id) });
+		if (res.success) loadAdminTiers();
+		else alert(res.data?.message || 'Error reordering tiers.');
+	} catch (e) { alert('Error reordering tiers.'); }
+}
+
+
 /* ---- Report Templates ---- */
+
+// Roles available for the template "Required Role" picker (labels from the DB).
+let spTemplateRoles = [];
 
 async function loadAdminTemplates() {
 	const wrap = $('#sp-admin-templates-content');
@@ -2002,6 +2371,7 @@ async function loadAdminTemplates() {
 	try {
 		const res = await spAjax('site_pulse_admin_get_templates', {});
 		if (!res.success) { wrap.innerHTML = '<p>Error loading templates.</p>'; return; }
+		spTemplateRoles = res.data.roles || [];
 		renderAdminTemplates(wrap, res.data.templates);
 	} catch (err) {
 		wrap.innerHTML = '<p>Error loading templates.</p>';
@@ -2025,9 +2395,10 @@ function renderAdminTemplates(wrap, templates) {
 			html += '<div class="sp-template-card-header">';
 			html += `<div><strong>${esc(t.name)}</strong> <span class="unique sp-status-badge ${statusClass}">${statusLabel}</span></div>`;
 			html += `<div style="display:grid;grid-auto-flow:column;gap:8px;">`;
-			html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-edit-template-btn" data-id="${t.id}">Edit</button>`;
+			html += iconBtn('edit', 'sp-edit-template-btn', `data-id="${t.id}"`);
 			html += '</div></div>';
-			html += `<div class="sp-template-meta">${esc(t.frequency)} &middot; ${esc(t.required_role_slug)} &middot; ${fieldCount} field${fieldCount !== 1 ? 's' : ''}</div>`;
+			const roleLabel = spTemplateRoles.find(r => r.slug === t.required_role_slug)?.label || t.required_role_slug;
+			html += `<div class="sp-template-meta">${esc(t.frequency)} &middot; ${esc(roleLabel)} &middot; ${fieldCount} field${fieldCount !== 1 ? 's' : ''}</div>`;
 
 			html += '<div class="sp-template-fields">';
 			if (t.fields && t.fields.length > 0) {
@@ -2038,7 +2409,7 @@ function renderAdminTemplates(wrap, templates) {
 					html += `<span class="sp-field-drag">&#9776;</span>`;
 					html += `<span class="sp-field-label">${esc(f.label)}</span>`;
 					html += `<span class="sp-field-type">${esc(f.field_type)}</span>`;
-					html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-edit-field-btn" data-field-id="${f.id}" data-template-id="${t.id}">Edit</button>`;
+					html += iconBtn('edit', 'sp-edit-field-btn', `data-field-id="${f.id}" data-template-id="${t.id}"`);
 					html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-delete-field-btn" data-field-id="${f.id}">×</button>`;
 					html += '</div>';
 				});
@@ -2148,14 +2519,12 @@ function initFieldDragDrop(wrap) {
 }
 
 function showTemplateForm(tpl) {
-	const wrap = $('#sp-template-form-wrap');
-	if (!wrap) return;
-	wrap.hidden = false;
+	const wrap = spFormModal();
 
 	const isEdit = !!tpl;
 	const title = isEdit ? 'Edit Template' : 'Add Template';
 
-	let html = '<div class="sp-report-form-wrap" style="margin-top:20px;">';
+	let html = '<div class="sp-report-form-wrap">';
 	html += `<div class="sp-report-form-header"><h3>${title}</h3>`;
 	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-tpl-form-cancel">Cancel</button></div>';
 	html += '<form id="sp-template-form">';
@@ -2174,8 +2543,8 @@ function showTemplateForm(tpl) {
 
 	html += '<div class="sp-form-group"><label>Required Role</label>';
 	html += `<select name="required_role_slug" class="sp-select">`;
-	['manager','supervisor','admin','owner'].forEach(r => {
-		html += `<option value="${r}"${tpl?.required_role_slug === r ? ' selected' : ''}>${r.charAt(0).toUpperCase() + r.slice(1)}</option>`;
+	(spTemplateRoles.length ? spTemplateRoles : [{slug:'manager',label:'GM'},{slug:'supervisor',label:'Supervisor'},{slug:'admin',label:'Administrator'},{slug:'owner',label:'Owner'}]).forEach(r => {
+		html += `<option value="${esc(r.slug)}"${tpl?.required_role_slug === r.slug ? ' selected' : ''}>${esc(r.label)}</option>`;
 	});
 	html += '</select></div>';
 
@@ -2200,7 +2569,7 @@ function showTemplateForm(tpl) {
 	markUniqueSpans(wrap);
 
 	$$('.sp-tpl-form-cancel', wrap).forEach(btn => {
-		btn.addEventListener('click', () => { wrap.hidden = true; wrap.innerHTML = ''; });
+		btn.addEventListener('click', () => closeFormModal());
 	});
 
 	$('#sp-template-form')?.addEventListener('submit', async (e) => {
@@ -2211,8 +2580,7 @@ function showTemplateForm(tpl) {
 		try {
 			const res = await spAjax('site_pulse_admin_save_template', data);
 			if (res.success) {
-				wrap.hidden = true;
-				wrap.innerHTML = '';
+				closeFormModal();
 				loadAdminTemplates();
 			} else alert(res.data?.message || 'Error.');
 		} catch (err) { alert('Error saving template.'); }
@@ -2220,14 +2588,12 @@ function showTemplateForm(tpl) {
 }
 
 function showFieldForm(field, templateId) {
-	const wrap = $('#sp-field-form-wrap');
-	if (!wrap) return;
-	wrap.hidden = false;
+	const wrap = spFormModal();
 
 	const isEdit = !!field;
 	const title = isEdit ? 'Edit Field' : 'Add Field';
 
-	let html = '<div class="sp-report-form-wrap" style="margin-top:20px;">';
+	let html = '<div class="sp-report-form-wrap">';
 	html += `<div class="sp-report-form-header"><h3>${title}</h3>`;
 	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-field-form-cancel">Cancel</button></div>';
 	html += '<form id="sp-field-form">';
@@ -2274,7 +2640,7 @@ function showFieldForm(field, templateId) {
 	markUniqueSpans(wrap);
 
 	$$('.sp-field-form-cancel', wrap).forEach(btn => {
-		btn.addEventListener('click', () => { wrap.hidden = true; wrap.innerHTML = ''; });
+		btn.addEventListener('click', () => closeFormModal());
 	});
 
 	$('#sp-field-form')?.addEventListener('submit', async (e) => {
@@ -2285,8 +2651,7 @@ function showFieldForm(field, templateId) {
 		try {
 			const res = await spAjax('site_pulse_admin_save_field', data);
 			if (res.success) {
-				wrap.hidden = true;
-				wrap.innerHTML = '';
+				closeFormModal();
 				loadAdminTemplates();
 			} else alert(res.data?.message || 'Error.');
 		} catch (err) { alert('Error saving field.'); }
@@ -2395,6 +2760,7 @@ let mileageLocations = [];
 let mileageRate = 0.67;
 let mileageHomeId = 0; // this driver's home-base location id (start/end bookend), 0 if unset
 let mileagePurposes = []; // editable library of common business purposes (datalist source)
+let mileageRequireApproval = true; // when false, drivers may save destinations straight to the database (global or personal)
 const MILEAGE_CATEGORIES = ['Restaurant', 'Office', 'Vendor', 'Supplier', 'Bank', 'Client', 'Other'];
 
 // Parse a location's pinned_purposes (stored as a JSON string) into an array.
@@ -2451,7 +2817,7 @@ function ensureGoogleMaps() {
 	_spGmapsPromise = new Promise((resolve, reject) => {
 		window.__spGmapsReady = () => resolve(window.google.maps);
 		const s = document.createElement('script');
-		s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=geometry&callback=__spGmapsReady`;
+		s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=geometry,places&callback=__spGmapsReady`;
 		s.async = true; s.defer = true;
 		s.onerror = () => reject(new Error('maps-load-failed'));
 		document.head.appendChild(s);
@@ -2459,15 +2825,120 @@ function ensureGoogleMaps() {
 	return _spGmapsPromise;
 }
 
+// Google Places autocomplete on a destination's Name field — built on the NEW Places API
+// (AutocompleteSuggestion + Place). We render our OWN dropdown rather than Google's widget, so a
+// denied/erroring API (or no key) just shows nothing and the field stays fully usable — no broken
+// icons, no locked line. Type a business name → pick a suggestion → fills the name + full address.
+function attachPlacesAutocomplete(nameEl, addrEl) {
+	if (!nameEl) return;
+
+	ensureGoogleMaps().then(async (maps) => {
+		// Prefer importLibrary (guarantees the new classes); fall back to the already-loaded ns.
+		let places = null;
+		try { places = await maps.importLibrary('places'); } catch (e) { places = maps.places || null; }
+		const Suggestion = places?.AutocompleteSuggestion || maps.places?.AutocompleteSuggestion;
+		const SessionToken = places?.AutocompleteSessionToken || maps.places?.AutocompleteSessionToken;
+		if (!Suggestion || typeof Suggestion.fetchAutocompleteSuggestions !== 'function') return; // new API unavailable → plain text field
+
+		// Wrap the input so our dropdown can sit directly beneath it.
+		const wrap = document.createElement('div');
+		wrap.style.position = 'relative';
+		nameEl.parentNode.insertBefore(wrap, nameEl);
+		wrap.appendChild(nameEl);
+
+		const menu = document.createElement('div');
+		menu.style.cssText = 'position:absolute;left:0;right:0;top:100%;z-index:100001;margin-top:4px;background:#fff;border:1px solid var(--sp-border,#e2e0dc);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);max-height:260px;overflow-y:auto;display:none;';
+		wrap.appendChild(menu);
+		nameEl.setAttribute('autocomplete', 'off');
+
+		let token = SessionToken ? new SessionToken() : null;
+		let suggestions = [];
+		let activeIdx = -1;
+		let debounce = null;
+
+		const ftext = (ft) => ft ? (ft.text != null ? ft.text : String(ft)) : '';
+		const close = () => { menu.style.display = 'none'; menu.innerHTML = ''; activeIdx = -1; };
+
+		const choose = async (sugg) => {
+			close();
+			try {
+				const place = sugg.placePrediction.toPlace();
+				await place.fetchFields({ fields: ['displayName', 'formattedAddress'] });
+				if (place.displayName) nameEl.value = place.displayName;
+				if (place.formattedAddress && addrEl) addrEl.value = place.formattedAddress;
+			} catch (e) { /* keep whatever was typed */ }
+			token = SessionToken ? new SessionToken() : null; // a selection ends the billing session
+			if (addrEl) addrEl.focus();
+		};
+
+		const render = () => {
+			if (!suggestions.length) { close(); return; }
+			menu.innerHTML = suggestions.map((s, i) => {
+				const p = s.placePrediction;
+				const main = ftext(p.mainText) || ftext(p.text);
+				const sub = ftext(p.secondaryText);
+				const bg = i === activeIdx ? 'background:var(--sp-primary-light,#fdf0e3);' : '';
+				return `<div data-i="${i}" style="padding:8px 12px;font-size:14px;line-height:1.3;cursor:pointer;${bg}">`
+					+ `<div style="color:var(--sp-text,#2c2a27);">${esc(main)}</div>`
+					+ (sub ? `<div style="font-size:12px;color:var(--sp-text-light,#8a8580);">${esc(sub)}</div>` : '')
+					+ '</div>';
+			}).join('');
+			menu.style.display = 'block';
+			$$('div[data-i]', menu).forEach(el => {
+				const i = parseInt(el.dataset.i);
+				el.addEventListener('mousedown', (e) => { e.preventDefault(); choose(suggestions[i]); });
+				el.addEventListener('mouseenter', () => { activeIdx = i; render(); });
+			});
+		};
+
+		const fetchSuggestions = async (q) => {
+			try {
+				const req = { input: q };
+				if (token) req.sessionToken = token;
+				const res = await Suggestion.fetchAutocompleteSuggestions(req);
+				suggestions = (res.suggestions || []).filter(s => s.placePrediction);
+				activeIdx = -1;
+				render();
+			} catch (e) { close(); } // REQUEST_DENIED / quota / etc → silently no suggestions
+		};
+
+		nameEl.addEventListener('input', () => {
+			const q = nameEl.value.trim();
+			if (q.length < 2) { close(); return; }
+			clearTimeout(debounce);
+			debounce = setTimeout(() => fetchSuggestions(q), 200);
+		});
+		nameEl.addEventListener('keydown', (e) => {
+			if (menu.style.display === 'none' || !suggestions.length) return;
+			if (e.key === 'ArrowDown') { e.preventDefault(); activeIdx = Math.min(activeIdx + 1, suggestions.length - 1); render(); }
+			else if (e.key === 'ArrowUp') { e.preventDefault(); activeIdx = Math.max(activeIdx - 1, 0); render(); }
+			else if (e.key === 'Enter' && activeIdx >= 0) { e.preventDefault(); choose(suggestions[activeIdx]); }
+			else if (e.key === 'Escape') { close(); }
+		});
+		nameEl.addEventListener('blur', () => setTimeout(close, 150));
+	}).catch(() => {});
+}
+
 let _spMileageMap = null, _spMileageMarkers = [], _spMileageInfo = null, _spMileageLocs = [], _spMileageHomeId = 0;
+let _spMileageMarkerIcons = {}; // per-type marker image URLs (admin-configured); blank = use a dot
+
+// Which marker "bucket" a location falls in — drives both the dot color and the image lookup.
+function mileageMarkerBucket(loc) {
+	if (parseInt(loc.id) === _spMileageHomeId) return 'home';
+	const t = (loc.location_type || '').toLowerCase();
+	const c = (loc.category || '').toLowerCase();
+	if (t === 'restaurant' || c === 'restaurant') return 'restaurant';
+	if (c === 'office') return 'office';
+	if (t === 'vendor' || c === 'vendor' || c === 'supplier') return 'vendor';
+	return 'other';
+}
 
 // Marker color by role: home (navy), restaurant/office (blue), vendor (amber), else grey.
 function mileageMapColor(loc) {
-	if (parseInt(loc.id) === _spMileageHomeId) return '#15243a';
-	const t = (loc.location_type || '').toLowerCase();
-	const c = (loc.category || '').toLowerCase();
-	if (t === 'restaurant' || c === 'restaurant' || c === 'office') return '#3b82f6';
-	if (t === 'vendor' || c === 'vendor' || c === 'supplier') return '#f59e0b';
+	const b = mileageMarkerBucket(loc);
+	if (b === 'home') return '#15243a';
+	if (b === 'restaurant' || b === 'office') return '#3b82f6';
+	if (b === 'vendor') return '#f59e0b';
 	return '#94a3b8';
 }
 
@@ -2482,6 +2953,7 @@ async function loadMileageMap() {
 		if (res.success) {
 			_spMileageLocs = (res.data.locations || []).filter(l => l.lat && l.lng);
 			_spMileageHomeId = parseInt(res.data.home_location_id) || 0;
+			_spMileageMarkerIcons = res.data.marker_icons || {};
 		}
 	} catch (e) {}
 
@@ -2527,9 +2999,13 @@ function renderMileageMapMarkers(maps, filterCat = '') {
 	_spMileageLocs.forEach(l => {
 		if (filterCat && (l.category || '') !== filterCat) return;
 		const pos = { lat: parseFloat(l.lat), lng: parseFloat(l.lng) };
+		// Per-location image override wins; else the type's default image; else the color dot.
+		const iconUrl = l.marker_icon || _spMileageMarkerIcons[mileageMarkerBucket(l)];
+		const icon = iconUrl
+			? { url: iconUrl, scaledSize: new maps.Size(38, 38), anchor: new maps.Point(19, 19) }
+			: { path: maps.SymbolPath.CIRCLE, scale: 7, fillColor: mileageMapColor(l), fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 };
 		const marker = new maps.Marker({
-			position: pos, map: _spMileageMap, title: l.name,
-			icon: { path: maps.SymbolPath.CIRCLE, scale: 7, fillColor: mileageMapColor(l), fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
+			position: pos, map: _spMileageMap, title: l.name, icon,
 		});
 		marker.addListener('click', () => {
 			const cat = l.category ? `<div class="sp-map-info-cat">${esc(l.category)}</div>` : '';
@@ -2588,6 +3064,7 @@ async function loadMileageLocations() {
 			mileageRate = parseFloat(res.data.rate) || 0.67;
 			mileageHomeId = parseInt(res.data.home_location_id) || 0;
 			mileagePurposes = res.data.purposes || [];
+			mileageRequireApproval = res.data.require_approval !== false;
 		}
 	} catch (e) { mileageLocations = []; }
 }
@@ -2628,22 +3105,19 @@ async function loadMileageEntries() {
 			</div>
 		`;
 
-		const ICON_EDIT = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
-		const ICON_DELETE = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
-
 		let html = '<div class="sp-table-card"><table class="sp-mileage-table"><thead><tr><th>Date</th><th>Route</th><th>Miles</th><th>$</th><th>Status</th></tr></thead><tbody>';
 		entries.forEach(e => {
 			const isPending = parseInt(e.pending_legs) > 0;
 			html += `<tr data-entry-id="${e.id}">`;
-			html += `<td><div class="sp-mileage-date">${formatDate(e.entry_date)}</div>`;
-			html += `<div class="sp-mileage-row-actions">`;
-			html += `<button type="button" class="unique sp-icon-btn sp-mileage-edit-btn" data-id="${e.id}" title="Edit" aria-label="Edit">${ICON_EDIT}</button>`;
-			html += `<button type="button" class="unique sp-icon-btn sp-mileage-delete-btn" data-id="${e.id}" title="Delete" aria-label="Delete">${ICON_DELETE}</button>`;
-			html += `</div></td>`;
+			html += `<td><div class="sp-mileage-date">${formatDate(e.entry_date)}</div></td>`;
 			html += `<td class="sp-mileage-path-cell"><span class="unique sp-mileage-path-loading">Loading…</span></td>`;
 			html += `<td>${parseFloat(e.total_miles).toFixed(2)}</td>`;
 			html += `<td>$${parseFloat(e.reimbursement_amount).toFixed(2)}</td>`;
-			html += `<td>${isPending ? '<span class="unique sp-status-badge sp-status-pending">Pending</span>' : '<span class="unique sp-status-badge sp-status-submitted">Final</span>'}</td>`;
+			html += `<td>${isPending ? '<span class="unique sp-status-badge sp-status-pending">Pending</span>' : '<span class="unique sp-status-badge sp-status-submitted">Final</span>'}`;
+			html += `<div class="sp-mileage-row-actions">`;
+			html += iconBtn('edit', 'sp-mileage-edit-btn', `data-id="${e.id}"`);
+			html += iconBtn('delete', 'sp-mileage-delete-btn', `data-id="${e.id}"`);
+			html += `</div></td>`;
 			html += `</tr>`;
 		});
 		html += '</tbody></table></div>';
@@ -2681,11 +3155,61 @@ async function loadMileageEntries() {
 	}
 }
 
+// --- Mileage day auto-save (replaces the explicit "Save Day" button) ---
+// The form persists itself on every change. The first valid save of a new day creates the
+// entry and captures its id, so later edits update that same row instead of duplicating it.
+let mileageFormEntryId = 0;
+let mileageSaveTimer = null;
+let mileageSaving = false;
+let mileageResavePending = false;
+
+function queueMileageAutoSave() {
+	clearTimeout(mileageSaveTimer);
+	mileageSaveTimer = setTimeout(autoSaveMileageEntry, 600);
+}
+
+async function autoSaveMileageEntry() {
+	const form = $('#sp-mileage-form');
+	if (!form) return;                          // form closed — nothing to save
+	if (mileageSaving) { mileageResavePending = true; return; }
+
+	// Drop empty stop picks, keeping purposes/tolls aligned.
+	const allStops = readMileageStops(), allPurposes = readMileageStopPurposes(), allTolls = readMileageStopTolls();
+	const stopsArr = [], purposesArr = [], tollsArr = [];
+	allStops.forEach((sid, i) => { if (sid > 0) { stopsArr.push(sid); purposesArr.push(allPurposes[i] || ''); tollsArr.push(allTolls[i] || 0); } });
+	const min = mileageHomeId ? 1 : 2;
+	if (stopsArr.length < min) return;          // not a valid day yet — wait for more stops
+
+	const data = {
+		entry_id: mileageFormEntryId || '',
+		entry_date: form.entry_date.value,
+		notes: form.notes.value,
+		stops: stopsArr, purposes: purposesArr, tolls: tollsArr,
+		auto_return_home: mileageHomeId ? 1 : 0,
+	};
+
+	mileageSaving = true;
+	try {
+		const r = await spAjax('site_pulse_save_mileage_entry', data);
+		if (r.success) {
+			mileageFormEntryId = parseInt(r.data.entry_id) || mileageFormEntryId;
+			spFlash('Saved');
+		} else {
+			spFlash(r.data?.message || 'Save failed');
+		}
+	} catch (e) { /* transient — next change will retry */ }
+	mileageSaving = false;
+	if (mileageResavePending) { mileageResavePending = false; queueMileageAutoSave(); }
+}
+
 async function showMileageForm(entryId = 0) {
 	const wrap = $('#sp-mileage-form-wrap');
 	const list = $('#sp-mileage-list');
 	const summary = $('#sp-mileage-summary');
 	if (!wrap) return;
+
+	mileageFormEntryId = entryId || 0; // create mode (0) until the first save returns an id
+	clearTimeout(mileageSaveTimer);
 
 	await loadMileageLocations();
 
@@ -2751,8 +3275,8 @@ async function showMileageForm(entryId = 0) {
 	html += `<textarea name="notes" class="sp-textarea" rows="2">${esc(entry?.notes || '')}</textarea>`;
 	html += '</div>';
 	html += '<div class="sp-report-form-actions">';
-	html += '<button type="submit" class="unique sp-btn sp-btn-primary">Save Day</button>';
-	html += '<button type="button" class="unique sp-btn sp-btn-secondary sp-mileage-back-btn">Cancel</button>';
+	html += '<button type="button" class="unique sp-btn sp-btn-primary sp-mileage-back-btn">Done</button>';
+	html += '<span class="sp-autosave-hint">Changes save automatically</span>';
 	html += '</div>';
 	html += '</form>';
 
@@ -2761,7 +3285,13 @@ async function showMileageForm(entryId = 0) {
 
 	renderMileageStops(stops, autoReturn, purposes, tolls);
 
-	$$('.sp-mileage-back-btn', wrap).forEach(b => b.addEventListener('click', () => hideMileageForm()));
+	// "Done"/Back: flush any pending save, then close and refresh the list.
+	$$('.sp-mileage-back-btn', wrap).forEach(b => b.addEventListener('click', async () => {
+		clearTimeout(mileageSaveTimer);
+		await autoSaveMileageEntry();
+		hideMileageForm();
+		loadMileageEntries();
+	}));
 	// Add Stop / Add Location buttons live inside the route list (above END) and are
 	// wired in renderMileageStops, so they survive re-renders.
 	$('#sp-mileage-quick-fill', wrap)?.addEventListener('click', () => applyMileageQuickEntry());
@@ -2771,36 +3301,18 @@ async function showMileageForm(entryId = 0) {
 		const summary = buildMileageSummary();
 		if (!summary) { alert('Pick at least one stop first.'); return; }
 		const ta = wrap.querySelector('textarea[name="notes"]');
-		if (ta) ta.value = summary;
+		if (ta) { ta.value = summary; queueMileageAutoSave(); }
 	});
 
-	$('#sp-mileage-form', wrap)?.addEventListener('submit', async (e) => {
-		e.preventDefault();
-		// Read stops + purposes + toll flags together so they stay aligned after empty picks are dropped.
-		const allStops = readMileageStops(), allPurposes = readMileageStopPurposes(), allTolls = readMileageStopTolls();
-		const stopsArr = [], purposesArr = [], tollsArr = [];
-		allStops.forEach((sid, i) => { if (sid > 0) { stopsArr.push(sid); purposesArr.push(allPurposes[i] || ''); tollsArr.push(allTolls[i] || 0); } });
-		const min = mileageHomeId ? 1 : 2;
-		if (stopsArr.length < min) {
-			alert(mileageHomeId ? 'Please add at least one stop.' : 'Please pick at least two stops.');
-			return;
-		}
-		const data = {
-			entry_id: entryId || '',
-			entry_date: e.target.entry_date.value,
-			notes: e.target.notes.value,
-			stops: stopsArr,
-			purposes: purposesArr,
-			tolls: tollsArr,
-			auto_return_home: mileageHomeId ? 1 : 0, // always a round trip when a home base exists
-		};
-		const r = await spAjax('site_pulse_save_mileage_entry', data);
-		if (r.success) { hideMileageForm(); loadMileageEntries(); }
-		else alert(r.data?.message || 'Error saving.');
-	});
+	// Auto-save: any field change (date, a stop dropdown, purpose, toll, notes) bubbles a
+	// `change` to the form. Stop add/remove and quick-fill call queueMileageAutoSave directly.
+	const form = $('#sp-mileage-form', wrap);
+	form?.addEventListener('submit', (e) => e.preventDefault()); // Enter in a field shouldn't reload
+	form?.addEventListener('change', () => queueMileageAutoSave());
 }
 
 function hideMileageForm() {
+	clearTimeout(mileageSaveTimer);
 	const wrap = $('#sp-mileage-form-wrap');
 	if (wrap) { wrap.hidden = true; wrap.innerHTML = ''; }
 	setMileageListChrome(false); // restore the list + report controls
@@ -2828,6 +3340,16 @@ function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = [])
 	mileagePurposes.forEach(p => { html += `<option value="${esc(p)}">`; });
 	html += '</datalist>';
 
+	// Shared datalist of pickable locations — lets the location field type-to-search like the
+	// purpose field. The visible input holds the label; a hidden sibling holds the resolved id.
+	html += '<datalist id="sp-mileage-loc-list">';
+	mileageLocations.forEach(l => {
+		if (parseInt(l.id) === mileageHomeId) return; // home is a bookend, never a mid-stop
+		const label = l.status === 'pending' ? `${l.name} (pending)` : l.name;
+		html += `<option value="${esc(label)}">`;
+	});
+	html += '</datalist>';
+
 	// Locked round-trip START bookend — Home, when a home base is configured.
 	if (mileageHomeId) {
 		html += '<div class="sp-mileage-stop sp-mileage-stop-fixed">';
@@ -2842,21 +3364,19 @@ function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = [])
 	stops.forEach((stopId, idx) => {
 		const purpose = purposes[idx] || '';
 		const toll = tolls[idx] ? 1 : 0;
+		const selLoc = stopId ? mileageLocations.find(l => parseInt(l.id) === stopId) : null;
+		const selLabel = selLoc ? (selLoc.status === 'pending' ? `${selLoc.name} (pending)` : selLoc.name) : '';
 		html += '<div class="sp-mileage-stop sp-mileage-stop-row">';
 		html += `<span class="unique sp-mileage-stop-num">${idx + 1}.</span>`;
-		html += `<select class="sp-select sp-mileage-stop-select">`;
-		html += '<option value="0">Choose a location…</option>';
-		mileageLocations.forEach(l => {
-			if (parseInt(l.id) === mileageHomeId) return; // home is a bookend, never a mid-stop
-			const sel = parseInt(l.id) === stopId ? ' selected' : '';
-			const label = l.status === 'pending' ? `${l.name} (pending)` : l.name;
-			html += `<option value="${l.id}"${sel}>${esc(label)}</option>`;
-		});
-		html += '</select>';
+		// Type-to-search location picker: visible input + hidden id (read by readMileageStops).
+		html += '<div class="sp-combo sp-mileage-stop-loc-wrap">';
+		html += `<input type="text" class="sp-input sp-combo-input sp-mileage-stop-loc" list="sp-mileage-loc-list" placeholder="Choose a location…" autocomplete="off" value="${esc(selLabel)}">`;
+		html += `<input type="hidden" class="sp-mileage-stop-select" value="${stopId || 0}">`;
+		html += '</div>';
 		// Purpose + toll flag share the purpose column. Toll = "this drive had tolls"; the
 		// amounts get filled in later once toll data is imported (TollGuru).
 		html += '<div class="sp-mileage-stop-purpose-cell">';
-		html += `<input type="text" class="sp-input sp-mileage-stop-purpose" list="sp-mileage-purpose-list" placeholder="Business purpose" value="${esc(purpose)}">`;
+		html += `<input type="text" class="sp-input sp-combo-input sp-mileage-stop-purpose" list="sp-mileage-purpose-list" placeholder="Business purpose" value="${esc(purpose)}">`;
 		html += `<label class="sp-mileage-toll-toggle unique" title="Check if this drive had tolls — the amounts get added later once toll data is imported."><input type="checkbox" class="sp-mileage-stop-toll"${toll ? ' checked' : ''}> Toll</label>`;
 		html += '</div>';
 		if (stops.length > minMiddle) {
@@ -2882,17 +3402,35 @@ function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = [])
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
 
-	$$('.sp-mileage-stop-select', wrap).forEach(s => s.addEventListener('change', () => {
-		// When a destination with pinned purposes is picked, pre-fill the (empty) purpose.
-		const row = s.closest('.sp-mileage-stop-row');
-		const purposeInput = row?.querySelector('.sp-mileage-stop-purpose');
-		if (purposeInput && !purposeInput.value.trim()) {
-			const loc = mileageLocations.find(l => parseInt(l.id) === parseInt(s.value));
-			const pinned = locationPinnedPurposes(loc);
-			if (pinned.length) purposeInput.value = pinned[0];
-		}
-		updateMileageTotals();
-	}));
+	// Resolve a typed/selected location label back to its id (0 if it isn't a real location).
+	const resolveLocId = (label) => {
+		const t = (label || '').trim();
+		if (!t) return 0;
+		const m = mileageLocations.find(l => {
+			if (parseInt(l.id) === mileageHomeId) return false;
+			const lbl = l.status === 'pending' ? `${l.name} (pending)` : l.name;
+			return lbl === t;
+		});
+		return m ? parseInt(m.id) : 0;
+	};
+	$$('.sp-mileage-stop-loc', wrap).forEach(inp => {
+		const apply = () => {
+			const row = inp.closest('.sp-mileage-stop-row');
+			const hidden = row?.querySelector('.sp-mileage-stop-select');
+			const id = resolveLocId(inp.value);
+			if (hidden) hidden.value = id;
+			// When a destination with pinned purposes is picked, pre-fill the (empty) purpose.
+			const purposeInput = row?.querySelector('.sp-mileage-stop-purpose');
+			if (id && purposeInput && !purposeInput.value.trim()) {
+				const loc = mileageLocations.find(l => parseInt(l.id) === id);
+				const pinned = locationPinnedPurposes(loc);
+				if (pinned.length) purposeInput.value = pinned[0];
+			}
+			updateMileageTotals();
+		};
+		inp.addEventListener('input', apply);
+		inp.addEventListener('change', apply);
+	});
 	$$('.sp-mileage-stop-remove', wrap).forEach(b => b.addEventListener('click', () => {
 		const s = readMileageStops(), p = readMileageStopPurposes(), t = readMileageStopTolls();
 		const i = parseInt(b.dataset.idx);
@@ -2900,6 +3438,7 @@ function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = [])
 		while (s.length < minMiddle) { s.push(0); p.push(''); t.push(0); }
 		renderMileageStops(s, getReturnHome(), p, t);
 		updateMileageTotals();
+		queueMileageAutoSave();
 	}));
 	$('#sp-mileage-add-stop', wrap)?.addEventListener('click', () => {
 		const s = readMileageStops(), p = readMileageStopPurposes(), t = readMileageStopTolls();
@@ -2969,9 +3508,10 @@ function applyMileageQuickEntry() {
 	const minMiddle = mileageHomeId ? 1 : 2;
 	while (ids.length < minMiddle) { ids.push(0); purposes.push(''); }
 	renderMileageStops(ids, getReturnHome(), purposes, ids.map(() => 0));
+	queueMileageAutoSave();
 	if (note) {
 		if (unmatched.length) { note.hidden = false; note.textContent = `Added ${ids.filter(Boolean).length}. Couldn't match: ${unmatched.join(', ')} — add those manually below.`; }
-		else { note.hidden = false; note.textContent = `Added ${ids.length} stop${ids.length !== 1 ? 's' : ''}. Review and Save.`; }
+		else { note.hidden = false; note.textContent = `Added ${ids.length} stop${ids.length !== 1 ? 's' : ''}.`; }
 	}
 }
 
@@ -3043,13 +3583,24 @@ function showAddLocationModal() {
 	const existing = $('#sp-mileage-loc-modal');
 	if (existing) existing.remove();
 
+	// With approvals off, the driver may save the destination straight to the database —
+	// either globally (everyone can pick it) or kept personal (only they see it). The
+	// checkbox controls that; with approvals on it's the usual "send for approval" flow.
+	const needsApproval = mileageRequireApproval;
+	const intro = needsApproval
+		? `It'll be sent for admin approval. Once approved, the distance will be calculated automatically.`
+		: `The distance will be calculated automatically. Tick "Save to Global Database" to share it with every driver; leave it off to keep it just for your own trips.`;
+	const actionLabel = needsApproval ? 'Submit for Approval' : 'Submit';
+	const globalRow = needsApproval ? '' :
+		`<div class="sp-form-group"><label class="sp-reminder-toggle"><input type="checkbox" id="sp-loc-global"> Save to Global Database</label></div>`;
+
 	const modal = document.createElement('div');
 	modal.id = 'sp-mileage-loc-modal';
 	modal.className = 'sp-modal-backdrop';
 	modal.innerHTML = `
 		<div class="sp-modal">
 			<h3>Add a New Location</h3>
-			<p class="sp-text-secondary">It'll be sent for admin approval. Once approved, the distance will be calculated automatically.</p>
+			<p class="sp-text-secondary">${intro}</p>
 			<div class="sp-form-group"><label>Name</label><input type="text" id="sp-loc-name" class="sp-input" placeholder="Big D Mechanical"></div>
 			<div class="sp-form-group"><label>Address</label><input type="text" id="sp-loc-address" class="sp-input" placeholder="123 Main St, City, TX 75001"></div>
 			<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -3058,14 +3609,16 @@ function showAddLocationModal() {
 			</div>
 			<div class="sp-form-group"><label>Business or personal</label><select id="sp-loc-business" class="sp-select"><option value="1">Business</option><option value="0">Personal</option></select></div>
 			<div class="sp-form-group"><label>Notes (optional)</label><textarea id="sp-loc-notes" class="sp-textarea" rows="2"></textarea></div>
+			${globalRow}
 			<div class="sp-modal-actions">
-				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-loc-submit">Submit for Approval</button>
+				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-loc-submit">${actionLabel}</button>
 				<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-loc-cancel">Cancel</button>
 			</div>
 		</div>
 	`;
 	document.body.appendChild(modal);
 	markUniqueSpans(modal);
+	attachPlacesAutocomplete(modal.querySelector('#sp-loc-name'), modal.querySelector('#sp-loc-address'));
 
 	const close = () => modal.remove();
 	modal.querySelector('#sp-loc-cancel').addEventListener('click', close);
@@ -3077,8 +3630,9 @@ function showAddLocationModal() {
 		const category = modal.querySelector('#sp-loc-category').value;
 		const is_business = modal.querySelector('#sp-loc-business').value;
 		const notes = modal.querySelector('#sp-loc-notes').value.trim();
+		const save_global = modal.querySelector('#sp-loc-global')?.checked ? 1 : 0;
 		if (!name || !address) { alert('Name and address required.'); return; }
-		const r = await spAjax('site_pulse_add_mileage_location', { name, address, location_type: type, category, is_business, notes });
+		const r = await spAjax('site_pulse_add_mileage_location', { name, address, location_type: type, category, is_business, notes, save_global });
 		if (r.success) {
 			await loadMileageLocations();
 			const stops = readMileageStops(), purposes = readMileageStopPurposes(), tolls = readMileageStopTolls();
@@ -3087,6 +3641,7 @@ function showAddLocationModal() {
 			if (emptyIdx >= 0) stops[emptyIdx] = parseInt(r.data.id);
 			else { stops.push(parseInt(r.data.id)); purposes.push(''); tolls.push(0); }
 			renderMileageStops(stops, getReturnHome(), purposes, tolls);
+			queueMileageAutoSave();
 			close();
 		} else {
 			alert(r.data?.message || 'Error.');
@@ -3094,8 +3649,63 @@ function showAddLocationModal() {
 	});
 }
 
-// Admin: edit an approved location's metadata (category, business/personal, active,
-// notes, and the pinned purposes that pre-fill a stop's purpose when this place is chosen).
+// Admin: add a destination directly. Skips the approval queue — saved, geocoded, and
+// distance-priced on the spot (no waiting for a driver to propose it).
+function showAdminAddLocationModal(onSaved) {
+	const existing = $('#sp-mileage-admin-addloc-modal');
+	if (existing) existing.remove();
+
+	const typeOptions = ['restaurant', 'vendor', 'other'].map(t => `<option value="${t}">${t.charAt(0).toUpperCase() + t.slice(1)}</option>`).join('');
+	const catOptions = MILEAGE_CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
+
+	const modal = document.createElement('div');
+	modal.id = 'sp-mileage-admin-addloc-modal';
+	modal.className = 'sp-modal-backdrop';
+	modal.innerHTML = `
+		<div class="sp-modal">
+			<h3>Add Destination</h3>
+			<p class="sp-text-secondary">Added straight to the database — geocoded and distance-priced right away. No approval needed.</p>
+			<div class="sp-form-group"><label>Name</label><input type="text" id="sp-addloc-name" class="sp-input" placeholder="Big D Mechanical"></div>
+			<div class="sp-form-group"><label>Address</label><input type="text" id="sp-addloc-address" class="sp-input" placeholder="123 Main St, City, TX 75001"></div>
+			<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+				<div class="sp-form-group"><label>Type</label><select id="sp-addloc-type" class="sp-select">${typeOptions}</select></div>
+				<div class="sp-form-group"><label>Category</label><select id="sp-addloc-category" class="sp-select">${catOptions}</select></div>
+			</div>
+			<div class="sp-form-group"><label>Business or personal</label><select id="sp-addloc-business" class="sp-select"><option value="1">Business</option><option value="0">Personal</option></select></div>
+			<div class="sp-form-group"><label>Notes (optional)</label><textarea id="sp-addloc-notes" class="sp-textarea" rows="2"></textarea></div>
+			<div class="sp-modal-actions">
+				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-addloc-submit">Add Destination</button>
+				<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-addloc-cancel">Cancel</button>
+			</div>
+		</div>
+	`;
+	document.body.appendChild(modal);
+	markUniqueSpans(modal);
+	attachPlacesAutocomplete(modal.querySelector('#sp-addloc-name'), modal.querySelector('#sp-addloc-address'));
+
+	const close = () => modal.remove();
+	modal.querySelector('#sp-addloc-cancel').addEventListener('click', close);
+	modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+	modal.querySelector('#sp-addloc-submit').addEventListener('click', async () => {
+		const name = modal.querySelector('#sp-addloc-name').value.trim();
+		const address = modal.querySelector('#sp-addloc-address').value.trim();
+		if (!name || !address) { alert('Name and address required.'); return; }
+		const btn = modal.querySelector('#sp-addloc-submit');
+		btn.disabled = true; btn.textContent = 'Adding…';
+		const r = await spAjax('site_pulse_admin_add_mileage_location', {
+			name, address,
+			location_type: modal.querySelector('#sp-addloc-type').value,
+			category: modal.querySelector('#sp-addloc-category').value,
+			is_business: modal.querySelector('#sp-addloc-business').value,
+			notes: modal.querySelector('#sp-addloc-notes').value.trim(),
+		});
+		if (r.success) { close(); if (onSaved) onSaved(); }
+		else { alert(r.data?.message || 'Error.'); btn.disabled = false; btn.textContent = 'Add Destination'; }
+	});
+}
+
+// Admin: edit an approved location's metadata (category, business/personal, notes, and the
+// pinned purposes that pre-fill a stop's purpose when this place is chosen), or delete it.
 function showEditLocationModal(loc, onSaved) {
 	const existing = $('#sp-mileage-editloc-modal');
 	if (existing) existing.remove();
@@ -3116,13 +3726,14 @@ function showEditLocationModal(loc, onSaved) {
 				<div class="sp-form-group"><label>Type</label><select id="sp-editloc-type" class="sp-select">${typeOptions}</select></div>
 				<div class="sp-form-group"><label>Category</label><select id="sp-editloc-category" class="sp-select">${catOptions}</select></div>
 				<div class="sp-form-group"><label>Business or personal</label><select id="sp-editloc-business" class="sp-select"><option value="1"${parseInt(loc.is_business) ? ' selected' : ''}>Business</option><option value="0"${!parseInt(loc.is_business) ? ' selected' : ''}>Personal</option></select></div>
-				<div class="sp-form-group"><label>Active</label><select id="sp-editloc-active" class="sp-select"><option value="1"${parseInt(loc.is_active) ? ' selected' : ''}>Active</option><option value="0"${!parseInt(loc.is_active) ? ' selected' : ''}>Inactive</option></select></div>
 			</div>
 			<div class="sp-form-group"><label>Notes</label><textarea id="sp-editloc-notes" class="sp-textarea" rows="2">${esc(loc.notes || '')}</textarea></div>
 			<div class="sp-form-group"><label>Pinned purposes <span class="unique sp-text-secondary" style="font-weight:400;">(one per line — first one pre-fills the purpose when this place is chosen)</span></label><textarea id="sp-editloc-pinned" class="sp-textarea" rows="3" placeholder="Store visit&#10;Manager meeting">${esc(pinned)}</textarea></div>
+			<div class="sp-form-group"><label>Marker image URL <span class="unique sp-text-secondary" style="font-weight:400;">(optional — overrides this location type's default marker on the map; blank = use the default)</span></label><input type="text" id="sp-editloc-marker" class="sp-input" value="${esc(loc.marker_icon || '')}" placeholder="https://rovin.work/wp-content/uploads/brand-logo.png"></div>
 			<div class="sp-modal-actions">
 				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-editloc-save">Save</button>
 				<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-editloc-cancel">Cancel</button>
+				<button type="button" class="unique sp-icon-btn sp-icon-delete" id="sp-editloc-delete" title="Delete" aria-label="Delete" style="margin-left:auto;">${ICON_DELETE}</button>
 			</div>
 		</div>
 	`;
@@ -3141,12 +3752,18 @@ function showEditLocationModal(loc, onSaved) {
 			location_type: modal.querySelector('#sp-editloc-type').value,
 			category: modal.querySelector('#sp-editloc-category').value,
 			is_business: modal.querySelector('#sp-editloc-business').value,
-			is_active: modal.querySelector('#sp-editloc-active').value,
 			notes: modal.querySelector('#sp-editloc-notes').value.trim(),
 			pinned_purposes: pinnedArr,
+			marker_icon: modal.querySelector('#sp-editloc-marker').value.trim(),
 		});
 		if (r.success) { close(); if (onSaved) onSaved(); }
 		else alert(r.data?.message || 'Error saving.');
+	});
+	modal.querySelector('#sp-editloc-delete').addEventListener('click', async () => {
+		if (!confirm(`Delete "${loc.name}"? This removes it from the database. Any trip legs that use it will be removed and those entries recalculated.`)) return;
+		const r = await spAjax('site_pulse_admin_delete_mileage_location', { id: loc.id });
+		if (r.success) { close(); if (onSaved) onSaved(); }
+		else alert(r.data?.message || 'Error deleting.');
 	});
 }
 
@@ -3464,13 +4081,13 @@ async function loadAdminMileage() {
 		const rate = parseFloat(res.data.rate) || 0.67;
 		const adminPurposes = res.data.purposes || [];
 		const reminders = res.data.reminders || { enabled: false, hour: 7 };
+		const requireApproval = res.data.require_approval !== false;
 		const pending = locs.filter(l => l.status === 'pending');
 		const approved = locs.filter(l => l.status === 'approved');
 
 		let html = '<div class="sp-admin-mileage-rate">';
 		html += '<label>Reimbursement rate ($/mile)</label>';
 		html += `<input type="number" step="0.01" min="0" max="5" id="sp-mileage-rate-input" class="sp-input" value="${rate.toFixed(2)}">`;
-		html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-rate-save">Save Rate</button>';
 		html += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-recompute">Recompute All Distances</button>';
 		html += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-import-btn">Import Destinations</button>';
 		if (D.isGod) {
@@ -3481,27 +4098,67 @@ async function loadAdminMileage() {
 			html += '<div id="sp-mileage-api-test-result" class="sp-mileage-api-test" hidden></div>';
 		}
 
-		html += `<h3>Pending (${pending.length})</h3>`;
-		if (pending.length === 0) {
-			html += '<p class="sp-text-secondary">No pending locations.</p>';
-		} else {
-			html += '<table class="sp-mileage-table"><thead><tr><th>Name</th><th>Address</th><th>Type</th><th>Added by</th><th></th></tr></thead><tbody>';
-			pending.forEach(l => {
-				html += '<tr>';
-				html += `<td>${esc(l.name)}</td>`;
-				html += `<td>${esc(l.address || '')}</td>`;
-				html += `<td>${esc(l.location_type)}</td>`;
-				html += `<td>${esc(l.created_by_name || '')}</td>`;
-				html += `<td class="sp-mileage-row-actions">`;
-				html += `<button type="button" class="unique sp-btn sp-btn-primary sp-mileage-approve-btn" data-id="${l.id}">Approve</button>`;
-				html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-reject-btn" data-id="${l.id}">Reject</button>`;
-				html += `</td></tr>`;
-			});
-			html += '</tbody></table>';
+		// Optional per-type map marker images (logo/icon). Blank = the default colored dot.
+		const markerIcons = res.data.marker_icons || {};
+		const MARKER_TYPES = [
+			{ key: 'home', label: 'Home base' },
+			{ key: 'restaurant', label: 'Restaurant' },
+			{ key: 'vendor', label: 'Vendor' },
+			{ key: 'office', label: 'Office' },
+			{ key: 'other', label: 'Other' },
+		];
+		html += '<h3>Map Markers</h3>';
+		html += '<p class="sp-text-secondary">Optional logo/icon image URL per location type, shown on the mileage map. Leave blank to use the default colored dot. A square image around 64–128px (PNG/SVG with transparency) works best.</p>';
+		MARKER_TYPES.forEach(t => {
+			html += '<div class="sp-form-group" style="max-width:560px;">';
+			html += `<label>${t.label} marker image URL</label>`;
+			html += `<input type="text" class="sp-input sp-marker-url" data-marker="${t.key}" value="${esc(markerIcons[t.key] || '')}" placeholder="https://rovin.work/wp-content/uploads/marker.png">`;
+			html += '</div>';
+		});
+
+		// Destination approval policy.
+		html += '<h3>New Destinations</h3>';
+		html += '<p class="sp-text-secondary">Do new destinations need admin approval before being added to the database? When unchecked, a destination a driver adds goes straight into the database — geocoded and ready to use — with no approval step.</p>';
+		html += '<div class="sp-toolbar">';
+		html += `<label class="sp-reminder-toggle"><input type="checkbox" id="sp-mileage-require-approval"${requireApproval ? ' checked' : ''}> Require admin approval for new destinations</label>`;
+		html += '</div>';
+
+		html += '<div class="sp-mileage-destinations-head">';
+		html += '<h3>Destinations</h3>';
+		html += '<div style="display:flex;gap:8px;">';
+		html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-geocode-missing" title="Add map coordinates to any destinations that are missing them (e.g. the seeded restaurants)">Geocode Missing</button>';
+		html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-mileage-add-dest">+ Add Destination</button>';
+		html += '</div>';
+		html += '</div>';
+
+		// With approval off there's no pending queue, so hide that section — unless leftover
+		// pending items remain from before it was switched off, so they can still be cleared.
+		const showPending = requireApproval || pending.length > 0;
+		if (showPending) {
+			html += `<h4>Pending (${pending.length})</h4>`;
+			if (pending.length === 0) {
+				html += '<p class="sp-text-secondary">No pending locations.</p>';
+			} else {
+				html += '<table class="sp-mileage-table"><thead><tr><th>Name</th><th>Address</th><th>Type</th><th>Added by</th><th></th></tr></thead><tbody>';
+				pending.forEach(l => {
+					html += '<tr>';
+					html += `<td>${esc(l.name)}</td>`;
+					html += `<td>${esc(l.address || '')}</td>`;
+					html += `<td>${esc(l.location_type)}</td>`;
+					html += `<td>${esc(l.created_by_name || '')}</td>`;
+					html += `<td class="sp-mileage-row-actions">`;
+					html += `<button type="button" class="unique sp-btn sp-btn-primary sp-mileage-approve-btn" data-id="${l.id}">Approve</button>`;
+					html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-reject-btn" data-id="${l.id}">Reject</button>`;
+					html += `</td></tr>`;
+				});
+				html += '</tbody></table>';
+			}
 		}
 
-		html += `<h3>Approved (${approved.length})</h3>`;
-		html += '<table class="sp-mileage-table"><thead><tr><th>Name</th><th>Address</th><th>Category</th><th>Business</th><th>Active</th><th></th></tr></thead><tbody>';
+		// Only sub-label the approved list when a Pending section is also shown; otherwise the
+		// "Destinations" header above is the only heading the single list needs.
+		if (showPending) html += `<h4>Approved (${approved.length})</h4>`;
+		html += '<table class="sp-mileage-table"><thead><tr><th>Name</th><th>Address</th><th>Category</th><th>Business</th><th></th></tr></thead><tbody>';
 		approved.forEach(l => {
 			const priv = parseInt(l.is_private) ? ' <span class="unique sp-status-badge sp-status-draft">private</span>' : '';
 			html += '<tr>';
@@ -3509,8 +4166,7 @@ async function loadAdminMileage() {
 			html += `<td>${esc(l.address || '')}</td>`;
 			html += `<td>${esc(l.category || l.location_type || '')}</td>`;
 			html += `<td>${parseInt(l.is_business) ? 'Business' : 'Personal'}</td>`;
-			html += `<td>${parseInt(l.is_active) ? 'Yes' : '<span class="unique sp-text-secondary">No</span>'}</td>`;
-			html += `<td class="sp-mileage-row-actions"><button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-edit-loc-btn" data-id="${l.id}">Edit</button></td>`;
+			html += `<td>${iconBtn('edit', 'sp-mileage-edit-loc-btn', `data-id="${l.id}"`)}</td>`;
 			html += '</tr>';
 		});
 		html += '</tbody></table>';
@@ -3525,7 +4181,6 @@ async function loadAdminMileage() {
 		html += '<div class="sp-toolbar">';
 		html += `<label class="sp-reminder-toggle"><input type="checkbox" id="sp-mileage-reminder-enabled"${reminders.enabled ? ' checked' : ''}> Send daily reminders</label>`;
 		html += `<div class="sp-toolbar-group"><span class="sp-toolbar-label">Send at</span><select id="sp-mileage-reminder-hour" class="sp-select">${hourOpts}</select></div>`;
-		html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-mileage-reminder-save">Save Reminders</button>';
 		html += '</div>';
 
 		// Distance matrix (lazy-rendered on demand — can be a large grid).
@@ -3539,40 +4194,82 @@ async function loadAdminMileage() {
 		html += '<p class="sp-text-secondary">Suggestions shown to drivers when they pick a stop\'s business purpose.</p>';
 		html += '<div class="sp-mileage-purposes" id="sp-mileage-purposes-list"></div>';
 		html += '<div class="sp-mileage-purpose-add"><input type="text" id="sp-mileage-purpose-new" class="sp-input" placeholder="Add a purpose…"><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-purpose-add-btn">Add</button></div>';
-		html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-mileage-purposes-save">Save Purposes</button>';
 
 		wrap.innerHTML = html;
 		markUniqueSpans(wrap);
 
-		// Purpose library: render chips + wire add/remove/save.
+		// Purpose library: render chips, auto-saving on every add/remove.
 		let purposeList = adminPurposes.slice();
+		const savePurposes = async () => {
+			const r = await spAjax('site_pulse_admin_save_mileage_purposes', { purposes: purposeList });
+			if (r.success) spFlash('Purposes saved');
+			else alert(r.data?.message || 'Error saving purposes.');
+		};
+		let editingIdx = -1; // index of the chip currently being edited inline (-1 = none)
 		const renderPurposeChips = () => {
 			const box = $('#sp-mileage-purposes-list', wrap);
 			if (!box) return;
-			box.innerHTML = purposeList.map((p, i) =>
-				`<span class="unique sp-purpose-chip">${esc(p)} <button type="button" class="sp-purpose-chip-x" data-i="${i}" aria-label="Remove">&times;</button></span>`
-			).join('') || '<span class="unique sp-text-secondary">No purposes yet.</span>';
+			if (!purposeList.length) {
+				box.innerHTML = '<span class="unique sp-text-secondary">No purposes yet.</span>';
+				markUniqueSpans(box);
+				return;
+			}
+			box.innerHTML = purposeList.map((p, i) => {
+				if (i === editingIdx) {
+					return `<span class="unique sp-purpose-chip sp-purpose-editing"><input type="text" class="sp-purpose-edit-input" data-i="${i}" value="${esc(p)}"></span>`;
+				}
+				return `<span class="unique sp-purpose-chip"><span class="sp-purpose-text">${esc(p)}</span>`
+					+ `<button type="button" class="sp-purpose-icon sp-purpose-edit" data-i="${i}" title="Edit" aria-label="Edit">${ICON_EDIT}</button>`
+					+ `<button type="button" class="sp-purpose-icon sp-purpose-del" data-i="${i}" title="Delete" aria-label="Delete">${ICON_DELETE}</button></span>`;
+			}).join('');
 			markUniqueSpans(box);
-			$$('.sp-purpose-chip-x', box).forEach(b => b.addEventListener('click', () => {
+
+			$$('.sp-purpose-del', box).forEach(b => b.addEventListener('click', () => {
 				purposeList.splice(parseInt(b.dataset.i), 1);
+				editingIdx = -1;
+				renderPurposeChips();
+				savePurposes();
+			}));
+			$$('.sp-purpose-edit', box).forEach(b => b.addEventListener('click', () => {
+				editingIdx = parseInt(b.dataset.i);
 				renderPurposeChips();
 			}));
+
+			const inp = $('.sp-purpose-edit-input', box);
+			if (inp) {
+				const commit = () => {
+					const i = parseInt(inp.dataset.i);
+					const v = (inp.value || '').trim();
+					editingIdx = -1;
+					// Cancel on empty or a name that already exists elsewhere; otherwise save.
+					const dup = purposeList.some((p, j) => j !== i && p === v);
+					if (!v || dup) { renderPurposeChips(); return; }
+					const changed = purposeList[i] !== v;
+					purposeList[i] = v;
+					renderPurposeChips();
+					if (changed) savePurposes();
+				};
+				inp.addEventListener('keydown', (e) => {
+					if (e.key === 'Enter') { e.preventDefault(); commit(); }
+					else if (e.key === 'Escape') { e.preventDefault(); editingIdx = -1; renderPurposeChips(); }
+				});
+				inp.addEventListener('blur', commit);
+				inp.focus();
+				inp.select();
+			}
 		};
 		renderPurposeChips();
 		const addPurpose = () => {
 			const inp = $('#sp-mileage-purpose-new', wrap);
 			const v = (inp.value || '').trim();
-			if (v && !purposeList.includes(v)) purposeList.push(v);
+			if (!v || purposeList.includes(v)) { inp.value = ''; return; }
+			purposeList.push(v);
 			inp.value = '';
 			renderPurposeChips();
+			savePurposes();
 		};
 		$('#sp-mileage-purpose-add-btn', wrap)?.addEventListener('click', addPurpose);
 		$('#sp-mileage-purpose-new', wrap)?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addPurpose(); } });
-		$('#sp-mileage-purposes-save', wrap)?.addEventListener('click', async () => {
-			const r = await spAjax('site_pulse_admin_save_mileage_purposes', { purposes: purposeList });
-			if (r.success) alert('Purpose library saved.');
-			else alert(r.data?.message || 'Error.');
-		});
 
 		// Edit an approved location's metadata.
 		$$('.sp-mileage-edit-loc-btn', wrap).forEach(b => b.addEventListener('click', () => {
@@ -3580,15 +4277,47 @@ async function loadAdminMileage() {
 			if (loc) showEditLocationModal(loc, () => { loadAdminMileage(); });
 		}));
 
+		$('#sp-mileage-add-dest', wrap)?.addEventListener('click', () => showAdminAddLocationModal(() => loadAdminMileage()));
+
+		$$('.sp-marker-url', wrap).forEach(inp => {
+			inp.addEventListener('change', async () => {
+				try {
+					const r = await spAjax('site_pulse_admin_save_setting', { key: 'mileage_marker_' + inp.dataset.marker, value: inp.value.trim() });
+					if (r.success) spFlash('Saved'); else alert(r.data?.message || 'Error saving.');
+				} catch (err) { alert('Error saving marker.'); }
+			});
+		});
+
+		$('#sp-mileage-geocode-missing', wrap)?.addEventListener('click', async (e) => {
+			const btn = e.currentTarget;
+			const orig = btn.textContent;
+			btn.disabled = true; btn.textContent = 'Geocoding…';
+			try {
+				const res = await spAjax('site_pulse_admin_geocode_missing', {});
+				if (res.success) { alert(res.data.message); loadAdminMileage(); }
+				else { alert(res.data?.message || 'Error.'); btn.disabled = false; btn.textContent = orig; }
+			} catch (err) { alert('Error geocoding destinations.'); btn.disabled = false; btn.textContent = orig; }
+		});
+
 		$('#sp-mileage-import-btn', wrap)?.addEventListener('click', () => showImportDestinationsModal(locs, () => loadAdminMileage()));
 
-		$('#sp-mileage-reminder-save', wrap)?.addEventListener('click', async () => {
+		// Approval toggle auto-saves, then re-renders so the Pending section appears/disappears.
+		$('#sp-mileage-require-approval', wrap)?.addEventListener('change', async () => {
+			const require_approval = $('#sp-mileage-require-approval')?.checked ? 1 : 0;
+			const r = await spAjax('site_pulse_admin_save_mileage_approval', { require_approval });
+			if (r.success) { spFlash(r.data.require_approval ? 'Approval required' : 'Approval off'); loadAdminMileage(); }
+			else alert(r.data?.message || 'Error.');
+		});
+
+		const saveReminders = async () => {
 			const enabled = $('#sp-mileage-reminder-enabled')?.checked ? 1 : 0;
 			const hour = parseInt($('#sp-mileage-reminder-hour')?.value || '7');
 			const r = await spAjax('site_pulse_admin_save_mileage_reminders', { enabled, hour });
-			if (r.success) alert(r.data.enabled ? 'Daily reminders ON.' : 'Daily reminders off.');
+			if (r.success) spFlash(r.data.enabled ? 'Reminders on' : 'Reminders off');
 			else alert(r.data?.message || 'Error.');
-		});
+		};
+		$('#sp-mileage-reminder-enabled', wrap)?.addEventListener('change', saveReminders);
+		$('#sp-mileage-reminder-hour', wrap)?.addEventListener('change', saveReminders);
 
 		// Distance matrix: render on first show, then toggle.
 		$('#sp-mileage-matrix-toggle', wrap)?.addEventListener('click', async (e) => {
@@ -3604,10 +4333,12 @@ async function loadAdminMileage() {
 			}
 		});
 
-		$('#sp-mileage-rate-save', wrap)?.addEventListener('click', async () => {
+		// Rate auto-saves when the field is committed (blur / Enter / spinner).
+		$('#sp-mileage-rate-input', wrap)?.addEventListener('change', async () => {
 			const rate = parseFloat($('#sp-mileage-rate-input').value);
+			if (isNaN(rate)) return;
 			const r = await spAjax('site_pulse_admin_save_mileage_rate', { rate });
-			if (r.success) alert('Rate saved.');
+			if (r.success) spFlash('Rate saved');
 			else alert(r.data?.message || 'Error.');
 		});
 

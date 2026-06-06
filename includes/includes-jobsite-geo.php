@@ -2243,12 +2243,27 @@ function bp_geo_send_daily_digest() {
 
 	// Jobs whose AI rewrite finished in the last 24h — i.e. became real /service/ pages.
 	$since = date( 'Y-m-d H:i:s', current_time('timestamp') - DAY_IN_SECONDS );
+
+	// ...BUT also require the job itself to be genuinely recent. The AI-rewrite
+	// timestamp is not a reliable "new job" signal on its own: the nightly
+	// housekeeping back-fill (functions-chron-housekeeping.php) and re-sync
+	// re-runs (includes-jobsite-geo-api.php) both stamp bp_geo_ai_ran = now onto
+	// OLD jobs that were entered weeks ago. Without this post_date bound, those
+	// back-filled jobs wrongly land in the client's "what you put online in the
+	// last 24 hours" digest. A 2-day window keeps genuinely-new jobs (tolerating
+	// AI-rewrite lag past midnight) while excluding anything older.
+	$recent_after = date( 'Y-m-d H:i:s', current_time('timestamp') - ( 2 * DAY_IN_SECONDS ) );
+
 	$jobs  = get_posts([
 		'post_type'      => BP_GEO_CPT,
 		'post_status'    => 'publish',
 		'posts_per_page' => 50,
 		'orderby'        => 'date',
 		'order'          => 'DESC',
+		'date_query'     => [[
+			'column' => 'post_date',
+			'after'  => $recent_after,
+		]],
 		'meta_query'     => [[
 			'key'     => BP_GEO_FIELD_AI_RAN,
 			'value'   => $since,

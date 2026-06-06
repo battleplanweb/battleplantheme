@@ -36,8 +36,7 @@ jobs:
           - rovindirec1stg
           - rovindir
           - rovininc
-          - spribeyes
-          - sweetiepie2stg
+          - rovinworkapp
     steps:
       - name: Checkout tag ${{ github.event.inputs.tag }}
         uses: actions/checkout@v4

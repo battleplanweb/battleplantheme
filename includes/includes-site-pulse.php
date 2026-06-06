@@ -24,7 +24,7 @@ require_once get_template_directory() . '/prompts/prompts-site-pulse.php';
 # Constants & Setup
 --------------------------------------------------------------*/
 
-define( 'SITE_PULSE_DB_VERSION', '1.10' );
+define( 'SITE_PULSE_DB_VERSION', '1.12' );
 
 function site_pulse_table( string $name ): string {
 	return $GLOBALS['wpdb']->prefix . 'site_pulse_' . $name;
@@ -281,6 +281,7 @@ function site_pulse_install_db(): void {
 		is_active tinyint(1) NOT NULL DEFAULT 1,
 		notes text DEFAULT NULL,
 		pinned_purposes text DEFAULT NULL,
+		marker_icon varchar(500) DEFAULT NULL,
 		site_pulse_location_id int(11) DEFAULT NULL,
 		status varchar(20) NOT NULL DEFAULT 'pending',
 		created_by int(11) NOT NULL DEFAULT 0,
@@ -419,6 +420,17 @@ add_action( 'init', function() {
 	if ( ! get_option( 'site_pulse_mileage_seeded' ) ) {
 		site_pulse_seed_mileage_locations();
 		update_option( 'site_pulse_mileage_seeded', '1' );
+	}
+
+	// One-time: the original store "Manager" tier is now the "GM" (and its report likewise). The
+	// seed/template seeders are insert-only, so existing installs need this nudge. Each row is only
+	// touched if it still holds the old default text, so a deliberate admin rename is never
+	// clobbered. Runs once.
+	if ( ! get_option( 'site_pulse_role_gm_relabel' ) ) {
+		global $wpdb;
+		$wpdb->update( site_pulse_table('roles'), [ 'label' => 'GM' ], [ 'slug' => 'manager', 'label' => 'Manager' ] );
+		$wpdb->update( site_pulse_table('report_templates'), [ 'name' => 'GM Bi-Weekly Report' ], [ 'slug' => 'manager-biweekly', 'name' => 'Manager Bi-Weekly Report' ] );
+		update_option( 'site_pulse_role_gm_relabel', '1' );
 	}
 
 	// Make sure the daily mileage-reminder cron exists when enabled (survives restarts).
@@ -578,20 +590,29 @@ function site_pulse_seed_roles(): void {
 		],
 		[
 			'slug'            => 'manager',
+			'label'           => 'GM',
+			'capabilities'    => wp_json_encode( [ 'submit_reports', 'view_own_reports', 'view_analytics', 'submit_mileage' ] ),
+			'hierarchy_level' => 20,
+		],
+		[
+			'slug'            => 'non-store-manager',
 			'label'           => 'Manager',
 			'capabilities'    => wp_json_encode( [ 'submit_reports', 'view_own_reports', 'view_analytics', 'submit_mileage' ] ),
 			'hierarchy_level' => 20,
 		],
 	];
 
+	// Insert-only: seed defaults on first run, but never overwrite a tier an admin has since
+	// renamed or re-permissioned in the Tiers editor. (The God tier is force-synced so the
+	// superuser can never be locked out by a stale/edited capability set.)
 	foreach ( $roles as $role ) {
 		$exists = $wpdb->get_var( $wpdb->prepare(
 			"SELECT id FROM " . site_pulse_table('roles') . " WHERE slug = %s", $role['slug']
 		) );
-		if ( $exists ) {
-			$wpdb->update( site_pulse_table('roles'), $role, [ 'slug' => $role['slug'] ] );
-		} else {
+		if ( ! $exists ) {
 			$wpdb->insert( site_pulse_table('roles'), $role );
+		} elseif ( $role['slug'] === 'god' ) {
+			$wpdb->update( site_pulse_table('roles'), $role, [ 'slug' => 'god' ] );
 		}
 	}
 }
@@ -604,18 +625,33 @@ function site_pulse_is_god( int $user_id = 0 ): bool {
 	return $role && $role['slug'] === 'god';
 }
 
+// The protected super-admin: the `battleplanweb` account. It alone manages the God tier
+// (grant/revoke/delete Gods) and is the only account hidden from the user list. Other Gods are
+// ordinary visible users that happen to hold the God role.
+function site_pulse_is_superadmin( int $user_id = 0 ): bool {
+	if ( ! $user_id ) $user_id = get_current_user_id();
+	$u = get_user_by( 'id', $user_id );
+	return $u && $u->user_login === 'battleplanweb';
+}
+
 
 /*--------------------------------------------------------------
 # Page Detection & Caching
 --------------------------------------------------------------*/
 
 add_action( 'template_redirect', function() {
-	$sp_slugs = [ 'site-pulse-login', 'site-pulse-dashboard' ];
 	global $post;
-	if ( ! $post || ! in_array( $post->post_name, $sp_slugs, true ) ) return;
+	// The entire Site Pulse app is per-user, auth-gated, nonce-bearing content with no caching
+	// upside (no heavy media). Never cache ANY of it — a cached page can serve one user another's
+	// dashboard or hand out a stale nonce that silently 403s every request. Match the whole
+	// `site-pulse-*` slug family so future Site Pulse pages are covered automatically.
+	if ( ! $post || strpos( (string) $post->post_name, 'site-pulse' ) !== 0 ) return;
 
+	// DONOTCACHEPAGE → WP Engine EverCache; nocache_headers() + the explicit header below →
+	// browsers AND Cloudflare (a separate layer that obeys Cache-Control, not DONOTCACHEPAGE).
 	if ( ! defined('DONOTCACHEPAGE') ) define( 'DONOTCACHEPAGE', true );
 	nocache_headers();
+	if ( ! headers_sent() ) header( 'Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0' );
 
 	add_filter( 'body_class', function( $classes ) {
 		$classes[] = 'has-site-pulse';
@@ -688,6 +724,9 @@ function site_pulse_enqueue_assets(): void {
 		'companyName'        => site_pulse_get_setting( 'company_name', '' ),
 		'reportHeaderFields' => $header_fields,
 		'isGod'              => $is_god,
+		// Only true for the real battleplanweb session AND not while impersonating — so "view as
+		// <someone>" hides the super-admin-only controls (Grant/Revoke God) like that user sees.
+		'isSuperadmin'       => site_pulse_is_superadmin( $real_user_id ) && ! site_pulse_is_impersonating(),
 		'impersonating'      => site_pulse_is_impersonating(),
 		// Google Maps JS key for the (client-side) mileage/toll maps. Prefers a dedicated
 		// browser key if set, else the main key. NOTE: this key is exposed to the browser,
@@ -750,6 +789,30 @@ function site_pulse_get_all_roles( bool $include_god = false ): array {
 		"SELECT * FROM " . site_pulse_table('roles') . " $where ORDER BY hierarchy_level DESC",
 		ARRAY_A
 	) ?: [];
+}
+
+/**
+ * The catalog of assignable capabilities (cap => friendly label). Single source of truth
+ * for the Tiers editor's checkbox grid and for validating saved capabilities. `god_mode` is
+ * intentionally excluded — it is internal and only the (hidden) God tier carries it.
+ */
+function site_pulse_capability_catalog(): array {
+	return [
+		'view_own_reports'  => 'View own reports',
+		'submit_reports'    => 'Submit reports',
+		'view_team_reports' => 'View team reports',
+		'view_all_reports'  => 'View all reports',
+		'review_reports'    => 'Review reports',
+		'view_analytics'    => 'View analytics',
+		'view_ai_insights'  => 'View AI insights',
+		'submit_mileage'    => 'Submit mileage',
+		'manage_mileage'    => 'Manage mileage settings',
+		'manage_locations'  => 'Manage home bases',
+		'manage_users'      => 'Manage users',
+		'manage_templates'  => 'Manage report templates',
+		'manage_settings'   => 'Manage site settings',
+		'manage_roles'      => 'Manage tiers',
+	];
 }
 
 function site_pulse_get_user_profile( int $user_id ): ?array {
@@ -1129,7 +1192,9 @@ function site_pulse_get_all_users( bool $active_only = true, bool $include_god =
 	global $wpdb;
 	$conditions = [];
 	if ( $active_only ) $conditions[] = "up.status = 'active'";
-	if ( ! $include_god ) $conditions[] = "r.slug != 'god'";
+	// Hide only the protected super-admin (battleplanweb), not the whole God role — other Gods
+	// stay visible. NULL-safe so orphaned profiles (no WP user) still appear for cleanup.
+	if ( ! $include_god ) $conditions[] = "( u.user_login IS NULL OR u.user_login != 'battleplanweb' )";
 	$where = $conditions ? "WHERE " . implode( ' AND ', $conditions ) : "";
 	return $wpdb->get_results(
 		"SELECT up.*, u.user_login, u.user_email, u.display_name, r.slug AS role_slug, r.label AS role_label, l.name AS location_name,
@@ -1156,7 +1221,10 @@ function site_pulse_ajax_login(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 
 	$username = sanitize_user( $_POST['username'] ?? '' );
-	$password = $_POST['password'] ?? '';
+	// Field is `sp_pass`, not `password`: WP Engine's WAF strips a POST field named
+	// `password` on non-login endpoints (admin-ajax.php), which would blank the password
+	// here and break every login. Accept the old name as a fallback for safety.
+	$password = $_POST['sp_pass'] ?? ( $_POST['password'] ?? '' );
 
 	if ( empty( $username ) || empty( $password ) ) {
 		wp_send_json_error( [ 'message' => 'Please enter your username and password.' ] );
@@ -1400,7 +1468,7 @@ function site_pulse_ajax_admin_create_user(): void {
 	$result = site_pulse_create_user( [
 		'username'                 => $_POST['username'] ?? '',
 		'email'                    => $_POST['email'] ?? '',
-		'password'                 => $_POST['password'] ?? '',
+		'password'                 => $_POST['user_pass'] ?? ( $_POST['password'] ?? '' ),
 		'first_name'               => $_POST['first_name'] ?? '',
 		'last_name'                => $_POST['last_name'] ?? '',
 		'role_id'                  => (int) ( $_POST['role_id'] ?? 0 ),
@@ -1441,6 +1509,16 @@ function site_pulse_ajax_admin_update_user(): void {
 
 	$updates = [];
 	if ( isset( $_POST['role_id'] ) )       $updates['role_id']       = (int) $_POST['role_id'];
+
+	// God membership is managed ONLY via the super-admin's Grant/Revoke actions — never through
+	// this form. Drop any role change that would move a user into or out of God.
+	if ( isset( $updates['role_id'] ) ) {
+		$cur_role = site_pulse_get_role( (int) $profile['role_id'] );
+		$new_role = site_pulse_get_role( (int) $updates['role_id'] );
+		$cur_god  = $cur_role && $cur_role['slug'] === 'god';
+		$new_god  = $new_role && $new_role['slug'] === 'god';
+		if ( $cur_god || $new_god ) unset( $updates['role_id'] );
+	}
 	if ( isset( $_POST['location_id'] ) )   $updates['location_id']   = (int) $_POST['location_id'];
 	if ( isset( $_POST['supervisor_id'] ) ) $updates['supervisor_id'] = (int) $_POST['supervisor_id'];
 	// Home base is derived from the store Location when one is set. Only a work-from-home
@@ -1463,8 +1541,9 @@ function site_pulse_ajax_admin_update_user(): void {
 		wp_update_user( $wp_updates );
 	}
 
-	if ( ! empty( $_POST['new_password'] ) ) {
-		wp_set_password( $_POST['new_password'], $user_id );
+	$new_pass = $_POST['new_user_pass'] ?? ( $_POST['new_password'] ?? '' );
+	if ( ! empty( $new_pass ) ) {
+		wp_set_password( $new_pass, $user_id );
 	}
 
 	site_pulse_log( 'user_updated', sprintf( 'Updated user #%d', $user_id ), [], $user_id );
@@ -1592,8 +1671,10 @@ function site_pulse_ajax_admin_get_templates(): void {
 	foreach ( $templates as &$t ) {
 		$t['fields'] = site_pulse_get_template_fields( (int) $t['id'] );
 	}
+	unset( $t );
 
-	wp_send_json_success( [ 'templates' => $templates ] );
+	// Roles (excluding God) so the template form's "Required Role" picker shows real labels.
+	wp_send_json_success( [ 'templates' => $templates, 'roles' => site_pulse_get_all_roles() ] );
 }
 
 add_action( 'wp_ajax_site_pulse_admin_save_template', 'site_pulse_ajax_admin_save_template' );
@@ -1741,6 +1822,133 @@ function site_pulse_ajax_get_template_fields(): void {
 	$previous_report = site_pulse_get_previous_report( $template_id, $location_id );
 
 	wp_send_json_success( [ 'fields' => $fields, 'previous_report' => $previous_report ] );
+}
+
+
+/*--------------------------------------------------------------
+# Admin AJAX — Tiers (Roles)
+--------------------------------------------------------------*/
+
+add_action( 'wp_ajax_site_pulse_admin_get_roles', 'site_pulse_ajax_admin_get_roles' );
+function site_pulse_ajax_admin_get_roles(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
+
+	global $wpdb;
+	$counts = [];
+	$rows = $wpdb->get_results(
+		"SELECT role_id, COUNT(*) AS n FROM " . site_pulse_table('user_profiles') . " GROUP BY role_id",
+		ARRAY_A
+	) ?: [];
+	foreach ( $rows as $r ) $counts[ (int) $r['role_id'] ] = (int) $r['n'];
+
+	wp_send_json_success( [
+		'roles'       => site_pulse_get_all_roles(),          // excludes the hidden God tier
+		'catalog'     => site_pulse_capability_catalog(),
+		'user_counts' => $counts,
+	] );
+}
+
+add_action( 'wp_ajax_site_pulse_admin_save_role', 'site_pulse_ajax_admin_save_role' );
+function site_pulse_ajax_admin_save_role(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
+
+	global $wpdb;
+	$id    = (int) ( $_POST['id'] ?? 0 );
+	$label = sanitize_text_field( wp_unslash( $_POST['label'] ?? '' ) );
+	if ( $label === '' ) {
+		wp_send_json_error( [ 'message' => 'Tier name is required.' ] );
+	}
+
+	// Only ever store known capabilities; silently drop anything not in the catalog.
+	$posted = (array) ( $_POST['capabilities'] ?? [] );
+	$caps   = array_values( array_intersect( array_map( 'strval', $posted ), array_keys( site_pulse_capability_catalog() ) ) );
+
+	if ( $id ) {
+		$role = site_pulse_get_role( $id );
+		if ( ! $role || $role['slug'] === 'god' ) {
+			wp_send_json_error( [ 'message' => 'That tier cannot be edited.' ] );
+		}
+		// Label + capabilities only — slug and rank are stable identity, untouched.
+		$wpdb->update( site_pulse_table('roles'),
+			[ 'label' => $label, 'capabilities' => wp_json_encode( $caps ) ],
+			[ 'id' => $id ]
+		);
+		site_pulse_log( 'tier_updated', sprintf( 'Updated tier "%s" (#%d)', $label, $id ) );
+		wp_send_json_success( [ 'message' => 'Tier saved.' ] );
+	}
+
+	// Create — derive a unique, stable slug from the name; never reuse the reserved 'god'.
+	$base = sanitize_title( $label ) ?: 'tier';
+	$slug = $base;
+	$i    = 2;
+	while ( $slug === 'god' || site_pulse_get_role_by_slug( $slug ) ) {
+		$slug = $base . '-' . $i++;
+	}
+
+	$min = (int) $wpdb->get_var(
+		"SELECT MIN(hierarchy_level) FROM " . site_pulse_table('roles') . " WHERE slug != 'god'"
+	);
+	$new_level = max( 1, $min - 10 ); // appended at the bottom (least senior)
+
+	$wpdb->insert( site_pulse_table('roles'), [
+		'slug'            => $slug,
+		'label'           => $label,
+		'capabilities'    => wp_json_encode( $caps ),
+		'hierarchy_level' => $new_level,
+		'is_active'       => 1,
+	] );
+	site_pulse_log( 'tier_created', sprintf( 'Created tier "%s" (%s)', $label, $slug ) );
+	wp_send_json_success( [ 'message' => 'Tier created.', 'id' => (int) $wpdb->insert_id ] );
+}
+
+add_action( 'wp_ajax_site_pulse_admin_delete_role', 'site_pulse_ajax_admin_delete_role' );
+function site_pulse_ajax_admin_delete_role(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
+
+	global $wpdb;
+	$id   = (int) ( $_POST['id'] ?? 0 );
+	$role = $id ? site_pulse_get_role( $id ) : null;
+	if ( ! $role || $role['slug'] === 'god' ) {
+		wp_send_json_error( [ 'message' => 'That tier cannot be deleted.' ] );
+	}
+
+	$members = (int) $wpdb->get_var( $wpdb->prepare(
+		"SELECT COUNT(*) FROM " . site_pulse_table('user_profiles') . " WHERE role_id = %d", $id
+	) );
+	if ( $members ) {
+		wp_send_json_error( [ 'message' => sprintf( 'Reassign this tier\'s %d member%s to another tier first.', $members, $members === 1 ? '' : 's' ) ] );
+	}
+
+	$wpdb->delete( site_pulse_table('roles'), [ 'id' => $id ] );
+	site_pulse_log( 'tier_deleted', sprintf( 'Deleted tier "%s" (%s)', $role['label'], $role['slug'] ) );
+	wp_send_json_success( [ 'message' => 'Tier deleted.' ] );
+}
+
+add_action( 'wp_ajax_site_pulse_admin_reorder_roles', 'site_pulse_ajax_admin_reorder_roles' );
+function site_pulse_ajax_admin_reorder_roles(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
+
+	global $wpdb;
+	$order = $_POST['order'] ?? []; // role IDs, most-senior first (God excluded)
+	if ( ! is_array( $order ) || ! $order ) {
+		wp_send_json_error( [ 'message' => 'Invalid order data.' ] );
+	}
+
+	// Even gaps below God's fixed 255 — tie-free and leaves room to insert between later.
+	$n = count( $order );
+	foreach ( $order as $i => $role_id ) {
+		$role = site_pulse_get_role( (int) $role_id );
+		if ( ! $role || $role['slug'] === 'god' ) continue;
+		$wpdb->update( site_pulse_table('roles'),
+			[ 'hierarchy_level' => ( $n - (int) $i ) * 10 ],
+			[ 'id' => (int) $role_id ]
+		);
+	}
+	wp_send_json_success( [ 'message' => 'Tiers reordered.' ] );
 }
 
 
@@ -2351,9 +2559,26 @@ function site_pulse_ajax_admin_get_settings(): void {
 	$api_key = site_pulse_get_api_key();
 	$masked  = $api_key ? substr( $api_key, 0, 8 ) . '...' . substr( $api_key, -4 ) : '';
 
+	// Server-side key (IP-restricted): geocoding + routes/distance matrix.
+	$google_key    = (string) site_pulse_get_setting( 'google_api_key', '' );
+	$google_masked = $google_key ? substr( $google_key, 0, 8 ) . '...' . substr( $google_key, -4 ) : '';
+
+	// Browser key (website/referrer-restricted): Maps JavaScript + Places autocomplete.
+	$maps_key    = (string) site_pulse_get_setting( 'maps_js_api_key', '' );
+	$maps_masked = $maps_key ? substr( $maps_key, 0, 8 ) . '...' . substr( $maps_key, -4 ) : '';
+
+	$toll_key    = (string) site_pulse_get_setting( 'tollguru_api_key', '' );
+	$toll_masked = $toll_key ? substr( $toll_key, 0, 6 ) . '...' . substr( $toll_key, -4 ) : '';
+
 	wp_send_json_success( [
-		'claude_api_key_masked' => $masked,
-		'claude_api_key_set'    => ! empty( $api_key ),
+		'claude_api_key_masked'    => $masked,
+		'claude_api_key_set'       => ! empty( $api_key ),
+		'google_api_key_masked'    => $google_masked,
+		'google_api_key_set'       => ! empty( $google_key ),
+		'maps_js_api_key_masked'   => $maps_masked,
+		'maps_js_api_key_set'      => ! empty( $maps_key ),
+		'tollguru_api_key_masked'  => $toll_masked,
+		'tollguru_api_key_set'     => ! empty( $toll_key ),
 	] );
 }
 
@@ -2478,6 +2703,209 @@ function site_pulse_ajax_god_nuke(): void {
 	$wpdb->query( "TRUNCATE TABLE " . site_pulse_table('activity_log') );
 
 	wp_send_json_success( [ 'message' => 'All reports, action items, notifications, and activity logs cleared.' ] );
+}
+
+// God-only single-record deletes. GOD alone (not owner/admin/supervisor) can permanently blank
+// out user-entered data that otherwise has no delete path. Each verifies the god role explicitly
+// — these are not gated by manage_* capabilities, so a non-god admin can never reach them.
+add_action( 'wp_ajax_site_pulse_god_delete_report', 'site_pulse_ajax_god_delete_report' );
+function site_pulse_ajax_god_delete_report(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_is_god() ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+
+	$id = (int) ( $_POST['report_id'] ?? 0 );
+	if ( ! $id ) wp_send_json_error( [ 'message' => 'Invalid report id.' ] );
+
+	global $wpdb;
+	// Cascade: the report's answers and any action items it generated go with it.
+	$wpdb->delete( site_pulse_table('report_answers'), [ 'report_id' => $id ] );
+	$wpdb->delete( site_pulse_table('action_items'),   [ 'report_id' => $id ] );
+	$deleted = $wpdb->delete( site_pulse_table('reports'), [ 'id' => $id ] );
+
+	if ( ! $deleted ) wp_send_json_error( [ 'message' => 'Report not found.' ] );
+
+	site_pulse_log( 'god_delete', sprintf( 'GOD deleted report #%d (and its answers + action items)', $id ) );
+	wp_send_json_success( [ 'message' => 'Report deleted.' ] );
+}
+
+add_action( 'wp_ajax_site_pulse_god_delete_action_item', 'site_pulse_ajax_god_delete_action_item' );
+function site_pulse_ajax_god_delete_action_item(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_is_god() ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+
+	$id = (int) ( $_POST['item_id'] ?? 0 );
+	if ( ! $id ) wp_send_json_error( [ 'message' => 'Invalid item id.' ] );
+
+	global $wpdb;
+	$deleted = $wpdb->delete( site_pulse_table('action_items'), [ 'id' => $id ] );
+	if ( ! $deleted ) wp_send_json_error( [ 'message' => 'Action item not found.' ] );
+
+	site_pulse_log( 'god_delete', sprintf( 'GOD deleted action item #%d', $id ) );
+	wp_send_json_success( [ 'message' => 'Action item deleted.' ] );
+}
+
+// Wipe one user's Site Pulse data + their profile row. Shared by the single-user delete and the
+// orphan purge. Does NOT touch the WordPress account — callers decide whether to remove that.
+function site_pulse_purge_user_data( int $uid ): void {
+	global $wpdb;
+
+	// Reports + their answers.
+	$report_ids = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM " . site_pulse_table('reports') . " WHERE user_id = %d", $uid ) );
+	if ( $report_ids ) {
+		$in = implode( ',', array_map( 'intval', $report_ids ) );
+		$wpdb->query( "DELETE FROM " . site_pulse_table('report_answers') . " WHERE report_id IN ($in)" );
+	}
+	$wpdb->delete( site_pulse_table('reports'), [ 'user_id' => $uid ] );
+	$wpdb->delete( site_pulse_table('action_items'), [ 'user_id' => $uid ] );
+
+	// Mileage entries + their legs.
+	$entry_ids = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM " . site_pulse_table('mileage_entries') . " WHERE user_id = %d", $uid ) );
+	if ( $entry_ids ) {
+		$in = implode( ',', array_map( 'intval', $entry_ids ) );
+		$wpdb->query( "DELETE FROM " . site_pulse_table('mileage_legs') . " WHERE entry_id IN ($in)" );
+	}
+	$wpdb->delete( site_pulse_table('mileage_entries'), [ 'user_id' => $uid ] );
+
+	// Their private/home destinations (never shared global ones), notifications, supervisor links.
+	$wpdb->query( $wpdb->prepare( "DELETE FROM " . site_pulse_table('mileage_locations') . " WHERE created_by = %d AND is_private = 1", $uid ) );
+	$wpdb->delete( site_pulse_table('notifications'), [ 'user_id' => $uid ] );
+	$wpdb->update( site_pulse_table('user_profiles'), [ 'supervisor_id' => 0 ], [ 'supervisor_id' => $uid ] );
+	$wpdb->delete( site_pulse_table('user_profiles'), [ 'user_id' => $uid ] );
+}
+
+// God-only HARD delete of a user + all their Site Pulse data + the WordPress account itself.
+// In normal use a user is set Inactive, never deleted — this exists purely so God can clean up
+// test/mistake accounts. Guarded so it can never nuke yourself, another God, or a WP admin.
+// Handles an ALREADY-orphaned profile too (WP account gone but the profile row lingers).
+add_action( 'wp_ajax_site_pulse_god_delete_user', 'site_pulse_ajax_god_delete_user' );
+function site_pulse_ajax_god_delete_user(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_is_god() ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+
+	$uid = (int) ( $_POST['user_id'] ?? 0 );
+	if ( ! $uid ) wp_send_json_error( [ 'message' => 'Invalid user id.' ] );
+	if ( $uid === get_current_user_id() ) wp_send_json_error( [ 'message' => 'You cannot delete your own account.' ] );
+	if ( site_pulse_is_superadmin( $uid ) ) wp_send_json_error( [ 'message' => 'The super-admin account cannot be deleted.' ] );
+	// A God account can only be deleted by the super-admin (battleplanweb); regular Gods can't.
+	if ( site_pulse_is_god( $uid ) && ! site_pulse_is_superadmin() ) {
+		wp_send_json_error( [ 'message' => 'Only the super-admin can delete a God account.' ] );
+	}
+
+	// $target may be false for an orphaned profile — that's fine, we still purge the profile.
+	$target = get_user_by( 'id', $uid );
+	if ( $target && in_array( 'administrator', (array) $target->roles, true ) ) {
+		wp_send_json_error( [ 'message' => 'WordPress administrators cannot be deleted here.' ] );
+	}
+
+	site_pulse_purge_user_data( $uid );
+
+	if ( $target ) {
+		require_once ABSPATH . 'wp-admin/includes/user.php';
+		wp_delete_user( $uid );
+	}
+
+	site_pulse_log( 'god_delete', sprintf( 'GOD deleted user #%d (%s) and all their data', $uid, $target ? $target->user_login : 'orphaned profile' ) );
+	wp_send_json_success( [ 'message' => $target ? 'User and all their data deleted.' : 'Orphaned profile purged.' ] );
+}
+
+// God-only bulk cleanup: purge every user_profiles row whose WordPress account no longer exists
+// (blank-name "ghost" users from earlier test deletes). God's own row and the WP-user JOIN keep
+// real accounts safe — only genuinely orphaned profiles match.
+add_action( 'wp_ajax_site_pulse_god_purge_orphans', 'site_pulse_ajax_god_purge_orphans' );
+function site_pulse_ajax_god_purge_orphans(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_is_god() ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+
+	global $wpdb;
+	$orphans = $wpdb->get_col(
+		"SELECT up.user_id FROM " . site_pulse_table('user_profiles') . " up
+		 LEFT JOIN {$wpdb->users} u ON u.ID = up.user_id
+		 WHERE u.ID IS NULL"
+	) ?: [];
+
+	foreach ( $orphans as $oid ) {
+		site_pulse_purge_user_data( (int) $oid );
+	}
+
+	site_pulse_log( 'god_delete', sprintf( 'GOD purged %d orphaned profile(s)', count( $orphans ) ) );
+	wp_send_json_success( [ 'message' => count( $orphans ) . ' orphaned profile(s) purged.', 'count' => count( $orphans ) ] );
+}
+
+// Super-admin only: promote another user into God mode. The God role is intentionally absent from
+// the Users role dropdown, so this is the sanctioned way to add a God. ONLY battleplanweb may do
+// it — other Gods cannot. Creates a profile if the user doesn't have one yet.
+add_action( 'wp_ajax_site_pulse_god_grant', 'site_pulse_ajax_god_grant' );
+function site_pulse_ajax_god_grant(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_is_superadmin() ) {
+		wp_send_json_error( [ 'message' => 'Only the super-admin can grant God access.' ] );
+	}
+
+	$uid = (int) ( $_POST['user_id'] ?? 0 );
+	if ( ! $uid ) wp_send_json_error( [ 'message' => 'Invalid user id.' ] );
+	if ( ! get_user_by( 'id', $uid ) ) wp_send_json_error( [ 'message' => 'User not found.' ] );
+
+	$god = site_pulse_get_role_by_slug( 'god' );
+	if ( ! $god ) wp_send_json_error( [ 'message' => 'God role is missing.' ] );
+
+	global $wpdb;
+	$now = current_time( 'mysql' );
+	if ( site_pulse_get_user_profile( $uid ) ) {
+		$wpdb->update( site_pulse_table('user_profiles'),
+			[ 'role_id' => (int) $god['id'], 'status' => 'active', 'updated_at' => $now ],
+			[ 'user_id' => $uid ]
+		);
+	} else {
+		$wpdb->insert( site_pulse_table('user_profiles'), [
+			'user_id'       => $uid,
+			'role_id'       => (int) $god['id'],
+			'location_id'   => 0,
+			'supervisor_id' => 0,
+			'status'        => 'active',
+			'created_at'    => $now,
+			'updated_at'    => $now,
+		] );
+	}
+
+	site_pulse_log( 'god_grant', sprintf( 'Super-admin granted God access to user #%d', $uid ) );
+	wp_send_json_success( [ 'message' => 'User now has God access.' ] );
+}
+
+// Super-admin only: revoke God from a user, demoting them to the lowest-privilege role. The account
+// and its data stay intact — only the God role is removed. battleplanweb can never be revoked here.
+add_action( 'wp_ajax_site_pulse_god_revoke', 'site_pulse_ajax_god_revoke' );
+function site_pulse_ajax_god_revoke(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_is_superadmin() ) {
+		wp_send_json_error( [ 'message' => 'Only the super-admin can revoke God access.' ] );
+	}
+
+	$uid = (int) ( $_POST['user_id'] ?? 0 );
+	if ( ! $uid ) wp_send_json_error( [ 'message' => 'Invalid user id.' ] );
+	if ( site_pulse_is_superadmin( $uid ) ) wp_send_json_error( [ 'message' => 'The super-admin cannot be revoked.' ] );
+	if ( ! site_pulse_is_god( $uid ) ) wp_send_json_error( [ 'message' => 'That user is not a God.' ] );
+
+	global $wpdb;
+	$fallback = $wpdb->get_row(
+		"SELECT id FROM " . site_pulse_table('roles') . " WHERE slug != 'god' AND is_active = 1 ORDER BY hierarchy_level ASC LIMIT 1"
+	);
+	if ( ! $fallback ) wp_send_json_error( [ 'message' => 'No role to demote to.' ] );
+
+	$wpdb->update( site_pulse_table('user_profiles'),
+		[ 'role_id' => (int) $fallback->id, 'updated_at' => current_time( 'mysql' ) ],
+		[ 'user_id' => $uid ]
+	);
+
+	site_pulse_log( 'god_revoke', sprintf( 'Super-admin revoked God from user #%d', $uid ) );
+	wp_send_json_success( [ 'message' => 'God access revoked. Edit the user to set their proper role.' ] );
 }
 
 
@@ -2754,6 +3182,11 @@ function site_pulse_mileage_save_distance( int $a, int $b, float $miles, string 
 }
 
 function site_pulse_mileage_google_key(): string {
+	// Site Pulse's own Google key (Site Settings) wins — it's the single key wired into the
+	// distance matrix, geocoding, the route map, and place search. Fall back to the framework
+	// constant/option so existing installs keep working until a key is entered here.
+	$k = (string) site_pulse_get_setting( 'google_api_key', '' );
+	if ( $k ) return $k;
 	if ( defined( '_PLACES_API' ) && _PLACES_API ) return (string) _PLACES_API;
 	return (string) get_option( 'bp_places_api', '' );
 }
@@ -3091,6 +3524,16 @@ function site_pulse_mileage_compute_route( int $from, int $to ): ?string {
 # Mileage — Manager AJAX
 --------------------------------------------------------------*/
 
+// Optional per-type marker images for the map (empty = fall back to the colored dot). Keyed by
+// the same buckets the map colors by: home / restaurant / vendor / office / other.
+function site_pulse_mileage_marker_icons(): array {
+	$out = [];
+	foreach ( [ 'home', 'restaurant', 'vendor', 'office', 'other' ] as $t ) {
+		$out[ $t ] = (string) site_pulse_get_setting( 'mileage_marker_' . $t, '' );
+	}
+	return $out;
+}
+
 add_action( 'wp_ajax_site_pulse_get_mileage_locations', 'site_pulse_ajax_get_mileage_locations' );
 function site_pulse_ajax_get_mileage_locations(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
@@ -3098,24 +3541,27 @@ function site_pulse_ajax_get_mileage_locations(): void {
 	$home_id = site_pulse_user_home_location_id( $user_id );
 
 	global $wpdb;
-	// Most home bases are shared stores (no privacy concern). Only locations explicitly
-	// flagged is_private (a work-from-home driver's residence) are PII — show those to
-	// their owner only (the driver they're the home base for), never to other drivers.
+	// Most home bases are shared stores (no privacy concern). Locations flagged is_private
+	// are restricted: a work-from-home driver's residence, or a personal destination a driver
+	// saved without sharing it globally. Show those to their owner only — the driver they're
+	// the home base for, or whoever created the personal destination — never to other drivers.
 	$rows = $wpdb->get_results( $wpdb->prepare(
-		"SELECT id, name, address, lat, lng, location_type, is_private, category, is_business, is_active, pinned_purposes, status, created_by
+		"SELECT id, name, address, lat, lng, location_type, is_private, category, is_business, is_active, pinned_purposes, marker_icon, status, created_by
 		 FROM " . site_pulse_table('mileage_locations') . "
 		 WHERE ( status = 'approved' OR ( status = 'pending' AND created_by = %d ) )
 		   AND is_active = 1
-		   AND ( is_private = 0 OR id = %d )
+		   AND ( is_private = 0 OR id = %d OR created_by = %d )
 		 ORDER BY status DESC, location_type, name",
-		$user_id, $home_id
+		$user_id, $home_id, $user_id
 	), ARRAY_A ) ?: [];
 
 	wp_send_json_success( [
 		'locations'        => $rows,
 		'rate'             => site_pulse_mileage_rate(),
 		'home_location_id' => $home_id,
+		'require_approval' => site_pulse_get_setting( 'mileage_require_approval', '1' ) === '1',
 		'purposes'         => site_pulse_mileage_purposes(),
+		'marker_icons'     => site_pulse_mileage_marker_icons(),
 	] );
 }
 
@@ -3135,12 +3581,20 @@ function site_pulse_ajax_add_mileage_location(): void {
 		wp_send_json_error( [ 'message' => 'Name and address are required.' ] );
 	}
 
+	// With approval off, the driver chooses whether the destination joins the shared global
+	// list (save_global) or stays personal to them (is_private). With approval on, save_global
+	// is irrelevant — it goes to the queue as a normal shared location.
+	$require_approval = site_pulse_get_setting( 'mileage_require_approval', '1' ) === '1';
+	$save_global      = isset( $_POST['save_global'] ) ? ( (int) $_POST['save_global'] ? 1 : 0 ) : 1;
+	$personal         = ( ! $require_approval && ! $save_global );
+
 	global $wpdb;
 	$now = current_time( 'mysql' );
 	$wpdb->insert( site_pulse_table('mileage_locations'), [
 		'name'          => $name,
 		'address'       => $address,
 		'location_type' => in_array( $type, [ 'restaurant', 'vendor', 'other' ], true ) ? $type : 'vendor',
+		'is_private'    => $personal ? 1 : 0,
 		'category'      => $category,
 		'is_business'   => $is_business,
 		'notes'         => $notes,
@@ -3150,6 +3604,15 @@ function site_pulse_ajax_add_mileage_location(): void {
 		'updated_at'    => $now,
 	] );
 	$id = (int) $wpdb->insert_id;
+
+	// When admin approval is turned off, the destination goes straight into the database —
+	// geocoded, distance-priced, and immediately usable on entries. No admin notification.
+	// A personal save is geocoded and priced the same way but kept private to its creator.
+	if ( ! $require_approval ) {
+		site_pulse_mileage_approve_location( $id, $user_id );
+		site_pulse_log( 'mileage_location_added', sprintf( 'Added location (%s): %s', $personal ? 'personal' : 'auto-approved', $name ), [ 'location_id' => $id ] );
+		wp_send_json_success( [ 'id' => $id, 'name' => $name, 'address' => $address, 'status' => 'approved', 'is_private' => $personal ? 1 : 0 ] );
+	}
 
 	site_pulse_log( 'mileage_location_proposed', sprintf( 'Proposed location: %s', $name ), [ 'location_id' => $id ] );
 
@@ -3515,29 +3978,92 @@ function site_pulse_mileage_admin_check(): bool {
 	return false;
 }
 
+// Backfill coordinates for approved destinations that have none — typically the seeded
+// restaurants, which were inserted without geocoding, so they never appeared on the map.
+// Geocode only (fast); leg distances still compute lazily when a day is saved.
+add_action( 'wp_ajax_site_pulse_admin_geocode_missing', 'site_pulse_ajax_admin_geocode_missing' );
+function site_pulse_ajax_admin_geocode_missing(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+
+	global $wpdb;
+	// Cap the batch so a long list can't blow the PHP timeout; the caller can run it again.
+	$rows = $wpdb->get_results(
+		"SELECT id, address FROM " . site_pulse_table('mileage_locations') . "
+		 WHERE status = 'approved' AND ( lat IS NULL OR lng IS NULL )
+		 ORDER BY id LIMIT 60",
+		ARRAY_A
+	) ?: [];
+
+	$now = current_time( 'mysql' );
+	$geocoded = 0; $failed = 0;
+	foreach ( $rows as $row ) {
+		$geo = $row['address'] ? site_pulse_mileage_geocode( $row['address'] ) : null;
+		if ( $geo ) {
+			$wpdb->update( site_pulse_table('mileage_locations'),
+				[ 'lat' => $geo['lat'], 'lng' => $geo['lng'], 'updated_at' => $now ],
+				[ 'id' => (int) $row['id'] ]
+			);
+			$geocoded++;
+		} else {
+			$failed++;
+		}
+	}
+
+	$remaining = (int) $wpdb->get_var(
+		"SELECT COUNT(*) FROM " . site_pulse_table('mileage_locations') . "
+		 WHERE status = 'approved' AND ( lat IS NULL OR lng IS NULL )"
+	);
+
+	$msg = $geocoded . ' location' . ( $geocoded === 1 ? '' : 's' ) . ' geocoded.';
+	if ( $failed )    $msg .= ' ' . $failed . ' could not be geocoded — check the address.';
+	if ( $remaining ) $msg .= ' ' . $remaining . ' still need it — run again.';
+	if ( ! $geocoded && ! $failed ) $msg = 'All destinations already have map coordinates.';
+
+	site_pulse_log( 'mileage_geocode_backfill', sprintf( 'Geocoded %d, failed %d, remaining %d', $geocoded, $failed, $remaining ) );
+	wp_send_json_success( [ 'message' => $msg, 'geocoded' => $geocoded, 'failed' => $failed, 'remaining' => $remaining ] );
+}
+
 add_action( 'wp_ajax_site_pulse_admin_get_mileage_locations', 'site_pulse_ajax_admin_get_mileage_locations' );
 function site_pulse_ajax_admin_get_mileage_locations(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	if ( ! site_pulse_mileage_admin_check() ) return;
 
 	global $wpdb;
+	// The global destination database. Shared destinations (is_private = 0) and genuine
+	// home-base residences belong here; a driver's personal "don't share" destination does
+	// not — it's theirs alone, surfaced only on their own entries, never the global list.
 	$rows = $wpdb->get_results(
 		"SELECT ml.*, u.display_name AS created_by_name
 		 FROM " . site_pulse_table('mileage_locations') . " ml
 		 LEFT JOIN {$wpdb->users} u ON u.ID = ml.created_by
+		 WHERE ml.is_private = 0
+		    OR ml.id IN ( SELECT mileage_home_location_id FROM " . site_pulse_table('user_profiles') . " WHERE mileage_home_location_id IS NOT NULL )
 		 ORDER BY FIELD(ml.status,'pending','approved'), ml.location_type, ml.name",
 		ARRAY_A
 	) ?: [];
 
 	wp_send_json_success( [
-		'locations' => $rows,
-		'rate'      => site_pulse_mileage_rate(),
-		'purposes'  => site_pulse_mileage_purposes(),
+		'locations'        => $rows,
+		'rate'             => site_pulse_mileage_rate(),
+		'purposes'         => site_pulse_mileage_purposes(),
+		'require_approval' => site_pulse_get_setting( 'mileage_require_approval', '1' ) === '1',
+		'marker_icons'     => site_pulse_mileage_marker_icons(),
 		'reminders' => [
 			'enabled' => site_pulse_get_setting( 'mileage_reminders_enabled', '0' ) === '1',
 			'hour'    => (int) site_pulse_get_setting( 'mileage_reminder_hour', '7' ),
 		],
 	] );
+}
+
+add_action( 'wp_ajax_site_pulse_admin_save_mileage_approval', 'site_pulse_ajax_admin_save_mileage_approval' );
+function site_pulse_ajax_admin_save_mileage_approval(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+
+	$require = ! empty( $_POST['require_approval'] ) ? '1' : '0';
+	site_pulse_set_setting( 'mileage_require_approval', $require );
+	wp_send_json_success( [ 'require_approval' => $require === '1' ] );
 }
 
 add_action( 'wp_ajax_site_pulse_admin_save_mileage_reminders', 'site_pulse_ajax_admin_save_mileage_reminders' );
@@ -3570,6 +4096,8 @@ function site_pulse_ajax_admin_update_mileage_location(): void {
 	if ( isset( $_POST['is_business'] ) )   $fields['is_business']   = (int) $_POST['is_business'] ? 1 : 0;
 	if ( isset( $_POST['is_active'] ) )     $fields['is_active']     = (int) $_POST['is_active'] ? 1 : 0;
 	if ( isset( $_POST['notes'] ) )         $fields['notes']         = sanitize_textarea_field( $_POST['notes'] );
+	// Per-location marker image override (empty clears it → falls back to the per-type default).
+	if ( isset( $_POST['marker_icon'] ) )   $fields['marker_icon']   = esc_url_raw( trim( (string) $_POST['marker_icon'] ) );
 
 	if ( isset( $_POST['pinned_purposes'] ) ) {
 		$pp = $_POST['pinned_purposes'];
@@ -3590,8 +4118,46 @@ function site_pulse_ajax_admin_update_mileage_location(): void {
 	wp_send_json_success();
 }
 
-add_action( 'wp_ajax_site_pulse_admin_approve_mileage_location', 'site_pulse_ajax_admin_approve_mileage_location' );
-function site_pulse_ajax_admin_approve_mileage_location(): void {
+add_action( 'wp_ajax_site_pulse_admin_add_mileage_location', 'site_pulse_ajax_admin_add_mileage_location' );
+function site_pulse_ajax_admin_add_mileage_location(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+
+	$name    = sanitize_text_field( $_POST['name'] ?? '' );
+	$address = sanitize_text_field( $_POST['address'] ?? '' );
+	if ( ! $name || ! $address ) wp_send_json_error( [ 'message' => 'Name and address are required.' ] );
+
+	$type        = sanitize_text_field( $_POST['location_type'] ?? 'vendor' );
+	$category    = sanitize_text_field( $_POST['category'] ?? '' );
+	$is_business = isset( $_POST['is_business'] ) ? ( (int) $_POST['is_business'] ? 1 : 0 ) : 1;
+	$notes       = sanitize_textarea_field( $_POST['notes'] ?? '' );
+
+	global $wpdb;
+	$now = current_time( 'mysql' );
+	$wpdb->insert( site_pulse_table('mileage_locations'), [
+		'name'          => $name,
+		'address'       => $address,
+		'location_type' => in_array( $type, [ 'restaurant', 'vendor', 'other' ], true ) ? $type : 'vendor',
+		'category'      => $category,
+		'is_business'   => $is_business,
+		'notes'         => $notes,
+		'status'        => 'pending',
+		'created_by'    => get_current_user_id(),
+		'created_at'    => $now,
+		'updated_at'    => $now,
+	] );
+	$id = (int) $wpdb->insert_id;
+
+	// Admin-added destinations skip the approval queue entirely — approved on the spot,
+	// geocoded and distance-priced immediately.
+	$res = site_pulse_mileage_approve_location( $id, get_current_user_id() );
+	site_pulse_log( 'mileage_location_added', sprintf( 'Admin added location: %s', $name ), [ 'location_id' => $id ] );
+
+	wp_send_json_success( [ 'id' => $id, 'distances_added' => $res['distances_added'] ?? 0 ] );
+}
+
+add_action( 'wp_ajax_site_pulse_admin_delete_mileage_location', 'site_pulse_ajax_admin_delete_mileage_location' );
+function site_pulse_ajax_admin_delete_mileage_location(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	if ( ! site_pulse_mileage_admin_check() ) return;
 
@@ -3603,6 +4169,44 @@ function site_pulse_ajax_admin_approve_mileage_location(): void {
 		"SELECT * FROM " . site_pulse_table('mileage_locations') . " WHERE id = %d", $id
 	), ARRAY_A );
 	if ( ! $loc ) wp_send_json_error( [ 'message' => 'Not found.' ] );
+
+	// Entries whose legs reference this location must be recalculated once it's gone.
+	$affected_entries = $wpdb->get_col( $wpdb->prepare(
+		"SELECT DISTINCT entry_id FROM " . site_pulse_table('mileage_legs') . " WHERE from_location_id = %d OR to_location_id = %d",
+		$id, $id
+	) ) ?: [];
+
+	$wpdb->delete( site_pulse_table('mileage_legs'), [ 'from_location_id' => $id ] );
+	$wpdb->delete( site_pulse_table('mileage_legs'), [ 'to_location_id'   => $id ] );
+	$wpdb->query( $wpdb->prepare(
+		"DELETE FROM " . site_pulse_table('mileage_distances') . " WHERE from_id = %d OR to_id = %d", $id, $id
+	) );
+	$wpdb->delete( site_pulse_table('mileage_locations'), [ 'id' => $id ] );
+
+	foreach ( $affected_entries as $eid ) {
+		site_pulse_mileage_recalc_entry( (int) $eid );
+	}
+
+	site_pulse_log( 'mileage_location_deleted',
+		sprintf( 'Deleted location: %s', $loc['name'] ),
+		[ 'name' => $loc['name'], 'address' => $loc['address'], 'entries_affected' => count( $affected_entries ) ]
+	);
+
+	wp_send_json_success( [ 'entries_affected' => count( $affected_entries ) ] );
+}
+
+/**
+ * Promote a mileage location to "approved": geocode if needed, flip status, then compute its
+ * distances and finalize any pending legs that reference it. Shared by the admin approve action
+ * and the auto-approve path used when admin approval is turned off. Returns the location row plus
+ * the distance/entry counts, or null if the id doesn't exist.
+ */
+function site_pulse_mileage_approve_location( int $id, int $approver_id ): ?array {
+	global $wpdb;
+	$loc = $wpdb->get_row( $wpdb->prepare(
+		"SELECT * FROM " . site_pulse_table('mileage_locations') . " WHERE id = %d", $id
+	), ARRAY_A );
+	if ( ! $loc ) return null;
 
 	if ( $loc['lat'] === null || $loc['lng'] === null ) {
 		$geo = site_pulse_mileage_geocode( (string) $loc['address'] );
@@ -3618,7 +4222,7 @@ function site_pulse_ajax_admin_approve_mileage_location(): void {
 	$wpdb->update( site_pulse_table('mileage_locations'),
 		[
 			'status'      => 'approved',
-			'approved_by' => get_current_user_id(),
+			'approved_by' => $approver_id,
 			'approved_at' => $now,
 			'updated_at'  => $now,
 		],
@@ -3628,6 +4232,25 @@ function site_pulse_ajax_admin_approve_mileage_location(): void {
 	$distances_added = site_pulse_mileage_compute_distances_for( $id );
 	$entries_updated = site_pulse_mileage_finalize_legs_for_location( $id );
 
+	return [
+		'loc'             => $loc,
+		'distances_added' => count( $distances_added ),
+		'entries_updated' => count( $entries_updated ),
+	];
+}
+
+add_action( 'wp_ajax_site_pulse_admin_approve_mileage_location', 'site_pulse_ajax_admin_approve_mileage_location' );
+function site_pulse_ajax_admin_approve_mileage_location(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+
+	$id = (int) ( $_POST['id'] ?? 0 );
+	if ( ! $id ) wp_send_json_error( [ 'message' => 'Invalid id.' ] );
+
+	$res = site_pulse_mileage_approve_location( $id, get_current_user_id() );
+	if ( ! $res ) wp_send_json_error( [ 'message' => 'Not found.' ] );
+
+	$loc = $res['loc'];
 	if ( (int) $loc['created_by'] ) {
 		site_pulse_notify( (int) $loc['created_by'], 'mileage_approved',
 			sprintf( 'Your mileage location was approved: %s', $loc['name'] ),
@@ -3636,12 +4259,12 @@ function site_pulse_ajax_admin_approve_mileage_location(): void {
 	}
 	site_pulse_log( 'mileage_location_approved',
 		sprintf( 'Approved location: %s', $loc['name'] ),
-		[ 'location_id' => $id, 'distances_added' => count( $distances_added ), 'entries_updated' => count( $entries_updated ) ]
+		[ 'location_id' => $id, 'distances_added' => $res['distances_added'], 'entries_updated' => $res['entries_updated'] ]
 	);
 
 	wp_send_json_success( [
-		'distances_added' => count( $distances_added ),
-		'entries_updated' => count( $entries_updated ),
+		'distances_added' => $res['distances_added'],
+		'entries_updated' => $res['entries_updated'],
 	] );
 }
 
@@ -3871,7 +4494,9 @@ function site_pulse_ajax_admin_test_mileage_api(): void {
 	$key = site_pulse_mileage_google_key();
 
 	$key_source = 'NOT SET';
-	if ( defined( '_PLACES_API' ) && _PLACES_API ) {
+	if ( site_pulse_get_setting( 'google_api_key', '' ) ) {
+		$key_source = 'Site Settings → Google API Key';
+	} elseif ( defined( '_PLACES_API' ) && _PLACES_API ) {
 		$key_source = '_PLACES_API constant (wp-config: BP_PLACES_KEY)';
 	} elseif ( get_option( 'bp_places_api', '' ) ) {
 		$key_source = 'wp option: bp_places_api';
@@ -3885,7 +4510,7 @@ function site_pulse_ajax_admin_test_mileage_api(): void {
 	];
 
 	if ( ! $key ) {
-		$result['error'] = "No API key found. Add define('BP_PLACES_KEY', 'AIza...') to wp-config.php, or set the wp option 'bp_places_api'.";
+		$result['error'] = "No API key found. Enter a Google API Key in Site Settings, or define('BP_PLACES_KEY', 'AIza...') in wp-config.php.";
 		wp_send_json_success( $result );
 	}
 

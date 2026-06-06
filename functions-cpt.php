@@ -355,9 +355,22 @@ function battleplan_add_acf_fields() {
 // # Daily "new reviews" digest to the client
 // ---------------------------------------------------------
 // Companion to the jobsite digest (includes-jobsite-geo.php): each morning (~9am)
-// email the client any testimonials added in the last 24h, so collecting reviews
-// has a visible payoff. Lives here (always-loaded) because testimonials exist on
-// every site, not just jobsite_geo ones.
+// email the client any newly-added testimonials, so collecting reviews has a
+// visible payoff. Lives here (always-loaded) because testimonials exist on every
+// site, not just jobsite_geo ones.
+//
+// NOTIFY-ONCE model (not a time window): each testimonial is emailed exactly one
+// time, ever — tracked by a _bp_reviews_notified flag on the post. We dropped the
+// old "published in the last 24h" window because it silently missed real additions
+// (back-dated reviews fall outside it, and a just-deployed cron's first run rarely
+// lines up with when a batch was added).
+//
+// FLOOR GUARD: bp_reviews_notify_floor() — never reach back past this cutoff, so
+// turning the digest on for a site with 100 existing testimonials doesn't blast all
+// of them. Defaults to "now" the first time the digest runs (nothing pre-existing is
+// emailed); set the bp_reviews_notify_since option (or BP_REVIEWS_NOTIFY_SINCE
+// constant / bp_reviews_notify_since filter) to an earlier date to catch a recent
+// batch on first enable.
 //
 // Opt-OUT per site, controlled by the bp_reviews_digest option:
 //   'false'            -> off (don't send)
@@ -394,15 +407,17 @@ function bp_reviews_send_daily_digest() {
 		: ( ! empty($customer['email']) && is_email($customer['email']) ? $customer['email'] : '' );
 	if ( ! $to ) return;
 
-	// Testimonials published in the last 24h.
-	$since   = date( 'Y-m-d H:i:s', current_time('timestamp') - DAY_IN_SECONDS );
+	// New testimonials = published, not yet flagged as notified, and not older than
+	// the floor (so we never blast a site's pre-existing back catalog).
+	$floor   = bp_reviews_notify_floor();
 	$reviews = get_posts([
 		'post_type'      => 'testimonials',
 		'post_status'    => 'publish',
 		'posts_per_page' => 50,
 		'orderby'        => 'date',
 		'order'          => 'DESC',
-		'date_query'     => [[ 'column' => 'post_date', 'after' => $since ]],
+		'date_query'     => [[ 'column' => 'post_date', 'after' => date('Y-m-d H:i:s', $floor), 'inclusive' => true ]],
+		'meta_query'     => [[ 'key' => '_bp_reviews_notified', 'compare' => 'NOT EXISTS' ]],
 	]);
 	if ( empty($reviews) ) return; // nothing new — no empty digests
 
@@ -476,4 +491,31 @@ function bp_reviews_send_daily_digest() {
 	$headers[] = 'Bcc: email@bp-webdev.com';
 
 	wp_mail($to, $subject, $message, $headers);
+
+	// Flag every testimonial in this digest so it is never emailed again. We flag
+	// regardless of the wp_mail() return: re-including a backlog on the next run is a
+	// worse failure than a one-off missed send (which is visible via the Bcc anyway).
+	foreach ($reviews as $r) {
+		update_post_meta($r->ID, '_bp_reviews_notified', current_time('mysql'));
+	}
+}
+
+// The "don't reach back past here" cutoff for the reviews digest. Resolution order:
+//   1. BP_REVIEWS_NOTIFY_SINCE constant / bp_reviews_notify_since filter (explicit override)
+//   2. bp_reviews_notify_since option (persisted)
+//   3. first run -> seed the option to "now" and use it (so a site's existing
+//      testimonials are never blasted; only ones added afterward get emailed)
+// To catch an already-added recent batch when first enabling, set #1 or #2 to an
+// earlier date, e.g. update_option('bp_reviews_notify_since', '2026-06-02 00:00:00').
+function bp_reviews_notify_floor(): int {
+	$override = apply_filters( 'bp_reviews_notify_since',
+		defined('BP_REVIEWS_NOTIFY_SINCE') ? BP_REVIEWS_NOTIFY_SINCE : null );
+	if ( $override ) return is_numeric($override) ? (int) $override : (int) strtotime($override);
+
+	$stored = get_option('bp_reviews_notify_since');
+	if ( $stored ) return is_numeric($stored) ? (int) $stored : (int) strtotime($stored);
+
+	$now = current_time('timestamp');
+	update_option('bp_reviews_notify_since', date('Y-m-d H:i:s', $now));
+	return $now;
 }

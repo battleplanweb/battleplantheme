@@ -2091,7 +2091,10 @@ document.addEventListener("DOMContentLoaded", function () {
 			});
 		}
 		subMenu.classList.add("active");
-		subMenu.style.height = `${subH}px`;
+		// Measure the height live (scrollHeight = full content height even while collapsed) so the
+		// open height is always correct. The passed subH is cached at page load — before a
+		// swap-loaded heading font finishes — so it can be a few px short and clip the last item.
+		subMenu.style.height = `${subMenu.scrollHeight || subH}px`;
 		setTimeout(() => {
 			subMenu.previousElementSibling.href = subMenu.previousElementSibling.getAttribute('data-href');
 		}, 500);

@@ -114,51 +114,50 @@
 }
 
 .testimonials-platform-facebook {
-	background:                                                url('/wp-content/themes/battleplantheme/common/logos/facebook.webp');
+	background:                                                url('/wp-content/themes/battleplantheme/common/logos/facebook.webp') 50% 50% no-repeat;
 }
 
 .testimonials-platform-google {
-	background:                                                url('/wp-content/themes/battleplantheme/common/logos/google.webp');
+	background:                                                url('/wp-content/themes/battleplantheme/common/logos/google.webp') 50% 50% no-repeat;
 }
 
 .testimonials-platform-yelp {
-	background:                                                url('/wp-content/themes/battleplantheme/common/logos/yelp.webp');
+	background:                                                url('/wp-content/themes/battleplantheme/common/logos/yelp.webp') 50% 50% no-repeat;
 }
 
 .testimonials-platform-nextdoor {
-	background:                                                url('/wp-content/themes/battleplantheme/common/logos/nextdoor.webp');
+	background:                                                url('/wp-content/themes/battleplantheme/common/logos/nextdoor.webp') 50% 50% no-repeat;
 }
 
 .testimonials-platform-yp {
-	background:                                                url('/wp-content/themes/battleplantheme/common/logos/yp.webp');
-}
+	background:                                                url('/wp-content/themes/battleplantheme/common/logos/yp.webp') 50% 50% no-repeat;
 
 .testimonials-platform-jobber {
-	background:                                                url('/wp-content/themes/battleplantheme/common/logos/jobber.webp');
+	background:                                                url('/wp-content/themes/battleplantheme/common/logos/jobber.webp') 50% 50% no-repeat;
 }
 
 .testimonials-platform-angi {
-	background:                                                url('/wp-content/themes/battleplantheme/common/logos/angi.webp');
+	background:                                                url('/wp-content/themes/battleplantheme/common/logos/angi.webp') 50% 50% no-repeat;
 }
 
 .testimonials-platform-houzz {
-	background:                                                url('/wp-content/themes/battleplantheme/common/logos/houzz.webp');
+	background:                                                url('/wp-content/themes/battleplantheme/common/logos/houzz.webp') 50% 50% no-repeat;
 }
 
 .testimonials-platform-home_advisor {
-	background:                                                url('/wp-content/themes/battleplantheme/common/logos/home_advisor.webp');
+	background:                                                url('/wp-content/themes/battleplantheme/common/logos/home_advisor.webp') 50% 50% no-repeat;
 }
 
 .testimonials-platform-housecall_pro {
-	background:                                                url('/wp-content/themes/battleplantheme/common/logos/housecallpro.webp');
+	background:                                                url('/wp-content/themes/battleplantheme/common/logos/housecallpro.webp') 50% 50% no-repeat;
 }
 
 .testimonials-platform-bbb {
-	background:                                                url('/wp-content/themes/battleplantheme/common/logos/bbb.webp');
+	background:                                                url('/wp-content/themes/battleplantheme/common/logos/bbb.webp') 50% 50% no-repeat;
 }
 
 .testimonials-platform-fiverr {
-	background:                                                url('/wp-content/themes/battleplantheme/common/logos/fiverr.webp');
+	background:                                                url('/wp-content/themes/battleplantheme/common/logos/fiverr.webp') 50% 50% no-repeat;
 }
 
 .testimonials-platform {

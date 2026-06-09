@@ -21,9 +21,9 @@ if ( $is_god && ! $impersonating ) {
 	// plus god_mode. Never a hand-maintained subset that can drift out of date.
 	$caps = array_keys( site_pulse_capability_catalog() );
 	$caps[] = 'god_mode';
-	$role_label = 'God';
+	$role_label = 'Odinson';
 } elseif ( $is_wp_admin && ! $role ) {
-	$caps = [ 'view_all_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'view_ai_insights', 'submit_reports', 'view_own_reports', 'manage_mileage', 'submit_mileage' ];
+	$caps = [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'view_ai_insights', 'submit_reports', 'view_own_reports', 'manage_mileage', 'submit_mileage' ];
 	$role_label = 'Administrator';
 } else {
 	$caps = $role ? ( json_decode( $role['capabilities'], true ) ?: [] ) : [];
@@ -35,6 +35,12 @@ $company_name = site_pulse_get_setting( 'company_name', '' );
 $logo_url     = site_pulse_get_setting( 'login_logo_url', '' );
 $display_name = $user ? esc_html( $user->first_name ?: $user->display_name ) : 'User';
 $loc_name     = $location ? esc_html( $location['name'] ) : '';
+
+// Report-access gates, driven by the two report-type caps.
+$cap_view_gm            = in_array( 'view_gm_reports', $caps, true );
+$cap_view_sup           = in_array( 'view_supervisor_reports', $caps, true );
+$cap_view_other_reports = $cap_view_gm || $cap_view_sup;
+$cap_reports_access     = in_array( 'submit_reports', $caps, true ) || in_array( 'view_own_reports', $caps, true ) || $cap_view_other_reports;
 
 $nonce_field = wp_nonce_field( 'site_pulse_nonce', 'site_pulse_nonce_field', true, false );
 
@@ -73,12 +79,13 @@ $nav[] = [
 	'slug'  => 'reports',
 	'label' => 'Stores',
 	'icon'  => 'clipboard',
-	'show'  => in_array( 'submit_reports', $caps ) || in_array( 'view_own_reports', $caps ) || in_array( 'view_all_reports', $caps ) || in_array( 'view_team_reports', $caps ),
+	'show'  => $cap_reports_access,
 	'children' => [
-		[ 'slug' => 'reports-my',     'label' => 'My Reports',      'show' => in_array( 'submit_reports', $caps ) || in_array( 'view_own_reports', $caps ) ],
-		[ 'slug' => 'reports-my',     'label' => 'New Report',      'action' => 'new-report', 'show' => in_array( 'submit_reports', $caps ) ],
-		[ 'slug' => 'reports-review', 'label' => 'GM Reports',      'show' => in_array( 'view_team_reports', $caps ) || in_array( 'view_all_reports', $caps ) ],
-		[ 'slug' => 'action-items',  'label' => 'Action Items',    'show' => in_array( 'submit_reports', $caps ) || in_array( 'view_own_reports', $caps ) || in_array( 'view_team_reports', $caps ) || in_array( 'view_all_reports', $caps ) ],
+		[ 'slug' => 'reports-my',     'label' => 'My Reports',          'show' => in_array( 'submit_reports', $caps ) || in_array( 'view_own_reports', $caps ) ],
+		[ 'slug' => 'reports-my',     'label' => 'New Report',          'action' => 'new-report', 'show' => in_array( 'submit_reports', $caps ) ],
+		[ 'slug' => 'reports-review', 'label' => 'GM Reports',          'action' => 'review-gm',  'show' => $cap_view_gm ],
+		[ 'slug' => 'reports-review', 'label' => 'Supervisor Reports',  'action' => 'review-sup', 'show' => $cap_view_sup ],
+		[ 'slug' => 'action-items',  'label' => 'Action Items',        'show' => $cap_reports_access ],
 	],
 ];
 
@@ -111,14 +118,14 @@ $nav[] = [
 
 $nav[] = [
 	'slug'  => 'admin',
-	'label' => 'Admin',
+	'label' => 'Settings',
 	'icon'  => 'settings',
 	'show'  => in_array( 'manage_locations', $caps ) || in_array( 'manage_users', $caps ) || in_array( 'manage_settings', $caps ) || in_array( 'manage_mileage', $caps ),
 	'children' => [
 		[ 'slug' => 'admin-users',     'label' => 'Users',            'icon' => 'users',   'show' => in_array( 'manage_users', $caps ) ],
 		[ 'slug' => 'admin-tiers',     'label' => 'Tiers',            'icon' => 'layers',  'show' => in_array( 'manage_settings', $caps ) ],
 		[ 'slug' => 'admin-locations', 'label' => 'Home Bases',       'icon' => 'mappin',  'show' => in_array( 'manage_locations', $caps ) ],
-		[ 'slug' => 'admin-templates', 'label' => 'GM Report Settings','icon' => 'file',    'show' => in_array( 'manage_templates', $caps ) ],
+		[ 'slug' => 'admin-templates', 'label' => 'Report Settings',   'icon' => 'file',    'show' => in_array( 'manage_templates', $caps ) ],
 		[ 'slug' => 'admin-mileage',   'label' => 'Mileage Settings', 'icon' => 'car',     'show' => in_array( 'manage_mileage', $caps ) ],
 		[ 'slug' => 'admin-settings',  'label' => 'Site Settings',    'icon' => 'sliders', 'show' => in_array( 'manage_settings', $caps ) ],
 	],
@@ -133,10 +140,10 @@ $printPage .= '<div id="sp-app">';
 if ( $is_god ) {
 	$all_users = site_pulse_get_all_users( true, false );
 	$printPage .= '<div class="sp-god-bar" id="sp-god-bar">';
-	$printPage .=   '<span class="sp-god-label">God Mode</span>';
+	$printPage .=   '<span class="sp-god-label">Odin Mode</span>';
 	$printPage .=   '<span class="sp-god-viewing">Viewing as:</span>';
 	$printPage .=   '<select class="sp-god-select" id="sp-god-user-select">';
-	$printPage .=     '<option value="0"' . ( ! $impersonating ? ' selected' : '' ) . '>Myself (God)</option>';
+	$printPage .=     '<option value="0"' . ( ! $impersonating ? ' selected' : '' ) . '>Myself (Odinson)</option>';
 	foreach ( $all_users as $u ) {
 		$selected = $impersonating && (int) $u['user_id'] === $user_id ? ' selected' : '';
 		$printPage .= '<option value="' . (int) $u['user_id'] . '"' . $selected . '>' . esc_html( $u['display_name'] ) . ' — ' . esc_html( $u['role_label'] ?? '' ) . '</option>';
@@ -215,7 +222,7 @@ $printPage .= '<header class="sp-topbar" id="sp-topbar">';
 $printPage .=   '<div class="sp-topbar-left">';
 $printPage .=     $svg( $icons['user'] );
 $printPage .=     '<span class="sp-topbar-name">' . $display_name . '</span>';
-if ( $role_label && $role_label !== 'God' ) {
+if ( $role_label ) {
 	$printPage .= '<span class="sp-topbar-divider">&middot;</span>';
 	$printPage .= '<span class="sp-topbar-role">' . $role_label . '</span>';
 }
@@ -251,7 +258,7 @@ $printPage .=   '<div class="sp-panel-header"><h2>Dashboard</h2></div>';
 $printPage .=   '<div class="sp-dashboard-widgets">';
 
 // Reports Widget
-if ( in_array( 'submit_reports', $caps ) || in_array( 'view_own_reports', $caps ) || in_array( 'view_team_reports', $caps ) || in_array( 'view_all_reports', $caps ) ) {
+if ( $cap_reports_access ) {
 	$printPage .= '<div class="sp-widget" id="sp-widget-reports">';
 	$printPage .=   '<div class="sp-widget-header">';
 	$printPage .=     '<h3>Recent Reports</h3>';
@@ -262,7 +269,7 @@ if ( in_array( 'submit_reports', $caps ) || in_array( 'view_own_reports', $caps 
 }
 
 // Action Items Widget
-if ( in_array( 'submit_reports', $caps ) || in_array( 'view_own_reports', $caps ) || in_array( 'view_team_reports', $caps ) || in_array( 'view_all_reports', $caps ) ) {
+if ( $cap_reports_access ) {
 	$printPage .= '<div class="sp-widget" id="sp-widget-actions">';
 	$printPage .=   '<div class="sp-widget-header">';
 	$printPage .=     '<h3>Open Action Items</h3>';
@@ -313,9 +320,9 @@ if ( in_array( 'submit_reports', $caps ) || in_array( 'view_own_reports', $caps 
 }
 
 // Review Reports Panel
-if ( in_array( 'view_team_reports', $caps ) || in_array( 'view_all_reports', $caps ) ) {
+if ( $cap_view_other_reports ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-reports-review">';
-	$printPage .=   '<div class="sp-panel-header"><h2>GM Reports</h2></div>';
+	$printPage .=   '<div class="sp-panel-header"><h2 id="sp-review-title">GM Reports</h2></div>';
 	$printPage .=   '<div class="sp-report-filters">';
 	$printPage .= '<select id="sp-review-filter-location" class="sp-select"><option value="">All Locations</option></select>';
 	$printPage .=     '<select id="sp-review-filter-user" class="sp-select"><option value="">All Submitters</option></select>';
@@ -333,11 +340,11 @@ if ( in_array( 'view_team_reports', $caps ) || in_array( 'view_all_reports', $ca
 }
 
 // Action Items Panel
-if ( in_array( 'submit_reports', $caps ) || in_array( 'view_own_reports', $caps ) || in_array( 'view_team_reports', $caps ) || in_array( 'view_all_reports', $caps ) ) {
+if ( $cap_reports_access ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-action-items">';
 	$printPage .=   '<div class="sp-panel-header"><h2>Action Items</h2></div>';
 	$printPage .=   '<div class="sp-report-filters">';
-	if ( in_array( 'view_team_reports', $caps ) || in_array( 'view_all_reports', $caps ) ) {
+	if ( $cap_view_other_reports ) {
 		$printPage .= '<select id="sp-action-filter-location" class="sp-select"><option value="">All Locations</option></select>';
 		$printPage .= '<select id="sp-action-filter-user" class="sp-select"><option value="">All Submitters</option></select>';
 	}
@@ -371,7 +378,7 @@ if ( in_array( 'view_analytics', $caps ) ) {
 	$printPage .=   '</div>';
 
 	// Analytics Filters
-	if ( in_array( 'view_team_reports', $caps ) || in_array( 'view_all_reports', $caps ) ) {
+	if ( $cap_view_other_reports ) {
 		$printPage .= '<div class="sp-report-filters" style="margin-bottom:20px;">';
 		$printPage .=   '<select id="sp-analytics-filter-location" class="sp-select"><option value="">All Locations</option></select>';
 		$printPage .= '</div>';

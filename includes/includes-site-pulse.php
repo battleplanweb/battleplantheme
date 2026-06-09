@@ -24,7 +24,7 @@ require_once get_template_directory() . '/prompts/prompts-site-pulse.php';
 # Constants & Setup
 --------------------------------------------------------------*/
 
-define( 'SITE_PULSE_DB_VERSION', '1.12' );
+define( 'SITE_PULSE_DB_VERSION', '1.17' );
 
 function site_pulse_table( string $name ): string {
 	return $GLOBALS['wpdb']->prefix . 'site_pulse_' . $name;
@@ -311,6 +311,8 @@ function site_pulse_install_db(): void {
 		entry_date date NOT NULL,
 		total_miles decimal(10,2) NOT NULL DEFAULT 0,
 		reimbursement_amount decimal(10,2) NOT NULL DEFAULT 0,
+		total_tolls decimal(10,2) NOT NULL DEFAULT 0,
+		total_trailer decimal(10,2) NOT NULL DEFAULT 0,
 		rate_used decimal(6,4) DEFAULT NULL,
 		auto_return_home tinyint(1) NOT NULL DEFAULT 1,
 		notes text DEFAULT NULL,
@@ -329,6 +331,8 @@ function site_pulse_install_db(): void {
 		miles decimal(8,2) DEFAULT NULL,
 		purpose varchar(255) DEFAULT NULL,
 		has_toll tinyint(1) NOT NULL DEFAULT 0,
+		toll_cost decimal(8,2) DEFAULT NULL,
+		has_trailer tinyint(1) NOT NULL DEFAULT 0,
 		created_at datetime NOT NULL,
 		PRIMARY KEY  (id),
 		KEY entry_id (entry_id),
@@ -349,6 +353,9 @@ function site_pulse_install_db(): void {
 		polyline longtext DEFAULT NULL,
 		plaza_sequence longtext DEFAULT NULL,
 		total_typical_cost decimal(8,2) DEFAULT NULL,
+		tag_cost decimal(8,2) DEFAULT NULL,
+		cash_cost decimal(8,2) DEFAULT NULL,
+		toll_computed_at datetime DEFAULT NULL,
 		plaza_count tinyint(3) NOT NULL DEFAULT 0,
 		source varchar(20) NOT NULL DEFAULT 'google',
 		use_count int(11) NOT NULL DEFAULT 0,
@@ -421,6 +428,16 @@ add_action( 'init', function() {
 		site_pulse_seed_mileage_locations();
 		update_option( 'site_pulse_mileage_seeded', '1' );
 	}
+
+	// One-time: stand up the Supervisor report (independent copy of the GM report) and bring
+	// the existing Supervisor role onto the new report-visibility capabilities. Both self-guard
+	// with their own option flag, so deleting either later won't resurrect it.
+	if ( ! get_option( 'site_pulse_supervisor_report_seeded' ) ) {
+		site_pulse_ensure_supervisor_template();
+		update_option( 'site_pulse_supervisor_report_seeded', '1' );
+	}
+	site_pulse_migrate_supervisor_report_caps();
+	site_pulse_migrate_retire_legacy_report_caps();
 
 	// One-time: the original store "Manager" tier is now the "GM" (and its report likewise). The
 	// seed/template seeders are insert-only, so existing installs need this nudge. Each row is only
@@ -560,32 +577,130 @@ function site_pulse_seed_initial_data(): void {
 	}
 }
 
+/**
+ * Create the "Supervisor Bi-Weekly Report" as an independent copy of the GM report — the
+ * template row plus every field as its own new record, so the two diverge freely from here.
+ * Idempotent (no-ops if the supervisor template already exists or the GM one doesn't).
+ */
+function site_pulse_ensure_supervisor_template(): void {
+	global $wpdb;
+	$tpl_tbl = site_pulse_table('report_templates');
+	$fld_tbl = site_pulse_table('report_fields');
+
+	if ( $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $tpl_tbl WHERE slug = %s", 'supervisor-biweekly' ) ) ) return;
+
+	$gm = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $tpl_tbl WHERE slug = %s", 'manager-biweekly' ), ARRAY_A );
+	if ( ! $gm ) return; // nothing to clone yet
+
+	$now   = current_time( 'mysql' );
+	$order = (int) $wpdb->get_var( "SELECT COALESCE(MAX(display_order), -1) + 1 FROM $tpl_tbl" );
+	$wpdb->insert( $tpl_tbl, [
+		'slug'               => 'supervisor-biweekly',
+		'name'               => 'Supervisor Bi-Weekly Report',
+		'description'        => $gm['description'],
+		'frequency'          => $gm['frequency'],
+		'required_role_slug' => 'supervisor',
+		'is_active'          => 1,
+		'display_order'      => $order,
+		'created_at'         => $now,
+		'updated_at'         => $now,
+	] );
+	$new_id = (int) $wpdb->insert_id;
+	if ( ! $new_id ) return;
+
+	$fields = $wpdb->get_results( $wpdb->prepare(
+		"SELECT * FROM $fld_tbl WHERE template_id = %d ORDER BY display_order, id", (int) $gm['id']
+	), ARRAY_A ) ?: [];
+	foreach ( $fields as $f ) {
+		$wpdb->insert( $fld_tbl, [
+			'template_id'   => $new_id,
+			'field_key'     => $f['field_key'],
+			'label'         => $f['label'],
+			'field_type'    => $f['field_type'],
+			'options'       => $f['options'],
+			'placeholder'   => $f['placeholder'],
+			'is_required'   => $f['is_required'],
+			'display_order' => $f['display_order'],
+			'section'       => $f['section'],
+			'help_text'     => $f['help_text'],
+		] );
+	}
+}
+
+/**
+ * One-time: move an EXISTING Supervisor role off the legacy view_team_reports model onto the
+ * new caps — see all GM reports + submit/view their own Supervisor report. Guarded by an option
+ * so a later admin customization of the role isn't repeatedly clobbered. (New sites already get
+ * these caps from seed_roles; this only fixes already-seeded sites.)
+ */
+function site_pulse_migrate_supervisor_report_caps(): void {
+	if ( get_option( 'site_pulse_supervisor_caps_migrated' ) ) return;
+	update_option( 'site_pulse_supervisor_caps_migrated', '1' );
+
+	global $wpdb;
+	$tbl = site_pulse_table('roles');
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT id, capabilities FROM $tbl WHERE slug = %s", 'supervisor' ), ARRAY_A );
+	if ( ! $row ) return;
+
+	$caps = json_decode( $row['capabilities'], true ) ?: [];
+	$caps = array_values( array_diff( $caps, [ 'view_team_reports' ] ) );
+	foreach ( [ 'view_gm_reports', 'submit_reports', 'view_own_reports' ] as $c ) {
+		if ( ! in_array( $c, $caps, true ) ) $caps[] = $c;
+	}
+	$wpdb->update( $tbl, [ 'capabilities' => wp_json_encode( $caps ), 'updated_at' => current_time( 'mysql' ) ], [ 'id' => (int) $row['id'] ] );
+}
+
+/**
+ * One-time cap cleanup: retire view_all_reports / view_team_reports / review_reports across ALL
+ * tiers. A tier that had "View all reports" is expanded to the two granular type caps so its
+ * visibility is unchanged (it just shows the individual boxes checked). Guarded by an option so
+ * a later admin customization of a tier isn't repeatedly clobbered.
+ */
+function site_pulse_migrate_retire_legacy_report_caps(): void {
+	if ( get_option( 'site_pulse_report_caps_retired' ) ) return;
+	update_option( 'site_pulse_report_caps_retired', '1' );
+
+	global $wpdb;
+	$tbl  = site_pulse_table('roles');
+	$rows = $wpdb->get_results( "SELECT id, capabilities FROM $tbl", ARRAY_A ) ?: [];
+	foreach ( $rows as $row ) {
+		$caps = json_decode( $row['capabilities'], true ) ?: [];
+		if ( in_array( 'view_all_reports', $caps, true ) ) {
+			foreach ( [ 'view_gm_reports', 'view_supervisor_reports' ] as $c ) {
+				if ( ! in_array( $c, $caps, true ) ) $caps[] = $c;
+			}
+		}
+		$caps = array_values( array_diff( $caps, [ 'view_all_reports', 'view_team_reports', 'review_reports' ] ) );
+		$wpdb->update( $tbl, [ 'capabilities' => wp_json_encode( $caps ), 'updated_at' => current_time( 'mysql' ) ], [ 'id' => (int) $row['id'] ] );
+	}
+}
+
 function site_pulse_seed_roles(): void {
 	global $wpdb;
 	$now = current_time( 'mysql' );
 	$roles = [
 		[
 			'slug'            => 'god',
-			'label'           => 'God',
-			'capabilities'    => wp_json_encode( [ 'view_all_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'view_ai_insights', 'submit_reports', 'view_own_reports', 'view_team_reports', 'review_reports', 'god_mode', 'manage_mileage', 'submit_mileage' ] ),
+			'label'           => 'Odinson',
+			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'view_ai_insights', 'submit_reports', 'view_own_reports', 'god_mode', 'manage_mileage', 'submit_mileage' ] ),
 			'hierarchy_level' => 255,
 		],
 		[
 			'slug'            => 'owner',
 			'label'           => 'Owner',
-			'capabilities'    => wp_json_encode( [ 'view_all_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'view_ai_insights', 'manage_mileage', 'submit_mileage' ] ),
+			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'view_ai_insights', 'manage_mileage', 'submit_mileage' ] ),
 			'hierarchy_level' => 100,
 		],
 		[
 			'slug'            => 'admin',
 			'label'           => 'Administrator',
-			'capabilities'    => wp_json_encode( [ 'view_all_reports', 'manage_locations', 'manage_users', 'manage_templates', 'view_analytics', 'manage_settings', 'view_ai_insights', 'manage_mileage', 'submit_mileage' ] ),
+			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'view_analytics', 'manage_settings', 'view_ai_insights', 'manage_mileage', 'submit_mileage' ] ),
 			'hierarchy_level' => 90,
 		],
 		[
 			'slug'            => 'supervisor',
 			'label'           => 'Supervisor',
-			'capabilities'    => wp_json_encode( [ 'view_team_reports', 'review_reports', 'view_analytics', 'submit_mileage' ] ),
+			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'submit_reports', 'view_own_reports', 'view_analytics', 'submit_mileage' ] ),
 			'hierarchy_level' => 50,
 		],
 		[
@@ -798,11 +913,10 @@ function site_pulse_get_all_roles( bool $include_god = false ): array {
  */
 function site_pulse_capability_catalog(): array {
 	return [
-		'view_own_reports'  => 'View own reports',
-		'submit_reports'    => 'Submit reports',
-		'view_team_reports' => 'View team reports',
-		'view_all_reports'  => 'View all reports',
-		'review_reports'    => 'Review reports',
+		'view_own_reports'        => 'View own reports',
+		'submit_reports'          => 'Submit reports',
+		'view_gm_reports'         => 'View all GM reports',
+		'view_supervisor_reports' => 'View all supervisor reports',
 		'view_analytics'    => 'View analytics',
 		'view_ai_insights'  => 'View AI insights',
 		'submit_mileage'    => 'Submit mileage',
@@ -851,14 +965,40 @@ function site_pulse_get_team_user_ids( int $supervisor_id ): array {
 	) ) ?: [];
 }
 
+// Active user IDs whose Site Pulse role has the given slug (e.g. 'manager' = GMs, 'supervisor').
+function site_pulse_user_ids_with_role( string $role_slug ): array {
+	global $wpdb;
+	return array_map( 'intval', $wpdb->get_col( $wpdb->prepare(
+		"SELECT up.user_id
+		 FROM " . site_pulse_table('user_profiles') . " up
+		 INNER JOIN " . site_pulse_table('roles') . " r ON r.id = up.role_id
+		 WHERE r.slug = %s AND up.status = 'active'",
+		$role_slug
+	) ) ?: [] );
+}
+
+/**
+ * The set of submitter user IDs whose reports/action items $viewer may see, driven by the
+ * report-visibility capabilities (keyed on the submitter's role = the report type):
+ *   - view_gm_reports         → all GMs (role 'manager')
+ *   - view_supervisor_reports → all supervisors (role 'supervisor')
+ * The viewer always sees their own. Returns the (always non-empty) list of user IDs — to see
+ * every report a role simply holds both type caps.
+ */
+function site_pulse_visible_report_user_ids( int $viewer_id ): array {
+	$ids = [ $viewer_id ]; // own
+	if ( site_pulse_user_can( $viewer_id, 'view_gm_reports' ) ) {
+		$ids = array_merge( $ids, site_pulse_user_ids_with_role( 'manager' ) );
+	}
+	if ( site_pulse_user_can( $viewer_id, 'view_supervisor_reports' ) ) {
+		$ids = array_merge( $ids, site_pulse_user_ids_with_role( 'supervisor' ) );
+	}
+	return array_values( array_unique( array_map( 'intval', $ids ) ) );
+}
+
 function site_pulse_can_view_report( int $viewer_id, array $report ): bool {
 	if ( (int) $report['user_id'] === $viewer_id ) return true;
-	if ( site_pulse_user_can( $viewer_id, 'view_all_reports' ) ) return true;
-	if ( site_pulse_user_can( $viewer_id, 'view_team_reports' ) ) {
-		$team = site_pulse_get_team_user_ids( $viewer_id );
-		return in_array( (int) $report['user_id'], array_map( 'intval', $team ), true );
-	}
-	return false;
+	return in_array( (int) $report['user_id'], site_pulse_visible_report_user_ids( $viewer_id ), true );
 }
 
 
@@ -1101,6 +1241,12 @@ function site_pulse_get_reports( array $args = [] ): array {
 		$where[]  = "r.template_id = %d";
 		$values[] = (int) $args['template_id'];
 	}
+	// Filter by report TYPE = the template's required_role_slug ('manager' = GM reports,
+	// 'supervisor' = Supervisor reports). Lets the GM/Supervisor review tabs scope by type.
+	if ( ! empty( $args['template_role'] ) ) {
+		$where[]  = "r.template_id IN ( SELECT id FROM " . site_pulse_table('report_templates') . " WHERE required_role_slug = %s )";
+		$values[] = $args['template_role'];
+	}
 	if ( ! empty( $args['status'] ) ) {
 		$where[]  = "r.status = %s";
 		$values[] = $args['status'];
@@ -1337,23 +1483,24 @@ function site_pulse_ajax_get_reports(): void {
 	$user_id = site_pulse_effective_user_id();
 	$args    = [];
 
-	if ( site_pulse_user_can( $user_id, 'view_all_reports' ) ) {
-		if ( ! empty( $_POST['user_id'] ) ) $args['user_id'] = (int) $_POST['user_id'];
-	} elseif ( site_pulse_user_can( $user_id, 'view_team_reports' ) ) {
-		$team_ids   = site_pulse_get_team_user_ids( $user_id );
-		$team_ids[] = $user_id;
-		if ( ! empty( $_POST['user_id'] ) && in_array( (int) $_POST['user_id'], array_map( 'intval', $team_ids ), true ) ) {
+	// scope=own → strictly the viewer's own reports (the "My Reports" panel). Otherwise the
+	// visible set is driven by the report-visibility capabilities (see visible_report_user_ids).
+	$scope = sanitize_text_field( $_POST['scope'] ?? '' );
+	if ( $scope === 'own' ) {
+		$args['user_id'] = $user_id;
+	} else {
+		$visible = site_pulse_visible_report_user_ids( $user_id );
+		if ( ! empty( $_POST['user_id'] ) && in_array( (int) $_POST['user_id'], $visible, true ) ) {
 			$args['user_id'] = (int) $_POST['user_id'];
 		} else {
-			$args['user_ids'] = $team_ids;
+			$args['user_ids'] = $visible;
 		}
-	} else {
-		$args['user_id'] = $user_id;
 	}
 
 	if ( ! empty( $_POST['location_id'] ) ) $args['location_id'] = (int) $_POST['location_id'];
 
-	if ( ! empty( $_POST['template_id'] ) )  $args['template_id']  = (int) $_POST['template_id'];
+	if ( ! empty( $_POST['template_id'] ) )    $args['template_id']    = (int) $_POST['template_id'];
+	if ( ! empty( $_POST['template_role'] ) )  $args['template_role']  = sanitize_text_field( $_POST['template_role'] );
 	if ( ! empty( $_POST['status'] ) )       $args['status']       = sanitize_text_field( $_POST['status'] );
 	if ( ! empty( $_POST['period_start'] ) ) $args['period_start'] = sanitize_text_field( $_POST['period_start'] );
 	if ( ! empty( $_POST['period_end'] ) )   $args['period_end']   = sanitize_text_field( $_POST['period_end'] );
@@ -1963,19 +2110,12 @@ function site_pulse_ajax_get_review_filters(): void {
 	$user_id = site_pulse_effective_user_id();
 	$locations = site_pulse_get_all_locations();
 
-	if ( site_pulse_user_can( $user_id, 'view_all_reports' ) ) {
-		$users = site_pulse_get_all_users( true, false );
-	} elseif ( site_pulse_user_can( $user_id, 'view_team_reports' ) ) {
-		$team_ids = site_pulse_get_team_user_ids( $user_id );
-		$users = [];
-		foreach ( $team_ids as $tid ) {
-			$u = get_userdata( $tid );
-			if ( $u ) {
-				$users[] = [ 'user_id' => $tid, 'display_name' => $u->display_name ];
-			}
-		}
-	} else {
-		$users = [];
+	// Submitters the viewer is allowed to filter by (GMs and/or supervisors, per their caps).
+	$users = [];
+	foreach ( site_pulse_visible_report_user_ids( $user_id ) as $tid ) {
+		if ( (int) $tid === (int) $user_id ) continue; // self isn't a "filter by" option
+		$u = get_userdata( $tid );
+		if ( $u ) $users[] = [ 'user_id' => $tid, 'display_name' => $u->display_name ];
 	}
 
 	wp_send_json_success( [ 'locations' => $locations, 'users' => $users ] );
@@ -2230,6 +2370,11 @@ function site_pulse_get_action_items( array $args = [] ): array {
 		$where[]  = "ai.user_id = %d";
 		$values[] = (int) $args['user_id'];
 	}
+	if ( ! empty( $args['user_ids'] ) ) {
+		$placeholders = implode( ',', array_fill( 0, count( $args['user_ids'] ), '%d' ) );
+		$where[]      = "ai.user_id IN ($placeholders)";
+		$values       = array_merge( $values, array_map( 'intval', $args['user_ids'] ) );
+	}
 	if ( ! empty( $args['location_id'] ) ) {
 		$where[]  = "ai.location_id = %d";
 		$values[] = (int) $args['location_id'];
@@ -2266,16 +2411,11 @@ function site_pulse_ajax_get_action_items(): void {
 	$user_id = site_pulse_effective_user_id();
 	$args = [];
 
-	if ( site_pulse_user_can( $user_id, 'view_all_reports' ) ) {
-		if ( ! empty( $_POST['user_id'] ) ) $args['user_id'] = (int) $_POST['user_id'];
-	} elseif ( site_pulse_user_can( $user_id, 'view_team_reports' ) ) {
-		$team_ids   = site_pulse_get_team_user_ids( $user_id );
-		$team_ids[] = $user_id;
-		if ( ! empty( $_POST['user_id'] ) && in_array( (int) $_POST['user_id'], array_map( 'intval', $team_ids ), true ) ) {
-			$args['user_id'] = (int) $_POST['user_id'];
-		}
+	$visible = site_pulse_visible_report_user_ids( $user_id );
+	if ( ! empty( $_POST['user_id'] ) && in_array( (int) $_POST['user_id'], $visible, true ) ) {
+		$args['user_id'] = (int) $_POST['user_id'];
 	} else {
-		$args['user_id'] = $user_id;
+		$args['user_ids'] = $visible;
 	}
 
 	if ( ! empty( $_POST['location_id'] ) ) $args['location_id'] = (int) $_POST['location_id'];
@@ -2643,12 +2783,12 @@ function site_pulse_ajax_get_analytics(): void {
 		: '';
 
 	$mtd = $wpdb->get_row( $wpdb->prepare(
-		"SELECT COALESCE(SUM(total_miles),0) miles, COALESCE(SUM(reimbursement_amount),0) reimb, COUNT(*) entries, COUNT(DISTINCT user_id) drivers
+		"SELECT COALESCE(SUM(total_miles),0) miles, COALESCE(SUM(reimbursement_amount),0) reimb, COALESCE(SUM(total_tolls),0) tolls, COALESCE(SUM(total_trailer),0) trailer, COUNT(*) entries, COUNT(DISTINCT user_id) drivers
 		 FROM $me e WHERE entry_date >= %s AND entry_date <= %s" . $m_where,
 		$month_start, $today
 	), ARRAY_A );
 	$ytd = $wpdb->get_row( $wpdb->prepare(
-		"SELECT COALESCE(SUM(total_miles),0) miles, COALESCE(SUM(reimbursement_amount),0) reimb
+		"SELECT COALESCE(SUM(total_miles),0) miles, COALESCE(SUM(reimbursement_amount),0) reimb, COALESCE(SUM(total_tolls),0) tolls, COALESCE(SUM(total_trailer),0) trailer
 		 FROM $me e WHERE entry_date >= %s AND entry_date <= %s" . $m_where,
 		$year_start, $today
 	), ARRAY_A );
@@ -2674,8 +2814,8 @@ function site_pulse_ajax_get_analytics(): void {
 			'avg_days'       => $avg_resolution !== null ? round( (float) $avg_resolution, 1 ) : null,
 		],
 		'mileage'     => [
-			'month'            => $mtd ?: [ 'miles' => 0, 'reimb' => 0, 'entries' => 0, 'drivers' => 0 ],
-			'ytd'              => $ytd ?: [ 'miles' => 0, 'reimb' => 0 ],
+			'month'            => $mtd ?: [ 'miles' => 0, 'reimb' => 0, 'tolls' => 0, 'trailer' => 0, 'entries' => 0, 'drivers' => 0 ],
+			'ytd'              => $ytd ?: [ 'miles' => 0, 'reimb' => 0, 'tolls' => 0, 'trailer' => 0 ],
 			'top_destinations' => $top_dest,
 			'rate'             => site_pulse_mileage_rate(),
 		],
@@ -2794,7 +2934,7 @@ function site_pulse_ajax_god_delete_user(): void {
 	if ( site_pulse_is_superadmin( $uid ) ) wp_send_json_error( [ 'message' => 'The super-admin account cannot be deleted.' ] );
 	// A God account can only be deleted by the super-admin (battleplanweb); regular Gods can't.
 	if ( site_pulse_is_god( $uid ) && ! site_pulse_is_superadmin() ) {
-		wp_send_json_error( [ 'message' => 'Only the super-admin can delete a God account.' ] );
+		wp_send_json_error( [ 'message' => 'Only the super-admin can delete an Odinson account.' ] );
 	}
 
 	// $target may be false for an orphaned profile — that's fine, we still purge the profile.
@@ -2846,7 +2986,7 @@ add_action( 'wp_ajax_site_pulse_god_grant', 'site_pulse_ajax_god_grant' );
 function site_pulse_ajax_god_grant(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	if ( ! site_pulse_is_superadmin() ) {
-		wp_send_json_error( [ 'message' => 'Only the super-admin can grant God access.' ] );
+		wp_send_json_error( [ 'message' => 'Only the super-admin can grant Odin access.' ] );
 	}
 
 	$uid = (int) ( $_POST['user_id'] ?? 0 );
@@ -2854,7 +2994,7 @@ function site_pulse_ajax_god_grant(): void {
 	if ( ! get_user_by( 'id', $uid ) ) wp_send_json_error( [ 'message' => 'User not found.' ] );
 
 	$god = site_pulse_get_role_by_slug( 'god' );
-	if ( ! $god ) wp_send_json_error( [ 'message' => 'God role is missing.' ] );
+	if ( ! $god ) wp_send_json_error( [ 'message' => 'Odinson role is missing.' ] );
 
 	global $wpdb;
 	$now = current_time( 'mysql' );
@@ -2875,8 +3015,8 @@ function site_pulse_ajax_god_grant(): void {
 		] );
 	}
 
-	site_pulse_log( 'god_grant', sprintf( 'Super-admin granted God access to user #%d', $uid ) );
-	wp_send_json_success( [ 'message' => 'User now has God access.' ] );
+	site_pulse_log( 'god_grant', sprintf( 'Super-admin granted Odin access to user #%d', $uid ) );
+	wp_send_json_success( [ 'message' => 'User now has Odin access.' ] );
 }
 
 // Super-admin only: revoke God from a user, demoting them to the lowest-privilege role. The account
@@ -2885,13 +3025,13 @@ add_action( 'wp_ajax_site_pulse_god_revoke', 'site_pulse_ajax_god_revoke' );
 function site_pulse_ajax_god_revoke(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	if ( ! site_pulse_is_superadmin() ) {
-		wp_send_json_error( [ 'message' => 'Only the super-admin can revoke God access.' ] );
+		wp_send_json_error( [ 'message' => 'Only the super-admin can revoke Odin access.' ] );
 	}
 
 	$uid = (int) ( $_POST['user_id'] ?? 0 );
 	if ( ! $uid ) wp_send_json_error( [ 'message' => 'Invalid user id.' ] );
 	if ( site_pulse_is_superadmin( $uid ) ) wp_send_json_error( [ 'message' => 'The super-admin cannot be revoked.' ] );
-	if ( ! site_pulse_is_god( $uid ) ) wp_send_json_error( [ 'message' => 'That user is not a God.' ] );
+	if ( ! site_pulse_is_god( $uid ) ) wp_send_json_error( [ 'message' => 'That user is not an Odinson.' ] );
 
 	global $wpdb;
 	$fallback = $wpdb->get_row(
@@ -2904,8 +3044,8 @@ function site_pulse_ajax_god_revoke(): void {
 		[ 'user_id' => $uid ]
 	);
 
-	site_pulse_log( 'god_revoke', sprintf( 'Super-admin revoked God from user #%d', $uid ) );
-	wp_send_json_success( [ 'message' => 'God access revoked. Edit the user to set their proper role.' ] );
+	site_pulse_log( 'god_revoke', sprintf( 'Super-admin revoked Odin from user #%d', $uid ) );
+	wp_send_json_success( [ 'message' => 'Odin access revoked. Edit the user to set their proper role.' ] );
 }
 
 
@@ -2954,6 +3094,15 @@ function site_pulse_ajax_impersonate(): void {
 function site_pulse_mileage_rate(): float {
 	$rate = (float) site_pulse_get_setting( 'mileage_rate', '0.67' );
 	return $rate > 0 ? $rate : 0.67;
+}
+
+/**
+ * Extra $/mile paid on top of the base rate for legs the driver pulls a trailer on.
+ * Default $0.10. Applies only to legs flagged has_trailer.
+ */
+function site_pulse_mileage_trailer_rate(): float {
+	$rate = (float) site_pulse_get_setting( 'mileage_trailer_rate', '0.10' );
+	return $rate >= 0 ? $rate : 0.10;
 }
 
 /**
@@ -3338,25 +3487,35 @@ function site_pulse_mileage_distance_matrix_call( array $origins, array $destina
 function site_pulse_mileage_recalc_entry( int $entry_id ): void {
 	global $wpdb;
 	$legs = $wpdb->get_results( $wpdb->prepare(
-		"SELECT miles FROM " . site_pulse_table('mileage_legs') . " WHERE entry_id = %d",
+		"SELECT miles, toll_cost, has_trailer FROM " . site_pulse_table('mileage_legs') . " WHERE entry_id = %d",
 		$entry_id
 	), ARRAY_A ) ?: [];
 
-	$total   = 0.0;
-	$pending = false;
+	$total         = 0.0;
+	$tolls         = 0.0;
+	$trailer_miles = 0.0;
+	$pending       = false;
 	foreach ( $legs as $leg ) {
 		if ( $leg['miles'] === null ) {
 			$pending = true;
 		} else {
 			$total += (float) $leg['miles'];
+			if ( ! empty( $leg['has_trailer'] ) ) $trailer_miles += (float) $leg['miles'];
 		}
+		if ( $leg['toll_cost'] !== null ) $tolls += (float) $leg['toll_cost'];
 	}
 
-	$rate = site_pulse_mileage_rate();
+	$rate         = site_pulse_mileage_rate();
+	$trailer_rate = site_pulse_mileage_trailer_rate();
+	// Mileage reimbursement stays miles × rate (all legs). Tolls and the trailer surcharge
+	// (extra $/mile on trailer legs only) are tracked separately so each expense category
+	// stays distinct. Grand total = reimbursement_amount + total_tolls + total_trailer.
 	$wpdb->update( site_pulse_table('mileage_entries'),
 		[
 			'total_miles'          => round( $total, 2 ),
 			'reimbursement_amount' => round( $total * $rate, 2 ),
+			'total_tolls'          => round( $tolls, 2 ),
+			'total_trailer'        => round( $trailer_miles * $trailer_rate, 2 ),
 			'rate_used'            => $rate,
 			'updated_at'           => current_time( 'mysql' ),
 		],
@@ -3406,6 +3565,17 @@ function site_pulse_toll_vehicle_type(): string {
 
 function site_pulse_tollguru_key(): string {
 	return (string) site_pulse_get_setting( 'tollguru_api_key', '' );
+}
+
+/**
+ * Which TollGuru cost column to reimburse at: 'tag' (transponder rate, what NTTA
+ * TollTag holders actually pay) or 'cash' (pay-by-plate, the higher rate). Defaults
+ * to 'tag' since drivers run transponders; flip it off in Mileage → Toll Pricing
+ * to reimburse at the cash rate instead.
+ */
+function site_pulse_toll_cost_basis(): string {
+	$basis = site_pulse_get_setting( 'toll_cost_basis', 'tag' );
+	return $basis === 'cash' ? 'cash' : 'tag';
 }
 
 /**
@@ -3517,6 +3687,155 @@ function site_pulse_mileage_compute_route( int $from, int $to ): ?string {
 		return null;
 	}
 	return (string) $data['routes'][0]['polyline']['encodedPolyline'];
+}
+
+/**
+ * Prices the toll between two mileage locations via TollGuru's basic Toll API
+ * (origin-destination-waypoints — NOT the premium "TollTally" polyline product, which
+ * standard keys aren't authorized for). TollGuru routes internally from the from/to
+ * lat-lng, so no Google polyline is needed. Returns
+ * [ 'tag' => float, 'cash' => float, 'plaza_sequence' => string|null, 'plaza_count' => int ]
+ * or null on any failure. $debug (if passed by ref) collects the raw HTTP status/body.
+ */
+function site_pulse_tollguru_compute_toll( int $from, int $to, array &$debug = null ): ?array {
+	$key = site_pulse_tollguru_key();
+	if ( ! $key || ! $from || ! $to ) return null;
+
+	global $wpdb;
+	$rows = $wpdb->get_results( $wpdb->prepare(
+		"SELECT id, address, lat, lng FROM " . site_pulse_table('mileage_locations') . " WHERE id IN (%d, %d)",
+		$from, $to
+	), ARRAY_A ) ?: [];
+	$by_id = [];
+	foreach ( $rows as $r ) $by_id[ (int) $r['id'] ] = $r;
+	if ( ! isset( $by_id[ $from ], $by_id[ $to ] ) ) return null;
+
+	// Prefer lat/lng (exact); fall back to the address string if a row isn't geocoded.
+	$point = function( array $l ): array {
+		return ( $l['lat'] !== null && $l['lng'] !== null )
+			? [ 'lat' => (float) $l['lat'], 'lng' => (float) $l['lng'] ]
+			: [ 'address' => (string) $l['address'] ];
+	};
+
+	$body = [
+		'from'            => $point( $by_id[ $from ] ),
+		'to'              => $point( $by_id[ $to ] ),
+		'serviceProvider' => 'here',   // TollGuru's default routing engine for this endpoint
+		'vehicle'         => [ 'type' => site_pulse_toll_vehicle_type() ],
+	];
+
+	$response = wp_remote_post( 'https://apis.tollguru.com/toll/v2/origin-destination-waypoints', [
+		'timeout' => 25,
+		'headers' => [ 'Content-Type' => 'application/json', 'x-api-key' => $key ],
+		'body'    => wp_json_encode( $body ),
+	] );
+
+	if ( is_wp_error( $response ) ) {
+		if ( $debug !== null ) $debug = [ 'status' => 'wp_error', 'body' => $response->get_error_message() ];
+		site_pulse_log( 'mileage_error', 'TollGuru failed: ' . $response->get_error_message() );
+		return null;
+	}
+
+	$code = (int) wp_remote_retrieve_response_code( $response );
+	$raw  = (string) wp_remote_retrieve_body( $response );
+
+	$data  = json_decode( $raw, true );
+	$route = is_array( $data ) ? ( $data['routes'][0] ?? null ) : null;
+	if ( $debug !== null ) $debug = [
+		'status'      => $code,
+		'costs'       => is_array( $route ) ? ( $route['costs'] ?? null ) : null,
+		'sample_toll' => is_array( $route ) ? ( $route['tolls'][0] ?? null ) : null,
+		'body'        => mb_substr( $raw, 0, 800 ),
+	];
+	if ( $code !== 200 || ! $route ) {
+		$err = is_array( $data ) ? ( $data['message'] ?? ( $data['error'] ?? ( 'HTTP ' . $code ) ) ) : ( 'HTTP ' . $code );
+		site_pulse_log( 'mileage_error', 'TollGuru error: ' . ( is_string( $err ) ? $err : wp_json_encode( $err ) ) );
+		return null;
+	}
+
+	$costs = $route['costs'] ?? [];
+	// TollGuru returns null/absent costs when a route has no tolls — treat as $0, not failure.
+	$tag  = isset( $costs['tag'] )  ? (float) $costs['tag']  : ( isset( $costs['minimumTollCost'] ) ? (float) $costs['minimumTollCost'] : 0.0 );
+	$cash = isset( $costs['cash'] ) ? (float) $costs['cash'] : ( isset( $costs['maximumTollCost'] ) ? (float) $costs['maximumTollCost'] : $tag );
+
+	$plazas = is_array( $route['tolls'] ?? null ) ? $route['tolls'] : [];
+	$names  = array_filter( array_map( fn( $t ) => $t['name'] ?? null, $plazas ) );
+
+	// Fallback: some responses leave the route-level costs at 0 but carry per-plaza prices.
+	// Sum them (covering the field-name variants TollGuru uses) when the totals look empty.
+	if ( $tag <= 0 && $cash <= 0 && $plazas ) {
+		$sum_tag = 0.0; $sum_cash = 0.0;
+		foreach ( $plazas as $p ) {
+			$sum_tag  += (float) ( $p['tagCost']  ?? $p['tagPrimaryCost']  ?? $p['tagPrice']  ?? 0 );
+			$sum_cash += (float) ( $p['cashCost'] ?? $p['cashPrice']       ?? 0 );
+		}
+		if ( $sum_tag > 0 || $sum_cash > 0 ) {
+			$tag  = $sum_tag;
+			$cash = $sum_cash ?: $sum_tag;
+		}
+	}
+
+	return [
+		'tag'            => round( $tag, 2 ),
+		'cash'           => round( $cash, 2 ),
+		'plaza_sequence' => $names ? wp_json_encode( array_values( $names ) ) : null,
+		'plaza_count'    => count( $plazas ),
+	];
+}
+
+/**
+ * Lazy, cached toll cost for a (from → to) leg — the toll analogue of
+ * site_pulse_mileage_ensure_distance(). Prices the pair via TollGuru once and caches
+ * tag/cash on a directional mileage_toll_routes row (no polyline needed). Returns the
+ * cost at the configured basis (tag|cash), or null if it can't be priced (caller leaves
+ * the leg pending). One TollGuru call per directional pair, ever.
+ */
+function site_pulse_mileage_ensure_toll( int $from, int $to ): ?float {
+	if ( $from === $to || ! $from || ! $to ) return null;
+
+	global $wpdb;
+	$basis = site_pulse_toll_cost_basis();
+
+	$row = $wpdb->get_row( $wpdb->prepare(
+		"SELECT * FROM " . site_pulse_table('mileage_toll_routes') . "
+		 WHERE from_location_id = %d AND to_location_id = %d
+		 ORDER BY is_primary DESC, id ASC LIMIT 1",
+		$from, $to
+	), ARRAY_A );
+
+	// Cache hit: tag/cash already priced for this directional pair.
+	if ( $row && ( $row['tag_cost'] !== null || $row['cash_cost'] !== null ) ) {
+		$val = $basis === 'tag' ? $row['tag_cost'] : $row['cash_cost'];
+		return $val === null ? null : (float) $val;
+	}
+
+	$toll = site_pulse_tollguru_compute_toll( $from, $to );
+	if ( $toll === null ) return null;
+
+	$now    = current_time( 'mysql' );
+	$fields = [
+		'tag_cost'           => $toll['tag'],
+		'cash_cost'          => $toll['cash'],
+		'total_typical_cost' => $toll['cash'],
+		'plaza_sequence'     => $toll['plaza_sequence'],
+		'plaza_count'        => $toll['plaza_count'],
+		'source'             => 'tollguru',
+		'toll_computed_at'   => $now,
+		'updated_at'         => $now,
+	];
+	if ( $row ) {
+		$wpdb->update( site_pulse_table('mileage_toll_routes'), $fields, [ 'id' => (int) $row['id'] ] );
+	} else {
+		$wpdb->insert( site_pulse_table('mileage_toll_routes'), array_merge( $fields, [
+			'from_location_id' => $from,
+			'to_location_id'   => $to,
+			'variant_index'    => 1,
+			'is_primary'       => 1,
+			'created_at'       => $now,
+		] ) );
+	}
+
+	return $basis === 'tag' ? (float) $toll['tag'] : (float) $toll['cash'];
 }
 
 
@@ -3673,7 +3992,7 @@ function site_pulse_ajax_get_mileage_report(): void {
 	if ( $end )   { $where .= " AND e.entry_date <= %s"; $values[] = $end; }
 
 	$entries = $wpdb->get_results( $wpdb->prepare(
-		"SELECT id, entry_date, total_miles, reimbursement_amount, rate_used, notes
+		"SELECT id, entry_date, total_miles, reimbursement_amount, total_tolls, total_trailer, rate_used, notes
 		 FROM " . site_pulse_table('mileage_entries') . " e
 		 $where
 		 ORDER BY e.entry_date ASC, e.id ASC
@@ -3774,20 +4093,27 @@ function site_pulse_ajax_save_mileage_entry(): void {
 	$stops_raw    = $_POST['stops'] ?? [];
 	$purposes_raw = $_POST['purposes'] ?? [];
 	$tolls_raw    = $_POST['tolls'] ?? [];
+	$trailers_raw = $_POST['trailers'] ?? [];
+	// Toll / trailer flags for the final leg home (the auto-appended END bookend).
+	$end_toll     = ! empty( $_POST['end_toll'] ) ? 1 : 0;
+	$end_trailer  = ! empty( $_POST['end_trailer'] ) ? 1 : 0;
 	if ( ! is_array( $stops_raw ) )    $stops_raw = [];
 	if ( ! is_array( $purposes_raw ) ) $purposes_raw = [];
 	if ( ! is_array( $tolls_raw ) )    $tolls_raw = [];
+	if ( ! is_array( $trailers_raw ) ) $trailers_raw = [];
 
-	// Keep stops with their per-stop purposes and toll flags aligned while dropping empty picks.
+	// Keep stops with their per-stop purposes, toll + trailer flags aligned, dropping empty picks.
 	$stops          = [];
 	$stop_purposes  = [];
 	$stop_tolls     = [];
+	$stop_trailers  = [];
 	foreach ( array_values( $stops_raw ) as $idx => $sid ) {
 		$sid = (int) $sid;
 		if ( $sid <= 0 ) continue;
 		$stops[]         = $sid;
 		$stop_purposes[] = sanitize_text_field( $purposes_raw[ $idx ] ?? '' );
 		$stop_tolls[]    = ! empty( $tolls_raw[ $idx ] ) ? 1 : 0;
+		$stop_trailers[] = ! empty( $trailers_raw[ $idx ] ) ? 1 : 0;
 	}
 
 	if ( ! $entry_date ) wp_send_json_error( [ 'message' => 'Date is required.' ] );
@@ -3804,12 +4130,14 @@ function site_pulse_ajax_save_mileage_entry(): void {
 		$seq          = array_merge( [ $home_id ], $stops );
 		$seq_purposes = array_merge( [ '' ], $stop_purposes );
 		$seq_tolls    = array_merge( [ 0 ], $stop_tolls );
-		if ( $auto_return ) { $seq[] = $home_id; $seq_purposes[] = ''; $seq_tolls[] = 0; }
+		$seq_trailers = array_merge( [ 0 ], $stop_trailers );
+		if ( $auto_return ) { $seq[] = $home_id; $seq_purposes[] = ''; $seq_tolls[] = $end_toll; $seq_trailers[] = $end_trailer; }
 	} else {
 		if ( count( $stops ) < 2 ) wp_send_json_error( [ 'message' => 'At least two stops are required.' ] );
 		$seq          = $stops;
 		$seq_purposes = $stop_purposes;
 		$seq_tolls    = $stop_tolls;
+		$seq_trailers = $stop_trailers;
 		$auto_return  = 0;
 	}
 	if ( count( $seq ) < 2 ) wp_send_json_error( [ 'message' => 'At least two stops are required.' ] );
@@ -3850,6 +4178,11 @@ function site_pulse_ajax_save_mileage_entry(): void {
 		// but the cache is empty. Returns null if either endpoint is pending.
 		$miles = site_pulse_mileage_ensure_distance( $from, $to );
 
+		// Only legs the driver flagged with the Toll box get priced (saves API quota and
+		// matches "this drive had tolls"). Lazy + cached, so each O→D pair calls TollGuru once.
+		$has_toll  = ! empty( $seq_tolls[ $i + 1 ] ) ? 1 : 0;
+		$toll_cost = $has_toll ? site_pulse_mileage_ensure_toll( $from, $to ) : null;
+
 		$wpdb->insert( site_pulse_table('mileage_legs'), [
 			'entry_id'         => $entry_id,
 			'leg_order'        => $i,
@@ -3857,7 +4190,9 @@ function site_pulse_ajax_save_mileage_entry(): void {
 			'to_location_id'   => $to,
 			'miles'            => $miles,
 			'purpose'          => $seq_purposes[ $i + 1 ] ?? '',
-			'has_toll'         => ! empty( $seq_tolls[ $i + 1 ] ) ? 1 : 0,
+			'has_toll'         => $has_toll,
+			'toll_cost'        => $toll_cost,
+			'has_trailer'      => ! empty( $seq_trailers[ $i + 1 ] ) ? 1 : 0,
 			'created_at'       => $now,
 		] );
 	}
@@ -4046,12 +4381,18 @@ function site_pulse_ajax_admin_get_mileage_locations(): void {
 	wp_send_json_success( [
 		'locations'        => $rows,
 		'rate'             => site_pulse_mileage_rate(),
+		'trailer_rate'     => site_pulse_mileage_trailer_rate(),
 		'purposes'         => site_pulse_mileage_purposes(),
 		'require_approval' => site_pulse_get_setting( 'mileage_require_approval', '1' ) === '1',
 		'marker_icons'     => site_pulse_mileage_marker_icons(),
 		'reminders' => [
 			'enabled' => site_pulse_get_setting( 'mileage_reminders_enabled', '0' ) === '1',
 			'hour'    => (int) site_pulse_get_setting( 'mileage_reminder_hour', '7' ),
+		],
+		'toll' => [
+			'key_set'      => site_pulse_tollguru_key() !== '',
+			'vehicle_type' => site_pulse_toll_vehicle_type(),
+			'cost_basis'   => site_pulse_toll_cost_basis(),
 		],
 	] );
 }
@@ -4318,7 +4659,15 @@ function site_pulse_ajax_admin_save_mileage_rate(): void {
 	if ( $rate <= 0 || $rate > 5 ) wp_send_json_error( [ 'message' => 'Rate must be between 0 and $5/mi.' ] );
 
 	site_pulse_set_setting( 'mileage_rate', (string) $rate );
-	wp_send_json_success( [ 'rate' => $rate ] );
+
+	// Optional trailer surcharge rate ($/mile added on trailer legs). 0 disables it.
+	if ( isset( $_POST['trailer_rate'] ) ) {
+		$trailer = (float) $_POST['trailer_rate'];
+		if ( $trailer < 0 || $trailer > 5 ) wp_send_json_error( [ 'message' => 'Trailer rate must be between 0 and $5/mi.' ] );
+		site_pulse_set_setting( 'mileage_trailer_rate', (string) $trailer );
+	}
+
+	wp_send_json_success( [ 'rate' => $rate, 'trailer_rate' => site_pulse_mileage_trailer_rate() ] );
 }
 
 add_action( 'wp_ajax_site_pulse_admin_get_mileage_purposes', 'site_pulse_ajax_admin_get_mileage_purposes' );
@@ -4465,6 +4814,7 @@ function site_pulse_ajax_admin_get_toll_settings(): void {
 		'key_set'      => $key !== '',
 		'key_preview'  => $key ? substr( $key, 0, 4 ) . '…' . substr( $key, -4 ) : '',
 		'vehicle_type' => site_pulse_toll_vehicle_type(),
+		'cost_basis'   => site_pulse_toll_cost_basis(),
 	] );
 }
 
@@ -4481,7 +4831,190 @@ function site_pulse_ajax_admin_save_toll_settings(): void {
 	if ( isset( $_POST['vehicle_type'] ) && $_POST['vehicle_type'] !== '' ) {
 		site_pulse_set_setting( 'toll_vehicle_type', sanitize_text_field( $_POST['vehicle_type'] ) );
 	}
-	wp_send_json_success( [ 'vehicle_type' => site_pulse_toll_vehicle_type() ] );
+	if ( isset( $_POST['cost_basis'] ) ) {
+		site_pulse_set_setting( 'toll_cost_basis', $_POST['cost_basis'] === 'tag' ? 'tag' : 'cash' );
+	}
+	wp_send_json_success( [
+		'vehicle_type' => site_pulse_toll_vehicle_type(),
+		'cost_basis'   => site_pulse_toll_cost_basis(),
+	] );
+}
+
+add_action( 'wp_ajax_site_pulse_admin_test_toll_api', 'site_pulse_ajax_admin_test_toll_api' );
+function site_pulse_ajax_admin_test_toll_api(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_is_god( get_current_user_id() ) ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+
+	$key = site_pulse_tollguru_key();
+	if ( ! $key ) {
+		wp_send_json_success( [ 'error' => 'No TollGuru API key set — enter it in the toll settings above and save first.' ] );
+	}
+
+	// Price a real toll via the basic Toll API (origin-destination). $0 is a valid result —
+	// it just means that route has no tolls; the key still works. $debug captures TollGuru's
+	// raw status/body. Admin can pick a specific From/To pair; otherwise the two lowest-id.
+	global $wpdb;
+	$from_id = (int) ( $_POST['from'] ?? 0 );
+	$to_id   = (int) ( $_POST['to'] ?? 0 );
+
+	if ( $from_id && $to_id ) {
+		if ( $from_id === $to_id ) {
+			wp_send_json_success( [ 'error' => 'Pick two different locations to test.' ] );
+		}
+		$found = $wpdb->get_results( $wpdb->prepare(
+			"SELECT id, name FROM " . site_pulse_table('mileage_locations') . "
+			 WHERE id IN (%d, %d) AND lat IS NOT NULL AND lng IS NOT NULL",
+			$from_id, $to_id
+		), ARRAY_A ) ?: [];
+		$by = [];
+		foreach ( $found as $l ) $by[ (int) $l['id'] ] = $l;
+		if ( ! isset( $by[ $from_id ], $by[ $to_id ] ) ) {
+			wp_send_json_success( [ 'error' => 'Both locations must be geocoded (have map coordinates) to test.' ] );
+		}
+		$locs = [ $by[ $from_id ], $by[ $to_id ] ];   // preserve From → To direction
+	} else {
+		$locs = $wpdb->get_results(
+			"SELECT id, name FROM " . site_pulse_table('mileage_locations') . "
+			 WHERE status = 'approved' AND lat IS NOT NULL AND lng IS NOT NULL
+			 ORDER BY id ASC LIMIT 2", ARRAY_A ) ?: [];
+		if ( count( $locs ) < 2 ) {
+			wp_send_json_success( [ 'error' => 'Need at least two approved, geocoded mileage locations to run a test.' ] );
+		}
+	}
+
+	$debug = [];
+	$toll  = site_pulse_tollguru_compute_toll( (int) $locs[0]['id'], (int) $locs[1]['id'], $debug );
+
+	if ( $toll === null ) {
+		wp_send_json_success( [
+			'error'        => 'TollGuru rejected the request. See the raw response below.',
+			'key_preview'  => substr( $key, 0, 4 ) . '…' . substr( $key, -4 ),
+			'vehicle_type' => site_pulse_toll_vehicle_type(),
+			'attempts'     => [ [ 'endpoint' => 'origin-destination-waypoints', 'status' => $debug['status'] ?? '?', 'body' => $debug['body'] ?? '' ] ],
+		] );
+	}
+
+	wp_send_json_success( [
+		'ok'           => true,
+		'endpoint'     => 'origin-destination-waypoints',
+		'key_preview'  => substr( $key, 0, 4 ) . '…' . substr( $key, -4 ),
+		'from'         => $locs[0]['name'],
+		'to'           => $locs[1]['name'],
+		'vehicle_type' => site_pulse_toll_vehicle_type(),
+		'tag'          => $toll['tag'],
+		'cash'         => $toll['cash'],
+		'plaza_count'  => $toll['plaza_count'],
+		'plazas'       => $toll['plaza_sequence'] ? ( json_decode( $toll['plaza_sequence'], true ) ?: [] ) : [],
+		// Diagnostic: the raw route-level costs + a sample plaza, so we can see exactly
+		// where (if anywhere) TollGuru put the dollar amounts.
+		'raw_costs'    => $debug['costs'] ?? null,
+		'sample_toll'  => $debug['sample_toll'] ?? null,
+	] );
+}
+
+/**
+ * Probe whether this TollGuru key may use the POLYLINE endpoint
+ * (complete-polyline-from-mapping-service) — i.e. price tolls along the EXACT Google route
+ * instead of letting TollGuru re-route from from/to. Builds the Google polyline for the
+ * chosen pair, POSTs it to the polyline endpoint, and reports authorization + result so we
+ * can tell, definitively, whether the plan already includes it or an upgrade is needed.
+ * God-only, read-only (no caching, no DB writes).
+ */
+add_action( 'wp_ajax_site_pulse_admin_test_toll_polyline', 'site_pulse_ajax_admin_test_toll_polyline' );
+function site_pulse_ajax_admin_test_toll_polyline(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_is_god( get_current_user_id() ) ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+
+	$key = site_pulse_tollguru_key();
+	if ( ! $key ) {
+		wp_send_json_success( [ 'error' => 'No TollGuru API key set — enter it in Site Settings and save first.' ] );
+	}
+
+	global $wpdb;
+	$from_id = (int) ( $_POST['from'] ?? 0 );
+	$to_id   = (int) ( $_POST['to'] ?? 0 );
+
+	if ( $from_id && $to_id ) {
+		if ( $from_id === $to_id ) wp_send_json_success( [ 'error' => 'Pick two different locations to test.' ] );
+		$found = $wpdb->get_results( $wpdb->prepare(
+			"SELECT id, name FROM " . site_pulse_table('mileage_locations') . "
+			 WHERE id IN (%d, %d) AND lat IS NOT NULL AND lng IS NOT NULL",
+			$from_id, $to_id
+		), ARRAY_A ) ?: [];
+		$by = [];
+		foreach ( $found as $l ) $by[ (int) $l['id'] ] = $l;
+		if ( ! isset( $by[ $from_id ], $by[ $to_id ] ) ) wp_send_json_success( [ 'error' => 'Both locations must be geocoded to test.' ] );
+		$locs = [ $by[ $from_id ], $by[ $to_id ] ];
+	} else {
+		$locs = $wpdb->get_results(
+			"SELECT id, name FROM " . site_pulse_table('mileage_locations') . "
+			 WHERE status = 'approved' AND lat IS NOT NULL AND lng IS NOT NULL
+			 ORDER BY id ASC LIMIT 2", ARRAY_A ) ?: [];
+		if ( count( $locs ) < 2 ) wp_send_json_success( [ 'error' => 'Need at least two approved, geocoded locations to run a test.' ] );
+	}
+
+	// 1) Build the exact Google route polyline for this pair (this part uses the Google key).
+	$polyline = site_pulse_mileage_compute_route( (int) $locs[0]['id'], (int) $locs[1]['id'] );
+	if ( ! $polyline ) {
+		wp_send_json_success( [ 'error' => 'Could not build a Google route polyline for this pair — check the Google Routes API key / quota (see mileage error log).' ] );
+	}
+
+	// 2) Send that exact geometry to TollGuru's polyline endpoint.
+	$body = [
+		'source'   => 'google',           // the mapping service that produced the polyline
+		'polyline' => $polyline,
+		'vehicle'  => [ 'type' => site_pulse_toll_vehicle_type() ],
+	];
+	$response = wp_remote_post( 'https://apis.tollguru.com/toll/v2/complete-polyline-from-mapping-service', [
+		'timeout' => 25,
+		'headers' => [ 'Content-Type' => 'application/json', 'x-api-key' => $key ],
+		'body'    => wp_json_encode( $body ),
+	] );
+
+	if ( is_wp_error( $response ) ) {
+		wp_send_json_success( [ 'error' => 'Request failed: ' . $response->get_error_message() ] );
+	}
+
+	$code = (int) wp_remote_retrieve_response_code( $response );
+	$raw  = (string) wp_remote_retrieve_body( $response );
+	$data = json_decode( $raw, true );
+	$route = is_array( $data ) ? ( $data['routes'][0] ?? null ) : null;
+
+	// Verdict: 200 with a route = the key already allows the polyline endpoint. 401/403 (or a
+	// plan/authorization message) = it's gated and an upgrade is needed.
+	$authorized = ( $code === 200 && $route );
+	$gated      = in_array( $code, [ 401, 402, 403 ], true );
+
+	$plazas = [];
+	$tag = $cash = null;
+	if ( $route ) {
+		$costs = $route['costs'] ?? [];
+		$tag   = isset( $costs['tag'] )  ? (float) $costs['tag']  : null;
+		$cash  = isset( $costs['cash'] ) ? (float) $costs['cash'] : null;
+		$tolls = is_array( $route['tolls'] ?? null ) ? $route['tolls'] : [];
+		$plazas = array_values( array_filter( array_map( fn( $t ) => $t['name'] ?? null, $tolls ) ) );
+	}
+
+	wp_send_json_success( [
+		'authorized'   => $authorized,
+		'gated'        => $gated,
+		'status'       => $code,
+		'endpoint'     => 'complete-polyline-from-mapping-service',
+		'key_preview'  => substr( $key, 0, 4 ) . '…' . substr( $key, -4 ),
+		'from'         => $locs[0]['name'],
+		'to'           => $locs[1]['name'],
+		'vehicle_type' => site_pulse_toll_vehicle_type(),
+		'polyline_len' => strlen( $polyline ),
+		'tag'          => $tag,
+		'cash'         => $cash,
+		'plazas'       => $plazas,
+		'message'      => is_array( $data ) ? ( $data['message'] ?? ( $data['error'] ?? null ) ) : null,
+		'body'         => mb_substr( $raw, 0, 800 ),   // raw response for diagnosis
+	] );
 }
 
 add_action( 'wp_ajax_site_pulse_admin_test_mileage_api', 'site_pulse_ajax_admin_test_mileage_api' );

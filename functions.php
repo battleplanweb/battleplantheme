@@ -688,7 +688,7 @@ function battleplan_CheckRemoveSidebar( $classes ) {
 add_filter( 'body_class', 'battleplan_addHomeBodyClassToOptimized', 70 );
 function battleplan_addHomeBodyClassToOptimized( $classes ) {
 	$jobsite_geo = get_option('jobsite_geo');
-	if ( !empty($jobsite_geo['install']) ) return $classes;
+	if ( bp_module_on($jobsite_geo) ) return $classes;
 	if ( get_post_type() == "landing" && preg_match ('/, [A-Z]{2}$/', get_the_title() ) === 1 ) array_push($classes, 'home', 'alt-home');
 	return $classes;
 }
@@ -1386,7 +1386,7 @@ function battleplan_enqueue_footer_scripts() {
 	bp_enqueue_script( 'battleplan-script-tracking', 'script-tracking' );
 
 	$event_calendar = get_option('event_calendar');
-	if ( !empty($event_calendar['install']) ) { bp_enqueue_script( 'battleplan-script-events', 'script-events' ); }
+	if ( bp_module_on($event_calendar) ) { bp_enqueue_script( 'battleplan-script-events', 'script-events' ); }
 
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) bp_enqueue_script( 'battleplan-script-woocommerce', 'script-woocommerce', ['jquery'] );
 
@@ -1580,7 +1580,7 @@ function battleplan_admin_scripts() {
 		bp_enqueue_script( 'battleplan-script-user-profiles', 'script-user-profiles', ['jquery'] );
 	}
 	$jobsite_geo = get_option('jobsite_geo');
-	if ( !empty($jobsite_geo['install']) ) { wp_enqueue_style( 'battleplan-admin-jobsite-geo-css', get_template_directory_uri()."/style-jobsite-geo-admin.css", [], _BP_VERSION ); }
+	if ( bp_module_on($jobsite_geo) ) { wp_enqueue_style( 'battleplan-admin-jobsite-geo-css', get_template_directory_uri()."/style-jobsite-geo-admin.css", [], _BP_VERSION ); }
 
 }
 
@@ -1595,27 +1595,31 @@ function battleplan_login_enqueue() {
 // Load various includes
 if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) require_once get_template_directory().'/includes/includes-woocommerce.php';
 $event_calendar = get_option('event_calendar');
-if ( !empty($event_calendar['install']) )  require_once get_template_directory().'/includes/includes-events.php';
+if ( bp_module_on($event_calendar) )  require_once get_template_directory().'/includes/includes-events.php';
 $timeline = get_option('timeline');
-if ( !empty($timeline['install']) )  require_once get_template_directory().'/includes/includes-timeline.php';
+if ( bp_module_on($timeline) )  require_once get_template_directory().'/includes/includes-timeline.php';
 $jobsite_geo = get_option('jobsite_geo');
-if ( !empty($jobsite_geo['install']) ) {
+if ( bp_module_on($jobsite_geo) ) {
 	require_once get_template_directory().'/includes/includes-jobsite-geo.php';
 	require_once get_template_directory() . '/includes/includes-jobsite-geo-api.php';
 }
 if (file_exists(get_stylesheet_directory().'/functions-site.php')) require_once get_stylesheet_directory().'/functions-site.php';
 
 $schedules = get_option('schedules');
-if ( !empty($schedules['install']) ) {
+if ( bp_module_on($schedules) ) {
 	require_once get_template_directory().'/includes/includes-schedules.php';
 }
 $site_pulse = get_option('site_pulse');
-if ( !empty($site_pulse['install']) ) {
+if ( bp_module_on($site_pulse) ) {
 	require_once get_template_directory().'/includes/includes-site-pulse.php';
 }
 $site_private = get_option('site_private');
-if ( !empty($site_private['install']) ) {
+if ( bp_module_on($site_private) ) {
 	require_once get_template_directory().'/includes/includes-site-private.php';
+}
+$ai_chat = get_option('ai_chat');
+if ( bp_module_on($ai_chat) ) {
+	require_once get_template_directory().'/includes/includes-ai-chat.php';
 }
 $customer_info['site-type'] = $customer_info['site-type'] ?? '';
 

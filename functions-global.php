@@ -13,8 +13,75 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', 'v43.3' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', 'v43.4' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
+
+/**
+ * Is a module's install flag enabled? Use this for every module gate instead of
+ * !empty($opt['install']). It treats the STRING 'false' (and '0'/'no'/'off'/'') as OFF —
+ * not just boolean false — so a stray string value can't accidentally enable a module
+ * (in PHP the string 'false' is truthy, so plain !empty('false') would wrongly pass).
+ *
+ *   bp_module_on($site_pulse)                  // checks $site_pulse['install']
+ *   bp_module_on($cfg, 'some_other_flag')      // check a different key
+ */
+function bp_module_on( $opt, string $key = 'install' ): bool {
+	$v = is_array( $opt ) ? ( $opt[ $key ] ?? null ) : $opt;
+	if ( is_string( $v ) ) {
+		$v = strtolower( trim( $v ) );
+		return ! in_array( $v, [ '', '0', 'false', 'no', 'off' ], true );
+	}
+	return ! empty( $v );
+}
+
+/**
+ * Alert the framework maintainer when an Anthropic (Claude) API call fails because
+ * the model was retired/deprecated. Retired model ids return HTTP 404 and otherwise
+ * fail silently — the only fix is bumping the model id in code, so we need to know
+ * the moment a live site hits the wall.
+ *
+ * Call this from the failure branch of every Anthropic wp_remote_post. It's a no-op
+ * unless $status is 404, and it self-throttles to one email per model per day (per
+ * site) so a hammering cron/AJAX path can't flood the inbox.
+ *
+ * @param int    $status   HTTP status code returned by the Anthropic API.
+ * @param mixed  $body     Decoded JSON body (array) or raw body string.
+ * @param string $model    The model id that was sent.
+ * @param string $context  Where it happened, e.g. 'Site Pulse toll reconcile'.
+ */
+function bp_ai_model_alert( int $status, $body, string $model, string $context = '' ): void {
+	if ( $status !== 404 ) return; // /v1/messages 404 == unknown/retired model
+
+	$api_msg = '';
+	if ( is_array( $body ) )      $api_msg = (string) ( $body['error']['message'] ?? '' );
+	elseif ( is_string( $body ) ) $api_msg = $body;
+
+	// One email per model per day per site (transients are per-install).
+	$key = 'bp_ai_model_alert_' . md5( $model );
+	if ( get_transient( $key ) ) return;
+	set_transient( $key, 1, DAY_IN_SECONDS );
+
+	$site = home_url();
+	$host = wp_parse_url( $site, PHP_URL_HOST ) ?: $site;
+	$body_lines = [
+		"A Battle Plan site called the Anthropic API with a model that no longer exists (HTTP 404).",
+		"The AI feature is failing silently until the model id is updated in the framework code.",
+		"",
+		"Site:    {$site}",
+		"Feature: " . ( $context !== '' ? $context : 'unspecified' ),
+		"Model:   {$model}",
+		"API msg: " . ( $api_msg !== '' ? $api_msg : '(none returned)' ),
+		"",
+		"Fix: update the model id to a current one (e.g. claude-sonnet-4-6 or claude-opus-4-8) and redeploy the framework.",
+	];
+
+	wp_mail(
+		'glendon@bp-webdev.com',
+		"[Battle Plan] Deprecated AI model on {$host}",
+		implode( "\n", $body_lines )
+	);
+	error_log( "bp_ai_model_alert: HTTP 404 model '{$model}' at '{$context}' on {$site}" );
+}
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID );

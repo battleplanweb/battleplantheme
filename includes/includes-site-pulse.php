@@ -1,5 +1,6 @@
 <?php
 require_once get_template_directory() . '/prompts/prompts-site-pulse.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-modules.php';
 
 /* Battle Plan Web Design - Site Pulse Internal Operations Platform
 
@@ -24,7 +25,7 @@ require_once get_template_directory() . '/prompts/prompts-site-pulse.php';
 # Constants & Setup
 --------------------------------------------------------------*/
 
-define( 'SITE_PULSE_DB_VERSION', '1.17' );
+define( 'SITE_PULSE_DB_VERSION', '1.24' );
 
 function site_pulse_table( string $name ): string {
 	return $GLOBALS['wpdb']->prefix . 'site_pulse_' . $name;
@@ -88,6 +89,7 @@ function site_pulse_install_db(): void {
 		state varchar(50) DEFAULT NULL,
 		zip varchar(20) DEFAULT NULL,
 		phone varchar(30) DEFAULT NULL,
+		location_number varchar(50) DEFAULT NULL,
 		status varchar(20) NOT NULL DEFAULT 'active',
 		display_order tinyint(3) NOT NULL DEFAULT 0,
 		meta text DEFAULT NULL,
@@ -117,6 +119,7 @@ function site_pulse_install_db(): void {
 		employee_id varchar(50) DEFAULT NULL,
 		status varchar(20) NOT NULL DEFAULT 'active',
 		meta text DEFAULT NULL,
+		capability_overrides text DEFAULT NULL,
 		created_at datetime NOT NULL,
 		updated_at datetime NOT NULL,
 		PRIMARY KEY  (id),
@@ -277,6 +280,7 @@ function site_pulse_install_db(): void {
 		location_type varchar(50) NOT NULL DEFAULT 'vendor',
 		is_private tinyint(1) NOT NULL DEFAULT 0,
 		category varchar(50) DEFAULT NULL,
+		code varchar(50) DEFAULT NULL,
 		is_business tinyint(1) NOT NULL DEFAULT 1,
 		is_active tinyint(1) NOT NULL DEFAULT 1,
 		notes text DEFAULT NULL,
@@ -329,9 +333,14 @@ function site_pulse_install_db(): void {
 		from_location_id int(11) NOT NULL,
 		to_location_id int(11) NOT NULL,
 		miles decimal(8,2) DEFAULT NULL,
+		miles_adjust decimal(8,2) DEFAULT NULL,
+		miles_adjust_reason varchar(255) DEFAULT NULL,
 		purpose varchar(255) DEFAULT NULL,
+		charge_to varchar(50) DEFAULT NULL,
+		note text DEFAULT NULL,
 		has_toll tinyint(1) NOT NULL DEFAULT 0,
 		toll_cost decimal(8,2) DEFAULT NULL,
+		toll_estimate decimal(8,2) DEFAULT NULL,
 		has_trailer tinyint(1) NOT NULL DEFAULT 0,
 		created_at datetime NOT NULL,
 		PRIMARY KEY  (id),
@@ -398,6 +407,7 @@ function site_pulse_install_db(): void {
 		plaza_lng decimal(10,7) DEFAULT NULL,
 		allocation_status varchar(20) NOT NULL DEFAULT 'unprocessed',
 		allocation_entry_id int(11) DEFAULT NULL,
+		allocation_leg_id int(11) DEFAULT NULL,
 		allocation_confidence decimal(4,3) DEFAULT NULL,
 		allocation_note varchar(255) DEFAULT NULL,
 		created_at datetime NOT NULL,
@@ -813,6 +823,20 @@ function site_pulse_enqueue_assets(): void {
 		true
 	);
 
+	// Site Pulse styles load here — scoped to the SP pages (login/dashboard), alongside the
+	// SP script — rather than via the global deferred CSS bundle. The SP UI only exists on
+	// these slugs, so this is both leaner (off every other page) and reliable (no dependence
+	// on the combined-bundle signature/cache that previously left it missing).
+	$style_path = get_template_directory() . '/style-site-pulse.css';
+	if ( file_exists( $style_path ) ) {
+		wp_enqueue_style(
+			'site-pulse-style',
+			get_template_directory_uri() . '/style-site-pulse.css',
+			[],
+			filemtime( $style_path )
+		);
+	}
+
 	$eff_user_id = site_pulse_effective_user_id();
 	$real_user_id = get_current_user_id();
 	$profile   = site_pulse_get_user_profile( $eff_user_id );
@@ -832,7 +856,7 @@ function site_pulse_enqueue_assets(): void {
 		'nonce'              => wp_create_nonce( 'site_pulse_nonce' ),
 		'userId'             => $eff_user_id,
 		'userRole'           => $role_data ? $role_data['slug'] : '',
-		'userCaps'           => $role_data ? json_decode( $role_data['capabilities'], true ) : [],
+		'userCaps'           => site_pulse_effective_caps( $eff_user_id ),
 		'locationId'         => $profile ? (int) $profile['location_id'] : 0,
 		'locationName'       => $location_name,
 		'appName'            => site_pulse_get_setting( 'app_name', 'Site Pulse' ),
@@ -911,7 +935,7 @@ function site_pulse_get_all_roles( bool $include_god = false ): array {
  * for the Tiers editor's checkbox grid and for validating saved capabilities. `god_mode` is
  * intentionally excluded — it is internal and only the (hidden) God tier carries it.
  */
-function site_pulse_capability_catalog(): array {
+function site_pulse_capability_catalog_all(): array {
 	return [
 		'view_own_reports'        => 'View own reports',
 		'submit_reports'          => 'Submit reports',
@@ -919,14 +943,30 @@ function site_pulse_capability_catalog(): array {
 		'view_supervisor_reports' => 'View all supervisor reports',
 		'view_analytics'    => 'View analytics',
 		'view_ai_insights'  => 'View AI insights',
+		'view_forms'        => 'View Forms',
+		'view_reviews'      => 'View reviews',
+		'manage_reviews'    => 'Manage reviews &amp; replies',
 		'submit_mileage'    => 'Submit mileage',
 		'manage_mileage'    => 'Manage mileage settings',
 		'manage_locations'  => 'Manage home bases',
 		'manage_users'      => 'Manage users',
 		'manage_templates'  => 'Manage report templates',
 		'manage_settings'   => 'Manage site settings',
-		'manage_roles'      => 'Manage tiers',
+		'manage_roles'      => 'Manage roles',
 	];
+}
+
+/**
+ * The catalog as SHOWN to admins (Tiers editor, per-user override grid) and as
+ * granted to god — the full set minus any capability whose module is currently
+ * off. Stored role/override caps are always validated against
+ * site_pulse_capability_catalog_all() (not this), so toggling a module off never
+ * strips a saved capability; it just sleeps until the module is re-enabled.
+ */
+function site_pulse_capability_catalog(): array {
+	$all  = site_pulse_capability_catalog_all();
+	$keep = array_flip( site_pulse_filter_caps_by_module( array_keys( $all ) ) );
+	return array_intersect_key( $all, $keep );
 }
 
 function site_pulse_get_user_profile( int $user_id ): ?array {
@@ -938,15 +978,52 @@ function site_pulse_get_user_profile( int $user_id ): ?array {
 	return $row ?: null;
 }
 
-function site_pulse_user_can( int $user_id, string $capability ): bool {
+/**
+ * Parse a stored per-user capability-override blob into a clean cap => bool map. Overrides are
+ * sparse — only the capabilities that differ from the role default are present. Anything not in
+ * the catalog is dropped, so a renamed/removed capability can never linger.
+ */
+function site_pulse_parse_overrides( $raw ): array {
+	if ( empty( $raw ) ) return [];
+	$decoded = json_decode( (string) $raw, true );
+	if ( ! is_array( $decoded ) ) return [];
+	// Validate against the FULL catalog (not the module-filtered one) so a stored
+	// override for an off module is preserved, not silently dropped on the next save.
+	$catalog = site_pulse_capability_catalog_all();
+	$out = [];
+	foreach ( $decoded as $cap => $on ) {
+		if ( isset( $catalog[ $cap ] ) ) $out[ $cap ] = (bool) $on;
+	}
+	return $out;
+}
+
+/**
+ * A user's effective capabilities: their role's capabilities, then per-user overrides applied
+ * on top (an override of true grants a cap the role lacks; false revokes one the role grants).
+ * This is THE single source of truth — used by site_pulse_user_can() for server-side AJAX gating,
+ * by the dashboard template, and by the JS localization — so an override holds everywhere.
+ */
+function site_pulse_effective_caps( int $user_id ): array {
 	$profile = site_pulse_get_user_profile( $user_id );
-	if ( ! $profile ) return false;
+	if ( ! $profile ) return [];
 
-	$role = site_pulse_get_role( $profile['role_id'] );
-	if ( ! $role ) return false;
+	$role = site_pulse_get_role( (int) $profile['role_id'] );
+	$caps = $role ? ( json_decode( $role['capabilities'], true ) ?: [] ) : [];
 
-	$caps = json_decode( $role['capabilities'], true ) ?: [];
-	return in_array( $capability, $caps, true );
+	foreach ( site_pulse_parse_overrides( $profile['capability_overrides'] ?? null ) as $cap => $on ) {
+		if ( $on ) {
+			if ( ! in_array( $cap, $caps, true ) ) $caps[] = $cap;
+		} else {
+			$caps = array_values( array_diff( $caps, [ $cap ] ) );
+		}
+	}
+	// Caps owned by an off module go inert here — the single runtime chokepoint for
+	// site_pulse_user_can() and the dashboard's per-user nav. Stored caps are untouched.
+	return site_pulse_filter_caps_by_module( $caps );
+}
+
+function site_pulse_user_can( int $user_id, string $capability ): bool {
+	return in_array( $capability, site_pulse_effective_caps( $user_id ), true );
 }
 
 function site_pulse_user_hierarchy( int $user_id ): int {
@@ -1391,6 +1468,13 @@ function site_pulse_ajax_login(): void {
 	wp_set_current_user( $user->ID );
 	wp_set_auth_cookie( $user->ID, true );
 
+	// If they signed in with the shared default password, flag them so the dashboard forces
+	// a password change before they can use the app. A non-default login clears the flag.
+	$default = site_pulse_default_password();
+	if ( $default !== '' ) {
+		update_user_meta( $user->ID, 'site_pulse_force_pw', hash_equals( $default, (string) $password ) ? '1' : '0' );
+	}
+
 	site_pulse_log( 'login', sprintf( '%s logged in', $user->display_name ) );
 
 	wp_send_json_success( [ 'redirect' => home_url( '/site-pulse-dashboard/' ) ] );
@@ -1403,6 +1487,121 @@ function site_pulse_ajax_logout(): void {
 	wp_send_json_success( [ 'redirect' => home_url( '/site-pulse-login/' ) ] );
 }
 
+/*--------------------------------------------------------------
+# Forced Password Change (shared default password)
+--------------------------------------------------------------*/
+
+// The shared temporary password handed out to new users. Anyone whose password is still
+// this exact string is forced to pick a new one before they can use the app. Filterable so
+// a deployment can change the default, or disable the gate entirely by returning ''.
+function site_pulse_default_password(): string {
+	return (string) apply_filters( 'site_pulse_default_password', 'Pa55w0rd@2026!' );
+}
+
+// Whether $user_id is still on the default password and must change it. The verdict is
+// cached in user meta so we only run the (relatively expensive) bcrypt check once: after
+// that it's a plain meta read. The cache is reset to '1'/'0' whenever the password changes
+// through a Site Pulse path (login, admin reset, or the forced-change screen below).
+function site_pulse_must_change_password( int $user_id ): bool {
+	if ( ! $user_id ) return false;
+	$default = site_pulse_default_password();
+	if ( $default === '' ) return false;
+
+	$flag = get_user_meta( $user_id, 'site_pulse_force_pw', true );
+	if ( $flag === '' ) {
+		$user = get_userdata( $user_id );
+		if ( ! $user ) return false;
+		$flag = wp_check_password( $default, $user->user_pass, $user_id ) ? '1' : '0';
+		update_user_meta( $user_id, 'site_pulse_force_pw', $flag );
+	}
+	return $flag === '1';
+}
+
+// Process the new password from the forced-change screen. Runs on template_redirect — before
+// any output — so we can reset the auth cookie (wp_set_password invalidates it) and redirect.
+// On a validation error we stash a message and let the dashboard re-render the form with it.
+add_action( 'template_redirect', 'site_pulse_force_password_change_handler' );
+function site_pulse_force_password_change_handler(): void {
+	if ( empty( $_POST['sp_force_pw_submit'] ) ) return;
+	if ( ! is_user_logged_in() ) return;
+	if ( site_pulse_is_impersonating() ) return; // god is just viewing — not their own gate
+
+	$user_id = get_current_user_id();
+	if ( ! site_pulse_must_change_password( $user_id ) ) return;
+
+	if ( ! isset( $_POST['sp_force_pw_nonce'] ) || ! wp_verify_nonce( $_POST['sp_force_pw_nonce'], 'sp_force_pw_' . $user_id ) ) {
+		$GLOBALS['sp_force_pw_error'] = 'Your session expired. Please try again.';
+		return;
+	}
+
+	// Field names dodge `password` (WP Engine's WAF strips it) and arrive slash-escaped.
+	$new  = (string) wp_unslash( $_POST['sp_new_pass']  ?? '' );
+	$new2 = (string) wp_unslash( $_POST['sp_new_pass2'] ?? '' );
+
+	if ( strlen( $new ) < 8 ) {
+		$GLOBALS['sp_force_pw_error'] = 'Your new password must be at least 8 characters.';
+		return;
+	}
+	if ( $new !== $new2 ) {
+		$GLOBALS['sp_force_pw_error'] = "The two passwords don't match.";
+		return;
+	}
+	if ( hash_equals( site_pulse_default_password(), $new ) ) {
+		$GLOBALS['sp_force_pw_error'] = 'Please choose a password different from the temporary one.';
+		return;
+	}
+
+	// wp_set_password() invalidates the current auth cookie, so re-issue one to stay logged in.
+	wp_set_password( $new, $user_id );
+	update_user_meta( $user_id, 'site_pulse_force_pw', '0' );
+	wp_set_current_user( $user_id );
+	wp_set_auth_cookie( $user_id, true );
+	site_pulse_log( 'password_changed', 'Replaced the temporary password with a new one' );
+
+	wp_safe_redirect( home_url( '/site-pulse-dashboard/' ) );
+	exit;
+}
+
+// The blocking "choose a new password" screen, styled like the Site Pulse login. Rendered by
+// the dashboard page (returns its HTML) whenever the logged-in user is still on the default.
+function site_pulse_render_force_password_screen(): string {
+	$app_name = site_pulse_get_setting( 'app_name', 'Site Pulse' );
+	$logo_url = site_pulse_get_setting( 'login_logo_url', '' );
+	$error    = $GLOBALS['sp_force_pw_error'] ?? '';
+	$nonce    = wp_create_nonce( 'sp_force_pw_' . get_current_user_id() );
+	$logout   = wp_logout_url( home_url( '/site-pulse-login/' ) );
+
+	$html  = '<div id="sp-login-wrap"><div class="sp-login-box">';
+	$html .=   '<div class="sp-login-header">';
+	if ( $logo_url ) {
+		$html .= '<img src="' . esc_url( $logo_url ) . '" alt="' . esc_attr( $app_name ) . '" class="sp-login-logo">';
+	}
+	$html .=     '<h1>Choose a New Password</h1>';
+	$html .=     '<p>For your security, please replace the temporary password before you continue.</p>';
+	$html .=   '</div>';
+
+	$html .=   '<form id="sp-force-pw-form" method="post" action="" autocomplete="off" novalidate>';
+	$html .=     '<input type="hidden" name="sp_force_pw_submit" value="1">';
+	$html .=     '<input type="hidden" name="sp_force_pw_nonce" value="' . esc_attr( $nonce ) . '">';
+	$html .=     '<div class="sp-form-group">';
+	$html .=       '<label for="sp-new-pass">New Password</label>';
+	$html .=       '<input type="password" id="sp-new-pass" name="sp_new_pass" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters">';
+	$html .=     '</div>';
+	$html .=     '<div class="sp-form-group">';
+	$html .=       '<label for="sp-new-pass2">Confirm New Password</label>';
+	$html .=       '<input type="password" id="sp-new-pass2" name="sp_new_pass2" autocomplete="new-password" minlength="8" required placeholder="Re-enter your new password">';
+	$html .=     '</div>';
+	if ( $error ) {
+		$html .= '<div class="sp-form-error" role="alert" style="display:block;">' . esc_html( $error ) . '</div>';
+	}
+	$html .=     '<button type="submit" class="sp-btn sp-btn-primary sp-btn-full">Save New Password</button>';
+	$html .=   '</form>';
+	$html .=   '<p class="sp-login-foot"><a href="' . esc_url( $logout ) . '">Log out</a></p>';
+	$html .= '</div></div>';
+
+	return $html;
+}
+
 add_action( 'wp_ajax_site_pulse_save_report', 'site_pulse_ajax_save_report' );
 function site_pulse_ajax_save_report(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
@@ -1410,7 +1609,9 @@ function site_pulse_ajax_save_report(): void {
 	$user_id     = site_pulse_effective_user_id();
 	$template_id = (int) ( $_POST['template_id'] ?? 0 );
 	$report_id   = (int) ( $_POST['report_id'] ?? 0 );
-	$answers     = $_POST['answers'] ?? [];
+	// WordPress slash-escapes all superglobals, so an apostrophe arrives as \'.
+	// Unslash before sanitizing/saving or the backslash gets stored (HGTV\'s).
+	$answers     = wp_unslash( $_POST['answers'] ?? [] );
 	$action_type = sanitize_text_field( $_POST['action_type'] ?? 'save' );
 
 	if ( ! $user_id || ! site_pulse_user_can( $user_id, 'submit_reports' ) ) {
@@ -1604,7 +1805,7 @@ function site_pulse_ajax_admin_get_users(): void {
 		ARRAY_A
 	) ?: [];
 
-	wp_send_json_success( [ 'users' => $users, 'roles' => $roles, 'locations' => $locations, 'mileage_locations' => $mileage_locations ] );
+	wp_send_json_success( [ 'users' => $users, 'roles' => $roles, 'locations' => $locations, 'mileage_locations' => $mileage_locations, 'catalog' => site_pulse_capability_catalog() ] );
 }
 
 add_action( 'wp_ajax_site_pulse_admin_create_user', 'site_pulse_ajax_admin_create_user' );
@@ -1676,6 +1877,22 @@ function site_pulse_ajax_admin_update_user(): void {
 	}
 	if ( isset( $_POST['employee_id'] ) )   $updates['employee_id']   = sanitize_text_field( $_POST['employee_id'] );
 	if ( isset( $_POST['status'] ) )        $updates['status']        = sanitize_text_field( $_POST['status'] );
+
+	// Per-user capability overrides — a sparse {cap: bool} map of only the caps that differ from
+	// the role default. Validated against the catalog; an empty map clears all overrides (NULL).
+	if ( isset( $_POST['capability_overrides'] ) ) {
+		$raw     = json_decode( (string) wp_unslash( $_POST['capability_overrides'] ), true );
+		// Full catalog so overrides for an off module are kept, not wiped on save.
+		$catalog = site_pulse_capability_catalog_all();
+		$clean   = [];
+		if ( is_array( $raw ) ) {
+			foreach ( $raw as $cap => $on ) {
+				if ( isset( $catalog[ $cap ] ) ) $clean[ $cap ] = (bool) $on;
+			}
+		}
+		$updates['capability_overrides'] = $clean ? wp_json_encode( $clean ) : null;
+	}
+
 	$updates['updated_at'] = current_time( 'mysql' );
 
 	$wpdb->update( site_pulse_table('user_profiles'), $updates, [ 'user_id' => $user_id ] );
@@ -1691,6 +1908,11 @@ function site_pulse_ajax_admin_update_user(): void {
 	$new_pass = $_POST['new_user_pass'] ?? ( $_POST['new_password'] ?? '' );
 	if ( ! empty( $new_pass ) ) {
 		wp_set_password( $new_pass, $user_id );
+		// If an admin (re)sets the shared default, force a change at next login; otherwise clear.
+		$default = site_pulse_default_password();
+		if ( $default !== '' ) {
+			update_user_meta( $user_id, 'site_pulse_force_pw', hash_equals( $default, (string) wp_unslash( $new_pass ) ) ? '1' : '0' );
+		}
 	}
 
 	site_pulse_log( 'user_updated', sprintf( 'Updated user #%d', $user_id ), [], $user_id );
@@ -1754,14 +1976,18 @@ function site_pulse_ajax_admin_save_location(): void {
 	global $wpdb;
 	$id   = (int) ( $_POST['id'] ?? 0 );
 	$now  = current_time( 'mysql' );
+	// WordPress slash-escapes every superglobal, so an apostrophe arrives as \' — wp_unslash()
+	// before sanitizing or names like "Babe's Chicken" get stored as "Babe\'s Chicken".
 	$data = [
-		'name'          => sanitize_text_field( $_POST['name'] ?? '' ),
-		'location_type' => sanitize_text_field( $_POST['location_type'] ?? '' ),
-		'address'       => sanitize_text_field( $_POST['address'] ?? '' ),
-		'city'          => sanitize_text_field( $_POST['city'] ?? '' ),
-		'state'         => sanitize_text_field( $_POST['state'] ?? '' ),
-		'zip'           => sanitize_text_field( $_POST['zip'] ?? '' ),
-		'phone'         => sanitize_text_field( $_POST['phone'] ?? '' ),
+		'name'          => sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) ),
+		'location_type' => sanitize_text_field( wp_unslash( $_POST['location_type'] ?? '' ) ),
+		'address'       => sanitize_text_field( wp_unslash( $_POST['address'] ?? '' ) ),
+		'city'          => sanitize_text_field( wp_unslash( $_POST['city'] ?? '' ) ),
+		'state'         => sanitize_text_field( wp_unslash( $_POST['state'] ?? '' ) ),
+		'zip'           => sanitize_text_field( wp_unslash( $_POST['zip'] ?? '' ) ),
+		'phone'         => sanitize_text_field( wp_unslash( $_POST['phone'] ?? '' ) ),
+		// Store/accounting number used to charge mileage to this location ("Charge To" on entries).
+		'location_number' => sanitize_text_field( wp_unslash( $_POST['location_number'] ?? '' ) ),
 		'status'        => sanitize_text_field( $_POST['status'] ?? 'active' ),
 		'display_order' => (int) ( $_POST['display_order'] ?? 0 ),
 		'updated_at'    => $now,
@@ -1835,7 +2061,7 @@ function site_pulse_ajax_admin_save_template(): void {
 	$data = [
 		'name'               => sanitize_text_field( $_POST['name'] ?? '' ),
 		'slug'               => sanitize_title( $_POST['slug'] ?? $_POST['name'] ?? '' ),
-		'description'        => sanitize_text_field( $_POST['description'] ?? '' ),
+		'description'        => sanitize_text_field( wp_unslash( $_POST['description'] ?? '' ) ),
 		'frequency'          => sanitize_text_field( $_POST['frequency'] ?? 'weekly' ),
 		'required_role_slug' => sanitize_text_field( $_POST['required_role_slug'] ?? 'manager' ),
 		'is_active'          => (int) ( $_POST['is_active'] ?? 1 ),
@@ -2005,25 +2231,27 @@ function site_pulse_ajax_admin_save_role(): void {
 	$id    = (int) ( $_POST['id'] ?? 0 );
 	$label = sanitize_text_field( wp_unslash( $_POST['label'] ?? '' ) );
 	if ( $label === '' ) {
-		wp_send_json_error( [ 'message' => 'Tier name is required.' ] );
+		wp_send_json_error( [ 'message' => 'Role name is required.' ] );
 	}
 
 	// Only ever store known capabilities; silently drop anything not in the catalog.
+	// Validate against the FULL catalog so a role keeps caps for a module that
+	// happens to be off right now (they'd otherwise be stripped on every save).
 	$posted = (array) ( $_POST['capabilities'] ?? [] );
-	$caps   = array_values( array_intersect( array_map( 'strval', $posted ), array_keys( site_pulse_capability_catalog() ) ) );
+	$caps   = array_values( array_intersect( array_map( 'strval', $posted ), array_keys( site_pulse_capability_catalog_all() ) ) );
 
 	if ( $id ) {
 		$role = site_pulse_get_role( $id );
 		if ( ! $role || $role['slug'] === 'god' ) {
-			wp_send_json_error( [ 'message' => 'That tier cannot be edited.' ] );
+			wp_send_json_error( [ 'message' => 'That role cannot be edited.' ] );
 		}
 		// Label + capabilities only — slug and rank are stable identity, untouched.
 		$wpdb->update( site_pulse_table('roles'),
 			[ 'label' => $label, 'capabilities' => wp_json_encode( $caps ) ],
 			[ 'id' => $id ]
 		);
-		site_pulse_log( 'tier_updated', sprintf( 'Updated tier "%s" (#%d)', $label, $id ) );
-		wp_send_json_success( [ 'message' => 'Tier saved.' ] );
+		site_pulse_log( 'tier_updated', sprintf( 'Updated role "%s" (#%d)', $label, $id ) );
+		wp_send_json_success( [ 'message' => 'Role saved.' ] );
 	}
 
 	// Create — derive a unique, stable slug from the name; never reuse the reserved 'god'.
@@ -2046,8 +2274,8 @@ function site_pulse_ajax_admin_save_role(): void {
 		'hierarchy_level' => $new_level,
 		'is_active'       => 1,
 	] );
-	site_pulse_log( 'tier_created', sprintf( 'Created tier "%s" (%s)', $label, $slug ) );
-	wp_send_json_success( [ 'message' => 'Tier created.', 'id' => (int) $wpdb->insert_id ] );
+	site_pulse_log( 'tier_created', sprintf( 'Created role "%s" (%s)', $label, $slug ) );
+	wp_send_json_success( [ 'message' => 'Role created.', 'id' => (int) $wpdb->insert_id ] );
 }
 
 add_action( 'wp_ajax_site_pulse_admin_delete_role', 'site_pulse_ajax_admin_delete_role' );
@@ -2059,19 +2287,19 @@ function site_pulse_ajax_admin_delete_role(): void {
 	$id   = (int) ( $_POST['id'] ?? 0 );
 	$role = $id ? site_pulse_get_role( $id ) : null;
 	if ( ! $role || $role['slug'] === 'god' ) {
-		wp_send_json_error( [ 'message' => 'That tier cannot be deleted.' ] );
+		wp_send_json_error( [ 'message' => 'That role cannot be deleted.' ] );
 	}
 
 	$members = (int) $wpdb->get_var( $wpdb->prepare(
 		"SELECT COUNT(*) FROM " . site_pulse_table('user_profiles') . " WHERE role_id = %d", $id
 	) );
 	if ( $members ) {
-		wp_send_json_error( [ 'message' => sprintf( 'Reassign this tier\'s %d member%s to another tier first.', $members, $members === 1 ? '' : 's' ) ] );
+		wp_send_json_error( [ 'message' => sprintf( 'Reassign this role\'s %d member%s to another role first.', $members, $members === 1 ? '' : 's' ) ] );
 	}
 
 	$wpdb->delete( site_pulse_table('roles'), [ 'id' => $id ] );
-	site_pulse_log( 'tier_deleted', sprintf( 'Deleted tier "%s" (%s)', $role['label'], $role['slug'] ) );
-	wp_send_json_success( [ 'message' => 'Tier deleted.' ] );
+	site_pulse_log( 'tier_deleted', sprintf( 'Deleted role "%s" (%s)', $role['label'], $role['slug'] ) );
+	wp_send_json_success( [ 'message' => 'Role deleted.' ] );
 }
 
 add_action( 'wp_ajax_site_pulse_admin_reorder_roles', 'site_pulse_ajax_admin_reorder_roles' );
@@ -2095,7 +2323,7 @@ function site_pulse_ajax_admin_reorder_roles(): void {
 			[ 'id' => (int) $role_id ]
 		);
 	}
-	wp_send_json_success( [ 'message' => 'Tiers reordered.' ] );
+	wp_send_json_success( [ 'message' => 'Roles reordered.' ] );
 }
 
 
@@ -2202,15 +2430,18 @@ function site_pulse_set_api_key( string $key ): void {
 	site_pulse_set_setting( 'claude_api_key', base64_encode( $key ) );
 }
 
-function site_pulse_call_claude( string $prompt, string $system = '' ): ?string {
+function site_pulse_call_claude( string $prompt, string $system = '', array $opts = [], &$debug = null ): ?string {
+	$debug = null;
 	$api_key = site_pulse_get_api_key();
-	if ( ! $api_key ) return null;
+	if ( ! $api_key ) { $debug = 'No API key configured.'; return null; }
 
 	$messages = [ [ 'role' => 'user', 'content' => $prompt ] ];
 
+	// Defaults preserved for existing callers; toll reconciliation passes a larger max_tokens.
+	// Model: claude-sonnet-4-6 (the prior claude-sonnet-4-20250514 now 404s — retired on this account).
 	$body = [
-		'model'      => 'claude-sonnet-4-20250514',
-		'max_tokens' => 2048,
+		'model'      => $opts['model']      ?? 'claude-sonnet-4-6',
+		'max_tokens' => $opts['max_tokens'] ?? 2048,
 		'messages'   => $messages,
 	];
 
@@ -2225,10 +2456,11 @@ function site_pulse_call_claude( string $prompt, string $system = '' ): ?string 
 			'anthropic-version' => '2023-06-01',
 		],
 		'body'    => wp_json_encode( $body ),
-		'timeout' => 30,
+		'timeout' => $opts['timeout'] ?? 30,
 	] );
 
 	if ( is_wp_error( $response ) ) {
+		$debug = 'Request failed: ' . $response->get_error_message();
 		site_pulse_log( 'ai_error', 'Claude API error: ' . $response->get_error_message() );
 		return null;
 	}
@@ -2237,7 +2469,10 @@ function site_pulse_call_claude( string $prompt, string $system = '' ): ?string 
 	$data   = json_decode( wp_remote_retrieve_body( $response ), true );
 
 	if ( $status !== 200 || empty( $data['content'][0]['text'] ) ) {
+		$api_msg = $data['error']['message'] ?? wp_remote_retrieve_response_message( $response );
+		$debug   = "HTTP $status" . ( $api_msg ? ": $api_msg" : '' );
 		site_pulse_log( 'ai_error', 'Claude API returned status ' . $status, [ 'response' => $data ] );
+		bp_ai_model_alert( (int) $status, $data, $body['model'], 'Site Pulse AI' );
 		return null;
 	}
 
@@ -2435,7 +2670,7 @@ function site_pulse_ajax_resolve_action_item(): void {
 
 	$user_id = site_pulse_effective_user_id();
 	$item_id = (int) ( $_POST['item_id'] ?? 0 );
-	$note    = sanitize_textarea_field( $_POST['note'] ?? '' );
+	$note    = sanitize_textarea_field( wp_unslash( $_POST['note'] ?? '' ) );
 
 	if ( ! $item_id ) {
 		wp_send_json_error( [ 'message' => 'Invalid item.' ] );
@@ -2824,26 +3059,74 @@ function site_pulse_ajax_get_analytics(): void {
 
 
 /*--------------------------------------------------------------
-# God Mode — Nuclear Reset
+# One-time maintenance — strip legacy WordPress over-escaping
+# Text saved before the save handlers were fixed to wp_unslash()
+# their input kept the slashes WP adds to $_POST (HGTV\'s, O\"Brien).
+# Visit, logged in as a God account:   /?sp_fix_slashes=run
+# Idempotent: only rows whose value actually changes are rewritten,
+# so it is safe to run more than once and a no-op once everything is
+# clean. stripslashes() is the exact inverse of the addslashes() WP
+# applied, so user-typed backslashes (stored doubled) restore intact.
 --------------------------------------------------------------*/
-
-add_action( 'wp_ajax_site_pulse_god_nuke', 'site_pulse_ajax_god_nuke' );
-function site_pulse_ajax_god_nuke(): void {
-	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-
-	if ( ! site_pulse_is_god() ) {
-		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
-	}
+add_action( 'init', 'site_pulse_maybe_fix_legacy_slashes', 99 );
+function site_pulse_maybe_fix_legacy_slashes(): void {
+	if ( ( $_GET['sp_fix_slashes'] ?? '' ) !== 'run' ) return;
+	if ( ! is_user_logged_in() || ! site_pulse_is_god() ) wp_die( 'Not authorized.' );
+	nocache_headers();
 
 	global $wpdb;
-	$wpdb->query( "TRUNCATE TABLE " . site_pulse_table('reports') );
-	$wpdb->query( "TRUNCATE TABLE " . site_pulse_table('report_answers') );
-	$wpdb->query( "TRUNCATE TABLE " . site_pulse_table('action_items') );
-	$wpdb->query( "TRUNCATE TABLE " . site_pulse_table('notifications') );
-	$wpdb->query( "TRUNCATE TABLE " . site_pulse_table('activity_log') );
+	// Every column users type prose into — the same fields whose save paths now wp_unslash().
+	$targets = [
+		[ site_pulse_table('report_answers'),    'answer_text' ],
+		[ site_pulse_table('reports'),           'review_notes' ],
+		[ site_pulse_table('action_items'),      'description' ],
+		[ site_pulse_table('action_items'),      'resolution_note' ],
+		[ site_pulse_table('mileage_entries'),   'notes' ],
+		[ site_pulse_table('mileage_locations'), 'name' ],
+		[ site_pulse_table('mileage_locations'), 'address' ],
+		[ site_pulse_table('mileage_locations'), 'notes' ],
+		[ site_pulse_table('mileage_legs'),      'purpose' ],
+		[ site_pulse_table('locations'),         'name' ],
+		[ site_pulse_table('locations'),         'location_type' ],
+		[ site_pulse_table('locations'),         'address' ],
+		[ site_pulse_table('locations'),         'city' ],
+	];
 
-	wp_send_json_success( [ 'message' => 'All reports, action items, notifications, and activity logs cleared.' ] );
+	$lines = [];
+	$grand = 0;
+	foreach ( $targets as [ $table, $col ] ) {
+		// Skip NULL/empty — stripslashes(null) would blank the cell. Column names are
+		// hardcoded (not user input), so the interpolation is safe.
+		$rows  = $wpdb->get_results( "SELECT id, `$col` AS val FROM `$table` WHERE `$col` IS NOT NULL AND `$col` <> ''" );
+		$fixed = 0;
+		foreach ( $rows as $row ) {
+			$clean = stripslashes( $row->val );
+			if ( $clean !== $row->val ) {
+				$wpdb->update( $table, [ $col => $clean ], [ 'id' => (int) $row->id ] );
+				$fixed++;
+			}
+		}
+		$lines[] = sprintf( '%s.%s — %d scanned, %d fixed', $table, $col, count( $rows ), $fixed );
+		$grand  += $fixed;
+	}
+
+	if ( function_exists( 'site_pulse_log' ) ) {
+		site_pulse_log( 'maintenance', sprintf( 'Legacy slash cleanup: %d rows fixed', $grand ) );
+	}
+
+	wp_die(
+		'<h2>Site Pulse — legacy slash cleanup</h2><p><strong>' . (int) $grand
+		. '</strong> rows fixed.</p><pre>' . esc_html( implode( "\n", $lines ) )
+		. '</pre><p>Idempotent — refresh to re-run (it will report 0 once clean).</p>',
+		'Slash cleanup',
+		[ 'response' => 200 ]
+	);
 }
+
+
+/*--------------------------------------------------------------
+# God Mode — Nuclear Reset
+--------------------------------------------------------------*/
 
 // God-only single-record deletes. GOD alone (not owner/admin/supervisor) can permanently blank
 // out user-entered data that otherwise has no delete path. Each verifies the god role explicitly
@@ -2952,6 +3235,32 @@ function site_pulse_ajax_god_delete_user(): void {
 
 	site_pulse_log( 'god_delete', sprintf( 'GOD deleted user #%d (%s) and all their data', $uid, $target ? $target->user_login : 'orphaned profile' ) );
 	wp_send_json_success( [ 'message' => $target ? 'User and all their data deleted.' : 'Orphaned profile purged.' ] );
+}
+
+// God-only HARD delete of a Home Base (store) — the regular admin button only deactivates.
+add_action( 'wp_ajax_site_pulse_god_delete_location', 'site_pulse_ajax_god_delete_location' );
+function site_pulse_ajax_god_delete_location(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_is_god() ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+
+	global $wpdb;
+	$id = (int) ( $_POST['id'] ?? 0 );
+	if ( ! $id ) wp_send_json_error( [ 'message' => 'Invalid location.' ] );
+
+	$loc = $wpdb->get_row( $wpdb->prepare(
+		"SELECT name FROM " . site_pulse_table('locations') . " WHERE id = %d", $id
+	), ARRAY_A );
+	if ( ! $loc ) wp_send_json_error( [ 'message' => 'Location not found.' ] );
+
+	// Detach any driver whose Home Base pointed here so no dangling reference is left behind.
+	// (Mileage legs reference mileage_locations, a separate table, so nothing there to clean.)
+	$wpdb->update( site_pulse_table('user_profiles'), [ 'location_id' => 0 ], [ 'location_id' => $id ] );
+	$wpdb->delete( site_pulse_table('locations'), [ 'id' => $id ] );
+
+	site_pulse_log( 'god_delete', sprintf( 'GOD deleted location "%s" (#%d)', $loc['name'], $id ) );
+	wp_send_json_success( [ 'message' => 'Location deleted.' ] );
 }
 
 // God-only bulk cleanup: purge every user_profiles row whose WordPress account no longer exists
@@ -3107,7 +3416,10 @@ function site_pulse_mileage_trailer_rate(): float {
 
 /**
  * The editable library of common business purposes (mirrors the prototype's PurposeLib).
- * Stored as a JSON array in config; falls back to a sensible default set.
+ * Stored as a JSON array in config; falls back to a sensible default set. Each purpose is
+ * returned as { label, requires_note } — requires_note flags purposes (e.g. "Meeting") that
+ * prompt the driver for the additional-notes line. Legacy bare-string entries normalize to
+ * requires_note = false, so older saved libraries keep working.
  */
 function site_pulse_mileage_purposes(): array {
 	$raw  = site_pulse_get_setting( 'mileage_purposes', '' );
@@ -3119,7 +3431,19 @@ function site_pulse_mileage_purposes(): array {
 			'Maintenance / repair', 'Catering / event',
 		];
 	}
-	return array_values( array_filter( array_map( 'strval', $list ) ) );
+	$out = [];
+	foreach ( $list as $item ) {
+		if ( is_array( $item ) ) {
+			$label = sanitize_text_field( (string) ( $item['label'] ?? '' ) );
+			$req   = ! empty( $item['requires_note'] ) && $item['requires_note'] !== 'false';
+		} else {
+			$label = sanitize_text_field( (string) $item );
+			$req   = false;
+		}
+		if ( $label === '' ) continue;
+		$out[] = [ 'label' => $label, 'requires_note' => (bool) $req ];
+	}
+	return $out;
 }
 
 /**
@@ -3487,7 +3811,7 @@ function site_pulse_mileage_distance_matrix_call( array $origins, array $destina
 function site_pulse_mileage_recalc_entry( int $entry_id ): void {
 	global $wpdb;
 	$legs = $wpdb->get_results( $wpdb->prepare(
-		"SELECT miles, toll_cost, has_trailer FROM " . site_pulse_table('mileage_legs') . " WHERE entry_id = %d",
+		"SELECT miles, miles_adjust, toll_cost, has_trailer FROM " . site_pulse_table('mileage_legs') . " WHERE entry_id = %d",
 		$entry_id
 	), ARRAY_A ) ?: [];
 
@@ -3499,8 +3823,11 @@ function site_pulse_mileage_recalc_entry( int $entry_id ): void {
 		if ( $leg['miles'] === null ) {
 			$pending = true;
 		} else {
-			$total += (float) $leg['miles'];
-			if ( ! empty( $leg['has_trailer'] ) ) $trailer_miles += (float) $leg['miles'];
+			// A driver can nudge a leg's miles for a detour/closure; the adjustment is stored
+			// separately so the original computed distance stays visible. Effective = base + adjust.
+			$eff = (float) $leg['miles'] + (float) ( $leg['miles_adjust'] ?? 0 );
+			$total += $eff;
+			if ( ! empty( $leg['has_trailer'] ) ) $trailer_miles += $eff;
 		}
 		if ( $leg['toll_cost'] !== null ) $tolls += (float) $leg['toll_cost'];
 	}
@@ -3840,6 +4167,627 @@ function site_pulse_mileage_ensure_toll( int $from, int $to ): ?float {
 
 
 /*--------------------------------------------------------------
+# Toll Reconciliation — CSV import + AI matching
+#
+# The driver uploads their toll-authority statement (NTTA etc.). We parse it,
+# keep only the charges on dates the driver actually logged a trip, then have
+# Claude cross-reference each day's charges against that day's route — matching
+# each toll to a leg, ignoring off-path charges as personal detours, and
+# flagging anything that doesn't map cleanly. Review-then-apply: the AI result
+# is staged on the transaction rows; nothing hits a leg's reimbursable toll_cost
+# until the driver confirms. TollGuru is still priced per matched leg purely as
+# an accuracy comparison (toll_estimate), pending its eventual removal.
+--------------------------------------------------------------*/
+
+// Strip the Excel formula wrappers NTTA exports wrap cells in — ="..." or
+// =Text("01/05/2026 08:15","mm/dd/yyyy"). Returns the first quoted token, which
+// is the underlying value in both shapes; otherwise the raw trimmed string.
+function site_pulse_toll_csv_clean( string $v ): string {
+	$v = trim( $v );
+	if ( $v !== '' && $v[0] === '=' ) {
+		if ( preg_match( '/"([^"]*)"/', $v, $m ) ) return trim( $m[1] );
+		return trim( ltrim( $v, '=' ) );
+	}
+	return $v;
+}
+
+// Parse a toll-authority CSV into normalized transactions. Header-keyword driven
+// so other authorities degrade gracefully; tuned for NTTA's column names.
+// Returns rows: [ external_id, datetime (Y-m-d H:i:s|null), date (Y-m-d|null),
+// road, gantry, amount (abs float), acct ].
+function site_pulse_parse_toll_csv( string $csv, ?int &$skipped = null, ?int &$dupes = null ): array {
+	$skipped = 0; // count of obviously-bogus rows auto-expelled (see ceiling check below)
+	$dupes   = 0; // count of exact-duplicate rows collapsed
+	$csv = str_replace( [ "\r\n", "\r" ], "\n", $csv );
+
+	// CRITICAL: NTTA/Excel exports wrap cells in spreadsheet formulas that CONTAIN COMMAS —
+	// =Text("01/07/2026 10:28:35","mm/dd/yyyy hh:mm:ss") and ="0003826043". If we tokenized
+	// on commas first, those internal commas split one cell into several and shifted every
+	// later column, so the amount slot landed on the wrong value (a tag/reference number like
+	// 598602) and one transaction smeared across multiple junk rows. Neutralize the wrappers
+	// to plain quoted fields BEFORE parsing so the commas inside them are protected.
+	$csv = preg_replace( '/=Text\(\s*"((?:[^"]|"")*)"\s*(?:,\s*"(?:[^"]|"")*"\s*)?\)/i', '"$1"', $csv ); // =Text("X","fmt") | =Text("X") → "X"
+	$csv = preg_replace( '/="((?:[^"]|"")*)"/', '"$1"', $csv );                                          // ="X" → "X"
+
+	// Parse the WHOLE blob with fgetcsv (in-memory stream) so quoted commas and any embedded
+	// newlines inside quotes are handled correctly — naive line-by-line splitting is what
+	// fragmented records and shifted columns.
+	$records = [];
+	$fh = fopen( 'php://temp', 'r+' );
+	if ( $fh ) {
+		fwrite( $fh, $csv );
+		rewind( $fh );
+		while ( ( $rec = fgetcsv( $fh, 0, ',', '"', '' ) ) !== false ) {
+			if ( $rec === [ null ] ) continue; // blank line
+			$records[] = $rec;
+		}
+		fclose( $fh );
+	}
+	if ( count( $records ) < 2 ) return [];
+
+	// Header row = first record that names an amount column plus a date/transaction column.
+	$header_idx = 0;
+	foreach ( $records as $i => $rec ) {
+		$low = strtolower( implode( ' ', array_map( 'strval', $rec ) ) );
+		if ( strpos( $low, 'amount' ) !== false && ( strpos( $low, 'date' ) !== false || strpos( $low, 'time' ) !== false || strpos( $low, 'transaction' ) !== false ) ) {
+			$header_idx = $i;
+			break;
+		}
+	}
+
+	$headers = array_map( fn( $h ) => strtolower( site_pulse_toll_csv_clean( (string) $h ) ), $records[ $header_idx ] );
+
+	// Find a column by header text. $needles = substrings that qualify a column;
+	// $exclude = substrings that DISqualify it (checked first), so a look-alike like
+	// "Toll Tag ID" or "Account Balance" can never win a slot it shouldn't.
+	$find = function( array $needles, array $exclude = [] ) use ( $headers ): int {
+		foreach ( $headers as $idx => $h ) {
+			foreach ( $exclude as $x ) { if ( $x !== '' && strpos( $h, $x ) !== false ) continue 2; }
+			foreach ( $needles as $n ) { if ( strpos( $h, $n ) !== false ) return $idx; }
+		}
+		return -1;
+	};
+	// Match an exact header name (after normalize) — used where a substring match is risky.
+	$find_exact = function( array $names ) use ( $headers ): int {
+		foreach ( $headers as $idx => $h ) { if ( in_array( $h, $names, true ) ) return $idx; }
+		return -1;
+	};
+
+	// Prefer the "Entry" date/time over "Posted".
+	$col_dt = -1;
+	foreach ( $headers as $idx => $h ) { if ( strpos( $h, 'entry' ) !== false && ( strpos( $h, 'date' ) !== false || strpos( $h, 'time' ) !== false ) ) { $col_dt = $idx; break; } }
+	if ( $col_dt < 0 ) $col_dt = $find( [ 'date', 'time' ] );
+
+	// Amount: the column the toll dollar value lives in. This is the one that bit us —
+	// "Toll Tag ID" contains "toll", so keyword-matching "toll" grabbed the wrong column.
+	// Match explicit money-column names first; on the fallback, exclude tag/account/plate/
+	// balance/number/id columns so only a real amount column qualifies.
+	$col_amt = $find_exact( [ 'transaction amount', 'toll amount', 'amount', 'amount ($)', 'charge amount', 'fee', 'toll', 'charge' ] );
+	if ( $col_amt < 0 ) $col_amt = $find( [ 'amount', 'amt' ], [ 'tag', 'account', 'plate', 'license', 'balance', 'number', ' id', 'id ' ] );
+
+	$col_id    = $find( [ 'transaction id', 'transaction number', 'reference', 'txn', 'trip id' ] );
+	$col_road  = $find( [ 'road', 'highway', 'tollway', 'facility', 'route' ], [ 'date', 'time' ] );
+	// Location/gantry: exclude any date/time column. NTTA has "Transaction Exit Date/Time",
+	// which contains "exit" — a generic 'exit' keyword wrongly grabbed that timestamp column
+	// and showed a date where the gantry should be. "location"/"gantry"/"plaza" + the
+	// date/time exclusion pins it to the real Location column.
+	$col_plaza = $find( [ 'location', 'gantry', 'plaza' ], [ 'date', 'time' ] );
+	$col_acct  = $find( [ 'plate', 'license', 'tag', 'account' ], [ 'date', 'time' ] );
+
+	// A single toll is a few dollars. Some exports interleave auxiliary/summary rows
+	// (e.g. the tag/account number landing in the amount column), which surface as a
+	// constant nonsense charge like $598,602 with no real plaza. Auto-expel anything
+	// non-positive or above this ceiling so drivers never have to reject it by hand.
+	$max_sane_toll = (float) site_pulse_get_setting( 'toll_max_sane', '100' );
+	if ( $max_sane_toll <= 0 ) $max_sane_toll = 100.0;
+
+	$rows = [];
+	$seen = []; // dedupe keys of rows already kept, so exact repeats are dropped
+	for ( $i = $header_idx + 1; $i < count( $records ); $i++ ) {
+		$cells = $records[ $i ];
+		$get   = fn( $c ) => ( $c >= 0 && isset( $cells[ $c ] ) ) ? site_pulse_toll_csv_clean( (string) $cells[ $c ] ) : '';
+
+		$dt_raw = $get( $col_dt );
+		$ts     = $dt_raw !== '' ? strtotime( $dt_raw ) : false;
+		if ( $ts === false ) continue; // no usable date → can't bucket it to a day
+
+		$amt_raw = $get( $col_amt );
+		$amount  = abs( (float) preg_replace( '/[^0-9.\-]/', '', $amt_raw ) );
+		if ( $amount <= 0 || $amount > $max_sane_toll ) { $skipped++; continue; } // obviously bogus → drop
+
+		$external_id = $get( $col_id );
+		$road        = $get( $col_road );
+		$gantry      = $get( $col_plaza );
+		$acct        = $get( $col_acct );
+
+		// Exact duplicate? Same transaction id (if the export gives one), else identical
+		// timestamp + road + gantry + amount + account. You can't pass one gantry twice in
+		// the same second, so these are export artifacts — collapse to one, silently.
+		$key = $external_id !== ''
+			? 'id:' . $external_id
+			: implode( '|', [ date( 'Y-m-d H:i:s', $ts ), $road, $gantry, number_format( $amount, 2, '.', '' ), $acct ] );
+		if ( isset( $seen[ $key ] ) ) { $dupes++; continue; }
+		$seen[ $key ] = true;
+
+		// Preserve the statement's wall-clock date/time exactly as written (no timezone
+		// conversion) — date() round-trips the strtotime() result in the same TZ, so a
+		// late-night toll never slips to the wrong calendar day the way gmdate() could.
+		$rows[] = [
+			'external_id' => $external_id,
+			'datetime'    => date( 'Y-m-d H:i:s', $ts ),
+			'date'        => date( 'Y-m-d', $ts ),
+			'road'        => $road,
+			'gantry'      => $gantry,
+			'amount'      => $amount,
+			'acct'        => $acct,
+		];
+	}
+	return $rows;
+}
+
+// Build the review payload for one day's entry directly from the staged transaction
+// rows + legs, so the review screen and the apply step always agree. Includes the
+// live TollGuru estimate per matched leg (cached) for the accuracy comparison.
+function site_pulse_toll_day_proposal( int $entry_id, int $user_id ): array {
+	global $wpdb;
+
+	$entry = $wpdb->get_row( $wpdb->prepare(
+		"SELECT id, entry_date FROM " . site_pulse_table('mileage_entries') . " WHERE id = %d AND user_id = %d",
+		$entry_id, $user_id
+	), ARRAY_A );
+	if ( ! $entry ) return [];
+
+	$legs = $wpdb->get_results( $wpdb->prepare(
+		"SELECT l.id, l.leg_order, l.miles, lf.name AS from_name, lt.name AS to_name,
+		        l.from_location_id, l.to_location_id
+		 FROM " . site_pulse_table('mileage_legs') . " l
+		 LEFT JOIN " . site_pulse_table('mileage_locations') . " lf ON lf.id = l.from_location_id
+		 LEFT JOIN " . site_pulse_table('mileage_locations') . " lt ON lt.id = l.to_location_id
+		 WHERE l.entry_id = %d ORDER BY l.leg_order ASC",
+		$entry_id
+	), ARRAY_A ) ?: [];
+
+	$txns = $wpdb->get_results( $wpdb->prepare(
+		"SELECT id, txn_external_id, txn_datetime, road, gantry, amount, allocation_status, allocation_leg_id, allocation_note
+		 FROM " . site_pulse_table('mileage_toll_transactions') . "
+		 WHERE user_id = %d AND allocation_entry_id = %d
+		   AND allocation_status != 'no_trip'
+		 ORDER BY txn_datetime ASC, id ASC",
+		$user_id, $entry_id
+	), ARRAY_A ) ?: [];
+
+	$by_leg = [];
+	foreach ( $txns as $t ) {
+		if ( $t['allocation_status'] === 'proposed_matched' || $t['allocation_status'] === 'matched' ) {
+			$by_leg[ (int) $t['allocation_leg_id'] ][] = $t;
+		}
+	}
+
+	$leg_out = [];
+	$matched_total = 0.0;
+	foreach ( $legs as $leg ) {
+		$lid    = (int) $leg['id'];
+		$mtxns  = $by_leg[ $lid ] ?? [];
+		if ( ! $mtxns ) continue; // only show legs that got a toll
+		$ltotal = 0.0;
+		foreach ( $mtxns as $mt ) $ltotal += (float) $mt['amount'];
+		$matched_total += $ltotal;
+		$estimate = site_pulse_mileage_ensure_toll( (int) $leg['from_location_id'], (int) $leg['to_location_id'] );
+		$leg_out[] = [
+			'leg_id'       => $lid,
+			'leg_order'    => (int) $leg['leg_order'],
+			'from_name'    => $leg['from_name'],
+			'to_name'      => $leg['to_name'],
+			'miles'        => $leg['miles'] !== null ? (float) $leg['miles'] : null,
+			'transactions' => array_map( fn( $t ) => [
+				'id'       => (int) $t['id'],
+				'datetime' => $t['txn_datetime'],
+				'road'     => $t['road'],
+				'gantry'   => $t['gantry'],
+				'amount'   => (float) $t['amount'],
+			], $mtxns ),
+			'leg_total'    => round( $ltotal, 2 ),
+			'estimate'     => $estimate === null ? null : round( $estimate, 2 ),
+		];
+	}
+
+	$excluded = $ambiguous = [];
+	foreach ( $txns as $t ) {
+		$status = $t['allocation_status'];
+		if ( $status === 'proposed_matched' || $status === 'matched' ) continue;
+		$row = [
+			'id'       => (int) $t['id'],
+			'datetime' => $t['txn_datetime'],
+			'road'     => $t['road'],
+			'gantry'   => $t['gantry'],
+			'amount'   => (float) $t['amount'],
+			'reason'   => $t['allocation_note'],
+		];
+		if ( $status === 'proposed_ambiguous' ) $ambiguous[] = $row;
+		else $excluded[] = $row; // proposed_excluded / unprocessed / excluded
+	}
+
+	// Every leg, for the review screen's "assign this charge to…" dropdown.
+	$all_legs = array_map( fn( $l ) => [
+		'leg_id'    => (int) $l['id'],
+		'leg_order' => (int) $l['leg_order'],
+		'label'     => $l['from_name'] . ' → ' . $l['to_name'],
+	], $legs );
+
+	return [
+		'entry_id'      => $entry_id,
+		'date'          => $entry['entry_date'],
+		'legs'          => $leg_out,
+		'all_legs'      => $all_legs,
+		'excluded'      => $excluded,
+		'ambiguous'     => $ambiguous,
+		'matched_total' => round( $matched_total, 2 ),
+	];
+}
+
+add_action( 'wp_ajax_site_pulse_upload_toll_csv', 'site_pulse_ajax_upload_toll_csv' );
+function site_pulse_ajax_upload_toll_csv(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id = site_pulse_effective_user_id();
+	if ( ! site_pulse_user_can( $user_id, 'submit_mileage' ) && ! site_pulse_is_god( get_current_user_id() ) ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+
+	$csv      = (string) wp_unslash( $_POST['csv'] ?? '' );
+	$filename = sanitize_text_field( wp_unslash( $_POST['filename'] ?? '' ) );
+	if ( trim( $csv ) === '' ) wp_send_json_error( [ 'message' => 'No file received.' ] );
+
+	// CSV only. Enforce server-side too (the client accept= and JS check are bypassable):
+	// require a .csv name and reject anything that looks binary (xlsx/pdf/etc. carry NUL bytes).
+	if ( ! preg_match( '/\.csv$/i', $filename ) ) {
+		wp_send_json_error( [ 'message' => 'Only .csv files are accepted. Export your toll statement as CSV and try again.' ] );
+	}
+	if ( strpos( $csv, "\0" ) !== false ) {
+		wp_send_json_error( [ 'message' => "That file isn't a plain CSV (it looks like a spreadsheet or PDF). Export as CSV and try again." ] );
+	}
+
+	$skipped_invalid = 0;
+	$skipped_dupes   = 0;
+	$rows = site_pulse_parse_toll_csv( $csv, $skipped_invalid, $skipped_dupes );
+	if ( ! $rows ) wp_send_json_error( [ 'message' => "Couldn't find any toll transactions in that file. Make sure it's the CSV export from your toll account." ] );
+
+	$dates = array_values( array_unique( array_column( $rows, 'date' ) ) );
+	sort( $dates );
+
+	global $wpdb;
+
+	// Which of those dates does this driver actually have a logged trip for?
+	$ph      = implode( ',', array_fill( 0, count( $dates ), '%s' ) );
+	$entries = $wpdb->get_results( $wpdb->prepare(
+		"SELECT id, entry_date FROM " . site_pulse_table('mileage_entries') . "
+		 WHERE user_id = %d AND entry_date IN ( $ph )",
+		array_merge( [ $user_id ], $dates )
+	), ARRAY_A ) ?: [];
+	$entry_by_date = [];
+	foreach ( $entries as $e ) $entry_by_date[ $e['entry_date'] ] = (int) $e['id'];
+
+	$now = current_time( 'mysql' );
+
+	// Fresh start: clear this driver's prior UN-APPLIED toll rows before importing the new
+	// file, so re-uploading is a clean reset instead of piling new transactions on top of old
+	// ones. (Reconcile/"Re-run" only re-reads stored rows — it never re-parses the CSV — so
+	// without this, garbage from an earlier broken-parser upload lingers forever.) Rows already
+	// 'matched' (applied to a leg) are kept so we don't wipe reconciled history.
+	$wpdb->query( $wpdb->prepare(
+		"DELETE FROM " . site_pulse_table('mileage_toll_transactions') . "
+		 WHERE user_id = %d AND allocation_status != 'matched'",
+		$user_id
+	) );
+
+	$wpdb->insert( site_pulse_table('mileage_toll_bills'), [
+		'user_id'      => $user_id,
+		'period_start' => $dates[0],
+		'period_end'   => end( $dates ),
+		'file_name'    => $filename,
+		'txn_count'    => count( $rows ),
+		'status'       => 'pending_review',
+		'created_at'   => $now,
+		'updated_at'   => $now,
+	] );
+	$bill_id = (int) $wpdb->insert_id;
+
+	// Which of these logged days were ALREADY reconciled + applied in a prior session?
+	// 'matched' rows survive the delete above, so a day with any matched toll is "done".
+	// We keep that result and DON'T re-import its charges (no duplicates, no asking the
+	// driver to redo it) — it surfaces as a done day with Review / Re-analyze.
+	$applied = [];
+	if ( $entry_by_date ) {
+		$eids = array_values( $entry_by_date );
+		$ph2  = implode( ',', array_fill( 0, count( $eids ), '%d' ) );
+		$applied_ids = $wpdb->get_col( $wpdb->prepare(
+			"SELECT DISTINCT allocation_entry_id FROM " . site_pulse_table('mileage_toll_transactions') . "
+			 WHERE user_id = %d AND allocation_status = 'matched' AND allocation_entry_id IN ( $ph2 )",
+			array_merge( [ $user_id ], $eids )
+		) );
+		foreach ( $applied_ids as $aid ) $applied[ (int) $aid ] = true;
+	}
+
+	$ignored = 0;
+	foreach ( $rows as $r ) {
+		$eid = $entry_by_date[ $r['date'] ] ?? 0;
+		if ( $eid && isset( $applied[ $eid ] ) ) continue; // day already applied — keep it, don't duplicate
+		$status = $eid ? 'unprocessed' : 'no_trip';
+		if ( ! $eid ) $ignored++;
+		$wpdb->insert( site_pulse_table('mileage_toll_transactions'), [
+			'bill_id'             => $bill_id,
+			'user_id'             => $user_id,
+			'txn_external_id'     => $r['external_id'],
+			'txn_datetime'        => $r['datetime'],
+			'road'                => $r['road'],
+			'gantry'              => $r['gantry'],
+			'internal_code_prefix'=> $r['acct'],
+			'amount'              => $r['amount'],
+			'allocation_status'   => $status,
+			'allocation_entry_id' => $eid ?: null,
+			'created_at'          => $now,
+			'updated_at'          => $now,
+		] );
+	}
+
+	// Day list: already-applied days are marked done (with their stored total); the rest
+	// are pending analysis.
+	$days = [];
+	foreach ( $entry_by_date as $date => $eid ) {
+		if ( isset( $applied[ $eid ] ) ) {
+			$tt = (float) $wpdb->get_var( $wpdb->prepare(
+				"SELECT total_tolls FROM " . site_pulse_table('mileage_entries') . " WHERE id = %d", $eid ) );
+			$mc = (int) $wpdb->get_var( $wpdb->prepare(
+				"SELECT COUNT(*) FROM " . site_pulse_table('mileage_toll_transactions') . " WHERE allocation_entry_id = %d AND allocation_status = 'matched'", $eid ) );
+			$days[] = [ 'entry_id' => $eid, 'date' => $date, 'txn_count' => $mc, 'applied' => true, 'total_tolls' => round( $tt, 2 ) ];
+		} else {
+			$cnt = 0;
+			foreach ( $rows as $r ) if ( $r['date'] === $date ) $cnt++;
+			if ( $cnt > 0 ) $days[] = [ 'entry_id' => $eid, 'date' => $date, 'txn_count' => $cnt, 'applied' => false, 'total_tolls' => 0 ];
+		}
+	}
+	usort( $days, fn( $a, $b ) => strcmp( $a['date'], $b['date'] ) );
+
+	wp_send_json_success( [
+		'bill_id'         => $bill_id,
+		'days'            => $days,
+		'ignored_count'   => $ignored,
+		'skipped_invalid' => $skipped_invalid,
+		'skipped_dupes'   => $skipped_dupes,
+		'total_txns'      => count( $rows ),
+	] );
+}
+
+// Read-only: return the already-stored allocation for a day (no AI call) so the driver can
+// "Review" what was found/applied without spending an API call re-analyzing.
+add_action( 'wp_ajax_site_pulse_get_toll_day', 'site_pulse_ajax_get_toll_day' );
+function site_pulse_ajax_get_toll_day(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id  = site_pulse_effective_user_id();
+	$entry_id = (int) ( $_POST['entry_id'] ?? 0 );
+	if ( ! site_pulse_user_can( $user_id, 'submit_mileage' ) && ! site_pulse_is_god( get_current_user_id() ) ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+	$proposal = site_pulse_toll_day_proposal( $entry_id, $user_id );
+	if ( ! $proposal ) wp_send_json_error( [ 'message' => 'Trip not found.' ] );
+	wp_send_json_success( $proposal );
+}
+
+add_action( 'wp_ajax_site_pulse_reconcile_toll_day', 'site_pulse_ajax_reconcile_toll_day' );
+function site_pulse_ajax_reconcile_toll_day(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id  = site_pulse_effective_user_id();
+	$entry_id = (int) ( $_POST['entry_id'] ?? 0 );
+	if ( ! site_pulse_user_can( $user_id, 'submit_mileage' ) && ! site_pulse_is_god( get_current_user_id() ) ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+	if ( ! site_pulse_get_api_key() ) {
+		wp_send_json_error( [ 'message' => 'No Claude API key is configured for this site, so AI toll matching is unavailable. Add one in Site Settings.' ] );
+	}
+
+	global $wpdb;
+	$entry = $wpdb->get_row( $wpdb->prepare(
+		"SELECT id, entry_date FROM " . site_pulse_table('mileage_entries') . " WHERE id = %d AND user_id = %d",
+		$entry_id, $user_id
+	), ARRAY_A );
+	if ( ! $entry ) wp_send_json_error( [ 'message' => 'Trip not found.' ] );
+
+	$legs = $wpdb->get_results( $wpdb->prepare(
+		"SELECT l.id, l.leg_order, l.miles, lf.name AS from_name, lf.address AS from_addr, lf.lat AS from_lat, lf.lng AS from_lng,
+		        lt.name AS to_name, lt.address AS to_addr, lt.lat AS to_lat, lt.lng AS to_lng
+		 FROM " . site_pulse_table('mileage_legs') . " l
+		 LEFT JOIN " . site_pulse_table('mileage_locations') . " lf ON lf.id = l.from_location_id
+		 LEFT JOIN " . site_pulse_table('mileage_locations') . " lt ON lt.id = l.to_location_id
+		 WHERE l.entry_id = %d ORDER BY l.leg_order ASC",
+		$entry_id
+	), ARRAY_A ) ?: [];
+	if ( ! $legs ) wp_send_json_error( [ 'message' => 'This trip has no route legs to match against.' ] );
+
+	// Re-runnable: reconcile considers every charge for this day (even ones a previous
+	// pass matched or excluded), so "Review again" after applying works.
+	$txns = $wpdb->get_results( $wpdb->prepare(
+		"SELECT id, txn_datetime, road, gantry, amount, internal_code_prefix
+		 FROM " . site_pulse_table('mileage_toll_transactions') . "
+		 WHERE user_id = %d AND allocation_entry_id = %d AND allocation_status != 'no_trip'
+		 ORDER BY txn_datetime ASC, id ASC",
+		$user_id, $entry_id
+	), ARRAY_A ) ?: [];
+	if ( ! $txns ) wp_send_json_error( [ 'message' => 'No toll charges for this day.' ] );
+
+	// Build the route + charges text for the model.
+	$leg_by_order = [];
+	$route_txt = '';
+	foreach ( $legs as $leg ) {
+		$leg_by_order[ (int) $leg['leg_order'] ] = (int) $leg['id'];
+		$from = $leg['from_name'] . ( $leg['from_addr'] ? ' — ' . $leg['from_addr'] : '' );
+		$to   = $leg['to_name']   . ( $leg['to_addr']   ? ' — ' . $leg['to_addr']   : '' );
+		$flat = ( $leg['from_lat'] !== null && $leg['from_lng'] !== null ) ? " [{$leg['from_lat']},{$leg['from_lng']}]" : '';
+		$tlat = ( $leg['to_lat']   !== null && $leg['to_lng']   !== null ) ? " [{$leg['to_lat']},{$leg['to_lng']}]"   : '';
+		$miles = $leg['miles'] !== null ? ' (' . (float) $leg['miles'] . ' mi)' : '';
+		$route_txt .= "Leg {$leg['leg_order']}: {$from}{$flat}  ->  {$to}{$tlat}{$miles}\n";
+	}
+	$txn_txt = '';
+	foreach ( $txns as $t ) {
+		$txn_txt .= "ID {$t['id']} | {$t['txn_datetime']} | road: {$t['road']} | gantry: {$t['gantry']} | \$" . number_format( (float) $t['amount'], 2 ) . " | acct: {$t['internal_code_prefix']}\n";
+	}
+
+	$system = "You are reconciling a driver's toll charges against the route they drove that day. Cross-reference each toll charge against the route.\n"
+		. "1. Match each toll charge to a specific leg of the trip based on the gantry location, tollway/road, and timestamp.\n"
+		. "2. Do not assume a trip uses tolls in both directions. A driver may take a tolled route one way and a non-tolled (free) route the other, so a leg with no tolls is normal — do not treat a missing outbound or missing return as a problem to explain, and do not flag charges as out-of-sequence merely because the opposite leg has no tolls to mirror them against.\n"
+		. "3. Flag any charge that doesn't map cleanly to the route — anything off-geography, out of sequence in the timeline, sitting in an unexplained time gap, or carrying a different transaction/account ID than the rest.\n"
+		. "4. Total only the tolls that belong to this trip. Report excluded charges separately with the reason each was excluded.\n"
+		. "5. Do not force a charge to fit by inventing an explanation for it. Equally, do not invent a problem where none exists — a one-way-only toll pattern is expected, not suspect. If something is genuinely ambiguous, list it as ambiguous rather than including or excluding it silently.\n\n"
+		. "Respond with ONLY a JSON object — no prose, no markdown code fences — in exactly this shape:\n"
+		. '{"legs":[{"leg_order":<int>,"transaction_ids":[<int>,...]}],"excluded":[{"transaction_id":<int>,"reason":"<short reason>"}],"ambiguous":[{"transaction_id":<int>,"reason":"<short reason>"}]}' . "\n"
+		. "Only include legs that have at least one matched charge. Use the exact ID numbers given. Every charge must appear exactly once across legs, excluded, or ambiguous.";
+
+	$prompt = "ROUTE FOR " . $entry['entry_date'] . ":\n" . $route_txt . "\nTOLL CHARGES:\n" . $txn_txt;
+
+	$ai_debug = null;
+	$raw = site_pulse_call_claude( $prompt, $system, [ 'max_tokens' => 4096, 'timeout' => 60 ], $ai_debug );
+	if ( $raw === null ) {
+		$detail = $ai_debug ? ' (' . $ai_debug . ')' : '';
+		wp_send_json_error( [ 'message' => 'The AI matching service did not respond' . $detail . '. Try again in a moment.' ] );
+	}
+
+	// Tolerant JSON parse: strip code fences / surrounding prose.
+	$json = trim( $raw );
+	$json = preg_replace( '/^```(?:json)?|```$/m', '', $json );
+	if ( preg_match( '/\{.*\}/s', $json, $m ) ) $json = $m[0];
+	$result = json_decode( $json, true );
+	if ( ! is_array( $result ) ) {
+		site_pulse_log( 'toll_error', 'Toll reconcile: unparseable AI response', [ 'raw' => $raw ] );
+		wp_send_json_error( [ 'message' => 'The AI returned an unexpected response. Try again.' ] );
+	}
+
+	$valid_ids = array_map( fn( $t ) => (int) $t['id'], $txns );
+	$now       = current_time( 'mysql' );
+
+	// Reset this day's staging so a re-run starts clean (matched/excluded included).
+	$wpdb->query( $wpdb->prepare(
+		"UPDATE " . site_pulse_table('mileage_toll_transactions') . "
+		 SET allocation_status = 'unprocessed', allocation_leg_id = NULL, allocation_note = NULL, updated_at = %s
+		 WHERE user_id = %d AND allocation_entry_id = %d AND allocation_status != 'no_trip'",
+		$now, $user_id, $entry_id
+	) );
+
+	$stage = function( int $txn_id, string $status, ?int $leg_id, string $note ) use ( $wpdb, $user_id, $entry_id, $valid_ids, $now ) {
+		if ( ! in_array( $txn_id, $valid_ids, true ) ) return;
+		$wpdb->update( site_pulse_table('mileage_toll_transactions'),
+			[ 'allocation_status' => $status, 'allocation_leg_id' => $leg_id, 'allocation_note' => $note, 'updated_at' => $now ],
+			[ 'id' => $txn_id, 'user_id' => $user_id, 'allocation_entry_id' => $entry_id ]
+		);
+	};
+
+	foreach ( $result['legs'] ?? [] as $leg ) {
+		$lid = $leg_by_order[ (int) ( $leg['leg_order'] ?? 0 ) ] ?? null;
+		if ( ! $lid ) continue;
+		foreach ( (array) ( $leg['transaction_ids'] ?? [] ) as $tid ) {
+			$stage( (int) $tid, 'proposed_matched', $lid, '' );
+		}
+	}
+	foreach ( $result['excluded'] ?? [] as $ex ) {
+		$stage( (int) ( $ex['transaction_id'] ?? 0 ), 'proposed_excluded', null, sanitize_text_field( $ex['reason'] ?? '' ) );
+	}
+	foreach ( $result['ambiguous'] ?? [] as $am ) {
+		$stage( (int) ( $am['transaction_id'] ?? 0 ), 'proposed_ambiguous', null, sanitize_text_field( $am['reason'] ?? '' ) );
+	}
+	// Any charge the model didn't address → surface it rather than silently dropping it.
+	$wpdb->query( $wpdb->prepare(
+		"UPDATE " . site_pulse_table('mileage_toll_transactions') . "
+		 SET allocation_status = 'proposed_ambiguous', allocation_note = 'Not addressed by AI — review manually', updated_at = %s
+		 WHERE user_id = %d AND allocation_entry_id = %d AND allocation_status = 'unprocessed'",
+		$now, $user_id, $entry_id
+	) );
+
+	wp_send_json_success( site_pulse_toll_day_proposal( $entry_id, $user_id ) );
+}
+
+add_action( 'wp_ajax_site_pulse_apply_toll_day', 'site_pulse_ajax_apply_toll_day' );
+function site_pulse_ajax_apply_toll_day(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id  = site_pulse_effective_user_id();
+	$entry_id = (int) ( $_POST['entry_id'] ?? 0 );
+	if ( ! site_pulse_user_can( $user_id, 'submit_mileage' ) && ! site_pulse_is_god( get_current_user_id() ) ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+
+	global $wpdb;
+	$entry = $wpdb->get_row( $wpdb->prepare(
+		"SELECT id FROM " . site_pulse_table('mileage_entries') . " WHERE id = %d AND user_id = %d",
+		$entry_id, $user_id
+	), ARRAY_A );
+	if ( ! $entry ) wp_send_json_error( [ 'message' => 'Trip not found.' ] );
+
+	$now = current_time( 'mysql' );
+
+	// Optional driver overrides from the review screen: a list of { id, status, leg_id }.
+	// status is 'matched' or 'excluded'; leg_id required when matched.
+	$decisions_raw = wp_unslash( $_POST['decisions'] ?? '' );
+	$decisions     = is_string( $decisions_raw ) && $decisions_raw !== '' ? json_decode( $decisions_raw, true ) : [];
+	if ( is_array( $decisions ) ) {
+		foreach ( $decisions as $d ) {
+			$tid = (int) ( $d['id'] ?? 0 );
+			if ( ! $tid ) continue;
+			$status = ( ( $d['status'] ?? '' ) === 'matched' ) ? 'proposed_matched' : 'proposed_excluded';
+			$leg_id = $status === 'proposed_matched' ? ( (int) ( $d['leg_id'] ?? 0 ) ?: null ) : null;
+			$wpdb->update( site_pulse_table('mileage_toll_transactions'),
+				[ 'allocation_status' => $status, 'allocation_leg_id' => $leg_id, 'updated_at' => $now ],
+				[ 'id' => $tid, 'user_id' => $user_id, 'allocation_entry_id' => $entry_id ]
+			);
+		}
+	}
+
+	// Finalize: proposed_matched → matched, everything else for this day → excluded.
+	$wpdb->query( $wpdb->prepare(
+		"UPDATE " . site_pulse_table('mileage_toll_transactions') . "
+		 SET allocation_status = 'matched', updated_at = %s
+		 WHERE user_id = %d AND allocation_entry_id = %d AND allocation_status = 'proposed_matched'",
+		$now, $user_id, $entry_id
+	) );
+	$wpdb->query( $wpdb->prepare(
+		"UPDATE " . site_pulse_table('mileage_toll_transactions') . "
+		 SET allocation_status = 'excluded', allocation_leg_id = NULL, updated_at = %s
+		 WHERE user_id = %d AND allocation_entry_id = %d AND allocation_status IN ( 'proposed_excluded', 'proposed_ambiguous', 'unprocessed' )",
+		$now, $user_id, $entry_id
+	) );
+
+	// Write the reimbursable toll per leg (CSV actual) + the TollGuru comparison estimate.
+	$legs = $wpdb->get_results( $wpdb->prepare(
+		"SELECT id, from_location_id, to_location_id FROM " . site_pulse_table('mileage_legs') . " WHERE entry_id = %d",
+		$entry_id
+	), ARRAY_A ) ?: [];
+	foreach ( $legs as $leg ) {
+		$lid = (int) $leg['id'];
+		$sum = $wpdb->get_var( $wpdb->prepare(
+			"SELECT SUM(amount) FROM " . site_pulse_table('mileage_toll_transactions') . "
+			 WHERE allocation_leg_id = %d AND allocation_status = 'matched'",
+			$lid
+		) );
+		if ( $sum !== null ) {
+			$estimate = site_pulse_mileage_ensure_toll( (int) $leg['from_location_id'], (int) $leg['to_location_id'] );
+			$wpdb->update( site_pulse_table('mileage_legs'),
+				[ 'has_toll' => 1, 'toll_cost' => round( (float) $sum, 2 ), 'toll_estimate' => $estimate === null ? null : round( $estimate, 2 ) ],
+				[ 'id' => $lid ]
+			);
+		} else {
+			$wpdb->update( site_pulse_table('mileage_legs'),
+				[ 'has_toll' => 0, 'toll_cost' => null, 'toll_estimate' => null ],
+				[ 'id' => $lid ]
+			);
+		}
+	}
+
+	site_pulse_mileage_recalc_entry( $entry_id );
+
+	$total_tolls = (float) $wpdb->get_var( $wpdb->prepare(
+		"SELECT total_tolls FROM " . site_pulse_table('mileage_entries') . " WHERE id = %d", $entry_id
+	) );
+
+	wp_send_json_success( [ 'entry_id' => $entry_id, 'total_tolls' => round( $total_tolls, 2 ) ] );
+}
+
+
+/*--------------------------------------------------------------
 # Mileage — Manager AJAX
 --------------------------------------------------------------*/
 
@@ -3865,7 +4813,7 @@ function site_pulse_ajax_get_mileage_locations(): void {
 	// saved without sharing it globally. Show those to their owner only — the driver they're
 	// the home base for, or whoever created the personal destination — never to other drivers.
 	$rows = $wpdb->get_results( $wpdb->prepare(
-		"SELECT id, name, address, lat, lng, location_type, is_private, category, is_business, is_active, pinned_purposes, marker_icon, status, created_by
+		"SELECT id, name, address, lat, lng, location_type, is_private, category, code, is_business, is_active, pinned_purposes, marker_icon, status, created_by
 		 FROM " . site_pulse_table('mileage_locations') . "
 		 WHERE ( status = 'approved' OR ( status = 'pending' AND created_by = %d ) )
 		   AND is_active = 1
@@ -3874,13 +4822,25 @@ function site_pulse_ajax_get_mileage_locations(): void {
 		$user_id, $home_id, $user_id
 	), ARRAY_A ) ?: [];
 
+	// "Charge To" options: every Home Base (store) that has a Location # set, so a driver can
+	// bill each leg to a specific store. The client also appends a fixed "Misc (#99)" option.
+	$charge_options = $wpdb->get_results(
+		"SELECT location_number AS number, name FROM " . site_pulse_table('locations') . "
+		 WHERE status = 'active' AND location_number IS NOT NULL AND location_number != ''
+		 ORDER BY name",
+		ARRAY_A
+	) ?: [];
+
 	wp_send_json_success( [
 		'locations'        => $rows,
+		'charge_options'   => $charge_options,
 		'rate'             => site_pulse_mileage_rate(),
 		'home_location_id' => $home_id,
 		'require_approval' => site_pulse_get_setting( 'mileage_require_approval', '1' ) === '1',
 		'purposes'         => site_pulse_mileage_purposes(),
 		'marker_icons'     => site_pulse_mileage_marker_icons(),
+		'period_length'    => (int) site_pulse_get_setting( 'mileage_period_length', '0' ),
+		'period_anchor'    => site_pulse_get_setting( 'mileage_period_anchor', '' ),
 	] );
 }
 
@@ -3889,12 +4849,13 @@ function site_pulse_ajax_add_mileage_location(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 
 	$user_id     = site_pulse_effective_user_id();
-	$name        = sanitize_text_field( $_POST['name'] ?? '' );
-	$address     = sanitize_text_field( $_POST['address'] ?? '' );
-	$type        = sanitize_text_field( $_POST['location_type'] ?? 'vendor' );
-	$category    = sanitize_text_field( $_POST['category'] ?? '' );
+	// wp_unslash() before sanitizing so an apostrophe (arriving as \') isn't stored as Babe\'s.
+	$name        = sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) );
+	$address     = sanitize_text_field( wp_unslash( $_POST['address'] ?? '' ) );
+	$type        = sanitize_text_field( wp_unslash( $_POST['location_type'] ?? 'vendor' ) );
+	$category    = sanitize_text_field( wp_unslash( $_POST['category'] ?? '' ) );
 	$is_business = isset( $_POST['is_business'] ) ? ( (int) $_POST['is_business'] ? 1 : 0 ) : 1;
-	$notes       = sanitize_textarea_field( $_POST['notes'] ?? '' );
+	$notes       = sanitize_textarea_field( wp_unslash( $_POST['notes'] ?? '' ) );
 
 	if ( ! $name || ! $address ) {
 		wp_send_json_error( [ 'message' => 'Name and address are required.' ] );
@@ -3963,8 +4924,17 @@ function site_pulse_ajax_get_mileage_entries(): void {
 	if ( $start ) { $where .= " AND e.entry_date >= %s"; $values[] = $start; }
 	if ( $end )   { $where .= " AND e.entry_date <= %s"; $values[] = $end; }
 
+	// A day is "pending" (not Final) when any leg is incomplete: no computed distance (an
+	// unapproved destination), OR no "Charge To" on any leg, OR no Business Purpose on any leg
+	// that arrives at a real stop (the drive-home leg needs a charge but carries no purpose).
+	$home_sub = "( SELECT up.mileage_home_location_id FROM " . site_pulse_table('user_profiles') . " up WHERE up.user_id = e.user_id )";
 	$rows = $wpdb->get_results( $wpdb->prepare(
-		"SELECT e.*, ( SELECT COUNT(*) FROM " . site_pulse_table('mileage_legs') . " l WHERE l.entry_id = e.id AND l.miles IS NULL ) AS pending_legs
+		"SELECT e.*, ( SELECT COUNT(*) FROM " . site_pulse_table('mileage_legs') . " l
+		      WHERE l.entry_id = e.id
+		        AND ( l.miles IS NULL
+		           OR l.charge_to IS NULL OR l.charge_to = ''
+		           OR ( ( l.purpose IS NULL OR l.purpose = '' ) AND l.to_location_id <> COALESCE( $home_sub, 0 ) ) )
+		    ) AS pending_legs
 		 FROM " . site_pulse_table('mileage_entries') . " e
 		 $where
 		 ORDER BY e.entry_date DESC, e.id DESC
@@ -4077,6 +5047,55 @@ function site_pulse_ajax_get_mileage_entry(): void {
 	] );
 }
 
+// Per-leg mileage adjustment. A driver can nudge one leg's miles (detour, road closure,
+// accident) without touching the computed base distance — the delta is stored in
+// miles_adjust and surfaced as "+7.8" in the report. Recalc cascades to the day + grand total.
+add_action( 'wp_ajax_site_pulse_save_mileage_leg_adjust', 'site_pulse_ajax_save_mileage_leg_adjust' );
+function site_pulse_ajax_save_mileage_leg_adjust(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id  = site_pulse_effective_user_id();
+	$entry_id = (int) ( $_POST['entry_id'] ?? 0 );
+	$leg_id   = (int) ( $_POST['leg_id'] ?? 0 );
+	$adjust   = max( -2000, min( 2000, round( (float) ( $_POST['adjust'] ?? 0 ), 2 ) ) );
+	$reason   = sanitize_text_field( wp_unslash( $_POST['reason'] ?? '' ) );
+
+	global $wpdb;
+	$entry = $wpdb->get_row( $wpdb->prepare(
+		"SELECT user_id FROM " . site_pulse_table('mileage_entries') . " WHERE id = %d", $entry_id
+	), ARRAY_A );
+	if ( ! $entry ) wp_send_json_error( [ 'message' => 'Entry not found.' ] );
+
+	$is_admin = site_pulse_user_can( $user_id, 'manage_mileage' ) || site_pulse_is_god( get_current_user_id() );
+	if ( (int) $entry['user_id'] !== $user_id && ! $is_admin ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+
+	// The leg must belong to this entry and have a computed base distance to adjust.
+	$leg = $wpdb->get_row( $wpdb->prepare(
+		"SELECT id, miles FROM " . site_pulse_table('mileage_legs') . " WHERE id = %d AND entry_id = %d",
+		$leg_id, $entry_id
+	), ARRAY_A );
+	if ( ! $leg ) wp_send_json_error( [ 'message' => 'Leg not found.' ] );
+	if ( $leg['miles'] === null ) wp_send_json_error( [ 'message' => 'This trip has no distance yet.' ] );
+	// Don't let an adjustment drive the leg negative.
+	if ( (float) $leg['miles'] + $adjust < 0 ) wp_send_json_error( [ 'message' => 'Adjusted miles cannot be negative.' ] );
+
+	// Clearing the adjustment (back to 0) drops the reason with it.
+	$wpdb->update( site_pulse_table('mileage_legs'),
+		[
+			'miles_adjust'        => ( $adjust == 0.0 ? null : $adjust ),
+			'miles_adjust_reason' => ( $adjust == 0.0 || $reason === '' ? null : $reason ),
+		],
+		[ 'id' => $leg_id ]
+	);
+	site_pulse_mileage_recalc_entry( $entry_id );
+
+	$totals = $wpdb->get_row( $wpdb->prepare(
+		"SELECT total_miles, reimbursement_amount, total_tolls, total_trailer FROM " . site_pulse_table('mileage_entries') . " WHERE id = %d", $entry_id
+	), ARRAY_A );
+	wp_send_json_success( [ 'adjust' => $adjust, 'entry' => $totals ] );
+}
+
 add_action( 'wp_ajax_site_pulse_save_mileage_entry', 'site_pulse_ajax_save_mileage_entry' );
 function site_pulse_ajax_save_mileage_entry(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
@@ -4088,25 +5107,35 @@ function site_pulse_ajax_save_mileage_entry(): void {
 
 	$entry_id    = (int) ( $_POST['entry_id'] ?? 0 );
 	$entry_date  = sanitize_text_field( $_POST['entry_date'] ?? '' );
-	$notes       = sanitize_textarea_field( $_POST['notes'] ?? '' );
+	// The form no longer collects a notes/summary; only touch the column when notes are sent, so
+	// editing a day never wipes a note saved before the field was removed.
+	$has_notes   = isset( $_POST['notes'] );
+	$notes       = $has_notes ? sanitize_textarea_field( wp_unslash( $_POST['notes'] ) ) : '';
 	$auto_return  = isset( $_POST['auto_return_home'] ) ? ( (int) $_POST['auto_return_home'] ? 1 : 0 ) : 1;
 	$stops_raw    = $_POST['stops'] ?? [];
-	$purposes_raw = $_POST['purposes'] ?? [];
+	$purposes_raw = wp_unslash( $_POST['purposes'] ?? [] );   // unslash so O'Brien's isn't stored as O\'Brien\'s
 	$tolls_raw    = $_POST['tolls'] ?? [];
 	$trailers_raw = $_POST['trailers'] ?? [];
-	// Toll / trailer flags for the final leg home (the auto-appended END bookend).
+	$charge_raw   = $_POST['charge_to'] ?? [];   // per-stop "Charge To" store number (or '99' = Misc)
+	$notes_raw    = wp_unslash( $_POST['line_notes'] ?? [] );   // per-stop free-text note (e.g. who you met)
+	// Toll / trailer flags + charge-to for the final leg home (the auto-appended END bookend).
 	$end_toll     = ! empty( $_POST['end_toll'] ) ? 1 : 0;
 	$end_trailer  = ! empty( $_POST['end_trailer'] ) ? 1 : 0;
+	$end_charge   = sanitize_text_field( $_POST['end_charge'] ?? '' );
 	if ( ! is_array( $stops_raw ) )    $stops_raw = [];
 	if ( ! is_array( $purposes_raw ) ) $purposes_raw = [];
 	if ( ! is_array( $tolls_raw ) )    $tolls_raw = [];
 	if ( ! is_array( $trailers_raw ) ) $trailers_raw = [];
+	if ( ! is_array( $charge_raw ) )   $charge_raw = [];
+	if ( ! is_array( $notes_raw ) )    $notes_raw = [];
 
-	// Keep stops with their per-stop purposes, toll + trailer flags aligned, dropping empty picks.
+	// Keep stops with their per-stop purposes, toll + trailer flags, charge-to, and note aligned, dropping empty picks.
 	$stops          = [];
 	$stop_purposes  = [];
 	$stop_tolls     = [];
 	$stop_trailers  = [];
+	$stop_charge    = [];
+	$stop_notes     = [];
 	foreach ( array_values( $stops_raw ) as $idx => $sid ) {
 		$sid = (int) $sid;
 		if ( $sid <= 0 ) continue;
@@ -4114,6 +5143,8 @@ function site_pulse_ajax_save_mileage_entry(): void {
 		$stop_purposes[] = sanitize_text_field( $purposes_raw[ $idx ] ?? '' );
 		$stop_tolls[]    = ! empty( $tolls_raw[ $idx ] ) ? 1 : 0;
 		$stop_trailers[] = ! empty( $trailers_raw[ $idx ] ) ? 1 : 0;
+		$stop_charge[]   = sanitize_text_field( $charge_raw[ $idx ] ?? '' );
+		$stop_notes[]    = sanitize_textarea_field( $notes_raw[ $idx ] ?? '' );
 	}
 
 	if ( ! $entry_date ) wp_send_json_error( [ 'message' => 'Date is required.' ] );
@@ -4131,13 +5162,17 @@ function site_pulse_ajax_save_mileage_entry(): void {
 		$seq_purposes = array_merge( [ '' ], $stop_purposes );
 		$seq_tolls    = array_merge( [ 0 ], $stop_tolls );
 		$seq_trailers = array_merge( [ 0 ], $stop_trailers );
-		if ( $auto_return ) { $seq[] = $home_id; $seq_purposes[] = ''; $seq_tolls[] = $end_toll; $seq_trailers[] = $end_trailer; }
+		$seq_charge   = array_merge( [ '' ], $stop_charge );
+		$seq_notes    = array_merge( [ '' ], $stop_notes );
+		if ( $auto_return ) { $seq[] = $home_id; $seq_purposes[] = ''; $seq_tolls[] = $end_toll; $seq_trailers[] = $end_trailer; $seq_charge[] = $end_charge; $seq_notes[] = ''; }
 	} else {
 		if ( count( $stops ) < 2 ) wp_send_json_error( [ 'message' => 'At least two stops are required.' ] );
 		$seq          = $stops;
 		$seq_purposes = $stop_purposes;
 		$seq_tolls    = $stop_tolls;
 		$seq_trailers = $stop_trailers;
+		$seq_charge   = $stop_charge;
+		$seq_notes    = $stop_notes;
 		$auto_return  = 0;
 	}
 	if ( count( $seq ) < 2 ) wp_send_json_error( [ 'message' => 'At least two stops are required.' ] );
@@ -4152,13 +5187,23 @@ function site_pulse_ajax_save_mileage_entry(): void {
 		if ( ! $existing || (int) $existing['user_id'] !== $user_id ) {
 			wp_send_json_error( [ 'message' => 'Entry not found or not yours.' ] );
 		}
-		$wpdb->update( site_pulse_table('mileage_entries'), [
+		$entry_update = [
 			'entry_date'       => $entry_date,
 			'auto_return_home' => $auto_return,
-			'notes'            => $notes,
 			'updated_at'       => $now,
-		], [ 'id' => $entry_id ] );
+		];
+		if ( $has_notes ) $entry_update['notes'] = $notes;
+		$wpdb->update( site_pulse_table('mileage_entries'), $entry_update, [ 'id' => $entry_id ] );
 		$wpdb->delete( site_pulse_table('mileage_legs'), [ 'entry_id' => $entry_id ] );
+		// Legs are about to be rebuilt with fresh ids, so any toll charges previously matched
+		// to this day's legs are now dangling — reset them to unprocessed so the driver can
+		// re-reconcile against the new route. ('no_trip' rows are for other days; leave them.)
+		$wpdb->query( $wpdb->prepare(
+			"UPDATE " . site_pulse_table('mileage_toll_transactions') . "
+			 SET allocation_status = 'unprocessed', allocation_leg_id = NULL, allocation_note = NULL, updated_at = %s
+			 WHERE user_id = %d AND allocation_entry_id = %d AND allocation_status != 'no_trip'",
+			$now, $user_id, $entry_id
+		) );
 	} else {
 		$wpdb->insert( site_pulse_table('mileage_entries'), [
 			'user_id'          => $user_id,
@@ -4178,11 +5223,9 @@ function site_pulse_ajax_save_mileage_entry(): void {
 		// but the cache is empty. Returns null if either endpoint is pending.
 		$miles = site_pulse_mileage_ensure_distance( $from, $to );
 
-		// Only legs the driver flagged with the Toll box get priced (saves API quota and
-		// matches "this drive had tolls"). Lazy + cached, so each O→D pair calls TollGuru once.
-		$has_toll  = ! empty( $seq_tolls[ $i + 1 ] ) ? 1 : 0;
-		$toll_cost = $has_toll ? site_pulse_mileage_ensure_toll( $from, $to ) : null;
-
+		// Tolls are no longer estimated at save. They're filled in later by AI toll
+		// reconciliation against the driver's uploaded toll-authority CSV, which sets
+		// has_toll / toll_cost / toll_estimate per leg. New legs start with no toll.
 		$wpdb->insert( site_pulse_table('mileage_legs'), [
 			'entry_id'         => $entry_id,
 			'leg_order'        => $i,
@@ -4190,8 +5233,10 @@ function site_pulse_ajax_save_mileage_entry(): void {
 			'to_location_id'   => $to,
 			'miles'            => $miles,
 			'purpose'          => $seq_purposes[ $i + 1 ] ?? '',
-			'has_toll'         => $has_toll,
-			'toll_cost'        => $toll_cost,
+			'charge_to'        => $seq_charge[ $i + 1 ] ?? '',
+			'note'             => $seq_notes[ $i + 1 ] ?? '',
+			'has_toll'         => 0,
+			'toll_cost'        => null,
 			'has_trailer'      => ! empty( $seq_trailers[ $i + 1 ] ) ? 1 : 0,
 			'created_at'       => $now,
 		] );
@@ -4385,6 +5430,8 @@ function site_pulse_ajax_admin_get_mileage_locations(): void {
 		'purposes'         => site_pulse_mileage_purposes(),
 		'require_approval' => site_pulse_get_setting( 'mileage_require_approval', '1' ) === '1',
 		'marker_icons'     => site_pulse_mileage_marker_icons(),
+		'period_length'    => (int) site_pulse_get_setting( 'mileage_period_length', '0' ),
+		'period_anchor'    => site_pulse_get_setting( 'mileage_period_anchor', '' ),
 		'reminders' => [
 			'enabled' => site_pulse_get_setting( 'mileage_reminders_enabled', '0' ) === '1',
 			'hour'    => (int) site_pulse_get_setting( 'mileage_reminder_hour', '7' ),
@@ -4405,6 +5452,24 @@ function site_pulse_ajax_admin_save_mileage_approval(): void {
 	$require = ! empty( $_POST['require_approval'] ) ? '1' : '0';
 	site_pulse_set_setting( 'mileage_require_approval', $require );
 	wp_send_json_success( [ 'require_approval' => $require === '1' ] );
+}
+
+// Pay-period config for the report's "Jump to period" menu. Length 0 (or no anchor)
+// falls back to calendar months. The client extrapolates all periods from these two values.
+add_action( 'wp_ajax_site_pulse_admin_save_mileage_periods', 'site_pulse_ajax_admin_save_mileage_periods' );
+function site_pulse_ajax_admin_save_mileage_periods(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+
+	$length = max( 0, min( 366, (int) ( $_POST['period_length'] ?? 0 ) ) );
+	$anchor = sanitize_text_field( $_POST['period_anchor'] ?? '' );
+	// Keep only a valid Y-m-d anchor; anything else clears it (falls back to calendar months).
+	if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $anchor ) ) $anchor = '';
+
+	site_pulse_set_setting( 'mileage_period_length', (string) $length );
+	site_pulse_set_setting( 'mileage_period_anchor', $anchor );
+
+	wp_send_json_success( [ 'period_length' => $length, 'period_anchor' => $anchor ] );
 }
 
 add_action( 'wp_ajax_site_pulse_admin_save_mileage_reminders', 'site_pulse_ajax_admin_save_mileage_reminders' );
@@ -4431,17 +5496,20 @@ function site_pulse_ajax_admin_update_mileage_location(): void {
 
 	global $wpdb;
 	$fields = [ 'updated_at' => current_time( 'mysql' ) ];
-	if ( isset( $_POST['name'] ) )          $fields['name']          = sanitize_text_field( $_POST['name'] );
-	if ( isset( $_POST['location_type'] ) ) $fields['location_type'] = sanitize_text_field( $_POST['location_type'] );
-	if ( isset( $_POST['category'] ) )      $fields['category']      = sanitize_text_field( $_POST['category'] );
+	// wp_unslash() before sanitizing so apostrophes (arriving as \') aren't stored as Babe\'s.
+	if ( isset( $_POST['name'] ) )          $fields['name']          = sanitize_text_field( wp_unslash( $_POST['name'] ) );
+	if ( isset( $_POST['location_type'] ) ) $fields['location_type'] = sanitize_text_field( wp_unslash( $_POST['location_type'] ) );
+	if ( isset( $_POST['category'] ) )      $fields['category']      = sanitize_text_field( wp_unslash( $_POST['category'] ) );
+	// Store number / accounting code for this destination (optional).
+	if ( isset( $_POST['code'] ) )          $fields['code']          = sanitize_text_field( wp_unslash( $_POST['code'] ) );
 	if ( isset( $_POST['is_business'] ) )   $fields['is_business']   = (int) $_POST['is_business'] ? 1 : 0;
 	if ( isset( $_POST['is_active'] ) )     $fields['is_active']     = (int) $_POST['is_active'] ? 1 : 0;
-	if ( isset( $_POST['notes'] ) )         $fields['notes']         = sanitize_textarea_field( $_POST['notes'] );
+	if ( isset( $_POST['notes'] ) )         $fields['notes']         = sanitize_textarea_field( wp_unslash( $_POST['notes'] ) );
 	// Per-location marker image override (empty clears it → falls back to the per-type default).
 	if ( isset( $_POST['marker_icon'] ) )   $fields['marker_icon']   = esc_url_raw( trim( (string) $_POST['marker_icon'] ) );
 
 	if ( isset( $_POST['pinned_purposes'] ) ) {
-		$pp = $_POST['pinned_purposes'];
+		$pp = wp_unslash( $_POST['pinned_purposes'] );
 		if ( ! is_array( $pp ) ) $pp = [];
 		$pp = array_values( array_unique( array_filter( array_map( 'sanitize_text_field', $pp ) ) ) );
 		$fields['pinned_purposes'] = wp_json_encode( $pp );
@@ -4449,7 +5517,7 @@ function site_pulse_ajax_admin_update_mileage_location(): void {
 
 	// Address change → re-geocode so cached distances and the map stay correct.
 	if ( isset( $_POST['address'] ) ) {
-		$address = sanitize_text_field( $_POST['address'] );
+		$address = sanitize_text_field( wp_unslash( $_POST['address'] ) );
 		$fields['address'] = $address;
 		$geo = site_pulse_mileage_geocode( $address );
 		if ( $geo ) { $fields['lat'] = $geo['lat']; $fields['lng'] = $geo['lng']; }
@@ -4464,14 +5532,16 @@ function site_pulse_ajax_admin_add_mileage_location(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	if ( ! site_pulse_mileage_admin_check() ) return;
 
-	$name    = sanitize_text_field( $_POST['name'] ?? '' );
-	$address = sanitize_text_field( $_POST['address'] ?? '' );
+	// wp_unslash() before sanitizing so apostrophes (arriving as \') aren't stored as Babe\'s.
+	$name    = sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) );
+	$address = sanitize_text_field( wp_unslash( $_POST['address'] ?? '' ) );
 	if ( ! $name || ! $address ) wp_send_json_error( [ 'message' => 'Name and address are required.' ] );
 
-	$type        = sanitize_text_field( $_POST['location_type'] ?? 'vendor' );
-	$category    = sanitize_text_field( $_POST['category'] ?? '' );
+	$type        = sanitize_text_field( wp_unslash( $_POST['location_type'] ?? 'vendor' ) );
+	$category    = sanitize_text_field( wp_unslash( $_POST['category'] ?? '' ) );
+	$code        = sanitize_text_field( wp_unslash( $_POST['code'] ?? '' ) );
 	$is_business = isset( $_POST['is_business'] ) ? ( (int) $_POST['is_business'] ? 1 : 0 ) : 1;
-	$notes       = sanitize_textarea_field( $_POST['notes'] ?? '' );
+	$notes       = sanitize_textarea_field( wp_unslash( $_POST['notes'] ?? '' ) );
 
 	global $wpdb;
 	$now = current_time( 'mysql' );
@@ -4480,6 +5550,7 @@ function site_pulse_ajax_admin_add_mileage_location(): void {
 		'address'       => $address,
 		'location_type' => in_array( $type, [ 'restaurant', 'vendor', 'other' ], true ) ? $type : 'vendor',
 		'category'      => $category,
+		'code'          => ( $code === '' ? null : $code ),
 		'is_business'   => $is_business,
 		'notes'         => $notes,
 		'status'        => 'pending',
@@ -4682,11 +5753,26 @@ function site_pulse_ajax_admin_save_mileage_purposes(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	if ( ! site_pulse_mileage_admin_check() ) return;
 
-	$raw = $_POST['purposes'] ?? [];
+	// Sent as a JSON string of { label, requires_note } objects (spAjax can't serialize an
+	// array of objects via FormData). Decode, dedupe by label, and store.
+	$raw = json_decode( (string) wp_unslash( $_POST['purposes'] ?? '' ), true );
 	if ( ! is_array( $raw ) ) $raw = [];
-	$clean = array_values( array_unique( array_filter( array_map( function( $p ) {
-		return sanitize_text_field( $p );
-	}, $raw ) ) ) );
+	$clean = [];
+	$seen  = [];
+	foreach ( $raw as $item ) {
+		if ( is_array( $item ) ) {
+			$label = sanitize_text_field( (string) ( $item['label'] ?? '' ) );
+			$req   = ! empty( $item['requires_note'] ) && $item['requires_note'] !== 'false';
+		} else {
+			$label = sanitize_text_field( (string) $item );
+			$req   = false;
+		}
+		if ( $label === '' ) continue;
+		$key = strtolower( $label );
+		if ( isset( $seen[ $key ] ) ) continue;
+		$seen[ $key ] = true;
+		$clean[] = [ 'label' => $label, 'requires_note' => (bool) $req ];
+	}
 	site_pulse_set_setting( 'mileage_purposes', wp_json_encode( $clean ) );
 	wp_send_json_success( [ 'purposes' => $clean ] );
 }

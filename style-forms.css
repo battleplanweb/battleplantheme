@@ -37,6 +37,7 @@ fieldset.hidden-fields-container {
 .bp-form form > .form-input {
 	grid-column:                                               1 / -1;
 	gap:                                                       var(--measure-base);
+	padding:                                                   0 !important;
 }
 
 .bp-form form .form-input {

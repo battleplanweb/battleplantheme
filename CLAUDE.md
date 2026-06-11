@@ -488,13 +488,17 @@ Note: `logo-top`, `logo-mid`, `logo-bot` are three logo variants that display at
 
 ### Mockup placeholder
 
-When building mockup/draft markup before the real images are picked, use this placeholder for **every** `<img src="…">`:
+When building mockup/draft markup before the real images are picked, point **every** `<img src="…">` (the logo excepted) at one of these placeholders, chosen by the image's aspect ratio:
 
 ```
-https://bp-webdev.com/wp-content/uploads/temp-mock-up-pic.webp
+https://bp-webdev.com/wp-content/uploads/x-square.webp   ← square images (1:1)
+https://bp-webdev.com/wp-content/uploads/x-horz.webp     ← landscape / wider-than-tall
+https://bp-webdev.com/wp-content/uploads/x-vert.webp     ← portrait / taller-than-wide
 ```
 
-Glendon swaps to the real image filenames once the design is locked. Don't invent fake filenames like `hero-tech-800x600.webp` — use the placeholder URL until told otherwise.
+Pick the one that matches the `width`/`height` (and `aspect-ratio`) you set on the tag: square → `x-square`, landscape → `x-horz`, portrait → `x-vert`. The **logo is the only exception** — use its real filename, never a placeholder.
+
+Glendon swaps to the real image filenames once the design is locked. Don't invent fake filenames like `hero-tech-800x600.webp` — use the matching placeholder URL until told otherwise.
 
 ---
 
@@ -994,7 +998,7 @@ When the new image has different pixel dimensions than the old one, `bp_mr_fix_i
 - Pulls the real per-size dimensions from `bp_mr_dimension_map()` (main image + each thumbnail size, keyed by relative URL path).
 - **Runs on same-name replacements too**, not just renames: if you re-upload `photo.webp` at a new size, the URLs don't change but the dimensions do, so a content pass still runs (gated by `bp_mr_dimensions_changed()`).
 - Only edits attributes that already exist (the framework always emits `width`/`height`/`aspect-ratio`). `srcset`/`sizes` are deliberately left alone — WordPress recomputes those live from the attachment metadata at render time.
-- Scoped to **plain-HTML `post_content` only**, never inside serialized/JSON blobs (rewriting a string there would break its byte-length prefix). Metadata/options get URL replacement but no dimension edits.
+- Runs on **plain-HTML `post_content` AND `postmeta`** — the Page Top / Page Bottom hero/band sections live in postmeta, so their `<img>` dimensions get corrected too (this is why a same-name resize of a hero updates its size). Never inside serialized/JSON blobs (rewriting a string there would break its byte-length prefix), and never on `commentmeta`/`termmeta`/`usermeta`/`options` — those get URL replacement only.
 
 ### Hook
 `do_action('bp_media_replaced', $attach_id, $old_url, $new_url)` fires after a successful replace.
@@ -1027,6 +1031,18 @@ WordPress bakes alt into post content at insert time and never updates it, so li
 
 One CSS file per feature/component. All loaded conditionally based on what's on the page.
 Site-specific overrides go in `style-site.css` in the child theme.
+
+### style-site.css is COMPILED — it is never served directly
+
+`bp_build_site_css()` (in `functions-style-sheets.php`, on `after_setup_theme`) compiles `style-site.css` → `dist/site.css` + `dist/site.min.css`. The browser is served **`dist/site.min.css?ver=_BP_VERSION`** (the `battleplanweb` admin user gets the unminified `dist/site.css`). Editing `style-site.css` alone is not enough to see changes:
+- **Rebuild is mtime-gated** — `dist/` only regenerates when `style-site.css` is newer than the dist files. (Same pattern for core CSS and for `.min.js`.)
+- **Cache-bust is `_BP_VERSION` only** — the enqueue URL's `?ver=` is the theme version, so once EverCache/Cloudflare cache `dist/site.min.css`, edits won't appear until the cache is purged or the version bumps.
+
+So after changing `style-site.css`: ensure the dist rebuilds (touch/upload so its mtime is newest, or delete `dist/site.min.css`), then **purge EverCache + Cloudflare**. To verify quickly, log in as `battleplanweb` (served the unminified, freshly-rebuilt `dist/site.css`). If a site "ignores" your CSS, a stale compiled `dist/site.min.css` is the first suspect.
+
+### Page content has NO comment syntax
+
+Content pasted into the editor / Page Top / Page Bottom / Elements is shortcode + HTML only. `/* … */` and `// …` are **not** stripped — they render as literal text on the page. When delivering paste-in markup (e.g. a `page-content.txt`), keep all labels/instructions OUTSIDE the copyable blocks; never put comments inside a block the user will paste.
 
 Key CSS variable groups (defined in `:root` in `style-site.css`):
 - `--font-primary`, `--font-secondary`, `--font-tertiary`, `--font-text`
@@ -1093,6 +1109,28 @@ When styling a hero text container (the `[col]` that holds the headline/subhead/
 ```
 
 Adjust `max-width` per design (typically 500–700px). Don't omit padding/margin/max-width — text running edge-to-edge over a parallax background is the wrong default.
+
+### Rendered HTML — what your CSS selectors must match
+
+Write selectors against the HTML the shortcodes actually emit, not against the shortcode names. Verified output:
+
+| Shortcode | Renders to |
+|---|---|
+| `[section name="x" style="2" width="full"]…[/section]` | `<section id="x" class="section style-2 section-full …">…</section>` — **content sits directly inside `<section>`; there is no inner wrapper.** `name` → `id` (spaces/underscores → hyphens). |
+| `[layout grid="5e"]…[/layout]` | `<div class="flex grid-5e …">…</div>` — column widths come from the framework's `.grid-*` rules. |
+| `[col class="c"]…[/col]` | `<div class="col c …"><div class="col-inner">…</div></div>` — **everything you put in a `[col]` lands inside `.col-inner`.** |
+| `[nested grid="g"]` | `<div class="flex nested grid-g …">` |
+| `[txt class="c"]…[/txt]` | `<div class="block block-text span-100 c">…</div>` |
+| `[group class="c"]…[/group]` | `<div class="block block-group span-100 c">…</div>` |
+| `[btn class="c"]Label[/btn]` | `<div class="block block-button span-100 c"><a class="button c">Label</a></div>` — the class lands on **both** the wrapper div and the `<a>`. |
+| `[img class="c"]` | `<div class="block block-image span-100 c">…</div>` |
+| `[get-icon type="t"]` | `<span class="icon t"><svg class="icon-svg icon-t">…</svg></span>` — SVG fills via `currentColor`, so set `color` (not `fill`). |
+| `[get-icon type="t" grid="1-2"]TXT[/get-icon]` | `<div class="icon-card"><div><span class="icon t">…</span></div><div>TXT</div></div>` — **one `.icon-card` per call.** Wrap a row of them in your own `<div class="icon-cards">` and grid that. |
+
+Practical consequences:
+- Per-section styling hangs off `#section-name` (from `name`); reusable strip backgrounds off `.section.style-N`. There is **no** `.section.{name}` class.
+- A component class on a `[col]` (`.service-card`, etc.) is a descendant of `.col-inner`, so `#services .service-card` works; `#services > .service-card` does not.
+- Loose siblings (e.g. `[get-icon]` + a `<span>` label) are **separate** children — wrap each icon+label pair in its own `<div>` before laying a row out in a grid, or the grid splits icons from text.
 
 ---
 

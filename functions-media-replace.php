@@ -535,16 +535,19 @@ function bp_mr_replace_query($base_url, $search, $replace, $dim_map = []) {
 		}
 	}
 
-	// URL replacements also live in metadata/options (dimensions aren't touched there).
-	// Skip entirely when only dimensions changed (same filename → nothing to find).
-	if (!empty($search)) {
-		$count += bp_mr_replace_meta($base_url, $search, $replace);
+	// URL + dimension fixups also live in metadata. The Page Top / Page Bottom hero
+	// sections are stored in postmeta, so this must run whenever a filename changed
+	// OR a size changed — a same-name resize has no search/replace pairs but still
+	// needs the <img> dimensions corrected on the hero (which lives in postmeta).
+	if (!empty($search) || !empty($dim_map)) {
+		$count += bp_mr_replace_meta($base_url, $search, $replace, $dim_map);
 	}
 	return $count;
 }
 
 // Search/replace across postmeta (content posts only), commentmeta, termmeta, usermeta, options.
-function bp_mr_replace_meta($base_url, $search, $replace) {
+// $dim_map drives <img> dimension correction on postmeta, where Page Top / Page Bottom live.
+function bp_mr_replace_meta($base_url, $search, $replace, $dim_map = []) {
 	global $wpdb;
 	$count = 0;
 	$like  = '%' . $wpdb->esc_like($base_url) . '%';
@@ -559,6 +562,13 @@ function bp_mr_replace_meta($base_url, $search, $replace) {
 	), ARRAY_A);
 	foreach ((array) $rows as $row) {
 		$new = bp_mr_replace_content($row['meta_value'], $search, $replace);
+		// Page Top / Page Bottom hero/band sections are stored here as plain HTML
+		// strings, so correct <img> dimensions too — but never inside a serialized
+		// blob (rewriting digits there would break its byte-length prefix). This is
+		// why a same-name resize of a hero still updates its size.
+		if (!empty($dim_map) && !is_serialized($row['meta_value'])) {
+			$new = bp_mr_fix_img_dimensions($new, $dim_map);
+		}
 		if ($new !== $row['meta_value']) {
 			$wpdb->query($wpdb->prepare("UPDATE {$wpdb->postmeta} SET meta_value = %s WHERE meta_id = %d", $new, $row['meta_id']));
 			clean_post_cache($row['post_id']); // bust the owning post's object cache
@@ -566,30 +576,33 @@ function bp_mr_replace_meta($base_url, $search, $replace) {
 		}
 	}
 
-	// Remaining tables: [table => [id column, value column]].
-	$tables = [
-		$wpdb->commentmeta => ['meta_id', 'meta_value'],
-		$wpdb->termmeta    => ['meta_id', 'meta_value'],
-		$wpdb->usermeta    => ['umeta_id', 'meta_value'],
-		$wpdb->options     => ['option_id', 'option_value'],
-	];
-	$options_changed = false;
-	foreach ($tables as $table => $cols) {
-		list($id_col, $val_col) = $cols;
-		$rows = $wpdb->get_results($wpdb->prepare(
-			"SELECT {$id_col} AS id, {$val_col} AS val FROM {$table} WHERE {$val_col} LIKE %s",
-			$like
-		), ARRAY_A);
-		foreach ((array) $rows as $row) {
-			$new = bp_mr_replace_content($row['val'], $search, $replace);
-			if ($new !== $row['val']) {
-				$wpdb->query($wpdb->prepare("UPDATE {$table} SET {$val_col} = %s WHERE {$id_col} = %d", $new, $row['id']));
-				if ($table === $wpdb->options) $options_changed = true;
-				$count++;
+	// Remaining tables get URL replacement only (not page HTML, so no dimension edits).
+	// Skip entirely on a same-name resize — there are no search pairs to find there.
+	if (!empty($search)) {
+		$tables = [
+			$wpdb->commentmeta => ['meta_id', 'meta_value'],
+			$wpdb->termmeta    => ['meta_id', 'meta_value'],
+			$wpdb->usermeta    => ['umeta_id', 'meta_value'],
+			$wpdb->options     => ['option_id', 'option_value'],
+		];
+		$options_changed = false;
+		foreach ($tables as $table => $cols) {
+			list($id_col, $val_col) = $cols;
+			$rows = $wpdb->get_results($wpdb->prepare(
+				"SELECT {$id_col} AS id, {$val_col} AS val FROM {$table} WHERE {$val_col} LIKE %s",
+				$like
+			), ARRAY_A);
+			foreach ((array) $rows as $row) {
+				$new = bp_mr_replace_content($row['val'], $search, $replace);
+				if ($new !== $row['val']) {
+					$wpdb->query($wpdb->prepare("UPDATE {$table} SET {$val_col} = %s WHERE {$id_col} = %d", $new, $row['id']));
+					if ($table === $wpdb->options) $options_changed = true;
+					$count++;
+				}
 			}
 		}
+		if ($options_changed) wp_cache_delete('alloptions', 'options'); // raw UPDATE leaves the autoload cache stale
 	}
-	if ($options_changed) wp_cache_delete('alloptions', 'options'); // raw UPDATE leaves the autoload cache stale
 
 	return $count;
 }

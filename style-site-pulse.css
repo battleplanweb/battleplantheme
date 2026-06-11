@@ -87,6 +87,11 @@
 	--input-border:                                            1px solid var(--sp-border);
 }
 
+input[type="checkbox"],
+input[type="radio"] {
+	transform:                                                 translateY(0);
+	margin-right:                                              0 !important;
+}
 
 /*--------------------------------------------------------------
 # Reset & Base
@@ -99,11 +104,26 @@ body.has-site-pulse {
 	line-height:                                               1.5;
 }
 
+body.has-site-pulse #primary,
+body.has-site-pulse .site-main-inner,
 body.has-site-pulse #main-content,
+body.has-site-pulse article[id^="post-"],
 body.has-site-pulse .entry-content {
 	max-width:                                                 100%;
+	width:                                                     100%;
 	padding:                                                   0;
 	margin:                                                    0;
+}
+
+/* The framework parks #main-content in its centered minmax(0,1280px) "default"
+   grid track. Site Pulse's sidebar is position:fixed (pinned to the viewport's
+   left edge), so a centered 1280px box leaves the main area floating in space
+   with beige gutters on both sides. Break out to full-bleed so the grid's
+   260px sidebar column lines up with the fixed sidebar and .sp-main spans the
+   entire non-menu area. Per-side gutters are handled on .sp-main below. */
+body.has-site-pulse #main-content {
+	grid-column:                                               1 / -1;
+	display:                                                   block;
 }
 
 body.has-site-pulse *,
@@ -241,6 +261,13 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	font-size:                                                 14px;
 	color:                                                     var(--sp-text-secondary);
 	margin:                                                    0;
+}
+
+/* "Log out" link under the forced password-change form. */
+.sp-login-foot {
+	text-align:                                                center;
+	margin:                                                    18px 0 0;
+	font-size:                                                 13px;
 }
 
 
@@ -747,7 +774,18 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 
 .sp-main {
 	grid-column:                                               2;
-	padding:                                                   28px 32px;
+	/* As a grid item, min-width defaults to `auto`, which lets wide children
+	   (tables, date inputs, button rows) push .sp-main past its track and out of
+	   the viewport — the "breaking out of the 100% shell" on mobile. min-width:0
+	   lets it shrink to its column so inner content wraps/clips instead. */
+	min-width:                                                 0;
+	/* Centered, fluid side gutters. Min 2em (laptops ~1280px, near-full width);
+	   grows with the viewport until it caps at 10% of the non-menu area, i.e. the
+	   content settles at ~80% width centered on large monitors. The middle term is
+	   what scales between those two — it crosses 2em just above 1280px and reaches
+	   10% around ~1850px, so wide screens fill out without the content going edge
+	   to edge. Vertical padding unchanged. */
+	padding:                                                   28px clamp(2em, (100vw - 80em) * 0.28, 10%);
 	min-height:                                                100vh;
 }
 
@@ -951,6 +989,19 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 
 .sp-meta-bar .sp-card-value {
 	font-size:                                                 18px;
+}
+
+/* On phones, header strips whose column count the JS forces inline — the report
+   detail header (.sp-meta-bar) and the report form header (.sp-report-header-grid)
+   both set grid-template-columns: repeat(N, 1fr) inline — would run off the right
+   edge. Override that to a wrapping auto-fit grid so the fields drop onto a second
+   row instead. !important is needed to beat the inline style. Harmless to the
+   mileage summary meta-bar, which already wraps. */
+@media (max-width: 600px) {
+	.sp-meta-bar,
+	.sp-report-header-grid {
+		grid-template-columns:                                    repeat(auto-fit, minmax(130px, 1fr)) !important;
+	}
 }
 
 /* Area 3 — horizontal control/filter row. */
@@ -1569,11 +1620,13 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	grid-template-columns:                                     1fr;
 	gap:                                                       9px;
 	margin-bottom:                                             16px;
+	text-align:                                                left;
 }
 
 .sp-tier-cap {
 	display:                                                   flex;
 	align-items:                                               center;
+	text-align:                                                left;
 	gap:                                                       8px;
 	font-size:                                                 13px;
 	line-height:                                               1.25;
@@ -1593,6 +1646,107 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	gap:                                                       8px;
 	padding-top:                                               14px;
 	border-top:                                                1px solid var(--sp-border);
+}
+
+/* Roles-page picker that jumps to one user's Edit popup for per-user permission overrides.
+   Sits below the role cards, separated by a divider. */
+.sp-roles-user-picker {
+	margin:                                                    28px 0 8px;
+	padding-top:                                               24px;
+	border-top:                                                1px solid var(--sp-border);
+}
+.sp-roles-user-picker label {
+	display:                                                   block;
+	font-size:                                                 13px;
+	font-weight:                                               600;
+	color:                                                     var(--sp-text);
+	margin-bottom:                                             6px;
+	/* The framework theme right-aligns bare labels; force left like .sp-form-group label does. */
+	text-align:                                                left;
+}
+.sp-roles-user-picker select {
+	display:                                                   block;
+	max-width:                                                 340px;
+}
+
+/* Per-user permission override grid in the Edit User popup: label · role default · this user. */
+.sp-perm-grid {
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             8px;
+	overflow:                                                  hidden;
+}
+.sp-perm-row {
+	display:                                                   grid;
+	grid-template-columns:                                     48px 48px 1fr;
+	align-items:                                               center;
+	gap:                                                       8px;
+	margin:                                                    0;
+	padding:                                                   7px 12px;
+	border-top:                                                1px solid var(--sp-border);
+	cursor:                                                    pointer;
+}
+.sp-perm-row:first-child {
+	border-top:                                                0;
+}
+.sp-perm-head {
+	background:                                                var(--sp-bg);
+	font-size:                                                 11px;
+	font-weight:                                               600;
+	text-transform:                                            uppercase;
+	letter-spacing:                                            0.04em;
+	color:                                                     var(--sp-text-secondary);
+	cursor:                                                    default;
+}
+.sp-perm-label {
+	font-size:                                                 13.5px;
+	color:                                                     var(--sp-text);
+}
+/* Columns are left-aligned so each header (Role/User/Permission) sits directly above its
+   checkbox/label below — one clean left edge per column. */
+.sp-perm-cell {
+	text-align:                                                left;
+}
+.sp-perm-cell input {
+	width:                                                     16px;
+	height:                                                    16px;
+	margin:                                                    0;
+	accent-color:                                              var(--sp-primary);
+}
+/* Header: one "Default / Override" caption spanning the two checkbox columns, Reset on the right. */
+.sp-perm-headcols {
+	grid-column:                                               1 / 3;
+	white-space:                                               nowrap;
+}
+.sp-perm-head .sp-perm-reset {
+	justify-self:                                              end;
+}
+.sp-perm-reset {
+	font:                                                      inherit;
+	font-size:                                                 10.5px;
+	font-weight:                                               600;
+	letter-spacing:                                            0.04em;
+	color:                                                     var(--sp-primary);
+	background:                                                none;
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             6px;
+	padding:                                                   3px 10px;
+	cursor:                                                    pointer;
+}
+.sp-perm-reset:hover {
+	background:                                                var(--sp-bg-white);
+	border-color:                                              var(--sp-primary);
+}
+.sp-perm-cell input:disabled {
+	opacity:                                                   0.6;
+}
+.sp-perm-user-cb {
+	cursor:                                                    pointer;
+}
+.sp-perm-row.sp-perm-changed {
+	background:                                                var(--sp-warning-bg, #fff7ed);
+}
+.sp-perm-row.sp-perm-changed .sp-perm-label {
+	font-weight:                                               600;
 }
 
 .sp-tier-form {
@@ -1636,7 +1790,7 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 .sp-settings-card-header {
 	display:                                                   flex;
 	align-items:                                               center;
-	justify-content:                                          space-between;
+	justify-content:                                           space-between;
 	gap:                                                       12px;
 	flex-wrap:                                                 wrap;
 }
@@ -2329,6 +2483,7 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 
 .sp-mileage-actions {
 	display:                                                   flex;
+	flex-wrap:                                                 wrap;
 	gap:                                                       8px;
 }
 
@@ -2396,6 +2551,165 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	border-radius:                                             var(--sp-radius);
 	color:                                                     var(--sp-text-secondary);
 	font-size:                                                 14px;
+}
+
+/* Toll reconciliation panel */
+.sp-toll-intro {
+	font-size: 14px;
+	line-height: 1.5;
+	color: var(--sp-text-secondary);
+}
+
+.sp-toll-file {
+	font-size: 14px;
+}
+
+.sp-toll-status {
+	margin: 14px 0;
+	padding: 12px 16px;
+	border-radius: var(--sp-radius);
+	background: var(--sp-bg);
+	border: 1px solid var(--sp-border);
+	font-size: 14px;
+	color: var(--sp-text);
+}
+
+.sp-toll-status-error {
+	background: var(--sp-danger-light, #fbeaea);
+	border-color: var(--sp-danger, #c0392b);
+	color: var(--sp-danger, #c0392b);
+}
+
+.sp-toll-status-ok {
+	background: var(--sp-success-light, #e8f5ea);
+	border-color: var(--sp-success, #2e7d32);
+	color: var(--sp-success, #2e7d32);
+}
+
+.sp-toll-days {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.sp-toll-day {
+	padding: 16px 18px;
+}
+
+.sp-toll-day-head {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.sp-toll-day-date {
+	font-weight: 700;
+	font-size: 16px;
+}
+
+.sp-toll-day-meta {
+	color: var(--sp-text-secondary);
+	font-size: 13px;
+}
+
+.sp-toll-day-head .sp-btn {
+	margin-left: auto;
+}
+
+.sp-toll-day-done {
+	opacity: 0.92;
+}
+
+.sp-toll-loading {
+	padding: 16px 4px;
+	color: var(--sp-text-secondary);
+	font-size: 14px;
+}
+
+.sp-toll-day-body {
+	margin-top: 14px;
+}
+
+.sp-toll-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 14px;
+	table-layout: fixed;
+}
+
+.sp-toll-table th,
+.sp-toll-table td {
+	padding: 8px 10px;
+	border-bottom: 1px solid var(--sp-border);
+	text-align: left;
+	vertical-align: top;
+}
+
+/* Column budget — give "Assign to leg" enough room to show the full leg label.
+   When (time only) and Charge are slim; Road/Gantry wraps onto two lines. */
+.sp-toll-table th:nth-child(1), .sp-toll-table td:nth-child(1) { width: 8%;  white-space: nowrap; }
+.sp-toll-table th:nth-child(2), .sp-toll-table td:nth-child(2) { width: 33%; }
+.sp-toll-table th:nth-child(3), .sp-toll-table td:nth-child(3) { width: 9%;  }
+.sp-toll-table th:nth-child(4), .sp-toll-table td:nth-child(4) { width: 50%; }
+
+.sp-toll-assign { width: 100%; max-width: 100%; }
+
+.sp-toll-road { font-weight: 600; line-height: 1.3; }
+.sp-toll-gantry { font-size: 12px; color: var(--sp-text-secondary); line-height: 1.3; margin-top: 1px; word-break: break-word; }
+
+.sp-toll-table th {
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	color: var(--sp-text-secondary);
+}
+
+.sp-toll-row-amb {
+	background: var(--sp-warning-light, #fff7e6);
+}
+
+.sp-toll-row-exc {
+	opacity: 0.6;
+}
+
+.sp-toll-flag {
+	color: var(--sp-warning, #b8860b);
+	cursor: help;
+}
+
+.sp-toll-reason {
+	font-size: 12px;
+	color: var(--sp-text-secondary);
+	margin-top: 2px;
+}
+
+.sp-toll-compare {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+	margin: 16px 0;
+	padding: 14px 16px;
+	background: var(--sp-bg);
+	border-radius: var(--sp-radius);
+}
+
+.sp-toll-compare-stat {
+	min-width: 130px;
+}
+
+.sp-toll-var-over {
+	color: var(--sp-danger, #c0392b);
+}
+
+.sp-toll-var-under {
+	color: var(--sp-success, #2e7d32);
+}
+
+.sp-toll-apply-row {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	align-items: center;
 }
 
 .sp-map-info {
@@ -2469,10 +2783,90 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	margin-top:                                                8px;
 }
 
+/* Mobile: reflow the cramped 5-column mileage log into stacked cards. Each row
+   becomes a flex container — Date and Route each take the full width (so the
+   route text gets room instead of jamming into a narrow column), then the
+   numeric cells (Miles / $ / Tolls / Trailer) wrap onto their own row below,
+   each with a small label since the table header is hidden. Status + row
+   actions sit on a final full-width row. */
+@media (max-width: 600px) {
+	.sp-mileage-table,
+	.sp-mileage-table tbody,
+	.sp-mileage-table tfoot,
+	.sp-mileage-table td {
+		display:                                                  block;
+	}
+
+	.sp-mileage-table thead {
+		display:                                                  none;
+	}
+
+	/* Desktop-only alignment spacers aren't needed in the stacked card view. */
+	.sp-leg-blank {
+		display:                                                  none;
+	}
+
+	.sp-mileage-table tr {
+		display:                                                  flex;
+		flex-wrap:                                                wrap;
+		align-items:                                              flex-start;
+		gap:                                                      10px 20px;
+		padding:                                                  14px 16px;
+		border-bottom:                                            1px solid var(--sp-border);
+	}
+
+	.sp-mileage-table td {
+		padding:                                                  0;
+		border:                                                   none;
+		font-size:                                                15px;
+	}
+
+	/* Date + Route each claim a full-width line. */
+	.sp-mileage-table .sp-m-date,
+	.sp-mileage-table .sp-mileage-path-cell {
+		flex:                                                     0 0 100%;
+		max-width:                                                none;
+	}
+
+	.sp-mileage-table .sp-m-date {
+		font-weight:                                              700;
+		color:                                                    var(--sp-text);
+	}
+
+	/* Numeric columns share the next row, each label stacked above its value. */
+	.sp-mileage-table .sp-m-num {
+		display:                                                  flex;
+		flex-direction:                                           column;
+		gap:                                                      2px;
+		font-variant-numeric:                                     tabular-nums;
+	}
+
+	.sp-mileage-table .sp-m-num::before {
+		content:                                                  attr(data-label);
+		font-size:                                                10px;
+		font-weight:                                              600;
+		text-transform:                                           uppercase;
+		letter-spacing:                                           0.05em;
+		color:                                                    var(--sp-text-light);
+	}
+
+	/* Status badge and edit/delete actions on a final full-width row. */
+	.sp-mileage-table .sp-m-status {
+		flex:                                                     0 0 100%;
+		display:                                                  flex;
+		align-items:                                              center;
+		justify-content:                                          space-between;
+	}
+
+	.sp-mileage-table .sp-m-status .sp-mileage-row-actions {
+		margin-top:                                               0;
+	}
+}
+
 .sp-icon-btn {
 	display:                                                   inline-flex;
 	align-items:                                               center;
-	justify-content:                                          center;
+	justify-content:                                           center;
 	width:                                                     32px;
 	height:                                                    32px;
 	padding:                                                   0;
@@ -2540,8 +2934,8 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
    and remove controls line up vertically across START / 1·2·3 / END. */
 .sp-mileage-stop {
 	display:                                                   grid;
-	grid-template-columns:                                     52px minmax(0, 1.3fr) minmax(0, 1.3fr) 24px;
-	gap:                                                       12px;
+	grid-template-columns:                                     48px minmax(0, 1fr) minmax(0, 0.85fr) minmax(0, 1.5fr) 24px;
+	gap:                                                       10px;
 	align-items:                                               center;
 }
 
@@ -2567,13 +2961,46 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	font-weight:                                               600;
 }
 
-/* The END row carries Toll/Trailer flags for the drive home, so the home field stays
-   in the location column and the flags line up under the middle stops' flags. */
+/* The END (drive-home) row mirrors a stop: home in the location column, its own Charge To in
+   the charge column, and the Toll/Trailer flags lined up under the middle stops' flags. */
 .sp-mileage-stop-end .sp-mileage-stop-home {
 	grid-column:                                               2 / 3;
 }
-.sp-mileage-stop-end .sp-mileage-end-extras {
+.sp-mileage-stop-end .sp-mileage-end-charge {
 	grid-column:                                               3 / 4;
+}
+.sp-mileage-stop-end .sp-mileage-end-extras {
+	grid-column:                                               4 / 5;
+}
+
+/* "Charge To" picker sits in its own column between the location and the purpose. Greyed like a
+   placeholder until a store is chosen, so it reads the same as the location/purpose placeholders. */
+.sp-mileage-charge {
+	min-width:                                                 0;
+}
+.sp-mileage-charge.sp-charge-empty {
+	color:                                                     var(--sp-text-light);
+}
+
+/* Required entry fields flag themselves with a red border while still empty — the location,
+   Charge To, business purpose, and the additional-details line when it's shown. The border
+   clears the instant the field has a value. Charge selects use the .sp-charge-empty class the
+   JS already maintains; the text inputs use :placeholder-shown. */
+.sp-mileage-stop-loc:placeholder-shown,
+.sp-mileage-stop-purpose:placeholder-shown,
+.sp-mileage-stop-note:placeholder-shown,
+.sp-mileage-charge.sp-charge-empty {
+	border-color:                                              var(--sp-danger);
+	filter:                                                    drop-shadow(0 0 3px var(--sp-danger));
+}
+
+/* Optional per-stop note: a full-width text input on its own line beneath the row, aligned under
+   the inputs. Hidden (via the [hidden] attr) until the chosen purpose requires it. */
+.sp-mileage-stop-note {
+	grid-column:                                               2 / -1;
+	min-width:                                                 0;
+	margin-top:                                                2px;
+	font-size:                                                 13px;
 }
 
 .sp-mileage-stop-remove {
@@ -2612,9 +3039,10 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 .sp-mileage-toll-toggle {
 	display:                                                   inline-flex;
 	align-items:                                               center;
-	gap:                                                       3px;
+	gap:                                                       5px;
 	flex:                                                      0 0 auto;
 	font-size:                                                 13px;
+	line-height:                                               1;
 	font-weight:                                               600;
 	color:                                                     var(--sp-text-light);
 	white-space:                                               nowrap;
@@ -2680,21 +3108,6 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	height:                                                    14px;
 }
 
-.sp-purpose-edit:hover {
-	color:                                                     var(--sp-primary);
-	border-color:                                              var(--sp-primary);
-}
-
-.sp-purpose-del:hover {
-	color:                                                     var(--sp-danger);
-	border-color:                                              var(--sp-danger);
-	background:                                                var(--sp-danger-light);
-}
-
-.sp-purpose-editing {
-	padding:                                                   2px;
-}
-
 .sp-purpose-edit-input {
 	width:                                                     150px;
 	padding:                                                   4px 12px;
@@ -2711,6 +3124,55 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	gap:                                                       8px;
 	margin-bottom:                                             10px;
 	max-width:                                                 420px;
+}
+
+/* Purpose library as a vertical list of rows: name (grows) · Requires-note toggle · edit · delete. */
+.sp-purpose-rows {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	gap:                                                       6px;
+	margin:                                                    8px 0;
+	max-width:                                                 560px;
+}
+.sp-purpose-row {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       10px;
+	padding:                                                   6px 8px 6px 14px;
+	background:                                                var(--sp-bg-white);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-sm);
+}
+.sp-purpose-row .sp-purpose-text {
+	flex:                                                      1 1 auto;
+	min-width:                                                 0;
+	font-size:                                                 14px;
+	color:                                                     var(--sp-text);
+}
+.sp-purpose-row .sp-purpose-edit-input {
+	flex:                                                      1 1 auto;
+	width:                                                     auto;
+	border-radius:                                             var(--sp-radius-sm);
+}
+.sp-purpose-req {
+	display:                                                   inline-flex;
+	align-items:                                               center;
+	gap:                                                       5px;
+	flex:                                                      0 0 auto;
+	font-size:                                                 12.5px;
+	line-height:                                               1;
+	font-weight:                                               600;
+	color:                                                     var(--sp-text-light);
+	white-space:                                               nowrap;
+	cursor:                                                    pointer;
+	user-select:                                               none;
+}
+.sp-purpose-req input {
+	width:                                                     15px;
+	height:                                                    15px;
+	margin:                                                    0;
+	accent-color:                                              var(--sp-primary);
+	cursor:                                                    pointer;
 }
 
 .sp-mileage-quickranges {
@@ -2736,14 +3198,15 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 }
 
 .sp-mileage-month-picker {
-	max-width:                                                 170px;
+	min-width:                                                 210px;
+	max-width:                                                 300px;
 }
 
 .sp-btn-tiny {
 	--_btn-padding:                                            0 10px;
 	min-height:                                                26px;
 	font-size:                                                 11px;
-	margin-left:                                                8px;
+	margin-left:                                               8px;
 }
 
 .sp-mileage-matrix-wrap {
@@ -2822,6 +3285,66 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 .sp-route-purpose {
 	color:                                                     var(--sp-text-secondary, #6b7280);
 	font-style:                                                italic;
+}
+
+/* Per-leg miles + mileage $ broken into the Miles/$ columns, one line per stop, aligned
+   line-for-line with the route names beside them (matching line-height). The trip total
+   sits on the first line in the normal weight; each leg below is muted grey. */
+.sp-mileage-table td.sp-m-num > div {
+	line-height:                                               1.5;
+	text-align:                                                right;
+}
+/* Numeric column headers right-align so MILES / $ / TOLLS sit above their right-aligned values. */
+.sp-mileage-table th.sp-th-num {
+	text-align:                                                right;
+}
+/* Extra gap before the Status column so the right-aligned Tolls values don't butt against it.
+   Desktop only — the mobile card reflow zeroes cell padding and stacks Status on its own row. */
+@media (min-width: 601px) {
+	.sp-mileage-table th:last-child,
+	.sp-mileage-table td.sp-m-status {
+		padding-left:                                             34px;
+	}
+}
+.sp-leg-stat {
+	color:                                                     var(--sp-text-light);
+	font-variant-numeric:                                      tabular-nums;
+}
+
+div.sp-leg-stat + .sp-day-total-line {
+	border-top:                                                1px solid var(--light-grey);
+}
+
+/* A leg's miles are clickable to adjust for a detour/closure. Subtle dotted underline hints
+   it's editable; the "+7.8" badge marks how far the saved miles differ from the computed ones.
+   The underline rides the inner .sp-leg-val span so it hugs just the number, while the column
+   stays right-aligned so every leg + the day total line up on the decimal. */
+.sp-leg-edit {
+	cursor:                                                    pointer;
+}
+.sp-leg-edit .sp-leg-val {
+	border-bottom:                                             1px dotted transparent;
+}
+.sp-leg-edit:hover {
+	color:                                                     var(--sp-text);
+}
+.sp-leg-edit:hover .sp-leg-val {
+	border-bottom-color:                                       var(--sp-border-focus, #cbd5e1);
+}
+.sp-leg-adjust {
+	color:                                                     var(--sp-primary);
+	font-weight:                                               600;
+}
+
+/* Each day's total sits on its own line at the BOTTOM of the stop rows — same weight as the
+   per-leg figures, just a slightly darker shade to set it apart. The blank spacers keep the
+   per-leg columns aligned line-for-line on desktop and collapse away in the mobile cards. */
+.sp-day-total-line {
+	color:                                                     var(--black);
+	line-height:                                               1.5;
+}
+.sp-leg-blank {
+	line-height:                                               1.5;
 }
 
 .sp-mileage-home-hint {
@@ -3091,28 +3614,28 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	body.sp-printing-mileage .sp-mileage-form-wrap,
 	body.sp-printing-mileage .sp-overlay,
 	body.sp-printing-mileage .sp-notification-panel {
-		display:                                              none !important;
+		display:                                                  none !important;
 	}
 
 	body.sp-printing-mileage .sp-main {
-		margin-left:                                          0;
-		padding:                                              0;
+		margin-left:                                              0;
+		padding:                                                  0;
 	}
 
 	body.sp-printing-mileage .sp-panel {
-		display:                                              none;
+		display:                                                  none;
 	}
 
 	body.sp-printing-mileage #sp-panel-mileage {
-		display:                                              block;
+		display:                                                  block;
 	}
 
 	body.sp-printing-mileage .sp-mileage-table {
-		border:                                               1px solid #000;
+		border:                                                   1px solid #000;
 	}
 
 	body.sp-printing-mileage .sp-mileage-table th,
 	body.sp-printing-mileage .sp-mileage-table td {
-		border-bottom:                                        1px solid #ccc;
+		border-bottom:                                            1px solid #ccc;
 	}
 }

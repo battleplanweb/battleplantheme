@@ -31,7 +31,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  */
 function bp_site_is_private(): bool {
 	$opts = get_option( 'site_private', [] );
-	return ! empty( $opts['install'] );
+	return bp_module_on( $opts );
 }
 
 /**

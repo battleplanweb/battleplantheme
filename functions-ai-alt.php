@@ -104,6 +104,7 @@ function bp_ai_generate_alt_text($attachment_id) {
 
 	if ($status !== 200) {
 		$msg = $decoded['error']['message'] ?? 'Unknown API error.';
+		if (function_exists('bp_ai_model_alert')) bp_ai_model_alert((int)$status, $decoded, BP_AI_ALT_MODEL, 'AI alt-text');
 		return new WP_Error('api_error', "Anthropic API error ($status): $msg");
 	}
 

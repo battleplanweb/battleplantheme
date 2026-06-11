@@ -7,8 +7,18 @@ if ( ! is_user_logged_in() ) {
 }
 
 $real_user_id = get_current_user_id();
+
+// Anyone still on the shared default password must set a new one before using the app.
+// (Skipped while a god is impersonating — that's not their own password.)
+if ( ! site_pulse_is_impersonating() && site_pulse_must_change_password( $real_user_id ) ) {
+	return site_pulse_render_force_password_screen();
+}
+
 $is_god       = site_pulse_is_god( $real_user_id );
 $impersonating = site_pulse_is_impersonating();
+// The Modules screen is for the protected super-admin (battleplanweb) only, and
+// never while impersonating — so "view as <someone>" hides it like that user sees.
+$is_superadmin = site_pulse_is_superadmin( $real_user_id ) && ! $impersonating;
 $user_id      = site_pulse_effective_user_id();
 $user         = get_userdata( $user_id );
 $profile      = site_pulse_get_user_profile( $user_id );
@@ -23,12 +33,19 @@ if ( $is_god && ! $impersonating ) {
 	$caps[] = 'god_mode';
 	$role_label = 'Odinson';
 } elseif ( $is_wp_admin && ! $role ) {
-	$caps = [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'view_ai_insights', 'submit_reports', 'view_own_reports', 'manage_mileage', 'submit_mileage' ];
+	$caps = [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'view_ai_insights', 'view_forms', 'submit_reports', 'view_own_reports', 'manage_mileage', 'submit_mileage' ];
 	$role_label = 'Administrator';
 } else {
-	$caps = $role ? ( json_decode( $role['capabilities'], true ) ?: [] ) : [];
+	// Effective caps = the role's capabilities with this user's per-user overrides applied, so an
+	// individual tweak (e.g. mileage turned off for one supervisor) is reflected in the menu/panels.
+	$caps = site_pulse_effective_caps( $user_id );
 	$role_label = $role ? esc_html( $role['label'] ) : '';
 }
+
+// Whichever path set $caps above (god's full catalog, the wp-admin fallback list, or
+// per-user effective caps), drop any capability whose module is off so the menu and
+// panels for a disabled module never render — for anyone, god included.
+$caps = site_pulse_filter_caps_by_module( $caps );
 
 $app_name     = site_pulse_get_setting( 'app_name', 'Site Pulse' );
 $company_name = site_pulse_get_setting( 'company_name', '' );
@@ -95,24 +112,28 @@ $nav[] = [
 	'icon'  => 'car',
 	'show'  => in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ),
 	'children' => [
-		[ 'slug' => 'mileage',     'label' => 'My Mileage',  'show' => in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ],
-		[ 'slug' => 'mileage',     'label' => 'Add a Day',   'action' => 'mileage-add', 'show' => in_array( 'submit_mileage', $caps ) ],
-		[ 'slug' => 'mileage-map', 'label' => 'Mileage Map', 'show' => in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ],
+		[ 'slug' => 'mileage',       'label' => 'My Mileage',     'show' => in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ],
+		[ 'slug' => 'mileage',       'label' => 'Add a Day',      'action' => 'mileage-add', 'show' => in_array( 'submit_mileage', $caps ) ],
+		[ 'slug' => 'mileage-tolls', 'label' => 'Analyze Tolls',  'show' => in_array( 'submit_mileage', $caps ) ],
+		[ 'slug' => 'mileage-map',   'label' => 'Mileage Map',    'show' => in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ],
 	],
 ];
 
 $nav[] = [ 'slug' => 'analytics', 'label' => 'Analytics', 'icon' => 'chart', 'show' => in_array( 'view_analytics', $caps ) ];
 
+// Forms is gated on the 'view_forms' capability — and always visible in Odin (god) mode,
+// independent of the capability catalog, so god never loses it.
+$cap_view_forms = in_array( 'view_forms', $caps ) || ( $is_god && ! $impersonating && site_pulse_module_on( 'forms' ) );
 $nav[] = [
 	'slug'  => 'forms',
 	'label' => 'Forms',
 	'icon'  => 'forms',
-	'show'  => true,
+	'show'  => $cap_view_forms,
 	'children' => [
-		[ 'slug' => 'forms-training', 'label' => 'Training', 'show' => true ],
-		[ 'slug' => 'forms-kitchen',  'label' => 'Kitchen',  'show' => true ],
-		[ 'slug' => 'forms-foh',      'label' => 'FOH',      'show' => true ],
-		[ 'slug' => 'forms-misc',     'label' => 'Misc',     'show' => true ],
+		[ 'slug' => 'forms-training', 'label' => 'Training', 'show' => $cap_view_forms ],
+		[ 'slug' => 'forms-kitchen',  'label' => 'Kitchen',  'show' => $cap_view_forms ],
+		[ 'slug' => 'forms-foh',      'label' => 'FOH',      'show' => $cap_view_forms ],
+		[ 'slug' => 'forms-misc',     'label' => 'Misc',     'show' => $cap_view_forms ],
 	],
 ];
 
@@ -123,11 +144,12 @@ $nav[] = [
 	'show'  => in_array( 'manage_locations', $caps ) || in_array( 'manage_users', $caps ) || in_array( 'manage_settings', $caps ) || in_array( 'manage_mileage', $caps ),
 	'children' => [
 		[ 'slug' => 'admin-users',     'label' => 'Users',            'icon' => 'users',   'show' => in_array( 'manage_users', $caps ) ],
-		[ 'slug' => 'admin-tiers',     'label' => 'Tiers',            'icon' => 'layers',  'show' => in_array( 'manage_settings', $caps ) ],
+		[ 'slug' => 'admin-tiers',     'label' => 'Roles',            'icon' => 'layers',  'show' => in_array( 'manage_settings', $caps ) ],
 		[ 'slug' => 'admin-locations', 'label' => 'Home Bases',       'icon' => 'mappin',  'show' => in_array( 'manage_locations', $caps ) ],
 		[ 'slug' => 'admin-templates', 'label' => 'Report Settings',   'icon' => 'file',    'show' => in_array( 'manage_templates', $caps ) ],
 		[ 'slug' => 'admin-mileage',   'label' => 'Mileage Settings', 'icon' => 'car',     'show' => in_array( 'manage_mileage', $caps ) ],
 		[ 'slug' => 'admin-settings',  'label' => 'Site Settings',    'icon' => 'sliders', 'show' => in_array( 'manage_settings', $caps ) ],
+		[ 'slug' => 'admin-modules',   'label' => 'Modules',          'icon' => 'layers',  'show' => $is_superadmin ],
 	],
 ];
 
@@ -149,10 +171,6 @@ if ( $is_god ) {
 		$printPage .= '<option value="' . (int) $u['user_id'] . '"' . $selected . '>' . esc_html( $u['display_name'] ) . ' — ' . esc_html( $u['role_label'] ?? '' ) . '</option>';
 	}
 	$printPage .=   '</select>';
-	if ( $impersonating ) {
-		$printPage .= '<button type="button" class="unique sp-btn sp-btn-ghost sp-god-reset" id="sp-god-reset">Reset</button>';
-	}
-	$printPage .= '<button type="button" class="unique sp-btn sp-btn-ghost sp-god-nuke" id="sp-god-nuke" style="color:#f87171;">Clear Test Data</button>';
 	$printPage .= '</div>';
 }
 
@@ -445,8 +463,7 @@ if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) 
 	$printPage .=     '<span class="sp-toolbar-label">Period</span>';
 	$printPage .=     '<div class="sp-mileage-period-controls">';
 	$printPage .=       '<div class="sp-toolbar-group sp-mileage-quickranges">';
-	$printPage .=         '<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-range" data-range="month">This Month</button>';
-	$printPage .=         '<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-range" data-range="quarter">This Quarter</button>';
+	$printPage .=         '<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-range" data-range="period" id="sp-mileage-range-period">This Period</button>';
 	$printPage .=         '<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-range" data-range="ytd">Year to Date</button>';
 	$printPage .=         '<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-range" data-range="last30">Last 30 Days</button>';
 	$printPage .=         '<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-range" data-range="last90">Last 90 Days</button>';
@@ -461,6 +478,23 @@ if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) 
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-mileage-list" id="sp-mileage-list"></div>';
 	$printPage .=   '<div class="sp-mileage-form-wrap" id="sp-mileage-form-wrap" hidden></div>';
+	$printPage .= '</section>';
+}
+
+// Reconcile Tolls Panel — upload a toll-authority CSV, then AI matches each charge
+// to the legs of the days you logged trips. Review the matches, then apply.
+if ( in_array( 'submit_mileage', $caps ) ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-mileage-tolls">';
+	$printPage .=   '<div class="sp-panel-header"><h2>Analyze Tolls</h2></div>';
+	$printPage .=   '<div class="sp-meta-bar"><div class="sp-toll-intro">Upload the CSV export from your toll account (e.g. NTTA). We only look at the days you logged a trip — charges on any other date are ignored. AI matches each toll to a leg of that day\'s route; you review before anything is added.</div></div>';
+	$printPage .=   '<div class="sp-toolbar" id="sp-toll-toolbar">';
+	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=       '<input type="file" id="sp-toll-file" accept=".csv,text/csv" class="sp-toll-file">';
+	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-toll-upload-btn" disabled>Upload CSV</button>';
+	$printPage .=     '</div>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-toll-status" id="sp-toll-status" hidden></div>';
+	$printPage .=   '<div class="sp-toll-days" id="sp-toll-days"></div>';
 	$printPage .= '</section>';
 }
 
@@ -480,13 +514,14 @@ if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) 
 	$printPage .= '</section>';
 }
 
-// Forms Panels — placeholders until each form set is built out
-$sp_forms_panels = [
+// Forms Panels — placeholders until each form set is built out. Gated on the same
+// 'view_forms' capability as the Forms menu, so they're not reachable by direct hash.
+$sp_forms_panels = $cap_view_forms ? [
 	'forms-training' => 'Training',
 	'forms-kitchen'  => 'Kitchen',
 	'forms-foh'      => 'FOH',
 	'forms-misc'     => 'Misc',
-];
+] : [];
 foreach ( $sp_forms_panels as $sp_form_slug => $sp_form_label ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-' . esc_attr( $sp_form_slug ) . '">';
 	$printPage .=   '<div class="sp-panel-header"><h2>' . esc_html( $sp_form_label ) . '</h2></div>';
@@ -507,7 +542,7 @@ if ( in_array( 'manage_users', $caps ) ) {
 }
 if ( in_array( 'manage_settings', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-tiers">';
-	$printPage .=   '<div class="sp-panel-header"><h2>Tiers</h2></div>';
+	$printPage .=   '<div class="sp-panel-header"><h2>Roles</h2></div>';
 	$printPage .=   '<div class="sp-admin-content" id="sp-admin-tiers-content"></div>';
 	$printPage .= '</section>';
 }
@@ -527,6 +562,12 @@ if ( in_array( 'manage_settings', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-settings">';
 	$printPage .=   '<div class="sp-panel-header"><h2>Site Settings</h2></div>';
 	$printPage .=   '<div class="sp-admin-content" id="sp-admin-settings-content"></div>';
+	$printPage .= '</section>';
+}
+if ( $is_superadmin ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-admin-modules">';
+	$printPage .=   '<div class="sp-panel-header"><h2>Modules</h2></div>';
+	$printPage .=   '<div class="sp-admin-content" id="sp-admin-modules-content"></div>';
 	$printPage .= '</section>';
 }
 if ( in_array( 'manage_mileage', $caps ) ) {

@@ -49,7 +49,7 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 			$wpMailSettings['mail']['mailer']            = 'sendinblue';
 			$wpMailSettings['mail']['from_email_force']  = '1';
 			$wpMailSettings['mail']['from_name_force']   = '1';
-			$wpMailSettings['sendinblue']['api_key']     = 'x' . _BREVO_API;
+			$wpMailSettings['sendinblue']['api_key']     = 'x' . ( $rovin && defined('BP_BREVO_ROVIN_KEY') ? BP_BREVO_ROVIN_KEY : _BREVO_API );
 			update_option('wp_mail_smtp', $wpMailSettings);
 		}
 	}
@@ -263,7 +263,7 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 	// bounded per run, and handed to the deferred bp_geo_ai_rewrite_cron event
 	// (staggered) so we never run a pile of API calls inside this pass. This also
 	// drains the pre-existing backlog and recovers any one-off API failures.
-	if ($jobsite && ($jobsite['install'] ?? '') === 'true'
+	if ( bp_module_on($jobsite)
 		&& defined('BP_GEO_CPT') && defined('BP_GEO_FIELD_AI_RAN')
 		&& function_exists('bp_geo_run_ai_rewrite')) {
 		$bp_geo_pending = get_posts([
@@ -488,7 +488,7 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 	}
 
 	$eventCalendar = get_option('event_calendar');
-	if (!empty($eventCalendar['install'])) {
+	if ( bp_module_on($eventCalendar) ) {
 		if (is_null(get_page_by_path('calendar', OBJECT, 'universal'))) {
 			wp_insert_post(['post_title' => 'Calendar', 'post_content' => '[get-event-calendar]', 'post_status' => 'publish', 'post_type' => 'universal']);
 		}
@@ -500,7 +500,7 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 	}
 
 	$sitePulse = get_option('site_pulse');
-	if (!empty($sitePulse['install'])) {
+	if ( bp_module_on($sitePulse) ) {
 		$sitePulsePages = [
 			['slug' => 'site-pulse-login',     'title' => 'Site Pulse Login',     'shortcode' => 'page-site-pulse-login'],
 			['slug' => 'site-pulse-dashboard', 'title' => 'Site Pulse Dashboard', 'shortcode' => 'page-site-pulse-dashboard'],

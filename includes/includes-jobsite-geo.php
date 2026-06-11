@@ -1659,7 +1659,7 @@ function bp_geo_run_taxonomy_cleanup( $dry_run = true ) {
 // Store your Anthropic API key in wp-config.php:
 // define( 'BP_ANTHROPIC_API_KEY', 'sk-ant-...' );
 
-define( 'BP_GEO_AI_MODEL',       'claude-sonnet-4-20250514' );
+define( 'BP_GEO_AI_MODEL',       'claude-sonnet-4-6' ); // was claude-sonnet-4-20250514 (now 404s — retired)
 define( 'BP_GEO_AI_MAX_TOKENS',  4096 ); // 1024 was too low: long rewrites truncated before service_category, orphaning the post
 define( 'BP_GEO_FIELD_ORIGINAL', 'bp_geo_original_description' ); // client's raw text, saved once on first publish
 define( 'BP_GEO_FIELD_AI_RAN',   'bp_geo_ai_ran' );               // timestamp of last AI run
@@ -2209,7 +2209,7 @@ add_action( 'init', 'bp_geo_schedule_daily_digest' );
 function bp_geo_schedule_daily_digest() {
 	$opts   = get_option('jobsite_geo');
 	$digest = is_array($opts) ? ($opts['digest'] ?? '') : '';
-	$on     = is_array($opts) && ($opts['install'] ?? '') === 'true' && $digest !== 'false';
+	$on     = bp_module_on($opts) && $digest !== 'false';
 
 	if ( ! $on ) {
 		$ts = wp_next_scheduled('bp_geo_daily_digest');
@@ -2228,7 +2228,7 @@ function bp_geo_schedule_daily_digest() {
 add_action( 'bp_geo_daily_digest', 'bp_geo_send_daily_digest' );
 function bp_geo_send_daily_digest() {
 	$geo_opts = get_option('jobsite_geo');
-	if ( ! is_array($geo_opts) || ($geo_opts['install'] ?? '') !== 'true' ) return;
+	if ( ! bp_module_on($geo_opts) ) return;
 
 	$digest = $geo_opts['digest'] ?? '';
 	if ( $digest === 'false' ) return;   // explicit opt-out
@@ -2401,6 +2401,7 @@ function bp_geo_call_anthropic( $data ) {
 
 	if ( $status !== 200 ) {
 		$error_msg = $decoded['error']['message'] ?? 'Unknown API error.';
+		if ( function_exists( 'bp_ai_model_alert' ) ) bp_ai_model_alert( (int) $status, $decoded, BP_GEO_AI_MODEL, 'Jobsite GEO AI' );
 		return new WP_Error( 'api_error', "Anthropic API error ($status): $error_msg" );
 	}
 

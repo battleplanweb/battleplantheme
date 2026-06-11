@@ -158,7 +158,7 @@ function battleplan_registerPostTypes() {
 // Unregister 'landing' CPT if jobsite_geo is installed (it replaces the same function)
 add_action('init', function() {
 	$jobsite_geo = get_option('jobsite_geo');
-	if (!empty($jobsite_geo['install']) || post_type_exists('jobsite_geo')) {
+	if ( bp_module_on($jobsite_geo) || post_type_exists('jobsite_geo')) {
 		unregister_post_type('landing');
 	}
 }, 20);

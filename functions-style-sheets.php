@@ -49,7 +49,7 @@ function bp_get_css_sources() {
         $deferred[] = '/style-woocommerce.css';
     }
 
-    $site_pulse = get_option('site_pulse');
+    $site_pulse = get_option('site-pulse');
     if (is_array($site_pulse) && ($site_pulse['install'] ?? null) === 'true') {
         $deferred[] = '/style-site-pulse.css';
     }
@@ -79,7 +79,6 @@ function bp_get_css_sources() {
         'deferred' => $deferred,
     ];
 }
-
 
 function bp_minify_css($css) {
 

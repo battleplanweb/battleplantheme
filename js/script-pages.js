@@ -1930,6 +1930,24 @@ document.addEventListener("DOMContentLoaded", function () {
 	// Handle locked sections and close button
 	window.addEventListener('load', () => {
 		const sections = getObjects('section.section-lock');
+
+		// Visitor stats (computed once per page load) for visitor/visits targeting.
+		// bpReturning: visited the site in a PRIOR session. bpVisits: lifetime pageview count.
+		let bpReturning = false, bpVisits = 1;
+		try {
+			const seen = localStorage.getItem('bp_seen');
+			const sess = sessionStorage.getItem('bp_returning');
+			if (sess === null) {
+				bpReturning = !!seen; // known visitor starting a fresh session
+				sessionStorage.setItem('bp_returning', bpReturning ? '1' : '0');
+				if (!seen) localStorage.setItem('bp_seen', Date.now().toString());
+			} else {
+				bpReturning = sess === '1';
+			}
+			bpVisits = (parseInt(localStorage.getItem('bp_pageviews') || '0', 10) || 0) + 1;
+			localStorage.setItem('bp_pageviews', String(bpVisits));
+		} catch (e) {}
+
 		sections.forEach(section => {
 			const sectionID = section.id;
 			const initDelay = section.dataset.delay;
@@ -1963,11 +1981,68 @@ document.addEventListener("DOMContentLoaded", function () {
 			}
 
 			if (buttonActivated === "no" && getCookie("display-" + sectionID) !== "no") {
-				setTimeout(() => {
-					section.classList.add("on-screen");
-					document.body.classList.add('locked');
-					section.focus();
-				}, initDelay);
+				const device = section.dataset.device || "all";
+				const isMobile = !!document.querySelector('.screen-mobile');
+				const visitor = section.dataset.visitor || "all";
+				const minVisits = parseInt(section.dataset.visits, 10);
+
+				const eligible =
+					!(device === "desktop" && isMobile) && !(device === "mobile" && !isMobile) &&
+					!(visitor === "new" && bpReturning) && !(visitor === "returning" && !bpReturning) &&
+					!(!isNaN(minVisits) && minVisits > 0 && bpVisits < minVisits);
+
+				if (eligible) {
+					let shown = false;
+					let timer = null;
+					let idleTimer = null;
+					const idleEvents = ['mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
+					const resetIdle = () => {
+						clearTimeout(idleTimer);
+						idleTimer = setTimeout(show, (parseInt(section.dataset.idle, 10) || 0) * 1000);
+					};
+					const cleanup = () => {
+						document.removeEventListener("mouseleave", onExit);
+						window.removeEventListener("scroll", onScroll);
+						if (timer) clearTimeout(timer);
+						if (idleTimer) clearTimeout(idleTimer);
+						idleEvents.forEach(ev => window.removeEventListener(ev, resetIdle));
+					};
+					const show = () => {
+						if (shown) return;
+						shown = true;
+						cleanup();
+						section.classList.add("on-screen");
+						document.body.classList.add('locked');
+						section.focus();
+					};
+
+					// Timed trigger — set delay="none" (or 0) to disable, e.g. for exit-only popups.
+					const delayMs = parseInt(initDelay, 10);
+					if (!isNaN(delayMs) && delayMs > 0) timer = setTimeout(show, delayMs);
+
+					// Exit-intent trigger (desktop only — there's no cursor on mobile). Armed after a
+					// short grace period so it can't fire the instant the page loads.
+					const onExit = (e) => { if (e.clientY <= 0) show(); };
+					if (section.dataset.exit === "yes" && !isMobile) {
+						setTimeout(() => { if (!shown) document.addEventListener("mouseleave", onExit); }, 2000);
+					}
+
+					// Scroll-depth trigger — fires once the visitor scrolls past N% of the page.
+					const scrollPct = parseInt(section.dataset.scroll, 10);
+					const onScroll = () => {
+						const h = document.documentElement.scrollHeight - window.innerHeight;
+						const pct = h > 0 ? (window.scrollY / h) * 100 : 0;
+						if (pct >= scrollPct) show();
+					};
+					if (!isNaN(scrollPct) && scrollPct > 0) window.addEventListener("scroll", onScroll, { passive: true });
+
+					// Idle trigger — show after N seconds of no activity (resets on any interaction).
+					const idleSec = parseInt(section.dataset.idle, 10);
+					if (!isNaN(idleSec) && idleSec > 0) {
+						idleEvents.forEach(ev => window.addEventListener(ev, resetIdle, { passive: true }));
+						resetIdle();
+					}
+				}
 			}
 
 			section.addEventListener('click', () => {

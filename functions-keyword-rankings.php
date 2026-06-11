@@ -490,7 +490,7 @@ function bp_kw_target_areas(): array {
 
 	// 3. jobsite-geo taxonomy terms (auto-grows as new jobs are posted) — augments, doesn't replace
 	$jobsite_geo = get_option('jobsite_geo', []);
-	$has_jobsite = is_array($jobsite_geo) && ($jobsite_geo['install'] ?? '') === 'true';
+	$has_jobsite = bp_module_on($jobsite_geo);
 	if ($has_jobsite) {
 		$terms = get_terms(['taxonomy' => 'jobsite_geo-service-areas', 'hide_empty' => false]);
 		foreach (is_wp_error($terms) ? [] : (array) $terms as $term) {
@@ -617,7 +617,7 @@ function bp_kw_target_records(): array {
 
 	// 2. Jobsite GEO services taxonomy — heat-driven cadence per term
 	$jobsite_geo = get_option('jobsite_geo', []);
-	$has_jobsite = is_array($jobsite_geo) && ($jobsite_geo['install'] ?? '') === 'true';
+	$has_jobsite = bp_module_on($jobsite_geo);
 	if ($has_jobsite) {
 		$stats = bp_kw_jobsite_service_term_stats();
 		$terms = get_terms(['taxonomy' => 'jobsite_geo-services', 'hide_empty' => false]);

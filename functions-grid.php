@@ -579,7 +579,18 @@ function battleplan_buildParallax( $atts, $content = null ) {
 // Locked Section
 add_shortcode( 'lock', 'battleplan_buildLockedSection' );
 function battleplan_buildLockedSection( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'style'=>'lock', 'width'=>'edge', 'position'=>'bottom', 'delay'=>'3000', 'show'=>'session', 'css'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'class'=>'', 'start'=>'', 'end'=>'', 'btn-activated'=>'no', 'track'=>'', 'content'=>'text' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'style'=>'lock', 'width'=>'edge', 'position'=>'bottom', 'delay'=>'3000', 'show'=>'session', 'css'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'class'=>'', 'start'=>'', 'end'=>'', 'btn-activated'=>'no', 'track'=>'', 'content'=>'text', 'pages'=>'', 'exclude'=>'', 'exit'=>'no', 'scroll'=>'', 'device'=>'all', 'idle'=>'', 'visitor'=>'all', 'visits'=>'' ), $atts );
+
+	// Page targeting (server-side): on off-target pages we ship nothing at all.
+	//   pages="contact, about"   → show ONLY on these slugs
+	//   exclude="checkout"       → show everywhere EXCEPT these slugs
+	$slug = defined('_PAGE_SLUG') ? strtolower((string)_PAGE_SLUG) : '';
+	if ( $slug === '' && function_exists('is_front_page') && is_front_page() ) $slug = 'home';
+	$only = array_filter( array_map('trim', explode(',', strtolower((string)$a['pages']))) );
+	$not  = array_filter( array_map('trim', explode(',', strtolower((string)$a['exclude']))) );
+	if ( $only && ! in_array($slug, $only, true) ) return null;
+	if ( $not  &&   in_array($slug, $not,  true) ) return null;
+
 	$name = strtolower(esc_attr($a['name']));
 	$name = preg_replace("/[\s_]/", "-", $name);
 	$delay = esc_attr($a['delay']);
@@ -608,7 +619,16 @@ function battleplan_buildLockedSection( $atts, $content = null ) {
 	$btnActivated = esc_attr($a['btn-activated']);
 	if ($btnActivated == "true" || $btnActivated == "yes" ) $btnActivated = "yes";
 
-	$buildSection = '<section'.$name.' class="section section-lock style-lock'.$style.$width.$contentType.$class.'"'.$tracking.' data-pos="'.$pos.'" data-delay="'.$delay.'" data-show="'.$show.'" data-btn="'.$btnActivated.'"';
+	// Triggers + targeting: exit-intent (desktop only), scroll-depth (percent), idle (seconds),
+	// device, new/returning visitor, and a minimum-pageviews gate.
+	$exit    = in_array(strtolower((string)$a['exit']), ['yes','true','1'], true) ? 'yes' : 'no';
+	$scroll  = preg_replace('/[^0-9]/', '', (string)$a['scroll']);  // percent, e.g. "50"
+	$idle    = preg_replace('/[^0-9]/', '', (string)$a['idle']);    // seconds of inactivity
+	$device  = in_array(strtolower((string)$a['device']),  ['desktop','mobile'],   true) ? strtolower((string)$a['device'])  : 'all';
+	$visitor = in_array(strtolower((string)$a['visitor']), ['new','returning'],    true) ? strtolower((string)$a['visitor']) : 'all';
+	$visits  = preg_replace('/[^0-9]/', '', (string)$a['visits']);  // show only on/after Nth pageview
+
+	$buildSection = '<section'.$name.' class="section section-lock style-lock'.$style.$width.$contentType.$class.'"'.$tracking.' data-pos="'.$pos.'" data-delay="'.$delay.'" data-show="'.$show.'" data-btn="'.$btnActivated.'" data-exit="'.$exit.'" data-scroll="'.$scroll.'" data-idle="'.$idle.'" data-device="'.$device.'" data-visitor="'.$visitor.'" data-visits="'.$visits.'"';
 
 	if ( $background != "" || $css != "" ) :
 		$buildSection .= ' style="';

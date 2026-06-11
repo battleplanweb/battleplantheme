@@ -75,7 +75,6 @@ function init() {
 
 function initGodMode() {
 	const select = $('#sp-god-user-select');
-	const resetBtn = $('#sp-god-reset');
 
 	if (select) {
 		select.addEventListener('change', async () => {
@@ -86,34 +85,6 @@ function initGodMode() {
 			} catch (err) {
 				alert('Error switching user.');
 			}
-		});
-	}
-
-	if (resetBtn) {
-		resetBtn.addEventListener('click', async () => {
-			try {
-				const res = await spAjax('site_pulse_impersonate', { user_id: 0 });
-				if (res.success) window.location.reload();
-			} catch (err) {
-				alert('Error resetting view.');
-			}
-		});
-	}
-
-	const nukeBtn = $('#sp-god-nuke');
-	if (nukeBtn) {
-		nukeBtn.addEventListener('click', async () => {
-			if (!confirm('Delete ALL reports, action items, and notifications? This cannot be undone.')) return;
-			if (!confirm('Are you sure? This wipes everything.')) return;
-			try {
-				const res = await spAjax('site_pulse_god_nuke', {});
-				if (res.success) {
-					alert(res.data.message);
-					window.location.reload();
-				} else {
-					alert(res.data?.message || 'Error.');
-				}
-			} catch (err) { alert('Error clearing data.'); }
 		});
 	}
 }
@@ -211,6 +182,9 @@ function activatePanel(panelId) {
 	}
 	if (panelId === 'mileage-map') {
 		loadMileageMap();
+	}
+	if (panelId === 'mileage-tolls') {
+		initTollReconcile();
 	}
 	// Returning to a list view closes any open form/detail in that section, so the nav
 	// item always lands on the main list (e.g. My Mileage while on Add-a-Day).
@@ -1406,12 +1380,14 @@ function initAdmin() {
 	const locsContent = $('#sp-admin-locations-content');
 	const tplsContent = $('#sp-admin-templates-content');
 	const settingsContent = $('#sp-admin-settings-content');
+	const modulesContent = $('#sp-admin-modules-content');
 
 	if (usersContent) loadAdminUsers();
 	if (tiersContent) loadAdminTiers();
 	if (locsContent) loadAdminLocations();
 	if (tplsContent) loadAdminTemplates();
 	if (settingsContent) loadAdminSettings();
+	if (modulesContent) loadAdminModules();
 
 	initActionItems();
 }
@@ -1436,6 +1412,7 @@ async function loadAdminUsers() {
 function renderAdminUsers(wrap, data) {
 	const { users, roles, locations } = data;
 	const mileageLocations = data.mileage_locations || [];
+	spPermCatalog = data.catalog || spPermCatalog;
 
 	let html = '<div class="sp-admin-toolbar">';
 	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-add-user-btn">+ Add User</button>';
@@ -1515,6 +1492,43 @@ function renderAdminUsers(wrap, data) {
 	});
 }
 
+// --- Per-user permission overrides (layered on top of the assigned role's capabilities) ---
+let spPermCatalog = {}; // cap => friendly label, from the admin get-users payload
+
+function spRoleCaps(roles, roleId) {
+	const r = (roles || []).find(x => String(x.id) === String(roleId));
+	if (!r) return [];
+	try { return JSON.parse(r.capabilities || '[]') || []; } catch (e) { return []; }
+}
+
+function spParseOverrides(raw) {
+	if (!raw) return {};
+	try { const o = JSON.parse(raw); return (o && typeof o === 'object') ? o : {}; } catch (e) { return {}; }
+}
+
+// Two-column grid: left = role default (read-only), right = this user (clickable). applyStored
+// seeds the right column from the user's saved overrides; on a Role change we pass false so the
+// right column resets to the newly-selected role's defaults.
+function spPermGridHtml(roles, roleId, user, applyStored) {
+	const roleCaps = spRoleCaps(roles, roleId);
+	const overrides = applyStored ? spParseOverrides(user && user.capability_overrides) : {};
+	let h = '<div class="sp-perm-grid">';
+	h += '<div class="sp-perm-row sp-perm-head"><span class="sp-perm-headcols">Default / Override</span><button type="button" class="unique sp-perm-reset">Reset</button></div>';
+	Object.keys(spPermCatalog).forEach(cap => {
+		const inRole = roleCaps.includes(cap);
+		let eff = inRole;
+		if (Object.prototype.hasOwnProperty.call(overrides, cap)) eff = !!overrides[cap];
+		const changed = eff !== inRole;
+		h += `<label class="sp-perm-row${changed ? ' sp-perm-changed' : ''}">`;
+		h += `<span class="sp-perm-cell"><input type="checkbox" tabindex="-1" disabled${inRole ? ' checked' : ''}></span>`;
+		h += `<span class="sp-perm-cell"><input type="checkbox" class="sp-perm-user-cb" data-cap="${cap}" data-default="${inRole ? '1' : '0'}"${eff ? ' checked' : ''}></span>`;
+		h += `<span class="sp-perm-label">${esc(spPermCatalog[cap])}</span>`;
+		h += '</label>';
+	});
+	h += '</div>';
+	return h;
+}
+
 function showUserForm(user, roles, locations, allUsers, mileageLocations = []) {
 	const wrap = spFormModal();
 
@@ -1574,7 +1588,7 @@ function showUserForm(user, roles, locations, allUsers, mileageLocations = []) {
 	} else {
 		html += `<div class="sp-form-group"><label>Role</label><select name="role_id" class="sp-select" required>${roleOptions}</select></div>`;
 	}
-	html += `<div class="sp-form-group"><label>Location <span class="unique sp-text-secondary" style="font-weight:400;">(also the mileage home base)</span></label><select name="location_id" class="sp-select">${locOptions}</select></div>`;
+	html += `<div class="sp-form-group"><label>Home Base</label><select name="location_id" class="sp-select">${locOptions}</select></div>`;
 	html += '</div>';
 
 	html += `<div class="sp-form-group"><label>Supervisor</label><select name="supervisor_id" class="sp-select">${supervisorOptions}</select></div>`;
@@ -1593,6 +1607,16 @@ function showUserForm(user, roles, locations, allUsers, mileageLocations = []) {
 		html += `<option value="active"${user.status === 'active' ? ' selected' : ''}>Active</option>`;
 		html += `<option value="inactive"${user.status === 'inactive' ? ' selected' : ''}>Inactive</option>`;
 		html += '</select></div>';
+	}
+
+	// Per-user permission overrides. Left column is the role default (read-only); right column is
+	// this user's effective setting. Ticking the right box to differ from the role creates an
+	// override (highlighted); matching it again clears the override. God users bypass caps entirely.
+	if (isEdit && !isGodUser) {
+		html += '<div class="sp-form-group" id="sp-user-perms-section">';
+		html += '<label>Permission Overrides</label>';
+		html += `<div id="sp-user-perms">${spPermGridHtml(roles, user.role_id, user, true)}</div>`;
+		html += '</div>';
 	}
 
 	html += '<div class="sp-report-form-actions">';
@@ -1641,11 +1665,43 @@ function showUserForm(user, roles, locations, allUsers, mileageLocations = []) {
 		if (privGroup) privGroup.style.display = (parseInt(locSel.value) > 0) ? 'none' : '';
 	});
 
+	// Permission grid: highlight a row the instant it diverges from the role default, and rebuild
+	// the grid (resetting to defaults) when the Role dropdown changes.
+	const permsBox = wrap.querySelector('#sp-user-perms');
+	const bindPermRows = () => {
+		$$('.sp-perm-user-cb', wrap).forEach(cb => cb.addEventListener('change', () => {
+			const row = cb.closest('.sp-perm-row');
+			if (row) row.classList.toggle('sp-perm-changed', cb.checked !== (cb.dataset.default === '1'));
+		}));
+		// Reset: snap every User box back to its role default and clear all override highlights.
+		// (Persists when "Save Changes" is clicked, like the rest of the form.)
+		$('.sp-perm-reset', wrap)?.addEventListener('click', () => {
+			$$('.sp-perm-user-cb', wrap).forEach(cb => {
+				cb.checked = cb.dataset.default === '1';
+				cb.closest('.sp-perm-row')?.classList.remove('sp-perm-changed');
+			});
+		});
+	};
+	bindPermRows();
+	const roleSelEl = wrap.querySelector('select[name="role_id"]');
+	roleSelEl?.addEventListener('change', () => {
+		if (permsBox) { permsBox.innerHTML = spPermGridHtml(roles, roleSelEl.value, user, false); bindPermRows(); }
+	});
+
 	$('#sp-user-form')?.addEventListener('submit', async (e) => {
 		e.preventDefault();
 		const formData = new FormData(e.target);
 		const data = {};
 		for (const [key, val] of formData.entries()) data[key] = val;
+
+		// Per-user permission overrides: send only the caps whose right-column box differs from the
+		// role default. An empty map ({}) tells the server to clear all overrides for this user.
+		const permCbs = $$('.sp-perm-user-cb', wrap);
+		if (permCbs.length) {
+			const overrides = {};
+			permCbs.forEach(cb => { if (cb.checked !== (cb.dataset.default === '1')) overrides[cb.dataset.cap] = cb.checked; });
+			data.capability_overrides = JSON.stringify(overrides);
+		}
 
 		const action = isEdit ? 'site_pulse_admin_update_user' : 'site_pulse_admin_create_user';
 		try {
@@ -1703,17 +1759,23 @@ function renderAdminLocations(wrap, locations) {
 		html += '<div class="sp-empty-state"><p>No locations yet.</p></div>';
 	} else {
 		html += '<div class="sp-admin-table-wrap"><table class="sp-admin-table">';
-		html += '<thead><tr><th>Name</th><th>Type</th><th>City</th><th>State</th><th>Status</th><th></th></tr></thead>';
+		html += '<thead><tr><th>Name</th><th>Location #</th><th>Type</th><th>City</th><th>State</th><th>Status</th><th></th></tr></thead>';
 		html += '<tbody>';
 		locations.forEach(l => {
 			const statusClass = l.status === 'active' ? 'sp-status-submitted' : 'sp-status-draft';
 			html += `<tr data-loc-id="${l.id}">`;
 			html += `<td>${esc(l.name)}</td>`;
+			html += `<td>${esc(l.location_number || '')}</td>`;
 			html += `<td>${esc(l.location_type)}</td>`;
 			html += `<td>${esc(l.city || '')}</td>`;
 			html += `<td>${esc(l.state || '')}</td>`;
 			html += `<td><span class="unique sp-status-badge ${statusClass}">${l.status}</span></td>`;
-			html += `<td>${iconBtn('edit', 'sp-edit-loc-btn', `data-loc-id="${l.id}"`)}</td>`;
+			let locActions = iconBtn('edit', 'sp-edit-loc-btn', `data-loc-id="${l.id}"`);
+			// GOD only: permanently delete a Home Base (the regular Status field only deactivates it).
+			if (D.isGod) {
+				locActions += ' ' + iconBtn('delete', 'sp-god-delete-loc', `data-loc-id="${l.id}" data-loc-name="${esc(l.name)}" title="Delete location"`);
+			}
+			html += `<td>${locActions}</td>`;
 			html += '</tr>';
 		});
 		html += '</tbody></table></div>';
@@ -1729,6 +1791,19 @@ function renderAdminLocations(wrap, locations) {
 			const lid = btn.dataset.locId;
 			const loc = locations.find(l => String(l.id) === lid);
 			showLocationForm(loc);
+		});
+	});
+
+	$$('.sp-god-delete-loc', wrap).forEach(btn => {
+		btn.addEventListener('click', async () => {
+			const name = btn.dataset.locName || 'this location';
+			if (!confirm(`Permanently delete ${name}? Any driver based here will have their Home Base cleared. To just retire it, set Status to Inactive instead. This cannot be undone.`)) return;
+			btn.disabled = true;
+			try {
+				const res = await spAjax('site_pulse_god_delete_location', { id: btn.dataset.locId });
+				if (res.success) loadAdminLocations();
+				else { alert(res.data?.message || 'Error.'); btn.disabled = false; }
+			} catch (err) { alert('Error deleting location.'); btn.disabled = false; }
 		});
 	});
 }
@@ -1749,9 +1824,11 @@ function showLocationForm(loc) {
 	html += '<div class="sp-form-group"><label>Location Name</label>';
 	html += `<input type="text" name="name" class="sp-input" value="${esc(loc?.name || '')}" required></div>`;
 
-	html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">';
+	html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">';
 	html += '<div class="sp-form-group"><label>Type / Brand</label>';
 	html += `<input type="text" name="location_type" class="sp-input" value="${esc(loc?.location_type || '')}" placeholder="e.g. Babe's Chicken"></div>`;
+	html += '<div class="sp-form-group"><label>Location #</label>';
+	html += `<input type="text" name="location_number" class="sp-input" value="${esc(loc?.location_number || '')}" placeholder="e.g. 1042"></div>`;
 	html += '<div class="sp-form-group"><label>Phone</label>';
 	html += `<input type="text" name="phone" class="sp-input" value="${esc(loc?.phone || '')}"></div>`;
 	html += '</div>';
@@ -2214,6 +2291,61 @@ function renderAdminSettings(wrap, data) {
 }
 
 
+/* ---- Modules (superadmin only) ---- */
+
+async function loadAdminModules() {
+	const wrap = $('#sp-admin-modules-content');
+	if (!wrap) return;
+	wrap.innerHTML = '<div class="sp-loading"></div>';
+
+	try {
+		const res = await spAjax('site_pulse_get_modules', {});
+		if (!res.success) { wrap.innerHTML = '<p>Error loading modules.</p>'; return; }
+		renderAdminModules(wrap, res.data.modules || []);
+	} catch (err) {
+		wrap.innerHTML = '<p>Error loading modules.</p>';
+	}
+}
+
+function renderAdminModules(wrap, modules) {
+	let html = '<h3 style="margin:0 0 8px;">Active Modules</h3>';
+	html += '<p class="sp-help-text" style="margin:0 0 20px;">Turn features on or off for this install. Disabled modules disappear from the menu and their permissions go inactive (saved settings are kept). Changes take effect on the next page load.</p>';
+
+	modules.forEach(m => {
+		html += '<label class="sp-module-row" style="display:flex;align-items:flex-start;gap:12px;padding:14px 2px;border-bottom:1px solid #e5e7eb;cursor:pointer;">';
+		html += `<input type="checkbox" class="sp-module-toggle" data-slug="${esc(m.slug)}"${m.enabled ? ' checked' : ''} style="margin-top:3px;flex:0 0 auto;">`;
+		html += '<span>';
+		html += `<span style="display:block;font-weight:600;">${m.label}</span>`;
+		html += `<span class="sp-help-text" style="display:block;margin-top:2px;">${m.desc}</span>`;
+		html += '</span>';
+		html += '</label>';
+	});
+
+	html += '<div style="margin-top:20px;display:flex;align-items:center;gap:12px;">';
+	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-save-modules">Save Modules</button>';
+	html += '<span id="sp-modules-saved" class="sp-help-text"></span>';
+	html += '</div>';
+
+	wrap.innerHTML = html;
+	markUniqueSpans(wrap);
+
+	const saveBtn = $('#sp-save-modules', wrap);
+	saveBtn.addEventListener('click', async () => {
+		const map = {};
+		$$('.sp-module-toggle', wrap).forEach(cb => { map[cb.dataset.slug] = cb.checked ? '1' : '0'; });
+		saveBtn.disabled = true;
+		const note = $('#sp-modules-saved', wrap);
+		if (note) note.textContent = 'Saving…';
+		try {
+			const res = await spAjax('site_pulse_save_modules', { modules: map });
+			if (res.success) { if (note) note.textContent = 'Saved. Reload to apply.'; }
+			else { if (note) note.textContent = ''; alert(res.data?.message || 'Error saving.'); }
+		} catch (err) { if (note) note.textContent = ''; alert('Error saving modules.'); }
+		saveBtn.disabled = false;
+	});
+}
+
+
 /* ---- Tiers (Roles) ---- */
 
 let spTierData = { roles: [], catalog: {}, counts: {} };
@@ -2225,11 +2357,11 @@ async function loadAdminTiers() {
 
 	try {
 		const res = await spAjax('site_pulse_admin_get_roles', {});
-		if (!res.success) { wrap.innerHTML = '<p>Error loading tiers.</p>'; return; }
+		if (!res.success) { wrap.innerHTML = '<p>Error loading roles.</p>'; return; }
 		spTierData = { roles: res.data.roles || [], catalog: res.data.catalog || {}, counts: res.data.user_counts || {} };
 		renderAdminTiers(wrap);
 	} catch (err) {
-		wrap.innerHTML = '<p>Error loading tiers.</p>';
+		wrap.innerHTML = '<p>Error loading roles.</p>';
 	}
 }
 
@@ -2251,13 +2383,13 @@ function renderAdminTiers(wrap) {
 	const tiers = tierNumbers(roles);
 
 	let html = '<div class="sp-admin-toolbar">';
-	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-add-tier-btn">+ Add Tier</button>';
+	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-add-tier-btn">+ Add Role</button>';
 	html += '</div>';
-	html += '<p class="sp-help-text" style="margin:0 0 16px;">Rename a tier and the new name shows everywhere it appears. The internal identity, members, and reports are unaffected.</p>';
+	html += '<p class="sp-help-text" style="margin:0 0 16px;">Rename a role and the new name shows everywhere it appears. The internal identity, members, and reports are unaffected.</p>';
 	html += '<div id="sp-tier-form-wrap" hidden></div>';
 
 	if (!roles.length) {
-		html += '<div class="sp-empty-state"><p>No tiers yet.</p></div>';
+		html += '<div class="sp-empty-state"><p>No roles yet.</p></div>';
 	} else {
 		html += '<div class="sp-tier-list">';
 		roles.forEach((r, idx) => {
@@ -2267,8 +2399,8 @@ function renderAdminTiers(wrap) {
 
 			html += `<div class="sp-tier-card" data-id="${r.id}">`;
 			html += '<div class="sp-tier-card-head">';
-			html += `<span class="unique sp-tier-badge">Tier ${tiers[r.id]}</span>`;
-			html += `<input type="text" class="sp-input sp-tier-name" value="${esc(r.label)}" aria-label="Tier name">`;
+			html += `<span class="unique sp-tier-badge">Role ${tiers[r.id]}</span>`;
+			html += `<input type="text" class="sp-input sp-tier-name" value="${esc(r.label)}" aria-label="Role name">`;
 			html += `<span class="sp-tier-count">${n} member${n === 1 ? '' : 's'}</span>`;
 			html += '<div class="sp-tier-move">';
 			html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-tier-up" title="Move up"${idx === 0 ? ' disabled' : ''}>&uarr;</button>`;
@@ -2290,6 +2422,11 @@ function renderAdminTiers(wrap) {
 		html += '</div>';
 	}
 
+	// Below the role cards: jump to one user's Edit popup to fine-tune their permissions on top
+	// of their role default. Hidden until populated (and only if the admin can manage users).
+	html += '<div class="sp-roles-user-picker" id="sp-roles-user-picker" hidden><label for="sp-roles-user-select">Customize an individual user’s permissions <span class="unique sp-text-secondary" style="font-weight:400;">(overrides their role default — the role itself stays intact)</span></label>';
+	html += '<select class="sp-select" id="sp-roles-user-select"><option value="">Select a user…</option></select></div>';
+
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
 
@@ -2304,6 +2441,51 @@ function renderAdminTiers(wrap) {
 		$('.sp-tier-up', card)?.addEventListener('click', () => moveTier(id, -1));
 		$('.sp-tier-down', card)?.addEventListener('click', () => moveTier(id, 1));
 	});
+
+	populateRolesUserPicker();
+}
+
+// Fill the Roles-page "Customize an individual user" dropdown (grouped by role) and open that
+// user's Edit popup on selection — the same popup reached from the Users screen, permission grid
+// and all. Needs the users/roles/locations payload, so it fetches get-users; if the admin lacks
+// manage_users the call fails and the picker simply stays hidden.
+async function populateRolesUserPicker() {
+	const sel = $('#sp-roles-user-select');
+	const box = $('#sp-roles-user-picker');
+	if (!sel || !box) return;
+
+	let data;
+	try {
+		const res = await spAjax('site_pulse_admin_get_users', {});
+		if (!res.success) return;
+		data = res.data;
+	} catch (e) { return; }
+
+	spPermCatalog = data.catalog || spPermCatalog;
+	const users = data.users || [];
+	const roles = data.roles || [];
+	const locations = data.locations || [];
+	const mileageLocations = data.mileage_locations || [];
+	if (!users.length) return;
+
+	const byRole = {};
+	users.forEach(u => { const k = u.role_label || 'No role'; (byRole[k] = byRole[k] || []).push(u); });
+	let opts = '<option value="">Select a user…</option>';
+	Object.keys(byRole).forEach(label => {
+		opts += `<optgroup label="${esc(label)}">`;
+		byRole[label].forEach(u => { opts += `<option value="${u.user_id}">${esc(u.display_name || u.user_login)}</option>`; });
+		opts += '</optgroup>';
+	});
+	sel.innerHTML = opts;
+	box.hidden = false;
+
+	sel.addEventListener('change', () => {
+		const uid = sel.value;
+		sel.value = '';
+		if (!uid) return;
+		const user = users.find(u => String(u.user_id) === String(uid));
+		if (user) showUserForm(user, roles, locations, users, mileageLocations);
+	});
 }
 
 function showTierForm() {
@@ -2311,8 +2493,8 @@ function showTierForm() {
 	const { catalog } = spTierData;
 
 	let html = '<div class="sp-tier-form">';
-	html += '<h3 style="margin:0 0 12px;">New Tier</h3>';
-	html += '<div class="sp-form-group"><label>Tier Name</label>';
+	html += '<h3 style="margin:0 0 12px;">New Role</h3>';
+	html += '<div class="sp-form-group"><label>Role Name</label>';
 	html += '<input type="text" id="sp-new-tier-name" class="sp-input" placeholder="e.g. Shift Lead"></div>';
 	html += '<div class="sp-form-group"><label>Capabilities</label>';
 	html += '<div class="sp-tier-caps">';
@@ -2321,7 +2503,7 @@ function showTierForm() {
 	});
 	html += '</div></div>';
 	html += '<div class="sp-report-form-actions">';
-	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-create-tier-btn">Create Tier</button>';
+	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-create-tier-btn">Create Role</button>';
 	html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-cancel-tier-btn">Cancel</button>';
 	html += '</div></div>';
 
@@ -2331,19 +2513,19 @@ function showTierForm() {
 	$('#sp-cancel-tier-btn')?.addEventListener('click', () => closeFormModal());
 	$('#sp-create-tier-btn')?.addEventListener('click', async () => {
 		const label = $('#sp-new-tier-name')?.value?.trim();
-		if (!label) { alert('Please enter a tier name.'); return; }
+		if (!label) { alert('Please enter a role name.'); return; }
 		const caps = $$('.sp-tier-caps input:checked', wrap).map(c => c.value);
 		try {
 			const res = await spAjax('site_pulse_admin_save_role', { id: 0, label, capabilities: caps });
 			if (res.success) { closeFormModal(); loadAdminTiers(); }
-			else alert(res.data?.message || 'Error creating tier.');
-		} catch (e) { alert('Error creating tier.'); }
+			else alert(res.data?.message || 'Error creating role.');
+		} catch (e) { alert('Error creating role.'); }
 	});
 }
 
 async function saveTier(id, card) {
 	const label = $('.sp-tier-name', card)?.value?.trim();
-	if (!label) { spFlash('Tier name required'); return; }
+	if (!label) { spFlash('Role name required'); return; }
 	const caps = $$('.sp-tier-caps input:checked', card).map(c => c.value);
 	try {
 		const res = await spAjax('site_pulse_admin_save_role', { id, label, capabilities: caps });
@@ -2352,18 +2534,18 @@ async function saveTier(id, card) {
 			// Keep in-memory state current so reorder/delete use the latest name + caps (no full re-render).
 			const role = spTierData.roles.find(x => String(x.id) === String(id));
 			if (role) { role.label = label; role.capabilities = JSON.stringify(caps); }
-		} else alert(res.data?.message || 'Error saving tier.');
-	} catch (e) { alert('Error saving tier.'); }
+		} else alert(res.data?.message || 'Error saving role.');
+	} catch (e) { alert('Error saving role.'); }
 }
 
 async function deleteTier(id, card) {
-	const name = $('.sp-tier-name', card)?.value || 'this tier';
+	const name = $('.sp-tier-name', card)?.value || 'this role';
 	if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
 	try {
 		const res = await spAjax('site_pulse_admin_delete_role', { id });
 		if (res.success) loadAdminTiers();
-		else alert(res.data?.message || 'Error deleting tier.');
-	} catch (e) { alert('Error deleting tier.'); }
+		else alert(res.data?.message || 'Error deleting role.');
+	} catch (e) { alert('Error deleting role.'); }
 }
 
 async function moveTier(id, dir) {
@@ -2375,8 +2557,8 @@ async function moveTier(id, dir) {
 	try {
 		const res = await spAjax('site_pulse_admin_reorder_roles', { order: roles.map(r => r.id) });
 		if (res.success) loadAdminTiers();
-		else alert(res.data?.message || 'Error reordering tiers.');
-	} catch (e) { alert('Error reordering tiers.'); }
+		else alert(res.data?.message || 'Error reordering roles.');
+	} catch (e) { alert('Error reordering roles.'); }
 }
 
 
@@ -2778,10 +2960,13 @@ function calcHeaderValue(calc, dateStr) {
 --------------------------------------------------------------*/
 
 let mileageLocations = [];
+let mileageChargeOptions = []; // Home Bases (stores) with a Location #, for the "Charge To" picker
 let mileageRate = 0.67;
 let mileageHomeId = 0; // this driver's home-base location id (start/end bookend), 0 if unset
 let mileagePurposes = []; // editable library of common business purposes (datalist source)
 let mileageRequireApproval = true; // when false, drivers may save destinations straight to the database (global or personal)
+let mileagePeriodLength = 0;  // pay-period length in days (0 = use calendar months for the Jump menu)
+let mileagePeriodAnchor = ''; // any date a period begins on (YYYY-MM-DD); periods extrapolate from here
 const MILEAGE_CATEGORIES = ['Restaurant', 'Office', 'Vendor', 'Supplier', 'Bank', 'Client', 'Other'];
 
 // Parse a location's pinned_purposes (stored as a JSON string) into an array.
@@ -2815,15 +3000,23 @@ function initMileage() {
 	$('#sp-mileage-filter-end')?.addEventListener('change', loadMileageEntries);
 
 	$$('.sp-mileage-range', panel).forEach(b => b.addEventListener('click', () => setMileageRange(b.dataset.range)));
-	populateMileageMonths();
+	populateMileagePeriods();
 	$('#sp-mileage-month-picker')?.addEventListener('change', (e) => {
 		const v = e.target.value;
 		if (!v) return;
-		const [y, m] = v.split('-').map(Number);
-		setMileageFilter(`${y}-${mPad2(m)}-01`, mMonthEnd(y, m));
+		const [start, end] = v.split('|');
+		setMileageFilter(start, end);
 	});
 
-	loadMileageLocations().then(() => loadMileageEntries());
+	// Click a leg's miles to adjust them (detour, closure, accident). Delegated on the list
+	// container so it keeps working after each re-render replaces the rows inside it.
+	$('#sp-mileage-list')?.addEventListener('click', (ev) => {
+		const el = ev.target.closest('.sp-leg-edit');
+		if (el && !el.querySelector('input')) openLegMilesEditor(el);
+	});
+
+	// Re-populate once the period config arrives (locations load resolves after the initial paint).
+	loadMileageLocations().then(() => { populateMileagePeriods(); loadMileageEntries(); });
 }
 
 /* ---- Reusable Google Maps loader (shared by the mileage map and, later, toll maps) ----
@@ -3050,12 +3243,68 @@ function setMileageFilter(start, end) {
 	loadMileageEntries();
 }
 
+// Modal to adjust one leg's miles. Driver enters the actual miles driven (prefilled with the
+// current value) and an optional reason; the delta from the computed base is saved as the
+// adjustment. On save the report reloads so the leg $, the day total, and the grand total update.
+function openLegMilesEditor(el) {
+	const base   = parseFloat(el.dataset.base) || 0;
+	const adj    = parseFloat(el.dataset.adjust) || 0;
+	const reason = el.dataset.reason || '';
+
+	const modal = document.createElement('div');
+	modal.className = 'sp-modal-backdrop';
+	modal.innerHTML = `
+		<div class="sp-modal">
+			<h3>Adjust Trip Miles</h3>
+			<p class="sp-text-secondary">Calculated distance for this trip: <strong>${mileageNumFmt(base)} mi</strong>. Enter the actual miles driven — the difference is recorded as an adjustment.</p>
+			<div class="sp-form-group"><label>Actual miles</label><input type="number" step="0.01" min="0" id="sp-leg-miles" class="sp-input" value="${(base + adj).toFixed(2)}"></div>
+			<div class="sp-form-group"><label>Reason for change</label><input type="text" id="sp-leg-reason" class="sp-input" value="${esc(reason)}" placeholder="e.g. detour around road closure"></div>
+			<div class="sp-modal-actions">
+				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-leg-save">Save</button>
+				<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-leg-cancel">Cancel</button>
+			</div>
+		</div>`;
+	document.body.appendChild(modal);
+	markUniqueSpans(modal);
+
+	const milesInput = modal.querySelector('#sp-leg-miles');
+	milesInput.focus(); milesInput.select();
+
+	const close = () => modal.remove();
+	modal.querySelector('#sp-leg-cancel').addEventListener('click', close);
+	modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+
+	modal.querySelector('#sp-leg-save').addEventListener('click', async () => {
+		const val = parseFloat(milesInput.value);
+		if (isNaN(val) || val < 0) { alert('Enter a valid mileage.'); return; }
+		const newAdjust = Math.round((val - base) * 100) / 100; // delta vs the computed distance
+		try {
+			const r = await spAjax('site_pulse_save_mileage_leg_adjust', {
+				entry_id: el.dataset.entryId, leg_id: el.dataset.legId,
+				adjust: newAdjust, reason: modal.querySelector('#sp-leg-reason').value.trim(),
+			});
+			if (r.success) { spFlash('Miles updated'); close(); loadMileageEntries(); }
+			else alert(r.data?.message || 'Error.');
+		} catch (err) { alert('Error saving miles.'); }
+	});
+
+	modal.querySelectorAll('input').forEach(inp => inp.addEventListener('keydown', (e) => {
+		if (e.key === 'Enter') { e.preventDefault(); modal.querySelector('#sp-leg-save').click(); }
+		else if (e.key === 'Escape') { e.preventDefault(); close(); }
+	}));
+}
+
 // Quick date ranges for the report (period selector + presets, mirroring the prototype).
 function setMileageRange(range) {
 	const now = new Date(), y = now.getFullYear(), m = now.getMonth() + 1;
 	let start = '', end = mIso(now);
-	if (range === 'month') { start = `${y}-${mPad2(m)}-01`; end = mMonthEnd(y, m); }
-	else if (range === 'quarter') { const qs = Math.floor((m - 1) / 3) * 3 + 1; start = `${y}-${mPad2(qs)}-01`; end = mMonthEnd(y, qs + 2); }
+	if (range === 'period') {
+		if (mileagePeriodLength > 0 && mileagePeriodAnchor) {
+			const cur = computeMileagePeriods(mileagePeriodAnchor, mileagePeriodLength, 0, 0).find(p => p.current);
+			if (cur) { start = cur.start; end = cur.end; }
+		} else { start = `${y}-${mPad2(m)}-01`; end = mMonthEnd(y, m); } // no period configured → calendar month
+	}
+	else if (range === 'month') { start = `${y}-${mPad2(m)}-01`; end = mMonthEnd(y, m); }
 	else if (range === 'ytd') { start = `${y}-01-01`; }
 	else if (range === 'last30') { const d = new Date(now); d.setDate(d.getDate() - 30); start = mIso(d); }
 	else if (range === 'last90') { const d = new Date(now); d.setDate(d.getDate() - 90); start = mIso(d); }
@@ -3063,16 +3312,61 @@ function setMileageRange(range) {
 	setMileageFilter(start, end);
 }
 
-function populateMileageMonths() {
+const MILEAGE_MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function mDateFromIso(iso) { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d); }
+function mAddDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
+
+// Human label for a date range, e.g. "Jan 25 – Feb 24, 2026" (shows both years if they differ).
+function mPeriodLabel(s, e) {
+	const sM = MILEAGE_MONTH_ABBR[s.getMonth()], eM = MILEAGE_MONTH_ABBR[e.getMonth()];
+	if (s.getFullYear() === e.getFullYear()) return `${sM} ${s.getDate()} – ${eM} ${e.getDate()}, ${e.getFullYear()}`;
+	return `${sM} ${s.getDate()}, ${s.getFullYear()} – ${eM} ${e.getDate()}, ${e.getFullYear()}`;
+}
+
+// Extrapolate pay periods of `lengthDays` from an anchor date, indefinitely in both directions.
+// Returns the period containing today plus `back` earlier and `fwd` later ones, newest first.
+function computeMileagePeriods(anchorIso, lengthDays, back = 24, fwd = 1) {
+	const anchor = mDateFromIso(anchorIso);
+	const today = new Date(); today.setHours(0, 0, 0, 0);
+	const MS_DAY = 86400000;
+	// Round the raw day gap first so a DST hour shift can't push us into the wrong period.
+	const dayGap = Math.round((today - anchor) / MS_DAY);
+	const k = Math.floor(dayGap / lengthDays); // which period today falls in
+	const out = [];
+	for (let i = k + fwd; i >= k - back; i--) {
+		const start = mAddDays(anchor, i * lengthDays);
+		const end = mAddDays(anchor, (i + 1) * lengthDays - 1);
+		out.push({ start: mIso(start), end: mIso(end), startDate: start, endDate: end, current: i === k });
+	}
+	return out;
+}
+
+// The Jump menu: pay periods when an admin has configured length + anchor, else calendar months.
+// Every option's value is "start|end" so the change handler is the same for both modes.
+function populateMileagePeriods() {
 	const sel = $('#sp-mileage-month-picker');
 	if (!sel) return;
-	const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+	// Keep the "This Period" / "This Month" preset button in sync with the configured mode.
+	const periodBtn = $('#sp-mileage-range-period');
+	if (periodBtn) periodBtn.textContent = (mileagePeriodLength > 0 && mileagePeriodAnchor) ? 'This Period' : 'This Month';
+
+	if (mileagePeriodLength > 0 && mileagePeriodAnchor) {
+		let opts = '<option value="">Jump to period…</option>';
+		computeMileagePeriods(mileagePeriodAnchor, mileagePeriodLength).forEach(p => {
+			opts += `<option value="${p.start}|${p.end}">${mPeriodLabel(p.startDate, p.endDate)}${p.current ? ' (current)' : ''}</option>`;
+		});
+		sel.innerHTML = opts;
+		return;
+	}
+
 	const now = new Date();
 	let opts = '<option value="">Jump to month…</option>';
 	for (let i = 0; i < 24; i++) {
 		const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
 		const y = d.getFullYear(), m = d.getMonth() + 1;
-		opts += `<option value="${y}-${mPad2(m)}">${MONTHS[m - 1]} ${y}</option>`;
+		opts += `<option value="${y}-${mPad2(m)}-01|${mMonthEnd(y, m)}">${MILEAGE_MONTH_ABBR[m - 1]} ${y}</option>`;
 	}
 	sel.innerHTML = opts;
 }
@@ -3082,10 +3376,13 @@ async function loadMileageLocations() {
 		const res = await spAjax('site_pulse_get_mileage_locations', {});
 		if (res.success) {
 			mileageLocations = res.data.locations || [];
+			mileageChargeOptions = res.data.charge_options || [];
 			mileageRate = parseFloat(res.data.rate) || 0.67;
 			mileageHomeId = parseInt(res.data.home_location_id) || 0;
 			mileagePurposes = res.data.purposes || [];
 			mileageRequireApproval = res.data.require_approval !== false;
+			mileagePeriodLength = parseInt(res.data.period_length) || 0;
+			mileagePeriodAnchor = res.data.period_anchor || '';
 		}
 	} catch (e) { mileageLocations = []; }
 }
@@ -3118,40 +3415,43 @@ async function loadMileageEntries() {
 		}
 
 		const totalMiles = entries.reduce((s, e) => s + parseFloat(e.total_miles || 0), 0);
-		const totalAmt = entries.reduce((s, e) => s + parseFloat(e.reimbursement_amount || 0), 0);
+		// Mileage total = (total miles × rate), rounded once — not the sum of each trip's
+		// already-rounded reimbursement. Keeps the headline figure matching total × rate; the
+		// per-trip $ column can sum a cent or two differently (rounding), which is fine here.
+		const totalAmt = Math.round(totalMiles * mileageRate * 100) / 100;
 		const totalTolls = entries.reduce((s, e) => s + parseFloat(e.total_tolls || 0), 0);
 		const totalTrailer = entries.reduce((s, e) => s + parseFloat(e.total_trailer || 0), 0);
-		const hasTolls = totalTolls > 0;
 		const hasTrailer = totalTrailer > 0;
-		const hasExtras = hasTolls || hasTrailer;
+		const hasTolls = totalTolls > 0;       // still gates the per-entry table's Tolls column
 		const pendingCount = entries.reduce((s, e) => s + (parseInt(e.pending_legs) > 0 ? 1 : 0), 0);
 
 		summary.innerHTML = `
 			<div class="sp-meta-bar">
-				<div><div class="sp-card-label">Entries</div><div class="sp-card-value">${entries.length}</div></div>
 				<div><div class="sp-card-label">Total Miles</div><div class="sp-card-value">${mileageNumFmt(totalMiles)}</div></div>
-				<div><div class="sp-card-label">Reimbursement</div><div class="sp-card-value">$${mileageNumFmt(totalAmt)}</div></div>
+				<div><div class="sp-card-label">Mileage</div><div class="sp-card-value">$${mileageNumFmt(totalAmt)}</div></div>
 				${hasTrailer ? `<div><div class="sp-card-label">Trailer</div><div class="sp-card-value">$${mileageNumFmt(totalTrailer)}</div></div>` : ''}
-				${hasTolls ? `<div><div class="sp-card-label">Tolls</div><div class="sp-card-value">$${mileageNumFmt(totalTolls)}</div></div>` : ''}
-				${hasExtras ? `<div><div class="sp-card-label">Grand Total</div><div class="sp-card-value">$${mileageNumFmt(totalAmt + totalTolls + totalTrailer)}</div></div>` : ''}
-				<div><div class="sp-card-label">Rate</div><div class="sp-card-value">$${mileageRate.toFixed(2)}/mi</div></div>
+				<div><div class="sp-card-label">Tolls</div><div class="sp-card-value">$${mileageNumFmt(totalTolls)}</div></div>
+				<div><div class="sp-card-label">Total Reimbursement</div><div class="sp-card-value">$${mileageNumFmt(totalAmt + totalTolls + totalTrailer)}</div></div>
 				${pendingCount > 0 ? `<div><div class="sp-card-label">Pending</div><div class="sp-card-value sp-text-warning">${pendingCount}</div></div>` : ''}
 			</div>
 		`;
 
-		let html = '<div class="sp-table-card"><table class="sp-mileage-table"><thead><tr><th>Date</th><th>Route</th><th>Miles</th><th>$</th>' + (hasTrailer ? '<th>Trailer</th>' : '') + (hasTolls ? '<th>Tolls</th>' : '') + '<th>Status</th></tr></thead><tbody>';
+		let html = '<div class="sp-table-card"><table class="sp-mileage-table"><thead><tr><th>Date</th><th>Route</th><th class="sp-th-num">Miles</th><th class="sp-th-num">$</th>' + (hasTrailer ? '<th class="sp-th-num">Trailer</th>' : '') + (hasTolls ? '<th class="sp-th-num">Tolls</th>' : '') + '<th>Status</th></tr></thead><tbody>';
 		entries.forEach(e => {
 			const isPending = parseInt(e.pending_legs) > 0;
 			const toll = parseFloat(e.total_tolls || 0);
 			const trailer = parseFloat(e.total_trailer || 0);
 			html += `<tr data-entry-id="${e.id}">`;
-			html += `<td><div class="sp-mileage-date">${formatDate(e.entry_date)}</div></td>`;
+			// Cell classes (sp-m-*) + data-label drive the mobile card reflow (see
+			// style-site-pulse.css @media): Date/Route span full width, the numeric
+			// columns stack into their own labeled row beneath.
+			html += `<td class="sp-m-date"><div class="sp-mileage-date">${formatDate(e.entry_date)}</div></td>`;
 			html += `<td class="sp-mileage-path-cell"><span class="unique sp-mileage-path-loading">Loading…</span></td>`;
-			html += `<td>${parseFloat(e.total_miles).toFixed(2)}</td>`;
-			html += `<td>$${parseFloat(e.reimbursement_amount).toFixed(2)}</td>`;
-			if (hasTrailer) html += `<td>${trailer > 0 ? '$' + trailer.toFixed(2) : '—'}</td>`;
-			if (hasTolls) html += `<td>${toll > 0 ? '$' + toll.toFixed(2) : '—'}</td>`;
-			html += `<td>${isPending ? '<span class="unique sp-status-badge sp-status-pending">Pending</span>' : '<span class="unique sp-status-badge sp-status-submitted">Final</span>'}`;
+			html += `<td class="sp-m-num" data-label="Miles">${parseFloat(e.total_miles).toFixed(2)}</td>`;
+			html += `<td class="sp-m-num" data-label="$">$${parseFloat(e.reimbursement_amount).toFixed(2)}</td>`;
+			if (hasTrailer) html += `<td class="sp-m-num" data-label="Trailer">${trailer > 0 ? '$' + trailer.toFixed(2) : '—'}</td>`;
+			if (hasTolls) html += `<td class="sp-m-num" data-label="Tolls">${toll > 0 ? '$' + toll.toFixed(2) : '—'}</td>`;
+			html += `<td class="sp-m-status">${isPending ? '<span class="unique sp-status-badge sp-status-pending">Pending</span>' : '<span class="unique sp-status-badge sp-status-submitted">Final</span>'}`;
 			html += `<div class="sp-mileage-row-actions">`;
 			html += iconBtn('edit', 'sp-mileage-edit-btn', `data-id="${e.id}"`);
 			html += iconBtn('delete', 'sp-mileage-delete-btn', `data-id="${e.id}"`);
@@ -3168,16 +3468,65 @@ async function loadMileageEntries() {
 				const r = await spAjax('site_pulse_get_mileage_entry', { entry_id: e.id });
 				if (!r.success) return;
 				const legs = r.data.legs || [];
-				const cell = list.querySelector(`tr[data-entry-id="${e.id}"] .sp-mileage-path-cell`);
-				if (!cell) return;
-				if (legs.length === 0) { cell.textContent = '—'; return; }
-				// One stop per line; per-stop purpose inline in italic (matches the PDF).
-				const nodes = [{ name: legs[0].from_name || '?', purpose: '' }];
-				legs.forEach(leg => nodes.push({ name: leg.to_name || '?', purpose: (leg.purpose || '').trim() }));
-				cell.innerHTML = nodes.map(n => {
+				const row = list.querySelector(`tr[data-entry-id="${e.id}"]`);
+				if (!row) return;
+				const cell = row.querySelector('.sp-mileage-path-cell');
+				if (legs.length === 0) { if (cell) cell.textContent = '—'; return; }
+				const legRate = parseFloat(r.data.entry?.rate_used) || mileageRate;
+
+				// One stop per line: origin, then each destination with its purpose in italic.
+				// A bold "Day total" line caps each cell so the day's totals sit at the BOTTOM.
+				const nodes = [{ name: legs[0].from_name || '?', purpose: '', leg: null }];
+				legs.forEach(leg => nodes.push({ name: leg.to_name || '?', purpose: (leg.purpose || '').trim(), leg }));
+				const BLANK = '<div class="sp-leg-blank">&nbsp;</div>'; // holds a row on desktop, hidden on mobile
+
+				if (cell) cell.innerHTML = nodes.map(n => {
 					const p = n.purpose ? ` <em class="sp-route-purpose">— ${esc(n.purpose)}</em>` : '';
 					return `<div class="sp-mileage-route-line">${esc(n.name)}${p}</div>`;
 				}).join('');
+
+				const milesCell = row.querySelector('td[data-label="Miles"]');
+				const amtCell   = row.querySelector('td[data-label="$"]');
+
+				// Miles: blank on the origin line, each leg's miles (clickable to adjust, with a
+				// "(+10)" badge for a saved adjustment), then the bold day total at the bottom.
+				if (milesCell) milesCell.innerHTML = nodes.map(n => {
+					if (!n.leg) return BLANK;
+					if (n.leg.miles == null) return '<div class="sp-leg-stat">—</div>';
+					const base = parseFloat(n.leg.miles) || 0;
+					const adj = parseFloat(n.leg.miles_adjust) || 0;
+					const reasonText = (n.leg.miles_adjust_reason || '').trim();
+					const badge = adj ? ` <span class="sp-leg-adjust">(${adj > 0 ? '+' : ''}${mileageNumFmt(adj)})</span>` : '';
+					const title = !adj ? "Click to adjust this trip's miles"
+						: `Calculated ${mileageNumFmt(base)} mi${reasonText ? ' · ' + reasonText : ''} · click to edit`;
+					return `<div class="sp-leg-stat sp-leg-edit" data-entry-id="${e.id}" data-leg-id="${n.leg.id}" data-base="${base}" data-adjust="${adj}" data-reason="${esc(reasonText)}" title="${esc(title)}"><span class="sp-leg-val">${mileageNumFmt(base + adj)}</span>${badge}</div>`;
+				}).join('') + `<div class="sp-day-total-line">${mileageNumFmt(parseFloat(e.total_miles) || 0)}</div>`;
+
+				// $ per leg uses the effective (adjusted) miles; the day total $ caps the column.
+				if (amtCell) amtCell.innerHTML = nodes.map(n => {
+					if (!n.leg) return BLANK;
+					if (n.leg.miles == null) return '<div class="sp-leg-stat">—</div>';
+					const eff = (parseFloat(n.leg.miles) || 0) + (parseFloat(n.leg.miles_adjust) || 0);
+					return `<div class="sp-leg-stat">$${mileageNumFmt(eff * legRate)}</div>`;
+				}).join('') + `<div class="sp-day-total-line">$${mileageNumFmt(parseFloat(e.reimbursement_amount) || 0)}</div>`;
+
+				// Trailer isn't broken down per leg — blank stop lines, day total at the bottom.
+				const blanks = nodes.map(() => BLANK).join('');
+				const trailerCell = row.querySelector('td[data-label="Trailer"]');
+				if (trailerCell) trailerCell.innerHTML = blanks + `<div class="sp-day-total-line">$${mileageNumFmt(parseFloat(e.total_trailer) || 0)}</div>`;
+
+				// Tolls: per-leg, aligned with the route lines (matched from the toll CSV), then
+				// the bold day total at the bottom — same shape as the Miles/$ columns.
+				const tollsCell = row.querySelector('td[data-label="Tolls"]');
+				if (tollsCell) {
+					const dt = parseFloat(e.total_tolls) || 0;
+					tollsCell.innerHTML = nodes.map(n => {
+						if (!n.leg) return BLANK;
+						const tc = parseFloat(n.leg.toll_cost);
+						if (!n.leg.toll_cost || !(tc > 0)) return '<div class="sp-leg-stat">—</div>';
+						return `<div class="sp-leg-stat">$${mileageNumFmt(tc)}</div>`;
+					}).join('') + `<div class="sp-day-total-line">${dt > 0 ? '$' + mileageNumFmt(dt) : '—'}</div>`;
+				}
 			} catch (err) {}
 		});
 
@@ -3211,20 +3560,19 @@ async function autoSaveMileageEntry() {
 	if (!form) return;                          // form closed — nothing to save
 	if (mileageSaving) { mileageResavePending = true; return; }
 
-	// Drop empty stop picks, keeping purposes/tolls/trailers aligned.
-	const allStops = readMileageStops(), allPurposes = readMileageStopPurposes(), allTolls = readMileageStopTolls(), allTrailers = readMileageStopTrailers();
-	const stopsArr = [], purposesArr = [], tollsArr = [], trailersArr = [];
-	allStops.forEach((sid, i) => { if (sid > 0) { stopsArr.push(sid); purposesArr.push(allPurposes[i] || ''); tollsArr.push(allTolls[i] || 0); trailersArr.push(allTrailers[i] || 0); } });
+	// Drop empty stop picks, keeping purposes/tolls/trailers/charge-to/notes aligned.
+	const allStops = readMileageStops(), allPurposes = readMileageStopPurposes(), allTolls = readMileageStopTolls(), allTrailers = readMileageStopTrailers(), allCharge = readMileageStopChargeTo(), allNotes = readMileageStopNotes();
+	const stopsArr = [], purposesArr = [], tollsArr = [], trailersArr = [], chargeArr = [], notesArr = [];
+	allStops.forEach((sid, i) => { if (sid > 0) { stopsArr.push(sid); purposesArr.push(allPurposes[i] || ''); tollsArr.push(allTolls[i] || 0); trailersArr.push(allTrailers[i] || 0); chargeArr.push(allCharge[i] || ''); notesArr.push(allNotes[i] || ''); } });
 	const min = mileageHomeId ? 1 : 2;
 	if (stopsArr.length < min) return;          // not a valid day yet — wait for more stops
 
 	const data = {
 		entry_id: mileageFormEntryId || '',
 		entry_date: form.entry_date.value,
-		notes: form.notes.value,
-		stops: stopsArr, purposes: purposesArr, tolls: tollsArr, trailers: trailersArr,
+		stops: stopsArr, purposes: purposesArr, tolls: tollsArr, trailers: trailersArr, charge_to: chargeArr, line_notes: notesArr,
 		auto_return_home: mileageHomeId ? 1 : 0,
-		end_toll: readMileageEndToll(), end_trailer: readMileageEndTrailer(),
+		end_toll: readMileageEndToll(), end_trailer: readMileageEndTrailer(), end_charge: readMileageEndChargeTo(),
 	};
 
 	mileageSaving = true;
@@ -3257,6 +3605,9 @@ async function showMileageForm(entryId = 0) {
 	let purposes = [];            // per-stop business purpose, parallel to stops
 	let tolls = [];               // per-stop toll flag (arriving leg has tolls), parallel to stops
 	let trailers = [];            // per-stop trailer flag (arriving leg pulled a trailer)
+	let chargeTos = [];           // per-stop "Charge To" store number (or '99' = Misc), parallel to stops
+	let lineNotes = [];           // per-stop free-text note, parallel to stops
+	let endCharge = '';           // "Charge To" for the final leg home (END bookend)
 	let endToll = 0;              // toll flag on the final leg home (END bookend)
 	let endTrailer = 0;           // trailer flag on the final leg home (END bookend)
 	let autoReturn = true;
@@ -3267,27 +3618,28 @@ async function showMileageForm(entryId = 0) {
 			autoReturn = entry ? !!parseInt(entry.auto_return_home) : true;
 			const legs = res.data.legs || [];
 			// Rebuild the full sequence + per-node purpose/toll/trailer (all = arriving at that node).
-			let seq = [], seqP = [], seqT = [], seqTr = [];
+			let seq = [], seqP = [], seqT = [], seqTr = [], seqC = [], seqN = [];
 			if (legs.length > 0) {
-				seq.push(parseInt(legs[0].from_location_id)); seqP.push(''); seqT.push(0); seqTr.push(0);
-				legs.forEach(l => { seq.push(parseInt(l.to_location_id)); seqP.push(l.purpose || ''); seqT.push(parseInt(l.has_toll) ? 1 : 0); seqTr.push(parseInt(l.has_trailer) ? 1 : 0); });
+				seq.push(parseInt(legs[0].from_location_id)); seqP.push(''); seqT.push(0); seqTr.push(0); seqC.push(''); seqN.push('');
+				legs.forEach(l => { seq.push(parseInt(l.to_location_id)); seqP.push(l.purpose || ''); seqT.push(parseInt(l.has_toll) ? 1 : 0); seqTr.push(parseInt(l.has_trailer) ? 1 : 0); seqC.push(l.charge_to || ''); seqN.push(l.note || ''); });
 			}
 			// Stored legs are [home, ...middle, home?]. Strip the home bookends so the
 			// form shows only the editable middle; the home start/end are re-applied by render.
 			if (mileageHomeId) {
-				if (seq.length && seq[0] === mileageHomeId) { seq = seq.slice(1); seqP = seqP.slice(1); seqT = seqT.slice(1); seqTr = seqTr.slice(1); }
+				if (seq.length && seq[0] === mileageHomeId) { seq = seq.slice(1); seqP = seqP.slice(1); seqT = seqT.slice(1); seqTr = seqTr.slice(1); seqC = seqC.slice(1); seqN = seqN.slice(1); }
 				if (seq.length && seq[seq.length - 1] === mileageHomeId) {
-					// the leg ARRIVING home carries the END toll/trailer flags — keep them before stripping
+					// the leg ARRIVING home carries the END toll/trailer/charge — keep them before stripping
 					endToll = seqT[seqT.length - 1] ? 1 : 0;
 					endTrailer = seqTr[seqTr.length - 1] ? 1 : 0;
-					seq = seq.slice(0, -1); seqP = seqP.slice(0, -1); seqT = seqT.slice(0, -1); seqTr = seqTr.slice(0, -1);
+					endCharge = seqC[seqC.length - 1] || '';
+					seq = seq.slice(0, -1); seqP = seqP.slice(0, -1); seqT = seqT.slice(0, -1); seqTr = seqTr.slice(0, -1); seqC = seqC.slice(0, -1); seqN = seqN.slice(0, -1);
 				}
 			}
-			stops = seq; purposes = seqP; tolls = seqT; trailers = seqTr;
+			stops = seq; purposes = seqP; tolls = seqT; trailers = seqTr; chargeTos = seqC; lineNotes = seqN;
 		}
 	}
 	const minMiddle = mileageHomeId ? 1 : 2;
-	while (stops.length < minMiddle) { stops.push(0); purposes.push(''); tolls.push(0); trailers.push(0); }
+	while (stops.length < minMiddle) { stops.push(0); purposes.push(''); tolls.push(0); trailers.push(0); chargeTos.push(''); lineNotes.push(''); }
 
 	setMileageListChrome(true); // hide list + report controls while the form is open
 	wrap.hidden = false;
@@ -3317,12 +3669,9 @@ async function showMileageForm(entryId = 0) {
 	html += '</div>';
 	html += '<div class="sp-mileage-stops" id="sp-mileage-stops"></div>';
 	html += '<div class="sp-mileage-totals" id="sp-mileage-totals"></div>';
-	html += '<div class="sp-form-group">';
-	html += '<label>Notes / summary <button type="button" class="unique sp-btn sp-btn-ghost sp-btn-tiny" id="sp-mileage-autosummary">✨ Auto-write</button></label>';
-	html += `<textarea name="notes" class="sp-textarea" rows="2">${esc(entry?.notes || '')}</textarea>`;
-	html += '</div>';
 	html += '<div class="sp-report-form-actions">';
-	html += '<button type="button" class="unique sp-btn sp-btn-primary sp-mileage-back-btn">Done</button>';
+	html += '<button type="button" class="unique sp-btn sp-btn-primary sp-mileage-back-btn">Log Day</button>';
+	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-cancel-btn">Cancel</button>';
 	html += '<span class="sp-autosave-hint">Changes save automatically</span>';
 	html += '</div>';
 	html += '</form>';
@@ -3330,26 +3679,32 @@ async function showMileageForm(entryId = 0) {
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
 
-	renderMileageStops(stops, autoReturn, purposes, tolls, trailers, endToll, endTrailer);
+	renderMileageStops(stops, autoReturn, purposes, tolls, trailers, endToll, endTrailer, chargeTos, endCharge, lineNotes);
 
-	// "Done"/Back: flush any pending save, then close and refresh the list.
+	// "Log Day"/Back: flush any pending save, then close and refresh the list.
 	$$('.sp-mileage-back-btn', wrap).forEach(b => b.addEventListener('click', async () => {
 		clearTimeout(mileageSaveTimer);
 		await autoSaveMileageEntry();
 		hideMileageForm();
 		loadMileageEntries();
 	}));
+	// Cancel: discard the day entirely — delete whatever was auto-saved, then close. If nothing
+	// has been saved yet (no valid stops), it just closes. Confirmed because it's destructive.
+	$('.sp-mileage-cancel-btn', wrap)?.addEventListener('click', async () => {
+		clearTimeout(mileageSaveTimer);
+		if (mileageFormEntryId) {
+			if (!confirm('Cancel this day and remove everything entered for it?')) return;
+			try { await spAjax('site_pulse_delete_mileage_entry', { entry_id: mileageFormEntryId }); } catch (e) {}
+			mileageFormEntryId = 0;
+		}
+		hideMileageForm();
+		loadMileageEntries();
+	});
 	// Add Stop / Add Location buttons live inside the route list (above END) and are
 	// wired in renderMileageStops, so they survive re-renders.
 	$('#sp-mileage-quick-fill', wrap)?.addEventListener('click', () => applyMileageQuickEntry());
 	$('#sp-mileage-quick', wrap)?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); applyMileageQuickEntry(); } });
 	$('#sp-mileage-mic', wrap)?.addEventListener('click', () => startMileageVoice());
-	$('#sp-mileage-autosummary', wrap)?.addEventListener('click', () => {
-		const summary = buildMileageSummary();
-		if (!summary) { alert('Pick at least one stop first.'); return; }
-		const ta = wrap.querySelector('textarea[name="notes"]');
-		if (ta) { ta.value = summary; queueMileageAutoSave(); }
-	});
 
 	// Auto-save: any field change (date, a stop dropdown, purpose, toll, notes) bubbles a
 	// `change` to the form. Stop add/remove and quick-fill call queueMileageAutoSave directly.
@@ -3374,7 +3729,37 @@ function setMileageListChrome(hidden) {
 		.forEach(sel => panel.querySelector(sel)?.classList.toggle('sp-hidden', hidden));
 }
 
-function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = [], trailers = [], endToll = 0, endTrailer = 0) {
+// Does a purpose (matched by label, case-insensitive) require the additional-notes line?
+// Free-typed purposes not in the library never require it.
+function purposeRequiresNote(label) {
+	const t = (label || '').trim().toLowerCase();
+	if (!t) return false;
+	return mileagePurposes.some(p => p && typeof p === 'object' && (p.label || '').toLowerCase() === t && p.requires_note);
+}
+
+// Show/hide a stop row's note line based on its purpose. Keeps a note visible if it already has
+// text, so existing detail is never hidden out from under the driver.
+function syncStopNote(row) {
+	if (!row) return;
+	const pInput = row.querySelector('.sp-mileage-stop-purpose');
+	const noteEl = row.querySelector('.sp-mileage-stop-note');
+	if (!pInput || !noteEl) return;
+	noteEl.hidden = !(purposeRequiresNote(pInput.value) || (noteEl.value || '').trim() !== '');
+}
+
+// Options for a "Charge To" picker: every Home Base with a Location #, plus a fixed Accounting / Admin (#99) catch-all.
+function mileageChargeOptionsHtml(selected) {
+	const v = selected != null ? String(selected) : '';
+	let h = `<option value=""${v === '' ? ' selected' : ''}>Charge to</option>`;
+	mileageChargeOptions.forEach(o => {
+		const num = String(o.number);
+		h += `<option value="${esc(num)}"${v === num ? ' selected' : ''}>${esc(o.name)} (#${esc(num)})</option>`;
+	});
+	h += `<option value="99"${v === '99' ? ' selected' : ''}>Accounting / Admin (#99)</option>`;
+	return h;
+}
+
+function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = [], trailers = [], endToll = 0, endTrailer = 0, chargeTos = [], endCharge = '', notes = []) {
 	const wrap = $('#sp-mileage-stops');
 	if (!wrap) return;
 	const minMiddle = mileageHomeId ? 1 : 2;
@@ -3384,7 +3769,7 @@ function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = [],
 
 	// Shared datalist of common business purposes (free text still allowed).
 	html += '<datalist id="sp-mileage-purpose-list">';
-	mileagePurposes.forEach(p => { html += `<option value="${esc(p)}">`; });
+	mileagePurposes.forEach(p => { const lbl = (typeof p === 'string') ? p : (p.label || ''); if (lbl) html += `<option value="${esc(lbl)}">`; });
 	html += '</datalist>';
 
 	// Shared datalist of pickable locations — lets the location field type-to-search like the
@@ -3410,7 +3795,7 @@ function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = [],
 	// Editable middle stops: location select + business purpose.
 	stops.forEach((stopId, idx) => {
 		const purpose = purposes[idx] || '';
-		const toll = tolls[idx] ? 1 : 0;
+		const note = notes[idx] || '';
 		const trailer = trailers[idx] ? 1 : 0;
 		const selLoc = stopId ? mileageLocations.find(l => parseInt(l.id) === stopId) : null;
 		const selLabel = selLoc ? (selLoc.status === 'pending' ? `${selLoc.name} (pending)` : selLoc.name) : '';
@@ -3418,19 +3803,26 @@ function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = [],
 		html += `<span class="unique sp-mileage-stop-num">${idx + 1}.</span>`;
 		// Type-to-search location picker: visible input + hidden id (read by readMileageStops).
 		html += '<div class="sp-combo sp-mileage-stop-loc-wrap">';
-		html += `<input type="text" class="sp-input sp-combo-input sp-mileage-stop-loc" list="sp-mileage-loc-list" placeholder="Choose a location…" autocomplete="off" value="${esc(selLabel)}">`;
+		html += `<input type="text" class="sp-input sp-combo-input sp-mileage-stop-loc" list="sp-mileage-loc-list" placeholder="Choose a location" autocomplete="off" value="${esc(selLabel)}">`;
 		html += `<input type="hidden" class="sp-mileage-stop-select" value="${stopId || 0}">`;
 		html += '</div>';
-		// Purpose + toll flag share the purpose column. Toll = "this drive had tolls"; the
-		// amounts get filled in later once toll data is imported (TollGuru).
+		// "Charge To": which store this leg's mileage is billed to. Required per leg — an empty one
+		// keeps the day Pending. Greyed like a placeholder until a store is picked.
+		const chargeTo = chargeTos[idx] != null ? String(chargeTos[idx]) : '';
+		html += `<select class="sp-select sp-mileage-charge sp-mileage-stop-charge${chargeTo === '' ? ' sp-charge-empty' : ''}" title="Charge this trip to a store">${mileageChargeOptionsHtml(chargeTo)}</select>`;
+		// Purpose + trailer flag share the purpose column. (Tolls are no longer flagged here —
+		// they're matched from the driver's uploaded toll CSV in Reconcile Tolls.)
 		html += '<div class="sp-mileage-stop-purpose-cell">';
 		html += `<input type="text" class="sp-input sp-combo-input sp-mileage-stop-purpose" list="sp-mileage-purpose-list" placeholder="Business purpose" value="${esc(purpose)}">`;
-		html += `<label class="sp-mileage-toll-toggle unique" title="Check if this drive had tolls — the toll amount is added to reimbursement."><input type="checkbox" class="sp-mileage-stop-toll"${toll ? ' checked' : ''}> Toll</label>`;
-		html += `<label class="sp-mileage-toll-toggle unique" title="Check if a trailer was pulled on this leg — the extra trailer rate per mile is added."><input type="checkbox" class="sp-mileage-stop-trailer"${trailer ? ' checked' : ''}> Trailer</label>`;
+		html += `<label class="sp-mileage-toll-toggle unique" title="Check if a trailer was pulled on this leg — the extra trailer rate per mile is added."><input type="checkbox" class="sp-mileage-stop-trailer"${trailer ? ' checked' : ''}>Trailer</label>`;
 		html += '</div>';
 		if (stops.length > minMiddle) {
 			html += `<button type="button" class="unique sp-mileage-stop-remove" data-idx="${idx}" aria-label="Remove stop" title="Remove stop">&times;</button>`;
 		}
+		// Per-stop note on its own line beneath the row — e.g. who you met with. Hidden until the
+		// chosen purpose is flagged "Requires note" in settings (or an existing note is present).
+		const showNote = purposeRequiresNote(purpose) || (note.trim() !== '');
+		html += `<input type="text" class="sp-input sp-mileage-stop-note" placeholder="Additional details required" value="${esc(note)}"${showNote ? '' : ' hidden'}>`;
 		html += '</div>';
 	});
 
@@ -3441,14 +3833,15 @@ function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = [],
 	html += '</div>';
 
 	// Locked round-trip END bookend — always returns to Home. The drive home can carry
-	// its own toll/trailer flags, just like a middle stop (the return leg often has tolls).
+	// its own trailer flag, just like a middle stop. (Tolls come from the uploaded CSV.)
 	if (mileageHomeId) {
 		html += '<div class="sp-mileage-stop sp-mileage-stop-fixed sp-mileage-stop-end">';
 		html += '<span class="unique sp-mileage-bookend-label">END</span>';
 		html += `<div class="sp-mileage-stop-home">${esc(homeName)}</div>`;
+		// The drive home is also charged to a store — required, same as the stops above.
+		html += `<select class="sp-select sp-mileage-charge sp-mileage-end-charge${endCharge === '' ? ' sp-charge-empty' : ''}" title="Charge the drive home to a store">${mileageChargeOptionsHtml(endCharge)}</select>`;
 		html += '<div class="sp-mileage-stop-purpose-cell sp-mileage-end-extras">';
-		html += `<label class="sp-mileage-toll-toggle unique" title="Check if the drive home had tolls — the toll amount is added to reimbursement."><input type="checkbox" class="sp-mileage-end-toll"${endToll ? ' checked' : ''}> Toll</label>`;
-		html += `<label class="sp-mileage-toll-toggle unique" title="Check if a trailer was pulled on the drive home — the extra trailer rate per mile is added."><input type="checkbox" class="sp-mileage-end-trailer"${endTrailer ? ' checked' : ''}> Trailer</label>`;
+		html += `<label class="sp-mileage-toll-toggle unique" title="Check if a trailer was pulled on the drive home — the extra trailer rate per mile is added."><input type="checkbox" class="sp-mileage-end-trailer"${endTrailer ? ' checked' : ''}>Trailer</label>`;
 		html += '</div>';
 		html += '</div>';
 	}
@@ -3480,24 +3873,38 @@ function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = [],
 				const pinned = locationPinnedPurposes(loc);
 				if (pinned.length) purposeInput.value = pinned[0];
 			}
+			syncStopNote(row); // a pinned purpose may itself require the note line
 			updateMileageTotals();
 		};
 		inp.addEventListener('input', apply);
 		inp.addEventListener('change', apply);
 	});
+	// Purpose change: reveal/hide that stop's note line (per the purpose's "Requires note" flag) and persist.
+	$$('.sp-mileage-stop-purpose', wrap).forEach(inp => inp.addEventListener('input', () => {
+		syncStopNote(inp.closest('.sp-mileage-stop-row'));
+		queueMileageAutoSave();
+	}));
+	// Picking a "Charge To" just needs to persist (doesn't affect totals). Toggle the placeholder
+	// grey when it returns to empty. Covers both the stop rows and the END drive-home row.
+	$$('.sp-mileage-charge', wrap).forEach(sel => sel.addEventListener('change', () => {
+		sel.classList.toggle('sp-charge-empty', sel.value === '');
+		queueMileageAutoSave();
+	}));
+	// Per-stop notes just need to persist as they're typed.
+	$$('.sp-mileage-stop-note', wrap).forEach(ta => ta.addEventListener('input', queueMileageAutoSave));
 	$$('.sp-mileage-stop-remove', wrap).forEach(b => b.addEventListener('click', () => {
-		const s = readMileageStops(), p = readMileageStopPurposes(), t = readMileageStopTolls(), tr = readMileageStopTrailers();
+		const s = readMileageStops(), p = readMileageStopPurposes(), t = readMileageStopTolls(), tr = readMileageStopTrailers(), c = readMileageStopChargeTo(), n = readMileageStopNotes();
 		const i = parseInt(b.dataset.idx);
-		s.splice(i, 1); p.splice(i, 1); t.splice(i, 1); tr.splice(i, 1);
-		while (s.length < minMiddle) { s.push(0); p.push(''); t.push(0); tr.push(0); }
-		renderMileageStops(s, getReturnHome(), p, t, tr, readMileageEndToll(), readMileageEndTrailer());
+		s.splice(i, 1); p.splice(i, 1); t.splice(i, 1); tr.splice(i, 1); c.splice(i, 1); n.splice(i, 1);
+		while (s.length < minMiddle) { s.push(0); p.push(''); t.push(0); tr.push(0); c.push(''); n.push(''); }
+		renderMileageStops(s, getReturnHome(), p, t, tr, readMileageEndToll(), readMileageEndTrailer(), c, readMileageEndChargeTo(), n);
 		updateMileageTotals();
 		queueMileageAutoSave();
 	}));
 	$('#sp-mileage-add-stop', wrap)?.addEventListener('click', () => {
-		const s = readMileageStops(), p = readMileageStopPurposes(), t = readMileageStopTolls(), tr = readMileageStopTrailers();
-		s.push(0); p.push(''); t.push(0); tr.push(0);
-		renderMileageStops(s, getReturnHome(), p, t, tr, readMileageEndToll(), readMileageEndTrailer());
+		const s = readMileageStops(), p = readMileageStopPurposes(), t = readMileageStopTolls(), tr = readMileageStopTrailers(), c = readMileageStopChargeTo(), n = readMileageStopNotes();
+		s.push(0); p.push(''); t.push(0); tr.push(0); c.push(''); n.push('');
+		renderMileageStops(s, getReturnHome(), p, t, tr, readMileageEndToll(), readMileageEndTrailer(), c, readMileageEndChargeTo(), n);
 	});
 	$('#sp-mileage-add-loc', wrap)?.addEventListener('click', () => showAddLocationModal());
 
@@ -3508,10 +3915,27 @@ function readMileageStops() {
 	return $$('.sp-mileage-stop-select').map(s => parseInt(s.value) || 0);
 }
 
+// "Charge To" for the locked END (drive-home) leg — separate from the per-stop charges.
+function readMileageEndChargeTo() {
+	const s = $('.sp-mileage-end-charge');
+	return s ? (s.value || '') : '';
+}
+
+function readMileageStopChargeTo() {
+	return $$('.sp-mileage-stop-charge').map(s => s.value || '');
+}
+
+function readMileageStopNotes() {
+	return $$('.sp-mileage-stop-note').map(t => t.value.trim());
+}
+
 function readMileageStopPurposes() {
 	return $$('.sp-mileage-stop-purpose').map(i => i.value.trim());
 }
 
+// Toll flags were removed from the form — tolls are now matched from the driver's uploaded
+// toll CSV (Reconcile Tolls). These readers return empty now so the existing call sites that
+// still thread a tolls[] array keep working without change; the server ignores them.
 function readMileageStopTolls() {
 	return $$('.sp-mileage-stop-toll').map(i => i.checked ? 1 : 0);
 }
@@ -3576,7 +4000,7 @@ function applyMileageQuickEntry() {
 	}
 	const minMiddle = mileageHomeId ? 1 : 2;
 	while (ids.length < minMiddle) { ids.push(0); purposes.push(''); }
-	renderMileageStops(ids, getReturnHome(), purposes, ids.map(() => 0), ids.map(() => 0), readMileageEndToll(), readMileageEndTrailer());
+	renderMileageStops(ids, getReturnHome(), purposes, ids.map(() => 0), ids.map(() => 0), readMileageEndToll(), readMileageEndTrailer(), [], readMileageEndChargeTo(), []);
 	queueMileageAutoSave();
 	if (note) {
 		if (unmatched.length) { note.hidden = false; note.textContent = `Added ${ids.filter(Boolean).length}. Couldn't match: ${unmatched.join(', ')} — add those manually below.`; }
@@ -3704,12 +4128,12 @@ function showAddLocationModal() {
 		const r = await spAjax('site_pulse_add_mileage_location', { name, address, location_type: type, category, is_business, notes, save_global });
 		if (r.success) {
 			await loadMileageLocations();
-			const stops = readMileageStops(), purposes = readMileageStopPurposes(), tolls = readMileageStopTolls(), trailers = readMileageStopTrailers();
+			const stops = readMileageStops(), purposes = readMileageStopPurposes(), tolls = readMileageStopTolls(), trailers = readMileageStopTrailers(), charge = readMileageStopChargeTo(), lnotes = readMileageStopNotes();
 			// Auto-fill the first empty stop with the new location
 			const emptyIdx = stops.findIndex(v => !v);
 			if (emptyIdx >= 0) stops[emptyIdx] = parseInt(r.data.id);
-			else { stops.push(parseInt(r.data.id)); purposes.push(''); tolls.push(0); trailers.push(0); }
-			renderMileageStops(stops, getReturnHome(), purposes, tolls, trailers, readMileageEndToll(), readMileageEndTrailer());
+			else { stops.push(parseInt(r.data.id)); purposes.push(''); tolls.push(0); trailers.push(0); charge.push(''); lnotes.push(''); }
+			renderMileageStops(stops, getReturnHome(), purposes, tolls, trailers, readMileageEndToll(), readMileageEndTrailer(), charge, readMileageEndChargeTo(), lnotes);
 			queueMileageAutoSave();
 			close();
 		} else {
@@ -3740,7 +4164,7 @@ function showAdminAddLocationModal(onSaved) {
 				<div class="sp-form-group"><label>Type</label><select id="sp-addloc-type" class="sp-select">${typeOptions}</select></div>
 				<div class="sp-form-group"><label>Category</label><select id="sp-addloc-category" class="sp-select">${catOptions}</select></div>
 			</div>
-			<div class="sp-form-group"><label>Business or personal</label><select id="sp-addloc-business" class="sp-select"><option value="1">Business</option><option value="0">Personal</option></select></div>
+			<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div class="sp-form-group"><label>Business or personal</label><select id="sp-addloc-business" class="sp-select"><option value="1">Business</option><option value="0">Personal</option></select></div><div class="sp-form-group"><label>Store # / code <span class="unique sp-text-secondary" style="font-weight:400;">(optional)</span></label><input type="text" id="sp-addloc-code" class="sp-input" placeholder="e.g. 1042"></div></div>
 			<div class="sp-form-group"><label>Notes (optional)</label><textarea id="sp-addloc-notes" class="sp-textarea" rows="2"></textarea></div>
 			<div class="sp-modal-actions">
 				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-addloc-submit">Add Destination</button>
@@ -3765,6 +4189,7 @@ function showAdminAddLocationModal(onSaved) {
 			name, address,
 			location_type: modal.querySelector('#sp-addloc-type').value,
 			category: modal.querySelector('#sp-addloc-category').value,
+			code: modal.querySelector('#sp-addloc-code').value.trim(),
 			is_business: modal.querySelector('#sp-addloc-business').value,
 			notes: modal.querySelector('#sp-addloc-notes').value.trim(),
 		});
@@ -3796,7 +4221,8 @@ function showEditLocationModal(loc, onSaved) {
 				<div class="sp-form-group"><label>Category</label><select id="sp-editloc-category" class="sp-select">${catOptions}</select></div>
 				<div class="sp-form-group"><label>Business or personal</label><select id="sp-editloc-business" class="sp-select"><option value="1"${parseInt(loc.is_business) ? ' selected' : ''}>Business</option><option value="0"${!parseInt(loc.is_business) ? ' selected' : ''}>Personal</option></select></div>
 			</div>
-			<div class="sp-form-group"><label>Notes</label><textarea id="sp-editloc-notes" class="sp-textarea" rows="2">${esc(loc.notes || '')}</textarea></div>
+			<div class="sp-form-group"><label>Store # / accounting code <span class="unique sp-text-secondary" style="font-weight:400;">(optional)</span></label><input type="text" id="sp-editloc-code" class="sp-input" value="${esc(loc.code || '')}" placeholder="e.g. 1042"></div>
+				<div class="sp-form-group"><label>Notes</label><textarea id="sp-editloc-notes" class="sp-textarea" rows="2">${esc(loc.notes || '')}</textarea></div>
 			<div class="sp-form-group"><label>Pinned purposes <span class="unique sp-text-secondary" style="font-weight:400;">(one per line — first one pre-fills the purpose when this place is chosen)</span></label><textarea id="sp-editloc-pinned" class="sp-textarea" rows="3" placeholder="Store visit&#10;Manager meeting">${esc(pinned)}</textarea></div>
 			<div class="sp-form-group"><label>Marker image URL <span class="unique sp-text-secondary" style="font-weight:400;">(optional — overrides this location type's default marker on the map; blank = use the default)</span></label><input type="text" id="sp-editloc-marker" class="sp-input" value="${esc(loc.marker_icon || '')}" placeholder="https://rovin.work/wp-content/uploads/brand-logo.png"></div>
 			<div class="sp-modal-actions">
@@ -3820,6 +4246,7 @@ function showEditLocationModal(loc, onSaved) {
 			address: modal.querySelector('#sp-editloc-address').value.trim(),
 			location_type: modal.querySelector('#sp-editloc-type').value,
 			category: modal.querySelector('#sp-editloc-category').value,
+			code: modal.querySelector('#sp-editloc-code').value.trim(),
 			is_business: modal.querySelector('#sp-editloc-business').value,
 			notes: modal.querySelector('#sp-editloc-notes').value.trim(),
 			pinned_purposes: pinnedArr,
@@ -3883,6 +4310,346 @@ function downloadBlob(filename, content, type) {
 	setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+/*--------------------------------------------------------------
+# Toll Reconciliation — upload CSV, AI-match per day, review & apply
+--------------------------------------------------------------*/
+
+// Wire the upload controls once per page load (activatePanel calls this each open).
+function initTollReconcile() {
+	const panel = $('#sp-panel-mileage-tolls');
+	if (!panel || panel.dataset.wired === '1') return;
+	panel.dataset.wired = '1';
+
+	const file = $('#sp-toll-file');
+	const btn = $('#sp-toll-upload-btn');
+	if (file && btn) {
+		file.addEventListener('change', () => { btn.disabled = !file.files.length; });
+		btn.addEventListener('click', tollUpload);
+	}
+}
+
+async function tollUpload() {
+	const file = $('#sp-toll-file');
+	const btn = $('#sp-toll-upload-btn');
+	const status = $('#sp-toll-status');
+	if (!file || !file.files.length) return;
+
+	const f = file.files[0];
+
+	// Hard gate to CSV only — the file input's accept= is just a picker hint, so enforce it.
+	const isCsv = /\.csv$/i.test(f.name) && (!f.type || /csv|text\/plain|application\/vnd\.ms-excel/i.test(f.type));
+	if (!isCsv) {
+		if (status) { status.hidden = false; status.className = 'sp-toll-status sp-toll-status-error'; status.textContent = 'Please upload a .csv file — that\'s the export format from your toll account.'; }
+		file.value = ''; btn.disabled = true;
+		return;
+	}
+
+	const text = await f.text();
+
+	btn.disabled = true; btn.textContent = 'Uploading…';
+	if (status) { status.hidden = false; status.className = 'sp-toll-status'; status.textContent = 'Reading your toll statement…'; }
+	$('#sp-toll-days').innerHTML = '';
+
+	try {
+		const r = await spAjax('site_pulse_upload_toll_csv', { csv: text, filename: f.name });
+		if (!r.success) {
+			if (status) { status.className = 'sp-toll-status sp-toll-status-error'; status.textContent = r.data?.message || 'Upload failed.'; }
+		} else {
+			renderTollDays(r.data);
+		}
+	} catch (e) {
+		if (status) { status.className = 'sp-toll-status sp-toll-status-error'; status.textContent = 'Upload failed. Please try again.'; }
+	} finally {
+		btn.disabled = false; btn.textContent = 'Upload CSV';
+	}
+}
+
+// The "applied" done-state body for a day, with Review (show stored result, no AI) and
+// Re-analyze (send back to Claude) buttons. Shared by upload render + just-applied.
+function tollDoneBodyHtml(total) {
+	return `<div class="sp-toll-status sp-toll-status-ok">✓ $${Number(total || 0).toFixed(2)} in tolls applied to this day. `
+		+ `<button type="button" class="unique sp-btn sp-btn-ghost sp-btn-tiny sp-toll-review-btn">Review</button> `
+		+ `<button type="button" class="unique sp-btn sp-btn-ghost sp-btn-tiny sp-toll-reanalyze-btn">Re-analyze</button></div>`;
+}
+
+function renderTollDays(data) {
+	const status = $('#sp-toll-status');
+	const wrap = $('#sp-toll-days');
+	const days = data.days || [];
+	const pending = days.filter(d => !d.applied);
+
+	if (status) {
+		status.hidden = false;
+		status.className = 'sp-toll-status';
+		if (!days.length) {
+			status.textContent = `Found ${data.total_txns} charge${data.total_txns !== 1 ? 's' : ''}, but none fall on a day you logged a trip — nothing to analyze.`;
+			wrap.innerHTML = '';
+			return;
+		}
+		const ign = data.ignored_count ? ` ${data.ignored_count} charge${data.ignored_count !== 1 ? 's' : ''} on non-trip days ${data.ignored_count !== 1 ? 'were' : 'was'} ignored.` : '';
+		const cleaned = (data.skipped_invalid || 0) + (data.skipped_dupes || 0);
+		const cln = cleaned ? ` ${cleaned} invalid or duplicate row${cleaned !== 1 ? 's' : ''} auto-removed.` : '';
+		const allBtnHtml = pending.length ? ` <button type="button" class="unique sp-btn sp-btn-secondary sp-btn-tiny" id="sp-toll-analyze-all">Analyze all</button>` : '';
+		status.innerHTML = `Found <strong>${days.length}</strong> logged day${days.length !== 1 ? 's' : ''} with toll charges.${ign}${cln}${allBtnHtml}`;
+		markUniqueSpans(status);
+	}
+
+	let h = '';
+	days.forEach(d => {
+		h += `<div class="sp-toll-day sp-table-card${d.applied ? ' sp-toll-day-done' : ''}" data-entry="${d.entry_id}" data-total="${d.total_tolls || 0}">`;
+		h += `<div class="sp-toll-day-head"><span class="unique sp-toll-day-date">${tollFmtDate(d.date)}</span>`;
+		h += `<span class="unique sp-toll-day-meta">${d.applied ? 'applied' : d.txn_count + ' charge' + (d.txn_count !== 1 ? 's' : '')}</span>`;
+		if (!d.applied) h += `<button type="button" class="unique sp-btn sp-btn-secondary sp-btn-tiny sp-toll-analyze-btn">Analyze</button>`;
+		h += `</div>`;
+		h += `<div class="sp-toll-day-body">${d.applied ? tollDoneBodyHtml(d.total_tolls) : ''}</div>`;
+		h += `</div>`;
+	});
+	wrap.innerHTML = h;
+	markUniqueSpans(wrap);
+
+	$$('.sp-toll-analyze-btn', wrap).forEach(b => b.addEventListener('click', () => reconcileTollDay(b.closest('.sp-toll-day'))));
+	$$('.sp-toll-review-btn', wrap).forEach(b => b.addEventListener('click', () => reviewTollDay(b.closest('.sp-toll-day'))));
+	$$('.sp-toll-reanalyze-btn', wrap).forEach(b => b.addEventListener('click', () => reconcileTollDay(b.closest('.sp-toll-day'))));
+
+	const allBtn = $('#sp-toll-analyze-all');
+	if (allBtn) allBtn.addEventListener('click', async () => {
+		allBtn.disabled = true;
+		for (const card of $$('.sp-toll-day:not(.sp-toll-day-done)', wrap)) { await reconcileTollDay(card); }
+		allBtn.disabled = false;
+	});
+}
+
+// Send the day's charges to Claude for fresh AI matching.
+async function reconcileTollDay(card) {
+	if (!card) return;
+	const entryId = parseInt(card.dataset.entry);
+	const body = card.querySelector('.sp-toll-day-body');
+	card.querySelector('.sp-toll-day-head .sp-btn')?.remove(); // the review renders in the body
+	body.innerHTML = '<div class="sp-toll-loading">AI is analyzing your tolls against this day\'s route…</div>';
+	try {
+		const r = await spAjax('site_pulse_reconcile_toll_day', { entry_id: entryId });
+		if (!r.success) {
+			body.innerHTML = `<div class="sp-toll-status sp-toll-status-error">${esc(r.data?.message || 'Could not analyze this day.')}</div>`;
+		} else {
+			renderTollReview(r.data, card, { mode: 'analyze' });
+		}
+	} catch (e) {
+		body.innerHTML = '<div class="sp-toll-status sp-toll-status-error">Something went wrong. Please try again.</div>';
+	}
+}
+
+// Show what was already found/applied for this day — reads the stored result, no AI call.
+async function reviewTollDay(card) {
+	if (!card) return;
+	const entryId = parseInt(card.dataset.entry);
+	const body = card.querySelector('.sp-toll-day-body');
+	card.querySelector('.sp-toll-day-head .sp-btn')?.remove();
+	body.innerHTML = '<div class="sp-toll-loading">Loading…</div>';
+	try {
+		const r = await spAjax('site_pulse_get_toll_day', { entry_id: entryId });
+		if (!r.success) {
+			body.innerHTML = `<div class="sp-toll-status sp-toll-status-error">${esc(r.data?.message || 'Could not load this day.')}</div>`;
+		} else {
+			renderTollReview(r.data, card, { mode: 'review' });
+		}
+	} catch (e) {
+		body.innerHTML = '<div class="sp-toll-status sp-toll-status-error">Something went wrong. Please try again.</div>';
+	}
+}
+
+// Flatten the proposal into one editable list of charges, each with its current leg
+// assignment (null = not on this trip) and the AI's state for highlighting.
+function tollFlattenCharges(p) {
+	const out = [];
+	(p.legs || []).forEach(leg => (leg.transactions || []).forEach(t => out.push(Object.assign({}, t, { legId: leg.leg_id, state: 'matched' }))));
+	(p.ambiguous || []).forEach(t => out.push(Object.assign({}, t, { legId: null, state: 'ambiguous' })));
+	(p.excluded || []).forEach(t => out.push(Object.assign({}, t, { legId: null, state: 'excluded' })));
+	out.sort((a, b) => String(a.datetime || '').localeCompare(String(b.datetime || '')));
+	return out;
+}
+
+function renderTollReview(p, card, opts) {
+	const mode = (opts && opts.mode) || 'analyze'; // 'analyze' (fresh/re-analyze) | 'review' (stored)
+	const body = card.querySelector('.sp-toll-day-body');
+	const charges = tollFlattenCharges(p);
+	const estMap = {};
+	(p.legs || []).forEach(l => { if (l.estimate != null) estMap[l.leg_id] = l.estimate; });
+
+	if (!charges.length) {
+		body.innerHTML = '<div class="sp-toll-status">No toll charges to review for this day.</div>';
+		return;
+	}
+
+	const legOpts = (selId) => {
+		let o = `<option value="">✕ Not this trip</option>`;
+		(p.all_legs || []).forEach(l => {
+			o += `<option value="${l.leg_id}"${String(selId) === String(l.leg_id) ? ' selected' : ''}>Leg ${l.leg_order + 1}: ${esc(l.label)}</option>`;
+		});
+		return o;
+	};
+
+	let h = '<table class="sp-toll-table"><thead><tr><th>When</th><th>Road / Gantry</th><th class="sp-m-num">Charge</th><th>Assign to leg</th></tr></thead><tbody>';
+	charges.forEach(c => {
+		const cls = c.state === 'ambiguous' ? ' sp-toll-row-amb' : (c.state === 'excluded' ? ' sp-toll-row-exc' : '');
+		const reason = c.reason ? ` title="${esc(c.reason)}"` : '';
+		const flag = c.state === 'ambiguous' ? ' <span class="unique sp-toll-flag" title="Flagged for your review">⚠</span>' : '';
+		const loc = tollSplitLocation(c.road, c.gantry);
+		h += `<tr class="sp-toll-row${cls}"${reason}>`;
+		h += `<td data-label="When">${tollFmtTime(c.datetime)}${flag}</td>`;
+		h += `<td data-label="Road / Gantry"><div class="sp-toll-road">${esc(loc.road || '—')}</div>${loc.gantry ? `<div class="sp-toll-gantry">${esc(loc.gantry)}</div>` : ''}${c.reason ? `<div class="sp-toll-reason">${esc(c.reason)}</div>` : ''}</td>`;
+		h += `<td class="sp-m-num" data-label="Charge">$${Number(c.amount).toFixed(2)}</td>`;
+		h += `<td data-label="Assign to leg"><select class="sp-select sp-toll-assign" data-id="${c.id}" data-amount="${Number(c.amount)}">${legOpts(c.legId)}</select></td>`;
+		h += '</tr>';
+	});
+	h += '</tbody></table>';
+
+	// Comparison strip + apply.
+	h += '<div class="sp-toll-compare">';
+	h += '<div class="sp-toll-compare-stat"><div class="sp-card-value" data-toll-actual>$0.00</div><div class="sp-card-label">Tolls from CSV (applied)</div></div>';
+	h += '<div class="sp-toll-compare-stat"><div class="sp-card-value" data-toll-estimate>$0.00</div><div class="sp-card-label">TollGuru estimate</div></div>';
+	h += '<div class="sp-toll-compare-stat"><div class="sp-card-value" data-toll-variance>$0.00</div><div class="sp-card-label">Difference</div></div>';
+	h += '</div>';
+	// Buttons: Cancel always; Apply shows immediately for a fresh/re-analyze, but in Review
+	// mode it only appears once the driver actually changes a leg assignment (then "Apply Changes").
+	const applyLabel  = mode === 'review' ? 'Apply Changes' : 'Apply to this day';
+	const applyHidden = mode === 'review' ? ' hidden' : '';
+	h += '<div class="sp-toll-apply-row">';
+	h += '<button type="button" class="unique sp-btn sp-btn-secondary sp-toll-cancel-btn">Cancel</button>';
+	h += `<button type="button" class="unique sp-btn sp-btn-primary sp-toll-apply-btn"${applyHidden}>${applyLabel}</button>`;
+	h += '</div>';
+
+	body.innerHTML = h;
+	markUniqueSpans(body);
+
+	// Snapshot the initial assignments so we can tell when one actually changes.
+	const initial = {};
+	$$('.sp-toll-assign', body).forEach(s => { initial[s.dataset.id] = s.value; });
+	const applyBtn = body.querySelector('.sp-toll-apply-btn');
+	const isDirty = () => $$('.sp-toll-assign', body).some(s => s.value !== initial[s.dataset.id]);
+
+	const recalc = () => tollRecalc(card, estMap);
+	$$('.sp-toll-assign', body).forEach(sel => sel.addEventListener('change', () => {
+		const row = sel.closest('.sp-toll-row');
+		if (row) { row.classList.remove('sp-toll-row-exc'); if (!sel.value) row.classList.add('sp-toll-row-exc'); }
+		recalc();
+		if (mode === 'review' && applyBtn) applyBtn.hidden = !isDirty(); // reveal "Apply Changes" only on edit
+	}));
+	applyBtn.addEventListener('click', () => applyTollDay(card));
+	body.querySelector('.sp-toll-cancel-btn').addEventListener('click', () => tollCollapseDay(card));
+	recalc();
+}
+
+// Collapse an open review back to the card's resting state without applying anything.
+// An already-applied day returns to its "✓ applied" summary; a never-applied day returns
+// to the pending "Analyze" button.
+function tollCollapseDay(card) {
+	const body = card.querySelector('.sp-toll-day-body');
+	card.querySelector('.sp-toll-day-head .sp-btn')?.remove();
+	if (card.classList.contains('sp-toll-day-done')) {
+		body.innerHTML = tollDoneBodyHtml(card.dataset.total || 0);
+		markUniqueSpans(body);
+		body.querySelector('.sp-toll-review-btn')?.addEventListener('click', () => reviewTollDay(card));
+		body.querySelector('.sp-toll-reanalyze-btn')?.addEventListener('click', () => reconcileTollDay(card));
+	} else {
+		body.innerHTML = '';
+		const head = card.querySelector('.sp-toll-day-head');
+		const btn = document.createElement('button');
+		btn.type = 'button';
+		btn.className = 'unique sp-btn sp-btn-secondary sp-btn-tiny sp-toll-analyze-btn';
+		btn.textContent = 'Analyze';
+		btn.addEventListener('click', () => reconcileTollDay(card));
+		head.appendChild(btn);
+		markUniqueSpans(head);
+	}
+}
+
+function tollRecalc(card, estMap) {
+	const sels = $$('.sp-toll-assign', card);
+	let actual = 0;
+	const legs = new Set();
+	sels.forEach(s => { if (s.value) { actual += parseFloat(s.dataset.amount) || 0; legs.add(s.value); } });
+	let estimate = 0;
+	legs.forEach(id => { if (estMap[id] != null) estimate += estMap[id]; });
+	const setVal = (sel, v) => { const el = card.querySelector(sel); if (el) el.textContent = '$' + v.toFixed(2); };
+	setVal('[data-toll-actual]', actual);
+	setVal('[data-toll-estimate]', estimate);
+	const varEl = card.querySelector('[data-toll-variance]');
+	if (varEl) {
+		const diff = actual - estimate;
+		varEl.textContent = (diff >= 0 ? '+$' : '-$') + Math.abs(diff).toFixed(2);
+		varEl.classList.toggle('sp-toll-var-over', diff > 0.005);
+		varEl.classList.toggle('sp-toll-var-under', diff < -0.005);
+	}
+}
+
+async function applyTollDay(card) {
+	const entryId = parseInt(card.dataset.entry);
+	const btn = card.querySelector('.sp-toll-apply-btn');
+	const decisions = $$('.sp-toll-assign', card).map(s => ({
+		id: parseInt(s.dataset.id),
+		status: s.value ? 'matched' : 'excluded',
+		leg_id: s.value ? parseInt(s.value) : 0,
+	}));
+	if (btn) { btn.disabled = true; btn.textContent = 'Applying…'; }
+	try {
+		const r = await spAjax('site_pulse_apply_toll_day', { entry_id: entryId, decisions: JSON.stringify(decisions) });
+		if (!r.success) {
+			if (btn) { btn.disabled = false; btn.textContent = 'Apply to this day'; }
+			alert(r.data?.message || 'Could not apply.');
+			return;
+		}
+		const body = card.querySelector('.sp-toll-day-body');
+		card.dataset.total = r.data.total_tolls; // so Cancel can restore the summary
+		body.innerHTML = tollDoneBodyHtml(r.data.total_tolls);
+		markUniqueSpans(body);
+		card.classList.add('sp-toll-day-done');
+		body.querySelector('.sp-toll-review-btn')?.addEventListener('click', () => reviewTollDay(card));
+		body.querySelector('.sp-toll-reanalyze-btn')?.addEventListener('click', () => reconcileTollDay(card));
+		// Refresh the My Mileage list so the newly-applied tolls show there too (it's a
+		// separate panel that doesn't otherwise reload after a toll apply).
+		if (typeof loadMileageEntries === 'function') loadMileageEntries();
+	} catch (e) {
+		if (btn) { btn.disabled = false; btn.textContent = 'Apply to this day'; }
+		alert('Something went wrong applying these tolls.');
+	}
+}
+
+// "2026-01-05" → "Jan 5, 2026" (TZ-safe; no Date parsing).
+function tollFmtDate(s) {
+	const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+	if (!m) return esc(s);
+	const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+	return `${months[+m[2] - 1]} ${+m[3]}, ${m[1]}`;
+}
+
+// "2026-01-05 08:15:00" → "Jan 5, 8:15 AM".
+function tollFmtDT(s) {
+	const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+	if (!m) return esc(s);
+	const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+	let h = +m[4]; const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+	return `${months[+m[2] - 1]} ${+m[3]}, ${h}:${m[5]} ${ap}`;
+}
+
+// Time-only "8:15 AM" — the date already shows in the day header above the table.
+function tollFmtTime(s) {
+	const m = String(s || '').match(/[ T](\d{2}):(\d{2})/);
+	if (!m) return '';
+	let h = +m[1]; const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+	return `${h}:${m[2]} ${ap}`;
+}
+
+// Split an NTTA Location ("Road - Gantry Name - CODE") into road (line 1) + the gantry
+// name & code (line 2). If a separate road field exists, use it as-is.
+function tollSplitLocation(road, gantry) {
+	if (road && gantry) return { road, gantry };
+	const g = gantry || '';
+	const i = g.indexOf(' - ');
+	if (i === -1) return { road: road || g, gantry: '' };
+	return { road: g.slice(0, i).trim(), gantry: g.slice(i + 3).trim() };
+}
+
+
 // Polished PDF report — adopts the layout from the original mileage prototype
 // (header, stat boxes, IRS-rate note, trip table with footer totals), driven by
 // server data and the Site Pulse navy palette.
@@ -3898,7 +4665,9 @@ async function exportMileagePDF() {
 
 	const rate = parseFloat(data.rate) || 0;
 	const totalMiles = entries.reduce((s, e) => s + parseFloat(e.total_miles || 0), 0);
-	const totalReimb = rate > 0 ? entries.reduce((s, e) => s + parseFloat(e.reimbursement_amount || 0), 0) : 0;
+	// Total = (total miles × rate) rounded once, matching the on-screen header (not the sum
+	// of each trip's rounded reimbursement). The per-trip Reimb. column may sum a cent or two off.
+	const totalReimb = rate > 0 ? Math.round(totalMiles * rate * 100) / 100 : 0;
 	const totalTolls = entries.reduce((s, e) => s + parseFloat(e.total_tolls || 0), 0);
 	const totalTrailer = entries.reduce((s, e) => s + parseFloat(e.total_trailer || 0), 0);
 	const hasTolls = totalTolls > 0 && rate > 0;       // extra $ columns piggyback the $ columns
@@ -3920,26 +4689,34 @@ async function exportMileagePDF() {
 	doc.text(`Period: ${data.label}`, 40, y); y += 14;
 	doc.text(`Generated: ${fmtReportDate(new Date())}`, 40, y);
 
-	// Stat boxes
+	// Stat boxes — mirror the on-screen mileage header exactly: Total Miles, Mileage,
+	// [Trailer when used], Tolls, Total Reimbursement (same categories, order, gating, and
+	// thousands-separated formatting). Cards flow across the top and size to fit their count.
+	const statCards = [
+		{ label: 'TOTAL MILES', value: mileageNumFmt(totalMiles) },
+		{ label: 'MILEAGE',     value: `$${mileageNumFmt(totalReimb)}` },
+	];
+	if (hasTrailer) statCards.push({ label: 'TRAILER', value: `$${mileageNumFmt(totalTrailer)}` });
+	statCards.push({ label: 'TOLLS',               value: `$${mileageNumFmt(totalTolls)}` });
+	statCards.push({ label: 'TOTAL REIMBURSEMENT', value: `$${mileageNumFmt(grand)}` });
+
 	const boxY = y + 16, boxH = 52;
-	doc.setFillColor(...SOFT); doc.setDrawColor(216, 213, 204);
-	doc.roundedRect(40, boxY, 155, boxH, 4, 4, 'FD');
-	doc.roundedRect(208, boxY, 155, boxH, 4, 4, 'FD');
-	if (rate > 0) doc.roundedRect(376, boxY, 155, boxH, 4, 4, 'FD');
-	doc.setFontSize(8); doc.setTextColor(...GREY);
-	doc.text('TOTAL MILES', 48, boxY + 14); doc.text('LOG ENTRIES', 216, boxY + 14);
-	doc.setFontSize(22); doc.setTextColor(...NAVY);
-	doc.text(totalMiles.toFixed(1), 48, boxY + 39); doc.text(String(entries.length), 216, boxY + 39);
-	if (rate > 0) {
-		doc.setFontSize(8); doc.setTextColor(...GREY); doc.text('REIMBURSEMENT', 384, boxY + 14);
-		doc.setFontSize(22); doc.setTextColor(...NAVY); doc.text(`$${totalReimb.toFixed(2)}`, 384, boxY + 39);
-	}
+	const rowX = 40, rowW = 532, gap = 10;
+	const boxW = (rowW - gap * (statCards.length - 1)) / statCards.length;
+	const valueFont = statCards.length >= 5 ? 15 : 18;
+	doc.setDrawColor(216, 213, 204);
+	statCards.forEach((card, i) => {
+		const bx = rowX + i * (boxW + gap);
+		// Re-assert the box fill each iteration: jsPDF's setTextColor() also mutates the
+		// fill color, so the previous card's NAVY value text would otherwise bleed into
+		// this card's box fill (leaving dark text on a dark box).
+		doc.setFillColor(...SOFT);
+		doc.roundedRect(bx, boxY, boxW, boxH, 4, 4, 'FD');
+		doc.setFontSize(7);  doc.setTextColor(...GREY); doc.text(card.label, bx + 8, boxY + 14);
+		doc.setFontSize(valueFont); doc.setTextColor(...NAVY); doc.text(card.value, bx + 8, boxY + 39);
+	});
 	doc.setFontSize(8); doc.setTextColor(...FAINT);
-	let rateNote = `Mileage rate applied: $${rate > 0 ? rate.toFixed(3) : 'N/A'}/mile`;
-	if (hasTrailer) rateNote += `      Trailer: $${totalTrailer.toFixed(2)}`;
-	if (hasTolls) rateNote += `      Tolls: $${totalTolls.toFixed(2)}`;
-	if (hasExtras) rateNote += `      Grand total: $${grand.toFixed(2)}`;
-	doc.text(rateNote, 40, boxY + boxH + 12);
+	doc.text(`Mileage rate applied: $${rate > 0 ? rate.toFixed(3) : 'N/A'}/mile`, 40, boxY + boxH + 12);
 
 	// Per-entry route lines: [{name, purpose}]. Prefer the structured route_stops; if absent
 	// (e.g. older server), split the route string and drop the arrow so jsPDF never sees it.
@@ -4183,6 +4960,8 @@ async function loadAdminMileage() {
 		const adminPurposes = res.data.purposes || [];
 		const reminders = res.data.reminders || { enabled: false, hour: 7 };
 		const requireApproval = res.data.require_approval !== false;
+		const periodLength = parseInt(res.data.period_length) || 0;
+		const periodAnchor = res.data.period_anchor || '';
 		const pending = locs.filter(l => l.status === 'pending');
 		const approved = locs.filter(l => l.status === 'approved');
 
@@ -4205,6 +4984,18 @@ async function loadAdminMileage() {
 		if (D.isGod) {
 			html += '<div id="sp-mileage-api-test-result" class="sp-mileage-api-test" hidden></div>';
 		}
+		html += cardEnd;
+
+		// Pay periods — drives the report's "Jump to period" menu. Length 0 = calendar months.
+		html += card('Pay Periods');
+		html += '<p class="sp-text-secondary">Define your reimbursement period and the report\'s “Jump to” menu will list each period instead of calendar months. Periods are extrapolated indefinitely from the start date below. Leave length at 0 to keep calendar months.</p>';
+		html += '<div class="sp-admin-mileage-rate">';
+		html += '<label title="Number of days each pay period spans, e.g. 30 for a 25th–24th cycle of a 30-day month.">How long is a period (days)?</label>';
+		html += `<input type="number" step="1" min="0" max="366" id="sp-mileage-period-length" class="sp-input" value="${periodLength}">`;
+		html += '<label title="Any date a period begins on. Earlier and later periods are calculated from this anchor.">When does a period start?</label>';
+		html += `<input type="date" id="sp-mileage-period-anchor" class="sp-input" value="${esc(periodAnchor)}">`;
+		html += '</div>';
+		html += '<p class="sp-text-secondary" id="sp-mileage-period-preview"></p>';
 		html += cardEnd;
 
 		// Optional per-type map marker images (logo/icon). Blank = the default colored dot.
@@ -4266,11 +5057,12 @@ async function loadAdminMileage() {
 		// Only sub-label the approved list when a Pending section is also shown; otherwise the
 		// "Destinations" header above is the only heading the single list needs.
 		if (showPending) html += `<h4>Approved (${approved.length})</h4>`;
-		html += '<table class="sp-mileage-table"><thead><tr><th>Name</th><th>Address</th><th>Category</th><th>Business</th><th></th></tr></thead><tbody>';
+		html += '<table class="sp-mileage-table"><thead><tr><th>Name</th><th>Code</th><th>Address</th><th>Category</th><th>Business</th><th></th></tr></thead><tbody>';
 		approved.forEach(l => {
 			const priv = parseInt(l.is_private) ? ' <span class="unique sp-status-badge sp-status-draft">private</span>' : '';
 			html += '<tr>';
 			html += `<td>${esc(l.name)}${priv}</td>`;
+			html += `<td>${esc(l.code || '')}</td>`;
 			html += `<td>${esc(l.address || '')}</td>`;
 			html += `<td>${esc(l.category || l.location_type || '')}</td>`;
 			html += `<td>${parseInt(l.is_business) ? 'Business' : 'Personal'}</td>`;
@@ -4331,23 +5123,27 @@ async function loadAdminMileage() {
 
 		// Purpose library editor
 		html += card('Trip Purpose Library');
-		html += '<p class="sp-text-secondary">Suggestions shown to drivers when they pick a stop\'s business purpose.</p>';
-		html += '<div class="sp-mileage-purposes" id="sp-mileage-purposes-list"></div>';
+		html += '<p class="sp-text-secondary">Suggestions shown to drivers when they pick a stop\'s business purpose. Tick <strong>Requires note</strong> to prompt the driver for extra detail (e.g. who they met) whenever they choose that purpose.</p>';
+		html += '<div class="sp-purpose-rows" id="sp-mileage-purposes-list"></div>';
 		html += '<div class="sp-mileage-purpose-add"><input type="text" id="sp-mileage-purpose-new" class="sp-input" placeholder="Add a purpose…"><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-purpose-add-btn">Add</button></div>';
 		html += cardEnd;
 
 		wrap.innerHTML = html;
 		markUniqueSpans(wrap);
 
-		// Purpose library: render chips, auto-saving on every add/remove.
-		let purposeList = adminPurposes.slice();
+		// Purpose library: one row per purpose with an inline-edit name, a "Requires note" toggle,
+		// and a delete button. Each purpose is { label, requires_note }. Auto-saves on every change.
+		let purposeList = adminPurposes.map(p => (typeof p === 'string')
+			? { label: p, requires_note: false }
+			: { label: p.label || '', requires_note: !!p.requires_note });
 		const savePurposes = async () => {
-			const r = await spAjax('site_pulse_admin_save_mileage_purposes', { purposes: purposeList });
+			// JSON string — spAjax can't serialize an array of objects through FormData.
+			const r = await spAjax('site_pulse_admin_save_mileage_purposes', { purposes: JSON.stringify(purposeList) });
 			if (r.success) spFlash('Purposes saved');
 			else alert(r.data?.message || 'Error saving purposes.');
 		};
-		let editingIdx = -1; // index of the chip currently being edited inline (-1 = none)
-		const renderPurposeChips = () => {
+		let editingIdx = -1; // index of the row whose name is being edited inline (-1 = none)
+		const renderPurposeRows = () => {
 			const box = $('#sp-mileage-purposes-list', wrap);
 			if (!box) return;
 			if (!purposeList.length) {
@@ -4356,24 +5152,29 @@ async function loadAdminMileage() {
 				return;
 			}
 			box.innerHTML = purposeList.map((p, i) => {
-				if (i === editingIdx) {
-					return `<span class="unique sp-purpose-chip sp-purpose-editing"><input type="text" class="sp-purpose-edit-input" data-i="${i}" value="${esc(p)}"></span>`;
-				}
-				return `<span class="unique sp-purpose-chip"><span class="sp-purpose-text">${esc(p)}</span>`
-					+ `<button type="button" class="sp-purpose-icon sp-purpose-edit" data-i="${i}" title="Edit" aria-label="Edit">${ICON_EDIT}</button>`
-					+ `<button type="button" class="sp-purpose-icon sp-purpose-del" data-i="${i}" title="Delete" aria-label="Delete">${ICON_DELETE}</button></span>`;
+				const nameCell = (i === editingIdx)
+					? `<input type="text" class="sp-input sp-purpose-edit-input" data-i="${i}" value="${esc(p.label)}">`
+					: `<span class="sp-purpose-text">${esc(p.label)}</span>`;
+				return `<div class="sp-purpose-row" data-i="${i}">${nameCell}`
+					+ `<label class="sp-purpose-req unique" title="Prompt the driver for an additional note whenever they pick this purpose"><input type="checkbox" class="sp-purpose-req-cb" data-i="${i}"${p.requires_note ? ' checked' : ''}> Requires note</label>`
+					+ iconBtn('edit', 'sp-purpose-edit', `data-i="${i}"`)
+					+ iconBtn('delete', 'sp-purpose-del', `data-i="${i}"`) + '</div>';
 			}).join('');
 			markUniqueSpans(box);
 
 			$$('.sp-purpose-del', box).forEach(b => b.addEventListener('click', () => {
 				purposeList.splice(parseInt(b.dataset.i), 1);
 				editingIdx = -1;
-				renderPurposeChips();
+				renderPurposeRows();
 				savePurposes();
 			}));
 			$$('.sp-purpose-edit', box).forEach(b => b.addEventListener('click', () => {
 				editingIdx = parseInt(b.dataset.i);
-				renderPurposeChips();
+				renderPurposeRows();
+			}));
+			$$('.sp-purpose-req-cb', box).forEach(cb => cb.addEventListener('change', () => {
+				purposeList[parseInt(cb.dataset.i)].requires_note = cb.checked;
+				savePurposes();
 			}));
 
 			const inp = $('.sp-purpose-edit-input', box);
@@ -4383,30 +5184,30 @@ async function loadAdminMileage() {
 					const v = (inp.value || '').trim();
 					editingIdx = -1;
 					// Cancel on empty or a name that already exists elsewhere; otherwise save.
-					const dup = purposeList.some((p, j) => j !== i && p === v);
-					if (!v || dup) { renderPurposeChips(); return; }
-					const changed = purposeList[i] !== v;
-					purposeList[i] = v;
-					renderPurposeChips();
+					const dup = purposeList.some((p, j) => j !== i && p.label.toLowerCase() === v.toLowerCase());
+					if (!v || dup) { renderPurposeRows(); return; }
+					const changed = purposeList[i].label !== v;
+					purposeList[i].label = v;
+					renderPurposeRows();
 					if (changed) savePurposes();
 				};
 				inp.addEventListener('keydown', (e) => {
 					if (e.key === 'Enter') { e.preventDefault(); commit(); }
-					else if (e.key === 'Escape') { e.preventDefault(); editingIdx = -1; renderPurposeChips(); }
+					else if (e.key === 'Escape') { e.preventDefault(); editingIdx = -1; renderPurposeRows(); }
 				});
 				inp.addEventListener('blur', commit);
 				inp.focus();
 				inp.select();
 			}
 		};
-		renderPurposeChips();
+		renderPurposeRows();
 		const addPurpose = () => {
 			const inp = $('#sp-mileage-purpose-new', wrap);
 			const v = (inp.value || '').trim();
-			if (!v || purposeList.includes(v)) { inp.value = ''; return; }
-			purposeList.push(v);
+			if (!v || purposeList.some(p => p.label.toLowerCase() === v.toLowerCase())) { inp.value = ''; return; }
+			purposeList.push({ label: v, requires_note: false });
 			inp.value = '';
-			renderPurposeChips();
+			renderPurposeRows();
 			savePurposes();
 		};
 		$('#sp-mileage-purpose-add-btn', wrap)?.addEventListener('click', addPurpose);
@@ -4487,6 +5288,31 @@ async function loadAdminMileage() {
 		};
 		$('#sp-mileage-rate-input', wrap)?.addEventListener('change', saveMileageRates);
 		$('#sp-mileage-trailer-rate-input', wrap)?.addEventListener('change', saveMileageRates);
+
+		// Pay periods auto-save; a live preview confirms the extrapolated current period.
+		const updatePeriodPreview = () => {
+			const el = $('#sp-mileage-period-preview', wrap);
+			if (!el) return;
+			const len = parseInt($('#sp-mileage-period-length')?.value || '0') || 0;
+			const anc = $('#sp-mileage-period-anchor')?.value || '';
+			if (!(len > 0 && anc)) { el.textContent = 'Using calendar months.'; return; }
+			const ps = computeMileagePeriods(anc, len, 0, 1); // [next, current]
+			const cur = ps.find(p => p.current), next = ps.find(p => !p.current);
+			el.textContent = cur
+				? `Current period: ${mPeriodLabel(cur.startDate, cur.endDate)}`
+					+ (next ? `  ·  next starts ${MILEAGE_MONTH_ABBR[next.startDate.getMonth()]} ${next.startDate.getDate()}` : '')
+				: '';
+		};
+		const savePeriods = async () => {
+			const period_length = parseInt($('#sp-mileage-period-length')?.value || '0') || 0;
+			const period_anchor = $('#sp-mileage-period-anchor')?.value || '';
+			const r = await spAjax('site_pulse_admin_save_mileage_periods', { period_length, period_anchor });
+			if (r.success) { spFlash('Saved'); updatePeriodPreview(); }
+			else alert(r.data?.message || 'Error.');
+		};
+		$('#sp-mileage-period-length', wrap)?.addEventListener('change', savePeriods);
+		$('#sp-mileage-period-anchor', wrap)?.addEventListener('change', savePeriods);
+		updatePeriodPreview();
 
 		$('#sp-toll-save', wrap)?.addEventListener('click', async () => {
 			const vehicle_type = $('#sp-toll-vehicle')?.value || '2AxlesAuto';

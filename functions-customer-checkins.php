@@ -140,7 +140,7 @@ function bp_check_jobsite_geo_freshness(int $throttleDays) {
     ];
 
     $jobsite_geo = get_option('jobsite_geo');
-    if (empty($jobsite_geo['install'])) return $result;
+    if ( ! bp_module_on($jobsite_geo) ) return $result;
 
     $lastGeoEmail = (int)get_option('bp_jobsite_geo_email_last_sent', 0);
     if ((time() - $lastGeoEmail) < (86400 * $throttleDays)) return $result;
@@ -175,7 +175,7 @@ function bp_check_jobsite_geo_commendation(int $throttleDays) {
     $result = ['should_email' => false, 'count_30' => 0, 'count_90' => 0];
 
     $jobsite_geo = get_option('jobsite_geo');
-    if (empty($jobsite_geo['install'])) return $result;
+    if ( ! bp_module_on($jobsite_geo) ) return $result;
 
     $lastCommendEmail = (int)get_option('bp_jobsite_geo_commend_last_sent', 0);
     if ((time() - $lastCommendEmail) < (86400 * $throttleDays)) return $result;

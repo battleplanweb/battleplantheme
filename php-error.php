@@ -59,8 +59,9 @@ if (!headers_sent()) {
 	$ref = htmlspecialchars($_SERVER['HTTP_REFERER'] ?? '');
 
 	// ERROR DISPLAY (your new requirement)
+	//if ($error) {
 	if ($error  && current_user_can('manage_options')) {
-		$errMsg  = htmlspecialchars($error['message'] ?? '');
+			$errMsg  = htmlspecialchars($error['message'] ?? '');
 		$errFile = htmlspecialchars($error['file'] ?? '');
 		$errLine = htmlspecialchars($error['line'] ?? '');
 

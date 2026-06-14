@@ -1501,41 +1501,55 @@ function bp_geo_run_taxonomy_cleanup( $dry_run = true ) {
 	/* ---- STEP 2: Canonicalize jobsite_geo-services → service--city-st + merge ---- */
 	$service_terms = get_terms( [ 'taxonomy' => 'jobsite_geo-services', 'hide_empty' => false ] );
 
+	// Reduce any service slug to the canonical service--city-st, repairing a
+	// location that got doubled into the service half. Handles every observed
+	// form: clean (air-conditioner-repair--quitman-tx), single-dash legacy
+	// (air-conditioner-repair-quitman-tx), single-dash doubled
+	// (air-conditioner-repair-quitman-tx-quitman-tx), and double-dash doubled
+	// (air-conditioner-repair-quitman-tx--quitman-tx). The doubled-location
+	// strip runs for BOTH the legacy and double-dash paths.
 	$canonical_service = function ( $slug ) use ( $area_map ) {
-		// Already double-dash: normalize the location half, and repair any
-		// location that got doubled into the service half. The canonical form
-		// is service--city-st; a bug can produce service-city-st--city-st
-		// (e.g. air-conditioner-repair-quitman-tx--quitman-tx). Strip the
-		// trailing '-{loc}' / '-{city-only}' off the service half until gone.
+
+		$base = null;
+		$loc  = null;
+
 		if ( strpos( $slug, '--' ) !== false ) {
-			$parts     = explode( '--', $slug, 2 );
-			$base      = $parts[0];
-			$loc       = isset( $area_map[ $parts[1] ] ) ? $area_map[ $parts[1] ] : $parts[1];
-			$city_only = preg_replace( '/-[a-z]{2}$/', '', $loc );
-			$dups      = array_values( array_unique( array_filter( [ $loc, $city_only ] ) ) );
-			$stripping = true;
-			while ( $stripping ) {
-				$stripping = false;
-				foreach ( $dups as $dup ) {
-					$suffix = '-' . $dup;
-					// Guard: never strip the whole service half away.
-					if ( strlen( $base ) > strlen( $suffix ) && substr( $base, -strlen( $suffix ) ) === $suffix ) {
-						$base      = substr( $base, 0, -strlen( $suffix ) );
-						$stripping = true;
-						break;
-					}
+			// Double-dash: service half is left of '--', location half is right.
+			$parts = explode( '--', $slug, 2 );
+			$base  = $parts[0];
+			$loc   = isset( $area_map[ $parts[1] ] ) ? $area_map[ $parts[1] ] : $parts[1];
+		} else {
+			// Single-dash legacy: find the area suffix (longest match first).
+			foreach ( $area_map as $needle => $full ) {
+				$suffix = '-' . $needle;
+				if ( substr( $slug, -strlen( $suffix ) ) === $suffix ) {
+					$base = substr( $slug, 0, -strlen( $suffix ) );
+					$loc  = $full;
+					break;
 				}
 			}
-			return $base . '--' . $loc;
+			if ( $base === null ) return $slug; // service-only term, no location detected
 		}
-		// Single-dash legacy: find the area suffix (longest match first)
-		foreach ( $area_map as $needle => $full ) {
-			$suffix = '-' . $needle;
-			if ( substr( $slug, -strlen( $suffix ) ) === $suffix ) {
-				return substr( $slug, 0, -strlen( $suffix ) ) . '--' . $full;
+
+		// Strip every trailing copy of the location ('-city-st' or just '-city')
+		// left clinging to the service half, so service-city-st[-city-st]…
+		// collapses to a bare service. Guarded so the service half is never emptied.
+		$city_only = preg_replace( '/-[a-z]{2}$/', '', $loc );
+		$dups      = array_values( array_unique( array_filter( [ $loc, $city_only ] ) ) );
+		$stripping = true;
+		while ( $stripping ) {
+			$stripping = false;
+			foreach ( $dups as $dup ) {
+				$suffix = '-' . $dup;
+				if ( strlen( $base ) > strlen( $suffix ) && substr( $base, -strlen( $suffix ) ) === $suffix ) {
+					$base      = substr( $base, 0, -strlen( $suffix ) );
+					$stripping = true;
+					break;
+				}
 			}
 		}
-		return $slug; // service-only term, no location detected
+
+		return $base . '--' . $loc;
 	};
 
 	$lines   = [];
@@ -1583,10 +1597,20 @@ function bp_geo_run_taxonomy_cleanup( $dry_run = true ) {
 	/* ---- STEP 3: Strip embedded location from jobsite_geo-service-types + merge ---- */
 	$type_terms = get_terms( [ 'taxonomy' => 'jobsite_geo-service-types', 'hide_empty' => false ] );
 
+	// Strip EVERY trailing area suffix (service types carry no location, and a
+	// doubled one like air-conditioner-repair-quitman-tx-quitman-tx must lose both).
 	$strip_area = function ( $slug ) use ( $area_map ) {
-		foreach ( $area_map as $needle => $full ) {
-			$suffix = '-' . $needle;
-			if ( substr( $slug, -strlen( $suffix ) ) === $suffix ) return substr( $slug, 0, -strlen( $suffix ) );
+		$stripping = true;
+		while ( $stripping ) {
+			$stripping = false;
+			foreach ( $area_map as $needle => $full ) {
+				$suffix = '-' . $needle;
+				if ( strlen( $slug ) > strlen( $suffix ) && substr( $slug, -strlen( $suffix ) ) === $suffix ) {
+					$slug      = substr( $slug, 0, -strlen( $suffix ) );
+					$stripping = true;
+					break;
+				}
+			}
 		}
 		return $slug;
 	};

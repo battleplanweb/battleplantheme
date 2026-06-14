@@ -1502,11 +1502,31 @@ function bp_geo_run_taxonomy_cleanup( $dry_run = true ) {
 	$service_terms = get_terms( [ 'taxonomy' => 'jobsite_geo-services', 'hide_empty' => false ] );
 
 	$canonical_service = function ( $slug ) use ( $area_map ) {
-		// Already double-dash: normalize only the location half
+		// Already double-dash: normalize the location half, and repair any
+		// location that got doubled into the service half. The canonical form
+		// is service--city-st; a bug can produce service-city-st--city-st
+		// (e.g. air-conditioner-repair-quitman-tx--quitman-tx). Strip the
+		// trailing '-{loc}' / '-{city-only}' off the service half until gone.
 		if ( strpos( $slug, '--' ) !== false ) {
-			$parts = explode( '--', $slug, 2 );
-			$loc   = isset( $area_map[ $parts[1] ] ) ? $area_map[ $parts[1] ] : $parts[1];
-			return $parts[0] . '--' . $loc;
+			$parts     = explode( '--', $slug, 2 );
+			$base      = $parts[0];
+			$loc       = isset( $area_map[ $parts[1] ] ) ? $area_map[ $parts[1] ] : $parts[1];
+			$city_only = preg_replace( '/-[a-z]{2}$/', '', $loc );
+			$dups      = array_values( array_unique( array_filter( [ $loc, $city_only ] ) ) );
+			$stripping = true;
+			while ( $stripping ) {
+				$stripping = false;
+				foreach ( $dups as $dup ) {
+					$suffix = '-' . $dup;
+					// Guard: never strip the whole service half away.
+					if ( strlen( $base ) > strlen( $suffix ) && substr( $base, -strlen( $suffix ) ) === $suffix ) {
+						$base      = substr( $base, 0, -strlen( $suffix ) );
+						$stripping = true;
+						break;
+					}
+				}
+			}
+			return $base . '--' . $loc;
 		}
 		// Single-dash legacy: find the area suffix (longest match first)
 		foreach ( $area_map as $needle => $full ) {

@@ -2851,6 +2851,24 @@ function bp_geo_assign_taxonomy_term( $post_id, $base_service, $city, $state, $e
 	$city_slug  = sanitize_title( strtolower( $city ) );
 	$state_abbr = bp_geo_normalize_state( $state );
 
+	// The AI's service_category sometimes arrives with the location already baked in
+	// (e.g. "Air Conditioner Repair Quitman TX" → air-conditioner-repair-quitman-tx).
+	// Appending the location again would double the city in both the service-type term
+	// and the combined slug (air-conditioner-repair-quitman-tx--quitman-tx). Strip any
+	// trailing "-{city}-{state}" / "-{city}" off the service half before using it.
+	$loc_suffixes = array_filter( [ "-{$city_slug}-{$state_abbr}", "-{$city_slug}" ] );
+	$stripping = true;
+	while ( $stripping ) {
+		$stripping = false;
+		foreach ( $loc_suffixes as $suffix ) {
+			if ( strlen( $base_service ) > strlen( $suffix ) && substr( $base_service, -strlen( $suffix ) ) === $suffix ) {
+				$base_service = substr( $base_service, 0, -strlen( $suffix ) );
+				$stripping = true;
+				break;
+			}
+		}
+	}
+
 	// Combined services slug: {service}--{city}-{state}  e.g. air-conditioner-repair--frisco-tx
 	// Double-dash separates the service from the location so multi-word cities can be parsed
 	// back out (used by keyword rankings); archive pages read the terms directly.

@@ -32,7 +32,7 @@
 			"https://*.cloudflare.com; " .
 
 			// Everything else
-			"img-src " . "'self' data: blob: https:; " . "connect-src " . "'self' https:; " . "frame-src " . "'self' https:; " . "worker-src blob:; " . "media-src 'self' https:; " . "form-action 'self' https:; " . "base-uri 'self'; " . "frame-ancestors 'self';"
+			"img-src " . "'self' data: blob: https:; " . "connect-src " . "'self' https:; " . "frame-src " . "'self' https:; " . "worker-src 'self' blob:; " . "media-src 'self' https:; " . "form-action 'self' https:; " . "base-uri 'self'; " . "frame-ancestors 'self';"
 		);
 	});
 

@@ -37,11 +37,11 @@ function bp_ai_alt_api_key() {
 }
 
 /**
- * Generate alt text for an image attachment via Claude vision.
- * Returns the alt text string, or a WP_Error on failure.
- * Does NOT save — caller decides whether to update_post_meta.
+ * Send an image attachment + a text prompt to Claude vision and return the raw
+ * response text (or a WP_Error). Shared plumbing for alt-text and focus-point
+ * generation so they don't duplicate the upload/request boilerplate.
  */
-function bp_ai_generate_alt_text($attachment_id) {
+function bp_ai_vision_text($attachment_id, $prompt, $max_tokens = null) {
 	$attachment_id = (int) $attachment_id;
 	if (!$attachment_id) return new WP_Error('bad_id', 'Invalid attachment ID.');
 
@@ -60,12 +60,9 @@ function bp_ai_generate_alt_text($attachment_id) {
 	$image = bp_ai_alt_load_image_for_api($attachment_id);
 	if (is_wp_error($image)) return $image;
 
-	$customer = function_exists('customer_info') ? customer_info() : [];
-	$prompt   = bp_ai_alt_build_prompt($attachment_id, $customer);
-
 	$body = [
 		'model'      => BP_AI_ALT_MODEL,
-		'max_tokens' => BP_AI_ALT_MAX_TOKENS,
+		'max_tokens' => $max_tokens ?: BP_AI_ALT_MAX_TOKENS,
 		'messages'   => [
 			[
 				'role'    => 'user',
@@ -104,12 +101,36 @@ function bp_ai_generate_alt_text($attachment_id) {
 
 	if ($status !== 200) {
 		$msg = $decoded['error']['message'] ?? 'Unknown API error.';
-		if (function_exists('bp_ai_model_alert')) bp_ai_model_alert((int)$status, $decoded, BP_AI_ALT_MODEL, 'AI alt-text');
+		if (function_exists('bp_ai_model_alert')) bp_ai_model_alert((int)$status, $decoded, BP_AI_ALT_MODEL, 'AI vision');
 		return new WP_Error('api_error', "Anthropic API error ($status): $msg");
 	}
 
 	$text = trim((string)($decoded['content'][0]['text'] ?? ''));
 	if ($text === '') return new WP_Error('empty', 'Empty response from API.');
+
+	return $text;
+}
+
+/**
+ * Generate alt text for an image attachment via Claude vision.
+ * Returns the alt text string, or a WP_Error on failure.
+ * Does NOT save the alt — caller decides whether to update_post_meta.
+ *
+ * Side effect: if the model reports a focus point (FOCUS: X,Y), it is stored as
+ * _bp_focus_position meta (a CSS object-position value) so square thumbnails can
+ * crop around the subject instead of the center. Captured here because it rides
+ * the same vision call for free.
+ */
+function bp_ai_generate_alt_text($attachment_id) {
+	$attachment_id = (int) $attachment_id;
+	$customer = function_exists('customer_info') ? customer_info() : [];
+	$prompt   = bp_ai_alt_build_prompt($attachment_id, $customer);
+
+	$text = bp_ai_vision_text($attachment_id, $prompt);
+	if (is_wp_error($text)) return $text;
+
+	// Pull out + store the optional focus point, and strip its line from the alt.
+	$text = bp_ai_alt_capture_focus($attachment_id, $text);
 
 	// Strip wrapping quotes the model sometimes adds despite instructions,
 	// and any leading "Alt text:" / "Alt:" prefix.
@@ -117,6 +138,62 @@ function bp_ai_generate_alt_text($attachment_id) {
 	$text = trim($text, "\"' \t\n");
 
 	return $text;
+}
+
+/**
+ * Generate ONLY a crop focus point for an attachment (used when a manual caption
+ * means the alt-text vision call doesn't run). Stores _bp_focus_position and
+ * returns the value, or a WP_Error.
+ */
+function bp_ai_generate_focus($attachment_id) {
+	$attachment_id = (int) $attachment_id;
+
+	$text = bp_ai_vision_text($attachment_id, bp_ai_focus_build_prompt(), 20);
+	if (is_wp_error($text)) return $text;
+
+	if (!preg_match('/(\d{1,3})\s*[,\/xX]\s*(\d{1,3})/', $text, $m)) {
+		return new WP_Error('no_focus', 'No focus point in response: ' . $text);
+	}
+
+	bp_ai_store_focus($attachment_id, (int) $m[1], (int) $m[2]);
+	return get_post_meta($attachment_id, '_bp_focus_position', true);
+}
+
+/**
+ * If $text contains a "FOCUS: X,Y" directive, store it as the attachment's crop
+ * focus and remove that line from $text. Returns the cleaned alt text.
+ */
+function bp_ai_alt_capture_focus($attachment_id, $text) {
+	if (preg_match('/FOCUS:\s*(\d{1,3})\s*[,\/xX]\s*(\d{1,3})/i', $text, $m)) {
+		bp_ai_store_focus($attachment_id, (int) $m[1], (int) $m[2]);
+		$text = trim(preg_replace('/FOCUS:\s*\d{1,3}\s*[,\/xX]\s*\d{1,3}.*$/is', '', $text));
+	}
+	return $text;
+}
+
+/**
+ * Store a focus point as a CSS object-position value ("X% Y%") on the attachment,
+ * clamped to 0–100. X = horizontal (0 left → 100 right), Y = vertical (0 top → 100 bottom).
+ */
+function bp_ai_store_focus($attachment_id, $x, $y) {
+	$x = max(0, min(100, (int) $x));
+	$y = max(0, min(100, (int) $y));
+	update_post_meta((int) $attachment_id, '_bp_focus_position', $x . '% ' . $y . '%');
+}
+
+/**
+ * Minimal prompt asking only for the subject's focus point as "X,Y" percentages.
+ */
+function bp_ai_focus_build_prompt() {
+	$lines = [];
+	$lines[] = "Identify the focus point of this photo so a SQUARE thumbnail can be cropped around its main subject.";
+	$lines[] = "Find the single most important subject or area — what a viewer should still see after the photo is cropped to a square.";
+	$lines[] = "Respond with ONLY two numbers \"X,Y\":";
+	$lines[] = "- X = horizontal position, 0 (far left) to 100 (far right)";
+	$lines[] = "- Y = vertical position, 0 (top) to 100 (bottom)";
+	$lines[] = "Example: a fixture low in the frame is \"50,80\". A centered or full-frame subject is \"50,50\".";
+	$lines[] = "Output ONLY the two numbers (e.g. 50,80) — no other text.";
+	return implode("\n", $lines);
 }
 
 /**
@@ -220,7 +297,11 @@ function bp_ai_alt_build_prompt($attachment_id, $customer) {
 	$lines[] = "- Do NOT start with \"Image of\", \"Picture of\", \"Photo of\"";
 	$lines[] = "- Do NOT wrap in quotes or add any prefix like \"Alt:\"";
 	$lines[] = "";
-	$lines[] = "Return ONLY the alt text. No commentary.";
+	$lines[] = "Then, on a SECOND line, give the photo's focus point — the position of the main subject — as \"FOCUS: X,Y\" (X = horizontal 0–100 left→right, Y = vertical 0–100 top→bottom). This is used to crop a square thumbnail around the subject. A centered or full-frame subject is \"FOCUS: 50,50\"; a subject low in the frame is e.g. \"FOCUS: 50,80\".";
+	$lines[] = "";
+	$lines[] = "Output exactly two lines and nothing else:";
+	$lines[] = "<the alt text>";
+	$lines[] = "FOCUS: <X>,<Y>";
 
 	return implode("\n", $lines);
 }
@@ -237,6 +318,12 @@ add_action('bp_ai_alt_generate_cron', function($attachment_id) {
 	$alt = bp_ai_generate_alt_text((int)$attachment_id);
 	if (is_wp_error($alt) || $alt === '') return;
 	update_post_meta((int)$attachment_id, '_wp_attachment_image_alt', $alt);
+});
+
+// Focus-only pass — queued for photos that already have a (manual) caption, so
+// the alt-text call above doesn't run but square thumbnails still frame the subject.
+add_action('bp_ai_focus_generate_cron', function($attachment_id) {
+	bp_ai_generate_focus((int)$attachment_id);
 });
 
 /*--------------------------------------------------------------

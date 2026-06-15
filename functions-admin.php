@@ -1639,6 +1639,90 @@ function bp_geo_taxonomy_cleanup_page() {
 		<?php submit_button( 'Fix Photo Orientation', 'secondary', 'bp_fix_orientation' ); ?>
 	</form>
 	</div>
+
+	<div class="card" style="margin-top:20px;padding:20px;">
+	<h2 style="margin-top:0">Re-caption Photos &amp; Detect Crop Focus</h2>
+	<p>Runs AI vision on every <code>jobsite_geo</code> photo to (re)write its caption <em>and</em> detect the subject's focus point, so square thumbnails crop around the subject instead of the center. <strong>Overwrites existing captions.</strong> Processes a batch per click (submit again to continue); already-processed photos are skipped unless &ldquo;Force&rdquo; is checked. Requires an Anthropic API key.</p>
+	<?php
+	if ( isset( $_POST['bp_recaption_photos'] ) && check_admin_referer( 'bp_recaption_photos_nonce' ) ) {
+
+		if ( ! function_exists( 'bp_ai_alt_available' ) || ! bp_ai_alt_available() ) {
+			echo '<div class="notice notice-error"><p>No Anthropic API key configured — cannot generate captions.</p></div>';
+		} else {
+			$rc_force = ! empty( $_POST['rc_force'] );
+			$rc_batch = 8;
+			$rc_pairs = [
+				'jobsite_photo_1' => 'jobsite_photo_1_alt',
+				'jobsite_photo_2' => 'jobsite_photo_2_alt',
+				'jobsite_photo_3' => 'jobsite_photo_3_alt',
+				'jobsite_photo_4' => 'jobsite_photo_4_alt',
+			];
+
+			$jobs = get_posts( [
+				'post_type'      => 'jobsite_geo',
+				'post_status'    => [ 'publish', 'draft', 'pending', 'private' ],
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+			] );
+
+			// Flat list of every photo slot that still needs processing.
+			$todo = [];
+			foreach ( $jobs as $jid ) {
+				foreach ( $rc_pairs as $img => $cap ) {
+					$aid = (int) get_field( $img, $jid );
+					if ( ! $aid ) continue;
+					if ( ! $rc_force && get_post_meta( $aid, '_bp_caption_backfilled', true ) ) continue;
+					$todo[] = [ 'post' => $jid, 'aid' => $aid, 'cap' => $cap ];
+				}
+			}
+
+			$batch     = array_slice( $todo, 0, $rc_batch );
+			$remaining = max( 0, count( $todo ) - count( $batch ) );
+
+			@set_time_limit( count( $batch ) * 40 );
+
+			$rc_done = [];
+			$rc_err  = [];
+			foreach ( $batch as $item ) {
+				$alt = bp_ai_generate_alt_text( $item['aid'] ); // also stores _bp_focus_position
+				if ( is_wp_error( $alt ) || $alt === '' ) {
+					$rc_err[] = 'Attachment ' . $item['aid'] . ' (job ' . $item['post'] . '): ' . ( is_wp_error( $alt ) ? esc_html( $alt->get_error_message() ) : 'empty response' );
+					continue;
+				}
+				update_field( $item['cap'], $alt, $item['post'] );                 // visible caption (ACF)
+				update_post_meta( $item['aid'], '_wp_attachment_image_alt', $alt ); // attachment alt
+				update_post_meta( $item['aid'], '_bp_caption_backfilled', current_time( 'mysql' ) );
+				$focus = get_post_meta( $item['aid'], '_bp_focus_position', true );
+				$rc_done[] = '&ldquo;' . esc_html( $alt ) . '&rdquo;' . ( $focus ? ' <span style="color:#888;">[focus ' . esc_html( $focus ) . ']</span>' : '' );
+			}
+
+			if ( $rc_done ) {
+				echo '<div class="notice notice-success"><p><strong>Re-captioned ' . count( $rc_done ) . ' photo(s)' . ( $remaining ? ' — ' . $remaining . ' remaining, submit again to continue.' : '. All done!' ) . '</strong></p><ul style="font-family:monospace;font-size:12px;margin-top:8px;">';
+				foreach ( $rc_done as $line ) echo '<li style="margin-bottom:4px;">' . $line . '</li>';
+				echo '</ul></div>';
+			}
+			if ( $rc_err ) {
+				echo '<div class="notice notice-error"><p><strong>Errors (' . count( $rc_err ) . '):</strong></p><ul style="font-family:monospace;font-size:12px;">';
+				foreach ( $rc_err as $line ) echo '<li>' . $line . '</li>';
+				echo '</ul></div>';
+			}
+			if ( ! $rc_done && ! $rc_err ) {
+				echo '<div class="notice notice-info"><p>No photos to process — everything is already captioned. Check &ldquo;Force&rdquo; to redo them all.</p></div>';
+			}
+		}
+	}
+	?>
+	<form method="post" onsubmit="return confirm('Run AI captioning on this batch of jobsite photos? This overwrites existing captions.');">
+		<?php wp_nonce_field( 'bp_recaption_photos_nonce' ); ?>
+		<p>
+			<label>
+				<input type="checkbox" name="rc_force" value="1">
+				&nbsp;Force &mdash; re-process photos already done
+			</label>
+		</p>
+		<?php submit_button( 'Re-caption Photos', 'secondary', 'bp_recaption_photos' ); ?>
+	</form>
+	</div>
 	</div>
 	<?php
 }

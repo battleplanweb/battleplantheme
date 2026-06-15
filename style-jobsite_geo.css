@@ -56,6 +56,106 @@
 	margin-bottom:                                             0;
 }
 
+/*--------------------------------------------------------------
+# Jobsite Card Grid — content + uniform 2:3 photo columns + lightbox
+--------------------------------------------- */
+
+/* The whole card is one grid: the description sits in the 1fr column and each
+   photo gets its own equal column beside it (1 pic = "1fr 320px", 2 pics =
+   "1fr 320px 320px", and so on). Photos crop to a fixed 2:3 tile via
+   object-fit:cover — same width and height regardless of the source, no
+   thumbnail regeneration. .jobsite-photos is display:contents so each <figure>
+   becomes a direct grid item. To put the photos on the LEFT of the content,
+   move the `1fr` to the end of each grid-template-columns rule. */
+.archive-jobsite_geo .jobsite-entry {
+	display:                                                   grid;
+	gap:                                                       1em 1.25em;
+	align-items:                                               start;
+	--jobsite-photo-col:                                       minmax(0, 320px);
+}
+
+.archive-jobsite_geo .jobsite-entry.count-1 {
+	grid-template-columns:                                     1fr var(--jobsite-photo-col);
+}
+.archive-jobsite_geo .jobsite-entry.count-2 {
+	grid-template-columns:                                     1fr var(--jobsite-photo-col) var(--jobsite-photo-col);
+}
+/* 3+ photos: equal columns, with the description spanning the full width on top
+   (via .span-all) and the photos sitting in a row beneath it. */
+.archive-jobsite_geo .jobsite-entry.count-3 {
+	grid-template-columns:                                     1fr 1fr 1fr;
+}
+.archive-jobsite_geo .jobsite-entry.count-4 {
+	grid-template-columns:                                     1fr 1fr 1fr 1fr;
+}
+
+.archive-jobsite_geo .jobsite-description.span-all {
+	grid-column:                                               1 / -1;
+}
+
+/* Promote each <figure> to a direct grid item of .jobsite-entry */
+.archive-jobsite_geo .jobsite-photos.lightbox {
+	display:                                                   contents;
+}
+
+.archive-jobsite_geo .jobsite-photo {
+	margin:                                                    0;
+}
+
+.archive-jobsite_geo .jobsite-photo-link {
+	display:                                                   block;
+	position:                                                  relative;
+	overflow:                                                  hidden;
+	border-radius:                                             8px;
+	aspect-ratio:                                              1 / 1;
+	background:                                                rgba(0, 0, 0, 0.06);
+	cursor:                                                    zoom-in;
+}
+
+.archive-jobsite_geo .jobsite-photo-link img {
+	width:                                                     100%;
+	height:                                                    100%;
+	object-fit:                                                cover;
+	display:                                                   block;
+	transition:                                                transform 0.35s ease;
+}
+
+.archive-jobsite_geo .jobsite-photo-link:hover img {
+	transform:                                                 scale(1.06);
+}
+
+/* Rendered as a <p> so it picks up whatever color each site applies to
+   paragraphs (e.g. a dark section that recolors `p` to white) — no color set
+   here, so caption text always matches the description paragraphs. */
+.archive-jobsite_geo .jobsite-photo-caption {
+	font-size:                                                 0.82em;
+	line-height:                                               1.35;
+	margin:                                                    0.45em 0 0;
+	font-weight:                                               normal;
+}
+
+/* Always capitalize the first letter of the caption */
+.archive-jobsite_geo .jobsite-photo-caption::first-letter {
+	text-transform:                                            uppercase;
+}
+
+/* Tablet + phone: stack to one column — description, then each photo capped + centered */
+@media (max-width: 860px) {
+	.archive-jobsite_geo .jobsite-entry,
+	.archive-jobsite_geo .jobsite-entry.count-1,
+	.archive-jobsite_geo .jobsite-entry.count-2,
+	.archive-jobsite_geo .jobsite-entry.count-3,
+	.archive-jobsite_geo .jobsite-entry.count-4 {
+		grid-template-columns:                                    1fr;
+	}
+
+	.archive-jobsite_geo .jobsite-photo {
+		width:                                                    100%;
+		max-width:                                                320px;
+		margin-inline:                                            auto;
+	}
+}
+
 .section.archive-content.archive-jobsite_geo .jobsite-equipment {
 	text-align:                                                center;
 }
@@ -76,33 +176,6 @@
 
 body.jobsite_geo #wrapper-bottom .archive-footer {
 	margin:                                                    4em auto;
-}
-
-.section.archive-content.archive-jobsite_geo .jobsite-description {
-	order:                                                     1;
-}
-
-.section.archive-content.archive-jobsite_geo .jobsite-review {
-	order:                                                     2;
-}
-
-.section.archive-content.archive-jobsite_geo .jobsite-photos {
-	order:                                                     3;
-}
-
-section.archive-jobsite_geo .col.single-img .col-inner {
-	grid-template-columns:                                     3fr 1fr;
-}
-
-section.archive-jobsite_geo .col.single-img .col-inner div {
-	grid-column:                                               span 1;
-}
-
-/* 2: Phones (landscape) + Tablets (portrait) */
-@media (max-width: 860px) {
-	section.archive-jobsite_geo .col.single-img .col-inner {
-		grid-template-columns:                                    1fr;
-	}
 }
 
 /* 1: Phones (portrait) */

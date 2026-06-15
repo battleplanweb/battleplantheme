@@ -617,6 +617,10 @@ Beyond the basics, these are commonly used:
 
 Custom form system that **replaced Contact Form 7 + Akismet**. Lives entirely in PHP, no admin UI. Submissions go to a REST endpoint at `/wp-json/bp/v1/contact`.
 
+### CF7 legacy shim — old `[contact-form-7]` tags are auto-caught
+
+WordPress leaves *unregistered* shortcodes as literal text, so any page still holding an old `[contact-form-7 …]` tag would print it raw. The framework registers a shim (`bp_cf7_shim` in [functions-forms.php](functions-forms.php), on `init` priority 99) that maps the orphaned tag to the right bp form by its CF7 `title` attribute: *quote/estimate/request* → `[bp-quote-form]`, *employ/application/career/job* → `[bp-employment-form]` (HVAC, only if registered), everything else → `[bp-contact-form]`. It only registers when `wpcf7_contact_form_tag_func()` is absent, so a site still running the real CF7 plugin keeps its own handler. The nightly housekeeping cron also runs `bp_cf7_sweep_content()`, which rewrites the leftover tag out of `post_content` (incl. Elements CPT) and plain-string `postmeta` (skips serialized blobs) so the content gets permanently cleaned — a near-no-op once a site is clean (LIKE-gated).
+
 ### The two standard forms
 
 These are defined once in [functions-forms.php](functions-forms.php) and shared across all 130+ sites — change them in the framework, every site updates.
@@ -1035,10 +1039,10 @@ Site-specific overrides go in `style-site.css` in the child theme.
 ### style-site.css is COMPILED — it is never served directly
 
 `bp_build_site_css()` (in `functions-style-sheets.php`, on `after_setup_theme`) compiles `style-site.css` → `dist/site.css` + `dist/site.min.css`. The browser is served **`dist/site.min.css?ver=_BP_VERSION`** (the `battleplanweb` admin user gets the unminified `dist/site.css`). Editing `style-site.css` alone is not enough to see changes:
-- **Rebuild is mtime-gated** — `dist/` only regenerates when `style-site.css` is newer than the dist files. (Same pattern for core CSS and for `.min.js`.)
-- **Cache-bust is `_BP_VERSION` only** — the enqueue URL's `?ver=` is the theme version, so once EverCache/Cloudflare cache `dist/site.min.css`, edits won't appear until the cache is purged or the version bumps.
+- **Rebuild is content-hash-gated** — `dist/` regenerates whenever the source content changes, tracked via a `dist/*.sig` file holding an md5 of the source (`site.css.sig` for the site build; `core-critical.css.sig` / `core-deferred.css.sig` for core). This is deploy-stable. (It used to be mtime-gated, which silently broke: git/WP Engine checkouts stamp every file with the same time, so a content-updated `style-site.css` and a stale committed `dist/site.min.css` tied on mtime and the rebuild was skipped — sites served old compiled CSS indefinitely. Fixed June 2026.)
+- **Cache-bust is `_BP_VERSION . '.' . filemtime(dist file)`** — the enqueue `?ver=` now includes the compiled file's mtime, which `file_put_contents` bumps on every rebuild. So a rebuild changes the asset URL and busts EverCache/Cloudflare automatically; no manual purge needed for CSS edits. (The inline critical CSS is echoed straight into `wp_head`, so it's never cached separately.)
 
-So after changing `style-site.css`: ensure the dist rebuilds (touch/upload so its mtime is newest, or delete `dist/site.min.css`), then **purge EverCache + Cloudflare**. To verify quickly, log in as `battleplanweb` (served the unminified, freshly-rebuilt `dist/site.css`). If a site "ignores" your CSS, a stale compiled `dist/site.min.css` is the first suspect.
+So after changing `style-site.css`, just deploy it — the next front-end pageload rebuilds `dist/` (hash changed) and the new `?ver` busts the CDN. To verify quickly, log in as `battleplanweb` (served the unminified `dist/site.css`). If a site still "ignores" your CSS, check that `dist/site.css.sig` matches `md5(style-site.css)` on the server.
 
 ### Page content has NO comment syntax
 

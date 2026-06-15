@@ -42,6 +42,18 @@ $printPage .= '
 
 $num++;
 $printPage .= '
+	<p><strong>'.$num.') SMS / TEXT MESSAGING</strong></p>
+
+	<p>'.$biz.' offers text (SMS) messaging so we can respond to your questions and help you. <b>How you opt in:</b> you consent to receive text messages from us when you provide your mobile number — for example, by entering it into the chat on our website, submitting it on a contact or quote form, or giving it to our team. Consent to receive text messages is not a condition of any purchase.</p>
+
+	<p>The messages you may receive include replies to your inquiries, appointment and scheduling information, and customer-care or service updates. <b>Message frequency varies. Message and data rates may apply.</b></p>
+
+	<p>You can opt out at any time by replying <b>STOP</b> to any text message; reply <b>HELP</b> for help. After you reply STOP, we will send one confirmation message and then stop texting you.</p>
+
+	<p><b>Your mobile information is never shared.</b> Mobile opt-in information and your phone number are not shared with, sold, or rented to any third parties or affiliates for their marketing purposes. Numbers you provide for text messaging are used solely by '.$biz.' to communicate with you about your request.</p>';
+
+$num++;
+$printPage .= '
 	<p><strong>'.$num.') COOKIES & TRACKING</strong></p>
 
 	<p>We use cookies to improve functionality and personalize your experience. Cookies are small text files stored on your device. Some expire when you close your browser; others remain until deleted. You can disable cookies in your browser settings, though this may impact site functionality. This site does not currently respond to Do Not Track signals.</p>

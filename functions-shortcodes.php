@@ -1661,7 +1661,7 @@ function bp_desktop_mobile_img( $atts ) {
 // Generate a WordPress gallery and filter
 add_shortcode( 'get-gallery', 'battleplan_setUpWPGallery' );
 function battleplan_setUpWPGallery( $atts, $content = null ) {
-	bp_enqueue_script( 'battleplan-script-lightbox', 'script-lightbox' );
+	bp_enqueue_script( 'battleplan-script-lightbox', 'script-lightbox', ['battleplan-script-pages'] );
 	bp_inline_minified_css( get_template_directory() . '/style-lightbox.css' );
 
 	$a = shortcode_atts( array( 'name'=>'', 'size'=>'thumbnail', 'id'=>'', 'columns'=>'5', 'max'=>'-1', 'offset'=>'0', 'caption'=>'false', 'start'=>'', 'end'=>'', 'order_by'=>'menu_order', 'order'=>'ASC', 'tags'=>'', 'field'=>'', 'operator'=>'any', 'class'=>'', 'include'=>'', 'exclude'=>'', 'unique'=>'true', 'value'=>'', 'type'=>'', 'compare'=>'' ), $atts );

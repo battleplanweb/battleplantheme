@@ -443,6 +443,103 @@ function bp_default_quote_body($submit_label = 'Request Quote') {
 
 
 /*--------------------------------------------------------------
+# CF7 Legacy Shim ([contact-form-7])
+#
+# Contact Form 7 was removed framework-wide in favour of [bp-form].
+# Any page whose content still holds the old [contact-form-7 …] tag would
+# otherwise print the raw shortcode as literal text — WordPress leaves
+# UNREGISTERED shortcodes untouched. This registers a handler so the orphaned
+# tag renders the matching bp form at runtime, and a nightly housekeeping
+# sweep (bp_cf7_sweep_content) rewrites the tag out of the database for good.
+#
+# Guarded by !function_exists('wpcf7_contact_form_tag_func') so any site still
+# legitimately running the CF7 plugin keeps its own handler — we only catch the
+# tag when the plugin is gone and nothing else is registered to handle it.
+--------------------------------------------------------------*/
+
+add_action('init', function() {
+	if (!function_exists('wpcf7_contact_form_tag_func')) {
+		add_shortcode('contact-form-7', 'bp_cf7_shim');
+	}
+}, 99);
+
+function bp_cf7_shim($atts = []) {
+	return do_shortcode(bp_cf7_target_shortcode($atts));
+}
+
+// Map a [contact-form-7] tag (parsed atts array, or the raw attribute string)
+// to the bp form that replaces it. The decision is driven by the CF7 `title`
+// attribute — the only piece stable across sites (numeric ids differ per install):
+//   title contains quote / estimate / request → [bp-quote-form]
+//   title contains employ / application / …    → [bp-employment-form] (HVAC; only if registered)
+//   anything else                              → [bp-contact-form]
+function bp_cf7_target_shortcode($atts) {
+	if (!is_array($atts)) $atts = shortcode_parse_atts((string)$atts) ?: [];
+	$title = strtolower((string)($atts['title'] ?? ''));
+
+	if (preg_match('/quote|estimate|request/', $title)) return '[bp-quote-form]';
+	if (preg_match('/employ|application|career|job/', $title) && shortcode_exists('bp-employment-form')) {
+		return '[bp-employment-form]';
+	}
+	return '[bp-contact-form]';
+}
+
+// Rewrite every leftover [contact-form-7 …] tag in the database to the bp form
+// that replaces it. Covers post_content (incl. the Elements CPT) and plain-string
+// postmeta (Page Top / Page Bottom heroes live there). Serialized/JSON meta is
+// skipped so byte-length-prefixed blobs are never corrupted. Candidate rows are
+// found with a LIKE, so the sweep is a near-no-op once a site is clean.
+// Returns the number of rows changed. No-op while the CF7 plugin is active.
+function bp_cf7_sweep_content(): int {
+	global $wpdb;
+
+	if (function_exists('wpcf7_contact_form_tag_func')) return 0;
+
+	$pattern = '/\[contact-form-7\b[^\]]*\]/i';
+	$swap = function($text) use ($pattern) {
+		return preg_replace_callback($pattern, function($m) {
+			$inner = preg_replace('/^\[contact-form-7\s*/i', '', rtrim($m[0], ']'));
+			return bp_cf7_target_shortcode($inner);
+		}, $text);
+	};
+
+	$changed = 0;
+
+	// post_content (publish/future/draft/pending/private — incl. Elements CPT)
+	$rows = $wpdb->get_results(
+		"SELECT ID, post_content FROM {$wpdb->posts}
+		 WHERE post_content LIKE '%contact-form-7%'
+		   AND post_status IN ('publish','future','draft','pending','private')"
+	);
+	foreach ((array)$rows as $r) {
+		$new = $swap($r->post_content);
+		if ($new !== $r->post_content) {
+			$wpdb->update($wpdb->posts, ['post_content' => $new], ['ID' => $r->ID]);
+			clean_post_cache($r->ID);
+			$changed++;
+		}
+	}
+
+	// postmeta — plain strings only (never touch serialized/JSON blobs)
+	$metas = $wpdb->get_results(
+		"SELECT meta_id, post_id, meta_value FROM {$wpdb->postmeta}
+		 WHERE meta_value LIKE '%contact-form-7%'"
+	);
+	foreach ((array)$metas as $m) {
+		if (is_serialized($m->meta_value)) continue;
+		$new = $swap($m->meta_value);
+		if ($new !== $m->meta_value) {
+			$wpdb->update($wpdb->postmeta, ['meta_value' => $new], ['meta_id' => $m->meta_id]);
+			clean_post_cache($m->post_id);
+			$changed++;
+		}
+	}
+
+	return $changed;
+}
+
+
+/*--------------------------------------------------------------
 # Multi-step wrapper ([bp-form-steps])
 --------------------------------------------------------------*/
 
@@ -1404,14 +1501,14 @@ function bp_is_test_submission($fields) {
 }
 
 function bp_blocklist_emails() {
-	return [$_SERVER['HTTP_HOST'] ?? '', 'testing.com', 'test@', 'b2blistbuilding', 'amy.wilsonmkt@gmail', 'agency.leads.fish', 'landrygeorge8@gmail', 'digitalconciergeservice', 'themerchantlendr', 'fluidbusinessresources', 'focal-pointcoaching.net', 'zionps', 'rddesignsllc', 'domainworld', 'marketing.ynsw@gmail', 'seoagetechnology@gmail', 'excitepreneur.net', 'bullmarket.biz', 'tworld', 'garywhi777@gmail', 'ronyisthebest16@gmail', 'ronythomas611@gmail', 'ronythomasrecruiter@gmail', 'ideonagency.net', 'axiarobbie20@gmail', 'hyper-tidy', 'readyjob.org', 'thefranchisecreatornetwork', 'franchisecreatormarketing', 'legendarygfx', 'hitachi-metal-jp', 'expresscommerce.co', 'zaphyrpro', 'erjconsult', 'christymkts@gmail', 'theheritageseo', 'freedomwebdesigns', 'wesavesmallbusinesses@gmail', 'bimservicesllc.net', 'spamhunter.co', 'myspamburner.co', 'spamshield.co', 'excelestimation.net', 'dmccreativesolutions', 'mdhmx', 'digitalmarketingvas', 'rushmoreblueprint.co', 'answeraide', 'servicesuite.io', 'webtechxpress', 'medicopostura', 'anna.cramer@outlook', 'stephania.sander@yahoo', 'yourmarketingagencyfuture@gmail', '.pawsafer.sale', 'wexinc', 'erjsolutions', 'frequentlyonline', 'thawkingo', 'podiatristusa', 'besocialworldwide', 'taylah.jordan@gmail', 'garzagaragedoors', 'westholtmed.net', 'agape1life', 'bayougraphics', 'betterfinancialsolution', 'betterbusinessedge', 'econnectlocal', 'sbiestimationll', 'zentrades.pro', 'appfactoryhub', 'caredogbest', 'w-bmason', 'vibrantestimation', 'tylersupplycompany', 'steinerseo', 'foxmail', 'posicionamientoparapymes', 'testeurpascher', 'sbi-estimation', 'est.sbiestimation', 'jebcapitalpartners', 'bestcontractorsites', 'secondestimationllc', 'ipayperlead', 'difusionagencia', 'seedranchflavor', 'grupoiasa', 'hedgestone', '6pmarketing', 'sowsustainability', 'xruma', 'businesscoachvas', 'costestimating', 'theubique-group', 'earnmillions', 'logodesignsteam', 'gracegroupsllc', 'rushmoreblueprintpartners', 'wiseins1', 'cleaning-dallas', 'financingmycustomers', 'innovenservices.com', 'ismael57morenozvm@outlook.com', 'vasdirect.com', 'webmai.co', 'hdsupply.com', 'automisly', 'flinnrgs32', '.co.uk', 'OYOapp.com', 'getoffyourhighhorse', 'advancedbodyscan.com', 'clientcaf.info', 'brucesilverman.outsourcing', 'chemtreat.com', 'astoundz.com', 'xinyisolar.online', 'BISHOPKNIGHTLLC.COM', 'rezult.org', 'casey.swiftt@aol.com', 'aecom-usa.com', 'academicproductions.com', 'houseflippers.biz', 'virtualhandsupport.com', 'pursuitind.com', 'magwitch.com', 'toptalentvas', 'mzfederal', 'moneysquad', 'dadknowsdiy.com', 'cahillestimating', 'bestaitools', 'dynamicvirtualmanager', 'expertcellent', 'dctechnolabs', 'ip-advocaat.com', 'bizbuydave', 'trustedvirtualteam', 'thevirtualsalesgroup', 'servicecallsaver', 'tile-stonecraetions', 'catehvac', 'bovafoodsco', 'usestateboilerinspector', 'kunal-kakkar', 'globalpartfinder', 'vladislavdev', 'frontierenergy', 'insuretuckertn', 'doanything', 'virtualeaseservice', 'humanwebdesign', 'dwbytes', 'onlinereviewfixer', 'archtri', 'aircoolsupply','restorecalls', 'businessbrokersleads', 'leaddesire', 'delphiconstructions', 'vettedvas', 'facilitiesfirstcall'];
+	return [$_SERVER['HTTP_HOST'] ?? '', 'testing.com', 'test@', 'b2blistbuilding', 'amy.wilsonmkt@gmail', 'agency.leads.fish', 'landrygeorge8@gmail', 'digitalconciergeservice', 'themerchantlendr', 'fluidbusinessresources', 'focal-pointcoaching.net', 'zionps', 'rddesignsllc', 'domainworld', 'marketing.ynsw@gmail', 'seoagetechnology@gmail', 'excitepreneur.net', 'bullmarket.biz', 'tworld', 'garywhi777@gmail', 'ronyisthebest16@gmail', 'ronythomas611@gmail', 'ronythomasrecruiter@gmail', 'ideonagency.net', 'axiarobbie20@gmail', 'hyper-tidy', 'readyjob.org', 'thefranchisecreatornetwork', 'franchisecreatormarketing', 'legendarygfx', 'hitachi-metal-jp', 'expresscommerce.co', 'zaphyrpro', 'erjconsult', 'christymkts@gmail', 'theheritageseo', 'freedomwebdesigns', 'wesavesmallbusinesses@gmail', 'bimservicesllc.net', 'spamhunter.co', 'myspamburner.co', 'spamshield.co', 'excelestimation.net', 'dmccreativesolutions', 'mdhmx', 'digitalmarketingvas', 'rushmoreblueprint.co', 'answeraide', 'servicesuite.io', 'webtechxpress', 'medicopostura', 'anna.cramer@outlook', 'stephania.sander@yahoo', 'yourmarketingagencyfuture@gmail', '.pawsafer.sale', 'wexinc', 'erjsolutions', 'frequentlyonline', 'thawkingo', 'podiatristusa', 'besocialworldwide', 'taylah.jordan@gmail', 'garzagaragedoors', 'westholtmed.net', 'agape1life', 'bayougraphics', 'betterfinancialsolution', 'betterbusinessedge', 'econnectlocal', 'sbiestimationll', 'zentrades.pro', 'appfactoryhub', 'caredogbest', 'w-bmason', 'vibrantestimation', 'tylersupplycompany', 'steinerseo', 'foxmail', 'posicionamientoparapymes', 'testeurpascher', 'sbi-estimation', 'est.sbiestimation', 'jebcapitalpartners', 'bestcontractorsites', 'secondestimationllc', 'ipayperlead', 'difusionagencia', 'seedranchflavor', 'grupoiasa', 'hedgestone', '6pmarketing', 'sowsustainability', 'xruma', 'businesscoachvas', 'costestimating', 'theubique-group', 'earnmillions', 'logodesignsteam', 'gracegroupsllc', 'rushmoreblueprintpartners', 'wiseins1', 'cleaning-dallas', 'financingmycustomers', 'innovenservices.com', 'ismael57morenozvm@outlook.com', 'vasdirect.com', 'webmai.co', 'hdsupply.com', 'automisly', 'flinnrgs32', '.co.uk', 'OYOapp.com', 'getoffyourhighhorse', 'advancedbodyscan.com', 'clientcaf.info', 'brucesilverman.outsourcing', 'chemtreat.com', 'astoundz.com', 'xinyisolar.online', 'BISHOPKNIGHTLLC.COM', 'rezult.org', 'casey.swiftt@aol.com', 'aecom-usa.com', 'academicproductions.com', 'houseflippers.biz', 'virtualhandsupport.com', 'pursuitind.com', 'magwitch.com', 'toptalentvas', 'mzfederal', 'moneysquad', 'dadknowsdiy.com', 'cahillestimating', 'bestaitools', 'dynamicvirtualmanager', 'expertcellent', 'dctechnolabs', 'ip-advocaat.com', 'bizbuydave', 'trustedvirtualteam', 'thevirtualsalesgroup', 'servicecallsaver', 'tile-stonecraetions', 'catehvac', 'bovafoodsco', 'usestateboilerinspector', 'kunal-kakkar', 'globalpartfinder', 'vladislavdev', 'frontierenergy', 'insuretuckertn', 'doanything', 'virtualeaseservice', 'humanwebdesign', 'dwbytes', 'onlinereviewfixer', 'archtri', 'aircoolsupply','restorecalls', 'businessbrokersleads', 'leaddesire', 'delphiconstructions', 'vettedvas', 'facilitiesfirstcall', 'smith-tanks', 'Estimating & Quantity Takeoff Services'];
 }
 
 function bp_blocklist_words() {
-	return ['и', 'д', 'б', 'й', 'л', 'ы', 'З', 'у', 'Я', 'à', 'ô', 'ố', 'ế', 'á', 'ủ', 'ạ', '湖', '結', '衣', '市', '翼', '清', '水', 'http://', 'https://', 'www.', 'Dear Customer', 'Dear Sales', 'Sir/Madam', 'Sir/Madame', 'Hello Business Owner', 'HELLO SALES', 'bitcoin', 'mаlwаre', 'antivirus', 'marketing', 'SEO', 'Wordpress', 'Cost Estimation', 'Guarantee Estimation', 'World Wide Estimating', 'lead generation', 'completely Free', 'Dear Receptionist', 'Franchise Creator', 'rebrand your business', 'organic traffic', 'more business leads', 'We do Estimation', 'get your site published', 'high quality appointments and leads', 'new website', 'Google’s 1st Page', 'Does this sound interesting?', 'I notice that your website is very basic', 'appeal to more clients', 'improve your sales', 'free estimate from our company', 'blocks spam leads', 'block spam messages', 'In order to get a better idea of our work', 'cost estimates and take-off', 'If you\'ve made it this far', 'home services advertising' , 'cooperate with your company', 'influencers on Instagram', 'procuring below items', 'Optimizing your website', 'your website could be', 'blog posts they write', 'mobile app development', 'Your website could benefit', 'available for download', 'at no cost', 'boost your business', 'targeted Customers', 'We help you get', 'designing and development', 'create your Website' , 'contact form blasting', 'make money online', 'not an AI haha', 'send over the set of plans', 'audit on your website', 'audit on your site', 'Are you in need of', 'kingcontacts', 'suggestions for your site', 'Using Google Adsense', 'a few issues with your website', 'very profitable business matter', 'needs of business owners', 'According to the documents', 'Can you ship to Barbados', 'Freelance Web Designer', 'Our estimating services can help you', 'We have FREE opportunity', 'MyEListing', 'food packaging company', 'sexy pictures', 'Publicamos en periódicos', '1st page of Google', 'Need Accurate Estimate', 'Take-off Packages', 'data harvesting services', 'Accurate Quantity Take-offs', 'collaborate with your company', 'partner with you', 'business brokers that represent buyers', 'an official quotation', 'a company based in the Philippines', 'prefer not to hear from me again', 'short term investment', 'review provider', 'Myspace group', 'penning this article', 'abide by your requests', 'premium databases', 'Getting Reviews', 'estimating services', 'UncoverHiddenProfits', 'helping your business make money', 'find higher quality leads', 'estimating/architectural', 'opportunity to provide you', 'build business credit', 'eliminate personal guarantees', 'untangle my tax situation', 'exclusive sales training event', 'Are Your Hiring A Full Time HVAC Tech', 'less than perfect credit customers', 'Can you take on more clients', 'excellent option for prospective entrepreneurs', 'I noticed a few things that could use some fixing' , 'Kegel Devices', 'N/A', 'web development company', 'Mary Kay Sales Director', 'Odena', 'Kouvach', 'audit of your website', 'Ozempic', 'Wegovy', 'enhance your website', 'no-obligation proposal', 'summary of the audit results', 'XRumer 23 StrongAI', 'WhatsApp: +', 'Most Demanded AI Apps', 'possible acquire some Hose Pipes', 'Good Day, I am inquiring on', 'Good discount pricing will be appreciated', 'fix your forwarding system', 'Please advise on how soon order can be shipped out', 'fastest and most efficient way to destroy your wealth', 'do you have surcharges when making payment', 'Whatsapp', 'AUDIT ME, AMMAR', 'competitors are attracting clients online', 'handle more clients', 'I can miss a lot of emails from spam', 'Confidential – Please Forward to Owner', 'website placements', 'homepage that seems out of place', 'simple chatbot', 'guaranteed form submission', 'Good day and would like to know', 'gesture of goodwill', 'Reply YES', 'better website', 'increasing your organic leads', 'online visibility', 'saw a bug on your website', 'optimized website conversions', ' I can support your business', 'reduce their operating costs', 'unable to complete the checkout process', 'keyword-driven traffic', 'Buy exclusive repair leads', 'I help local businesses', 'top 3 map results', 'both need the right partner', 'Acquitrust Advisors', 'your clients', 'improve follow-up on missed calls', 'Want me to send over', 'targeted traffic', 'sourcing service quotations', 'top keywords', 'quantity takeoffs', 'cost planning', 'should show up first', 'Can I show you', 'AI employee', 'You pick the keywords', 'in front of hundreds', 'a few HVAC company owner', 'putting businesses like yours', 'advertising system', 'website traffic', 'update your keywords', 'live within 24 hours', 'Are you interested', 'would you take that spot', 'above the competition', 'position your brand', 'fix your website' ];
+	return ['и', 'д', 'б', 'й', 'л', 'ы', 'З', 'у', 'Я', 'à', 'ô', 'ố', 'ế', 'á', 'ủ', 'ạ', '湖', '結', '衣', '市', '翼', '清', '水', 'http://', 'https://', 'www.', 'Dear Customer', 'Dear Sales', 'Sir/Madam', 'Sir/Madame', 'Hello Business Owner', 'HELLO SALES', 'bitcoin', 'mаlwаre', 'antivirus', 'marketing', 'SEO', 'Wordpress', 'Cost Estimation', 'Guarantee Estimation', 'World Wide Estimating', 'lead generation', 'completely Free', 'Dear Receptionist', 'Franchise Creator', 'rebrand your business', 'organic traffic', 'more business leads', 'We do Estimation', 'get your site published', 'high quality appointments and leads', 'new website', 'Google’s 1st Page', 'Does this sound interesting?', 'I notice that your website is very basic', 'appeal to more clients', 'improve your sales', 'free estimate from our company', 'blocks spam leads', 'block spam messages', 'In order to get a better idea of our work', 'cost estimates and take-off', 'If you\'ve made it this far', 'home services advertising' , 'cooperate with your company', 'influencers on Instagram', 'procuring below items', 'Optimizing your website', 'your website could be', 'blog posts they write', 'mobile app development', 'Your website could benefit', 'available for download', 'at no cost', 'boost your business', 'targeted Customers', 'We help you get', 'designing and development', 'create your Website' , 'contact form blasting', 'make money online', 'not an AI haha', 'send over the set of plans', 'audit on your website', 'audit on your site', 'Are you in need of', 'kingcontacts', 'suggestions for your site', 'Using Google Adsense', 'a few issues with your website', 'very profitable business matter', 'needs of business owners', 'According to the documents', 'Can you ship to Barbados', 'Freelance Web Designer', 'Our estimating services can help you', 'We have FREE opportunity', 'MyEListing', 'food packaging company', 'sexy pictures', 'Publicamos en periódicos', '1st page of Google', 'Need Accurate Estimate', 'Take-off Packages', 'data harvesting services', 'Accurate Quantity Take-offs', 'collaborate with your company', 'partner with you', 'business brokers that represent buyers', 'an official quotation', 'a company based in the Philippines', 'prefer not to hear from me again', 'short term investment', 'review provider', 'Myspace group', 'penning this article', 'abide by your requests', 'premium databases', 'Getting Reviews', 'estimating services', 'UncoverHiddenProfits', 'helping your business make money', 'find higher quality leads', 'estimating/architectural', 'opportunity to provide you', 'build business credit', 'eliminate personal guarantees', 'untangle my tax situation', 'exclusive sales training event', 'Are Your Hiring A Full Time HVAC Tech', 'less than perfect credit customers', 'Can you take on more clients', 'excellent option for prospective entrepreneurs', 'I noticed a few things that could use some fixing' , 'Kegel Devices', 'N/A', 'web development company', 'Mary Kay Sales Director', 'Odena', 'Kouvach', 'audit of your website', 'Ozempic', 'Wegovy', 'enhance your website', 'no-obligation proposal', 'summary of the audit results', 'XRumer 23 StrongAI', 'WhatsApp: +', 'Most Demanded AI Apps', 'possible acquire some Hose Pipes', 'Good Day, I am inquiring on', 'Good discount pricing will be appreciated', 'fix your forwarding system', 'Please advise on how soon order can be shipped out', 'fastest and most efficient way to destroy your wealth', 'do you have surcharges when making payment', 'Whatsapp', 'AUDIT ME, AMMAR', 'competitors are attracting clients online', 'handle more clients', 'I can miss a lot of emails from spam', 'Confidential – Please Forward to Owner', 'website placements', 'homepage that seems out of place', 'simple chatbot', 'guaranteed form submission', 'Good day and would like to know', 'gesture of goodwill', 'Reply YES', 'better website', 'increasing your organic leads', 'online visibility', 'saw a bug on your website', 'optimized website conversions', ' I can support your business', 'reduce their operating costs', 'unable to complete the checkout process', 'keyword-driven traffic', 'Buy exclusive repair leads', 'I help local businesses', 'top 3 map results', 'both need the right partner', 'Acquitrust Advisors', 'your clients', 'improve follow-up on missed calls', 'Want me to send over', 'targeted traffic', 'sourcing service quotations', 'top keywords', 'quantity takeoffs', 'cost planning', 'should show up first', 'Can I show you', 'AI employee', 'You pick the keywords', 'in front of hundreds', 'a few HVAC company owner', 'putting businesses like yours', 'advertising system', 'website traffic', 'update your keywords', 'live within 24 hours', 'Are you interested', 'would you take that spot', 'above the competition', 'position your brand', 'fix your website', 'shows up in AI-based search tools', 'Can I walk you through it?', ];
 }
 
 function bp_blocklist_kill() {
-	return ['Get more reviews, Get more customers', 'We write the reviews', 'write an article', 'a free article', 'keyword targeted traffic', 'rank your google', 'boost your leads', 'write you an article', 'write a short article', 'website home page design', 'updated version of your website', 'free sample Home Page', 'what I would suggest for your website', 'improving your website', 'Would you be interested in an article', 'Do you need help with graphic design', 'I have an Audit of your website', 'Can we talk about your Website?', 'fix a few things on your website', 'warnings found on your website', 'offer some suggestions for your website', 'analyzed your website', 'He querido escribirte porque veo una excelente', 'enhance your online reputation', 'Supercharge your GMB listing', 'top pages of google', 'based in India', 'your website is in a great design', 'I apologize for my cold outreach', 'Our answering service frees you up', 'no-strings-attached call', 'local customers from your website', 'few opportunities to increase engagement', 'specialize in ad creatives', 'your site is absolutely outdated', 'This is not a sales pitch', 'help you hit the Top 3', 'qualified local leads', 'affecting your search rankings', 'top of search results', 'first in search results', 'targeted visitors', 'ahead of competitors', 'strong buyer interest', 'complimentary website previews', 'free website preview', 'costing you calls every week', 'your website could use some improvement', 'technical ranking errors', 'appears in AI search results', 'changing how customers find' ];
+	return ['Get more reviews, Get more customers', 'We write the reviews', 'write an article', 'a free article', 'keyword targeted traffic', 'rank your google', 'boost your leads', 'write you an article', 'write a short article', 'website home page design', 'updated version of your website', 'free sample Home Page', 'what I would suggest for your website', 'improving your website', 'Would you be interested in an article', 'Do you need help with graphic design', 'I have an Audit of your website', 'Can we talk about your Website?', 'fix a few things on your website', 'warnings found on your website', 'offer some suggestions for your website', 'analyzed your website', 'He querido escribirte porque veo una excelente', 'enhance your online reputation', 'Supercharge your GMB listing', 'top pages of google', 'based in India', 'your website is in a great design', 'I apologize for my cold outreach', 'Our answering service frees you up', 'no-strings-attached call', 'local customers from your website', 'few opportunities to increase engagement', 'specialize in ad creatives', 'your site is absolutely outdated', 'This is not a sales pitch', 'help you hit the Top 3', 'qualified local leads', 'affecting your search rankings', 'top of search results', 'first in search results', 'targeted visitors', 'ahead of competitors', 'strong buyer interest', 'complimentary website previews', 'free website preview', 'costing you calls every week', 'your website could use some improvement', 'technical ranking errors', 'appears in AI search results', 'changing how customers find', 'track everything yourself inside Google Analytics', 'exact moment they\'re searching online' ];
 }
 

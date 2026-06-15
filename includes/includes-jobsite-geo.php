@@ -479,18 +479,27 @@ function bp_jobsite_setup($post_id, $user) {
 		$manual_alt = trim((string) get_field($cap, $post_id));
 		if ($manual_alt !== '') {
 			update_post_meta($aid, '_wp_attachment_image_alt', $manual_alt);
+			// Manual caption skips the AI alt-text call (which captures the crop
+			// focus point for free), so run a focus-only pass once so square
+			// thumbnails still frame the subject rather than the center.
+			if (function_exists('bp_ai_alt_available') && bp_ai_alt_available() && !get_post_meta($aid, '_bp_focus_position', true)) {
+				wp_schedule_single_event(time() + 5, 'bp_ai_focus_generate_cron', [$aid]);
+			}
 			continue;
 		}
 
 		$current_alt = trim((string) get_post_meta($aid, '_wp_attachment_image_alt', true));
 		$title       = get_the_title($post_id);
 
-		// Empty or just the title fallback → set title now, queue AI to enhance.
-		// Anything else means a user (or a previous AI pass) already wrote it, so leave alone.
+		// No caption yet → queue AI to write one. The jobsite caption cron writes the
+		// AI result to BOTH the visible ACF caption field and the attachment alt (and
+		// captures the crop focus point), so new jobs get a visible caption — not just
+		// an attachment alt the archive never shows. The title placeholder fills the
+		// attachment alt until the AI pass completes.
 		if ($current_alt === '' || $current_alt === $title) {
 			if ($current_alt === '') update_post_meta($aid, '_wp_attachment_image_alt', $title);
 			if (function_exists('bp_ai_alt_available') && bp_ai_alt_available()) {
-				wp_schedule_single_event(time() + 5, 'bp_ai_alt_generate_cron', [$aid]);
+				wp_schedule_single_event(time() + 5, 'bp_geo_caption_cron', [$post_id, $img, $cap]);
 			}
 		}
 	}
@@ -502,6 +511,25 @@ function bp_jobsite_setup($post_id, $user) {
 	// Notification email is now sent from bp_geo_run_ai_rewrite() after the AI
 	// finishes — not here — so that only fully-completed posts trigger a notification.
 }
+
+// Jobsite caption cron — writes the AI caption to the visible ACF caption field
+// AND the attachment alt, and captures the crop focus point in the same call.
+// (The generic bp_ai_alt_generate_cron only writes attachment alt, which the
+// jobsite archive never displays — it reads the ACF jobsite_photo_N_alt field.)
+add_action('bp_geo_caption_cron', function($post_id, $img_field, $cap_field) {
+	$post_id = (int) $post_id;
+	if (get_post_type($post_id) !== 'jobsite_geo') return;
+	if (!function_exists('bp_ai_generate_alt_text')) return;
+
+	$aid = (int) get_field($img_field, $post_id);
+	if (!$aid) return;
+
+	$alt = bp_ai_generate_alt_text($aid); // also stores _bp_focus_position
+	if (is_wp_error($alt) || $alt === '') return;
+
+	update_field($cap_field, $alt, $post_id);                 // visible caption (ACF)
+	update_post_meta($aid, '_wp_attachment_image_alt', $alt); // attachment alt
+}, 10, 3);
 
 // Save important info to meta data upon publishing or updating post
 add_action('save_post', 'battleplan_saveJobsite', 10, 3);

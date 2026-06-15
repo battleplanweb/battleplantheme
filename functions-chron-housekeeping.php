@@ -19,6 +19,16 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 		}
 	}
 
+/*--------------------------------------------------------------
+# CF7 Legacy Shortcode Sweep
+#
+# Rewrite any leftover [contact-form-7 …] tags in the DB to the bp form that
+# replaced them, so old content stops printing the raw shortcode as text.
+# Near-no-op once a site is clean (gated by a LIKE inside the helper).
+--------------------------------------------------------------*/
+
+	if (function_exists('bp_cf7_sweep_content')) bp_cf7_sweep_content();
+
 	bp_typeface_refresh();
 
 	if (function_exists('battleplan_remove_user_roles')) battleplan_remove_user_roles();

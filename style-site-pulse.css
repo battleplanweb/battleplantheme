@@ -32,7 +32,36 @@
 --------------------------------------------------------------*/
 
 :root {
-	/* ---- AutoDrive theme: cream canvas, orange accent, slate nav ---- */
+
+	/* ---- Brand palette: the three per-install company colors ----
+	   The DEFAULT scheme below is concrete ON PURPOSE. Each brand slot (dominant / secondary /
+	   accent) carries four tonal variants — lightest / light / dark / darkest — for real range:
+	   lightest = card/panel fills, light = highlights/hover, dark = borders/shadows, darkest =
+	   strong borders/deep fills. These are real values, NOT var() references, because choosing
+	   legible text for a given background is contrast MATH that plain CSS can't do. Per-install,
+	   the admin's Generate run hands the brand colors to AI, which TUNES all four variants per
+	   color (a fixed mix doesn't suit every color) and runs the role colors through a
+	   deterministic WCAG contrast guard (site_pulse_enforce_contrast in PHP), then emits an
+	   inline <style id="sp-color-scheme"> overriding these. Design against the brand slots
+	   (e.g. var(--sp-dominant-lightest)) — they re-theme for free. */
+	--sp-dominant-color:                                       #ec9a3c;
+	--sp-dominant-lightest:                                    #fcf1e4;
+	--sp-dominant-light:                                       #f4c48e;
+	--sp-dominant-dark:                                        #aa6f2b;
+	--sp-dominant-darkest:                                     #714a1d;
+	--sp-secondary-color:                                      #474c54;
+	--sp-secondary-lightest:                                   #e5e6e7;
+	--sp-secondary-light:                                      #94979c;
+	--sp-secondary-dark:                                       #33373c;
+	--sp-secondary-darkest:                                    #222428;
+	--sp-accent-color:                                         #2f8f57;
+	--sp-accent-lightest:                                      #e2efe7;
+	--sp-accent-light:                                         #86be9e;
+	--sp-accent-dark:                                          #22673e;
+	--sp-accent-darkest:                                       #17442a;
+
+	/* ---- AutoDrive default theme: cream canvas, orange accent, slate nav.
+	   Concrete, contrast-checked values — overridden per-install by the generated scheme. */
 	--sp-sidebar-bg:                                           #474c54;
 	--sp-sidebar-bg-hover:                                     #545a64;
 	--sp-sidebar-bg-active:                                    #ec9a3c;
@@ -41,7 +70,7 @@
 	--sp-sidebar-text-active:                                  #ffffff;
 	--sp-sidebar-accent:                                       #ec9a3c;
 	--sp-sidebar-accent-glow:                                  rgba(236, 154, 60, 0.18);
-	--sp-sidebar-width:                                        260px;
+	--sp-sidebar-width:                                        280px;
 	--sp-sidebar-border:                                       rgba(255,255,255,0.08);
 
 	--sp-primary:                                              #ec9a3c;
@@ -71,7 +100,6 @@
 	--sp-radius-sm:                                            8px;
 	--sp-radius-lg:                                            16px;
 	--sp-radius-pill:                                          999px;
-	--sp-font:                                                 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 	--sp-transition:                                           0.2s ease;
 
 	--input-padding:                                           8px 15px;
@@ -83,9 +111,16 @@
 	--input-color-focus:                                       var(--sp-text);
 	--input-background-focus:                                  var(--sp-bg-white);
 
-
 	--input-border:                                            1px solid var(--sp-border);
+
+	--font-primary:                                            "Open Sans", sans-serif;
+	--font-secondary:                                          var(--font-primary);
+	--font-tertiary:                                           var(--font-secondary);
+	--font-text:                                               "Open Sans", sans-serif;
 }
+
+#masthead,
+#colophon { display: none; }
 
 input[type="checkbox"],
 input[type="radio"] {
@@ -98,10 +133,17 @@ input[type="radio"] {
 --------------------------------------------------------------*/
 
 body.has-site-pulse {
-	background:                                                var(--sp-bg);
-	font-family:                                               var(--sp-font);
+	/* The app canvas stays white for a clean interface, regardless of the chosen scheme —
+	   the "background" color (--sp-bg) is repurposed as a subtle accent (table headers,
+	   input fills, hover rows). Cards + page share the white surface, separated by borders. */
+	background:                                                var(--sp-bg-white);
+	font-family:                                               var(--font-text);
 	color:                                                     var(--sp-text);
-	line-height:                                               1.5;
+	line-height:                                               1.8;
+}
+
+.sp-table.sp-mileage-table .sp-mileage-day-total-label {
+	line-height:                                               1.8;
 }
 
 body.has-site-pulse #primary,
@@ -113,6 +155,21 @@ body.has-site-pulse .entry-content {
 	width:                                                     100%;
 	padding:                                                   0;
 	margin:                                                    0;
+	/* The content-box layouts paint #main-content/#primary with var(--black-lowest)
+	   (style-grid.css), whose value lives in style-site.css's :root — which Site Pulse
+	   no longer loads. Own the background here so the content area matches the SP body
+	   instead of falling back to the framework's default grey. */
+	background:                                                var(--sp-bg-white);
+}
+
+/* The framework's fixed mobile menu bar (scroll-to-top + menu toggle) has no
+   place in the Site Pulse app — the app has its own mobile header + sidebar nav.
+   Remove it entirely. #mobile-menu-bar is position:fixed and the framework
+   reserves its 42px with the relative #mobile-menu-bar-faux spacer, so hide that
+   too or a blank 42px gap is left at the top on mobile. */
+body.has-site-pulse #mobile-menu-bar,
+body.has-site-pulse #mobile-menu-bar-faux {
+	display:                                                   none !important;
 }
 
 /* The framework parks #main-content in its centered minmax(0,1280px) "default"
@@ -154,7 +211,7 @@ body.has-site-pulse *::after {
 	background:                                                #7c3aed;
 	color:                                                     #ffffff;
 	font-size:                                                 13px;
-	font-family:                                               var(--sp-font);
+	font-family:                                               var(--font-text);
 	position:                                                  fixed;
 	top:                                                       0;
 	left:                                                      0;
@@ -183,7 +240,7 @@ body.has-site-pulse *::after {
 	background:                                                rgba(255,255,255,0.15);
 	color:                                                     #ffffff;
 	font-size:                                                 13px;
-	font-family:                                               var(--sp-font);
+	font-family:                                               var(--font-text);
 	max-width:                                                 350px;
 }
 
@@ -289,7 +346,10 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 .sp-sidebar {
 	grid-column:                                               1;
 	width:                                                     var(--sp-sidebar-width);
-	min-height:                                                100vh;
+	/* Height is set by top:0/bottom:0 below (viewport-tall, or minus the god bar) so the
+	   menu scrolls internally via overflow-y when it outgrows the screen. Do NOT add
+	   min-height:100vh — it lets the fixed box grow past the viewport, which pushes the
+	   bottom nav items off-screen where they can't be reached. */
 	background:                                                var(--sp-sidebar-bg);
 	display:                                                   grid;
 	grid-template-rows:                                        auto 1fr auto;
@@ -300,6 +360,12 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	z-index:                                                   200;
 	overflow-y:                                                auto;
 	overflow-x:                                                hidden;
+	/* Depth gradient driven entirely by overlay shadows (no second color var needed), so it
+	   works on whatever --sp-sidebar-bg the user/AI picks: a bright soft glow through the
+	   UPPER-MIDDLE, then a strong darkening toward the bottom so the gradient reads clearly.
+	   Inset shadows sit behind the nav content. */
+	box-shadow:                                                inset 0 210px 190px -140px rgba(255,255,255,0.16),
+	                                                           inset 0 -300px 240px -130px rgba(0,0,0,0.45);
 }
 
 .sp-sidebar-header {
@@ -311,6 +377,18 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 }
 
 .sp-sidebar-brand {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	align-items:                                               center;
+	gap:                                                       5px;
+	min-width:                                                 0;
+}
+
+.sp-sidebar-brand img {
+	border-radius:                                             var(--sp-radius-sm);
+}
+
+.sp-sidebar-brand-main {
 	display:                                                   grid;
 	grid-template-columns:                                     auto 1fr;
 	align-items:                                               center;
@@ -326,6 +404,26 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	font-weight:                                               700;
 	color:                                                     #ffffff;
 	letter-spacing:                                            -0.01em;
+}
+
+/* Optional logo image (header_logo_url) — replaces the icon + title */
+.sp-sidebar-logo {
+	display:                                                   block;
+	max-width:                                                 100%;
+	max-height:                                                80px;
+	width:                                                     auto;
+	height:                                                    auto;
+}
+
+/* "POWERED BY BP SITE PULSE" attribution under the brand */
+.sp-sidebar-powered {
+	font-size:                                                 9px;
+	font-weight:                                               700;
+	letter-spacing:                                            0.14em;
+	text-transform:                                            uppercase;
+	color:                                                     var(--sp-sidebar-text);
+	opacity:                                                   0.6;
+	text-align:                                                center;
 }
 
 .sp-sidebar-close {
@@ -362,7 +460,7 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	color:                                                     var(--sp-sidebar-text);
 	font-size:                                                 14px;
 	font-weight:                                               500;
-	font-family:                                               var(--sp-font);
+	font-family:                                               var(--font-text);
 	cursor:                                                    pointer;
 	border-radius:                                             var(--sp-radius-sm);
 	transition:                                                background var(--sp-transition), color var(--sp-transition);
@@ -373,11 +471,13 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 .sp-nav-item:hover {
 	background:                                                var(--sp-sidebar-bg-hover);
 	color:                                                     var(--sp-sidebar-text-hover);
+	font-weight:                                               800;
 }
 
 .sp-nav-item.active {
 	background:                                                var(--sp-sidebar-bg-active);
 	color:                                                     var(--sp-sidebar-text-active);
+	font-weight:                                               800;
 }
 
 .sp-nav-item.active::before {
@@ -438,7 +538,7 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	color:                                                     var(--sp-sidebar-text);
 	font-size:                                                 13px;
 	font-weight:                                               400;
-	font-family:                                               var(--sp-font);
+	font-family:                                               var(--font-text);
 	cursor:                                                    pointer;
 	border-radius:                                             var(--sp-radius-sm);
 	transition:                                                background var(--sp-transition), color var(--sp-transition);
@@ -465,8 +565,13 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 }
 
 .sp-nav-child.active {
-	color:                                                     var(--sp-sidebar-text-active);
-	background:                                                var(--sp-sidebar-bg-hover); /* subtle slate, not orange */
+	/* Active sub-items sit on bg-hover (subtle slate, not orange), so they use text-hover —
+	   the color the contrast guard guarantees legible on bg-hover. text-active is reserved for
+	   the active TOP-level item on bg-active, so no single text color has to read on two
+	   different backgrounds. The persistent fill + bold weight mark it active. */
+	color:                                                     var(--sp-sidebar-text-hover);
+	background:                                                var(--sp-sidebar-bg-hover);
+	font-weight:                                               600;
 }
 
 .sp-nav-child.active::before {
@@ -534,13 +639,16 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	display:                                                   grid;
 	grid-template-columns:                                     1fr auto;
 	align-items:                                               center;
-	padding:                                                   10px 0;
+	padding:                                                   10px;
 	margin-bottom:                                             20px;
-	background:                                                var(--sp-bg);
-	border-bottom:                                             1px solid var(--sp-border);
+	background:                                                var(--sp-g);
+	border:                                                    1px solid var(--white-lowest);
+	border-right:                                              1px solid var(--black-lowest);
+	border-bottom:                                             1px solid var(--black-lowest);
 	position:                                                  sticky;
 	top:                                                       0;
 	z-index:                                                   100;
+	border-radius:                                             var(--sp-radius);
 }
 
 .sp-topbar-left {
@@ -592,7 +700,7 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	background:                                                none;
 	color:                                                     var(--sp-text-secondary);
 	font-size:                                                 13px;
-	font-family:                                               var(--sp-font);
+	font-family:                                               var(--font-text);
 	cursor:                                                    pointer;
 	border-radius:                                             var(--sp-radius-sm);
 	transition:                                                background var(--sp-transition), color var(--sp-transition);
@@ -746,9 +854,34 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	padding:                                                   4px;
 }
 
+.sp-mobile-brand {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	justify-content:                                           center;
+	gap:                                                       2px;
+	min-width:                                                 0;
+}
+
 .sp-mobile-title {
 	font-size:                                                 16px;
 	font-weight:                                               700;
+}
+
+.sp-mobile-logo {
+	display:                                                   block;
+	max-width:                                                 100%;
+	max-height:                                                28px;
+	width:                                                     auto;
+	height:                                                    auto;
+}
+
+.sp-mobile-powered {
+	font-size:                                                 8px;
+	font-weight:                                               700;
+	letter-spacing:                                            0.14em;
+	text-transform:                                            uppercase;
+	color:                                                     var(--sp-sidebar-text);
+	opacity:                                                   0.6;
 }
 
 .sp-mobile-user .sp-icon {
@@ -810,10 +943,34 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 }
 
 .sp-panel-header h2 {
-	font-size:                                                 24px;
-	font-weight:                                               700;
+	font-size:                                                 42px;
+	font-weight:                                               800;
+	text-align:                                                left;
 	color:                                                     var(--sp-text);
 	margin:                                                    0;
+}
+
+/* Breadcrumb-style panel title: a small parent-section eyebrow stacked ABOVE the main page
+   headline, each on its own line, with a rule above the headline separating them. Reusable — wrap
+   any panel title as
+   <div class="sp-crumb"><div class="sp-crumb-parent">Parent</div><h2 class="sp-crumb-current">Current</h2></div>
+   width:fit-content keeps the separating rule as wide as the headline, not the whole column. */
+.sp-crumb {
+	width:                                                     fit-content;
+}
+
+.sp-crumb-parent {
+	font-size:                                                 18px;
+	font-weight:                                               700;
+	color:                                                     var(--sp-text);
+	margin-bottom:                                             4px;
+}
+
+/* The current page is the main headline (inherits 42px/800 from .sp-panel-header h2); the
+   border-top + padding place it below the eyebrow with a separating rule above it. */
+.sp-panel-header h2.sp-crumb-current {
+	border-top:                                                1px solid var(--sp-border);
+	padding-top:                                               4px;
 }
 
 
@@ -963,6 +1120,77 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	color:                                                     var(--sp-text);
 }
 
+/* Stat cards — the shared "at-a-glance metric" tile used across modules (mileage summary,
+   dashboard, analytics): white card, caps label, big value, and a round tinted icon badge.
+   Fully variable-driven, so it re-themes with the rest of the app. */
+.sp-stat-grid {
+	display:                                                   grid;
+	grid-template-columns:                                     repeat(auto-fit, minmax(180px, 1fr));
+	gap:                                                       16px;
+	margin-bottom:                                             24px;
+}
+
+.sp-stat-card {
+	display:                                                   flex;
+	align-items:                                               center;
+	justify-content:                                           start;
+	gap:                                                       14px;
+	/* Subtle upper bevel: a white highlight on the top + left edges, transparent on the bottom +
+	   right, plus twin drop-shadows in --sp-secondary-light offset both diagonals so the lower edge
+	   picks up a faint brand-toned line. Re-themes with the scheme. */
+	background:                                                var(--sp-secondary-lightest);
+	border-top:                                                1px solid #fff;
+	border-left:                                               1px solid #fff;
+	border-right:                                              1px solid transparent;
+	border-bottom:                                             1px solid transparent;
+	border-radius:                                             var(--sp-radius-lg);
+	filter:                                                    drop-shadow(-1px -1px 0 var(--sp-secondary-light)) drop-shadow(1px 1px 0 var(--sp-secondary-light));
+	padding:                                                   18px 20px;
+	transition:                                                transform var(--sp-transition);
+}
+
+.sp-stat-text {
+	min-width:                                                 0;
+	order:                                                     2;
+}
+
+.sp-stat-label {
+	font-size:                                                 11px;
+	font-weight:                                               600;
+	text-transform:                                            uppercase;
+	letter-spacing:                                            0.06em;
+	color:                                                     var(--sp-secondary-dark);
+	margin-bottom:                                             6px;
+}
+
+.sp-stat-value {
+	font-size:                                                 24px;
+	font-weight:                                               800;
+	line-height:                                               1.1;
+	letter-spacing:                                            -0.01em;
+	color:                                                     var(--sp-text);
+}
+
+.sp-stat-icon {
+	flex:                                                      0 0 auto;
+	width:                                                     55px;
+	height:                                                    55px;
+	border-radius:                                             50%;
+	display:                                                   grid;
+	place-items:                                               center;
+	color:                                                     var(--sp-secondary-color);
+	order:                                                     1;
+}
+
+.sp-stat-icon svg {
+	font-size:                                                 30px;
+}
+
+/* Accent variants so semantic tiles (tolls, pending, totals) can tint their badge. */
+.sp-stat-icon.is-success { background: var(--sp-success-light); color: var(--sp-success); }
+.sp-stat-icon.is-warning { background: var(--sp-warning-light); color: var(--sp-warning); }
+.sp-stat-icon.is-danger  { background: var(--sp-danger-light);  color: var(--sp-danger);  }
+
 
 /*--------------------------------------------------------------
 # Shared Layout Primitives
@@ -1010,7 +1238,7 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	flex-wrap:                                                 wrap;
 	align-items:                                               center;
 	gap:                                                       10px 18px;
-	margin-bottom:                                             18px;
+	margin:                                                    36px 0;
 }
 
 .sp-toolbar-group {
@@ -1026,12 +1254,13 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	text-transform:                                            uppercase;
 	letter-spacing:                                            0.05em;
 	color:                                                     var(--sp-text-light);
+	display:                                                   none;
 }
 
 /* Area 4 — card wrapper for tables / data. */
 .sp-table-card {
 	background:                                                var(--sp-bg-white);
-	border:                                                    1px solid var(--sp-border);
+	border:                                                    1px solid var(--sp-secondary-light);
 	border-radius:                                             var(--sp-radius-lg);
 	overflow:                                                  hidden;
 }
@@ -1065,7 +1294,7 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	min-height:                                                40px;
 	padding:                                                   9px 14px;
 	font-size:                                                 14px;
-	font-family:                                               var(--sp-font);
+	font-family:                                               var(--font-text);
 	color:                                                     var(--sp-text);
 	background:                                                var(--sp-bg-white);
 	border:                                                    1px solid var(--sp-border);
@@ -1094,6 +1323,12 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	background-repeat:                                         no-repeat;
 	background-position:                                       right 12px center;
 	padding-right:                                             36px;
+}
+
+/* Smaller text in the OPEN dropdown list only — the closed value stays at the input size (14px).
+   The native popup renders each <option> at the option's own font-size. */
+.sp-select option {
+	font-size:                                                 12px;
 }
 
 /* Datalist-backed combobox inputs (location + purpose). Wear the SAME thin chevron as
@@ -1215,7 +1450,7 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	align-items:                                               center;
 	justify-content:                                           center;
 	gap:                                                       6px;
-	font-family:                                               var(--sp-font);
+	font-family:                                               var(--font-text);
 	font-weight:                                               600;
 	font-size:                                                 14px;
 	line-height:                                               1;
@@ -1239,26 +1474,33 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 }
 
 .sp-btn-primary {
-	--_btn-color:                                              #ffffff;
-	--_btn-color-h:                                            #ffffff;
-	--_btn-bg:                                                 var(--sp-primary);
-	--_btn-bg-h:                                               var(--sp-primary-hover);
+	--_btn-color:                                              var(--sp-primary-contrast, #ffffff);
+	--_btn-bg:                                                 var(--sp-dominant-color);
+	--_btn-border:                                             2px solid var(--sp-dominant-color);
+
+	--_btn-color-h:                                            var(--sp-accent-darkest, #000000);
+	--_btn-bg-h:                                               var(--sp-accent-light);
+	--_btn-border-h:                                           2px solid rgba(0,0,0,0.3);
 }
 
 .sp-btn-secondary {
-	--_btn-color:                                              var(--sp-text);
-	--_btn-color-h:                                            var(--sp-text);
-	--_btn-bg:                                                 var(--sp-bg-white);
-	--_btn-bg-h:                                               var(--sp-bg);
-	--_btn-border:                                             1px solid var(--sp-border);
-	--_btn-border-h:                                           1px solid var(--sp-border-focus);
+	--_btn-color:                                              var(--sp-dominant-color);
+	--_btn-bg:                                                 var(--sp-dominant-lightest);
+	--_btn-border:                                             1px solid rgba(0, 0, 0, 0.1);
+
+	--_btn-color-h:                                            var(--sp-accent-dark, #000000);
+	--_btn-bg-h:                                               var(--sp-accent-lightest);
+	--_btn-border-h:                                           1px solid rgba(0, 0, 0, 0.2);
 }
 
 .sp-btn-ghost {
-	--_btn-color:                                              var(--sp-text-secondary);
-	--_btn-color-h:                                            var(--sp-text);
-	--_btn-bg:                                                 rgba(44, 42, 39, 0.05);
-	--_btn-bg-h:                                               rgba(44, 42, 39, 0.10);
+	--_btn-color:                                              var(--sp-dominant-light);
+	--_btn-bg:                                                 transparent;
+	--_btn-border:                                             1px solid var(--sp-dominant-lightest);
+
+	--_btn-color-h:                                            var(--sp-accent-dark, #000000);
+	--_btn-bg-h:                                               var(--sp-accent-lightest);
+	--_btn-border-h:                                           1px solid rgba(0, 0, 0, 0.2);
 }
 
 .sp-btn-danger {
@@ -1338,10 +1580,11 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 
 .sp-status-badge {
 	display:                                                   inline-block;
-	padding:                                                   4px 10px;
-	border-radius:                                             12px;
+	padding:                                                   4px 12px;
+	border-radius:                                             var(--sp-radius-pill);
 	font-size:                                                 12px;
 	font-weight:                                               600;
+	letter-spacing:                                            0.01em;
 	text-transform:                                            capitalize;
 }
 
@@ -1499,6 +1742,21 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	grid-template-columns:                                     repeat(auto-fill, minmax(220px, 1fr));
 }
 
+/* A From/To date pair claims its OWN full-width row in the filter grid (so the dropdowns sit on the
+   line above and the date range stays together), with the two inputs side by side. Reusable — wrap
+   any date pair in <div class="sp-date-range">. */
+.sp-report-filters .sp-date-range {
+	grid-column:                                               1 / -1;
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       12px;
+}
+
+.sp-report-filters .sp-date-range .sp-input {
+	width:                                                     auto;
+	flex:                                                      0 1 280px;
+}
+
 
 /*--------------------------------------------------------------
 # Admin Panels
@@ -1514,6 +1772,10 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 
 .sp-admin-toolbar {
 	margin-bottom:                                             20px;
+}
+
+.sp-admin-toolbar button {
+	margin-right:                                              10px;
 }
 
 .sp-admin-table-wrap {
@@ -1557,6 +1819,10 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	border-radius:                                             var(--sp-radius);
 	padding:                                                   20px;
 	margin-bottom:                                             16px;
+}
+
+.sp-module-row {
+	text-align:                                                left;
 }
 
 /* ---- Tiers (Roles) ---- */
@@ -1814,6 +2080,235 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 .sp-settings-card-body > h4:first-child,
 .sp-settings-card-body > p:first-child {
 	margin-top:                                                0;
+}
+
+/* ---- Color Scheme editor (Site Settings) ---- */
+.sp-color-grid {
+	display:                                                   grid;
+	grid-template-columns:                                     repeat(auto-fill, minmax(280px, 1fr));
+	gap:                                                       14px;
+}
+
+.sp-color-card {
+	position:                                                  relative;
+	display:                                                   grid;
+	grid-template-columns:                                     auto 1fr;
+	align-items:                                               center;
+	gap:                                                       14px;
+	padding:                                                   14px;
+	background:                                                var(--sp-bg-white);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius);
+}
+
+.sp-color-swatch {
+	width:                                                     48px;
+	height:                                                    48px;
+	border-radius:                                             var(--sp-radius-sm);
+	border:                                                    1px solid rgba(0,0,0,0.15);
+	box-shadow:                                                inset 0 0 0 2px var(--sp-bg-white);
+	cursor:                                                    pointer;
+	padding:                                                   0;
+	flex:                                                      0 0 auto;
+	transition:                                                transform var(--sp-transition);
+}
+
+.sp-color-swatch:hover {
+	transform:                                                 scale(1.06);
+}
+
+.sp-color-meta {
+	min-width:                                                 0;
+}
+
+.sp-color-label {
+	font-weight:                                               600;
+	font-size:                                                 14px;
+	color:                                                     var(--sp-text);
+}
+
+.sp-color-desc {
+	font-size:                                                 12px;
+	color:                                                     var(--sp-text-secondary);
+	margin:                                                    2px 0 4px;
+	line-height:                                               1.35;
+}
+
+.sp-color-hex-input {
+	width:                                                     104px;
+	font-family:                                               ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size:                                                 12px;
+	text-transform:                                            uppercase;
+	letter-spacing:                                            0.04em;
+	color:                                                     var(--sp-text);
+	padding:                                                   5px 9px;
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-sm);
+	background:                                                var(--sp-bg-white);
+}
+
+.sp-color-hex-input:focus {
+	outline:                                                   none;
+	border-color:                                              var(--sp-border-focus);
+}
+
+.sp-color-hex-input.invalid {
+	border-color:                                              var(--sp-danger);
+	color:                                                     var(--sp-danger);
+}
+
+/* The native color input is the picker target — hidden behind the swatch */
+.sp-color-input {
+	position:                                                  absolute;
+	left:                                                      14px;
+	bottom:                                                    14px;
+	width:                                                     1px;
+	height:                                                    1px;
+	opacity:                                                   0;
+	border:                                                    0;
+	padding:                                                   0;
+	pointer-events:                                            none;
+}
+
+.sp-color-actions {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       12px;
+	flex-wrap:                                                 wrap;
+	margin-top:                                                20px;
+}
+
+.sp-color-status {
+	font-size:                                                 13px;
+	color:                                                     var(--sp-success);
+	font-weight:                                               600;
+}
+
+/* AI brand-color generator */
+.sp-ai-colors {
+	background:                                                var(--sp-primary-light);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius);
+	padding:                                                   18px;
+	margin-bottom:                                             20px;
+}
+
+.sp-ai-colors-title {
+	margin:                                                    0;
+	font-size:                                                 15px;
+}
+
+.sp-brand-rows {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	gap:                                                       8px;
+	margin-bottom:                                             14px;
+}
+
+.sp-brand-row {
+	position:                                                  relative;
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       10px;
+	background:                                                var(--sp-bg-white);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-sm);
+	padding:                                                   8px 10px;
+}
+
+/* The role label (Dominant / Secondary / Accent) takes the leading space; the
+   swatch + hex sit at the trailing edge. */
+.sp-brand-slot-label {
+	flex:                                                      1 1 auto;
+	display:                                                   flex;
+	flex-direction:                                            column;
+	gap:                                                       1px;
+	min-width:                                                 0;
+}
+
+.sp-brand-slot-name {
+	font-weight:                                               700;
+	font-size:                                                 13px;
+	color:                                                     var(--sp-text);
+}
+
+.sp-brand-slot-label .sp-help-text {
+	font-size:                                                 11.5px;
+	line-height:                                               1.3;
+}
+
+.sp-brand-swatch {
+	width:                                                     34px;
+	height:                                                    34px;
+	flex:                                                      0 0 auto;
+}
+
+.sp-brand-row .sp-color-hex-input {
+	width:                                                     92px;
+}
+
+.sp-brand-picker {
+	position:                                                  absolute;
+	left:                                                      8px;
+	bottom:                                                    6px;
+	width:                                                     1px;
+	height:                                                    1px;
+	opacity:                                                   0;
+	border:                                                    0;
+	padding:                                                   0;
+	pointer-events:                                            none;
+}
+
+.sp-brand-remove {
+	border:                                                    none;
+	background:                                                transparent;
+	color:                                                     var(--sp-text-light);
+	font-size:                                                 20px;
+	line-height:                                               1;
+	cursor:                                                    pointer;
+	padding:                                                   0 2px;
+}
+
+.sp-brand-remove:hover {
+	color:                                                     var(--sp-danger);
+}
+
+.sp-brand-controls {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       10px;
+	flex-wrap:                                                 wrap;
+}
+
+.sp-brand-controls #sp-ai-note {
+	flex:                                                      1 1 240px;
+	min-width:                                                 200px;
+}
+
+.sp-ai-rationale {
+	margin-top:                                                12px;
+	font-size:                                                 13px;
+	line-height:                                               1.45;
+	color:                                                     var(--sp-text-secondary);
+}
+
+.sp-color-divider {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       12px;
+	margin:                                                    0 0 16px;
+	color:                                                     var(--sp-text-light);
+	font-size:                                                 12px;
+	text-transform:                                            uppercase;
+	letter-spacing:                                            0.08em;
+}
+
+.sp-color-divider::before,
+.sp-color-divider::after {
+	content:                                                   "";
+	flex:                                                      1;
+	height:                                                    1px;
+	background:                                                var(--sp-border);
 }
 
 .sp-field-list {
@@ -2487,50 +2982,301 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	gap:                                                       8px;
 }
 
-.sp-mileage-summary {
+/* Action buttons relocated into the period-toolbar row, pushed to the right edge. Global —
+   shared by Mileage (PDF/CSV/Map/+Add) and every expense section (+Add …). */
+.sp-toolbar-actions {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	align-items:                                               center;
+	gap:                                                       8px;
+	margin-left:                                               auto;
+}
+
+.sp-mileage-summary,
+.sp-vexp-summary,
+.sp-meal-summary {
 	margin-bottom:                                             16px;
+}
+
+/* Summary holders sit empty until their cards render — don't reserve the bottom gap then. */
+.sp-vexp-summary:empty,
+.sp-meal-summary:empty {
+	margin-bottom:                                             0;
 }
 
 /* Mileage summary reuses the shared .sp-meta-bar (see Shared Layout Primitives). */
 .sp-mileage-summary-grid { /* legacy alias */ }
 
-.sp-mileage-table {
+/* Generic table = structural only. The card frame (border, radius, rounded-corner clipping) lives
+   on the wrapper div (.sp-table-card / .sp-admin-table-wrap / …) because a <table> with
+   border-collapse ignores border-radius, doesn't clip with overflow, and a filter on it risks the
+   matrix's sticky headers. Header styling comes from the .sp-thead/thead treatment above. Putting a
+   border + bevel here too just double-framed every wrapped table. */
+.sp-table {
 	width:                                                     100%;
 	border-collapse:                                           collapse;
 	background:                                                var(--sp-bg-white);
-	border:                                                    1px solid var(--sp-border);
-	border-radius:                                             var(--sp-radius);
-	overflow:                                                  hidden;
+	margin:                                                    0;
 }
 
-.sp-mileage-table thead {
-	background:                                                var(--sp-bg);
+
+
+
+
+/* Vehicle Expenses (B) + Business Meals (C) + Competitive Shopping (D) + Other Expenses (E)
+   share these table styles. */
+.sp-vexp-table th.sp-num,
+.sp-vexp-table td.sp-num,
+.sp-meal-table th.sp-num,
+.sp-meal-table td.sp-num,
+.sp-shop-table th.sp-num,
+.sp-shop-table td.sp-num,
+.sp-oexp-table th.sp-num,
+.sp-oexp-table td.sp-num {
+	text-align:                                                right;
+	white-space:                                               nowrap;
 }
 
-.sp-mileage-table th,
-.sp-mileage-table td {
+/* These have more columns than fit a phone — let the card scroll sideways. */
+.sp-meal-content .sp-table-card,
+.sp-shop-content .sp-table-card,
+.sp-oexp-content .sp-table-card {
+	overflow-x:                                                auto;
+}
+
+.sp-meal-table td:first-child,
+.sp-meal-table th:first-child,
+.sp-shop-table td:first-child,
+.sp-shop-table th:first-child,
+.sp-oexp-table td:first-child,
+.sp-oexp-table th:first-child {
+	white-space:                                               nowrap;
+}
+
+/* ---- Expense Report cover page (Sections A–F composed together) ---- */
+.sp-rep-table th.sp-num,
+.sp-rep-table td.sp-num,
+.sp-rep-summary th.sp-num,
+.sp-rep-summary td.sp-num {
+	text-align:                                                right;
+	white-space:                                               nowrap;
+}
+
+.sp-rep-content .sp-table-card {
+	overflow-x:                                                auto;
+}
+
+/* Report header block (Payee / Period / Week Ending / Home Base). */
+.sp-rep-head {
+	margin-bottom:                                             20px;
+}
+.sp-rep-head-title {
+	font-size:                                                 18px;
+	font-weight:                                               700;
+	color:                                                     var(--sp-text);
+	margin-bottom:                                             12px;
+}
+.sp-rep-head-grid {
+	display:                                                   grid;
+	grid-template-columns:                                     repeat(auto-fit, minmax(170px, 1fr));
+	gap:                                                       12px 24px;
+}
+.sp-rep-field {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	gap:                                                       2px;
+}
+.sp-rep-field-label {
+	font-size:                                                 11px;
+	font-weight:                                               600;
+	text-transform:                                            uppercase;
+	letter-spacing:                                            .04em;
+	color:                                                     var(--sp-text-light);
+}
+.sp-rep-field-val {
+	font-size:                                                 15px;
+	color:                                                     var(--sp-text);
+}
+
+.sp-rep-section-title {
+	font-size:                                                 16px;
+	font-weight:                                               700;
+	color:                                                     var(--sp-text);
+	margin:                                                    28px 0 10px;
+}
+
+/* Total Due to Employee — the bottom-line row on the Summary of Expenses table. */
+.sp-rep-total td {
+	font-weight:                                               800;
+	font-size:                                                 15px;
+	background:                                                var(--sp-secondary-lightest);
+	color:                                                     var(--sp-text);
+	border-top:                                                2px solid var(--sp-border);
+}
+
+.sp-vexp-table tfoot td {
+	font-weight:                                               700;
+}
+
+.sp-vexp-grand td {
+	border-top:                                                2px solid var(--sp-border);
+}
+
+.sp-vexp-form {
+	margin-bottom:                                             18px;
+}
+
+.sp-vexp-form-grid {
+	display:                                                   grid;
+	grid-template-columns:                                     repeat(3, minmax(0, 1fr));
+	gap:                                                       12px;
+}
+
+.sp-vexp-form-actions {
+	display:                                                   flex;
+	gap:                                                       10px;
+	margin-top:                                                14px;
+}
+
+/* Receipt scan control (reusable across expense modules) */
+.sp-receipt-row {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       12px;
+	flex-wrap:                                                 wrap;
+	margin-bottom:                                             14px;
+	padding-bottom:                                            14px;
+	border-bottom:                                             1px dashed var(--sp-border);
+}
+
+.sp-receipt-status {
+	margin:                                                    0;
+}
+
+.sp-receipt-status.sp-receipt-err {
+	color:                                                     var(--sp-danger);
+}
+
+/* Section B category subtotals */
+.sp-vexp-subtotals {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       8px 18px;
+	margin-top:                                                12px;
+	padding:                                                   0 4px;
+	font-size:                                                 13px;
+	color:                                                     var(--sp-text-secondary);
+}
+
+.sp-vexp-sub-label {
+	color:                                                     var(--sp-text-light);
+}
+
+
+/* ---- Generic table + reusable table-header treatment ----
+   Every Site Pulse table carries a generic ".sp-table" class IN ADDITION to its specific class
+   (sp-mileage-table, sp-toll-table, …) so styling can target all tables at once while the specific
+   class stays available for per-table overrides. The header treatment matches the stat-card look:
+   a light secondary fill + the same bevel (white highlight on the top/left edge, a faint
+   --sp-secondary-light line on the bottom/right). It hangs off ".sp-table thead" (the generic
+   table class), and ALSO off a standalone ".sp-thead" class and the app-wide fallback, so it
+   matches no matter which hook a table uses. The bevel uses BORDERS rather than filter:drop-shadow
+   on purpose — a filter on a <thead> breaks sticky headers and can disturb column painting; the
+   border form renders the identical light-top / secondary-shadow-bottom edge and is safe here. */
+body.has-site-pulse thead,
+.sp-table thead,
+thead.sp-thead {
+	background:                                                var(--sp-secondary-lightest);
+}
+
+body.has-site-pulse thead th,
+.sp-table thead th,
+thead.sp-thead th {
+	background:                                                var(--sp-secondary-lightest);
+	border-top:                                                1px solid #fff;
+	border-bottom:                                             1px solid var(--sp-secondary-light);
 	padding:                                                   10px 14px;
+}
+
+body.has-site-pulse thead th:first-child,
+.sp-table thead th:first-child,
+thead.sp-thead th:first-child {
+	border-left:                                               1px solid #fff;
+}
+
+body.has-site-pulse thead th:last-child,
+.sp-table thead th:last-child,
+thead.sp-thead th:last-child {
+	border-right:                                              1px solid var(--sp-secondary-light);
+}
+
+
+body.has-site-pulse tbody tr.sp-vexp-grand {
+	background:                                                var(--sp-secondary-lightest);
+}
+
+body.has-site-pulse .sp-table tbody tr th,
+body.has-site-pulse .sp-table tbody tr td {
+	padding:                                                   2px 14px;
 	text-align:                                                left;
 	font-size:                                                 14px;
-	border-bottom:                                             1px solid var(--sp-border);
-	vertical-align:                                            top;
+	border-bottom:                                             1px solid var(--sp-secondary-light);
+	vertical-align:                                            middle;
+	color:                                                     var(--sp-text-secondary);
 }
 
-.sp-mileage-table th {
+body.has-site-pulse .sp-mileage-table td,
+body.has-site-pulse .sp-rep-mileage td {
+	line-height:                                               1.3;
+}
+
+
+/*
+body.has-site-pulse .sp-table tbody tr:first-of-type th,
+body.has-site-pulse .sp-table tbody tr:first-of-type td {
+	padding-top:                                               6px;
+}
+	*/
+
+body.has-site-pulse .sp-table tbody tr:last-of-type th,
+body.has-site-pulse .sp-table tbody tr:last-of-type td {
+	border-bottom:                                             none;
+}
+
+body.has-site-pulse .sp-table th {
 	font-weight:                                               600;
-	color:                                                     var(--sp-text-secondary);
+	color:                                                     var(--sp-secondary-dark);
 	font-size:                                                 12px;
 	text-transform:                                            uppercase;
 	letter-spacing:                                            0.5px;
+	text-align:                                                left;
 }
 
-.sp-mileage-table tbody tr:last-child td {
-	border-bottom:                                             0;
+body.has-site-pulse .sp-table .sp-mileage-leg td {
+	border-bottom:                                             none;
+}
+
+body.has-site-pulse .sp-table .sp-mileage-leg:first-of-type td {
+	padding-top:                                               8px;
+}
+
+body.has-site-pulse .sp-table .sp-mileage-day-total td {
+	padding-bottom:                                            2px;
+}
+
+body.has-site-pulse .sp-table.sp-mileage-table .sp-mileage-day-total td {
+	padding-bottom:                                            8px;
+}
+
+
+
+
+body.has-site-pulse .sp-table.sp-mileage-table tbody {
+	border-bottom:                                             1px solid var(--sp-secondary-light);
 }
 
 .sp-mileage-path-cell {
 	max-width:                                                 360px;
-	color:                                                     var(--sp-text-secondary);
 }
 
 .sp-mileage-path-loading {
@@ -2553,96 +3299,102 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	font-size:                                                 14px;
 }
 
-/* Toll reconciliation panel */
-.sp-toll-intro {
-	font-size: 14px;
-	line-height: 1.5;
-	color: var(--sp-text-secondary);
+body.has-site-pulse .sp-table .sp-mileage-charge {
+	text-align:                                                center;
+}
+
+/* Instruction / intro text inside ANY .sp-meta-bar — kept consistent (the smaller size) across
+   every Site Pulse page. Catches sp-toll-intro, sp-vexp-intro and any future *-intro box, so all
+   "instructions" boxes read the same. */
+.sp-meta-bar [class*="-intro"] {
+	font-size:                                                 14px;
+	line-height:                                               1.5;
+	color:                                                     var(--sp-text-secondary);
 }
 
 .sp-toll-file {
-	font-size: 14px;
+	font-size:                                                 14px;
 }
 
 .sp-toll-status {
-	margin: 14px 0;
-	padding: 12px 16px;
-	border-radius: var(--sp-radius);
-	background: var(--sp-bg);
-	border: 1px solid var(--sp-border);
-	font-size: 14px;
-	color: var(--sp-text);
+	margin:                                                    14px 0;
+	padding:                                                   12px 16px;
+	border-radius:                                             var(--sp-radius);
+	background:                                                var(--sp-bg);
+	border:                                                    1px solid var(--sp-border);
+	font-size:                                                 14px;
+	color:                                                     var(--sp-text);
 }
 
 .sp-toll-status-error {
-	background: var(--sp-danger-light, #fbeaea);
-	border-color: var(--sp-danger, #c0392b);
-	color: var(--sp-danger, #c0392b);
+	background:                                                var(--sp-danger-light, #fbeaea);
+	border-color:                                              var(--sp-danger, #c0392b);
+	color:                                                     var(--sp-danger, #c0392b);
 }
 
 .sp-toll-status-ok {
-	background: var(--sp-success-light, #e8f5ea);
-	border-color: var(--sp-success, #2e7d32);
-	color: var(--sp-success, #2e7d32);
+	background:                                                var(--sp-success-light, #e8f5ea);
+	border-color:                                              var(--sp-success, #2e7d32);
+	color:                                                     var(--sp-success, #2e7d32);
 }
 
 .sp-toll-days {
-	display: flex;
-	flex-direction: column;
-	gap: 16px;
+	display:                                                   flex;
+	flex-direction:                                            column;
+	gap:                                                       16px;
 }
 
 .sp-toll-day {
-	padding: 16px 18px;
+	padding:                                                   16px 18px;
 }
 
 .sp-toll-day-head {
-	display: flex;
-	align-items: center;
-	gap: 12px;
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       12px;
 }
 
 .sp-toll-day-date {
-	font-weight: 700;
-	font-size: 16px;
+	font-weight:                                               700;
+	font-size:                                                 16px;
 }
 
 .sp-toll-day-meta {
-	color: var(--sp-text-secondary);
-	font-size: 13px;
+	color:                                                     var(--sp-text-secondary);
+	font-size:                                                 13px;
 }
 
 .sp-toll-day-head .sp-btn {
-	margin-left: auto;
+	margin-left:                                               auto;
 }
 
 .sp-toll-day-done {
-	opacity: 0.92;
+	opacity:                                                   0.92;
 }
 
 .sp-toll-loading {
-	padding: 16px 4px;
-	color: var(--sp-text-secondary);
-	font-size: 14px;
+	padding:                                                   16px 4px;
+	color:                                                     var(--sp-text-secondary);
+	font-size:                                                 14px;
 }
 
 .sp-toll-day-body {
-	margin-top: 14px;
+	margin-top:                                                14px;
 }
 
 .sp-toll-table {
-	width: 100%;
-	border-collapse: collapse;
-	font-size: 14px;
-	table-layout: fixed;
+	width:                                                     100%;
+	border-collapse:                                           collapse;
+	font-size:                                                 14px;
+	table-layout:                                              fixed;
 }
 
 .sp-toll-table th,
 .sp-toll-table td {
-	padding: 8px 10px;
-	border-bottom: 1px solid var(--sp-border);
-	text-align: left;
-	vertical-align: top;
+	padding:                                                   8px 10px;
+	border-bottom:                                             1px solid var(--sp-border);
+	text-align:                                                left;
+	vertical-align:                                            top;
 }
 
 /* Column budget — give "Assign to leg" enough room to show the full leg label.
@@ -2658,58 +3410,58 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 .sp-toll-gantry { font-size: 12px; color: var(--sp-text-secondary); line-height: 1.3; margin-top: 1px; word-break: break-word; }
 
 .sp-toll-table th {
-	font-size: 12px;
-	text-transform: uppercase;
-	letter-spacing: 0.03em;
-	color: var(--sp-text-secondary);
+	font-size:                                                 12px;
+	text-transform:                                            uppercase;
+	letter-spacing:                                            0.03em;
+	color:                                                     var(--sp-text-secondary);
 }
 
 .sp-toll-row-amb {
-	background: var(--sp-warning-light, #fff7e6);
+	background:                                                var(--sp-warning-light, #fff7e6);
 }
 
 .sp-toll-row-exc {
-	opacity: 0.6;
+	opacity:                                                   0.6;
 }
 
 .sp-toll-flag {
-	color: var(--sp-warning, #b8860b);
-	cursor: help;
+	color:                                                     var(--sp-warning, #b8860b);
+	cursor:                                                    help;
 }
 
 .sp-toll-reason {
-	font-size: 12px;
-	color: var(--sp-text-secondary);
-	margin-top: 2px;
+	font-size:                                                 12px;
+	color:                                                     var(--sp-text-secondary);
+	margin-top:                                                2px;
 }
 
 .sp-toll-compare {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 16px;
-	margin: 16px 0;
-	padding: 14px 16px;
-	background: var(--sp-bg);
-	border-radius: var(--sp-radius);
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       16px;
+	margin:                                                    16px 0;
+	padding:                                                   14px 16px;
+	background:                                                var(--sp-bg);
+	border-radius:                                             var(--sp-radius);
 }
 
 .sp-toll-compare-stat {
-	min-width: 130px;
+	min-width:                                                 130px;
 }
 
 .sp-toll-var-over {
-	color: var(--sp-danger, #c0392b);
+	color:                                                     var(--sp-danger, #c0392b);
 }
 
 .sp-toll-var-under {
-	color: var(--sp-success, #2e7d32);
+	color:                                                     var(--sp-success, #2e7d32);
 }
 
 .sp-toll-apply-row {
-	display: flex;
-	justify-content: flex-end;
-	gap: 8px;
-	align-items: center;
+	display:                                                   flex;
+	justify-content:                                           flex-end;
+	gap:                                                       8px;
+	align-items:                                               center;
 }
 
 .sp-map-info {
@@ -2774,92 +3526,88 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 }
 
 .sp-mileage-date {
-	font-weight:                                               500;
+	font-weight:                                               800;
 }
 
 .sp-mileage-row-actions {
 	display:                                                   flex;
 	gap:                                                       4px;
-	margin-top:                                                8px;
 }
 
-/* Mobile: reflow the cramped 5-column mileage log into stacked cards. Each row
-   becomes a flex container — Date and Route each take the full width (so the
-   route text gets room instead of jamming into a narrow column), then the
-   numeric cells (Miles / $ / Tolls / Trailer) wrap onto their own row below,
-   each with a small label since the table header is hidden. Status + row
-   actions sit on a final full-width row. */
+/*
+.sp-mileage-row-actions {
+	margin-top:                                                8px;
+}
+	*/
+
+/* A Status cell in ANY table: sit the edit/delete buttons to the RIGHT of the status badge
+   instead of stacked beneath it, and bottom-align the whole group so on tall rows (e.g. multiple
+   legs) the badge + edit/trash line up with the row total rather than floating at the top. Keyed
+   off the column class under body.has-site-pulse (works on every table without needing a class on
+   the <table>), not mileage-specific. (Mobile already lays them inline.) */
+   body.has-site-pulse th.sp-m-status,
+   body.has-site-pulse td.sp-m-status {
+	white-space:                                               nowrap;
+	vertical-align:                                            bottom;
+	padding-left:                                              36px;
+}
+
+body.has-site-pulse td.sp-m-status .sp-status-badge {
+	vertical-align:                                            middle;
+}
+
+body.has-site-pulse td.sp-m-status .sp-mileage-row-actions {
+	display:                                                   inline-flex;
+	margin-top:                                                0;
+	margin-left:                                               10px;
+	vertical-align:                                            middle;
+}
+
+/* ---- Per-leg mileage table (Date · Charge To · Route · Purpose · Miles · $ · Tolls · Status) ----
+   Each leg is its own row; a "Total for Day" row caps each day. Numeric cells right-align. */
+.sp-mileage-table td.sp-num,
+.sp-mileage-table .sp-mileage-charge {
+	white-space:                                               nowrap;
+}
+
+/* Per-leg mileage column alignment: Date / Route / Purpose stay left (table default); Charge To,
+   the numeric columns (Miles / $ / Trailer / Tolls) and Status are centered — header + body.
+   High specificity to beat the generic `…tbody tr td { text-align: left }` and `th.sp-th-num { right }`. */
+body.has-site-pulse .sp-mileage-table th.sp-th-num,
+body.has-site-pulse .sp-mileage-table th.sp-mileage-charge,
+body.has-site-pulse .sp-mileage-table th.sp-mileage-status,
+body.has-site-pulse .sp-mileage-table tbody tr td.sp-num,
+body.has-site-pulse .sp-mileage-table tbody tr td.sp-mileage-charge,
+body.has-site-pulse .sp-mileage-table tbody tr td.sp-m-status,
+body.has-site-pulse .sp-rep-mileage th.sp-num,
+body.has-site-pulse .sp-rep-mileage th.sp-mileage-charge,
+body.has-site-pulse .sp-rep-mileage tbody tr td.sp-num,
+body.has-site-pulse .sp-rep-mileage tbody tr td.sp-mileage-charge {
+	text-align:                                                center;
+}
+/* Day-total row: highlighted, with a strong bottom rule that separates one day from the next. */
+.sp-mileage-day-total td {
+	font-weight:                                               700;
+	color:                                                     var(--sp-text);
+}
+
+.sp-mileage-day-total td.sp-mileage-day-total-label,
+.sp-mileage-day-total td.sp-num {
+	border-top:                                                1px solid var(--sp-secondary-lightest);
+}
+
+
+/* Mobile: too many columns to reflow cleanly — let the table scroll sideways (matches the
+   other expense tables) rather than stacking each leg into a card. */
 @media (max-width: 600px) {
+	#sp-mileage-list .sp-table-card,
+	.sp-rep-content .sp-table-card {
+		overflow-x:                                               auto;
+	}
+
 	.sp-mileage-table,
-	.sp-mileage-table tbody,
-	.sp-mileage-table tfoot,
-	.sp-mileage-table td {
-		display:                                                  block;
-	}
-
-	.sp-mileage-table thead {
-		display:                                                  none;
-	}
-
-	/* Desktop-only alignment spacers aren't needed in the stacked card view. */
-	.sp-leg-blank {
-		display:                                                  none;
-	}
-
-	.sp-mileage-table tr {
-		display:                                                  flex;
-		flex-wrap:                                                wrap;
-		align-items:                                              flex-start;
-		gap:                                                      10px 20px;
-		padding:                                                  14px 16px;
-		border-bottom:                                            1px solid var(--sp-border);
-	}
-
-	.sp-mileage-table td {
-		padding:                                                  0;
-		border:                                                   none;
-		font-size:                                                15px;
-	}
-
-	/* Date + Route each claim a full-width line. */
-	.sp-mileage-table .sp-m-date,
-	.sp-mileage-table .sp-mileage-path-cell {
-		flex:                                                     0 0 100%;
-		max-width:                                                none;
-	}
-
-	.sp-mileage-table .sp-m-date {
-		font-weight:                                              700;
-		color:                                                    var(--sp-text);
-	}
-
-	/* Numeric columns share the next row, each label stacked above its value. */
-	.sp-mileage-table .sp-m-num {
-		display:                                                  flex;
-		flex-direction:                                           column;
-		gap:                                                      2px;
-		font-variant-numeric:                                     tabular-nums;
-	}
-
-	.sp-mileage-table .sp-m-num::before {
-		content:                                                  attr(data-label);
-		font-size:                                                10px;
-		font-weight:                                              600;
-		text-transform:                                           uppercase;
-		letter-spacing:                                           0.05em;
-		color:                                                    var(--sp-text-light);
-	}
-
-	/* Status badge and edit/delete actions on a final full-width row. */
-	.sp-mileage-table .sp-m-status {
-		flex:                                                     0 0 100%;
-		display:                                                  flex;
-		align-items:                                              center;
-		justify-content:                                          space-between;
-	}
-
-	.sp-mileage-table .sp-m-status .sp-mileage-row-actions {
-		margin-top:                                               0;
+	.sp-rep-mileage {
+		min-width:                                                660px;
 	}
 }
 
@@ -3187,13 +3935,14 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	gap:                                                       10px;
 }
 
-/* Keep the date row inline — base .sp-input is width:100%, which would stack them. */
-#sp-mileage-toolbar .sp-input,
-#sp-mileage-toolbar .sp-select {
+/* Keep the date row inline — base .sp-input is width:100%, which would stack them.
+   Keyed to the global .sp-period-toolbar class so Mileage + every expense section match. */
+.sp-period-toolbar .sp-input,
+.sp-period-toolbar .sp-select {
 	width:                                                     auto;
 }
 
-#sp-mileage-toolbar .sp-input {
+.sp-period-toolbar .sp-input {
 	min-width:                                                 150px;
 }
 
@@ -3207,6 +3956,18 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	min-height:                                                26px;
 	font-size:                                                 11px;
 	margin-left:                                               8px;
+}
+
+/* Active quick-range pill: a selected preset fills with the primary color (the rest stay
+   outlined secondary). Variable-driven so it follows the theme. Scoped to the global
+   .sp-period-toolbar — the only .sp-btn that ever takes .active there is a range preset. */
+.sp-period-toolbar .sp-btn.active {
+	--_btn-color:                                              var(--sp-primary-contrast, #ffffff);
+	--_btn-color-h:                                            var(--sp-primary-contrast, #ffffff);
+	--_btn-bg:                                                 var(--sp-primary);
+	--_btn-bg-h:                                               var(--sp-primary-hover);
+	--_btn-border:                                             1px solid var(--sp-primary);
+	--_btn-border-h:                                           1px solid var(--sp-primary-hover);
 }
 
 .sp-mileage-matrix-wrap {
@@ -3287,19 +4048,15 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	font-style:                                                italic;
 }
 
-/* Per-leg miles + mileage $ broken into the Miles/$ columns, one line per stop, aligned
-   line-for-line with the route names beside them (matching line-height). The trip total
-   sits on the first line in the normal weight; each leg below is muted grey. */
-.sp-mileage-table td.sp-m-num > div {
+body.has-site-pulse td.sp-m-num > div {
 	line-height:                                               1.5;
 	text-align:                                                right;
 }
-/* Numeric column headers right-align so MILES / $ / TOLLS sit above their right-aligned values. */
-.sp-mileage-table th.sp-th-num {
-	text-align:                                                right;
+
+body.has-site-pulse th.sp-th-num {
+	text-align:                                                center;
 }
-/* Extra gap before the Status column so the right-aligned Tolls values don't butt against it.
-   Desktop only — the mobile card reflow zeroes cell padding and stacks Status on its own row. */
+
 @media (min-width: 601px) {
 	.sp-mileage-table th:last-child,
 	.sp-mileage-table td.sp-m-status {
@@ -3312,7 +4069,8 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 }
 
 div.sp-leg-stat + .sp-day-total-line {
-	border-top:                                                1px solid var(--light-grey);
+	font-weight:                                               800;
+	border-top:                                                1px solid var(--sp-text-light);
 }
 
 /* A leg's miles are clickable to adjust for a detour/closure. Subtle dotted underline hints
@@ -3340,7 +4098,7 @@ div.sp-leg-stat + .sp-day-total-line {
    per-leg figures, just a slightly darker shade to set it apart. The blank spacers keep the
    per-leg columns aligned line-for-line on desktop and collapse away in the mobile cards. */
 .sp-day-total-line {
-	color:                                                     var(--black);
+	color:                                                     var(--sp-text-secondary);
 	line-height:                                               1.5;
 }
 .sp-leg-blank {
@@ -3558,7 +4316,7 @@ div.sp-leg-stat + .sp-day-total-line {
 	border:                                                    1px solid var(--sp-border);
 	border-radius:                                             var(--sp-radius-lg);
 	box-shadow:                                                0 25px 50px -12px rgba(0, 0, 0, 0.5);
-	font-family:                                               var(--sp-font);
+	font-family:                                               var(--font-text);
 	color:                                                     var(--sp-text);
 }
 
@@ -3638,4 +4396,157 @@ div.sp-leg-stat + .sp-day-total-line {
 	body.sp-printing-mileage .sp-mileage-table td {
 		border-bottom:                                            1px solid #ccc;
 	}
+}
+
+
+/*--------------------------------------------------------------
+# Reviews (Google Business Profile)
+--------------------------------------------------------------*/
+
+.sp-reviews-actions {
+	display:                                                   flex;
+	gap:                                                       8px;
+}
+
+.sp-reviews-summary {
+	display:                                                   flex;
+	gap:                                                       12px;
+	margin:                                                    0 0 16px;
+}
+
+.sp-reviews-stat {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	background:                                                var(--sp-bg-white);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius);
+	padding:                                                   12px 18px;
+	min-width:                                                 120px;
+}
+
+.sp-reviews-stat-num {
+	font-size:                                                 24px;
+	font-weight:                                               700;
+	color:                                                     var(--sp-text);
+}
+
+.sp-reviews-stat-label {
+	font-size:                                                 12px;
+	color:                                                     var(--sp-text-secondary);
+}
+
+.sp-reviews-list {
+	display:                                                   grid;
+	gap:                                                       12px;
+}
+
+.sp-review-card {
+	background:                                                var(--sp-bg-white);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius);
+	padding:                                                   16px 18px;
+	box-shadow:                                                var(--sp-shadow-sm);
+}
+
+.sp-review-head {
+	display:                                                   grid;
+	grid-template-columns:                                     40px 1fr auto;
+	align-items:                                               center;
+	gap:                                                       12px;
+}
+
+.sp-review-avatar {
+	width:                                                     40px;
+	height:                                                    40px;
+	border-radius:                                             50%;
+	object-fit:                                                cover;
+}
+
+.sp-review-avatar-blank {
+	background:                                                var(--sp-border);
+}
+
+.sp-review-meta {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	min-width:                                                 0;
+}
+
+.sp-review-author {
+	font-weight:                                               600;
+	color:                                                     var(--sp-text);
+}
+
+.sp-review-date {
+	font-size:                                                 12px;
+	color:                                                     var(--sp-text-light);
+}
+
+.sp-review-stars {
+	color:                                                     var(--sp-primary);
+	font-size:                                                 16px;
+	letter-spacing:                                            1px;
+	white-space:                                               nowrap;
+}
+
+.sp-review-body {
+	margin:                                                    12px 0 0;
+	color:                                                     var(--sp-text);
+	line-height:                                               1.55;
+	white-space:                                               pre-wrap;
+}
+
+.sp-review-nobody {
+	color:                                                     var(--sp-text-light);
+	font-style:                                                italic;
+}
+
+.sp-review-reply {
+	margin:                                                    12px 0 0;
+	padding:                                                   10px 14px;
+	background:                                                var(--sp-primary-light);
+	border-radius:                                             var(--sp-radius-sm);
+}
+
+.sp-review-reply-label {
+	display:                                                   block;
+	font-size:                                                 11px;
+	font-weight:                                               700;
+	text-transform:                                            uppercase;
+	letter-spacing:                                            0.04em;
+	color:                                                     var(--sp-warning);
+	margin-bottom:                                             4px;
+}
+
+.sp-review-reply p {
+	margin:                                                    0;
+	color:                                                     var(--sp-text);
+}
+
+.sp-review-actions {
+	display:                                                   flex;
+	gap:                                                       8px;
+	align-items:                                               center;
+	margin:                                                    12px 0 0;
+}
+
+.sp-review-imported {
+	font-size:                                                 13px;
+	font-weight:                                               600;
+	color:                                                     var(--sp-success);
+}
+
+.sp-review-reply-form {
+	margin:                                                    12px 0 0;
+}
+
+.sp-review-reply-input {
+	width:                                                     100%;
+	resize:                                                    vertical;
+}
+
+.sp-review-reply-formbtns {
+	display:                                                   flex;
+	gap:                                                       8px;
+	margin:                                                    8px 0 0;
 }

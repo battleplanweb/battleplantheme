@@ -20,7 +20,7 @@ function battleplan_carte_du_jour_scripts() {
 //Load Titles & Descriptions (Alt Text) of images and save for javascript
 add_action('wp_head', 'battleplan_loadPicTitles');
 function battleplan_loadPicTitles() {
-	bp_enqueue_script( 'battleplan-script-lightbox', 'script-lightbox' );
+	bp_enqueue_script( 'battleplan-script-lightbox', 'script-lightbox', ['battleplan-script-pages'] );
 
 	$query = bp_WP_Query('attachment', [
 		'post_status'     => 'any',

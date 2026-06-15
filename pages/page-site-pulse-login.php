@@ -17,6 +17,7 @@ $company     = site_pulse_get_setting( 'company_name', '' );
 $logo_url    = site_pulse_get_setting( 'login_logo_url', '' );
 
 $printPage  = '';
+$printPage .= site_pulse_color_scheme_css();
 $printPage .= '<div id="sp-login-wrap">';
 $printPage .=   '<div class="sp-login-box">';
 

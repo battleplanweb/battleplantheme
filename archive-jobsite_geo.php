@@ -3,6 +3,8 @@
 bp_inline_minified_css( get_template_directory() . '/style-posts.css' );
 bp_inline_minified_css( get_template_directory() . '/style-jobsite_geo.css' );
 bp_enqueue_script( 'battleplan-script-jobsite_geo', 'script-jobsite_geo', [], ['strategy' => 'defer'] );
+bp_enqueue_script( 'battleplan-script-lightbox', 'script-lightbox', ['battleplan-script-pages'] );
+bp_inline_minified_css( get_template_directory() . '/style-lightbox.css' );
 
 get_header(); ?>
 
@@ -40,10 +42,10 @@ get_header(); ?>
 				$imgs[1] = esc_attr(get_field( "jobsite_photo_2"));
 				$imgs[2] = esc_attr(get_field( "jobsite_photo_3"));
 				$imgs[3]= esc_attr(get_field( "jobsite_photo_4"));
-				$alt[0] = esc_attr(get_field( "jobsite_photo_1_alt"));
-				$alt[1] = esc_attr(get_field( "jobsite_photo_2_alt"));
-				$alt[2] = esc_attr(get_field( "jobsite_photo_3_alt"));
-				$alt[3] = esc_attr(get_field( "jobsite_photo_4_alt"));
+				$alt[0] = get_field( "jobsite_photo_1_alt");
+				$alt[1] = get_field( "jobsite_photo_2_alt");
+				$alt[2] = get_field( "jobsite_photo_3_alt");
+				$alt[3] = get_field( "jobsite_photo_4_alt");
 				$imgs = array_filter($imgs);
 				$imgNum = count($imgs);
 				$alt = array_filter($alt);
@@ -70,12 +72,14 @@ get_header(); ?>
 
 				$buildUpdate .= '[section width="'.$sectionWidth.'" name="jobsite-'.get_the_ID().'" class="archive-content archive-'.get_post_type().$addTags.$addClass.'"][layout grid="'.$grid.'" valign="'.$valign.'"]';
 
-				$buildUpdate .= $imgNum === 1 ? '[col class="single-img"]' : '[col]';
-				$buildUpdate .= '<div class="jobsite-description">';
+				$buildUpdate .= '[col]';
+				$buildUpdate .= '<div class="jobsite-entry count-'.$imgNum.'">';
+				$buildUpdate .= '<div class="jobsite-description'.( $imgNum >= 3 ? ' span-all' : '' ).'">';
 				$buildUpdate .= '<div class="jobsite_geo-job_meta"><p>'.$location.'</p></div>';
 				$buildUpdate .= '<p>'.$jobDesc.'</p></div>';
 				$cleanedJobDesc = htmlspecialchars(strip_tags($jobDesc), ENT_QUOTES, 'UTF-8');
 				$customer_info = customer_info();
+				$img = $imgs ? wp_get_attachment_image_src( reset($imgs), 'full' ) : array('');
 
 		?>
 				<script nonce="<?php echo _BP_NONCE; ?>" type="application/ld+json">
@@ -103,24 +107,39 @@ get_header(); ?>
 		<?php
 
 
-				if ( $imgNum === 1 ) {
-					$buildUpdate .= '<div class="jobsite-photos align-center break-none">'.wp_get_attachment_image( $imgs[0], $imgSize, "", ["alt" => $alt[0]] ).'</div>';
-				} else {
+				// Card grid: the description sits in the 1fr column and each photo
+				// gets its own equal column beside it (content + pic + pic …). Photos
+				// crop to a uniform 2:3 tile via CSS object-fit — same width/height
+				// regardless of source, no thumbnail regeneration — and the full-size
+				// original opens in the shared lightbox. .jobsite-photos is
+				// display:contents so each <figure> is a direct grid item of
+				// .jobsite-entry. Caption = the photo's alt text.
+				$buildUpdate .= '<div class="jobsite-photos lightbox">';
+				$thumbSize = $imgNum >= 3 ? 'third-s' : 'half-s';
+				foreach ( $imgs as $k => $imgId ) :
+					$thumb = wp_get_attachment_image_src( $imgId, $thumbSize );
+					$full  = wp_get_attachment_image_src( $imgId, 'full' );
+					if ( ! $thumb ) continue;
+					$thisAlt = isset($alt[$k]) ? trim((string)$alt[$k]) : '';
 
-					if ( $numImg === 4 ) $imgSize = "quarter-f";
-					elseif ( $numImg === 3 ) $imgSize = "third-f";
-					else $imgSize = "half-f";
+					// Smart crop: AI-detected subject position (CSS object-position).
+					// Falls back to the CSS default (centered) when no focus is stored.
+					$focus = get_post_meta( $imgId, '_bp_focus_position', true );
+					$focusStyle = $focus ? ' style="object-position:'.esc_attr($focus).'"' : '';
 
-					$buildUpdate .= '<ul class="jobsite-photos side-by-side align-center break-none">';
-					for ($i = 0; $i < $imgNum; $i++) :
-						$img = wp_get_attachment_image_src( $imgs[$i], $imgSize );
-
-						list ($src, $width, $height ) = $img;
-						if ($height > 0) $ratio = $width / $height;
-						$buildUpdate .= '<li style="flex: '.$ratio.'" class="full-top">'.wp_get_attachment_image( $imgs[$i], $imgSize, "", ["alt" => $alt[$i]] ).'</li>';
-					endfor;
-					$buildUpdate .= '</ul>';
-				}
+					// Anchor mirrors [get-gallery] exactly (link-archive link-gallery +
+					// data-gallery + data-effect/zoomable/draggable, img-gallery) so the
+					// same proprietary lightbox/slider binds to these photos. data-gallery
+					// is per-job so the slider cycles only that job's photos.
+					$buildUpdate .= '<figure class="jobsite-photo">';
+					$buildUpdate .=   '<a class="link-archive link-gallery jobsite-photo-link" data-gallery="jobsite-'.get_the_ID().'" href="'.esc_url($full[0]).'" data-effect="fade" data-zoomable="true" data-draggable="true">';
+					$buildUpdate .=     '<img class="img-gallery jobsite-photo-thumb wp-image-'.intval($imgId).'" loading="lazy" src="'.esc_url($thumb[0]).'" width="'.intval($thumb[1]).'" height="'.intval($thumb[2]).'" alt="'.esc_attr($thisAlt).'"'.$focusStyle.'>';
+					$buildUpdate .=   '</a>';
+					if ( $thisAlt !== '' ) $buildUpdate .= '<p class="jobsite-photo-caption">'.esc_html($thisAlt).'</p>';
+					$buildUpdate .= '</figure>';
+				endforeach;
+				$buildUpdate .= '</div>'; // .jobsite-photos
+				$buildUpdate .= '</div>'; // .jobsite-entry
 
 				if ( $review ) :
 					bp_inline_minified_css( get_template_directory() . '/style-testimonials.css' );
@@ -194,6 +213,17 @@ get_header(); ?>
 				$buildUpdate .= '[/col][/layout][/section]';
 
 			endwhile;
+
+			// One shared lightbox overlay for the whole archive. Every job's photo
+			// grid carries the .lightbox class; the JS scopes prev/next to the grid
+			// that was clicked, so navigation stays within a single job.
+			$buildUpdate .= "<div class='lightbox-overlay'>";
+			$buildUpdate .= "<img class='lightbox-image' src='' alt=''>";
+			$buildUpdate .= "<div class='lightbox-counter'></div>";
+			$buildUpdate .= "<button class='closeBtn' aria-label='close'>[get-icon type='x-large']<span class='sr-only'>Close Gallery</span></button>";
+			$buildUpdate .= "<div class='block block-button button-prev'><button aria-label='Previous Photo'>[get-icon type='chevron-left']<span class='sr-only'>Previous Photo</span></button></div>";
+			$buildUpdate .= "<div class='block block-button button-next'><button aria-label='Next Photo'>[get-icon type='chevron-right']<span class='sr-only'>Next Photo</span></button></div>";
+			$buildUpdate .= "</div>";
 
 		$GLOBALS['mapPins'] = json_encode($lat_lng);
 

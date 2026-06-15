@@ -130,32 +130,27 @@ function bp_build_css_core() {
 
     if (!is_dir($dist)) wp_mkdir_p($dist);
 
+    clearstatcache();
+
     foreach ( $files as $type => $config ) :
         $missing = !file_exists($config['css']) || !file_exists($config['min']);
 
-        if ( !$missing && ( (is_admin() && !wp_doing_ajax()) || (defined('REST_REQUEST') && REST_REQUEST) || (defined('WP_CLI') && WP_CLI) ) ) continue;
-
-        $core_mtime = max(
-            file_exists($config['css']) ? filemtime($config['css']) : 0,
-            file_exists($config['min']) ? filemtime($config['min']) : 0
-        );
-
-        $latest_src = 0;
+        // Gate on a CONTENT signature, not mtime. mtime is not deploy-stable: git /
+        // WP Engine checkouts stamp every file with the same checkout time, so a
+        // content-updated source and a stale compiled dist tie on mtime and the old
+        // logic ($src_mtime <= $out_mtime) wrongly skipped the rebuild. Hashing the
+        // source set + each source's contents rebuilds iff something actually changed,
+        // regardless of what mtimes the deploy assigned.
+        $sig_parts = [];
         foreach ($config['sources'] as $rel) :
             $path = get_template_directory() . $rel;
-            if (file_exists($path)) :
-                $latest_src = max($latest_src, filemtime($path));
-            endif;
+            $sig_parts[] = $rel . ':' . (file_exists($path) ? md5_file($path) : 'missing');
         endforeach;
-
-        // Invalidate when the *set* of source files changes (e.g. a feature like the
-        // event calendar gets toggled on, adding a stylesheet to the list), not just
-        // when an existing source file's mtime changes.
-        $sig         = md5(implode('|', $config['sources']));
+        $sig         = md5(implode('|', $sig_parts));
         $sig_file    = $config['css'] . '.sig';
         $sig_changed = !file_exists($sig_file) || file_get_contents($sig_file) !== $sig;
 
-        if (!$missing && !$sig_changed && $latest_src <= $core_mtime) continue;
+        if (!$missing && !$sig_changed) continue;
 
         $out  = "@charset \"UTF-8\";\n";
         $out .= "/* Battle Plan Core CSS - " . ucfirst($type) . " */\n";
@@ -187,27 +182,30 @@ function bp_build_site_css() {
 	$dist = get_stylesheet_directory() . '/dist';
 	$site     = $dist . '/site.css';
 	$site_min = $dist . '/site.min.css';
+	$sig_file = $site . '.sig';
 
 	if (!is_dir($dist)) {
 		wp_mkdir_p($dist);
 	}
 
-	$missing = !file_exists($site) || !file_exists($site_min);
+	clearstatcache();
 
-	$src_mtime = filemtime($src);
-	$out_mtime = max(
-		file_exists($site)     ? filemtime($site)     : 0,
-		file_exists($site_min) ? filemtime($site_min) : 0
-	);
+	// Gate on a CONTENT signature, not mtime — see bp_build_css_core() for why mtime
+	// is unreliable across deploys. md5 of the source content rebuilds iff style-site.css
+	// actually changed, no matter what mtime the deploy gave it relative to dist/.
+	$css = file_get_contents($src);
+	$sig = md5($css);
 
-	if (!$missing && $src_mtime <= $out_mtime) {
+	$missing     = !file_exists($site) || !file_exists($site_min);
+	$sig_changed = !file_exists($sig_file) || file_get_contents($sig_file) !== $sig;
+
+	if (!$missing && !$sig_changed) {
 		return;
 	}
 
-	$css = file_get_contents($src);
-
 	file_put_contents($site, $css);
 	file_put_contents($site_min, bp_minify_css($css));
+	file_put_contents($sig_file, $sig);
 }
 
 
@@ -245,7 +243,7 @@ add_action('wp_enqueue_scripts', function () {
     $url  = get_stylesheet_directory_uri() . '/dist/' . $file;
     if (!file_exists($path)) return;
     //wp_enqueue_style('battleplan-deferred', $url, ['battleplan-core'], _BP_VERSION);
-    wp_enqueue_style('battleplan-deferred', $url, [], _BP_VERSION);
+    wp_enqueue_style('battleplan-deferred', $url, [], _BP_VERSION . '.' . filemtime($path));
 }, 10);
 
 add_action('wp_enqueue_scripts', function () {
@@ -254,7 +252,7 @@ add_action('wp_enqueue_scripts', function () {
     $url  = get_stylesheet_directory_uri() . '/dist/' . $file;
     if (!file_exists($path)) return;
     //wp_enqueue_style('battleplan-site', $url, ['battleplan-core'], _BP_VERSION);
-    wp_enqueue_style('battleplan-site', $url, [], _BP_VERSION);
+    wp_enqueue_style('battleplan-site', $url, [], _BP_VERSION . '.' . filemtime($path));
 }, 20);
 
 add_filter('style_loader_tag', function($tag, $handle, $src) {

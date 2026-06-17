@@ -16,10 +16,14 @@ if ( ! site_pulse_is_impersonating() && site_pulse_must_change_password( $real_u
 
 $is_god       = site_pulse_is_god( $real_user_id );
 $impersonating = site_pulse_is_impersonating();
+if ( function_exists( 'site_pulse_touch_last_active' ) ) site_pulse_touch_last_active(); // record real usage
 // The Modules screen is for the protected super-admin (battleplanweb) only, and
 // never while impersonating — so "view as <someone>" hides it like that user sees.
 $is_superadmin = site_pulse_is_superadmin( $real_user_id ) && ! $impersonating;
 $user_id      = site_pulse_effective_user_id();
+// Is the EFFECTIVE (possibly impersonated) user a god? Gods bypass module gating and see all
+// god-capability areas — so "view as <another god>" shows that god's full view, not a gated one.
+$eff_is_god   = site_pulse_is_god( $user_id );
 $user         = get_userdata( $user_id );
 $profile      = site_pulse_get_user_profile( $user_id );
 $role         = $profile ? site_pulse_get_role( $profile['role_id'] ) : null;
@@ -27,9 +31,10 @@ $location     = $profile ? site_pulse_get_location( (int) $profile['location_id'
 
 $is_wp_admin = in_array( 'administrator', (array) get_userdata( $real_user_id )->roles, true );
 if ( $is_god && ! $impersonating ) {
-	// God sees everything: every capability in the catalog (so new caps are covered automatically)
-	// plus god_mode. Never a hand-maintained subset that can drift out of date.
-	$caps = array_keys( site_pulse_capability_catalog() );
+	// God sees EVERYTHING, all the time: the full capability catalog (so new caps are covered
+	// automatically) plus god_mode — the UNFILTERED catalog, so a toggled-off module never hides
+	// anything from god. The module filter below is skipped for god to preserve this.
+	$caps = array_keys( site_pulse_capability_catalog_all() );
 	$caps[] = 'god_mode';
 	$role_label = 'Odinson';
 } elseif ( $is_wp_admin && ! $role ) {
@@ -42,16 +47,20 @@ if ( $is_god && ! $impersonating ) {
 	$role_label = $role ? esc_html( $role['label'] ) : '';
 }
 
-// Whichever path set $caps above (god's full catalog, the wp-admin fallback list, or
-// per-user effective caps), drop any capability whose module is off so the menu and
-// panels for a disabled module never render — for anyone, god included.
-$caps = site_pulse_filter_caps_by_module( $caps );
+// Drop any capability whose module is off so the menu and panels for a disabled module never
+// render — EXCEPT when the EFFECTIVE user is a god. Gods bypass module gating entirely, including
+// when a god impersonates ANOTHER god ("view as <god>" shows that god's full, unfiltered view).
+// A wp-admin fallback, a client tier, or impersonating a client tier is still module-filtered.
+if ( ! $eff_is_god ) {
+	$caps = site_pulse_filter_caps_by_module( $caps );
+}
 
 $app_name     = site_pulse_get_setting( 'app_name', 'Site Pulse' );
 $company_name = site_pulse_get_setting( 'company_name', '' );
 $logo_url     = site_pulse_get_setting( 'login_logo_url', '' );
 $header_logo  = site_pulse_get_setting( 'header_logo_url', '' );
-$display_name = $user ? esc_html( $user->first_name ?: $user->display_name ) : 'User';
+$full_name    = $user ? trim( $user->first_name . ' ' . $user->last_name ) : '';
+$display_name = $user ? esc_html( $full_name !== '' ? $full_name : $user->display_name ) : 'User';
 $loc_name     = $location ? esc_html( $location['name'] ) : '';
 
 // Report-access gates, driven by the two report-type caps.
@@ -84,6 +93,8 @@ $icons = [
 	'pulse'     => '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
 	'checklist' => '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
 	'car'       => '<path d="M5 17h14M3 13l2-6h14l2 6M5 17a2 2 0 0 0 4 0M15 17a2 2 0 0 0 4 0M3 13v4h18v-4"/>',
+	'store'       => '<path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/><path d="M22 7v3a2 2 0 0 1-2 2 2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7"/>',
+	'dollar-sign' => '<line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
 	'forms'     => '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>',
 	'layers'    => '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
 	'star'      => '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
@@ -91,6 +102,8 @@ $icons = [
 	'grid'      => '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/>',
 	'printer'   => '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
 	'mail'      => '<path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22,6 12,13 2,6"/>',
+	'chat'      => '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>',
+	'tasks'     => '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
 	'palette'   => '<circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.564C22 6.012 17.5 2 12 2z"/>',
 ];
 
@@ -99,23 +112,29 @@ $nav = [];
 
 $nav[] = [ 'slug' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'dashboard', 'show' => true ];
 
+// Direct messages between users. Available to every signed-in Site Pulse user.
+$nav[] = [ 'slug' => 'messages', 'label' => 'Messages', 'icon' => 'chat', 'show' => true ];
+
+// Action Items — its own top-level item (sits under Messages). Shown to everyone: items can now be
+// created from messages for any user, not just report-access roles.
+$nav[] = [ 'slug' => 'action-items', 'label' => 'Action Items', 'icon' => 'tasks', 'show' => true ];
+
 $nav[] = [
 	'slug'  => 'reports',
 	'label' => 'Stores',
-	'icon'  => 'clipboard',
+	'icon'  => 'store',
 	'show'  => $cap_reports_access,
 	'children' => [
 		[ 'slug' => 'reports-my',     'label' => 'My Reports',          'show' => in_array( 'submit_reports', $caps ) || in_array( 'view_own_reports', $caps ) ],
 		[ 'slug' => 'reports-review', 'label' => 'GM Reports',          'action' => 'review-gm',  'show' => $cap_view_gm ],
 		[ 'slug' => 'reports-review', 'label' => 'Supervisor Reports',  'action' => 'review-sup', 'show' => $cap_view_sup ],
-		[ 'slug' => 'action-items',  'label' => 'Action Items',        'show' => $cap_reports_access ],
 	],
 ];
 
 $nav[] = [
 	'slug'  => 'mileage',
 	'label' => 'Expenses',
-	'icon'  => 'car',
+	'icon'  => 'dollar-sign',
 	'show'  => in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ),
 	'children' => [
 		[ 'slug' => 'expense-report',    'label' => 'Expense Report',   'show' => in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ],
@@ -128,25 +147,56 @@ $nav[] = [
 	],
 ];
 
-$nav[] = [ 'slug' => 'analytics', 'label' => 'Analytics', 'icon' => 'chart', 'show' => in_array( 'view_analytics', $caps ) ];
+// Reviews area: Google reviews + Customer Surveys as sibling tabs. The parent shows if EITHER
+// module's caps are present, so Surveys can stand alone even while Reviews (Google) is dark.
+$cap_reviews_area = in_array( 'view_reviews', $caps ) || in_array( 'manage_reviews', $caps );
+$cap_surveys_area = in_array( 'view_surveys', $caps ) || in_array( 'manage_surveys', $caps );
+$nav[] = [
+	'slug'  => 'reviews',
+	'label' => 'Reviews',
+	'icon'  => 'star',
+	'show'  => $cap_reviews_area || $cap_surveys_area,
+	'children' => [
+		[ 'slug' => 'reviews', 'label' => 'Google Reviews', 'show' => $cap_reviews_area ],
+		[ 'slug' => 'surveys', 'label' => 'Surveys',        'show' => $cap_surveys_area ],
+	],
+];
 
-$nav[] = [ 'slug' => 'reviews', 'label' => 'Reviews', 'icon' => 'star', 'show' => in_array( 'view_reviews', $caps ) || in_array( 'manage_reviews', $caps ) ];
-
-// Forms is gated on the 'view_forms' capability — and always visible in Odin (god) mode,
-// independent of the capability catalog, so god never loses it.
-$cap_view_forms = in_array( 'view_forms', $caps ) || ( $is_god && ! $impersonating && site_pulse_module_on( 'forms' ) );
+// Forms is gated on the 'view_forms' capability — and ALWAYS visible in Odin (god) mode,
+// independent of the module toggle / capability catalog, so god never loses it. 'upload_forms'
+// is a separate capability that reveals the per-repository upload controls (and, on its own,
+// the Forms area). The AJAX endpoints mirror this god bypass.
+$god_forms        = $is_god && ! $impersonating;
+$cap_view_forms   = in_array( 'view_forms', $caps ) || $god_forms;
+$cap_upload_forms = in_array( 'upload_forms', $caps ) || $god_forms;
+$cap_forms_area   = $cap_view_forms || $cap_upload_forms;
+$forms_children = [];
+foreach ( site_pulse_form_category_tree() as $sp_cat_key => $sp_cat ) {
+	$child = [ 'slug' => 'forms-' . $sp_cat_key, 'label' => $sp_cat['label'], 'show' => $cap_forms_area ];
+	if ( ! empty( $sp_cat['children'] ) ) {
+		$subs = [];
+		foreach ( $sp_cat['children'] as $sub_key => $sub_label ) {
+			// Sub-folder items open the category's panel ('forms-{cat}') filtered to this sub-folder.
+			$subs[] = [ 'slug' => 'forms-' . $sp_cat_key, 'sub' => $sub_key, 'label' => $sub_label, 'show' => $cap_forms_area ];
+		}
+		$child['subchildren'] = $subs;
+	}
+	$forms_children[] = $child;
+}
+// "All" sits at the bottom — a cross-repository, searchable view to locate a form.
+$forms_children[] = [ 'slug' => 'forms-all', 'label' => 'All', 'show' => $cap_forms_area ];
 $nav[] = [
 	'slug'  => 'forms',
 	'label' => 'Forms',
 	'icon'  => 'forms',
-	'show'  => $cap_view_forms,
-	'children' => [
-		[ 'slug' => 'forms-training', 'label' => 'Training', 'show' => $cap_view_forms ],
-		[ 'slug' => 'forms-kitchen',  'label' => 'Kitchen',  'show' => $cap_view_forms ],
-		[ 'slug' => 'forms-foh',      'label' => 'FOH',      'show' => $cap_view_forms ],
-		[ 'slug' => 'forms-misc',     'label' => 'Misc',     'show' => $cap_view_forms ],
-	],
+	'show'  => $cap_forms_area,
+	'children' => $forms_children,
 ];
+
+$nav[] = [ 'slug' => 'analytics', 'label' => 'Analytics', 'icon' => 'chart', 'show' => in_array( 'view_analytics', $caps ) ];
+
+// Import Past Reports — GOD-only tool to bulk-import historical GM reports from PDF/CSV.
+$nav[] = [ 'slug' => 'import-reports', 'label' => 'Import Reports', 'icon' => 'forms', 'show' => $eff_is_god ];
 
 $nav[] = [
 	'slug'  => 'admin',
@@ -157,9 +207,11 @@ $nav[] = [
 		[ 'slug' => 'admin-users',     'label' => 'Users',            'icon' => 'users',   'show' => in_array( 'manage_users', $caps ) ],
 		[ 'slug' => 'admin-tiers',     'label' => 'Roles',            'icon' => 'layers',  'show' => in_array( 'manage_settings', $caps ) ],
 		[ 'slug' => 'admin-locations', 'label' => 'Home Bases',       'icon' => 'mappin',  'show' => in_array( 'manage_locations', $caps ) ],
-		[ 'slug' => 'admin-templates', 'label' => 'Report Settings',   'icon' => 'file',    'show' => in_array( 'manage_templates', $caps ) ],
-		[ 'slug' => 'admin-mileage',   'label' => 'Mileage Settings', 'icon' => 'car',     'show' => in_array( 'manage_mileage', $caps ) ],
-		[ 'slug' => 'admin-settings',  'label' => 'Site Settings',    'icon' => 'palette', 'show' => in_array( 'manage_settings', $caps ) ],
+		[ 'slug' => 'admin-templates', 'label' => 'Reports',        'icon' => 'file',    'show' => in_array( 'manage_templates', $caps ) ],
+		[ 'slug' => 'admin-mileage',   'label' => 'Mileage',        'icon' => 'car',     'show' => in_array( 'manage_mileage', $caps ) ],
+		[ 'slug' => 'admin-forms',     'label' => 'Forms',          'icon' => 'forms',   'show' => in_array( 'manage_settings', $caps ) ],
+		[ 'slug' => 'admin-settings',  'label' => 'Site Defaults',  'icon' => 'palette', 'show' => in_array( 'manage_settings', $caps ) ],
+		[ 'slug' => 'admin-notifications', 'label' => 'Notifications', 'icon' => 'bell',   'show' => in_array( 'manage_settings', $caps ) ],
 		[ 'slug' => 'admin-apikeys',   'label' => 'API Keys',         'icon' => 'key',     'show' => in_array( 'manage_settings', $caps ) ],
 		[ 'slug' => 'admin-modules',   'label' => 'Modules',          'icon' => 'layers',  'show' => $is_superadmin ],
 	],
@@ -242,15 +294,27 @@ foreach ( $nav as $item ) {
 	$printPage .= '</button>';
 
 	if ( $has_children ) {
-		$printPage .= '<div class="sp-nav-children">';
+		// Inner wrapper so the submenu can animate open/closed via grid-template-rows (0fr↔1fr).
+		$printPage .= '<div class="sp-nav-children"><div class="sp-nav-children-inner">';
 		foreach ( $item['children'] as $child ) {
 			if ( empty( $child['show'] ) ) continue;
 			$child_action = ! empty( $child['action'] ) ? ' data-action="' . esc_attr( $child['action'] ) . '"' : '';
 			$printPage .= '<button type="button" class="unique sp-nav-child" data-nav="' . esc_attr( $child['slug'] ) . '"' . $child_action . '>';
 			$printPage .=   '<span>' . esc_html( $child['label'] ) . '</span>';
 			$printPage .= '</button>';
+			// Optional third level: sub-folders that deep-link to the parent panel with a filter.
+			if ( ! empty( $child['subchildren'] ) ) {
+				$printPage .= '<div class="sp-nav-subchildren">';
+				foreach ( $child['subchildren'] as $sub ) {
+					if ( empty( $sub['show'] ) ) continue;
+					$printPage .= '<button type="button" class="unique sp-nav-child sp-nav-subchild" data-nav="' . esc_attr( $sub['slug'] ) . '" data-sub="' . esc_attr( $sub['sub'] ) . '">';
+					$printPage .=   '<span>' . esc_html( $sub['label'] ) . '</span>';
+					$printPage .= '</button>';
+				}
+				$printPage .= '</div>';
+			}
 		}
-		$printPage .= '</div>';
+		$printPage .= '</div></div>';
 	}
 
 	$printPage .= '</div>';
@@ -315,6 +379,7 @@ $printPage .=   '<div class="sp-notification-header">';
 $printPage .=     '<h3>Notifications</h3>';
 $printPage .=     '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mark-all-read">Mark all read</button>';
 $printPage .=   '</div>';
+$printPage .=   '<div class="sp-push-prompt" id="sp-push-prompt" hidden></div>'; // per-device "turn on push", filled by JS
 $printPage .=   '<div class="sp-notification-list" id="sp-notification-list"></div>';
 $printPage .= '</div>';
 
@@ -329,7 +394,45 @@ $sp_crumb = function ( $parent, $current ) {
 // Dashboard Panel
 $printPage .= '<section class="sp-panel active" id="sp-panel-dashboard">';
 $printPage .=   '<div class="sp-panel-header"><h2>Dashboard</h2></div>';
+
+// "Install the app" reminder card — filled + shown by JS only when NOT running as the installed app
+// and the user hasn't installed it yet. (Separate from the floating install banner, which stays.)
+$printPage .=   '<div class="sp-install-card" id="sp-install-card" hidden></div>';
+
+// Important-message banners — notifications flagged "Dashboard" in the Notifications matrix, shown
+// at the top until the user X's them. Styled like the In-the-News bar.
+$sp_dash_msgs = site_pulse_get_dashboard_messages( site_pulse_effective_user_id() );
+if ( $sp_dash_msgs ) {
+	$printPage .= '<div class="sp-dash-messages" id="sp-dash-messages">';
+	foreach ( $sp_dash_msgs as $sp_m ) {
+		$printPage .= '<div class="sp-dash-message" data-id="' . (int) $sp_m['id'] . '">';
+		$printPage .=   '<span class="sp-dash-message-text">' . esc_html( $sp_m['message'] ) . '</span>';
+		$printPage .=   '<button type="button" class="unique sp-dash-message-close" data-id="' . (int) $sp_m['id'] . '" aria-label="Acknowledge and dismiss">&times;</button>';
+		$printPage .= '</div>';
+	}
+	$printPage .= '</div>';
+}
+
 $printPage .=   '<div class="sp-dashboard-widgets">';
+
+// News Feed Widget (full width) — a Google Alerts feed, shown only when the feed is switched on
+// (Settings → Site Settings) AND keywords are configured. The toggle removes it from every
+// dashboard regardless of keywords; the keyword is per-install, so nothing is hardcoded.
+$sp_alert_kw = trim( (string) site_pulse_get_setting( 'dashboard_alert_keywords', '' ) );
+$sp_news_on  = (string) site_pulse_get_setting( 'dashboard_news_enabled', '1' ) !== '0';
+if ( $sp_news_on && $sp_alert_kw !== '' ) {
+	$printPage .= '<div class="sp-widget sp-widget-full" id="sp-widget-alerts">';
+	$printPage .=   '<div class="sp-widget-header"><h3>In the News</h3></div>';
+	$printPage .=   '<div class="sp-widget-body sp-alert-feed-body">';
+	if ( shortcode_exists( 'get-google-alerts' ) ) {
+		$sp_alert_kw_safe = str_replace( [ '"', ']' ], '', $sp_alert_kw );
+		$printPage .= do_shortcode( '[get-google-alerts keywords="' . $sp_alert_kw_safe . '" max="8"]' );
+	} else {
+		$printPage .= '<p class="sp-widget-empty">The “get-google-alerts” feature isn’t available on this site yet.</p>';
+	}
+	$printPage .=   '</div>';
+	$printPage .= '</div>';
+}
 
 // Reports Widget
 if ( $cap_reports_access ) {
@@ -367,6 +470,17 @@ if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) 
 $printPage .=   '</div>';
 $printPage .= '</section>';
 
+// Messages Panel — direct messages between users. Two-pane: conversation list + active thread.
+$printPage .= '<section class="sp-panel" id="sp-panel-messages">';
+$printPage .=   '<div class="sp-panel-header"><h2>Messages</h2>';
+$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-msg-new-btn">+ New Message</button>';
+$printPage .=   '</div>';
+$printPage .=   '<div class="sp-messenger" id="sp-messenger">';
+$printPage .=     '<div class="sp-msg-list" id="sp-msg-list"></div>';
+$printPage .=     '<div class="sp-msg-thread" id="sp-msg-thread"></div>';
+$printPage .=   '</div>';
+$printPage .= '</section>';
+
 // My Reports Panel
 if ( in_array( 'submit_reports', $caps ) || in_array( 'view_own_reports', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-reports-my">';
@@ -378,12 +492,6 @@ if ( in_array( 'submit_reports', $caps ) || in_array( 'view_own_reports', $caps 
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-report-filters">';
 	$printPage .=     '<select id="sp-filter-template" class="sp-select"><option value="">All Report Types</option></select>';
-	$printPage .=     '<select id="sp-filter-status" class="sp-select">';
-	$printPage .=       '<option value="">All Statuses</option>';
-	$printPage .=       '<option value="draft">Draft</option>';
-	$printPage .=       '<option value="submitted">Submitted</option>';
-	$printPage .=       '<option value="reviewed">Reviewed</option>';
-	$printPage .=     '</select>';
 	$printPage .=     '<div class="sp-date-range"><input type="date" id="sp-filter-date-start" class="sp-input" placeholder="From">';
 	$printPage .=     '<input type="date" id="sp-filter-date-end" class="sp-input" placeholder="To"></div>';
 	$printPage .=   '</div>';
@@ -399,12 +507,6 @@ if ( $cap_view_other_reports ) {
 	$printPage .=   '<div class="sp-panel-header"><div class="sp-crumb"><div class="sp-crumb-parent">Stores</div><h2 class="sp-crumb-current" id="sp-review-title">GM Reports</h2></div></div>';
 	$printPage .=   '<div class="sp-report-filters">';
 	$printPage .= '<select id="sp-review-filter-location" class="sp-select"><option value="">All Locations</option></select>';
-	$printPage .=     '<select id="sp-review-filter-user" class="sp-select"><option value="">All Submitters</option></select>';
-	$printPage .=     '<select id="sp-review-filter-status" class="sp-select">';
-	$printPage .=       '<option value="">All Statuses</option>';
-	$printPage .=       '<option value="submitted">Submitted</option>';
-	$printPage .=       '<option value="reviewed">Reviewed</option>';
-	$printPage .=     '</select>';
 	$printPage .=     '<div class="sp-date-range"><input type="date" id="sp-review-filter-start" class="sp-input" placeholder="From">';
 	$printPage .=     '<input type="date" id="sp-review-filter-end" class="sp-input" placeholder="To"></div>';
 	$printPage .=   '</div>';
@@ -413,23 +515,29 @@ if ( $cap_view_other_reports ) {
 	$printPage .= '</section>';
 }
 
-// Action Items Panel
-if ( $cap_reports_access ) {
+// Action Items Panel — top-level, visible to every signed-in user (the data endpoint always scopes
+// to at least the viewer's own items).
+{
 	$printPage .= '<section class="sp-panel" id="sp-panel-action-items">';
-	$printPage .=   '<div class="sp-panel-header">' . $sp_crumb( 'Stores', 'Action Items' ) . '</div>';
+	$printPage .=   '<div class="sp-panel-header"><h2>Action Items</h2>';
+	if ( $is_god && ! $impersonating ) {
+		// One-time recovery for reports that generated no action items while the generator was broken.
+		$printPage .= '<div class="sp-action-backfill-wrap"><span class="sp-help-text" id="sp-action-backfill-status"></span><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-action-backfill-btn">Backfill missing</button></div>';
+	}
+	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-report-filters">';
 	if ( $cap_view_other_reports ) {
-		$printPage .= '<select id="sp-action-filter-location" class="sp-select"><option value="">All Locations</option></select>';
-		$printPage .= '<select id="sp-action-filter-user" class="sp-select"><option value="">All Submitters</option></select>';
+		$printPage .= '<select id="sp-action-filter-location" class="sp-select"><option value="mine">My Action Items</option></select>';
 	}
 	$printPage .=     '<select id="sp-action-filter-status" class="sp-select">';
 	$printPage .=       '<option value="open">Open</option>';
 	$printPage .=       '<option value="">All</option>';
-	$printPage .=       '<option value="resolved">Resolved</option>';
+	$printPage .=       '<option value="resolved">Completed</option>';
 	$printPage .=     '</select>';
 	$printPage .=     '<select id="sp-action-sort" class="sp-select">';
-	$printPage .=       '<option value="importance">Sort by Importance</option>';
-	$printPage .=       '<option value="custom">Sort by Custom</option>';
+	$printPage .=       '<option value="importance">Order by Importance</option>';
+	$printPage .=       '<option value="duedate">Order by Due Date</option>';
+	$printPage .=       '<option value="custom">Order by Custom</option>';
 	$printPage .=     '</select>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-action-items-list" id="sp-action-items-list"></div>';
@@ -485,18 +593,37 @@ if ( in_array( 'view_analytics', $caps ) ) {
 	$printPage .=       '<div class="sp-analytics-card-body"><div class="sp-loading"></div></div>';
 	$printPage .=     '</div>';
 
-	// Mileage analytics (shown to mileage users)
-	if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ) {
-		$printPage .=   '<div class="sp-analytics-card" id="sp-analytics-mileage">';
-		$printPage .=     '<h4>Business Mileage</h4>';
-		$printPage .=     '<div class="sp-analytics-card-body"><div class="sp-loading"></div></div>';
-		$printPage .=   '</div>';
-		$printPage .=   '<div class="sp-analytics-card" id="sp-analytics-mileage-dest">';
-		$printPage .=     '<h4>Top Destinations (YTD)</h4>';
+	// Survey Results by Location (only for users who can view surveys). Stores down the side,
+	// each with a 1-5 distribution bar chart; the dropdown toggles which question is shown.
+	if ( in_array( 'view_surveys', $caps ) ) {
+		$printPage .=   '<div class="sp-analytics-card" id="sp-analytics-surveys">';
+		$printPage .=     '<div class="sp-analytics-card-head">';
+		$printPage .=       '<h4>Survey Results by Location</h4>';
+		$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-analytics-survey-link">View Surveys</button>';
+		$printPage .=     '</div>';
+		$printPage .=     '<div class="sp-analytics-card-toolbar"><select id="sp-analytics-survey-dim" class="sp-select"></select></div>';
 		$printPage .=     '<div class="sp-analytics-card-body"><div class="sp-loading"></div></div>';
 		$printPage .=   '</div>';
 	}
 
+	$printPage .=   '</div>';
+	$printPage .= '</section>';
+}
+
+// Import Past Reports Panel (GOD-only) — upload PDFs/CSVs of historical GM reports, AI-parse,
+// review/confirm attribution, and save. No action items are generated for imported reports.
+if ( $eff_is_god ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-import-reports">';
+	$printPage .=   '<div class="sp-panel-header"><h2>Import Past Reports</h2></div>';
+	$printPage .=   '<div class="sp-meta-bar"><div class="sp-import-intro">Upload past <strong>GM or Supervisor reports</strong> (PDF or CSV, one report per file). Claude reads each file and fills in the matching fields; the report <strong>type is auto-detected from who wrote it</strong> (and editable). Review the detected info below, correct anything, then save. <strong>No action items are created</strong> for imported reports. <em>Supervisor reports aren\'t tied to a location.</em></div></div>';
+	$printPage .=   '<div class="sp-import-drop" id="sp-import-drop">';
+	$printPage .=     '<input type="file" id="sp-import-files" accept=".pdf,.csv,application/pdf,text/csv" multiple hidden>';
+	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-import-pick">Choose PDF / CSV files</button>';
+	$printPage .=     '<span class="sp-import-hint">…or drop files here</span>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-import-list" id="sp-import-list"></div>';
+	$printPage .=   '<div class="sp-import-actions" id="sp-import-actions" hidden>';
+	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-import-save-all">Save All Checked Reports</button>';
 	$printPage .=   '</div>';
 	$printPage .= '</section>';
 }
@@ -673,22 +800,167 @@ if ( in_array( 'view_reviews', $caps ) || in_array( 'manage_reviews', $caps ) ) 
 	$printPage .= '</section>';
 }
 
-// Forms Panels — placeholders until each form set is built out. Gated on the same
-// 'view_forms' capability as the Forms menu, so they're not reachable by direct hash.
-$sp_forms_panels = $cap_view_forms ? [
-	'forms-training' => 'Training',
-	'forms-kitchen'  => 'Kitchen',
-	'forms-foh'      => 'FOH',
-	'forms-misc'     => 'Misc',
-] : [];
-foreach ( $sp_forms_panels as $sp_form_slug => $sp_form_label ) {
-	$printPage .= '<section class="sp-panel" id="sp-panel-' . esc_attr( $sp_form_slug ) . '">';
-	$printPage .=   '<div class="sp-panel-header">' . $sp_crumb( 'Forms', $sp_form_label ) . '</div>';
-	$printPage .=   '<div class="sp-coming-soon-panel">';
-	$printPage .=     $svg( $icons['forms'] );
-	$printPage .=     '<h3>Coming Soon</h3>';
-	$printPage .=     '<p>' . esc_html( $sp_form_label ) . ' forms are on the way.</p>';
+// Customer Surveys Panel — submissions forwarded in from the public restaurant sites.
+// Sibling tab of Reviews; gated on the surveys module's caps (independent of Google reviews).
+if ( in_array( 'view_surveys', $caps ) || in_array( 'manage_surveys', $caps ) ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-surveys">';
+	$printPage .=   '<div class="sp-panel-header">';
+	$printPage .=     '<h2>Customer Surveys</h2>';
+	$printPage .=     '<div class="sp-reviews-actions">';
+	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-survey-archive-toggle">View Archived Surveys</button>';
+	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-survey-refresh-btn">Refresh</button>';
+	$printPage .=     '</div>';
 	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-survey-summary" id="sp-survey-summary"></div>';
+	$printPage .=   '<div class="sp-toolbar" id="sp-survey-toolbar">';
+	$printPage .=     '<span class="sp-toolbar-label">Filter</span>';
+	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=       '<select id="sp-survey-filter-location" class="sp-select"><option value="">All locations</option></select>';
+	$printPage .=       '<select id="sp-survey-filter-range" class="sp-select">';
+	$printPage .=         '<option value="">All time</option>';
+	$printPage .=         '<option value="30">Last 30 days</option>';
+	$printPage .=         '<option value="90">Last 90 days</option>';
+	$printPage .=         '<option value="365">Last 12 months</option>';
+	$printPage .=         '<option value="ytd">Year to date</option>';
+	$printPage .=       '</select>';
+	$printPage .=     '</div>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-survey-list" id="sp-survey-list"><div class="sp-loading"></div></div>';
+	$printPage .= '</section>';
+}
+
+// Forms Panels — one repository each (dynamic; managed under Settings → Forms), plus an "All"
+// panel at the end. Lists are populated by JS (get_forms); upload/replace/delete controls render
+// only with 'upload_forms'. Gated on the same area capability as the Forms menu.
+if ( $cap_forms_area ) {
+	// Destination <option>s for the bulk "Move selected" picker — every repository, plus each of
+	// its sub-folders (value "cat::sub"; the JS splits on "::" into category + sub_category).
+	$sp_move_opts = '';
+	foreach ( site_pulse_form_category_tree() as $sp_mk => $sp_mcat ) {
+		if ( empty( $sp_mcat['children'] ) ) {
+			$sp_move_opts .= '<option value="' . esc_attr( $sp_mk ) . '">' . esc_html( $sp_mcat['label'] ) . '</option>';
+		} else {
+			$sp_move_opts .= '<optgroup label="' . esc_attr( $sp_mcat['label'] ) . '">';
+			$sp_move_opts .=   '<option value="' . esc_attr( $sp_mk ) . '">' . esc_html( $sp_mcat['label'] ) . ' (top level)</option>';
+			foreach ( $sp_mcat['children'] as $sp_sk => $sp_sl ) {
+				$sp_move_opts .= '<option value="' . esc_attr( $sp_mk . '::' . $sp_sk ) . '">&nbsp;&nbsp;&rsaquo; ' . esc_html( $sp_sl ) . '</option>';
+			}
+			$sp_move_opts .= '</optgroup>';
+		}
+	}
+	foreach ( site_pulse_form_category_tree() as $sp_cat => $sp_cat_data ) {
+		$sp_form_label = $sp_cat_data['label'];
+		$sp_subs       = $sp_cat_data['children'];   // [subKey => subLabel] for this repository
+		$printPage .= '<section class="sp-panel sp-forms-panel" id="sp-panel-forms-' . esc_attr( $sp_cat ) . '" data-forms-cat="' . esc_attr( $sp_cat ) . '">';
+		$printPage .=   '<div class="sp-panel-header">' . $sp_crumb( 'Forms', $sp_form_label );
+		if ( $cap_upload_forms ) {
+			$printPage .= '<button type="button" class="unique sp-btn sp-btn-primary sp-forms-upload-btn">+ Upload Form</button>';
+		}
+		$printPage .=   '</div>';
+		// Sub-folder filter chips — only when this repository has sub-folders.
+		if ( $sp_subs ) {
+			$printPage .= '<div class="sp-forms-subchips" data-forms-subchips>';
+			$printPage .=   '<button type="button" class="unique sp-chip sp-forms-subchip active" data-sub="">All</button>';
+			foreach ( $sp_subs as $sk => $sl ) $printPage .= '<button type="button" class="unique sp-chip sp-forms-subchip" data-sub="' . esc_attr( $sk ) . '">' . esc_html( $sl ) . '</button>';
+			$printPage .= '</div>';
+		}
+
+		// Upload / replace form (hidden until "Upload Form" or a row's "Replace" is clicked).
+		if ( $cap_upload_forms ) {
+			$printPage .= '<div class="sp-forms-upload-wrap" hidden>';
+			$printPage .=   '<form class="sp-forms-upload-form">';
+			$printPage .=     '<h3 class="sp-forms-upload-title unique">Upload Form</h3>';
+			$printPage .=     '<input type="hidden" class="sp-forms-edit-id" value="">';
+			$printPage .=     '<div class="sp-form-group"><label>Name</label><input type="text" class="sp-input sp-forms-field-name" maxlength="200" placeholder="e.g. Line Check Sheet" required></div>';
+			if ( $sp_subs ) {
+				$printPage .= '<div class="sp-form-group"><label>Sub-folder</label><select class="sp-select sp-forms-field-sub"><option value="">— None (top level) —</option>';
+				foreach ( $sp_subs as $sk => $sl ) $printPage .= '<option value="' . esc_attr( $sk ) . '">' . esc_html( $sl ) . '</option>';
+				$printPage .= '</select></div>';
+			}
+			$printPage .=     '<div class="sp-form-group"><label class="sp-forms-file-label">File</label><input type="file" class="sp-input sp-forms-field-file" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.gif,.webp"></div>';
+			$printPage .=     '<p class="sp-forms-replace-note unique" hidden>Leave the file empty to keep the current file and only rename/retype.</p>';
+			$printPage .=     '<div class="sp-forms-upload-status" hidden></div>';
+			$printPage .=     '<div class="sp-forms-upload-buttons"><button type="submit" class="unique sp-btn sp-btn-primary sp-forms-save-btn">Upload</button><button type="button" class="unique sp-btn sp-btn-secondary sp-forms-cancel-btn">Cancel</button></div>';
+			$printPage .=   '</form>';
+			$printPage .= '</div>';
+		}
+
+		// Bulk-actions row (the search box sits on its own row directly above the table, below).
+		$printPage .=   '<div class="sp-forms-toolbar">';
+		$printPage .=     '<button type="button" class="unique sp-btn sp-btn-secondary sp-forms-download-selected" disabled>Download selected</button>';
+		if ( $cap_upload_forms ) {
+			$printPage .= '<button type="button" class="unique sp-btn sp-btn-secondary sp-forms-move-selected" disabled>Move selected</button>';
+			$printPage .= '<button type="button" class="unique sp-btn sp-btn-secondary sp-forms-delete-selected" disabled>Delete selected</button>';
+		}
+		$printPage .=   '</div>';
+		if ( $cap_upload_forms ) {
+			$printPage .= '<div class="sp-forms-move-wrap" hidden>';
+			$printPage .=   '<span class="unique sp-forms-move-label">Move selected to:</span>';
+			$printPage .=   '<select class="sp-select sp-forms-move-target"><option value="">— Choose repository —</option>' . $sp_move_opts . '</select>';
+			$printPage .=   '<button type="button" class="unique sp-btn sp-btn-primary sp-forms-move-go">Move</button>';
+			$printPage .=   '<button type="button" class="unique sp-btn sp-btn-secondary sp-forms-move-cancel">Cancel</button>';
+			$printPage .= '</div>';
+		}
+		$printPage .=   '<div class="sp-forms-searchbar"><input type="search" class="sp-input sp-forms-search" placeholder="Search names…" aria-label="Search form names"></div>';
+		$printPage .=   '<div class="sp-table-card">';
+		$printPage .=     '<table class="sp-table sp-forms-table">';
+		$printPage .=       '<thead class="sp-thead"><tr>';
+		$printPage .=         '<th class="sp-forms-check-col"><input type="checkbox" class="sp-forms-check-all" aria-label="Select all forms"></th>';
+		$printPage .=         '<th class="sp-forms-sort" data-sort="name">Name</th>';
+		$printPage .=         '<th class="sp-forms-sort" data-sort="category_label">Repository</th>';
+		$printPage .=         '<th class="sp-forms-sort" data-sort="format">Format</th>';
+		$printPage .=         '<th class="sp-forms-sort" data-sort="date">Date</th>';
+		$printPage .=         '<th class="sp-forms-actions-col"></th>';
+		$printPage .=       '</tr></thead>';
+		$printPage .=       '<tbody class="sp-forms-tbody"></tbody>';
+		$printPage .=     '</table>';
+		$printPage .=     '<div class="sp-forms-empty" hidden><p>No forms here yet.</p></div>';
+		$printPage .=   '</div>';
+		$printPage .= '</section>';
+	}
+
+	// "All" — every repository's forms in one searchable list (read-only; locate-and-open). The
+	// big search box filters titles live; a Repository column shows where each form lives.
+	$printPage .= '<section class="sp-panel sp-forms-panel sp-forms-all" id="sp-panel-forms-all" data-forms-cat="all">';
+	$printPage .=   '<div class="sp-panel-header">' . $sp_crumb( 'Forms', 'All' ) . '</div>';
+	$printPage .=   '<div class="sp-forms-toolbar sp-forms-toolbar-all">';
+	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-secondary sp-forms-download-selected" disabled>Download selected</button>';
+	if ( $cap_upload_forms ) {
+		$printPage .= '<button type="button" class="unique sp-btn sp-btn-secondary sp-forms-move-selected" disabled>Move selected</button>';
+		$printPage .= '<button type="button" class="unique sp-btn sp-btn-secondary sp-forms-delete-selected" disabled>Delete selected</button>';
+	}
+	$printPage .=   '</div>';
+	if ( $cap_upload_forms ) {
+		$printPage .= '<div class="sp-forms-move-wrap" hidden>';
+		$printPage .=   '<span class="unique sp-forms-move-label">Move selected to:</span>';
+		$printPage .=   '<select class="sp-select sp-forms-move-target"><option value="">— Choose repository —</option>' . $sp_move_opts . '</select>';
+		$printPage .=   '<button type="button" class="unique sp-btn sp-btn-primary sp-forms-move-go">Move</button>';
+		$printPage .=   '<button type="button" class="unique sp-btn sp-btn-secondary sp-forms-move-cancel">Cancel</button>';
+		$printPage .= '</div>';
+	}
+	$printPage .=   '<div class="sp-forms-searchbar"><input type="search" class="sp-input sp-forms-search sp-forms-filter-all" placeholder="Search all forms by name…" aria-label="Search all forms"></div>';
+	$printPage .=   '<div class="sp-table-card">';
+	$printPage .=     '<table class="sp-table sp-forms-table sp-forms-table-all">';
+	$printPage .=       '<thead class="sp-thead"><tr>';
+	$printPage .=         '<th class="sp-forms-check-col"><input type="checkbox" class="sp-forms-check-all" aria-label="Select all forms"></th>';
+	$printPage .=         '<th class="sp-forms-sort" data-sort="name">Name</th>';
+	$printPage .=         '<th class="sp-forms-sort" data-sort="category_label">Repository</th>';
+	$printPage .=         '<th class="sp-forms-sort" data-sort="format">Format</th>';
+	$printPage .=         '<th class="sp-forms-sort" data-sort="date">Date</th>';
+	$printPage .=         '<th class="sp-forms-actions-col"></th>';
+	$printPage .=       '</tr></thead>';
+	$printPage .=       '<tbody class="sp-forms-tbody"></tbody>';
+	$printPage .=     '</table>';
+	$printPage .=     '<div class="sp-forms-empty" hidden><p>No forms here yet.</p></div>';
+	$printPage .=   '</div>';
+	$printPage .= '</section>';
+}
+
+// Settings → Forms — manage the repositories (add / rename / delete). Content built by JS.
+if ( in_array( 'manage_settings', $caps ) ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-admin-forms">';
+	$printPage .=   '<div class="sp-panel-header">' . $sp_crumb( 'Settings', 'Forms' ) . '</div>';
+	$printPage .=   '<div class="sp-admin-content" id="sp-admin-forms-content"></div>';
 	$printPage .= '</section>';
 }
 
@@ -713,14 +985,19 @@ if ( in_array( 'manage_locations', $caps ) ) {
 }
 if ( in_array( 'manage_templates', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-templates">';
-	$printPage .=   '<div class="sp-panel-header">' . $sp_crumb( 'Settings', 'GM Report Settings' ) . '</div>';
+	$printPage .=   '<div class="sp-panel-header">' . $sp_crumb( 'Settings', 'Reports' ) . '</div>';
 	$printPage .=   '<div class="sp-admin-content" id="sp-admin-templates-content"></div>';
 	$printPage .= '</section>';
 }
 if ( in_array( 'manage_settings', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-settings">';
-	$printPage .=   '<div class="sp-panel-header">' . $sp_crumb( 'Settings', 'Site Settings' ) . '</div>';
+	$printPage .=   '<div class="sp-panel-header">' . $sp_crumb( 'Settings', 'Site Defaults' ) . '</div>';
 	$printPage .=   '<div class="sp-admin-content" id="sp-admin-settings-content"></div>';
+	$printPage .= '</section>';
+
+	$printPage .= '<section class="sp-panel" id="sp-panel-admin-notifications">';
+	$printPage .=   '<div class="sp-panel-header">' . $sp_crumb( 'Settings', 'Notifications' ) . '</div>';
+	$printPage .=   '<div class="sp-admin-content" id="sp-admin-notifications-content"></div>';
 	$printPage .= '</section>';
 
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-apikeys">';
@@ -736,7 +1013,7 @@ if ( $is_superadmin ) {
 }
 if ( in_array( 'manage_mileage', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-mileage">';
-	$printPage .=   '<div class="sp-panel-header">' . $sp_crumb( 'Settings', 'Mileage Settings' ) . '</div>';
+	$printPage .=   '<div class="sp-panel-header">' . $sp_crumb( 'Settings', 'Mileage' ) . '</div>';
 	$printPage .=   '<div class="sp-admin-content" id="sp-admin-mileage-content"></div>';
 	$printPage .= '</section>';
 }

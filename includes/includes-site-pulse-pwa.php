@@ -36,7 +36,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 // Bump on any structural change to force every installed client to fetch a
 // fresh service worker and drop its old cache.
-if ( ! defined( 'SITE_PULSE_PWA_VERSION' ) ) define( 'SITE_PULSE_PWA_VERSION', '1.0.0' );
+if ( ! defined( 'SITE_PULSE_PWA_VERSION' ) ) define( 'SITE_PULSE_PWA_VERSION', '1.1.0' );
 
 // The two virtual files. Matched by basename so a subdirectory install still works.
 if ( ! defined( 'SITE_PULSE_PWA_MANIFEST_FILE' ) ) define( 'SITE_PULSE_PWA_MANIFEST_FILE', 'site-pulse-app.webmanifest' );
@@ -265,6 +265,42 @@ self.addEventListener('fetch', (event) => {
 		})());
 	}
 });
+
+// --- Web Push (payload-less) — a wake fires this; we fetch the latest unread summary (cookie-authed)
+// then show the notification + set the app-icon badge. Closed-app delivery. ---
+const SP_PUSH_DATA = '<?php echo esc_js( admin_url( 'admin-ajax.php' ) . '?action=site_pulse_push_data' ); ?>';
+const SP_HOME = '<?php echo esc_js( home_url( '/site-pulse-dashboard/' ) ); ?>';
+
+self.addEventListener('push', (event) => {
+	event.waitUntil((async () => {
+		let data = { title: '<?php echo esc_js( $app_name ); ?>', body: 'You have new activity.', count: 0, url: SP_HOME };
+		try {
+			const r = await fetch(SP_PUSH_DATA, { credentials: 'include', cache: 'no-store' });
+			if (r.ok) data = Object.assign(data, await r.json());
+		} catch (_) {}
+		await self.registration.showNotification(data.title, {
+			body: data.body,
+			tag: 'site-pulse',
+			renotify: true,
+			data: { url: data.url || SP_HOME }
+		});
+		if ('setAppBadge' in self.navigator) {
+			try { (data.count > 0) ? self.navigator.setAppBadge(data.count) : self.navigator.clearAppBadge(); } catch (_) {}
+		}
+	})());
+});
+
+self.addEventListener('notificationclick', (event) => {
+	event.notification.close();
+	const target = (event.notification.data && event.notification.data.url) || SP_HOME;
+	event.waitUntil((async () => {
+		const wins = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+		for (const w of wins) {
+			if ('focus' in w) { try { await w.navigate(target); } catch (_) {} return w.focus(); }
+		}
+		if (clients.openWindow) return clients.openWindow(target);
+	})());
+});
 	<?php
 	exit;
 }
@@ -281,21 +317,67 @@ self.addEventListener('fetch', (event) => {
  */
 function site_pulse_pwa_icons(): array {
 	$urls = site_pulse_pwa_generate_icons();
-	if ( empty( $urls ) ) return [];
+	if ( ! empty( $urls ) ) {
+		$icons = [];
+		if ( ! empty( $urls['192'] ) )      $icons[] = [ 'src' => $urls['192'],      'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any' ];
+		if ( ! empty( $urls['512'] ) )      $icons[] = [ 'src' => $urls['512'],      'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any' ];
+		if ( ! empty( $urls['maskable'] ) ) $icons[] = [ 'src' => $urls['maskable'], 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable' ];
+		if ( $icons ) return $icons;
+	}
 
-	$icons = [];
-	if ( ! empty( $urls['192'] ) )      $icons[] = [ 'src' => $urls['192'],      'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any' ];
-	if ( ! empty( $urls['512'] ) )      $icons[] = [ 'src' => $urls['512'],      'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any' ];
-	if ( ! empty( $urls['maskable'] ) ) $icons[] = [ 'src' => $urls['maskable'], 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable' ];
-	return $icons;
+	// Fallback — server couldn't generate PNGs (e.g. no WebP support in GD/Imagick). Browsers accept
+	// webp/png/jpg manifest icons directly, so point straight at the source image. No padding, but it
+	// works everywhere. Best results when the uploaded source is already square.
+	$url = site_pulse_pwa_source_url();
+	if ( $url ) {
+		$type = site_pulse_pwa_mime_for_url( $url );
+		return [
+			[ 'src' => $url, 'sizes' => '512x512', 'type' => $type, 'purpose' => 'any' ],
+			[ 'src' => $url, 'sizes' => '512x512', 'type' => $type, 'purpose' => 'maskable' ],
+		];
+	}
+	return [];
 }
 
 /**
- * Apple touch icon URL (opaque, 180px), or '' if none.
+ * A single representative icon URL (generated 192 if available, else the fallback source) for
+ * previews / status — works whether icons were generated or we fell back to the raw source.
+ */
+function site_pulse_pwa_preview_url(): string {
+	$icons = site_pulse_pwa_icons();
+	return $icons ? ( $icons[0]['src'] ?? '' ) : '';
+}
+
+/**
+ * Apple touch icon URL (opaque, 180px). Falls back to the raw source image when generation failed.
  */
 function site_pulse_pwa_apple_icon(): string {
 	$urls = site_pulse_pwa_generate_icons();
-	return $urls['180'] ?? ( $urls['192'] ?? '' );
+	return $urls['180'] ?? ( $urls['192'] ?? site_pulse_pwa_source_url() );
+}
+
+/**
+ * URL of the resolved source image (mirrors site_pulse_pwa_source_image, which returns a file path).
+ * Used for the no-generation fallback so the manifest can point straight at the original.
+ */
+function site_pulse_pwa_source_url(): string {
+	$file = site_pulse_pwa_source_image();
+	if ( $file === '' ) return '';
+	$uploads = wp_upload_dir();
+	if ( ! empty( $uploads['basedir'] ) && strpos( $file, $uploads['basedir'] ) === 0 ) {
+		return $uploads['baseurl'] . str_replace( '\\', '/', substr( $file, strlen( $uploads['basedir'] ) ) );
+	}
+	$theme = get_stylesheet_directory();
+	if ( strpos( $file, $theme ) === 0 ) {
+		return get_stylesheet_directory_uri() . str_replace( '\\', '/', substr( $file, strlen( $theme ) ) );
+	}
+	return '';
+}
+
+function site_pulse_pwa_mime_for_url( string $url ): string {
+	$ext = strtolower( pathinfo( (string) wp_parse_url( $url, PHP_URL_PATH ), PATHINFO_EXTENSION ) );
+	$map = [ 'png' => 'image/png', 'webp' => 'image/webp', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'gif' => 'image/gif', 'avif' => 'image/avif', 'svg' => 'image/svg+xml' ];
+	return $map[ $ext ] ?? 'image/png';
 }
 
 /**
@@ -414,10 +496,7 @@ function site_pulse_pwa_generate_icons(): array {
  * pad-and-center onto a colored canvas).
  */
 function site_pulse_pwa_make_square_png( string $src, string $out, int $size, string $bg_hex, bool $maskable ): bool {
-	$data = @file_get_contents( $src );
-	if ( $data === false ) return false;
-
-	$im = @imagecreatefromstring( $data ); // auto-detects png/jpg/webp/gif if GD supports it
+	$im = sp_pwa_load_gd_image( $src );
 	if ( ! $im ) return false;
 
 	$sw = imagesx( $im );
@@ -445,6 +524,38 @@ function site_pulse_pwa_make_square_png( string $src, string $out, int $size, st
 	imagedestroy( $im );
 	imagedestroy( $canvas );
 	return (bool) $ok;
+}
+
+/**
+ * Load a source image into a GD resource. Tries GD's native decode first (png/jpg/webp/gif if this
+ * GD build supports them); if that fails — most often a WebP/AVIF source on a GD without WebP — it
+ * converts to PNG via wp_get_image_editor (which can use Imagick) and loads that. Returns a GD image
+ * or null.
+ */
+function sp_pwa_load_gd_image( string $src ) {
+	$data = @file_get_contents( $src );
+	if ( $data !== false ) {
+		$im = @imagecreatefromstring( $data );
+		if ( $im ) return $im;
+	}
+
+	if ( function_exists( 'wp_get_image_editor' ) ) {
+		$editor = wp_get_image_editor( $src );
+		if ( ! is_wp_error( $editor ) ) {
+			$tmp   = wp_tempnam( 'sp-pwa-icon-src' );
+			$saved = $editor->save( $tmp, 'image/png' );
+			if ( ! is_wp_error( $saved ) && ! empty( $saved['path'] ) && file_exists( $saved['path'] ) ) {
+				$d = @file_get_contents( $saved['path'] );
+				@unlink( $saved['path'] );
+				if ( $d !== false ) {
+					$im = @imagecreatefromstring( $d );
+					if ( $im ) return $im;
+				}
+			}
+			if ( file_exists( $tmp ) ) @unlink( $tmp );
+		}
+	}
+	return null;
 }
 
 /**
@@ -551,6 +662,11 @@ function site_pulse_pwa_head(): void {
 		window.addEventListener('beforeinstallprompt', function (e) {
 			e.preventDefault();
 			deferred = e;
+			window.__spInstallEvent = e; // shared with the in-app dashboard install card
+			// The app is phone-first — don't show the desktop floating install banner (the dashboard
+			// card tells desktop users to install on their phone instead). Still captured above so the
+			// mobile dashboard card's Install button can use it.
+			if (!/Android|Mobi|iPhone|iPad|iPod/i.test(navigator.userAgent || '')) return;
 			showBanner(
 				'<div class="sp-ib-title">Install ' + SP.name + '</div>' +
 				'<div class="sp-ib-text">Add ' + SP.name + ' to your home screen for one-tap, full-screen access.</div>',

@@ -174,6 +174,21 @@ function bp_render_meta($id, $cols, $col, $pt) {
 }
 
 
+function bp_menu_order_span($id, $value) {
+	return '<span class="bp-inline-edit-order"
+		data-post-id="'.esc_attr($id).'"
+		data-raw-value="'.esc_attr((int) $value).'"
+		style="cursor:pointer; border-bottom:var(--inline-edit);"
+		title="Click to edit (applies to all checked rows)">'.(int) $value.'</span>';
+}
+
+function bp_render_menu_order($id, $cols, $col) {
+	$value = (int) get_post_field('menu_order', $id);
+	return empty($cols[$col]['inline_edit'])
+		? $value
+		: bp_menu_order_span($id, $value);
+}
+
 function bp_render_taxonomy_cell($id, $taxonomy, $col, $pt, $inline_edit = false) {
 
 	$base_url = ($pt === 'attachment')
@@ -594,8 +609,7 @@ function bp_admin_columns($config){
 				'bp-author' => fn() =>
 					get_the_author_meta('display_name', get_post_field('post_author', $id)),
 
-				'bp-menu_order' => fn() =>
-					(int) get_post_field('menu_order', $id),
+				'bp-menu_order' => fn() => bp_render_menu_order($id, $cols, $col),
 
 				'bp-meta_number' => ($v = (int) get_post_meta($id, $cols[$col]['meta_key'], true))
 					? str_repeat('⭐', $v)
@@ -1140,6 +1154,68 @@ add_action('admin_enqueue_scripts', function($hook){
 		});
 
 
+		// ===== MENU ORDER INLINE EDITING (numeric, bulk-aware) =====
+
+		document.addEventListener('click', function(e){
+
+			var span = e.target.closest('.bp-inline-edit-order');
+			if (!span) return;
+			if (span.classList.contains('editing')) return;
+			span.classList.add('editing');
+
+			var postId = span.getAttribute('data-post-id');
+			var rawValue = span.getAttribute('data-raw-value') || '0';
+
+			var input = createEl('input', { type: 'number', className: 'bp-inline-input' });
+			input.style.width = '60px';
+			input.style.padding = '3px';
+			input.value = rawValue;
+			span.replaceWith(input);
+			input.focus();
+			input.select();
+
+			function orderSpan(val){
+				return makeEditableSpan('bp-inline-edit-order', { 'post-id': postId, 'raw-value': val }, String(val));
+			}
+
+			function saveOrder(ev){
+				if (ev.type === 'keypress' && ev.which !== 13) return;
+				if (ev.type === 'keypress') ev.preventDefault();
+				input.removeEventListener('blur', saveOrder);
+				input.removeEventListener('keypress', saveOrder);
+
+				var newValue = input.value;
+				var targets = bpBulkTargets(postId);
+
+				var loading = orderSpan('...');
+				input.replaceWith(loading);
+
+				ajaxPost('bp_inline_edit_order_save', {
+					post_ids: targets,
+					menu_order: newValue,
+					nonce: '".wp_create_nonce("bp_inline_edit")."'
+				}).then(function(response){
+					if (response.success) {
+						loading.replaceWith(orderSpan(response.data.menu_order));
+						if (response.data.results) bpApplyResults(response.data.results, postId, 'bp-menu_order');
+					} else {
+						alert('Error: ' + (response.data || 'Failed to save'));
+						loading.replaceWith(orderSpan(rawValue));
+					}
+				}).catch(function(){
+					alert('Error saving order');
+					loading.replaceWith(orderSpan(rawValue));
+				});
+			}
+
+			input.addEventListener('blur', saveOrder);
+			input.addEventListener('keypress', saveOrder);
+			input.addEventListener('keydown', function(ev){
+				if (ev.which === 27) input.replaceWith(orderSpan(rawValue));
+			});
+		});
+
+
 		// ===== TAXONOMY INLINE EDITING (instant toggle, no save button) =====
 
 		document.addEventListener('click', function(e){
@@ -1531,6 +1607,52 @@ add_action('wp_ajax_bp_inline_edit_save', function(){
 		'post_id'   => $post_id,
 		'meta_key'  => $meta_key,
 		'meta_value'=> $meta_value
+	]);
+});
+
+// AJAX: update menu_order (bulk-aware — applies to all checked rows) for the inline editor.
+add_action('wp_ajax_bp_inline_edit_order_save', function(){
+
+	if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'bp_inline_edit')) {
+		wp_send_json_error('Invalid nonce');
+	}
+
+	$menu_order = (int) ($_POST['menu_order'] ?? 0);
+
+	// Accept a single post_id or a post_ids[] array (bulk editing).
+	if (isset($_POST['post_ids']) && is_array($_POST['post_ids'])) {
+		$post_ids = array_map('intval', $_POST['post_ids']);
+	} else {
+		$post_ids = [(int) ($_POST['post_id'] ?? 0)];
+	}
+	$post_ids = array_values(array_unique(array_filter($post_ids)));
+
+	if (empty($post_ids)) {
+		wp_send_json_error('No posts specified');
+	}
+
+	global $wpdb;
+	$results = [];
+
+	foreach ($post_ids as $pid) {
+
+		// Skip any post the current user can't edit.
+		if (!current_user_can('edit_post', $pid)) continue;
+
+		// Update menu_order only (no post_modified bump), then refresh caches.
+		$wpdb->update($wpdb->posts, ['menu_order' => $menu_order], ['ID' => $pid]);
+		clean_post_cache($pid);
+
+		$results[$pid] = bp_menu_order_span($pid, $menu_order);
+	}
+
+	if (empty($results)) {
+		wp_send_json_error('Failed to update order');
+	}
+
+	wp_send_json_success([
+		'menu_order' => $menu_order,
+		'results'    => $results,
 	]);
 });
 

@@ -34,7 +34,7 @@ get_header(); ?>
 			$showContent = "false";
 			$metaPos = "below"; // above or below the title
 			$showDate = "true";
-			$showAuthor = "false"; // true (no link), profile (link to profile)
+			$showAuthor = "false"; // true (no link)
 			$accordion = "false";
 			$countView = "false";
 			$link = "post"; //post, cf-custom-field, specific link, false

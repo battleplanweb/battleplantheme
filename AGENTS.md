@@ -1,4 +1,4 @@
-# Battle Plan Theme Framework — Claude Reference
+# Battle Plan Theme Framework — Codex Reference
 
 ## Overview
 Custom WordPress framework theme built from scratch by Glendon Guttenfelder (Battle Plan Web Design).
@@ -42,7 +42,7 @@ battleplantheme/
 ├── functions-grid.php             # Layout/grid shortcodes
 ├── functions-media-replace.php    # Media replace (absorbed Enable Media Replace plugin; admin-only)
 ├── functions-icons.php            # Icon system
-├── functions-ai-alt.php           # AI alt-text generation (Claude vision) + alt→content sync
+├── functions-ai-alt.php           # AI alt-text generation (Codex vision) + alt→content sync
 ├── functions-style-sheets.php     # CSS enqueueing logic
 ├── style.css                      # Theme declaration (WordPress + GitHub Updater — do not remove)
 ├── header.php / footer.php        # Site wrappers
@@ -934,7 +934,7 @@ Every submission runs through this pipeline automatically:
 6. **Email blocklist** — ~150 known spam-sender email domains
 7. **Word blocklist** — ~250 known spam phrases ("audit your website", "boost your leads", etc.)
 8. **Phone blocklist** — leading-digit checks
-9. **AI filter** (if `ANTHROPIC_API_KEY` constant defined) — Claude Haiku evaluates the submission
+9. **AI filter** (if `ANTHROPIC_API_KEY` constant defined) — Codex Haiku evaluates the submission
 
 Spam submissions still receive a "thanks" response (so bots don't learn what tripped them) but the email gets rerouted to `email@bp-webdev.com` with a `<- SPAM: Blocked {reason} ->` subject prefix, and the IP is fire-and-forget logged to the central `bp-webdev.com/wp-content/email-add-ip.php` endpoint.
 
@@ -1016,7 +1016,7 @@ Only **database** references are rewritten (where ~all content lives, including 
 Loaded **unconditionally** (front-end + cron), because alt can be generated in the background.
 
 ### AI generation
-`bp_ai_generate_alt_text($attachment_id)` sends the image to Claude vision (default `claude-haiku-4-5`) with business + parent-post context and returns SEO-aware alt text (80–125 chars). It does **not** save — the caller decides. Requires `ANTHROPIC_API_KEY` or `BP_ANTHROPIC_API_KEY`; no-ops (and hides the UI) if neither is set.
+`bp_ai_generate_alt_text($attachment_id)` sends the image to Codex vision (default `Codex-haiku-4-5`) with business + parent-post context and returns SEO-aware alt text (80–125 chars). It does **not** save — the caller decides. Requires `ANTHROPIC_API_KEY` or `BP_ANTHROPIC_API_KEY`; no-ops (and hides the UI) if neither is set.
 - **Sparkle icon (✨)** in the Media Library "Alt Text" column → AJAX → generate → `update_post_meta(_wp_attachment_image_alt)`.
 - **Cron** `bp_ai_alt_generate_cron` → same, in the background (used by jobsite_geo auto-generation).
 - Overrides: `BP_AI_ALT_MODEL`, `BP_AI_ALT_MAX_TOKENS`.
@@ -1288,7 +1288,7 @@ Both taxonomies are also excluded from the Yoast sitemap (`battleplan_sitemap_ex
 ### SEO Landing Page Content System
 The archive template (`archive-jobsite_geo.php`) displays a content snippet above the map and job cards. This snippet is stored as **term meta on the `jobsite_geo-services` taxonomy term**.
 
-When a new service+city combination is created for the first time, AI (Claude via Anthropic API) automatically generates a content snippet for that landing page and saves it to the term's meta data.
+When a new service+city combination is created for the first time, AI (Codex via Anthropic API) automatically generates a content snippet for that landing page and saves it to the term's meta data.
 
 Page title is dynamically set: `"Air Conditioner Repair in Allen, TX · Business Name"`
 Meta description is also generated and stored on the term.
@@ -1349,7 +1349,7 @@ Posts are sorted on archive pages by score (highest first):
 
 ### The Mobile App
 Located at `D:/00 - Battle Plan Assets/bp-geo-app/`
-A **PWA (Progressive Web App)** built and maintained with Claude's assistance.
+A **PWA (Progressive Web App)** built and maintained with Codex's assistance.
 - Self-contained — all app code lives in a single `index.html`
 - Deployed and hosted on **Cloudflare Pages**
 - Has `manifest.json` and `sw.js` service worker for installability

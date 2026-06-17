@@ -22,8 +22,12 @@ $printPage .= '<div id="sp-login-wrap">';
 $printPage .=   '<div class="sp-login-box">';
 
 $printPage .=     '<div class="sp-login-header">';
+$sp_login_app_icon = function_exists( 'site_pulse_pwa_preview_url' ) ? site_pulse_pwa_preview_url() : '';
 if ( $logo_url ) {
 	$printPage .=     '<img src="' . esc_url( $logo_url ) . '" alt="' . esc_attr( $app_name ) . '" class="sp-login-logo">';
+} elseif ( $sp_login_app_icon ) {
+	// Use the configured app icon (Settings → Site Defaults → App Icon) instead of the generic lock.
+	$printPage .=     '<img src="' . esc_url( $sp_login_app_icon ) . '" alt="' . esc_attr( $app_name ) . '" class="sp-login-app-icon">';
 } else {
 	$printPage .=     '<div class="sp-login-icon">';
 	$printPage .=       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true" focusable="false">';

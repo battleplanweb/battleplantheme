@@ -2,6 +2,10 @@
 require_once get_template_directory() . '/prompts/prompts-site-pulse.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-modules.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-reviews.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-surveys.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-import.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-messages.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-push.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-pwa.php';
 
 /* Battle Plan Web Design - Site Pulse Internal Operations Platform
@@ -27,7 +31,7 @@ require_once get_template_directory() . '/includes/includes-site-pulse-pwa.php';
 # Constants & Setup
 --------------------------------------------------------------*/
 
-define( 'SITE_PULSE_DB_VERSION', '1.26' );
+define( 'SITE_PULSE_DB_VERSION', '1.42' );
 
 function site_pulse_table( string $name ): string {
 	return $GLOBALS['wpdb']->prefix . 'site_pulse_' . $name;
@@ -86,6 +90,7 @@ function site_pulse_install_db(): void {
 		id int(11) NOT NULL AUTO_INCREMENT,
 		name varchar(255) NOT NULL,
 		location_type varchar(100) NOT NULL DEFAULT '',
+		is_store tinyint(1) NOT NULL DEFAULT 1,
 		address varchar(255) DEFAULT NULL,
 		city varchar(100) DEFAULT NULL,
 		state varchar(50) DEFAULT NULL,
@@ -231,15 +236,72 @@ function site_pulse_install_db(): void {
 		message text NOT NULL,
 		is_read tinyint(1) NOT NULL DEFAULT 0,
 		is_archived tinyint(1) NOT NULL DEFAULT 0,
+		on_dashboard tinyint(1) NOT NULL DEFAULT 0,
 		created_at datetime NOT NULL,
 		PRIMARY KEY  (id),
 		KEY user_notifications (user_id, is_read, is_archived)
+	) $charset;";
+
+	$sql .= "CREATE TABLE " . site_pulse_table('messages') . " (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		conversation_id int(11) NOT NULL DEFAULT 0,
+		sender_id int(11) NOT NULL,
+		recipient_id int(11) NOT NULL,
+		body text NOT NULL,
+		is_read tinyint(1) NOT NULL DEFAULT 0,
+		edited tinyint(1) NOT NULL DEFAULT 0,
+		attach_url varchar(255) DEFAULT NULL,
+		attach_name varchar(255) DEFAULT NULL,
+		attach_mime varchar(100) DEFAULT NULL,
+		created_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		KEY conversation (sender_id, recipient_id),
+		KEY conv (conversation_id),
+		KEY inbox (recipient_id, is_read)
+	) $charset;";
+
+	$sql .= "CREATE TABLE " . site_pulse_table('conversations') . " (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		is_group tinyint(1) NOT NULL DEFAULT 0,
+		title varchar(255) DEFAULT NULL,
+		created_by int(11) NOT NULL DEFAULT 0,
+		created_at datetime NOT NULL,
+		updated_at datetime NOT NULL,
+		PRIMARY KEY  (id)
+	) $charset;";
+
+	$sql .= "CREATE TABLE " . site_pulse_table('conversation_participants') . " (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		conversation_id int(11) NOT NULL,
+		user_id int(11) NOT NULL,
+		last_read_message_id int(11) NOT NULL DEFAULT 0,
+		seen_message_id int(11) NOT NULL DEFAULT 0,
+		seen_at datetime DEFAULT NULL,
+		joined_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		UNIQUE KEY convo_user (conversation_id, user_id),
+		KEY user_convos (user_id)
+	) $charset;";
+
+	$sql .= "CREATE TABLE " . site_pulse_table('push_subscriptions') . " (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		user_id int(11) NOT NULL,
+		endpoint varchar(500) NOT NULL,
+		endpoint_hash char(64) NOT NULL,
+		p256dh varchar(255) DEFAULT NULL,
+		auth varchar(255) DEFAULT NULL,
+		ua varchar(255) DEFAULT NULL,
+		created_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		UNIQUE KEY endpoint_hash (endpoint_hash),
+		KEY user_id (user_id)
 	) $charset;";
 
 	$sql .= "CREATE TABLE " . site_pulse_table('action_items') . " (
 		id int(11) NOT NULL AUTO_INCREMENT,
 		report_id int(11) NOT NULL,
 		user_id int(11) NOT NULL,
+		created_by int(11) NOT NULL DEFAULT 0,
 		location_id int(11) NOT NULL DEFAULT 0,
 		category varchar(100) DEFAULT NULL,
 		description text NOT NULL,
@@ -436,11 +498,33 @@ function site_pulse_install_db(): void {
 		store_number varchar(40) DEFAULT NULL,
 		account_code varchar(20) DEFAULT NULL,
 		amount decimal(10,2) NOT NULL DEFAULT 0,
+		receipt_path varchar(255) DEFAULT NULL,
 		created_at datetime NOT NULL,
 		updated_at datetime NOT NULL,
 		PRIMARY KEY  (id),
 		KEY user_section (user_id, section),
 		KEY user_date (user_id, expense_date)
+	) $charset;";
+
+	// Uploaded Forms library — files shared company-wide, organized into repositories
+	// (training / kitchen / foh / misc). `file_format` is the auto-detected family (PDF, Word,
+	// Excel, Image…); `type_label` is the uploader's manual label (Checklist, Policy…).
+	$sql .= "CREATE TABLE " . site_pulse_table('forms') . " (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		name varchar(200) NOT NULL,
+		category varchar(20) NOT NULL,
+		sub_category varchar(40) DEFAULT NULL,
+		type_label varchar(80) DEFAULT NULL,
+		file_path varchar(255) NOT NULL,
+		file_name varchar(255) DEFAULT NULL,
+		file_format varchar(20) DEFAULT NULL,
+		file_size int(11) NOT NULL DEFAULT 0,
+		uploaded_by int(11) NOT NULL,
+		created_at datetime NOT NULL,
+		updated_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		KEY category (category),
+		KEY uploaded_by (uploaded_by)
 	) $charset;";
 
 	// Recoverable deletions — powers the header "Undo" button. One row per deleted record
@@ -454,6 +538,48 @@ function site_pulse_install_db(): void {
 		created_at datetime NOT NULL,
 		PRIMARY KEY  (id),
 		KEY user_created (user_id, created_at)
+	) $charset;";
+
+	// Customer satisfaction surveys forwarded in from the public restaurant sites (cross-site,
+	// HMAC-signed — see includes-site-pulse-surveys.php). One row per submission. `ratings` is a
+	// JSON map of dimension => 1-5 (dimensions can differ per brand); `avg_rating`/`overall` are
+	// denormalized for fast sorting + summary cards. `location` is the customer-picked restaurant.
+	$sql .= "CREATE TABLE " . site_pulse_table('surveys') . " (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		location varchar(150) DEFAULT NULL,
+		source_site varchar(150) DEFAULT NULL,
+		customer_name varchar(150) DEFAULT NULL,
+		email varchar(190) DEFAULT NULL,
+		phone varchar(40) DEFAULT NULL,
+		address varchar(255) DEFAULT NULL,
+		city varchar(100) DEFAULT NULL,
+		state varchar(50) DEFAULT NULL,
+		zip varchar(20) DEFAULT NULL,
+		experience varchar(40) DEFAULT NULL,
+		visit_date date DEFAULT NULL,
+		referral varchar(80) DEFAULT NULL,
+		ratings longtext DEFAULT NULL,
+		avg_rating decimal(3,2) DEFAULT NULL,
+		overall tinyint(4) DEFAULT NULL,
+		comments text DEFAULT NULL,
+		source_ip varchar(60) DEFAULT NULL,
+		created_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		KEY location (location),
+		KEY visit_date (visit_date),
+		KEY created_at (created_at)
+	) $charset;";
+
+	// PER-USER survey archiving — archiving hides a survey from THAT user's list only; everyone
+	// else still sees it until they archive it themselves. One row per (user, survey) archived.
+	$sql .= "CREATE TABLE " . site_pulse_table('survey_archives') . " (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		user_id int(11) NOT NULL,
+		survey_id int(11) NOT NULL,
+		created_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		UNIQUE KEY user_survey (user_id, survey_id),
+		KEY survey_id (survey_id)
 	) $charset;";
 
 	dbDelta( $sql );
@@ -486,6 +612,13 @@ add_action( 'init', function() {
 	}
 	site_pulse_migrate_supervisor_report_caps();
 	site_pulse_migrate_retire_legacy_report_caps();
+	site_pulse_migrate_survey_caps();
+
+	// One-time: fold legacy 1:1 messages into the conversation model (group threads). Self-guarded.
+	if ( ! get_option( 'site_pulse_msg_convos_migrated' ) && function_exists( 'sp_msg_migrate_to_conversations' ) ) {
+		sp_msg_migrate_to_conversations();
+		update_option( 'site_pulse_msg_convos_migrated', '1' );
+	}
 
 	// One-time: the original store "Manager" tier is now the "GM" (and its report likewise). The
 	// seed/template seeders are insert-only, so existing installs need this nudge. Each row is only
@@ -501,6 +634,12 @@ add_action( 'init', function() {
 	// Make sure the daily mileage-reminder cron exists when enabled (survives restarts).
 	if ( site_pulse_get_setting( 'mileage_reminders_enabled', '0' ) === '1' && ! wp_next_scheduled( 'site_pulse_mileage_reminder' ) ) {
 		site_pulse_reschedule_mileage_reminder();
+	}
+
+	// Daily expense-period reminder cron (always scheduled; it self-gates on period config + the
+	// Notifications matrix + pending-user list, so it's a no-op until the submit flow exists).
+	if ( ! wp_next_scheduled( 'site_pulse_expense_period_reminder' ) ) {
+		wp_schedule_event( strtotime( 'tomorrow 7:00am' ), 'daily', 'site_pulse_expense_period_reminder' );
 	}
 } );
 
@@ -723,6 +862,28 @@ function site_pulse_migrate_retire_legacy_report_caps(): void {
 	}
 }
 
+/**
+ * One-time: grant the Surveys caps to existing tiers that already manage Reviews (the Surveys
+ * caps were added after Reviews shipped). Any tier with view_reviews gains view_surveys; any with
+ * manage_reviews gains manage_surveys. Insert-only + option-guarded, so a later admin tweak sticks.
+ * (New sites already get these from seed_roles.) They stay inert until the Surveys module is on.
+ */
+function site_pulse_migrate_survey_caps(): void {
+	if ( get_option( 'site_pulse_survey_caps_seeded' ) ) return;
+	update_option( 'site_pulse_survey_caps_seeded', '1' );
+
+	global $wpdb;
+	$tbl  = site_pulse_table('roles');
+	$rows = $wpdb->get_results( "SELECT id, capabilities FROM $tbl", ARRAY_A ) ?: [];
+	foreach ( $rows as $row ) {
+		$caps    = json_decode( $row['capabilities'], true ) ?: [];
+		$changed = false;
+		if ( in_array( 'view_reviews', $caps, true ) && ! in_array( 'view_surveys', $caps, true ) )     { $caps[] = 'view_surveys';   $changed = true; }
+		if ( in_array( 'manage_reviews', $caps, true ) && ! in_array( 'manage_surveys', $caps, true ) ) { $caps[] = 'manage_surveys'; $changed = true; }
+		if ( $changed ) $wpdb->update( $tbl, [ 'capabilities' => wp_json_encode( array_values( $caps ) ), 'updated_at' => current_time( 'mysql' ) ], [ 'id' => (int) $row['id'] ] );
+	}
+}
+
 function site_pulse_seed_roles(): void {
 	global $wpdb;
 	$now = current_time( 'mysql' );
@@ -730,25 +891,25 @@ function site_pulse_seed_roles(): void {
 		[
 			'slug'            => 'god',
 			'label'           => 'Odinson',
-			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'view_ai_insights', 'submit_reports', 'view_own_reports', 'god_mode', 'manage_mileage', 'submit_mileage', 'view_reviews', 'manage_reviews' ] ),
+			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'view_ai_insights', 'submit_reports', 'view_own_reports', 'god_mode', 'manage_mileage', 'submit_mileage', 'view_reviews', 'manage_reviews', 'view_surveys', 'manage_surveys' ] ),
 			'hierarchy_level' => 255,
 		],
 		[
 			'slug'            => 'owner',
 			'label'           => 'Owner',
-			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'view_ai_insights', 'manage_mileage', 'submit_mileage', 'view_reviews', 'manage_reviews' ] ),
+			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'view_ai_insights', 'manage_mileage', 'submit_mileage', 'view_reviews', 'manage_reviews', 'view_surveys', 'manage_surveys' ] ),
 			'hierarchy_level' => 100,
 		],
 		[
 			'slug'            => 'admin',
 			'label'           => 'Administrator',
-			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'view_analytics', 'manage_settings', 'view_ai_insights', 'manage_mileage', 'submit_mileage', 'view_reviews', 'manage_reviews' ] ),
+			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'view_analytics', 'manage_settings', 'view_ai_insights', 'manage_mileage', 'submit_mileage', 'view_reviews', 'manage_reviews', 'view_surveys', 'manage_surveys' ] ),
 			'hierarchy_level' => 90,
 		],
 		[
 			'slug'            => 'supervisor',
 			'label'           => 'Supervisor',
-			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'submit_reports', 'view_own_reports', 'view_analytics', 'submit_mileage', 'view_reviews' ] ),
+			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'submit_reports', 'view_own_reports', 'view_analytics', 'submit_mileage', 'view_reviews', 'view_surveys' ] ),
 			'hierarchy_level' => 50,
 		],
 		[
@@ -926,6 +1087,9 @@ function site_pulse_enqueue_assets(): void {
 		// <someone>" hides the super-admin-only controls (Grant/Revoke God) like that user sees.
 		'isSuperadmin'       => site_pulse_is_superadmin( $real_user_id ) && ! site_pulse_is_impersonating(),
 		'impersonating'      => site_pulse_is_impersonating(),
+		// Whether the REAL user has ever opened the installed (home-screen) app — used to stop
+		// nagging installers with the dashboard install card.
+		'appInstalled'       => (bool) get_user_meta( $real_user_id, '_sp_app_installed', true ),
 		// Google Maps JS key for the (client-side) mileage/toll maps. Prefers a dedicated
 		// browser key if set, else the main key. NOTE: this key is exposed to the browser,
 		// so it MUST be HTTP-referrer restricted in the Google Cloud Console.
@@ -1010,8 +1174,11 @@ function site_pulse_capability_catalog_all(): array {
 		'view_analytics'    => 'View analytics',
 		'view_ai_insights'  => 'View AI insights',
 		'view_forms'        => 'View Forms',
+		'upload_forms'      => 'Upload Forms',
 		'view_reviews'      => 'View reviews',
 		'manage_reviews'    => 'Manage reviews &amp; replies',
+		'view_surveys'      => 'View customer surveys',
+		'manage_surveys'    => 'Manage customer surveys',
 		'submit_mileage'    => 'Submit mileage',
 		'manage_mileage'    => 'Manage mileage settings',
 		'manage_locations'  => 'Manage home bases',
@@ -1070,6 +1237,13 @@ function site_pulse_parse_overrides( $raw ): array {
  * by the dashboard template, and by the JS localization — so an override holds everywhere.
  */
 function site_pulse_effective_caps( int $user_id ): array {
+	// A god sees and can do everything, all the time — the FULL capability catalog, never
+	// module-filtered. (Impersonation passes the impersonated user's id here, so this only
+	// applies when a god is acting as themselves; an impersonated god gets the user's real caps.)
+	if ( site_pulse_is_god( $user_id ) ) {
+		return array_merge( array_keys( site_pulse_capability_catalog_all() ), [ 'god_mode' ] );
+	}
+
 	$profile = site_pulse_get_user_profile( $user_id );
 	if ( ! $profile ) return [];
 
@@ -1139,6 +1313,38 @@ function site_pulse_visible_report_user_ids( int $viewer_id ): array {
 	return array_values( array_unique( array_map( 'intval', $ids ) ) );
 }
 
+// Every user BELOW a viewer in the supervisor tree (their whole org chain, not just direct reports).
+// Walks supervisor_id downward breadth-first: Joel → Ed & Patrick → Ed's GMs, Patrick's GMs, … A
+// $seen set guards against misconfigured cycles. Returns the flat list of descendant user IDs.
+function site_pulse_get_descendant_user_ids( int $viewer_id ): array {
+	$descendants = [];
+	$seen        = [ $viewer_id => true ];
+	$queue       = array_map( 'intval', site_pulse_get_team_user_ids( $viewer_id ) );
+	while ( $queue ) {
+		$uid = (int) array_shift( $queue );
+		if ( isset( $seen[ $uid ] ) ) continue;
+		$seen[ $uid ]   = true;
+		$descendants[]  = $uid;
+		foreach ( site_pulse_get_team_user_ids( $uid ) as $child ) {
+			$child = (int) $child;
+			if ( ! isset( $seen[ $child ] ) ) $queue[] = $child;
+		}
+	}
+	return array_values( array_unique( $descendants ) );
+}
+
+// The store IDs a viewer "manages" = the stores of EVERY user beneath them in the supervisor tree
+// (recursive, so a regional manager over several supervisors sees all of their stores). Drives the
+// "My Stores" default filter in GM Reports. Empty for viewers with no one under them.
+function site_pulse_managed_location_ids( int $viewer_id ): array {
+	$loc_ids = [];
+	foreach ( site_pulse_get_descendant_user_ids( $viewer_id ) as $tid ) {
+		$p = site_pulse_get_user_profile( (int) $tid );
+		if ( $p && (int) $p['location_id'] ) $loc_ids[] = (int) $p['location_id'];
+	}
+	return array_values( array_unique( $loc_ids ) );
+}
+
 function site_pulse_can_view_report( int $viewer_id, array $report ): bool {
 	if ( (int) $report['user_id'] === $viewer_id ) return true;
 	return in_array( (int) $report['user_id'], site_pulse_visible_report_user_ids( $viewer_id ), true );
@@ -1190,9 +1396,12 @@ function site_pulse_get_location( int $id ): ?array {
 	return $row ?: null;
 }
 
-function site_pulse_get_all_locations( bool $active_only = true ): array {
+function site_pulse_get_all_locations( bool $active_only = true, bool $stores_only = false ): array {
 	global $wpdb;
-	$where = $active_only ? "WHERE status = 'active'" : "";
+	$conds = [];
+	if ( $active_only ) $conds[] = "status = 'active'";
+	if ( $stores_only ) $conds[] = "is_store = 1";
+	$where = $conds ? 'WHERE ' . implode( ' AND ', $conds ) : '';
 	return $wpdb->get_results(
 		"SELECT * FROM " . site_pulse_table('locations') . " $where ORDER BY display_order, name",
 		ARRAY_A
@@ -1302,9 +1511,12 @@ function site_pulse_submit_report( int $report_id ): bool {
 
 			site_pulse_log( 'report_submitted', $msg, [ 'report_id' => $report_id ] );
 
-			if ( $profile && $profile['supervisor_id'] ) {
-				site_pulse_notify( (int) $profile['supervisor_id'], 'report_submitted', $msg, $report_id, 'report' );
-			}
+			// GM vs Supervisor report — driven by the template's required role — get separate events.
+			$tpl   = site_pulse_get_template( (int) $report['template_id'] );
+			$event = ( $tpl && ( $tpl['required_role_slug'] ?? '' ) === 'supervisor' )
+				? 'supervisor_report_submitted'
+				: 'gm_report_submitted';
+			site_pulse_dispatch_notification( $event, (int) $report['user_id'], $msg, $report_id, 'report' );
 		}
 	}
 
@@ -1407,15 +1619,21 @@ function site_pulse_get_reports( array $args = [] ): array {
 		$where[]      = "r.user_id IN ($placeholders)";
 		$values       = array_merge( $values, array_map( 'intval', $args['user_ids'] ) );
 	}
+	if ( ! empty( $args['location_ids'] ) ) {
+		$placeholders = implode( ',', array_fill( 0, count( $args['location_ids'] ), '%d' ) );
+		$where[]      = "r.location_id IN ($placeholders)";
+		$values       = array_merge( $values, array_map( 'intval', $args['location_ids'] ) );
+	}
 
 	$order_by = $args['order_by'] ?? 'r.report_period_end DESC, r.created_at DESC';
 	$limit    = isset( $args['limit'] ) ? (int) $args['limit'] : 50;
 	$offset   = isset( $args['offset'] ) ? (int) $args['offset'] : 0;
 
-	$sql = "SELECT r.*, l.name AS location_name, u.display_name AS author_name
+	$sql = "SELECT r.*, l.name AS location_name, u.display_name AS author_name, t.required_role_slug AS template_role
 			FROM " . site_pulse_table('reports') . " r
 			LEFT JOIN " . site_pulse_table('locations') . " l ON l.id = r.location_id
 			LEFT JOIN {$wpdb->users} u ON u.ID = r.user_id
+			LEFT JOIN " . site_pulse_table('report_templates') . " t ON t.id = r.template_id
 			WHERE " . implode( ' AND ', $where ) . "
 			ORDER BY $order_by
 			LIMIT $limit OFFSET $offset";
@@ -1497,6 +1715,45 @@ function site_pulse_get_all_users( bool $active_only = true, bool $include_god =
 		 ORDER BY u.display_name",
 		ARRAY_A
 	) ?: [];
+}
+
+
+/*--------------------------------------------------------------
+# Activity tracking (last-active + app-installed)
+--------------------------------------------------------------*/
+
+// Stamp the REAL logged-in user's last-active time (throttled to once / 2 min to avoid write spam).
+// "Real" not effective, so a god impersonating someone doesn't mark that person active.
+function site_pulse_touch_last_active(): void {
+	// Always stamp the REAL logged-in user, never the effective/impersonated one. So a god
+	// impersonating Bill marks the GOD active (it's the god actually using the app), and Bill is
+	// only marked active when Bill's own session uses it. (Impersonation is a meta flag, not a login
+	// switch, so get_current_user_id() stays the god throughout.)
+	$uid = get_current_user_id();
+	if ( ! $uid ) return;
+	$last = (int) get_user_meta( $uid, '_sp_last_active', true );
+	if ( time() - $last >= 120 ) update_user_meta( $uid, '_sp_last_active', time() );
+}
+
+// Fires on every Site Pulse AJAX call (the SPA polls regularly), so "last active" reflects real use.
+add_action( 'init', function () {
+	if ( ! is_user_logged_in() || ! wp_doing_ajax() ) return;
+	$action = isset( $_REQUEST['action'] ) ? (string) $_REQUEST['action'] : '';
+	if ( strpos( $action, 'site_pulse' ) !== 0 && strpos( $action, 'sp_' ) !== 0 ) return;
+	site_pulse_touch_last_active();
+}, 1 );
+
+// The installed-PWA client pings this when it detects it's running standalone (home-screen app), so
+// we know which users have actually installed it (adoption) and can stop nudging them.
+add_action( 'wp_ajax_site_pulse_record_app_open', 'site_pulse_ajax_record_app_open' );
+function site_pulse_ajax_record_app_open(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$uid = get_current_user_id();
+	if ( $uid ) {
+		update_user_meta( $uid, '_sp_app_installed', 1 );
+		update_user_meta( $uid, '_sp_app_open_at', time() );
+	}
+	wp_send_json_success();
 }
 
 
@@ -1766,6 +2023,13 @@ function site_pulse_ajax_get_reports(): void {
 
 	if ( ! empty( $_POST['location_id'] ) ) $args['location_id'] = (int) $_POST['location_id'];
 
+	// "My Stores" filter — limit to the stores the viewer manages (their team's stores). Resolved
+	// server-side so the client can't widen it. No managed stores → match nothing (id 0).
+	if ( ! empty( $_POST['mine'] ) ) {
+		$managed = site_pulse_managed_location_ids( $user_id );
+		$args['location_ids'] = $managed ?: [ 0 ];
+	}
+
 	if ( ! empty( $_POST['template_id'] ) )    $args['template_id']    = (int) $_POST['template_id'];
 	if ( ! empty( $_POST['template_role'] ) )  $args['template_role']  = sanitize_text_field( $_POST['template_role'] );
 	if ( ! empty( $_POST['status'] ) )       $args['status']       = sanitize_text_field( $_POST['status'] );
@@ -1861,6 +2125,14 @@ function site_pulse_ajax_admin_get_users(): void {
 	$users     = site_pulse_get_all_users( false, false );
 	$roles     = site_pulse_get_all_roles( false );
 	$locations = site_pulse_get_all_locations();
+
+	// Attach activity + app-install state for the "Last Active" / adoption columns.
+	foreach ( $users as &$u ) {
+		$uid = (int) ( $u['user_id'] ?? 0 );
+		$u['last_active']   = $uid ? (int) get_user_meta( $uid, '_sp_last_active', true ) : 0;
+		$u['app_installed'] = $uid ? ( get_user_meta( $uid, '_sp_app_installed', true ) ? 1 : 0 ) : 0;
+	}
+	unset( $u );
 
 	global $wpdb;
 	// Shared (non-private) approved locations for the Home Base picker. Private
@@ -2047,6 +2319,10 @@ function site_pulse_ajax_admin_save_location(): void {
 	$data = [
 		'name'          => sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) ),
 		'location_type' => sanitize_text_field( wp_unslash( $_POST['location_type'] ?? '' ) ),
+		// Whether this is a store (restaurant). Stores appear in the report location filters; non-store
+		// locations (accounting office, storage, vendor) are kept off those lists. New locations default
+		// to store unless the checkbox is cleared.
+		'is_store'      => ( isset( $_POST['is_store'] ) ? ( (int) $_POST['is_store'] ? 1 : 0 ) : 1 ),
 		'address'       => sanitize_text_field( wp_unslash( $_POST['address'] ?? '' ) ),
 		'city'          => sanitize_text_field( wp_unslash( $_POST['city'] ?? '' ) ),
 		'state'         => sanitize_text_field( wp_unslash( $_POST['state'] ?? '' ) ),
@@ -2402,7 +2678,15 @@ function site_pulse_ajax_get_review_filters(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 
 	$user_id = site_pulse_effective_user_id();
-	$locations = site_pulse_get_all_locations();
+	// The full store list — every viewer can drill into any store. Reports are filed for stores, so
+	// this excludes non-store locations (accounting office, storage yard, vendor) via stores_only.
+	$locations = site_pulse_get_all_locations( true, true );
+
+	// The stores this viewer manages (their team's stores). Non-empty → the GM Reports filter shows a
+	// "My Stores" option as the default. Org-wide viewers (god/owner/admin) have no team and just get
+	// the normal "All Locations" default.
+	$org_wide = site_pulse_is_god( $user_id ) || site_pulse_user_can( $user_id, 'manage_users' );
+	$my_location_ids = $org_wide ? [] : site_pulse_managed_location_ids( $user_id );
 
 	// Submitters the viewer is allowed to filter by (GMs and/or supervisors, per their caps).
 	$users = [];
@@ -2412,7 +2696,7 @@ function site_pulse_ajax_get_review_filters(): void {
 		if ( $u ) $users[] = [ 'user_id' => $tid, 'display_name' => $u->display_name ];
 	}
 
-	wp_send_json_success( [ 'locations' => $locations, 'users' => $users ] );
+	wp_send_json_success( [ 'locations' => $locations, 'users' => $users, 'my_location_ids' => $my_location_ids ] );
 }
 
 
@@ -2444,17 +2728,24 @@ function site_pulse_ajax_get_notifications(): void {
 	wp_send_json_success( [ 'notifications' => $notifications ] );
 }
 
+// Clicking a notification dismisses it — read AND archived, so it leaves the bell (the panel only
+// lists is_archived=0). Scoped to the owner.
 add_action( 'wp_ajax_site_pulse_mark_notification_read', 'site_pulse_ajax_mark_notification_read' );
 function site_pulse_ajax_mark_notification_read(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	$id = (int) ( $_POST['id'] ?? 0 );
 	if ( $id ) {
 		global $wpdb;
-		$wpdb->update( site_pulse_table('notifications'), [ 'is_read' => 1 ], [ 'id' => $id ] );
+		$wpdb->update(
+			site_pulse_table('notifications'),
+			[ 'is_read' => 1, 'is_archived' => 1 ],
+			[ 'id' => $id, 'user_id' => site_pulse_effective_user_id() ]
+		);
 	}
 	wp_send_json_success();
 }
 
+// "Mark all read" clears the bell — archives every still-showing notification for the user.
 add_action( 'wp_ajax_site_pulse_mark_notifications_read', 'site_pulse_ajax_mark_notifications_read' );
 function site_pulse_ajax_mark_notifications_read(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
@@ -2462,13 +2753,13 @@ function site_pulse_ajax_mark_notifications_read(): void {
 	global $wpdb;
 	$wpdb->update(
 		site_pulse_table('notifications'),
-		[ 'is_read' => 1 ],
-		[ 'user_id' => $user_id, 'is_read' => 0 ]
+		[ 'is_read' => 1, 'is_archived' => 1 ],
+		[ 'user_id' => $user_id, 'is_archived' => 0 ]
 	);
 	wp_send_json_success();
 }
 
-function site_pulse_notify( int $user_id, string $type, string $message, int $related_id = 0, string $related_type = '' ): void {
+function site_pulse_notify( int $user_id, string $type, string $message, int $related_id = 0, string $related_type = '', bool $on_dashboard = false ): void {
 	global $wpdb;
 	$wpdb->insert( site_pulse_table('notifications'), [
 		'user_id'      => $user_id,
@@ -2478,8 +2769,231 @@ function site_pulse_notify( int $user_id, string $type, string $message, int $re
 		'related_type' => $related_type,
 		'is_read'      => 0,
 		'is_archived'  => 0,
+		'on_dashboard' => $on_dashboard ? 1 : 0,
 		'created_at'   => current_time( 'mysql' ),
 	] );
+}
+
+/*--------------------------------------------------------------
+# Notification routing (Settings → Notifications matrix)
+--------------------------------------------------------------*/
+
+// The notifiable situations (rows of the Settings → Notifications matrix).
+function site_pulse_notification_events(): array {
+	return [
+		'gm_report_submitted'         => 'GM report submitted',
+		'supervisor_report_submitted' => 'Supervisor report submitted',
+		'survey_received'             => 'New customer survey submitted',
+		'action_pending'              => 'Action items created from a new report',
+		'action_followup'             => 'Action item needs follow-up (not fully resolved)',
+		'action_resolved'             => 'Action item resolved',
+		'action_urgent'               => 'High-priority action item approved',
+		'period_ending_2days'         => 'Expense period ends in 2 days (not yet submitted)',
+		'period_ending_tomorrow'      => 'Expense period ends tomorrow (not yet submitted)',
+		'period_ends_today'           => 'Expense period ends today (not yet submitted)',
+		'mileage_pending'             => 'New mileage location proposed (needs approval)',
+		'mileage_approved'            => 'Mileage location approved',
+		'mileage_rejected'            => 'Mileage location rejected',
+	];
+}
+
+// The matrix columns. 'dashboard' is a DELIVERY channel (not a recipient) — when on, the bell
+// notifications for that event ALSO surface as a dismissible banner on the dashboard. The rest are
+// recipients: 'gm' = the event's subject person; 'supervisor' = that person's direct supervisor;
+// the others broadcast to everyone holding that Site Pulse role.
+function site_pulse_notification_columns(): array {
+	return [
+		'dashboard'       => 'Dashboard',
+		'push'            => 'Push',
+		'gm'              => 'GM',
+		'all_gms'         => 'All GMs',
+		'supervisor'      => 'Supervisor',
+		'all_supervisors' => 'All Supervisors',
+		'admin'           => 'Admin',
+		'managers'        => 'Managers',
+		'owners'          => 'Owners',
+	];
+}
+
+// Defaults mirror the original hard-coded recipients, so behavior is unchanged until an admin edits.
+function site_pulse_notification_defaults(): array {
+	return [
+		'gm_report_submitted'         => [ 'supervisor' => 1 ],
+		'supervisor_report_submitted' => [ 'supervisor' => 1 ],
+		'survey_received'             => [ 'gm' => 1, 'supervisor' => 1 ],
+		'action_pending'              => [ 'gm' => 1 ],
+		'action_followup'             => [ 'gm' => 1, 'supervisor' => 1 ],
+		'action_resolved'             => [ 'supervisor' => 1 ],
+		'action_urgent'               => [ 'supervisor' => 1 ],
+		'period_ending_2days'         => [ 'gm' => 1 ],
+		'period_ending_tomorrow'      => [ 'gm' => 1 ],
+		'period_ends_today'           => [ 'gm' => 1 ],
+		'mileage_pending'             => [ 'admin' => 1, 'owners' => 1 ],
+		'mileage_approved'            => [ 'gm' => 1 ],
+		'mileage_rejected'            => [ 'gm' => 1 ],
+	];
+}
+
+// The effective matrix: saved overrides per event, falling back to defaults for any event not saved.
+function site_pulse_get_notification_routing(): array {
+	$raw   = site_pulse_get_setting( 'notification_routing', '' );
+	$saved = $raw !== '' ? json_decode( $raw, true ) : null;
+	$defaults = site_pulse_notification_defaults();
+	$out = [];
+	foreach ( site_pulse_notification_events() as $ev => $label ) {
+		$out[ $ev ] = ( is_array( $saved ) && isset( $saved[ $ev ] ) && is_array( $saved[ $ev ] ) )
+			? $saved[ $ev ]
+			: ( $defaults[ $ev ] ?? [] );
+	}
+	return $out;
+}
+
+// Fan a notification out to whichever recipient groups the matrix enables for this event.
+// $subject_user_id is the person the event is "about" (report author, action-item owner, the
+// proposer/creator of a mileage location) — it drives the contextual 'gm' and 'supervisor' columns.
+function site_pulse_dispatch_notification( string $event, int $subject_user_id, string $message, int $related_id = 0, string $related_type = '' ): void {
+	$cols = site_pulse_get_notification_routing()[ $event ] ?? [];
+	if ( empty( $cols ) ) return;
+
+	// 'dashboard' and 'push' are channel flags, not recipients. Dashboard elevates the bell entry to a
+	// banner; push fires a Web Push wake. The recipient resolution below only reads role/contextual keys.
+	$on_dashboard = ! empty( $cols['dashboard'] );
+	$do_push      = ! empty( $cols['push'] );
+
+	$recipients = [];
+	if ( ! empty( $cols['gm'] ) && $subject_user_id ) {
+		$recipients[] = $subject_user_id;
+	}
+	if ( ! empty( $cols['supervisor'] ) && $subject_user_id ) {
+		$p = site_pulse_get_user_profile( $subject_user_id );
+		if ( $p && (int) $p['supervisor_id'] ) $recipients[] = (int) $p['supervisor_id'];
+	}
+	if ( ! empty( $cols['all_gms'] ) )         $recipients = array_merge( $recipients, site_pulse_user_ids_with_role( 'manager' ) );
+	if ( ! empty( $cols['all_supervisors'] ) ) $recipients = array_merge( $recipients, site_pulse_user_ids_with_role( 'supervisor' ) );
+	if ( ! empty( $cols['admin'] ) )           $recipients = array_merge( $recipients, site_pulse_user_ids_with_role( 'admin' ) );
+	if ( ! empty( $cols['managers'] ) )        $recipients = array_merge( $recipients, site_pulse_user_ids_with_role( 'non-store-manager' ) );
+	if ( ! empty( $cols['owners'] ) )          $recipients = array_merge( $recipients, site_pulse_user_ids_with_role( 'owner' ) );
+
+	$recipients = array_values( array_unique( array_map( 'intval', array_filter( $recipients ) ) ) );
+	foreach ( $recipients as $rid ) {
+		site_pulse_notify( $rid, $event, $message, $related_id, $related_type, $on_dashboard );
+		if ( $do_push && function_exists( 'site_pulse_push_send' ) ) site_pulse_push_send( $rid );
+	}
+}
+
+// The current user's un-acknowledged dashboard banner messages (notifications flagged on_dashboard
+// via the matrix' "Dashboard" column), newest first.
+function site_pulse_get_dashboard_messages( int $user_id ): array {
+	global $wpdb;
+	return $wpdb->get_results( $wpdb->prepare(
+		"SELECT id, message, related_id, related_type, created_at
+		 FROM " . site_pulse_table('notifications') . "
+		 WHERE user_id = %d AND on_dashboard = 1 AND is_archived = 0
+		 ORDER BY created_at DESC",
+		$user_id
+	), ARRAY_A ) ?: [];
+}
+
+// Acknowledge (X) a dashboard banner — clears its dashboard flag and marks it read. Owner-only.
+add_action( 'wp_ajax_site_pulse_ack_dashboard_message', 'site_pulse_ajax_ack_dashboard_message' );
+function site_pulse_ajax_ack_dashboard_message(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id = site_pulse_effective_user_id();
+	$id      = (int) ( $_POST['id'] ?? 0 );
+	if ( ! $id ) wp_send_json_error( [ 'message' => 'Invalid id.' ] );
+	global $wpdb;
+	$wpdb->update(
+		site_pulse_table('notifications'),
+		[ 'on_dashboard' => 0, 'is_read' => 1 ],
+		[ 'id' => $id, 'user_id' => $user_id ]
+	);
+	wp_send_json_success( [ 'message' => 'Acknowledged.' ] );
+}
+
+add_action( 'wp_ajax_site_pulse_get_notification_settings', 'site_pulse_ajax_get_notification_settings' );
+function site_pulse_ajax_get_notification_settings(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
+	wp_send_json_success( [
+		'events'         => site_pulse_notification_events(),
+		'columns'        => site_pulse_notification_columns(),
+		'routing'        => site_pulse_get_notification_routing(),
+		'messages_email' => site_pulse_get_setting( 'messages_email_enabled', '0' ),
+		'push_enabled'   => site_pulse_get_setting( 'push_enabled', '0' ),
+	] );
+}
+
+add_action( 'wp_ajax_site_pulse_save_notification_settings', 'site_pulse_ajax_save_notification_settings' );
+function site_pulse_ajax_save_notification_settings(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
+
+	$in = json_decode( wp_unslash( $_POST['routing'] ?? '' ), true );
+	if ( ! is_array( $in ) ) wp_send_json_error( [ 'message' => 'Invalid data.' ] );
+
+	$clean = [];
+	foreach ( site_pulse_notification_events() as $ev => $label ) {
+		$clean[ $ev ] = [];
+		$row = is_array( $in[ $ev ] ?? null ) ? $in[ $ev ] : [];
+		foreach ( site_pulse_notification_columns() as $ck => $cl ) {
+			if ( ! empty( $row[ $ck ] ) ) $clean[ $ev ][ $ck ] = 1;
+		}
+	}
+	site_pulse_set_setting( 'notification_routing', wp_json_encode( $clean ) );
+	wp_send_json_success( [ 'message' => 'Saved.' ] );
+}
+
+// Current expense/mileage reporting period [start,end] from the configured anchor + length (the
+// Mileage Settings period), or null if not configured. Periods tile forward from the anchor date.
+function site_pulse_current_expense_period(): ?array {
+	$length = (int) site_pulse_get_setting( 'mileage_period_length', '0' );
+	$anchor = site_pulse_get_setting( 'mileage_period_anchor', '' );
+	if ( $length < 1 || ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $anchor ) ) return null;
+
+	$day       = 86400;
+	$anchor_ts = strtotime( $anchor . ' 00:00:00' );
+	$today_ts  = strtotime( current_time( 'Y-m-d' ) . ' 00:00:00' );
+	if ( $anchor_ts === false || $today_ts === false ) return null;
+
+	$idx      = (int) floor( ( $today_ts - $anchor_ts ) / ( $day * $length ) );
+	$start_ts = $anchor_ts + $idx * $length * $day;
+	$end_ts   = $start_ts + ( $length - 1 ) * $day;
+	return [ 'start' => gmdate( 'Y-m-d', $start_ts ), 'end' => gmdate( 'Y-m-d', $end_ts ) ];
+}
+
+// PLACEHOLDER — the user IDs who still owe an expense report for the given period. The expense-report
+// SUBMIT flow doesn't exist yet, so this returns [] (no reminders fire). When that flow is built,
+// return the people who CAN submit (e.g. submit_mileage cap) MINUS those who already submitted an
+// expense report whose period matches [$period_start,$period_end].
+function site_pulse_users_pending_expense_report( string $period_start, string $period_end ): array {
+	return [];
+}
+
+// Daily cron — fires the period-ending reminders to whoever still owes an expense report. Wired now
+// (events + matrix + dispatch); no-ops until the placeholder above returns real pending users.
+add_action( 'site_pulse_expense_period_reminder', 'site_pulse_run_expense_period_reminders' );
+function site_pulse_run_expense_period_reminders(): void {
+	$period = site_pulse_current_expense_period();
+	if ( ! $period ) return;
+
+	$today_ts   = strtotime( current_time( 'Y-m-d' ) . ' 00:00:00' );
+	$end_ts     = strtotime( $period['end'] . ' 00:00:00' );
+	$days_until  = (int) round( ( $end_ts - $today_ts ) / 86400 );
+
+	$event = '';
+	if     ( $days_until === 2 ) $event = 'period_ending_2days';
+	elseif ( $days_until === 1 ) $event = 'period_ending_tomorrow';
+	elseif ( $days_until === 0 ) $event = 'period_ends_today';
+	if ( ! $event ) return;
+
+	$pending = site_pulse_users_pending_expense_report( $period['start'], $period['end'] );
+	if ( empty( $pending ) ) return;
+
+	$when = [ 'period_ending_2days' => 'in 2 days', 'period_ending_tomorrow' => 'tomorrow', 'period_ends_today' => 'today' ][ $event ];
+	$msg  = sprintf( 'Reminder: the expense report period ends %s and you haven\'t submitted yet.', $when );
+	foreach ( $pending as $uid ) {
+		site_pulse_dispatch_notification( $event, (int) $uid, $msg, 0, 'expense_period' );
+	}
 }
 
 
@@ -2637,7 +3151,8 @@ function site_pulse_generate_action_items( int $report_id ): array {
 	if ( $open_items ) {
 		$report_text .= "\n## Previously Unresolved Action Items\n";
 		foreach ( $open_items as $item ) {
-			$report_text .= "- [{$item['category']}] {$item['description']} (from " . formatDate( $item['created_at'] ) . ")\n";
+			$from = ! empty( $item['created_at'] ) ? date_i18n( 'M j, Y', strtotime( (string) $item['created_at'] ) ) : 'earlier';
+			$report_text .= "- [{$item['category']}] {$item['description']} (from {$from})\n";
 		}
 	}
 
@@ -2702,11 +3217,74 @@ function site_pulse_create_action_items_from_report( int $report_id ): int {
 			$loc ? $loc['name'] : 'Unknown'
 		);
 
-		site_pulse_notify( (int) $report['user_id'], 'action_pending', $msg, $report_id, 'action_item' );
+		site_pulse_dispatch_notification( 'action_pending', (int) $report['user_id'], $msg, $report_id, 'action_item' );
 		site_pulse_log( 'action_items_pending', $msg, [ 'report_id' => $report_id, 'count' => $count ] );
 	}
 
 	return $count;
+}
+
+
+/**
+ * One-time recovery: recently-submitted reports that ended up with ZERO action items (e.g. the
+ * reports submitted while the generator was crashing). Returns up to $limit report ids that still
+ * need processing, plus the total still pending — skipping any already handled by a prior batch
+ * (tracked in the `site_pulse_action_backfill_seen` option) so a report that legitimately yields
+ * no items isn't retried forever.
+ */
+function site_pulse_backfill_candidates( int $limit ): array {
+	global $wpdb;
+	$seen = get_option( 'site_pulse_action_backfill_seen', [] );
+	if ( ! is_array( $seen ) ) $seen = [];
+
+	// Look back a year, and fall back to created_at when submitted_at was never stamped, so older
+	// (but still recent) reports that missed generation aren't excluded.
+	$cutoff  = date( 'Y-m-d H:i:s', strtotime( '-365 days' ) );
+	$reports = $wpdb->get_results( $wpdb->prepare(
+		"SELECT r.id FROM " . site_pulse_table('reports') . " r
+		 LEFT JOIN " . site_pulse_table('action_items') . " ai ON ai.report_id = r.id
+		 WHERE r.status = 'submitted' AND COALESCE( r.submitted_at, r.created_at ) >= %s
+		 GROUP BY r.id
+		 HAVING COUNT( ai.id ) = 0
+		 ORDER BY COALESCE( r.submitted_at, r.created_at ) DESC",
+		$cutoff
+	), ARRAY_A ) ?: [];
+
+	$ids = [];
+	foreach ( $reports as $r ) {
+		if ( ! in_array( (int) $r['id'], $seen, true ) ) $ids[] = (int) $r['id'];
+	}
+	return [ 'ids' => array_slice( $ids, 0, max( 1, $limit ) ), 'total' => count( $ids ) ];
+}
+
+// God-only, batched backfill. Each call processes a few reports (one Claude request each) and
+// reports how many remain, so the client loops until done without tripping request timeouts.
+add_action( 'wp_ajax_site_pulse_backfill_action_items', 'site_pulse_ajax_backfill_action_items' );
+function site_pulse_ajax_backfill_action_items(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_is_god( get_current_user_id() ) ) wp_send_json_error( [ 'message' => 'Only an Odinson can run the backfill.' ] );
+
+	@set_time_limit( 120 );
+	$batch = site_pulse_backfill_candidates( 4 );
+
+	$seen = get_option( 'site_pulse_action_backfill_seen', [] );
+	if ( ! is_array( $seen ) ) $seen = [];
+
+	$created = 0; $processed = 0;
+	foreach ( $batch['ids'] as $rid ) {
+		$created += site_pulse_create_action_items_from_report( $rid );
+		$seen[]   = $rid;
+		$processed++;
+	}
+	update_option( 'site_pulse_action_backfill_seen', array_values( array_unique( array_map( 'intval', $seen ) ) ), false );
+
+	$remaining = max( 0, (int) $batch['total'] - $processed );
+	wp_send_json_success( [
+		'processed' => $processed,
+		'created'   => $created,
+		'remaining' => $remaining,
+		'done'      => $remaining === 0,
+	] );
 }
 
 
@@ -2743,10 +3321,11 @@ function site_pulse_get_action_items( array $args = [] ): array {
 		$where[] = "ai.status != 'pending'";
 	}
 
-	$sql = "SELECT ai.*, l.name AS location_name, u.display_name AS user_name
+	$sql = "SELECT ai.*, l.name AS location_name, u.display_name AS user_name, cu.display_name AS creator_name
 			FROM " . site_pulse_table('action_items') . " ai
 			LEFT JOIN " . site_pulse_table('locations') . " l ON l.id = ai.location_id
 			LEFT JOIN {$wpdb->users} u ON u.ID = ai.user_id
+			LEFT JOIN {$wpdb->users} cu ON cu.ID = ai.created_by
 			WHERE " . implode( ' AND ', $where ) . "
 			ORDER BY ai.display_order ASC, FIELD(ai.priority, 'high', 'medium', 'low'), ai.due_date ASC";
 
@@ -2765,14 +3344,17 @@ function site_pulse_ajax_get_action_items(): void {
 	$args = [];
 
 	$visible = site_pulse_visible_report_user_ids( $user_id );
-	if ( ! empty( $_POST['user_id'] ) && in_array( (int) $_POST['user_id'], $visible, true ) ) {
+	if ( ! empty( $_POST['mine'] ) ) {
+		// Default to-do view: just my own items.
+		$args['user_id'] = $user_id;
+	} elseif ( ! empty( $_POST['user_id'] ) && in_array( (int) $_POST['user_id'], $visible, true ) ) {
 		$args['user_id'] = (int) $_POST['user_id'];
 	} else {
 		$args['user_ids'] = $visible;
+		if ( ! empty( $_POST['location_id'] ) ) $args['location_id'] = (int) $_POST['location_id'];
 	}
 
-	if ( ! empty( $_POST['location_id'] ) ) $args['location_id'] = (int) $_POST['location_id'];
-	if ( ! empty( $_POST['status'] ) )      $args['status']      = sanitize_text_field( $_POST['status'] );
+	if ( ! empty( $_POST['status'] ) ) $args['status'] = sanitize_text_field( $_POST['status'] );
 
 	$pending = site_pulse_get_action_items( [ 'user_id' => $user_id, 'status' => 'pending' ] );
 
@@ -2853,11 +3435,7 @@ function site_pulse_ajax_resolve_action_item(): void {
 		] );
 
 		$msg = sprintf( 'Action item needs follow-up: %s', $follow_up );
-		site_pulse_notify( (int) $item['user_id'], 'action_followup', $msg, $item_id, 'action_item' );
-
-		if ( $profile && $profile['supervisor_id'] ) {
-			site_pulse_notify( (int) $profile['supervisor_id'], 'action_followup', $msg, $item_id, 'action_item' );
-		}
+		site_pulse_dispatch_notification( 'action_followup', (int) $item['user_id'], $msg, $item_id, 'action_item' );
 
 		site_pulse_log( 'action_item_followup', $msg, [ 'item_id' => $item_id, 'ai_reason' => $ai_verdict['reason'] ?? '' ] );
 
@@ -2883,9 +3461,7 @@ function site_pulse_ajax_resolve_action_item(): void {
 
 	site_pulse_log( 'action_item_resolved', $msg, [ 'item_id' => $item_id ] );
 
-	if ( $profile && $profile['supervisor_id'] ) {
-		site_pulse_notify( (int) $profile['supervisor_id'], 'action_resolved', $msg, $item_id, 'action_item' );
-	}
+	site_pulse_dispatch_notification( 'action_resolved', (int) $item['user_id'], $msg, $item_id, 'action_item' );
 
 	wp_send_json_success( [ 'resolved' => true, 'message' => 'Item resolved.' ] );
 }
@@ -2930,6 +3506,90 @@ function site_pulse_evaluate_resolution( array $item, string $note ): ?array {
 	}
 
 	return $data;
+}
+
+// Shared: can $me touch this action item? (their own, or one belonging to someone they can see).
+function sp_action_item_editable_by( array $item, int $me ): bool {
+	if ( (int) $item['user_id'] === $me ) return true;
+	return in_array( (int) $item['user_id'], site_pulse_visible_report_user_ids( $me ), true );
+}
+
+// Add Note: append a note, keep a running notes list (seeded with the original item), and let the AI
+// rewrite the item description to reflect the latest state. The item STAYS open.
+add_action( 'wp_ajax_site_pulse_add_action_note', 'site_pulse_ajax_add_action_note' );
+function site_pulse_ajax_add_action_note(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$me      = site_pulse_effective_user_id();
+	$item_id = (int) ( $_POST['item_id'] ?? 0 );
+	$note    = sanitize_textarea_field( wp_unslash( $_POST['note'] ?? '' ) );
+	if ( ! $item_id )       wp_send_json_error( [ 'message' => 'Invalid item.' ] );
+	if ( $note === '' )     wp_send_json_error( [ 'message' => 'Please enter a note.' ] );
+
+	global $wpdb;
+	$item = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . site_pulse_table( 'action_items' ) . " WHERE id = %d", $item_id ), ARRAY_A );
+	if ( ! $item )                              wp_send_json_error( [ 'message' => 'Item not found.' ] );
+	if ( ! sp_action_item_editable_by( $item, $me ) ) wp_send_json_error( [ 'message' => 'Not allowed.' ] );
+
+	$meta  = $item['meta'] ? json_decode( $item['meta'], true ) : [];
+	if ( ! is_array( $meta ) ) $meta = [];
+	$notes = ( isset( $meta['notes'] ) && is_array( $meta['notes'] ) ) ? $meta['notes'] : [];
+	if ( ! $notes ) $notes[] = (string) $item['description']; // seed list with the original item
+	$notes[] = $note;
+	$meta['notes'] = $notes;
+
+	// Rewrite the item from the original + all notes (falls back to the existing text if AI is off).
+	$new_desc = $item['description'];
+	if ( site_pulse_get_api_key() ) {
+		$prompt  = "Action item: " . $notes[0] . "\n\nNotes added since (oldest first):\n";
+		foreach ( array_slice( $notes, 1 ) as $n ) $prompt .= "- " . $n . "\n";
+		$prompt .= "\nRewrite the action item to reflect the latest state.";
+		$ai = site_pulse_call_claude( $prompt, site_pulse_prompt_rewrite_action_item() );
+		if ( $ai ) {
+			$ai = trim( wp_strip_all_tags( $ai ) );
+			$ai = trim( $ai, " \t\n\r\0\x0B\"'" );
+			if ( $ai !== '' ) $new_desc = $ai;
+		}
+	}
+
+	$wpdb->update( site_pulse_table( 'action_items' ), [
+		'description' => sanitize_text_field( $new_desc ),
+		'meta'        => wp_json_encode( $meta ),
+		'updated_at'  => current_time( 'mysql' ),
+	], [ 'id' => $item_id ] );
+
+	wp_send_json_success();
+}
+
+// Item Complete: mark done (moves it to the completed/archived view). Urgent items fire the
+// configured notification.
+add_action( 'wp_ajax_site_pulse_complete_action_item', 'site_pulse_ajax_complete_action_item' );
+function site_pulse_ajax_complete_action_item(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$me      = site_pulse_effective_user_id();
+	$item_id = (int) ( $_POST['item_id'] ?? 0 );
+	if ( ! $item_id ) wp_send_json_error( [ 'message' => 'Invalid item.' ] );
+
+	global $wpdb;
+	$item = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . site_pulse_table( 'action_items' ) . " WHERE id = %d", $item_id ), ARRAY_A );
+	if ( ! $item )                              wp_send_json_error( [ 'message' => 'Item not found.' ] );
+	if ( ! sp_action_item_editable_by( $item, $me ) ) wp_send_json_error( [ 'message' => 'Not allowed.' ] );
+
+	$now = current_time( 'mysql' );
+	$wpdb->update( site_pulse_table( 'action_items' ), [
+		'status'      => 'resolved',
+		'resolved_at' => $now,
+		'resolved_by' => $me,
+		'updated_at'  => $now,
+	], [ 'id' => $item_id ] );
+
+	if ( ( $item['priority'] ?? '' ) === 'high' ) {
+		$user = get_userdata( $me );
+		$msg  = sprintf( '%s completed an urgent action item: %s', $user ? $user->display_name : 'Someone', $item['description'] );
+		site_pulse_dispatch_notification( 'action_resolved', (int) $item['user_id'], $msg, $item_id, 'action_item' );
+	}
+
+	site_pulse_log( 'action_item_completed', 'Action item completed', [ 'item_id' => $item_id ] );
+	wp_send_json_success();
 }
 
 add_action( 'wp_ajax_site_pulse_review_action_item', 'site_pulse_ajax_review_action_item' );
@@ -2984,9 +3644,8 @@ function site_pulse_ajax_review_action_item(): void {
 	);
 
 	if ( $item['priority'] === 'high' ) {
-		$profile = site_pulse_get_user_profile( (int) $item['user_id'] );
-		$user    = get_userdata( (int) $item['user_id'] );
-		$loc     = site_pulse_get_location( (int) $item['location_id'] );
+		$user = get_userdata( (int) $item['user_id'] );
+		$loc  = site_pulse_get_location( (int) $item['location_id'] );
 
 		$urgent_msg = sprintf( 'URGENT — high-priority item from %s (%s): %s',
 			$user ? $user->display_name : 'Unknown',
@@ -2994,9 +3653,7 @@ function site_pulse_ajax_review_action_item(): void {
 			$item['description']
 		);
 
-		if ( $profile && $profile['supervisor_id'] ) {
-			site_pulse_notify( (int) $profile['supervisor_id'], 'action_urgent', $urgent_msg, $item_id, 'action_item' );
-		}
+		site_pulse_dispatch_notification( 'action_urgent', (int) $item['user_id'], $urgent_msg, $item_id, 'action_item' );
 	}
 
 	wp_send_json_success( [ 'decision' => 'approve' ] );
@@ -3444,9 +4101,13 @@ function site_pulse_ajax_admin_get_color_scheme(): void {
 	$brand = array_values( array_filter( array_map( fn( $c ) => site_pulse_sanitize_hex( (string) $c ), $brand ) ) );
 
 	wp_send_json_success( [
-		'brand'  => $brand,
-		'mood'   => (string) site_pulse_get_setting( 'color_mood', '' ),
-		'active' => (bool) site_pulse_color_active_vars(),
+		'brand'          => $brand,
+		'mood'           => (string) site_pulse_get_setting( 'color_mood', '' ),
+		'active'         => (bool) site_pulse_color_active_vars(),
+		'alert_keywords' => (string) site_pulse_get_setting( 'dashboard_alert_keywords', '' ),
+		'news_enabled'   => (string) site_pulse_get_setting( 'dashboard_news_enabled', '1' ),
+		'app_icon'       => site_pulse_pwa_icon_setting_url(),
+		'app_icon_built' => function_exists( 'site_pulse_pwa_preview_url' ) ? site_pulse_pwa_preview_url() : '',
 	] );
 }
 
@@ -3796,6 +4457,74 @@ function site_pulse_ajax_god_delete_report(): void {
 
 	site_pulse_log( 'god_delete', sprintf( 'GOD deleted report #%d (and its answers + action items)', $id ) );
 	wp_send_json_success( [ 'message' => 'Report deleted.' ] );
+}
+
+// GOD only: the option lists for the Reassign dialog — every active Site Pulse user (so god can pick
+// the correct author when the AI matched the wrong person) plus the store list.
+add_action( 'wp_ajax_site_pulse_god_report_options', 'site_pulse_ajax_god_report_options' );
+function site_pulse_ajax_god_report_options(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_is_god() ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+
+	global $wpdb;
+	$rows  = $wpdb->get_results( "SELECT user_id, role_id, location_id FROM " . site_pulse_table('user_profiles') . " WHERE status = 'active'", ARRAY_A ) ?: [];
+	$users = [];
+	foreach ( $rows as $r ) {
+		$u = get_userdata( (int) $r['user_id'] );
+		if ( ! $u ) continue;
+		$role = site_pulse_get_role( (int) $r['role_id'] );
+		$loc  = (int) $r['location_id'] ? site_pulse_get_location( (int) $r['location_id'] ) : null;
+		$meta = trim( ( $role ? $role['label'] : '' ) . ( $loc ? ' · ' . $loc['name'] : '' ) );
+		$users[] = [ 'id' => (int) $r['user_id'], 'name' => $u->display_name, 'meta' => $meta ];
+	}
+	usort( $users, fn( $a, $b ) => strcmp( $a['name'], $b['name'] ) );
+
+	$locations = array_map(
+		fn( $l ) => [ 'id' => (int) $l['id'], 'name' => $l['name'] ],
+		site_pulse_get_all_locations( true, true )
+	);
+
+	wp_send_json_success( [ 'users' => $users, 'locations' => $locations ] );
+}
+
+// GOD only: fix a report's attribution — reassign its submitter (and store). Used when an imported
+// report was matched to the wrong person (e.g. the wrong "Grant"). Action items created from the
+// report inherit the new author/location so they stay correctly attributed.
+add_action( 'wp_ajax_site_pulse_god_reassign_report', 'site_pulse_ajax_god_reassign_report' );
+function site_pulse_ajax_god_reassign_report(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_is_god() ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+
+	$report_id   = (int) ( $_POST['report_id'] ?? 0 );
+	$new_user_id = (int) ( $_POST['user_id'] ?? 0 );
+	$new_loc_id  = (int) ( $_POST['location_id'] ?? 0 );
+
+	$report = site_pulse_get_report( $report_id );
+	if ( ! $report )      wp_send_json_error( [ 'message' => 'Report not found.' ] );
+	if ( ! $new_user_id ) wp_send_json_error( [ 'message' => 'Choose a submitter.' ] );
+	if ( ! site_pulse_get_user_profile( $new_user_id ) ) {
+		wp_send_json_error( [ 'message' => 'That user has no Site Pulse profile.' ] );
+	}
+
+	global $wpdb;
+	$wpdb->update(
+		site_pulse_table('reports'),
+		[ 'user_id' => $new_user_id, 'location_id' => $new_loc_id, 'updated_at' => current_time( 'mysql' ) ],
+		[ 'id' => $report_id ]
+	);
+	$wpdb->update(
+		site_pulse_table('action_items'),
+		[ 'user_id' => $new_user_id, 'location_id' => $new_loc_id ],
+		[ 'report_id' => $report_id ]
+	);
+
+	$u = get_userdata( $new_user_id );
+	site_pulse_log( 'god_reassign_report', sprintf( 'GOD reassigned report #%d to %s', $report_id, $u ? $u->display_name : 'user ' . $new_user_id ) );
+	wp_send_json_success( [ 'message' => 'Report reassigned.' ] );
 }
 
 add_action( 'wp_ajax_site_pulse_god_delete_action_item', 'site_pulse_ajax_god_delete_action_item' );
@@ -5541,16 +6270,8 @@ function site_pulse_ajax_add_mileage_location(): void {
 
 	site_pulse_log( 'mileage_location_proposed', sprintf( 'Proposed location: %s', $name ), [ 'location_id' => $id ] );
 
-	// Notify all admin/owner/god users
-	$admins = $wpdb->get_col(
-		"SELECT up.user_id FROM " . site_pulse_table('user_profiles') . " up
-		 INNER JOIN " . site_pulse_table('roles') . " r ON r.id = up.role_id
-		 WHERE up.status = 'active' AND r.slug IN ('god','owner','admin')"
-	) ?: [];
 	$msg = sprintf( 'New mileage location pending approval: %s', $name );
-	foreach ( $admins as $aid ) {
-		site_pulse_notify( (int) $aid, 'mileage_pending', $msg, $id, 'mileage_location' );
-	}
+	site_pulse_dispatch_notification( 'mileage_pending', $user_id, $msg, $id, 'mileage_location' );
 
 	wp_send_json_success( [ 'id' => $id, 'name' => $name, 'address' => $address, 'status' => 'pending' ] );
 }
@@ -5679,7 +6400,7 @@ function site_pulse_ajax_get_mileage_report(): void {
 	if ( $start ) { $bwhere .= " AND expense_date >= %s"; $bvalues[] = $start; }
 	if ( $end )   { $bwhere .= " AND expense_date <= %s"; $bvalues[] = $end; }
 	$vehicle = $wpdb->get_results( $wpdb->prepare(
-		"SELECT expense_date, category, description, amount FROM " . site_pulse_table('expenses') . "
+		"SELECT expense_date, category, description, amount, receipt_path FROM " . site_pulse_table('expenses') . "
 		 $bwhere ORDER BY expense_date ASC, id ASC LIMIT 500",
 		...$bvalues
 	), ARRAY_A ) ?: [];
@@ -5690,7 +6411,7 @@ function site_pulse_ajax_get_mileage_report(): void {
 	if ( $start ) { $cwhere .= " AND expense_date >= %s"; $cvalues[] = $start; }
 	if ( $end )   { $cwhere .= " AND expense_date <= %s"; $cvalues[] = $end; }
 	$meals = $wpdb->get_results( $wpdb->prepare(
-		"SELECT expense_date, place, business_purpose, attendees, store_number, amount FROM " . site_pulse_table('expenses') . "
+		"SELECT expense_date, place, business_purpose, attendees, store_number, amount, receipt_path FROM " . site_pulse_table('expenses') . "
 		 $cwhere ORDER BY expense_date ASC, id ASC LIMIT 500",
 		...$cvalues
 	), ARRAY_A ) ?: [];
@@ -5701,7 +6422,7 @@ function site_pulse_ajax_get_mileage_report(): void {
 	if ( $start ) { $dwhere .= " AND expense_date >= %s"; $dvalues[] = $start; }
 	if ( $end )   { $dwhere .= " AND expense_date <= %s"; $dvalues[] = $end; }
 	$shopping = $wpdb->get_results( $wpdb->prepare(
-		"SELECT expense_date, place, business_purpose, store_number, amount FROM " . site_pulse_table('expenses') . "
+		"SELECT expense_date, place, business_purpose, store_number, amount, receipt_path FROM " . site_pulse_table('expenses') . "
 		 $dwhere ORDER BY expense_date ASC, id ASC LIMIT 500",
 		...$dvalues
 	), ARRAY_A ) ?: [];
@@ -5712,10 +6433,17 @@ function site_pulse_ajax_get_mileage_report(): void {
 	if ( $start ) { $ewhere .= " AND expense_date >= %s"; $evalues[] = $start; }
 	if ( $end )   { $ewhere .= " AND expense_date <= %s"; $evalues[] = $end; }
 	$other = $wpdb->get_results( $wpdb->prepare(
-		"SELECT expense_date, description, account_code, store_number, amount FROM " . site_pulse_table('expenses') . "
+		"SELECT expense_date, description, account_code, store_number, amount, receipt_path FROM " . site_pulse_table('expenses') . "
 		 $ewhere ORDER BY expense_date ASC, id ASC LIMIT 500",
 		...$evalues
 	), ARRAY_A ) ?: [];
+
+	// Surface a public receipt URL per expense line so the PDF can append the photos.
+	foreach ( [ &$vehicle, &$meals, &$shopping, &$other ] as &$_set ) {
+		foreach ( $_set as &$_row ) { $_row['receipt_url'] = site_pulse_receipt_url( (string) ( $_row['receipt_path'] ?? '' ) ); }
+		unset( $_row );
+	}
+	unset( $_set );
 
 	wp_send_json_success( [
 		'entries'             => $entries,
@@ -5807,6 +6535,8 @@ function site_pulse_ajax_get_expenses(): void {
 		"SELECT * FROM " . site_pulse_table('expenses') . " $where ORDER BY expense_date ASC, id ASC LIMIT 500",
 		...$values
 	), ARRAY_A ) ?: [];
+	foreach ( $rows as &$r ) { $r['receipt_url'] = site_pulse_receipt_url( (string) ( $r['receipt_path'] ?? '' ) ); }
+	unset( $r );
 
 	wp_send_json_success( [ 'expenses' => $rows, 'categories' => $sections[ $section ]['categories'] ] );
 }
@@ -5859,10 +6589,28 @@ function site_pulse_ajax_save_expense(): void {
 	];
 
 	$is_admin = site_pulse_user_can( $user_id, 'manage_mileage' ) || site_pulse_is_god( get_current_user_id() );
+	$old_receipt = '';
 	if ( $id ) {
-		$owner = (int) $wpdb->get_var( $wpdb->prepare( "SELECT user_id FROM " . site_pulse_table('expenses') . " WHERE id = %d", $id ) );
-		if ( ! $owner ) wp_send_json_error( [ 'message' => 'Expense not found.' ] );
-		if ( $owner !== $user_id && ! $is_admin ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+		$existing = $wpdb->get_row( $wpdb->prepare( "SELECT user_id, receipt_path FROM " . site_pulse_table('expenses') . " WHERE id = %d", $id ), ARRAY_A );
+		if ( ! $existing ) wp_send_json_error( [ 'message' => 'Expense not found.' ] );
+		if ( (int) $existing['user_id'] !== $user_id && ! $is_admin ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+		$old_receipt = (string) ( $existing['receipt_path'] ?? '' );
+	}
+
+	// Receipt image: a new base64 photo replaces; receipt_remove clears; otherwise the existing
+	// one is left untouched (receipt_path simply omitted from $data on update).
+	if ( ! empty( $_POST['receipt'] ) ) {
+		$saved = site_pulse_save_receipt_image( $user_id, (string) $_POST['receipt'] );
+		if ( $saved !== '' ) {
+			$data['receipt_path'] = $saved;
+			if ( $old_receipt !== '' && $old_receipt !== $saved ) site_pulse_delete_receipt_file( $old_receipt );
+		}
+	} elseif ( ! empty( $_POST['receipt_remove'] ) ) {
+		$data['receipt_path'] = '';
+		if ( $old_receipt !== '' ) site_pulse_delete_receipt_file( $old_receipt );
+	}
+
+	if ( $id ) {
 		$wpdb->update( site_pulse_table('expenses'), $data, [ 'id' => $id ] );
 	} else {
 		$data['created_at'] = $now;
@@ -5870,7 +6618,560 @@ function site_pulse_ajax_save_expense(): void {
 		$id = (int) $wpdb->insert_id;
 	}
 
+	wp_send_json_success( [ 'id' => $id, 'receipt_url' => site_pulse_receipt_url( $data['receipt_path'] ?? $old_receipt ) ] );
+}
+
+/* ============================================================================
+   Forms library — upload / list / replace / delete (uploads/sp-forms/<random>.<ext>)
+   View gated on 'view_forms'; create gated on 'upload_forms'; delete/replace limited
+   to the uploader or a god. Forms are shared company-wide, filed under a repository
+   (training / kitchen / foh / misc).
+   ============================================================================ */
+
+// The repositories a brand-new install starts with. Editable via Settings → Forms.
+function site_pulse_form_default_categories(): array {
+	return [ 'training' => 'Training', 'kitchen' => 'Kitchen', 'foh' => 'FOH', 'misc' => 'Misc' ];
+}
+
+// The live repositories (key => label), ordered. Stored as a JSON [{key,label},…] setting so
+// admins can add / rename / delete them; falls back to the defaults when unset. Per-request cached.
+function site_pulse_form_categories(): array {
+	static $cache = null;
+	if ( $cache !== null ) return $cache;
+
+	$raw = site_pulse_get_setting( 'form_categories', '' );
+	if ( $raw !== '' ) {
+		$decoded = json_decode( $raw, true );
+		if ( is_array( $decoded ) ) {
+			$out = [];
+			foreach ( $decoded as $c ) {
+				if ( ! is_array( $c ) ) continue;
+				$key   = sanitize_key( (string) ( $c['key'] ?? '' ) );
+				$label = trim( (string) ( $c['label'] ?? '' ) );
+				if ( $key !== '' && $label !== '' ) $out[ $key ] = $label;
+			}
+			if ( $out ) { $cache = $out; return $cache; }
+		}
+	}
+	$cache = site_pulse_form_default_categories();
+	return $cache;
+}
+
+// The full nested structure: [ catKey => [ 'label' => …, 'children' => [ subKey => subLabel ] ] ].
+// Children come from each stored category's optional `children` array; categories without
+// sub-folders get an empty children list. Drives the 3-level nav + sub-folder pickers/filters.
+function site_pulse_form_category_tree(): array {
+	$flat = site_pulse_form_categories();             // top-level key => label (validated, ordered)
+	$raw  = site_pulse_get_setting( 'form_categories', '' );
+	$kids = [];
+	if ( $raw !== '' ) {
+		$decoded = json_decode( $raw, true );
+		if ( is_array( $decoded ) ) {
+			foreach ( $decoded as $c ) {
+				if ( ! is_array( $c ) ) continue;
+				$ckey = sanitize_key( (string) ( $c['key'] ?? '' ) );
+				if ( $ckey === '' ) continue;
+				$children = [];
+				foreach ( (array) ( $c['children'] ?? [] ) as $sub ) {
+					if ( ! is_array( $sub ) ) continue;
+					$skey   = sanitize_key( (string) ( $sub['key'] ?? '' ) );
+					$slabel = trim( (string) ( $sub['label'] ?? '' ) );
+					if ( $skey !== '' && $slabel !== '' ) $children[ $skey ] = $slabel;
+				}
+				$kids[ $ckey ] = $children;
+			}
+		}
+	}
+	$tree = [];
+	foreach ( $flat as $key => $label ) {
+		$tree[ $key ] = [ 'label' => $label, 'children' => $kids[ $key ] ?? [] ];
+	}
+	return $tree;
+}
+
+// Sub-folder map [subKey => subLabel] for one category (empty if it has none).
+function site_pulse_form_subfolders( string $category ): array {
+	$tree = site_pulse_form_category_tree();
+	return $tree[ $category ]['children'] ?? [];
+}
+
+// Allowed upload extensions → the friendly "Format" family shown in the list.
+function site_pulse_form_formats(): array {
+	return [
+		'pdf'  => 'PDF',
+		'doc'  => 'Word',  'docx' => 'Word',
+		'xls'  => 'Excel', 'xlsx' => 'Excel', 'csv' => 'Excel',
+		'ppt'  => 'PowerPoint', 'pptx' => 'PowerPoint',
+		'txt'  => 'Text',
+		'png'  => 'Image', 'jpg' => 'Image', 'jpeg' => 'Image', 'gif' => 'Image', 'webp' => 'Image',
+	];
+}
+
+function site_pulse_forms_basedir(): array {
+	$up  = wp_upload_dir();
+	$dir = trailingslashit( $up['basedir'] ) . 'sp-forms';
+	if ( ! file_exists( $dir ) ) wp_mkdir_p( $dir );
+	return [ 'dir' => $dir, 'url' => trailingslashit( $up['baseurl'] ) . 'sp-forms' ];
+}
+
+function site_pulse_form_url( string $path ): string {
+	if ( $path === '' ) return '';
+	$up = wp_upload_dir();
+	return trailingslashit( $up['baseurl'] ) . ltrim( $path, '/' );
+}
+
+function site_pulse_delete_form_file( string $path ): void {
+	if ( $path === '' ) return;
+	$up   = wp_upload_dir();
+	$base = trailingslashit( $up['basedir'] ) . 'sp-forms/';
+	$full = trailingslashit( $up['basedir'] ) . ltrim( $path, '/' );
+	if ( strpos( $full, $base ) === 0 && is_file( $full ) ) @unlink( $full );
+}
+
+// Validate + store an uploaded $_FILES entry. Returns ['path','name','format','size'] on success
+// or a string error message on failure.
+function site_pulse_save_form_file( int $user_id, array $file ) {
+	if ( ! isset( $file['error'] ) || $file['error'] !== UPLOAD_ERR_OK ) return 'The file failed to upload.';
+	if ( ! is_uploaded_file( $file['tmp_name'] ) ) return 'Invalid upload.';
+	$size = (int) ( $file['size'] ?? 0 );
+	if ( $size <= 0 ) return 'The file is empty.';
+	if ( $size > 25 * 1024 * 1024 ) return 'The file is too large (25 MB max).';
+
+	$orig = (string) ( $file['name'] ?? 'form' );
+	$ext  = strtolower( pathinfo( $orig, PATHINFO_EXTENSION ) );
+	$formats = site_pulse_form_formats();
+	if ( ! isset( $formats[ $ext ] ) ) return 'Unsupported file type. Allowed: PDF, Word, Excel, PowerPoint, images, text.';
+
+	// Cross-check the real type so a renamed executable can't sneak in.
+	$check = wp_check_filetype_and_ext( $file['tmp_name'], $orig );
+	if ( empty( $check['ext'] ) && ! in_array( $ext, [ 'csv', 'txt' ], true ) ) return 'The file type could not be verified.';
+
+	$base = site_pulse_forms_basedir();
+	$name = 'f' . $user_id . '-' . time() . '-' . wp_generate_password( 10, false, false ) . '.' . $ext;
+	$dest = trailingslashit( $base['dir'] ) . $name;
+	if ( ! move_uploaded_file( $file['tmp_name'], $dest ) ) return 'Could not save the file.';
+
+	return [
+		'path'   => 'sp-forms/' . $name,
+		'name'   => sanitize_file_name( $orig ),
+		'format' => $formats[ $ext ],
+		'size'   => $size,
+	];
+}
+
+// Shape a DB row for the client. `can_edit` = uploader (with upload_forms) or god.
+function site_pulse_form_present( array $r, int $user_id, bool $is_god, bool $can_upload ): array {
+	$ts       = ! empty( $r['created_at'] ) ? strtotime( $r['created_at'] ) : 0;
+	$can_edit = $is_god || ( $can_upload && (int) $r['uploaded_by'] === $user_id );
+	$cats     = site_pulse_form_categories();
+	$catkey   = (string) $r['category'];
+	$subkey   = (string) ( $r['sub_category'] ?? '' );
+	$subs     = $subkey !== '' ? site_pulse_form_subfolders( $catkey ) : [];
+	return [
+		'id'             => (int) $r['id'],
+		'name'           => (string) $r['name'],
+		'category'       => $catkey,
+		'category_label' => $cats[ $catkey ] ?? $catkey,
+		'sub_category'   => $subkey,
+		'sub_label'      => $subs[ $subkey ] ?? '',
+		'type_label' => (string) ( $r['type_label'] ?? '' ),
+		'format'     => (string) ( $r['file_format'] ?? '' ),
+		'file_name'  => (string) ( $r['file_name'] ?? '' ),
+		'size'       => (int) ( $r['file_size'] ?? 0 ),
+		'url'        => site_pulse_form_url( (string) $r['file_path'] ),
+		'date'       => $ts ? date( 'Y-m-d', $ts ) : '',
+		'date_label' => $ts ? date_i18n( 'M j, Y', $ts ) : '',
+		'can_edit'   => $can_edit,
+	];
+}
+
+// Fetch + present one form for the acting user (used after upload/replace).
+function site_pulse_form_row( int $id, int $user_id ): ?array {
+	global $wpdb;
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . site_pulse_table('forms') . " WHERE id = %d", $id ), ARRAY_A );
+	if ( ! $row ) return null;
+	$is_god     = site_pulse_is_god( get_current_user_id() );
+	$can_upload = $is_god || site_pulse_user_can( $user_id, 'upload_forms' );
+	return site_pulse_form_present( $row, $user_id, $is_god, $can_upload );
+}
+
+add_action( 'wp_ajax_site_pulse_get_forms', 'site_pulse_ajax_get_forms' );
+function site_pulse_ajax_get_forms(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id = site_pulse_effective_user_id();
+	$is_god  = site_pulse_is_god( get_current_user_id() );
+	if ( ! $user_id || ! ( $is_god || site_pulse_user_can( $user_id, 'view_forms' ) || site_pulse_user_can( $user_id, 'upload_forms' ) ) ) wp_send_json_error( [ 'message' => 'You do not have permission to view forms.' ] );
+	$category = sanitize_key( $_POST['category'] ?? '' );
+	$is_all   = ( $category === 'all' );   // the "All" view lists every repository's forms
+	if ( ! $is_all && ! isset( site_pulse_form_categories()[ $category ] ) ) wp_send_json_error( [ 'message' => 'Unknown repository.' ] );
+
+	global $wpdb;
+	$tbl  = site_pulse_table('forms');
+	$rows = $is_all
+		? ( $wpdb->get_results( "SELECT * FROM $tbl ORDER BY created_at DESC", ARRAY_A ) ?: [] )
+		: ( $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $tbl WHERE category = %s ORDER BY created_at DESC", $category ), ARRAY_A ) ?: [] );
+	$can_upload = $is_god || site_pulse_user_can( $user_id, 'upload_forms' );
+	$forms = array_map( fn( $r ) => site_pulse_form_present( $r, $user_id, $is_god, $can_upload ), $rows );
+	wp_send_json_success( [ 'forms' => $forms, 'can_upload' => $can_upload ] );
+}
+
+add_action( 'wp_ajax_site_pulse_upload_form', 'site_pulse_ajax_upload_form' );
+function site_pulse_ajax_upload_form(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id = site_pulse_effective_user_id();
+	if ( ! $user_id || ! ( site_pulse_is_god( get_current_user_id() ) || site_pulse_user_can( $user_id, 'upload_forms' ) ) ) wp_send_json_error( [ 'message' => 'You do not have permission to upload forms.' ] );
+
+	$name         = sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) );
+	$category     = sanitize_key( $_POST['category'] ?? '' );
+	$sub_category = sanitize_key( $_POST['sub_category'] ?? '' );
+	$type_label   = sanitize_text_field( wp_unslash( $_POST['type_label'] ?? '' ) );
+	if ( $name === '' ) wp_send_json_error( [ 'message' => 'Please give the form a name.' ] );
+	if ( ! isset( site_pulse_form_categories()[ $category ] ) ) wp_send_json_error( [ 'message' => 'Choose a repository.' ] );
+	// A sub-folder is optional, but if given it must belong to the chosen repository.
+	if ( $sub_category !== '' && ! isset( site_pulse_form_subfolders( $category )[ $sub_category ] ) ) $sub_category = '';
+	if ( empty( $_FILES['file'] ) ) wp_send_json_error( [ 'message' => 'Please choose a file to upload.' ] );
+
+	$saved = site_pulse_save_form_file( $user_id, $_FILES['file'] );
+	if ( is_string( $saved ) ) wp_send_json_error( [ 'message' => $saved ] );
+
+	global $wpdb;
+	$now = current_time( 'mysql' );
+	$wpdb->insert( site_pulse_table('forms'), [
+		'name'         => $name,
+		'category'     => $category,
+		'sub_category' => $sub_category ?: null,
+		'type_label'   => $type_label,
+		'file_path'   => $saved['path'],
+		'file_name'   => $saved['name'],
+		'file_format' => $saved['format'],
+		'file_size'   => $saved['size'],
+		'uploaded_by' => $user_id,
+		'created_at'  => $now,
+		'updated_at'  => $now,
+	] );
+	$id = (int) $wpdb->insert_id;
+	if ( ! $id ) { site_pulse_delete_form_file( $saved['path'] ); wp_send_json_error( [ 'message' => 'Could not save the form.' ] ); }
+	wp_send_json_success( [ 'form' => site_pulse_form_row( $id, $user_id ) ] );
+}
+
+add_action( 'wp_ajax_site_pulse_replace_form', 'site_pulse_ajax_replace_form' );
+function site_pulse_ajax_replace_form(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id = site_pulse_effective_user_id();
+	$id      = (int) ( $_POST['id'] ?? 0 );
+
+	global $wpdb;
+	$tbl = site_pulse_table('forms');
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $tbl WHERE id = %d", $id ), ARRAY_A );
+	if ( ! $row ) wp_send_json_error( [ 'message' => 'Form not found.' ] );
+
+	$is_god = site_pulse_is_god( get_current_user_id() );
+	$owner  = (int) $row['uploaded_by'];
+	if ( ! ( $is_god || ( site_pulse_user_can( $user_id, 'upload_forms' ) && $owner === $user_id ) ) ) wp_send_json_error( [ 'message' => 'You can only replace forms you uploaded.' ] );
+
+	$update = [ 'updated_at' => current_time( 'mysql' ) ];
+	if ( isset( $_POST['name'] ) ) {
+		$n = sanitize_text_field( wp_unslash( $_POST['name'] ) );
+		if ( $n === '' ) wp_send_json_error( [ 'message' => 'The name cannot be empty.' ] );
+		$update['name'] = $n;
+	}
+	if ( isset( $_POST['type_label'] ) ) $update['type_label'] = sanitize_text_field( wp_unslash( $_POST['type_label'] ) );
+	// Allow moving the form into / out of a sub-folder of its repository on edit.
+	if ( isset( $_POST['sub_category'] ) ) {
+		$sub = sanitize_key( $_POST['sub_category'] );
+		$update['sub_category'] = ( $sub !== '' && isset( site_pulse_form_subfolders( (string) $row['category'] )[ $sub ] ) ) ? $sub : null;
+	}
+
+	// A new file is optional — replace just the name/type if none is sent.
+	if ( ! empty( $_FILES['file'] ) && isset( $_FILES['file']['error'] ) && $_FILES['file']['error'] === UPLOAD_ERR_OK ) {
+		$saved = site_pulse_save_form_file( $user_id, $_FILES['file'] );
+		if ( is_string( $saved ) ) wp_send_json_error( [ 'message' => $saved ] );
+		site_pulse_delete_form_file( (string) $row['file_path'] );
+		$update['file_path']   = $saved['path'];
+		$update['file_name']   = $saved['name'];
+		$update['file_format'] = $saved['format'];
+		$update['file_size']   = $saved['size'];
+	}
+
+	$wpdb->update( $tbl, $update, [ 'id' => $id ] );
+	wp_send_json_success( [ 'form' => site_pulse_form_row( $id, $user_id ) ] );
+}
+
+add_action( 'wp_ajax_site_pulse_delete_form', 'site_pulse_ajax_delete_form' );
+function site_pulse_ajax_delete_form(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id = site_pulse_effective_user_id();
+	$id      = (int) ( $_POST['id'] ?? 0 );
+
+	global $wpdb;
+	$tbl = site_pulse_table('forms');
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $tbl WHERE id = %d", $id ), ARRAY_A );
+	if ( ! $row ) wp_send_json_error( [ 'message' => 'Form not found.' ] );
+
+	$is_god = site_pulse_is_god( get_current_user_id() );
+	$owner  = (int) $row['uploaded_by'];
+	if ( ! ( $is_god || ( site_pulse_user_can( $user_id, 'upload_forms' ) && $owner === $user_id ) ) ) wp_send_json_error( [ 'message' => 'You can only delete forms you uploaded.' ] );
+
+	site_pulse_delete_form_file( (string) $row['file_path'] );
+	$wpdb->delete( $tbl, [ 'id' => $id ] );
 	wp_send_json_success( [ 'id' => $id ] );
+}
+
+// Read a posted id list that may arrive as ids[] or as a JSON string.
+function site_pulse_form_ids_param(): array {
+	$raw = $_POST['ids'] ?? '';
+	if ( is_string( $raw ) ) $raw = json_decode( wp_unslash( $raw ), true );
+	if ( ! is_array( $raw ) ) return [];
+	return array_values( array_unique( array_filter( array_map( 'intval', $raw ) ) ) );
+}
+
+// Bulk delete selected forms. Needs upload_forms; only deletes forms you own (god deletes any).
+add_action( 'wp_ajax_site_pulse_bulk_delete_forms', 'site_pulse_ajax_bulk_delete_forms' );
+function site_pulse_ajax_bulk_delete_forms(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id = site_pulse_effective_user_id();
+	$is_god  = site_pulse_is_god( get_current_user_id() );
+	if ( ! $user_id || ! ( $is_god || site_pulse_user_can( $user_id, 'upload_forms' ) ) ) wp_send_json_error( [ 'message' => 'You do not have permission to delete forms.' ] );
+
+	$ids = site_pulse_form_ids_param();
+	if ( ! $ids ) wp_send_json_error( [ 'message' => 'No forms selected.' ] );
+
+	global $wpdb;
+	$tbl = site_pulse_table('forms');
+	$deleted = 0; $skipped = 0;
+	foreach ( $ids as $id ) {
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT id, uploaded_by, file_path FROM $tbl WHERE id = %d", $id ), ARRAY_A );
+		if ( ! $row ) continue;
+		if ( ! ( $is_god || (int) $row['uploaded_by'] === $user_id ) ) { $skipped++; continue; }
+		site_pulse_delete_form_file( (string) $row['file_path'] );
+		$wpdb->delete( $tbl, [ 'id' => (int) $id ] );
+		$deleted++;
+	}
+	wp_send_json_success( [ 'deleted' => $deleted, 'skipped' => $skipped ] );
+}
+
+// Bulk move selected forms to another repository (optionally a sub-folder of it). Needs
+// upload_forms; only moves forms you own (god moves any). Sub-folders don't carry across, so a
+// move clears sub_category unless a valid sub-folder of the destination is given.
+add_action( 'wp_ajax_site_pulse_move_forms', 'site_pulse_ajax_move_forms' );
+function site_pulse_ajax_move_forms(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id = site_pulse_effective_user_id();
+	$is_god  = site_pulse_is_god( get_current_user_id() );
+	if ( ! $user_id || ! ( $is_god || site_pulse_user_can( $user_id, 'upload_forms' ) ) ) wp_send_json_error( [ 'message' => 'You do not have permission to move forms.' ] );
+
+	$category = sanitize_key( $_POST['category'] ?? '' );
+	if ( ! isset( site_pulse_form_categories()[ $category ] ) ) wp_send_json_error( [ 'message' => 'Choose a destination repository.' ] );
+	$sub = sanitize_key( $_POST['sub_category'] ?? '' );
+	if ( $sub !== '' && ! isset( site_pulse_form_subfolders( $category )[ $sub ] ) ) $sub = '';
+
+	$ids = site_pulse_form_ids_param();
+	if ( ! $ids ) wp_send_json_error( [ 'message' => 'No forms selected.' ] );
+
+	global $wpdb;
+	$tbl = site_pulse_table('forms');
+	$now = current_time( 'mysql' );
+	$moved = 0; $skipped = 0;
+	foreach ( $ids as $id ) {
+		$owner = $wpdb->get_var( $wpdb->prepare( "SELECT uploaded_by FROM $tbl WHERE id = %d", $id ) );
+		if ( $owner === null ) continue;
+		if ( ! ( $is_god || (int) $owner === $user_id ) ) { $skipped++; continue; }
+		$wpdb->update( $tbl, [ 'category' => $category, 'sub_category' => $sub ?: null, 'updated_at' => $now ], [ 'id' => (int) $id ] );
+		$moved++;
+	}
+	wp_send_json_success( [ 'moved' => $moved, 'skipped' => $skipped ] );
+}
+
+// Bulk download — zip the selected forms and stream the archive. Open to any forms viewer.
+add_action( 'wp_ajax_site_pulse_download_forms', 'site_pulse_ajax_download_forms' );
+function site_pulse_ajax_download_forms(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id = site_pulse_effective_user_id();
+	$is_god  = site_pulse_is_god( get_current_user_id() );
+	if ( ! $user_id || ! ( $is_god || site_pulse_user_can( $user_id, 'view_forms' ) || site_pulse_user_can( $user_id, 'upload_forms' ) ) ) wp_send_json_error( [ 'message' => 'You do not have permission to download forms.' ] );
+
+	$ids = isset( $_POST['ids'] ) && is_array( $_POST['ids'] ) ? array_values( array_unique( array_filter( array_map( 'intval', $_POST['ids'] ) ) ) ) : [];
+	if ( ! $ids ) wp_send_json_error( [ 'message' => 'No forms selected.' ] );
+	if ( ! class_exists( 'ZipArchive' ) ) wp_send_json_error( [ 'message' => 'Zip downloads are not available on this server.' ] );
+
+	global $wpdb;
+	$place = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+	$rows  = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM " . site_pulse_table('forms') . " WHERE id IN ($place)", $ids ), ARRAY_A ) ?: [];
+	if ( ! $rows ) wp_send_json_error( [ 'message' => 'Forms not found.' ] );
+
+	$up   = wp_upload_dir();
+	$base = trailingslashit( $up['basedir'] ) . 'sp-forms/';
+	$tmp  = wp_tempnam( 'sp-forms-zip' );
+	$zip  = new ZipArchive();
+	if ( $zip->open( $tmp, ZipArchive::CREATE | ZipArchive::OVERWRITE ) !== true ) { @unlink( $tmp ); wp_send_json_error( [ 'message' => 'Could not create the archive.' ] ); }
+
+	$used = [];
+	$count = 0;
+	foreach ( $rows as $r ) {
+		$full = trailingslashit( $up['basedir'] ) . ltrim( (string) $r['file_path'], '/' );
+		if ( strpos( $full, $base ) !== 0 || ! is_file( $full ) ) continue;   // stay inside sp-forms/
+		$name = sanitize_file_name( $r['file_name'] ?: basename( (string) $r['file_path'] ) );
+		if ( $name === '' ) $name = 'form-' . (int) $r['id'];
+		$ext = strtolower( pathinfo( (string) $r['file_path'], PATHINFO_EXTENSION ) );
+		if ( $ext && strtolower( pathinfo( $name, PATHINFO_EXTENSION ) ) !== $ext ) $name .= '.' . $ext;
+		$entry = $name; $i = 2;
+		while ( isset( $used[ strtolower( $entry ) ] ) ) {
+			$b = pathinfo( $name, PATHINFO_FILENAME ); $e = pathinfo( $name, PATHINFO_EXTENSION );
+			$entry = $b . ' (' . $i . ')' . ( $e ? '.' . $e : '' ); $i++;
+		}
+		$used[ strtolower( $entry ) ] = true;
+		if ( $zip->addFile( $full, $entry ) ) $count++;
+	}
+	$zip->close();
+
+	if ( ! $count ) { @unlink( $tmp ); wp_send_json_error( [ 'message' => 'None of the selected forms could be downloaded.' ] ); }
+
+	nocache_headers();
+	header( 'Content-Type: application/zip' );
+	header( 'Content-Disposition: attachment; filename="forms-' . date( 'Y-m-d' ) . '.zip"' );
+	header( 'Content-Length: ' . filesize( $tmp ) );
+	readfile( $tmp );
+	@unlink( $tmp );
+	exit;
+}
+
+// Settings → Forms: the repository list with each one's form count.
+add_action( 'wp_ajax_site_pulse_get_form_settings', 'site_pulse_ajax_get_form_settings' );
+function site_pulse_ajax_get_form_settings(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
+
+	global $wpdb;
+	$counts = [];
+	$rows = $wpdb->get_results( "SELECT category, COUNT(*) AS c FROM " . site_pulse_table('forms') . " GROUP BY category", ARRAY_A ) ?: [];
+	foreach ( $rows as $r ) $counts[ (string) $r['category'] ] = (int) $r['c'];
+
+	$cats = [];
+	foreach ( site_pulse_form_category_tree() as $key => $cat ) {
+		$kids = [];
+		foreach ( $cat['children'] as $sk => $sl ) $kids[] = [ 'key' => $sk, 'label' => $sl ];
+		$cats[] = [ 'key' => $key, 'label' => $cat['label'], 'count' => $counts[ $key ] ?? 0, 'children' => $kids ];
+	}
+	wp_send_json_success( [ 'categories' => $cats ] );
+}
+
+// Settings → Forms: save the repository list (add / rename / delete / reorder). Existing rows keep
+// their key (so their forms stay linked); new rows get a slug from the label. Deleting a repository
+// reassigns its forms to the first remaining one — nothing is orphaned.
+add_action( 'wp_ajax_site_pulse_save_form_categories', 'site_pulse_ajax_save_form_categories' );
+function site_pulse_ajax_save_form_categories(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
+
+	$raw = json_decode( (string) wp_unslash( $_POST['categories'] ?? '' ), true );
+	if ( ! is_array( $raw ) ) wp_send_json_error( [ 'message' => 'Invalid data.' ] );
+
+	$old_tree = site_pulse_form_category_tree();   // pre-change state (for sub-folder cleanup)
+
+	$final    = [];   // key => label, in submitted order
+	$children = [];   // catKey => [ subKey => subLabel ]
+	foreach ( $raw as $c ) {
+		if ( ! is_array( $c ) ) continue;
+		$label = trim( (string) ( $c['label'] ?? '' ) );
+		if ( $label === '' ) continue;
+		$key = sanitize_key( (string) ( $c['key'] ?? '' ) );
+		if ( $key === '' ) $key = sanitize_title( $label );
+		if ( $key === '' ) $key = 'cat';
+		$base = $key; $i = 2;
+		while ( isset( $final[ $key ] ) ) { $key = $base . '-' . $i; $i++; }
+		$final[ $key ] = $label;
+
+		// Optional sub-folders for this repository.
+		$subs = [];
+		foreach ( (array) ( $c['children'] ?? [] ) as $s ) {
+			if ( ! is_array( $s ) ) continue;
+			$slabel = trim( (string) ( $s['label'] ?? '' ) );
+			if ( $slabel === '' ) continue;
+			$skey = sanitize_key( (string) ( $s['key'] ?? '' ) );
+			if ( $skey === '' ) $skey = sanitize_title( $slabel );
+			if ( $skey === '' ) $skey = 'sub';
+			$sbase = $skey; $si = 2;
+			while ( isset( $subs[ $skey ] ) ) { $skey = $sbase . '-' . $si; $si++; }
+			$subs[ $skey ] = $slabel;
+		}
+		$children[ $key ] = $subs;
+	}
+	if ( empty( $final ) ) wp_send_json_error( [ 'message' => 'Keep at least one repository.' ] );
+
+	global $wpdb;
+	$ftbl     = site_pulse_table('forms');
+	$new_keys = array_keys( $final );
+
+	// Reassign forms from any deleted repository to the first remaining one (sub-folder cleared).
+	$deleted = array_diff( array_keys( $old_tree ), $new_keys );
+	$moved   = 0;
+	if ( $deleted ) {
+		$target = $new_keys[0];
+		foreach ( $deleted as $dk ) {
+			$moved += (int) $wpdb->query( $wpdb->prepare(
+				"UPDATE $ftbl SET category = %s, sub_category = NULL WHERE category = %s", $target, $dk
+			) );
+		}
+	}
+	// For surviving repositories, move forms out of any REMOVED sub-folder back to the repo root.
+	foreach ( $new_keys as $ck ) {
+		$gone = array_diff( array_keys( $old_tree[ $ck ]['children'] ?? [] ), array_keys( $children[ $ck ] ?? [] ) );
+		foreach ( $gone as $sk ) {
+			$wpdb->query( $wpdb->prepare(
+				"UPDATE $ftbl SET sub_category = NULL WHERE category = %s AND sub_category = %s", $ck, $sk
+			) );
+		}
+	}
+
+	$store = [];
+	foreach ( $final as $k => $l ) {
+		$kids = [];
+		foreach ( $children[ $k ] as $sk => $sl ) $kids[] = [ 'key' => $sk, 'label' => $sl ];
+		$store[] = [ 'key' => $k, 'label' => $l, 'children' => $kids ];
+	}
+	site_pulse_set_setting( 'form_categories', wp_json_encode( $store ) );
+
+	wp_send_json_success( [
+		'categories' => $store,
+		'moved'      => $moved,
+		'moved_to'   => $moved ? $final[ $new_keys[0] ] : '',
+	] );
+}
+
+/* ---- Receipt image storage (uploads/sp-receipts/<unguessable>.jpg; row keeps the relative path) ---- */
+function site_pulse_receipts_basedir(): array {
+	$up  = wp_upload_dir();
+	$dir = trailingslashit( $up['basedir'] ) . 'sp-receipts';
+	if ( ! file_exists( $dir ) ) wp_mkdir_p( $dir );
+	return [ 'dir' => $dir, 'url' => trailingslashit( $up['baseurl'] ) . 'sp-receipts' ];
+}
+
+function site_pulse_receipt_url( string $path ): string {
+	if ( $path === '' ) return '';
+	$up = wp_upload_dir();
+	return trailingslashit( $up['baseurl'] ) . ltrim( $path, '/' );
+}
+
+// Decode a base64 data-URL receipt photo, save it, return its relative path (or '' on failure).
+function site_pulse_save_receipt_image( int $user_id, string $data_url ): string {
+	if ( ! preg_match( '#^data:image/(jpe?g|png);base64,#i', $data_url, $m ) ) return '';
+	$b64 = substr( $data_url, strpos( $data_url, ',' ) + 1 );
+	if ( strlen( $b64 ) > 13 * 1024 * 1024 ) return '';            // ~9MB binary cap
+	$bytes = base64_decode( $b64, true );
+	if ( $bytes === false || strlen( $bytes ) < 64 ) return '';
+	$ext  = ( stripos( $m[1], 'png' ) === 0 ) ? 'png' : 'jpg';
+	$base = site_pulse_receipts_basedir();
+	$name = 'r' . $user_id . '-' . time() . '-' . wp_generate_password( 10, false, false ) . '.' . $ext;
+	if ( ! file_put_contents( trailingslashit( $base['dir'] ) . $name, $bytes ) ) return '';
+	return 'sp-receipts/' . $name;
+}
+
+function site_pulse_delete_receipt_file( string $path ): void {
+	if ( $path === '' ) return;
+	$up   = wp_upload_dir();
+	$base = trailingslashit( $up['basedir'] ) . 'sp-receipts/';
+	$full = trailingslashit( $up['basedir'] ) . ltrim( $path, '/' );
+	if ( strpos( $full, $base ) === 0 && is_file( $full ) ) @unlink( $full );
 }
 
 add_action( 'wp_ajax_site_pulse_delete_expense', 'site_pulse_ajax_delete_expense' );
@@ -5943,8 +7244,9 @@ function site_pulse_ajax_scan_receipt(): void {
 	$prompt .= "- \"description\": a short label, ideally \"<merchant> — <item>\" (e.g. \"Shell — fuel\", \"Discount Tire — trailer tire\"), max ~60 characters\n";
 	$prompt .= "- \"place\": the merchant / restaurant / store name on its own (e.g. \"Olive Garden\", \"Shell\"), or empty string\n";
 	$prompt .= "- \"date\": the receipt date as YYYY-MM-DD if visible, otherwise an empty string\n";
+	$prompt .= "- \"corners\": the four corners of the RECEIPT PAPER itself (ignore table/hand/background), as percentages of the image, ordered top-left, top-right, bottom-right, bottom-left. Format each as [x,y] where x and y are 0–100 (x across the width, y down the height). ALWAYS give four corners. If part of the receipt runs off the edge of the photo (cut off), use the spot where its edge meets the image border as that corner — clamp that coordinate to 0 or 100 (the last visible spot). Return an empty array [] ONLY if you truly cannot locate the receipt at all.\n";
 	$prompt .= "If a field can't be read, use an empty string (or 0 for amount). Pick the most likely category even if unsure.\n";
-	$prompt .= 'Return ONLY: {"category":"<key>","amount":0,"description":"","place":"","date":""}';
+	$prompt .= 'Return ONLY: {"category":"<key>","amount":0,"description":"","place":"","date":"","corners":[[x,y],[x,y],[x,y],[x,y]]}';
 
 	$debug = null;
 	$resp  = site_pulse_call_claude_vision( $image, $media_type, $prompt, $system, [ 'max_tokens' => 400, 'timeout' => 45 ], $debug );
@@ -5960,12 +7262,27 @@ function site_pulse_ajax_scan_receipt(): void {
 	$date = sanitize_text_field( (string) ( $parsed['date'] ?? '' ) );
 	if ( $date !== '' && ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ) $date = '';
 
+	// Receipt corners (top-left, top-right, bottom-right, bottom-left) as 0–1 fractions, for the
+	// client to deskew + crop. Only pass through 4 in-range points; anything else → [] (no warp).
+	$corners = [];
+	if ( isset( $parsed['corners'] ) && is_array( $parsed['corners'] ) && count( $parsed['corners'] ) === 4 ) {
+		$ok = true;
+		foreach ( $parsed['corners'] as $pt ) {
+			if ( ! is_array( $pt ) || count( $pt ) < 2 ) { $ok = false; break; }
+			$x = (float) $pt[0] / 100; $y = (float) $pt[1] / 100;
+			if ( $x < -0.1 || $x > 1.1 || $y < -0.1 || $y > 1.1 ) { $ok = false; break; }
+			$corners[] = [ max( 0, min( 1, $x ) ), max( 0, min( 1, $y ) ) ];
+		}
+		if ( ! $ok ) $corners = [];
+	}
+
 	wp_send_json_success( [
 		'category'    => $cat,
 		'amount'      => round( (float) ( $parsed['amount'] ?? 0 ), 2 ),
 		'description' => sanitize_text_field( (string) ( $parsed['description'] ?? '' ) ),
 		'place'       => sanitize_text_field( (string) ( $parsed['place'] ?? '' ) ),
 		'date'        => $date,
+		'corners'     => $corners,
 	] );
 }
 
@@ -6687,7 +8004,7 @@ function site_pulse_ajax_admin_approve_mileage_location(): void {
 
 	$loc = $res['loc'];
 	if ( (int) $loc['created_by'] ) {
-		site_pulse_notify( (int) $loc['created_by'], 'mileage_approved',
+		site_pulse_dispatch_notification( 'mileage_approved', (int) $loc['created_by'],
 			sprintf( 'Your mileage location was approved: %s', $loc['name'] ),
 			$id, 'mileage_location'
 		);
@@ -6731,7 +8048,7 @@ function site_pulse_ajax_admin_reject_mileage_location(): void {
 	}
 
 	if ( (int) $loc['created_by'] ) {
-		site_pulse_notify( (int) $loc['created_by'], 'mileage_rejected',
+		site_pulse_dispatch_notification( 'mileage_rejected', (int) $loc['created_by'],
 			sprintf( 'Your mileage location was rejected: %s — affected legs were removed from your entries.', $loc['name'] ),
 			0, 'mileage_location'
 		);
@@ -7329,6 +8646,70 @@ function site_pulse_auth_guard(): void {
 	}
 }
 
+add_shortcode('get-google-alerts', function($atts){
+    $a = shortcode_atts(['keywords' => '', 'max' => 10], $atts);
+    if (empty($a['keywords'])) return '';
+
+    $query    = urlencode('"' . $a['keywords'] . '"');   // exact-phrase match
+    $feed_url = "https://news.google.com/rss/search?q={$query}&hl=en-US&gl=US&ceid=US:en";
+
+    $feed = fetch_feed($feed_url);
+    if (is_wp_error($feed)) return '';
+
+    $items = $feed->get_items(0, (int)$a['max']);
+    if (!$items) return '<p>No recent results.</p>';
+
+    $out = '<ul class="ga-feed">';
+    foreach ($items as $item) {
+        $link = esc_url($item->get_permalink());
+
+        // Google News supplies the publisher in an RSS <source url="...">Name</source>
+        // element. SimplePie's get_source() is Atom-only, so read the raw tag instead.
+        $pub    = '';
+        $domain = '';
+        $src_tags = $item->get_item_tags('', 'source');
+        if (!empty($src_tags[0])) {
+            $pub = isset($src_tags[0]['data']) ? trim($src_tags[0]['data']) : '';
+            if (!empty($src_tags[0]['attribs']['']['url'])) {
+                $domain = wp_parse_url($src_tags[0]['attribs']['']['url'], PHP_URL_HOST);
+            }
+        }
+
+        // Google News titles read "Headline - Publication" — drop the trailing source.
+        $title = $item->get_title();
+        if ($pub && substr($title, -strlen(' - ' . $pub)) === ' - ' . $pub) {
+            $title = rtrim(substr($title, 0, -strlen(' - ' . $pub)));
+        }
+
+        // Option A: publisher favicon via Google's favicon service (no per-article fetch).
+        $favicon = $domain
+            ? 'https://www.google.com/s2/favicons?domain=' . rawurlencode($domain) . '&sz=64'
+            : '';
+
+        $out .= '<li class="ga-item">';
+
+        // Title
+        $out .= '<a class="ga-title" href="' . $link . '" target="_blank" rel="noopener">' . esc_html($title) . '</a>';
+
+        // Meta row: ICON | Publication · Date. (The whole item is the link — see .ga-title::after.)
+        $out .= '<div class="ga-meta">';
+        if ($favicon) {
+            $out .= '<img class="ga-favicon" src="' . esc_url($favicon) . '" width="20" height="20" alt="" loading="lazy">';
+        }
+        if ($pub) {
+            $out .= '<span class="ga-pub">' . esc_html($pub) . '</span>';
+            $out .= '<span class="ga-sep">&middot;</span>';
+        }
+        $out .= '<span class="ga-date">' . esc_html($item->get_date('M j, Y')) . '</span>';
+        $out .= '</div>';
+
+        $out .= '</li>';
+    }
+    return $out . '</ul>';
+});
+
+
+
 
 add_filter( 'battleplan_icon_map', 'battleplan_addSitePulseIcons' );
 function battleplan_addSitePulseIcons( $icons ) {
@@ -7338,7 +8719,9 @@ function battleplan_addSitePulseIcons( $icons ) {
 
 	$icons['toll'] = [ '<g transform="translate(0 150)"><path d="m333.83 59.73 25.72.05L380.57.35 410.39 0l-21.6 59.7 28.66.34L438.89.23l24.69.88c2.98.11 9.55 4.26 9.65 7.36.48 15.19.65 28.9-.15 43.91-.28 5.24-9.33 9.29-13.98 9.29l-57.04-.04h-53.13l-61.94-.1-222.03-.33c-5.11 0-11.63-3.45-13.64-7.42-.38-15.16-.6-29.28.2-44.27.35-6.53 10.35-9.1 15.39-9.14L99.34.11l54.33-.04 26.03.44-20.82 59.03c9.93.47 18.14.53 28.54.33L208.72.2l29.46.27-21.02 59.11c9.73.5 18.94.55 28.6.06l19.07-52.93c.52-1.44.57-3.94.52-6.25l31.37-.12-21.22 59.27 28.68.33L325.32.43 354.7.37l-20.87 59.35ZM116.07 100.14l.1 182.44c12.17 4.66 18.13 15.97 15.94 28.21H.47c-2.21-12.33 3.38-23.96 15.73-27.82l-.07-178.58c0-11.35 6.51-20.66 18.69-20.78l10.04-.1.1 56.06 38.94-.04.15-55.48c15.21-3.01 32 1.92 32 16.08Z"/><path d="M77.88 102.76c.5 13.7 2.32 31.62-4.65 31.67l-16.36.11c-2.77.02-5.37-2.73-5.89-6.01l.03-55.31c0-2.72 2.73-5.2 4.64-5.2l16.78.02c2.97 0 5.4 2.8 5.41 6.45z"/></g>' ];
 
-	$icons['dollar-sign'] = [ '<g transform="translate(0 200)"><path d="M0 0h484.82v263.66H0zm22.99 23.86v215.98H461.8V23.86z"/><path d="m195.21 225.6-158.08.09-.02-187.71h158.31c-35.46 18.93-57.4 53.93-57.68 93.06-.29 39.85 21.83 75.43 57.47 94.56M447.71 225.6l-157.95-.02c36.48-19.98 57.51-55.28 57.3-94.57-.2-39.07-22.29-74.2-57.63-92.99l158.25-.13.03 187.7Z"/><path d="M332.98 131.84c0 50.03-40.56 90.58-90.58 90.58s-90.58-40.56-90.58-90.58 40.56-90.58 90.58-90.58 90.58 40.56 90.58 90.58m-84.19 61.93c12.18-1.57 22.73-4.92 30.94-13.17 9.79-9.84 12.4-25.68 6.69-38.39-4.02-8.94-13.06-14.8-21.91-17.38l-15.85-4.62-.24-26.73c8.59.32 13.97 2.21 20.13 6.81l16.17-19.9c-10.62-7.93-21.47-10.02-35.08-10.48l-1.54-12.04-10.47-.12-.76 12c-10.64 2-20.13 5.08-27.88 12.37-12.13 11.41-14.54 32.27-3.16 44.94 8.06 8.98 20.11 11.04 31.41 14.7l.12 28.16c-9.51.53-18.3-3.08-23.96-9.97l-17.91 20.11c11.22 10.58 26.4 13.26 41.56 13.96l.43 11.97 10.88-.13.4-12.09Z"/><path d="M261.45 151.94c2.54 2.78 1.39 10.66-1.27 12.89s-6.18 3.76-11.6 5.42l-.07-25.45c5.46 1.77 9.3 3.15 12.94 7.13ZM237.41 94.4l-.05 22.66c-7.56-.03-12.38-5.12-12.27-12.43.09-6.02 6.1-10.61 12.32-10.23"/></g>' ];
+	$icons['dollar-bill'] = [ '<g transform="translate(0 200)"><path d="M0 0h484.82v263.66H0zm22.99 23.86v215.98H461.8V23.86z"/><path d="m195.21 225.6-158.08.09-.02-187.71h158.31c-35.46 18.93-57.4 53.93-57.68 93.06-.29 39.85 21.83 75.43 57.47 94.56M447.71 225.6l-157.95-.02c36.48-19.98 57.51-55.28 57.3-94.57-.2-39.07-22.29-74.2-57.63-92.99l158.25-.13.03 187.7Z"/><path d="M332.98 131.84c0 50.03-40.56 90.58-90.58 90.58s-90.58-40.56-90.58-90.58 40.56-90.58 90.58-90.58 90.58 40.56 90.58 90.58m-84.19 61.93c12.18-1.57 22.73-4.92 30.94-13.17 9.79-9.84 12.4-25.68 6.69-38.39-4.02-8.94-13.06-14.8-21.91-17.38l-15.85-4.62-.24-26.73c8.59.32 13.97 2.21 20.13 6.81l16.17-19.9c-10.62-7.93-21.47-10.02-35.08-10.48l-1.54-12.04-10.47-.12-.76 12c-10.64 2-20.13 5.08-27.88 12.37-12.13 11.41-14.54 32.27-3.16 44.94 8.06 8.98 20.11 11.04 31.41 14.7l.12 28.16c-9.51.53-18.3-3.08-23.96-9.97l-17.91 20.11c11.22 10.58 26.4 13.26 41.56 13.96l.43 11.97 10.88-.13.4-12.09Z"/><path d="M261.45 151.94c2.54 2.78 1.39 10.66-1.27 12.89s-6.18 3.76-11.6 5.42l-.07-25.45c5.46 1.77 9.3 3.15 12.94 7.13ZM237.41 94.4l-.05 22.66c-7.56-.03-12.38-5.12-12.27-12.43.09-6.02 6.1-10.61 12.32-10.23"/></g>' ];
+
+	$icons['dollar-sign'] = [ '<g transform="translate(60 200)"><path d="M149.95 476.58h-34.52c-5.3.01-10.31-4.74-10.34-10.17l-.21-43.02c-31.39-3.37-59.13-14.35-80.26-36.22C7.61 369.55 1.19 345.95.02 321.68c-.32-6.74 3.43-11.69 10.29-11.69h50.85c6.68-.01 10.74 4.72 10.98 11.09.83 21.38 12.99 38.58 33.58 44.66 13.25 3.91 27.7 4.23 41.12.66 18.44-4.89 28.53-21.15 29.17-39.58 1.34-38.5-29.61-50.34-64.16-62.71-21.84-7.81-42.16-17.43-60.95-30.65-18.12-12.75-30.6-29.9-35.42-51.68-9.79-44.22 2.45-86.95 41.68-110.94 14.7-8.99 30.69-13.7 47.85-16.58l.02-44.1c0-5.46 5.16-10.15 10.37-10.15l34.53-.02c5.34.03 10.56 4.5 10.56 10.19l.02 45.5c49.27 7.65 84.77 46.01 86.49 95.95.21 6.2-1.12 13.23-9.3 13.24l-51.98.06c-6.72 0-10.11-5.66-10.61-11.69-1.36-16.33-8.55-31.87-23.55-39.41-15.12-7.59-35.18-7.16-49.64 1.69-20.19 12.37-25.81 56.74 1.81 75.27 33.8 22.67 66.93 23.35 107.71 53.71 31.93 23.78 41.21 60.33 35.33 99.23-6.74 44.6-43.1 70.63-86.25 78.46v44.21c0 5.53-5.31 10.17-10.57 10.17Z"/></g>' ];
 
 	$icons['trailer'] = [ '<g transform="translate(0 300)"><path d="m29.1 91.99-.39 44.25c6.25 2.06 8.09 2.64 13.11 5.55-12.45 2.82-18.89 2.59-31.69.93 3.67-4.73 5.76-5.09 12.32-6.39l-.08-44.05L0 90.55l13.07-20.74c5.87-4.05 20.73-5.15 28.25-.78l-19.68 5.54c-1.94.55-3.64 3.83-4.17 7.73l141.28-4.14.19-78.16 308.8.03.22 79.27 8.12 6.04-1.04 23.88c-4.7 1.19-13.45 1.51-15.67-1.1s-2.45-9.25-2.48-16.07l-75.85-.18-1.04 13.24c-.13 1.72-3.72 4.75-5.42 5.22-2.12.59-5.6-4.51-5.42-6.92 2.5-33.38-23.13-59.77-54.56-60.5-32.57-.75-59.79 26.39-56.92 60.42.2 2.4-3.48 7.46-5.69 7.15s-5.48-4.57-5.6-6.92l-.6-11.58-216.71-.02Z"/><path d="M358.46 98.85c0 24.9-20.19 45.09-45.09 45.09s-45.09-20.19-45.09-45.09 20.19-45.09 45.09-45.09 45.09 20.19 45.09 45.09m-24.36.01c0-11.43-9.26-20.69-20.69-20.69s-20.69 9.26-20.69 20.69 9.26 20.69 20.69 20.69 20.69-9.26 20.69-20.69"/><circle cx="313.4" cy="98.75" r="9.75"/></g>' ];
 
@@ -7352,11 +8735,13 @@ function battleplan_addSitePulseIcons( $icons ) {
 
 	$icons['fuel'] = [ '<g transform="translate(110 50)"><path d="M280.28 413.16H.08c.04-9.57-.38-18.76.36-28.44.32-4.14 5.91-9.44 9.53-10.8 5.75-2.16 11.39-1.34 17.49-1.57l.27-358.53c0-5.68 6.81-11.29 11.25-13.03l77.81-.74L239.67 0c5.37 2.36 9.05 5.84 12.18 10.92l.81 360.79 11.64.97c8.39.7 15.72 6.85 15.79 15.77zm-66.83-369.5H66.87v83.63h146.58z"/><path d="M256.36 251.94c24.32.78 43.52 12.39 43.33 38.03l-.31 41.27c-.07 9.11 2.54 18.3 9.01 24.82 7.6 7.67 20.17 8.88 29.35 3.47 8.35-4.93 11.47-14.9 9.11-24.12-1.93-7.54-4.69-14.36-7.6-21.64l-21.53-53.87c-11.29-28.25-17.33-57.38-19.59-88.04-7.85 1.36-14.14-3.22-15.44-10.72-1.22-7.05-1.58-14.13-1.95-21.39l-.64-34.86 11.19-27.25-34.42-10.62c-.36-7.38-.49-14.31-.15-21.91l52.35 17.64c5.33 2.01 9.52 6.4 9.42 12.62l-1.1 66.35c-.22 13.27-.92 25.72.43 38.98 2.93 28.63 10.21 55.89 21.03 82.42l17.87 43.79c3.06 7.5 6.6 14.69 7.92 22.81 1.18 7.24 1.76 15.78.14 22.95-3.5 15.52-17.27 25.85-32.45 28.24-19.18 3.02-37-6.39-45.66-23.39-4.5-8.84-5.51-17.84-5.6-27.85l-.36-42.85c-.1-12.48-12.21-14.83-24.33-16.66zm41.34-90.26-3.57-45.11-9.12-.49c.79 14.54 1.53 27.21 3.36 40.96.23 1.71 1.96 4.15 3.14 4.93 1.47.97 4.19.9 6.19-.3Z"/></g>' ];
 
-	$icons['wash'] = [ '<g transform="translate(110 80)"><path d="M326.48 351.3c.25 6.52-3.98 11.84-10.53 11.83l-42.23-.07c-5.01 0-9.18-4.39-9.38-9.09l-.38-8.77H64.54l-.25 8.35c-.14 4.83-4.29 9.5-9.52 9.51l-42.28.07c-5.32 0-10.1-4.29-10.15-9.59l-.28-26.35-1.94-35.9c-.49-9.06.56-17.69 2.56-26.45 3.33-14.57 11.48-27 24.46-35.15-9.16-5.27-20.17-11.41-20.35-21.61 3.24-8.29 14.7-8.6 23.94-8.38l6.62 12.3 15.1-46.29c2-6.14 5.17-11.68 8.92-16.71 5.34-7.16 13.01-10.79 21.89-10.83l25.18-.12 2.95-15.42c.66-3.44 4.02-5.35 7.16-5 2.82.31 5.93 3.34 5.33 6.75l-2.43 13.7 34.12-.03.59-5.9c.33-3.3 2.69-5.25 5.81-5.5 2.43-.19 5.84 1.12 6.43 4.38.37 2.03.2 4.54.07 6.96h41.03l-2.43-12.4c-.63-3.21 1.19-6.12 3.84-7.16s7.05-.4 8.07 2.98c1.65 5.45 2.49 11.12 3.12 16.56l35.31.16c15.81.07 26.55 14.83 30.23 29.41l10.84 42.91 5.95-10.75 9.69.22c3.67.08 7.29 1.35 10.37 3.25 3.73 2.29 4.78 6.81 2.56 10.74-1.99 3.53-5.05 7.01-8.65 9.18l-12.9 7.76c1.78 2.56 3.3 5.76 5.28 7.85 9.52 10.07 15.3 22.01 16.7 36.01 2.65 26.54-1.99 50.34-.98 76.57Zm-43.03-129.9-9.82-41.01c-1.27-5.82-3.3-11.11-6.52-15.97-3.83-5.55-9.15-8.83-16.1-9.77H86.48c-4.97.75-8.95 2.47-12.18 5.99-.65 2.74-2.24 4.8-4.86 5.98-2.8 5.22-4.73 10.46-6.43 16.17l-11.5 38.63h231.93ZM95.79 298.37c2.67-5.88-3.8-18.67-14.54-20.05l-39.2-5.04c-2.18-.28-5.52.61-6.82 2.18-1.43 1.73-1.11 4.98-.36 6.88l4 10.12c2.5 6.32 8.13 9.27 14.73 9.33l19.23.17c8.86.08 20.63 1.57 22.97-3.58Zm178.86 3.42c6.2-.05 12.03-2.27 14.32-8.02l5.14-12.89c.62-1.55-.04-4.91-1.16-5.84-1.02-.85-3.62-2.05-5.26-1.84l-39.95 5c-12.25 1.53-18.22 16.03-14.51 21 .98 1.31 3.91 2.88 6.04 2.87l35.39-.26ZM229.92 68.62H97.94c-2.02 0-3.3-2.08-3.3-3.71V53.83c.08-1.84 1.59-3.43 3.55-3.44l22.12-.1c2.55-21.6 16.03-37.68 36.71-42.36L157-.01h14.51v7.37c22.9 2.93 36.95 20.17 41.87 42.89l17.61.14c1.61.01 3.01 1.86 3 3.35l-.02 11.1c0 2.3-1.57 3.76-4.03 3.76ZM248.67 92.05c1.6 3.28-.64 6.61-3.08 7.99-2.69 1.52-7.06.55-8.5-2.49l-6.19-13.11c-1.37-2.9 1.01-6.34 3.3-7.46 2.67-1.3 6.73-.77 8.25 2.34z"/><path d="M84.44 133.89c-1.3 3.38-5.52 4.3-8.35 3.13-2.58-1.06-4.68-4.5-3.49-7.65l4.76-12.55c1.33-3.52 5.17-4.84 8.3-3.59s4.85 4.84 3.52 8.31l-4.73 12.34ZM98.08 98.07c-1.33 3.32-5.31 4.13-8.04 3.05-2.41-.96-4.89-4.33-3.71-7.46l4.92-13.05c1.21-3.2 5.38-4.32 8.19-3.08 3.04 1.34 4.88 4.93 3.5 8.38l-4.87 12.16ZM214.5 96.67c.81 4.2-1.67 7.65-5.27 8.04-3.97.43-6.68-1.91-7.43-5.98l-2.1-11.45c-.69-3.77 1.61-6.84 5.17-7.45 3.27-.56 6.66 1.5 7.39 5.24zM170.15 107.28c-.21 4.09-3.91 6.53-7.01 6.12-3.73-.49-5.97-3.7-5.75-7.53.26-4.46.44-8.93 1.06-13.16.49-3.31 4.4-4.98 6.88-4.6 2.8.43 5.63 3.01 5.46 6.4l-.65 12.78ZM129.1 98.91c-.77 4.07-3.57 6.17-7.25 5.76-3.13-.35-6.13-3.4-5.45-7.17l2.05-11.4c.74-4.1 3.4-6.57 7.36-6.05 3.66.48 6.15 3.84 5.39 7.86l-2.08 11ZM264.65 124.18c1.9 3.69 1.5 7-1.64 9.4-2.5 1.91-7.24 1.65-8.89-1.79l-6.01-12.48c-1.53-3.17.59-6.55 3.25-7.77 2.45-1.13 6.44-.7 7.95 2.25l5.35 10.39Z"/></g>' ];
+	$icons['wash'] = [ '<g transform="translate(110 100)"><path d="M326.48 351.3c.25 6.52-3.98 11.84-10.53 11.83l-42.23-.07c-5.01 0-9.18-4.39-9.38-9.09l-.38-8.77H64.54l-.25 8.35c-.14 4.83-4.29 9.5-9.52 9.51l-42.28.07c-5.32 0-10.1-4.29-10.15-9.59l-.28-26.35-1.94-35.9c-.49-9.06.56-17.69 2.56-26.45 3.33-14.57 11.48-27 24.46-35.15-9.16-5.27-20.17-11.41-20.35-21.61 3.24-8.29 14.7-8.6 23.94-8.38l6.62 12.3 15.1-46.29c2-6.14 5.17-11.68 8.92-16.71 5.34-7.16 13.01-10.79 21.89-10.83l25.18-.12 2.95-15.42c.66-3.44 4.02-5.35 7.16-5 2.82.31 5.93 3.34 5.33 6.75l-2.43 13.7 34.12-.03.59-5.9c.33-3.3 2.69-5.25 5.81-5.5 2.43-.19 5.84 1.12 6.43 4.38.37 2.03.2 4.54.07 6.96h41.03l-2.43-12.4c-.63-3.21 1.19-6.12 3.84-7.16s7.05-.4 8.07 2.98c1.65 5.45 2.49 11.12 3.12 16.56l35.31.16c15.81.07 26.55 14.83 30.23 29.41l10.84 42.91 5.95-10.75 9.69.22c3.67.08 7.29 1.35 10.37 3.25 3.73 2.29 4.78 6.81 2.56 10.74-1.99 3.53-5.05 7.01-8.65 9.18l-12.9 7.76c1.78 2.56 3.3 5.76 5.28 7.85 9.52 10.07 15.3 22.01 16.7 36.01 2.65 26.54-1.99 50.34-.98 76.57Zm-43.03-129.9-9.82-41.01c-1.27-5.82-3.3-11.11-6.52-15.97-3.83-5.55-9.15-8.83-16.1-9.77H86.48c-4.97.75-8.95 2.47-12.18 5.99-.65 2.74-2.24 4.8-4.86 5.98-2.8 5.22-4.73 10.46-6.43 16.17l-11.5 38.63h231.93ZM95.79 298.37c2.67-5.88-3.8-18.67-14.54-20.05l-39.2-5.04c-2.18-.28-5.52.61-6.82 2.18-1.43 1.73-1.11 4.98-.36 6.88l4 10.12c2.5 6.32 8.13 9.27 14.73 9.33l19.23.17c8.86.08 20.63 1.57 22.97-3.58Zm178.86 3.42c6.2-.05 12.03-2.27 14.32-8.02l5.14-12.89c.62-1.55-.04-4.91-1.16-5.84-1.02-.85-3.62-2.05-5.26-1.84l-39.95 5c-12.25 1.53-18.22 16.03-14.51 21 .98 1.31 3.91 2.88 6.04 2.87l35.39-.26ZM229.92 68.62H97.94c-2.02 0-3.3-2.08-3.3-3.71V53.83c.08-1.84 1.59-3.43 3.55-3.44l22.12-.1c2.55-21.6 16.03-37.68 36.71-42.36L157-.01h14.51v7.37c22.9 2.93 36.95 20.17 41.87 42.89l17.61.14c1.61.01 3.01 1.86 3 3.35l-.02 11.1c0 2.3-1.57 3.76-4.03 3.76ZM248.67 92.05c1.6 3.28-.64 6.61-3.08 7.99-2.69 1.52-7.06.55-8.5-2.49l-6.19-13.11c-1.37-2.9 1.01-6.34 3.3-7.46 2.67-1.3 6.73-.77 8.25 2.34z"/><path d="M84.44 133.89c-1.3 3.38-5.52 4.3-8.35 3.13-2.58-1.06-4.68-4.5-3.49-7.65l4.76-12.55c1.33-3.52 5.17-4.84 8.3-3.59s4.85 4.84 3.52 8.31l-4.73 12.34ZM98.08 98.07c-1.33 3.32-5.31 4.13-8.04 3.05-2.41-.96-4.89-4.33-3.71-7.46l4.92-13.05c1.21-3.2 5.38-4.32 8.19-3.08 3.04 1.34 4.88 4.93 3.5 8.38l-4.87 12.16ZM214.5 96.67c.81 4.2-1.67 7.65-5.27 8.04-3.97.43-6.68-1.91-7.43-5.98l-2.1-11.45c-.69-3.77 1.61-6.84 5.17-7.45 3.27-.56 6.66 1.5 7.39 5.24zM170.15 107.28c-.21 4.09-3.91 6.53-7.01 6.12-3.73-.49-5.97-3.7-5.75-7.53.26-4.46.44-8.93 1.06-13.16.49-3.31 4.4-4.98 6.88-4.6 2.8.43 5.63 3.01 5.46 6.4l-.65 12.78ZM129.1 98.91c-.77 4.07-3.57 6.17-7.25 5.76-3.13-.35-6.13-3.4-5.45-7.17l2.05-11.4c.74-4.1 3.4-6.57 7.36-6.05 3.66.48 6.15 3.84 5.39 7.86l-2.08 11ZM264.65 124.18c1.9 3.69 1.5 7-1.64 9.4-2.5 1.91-7.24 1.65-8.89-1.79l-6.01-12.48c-1.53-3.17.59-6.55 3.25-7.77 2.45-1.13 6.44-.7 7.95 2.25l5.35 10.39Z"/></g>' ];
 
-	$icons['parking'] = [ '<g transform="translate(80 170)"><path d="M327.46 202.97c-1.4-14-7.18-25.94-16.7-36.01-1.98-2.09-3.5-5.29-5.28-7.85l12.9-7.76c3.6-2.17 6.65-5.64 8.65-9.18 2.22-3.93 1.17-8.45-2.56-10.74-3.08-1.89-6.7-3.16-10.37-3.25l-9.69-.22-5.95 10.75-10.84-42.91c-3.68-14.58-14.42-29.33-30.23-29.41l-174.14.03c-8.88.04-16.55 3.67-21.89 10.83-3.75 5.03-6.92 10.57-8.92 16.71l-15.1 46.29-6.62-12.3c-9.24-.22-20.7.08-23.94 8.38.18 10.2 11.2 16.34 20.35 21.61C14.15 166.09 6 178.52 2.67 193.09c-2 8.76-3.05 17.39-2.56 26.45l1.95 35.89.28 26.35c.06 5.3 4.83 9.6 10.15 9.59l42.28-.07c5.23 0 9.37-4.68 9.52-9.51l.25-8.35h199.42l.38 8.77c.2 4.7 4.37 9.08 9.38 9.09l42.23.07c6.55.01 10.78-5.3 10.53-11.83-1.01-26.23 3.64-50.03.98-76.57M63.02 111.01c1.7-5.71 3.62-10.95 6.43-16.17 2.61-1.18 4.21-3.24 4.86-5.98 3.23-3.51 7.21-5.24 12.18-5.99h164.52c6.95.94 12.27 4.22 16.1 9.77 3.22 4.86 5.26 10.16 6.52 15.97l9.82 41.01H51.52L63.02 111Zm32.77 115.6c-2.34 5.15-14.11 3.66-22.97 3.58l-19.23-.17c-6.6-.06-12.23-3.01-14.73-9.33l-4-10.12c-.75-1.9-1.06-5.15.36-6.88 1.3-1.57 4.64-2.46 6.82-2.18l39.2 5.04c10.74 1.38 17.21 14.18 14.54 20.05Zm198.33-17.5L288.98 222c-2.29 5.75-8.12 7.98-14.32 8.02l-35.39.26c-2.13.02-5.06-1.55-6.04-2.87-3.71-4.96 2.26-19.47 14.51-21l39.95-5c1.65-.21 4.24.99 5.26 1.84 1.12.93 1.78 4.29 1.16 5.84Z"/><path d="m365.3 104.35-.02 153.96c0 3.6-3.99 5.93-6.6 5.87-3.44-.08-6.76-2.75-6.76-6.85V104.3l-24.78.11c-10.29.04-19.01-5.73-20.62-16.27l.16-71.42C306.7 6.78 315.91 0 325.07 0l68.14.07c8.93 0 17.42 7.43 17.44 16.61l.16 71.47c-1.67 11.05-10.99 16.3-21.66 16.27l-23.85-.06Zm-.29-42.79c4.53-.15 10.48-2.67 13.29-6.03 6.69-7.99 6.84-20.41.31-28.64-3.09-3.9-9.66-6.19-14.56-6.25l-26.1-.36c-1.63-.02-3.87 2.3-3.86 4.05l.1 58.64c4.88 1.6 9.09 1.54 13.73.09l.39-20.96z"/><path d="M366.27 47.87c-5.93 2.67-11.2 2.16-17.98 1.93l-.09-17.34c10.7-.68 19.8-1.46 21.05 6.71.34 2.25-.4 7.53-2.98 8.69ZM351.98 200.23v85.55c0 4.1 3.33 6.77 6.77 6.85 2.6.06 6.6-2.27 6.6-5.87v-86.54h-13.37Z"/></g>' ];
+	$icons['parking'] = [ '<g transform="translate(80 180)"><path d="M327.46 202.97c-1.4-14-7.18-25.94-16.7-36.01-1.98-2.09-3.5-5.29-5.28-7.85l12.9-7.76c3.6-2.17 6.65-5.64 8.65-9.18 2.22-3.93 1.17-8.45-2.56-10.74-3.08-1.89-6.7-3.16-10.37-3.25l-9.69-.22-5.95 10.75-10.84-42.91c-3.68-14.58-14.42-29.33-30.23-29.41l-174.14.03c-8.88.04-16.55 3.67-21.89 10.83-3.75 5.03-6.92 10.57-8.92 16.71l-15.1 46.29-6.62-12.3c-9.24-.22-20.7.08-23.94 8.38.18 10.2 11.2 16.34 20.35 21.61C14.15 166.09 6 178.52 2.67 193.09c-2 8.76-3.05 17.39-2.56 26.45l1.95 35.89.28 26.35c.06 5.3 4.83 9.6 10.15 9.59l42.28-.07c5.23 0 9.37-4.68 9.52-9.51l.25-8.35h199.42l.38 8.77c.2 4.7 4.37 9.08 9.38 9.09l42.23.07c6.55.01 10.78-5.3 10.53-11.83-1.01-26.23 3.64-50.03.98-76.57M63.02 111.01c1.7-5.71 3.62-10.95 6.43-16.17 2.61-1.18 4.21-3.24 4.86-5.98 3.23-3.51 7.21-5.24 12.18-5.99h164.52c6.95.94 12.27 4.22 16.1 9.77 3.22 4.86 5.26 10.16 6.52 15.97l9.82 41.01H51.52L63.02 111Zm32.77 115.6c-2.34 5.15-14.11 3.66-22.97 3.58l-19.23-.17c-6.6-.06-12.23-3.01-14.73-9.33l-4-10.12c-.75-1.9-1.06-5.15.36-6.88 1.3-1.57 4.64-2.46 6.82-2.18l39.2 5.04c10.74 1.38 17.21 14.18 14.54 20.05Zm198.33-17.5L288.98 222c-2.29 5.75-8.12 7.98-14.32 8.02l-35.39.26c-2.13.02-5.06-1.55-6.04-2.87-3.71-4.96 2.26-19.47 14.51-21l39.95-5c1.65-.21 4.24.99 5.26 1.84 1.12.93 1.78 4.29 1.16 5.84Z"/><path d="m365.3 104.35-.02 153.96c0 3.6-3.99 5.93-6.6 5.87-3.44-.08-6.76-2.75-6.76-6.85V104.3l-24.78.11c-10.29.04-19.01-5.73-20.62-16.27l.16-71.42C306.7 6.78 315.91 0 325.07 0l68.14.07c8.93 0 17.42 7.43 17.44 16.61l.16 71.47c-1.67 11.05-10.99 16.3-21.66 16.27l-23.85-.06Zm-.29-42.79c4.53-.15 10.48-2.67 13.29-6.03 6.69-7.99 6.84-20.41.31-28.64-3.09-3.9-9.66-6.19-14.56-6.25l-26.1-.36c-1.63-.02-3.87 2.3-3.86 4.05l.1 58.64c4.88 1.6 9.09 1.54 13.73.09l.39-20.96z"/><path d="M366.27 47.87c-5.93 2.67-11.2 2.16-17.98 1.93l-.09-17.34c10.7-.68 19.8-1.46 21.05 6.71.34 2.25-.4 7.53-2.98 8.69ZM351.98 200.23v85.55c0 4.1 3.33 6.77 6.77 6.85 2.6.06 6.6-2.27 6.6-5.87v-86.54h-13.37Z"/></g>' ];
 
 	$icons['car-repairs'] = [ '<g transform="translate(60 200)"><path d="M341.98 353.66c5.05-7.19 9.78-13.83 12.2-22.08 2.92-9.95 1.98-20.44-4.29-28.64-7.77-10.15-20.78-13.43-32.36-7.97-12.98 6.11-20.08 19-25.22 32.61-15.04-22.76-12.66-48.24 4.69-68.27l8-7.84 18.58-14.8c6.34-5.05 10.92-11.76 13.02-19.86l23.62-90.95c5-19.24-12.14-42.1-15.49-64.86-4.74-32.21 24.08-58.76 55.26-60.98-9.78 12.3-16.04 24.41-13.38 39.09 1.56 8.63 7.24 15.7 13.82 19.09 8.83 4.54 18.43 3.84 26.21-.73l7.28-5.49c7.35-7.2 11.6-16.02 15.41-26.07 12.63 19.49 13.47 40.9 1.19 60.42-6.53 10.37-15.79 18.28-26.1 24.82-10.84 6.88-17.85 15.65-21.04 28.32l-21.79 86.49c-2.16 8.58-2.11 16.41.93 24.75l9.59 26.3c6.86 18.8 7.35 35.43-4.77 51.97-10.37 14.16-26.78 23.06-45.37 24.7Z"/><path d="M100.13 209.71c-22.67 9.84-33.45 30.64-35.37 54.76-.91 11.46.45 22.61 2.21 34.26l-47.04-.12c-6.76-.02-12.29-3.62-15.2-9.56-2.49-5.07-4.16-10.9-4.41-16.82-.47-11.19-.3-21.99-.15-33.35.06-4.08 2.09-8.66 4.29-11.87 3.28-4.78 8.65-6.51 14.39-7.19-1.8-22.92 9.04-40.23 30.42-48.32 8.12-3.07 16.22-3.88 24.91-5.48 37.69-6.95 75.2-11.49 113.47-12.14l6.62-4.85-19.57-19.18-21.1-20.48-22.75-22.01-20.39-19.92c-15.04-14.7-29.44-9.15-40.23-11.03-8.36-1.46-13.75-9.23-15.71-16.83-.91-3.53-2.66-7-2.01-10.51.93-5.04 5.22-8.53 9.76-10.43 5.85-2.45 12.06-2.65 18.44-3.08 6.39-.43 12.81.38 18.93 2.11 9.5 2.69 16.18 8.84 22.77 15.88l93.19 99.58c28.78-19.62 58.19-36.72 89.51-51.2 7.66-3.55 15.59-5.74 23.67-7.04l1.82 13.69c-7.81 1.21-15.34 3.37-22.66 6.93-15.82 7.7-30.79 16.01-45.59 25.55l-23.77 15.31-9.73 6.82.04 23.16h109.76l-15.29 58.45-10.41 8.71c-22.69 15.08-37.59 37.25-43.68 64.28h-72.41c2.45-11.66 3.8-22.87 2.71-34.46-1.25-12.14-4.54-23.38-11.38-33.46-19.87-27.91-57.78-33.28-88.06-20.13Z"/><path d="M185.51 272.84c0 29.29-23.75 53.04-53.04 53.04s-53.04-23.75-53.04-53.04 23.75-53.04 53.04-53.04 53.04 23.75 53.04 53.04m-59.13-6.18-.3-19.2c-9.98 2.82-16.5 10.1-18.74 19.16zm31.38-.3c-2.81-10.15-9.97-16.4-19.06-18.95l-.03 19.27zm-31.49 12.4-19.14.06c2.41 9.5 9.39 17.04 19.1 19.14l.04-19.19Zm31.45.06-19.1-.08.2 19.28c10.08-2.59 16.61-9.85 18.91-19.19Z"/></g>' ];
+
+	$icons['paper-clip'] = [ '<g transform="translate(0 0)"><path d="m35.34 241.32 187.8-188c4.23-4.23 3.03-11.41-.34-14.44s-9.93-3.9-13.95.12L21.7 226.2c-5.98 5.98-9.43 13.13-13.18 20.16-13.02 24.45-10.87 59.42 4.68 82.73 31.74 47.57 95.29 49.42 127.07 17.69l240.21-239.9c9.26-9.25 12.31-23.71 13.48-35.18 4.09-39.75-28.5-73.92-69.02-71.59-12.89.74-28.73 4.92-38.9 15.1L91.92 209.39c-18.02 18.03-14.07 48.63 2.57 64.77 18.04 17.48 47.33 18.53 65.42.45L303.3 131.33c4.08-4.08 2.02-10.54-1.68-13.32-3.13-2.35-9.51-3.46-13.36.39l-143.9 143.65c-10.06 10.05-34.09 7.32-41.83-10.24-4.07-9.23-3.62-21.08 4-28.68L299.56 30.51c16.78-16.74 45.87-12.77 61.03 2.32 17.55 16.87 18.61 42.55 4.2 62.1L126.72 332.29c-20.46 20.4-54.78 20.22-77.35 5.54-23.98-15.6-35.31-44.98-27.07-72.43 2.65-8.82 5.91-16.92 13.04-24.06Z"/><path d="M35.34 241.32c-7.14 7.14-10.4 15.24-13.04 24.06-8.24 27.45 3.09 56.83 27.07 72.43 22.58 14.69 56.89 14.86 77.35-5.54L364.79 94.91c14.41-19.55 13.35-45.23-4.2-62.1-15.16-15.09-44.26-19.06-61.03-2.32L106.53 223.12c-7.62 7.61-8.07 19.45-4 28.68 7.73 17.56 31.76 20.29 41.83 10.24l143.9-143.65c3.86-3.85 10.23-2.74 13.36-.39 3.7 2.78 5.76 9.24 1.68 13.32L159.91 274.6c-18.09 18.08-47.38 17.03-65.42-.45-16.65-16.13-20.59-46.74-2.57-64.77L286.04 15.21C296.21 5.04 312.05.85 324.94.11c40.52-2.33 73.11 31.84 69.03 71.58-1.18 11.47-4.23 25.94-13.48 35.18l-240.21 239.9c-31.78 31.74-95.32 29.89-127.07-17.69-15.55-23.3-17.7-58.28-4.68-82.73 3.74-7.03 7.19-14.18 13.18-20.16L208.85 39.01c4.02-4.02 10.67-3.06 13.95-.12s4.57 10.2.34 14.44z"/></g>' ];
 
 
 	return $icons;

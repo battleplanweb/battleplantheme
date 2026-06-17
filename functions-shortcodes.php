@@ -1040,9 +1040,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 			else :
 				if ( $showDate == "true" && is_post_type_archive('events') ) $archiveMeta .= include('wp-content/themes/battleplantheme/elements/element-events-meta.php');
 				if ( $showDate == "true" && !is_post_type_archive('events') ) $archiveMeta .= '<span class="archive-date '.$type.'-date date">[get-icon type="calendar"]'.get_the_date().'</span>';
-				if ( $showAuthor == "profile") $archiveMeta .= '<a href="/profile/?user='.get_the_author().'">';
 				if ( $showAuthor != "false") $archiveMeta .= '<span class="archive-author '.$type.'-author author">[get-icon type="user"]'.get_the_author().'</span>';
-				if ( $showAuthor == "profile") $archiveMeta .= '</a>';
 				if ( $showSocial == "true") $archiveMeta .= '<span class="archive-social '.$type.'-social social">'.do_shortcode('[add-share-buttons facebook="true" twitter="true"]').'</span>';
 			endif;
 			if ( $showDate == "true" || $showAuthor == "true" || $showSocial == "true" ) $archiveMeta .= '</div>';

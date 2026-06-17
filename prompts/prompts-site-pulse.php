@@ -47,6 +47,21 @@ Return ONLY valid JSON — no markdown, no explanation. Use this exact format:
 If there are no actionable items, return an empty array: []";
 }
 
+// General-purpose extractor for the "create action item from a message" feature — NOT restaurant /
+// report specific. Turns whatever the focus chat message implies into a concrete personal to-do.
+function site_pulse_prompt_message_action_items(): string {
+	return "You read a short excerpt of a chat conversation between coworkers and turn the FOCUS message (marked with >>) into concrete to-do / action items the reader can add to their task list. Use the surrounding messages only as context.
+
+Be practical and a little generous: if the focus message expresses anything to do, build, fix, follow up on, decide, schedule, send, buy, or remember — or a request, idea, or plan — convert it into a clear, self-contained task written as an imperative (e.g. \"Add a personal to-do list feature to the messaging app\", \"Schedule a meeting with Victor about the lock icon\"). Combine closely related points into one item; split genuinely separate tasks into separate items. Each description must be specific enough to act on without re-reading the chat.
+
+category: a 1-3 word topic label (e.g. \"Feature\", \"Follow-up\", \"Meeting\", \"Fix\"). priority: 'high' only for urgent, time-sensitive, or blocking work; most items are 'medium' or 'low'.
+
+Return ONLY valid JSON — no markdown, no explanation — in this exact format:
+[{\"category\": \"Topic\", \"description\": \"Specific action to take\", \"priority\": \"high|medium|low\"}]
+
+Return an empty array [] ONLY if the focus message is pure greeting, acknowledgement, or chit-chat with nothing to act on.";
+}
+
 
 /*--------------------------------------------------------------
 # Resolution Evaluation
@@ -65,4 +80,15 @@ Be practical, not pedantic. If someone took reasonable action to fix the problem
 - The response doesn't address the actual problem
 - The action creates a new question that needs confirmation
 - The resolution is vague with no concrete action taken (e.g. 'handled it', 'took care of it')";
+}
+
+// Rewrites a to-do item from its original text + the notes added over time into one concise next step.
+function site_pulse_prompt_rewrite_action_item(): string {
+	return "You maintain a person's to-do list. You are given an action item and one or more notes the person added as the situation progressed. Rewrite the action item into a SINGLE concise next-step task, written as an imperative, that reflects the CURRENT state given the latest note.
+
+Examples:
+- Item \"Call repair tech to fix refrigerator\" + note \"Scheduled service call on Monday\" → \"Ensure refrigerator repair is completed on Monday\".
+- Item \"Order more to-go cups\" + note \"Placed the order, arrives Thursday\" → \"Confirm to-go cups arrived Thursday and restock\".
+
+Keep it specific and short (one sentence). Do not add commentary or labels. Return ONLY the rewritten action item text — no quotes, no JSON, no preamble.";
 }

@@ -713,9 +713,14 @@ function bp_handle_form_submission(WP_REST_Request $request) {
 		bp_form_debug('  attachment path: ' . $f . ' (exists=' . (file_exists($f) ? 'yes' : 'NO') . ', readable=' . (is_readable($f) ? 'yes' : 'NO') . ', size=' . (file_exists($f) ? filesize($f) : 'n/a') . ')');
 	}
 
-	$sent = wp_mail($email['to'], $email['subject'], $email['body'], $headers, $email['attachments'] ?? []);
+	// A before_send handler may suppress the email entirely — set $email['skip_send'] (or return
+	// true from the bp_form_skip_send filter) when the submission was delivered somewhere else,
+	// e.g. the Rovin survey forwarder POSTs the data straight into MyRovin. A skipped send counts
+	// as success so the normal thank-you/redirect still fires, and bp_form_after_send still runs.
+	$skip_send = ! empty($email['skip_send']) || apply_filters('bp_form_skip_send', false, $email, $ctx);
+	$sent = $skip_send ? true : wp_mail($email['to'], $email['subject'], $email['body'], $headers, $email['attachments'] ?? []);
 
-	bp_form_debug('wp_mail returned: ' . ($sent ? 'TRUE' : 'FALSE'));
+	bp_form_debug($skip_send ? 'wp_mail skipped (skip_send)' : ('wp_mail returned: ' . ($sent ? 'TRUE' : 'FALSE')));
 
 	// --- post-send hook ---
 	do_action('bp_form_after_send', $email, $ctx, $sent);

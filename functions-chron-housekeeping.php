@@ -471,23 +471,6 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 		}
 	}
 
-	$isProfile = !empty($customer_info['site-type']) && strtolower(trim($customer_info['site-type'])) === 'profile';
-	$profilePages = [
-		['slug' => 'profile',           'title' => 'Profile',           'shortcode' => 'page-profile'],
-		['slug' => 'profile-directory', 'title' => 'Profile Directory', 'shortcode' => 'page-profile-directory'],
-	];
-
-	foreach ($profilePages as $page) {
-		if ($isProfile) {
-			if (is_null(get_page_by_path($page['slug'], OBJECT, 'universal'))) {
-				wp_insert_post(['post_title' => $page['title'], 'post_content' => '[get-universal-page slug="' . $page['shortcode'] . '"]', 'post_status' => 'publish', 'post_type' => 'universal']);
-			}
-		} else {
-			$getPage = get_page_by_path($page['slug'], OBJECT, 'universal');
-			if ($getPage) wp_delete_post($getPage->ID, true);
-		}
-	}
-
 	if (!empty($customer_info['service-areas']) && is_array($customer_info['service-areas'])) {
 		if (is_null(get_page_by_path('areas-we-serve', OBJECT, 'universal'))) {
 			wp_insert_post(['post_title' => 'Areas We Serve', 'post_content' => '[get-service-areas]', 'post_status' => 'publish', 'post_type' => 'universal']);

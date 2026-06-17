@@ -58,14 +58,20 @@ function site_pulse_modules(): array {
 		],
 		'forms' => [
 			'label'   => 'Forms',
-			'desc'    => 'Website form-submission viewer.',
-			'caps'    => [ 'view_forms' ],
+			'desc'    => 'Shared forms library — upload and organize files by repository (Training, Kitchen, FOH, Misc).',
+			'caps'    => [ 'view_forms', 'upload_forms' ],
 			'default' => true,
 		],
 		'reviews' => [
 			'label'   => 'Reviews',
 			'desc'    => 'Google review aggregation, one-click replies, and one-click testimonials.',
 			'caps'    => [ 'view_reviews', 'manage_reviews' ],
+			'default' => false,
+		],
+		'surveys' => [
+			'label'   => 'Customer Surveys',
+			'desc'    => 'Collects customer satisfaction surveys forwarded in from the public restaurant sites — ratings, comments, and per-location breakdowns. Shown as a tab under Reviews.',
+			'caps'    => [ 'view_surveys', 'manage_surveys' ],
 			'default' => false,
 		],
 	];

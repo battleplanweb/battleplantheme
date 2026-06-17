@@ -77,32 +77,41 @@ get_header(); ?>
 				$buildUpdate .= '<div class="jobsite-description'.( $imgNum >= 3 ? ' span-all' : '' ).'">';
 				$buildUpdate .= '<div class="jobsite_geo-job_meta"><p>'.$location.'</p></div>';
 				$buildUpdate .= '<p>'.$jobDesc.'</p></div>';
-				$cleanedJobDesc = htmlspecialchars(strip_tags($jobDesc), ENT_QUOTES, 'UTF-8');
+				$cleanedJobDesc = trim( wp_strip_all_tags( $jobDesc ) );
 				$customer_info = customer_info();
 				$img = $imgs ? wp_get_attachment_image_src( reset($imgs), 'full' ) : array('');
 
+				// --- Structured data values (built defensively) -----------------
+				// Google flags "Incorrect value type" when a property comes through
+				// empty (e.g. blank lat/lng = expected Number, blank startDate =
+				// expected Date). So we resolve each value first and only emit a
+				// property below when it's actually present and the right type.
+				$zip        = trim( (string) get_field( 'zip' ) );
+				$fullAddr   = trim( $address.', '.$city.', '.$state.' '.$zip );
+				$rawDate    = get_field( 'job_date' );                       // ACF date: Ymd or Y-m-d
+				$jobIsoDate = $rawDate ? date( 'Y-m-d', strtotime( $rawDate ) ) : '';
+				$lat = ( isset($geocode[0]['lat']) && is_numeric($geocode[0]['lat']) ) ? (float) $geocode[0]['lat'] : null;
+				$lng = ( isset($geocode[0]['lng']) && is_numeric($geocode[0]['lng']) ) ? (float) $geocode[0]['lng'] : null;
+				$geoNode = ( $lat !== null && $lng !== null )
+					? array( '@type' => 'GeoCoordinates', 'latitude' => $lat, 'longitude' => $lng )
+					: null;
+
+				$checkin = array(
+					'@context'    => 'https://schema.org',
+					'@type'       => 'UserCheckins',
+					'name'        => $customer_info['name'],
+					'description' => $cleanedJobDesc,
+					'location'    => array(
+						'@type'   => 'Place',
+						'address' => array( '@type' => 'PostalAddress', 'name' => $fullAddr ),
+					),
+				);
+				if ( $jobIsoDate )        $checkin['startDate']      = $jobIsoDate;
+				if ( $geoNode )           $checkin['location']['geo'] = $geoNode;
+				if ( ! empty($img[0]) )   $checkin['image']          = $img[0];
 		?>
 				<script nonce="<?php echo _BP_NONCE; ?>" type="application/ld+json">
-					{
-						"@context": "https://schema.org",
-						"@type": "UserCheckins",
-						"name": "<?php echo $customer_info['name']; ?>",
-						"startDate": "<?php echo $jobIsoDate; ?>",
-						"description": "<?php echo $cleanedJobDesc; ?>",
-						"location": {
-							"@type": "Place",
-							"address": {
-								"@type": "PostalAddress",
-								"name": "<?php echo $address.', '.$city.', '.$state.' '.$zip ?>"
-							},
-							"geo": {
-								"@type": "GeoCoordinates",
-								"latitude": <?php echo $geocode[0]['lat']; ?>,
-								"longitude": <?php echo $geocode[0]['lng']; ?>
-							}
-						},
-						"image": "<?php echo $img[0]; ?>"
-					}
+				<?php echo wp_json_encode( $checkin, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ); ?>
 				</script>
 		<?php
 
@@ -170,40 +179,34 @@ get_header(); ?>
 
 					$buildUpdate .= '<div style="order: '.$testImgOrder.'" class="block block-group span-'.convertSize(getTextSize( $picSize )).'">[txt class="testimonials-quote"][p]'.$testimonialContent.'[/p][/txt][txt size="11/12" class="testimonials-credentials"]'.$buildCredentials.'[/txt][txt size="1/12" class="testimonials-platform testimonials-platform-'.$testimonialPlatform.'"][/txt]</div>';
 
+				// $fullAddr and $geoNode were resolved above in this same loop pass.
+				$rating = is_numeric( $testimonialRate ) ? (float) $testimonialRate : null;
+
+				$review_ld = array(
+					'@context' => 'https://schema.org',
+					'@type'    => 'UserReview',
+					'author'   => array(
+						'@type'   => 'Person',
+						'name'    => $testimonialName,
+						'address' => $fullAddr,
+					),
+					'itemReviewed' => array(
+						'@type' => 'HomeAndConstructionBusiness',
+						'name'  => $customer_info['name'],
+					),
+					'reviewBody' => trim( wp_strip_all_tags( $testimonialContent ) ),
+					'contentLocation' => array(
+						'@type'   => 'Place',
+						'address' => array( '@type' => 'PostalAddress', 'name' => $fullAddr ),
+					),
+				);
+				if ( $rating !== null ) $review_ld['reviewRating'] = array(
+					'@type' => 'Rating', 'ratingValue' => $rating, 'worstRating' => 1, 'bestRating' => 5,
+				);
+				if ( $geoNode ) $review_ld['contentLocation']['geo'] = $geoNode;
 		?>
 				<script nonce="<?php echo _BP_NONCE; ?>" type="application/ld+json">
-					{
-						"@context":"https://schema.org",
-						"@type": "UserReview",
-						"author": {
-							"@type": "Person",
-							"name": "<?php echo $testimonialName; ?>",
-							"address": "<?php echo $address.', '.$city.', '.$state.' '.$zip ?>"
-						},
-						"itemReviewed":{
-							"@type": "HomeAndConstructionBusiness",
-							"name": "<?php echo $customer_info['name']; ?>"
-						},
-						"reviewRating":{
-							"@type": "Rating",
-							"ratingValue": <?php echo $testimonialRate; ?>,
-							"worstRating": 1,
-							"bestRating": 5
-						},
-						"reviewBody": "<?php echo $testimonialContent; ?>",
-						"contentLocation":{
-							"@type": "Place",
-							"address": {
-								"@type": "PostalAddress",
-								"name": "<?php echo $address.', '.$city.', '.$state.' '.$zip ?>"
-							},
-							"geo":{
-								"@type": "GeoCoordinates",
-								"latitude": <?php echo $geocode[0]['lat']; ?>,
-								"longitude": <?php echo $geocode[0]['lng']; ?>
-							}
-						}
-					}
+				<?php echo wp_json_encode( $review_ld, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ); ?>
 				</script>
 		<?php
 

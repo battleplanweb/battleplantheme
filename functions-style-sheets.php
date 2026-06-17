@@ -58,13 +58,6 @@ function bp_get_css_sources() {
         $deferred[] = '/style-cue.css';
     }
 
-    if (
-        isset($customer_info['site-type']) &&
-        in_array($customer_info['site-type'], ['profile','profiles'], true)
-    ) {
-        $deferred[] = '/style-user-profiles.css';
-    }
-
     $start = strtotime(date("Y").'-12-01');
     $end   = strtotime(date("Y").'-12-30');
     if (

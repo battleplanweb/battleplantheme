@@ -1029,9 +1029,7 @@ function battleplan_meta_date() {
 function battleplan_meta_author($link='false') {
 	$byline = sprintf ( esc_html_x( '%s', 'post author', 'battleplan' ), '<span class="author vcard">'.esc_html( get_the_author() ).'</span>' );
 	$printByline = '<span class="meta-author">';
-	if ( $link == 'profile' ) $printByline .= '<a class="author-link" href="/profile/?user='.esc_html( get_the_author() ).'">';
 	$printByline .= '[get-icon type="user"]'.$byline;
-	if ( $link == 'profile' ) $printByline .= '</a>';
 	$printByline .= '</span>';
 
 	return $printByline;
@@ -1401,16 +1399,6 @@ function battleplan_enqueue_footer_scripts() {
         wp_localize_script('battleplan-script-cue', 'IconMap', $map);
 	}
 
-	$siteType = $customer_info['site-type'] ?? null;
-
-	$isProfile =
-		$siteType === 'profile'
-		|| $siteType === 'profiles'
-		|| (is_array($siteType) && in_array('profile', $siteType, true))
-		|| (is_array($siteType) && in_array('profiles', $siteType, true));
-
-	if ($isProfile) bp_enqueue_script( 'battleplan-script-user-profiles', 'script-user-profiles' );
-
 	bp_enqueue_script( 'battleplan-script-fire-off', 'script-fire-off' );
 
 	if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) wp_enqueue_script( 'comment-reply' );
@@ -1431,6 +1419,15 @@ function battleplan_enqueue_footer_scripts() {
 	wp_localize_script( 'battleplan-script-site', 'BP_AJAX', [ 'url' => admin_url('admin-ajax.php') ] );
 }
 
+// Keep our inline localize scripts (site_dir, BP_AJAX, site_options) out of Rocket
+// Loader too, so the data globals are defined before the deferred scripts that read them.
+add_filter('wp_inline_script_attributes', function ($attributes, $javascript) {
+    if ( isset($attributes['id']) && strpos($attributes['id'], 'battleplan-') === 0 ) {
+        $attributes['data-cfasync'] = 'false';
+    }
+    return $attributes;
+}, 10, 2);
+
 // Block jquery, add nonce to inline scripts, and defer to footer when appropriate
 add_filter('script_loader_tag', 'battleplan_add_data_attribute', 10, 3);
 function battleplan_add_data_attribute($tag, $handle, $src) {
@@ -1448,6 +1445,17 @@ function battleplan_add_data_attribute($tag, $handle, $src) {
 
     // Add nonce to all scripts
     $tag = str_replace('<script ', '<script nonce="' . _BP_NONCE . '" ', $tag);
+
+    // Opt our theme scripts out of Cloudflare Rocket Loader. RL ignores `defer`,
+    // loads scripts async, and can run script-site before script-desktop/-pages/
+    // -helpers have defined the globals it calls (parallaxBG, parallaxDiv, lockMenu,
+    // getObject…). That throws and aborts script-site -> #page parallax background
+    // intermittently missing + blurry hero for anonymous visitors (logged-in sessions
+    // bypass RL, which is why it only happens logged out). data-cfasync="false" keeps
+    // them as ordered, deferred scripts even if a zone has RL on.
+    if ( strpos($handle, 'battleplan-') === 0 ) {
+        $tag = str_replace('<script ', '<script data-cfasync="false" ', $tag);
+    }
 
     // Don't defer anything on checkout/cart — WP/WooCommerce inline scripts (wp-data-js-after, etc.)
     // run synchronously and break when their parent scripts are deferred
@@ -1575,10 +1583,6 @@ function battleplan_admin_scripts() {
 	bp_enqueue_script( 'battleplan-script-helpers', 'script-helpers', ['jquery'] );
 	bp_enqueue_script( 'battleplan-admin-script', 'script-admin', ['battleplan-script-helpers'] );
 
-	if ( isset($customer_info['site-type']) && in_array($customer_info['site-type'], ['profile', 'profiles'], true) ) {
-		wp_enqueue_style( 'battleplan-user-profiles', get_template_directory_uri().'/style-user-profiles.css', [], _BP_VERSION );
-		bp_enqueue_script( 'battleplan-script-user-profiles', 'script-user-profiles', ['jquery'] );
-	}
 	$jobsite_geo = get_option('jobsite_geo');
 	if ( bp_module_on($jobsite_geo) ) { wp_enqueue_style( 'battleplan-admin-jobsite-geo-css', get_template_directory_uri()."/style-jobsite-geo-admin.css", [], _BP_VERSION ); }
 
@@ -1625,8 +1629,6 @@ $customer_info['site-type'] = $customer_info['site-type'] ?? '';
 
 if ( $customer_info['site-type'] === 'hvac' ) require_once get_template_directory().'/includes/includes-hvac.php';
 if ( $customer_info['site-type'] === 'pedigree' ) require_once get_template_directory().'/includes/includes-pedigree.php';
-if ( $customer_info['site-type'] === 'carte-du-jour' ) require_once get_template_directory().'/includes/includes-carte-du-jour.php';
-if ( $customer_info['site-type'] === 'profile' || $customer_info['site-type'] == 'profiles' ) require_once get_template_directory().'/includes/includes-user-profiles.php';
 
 require_once get_template_directory().'/functions-shortcodes.php';
 require_once get_template_directory().'/functions-icons.php';
@@ -1645,7 +1647,7 @@ require_once get_template_directory() . '/functions-chron.php';
 if ( is_admin() || _USER_LOGIN == "battleplanweb" ) require_once get_template_directory().'/functions-admin.php';
 if ( is_admin() ) require_once get_template_directory().'/functions-media-replace.php';
 require_once get_template_directory().'/functions-ai-alt.php';
-if (!empty( get_site_option('bp_rovin_secret'))) { require_once get_template_directory() . '/functions-rovin.php'; }
+if (!empty( get_site_option('bp_rovin_secret')) || !empty( get_site_option('bp_rovin_survey_secret'))) { require_once get_template_directory() . '/functions-rovin.php'; }
 
 // Add filter to search & replace final HTML output
 ob_start();

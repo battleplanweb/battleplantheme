@@ -416,8 +416,9 @@ class BPGBP_Hub {
 	 * nextPageToken so a caller can resume for older pages ('' once Google has no more).
 	 * Throws on Google error.
 	 */
-	public static function fetch_reviews_for_location( $location, $start_token = '', $max = 200 ) {
+	public static function fetch_reviews_for_location( $location, $start_token = '', $max = 200, $since = 0 ) {
 		$max     = max( 1, (int) $max );
+		$since   = (int) $since; // unix timestamp cutoff; 0 = no cutoff (full history up to $max)
 		$token   = self::get_access_token();
 		$reviews = array();
 		$avg     = null;
@@ -430,19 +431,28 @@ class BPGBP_Hub {
 			}
 			$data = self::google_request( 'GET', $url, $token );
 
-			if ( ! empty( $data['reviews'] ) ) {
-				foreach ( $data['reviews'] as $r ) {
-					$reviews[] = self::normalize_review( $r );
-				}
-			}
+			// Summary fields come from page 1 — capture them before any early break so they stay exact.
 			if ( null === $avg && isset( $data['averageRating'] ) ) {
 				$avg = $data['averageRating'];
 			}
 			if ( null === $total && isset( $data['totalReviewCount'] ) ) {
 				$total = (int) $data['totalReviewCount'];
 			}
+
+			if ( ! empty( $data['reviews'] ) ) {
+				foreach ( $data['reviews'] as $r ) {
+					$nr = self::normalize_review( $r );
+					// Reviews come newest-first, so the first one older than the cutoff means we're done —
+					// stop here instead of walking the entire back-catalogue.
+					if ( $since > 0 && ! empty( $nr['createTime'] ) ) {
+						$ts = strtotime( (string) $nr['createTime'] );
+						if ( $ts && $ts < $since ) { $page = ''; break 2; }
+					}
+					$reviews[] = $nr;
+				}
+			}
 			$page = ! empty( $data['nextPageToken'] ) ? $data['nextPageToken'] : '';
-		} while ( $page && count( $reviews ) < $max ); // summary fields come from page 1, so they stay exact.
+		} while ( $page && count( $reviews ) < $max );
 
 		return array(
 			'averageRating'    => $avg,
@@ -789,7 +799,12 @@ function bpgbp_create_testimonial_from_review( array $review, $status = 'draft' 
 		'numberposts' => 1,
 	) );
 	if ( $dupe ) {
-		return array( 'already_imported' => true, 'post_id' => (int) $dupe[0] );
+		$existing     = (int) $dupe[0];
+		$photo_status = 'none';
+		// Backfill the photo if this review was imported before we supported it (and has none yet).
+		$photo = (string) ( isset( $review['photo'] ) ? $review['photo'] : '' );
+		if ( '' !== $photo ) $photo_status = bpgbp_set_testimonial_photo( $existing, $photo );
+		return array( 'already_imported' => true, 'post_id' => $existing, 'photo' => $photo_status );
 	}
 
 	$post_id = wp_insert_post( array(
@@ -812,7 +827,76 @@ function bpgbp_create_testimonial_from_review( array $review, $status = 'draft' 
 	}
 	update_post_meta( $post_id, '_bp_google_review_id', $review_id );
 
-	return array( 'post_id' => (int) $post_id, 'edit_url' => get_edit_post_link( $post_id, 'raw' ) );
+	// Optional: the reviewer's Google profile photo → featured image (skipped if it's a monogram default).
+	$photo_status = 'none';
+	$photo = (string) ( isset( $review['photo'] ) ? $review['photo'] : '' );
+	if ( '' !== $photo ) {
+		$photo_status = bpgbp_set_testimonial_photo( (int) $post_id, $photo );
+	}
+
+	return array( 'post_id' => (int) $post_id, 'edit_url' => get_edit_post_link( $post_id, 'raw' ), 'photo' => $photo_status );
+}
+
+/**
+ * Sideload a Google-hosted reviewer photo and set it as the testimonial's featured image. Restricted to
+ * googleusercontent.com hosts. Skips Google's monogram default (colored circle + initial). Returns a
+ * status string: 'set' | 'exists' | 'skipped-monogram' | 'skipped-host' | 'error-download' |
+ * 'error-type' | 'error-sideload'.
+ */
+function bpgbp_set_testimonial_photo( int $post_id, string $url ) {
+	if ( ! $post_id || '' === $url ) return 'none';
+	$host = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
+	if ( ! preg_match( '/(^|\.)googleusercontent\.com$/', $host ) ) return 'skipped-host';
+	if ( has_post_thumbnail( $post_id ) ) return 'exists';
+
+	require_once ABSPATH . 'wp-admin/includes/file.php';
+	require_once ABSPATH . 'wp-admin/includes/media.php';
+	require_once ABSPATH . 'wp-admin/includes/image.php';
+
+	$tmp = download_url( $url, 20 );
+	if ( is_wp_error( $tmp ) ) return 'error-download';
+
+	// Skip Google's monogram default (few distinct colors); real photos have many. If we can't analyze
+	// (no GD), we DON'T skip — better to occasionally allow a monogram than to drop a real photo.
+	if ( bpgbp_image_is_monogram( $tmp ) ) { @unlink( $tmp ); return 'skipped-monogram'; }
+
+	// Google may serve jpeg/png/webp regardless of the URL, so name the temp file by its REAL type —
+	// otherwise the sideload's filetype check rejects a .jpg name on non-jpeg bytes (a silent failure).
+	$mime = function_exists( 'wp_get_image_mime' ) ? wp_get_image_mime( $tmp ) : '';
+	$map  = array( 'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp' );
+	$ext  = isset( $map[ $mime ] ) ? $map[ $mime ] : '';
+	if ( '' === $ext ) { @unlink( $tmp ); return 'error-type'; }
+
+	$file   = array( 'name' => 'google-review-' . $post_id . '.' . $ext, 'tmp_name' => $tmp );
+	$att_id = media_handle_sideload( $file, $post_id, '' );
+	if ( is_wp_error( $att_id ) ) { @unlink( $tmp ); return 'error-sideload'; }
+
+	set_post_thumbnail( $post_id, (int) $att_id );
+	return 'set';
+}
+
+/** True if a local image file looks like Google's monogram default (very few distinct colors). */
+function bpgbp_image_is_monogram( $path ) {
+	if ( ! function_exists( 'imagecreatefromstring' ) ) return false; // can't analyze → treat as real
+	$bytes = @file_get_contents( $path );
+	if ( false === $bytes || '' === $bytes ) return false;
+	$img = @imagecreatefromstring( $bytes );
+	if ( ! $img ) return false;
+
+	$w = imagesx( $img );
+	$h = imagesy( $img );
+	$step    = max( 1, (int) floor( min( $w, $h ) / 24 ) ); // ~24x24 sample grid
+	$buckets = array();
+	for ( $x = 0; $x < $w; $x += $step ) {
+		for ( $y = 0; $y < $h; $y += $step ) {
+			$rgb = imagecolorat( $img, $x, $y );
+			// Quantize to 4 bits/channel so anti-aliasing noise doesn't inflate the count.
+			$buckets[ ( ( $rgb >> 20 ) & 0xF ) . '-' . ( ( $rgb >> 12 ) & 0xF ) . '-' . ( ( $rgb >> 4 ) & 0xF ) ] = true;
+			if ( count( $buckets ) >= 16 ) { imagedestroy( $img ); return false; } // many colors → real photo
+		}
+	}
+	imagedestroy( $img );
+	return count( $buckets ) < 16; // few colors → monogram
 }
 
 if ( bpgbp_cfg( 'SITE_SECRET' ) ) {
@@ -853,6 +937,7 @@ function bpgbp_receive_testimonial( WP_REST_Request $request ) {
 		'reviewer'   => isset( $p['reviewer'] )   ? sanitize_text_field( (string) $p['reviewer'] ) : '',
 		'comment'    => isset( $p['comment'] )    ? wp_kses_post( (string) $p['comment'] ) : '',
 		'starRating' => isset( $p['starRating'] ) ? (int) $p['starRating'] : 0,
+		'photo'      => isset( $p['photo'] )      ? esc_url_raw( (string) $p['photo'] ) : '',
 	);
 	if ( '' === $review['reviewId'] ) {
 		return new WP_Error( 'bpgbp_no_review', 'Missing review id.', array( 'status' => 400 ) );

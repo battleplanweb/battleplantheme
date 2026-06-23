@@ -33,9 +33,11 @@ function bp_label_complaint_messages($email, $ctx) {
 
 
 // Customer feedback → MyRovin Site Pulse (Customer Feedback → Emails).
-// Replaces the old rovininc.com complaint forwarder. The framework does the actual forwarding
-// (bp_feedback_forward_submission in functions-forms.php); these filters just supply Rovin's settings,
-// so other companies configure their own without touching framework code.
+// Replaces the old rovininc.com complaint forwarder. The forwarder itself (bp_feedback_forward_submission,
+// below) lives HERE — on the Rovin sender sites, next to the survey forwarder — because the Babe's/Bubba's
+// public sites that submit the contact forms do NOT run the Site Pulse app (so it can't live in a Site
+// Pulse include). The receiver lives in includes-site-pulse-emails.php on MyRovin. These filters supply
+// Rovin's settings; another company would add its own forwarder + filters in its own sender file.
 add_filter('bp_feedback_forward_url', function () {
     return (defined('BP_ROVIN_SURVEY_URL') ? BP_ROVIN_SURVEY_URL : 'https://rovin.work') . '/wp-json/site-pulse/v1/email';
 });
@@ -53,6 +55,71 @@ add_filter('bp_feedback_brand', function ($brand, $ctx) {
     if (strpos($host, 'babe')  !== false) return "Babe's";
     return $brand;
 }, 10, 2);
+
+// When a contact-form submission is flagged a customer-service type, POST it (HMAC-signed) to MyRovin,
+// where it lands under Customer Feedback → Emails. Runs in addition to the normal email (after_send), so
+// the contact email still goes wherever it always did. No-op unless the bp_feedback_* filters above set a
+// destination/secret/categories. Category is matched as a case-insensitive SUBSTRING (so "Complaint about
+// my visit" still triggers), mirroring the old complaint detector. Signs the exact bytes it posts.
+add_action('bp_form_after_send', 'bp_feedback_forward_submission', 10, 3);
+function bp_feedback_forward_submission($email, $ctx, $sent) {
+    $endpoint = (string) apply_filters('bp_feedback_forward_url', '');
+    $secret   = (string) apply_filters('bp_feedback_forward_secret', '');
+    $forward  = array_map('strtolower', (array) apply_filters('bp_feedback_forward_categories', []));
+    if ($endpoint === '' || $secret === '' || empty($forward)) return;
+
+    $fields     = $ctx['fields'] ?? [];
+    $field_name = (string) apply_filters('bp_feedback_category_field', 'user-category');
+
+    // Read the chosen category from the configured field, falling back to any category/subject-ish field.
+    $category = '';
+    if ($field_name !== '' && isset($fields[$field_name]) && is_string($fields[$field_name])) {
+        $category = $fields[$field_name];
+    }
+    if ($category === '') {
+        foreach ($fields as $k => $v) {
+            if (is_string($v) && $v !== '' && (stripos($k, 'category') !== false || stripos($k, 'subject') !== false)) { $category = $v; break; }
+        }
+    }
+
+    $cat_l = strtolower(trim($category));
+    $hit   = false;
+    foreach ($forward as $f) {
+        if ($f !== '' && $cat_l !== '' && strpos($cat_l, $f) !== false) { $hit = true; break; }
+    }
+    if (!$hit) return;
+
+    $payload = [
+        'site'      => $_SERVER['HTTP_HOST'] ?? '',
+        'brand'     => (string) apply_filters('bp_feedback_brand', '', $ctx),
+        'location'  => $fields['user-location'] ?? '',
+        'category'  => $category,
+        'name'      => $fields['user-name']    ?? '',
+        'email'     => $fields['user-email']   ?? '',
+        'phone'     => $fields['user-phone']   ?? '',
+        'message'   => $fields['user-message'] ?? '',
+        'page'      => $_SERVER['HTTP_REFERER'] ?? '',
+        'ip'        => $ctx['ip'] ?? ($_SERVER['REMOTE_ADDR'] ?? ''),
+        'timestamp' => time(),
+    ];
+    $payload = apply_filters('bp_feedback_payload', $payload, $ctx);
+
+    $raw = wp_json_encode($payload);
+    $sig = hash_hmac('sha256', $raw, $secret);
+
+    $res = wp_remote_post($endpoint, [
+        'timeout'  => 15,
+        'blocking' => true,
+        'headers'  => ['Content-Type' => 'application/json', 'Authorization' => 'Bearer ' . $sig],
+        'body'     => $raw,
+    ]);
+
+    $code = is_wp_error($res) ? 0 : (int) wp_remote_retrieve_response_code($res);
+    if ($code < 200 || $code >= 300) {
+        $err = is_wp_error($res) ? $res->get_error_message() : ('HTTP ' . $code);
+        error_log('[bp_feedback] forward FAILED (' . $err . ') site=' . ($_SERVER['HTTP_HOST'] ?? '') . ' cat=' . $category);
+    }
+}
 
 
 /*--------------------------------------------------------------

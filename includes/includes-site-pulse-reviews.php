@@ -847,6 +847,22 @@ function sp_reviews_generate_reply( array $row ) {
 	$rating   = (int) ( $row['star_rating'] ?? 0 );
 	$comment  = trim( (string) ( $row['comment'] ?? '' ) );
 
+	// Too short to be worth an AI draft (a bare star rating, "Great!", etc.) — a model call would just
+	// burn tokens producing a generic line. Inject a quick canned thank-you instead.
+	if ( mb_strlen( $comment ) < 25 ) {
+		$canned = [
+			'Thank you!',
+			'Thank you for the review!',
+			'We appreciate the review!',
+			'Thanks for taking the time to review our business!',
+			'We appreciate your business!',
+			'Thank you for your business!',
+			'Thanks!',
+		];
+		if ( 5 === $rating ) $canned[] = 'Thanks for the 5 stars!'; // only when it's actually 5 stars
+		return $canned[ array_rand( $canned ) ];
+	}
+
 	// Generic fallback voice; the real brand voice comes from the site (functions-site.php) via this filter.
 	$default_voice = 'Warm, genuine, and personable — like a real owner who cares about every guest: appreciative, specific, and human.';
 	$voice = (string) apply_filters( 'site_pulse_review_reply_voice', $default_voice, $brand, $row );

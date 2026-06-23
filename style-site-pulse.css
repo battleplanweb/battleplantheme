@@ -6117,7 +6117,8 @@ div.sp-leg-stat + .sp-day-total-line {
 }
 
 /* Keep the list's rating/reply filters on one line too (same width:100% stacking issue). */
-#sp-reviews-toolbar .sp-toolbar-group .sp-select {
+#sp-reviews-toolbar .sp-toolbar-group .sp-select,
+#sp-agency-reviews-toolbar .sp-toolbar-group .sp-select {
 	width:                                                     auto;
 }
 
@@ -6217,7 +6218,7 @@ div.sp-leg-stat + .sp-day-total-line {
 	font-weight:                                               700;
 	text-transform:                                            uppercase;
 	letter-spacing:                                            0.04em;
-	color:                                                     var(--sp-warning);
+	color:                                                     var(--sp-dominant-color);
 }
 
 .sp-review-reply p {
@@ -7148,7 +7149,7 @@ div.sp-leg-stat + .sp-day-total-line {
 .sp-email-head {
 	display:                                                   flex;
 	align-items:                                               baseline;
-	justify-content:                                          space-between;
+	justify-content:                                           space-between;
 	gap:                                                       12px;
 	flex-wrap:                                                 wrap;
 }
@@ -7200,7 +7201,7 @@ div.sp-leg-stat + .sp-day-total-line {
 .sp-email-foot {
 	display:                                                   flex;
 	align-items:                                               center;
-	justify-content:                                          space-between;
+	justify-content:                                           space-between;
 	gap:                                                       10px;
 	flex-wrap:                                                 wrap;
 	margin-top:                                                12px;

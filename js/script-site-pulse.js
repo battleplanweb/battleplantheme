@@ -5991,6 +5991,7 @@ function initAgencyReviews() {
 	$('#sp-agency-filter-client')?.addEventListener('change', renderAgencyReviews);
 	$('#sp-agency-filter-stars')?.addEventListener('change', renderAgencyReviews);
 	$('#sp-agency-filter-reply')?.addEventListener('change', renderAgencyReviews);
+	$('#sp-agency-filter-sort')?.addEventListener('change', renderAgencyReviews);
 	$('#sp-agency-reviews-list')?.addEventListener('click', onAgencyReviewListClick);
 }
 
@@ -6024,9 +6025,19 @@ function populateAgencyClientFilter() {
 	sel.value = cur;
 }
 
-function renderAgencyReviews() {
+// Client Reviews are all held in memory (spAgencyClients), so pagination here is client-side windowing:
+// render a page of cards, then infinite-scroll to append more from the filtered+sorted set.
+const SP_AGENCY_PAGE = 50;
+let _spAgencyItems = [];
+let _spAgencyShown = 0;
+let _spAgencyIO = null;
+
+// reset=true (filter/sort change) snaps back to the first page; reset=false (after a reply/push) keeps
+// however many were already scrolled into view so the list doesn't jump back to the top.
+function renderAgencyReviews(reset = true) {
 	const list = $('#sp-agency-reviews-list');
 	if (!list) return;
+	if (reset !== false) reset = true; // change handlers pass an Event; treat anything non-false as reset
 	const clientFilter = $('#sp-agency-filter-client')?.value || '';
 	const sf = $('#sp-agency-filter-stars')?.value || '';
 	const rf = $('#sp-agency-filter-reply')?.value || '';
@@ -6041,8 +6052,8 @@ function renderAgencyReviews() {
 		.map(c => `<div class="sp-empty">${esc(c.label)}: ${esc(c.error)}</div>`)
 		.join('');
 
-	// Flatten every (filtered) client's reviews into one list, tagging each with its client, then
-	// sort newest-first across all companies — they interleave by date, which is intended.
+	// Flatten every (filtered) client's reviews into one list, tagging each with its client, then sort
+	// across all companies (they interleave by date, which is intended).
 	const items = [];
 	clients.forEach(c => (c.reviews || []).forEach(r => {
 		if (sf && String(r.starRating) !== sf) return;
@@ -6050,13 +6061,51 @@ function renderAgencyReviews() {
 		if (rf === 'unreplied' &&  r.reply) return;
 		items.push({ c, r });
 	}));
-	items.sort((a, b) => (b.r.createTime ? Date.parse(b.r.createTime) : 0) - (a.r.createTime ? Date.parse(a.r.createTime) : 0));
+	const sortOrder = $('#sp-agency-filter-sort')?.value || 'newest';
+	items.sort((a, b) => {
+		const ta = a.r.createTime ? Date.parse(a.r.createTime) : 0;
+		const tb = b.r.createTime ? Date.parse(b.r.createTime) : 0;
+		return sortOrder === 'oldest' ? (ta - tb) : (tb - ta);
+	});
 
-	const cards = items.length
-		? items.map(({ c, r }) => renderAgencyReviewCard(c, r)).join('')
-		: '<div class="sp-empty">No reviews match this filter.</div>';
+	_spAgencyItems = items;
+	if (_spAgencyIO) _spAgencyIO.disconnect();
 
-	list.innerHTML = notices + cards;
+	if (!items.length) { list.innerHTML = notices + '<div class="sp-empty">No reviews match this filter.</div>'; _spAgencyShown = 0; return; }
+
+	const keep = reset ? SP_AGENCY_PAGE : Math.max(SP_AGENCY_PAGE, _spAgencyShown);
+	_spAgencyShown = Math.min(keep, items.length);
+	list.innerHTML = notices + items.slice(0, _spAgencyShown).map(({ c, r }) => renderAgencyReviewCard(c, r)).join('');
+	if (_spAgencyShown < items.length) {
+		list.insertAdjacentHTML('beforeend', '<div id="sp-agency-sentinel"></div>');
+		agencyObserveSentinel();
+	}
+}
+
+// Append the next window of cards above the sentinel when it scrolls into view.
+function agencyAppendPage() {
+	const list = $('#sp-agency-reviews-list');
+	if (!list || _spAgencyShown >= _spAgencyItems.length) return;
+	const next = _spAgencyItems.slice(_spAgencyShown, _spAgencyShown + SP_AGENCY_PAGE);
+	const html = next.map(({ c, r }) => renderAgencyReviewCard(c, r)).join('');
+	const sentinel = $('#sp-agency-sentinel');
+	if (sentinel) sentinel.insertAdjacentHTML('beforebegin', html);
+	else list.insertAdjacentHTML('beforeend', html);
+	_spAgencyShown += next.length;
+	if (_spAgencyShown >= _spAgencyItems.length) { $('#sp-agency-sentinel')?.remove(); if (_spAgencyIO) _spAgencyIO.disconnect(); }
+	else agencyObserveSentinel();
+}
+
+function agencyObserveSentinel() {
+	const sentinel = $('#sp-agency-sentinel');
+	if (!sentinel) return;
+	if (!_spAgencyIO) {
+		_spAgencyIO = new IntersectionObserver((entries) => {
+			if (entries.some(e => e.isIntersecting)) agencyAppendPage();
+		}, { rootMargin: '600px 0px' });
+	}
+	_spAgencyIO.disconnect();
+	_spAgencyIO.observe(sentinel);
 }
 
 function renderAgencyReviewCard(c, r) {
@@ -6064,44 +6113,64 @@ function renderAgencyReviewCard(c, r) {
 	const sk   = esc(c.site_key);
 	const date = r.createTime ? new Date(r.createTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
 
-	const photo = r.photo
-		? `<img class="sp-review-avatar" src="${esc(r.photo)}" alt="" referrerpolicy="no-referrer">`
-		: '<div class="sp-review-avatar sp-review-avatar-blank"></div>';
+	const photoUrl = r.photo ? r.photo.replace(/=s\d+-c[\w-]*$/, '=s400-c') : '';
+	const photo = photoUrl
+		? `<img class="unique sp-review-avatar" src="${esc(photoUrl)}" alt="" referrerpolicy="no-referrer">`
+		: '<div class="unique sp-review-avatar sp-review-avatar-blank"></div>';
 
 	const reply = r.reply
 		? `<div class="unique sp-review-reply"><span class="unique sp-review-reply-label">Owner reply</span><p class="unique">${esc(r.reply.comment)}</p></div>`
 		: '';
 
+	// The client's company name sits in the store slot (under the stars), labeling which client this is.
+	const store = `<span class="unique sp-review-store">${esc(c.label)}</span>`;
+
 	const pushBtn = c.site_url
 		? (r.imported
-			? '<span class="sp-review-imported">✓ Sent to site</span>'
+			? '<span class="unique sp-review-imported">✓ Sent to site</span>'
 			: `<button type="button" class="unique sp-btn sp-btn-ghost sp-agency-push-btn" data-site="${sk}" data-id="${id}">Send to site</button>`)
 		: '';
 
 	const actions =
-		'<div class="sp-review-actions">' +
+		'<div class="unique sp-review-actions">' +
 			`<button type="button" class="unique sp-btn sp-btn-ghost sp-agency-reply-btn" data-site="${sk}" data-id="${id}">${r.reply ? 'Edit reply' : 'Reply'}</button>` +
 			pushBtn +
-		'</div>' +
-		`<div class="sp-review-reply-form" data-site="${sk}" data-id="${id}" hidden>` +
-			`<textarea class="sp-input sp-review-reply-input" rows="3" placeholder="Write a public reply…">${r.reply ? esc(r.reply.comment) : ''}</textarea>` +
-			'<div class="sp-review-reply-formbtns">' +
+			`<button type="button" class="unique sp-btn sp-btn-ghost sp-agency-dismiss-btn" data-site="${sk}" data-id="${id}">Remove</button>` +
+		'</div>';
+
+	const form =
+		`<div class="unique sp-review-reply-form" data-site="${sk}" data-id="${id}" hidden>` +
+			`<textarea class="unique sp-input sp-review-reply-input" rows="3" placeholder="Write a public reply…">${r.reply ? esc(r.reply.comment) : ''}</textarea>` +
+			'<div class="unique sp-review-reply-formbtns">' +
 				`<button type="button" class="unique sp-btn sp-btn-primary sp-agency-reply-save" data-site="${sk}" data-id="${id}">Post reply</button>` +
+				`<button type="button" class="unique sp-btn sp-btn-ghost sp-agency-reply-regen" data-site="${sk}" data-id="${id}">Regenerate</button>` +
 				`<button type="button" class="unique sp-btn sp-btn-ghost sp-agency-reply-cancel" data-site="${sk}" data-id="${id}">Cancel</button>` +
 				(r.reply ? `<button type="button" class="unique sp-btn sp-btn-ghost sp-agency-reply-delete" data-site="${sk}" data-id="${id}">Delete reply</button>` : '') +
 			'</div>' +
 		'</div>';
 
+	const tags = renderReviewTags(r.tags);
+	const body = r.comment ? `<p class="unique sp-review-body">${esc(r.comment)}</p>` : '<p class="unique sp-review-body sp-review-nobody">(no comment)</p>';
+
 	return (
-		`<div class="sp-review-card" data-site="${sk}" data-id="${id}">` +
-			'<div class="sp-review-head">' +
+		`<div class="unique sp-review-card" data-site="${sk}" data-id="${id}">` +
+			'<div class="unique sp-review-head">' +
 				photo +
-				`<div class="sp-review-meta"><span class="sp-review-author">${esc(r.reviewer)}</span><span class="sp-agency-card-company">${esc(c.label)}</span><span class="sp-review-date">${esc(date)}</span></div>` +
-				`<span class="sp-review-stars" title="${parseInt(r.starRating, 10) || 0} of 5">${starString(r.starRating)}</span>` +
+				'<div class="unique sp-review-headright">' +
+					`<span class="unique sp-review-rating">${SP_GOOGLE_ICON}<span class="unique sp-review-stars" title="${parseInt(r.starRating, 10) || 0} of 5">${starString(r.starRating)}</span></span>` +
+					store +
+					actions +
+				'</div>' +
+				'<div class="unique sp-review-headmain">' +
+					'<div class="unique sp-review-topline">' +
+						`<div class="unique sp-review-byline"><span class="unique sp-review-author">${esc(r.reviewer)}</span><span class="unique sp-review-date">${esc(date)}</span></div>` +
+						tags +
+					'</div>' +
+					body +
+				'</div>' +
 			'</div>' +
-			(r.comment ? `<p class="sp-review-body">${esc(r.comment)}</p>` : '<p class="sp-review-body sp-review-nobody">(no comment)</p>') +
 			reply +
-			actions +
+			form +
 		'</div>'
 	);
 }
@@ -6120,7 +6189,17 @@ function onAgencyReviewListClick(e) {
 	const form = $(`.sp-review-reply-form[data-site="${CSS.escape(site)}"][data-id="${CSS.escape(id)}"]`);
 
 	if (btn.classList.contains('sp-agency-reply-btn')) {
-		if (form) { form.hidden = !form.hidden; if (!form.hidden) form.querySelector('textarea')?.focus(); }
+		if (form) {
+			form.hidden = !form.hidden;
+			if (!form.hidden) {
+				const ta = form.querySelector('textarea');
+				ta?.focus();
+				// Auto-draft an AI reply when opening on a review that has no reply yet.
+				if (ta && !ta.value.trim()) generateAgencyReply(site, id, form);
+			}
+		}
+	} else if (btn.classList.contains('sp-agency-reply-regen')) {
+		generateAgencyReply(site, id, form);
 	} else if (btn.classList.contains('sp-agency-reply-cancel')) {
 		if (form) form.hidden = true;
 	} else if (btn.classList.contains('sp-agency-reply-save')) {
@@ -6131,7 +6210,58 @@ function onAgencyReviewListClick(e) {
 		if (confirm('Delete the public reply to this review?')) submitAgencyReply(site, id, '', btn);
 	} else if (btn.classList.contains('sp-agency-push-btn')) {
 		pushAgencyTestimonial(site, id, btn);
+	} else if (btn.classList.contains('sp-agency-dismiss-btn')) {
+		dismissAgencyReview(site, id, btn);
 	}
+}
+
+// Permanently remove a handled review from the Client Reviews list — it's recorded on the hub so it
+// stays gone on every future pull (these aren't kept for analysis like Rovin's, so this keeps the list lean).
+async function dismissAgencyReview(site, id, btn) {
+	btn.disabled = true;
+	try {
+		const res = await spAjax('site_pulse_agency_dismiss_review', { site_key: site, review_id: id });
+		if (!res.success) { alert(res.data?.message || 'Could not remove.'); btn.disabled = false; return; }
+		const c = spAgencyClients.find(x => x.site_key === site);
+		if (c) c.reviews = (c.reviews || []).filter(r => String(r.reviewId) !== String(id));
+		renderAgencyReviews(false);
+		spFlash('Review removed');
+	} catch (e) {
+		alert('Could not remove.');
+		btn.disabled = false;
+	}
+}
+
+// Draft (or regenerate) an AI reply into the agency form's textarea. Editable before posting.
+async function generateAgencyReply(site, id, form) {
+	const ta    = form?.querySelector('textarea');
+	const regen = form?.querySelector('.sp-agency-reply-regen');
+	const save  = form?.querySelector('.sp-agency-reply-save');
+	if (!ta) return;
+	const prev = ta.value, ph = ta.placeholder;
+	ta.disabled = true; ta.value = ''; ta.placeholder = 'Drafting a reply…';
+	if (regen) { regen.disabled = true; regen.textContent = 'Generating…'; }
+	if (save) save.disabled = true;
+	try {
+		// Pass the displayed review as a fallback so drafting works even if the server cache has rotated.
+		const [, rev] = agencyFindReview(site, id);
+		const res = await spAjax('site_pulse_agency_generate_reply', {
+			site_key: site,
+			review_id: id,
+			reviewer: rev?.reviewer || '',
+			comment: rev?.comment || '',
+			star_rating: rev?.starRating || 0,
+		});
+		if (res.success && res.data.reply) ta.value = res.data.reply;
+		else { ta.value = prev; spFlash(res.data?.message || 'Could not draft a reply.'); }
+	} catch (e) {
+		ta.value = prev;
+		spFlash('Could not draft a reply.');
+	}
+	ta.disabled = false; ta.placeholder = ph;
+	if (regen) { regen.disabled = false; regen.textContent = 'Regenerate'; }
+	if (save) save.disabled = false;
+	ta.focus();
 }
 
 async function submitAgencyReply(site, id, comment, btn) {
@@ -6141,7 +6271,7 @@ async function submitAgencyReply(site, id, comment, btn) {
 		if (!res.success) { alert(res.data?.message || 'Reply failed.'); btn.disabled = false; return; }
 		const [, r] = agencyFindReview(site, id);
 		if (r) r.reply = res.data.reply;
-		renderAgencyReviews();
+		renderAgencyReviews(false);
 		spFlash(comment === '' ? 'Reply deleted' : 'Reply posted');
 	} catch (e) {
 		alert('Reply failed.');
@@ -6161,8 +6291,16 @@ async function pushAgencyTestimonial(site, id, btn) {
 		}
 		const [, r] = agencyFindReview(site, id);
 		if (r) r.imported = true;
-		renderAgencyReviews();
-		spFlash(res.data.already_imported ? 'Already on the client site' : 'Published to client site');
+		renderAgencyReviews(false);
+		const p = res.data.photo;
+		let extra = '';
+		if (p === 'set') extra = ' — photo added';
+		else if (p === 'skipped-monogram') extra = ' — no photo (default avatar)';
+		else if (p === 'exists') extra = ' — kept existing photo';
+		else if (typeof p === 'string' && p.indexOf('error') === 0) extra = ' — photo upload failed';
+		else if (typeof p === 'string' && p.indexOf('skipped') === 0) extra = ' — no photo';
+		else if (p == null) extra = ' — photo not processed (update the client site)';
+		spFlash((res.data.already_imported ? 'Already on the client site' : 'Published to client site') + extra);
 	} catch (e) {
 		alert('Could not send to site.');
 		btn.disabled = false; btn.textContent = 'Send to site';

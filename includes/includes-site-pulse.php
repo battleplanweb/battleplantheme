@@ -3649,7 +3649,7 @@ function site_pulse_call_claude( string $prompt, string $system = '', array $opt
 		$body['system'] = $system;
 	}
 
-	$response = wp_remote_post( 'https://api.anthropic.com/v1/messages', [
+	$args = [
 		'headers' => [
 			'Content-Type'      => 'application/json',
 			'x-api-key'         => $api_key,
@@ -3657,26 +3657,49 @@ function site_pulse_call_claude( string $prompt, string $system = '', array $opt
 		],
 		'body'    => wp_json_encode( $body ),
 		'timeout' => $opts['timeout'] ?? 30,
-	] );
+	];
 
-	if ( is_wp_error( $response ) ) {
-		$debug = 'Request failed: ' . $response->get_error_message();
-		site_pulse_log( 'ai_error', 'Claude API error: ' . $response->get_error_message() );
-		return null;
+	// Anthropic returns transient errors under load — 429 (rate limit), 500/502/503, and 529 (overloaded).
+	// Retry a few times with backoff so a momentary blip doesn't surface to the user. A 'Retry-After'
+	// header (sent on 429) is honored. Permanent errors (400/401/404…) fail immediately.
+	$max_attempts = max( 1, (int) ( $opts['retries'] ?? 3 ) );
+	$transient    = [ 429, 500, 502, 503, 529 ];
+	$status       = 0;
+	$data         = null;
+	$response     = null;
+
+	for ( $attempt = 1; $attempt <= $max_attempts; $attempt++ ) {
+		$response = wp_remote_post( 'https://api.anthropic.com/v1/messages', $args );
+
+		if ( is_wp_error( $response ) ) {
+			if ( $attempt < $max_attempts ) { sleep( min( 4, $attempt * 2 ) ); continue; }
+			$debug = 'Request failed: ' . $response->get_error_message();
+			site_pulse_log( 'ai_error', 'Claude API error: ' . $response->get_error_message() );
+			return null;
+		}
+
+		$status = (int) wp_remote_retrieve_response_code( $response );
+		$data   = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( 200 === $status && ! empty( $data['content'][0]['text'] ) ) {
+			return $data['content'][0]['text'];
+		}
+
+		if ( in_array( $status, $transient, true ) && $attempt < $max_attempts ) {
+			$retry_after = (int) wp_remote_retrieve_header( $response, 'retry-after' );
+			sleep( $retry_after > 0 ? min( 10, $retry_after ) : min( 4, $attempt * 2 ) );
+			continue;
+		}
+		break; // success was handled above; anything here is a permanent error or the last attempt
 	}
 
-	$status = wp_remote_retrieve_response_code( $response );
-	$data   = json_decode( wp_remote_retrieve_body( $response ), true );
-
-	if ( $status !== 200 || empty( $data['content'][0]['text'] ) ) {
-		$api_msg = $data['error']['message'] ?? wp_remote_retrieve_response_message( $response );
-		$debug   = "HTTP $status" . ( $api_msg ? ": $api_msg" : '' );
-		site_pulse_log( 'ai_error', 'Claude API returned status ' . $status, [ 'response' => $data ] );
-		bp_ai_model_alert( (int) $status, $data, $body['model'], 'Site Pulse AI' );
-		return null;
-	}
-
-	return $data['content'][0]['text'];
+	$api_msg = $data['error']['message'] ?? wp_remote_retrieve_response_message( $response );
+	$debug   = ( in_array( $status, [ 429, 529 ], true ) )
+		? "Claude is temporarily overloaded (HTTP $status) — please try again in a moment."
+		: "HTTP $status" . ( $api_msg ? ": $api_msg" : '' );
+	site_pulse_log( 'ai_error', 'Claude API returned status ' . $status, [ 'response' => $data ] );
+	bp_ai_model_alert( $status, $data, $body['model'], 'Site Pulse AI' );
+	return null;
 }
 
 /**

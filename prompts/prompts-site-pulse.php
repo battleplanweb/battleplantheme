@@ -82,13 +82,86 @@ Be practical, not pedantic. If someone took reasonable action to fix the problem
 - The resolution is vague with no concrete action taken (e.g. 'handled it', 'took care of it')";
 }
 
-// Rewrites a to-do item from its original text + the notes added over time into one concise next step.
+// Rewrites a to-do item from its original text + the notes added over time into one concise next
+// step, and optionally extends the due date when the notes imply a new timeframe.
 function site_pulse_prompt_rewrite_action_item(): string {
-	return "You maintain a person's to-do list. You are given an action item and one or more notes the person added as the situation progressed. Rewrite the action item into a SINGLE concise next-step task, written as an imperative, that reflects the CURRENT state given the latest note.
+	return "You maintain a person's to-do list. You are given today's date, the current due date, an action item, and one or more notes the person added as the situation progressed. Rewrite the action item into a SINGLE concise next-step task, written as an imperative, that reflects the CURRENT state given the latest note. Keep it specific and short (one sentence).
+
+Also decide whether the due date should change. If a note implies a specific new timeframe (e.g. \"scheduled for Monday\", \"vendor comes next week\", \"pushed to the 30th\", \"waiting on parts until end of month\"), set due_date to that calendar date (resolve relative dates against today's date). Never set it earlier than today. If the notes don't imply a new timeframe, return the current due date unchanged.
 
 Examples:
-- Item \"Call repair tech to fix refrigerator\" + note \"Scheduled service call on Monday\" → \"Ensure refrigerator repair is completed on Monday\".
-- Item \"Order more to-go cups\" + note \"Placed the order, arrives Thursday\" → \"Confirm to-go cups arrived Thursday and restock\".
+- Item \"Call repair tech to fix refrigerator\" + note \"Scheduled service call on Monday\" → item \"Ensure refrigerator repair is completed on Monday\", due_date = that Monday's date.
+- Item \"Order more to-go cups\" + note \"Placed the order, arrives Thursday\" → item \"Confirm to-go cups arrived Thursday and restock\", due_date = that Thursday.
 
-Keep it specific and short (one sentence). Do not add commentary or labels. Return ONLY the rewritten action item text — no quotes, no JSON, no preamble.";
+Return ONLY valid JSON — no markdown, no preamble — in this exact format:
+{\"item\": \"rewritten action item\", \"due_date\": \"YYYY-MM-DD\"}";
+}
+
+// Tags a batch of Google reviews with the topics each one discusses and the sentiment of each topic.
+function site_pulse_prompt_review_tags(): string {
+	return "You label customer reviews of a restaurant by topic and sentiment.
+
+You receive a JSON array of reviews, each { \"i\": index, \"text\": review }. For EACH review, identify the distinct topics it actually discusses and the sentiment of each topic.
+
+Rules:
+- sentiment is \"positive\", \"negative\", or \"neutral\". Use \"neutral\" sparingly — only when a topic is clearly raised but neither praised nor criticized.
+- At most 4 topics per review; pick the most salient. A review may have 0 topics (e.g. generic praise with no specifics → empty list is fine).
+- Labels are 1-2 words, Title Case. Strongly prefer the provided topic list; invent a short new label only if none of them fit.
+- Judge sentiment from what the reviewer says about that topic, NOT from the star rating.
+
+Return ONLY a JSON array, no prose, no markdown, in exactly this shape:
+[{\"i\":0,\"tags\":[{\"label\":\"Food\",\"sentiment\":\"positive\"},{\"label\":\"Wait Time\",\"sentiment\":\"negative\"}]},{\"i\":1,\"tags\":[]}]";
+}
+
+// Answers a natural-language question over a set of report digests (trends, areas to improve, etc.).
+function site_pulse_prompt_report_qa(): string {
+	return "You are an operations analyst for a restaurant group. You answer questions about store performance using ONLY the report digests provided below. Each digest is one bi-weekly GM or Supervisor report, with its period (dates), location, a short summary, per-category scores (1 = serious problems … 5 = excellent) with sentiment, wins, issues, and keywords. They are listed oldest-first.
+
+How to answer:
+- Answer the question directly and concretely. Ground every claim in the digests — never invent.
+- For TREND questions, describe how things changed over time (improving / declining / steady), and call out notable periods, turning points, or recurring patterns.
+- For \"areas to improve\" questions, surface the recurring issues and lowest-scoring categories, then give specific, actionable suggestions.
+- Cite your evidence: reference locations and periods/dates (e.g. \"Burleson, Apr–May 2026\"). Aggregate across stores when it's relevant.
+- If the digests don't contain enough to answer, say so plainly.
+- Be concise and skimmable — short paragraphs and/or bullet points.";
+}
+
+// Condenses one manager/supervisor report into a compact structured digest (the searchable "index").
+function site_pulse_prompt_report_digest( string $categories ): string {
+	return "You condense a restaurant manager's bi-weekly report into a compact, structured digest that will later be searched and trend-analyzed across many reports. You are given the report's metadata and the manager's written answers.
+
+Preferred categories (score ONLY the ones the report meaningfully addresses): {$categories}.
+
+Produce:
+- summary: 1-2 sentences capturing the overall state of the store and anything notable this period.
+- categories: for each preferred category the report meaningfully addresses, give a score 1-5 (1 = serious problems, 3 = okay, 5 = excellent), a sentiment (\"positive\", \"neutral\", or \"negative\"), and a short note (<= 12 words). Omit categories the report doesn't address. You may add ONE short new category only if something important fits none of the preferred ones.
+- wins: up to 4 short phrases of what went well.
+- issues: up to 4 short phrases of problems, risks, or things to improve.
+- keywords: up to 10 lowercase search keywords/topics (people, programs, events, equipment, menu items, etc.).
+
+Base everything strictly on what the report says — do not invent. Keep all text terse.
+
+Return ONLY valid JSON, no markdown, in exactly this shape:
+{\"summary\":\"...\",\"categories\":[{\"label\":\"Guest Service\",\"score\":4,\"sentiment\":\"positive\",\"note\":\"...\"}],\"wins\":[\"...\"],\"issues\":[\"...\"],\"keywords\":[\"...\"]}";
+}
+
+// Drafts the owner's short public reply to a Google review, in the given brand's voice ($voice = guidance).
+function site_pulse_prompt_review_reply( string $brand, string $voice ): string {
+	$brand = '' !== $brand ? $brand : 'this restaurant';
+	return "You write the OWNER'S short public reply to a Google review for {$brand}. You are given the location, the reviewer's first name, the star rating, and the review text.
+
+Brand voice for {$brand}:
+{$voice}
+
+Rules:
+- 2 to 4 sentences. Warm, genuine, and specific — never generic or corporate.
+- Use the reviewer's first name naturally when it is known.
+- Reference something concrete from their review.
+- Positive review: thank them sincerely and warmly invite them back.
+- Critical review: acknowledge it honestly, apologize where warranted, and make it right or invite another visit — never defensive, never excuses.
+- Vary your opening and phrasing every time. Do NOT default to starting with \"Thank you for\". Avoid clichés and repetition.
+- DO NOT use the em-dash. Either create new sentence, or use elipsis.
+- No hashtags, no sign-off or signature block, and no emojis unless they genuinely fit the brand voice.
+
+Return ONLY the reply text — no quotes, no preamble, no labels.";
 }

@@ -212,6 +212,14 @@ function site_pulse_ajax_get_surveys(): void {
 	if ( $start !== '' ) { $where[] = 'created_at >= %s'; $params[] = $start . ' 00:00:00'; }
 	if ( $end   !== '' ) { $where[] = 'created_at <= %s'; $params[] = $end   . ' 23:59:59'; }
 
+	// Free-text lookup by customer name / phone / address (matches the whole list, not just the loaded page).
+	$search = trim( sanitize_text_field( wp_unslash( $_POST['search'] ?? '' ) ) );
+	if ( $search !== '' ) {
+		$like = '%' . $wpdb->esc_like( $search ) . '%';
+		$where[] = '( customer_name LIKE %s OR phone LIKE %s OR address LIKE %s OR city LIKE %s OR state LIKE %s OR email LIKE %s )';
+		array_push( $params, $like, $like, $like, $like, $like, $like );
+	}
+
 	$where_sql = implode( ' AND ', $where );
 	$sql       = "SELECT * FROM $table WHERE $where_sql ORDER BY created_at DESC LIMIT 1000";
 	$rows      = $params ? $wpdb->get_results( $wpdb->prepare( $sql, $params ), ARRAY_A ) : $wpdb->get_results( $sql, ARRAY_A );
@@ -255,6 +263,7 @@ function site_pulse_ajax_get_surveys(): void {
 			'phone'       => $r['phone'],
 			'city'        => $r['city'],
 			'state'       => $r['state'],
+			'address'     => $r['address'],
 			'experience'  => $r['experience'],
 			'visit_date'  => $r['visit_date'],
 			'referral'    => $r['referral'],

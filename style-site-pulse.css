@@ -123,6 +123,8 @@
 	--sp-card-value-color:                                     var(--sp-text);
 	--sp-card-value-margin:                                    -5px 0 8px;
 
+	--sp-btn-padding-thin:                                     0px 16px;
+
 	--input-padding:                                           8px 15px;
 	--input-border-radius:                                     var(--sp-radius-sm);
 	--input-color:                                             var(--sp-text);
@@ -288,16 +290,20 @@ body.has-site-pulse *::after {
 	color:                                                     #fbbf24;
 }
 
+
 body.has-site-pulse .sp-god-bar ~ .sp-sidebar {
 	top:                                                       34px;
 }
 
-body.has-site-pulse .sp-god-bar ~ .sp-main {
-	padding-top:                                               62px;
-}
 
-body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
-	top:                                                       34px;
+@media (min-width: 576px) {
+	body.has-site-pulse .sp-god-bar ~ .sp-main {
+			padding-top:                                             85px;
+	}
+
+	body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
+		top:                                                      104px;
+	}
 }
 
 
@@ -698,19 +704,22 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 --------------------------------------------------------------*/
 
 .sp-topbar {
-	display:                                                   grid;
-	grid-template-columns:                                     1fr auto;
+	position:                                                  fixed;
+	top:                                                       10px;
+	right:                                                     0;
+	display:                                                   flex;
 	align-items:                                               center;
-	padding:                                                   10px;
-	margin-bottom:                                             20px;
-	background:                                                var(--sp-g);
-	border:                                                    1px solid var(--white-lowest);
-	border-right:                                              1px solid var(--black-lowest);
-	border-bottom:                                             1px solid var(--black-lowest);
-	position:                                                  sticky;
-	top:                                                       0;
+	gap:                                                       4px;
+	padding:                                                   4px 14px 2px;
+	background:                                                var(--white);
+	border:                                                    1px solid var(--black-lowest);
+	border-top:                                                none;
 	z-index:                                                   100;
 	border-radius:                                             var(--sp-radius);
+}
+
+body.has-site-pulse.sp-role-god .sp-topbar {
+	top:                                                       43px;
 }
 
 .sp-topbar-left {
@@ -720,6 +729,8 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	gap:                                                       8px;
 	justify-content:                                           start;
 	font-size:                                                 14px;
+	flex:                                                      1 1 auto;   /* grows so the buttons sit at the right */
+	min-width:                                                 0;
 }
 
 .sp-topbar-left .sp-icon {
@@ -780,6 +791,7 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 
 .sp-notification-btn {
 	position:                                                  relative;
+	margin-left:                                               10px;
 }
 
 .sp-notification-badge {
@@ -896,10 +908,10 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 
 .sp-mobile-header {
 	display:                                                   none;
-	grid-template-columns:                                     auto 1fr auto;
+	grid-template-columns:                                     1fr auto 1fr;   /* hamburger | centered brand | (empty) */
 	align-items:                                               center;
 	gap:                                                       12px;
-	padding:                                                   12px 16px;
+	padding:                                                   16px 16px 4px;
 	background:                                                var(--sp-sidebar-bg);
 	color:                                                     #ffffff;
 	position:                                                  sticky;
@@ -931,18 +943,20 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 .sp-mobile-logo {
 	display:                                                   block;
 	max-width:                                                 100%;
-	max-height:                                                28px;
+	max-height:                                                45px;
 	width:                                                     auto;
 	height:                                                    auto;
+	border-radius:                                             var(--sp-radius-sm);
 }
 
 .sp-mobile-powered {
-	font-size:                                                 8px;
+	font-size:                                                 9px;
 	font-weight:                                               700;
 	letter-spacing:                                            0.14em;
 	text-transform:                                            uppercase;
 	color:                                                     var(--sp-sidebar-text);
 	opacity:                                                   0.6;
+	text-align:                                                center;
 }
 
 .sp-mobile-user .sp-icon {
@@ -1057,12 +1071,10 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	grid-column:                                               1 / -1;
 }
 
-/* God-only "Backfill missing" control in the Action Items header */
-.sp-action-backfill-wrap {
-	display:                                                   flex;
-	align-items:                                               center;
-	gap:                                                       0.7em;
-}
+/* Add Action Item dialog — urgency + due date side by side. */
+.sp-aai-row { display: flex; gap: 14px; margin: 12px 0 4px; }
+.sp-aai-col { flex: 1 1 0; min-width: 0; }
+.sp-aai-col .sp-select, .sp-aai-col .sp-input { width: 100%; box-sizing: border-box; }
 
 .sp-widget-header {
 	display:                                                   grid;
@@ -1629,7 +1641,7 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	--_btn-bg-h:                                               none;
 	--_btn-border:                                             1px solid transparent;
 	--_btn-border-h:                                           1px solid transparent;
-	--_btn-padding:                                            0 18px;
+	--_btn-padding:                                            var(--sp-btn-padding-thin);
 
 	display:                                                   inline-grid;
 	min-height:                                                40px;
@@ -1650,6 +1662,12 @@ body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
 	background:                                                var(--_btn-bg);
 	border:                                                    var(--_btn-border);
 	padding:                                                   var(--_btn-padding);
+}
+
+/* .sp-btn sets display:inline-grid, which outranks the UA [hidden] rule — so a button toggled
+   hidden in JS (e.g. "Load older reviews" once syncing is complete) would stay visible. Re-assert it. */
+.sp-btn[hidden] {
+	display:                                                   none;
 }
 
 .sp-btn:hover,
@@ -2272,6 +2290,14 @@ a.sp-forms-row-btn.sp-forms-download:hover {
 }
 .sp-msg-bubble-actions button:hover { color: var(--sp-text); }
 .sp-msg-bubble-actions svg { width: 13px; height: 13px; }
+/* "Create action item" already used on this message — locked so two people can't make duplicates. */
+.sp-msg-task.is-done,
+.sp-msg-bubble-actions button:disabled {
+	opacity:                                                   0.4;
+	cursor:                                                    default;
+	box-shadow:                                                none;
+}
+.sp-msg-task.is-done:hover { color: var(--sp-text-secondary); }
 
 .sp-msg-edit-input {
 	width:                                                     100%;
@@ -2357,6 +2383,41 @@ a.sp-forms-row-btn.sp-forms-download:hover {
 }
 .sp-msg-attach-btn:hover { background: var(--sp-primary-light); }
 
+/* Mic / dictation button — matches the attach button. */
+.sp-msg-mic-btn {
+	flex:                                                      0 0 auto;
+	display:                                                   grid;
+	place-items:                                               center;
+	width:                                                     40px;
+	height:                                                    40px;
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-sm);
+	background:                                                var(--sp-bg-white);
+	color:                                                     var(--sp-text);
+	cursor:                                                    pointer;
+	display:                                                   none;
+}
+
+@media (max-width: 720px) {
+	.sp-msg-mic-btn {
+			display:                                                 block;
+		}
+	}
+
+.sp-msg-mic-btn:hover { background: var(--sp-primary-light); }
+.sp-msg-mic-btn[hidden] { display: none; }
+/* While listening: warning-red + a soft pulse so it's obvious it's recording. */
+.sp-msg-mic-btn.listening {
+	color:                                                     #fff;
+	background:                                                var(--sp-danger);
+	border-color:                                              var(--sp-danger);
+	animation:                                                 sp-mic-pulse 1.2s ease-in-out infinite;
+}
+@keyframes sp-mic-pulse {
+	0%, 100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.35); }
+	50%      { box-shadow: 0 0 0 6px rgba(255, 0, 0, 0); }
+}
+
 .sp-msg-attach-img { display: block; margin-bottom: 4px; }
 .sp-msg-attach-img img {
 	max-width:                                                 220px;
@@ -2413,25 +2474,25 @@ a.sp-forms-row-btn.sp-forms-download:hover {
 /* Grid (not flex) so the description column gets a real 1fr width — under flex the textarea
    collapsed to a thin sliver. */
 .sp-act-item {
-	display: grid;
-	grid-template-columns: auto 1fr auto;
-	align-items: start;
-	gap: 8px;
+	display:                                                   grid;
+	grid-template-columns:                                     auto 1fr auto;
+	align-items:                                               start;
+	gap:                                                       8px;
 }
 .sp-act-item .sp-act-cb { margin-top: 12px; }
 .sp-act-desc {
-	width: 100%;
-	box-sizing: border-box;
-	resize: vertical;
-	min-height: 56px;
-	padding: 8px 10px;
-	border: 1px solid var(--sp-border);
-	border-radius: 8px;
-	font-family: var(--font-text);
-	font-size: 14px;
-	line-height: 1.4;
-	color: var(--sp-text);
-	background: var(--sp-bg-white);
+	width:                                                     100%;
+	box-sizing:                                                border-box;
+	resize:                                                    vertical;
+	min-height:                                                56px;
+	padding:                                                   8px 10px;
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             8px;
+	font-family:                                               var(--font-text);
+	font-size:                                                 14px;
+	line-height:                                               1.4;
+	color:                                                     var(--sp-text);
+	background:                                                var(--sp-bg-white);
 }
 .sp-act-pri { width: auto; min-width: 92px; align-self: start; }
 .sp-act-assign { display: grid; gap: 6px; margin-bottom: 4px; }
@@ -2496,8 +2557,9 @@ a.sp-forms-row-btn.sp-forms-download:hover {
 	/* Composer stacks: full-width textarea on top, then a row of [attach … Send] below. */
 	.sp-msg-composer { flex-wrap: wrap; align-items: center; }
 	.sp-msg-input { order: 1; flex: 1 1 100%; width: 100%; min-height: 84px; }
-	.sp-msg-attach-btn { order: 2; }
-	.sp-msg-composer button[type="submit"] { order: 3; margin-left: auto; }
+	.sp-msg-mic-btn { order: 2; }
+	.sp-msg-attach-btn { order: 3; }
+	.sp-msg-composer button[type="submit"] { order: 4; margin-left: auto; }
 }
 
 /* Dashboard important-message banners — surfaced from the Notifications matrix' "Dashboard" column.
@@ -3032,6 +3094,18 @@ a.sp-forms-row-btn.sp-forms-download:hover {
 	accent-color:                                              var(--sp-primary);
 }
 
+/* Divider above the first "Manage …" capability — visually splits the regular caps from the admin
+   (manage) ones. The role grid has no row borders, so 1px reads clearly; the per-user override grid
+   already has 1px row lines, so its divider is 2px to stand out. */
+.sp-tier-cap.sp-cap-admin-start {
+	margin-top:                                                8px;
+	padding-top:                                               12px;
+	border-top:                                                1px solid var(--sp-text-secondary);
+}
+.sp-perm-row.sp-cap-admin-start {
+	border-top:                                                2px solid var(--sp-text-secondary);
+}
+
 .sp-tier-card-foot {
 	display:                                                   flex;
 	gap:                                                       8px;
@@ -3493,6 +3567,128 @@ a.sp-forms-row-btn.sp-forms-download:hover {
 	margin-bottom:                                             24px;
 }
 
+/* Report AI: search bar + results (GOD rollout). */
+.sp-reports-ai {
+	margin:                                                    0 0 24px;
+}
+
+.sp-reports-ai-bar {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       8px;
+	align-items:                                               center;
+}
+
+.sp-reports-ai-q {
+	flex:                                                      1 1 260px;
+	width:                                                     auto;
+	min-width:                                                 0;
+}
+
+.sp-reports-ai-bar .sp-select {
+	flex:                                                      0 1 160px;
+	width:                                                     auto;
+	min-width:                                                 0;
+}
+
+.sp-reports-ai-tools {
+	display:                                                   flex;
+	align-items:                                               center;
+	justify-content:                                           flex-end;
+	gap:                                                       10px;
+	margin:                                                    8px 0 0;
+}
+
+.sp-reports-aiprep-status {
+	font-size:                                                 12px;
+	color:                                                     var(--sp-text-light);
+}
+
+.sp-reports-ai-results {
+	display:                                                   grid;
+	gap:                                                       10px;
+	margin-top:                                                14px;
+}
+
+.sp-report-result {
+	background:                                                var(--sp-bg-white);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius);
+	padding:                                                   12px 14px;
+	box-shadow:                                                var(--sp-shadow-sm);
+	cursor:                                                    pointer;
+	transition:                                                border-color var(--sp-transition);
+}
+
+.sp-report-result:hover { border-color: var(--sp-primary); }
+
+.sp-report-result-head {
+	display:                                                   flex;
+	justify-content:                                           space-between;
+	align-items:                                               baseline;
+	flex-wrap:                                                 wrap;
+	gap:                                                       6px 12px;
+}
+
+.sp-report-result-title { font-weight: 700; color: var(--sp-text); }
+.sp-report-result-meta  { font-size: 12px; color: var(--sp-text-light); }
+
+.sp-report-result-summary {
+	margin:                                                    6px 0 0;
+	color:                                                     var(--sp-text);
+	line-height:                                               1.5;
+}
+
+.sp-report-result-chips {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       6px;
+	margin-top:                                                8px;
+}
+
+.sp-report-chip {
+	display:                                                   inline-block;
+	padding:                                                   1px 8px;
+	border-radius:                                             4px;
+	font-size:                                                 11px;
+	font-weight:                                               600;
+	color:                                                     #fff;
+}
+
+.sp-report-chip-good { background: #1faa59; }
+.sp-report-chip-ok   { background: #c9971f; }
+.sp-report-chip-bad  { background: #d23b3b; }
+
+/* Ask-AI answer block. */
+.sp-report-answer {
+	background:                                                var(--sp-bg-white);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius);
+	padding:                                                   16px 18px;
+	box-shadow:                                                var(--sp-shadow-sm);
+}
+
+.sp-report-answer-q {
+	font-weight:                                               700;
+	color:                                                     var(--sp-text);
+	margin-bottom:                                             10px;
+}
+
+.sp-report-answer-body {
+	color:                                                     var(--sp-text);
+	line-height:                                               1.55;
+}
+
+.sp-report-answer-body p  { margin: 0 0 8px; }
+.sp-report-answer-body ul { margin: 0 0 8px 18px; }
+.sp-report-answer-body li { margin: 2px 0; }
+
+.sp-report-answer-meta {
+	margin-top:                                                10px;
+	font-size:                                                 12px;
+	color:                                                     var(--sp-text-light);
+}
+
 .sp-analytics-search-inner {
 	display:                                                   grid;
 	grid-template-columns:                                     1fr auto;
@@ -3680,12 +3876,24 @@ a.sp-forms-row-btn.sp-forms-download:hover {
 
 .sp-action-items-list {
 	display:                                                   grid;
-	gap:                                                       8px;
+	grid-template-columns:                                     repeat(3, 1fr);
+	gap:                                                       16px;
+	align-items:                                               start;
+}
+
+/* Full-width rows inside the grid: the pending queue and the empty/loading states span all columns
+   so they don't get squeezed into a single grid cell. */
+.sp-action-items-list > .sp-pending-section,
+.sp-action-items-list > .sp-empty-state,
+.sp-action-items-list > .sp-loading { grid-column: 1 / -1; }
+
+@media (max-width: 900px) {
+	.sp-action-items-list { grid-template-columns: 1fr; }
 }
 
 .sp-action-item {
 	display:                                                   grid;
-	grid-template-columns:                                     auto 1fr auto;
+	grid-template-columns:                                     auto 1fr;
 	align-items:                                               start;
 	gap:                                                       12px;
 	padding:                                                   16px 20px;
@@ -3825,6 +4033,39 @@ a.sp-forms-row-btn.sp-forms-download:hover {
 	font-size:                                                 14px;
 	color:                                                     var(--sp-secondary-color);
 }
+
+/* To-do-style info lines under each item. */
+.sp-action-item-who {
+	font-size:                                                 14px;
+	font-weight:                                               600;
+	color:                                                     var(--sp-text);
+	margin-bottom:                                             2px;
+}
+.sp-action-item-sub {
+	font-size:                                                 13px;
+	color:                                                     var(--sp-text-secondary);
+	line-height:                                               1.45;
+}
+/* Due-date urgency (color cascades to the inner .unique span). */
+.sp-due-soon   { font-weight: 700; color: var(--sp-primary); }
+.sp-due-urgent { font-weight: 700; color: var(--sp-danger); }
+.sp-action-item-sub { position: relative; }
+.sp-action-due-btn { background: none; border: none; padding: 0; margin: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; border-bottom: 1px dashed currentColor; }
+.sp-action-due-btn:hover { opacity: 0.75; }
+.sp-action-due-input { position: absolute; left: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.sp-action-notes {
+	margin-top:                                                8px;
+	padding:                                                   8px 12px;
+	background:                                                var(--sp-bg);
+	border-radius:                                             var(--sp-radius-sm);
+	border-left:                                               2px solid var(--sp-text-light);
+}
+.sp-action-notes-label { font-size: 12px; font-weight: 700; color: var(--sp-text-secondary); margin-bottom: 2px; }
+.sp-action-notes ul { margin: 0; padding-left: 18px; }
+.sp-action-notes li { font-size: 13px; color: var(--sp-text); line-height: 1.5; }
+.sp-action-item-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+.sp-note-form { margin-top: 10px; }
+.sp-note-form .sp-note-text { width: 100%; box-sizing: border-box; }
 
 .sp-action-resolved {
 	font-size:                                                 12px;
@@ -4033,13 +4274,49 @@ a.sp-forms-row-btn.sp-forms-download:hover {
 		place-items:                                              center;
 	}
 
+	/* Fixed, not sticky: the header is a grid item of #sp-app, and a sticky grid item only sticks
+	   within its own (short) grid cell — so it scrolled out of view. Fixed pins it to the viewport;
+	   .sp-main reserves matching top space (via the shared var) so content isn't hidden underneath. */
+	#sp-app {
+		--sp-mobile-header-h:                                     84px;
+	}
+
 	.sp-mobile-header {
 		display:                                                  grid;
+		position:                                                 fixed;
+		top:                                                      0;
+		left:                                                     0;
+		right:                                                    0;
+		min-height:                                               var(--sp-mobile-header-h);
+		align-content:                                            center;
 	}
 
 	.sp-topbar-role,
 	.sp-topbar-location,
 	.sp-topbar-divider {
+		display:                                                  none;
+	}
+
+	/* One row: the name on the left, then icon-only Bell / Undo / Sign Out right-justified (DOM order
+	   is already bell → undo → logout). The name flexes to fill, pushing the three icons to the edge. */
+	.sp-topbar {
+		position:                                                 fixed;
+		top:                                                      76px;
+		display:                                                  flex;
+		align-items:                                              center;
+		gap:                                                      10px;
+	}
+
+	body.has-site-pulse.sp-role-god .sp-topbar {
+		top:                                                      110px;
+	}
+
+	.sp-topbar-left { flex: 1 1 auto; min-width: 0; }
+	.sp-topbar-left .sp-icon { display: none; }
+
+	/* Strip the Sign Out text on mobile — icon only. (Scoped to the logout button so the bell's
+	   notification-count badge span is untouched.) */
+	.sp-logout-btn-top span {
 		display:                                                  none;
 	}
 
@@ -4051,7 +4328,18 @@ a.sp-forms-row-btn.sp-forms-download:hover {
 
 	.sp-main {
 		grid-column:                                              1;
-		padding:                                                  20px 16px;
+		/* Top padding clears the now-fixed mobile header so content starts below it. */
+		padding:                                                  0 16px 20px; /* padding-top removed (calc(var(--sp-mobile-header-h) + 20px)) after fixed header */
+	}
+
+	/* God users get the 34px god bar fixed above everything — drop the header below it and add that
+	   34px to the content's reserved top space. */
+	body.has-site-pulse .sp-god-bar ~ .sp-mobile-header {
+		top:                                                      34px;
+	}
+
+	body.has-site-pulse .sp-god-bar ~ .sp-main {
+		padding-top:                                              calc(var(--sp-mobile-header-h) + 34px + 20px);
 	}
 }
 
@@ -5664,19 +5952,205 @@ div.sp-leg-stat + .sp-day-total-line {
 	gap:                                                       12px;
 }
 
+.sp-reviews-more {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	align-items:                                               center;
+	gap:                                                       10px;
+	margin-top:                                                16px;
+}
+
+.sp-reviews-count {
+	font-size:                                                 0.85rem;
+	color:                                                     var(--sp-text-light);
+}
+
 .sp-review-card {
 	background:                                                var(--sp-bg-white);
 	border:                                                    1px solid var(--sp-border);
 	border-radius:                                             var(--sp-radius);
 	padding:                                                   16px 18px;
 	box-shadow:                                                var(--sp-shadow-sm);
+	margin-bottom:                                             25px;
 }
 
 .sp-review-head {
 	display:                                                   grid;
-	grid-template-columns:                                     40px 1fr auto;
-	align-items:                                               center;
+	grid-template-columns:                                     40px 1fr 300px;
+	grid-template-areas:                                       "avatar main right";
+	align-items:                                               start;
 	gap:                                                       12px;
+}
+
+/* Source order is avatar → right → main (so the body can float-wrap on small screens); the grid areas
+   restore the visual avatar | main | right on desktop. */
+.sp-review-head > .sp-review-avatar { grid-area: avatar; }
+
+/* Right column of the head: star row up top, action buttons stacked beneath it (keeps the card short). */
+.sp-review-headright {
+	grid-area:                                                 right;
+	display:                                                   flex;
+	flex-direction:                                            column;
+	align-items:                                               flex-end;
+	gap:                                                       8px;
+}
+
+.sp-review-rating {
+	display:                                                   inline-flex;
+	align-items:                                               center;
+	gap:                                                       6px;
+}
+
+.sp-review-platform-icon {
+	display:                                                   block;
+	flex-shrink:                                               0;
+}
+
+/* Restaurant / location name, right-aligned under the stars — the anchor for combined multi-location lists. */
+.sp-review-store {
+	font-size:                                                 15px;
+	font-weight:                                               600;
+	color:                                                     var(--sp-primary);
+	text-align:                                                right;
+	margin-top:                                                -10px;
+}
+
+/* Left/centre column: top line (byline + chips) then the review body stacked beneath it, so the body
+   sits alongside the stars/store/buttons column instead of dropping full-width and growing the card. */
+.sp-review-headmain {
+	grid-area:                                                 main;
+	display:                                                   flex;
+	flex-direction:                                            column;
+	gap:                                                       6px;
+	min-width:                                                 0;
+}
+
+.sp-review-topline {
+	display:                                                   flex;
+	align-items:                                               center;
+	flex-wrap:                                                 wrap;
+	gap:                                                       6px 14px;
+}
+
+.sp-review-byline {
+	display:                                                   flex;
+	align-items:                                               baseline;
+	gap:                                                       8px;
+	width:                                                     100%;
+	max-width:                                                 400px;
+}
+
+.sp-review-tags {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       6px;
+}
+
+/* AI topic + sentiment chip: solid green for positive, red for negative, grey for neutral.
+   Clickable — filters the list to that topic (same as clicking the matching stat card). */
+.sp-review-tag {
+	display:                                                   inline-block;
+	padding:                                                   2px 9px;
+	border-radius:                                             4px;
+	font-size:                                                 12px;
+	font-weight:                                               600;
+	line-height:                                               1.5;
+	color:                                                     #fff;
+	cursor:                                                    pointer;
+	transition:                                                filter var(--sp-transition);
+}
+
+.sp-review-tag:hover { filter: brightness(1.08); }
+
+.sp-review-tag-pos     { background: #1faa59; } /* muted green — readable with white text, matches the mockup */
+.sp-review-tag-neg     { background: #d23b3b; } /* muted red */
+.sp-review-tag-neutral { background: #8a8a8a; }
+
+.sp-reviews-analyze-status {
+	font-size:                                                 12px;
+	color:                                                     var(--sp-text-light);
+	margin-right:                                              4px;
+}
+
+/* Analytics scope selectors (restaurant / brand / time range) above the sentiment stat cards.
+   The selects default to width:100% (which would stack them), so share the row here instead. */
+.sp-reviews-statbar {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       8px;
+	margin:                                                    0 0 14px;
+}
+
+.sp-reviews-statbar .sp-select {
+	flex:                                                      1 1 180px;
+	width:                                                     auto;
+	min-width:                                                 0;
+}
+
+/* While the stats re-aggregate (a few seconds over tens of thousands of reviews), dim the current
+   cards and float a spinner so a filter change never looks frozen. */
+.sp-reviews-stats {
+	position:                                                  relative;
+}
+
+.sp-reviews-stats.is-loading {
+	min-height:                                                80px;
+}
+
+.sp-reviews-stats.is-loading > * {
+	opacity:                                                   0.35;
+	pointer-events:                                            none;
+}
+
+.sp-reviews-stats.is-loading::after {
+	content:                                                   "";
+	position:                                                  absolute;
+	left:                                                      50%;
+	top:                                                       24px;
+	transform:                                                 translateX(-50%);
+	width:                                                     32px;
+	height:                                                    32px;
+	border:                                                    3px solid var(--sp-border);
+	border-top-color:                                          var(--sp-primary);
+	border-radius:                                             50%;
+	animation:                                                 sp-spin 0.6s linear infinite;
+}
+
+/* Keep the list's rating/reply filters on one line too (same width:100% stacking issue). */
+#sp-reviews-toolbar .sp-toolbar-group .sp-select {
+	width:                                                     auto;
+}
+
+/* Review sentiment stat cards reuse the survey card/bar shell; only the bar fills + label width differ.
+   Wider label cell so "Pos/Neu/Neg" fits (compound selector beats .sp-survey-bar-star regardless of order). */
+.sp-survey-bar-star.sp-rev-bar-lbl {
+	width:                                                     22px;
+	font-size:                                                 10px;
+}
+
+.sp-rev-fill-pos { background: #1faa59; }
+.sp-rev-fill-neu { background: #8a8a8a; }
+.sp-rev-fill-neg { background: #d23b3b; }
+
+.sp-reviews-stat-note {
+	font-size:                                                 12px;
+	color:                                                     var(--sp-text-light);
+	margin:                                                    -8px 0 14px;
+}
+
+/* Stat cards that filter the list when clicked. */
+.sp-survey-stat-card.sp-stat-clickable {
+	cursor:                                                    pointer;
+	transition:                                                border-color var(--sp-transition), box-shadow var(--sp-transition);
+}
+
+.sp-survey-stat-card.sp-stat-clickable:hover {
+	border-color:                                              var(--sp-primary);
+}
+
+.sp-survey-stat-card.sp-stat-active {
+	border-color:                                              var(--sp-primary);
+	box-shadow:                                                0 0 0 2px var(--sp-primary-light);
 }
 
 .sp-review-avatar {
@@ -5702,19 +6176,24 @@ div.sp-leg-stat + .sp-day-total-line {
 }
 
 .sp-review-date {
-	font-size:                                                 12px;
-	color:                                                     var(--sp-text-light);
+	font-size:                                                 13px;
+	font-style:                                                italic;
+	color:                                                     var(--sp-secondary-color);
+}
+
+.sp-review-date::before {
+	content:                                                   " ▪ ";
 }
 
 .sp-review-stars {
 	color:                                                     var(--sp-primary);
-	font-size:                                                 16px;
+	font-size:                                                 20px;
 	letter-spacing:                                            1px;
 	white-space:                                               nowrap;
 }
 
 .sp-review-body {
-	margin:                                                    12px 0 0;
+	margin:                                                    10px 0 0;
 	color:                                                     var(--sp-text);
 	line-height:                                               1.55;
 	white-space:                                               pre-wrap;
@@ -5748,9 +6227,17 @@ div.sp-leg-stat + .sp-day-total-line {
 
 .sp-review-actions {
 	display:                                                   flex;
-	gap:                                                       8px;
+	gap:                                                       6px;
 	align-items:                                               center;
-	margin:                                                    12px 0 0;
+	justify-content:                                           flex-end;
+	flex-wrap:                                                 wrap;
+	margin:                                                    0;
+}
+
+/* Compact the action buttons now that they share the narrow right column. */
+.sp-review-headright .sp-review-actions .sp-btn {
+	padding:                                                   4px 11px;
+	font-size:                                                 12px;
 }
 
 .sp-review-imported {
@@ -5772,6 +6259,85 @@ div.sp-leg-stat + .sp-day-total-line {
 	display:                                                   flex;
 	gap:                                                       8px;
 	margin:                                                    8px 0 0;
+}
+
+/* ≤1024px: long reviews in a narrow middle column look obnoxious, so drop the grid and let the body
+   text float-wrap around the right block (stars / store / buttons) and the avatar, like text around an image. */
+@media (max-width: 1024px) {
+	.sp-review-head {
+		display:                                                  block;
+	}
+	.sp-review-head::after { /* contain the floats */
+		content:                                                  "";
+		display:                                                  block;
+		clear:                                                    both;
+	}
+	.sp-review-head > .sp-review-avatar {
+		float:                                                    left;
+		margin:                                                   2px 12px 6px 0;
+	}
+	.sp-review-headright {
+		float:                                                    right;
+		width:                                                    auto;
+		max-width:                                                60%;
+		margin:                                                   0 0 8px 16px;
+	}
+	/* Normal-flow block (not flex) so the body's lines wrap around the floats instead of shrinking beside them. */
+	.sp-review-headmain {
+		display:                                                  block;
+		min-width:                                                0;
+	}
+	.sp-review-headmain > .sp-review-topline {
+		margin-bottom:                                            6px;
+	}
+}
+
+/* Phones (≤600px): float-wrap gets too cramped. Flatten the wrappers (display:contents) so every leaf
+   becomes a grid item, then lay them out: avatar+byline on top, stars/store/chips right-aligned, body
+   full-width, action buttons at the bottom-left. */
+@media (max-width: 600px) {
+	.sp-review-head {
+		display:                                                  grid;
+		grid-template-columns:                                    40px 1fr;
+		grid-template-areas:
+			"avatar  byline"
+			"rating  rating"
+			"store   store"
+			"tags    tags"
+			"body    body"
+			"actions actions";
+		align-items:                                              center;
+		gap:                                                      6px 10px;
+	}
+	/* Dissolve the grouping boxes so their children join the head grid directly. */
+	.sp-review-headright,
+	.sp-review-headmain,
+	.sp-review-topline {
+		display:                                                  contents;
+	}
+	.sp-review-head > .sp-review-avatar { grid-area: avatar; float: none; margin: 0; }
+	.sp-review-byline  { grid-area: byline; }
+
+	.sp-review-rating  {
+		grid-area:                                                rating;
+		justify-self:                                             end;
+		margin:                                                   -10px 0 -13px;
+	}
+
+	.sp-review-store   { grid-area: store;  justify-self: end; text-align: right; margin-top: 0; }
+
+	.sp-review-tags    {
+		grid-area:                                                tags;
+		justify-self:                                             end;
+		margin-top:                                               9px;
+	}
+
+	.sp-review-body    {
+		grid-area:                                                body;
+		margin-bottom:                                            16px !important;
+	}
+
+	.sp-review-actions { grid-area: actions; justify-self: start; }
 }
 
 
@@ -5875,6 +6441,14 @@ div.sp-leg-stat + .sp-day-total-line {
 	gap:                                                       12px;
 }
 
+/* Archive search box — sits inline in the toolbar instead of stretching full width (.sp-input is 100%). */
+.sp-survey-search {
+	flex:                                                      1 1 240px;
+	width:                                                     auto;
+	min-width:                                                 0;
+	max-width:                                                 340px;
+}
+
 .sp-survey-card {
 	background:                                                var(--sp-bg-white);
 	border:                                                    1px solid var(--sp-border);
@@ -5895,14 +6469,19 @@ div.sp-leg-stat + .sp-day-total-line {
 }
 
 .sp-survey-date {
-	font-size:                                                 13px;
-	color:                                                     var(--sp-text-secondary);
+	font-size:                                                 13px !important;
+	color:                                                     var(--sp-text-secondary)!important;
+	font-style:                                                italic;
 }
 
 .sp-survey-tags {
 	margin:                                                    4px 0 0;
-	font-size:                                                 13px;
+	font-size:                                                 15px;
 	color:                                                     var(--sp-text-secondary);
+	font-weight:                                               bold;
+	border-top:                                                1px solid var(--sp-secondary-lightest);
+	margin-top:                                                14px;
+	padding-top:                                               14px;
 }
 
 .sp-survey-rates {
@@ -5934,16 +6513,25 @@ div.sp-leg-stat + .sp-day-total-line {
 }
 
 .sp-survey-comments {
-	margin:                                                    12px 0 0;
-	color:                                                     var(--sp-text);
-	white-space:                                               pre-wrap;
+	margin:                                                    25px 0 0;
+	color:                                                     var(--sp-secondary-color);
+	background:                                                var(--sp-secondary-lightest);
+	border-radius:                                             var(--sp-radius-sm);
+	padding:                                                   10px;
+	font-size:                                                 14px;
 }
 
 /* Person block (bottom): name, email (mailto), phone (tel), City, State. */
 .sp-survey-person {
+	margin:                                                    35px 0 0;
+	padding:                                                   25px 0 0;
+	border-top:                                                1px solid var(--sp-secondary-lightest);
+}
+
+.sp-survey-comments + .sp-survey-person {
 	margin:                                                    14px 0 0;
 	padding:                                                   12px 0 0;
-	border-top:                                                1px solid var(--sp-border);
+	border-top:                                                none;
 }
 
 .sp-survey-name {
@@ -6337,4 +6925,429 @@ div.sp-leg-stat + .sp-day-total-line {
    (A bare display:flex would override [hidden]'s display:none, so it must be re-asserted.) */
 .sp-forms-move-wrap[hidden] {
 	display:                                                   none;
+}
+
+
+/*--------------------------------------------------------------
+# Company Directory
+--------------------------------------------------------------*/
+
+/* Filter dropdowns sit in one row above the search bar; the search bar spans full width
+   directly above the cards. */
+.sp-dir-filters {
+	display:                                                   flex;
+	gap:                                                       10px;
+	margin-bottom:                                             10px;
+}
+
+.sp-dir-filters .sp-select {
+	flex:                                                      1 1 0;
+	min-width:                                                 0;
+}
+
+.sp-dir-search {
+	margin-bottom:                                             14px;
+}
+
+.sp-dir-count {
+	color:                                                     var(--sp-text-secondary);
+	font-size:                                                 13px;
+	margin:                                                    0 0 10px;
+}
+
+@media (max-width: 640px) {
+	.sp-dir-filters {
+		flex-wrap:                                                wrap;
+	}
+	.sp-dir-filters .sp-select {
+		flex:                                                     1 1 45%;
+	}
+}
+
+.sp-directory-grid {
+	display:                                                   grid;
+	grid-template-columns:                                     repeat(4, minmax(0, 1fr));
+	gap:                                                       16px;
+}
+
+@media (max-width: 900px) {
+	.sp-directory-grid {
+		grid-template-columns:                                    repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 560px) {
+	.sp-directory-grid {
+		grid-template-columns:                                    1fr;
+	}
+}
+
+.sp-dir-card {
+	position:                                                  relative;
+	display:                                                   flex;
+	flex-direction:                                            column;
+	align-items:                                               center;
+	text-align:                                                center;
+	gap:                                                       10px;
+	padding:                                                   22px 16px 18px;
+	background:                                                var(--sp-bg-white);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-lg);
+	box-shadow:                                                var(--sp-shadow-sm);
+	cursor:                                                    pointer;
+	transition:                                                box-shadow var(--sp-transition), transform var(--sp-transition);
+}
+
+.sp-dir-card.is-inactive {
+	opacity:                                                   0.62;
+}
+
+.sp-dir-photo {
+	flex:                                                      0 0 auto;
+	width:                                                     200px;
+	aspect-ratio:                                              1/1;
+	border-radius:                                             var(--sp-radius-pill);
+	background-size:                                           cover;
+	background-position:                                       center;
+	background-color:                                          var(--sp-bg);
+}
+
+.sp-dir-photo-empty {
+	display:                                                   flex;
+	align-items:                                               center;
+	justify-content:                                           center;
+	font-weight:                                               700;
+	font-size:                                                 36px;
+	color:                                                     var(--sp-primary);
+	background-color:                                          var(--sp-primary-light);
+}
+
+.sp-dir-body {
+	width:                                                     100%;
+	min-width:                                                 0;
+}
+
+.sp-dir-name-row {
+	display:                                                   flex;
+	align-items:                                               center;
+	justify-content:                                           center;
+	gap:                                                       8px;
+	flex-wrap:                                                 wrap;
+}
+
+.sp-dir-name {
+	font-weight:                                               700;
+	font-size:                                                 24px;
+	color:                                                     var(--sp-text);
+}
+
+.sp-dir-sub {
+	color:                                                     var(--sp-text-secondary);
+	font-size:                                                 17px;
+	margin-top:                                                3px;
+}
+
+.sp-dir-contacts {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	align-items:                                               center;
+	gap:                                                       3px;
+	margin-top:                                                9px;
+}
+
+/* Contact methods as ghost buttons (email + each phone), icon + value, stacked and centered. */
+.sp-dir-contact-btns {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	align-items:                                               center;
+	gap:                                                       8px;
+	width:                                                     100%;
+}
+
+.sp-dir-cbtn {
+	max-width:                                                 100%;
+	min-height:                                                36px;
+	font-size:                                                 15px;
+}
+
+.sp-dir-cbtn span {
+	text-overflow:                                             ellipsis;
+	white-space:                                               nowrap;
+	min-width:                                                 0;
+}
+
+.sp-dir-cbtn svg {
+	width:                                                     23px;
+	height:                                                    23px;
+}
+
+.sp-dir-cbtn.sp-dir-email-btn svg {
+	width:                                                     18px;
+	height:                                                    18px;
+}
+
+
+
+/* Email can be long — let its label column shrink so it ellipsizes instead of overflowing. */
+.sp-dir-email-btn {
+	grid-template-columns:                                     auto minmax(0, 1fr);
+}
+
+.sp-dir-tag {
+	color:                                                     var(--sp-text-light);
+	font-size:                                                 11px;
+	text-transform:                                            uppercase;
+	letter-spacing:                                            0.04em;
+}
+
+.sp-dir-edit {
+	position:                                                  absolute;
+	top:                                                       10px;
+	right:                                                     10px;
+}
+
+/* Reviews infinite-scroll sentinel + its compact "loading more" spinner. */
+#sp-reviews-sentinel {
+	min-height:                                                1px;
+}
+
+.sp-loading-inline {
+	padding:                                                   16px 0;
+	transform:                                                 scale(0.7);
+}
+
+
+/*--------------------------------------------------------------
+# Customer Emails
+--------------------------------------------------------------*/
+
+.sp-emails-count {
+	color:                                                     var(--sp-text-secondary);
+	font-size:                                                 13px;
+	margin:                                                    0 0 12px;
+}
+
+.sp-emails-list {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	gap:                                                       12px;
+}
+
+.sp-email-card {
+	padding:                                                   16px;
+	background:                                                var(--sp-bg-white);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-lg);
+	box-shadow:                                                var(--sp-shadow-sm);
+}
+
+.sp-email-card.is-handled {
+	opacity:                                                   0.7;
+}
+
+.sp-email-head {
+	display:                                                   flex;
+	align-items:                                               baseline;
+	justify-content:                                          space-between;
+	gap:                                                       12px;
+	flex-wrap:                                                 wrap;
+}
+
+.sp-email-who {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       8px;
+	flex-wrap:                                                 wrap;
+}
+
+.sp-email-name {
+	font-weight:                                               700;
+	color:                                                     var(--sp-text);
+}
+
+.sp-email-cat {
+	font-size:                                                 11px;
+	font-weight:                                               700;
+	text-transform:                                            uppercase;
+	letter-spacing:                                            0.03em;
+	padding:                                                   2px 9px;
+	border-radius:                                             var(--sp-radius-pill);
+}
+
+.sp-email-cat-neg     { color: var(--sp-danger);  background: var(--sp-danger-light); }
+.sp-email-cat-pos     { color: var(--sp-success); background: var(--sp-success-light); }
+.sp-email-cat-neutral { color: var(--sp-text-secondary); background: var(--sp-bg); }
+
+.sp-email-date {
+	color:                                                     var(--sp-text-light);
+	font-size:                                                 12px;
+	white-space:                                               nowrap;
+}
+
+.sp-email-where {
+	color:                                                     var(--sp-text-secondary);
+	font-size:                                                 13px;
+	margin-top:                                                2px;
+}
+
+.sp-email-message {
+	margin:                                                    10px 0 0;
+	color:                                                     var(--sp-text);
+	white-space:                                               pre-line;
+	line-height:                                               1.5;
+}
+
+.sp-email-foot {
+	display:                                                   flex;
+	align-items:                                               center;
+	justify-content:                                          space-between;
+	gap:                                                       10px;
+	flex-wrap:                                                 wrap;
+	margin-top:                                                12px;
+}
+
+.sp-email-contacts {
+	display:                                                   flex;
+	gap:                                                       8px;
+	flex-wrap:                                                 wrap;
+}
+
+.sp-email-actions {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       8px;
+	margin-left:                                               auto;
+}
+
+/* Add/Edit modal */
+.sp-modal.sp-dir-form {
+	max-width:                                                 640px;
+	width:                                                     100%;
+}
+
+.sp-dir-form-top {
+	display:                                                   flex;
+	gap:                                                       16px;
+	align-items:                                               flex-start;
+}
+
+.sp-dir-form-names {
+	flex:                                                      1 1 auto;
+	min-width:                                                 0;
+}
+
+.sp-dir-photo-edit {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	align-items:                                               center;
+	gap:                                                       8px;
+}
+
+.sp-dir-photo-edit .sp-dir-photo {
+	width:                                                     76px;
+	height:                                                    76px;
+}
+
+.sp-btn.sp-btn-sm {
+	padding:                                                   4px 12px;
+	font-size:                                                 12px;
+}
+
+.sp-form-row {
+	display:                                                   flex;
+	gap:                                                       12px;
+	flex-wrap:                                                 wrap;
+}
+
+.sp-form-row .sp-form-group {
+	flex:                                                      1 1 0;
+	min-width:                                                 120px;
+}
+
+.sp-form-row .sp-form-group.sp-grow2 {
+	flex:                                                      2 1 0;
+}
+
+.sp-dir-days {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       6px 14px;
+}
+
+.sp-dir-day {
+	display:                                                   inline-flex;
+	align-items:                                               center;
+	gap:                                                       5px;
+	font-size:                                                 13px;
+	color:                                                     var(--sp-text);
+}
+
+/* Read-only detail modal */
+.sp-modal.sp-dir-detail {
+	max-width:                                                 520px;
+	width:                                                     100%;
+}
+
+.sp-dir-detail-head {
+	display:                                                   flex;
+	gap:                                                       14px;
+	align-items:                                               flex-start;
+	padding-bottom:                                            14px;
+	margin-bottom:                                             14px;
+	border-bottom:                                             1px solid var(--sp-border);
+}
+
+.sp-dir-detail-head .sp-dir-photo {
+	width:                                                     72px;
+	height:                                                    72px;
+}
+
+.sp-dir-detail-name {
+	font-weight:                                               700;
+	font-size:                                                 18px;
+	color:                                                     var(--sp-text);
+}
+
+.sp-dir-detail-grid {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	gap:                                                       8px;
+}
+
+.sp-dir-detail-row {
+	display:                                                   flex;
+	gap:                                                       12px;
+	align-items:                                               baseline;
+}
+
+.sp-dir-detail-label {
+	flex:                                                      0 0 110px;
+	color:                                                     var(--sp-text-secondary);
+	font-size:                                                 12px;
+	font-weight:                                               600;
+	text-transform:                                            uppercase;
+	letter-spacing:                                            0.03em;
+}
+
+.sp-dir-detail-val {
+	flex:                                                      1 1 auto;
+	color:                                                     var(--sp-text);
+	white-space:                                               pre-line;
+}
+
+@media (max-width: 600px) {
+	.sp-dir-form-top {
+		flex-direction:                                           column;
+		align-items:                                              stretch;
+	}
+	.sp-dir-photo-edit {
+		align-self:                                               center;
+	}
+	.sp-dir-detail-row {
+		flex-direction:                                           column;
+		gap:                                                      2px;
+	}
+	.sp-dir-detail-label {
+		flex-basis:                                               auto;
+	}
 }

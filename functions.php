@@ -1639,6 +1639,7 @@ require_once get_template_directory().'/includes/includes-time-tracker.php';
 // GBP hub: loaded everywhere but self-gating — only the install whose wp-config defines
 // BPGBP_REFRESH_TOKEN actually becomes the hub and registers the /bpgbp/v1/* routes.
 require_once get_template_directory().'/includes/includes-gbp-hub.php';
+require_once get_template_directory().'/includes/includes-gbp-hub-registry.php';
 require_once get_template_directory().'/functions-grid.php';
 require_once get_template_directory().'/functions-public.php';
 

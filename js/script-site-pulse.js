@@ -30,6 +30,7 @@ const ICON_RECEIPT = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none
 const ICON_CHECK = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
 const ICON_ATTACH = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>';
 const ICON_TASK = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
+const ICON_MIC = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
 
 // kind: 'edit' | 'delete'. cls = extra functional class(es); attrs = raw attribute string (data-*, disabled…).
 function iconBtn(kind, cls = '', attrs = '') {
@@ -128,8 +129,8 @@ function init() {
 	initMileage();
 	initAdminMileage();
 	initReviews();
+	initAgencyReviews();
 	initSurveys();
-	initUndo();
 	initNewsSliders();
 	restoreViewState();
 }
@@ -165,42 +166,6 @@ function initNewsSliders(root) {
 		}, true);
 	});
 }
-
-// Header "Undo" button: restores the most recently deleted mileage day or expense line.
-function initUndo() {
-	const btn = $('#sp-undo-btn');
-	if (!btn || btn._wired) return;
-	btn._wired = true;
-	btn.addEventListener('click', async () => {
-		btn.disabled = true;
-		try {
-			const r = await spAjax('site_pulse_undo_delete', {});
-			if (r.success) {
-				spFlash('Restored: ' + (r.data?.label || 'item'));
-				spRefreshAfterUndo(r.data?.kind, r.data?.section);
-			} else {
-				spFlash(r.data?.message || 'Nothing to undo');
-			}
-		} catch (e) { spFlash('Could not undo'); }
-		btn.disabled = false;
-	});
-}
-
-// Refresh whatever view the restored record belongs to (its panel content div always exists).
-function spRefreshAfterUndo(kind, section) {
-	try {
-		if (kind === 'mileage' && typeof loadMileageEntries === 'function') loadMileageEntries();
-		if (kind === 'expense') {
-			if (section === 'B' && typeof loadVehicleExpenses === 'function') loadVehicleExpenses();
-			else if (section === 'C' && typeof loadBusinessMeals === 'function') loadBusinessMeals();
-			else if (section === 'D' && typeof loadCompetitiveShopping === 'function') loadCompetitiveShopping();
-			else if (section === 'E' && typeof loadOtherExpenses === 'function') loadOtherExpenses();
-		}
-		// The Expense Report cover page rolls up everything — refresh it too if it's been opened.
-		if (typeof loadExpenseReport === 'function' && $('#sp-rep-content')?.children.length) loadExpenseReport();
-	} catch (e) {}
-}
-
 
 /*--------------------------------------------------------------
 # God Mode — Impersonation
@@ -326,6 +291,7 @@ function activatePanel(panelId) {
 	if (panelId === 'analytics') {
 		populateAnalyticsFilters();
 		loadAnalytics(true);
+		initReportsDigestBtn();
 	}
 	if (panelId === 'mileage-map') {
 		loadMileageMap();
@@ -335,10 +301,22 @@ function activatePanel(panelId) {
 	}
 	if (panelId === 'reviews') {
 		loadReviews();
+		loadReviewStats();
+	}
+	if (panelId === 'agency-reviews') {
+		loadAgencyReviews();
 	}
 	if (panelId === 'surveys') {
 		initSurveys();
 		loadSurveys();
+	}
+	if (panelId === 'directory') {
+		initDirectory();
+		loadDirectory();
+	}
+	if (panelId === 'emails') {
+		initEmails();
+		loadEmails();
 	}
 	if (panelId === 'import-reports') {
 		initImportReports();
@@ -366,6 +344,12 @@ function activatePanel(panelId) {
 	// item always lands on the main list (e.g. My Mileage while on Add-a-Day).
 	if (panelId === 'mileage' && typeof hideMileageForm === 'function') hideMileageForm();
 	if (panelId === 'reports-my' && typeof hideReportForm === 'function') hideReportForm();
+
+	// A new panel is effectively a new page — jump back to the top so the user starts at its header
+	// instead of wherever they'd scrolled to in the previous panel (most noticeable on mobile).
+	window.scrollTo(0, 0);
+	const spMain = document.getElementById('sp-main');
+	if (spMain) spMain.scrollTop = 0;
 
 	saveViewState({ panel: panelId });
 }
@@ -565,6 +549,41 @@ function initNotifications() {
 	};
 	tick();
 	setInterval(tick, 60000);
+
+	// When a push lands while the app is open, the service worker pings us — refresh the counts
+	// immediately so the bell + app badge reflect the new activity without waiting for the poll.
+	if (navigator.serviceWorker) {
+		navigator.serviceWorker.addEventListener('message', (e) => {
+			if (e.data && e.data.type === 'sp-activity') {
+				loadNotificationCount();
+				if (typeof loadMsgUnread === 'function') loadMsgUnread();
+			}
+		});
+	}
+
+	// Opening/returning to the app dismisses any delivered push notifications still sitting in the OS
+	// notification shade. Android stamps the app icon with its OWN badge for undismissed notifications
+	// (separate from the Web Badging count) — clearing them here removes that lingering "1".
+	spClearDeliveredNotifications();
+	document.addEventListener('visibilitychange', () => {
+		if (document.visibilityState === 'visible') spClearDeliveredNotifications();
+	});
+}
+
+function spClearDeliveredNotifications() {
+	if (!navigator.serviceWorker) return;
+	// Authoritative path: ask the SW to dismiss its notifications + clear the badge (it owns them, and
+	// on Android the launcher badge is the OS notification count — only closing them clears it).
+	try {
+		if (navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage({ type: 'sp-clear' });
+	} catch (e) {}
+	// Fallback: also close from the page (covers the brief window before a controller is claimed).
+	if (navigator.serviceWorker.ready) {
+		navigator.serviceWorker.ready
+			.then((reg) => reg.getNotifications ? reg.getNotifications() : [])
+			.then((ns) => ns.forEach((n) => n.close()))
+			.catch(() => {});
+	}
 }
 
 async function loadNotificationCount() {
@@ -576,8 +595,11 @@ async function loadNotificationCount() {
 	} catch (err) {}
 }
 
+// `count` = unread SYSTEM notifications (messages aren't notifications — they have their own count).
+// Drives both the bell badge and the notification half of the app-icon badge (icon = this + messages).
 function updateNotificationBadge(count) {
 	_spBellCount = count || 0;
+	_spNotifBadgeCount = count || 0;
 	spUpdateAppBadge();
 	const badge = $('#sp-notification-badge');
 	if (!badge) return;
@@ -589,13 +611,22 @@ function updateNotificationBadge(count) {
 	}
 }
 
-// PWA home-screen icon badge (Web Badging API) — reflects total unread (bell + messages) whenever
-// the app is running. Updated on every unread poll. Silently a no-op where unsupported / not
-// installed. (Closed-app updates need Web Push — see roadmap item 6.)
-let _spBellCount = 0, _spMsgCount = 0;
+// PWA home-screen icon badge (Web Badging API) — reflects unread messages + non-message
+// notifications (messages counted once, not twice) whenever the app is running. Updated on every
+// unread poll. Silently a no-op where unsupported / not installed.
+let _spBellCount = 0, _spMsgCount = 0, _spNotifBadgeCount = 0;
 function spUpdateAppBadge() {
+	const total = (_spNotifBadgeCount || 0) + (_spMsgCount || 0);
+	// Prefer the service worker: on Android the launcher badge only updates reliably from the SW
+	// context (the page's own setAppBadge/clearAppBadge silently does nothing on many installs).
+	try {
+		if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+			navigator.serviceWorker.controller.postMessage({ type: 'sp-badge', count: total });
+			return;
+		}
+	} catch (e) {}
+	// Fallback (desktop / no controller yet): set it straight from the page.
 	if (!('setAppBadge' in navigator)) return;
-	const total = (_spBellCount || 0) + (_spMsgCount || 0);
 	try {
 		if (total > 0) navigator.setAppBadge(total);
 		else navigator.clearAppBadge();
@@ -782,10 +813,15 @@ async function spPushInit() {
 	_spPush.supported = ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
 	const slot = $('#sp-push-prompt');
 	if (!slot) return;
-	if (!_spPush.supported) { slot.hidden = true; return; }
 	let meta;
 	try { const r = await spAjax('site_pulse_push_meta', {}); if (r && r.success) meta = r.data; } catch (e) {}
-	if (!meta || !meta.enabled) { slot.hidden = true; return; } // site hasn't turned push on
+	if (!meta || !meta.enabled) { slot.hidden = true; return; } // site hasn't turned push on — hide entirely
+	// Push is on site-wide, so from here the row ALWAYS shows a status (never silently hidden).
+	if (!_spPush.supported) {
+		slot.hidden = false;
+		slot.innerHTML = '<span class="sp-push-state">This device or browser doesn’t support push notifications.</span>';
+		return;
+	}
 	_spPush.vapid = meta.vapid_public || '';
 	spPushRender();
 }
@@ -793,14 +829,31 @@ async function spPushInit() {
 async function spPushRender() {
 	const slot = $('#sp-push-prompt');
 	if (!slot) return;
-	let sub = null;
-	try { const reg = await navigator.serviceWorker.ready; sub = await reg.pushManager.getSubscription(); } catch (e) {}
 	slot.hidden = false;
+	slot.innerHTML = '<span class="sp-push-state">Checking notifications…</span>';
+
+	// Don't let a service worker that never reaches "ready" hang this forever (the prior silent failure).
+	let reg = null;
+	try {
+		reg = await Promise.race([
+			navigator.serviceWorker.ready,
+			new Promise((_, rej) => setTimeout(() => rej(new Error('sw-timeout')), 4000))
+		]);
+	} catch (e) {}
+
+	if (!reg) {
+		slot.innerHTML = '<span class="sp-push-state">Couldn’t start notifications — the app’s background service isn’t active yet. Fully close the app and reopen it from the home screen, then check here again.</span>';
+		return;
+	}
+
+	let sub = null;
+	try { sub = await reg.pushManager.getSubscription(); } catch (e) {}
+
 	if (sub) {
 		slot.innerHTML = '<span class="sp-push-state">🔔 Notifications on for this device.</span> <button type="button" class="unique sp-btn sp-btn-ghost sp-push-off">Turn off</button>';
 		$('.sp-push-off', slot)?.addEventListener('click', spPushUnsubscribe);
 	} else if (typeof Notification !== 'undefined' && Notification.permission === 'denied') {
-		slot.innerHTML = '<span class="sp-push-state">Notifications are blocked in this browser’s settings.</span>';
+		slot.innerHTML = '<span class="sp-push-state">Notifications are blocked for this app in your device settings — turn them back on there first.</span>';
 	} else {
 		slot.innerHTML = '<button type="button" class="unique sp-btn sp-btn-primary sp-push-on">Turn on notifications for this device</button>';
 		$('.sp-push-on', slot)?.addEventListener('click', spPushSubscribe);
@@ -808,14 +861,15 @@ async function spPushRender() {
 }
 
 async function spPushSubscribe() {
-	if (!_spPush.vapid) { alert('Push isn’t configured yet.'); return; }
+	if (!_spPush.vapid) { alert('Push isn’t set up on the server yet (no VAPID key). Check Settings → Push.'); return; }
 	try {
 		const perm = await Notification.requestPermission();
 		if (perm !== 'granted') { spPushRender(); return; }
 		const reg = await navigator.serviceWorker.ready;
 		const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: spUrlB64ToUint8(_spPush.vapid) });
-		await spAjax('site_pulse_push_subscribe', { sub: JSON.stringify(sub) });
-	} catch (e) { alert('Could not enable notifications on this device.'); }
+		const res = await spAjax('site_pulse_push_subscribe', { sub: JSON.stringify(sub) });
+		if (!res || !res.success) { alert('This device got a subscription but the server rejected it: ' + (res?.data?.message || 'unknown error')); }
+	} catch (e) { alert('Could not enable notifications on this device: ' + (e && e.message ? e.message : e)); }
 	spPushRender();
 }
 
@@ -851,7 +905,57 @@ function initDashboardMessages() {
 # Messages (direct messages between users)
 --------------------------------------------------------------*/
 
-let _spMsg = { cid: 0, timer: null, editing: false, meta: null, seenTimer: null, maxId: 0 };
+let _spMsg = { cid: 0, timer: null, editing: false, meta: null, seenTimer: null, maxId: 0, threadSig: '' };
+
+// A cheap fingerprint of the rendered thread (messages + the seen receipt). The poll uses it to skip
+// re-rendering when nothing changed — a full innerHTML swap every 10s is what caused the flicker.
+function spMsgThreadSig(data) {
+	const msgs = data.messages || [];
+	return msgs.map(m => `${m.id}:${m.edited || 0}:${(m.body || '').length}:${m.attach_url ? 1 : 0}`).join(',') + '|' + spMsgReceiptHTML(data);
+}
+
+// Speech-to-text dictation into the composer (Web Speech API). The mic button only appears when the
+// browser supports it (Android Chrome, desktop Chrome/Edge, iOS Safari 14.5+).
+let _spDictation = { rec: null, active: false };
+function spMsgSpeechApi() { return window.SpeechRecognition || window.webkitSpeechRecognition || null; }
+
+function spMsgInitMic(thread) {
+	const btn = $('#sp-msg-mic', thread);
+	if (!btn || !spMsgSpeechApi()) return; // unsupported → button stays hidden
+	btn.hidden = false;
+	btn.addEventListener('click', () => spMsgToggleDictation(btn));
+}
+
+function spMsgToggleDictation(btn) {
+	// Already listening → stop.
+	if (_spDictation.active && _spDictation.rec) { try { _spDictation.rec.stop(); } catch (e) {} return; }
+
+	const SR = spMsgSpeechApi();
+	const input = $('#sp-msg-input');
+	if (!SR || !input) return;
+
+	const rec = new SR();
+	rec.lang = navigator.language || 'en-US';
+	rec.interimResults = true;
+	rec.continuous = true;
+	_spDictation.rec = rec;
+
+	const base = input.value || ''; // keep anything already typed
+
+	rec.onstart = () => { _spDictation.active = true; btn.classList.add('listening'); btn.title = 'Stop dictating'; };
+	const stop = () => { _spDictation.active = false; btn.classList.remove('listening'); btn.title = 'Dictate a message'; };
+	rec.onend = stop;
+	rec.onerror = stop;
+	rec.onresult = (e) => {
+		let text = '';
+		for (let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript;
+		const sep = base && !/\s$/.test(base) ? ' ' : '';
+		input.value = base + sep + text;
+		input.dispatchEvent(new Event('input'));
+	};
+
+	try { rec.start(); } catch (e) {}
+}
 
 // "Seen" read-receipt under the viewer's last sent message: shown once another participant's seen
 // pointer reaches it (1:1 → "Seen <time>", group → "Seen by …"). data.seen = other participants'
@@ -891,7 +995,9 @@ function msgBubbleHTML(m, isGroup) {
 	// Every message gets a "create action item" control; own messages also get Edit/Delete. In a
 	// group, others' bubbles show the sender name.
 	let actions = '<div class="sp-msg-bubble-actions">';
-	actions += `<button type="button" class="unique sp-msg-task" title="Create action item" aria-label="Create action item from this message">${ICON_TASK}</button>`;
+	actions += m.has_task
+		? `<button type="button" class="unique sp-msg-task is-done" title="Action item already created" aria-label="Action item already created from this message" disabled>${ICON_TASK}</button>`
+		: `<button type="button" class="unique sp-msg-task" title="Create action item" aria-label="Create action item from this message">${ICON_TASK}</button>`;
 	if (m.mine) {
 		actions += `<button type="button" class="unique sp-msg-edit" title="Edit" aria-label="Edit message">${ICON_EDIT}</button>`;
 		actions += `<button type="button" class="unique sp-msg-del" title="Delete" aria-label="Delete message">${ICON_DELETE}</button>`;
@@ -943,7 +1049,7 @@ function initMessages() {
 		threadEl._wiredActions = true;
 		threadEl.addEventListener('click', (e) => {
 			const taskBtn = e.target.closest('.sp-msg-task');
-			if (taskBtn) { const b = taskBtn.closest('.sp-msg-bubble'); if (b) spMsgCreateAction(parseInt(b.dataset.id, 10)); return; }
+			if (taskBtn) { if (taskBtn.disabled) return; const b = taskBtn.closest('.sp-msg-bubble'); if (b) spMsgCreateAction(parseInt(b.dataset.id, 10)); return; }
 			const editBtn = e.target.closest('.sp-msg-edit');
 			if (editBtn) { const b = editBtn.closest('.sp-msg-bubble'); if (b) editMsg(parseInt(b.dataset.id, 10), b); return; }
 			const delBtn = e.target.closest('.sp-msg-del');
@@ -1064,8 +1170,11 @@ async function spMsgCreateAction(mid) {
 		const btn = $('.sp-act-create', backdrop);
 		if (btn) btn.disabled = true;
 		try {
-			const res = await spAjax('site_pulse_messages_action_create', { conversation_id: data.conversation_id, assign, items: JSON.stringify(chosen) });
+			const res = await spAjax('site_pulse_messages_action_create', { conversation_id: data.conversation_id, assign, items: JSON.stringify(chosen), message_id: mid });
 			if (res.success) {
+				// Lock this message's task button immediately for the clicker (others get it via the poll).
+				const tb = document.querySelector(`#sp-msg-bubbles .sp-msg-bubble[data-id="${mid}"] .sp-msg-task`);
+				if (tb) { tb.disabled = true; tb.classList.add('is-done'); tb.title = 'Action item already created'; }
 				const n = res.data.created || 0;
 				backdrop.innerHTML = `<div class="sp-report-form-wrap"><p style="text-align:center;font-weight:600;margin:8px 0 16px;">✓ Added ${n} action item${n === 1 ? '' : 's'}.</p><div class="sp-report-form-actions" style="justify-content:center;"><button type="button" class="unique sp-btn sp-btn-primary sp-act-cancel">Done</button></div></div>`;
 				$('.sp-act-cancel', backdrop)?.addEventListener('click', () => closeFormModal());
@@ -1151,6 +1260,12 @@ async function openMsgConversation(cid) {
 		renderMsgThread(res.data);
 		loadMsgConversations();
 		loadMsgUnread();
+		// Reading this thread clears its push notification from the shade (and drops the icon badge by one).
+		try {
+			if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+				navigator.serviceWorker.controller.postMessage({ type: 'sp-close-tag', tag: 'sp-conv-' + cid });
+			}
+		} catch (e) {}
 	} catch (e) {}
 }
 
@@ -1167,26 +1282,61 @@ function renderMsgThread(data) {
 	html += spMsgReceiptHTML(data);
 	html += '</div>';
 	html += '<form class="sp-msg-composer" id="sp-msg-composer">'
+		+ '<button type="button" class="sp-msg-mic-btn unique" id="sp-msg-mic" title="Dictate a message" aria-label="Dictate a message" hidden>' + ICON_MIC + '</button>'
 		+ '<label class="sp-msg-attach-btn unique" title="Attach a file" aria-label="Attach a file">' + ICON_ATTACH + '<input type="file" id="sp-msg-file" hidden></label>'
 		+ '<textarea class="sp-msg-input" id="sp-msg-input" rows="1" placeholder="Type a message…"></textarea>'
 		+ '<button type="submit" class="unique sp-btn sp-btn-primary">Send</button></form>';
 	thread.innerHTML = html;
 	markUniqueSpans(thread);
 
+	// Open scrolled to the FIRST UNREAD message (not the top like iOS, not always the bottom like Android).
+	// First unread = the earliest incoming message newer than what this user had previously read.
 	const bubbles = $('#sp-msg-bubbles', thread);
-	if (bubbles) bubbles.scrollTop = bubbles.scrollHeight;
+	if (bubbles) {
+		const lastRead = parseInt(data.last_read_id, 10) || 0;
+		let firstUnread = null;
+		for (const m of (data.messages || [])) {
+			if (!m.mine && parseInt(m.id, 10) > lastRead) { firstUnread = m.id; break; }
+		}
+		const el = firstUnread != null ? bubbles.querySelector(`.sp-msg-bubble[data-id="${firstUnread}"]`) : null;
+		if (el) {
+			// Pin the first unread message near the top of the thread (confined to the bubbles scroller).
+			const top = el.getBoundingClientRect().top - bubbles.getBoundingClientRect().top + bubbles.scrollTop;
+			bubbles.scrollTop = Math.max(0, top - 8);
+		} else {
+			bubbles.scrollTop = bubbles.scrollHeight; // all caught up → jump to the latest
+		}
+	}
 
 	$('#sp-msg-composer', thread)?.addEventListener('submit', (e) => { e.preventDefault(); sendMsg(); });
 	const input = $('#sp-msg-input', thread);
 	input?.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } });
+	// Paste an image straight from the clipboard (e.g. a screenshot + Ctrl/Cmd-V) → send it as an attachment.
+	input?.addEventListener('paste', (e) => {
+		const items = e.clipboardData && e.clipboardData.items;
+		if (!items) return;
+		for (let i = 0; i < items.length; i++) {
+			const it = items[i];
+			if (it.kind === 'file' && it.type && it.type.indexOf('image/') === 0) {
+				let file = it.getAsFile();
+				if (!file) continue;
+				if (!file.name) file = new File([file], `pasted-${Date.now()}.png`, { type: file.type || 'image/png' });
+				e.preventDefault(); // don't dump the image's raw data into the textarea
+				uploadMsgFile(file); // includes any text already typed as the caption
+				return;
+			}
+		}
+	});
 	input?.focus();
 	const fileInput = $('#sp-msg-file', thread);
 	fileInput?.addEventListener('change', () => { if (fileInput.files && fileInput.files[0]) { uploadMsgFile(fileInput.files[0]); fileInput.value = ''; } });
 	$('.sp-msg-manage', thread)?.addEventListener('click', () => openGroupManage(conv));
+	spMsgInitMic(thread);
 
 	// "Seen" dwell: track the latest message and arm the 3s timer.
 	const msgs = data.messages || [];
 	_spMsg.maxId = msgs.length ? parseInt(msgs[msgs.length - 1].id, 10) : 0;
+	_spMsg.threadSig = spMsgThreadSig(data); // so the first poll doesn't needlessly re-render
 	spMsgStartSeenTimer(conv.id || _spMsg.cid);
 }
 
@@ -1198,11 +1348,19 @@ async function refreshMsgThread(cid) {
 		if (!res.success) return;
 		const bubbles = $('#sp-msg-bubbles');
 		if (!bubbles) return;
+		// Nothing changed since the last render → leave the DOM (and scroll) untouched. This is the
+		// common poll outcome and skipping it is what stops the every-10s flicker.
+		const sig = spMsgThreadSig(res.data);
+		if (sig === _spMsg.threadSig) return;
+		_spMsg.threadSig = sig;
+
 		const isGroup = !!(res.data.conversation && res.data.conversation.is_group);
-		const atBottom = Math.abs(bubbles.scrollHeight - bubbles.scrollTop - bubbles.clientHeight) < 40;
 		const msgs = res.data.messages || [];
+		const atBottom = Math.abs(bubbles.scrollHeight - bubbles.scrollTop - bubbles.clientHeight) < 40;
+		const prevTop = bubbles.scrollTop;
 		bubbles.innerHTML = msgs.map(m => msgBubbleHTML(m, isGroup)).join('') + spMsgReceiptHTML(res.data);
-		if (atBottom) bubbles.scrollTop = bubbles.scrollHeight;
+		// Keep the viewport steady: snap to bottom only if they were already there, else hold position.
+		bubbles.scrollTop = atBottom ? bubbles.scrollHeight : prevTop;
 
 		// New messages arrived while viewing → they need their own 3s dwell before counting as seen.
 		const newMax = msgs.length ? parseInt(msgs[msgs.length - 1].id, 10) : 0;
@@ -2177,6 +2335,141 @@ function renderReviewList(container, reports) {
 let analyticsLoaded = false;
 let analyticsFiltersPopulated = false;
 
+// God-only: build/refresh the AI report index (condense each report into a search/trend digest). Loops
+// batches like the review-analyzer so a big backlog finishes on one click; the cron keeps it current.
+function initReportsDigestBtn() {
+	const btn = $('#sp-reports-digest-btn');
+	if (btn && !btn._wired) { btn._wired = true; btn.addEventListener('click', runReportsDigest); }
+
+	const sBtn = $('#sp-reports-ai-search-btn');
+	if (sBtn && !sBtn._wired) { sBtn._wired = true; sBtn.addEventListener('click', () => runReportSearch()); }
+
+	const aBtn = $('#sp-reports-ai-ask-btn');
+	if (aBtn && !aBtn._wired) {
+		aBtn._wired = true;
+		aBtn.addEventListener('click', () => runReportAsk());
+		// Enter in the box asks a question (the headline action); use the Search button for keyword lookups.
+		$('#sp-reports-ai-q')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); runReportAsk(); } });
+	}
+}
+
+// Keyword search across the report corpus (digests + raw answers). Results link into the report detail.
+async function runReportSearch() {
+	const box = $('#sp-reports-ai-results');
+	if (!box) return;
+	const q = $('#sp-reports-ai-q')?.value.trim() || '';
+	const type = $('#sp-reports-ai-type')?.value || '';
+	const location_id = $('#sp-reports-ai-location')?.value || '';
+	const range = $('#sp-reports-ai-range')?.value || '';
+	box.innerHTML = '<div class="sp-loading"></div>';
+	try {
+		const res = await spAjax('site_pulse_reports_search', { q, type, location_id, range });
+		if (!res.success) { box.innerHTML = `<div class="sp-empty">${esc(res.data?.message || 'Search failed.')}</div>`; return; }
+		spFillReportLocations(res.data.locations || []);
+		renderReportSearch(res.data.results || []);
+	} catch (e) { box.innerHTML = '<div class="sp-empty">Search error.</div>'; }
+}
+
+let _spReportLocLoaded = false;
+function spFillReportLocations(locs) {
+	const sel = $('#sp-reports-ai-location');
+	if (!sel || _spReportLocLoaded) return;
+	_spReportLocLoaded = true;
+	const cur = sel.value;
+	sel.innerHTML = '<option value="">All locations</option>' + locs.map(l => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join('');
+	sel.value = cur;
+}
+
+function renderReportSearch(results) {
+	const box = $('#sp-reports-ai-results');
+	if (!box) return;
+	if (!results.length) { box.innerHTML = '<div class="sp-empty">No reports match.</div>'; return; }
+	box.innerHTML = results.map(r => {
+		const date = r.period_end ? new Date(r.period_end + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+		const chips = (r.categories || []).map(c => {
+			const cls = c.score >= 4 ? 'sp-report-chip-good' : (c.score === 3 ? 'sp-report-chip-ok' : 'sp-report-chip-bad');
+			return `<span class="unique sp-report-chip ${cls}">${esc(c.label)}${c.score ? ' ' + c.score : ''}</span>`;
+		}).join('');
+		return `<div class="sp-report-result" data-report-id="${r.id}">` +
+			`<div class="sp-report-result-head"><span class="unique sp-report-result-title">${esc(r.location || r.author || 'Report')}</span>` +
+			`<span class="unique sp-report-result-meta">${esc(r.type)}${date ? ' · ' + esc(date) : ''}${r.author ? ' · ' + esc(r.author) : ''}</span></div>` +
+			(r.summary ? `<p class="sp-report-result-summary">${esc(r.summary)}</p>` : '') +
+			(chips ? `<div class="sp-report-result-chips">${chips}</div>` : '') +
+		'</div>';
+	}).join('');
+	markUniqueSpans(box);
+	$$('.sp-report-result', box).forEach(el => el.addEventListener('click', () => {
+		activatePanel('reports-review');
+		showReportDetail(el.dataset.reportId, 'review');
+	}));
+}
+
+// Ask AI: send the question + scope; Sonnet reads the in-scope digests and answers trends/insights.
+async function runReportAsk() {
+	const box = $('#sp-reports-ai-results');
+	if (!box) return;
+	const q = $('#sp-reports-ai-q')?.value.trim() || '';
+	if (!q) { spFlash('Type a question first.'); return; }
+	const type = $('#sp-reports-ai-type')?.value || '';
+	const location_id = $('#sp-reports-ai-location')?.value || '';
+	const range = $('#sp-reports-ai-range')?.value || '';
+	box.innerHTML = '<div class="sp-loading"></div><p class="sp-help-text" style="text-align:center;margin-top:8px;">Reading the reports…</p>';
+	try {
+		const res = await spAjax('site_pulse_reports_ask', { q, type, location_id, range });
+		if (!res.success) { box.innerHTML = `<div class="sp-empty">${esc(res.data?.message || 'Could not answer that.')}</div>`; return; }
+		renderReportAnswer(res.data.answer || '', res.data.count || 0, q);
+	} catch (e) { box.innerHTML = '<div class="sp-empty">Could not answer that.</div>'; }
+}
+
+// Minimal markdown → HTML for the AI answer (escape first, then **bold**, bullets, and paragraphs).
+function spLightMarkdown(t) {
+	let h = esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+	const lines = h.split('\n');
+	let out = '', inList = false;
+	lines.forEach(line => {
+		const m = line.match(/^\s*[-*•]\s+(.*)$/);
+		if (m) { if (!inList) { out += '<ul>'; inList = true; } out += `<li>${m[1]}</li>`; return; }
+		if (inList) { out += '</ul>'; inList = false; }
+		if (line.trim() !== '') out += `<p>${line}</p>`;
+	});
+	if (inList) out += '</ul>';
+	return out;
+}
+
+function renderReportAnswer(answer, count, question) {
+	const box = $('#sp-reports-ai-results');
+	if (!box) return;
+	box.innerHTML =
+		'<div class="sp-report-answer">' +
+			`<div class="sp-report-answer-q">${esc(question)}</div>` +
+			`<div class="sp-report-answer-body">${spLightMarkdown(answer)}</div>` +
+			`<div class="sp-report-answer-meta">Based on ${spComma(count)} report${count === 1 ? '' : 's'}.</div>` +
+		'</div>';
+}
+
+async function runReportsDigest() {
+	const btn = $('#sp-reports-digest-btn');
+	const status = $('#sp-reports-digest-status');
+	if (!btn || btn.disabled) return;
+	const orig = btn.textContent;
+	btn.disabled = true;
+	btn.textContent = 'Indexing…';
+	let errored = false, total = 0;
+	try {
+		while (true) {
+			const res = await spAjax('site_pulse_reports_digest_batch', {});
+			if (!res.success) { spFlash(res.data?.message || 'Indexing failed.'); errored = true; break; }
+			total += res.data.done || 0;
+			if (status) status.textContent = res.data.remaining > 0 ? `Indexed ${spComma(total)} — ${spComma(res.data.remaining)} to go…` : `Indexed ${spComma(total)}.`;
+			if (res.data.error) { spFlash(res.data.error); errored = true; break; }
+			if (!res.data.remaining || res.data.done === 0) break;
+		}
+	} catch (e) { spFlash('Indexing failed.'); errored = true; }
+	btn.disabled = false;
+	btn.textContent = orig;
+	if (!errored) spFlash('Report index up to date.');
+}
+
 async function populateAnalyticsFilters() {
 	if (analyticsFiltersPopulated) return;
 	analyticsFiltersPopulated = true;
@@ -2483,6 +2776,11 @@ async function loadNotificationSettings() {
 	const routing = data.routing || {};
 	const colKeys = Object.keys(columns);
 
+	// A row with no columns set arrives as an empty array []. Reading row['push'] on an array returns
+	// Array.prototype.push (a truthy function!) — which falsely checked the Push box on every empty
+	// row. Test for an OWN property so only genuinely-saved columns count, never inherited methods.
+	const isOn = (row, col) => !!(row && Object.prototype.hasOwnProperty.call(row, col) && row[col]);
+
 	// Direct-messages email toggle (independent of the matrix; auto-saves).
 	let html = '<div class="sp-settings-card">';
 	html += '<h3 style="margin:0 0 4px;">Direct messages</h3>';
@@ -2497,6 +2795,7 @@ async function loadNotificationSettings() {
 	html += '<p class="sp-help-text" style="margin:0 0 12px;">Send notifications to phones/desktops even when the app is closed (installed-to-home-screen apps; iOS 16.4+). When on, each person turns it on for their own device from the notification bell, and you choose which situations push using the <strong>Push</strong> column below.</p>';
 	html += `<label class="sp-reminder-toggle"><input type="checkbox" id="sp-push-enable-toggle"${String(data.push_enabled) === '1' ? ' checked' : ''}> Enable push notifications for this app</label>`;
 	html += '<span class="sp-help-text" id="sp-push-enable-status" style="margin-left:12px;"></span>';
+	html += '<div style="margin-top:12px;"><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-push-test-btn">Send test notification to my devices</button> <span class="sp-help-text" id="sp-push-test-status" style="margin-left:12px;"></span></div>';
 	html += '</div>';
 
 	html += '<div class="sp-settings-card">';
@@ -2512,7 +2811,7 @@ async function loadNotificationSettings() {
 		const row = routing[ev] || {};
 		html += `<tr data-event="${esc(ev)}"><td>${esc(events[ev])}</td>`;
 		colKeys.forEach(ck => {
-			html += `<td class="sp-notif-cell"><input type="checkbox" class="sp-notif-cb" data-event="${esc(ev)}" data-col="${esc(ck)}"${row[ck] ? ' checked' : ''}></td>`;
+			html += `<td class="sp-notif-cell"><input type="checkbox" autocomplete="off" class="sp-notif-cb" data-event="${esc(ev)}" data-col="${esc(ck)}"${isOn(row, ck) ? ' checked' : ''}></td>`;
 		});
 		html += '</tr>';
 	});
@@ -2522,6 +2821,13 @@ async function loadNotificationSettings() {
 
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
+
+	// Browsers restore a checkbox's prior on/off state across reloads, overriding the server-rendered
+	// `checked` attribute — which made unchecked boxes (e.g. Push) reappear checked. Force every box to
+	// match the loaded routing so the DOM always reflects the saved settings, not the browser's cache.
+	$$('.sp-notif-cb', wrap).forEach(cb => {
+		cb.checked = isOn(routing[cb.dataset.event], cb.dataset.col);
+	});
 
 	// Auto-save on each checkbox change (consistent with the rest of Settings — no Save button).
 	let notifSaveTimer = null;
@@ -2566,6 +2872,19 @@ async function loadNotificationSettings() {
 			if (st) st.textContent = (res && res.success) ? 'Saved.' : 'Could not save.';
 			if (typeof spPushInit === 'function') spPushInit();
 		} catch (e) { if (st) st.textContent = 'Could not save.'; }
+	});
+
+	// Diagnostic: push a notification to the admin's own subscribed devices and report the result.
+	const pushTest = $('#sp-push-test-btn', wrap);
+	pushTest?.addEventListener('click', async () => {
+		const st = $('#sp-push-test-status', wrap);
+		if (st) st.textContent = 'Sending…';
+		pushTest.disabled = true;
+		try {
+			const res = await spAjax('site_pulse_push_test', {});
+			if (st) st.textContent = (res?.data?.message) || (res?.success ? 'Sent.' : 'Could not send.');
+		} catch (e) { if (st) st.textContent = 'Could not send.'; }
+		pushTest.disabled = false;
 	});
 }
 
@@ -2771,12 +3090,15 @@ function spPermGridHtml(roles, roleId, user, applyStored) {
 	const overrides = applyStored ? spParseOverrides(user && user.capability_overrides) : {};
 	let h = '<div class="sp-perm-grid">';
 	h += '<div class="sp-perm-row sp-perm-head"><span class="sp-perm-headcols">Default / Override</span><button type="button" class="unique sp-perm-reset">Reset</button></div>';
+	let sawManagePerm = false;
 	Object.keys(spPermCatalog).forEach(cap => {
 		const inRole = roleCaps.includes(cap);
 		let eff = inRole;
 		if (Object.prototype.hasOwnProperty.call(overrides, cap)) eff = !!overrides[cap];
 		const changed = eff !== inRole;
-		h += `<label class="sp-perm-row${changed ? ' sp-perm-changed' : ''}">`;
+		const divider = (!sawManagePerm && /^Manage/i.test(spPermCatalog[cap])) ? ' sp-cap-admin-start' : '';
+		if (divider) sawManagePerm = true;
+		h += `<label class="sp-perm-row${changed ? ' sp-perm-changed' : ''}${divider}">`;
 		h += `<span class="sp-perm-cell"><input type="checkbox" tabindex="-1" disabled${inRole ? ' checked' : ''}></span>`;
 		h += `<span class="sp-perm-cell"><input type="checkbox" class="sp-perm-user-cb" data-cap="${cap}" data-default="${inRole ? '1' : '0'}"${eff ? ' checked' : ''}></span>`;
 		h += `<span class="sp-perm-label">${esc(spPermCatalog[cap])}</span>`;
@@ -3180,41 +3502,52 @@ function initActionItems() {
 		el?.addEventListener('change', () => loadActionItems());
 	});
 
-	const backfillBtn = $('#sp-action-backfill-btn');
-	if (backfillBtn && !backfillBtn._wired) {
-		backfillBtn._wired = true;
-		backfillBtn.addEventListener('click', () => spRunActionBackfill(backfillBtn));
+	const addBtn = $('#sp-add-action-item-btn');
+	if (addBtn && !addBtn._wired) {
+		addBtn._wired = true;
+		addBtn.addEventListener('click', () => spAddActionItem());
 	}
 }
 
-// God-only: loop the batched backfill until every recent zero-item report has been processed.
-async function spRunActionBackfill(btn) {
-	if (!confirm('Generate action items for recently-submitted reports that have none?\n\nThis asks the AI once per report and may take a minute.')) return;
-	const status = $('#sp-action-backfill-status');
-	const setStatus = (m) => { if (status) status.textContent = m; };
-	btn.disabled = true;
-	let processed = 0, created = 0, total = null;
-	try {
-		while (true) {
-			const res = await spAjax('site_pulse_backfill_action_items', {});
-			if (!res || !res.success) { setStatus(''); alert((res && res.data && res.data.message) || 'Backfill failed.'); break; }
-			if (total === null) total = (res.data.processed || 0) + (res.data.remaining || 0);
-			processed += res.data.processed || 0;
-			created += res.data.created || 0;
-			if (res.data.done || (res.data.processed || 0) === 0) {
-				setStatus(total === 0
-					? 'No reports needed backfilling — the rest already have action items.'
-					: `Done — ${processed} of ${total} report${total === 1 ? '' : 's'} processed, ${created} action item${created === 1 ? '' : 's'} created.`);
-				loadActionItems();
-				break;
-			}
-			setStatus(`Working… ${processed}/${total} reports, ${created} created…`);
-		}
-	} catch (e) {
-		setStatus('');
-		alert('Backfill failed — please try again.');
-	}
-	btn.disabled = false;
+// "+ Add Action Item" — create your own to-do (description, urgency, due date).
+function spAddActionItem() {
+	const backdrop = spFormModal();
+	const due = spDatePlusDays(14);
+	let html = '<div class="sp-report-form-wrap">';
+	html += '<div class="sp-report-form-header"><h3>Add Action Item</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-aai-cancel">Cancel</button></div>';
+	html += '<label class="sp-field-label">To-do</label>';
+	html += '<textarea class="sp-input sp-aai-desc" rows="2" placeholder="What needs to get done?"></textarea>';
+	html += '<div class="sp-aai-row">';
+	html += '<div class="sp-aai-col"><label class="sp-field-label">Urgency</label><select class="sp-select sp-aai-pri"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></div>';
+	html += `<div class="sp-aai-col"><label class="sp-field-label">Due date</label><input type="date" class="sp-input sp-aai-due" value="${due}"></div>`;
+	html += '</div>';
+	html += '<div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-btn-primary sp-aai-save">Add</button><button type="button" class="unique sp-btn sp-btn-ghost sp-aai-cancel">Cancel</button></div>';
+	html += '</div>';
+	backdrop.innerHTML = html;
+	markUniqueSpans(backdrop);
+
+	$('.sp-aai-desc', backdrop)?.focus();
+	$$('.sp-aai-cancel', backdrop).forEach(b => b.addEventListener('click', () => closeFormModal()));
+	$('.sp-aai-save', backdrop)?.addEventListener('click', async () => {
+		const desc = ($('.sp-aai-desc', backdrop)?.value || '').trim();
+		if (!desc) { alert('Please enter the to-do.'); return; }
+		const priority = $('.sp-aai-pri', backdrop)?.value || 'medium';
+		const due_date = $('.sp-aai-due', backdrop)?.value || '';
+		const save = $('.sp-aai-save', backdrop);
+		if (save) save.disabled = true;
+		try {
+			const res = await spAjax('site_pulse_create_action_item', { description: desc, priority, due_date });
+			if (res.success) { closeFormModal(); loadActionItems(); }
+			else { alert(res.data?.message || 'Could not add the item.'); if (save) save.disabled = false; }
+		} catch (e) { alert('Could not add the item.'); if (save) save.disabled = false; }
+	});
+}
+
+// YYYY-MM-DD for today + n days (local).
+function spDatePlusDays(n) {
+	const d = new Date();
+	d.setDate(d.getDate() + n);
+	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 async function populateActionItemFilters() {
@@ -3266,6 +3599,8 @@ function renderActionItems(container, items, pending = []) {
 
 	if (sortMode === 'importance' && items) {
 		items.sort((a, b) => (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1));
+	} else if (sortMode === 'duedate' && items) {
+		items.sort((a, b) => (a.due_date || '9999-12-31').localeCompare(b.due_date || '9999-12-31'));
 	}
 	// 'custom' uses the display_order from the DB, which is how items arrive by default
 
@@ -3306,66 +3641,71 @@ function renderActionItems(container, items, pending = []) {
 		});
 	});
 
-	$$('.sp-resolve-item-btn', container).forEach(btn => {
+	// Add Note: append a note; the server rewrites the item via AI and keeps the notes list.
+	$$('.sp-action-note-btn', container).forEach(btn => {
 		btn.addEventListener('click', () => {
 			const itemEl = btn.closest('.sp-action-item');
-			const itemId = btn.dataset.itemId;
-
-			if (itemEl.querySelector('.sp-resolve-form')) return;
+			if (itemEl.querySelector('.sp-note-form')) return;
 
 			const form = document.createElement('div');
-			form.className = 'sp-resolve-form';
+			form.className = 'sp-note-form';
 			form.innerHTML = `
-				<textarea class="sp-input sp-resolve-note" placeholder="Describe what you did to resolve this..." rows="3"></textarea>
-				<div style="display:grid;grid-auto-flow:column;gap:8px;justify-content:start;margin-top:8px;">
-					<button type="button" class="unique sp-btn sp-btn-primary sp-resolve-submit">Submit Resolution</button>
-					<button type="button" class="unique sp-btn sp-btn-ghost sp-resolve-cancel">Cancel</button>
-				</div>
-				<div class="sp-resolve-feedback" hidden></div>
-			`;
-
+				<textarea class="sp-input sp-note-text" placeholder="Add details — what happened or the next step…" rows="2"></textarea>
+				<div style="display:flex;gap:8px;margin-top:8px;">
+					<button type="button" class="unique sp-btn sp-btn-primary sp-note-save">Save Details</button>
+					<button type="button" class="unique sp-btn sp-btn-ghost sp-note-cancel">Cancel</button>
+				</div>`;
 			itemEl.querySelector('.sp-action-item-content').appendChild(form);
 			markUniqueSpans(form);
+			form.querySelector('.sp-note-text').focus();
+			form.querySelector('.sp-note-cancel').addEventListener('click', () => form.remove());
 
-			form.querySelector('.sp-resolve-cancel').addEventListener('click', () => form.remove());
-
-			form.querySelector('.sp-resolve-submit').addEventListener('click', async () => {
-				const note = form.querySelector('.sp-resolve-note').value.trim();
-				if (!note) { alert('Please describe what you did.'); return; }
-
-				const submitBtn = form.querySelector('.sp-resolve-submit');
-				const feedback = form.querySelector('.sp-resolve-feedback');
-				submitBtn.disabled = true;
-				submitBtn.textContent = 'Evaluating...';
-
+			form.querySelector('.sp-note-save').addEventListener('click', async () => {
+				const note = form.querySelector('.sp-note-text').value.trim();
+				if (!note) { alert('Please enter a note.'); return; }
+				const save = form.querySelector('.sp-note-save');
+				save.disabled = true;
+				save.textContent = 'Saving…';
 				try {
-					const res = await spAjax('site_pulse_resolve_action_item', { item_id: itemId, note: note });
-					if (res.success) {
-						if (res.data.resolved === false) {
-							feedback.hidden = false;
-							feedback.innerHTML = '<div class="sp-resolve-not-resolved">' +
-								'<strong>Not fully resolved</strong>' +
-								(res.data.reason ? '<p>' + esc(res.data.reason) + '</p>' : '') +
-								'<p>Follow-up created: <em>' + esc(res.data.follow_up) + '</em></p>' +
-								'</div>';
-							submitBtn.textContent = 'Submit Resolution';
-							submitBtn.disabled = false;
-							setTimeout(() => loadActionItems(), 3000);
-						} else {
-							loadActionItems();
-							loadNotificationCount();
-						}
-					} else {
-						alert(res.data?.message || 'Error.');
-						submitBtn.textContent = 'Submit Resolution';
-						submitBtn.disabled = false;
-					}
-				} catch (err) {
-					alert('Error resolving item.');
-					submitBtn.textContent = 'Submit Resolution';
-					submitBtn.disabled = false;
-				}
+					const res = await spAjax('site_pulse_add_action_note', { item_id: btn.dataset.itemId, note: note });
+					if (res.success) { loadActionItems(); }
+					else { alert(res.data?.message || 'Error saving note.'); save.disabled = false; save.textContent = 'Save Details'; }
+				} catch (err) { alert('Error saving note.'); save.disabled = false; save.textContent = 'Save Details'; }
 			});
+		});
+	});
+
+	// Clickable due date → native date picker → save the new date.
+	$$('.sp-action-due-btn', container).forEach(btn => {
+		btn.addEventListener('click', () => {
+			const input = btn.parentElement.querySelector('.sp-action-due-input');
+			if (!input) return;
+			if (typeof input.showPicker === 'function') { try { input.showPicker(); return; } catch (e) {} }
+			input.focus();
+			input.click();
+		});
+	});
+	$$('.sp-action-due-input', container).forEach(input => {
+		input.addEventListener('change', async () => {
+			const due = input.value;
+			if (!due) return;
+			try {
+				const res = await spAjax('site_pulse_set_action_due_date', { item_id: input.dataset.itemId, due_date: due });
+				if (res.success) loadActionItems();
+				else alert(res.data?.message || 'Could not update the due date.');
+			} catch (e) { alert('Could not update the due date.'); }
+		});
+	});
+
+	// Item Complete: mark done → moves to the completed/archived view.
+	$$('.sp-action-complete-btn', container).forEach(btn => {
+		btn.addEventListener('click', async () => {
+			btn.disabled = true;
+			try {
+				const res = await spAjax('site_pulse_complete_action_item', { item_id: btn.dataset.itemId });
+				if (res.success) { loadActionItems(); loadNotificationCount(); }
+				else { alert(res.data?.message || 'Error.'); btn.disabled = false; }
+			} catch (err) { alert('Error completing item.'); btn.disabled = false; }
 		});
 	});
 
@@ -3379,7 +3719,7 @@ function renderActionItemCard(item, mode) {
 	const isResolved = mode === 'resolved';
 
 	const resolvedInfo = isResolved && item.resolved_at
-		? `<div class="sp-action-resolved">Resolved ${timeAgo(item.resolved_at)}${item.resolution_note ? ' — ' + esc(item.resolution_note) : ''}</div>`
+		? `<div class="sp-action-resolved">Completed ${timeAgo(item.resolved_at)}${item.resolution_note ? ' — ' + esc(item.resolution_note) : ''}</div>`
 		: '';
 
 	const classes = [ 'sp-action-item', priorityClass ];
@@ -3397,42 +3737,66 @@ function renderActionItemCard(item, mode) {
 	}
 	html += '<div class="sp-action-item-content">';
 
-	const history = item.meta ? (typeof item.meta === 'string' ? JSON.parse(item.meta || '[]') : item.meta) : [];
-	if (Array.isArray(history) && history.length > 0) {
-		html += '<div class="sp-action-history">';
-		history.forEach(h => {
-			html += '<div class="sp-action-history-entry">';
-			html += `<div class="sp-action-history-label">Original Item:</div>`;
-			html += `<div class="sp-action-history-text">${esc(h.original)}</div>`;
-			html += `<div class="sp-action-history-label">Response:</div>`;
-			html += `<div class="sp-action-history-text">${esc(h.response)}</div>`;
-			if (h.ai_reason) {
-				html += `<div class="sp-action-history-label">Assessment:</div>`;
-				html += `<div class="sp-action-history-ai">${esc(h.ai_reason)}</div>`;
+	html += `<div class="sp-action-item-category"><span class="unique">${esc(item.category)}</span></div>`;
+	html += `<div class="sp-action-item-desc">${esc(item.description)}</div>`;
+
+	// Who it's for ▪ where — only when viewing SOMEONE ELSE'S item. On your own list it's redundant,
+	// so the card goes straight from the to-do to "Added by".
+	if (!item.mine) {
+		const where = [];
+		if (item.user_name) where.push(esc(item.user_name));
+		if (item.location_name) where.push(esc(item.location_name));
+		if (where.length) html += `<div class="sp-action-item-who"><span class="unique">${where.join(' ▪ ')}</span></div>`;
+	}
+
+	// Where it came from + when, and the due date.
+	if (!isPending) {
+		const source = (parseInt(item.report_id, 10) > 0) ? 'Reports' : (item.creator_name ? esc(item.creator_name) : '');
+		const added = item.created_at ? formatDate(String(item.created_at).split(' ')[0]) : '';
+		if (added) html += `<div class="sp-action-item-sub"><span class="unique">Added by ${source || 'the team'} on ${added}</span></div>`;
+	}
+	if (item.due_date) {
+		if (isResolved) {
+			html += `<div class="sp-action-item-sub"><span class="unique">Was due by ${formatDate(item.due_date)}</span></div>`;
+		} else {
+			const d = daysUntil(item.due_date);
+			let cls = 'sp-action-item-sub';
+			let text = `Due for completion by ${formatDate(item.due_date)}`;
+			if (d !== null) {
+				if (d < 0) { const n = -d; text = `${n} day${n === 1 ? '' : 's'} past due`; cls += ' sp-due-urgent'; }
+				else if (d <= 1) { cls += ' sp-due-urgent'; }   // today or tomorrow
+				else if (d <= 3) { cls += ' sp-due-soon'; }     // 2–3 days out
 			}
-			html += '</div>';
-		});
+			// Clickable → date picker to extend/move the due date.
+			html += `<div class="${cls}">`
+				+ `<button type="button" class="unique sp-action-due-btn" data-item-id="${item.id}" title="Change due date">${text}</button>`
+				+ `<input type="date" class="sp-action-due-input" data-item-id="${item.id}" value="${item.due_date}" tabindex="-1" aria-label="Due date">`
+				+ `</div>`;
+		}
+	}
+
+	// Notes accumulated via "Add Note".
+	let meta = null;
+	if (item.meta) { try { meta = (typeof item.meta === 'string') ? JSON.parse(item.meta) : item.meta; } catch (e) {} }
+	const notes = (meta && Array.isArray(meta.notes)) ? meta.notes : [];
+	if (notes.length) {
+		html += '<div class="sp-action-notes"><div class="sp-action-notes-label">Notes:</div><ul>';
+		notes.forEach(n => { html += `<li><span class="unique">${esc(n)}</span></li>`; });
+		html += '</ul></div>';
+	}
+
+	html += resolvedInfo;
+
+	// Buttons sit under the info lines (inside the content column). Anyone who can see the item can
+	// Add Details; only the OWNER sees Mark Complete.
+	if (isOpen) {
+		html += '<div class="sp-action-item-actions">';
+		html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-action-note-btn" data-item-id="${item.id}">Add Details</button>`;
+		if (item.mine) html += `<button type="button" class="unique sp-btn sp-btn-primary sp-action-complete-btn" data-item-id="${item.id}">Mark Complete</button>`;
 		html += '</div>';
 	}
 
-	html += `<div class="sp-action-item-category"><span class="unique">${esc(item.category)}</span></div>`;
-	html += `<div class="sp-action-item-desc">${esc(item.description)}</div>`;
-	html += `<div class="sp-action-item-meta"><span class="unique">${esc(item.location_name || '')}</span>`;
-	if (item.user_name) html += ` <span class="unique">&middot; ${esc(item.user_name)}</span>`;
-	if (item.due_date) html += ` <span class="unique">&middot; Due ${formatDate(item.due_date)}</span>`;
 	html += '</div>';
-	html += resolvedInfo;
-	html += '</div>';
-
-	if (isOpen) {
-		html += `<button type="button" class="unique sp-btn sp-btn-secondary sp-resolve-item-btn" data-item-id="${item.id}">Resolve</button>`;
-	}
-
-	// GOD only: permanently delete this action item. Not on pending — its Reject trash already
-	// removes the item, so there's no second trash can.
-	if (D.isGod && !isPending) {
-		html += iconBtn('delete', 'sp-god-delete-action', `data-item-id="${item.id}" title="Delete item (Odin only)"`);
-	}
 
 	html += '</div>';
 	return html;
@@ -3963,9 +4327,12 @@ function renderAdminTiers(wrap) {
 			html += '</div></div>';
 
 			html += '<div class="sp-tier-caps">';
+			let sawManage = false;
 			Object.entries(catalog).forEach(([cap, label]) => {
 				const checked = caps.includes(cap) ? ' checked' : '';
-				html += `<label class="sp-tier-cap"><input type="checkbox" value="${cap}"${checked}> ${esc(label)}</label>`;
+				const divider = (!sawManage && /^Manage/i.test(label)) ? ' sp-cap-admin-start' : '';
+				if (divider) sawManage = true;
+				html += `<label class="sp-tier-cap${divider}"><input type="checkbox" value="${cap}"${checked}> ${esc(label)}</label>`;
 			});
 			html += '</div>';
 
@@ -4053,8 +4420,11 @@ function showTierForm() {
 	html += '<input type="text" id="sp-new-tier-name" class="sp-input" placeholder="e.g. Shift Lead"></div>';
 	html += '<div class="sp-form-group"><label>Capabilities</label>';
 	html += '<div class="sp-tier-caps">';
+	let sawManageNew = false;
 	Object.entries(catalog).forEach(([cap, label]) => {
-		html += `<label class="sp-tier-cap"><input type="checkbox" value="${cap}"> ${esc(label)}</label>`;
+		const divider = (!sawManageNew && /^Manage/i.test(label)) ? ' sp-cap-admin-start' : '';
+		if (divider) sawManageNew = true;
+		html += `<label class="sp-tier-cap${divider}"><input type="checkbox" value="${cap}"> ${esc(label)}</label>`;
 	});
 	html += '</div></div>';
 	html += '<div class="sp-report-form-actions">';
@@ -4464,6 +4834,483 @@ async function spAjax(action, data = {}) {
 	}
 }
 
+/*--------------------------------------------------------------
+# Company Directory
+--------------------------------------------------------------*/
+
+let _spDirWired = false;
+let _spDirCanManage = false;
+let _spDirOptions = { positions: {}, brands: {}, locations: {} };
+let _spDirData = [];
+let _spDirSearchT = null;
+
+const DIR_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+// Pull one of the company's registered framework icons (battleplan_icon_map, 512-viewBox fill-based,
+// exposed as D.icons) by name, so the directory matches the rest of the site. '' if not registered.
+function dirIcon(key) {
+	const p = D.icons && D.icons[key];
+	return p ? `<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true">${p}</svg>` : '';
+}
+
+// Shared contact block — email (icon + link) and each phone number as a tappable pill button with a
+// phone icon (phone-cell for cell, phone receiver for work). No CELL/WORK text labels.
+function dirContactsHtml(e) {
+	const items = [];
+	if (e.email)      items.push(`<a class="unique sp-btn sp-btn-ghost sp-dir-cbtn sp-dir-email-btn" href="mailto:${esc(e.email)}">${dirIcon('email')}<span>${esc(e.email)}</span></a>`);
+	if (e.cell_phone) items.push(`<a class="unique sp-btn sp-btn-ghost sp-dir-cbtn" href="tel:${esc(e.cell_phone)}" title="Cell">${dirIcon('phone-cell')}<span>${esc(e.cell_phone)}</span></a>`);
+	if (e.sec_phone)  items.push(`<a class="unique sp-btn sp-btn-ghost sp-dir-cbtn" href="tel:${esc(e.sec_phone)}" title="Work">${dirIcon('phone')}<span>${esc(e.sec_phone)}</span></a>`);
+	return items.length ? `<div class="sp-dir-contact-btns">${items.join('')}</div>` : '';
+}
+
+function initDirectory() {
+	const panel = $('#sp-panel-directory');
+	if (!panel || _spDirWired) return;
+	$('#sp-dir-search')?.addEventListener('input', () => { clearTimeout(_spDirSearchT); _spDirSearchT = setTimeout(loadDirectory, 300); });
+	['sp-dir-filter-brand', 'sp-dir-filter-location', 'sp-dir-filter-position', 'sp-dir-filter-status'].forEach(id => {
+		document.getElementById(id)?.addEventListener('change', loadDirectory);
+	});
+	$('#sp-dir-add-btn')?.addEventListener('click', () => openDirForm(null));
+	$('#sp-directory-grid')?.addEventListener('click', onDirGridClick);
+	_spDirWired = true;
+}
+
+async function loadDirectory() {
+	const grid = $('#sp-directory-grid');
+	if (!grid) return;
+	grid.innerHTML = '<div class="sp-loading"></div>';
+	const params = {
+		search:   $('#sp-dir-search')?.value.trim() || '',
+		brand:    $('#sp-dir-filter-brand')?.value || '',
+		location: $('#sp-dir-filter-location')?.value || '',
+		position: $('#sp-dir-filter-position')?.value || '',
+		status:   $('#sp-dir-filter-status')?.value || 'active',
+	};
+	try {
+		const res = await spAjax('site_pulse_directory_list', params);
+		if (!res.success) { grid.innerHTML = `<div class="sp-empty">${esc(res.data?.message || 'Could not load the directory.')}</div>`; return; }
+		_spDirData      = res.data.employees || [];
+		_spDirCanManage = !!res.data.can_manage;
+		_spDirOptions   = res.data.options || _spDirOptions;
+		const cnt = $('#sp-dir-count');
+		if (cnt) cnt.textContent = `${_spDirData.length} ${_spDirData.length === 1 ? 'person' : 'people'}`;
+		renderDirectory();
+	} catch (e) {
+		grid.innerHTML = '<div class="sp-empty">Error loading the directory.</div>';
+	}
+}
+
+function dirLabel(kind, key) {
+	if (!key) return '';
+	const map = _spDirOptions[kind] || {};
+	return map[key] || key;
+}
+
+function dirInitials(e) {
+	const a = (e.first_name || '').trim()[0] || '';
+	const b = (e.last_name || '').trim()[0] || '';
+	return (a + b).toUpperCase() || '?';
+}
+
+function renderDirectory() {
+	const grid = $('#sp-directory-grid');
+	if (!grid) return;
+	if (!_spDirData.length) { grid.innerHTML = '<div class="sp-empty">No one matches these filters.</div>'; return; }
+	grid.innerHTML = _spDirData.map(dirCard).join('');
+	markUniqueSpans(grid);
+}
+
+function dirCard(e) {
+	const name = [e.first_name, e.last_name].filter(Boolean).join(' ');
+	const photo = e.photo_url
+		? `<div class="sp-dir-photo" style="background-image:url('${esc(e.photo_url)}')"></div>`
+		: `<div class="sp-dir-photo sp-dir-photo-empty">${esc(dirInitials(e))}</div>`;
+	const sub = [dirLabel('positions', e.position), dirLabel('brands', e.brand), dirLabel('locations', e.location)].filter(Boolean).join(' &middot; ');
+	const contact = dirContactsHtml(e);
+	const inactive = e.status === 'inactive' ? '<span class="unique sp-status-badge sp-status-draft">Inactive</span>' : '';
+	const editBtn = _spDirCanManage ? `<button type="button" class="unique sp-icon-btn sp-icon-edit sp-dir-edit" data-id="${e.id}" title="Edit" aria-label="Edit">${ICON_EDIT}</button>` : '';
+	return `<div class="sp-dir-card${e.status === 'inactive' ? ' is-inactive' : ''}" data-id="${e.id}">
+		${photo}
+		<div class="sp-dir-body">
+			<div class="sp-dir-name-row"><span class="unique sp-dir-name">${esc(name)}</span>${inactive}</div>
+			${sub ? `<div class="unique sp-dir-sub">${sub}</div>` : ''}
+			<div class="sp-dir-contacts">${contact}</div>
+		</div>
+		${editBtn}
+	</div>`;
+}
+
+function onDirGridClick(e) {
+	const btn = e.target.closest('.sp-dir-edit');
+	if (btn) {
+		e.stopPropagation();
+		const emp = _spDirData.find(x => String(x.id) === String(btn.dataset.id));
+		if (emp) openDirForm(emp);
+		return;
+	}
+	// A click anywhere else on the card opens the read-only detail (but let contact links work).
+	if (e.target.closest('a')) return;
+	const card = e.target.closest('.sp-dir-card');
+	if (!card) return;
+	const emp = _spDirData.find(x => String(x.id) === String(card.dataset.id));
+	if (emp) openDirDetail(emp);
+}
+
+function dirFmtMonthDay(ymd) {
+	if (!ymd) return '';
+	const p = String(ymd).split('-');
+	if (p.length < 3) return '';
+	return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+}
+
+function dirFmtDate(ymd) {
+	if (!ymd) return '';
+	const p = String(ymd).split('-');
+	if (p.length < 3) return '';
+	return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// Read-only detail view — everything we hold on a person. Visible to anyone with view access;
+// the Edit button only appears for managers and hands off to the edit form.
+function openDirDetail(e) {
+	const name = [e.first_name, e.last_name].filter(Boolean).join(' ') || 'Employee';
+	const photo = e.photo_url
+		? `<div class="sp-dir-photo" style="background-image:url('${esc(e.photo_url)}')"></div>`
+		: `<div class="sp-dir-photo sp-dir-photo-empty">${esc(dirInitials(e))}</div>`;
+	const sub = [dirLabel('positions', e.position), dirLabel('brands', e.brand), dirLabel('locations', e.location)].filter(Boolean).join(' &middot; ');
+	const inactive = e.status === 'inactive' ? '<span class="unique sp-status-badge sp-status-draft">Inactive</span>' : '';
+
+	const contact = dirContactsHtml(e);
+
+	const addr = [e.home_address, [e.address_city, e.address_zip].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+	const days = (e.days_off || '').split(',').map(s => s.trim()).filter(Boolean).join(', ');
+
+	const row = (label, val) => val ? `<div class="sp-dir-detail-row"><span class="unique sp-dir-detail-label">${label}</span><span class="unique sp-dir-detail-val">${esc(val)}</span></div>` : '';
+	let rows = '';
+	rows += row('Birthday', dirFmtMonthDay(e.date_of_birth));
+	rows += row('Date of hire', dirFmtDate(e.date_of_hire));
+	rows += row('Address', addr);
+	rows += row('Spouse', e.spouse);
+	rows += row('Children', e.children);
+	rows += row('Hobbies', e.hobbies);
+	rows += row('Days off', days);
+	rows += row('Notes', e.other_info);
+
+	const modal = document.createElement('div');
+	modal.id = 'sp-dir-detail-modal';
+	modal.className = 'sp-modal-backdrop';
+	modal.innerHTML = `
+		<div class="sp-modal sp-dir-detail">
+			<div class="sp-dir-detail-head">
+				${photo}
+				<div class="sp-dir-detail-headtext">
+					<div class="sp-dir-name-row"><span class="unique sp-dir-detail-name">${esc(name)}</span>${inactive}</div>
+					${sub ? `<div class="unique sp-dir-sub">${sub}</div>` : ''}
+					${contact ? `<div class="sp-dir-contacts">${contact}</div>` : ''}
+				</div>
+			</div>
+			${rows ? `<div class="sp-dir-detail-grid">${rows}</div>` : '<p class="sp-help-text">No additional details on file.</p>'}
+			<div class="sp-modal-actions">
+				${_spDirCanManage ? '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-dird-edit">Edit</button>' : ''}
+				<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-dird-close">Close</button>
+			</div>
+		</div>`;
+	document.body.appendChild(modal);
+	markUniqueSpans(modal);
+
+	const close = () => modal.remove();
+	modal.addEventListener('click', (ev) => { if (ev.target === modal) close(); });
+	modal.querySelector('#sp-dird-close').addEventListener('click', close);
+	modal.querySelector('#sp-dird-edit')?.addEventListener('click', () => { close(); openDirForm(e); });
+}
+
+// Build a <select> from one of the option maps; "---" entries are rendered as disabled separators.
+function dirSelect(kind, current) {
+	const map = _spDirOptions[kind] || {};
+	let html = '<option value="">—</option>';
+	for (const k in map) {
+		if (k === '---') { html += '<option disabled>──────────</option>'; continue; }
+		html += `<option value="${esc(k)}"${k === current ? ' selected' : ''}>${esc(map[k])}</option>`;
+	}
+	return html;
+}
+
+async function dirUploadPhoto(file) {
+	const fd = new FormData();
+	fd.append('action', 'site_pulse_directory_upload_photo');
+	fd.append('nonce', spGetNonce());
+	fd.append('file', file);
+	try {
+		const res = await fetch(D.ajaxUrl || '/wp-admin/admin-ajax.php', { method: 'POST', credentials: 'same-origin', body: fd });
+		const json = await res.json();
+		if (json.success) return json.data.url;
+		alert(json.data?.message || 'Upload failed.');
+	} catch (e) { alert('Upload failed.'); }
+	return '';
+}
+
+function openDirForm(emp) {
+	const e = emp || {};
+	const isEdit = !!emp;
+	const name = [e.first_name, e.last_name].filter(Boolean).join(' ') || 'this employee';
+	const daysSet = new Set((e.days_off || '').split(',').map(s => s.trim()).filter(Boolean));
+	const dayChecks = DIR_DAYS.map(d => `<label class="sp-dir-day"><input type="checkbox" value="${d}"${daysSet.has(d) ? ' checked' : ''}> ${d.slice(0, 3)}</label>`).join('');
+	const photoBox = e.photo_url
+		? `<div class="sp-dir-photo" id="sp-dirf-preview" style="background-image:url('${esc(e.photo_url)}')"></div>`
+		: `<div class="sp-dir-photo sp-dir-photo-empty" id="sp-dirf-preview">${esc(dirInitials(e))}</div>`;
+
+	const modal = document.createElement('div');
+	modal.id = 'sp-dir-modal';
+	modal.className = 'sp-modal-backdrop';
+	modal.innerHTML = `
+		<div class="sp-modal sp-dir-form">
+			<h3>${isEdit ? 'Edit Employee' : 'Add Employee'}</h3>
+			<div class="sp-dir-form-top">
+				<div class="sp-dir-photo-edit">
+					${photoBox}
+					<input type="file" id="sp-dirf-photo-input" accept="image/*" hidden>
+					<button type="button" class="unique sp-btn sp-btn-ghost sp-btn-sm" id="sp-dirf-photo-btn">Photo</button>
+					<input type="hidden" id="sp-dirf-photo-url" value="${esc(e.photo_url || '')}">
+				</div>
+				<div class="sp-dir-form-names">
+					<div class="sp-form-row">
+						<div class="sp-form-group"><label>First name</label><input type="text" id="sp-dirf-first" class="sp-input" value="${esc(e.first_name || '')}"></div>
+						<div class="sp-form-group"><label>Last name</label><input type="text" id="sp-dirf-last" class="sp-input" value="${esc(e.last_name || '')}"></div>
+					</div>
+					<div class="sp-form-row">
+						<div class="sp-form-group"><label>Status</label><select id="sp-dirf-status" class="sp-select"><option value="active"${e.status !== 'inactive' ? ' selected' : ''}>Active</option><option value="inactive"${e.status === 'inactive' ? ' selected' : ''}>Inactive</option></select></div>
+						<div class="sp-form-group"><label>Position</label><select id="sp-dirf-position" class="sp-select">${dirSelect('positions', e.position)}</select></div>
+					</div>
+				</div>
+			</div>
+
+			<div class="sp-form-row">
+				<div class="sp-form-group"><label>Brand</label><select id="sp-dirf-brand" class="sp-select">${dirSelect('brands', e.brand)}</select></div>
+				<div class="sp-form-group"><label>Location</label><select id="sp-dirf-location" class="sp-select">${dirSelect('locations', e.location)}</select></div>
+			</div>
+
+			<div class="sp-form-row">
+				<div class="sp-form-group"><label>Email</label><input type="email" id="sp-dirf-email" class="sp-input" value="${esc(e.email || '')}"></div>
+				<div class="sp-form-group"><label>Cell phone</label><input type="text" id="sp-dirf-cell" class="sp-input" value="${esc(e.cell_phone || '')}" placeholder="xxx-xxx-xxxx"></div>
+				<div class="sp-form-group"><label>Work phone</label><input type="text" id="sp-dirf-sec" class="sp-input" value="${esc(e.sec_phone || '')}" placeholder="xxx-xxx-xxxx"></div>
+			</div>
+
+			<div class="sp-form-row">
+				<div class="sp-form-group"><label>Birthday</label><input type="date" id="sp-dirf-dob" class="sp-input" value="${esc(e.date_of_birth || '')}"></div>
+				<div class="sp-form-group"><label>Date of hire</label><input type="date" id="sp-dirf-hire" class="sp-input" value="${esc(e.date_of_hire || '')}"></div>
+			</div>
+
+			<div class="sp-form-row">
+				<div class="sp-form-group sp-grow2"><label>Home address</label><input type="text" id="sp-dirf-addr" class="sp-input" value="${esc(e.home_address || '')}"></div>
+				<div class="sp-form-group"><label>City</label><input type="text" id="sp-dirf-city" class="sp-input" value="${esc(e.address_city || '')}"></div>
+				<div class="sp-form-group"><label>Zip</label><input type="text" id="sp-dirf-zip" class="sp-input" value="${esc(e.address_zip || '')}"></div>
+			</div>
+
+			<div class="sp-form-row">
+				<div class="sp-form-group"><label>Spouse</label><input type="text" id="sp-dirf-spouse" class="sp-input" value="${esc(e.spouse || '')}"></div>
+				<div class="sp-form-group"><label>Children</label><input type="text" id="sp-dirf-children" class="sp-input" value="${esc(e.children || '')}"></div>
+				<div class="sp-form-group"><label>Hobbies</label><input type="text" id="sp-dirf-hobbies" class="sp-input" value="${esc(e.hobbies || '')}"></div>
+			</div>
+
+			<div class="sp-form-group"><label>Days off</label><div class="sp-dir-days">${dayChecks}</div></div>
+			<div class="sp-form-group"><label>Other info</label><textarea id="sp-dirf-other" class="sp-textarea" rows="2">${esc(e.other_info || '')}</textarea></div>
+
+			<div class="sp-modal-actions">
+				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-dirf-save">${isEdit ? 'Save' : 'Add'}</button>
+				<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-dirf-cancel">Cancel</button>
+				${isEdit ? `<button type="button" class="unique sp-icon-btn sp-icon-delete" id="sp-dirf-delete" title="Delete" aria-label="Delete" style="margin-left:auto;">${ICON_DELETE}</button>` : ''}
+			</div>
+		</div>`;
+	document.body.appendChild(modal);
+	markUniqueSpans(modal);
+
+	const close = () => modal.remove();
+	modal.addEventListener('click', (ev) => { if (ev.target === modal) close(); });
+	modal.querySelector('#sp-dirf-cancel').addEventListener('click', close);
+
+	const fileInput = modal.querySelector('#sp-dirf-photo-input');
+	modal.querySelector('#sp-dirf-photo-btn').addEventListener('click', () => fileInput.click());
+	fileInput.addEventListener('change', async () => {
+		if (!fileInput.files || !fileInput.files[0]) return;
+		const pbtn = modal.querySelector('#sp-dirf-photo-btn');
+		pbtn.disabled = true; pbtn.textContent = 'Uploading…';
+		const url = await dirUploadPhoto(fileInput.files[0]);
+		pbtn.disabled = false; pbtn.textContent = 'Photo';
+		if (url) {
+			modal.querySelector('#sp-dirf-photo-url').value = url;
+			const prev = modal.querySelector('#sp-dirf-preview');
+			prev.classList.remove('sp-dir-photo-empty');
+			prev.textContent = '';
+			prev.style.backgroundImage = `url('${url}')`;
+		}
+	});
+
+	modal.querySelector('#sp-dirf-save').addEventListener('click', async () => {
+		const first = modal.querySelector('#sp-dirf-first').value.trim();
+		const last  = modal.querySelector('#sp-dirf-last').value.trim();
+		if (!first && !last) { alert('Please enter a first or last name.'); return; }
+		const days = [...modal.querySelectorAll('.sp-dir-days input:checked')].map(c => c.value);
+		const sbtn = modal.querySelector('#sp-dirf-save');
+		sbtn.disabled = true; sbtn.textContent = 'Saving…';
+		const r = await spAjax('site_pulse_directory_save', {
+			id: e.id || 0,
+			first_name: first,
+			last_name: last,
+			status: modal.querySelector('#sp-dirf-status').value,
+			position: modal.querySelector('#sp-dirf-position').value,
+			brand: modal.querySelector('#sp-dirf-brand').value,
+			location: modal.querySelector('#sp-dirf-location').value,
+			email: modal.querySelector('#sp-dirf-email').value.trim(),
+			cell_phone: modal.querySelector('#sp-dirf-cell').value.trim(),
+			sec_phone: modal.querySelector('#sp-dirf-sec').value.trim(),
+			date_of_birth: modal.querySelector('#sp-dirf-dob').value,
+			date_of_hire: modal.querySelector('#sp-dirf-hire').value,
+			home_address: modal.querySelector('#sp-dirf-addr').value.trim(),
+			address_city: modal.querySelector('#sp-dirf-city').value.trim(),
+			address_zip: modal.querySelector('#sp-dirf-zip').value.trim(),
+			spouse: modal.querySelector('#sp-dirf-spouse').value.trim(),
+			children: modal.querySelector('#sp-dirf-children').value.trim(),
+			hobbies: modal.querySelector('#sp-dirf-hobbies').value.trim(),
+			other_info: modal.querySelector('#sp-dirf-other').value.trim(),
+			days_off: days,
+			photo_url: modal.querySelector('#sp-dirf-photo-url').value,
+		});
+		if (r.success) { close(); loadDirectory(); }
+		else { alert(r.data?.message || 'Error saving.'); sbtn.disabled = false; sbtn.textContent = isEdit ? 'Save' : 'Add'; }
+	});
+
+	const delBtn = modal.querySelector('#sp-dirf-delete');
+	if (delBtn) {
+		delBtn.addEventListener('click', async () => {
+			if (!confirm(`Delete ${name}? This permanently removes them from the directory. To keep the record but hide them, set Status to Inactive instead.`)) return;
+			const r = await spAjax('site_pulse_directory_delete', { id: e.id });
+			if (r.success) { close(); loadDirectory(); }
+			else alert(r.data?.message || 'Error deleting.');
+		});
+	}
+}
+
+
+/*--------------------------------------------------------------
+# Customer Emails (Customer Feedback → Emails)
+--------------------------------------------------------------*/
+
+let _spEmailsWired = false;
+let _spEmailsCanManage = false;
+let _spEmails = [];
+let _spEmailsSearchT = null;
+
+function initEmails() {
+	const panel = $('#sp-panel-emails');
+	if (!panel || _spEmailsWired) return;
+	$('#sp-emails-search')?.addEventListener('input', () => { clearTimeout(_spEmailsSearchT); _spEmailsSearchT = setTimeout(loadEmails, 300); });
+	['sp-emails-filter-status', 'sp-emails-filter-category', 'sp-emails-filter-brand', 'sp-emails-filter-location'].forEach(id => {
+		document.getElementById(id)?.addEventListener('change', loadEmails);
+	});
+	$('#sp-emails-list')?.addEventListener('click', onEmailsListClick);
+	_spEmailsWired = true;
+}
+
+async function loadEmails() {
+	const list = $('#sp-emails-list');
+	if (!list) return;
+	list.innerHTML = '<div class="sp-loading"></div>';
+	const params = {
+		status:   $('#sp-emails-filter-status')?.value || 'new',
+		category: $('#sp-emails-filter-category')?.value || '',
+		brand:    $('#sp-emails-filter-brand')?.value || '',
+		location: $('#sp-emails-filter-location')?.value || '',
+		search:   $('#sp-emails-search')?.value.trim() || '',
+	};
+	try {
+		const res = await spAjax('site_pulse_emails_list', params);
+		if (!res.success) { list.innerHTML = `<div class="sp-empty">${esc(res.data?.message || 'Could not load emails.')}</div>`; return; }
+		_spEmails = res.data.emails || [];
+		_spEmailsCanManage = !!res.data.can_manage;
+		spEmailsSyncFilters(res.data);
+		const cnt = $('#sp-emails-count');
+		if (cnt) cnt.textContent = `${spComma(res.data.new_count || 0)} new · ${spComma(res.data.handled_count || 0)} handled`;
+		renderEmails();
+	} catch (e) {
+		list.innerHTML = '<div class="sp-empty">Error loading emails.</div>';
+	}
+}
+
+// Keep the type/brand/location dropdowns populated from whatever's actually present, preserving the pick.
+function spEmailsSyncFilters(d) {
+	const fill = (id, vals, allLabel) => {
+		const sel = document.getElementById(id);
+		if (!sel) return;
+		const cur = sel.value;
+		sel.innerHTML = `<option value="">${allLabel}</option>` + (vals || []).map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+		if (cur && (vals || []).indexOf(cur) !== -1) sel.value = cur;
+	};
+	fill('sp-emails-filter-category', d.categories, 'All types');
+	fill('sp-emails-filter-brand', d.brands, 'All brands');
+	fill('sp-emails-filter-location', d.locations, 'All locations');
+}
+
+function emailCategoryClass(cat) {
+	const c = String(cat || '').toLowerCase();
+	if (c.indexOf('complaint') !== -1) return 'sp-email-cat-neg';
+	if (c.indexOf('compliment') !== -1 || c.indexOf('comment') !== -1) return 'sp-email-cat-pos';
+	return 'sp-email-cat-neutral';
+}
+
+function renderEmails() {
+	const list = $('#sp-emails-list');
+	if (!list) return;
+	if (!_spEmails.length) { list.innerHTML = '<div class="sp-empty">No customer emails match this filter.</div>'; return; }
+	list.innerHTML = _spEmails.map(emailCard).join('');
+	markUniqueSpans(list);
+}
+
+function emailCard(m) {
+	const date = m.created_at ? new Date(m.created_at.replace(' ', 'T')).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+	const where = [m.brand, m.location].filter(Boolean).join(' · ');
+	const cat = m.category ? `<span class="unique sp-email-cat ${emailCategoryClass(m.category)}">${esc(m.category)}</span>` : '';
+	const handled = m.status === 'handled' ? '<span class="unique sp-status-badge sp-status-draft">Handled</span>' : '';
+	let contact = '';
+	if (m.email) contact += `<a class="unique sp-dir-cbtn sp-btn sp-btn-ghost" href="mailto:${esc(m.email)}">${dirIcon('email')}<span>${esc(m.email)}</span></a>`;
+	if (m.phone) contact += `<a class="unique sp-dir-cbtn sp-btn sp-btn-ghost" href="tel:${esc(m.phone)}">${dirIcon('phone-cell')}<span>${esc(m.phone)}</span></a>`;
+	let actions = '';
+	if (_spEmailsCanManage) {
+		actions = '<div class="unique sp-email-actions">' +
+			`<button type="button" class="unique sp-btn sp-btn-ghost sp-email-toggle" data-id="${m.id}" data-status="${m.status === 'handled' ? 'new' : 'handled'}">${m.status === 'handled' ? 'Mark new' : 'Mark handled'}</button>` +
+			`<button type="button" class="unique sp-icon-btn sp-icon-delete sp-email-delete" data-id="${m.id}" title="Delete" aria-label="Delete">${ICON_DELETE}</button>` +
+		'</div>';
+	}
+	return `<div class="sp-email-card${m.status === 'handled' ? ' is-handled' : ''}">
+		<div class="sp-email-head">
+			<div class="sp-email-who"><span class="unique sp-email-name">${esc(m.customer_name || 'Anonymous')}</span>${cat}${handled}</div>
+			<span class="unique sp-email-date">${esc(date)}</span>
+		</div>
+		${where ? `<div class="unique sp-email-where">${esc(where)}</div>` : ''}
+		${m.message ? `<p class="unique sp-email-message">${esc(m.message)}</p>` : ''}
+		<div class="sp-email-foot">
+			<div class="sp-email-contacts">${contact}</div>
+			${actions}
+		</div>
+	</div>`;
+}
+
+async function onEmailsListClick(e) {
+	const toggle = e.target.closest('.sp-email-toggle');
+	if (toggle) {
+		toggle.disabled = true;
+		const res = await spAjax('site_pulse_emails_set_status', { id: toggle.dataset.id, status: toggle.dataset.status });
+		if (res.success) loadEmails(); else { toggle.disabled = false; spFlash(res.data?.message || 'Could not update.'); }
+		return;
+	}
+	const del = e.target.closest('.sp-email-delete');
+	if (del) {
+		if (!confirm('Delete this email? This cannot be undone.')) return;
+		const res = await spAjax('site_pulse_emails_delete', { id: del.dataset.id });
+		if (res.success) loadEmails(); else spFlash(res.data?.message || 'Could not delete.');
+	}
+}
+
+
 function esc(str) {
 	if (!str) return '';
 	const el = document.createElement('span');
@@ -4477,6 +5324,16 @@ function formatDate(dateStr) {
 	return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+// Whole-day difference from today (local) to a YYYY-MM-DD date: 0 = today, 1 = tomorrow, <0 = past.
+function daysUntil(dateStr) {
+	if (!dateStr) return null;
+	const due = new Date(String(dateStr).split(' ')[0] + 'T00:00:00');
+	if (isNaN(due)) return null;
+	const now = new Date();
+	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	return Math.round((due - today) / 86400000);
+}
+
 
 /*--------------------------------------------------------------
 # Reviews — Google Business Profile
@@ -4485,49 +5342,404 @@ function formatDate(dateStr) {
 let spReviews = [];
 let spReviewsCanManage = false;
 let spReviewsLoaded = false;
+let spReviewsAvg = null;
+let spReviewsTotal = 0;
+let spReviewsHasOlder = false;
+let spReviewTopicFilter = ''; // when set (from a stat-card click), the list shows only reviews mentioning this topic
+
+// Infinite-scroll pagination state. spReviews holds the rows loaded so far (page 1..N appended);
+// spReviewsMatched is the total stored rows matching the current filters (the "of Y" count).
+const SP_REVIEWS_PER_PAGE = 50;
+let spReviewsPage = 1;
+let spReviewsHasMore = false;
+let spReviewsMatched = 0;
+let spReviewsLoadingMore = false;
+let spReviewsIO = null;
+
+// All list filters now run server-side so the list can paginate: scope (range/store/brand) + the
+// secondary star/reply filters + the topic chosen by a stat-card/chip click.
+function reviewQueryParams() {
+	return {
+		range:    $('#sp-reviews-stat-range')?.value || '30',
+		store:    $('#sp-reviews-stat-restaurant')?.value || '',
+		brand:    $('#sp-reviews-stat-brand')?.value || '',
+		stars:    $('#sp-reviews-filter-stars')?.value || '',
+		reply:    $('#sp-reviews-filter-reply')?.value || '',
+		topic:    spReviewTopicFilter || '',
+		per_page: SP_REVIEWS_PER_PAGE,
+	};
+}
+
+// Integer with thousands separators (2157 → "2,157"); leaves non-numerics untouched.
+function spComma(n) {
+	const v = parseInt(n, 10);
+	return isNaN(v) ? String(n ?? '') : v.toLocaleString('en-US');
+}
 
 function initReviews() {
 	const panel = $('#sp-panel-reviews');
 	if (!panel) return;
 
 	$('#sp-reviews-refresh-btn')?.addEventListener('click', () => loadReviews(true));
-	$('#sp-reviews-filter-stars')?.addEventListener('change', renderReviews);
-	$('#sp-reviews-filter-reply')?.addEventListener('change', renderReviews);
+	$('#sp-reviews-analyze-btn')?.addEventListener('click', analyzeReviews);
+	$('#sp-reviews-load-older')?.addEventListener('click', loadOlderReviews);
+	$('#sp-reviews-filter-stars')?.addEventListener('change', () => loadReviews());
+	$('#sp-reviews-filter-reply')?.addEventListener('change', () => loadReviews());
+
+	// Analytics scope (restaurant / brand / time range) re-scopes the list (server-side) AND the stat cards.
+	const onScopeChange = () => { loadReviews(); loadReviewStats(); };
+	$('#sp-reviews-stat-range')?.addEventListener('change', onScopeChange);
+	$('#sp-reviews-stat-restaurant')?.addEventListener('change', onScopeChange);
+	$('#sp-reviews-stat-brand')?.addEventListener('change', onScopeChange);
+
+	// Clicking a stat card filters the list to that topic.
+	$('#sp-reviews-stats')?.addEventListener('click', onReviewStatClick);
 
 	// Per-review action buttons are rendered dynamically, so delegate from the list.
 	$('#sp-reviews-list')?.addEventListener('click', onReviewListClick);
 }
 
+// Pull Google's older reviews into the DB in small reliable batches (each well under the hub timeout),
+// looping up to ~1000 per click. This only fills the DB; the list itself is paginated, so afterward we
+// refresh page 1 (the newly-stored older reviews surface as you scroll). Progress is measured by the
+// server's stored-row count, not the on-screen list.
+async function loadOlderReviews() {
+	const btn = $('#sp-reviews-load-older');
+	if (!btn || btn.disabled) return;
+	const TARGET = 1000; // aim to add roughly this many per click
+	btn.disabled = true;
+	btn.textContent = 'Loading older reviews…';
+	let errored = false, zeroGain = 0, startStored = null, lastStored = null, lastData = null;
+	try {
+		while (true) {
+			const res = await spAjax('site_pulse_load_older_reviews', spReviewScope());
+			if (!res.success) { spFlash(res.data?.message || 'Could not load older reviews.'); errored = true; break; }
+			lastData = res.data;
+			spReviewsHasOlder = !!res.data.has_older;
+			if (res.data.totalReviewCount != null) spReviewsTotal = res.data.totalReviewCount;
+			const stored = res.data.stored != null ? res.data.stored : null;
+			if (startStored === null) startStored = stored;
+			// A batch can legitimately add 0 (it re-walks pages we already hold to advance the cursor), so
+			// don't stop on that alone — keep going while there's more, with a small cap as a runaway guard.
+			const gained = (stored != null && lastStored != null) ? stored - lastStored : 0;
+			lastStored = stored;
+			zeroGain = gained === 0 ? zeroGain + 1 : 0;
+			if (!res.data.has_older || (stored != null && startStored != null && stored - startStored >= TARGET) || zeroGain >= 6) break;
+		}
+	} catch (e) {
+		spFlash('Could not load older reviews.');
+		errored = true;
+	}
+	spUpdateLoadOlderBtn(lastData);
+	btn.disabled = false;
+	btn.textContent = 'Load older reviews';
+
+	await loadReviews(); // refresh the list (page 1) so newly-stored older reviews are reachable
+
+	const added = (lastStored != null && startStored != null) ? lastStored - startStored : 0;
+	if (!errored && added > 0)               spFlash(`Loaded ${spComma(added)} older review${added === 1 ? '' : 's'}.`);
+	else if (!errored && !spReviewsHasOlder) spFlash('All reviews are now loaded.');
+	else if (!errored)                       spFlash('Still compiling older reviews — click again to continue.');
+}
+
+// AI-tag the review back-catalogue in chunks (each server call analyzes ~60 with Claude). Loops until
+// the queue is empty, showing live progress, then re-reads the list so the new chips appear.
+async function analyzeReviews() {
+	const btn = $('#sp-reviews-analyze-btn');
+	const status = $('#sp-reviews-analyze-status');
+	if (!btn || btn.disabled) return;
+	const orig = btn.textContent;
+	btn.disabled = true;
+	btn.textContent = 'Analyzing…';
+	let errored = false, total = 0;
+	try {
+		while (true) {
+			const res = await spAjax('site_pulse_analyze_reviews', {});
+			if (!res.success) { spFlash(res.data?.message || 'Analysis failed.'); errored = true; break; }
+			total += res.data.tagged || 0;
+			if (status) status.textContent = res.data.remaining > 0 ? `Analyzed ${spComma(total)} — ${spComma(res.data.remaining)} to go…` : `Analyzed ${spComma(total)}.`;
+			if (res.data.error) { spFlash(res.data.error); errored = true; break; }
+			if (!res.data.remaining || res.data.tagged === 0) break; // done, or no progress this pass
+		}
+	} catch (e) {
+		spFlash('Analysis failed.');
+		errored = true;
+	}
+	btn.disabled = false;
+	btn.textContent = orig;
+	// Re-read from the store (no hub re-sync) so the freshly-tagged chips render.
+	spReviewsLoaded = false;
+	loadReviews();
+	if (!errored) spFlash('Review analysis complete.');
+}
+
+/*--------------------------------------------------------------
+# Review analytics — sentiment stat cards (scoped by the dropdowns)
+--------------------------------------------------------------*/
+
+async function loadReviewStats() {
+	const box = $('#sp-reviews-stats');
+	if (!box) return;
+	spReviewTopicFilter = ''; // a scope change resets any card-driven topic filter
+	const range = $('#sp-reviews-stat-range')?.value || 'all';
+	const store = $('#sp-reviews-stat-restaurant')?.value || '';
+	const brand = $('#sp-reviews-stat-brand')?.value || '';
+	// First load shows the full-size spinner; a re-scope dims the existing cards + overlays a spinner
+	// (the server re-aggregates tens of thousands of reviews, so this can take a few seconds).
+	if (!box.innerHTML) box.innerHTML = '<div class="sp-loading"></div>';
+	else box.classList.add('is-loading');
+	try {
+		const res = await spAjax('site_pulse_review_stats', { range, store, brand });
+		if (!res.success) { box.innerHTML = `<div class="sp-empty">${esc(res.data?.message || 'Could not load stats.')}</div>`; return; }
+		spPopulateStatDropdowns(res.data);
+		renderReviewStats(res.data);
+	} catch (e) {
+		box.innerHTML = '<div class="sp-empty">Error loading stats.</div>';
+	} finally {
+		box.classList.remove('is-loading');
+	}
+}
+
+// Fill the restaurant/brand selects from the data (only when the option set actually changed).
+function spPopulateStatDropdowns(d) {
+	spFillStatSelect('#sp-reviews-stat-restaurant', 'All restaurants', d.stores || []);
+	spFillStatSelect('#sp-reviews-stat-brand', 'All brands', d.brands || []);
+}
+function spFillStatSelect(sel, allLabel, opts) {
+	const el = $(sel);
+	if (!el) return;
+	const want = [''].concat(opts);
+	const have = Array.from(el.options).map(o => o.value);
+	if (have.length === want.length && have.every((v, i) => v === want[i])) return; // unchanged
+	const cur = el.value;
+	el.innerHTML = `<option value="">${esc(allLabel)}</option>` + opts.map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('');
+	el.value = want.indexOf(cur) >= 0 ? cur : '';
+}
+
+function renderReviewStats(d) {
+	const box = $('#sp-reviews-stats');
+	if (!box) return;
+	const cards = [];
+	// Count tile — clicking it clears any topic filter (shows all reviews again).
+	cards.push(
+		'<div class="sp-survey-stat-card sp-stat-clickable" data-topic="">' +
+			`<div class="sp-survey-stat-left"><div class="sp-survey-stat-label">Reviews</div><div class="sp-survey-stat-value">${esc(spComma(d.count || 0))}</div></div>` +
+		'</div>'
+	);
+	// Average rating tile with a 5→1 star distribution (not a topic filter).
+	cards.push(
+		'<div class="sp-survey-stat-card">' +
+			`<div class="sp-survey-stat-left"><div class="sp-survey-stat-label">Avg Rating</div><div class="sp-survey-stat-value">${d.avg != null ? esc(Number(d.avg).toFixed(1)) : '—'}</div></div>` +
+			spStarDistBars(d.stardist) +
+		'</div>'
+	);
+	// One tile per topic: mention count + positive / neutral / negative split. Clicking filters the list.
+	(d.topics || []).forEach(t => {
+		cards.push(
+			`<div class="sp-survey-stat-card sp-stat-clickable" data-topic="${esc(t.label)}">` +
+				`<div class="sp-survey-stat-left"><div class="sp-survey-stat-label">${esc(t.label)}</div><div class="sp-survey-stat-value">${esc(spComma(t.mentions))}</div></div>` +
+				spSentimentBars(t) +
+			'</div>'
+		);
+	});
+
+	let html = `<div class="sp-survey-stat-grid">${cards.join('')}</div>`;
+	// Longer ranges depend on the background back-fill; warn while any location is still being walked.
+	const range = $('#sp-reviews-stat-range')?.value || '30';
+	if (d.syncing && range !== '30') {
+		html += `<div class="sp-reviews-stat-note">Older reviews are still syncing in the background — figures for this range will keep rising until the full history finishes loading.</div>`;
+	}
+	if (d.untagged > 0) {
+		html += `<div class="sp-reviews-stat-note">${spComma(d.untagged)} review${d.untagged === 1 ? '' : 's'} not yet analyzed — click “Analyze reviews” above for complete topic stats.</div>`;
+	}
+	box.innerHTML = html;
+	spMarkActiveStatCard();
+}
+
+// Highlight the topic card matching the active filter (the "Reviews"/all card is never highlighted).
+function spMarkActiveStatCard() {
+	$$('#sp-reviews-stats .sp-stat-clickable').forEach(c => {
+		const topic = c.getAttribute('data-topic') || '';
+		c.classList.toggle('sp-stat-active', !!topic && topic === spReviewTopicFilter);
+	});
+}
+
+// Click a stat card → filter the list to that topic (toggle off if it's already active; the count card clears).
+function onReviewStatClick(e) {
+	const card = e.target.closest('.sp-stat-clickable');
+	if (!card) return;
+	const topic = card.getAttribute('data-topic') || '';
+	spReviewTopicFilter = (topic && spReviewTopicFilter === topic) ? '' : topic;
+	spMarkActiveStatCard();
+	loadReviews(); // topic filter runs server-side now — re-query from page 1
+	if (spReviewTopicFilter) $('#sp-reviews-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// 5→1 star bars (reuses the survey bar styling; built from divs so the span colour-reset never touches it).
+function spStarDistBars(dist) {
+	if (!dist) return '';
+	const total = [1, 2, 3, 4, 5].reduce((t, n) => t + (parseInt(dist[n], 10) || 0), 0);
+	if (!total) return '';
+	let rows = '';
+	for (let star = 5; star >= 1; star--) {
+		const pct = Math.round((parseInt(dist[star], 10) || 0) / total * 100);
+		rows += '<div class="sp-survey-bar-row">' +
+			`<div class="sp-survey-bar-star">${star}</div>` +
+			`<div class="sp-survey-bar-track"><div class="sp-survey-bar-fill ${spRateClass(star)}" style="width:${pct}%"></div></div>` +
+			`<div class="sp-survey-bar-pct">${pct}%</div>` +
+		'</div>';
+	}
+	return `<div class="sp-survey-bars">${rows}</div>`;
+}
+
+// Positive / Neutral / Negative bars for one topic tile.
+function spSentimentBars(t) {
+	const rows = [
+		['Pos', t.pos_pct, 'sp-rev-fill-pos'],
+		['Neu', t.neu_pct, 'sp-rev-fill-neu'],
+		['Neg', t.neg_pct, 'sp-rev-fill-neg'],
+	].map(row => {
+		const pct = row[1] || 0;
+		return '<div class="sp-survey-bar-row">' +
+			`<div class="sp-survey-bar-star sp-rev-bar-lbl">${row[0]}</div>` +
+			`<div class="sp-survey-bar-track"><div class="sp-survey-bar-fill ${row[2]}" style="width:${pct}%"></div></div>` +
+			`<div class="sp-survey-bar-pct">${pct}%</div>` +
+		'</div>';
+	}).join('');
+	return `<div class="sp-survey-bars">${rows}</div>`;
+}
+
+// "Showing X of Y reviews" — footer count. X = rows loaded so far (pages appended), Y = total stored
+// rows matching the current filters. Owns the count element; always shown once anything is loaded.
+function spRenderReviewsCount() {
+	const cnt = $('#sp-reviews-count');
+	if (!cnt) return;
+	const loaded = spReviews.length;
+	const total  = spReviewsMatched || loaded;
+	cnt.textContent = `Showing ${spComma(loaded)} of ${spComma(total)} reviews`;
+	cnt.hidden = loaded === 0;
+}
+
+// The "Load older" button pulls Google's back-catalogue into the DB; it only applies to the All-time
+// view (a bounded range already returns its complete slice). The footer count is owned separately by
+// spRenderReviewsCount. (The cron keeps back-filling history regardless of this button.)
+function spUpdateLoadOlderBtn(d) {
+	const btn = $('#sp-reviews-load-older');
+	if (d) {
+		spReviewsHasOlder = !!d.has_older;
+		if (d.totalReviewCount != null) spReviewsTotal = d.totalReviewCount;
+	}
+	const allTime  = ( $('#sp-reviews-stat-range')?.value || '30' ) === 'all';
+	const hasOlder = spReviewsHasOlder && allTime;
+	if (btn) {
+		btn.hidden = !hasOlder;
+		if (hasOlder) btn.textContent = 'Load older reviews';
+	}
+}
+
+// Current analytics scope (restaurant / brand / time range) sent to the server so it only returns and
+// aggregates that slice — the tab no longer pulls tens of thousands of rows just to filter them client-side.
+function spReviewScope() {
+	return {
+		range: $('#sp-reviews-stat-range')?.value || '30',
+		store: $('#sp-reviews-stat-restaurant')?.value || '',
+		brand: $('#sp-reviews-stat-brand')?.value || '',
+	};
+}
+
+// (Re)load the list from page 1 — used on first open, scope/filter change, refresh, and after a backfill.
 async function loadReviews(force = false) {
 	const list = $('#sp-reviews-list');
 	if (!list) return;
 
-	// Already have them in memory — just re-apply filters (Refresh forces a re-fetch).
-	if (spReviewsLoaded && !force) { renderReviews(); return; }
-
+	spReviewsPage = 1;
+	spReviewsLoadingMore = false;
+	if (spReviewsIO) spReviewsIO.disconnect();
 	list.innerHTML = '<div class="sp-loading"></div>';
 	try {
-		const res = await spAjax('site_pulse_get_reviews', force ? { refresh: 1 } : {});
+		const params = reviewQueryParams();
+		params.page = 1;
+		if (force) params.refresh = 1;
+		const res = await spAjax('site_pulse_get_reviews', params);
 		if (!res.success) {
 			list.innerHTML = `<div class="sp-empty">${esc(res.data?.message || 'Could not load reviews.')}</div>`;
 			return;
 		}
 		spReviews = res.data.reviews || [];
 		spReviewsCanManage = !!res.data.can_manage;
+		spReviewsHasOlder = !!res.data.has_older;
+		spReviewsHasMore = !!res.data.has_more;
+		spReviewsMatched = res.data.matched != null ? res.data.matched : spReviews.length;
+		if (res.data.totalReviewCount != null) spReviewsTotal = res.data.totalReviewCount;
 		spReviewsLoaded = true;
 		renderReviewsSummary(res.data);
 		renderReviews();
+		spUpdateLoadOlderBtn(res.data);
+		spRenderReviewsCount(res.data);
 		if (res.data.stale && res.data.error) spFlash('Showing saved reviews — ' + res.data.error);
 	} catch (e) {
 		list.innerHTML = '<div class="sp-empty">Error loading reviews.</div>';
 	}
 }
 
+// Fetch and append the next page when the scroll sentinel comes into view.
+async function loadMoreReviews() {
+	if (spReviewsLoadingMore || !spReviewsHasMore) return;
+	spReviewsLoadingMore = true;
+	const sentinel = $('#sp-reviews-sentinel');
+	if (sentinel) sentinel.innerHTML = '<div class="sp-loading sp-loading-inline"></div>';
+	try {
+		const params = reviewQueryParams();
+		params.page = spReviewsPage + 1;
+		const res = await spAjax('site_pulse_get_reviews', params);
+		if (res.success) {
+			const rows = res.data.reviews || [];
+			spReviewsPage   += 1;
+			spReviewsHasMore = !!res.data.has_more;
+			if (res.data.matched != null) spReviewsMatched = res.data.matched;
+			spReviews = spReviews.concat(rows);
+			appendReviews(rows);
+			spRenderReviewsCount(res.data);
+		}
+	} catch (e) { /* leave the sentinel; a later scroll retries */ }
+	spReviewsLoadingMore = false;
+}
+
+// Re-arm the IntersectionObserver on the bottom sentinel (only while more pages remain).
+function observeReviewsSentinel() {
+	const sentinel = $('#sp-reviews-sentinel');
+	if (!sentinel) return;
+	if (!spReviewsIO) {
+		spReviewsIO = new IntersectionObserver((entries) => {
+			if (entries.some(e => e.isIntersecting)) loadMoreReviews();
+		}, { rootMargin: '600px 0px' });
+	}
+	spReviewsIO.disconnect();
+	if (spReviewsHasMore) spReviewsIO.observe(sentinel);
+}
+
+// Append a freshly-fetched page's cards just above the sentinel, then re-arm the observer.
+function appendReviews(rows) {
+	const sentinel = $('#sp-reviews-sentinel');
+	const html = rows.map(renderReviewCard).join('');
+	if (sentinel) { sentinel.innerHTML = ''; sentinel.insertAdjacentHTML('beforebegin', html); }
+	else $('#sp-reviews-list')?.insertAdjacentHTML('beforeend', html);
+	observeReviewsSentinel();
+}
+
+// Average + total, plus a live "Loaded so far" stat while older reviews remain. Rendered into the
+// always-present summary box so the progress count shows even if the footer count element is absent.
 function renderReviewsSummary(d) {
 	const box = $('#sp-reviews-summary');
 	if (!box) return;
-	const avg   = d.averageRating ? Number(d.averageRating).toFixed(1) : '—';
-	const total = (d.totalReviewCount != null) ? d.totalReviewCount : spReviews.length;
+	if (d) {
+		if (d.averageRating != null) spReviewsAvg = d.averageRating;
+		if (d.totalReviewCount != null) spReviewsTotal = d.totalReviewCount;
+	}
+	const avg    = spReviewsAvg ? Number(spReviewsAvg).toFixed(1) : '—';
+	const total  = spReviewsTotal || spReviews.length;
+	// Live load progress is shown by the footer "Showing X of Y" (it updates as you infinite-scroll),
+	// so the summary just carries the average + total.
 	box.innerHTML =
 		`<div class="sp-reviews-stat"><span class="sp-reviews-stat-num">${esc(avg)}</span><span class="sp-reviews-stat-label">Average rating</span></div>` +
 		`<div class="sp-reviews-stat"><span class="sp-reviews-stat-num">${esc(String(total))}</span><span class="sp-reviews-stat-label">Total reviews</span></div>`;
@@ -4544,71 +5756,155 @@ function reviewMatchesFilters(r) {
 	if (sf && String(r.starRating) !== sf) return false;
 	if (rf === 'replied'   && !r.reply) return false;
 	if (rf === 'unreplied' &&  r.reply) return false;
+	// Note: restaurant / brand / time-range scoping is applied server-side (loadReviews re-fetches),
+	// so the list already holds only the scoped set — only the star/reply/topic filters run here.
+	// Clicking a topic stat card narrows the list to reviews mentioning that topic.
+	if (spReviewTopicFilter) {
+		const tags = Array.isArray(r.tags) ? r.tags : [];
+		if (!tags.some(t => String(t.label || '').toLowerCase() === spReviewTopicFilter.toLowerCase())) return false;
+	}
 	return true;
 }
 
+// Is a review's createTime within the selected range? (30/90/365 days, year-to-date, or all.)
+function reviewInRange(createTime, range) {
+	if (range === 'all') return true;
+	if (!createTime) return false;
+	const d = new Date(createTime);
+	if (isNaN(d)) return true;
+	const now = new Date();
+	if (range === 'ytd') return d.getFullYear() === now.getFullYear();
+	const days = range === '30' ? 30 : range === '90' ? 90 : range === '365' ? 365 : 0;
+	if (!days) return true;
+	return (now - d) <= days * 86400000;
+}
+
+// The server has already applied every filter + paged the set, so render spReviews as-is and drop a
+// sentinel at the bottom that the IntersectionObserver watches to pull the next page.
 function renderReviews() {
 	const list = $('#sp-reviews-list');
 	if (!list) return;
-	const rows = spReviews.filter(reviewMatchesFilters);
-	list.innerHTML = rows.length
-		? rows.map(renderReviewCard).join('')
-		: '<div class="sp-empty">No reviews match this filter.</div>';
+	if (!spReviews.length) { list.innerHTML = '<div class="sp-empty">No reviews match this filter.</div>'; return; }
+	list.innerHTML = spReviews.map(renderReviewCard).join('') + '<div id="sp-reviews-sentinel"></div>';
+	observeReviewsSentinel();
+}
+
+// Multi-colour Google "G" — marks the source platform next to the star row.
+const SP_GOOGLE_ICON =
+	'<svg class="unique sp-review-platform-icon" viewBox="0 0 48 48" width="15" height="15" aria-hidden="true">' +
+		'<path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>' +
+		'<path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>' +
+		'<path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>' +
+		'<path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>' +
+	'</svg>';
+
+// AI sentiment chips: each tag is { label, sentiment } → green (positive) / red (negative) / grey (neutral).
+function renderReviewTags(tags) {
+	if (!Array.isArray(tags) || !tags.length) return '';
+	const chips = tags.map(t => {
+		const s = String(t.sentiment || '').toLowerCase();
+		const cls = s === 'negative' ? 'sp-review-tag-neg' : (s === 'neutral' ? 'sp-review-tag-neutral' : 'sp-review-tag-pos');
+		return `<span class="unique sp-review-tag ${cls}" data-topic="${esc(t.label)}" role="button" tabindex="0" title="Filter to ${esc(t.label)}">${esc(t.label)}</span>`;
+	}).join('');
+	return `<div class="unique sp-review-tags">${chips}</div>`;
 }
 
 function renderReviewCard(r) {
 	const id   = esc(r.reviewId);
 	const date = r.createTime ? new Date(r.createTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
 
-	const photo = r.photo
-		? `<img class="sp-review-avatar" src="${esc(r.photo)}" alt="" referrerpolicy="no-referrer">`
-		: '<div class="sp-review-avatar sp-review-avatar-blank"></div>';
+	// Google serves a tiny default thumbnail (e.g. ...=s120-c-rp-mo-ba12-br100). Swap the trailing
+	// size directive for a larger square crop so the avatar is crisp.
+	const photoUrl = r.photo ? r.photo.replace(/=s\d+-c[\w-]*$/, '=s400-c') : '';
+	const photo = photoUrl
+		? `<img class="unique sp-review-avatar" src="${esc(photoUrl)}" alt="" referrerpolicy="no-referrer">`
+		: '<div class="unique sp-review-avatar sp-review-avatar-blank"></div>';
 
 	const reply = r.reply
-		? `<div class="sp-review-reply"><span class="sp-review-reply-label">Owner reply</span><p>${esc(r.reply.comment)}</p></div>`
+		? `<div class="unique sp-review-reply"><span class="unique sp-review-reply-label">Owner reply</span><p class="unique">${esc(r.reply.comment)}</p></div>`
 		: '';
 
-	let actions = '';
+	// Restaurant / location label — so a combined multi-location list shows which store each review is for.
+	const store = r.store ? `<span class="unique sp-review-store">${esc(r.store)}</span>` : '';
+
+	// Action buttons sit in the head's right column (under the stars); the reply form stays full-width below.
+	let actions = '', form = '';
 	if (spReviewsCanManage) {
 		actions =
-			'<div class="sp-review-actions">' +
+			'<div class="unique sp-review-actions">' +
 				`<button type="button" class="unique sp-btn sp-btn-ghost sp-review-reply-btn" data-id="${id}">${r.reply ? 'Edit reply' : 'Reply'}</button>` +
 				(r.imported
-					? '<span class="sp-review-imported">✓ Testimonial</span>'
+					? '<span class="unique sp-review-imported">✓ Testimonial</span>'
 					: `<button type="button" class="unique sp-btn sp-btn-ghost sp-review-import-btn" data-id="${id}">Add as testimonial</button>`) +
-			'</div>' +
-			`<div class="sp-review-reply-form" data-id="${id}" hidden>` +
-				`<textarea class="sp-input sp-review-reply-input" rows="3" placeholder="Write a public reply…">${r.reply ? esc(r.reply.comment) : ''}</textarea>` +
-				'<div class="sp-review-reply-formbtns">' +
+			'</div>';
+		form =
+			`<div class="unique sp-review-reply-form" data-id="${id}" hidden>` +
+				`<textarea class="unique sp-input sp-review-reply-input" rows="3" placeholder="Write a public reply…">${r.reply ? esc(r.reply.comment) : ''}</textarea>` +
+				'<div class="unique sp-review-reply-formbtns">' +
 					`<button type="button" class="unique sp-btn sp-btn-primary sp-review-reply-save" data-id="${id}">Post reply</button>` +
+					`<button type="button" class="unique sp-btn sp-btn-ghost sp-review-reply-regen" data-id="${id}">Regenerate</button>` +
 					`<button type="button" class="unique sp-btn sp-btn-ghost sp-review-reply-cancel" data-id="${id}">Cancel</button>` +
 					(r.reply ? `<button type="button" class="unique sp-btn sp-btn-ghost sp-review-reply-delete" data-id="${id}">Delete reply</button>` : '') +
 				'</div>' +
 			'</div>';
 	}
 
+	const tags = renderReviewTags(r.tags);
+	const body = r.comment ? `<p class="unique sp-review-body">${esc(r.comment)}</p>` : '<p class="unique sp-review-body sp-review-nobody">(no comment)</p>';
+
 	return (
-		`<div class="sp-review-card" data-id="${id}">` +
-			'<div class="sp-review-head">' +
+		`<div class="unique sp-review-card" data-id="${id}">` +
+			'<div class="unique sp-review-head">' +
 				photo +
-				`<div class="sp-review-meta"><span class="sp-review-author">${esc(r.reviewer)}</span><span class="sp-review-date">${esc(date)}</span></div>` +
-				`<span class="sp-review-stars" title="${parseInt(r.starRating, 10) || 0} of 5">${starString(r.starRating)}</span>` +
+				// Right block comes before the main column in source so the body can float-wrap around it
+				// on small screens (≤1024px); desktop keeps the visual order via grid-template-areas.
+				'<div class="unique sp-review-headright">' +
+					`<span class="unique sp-review-rating">${SP_GOOGLE_ICON}<span class="unique sp-review-stars" title="${parseInt(r.starRating, 10) || 0} of 5">${starString(r.starRating)}</span></span>` +
+					store +
+					actions +
+				'</div>' +
+				'<div class="unique sp-review-headmain">' +
+					'<div class="unique sp-review-topline">' +
+						`<div class="unique sp-review-byline"><span class="unique sp-review-author">${esc(r.reviewer)}</span><span class="unique sp-review-date">${esc(date)}</span></div>` +
+						tags +
+					'</div>' +
+					body +
+				'</div>' +
 			'</div>' +
-			(r.comment ? `<p class="sp-review-body">${esc(r.comment)}</p>` : '<p class="sp-review-body sp-review-nobody">(no comment)</p>') +
 			reply +
-			actions +
+			form +
 		'</div>'
 	);
 }
 
 function onReviewListClick(e) {
+	// A sentiment chip filters the list to that topic — same effect as clicking the matching stat card.
+	const tag = e.target.closest('.sp-review-tag');
+	if (tag && tag.dataset.topic) {
+		spReviewTopicFilter = (spReviewTopicFilter === tag.dataset.topic) ? '' : tag.dataset.topic;
+		spMarkActiveStatCard();
+		loadReviews(); // topic filter runs server-side now — re-query from page 1
+		$('#sp-reviews-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		return;
+	}
+
 	const btn = e.target.closest('button');
 	if (!btn || !btn.dataset.id) return;
 	const id   = btn.dataset.id;
 	const form = $(`.sp-review-reply-form[data-id="${CSS.escape(id)}"]`);
 
 	if (btn.classList.contains('sp-review-reply-btn')) {
-		if (form) { form.hidden = !form.hidden; if (!form.hidden) form.querySelector('textarea')?.focus(); }
+		if (form) {
+			form.hidden = !form.hidden;
+			if (!form.hidden) {
+				const ta = form.querySelector('textarea');
+				ta?.focus();
+				// Auto-draft an AI reply when opening on a review that has no reply yet.
+				if (ta && !ta.value.trim()) generateReviewReply(id, form);
+			}
+		}
+	} else if (btn.classList.contains('sp-review-reply-regen')) {
+		generateReviewReply(id, form);
 	} else if (btn.classList.contains('sp-review-reply-cancel')) {
 		if (form) form.hidden = true;
 	} else if (btn.classList.contains('sp-review-reply-save')) {
@@ -4620,6 +5916,30 @@ function onReviewListClick(e) {
 	} else if (btn.classList.contains('sp-review-import-btn')) {
 		importReviewAsTestimonial(id, btn);
 	}
+}
+
+// Draft (or regenerate) an AI reply into the form's textarea, in the brand voice. Editable before posting.
+async function generateReviewReply(id, form) {
+	const ta    = form?.querySelector('textarea');
+	const regen = form?.querySelector('.sp-review-reply-regen');
+	const save  = form?.querySelector('.sp-review-reply-save');
+	if (!ta) return;
+	const prev = ta.value, ph = ta.placeholder;
+	ta.disabled = true; ta.value = ''; ta.placeholder = 'Drafting a reply…';
+	if (regen) { regen.disabled = true; regen.textContent = 'Generating…'; }
+	if (save) save.disabled = true;
+	try {
+		const res = await spAjax('site_pulse_generate_review_reply', { review_id: id });
+		if (res.success && res.data.reply) ta.value = res.data.reply;
+		else { ta.value = prev; spFlash(res.data?.message || 'Could not draft a reply.'); }
+	} catch (e) {
+		ta.value = prev;
+		spFlash('Could not draft a reply.');
+	}
+	ta.disabled = false; ta.placeholder = ph;
+	if (regen) { regen.disabled = false; regen.textContent = 'Regenerate'; }
+	if (save) save.disabled = false;
+	ta.focus();
 }
 
 async function submitReviewReply(id, comment, btn) {
@@ -4658,6 +5978,198 @@ async function importReviewAsTestimonial(id, btn) {
 }
 
 /*--------------------------------------------------------------
+# Client Reviews — agency view (hub only): all clients' Google reviews
+--------------------------------------------------------------*/
+
+let spAgencyClients = [];   // [{ site_key, label, site_url, averageRating, totalReviewCount, reviews:[], error }]
+let spAgencyLoaded  = false;
+
+function initAgencyReviews() {
+	const panel = $('#sp-panel-agency-reviews');
+	if (!panel) return;
+	$('#sp-agency-reviews-refresh-btn')?.addEventListener('click', () => loadAgencyReviews(true));
+	$('#sp-agency-filter-client')?.addEventListener('change', renderAgencyReviews);
+	$('#sp-agency-filter-stars')?.addEventListener('change', renderAgencyReviews);
+	$('#sp-agency-filter-reply')?.addEventListener('change', renderAgencyReviews);
+	$('#sp-agency-reviews-list')?.addEventListener('click', onAgencyReviewListClick);
+}
+
+async function loadAgencyReviews(force = false) {
+	const list = $('#sp-agency-reviews-list');
+	if (!list) return;
+	if (spAgencyLoaded && !force) { renderAgencyReviews(); return; }
+
+	list.innerHTML = '<div class="sp-loading"></div>';
+	try {
+		const res = await spAjax('site_pulse_get_agency_reviews', force ? { refresh: 1 } : {});
+		if (!res.success) {
+			list.innerHTML = `<div class="sp-empty">${esc(res.data?.message || 'Could not load client reviews.')}</div>`;
+			return;
+		}
+		spAgencyClients = res.data.clients || [];
+		spAgencyLoaded = true;
+		populateAgencyClientFilter();
+		renderAgencyReviews();
+	} catch (e) {
+		list.innerHTML = '<div class="sp-empty">Error loading client reviews.</div>';
+	}
+}
+
+function populateAgencyClientFilter() {
+	const sel = $('#sp-agency-filter-client');
+	if (!sel) return;
+	const cur = sel.value;
+	sel.innerHTML = '<option value="">All clients</option>' +
+		spAgencyClients.map(c => `<option value="${esc(c.site_key)}">${esc(c.label)}</option>`).join('');
+	sel.value = cur;
+}
+
+function renderAgencyReviews() {
+	const list = $('#sp-agency-reviews-list');
+	if (!list) return;
+	const clientFilter = $('#sp-agency-filter-client')?.value || '';
+	const sf = $('#sp-agency-filter-stars')?.value || '';
+	const rf = $('#sp-agency-filter-reply')?.value || '';
+
+	if (!spAgencyClients.length) { list.innerHTML = '<div class="sp-empty">No clients mapped yet.</div>'; return; }
+
+	const clients = spAgencyClients.filter(c => !clientFilter || c.site_key === clientFilter);
+
+	// Surface client-level errors as notices so a failed pull isn't silently missing from the list.
+	const notices = clients
+		.filter(c => c.error)
+		.map(c => `<div class="sp-empty">${esc(c.label)}: ${esc(c.error)}</div>`)
+		.join('');
+
+	// Flatten every (filtered) client's reviews into one list, tagging each with its client, then
+	// sort newest-first across all companies — they interleave by date, which is intended.
+	const items = [];
+	clients.forEach(c => (c.reviews || []).forEach(r => {
+		if (sf && String(r.starRating) !== sf) return;
+		if (rf === 'replied'   && !r.reply) return;
+		if (rf === 'unreplied' &&  r.reply) return;
+		items.push({ c, r });
+	}));
+	items.sort((a, b) => (b.r.createTime ? Date.parse(b.r.createTime) : 0) - (a.r.createTime ? Date.parse(a.r.createTime) : 0));
+
+	const cards = items.length
+		? items.map(({ c, r }) => renderAgencyReviewCard(c, r)).join('')
+		: '<div class="sp-empty">No reviews match this filter.</div>';
+
+	list.innerHTML = notices + cards;
+}
+
+function renderAgencyReviewCard(c, r) {
+	const id   = esc(r.reviewId);
+	const sk   = esc(c.site_key);
+	const date = r.createTime ? new Date(r.createTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+
+	const photo = r.photo
+		? `<img class="sp-review-avatar" src="${esc(r.photo)}" alt="" referrerpolicy="no-referrer">`
+		: '<div class="sp-review-avatar sp-review-avatar-blank"></div>';
+
+	const reply = r.reply
+		? `<div class="unique sp-review-reply"><span class="unique sp-review-reply-label">Owner reply</span><p class="unique">${esc(r.reply.comment)}</p></div>`
+		: '';
+
+	const pushBtn = c.site_url
+		? (r.imported
+			? '<span class="sp-review-imported">✓ Sent to site</span>'
+			: `<button type="button" class="unique sp-btn sp-btn-ghost sp-agency-push-btn" data-site="${sk}" data-id="${id}">Send to site</button>`)
+		: '';
+
+	const actions =
+		'<div class="sp-review-actions">' +
+			`<button type="button" class="unique sp-btn sp-btn-ghost sp-agency-reply-btn" data-site="${sk}" data-id="${id}">${r.reply ? 'Edit reply' : 'Reply'}</button>` +
+			pushBtn +
+		'</div>' +
+		`<div class="sp-review-reply-form" data-site="${sk}" data-id="${id}" hidden>` +
+			`<textarea class="sp-input sp-review-reply-input" rows="3" placeholder="Write a public reply…">${r.reply ? esc(r.reply.comment) : ''}</textarea>` +
+			'<div class="sp-review-reply-formbtns">' +
+				`<button type="button" class="unique sp-btn sp-btn-primary sp-agency-reply-save" data-site="${sk}" data-id="${id}">Post reply</button>` +
+				`<button type="button" class="unique sp-btn sp-btn-ghost sp-agency-reply-cancel" data-site="${sk}" data-id="${id}">Cancel</button>` +
+				(r.reply ? `<button type="button" class="unique sp-btn sp-btn-ghost sp-agency-reply-delete" data-site="${sk}" data-id="${id}">Delete reply</button>` : '') +
+			'</div>' +
+		'</div>';
+
+	return (
+		`<div class="sp-review-card" data-site="${sk}" data-id="${id}">` +
+			'<div class="sp-review-head">' +
+				photo +
+				`<div class="sp-review-meta"><span class="sp-review-author">${esc(r.reviewer)}</span><span class="sp-agency-card-company">${esc(c.label)}</span><span class="sp-review-date">${esc(date)}</span></div>` +
+				`<span class="sp-review-stars" title="${parseInt(r.starRating, 10) || 0} of 5">${starString(r.starRating)}</span>` +
+			'</div>' +
+			(r.comment ? `<p class="sp-review-body">${esc(r.comment)}</p>` : '<p class="sp-review-body sp-review-nobody">(no comment)</p>') +
+			reply +
+			actions +
+		'</div>'
+	);
+}
+
+function agencyFindReview(site, id) {
+	const c = spAgencyClients.find(x => x.site_key === site);
+	if (!c) return [null, null];
+	return [c, (c.reviews || []).find(r => String(r.reviewId) === String(id)) || null];
+}
+
+function onAgencyReviewListClick(e) {
+	const btn = e.target.closest('button');
+	if (!btn || !btn.dataset.id) return;
+	const site = btn.dataset.site;
+	const id   = btn.dataset.id;
+	const form = $(`.sp-review-reply-form[data-site="${CSS.escape(site)}"][data-id="${CSS.escape(id)}"]`);
+
+	if (btn.classList.contains('sp-agency-reply-btn')) {
+		if (form) { form.hidden = !form.hidden; if (!form.hidden) form.querySelector('textarea')?.focus(); }
+	} else if (btn.classList.contains('sp-agency-reply-cancel')) {
+		if (form) form.hidden = true;
+	} else if (btn.classList.contains('sp-agency-reply-save')) {
+		const comment = form?.querySelector('textarea')?.value.trim() || '';
+		if (!comment) { alert('Write a reply first.'); return; }
+		submitAgencyReply(site, id, comment, btn);
+	} else if (btn.classList.contains('sp-agency-reply-delete')) {
+		if (confirm('Delete the public reply to this review?')) submitAgencyReply(site, id, '', btn);
+	} else if (btn.classList.contains('sp-agency-push-btn')) {
+		pushAgencyTestimonial(site, id, btn);
+	}
+}
+
+async function submitAgencyReply(site, id, comment, btn) {
+	btn.disabled = true;
+	try {
+		const res = await spAjax('site_pulse_agency_reply_review', { site_key: site, review_id: id, comment });
+		if (!res.success) { alert(res.data?.message || 'Reply failed.'); btn.disabled = false; return; }
+		const [, r] = agencyFindReview(site, id);
+		if (r) r.reply = res.data.reply;
+		renderAgencyReviews();
+		spFlash(comment === '' ? 'Reply deleted' : 'Reply posted');
+	} catch (e) {
+		alert('Reply failed.');
+		btn.disabled = false;
+	}
+}
+
+async function pushAgencyTestimonial(site, id, btn) {
+	btn.disabled = true;
+	btn.textContent = 'Sending…';
+	try {
+		const res = await spAjax('site_pulse_agency_push_testimonial', { site_key: site, review_id: id });
+		if (!res.success) {
+			alert(res.data?.message || 'Could not send to site.');
+			btn.disabled = false; btn.textContent = 'Send to site';
+			return;
+		}
+		const [, r] = agencyFindReview(site, id);
+		if (r) r.imported = true;
+		renderAgencyReviews();
+		spFlash(res.data.already_imported ? 'Already on the client site' : 'Published to client site');
+	} catch (e) {
+		alert('Could not send to site.');
+		btn.disabled = false; btn.textContent = 'Send to site';
+	}
+}
+
+/*--------------------------------------------------------------
 # Customer Surveys (forwarded in from the public restaurant sites)
 --------------------------------------------------------------*/
 
@@ -4677,6 +6189,8 @@ function initSurveys() {
 		$('#sp-survey-filter-location')?.addEventListener('change', () => loadSurveys());
 		$('#sp-survey-filter-range')?.addEventListener('change', () => loadSurveys());
 		$('#sp-survey-archive-toggle')?.addEventListener('click', () => { spSurveyViewArchived = !spSurveyViewArchived; loadSurveys(); });
+		let _surveySearchT;
+		$('#sp-survey-search')?.addEventListener('input', () => { clearTimeout(_surveySearchT); _surveySearchT = setTimeout(() => loadSurveys(), 300); });
 		$('#sp-survey-list')?.addEventListener('click', onSurveyListClick);
 		_spSurveyWired = true;
 	}
@@ -4705,9 +6219,10 @@ async function loadSurveys() {
 
 	const { start, end } = spSurveyRange();
 	const location = $('#sp-survey-filter-location')?.value || '';
+	const search = $('#sp-survey-search')?.value.trim() || '';
 
 	try {
-		const res = await spAjax('site_pulse_get_surveys', { start, end, location, archived: spSurveyViewArchived ? 1 : 0 });
+		const res = await spAjax('site_pulse_get_surveys', { start, end, location, search, archived: spSurveyViewArchived ? 1 : 0 });
 		if (!res.success) {
 			list.innerHTML = `<div class="sp-empty">${esc(res.data?.message || 'Could not load surveys.')}</div>`;
 			return;

@@ -41,7 +41,7 @@ function site_pulse_modules(): array {
 		'reports' => [
 			'label'   => 'Reports',
 			'desc'    => 'Bi-weekly GM/Supervisor reports, report templates, and action items.',
-			'caps'    => [ 'view_own_reports', 'submit_reports', 'view_gm_reports', 'view_supervisor_reports', 'manage_templates' ],
+			'caps'    => [ 'submit_reports', 'view_gm_reports', 'view_supervisor_reports', 'view_gm_action_items', 'view_supervisor_action_items', 'manage_templates' ],
 			'default' => true,
 		],
 		'ai' => [
@@ -73,6 +73,18 @@ function site_pulse_modules(): array {
 			'desc'    => 'Collects customer satisfaction surveys forwarded in from the public restaurant sites — ratings, comments, and per-location breakdowns. Shown as a tab under Reviews.',
 			'caps'    => [ 'view_surveys', 'manage_surveys' ],
 			'default' => false,
+		],
+		'directory' => [
+			'label'   => 'Company Directory',
+			'desc'    => 'A staff directory of everyone in the company — names, photos, contact info, and personal notes. Most people in it are not Site Pulse users.',
+			'caps'    => [ 'view_directory', 'manage_directory' ],
+			'default' => true,
+		],
+		'emails' => [
+			'label'   => 'Customer Emails',
+			'desc'    => 'Flagged customer-service emails (complaints, compliments, comments) forwarded in from the public sites\' contact forms. Shown as a tab under Customer Feedback.',
+			'caps'    => [ 'view_emails', 'manage_emails' ],
+			'default' => true,
 		],
 	];
 }

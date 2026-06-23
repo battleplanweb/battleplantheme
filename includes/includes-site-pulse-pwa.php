@@ -11,7 +11,7 @@
  * No rewrite rules and no static files: both endpoints are served dynamically
  * by intercepting two root-scoped URLs early on `init`:
  *     /site-pulse-app.webmanifest
- *     /site-pulse-sw.js
+ *     /site-pulse-sw           (extensionless on purpose — see the SW_FILE note below)
  * Root scope lets a single service worker control /site-pulse-login/ and
  * /site-pulse-dashboard/ alike.
  *
@@ -36,11 +36,15 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 // Bump on any structural change to force every installed client to fetch a
 // fresh service worker and drop its old cache.
-if ( ! defined( 'SITE_PULSE_PWA_VERSION' ) ) define( 'SITE_PULSE_PWA_VERSION', '1.1.0' );
+if ( ! defined( 'SITE_PULSE_PWA_VERSION' ) ) define( 'SITE_PULSE_PWA_VERSION', '1.4.2' );
 
 // The two virtual files. Matched by basename so a subdirectory install still works.
+// NOTE: the service worker URL is intentionally EXTENSIONLESS. On WP Engine, nginx serves any URL
+// ending in a static extension (.js/.css/…) straight from disk and returns a hard 404 before PHP
+// runs — so a virtual "*.js" endpoint can never be intercepted. An extensionless path falls through
+// to WordPress (like the .webmanifest does), where the init handler below serves it as text/javascript.
 if ( ! defined( 'SITE_PULSE_PWA_MANIFEST_FILE' ) ) define( 'SITE_PULSE_PWA_MANIFEST_FILE', 'site-pulse-app.webmanifest' );
-if ( ! defined( 'SITE_PULSE_PWA_SW_FILE' ) )       define( 'SITE_PULSE_PWA_SW_FILE', 'site-pulse-sw.js' );
+if ( ! defined( 'SITE_PULSE_PWA_SW_FILE' ) )       define( 'SITE_PULSE_PWA_SW_FILE', 'site-pulse-sw' );
 
 
 /*--------------------------------------------------------------
@@ -273,21 +277,70 @@ const SP_HOME = '<?php echo esc_js( home_url( '/site-pulse-dashboard/' ) ); ?>';
 
 self.addEventListener('push', (event) => {
 	event.waitUntil((async () => {
-		let data = { title: '<?php echo esc_js( $app_name ); ?>', body: 'You have new activity.', count: 0, url: SP_HOME };
+		const APP = '<?php echo esc_js( $app_name ); ?>';
+		let data = { title: APP, body: 'You have new activity.', count: 0, url: SP_HOME, items: [] };
 		try {
 			const r = await fetch(SP_PUSH_DATA, { credentials: 'include', cache: 'no-store' });
 			if (r.ok) data = Object.assign(data, await r.json());
 		} catch (_) {}
-		await self.registration.showNotification(data.title, {
-			body: data.body,
-			tag: 'site-pulse',
-			renotify: true,
-			data: { url: data.url || SP_HOME }
-		});
+
+		const items = Array.isArray(data.items) ? data.items : [];
+		if (items.length) {
+			// One notification per unread conversation / system alert, each with its own stable tag, so
+			// the shade previews each message and the OS icon badge counts them.
+			for (const it of items) {
+				await self.registration.showNotification(it.title || APP, {
+					body: it.body || '',
+					tag: it.tag || 'site-pulse',
+					renotify: true,
+					data: { url: it.url || SP_HOME }
+				});
+			}
+		} else {
+			// Fallback (older payload / no items): a single summary notification.
+			await self.registration.showNotification(data.title || APP, {
+				body: data.body,
+				tag: 'site-pulse',
+				renotify: true,
+				data: { url: data.url || SP_HOME }
+			});
+		}
 		if ('setAppBadge' in self.navigator) {
 			try { (data.count > 0) ? self.navigator.setAppBadge(data.count) : self.navigator.clearAppBadge(); } catch (_) {}
 		}
+		// Nudge any open app window to refresh its in-app counts (bell + messages) right away, so the
+		// numbers track new activity without waiting on the 60s poll.
+		try {
+			const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+			wins.forEach((w) => w.postMessage({ type: 'sp-activity' }));
+		} catch (_) {}
 	})());
+});
+
+// The page sets/clears the launcher badge THROUGH the service worker — on Android the badge only
+// updates reliably from the SW context, not the page. The page posts the authoritative total here.
+self.addEventListener('message', (event) => {
+	const d = event.data || {};
+	if (!d) return;
+	if (d.type === 'sp-badge' && 'setAppBadge' in self.navigator) {
+		try { ((d.count || 0) > 0) ? self.navigator.setAppBadge(d.count) : self.navigator.clearAppBadge(); } catch (_) {}
+	}
+	// App opened/focused: dismiss EVERY delivered notification and clear the launcher badge, straight
+	// from the SW (it owns them). On Android the icon badge is the OS notification count, so closing
+	// the (tag-collapsed) notification is what actually clears the number.
+	if (d.type === 'sp-clear') {
+		event.waitUntil((async () => {
+			try { const ns = await self.registration.getNotifications(); ns.forEach((n) => n.close()); } catch (_) {}
+			if ('clearAppBadge' in self.navigator) { try { await self.navigator.clearAppBadge(); } catch (_) {} }
+		})());
+	}
+	// Reading one conversation dismisses just that conversation's notification, so the badge ticks
+	// down by one as each thread is read (without closing everything).
+	if (d.type === 'sp-close-tag' && d.tag) {
+		event.waitUntil((async () => {
+			try { const ns = await self.registration.getNotifications({ tag: d.tag }); ns.forEach((n) => n.close()); } catch (_) {}
+		})());
+	}
 });
 
 self.addEventListener('notificationclick', (event) => {

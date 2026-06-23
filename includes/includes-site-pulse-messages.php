@@ -208,7 +208,7 @@ function site_pulse_ajax_messages_thread(): void {
 	$m = site_pulse_table( 'messages' );
 
 	$rows = $wpdb->get_results( $wpdb->prepare(
-		"SELECT id, sender_id, body, edited, attach_url, attach_name, attach_mime, created_at FROM $m WHERE conversation_id = %d ORDER BY created_at ASC, id ASC LIMIT 500",
+		"SELECT id, sender_id, body, edited, attach_url, attach_name, attach_mime, action_created, created_at FROM $m WHERE conversation_id = %d ORDER BY created_at ASC, id ASC LIMIT 500",
 		$cid
 	), ARRAY_A ) ?: [];
 
@@ -221,8 +221,16 @@ function site_pulse_ajax_messages_thread(): void {
 		'attach_url'  => $r['attach_url'],
 		'attach_name' => $r['attach_name'],
 		'attach_mime' => $r['attach_mime'],
+		'has_task'    => (int) $r['action_created'] === 1, // an action item was already made from this message
 		'at'          => $r['created_at'],
 	], $rows );
+
+	// Where this user had previously read up to — captured BEFORE we mark the thread read below, so the
+	// client can open the conversation scrolled to the first unread message.
+	$prev_last_read = (int) $wpdb->get_var( $wpdb->prepare(
+		"SELECT last_read_message_id FROM " . site_pulse_table( 'conversation_participants' ) . " WHERE conversation_id = %d AND user_id = %d",
+		$cid, $me
+	) );
 
 	// Mark read up to the latest message + clear this conversation's bell notification — but NOT while
 	// a god is impersonating: viewing as someone must not consume their unread state. The god is just
@@ -253,7 +261,7 @@ function site_pulse_ajax_messages_thread(): void {
 	}
 
 	$meta = sp_msg_conversation_meta( $cid, $me );
-	wp_send_json_success( [ 'conversation' => $meta, 'messages' => $messages, 'seen' => $seen, 'me' => $me ] );
+	wp_send_json_success( [ 'conversation' => $meta, 'messages' => $messages, 'seen' => $seen, 'me' => $me, 'last_read_id' => $prev_last_read ] );
 }
 
 // Mark the conversation "seen" for the current user up to its latest message. Called by the client
@@ -487,30 +495,18 @@ function site_pulse_ajax_messages_upload_send(): void {
 	] ] );
 }
 
-// Bell (+ optional email) for every OTHER participant. Deduped per conversation per recipient.
+// Notify every OTHER participant of a new message. Messages are NOT bell notifications — they live
+// in the Messages tab with their own unread count (derived from the messages table's last_read
+// pointers). So here we only wake the recipient's devices (push) and optionally email; nothing is
+// written to the notifications table. The bell is reserved for system notifications.
 function sp_msg_notify_participants( int $conv_id, int $sender_id, string $body ): void {
-	global $wpdb;
-	$sender  = get_userdata( $sender_id );
-	$name    = $sender ? $sender->display_name : 'Someone';
-	$meta    = sp_msg_conversation_meta( $conv_id, $sender_id );
-	$preview = mb_substr( trim( preg_replace( '/\s+/', ' ', $body ) ), 0, 80 );
-	$prefix  = $meta['is_group'] ? sprintf( '%s in %s', $name, $meta['title'] ) : $name;
-	$msg     = sprintf( 'New message from %s: %s', $prefix, $preview );
-	$ntable  = site_pulse_table( 'notifications' );
+	$sender = get_userdata( $sender_id );
+	$name   = $sender ? $sender->display_name : 'Someone';
+	$meta   = sp_msg_conversation_meta( $conv_id, $sender_id );
+	$prefix = $meta['is_group'] ? sprintf( '%s in %s', $name, $meta['title'] ) : $name;
 
 	foreach ( sp_msg_participant_ids( $conv_id ) as $uid ) {
 		if ( $uid === $sender_id ) continue;
-		$existing = (int) $wpdb->get_var( $wpdb->prepare(
-			"SELECT id FROM $ntable WHERE user_id = %d AND type = 'message' AND related_type = 'conversation'
-			 AND related_id = %d AND is_read = 0 AND is_archived = 0 LIMIT 1",
-			$uid, $conv_id
-		) );
-		if ( $existing ) {
-			$wpdb->update( $ntable, [ 'message' => $msg, 'created_at' => current_time( 'mysql' ) ], [ 'id' => $existing ] );
-			if ( function_exists( 'site_pulse_push_send' ) ) site_pulse_push_send( $uid ); // wake their devices for each new message
-			continue;
-		}
-		site_pulse_notify( $uid, 'message', $msg, $conv_id, 'conversation' );
 		if ( function_exists( 'site_pulse_push_send' ) ) site_pulse_push_send( $uid );
 		if ( site_pulse_get_setting( 'messages_email_enabled', '0' ) === '1' ) sp_msg_email_recipient( $uid, $prefix );
 	}
@@ -657,6 +653,7 @@ function site_pulse_ajax_messages_action_create(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	$me     = site_pulse_effective_user_id();
 	$cid    = (int) ( $_POST['conversation_id'] ?? 0 );
+	$src_mid = (int) ( $_POST['message_id'] ?? 0 ); // the message the action item was made from
 	$assign = in_array( $_POST['assign'] ?? 'me', [ 'me', 'other', 'both' ], true ) ? $_POST['assign'] : 'me';
 	$items  = json_decode( (string) wp_unslash( $_POST['items'] ?? '[]' ), true );
 	if ( ! $me || ! $cid || ! sp_msg_is_participant( $cid, $me ) ) wp_send_json_error( [ 'message' => 'Conversation not found.' ] );
@@ -700,8 +697,15 @@ function site_pulse_ajax_messages_action_create(): void {
 			$created++;
 			if ( $uid !== $me ) {
 				site_pulse_notify( $uid, 'action_pending', sprintf( '%s added an action item for you: %s', $me_name, $desc ), (int) $wpdb->insert_id, 'action_item' );
+					if ( function_exists( 'site_pulse_push_send' ) ) site_pulse_push_send( $uid ); // bell notification → also wake their devices
 			}
 		}
+	}
+
+	// Lock the source message's "create action item" button for everyone (prevents duplicate items from
+	// two people acting on the same comment). Reflected via has_task on the next thread fetch/poll.
+	if ( $created > 0 && $src_mid ) {
+		$wpdb->update( site_pulse_table( 'messages' ), [ 'action_created' => 1 ], [ 'id' => $src_mid, 'conversation_id' => $cid ] );
 	}
 
 	wp_send_json_success( [ 'created' => $created ] );

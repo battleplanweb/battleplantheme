@@ -106,6 +106,56 @@ class BPGBP_Hub {
 		echo '</div>';
 	}
 
+	/**
+	 * Every manageable GBP location WITH its websiteUri — used to auto-match a client site to its
+	 * location during pairing approval. Paginated (your listings exceed 100 under one account) and
+	 * cached for an hour. Returns [ [ 'location' => 'accounts/X/locations/Y', 'title', 'website' ], … ];
+	 * [] on any API error. Pass $fresh = true to bypass the cache.
+	 */
+	public static function locations_for_match( $fresh = false ) {
+		if ( ! $fresh ) {
+			$cached = get_transient( 'bpgbp_loc_match' );
+			if ( is_array( $cached ) ) return $cached;
+		}
+
+		$out = array();
+		try {
+			$token    = self::get_access_token();
+			$accounts = self::google_request( 'GET', self::ACCOUNTS_URL, $token );
+		} catch ( Exception $e ) {
+			return array();
+		}
+
+		if ( ! empty( $accounts['accounts'] ) ) {
+			foreach ( $accounts['accounts'] as $account ) {
+				$account_name = $account['name'];
+				$next         = '';
+				do {
+					try {
+						$url = sprintf( self::LOCATIONS_URL, $account_name ) . '?readMask=name,title,websiteUri&pageSize=100';
+						if ( $next ) $url .= '&pageToken=' . rawurlencode( $next );
+						$locs = self::google_request( 'GET', $url, $token );
+					} catch ( Exception $e ) {
+						break;
+					}
+					if ( ! empty( $locs['locations'] ) ) {
+						foreach ( $locs['locations'] as $loc ) {
+							$out[] = array(
+								'location' => $account_name . '/' . $loc['name'],
+								'title'    => isset( $loc['title'] ) ? $loc['title'] : '',
+								'website'  => isset( $loc['websiteUri'] ) ? $loc['websiteUri'] : '',
+							);
+						}
+					}
+					$next = isset( $locs['nextPageToken'] ) ? (string) $locs['nextPageToken'] : '';
+				} while ( $next );
+			}
+		}
+
+		set_transient( 'bpgbp_loc_match', $out, HOUR_IN_SECONDS );
+		return $out;
+	}
+
 	public static function register_routes() {
 		// Client sites post here. Auth is per-site HMAC (see verify_site_signature).
 		register_rest_route(
@@ -137,6 +187,17 @@ class BPGBP_Hub {
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( __CLASS__, 'handle_reply' ),
+				'permission_callback' => array( __CLASS__, 'verify_site_signature' ),
+			)
+		);
+
+		// Client sites ask which locations they own (so a multi-location client knows what to sync).
+		register_rest_route(
+			self::NS,
+			'/site-locations',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( __CLASS__, 'handle_site_locations' ),
 				'permission_callback' => array( __CLASS__, 'verify_site_signature' ),
 			)
 		);
@@ -247,47 +308,43 @@ class BPGBP_Hub {
 	public static function handle_reviews( WP_REST_Request $request ) {
 		$sites    = self::get_sites();
 		$site_key = $request->get_param( '_bpgbp_site_key' );
-		$location = $sites[ $site_key ]['location']; // hub-enforced; never taken from the client
+		$site     = $sites[ $site_key ];
+
+		// The client may target any location it owns; the hub validates it against this site's allowlist
+		// (so a site still can't read another client's listing). No location → the site's primary.
+		$location = self::resolve_site_location( $site, (string) $request->get_param( 'location' ) );
+		if ( '' === $location ) {
+			return new WP_Error( 'bpgbp_bad_location', 'That location is not configured for this site.', array( 'status' => 403 ) );
+		}
+		$lm = self::location_meta( $site, $location );
+
+		// Optional pagination: page_token resumes older pages; max caps this batch (default newest 200).
+		$start_token = (string) $request->get_param( 'page_token' );
+		$max         = (int) ( $request->get_param( 'max' ) ?: 200 );
+		$max         = min( 1000, max( 1, $max ) ); // hard ceiling so one call can't run away
 
 		try {
-			$token   = self::get_access_token();
-			$reviews = array();
-			$avg     = null;
-			$total   = null;
-			$page    = '';
-			do {
-				$url = sprintf( self::REVIEWS_URL, $location ) . '?pageSize=50';
-				if ( $page ) {
-					$url .= '&pageToken=' . rawurlencode( $page );
-				}
-				$data = self::google_request( 'GET', $url, $token );
-
-				if ( ! empty( $data['reviews'] ) ) {
-					foreach ( $data['reviews'] as $r ) {
-						$reviews[] = self::normalize_review( $r );
-					}
-				}
-				if ( null === $avg && isset( $data['averageRating'] ) ) {
-					$avg = $data['averageRating'];
-				}
-				if ( null === $total && isset( $data['totalReviewCount'] ) ) {
-					$total = (int) $data['totalReviewCount'];
-				}
-				$page = ! empty( $data['nextPageToken'] ) ? $data['nextPageToken'] : '';
-			} while ( $page && count( $reviews ) < 2000 ); // safety cap against runaway paging
+			$data = self::fetch_reviews_for_location( $location, $start_token, $max );
 		} catch ( Exception $e ) {
 			return new WP_Error( 'bpgbp_google_error', $e->getMessage(), array( 'status' => 502 ) );
 		}
 
-		return new WP_REST_Response(
+		$response = new WP_REST_Response(
 			array(
 				'ok'               => true,
-				'averageRating'    => $avg,
-				'totalReviewCount' => $total,
-				'reviews'          => $reviews,
+				'averageRating'    => $data['averageRating'],
+				'totalReviewCount' => $data['totalReviewCount'],
+				'reviews'          => $data['reviews'],
+				'nextPageToken'    => $data['nextPageToken'],
+				'location'         => $location,
+				'label'            => $lm['label'], // friendly location name for the card
+				'brand'            => $lm['brand'], // brand grouping for the by-brand filter
 			),
 			200
 		);
+		// Never let an edge cache (Cloudflare/WPE) store this per-site response.
+		$response->header( 'Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0' );
+		return $response;
 	}
 
 	/* ───────────────────────── POST bpgbp/v1/reply ───────────────────────── */
@@ -295,28 +352,29 @@ class BPGBP_Hub {
 	public static function handle_reply( WP_REST_Request $request ) {
 		$sites    = self::get_sites();
 		$site_key = $request->get_param( '_bpgbp_site_key' );
-		$location = $sites[ $site_key ]['location']; // hub-enforced
+		$site     = $sites[ $site_key ];
 
 		$params    = (array) $request->get_json_params();
-		$review_id = isset( $params['review_id'] ) ? preg_replace( '/[^A-Za-z0-9_\-]/', '', (string) $params['review_id'] ) : '';
-		$comment   = isset( $params['comment'] ) ? trim( (string) $params['comment'] ) : '';
+		$review_id = isset( $params['review_id'] ) ? (string) $params['review_id'] : '';
+		$comment   = isset( $params['comment'] ) ? (string) $params['comment'] : '';
 
-		if ( '' === $review_id ) {
+		// The review's own location (validated against the site's allowlist); falls back to primary.
+		$location = self::resolve_site_location( $site, isset( $params['location'] ) ? (string) $params['location'] : '' );
+		if ( '' === $location ) {
+			return new WP_Error( 'bpgbp_bad_location', 'That location is not configured for this site.', array( 'status' => 403 ) );
+		}
+		if ( '' === trim( $review_id ) ) {
 			return new WP_Error( 'bpgbp_no_review', 'A review_id is required.', array( 'status' => 400 ) );
 		}
 
-		$url = sprintf( self::REVIEW_REPLY_URL, $location, $review_id );
-
 		try {
-			$token = self::get_access_token();
-			if ( '' === $comment ) {
-				// Empty comment = remove the existing reply.
-				self::google_request( 'DELETE', $url, $token );
-				return new WP_REST_Response( array( 'ok' => true, 'deleted' => true ), 200 );
-			}
-			$result = self::google_request( 'PUT', $url, $token, array( 'comment' => $comment ) );
+			$result = self::reply_for_location( $location, $review_id, $comment );
 		} catch ( Exception $e ) {
 			return new WP_Error( 'bpgbp_google_error', $e->getMessage(), array( 'status' => 502 ) );
+		}
+
+		if ( ! empty( $result['deleted'] ) ) {
+			return new WP_REST_Response( array( 'ok' => true, 'deleted' => true ), 200 );
 		}
 
 		return new WP_REST_Response(
@@ -327,6 +385,93 @@ class BPGBP_Hub {
 			),
 			200
 		);
+	}
+
+	/* ───────────────────────── GET bpgbp/v1/site-locations ───────────────────────── */
+
+	public static function handle_site_locations( WP_REST_Request $request ) {
+		$sites    = self::get_sites();
+		$site_key = $request->get_param( '_bpgbp_site_key' );
+		$site     = $sites[ $site_key ];
+
+		$response = new WP_REST_Response(
+			array(
+				'ok'        => true,
+				'locations' => array_values( isset( $site['locations'] ) ? $site['locations'] : array() ),
+			),
+			200
+		);
+		$response->header( 'Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0' );
+		return $response;
+	}
+
+	/* ───────────── in-process API (the hub's own dashboard uses these) ─────────────
+	 * The REST handlers above lock each call to the caller's own location via HMAC. The hub
+	 * site itself (its agency "Client Reviews" view) trusts itself, so it calls these directly
+	 * with an explicit location — no HMAC round-trip to localhost. Same Google plumbing. */
+
+	/**
+	 * Pull reviews + the exact summary for one location. Starts from $start_token (Google's
+	 * nextPageToken — '' = newest first) and gathers up to $max reviews, returning the
+	 * nextPageToken so a caller can resume for older pages ('' once Google has no more).
+	 * Throws on Google error.
+	 */
+	public static function fetch_reviews_for_location( $location, $start_token = '', $max = 200 ) {
+		$max     = max( 1, (int) $max );
+		$token   = self::get_access_token();
+		$reviews = array();
+		$avg     = null;
+		$total   = null;
+		$page    = (string) $start_token;
+		do {
+			$url = sprintf( self::REVIEWS_URL, $location ) . '?pageSize=50';
+			if ( $page ) {
+				$url .= '&pageToken=' . rawurlencode( $page );
+			}
+			$data = self::google_request( 'GET', $url, $token );
+
+			if ( ! empty( $data['reviews'] ) ) {
+				foreach ( $data['reviews'] as $r ) {
+					$reviews[] = self::normalize_review( $r );
+				}
+			}
+			if ( null === $avg && isset( $data['averageRating'] ) ) {
+				$avg = $data['averageRating'];
+			}
+			if ( null === $total && isset( $data['totalReviewCount'] ) ) {
+				$total = (int) $data['totalReviewCount'];
+			}
+			$page = ! empty( $data['nextPageToken'] ) ? $data['nextPageToken'] : '';
+		} while ( $page && count( $reviews ) < $max ); // summary fields come from page 1, so they stay exact.
+
+		return array(
+			'averageRating'    => $avg,
+			'totalReviewCount' => $total,
+			'reviews'          => $reviews,
+			'nextPageToken'    => $page, // '' when Google has no older pages left
+		);
+	}
+
+	/** Reply to a review (empty comment = delete the reply). Throws on Google error. */
+	public static function reply_for_location( $location, $review_id, $comment ) {
+		$review_id = preg_replace( '/[^A-Za-z0-9_\-]/', '', (string) $review_id );
+		if ( '' === $review_id ) {
+			throw new Exception( 'A review_id is required.' );
+		}
+		$comment = trim( (string) $comment );
+		$url     = sprintf( self::REVIEW_REPLY_URL, $location, $review_id );
+		$token   = self::get_access_token();
+
+		if ( '' === $comment ) {
+			self::google_request( 'DELETE', $url, $token );
+			return array( 'deleted' => true );
+		}
+		return self::google_request( 'PUT', $url, $token, array( 'comment' => $comment ) );
+	}
+
+	/** Read-only accessor for the site map (key => { secret, location, label, site_url }). */
+	public static function get_site_map() {
+		return self::get_sites();
 	}
 
 	/** Flatten a v4 review object into the lean shape client sites consume. */
@@ -503,7 +648,69 @@ class BPGBP_Hub {
 		$sites = apply_filters( 'bpgbp_sites', $sites );
 
 		$cache = is_array( $sites ) ? $sites : array();
+
+		// Normalize every entry to a `locations` array of { id, label, brand } so multi-location and the
+		// legacy single `location`/`label` form behave identically downstream. `location` is kept as the
+		// primary id for single-location consumers (the post route + the signature precheck).
+		foreach ( $cache as $key => $entry ) {
+			if ( ! is_array( $entry ) ) { $cache[ $key ] = array(); continue; }
+			$entry['locations'] = self::normalize_locations( $entry );
+			if ( empty( $entry['location'] ) && ! empty( $entry['locations'][0]['id'] ) ) {
+				$entry['location'] = $entry['locations'][0]['id'];
+			}
+			$cache[ $key ] = $entry;
+		}
 		return $cache;
+	}
+
+	/** Build a uniform [ {id,label,brand}, ... ] from either a `locations` array or a single `location`. */
+	private static function normalize_locations( array $entry ) {
+		$out = array();
+		if ( ! empty( $entry['locations'] ) && is_array( $entry['locations'] ) ) {
+			foreach ( $entry['locations'] as $l ) {
+				$id = is_array( $l ) ? (string) ( isset( $l['id'] ) ? $l['id'] : '' ) : (string) $l;
+				if ( '' === $id ) continue;
+				$out[] = array(
+					'id'    => $id,
+					'label' => ( is_array( $l ) && isset( $l['label'] ) ) ? (string) $l['label'] : '',
+					'brand' => ( is_array( $l ) && isset( $l['brand'] ) ) ? (string) $l['brand'] : '',
+				);
+			}
+		} elseif ( ! empty( $entry['location'] ) ) {
+			$out[] = array(
+				'id'    => (string) $entry['location'],
+				'label' => isset( $entry['label'] ) ? (string) $entry['label'] : '',
+				'brand' => isset( $entry['brand'] ) ? (string) $entry['brand'] : '',
+			);
+		}
+		return $out;
+	}
+
+	/** Validate a requested location against a site; '' → the site's primary; returns '' if not owned. */
+	private static function resolve_site_location( array $site, $requested ) {
+		$locs      = isset( $site['locations'] ) ? $site['locations'] : array();
+		$requested = (string) $requested;
+		if ( '' === $requested ) {
+			if ( ! empty( $locs[0]['id'] ) ) return $locs[0]['id'];
+			return ! empty( $site['location'] ) ? (string) $site['location'] : '';
+		}
+		foreach ( $locs as $l ) {
+			if ( isset( $l['id'] ) && $l['id'] === $requested ) return $requested;
+		}
+		return '';
+	}
+
+	/** label/brand for a location id within a site (falls back to the site-level label/brand). */
+	private static function location_meta( array $site, $location_id ) {
+		foreach ( ( isset( $site['locations'] ) ? $site['locations'] : array() ) as $l ) {
+			if ( isset( $l['id'] ) && $l['id'] === $location_id ) {
+				return array( 'label' => (string) $l['label'], 'brand' => (string) $l['brand'] );
+			}
+		}
+		return array(
+			'label' => isset( $site['label'] ) ? (string) $site['label'] : '',
+			'brand' => isset( $site['brand'] ) ? (string) $site['brand'] : '',
+		);
 	}
 
 	private static function default_sites_path() {
@@ -528,4 +735,134 @@ class BPGBP_Hub {
 // hub and registers the /bpgbp/v1/* routes. Everywhere else the class loads dormant.
 if ( defined( 'BPGBP_REFRESH_TOKEN' ) && BPGBP_REFRESH_TOKEN ) {
 	BPGBP_Hub::init();
+}
+
+
+/* ─────────────────── CLIENT CONFIG: constant OR stored option ───────────────────
+ * A client's hub credentials used to come only from wp-config constants. To let a site be PAIRED
+ * automatically (no wp-config edit), each value now falls back to a stored option that the pairing
+ * handshake writes. A constant always wins, so existing hand-configured sites are unaffected. */
+function bpgbp_cfg( $which ) {
+	static $map = array(
+		'HUB_URL'     => array( 'BPGBP_HUB_URL', 'bpgbp_hub_url' ),
+		'SITE_KEY'    => array( 'BPGBP_SITE_KEY', 'bpgbp_site_key' ),
+		'SITE_SECRET' => array( 'BPGBP_SITE_SECRET', 'bpgbp_site_secret' ),
+	);
+	if ( ! isset( $map[ $which ] ) ) return '';
+	list( $const, $opt ) = $map[ $which ];
+	if ( defined( $const ) && constant( $const ) ) return (string) constant( $const );
+	return (string) get_option( $opt, '' );
+}
+
+
+/* ─────────────────── GBP CLIENT: testimonial receiver (mirror of the hub) ───────────────────
+ * The client-side counterpart to the hub. Any battleplantheme site configured as a hub client
+ * (wp-config defines BPGBP_SITE_SECRET) accepts a signed push from the hub's agency dashboard and
+ * posts the review as a `testimonials` CPT. Like the hub above, this lives in a file loaded on
+ * EVERY install but stays dormant unless the secret exists — so the push reaches plain client
+ * sites (e.g. the HVAC contractors) that don't run the Site Pulse app, not only Site Pulse ones.
+ *
+ * Auth is the same per-site HMAC as the hub, reversed: the hub signs timestamp . '.' . rawBody
+ * with the secret it holds for this site in bpgbp-sites.json; we verify with BPGBP_SITE_SECRET. */
+
+/**
+ * Create a `testimonials` post from a normalized Google review (one per reviewId). Shared by the
+ * push receiver here ($status 'publish' — goes live) and Site Pulse's local importer ($status
+ * defaults to 'draft' — client reviews before publishing).
+ * Returns array( 'post_id', 'edit_url' ), array( 'already_imported' => true, 'post_id' ), or WP_Error.
+ */
+function bpgbp_create_testimonial_from_review( array $review, $status = 'draft' ) {
+	$review_id = (string) ( isset( $review['reviewId'] ) ? $review['reviewId'] : '' );
+	if ( '' === $review_id ) {
+		return new WP_Error( 'bpgbp_no_review', 'Missing review id.' );
+	}
+
+	$status = ( 'publish' === $status ) ? 'publish' : 'draft';
+
+	// One testimonial per Google review.
+	$dupe = get_posts( array(
+		'post_type'   => 'testimonials',
+		'post_status' => 'any',
+		'meta_key'    => '_bp_google_review_id',
+		'meta_value'  => $review_id,
+		'fields'      => 'ids',
+		'numberposts' => 1,
+	) );
+	if ( $dupe ) {
+		return array( 'already_imported' => true, 'post_id' => (int) $dupe[0] );
+	}
+
+	$post_id = wp_insert_post( array(
+		'post_type'    => 'testimonials',
+		'post_status'  => $status,
+		'post_title'   => ( isset( $review['reviewer'] ) ? $review['reviewer'] : '' ) ?: 'Google Reviewer',
+		'post_content' => isset( $review['comment'] ) ? $review['comment'] : '',
+	), true );
+	if ( is_wp_error( $post_id ) ) {
+		return $post_id;
+	}
+
+	$rating = (int) ( isset( $review['starRating'] ) ? $review['starRating'] : 0 );
+	if ( function_exists( 'update_field' ) ) {
+		update_field( 'testimonial_rating', $rating, $post_id );
+		update_field( 'testimonial_platform', 'Google', $post_id );
+	} else {
+		update_post_meta( $post_id, 'testimonial_rating', $rating );
+		update_post_meta( $post_id, 'testimonial_platform', 'Google' );
+	}
+	update_post_meta( $post_id, '_bp_google_review_id', $review_id );
+
+	return array( 'post_id' => (int) $post_id, 'edit_url' => get_edit_post_link( $post_id, 'raw' ) );
+}
+
+if ( bpgbp_cfg( 'SITE_SECRET' ) ) {
+	add_action( 'rest_api_init', 'bpgbp_register_testimonial_receiver' );
+}
+
+function bpgbp_register_testimonial_receiver() {
+	register_rest_route( 'bpgbp-client/v1', '/testimonial', array(
+		'methods'             => 'POST',
+		'callback'            => 'bpgbp_receive_testimonial',
+		'permission_callback' => 'bpgbp_verify_hub_signature',
+	) );
+}
+
+/** Mirror of BPGBP_Hub::verify_site_signature(): sign timestamp . '.' . rawBody with our secret. */
+function bpgbp_verify_hub_signature( WP_REST_Request $request ) {
+	$timestamp = $request->get_header( 'x-bpgbp-timestamp' );
+	$signature = $request->get_header( 'x-bpgbp-signature' );
+
+	if ( ! $timestamp || ! $signature ) {
+		return new WP_Error( 'bpgbp_missing_auth', 'Missing authentication headers.', array( 'status' => 401 ) );
+	}
+	if ( abs( time() - (int) $timestamp ) > 300 ) {
+		return new WP_Error( 'bpgbp_stale', 'Request timestamp outside allowed window.', array( 'status' => 401 ) );
+	}
+
+	$expected = hash_hmac( 'sha256', $timestamp . '.' . $request->get_body(), bpgbp_cfg( 'SITE_SECRET' ) );
+	if ( ! hash_equals( $expected, (string) $signature ) ) {
+		return new WP_Error( 'bpgbp_bad_signature', 'Signature mismatch.', array( 'status' => 403 ) );
+	}
+	return true;
+}
+
+function bpgbp_receive_testimonial( WP_REST_Request $request ) {
+	$p      = (array) $request->get_json_params();
+	$review = array(
+		'reviewId'   => isset( $p['reviewId'] )   ? sanitize_text_field( (string) $p['reviewId'] ) : '',
+		'reviewer'   => isset( $p['reviewer'] )   ? sanitize_text_field( (string) $p['reviewer'] ) : '',
+		'comment'    => isset( $p['comment'] )    ? wp_kses_post( (string) $p['comment'] ) : '',
+		'starRating' => isset( $p['starRating'] ) ? (int) $p['starRating'] : 0,
+	);
+	if ( '' === $review['reviewId'] ) {
+		return new WP_Error( 'bpgbp_no_review', 'Missing review id.', array( 'status' => 400 ) );
+	}
+
+	// Pushed testimonials go LIVE on the client site (the agency reviewed them before sending).
+	$created = bpgbp_create_testimonial_from_review( $review, 'publish' );
+	if ( is_wp_error( $created ) ) {
+		return new WP_Error( 'bpgbp_create_failed', $created->get_error_message(), array( 'status' => 500 ) );
+	}
+
+	return new WP_REST_Response( array_merge( array( 'ok' => true ), $created ), 200 );
 }

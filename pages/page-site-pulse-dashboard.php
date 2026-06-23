@@ -38,7 +38,7 @@ if ( $is_god && ! $impersonating ) {
 	$caps[] = 'god_mode';
 	$role_label = 'Odinson';
 } elseif ( $is_wp_admin && ! $role ) {
-	$caps = [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'view_ai_insights', 'view_forms', 'submit_reports', 'view_own_reports', 'manage_mileage', 'submit_mileage' ];
+	$caps = [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'manage_notifications', 'manage_api_keys', 'view_ai_insights', 'view_forms', 'upload_forms', 'submit_reports', 'view_gm_action_items', 'view_supervisor_action_items', 'manage_mileage', 'submit_mileage' ];
 	$role_label = 'Administrator';
 } else {
 	// Effective caps = the role's capabilities with this user's per-user overrides applied, so an
@@ -67,7 +67,10 @@ $loc_name     = $location ? esc_html( $location['name'] ) : '';
 $cap_view_gm            = in_array( 'view_gm_reports', $caps, true );
 $cap_view_sup           = in_array( 'view_supervisor_reports', $caps, true );
 $cap_view_other_reports = $cap_view_gm || $cap_view_sup;
-$cap_reports_access     = in_array( 'submit_reports', $caps, true ) || in_array( 'view_own_reports', $caps, true ) || $cap_view_other_reports;
+$cap_reports_access     = in_array( 'submit_reports', $caps, true ) || $cap_view_other_reports;
+
+// Action-item cross-visibility gates (separate caps; OFF by default = own items only).
+$cap_view_other_actions = in_array( 'view_gm_action_items', $caps, true ) || in_array( 'view_supervisor_action_items', $caps, true );
 
 $nonce_field = wp_nonce_field( 'site_pulse_nonce', 'site_pulse_nonce_field', true, false );
 
@@ -125,7 +128,7 @@ $nav[] = [
 	'icon'  => 'store',
 	'show'  => $cap_reports_access,
 	'children' => [
-		[ 'slug' => 'reports-my',     'label' => 'My Reports',          'show' => in_array( 'submit_reports', $caps ) || in_array( 'view_own_reports', $caps ) ],
+		[ 'slug' => 'reports-my',     'label' => 'My Reports',          'show' => in_array( 'submit_reports', $caps ) ],
 		[ 'slug' => 'reports-review', 'label' => 'GM Reports',          'action' => 'review-gm',  'show' => $cap_view_gm ],
 		[ 'slug' => 'reports-review', 'label' => 'Supervisor Reports',  'action' => 'review-sup', 'show' => $cap_view_sup ],
 	],
@@ -151,16 +154,30 @@ $nav[] = [
 // module's caps are present, so Surveys can stand alone even while Reviews (Google) is dark.
 $cap_reviews_area = in_array( 'view_reviews', $caps ) || in_array( 'manage_reviews', $caps );
 $cap_surveys_area = in_array( 'view_surveys', $caps ) || in_array( 'manage_surveys', $caps );
+$cap_emails_area  = in_array( 'view_emails', $caps ) || in_array( 'manage_emails', $caps );
+$cap_emails_manage = in_array( 'manage_emails', $caps );
+// Agency "Client Reviews": every mapped client's reviews in one place. Hub-only (this install holds
+// the GBP token) and agency-only (manage_reviews / god) — invisible on client sites entirely.
+$is_review_hub      = defined( 'BPGBP_REFRESH_TOKEN' ) && BPGBP_REFRESH_TOKEN;
+$cap_agency_reviews = $is_review_hub && ( $eff_is_god || in_array( 'manage_reviews', $caps ) );
 $nav[] = [
 	'slug'  => 'reviews',
-	'label' => 'Reviews',
+	'label' => 'Customer Feedback',
 	'icon'  => 'star',
-	'show'  => $cap_reviews_area || $cap_surveys_area,
+	'show'  => $cap_reviews_area || $cap_surveys_area || $cap_agency_reviews || $cap_emails_area,
 	'children' => [
-		[ 'slug' => 'reviews', 'label' => 'Google Reviews', 'show' => $cap_reviews_area ],
-		[ 'slug' => 'surveys', 'label' => 'Surveys',        'show' => $cap_surveys_area ],
+		[ 'slug' => 'reviews',        'label' => 'Reviews',        'show' => $cap_reviews_area ],
+		[ 'slug' => 'agency-reviews', 'label' => 'Client Reviews', 'show' => $cap_agency_reviews ],
+		[ 'slug' => 'surveys',        'label' => 'Surveys',        'show' => $cap_surveys_area ],
+		[ 'slug' => 'emails',         'label' => 'Emails',         'show' => $cap_emails_area ],
 	],
 ];
+
+// Company Directory — staff directory (names, photos, contact info). Most people in it are NOT
+// users; access is gated purely by role + per-user override via the directory caps. God always sees.
+$cap_directory        = in_array( 'view_directory', $caps, true ) || in_array( 'manage_directory', $caps, true );
+$cap_directory_manage = in_array( 'manage_directory', $caps, true );
+$nav[] = [ 'slug' => 'directory', 'label' => 'Directory', 'icon' => 'users', 'show' => $cap_directory ];
 
 // Forms is gated on the 'view_forms' capability — and ALWAYS visible in Odin (god) mode,
 // independent of the module toggle / capability catalog, so god never loses it. 'upload_forms'
@@ -202,7 +219,7 @@ $nav[] = [
 	'slug'  => 'admin',
 	'label' => 'Settings',
 	'icon'  => 'settings',
-	'show'  => in_array( 'manage_locations', $caps ) || in_array( 'manage_users', $caps ) || in_array( 'manage_settings', $caps ) || in_array( 'manage_mileage', $caps ),
+	'show'  => in_array( 'manage_locations', $caps ) || in_array( 'manage_users', $caps ) || in_array( 'manage_settings', $caps ) || in_array( 'manage_mileage', $caps ) || in_array( 'manage_templates', $caps ) || in_array( 'manage_notifications', $caps ) || in_array( 'manage_api_keys', $caps ),
 	'children' => [
 		[ 'slug' => 'admin-users',     'label' => 'Users',            'icon' => 'users',   'show' => in_array( 'manage_users', $caps ) ],
 		[ 'slug' => 'admin-tiers',     'label' => 'Roles',            'icon' => 'layers',  'show' => in_array( 'manage_settings', $caps ) ],
@@ -211,8 +228,8 @@ $nav[] = [
 		[ 'slug' => 'admin-mileage',   'label' => 'Mileage',        'icon' => 'car',     'show' => in_array( 'manage_mileage', $caps ) ],
 		[ 'slug' => 'admin-forms',     'label' => 'Forms',          'icon' => 'forms',   'show' => in_array( 'manage_settings', $caps ) ],
 		[ 'slug' => 'admin-settings',  'label' => 'Site Defaults',  'icon' => 'palette', 'show' => in_array( 'manage_settings', $caps ) ],
-		[ 'slug' => 'admin-notifications', 'label' => 'Notifications', 'icon' => 'bell',   'show' => in_array( 'manage_settings', $caps ) ],
-		[ 'slug' => 'admin-apikeys',   'label' => 'API Keys',         'icon' => 'key',     'show' => in_array( 'manage_settings', $caps ) ],
+		[ 'slug' => 'admin-notifications', 'label' => 'Notifications', 'icon' => 'bell',   'show' => in_array( 'manage_notifications', $caps ) ],
+		[ 'slug' => 'admin-apikeys',   'label' => 'API Keys',         'icon' => 'key',     'show' => in_array( 'manage_api_keys', $caps ) ],
 		[ 'slug' => 'admin-modules',   'label' => 'Modules',          'icon' => 'layers',  'show' => $is_superadmin ],
 	],
 ];
@@ -334,7 +351,6 @@ if ( $header_logo ) {
 }
 $printPage .=     '<span class="sp-mobile-powered">Powered by Battle Plan Site Pulse</span>';
 $printPage .=   '</div>';
-$printPage .=   '<div class="sp-mobile-user">' . $svg( $icons['user'] ) . '</div>';
 $printPage .= '</header>';
 
 // Overlay for mobile sidebar
@@ -349,28 +365,22 @@ $printPage .=   '<div class="sp-topbar-left">';
 $printPage .=     $svg( $icons['user'] );
 $printPage .=     '<span class="sp-topbar-name">' . $display_name . '</span>';
 if ( $role_label ) {
-	$printPage .= '<span class="sp-topbar-divider">&middot;</span>';
+	$printPage .= '<span class="sp-topbar-divider">&#9642;</span>';
 	$printPage .= '<span class="sp-topbar-role">' . $role_label . '</span>';
 }
 if ( $loc_name ) {
-	$printPage .= '<span class="sp-topbar-divider">&middot;</span>';
+	$printPage .= '<span class="sp-topbar-divider">&#9642;</span>';
 	$printPage .= '<span class="sp-topbar-location">' . $loc_name . '</span>';
 }
 $printPage .=   '</div>';
-$printPage .=   '<div class="sp-topbar-right">';
 $printPage .=     '<button type="button" class="unique sp-topbar-btn sp-notification-btn" id="sp-notification-btn" aria-label="Notifications">';
 $printPage .=       '<svg class="sp-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
 $printPage .=       '<span class="sp-notification-badge" id="sp-notification-badge" hidden>0</span>';
 $printPage .=     '</button>';
-$printPage .=     '<button type="button" class="unique sp-topbar-btn sp-undo-btn" id="sp-undo-btn" aria-label="Undo last delete" title="Undo last delete">';
-$printPage .=       '<svg class="sp-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>';
-$printPage .=       '<span>Undo</span>';
-$printPage .=     '</button>';
-$printPage .=     '<button type="button" class="unique sp-topbar-btn sp-logout-btn-top" id="sp-logout-btn-top">';
+$printPage .=     '<button type="button" class="unique sp-topbar-btn sp-logout-btn-top" id="sp-logout-btn-top" aria-label="Sign Out">';
 $printPage .=       $svg( $icons['logout'] );
 $printPage .=       '<span>Sign Out</span>';
 $printPage .=     '</button>';
-$printPage .=   '</div>';
 $printPage .= '</header>';
 
 // Notification Panel
@@ -482,7 +492,7 @@ $printPage .=   '</div>';
 $printPage .= '</section>';
 
 // My Reports Panel
-if ( in_array( 'submit_reports', $caps ) || in_array( 'view_own_reports', $caps ) ) {
+if ( in_array( 'submit_reports', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-reports-my">';
 	$printPage .=   '<div class="sp-panel-header">';
 	$printPage .=     $sp_crumb( 'Stores', 'My Reports' );
@@ -520,13 +530,10 @@ if ( $cap_view_other_reports ) {
 {
 	$printPage .= '<section class="sp-panel" id="sp-panel-action-items">';
 	$printPage .=   '<div class="sp-panel-header"><h2>Action Items</h2>';
-	if ( $is_god && ! $impersonating ) {
-		// One-time recovery for reports that generated no action items while the generator was broken.
-		$printPage .= '<div class="sp-action-backfill-wrap"><span class="sp-help-text" id="sp-action-backfill-status"></span><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-action-backfill-btn">Backfill missing</button></div>';
-	}
+	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-add-action-item-btn">+ Add Action Item</button>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-report-filters">';
-	if ( $cap_view_other_reports ) {
+	if ( $cap_view_other_actions ) {
 		$printPage .= '<select id="sp-action-filter-location" class="sp-select"><option value="mine">My Action Items</option></select>';
 	}
 	$printPage .=     '<select id="sp-action-filter-status" class="sp-select">';
@@ -549,15 +556,33 @@ if ( in_array( 'view_analytics', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-analytics">';
 	$printPage .=   '<div class="sp-panel-header"><h2>Analytics</h2></div>';
 
-	// AI Search — Coming Soon
-	$printPage .=   '<div class="sp-analytics-search sp-coming-soon">';
-	$printPage .=     '<div class="sp-coming-soon-badge"><span class="unique">Coming Soon</span></div>';
-	$printPage .=     '<div class="sp-analytics-search-inner">';
-	$printPage .=       '<input type="text" class="sp-input" placeholder="Ask a question about your reports..." disabled>';
-	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-primary" disabled>Submit</button>';
-	$printPage .=     '</div>';
-	$printPage .=     '<p class="sp-coming-soon-text">Natural language search across all reports</p>';
-	$printPage .=   '</div>';
+	// Report AI search (GOD only during rollout). Non-god still sees the "Coming Soon" placeholder.
+	if ( $eff_is_god ) {
+		$printPage .=   '<div class="sp-reports-ai" id="sp-reports-ai">';
+		$printPage .=     '<div class="sp-reports-ai-bar">';
+		$printPage .=       '<input type="search" id="sp-reports-ai-q" class="sp-input sp-reports-ai-q" placeholder="Search by keyword, or ask a question…">';
+		$printPage .=       '<select id="sp-reports-ai-type" class="sp-select"><option value="">All reports</option><option value="manager">GM</option><option value="supervisor">Supervisor</option></select>';
+		$printPage .=       '<select id="sp-reports-ai-location" class="sp-select"><option value="">All locations</option></select>';
+		$printPage .=       '<select id="sp-reports-ai-range" class="sp-select"><option value="">All time</option><option value="90">Last 90 days</option><option value="180">Last 6 months</option><option value="365">Last 12 months</option><option value="730">Last 2 years</option></select>';
+		$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-reports-ai-search-btn">Search</button>';
+		$printPage .=       '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-reports-ai-ask-btn">Ask AI</button>';
+		$printPage .=     '</div>';
+		$printPage .=     '<div class="sp-reports-ai-tools">';
+		$printPage .=       '<span class="sp-reports-aiprep-status" id="sp-reports-digest-status"></span>';
+		$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-reports-digest-btn">Index reports for AI</button>';
+		$printPage .=     '</div>';
+		$printPage .=     '<div class="sp-reports-ai-results" id="sp-reports-ai-results"></div>';
+		$printPage .=   '</div>';
+	} else {
+		$printPage .=   '<div class="sp-analytics-search sp-coming-soon">';
+		$printPage .=     '<div class="sp-coming-soon-badge"><span class="unique">Coming Soon</span></div>';
+		$printPage .=     '<div class="sp-analytics-search-inner">';
+		$printPage .=       '<input type="text" class="sp-input" placeholder="Ask a question about your reports..." disabled>';
+		$printPage .=       '<button type="button" class="unique sp-btn sp-btn-primary" disabled>Submit</button>';
+		$printPage .=     '</div>';
+		$printPage .=     '<p class="sp-coming-soon-text">Natural language search across all reports</p>';
+		$printPage .=   '</div>';
+	}
 
 	// Analytics Filters
 	if ( $cap_view_other_reports ) {
@@ -615,10 +640,10 @@ if ( in_array( 'view_analytics', $caps ) ) {
 if ( $eff_is_god ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-import-reports">';
 	$printPage .=   '<div class="sp-panel-header"><h2>Import Past Reports</h2></div>';
-	$printPage .=   '<div class="sp-meta-bar"><div class="sp-import-intro">Upload past <strong>GM or Supervisor reports</strong> (PDF or CSV, one report per file). Claude reads each file and fills in the matching fields; the report <strong>type is auto-detected from who wrote it</strong> (and editable). Review the detected info below, correct anything, then save. <strong>No action items are created</strong> for imported reports. <em>Supervisor reports aren\'t tied to a location.</em></div></div>';
+	$printPage .=   '<div class="sp-meta-bar"><div class="sp-import-intro">Upload past <strong>GM or Supervisor reports</strong> (PDF, CSV, or image — JPG/PNG, one report per file). Claude reads each file and fills in the matching fields; the report <strong>type is auto-detected from who wrote it</strong> (and editable). Review the detected info below, correct anything, then save. <strong>No action items are created</strong> for imported reports. <em>Supervisor reports aren\'t tied to a location.</em></div></div>';
 	$printPage .=   '<div class="sp-import-drop" id="sp-import-drop">';
-	$printPage .=     '<input type="file" id="sp-import-files" accept=".pdf,.csv,application/pdf,text/csv" multiple hidden>';
-	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-import-pick">Choose PDF / CSV files</button>';
+	$printPage .=     '<input type="file" id="sp-import-files" accept=".pdf,.csv,.jpg,.jpeg,.jpe,.jfif,.png,application/pdf,text/csv,image/jpeg,image/png" multiple hidden>';
+	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-import-pick">Choose PDF / CSV / Image files</button>';
 	$printPage .=     '<span class="sp-import-hint">…or drop files here</span>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-import-list" id="sp-import-list"></div>';
@@ -774,10 +799,26 @@ if ( in_array( 'view_reviews', $caps ) || in_array( 'manage_reviews', $caps ) ) 
 	$printPage .=   '<div class="sp-panel-header">';
 	$printPage .=     '<h2>Reviews</h2>';
 	$printPage .=     '<div class="sp-reviews-actions">';
+	$printPage .=       '<span class="sp-reviews-analyze-status" id="sp-reviews-analyze-status"></span>';
+	if ( in_array( 'manage_reviews', $caps ) || $eff_is_god ) {
+		$printPage .=   '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-reviews-analyze-btn">Analyze reviews</button>';
+	}
 	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-reviews-refresh-btn">Refresh</button>';
 	$printPage .=     '</div>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-reviews-summary" id="sp-reviews-summary"></div>';
+	// Analytics scope: restaurant / brand / time range. Drives the sentiment stat cards (and the list).
+	$printPage .=   '<div class="sp-reviews-statbar" id="sp-reviews-statbar">';
+	$printPage .=     '<select id="sp-reviews-stat-restaurant" class="sp-select"><option value="">All restaurants</option></select>';
+	$printPage .=     '<select id="sp-reviews-stat-brand" class="sp-select"><option value="">All brands</option></select>';
+	$printPage .=     '<select id="sp-reviews-stat-range" class="sp-select">';
+	$printPage .=       '<option value="30" selected>Last 30 days</option>';
+	$printPage .=       '<option value="90">Last 90 days</option>';
+	$printPage .=       '<option value="365">Last 12 months</option>';
+	$printPage .=       '<option value="ytd">Year to date</option>';
+	$printPage .=       '<option value="all">All time</option>';
+	$printPage .=     '</select>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-reviews-stats" id="sp-reviews-stats"></div>';
 	$printPage .=   '<div class="sp-toolbar" id="sp-reviews-toolbar">';
 	$printPage .=     '<span class="sp-toolbar-label">Filter</span>';
 	$printPage .=     '<div class="sp-toolbar-group">';
@@ -797,6 +838,43 @@ if ( in_array( 'view_reviews', $caps ) || in_array( 'manage_reviews', $caps ) ) 
 	$printPage .=     '</div>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-reviews-list" id="sp-reviews-list"><div class="sp-loading"></div></div>';
+	$printPage .=   '<div class="sp-reviews-more">';
+	$printPage .=     '<div class="sp-reviews-count" id="sp-reviews-count" hidden></div>';
+	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-reviews-load-older" hidden>Load older reviews</button>';
+	$printPage .=   '</div>';
+	$printPage .= '</section>';
+}
+
+// Client Reviews Panel (agency / hub only). Every mapped client's Google reviews grouped by
+// client, with reply + one-click push of a review to that client's site as a Testimonial CPT.
+if ( ( defined( 'BPGBP_REFRESH_TOKEN' ) && BPGBP_REFRESH_TOKEN ) && ( $eff_is_god || in_array( 'manage_reviews', $caps ) ) ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-agency-reviews">';
+	$printPage .=   '<div class="sp-panel-header">';
+	$printPage .=     '<h2>Client Reviews</h2>';
+	$printPage .=     '<div class="sp-reviews-actions">';
+	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-agency-reviews-refresh-btn">Refresh</button>';
+	$printPage .=     '</div>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-toolbar" id="sp-agency-reviews-toolbar">';
+	$printPage .=     '<span class="sp-toolbar-label">Filter</span>';
+	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=       '<select id="sp-agency-filter-client" class="sp-select"><option value="">All clients</option></select>';
+	$printPage .=       '<select id="sp-agency-filter-stars" class="sp-select">';
+	$printPage .=         '<option value="">All ratings</option>';
+	$printPage .=         '<option value="5">5 stars</option>';
+	$printPage .=         '<option value="4">4 stars</option>';
+	$printPage .=         '<option value="3">3 stars</option>';
+	$printPage .=         '<option value="2">2 stars</option>';
+	$printPage .=         '<option value="1">1 star</option>';
+	$printPage .=       '</select>';
+	$printPage .=       '<select id="sp-agency-filter-reply" class="sp-select">';
+	$printPage .=         '<option value="">All reviews</option>';
+	$printPage .=         '<option value="unreplied">Needs reply</option>';
+	$printPage .=         '<option value="replied">Replied</option>';
+	$printPage .=       '</select>';
+	$printPage .=     '</div>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-reviews-list" id="sp-agency-reviews-list"><div class="sp-loading"></div></div>';
 	$printPage .= '</section>';
 }
 
@@ -815,6 +893,7 @@ if ( in_array( 'view_surveys', $caps ) || in_array( 'manage_surveys', $caps ) ) 
 	$printPage .=   '<div class="sp-toolbar" id="sp-survey-toolbar">';
 	$printPage .=     '<span class="sp-toolbar-label">Filter</span>';
 	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=       '<input type="search" id="sp-survey-search" class="sp-input sp-survey-search" placeholder="Search name, phone, or address…">';
 	$printPage .=       '<select id="sp-survey-filter-location" class="sp-select"><option value="">All locations</option></select>';
 	$printPage .=       '<select id="sp-survey-filter-range" class="sp-select">';
 	$printPage .=         '<option value="">All time</option>';
@@ -826,6 +905,60 @@ if ( in_array( 'view_surveys', $caps ) || in_array( 'manage_surveys', $caps ) ) 
 	$printPage .=     '</div>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-survey-list" id="sp-survey-list"><div class="sp-loading"></div></div>';
+	$printPage .= '</section>';
+}
+
+// Customer Emails Panel — flagged customer-service emails forwarded in from the public sites. List of
+// message cards with status / type / brand / location filters + search; mark-handled + delete for managers.
+if ( $cap_emails_area ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-emails">';
+	$printPage .=   '<div class="sp-panel-header">' . $sp_crumb( 'Customer Feedback', 'Emails' ) . '</div>';
+	$printPage .=   '<div class="sp-toolbar">';
+	$printPage .=     '<span class="sp-toolbar-label">Filter</span>';
+	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=       '<input type="search" id="sp-emails-search" class="sp-input" placeholder="Search name, email, phone, or message…">';
+	$printPage .=       '<select id="sp-emails-filter-status" class="sp-select"><option value="new">New</option><option value="handled">Handled</option><option value="all">All</option></select>';
+	$printPage .=       '<select id="sp-emails-filter-category" class="sp-select"><option value="">All types</option></select>';
+	$printPage .=       '<select id="sp-emails-filter-brand" class="sp-select"><option value="">All brands</option></select>';
+	$printPage .=       '<select id="sp-emails-filter-location" class="sp-select"><option value="">All locations</option></select>';
+	$printPage .=     '</div>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-emails-count" id="sp-emails-count"></div>';
+	$printPage .=   '<div class="sp-emails-list" id="sp-emails-list"><div class="sp-loading"></div></div>';
+	$printPage .= '</section>';
+}
+
+// Company Directory Panel — list of employee cards with search + brand/location/position/status
+// filters. Add/edit happens in a JS modal; the option lists come from the site filters.
+if ( $cap_directory ) {
+	$dir_opts = function_exists( 'sp_directory_options' ) ? sp_directory_options() : [ 'positions' => [], 'brands' => [], 'locations' => [] ];
+	$dir_select_opts = function ( array $list ) {
+		$html = '';
+		foreach ( $list as $k => $v ) {
+			if ( $k === '---' ) continue; // the visual separator in the option lists isn't a real filter value
+			$html .= '<option value="' . esc_attr( $k ) . '">' . esc_html( $v ) . '</option>';
+		}
+		return $html;
+	};
+
+	$printPage .= '<section class="sp-panel" id="sp-panel-directory">';
+	$printPage .=   '<div class="sp-panel-header">';
+	$printPage .=     '<h2>Directory</h2>';
+	if ( $cap_directory_manage ) {
+		$printPage .=   '<div class="sp-reviews-actions">';
+		$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-dir-add-btn">Add Employee</button>';
+		$printPage .=   '</div>';
+	}
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-dir-filters">';
+	$printPage .=     '<select id="sp-dir-filter-brand" class="sp-select"><option value="">All brands</option>' . $dir_select_opts( $dir_opts['brands'] ) . '</select>';
+	$printPage .=     '<select id="sp-dir-filter-location" class="sp-select"><option value="">All locations</option>' . $dir_select_opts( $dir_opts['locations'] ) . '</select>';
+	$printPage .=     '<select id="sp-dir-filter-position" class="sp-select"><option value="">All positions</option>' . $dir_select_opts( $dir_opts['positions'] ) . '</select>';
+	$printPage .=     '<select id="sp-dir-filter-status" class="sp-select"><option value="active">Active</option><option value="inactive">Inactive</option><option value="all">All</option></select>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-dir-count" id="sp-dir-count"></div>';
+	$printPage .=   '<input type="search" id="sp-dir-search" class="sp-input sp-dir-search" placeholder="Search name, email, or phone…">';
+	$printPage .=   '<div class="sp-directory-grid" id="sp-directory-grid"><div class="sp-loading"></div></div>';
 	$printPage .= '</section>';
 }
 
@@ -994,12 +1127,14 @@ if ( in_array( 'manage_settings', $caps ) ) {
 	$printPage .=   '<div class="sp-panel-header">' . $sp_crumb( 'Settings', 'Site Defaults' ) . '</div>';
 	$printPage .=   '<div class="sp-admin-content" id="sp-admin-settings-content"></div>';
 	$printPage .= '</section>';
-
+}
+if ( in_array( 'manage_notifications', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-notifications">';
 	$printPage .=   '<div class="sp-panel-header">' . $sp_crumb( 'Settings', 'Notifications' ) . '</div>';
 	$printPage .=   '<div class="sp-admin-content" id="sp-admin-notifications-content"></div>';
 	$printPage .= '</section>';
-
+}
+if ( in_array( 'manage_api_keys', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-apikeys">';
 	$printPage .=   '<div class="sp-panel-header">' . $sp_crumb( 'Settings', 'API Keys' ) . '</div>';
 	$printPage .=   '<div class="sp-admin-content" id="sp-admin-apikeys-content"></div>';

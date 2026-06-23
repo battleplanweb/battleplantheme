@@ -32,39 +32,27 @@ function bp_label_complaint_messages($email, $ctx) {
 }
 
 
-// Forward Complaints to Central Server
-add_action('bp_form_after_send', 'bp_forward_complaints_to_central', 10, 3);
-function bp_forward_complaints_to_central($email, $ctx, $sent) {
-    if (!bp_rovin_is_complaint($ctx)) return;
-
-    $fields = $ctx['fields'] ?? [];
-
-    $complaint = [
-        'site'      => $_SERVER['HTTP_HOST'] ?? '',
-        'name'      => $fields['user-name']    ?? '',
-        'email'     => $fields['user-email']   ?? '',
-        'phone'     => $fields['user-phone']   ?? '',
-        'message'   => $fields['user-message'] ?? '',
-        'page'      => $_SERVER['HTTP_REFERER'] ?? '',
-        'ip'        => $ctx['ip']               ?? ($_SERVER['REMOTE_ADDR'] ?? ''),
-        'timestamp' => time(),
-    ];
-
-    $secret = get_site_option('bp_rovin_secret');
-    if (empty($secret)) return;
-
-    $sig = hash_hmac('sha256', json_encode($complaint), $secret);
-
-    wp_remote_post('https://rovininc.com/wp-json/complaints/v1/add', [
-        'timeout'  => 15,
-        'blocking' => true,
-        'headers'  => [
-            'Content-Type'  => 'application/json',
-            'Authorization' => 'Bearer ' . $sig,
-        ],
-        'body' => wp_json_encode($complaint),
-    ]);
-}
+// Customer feedback → MyRovin Site Pulse (Customer Feedback → Emails).
+// Replaces the old rovininc.com complaint forwarder. The framework does the actual forwarding
+// (bp_feedback_forward_submission in functions-forms.php); these filters just supply Rovin's settings,
+// so other companies configure their own without touching framework code.
+add_filter('bp_feedback_forward_url', function () {
+    return (defined('BP_ROVIN_SURVEY_URL') ? BP_ROVIN_SURVEY_URL : 'https://rovin.work') . '/wp-json/site-pulse/v1/email';
+});
+add_filter('bp_feedback_forward_secret', function () {
+    return get_site_option('bp_rovin_survey_secret'); // shared rovin.work cross-site secret
+});
+// The contact form's "What is this regarding?" select. Change if the field name differs on the form.
+add_filter('bp_feedback_category_field', function () { return 'user-subject'; });
+// Only these category selections forward into MyRovin (case-insensitive).
+add_filter('bp_feedback_forward_categories', function () { return ['complaint', 'compliment', 'comment']; });
+// Tag the row with the restaurant brand based on which site it came from.
+add_filter('bp_feedback_brand', function ($brand, $ctx) {
+    $host = strtolower($_SERVER['HTTP_HOST'] ?? '');
+    if (strpos($host, 'bubba') !== false) return "Bubba's";
+    if (strpos($host, 'babe')  !== false) return "Babe's";
+    return $brand;
+}, 10, 2);
 
 
 /*--------------------------------------------------------------

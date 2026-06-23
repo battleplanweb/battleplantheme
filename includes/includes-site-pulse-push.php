@@ -183,18 +183,19 @@ function sp_push_flush_queue(): void {
 	foreach ( $ids as $uid ) sp_push_deliver( (int) $uid );
 }
 
-function sp_push_deliver( int $user_id ): void {
+function sp_push_deliver( int $user_id ): array {
 	global $wpdb;
 	$subs = $wpdb->get_results( $wpdb->prepare(
 		"SELECT id, endpoint FROM " . site_pulse_table( 'push_subscriptions' ) . " WHERE user_id = %d", $user_id
 	), ARRAY_A );
-	if ( ! $subs ) return;
+	if ( ! $subs ) { site_pulse_log( 'push_skip', 'No subscribed devices for user', [ 'user_id' => $user_id ] ); return [ 'devices' => 0, 'codes' => [] ]; }
 	$pub = sp_push_vapid_public();
-	if ( ! $pub ) return;
+	if ( ! $pub ) { site_pulse_log( 'push_error', 'No VAPID key — cannot deliver push', [ 'user_id' => $user_id ] ); return [ 'devices' => count( $subs ), 'codes' => [] ]; }
 
+	$codes = [];
 	foreach ( $subs as $s ) {
 		$jwt = sp_push_vapid_jwt( sp_push_audience( $s['endpoint'] ) );
-		if ( ! $jwt ) continue;
+		if ( ! $jwt ) { $codes[] = 0; continue; }
 		$resp = wp_remote_post( $s['endpoint'], [
 			'headers' => [
 				'Authorization' => 'vapid t=' . $jwt . ', k=' . $pub,
@@ -204,12 +205,20 @@ function sp_push_deliver( int $user_id ): void {
 			'body'    => '',
 			'timeout' => 5,
 		] );
-		$code = (int) wp_remote_retrieve_response_code( $resp );
+		$code    = (int) wp_remote_retrieve_response_code( $resp );
+		$codes[] = is_wp_error( $resp ) ? 0 : $code;
 		// 404/410 = the subscription is gone; prune it.
 		if ( $code === 404 || $code === 410 ) {
 			$wpdb->delete( site_pulse_table( 'push_subscriptions' ), [ 'id' => (int) $s['id'] ] );
 		}
 	}
+
+	// Web Push success is 201 (some services 200). Log only when something looked wrong, so the
+	// activity log stays quiet in normal use but a failing push service / bad VAPID is visible.
+	if ( array_filter( $codes, fn( $c ) => $c !== 201 && $c !== 200 ) ) {
+		site_pulse_log( 'push_error', 'Web push returned non-success codes', [ 'user_id' => $user_id, 'codes' => $codes ] );
+	}
+	return [ 'devices' => count( $subs ), 'codes' => $codes ];
 }
 
 // ---- AJAX ------------------------------------------------------------------
@@ -236,7 +245,7 @@ function site_pulse_ajax_push_subscribe(): void {
 	if ( ! $endpoint || ! filter_var( $endpoint, FILTER_VALIDATE_URL ) ) wp_send_json_error( [ 'message' => 'Bad subscription.' ] );
 
 	global $wpdb;
-	$wpdb->query( $wpdb->prepare(
+	$ok = $wpdb->query( $wpdb->prepare(
 		"INSERT INTO " . site_pulse_table( 'push_subscriptions' ) . "
 		 (user_id, endpoint, endpoint_hash, p256dh, auth, ua, created_at)
 		 VALUES (%d, %s, %s, %s, %s, %s, %s)
@@ -249,6 +258,13 @@ function site_pulse_ajax_push_subscribe(): void {
 		substr( sanitize_text_field( $_SERVER['HTTP_USER_AGENT'] ?? '' ), 0, 255 ),
 		current_time( 'mysql' )
 	) );
+
+	// Don't fake success: a failed insert (e.g. the push_subscriptions table never got created) would
+	// otherwise leave the device showing "notifications on" while nothing is stored to deliver to.
+	if ( $ok === false ) {
+		site_pulse_log( 'push_error', 'Could not store push subscription', [ 'user_id' => $uid, 'db_error' => $wpdb->last_error ] );
+		wp_send_json_error( [ 'message' => 'Could not save this device’s subscription. ' . $wpdb->last_error ] );
+	}
 	wp_send_json_success( [ 'subscribed' => true ] );
 }
 
@@ -263,6 +279,31 @@ function site_pulse_ajax_push_unsubscribe(): void {
 	wp_send_json_success( [ 'unsubscribed' => true ] );
 }
 
+// Diagnostic: deliver a push to the caller's OWN devices right now (synchronously) and report what
+// happened — device count + per-endpoint HTTP codes — so an admin can verify the whole chain on the
+// phone they're holding, without needing a second person to message them.
+add_action( 'wp_ajax_site_pulse_push_test', 'site_pulse_ajax_push_test' );
+function site_pulse_ajax_push_test(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$uid = site_pulse_effective_user_id();
+	if ( ! $uid ) wp_send_json_error( [ 'message' => 'Not signed in.' ] );
+	if ( ! site_pulse_push_enabled() ) wp_send_json_error( [ 'message' => 'Push is turned off for this app (enable it above first).' ] );
+	if ( ! sp_push_vapid_public() ) wp_send_json_error( [ 'message' => 'VAPID keys are unavailable on this server (OpenSSL EC support required).' ] );
+
+	global $wpdb;
+	$n = (int) $wpdb->get_var( $wpdb->prepare(
+		"SELECT COUNT(*) FROM " . site_pulse_table( 'push_subscriptions' ) . " WHERE user_id = %d", $uid
+	) );
+	if ( ! $n ) wp_send_json_error( [ 'message' => 'No subscribed devices on your account yet. On each phone, open the 🔔 bell and tap “Turn on notifications for this device.”' ] );
+
+	$res   = sp_push_deliver( $uid );
+	$codes = $res['codes'] ?: [];
+	$good  = count( array_filter( $codes, fn( $c ) => $c === 201 || $c === 200 ) );
+	wp_send_json_success( [
+		'message' => sprintf( 'Sent to %d device(s); %d accepted. Push-service codes: %s', $res['devices'], $good, $codes ? implode( ', ', $codes ) : '—' ),
+	] );
+}
+
 // The service worker fetches this (cookie-authed, read-only) on a push to learn what to show. No
 // nonce — it's a GET of the caller's own unread summary, and the SW can't carry a fresh nonce.
 add_action( 'wp_ajax_site_pulse_push_data', 'site_pulse_ajax_push_data' );
@@ -272,26 +313,62 @@ function site_pulse_ajax_push_data(): void {
 	if ( ! $uid ) { wp_send_json( [ 'title' => $app, 'body' => 'You have new activity.', 'count' => 0, 'url' => home_url( '/site-pulse-dashboard/' ) ] ); }
 
 	global $wpdb;
-	$n = $wpdb->get_row( $wpdb->prepare(
-		"SELECT message, related_type FROM " . site_pulse_table( 'notifications' ) . "
-		 WHERE user_id = %d AND is_read = 0 AND is_archived = 0 ORDER BY created_at DESC LIMIT 1", $uid
-	), ARRAY_A );
-	$bell = (int) $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(*) FROM " . site_pulse_table( 'notifications' ) . " WHERE user_id = %d AND is_read = 0 AND is_archived = 0", $uid
-	) );
+	$msg_url  = home_url( '/site-pulse-dashboard/?sp_panel=messages' );
+	$dash_url = home_url( '/site-pulse-dashboard/' );
+
+	// Build ONE notification per unread conversation (latest preview) + one per unread system
+	// notification. The service worker shows each as its own tagged notification, so the shade reads
+	// like a chat app AND the Android icon badge (which counts notifications) tracks them. `count` is
+	// the exact unread total for setAppBadge (desktop, where the number actually renders).
+	$items = [];
+
+	// --- Unread conversations (newest first, capped) ---
+	$convos = $wpdb->get_results( $wpdb->prepare(
+		"SELECT m.conversation_id AS cid, MAX(m.id) AS last_id, COUNT(*) AS unread
+		 FROM " . site_pulse_table( 'messages' ) . " m
+		 JOIN " . site_pulse_table( 'conversation_participants' ) . " p ON p.conversation_id = m.conversation_id AND p.user_id = %d
+		 WHERE m.id > p.last_read_message_id AND m.sender_id != %d
+		 GROUP BY m.conversation_id ORDER BY last_id DESC LIMIT 12", $uid, $uid
+	), ARRAY_A ) ?: [];
+
+	foreach ( $convos as $c ) {
+		$lm   = $wpdb->get_row( $wpdb->prepare( "SELECT body, sender_id FROM " . site_pulse_table( 'messages' ) . " WHERE id = %d", (int) $c['last_id'] ), ARRAY_A );
+		$conv = $wpdb->get_row( $wpdb->prepare( "SELECT is_group, title FROM " . site_pulse_table( 'conversations' ) . " WHERE id = %d", (int) $c['cid'] ), ARRAY_A );
+		$snd  = $lm ? get_userdata( (int) $lm['sender_id'] ) : null;
+		$name = $snd ? $snd->display_name : 'Someone';
+		$prev = $lm ? mb_substr( trim( preg_replace( '/\s+/', ' ', (string) $lm['body'] ) ), 0, 120 ) : '';
+		if ( $prev === '' ) $prev = 'New message';
+		$is_group = $conv && (int) $conv['is_group'];
+		$title    = ( $is_group && ! empty( $conv['title'] ) ) ? $conv['title'] : $name;
+		$body     = $is_group ? ( $name . ': ' . $prev ) : $prev;       // group: show who said it
+		if ( (int) $c['unread'] > 1 ) $body = '(' . (int) $c['unread'] . ') ' . $body;
+		$items[] = [ 'tag' => 'sp-conv-' . (int) $c['cid'], 'title' => $title, 'body' => $body, 'url' => $msg_url ];
+	}
+
+	// --- Unread system notifications (bell; messages excluded) ---
+	$notes = $wpdb->get_results( $wpdb->prepare(
+		"SELECT id, message FROM " . site_pulse_table( 'notifications' ) . "
+		 WHERE user_id = %d AND is_read = 0 AND is_archived = 0 AND type != 'message' ORDER BY created_at DESC LIMIT 12", $uid
+	), ARRAY_A ) ?: [];
+	foreach ( $notes as $n ) {
+		$items[] = [ 'tag' => 'sp-note-' . (int) $n['id'], 'title' => $app, 'body' => (string) $n['message'], 'url' => $dash_url ];
+	}
+
 	$msgs = (int) $wpdb->get_var( $wpdb->prepare(
 		"SELECT COUNT(*) FROM " . site_pulse_table( 'messages' ) . " m
 		 JOIN " . site_pulse_table( 'conversation_participants' ) . " p ON p.conversation_id = m.conversation_id AND p.user_id = %d
 		 WHERE m.id > p.last_read_message_id AND m.sender_id != %d", $uid, $uid
 	) );
+	$count = count( $notes ) + $msgs;
 
-	$url = home_url( '/site-pulse-dashboard/' );
-	if ( $n && $n['related_type'] === 'conversation' ) $url = home_url( '/site-pulse-dashboard/?sp_panel=messages' );
+	// Summary fallback (used by an un-updated SW that doesn't understand `items`, and as the title).
+	$summary = $items ? ( $items[0]['title'] . ': ' . $items[0]['body'] ) : 'You have new activity.';
 
 	wp_send_json( [
 		'title' => $app,
-		'body'  => $n ? $n['message'] : 'You have new activity.',
-		'count' => $bell + $msgs,
-		'url'   => $url,
+		'body'  => $summary,
+		'count' => $count,
+		'url'   => $items ? $items[0]['url'] : $dash_url,
+		'items' => $items,
 	] );
 }

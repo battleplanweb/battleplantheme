@@ -201,6 +201,52 @@ function site_pulse_call_claude_document( string $pdf_b64, string $prompt, strin
 	return $data['content'][0]['text'];
 }
 
+/**
+ * Image sibling of site_pulse_call_claude_document: a base64 image + a text prompt → model reply.
+ * `$media_type` is the exact image MIME the API expects (image/jpeg | image/png).
+ */
+function site_pulse_call_claude_image( string $img_b64, string $media_type, string $prompt, string $system = '', array $opts = [], &$debug = null ): ?string {
+	$debug   = null;
+	$api_key = site_pulse_get_api_key();
+	if ( ! $api_key ) { $debug = 'No API key configured.'; return null; }
+
+	$body = [
+		'model'      => $opts['model']      ?? 'claude-sonnet-4-6',
+		'max_tokens' => $opts['max_tokens'] ?? 4096,
+		'messages'   => [ [
+			'role'    => 'user',
+			'content' => [
+				[ 'type' => 'image', 'source' => [ 'type' => 'base64', 'media_type' => $media_type, 'data' => $img_b64 ] ],
+				[ 'type' => 'text', 'text' => $prompt ],
+			],
+		] ],
+	];
+	if ( $system ) $body['system'] = $system;
+
+	$response = wp_remote_post( 'https://api.anthropic.com/v1/messages', [
+		'headers' => [
+			'Content-Type'      => 'application/json',
+			'x-api-key'         => $api_key,
+			'anthropic-version' => '2023-06-01',
+		],
+		'body'    => wp_json_encode( $body ),
+		'timeout' => $opts['timeout'] ?? 60,
+	] );
+
+	if ( is_wp_error( $response ) ) { $debug = 'Request failed: ' . $response->get_error_message(); return null; }
+
+	$status = wp_remote_retrieve_response_code( $response );
+	$data   = json_decode( wp_remote_retrieve_body( $response ), true );
+	if ( $status !== 200 || empty( $data['content'][0]['text'] ) ) {
+		$api_msg = $data['error']['message'] ?? wp_remote_retrieve_response_message( $response );
+		$debug   = "HTTP $status" . ( $api_msg ? ": $api_msg" : '' );
+		site_pulse_log( 'ai_error', 'Claude (image) returned status ' . $status, [ 'response' => $data ] );
+		if ( function_exists( 'bp_ai_model_alert' ) ) bp_ai_model_alert( (int) $status, $data, $body['model'], 'Site Pulse Import' );
+		return null;
+	}
+	return $data['content'][0]['text'];
+}
+
 function sp_import_build_prompt( array $fields ): array {
 	$field_lines = array_map(
 		fn( $f ) => "- {$f['key']} ({$f['type']}): {$f['label']}" . ( $f['options'] ? " [options: {$f['options']}]" : '' ),
@@ -227,6 +273,9 @@ function sp_import_parse_file( string $b64, string $mime, array $fields, &$debug
 
 	if ( stripos( $mime, 'pdf' ) !== false ) {
 		$raw = site_pulse_call_claude_document( $b64, $prompt, $system, [ 'max_tokens' => 4096 ], $debug );
+	} elseif ( stripos( $mime, 'image' ) !== false || preg_match( '#(jpe?g|jfif|png)$#i', $mime ) ) {
+		$media = ( stripos( $mime, 'png' ) !== false ) ? 'image/png' : 'image/jpeg';
+		$raw   = site_pulse_call_claude_image( $b64, $media, $prompt, $system, [ 'max_tokens' => 4096 ], $debug );
 	} else {
 		$text = base64_decode( $b64 );
 		if ( strlen( $text ) > 200000 ) $text = substr( $text, 0, 200000 ); // keep CSV prompts sane

@@ -2,11 +2,15 @@
 require_once get_template_directory() . '/prompts/prompts-site-pulse.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-modules.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-reviews.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-agency-reviews.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-reports-ai.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-surveys.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-import.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-messages.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-push.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-pwa.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-directory.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-emails.php';
 
 /* Battle Plan Web Design - Site Pulse Internal Operations Platform
 
@@ -14,6 +18,7 @@ require_once get_template_directory() . '/includes/includes-site-pulse-pwa.php';
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
 # Constants & Setup
+# Employee Directory (CPT + Fields)
 # Database Schema
 # Asset Enqueueing
 # User Roles & Capabilities
@@ -31,7 +36,7 @@ require_once get_template_directory() . '/includes/includes-site-pulse-pwa.php';
 # Constants & Setup
 --------------------------------------------------------------*/
 
-define( 'SITE_PULSE_DB_VERSION', '1.42' );
+define( 'SITE_PULSE_DB_VERSION', '1.49' );
 
 function site_pulse_table( string $name ): string {
 	return $GLOBALS['wpdb']->prefix . 'site_pulse_' . $name;
@@ -73,6 +78,428 @@ function site_pulse_log( string $action, string $description, array $meta = [], 
 		],
 		[ '%d', '%s', '%d', '%s', '%s', '%s', '%s' ]
 	);
+}
+
+
+/*--------------------------------------------------------------
+# Employee Directory (CPT + Fields)
+--------------------------------------------------------------*/
+
+/* The 'employees' post type is a generic staff directory that ships with Site
+   Pulse. Site-specific option lists (positions, brands, locations) are pulled
+   from filters so each company fills in its own — e.g. in functions-site.php:
+
+	add_filter( 'site_pulse_employee_brands', function () {
+		return [ 'babes' => "Babe's", 'bubbas' => "Bubba's" ];
+	} );
+
+   Mirror that for 'site_pulse_employee_positions' and 'site_pulse_employee_locations'. */
+
+add_action( 'init', 'site_pulse_register_employees_cpt', 0 );
+function site_pulse_register_employees_cpt(): void {
+	// Current staff directory.
+	if ( ! post_type_exists( 'employees' ) ) { // a child theme may already own it
+		register_post_type( 'employees', array(
+			'labels' => array(
+				'name'          => _x( 'Employees', 'Post Type General Name', 'battleplan' ),
+				'singular_name' => _x( 'Employee', 'Post Type Singular Name', 'battleplan' ),
+			),
+			'public'              => false,
+			'show_ui'             => true,
+			'show_in_menu'        => true,
+			'show_in_nav_menus'   => false,
+			'exclude_from_search' => true,
+			'has_archive'         => false,
+			'hierarchical'        => false,
+			'menu_position'       => 26,
+			'menu_icon'           => 'dashicons-groups',
+			'supports'            => array( 'title', 'thumbnail', 'custom-fields' ),
+			'capability_type'     => 'post',
+		) );
+	}
+
+	// Past staff — separate archive of former employees.
+	if ( ! post_type_exists( 'former-employees' ) ) {
+		register_post_type( 'former-employees', array(
+			'labels' => array(
+				'name'          => _x( 'Former Employees', 'Post Type General Name', 'battleplan' ),
+				'singular_name' => _x( 'Former Employee', 'Post Type Singular Name', 'battleplan' ),
+			),
+			'public'              => false,
+			'show_ui'             => true,
+			'show_in_menu'        => true,
+			'show_in_nav_menus'   => false,
+			'exclude_from_search' => true,
+			'has_archive'         => false,
+			'hierarchical'        => false,
+			'menu_position'       => 27,
+			'menu_icon'           => 'dashicons-groups',
+			'supports'            => array( 'title', 'thumbnail', 'custom-fields' ),
+			'capability_type'     => 'post',
+		) );
+	}
+}
+
+/* Choice lists — empty by default; each site supplies its own via these filters. */
+function site_pulse_employee_positions(): array { return apply_filters( 'site_pulse_employee_positions', array() ); }
+function site_pulse_employee_brands(): array    { return apply_filters( 'site_pulse_employee_brands', array() ); }
+function site_pulse_employee_locations(): array { return apply_filters( 'site_pulse_employee_locations', array() ); }
+
+add_action( 'acf/init', 'site_pulse_register_employee_fields' );
+function site_pulse_register_employee_fields(): void {
+	if ( ! function_exists( 'acf_add_local_field_group' ) ) return;
+
+	acf_add_local_field_group( array(
+		'key'    => 'group_5dc3627053447',
+		'title'  => 'Employees',
+		'fields' => array(
+			array(
+				'key'               => 'field_5dc3627e6e8e9',
+				'label'             => 'First Name',
+				'name'              => 'first_name',
+				'aria-label'        => '',
+				'type'              => 'text',
+				'instructions'      => '',
+				'required'          => 1,
+				'conditional_logic' => 0,
+				'wrapper'           => array( 'width' => '50', 'class' => '', 'id' => '' ),
+				'default_value'     => '',
+				'maxlength'         => '',
+				'placeholder'       => '',
+				'prepend'           => '',
+				'append'            => '',
+			),
+			array(
+				'key'               => 'field_5dc3628b6e8ea',
+				'label'             => 'Last Name',
+				'name'              => 'last_name',
+				'aria-label'        => '',
+				'type'              => 'text',
+				'instructions'      => '',
+				'required'          => 1,
+				'conditional_logic' => 0,
+				'wrapper'           => array( 'width' => '50', 'class' => '', 'id' => '' ),
+				'default_value'     => '',
+				'maxlength'         => '',
+				'placeholder'       => '',
+				'prepend'           => '',
+				'append'            => '',
+			),
+			array(
+				'key'               => 'field_5dd6eac5b89be',
+				'label'             => 'Current Employee',
+				'name'              => 'current_employee',
+				'aria-label'        => '',
+				'type'              => 'radio',
+				'instructions'      => '',
+				'required'          => 1,
+				'conditional_logic' => 0,
+				'wrapper'           => array( 'width' => '24', 'class' => '', 'id' => '' ),
+				'choices'           => array( 'Yes' => 'Yes', 'No' => 'No' ),
+				'default_value'     => 'Yes',
+				'return_format'     => 'value',
+				'allow_null'        => 0,
+				'other_choice'      => 0,
+				'layout'            => 'horizontal',
+				'save_other_choice' => 0,
+			),
+			array(
+				'key'               => 'field_5dc362926e8eb',
+				'label'             => 'Date Of Birth',
+				'name'              => 'date_of_birth',
+				'aria-label'        => '',
+				'type'              => 'date_picker',
+				'instructions'      => '',
+				'required'          => 0,
+				'conditional_logic' => 0,
+				'wrapper'           => array( 'width' => '38', 'class' => '', 'id' => '' ),
+				'display_format'    => 'F j',
+				'return_format'     => 'F j',
+				'first_day'         => 1,
+			),
+			array(
+				'key'               => 'field_5dc362aa6e8ec',
+				'label'             => 'Date Of Hire',
+				'name'              => 'date_of_hire',
+				'aria-label'        => '',
+				'type'              => 'date_picker',
+				'instructions'      => '',
+				'required'          => 0,
+				'conditional_logic' => 0,
+				'wrapper'           => array( 'width' => '38', 'class' => '', 'id' => '' ),
+				'display_format'    => 'M. j, Y',
+				'return_format'     => 'M. j, Y',
+				'first_day'         => 1,
+			),
+			array(
+				'key'               => 'field_5dc362bc6e8ed',
+				'label'             => 'Position',
+				'name'              => 'position',
+				'aria-label'        => '',
+				'type'              => 'select',
+				'instructions'      => '',
+				'required'          => 0,
+				'conditional_logic' => 0,
+				'wrapper'           => array( 'width' => '24', 'class' => '', 'id' => '' ),
+				'choices'           => site_pulse_employee_positions(),
+				'default_value'     => false,
+				'return_format'     => 'label',
+				'multiple'          => 0,
+				'allow_null'        => 0,
+				'ui'                => 0,
+				'ajax'              => 0,
+				'placeholder'       => '',
+			),
+			array(
+				'key'               => 'field_5dc3634a6e8ee',
+				'label'             => 'Brand',
+				'name'              => 'brand',
+				'aria-label'        => '',
+				'type'              => 'select',
+				'instructions'      => '',
+				'required'          => 0,
+				'conditional_logic' => 0,
+				'wrapper'           => array( 'width' => '38', 'class' => '', 'id' => '' ),
+				'choices'           => site_pulse_employee_brands(),
+				'default_value'     => false,
+				'return_format'     => 'label',
+				'multiple'          => 0,
+				'allow_null'        => 0,
+				'ui'                => 0,
+				'ajax'              => 0,
+				'placeholder'       => '',
+			),
+			array(
+				'key'               => 'field_6420ae43181c7',
+				'label'             => 'Location',
+				'name'              => 'location',
+				'aria-label'        => '',
+				'type'              => 'select',
+				'instructions'      => '',
+				'required'          => 0,
+				'conditional_logic' => 0,
+				'wrapper'           => array( 'width' => '38', 'class' => '', 'id' => '' ),
+				'choices'           => site_pulse_employee_locations(),
+				'default_value'     => false,
+				'return_format'     => 'label',
+				'multiple'          => 0,
+				'allow_null'        => 0,
+				'ui'                => 0,
+				'ajax'              => 0,
+				'placeholder'       => '',
+			),
+			array(
+				'key'               => 'field_5dc363fb6e8ef',
+				'label'             => 'Email',
+				'name'              => 'email',
+				'aria-label'        => '',
+				'type'              => 'email',
+				'instructions'      => '',
+				'required'          => 0,
+				'conditional_logic' => 0,
+				'wrapper'           => array( 'width' => '50', 'class' => '', 'id' => '' ),
+				'default_value'     => '',
+				'placeholder'       => '',
+				'prepend'           => '',
+				'append'            => '',
+			),
+			array(
+				'key'               => 'field_5dc364076e8f0',
+				'label'             => 'Personal Cell Phone Number',
+				'name'              => 'cell_phone',
+				'aria-label'        => '',
+				'type'              => 'text',
+				'instructions'      => 'xxx-xxx-xxxx',
+				'required'          => 0,
+				'conditional_logic' => 0,
+				'wrapper'           => array( 'width' => '25', 'class' => '', 'id' => '' ),
+				'default_value'     => '',
+				'maxlength'         => '',
+				'placeholder'       => '',
+				'prepend'           => '',
+				'append'            => '',
+			),
+			array(
+				'key'               => 'field_67af6ab9cb54c',
+				'label'             => 'Work Number',
+				'name'              => 'sec_phone',
+				'aria-label'        => '',
+				'type'              => 'text',
+				'instructions'      => 'xxx-xxx-xxxx',
+				'required'          => 0,
+				'conditional_logic' => 0,
+				'wrapper'           => array( 'width' => '25', 'class' => '', 'id' => '' ),
+				'default_value'     => '',
+				'maxlength'         => '',
+				'placeholder'       => '',
+				'prepend'           => '',
+				'append'            => '',
+			),
+			array(
+				'key'               => 'field_69600989aba20',
+				'label'             => 'Home Address',
+				'name'              => 'home_address',
+				'aria-label'        => '',
+				'type'              => 'text',
+				'instructions'      => '',
+				'required'          => 0,
+				'conditional_logic' => 0,
+				'wrapper'           => array( 'width' => '50', 'class' => '', 'id' => '' ),
+				'default_value'     => '',
+				'maxlength'         => '',
+				'placeholder'       => '',
+				'prepend'           => '',
+				'append'            => '',
+			),
+			array(
+				'key'               => 'field_69600994aba21',
+				'label'             => 'City',
+				'name'              => 'address_city',
+				'aria-label'        => '',
+				'type'              => 'text',
+				'instructions'      => '',
+				'required'          => 0,
+				'conditional_logic' => 0,
+				'wrapper'           => array( 'width' => '35', 'class' => '', 'id' => '' ),
+				'default_value'     => '',
+				'maxlength'         => '',
+				'placeholder'       => '',
+				'prepend'           => '',
+				'append'            => '',
+			),
+			array(
+				'key'               => 'field_696009a3aba22',
+				'label'             => 'Zip',
+				'name'              => 'address_zip',
+				'aria-label'        => '',
+				'type'              => 'text',
+				'instructions'      => '',
+				'required'          => 0,
+				'conditional_logic' => 0,
+				'wrapper'           => array( 'width' => '15', 'class' => '', 'id' => '' ),
+				'default_value'     => '',
+				'maxlength'         => '',
+				'placeholder'       => '',
+				'prepend'           => '',
+				'append'            => '',
+			),
+			array(
+				'key'               => 'field_63bc6e28ec87c',
+				'label'             => 'Spouse',
+				'name'              => 'spouse',
+				'aria-label'        => '',
+				'type'              => 'text',
+				'instructions'      => '',
+				'required'          => 0,
+				'conditional_logic' => 0,
+				'wrapper'           => array( 'width' => '20', 'class' => '', 'id' => '' ),
+				'default_value'     => '',
+				'maxlength'         => '',
+				'placeholder'       => '',
+				'prepend'           => '',
+				'append'            => '',
+			),
+			array(
+				'key'               => 'field_63bc6e31ec87d',
+				'label'             => 'Children',
+				'name'              => 'children',
+				'aria-label'        => '',
+				'type'              => 'text',
+				'instructions'      => '',
+				'required'          => 0,
+				'conditional_logic' => 0,
+				'wrapper'           => array( 'width' => '35', 'class' => '', 'id' => '' ),
+				'default_value'     => '',
+				'maxlength'         => '',
+				'placeholder'       => '',
+				'prepend'           => '',
+				'append'            => '',
+			),
+			array(
+				'key'               => 'field_63bc6e3bec87e',
+				'label'             => 'Hobbies',
+				'name'              => 'hobbies',
+				'aria-label'        => '',
+				'type'              => 'text',
+				'instructions'      => '',
+				'required'          => 0,
+				'conditional_logic' => 0,
+				'wrapper'           => array( 'width' => '45', 'class' => '', 'id' => '' ),
+				'default_value'     => '',
+				'maxlength'         => '',
+				'placeholder'       => '',
+				'prepend'           => '',
+				'append'            => '',
+			),
+			array(
+				'key'               => 'field_63bc6f132cf20',
+				'label'             => 'Other Info',
+				'name'              => 'other_info',
+				'aria-label'        => '',
+				'type'              => 'text',
+				'instructions'      => '',
+				'required'          => 0,
+				'conditional_logic' => 0,
+				'wrapper'           => array( 'width' => '65', 'class' => '', 'id' => '' ),
+				'default_value'     => '',
+				'maxlength'         => '',
+				'placeholder'       => '',
+				'prepend'           => '',
+				'append'            => '',
+			),
+			array(
+				'key'               => 'field_67af6ce7b75bb',
+				'label'             => 'Days Off',
+				'name'              => 'days_off',
+				'aria-label'        => '',
+				'type'              => 'checkbox',
+				'instructions'      => '',
+				'required'          => 0,
+				'conditional_logic' => 0,
+				'wrapper'           => array( 'width' => '35', 'class' => '', 'id' => '' ),
+				'choices'           => array(
+					'Sunday'    => 'Sunday',
+					'Monday'    => 'Monday',
+					'Tuesday'   => 'Tuesday',
+					'Wednesday' => 'Wednesday',
+					'Thursday'  => 'Thursday',
+					'Friday'    => 'Friday',
+					'Saturday'  => 'Saturday',
+				),
+				'default_value'     => array(),
+				'return_format'     => 'value',
+				'allow_custom'      => 0,
+				'layout'            => 'vertical',
+				'toggle'            => 0,
+				'save_custom'       => 0,
+			),
+		),
+		'location' => array(
+			array(
+				array(
+					'param'    => 'post_type',
+					'operator' => '==',
+					'value'    => 'employees',
+				),
+			),
+			array(
+				array(
+					'param'    => 'post_type',
+					'operator' => '==',
+					'value'    => 'former-employees',
+				),
+			),
+		),
+		'menu_order'            => 0,
+		'position'              => 'normal',
+		'style'                 => 'default',
+		'label_placement'       => 'top',
+		'instruction_placement' => 'label',
+		'hide_on_screen'        => '',
+		'active'                => true,
+		'description'           => '',
+		'show_in_rest'          => 0,
+	) );
 }
 
 
@@ -136,6 +563,64 @@ function site_pulse_install_db(): void {
 		KEY role_id (role_id)
 	) $charset;";
 
+	$sql .= "CREATE TABLE " . site_pulse_table('employees') . " (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		user_id int(11) NOT NULL DEFAULT 0,
+		status varchar(20) NOT NULL DEFAULT 'active',
+		first_name varchar(100) NOT NULL DEFAULT '',
+		last_name varchar(100) NOT NULL DEFAULT '',
+		photo_url varchar(255) DEFAULT NULL,
+		position varchar(100) DEFAULT NULL,
+		brand varchar(100) DEFAULT NULL,
+		location varchar(100) DEFAULT NULL,
+		email varchar(190) DEFAULT NULL,
+		cell_phone varchar(40) DEFAULT NULL,
+		sec_phone varchar(40) DEFAULT NULL,
+		date_of_birth date DEFAULT NULL,
+		date_of_hire date DEFAULT NULL,
+		home_address varchar(255) DEFAULT NULL,
+		address_city varchar(100) DEFAULT NULL,
+		address_zip varchar(20) DEFAULT NULL,
+		spouse varchar(150) DEFAULT NULL,
+		children varchar(255) DEFAULT NULL,
+		hobbies varchar(255) DEFAULT NULL,
+		other_info text DEFAULT NULL,
+		days_off varchar(100) DEFAULT NULL,
+		legacy_post_id int(11) NOT NULL DEFAULT 0,
+		display_order int(11) NOT NULL DEFAULT 0,
+		meta text DEFAULT NULL,
+		created_at datetime NOT NULL,
+		updated_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		KEY status (status),
+		KEY user_id (user_id),
+		KEY legacy_post_id (legacy_post_id)
+	) $charset;";
+
+	$sql .= "CREATE TABLE " . site_pulse_table('emails') . " (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		source_site varchar(190) DEFAULT NULL,
+		brand varchar(100) DEFAULT NULL,
+		location varchar(100) DEFAULT NULL,
+		category varchar(100) DEFAULT NULL,
+		customer_name varchar(190) DEFAULT NULL,
+		email varchar(190) DEFAULT NULL,
+		phone varchar(40) DEFAULT NULL,
+		message text DEFAULT NULL,
+		page_url varchar(255) DEFAULT NULL,
+		status varchar(20) NOT NULL DEFAULT 'new',
+		handled_by int(11) NOT NULL DEFAULT 0,
+		handled_at datetime DEFAULT NULL,
+		source_ip varchar(64) DEFAULT NULL,
+		meta text DEFAULT NULL,
+		created_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		KEY status (status),
+		KEY brand (brand),
+		KEY location (location),
+		KEY category (category)
+	) $charset;";
+
 	$sql .= "CREATE TABLE " . site_pulse_table('report_templates') . " (
 		id int(11) NOT NULL AUTO_INCREMENT,
 		slug varchar(100) NOT NULL,
@@ -180,6 +665,8 @@ function site_pulse_install_db(): void {
 		reviewed_by int(11) DEFAULT NULL,
 		reviewed_at datetime DEFAULT NULL,
 		review_notes text DEFAULT NULL,
+		ai_digest text DEFAULT NULL,
+		ai_digest_at datetime DEFAULT NULL,
 		created_at datetime NOT NULL,
 		updated_at datetime NOT NULL,
 		PRIMARY KEY  (id),
@@ -253,6 +740,7 @@ function site_pulse_install_db(): void {
 		attach_url varchar(255) DEFAULT NULL,
 		attach_name varchar(255) DEFAULT NULL,
 		attach_mime varchar(100) DEFAULT NULL,
+		action_created tinyint(1) NOT NULL DEFAULT 0,
 		created_at datetime NOT NULL,
 		PRIMARY KEY  (id),
 		KEY conversation (sender_id, recipient_id),
@@ -295,6 +783,33 @@ function site_pulse_install_db(): void {
 		PRIMARY KEY  (id),
 		UNIQUE KEY endpoint_hash (endpoint_hash),
 		KEY user_id (user_id)
+	) $charset;";
+
+	// Google reviews, accumulated from the GBP hub (one row per Google reviewId). Lets the panel build
+	// up the full back-catalog via "Load older" instead of re-pulling the newest snapshot each time.
+	$sql .= "CREATE TABLE " . site_pulse_table('reviews') . " (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		review_id varchar(255) NOT NULL,
+		reviewer varchar(255) DEFAULT NULL,
+		photo varchar(500) DEFAULT NULL,
+		star_rating tinyint(1) NOT NULL DEFAULT 0,
+		comment text DEFAULT NULL,
+		create_time datetime DEFAULT NULL,
+		reply_comment text DEFAULT NULL,
+		reply_time datetime DEFAULT NULL,
+		tags text DEFAULT NULL,
+		tagged_at datetime DEFAULT NULL,
+		location varchar(255) DEFAULT NULL,
+		store varchar(255) DEFAULT NULL,
+		brand varchar(255) DEFAULT NULL,
+		synced_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		UNIQUE KEY review_id (review_id),
+		KEY star_rating (star_rating),
+		KEY create_time (create_time),
+		KEY location (location),
+		KEY store (store),
+		KEY brand (brand)
 	) $charset;";
 
 	$sql .= "CREATE TABLE " . site_pulse_table('action_items') . " (
@@ -527,19 +1042,6 @@ function site_pulse_install_db(): void {
 		KEY uploaded_by (uploaded_by)
 	) $charset;";
 
-	// Recoverable deletions — powers the header "Undo" button. One row per deleted record
-	// (mileage day or expense line), holding a JSON snapshot to re-insert on undo.
-	$sql .= "CREATE TABLE " . site_pulse_table('trash') . " (
-		id int(11) NOT NULL AUTO_INCREMENT,
-		user_id int(11) NOT NULL,
-		kind varchar(20) NOT NULL,
-		label varchar(255) DEFAULT NULL,
-		payload longtext NOT NULL,
-		created_at datetime NOT NULL,
-		PRIMARY KEY  (id),
-		KEY user_created (user_id, created_at)
-	) $charset;";
-
 	// Customer satisfaction surveys forwarded in from the public restaurant sites (cross-site,
 	// HMAC-signed — see includes-site-pulse-surveys.php). One row per submission. `ratings` is a
 	// JSON map of dimension => 1-5 (dimensions can differ per brand); `avg_rating`/`overall` are
@@ -613,6 +1115,14 @@ add_action( 'init', function() {
 	site_pulse_migrate_supervisor_report_caps();
 	site_pulse_migrate_retire_legacy_report_caps();
 	site_pulse_migrate_survey_caps();
+	site_pulse_migrate_split_settings_caps();
+
+	// One-time: grant the new directory caps to the tiers that should see it out of the box
+	// (owner/admin manage; supervisor view), and import the legacy Employees/Former Employees
+	// CPT records into the new directory table. Both self-guard with their own option flag.
+	if ( function_exists( 'sp_directory_migrate_caps' ) )  sp_directory_migrate_caps();
+	if ( function_exists( 'sp_directory_import_from_cpt' ) ) sp_directory_import_from_cpt();
+	if ( function_exists( 'sp_emails_migrate_caps' ) )    sp_emails_migrate_caps();
 
 	// One-time: fold legacy 1:1 messages into the conversation model (group threads). Self-guarded.
 	if ( ! get_option( 'site_pulse_msg_convos_migrated' ) && function_exists( 'sp_msg_migrate_to_conversations' ) ) {
@@ -640,6 +1150,17 @@ add_action( 'init', function() {
 	// Notifications matrix + pending-user list, so it's a no-op until the submit flow exists).
 	if ( ! wp_next_scheduled( 'site_pulse_expense_period_reminder' ) ) {
 		wp_schedule_event( strtotime( 'tomorrow 7:00am' ), 'daily', 'site_pulse_expense_period_reminder' );
+	}
+
+	// Hourly cron to AI-tag reviews that don't yet have sentiment chips (self-gates: no-op when there's
+	// nothing untagged or no API key). The bulk backfill is the manual "Analyze reviews" button.
+	if ( ! wp_next_scheduled( 'site_pulse_tag_reviews' ) ) {
+		wp_schedule_event( time() + 300, 'hourly', 'site_pulse_tag_reviews' );
+	}
+
+	// Hourly cron to AI-condense submitted reports into search/trend digests (self-gates on count + key).
+	if ( ! wp_next_scheduled( 'site_pulse_digest_reports' ) ) {
+		wp_schedule_event( time() + 600, 'hourly', 'site_pulse_digest_reports' );
 	}
 } );
 
@@ -831,7 +1352,7 @@ function site_pulse_migrate_supervisor_report_caps(): void {
 
 	$caps = json_decode( $row['capabilities'], true ) ?: [];
 	$caps = array_values( array_diff( $caps, [ 'view_team_reports' ] ) );
-	foreach ( [ 'view_gm_reports', 'submit_reports', 'view_own_reports' ] as $c ) {
+	foreach ( [ 'view_gm_reports', 'submit_reports' ] as $c ) {
 		if ( ! in_array( $c, $caps, true ) ) $caps[] = $c;
 	}
 	$wpdb->update( $tbl, [ 'capabilities' => wp_json_encode( $caps ), 'updated_at' => current_time( 'mysql' ) ], [ 'id' => (int) $row['id'] ] );
@@ -884,6 +1405,29 @@ function site_pulse_migrate_survey_caps(): void {
 	}
 }
 
+/**
+ * One-time: Notifications and API Keys were split out of the single "Manage site settings" cap into
+ * their own permissions (manage_notifications, manage_api_keys). Grant both to every tier that already
+ * has manage_settings so no admin loses access. Insert-only + option-guarded.
+ */
+function site_pulse_migrate_split_settings_caps(): void {
+	if ( get_option( 'site_pulse_settings_caps_split' ) ) return;
+	update_option( 'site_pulse_settings_caps_split', '1' );
+
+	global $wpdb;
+	$tbl  = site_pulse_table('roles');
+	$rows = $wpdb->get_results( "SELECT id, capabilities FROM $tbl", ARRAY_A ) ?: [];
+	foreach ( $rows as $row ) {
+		$caps = json_decode( $row['capabilities'], true ) ?: [];
+		if ( ! in_array( 'manage_settings', $caps, true ) ) continue;
+		$changed = false;
+		foreach ( [ 'manage_notifications', 'manage_api_keys' ] as $c ) {
+			if ( ! in_array( $c, $caps, true ) ) { $caps[] = $c; $changed = true; }
+		}
+		if ( $changed ) $wpdb->update( $tbl, [ 'capabilities' => wp_json_encode( array_values( $caps ) ), 'updated_at' => current_time( 'mysql' ) ], [ 'id' => (int) $row['id'] ] );
+	}
+}
+
 function site_pulse_seed_roles(): void {
 	global $wpdb;
 	$now = current_time( 'mysql' );
@@ -891,37 +1435,37 @@ function site_pulse_seed_roles(): void {
 		[
 			'slug'            => 'god',
 			'label'           => 'Odinson',
-			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'view_ai_insights', 'submit_reports', 'view_own_reports', 'god_mode', 'manage_mileage', 'submit_mileage', 'view_reviews', 'manage_reviews', 'view_surveys', 'manage_surveys' ] ),
+			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'manage_notifications', 'manage_api_keys', 'view_ai_insights', 'submit_reports', 'view_gm_action_items', 'view_supervisor_action_items', 'god_mode', 'manage_mileage', 'submit_mileage', 'view_reviews', 'manage_reviews', 'view_surveys', 'manage_surveys' ] ),
 			'hierarchy_level' => 255,
 		],
 		[
 			'slug'            => 'owner',
 			'label'           => 'Owner',
-			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'view_ai_insights', 'manage_mileage', 'submit_mileage', 'view_reviews', 'manage_reviews', 'view_surveys', 'manage_surveys' ] ),
+			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'manage_notifications', 'manage_api_keys', 'view_ai_insights', 'manage_mileage', 'submit_mileage', 'view_reviews', 'manage_reviews', 'view_surveys', 'manage_surveys' ] ),
 			'hierarchy_level' => 100,
 		],
 		[
 			'slug'            => 'admin',
 			'label'           => 'Administrator',
-			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'view_analytics', 'manage_settings', 'view_ai_insights', 'manage_mileage', 'submit_mileage', 'view_reviews', 'manage_reviews', 'view_surveys', 'manage_surveys' ] ),
+			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'view_analytics', 'manage_settings', 'manage_notifications', 'manage_api_keys', 'view_ai_insights', 'manage_mileage', 'submit_mileage', 'view_reviews', 'manage_reviews', 'view_surveys', 'manage_surveys' ] ),
 			'hierarchy_level' => 90,
 		],
 		[
 			'slug'            => 'supervisor',
 			'label'           => 'Supervisor',
-			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'submit_reports', 'view_own_reports', 'view_analytics', 'submit_mileage', 'view_reviews', 'view_surveys' ] ),
+			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'submit_reports', 'view_analytics', 'submit_mileage', 'view_reviews', 'view_surveys' ] ),
 			'hierarchy_level' => 50,
 		],
 		[
 			'slug'            => 'manager',
 			'label'           => 'GM',
-			'capabilities'    => wp_json_encode( [ 'submit_reports', 'view_own_reports', 'view_analytics', 'submit_mileage' ] ),
+			'capabilities'    => wp_json_encode( [ 'submit_reports', 'view_analytics', 'submit_mileage' ] ),
 			'hierarchy_level' => 20,
 		],
 		[
 			'slug'            => 'non-store-manager',
 			'label'           => 'Manager',
-			'capabilities'    => wp_json_encode( [ 'submit_reports', 'view_own_reports', 'view_analytics', 'submit_mileage' ] ),
+			'capabilities'    => wp_json_encode( [ 'submit_reports', 'view_analytics', 'submit_mileage' ] ),
 			'hierarchy_level' => 20,
 		],
 	];
@@ -1166,26 +1710,37 @@ function site_pulse_get_all_roles( bool $include_god = false ): array {
  * intentionally excluded — it is internal and only the (hidden) God tier carries it.
  */
 function site_pulse_capability_catalog_all(): array {
+	// Ordered so every non-"manage" capability comes first, then all the admin "Manage …" ones grouped
+	// at the end (submit_mileage sits with the other submit/view caps). The Tiers / per-user grids draw
+	// a divider above the first "Manage" item, so this grouping keeps regular vs admin caps cleanly split.
 	return [
-		'view_own_reports'        => 'View own reports',
-		'submit_reports'          => 'Submit reports',
-		'view_gm_reports'         => 'View all GM reports',
-		'view_supervisor_reports' => 'View all supervisor reports',
+		'submit_reports'               => 'Submit reports',
+		'view_gm_reports'              => 'View all GM reports',
+		'view_supervisor_reports'      => 'View all supervisor reports',
+		'view_gm_action_items'         => 'View all GM action items',
+		'view_supervisor_action_items' => 'View all supervisor action items',
 		'view_analytics'    => 'View analytics',
 		'view_ai_insights'  => 'View AI insights',
 		'view_forms'        => 'View Forms',
-		'upload_forms'      => 'Upload Forms',
 		'view_reviews'      => 'View reviews',
-		'manage_reviews'    => 'Manage reviews &amp; replies',
 		'view_surveys'      => 'View customer surveys',
-		'manage_surveys'    => 'Manage customer surveys',
+		'view_directory'    => 'View company directory',
+		'view_emails'       => 'View customer emails',
 		'submit_mileage'    => 'Submit mileage',
-		'manage_mileage'    => 'Manage mileage settings',
-		'manage_locations'  => 'Manage home bases',
-		'manage_users'      => 'Manage users',
-		'manage_templates'  => 'Manage report templates',
-		'manage_settings'   => 'Manage site settings',
-		'manage_roles'      => 'Manage roles',
+		// "Manage …" block, ordered to follow the admin menu.
+		'manage_users'         => 'Manage users',
+		'manage_roles'         => 'Manage roles',
+		'manage_locations'     => 'Manage home bases',
+		'manage_templates'     => 'Manage reports',
+		'manage_mileage'       => 'Manage mileage settings',
+		'upload_forms'         => 'Manage forms',
+		'manage_settings'      => 'Manage site defaults',
+		'manage_notifications' => 'Manage notifications',
+		'manage_api_keys'      => 'Manage API keys',
+		'manage_surveys'       => 'Manage customer surveys',
+		'manage_reviews'       => 'Manage reviews &amp; replies',
+		'manage_directory'     => 'Manage company directory',
+		'manage_emails'        => 'Manage customer emails',
 	];
 }
 
@@ -1308,6 +1863,25 @@ function site_pulse_visible_report_user_ids( int $viewer_id ): array {
 		$ids = array_merge( $ids, site_pulse_user_ids_with_role( 'manager' ) );
 	}
 	if ( site_pulse_user_can( $viewer_id, 'view_supervisor_reports' ) ) {
+		$ids = array_merge( $ids, site_pulse_user_ids_with_role( 'supervisor' ) );
+	}
+	return array_values( array_unique( array_map( 'intval', $ids ) ) );
+}
+
+/**
+ * Whose ACTION ITEMS $viewer may see. Separate from report visibility and OFF by default — everyone
+ * sees only their own unless their tier holds the action-item view caps:
+ *   - view_gm_action_items         → all GMs (role 'manager')
+ *   - view_supervisor_action_items → all supervisors (role 'supervisor')
+ * The viewer always sees their own. (Gods get the whole catalog via site_pulse_effective_caps, so
+ * they hold both caps automatically.)
+ */
+function site_pulse_visible_action_item_user_ids( int $viewer_id ): array {
+	$ids = [ $viewer_id ]; // own
+	if ( site_pulse_user_can( $viewer_id, 'view_gm_action_items' ) ) {
+		$ids = array_merge( $ids, site_pulse_user_ids_with_role( 'manager' ) );
+	}
+	if ( site_pulse_user_can( $viewer_id, 'view_supervisor_action_items' ) ) {
 		$ids = array_merge( $ids, site_pulse_user_ids_with_role( 'supervisor' ) );
 	}
 	return array_values( array_unique( array_map( 'intval', $ids ) ) );
@@ -2709,8 +3283,10 @@ function site_pulse_ajax_get_unread_count(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	$user_id = site_pulse_effective_user_id();
 	global $wpdb;
+	// The bell is system notifications only — messages have their own Messages-tab count, so exclude
+	// any (legacy) message-type rows. The app-icon badge = this count + unread messages.
 	$count = (int) $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(*) FROM " . site_pulse_table('notifications') . " WHERE user_id = %d AND is_read = 0 AND is_archived = 0",
+		"SELECT COUNT(*) FROM " . site_pulse_table('notifications') . " WHERE user_id = %d AND is_read = 0 AND is_archived = 0 AND type != 'message'",
 		$user_id
 	) );
 	wp_send_json_success( [ 'count' => $count ] );
@@ -2722,7 +3298,7 @@ function site_pulse_ajax_get_notifications(): void {
 	$user_id = site_pulse_effective_user_id();
 	global $wpdb;
 	$notifications = $wpdb->get_results( $wpdb->prepare(
-		"SELECT * FROM " . site_pulse_table('notifications') . " WHERE user_id = %d AND is_archived = 0 ORDER BY created_at DESC LIMIT 50",
+		"SELECT * FROM " . site_pulse_table('notifications') . " WHERE user_id = %d AND is_archived = 0 AND type != 'message' ORDER BY created_at DESC LIMIT 50",
 		$user_id
 	), ARRAY_A ) ?: [];
 	wp_send_json_success( [ 'notifications' => $notifications ] );
@@ -2797,6 +3373,42 @@ function site_pulse_notification_events(): array {
 	];
 }
 
+// The events relevant to THIS install — the ones whose feature is actually on. Used to decide which
+// rows the Settings → Notifications matrix shows; an event for an off feature can never fire, so its
+// row is just clutter. Routing for hidden events is preserved (the save merges), so turning a feature
+// back on restores its prior notification settings.
+function site_pulse_notification_events_active(): array {
+	// Which module powers each event — if that module is off, the event can't fire.
+	$event_module = [
+		'gm_report_submitted'         => 'reports',
+		'supervisor_report_submitted' => 'reports',
+		'action_pending'              => 'reports',
+		'action_followup'             => 'reports',
+		'action_resolved'             => 'reports',
+		'action_urgent'               => 'reports',
+		'survey_received'             => 'surveys',
+		'period_ending_2days'         => 'mileage',
+		'period_ending_tomorrow'      => 'mileage',
+		'period_ends_today'           => 'mileage',
+		'mileage_pending'             => 'mileage',
+		'mileage_approved'            => 'mileage',
+		'mileage_rejected'            => 'mileage',
+	];
+
+	// The new-destination approval flow is optional; with it off, those three events never fire.
+	$approval_on     = site_pulse_get_setting( 'mileage_require_approval', '1' ) === '1';
+	$approval_events = [ 'mileage_pending', 'mileage_approved', 'mileage_rejected' ];
+
+	$out = [];
+	foreach ( site_pulse_notification_events() as $ev => $label ) {
+		$mod = $event_module[ $ev ] ?? null;
+		if ( $mod && function_exists( 'site_pulse_module_on' ) && ! site_pulse_module_on( $mod ) ) continue;
+		if ( ! $approval_on && in_array( $ev, $approval_events, true ) ) continue;
+		$out[ $ev ] = $label;
+	}
+	return $out;
+}
+
 // The matrix columns. 'dashboard' is a DELIVERY channel (not a recipient) — when on, the bell
 // notifications for that event ALSO surface as a dismissible banner on the dashboard. The rest are
 // recipients: 'gm' = the event's subject person; 'supervisor' = that person's direct supervisor;
@@ -2815,22 +3427,23 @@ function site_pulse_notification_columns(): array {
 	];
 }
 
-// Defaults mirror the original hard-coded recipients, so behavior is unchanged until an admin edits.
+// Defaults mirror the original hard-coded recipients (push on by default — every notified event also
+// wakes the recipient's devices; an admin can uncheck Push per event in Settings → Notifications).
 function site_pulse_notification_defaults(): array {
 	return [
-		'gm_report_submitted'         => [ 'supervisor' => 1 ],
-		'supervisor_report_submitted' => [ 'supervisor' => 1 ],
-		'survey_received'             => [ 'gm' => 1, 'supervisor' => 1 ],
-		'action_pending'              => [ 'gm' => 1 ],
-		'action_followup'             => [ 'gm' => 1, 'supervisor' => 1 ],
-		'action_resolved'             => [ 'supervisor' => 1 ],
-		'action_urgent'               => [ 'supervisor' => 1 ],
-		'period_ending_2days'         => [ 'gm' => 1 ],
-		'period_ending_tomorrow'      => [ 'gm' => 1 ],
-		'period_ends_today'           => [ 'gm' => 1 ],
-		'mileage_pending'             => [ 'admin' => 1, 'owners' => 1 ],
-		'mileage_approved'            => [ 'gm' => 1 ],
-		'mileage_rejected'            => [ 'gm' => 1 ],
+		'gm_report_submitted'         => [ 'supervisor' => 1, 'push' => 1 ],
+		'supervisor_report_submitted' => [ 'supervisor' => 1, 'push' => 1 ],
+		'survey_received'             => [ 'gm' => 1, 'supervisor' => 1, 'push' => 1 ],
+		'action_pending'              => [ 'gm' => 1, 'push' => 1 ],
+		'action_followup'             => [ 'gm' => 1, 'supervisor' => 1, 'push' => 1 ],
+		'action_resolved'             => [ 'supervisor' => 1, 'push' => 1 ],
+		'action_urgent'               => [ 'supervisor' => 1, 'push' => 1 ],
+		'period_ending_2days'         => [ 'gm' => 1, 'push' => 1 ],
+		'period_ending_tomorrow'      => [ 'gm' => 1, 'push' => 1 ],
+		'period_ends_today'           => [ 'gm' => 1, 'push' => 1 ],
+		'mileage_pending'             => [ 'admin' => 1, 'owners' => 1, 'push' => 1 ],
+		'mileage_approved'            => [ 'gm' => 1, 'push' => 1 ],
+		'mileage_rejected'            => [ 'gm' => 1, 'push' => 1 ],
 	];
 }
 
@@ -2913,9 +3526,10 @@ function site_pulse_ajax_ack_dashboard_message(): void {
 add_action( 'wp_ajax_site_pulse_get_notification_settings', 'site_pulse_ajax_get_notification_settings' );
 function site_pulse_ajax_get_notification_settings(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
+	if ( ! site_pulse_admin_check( 'manage_notifications' ) ) return;
+
 	wp_send_json_success( [
-		'events'         => site_pulse_notification_events(),
+		'events'         => site_pulse_notification_events_active(),   // only events whose feature is on
 		'columns'        => site_pulse_notification_columns(),
 		'routing'        => site_pulse_get_notification_routing(),
 		'messages_email' => site_pulse_get_setting( 'messages_email_enabled', '0' ),
@@ -2926,20 +3540,26 @@ function site_pulse_ajax_get_notification_settings(): void {
 add_action( 'wp_ajax_site_pulse_save_notification_settings', 'site_pulse_ajax_save_notification_settings' );
 function site_pulse_ajax_save_notification_settings(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
+	if ( ! site_pulse_admin_check( 'manage_notifications' ) ) return;
 
 	$in = json_decode( wp_unslash( $_POST['routing'] ?? '' ), true );
 	if ( ! is_array( $in ) ) wp_send_json_error( [ 'message' => 'Invalid data.' ] );
 
-	$clean = [];
+	// Start from whatever's already saved so events HIDDEN from the matrix (feature off) keep their
+	// settings, then overwrite only the rows the matrix actually posted (the active events).
+	$existing = json_decode( (string) site_pulse_get_setting( 'notification_routing', '' ), true );
+	$clean    = is_array( $existing ) ? $existing : [];
+
 	foreach ( site_pulse_notification_events() as $ev => $label ) {
+		if ( ! isset( $in[ $ev ] ) ) continue;            // not in this save (hidden row) → leave as-is
+		$row        = is_array( $in[ $ev ] ) ? $in[ $ev ] : [];
 		$clean[ $ev ] = [];
-		$row = is_array( $in[ $ev ] ?? null ) ? $in[ $ev ] : [];
 		foreach ( site_pulse_notification_columns() as $ck => $cl ) {
 			if ( ! empty( $row[ $ck ] ) ) $clean[ $ev ][ $ck ] = 1;
 		}
 	}
 	site_pulse_set_setting( 'notification_routing', wp_json_encode( $clean ) );
+
 	wp_send_json_success( [ 'message' => 'Saved.' ] );
 }
 
@@ -3225,66 +3845,37 @@ function site_pulse_create_action_items_from_report( int $report_id ): int {
 }
 
 
-/**
- * One-time recovery: recently-submitted reports that ended up with ZERO action items (e.g. the
- * reports submitted while the generator was crashing). Returns up to $limit report ids that still
- * need processing, plus the total still pending — skipping any already handled by a prior batch
- * (tracked in the `site_pulse_action_backfill_seen` option) so a report that legitimately yields
- * no items isn't retried forever.
- */
-function site_pulse_backfill_candidates( int $limit ): array {
-	global $wpdb;
-	$seen = get_option( 'site_pulse_action_backfill_seen', [] );
-	if ( ! is_array( $seen ) ) $seen = [];
-
-	// Look back a year, and fall back to created_at when submitted_at was never stamped, so older
-	// (but still recent) reports that missed generation aren't excluded.
-	$cutoff  = date( 'Y-m-d H:i:s', strtotime( '-365 days' ) );
-	$reports = $wpdb->get_results( $wpdb->prepare(
-		"SELECT r.id FROM " . site_pulse_table('reports') . " r
-		 LEFT JOIN " . site_pulse_table('action_items') . " ai ON ai.report_id = r.id
-		 WHERE r.status = 'submitted' AND COALESCE( r.submitted_at, r.created_at ) >= %s
-		 GROUP BY r.id
-		 HAVING COUNT( ai.id ) = 0
-		 ORDER BY COALESCE( r.submitted_at, r.created_at ) DESC",
-		$cutoff
-	), ARRAY_A ) ?: [];
-
-	$ids = [];
-	foreach ( $reports as $r ) {
-		if ( ! in_array( (int) $r['id'], $seen, true ) ) $ids[] = (int) $r['id'];
-	}
-	return [ 'ids' => array_slice( $ids, 0, max( 1, $limit ) ), 'total' => count( $ids ) ];
-}
-
-// God-only, batched backfill. Each call processes a few reports (one Claude request each) and
-// reports how many remain, so the client loops until done without tripping request timeouts.
-add_action( 'wp_ajax_site_pulse_backfill_action_items', 'site_pulse_ajax_backfill_action_items' );
-function site_pulse_ajax_backfill_action_items(): void {
+// Manually add a personal to-do (the "+ Add Action Item" button) for the current user.
+add_action( 'wp_ajax_site_pulse_create_action_item', 'site_pulse_ajax_create_action_item' );
+function site_pulse_ajax_create_action_item(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_is_god( get_current_user_id() ) ) wp_send_json_error( [ 'message' => 'Only an Odinson can run the backfill.' ] );
+	$me   = site_pulse_effective_user_id();
+	$desc = sanitize_text_field( wp_unslash( $_POST['description'] ?? '' ) );
+	$prio = in_array( $_POST['priority'] ?? '', [ 'high', 'medium', 'low' ], true ) ? $_POST['priority'] : 'medium';
+	$due  = trim( (string) ( $_POST['due_date'] ?? '' ) );
+	if ( ! $me )         wp_send_json_error( [ 'message' => 'Not signed in.' ] );
+	if ( $desc === '' )  wp_send_json_error( [ 'message' => 'Please enter the to-do.' ] );
+	if ( $due === '' || ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $due ) ) $due = date( 'Y-m-d', strtotime( '+14 days' ) );
 
-	@set_time_limit( 120 );
-	$batch = site_pulse_backfill_candidates( 4 );
+	$prof = site_pulse_get_user_profile( $me );
+	$loc  = $prof ? (int) $prof['location_id'] : 0;
+	$now  = current_time( 'mysql' );
 
-	$seen = get_option( 'site_pulse_action_backfill_seen', [] );
-	if ( ! is_array( $seen ) ) $seen = [];
-
-	$created = 0; $processed = 0;
-	foreach ( $batch['ids'] as $rid ) {
-		$created += site_pulse_create_action_items_from_report( $rid );
-		$seen[]   = $rid;
-		$processed++;
-	}
-	update_option( 'site_pulse_action_backfill_seen', array_values( array_unique( array_map( 'intval', $seen ) ) ), false );
-
-	$remaining = max( 0, (int) $batch['total'] - $processed );
-	wp_send_json_success( [
-		'processed' => $processed,
-		'created'   => $created,
-		'remaining' => $remaining,
-		'done'      => $remaining === 0,
+	global $wpdb;
+	$wpdb->insert( site_pulse_table( 'action_items' ), [
+		'report_id'   => 0,
+		'user_id'     => $me,
+		'created_by'  => $me,
+		'location_id' => $loc,
+		'category'    => 'To-Do',
+		'description' => $desc,
+		'priority'    => $prio,
+		'status'      => 'open',
+		'due_date'    => $due,
+		'created_at'  => $now,
+		'updated_at'  => $now,
 	] );
+	wp_send_json_success( [ 'id' => (int) $wpdb->insert_id ] );
 }
 
 
@@ -3343,7 +3934,7 @@ function site_pulse_ajax_get_action_items(): void {
 	$user_id = site_pulse_effective_user_id();
 	$args = [];
 
-	$visible = site_pulse_visible_report_user_ids( $user_id );
+	$visible = site_pulse_visible_action_item_user_ids( $user_id );
 	if ( ! empty( $_POST['mine'] ) ) {
 		// Default to-do view: just my own items.
 		$args['user_id'] = $user_id;
@@ -3356,11 +3947,18 @@ function site_pulse_ajax_get_action_items(): void {
 
 	if ( ! empty( $_POST['status'] ) ) $args['status'] = sanitize_text_field( $_POST['status'] );
 
+	$items   = site_pulse_get_action_items( $args );
 	$pending = site_pulse_get_action_items( [ 'user_id' => $user_id, 'status' => 'pending' ] );
 
+	// Flag the viewer's OWN items so the UI can hide the owner name and gate "Mark Complete".
+	$flag_mine = static function ( array $rows ) use ( $user_id ): array {
+		foreach ( $rows as &$r ) $r['mine'] = ( (int) $r['user_id'] === $user_id ) ? 1 : 0;
+		return $rows;
+	};
+
 	wp_send_json_success( [
-		'items'   => site_pulse_get_action_items( $args ),
-		'pending' => $pending,
+		'items'   => $flag_mine( $items ),
+		'pending' => $flag_mine( $pending ),
 	] );
 }
 
@@ -3511,7 +4109,7 @@ function site_pulse_evaluate_resolution( array $item, string $note ): ?array {
 // Shared: can $me touch this action item? (their own, or one belonging to someone they can see).
 function sp_action_item_editable_by( array $item, int $me ): bool {
 	if ( (int) $item['user_id'] === $me ) return true;
-	return in_array( (int) $item['user_id'], site_pulse_visible_report_user_ids( $me ), true );
+	return in_array( (int) $item['user_id'], site_pulse_visible_action_item_user_ids( $me ), true );
 }
 
 // Add Note: append a note, keep a running notes list (seeded with the original item), and let the AI
@@ -3537,27 +4135,69 @@ function site_pulse_ajax_add_action_note(): void {
 	$notes[] = $note;
 	$meta['notes'] = $notes;
 
-	// Rewrite the item from the original + all notes (falls back to the existing text if AI is off).
+	// Rewrite the item from the original + all notes, and let the AI extend the due date when the
+	// notes imply a new timeframe (falls back to the existing text/date if AI is off or unparseable).
 	$new_desc = $item['description'];
+	$new_due  = $item['due_date'];
 	if ( site_pulse_get_api_key() ) {
-		$prompt  = "Action item: " . $notes[0] . "\n\nNotes added since (oldest first):\n";
+		$today   = current_time( 'Y-m-d' );
+		$prompt  = "Today's date: {$today}.\nCurrent due date: " . ( $item['due_date'] ?: 'none' ) . ".\n\n";
+		$prompt .= "Action item: " . $notes[0] . "\n\nNotes added since (oldest first):\n";
 		foreach ( array_slice( $notes, 1 ) as $n ) $prompt .= "- " . $n . "\n";
-		$prompt .= "\nRewrite the action item to reflect the latest state.";
+		$prompt .= "\nRewrite the action item to reflect the latest state, and set a new due date only if the notes imply one.";
 		$ai = site_pulse_call_claude( $prompt, site_pulse_prompt_rewrite_action_item() );
 		if ( $ai ) {
-			$ai = trim( wp_strip_all_tags( $ai ) );
-			$ai = trim( $ai, " \t\n\r\0\x0B\"'" );
-			if ( $ai !== '' ) $new_desc = $ai;
+			$ai = trim( $ai );
+			if ( strpos( $ai, '```' ) !== false ) {
+				$ai = preg_replace( '/```(?:json)?\s*/', '', $ai );
+				$ai = trim( preg_replace( '/```\s*$/', '', $ai ) );
+			}
+			$parsed = json_decode( $ai, true );
+			if ( is_array( $parsed ) && ! empty( $parsed['item'] ) ) {
+				$new_desc = trim( wp_strip_all_tags( (string) $parsed['item'] ) );
+				$d = trim( (string) ( $parsed['due_date'] ?? '' ) );
+				// Accept only a real future-or-today date; never pull it earlier than now.
+				if ( preg_match( '/^\d{4}-\d{2}-\d{2}$/', $d ) && $d >= $today ) $new_due = $d;
+			} else {
+				// Older/plain-text response — treat the whole thing as the rewritten item.
+				$plain = trim( wp_strip_all_tags( $ai ), " \t\n\r\0\x0B\"'" );
+				if ( $plain !== '' ) $new_desc = $plain;
+			}
+			if ( $new_desc === '' ) $new_desc = $item['description'];
 		}
 	}
 
 	$wpdb->update( site_pulse_table( 'action_items' ), [
 		'description' => sanitize_text_field( $new_desc ),
+		'due_date'    => $new_due,
 		'meta'        => wp_json_encode( $meta ),
 		'updated_at'  => current_time( 'mysql' ),
 	], [ 'id' => $item_id ] );
 
-	wp_send_json_success();
+	wp_send_json_success( [ 'due_date' => $new_due ] );
+}
+
+// Change an action item's due date (clickable due date on open & pending items — extend/move time).
+add_action( 'wp_ajax_site_pulse_set_action_due_date', 'site_pulse_ajax_set_action_due_date' );
+function site_pulse_ajax_set_action_due_date(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$me      = site_pulse_effective_user_id();
+	$item_id = (int) ( $_POST['item_id'] ?? 0 );
+	$due     = trim( (string) ( $_POST['due_date'] ?? '' ) );
+	if ( ! $item_id ) wp_send_json_error( [ 'message' => 'Invalid item.' ] );
+	if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $due ) ) wp_send_json_error( [ 'message' => 'Invalid date.' ] );
+
+	global $wpdb;
+	$item = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . site_pulse_table( 'action_items' ) . " WHERE id = %d", $item_id ), ARRAY_A );
+	if ( ! $item )                              wp_send_json_error( [ 'message' => 'Item not found.' ] );
+	if ( ! sp_action_item_editable_by( $item, $me ) ) wp_send_json_error( [ 'message' => 'Not allowed.' ] );
+
+	$wpdb->update(
+		site_pulse_table( 'action_items' ),
+		[ 'due_date' => $due, 'updated_at' => current_time( 'mysql' ) ],
+		[ 'id' => $item_id ]
+	);
+	wp_send_json_success( [ 'due_date' => $due ] );
 }
 
 // Item Complete: mark done (moves it to the completed/archived view). Urgent items fire the
@@ -3571,8 +4211,9 @@ function site_pulse_ajax_complete_action_item(): void {
 
 	global $wpdb;
 	$item = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . site_pulse_table( 'action_items' ) . " WHERE id = %d", $item_id ), ARRAY_A );
-	if ( ! $item )                              wp_send_json_error( [ 'message' => 'Item not found.' ] );
-	if ( ! sp_action_item_editable_by( $item, $me ) ) wp_send_json_error( [ 'message' => 'Not allowed.' ] );
+	if ( ! $item ) wp_send_json_error( [ 'message' => 'Item not found.' ] );
+	// Only the owner can complete an item — someone else can add details but not close it.
+	if ( (int) $item['user_id'] !== $me ) wp_send_json_error( [ 'message' => 'Only the owner can mark this complete.' ] );
 
 	$now = current_time( 'mysql' );
 	$wpdb->update( site_pulse_table( 'action_items' ), [
@@ -3683,7 +4324,6 @@ function site_pulse_ajax_reorder_action_items(): void {
 add_action( 'wp_ajax_site_pulse_admin_save_setting', 'site_pulse_ajax_admin_save_setting' );
 function site_pulse_ajax_admin_save_setting(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
 
 	$key   = sanitize_key( $_POST['key'] ?? '' );
 	$value = $_POST['value'] ?? '';
@@ -3691,6 +4331,14 @@ function site_pulse_ajax_admin_save_setting(): void {
 	if ( ! $key ) {
 		wp_send_json_error( [ 'message' => 'Setting key is required.' ] );
 	}
+
+	// This one endpoint saves several Settings tabs, each governed by its own permission. Pick the
+	// required capability from the key being written (API keys / notifications / everything else).
+	$api_key_keys   = [ 'claude_api_key', 'maps_js_api_key', 'google_api_key', 'tollguru_api_key' ];
+	$notif_keys     = [ 'push_enabled', 'messages_email_enabled', 'push_contact_email' ];
+	$required_cap   = in_array( $key, $api_key_keys, true ) ? 'manage_api_keys'
+		: ( in_array( $key, $notif_keys, true ) ? 'manage_notifications' : 'manage_settings' );
+	if ( ! site_pulse_admin_check( $required_cap ) ) return;
 
 	if ( $key === 'claude_api_key' ) {
 		site_pulse_set_api_key( $value );
@@ -3704,7 +4352,7 @@ function site_pulse_ajax_admin_save_setting(): void {
 add_action( 'wp_ajax_site_pulse_admin_get_settings', 'site_pulse_ajax_admin_get_settings' );
 function site_pulse_ajax_admin_get_settings(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
+	if ( ! site_pulse_admin_check( 'manage_api_keys' ) ) return;   // this payload is the API Keys tab
 
 	$api_key = site_pulse_get_api_key();
 	$masked  = $api_key ? substr( $api_key, 0, 8 ) . '...' . substr( $api_key, -4 ) : '';
@@ -7188,11 +7836,6 @@ function site_pulse_ajax_delete_expense(): void {
 	$is_admin = site_pulse_user_can( $user_id, 'manage_mileage' ) || site_pulse_is_god( get_current_user_id() );
 	if ( $owner !== $user_id && ! $is_admin ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 
-	// Snapshot to the trash so the deletion can be undone, then remove.
-	$sec_labels = [ 'B' => 'Vehicle expense', 'C' => 'Business meal', 'D' => 'Competitive shopping', 'E' => 'Other expense' ];
-	$label = ( $sec_labels[ $row['section'] ] ?? 'Expense' ) . ( ! empty( $row['expense_date'] ) ? ' · ' . date_i18n( 'M j, Y', strtotime( $row['expense_date'] ) ) : '' );
-	site_pulse_trash_push( $owner, 'expense', $label, [ 'row' => $row ] );
-
 	$wpdb->delete( site_pulse_table('expenses'), [ 'id' => $id ] );
 	wp_send_json_success();
 }
@@ -7521,64 +8164,6 @@ function site_pulse_ajax_save_mileage_entry(): void {
 	wp_send_json_success( [ 'entry_id' => $entry_id ] );
 }
 
-/**
- * Stash a deleted record so the header "Undo" button can bring it back. Holds a JSON snapshot
- * keyed by kind ('mileage' | 'expense'); keeps each user's 50 most recent deletions.
- */
-function site_pulse_trash_push( int $user_id, string $kind, string $label, array $payload ): void {
-	global $wpdb;
-	$wpdb->insert( site_pulse_table('trash'), [
-		'user_id'    => $user_id,
-		'kind'       => $kind,
-		'label'      => $label,
-		'payload'    => wp_json_encode( $payload ),
-		'created_at' => current_time( 'mysql' ),
-	] );
-	$old = $wpdb->get_col( $wpdb->prepare(
-		"SELECT id FROM " . site_pulse_table('trash') . " WHERE user_id = %d ORDER BY id DESC LIMIT %d, 100000",
-		$user_id, 50
-	) );
-	if ( $old ) {
-		$in = implode( ',', array_map( 'intval', $old ) );
-		$wpdb->query( "DELETE FROM " . site_pulse_table('trash') . " WHERE id IN ($in)" );
-	}
-}
-
-// Undo the most recent deletion for the current (effective) user — re-inserts the snapshot.
-add_action( 'wp_ajax_site_pulse_undo_delete', 'site_pulse_ajax_undo_delete' );
-function site_pulse_ajax_undo_delete(): void {
-	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	$user_id = site_pulse_effective_user_id();
-
-	global $wpdb;
-	$row = $wpdb->get_row( $wpdb->prepare(
-		"SELECT * FROM " . site_pulse_table('trash') . " WHERE user_id = %d ORDER BY id DESC LIMIT 1", $user_id
-	), ARRAY_A );
-	if ( ! $row ) wp_send_json_error( [ 'message' => 'Nothing to undo.' ] );
-
-	$payload = json_decode( (string) $row['payload'], true );
-	$section = '';
-	if ( is_array( $payload ) && $row['kind'] === 'mileage' ) {
-		$entry = $payload['entry'] ?? [];
-		$legs  = $payload['legs'] ?? [];
-		unset( $entry['id'] );
-		$wpdb->insert( site_pulse_table('mileage_entries'), $entry );
-		$new_id = (int) $wpdb->insert_id;
-		foreach ( (array) $legs as $lg ) { unset( $lg['id'] ); $lg['entry_id'] = $new_id; $wpdb->insert( site_pulse_table('mileage_legs'), $lg ); }
-	} elseif ( is_array( $payload ) && $row['kind'] === 'expense' ) {
-		$exp = $payload['row'] ?? [];
-		$section = (string) ( $exp['section'] ?? '' );
-		unset( $exp['id'] );
-		$wpdb->insert( site_pulse_table('expenses'), $exp );
-	} else {
-		$wpdb->delete( site_pulse_table('trash'), [ 'id' => $row['id'] ] );
-		wp_send_json_error( [ 'message' => 'Could not restore that item.' ] );
-	}
-
-	$wpdb->delete( site_pulse_table('trash'), [ 'id' => $row['id'] ] );
-	wp_send_json_success( [ 'kind' => $row['kind'], 'section' => $section, 'label' => (string) $row['label'] ] );
-}
-
 add_action( 'wp_ajax_site_pulse_delete_mileage_entry', 'site_pulse_ajax_delete_mileage_entry' );
 function site_pulse_ajax_delete_mileage_entry(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
@@ -7593,13 +8178,6 @@ function site_pulse_ajax_delete_mileage_entry(): void {
 	if ( (int) $entry['user_id'] !== $user_id && ! site_pulse_is_god( get_current_user_id() ) ) {
 		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 	}
-
-	// Snapshot the day + its legs to the trash so it can be undone, then hard-delete.
-	$legs = $wpdb->get_results( $wpdb->prepare(
-		"SELECT * FROM " . site_pulse_table('mileage_legs') . " WHERE entry_id = %d ORDER BY leg_order, id", $entry_id
-	), ARRAY_A ) ?: [];
-	$label = 'Mileage day' . ( ! empty( $entry['entry_date'] ) ? ' · ' . date_i18n( 'M j, Y', strtotime( $entry['entry_date'] ) ) : '' );
-	site_pulse_trash_push( (int) $entry['user_id'], 'mileage', $label, [ 'entry' => $entry, 'legs' => $legs ] );
 
 	$wpdb->delete( site_pulse_table('mileage_legs'),    [ 'entry_id' => $entry_id ] );
 	$wpdb->delete( site_pulse_table('mileage_entries'), [ 'id'       => $entry_id ] );
@@ -8743,6 +9321,17 @@ function battleplan_addSitePulseIcons( $icons ) {
 
 	$icons['paper-clip'] = [ '<g transform="translate(0 0)"><path d="m35.34 241.32 187.8-188c4.23-4.23 3.03-11.41-.34-14.44s-9.93-3.9-13.95.12L21.7 226.2c-5.98 5.98-9.43 13.13-13.18 20.16-13.02 24.45-10.87 59.42 4.68 82.73 31.74 47.57 95.29 49.42 127.07 17.69l240.21-239.9c9.26-9.25 12.31-23.71 13.48-35.18 4.09-39.75-28.5-73.92-69.02-71.59-12.89.74-28.73 4.92-38.9 15.1L91.92 209.39c-18.02 18.03-14.07 48.63 2.57 64.77 18.04 17.48 47.33 18.53 65.42.45L303.3 131.33c4.08-4.08 2.02-10.54-1.68-13.32-3.13-2.35-9.51-3.46-13.36.39l-143.9 143.65c-10.06 10.05-34.09 7.32-41.83-10.24-4.07-9.23-3.62-21.08 4-28.68L299.56 30.51c16.78-16.74 45.87-12.77 61.03 2.32 17.55 16.87 18.61 42.55 4.2 62.1L126.72 332.29c-20.46 20.4-54.78 20.22-77.35 5.54-23.98-15.6-35.31-44.98-27.07-72.43 2.65-8.82 5.91-16.92 13.04-24.06Z"/><path d="M35.34 241.32c-7.14 7.14-10.4 15.24-13.04 24.06-8.24 27.45 3.09 56.83 27.07 72.43 22.58 14.69 56.89 14.86 77.35-5.54L364.79 94.91c14.41-19.55 13.35-45.23-4.2-62.1-15.16-15.09-44.26-19.06-61.03-2.32L106.53 223.12c-7.62 7.61-8.07 19.45-4 28.68 7.73 17.56 31.76 20.29 41.83 10.24l143.9-143.65c3.86-3.85 10.23-2.74 13.36-.39 3.7 2.78 5.76 9.24 1.68 13.32L159.91 274.6c-18.09 18.08-47.38 17.03-65.42-.45-16.65-16.13-20.59-46.74-2.57-64.77L286.04 15.21C296.21 5.04 312.05.85 324.94.11c40.52-2.33 73.11 31.84 69.03 71.58-1.18 11.47-4.23 25.94-13.48 35.18l-240.21 239.9c-31.78 31.74-95.32 29.89-127.07-17.69-15.55-23.3-17.7-58.28-4.68-82.73 3.74-7.03 7.19-14.18 13.18-20.16L208.85 39.01c4.02-4.02 10.67-3.06 13.95-.12s4.57 10.2.34 14.44z"/></g>' ];
 
+	// Contact icons used by the Company Directory (and available app-wide), kept in sync with the
+	// framework set in functions-icons.php. Only added if not already provided, so a site override wins.
+	if ( empty( $icons['email'] ) ) {
+		$icons['email'] = [ '<path d="M22 399V190c8 8 17 16 27 23l32 22a2548 2548 0 0 1 135 92c13 9 27 13 41 13h1c14 0 28-4 41-13a513 513 0 0 0 69-47 4030 4030 0 0 0 66-45l33-22 26-23v209c0 11-4 21-13 29s-18 12-29 12H63c-11 0-21-4-29-12s-12-18-12-29zm15-244c-10-13-15-25-15-38s3-23 10-33 18-14 31-14h388c11 0 21 4 29 12s13 19 13 33-5 26-14 38c-9 13-19 23-30 31l-32 22-23 16-38 26-30 21-33 23-35 14h-1c-11 0-22-5-35-14l-34-23a4004 4004 0 0 1-60-42l-31-21-30-21-30-30z"/>' ];
+	}
+	if ( empty( $icons['phone'] ) ) {
+		$icons['phone'] = [ '<path d="M375 503c-26 1-50-8-73-18-68-32-126-78-175-134-44-50-81-104-110-164-13-27-14-54-7-82 9-34 26-63 48-90 6-7 14-7 23-5 8 2 15 6 21 12l72 73c7 6 12 14 15 23 3 8 2 14-4 20l-34 36a39 39 0 0 0-8 48c21 42 51 77 86 108a356 356 0 0 0 89 61c6 3 12 2 18-3 12-9 22-20 31-33l9-14c6-10 11-13 23-11 8 2 14 5 20 10l74 74 9 10c6 8 6 17 0 25a83 83 0 0 1-40 34c-24 10-49 16-75 20h-12z"/>' ];
+	}
+	if ( empty( $icons['phone-cell'] ) ) {
+		$icons['phone-cell'] = [ '<path d="M398 258v220c0 22-7 29-29 29H142c-22 0-29-7-29-29V37c0-22 7-29 29-29h229c20 0 27 7 27 27v223zM137 429h237V85H137v344zm120 16c-14 0-25 10-25 23-1 13 9 24 23 25 13 0 24-10 25-23 0-13-10-24-23-25zm0-403h27c2 0 4-3 6-4-2-2-4-6-6-6h-56c-2 0-5 3-7 5 2 2 5 5 7 5h29z"/><path d="M160 208c0-9 1-17 5-25s10-14 19-17l13-5c5-1 8 0 10 5l18 46c2 4 1 8-2 11l-12 12c-5 5-5 8-2 13 14 24 32 42 56 56 5 3 8 2 12-2l13-12c3-4 7-4 11-3l46 19c4 2 6 4 5 9l-4 11c-5 16-17 24-33 26-17 3-34-1-49-8a185 185 0 0 1-105-124l-1-12z"/>' ];
+	}
 
 	return $icons;
 }

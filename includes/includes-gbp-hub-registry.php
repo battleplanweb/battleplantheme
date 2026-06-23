@@ -232,13 +232,27 @@ function bpgbp_registry_handle_save(): void {
 		$secret = wp_generate_password( 64, false, false );
 	}
 
+	// Location: a dropdown pick (single location) wins; otherwise parse the advanced/multi textarea.
+	$pick = sanitize_text_field( wp_unslash( $_POST['location_pick'] ?? '' ) );
+	if ( '' !== $pick ) {
+		$title = '';
+		if ( class_exists( 'BPGBP_Hub' ) && method_exists( 'BPGBP_Hub', 'locations_for_match' ) ) {
+			foreach ( BPGBP_Hub::locations_for_match() as $gl ) {
+				if ( $gl['location'] === $pick ) { $title = $gl['title']; break; }
+			}
+		}
+		$locations_json = wp_json_encode( [ [ 'id' => $pick, 'label' => $title, 'brand' => '' ] ] );
+	} else {
+		$locations_json = wp_json_encode( bpgbp_registry_text_to_locations( (string) wp_unslash( $_POST['locations'] ?? '' ) ) );
+	}
+
 	$data = [
 		'site_key'   => $site_key,
 		'label'      => sanitize_text_field( wp_unslash( $_POST['label'] ?? '' ) ) ?: null,
 		'site_url'   => esc_url_raw( wp_unslash( $_POST['site_url'] ?? '' ) ) ?: null,
 		'secret'     => $secret,
 		'agency'     => ! empty( $_POST['agency'] ) ? 1 : 0,
-		'locations'  => wp_json_encode( bpgbp_registry_text_to_locations( (string) wp_unslash( $_POST['locations'] ?? '' ) ) ),
+		'locations'  => $locations_json,
 		'status'     => ( ( $_POST['status'] ?? 'active' ) === 'inactive' ) ? 'inactive' : 'active',
 		'updated_at' => $now,
 	];
@@ -273,6 +287,17 @@ function bpgbp_registry_render_page(): void {
 	if ( isset( $notes[ $msg ] ) ) {
 		echo '<div class="notice notice-' . ( $msg === 'nokey' ? 'error' : 'success' ) . ' is-dismissible"><p>' . esc_html( $notes[ $msg ] ) . '</p></div>';
 	}
+	if ( 'matched' === $msg ) {
+		$n = (int) ( $_GET['n'] ?? 0 );
+		echo '<div class="notice notice-success is-dismissible"><p>Auto-matched ' . $n . ' client' . ( 1 === $n ? '' : 's' ) . ' to a Google location.</p></div>';
+	}
+
+	// Bulk: fill any client that's missing a location, by website match (e.g. JSON-imported ones).
+	echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="margin:0 0 16px">';
+	wp_nonce_field( 'bpgbp_automatch_locations' );
+	echo '<input type="hidden" name="action" value="bpgbp_automatch_locations">';
+	echo '<button class="button">Auto-match missing locations</button> <span class="description">Fills a Google location for any client without one, matched by website.</span>';
+	echo '</form>';
 
 	// ---- Pending approvals: sites that auto-registered and are waiting for you to OK them ----
 	$pending = $wpdb->get_results( "SELECT * FROM $table WHERE status = 'pending' ORDER BY created_at ASC", ARRAY_A );
@@ -320,7 +345,21 @@ function bpgbp_registry_render_page(): void {
 	echo '<tr><th><label>Site key</label></th><td><input name="site_key" class="regular-text" value="' . $e_key . '" placeholder="e.g. 1callheatandair" required>' . ( $editing ? '' : '<p class="description">A short unique slug; the client uses this as its BPGBP_SITE_KEY.</p>' ) . '</td></tr>';
 	echo '<tr><th><label>Label</label></th><td><input name="label" class="regular-text" value="' . $e_lbl . '" placeholder="1 Call Heat &amp; Air"></td></tr>';
 	echo '<tr><th><label>Site URL</label></th><td><input name="site_url" class="regular-text" value="' . $e_url . '" placeholder="https://1callheatandair.com"></td></tr>';
-	echo '<tr><th><label>Locations</label></th><td><textarea name="locations" rows="3" class="large-text code" placeholder="accounts/123/locations/456 | Roanoke | Babe\'s">' . $e_loc . '</textarea><p class="description">One per line: <code>location id | label | brand</code> (label/brand optional). Single-location clients = one line.</p></td></tr>';
+	// A dropdown of the hub's actual GBP locations — pick instead of paste. (Cached hourly.)
+	$gbp_locs = ( class_exists( 'BPGBP_Hub' ) && method_exists( 'BPGBP_Hub', 'locations_for_match' ) ) ? BPGBP_Hub::locations_for_match() : [];
+	$pick = '<select name="location_pick" class="regular-text"><option value="">' . ( $e_loc !== '' ? '— keep current —' : '— select a Google location —' ) . '</option>';
+	foreach ( $gbp_locs as $gl ) {
+		$lbl = ( $gl['title'] !== '' ? $gl['title'] : $gl['location'] );
+		if ( ! empty( $gl['website'] ) ) $lbl .= '  (' . preg_replace( '#^https?://#', '', rtrim( $gl['website'], '/' ) ) . ')';
+		$pick .= '<option value="' . esc_attr( $gl['location'] ) . '">' . esc_html( $lbl ) . '</option>';
+	}
+	$pick .= '</select>';
+	echo '<tr><th><label>Google location</label></th><td>';
+	echo $pick . ( $gbp_locs ? '' : ' <span class="description">(location list unavailable — paste below)</span>' );
+	echo '<p class="description">Pick a location to set it (overrides the box below). Single-location clients only need this.</p>';
+	echo '<textarea name="locations" rows="2" class="large-text code" placeholder="accounts/123/locations/456 | Roanoke | Babe\'s">' . $e_loc . '</textarea>';
+	echo '<p class="description">Advanced / multi-location: one per line — <code>location id | label | brand</code>.</p>';
+	echo '</td></tr>';
 	echo '<tr><th><label>Agency view</label></th><td><label><input type="checkbox" name="agency" value="1"' . $e_ag . '> Include in the agency “Client Reviews” tab on this hub</label></td></tr>';
 	echo '<tr><th><label>Secret</label></th><td>';
 	if ( $editing ) {
@@ -401,7 +440,7 @@ function bpgbp_pair_handle( WP_REST_Request $request ) {
 	$label    = sanitize_text_field( (string) ( $p['label'] ?? '' ) );
 	$secret   = sanitize_text_field( (string) ( $p['secret'] ?? '' ) );
 	$site_key = sanitize_title( (string) ( $p['site_key'] ?? '' ) );
-	if ( '' === $site_key && $site_url ) $site_key = sanitize_title( (string) wp_parse_url( $site_url, PHP_URL_HOST ) );
+	if ( '' === $site_key && $site_url ) $site_key = bpgbp_key_from_url( $site_url );
 	if ( '' === $site_key || '' === $secret ) return new WP_Error( 'bpgbp_pair_bad', 'Missing site_key or secret.', [ 'status' => 400 ] );
 
 	$now = current_time( 'mysql' );
@@ -436,15 +475,26 @@ function bpgbp_pair_handle( WP_REST_Request $request ) {
 
 /**
  * Client-side: a site that ISN'T the hub and hasn't been configured the old way (no wp-config secret)
- * self-generates a secret, stores it as an option, and registers with the hub. Runs at most hourly during
- * an admin's session; stops once the hub reports the pairing 'active'.
+ * self-generates a secret, stores it as an option, and registers with the hub. Fires on admin page loads
+ * AND on an hourly wp-cron tick (driven by the site's normal traffic — no admin login needed), throttled
+ * to one attempt/hour, and stops once the hub reports the pairing 'active'.
  */
 add_action( 'admin_init', 'bpgbp_client_autopair' );
+add_action( 'bpgbp_pair_cron', 'bpgbp_client_autopair' );
+
+// Self-schedule the hourly pairing tick on every non-hub site (the callback self-gates, so it's a
+// harmless no-op once the site is configured/active or if it's the hub).
+add_action( 'init', function () {
+	if ( bpgbp_registry_active() ) return;
+	if ( ! wp_next_scheduled( 'bpgbp_pair_cron' ) ) {
+		wp_schedule_event( time() + 120, 'hourly', 'bpgbp_pair_cron' );
+	}
+} );
+
 function bpgbp_client_autopair(): void {
 	if ( bpgbp_registry_active() ) return;                              // the hub never pairs with itself
 	if ( defined( 'BPGBP_SITE_SECRET' ) && BPGBP_SITE_SECRET ) return;  // already hand-configured
 	if ( defined( 'BPGBP_AUTOPAIR' ) && ! BPGBP_AUTOPAIR ) return;      // explicit opt-out
-	if ( ! current_user_can( 'manage_options' ) ) return;
 	if ( 'active' === get_option( 'bpgbp_pair_status' ) ) return;       // done
 	if ( get_transient( 'bpgbp_pair_throttle' ) ) return;
 	set_transient( 'bpgbp_pair_throttle', 1, HOUR_IN_SECONDS );
@@ -453,7 +503,7 @@ function bpgbp_client_autopair(): void {
 	if ( '' === $hub ) return;
 
 	$site_key = get_option( 'bpgbp_site_key' );
-	if ( ! $site_key ) { $site_key = sanitize_title( (string) wp_parse_url( home_url(), PHP_URL_HOST ) ); update_option( 'bpgbp_site_key', $site_key ); }
+	if ( ! $site_key ) { $site_key = bpgbp_key_from_url( home_url() ); update_option( 'bpgbp_site_key', $site_key ); }
 	$secret = get_option( 'bpgbp_site_secret' );
 	if ( ! $secret ) { $secret = wp_generate_password( 64, false, false ); update_option( 'bpgbp_site_secret', $secret ); }
 	if ( ! defined( 'BPGBP_HUB_URL' ) && ! get_option( 'bpgbp_hub_url' ) ) update_option( 'bpgbp_hub_url', $hub );
@@ -478,6 +528,14 @@ function bpgbp_client_autopair(): void {
 /*--------------------------------------------------------------
 # Approve pending clients (single + bulk)
 --------------------------------------------------------------*/
+
+/** Derive a clean site key from a URL: the label before the first dot (no www, no TLD). */
+function bpgbp_key_from_url( $url ): string {
+	$host  = strtolower( (string) wp_parse_url( (string) $url, PHP_URL_HOST ) );
+	$host  = preg_replace( '/^www\./', '', $host );
+	$label = explode( '.', $host )[0] ?? '';
+	return sanitize_title( $label );
+}
 
 /** Bare host for matching: lowercased, no leading www. */
 function bpgbp_match_host( $url ): string {
@@ -539,5 +597,34 @@ function bpgbp_registry_handle_approve(): void {
 		if ( $row ) $activate( $row );
 	}
 	wp_safe_redirect( admin_url( 'tools.php?page=bpgbp-clients&msg=approved' ) );
+	exit;
+}
+
+// Fill in a Google location for every client that's missing one, matched by websiteUri → site URL.
+// Useful for entries imported from the old JSON without a location (the auto-match only fires on approve).
+add_action( 'admin_post_bpgbp_automatch_locations', 'bpgbp_registry_handle_automatch' );
+function bpgbp_registry_handle_automatch(): void {
+	if ( ! current_user_can( 'manage_options' ) || ! bpgbp_registry_active() ) wp_die( 'Not allowed.' );
+	check_admin_referer( 'bpgbp_automatch_locations' );
+
+	global $wpdb;
+	$table = bpgbp_registry_table();
+	$now   = current_time( 'mysql' );
+	$map   = bpgbp_location_match_map();
+
+	$rows = $wpdb->get_results( "SELECT * FROM $table", ARRAY_A );
+	$n    = 0;
+	foreach ( $rows ?: [] as $r ) {
+		$locs = json_decode( (string) $r['locations'], true );
+		if ( is_array( $locs ) && ! empty( $locs ) ) continue; // already has a location
+		$hit = bpgbp_match_for_row( $r, $map );
+		if ( ! $hit ) continue;
+		$wpdb->update( $table, [
+			'locations'  => wp_json_encode( [ [ 'id' => $hit['location'], 'label' => $hit['title'], 'brand' => '' ] ] ),
+			'updated_at' => $now,
+		], [ 'id' => (int) $r['id'] ] );
+		$n++;
+	}
+	wp_safe_redirect( admin_url( 'tools.php?page=bpgbp-clients&msg=matched&n=' . $n ) );
 	exit;
 }

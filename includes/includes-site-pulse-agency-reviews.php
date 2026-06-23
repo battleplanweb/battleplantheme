@@ -75,7 +75,7 @@ function site_pulse_ajax_get_agency_reviews(): void {
 			'error'            => null,
 		];
 
-		if ( '' === $location ) { $entry['error'] = 'No location mapped in bpgbp-sites.json.'; $out[] = $entry; continue; }
+		if ( '' === $location ) { $entry['error'] = 'No Google location set for this client — add it in Tools → GBP Clients.'; $out[] = $entry; continue; }
 
 		$cached = $cache[ $location ] ?? null;
 		$stale  = empty( $cached['fetched_at'] ) || ( $now - (int) $cached['fetched_at'] > SP_AGENCY_REVIEWS_TTL );
@@ -178,8 +178,8 @@ function site_pulse_ajax_agency_push_testimonial(): void {
 	$location = $cfg['location'] ?? '';
 	$site_url = ! empty( $cfg['site_url'] ) ? rtrim( (string) $cfg['site_url'], '/' ) : '';
 	$secret   = $cfg['secret'] ?? '';
-	if ( '' === $site_url ) wp_send_json_error( [ 'message' => 'No "site_url" set for this client in bpgbp-sites.json.' ] );
-	if ( '' === $secret )   wp_send_json_error( [ 'message' => 'No secret set for this client in bpgbp-sites.json.' ] );
+	if ( '' === $site_url ) wp_send_json_error( [ 'message' => 'No Site URL set for this client — add it in Tools → GBP Clients.' ] );
+	if ( '' === $secret )   wp_send_json_error( [ 'message' => 'No secret set for this client — approve/pair it in Tools → GBP Clients.' ] );
 
 	// Pull the review from our cache — never trust client-posted review text.
 	$review = null;

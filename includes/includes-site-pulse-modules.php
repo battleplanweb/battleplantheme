@@ -69,8 +69,8 @@ function site_pulse_modules(): array {
 			'default' => false,
 		],
 		'surveys' => [
-			'label'   => 'Customer Surveys',
-			'desc'    => 'Collects customer satisfaction surveys forwarded in from the public restaurant sites — ratings, comments, and per-location breakdowns. Shown as a tab under Reviews.',
+			'label'   => 'Comment Cards',
+			'desc'    => 'Collects customer comment cards forwarded in from the public restaurant sites — ratings, comments, and per-location breakdowns. Shown as a tab under Customer Feedback.',
 			'caps'    => [ 'view_surveys', 'manage_surveys' ],
 			'default' => false,
 		],

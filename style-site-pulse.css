@@ -1073,6 +1073,10 @@ body.has-site-pulse.sp-role-god .sp-topbar {
 
 /* Add Action Item dialog — urgency + due date side by side. */
 .sp-aai-row { display: flex; gap: 14px; margin: 12px 0 4px; }
+/* GOD report-edit attribution row: date · submitted by · location. */
+.sp-ger-attr { display: flex; flex-wrap: wrap; gap: 14px; margin: 4px 0 14px; }
+.sp-ger-col { flex: 1 1 160px; min-width: 0; }
+.sp-ger-col .sp-input, .sp-ger-col .sp-select { width: 100%; box-sizing: border-box; }
 .sp-aai-col { flex: 1 1 0; min-width: 0; }
 .sp-aai-col .sp-select, .sp-aai-col .sp-input { width: 100%; box-sizing: border-box; }
 
@@ -1452,6 +1456,56 @@ body.has-site-pulse.sp-role-god .sp-topbar {
 	border:                                                    1px solid var(--sp-secondary-light);
 	border-radius:                                             var(--sp-radius-lg);
 	overflow:                                                  hidden;
+}
+
+/* Transient, auto-dismissing toast (bottom-center) — e.g. confirming a cross-section expense move. */
+.sp-toast {
+	position:                                                  fixed;
+	left:                                                      50%;
+	bottom:                                                    24px;
+	z-index:                                                   2000;
+	max-width:                                                 90vw;
+	padding:                                                   12px 18px;
+	border-radius:                                             var(--sp-radius);
+	background:                                                var(--sp-text);
+	color:                                                     #fff;
+	font-size:                                                 14px;
+	font-weight:                                               600;
+	box-shadow:                                                0 6px 24px rgba(0, 0, 0, 0.25);
+	opacity:                                                   0;
+	transform:                                                 translate(-50%, 16px);
+	pointer-events:                                            none;
+	transition:                                                opacity 0.2s ease, transform 0.2s ease;
+}
+.sp-toast.sp-toast-show {
+	opacity:                                                   1;
+	transform:                                                 translate(-50%, 0);
+}
+
+/* Facebook review card actions: name + photo + post, inline & wrapping (name isn't full-width). */
+.sp-fb-actions { flex-wrap: wrap; align-items: center; gap: 8px; }
+.sp-fb-actions .sp-fb-name { width: auto; flex: 0 1 240px; min-width: 160px; }
+
+/* On FB cards the avatar is click-to-upload and the name is click-to-edit inline (both mirror the
+   fields posted to the site). Affordances: pointer avatar with a "+" hint, dashed-underline name. */
+.sp-review-card:has(.sp-fb-name) .sp-review-avatar { cursor: pointer; position: relative; }
+.sp-review-card:has(.sp-fb-name) .sp-review-avatar.sp-review-avatar-blank::after {
+	content: "+";
+	position: absolute;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	font-size: 22px;
+	color: var(--sp-text-light);
+}
+.sp-review-card:has(.sp-fb-name) .sp-review-author {
+	cursor: text;
+	border-bottom: 1px dashed var(--sp-border);
+}
+.sp-review-card:has(.sp-fb-name) .sp-review-author:hover { border-bottom-color: var(--sp-text-secondary); }
+.sp-review-card:has(.sp-fb-name) .sp-review-author[contenteditable="true"] {
+	outline: none;
+	border-bottom-color: var(--sp-primary);
 }
 
 
@@ -2324,7 +2378,33 @@ a.sp-forms-row-btn.sp-forms-download:hover {
 
 
 .sp-msg-thread-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.sp-msg-thread-title { font-weight: 700; color: var(--sp-text); }
+/* Stacked heading: "N members" on top, the (possibly scrolling) name below. */
+.sp-msg-thread-heading { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; gap: 1px; }
+.sp-msg-thread-title-wrap { overflow: hidden; width: 100%; }
+.sp-msg-thread-title { display: inline-block; font-weight: 700; color: var(--sp-text); white-space: nowrap; will-change: transform; }
+/* Gentle back-and-forth marquee for names too long to fit (shift distance set per-name in JS). */
+.sp-msg-thread-title.sp-marquee { animation: sp-marquee linear infinite; }
+@keyframes sp-marquee {
+	0%, 8%    { transform: translateX(0); }
+	46%, 54%  { transform: translateX(var(--sp-marquee-shift, 0)); }
+	92%, 100% { transform: translateX(0); }
+}
+.sp-msg-thread-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+/* "N members" as small plain text above the name (still clickable to manage the group). */
+.sp-msg-members {
+	align-self:                                                flex-start;
+	border:                                                    none;
+	background:                                                transparent;
+	padding:                                                   0;
+	font-size:                                                 11px;
+	line-height:                                               1.2;
+	white-space:                                               nowrap;
+	color:                                                     var(--sp-text-secondary);
+	cursor:                                                    pointer;
+}
+.sp-msg-members:hover { color: var(--sp-text); text-decoration: underline; }
+/* "Back" only matters in the single-pane (mobile) overlay; hidden in the desktop two-pane view. */
+.sp-messenger .sp-msg-back { display: none; }
 
 .sp-msg-group-tag {
 	display:                                                   inline-block;
@@ -2352,7 +2432,7 @@ a.sp-forms-row-btn.sp-forms-download:hover {
 	padding-left:                                              38px;
 }
 .sp-msg-contact-pick:hover { background: var(--sp-primary-light); }
-.sp-msg-contact-pick .sp-msg-pick { position: absolute; left: 12px; top: 12px; }
+.sp-msg-contact-pick .sp-msg-pick { position: absolute; left: 6px; top: 11px; }
 
 .sp-msg-members { display: grid; gap: 4px; }
 .sp-msg-member {
@@ -2548,11 +2628,29 @@ a.sp-forms-row-btn.sp-forms-download:hover {
 .sp-msg-contact-name { font-weight: 600; color: var(--sp-text); }
 .sp-msg-contact-meta { font-size: 12px; color: var(--sp-text-secondary); }
 
-/* Stack the messenger panes on small screens. */
+/* Messenger goes single-pane on phones (Facebook Messenger style): the conversation list is full-width,
+   and opening a thread shows it as a full-screen overlay with a LOCKED header (name + back) on top and a
+   LOCKED composer at the bottom, while only the bubbles scroll. "Back" returns to the list. */
 @media (max-width: 720px) {
-	.sp-messenger { grid-template-columns: 1fr; height: auto; }
-	.sp-msg-list { max-height: 220px; }
-	.sp-msg-thread { min-height: 60vh; }
+	.sp-messenger { grid-template-columns: 1fr; height: auto; min-height: 0; }
+	.sp-msg-list { max-height: none; }
+	.sp-msg-thread { display: none; }                 /* hidden until a thread is opened */
+
+	.sp-messenger.thread-open .sp-msg-list { display: none; }
+	.sp-messenger.thread-open .sp-msg-thread {
+		display:                                               flex;
+		position:                                              fixed;
+		inset:                                                 0;
+		z-index:                                               1000;
+		height:                                                100vh;
+		height:                                                100dvh;
+		border:                                                none;
+		border-radius:                                         0;
+	}
+	.sp-messenger .sp-msg-back { display: inline-grid; }
+	.sp-msg-thread-header { flex: 0 0 auto; }          /* pinned top of the flex column */
+	.sp-msg-composer { flex: 0 0 auto; }              /* pinned bottom */
+	.sp-msg-bubbles { flex: 1 1 auto; min-height: 0; } /* the only scrolling region */
 
 	/* Composer stacks: full-width textarea on top, then a row of [attach … Send] below. */
 	.sp-msg-composer { flex-wrap: wrap; align-items: center; }
@@ -5061,6 +5159,18 @@ body.has-site-pulse .sp-rep-mileage tbody tr td.sp-mileage-charge {
 	.sp-rep-mileage {
 		min-width:                                                660px;
 	}
+
+	/* Keep every cell on ONE line so a leg's route/purpose and "Total for Day" don't stack word-by-word
+	   into towering rows — the card already scrolls sideways to reveal the rest. */
+	body.has-site-pulse #sp-mileage-list .sp-mileage-table th,
+	body.has-site-pulse #sp-mileage-list .sp-mileage-table td {
+		white-space:                                              nowrap;
+	}
+	/* Let the route cell grow to its content instead of being capped (which forced the wrapping). */
+	#sp-mileage-list .sp-mileage-path-cell,
+	#sp-mileage-list .sp-mileage-leg-route {
+		max-width:                                                none;
+	}
 }
 
 .sp-icon-btn {
@@ -5189,6 +5299,7 @@ body.has-site-pulse .sp-rep-mileage tbody tr td.sp-mileage-charge {
 .sp-mileage-stop-loc:placeholder-shown,
 .sp-mileage-stop-purpose:placeholder-shown,
 .sp-mileage-stop-note:placeholder-shown,
+.sp-mileage-stop-loc.sp-loc-empty,
 .sp-mileage-charge.sp-charge-empty {
 	border-color:                                              var(--sp-danger);
 	filter:                                                    drop-shadow(0 0 3px var(--sp-danger));
@@ -5262,6 +5373,64 @@ body.has-site-pulse .sp-rep-mileage tbody tr td.sp-mileage-charge {
 	margin:                                                    0;
 	accent-color:                                              var(--sp-primary);
 	cursor:                                                    pointer;
+}
+
+/* ── Mobile: the desktop 5-column route grid (gutter · location · charge · purpose · ×) crams into
+   unusable slivers on a phone. Below 600px, stack each stop into a full-width card so every field is
+   tappable and full size. */
+@media (max-width: 600px) {
+	.sp-mileage-stops { padding: 12px; }
+
+	/* DATE + ROUTE stack instead of sharing a tight row. */
+	.sp-mileage-form-top { grid-template-columns: 1fr; gap: 14px; }
+
+	/* One field per line for every route row (START / 1·2·3 / END). */
+	.sp-mileage-stop {
+		grid-template-columns:                                 1fr;
+		gap:                                                   8px;
+		align-items:                                           stretch;
+	}
+
+	/* Editable stops become small cards so it's clear which fields belong together. */
+	.sp-mileage-stop-row {
+		position:                                              relative;
+		padding:                                               12px;
+		border:                                                1px solid var(--sp-border);
+		border-radius:                                         var(--sp-radius-sm);
+		background:                                            var(--sp-bg-white);
+	}
+
+	/* Reset every desktop column-span so children fill the single column. */
+	.sp-mileage-stop-fixed .sp-mileage-stop-home,
+	.sp-mileage-stop-end .sp-mileage-stop-home,
+	.sp-mileage-stop-end .sp-mileage-end-charge,
+	.sp-mileage-stop-end .sp-mileage-end-extras,
+	.sp-mileage-stop-note {
+		grid-column:                                           1 / -1;
+	}
+
+	/* Make all the controls fill the row width. */
+	.sp-mileage-stop-loc-wrap,
+	.sp-mileage-stop-loc,
+	.sp-mileage-charge,
+	.sp-mileage-stop-purpose-cell,
+	.sp-mileage-stop-note { width: 100%; }
+
+	/* Move the remove (×) to the card's top-right corner, out of the field flow. */
+	.sp-mileage-stop-row .sp-mileage-stop-remove {
+		position:                                              absolute;
+		top:                                                   6px;
+		right:                                                 6px;
+	}
+
+	/* Add Stop / Add Destination stack full-width and stay easy to tap. */
+	.sp-mileage-stop-actions { flex-direction: column; padding-left: 0; }
+	.sp-mileage-stop-actions .sp-btn { width: 100%; }
+
+	/* Mobile purpose: native <select> + its "Other…" custom field wraps full-width beneath it. */
+	.sp-mileage-stop-purpose-cell { flex-wrap: wrap; }
+	.sp-mileage-purpose-pick { flex: 1 1 auto; min-width: 0; }
+	.sp-mileage-purpose-custom { flex: 1 1 100%; margin-top: 6px; }
 }
 
 .sp-mileage-purposes {

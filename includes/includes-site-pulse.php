@@ -18,7 +18,7 @@ require_once get_template_directory() . '/includes/includes-site-pulse-emails.ph
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
 # Constants & Setup
-# Employee Directory (CPT + Fields)
+# Employee Directory — option lists
 # Database Schema
 # Asset Enqueueing
 # User Roles & Capabilities
@@ -36,7 +36,7 @@ require_once get_template_directory() . '/includes/includes-site-pulse-emails.ph
 # Constants & Setup
 --------------------------------------------------------------*/
 
-define( 'SITE_PULSE_DB_VERSION', '1.49' );
+define( 'SITE_PULSE_DB_VERSION', '1.51' );
 
 function site_pulse_table( string $name ): string {
 	return $GLOBALS['wpdb']->prefix . 'site_pulse_' . $name;
@@ -57,8 +57,10 @@ function site_pulse_effective_user_id(): int {
 
 function site_pulse_is_impersonating(): bool {
 	$real_id = get_current_user_id();
-	if ( ! site_pulse_is_god( $real_id ) ) return false;
-	return (bool) get_user_meta( $real_id, '_sp_impersonate', true );
+	// Genuinely viewing AS someone else — i.e. the effective user differs from the real one. A god whose
+	// impersonation target is themselves (or stale self-meta) is NOT impersonating, so things like
+	// marking a thread read on open still work for their own account.
+	return $real_id > 0 && site_pulse_effective_user_id() !== $real_id;
 }
 
 function site_pulse_log( string $action, string $description, array $meta = [], int $for_user_id = 0 ): void {
@@ -82,425 +84,22 @@ function site_pulse_log( string $action, string $description, array $meta = [], 
 
 
 /*--------------------------------------------------------------
-# Employee Directory (CPT + Fields)
+# Employee Directory — option lists
 --------------------------------------------------------------*/
 
-/* The 'employees' post type is a generic staff directory that ships with Site
-   Pulse. Site-specific option lists (positions, brands, locations) are pulled
-   from filters so each company fills in its own — e.g. in functions-site.php:
+/* The staff directory now lives in the DB (includes-site-pulse-directory.php), NOT in a CPT — the old
+   'employees' / 'former-employees' CPTs and their ACF field group have been removed. These three filters
+   still feed the directory's Position / Brand / Location dropdowns; each company supplies its own in
+   functions-site.php, e.g.:
 
 	add_filter( 'site_pulse_employee_brands', function () {
 		return [ 'babes' => "Babe's", 'bubbas' => "Bubba's" ];
 	} );
 
-   Mirror that for 'site_pulse_employee_positions' and 'site_pulse_employee_locations'. */
-
-add_action( 'init', 'site_pulse_register_employees_cpt', 0 );
-function site_pulse_register_employees_cpt(): void {
-	// Current staff directory.
-	if ( ! post_type_exists( 'employees' ) ) { // a child theme may already own it
-		register_post_type( 'employees', array(
-			'labels' => array(
-				'name'          => _x( 'Employees', 'Post Type General Name', 'battleplan' ),
-				'singular_name' => _x( 'Employee', 'Post Type Singular Name', 'battleplan' ),
-			),
-			'public'              => false,
-			'show_ui'             => true,
-			'show_in_menu'        => true,
-			'show_in_nav_menus'   => false,
-			'exclude_from_search' => true,
-			'has_archive'         => false,
-			'hierarchical'        => false,
-			'menu_position'       => 26,
-			'menu_icon'           => 'dashicons-groups',
-			'supports'            => array( 'title', 'thumbnail', 'custom-fields' ),
-			'capability_type'     => 'post',
-		) );
-	}
-
-	// Past staff — separate archive of former employees.
-	if ( ! post_type_exists( 'former-employees' ) ) {
-		register_post_type( 'former-employees', array(
-			'labels' => array(
-				'name'          => _x( 'Former Employees', 'Post Type General Name', 'battleplan' ),
-				'singular_name' => _x( 'Former Employee', 'Post Type Singular Name', 'battleplan' ),
-			),
-			'public'              => false,
-			'show_ui'             => true,
-			'show_in_menu'        => true,
-			'show_in_nav_menus'   => false,
-			'exclude_from_search' => true,
-			'has_archive'         => false,
-			'hierarchical'        => false,
-			'menu_position'       => 27,
-			'menu_icon'           => 'dashicons-groups',
-			'supports'            => array( 'title', 'thumbnail', 'custom-fields' ),
-			'capability_type'     => 'post',
-		) );
-	}
-}
-
-/* Choice lists — empty by default; each site supplies its own via these filters. */
+   Empty by default. */
 function site_pulse_employee_positions(): array { return apply_filters( 'site_pulse_employee_positions', array() ); }
 function site_pulse_employee_brands(): array    { return apply_filters( 'site_pulse_employee_brands', array() ); }
 function site_pulse_employee_locations(): array { return apply_filters( 'site_pulse_employee_locations', array() ); }
-
-add_action( 'acf/init', 'site_pulse_register_employee_fields' );
-function site_pulse_register_employee_fields(): void {
-	if ( ! function_exists( 'acf_add_local_field_group' ) ) return;
-
-	acf_add_local_field_group( array(
-		'key'    => 'group_5dc3627053447',
-		'title'  => 'Employees',
-		'fields' => array(
-			array(
-				'key'               => 'field_5dc3627e6e8e9',
-				'label'             => 'First Name',
-				'name'              => 'first_name',
-				'aria-label'        => '',
-				'type'              => 'text',
-				'instructions'      => '',
-				'required'          => 1,
-				'conditional_logic' => 0,
-				'wrapper'           => array( 'width' => '50', 'class' => '', 'id' => '' ),
-				'default_value'     => '',
-				'maxlength'         => '',
-				'placeholder'       => '',
-				'prepend'           => '',
-				'append'            => '',
-			),
-			array(
-				'key'               => 'field_5dc3628b6e8ea',
-				'label'             => 'Last Name',
-				'name'              => 'last_name',
-				'aria-label'        => '',
-				'type'              => 'text',
-				'instructions'      => '',
-				'required'          => 1,
-				'conditional_logic' => 0,
-				'wrapper'           => array( 'width' => '50', 'class' => '', 'id' => '' ),
-				'default_value'     => '',
-				'maxlength'         => '',
-				'placeholder'       => '',
-				'prepend'           => '',
-				'append'            => '',
-			),
-			array(
-				'key'               => 'field_5dd6eac5b89be',
-				'label'             => 'Current Employee',
-				'name'              => 'current_employee',
-				'aria-label'        => '',
-				'type'              => 'radio',
-				'instructions'      => '',
-				'required'          => 1,
-				'conditional_logic' => 0,
-				'wrapper'           => array( 'width' => '24', 'class' => '', 'id' => '' ),
-				'choices'           => array( 'Yes' => 'Yes', 'No' => 'No' ),
-				'default_value'     => 'Yes',
-				'return_format'     => 'value',
-				'allow_null'        => 0,
-				'other_choice'      => 0,
-				'layout'            => 'horizontal',
-				'save_other_choice' => 0,
-			),
-			array(
-				'key'               => 'field_5dc362926e8eb',
-				'label'             => 'Date Of Birth',
-				'name'              => 'date_of_birth',
-				'aria-label'        => '',
-				'type'              => 'date_picker',
-				'instructions'      => '',
-				'required'          => 0,
-				'conditional_logic' => 0,
-				'wrapper'           => array( 'width' => '38', 'class' => '', 'id' => '' ),
-				'display_format'    => 'F j',
-				'return_format'     => 'F j',
-				'first_day'         => 1,
-			),
-			array(
-				'key'               => 'field_5dc362aa6e8ec',
-				'label'             => 'Date Of Hire',
-				'name'              => 'date_of_hire',
-				'aria-label'        => '',
-				'type'              => 'date_picker',
-				'instructions'      => '',
-				'required'          => 0,
-				'conditional_logic' => 0,
-				'wrapper'           => array( 'width' => '38', 'class' => '', 'id' => '' ),
-				'display_format'    => 'M. j, Y',
-				'return_format'     => 'M. j, Y',
-				'first_day'         => 1,
-			),
-			array(
-				'key'               => 'field_5dc362bc6e8ed',
-				'label'             => 'Position',
-				'name'              => 'position',
-				'aria-label'        => '',
-				'type'              => 'select',
-				'instructions'      => '',
-				'required'          => 0,
-				'conditional_logic' => 0,
-				'wrapper'           => array( 'width' => '24', 'class' => '', 'id' => '' ),
-				'choices'           => site_pulse_employee_positions(),
-				'default_value'     => false,
-				'return_format'     => 'label',
-				'multiple'          => 0,
-				'allow_null'        => 0,
-				'ui'                => 0,
-				'ajax'              => 0,
-				'placeholder'       => '',
-			),
-			array(
-				'key'               => 'field_5dc3634a6e8ee',
-				'label'             => 'Brand',
-				'name'              => 'brand',
-				'aria-label'        => '',
-				'type'              => 'select',
-				'instructions'      => '',
-				'required'          => 0,
-				'conditional_logic' => 0,
-				'wrapper'           => array( 'width' => '38', 'class' => '', 'id' => '' ),
-				'choices'           => site_pulse_employee_brands(),
-				'default_value'     => false,
-				'return_format'     => 'label',
-				'multiple'          => 0,
-				'allow_null'        => 0,
-				'ui'                => 0,
-				'ajax'              => 0,
-				'placeholder'       => '',
-			),
-			array(
-				'key'               => 'field_6420ae43181c7',
-				'label'             => 'Location',
-				'name'              => 'location',
-				'aria-label'        => '',
-				'type'              => 'select',
-				'instructions'      => '',
-				'required'          => 0,
-				'conditional_logic' => 0,
-				'wrapper'           => array( 'width' => '38', 'class' => '', 'id' => '' ),
-				'choices'           => site_pulse_employee_locations(),
-				'default_value'     => false,
-				'return_format'     => 'label',
-				'multiple'          => 0,
-				'allow_null'        => 0,
-				'ui'                => 0,
-				'ajax'              => 0,
-				'placeholder'       => '',
-			),
-			array(
-				'key'               => 'field_5dc363fb6e8ef',
-				'label'             => 'Email',
-				'name'              => 'email',
-				'aria-label'        => '',
-				'type'              => 'email',
-				'instructions'      => '',
-				'required'          => 0,
-				'conditional_logic' => 0,
-				'wrapper'           => array( 'width' => '50', 'class' => '', 'id' => '' ),
-				'default_value'     => '',
-				'placeholder'       => '',
-				'prepend'           => '',
-				'append'            => '',
-			),
-			array(
-				'key'               => 'field_5dc364076e8f0',
-				'label'             => 'Personal Cell Phone Number',
-				'name'              => 'cell_phone',
-				'aria-label'        => '',
-				'type'              => 'text',
-				'instructions'      => 'xxx-xxx-xxxx',
-				'required'          => 0,
-				'conditional_logic' => 0,
-				'wrapper'           => array( 'width' => '25', 'class' => '', 'id' => '' ),
-				'default_value'     => '',
-				'maxlength'         => '',
-				'placeholder'       => '',
-				'prepend'           => '',
-				'append'            => '',
-			),
-			array(
-				'key'               => 'field_67af6ab9cb54c',
-				'label'             => 'Work Number',
-				'name'              => 'sec_phone',
-				'aria-label'        => '',
-				'type'              => 'text',
-				'instructions'      => 'xxx-xxx-xxxx',
-				'required'          => 0,
-				'conditional_logic' => 0,
-				'wrapper'           => array( 'width' => '25', 'class' => '', 'id' => '' ),
-				'default_value'     => '',
-				'maxlength'         => '',
-				'placeholder'       => '',
-				'prepend'           => '',
-				'append'            => '',
-			),
-			array(
-				'key'               => 'field_69600989aba20',
-				'label'             => 'Home Address',
-				'name'              => 'home_address',
-				'aria-label'        => '',
-				'type'              => 'text',
-				'instructions'      => '',
-				'required'          => 0,
-				'conditional_logic' => 0,
-				'wrapper'           => array( 'width' => '50', 'class' => '', 'id' => '' ),
-				'default_value'     => '',
-				'maxlength'         => '',
-				'placeholder'       => '',
-				'prepend'           => '',
-				'append'            => '',
-			),
-			array(
-				'key'               => 'field_69600994aba21',
-				'label'             => 'City',
-				'name'              => 'address_city',
-				'aria-label'        => '',
-				'type'              => 'text',
-				'instructions'      => '',
-				'required'          => 0,
-				'conditional_logic' => 0,
-				'wrapper'           => array( 'width' => '35', 'class' => '', 'id' => '' ),
-				'default_value'     => '',
-				'maxlength'         => '',
-				'placeholder'       => '',
-				'prepend'           => '',
-				'append'            => '',
-			),
-			array(
-				'key'               => 'field_696009a3aba22',
-				'label'             => 'Zip',
-				'name'              => 'address_zip',
-				'aria-label'        => '',
-				'type'              => 'text',
-				'instructions'      => '',
-				'required'          => 0,
-				'conditional_logic' => 0,
-				'wrapper'           => array( 'width' => '15', 'class' => '', 'id' => '' ),
-				'default_value'     => '',
-				'maxlength'         => '',
-				'placeholder'       => '',
-				'prepend'           => '',
-				'append'            => '',
-			),
-			array(
-				'key'               => 'field_63bc6e28ec87c',
-				'label'             => 'Spouse',
-				'name'              => 'spouse',
-				'aria-label'        => '',
-				'type'              => 'text',
-				'instructions'      => '',
-				'required'          => 0,
-				'conditional_logic' => 0,
-				'wrapper'           => array( 'width' => '20', 'class' => '', 'id' => '' ),
-				'default_value'     => '',
-				'maxlength'         => '',
-				'placeholder'       => '',
-				'prepend'           => '',
-				'append'            => '',
-			),
-			array(
-				'key'               => 'field_63bc6e31ec87d',
-				'label'             => 'Children',
-				'name'              => 'children',
-				'aria-label'        => '',
-				'type'              => 'text',
-				'instructions'      => '',
-				'required'          => 0,
-				'conditional_logic' => 0,
-				'wrapper'           => array( 'width' => '35', 'class' => '', 'id' => '' ),
-				'default_value'     => '',
-				'maxlength'         => '',
-				'placeholder'       => '',
-				'prepend'           => '',
-				'append'            => '',
-			),
-			array(
-				'key'               => 'field_63bc6e3bec87e',
-				'label'             => 'Hobbies',
-				'name'              => 'hobbies',
-				'aria-label'        => '',
-				'type'              => 'text',
-				'instructions'      => '',
-				'required'          => 0,
-				'conditional_logic' => 0,
-				'wrapper'           => array( 'width' => '45', 'class' => '', 'id' => '' ),
-				'default_value'     => '',
-				'maxlength'         => '',
-				'placeholder'       => '',
-				'prepend'           => '',
-				'append'            => '',
-			),
-			array(
-				'key'               => 'field_63bc6f132cf20',
-				'label'             => 'Other Info',
-				'name'              => 'other_info',
-				'aria-label'        => '',
-				'type'              => 'text',
-				'instructions'      => '',
-				'required'          => 0,
-				'conditional_logic' => 0,
-				'wrapper'           => array( 'width' => '65', 'class' => '', 'id' => '' ),
-				'default_value'     => '',
-				'maxlength'         => '',
-				'placeholder'       => '',
-				'prepend'           => '',
-				'append'            => '',
-			),
-			array(
-				'key'               => 'field_67af6ce7b75bb',
-				'label'             => 'Days Off',
-				'name'              => 'days_off',
-				'aria-label'        => '',
-				'type'              => 'checkbox',
-				'instructions'      => '',
-				'required'          => 0,
-				'conditional_logic' => 0,
-				'wrapper'           => array( 'width' => '35', 'class' => '', 'id' => '' ),
-				'choices'           => array(
-					'Sunday'    => 'Sunday',
-					'Monday'    => 'Monday',
-					'Tuesday'   => 'Tuesday',
-					'Wednesday' => 'Wednesday',
-					'Thursday'  => 'Thursday',
-					'Friday'    => 'Friday',
-					'Saturday'  => 'Saturday',
-				),
-				'default_value'     => array(),
-				'return_format'     => 'value',
-				'allow_custom'      => 0,
-				'layout'            => 'vertical',
-				'toggle'            => 0,
-				'save_custom'       => 0,
-			),
-		),
-		'location' => array(
-			array(
-				array(
-					'param'    => 'post_type',
-					'operator' => '==',
-					'value'    => 'employees',
-				),
-			),
-			array(
-				array(
-					'param'    => 'post_type',
-					'operator' => '==',
-					'value'    => 'former-employees',
-				),
-			),
-		),
-		'menu_order'            => 0,
-		'position'              => 'normal',
-		'style'                 => 'default',
-		'label_placement'       => 'top',
-		'instruction_placement' => 'label',
-		'hide_on_screen'        => '',
-		'active'                => true,
-		'description'           => '',
-		'show_in_rest'          => 0,
-	) );
-}
 
 
 /*--------------------------------------------------------------
@@ -765,6 +364,7 @@ function site_pulse_install_db(): void {
 		last_read_message_id int(11) NOT NULL DEFAULT 0,
 		seen_message_id int(11) NOT NULL DEFAULT 0,
 		seen_at datetime DEFAULT NULL,
+		hidden_at datetime DEFAULT NULL,
 		joined_at datetime NOT NULL,
 		PRIMARY KEY  (id),
 		UNIQUE KEY convo_user (conversation_id, user_id),
@@ -827,6 +427,7 @@ function site_pulse_install_db(): void {
 		resolved_by int(11) DEFAULT NULL,
 		resolution_note text DEFAULT NULL,
 		meta text DEFAULT NULL,
+		group_id varchar(32) DEFAULT NULL,
 		display_order int(11) NOT NULL DEFAULT 0,
 		created_at datetime NOT NULL,
 		updated_at datetime NOT NULL,
@@ -834,7 +435,8 @@ function site_pulse_install_db(): void {
 		KEY user_id (user_id),
 		KEY report_id (report_id),
 		KEY status (status),
-		KEY location_id (location_id)
+		KEY location_id (location_id),
+		KEY group_id (group_id)
 	) $charset;";
 
 	$sql .= "CREATE TABLE " . site_pulse_table('embeddings') . " (
@@ -1139,6 +741,51 @@ add_action( 'init', function() {
 		$wpdb->update( site_pulse_table('roles'), [ 'label' => 'GM' ], [ 'slug' => 'manager', 'label' => 'Manager' ] );
 		$wpdb->update( site_pulse_table('report_templates'), [ 'name' => 'GM Bi-Weekly Report' ], [ 'slug' => 'manager-biweekly', 'name' => 'Manager Bi-Weekly Report' ] );
 		update_option( 'site_pulse_role_gm_relabel', '1' );
+	}
+
+	// One-time: clear every cached force-pw verdict so all users are re-evaluated against the current
+	// default password on their next dashboard load. Catches anyone who slipped past the gate while the
+	// cache went stale (e.g. password reset to the default via wp-admin). Self-guarded; runs once.
+	if ( ! get_option( 'site_pulse_force_pw_recheck_2026' ) ) {
+		delete_metadata( 'user', 0, 'site_pulse_force_pw', '', true ); // delete for ALL users in one call
+		update_option( 'site_pulse_force_pw_recheck_2026', '1' );
+	}
+
+	// One-time: mark every EXISTING user as having completed first login, so the new "all new users must
+	// change their password" rule only applies to accounts created from here on (existing users aren't
+	// suddenly forced). Anyone created later has no marker → forced until they set their own password.
+	if ( ! get_option( 'site_pulse_first_login_backfill' ) ) {
+		foreach ( get_users( [ 'fields' => 'ID' ] ) as $uid ) {
+			if ( ! get_user_meta( (int) $uid, 'site_pulse_first_login_done', true ) ) {
+				update_user_meta( (int) $uid, 'site_pulse_first_login_done', '1' );
+			}
+		}
+		update_option( 'site_pulse_first_login_backfill', '1' );
+	}
+
+	// One-time: link EXISTING multi-assignee action items (chat-created siblings: same creator, text, and
+	// timestamp, no group yet) so completing one closes everyone's copy — fixing duplicates created before
+	// the group_id column existed. Self-guarded; runs once.
+	if ( ! get_option( 'site_pulse_action_group_backfill' ) ) {
+		global $wpdb;
+		$ai_t  = site_pulse_table( 'action_items' );
+		$dupes = $wpdb->get_results(
+			"SELECT created_by, description, created_at, COUNT(*) AS c
+			 FROM $ai_t
+			 WHERE ( group_id IS NULL OR group_id = '' ) AND report_id = 0 AND created_by > 0 AND status != 'resolved'
+			 GROUP BY created_by, description, created_at
+			 HAVING c > 1", ARRAY_A
+		);
+		foreach ( $dupes ?: [] as $d ) {
+			$gid = wp_generate_password( 20, false );
+			$wpdb->query( $wpdb->prepare(
+				"UPDATE $ai_t SET group_id = %s
+				 WHERE ( group_id IS NULL OR group_id = '' ) AND report_id = 0 AND status != 'resolved'
+				   AND created_by = %d AND description = %s AND created_at = %s",
+				$gid, (int) $d['created_by'], (string) $d['description'], (string) $d['created_at']
+			) );
+		}
+		update_option( 'site_pulse_action_group_backfill', '1' );
 	}
 
 	// Make sure the daily mileage-reminder cron exists when enabled (survives restarts).
@@ -1502,6 +1149,56 @@ function site_pulse_is_superadmin( int $user_id = 0 ): bool {
 	return $u && $u->user_login === 'battleplanweb';
 }
 
+/**
+ * Whether a user holds a capability by EXPLICIT assignment — their role's stored caps plus per-user
+ * overrides — WITHOUT the god "sees everything" bypass or module filtering. Use this for gates that must
+ * be hand-picked per person (e.g. who may see the protected superadmin), where auto-granting every god
+ * would defeat the purpose.
+ */
+function site_pulse_has_cap_raw( int $user_id, string $capability ): bool {
+	$profile = site_pulse_get_user_profile( $user_id );
+	if ( ! $profile ) return false;
+	$role = site_pulse_get_role( (int) $profile['role_id'] );
+	$caps = $role ? ( json_decode( $role['capabilities'], true ) ?: [] ) : [];
+	$has  = in_array( $capability, $caps, true );
+	$ov   = site_pulse_parse_overrides( $profile['capability_overrides'] ?? null );
+	if ( array_key_exists( $capability, $ov ) ) $has = $ov[ $capability ]; // override wins over role default
+	return (bool) $has;
+}
+
+/**
+ * Whether the current viewer is allowed to SEE the protected superadmin (battleplanweb) in user lists,
+ * the messages contact picker, the impersonation bar, etc. Hidden from everyone by default; revealed
+ * only to people granted the `see_superadmin` capability (by role default or per-user override). The
+ * superadmin always sees itself.
+ */
+function site_pulse_can_see_superadmin( int $viewer_id = 0 ): bool {
+	if ( ! $viewer_id ) $viewer_id = site_pulse_effective_user_id();
+	if ( ! $viewer_id ) return false;
+	if ( site_pulse_is_superadmin( $viewer_id ) ) return true;
+	return site_pulse_has_cap_raw( $viewer_id, 'see_superadmin' );
+}
+
+/**
+ * The name to SHOW for a user in the app. Applies the optional superadmin (battleplanweb) alias from the
+ * `site_pulse_superadmin_alias` filter WITHOUT touching the real WP display_name. Accepts a WP_User or id.
+ * Use this anywhere a user's name is rendered so the alias is consistent everywhere.
+ */
+function site_pulse_display_name( $user ): string {
+	$login = ''; $name = '';
+	if ( $user instanceof WP_User ) {
+		$login = $user->user_login; $name = $user->display_name;
+	} elseif ( is_numeric( $user ) ) {
+		$u = get_userdata( (int) $user );
+		if ( $u ) { $login = $u->user_login; $name = $u->display_name; }
+	}
+	if ( 'battleplanweb' === $login ) {
+		$alias = (string) apply_filters( 'site_pulse_superadmin_alias', '' );
+		if ( '' !== $alias ) return $alias;
+	}
+	return (string) $name;
+}
+
 
 /*--------------------------------------------------------------
 # Page Detection & Caching
@@ -1723,9 +1420,10 @@ function site_pulse_capability_catalog_all(): array {
 		'view_ai_insights'  => 'View AI insights',
 		'view_forms'        => 'View Forms',
 		'view_reviews'      => 'View reviews',
-		'view_surveys'      => 'View customer surveys',
+		'view_surveys'      => 'View comment cards',
 		'view_directory'    => 'View company directory',
 		'view_emails'       => 'View customer emails',
+		'see_superadmin'    => 'See protected admin in lists',
 		'submit_mileage'    => 'Submit mileage',
 		// "Manage …" block, ordered to follow the admin menu.
 		'manage_users'         => 'Manage users',
@@ -1737,7 +1435,7 @@ function site_pulse_capability_catalog_all(): array {
 		'manage_settings'      => 'Manage site defaults',
 		'manage_notifications' => 'Manage notifications',
 		'manage_api_keys'      => 'Manage API keys',
-		'manage_surveys'       => 'Manage customer surveys',
+		'manage_surveys'       => 'Manage comment cards',
 		'manage_reviews'       => 'Manage reviews &amp; replies',
 		'manage_directory'     => 'Manage company directory',
 		'manage_emails'        => 'Manage customer emails',
@@ -2273,11 +1971,13 @@ function site_pulse_get_all_users( bool $active_only = true, bool $include_god =
 	global $wpdb;
 	$conditions = [];
 	if ( $active_only ) $conditions[] = "up.status = 'active'";
-	// Hide only the protected super-admin (battleplanweb), not the whole God role — other Gods
-	// stay visible. NULL-safe so orphaned profiles (no WP user) still appear for cleanup.
-	if ( ! $include_god ) $conditions[] = "( u.user_login IS NULL OR u.user_login != 'battleplanweb' )";
+	// Hide the protected super-admin (battleplanweb), not the whole God role — other Gods stay visible.
+	// NULL-safe so orphaned profiles (no WP user) still appear for cleanup. The superadmin is revealed
+	// only to viewers explicitly granted the see_superadmin capability (role default or per-user override).
+	$show_super = $include_god || site_pulse_can_see_superadmin();
+	if ( ! $show_super ) $conditions[] = "( u.user_login IS NULL OR u.user_login != 'battleplanweb' )";
 	$where = $conditions ? "WHERE " . implode( ' AND ', $conditions ) : "";
-	return $wpdb->get_results(
+	$rows = $wpdb->get_results(
 		"SELECT up.*, u.user_login, u.user_email, u.display_name, r.slug AS role_slug, r.label AS role_label, r.hierarchy_level AS role_rank, l.name AS location_name,
 		        hb.address AS home_address, hb.is_private AS home_is_private
 		 FROM " . site_pulse_table('user_profiles') . " up
@@ -2289,6 +1989,16 @@ function site_pulse_get_all_users( bool $active_only = true, bool $include_god =
 		 ORDER BY u.display_name",
 		ARRAY_A
 	) ?: [];
+
+	// Optional: show the superadmin under a friendly alias in the app, WITHOUT changing its WP display_name.
+	$alias = (string) apply_filters( 'site_pulse_superadmin_alias', '' );
+	if ( '' !== $alias ) {
+		foreach ( $rows as &$row ) {
+			if ( ( $row['user_login'] ?? '' ) === 'battleplanweb' ) $row['display_name'] = $alias;
+		}
+		unset( $row );
+	}
+	return $rows;
 }
 
 
@@ -2401,6 +2111,12 @@ function site_pulse_default_password(): string {
 // through a Site Pulse path (login, admin reset, or the forced-change screen below).
 function site_pulse_must_change_password( int $user_id ): bool {
 	if ( ! $user_id ) return false;
+
+	// Every NEW user must set their own password before using the app — they're handed a generic one,
+	// so force a change until they've completed it once (regardless of what that generic password is).
+	// Existing users are backfilled as "done" on upgrade so this only affects accounts created after.
+	if ( ! get_user_meta( $user_id, 'site_pulse_first_login_done', true ) ) return true;
+
 	$default = site_pulse_default_password();
 	if ( $default === '' ) return false;
 
@@ -2412,6 +2128,18 @@ function site_pulse_must_change_password( int $user_id ): bool {
 		update_user_meta( $user_id, 'site_pulse_force_pw', $flag );
 	}
 	return $flag === '1';
+}
+
+// Drop the cached force-pw verdict whenever a password changes through WordPress's OWN flows — the
+// wp-admin Users screen (profile_update) or a lost-password reset (after_password_reset) — so the next
+// dashboard load re-evaluates against the new password. Without this, resetting someone back to the
+// shared default OUTSIDE Site Pulse leaves a stale '0' and the forced-change screen never appears.
+// (Site Pulse's own login / user-editor paths already set the flag explicitly, so they're unaffected.)
+add_action( 'profile_update',        'site_pulse_clear_force_pw_cache', 10, 1 );
+add_action( 'after_password_reset',  'site_pulse_clear_force_pw_cache', 10, 1 );
+function site_pulse_clear_force_pw_cache( $user ): void {
+	$user_id = $user instanceof WP_User ? (int) $user->ID : (int) $user;
+	if ( $user_id ) delete_user_meta( $user_id, 'site_pulse_force_pw' );
 }
 
 // Process the new password from the forced-change screen. Runs on template_redirect — before
@@ -2451,6 +2179,7 @@ function site_pulse_force_password_change_handler(): void {
 	// wp_set_password() invalidates the current auth cookie, so re-issue one to stay logged in.
 	wp_set_password( $new, $user_id );
 	update_user_meta( $user_id, 'site_pulse_force_pw', '0' );
+	update_user_meta( $user_id, 'site_pulse_first_login_done', '1' ); // they've now set their own password
 	wp_set_current_user( $user_id );
 	wp_set_auth_cookie( $user_id, true );
 	site_pulse_log( 'password_changed', 'Replaced the temporary password with a new one' );
@@ -3359,7 +3088,7 @@ function site_pulse_notification_events(): array {
 	return [
 		'gm_report_submitted'         => 'GM report submitted',
 		'supervisor_report_submitted' => 'Supervisor report submitted',
-		'survey_received'             => 'New customer survey submitted',
+		'survey_received'             => 'New comment card submitted',
 		'action_pending'              => 'Action items created from a new report',
 		'action_followup'             => 'Action item needs follow-up (not fully resolved)',
 		'action_resolved'             => 'Action item resolved',
@@ -4246,10 +3975,37 @@ function site_pulse_ajax_complete_action_item(): void {
 		'updated_at'  => $now,
 	], [ 'id' => $item_id ] );
 
+	// If this item was assigned to several people (a shared group), completing it closes EVERYONE's copy —
+	// so it drops off all involved parties' pending lists, not just the person who clicked complete.
+	$group = (string) ( $item['group_id'] ?? '' );
+	if ( '' !== $group ) {
+		$wpdb->query( $wpdb->prepare(
+			"UPDATE " . site_pulse_table( 'action_items' ) . "
+			 SET status = 'resolved', resolved_at = %s, resolved_by = %d, updated_at = %s
+			 WHERE group_id = %s AND status != 'resolved'",
+			$now, $me, $now, $group
+		) );
+	}
+
 	if ( ( $item['priority'] ?? '' ) === 'high' ) {
 		$user = get_userdata( $me );
 		$msg  = sprintf( '%s completed an urgent action item: %s', $user ? $user->display_name : 'Someone', $item['description'] );
 		site_pulse_dispatch_notification( 'action_resolved', (int) $item['user_id'], $msg, $item_id, 'action_item' );
+	}
+
+	// Tell the person who CREATED the item that it's done — but only when someone else closes it. If you
+	// complete your own item (incl. one generated from your own report, where created_by is you), no ping.
+	$creator = (int) ( $item['created_by'] ?? 0 );
+	if ( $creator && $creator !== $me ) {
+		$who = site_pulse_display_name( $me );
+		site_pulse_notify(
+			$creator,
+			'action_item',
+			sprintf( '%s completed an action item you created: %s', $who, $item['description'] ),
+			$item_id,
+			'action_item'
+		);
+		if ( function_exists( 'site_pulse_push_send' ) ) site_pulse_push_send( $creator ); // bell + wake devices
 	}
 
 	site_pulse_log( 'action_item_completed', 'Action item completed', [ 'item_id' => $item_id ] );
@@ -4349,7 +4105,7 @@ function site_pulse_ajax_admin_save_setting(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 
 	$key   = sanitize_key( $_POST['key'] ?? '' );
-	$value = $_POST['value'] ?? '';
+	$value = wp_unslash( $_POST['value'] ?? '' );   // strip WP's auto-added POST slashes before storing
 
 	if ( ! $key ) {
 		wp_send_json_error( [ 'message' => 'Setting key is required.' ] );
@@ -5198,6 +4954,70 @@ function site_pulse_ajax_god_reassign_report(): void {
 	wp_send_json_success( [ 'message' => 'Report reassigned.' ] );
 }
 
+// GOD only (temporary, for PDF/JPG-imported reports): edit EVERYTHING on a report in one save — the
+// date, submitter, location, and the field answers. Action items inherit the new author/store, and
+// the report period length is preserved when the date moves.
+add_action( 'wp_ajax_site_pulse_god_edit_report', 'site_pulse_ajax_god_edit_report' );
+function site_pulse_ajax_god_edit_report(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_is_god() ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+
+	$report_id = (int) ( $_POST['report_id'] ?? 0 );
+	$report    = site_pulse_get_report( $report_id );
+	if ( ! $report ) wp_send_json_error( [ 'message' => 'Report not found.' ] );
+
+	$new_user_id = (int) ( $_POST['user_id'] ?? 0 );
+	$new_loc_id  = (int) ( $_POST['location_id'] ?? 0 );
+	$new_date    = trim( (string) ( $_POST['report_date'] ?? '' ) );
+	$answers     = wp_unslash( $_POST['answers'] ?? [] );
+
+	if ( ! $new_user_id ) wp_send_json_error( [ 'message' => 'Choose a submitter.' ] );
+	if ( ! site_pulse_get_user_profile( $new_user_id ) ) wp_send_json_error( [ 'message' => 'That user has no Site Pulse profile.' ] );
+
+	$update = [
+		'user_id'     => $new_user_id,
+		'location_id' => $new_loc_id,
+		'updated_at'  => current_time( 'mysql' ),
+	];
+	// Move the report date, preserving the original period length (start..end span).
+	if ( preg_match( '/^\d{4}-\d{2}-\d{2}$/', $new_date ) ) {
+		$update['report_period_start'] = $new_date;
+		$old_start = $report['report_period_start'] ?? '';
+		$old_end   = $report['report_period_end'] ?? '';
+		if ( $old_start && $old_end ) {
+			$span = max( 0, (int) round( ( strtotime( $old_end ) - strtotime( $old_start ) ) / 86400 ) );
+			$update['report_period_end'] = date( 'Y-m-d', strtotime( $new_date . ' +' . $span . ' days' ) );
+		}
+	}
+
+	global $wpdb;
+	$wpdb->update( site_pulse_table( 'reports' ), $update, [ 'id' => $report_id ] );
+
+	// Action items follow the new author/store.
+	$wpdb->update(
+		site_pulse_table( 'action_items' ),
+		[ 'user_id' => $new_user_id, 'location_id' => $new_loc_id ],
+		[ 'report_id' => $report_id ]
+	);
+
+	// Save the answer edits.
+	if ( is_array( $answers ) && $answers ) {
+		$field_map = [];
+		foreach ( site_pulse_get_template_fields( (int) $report['template_id'] ) as $f ) {
+			$field_map[ $f['field_key'] ] = $f;
+		}
+		foreach ( $answers as $key => $value ) {
+			$key = sanitize_key( $key );
+			if ( isset( $field_map[ $key ] ) ) {
+				site_pulse_save_answer( $report_id, (int) $field_map[ $key ]['id'], $key, sanitize_textarea_field( $value ) );
+			}
+		}
+	}
+
+	site_pulse_log( 'god_edit_report', sprintf( 'GOD edited report #%d', $report_id ) );
+	wp_send_json_success( [ 'message' => 'Report updated.' ] );
+}
+
 add_action( 'wp_ajax_site_pulse_god_delete_action_item', 'site_pulse_ajax_god_delete_action_item' );
 function site_pulse_ajax_god_delete_action_item(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
@@ -5431,9 +5251,10 @@ function site_pulse_ajax_impersonate(): void {
 	}
 
 	$target_id = (int) ( $_POST['user_id'] ?? 0 );
-	if ( $target_id ) {
+	if ( $target_id && $target_id !== $real_id ) {
 		update_user_meta( $real_id, '_sp_impersonate', $target_id );
 	} else {
+		// No target, or the god picked themselves → stop impersonating (and clear any stale self-meta).
 		delete_user_meta( $real_id, '_sp_impersonate' );
 	}
 
@@ -7181,6 +7002,29 @@ function site_pulse_expense_account( string $section, string $category ): string
 	return site_pulse_expense_sections()[ $section ]['categories'][ $category ]['account'] ?? '';
 }
 
+/**
+ * A flat list of every place an expense can live — { section, category, label } — across ALL sections.
+ * Powers the "move to another category" picker in the expense edit forms, so a receipt filed in the
+ * wrong panel (e.g. a meal under Vehicle/Fuel) can be re-filed to the right one. A section with no fixed
+ * categories (E) contributes one entry with an empty category; the row keeps its free-entry account code.
+ */
+function site_pulse_expense_destinations(): array {
+	$out = [];
+	foreach ( site_pulse_expense_sections() as $sec => $info ) {
+		$slabel = $info['label'] ?? $sec;
+		if ( ! empty( $info['categories'] ) ) {
+			$multi = count( $info['categories'] ) > 1; // only prefix the section name when it has >1 category
+			foreach ( $info['categories'] as $cat => $cinfo ) {
+				$label   = $multi ? ( $slabel . ' — ' . ( $cinfo['label'] ?? $cat ) ) : $slabel;
+				$out[]   = [ 'section' => $sec, 'category' => $cat, 'label' => $label ];
+			}
+		} else {
+			$out[] = [ 'section' => $sec, 'category' => '', 'label' => $slabel ];
+		}
+	}
+	return $out;
+}
+
 add_action( 'wp_ajax_site_pulse_get_expenses', 'site_pulse_ajax_get_expenses' );
 function site_pulse_ajax_get_expenses(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
@@ -7209,7 +7053,11 @@ function site_pulse_ajax_get_expenses(): void {
 	foreach ( $rows as &$r ) { $r['receipt_url'] = site_pulse_receipt_url( (string) ( $r['receipt_path'] ?? '' ) ); }
 	unset( $r );
 
-	wp_send_json_success( [ 'expenses' => $rows, 'categories' => $sections[ $section ]['categories'] ] );
+	wp_send_json_success( [
+		'expenses'     => $rows,
+		'categories'   => $sections[ $section ]['categories'],
+		'destinations' => site_pulse_expense_destinations(), // for the "move to category" picker
+	] );
 }
 
 add_action( 'wp_ajax_site_pulse_save_expense', 'site_pulse_ajax_save_expense' );
@@ -9322,7 +9170,7 @@ function battleplan_addSitePulseIcons( $icons ) {
 
 	$icons['dollar-bill'] = [ '<g transform="translate(0 200)"><path d="M0 0h484.82v263.66H0zm22.99 23.86v215.98H461.8V23.86z"/><path d="m195.21 225.6-158.08.09-.02-187.71h158.31c-35.46 18.93-57.4 53.93-57.68 93.06-.29 39.85 21.83 75.43 57.47 94.56M447.71 225.6l-157.95-.02c36.48-19.98 57.51-55.28 57.3-94.57-.2-39.07-22.29-74.2-57.63-92.99l158.25-.13.03 187.7Z"/><path d="M332.98 131.84c0 50.03-40.56 90.58-90.58 90.58s-90.58-40.56-90.58-90.58 40.56-90.58 90.58-90.58 90.58 40.56 90.58 90.58m-84.19 61.93c12.18-1.57 22.73-4.92 30.94-13.17 9.79-9.84 12.4-25.68 6.69-38.39-4.02-8.94-13.06-14.8-21.91-17.38l-15.85-4.62-.24-26.73c8.59.32 13.97 2.21 20.13 6.81l16.17-19.9c-10.62-7.93-21.47-10.02-35.08-10.48l-1.54-12.04-10.47-.12-.76 12c-10.64 2-20.13 5.08-27.88 12.37-12.13 11.41-14.54 32.27-3.16 44.94 8.06 8.98 20.11 11.04 31.41 14.7l.12 28.16c-9.51.53-18.3-3.08-23.96-9.97l-17.91 20.11c11.22 10.58 26.4 13.26 41.56 13.96l.43 11.97 10.88-.13.4-12.09Z"/><path d="M261.45 151.94c2.54 2.78 1.39 10.66-1.27 12.89s-6.18 3.76-11.6 5.42l-.07-25.45c5.46 1.77 9.3 3.15 12.94 7.13ZM237.41 94.4l-.05 22.66c-7.56-.03-12.38-5.12-12.27-12.43.09-6.02 6.1-10.61 12.32-10.23"/></g>' ];
 
-	$icons['dollar-sign'] = [ '<g transform="translate(60 200)"><path d="M149.95 476.58h-34.52c-5.3.01-10.31-4.74-10.34-10.17l-.21-43.02c-31.39-3.37-59.13-14.35-80.26-36.22C7.61 369.55 1.19 345.95.02 321.68c-.32-6.74 3.43-11.69 10.29-11.69h50.85c6.68-.01 10.74 4.72 10.98 11.09.83 21.38 12.99 38.58 33.58 44.66 13.25 3.91 27.7 4.23 41.12.66 18.44-4.89 28.53-21.15 29.17-39.58 1.34-38.5-29.61-50.34-64.16-62.71-21.84-7.81-42.16-17.43-60.95-30.65-18.12-12.75-30.6-29.9-35.42-51.68-9.79-44.22 2.45-86.95 41.68-110.94 14.7-8.99 30.69-13.7 47.85-16.58l.02-44.1c0-5.46 5.16-10.15 10.37-10.15l34.53-.02c5.34.03 10.56 4.5 10.56 10.19l.02 45.5c49.27 7.65 84.77 46.01 86.49 95.95.21 6.2-1.12 13.23-9.3 13.24l-51.98.06c-6.72 0-10.11-5.66-10.61-11.69-1.36-16.33-8.55-31.87-23.55-39.41-15.12-7.59-35.18-7.16-49.64 1.69-20.19 12.37-25.81 56.74 1.81 75.27 33.8 22.67 66.93 23.35 107.71 53.71 31.93 23.78 41.21 60.33 35.33 99.23-6.74 44.6-43.1 70.63-86.25 78.46v44.21c0 5.53-5.31 10.17-10.57 10.17Z"/></g>' ];
+	$icons['dollar-sign'] = [ '<g transform="translate(60 20)"><path d="M149.95 476.58h-34.52c-5.3.01-10.31-4.74-10.34-10.17l-.21-43.02c-31.39-3.37-59.13-14.35-80.26-36.22C7.61 369.55 1.19 345.95.02 321.68c-.32-6.74 3.43-11.69 10.29-11.69h50.85c6.68-.01 10.74 4.72 10.98 11.09.83 21.38 12.99 38.58 33.58 44.66 13.25 3.91 27.7 4.23 41.12.66 18.44-4.89 28.53-21.15 29.17-39.58 1.34-38.5-29.61-50.34-64.16-62.71-21.84-7.81-42.16-17.43-60.95-30.65-18.12-12.75-30.6-29.9-35.42-51.68-9.79-44.22 2.45-86.95 41.68-110.94 14.7-8.99 30.69-13.7 47.85-16.58l.02-44.1c0-5.46 5.16-10.15 10.37-10.15l34.53-.02c5.34.03 10.56 4.5 10.56 10.19l.02 45.5c49.27 7.65 84.77 46.01 86.49 95.95.21 6.2-1.12 13.23-9.3 13.24l-51.98.06c-6.72 0-10.11-5.66-10.61-11.69-1.36-16.33-8.55-31.87-23.55-39.41-15.12-7.59-35.18-7.16-49.64 1.69-20.19 12.37-25.81 56.74 1.81 75.27 33.8 22.67 66.93 23.35 107.71 53.71 31.93 23.78 41.21 60.33 35.33 99.23-6.74 44.6-43.1 70.63-86.25 78.46v44.21c0 5.53-5.31 10.17-10.57 10.17Z"/></g>' ];
 
 	$icons['trailer'] = [ '<g transform="translate(0 300)"><path d="m29.1 91.99-.39 44.25c6.25 2.06 8.09 2.64 13.11 5.55-12.45 2.82-18.89 2.59-31.69.93 3.67-4.73 5.76-5.09 12.32-6.39l-.08-44.05L0 90.55l13.07-20.74c5.87-4.05 20.73-5.15 28.25-.78l-19.68 5.54c-1.94.55-3.64 3.83-4.17 7.73l141.28-4.14.19-78.16 308.8.03.22 79.27 8.12 6.04-1.04 23.88c-4.7 1.19-13.45 1.51-15.67-1.1s-2.45-9.25-2.48-16.07l-75.85-.18-1.04 13.24c-.13 1.72-3.72 4.75-5.42 5.22-2.12.59-5.6-4.51-5.42-6.92 2.5-33.38-23.13-59.77-54.56-60.5-32.57-.75-59.79 26.39-56.92 60.42.2 2.4-3.48 7.46-5.69 7.15s-5.48-4.57-5.6-6.92l-.6-11.58-216.71-.02Z"/><path d="M358.46 98.85c0 24.9-20.19 45.09-45.09 45.09s-45.09-20.19-45.09-45.09 20.19-45.09 45.09-45.09 45.09 20.19 45.09 45.09m-24.36.01c0-11.43-9.26-20.69-20.69-20.69s-20.69 9.26-20.69 20.69 9.26 20.69 20.69 20.69 20.69-9.26 20.69-20.69"/><circle cx="313.4" cy="98.75" r="9.75"/></g>' ];
 

@@ -19,7 +19,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-const BPGBP_REGISTRY_DB_VERSION = '1.0';
+const BPGBP_REGISTRY_DB_VERSION = '1.1';
 
 /* The shared agency bootstrap key — the trust anchor for auto-pairing. It ships with the theme so every
  * client site has it automatically (no per-site config). It is intentionally LOW-POWER: on its own it can
@@ -72,6 +72,7 @@ function bpgbp_registry_install(): void {
 		secret varchar(128) NOT NULL,
 		agency tinyint(1) NOT NULL DEFAULT 0,
 		locations text DEFAULT NULL,
+		facebook_page_id varchar(40) DEFAULT NULL,
 		status varchar(20) NOT NULL DEFAULT 'active',
 		created_at datetime NOT NULL,
 		updated_at datetime NOT NULL,
@@ -157,11 +158,12 @@ function bpgbp_registry_merge( $sites ) {
 		$locs = is_array( $locs ) ? $locs : [];
 
 		$entry = [
-			'secret'    => (string) $r['secret'],
-			'label'     => (string) ( $r['label'] ?? '' ),
-			'site_url'  => (string) ( $r['site_url'] ?? '' ),
-			'agency'    => (bool) $r['agency'],
-			'locations' => $locs,
+			'secret'           => (string) $r['secret'],
+			'label'            => (string) ( $r['label'] ?? '' ),
+			'site_url'         => (string) ( $r['site_url'] ?? '' ),
+			'agency'           => (bool) $r['agency'],
+			'locations'        => $locs,
+			'facebook_page_id' => (string) ( $r['facebook_page_id'] ?? '' ),
 		];
 		if ( ! empty( $locs[0]['id'] ) ) $entry['location'] = $locs[0]['id']; // primary, for single-location consumers
 		$sites[ $key ] = $entry; // DB wins over the file on a key collision
@@ -177,7 +179,7 @@ function bpgbp_registry_merge( $sites ) {
 add_action( 'admin_menu', 'bpgbp_registry_admin_menu' );
 function bpgbp_registry_admin_menu(): void {
 	if ( ! bpgbp_registry_active() ) return;
-	add_management_page( 'GBP Clients', 'GBP Clients', 'manage_options', 'bpgbp-clients', 'bpgbp_registry_render_page' );
+	add_management_page( 'Client Reviews', 'Client Reviews', 'manage_options', 'bpgbp-clients', 'bpgbp_registry_render_page' );
 }
 
 function bpgbp_registry_locations_to_text( array $locs ): string {
@@ -253,6 +255,13 @@ function bpgbp_registry_handle_save(): void {
 		'secret'     => $secret,
 		'agency'     => ! empty( $_POST['agency'] ) ? 1 : 0,
 		'locations'  => $locations_json,
+		// FB Page: the dropdown pick wins; '__none__' clears; otherwise the manually typed ID.
+		'facebook_page_id' => ( function () {
+			$pick = sanitize_text_field( wp_unslash( $_POST['facebook_page_pick'] ?? '' ) );
+			if ( '__none__' === $pick ) return null;
+			$val = $pick !== '' ? $pick : sanitize_text_field( wp_unslash( $_POST['facebook_page_id'] ?? '' ) );
+			return $val ?: null;
+		} )(),
 		'status'     => ( ( $_POST['status'] ?? 'active' ) === 'inactive' ) ? 'inactive' : 'active',
 		'updated_at' => $now,
 	];
@@ -279,8 +288,12 @@ function bpgbp_registry_render_page(): void {
 	}
 
 	echo '<div class="wrap">';
-	echo '<h1>GBP Clients</h1>';
-	echo '<p>The hub\'s client registry. Add a site, paste its Google location, and a secret is generated automatically — no JSON file to edit. (Copy location ids from <a href="' . esc_url( admin_url( 'tools.php?page=bpgbp-locations' ) ) . '">Tools → GBP Locations</a>.)</p>';
+	echo '<h1>Client Reviews</h1>';
+	echo '<p>The hub\'s client registry — Google + Facebook. Each client maps to a Google location and/or a Facebook Page; a secret is generated automatically.</p>';
+	// Facebook connection controls (Connect / Reconnect / Disconnect) live here now, not on a separate tab.
+	if ( class_exists( 'BPFB_Hub' ) && method_exists( 'BPFB_Hub', 'render_connection_controls' ) ) {
+		BPFB_Hub::render_connection_controls();
+	}
 
 	$msg = sanitize_key( $_GET['msg'] ?? '' );
 	$notes = [ 'saved' => 'Client saved.', 'deleted' => 'Client deleted.', 'nokey' => 'A site key is required.', 'approved' => 'Client approved.', 'approved_all' => 'All pending clients approved.' ];
@@ -291,12 +304,28 @@ function bpgbp_registry_render_page(): void {
 		$n = (int) ( $_GET['n'] ?? 0 );
 		echo '<div class="notice notice-success is-dismissible"><p>Auto-matched ' . $n . ' client' . ( 1 === $n ? '' : 's' ) . ' to a Google location.</p></div>';
 	}
+	if ( 'fbmatched' === $msg ) {
+		$n = (int) ( $_GET['n'] ?? 0 );
+		echo '<div class="notice notice-success is-dismissible"><p>Auto-matched ' . $n . ' client' . ( 1 === $n ? '' : 's' ) . ' to a Facebook Page.</p></div>';
+	}
+	if ( 'added_agency' === $msg || 'added_noagency' === $msg ) {
+		$n   = (int) ( $_GET['n'] ?? 0 );
+		$how = 'added_agency' === $msg ? 'to the agency Client Reviews tab' : 'without the agency tab';
+		echo '<div class="notice notice-success is-dismissible"><p>Approved ' . $n . ' client' . ( 1 === $n ? '' : 's' ) . ' ' . esc_html( $how ) . '. (Only entries with a matched location were approved.)</p></div>';
+	}
 
 	// Bulk: fill any client that's missing a location, by website match (e.g. JSON-imported ones).
 	echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="margin:0 0 16px">';
 	wp_nonce_field( 'bpgbp_automatch_locations' );
 	echo '<input type="hidden" name="action" value="bpgbp_automatch_locations">';
 	echo '<button class="button">Auto-match missing locations</button> <span class="description">Fills a Google location for any client without one, matched by website.</span>';
+	echo '</form>';
+
+	// Bulk: fill any client that's missing a Facebook Page, by the Page's website (name fallback).
+	echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="margin:0 0 16px">';
+	wp_nonce_field( 'bpgbp_automatch_facebook' );
+	echo '<input type="hidden" name="action" value="bpgbp_automatch_facebook">';
+	echo '<button class="button">Auto-match Facebook Pages</button> <span class="description">Fills a Facebook Page for any client without one, matched by the Page\'s website (then by name).</span>';
 	echo '</form>';
 
 	// ---- Pending approvals: sites that auto-registered and are waiting for you to OK them ----
@@ -322,8 +351,11 @@ function bpgbp_registry_render_page(): void {
 		echo '</tbody></table>';
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="margin-bottom:24px">';
 		wp_nonce_field( 'bpgbp_approve_client' );
-		echo '<input type="hidden" name="action" value="bpgbp_approve_client"><input type="hidden" name="approve_all" value="1">';
-		echo '<button class="button">Approve all pending</button></form>';
+		echo '<input type="hidden" name="action" value="bpgbp_approve_client">';
+		echo '<button class="button button-primary" name="approve_bulk" value="agency">Add to Agency</button> ';
+		echo '<button class="button" name="approve_bulk" value="no_agency">Add without Agency</button>';
+		echo ' <span class="description">Both approve every pending client that has a matched location. “Add to Agency” keeps them in your Client Reviews tab; “Add without Agency” unchecks that box. Unmatched sites stay pending — approve them individually after setting a location.</span>';
+		echo '</form>';
 	}
 
 	// ---- Add / Edit form ----
@@ -334,6 +366,7 @@ function bpgbp_registry_render_page(): void {
 	$e_sec  = $editing ? esc_attr( $editing['secret'] ) : '';
 	$e_ag   = $editing && (int) $editing['agency'] ? ' checked' : ( $editing ? '' : ' checked' );
 	$e_loc  = $editing ? esc_textarea( bpgbp_registry_locations_to_text( json_decode( (string) $editing['locations'], true ) ?: [] ) ) : '';
+	$e_fb   = $editing ? esc_attr( $editing['facebook_page_id'] ?? '' ) : '';
 	$e_stat = $editing ? (string) $editing['status'] : 'active';
 
 	echo '<h2>' . ( $editing ? 'Edit client' : 'Add client' ) . '</h2>';
@@ -360,6 +393,24 @@ function bpgbp_registry_render_page(): void {
 	echo '<textarea name="locations" rows="2" class="large-text code" placeholder="accounts/123/locations/456 | Roanoke | Babe\'s">' . $e_loc . '</textarea>';
 	echo '<p class="description">Advanced / multi-location: one per line — <code>location id | label | brand</code>.</p>';
 	echo '</td></tr>';
+	// A dropdown of the hub's connected Facebook Pages — pick instead of paste (mirrors the Google picker).
+	$fb_pages = ( class_exists( 'BPFB_Hub' ) && method_exists( 'BPFB_Hub', 'pages' ) ) ? BPFB_Hub::pages() : [];
+	echo '<tr><th><label>Facebook Page</label></th><td>';
+	if ( $fb_pages ) {
+		echo '<select name="facebook_page_pick" class="regular-text"><option value="">' . ( $e_fb !== '' ? '— keep current —' : '— select a Facebook Page —' ) . '</option>';
+		echo '<option value="__none__">— none —</option>';
+		foreach ( $fb_pages as $fp ) {
+			$pid = (string) ( $fp['id'] ?? '' );
+			$lbl = (string) ( $fp['name'] ?? $pid );
+			if ( ! empty( $fp['website'] ) ) $lbl .= '  (' . preg_replace( '#^https?://#', '', rtrim( $fp['website'], '/' ) ) . ')';
+			echo '<option value="' . esc_attr( $pid ) . '"' . selected( $e_fb, $pid, false ) . '>' . esc_html( $lbl ) . '</option>';
+		}
+		echo '</select>';
+	} else {
+		echo '<span class="description">(no connected Pages — connect on Tools → Facebook, or paste an ID below)</span>';
+	}
+	echo '<p style="margin:6px 0 0"><input name="facebook_page_id" class="regular-text code" value="' . $e_fb . '" placeholder="or paste a Page ID, e.g. 105123695878913"></p>';
+	echo '<p class="description">Pick the client\'s Facebook Page (overrides the box) to pull FB reviews alongside Google. Leave blank for none.</p></td></tr>';
 	echo '<tr><th><label>Agency view</label></th><td><label><input type="checkbox" name="agency" value="1"' . $e_ag . '> Include in the agency “Client Reviews” tab on this hub</label></td></tr>';
 	echo '<tr><th><label>Secret</label></th><td>';
 	if ( $editing ) {
@@ -378,20 +429,42 @@ function bpgbp_registry_render_page(): void {
 	echo '</form>';
 
 	// ---- List ----
-	$rows = $wpdb->get_results( "SELECT * FROM $table ORDER BY label ASC, site_key ASC", ARRAY_A );
-	echo '<h2 style="margin-top:30px">Clients (' . count( $rows ?: [] ) . ')</h2>';
-	echo '<table class="widefat striped"><thead><tr><th>Label</th><th>Site key</th><th>Locations</th><th>Agency</th><th>Status</th><th></th></tr></thead><tbody>';
+	$rows = $wpdb->get_results( "SELECT * FROM $table ORDER BY label ASC, site_key ASC", ARRAY_A ) ?: [];
+	// Multi-location clients sink to the bottom so they're visually distinct from single-location ones.
+	$single = []; $multi = [];
+	foreach ( $rows as $r ) {
+		if ( count( json_decode( (string) $r['locations'], true ) ?: [] ) > 1 ) { $multi[] = $r; } else { $single[] = $r; }
+	}
+	$rows = array_merge( $single, $multi );
+	echo '<h2 style="margin-top:30px">Clients (' . count( $rows ) . ')</h2>';
+	echo '<table class="widefat striped"><thead><tr><th>Label</th><th>Site key</th><th>Locations</th><th>Facebook</th><th>Agency</th><th>Status</th><th></th></tr></thead><tbody>';
 	if ( $rows ) {
 		foreach ( $rows as $r ) {
 			$locs  = json_decode( (string) $r['locations'], true ) ?: [];
 			$ncount = count( $locs );
+			$fb_id  = (string) ( $r['facebook_page_id'] ?? '' );
 			echo '<tr>';
 			echo '<td>' . esc_html( $r['label'] ) . '</td>';
 			echo '<td><code>' . esc_html( $r['site_key'] ) . '</code></td>';
-			echo '<td>' . esc_html( $ncount === 1 ? '1 location' : $ncount . ' locations' ) . '</td>';
+			if ( $ncount === 0 ) {
+				echo '<td><span style="color:#a7aaad">&mdash;</span></td>';
+			} else {
+				$loc_ids = array_map( function ( $l ) {
+					$id  = (string) ( $l['id'] ?? '' );
+					$num = ( ( $p = strrpos( $id, '/' ) ) !== false ) ? substr( $id, $p + 1 ) : $id; // just the location number
+					return '<code>' . esc_html( $num ) . '</code>';
+				}, $locs );
+				echo '<td>&#10003; ' . implode( '<br>', $loc_ids ) . '</td>';
+			}
+			echo '<td>' . ( $fb_id !== '' ? '✓ <code>' . esc_html( $fb_id ) . '</code>' : '<span style="color:#a7aaad">—</span>' ) . '</td>';
 			echo '<td>' . ( (int) $r['agency'] ? '✓' : '' ) . '</td>';
 			echo '<td>' . esc_html( $r['status'] ) . '</td>';
-			echo '<td><a class="button button-small" href="' . esc_url( admin_url( 'tools.php?page=bpgbp-clients&edit=' . (int) $r['id'] ) ) . '">Edit</a></td>';
+			echo '<td><a class="button button-small" href="' . esc_url( admin_url( 'tools.php?page=bpgbp-clients&edit=' . (int) $r['id'] ) ) . '">Edit</a> ';
+			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline" onsubmit="return confirm(\'Delete &quot;' . esc_js( $r['label'] ?: $r['site_key'] ) . '&quot;? This removes its secret + mapping and cannot be undone.\');">';
+			wp_nonce_field( 'bpgbp_save_client' );
+			echo '<input type="hidden" name="action" value="bpgbp_save_client"><input type="hidden" name="id" value="' . (int) $r['id'] . '"><input type="hidden" name="delete" value="1">';
+			echo '<button type="submit" class="button button-small button-link-delete">Delete</button>';
+			echo '</form></td>';
 			echo '</tr>';
 		}
 	} else {
@@ -570,8 +643,9 @@ function bpgbp_registry_handle_approve(): void {
 	$now   = current_time( 'mysql' );
 	$map   = bpgbp_location_match_map();
 
-	// Activate one row; auto-fill its location from the websiteUri match when it has none yet.
-	$activate = function ( array $row ) use ( $wpdb, $table, $now, $map ) {
+	// Activate one row; auto-fill its location from the websiteUri match when it has none yet. $force_agency
+	// (true/false) overrides the agency flag; null leaves it as-is.
+	$activate = function ( array $row, $force_agency = null ) use ( $wpdb, $table, $now, $map ) {
 		$update = [ 'status' => 'active', 'updated_at' => $now ];
 		$locs   = json_decode( (string) $row['locations'], true );
 		$locs   = is_array( $locs ) ? $locs : [];
@@ -581,13 +655,25 @@ function bpgbp_registry_handle_approve(): void {
 				$update['locations'] = wp_json_encode( [ [ 'id' => $hit['location'], 'label' => $hit['title'], 'brand' => '' ] ] );
 			}
 		}
+		if ( null !== $force_agency ) $update['agency'] = $force_agency ? 1 : 0;
 		$wpdb->update( $table, $update, [ 'id' => (int) $row['id'] ] );
 	};
 
-	if ( ! empty( $_POST['approve_all'] ) ) {
+	// Bulk: "Add to Agency" (agency=1) or "Add without Agency" (agency=0). Both approve ONLY pending
+	// entries that have a matched location (or one already set), so nothing goes live without a location.
+	$bulk = isset( $_POST['approve_bulk'] ) ? sanitize_key( (string) $_POST['approve_bulk'] ) : '';
+	if ( 'agency' === $bulk || 'no_agency' === $bulk ) {
 		$rows = $wpdb->get_results( "SELECT * FROM $table WHERE status = 'pending'", ARRAY_A );
-		foreach ( $rows ?: [] as $r ) $activate( $r );
-		wp_safe_redirect( admin_url( 'tools.php?page=bpgbp-clients&msg=approved_all' ) );
+		$n    = 0;
+		foreach ( $rows ?: [] as $r ) {
+			$locs    = json_decode( (string) $r['locations'], true );
+			$has_loc = ( is_array( $locs ) && ! empty( $locs ) ) || bpgbp_match_for_row( $r, $map );
+			if ( ! $has_loc ) continue; // skip unmatched — they stay pending for manual handling
+			$activate( $r, 'agency' === $bulk );
+			$n++;
+		}
+		$msg = 'agency' === $bulk ? 'added_agency' : 'added_noagency';
+		wp_safe_redirect( admin_url( 'tools.php?page=bpgbp-clients&msg=' . $msg . '&n=' . $n ) );
 		exit;
 	}
 
@@ -626,5 +712,48 @@ function bpgbp_registry_handle_automatch(): void {
 		$n++;
 	}
 	wp_safe_redirect( admin_url( 'tools.php?page=bpgbp-clients&msg=matched&n=' . $n ) );
+	exit;
+}
+
+/** Connected Facebook Pages indexed for matching: by website host (primary) and by name slug (fallback). */
+function bpfb_page_match_map(): array {
+	if ( ! class_exists( 'BPFB_Hub' ) || ! method_exists( 'BPFB_Hub', 'pages' ) ) return [ 'host' => [], 'name' => [] ];
+	$byhost = []; $byname = [];
+	foreach ( BPFB_Hub::pages() as $p ) {
+		$pid = (string) ( $p['id'] ?? '' );
+		if ( '' === $pid ) continue;
+		$h = bpgbp_match_host( $p['website'] ?? '' );
+		if ( '' !== $h && empty( $byhost[ $h ] ) ) $byhost[ $h ] = $pid;
+		$n = sanitize_title( (string) ( $p['name'] ?? '' ) );
+		if ( '' !== $n && empty( $byname[ $n ] ) ) $byname[ $n ] = $pid;
+	}
+	return [ 'host' => $byhost, 'name' => $byname ];
+}
+
+// Fill in a Facebook Page for every client that's missing one — matched by the Page's listed website →
+// the client's Site URL (host), falling back to Page-name ≈ client-label. Mirrors the Google auto-match.
+add_action( 'admin_post_bpgbp_automatch_facebook', 'bpgbp_registry_handle_fb_automatch' );
+function bpgbp_registry_handle_fb_automatch(): void {
+	if ( ! current_user_can( 'manage_options' ) || ! bpgbp_registry_active() ) wp_die( 'Not allowed.' );
+	check_admin_referer( 'bpgbp_automatch_facebook' );
+
+	global $wpdb;
+	$table = bpgbp_registry_table();
+	$now   = current_time( 'mysql' );
+	$map   = bpfb_page_match_map();
+
+	$rows = $wpdb->get_results( "SELECT * FROM $table", ARRAY_A );
+	$n    = 0;
+	foreach ( $rows ?: [] as $r ) {
+		if ( ! empty( $r['facebook_page_id'] ) ) continue; // already mapped
+		$h    = bpgbp_match_host( $r['site_url'] ?? '' );
+		$slug = sanitize_title( (string) ( $r['label'] ?? '' ) );
+		$pid  = ( '' !== $h && isset( $map['host'][ $h ] ) ) ? $map['host'][ $h ]
+			: ( ( '' !== $slug && isset( $map['name'][ $slug ] ) ) ? $map['name'][ $slug ] : '' );
+		if ( '' === $pid ) continue;
+		$wpdb->update( $table, [ 'facebook_page_id' => $pid, 'updated_at' => $now ], [ 'id' => (int) $r['id' ] ] );
+		$n++;
+	}
+	wp_safe_redirect( admin_url( 'tools.php?page=bpgbp-clients&msg=fbmatched&n=' . $n ) );
 	exit;
 }

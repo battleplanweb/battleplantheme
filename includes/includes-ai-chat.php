@@ -142,14 +142,25 @@ function bp_chat_enqueue_assets(): void {
 	$company = $customer['name'] ?? get_bloginfo( 'name' );
 	$default_greeting = "Hi! 👋 Have a question or need service? Ask me anything and I'll help.";
 
+	$default_text_consent = "{$company} can text you about your request. By tapping Yes, you agree to receive "
+		. "SMS messages from {$company} about your inquiry and appointment. Message frequency varies. "
+		. "Message & data rates may apply. Reply STOP to unsubscribe or HELP for help.";
+
 	wp_localize_script( 'bp-ai-chat', 'bpChat', [
-		'restUrl'   => esc_url_raw( rest_url( 'bp-chat/v1/message' ) ),
-		'company'   => $company,
-		'greeting'  => trim( (string) ( $o['greeting'] ?? '' ) ) ?: $default_greeting,
-		'launcher'  => trim( (string) ( $o['launcher'] ?? '' ) ) ?: 'Chat with us',
-		// Shown once, under the input — TCPA-friendly notice.
-		'consent'   => trim( (string) ( $o['consent'] ?? '' ) )
-			?: "By chatting you agree to be contacted by phone or text about your request.",
+		'restUrl'     => esc_url_raw( rest_url( 'bp-chat/v1/message' ) ),
+		'consentUrl'  => esc_url_raw( rest_url( 'bp-chat/v1/consent' ) ),
+		'company'     => $company,
+		'greeting'    => trim( (string) ( $o['greeting'] ?? '' ) ) ?: $default_greeting,
+		'launcher'    => trim( (string) ( $o['launcher'] ?? '' ) ) ?: 'Chat with us',
+		// Passive notice shown once under the input.
+		'consent'     => trim( (string) ( $o['consent'] ?? '' ) )
+			?: "By chatting you agree to be contacted about your request.",
+		// The explicit SMS opt-in disclosure shown on the consent card before any text is sent.
+		'textConsent' => trim( (string) ( $o['text_consent'] ?? '' ) ) ?: $default_text_consent,
+		'privacyUrl'  => trim( (string) ( $o['privacy_url'] ?? '' ) ) ?: '/privacy-policy/',
+		'termsUrl'    => trim( (string) ( $o['terms_url'] ?? '' ) ),
+		'consentYes'  => 'Yes, text me',
+		'consentNo'   => 'No thanks',
 	] );
 }
 
@@ -169,6 +180,11 @@ add_action( 'rest_api_init', function () {
 		'methods'             => 'POST',
 		'callback'            => 'bp_chat_handle_message',
 		'permission_callback' => '__return_true', // public widget; abuse guards below
+	] );
+	register_rest_route( 'bp-chat/v1', '/consent', [
+		'methods'             => 'POST',
+		'callback'            => 'bp_chat_handle_consent',
+		'permission_callback' => '__return_true', // public widget; phone comes from server-side pending only
 	] );
 } );
 
@@ -220,6 +236,63 @@ function bp_chat_handle_message( WP_REST_Request $req ) {
 	return new WP_REST_Response( $result, 200 );
 }
 
+/**
+ * The visitor's Yes/No on the consent card. "yes" is the verifiable opt-in:
+ * we only act on a phone number we stashed server-side when the AI called
+ * request_text_consent — the client never supplies the number here, so this
+ * endpoint can't be used to text an arbitrary number. On "yes" we record the
+ * consent audit trail (timestamp + IP) and send the opening SMS.
+ */
+function bp_chat_handle_consent( WP_REST_Request $req ) {
+	if ( ! bp_chat_ready() ) {
+		return new WP_REST_Response( [ 'error' => 'Chat is not configured.' ], 503 );
+	}
+
+	$params = $req->get_json_params();
+	$cid    = preg_replace( '/[^a-zA-Z0-9_-]/', '', (string) ( $params['cid'] ?? '' ) );
+	$cid    = substr( $cid, 0, 64 );
+	$choice = strtolower( trim( (string) ( $params['choice'] ?? '' ) ) );
+	if ( $cid === '' ) return new WP_REST_Response( [ 'error' => 'Missing conversation.' ], 400 );
+
+	$pending = get_transient( 'bp_chat_pending_' . $cid );
+	// No pending opt-in → nothing to do (idempotent; blocks replay/abuse).
+	if ( ! is_array( $pending ) || empty( $pending['phone'] ) ) {
+		return new WP_REST_Response( [ 'ok' => false, 'reply' => '' ], 200 );
+	}
+
+	$o        = bp_chat_config();
+	$customer = function_exists( 'customer_info' ) ? customer_info() : [];
+	$conv     = bp_chat_conv_get_or_create_by_cid( $cid );
+
+	if ( $choice !== 'yes' ) {
+		delete_transient( 'bp_chat_pending_' . $cid );
+		bp_chat_msg_add( (int) $conv['id'], 'user', '[declined text updates]', 'web' );
+		$reply = 'No problem — we can keep chatting right here.';
+		bp_chat_msg_add( (int) $conv['id'], 'assistant', $reply, 'web' );
+		return new WP_REST_Response( [ 'ok' => true, 'consent' => 'declined', 'reply' => $reply ], 200 );
+	}
+
+	// Consent granted — write the audit trail BEFORE sending anything.
+	delete_transient( 'bp_chat_pending_' . $cid );
+	bp_chat_conv_update( (int) $conv['id'], [
+		'name'       => (string) ( $pending['name'] ?? ( $conv['name'] ?? '' ) ),
+		'email'      => (string) ( $pending['email'] ?? ( $conv['email'] ?? '' ) ),
+		'consent_at' => current_time( 'mysql' ),
+		'consent_ip' => bp_chat_client_ip(),
+	] );
+	$conv = bp_chat_conv_get( (int) $conv['id'] );
+	bp_chat_msg_add( (int) $conv['id'], 'user', '[agreed to receive text messages]', 'web' );
+
+	$ok      = bp_chat_begin_text_thread( $conv, $customer, (string) $pending['phone'], (string) ( $pending['name'] ?? '' ) );
+	$company = $customer['name'] ?? 'us';
+	$reply   = $ok
+		? "Great — I just texted you from {$company}. Reply there anytime and we'll keep helping."
+		: "Thanks! We'll be in touch. If our text doesn't come through, just give us a call.";
+	bp_chat_msg_add( (int) $conv['id'], 'assistant', $reply, 'web' );
+
+	return new WP_REST_Response( [ 'ok' => $ok, 'consent' => 'granted', 'reply' => $reply ], 200 );
+}
+
 function bp_chat_client_ip(): string {
 	foreach ( [ 'HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR' ] as $k ) {
 		if ( ! empty( $_SERVER[ $k ] ) ) {
@@ -254,8 +327,8 @@ function bp_chat_run( array $messages, string $cid ) {
 	$conv = bp_chat_conv_get_or_create_by_cid( $cid );
 	bp_chat_sync_web_history( (int) $conv['id'], $messages );
 
-	$lead_sent    = false;
-	$text_started = false;
+	$lead_sent         = false;
+	$consent_requested = false;
 
 	$resp = bp_chat_call_claude( $system, $messages, $tools );
 	if ( is_wp_error( $resp ) ) return $resp;
@@ -268,7 +341,7 @@ function bp_chat_run( array $messages, string $cid ) {
 			$results[] = [
 				'type'        => 'tool_result',
 				'tool_use_id' => $block['id'] ?? '',
-				'content'     => bp_chat_handle_tool_block( $block, $customer, $o, $conv, 'web', $lead_sent, $text_started ),
+				'content'     => bp_chat_handle_tool_block( $block, $customer, $o, $conv, 'web', $lead_sent, $consent_requested ),
 			];
 		}
 		$messages[] = [ 'role' => 'assistant', 'content' => $resp['content'] ];
@@ -287,7 +360,7 @@ function bp_chat_run( array $messages, string $cid ) {
 
 	bp_chat_msg_add( (int) $conv['id'], 'assistant', $reply, 'web' );
 
-	return [ 'reply' => $reply, 'lead_sent' => $lead_sent, 'text_started' => $text_started ];
+	return [ 'reply' => $reply, 'lead_sent' => $lead_sent, 'request_consent' => $consent_requested ];
 }
 
 /**
@@ -298,13 +371,14 @@ function bp_chat_tools(): array {
 	return [
 		[
 			'name'        => 'send_lead_to_contractor',
-			'description' => "Text the contractor the visitor's details so they can call back. "
-				. "Call this once you have the visitor's name, a phone number, and a clear "
+			'description' => "Text the contractor the visitor's details so they can follow up. "
+				. "Call this once you have the visitor's name, email, a phone number, and a clear "
 				. "description of what they need. Do not call it for casual browsers.",
 			'input_schema' => [
 				'type'       => 'object',
 				'properties' => [
 					'customer_name'  => [ 'type' => 'string', 'description' => "Visitor's name." ],
+					'customer_email' => [ 'type' => 'string', 'description' => "Visitor's email address." ],
 					'customer_phone' => [ 'type' => 'string', 'description' => "Best callback phone number." ],
 					'problem_summary'=> [ 'type' => 'string', 'description' => "Plain summary of what they need." ],
 					'urgency'        => [ 'type' => 'string', 'description' => "How urgent (e.g. emergency, soon, flexible)." ],
@@ -314,17 +388,19 @@ function bp_chat_tools(): array {
 			],
 		],
 		[
-			'name'        => 'start_text_thread',
-			'description' => "Move the conversation to SMS text. Call this when the visitor has shared a "
-				. "mobile number and is willing to keep talking by text — it texts them so the conversation "
-				. "continues even if they leave the website. Only use a real mobile number they gave you.",
+			'name'        => 'request_text_consent',
+			'description' => "Ask the visitor to opt in to SMS text messages. Call this ONLY after the visitor "
+				. "has agreed to be texted AND you have their name, email, and a real mobile number. This does NOT "
+				. "send a text — it shows the visitor a consent form they must accept first. Do not tell them they "
+				. "are signed up until they accept it.",
 			'input_schema' => [
 				'type'       => 'object',
 				'properties' => [
-					'customer_name'  => [ 'type' => 'string', 'description' => "Visitor's name, if known." ],
+					'customer_name'  => [ 'type' => 'string', 'description' => "Visitor's name." ],
+					'customer_email' => [ 'type' => 'string', 'description' => "Visitor's email address." ],
 					'customer_phone' => [ 'type' => 'string', 'description' => "The visitor's mobile number." ],
 				],
-				'required' => [ 'customer_phone' ],
+				'required' => [ 'customer_name', 'customer_email', 'customer_phone' ],
 			],
 		],
 	];
@@ -333,44 +409,102 @@ function bp_chat_tools(): array {
 /**
  * Execute one tool_use block and return the tool_result content string.
  * Shared by the web and SMS runners. $conv is updated in place; $lead_sent
- * and $text_started are set when those actions fire.
+ * and $consent_requested are set when those actions fire.
  */
-function bp_chat_handle_tool_block( array $block, array $customer, array $o, array &$conv, string $channel, bool &$lead_sent, bool &$text_started ): string {
+function bp_chat_handle_tool_block( array $block, array $customer, array $o, array &$conv, string $channel, bool &$lead_sent, bool &$consent_requested ): string {
 	$name  = $block['name'] ?? '';
 	$input = (array) ( $block['input'] ?? [] );
 
 	if ( $name === 'send_lead_to_contractor' ) {
+		if ( ! empty( $input['customer_email'] ) && ! empty( $conv['id'] ) ) {
+			bp_chat_conv_update( (int) $conv['id'], [ 'email' => sanitize_email( (string) $input['customer_email'] ) ] );
+		}
 		$ok = bp_chat_deliver_lead( $input, (string) ( $conv['cid'] ?? '' ), $customer, $o );
 		if ( $ok && ! empty( $conv['id'] ) ) bp_chat_conv_update( (int) $conv['id'], [ 'lead_sent_at' => current_time( 'mysql' ) ] );
 		$lead_sent = $lead_sent || $ok;
-		return $ok
-			? 'Lead delivered to the contractor.'
-			: 'Could not deliver the lead right now; ask the visitor to call the listed phone number.';
+		if ( ! $ok ) {
+			return 'Could not deliver the lead right now; ask the visitor to call the listed phone number.';
+		}
+
+		// Compliance safety net: once we have a lead with a usable mobile number,
+		// ALWAYS surface the SMS consent card (web only) — don't depend on the
+		// model choosing to call request_text_consent. Guarded so it offers once
+		// per conversation and never after the visitor has already opted in.
+		$offered = bp_chat_offer_text_consent( $conv, $input, $channel, $consent_requested );
+		return $offered
+			? 'Lead delivered. An SMS opt-in form is now being shown to the visitor — invite them to accept it if they want updates by text. Do NOT say they are signed up for texts until they accept it.'
+			: 'Lead delivered to the contractor.';
 	}
 
-	if ( $name === 'start_text_thread' ) {
+	if ( $name === 'request_text_consent' ) {
 		$phone = bp_chat_normalize_phone( (string) ( $input['customer_phone'] ?? '' ) );
-		if ( $phone === '' ) return 'That phone number was not valid — ask for a 10-digit US mobile.';
+		if ( $phone === '' ) return 'That phone number was not valid — ask for a 10-digit US mobile number.';
 		if ( ( $conv['channel'] ?? 'web' ) === 'sms' ) return 'Already connected by text with this visitor.';
 
-		bp_chat_conv_update( (int) $conv['id'], [
-			'phone'   => $phone,
-			'name'    => (string) ( $input['customer_name'] ?? ( $conv['name'] ?? '' ) ),
-			'channel' => 'sms',
-		] );
-		$conv['channel'] = 'sms';
-		$conv['phone']   = $phone;
-
-		$opening = bp_chat_text_opening( $customer, (string) ( $input['customer_name'] ?? '' ) );
-		$ok = bp_chat_send_sms( $phone, $opening );
-		if ( $ok ) bp_chat_msg_add( (int) $conv['id'], 'assistant', $opening, 'sms' );
-		$text_started = $text_started || $ok;
-		return $ok
-			? 'Texted the visitor; the conversation can now continue over SMS.'
-			: 'Could not send the text right now.';
+		if ( ! empty( $input['customer_email'] ) && ! empty( $conv['id'] ) ) {
+			bp_chat_conv_update( (int) $conv['id'], [ 'email' => sanitize_email( (string) $input['customer_email'] ) ] );
+		}
+		// Visitor explicitly asked to be texted — force the card even if the lead
+		// path already auto-offered it earlier in this conversation.
+		bp_chat_offer_text_consent( $conv, $input, $channel, $consent_requested, true );
+		return 'Consent form shown to the visitor. Wait for them to accept it — do NOT say they are signed up or that you have texted them yet. Briefly let them know a quick confirmation will pop up to approve.';
 	}
 
 	return 'Unknown tool.';
+}
+
+/**
+ * Stash opt-in details server-side and flag the widget to show the SMS consent
+ * card. The visitor's "Yes" tap on that card is the A2P-verifiable opt-in — no
+ * text is sent before it. Returns true if the card will be shown.
+ *
+ * Web channel only (there's no widget on the SMS side). Offers once per
+ * conversation and never after the visitor has already opted in, unless $force
+ * is set (used when the visitor explicitly asks to be texted).
+ */
+function bp_chat_offer_text_consent( array $conv, array $input, string $channel, bool &$consent_requested, bool $force = false ): bool {
+	if ( $channel !== 'web' ) return false;
+	if ( ( $conv['channel'] ?? 'web' ) === 'sms' ) return false;
+	if ( ! empty( $conv['consent_at'] ) ) return false; // already opted in
+
+	$cid   = (string) ( $conv['cid'] ?? '' );
+	$phone = bp_chat_normalize_phone( (string) ( $input['customer_phone'] ?? '' ) );
+	if ( $cid === '' || $phone === '' ) return false;
+	if ( ! $force && get_transient( 'bp_chat_offered_' . $cid ) ) return false;
+
+	set_transient( 'bp_chat_pending_' . $cid, [
+		'name'  => (string) ( $input['customer_name']  ?? ( $conv['name']  ?? '' ) ),
+		'email' => sanitize_email( (string) ( $input['customer_email'] ?? ( $conv['email'] ?? '' ) ) ),
+		'phone' => $phone,
+	], HOUR_IN_SECONDS );
+	set_transient( 'bp_chat_offered_' . $cid, 1, 6 * HOUR_IN_SECONDS );
+
+	$consent_requested = true;
+	return true;
+}
+
+/**
+ * Begin the SMS thread once consent is confirmed: flip the conversation to the
+ * SMS channel and send the opening text. Shared by the consent endpoint.
+ * Returns true if the opening SMS sent.
+ */
+function bp_chat_begin_text_thread( array &$conv, array $customer, string $raw_phone, string $name ): bool {
+	$phone = bp_chat_normalize_phone( $raw_phone );
+	if ( $phone === '' ) return false;
+	if ( ( $conv['channel'] ?? 'web' ) === 'sms' ) return true; // already texting
+
+	bp_chat_conv_update( (int) $conv['id'], [
+		'phone'   => $phone,
+		'name'    => $name !== '' ? $name : (string) ( $conv['name'] ?? '' ),
+		'channel' => 'sms',
+	] );
+	$conv['channel'] = 'sms';
+	$conv['phone']   = $phone;
+
+	$opening = bp_chat_text_opening( $customer, $name );
+	$ok = bp_chat_send_sms( $phone, $opening );
+	if ( $ok ) bp_chat_msg_add( (int) $conv['id'], 'assistant', $opening, 'sms' );
+	return $ok;
 }
 
 /**
@@ -443,6 +577,7 @@ function bp_chat_deliver_lead( array $lead, string $cid, array $customer, array 
 	$lines   = [];
 	$lines[] = "New lead from your {$company} website:";
 	$lines[] = trim( ( $lead['customer_name'] ?? 'Customer' ) . ' — ' . ( $lead['customer_phone'] ?? 'no number given' ) );
+	if ( ! empty( $lead['customer_email'] ) )  $lines[] = $lead['customer_email'];
 	if ( ! empty( $lead['problem_summary'] ) ) $lines[] = $lead['problem_summary'];
 	if ( ! empty( $lead['urgency'] ) )         $lines[] = 'Urgency: ' . $lead['urgency'];
 	if ( ! empty( $lead['service_area'] ) )    $lines[] = 'Area: ' . $lead['service_area'];

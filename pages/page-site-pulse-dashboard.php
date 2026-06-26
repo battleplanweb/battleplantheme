@@ -60,7 +60,9 @@ $company_name = site_pulse_get_setting( 'company_name', '' );
 $logo_url     = site_pulse_get_setting( 'login_logo_url', '' );
 $header_logo  = site_pulse_get_setting( 'header_logo_url', '' );
 $full_name    = $user ? trim( $user->first_name . ' ' . $user->last_name ) : '';
-$display_name = $user ? esc_html( $full_name !== '' ? $full_name : $user->display_name ) : 'User';
+// The superadmin (battleplanweb) can be shown under a friendly alias without changing its WP display_name.
+$sp_alias     = ( $user && site_pulse_is_superadmin( (int) $user->ID ) ) ? (string) apply_filters( 'site_pulse_superadmin_alias', '' ) : '';
+$display_name = $sp_alias !== '' ? esc_html( $sp_alias ) : ( $user ? esc_html( $full_name !== '' ? $full_name : $user->display_name ) : 'User' );
 $loc_name     = $location ? esc_html( $location['name'] ) : '';
 
 // Report-access gates, driven by the two report-type caps.
@@ -166,9 +168,11 @@ $nav[] = [
 	'icon'  => 'star',
 	'show'  => $cap_reviews_area || $cap_surveys_area || $cap_agency_reviews || $cap_emails_area,
 	'children' => [
-		[ 'slug' => 'reviews',        'label' => 'Reviews',        'show' => $cap_reviews_area ],
+		// On the review hub (your agency site) you manage clients via Client Reviews and don't need the
+		// site's own Reviews tab; client installs (e.g. Rovin) get Reviews but never Client Reviews.
+		[ 'slug' => 'reviews',        'label' => 'Reviews',        'show' => $cap_reviews_area && ! $is_review_hub ],
 		[ 'slug' => 'agency-reviews', 'label' => 'Client Reviews', 'show' => $cap_agency_reviews ],
-		[ 'slug' => 'surveys',        'label' => 'Surveys',        'show' => $cap_surveys_area ],
+		[ 'slug' => 'surveys',        'label' => 'Comment Cards', 'show' => $cap_surveys_area ],
 		[ 'slug' => 'emails',         'label' => 'Emails',         'show' => $cap_emails_area ],
 	],
 ];
@@ -623,8 +627,8 @@ if ( in_array( 'view_analytics', $caps ) ) {
 	if ( in_array( 'view_surveys', $caps ) ) {
 		$printPage .=   '<div class="sp-analytics-card" id="sp-analytics-surveys">';
 		$printPage .=     '<div class="sp-analytics-card-head">';
-		$printPage .=       '<h4>Survey Results by Location</h4>';
-		$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-analytics-survey-link">View Surveys</button>';
+		$printPage .=       '<h4>Comment Card Results by Location</h4>';
+		$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-analytics-survey-link">View Comment Cards</button>';
 		$printPage .=     '</div>';
 		$printPage .=     '<div class="sp-analytics-card-toolbar"><select id="sp-analytics-survey-dim" class="sp-select"></select></div>';
 		$printPage .=     '<div class="sp-analytics-card-body"><div class="sp-loading"></div></div>';
@@ -858,6 +862,8 @@ if ( ( defined( 'BPGBP_REFRESH_TOKEN' ) && BPGBP_REFRESH_TOKEN ) && ( $eff_is_go
 	$printPage .=   '<div class="sp-toolbar" id="sp-agency-reviews-toolbar">';
 	$printPage .=     '<span class="sp-toolbar-label">Filter</span>';
 	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=       '<input type="search" id="sp-agency-client-search" class="sp-input" list="sp-agency-client-list" placeholder="Search company…" autocomplete="off">';
+	$printPage .=       '<datalist id="sp-agency-client-list"></datalist>';
 	$printPage .=       '<select id="sp-agency-filter-client" class="sp-select"><option value="">All clients</option></select>';
 	$printPage .=       '<select id="sp-agency-filter-stars" class="sp-select">';
 	$printPage .=         '<option value="">All ratings</option>';
@@ -866,6 +872,11 @@ if ( ( defined( 'BPGBP_REFRESH_TOKEN' ) && BPGBP_REFRESH_TOKEN ) && ( $eff_is_go
 	$printPage .=         '<option value="3">3 stars</option>';
 	$printPage .=         '<option value="2">2 stars</option>';
 	$printPage .=         '<option value="1">1 star</option>';
+	$printPage .=       '</select>';
+	$printPage .=       '<select id="sp-agency-filter-platform" class="sp-select">';
+	$printPage .=         '<option value="">All platforms</option>';
+	$printPage .=         '<option value="google">Google</option>';
+	$printPage .=         '<option value="facebook">Facebook</option>';
 	$printPage .=       '</select>';
 	$printPage .=       '<select id="sp-agency-filter-reply" class="sp-select">';
 	$printPage .=         '<option value="">All reviews</option>';
@@ -887,9 +898,9 @@ if ( ( defined( 'BPGBP_REFRESH_TOKEN' ) && BPGBP_REFRESH_TOKEN ) && ( $eff_is_go
 if ( in_array( 'view_surveys', $caps ) || in_array( 'manage_surveys', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-surveys">';
 	$printPage .=   '<div class="sp-panel-header">';
-	$printPage .=     '<h2>Customer Surveys</h2>';
+	$printPage .=     '<h2>Comment Cards</h2>';
 	$printPage .=     '<div class="sp-reviews-actions">';
-	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-survey-archive-toggle">View Archived Surveys</button>';
+	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-survey-archive-toggle">View Archived Comment Cards</button>';
 	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-survey-refresh-btn">Refresh</button>';
 	$printPage .=     '</div>';
 	$printPage .=   '</div>';

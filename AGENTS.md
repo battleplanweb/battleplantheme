@@ -82,6 +82,10 @@ battleplantheme-site/
 4. Set body classes for the desired layout
 5. Customize `style-site.css` with brand colors/fonts via CSS variables
 
+### Never delete commented-out code in the child-theme files
+
+When editing `functions-site.php`, `style-site.css`, or `script-site.js`, you may freely change the active code — but **leave every commented-out block exactly as it is. Do not delete it.** Those comments are intentional: loader/animation options, feature toggles, alternate layouts, and reference snippets Glendon keeps on hand to flip on later. Likewise, if you stop using a piece of *active* code, **comment it out — don't remove it.** When in doubt, preserve; never silently strip a file down.
+
 ---
 
 ## functions-site.php — The Brain of Each Site
@@ -184,11 +188,26 @@ Delete the option to disable it. Default base template has these commented out.
 - `grid` → if set, wraps content in `<div class="flex grid-{value}">` inside the section
 - `start`/`end` → date-based show/hide (YYYY-MM-DD)
 
+**Critical rule — a `[section]` holds a `[layout]`, never bare content.** Every `[section]` must wrap its content in a `[layout]`; do not place `[txt]`, headings, or HTML directly inside a `[section]`. The structure is always **section → layout → col → content**. Content that should span the whole row (a heading above a row of cards, an intro paragraph, etc.) goes in its own `[col class="span-all"]` *inside that same layout* — not in a loose `[txt]` above the `[layout]`.
+
+```
+[section name="services" style="2" width="full"]
+ [layout grid="5e"]
+  [col class="span-all"][txt]
+   <p class="eyebrow">Our Services</p>
+   <h2>Drainage Solutions That Work</h2>
+  [/txt][/col]
+  [col class="service-card"][txt] … [/txt][/col]
+  …four more service-card cols…
+ [/layout]
+[/section]
+```
+
 ### [layout] — Flex grid container
 ```
 [layout name="" grid="1-1" break="" valign="" class=""]
 ```
-- `grid` → column layout. Two notations:
+- `grid` → column layout. Three notations:
   - **Dash notation** (1–4 cols only): fractional ratios joined with dashes. Each number is a share of the total; col gets `share / total`.
     - `grid="1-1"` → 2 cols at 50% / 50%
     - `grid="1-1-1"` → 3 cols at 33% × 3
@@ -201,21 +220,31 @@ Delete the option to disable it. Default base template has these commented out.
   - **Equal notation** (5 or 6 cols only): `Ne` where N is the column count.
     - `grid="5e"` → 5 equal cols at 20%
     - `grid="6e"` → 6 equal cols at ~16.6%
-  - **Never use more than 6 columns.** Don't write `grid="1-1-1-1-1"` — use `grid="5e"`. Don't write `grid="7e"` or `grid="8e"`.
+  - **Custom track notation** (fixed + fluid mix): pass a raw CSS `grid-template-columns` value. Any `grid` string containing `px`, `em`, or `fr` triggers it — the layout renders as `<div class="flex grid-custom" style="grid-template-columns:…">`.
+    - `grid="150px 1fr 200px"` → fixed 150px left rail · fluid center · fixed 200px right rail
+    - `grid="1fr 1fr"` → two fluid equal columns
+    - Use this when columns aren't simple equal/ratio shares — e.g. decorative side images flanking a fluid content column (the image cols are fixed-width, the text col takes `1fr`). For plain ratio splits, stick with dash/equal notation.
+  - **Never use more than 6 columns** in dash/equal notation. Don't write `grid="1-1-1-1-1"` — use `grid="5e"`. Don't write `grid="7e"` or `grid="8e"`. (Custom track notation is exempt — it's for fixed-rail layouts, not wide column counts.)
 - `valign` → vertical alignment — values: `left`, `center`, `right` (never `middle`)
 - `gap` → **do not set this attribute.** Glendon adjusts column spacing via CSS in the rare cases it's needed. Same applies to `[col]`.
 - `break` → **do not set this attribute.** Glendon adds responsive breakpoints manually if/when needed. Same applies to `[col]`.
 
-### [nested] — Nested flex grid (inside a layout)
+**Critical rule — never nest `[layout]` inside `[layout]` (or inside a `[col]`).** It breaks the grid. `[layout]` emits a bare `<div class="flex grid-X">` whose grid CSS only works as the **direct child of a `[section]`** — drop a second `[layout]` inside a `[col]` and the inner grid renders wrong. Two correct options instead:
+1. **Flatten the grid (preferred).** Rethink the columns as a single layout. A `grid="1-2"` whose right col holds an inner `grid="1-1"` is really just three columns — write `grid="1-1-1"`. Most "I need a grid inside a grid" cases collapse this way, often with `h-span`/`v-span` to handle the odd spanning cell.
+2. **Use `[nested]` for a genuine sub-grid.** When a col truly must contain its own multi-column grid, that is the *only* supported nesting — see below. Glendon reaches for it rarely; try to flatten first.
+
+### [nested] — Sub-grid inside a `[col]` (the only supported nesting)
 ```
 [nested name="" grid="1" break="" valign="" class=""]
 ```
+`[nested]` is the **only** way to put a grid inside a `[col]`. It emits `<div class="flex nested grid-X">` — the `nested` class is what makes the grid CSS behave one level down; a plain `[layout]` in that spot lacks it and breaks (see the `[layout]` rule above). Same `grid` notation as `[layout]` (dash for 1–4, `Ne` for 5–6). Use it only when a sub-grid genuinely can't be flattened into the parent layout — most layouts should be a single `[layout]` of `[col]`s.
 
 ### [col] — Column inside a layout
 ```
 [col name="" class="" order="" break="" align="" valign="" h-span="" v-span="" background="" css="" hash="" start="" end="" track=""]
 ```
-- `h-span`/`v-span` → CSS grid span values
+- `h-span="N"` → the col spans **N columns** of the grid (`.col.h-span-N` → `grid-column: span N`). `v-span="N"` → spans **N rows** (`grid-row: span N`). The grid (`.flex.grid-*`) is a real CSS grid, so a single col can span multiple cells in either direction — e.g. in a `grid="1-1"`, give the heading col `h-span="2"` to make it span both columns while the rest of the cells flow normally.
+- `class="span-all"` → shorthand for "span the entire row" (`grid-column: 1 / -1`). Prefer this over `h-span="5"`/`h-span="6"` for a full-width header inside a multi-col grid — it's count-agnostic, so it keeps spanning the whole row no matter how many columns the layout has.
 - `order` → CSS order override
 - `align` / `valign` → values: `left`, `center`, `right` (never `middle`)
 - `gap` → **do not set.** Glendon tweaks via CSS only when needed.
@@ -262,6 +291,33 @@ The same rule applies to `[nested]` when it wraps multiple inline children. (`[g
 ```
 
 (Note the compact formatting — `[col …][txt]` and `[/txt][/col]` on the same line is fine for short blocks.)
+
+**A card IS the `[col]` — don't wrap it in another div.** Put the component class (`.service-card`, `.feature-card`, etc.) directly on the `[col]` and open a `[txt]` inside it. Do **not** write `[col]<div class="service-card">…</div>[/col]` — the extra wrapper is the exact `.col` / `.col-inner` the framework already gives you, just duplicated. An inner grouping div for *part* of the card (e.g. `<div class="service-text">` around the heading+paragraph+button) is fine; it's the *outer* card wrapper that's redundant.
+
+```
+[col class="service-card"][txt]
+ <div class="service-img"><img src="/wp-content/uploads/teaser-french-drains.webp" width="333" height="219" style="aspect-ratio:333/219" class="wp-image-7187" alt="">[get-icon type="french-drain"]</div>
+ <div class="service-text">
+  <h3>French Drains</h3>
+  <p>The most effective way to redirect groundwater and keep your property dry.</p>
+  [btn link="/french-drains/" class="learn-more" icon="arrow-right"]Learn More[/btn]
+ </div>
+[/txt][/col]
+```
+
+NOT:
+
+```
+[col][txt]
+ <div class="service-card">          ← redundant: this div is just .col-inner again
+  <h3>French Drains</h3> …
+ </div>
+[/txt][/col]
+```
+
+**When you flatten a wrapper `<div>`, move its CSS hook with it — don't let it vanish.** If the `<div>` you're removing carried styling (a `class` with a background, a `position:relative` context, a `::before`/`::after` connector or accent, a grid/flex declaration), that class and its CSS have to land on the element that replaces it — usually the `[col]` (via `class=""`) or the `[layout]` (yes, `[layout class="x"]` works → `<div class="flex grid-… x">`). Two traps specifically:
+- **Selector drift.** A rule written as `.journey .journey-step` (descendant of the old wrapper) stops matching once the wrapper is gone. Rewrite it against the new DOM — `#section-name .journey-step`, or whatever the surviving ancestor is.
+- **Positioned pseudo-elements lose their anchor.** An absolutely-positioned `::before`/`::after` (e.g. a connector line behind a row of icons) needs a `position:relative` ancestor. If that `position:relative` lived on the deleted wrapper, re-add it to the element now carrying the class (commonly the `[layout]`). And if the pseudo-element is positioned from the top of its host, keep section headings in a *separate* `[layout]` so the decorated grid's top still aligns with its own content row, not the heading.
 
 ### [img] — Image block wrapper
 ```
@@ -351,17 +407,20 @@ Spring/fall fall back to summer/winter if not set.
 - `link` → wraps the icon in `<a class="icon-btn">` (pair with `sr` for screen-reader text and `new-tab` to open in a new tab)
 - `grid` → if set with content, splits into a 2-col layout: icon on the left, content (auto-wrapped in `[txt]`) on the right. Empty content falls back to icon-only output.
 
-**Use `grid` for icon + stacked-text card patterns** (stat cards, feature pills, contact rows — anywhere the design is "icon on the left, two lines of text on the right"). Wrap a row of these in `<div class="icon-cards">` — no inner `<p>` or per-card class needed, just bare `[get-icon]` calls:
+**Use `grid` for icon + stacked-text card patterns** (stat cards, feature pills, contact rows — "icon on the left, one or two lines of text on the right"). `[get-icon type="x" grid="1-3"]<text>[/get-icon]` builds the whole icon+text card in one shortcode. The `grid` value is the icon-col : text-col ratio (`1-2`, `1-3`, …) — tune it to taste.
+
+**To lay a row of them out, give each its own `[col]` in a `[layout grid="Ne"]` — never a wrapping `<div>`.** Let the layout grid form the row; each feature is one `[col]` holding a single `[get-icon grid]`:
 
 ```
-<div class="icon-cards">
- [get-icon type="location-pin" grid="1-2"]<strong>Locally Owned</strong><br>Since 1995[/get-icon]
- [get-icon type="shield" grid="1-2"]<strong>Licensed &amp; Insured</strong><br>For Your Safety[/get-icon]
- [get-icon type="money-bag" grid="1-2"]<strong>Financing Available</strong><br>Easy &amp; Affordable[/get-icon]
-</div>
+[layout grid="4e" valign="center"]
+ [col class="cta-features"][get-icon type="checkmark-seal" grid="1-3"]<span><strong>FREE</strong><br>On-Site Estimates</span>[/get-icon][/col]
+ [col class="cta-features"][get-icon type="handshake" grid="1-3"]<span><strong>Honest,</strong><br>Upfront Pricing</span>[/get-icon][/col]
+ [col class="cta-features"][get-icon type="shield" grid="1-3"]<span><strong>Licensed</strong><br>&amp; Insured</span>[/get-icon][/col]
+ [col class="cta-features"][get-icon type="ribbon" grid="1-3"]<span><strong>100% Satisfaction</strong><br>Guaranteed</span>[/get-icon][/col]
+[/layout]
 ```
 
-This is preferred over manually writing `[layout grid="1-2"][col]<icon>[/col][col][txt]…[/txt][/col][/layout]` — `[get-icon grid="…"]` does the same thing in one shortcode, and the `<div class="icon-cards">` wrapper is what CSS targets to style the row + each card.
+Do **not** hand-build the row as `<div class="features"><div class="feature">[get-icon]…</div>…</div>` inside a single `[col]`. That fakes a grid the `[layout]`/`[col]` system already gives you — the same mistake as wrapping a card in a redundant div. **A row of repeated items = one `[col]` each in a `[layout grid="Ne"]`; let the grid do the layout, not stacked `<div>`s.**
 
 ### [get-universal-page] — Embed a universal page template
 ```
@@ -1051,6 +1110,94 @@ Key CSS variable groups (defined in `:root` in `style-site.css`):
 - `--font-primary`, `--font-secondary`, `--font-tertiary`, `--font-text`
 - Color palette: `--main-red`, `--main-blue`, `--black`, `--white`, `--light-grey`, etc.
 
+### Every `:hover` rule must also style `.active` and `.tab-focus` (ADA)
+
+The framework is built for ADA/keyboard compliance: when a user tabs to an element, the framework applies `.active` / `.tab-focus` classes to it so it can show the **same** affordance a mouse user gets on hover. So **any selector you write with `:hover` must include matching `.active` and `.tab-focus` selectors** — never style `:hover` alone, or keyboard users get no visible focus state.
+
+```css
+a:hover,
+a.active,
+a.tab-focus {
+	color: var(--blue);
+}
+```
+
+This applies to **every** hoverable element, not just links — buttons, cards, icons, menu items, etc. Pattern: for any `X:hover`, add `X.active, X.tab-focus` alongside it.
+
+```css
+.service-card:hover,
+.service-card.active,
+.service-card.tab-focus {
+	box-shadow: 0 8px 24px rgba(0,0,0,.15);
+}
+```
+
+### Buttons are variable-driven — set `--button-*`, don't override `.button` directly
+
+The framework's `.button` (and form-submit) styling is entirely CSS-custom-property driven. To restyle buttons in a scope, **set the `--button-*` variables on that scope** instead of writing `background`/`color`/`border` on `a.button`. Every visual property has a `-hover` companion, so you also **don't need a separate `:hover, :active, .tab-focus` block** — the framework already wires all those states (including the ADA `.tab-focus`/`.active` classes) to the `-hover` variables.
+
+```css
+#products .span-all a.button {
+	--button-background:        var(--main-red);
+	--button-border:            2px solid var(--main-red);
+	--button-color:             var(--white);
+
+	--button-background-hover:  var(--black);
+	--button-border-hover:      2px solid var(--black);
+	--button-color-hover:       var(--yellow);
+}
+```
+
+That single block replaces *both* the base rule and the hand-written hover/active/tab-focus rule.
+
+Common variables (each has a matching `--…-hover` that defaults to the base value if unset):
+- `--button-color`, `--button-background`, `--button-border` (full border shorthand, e.g. `2px solid …`; default `none`)
+- `--button-border-radius`, `--button-padding`, `--button-box-shadow`, `--button-transform`
+- `--button-font-family`, `--button-font-size`, `--button-font-weight`, `--button-text-transform`, `--button-letter-spacing`, `--button-text-shadow`, `--button-outline`, `--button-filter`
+- `--button-transition`
+
+Set only the ones you're changing; the rest inherit framework defaults. **Don't** write `a.button { background: … }` plus a separate `:hover` block — that bypasses the variable system and re-does work the framework already handles. (Note: it's `--button-border`, not `--butotn-border`.)
+
+### Styled lists — use the framework `.bullet` system, don't hand-roll list CSS
+
+The framework ships a bullet/icon-list system (in `style.css`). For a checkmark/icon list, add a base class + a glyph modifier to the `<ul>` — **do not** build `<li>` rows out of `[get-icon]` + `<span>` + custom flex CSS. One class swaps the marker; no per-item markup.
+
+```
+<ul class="why-list bullet bullet-check">
+ <li><strong>Rapid Response</strong> — Our fleet is ready to dispatch statewide.</li>
+ <li><strong>Compliance Experts</strong> — We help you meet NFPA and state requirements.</li>
+</ul>
+```
+
+**Base classes** (pick one):
+- `bullet` — hanging marker; label + description stay inline on one line.
+- `bullet-list` — same, but a leading `<strong>`/`<b>` breaks onto its own line (label above, text below).
+- `fancy-list` — two-column: bold label in a fixed 160px column, text beside it.
+
+**Glyph modifiers** (combine with a base class — set the `::before` marker):
+| Class | Marker |
+|---|---|
+| *(none)* | `●` filled circle |
+| `bullet-check` | ✔ |
+| `bullet-square` | ■ |
+| `bullet-diamond` | ♦ |
+| `bullet-warning` | ⚠️ |
+| `bullet-image` | image marker (default `/wp-content/uploads/site-icon-80x80.webp`) |
+| `bullet-svg` | SVG-mask marker, tintable via `currentColor` (default = arrow) |
+
+The marker inherits the list's text color. To tint **just** the marker, one rule does it (replacing all the hand-rolled flex/icon CSS): `#why-choose .why-list li::before { color: var(--yellow); }`.
+
+**Custom marker icon:** use `bullet-svg` plus an extra modifier class of your choosing, then supply the SVG as a mask in a single rule (the marker fills with `currentColor`, so `color` tints it):
+
+```css
+ul.bullet-svg.bullet-arrow li::before {
+	-webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path d='M508 256 336 428l-28-31 117-114-3-5H4v-45h421L305 113l31-29 172 172z'/></svg>") no-repeat center;
+	mask:         url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path d='M508 256 336 428l-28-31 117-114-3-5H4v-45h421L305 113l31-29 172 172z'/></svg>") no-repeat center;
+}
+```
+
+Then write `<ul class="bullet bullet-svg bullet-arrow">…</ul>`.
+
 ### Conventions for `style-site.css` when designing pages
 
 The base `style-site.css` ships with a fixed skeleton of empty selectors (Header, Content, Sections, Footer, Icons & Social, Site Navigation, Mobile Styles, etc.). When building out a site, **fill in those selectors — don't add parallel ones**.
@@ -1128,7 +1275,7 @@ Write selectors against the HTML the shortcodes actually emit, not against the s
 | `[btn class="c"]Label[/btn]` | `<div class="block block-button span-100 c"><a class="button c">Label</a></div>` — the class lands on **both** the wrapper div and the `<a>`. |
 | `[img class="c"]` | `<div class="block block-image span-100 c">…</div>` |
 | `[get-icon type="t"]` | `<span class="icon t"><svg class="icon-svg icon-t">…</svg></span>` — SVG fills via `currentColor`, so set `color` (not `fill`). |
-| `[get-icon type="t" grid="1-2"]TXT[/get-icon]` | `<div class="icon-card"><div><span class="icon t">…</span></div><div>TXT</div></div>` — **one `.icon-card` per call.** Wrap a row of them in your own `<div class="icon-cards">` and grid that. |
+| `[get-icon type="t" grid="1-2"]TXT[/get-icon]` | `<div class="icon-card"><div><span class="icon t">…</span></div><div>TXT</div></div>` — **one `.icon-card` per call.** To lay out a row of them, put each in its own `[col]` of a `[layout grid="Ne"]`; don't wrap them in a `<div>`. |
 
 Practical consequences:
 - Per-section styling hangs off `#section-name` (from `name`); reusable strip backgrounds off `.section.style-N`. There is **no** `.section.{name}` class.

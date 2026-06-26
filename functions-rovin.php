@@ -63,10 +63,20 @@ add_filter('bp_feedback_brand', function ($brand, $ctx) {
 // my visit" still triggers), mirroring the old complaint detector. Signs the exact bytes it posts.
 add_action('bp_form_after_send', 'bp_feedback_forward_submission', 10, 3);
 function bp_feedback_forward_submission($email, $ctx, $sent) {
+    // Temporary diagnostics so we can see WHY a submission did/didn't forward. Disable with
+    // add_filter('bp_feedback_debug','__return_false'); once the pipeline is confirmed working.
+    $debug = (bool) apply_filters('bp_feedback_debug', true);
+    $log   = function ($m) use ($debug) { if ($debug) error_log('[bp_feedback] ' . $m); };
+
     $endpoint = (string) apply_filters('bp_feedback_forward_url', '');
     $secret   = (string) apply_filters('bp_feedback_forward_secret', '');
     $forward  = array_map('strtolower', (array) apply_filters('bp_feedback_forward_categories', []));
-    if ($endpoint === '' || $secret === '' || empty($forward)) return;
+    if ($endpoint === '' || $secret === '' || empty($forward)) {
+        $log('skip (unconfigured): endpoint=' . ($endpoint !== '' ? 'set' : 'EMPTY')
+            . ' secret=' . ($secret !== '' ? 'set' : 'EMPTY')
+            . ' categories=' . count($forward) . ' site=' . ($_SERVER['HTTP_HOST'] ?? ''));
+        return;
+    }
 
     $fields     = $ctx['fields'] ?? [];
     $field_name = (string) apply_filters('bp_feedback_category_field', 'user-category');
@@ -82,12 +92,18 @@ function bp_feedback_forward_submission($email, $ctx, $sent) {
         }
     }
 
+    $log('submission: form=' . ($ctx['form_id'] ?? '?') . ' field="' . $field_name . '" category="' . $category
+        . '" available_fields=[' . implode(',', array_keys($fields)) . ']');
+
     $cat_l = strtolower(trim($category));
     $hit   = false;
     foreach ($forward as $f) {
         if ($f !== '' && $cat_l !== '' && strpos($cat_l, $f) !== false) { $hit = true; break; }
     }
-    if (!$hit) return;
+    if (!$hit) {
+        $log('skip (no category match): "' . $cat_l . '" not in [' . implode(',', $forward) . ']');
+        return;
+    }
 
     $payload = [
         'site'      => $_SERVER['HTTP_HOST'] ?? '',
@@ -116,8 +132,11 @@ function bp_feedback_forward_submission($email, $ctx, $sent) {
 
     $code = is_wp_error($res) ? 0 : (int) wp_remote_retrieve_response_code($res);
     if ($code < 200 || $code >= 300) {
-        $err = is_wp_error($res) ? $res->get_error_message() : ('HTTP ' . $code);
-        error_log('[bp_feedback] forward FAILED (' . $err . ') site=' . ($_SERVER['HTTP_HOST'] ?? '') . ' cat=' . $category);
+        $err  = is_wp_error($res) ? $res->get_error_message() : ('HTTP ' . $code);
+        $body = is_wp_error($res) ? '' : wp_remote_retrieve_body($res);
+        error_log('[bp_feedback] forward FAILED (' . $err . ') endpoint=' . $endpoint . ' cat=' . $category . ' resp=' . substr((string) $body, 0, 300));
+    } else {
+        $log('forward OK (' . $code . ') endpoint=' . $endpoint . ' cat=' . $category);
     }
 }
 

@@ -17,15 +17,18 @@ function sp_msg_contacts( int $exclude_user_id ): array {
 	global $wpdb;
 	$rows = $wpdb->get_results( "SELECT user_id, role_id, location_id FROM " . site_pulse_table( 'user_profiles' ) . " WHERE status = 'active'", ARRAY_A ) ?: [];
 	$out  = [];
+	$see_super = site_pulse_can_see_superadmin( $exclude_user_id ); // viewer is the one starting the message
 	foreach ( $rows as $r ) {
 		$uid = (int) $r['user_id'];
 		if ( $uid === $exclude_user_id ) continue;
 		$u = get_userdata( $uid );
 		if ( ! $u ) continue;
+		if ( ! $see_super && $u->user_login === 'battleplanweb' ) continue; // protected superadmin
+
 		$role = site_pulse_get_role( (int) $r['role_id'] );
 		$loc  = (int) $r['location_id'] ? site_pulse_get_location( (int) $r['location_id'] ) : null;
 		$meta = trim( ( $role ? $role['label'] : '' ) . ( $loc ? ' · ' . $loc['name'] : '' ) );
-		$out[] = [ 'id' => $uid, 'name' => $u->display_name, 'meta' => $meta ];
+		$out[] = [ 'id' => $uid, 'name' => site_pulse_display_name( $u ), 'meta' => $meta ];
 	}
 	usort( $out, fn( $a, $b ) => strcmp( $a['name'], $b['name'] ) );
 	return $out;
@@ -33,7 +36,7 @@ function sp_msg_contacts( int $exclude_user_id ): array {
 
 function sp_msg_user( int $uid ): array {
 	$u = get_userdata( $uid );
-	return [ 'id' => $uid, 'name' => $u ? $u->display_name : 'Unknown user' ];
+	return [ 'id' => $uid, 'name' => $u ? site_pulse_display_name( $u ) : 'Unknown user' ];
 }
 
 // Participant user IDs of a conversation.
@@ -167,9 +170,11 @@ function site_pulse_ajax_messages_conversations(): void {
 	$m  = site_pulse_table( 'messages' );
 
 	$rows = $wpdb->get_results( $wpdb->prepare(
-		"SELECT c.id, c.is_group, c.title, c.updated_at, p.last_read_message_id
+		"SELECT c.id, c.is_group, c.title, c.updated_at, p.last_read_message_id,
+		        (SELECT MAX(id) FROM $m WHERE conversation_id = c.id) AS last_msg_id
 		 FROM $c c JOIN $cp p ON p.conversation_id = c.id AND p.user_id = %d
-		 ORDER BY c.updated_at DESC LIMIT 200",
+		 WHERE p.hidden_at IS NULL OR c.updated_at > p.hidden_at
+		 ORDER BY last_msg_id DESC, c.updated_at DESC LIMIT 200",
 		$me
 	), ARRAY_A ) ?: [];
 
@@ -295,7 +300,11 @@ function site_pulse_ajax_messages_start_dm(): void {
 	$other = (int) ( $_POST['user_id'] ?? 0 );
 	if ( ! $me || ! $other || $other === $me ) wp_send_json_error( [ 'message' => 'Invalid recipient.' ] );
 	if ( ! site_pulse_get_user_profile( $other ) ) wp_send_json_error( [ 'message' => 'That user can’t receive messages.' ] );
-	wp_send_json_success( [ 'conversation_id' => sp_msg_find_or_create_dm( $me, $other ) ] );
+	$cid = sp_msg_find_or_create_dm( $me, $other );
+	// Reopening a DM the user previously deleted un-hides it for them.
+	global $wpdb;
+	$wpdb->update( site_pulse_table( 'conversation_participants' ), [ 'hidden_at' => null ], [ 'conversation_id' => $cid, 'user_id' => $me ] );
+	wp_send_json_success( [ 'conversation_id' => $cid ] );
 }
 
 // Create a group thread with a title + members (creator included) → returns the conversation id.
@@ -363,6 +372,19 @@ function site_pulse_ajax_messages_leave(): void {
 	global $wpdb;
 	$wpdb->delete( site_pulse_table( 'conversation_participants' ), [ 'conversation_id' => $cid, 'user_id' => $me ] );
 	wp_send_json_success( [ 'left' => true ] );
+}
+
+// Delete a thread FOR THIS USER only — hides it from their list without affecting anyone else. It comes
+// back (unread) if a new message arrives, since the list shows threads whose updated_at beats hidden_at.
+add_action( 'wp_ajax_site_pulse_messages_delete_thread', 'site_pulse_ajax_messages_delete_thread' );
+function site_pulse_ajax_messages_delete_thread(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$me  = site_pulse_effective_user_id();
+	$cid = (int) ( $_POST['conversation_id'] ?? 0 );
+	if ( ! $me || ! $cid || ! sp_msg_is_participant( $cid, $me ) ) wp_send_json_error( [ 'message' => 'Conversation not found.' ] );
+	global $wpdb;
+	$wpdb->update( site_pulse_table( 'conversation_participants' ), [ 'hidden_at' => current_time( 'mysql' ) ], [ 'conversation_id' => $cid, 'user_id' => $me ] );
+	wp_send_json_success( [ 'deleted' => true ] );
 }
 
 // Shared guard: returns the conversation row if it's a group and $me created it, else errors out.
@@ -501,7 +523,7 @@ function site_pulse_ajax_messages_upload_send(): void {
 // written to the notifications table. The bell is reserved for system notifications.
 function sp_msg_notify_participants( int $conv_id, int $sender_id, string $body ): void {
 	$sender = get_userdata( $sender_id );
-	$name   = $sender ? $sender->display_name : 'Someone';
+	$name   = $sender ? site_pulse_display_name( $sender ) : 'Someone';
 	$meta   = sp_msg_conversation_meta( $conv_id, $sender_id );
 	$prefix = $meta['is_group'] ? sprintf( '%s in %s', $name, $meta['title'] ) : $name;
 
@@ -673,14 +695,17 @@ function site_pulse_ajax_messages_action_create(): void {
 	$due     = date( 'Y-m-d', strtotime( '+14 days' ) );
 	$me_name = sp_msg_user( $me )['name'];
 	$created = 0;
+	$multi   = count( $assignees ) > 1; // same item assigned to several people → link the rows so completing one closes all
+	$groups  = [];                      // per-item shared group_id (same across assignees)
 
 	foreach ( $assignees as $uid ) {
 		$prof = site_pulse_get_user_profile( $uid );
 		$loc  = $prof ? (int) $prof['location_id'] : 0;
-		foreach ( array_slice( $items, 0, 10 ) as $it ) {
+		foreach ( array_slice( $items, 0, 10 ) as $ix => $it ) {
 			$desc = trim( (string) ( $it['description'] ?? '' ) );
 			if ( $desc === '' ) continue;
 			$priority = in_array( $it['priority'] ?? '', [ 'high', 'medium', 'low' ], true ) ? $it['priority'] : 'medium';
+			if ( $multi && ! isset( $groups[ $ix ] ) ) $groups[ $ix ] = wp_generate_password( 20, false );
 			$wpdb->insert( site_pulse_table( 'action_items' ), [
 				'report_id'   => 0,
 				'user_id'     => $uid,
@@ -691,6 +716,7 @@ function site_pulse_ajax_messages_action_create(): void {
 				'priority'    => $priority,
 				'status'      => 'open',
 				'due_date'    => $due,
+				'group_id'    => $multi ? $groups[ $ix ] : null,
 				'created_at'  => $now,
 				'updated_at'  => $now,
 			] );

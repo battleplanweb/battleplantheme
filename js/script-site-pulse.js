@@ -1248,6 +1248,33 @@ async function loadMsgConversations() {
 	$$('.sp-msg-convo', list).forEach(b => b.addEventListener('click', () => openMsgConversation(parseInt(b.dataset.cid, 10))));
 }
 
+// Return from an open thread to the conversation list (the mobile "Back" action; on desktop it just
+// clears the active thread pane). Drops the full-screen overlay and refreshes the list + badges.
+function spMsgBackToList() {
+	$('#sp-messenger')?.classList.remove('thread-open');
+	_spMsg.cid = 0;
+	renderMsgThreadEmpty();
+	loadMsgConversations();
+	loadMsgUnread();
+}
+
+// If the conversation name is wider than its header slot, slowly pan it left to reveal the end, then
+// back — a gentle marquee. Static (no animation) when the name already fits.
+function spMsgMarqueeTitle(thread) {
+	const title = $('.sp-msg-thread-title', thread);
+	if (!title) return;
+	const wrap = title.parentElement;
+	title.classList.remove('sp-marquee');
+	title.style.removeProperty('--sp-marquee-shift');
+	title.style.removeProperty('animation-duration');
+	const shift = title.scrollWidth - wrap.clientWidth;
+	if (shift > 6) {
+		title.style.setProperty('--sp-marquee-shift', `-${shift}px`);
+		title.style.animationDuration = Math.max(9, (shift / 22) + 6) + 's'; // pace by overshoot, never frantic
+		title.classList.add('sp-marquee');
+	}
+}
+
 async function openMsgConversation(cid) {
 	_spMsg.cid = cid;
 	const thread = $('#sp-msg-thread');
@@ -1258,6 +1285,7 @@ async function openMsgConversation(cid) {
 		if (!res.success) { thread.innerHTML = '<div class="sp-msg-empty">Could not load this conversation.</div>'; return; }
 		_spMsg.meta = res.data.conversation;
 		renderMsgThread(res.data);
+		$('#sp-messenger')?.classList.add('thread-open'); // mobile: show the thread as a full-screen overlay
 		loadMsgConversations();
 		loadMsgUnread();
 		// Reading this thread clears its push notification from the shade (and drops the icon badge by one).
@@ -1274,8 +1302,15 @@ function renderMsgThread(data) {
 	if (!thread) return;
 	const conv = data.conversation || {};
 	const isGroup = !!conv.is_group;
-	let html = `<div class="sp-msg-thread-header"><span class="sp-msg-thread-title">${esc(conv.title || 'Conversation')}</span>`;
-	if (isGroup) html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-msg-manage">${(conv.participants || []).length} members</button>`;
+	let html = '<div class="sp-msg-thread-header">';
+	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-msg-back" title="Back to messages" aria-label="Back to messages">&#8592;</button>';
+	html += '<div class="sp-msg-thread-heading">';
+	if (isGroup) html += `<button type="button" class="unique sp-msg-members sp-msg-manage">${(conv.participants || []).length} members</button>`;
+	html += `<div class="sp-msg-thread-title-wrap"><span class="sp-msg-thread-title">${esc(conv.title || 'Conversation')}</span></div>`;
+	html += '</div>';
+	html += '<span class="sp-msg-thread-actions">';
+	html += `<button type="button" class="unique sp-icon-btn sp-icon-delete sp-msg-delete" title="Delete this conversation from your list" aria-label="Delete conversation">${ICON_DELETE}</button>`;
+	html += '</span>';
 	html += '</div>';
 	html += '<div class="sp-msg-bubbles" id="sp-msg-bubbles">';
 	(data.messages || []).forEach(m => { html += msgBubbleHTML(m, isGroup); });
@@ -1298,14 +1333,22 @@ function renderMsgThread(data) {
 		for (const m of (data.messages || [])) {
 			if (!m.mine && parseInt(m.id, 10) > lastRead) { firstUnread = m.id; break; }
 		}
-		const el = firstUnread != null ? bubbles.querySelector(`.sp-msg-bubble[data-id="${firstUnread}"]`) : null;
-		if (el) {
-			// Pin the first unread message near the top of the thread (confined to the bubbles scroller).
-			const top = el.getBoundingClientRect().top - bubbles.getBoundingClientRect().top + bubbles.scrollTop;
-			bubbles.scrollTop = Math.max(0, top - 8);
-		} else {
-			bubbles.scrollTop = bubbles.scrollHeight; // all caught up → jump to the latest
-		}
+		const pinScroll = () => {
+			const el = firstUnread != null ? bubbles.querySelector(`.sp-msg-bubble[data-id="${firstUnread}"]`) : null;
+			if (el) {
+				// Pin the first unread message near the top of the thread (confined to the bubbles scroller).
+				const top = el.getBoundingClientRect().top - bubbles.getBoundingClientRect().top + bubbles.scrollTop;
+				bubbles.scrollTop = Math.max(0, top - 8);
+			} else {
+				bubbles.scrollTop = bubbles.scrollHeight; // all caught up → jump to the latest
+			}
+		};
+		// iOS Safari hasn't laid the bubbles out yet on the same tick as innerHTML, so scrollTop here is a
+		// no-op (lands at the top). Defer past layout (double rAF), then re-pin once any images/attachments
+		// finish loading and shift the heights.
+		requestAnimationFrame(() => requestAnimationFrame(pinScroll));
+		setTimeout(pinScroll, 80);
+		bubbles.querySelectorAll('img').forEach(img => { if (!img.complete) img.addEventListener('load', pinScroll, { once: true }); });
 	}
 
 	$('#sp-msg-composer', thread)?.addEventListener('submit', (e) => { e.preventDefault(); sendMsg(); });
@@ -1330,7 +1373,17 @@ function renderMsgThread(data) {
 	input?.focus();
 	const fileInput = $('#sp-msg-file', thread);
 	fileInput?.addEventListener('change', () => { if (fileInput.files && fileInput.files[0]) { uploadMsgFile(fileInput.files[0]); fileInput.value = ''; } });
+	$('.sp-msg-back', thread)?.addEventListener('click', () => spMsgBackToList());
 	$('.sp-msg-manage', thread)?.addEventListener('click', () => openGroupManage(conv));
+	// Slowly scroll a too-long name back and forth so it can be read in full. Deferred past layout (and
+	// past the mobile full-screen overlay class) so the available width is measured correctly.
+	requestAnimationFrame(() => spMsgMarqueeTitle(thread));
+	$('.sp-msg-delete', thread)?.addEventListener('click', async () => {
+		if (!confirm('Delete this conversation from your list? It will reappear if a new message arrives.')) return;
+		const r = await spAjax('site_pulse_messages_delete_thread', { conversation_id: conv.id });
+		if (r.success) { spMsgBackToList(); }
+		else alert(r.data?.message || 'Could not delete.');
+	});
 	spMsgInitMic(thread);
 
 	// "Seen" dwell: track the latest message and arm the 3s timer.
@@ -1411,7 +1464,7 @@ async function openMsgNew() {
 	html += '<div id="sp-msg-new-grouprow" hidden style="margin-bottom:10px;"><input type="text" class="sp-input" id="sp-msg-new-title" placeholder="Group name (optional)"></div>';
 	html += '<div class="sp-msg-contacts" id="sp-msg-new-list">';
 	contacts.forEach(c => {
-		html += `<label class="sp-msg-contact-pick"><input type="checkbox" class="sp-msg-pick" value="${c.id}" data-name="${esc(c.name)}"><span class="sp-msg-contact-name">${esc(c.name)}</span>${c.meta ? `<span class="sp-msg-contact-meta">${esc(c.meta)}</span>` : ''}</label>`;
+		html += `<label class="sp-msg-contact-pick"><input type="checkbox" class="sp-msg-pick" value="${c.id}" data-name="${esc(c.name)}"><span class="sp-msg-contact-name">${esc(c.name)}</span></label>`;
 	});
 	html += '</div>';
 	html += '<div class="sp-report-form-actions" style="margin-top:12px;"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-msg-new-start" disabled>Start conversation</button></div>';
@@ -1512,7 +1565,7 @@ async function openGroupManage(conv) {
 	$('#sp-msg-leave-btn', backdrop)?.addEventListener('click', async () => {
 		if (!confirm('Leave this group?')) return;
 		const r = await spAjax('site_pulse_messages_leave', { conversation_id: conv.id });
-		if (r.success) { closeFormModal(); _spMsg.cid = 0; renderMsgThreadEmpty(); loadMsgConversations(); loadMsgUnread(); }
+		if (r.success) { closeFormModal(); spMsgBackToList(); }
 		else alert(r.data?.message || 'Could not leave.');
 	});
 }
@@ -2063,9 +2116,14 @@ function renderReportDetail(wrap, report, answers, fields, location, author, pan
 	if (canEdit) {
 		html += iconBtn('edit', 'sp-detail-edit', `data-report-id="${report.id}" title="Edit report"`);
 	}
-	// GOD only: reassign attribution (fix a wrong AI-matched author/store) and permanently delete.
+	// GOD only: reassign attribution (fix a wrong AI-matched author/store), edit content (temporary —
+	// for fixing PDF/JPG-imported reports), and permanently delete. The edit button shows in the
+	// review (GM Reports) view, where the normal author-edit button isn't available.
 	if (D.isGod) {
 		html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-detail-reassign" data-report-id="${report.id}" title="Reassign submitter / store">Reassign</button>`;
+		if (panelPrefix) {
+			html += iconBtn('edit', 'sp-detail-god-edit', `data-report-id="${report.id}" title="Edit report (Odin only)"`);
+		}
 		html += iconBtn('delete', 'sp-detail-god-delete', `data-report-id="${report.id}" title="Delete report (Odin only)"`);
 	}
 	// Status pill sits inline, to the right of the actions — only a draft shows one.
@@ -2131,6 +2189,7 @@ function renderReportDetail(wrap, report, answers, fields, location, author, pan
 	$('.sp-detail-new-btn', wrap)?.addEventListener('click', () => showReportForm());
 	$('.sp-detail-edit', wrap)?.addEventListener('click', () => showReportForm(report));
 	$('.sp-detail-reassign', wrap)?.addEventListener('click', () => spOpenReassign(report, author, location, panelPrefix));
+	$('.sp-detail-god-edit', wrap)?.addEventListener('click', () => spGodEditReport(report, panelPrefix));
 
 	$('.sp-detail-god-delete', wrap)?.addEventListener('click', async (e) => {
 		const btn = e.currentTarget;
@@ -2221,6 +2280,93 @@ async function spOpenReassign(report, author, location, panelPrefix) {
 				if (panelPrefix === 'review') loadReviewReports(); else loadReports();
 			} else { alert(res.data?.message || 'Could not reassign.'); if (btn) btn.disabled = false; }
 		} catch (e) { alert('Could not reassign.'); if (btn) btn.disabled = false; }
+	});
+}
+
+// GOD-only editor (temporary) — fix a report imported from PDF/JPG: its date, submitter, location,
+// AND field values, in one save. Self-contained modal so it works from the GM Reports (review) view.
+async function spGodEditReport(report, panelPrefix) {
+	const backdrop = spFormModal();
+	backdrop.innerHTML = '<div class="sp-report-form-wrap"><div class="sp-loading"></div></div>';
+
+	let data, opts;
+	try {
+		const [detRes, optRes] = await Promise.all([
+			spAjax('site_pulse_get_report_detail', { report_id: report.id }),
+			spAjax('site_pulse_god_report_options', {}),
+		]);
+		if (!detRes.success) throw new Error();
+		data = detRes.data;
+		opts = (optRes && optRes.success) ? optRes.data : { users: [], locations: [] };
+	} catch (e) {
+		backdrop.innerHTML = '<div class="sp-report-form-wrap"><p>Could not load the report.</p><div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-btn-ghost sp-ger-cancel">Close</button></div></div>';
+		$('.sp-ger-cancel', backdrop)?.addEventListener('click', () => closeFormModal());
+		return;
+	}
+
+	const fields = data.fields || [];
+	const template = data.template || {};
+	const rpt = data.report || report;
+	const isSupervisor = template.required_role_slug === 'supervisor'; // supervisor reports have no location
+	const answerMap = {};
+	(data.answers || []).forEach(a => { answerMap[a.field_key] = a.answer_text || ''; });
+	const dateVal = String(rpt.report_period_start || '').split(' ')[0].split('T')[0];
+
+	let html = '<div class="sp-report-form-wrap">';
+	html += '<div class="sp-report-form-header"><h3>Edit Report</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-ger-cancel">Cancel</button></div>';
+	html += '<p class="sp-help-text" style="margin:0 0 12px;">Fix the imported report — date, submitter, location, and any field values.</p>';
+
+	// Attribution row: date · submitted by · location.
+	html += '<div class="sp-ger-attr">';
+	html += `<div class="sp-ger-col"><label class="sp-field-label">Report date</label><input type="date" class="sp-input sp-ger-date" value="${dateVal}"></div>`;
+	html += '<div class="sp-ger-col"><label class="sp-field-label">Submitted by</label><select class="sp-select sp-ger-user">'
+		+ (opts.users || []).map(u => `<option value="${u.id}"${u.id === +rpt.user_id ? ' selected' : ''}>${esc(u.name)}${u.meta ? ' — ' + esc(u.meta) : ''}</option>`).join('')
+		+ '</select></div>';
+	if (!isSupervisor) {
+		html += '<div class="sp-ger-col"><label class="sp-field-label">Location</label><select class="sp-select sp-ger-loc"><option value="0">—</option>'
+			+ (opts.locations || []).map(l => `<option value="${l.id}"${l.id === +rpt.location_id ? ' selected' : ''}>${esc(l.name)}</option>`).join('')
+			+ '</select></div>';
+	}
+	html += '</div>';
+
+	// Field answers.
+	let currentSection = '';
+	fields.forEach(f => {
+		if (f.section && f.section !== currentSection) {
+			currentSection = f.section;
+			html += `<h4 class="sp-form-section-title">${esc(currentSection)}</h4>`;
+		}
+		html += '<div class="sp-form-group">';
+		html += `<label class="sp-field-label">${esc(f.label)}</label>`;
+		html += `<textarea class="sp-input sp-ger-field" data-key="${esc(f.field_key)}" rows="3">${esc(answerMap[f.field_key] || '')}</textarea>`;
+		html += '</div>';
+	});
+
+	html += '<div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-btn-primary sp-ger-save">Save Changes</button><button type="button" class="unique sp-btn sp-btn-ghost sp-ger-cancel">Cancel</button></div>';
+	html += '</div>';
+	backdrop.innerHTML = html;
+	markUniqueSpans(backdrop);
+
+	$$('.sp-ger-cancel', backdrop).forEach(b => b.addEventListener('click', () => closeFormModal()));
+	$('.sp-ger-save', backdrop)?.addEventListener('click', async () => {
+		const answers = {};
+		$$('.sp-ger-field', backdrop).forEach(t => { answers[t.dataset.key] = t.value; });
+		const save = $('.sp-ger-save', backdrop);
+		if (save) { save.disabled = true; save.textContent = 'Saving…'; }
+		try {
+			const res = await spAjax('site_pulse_god_edit_report', {
+				report_id: report.id,
+				user_id: $('.sp-ger-user', backdrop)?.value || rpt.user_id,
+				location_id: isSupervisor ? (rpt.location_id || 0) : ($('.sp-ger-loc', backdrop)?.value || 0),
+				report_date: $('.sp-ger-date', backdrop)?.value || '',
+				answers: answers,
+			});
+			if (res.success) {
+				closeFormModal();
+				if (panelPrefix === 'review') loadReviewReports(); else loadReports();
+				showReportDetail(report.id, panelPrefix);   // reload the detail with the fixes
+			} else { alert(res.data?.message || 'Could not save.'); if (save) { save.disabled = false; save.textContent = 'Save Changes'; } }
+		} catch (e) { alert('Could not save.'); if (save) { save.disabled = false; save.textContent = 'Save Changes'; } }
 	});
 }
 
@@ -2537,7 +2683,7 @@ function renderSurveyLocationChart(data) {
 	}
 
 	if (!data || !data.locations || !data.locations.length) {
-		if (body) body.innerHTML = '<div class="sp-widget-empty">No surveys yet.</div>';
+		if (body) body.innerHTML = '<div class="sp-widget-empty">No comment cards yet.</div>';
 		return;
 	}
 	if (sel && !sel.dataset.filled) {
@@ -5313,8 +5459,17 @@ async function onEmailsListClick(e) {
 
 function esc(str) {
 	if (!str) return '';
+	let s = String(str);
+	// Some sources (e.g. Google review text) arrive already HTML-encoded — "it&#39;s", "Babe&amp;s".
+	// Decode once first so we don't double-encode and render the raw entity. Only when an "&" is
+	// present, to keep the common (entity-free) case cheap.
+	if (s.indexOf('&') !== -1) {
+		const d = document.createElement('textarea');
+		d.innerHTML = s;
+		s = d.value;
+	}
 	const el = document.createElement('span');
-	el.textContent = String(str);
+	el.textContent = s;
 	return el.innerHTML;
 }
 
@@ -5798,6 +5953,12 @@ const SP_GOOGLE_ICON =
 		'<path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>' +
 	'</svg>';
 
+// Facebook recommendation badge (used in place of the Google icon on FB review cards).
+const SP_FB_ICON =
+	'<svg class="unique sp-review-platform-icon" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">' +
+		'<path fill="#1877F2" d="M24 12c0-6.627-5.373-12-12-12S0 5.373 0 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078V12h3.047V9.356c0-3.007 1.792-4.668 4.533-4.668 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874V12h3.328l-.532 3.469h-2.796v8.385C19.612 22.954 24 17.99 24 12z"/>' +
+	'</svg>';
+
 // AI sentiment chips: each tag is { label, sentiment } → green (positive) / red (negative) / grey (neutral).
 function renderReviewTags(tags) {
 	if (!Array.isArray(tags) || !tags.length) return '';
@@ -5918,6 +6079,11 @@ function onReviewListClick(e) {
 	}
 }
 
+// Swap em-dashes (—, with any spaces around them) for an ellipsis before a drafted reply hits the box.
+function spReplaceEmDash(s) {
+	return String( s == null ? '' : s ).replace(/\s*—\s*/g, '... ');
+}
+
 // Draft (or regenerate) an AI reply into the form's textarea, in the brand voice. Editable before posting.
 async function generateReviewReply(id, form) {
 	const ta    = form?.querySelector('textarea');
@@ -5930,7 +6096,7 @@ async function generateReviewReply(id, form) {
 	if (save) save.disabled = true;
 	try {
 		const res = await spAjax('site_pulse_generate_review_reply', { review_id: id });
-		if (res.success && res.data.reply) ta.value = res.data.reply;
+		if (res.success && res.data.reply) ta.value = spReplaceEmDash(res.data.reply);
 		else { ta.value = prev; spFlash(res.data?.message || 'Could not draft a reply.'); }
 	} catch (e) {
 		ta.value = prev;
@@ -5988,11 +6154,59 @@ function initAgencyReviews() {
 	const panel = $('#sp-panel-agency-reviews');
 	if (!panel) return;
 	$('#sp-agency-reviews-refresh-btn')?.addEventListener('click', () => loadAgencyReviews(true));
-	$('#sp-agency-filter-client')?.addEventListener('change', renderAgencyReviews);
+	$('#sp-agency-filter-client')?.addEventListener('change', () => {
+		// Keep the search box in sync when the dropdown is used directly.
+		const sel = $('#sp-agency-filter-client'), inp = $('#sp-agency-client-search');
+		if (inp) inp.value = sel.value ? (spAgencyClients.find(c => c.site_key === sel.value)?.label || '') : '';
+		renderAgencyReviews();
+	});
+	$('#sp-agency-client-search')?.addEventListener('input', agencyClientSearch);
 	$('#sp-agency-filter-stars')?.addEventListener('change', renderAgencyReviews);
+	$('#sp-agency-filter-platform')?.addEventListener('change', renderAgencyReviews);
 	$('#sp-agency-filter-reply')?.addEventListener('change', renderAgencyReviews);
 	$('#sp-agency-filter-sort')?.addEventListener('change', renderAgencyReviews);
 	$('#sp-agency-reviews-list')?.addEventListener('click', onAgencyReviewListClick);
+	// FB photo chosen (via "Add photo" OR clicking the avatar): mark the button + preview it on the avatar.
+	$('#sp-agency-reviews-list')?.addEventListener('change', (e) => {
+		const f = e.target.closest('.sp-fb-photo');
+		if (f && f.files && f.files[0]) {
+			const card = f.closest('.sp-review-card');
+			const t = f.closest('.sp-fb-photo-label')?.querySelector('.sp-fb-photo-text');
+			if (t) t.textContent = '✓ Photo';
+			const av = card?.querySelector('.sp-review-avatar');
+			if (av) {
+				const url = URL.createObjectURL(f.files[0]);
+				av.style.backgroundImage = `url(${url})`;
+				av.style.backgroundSize = 'cover';
+				av.style.backgroundPosition = 'center';
+				av.classList.remove('sp-review-avatar-blank');
+			}
+		}
+	});
+	// Two-way sync for FB cards: typing in the name box mirrors to the on-card name (and vice-versa), so
+	// the card always shows exactly what will be posted.
+	$('#sp-agency-reviews-list')?.addEventListener('input', (e) => {
+		const box = e.target.closest('.sp-fb-name');
+		if (box) {
+			const a = box.closest('.sp-review-card')?.querySelector('.sp-review-author');
+			if (a) a.textContent = box.value || 'Facebook user';
+			return;
+		}
+		const auth = e.target.closest('.sp-review-author[contenteditable="true"]');
+		if (auth) {
+			const box2 = auth.closest('.sp-review-card')?.querySelector('.sp-fb-name');
+			if (box2) box2.value = auth.textContent.trim();
+		}
+	});
+	// Finish inline name editing: commit to the box and drop edit mode.
+	$('#sp-agency-reviews-list')?.addEventListener('focusout', (e) => {
+		const auth = e.target.closest('.sp-review-author[contenteditable="true"]');
+		if (auth) {
+			const box = auth.closest('.sp-review-card')?.querySelector('.sp-fb-name');
+			if (box) box.value = auth.textContent.trim();
+			auth.removeAttribute('contenteditable');
+		}
+	});
 }
 
 async function loadAgencyReviews(force = false) {
@@ -6016,13 +6230,33 @@ async function loadAgencyReviews(force = false) {
 	}
 }
 
+// Type-to-search the client list: matches the typed company name (exact, or a unique partial) to a
+// client and applies it as the filter. Empty clears back to All clients.
+function agencyClientSearch() {
+	const inp = $('#sp-agency-client-search'), sel = $('#sp-agency-filter-client');
+	if (!inp || !sel) return;
+	const q = inp.value.trim().toLowerCase();
+	if (q === '') { if (sel.value) { sel.value = ''; renderAgencyReviews(); } return; }
+	let hit = spAgencyClients.find(c => (c.label || '').toLowerCase() === q);
+	if (!hit) {
+		const m = spAgencyClients.filter(c => (c.label || '').toLowerCase().includes(q));
+		if (m.length === 1) hit = m[0]; // a unique partial match selects it
+	}
+	if (hit && sel.value !== hit.site_key) { sel.value = hit.site_key; renderAgencyReviews(); }
+}
+
 function populateAgencyClientFilter() {
 	const sel = $('#sp-agency-filter-client');
 	if (!sel) return;
 	const cur = sel.value;
+	// Alphabetize by company name (copy so the underlying review order is untouched).
+	const sorted = spAgencyClients.slice().sort((a, b) => (a.label || '').localeCompare(b.label || '', undefined, { sensitivity: 'base' }));
 	sel.innerHTML = '<option value="">All clients</option>' +
-		spAgencyClients.map(c => `<option value="${esc(c.site_key)}">${esc(c.label)}</option>`).join('');
+		sorted.map(c => `<option value="${esc(c.site_key)}">${esc(c.label)}</option>`).join('');
 	sel.value = cur;
+	// Feed the type-to-search datalist with the same alphabetized company names.
+	const dl = $('#sp-agency-client-list');
+	if (dl) dl.innerHTML = sorted.map(c => `<option value="${esc(c.label)}"></option>`).join('');
 }
 
 // Client Reviews are all held in memory (spAgencyClients), so pagination here is client-side windowing:
@@ -6040,6 +6274,7 @@ function renderAgencyReviews(reset = true) {
 	if (reset !== false) reset = true; // change handlers pass an Event; treat anything non-false as reset
 	const clientFilter = $('#sp-agency-filter-client')?.value || '';
 	const sf = $('#sp-agency-filter-stars')?.value || '';
+	const pf = $('#sp-agency-filter-platform')?.value || '';
 	const rf = $('#sp-agency-filter-reply')?.value || '';
 
 	if (!spAgencyClients.length) { list.innerHTML = '<div class="sp-empty">No clients mapped yet.</div>'; return; }
@@ -6048,8 +6283,8 @@ function renderAgencyReviews(reset = true) {
 
 	// Surface client-level errors as notices so a failed pull isn't silently missing from the list.
 	const notices = clients
-		.filter(c => c.error)
-		.map(c => `<div class="sp-empty">${esc(c.label)}: ${esc(c.error)}</div>`)
+		.filter(c => c.error || c.fb_error)
+		.map(c => `<div class="sp-empty">${esc(c.label)}: ${esc(c.error || '')}${c.error && c.fb_error ? ' · ' : ''}${c.fb_error ? 'Facebook — ' + esc(c.fb_error) : ''}</div>`)
 		.join('');
 
 	// Flatten every (filtered) client's reviews into one list, tagging each with its client, then sort
@@ -6057,6 +6292,7 @@ function renderAgencyReviews(reset = true) {
 	const items = [];
 	clients.forEach(c => (c.reviews || []).forEach(r => {
 		if (sf && String(r.starRating) !== sf) return;
+		if (pf && (r.source || 'google') !== pf) return;
 		if (rf === 'replied'   && !r.reply) return;
 		if (rf === 'unreplied' &&  r.reply) return;
 		items.push({ c, r });
@@ -6071,7 +6307,13 @@ function renderAgencyReviews(reset = true) {
 	_spAgencyItems = items;
 	if (_spAgencyIO) _spAgencyIO.disconnect();
 
-	if (!items.length) { list.innerHTML = notices + '<div class="sp-empty">No reviews match this filter.</div>'; _spAgencyShown = 0; return; }
+	if (!items.length) {
+		const anyLoaded = spAgencyClients.some(c => (c.reviews || []).length);
+		const msg = anyLoaded ? 'No reviews match this filter.' : 'No reviews loaded yet — click Refresh to pull the latest.';
+		list.innerHTML = notices + `<div class="sp-empty">${msg}</div>`;
+		_spAgencyShown = 0;
+		return;
+	}
 
 	const keep = reset ? SP_AGENCY_PAGE : Math.max(SP_AGENCY_PAGE, _spAgencyShown);
 	_spAgencyShown = Math.min(keep, items.length);
@@ -6112,33 +6354,49 @@ function renderAgencyReviewCard(c, r) {
 	const id   = esc(r.reviewId);
 	const sk   = esc(c.site_key);
 	const date = r.createTime ? new Date(r.createTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+	const isFb = (r.source === 'facebook'); // FB recommendations: read-only here (no reply); posting comes in the next step
 
 	const photoUrl = r.photo ? r.photo.replace(/=s\d+-c[\w-]*$/, '=s400-c') : '';
 	const photo = photoUrl
 		? `<img class="unique sp-review-avatar" src="${esc(photoUrl)}" alt="" referrerpolicy="no-referrer">`
 		: '<div class="unique sp-review-avatar sp-review-avatar-blank"></div>';
 
-	const reply = r.reply
+	const reply = ( ! isFb && r.reply )
 		? `<div class="unique sp-review-reply"><span class="unique sp-review-reply-label">Owner reply</span><p class="unique">${esc(r.reply.comment)}</p></div>`
 		: '';
 
 	// The client's company name sits in the store slot (under the stars), labeling which client this is.
 	const store = `<span class="unique sp-review-store">${esc(c.label)}</span>`;
 
-	const pushBtn = c.site_url
-		? (r.imported
-			? '<span class="unique sp-review-imported">✓ Sent to site</span>'
-			: `<button type="button" class="unique sp-btn sp-btn-ghost sp-agency-push-btn" data-site="${sk}" data-id="${id}">Send to site</button>`)
-		: '';
+	// Two send buttons: "Post Review" omits the photo; "Post Review w/ Pic" includes it (only offered when
+	// the reviewer actually has a photo). Once sent, both collapse to the "✓ Sent to site" badge.
+	let pushBtns = '';
+	if ( ! isFb && c.site_url ) {
+		if ( r.imported ) {
+			pushBtns = '<span class="unique sp-review-imported">✓ Sent to site</span>';
+		} else {
+			pushBtns = `<button type="button" class="unique sp-btn sp-btn-ghost sp-agency-push-btn" data-site="${sk}" data-id="${id}" data-photo="0">Post Review</button>`;
+			if ( r.photo ) pushBtns += `<button type="button" class="unique sp-btn sp-btn-ghost sp-agency-push-btn" data-site="${sk}" data-id="${id}" data-photo="1">Post Review w/ Pic</button>`;
+		}
+	}
 
-	const actions =
-		'<div class="unique sp-review-actions">' +
-			`<button type="button" class="unique sp-btn sp-btn-ghost sp-agency-reply-btn" data-site="${sk}" data-id="${id}">${r.reply ? 'Edit reply' : 'Reply'}</button>` +
-			pushBtn +
-			`<button type="button" class="unique sp-btn sp-btn-ghost sp-agency-dismiss-btn" data-site="${sk}" data-id="${id}">Remove</button>` +
-		'</div>';
+	// FB recommendations are anonymous: add the name (look it up on FB) + optionally a photo, then post to
+	// the client site as a testimonial. No reply (read-only on FB). Posting removes it from this list.
+	const actions = isFb
+		? '<div class="unique sp-review-actions sp-fb-actions">' +
+				`<input type="text" class="unique sp-input sp-fb-name" data-site="${sk}" data-id="${id}" placeholder="Customer Name">` +
+				`<label class="unique sp-btn sp-btn-ghost sp-fb-photo-label"><span class="unique sp-fb-photo-text">Add photo</span><input type="file" class="sp-fb-photo" accept="image/*" data-site="${sk}" data-id="${id}" hidden></label>` +
+				( c.site_url ? `<button type="button" class="unique sp-btn sp-btn-ghost sp-fb-post-btn" data-site="${sk}" data-id="${id}">Post to site</button>` : '' ) +
+				`<button type="button" class="unique sp-btn sp-btn-ghost sp-agency-dismiss-btn" data-site="${sk}" data-id="${id}">Remove</button>` +
+			'</div>'
+		: '<div class="unique sp-review-actions">' +
+				`<button type="button" class="unique sp-btn sp-btn-ghost sp-agency-draft-btn" data-site="${sk}" data-id="${id}">Draft Reply</button>` +
+				`<button type="button" class="unique sp-btn sp-btn-ghost sp-agency-generate-btn" data-site="${sk}" data-id="${id}">Generate Reply</button>` +
+				pushBtns +
+				`<button type="button" class="unique sp-btn sp-btn-ghost sp-agency-dismiss-btn" data-site="${sk}" data-id="${id}">Remove</button>` +
+			'</div>';
 
-	const form =
+	const form = isFb ? '' :
 		`<div class="unique sp-review-reply-form" data-site="${sk}" data-id="${id}" hidden>` +
 			`<textarea class="unique sp-input sp-review-reply-input" rows="3" placeholder="Write a public reply…">${r.reply ? esc(r.reply.comment) : ''}</textarea>` +
 			'<div class="unique sp-review-reply-formbtns">' +
@@ -6157,7 +6415,7 @@ function renderAgencyReviewCard(c, r) {
 			'<div class="unique sp-review-head">' +
 				photo +
 				'<div class="unique sp-review-headright">' +
-					`<span class="unique sp-review-rating">${SP_GOOGLE_ICON}<span class="unique sp-review-stars" title="${parseInt(r.starRating, 10) || 0} of 5">${starString(r.starRating)}</span></span>` +
+					`<span class="unique sp-review-rating">${isFb ? SP_FB_ICON : SP_GOOGLE_ICON}<span class="unique sp-review-stars" title="${parseInt(r.starRating, 10) || 0} of 5">${starString(r.starRating)}</span></span>` +
 					store +
 					actions +
 				'</div>' +
@@ -6182,22 +6440,31 @@ function agencyFindReview(site, id) {
 }
 
 function onAgencyReviewListClick(e) {
+	// FB cards: the avatar is a photo upload, and the name is click-to-edit inline — both mirror the
+	// fields used by "Post to site". (FB cards are the ones carrying a .sp-fb-name input.)
+	const fbCard = e.target.closest('.sp-review-card');
+	if (fbCard && fbCard.querySelector('.sp-fb-name')) {
+		if (e.target.closest('.sp-review-avatar')) { fbCard.querySelector('.sp-fb-photo')?.click(); return; }
+		const auth = e.target.closest('.sp-review-author');
+		if (auth && auth.getAttribute('contenteditable') !== 'true') {
+			auth.setAttribute('contenteditable', 'true');
+			auth.focus();
+			const range = document.createRange(); range.selectNodeContents(auth); range.collapse(false);
+			const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+			return;
+		}
+	}
+
 	const btn = e.target.closest('button');
 	if (!btn || !btn.dataset.id) return;
 	const site = btn.dataset.site;
 	const id   = btn.dataset.id;
 	const form = $(`.sp-review-reply-form[data-site="${CSS.escape(site)}"][data-id="${CSS.escape(id)}"]`);
 
-	if (btn.classList.contains('sp-agency-reply-btn')) {
-		if (form) {
-			form.hidden = !form.hidden;
-			if (!form.hidden) {
-				const ta = form.querySelector('textarea');
-				ta?.focus();
-				// Auto-draft an AI reply when opening on a review that has no reply yet.
-				if (ta && !ta.value.trim()) generateAgencyReply(site, id, form);
-			}
-		}
+	if (btn.classList.contains('sp-agency-generate-btn')) {
+		if (form) { form.hidden = false; generateAgencyReply(site, id, form); }       // AI draft
+	} else if (btn.classList.contains('sp-agency-draft-btn')) {
+		if (form) { form.hidden = false; draftCannedReply(site, id, form); }          // canned, no AI
 	} else if (btn.classList.contains('sp-agency-reply-regen')) {
 		generateAgencyReply(site, id, form);
 	} else if (btn.classList.contains('sp-agency-reply-cancel')) {
@@ -6209,27 +6476,67 @@ function onAgencyReviewListClick(e) {
 	} else if (btn.classList.contains('sp-agency-reply-delete')) {
 		if (confirm('Delete the public reply to this review?')) submitAgencyReply(site, id, '', btn);
 	} else if (btn.classList.contains('sp-agency-push-btn')) {
-		pushAgencyTestimonial(site, id, btn);
+		pushAgencyTestimonial(site, id, btn, btn.dataset.photo === '1');
+	} else if (btn.classList.contains('sp-fb-post-btn')) {
+		postAgencyFbTestimonial(site, id, btn);
 	} else if (btn.classList.contains('sp-agency-dismiss-btn')) {
 		dismissAgencyReview(site, id, btn);
 	}
 }
 
+// Read a File as a base64 data URL (for the manual FB profile photo upload).
+function spFileToDataURL(file) {
+	return new Promise((resolve, reject) => {
+		const fr = new FileReader();
+		fr.onload = () => resolve(fr.result);
+		fr.onerror = reject;
+		fr.readAsDataURL(file);
+	});
+}
+
+// Post a Facebook recommendation to the client site as a testimonial, with the manually-added name +
+// (optional) uploaded photo. Transient list → on success it's removed (like Google once handled).
+async function postAgencyFbTestimonial(site, id, btn) {
+	const card = btn.closest('.sp-review-card');
+	const name = card?.querySelector('.sp-fb-name')?.value.trim() || '';
+	const file = card?.querySelector('.sp-fb-photo')?.files?.[0] || null;
+	if (!name && !confirm('No customer name entered — post without a name?')) return;
+	const label = btn.textContent;
+	btn.disabled = true; btn.textContent = 'Sending…';
+	try {
+		const payload = { site_key: site, review_id: id, reviewer: name, with_photo: file ? 1 : 0 };
+		if (file) payload.photo_data = await spFileToDataURL(file);
+		const res = await spAjax('site_pulse_agency_push_testimonial', payload);
+		if (!res.success) { alert(res.data?.message || 'Could not send to site.'); btn.disabled = false; btn.textContent = label; return; }
+		const p = res.data.photo;
+		const extra = p === 'set' ? ' — photo added' : (p && p !== 'none' ? ' — photo: ' + p : '');
+		const plat = res.data.platform ? ' as ' + res.data.platform : '';
+		dismissAgencyReview(site, id, null, 'Posted to client site' + plat + extra + ' — removed');
+	} catch (e) { alert('Could not send to site.'); btn.disabled = false; btn.textContent = label; }
+}
+
 // Permanently remove a handled review from the Client Reviews list — it's recorded on the hub so it
 // stays gone on every future pull (these aren't kept for analysis like Rovin's, so this keeps the list lean).
-async function dismissAgencyReview(site, id, btn) {
-	btn.disabled = true;
+async function dismissAgencyReview(site, id, btn, flashMsg) {
+	if (btn) btn.disabled = true;
 	try {
 		const res = await spAjax('site_pulse_agency_dismiss_review', { site_key: site, review_id: id });
-		if (!res.success) { alert(res.data?.message || 'Could not remove.'); btn.disabled = false; return; }
+		if (!res.success) { spFlash(res.data?.message || 'Could not remove.'); if (btn) btn.disabled = false; return; }
 		const c = spAgencyClients.find(x => x.site_key === site);
 		if (c) c.reviews = (c.reviews || []).filter(r => String(r.reviewId) !== String(id));
 		renderAgencyReviews(false);
-		spFlash('Review removed');
+		spFlash(flashMsg || 'Review removed');
 	} catch (e) {
-		alert('Could not remove.');
-		btn.disabled = false;
+		spFlash('Could not remove.');
+		if (btn) btn.disabled = false;
 	}
+}
+
+// Once a review is BOTH replied to and pushed to the client site, it's fully handled — remove it.
+function agencyMaybeAutoRemove(site, id, flashMsg) {
+	const [, r] = agencyFindReview(site, id);
+	if (r && r.reply && r.imported) { dismissAgencyReview(site, id, null, flashMsg); return true; }
+	return false;
 }
 
 // Draft (or regenerate) an AI reply into the agency form's textarea. Editable before posting.
@@ -6252,7 +6559,7 @@ async function generateAgencyReply(site, id, form) {
 			comment: rev?.comment || '',
 			star_rating: rev?.starRating || 0,
 		});
-		if (res.success && res.data.reply) ta.value = res.data.reply;
+		if (res.success && res.data.reply) ta.value = spReplaceEmDash(res.data.reply);
 		else { ta.value = prev; spFlash(res.data?.message || 'Could not draft a reply.'); }
 	} catch (e) {
 		ta.value = prev;
@@ -6264,6 +6571,26 @@ async function generateAgencyReply(site, id, form) {
 	ta.focus();
 }
 
+// "Draft Reply" — skip the AI and drop a random canned thank-you into the box (instant, no tokens).
+const AGENCY_CANNED_REPLIES = [
+	'Thank you!',
+	'Thank you for the review!',
+	'We appreciate the review!',
+	'Thanks for taking the time to review our business!',
+	'We appreciate your business!',
+	'Thank you for your business!',
+	'Thanks!',
+];
+function draftCannedReply(site, id, form) {
+	const ta = form?.querySelector('textarea');
+	if (!ta) return;
+	const [, rev] = agencyFindReview(site, id);
+	const pool = AGENCY_CANNED_REPLIES.slice();
+	if (rev && parseInt(rev.starRating, 10) === 5) pool.push('Thanks for the 5 stars!'); // only when truly 5 stars
+	ta.value = pool[Math.floor(Math.random() * pool.length)];
+	ta.focus();
+}
+
 async function submitAgencyReply(site, id, comment, btn) {
 	btn.disabled = true;
 	try {
@@ -6271,27 +6598,32 @@ async function submitAgencyReply(site, id, comment, btn) {
 		if (!res.success) { alert(res.data?.message || 'Reply failed.'); btn.disabled = false; return; }
 		const [, r] = agencyFindReview(site, id);
 		if (r) r.reply = res.data.reply;
-		renderAgencyReviews(false);
-		spFlash(comment === '' ? 'Reply deleted' : 'Reply posted');
+		// If this review is now both replied AND already on the client site, it's done — auto-remove.
+		if (comment !== '' && agencyMaybeAutoRemove(site, id, 'Reply posted — removed (replied + on site)')) {
+			// handled (re-rendered + flashed by the dismiss)
+		} else {
+			renderAgencyReviews(false);
+			spFlash(comment === '' ? 'Reply deleted' : 'Reply posted');
+		}
 	} catch (e) {
 		alert('Reply failed.');
 		btn.disabled = false;
 	}
 }
 
-async function pushAgencyTestimonial(site, id, btn) {
+async function pushAgencyTestimonial(site, id, btn, withPhoto) {
+	const label = btn.textContent;
 	btn.disabled = true;
 	btn.textContent = 'Sending…';
 	try {
-		const res = await spAjax('site_pulse_agency_push_testimonial', { site_key: site, review_id: id });
+		const res = await spAjax('site_pulse_agency_push_testimonial', { site_key: site, review_id: id, with_photo: withPhoto ? 1 : 0 });
 		if (!res.success) {
 			alert(res.data?.message || 'Could not send to site.');
-			btn.disabled = false; btn.textContent = 'Send to site';
+			btn.disabled = false; btn.textContent = label;
 			return;
 		}
 		const [, r] = agencyFindReview(site, id);
 		if (r) r.imported = true;
-		renderAgencyReviews(false);
 		const p = res.data.photo;
 		let extra = '';
 		if (p === 'set') extra = ' — photo added';
@@ -6300,10 +6632,15 @@ async function pushAgencyTestimonial(site, id, btn) {
 		else if (typeof p === 'string' && p.indexOf('error') === 0) extra = ' — photo upload failed';
 		else if (typeof p === 'string' && p.indexOf('skipped') === 0) extra = ' — no photo';
 		else if (p == null) extra = ' — photo not processed (update the client site)';
-		spFlash((res.data.already_imported ? 'Already on the client site' : 'Published to client site') + extra);
+		const base = res.data.already_imported ? 'Already on the client site' : 'Published to client site';
+		// If this review already has a reply too, it's fully handled — auto-remove it.
+		if (!agencyMaybeAutoRemove(site, id, base + extra + ' — removed (replied + on site)')) {
+			renderAgencyReviews(false);
+			spFlash(base + extra);
+		}
 	} catch (e) {
 		alert('Could not send to site.');
-		btn.disabled = false; btn.textContent = 'Send to site';
+		btn.disabled = false; btn.textContent = label;
 	}
 }
 
@@ -6384,8 +6721,8 @@ function updateSurveyArchiveToggle() {
 	const btn = $('#sp-survey-archive-toggle');
 	if (!btn) return;
 	btn.textContent = spSurveyViewArchived
-		? '← Back to Active Surveys'
-		: `View Archived Surveys${spSurveyArchivedCount ? ' (' + spSurveyArchivedCount + ')' : ''}`;
+		? '← Back to Active Comment Cards'
+		: `View Archived Comment Cards${spSurveyArchivedCount ? ' (' + spSurveyArchivedCount + ')' : ''}`;
 }
 
 // Keep the location dropdown in sync with the locations actually present (across the whole
@@ -6430,7 +6767,7 @@ function renderSurveysSummary(s) {
 // Plain count tile — left-justified label + value, no bars.
 function surveyCountCard(count) {
 	return `<div class="sp-survey-stat-card">` +
-		`<div class="sp-survey-stat-left"><div class="sp-survey-stat-label">Surveys</div><div class="sp-survey-stat-value">${esc(String(count))}</div></div>` +
+		`<div class="sp-survey-stat-left"><div class="sp-survey-stat-label">Comment Cards</div><div class="sp-survey-stat-value">${esc(String(count))}</div></div>` +
 	`</div>`;
 }
 
@@ -6466,7 +6803,7 @@ function renderSurveys() {
 	if (!list) return;
 	list.innerHTML = spSurveys.length
 		? spSurveys.map(renderSurveyCard).join('')
-		: '<div class="sp-empty">No surveys in this view.</div>';
+		: '<div class="sp-empty">No comment cards in this view.</div>';
 }
 
 function renderSurveyCard(s) {
@@ -7754,6 +8091,21 @@ function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = [],
 	const homeName = homeLoc ? homeLoc.name : 'Home';
 	let html = '';
 
+	// On phones, render the Location/Purpose pickers as native <select> (full-screen picker) instead of
+	// the type-to-search <input list=datalist> combos, which on mobile show that awkward suggestion bar
+	// above the keyboard. Desktop keeps the combos. Same hidden/text source-of-truth fields either way.
+	const isMobile = window.matchMedia('(max-width: 600px)').matches;
+	const locOptionsHtml = (selId) => {
+		let o = '<option value="">Choose a location</option>';
+		mileageLocations.forEach(l => {
+			if (parseInt(l.id) === mileageHomeId) return; // home is a bookend, never a mid-stop
+			const label = l.status === 'pending' ? `${l.name} (pending)` : l.name;
+			o += `<option value="${esc(label)}"${parseInt(l.id) === selId ? ' selected' : ''}>${esc(label)}</option>`;
+		});
+		return o;
+	};
+	const purposeLabels = () => mileagePurposes.map(p => (typeof p === 'string') ? p : (p.label || '')).filter(Boolean);
+
 	// Shared datalist of common business purposes (free text still allowed).
 	html += '<datalist id="sp-mileage-purpose-list">';
 	mileagePurposes.forEach(p => { const lbl = (typeof p === 'string') ? p : (p.label || ''); if (lbl) html += `<option value="${esc(lbl)}">`; });
@@ -7790,7 +8142,11 @@ function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = [],
 		html += `<span class="unique sp-mileage-stop-num">${idx + 1}.</span>`;
 		// Type-to-search location picker: visible input + hidden id (read by readMileageStops).
 		html += '<div class="sp-combo sp-mileage-stop-loc-wrap">';
-		html += `<input type="text" class="sp-input sp-combo-input sp-mileage-stop-loc" list="sp-mileage-loc-list" placeholder="Choose a location" autocomplete="off" value="${esc(selLabel)}">`;
+		if (isMobile) {
+			html += `<select class="sp-select sp-mileage-stop-loc${stopId ? '' : ' sp-loc-empty'}">${locOptionsHtml(stopId)}</select>`;
+		} else {
+			html += `<input type="text" class="sp-input sp-combo-input sp-mileage-stop-loc" list="sp-mileage-loc-list" placeholder="Choose a location" autocomplete="off" value="${esc(selLabel)}">`;
+		}
 		html += `<input type="hidden" class="sp-mileage-stop-select" value="${stopId || 0}">`;
 		html += '</div>';
 		// "Charge To": which store this leg's mileage is billed to. Required per leg — an empty one
@@ -7800,7 +8156,18 @@ function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = [],
 		// Purpose + trailer flag share the purpose column. (Tolls are no longer flagged here —
 		// they're matched from the driver's uploaded toll CSV in Reconcile Tolls.)
 		html += '<div class="sp-mileage-stop-purpose-cell">';
-		html += `<input type="text" class="sp-input sp-combo-input sp-mileage-stop-purpose" list="sp-mileage-purpose-list" placeholder="Business purpose" value="${esc(purpose)}">`;
+		if (isMobile) {
+			const labels = purposeLabels();
+			const isCustom = purpose !== '' && !labels.includes(purpose);
+			let o = '<option value="">Business purpose</option>';
+			labels.forEach(lbl => { o += `<option value="${esc(lbl)}"${lbl === purpose ? ' selected' : ''}>${esc(lbl)}</option>`; });
+			o += `<option value="__other__"${isCustom ? ' selected' : ''}>Other…</option>`;
+			html += `<select class="sp-select sp-mileage-purpose-pick">${o}</select>`;
+			// The text field stays the source of truth read by readMileageStopPurposes(); shown only for "Other".
+			html += `<input type="text" class="sp-input sp-mileage-stop-purpose sp-mileage-purpose-custom" placeholder="Type a purpose" value="${esc(purpose)}"${isCustom ? '' : ' hidden'}>`;
+		} else {
+			html += `<input type="text" class="sp-input sp-combo-input sp-mileage-stop-purpose" list="sp-mileage-purpose-list" placeholder="Business purpose" value="${esc(purpose)}">`;
+		}
 		html += `<label class="sp-mileage-toll-toggle unique" title="Check if a trailer was pulled on this leg — the extra trailer rate per mile is added."><input type="checkbox" class="sp-mileage-stop-trailer"${trailer ? ' checked' : ''}>Trailer</label>`;
 		html += '</div>';
 		if (stops.length > minMiddle) {
@@ -7853,12 +8220,22 @@ function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = [],
 			const hidden = row?.querySelector('.sp-mileage-stop-select');
 			const id = resolveLocId(inp.value);
 			if (hidden) hidden.value = id;
+			if (inp.tagName === 'SELECT') inp.classList.toggle('sp-loc-empty', !id); // mobile required-field cue
 			// When a destination with pinned purposes is picked, pre-fill the (empty) purpose.
 			const purposeInput = row?.querySelector('.sp-mileage-stop-purpose');
 			if (id && purposeInput && !purposeInput.value.trim()) {
 				const loc = mileageLocations.find(l => parseInt(l.id) === id);
 				const pinned = locationPinnedPurposes(loc);
-				if (pinned.length) purposeInput.value = pinned[0];
+				if (pinned.length) {
+					purposeInput.value = pinned[0];
+					// Keep the mobile purpose <select> in step with the pre-filled value.
+					const pick = row?.querySelector('.sp-mileage-purpose-pick');
+					if (pick) {
+						const known = Array.from(pick.options).some(o => o.value === pinned[0]);
+						pick.value = known ? pinned[0] : '__other__';
+						purposeInput.hidden = known;
+					}
+				}
 			}
 			syncStopNote(row); // a pinned purpose may itself require the note line
 			updateMileageTotals();
@@ -7870,6 +8247,20 @@ function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = [],
 	$$('.sp-mileage-stop-purpose', wrap).forEach(inp => inp.addEventListener('input', () => {
 		syncStopNote(inp.closest('.sp-mileage-stop-row'));
 		queueMileageAutoSave();
+	}));
+	// Mobile purpose <select>: a normal pick fills the (hidden) text field; "Other…" reveals it to type a
+	// custom purpose. Either way we fire the text field's input handler so notes/auto-save stay in sync.
+	$$('.sp-mileage-purpose-pick', wrap).forEach(sel => sel.addEventListener('change', () => {
+		const txt = sel.closest('.sp-mileage-stop-purpose-cell')?.querySelector('.sp-mileage-stop-purpose');
+		if (!txt) return;
+		if (sel.value === '__other__') {
+			txt.hidden = false;
+			txt.focus();
+		} else {
+			txt.value = sel.value;
+			txt.hidden = true;
+		}
+		txt.dispatchEvent(new Event('input', { bubbles: true }));
 	}));
 	// Picking a "Charge To" just needs to persist (doesn't affect totals). Toggle the placeholder
 	// grey when it returns to empty. Covers both the stop rows and the END drive-home row.
@@ -9504,6 +9895,40 @@ async function initVehicleExpenses() {
 	loadVehicleExpenses();
 }
 
+// Shared across all four expense sections: every "move to" destination (section + category) for the
+// edit-form picker, filled from any get_expenses response. Lets a receipt filed in the wrong panel be
+// re-categorized (even across sections, e.g. Vehicle/Fuel → Business Meals) on save.
+let _spExpDestinations = [];
+function spExpDestOptions(curSection, curCategory) {
+	return _spExpDestinations.map(d => {
+		const val = `${d.section}|${d.category}`;
+		const sel = (d.section === curSection && (d.category || '') === (curCategory || '')) ? ' selected' : '';
+		return `<option value="${esc(val)}"${sel}>${esc(d.label)}</option>`;
+	}).join('');
+}
+function spExpDestParse(v) {
+	const parts = String(v || '').split('|');
+	return { section: parts[0] || 'B', category: parts[1] || '' };
+}
+function spExpDestLabel(section, category) {
+	const d = _spExpDestinations.find(d => d.section === section && (d.category || '') === (category || ''));
+	return d ? d.label : 'another category';
+}
+
+// Lightweight, auto-dismissing toast (bottom-center). Reusable anywhere; used here to confirm a
+// cross-section expense move, since the item then leaves the current panel.
+let _spToastTimer = null;
+function spToast(message, ms = 3200) {
+	let el = document.getElementById('sp-toast');
+	if (!el) { el = document.createElement('div'); el.id = 'sp-toast'; el.className = 'sp-toast'; document.body.appendChild(el); }
+	el.textContent = message;
+	// force reflow so re-triggering the same toast replays the transition
+	void el.offsetWidth;
+	el.classList.add('sp-toast-show');
+	clearTimeout(_spToastTimer);
+	_spToastTimer = setTimeout(() => el.classList.remove('sp-toast-show'), ms);
+}
+
 async function loadVehicleExpenses() {
 	const wrap = $('#sp-vexp-content');
 	if (!wrap) return;
@@ -9513,6 +9938,7 @@ async function loadVehicleExpenses() {
 		if (!res.success) { wrap.innerHTML = '<p>Error loading expenses.</p>'; return; }
 		_spVexp.cats = res.data.categories || {};
 		_spVexp.list = res.data.expenses || [];
+		_spExpDestinations = res.data.destinations || _spExpDestinations;
 		renderVehicleExpenses();
 	} catch (e) { wrap.innerHTML = '<p>Error loading expenses.</p>'; }
 }
@@ -9588,11 +10014,8 @@ function showVexpForm(x) {
 	if (!wrap) return;
 	_spVexp.editId = x ? x.id : 0;
 	wrap._receiptData = null; wrap._receiptRemove = false;
-	const cats = _spVexp.cats;
 	const d = new Date();
 	const today = `${d.getFullYear()}-${mPad2(d.getMonth() + 1)}-${mPad2(d.getDate())}`;
-	const catOpts = Object.keys(cats).map(k =>
-		`<option value="${esc(k)}"${x && x.category === k ? ' selected' : ''}>${esc(cats[k].label)}</option>`).join('');
 
 	wrap.innerHTML = `
 		<div class="sp-card sp-vexp-form">
@@ -9606,7 +10029,7 @@ function showVexpForm(x) {
 			</div>
 			<div class="sp-vexp-form-grid">
 				<div class="sp-form-group"><label>Date</label><input type="date" id="sp-vexp-date" class="sp-input" value="${esc(x ? x.expense_date : today)}"></div>
-				<div class="sp-form-group"><label>Category</label><select id="sp-vexp-cat" class="sp-select">${catOpts}</select></div>
+				<div class="sp-form-group"><label>Category</label><select id="sp-vexp-cat" class="sp-select">${spExpDestOptions(x ? x.section : 'B', x ? x.category : 'fuel')}</select></div>
 				<div class="sp-form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0" id="sp-vexp-amount" class="sp-input" value="${x ? (parseFloat(x.amount) || 0).toFixed(2) : ''}"></div>
 			</div>
 			<div class="sp-form-group"><label>Description</label><input type="text" id="sp-vexp-desc" class="sp-input" value="${esc(x ? (x.description || '') : '')}" placeholder="e.g. Shell — fuel"></div>
@@ -9621,7 +10044,7 @@ function showVexpForm(x) {
 	// Receipt scan → fill the fields (reusable across expense modules).
 	spWireReceiptScan(wrap, 'B', (r) => {
 		if (r.date) { const el = $('#sp-vexp-date', wrap); if (el) el.value = r.date; }
-		if (r.category) { const el = $('#sp-vexp-cat', wrap); if (el) el.value = r.category; }
+		if (r.category) { const el = $('#sp-vexp-cat', wrap); if (el) el.value = 'B|' + r.category; }
 		if (r.amount > 0) { const el = $('#sp-vexp-amount', wrap); if (el) el.value = (parseFloat(r.amount) || 0).toFixed(2); }
 		if (r.description) { const el = $('#sp-vexp-desc', wrap); if (el) el.value = r.description; }
 	});
@@ -9640,19 +10063,19 @@ function hideVexpForm() {
 
 async function saveVexp() {
 	const date = $('#sp-vexp-date')?.value;
-	const category = $('#sp-vexp-cat')?.value;
+	const dest = spExpDestParse($('#sp-vexp-cat')?.value);
 	const amount = parseFloat($('#sp-vexp-amount')?.value);
 	const description = $('#sp-vexp-desc')?.value || '';
 	if (!date) { alert('Please choose a date.'); return; }
 	if (!(amount > 0)) { alert('Please enter an amount greater than zero.'); return; }
 	const btn = $('#sp-vexp-save');
 	if (btn) btn.disabled = true;
-	const payload = { section: 'B', expense_date: date, category, amount, description };
+	const payload = { section: dest.section, category: dest.category, expense_date: date, amount, description };
 	if (_spVexp.editId) payload.id = _spVexp.editId;
 	Object.assign(payload, spReceiptPayload($('#sp-vexp-form-wrap')));
 	try {
 		const r = await spAjax('site_pulse_save_expense', payload);
-		if (r.success) { hideVexpForm(); loadVehicleExpenses(); }
+		if (r.success) { if (dest.section !== 'B') spToast('Moved to ' + spExpDestLabel(dest.section, dest.category)); hideVexpForm(); loadVehicleExpenses(); }
 		else { alert(r.data?.message || 'Error saving.'); if (btn) btn.disabled = false; }
 	} catch (e) { alert('Error saving expense.'); if (btn) btn.disabled = false; }
 }
@@ -9687,6 +10110,7 @@ async function loadBusinessMeals() {
 		const res = await spAjax('site_pulse_get_expenses', { section: 'C', start: _spMeal.start, end: _spMeal.end });
 		if (!res.success) { wrap.innerHTML = '<p>Error loading meals.</p>'; return; }
 		_spMeal.list = res.data.expenses || [];
+		_spExpDestinations = res.data.destinations || _spExpDestinations;
 		renderBusinessMeals();
 	} catch (e) { wrap.innerHTML = '<p>Error loading meals.</p>'; }
 }
@@ -9776,7 +10200,8 @@ function showMealForm(x) {
 				<div class="sp-form-group"><label>Place</label><input type="text" id="sp-meal-place" class="sp-input" value="${esc(x ? (x.place || '') : '')}" placeholder="Restaurant / venue"></div>
 				<div class="sp-form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0" id="sp-meal-amount" class="sp-input" value="${x ? (parseFloat(x.amount) || 0).toFixed(2) : ''}"></div>
 			</div>
-			<div class="sp-form-group"><label>Business Purpose</label><input type="text" id="sp-meal-purpose" class="sp-input" value="${esc(x ? (x.business_purpose || '') : '')}" placeholder="e.g. Vendor meeting, candidate interview"></div>
+			<div class="sp-form-group"><label>Category</label><select id="sp-meal-move" class="sp-select">${spExpDestOptions(x ? x.section : 'C', x ? x.category : 'meals')}</select></div>
+					<div class="sp-form-group"><label>Business Purpose</label><input type="text" id="sp-meal-purpose" class="sp-input" value="${esc(x ? (x.business_purpose || '') : '')}" placeholder="e.g. Vendor meeting, candidate interview"></div>
 			<div class="sp-form-group"><label>Attendees</label><input type="text" id="sp-meal-attendees" class="sp-input" value="${esc(x ? (x.attendees || '') : '')}" placeholder="Who attended"></div>
 			<div class="sp-form-group"><label>Store # <span class="sp-help-text">(optional)</span></label><input type="text" id="sp-meal-store" class="sp-input" value="${esc(x ? (x.store_number || '') : '')}"></div>
 			<div class="sp-vexp-form-actions">
@@ -9813,16 +10238,17 @@ async function saveMeal() {
 	const business_purpose = $('#sp-meal-purpose')?.value || '';
 	const attendees = $('#sp-meal-attendees')?.value || '';
 	const store_number = $('#sp-meal-store')?.value || '';
+	const dest = spExpDestParse($('#sp-meal-move')?.value);
 	if (!date) { alert('Please choose a date.'); return; }
 	if (!(amount > 0)) { alert('Please enter an amount greater than zero.'); return; }
 	const btn = $('#sp-meal-save');
 	if (btn) btn.disabled = true;
-	const payload = { section: 'C', category: 'meals', expense_date: date, amount, place, business_purpose, attendees, store_number };
+	const payload = { section: dest.section, category: dest.category, expense_date: date, amount, place, business_purpose, attendees, store_number };
 	if (_spMeal.editId) payload.id = _spMeal.editId;
 	Object.assign(payload, spReceiptPayload($('#sp-meal-form-wrap')));
 	try {
 		const r = await spAjax('site_pulse_save_expense', payload);
-		if (r.success) { hideMealForm(); loadBusinessMeals(); }
+		if (r.success) { if (dest.section !== 'C') spToast('Moved to ' + spExpDestLabel(dest.section, dest.category)); hideMealForm(); loadBusinessMeals(); }
 		else { alert(r.data?.message || 'Error saving.'); if (btn) btn.disabled = false; }
 	} catch (e) { alert('Error saving meal.'); if (btn) btn.disabled = false; }
 }
@@ -9858,6 +10284,7 @@ async function loadCompetitiveShopping() {
 		const res = await spAjax('site_pulse_get_expenses', { section: 'D', start: _spShop.start, end: _spShop.end });
 		if (!res.success) { wrap.innerHTML = '<p>Error loading visits.</p>'; return; }
 		_spShop.list = res.data.expenses || [];
+		_spExpDestinations = res.data.destinations || _spExpDestinations;
 		renderCompetitiveShopping();
 	} catch (e) { wrap.innerHTML = '<p>Error loading visits.</p>'; }
 }
@@ -9946,7 +10373,8 @@ function showShopForm(x) {
 				<div class="sp-form-group"><label>Place</label><input type="text" id="sp-shop-place" class="sp-input" value="${esc(x ? (x.place || '') : '')}" placeholder="Restaurant / place shopped"></div>
 				<div class="sp-form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0" id="sp-shop-amount" class="sp-input" value="${x ? (parseFloat(x.amount) || 0).toFixed(2) : ''}"></div>
 			</div>
-			<div class="sp-form-group"><label>Business Purpose</label><input type="text" id="sp-shop-purpose" class="sp-input" value="${esc(x ? (x.business_purpose || '') : '')}" placeholder="e.g. Menu/pricing research"></div>
+			<div class="sp-form-group"><label>Category</label><select id="sp-shop-move" class="sp-select">${spExpDestOptions(x ? x.section : 'D', x ? x.category : 'shopping')}</select></div>
+					<div class="sp-form-group"><label>Business Purpose</label><input type="text" id="sp-shop-purpose" class="sp-input" value="${esc(x ? (x.business_purpose || '') : '')}" placeholder="e.g. Menu/pricing research"></div>
 			<div class="sp-form-group"><label>Store # <span class="sp-help-text">(optional)</span></label><input type="text" id="sp-shop-store" class="sp-input" value="${esc(x ? (x.store_number || '') : '')}"></div>
 			<div class="sp-vexp-form-actions">
 				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-shop-save">Save</button>
@@ -9981,16 +10409,17 @@ async function saveShop() {
 	const amount = parseFloat($('#sp-shop-amount')?.value);
 	const business_purpose = $('#sp-shop-purpose')?.value || '';
 	const store_number = $('#sp-shop-store')?.value || '';
+	const dest = spExpDestParse($('#sp-shop-move')?.value);
 	if (!date) { alert('Please choose a date.'); return; }
 	if (!(amount > 0)) { alert('Please enter an amount greater than zero.'); return; }
 	const btn = $('#sp-shop-save');
 	if (btn) btn.disabled = true;
-	const payload = { section: 'D', category: 'shopping', expense_date: date, amount, place, business_purpose, store_number };
+	const payload = { section: dest.section, category: dest.category, expense_date: date, amount, place, business_purpose, store_number };
 	if (_spShop.editId) payload.id = _spShop.editId;
 	Object.assign(payload, spReceiptPayload($('#sp-shop-form-wrap')));
 	try {
 		const r = await spAjax('site_pulse_save_expense', payload);
-		if (r.success) { hideShopForm(); loadCompetitiveShopping(); }
+		if (r.success) { if (dest.section !== 'D') spToast('Moved to ' + spExpDestLabel(dest.section, dest.category)); hideShopForm(); loadCompetitiveShopping(); }
 		else { alert(r.data?.message || 'Error saving.'); if (btn) btn.disabled = false; }
 	} catch (e) { alert('Error saving visit.'); if (btn) btn.disabled = false; }
 }
@@ -10027,6 +10456,7 @@ async function loadOtherExpenses() {
 		const res = await spAjax('site_pulse_get_expenses', { section: 'E', start: _spOexp.start, end: _spOexp.end });
 		if (!res.success) { wrap.innerHTML = '<p>Error loading expenses.</p>'; return; }
 		_spOexp.list = res.data.expenses || [];
+		_spExpDestinations = res.data.destinations || _spExpDestinations;
 		renderOtherExpenses();
 	} catch (e) { wrap.innerHTML = '<p>Error loading expenses.</p>'; }
 }
@@ -10115,7 +10545,8 @@ function showOexpForm(x) {
 				<div class="sp-form-group"><label>Account</label><input type="text" id="sp-oexp-account" class="sp-input" value="${esc(x ? (x.account_code || '') : '')}" placeholder="GL account #"></div>
 				<div class="sp-form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0" id="sp-oexp-amount" class="sp-input" value="${x ? (parseFloat(x.amount) || 0).toFixed(2) : ''}"></div>
 			</div>
-			<div class="sp-form-group"><label>Description</label><input type="text" id="sp-oexp-desc" class="sp-input" value="${esc(x ? (x.description || '') : '')}" placeholder="e.g. Postage — overnight to vendor"></div>
+			<div class="sp-form-group"><label>Category</label><select id="sp-oexp-move" class="sp-select">${spExpDestOptions(x ? x.section : 'E', x ? x.category : '')}</select></div>
+				<div class="sp-form-group"><label>Description</label><input type="text" id="sp-oexp-desc" class="sp-input" value="${esc(x ? (x.description || '') : '')}" placeholder="e.g. Postage — overnight to vendor"></div>
 			<div class="sp-form-group"><label>Store # <span class="sp-help-text">(optional)</span></label><input type="text" id="sp-oexp-store" class="sp-input" value="${esc(x ? (x.store_number || '') : '')}"></div>
 			<div class="sp-vexp-form-actions">
 				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-oexp-save">Save</button>
@@ -10150,16 +10581,17 @@ async function saveOexp() {
 	const amount = parseFloat($('#sp-oexp-amount')?.value);
 	const description = $('#sp-oexp-desc')?.value || '';
 	const store_number = $('#sp-oexp-store')?.value || '';
+	const dest = spExpDestParse($('#sp-oexp-move')?.value);
 	if (!date) { alert('Please choose a date.'); return; }
 	if (!(amount > 0)) { alert('Please enter an amount greater than zero.'); return; }
 	const btn = $('#sp-oexp-save');
 	if (btn) btn.disabled = true;
-	const payload = { section: 'E', expense_date: date, amount, description, account_code, store_number };
+	const payload = { section: dest.section, category: dest.category, expense_date: date, amount, description, account_code, store_number };
 	if (_spOexp.editId) payload.id = _spOexp.editId;
 	Object.assign(payload, spReceiptPayload($('#sp-oexp-form-wrap')));
 	try {
 		const r = await spAjax('site_pulse_save_expense', payload);
-		if (r.success) { hideOexpForm(); loadOtherExpenses(); }
+		if (r.success) { if (dest.section !== 'E') spToast('Moved to ' + spExpDestLabel(dest.section, dest.category)); hideOexpForm(); loadOtherExpenses(); }
 		else { alert(r.data?.message || 'Error saving.'); if (btn) btn.disabled = false; }
 	} catch (e) { alert('Error saving expense.'); if (btn) btn.disabled = false; }
 }

@@ -106,38 +106,79 @@ function site_pulse_ajax_get_agency_reviews(): void {
 			'error'            => null,
 		];
 
-		if ( '' === $location ) { $entry['error'] = 'No Google location set for this client — add it in Tools → GBP Clients.'; $out[] = $entry; continue; }
+		$fbid = (string) ( $cfg['facebook_page_id'] ?? '' );
+		if ( '' === $location && '' === $fbid ) { $entry['error'] = 'No Google location or Facebook Page set — add one in Tools → Client Reviews.'; $out[] = $entry; continue; }
 
-		$cached = $cache[ $location ] ?? null;
-		$stale  = empty( $cached['fetched_at'] ) || ( $now - (int) $cached['fetched_at'] > SP_AGENCY_REVIEWS_TTL );
+		$reviews = [];
 
-		if ( $force || $stale ) {
-			try {
-				$data   = BPGBP_Hub::fetch_reviews_for_location( $location, '', 200, sp_agency_reviews_since() );
-				$cached = [
-					'fetched_at'       => $now,
-					'averageRating'    => $data['averageRating'],
-					'totalReviewCount' => $data['totalReviewCount'],
-					'reviews'          => array_values( $data['reviews'] ),
-				];
-				$cache[ $location ] = $cached;
-			} catch ( Exception $e ) {
-				// No usable cache → surface the error for this client; otherwise show saved reviews + flag.
-				if ( empty( $cached['reviews'] ) ) { $entry['error'] = $e->getMessage(); $out[] = $entry; continue; }
-				$entry['error'] = 'Showing saved reviews — ' . $e->getMessage();
+		// ── Google reviews ──
+		if ( '' !== $location ) {
+			$cached = $cache[ $location ] ?? null;
+			// Only the Refresh button re-polls (live Google fetch); opening the panel serves cache instantly.
+			if ( $force ) {
+				try {
+					$data   = BPGBP_Hub::fetch_reviews_for_location( $location, '', 200, sp_agency_reviews_since() );
+					$cached = [
+						'fetched_at'       => $now,
+						'averageRating'    => $data['averageRating'],
+						'totalReviewCount' => $data['totalReviewCount'],
+						'reviews'          => array_values( $data['reviews'] ),
+					];
+					$cache[ $location ] = $cached;
+				} catch ( Exception $e ) {
+					if ( empty( $cached['reviews'] ) ) { $entry['error'] = $e->getMessage(); }
+					else { $entry['error'] = 'Showing saved reviews — ' . $e->getMessage(); }
+				}
 			}
+			$entry['averageRating']    = $cached['averageRating']    ?? null;
+			$entry['totalReviewCount'] = $cached['totalReviewCount'] ?? null;
+			$greviews = $cached['reviews'] ?? [];
+			foreach ( $greviews as &$gr ) { if ( empty( $gr['source'] ) ) $gr['source'] = 'google'; }
+			unset( $gr );
+			$dis = $dismissed[ $location ] ?? [];
+			if ( $dis && $greviews ) {
+				$greviews = array_values( array_filter( $greviews, function ( $r ) use ( $dis ) {
+					return empty( $dis[ (string) ( $r['reviewId'] ?? '' ) ] );
+				} ) );
+			}
+			$reviews = array_merge( $reviews, $greviews );
 		}
 
-		$entry['averageRating']    = $cached['averageRating']    ?? null;
-		$entry['totalReviewCount'] = $cached['totalReviewCount'] ?? null;
-		$reviews                   = $cached['reviews']          ?? [];
-
-		// Drop reviews the agency has already handled + removed — kept out on every pull, including re-fetches.
-		$dis = $dismissed[ $location ] ?? [];
-		if ( $dis && $reviews ) {
-			$reviews = array_values( array_filter( $reviews, function ( $r ) use ( $dis ) {
-				return empty( $dis[ (string) ( $r['reviewId'] ?? '' ) ] );
-			} ) );
+		// ── Facebook recommendations (own cache bucket 'fb:<pageId>'; positive=5★, negative=1★) ──
+		if ( '' !== $fbid && class_exists( 'BPFB_Hub' ) ) {
+			$fbkey  = 'fb:' . $fbid;
+			$fbc    = $cache[ $fbkey ] ?? null;
+			// Only the Refresh button re-polls (live FB fetch); opening the panel serves cache instantly.
+			if ( $force ) {
+				try {
+					$fbrev = [];
+					foreach ( BPFB_Hub::fetch_reviews( $fbid, 100 ) as $r ) {
+						$fbrev[] = [
+							'reviewId'   => 'fb_' . sha1( $fbid . '|' . $r['createTime'] . '|' . $r['comment'] ),
+							'reviewer'   => $r['author'],   // anonymous "Facebook user"; named at post time
+							'comment'    => $r['comment'],
+							'starRating' => (int) $r['rating'],
+							'createTime' => $r['createTime'],
+							'photo'      => '',
+							'reply'      => '',
+							'source'     => 'facebook',
+						];
+					}
+					$fbc = [ 'fetched_at' => $now, 'reviews' => $fbrev ];
+					$cache[ $fbkey ] = $fbc;
+				} catch ( Exception $e ) {
+					// Surface the FB fetch problem (token/mapping/deprecation) so it isn't an invisible blank.
+					$entry['fb_error'] = $e->getMessage();
+				}
+			}
+			$fbreviews = $fbc['reviews'] ?? [];
+			$fdis = $dismissed[ $fbkey ] ?? [];
+			if ( $fdis && $fbreviews ) {
+				$fbreviews = array_values( array_filter( $fbreviews, function ( $r ) use ( $fdis ) {
+					return empty( $fdis[ (string) ( $r['reviewId'] ?? '' ) ] );
+				} ) );
+			}
+			$reviews = array_merge( $reviews, $fbreviews );
 		}
 
 		$entry['reviews'] = $reviews;
@@ -221,19 +262,21 @@ function site_pulse_ajax_agency_dismiss_review(): void {
 	$sites    = BPGBP_Hub::get_site_map();
 	$cfg      = $sites[ $site_key ] ?? null;
 	if ( ! $cfg || empty( $cfg['agency'] ) ) wp_send_json_error( [ 'message' => 'Not an agency-managed client.' ] );
-	$location = $cfg['location'] ?? '';
-	if ( '' === $location ) wp_send_json_error( [ 'message' => 'Unknown client.' ] );
+	// FB reviews dismiss into their own bucket ('fb:<pageId>'); Google into the location bucket.
+	$is_fb  = strpos( $review_id, 'fb_' ) === 0;
+	$bucket = $is_fb ? ( 'fb:' . (string) ( $cfg['facebook_page_id'] ?? '' ) ) : (string) ( $cfg['location'] ?? '' );
+	if ( '' === $bucket || 'fb:' === $bucket ) wp_send_json_error( [ 'message' => 'Unknown client.' ] );
 
 	// Record it as dismissed so it stays out of the list on every future pull.
 	$dismissed = sp_agency_dismissed();
-	if ( ! isset( $dismissed[ $location ] ) || ! is_array( $dismissed[ $location ] ) ) $dismissed[ $location ] = [];
-	$dismissed[ $location ][ $review_id ] = 1;
+	if ( ! isset( $dismissed[ $bucket ] ) || ! is_array( $dismissed[ $bucket ] ) ) $dismissed[ $bucket ] = [];
+	$dismissed[ $bucket ][ $review_id ] = 1;
 	sp_agency_dismissed_save( $dismissed );
 
 	// Also drop it from the live cache now, so it's gone immediately without waiting for a re-fetch.
 	$cache = sp_agency_cache();
-	if ( ! empty( $cache[ $location ]['reviews'] ) ) {
-		$cache[ $location ]['reviews'] = array_values( array_filter( $cache[ $location ]['reviews'], function ( $r ) use ( $review_id ) {
+	if ( ! empty( $cache[ $bucket ]['reviews'] ) ) {
+		$cache[ $bucket ]['reviews'] = array_values( array_filter( $cache[ $bucket ]['reviews'], function ( $r ) use ( $review_id ) {
 			return (string) ( $r['reviewId'] ?? '' ) !== $review_id;
 		} ) );
 		sp_agency_cache_save( $cache );
@@ -330,6 +373,17 @@ function sp_agency_photo_is_real( string $url ): bool {
 	return count( $buckets ) >= 16;
 }
 
+/** Save a base64 data-URI image to the hub's uploads and return its URL (or '' on failure). Used for the
+ *  manually-uploaded profile photo on a Facebook review, so the client site can sideload it. */
+function sp_agency_save_fb_photo( string $data_uri ): string {
+	if ( ! preg_match( '#^data:image/(jpe?g|png|gif|webp);base64,#i', $data_uri, $m ) ) return '';
+	$bytes = base64_decode( substr( $data_uri, strpos( $data_uri, ',' ) + 1 ) );
+	if ( false === $bytes || '' === $bytes ) return '';
+	$ext = strtolower( $m[1] ); if ( 'jpeg' === $ext ) $ext = 'jpg';
+	$up  = wp_upload_bits( 'fb-review-' . wp_generate_password( 8, false ) . '.' . $ext, null, $bytes );
+	return ( ! empty( $up['url'] ) && empty( $up['error'] ) ) ? (string) $up['url'] : '';
+}
+
 add_action( 'wp_ajax_site_pulse_agency_push_testimonial', 'site_pulse_ajax_agency_push_testimonial' );
 function site_pulse_ajax_agency_push_testimonial(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
@@ -347,48 +401,80 @@ function site_pulse_ajax_agency_push_testimonial(): void {
 	$location = $cfg['location'] ?? '';
 	$site_url = ! empty( $cfg['site_url'] ) ? rtrim( (string) $cfg['site_url'], '/' ) : '';
 	$secret   = $cfg['secret'] ?? '';
-	if ( '' === $site_url ) wp_send_json_error( [ 'message' => 'No Site URL set for this client — add it in Tools → GBP Clients.' ] );
-	if ( '' === $secret )   wp_send_json_error( [ 'message' => 'No secret set for this client — approve/pair it in Tools → GBP Clients.' ] );
+	if ( '' === $site_url ) wp_send_json_error( [ 'message' => 'No Site URL set for this client — add it in Tools → Client Reviews.' ] );
+	if ( '' === $secret )   wp_send_json_error( [ 'message' => 'No secret set for this client — approve/pair it in Tools → Client Reviews.' ] );
 
-	// Pull the review from our cache — never trust client-posted review text. If it isn't there (stale
-	// cache, or the location was just set/changed in GBP Clients so the cache is keyed differently),
-	// re-fetch this location live and look again before giving up.
-	$cache  = sp_agency_cache();
-	$review = sp_agency_find_review( $cache[ $location ]['reviews'] ?? [], $review_id );
+	$with_photo = ! empty( $_POST['with_photo'] );
+	$is_fb      = strpos( $review_id, 'fb_' ) === 0;
+	$cache      = sp_agency_cache();
 
-	if ( ! $review && '' !== $location ) {
-		try {
-			$data               = BPGBP_Hub::fetch_reviews_for_location( $location, '', 200, sp_agency_reviews_since() );
-			$cache[ $location ] = [
-				'fetched_at'       => time(),
-				'averageRating'    => $data['averageRating'],
-				'totalReviewCount' => $data['totalReviewCount'],
-				'reviews'          => array_values( $data['reviews'] ),
-			];
-			sp_agency_cache_save( $cache );
-			$review = sp_agency_find_review( $cache[ $location ]['reviews'], $review_id );
-		} catch ( Exception $e ) {
-			wp_send_json_error( [ 'message' => 'Could not reach Google to verify the review: ' . $e->getMessage() ] );
+	if ( $is_fb ) {
+		// Facebook → testimonial. FB is anonymous, so the NAME (and optional PHOTO) come from the agent at
+		// post time; the TEXT + rating come from our authoritative FB cache (never client-posted text).
+		$fbid = (string) ( $cfg['facebook_page_id'] ?? '' );
+		if ( '' === $fbid ) wp_send_json_error( [ 'message' => 'No Facebook Page mapped for this client.' ] );
+		$bucket = 'fb:' . $fbid;
+		$review = sp_agency_find_review( $cache[ $bucket ]['reviews'] ?? [], $review_id );
+		if ( ! $review && class_exists( 'BPFB_Hub' ) ) {
+			try {
+				$fbrev = [];
+				foreach ( BPFB_Hub::fetch_reviews( $fbid, 100 ) as $r ) {
+					$fbrev[] = [
+						'reviewId'   => 'fb_' . sha1( $fbid . '|' . $r['createTime'] . '|' . $r['comment'] ),
+						'reviewer'   => $r['author'], 'comment' => $r['comment'],
+						'starRating' => (int) $r['rating'], 'createTime' => $r['createTime'], 'photo' => '', 'source' => 'facebook',
+					];
+				}
+				$cache[ $bucket ] = [ 'fetched_at' => time(), 'reviews' => $fbrev ];
+				sp_agency_cache_save( $cache );
+				$review = sp_agency_find_review( $fbrev, $review_id );
+			} catch ( Exception $e ) {}
 		}
-	}
+		if ( ! $review ) wp_send_json_error( [ 'message' => 'That Facebook review is no longer available — Refresh and try again.' ] );
 
-	if ( ! $review ) {
-		wp_send_json_error( [ 'message' => 'That review is no longer on this Google location — it may have been deleted, or the wrong location is mapped for this client (check Tools → GBP Clients).' ] );
-	}
-
-	$payload = [
-		'reviewId'   => (string) ( $review['reviewId'] ?? '' ),
-		'reviewer'   => (string) ( $review['reviewer'] ?? '' ),
-		'comment'    => (string) ( $review['comment'] ?? '' ),
-		'starRating' => (int) ( $review['starRating'] ?? 0 ),
-	];
-
-	// Reviewer profile photo → testimonial featured image. Send the (upscaled) URL and let the CLIENT
-	// decide whether it's a real photo vs Google's monogram default — the client downloads the image to
-	// sideload it anyway, so it does the check there (one download, no hub-side GD dependency).
-	$photo = (string) ( $review['photo'] ?? '' );
-	if ( '' !== $photo ) {
-		$payload['photo'] = preg_replace( '/=s\d+-c[\w-]*$/', '=s400-c', $photo );
+		$manual_name = sanitize_text_field( wp_unslash( $_POST['reviewer'] ?? '' ) );
+		$payload = [
+			'reviewId'   => (string) ( $review['reviewId'] ?? '' ),
+			'reviewer'   => '' !== $manual_name ? $manual_name : (string) ( $review['reviewer'] ?? '' ),
+			'comment'    => (string) ( $review['comment'] ?? '' ),
+			'starRating' => (int) ( $review['starRating'] ?? 0 ),
+			'platform'   => 'Facebook',
+		];
+		if ( $with_photo && ! empty( $_POST['photo_data'] ) ) {
+			$purl = sp_agency_save_fb_photo( (string) wp_unslash( $_POST['photo_data'] ) );
+			if ( '' !== $purl ) $payload['photo'] = $purl;
+		}
+	} else {
+		// Google → testimonial. Pull from cache (never trust posted text); re-fetch live if missing.
+		$review = sp_agency_find_review( $cache[ $location ]['reviews'] ?? [], $review_id );
+		if ( ! $review && '' !== $location ) {
+			try {
+				$data               = BPGBP_Hub::fetch_reviews_for_location( $location, '', 200, sp_agency_reviews_since() );
+				$cache[ $location ] = [
+					'fetched_at'       => time(),
+					'averageRating'    => $data['averageRating'],
+					'totalReviewCount' => $data['totalReviewCount'],
+					'reviews'          => array_values( $data['reviews'] ),
+				];
+				sp_agency_cache_save( $cache );
+				$review = sp_agency_find_review( $cache[ $location ]['reviews'], $review_id );
+			} catch ( Exception $e ) {
+				wp_send_json_error( [ 'message' => 'Could not reach Google to verify the review: ' . $e->getMessage() ] );
+			}
+		}
+		if ( ! $review ) {
+			wp_send_json_error( [ 'message' => 'That review is no longer on this Google location — it may have been deleted, or the wrong location is mapped for this client (check Tools → Client Reviews).' ] );
+		}
+		$payload = [
+			'reviewId'   => (string) ( $review['reviewId'] ?? '' ),
+			'reviewer'   => (string) ( $review['reviewer'] ?? '' ),
+			'comment'    => (string) ( $review['comment'] ?? '' ),
+			'starRating' => (int) ( $review['starRating'] ?? 0 ),
+		];
+		$photo = (string) ( $review['photo'] ?? '' );
+		if ( $with_photo && '' !== $photo ) {
+			$payload['photo'] = preg_replace( '/=s\d+-c[\w-]*$/', '=s400-c', $photo );
+		}
 	}
 
 	// Use the ?rest_route= form, NOT the pretty /wp-json/ path: pretty REST paths get

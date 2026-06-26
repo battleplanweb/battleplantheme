@@ -6,36 +6,36 @@
  */
 
 #bp-chat-root {
-	--bpc-accent: var(--main-blue, #1763a6);
-	--bpc-accent-text: #fff;
-	--bpc-bg: #fff;
-	--bpc-text: var(--black, #1d1d1d);
-	--bpc-muted: #6b7280;
-	--bpc-bot-bg: var(--light-grey, #f1f3f5);
-	--bpc-radius: 1em;
-	font-family: var(--font-text, inherit);
+	--bpc-accent:                                              var(--main-blue, #1763a6);
+	--bpc-accent-text:                                         #fff;
+	--bpc-bg:                                                  #fff;
+	--bpc-text:                                                var(--black, #1d1d1d);
+	--bpc-muted:                                               #6b7280;
+	--bpc-bot-bg:                                              var(--light-grey, #f1f3f5);
+	--bpc-radius:                                              1em;
+	font-family:                                               var(--font-text, inherit);
 }
 
 /* ---- Launcher (circular chat bubble) ---- */
 .bp-chat-launcher {
-	position: fixed;
-	right: 1.25em;
-	bottom: 1.25em;
-	z-index: 99998;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 3.75em;
-	height: 3.75em;
-	padding: 0;
-	border: none;
-	border-radius: 50%;
-	background: var(--bpc-accent);
-	color: var(--bpc-accent-text);
-	line-height: 1;
-	cursor: pointer;
-	box-shadow: 0 0.25em 1em rgba(0, 0, 0, 0.25);
-	transition: transform 0.15s ease, box-shadow 0.15s ease;
+	position:                                                  fixed;
+	right:                                                     1.25em;
+	bottom:                                                    1.25em;
+	z-index:                                                   99998;
+	display:                                                   inline-flex;
+	align-items:                                               center;
+	justify-content:                                           center;
+	width:                                                     3.75em;
+	height:                                                    3.75em;
+	padding:                                                   0;
+	border:                                                    none;
+	border-radius:                                             50%;
+	background:                                                var(--bpc-accent);
+	color:                                                     var(--bpc-accent-text);
+	line-height:                                               1;
+	cursor:                                                    pointer;
+	box-shadow:                                                0 0.25em 1em rgba(0, 0, 0, 0.25);
+	transition:                                                transform 0.15s ease, box-shadow 0.15s ease;
 }
 .bp-chat-launcher:hover { transform: translateY(-0.1em) scale(1.05); box-shadow: 0 0.4em 1.2em rgba(0, 0, 0, 0.3); }
 .bp-chat-launcher-icon { display: inline-flex; width: 1.7em; height: 1.7em; }
@@ -45,22 +45,22 @@
 
 /* ---- Panel ---- */
 .bp-chat-panel {
-	position: fixed;
-	right: 1.25em;
-	bottom: 1.25em;
-	z-index: 99999;
+	position:                                                  fixed;
+	right:                                                     1.25em;
+	bottom:                                                    1.25em;
+	z-index:                                                   99999;
 	display: none; /* shown only when #bp-chat-root has .bp-chat-open */
-	flex-direction: column;
-	width: 22em;
-	max-width: calc(100vw - 2em);
-	height: 32em;
-	max-height: calc(100vh - 2.5em);
-	background: var(--bpc-bg);
-	color: var(--bpc-text);
-	border-radius: var(--bpc-radius);
-	overflow: hidden;
-	box-shadow: 0 0.5em 2em rgba(0, 0, 0, 0.3);
-	animation: bpc-pop 0.18s ease;
+	flex-direction:                                            column;
+	width:                                                     22em;
+	max-width:                                                 calc(100vw - 2em);
+	height:                                                    32em;
+	max-height:                                                calc(100vh - 2.5em);
+	background:                                                var(--bpc-bg);
+	color:                                                     var(--bpc-text);
+	border-radius:                                             var(--bpc-radius);
+	overflow:                                                  hidden;
+	box-shadow:                                                0 0.5em 2em rgba(0, 0, 0, 0.3);
+	animation:                                                 bpc-pop 0.18s ease;
 }
 @keyframes bpc-pop {
 	from { opacity: 0; transform: translateY(0.75em); }
@@ -70,66 +70,66 @@
 
 /* ---- Header ---- */
 .bp-chat-head {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 0.85em 1em;
-	background: var(--bpc-accent);
-	color: var(--bpc-accent-text);
+	display:                                                   flex;
+	align-items:                                               center;
+	justify-content:                                           space-between;
+	padding:                                                   0.85em 1em;
+	background:                                                var(--bpc-accent);
+	color:                                                     var(--bpc-accent-text);
 }
 .bp-chat-title { font-weight: 700; font-size: 1.05em; }
 .bp-chat-close {
-	border: none;
-	background: none;
-	color: var(--bpc-accent-text);
-	font-size: 1.6em;
-	line-height: 1;
-	cursor: pointer;
-	padding: 0 0.15em;
-	opacity: 0.9;
+	border:                                                    none;
+	background:                                                none;
+	color:                                                     var(--bpc-accent-text);
+	font-size:                                                 1.6em;
+	line-height:                                               1;
+	cursor:                                                    pointer;
+	padding:                                                   0 0.15em;
+	opacity:                                                   0.9;
 }
 .bp-chat-close:hover { opacity: 1; }
 
 /* ---- Log ---- */
 .bp-chat-log {
-	flex: 1 1 auto;
-	overflow-y: auto;
-	padding: 1em;
-	display: flex;
-	flex-direction: column;
-	gap: 0.6em;
-	background: var(--bpc-bg);
+	flex:                                                      1 1 auto;
+	overflow-y:                                                auto;
+	padding:                                                   1em;
+	display:                                                   flex;
+	flex-direction:                                            column;
+	gap:                                                       0.6em;
+	background:                                                var(--bpc-bg);
 }
 .bp-chat-msg { display: flex; }
 .bp-chat-user { justify-content: flex-end; }
 .bp-chat-bubble {
-	max-width: 85%;
-	padding: 0.6em 0.85em;
-	border-radius: var(--bpc-radius);
-	font-size: 0.95em;
-	line-height: 1.4;
-	white-space: pre-wrap;
-	word-wrap: break-word;
+	max-width:                                                 85%;
+	padding:                                                   0.6em 0.85em;
+	border-radius:                                             var(--bpc-radius);
+	font-size:                                                 0.95em;
+	line-height:                                               1.4;
+	white-space:                                               pre-wrap;
+	word-wrap:                                                 break-word;
 }
 .bp-chat-assistant .bp-chat-bubble {
-	background: var(--bpc-bot-bg);
-	color: var(--bpc-text);
-	border-bottom-left-radius: 0.25em;
+	background:                                                var(--bpc-bot-bg);
+	color:                                                     var(--bpc-text);
+	border-bottom-left-radius:                                 0.25em;
 }
 .bp-chat-user .bp-chat-bubble {
-	background: var(--bpc-accent);
-	color: var(--bpc-accent-text);
-	border-bottom-right-radius: 0.25em;
+	background:                                                var(--bpc-accent);
+	color:                                                     var(--bpc-accent-text);
+	border-bottom-right-radius:                                0.25em;
 }
 
 /* ---- Typing indicator ---- */
 .bp-chat-typing .bp-chat-bubble { display: inline-flex; gap: 0.3em; padding: 0.8em 0.9em; }
 .bp-chat-typing span {
-	width: 0.45em;
-	height: 0.45em;
-	border-radius: 50%;
-	background: var(--bpc-muted);
-	animation: bpc-blink 1.2s infinite ease-in-out both;
+	width:                                                     0.45em;
+	height:                                                    0.45em;
+	border-radius:                                             50%;
+	background:                                                var(--bpc-muted);
+	animation:                                                 bpc-blink 1.2s infinite ease-in-out both;
 }
 .bp-chat-typing span:nth-child(2) { animation-delay: 0.2s; }
 .bp-chat-typing span:nth-child(3) { animation-delay: 0.4s; }
@@ -137,56 +137,93 @@
 
 /* ---- Form ---- */
 .bp-chat-form {
-	display: flex;
-	align-items: flex-end;
-	gap: 0.5em;
-	padding: 0.6em 0.75em 0.4em;
-	border-top: 1px solid rgba(0, 0, 0, 0.08);
+	display:                                                   flex;
+	align-items:                                               flex-end;
+	gap:                                                       0.5em;
+	padding:                                                   0.6em 0.75em 0.4em;
+	border-top:                                                1px solid rgba(0, 0, 0, 0.08);
 }
 .bp-chat-input {
-	flex: 1 1 auto;
-	resize: none;
-	border: 1px solid rgba(0, 0, 0, 0.18);
-	border-radius: 0.75em;
-	padding: 0.55em 0.7em;
-	font: inherit;
-	font-size: 0.95em;
-	line-height: 1.35;
-	max-height: 7.5em;
-	color: var(--bpc-text);
-	background: #fff;
+	flex:                                                      1 1 auto;
+	resize:                                                    none;
+	border:                                                    1px solid rgba(0, 0, 0, 0.18);
+	border-radius:                                             0.75em;
+	padding:                                                   0.55em 0.7em;
+	font:                                                      inherit;
+	font-size:                                                 0.95em;
+	line-height:                                               1.35;
+	max-height:                                                7.5em;
+	color:                                                     var(--bpc-text);
+	background:                                                #fff;
 }
 .bp-chat-input:focus { outline: none; border-color: var(--bpc-accent); }
 .bp-chat-send {
-	flex: 0 0 auto;
-	border: none;
-	border-radius: 0.75em;
-	padding: 0.6em 1em;
-	background: var(--bpc-accent);
-	color: var(--bpc-accent-text);
-	font-weight: 600;
-	cursor: pointer;
+	flex:                                                      0 0 auto;
+	border:                                                    none;
+	border-radius:                                             0.75em;
+	padding:                                                   0.6em 1em;
+	background:                                                var(--bpc-accent);
+	color:                                                     var(--bpc-accent-text) !important;
+	font-weight:                                               600;
+	cursor:                                                    pointer;
 }
 .bp-chat-send:disabled { opacity: 0.5; cursor: default; }
 
 /* ---- Consent line ---- */
 .bp-chat-consent {
-	padding: 0 0.9em 0.7em;
-	font-size: 0.72em;
-	line-height: 1.3;
-	color: var(--bpc-muted);
-	text-align: center;
+	padding:                                                   0 0.9em 0.7em;
+	font-size:                                                 0.72em;
+	line-height:                                               1.3;
+	color:                                                     var(--bpc-muted);
+	text-align:                                                center;
 }
+
+/* ---- Consent card (explicit SMS opt-in) ---- */
+.bp-chat-consent-card {
+	max-width:                                                 92%;
+	padding:                                                   0.85em 0.95em;
+	border:                                                    1px solid var(--bpc-accent);
+	border-radius:                                             var(--bpc-radius);
+	background:                                                #fff;
+}
+.bp-chat-consent-disclosure {
+	margin:                                                    0 0 0.6em;
+	font-size:                                                 0.8em;
+	line-height:                                               1.4;
+	color:                                                     var(--bpc-text);
+}
+.bp-chat-consent-links {
+	margin:                                                    0 0 0.7em;
+	font-size:                                                 0.72em;
+	line-height:                                               1.3;
+}
+.bp-chat-consent-links a { color: var(--bpc-accent); text-decoration: underline; }
+.bp-chat-consent-btns { display: flex; gap: 0.5em; }
+.bp-chat-consent-yes,
+.bp-chat-consent-no {
+	flex:                                                      1 1 auto;
+	border:                                                    none;
+	border-radius:                                             0.75em;
+	padding:                                                   0.55em 0.8em;
+	font:                                                      inherit;
+	font-size:                                                 0.9em;
+	font-weight:                                               600;
+	cursor:                                                    pointer;
+}
+.bp-chat-consent-yes { background: var(--bpc-accent); color: var(--bpc-accent-text)!important; }
+.bp-chat-consent-no { background: var(--bpc-bot-bg); color: var(--bpc-text)!important; }
+.bp-chat-consent-yes:disabled,
+.bp-chat-consent-no:disabled { opacity: 0.5; cursor: default; }
 
 /* ---- Mobile ---- */
 @media (max-width: 30em) {
 	.bp-chat-panel {
-		right: 0;
-		bottom: 0;
-		width: 100vw;
-		max-width: 100vw;
-		height: 100vh;
-		max-height: 100vh;
-		border-radius: 0;
+		right:                                                    0;
+		bottom:                                                   0;
+		width:                                                    100vw;
+		max-width:                                                100vw;
+		height:                                                   100vh;
+		max-height:                                               100vh;
+		border-radius:                                            0;
 	}
 }

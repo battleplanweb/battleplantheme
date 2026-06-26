@@ -150,7 +150,7 @@ function sp_survey_store( array $data ): int {
 	// columns target the right store's people); falls back to 0 when the store can't be resolved.
 	$loc_name = sanitize_text_field( (string) ( $data['location'] ?? '' ) );
 	$subject  = sp_survey_subject_user( $loc_name );
-	$msg      = 'New customer survey' . ( $loc_name !== '' ? ' for ' . $loc_name : '' )
+	$msg      = 'New comment card' . ( $loc_name !== '' ? ' for ' . $loc_name : '' )
 		. ( $avg !== null ? sprintf( ' (avg %.1f stars)', $avg ) : '' );
 	if ( function_exists( 'site_pulse_dispatch_notification' ) ) {
 		site_pulse_dispatch_notification( 'survey_received', $subject, $msg, $survey_id, 'survey' );

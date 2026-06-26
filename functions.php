@@ -1640,6 +1640,9 @@ require_once get_template_directory().'/includes/includes-time-tracker.php';
 // BPGBP_REFRESH_TOKEN actually becomes the hub and registers the /bpgbp/v1/* routes.
 require_once get_template_directory().'/includes/includes-gbp-hub.php';
 require_once get_template_directory().'/includes/includes-gbp-hub-registry.php';
+// Facebook (Meta) hub — OAuth + Page reviews. Like the GBP hub, it only activates on the install whose
+// wp-config defines BP_FB_APP_ID / BP_FB_APP_SECRET; dormant everywhere else.
+require_once get_template_directory().'/includes/includes-fb-hub.php';
 require_once get_template_directory().'/functions-grid.php';
 require_once get_template_directory().'/functions-public.php';
 
@@ -3113,7 +3116,15 @@ function battleplan_printFooterLeft($out) {
 add_filter('bp_footer_right', 'battleplan_printFooterRight', 20, 1);
 function battleplan_printFooterRight($out) {
 	$customer_info = customer_info();
-	$printRight = '<div class="block block-text span-10">';
+	$printRight = '';
+
+	$icon = battleplan_fetch_site_icon();
+	if ( !empty($icon['name']) ) {
+		$iconImg  = '<img src="'.esc_url('/wp-content/uploads/'.$icon['name']).'"'.($icon['wh'] ?? '').' alt="'.esc_attr($customer_info['name'] ?? '').'" loading="lazy" />';
+		$printRight .= apply_filters('bp_footer_icon', '<div class="block block-image site-icon span-2">'.$iconImg.'</div>', $customer_info, $icon);
+	}
+
+	$printRight .= '<div class="block block-text span-10">';
 
 	$printRight .= apply_filters('bp_footer_nav', '', $customer_info);
 	$printRight .= apply_filters('bp_footer_misc2', '', $customer_info);

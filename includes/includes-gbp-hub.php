@@ -41,7 +41,7 @@ class BPGBP_Hub {
 
 	public static function init() {
 		add_action( 'rest_api_init', array( __CLASS__, 'register_routes' ) );
-		add_action( 'admin_menu', array( __CLASS__, 'admin_menu' ) );
+		// The "GBP Locations" tab is retired — location IDs now show in the Client Reviews list (Locations column).
 	}
 
 	/* ─────────────── Admin helper page: Tools → GBP Locations ─────────────── */
@@ -789,6 +789,10 @@ function bpgbp_create_testimonial_from_review( array $review, $status = 'draft' 
 
 	$status = ( 'publish' === $status ) ? 'publish' : 'draft';
 
+	// Source platform — Google by default; the push sends 'Facebook' for FB recommendations.
+	$platform = (string) ( isset( $review['platform'] ) ? $review['platform'] : '' );
+	$platform = in_array( $platform, array( 'Google', 'Facebook' ), true ) ? $platform : 'Google';
+
 	// One testimonial per Google review.
 	$dupe = get_posts( array(
 		'post_type'   => 'testimonials',
@@ -800,17 +804,20 @@ function bpgbp_create_testimonial_from_review( array $review, $status = 'draft' 
 	) );
 	if ( $dupe ) {
 		$existing     = (int) $dupe[0];
+		// Keep the platform tag current on re-push — an earlier test may have created this as Google.
+		if ( function_exists( 'update_field' ) ) update_field( 'testimonial_platform', $platform, $existing );
+		else update_post_meta( $existing, 'testimonial_platform', $platform );
 		$photo_status = 'none';
 		// Backfill the photo if this review was imported before we supported it (and has none yet).
 		$photo = (string) ( isset( $review['photo'] ) ? $review['photo'] : '' );
 		if ( '' !== $photo ) $photo_status = bpgbp_set_testimonial_photo( $existing, $photo );
-		return array( 'already_imported' => true, 'post_id' => $existing, 'photo' => $photo_status );
+		return array( 'already_imported' => true, 'post_id' => $existing, 'photo' => $photo_status, 'platform' => $platform );
 	}
 
 	$post_id = wp_insert_post( array(
 		'post_type'    => 'testimonials',
 		'post_status'  => $status,
-		'post_title'   => ( isset( $review['reviewer'] ) ? $review['reviewer'] : '' ) ?: 'Google Reviewer',
+		'post_title'   => ( isset( $review['reviewer'] ) ? $review['reviewer'] : '' ) ?: ( $platform . ' Reviewer' ),
 		'post_content' => isset( $review['comment'] ) ? $review['comment'] : '',
 	), true );
 	if ( is_wp_error( $post_id ) ) {
@@ -820,10 +827,10 @@ function bpgbp_create_testimonial_from_review( array $review, $status = 'draft' 
 	$rating = (int) ( isset( $review['starRating'] ) ? $review['starRating'] : 0 );
 	if ( function_exists( 'update_field' ) ) {
 		update_field( 'testimonial_rating', $rating, $post_id );
-		update_field( 'testimonial_platform', 'Google', $post_id );
+		update_field( 'testimonial_platform', $platform, $post_id );
 	} else {
 		update_post_meta( $post_id, 'testimonial_rating', $rating );
-		update_post_meta( $post_id, 'testimonial_platform', 'Google' );
+		update_post_meta( $post_id, 'testimonial_platform', $platform );
 	}
 	update_post_meta( $post_id, '_bp_google_review_id', $review_id );
 
@@ -834,7 +841,7 @@ function bpgbp_create_testimonial_from_review( array $review, $status = 'draft' 
 		$photo_status = bpgbp_set_testimonial_photo( (int) $post_id, $photo );
 	}
 
-	return array( 'post_id' => (int) $post_id, 'edit_url' => get_edit_post_link( $post_id, 'raw' ), 'photo' => $photo_status );
+	return array( 'post_id' => (int) $post_id, 'edit_url' => get_edit_post_link( $post_id, 'raw' ), 'photo' => $photo_status, 'platform' => $platform );
 }
 
 /**
@@ -846,7 +853,14 @@ function bpgbp_create_testimonial_from_review( array $review, $status = 'draft' 
 function bpgbp_set_testimonial_photo( int $post_id, string $url ) {
 	if ( ! $post_id || '' === $url ) return 'none';
 	$host = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
-	if ( ! preg_match( '/(^|\.)googleusercontent\.com$/', $host ) ) return 'skipped-host';
+	// Allow Google's photo CDN AND the agency hub's own domain (manually-uploaded Facebook profile pics
+	// are hosted on the hub, which already signs the push, so it's a trusted source). Trust both the
+	// configured hub URL (the hub this site actually pairs with) and the BPGBP_PAIR_HUB constant.
+	$hub_hosts = array();
+	if ( function_exists( 'bpgbp_cfg' ) && bpgbp_cfg( 'HUB_URL' ) ) $hub_hosts[] = strtolower( (string) wp_parse_url( bpgbp_cfg( 'HUB_URL' ), PHP_URL_HOST ) );
+	if ( defined( 'BPGBP_PAIR_HUB' ) )                              $hub_hosts[] = strtolower( (string) wp_parse_url( BPGBP_PAIR_HUB, PHP_URL_HOST ) );
+	$ok_host = preg_match( '/(^|\.)googleusercontent\.com$/', $host ) || in_array( $host, array_filter( $hub_hosts ), true );
+	if ( ! $ok_host ) return 'skipped-host';
 	if ( has_post_thumbnail( $post_id ) ) return 'exists';
 
 	require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -867,9 +881,25 @@ function bpgbp_set_testimonial_photo( int $post_id, string $url ) {
 	$ext  = isset( $map[ $mime ] ) ? $map[ $mime ] : '';
 	if ( '' === $ext ) { @unlink( $tmp ); return 'error-type'; }
 
-	$file   = array( 'name' => 'google-review-' . $post_id . '.' . $ext, 'tmp_name' => $tmp );
+	// Normalize the avatar like the Jobsite GEO photos: cap at 400x400 (keep aspect, no crop) and convert
+	// to WebP. Falls back to the original file if the image editor / WebP support isn't available.
+	$final_path = $tmp;
+	$final_ext  = $ext;
+	$editor = wp_get_image_editor( $tmp );
+	if ( ! is_wp_error( $editor ) ) {
+		$editor->resize( 400, 400, false );
+		$webp  = preg_replace( '/\.[^.]+$/', '', $tmp ) . '-400.webp';
+		$saved = $editor->save( $webp, 'image/webp' );
+		if ( ! is_wp_error( $saved ) && ! empty( $saved['path'] ) ) {
+			@unlink( $tmp );
+			$final_path = $saved['path'];
+			$final_ext  = 'webp';
+		}
+	}
+
+	$file   = array( 'name' => 'review-' . $post_id . '.' . $final_ext, 'tmp_name' => $final_path );
 	$att_id = media_handle_sideload( $file, $post_id, '' );
-	if ( is_wp_error( $att_id ) ) { @unlink( $tmp ); return 'error-sideload'; }
+	if ( is_wp_error( $att_id ) ) { @unlink( $final_path ); return 'error-sideload'; }
 
 	set_post_thumbnail( $post_id, (int) $att_id );
 	return 'set';
@@ -938,6 +968,7 @@ function bpgbp_receive_testimonial( WP_REST_Request $request ) {
 		'comment'    => isset( $p['comment'] )    ? wp_kses_post( (string) $p['comment'] ) : '',
 		'starRating' => isset( $p['starRating'] ) ? (int) $p['starRating'] : 0,
 		'photo'      => isset( $p['photo'] )      ? esc_url_raw( (string) $p['photo'] ) : '',
+		'platform'   => isset( $p['platform'] )   ? sanitize_text_field( (string) $p['platform'] ) : '',
 	);
 	if ( '' === $review['reviewId'] ) {
 		return new WP_Error( 'bpgbp_no_review', 'Missing review id.', array( 'status' => 400 ) );

@@ -847,9 +847,9 @@ function sp_reviews_generate_reply( array $row ) {
 	$rating   = (int) ( $row['star_rating'] ?? 0 );
 	$comment  = trim( (string) ( $row['comment'] ?? '' ) );
 
-	// Too short to be worth an AI draft (a bare star rating, "Great!", etc.) — a model call would just
-	// burn tokens producing a generic line. Inject a quick canned thank-you instead.
-	if ( mb_strlen( $comment ) < 25 ) {
+	// Too short to be worth an AI draft (a bare star rating, "Great service!", etc.) — a model call would
+	// just burn tokens producing a generic line. Inject a quick canned thank-you instead.
+	if ( mb_strlen( $comment ) < 40 ) {
 		$canned = [
 			'Thank you!',
 			'Thank you for the review!',
@@ -863,9 +863,9 @@ function sp_reviews_generate_reply( array $row ) {
 		return $canned[ array_rand( $canned ) ];
 	}
 
-	// Generic fallback voice; the real brand voice comes from the site (functions-site.php) via this filter.
-	$default_voice = 'Warm, genuine, and personable — like a real owner who cares about every guest: appreciative, specific, and human.';
-	$voice = (string) apply_filters( 'site_pulse_review_reply_voice', $default_voice, $brand, $row );
+	// No voice by default — the prompt's own rules already cover tone. A site supplies a real brand voice
+	// through this filter (functions-site.php); only then is a "Brand voice" section added to the prompt.
+	$voice = (string) apply_filters( 'site_pulse_review_reply_voice', '', $brand, $row );
 
 	// Random angle each call so regenerated drafts don't converge on the same phrasing.
 	$nudges = apply_filters( 'site_pulse_review_reply_nudges', [
@@ -886,6 +886,11 @@ function sp_reviews_generate_reply( array $row ) {
 	$ctx .= 'Reviewer first name: ' . ( $first ?: '(unknown)' ) . "\n";
 	$ctx .= "Star rating: {$rating} of 5\n";
 	$ctx .= 'Review: ' . ( '' !== $comment ? $comment : "(no written comment — a {$rating}-star rating only)" ) . "\n";
+
+	// Proportional length: the reply must not be longer than the review. Give the model the actual size.
+	$rev_words = max( 1, str_word_count( $comment ) );
+	$ctx .= "\nLength: keep the reply no longer than the review itself — this review is about {$rev_words} words, so reply in roughly that many words or fewer. A short review gets a short reply.";
+
 	if ( '' !== $nudge ) $ctx .= "\nStyle nudge for THIS draft (so it differs from previous replies): {$nudge}";
 
 	$system = (string) apply_filters( 'site_pulse_review_reply_prompt', site_pulse_prompt_review_reply( $brand, $voice ), $brand, $voice, $row );

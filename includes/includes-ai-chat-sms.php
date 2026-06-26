@@ -21,7 +21,7 @@ SMS after the visitor leaves — the transcript lives server-side,
 keyed by the visitor's phone number once captured.
 --------------------------------------------------------------*/
 
-if ( ! defined( 'BP_CHAT_DB_VERSION' ) ) define( 'BP_CHAT_DB_VERSION', '1.0' );
+if ( ! defined( 'BP_CHAT_DB_VERSION' ) ) define( 'BP_CHAT_DB_VERSION', '1.1' );
 
 function bp_chat_table( string $name ): string {
 	return $GLOBALS['wpdb']->prefix . 'bp_chat_' . $name;
@@ -37,9 +37,12 @@ function bp_chat_install_db(): void {
 		cid varchar(64) DEFAULT NULL,
 		phone varchar(20) DEFAULT NULL,
 		name varchar(190) DEFAULT NULL,
+		email varchar(190) DEFAULT NULL,
 		channel varchar(10) NOT NULL DEFAULT 'web',
 		status varchar(20) NOT NULL DEFAULT 'active',
 		opted_out tinyint(1) NOT NULL DEFAULT 0,
+		consent_at datetime DEFAULT NULL,
+		consent_ip varchar(45) DEFAULT NULL,
 		lead_sent_at datetime DEFAULT NULL,
 		created_at datetime NOT NULL,
 		updated_at datetime NOT NULL,
@@ -204,8 +207,8 @@ function bp_chat_normalize_phone( string $raw ): string {
 function bp_chat_text_opening( array $customer, string $name ): string {
 	$company = $customer['name'] ?? get_bloginfo( 'name' );
 	$hi      = $name !== '' ? "Hi {$name}, " : 'Hi, ';
-	return $hi . "it's {$company} — picking up our chat here so we can help even if you step away. "
-		. "Reply anytime. Msg & data rates may apply; reply STOP to opt out.";
+	return $hi . "it's {$company} — continuing our chat by text so we can help even if you step away. "
+		. "Reply anytime. Msg frequency varies; msg & data rates may apply. Reply STOP to unsubscribe, HELP for help.";
 }
 
 
@@ -340,10 +343,10 @@ function bp_chat_run_sms( array $conv, array $customer, array $o ): string {
 		. "\n\nYou are now continuing this conversation over SMS text messages. "
 		. "Keep every reply to one or two short sentences — texts must be brief.";
 
-	$tools       = bp_chat_tools();
-	$messages    = bp_chat_history( (int) $conv['id'] );
-	$lead_sent   = false;
-	$text_started= false;
+	$tools            = bp_chat_tools();
+	$messages         = bp_chat_history( (int) $conv['id'] );
+	$lead_sent        = false;
+	$consent_requested= false;
 
 	$resp = bp_chat_call_claude( $system, $messages, $tools );
 	if ( is_wp_error( $resp ) ) { error_log( 'BP CHAT SMS error: ' . $resp->get_error_message() ); return ''; }
@@ -355,7 +358,7 @@ function bp_chat_run_sms( array $conv, array $customer, array $o ): string {
 			$results[] = [
 				'type'        => 'tool_result',
 				'tool_use_id' => $block['id'] ?? '',
-				'content'     => bp_chat_handle_tool_block( $block, $customer, $o, $conv, 'sms', $lead_sent, $text_started ),
+				'content'     => bp_chat_handle_tool_block( $block, $customer, $o, $conv, 'sms', $lead_sent, $consent_requested ),
 			];
 		}
 		$messages[] = [ 'role' => 'assistant', 'content' => $resp['content'] ];

@@ -147,21 +147,82 @@ Return ONLY valid JSON, no markdown, in exactly this shape:
 
 // Drafts the owner's short public reply to a Google review, in the given brand's voice ($voice = guidance).
 function site_pulse_prompt_review_reply( string $brand, string $voice ): string {
-	$brand = '' !== $brand ? $brand : 'this restaurant';
-	return "You write the OWNER'S short public reply to a Google review for {$brand}. You are given the location, the reviewer's first name, the star rating, and the review text.
+	$rand1 = rand( 1, 5 );
+	$rand2 = rand( 1, 4 );
+	$rand3 = rand( 1, 2 );
+	$rand4 = rand( 1, 6 );
+	$rand5 = rand( 1, 6 );
+	$rand6 = rand( 1, 3 );
+	$rand7 = rand( 1, 2 );
+	$rand8 = rand( 1, 4 );
 
-Brand voice for {$brand}:
-{$voice}
+	$brand = '' !== $brand ? $brand : 'this business';
+	$voice = trim( $voice );
+	// Only include a brand-voice section when the site actually supplied one — otherwise it adds nothing.
+	$voice_block = ( '' !== $voice ) ? "\n\nBrand voice for {$brand}:\n{$voice}" : '';
+
+	$prompt = "You write the OWNER'S short public reply to a Google review for {$brand}. You are given the location, the reviewer's first name, the star rating, and the review text.{$voice_block}
 
 Rules:
-- 2 to 4 sentences. Warm, genuine, and specific — never generic or corporate.
-- Use the reviewer's first name naturally when it is known.
-- Reference something concrete from their review.
-- Positive review: thank them sincerely and warmly invite them back.
-- Critical review: acknowledge it honestly, apologize where warranted, and make it right or invite another visit — never defensive, never excuses.
+- Keep the reply NO LONGER than the review itself — match its length. A short review gets a short reply (a sentence or two); only a long, detailed review warrants a longer response. Never out-write the reviewer.";
+
+if ( $rand1 === 1 || $rand === 2 ) {
+	$prompt .= "- Use the reviewer's first name naturally when it is known.";
+} elseif ( $rand1 === 3 ) {
+	$prompt .= "- Begin with the reviewer's first name when it is known.";
+} elseif ( $rand1 === 4 ) {
+	$prompt .= "- Begin 2nd sentence with the reviewer's first name when it is known.";
+} elseif ( $rand1 === 5 ) {
+	$prompt .= "- Don't use the reviewer's name.";
+}
+
+if ( $rand2 === 1 ) {
+	$prompt .= "- Reply should be warm, genuine, and specific. Never generic or corporate.";
+} elseif ( $rand2 === 2 ) {
+	$prompt .= "- Reply should be professional, but not corporate.";
+} elseif ( $rand2 === 3 ) {
+	$prompt .= "- Reply should be friendly and thankful.";
+} elseif ( $rand2 === 4 ) {
+	$prompt .= "- Reply should never sound like a generic customer service agent.";
+}
+
+if ( $rand3 === 1 ) {
+	$prompt .= "- Reference something concrete from their review.";
+}
+
+if ( $rand4 < 5 ) {
+	$prompt .= "- Avoid phrases like 'means the world to us' and 'that is what we strive for'.";
+}
+
+if ( $rand5 < 5 ) {
+	$prompt .= "- Avoid saying things that sound like we're praising ourselves.";
+}
+
+if ( $rand6 === 1 ) {
+	$prompt .= "- Use our company name within the review.";
+}
+
+if ( $rand7 === 1 ) {
+	$prompt .= "- Positive review: thank them sincerely and warmly invite them back.";
+}
+
+if ( $rand8 === 1 ) {
+	$prompt .= "- Use a phrase like 'we're happy that we made you a satisfied customer'.";
+} elseif ( $rand8 === 2 ) {
+	$prompt .= "- Use a phrase like 'customers like you is why we love our job.";
+}
+
+$prompt .= "
+- Critical review: acknowledge it honestly, apologize where warranted, and make it right or invite another visit. Never defensive, never excuses, and never argumentative.
 - Vary your opening and phrasing every time. Do NOT default to starting with \"Thank you for\". Avoid clichés and repetition.
 - DO NOT use the em-dash. Either create new sentence, or use elipsis.
 - No hashtags, no sign-off or signature block, and no emojis unless they genuinely fit the brand voice.
 
 Return ONLY the reply text — no quotes, no preamble, no labels.";
+
+;
+
+return $prompt;
+
+
 }

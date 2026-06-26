@@ -1495,13 +1495,13 @@ function bp_kw_run_chron(bool $force = false): array {
 
 add_action('wp_dashboard_setup', 'bp_kw_register_dashboard_widget');
 function bp_kw_register_dashboard_widget(): void {
-	if (_USER_LOGIN !== 'battleplanweb' && !in_array('bp_view_stats', _USER_ROLES)) return;
+	if (_USER_LOGIN !== 'battleplanweb') return;
 	add_meta_box('bp_keyword_rankings', 'Keyword Rankings', 'bp_kw_render_dashboard_widget', 'dashboard', 'column3', 'default');
 }
 
 // Force keyword rankings widget into column3 by writing directly to user meta
 add_action('load-index.php', function() {
-	if (_USER_LOGIN !== 'battleplanweb' && !in_array('bp_view_stats', _USER_ROLES)) return;
+	if (_USER_LOGIN !== 'battleplanweb') return;
 
 	$user_id = get_current_user_id();
 	if (!$user_id) return;
@@ -1529,7 +1529,7 @@ add_action('load-index.php', function() {
 function bp_kw_render_dashboard_widget(): void {
 	$creds = bp_kw_api_creds();
 	if (!$creds['login'] || !$creds['password']) {
-		echo '<p><strong>DataForSEO not configured.</strong> <a href="' . esc_url(admin_url('admin.php?page=kw-rankings')) . '">Add credentials →</a></p>';
+		echo '<p><strong>DataForSEO not configured.</strong> <a href="' . esc_url(menu_page_url('kw-rankings', false)) . '">Add credentials →</a></p>';
 		return;
 	}
 
@@ -1538,7 +1538,7 @@ function bp_kw_render_dashboard_widget(): void {
 	$stale_cutoff = date('Y-m-d', strtotime('-100 days'));
 
 	if (!$tracked) {
-		echo '<p>No data yet — rankings will appear after the first weekly snapshot. <a href="' . esc_url(admin_url('admin.php?page=kw-rankings')) . '">Fetch now →</a></p>';
+		echo '<p>No data yet — rankings will appear after the first weekly snapshot. <a href="' . esc_url(menu_page_url('kw-rankings', false)) . '">Fetch now →</a></p>';
 		return;
 	}
 
@@ -1687,7 +1687,7 @@ function bp_kw_render_dashboard_widget(): void {
 
 	<div class="kwfoot">
 		<span><?php echo $total; ?> keywords · Snapshot: <?php echo esc_html($snapshot_date ?: 'None'); ?> · Fetched: <?php echo esc_html($last_label); ?></span>
-		<a href="<?php echo esc_url(admin_url('admin.php?page=kw-rankings')); ?>">Manage →</a>
+		<a href="<?php echo esc_url(menu_page_url('kw-rankings', false)); ?>">Manage →</a>
 	</div>
 
 	<script>
@@ -1724,8 +1724,8 @@ function bp_kw_render_dashboard_widget(): void {
 
 add_action('admin_menu', 'bp_kw_register_admin_page');
 function bp_kw_register_admin_page(): void {
-	if (_USER_LOGIN !== 'battleplanweb' && !in_array('bp_view_stats', _USER_ROLES)) return;
-	add_menu_page('Keyword Rankings', 'Keywords', 'manage_options', 'kw-rankings', 'bp_kw_render_admin_page', 'dashicons-chart-line', 72);
+	if (_USER_LOGIN !== 'battleplanweb') return;   // Keywords is battleplanweb-only
+	add_submenu_page('tools.php', 'Keyword Rankings', 'Keywords', 'manage_options', 'kw-rankings', 'bp_kw_render_admin_page');
 }
 
 function bp_kw_render_admin_page(): void {

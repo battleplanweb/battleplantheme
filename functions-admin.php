@@ -368,12 +368,37 @@ function battleplan_customize_admin_menus() {
 
 	add_submenu_page( 'edit.php?post_type=elements', 'Comments', 'Comments', 'manage_options', 'edit-comments.php' );
 	if ( _USER_LOGIN === "battleplanweb" ) add_submenu_page( 'edit.php?post_type=elements', 'Custom Fields', 'Custom Fields', 'manage_options', 'edit.php?post_type=acf-field-group' );
-	if ( _USER_LOGIN === "battleplanweb" ) add_submenu_page( 'options-general.php', 'Options', 'Options', 'manage_options', 'options.php' );
-	add_submenu_page( 'tools.php', 'WP Engine', 'WP Engine', 'manage_options', 'options-general.php?page=wpengine-common' );
+	if ( _USER_LOGIN === "battleplanweb" ) add_submenu_page( 'options-general.php', 'Site Options', 'Site Options', 'manage_options', 'options.php' );
+	// Removed from Tools menu — WP Engine. Re-enable by uncommenting.
+	// add_submenu_page( 'tools.php', 'WP Engine', 'WP Engine', 'manage_options', 'options-general.php?page=wpengine-common' );
 
 	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'git-updater/git-updater.php' ) ) add_submenu_page( 'tools.php', 'Git Updater', 'Git Updater', 'manage_options', 'options-general.php?page=git-updater' );
 	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'admin-columns-pro/admin-columns-pro.php' ) ) add_submenu_page( 'tools.php', 'Admin Columns', 'Admin Columns', 'manage_options', 'options-general.php?page=codepress-admin-columns' );
-	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wp-mail-smtp/wp_mail_smtp.php' ) ) add_submenu_page( 'tools.php', 'WP Mail SMTP', 'WP Mail SMTP', 'manage_options', 'options-general.php?page=wp-mail-smtp' );
+	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wp-mail-smtp/wp_mail_smtp.php' ) ) add_submenu_page( 'tools.php', 'Mail SMTP', 'Mail SMTP', 'manage_options', 'options-general.php?page=wp-mail-smtp' );
+
+	// Microsoft Clarity is battleplanweb-only. Remove the plugin's top-level Clarity menu for EVERYONE,
+	// then re-add it for battleplanweb under Tools → "Clarity". Non-battleplanweb users (incl. other
+	// admins and bp_view_stats clients) lose it entirely. Only acts when the plugin registered its menu.
+	global $menu;
+	$bp_has_clarity = false;
+	if ( is_array( $menu ) ) foreach ( $menu as $bp_m ) { if ( isset( $bp_m[2] ) && $bp_m[2] === 'microsoft-clarity' ) { $bp_has_clarity = true; break; } }
+	if ( $bp_has_clarity ) {
+		remove_menu_page( 'microsoft-clarity' );
+		if ( _USER_LOGIN === "battleplanweb" ) {
+			add_submenu_page( 'tools.php', 'Microsoft Clarity', 'Clarity', 'manage_options', 'admin.php?page=microsoft-clarity' );
+		}
+	}
+
+	// Rename the Yoast Premium "Redirects" entry shown under Tools → "URL Redirects".
+	// (Registered by the Yoast plugin, not the framework, so it's relabeled here by its visible text.)
+	global $submenu;
+	if ( ! empty( $submenu['tools.php'] ) && is_array( $submenu['tools.php'] ) ) {
+		foreach ( $submenu['tools.php'] as $bp_i => $bp_item ) {
+			if ( trim( wp_strip_all_tags( html_entity_decode( $bp_item[0] ) ) ) === 'Yoast Redirects' ) {
+				$submenu['tools.php'][$bp_i][0] = 'URL Redirects';
+			}
+		}
+	}
 
 	if ( _USER_LOGIN === "battleplanweb" ) :
 		add_submenu_page( 'tools.php', '⚙️ Clear ALL',   '⚙️ Clear ALL',   'manage_options', 'clear-all',   'battleplan_clear_all' );
@@ -382,8 +407,10 @@ function battleplan_customize_admin_menus() {
 	endif;
 
 	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wordpress-seo-premium/wp-seo-premium.php' ) ) add_submenu_page( 'options-general.php', 'Yoast Settings', 'Yoast Settings', 'manage_options', 'admin.php?page=wpseo_page_settings' );
-	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wpseo-local/local-seo.php' ) ) add_submenu_page( 'options-general.php', 'Yoast Local', '&nbsp;└&nbsp;Local', 'manage_options', 'admin.php?page=wpseo_local' );
-	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wordpress-seo-premium/wp-seo-premium.php' ) ) add_submenu_page( 'options-general.php', 'Yoast Redirects', '&nbsp;└&nbsp;Redirects', 'manage_options', 'admin.php?page=wpseo_redirects' );
+	// Removed from Settings menu — Yoast Local (└ Local). Re-enable by uncommenting.
+	// if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wpseo-local/local-seo.php' ) ) add_submenu_page( 'options-general.php', 'Yoast Local', '&nbsp;└&nbsp;Local', 'manage_options', 'admin.php?page=wpseo_local' );
+	// Removed from Settings menu — Yoast Redirects (└ Redirects). Re-enable by uncommenting.
+	// if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wordpress-seo-premium/wp-seo-premium.php' ) ) add_submenu_page( 'options-general.php', 'Yoast Redirects', '&nbsp;└&nbsp;Redirects', 'manage_options', 'admin.php?page=wpseo_redirects' );
 
 	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'options-general.php', 'GBP Settings', 'GBP Settings', 'manage_options', 'admin.php?page=pgmb_settings' );
 	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'options-general.php', 'GBP Templates', '&nbsp;└&nbsp;Templates', 'manage_options', 'edit.php?post_type=pgmb_templates' );
@@ -421,6 +448,17 @@ function battleplan_submenu_order($menu_ord) {
 
 	if (empty($submenu['options-general.php']) || !is_array($submenu['options-general.php'])) {
 		return $menu_ord;
+	}
+
+	// Relabel / remove plugin-injected Settings submenu items by their visible label.
+	// (These aren't registered by the framework, so they're handled here after the plugins add them.)
+	foreach ($submenu['options-general.php'] as $idx => $item) {
+		$label = trim( wp_strip_all_tags( html_entity_decode( $item[0] ) ) );
+		if ( $label === 'Update Source' ) {
+			unset( $submenu['options-general.php'][$idx] );      // remove "Update Source"
+		} elseif ( $label === 'Connectors' ) {
+			$submenu['options-general.php'][$idx][0] = 'AI Connections';   // rename "Connectors" → "AI Connections"
+		}
 	}
 
 	$wanted = [10,15,20,25,30,40,45,49,46,48,47];
@@ -550,9 +588,8 @@ add_action('admin_print_footer_scripts', function() {
 	<?php
 });
 
-// Microsoft Clarity logo-link beside the Dashboard heading. Shown to the same users
-// who see the GA4 stats panel (battleplanweb / bp_view_stats) and only when a Clarity
-// project ID is set in customer_info['google-tags']['clarity']. Just the logo (no button
+// Microsoft Clarity logo-link beside the Dashboard heading. battleplanweb only, and only
+// when a Clarity project ID is set in customer_info['google-tags']['clarity']. Just the logo (no button
 // or label); clicking it opens the in-admin Clarity page (admin.php?page=microsoft-clarity).
 add_action('admin_print_footer_scripts', function() {
 	$screen = get_current_screen();
@@ -563,7 +600,7 @@ add_action('admin_print_footer_scripts', function() {
 		? $customer_info['google-tags']['clarity'] : '';
 	if ( ! $clarity ) return;
 
-	if ( _USER_LOGIN !== 'battleplanweb' && ! in_array('bp_view_stats', _USER_ROLES) ) return;
+	if ( _USER_LOGIN !== 'battleplanweb' ) return;   // Clarity link is battleplanweb-only
 
 	$url  = esc_url_raw( admin_url( 'admin.php?page=microsoft-clarity' ) );
 	$logo = esc_url_raw( get_template_directory_uri() . '/common/logos/microsoft-clarity.webp' );

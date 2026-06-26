@@ -116,6 +116,69 @@
 		messages.forEach(function (m) { addBubble(m.role, m.content); });
 	}
 
+	// ---- Consent card (explicit SMS opt-in) ----------------------------
+	// Shown when the server signals request_consent. The visitor must tap Yes
+	// before any text is sent — the click is the A2P-verifiable opt-in. The
+	// phone number lives server-side, so the card only carries the choice.
+	function showConsentCard() {
+		var wrap = el('div', 'bp-chat-msg bp-chat-assistant');
+		var card = el('div', 'bp-chat-consent-card');
+
+		card.appendChild(el('p', 'bp-chat-consent-disclosure', bpChat.textConsent || ''));
+
+		if (bpChat.privacyUrl || bpChat.termsUrl) {
+			var links = el('p', 'bp-chat-consent-links');
+			if (bpChat.privacyUrl) {
+				var a = el('a', null, 'Privacy Policy');
+				a.href = bpChat.privacyUrl; a.target = '_blank'; a.rel = 'noopener';
+				links.appendChild(a);
+			}
+			if (bpChat.privacyUrl && bpChat.termsUrl) links.appendChild(document.createTextNode(' · '));
+			if (bpChat.termsUrl) {
+				var t = el('a', null, 'Terms');
+				t.href = bpChat.termsUrl; t.target = '_blank'; t.rel = 'noopener';
+				links.appendChild(t);
+			}
+			card.appendChild(links);
+		}
+
+		var btns = el('div', 'bp-chat-consent-btns');
+		var yes = el('button', 'bp-chat-consent-yes', bpChat.consentYes || 'Yes, text me');
+		var no  = el('button', 'bp-chat-consent-no', bpChat.consentNo || 'No thanks');
+		yes.type = 'button'; no.type = 'button';
+		btns.appendChild(yes); btns.appendChild(no);
+		card.appendChild(btns);
+
+		wrap.appendChild(card);
+		log.appendChild(wrap);
+		log.scrollTop = log.scrollHeight;
+
+		function choose(choice) {
+			yes.disabled = true; no.disabled = true;
+			fetch(bpChat.consentUrl, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				credentials: 'same-origin',
+				body: JSON.stringify({ cid: cid, choice: choice })
+			})
+				.then(function (r) { return r.json(); })
+				.then(function (j) {
+					wrap.remove();
+					if (j && j.reply) {
+						messages.push({ role: 'assistant', content: j.reply });
+						addBubble('assistant', j.reply);
+						saveState();
+					}
+				})
+				.catch(function () {
+					wrap.remove();
+					addBubble('assistant', 'Sorry — something went wrong. Please call us instead.');
+				});
+		}
+		yes.addEventListener('click', function () { choose('yes'); });
+		no.addEventListener('click', function () { choose('no'); });
+	}
+
 	function showTyping() {
 		var wrap = el('div', 'bp-chat-msg bp-chat-assistant bp-chat-typing');
 		var b = el('div', 'bp-chat-bubble');
@@ -179,6 +242,8 @@
 				addBubble('assistant', res.j.reply);
 				if (res.j.lead_sent) leadSent = true;
 				saveState();
+				// The AI asked the visitor to opt in to texts — show the consent card.
+				if (res.j.request_consent) showConsentCard();
 			})
 			.catch(function () {
 				typing.remove();
